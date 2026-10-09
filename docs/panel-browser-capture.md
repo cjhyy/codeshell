@@ -101,6 +101,13 @@ guests or local Panel capture. Windows may provide system loopback audio; other
 platforms can record microphone audio without system sound. The native system
 picker is disabled because it can bypass the authorization callback.
 
+Packaged macOS builds declare `NSCameraUsageDescription` and
+`NSMicrophoneUsageDescription` through `build.mac.extendInfo` in the Desktop
+package. Both strings explain capture after the user explicitly starts recording;
+the microphone description also covers existing voice input. These usage strings
+are required by Electron's [macOS media permission API](https://www.electronjs.org/docs/latest/api/system-preferences#systempreferencesaskformediaaccessmediatype-macos)
+and do not grant device access or replace the trusted workbench consent prompt.
+
 Unit/HTTP tests cover consent boundaries, source/audio projection, cancellation,
 late permissions, ABA, MIME normalization, exact upload receipts and transfer
 pacing. `bun scripts/smoke-panel-video-capture.mjs` runs the production workbench,

@@ -19,6 +19,8 @@ export interface ComposePermissionRulesOptions {
   presetRules: readonly PermissionRule[];
   settingsScope?: EngineConfig["settingsScope"];
   projectTrusted?: boolean;
+  /** Already loaded trusted Host snapshot; read-only consumers disable migrations. */
+  settings?: Pick<SettingsManager, "get">;
 }
 
 /**
@@ -56,10 +58,9 @@ export function composePermissionRules(options: ComposePermissionRulesOptions): 
   if (mode === "bypassPermissions") rules.push({ tool: "Bash", decision: "allow" });
 
   try {
-    const settings = new SettingsManager(
-      cwd,
-      options.settingsScope ?? "project",
-      options.projectTrusted !== false,
+    const settings = (
+      options.settings ??
+      new SettingsManager(cwd, options.settingsScope ?? "project", options.projectTrusted !== false)
     ).get();
     // unshift: the user's own rules outrank every default.
     if (settings.permissions?.rules?.length) rules.unshift(...settings.permissions.rules);

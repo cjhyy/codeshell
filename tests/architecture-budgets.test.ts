@@ -80,6 +80,8 @@ describe("architecture growth budgets", () => {
     // +5 composition lines supply the existing external Runtime lazily and subscribe
     // its owned stream to Mobile. Command authority and the bounded recovery pump
     // stay in mobile-remote modules; no IPC route or public export is added here.
+    // Awaited constrained Hook cleanup uses the extracted desktop-shutdown quit
+    // coordinator. Its failure/retry gate reduces Main without raising this limit.
     expect(lines("packages/desktop/src/main/index.ts")).toBeLessThanOrEqual(7_201);
     expect(lines("packages/desktop/src/main/project-panel-ipc.ts")).toBeLessThanOrEqual(322);
     // The five generic Link authorization operations reuse the window/project
@@ -100,12 +102,17 @@ describe("architecture growth budgets", () => {
     // The reviewed additions are five Link challenge operations, four Lab
     // operations and one usage-history query. Count every registration, including
     // the extracted modules, with no allowance for future routes.
+    // Optional accounts add seven reviewed main-frame-owned operations: status,
+    // login, register, github, linkGitHub, cancelSignIn and logout. Their results
+    // expose only public account state; access/refresh tokens remain in Main.
+    // Include the extracted registrar and raise only this contract baseline by seven.
     expect(
       matches("packages/desktop/src/main/index.ts", /ipcMain\.handle\(/g) +
         matches("packages/desktop/src/main/project-panel-ipc.ts", /ipcMain\.handle\(/g) +
         matches("packages/desktop/src/main/project-panel-version-ipc.ts", /ipcMain\.handle\(/g) +
         matches("packages/desktop/src/main/remote-link-ipc.ts", /ipcMain\.handle\(/g) +
         matches("packages/desktop/src/main/device-relay-ipc.ts", /ipcMain\.handle\(/g) +
+        matches("packages/desktop/src/main/cloud-account-ipc.ts", /ipcMain\.handle\(/g) +
         matches("packages/desktop/src/main/local-file-preview-ipc.ts", /ipcMain\.handle\(/g) +
         matches("packages/desktop/src/main/session-transcript-ipc.ts", /ipcMain\.handle\(/g) +
         matches("packages/desktop/src/main/profile-switch-ipc.ts", /ipcMain\.handle\(/g) +
@@ -125,7 +132,7 @@ describe("architecture growth budgets", () => {
       // validation and recovery algorithm stay in Core and the extracted adapters.
       // +2 metadata-only Profile preview and revision-checked adoption routes.
       // +3 preview/cancel/reviewed-save operations, without installation authority.
-    ).toBeLessThanOrEqual(330);
+    ).toBeLessThanOrEqual(337);
     // v0.8.17 added the reviewed Panel catalog/task bridge to both preload
     // surfaces. Mimi's bounded transcript pagination adds one typed invoke;
     // the validation and file-reading implementation remain extracted in main.
@@ -150,8 +157,13 @@ describe("architecture growth budgets", () => {
     // Include all nine extracted Lab invokes and the five generic Link
     // challenge invokes plus usage history. Main-only routes remain counted
     // above even when no renderer adapter exists; do not equate the totals.
+    // Count the same seven reviewed optional-account invokes: status, login,
+    // register, github, linkGitHub, cancelSignIn and logout. No token-read API
+    // exists; this increases the invoke contract by exactly seven, not line budgets.
     expect(
       matches("packages/desktop/src/preload/device-relay-api.ts", /ipcRenderer\.invoke\(/g) +
+        matches("packages/desktop/src/preload/cloud-account-api.ts", /ipcRenderer\.invoke\(/g) +
+        matches("packages/desktop/src/preload/mobile-remote-api.ts", /ipcRenderer\.invoke\(/g) +
         matches("packages/desktop/src/preload/index.ts", /ipcRenderer\.invoke\(/g) +
         matches(
           "packages/desktop/src/preload/project-panel-version-api.ts",
@@ -162,7 +174,7 @@ describe("architecture growth budgets", () => {
         matches("packages/desktop/src/preload/profile-plugin-export-api.ts", /ipc\.invoke\(/g) +
         matches("packages/desktop/src/preload/optimization-lab-api.ts", /ipc\.invoke\(/g) +
         matches("packages/desktop/src/preload/operation-resolution-api.ts", /ipc\.invoke\(/g),
-    ).toBeLessThanOrEqual(323);
+    ).toBeLessThanOrEqual(330);
     // GitHub skill previews and Panel task hosting carry main-issued review and
     // ownership fields across the typed preload boundary. The optional Mimi
     // transcript-page method adds its bounded response shape without widening
@@ -349,7 +361,10 @@ describe("architecture growth budgets", () => {
       // It adds no stable public SDK or extension surface or execution authority.
       // +1 native activity review store for masked receipts and CAS operator decisions.
       // Desktop Main is its sole consumer; no worker/model/public SDK resolution authority.
-      "packages/core/src/index.internal.ts": 98,
+      // +3 reviewed Host-only contracts: native operation Hook host, constrained
+      // process host, and its opaque permit/resource/runtime types. Published
+      // public/extension contracts remain unchanged; allow no future exports.
+      "packages/core/src/index.internal.ts": 101,
       "packages/coding/src/index.ts": 12,
       "packages/arena/src/index.ts": 19,
       // +1 for conversation-session.ts, which re-exports the four modules

@@ -8,18 +8,22 @@ import {
   mkdirSync,
   openSync,
   readFileSync,
+  readSync,
   renameSync,
   rmSync,
   writeFileSync,
 } from "node:fs";
 import { chmod, lstat, mkdir, rename, rm, writeFile } from "node:fs/promises";
 import { createServer, type IncomingMessage, type Server, type ServerResponse } from "node:http";
-import { dirname, isAbsolute } from "node:path";
+import { dirname, isAbsolute, join } from "node:path";
+import { acquireGatewayInstanceLock, type GatewayInstanceLease } from "@cjhyy/code-shell-chat";
 import { dlog } from "./desktop-logger.js";
 import { GatewayChatRequests, GatewayChatRequestError } from "./im-gateway-chat-requests.js";
 
 export const DESKTOP_CONTROL_PROTOCOL_VERSION = 1;
 
+const MAX_DESKTOP_CONTROL_DESCRIPTOR_BYTES = 64 * 1024;
+const DESCRIPTOR_HEALTH_CHECK_INTERVAL_MS = 5_000;
 const GATEWAY_EVENT_OUTBOX_VERSION = 2;
 const MAX_GATEWAY_EVENTS = 200;
 const MAX_GATEWAY_EVENT_TEXT_LENGTH = 100_000;
@@ -63,6 +67,10 @@ export interface MobileRemoteGatewayStatus {
 
 export interface GatewayControlServerOptions {
   descriptorPath: string;
+  /** Migration guard for older desktops that only own the gateway lease. */
+  legacyDesktopGatewayLockPath?: string;
+  /** Descriptor recovery cadence; injectable for lifecycle tests. */
+  descriptorHealthCheckIntervalMs?: number;
   open: () => Promise<MobileRemoteOpenResult>;
   close: () => Promise<void>;
   status: () => Promise<MobileRemoteGatewayStatus> | MobileRemoteGatewayStatus;
@@ -70,8 +78,12 @@ export interface GatewayControlServerOptions {
     | Promise<{ pairingUrl: string; expiresAt: number }>
     | { pairingUrl: string; expiresAt: number };
   petChat?: (request: PetChatControlRequest) => Promise<PetChatControlResult>;
+  /** Return false until Mimi can accept a turn without losing its message. */
+  isPetChatReady?: () => boolean;
   /** Where one inbound IM message should go: a bound Session, or Mimi. */
   routeSession?: (request: SessionRouteControlRequest) => Promise<unknown>;
+  /** Return false until persisted conversation bindings have been restored. */
+  isSessionRouteReady?: () => boolean;
 }
 
 export interface GatewayControlEventInput {
@@ -204,6 +216,11 @@ export interface DesktopControlDescriptor {
 export class GatewayControlServer {
   private server?: Server;
   private descriptor?: DesktopControlDescriptor;
+  private instanceLease?: GatewayInstanceLease;
+  private startPromise?: Promise<DesktopControlDescriptor>;
+  private stopPromise?: Promise<void>;
+  private descriptorHealthTimer?: ReturnType<typeof setInterval>;
+  private descriptorHealthError?: string;
   private readonly events: GatewayControlEvent[] = [];
   private readonly eventWaiters = new Set<() => void>();
   private eventStreamId = "";
@@ -220,9 +237,48 @@ export class GatewayControlServer {
     });
   }
 
-  async start(): Promise<DesktopControlDescriptor> {
-    if (this.descriptor) return this.descriptor;
+  start(): Promise<DesktopControlDescriptor> {
+    if (this.stopPromise) return this.stopPromise.then(() => this.start());
+    if (this.startPromise) return this.startPromise;
+    if (this.descriptor) {
+      try {
+        this.ensureDescriptor(this.descriptor);
+        return Promise.resolve(this.descriptor);
+      } catch (error) {
+        return Promise.reject(error);
+      }
+    }
+    const starting = this.startServer();
+    this.startPromise = starting;
+    const clear = () => {
+      if (this.startPromise === starting) this.startPromise = undefined;
+    };
+    void starting.then(clear, clear);
+    return starting;
+  }
 
+  private async startServer(): Promise<DesktopControlDescriptor> {
+    // Electron's single-instance lock is profile-scoped. Different profiles can
+    // still share HOME, this descriptor and its durable event outbox.
+    this.prepareDescriptorParent();
+    this.instanceLease = acquireGatewayInstanceLock(
+      `${this.opts.descriptorPath}.lock`,
+      "CodeShell desktop control",
+    );
+    try {
+      // Older desktops have no descriptor lease; keep their live control plane
+      // intact before touching either the descriptor or the shared outbox.
+      this.assertDescriptorAvailable();
+      return await this.initializeServer();
+    } catch (error) {
+      this.eventOutboxReady = false;
+      this.instanceLease.release();
+      this.instanceLease = undefined;
+      throw error;
+    }
+  }
+
+  private async initializeServer(): Promise<DesktopControlDescriptor> {
     this.eventOutboxReady = false;
     let restored: GatewayControlEventOutbox | undefined;
     try {
@@ -245,7 +301,6 @@ export class GatewayControlServer {
     // Also rewrites a validated v1 file into the current schema atomically.
     await this.writeEventOutbox(outbox);
     this.restoreEventOutbox(outbox);
-    this.eventOutboxReady = true;
     const token = randomBytes(32).toString("hex");
     const server = createServer((req, res) => {
       void this.handleRequest(token, req, res);
@@ -274,17 +329,36 @@ export class GatewayControlServer {
     };
 
     try {
-      this.writeDescriptor(this.descriptor);
+      this.ensureDescriptor(this.descriptor);
     } catch (error) {
       await closeServer(server);
       this.server = undefined;
       this.descriptor = undefined;
       throw error;
     }
+    this.eventOutboxReady = true;
+    this.startDescriptorHealthCheck();
     return this.descriptor;
   }
 
-  async stop(): Promise<void> {
+  stop(): Promise<void> {
+    if (this.stopPromise) return this.stopPromise;
+    const stopping = this.stopServer();
+    this.stopPromise = stopping;
+    const clear = () => {
+      if (this.stopPromise === stopping) this.stopPromise = undefined;
+    };
+    void stopping.then(clear, clear);
+    return stopping;
+  }
+
+  private async stopServer(): Promise<void> {
+    // A stop during the asynchronous outbox/listen work must close the eventual
+    // listener too, rather than letting startup publish after shutdown.
+    if (this.startPromise) await this.startPromise.catch(() => undefined);
+    if (this.descriptorHealthTimer) clearInterval(this.descriptorHealthTimer);
+    this.descriptorHealthTimer = undefined;
+    this.descriptorHealthError = undefined;
     const server = this.server;
     const descriptor = this.descriptor;
     this.server = undefined;
@@ -292,17 +366,25 @@ export class GatewayControlServer {
     this.chatRequests.clear();
     this.wakeEventWaiters();
 
-    if (server) await closeServer(server);
-    // A caller may have started a durable publication immediately before
-    // shutdown. Let the already-queued mutation reach disk before marking the
-    // outbox unavailable; otherwise the queued callback would observe false
-    // and reject even though publish() was accepted while the server was live.
-    await this.eventMutationTail.catch(() => undefined);
-    this.eventOutboxReady = false;
-    if (descriptor) this.removeOwnDescriptor(descriptor.token);
+    try {
+      if (server) await closeServer(server);
+      // Flush accepted publications while the shared outbox lease is held.
+      await this.eventMutationTail.catch(() => undefined);
+      this.eventOutboxReady = false;
+      if (descriptor) this.removeOwnDescriptor(descriptor.token);
+    } finally {
+      this.eventOutboxReady = false;
+      this.instanceLease?.release();
+      this.instanceLease = undefined;
+    }
   }
 
   publish(event: GatewayControlEventInput): Promise<GatewayControlEvent> {
+    // Once stop() has begun, only mutations already accepted by the live owner
+    // may flush under its lease. A later publication must wait for a new start.
+    if (!this.descriptor || !this.server || this.stopPromise) {
+      return Promise.reject(new Error("Gateway control event stream is not started"));
+    }
     return this.enqueueEventMutation(async () => {
       if (!this.eventOutboxReady || !this.eventStreamId) {
         throw new Error("Gateway control event stream is not started");
@@ -352,6 +434,7 @@ export class GatewayControlServer {
    * the HTTP cursor.
    */
   acknowledgeDirectDelivery(eventId: number): Promise<boolean> {
+    if (!this.descriptor || !this.server || this.stopPromise) return Promise.resolve(false);
     return this.enqueueEventMutation(async () => {
       if (!Number.isSafeInteger(eventId) || eventId < 1 || this.events.at(0)?.id !== eventId) {
         return false;
@@ -423,11 +506,15 @@ export class GatewayControlServer {
       }
       if (req.method === "POST" && req.url === "/v1/session/route" && this.opts.routeSession) {
         const body = parseSessionRouteRequest(await readJsonBody(req, 64 * 1024));
+        if (this.opts.isSessionRouteReady?.() === false) {
+          throw new GatewayControlRequestError("会话路由正在启动，消息将稍后重试", 503);
+        }
         sendJson(res, 200, await this.opts.routeSession(body));
         return;
       }
       if (req.method === "POST" && req.url === "/v1/pet/chat/start" && this.opts.petChat) {
         const body = parsePetChatRequest(await readJsonBody(req, 32 * 1024 * 1024));
+        this.assertPetChatReady();
         sendJson(res, 202, this.chatRequests.start(body));
         return;
       }
@@ -453,6 +540,7 @@ export class GatewayControlServer {
       }
       if (req.method === "POST" && req.url === "/v1/pet/chat" && this.opts.petChat) {
         const body = parsePetChatRequest(await readJsonBody(req, 32 * 1024 * 1024));
+        this.assertPetChatReady();
         sendJson(res, 200, await this.opts.petChat(body));
         return;
       }
@@ -470,19 +558,107 @@ export class GatewayControlServer {
     }
   }
 
-  private writeDescriptor(descriptor: DesktopControlDescriptor): void {
+  private assertPetChatReady(): void {
+    if (this.opts.isPetChatReady?.() === false) {
+      // Reject before creating a correlated ticket: a cached startup failure
+      // would otherwise prevent the durable inbox from retrying once ready.
+      throw new GatewayControlRequestError("Mimi Pet 正在启动，消息将稍后重试", 503);
+    }
+  }
+
+  private prepareDescriptorParent(): void {
     const dir = dirname(this.opts.descriptorPath);
     mkdirSync(dir, { recursive: true, mode: 0o700 });
     const dirInfo = lstatSync(dir);
     if (dirInfo.isSymbolicLink() || !dirInfo.isDirectory()) {
       throw new Error(`IM gateway control descriptor parent is not a regular directory: ${dir}`);
     }
-    try {
-      chmodSync(dir, 0o700);
-    } catch {
-      // Windows does not implement POSIX modes; the bearer token still gates RPC.
-    }
+    if (process.platform !== "win32") chmodSync(dir, 0o700);
+  }
 
+  private assertDescriptorAvailable(
+    own?: DesktopControlDescriptor,
+  ): DesktopControlDescriptor | undefined {
+    this.assertLegacyDesktopGatewayAvailable();
+    const current = this.readDescriptor();
+    if (current && current.token !== own?.token && isProcessAlive(current.pid)) {
+      throw new Error(
+        `IM gateway control descriptor belongs to a running desktop (PID ${current.pid})`,
+      );
+    }
+    return current;
+  }
+
+  private assertLegacyDesktopGatewayAvailable(): void {
+    const path =
+      this.opts.legacyDesktopGatewayLockPath ??
+      join(dirname(this.opts.descriptorPath), "gateway.lock");
+    const raw = readOwnerOnlyControlFile(path, "IM gateway legacy instance lock");
+    if (raw === undefined) return;
+    const owner = parseLegacyGatewayOwner(raw);
+    if (!owner) throw new Error("IM gateway legacy instance lock is invalid");
+    // CLI gateways legitimately launch Desktop to obtain its control endpoint.
+    // A different Desktop owner, however, may already have queued messages for
+    // its still-live control server even when that server's descriptor is gone.
+    if (
+      owner.pid !== process.pid &&
+      owner.owner.startsWith("CodeShell Desktop") &&
+      isProcessAlive(owner.pid)
+    ) {
+      throw new Error(`IM gateway is owned by a running legacy desktop (PID ${owner.pid})`);
+    }
+  }
+
+  private ensureDescriptor(descriptor: DesktopControlDescriptor): boolean {
+    this.prepareDescriptorParent();
+    const current = this.assertDescriptorAvailable(descriptor);
+    if (
+      current?.token === descriptor.token &&
+      current.pid === descriptor.pid &&
+      current.baseUrl === descriptor.baseUrl &&
+      current.startedAt === descriptor.startedAt
+    ) {
+      return false;
+    }
+    this.writeDescriptor(descriptor);
+    return true;
+  }
+
+  private startDescriptorHealthCheck(): void {
+    if (this.descriptorHealthTimer) return;
+    const intervalMs =
+      this.opts.descriptorHealthCheckIntervalMs ?? DESCRIPTOR_HEALTH_CHECK_INTERVAL_MS;
+    this.descriptorHealthTimer = setInterval(() => {
+      if (!this.descriptor || !this.server?.listening || !this.instanceLease) return;
+      try {
+        const repaired = this.ensureDescriptor(this.descriptor);
+        if (repaired || this.descriptorHealthError) {
+          dlog("main", "im_gateway.control_descriptor.recovered", {
+            path: this.opts.descriptorPath,
+            repaired,
+          });
+        }
+        this.descriptorHealthError = undefined;
+      } catch (error) {
+        const message = error instanceof Error ? error.message : String(error);
+        if (this.descriptorHealthError !== message) {
+          dlog("main", "im_gateway.control_descriptor.recovery_failed", {
+            path: this.opts.descriptorPath,
+            error: message,
+          });
+        }
+        this.descriptorHealthError = message;
+      }
+    }, intervalMs);
+    this.descriptorHealthTimer.unref?.();
+  }
+
+  private readDescriptor(): DesktopControlDescriptor | undefined {
+    const raw = readOwnerOnlyControlFile(this.opts.descriptorPath, "IM gateway control descriptor");
+    return raw === undefined ? undefined : parseControlDescriptor(raw);
+  }
+
+  private writeDescriptor(descriptor: DesktopControlDescriptor): void {
     try {
       const temporary = `${this.opts.descriptorPath}.${process.pid}.${randomBytes(8).toString("hex")}.tmp`;
       try {
@@ -667,14 +843,133 @@ export class GatewayControlServer {
 
   private removeOwnDescriptor(token: string): void {
     try {
-      const current = JSON.parse(readFileSync(this.opts.descriptorPath, "utf-8")) as {
-        token?: unknown;
-      };
-      if (current.token === token) rmSync(this.opts.descriptorPath, { force: true });
+      const current = this.readDescriptor();
+      if (current?.token === token) rmSync(this.opts.descriptorPath, { force: true });
     } catch {
       // Already removed, malformed, or replaced by a newer desktop instance.
     }
   }
+}
+
+/** Never follow a link, allocate an unbounded read, or trust a replaced inode. */
+function readOwnerOnlyControlFile(path: string, label: string): string | undefined {
+  let handle: number | undefined;
+  try {
+    const entry = lstatSync(path);
+    if (entry.isSymbolicLink() || !entry.isFile()) {
+      throw new Error(`${label} is not a regular file`);
+    }
+    if (process.platform !== "win32" && (entry.mode & 0o077) !== 0) {
+      throw new Error(`${label} permissions must be 0600`);
+    }
+    if (entry.size > MAX_DESKTOP_CONTROL_DESCRIPTOR_BYTES) {
+      throw new Error(`${label} exceeds its size limit`);
+    }
+    handle = openSync(path, constants.O_RDONLY | (constants.O_NOFOLLOW ?? 0));
+    const opened = fstatSync(handle);
+    if (
+      !opened.isFile() ||
+      opened.dev !== entry.dev ||
+      opened.ino !== entry.ino ||
+      (process.platform !== "win32" && (opened.mode & 0o077) !== 0) ||
+      opened.size > MAX_DESKTOP_CONTROL_DESCRIPTOR_BYTES
+    ) {
+      throw new Error(`${label} changed while opening`);
+    }
+    const buffer = Buffer.alloc(MAX_DESKTOP_CONTROL_DESCRIPTOR_BYTES + 1);
+    let length = 0;
+    while (length < buffer.length) {
+      const bytes = readSync(handle, buffer, length, buffer.length - length, length);
+      if (!bytes) break;
+      length += bytes;
+    }
+    if (length > MAX_DESKTOP_CONTROL_DESCRIPTOR_BYTES) {
+      throw new Error(`${label} exceeds its size limit`);
+    }
+    return buffer.toString("utf-8", 0, length);
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code === "ENOENT") return undefined;
+    throw error;
+  } finally {
+    if (handle !== undefined) closeSync(handle);
+  }
+}
+
+function parseLegacyGatewayOwner(raw: string): { pid: number; owner: string } | undefined {
+  let value: unknown;
+  try {
+    value = JSON.parse(raw);
+  } catch {
+    return undefined;
+  }
+  if (
+    !isPlainRecord(value) ||
+    value.version !== 1 ||
+    !Number.isSafeInteger(value.pid) ||
+    Number(value.pid) < 1 ||
+    typeof value.owner !== "string" ||
+    !value.owner ||
+    value.owner.length > 256 ||
+    /[\0\r\n]/u.test(value.owner) ||
+    typeof value.token !== "string" ||
+    !/^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/iu.test(
+      value.token,
+    ) ||
+    typeof value.startedAt !== "number" ||
+    !Number.isFinite(value.startedAt)
+  ) {
+    return undefined;
+  }
+  return { pid: Number(value.pid), owner: value.owner };
+}
+
+function isProcessAlive(pid: number): boolean {
+  try {
+    process.kill(pid, 0);
+    return true;
+  } catch (error) {
+    return (error as NodeJS.ErrnoException).code === "EPERM";
+  }
+}
+
+function parseControlDescriptor(raw: string): DesktopControlDescriptor | undefined {
+  let value: unknown;
+  try {
+    value = JSON.parse(raw);
+  } catch {
+    return undefined;
+  }
+  if (
+    !isPlainRecord(value) ||
+    value.version !== DESKTOP_CONTROL_PROTOCOL_VERSION ||
+    !Number.isSafeInteger(value.pid) ||
+    Number(value.pid) < 1 ||
+    typeof value.baseUrl !== "string" ||
+    typeof value.token !== "string" ||
+    !/^[a-f0-9]{64}$/u.test(value.token) ||
+    typeof value.startedAt !== "number" ||
+    !Number.isFinite(value.startedAt)
+  ) {
+    return undefined;
+  }
+  try {
+    const url = new URL(value.baseUrl);
+    if (
+      url.protocol !== "http:" ||
+      url.hostname !== "127.0.0.1" ||
+      !url.port ||
+      url.pathname !== "/" ||
+      url.username ||
+      url.password ||
+      url.search ||
+      url.hash
+    ) {
+      return undefined;
+    }
+  } catch {
+    return undefined;
+  }
+  return value as unknown as DesktopControlDescriptor;
 }
 
 function parseGatewayControlEventOutbox(raw: string, source: string): GatewayControlEventOutbox {

@@ -285,9 +285,18 @@ export interface PluginHookEntry {
  * show "由 xxx 插件提供（已禁用）"); pass it so that flag is accurate.
  */
 export function listPluginHooks(disabledPlugins: string[] = []): PluginHookEntry[] {
+  return listPluginHooksForHost(disabledPlugins).map(
+    ({ installPath: _path, timeoutMs: _timeout, ...entry }) => entry,
+  );
+}
+
+/** Host-only execution metadata. The UI listing deliberately omits native paths. */
+export function listPluginHooksForHost(
+  disabledPlugins: string[] = [],
+): Array<PluginHookEntry & { installPath: string; timeoutMs?: number }> {
   const data = readInstalledPlugins();
   const disabledSet = new Set(disabledPlugins);
-  const out: PluginHookEntry[] = [];
+  const out: Array<PluginHookEntry & { installPath: string; timeoutMs?: number }> = [];
   for (const [key, entries] of Object.entries(data.plugins)) {
     const plugin = pluginNameFromKey(key);
     const disabled = disabledSet.has(plugin);
@@ -300,6 +309,8 @@ export function listPluginHooks(disabledPlugins: string[] = []): PluginHookEntry
       if (!snapshot.definition) continue;
       for (const hook of iteratePluginHooks(snapshot.definition)) {
         out.push({
+          installPath,
+          timeoutMs: hook.command.timeoutMs,
           installKey: key,
           plugin,
           event: hook.event,

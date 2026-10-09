@@ -1,6 +1,5 @@
-import { MobileRemoteController } from "./mobile-remote-controller.js";
-import { DeviceRelayStore } from "./device-relay-store.js";
-import { registerDeviceRelayIpc } from "./device-relay-ipc.js";
+import { createDesktopRemoteServices } from "./desktop-remote-services.js";
+import { createDesktopShutdownHandler } from "./desktop-shutdown.js";
 import { registerProjectPanelIpc } from "./project-panel-ipc.js";
 import { registerProfileSwitchIpc } from "./profile-switch-ipc.js";
 import { registerRemoteLinkIpc } from "./remote-link-ipc.js";
@@ -833,6 +832,10 @@ const panelAppBridge = new PanelAppBridge({
 });
 panelAppBridge.registerIpc();
 const imGatewayService = new ImGatewayService({
+  ensureDesktopControl: async () => {
+    if (!gatewayControlServer) throw new Error("Desktop 消息桥接尚未启动");
+    await gatewayControlServer.start();
+  },
   emit: (event) => {
     for (const window of BrowserWindow.getAllWindows()) {
       if (!window.isDestroyed()) window.webContents.send("im-gateway:event", event);
@@ -844,6 +847,9 @@ let petStateAggregator: PetStateAggregator | null = null;
 let petExternalVisibilityController: ExternalSessionVisibilityController | null = null;
 let reconcileExternalAdapters: (() => Promise<void>) | null = null;
 let petDispatchService: PetDispatchService | null = null;
+// The dispatcher exists before its worker and durable stores finish loading.
+// IM delivery shares the same completed initialization boundary as Pet IPC.
+let petRuntimeReady = false;
 let petHostActionReceiptService: PetHostActionReceiptService | null = null;
 let petAttentionPolicy: PetAttentionPolicy | null = null;
 let petWorkInboxStore: PetWorkInboxStore | null = null;
@@ -1004,24 +1010,17 @@ const tunnelManager = new TunnelManager({
 const accessPasscode = new AccessPasscode({
   filePath: resolve(app.getPath("userData"), "mobile-remote", "access.json"),
 });
-const mobileRemoteController = new MobileRemoteController({
+const { mobileRemoteController } = createDesktopRemoteServices({
+  ipcMain,
+  userDataDir: app.getPath("userData"),
+  environmentDir: join(codeShellHome(), "desktop"),
+  safeStorage,
+  windows: () => mainWindows,
+  openExternal: (url) => shell.openExternal(url),
   host: mobileRemote,
   tunnel: tunnelManager,
   binary: cloudflaredBinary,
   passcode: accessPasscode,
-  environmentDir: join(codeShellHome(), "desktop"),
-  store: new DeviceRelayStore(resolve(app.getPath("userData"), "mobile-remote", "relay.enc"), {
-    available: () =>
-      safeStorage.isEncryptionAvailable() &&
-      (process.platform !== "linux" || safeStorage.getSelectedStorageBackend() !== "basic_text"),
-    encrypt: (value) => safeStorage.encryptString(value),
-    decrypt: (value) => safeStorage.decryptString(value),
-  }),
-  changed: (status) => {
-    for (const window of mainWindows) {
-      if (!window.isDestroyed()) window.webContents.send("mobileRemote:relayStatusChanged", status);
-    }
-  },
 });
 let gatewayControlServer: GatewayControlServer | undefined;
 let sessionBridge: SessionBridgeWiring | undefined;
@@ -2721,6 +2720,7 @@ async function createWindow(): Promise<BrowserWindow> {
       ready: petInitialization,
     });
     await petInitialization;
+    petRuntimeReady = petDispatchService !== null;
     markPetIpcReady?.();
     markPetIpcReady = null;
   } else {
@@ -3402,11 +3402,15 @@ app.whenReady().then(async () => {
 
   gatewayControlServer = new GatewayControlServer({
     descriptorPath: join(userHome(), ".code-shell", "im-gateway", "desktop-control.json"),
+    legacyDesktopGatewayLockPath: imGatewayService.configuredGatewayLockPath(),
     open: () => startMobileRemote({ mode: "tunnel" }),
     close: () => stopMobileRemote(),
     status: () => getMobileRemoteGatewayStatus(),
     pairingUrl: () => createMobileRemotePairingUrl(),
     petChat: (request) => dispatchGatewayPetChat(request),
+    isPetChatReady: () => petRuntimeReady && petDispatchService !== null,
+    isSessionRouteReady: () =>
+      petRuntimeReady && petDispatchService !== null && sessionBridge !== undefined,
     routeSession: async (request) =>
       (await petImDecisions?.replyToSession(request)) ??
       (sessionBridge ? sessionBridge.routeInbound(request) : { kind: "not-bound" }),
@@ -5477,12 +5481,6 @@ const startMobileRemote = (opts?: { mode?: "lan" | "tunnel" | "relay" }) =>
 const stopMobileRemote = () => mobileRemoteController.stop();
 const createMobileRemotePairingUrl = () => mobileRemoteController.pairingUrl();
 const getMobileRemoteGatewayStatus = () => mobileRemoteController.status();
-registerDeviceRelayIpc({
-  ipcMain,
-  controller: mobileRemoteController,
-  isMainWindow: (sender) =>
-    [...mainWindows].some((window) => !window.isDestroyed() && window.webContents === sender),
-});
 
 ipcMain.handle("mobileRemote:listDevices", async () => mobileDevices.listDevices());
 ipcMain.handle("mobileRemote:revokeDevice", async (_e, id: string) => {
@@ -6951,16 +6949,16 @@ const taskInboxService = createTaskInboxService({
 });
 taskInboxDisposers.push(
   registerTaskInboxIpc(ipcMain, () => [...mainWindows], taskInboxService, taskInboxEnabled),
-  registerOperationResolutionHost({
-    windows: () => [...mainWindows],
-    enabled: taskInboxEnabled,
-    isSessionRunning: (id) =>
-      taskInboxAutomationSessions.has(id) ||
-      !!bridge?.isSessionRunning(id) ||
-      !!externalRuntimeService?.isSessionRunning(id),
-  }),
   sessionCatalogStore.onChanged(() => taskInboxService?.scheduleRefresh()),
 );
+const disposeOperationResolutionHost = registerOperationResolutionHost({
+  windows: () => [...mainWindows],
+  enabled: taskInboxEnabled,
+  isSessionRunning: (id) =>
+    taskInboxAutomationSessions.has(id) ||
+    !!bridge?.isSessionRunning(id) ||
+    !!externalRuntimeService?.isSessionRunning(id),
+});
 ipcMain.handle("runs:delete", async (_e, runId: string) => {
   if (typeof runId !== "string") throw new Error("runId required");
   await deleteRunDir(runId);
@@ -7123,78 +7121,71 @@ app.on("window-all-closed", () => {
   if (process.platform !== "darwin") app.quit();
 });
 
-let quitCleanupPromise: Promise<void> | undefined;
-let quitCleanupDone = false;
-app.on("before-quit", (event) => {
-  if (!ownsDesktopInstance) return;
-  if (quitCleanupDone) return;
-  event.preventDefault();
-  if (quitCleanupPromise) return;
-  quitCleanupPromise = (async () => {
-    try {
-      await sessionCatalogIpc.flushRenderers();
-    } catch (error) {
-      dlog("main", "session.quit_save_failed", { error: String(error) });
-      quitCleanupPromise = undefined;
-      return;
-    }
-    // Drain the last debounced rotations before the browser contexts are closed.
-    taskInboxService?.dispose();
-    for (const dispose of taskInboxDisposers.splice(0)) dispose();
-    const cookieRefreshShutdown = cookieCredentialAutoRefresh.shutdown();
-    browserRuntime.closeAll();
-    bridge?.kill();
-    petStateAggregator?.stop();
-    petStateAggregator = null;
-    petExternalVisibilityController?.shutdown();
-    petExternalVisibilityController = null;
-    reconcileExternalAdapters = null;
-    petDispatchService = null;
-    petHostActionReceiptService = null;
-    petImDecisions?.stop();
-    petImDecisions = null;
-    petLongTaskCoordinator?.stop();
-    petLongTaskCoordinator = null;
-    unsubscribePetLongTaskStream?.();
-    unsubscribePetLongTaskStream = null;
-    unsubscribePetReportStream?.();
-    unsubscribePetReportStream = null;
-    petAttentionPolicy?.stop();
-    petAttentionPolicy = null;
-    const petWorkInboxFlush = petWorkInboxStore?.flush();
-    petWorkInboxStore = null;
-    const petLongTaskFlush = petLongTaskStore?.flush();
-    petLongTaskStore = null;
-    disposePetIpc?.();
-    disposePetIpc = null;
-    automationHandle?.stop();
-    automationHandle = null;
-    ptyKillAll();
-    transcriptSubscriptions?.closeAll();
-    roomManager.closeAll();
-    // Each external-runtime session holds a child process and a listening port,
-    // and neither dies with the parent on Windows. Captured before the async
-    // block so a later reassignment cannot make this a no-op.
-    const externalRuntimeShutdown = externalRuntimeService?.stopAll();
-    externalRuntimeService = null;
-    await Promise.allSettled([
-      imGatewayService.dispose(),
-      mobileRemoteController.dispose(),
-      gatewayControlServer?.stop(),
-      petWorkInboxFlush,
-      petLongTaskFlush,
-      externalRuntimeShutdown,
-      cookieRefreshShutdown,
-      sessionCatalogIpc.flush(),
-      panelAppBridge.shutdownMedia(),
-      chromeExtensionRuntimeService.stop(),
-    ]);
-    gatewayControlServer = undefined;
-    await mobileUploads.dispose();
-    quitCleanupDone = true;
-    app.quit();
-  })();
-});
+app.on(
+  "before-quit",
+  createDesktopShutdownHandler({
+    ownsInstance: () => ownsDesktopInstance,
+    flushRenderers: () => sessionCatalogIpc.flushRenderers(),
+    disposeOperationResolution: disposeOperationResolutionHost,
+    onError: (phase, error) => dlog("main", phase, { error: String(error) }),
+    cleanup: async () => {
+      taskInboxService?.dispose();
+      for (const dispose of taskInboxDisposers.splice(0)) dispose();
+      const cookieRefreshShutdown = cookieCredentialAutoRefresh.shutdown();
+      petRuntimeReady = false;
+      browserRuntime.closeAll();
+      bridge?.kill();
+      petStateAggregator?.stop();
+      petStateAggregator = null;
+      petExternalVisibilityController?.shutdown();
+      petExternalVisibilityController = null;
+      reconcileExternalAdapters = null;
+      petDispatchService = null;
+      petHostActionReceiptService = null;
+      petImDecisions?.stop();
+      petImDecisions = null;
+      petLongTaskCoordinator?.stop();
+      petLongTaskCoordinator = null;
+      unsubscribePetLongTaskStream?.();
+      unsubscribePetLongTaskStream = null;
+      unsubscribePetReportStream?.();
+      unsubscribePetReportStream = null;
+      petAttentionPolicy?.stop();
+      petAttentionPolicy = null;
+      const petWorkInboxFlush = petWorkInboxStore?.flush();
+      petWorkInboxStore = null;
+      const petLongTaskFlush = petLongTaskStore?.flush();
+      petLongTaskStore = null;
+      disposePetIpc?.();
+      disposePetIpc = null;
+      automationHandle?.stop();
+      automationHandle = null;
+      ptyKillAll();
+      transcriptSubscriptions?.closeAll();
+      roomManager.closeAll();
+      // Each external-runtime session holds a child process and a listening port,
+      // and neither dies with the parent on Windows. Captured before the async
+      // block so a later reassignment cannot make this a no-op.
+      const externalRuntimeShutdown = externalRuntimeService?.stopAll();
+      externalRuntimeService = null;
+      await Promise.allSettled([
+        imGatewayService.dispose(),
+        mobileRemoteController.dispose(),
+        gatewayControlServer?.stop(),
+        petWorkInboxFlush,
+        petLongTaskFlush,
+        externalRuntimeShutdown,
+        cookieRefreshShutdown,
+        sessionCatalogIpc.flush(),
+        panelAppBridge.shutdownMedia(),
+        chromeExtensionRuntimeService.stop(),
+      ]);
+      gatewayControlServer = undefined;
+      await mobileUploads.dispose();
+    },
+    quit: () => app.quit(),
+  }),
+);
 
 app.on("activate", () => {
   if (ownsDesktopInstance && !preferredMainWindow()) void createWindow();

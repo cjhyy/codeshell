@@ -23,6 +23,9 @@ export interface RelayRegistration {
   credentialEpoch: number;
   protocolVersion: 1;
   name: string;
+  accountId?: string;
+  refreshToken?: string;
+  credentialExpiresAt?: number;
 }
 export interface RelaySecretCipher {
   available(): boolean;
@@ -43,7 +46,13 @@ export function validRegistration(value: unknown): value is RelayRegistration {
     data.protocolVersion === 1 &&
     typeof data.name === "string" &&
     data.name.length > 0 &&
-    data.name.length <= 100
+    data.name.length <= 100 &&
+    (data.accountId === undefined
+      ? data.refreshToken === undefined && data.credentialExpiresAt === undefined
+      : isRelayHostId(data.accountId) &&
+        isRelayToken(data.refreshToken) &&
+        Number.isSafeInteger(data.credentialExpiresAt) &&
+        data.credentialExpiresAt! > 0)
   );
 }
 

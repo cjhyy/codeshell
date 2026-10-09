@@ -18,8 +18,19 @@ import type {
   MobileRemoteGatewayStatus,
   MobileRemoteOpenResult,
 } from "./im-gateway-control-server.js";
-import { enrollRelayComputer, validateRelayEnrollment } from "./device-relay-enrollment.js";
+import {
+  enrollRelayComputer,
+  enrollAccountRelayComputer,
+  validateRelayEnrollment,
+} from "./device-relay-enrollment.js";
 import { DeviceRelayStore, type RelayRegistration } from "./device-relay-store.js";
+import type { CloudAccountManager } from "./cloud-account-manager.js";
+import {
+  CloudAccountHttpError,
+  createCloudAccountTransport,
+  type CloudAccountTransport,
+} from "./cloud-account-http.js";
+import { validCloudAccountGrant } from "./cloud-account-store.js";
 
 /** One owner for all three transports. Stop fences pending starts/enrollment immediately. */
 export class MobileRemoteController {
@@ -32,6 +43,10 @@ export class MobileRemoteController {
   private loadFailed = false;
   private state: DesktopRelayState = "unregistered";
   private disposed = false;
+  private deviceRefresh?: Promise<string>;
+  private deviceRefreshResponse?: Promise<unknown>;
+  private deviceAuthority = 0;
+  private accountEnrollment?: { origin: string; accountId: string };
   constructor(
     private readonly deps: {
       host: RemoteHostManager;
@@ -41,6 +56,9 @@ export class MobileRemoteController {
       store: DeviceRelayStore;
       environmentDir: string;
       changed: (status: DesktopRelayStatus) => void;
+      account?: CloudAccountManager;
+      accountRequest?: CloudAccountTransport;
+      connectorFactory?: typeof createDeviceRelayConnector;
     },
   ) {}
   private serial<T>(work: () => Promise<T>): Promise<T> {
@@ -72,6 +90,7 @@ export class MobileRemoteController {
             publicOrigin: data.publicOrigin,
             hostId: data.hostId,
             name: data.name,
+            ...(data.accountId ? { accountId: data.accountId } : {}),
           }
         : {}),
     };
@@ -100,6 +119,9 @@ export class MobileRemoteController {
   }
   enroll(input: DesktopRelayEnrollment, authorized: () => boolean): Promise<DesktopRelayStatus> {
     validateRelayEnrollment(input);
+    this.deviceAuthority++;
+    this.deviceRefresh = undefined;
+    this.deviceRefreshResponse = undefined;
     this.invalidate();
     const generation = this.generation;
     const signal = this.operation.signal;
@@ -116,19 +138,57 @@ export class MobileRemoteController {
       this.deps.store.forget();
       this.registration = undefined;
       this.publish("unregistered");
+      let result: RelayRegistration | undefined;
       try {
-        const result = await enrollRelayComputer(input, environmentId, signal);
+        if (input.authorization === "account") {
+          const account = this.deps.account?.status();
+          if (
+            account?.state !== "signed-in" ||
+            !account.account ||
+            account.origin !== input.relayOrigin
+          )
+            throw new Error("请先登录同一云服务的账号。");
+          this.accountEnrollment = { origin: account.origin, accountId: account.account.id };
+          const token = await this.deps.account!.getCredential(
+            account.origin,
+            account.account.id,
+            signal,
+          );
+          result = await enrollAccountRelayComputer(
+            input,
+            environmentId,
+            token,
+            account.account.id,
+            signal,
+            this.deps.accountRequest ?? createCloudAccountTransport(),
+          );
+        } else result = await enrollRelayComputer(input, environmentId, signal);
         if (signal.aborted || !authorized()) throw new Error("登记已取消。");
         this.deps.store.save(result);
         this.registration = result;
         this.publish("stopped");
         return this.relayStatus();
       } catch {
-        throw new Error("登记未保存。请在目录页面生成新票据并重新登记；当前电脑连接已停止。");
+        if (result?.accountId) void this.revokeAccountDevice(result);
+        throw new Error(
+          input.authorization === "account"
+            ? "电脑登记未保存，请检查云账号和网络后重新登记；连接已停止。"
+            : "登记未保存。请在目录页面生成新票据并重新登记；当前电脑连接已停止。",
+        );
+      } finally {
+        this.accountEnrollment = undefined;
       }
     });
   }
   forget(): Promise<void> {
+    // A cold process still owns a persisted device grant. Unreadable storage
+    // leaves no credential to revoke, but must not prevent deleting local state.
+    this.load();
+    const previous = this.registration;
+    const refresh = this.deviceRefreshResponse;
+    this.deviceAuthority++;
+    this.deviceRefresh = undefined;
+    this.deviceRefreshResponse = undefined;
     this.invalidate();
     return this.serial(async () => {
       await this.closeTransport();
@@ -141,6 +201,8 @@ export class MobileRemoteController {
       } catch {
         this.publish("storage-error");
         throw new Error("无法移除本机登记，请检查文件权限后重试。");
+      } finally {
+        if (previous?.accountId) void this.revokeAccountDevice(previous, refresh);
       }
     });
   }
@@ -210,8 +272,14 @@ export class MobileRemoteController {
         15_000,
       );
       signal.addEventListener("abort", abort, { once: true });
-      this.connector = createDeviceRelayConnector({
+      this.connector = (this.deps.connectorFactory ?? createDeviceRelayConnector)({
         ...this.registration!,
+        ...(this.registration?.accountId
+          ? {
+              getCredential: (credentialSignal: AbortSignal) =>
+                this.accountDeviceCredential(credentialSignal),
+            }
+          : {}),
         localHost: this.deps.host.relayTarget(),
         onState: (state) => {
           if (generation !== this.generation || state === "closed") return;
@@ -235,6 +303,139 @@ export class MobileRemoteController {
       this.connector.start();
     });
   }
+  /** Account logout must not stop an unrelated LAN/tunnel Host or local tasks. */
+  retireAccountRelay(identity: { origin: string; accountId: string }): Promise<void> {
+    this.load();
+    const matches =
+      this.registration?.relayOrigin === identity.origin &&
+      this.registration?.accountId === identity.accountId;
+    const enrolling =
+      this.accountEnrollment?.origin === identity.origin &&
+      this.accountEnrollment?.accountId === identity.accountId;
+    if (!matches && !enrolling) return Promise.resolve();
+    this.deviceAuthority++;
+    this.deviceRefresh = undefined;
+    this.deviceRefreshResponse = undefined;
+    if (enrolling || this.deps.host.status()?.mode === "relay") this.invalidate();
+    return this.serial(async () => {
+      if (this.deps.host.status()?.mode === "relay") await this.closeTransport();
+      if (
+        this.registration?.relayOrigin !== identity.origin ||
+        this.registration?.accountId !== identity.accountId
+      )
+        return;
+      this.registration = undefined;
+      try {
+        this.deps.store.forget();
+        this.publish("unregistered");
+      } catch {
+        this.publish("storage-error");
+        throw new Error("无法移除账号的电脑授权，请检查文件权限。");
+      }
+    });
+  }
+  private async accountDeviceCredential(signal: AbortSignal): Promise<string> {
+    const registration = this.registration;
+    const account = this.deps.account?.status();
+    if (
+      !registration?.accountId ||
+      account?.state !== "signed-in" ||
+      account.origin !== registration.relayOrigin ||
+      account.account?.id !== registration.accountId
+    )
+      throw new CloudAccountHttpError(401);
+    signal.throwIfAborted();
+    if (registration.credentialExpiresAt! > Date.now() + 30_000) return registration.credential;
+    if (!this.deviceRefresh) {
+      const authority = this.deviceAuthority;
+      // A transport stop fences use but keeps a committed rotation recoverable.
+      // Forget, account logout and re-enrollment retire this authority separately.
+      const response = (this.deps.accountRequest ?? createCloudAccountTransport())({
+        origin: registration.relayOrigin,
+        path: "/api/v1/account/refresh",
+        body: { refreshToken: registration.refreshToken },
+      });
+      this.deviceRefreshResponse = response;
+      const pending = (async () => {
+        const result = await response;
+        if (
+          !validCloudAccountGrant(result) ||
+          result.kind !== "device" ||
+          result.account.id !== registration.accountId ||
+          result.hostId !== registration.hostId ||
+          (result.audience !== undefined && result.audience !== registration.relayOrigin) ||
+          result.accessTokenExpiresAt <= Date.now()
+        )
+          throw new CloudAccountHttpError(401);
+        const next = {
+          ...registration,
+          credential: result.accessToken,
+          refreshToken: result.refreshToken,
+          credentialExpiresAt: result.accessTokenExpiresAt,
+        };
+        const current = this.deps.account?.status();
+        if (
+          authority !== this.deviceAuthority ||
+          this.registration !== registration ||
+          current?.state !== "signed-in" ||
+          current.origin !== registration.relayOrigin ||
+          current.account?.id !== registration.accountId
+        ) {
+          void this.revokeAccountDevice(next);
+          throw new Error("电脑授权刷新已取消。");
+        }
+        try {
+          this.deps.store.save(next);
+        } catch {
+          void this.revokeAccountDevice(next);
+          throw new CloudAccountHttpError(401);
+        }
+        this.registration = next;
+        return next.credential;
+      })();
+      this.deviceRefresh = pending;
+      void pending
+        .finally(() => {
+          if (this.deviceRefresh === pending) this.deviceRefresh = undefined;
+          if (this.deviceRefreshResponse === response) this.deviceRefreshResponse = undefined;
+        })
+        .catch(() => {});
+    }
+    const credential = await this.deviceRefresh;
+    signal.throwIfAborted();
+    return credential;
+  }
+  private async revokeAccountDevice(registration: RelayRegistration, refresh?: Promise<unknown>) {
+    if (!registration.accountId) return;
+    const request = this.deps.accountRequest ?? createCloudAccountTransport();
+    try {
+      let credential = registration.credential;
+      if (refresh || registration.credentialExpiresAt! <= Date.now()) {
+        const grant = await (refresh ??
+          request({
+            origin: registration.relayOrigin,
+            path: "/api/v1/account/refresh",
+            body: { refreshToken: registration.refreshToken },
+          }));
+        if (
+          !validCloudAccountGrant(grant) ||
+          grant.kind !== "device" ||
+          grant.account.id !== registration.accountId ||
+          grant.hostId !== registration.hostId
+        )
+          return;
+        credential = grant.accessToken;
+      }
+      await request({
+        origin: registration.relayOrigin,
+        path: "/api/v1/account/logout",
+        token: credential,
+        body: {},
+      });
+    } catch {
+      /* Local authority is already retired; server revocation/expiry remains authoritative. */
+    }
+  }
   stop(): Promise<void> {
     this.invalidate();
     return this.serial(async () => {
@@ -243,9 +444,10 @@ export class MobileRemoteController {
       this.publish(this.registration ? "stopped" : this.state);
     });
   }
-  dispose(): Promise<void> {
+  async dispose(): Promise<void> {
     this.disposed = true;
-    return this.stop();
+    await this.stop();
+    await this.deviceRefresh?.catch(() => {});
   }
   pairingUrl(): { pairingUrl: string; expiresAt: number } {
     if (!this.status().url) throw new Error("远程连接尚未就绪。");
