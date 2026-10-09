@@ -7,14 +7,13 @@ import { execFileSync, spawn } from "node:child_process";
 import { createServer } from "node:http";
 import { mkdir, mkdtemp, readFile, readdir, realpath, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
+import { performance } from "node:perf_hooks";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { createBunTestEnvironment } from "../../../scripts/bun-test-completion.mjs";
 import {
   finiteSettingsHooks,
   finiteBoundSettings,
-  prepareFiniteHookFixture,
-  prepareFiniteHookBoundsFixture,
 } from "../../../scripts/fixtures/finite-hook-package.mjs";
 
 const appDir = resolve(dirname(fileURLToPath(import.meta.url)), "..");
@@ -165,6 +164,7 @@ const harnessPaths = [
   "packages/desktop/scripts/operation-read-guard.mjs",
   "scripts/fixtures/finite-hook-package.mjs",
   "scripts/fixtures/finite-hook-metrics.mjs",
+  "packages/desktop/scripts/operation-read-install-finite.mjs",
 ];
 const harnessFiles = Object.fromEntries(
   harnessPaths.map((path) => [
@@ -258,6 +258,7 @@ let app,
   physicalRequests = 0;
 let finiteFixture;
 let mainPerformance;
+let launchToReadyMs;
 const observations = [];
 const mainStderr = [];
 let rendererErrors = [];
@@ -435,21 +436,24 @@ try {
   if (finiteResources) {
     // Actual local install/approval under the synthetic HOME, before Main's
     // startup config is captured. All Core imports occur after this guard.
-    Object.assign(
-      process.env,
-      Object.fromEntries(Object.entries(fixture.env).filter(([, value]) => value !== undefined)),
-    );
-    await import("./operation-read-guard.mjs");
-    finiteFixture = await (
-      finiteBounds ? prepareFiniteHookBoundsFixture : prepareFiniteHookFixture
-    )({
-      coreUrl,
-      home: isolated.home,
-      cwd: projectRoot,
-      settingsScope: "full",
-      settingsBytes: positiveSettingsBytes,
-      largeResources: finiteBounds,
+    await new Promise((done, reject) => {
+      const child = spawn(
+        process.execPath,
+        [
+          fileURLToPath(new URL("./operation-read-install-finite.mjs", import.meta.url)),
+          isolated.home,
+          finiteBounds ? "--resource-bounds" : "--resources",
+        ],
+        { env: fixture.env, stdio: "inherit" },
+      );
+      child.once("error", reject);
+      child.once("exit", (code) =>
+        code === 0 ? done() : reject(new Error(`Guarded finite installer failed (${code})`)),
+      );
     });
+    finiteFixture = JSON.parse(
+      await readFile(join(isolated.home, "finite-installed.json"), "utf8"),
+    );
     fixture.env.CODESHELL_OPERATION_HOOK_HOST = JSON.stringify({
       runtime: hookRuntime,
       inlineCommandSha256: [denyHook, fixedInputHook].map((command) =>
@@ -472,6 +476,7 @@ try {
       `\nglobalThis.__readCustody = (await import(${JSON.stringify(helperUrl)})).installOperationReadFixture(await import(${JSON.stringify(coreUrl)}), ${JSON.stringify(origin)}, "review");\n`,
   );
   stage = "launch guarded production Main";
+  const launchStarted = performance.now();
   app = await launchCodeShellElectron({
     appDir,
     ...isolated,
@@ -483,6 +488,7 @@ try {
     while (mainStderr.join("").length > 32_768) mainStderr.shift();
   });
   win = await findCodeShellWindow(app);
+  launchToReadyMs = performance.now() - launchStarted;
   rendererErrors = captureRendererErrors(win);
   await win.setViewportSize({ width: 1440, height: 980 });
   const viewOnly = win.getByRole("button", { name: /^(仅查看|View only)/ });
@@ -674,7 +680,11 @@ try {
         globalThis.__finiteHookMetrics.beginFiniteHookMetrics(paths);
         globalThis.__finiteHookMetrics.startFiniteHookProfile();
       },
-      { sourcePath: settingsPath, resourceRoot: finiteFixture.packageRoot },
+      {
+        sourcePath: settingsPath,
+        resourceRoot: finiteFixture.packageRoot,
+        runtimeExecutable: hookRuntime.executable,
+      },
     );
   await card.getByRole("button", { name: "Read-only review…", exact: true }).click();
   await card
@@ -864,6 +874,7 @@ try {
         finiteResourcePlans: finiteFixture?.plans ?? null,
         actualPluginApproval: finiteFixture?.approval ?? null,
         mainPerformance,
+        launchToReadyMs,
         checks: [
           "actual compiled Engine unknown",
           "actual synthetic HTTP fixed GETs only",

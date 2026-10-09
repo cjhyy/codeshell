@@ -9,15 +9,19 @@ let profiler;
 const descriptors = new Map();
 const open = fs.openSync,
   close = fs.closeSync,
-  read = fs.readSync;
+  read = fs.readSync,
+  readFile = fs.readFileSync;
+const kindFor = (path) =>
+  String(path) === current.sourcePath
+    ? "source"
+    : String(path) === current.runtimeExecutable
+      ? "runtime"
+      : String(path).startsWith(current.resourceRoot + "/")
+        ? "resource"
+        : "other";
 fs.openSync = function (path, ...args) {
   if (current) {
-    const kind =
-      String(path) === current.sourcePath
-        ? "source"
-        : String(path).startsWith(current.resourceRoot + "/")
-          ? "resource"
-          : "other";
+    const kind = kindFor(path);
     current[kind + "OpenCalls"]++;
   }
   const descriptor = open.call(this, path, ...args);
@@ -32,30 +36,34 @@ fs.readSync = function (descriptor, ...args) {
   const bytes = read.call(this, descriptor, ...args);
   if (current) {
     const path = descriptors.get(descriptor);
-    const kind =
-      path === current.sourcePath
-        ? "source"
-        : path?.startsWith(current.resourceRoot + "/")
-          ? "resource"
-          : "other";
+    const kind = kindFor(path);
     current[kind + "ReadCalls"]++;
     current[kind + "ReadBytes"] += bytes;
   }
   return bytes;
 };
+fs.readFileSync = function (path, ...args) {
+  return current && String(path) === current.runtimeExecutable
+    ? measureFiniteHookSlice("runtimeBinaryRead", () => readFile.call(this, path, ...args))
+    : readFile.call(this, path, ...args);
+};
 syncBuiltinESMExports();
 
-export function beginFiniteHookMetrics({ sourcePath, resourceRoot }) {
+export function beginFiniteHookMetrics({ sourcePath, resourceRoot, runtimeExecutable }) {
   if (current) throw new Error("Finite fixture measurement already active");
   current = {
     sourcePath,
     resourceRoot,
+    runtimeExecutable,
     sourceReadCalls: 0,
     sourceOpenCalls: 0,
     sourceReadBytes: 0,
     resourceReadCalls: 0,
     resourceOpenCalls: 0,
     resourceReadBytes: 0,
+    runtimeOpenCalls: 0,
+    runtimeReadCalls: 0,
+    runtimeReadBytes: 0,
     otherReadCalls: 0,
     otherOpenCalls: 0,
     otherReadBytes: 0,
@@ -84,7 +92,7 @@ export function endFiniteHookMetrics() {
     kernelFsReadBlocks: usage.fsRead - value.usage.fsRead,
     userCpuMicros: usage.userCPUTime - value.usage.userCPUTime,
     systemCpuMicros: usage.systemCPUTime - value.usage.systemCPUTime,
-    note: "Forwarding descriptor readSync bytes plus kernel fsRead blocks (page cache can make blocks zero); 10ms timer gap includes fixture diagnostics. No OS latency guarantee.",
+    note: "Forwarding descriptor readSync bytes plus kernel fsRead blocks (page cache can make blocks zero); 10ms timer and synchronous-call diagnostics add measurement overhead. The positive interval has no synchronous Docker observer. Cancellation intervals separately include the fixture's synchronous inspect/top observer. No OS latency guarantee.",
   };
 }
 

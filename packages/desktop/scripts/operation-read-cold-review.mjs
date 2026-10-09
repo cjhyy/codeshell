@@ -2,7 +2,7 @@
 /* global Event, localStorage, window */
 import assert from "node:assert/strict";
 import { createHash } from "node:crypto";
-import { mkdir, readFile, realpath, writeFile } from "node:fs/promises";
+import { cp, mkdir, readFile, realpath, writeFile } from "node:fs/promises";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { prepareConfinedElectronFixture } from "./confined-electron-fixture.mjs";
@@ -114,6 +114,18 @@ try {
     const originalCount = Object.values(before.observations ?? {}).flat().length;
     const changedRoot = join(home, "late-native-state-root");
     await mkdir(join(changedRoot, "serve/project-runtime-secrets/fixture"), { recursive: true });
+    await mkdir(join(changedRoot, "desktop"), { recursive: true });
+    for (const name of ["projects.json", "trust.json"])
+      await writeFile(
+        join(changedRoot, "desktop", name),
+        await readFile(join(isolated.codeShellHome, "desktop", name)),
+      );
+    await mkdir(join(changedRoot, "sessions"), { recursive: true });
+    await cp(
+      join(isolated.codeShellHome, "sessions", config.sessionId),
+      join(changedRoot, "sessions", config.sessionId),
+      { recursive: true },
+    );
     await writeFile(
       join(changedRoot, "serve/project-runtime-secrets/fixture/runtime.json"),
       '{"synthetic":"credential-container"}',
@@ -124,6 +136,15 @@ try {
       // late login-shell state-root adoption. This does not claim the shell ran.
       process.env.CODE_SHELL_HOME = changedRoot;
     }, changedRoot);
+    // Mint a new existing IPC preview under the changed synthetic registries;
+    // otherwise the old preview correctly rejects registry identity first.
+    await card
+      .getByRole("button", { name: "Review uncertain external writes", exact: true })
+      .click();
+    await card
+      .getByRole("button", { name: "Review uncertain external writes", exact: true })
+      .click();
+    await card.getByRole("button", { name: "Read-only review…", exact: true }).waitFor();
     await card.getByRole("button", { name: "Read-only review…", exact: true }).click();
     let observed;
     for (let attempt = 0; ; attempt++) {
@@ -145,6 +166,13 @@ try {
     await app.evaluate((_electron, stateRoot) => {
       process.env.CODE_SHELL_HOME = stateRoot;
     }, isolated.codeShellHome);
+    await card
+      .getByRole("button", { name: "Review uncertain external writes", exact: true })
+      .click();
+    await card
+      .getByRole("button", { name: "Review uncertain external writes", exact: true })
+      .click();
+    await card.getByRole("button", { name: "Read-only review…", exact: true }).waitFor();
     await card.getByRole("button", { name: "Read-only review…", exact: true }).click();
     for (let attempt = 0; ; attempt++) {
       const after = JSON.parse(await readFile(ledgerPath, "utf8"));

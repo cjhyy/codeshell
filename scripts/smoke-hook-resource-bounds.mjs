@@ -52,6 +52,7 @@ const {
   endFiniteHookMetrics,
   instrumentFiniteSettings,
   instrumentFiniteHookHost,
+  measureFiniteHookSlice,
 } = await import("./fixtures/finite-hook-metrics.mjs");
 const coreUrl = pathToFileURL(join(process.cwd(), "packages/core/dist/index.js")).href;
 await instrumentFiniteSettings(coreUrl);
@@ -116,19 +117,27 @@ try {
     return instrumentFiniteHookHost(createOperationHookHost(config));
   };
   const makeReader = (signal) =>
-    createGithubOperationReader({
-      cwd,
-      sessionId: "near-bound",
-      settingsScope: "project",
-      signal,
-      assertAuthorized() {},
-      approveRead: async () => true,
-      hookProcesses: host.hookProcesses,
-    });
-  beginFiniteHookMetrics({ sourcePath: settingsPath, resourceRoot: installed.packageRoot });
+    measureFiniteHookSlice("createReader", () =>
+      createGithubOperationReader({
+        cwd,
+        sessionId: "near-bound",
+        settingsScope: "project",
+        signal,
+        assertAuthorized() {},
+        approveRead: async () => true,
+        hookProcesses: host.hookProcesses,
+      }),
+    );
+  beginFiniteHookMetrics({
+    sourcePath: settingsPath,
+    resourceRoot: installed.packageRoot,
+    runtimeExecutable: runtime.executable,
+  });
   host = startup();
   reader = makeReader(new AbortController().signal);
-  await reader.read("get_repository", "synthetic", { owner: "fixture", repo: "repo" });
+  await measureFiniteHookSlice("readUntilFirstAwait", () =>
+    reader.read("get_repository", "synthetic", { owner: "fixture", repo: "repo" }),
+  );
   await reader.close();
   reader = undefined;
   const positive = endFiniteHookMetrics();
@@ -162,7 +171,11 @@ try {
       .filter(Boolean),
   );
   const controller = new AbortController();
-  beginFiniteHookMetrics({ sourcePath: settingsPath, resourceRoot: installed.packageRoot });
+  beginFiniteHookMetrics({
+    sourcePath: settingsPath,
+    resourceRoot: installed.packageRoot,
+    runtimeExecutable: runtime.executable,
+  });
   host = startup();
   reader = makeReader(controller.signal);
   const outcome = reader
@@ -235,7 +248,9 @@ try {
         ),
         results,
         limitations:
-          "One near-bound shared source and small declared files; no claim of arbitrary large-script suitability or hard real-time Main responsiveness.",
+          contentMode === "--large-resources"
+            ? "One near-4MiB shared source and 64 files totaling just below 32MiB. Actual repeated verification I/O and synchronous costs are recorded; this is no claim of arbitrary script compatibility or hard real-time Host responsiveness."
+            : "One near-4MiB shared source and 64 small files; this does not measure the aggregate resource-byte bound or guarantee hard real-time Host responsiveness.",
       },
       null,
       2,
