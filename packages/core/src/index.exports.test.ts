@@ -106,6 +106,7 @@ const expectedRuntimeExportsByPartition = {
     "createManagedDocumentParserResolver",
   ],
   toolSystemAndHostServices: [
+    "createLinkOperationReviewStore",
     "getInteractiveApprovalBackend",
     "defaultSandboxConfig",
     "buildNotificationMessage",

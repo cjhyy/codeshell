@@ -119,6 +119,8 @@ export type {
 
 // ─── Tool system and host services ───────────────────────────────
 
+export { createLinkOperationReviewStore } from "./links/operation-review.js";
+
 export { getInteractiveApprovalBackend } from "./tool-system/permission.js";
 export { defaultSandboxConfig, type SandboxConfig } from "./tool-system/sandbox/index.js";
 export {
