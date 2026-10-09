@@ -61,7 +61,8 @@
     "packages/*"
   ],
   "overrides": {
-    "react": "19.2.6"
+    "react": "19.2.6",
+    "proxy-addr": "2.0.8"
   },
   "repository": {
     "type": "git",
