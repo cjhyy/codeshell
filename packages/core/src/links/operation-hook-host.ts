@@ -9,6 +9,7 @@ import { userHome } from "../settings/manager.js";
 import {
   assertHookResourceNotCredential,
   createHookCredentialPolicy,
+  type HookCredentialPolicy,
 } from "./operation-hook-credentials.js";
 import { createHookSourceCustody, sourceMatches } from "./operation-hook-custody.js";
 import { parseOperationHookHost, type NativeHookResourcePlan } from "./operation-hook-plans.js";
@@ -48,19 +49,26 @@ export function createOperationHookHost(
   });
   const parsed = parseOperationHookHost(configuration);
   const host = createConstrainedDockerProcessHost(parsed.runtime);
-  const credentialPolicy = createHookCredentialPolicy({
-    nativeHome: resolve(options.nativeHome ?? userHome()),
-    temporaryRoot: resolve(tmpdir()),
-    sensitiveRoots: Object.freeze((options.sensitiveRoots ?? []).map((path) => resolve(path))),
-    stateRoot:
-      options.stateRoot ?? (process.env.CODE_SHELL_HOME || join(userHome(), ".code-shell")),
-  });
+  let credentialPolicy: HookCredentialPolicy | undefined;
+  try {
+    credentialPolicy = createHookCredentialPolicy({
+      nativeHome: resolve(options.nativeHome ?? userHome()),
+      temporaryRoot: resolve(tmpdir()),
+      sensitiveRoots: Object.freeze((options.sensitiveRoots ?? []).map((path) => resolve(path))),
+      stateRoot:
+        options.stateRoot ?? (process.env.CODE_SHELL_HOME || join(userHome(), ".code-shell")),
+    });
+  } catch {
+    // Unsafe known roots disable only the opt-in resource authority for this
+    // native lifetime. Existing approved closed-inline execution needs no files.
+  }
   const cache = new Map<NativeHookResourcePlan, CapturedPlan | "invalid" | "capturing">();
   let disposed = false;
-  let nativeStateInvalid = false;
+  let nativeStateInvalid = credentialPolicy === undefined;
   const originalStateEnvironment = process.env.CODE_SHELL_HOME;
   const assertNativeState = () => {
-    if (nativeStateInvalid) throw new Error("Native Hook state custody unavailable");
+    if (nativeStateInvalid || !credentialPolicy)
+      throw new Error("Native Hook state custody unavailable");
     try {
       credentialPolicy.assertCurrent();
       if (
@@ -161,6 +169,7 @@ export function createOperationHookHost(
                 plan.source.kind === "plugin"
                   ? join(plan.source.installPath, file.source)
                   : file.source;
+              if (!credentialPolicy) throw new Error("Native Hook state custody unavailable");
               assertHookResourceNotCredential(path, credentialPolicy);
               if (resolve(path) !== path || realpathSync(path) !== path)
                 throw new Error("Hook resource path is not canonical");

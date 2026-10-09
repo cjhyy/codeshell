@@ -145,6 +145,33 @@ describe("finite native Hook plans", () => {
       first.planSha256,
     );
   });
+  test("unsafe typed credential-root custody does not disable approved closed inline", async () => {
+    const privateHome = join(root, "dangling-credential-home");
+    mkdirSync(privateHome);
+    symlinkSync(join(privateHome, "missing-aws"), join(privateHome, ".aws"));
+    const literal = "exit 0";
+    const startup = createOperationHookHost(
+      configuration(plan(), { inlineCommandSha256: [hash(literal)] }),
+      { nativeHome: privateHome },
+    )!;
+    const inline = {
+      id: "closed-inline",
+      event: "pre_tool_use" as const,
+      protocol: "settings" as const,
+      priority: 50 as const,
+      command: literal,
+      timeoutMs: 5000,
+    };
+    try {
+      expect(startup.hookProcesses.resolveClosure(inline, context)).toEqual({});
+      expect(() => startup.hookProcesses.resolveClosure({ ...inline, command }, context)).toThrow();
+      rmSync(join(privateHome, ".aws"));
+      expect(() => startup.hookProcesses.resolveClosure({ ...inline, command }, context)).toThrow();
+      expect(startup.hookProcesses.resolveClosure(inline, context)).toEqual({});
+    } finally {
+      await startup.dispose();
+    }
+  });
   test("rejects unknown nested fields, mode ambiguity and all path collisions before reads", () => {
     const invalid: unknown[] = [
       { ...plan(), surprise: true },
