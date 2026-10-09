@@ -1,24 +1,21 @@
 import { createCipheriv, createDecipheriv, createHmac, randomBytes } from "node:crypto";
-import {
-  constants,
-  closeSync,
-  fstatSync,
-  lstatSync,
-  mkdirSync,
-  openSync,
-  readFileSync,
-  readdirSync,
-} from "node:fs";
+import { lstatSync, opendirSync, readdirSync } from "node:fs";
 import { join } from "node:path";
 import { writeFileAtomic } from "../utils/file-mutex.js";
+import { operationDirectory, operationFile, readOperationFile } from "./files.js";
 
 // A legal create_issue plan repeats its 20,000-character body in parameters
 // and postcondition. JSON escaping may use six bytes per UTF-16 code unit.
 // Reserve 512 KiB for that bounded plan plus its authority snapshot, and a
 // separately bounded envelope that includes base64 expansion and metadata.
 const MAX_PLAINTEXT_BYTES = 512 * 1024;
-const MAX_BYTES = 704 * 1024;
+export const OPERATION_RECOVERY_MAX_BYTES = 704 * 1024;
 const hexDigest = /^[a-f0-9]{64}$/;
+
+export interface OperationRecoverySummary {
+  bytes: number;
+  slots: { digest: string; bytes: number }[];
+}
 
 /**
  * Private, authenticated recovery inputs. Only a digest enters the ordinary
@@ -38,18 +35,60 @@ export class OperationRecoveryFiles {
     const root = join(this.ledgerDirectory, "recovery");
     const directory = join(root, id);
     for (const path of [root, directory]) {
-      if (create) {
-        try {
-          mkdirSync(path, { mode: 0o700 });
-        } catch (error) {
-          if ((error as NodeJS.ErrnoException).code !== "EEXIST") throw error;
-        }
-      }
-      const info = lstatSync(path);
-      if (!info.isDirectory() || info.isSymbolicLink())
-        throw new Error("Invalid recovery directory");
+      operationDirectory(path, create);
     }
     return directory;
+  }
+
+  /** Includes both legal physical slots, even an unreferenced failed-checkpoint orphan. */
+  inspect(rootKey: Buffer, id: string, references: string[] = []): OperationRecoverySummary {
+    let directory: string;
+    try {
+      directory = this.directory(id);
+    } catch (error) {
+      if ((error as NodeJS.ErrnoException).code !== "ENOENT" || references.length) throw error;
+      return { bytes: 0, slots: [] };
+    }
+    const identity = operationDirectory(directory);
+    const slots: OperationRecoverySummary["slots"] = [];
+    const entries = opendirSync(directory);
+    try {
+      for (;;) {
+        const entry = entries.readSync();
+        if (!entry) break;
+        if (slots.length >= 2 || !/^[a-f0-9]{64}\.json$/.test(entry.name))
+          throw new Error("Invalid operation recovery slots");
+        const digest = entry.name.slice(0, 64);
+        const file = join(directory, entry.name);
+        const info = operationFile(file, OPERATION_RECOVERY_MAX_BYTES);
+        // Authenticate orphans too; their physical size must not escape the quota.
+        this.read(rootKey, id, digest);
+        const after = operationFile(file, OPERATION_RECOVERY_MAX_BYTES);
+        if (
+          info.dev !== after.dev ||
+          info.ino !== after.ino ||
+          info.size !== after.size ||
+          info.mtimeMs !== after.mtimeMs ||
+          info.ctimeMs !== after.ctimeMs
+        )
+          throw new Error("Operation recovery changed while accounting");
+        slots.push({ digest, bytes: info.size });
+      }
+    } finally {
+      entries.closeSync();
+    }
+    slots.sort((a, b) => a.digest.localeCompare(b.digest));
+    const after = operationDirectory(directory);
+    if (
+      identity.dev !== after.dev ||
+      identity.ino !== after.ino ||
+      identity.mtimeMs !== after.mtimeMs ||
+      identity.ctimeMs !== after.ctimeMs
+    )
+      throw new Error("Operation recovery directory changed while accounting");
+    if (references.some((digest) => !slots.some((slot) => slot.digest === digest)))
+      throw new Error("Original operation recovery input is missing");
+    return { bytes: slots.reduce((sum, slot) => sum + slot.bytes, 0), slots };
   }
 
   private encryptionKey(rootKey: Buffer): Buffer {
@@ -100,38 +139,31 @@ export class OperationRecoveryFiles {
   read(rootKey: Buffer, id: string, digest: string): string {
     if (!hexDigest.test(digest)) throw new Error("Invalid recovery digest");
     const file = join(this.directory(id), `${digest}.json`);
-    const fd = openSync(file, constants.O_RDONLY | (constants.O_NOFOLLOW ?? 0));
-    try {
-      const info = fstatSync(fd);
-      if (!info.isFile() || info.size > MAX_BYTES) throw new Error("Recovery input exceeds bounds");
-      const envelope = JSON.parse(readFileSync(fd, "utf8"));
-      if (
-        !envelope ||
-        Object.keys(envelope).sort().join(",") !== "ciphertext,iv,schema,tag" ||
-        envelope.schema !== 1 ||
-        ![envelope.iv, envelope.tag, envelope.ciphertext].every(
-          (value) => typeof value === "string" && /^[A-Za-z0-9+/]+={0,2}$/.test(value),
-        )
+    const envelope = JSON.parse(readOperationFile(file, OPERATION_RECOVERY_MAX_BYTES));
+    if (
+      !envelope ||
+      Object.keys(envelope).sort().join(",") !== "ciphertext,iv,schema,tag" ||
+      envelope.schema !== 1 ||
+      ![envelope.iv, envelope.tag, envelope.ciphertext].every(
+        (value) => typeof value === "string" && /^[A-Za-z0-9+/]+={0,2}$/.test(value),
       )
-        throw new Error("Invalid recovery input");
-      const iv = Buffer.from(envelope.iv, "base64");
-      const tag = Buffer.from(envelope.tag, "base64");
-      if (iv.length !== 12 || tag.length !== 16) throw new Error("Invalid recovery input");
-      const decipher = createDecipheriv("aes-256-gcm", this.encryptionKey(rootKey), iv);
-      decipher.setAAD(Buffer.from(JSON.stringify([id, digest])));
-      decipher.setAuthTag(tag);
-      const plaintext = Buffer.concat([
-        decipher.update(Buffer.from(envelope.ciphertext, "base64")),
-        decipher.final(),
-      ]).toString("utf8");
-      if (
-        Buffer.byteLength(plaintext) > MAX_PLAINTEXT_BYTES ||
-        this.digest(rootKey, id, plaintext) !== digest
-      )
-        throw new Error("Recovery input authentication failed");
-      return plaintext;
-    } finally {
-      closeSync(fd);
-    }
+    )
+      throw new Error("Invalid recovery input");
+    const iv = Buffer.from(envelope.iv, "base64");
+    const tag = Buffer.from(envelope.tag, "base64");
+    if (iv.length !== 12 || tag.length !== 16) throw new Error("Invalid recovery input");
+    const decipher = createDecipheriv("aes-256-gcm", this.encryptionKey(rootKey), iv);
+    decipher.setAAD(Buffer.from(JSON.stringify([id, digest])));
+    decipher.setAuthTag(tag);
+    const plaintext = Buffer.concat([
+      decipher.update(Buffer.from(envelope.ciphertext, "base64")),
+      decipher.final(),
+    ]).toString("utf8");
+    if (
+      Buffer.byteLength(plaintext) > MAX_PLAINTEXT_BYTES ||
+      this.digest(rootKey, id, plaintext) !== digest
+    )
+      throw new Error("Recovery input authentication failed");
+    return plaintext;
   }
 }
