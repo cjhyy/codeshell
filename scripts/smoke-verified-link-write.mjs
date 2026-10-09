@@ -8,6 +8,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { confinedWorkerEnvironment } from "./runtime-cost-smoke-isolation.mjs";
+import { seedRetentionMetadata } from "./fixtures/operation-retention-data.mjs";
 
 if (process.argv[2] === "--worker") {
   // The parent checks the pre-bootstrap guard receipt before authorizing import.
@@ -15,6 +16,16 @@ if (process.argv[2] === "--worker") {
   assert.equal(String((await once(process.stdin, "data"))[0]).trim(), "start");
   const root = process.env.AGENT_CWD;
   const origin = process.env.CODESHELL_COST_SMOKE_ORIGIN;
+  if (process.argv.includes("--retention")) {
+    const { default: http } = await import("node:http");
+    const { default: https } = await import("node:https");
+    for (const probe of [
+      () => fetch("https://provider.invalid/"),
+      () => http.get("http://127.0.0.1:1/"),
+      () => https.get("https://provider.invalid/"),
+    ])
+      assert.throws(probe, /refused a non-fixture request/);
+  }
   const core = await import("@cjhyy/code-shell-core");
   const credential = {
     id: "fixture-link",
@@ -156,6 +167,11 @@ if (process.argv[2] === "--worker") {
       behaviorMode: "verification-fixture",
     });
     assert.equal(verified.reason, "completed");
+    let retainedReceipt;
+    if (process.argv.includes("--retention")) {
+      const seeded = seedRetentionMetadata(join(root, "sessions"));
+      retainedReceipt = seeded.original;
+    }
     const events = [];
     const uncertain = await engine.run("fixture unknown", {
       sessionId: "unknown-session",
@@ -177,6 +193,29 @@ if (process.argv[2] === "--worker") {
       "utf8",
     );
     assert.ok(transcript.includes("尚未通过独立回读验证"));
+    if (retainedReceipt) {
+      const ledger = JSON.parse(
+        readFileSync(join(root, "sessions/.operations/ledger.json"), "utf8"),
+      );
+      assert.equal(ledger.schema, 2);
+      assert.equal(ledger.records[retainedReceipt.id], undefined);
+      assert.ok(Object.values(ledger.records).some((receipt) => receipt.state === "unknown"));
+      const prefix = retainedReceipt.id.slice(0, 2);
+      const bucket = JSON.parse(
+        readFileSync(
+          join(
+            root,
+            "sessions/.operations/archives",
+            `${prefix}-${ledger.archives.buckets[prefix].digest}.json`,
+          ),
+          "utf8",
+        ),
+      );
+      assert.deepEqual(
+        bucket.records.find((receipt) => receipt.id === retainedReceipt.id),
+        retainedReceipt,
+      );
+    }
   } finally {
     await engine.dispose();
   }
@@ -219,24 +258,32 @@ if (process.argv[2] === "--worker") {
     receipts = join(root, "guard-receipts.jsonl");
   mkdirSync(join(home, ".code-shell"), { recursive: true, mode: 0o700 });
   writeFileSync(join(home, ".code-shell/settings.json"), "{}", { mode: 0o600 });
-  const child = spawn(process.execPath, [fileURLToPath(import.meta.url), "--worker"], {
-    cwd: root,
-    stdio: ["pipe", "pipe", "pipe"],
-    env: {
-      ...confinedWorkerEnvironment(
-        process.env,
-        home,
-        origin,
-        new URL("./runtime-cost-smoke-isolation.mjs", import.meta.url).href,
-      ),
-      CODESHELL_COST_SMOKE_GUARD_LOG: receipts,
-      CODE_SHELL_DATA_ROOT: join(root, "data"),
-      AGENT_CWD: root,
-      CODE_SHELL_CAPABILITY_MODULES: "",
-      CODE_SHELL_DEV: "0",
-      CODESHELL_SELF_UPDATE_CHECK: "0",
+  const child = spawn(
+    process.execPath,
+    [
+      fileURLToPath(import.meta.url),
+      "--worker",
+      ...(process.argv.includes("--retention") ? ["--retention"] : []),
+    ],
+    {
+      cwd: root,
+      stdio: ["pipe", "pipe", "pipe"],
+      env: {
+        ...confinedWorkerEnvironment(
+          process.env,
+          home,
+          origin,
+          new URL("./runtime-cost-smoke-isolation.mjs", import.meta.url).href,
+        ),
+        CODESHELL_COST_SMOKE_GUARD_LOG: receipts,
+        CODE_SHELL_DATA_ROOT: join(root, "data"),
+        AGENT_CWD: root,
+        CODE_SHELL_CAPABILITY_MODULES: "",
+        CODE_SHELL_DEV: "0",
+        CODESHELL_SELF_UPDATE_CHECK: "0",
+      },
     },
-  });
+  );
   let output = "";
   child.stdout.on("data", (data) => {
     output += String(data);
