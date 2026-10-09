@@ -87,8 +87,11 @@ localhost 审计观察到 PUT/DELETE 跟随 307 再次发送；stdin POST 跟随
 账本位于 Session storage root 下独立 `.operations/ledger.json`，0700/0600，保留有界
 元数据与 keyed HMAC；默认沿用宿主 credential cipher。未提供加密 cipher 的 Node/worker
 宿主使用 owner-only plaintext key，不宣称系统密钥库加密。它不暴露给 renderer 或模型
-RPC，不保存正文/凭据，也不是针对同用户任意代码的防篡改存储。16MiB/10000条达到上限
-会拒绝新写，不丢弃旧幂等回执；压缩/保留策略仍待实现。
+RPC，不保存正文/凭据，也不是针对同用户任意代码的防篡改存储。active 保留 16 MiB／10,000 条
+上限；已封存 verified 或无 attempt blocked 可按原 HMAC 前缀归档，原 key／完整回执和 unknown
+阻断不变。256 桶、每桶 1,024 条／2 MiB，冷正文总额 512 MiB，全部容量有限；达到安全容量
+仍拒绝新写，不丢弃旧幂等回执。schema 2／不可变版本／受控 GC、迁移与降级边界及实际进程
+崩溃和并发验收见[账本保留交付](operation-ledger-retention-delivery.md)。本源码增量仍待合并和发行。
 
 写回执采用短同步锁和原子 rename，不持锁等待网络或批准，不承诺断电 fsync durability。
 任何 Run 终态先封住 planned/pending；同一 controller 即使落盘失败也先安装内存 fence。

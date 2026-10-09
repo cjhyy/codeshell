@@ -174,7 +174,7 @@ Services PR28 已合入 `4bec9daa`，五个公开 Host 包仍为 0.9.28、SDK ov
    受控 Electron GUI 两 Session／known+unknown／partial／取消／刷新已由 PR88 完成，不能代替真实账单。
    Runtime MCP pool 已有实现，补核多 Session/项目隔离、释放和汇总展示，避免重复重建。
 2. Workspace 跨文件／语义查询及 OCR；上传解析／索引、Profile 求交与现有 Link 只读视图已实现。
-   PR100 人工接受已合并，独立只读核查已接入本源码；配置工具 Hook 兼容、其他 provider 写语义、批量 slots 与账本保留策略仍待逐项接入。
+   PR100 人工接受已合并，独立只读核查已接入本源码；配置工具 Hook 兼容、其他 provider 写语义、批量 slots 仍待逐项接入。操作账本[有界冷归档保留](operation-ledger-retention-delivery.md)已在独立增量完成受控原生验收，原 intent／完整回执、unknown／Run 阻断和显式有限容量保留；待本增量合并与正式发行，不代表真实 provider 验收。
 3. 更多真实工具的后置验证和错误预算适配，以及真实长程与按模型配对评测、通用评测
    adapter。Skill 预算已发布；非核心工具渐进发现已合入 main，已随 0.9.28 正式发行。
 4. 优化实验室真实模型实验、报告价值评价和有工具的任务试验，须按原授权要求完成。

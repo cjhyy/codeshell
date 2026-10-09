@@ -102,6 +102,7 @@ if (childMode) {
   const origin = process.env.CODESHELL_RETENTION_ORIGIN;
   const file = join(root, ".operations", "ledger.json");
   if (mode.startsWith("crash-")) {
+    let publishedArchive = false;
     const write = fs.writeFileSync;
     fs.writeFileSync = (path, ...args) => {
       const value = write(path, ...args);
@@ -113,10 +114,12 @@ if (childMode) {
     fs.renameSync = (from, to) => {
       if (
         (["crash-before-manifest", "crash-settle-before-manifest"].includes(mode) && to === file) ||
+        (mode === "crash-final-verification" && publishedArchive && to === file) ||
         (mode === "crash-recovery-before-rename" && String(to).includes("/recovery/"))
       )
         process.kill(process.pid, "SIGKILL");
       const value = rename(from, to);
+      if (String(from).includes("/.stage-")) publishedArchive = true;
       if (
         (["crash-after-blob", "crash-settle-after-blob"].includes(mode) &&
           String(from).includes("/.stage-")) ||
@@ -131,7 +134,31 @@ if (childMode) {
   const { OperationLedger } = await import("../packages/core/dist/operations/ledger.js");
   const { PlaintextCipher } = await import("../packages/core/dist/credentials/cipher.js");
   const ledger = new OperationLedger(root, new PlaintextCipher());
-  if (mode.startsWith("crash-")) {
+  if (mode === "crash-final-verification") {
+    const { OperationController } = await import("../packages/core/dist/operations/controller.js");
+    await new OperationController(ledger).run(
+      retentionPlan("verification", "crash-verification-session"),
+      {
+        assertAuthorized() {},
+        async preflight() {},
+        async validate() {},
+        async authorize() {
+          return true;
+        },
+        async execute() {
+          const response = await fetch(`${origin}/send`, {
+            method: "POST",
+            body: "verification-crash",
+          });
+          return response.json();
+        },
+        async verify() {
+          return (await fetch(`${origin}/read`)).status === 200;
+        },
+      },
+    );
+    assert.fail("Expected abrupt final verification death");
+  } else if (mode.startsWith("crash-")) {
     if (mode.startsWith("crash-settle-") || mode.startsWith("crash-recovery-")) {
       const original = JSON.parse(fs.readFileSync(join(root, "fixture-receipt.json"), "utf8"));
       if (mode.startsWith("crash-settle-"))
@@ -447,12 +474,71 @@ if (childMode) {
       noHttpBefore,
       "atomic metadata recovery never replays a provider write",
     );
+    const failedCommitRoot = fs.mkdtempSync(join(process.env.HOME, "retention-verified-commit-"));
+    const failedCommitLedger = new OperationLedger(failedCommitRoot, cipher);
+    const seedPlan = retentionPlan();
+    const seed = failedCommitLedger.prepare(seedPlan);
+    const seedAttempt = failedCommitLedger.claim(seed.id).receipt.attemptId;
+    failedCommitLedger.settle(seed.id, seedAttempt, "succeeded", {
+      reference: { id: "seed/reference" },
+    });
+    failedCommitLedger.settle(seed.id, seedAttempt, "verified");
+    const failedCommitSeed = seedRetentionMetadata(failedCommitRoot, 9000, {
+      decrypt: (value) => cipher.decrypt(value),
+      unknown: true,
+    });
+    const verificationPlan = retentionPlan("verification", "crash-verification-session");
+    const httpBeforeFailedCommit = calls.length;
+    const failedCommitProcess = await launch(
+      "crash-final-verification",
+      failedCommitRoot,
+      origin,
+      "SIGKILL",
+    );
+    assert.equal(
+      calls.length,
+      httpBeforeFailedCommit + 2,
+      "one send and read before abrupt commit death",
+    );
+    const failedCommitCold = new OperationLedger(failedCommitRoot, cipher);
+    const coldFailedCommitReceipt = failedCommitCold.prepare(verificationPlan);
+    assert.equal(coldFailedCommitReceipt.state, "succeeded");
+    assert.equal(failedCommitCold.claim(coldFailedCommitReceipt.id).claimed, false);
+    assert.equal(failedCommitCold.hasUnverifiedWrites(verificationPlan.sessionId), true);
+    // A real finalization discards only the unpublished verified copy. The durable
+    // provider attempt stays unknown; neither the original nor a new same-session
+    // intent may replay the already sent request.
+    assert.equal(failedCommitCold.sealForFinalization(verificationPlan.sessionId), true);
+    const finalized = new OperationLedger(failedCommitRoot, cipher).prepare(verificationPlan);
+    assert.equal(finalized.state, "unknown");
+    for (const field of ["id", "attemptId", "reference", "recovery", "createdAt", "fingerprint"])
+      assert.deepEqual(finalized[field], coldFailedCommitReceipt[field]);
+    assert.equal(finalized.verifiedAt, undefined);
+    assert.equal(failedCommitCold.hasUnverifiedWrites(verificationPlan.sessionId), true);
+    const controller = new OperationController(new OperationLedger(failedCommitRoot, cipher));
+    assert.equal((await controller.run(verificationPlan, adapter)).state, "unknown");
+    const blocked = await controller.run(
+      retentionPlan("same-session-after-death", verificationPlan.sessionId),
+      adapter,
+    );
+    assert.equal(blocked.state, "blocked");
+    assert.equal(blocked.attemptId, undefined);
+    assert.equal(
+      calls.length,
+      httpBeforeFailedCommit + 2,
+      "unpublished verified proof cannot upgrade or replay the original provider attempt",
+    );
+    assert.equal(
+      JSON.parse(fs.readFileSync(failedCommitSeed.file, "utf8")).key,
+      failedCommitSeed.state.key,
+    );
     const capacity = await runRetentionCapacity({
       home: process.env.HOME,
       cipher,
       OperationLedger,
       launch,
       origin,
+      criticalMetrics: metrics,
     });
     const receipts = fs.readFileSync(guards, "utf8").trim().split("\n").map(JSON.parse);
     assert.ok(receipts.length >= 14);
@@ -481,6 +567,15 @@ if (childMode) {
       crashes,
       atomicRecovery,
       rollbacks,
+      failedVerificationCommit: {
+        pid: failedCommitProcess.pid,
+        durableState: "unknown",
+        barrier: true,
+        originalIdentityPreserved: true,
+        unpublishedProofAdopted: false,
+        additionalHttp: 0,
+        repairRequired: false,
+      },
       maxCriticalMs: Math.max(...allMetrics),
       lockStaleMs: 10_000,
       guards: receipts,
