@@ -105,9 +105,12 @@ SDK Engine 验收还要求已 verified 原操作归档后不重发，另一个 u
 终态和 transcript 仍为 unverified_write，冷新 Run 仍零重发。本测试不替代真实 provider 写入、
 真实账号或付费模型验收。
 
-每次最终组合验收生成 `retention-receipt.json`，记录实际 Node 路径／hash／版本、父子 PID、
+每次最终组合验收生成 `native-receipt.json`，记录实际 Node 路径／hash／版本、父子 PID、
 容量矩阵字节、七次桶内容读取、所有 SIGKILL 边界与锁内耗时。崩溃后等待原 10 秒 stale 的时间
 不算锁内耗时；guard 保持单次锁内小于 5 秒，不放宽原 stale。实际恢复正文矩阵为
 536,870,912 B／768 槽／384 ID，无稀疏文件或正文删除。旧源码验收日志中的
 `repairRequired:true` 仅描述修复前的 verification 提交窗口，最终组合要求该安全覆盖窗口可恢复。
 实测耗时不代表任意硬件的延迟 SLA。
+
+默认 smoke 的 evidence 位于隔离 HOME，会随 wrapper 清理。需要保留原始 receipt／child 日志时，
+给 `scripts/smoke-operation-retention.mjs` 显式传入由本次验收拥有的 evidence 目录；汇总也输出到 stdout。
