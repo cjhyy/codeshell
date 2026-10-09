@@ -158,7 +158,7 @@ describe("desktop sources service", () => {
     expect(readdirSync(root).filter((name) => name.endsWith(".tmp"))).toEqual([]);
   });
 
-  test("overwrite and delete remove the derived document index as well as invalidate old content", async () => {
+  test("overwrite and delete invalidate content without creating or touching legacy indexes", async () => {
     const picked = join(sourceDir, "brief.md");
     writeFileSync(picked, "Project milestone");
     uploadFiles(cwd, [picked]);
@@ -170,13 +170,17 @@ describe("desktop sources service", () => {
       });
     await read();
     const index = join(cwd, ".code-shell", "source-index");
-    expect(readdirSync(index)).toHaveLength(1);
+    expect(existsSync(index)).toBe(false);
+    mkdirSync(index);
+    const legacy = join(index, "legacy.json");
+    writeFileSync(legacy, "Legacy bytes belong to the workspace");
     writeFileSync(picked, "Replacement milestone");
     uploadFiles(cwd, [picked]);
-    expect(readdirSync(index)).toEqual([]);
     expect((await read()).text).toContain("Replacement milestone");
-    expect(readdirSync(index)).toHaveLength(1);
+    expect(readFileSync(legacy, "utf8")).toBe("Legacy bytes belong to the workspace");
     deleteUpload(cwd, "brief.md");
-    expect(readdirSync(index)).toEqual([]);
+    await expect(read()).rejects.toThrow("ENOENT");
+    expect(readdirSync(index)).toEqual(["legacy.json"]);
+    expect(readFileSync(legacy, "utf8")).toBe("Legacy bytes belong to the workspace");
   });
 });
