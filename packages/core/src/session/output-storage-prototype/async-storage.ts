@@ -1,4 +1,4 @@
-/** Non-activated marker-only async read storage. No write or producer activation entry exists. */
+/** Non-activated marker-only async storage. No production producer authority is granted. */
 import {
   AsyncFixtureCustody,
   assertAsyncJournalSnapshot,
@@ -6,12 +6,25 @@ import {
   openAsyncJournal,
   readAsyncStateUnderLease,
   snapshotAsyncJournal,
+  createWriterFacts,
+  readWriterFacts,
   type AsyncLeaseOptions,
 } from "./async-io.js";
 import { AsyncJournalReader } from "./async-journal.js";
-import { EVENT_ID, HEX, StorageFailure } from "./codec.js";
+import { encodeState, EVENT_ID, HEX, StorageFailure, type RawObject } from "./codec.js";
 import { AsyncIdentityIndex, IdentityPool } from "./id-index.js";
-import type { VerifiedJournal } from "./journal.js";
+import type { Scope, VerifiedJournal } from "./journal.js";
+import {
+  captureWriterRequest,
+  executeWriterMutation,
+  onlyCancellation,
+  prepareWriterMutation,
+  WriterCancellation,
+  WriterFailure,
+  type PreparedMutation,
+  type WriterRequest,
+} from "./async-writer.js";
+import type { Receipt } from "./storage.js";
 import { combineFailures, type FixtureIOHooks } from "./lease-fs.js";
 import { claimAsyncFixtureReader } from "./path-mode.js";
 
@@ -133,6 +146,135 @@ export class AsyncFixtureStorage {
         ? { cursor: await reader.receipt(proof.identity, receipt), replayed: true as const }
         : undefined;
     });
+  }
+  transition(options: AsyncLeaseOptions = {}): Promise<string> {
+    return this.write({ kind: "transition" }, options) as Promise<string>;
+  }
+  append(
+    eventId: string,
+    scope: Scope,
+    event: RawObject,
+    options: AsyncLeaseOptions = {},
+  ): Promise<Receipt> {
+    try {
+      return this.write(
+        captureWriterRequest("append", eventId, scope, event),
+        options,
+      ) as Promise<Receipt>;
+    } catch (cause) {
+      return Promise.reject(cause);
+    }
+  }
+  control(
+    eventId: string,
+    scope: Scope,
+    goal: unknown,
+    event: RawObject | null,
+    expectedRevision: number,
+    options: AsyncLeaseOptions = {},
+  ): Promise<Receipt> {
+    try {
+      return this.write(
+        captureWriterRequest("control", eventId, scope, event, goal, expectedRevision),
+        options,
+      ) as Promise<Receipt>;
+    } catch (cause) {
+      return Promise.reject(cause);
+    }
+  }
+  private write(request: WriterRequest, options: AsyncLeaseOptions): Promise<string | Receipt> {
+    if (this.closing) return Promise.reject(new Error("Async fixture storage disposed"));
+    if (this.current)
+      return Promise.reject(
+        new StorageFailure("busy", "Async fixture storage operation in progress"),
+      );
+    const signal = options.signal;
+    const facts = createWriterFacts();
+    let prepared: PreparedMutation | undefined;
+    const work = Promise.resolve().then(async () => {
+      try {
+        const settlement = await this.custody.withLeaseSettled(
+          async (lease) => {
+            const file = await openAsyncJournal(lease, true);
+            const snapshot = await snapshotAsyncJournal(lease, file);
+            const reader = new AsyncJournalReader(lease, file, snapshot);
+            const state = await readAsyncStateUnderLease(lease);
+            let proof: VerifiedJournal;
+            if (this.verified && this.index.isAuthenticated(snapshot.stamp)) {
+              await reader.state(state, this.verified);
+              proof = this.verified;
+            } else {
+              this.index.reset();
+              proof = await reader.verify(state, this.index);
+              this.index.authenticate(snapshot.stamp);
+            }
+            prepared = await prepareWriterMutation(
+              lease,
+              reader,
+              state,
+              proof,
+              this.index,
+              request,
+            );
+            if (encodeState(await readAsyncStateUnderLease(lease)) !== encodeState(state))
+              throw new StorageFailure("incomplete", "State changed during writer preparation");
+            await assertAsyncJournalSnapshot(lease, file, snapshot);
+            await executeWriterMutation(lease, file, prepared, facts);
+            // Native custody owns and closes this descriptor, also when cancellation interrupted a stage.
+            return prepared.receipt;
+          },
+          { signal },
+        );
+        const actual = readWriterFacts(facts);
+        const causes = [...settlement.failures, ...settlement.cleanupFailures];
+        if (signal?.aborted && !causes.length)
+          causes.push(new DOMException("Writer cancelled after cleanup", "AbortError"));
+        if (causes.length) {
+          if (onlyCancellation(causes) && settlement.cleanupOk) {
+            const committed =
+              !!actual.bound &&
+              !!prepared?.finalStage &&
+              actual.completed.includes(prepared.finalStage);
+            throw new WriterCancellation(
+              committed
+                ? "committed"
+                : !actual.journalSubmitted && !actual.tempSubmitted
+                  ? "zero_effects"
+                  : "incomplete_or_unknown",
+              combineFailures(causes),
+              committed ? prepared!.receipt : undefined,
+            );
+          }
+          if (
+            settlement.cleanupOk &&
+            !actual.journalSubmitted &&
+            !actual.tempSubmitted &&
+            settlement.failures.length === 1 &&
+            settlement.failures[0] instanceof StorageFailure
+          )
+            throw settlement.failures[0];
+          throw new WriterFailure(causes);
+        }
+        if (!settlement.cleanupOk || !prepared) throw new WriterFailure(settlement.cleanupFailures);
+        const proof = prepared.finalStage ? actual.bound : prepared.proof;
+        if (!proof) throw new WriterFailure([new Error("Final writer bindings not proven")]);
+        if (prepared.delta) this.index.publishPrepared(prepared.delta, proof.fileStamp);
+        else this.index.authenticate(proof.fileStamp);
+        this.verified = proof;
+        return prepared.receipt;
+      } catch (cause) {
+        this.verified = undefined;
+        this.index.invalidate();
+        throw cause;
+      }
+    });
+    this.current = work;
+    void work
+      .finally(() => {
+        if (this.current === work) this.current = undefined;
+      })
+      .catch(() => {});
+    return work;
   }
   dispose(): Promise<void> {
     this.closing = true;

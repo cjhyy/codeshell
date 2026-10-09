@@ -1,5 +1,5 @@
 /** Non-activated async custody/I/O experiment. Only private opt-in fixture readers use it; no package export. */
-import { randomUUID } from "node:crypto";
+import { createHash, randomUUID } from "node:crypto";
 import { constants } from "node:fs";
 import * as fsp from "node:fs/promises";
 import type { FileHandle } from "node:fs/promises";
@@ -10,13 +10,26 @@ import { lock } from "../../utils/lockfile.js";
 import {
   decodeStateBytes,
   canonical,
+  canonicalSteps,
   encodeState,
+  EVENT_ID,
+  HEX,
   fail,
   parseUnique,
   STATE_LIMIT,
   StorageFailure,
   type DecodedState,
+  type Position,
+  type RawObject,
 } from "./codec.js";
+import {
+  encodeRecord,
+  eventPayloadIterator,
+  validateScope,
+  verifyState,
+  type Binding,
+  type VerifiedJournal,
+} from "./journal.js";
 import {
   CHUNK_SIZE,
   EVENT_LIMIT,
@@ -46,6 +59,7 @@ type Context = {
   files: Set<AsyncFile>;
   busy: boolean;
   ioFailures: unknown[];
+  writerBinding?: { proof: VerifiedJournal; state: string; stateStamp: string };
 };
 const leases = new WeakMap<AsyncLease, Context>();
 const snapshots = new WeakMap<AsyncJournalSnapshot, { context: Context; file: AsyncFile }>();
@@ -53,12 +67,49 @@ const files = new WeakMap<AsyncFile, { handle: FileHandle; owner: Context; close
 export type AsyncLease = Readonly<{ root: string; directory: string; sessionId: string }>;
 export type AsyncFile = Readonly<{ kind: "fixture-journal" }>;
 export type AsyncLeaseOptions = { signal?: AbortSignal };
+export type LeaseSettlement<T> = Readonly<{
+  value?: T;
+  failures: readonly unknown[];
+  cleanupFailures: readonly unknown[];
+  cleanupOk: boolean;
+}>;
 
 /** Capture before validating caller fields. This copies JSON; it does not grant producer authority. */
+const ownedJSONLengths = new WeakMap<object, number>();
+function assertCaptureArrays(value: unknown, depth = 0): void {
+  if (depth > 128) fail("Canonical depth bound");
+  if (utilTypes.isProxy(value)) fail("Proxy is not strict JSON");
+  if (value === null || typeof value !== "object") return;
+  const descriptors = Object.getOwnPropertyDescriptors(value);
+  if (Object.values(descriptors).some((descriptor) => !("value" in descriptor)))
+    fail("Accessor is not strict JSON");
+  if (Array.isArray(value)) {
+    const length = descriptors.length.value as number;
+    if (
+      Object.keys(descriptors).length !== length + 1 ||
+      Object.keys(descriptors).some(
+        (key) =>
+          key !== "length" &&
+          (!/^(0|[1-9][0-9]*)$/.test(key) || Number(key) >= length || !descriptors[key].enumerable),
+      )
+    )
+      fail("Sparse or decorated JSON array");
+  }
+  for (const descriptor of Object.values(descriptors))
+    if (descriptor.enumerable) assertCaptureArrays(descriptor.value, depth + 1);
+}
 export function captureOwnedJSON<T>(value: T, limit = EVENT_LIMIT): T {
   if (!Number.isSafeInteger(limit) || limit < 1 || limit > EVENT_LIMIT)
     throw new StorageFailure("capacity", "Strict capture byte bound cannot exceed the event limit");
-  const owned = parseUnique(canonical(value), limit);
+  if (typeof value === "object" && value !== null && ownedJSONLengths.has(value)) {
+    if (ownedJSONLengths.get(value)! > limit)
+      throw new StorageFailure("capacity", "Owned JSON byte bound");
+    return value; // Only our recursively frozen copies carry this certificate.
+  }
+  // Caller arrays may hide own decoration from Object.keys; parsed disk JSON cannot have it.
+  assertCaptureArrays(value);
+  const text = canonical(value);
+  const owned = parseUnique(text, limit);
   const freeze = (item: unknown): void => {
     if (item !== null && typeof item === "object") {
       for (const child of Object.values(item)) freeze(child);
@@ -66,6 +117,8 @@ export function captureOwnedJSON<T>(value: T, limit = EVENT_LIMIT): T {
     }
   };
   freeze(owned);
+  if (typeof owned === "object" && owned !== null)
+    ownedJSONLengths.set(owned, Buffer.byteLength(text));
   return owned as T;
 }
 
@@ -102,6 +155,13 @@ function captureStateData(value: unknown, depth = 0): unknown {
       .filter(([, descriptor]) => descriptor.enumerable && descriptor.value !== undefined)
       .map(([key, descriptor]) => [key, captureStateData(descriptor.value, depth + 1)]),
   );
+}
+export function captureOwnedGoal(value: unknown): unknown {
+  if (value === undefined) return undefined;
+  const owned = captureStateData(value);
+  if (Buffer.byteLength(JSON.stringify(owned)) > STATE_LIMIT)
+    throw new StorageFailure("capacity", "Goal state byte bound");
+  return owned;
 }
 
 function captureStateWrapper(value: DecodedState): DecodedState {
@@ -191,6 +251,11 @@ async function stamp(handle: FileHandle): Promise<string> {
   const stat = await handle.stat({ bigint: true });
   return `${stat.dev}:${stat.ino}:${stat.size}:${stat.mtimeNs}:${stat.ctimeNs}`;
 }
+async function namedWriterStamp(path: string): Promise<string> {
+  const stat = await fsp.lstat(path, { bigint: true });
+  if (!stat.isFile() || stat.isSymbolicLink()) fail("Final writer binding requires a regular file");
+  return `${stat.dev}:${stat.ino}:${stat.size}:${stat.mtimeNs}:${stat.ctimeNs}`;
+}
 async function readBounded(path: string, limit: number, resource: Resources = {}): Promise<Buffer> {
   const handle = await regular(path, constants.O_RDONLY, resource);
   const failures: unknown[] = [];
@@ -252,14 +317,18 @@ function fileFor(context: Context, file: AsyncFile): FileHandle {
   if (!stored || stored.owner !== context || stored.closed) fail("Owned async journal required");
   return stored.handle;
 }
-function submit<T>(lease: AsyncLease, operation: () => Promise<T>): Promise<T> {
-  const context = assertAsyncLease(lease);
+function submit<T>(
+  lease: AsyncLease,
+  operation: () => Promise<T>,
+  allowCancelled = false,
+): Promise<T> {
+  const context = assertAsyncLease(lease, allowCancelled);
   if (context.busy) fail("Overlapping fixture I/O refused");
   context.busy = true;
   // Register before the microtask that can submit the first native operation.
   const work = Promise.resolve().then(() => {
     context.custody.assertHealthy();
-    abort(context.signal);
+    if (!allowCancelled) abort(context.signal);
     return operation();
   });
   context.pending.add(work);
@@ -268,7 +337,7 @@ function submit<T>(lease: AsyncLease, operation: () => Promise<T>): Promise<T> {
       context.pending.delete(work);
       context.busy = false;
       context.custody.assertHealthy();
-      abort(context.signal); // A cancellation waits for the actual operation/durability group.
+      if (!allowCancelled) abort(context.signal); // Wait for the actual durability group.
       return value;
     },
     (cause) => {
@@ -290,6 +359,7 @@ async function completeIO<T>(
   name: string,
   operation: () => Promise<T>,
   beforeSubmit?: () => void,
+  completed?: () => void,
 ): Promise<T> {
   await context.custody.assertDirectory();
   const failures: unknown[] = [];
@@ -302,6 +372,7 @@ async function completeIO<T>(
     beforeSubmit?.();
     submitted = true;
     value = await operation();
+    completed?.(); // Actual native facts survive an instrumentation/authority error afterwards.
     await context.custody.hooks.afterNative?.(name);
     await context.custody.assertDirectory();
   } catch (cause) {
@@ -328,16 +399,17 @@ async function writeAll(
   handle: FileHandle,
   bytes: Buffer,
   position: number,
+  alreadyStarted = false,
 ): Promise<void> {
   // Once a byte write starts, complete the already submitted durability group before cancellation.
-  abort(context.signal);
+  if (!alreadyStarted) abort(context.signal);
   for (let at = 0; at < bytes.length; ) {
     const { bytesWritten } = await completeIO(
       context,
       "file.write",
       () => handle.write(bytes, at, Math.min(CHUNK_SIZE, bytes.length - at), position + at),
       () => {
-        if (at === 0) abort(context.signal);
+        if (at === 0 && !alreadyStarted) abort(context.signal);
       },
     );
     if (!bytesWritten) fail("Fixture write made no progress");
@@ -356,11 +428,36 @@ export function writeAsyncStateUnderLease(
   state: DecodedState,
   platform = process.platform,
 ): Promise<void> {
+  return writePreparedAsyncStateUnderLease(lease, prepareAsyncState(lease, state, platform));
+}
+export type PreparedState = Readonly<{ kind: "prepared-state" }>;
+const preparedStates = new WeakMap<PreparedState, { lease: AsyncLease; bytes: Buffer }>();
+export function prepareAsyncState(
+  lease: AsyncLease,
+  state: DecodedState,
+  platform = process.platform,
+): PreparedState {
   const context = assertAsyncLease(lease);
   if (platform === "win32")
     throw new StorageFailure("unsupported", "Prototype requires directory fsync support");
   const bytes = Buffer.from(encodeState(captureStateWrapper(state)));
   context.custody.assertCapturedState(decodeStateBytes(bytes));
+  const token = Object.freeze({ kind: "prepared-state" as const });
+  preparedStates.set(token, { lease, bytes });
+  return token;
+}
+export function writePreparedAsyncStateUnderLease(
+  lease: AsyncLease,
+  prepared: PreparedState,
+  facts?: WriterFacts,
+  stage = "state",
+): Promise<void> {
+  const context = assertAsyncLease(lease);
+  const owned = preparedStates.get(prepared);
+  if (!owned || owned.lease !== lease) fail("Prepared state for this current lease required");
+  const bytes = owned.bytes;
+  context.custody.assertCapturedState(decodeStateBytes(bytes));
+  const ledger = facts ? claimWriterFacts(facts, lease) : undefined;
   return submit(lease, async () => {
     const temporary = join(lease.directory, `.prototype-async-state-${randomUUID()}.tmp`);
     let handle: FileHandle | undefined;
@@ -368,18 +465,27 @@ export function writeAsyncStateUnderLease(
     const resource = resources(context);
     try {
       await context.custody.assertCurrent();
+      abort(context.signal);
+      if (ledger) ledger.tempSubmitted = true;
       handle = await regular(
         temporary,
         constants.O_WRONLY | constants.O_CREAT | constants.O_EXCL,
         resource,
       );
-      await writeAll(context, handle, bytes, 0);
+      if (ledger) await context.custody.hooks.afterNative?.("writer.temp.open");
+      await writeAll(context, handle, bytes, 0, !!ledger);
       await completeIO(context, "file.sync", () => handle!.sync());
       await closeHandle(handle, resource);
       handle = undefined;
       await context.custody.assertDirectory();
-      await completeIO(context, "state.rename", () =>
-        fsp.rename(temporary, join(lease.directory, "state.json")),
+      await completeIO(
+        context,
+        "state.rename",
+        () => fsp.rename(temporary, join(lease.directory, "state.json")),
+        undefined,
+        () => {
+          ledger?.native.push("state.rename:" + stage);
+        },
       );
       const directory = await fsp.open(
         lease.directory,
@@ -387,7 +493,15 @@ export function writeAsyncStateUnderLease(
       );
       const directoryFailures: unknown[] = [];
       try {
-        await completeIO(context, "directory.sync", () => directory.sync());
+        await completeIO(
+          context,
+          "directory.sync",
+          () => directory.sync(),
+          undefined,
+          () => {
+            ledger?.native.push("directory.sync:" + stage);
+          },
+        );
       } catch (cause) {
         directoryFailures.push(cause);
       }
@@ -398,6 +512,8 @@ export function writeAsyncStateUnderLease(
       }
       if (directoryFailures.length) throw combineFailures(directoryFailures);
       await context.custody.assertDirectory();
+      if (ledger) ledger.completed.push(stage);
+      await context.custody.hooks.afterNative?.("writer.stage." + stage);
     } catch (cause) {
       failures.push(cause);
     }
@@ -600,6 +716,282 @@ export function closeAsyncFile(lease: AsyncLease, file: AsyncFile): Promise<void
   });
 }
 
+export type WriterFacts = Readonly<{ kind: "writer-facts" }>;
+type Facts = {
+  journalSubmitted: boolean;
+  tempSubmitted: boolean;
+  completed: string[];
+  native: string[];
+  bound?: VerifiedJournal;
+};
+const writerLedgers = new WeakMap<WriterFacts, Facts>();
+const writerOwners = new WeakMap<WriterFacts, AsyncLease>();
+export function createWriterFacts(): WriterFacts {
+  const token = Object.freeze({ kind: "writer-facts" as const });
+  writerLedgers.set(token, {
+    journalSubmitted: false,
+    tempSubmitted: false,
+    completed: [],
+    native: [],
+  });
+  return token;
+}
+function factsFor(token: WriterFacts): Facts {
+  const facts = writerLedgers.get(token);
+  if (!facts) fail("Owned writer facts required");
+  return facts;
+}
+function claimWriterFacts(token: WriterFacts, lease: AsyncLease): Facts {
+  const facts = factsFor(token),
+    owner = writerOwners.get(token);
+  if (owner && owner !== lease) fail("Writer facts for this current lease required");
+  writerOwners.set(token, lease);
+  return facts;
+}
+export function readWriterFacts(token: WriterFacts): Readonly<Facts> {
+  return structuredClone(factsFor(token));
+}
+
+export type PreparedEventSource = Readonly<{ kind: "prepared-event-source" }>;
+type EventSource = {
+  lease: AsyncLease;
+  binding: Binding;
+  event?: RawObject;
+  bytes: Buffer;
+  id: string;
+  digest: string;
+};
+const eventSources = new WeakMap<PreparedEventSource, EventSource>();
+export async function prepareAsyncEventSource(
+  lease: AsyncLease,
+  binding: Binding,
+  event: RawObject,
+): Promise<PreparedEventSource> {
+  // Each parameter has its own bound; an exact 16MiB event is not an oversized envelope.
+  const ownedBinding = captureOwnedJSON(binding);
+  const ownedEvent = captureOwnedJSON(event);
+  assertAsyncLease(lease);
+  validateScope(ownedBinding.scope);
+  if (
+    typeof ownedBinding.eventId !== "string" ||
+    !EVENT_ID.test(ownedBinding.eventId) ||
+    typeof ownedBinding.projectionDigest !== "string" ||
+    !HEX.test(ownedBinding.projectionDigest)
+  )
+    fail("Invalid prepared event binding");
+  if (typeof ownedEvent.type !== "string" || !ownedEvent.type.length) fail("Invalid display event");
+  const bytes = Buffer.alloc(ownedJSONLengths.get(ownedEvent)!);
+  let offset = 0;
+  let pending = 0;
+  for (const chunk of canonicalSteps(ownedEvent)) {
+    const length = Buffer.byteLength(chunk);
+    if (bytes.write(chunk, offset) !== length) fail("Owned canonical event changed");
+    offset += length;
+    pending += length;
+    if (pending >= CHUNK_SIZE) {
+      await yieldAsyncLease(lease);
+      pending = 0;
+    }
+  }
+  if (offset !== bytes.length) fail("Owned canonical event length changed");
+  if (bytes.length > EVENT_LIMIT) throw new StorageFailure("capacity", "Whole event byte bound");
+  const hash = createHash("sha256");
+  for (let at = 0; at < bytes.length; at += CHUNK_SIZE) {
+    hash.update(bytes.subarray(at, at + CHUNK_SIZE));
+    await yieldAsyncLease(lease);
+  }
+  const token = Object.freeze({ kind: "prepared-event-source" as const });
+  eventSources.set(token, {
+    lease,
+    binding: ownedBinding,
+    event: bytes.length <= CHUNK_SIZE ? ownedEvent : undefined,
+    bytes,
+    id: randomUUID(),
+    digest: hash.digest("hex"),
+  });
+  return token;
+}
+export function preparedEventCount(source: PreparedEventSource): number {
+  const value = eventSources.get(source);
+  if (!value) fail("Owned prepared event source required");
+  return Math.max(1, Math.ceil(value.bytes.length / CHUNK_SIZE));
+}
+export type PreparedRecordGroup = Readonly<{ kind: "prepared-record-group" }>;
+type Group = {
+  lease: AsyncLease;
+  head: Position;
+  positions: Position[];
+  lengths: number[];
+  source?: EventSource;
+  payload?: RawObject;
+};
+const recordGroups = new WeakMap<PreparedRecordGroup, Group>();
+function* groupPayloads(group: Group): Generator<RawObject> {
+  if (group.source) {
+    const s = group.source;
+    yield* eventPayloadIterator(s.binding, s.event ?? {}, s.bytes, s.id, s.digest);
+  } else if (group.payload) yield group.payload;
+}
+export async function prepareAsyncRecordGroup(
+  lease: AsyncLease,
+  head: Position,
+  payload?: RawObject,
+  source?: PreparedEventSource,
+): Promise<PreparedRecordGroup> {
+  assertAsyncLease(lease);
+  const ownedHead = captureOwnedJSON(head);
+  // Cursor tokens retain the original Position field order even for an empty prepared group.
+  const group: Group = {
+    lease,
+    head: { sequence: ownedHead.sequence, offset: ownedHead.offset, hash: ownedHead.hash },
+    positions: [],
+    lengths: [],
+  };
+  if (
+    !Number.isSafeInteger(group.head.sequence) ||
+    group.head.sequence < 0 ||
+    !Number.isSafeInteger(group.head.offset) ||
+    group.head.offset < 0 ||
+    typeof group.head.hash !== "string" ||
+    !HEX.test(group.head.hash)
+  )
+    fail("Valid prepared head required");
+  if (payload && source) fail("One prepared record source required");
+  if (source) {
+    group.source = eventSources.get(source);
+    if (!group.source || group.source.lease !== lease) fail("Owned event source required");
+  }
+  if (payload) group.payload = captureOwnedJSON(payload);
+  let position = group.head;
+  for (const value of groupPayloads(group)) {
+    const encoded = encodeRecord(position, value);
+    position = encoded.position;
+    if (position.offset > JOURNAL_LIMIT)
+      throw new StorageFailure("capacity", "Journal storage bound");
+    group.positions.push(position);
+    group.lengths.push(encoded.bytes.length);
+    await yieldAsyncLease(lease);
+  }
+  const token = Object.freeze({ kind: "prepared-record-group" as const });
+  recordGroups.set(token, group);
+  return token;
+}
+export function preparedGroupHead(token: PreparedRecordGroup): Position {
+  const group = recordGroups.get(token);
+  if (!group) fail("Owned prepared record group required");
+  return { ...(group.positions.at(-1) ?? group.head) };
+}
+export function appendPreparedRecordGroup(
+  lease: AsyncLease,
+  file: AsyncFile,
+  token: PreparedRecordGroup,
+  facts: WriterFacts,
+  stage: string,
+): Promise<void> {
+  const context = assertAsyncLease(lease),
+    handle = fileFor(context, file);
+  const group = recordGroups.get(token),
+    ledger = claimWriterFacts(facts, lease);
+  if (!group || group.lease !== lease)
+    fail("Prepared record group for this current lease required");
+  return submit(lease, async () => {
+    await context.custody.assertCurrent();
+    await namedFile(join(lease.directory, "output-journal.jsonl"), handle);
+    if ((await handle.stat()).size !== group.head.offset) fail("Journal head changed before group");
+    let position = group.head,
+      index = 0,
+      groupStarted = false;
+    for (const payload of groupPayloads(group)) {
+      const encoded = encodeRecord(position, payload);
+      const expected = group.positions[index];
+      if (
+        encoded.bytes.length !== group.lengths[index] ||
+        encoded.position.hash !== expected.hash ||
+        encoded.position.offset !== expected.offset
+      )
+        fail("Prepared record recipe changed");
+      for (let at = 0; at < encoded.bytes.length; ) {
+        await namedFile(join(lease.directory, "output-journal.jsonl"), handle);
+        const { bytesWritten } = await completeIO(
+          context,
+          "file.write",
+          () =>
+            handle.write(
+              encoded.bytes,
+              at,
+              Math.min(CHUNK_SIZE, encoded.bytes.length - at),
+              position.offset + at,
+            ),
+          () => {
+            if (!groupStarted) abort(context.signal);
+            groupStarted = true;
+            ledger.journalSubmitted = true;
+          },
+        );
+        if (
+          !Number.isInteger(bytesWritten) ||
+          bytesWritten < 1 ||
+          bytesWritten > Math.min(CHUNK_SIZE, encoded.bytes.length - at)
+        )
+          fail("Invalid short write");
+        at += bytesWritten;
+      }
+      position = encoded.position;
+      index++;
+    }
+    if (groupStarted)
+      await completeIO(
+        context,
+        "file.sync",
+        () => handle.sync(),
+        undefined,
+        () => {
+          ledger.native.push("journal.sync:" + stage);
+        },
+      );
+    await namedFile(join(lease.directory, "output-journal.jsonl"), handle);
+    if ((await handle.stat()).size !== position.offset) fail("Journal size changed after group");
+    await context.custody.assertCurrent();
+    ledger.completed.push(stage);
+    await context.custody.hooks.afterNative?.("writer.stage." + stage);
+  });
+}
+/** Final bindings may be proved after cancellation, but never after revoked native custody. */
+export function finalizeAsyncWriter(
+  lease: AsyncLease,
+  file: AsyncFile,
+  proof: VerifiedJournal,
+  facts: WriterFacts,
+): Promise<VerifiedJournal> {
+  const context = assertAsyncLease(lease, true),
+    handle = fileFor(context, file),
+    ledger = claimWriterFacts(facts, lease);
+  return submit(
+    lease,
+    async () => {
+      const current = await context.custody.assertCurrent();
+      if (current.state.outputJournalIdentity !== proof.pin)
+        fail("Journal pin changed during write");
+      verifyState(current, proof);
+      const stateStamp = await namedWriterStamp(context.custody.target);
+      await namedFile(join(lease.directory, "output-journal.jsonl"), handle);
+      if ((await handle.stat()).size !== proof.head.offset) fail("Final journal head mismatch");
+      const next = { ...proof, fileStamp: await stamp(handle) };
+      if (encodeState(await context.custody.assertCurrent()) !== encodeState(current))
+        fail("Final writer state changed while binding");
+      if ((await namedWriterStamp(context.custody.target)) !== stateStamp)
+        fail("Final writer state stamp changed while binding");
+      await namedFile(join(lease.directory, "output-journal.jsonl"), handle);
+      if ((await stamp(handle)) !== next.fileStamp) fail("Final journal stamp changed");
+      ledger.bound = next;
+      context.writerBinding = { proof: next, state: encodeState(current), stateStamp };
+      await context.custody.hooks.afterNative?.("writer.final_binding");
+      return next;
+    },
+    true,
+  );
+}
+
 export class AsyncFixtureCustody {
   readonly target: string;
   private current?: Promise<unknown>;
@@ -720,10 +1112,34 @@ export class AsyncFixtureCustody {
     operation: (lease: AsyncLease) => T | Promise<T>,
     options: AsyncLeaseOptions = {},
   ): Promise<T> {
+    return this.admit(operation, options).then((settlement) => {
+      if (settlement.failures.length) throw combineFailures(settlement.failures);
+      return settlement.value as T;
+    });
+  }
+  withLeaseSettled<T>(
+    operation: (lease: AsyncLease) => T | Promise<T>,
+    options: AsyncLeaseOptions = {},
+  ): Promise<LeaseSettlement<T>> {
+    return this.admit(operation, options);
+  }
+  private admit<T>(
+    operation: (lease: AsyncLease) => T | Promise<T>,
+    options: AsyncLeaseOptions,
+  ): Promise<LeaseSettlement<T>> {
     if (this.closing) return Promise.reject(new Error("Async custody disposed"));
     if (this.current) return Promise.reject(new Error("Nested async custody acquisition refused"));
     const signal = options.signal; // Own this reference before the first async handoff.
-    const work = this.run(operation, { signal });
+    const cleanupStart = this.cleanupFailures.length;
+    const work = this.run(operation, { signal }, cleanupStart).catch((cause) => {
+      const cleanupFailures = this.cleanupFailures.slice(cleanupStart);
+      try {
+        this.assertHealthy();
+      } catch (health) {
+        cleanupFailures.push(health);
+      }
+      return { failures: [cause], cleanupFailures, cleanupOk: !cleanupFailures.length };
+    });
     this.current = work;
     void work
       .finally(() => {
@@ -736,7 +1152,8 @@ export class AsyncFixtureCustody {
   private async run<T>(
     operation: (lease: AsyncLease) => T | Promise<T>,
     options: AsyncLeaseOptions,
-  ): Promise<T> {
+    cleanupStart: number,
+  ): Promise<LeaseSettlement<T>> {
     abort(options.signal);
     this.assertHealthy();
     let adapter: LeaseFs | undefined;
@@ -820,11 +1237,36 @@ export class AsyncFixtureCustody {
       }
     }
     context.files.clear();
+    const bindingFailures: unknown[] = [];
     try {
-      await this.assertCurrent();
-      abort(options.signal);
+      const current = await this.assertCurrent();
+      const witness = context.writerBinding;
+      if (witness) {
+        if (
+          current.state.outputJournalIdentity !== witness.proof.pin ||
+          encodeState(current) !== witness.state ||
+          (await namedWriterStamp(this.target)) !== witness.stateStamp
+        )
+          fail("Final writer state binding changed during descriptor cleanup");
+        verifyState(current, witness.proof);
+        if (
+          (await namedWriterStamp(join(this.directory, "output-journal.jsonl"))) !==
+          witness.proof.fileStamp
+        )
+          fail("Final writer journal binding changed during descriptor cleanup");
+        await this.assertDirectory();
+      }
     } catch (cause) {
+      poisonPath(this.target, cause);
       failures.push(cause);
+      bindingFailures.push(cause);
+    }
+    if (!bindingFailures.length) {
+      try {
+        abort(options.signal);
+      } catch (cause) {
+        failures.push(cause);
+      }
     }
     leases.delete(lease);
     try {
@@ -841,8 +1283,13 @@ export class AsyncFixtureCustody {
     } catch (cause) {
       failures.push(cause);
     }
-    if (failures.length) throw combineFailures(failures);
-    return result as T;
+    const cleanupFailures = [...this.cleanupFailures.slice(cleanupStart), ...bindingFailures];
+    try {
+      this.assertHealthy();
+    } catch (cause) {
+      cleanupFailures.push(cause);
+    }
+    return { value: result, failures, cleanupFailures, cleanupOk: !cleanupFailures.length };
   }
 
   /** No early release: waits for the callback, submitted I/O, descriptors, heartbeat and unlock. */

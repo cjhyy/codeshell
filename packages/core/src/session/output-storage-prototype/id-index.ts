@@ -10,6 +10,7 @@ export const POOL_BYTES = 96 * 1024 * 1024;
 const MAX_PROBES = 64;
 const MAX_HASH_MATCHES = 4;
 export type IndexReceipt = { sequence: number; offset: number; bindingOffset: number };
+export type PreparedIndexInsert = Readonly<{ kind: "prepared-index-insert" }>;
 type Arena = {
   keys: Uint8Array;
   projections: Uint8Array;
@@ -221,6 +222,77 @@ export class AsyncIdentityIndex extends IdentityTable {
   private closing = false;
   private disposal?: Promise<void>;
   private generation = 0;
+  private readonly prepared = new WeakMap<
+    PreparedIndexInsert,
+    {
+      generation: number;
+      size: number;
+      eventId: string;
+      projection: string;
+      projectionBytes: Buffer;
+      receipt: IndexReceipt;
+      located: { slot: number; hash: Buffer; found: boolean };
+    }
+  >();
+
+  prepareInsert(
+    eventId: string,
+    projection: string,
+    receipt: IndexReceipt,
+    reader: (offset: number) => Promise<string>,
+  ): Promise<PreparedIndexInsert> {
+    if (typeof projection !== "string" || !HEX.test(projection))
+      return Promise.reject(new StorageFailure("incomplete", "Invalid projection digest"));
+    // Use the same descriptor-only capture as addVerified, without inserting into the arena.
+    let owned: IndexReceipt;
+    try {
+      owned = this.captureReceipt(receipt);
+    } catch (cause) {
+      return Promise.reject(cause);
+    }
+    return this.operation(eventId, reader, (located) => {
+      if (located.found) throw new StorageFailure("incomplete", "Duplicate committed event id");
+      if (this.size >= MAX_IDENTITIES)
+        throw new StorageFailure("capacity", "Complete identity capacity exhausted");
+      const token = Object.freeze({ kind: "prepared-index-insert" as const });
+      this.prepared.set(token, {
+        generation: this.generation,
+        size: this.size,
+        eventId,
+        projection,
+        projectionBytes: Buffer.from(projection, "hex"),
+        receipt: owned,
+        located: { ...located, hash: Buffer.from(located.hash) },
+      });
+      return token;
+    });
+  }
+  /** No allocation, capacity search or binding read remains after custody cleanup. */
+  publishPrepared(token: PreparedIndexInsert, stamp: string): void {
+    const delta = this.prepared.get(token);
+    if (
+      !delta ||
+      this.current ||
+      this.closing ||
+      this.disposed ||
+      delta.generation !== this.generation ||
+      delta.size !== this.size ||
+      this.occupied[delta.located.slot]
+    )
+      throw new StorageFailure("incomplete", "Prepared identity lifetime changed");
+    this.prepared.delete(token);
+    // Every deterministic input/capacity validation was completed by prepareInsert.
+    const { slot, hash } = delta.located;
+    this.keys.set(hash, slot * 32);
+    this.projections.set(delta.projectionBytes, slot * 32);
+    this.sequences[slot] = delta.receipt.sequence;
+    this.offsets[slot] = delta.receipt.offset;
+    this.bindingOffsets[slot] = delta.receipt.bindingOffset;
+    this.occupied[slot] = 1;
+    this.size++;
+    super.authenticate(stamp);
+    this.generation++;
+  }
 
   override reset(): void {
     if (this.current || this.closing)
@@ -312,6 +384,17 @@ export class AsyncIdentityIndex extends IdentityTable {
     receipt: IndexReceipt,
     reader: (offset: number) => Promise<string>,
   ): Promise<void> {
+    let owned: IndexReceipt;
+    try {
+      owned = this.captureReceipt(receipt);
+    } catch (cause) {
+      return Promise.reject(cause);
+    }
+    return this.operation(eventId, reader, (located) => {
+      this.insert(eventId, projection, owned, located);
+    });
+  }
+  private captureReceipt(receipt: IndexReceipt): IndexReceipt {
     // Own the receipt before any reader can await or mutate caller data.
     if (
       utilTypes.isProxy(receipt) ||
@@ -319,7 +402,7 @@ export class AsyncIdentityIndex extends IdentityTable {
       typeof receipt !== "object" ||
       Object.getOwnPropertySymbols(receipt).length
     )
-      return Promise.reject(new StorageFailure("incomplete", "Owned identity receipt required"));
+      throw new StorageFailure("incomplete", "Owned identity receipt required");
     const descriptors = Object.getOwnPropertyDescriptors(receipt);
     if (
       Object.keys(descriptors).length !== 3 ||
@@ -331,14 +414,11 @@ export class AsyncIdentityIndex extends IdentityTable {
           descriptors[key].value < 0,
       )
     )
-      return Promise.reject(new StorageFailure("incomplete", "Owned identity receipt required"));
-    const owned: IndexReceipt = {
+      throw new StorageFailure("incomplete", "Owned identity receipt required");
+    return {
       sequence: descriptors.sequence.value as number,
       offset: descriptors.offset.value as number,
       bindingOffset: descriptors.bindingOffset.value as number,
     };
-    return this.operation(eventId, reader, (located) => {
-      this.insert(eventId, projection, owned, located);
-    });
   }
 }

@@ -215,22 +215,36 @@ export function eventPayloads(binding: Binding, event: RawObject): RawObject[] {
   if (!object(event) || !text(event.type)) fail("Invalid display event");
   const bytes = Buffer.from(canonical(event));
   if (bytes.length > EVENT_LIMIT) throw new StorageFailure("capacity", "Whole event byte bound");
-  if (bytes.length <= CHUNK_SIZE) return [{ kind: "event", ...binding, event }];
   const id = randomUUID();
-  const total = Math.ceil(bytes.length / CHUNK_SIZE);
   const eventDigest = digest(bytes);
-  return Array.from({ length: total }, (_, index) => ({
-    kind: "fragment",
-    ...binding,
-    fragment: {
-      id,
-      index,
-      total,
-      eventBytes: bytes.length,
-      eventDigest,
-      data: bytes.subarray(index * CHUNK_SIZE, (index + 1) * CHUNK_SIZE).toString("base64"),
-    },
-  }));
+  return Array.from(eventPayloadIterator(binding, event, bytes, id, eventDigest));
+}
+/** Shared wire recipe; callers here are internal owners of the already captured bytes and IDs. */
+export function* eventPayloadIterator(
+  binding: Binding,
+  event: RawObject,
+  bytes: Buffer,
+  id: string,
+  eventDigest: string,
+): Generator<RawObject> {
+  if (bytes.length <= CHUNK_SIZE) {
+    yield { kind: "event", ...binding, event };
+    return;
+  }
+  const total = Math.ceil(bytes.length / CHUNK_SIZE);
+  for (let index = 0; index < total; index++)
+    yield {
+      kind: "fragment",
+      ...binding,
+      fragment: {
+        id,
+        index,
+        total,
+        eventBytes: bytes.length,
+        eventDigest,
+        data: bytes.subarray(index * CHUNK_SIZE, (index + 1) * CHUNK_SIZE).toString("base64"),
+      },
+    };
 }
 
 export type JournalStep =
