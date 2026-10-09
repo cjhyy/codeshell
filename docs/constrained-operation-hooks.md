@@ -204,6 +204,8 @@ and bounded-content performance/cancellation. The near-limit checks report
 descriptor byte I/O, Settings/capture/resource synchronous slices, timer gaps,
 and cancellation latency. Repeated verification has material synchronous CPU
 and I/O costs; these limits are ceilings, not a responsiveness guarantee. Main
+Host memory for snapshots, fresh configuration parsing and verification is
+separate from the container's 192 MiB limit; cumulative Host RSS is reported.
 measurement covers the review interval after Main is ready, with a separate
 launch-to-ready wall time, not the entire cold startup. CPU profiles are sampled
 diagnostics, not precise per-function elapsed-time guarantees. All measurements

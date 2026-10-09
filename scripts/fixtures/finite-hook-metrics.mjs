@@ -70,6 +70,7 @@ export function beginFiniteHookMetrics({ sourcePath, resourceRoot, runtimeExecut
     maxTimerGapMs: 0,
     started: performance.now(),
     usage: process.resourceUsage(),
+    memoryAtBegin: process.memoryUsage(),
   };
   lastTick = performance.now();
   timer = setInterval(() => {
@@ -87,6 +88,12 @@ export function endFiniteHookMetrics() {
   current = undefined;
   return {
     ...value,
+    usageAtEnd: usage,
+    maxRSSAtBegin: value.usage.maxRSS,
+    maxRSSAtEnd: usage.maxRSS,
+    maxRSSMeaning:
+      "Cumulative process high-water marks, not interval deltas or container memory limits.",
+    memoryAtEnd: process.memoryUsage(),
     elapsedMs: now - value.started,
     maxTimerGapMs: Math.max(value.maxTimerGapMs, now - lastTick),
     kernelFsReadBlocks: usage.fsRead - value.usage.fsRead,
