@@ -27,6 +27,8 @@ export const EVENT_LIMIT = 16 * 1024 * 1024;
 export const CHUNK_SIZE = 64 * 1024;
 const MARKER = ".codeshell-output-storage-fixture";
 const MAGIC = "non-activated-producer-output-storage-prototype-v1\n";
+import { assertSyncFixtureAllowed } from "./path-mode.js";
+
 const activeTokens = new WeakSet<object>();
 
 export type Lease = Readonly<{ root: string; sessionId: string; directory: string }>;
@@ -221,6 +223,7 @@ export class FixtureCustody {
   }
 
   withLease<T>(operation: (lease: Lease) => T): T {
+    assertSyncFixtureAllowed(join(this.directory, "state.json"));
     if (this.held) fail("Nested storage lock acquisition refused");
     fixtureRoot(this.root);
     const target = join(this.directory, "state.json");

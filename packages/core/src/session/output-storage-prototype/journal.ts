@@ -6,7 +6,6 @@ import {
   digest,
   EVENT_ID,
   fail,
-  goalEffect,
   HEX,
   integer,
   keys,
@@ -234,7 +233,43 @@ export function eventPayloads(binding: Binding, event: RawObject): RawObject[] {
   }));
 }
 
-/** Rebuild complete proof in one pass; current state is compared only to latest control. */
+export type JournalStep =
+  | { kind: "line" }
+  | {
+      kind: "add";
+      eventId: string;
+      projection: string;
+      receipt: { sequence: number; offset: number; bindingOffset: number };
+    }
+  | { kind: "parse"; text: string; maxBytes: number; unique: boolean }
+  | { kind: "canonical"; value: unknown }
+  | { kind: "digest"; value: string | Buffer }
+  | { kind: "digestCanonical"; value: unknown }
+  | { kind: "projection"; scope: Scope; event: RawObject | null; effect: string | null }
+  | { kind: "decode"; bytes: Buffer };
+export type JournalSteps<T> = Generator<JournalStep, T, any>;
+
+/** Bounded CPU-only sync evaluator. Async I/O uses the same semantic state machine below. */
+export function evaluateJournalStep(
+  step: Exclude<JournalStep, { kind: "line" } | { kind: "add" }>,
+): unknown {
+  switch (step.kind) {
+    case "parse":
+      return step.unique ? parseUnique(step.text, step.maxBytes) : JSON.parse(step.text);
+    case "canonical":
+      return canonical(step.value);
+    case "digest":
+      return digest(step.value);
+    case "digestCanonical":
+      return digest(canonical(step.value));
+    case "projection":
+      return projection(step.scope, step.event, step.effect);
+    case "decode":
+      return new TextDecoder("utf-8", { fatal: true, ignoreBOM: true }).decode(step.bytes);
+  }
+}
+
+/** Sync I/O driver retained for the original private fixture writer and its regression tests. */
 export function verifyJournal(
   fd: number,
   root: string,
@@ -242,13 +277,42 @@ export function verifyJournal(
   decoded: DecodedState,
   index: CompleteIdentityIndex,
 ): VerifiedJournal {
-  const size = fstatSync(fd).size;
-  if (size > JOURNAL_LIMIT) throw new StorageFailure("capacity", "Journal byte bound");
+  const file = fstatSync(fd);
   const beforeStamp = stamp(fd);
-  const iterator = lines(fd, 0, size);
-  const first = iterator.next();
-  if (first.done) fail("Missing journal header");
-  const header = JSON.parse(first.value.text);
+  const iterator = lines(fd, 0, file.size);
+  const steps = verifyJournalSteps(root, directoryIdentity, file, file.size, beforeStamp, decoded);
+  let next = steps.next();
+  while (!next.done) {
+    const step = next.value;
+    let result: unknown;
+    if (step.kind === "line") {
+      const line = iterator.next();
+      result = line.done ? undefined : line.value;
+    } else if (step.kind === "add")
+      index.addVerified(step.eventId, step.projection, step.receipt, (offset) =>
+        readBinding(fd, offset),
+      );
+    else result = evaluateJournalStep(step);
+    next = steps.next(result);
+  }
+  if (stamp(fd) !== beforeStamp) fail("Journal changed during verification");
+  index.authenticate(beforeStamp);
+  return next.value;
+}
+
+/** One validator for both drivers; it cannot perform I/O, authenticate an index or publish proof. */
+export function* verifyJournalSteps(
+  root: string,
+  directoryIdentity: { dev: number | string; ino: number | string },
+  fileIdentity: { dev: number | string; ino: number | string },
+  size: number,
+  beforeStamp: string,
+  decoded: DecodedState,
+): JournalSteps<VerifiedJournal> {
+  if (size > JOURNAL_LIMIT) throw new StorageFailure("capacity", "Journal byte bound");
+  const first = (yield { kind: "line" }) as Line | undefined;
+  if (!first) fail("Missing journal header");
+  const header = yield { kind: "parse", text: first.text, maxBytes: RECORD_LIMIT, unique: false };
   if (
     !object(header) ||
     header.version !== 1 ||
@@ -259,13 +323,16 @@ export function verifyJournal(
     !text(header.journalId)
   )
     fail("Invalid pinned journal header");
-  const pin = digest(first.value.text + "\n");
+  const pin = yield { kind: "digest", value: first.text + "\n" };
   if (decoded.state.outputJournalIdentity !== pin) fail("Journal pin missing or replaced");
-  const file = fstatSync(fd);
-  const identity = digest(
-    `${digest(root)}\n${first.value.text}\n${directoryIdentity.dev}:${directoryIdentity.ino}\n${file.dev}:${file.ino}`,
-  );
-  const start = { sequence: 0, offset: first.value.end, hash: pin };
+  const rootDigest = yield { kind: "digest", value: root };
+  const identity = yield {
+    kind: "digest",
+    // Existing v1 cursor identities stringify Node's default numeric Stats projection.
+    // Ownership and stamps remain exact BigInt values in the async I/O driver.
+    value: `${rootDigest}\n${first.text}\n${Number(directoryIdentity.dev)}:${Number(directoryIdentity.ino)}\n${Number(fileIdentity.dev)}:${Number(fileIdentity.ino)}`,
+  };
+  const start = { sequence: 0, offset: first.end, hash: pin };
   let current: Position = start;
   let committed: Position = start;
   let transition: RawObject | undefined;
@@ -279,8 +346,10 @@ export function verifyJournal(
     | undefined;
   let legacyGroup: { id: string; total: number; index: number } | undefined;
 
-  for (const line of iterator) {
-    const raw = JSON.parse(line.text);
+  for (;;) {
+    const line = (yield { kind: "line" }) as Line | undefined;
+    if (!line) break;
+    const raw = yield { kind: "parse", text: line.text, maxBytes: RECORD_LIMIT, unique: false };
     if (!object(raw)) fail("Invalid record object");
     const { hash, ...value } = raw;
     if (
@@ -295,7 +364,7 @@ export function verifyJournal(
         transition ||
         typeof value.runId !== "string" ||
         !!value.event === !!value.fragment ||
-        hash !== digest(JSON.stringify(value))
+        hash !== (yield { kind: "digest", value: JSON.stringify(value) })
       )
         fail("Invalid legacy prefix");
       if (value.fragment) {
@@ -332,10 +401,14 @@ export function verifyJournal(
       }
       continue;
     }
-    parseUnique(line.text, RECORD_LIMIT);
+    yield { kind: "parse", text: line.text, maxBytes: RECORD_LIMIT, unique: true };
     if (value.recordVersion !== 2)
       throw new StorageFailure("unsupported", "Unknown record version");
-    if (canonical(raw) !== line.text || hash !== digest(canonical(value)) || legacyGroup)
+    if (
+      (yield { kind: "canonical", value: raw }) !== line.text ||
+      hash !== (yield { kind: "digestCanonical", value }) ||
+      legacyGroup
+    )
       fail("Invalid canonical v2 record");
     const common = ["recordVersion", "sequence", "previousHash", "hash", "kind"];
     if (value.kind === "format_transition") {
@@ -437,18 +510,22 @@ export function verifyJournal(
         b.hasDisplayEvent !== !!pending.prepared
       )
         fail("Transaction commit binding failed");
-      if (!b.hasDisplayEvent && b.projectionDigest !== projection(b.scope, null, b.afterEffect))
+      if (
+        !b.hasDisplayEvent &&
+        b.projectionDigest !==
+          (yield { kind: "projection", scope: b.scope, event: null, effect: b.afterEffect })
+      )
         fail("Invalid state-only projection");
-      index.addVerified(
-        b.eventId,
-        b.projectionDigest,
-        {
+      yield {
+        kind: "add",
+        eventId: b.eventId,
+        projection: b.projectionDigest,
+        receipt: {
           sequence: current.sequence,
           offset: current.offset,
           bindingOffset: pending.bindingOffset,
         },
-        (offset) => readBinding(fd, offset),
-      );
+      };
       latestControl = {
         txId: b.id,
         eventId: b.eventId,
@@ -481,7 +558,8 @@ export function verifyJournal(
         ? binding.txId !== pending.begin.id ||
           binding.eventId !== pending.begin.eventId ||
           binding.projectionDigest !== pending.begin.projectionDigest ||
-          canonical(scope) !== canonical(pending.begin.scope) ||
+          (yield { kind: "canonical", value: scope }) !==
+            (yield { kind: "canonical", value: pending.begin.scope }) ||
           pending.prepared
         : binding.txId !== undefined
     )
@@ -494,7 +572,7 @@ export function verifyJournal(
         group ||
         !object(value.event) ||
         !text(value.event.type) ||
-        Buffer.byteLength(canonical(value.event)) > CHUNK_SIZE
+        Buffer.byteLength(yield { kind: "canonical", value: value.event }) > CHUNK_SIZE
       )
         fail("Invalid whole event");
       event = value.event;
@@ -531,7 +609,8 @@ export function verifyJournal(
         if (part.index !== 0) fail("Missing fragment beginning");
         group = { binding, fragment: part, chunks: [], bytes: 0, start: line.start };
       } else if (
-        canonical(binding) !== canonical(group.binding) ||
+        (yield { kind: "canonical", value: binding }) !==
+          (yield { kind: "canonical", value: group.binding }) ||
         part.id !== group.fragment.id ||
         part.total !== group.fragment.total ||
         part.eventBytes !== group.fragment.eventBytes ||
@@ -545,30 +624,35 @@ export function verifyJournal(
       group.chunks.push(chunk);
       if (part.index !== part.total - 1) continue;
       const bytes = Buffer.concat(group.chunks, group.bytes);
-      if (bytes.length !== part.eventBytes || digest(bytes) !== part.eventDigest)
+      if (
+        bytes.length !== part.eventBytes ||
+        (yield { kind: "digest", value: bytes }) !== part.eventDigest
+      )
         fail("Fragment event digest failed");
-      const parsed = parseUnique(
-        new TextDecoder("utf-8", { fatal: true, ignoreBOM: true }).decode(bytes),
-        EVENT_LIMIT,
-      );
+      const decoded = yield { kind: "decode", bytes };
+      const parsed = yield { kind: "parse", text: decoded, maxBytes: EVENT_LIMIT, unique: true };
       if (!object(parsed) || !text(parsed.type)) fail("Invalid assembled event");
       event = parsed;
       bindingOffset = group.start;
       group = undefined;
     }
     if (
-      projection(scope, event, pending ? pending.begin.afterEffect : null) !==
-      binding.projectionDigest
+      (yield {
+        kind: "projection",
+        scope,
+        event,
+        effect: pending ? pending.begin.afterEffect : null,
+      }) !== binding.projectionDigest
     )
       fail("Public projection digest mismatch");
     if (pending) pending.prepared = token(identity, current);
     else {
-      index.addVerified(
-        binding.eventId,
-        binding.projectionDigest,
-        { sequence: current.sequence, offset: current.offset, bindingOffset },
-        (offset) => readBinding(fd, offset),
-      );
+      yield {
+        kind: "add",
+        eventId: binding.eventId,
+        projection: binding.projectionDigest,
+        receipt: { sequence: current.sequence, offset: current.offset, bindingOffset },
+      };
       committed = current;
     }
   }
@@ -584,13 +668,23 @@ export function verifyJournal(
     latestControl,
     uncommittedLegacyTail: false,
   };
-  verifyState(decoded, verified);
-  if (stamp(fd) !== beforeStamp) fail("Journal changed during verification");
-  index.authenticate(beforeStamp);
+  yield* verifyStateSteps(decoded, verified);
   return verified;
 }
 
 export function verifyState(decoded: DecodedState, verified: VerifiedJournal): void {
+  const steps = verifyStateSteps(decoded, verified);
+  let next = steps.next();
+  while (!next.done) {
+    if (next.value.kind === "line" || next.value.kind === "add")
+      fail("Invalid state-only verification step");
+    next = steps.next(evaluateJournalStep(next.value));
+  }
+}
+export function* verifyStateSteps(
+  decoded: DecodedState,
+  verified: VerifiedJournal,
+): JournalSteps<void> {
   const { transition, pin, latestControl } = verified;
   if (transition) {
     if (
@@ -606,8 +700,12 @@ export function verifyState(decoded: DecodedState, verified: VerifiedJournal): v
     const effect = latestControl?.effectDigest ?? transition.initialControlEffect;
     if (
       decoded.control.effectDigest !== effect ||
-      goalEffect(decoded.state) !== effect ||
-      canonical(decoded.control.lastCommitted ?? null) !== canonical(latestControl ?? null) ||
+      (yield {
+        kind: "digestCanonical",
+        value: (decoded.state as unknown as RawObject).goalLifecycle ?? null,
+      }) !== effect ||
+      (yield { kind: "canonical", value: decoded.control.lastCommitted ?? null }) !==
+        (yield { kind: "canonical", value: latestControl ?? null }) ||
       (latestControl && (decoded.state.stateRevision ?? -1) < latestControl.revision)
     )
       fail("Latest control watermark/state mismatch");

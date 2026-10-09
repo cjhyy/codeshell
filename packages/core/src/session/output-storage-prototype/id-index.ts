@@ -1,6 +1,7 @@
 /** Complete verified-history index. No LRU miss is ever treated as proof of absence. */
 import { createHash } from "node:crypto";
-import { HEX, StorageFailure } from "./codec.js";
+import { types as utilTypes } from "node:util";
+import { EVENT_ID, HEX, StorageFailure } from "./codec.js";
 
 export const MAX_IDENTITIES = 262_144;
 export const INDEX_SLOTS = 524_288;
@@ -64,17 +65,17 @@ export class IdentityPool {
   }
 }
 
-export class CompleteIdentityIndex {
-  private keys: Uint8Array;
-  private projections: Uint8Array;
-  private sequences: Float64Array;
-  private offsets: Float64Array;
-  private bindingOffsets: Float64Array;
-  private occupied: Uint8Array;
+class IdentityTable {
+  protected keys: Uint8Array;
+  protected projections: Uint8Array;
+  protected sequences: Float64Array;
+  protected offsets: Float64Array;
+  protected bindingOffsets: Float64Array;
+  protected occupied: Uint8Array;
   private readonly release: () => void;
-  private disposed = false;
-  private size = 0;
-  private authenticatedStamp?: string;
+  protected disposed = false;
+  protected size = 0;
+  protected authenticatedStamp?: string;
 
   constructor(pool: IdentityPool) {
     const { arena, release } = pool.acquire();
@@ -117,10 +118,12 @@ export class CompleteIdentityIndex {
     this.occupied = new Uint8Array(0);
     this.release();
   }
-  private assertOpen() {
+  protected assertOpen() {
     if (this.disposed) throw new StorageFailure("incomplete", "Disposed identity proof");
   }
-  private locate(eventId: string, readBinding: (offset: number) => string) {
+  protected *locateSteps(
+    eventId: string,
+  ): Generator<number, { slot: number; hash: Buffer; found: boolean }, string> {
     this.assertOpen();
     const hash = createHash("sha256").update(eventId).digest();
     const start = hash.readUInt32LE(0) & (INDEX_SLOTS - 1);
@@ -137,20 +140,32 @@ export class CompleteIdentityIndex {
       if (!equal) continue;
       if (++matches > MAX_HASH_MATCHES)
         throw new StorageFailure("capacity", "Identity hash collision bound");
-      if (readBinding(this.bindingOffsets[slot]) === eventId) return { slot, hash, found: true };
+      if ((yield this.bindingOffsets[slot]) === eventId) return { slot, hash, found: true };
     }
     throw new StorageFailure("capacity", "Identity probe bound");
   }
-  lookup(
-    eventId: string,
+  protected insert(
+    _eventId: string,
     projection: string,
-    stamp: string,
-    readBinding: (offset: number) => string,
-  ): IndexReceipt | undefined {
-    if (!this.isAuthenticated(stamp))
-      throw new StorageFailure("incomplete", "Whole-history identity proof requires rebuild");
-    const { slot, found } = this.locate(eventId, readBinding);
-    if (!found) return undefined;
+    receipt: IndexReceipt,
+    located: { slot: number; hash: Buffer; found: boolean },
+  ) {
+    if (typeof projection !== "string" || !HEX.test(projection))
+      throw new StorageFailure("incomplete", "Invalid projection digest");
+    if (located.found)
+      throw new StorageFailure("incomplete", "Duplicate committed event id in history");
+    if (this.size >= MAX_IDENTITIES)
+      throw new StorageFailure("capacity", "Complete identity capacity exhausted");
+    const { slot, hash } = located;
+    this.keys.set(hash, slot * 32);
+    this.projections.set(Buffer.from(projection, "hex"), slot * 32);
+    this.sequences[slot] = receipt.sequence;
+    this.offsets[slot] = receipt.offset;
+    this.bindingOffsets[slot] = receipt.bindingOffset;
+    this.occupied[slot] = 1;
+    this.size++;
+  }
+  protected receipt(slot: number, projection: string): IndexReceipt {
     const expected = Buffer.from(this.projections.subarray(slot * 32, slot * 32 + 32)).toString(
       "hex",
     );
@@ -162,6 +177,28 @@ export class CompleteIdentityIndex {
       bindingOffset: this.bindingOffsets[slot],
     };
   }
+}
+
+export class CompleteIdentityIndex extends IdentityTable {
+  private locate(eventId: string, readBinding: (offset: number) => string) {
+    const steps = this.locateSteps(eventId);
+    let next = steps.next();
+    while (!next.done) next = steps.next(readBinding(next.value));
+    return next.value;
+  }
+  lookup(
+    eventId: string,
+    projection: string,
+    stamp: string,
+    readBinding: (offset: number) => string,
+  ): IndexReceipt | undefined {
+    if (!this.isAuthenticated(stamp))
+      throw new StorageFailure("incomplete", "Whole-history identity proof requires rebuild");
+    const { slot, found } = this.locate(eventId, readBinding);
+    if (!found) return undefined;
+    return this.receipt(slot, projection);
+  }
+
   assertInsertable(eventId: string, readBinding: (offset: number) => string) {
     const { found } = this.locate(eventId, readBinding);
     if (found) throw new StorageFailure("incomplete", "Duplicate committed event id in history");
@@ -174,18 +211,134 @@ export class CompleteIdentityIndex {
     receipt: IndexReceipt,
     readBinding: (offset: number) => string,
   ) {
+    this.insert(eventId, projection, receipt, this.locate(eventId, readBinding));
+  }
+}
+
+/** One awaited binding lookup owns its arena until every actual read and cleanup has settled. */
+export class AsyncIdentityIndex extends IdentityTable {
+  private current?: Promise<unknown>;
+  private closing = false;
+  private disposal?: Promise<void>;
+  private generation = 0;
+
+  override reset(): void {
+    if (this.current || this.closing)
+      throw new StorageFailure("busy", "Index operation in progress/closing");
+    super.reset();
+    this.generation++;
+  }
+  override authenticate(stamp: string): void {
+    if (this.current || this.closing)
+      throw new StorageFailure("busy", "Index operation in progress/closing");
+    super.authenticate(stamp);
+    this.generation++;
+  }
+  override invalidate(): void {
+    super.invalidate();
+    this.generation++;
+  }
+  override dispose(): Promise<void> {
+    this.closing = true;
+    this.disposal ??= (async () => {
+      if (this.current) await this.current.catch(() => {});
+      super.dispose();
+    })();
+    return this.disposal;
+  }
+  private operation<T>(
+    eventId: string,
+    reader: (offset: number) => Promise<string>,
+    action: (located: { slot: number; hash: Buffer; found: boolean }) => T,
+  ): Promise<T> {
+    if (this.closing || this.disposed)
+      return Promise.reject(new StorageFailure("incomplete", "Disposed identity proof"));
+    if (this.current)
+      return Promise.reject(new StorageFailure("busy", "Index operation in progress"));
+    if (typeof eventId !== "string" || !EVENT_ID.test(eventId) || typeof reader !== "function")
+      return Promise.reject(new StorageFailure("incomplete", "Invalid identity lookup"));
+    const generation = this.generation;
+    const work = Promise.resolve().then(async () => {
+      const steps = this.locateSteps(eventId);
+      try {
+        let next = steps.next();
+        while (!next.done) {
+          const binding = await reader(next.value);
+          this.assertOpen();
+          if (this.closing || generation !== this.generation)
+            throw new StorageFailure("incomplete", "Index lifetime changed during binding read");
+          if (typeof binding !== "string" || !EVENT_ID.test(binding))
+            throw new StorageFailure("incomplete", "Invalid indexed identity binding");
+          next = steps.next(binding);
+        }
+        this.assertOpen();
+        if (this.closing || generation !== this.generation)
+          throw new StorageFailure("incomplete", "Index lifetime changed before result");
+        return action(next.value);
+      } catch (cause) {
+        this.invalidate();
+        throw cause;
+      } finally {
+        steps.return(undefined as never);
+      }
+    });
+    this.current = work;
+    void work
+      .finally(() => {
+        if (this.current === work) this.current = undefined;
+      })
+      .catch(() => {});
+    return work;
+  }
+  lookup(
+    eventId: string,
+    projection: string,
+    stamp: string,
+    reader: (offset: number) => Promise<string>,
+  ): Promise<IndexReceipt | undefined> {
+    if (!this.isAuthenticated(stamp))
+      return Promise.reject(
+        new StorageFailure("incomplete", "Whole-history identity proof requires rebuild"),
+      );
     if (typeof projection !== "string" || !HEX.test(projection))
-      throw new StorageFailure("incomplete", "Invalid projection digest");
-    const { slot, hash, found } = this.locate(eventId, readBinding);
-    if (found) throw new StorageFailure("incomplete", "Duplicate committed event id in history");
-    if (this.size >= MAX_IDENTITIES)
-      throw new StorageFailure("capacity", "Complete identity capacity exhausted");
-    this.keys.set(hash, slot * 32);
-    this.projections.set(Buffer.from(projection, "hex"), slot * 32);
-    this.sequences[slot] = receipt.sequence;
-    this.offsets[slot] = receipt.offset;
-    this.bindingOffsets[slot] = receipt.bindingOffset;
-    this.occupied[slot] = 1;
-    this.size++;
+      return Promise.reject(new StorageFailure("incomplete", "Invalid projection digest"));
+    return this.operation(eventId, reader, ({ slot, found }) =>
+      found ? this.receipt(slot, projection) : undefined,
+    );
+  }
+  addVerified(
+    eventId: string,
+    projection: string,
+    receipt: IndexReceipt,
+    reader: (offset: number) => Promise<string>,
+  ): Promise<void> {
+    // Own the receipt before any reader can await or mutate caller data.
+    if (
+      utilTypes.isProxy(receipt) ||
+      receipt === null ||
+      typeof receipt !== "object" ||
+      Object.getOwnPropertySymbols(receipt).length
+    )
+      return Promise.reject(new StorageFailure("incomplete", "Owned identity receipt required"));
+    const descriptors = Object.getOwnPropertyDescriptors(receipt);
+    if (
+      Object.keys(descriptors).length !== 3 ||
+      ["sequence", "offset", "bindingOffset"].some(
+        (key) =>
+          !descriptors[key] ||
+          !("value" in descriptors[key]) ||
+          !Number.isSafeInteger(descriptors[key].value) ||
+          descriptors[key].value < 0,
+      )
+    )
+      return Promise.reject(new StorageFailure("incomplete", "Owned identity receipt required"));
+    const owned: IndexReceipt = {
+      sequence: descriptors.sequence.value as number,
+      offset: descriptors.offset.value as number,
+      bindingOffset: descriptors.bindingOffset.value as number,
+    };
+    return this.operation(eventId, reader, (located) => {
+      this.insert(eventId, projection, owned, located);
+    });
   }
 }

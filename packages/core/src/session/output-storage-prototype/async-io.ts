@@ -1,10 +1,10 @@
-/** Non-activated async custody/I/O experiment. No producer, scanner or package export uses it. */
+/** Non-activated async custody/I/O experiment. Only private opt-in fixture readers use it; no package export. */
 import { randomUUID } from "node:crypto";
 import { constants } from "node:fs";
 import * as fsp from "node:fs/promises";
 import type { FileHandle } from "node:fs/promises";
 import { isAbsolute, join, relative, sep } from "node:path";
-import { setTimeout as delay } from "node:timers/promises";
+import { setImmediate as yieldTask, setTimeout as delay } from "node:timers/promises";
 import { types as utilTypes } from "node:util";
 import { lock } from "../../utils/lockfile.js";
 import {
@@ -48,6 +48,7 @@ type Context = {
   ioFailures: unknown[];
 };
 const leases = new WeakMap<AsyncLease, Context>();
+const snapshots = new WeakMap<AsyncJournalSnapshot, { context: Context; file: AsyncFile }>();
 const files = new WeakMap<AsyncFile, { handle: FileHandle; owner: Context; closed: boolean }>();
 export type AsyncLease = Readonly<{ root: string; directory: string; sessionId: string }>;
 export type AsyncFile = Readonly<{ kind: "fixture-journal" }>;
@@ -469,11 +470,8 @@ export function readAsyncAt(
     const bytes = Buffer.alloc(length);
     let at = 0;
     while (at < length) {
-      const { bytesRead } = await handle.read(
-        bytes,
-        at,
-        Math.min(CHUNK_SIZE, length - at),
-        position + at,
+      const { bytesRead } = await completeIO(context, "journal.read", () =>
+        handle.read(bytes, at, Math.min(CHUNK_SIZE, length - at), position + at),
       );
       if (!bytesRead) break;
       at += bytesRead;
@@ -482,6 +480,77 @@ export function readAsyncAt(
     return bytes.subarray(0, at);
   });
 }
+export type AsyncJournalSnapshot = Readonly<{
+  size: number;
+  stamp: string;
+  dev: string;
+  ino: string;
+  directoryDev: string;
+  directoryIno: string;
+}>;
+
+/** No descriptor escapes: the snapshot belongs to a current opaque lease/file pair. */
+export function snapshotAsyncJournal(
+  lease: AsyncLease,
+  file: AsyncFile,
+): Promise<AsyncJournalSnapshot> {
+  const context = assertAsyncLease(lease);
+  const handle = fileFor(context, file);
+  return submit(lease, async () => {
+    await context.custody.assertCurrent();
+    await namedFile(join(lease.directory, "output-journal.jsonl"), handle);
+    const stat = await handle.stat({ bigint: true });
+    if (stat.size > BigInt(JOURNAL_LIMIT))
+      throw new StorageFailure("capacity", "Journal byte bound");
+    const directory = await fsp.lstat(lease.directory, { bigint: true });
+    await context.custody.assertCurrent();
+    await namedFile(join(lease.directory, "output-journal.jsonl"), handle);
+    const after = await handle.stat({ bigint: true });
+    const stamp = (value: typeof stat) =>
+      `${value.dev}:${value.ino}:${value.size}:${value.mtimeNs}:${value.ctimeNs}`;
+    if (stamp(stat) !== stamp(after)) fail("Journal changed while capturing descriptor snapshot");
+    const snapshot = Object.freeze({
+      size: Number(stat.size),
+      stamp: stamp(stat),
+      dev: String(stat.dev),
+      ino: String(stat.ino),
+      directoryDev: String(directory.dev),
+      directoryIno: String(directory.ino),
+    });
+    snapshots.set(snapshot, { context, file });
+    return snapshot;
+  });
+}
+export function assertAsyncJournalSnapshot(
+  lease: AsyncLease,
+  file: AsyncFile,
+  expected: AsyncJournalSnapshot,
+): Promise<void> {
+  const context = assertAsyncLease(lease);
+  const owner = snapshots.get(expected);
+  if (!owner || owner.context !== context || owner.file !== file)
+    fail("Native snapshot for this current lease/file required");
+  const handle = fileFor(context, file);
+  return submit(lease, async () => {
+    await context.custody.assertDirectory();
+    await namedFile(join(lease.directory, "output-journal.jsonl"), handle);
+    if ((await stamp(handle)) !== expected.stamp) fail("Journal changed during verification");
+    await context.custody.assertDirectory();
+  });
+}
+
+/** A real macrotask permits the native heartbeat to progress, followed by current custody checks. */
+export function yieldAsyncLease(lease: AsyncLease): Promise<void> {
+  const context = assertAsyncLease(lease);
+  return submit(lease, async () => {
+    await yieldTask();
+    assertAsyncLease(lease);
+    await context.custody.assertDirectory();
+    assertAsyncLease(lease);
+    context.custody.hooks.observe?.({ operation: "scanner.cpu_yield", stage: "settle" });
+  });
+}
+
 export function appendAsyncUnderLease(
   lease: AsyncLease,
   file: AsyncFile,

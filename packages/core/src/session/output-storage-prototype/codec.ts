@@ -64,83 +64,123 @@ export function keys(value: RawObject, required: string[], optional: string[] = 
 }
 export const digest = (value: string | Buffer) => createHash("sha256").update(value).digest("hex");
 
-/** Reject duplicate keys before JSON.parse can discard their evidence. Depth and input are bounded. */
-export function parseUnique(text: string, maxBytes = STATE_LIMIT): unknown {
+/** Pure CPU steps shared by synchronous verification and the yielding async driver. */
+export function* parseJSONSteps(text: string, maxBytes = STATE_LIMIT): Generator<void, unknown> {
   if (Buffer.byteLength(text) > maxBytes) throw new StorageFailure("capacity", "JSON byte bound");
   let at = 0;
-  const whitespace = () => {
-    while (/\s/.test(text[at] ?? "") && at < text.length) at++;
-  };
-  const string = (): string => {
-    const start = at++;
-    let escape = false;
+  let checkpoint = 0;
+  function* tick(): Generator<void> {
+    if (at - checkpoint >= 16_384) {
+      checkpoint = at;
+      yield;
+    }
+  }
+  function* whitespace(): Generator<void> {
+    while (at < text.length && /[ \t\n\r]/.test(text[at])) {
+      at++;
+      yield* tick();
+    }
+  }
+  function* string(): Generator<void, string> {
+    if (text[at++] !== '"') fail("Invalid JSON string");
+    let start = at;
+    const chunks: string[] = [];
     while (at < text.length) {
-      const character = text[at++];
-      if (escape) {
-        escape = false;
-        continue;
+      if (text[at] === '"') {
+        chunks.push(JSON.parse('"' + text.slice(start, at) + '"'));
+        at++;
+        return chunks.join("");
       }
-      if (character === "\\") {
-        escape = true;
-        continue;
+      if (text[at] === "\\") {
+        at++;
+        if (text[at] === "u") at += 5;
+        else at++;
+      } else at++;
+      if (at - start >= 16_384) {
+        chunks.push(JSON.parse('"' + text.slice(start, at) + '"'));
+        start = at;
+        yield* tick();
       }
-      if (character === '"') return JSON.parse(text.slice(start, at));
     }
     return fail("Unterminated JSON string");
-  };
-  const value = (depth: number): void => {
+  }
+  function* value(depth: number): Generator<void, unknown> {
     if (depth > 128) fail("JSON depth bound");
-    whitespace();
+    yield* whitespace();
+    yield* tick();
     const first = text[at];
-    if (first === '"') {
-      string();
-      return;
-    }
+    if (first === '"') return yield* string();
     if (first === "{" || first === "[") {
       at++;
-      const end = first === "{" ? "}" : "]";
+      const array = first === "[";
+      const output: unknown[] | RawObject = array ? [] : {};
+      const end = array ? "]" : "}";
       const seen = new Set<string>();
-      whitespace();
+      yield* whitespace();
       if (text[at] === end) {
         at++;
-        return;
+        return output;
       }
       for (;;) {
-        if (first === "{") {
-          whitespace();
-          if (text[at] !== '"') fail("Invalid JSON key");
-          const key = string();
+        let key: string | undefined;
+        if (!array) {
+          yield* whitespace();
+          key = yield* string();
           if (seen.has(key)) fail("Duplicate JSON key");
           seen.add(key);
-          whitespace();
+          yield* whitespace();
           if (text[at++] !== ":") fail("Invalid JSON object");
         }
-        value(depth + 1);
-        whitespace();
+        const item = yield* value(depth + 1);
+        if (array) (output as unknown[]).push(item);
+        else
+          Object.defineProperty(output, key!, {
+            value: item,
+            writable: true,
+            enumerable: true,
+            configurable: true,
+          });
+        yield* whitespace();
         if (text[at] === end) {
           at++;
-          return;
+          return output;
         }
         if (text[at++] !== ",") fail("Invalid JSON separator");
       }
     }
-    const match = /^(?:true|false|null|-?(?:0|[1-9]\d*)(?:\.\d+)?(?:[eE][+-]?\d+)?)/.exec(
-      text.slice(at),
-    );
-    if (!match) fail("Invalid JSON value");
-    at += match[0].length;
-  };
-  value(0);
-  whitespace();
+    for (const [literal, parsed] of [
+      ["true", true],
+      ["false", false],
+      ["null", null],
+    ] as const) {
+      if (text.startsWith(literal, at)) {
+        at += literal.length;
+        return parsed;
+      }
+    }
+    const start = at;
+    while (at < text.length && /[0-9eE+.-]/.test(text[at])) {
+      at++;
+      yield* tick();
+    }
+    const spelling = text.slice(start, at);
+    if (!/^-?(?:0|[1-9]\d*)(?:\.\d+)?(?:[eE][+-]?\d+)?$/.test(spelling)) fail("Invalid JSON value");
+    const parsed = Number(spelling);
+    if (!Number.isFinite(parsed)) fail("Nonfinite JSON number");
+    return parsed;
+  }
+  const parsed = yield* value(0);
+  yield* whitespace();
   if (at !== text.length) fail("Trailing JSON data");
-  const parsed = JSON.parse(text);
-  const finite = (value: unknown): void => {
-    if (typeof value === "number" && !Number.isFinite(value)) fail("Nonfinite JSON number");
-    if (Array.isArray(value)) value.forEach(finite);
-    else if (object(value)) Object.values(value).forEach(finite);
-  };
-  finite(parsed);
   return parsed;
+}
+
+/** Reject duplicate keys without discarding evidence; sync and async use identical grammar. */
+export function parseUnique(text: string, maxBytes = STATE_LIMIT): unknown {
+  const steps = parseJSONSteps(text, maxBytes);
+  let next = steps.next();
+  while (!next.done) next = steps.next();
+  return next.value;
 }
 
 function assertDataObject(value: object): void {
@@ -154,24 +194,70 @@ function denseArray(value: unknown[]): void {
   for (let i = 0; i < value.length; i++) if (!Object.hasOwn(value, i)) fail("Sparse JSON array");
 }
 
-/** Canonical v2 values only. Old records always keep their original JSON.stringify hash. */
-export function canonical(value: unknown, depth = 0): string {
+function* canonicalString(value: string): Generator<string> {
+  yield '"';
+  for (let start = 0; start < value.length; ) {
+    let end = Math.min(value.length, start + 8192);
+    // Never stringify a surrogate pair as two lone escaped surrogates at a slice boundary.
+    if (
+      end < value.length &&
+      /[\uD800-\uDBFF]/.test(value[end - 1]) &&
+      /[\uDC00-\uDFFF]/.test(value[end])
+    )
+      end--;
+    yield JSON.stringify(value.slice(start, end)).slice(1, -1);
+    start = end;
+  }
+  yield '"';
+}
+
+/** Canonical chunks share strict own-data validation and byte semantics with the sync codec. */
+export function* canonicalSteps(value: unknown, depth = 0): Generator<string> {
   if (depth > 128) fail("Canonical depth bound");
   if (value !== null && typeof value === "object") assertDataObject(value);
-  if (value === null || typeof value === "string" || typeof value === "boolean")
-    return JSON.stringify(value);
-  if (typeof value === "number" && Number.isFinite(value)) return JSON.stringify(value);
+  if (typeof value === "string") {
+    yield* canonicalString(value);
+    return;
+  }
+  if (
+    value === null ||
+    typeof value === "boolean" ||
+    (typeof value === "number" && Number.isFinite(value))
+  ) {
+    yield JSON.stringify(value);
+    return;
+  }
   if (Array.isArray(value)) {
     denseArray(value);
-    return `[${value.map((item) => canonical(item, depth + 1)).join(",")}]`;
+    yield "[";
+    for (let i = 0; i < value.length; i++) {
+      if (i) yield ",";
+      yield* canonicalSteps(value[i], depth + 1);
+    }
+    yield "]";
+    return;
   }
-  if (object(value) && [Object.prototype, null].includes(Object.getPrototypeOf(value)))
-    return `{${Object.keys(value)
-      .sort()
-      .map((key) => `${JSON.stringify(key)}:${canonical(value[key], depth + 1)}`)
-      .join(",")}}`;
+  if (object(value) && [Object.prototype, null].includes(Object.getPrototypeOf(value))) {
+    yield "{";
+    let comma = false;
+    for (const key of Object.keys(value).sort()) {
+      if (comma) yield ",";
+      comma = true;
+      yield* canonicalString(key);
+      yield ":";
+      yield* canonicalSteps(value[key], depth + 1);
+    }
+    yield "}";
+    return;
+  }
   return fail("Non-JSON canonical value");
 }
+
+/** Old records retain their original JSON.stringify hashing; v2 canonical bytes are unchanged. */
+export function canonical(value: unknown, depth = 0): string {
+  return [...canonicalSteps(value, depth)].join("");
+}
+
 export function goalEffect(state: SessionState): string {
   return digest(canonical((state as unknown as RawObject).goalLifecycle ?? null));
 }
