@@ -296,7 +296,11 @@ test("pure Node HTTP shutdown and listener races pass", async () => {
   const { fileURLToPath } = await import("node:url");
   const result = await promisify(execFile)(
     "node",
-    [fileURLToPath(new URL("./link-loopback-callback.smoke.mjs", import.meta.url))],
+    [
+      // Node 22.16 supports erasable TypeScript behind this explicit flag.
+      "--experimental-strip-types",
+      fileURLToPath(new URL("./link-loopback-callback.smoke.mjs", import.meta.url)),
+    ],
     { timeout: 10_000 },
   );
   expect(JSON.parse(result.stdout)).toMatchObject({

@@ -109,3 +109,15 @@ and before OS cryptography initializes. Linux explicitly selects the private
 and actual available backend before sending. Earlier macOS smoke runs that
 retained `use-mock-keychain` established only the SafeStorage API path, not real
 OS keychain custody, and are superseded by the corrected run.
+
+The macOS acceptance additionally checks a real native synthetic round trip and
+closes Electron completely before a second Main PID decrypts the same persisted
+material and recomputes the original fixture-wire HMACs without another provider
+request. Its private HOME references only the existing OS default's metadata;
+both actual HOME contexts must pass metadata preflight before launch. It never
+copies a Keychain or search list, changes the OS default, enumerates items, or
+automates an authorization dialog. The cold process does not create a worker;
+the first process requires its actual worker and both Main generations run the
+pre-Core negative probes. See the [native macOS acceptance](todo/macos-keychain-acceptance.md)
+for commands, preserved failures and the distinction between this local native
+API evidence and independent OS attestation or installer signing.

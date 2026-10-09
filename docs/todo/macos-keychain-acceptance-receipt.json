@@ -1,0 +1,198 @@
+{
+  "version": 1,
+  "runtimeSourceCommit": "3e39bf7b295f023c0eb18147086280729d193415",
+  "normallyMergedMain": "a1fd082c109f739828ca4002e6e62aca3361cb66",
+  "sourceTree": "0daf83d198ba7c305d48e21ebe2e982700ac26c2",
+  "testScriptDiffSha256": "94964c14d06efec80b0f8b86d3db2f6203b62a8026207d1dd617cf6c5f8c9efe",
+  "productionSourceChanges": [],
+  "gates": {
+    "package": {
+      "tarballs": 9,
+      "typedEntries": 47,
+      "runtimeEntries": 45
+    },
+    "workspaceBuild": true,
+    "desktopBuild": true,
+    "workspaceTypechecks": 12,
+    "nodeHelpers": {
+      "tests": 13,
+      "failures": 0,
+      "skippedOnMac": 0
+    },
+    "signingShard": {
+      "tests": 19,
+      "files": 6,
+      "assertions": 106,
+      "failures": 0,
+      "skipped": 0
+    },
+    "lint": {
+      "errors": 0,
+      "warnings": 105,
+      "atExistingBaseline": true
+    },
+    "engineBypassGuard": true,
+    "workflowPathsGuard": true
+  },
+  "native": {
+    "runtimeSourceCommit": "3e39bf7b295f023c0eb18147086280729d193415",
+    "operatorDefaultMetadataUnchanged": true,
+    "defaultPathHash": "bf5b7026c780c552ffd8ea51bbbcd50625c87d3f32112c15d86ef5649abdc636",
+    "launchPassed": true,
+    "elapsedMs": 41839,
+    "remainingOwnedPids": [],
+    "firstMainPid": 14350,
+    "firstWorkerPid": 14607,
+    "coldMainPid": 15747,
+    "coldWorkerCreated": false,
+    "localProviderRequests": 10,
+    "coldProviderRequests": 0,
+    "zeroUnavailableRequests": true,
+    "proof": {
+      "boundaries": 5,
+      "attempts": 6,
+      "encryptedKeys": 1,
+      "keyRecordsDigest": "2f7e8a9789ac0bfcc4408e22a347bc36a41337c00fc89995c78a582ff83af023",
+      "syntheticRoundTrip": true
+    }
+  },
+  "previousAttempts": [
+    {
+      "attempt": 1,
+      "passed": false,
+      "elapsedMs": 3860,
+      "timedOut": false,
+      "result": {
+        "code": 1,
+        "signal": null
+      },
+      "remainingOwnedPids": []
+    },
+    {
+      "attempt": 2,
+      "passed": false,
+      "elapsedMs": 1163,
+      "timedOut": false,
+      "result": {
+        "code": 1,
+        "signal": null
+      },
+      "remainingOwnedPids": []
+    },
+    {
+      "attempt": 3,
+      "passed": false,
+      "elapsedMs": 35121,
+      "timedOut": false,
+      "result": {
+        "code": 1,
+        "signal": null
+      },
+      "remainingOwnedPids": []
+    },
+    {
+      "attempt": 4,
+      "passed": false,
+      "elapsedMs": 183870,
+      "timedOut": true,
+      "result": {
+        "code": null,
+        "signal": "SIGKILL"
+      },
+      "remainingOwnedPids": []
+    },
+    {
+      "attempt": 5,
+      "passed": false,
+      "elapsedMs": 3467,
+      "timedOut": false,
+      "result": {
+        "code": 1,
+        "signal": null
+      },
+      "remainingOwnedPids": []
+    },
+    {
+      "attempt": 6,
+      "passed": false,
+      "elapsedMs": 33310,
+      "timedOut": false,
+      "result": {
+        "code": 1,
+        "signal": null
+      },
+      "remainingOwnedPids": []
+    },
+    {
+      "attempt": 7,
+      "passed": false,
+      "elapsedMs": 183866,
+      "timedOut": true,
+      "result": {
+        "code": null,
+        "signal": "SIGKILL"
+      },
+      "remainingOwnedPids": []
+    },
+    {
+      "attempt": 8,
+      "passed": false,
+      "elapsedMs": 21771,
+      "timedOut": false,
+      "result": {
+        "code": 1,
+        "signal": null
+      },
+      "remainingOwnedPids": []
+    },
+    {
+      "attempt": 9,
+      "passed": false,
+      "elapsedMs": 56536,
+      "timedOut": false,
+      "result": {
+        "code": 1,
+        "signal": null
+      },
+      "remainingOwnedPids": []
+    },
+    {
+      "attempt": 10,
+      "passed": true,
+      "elapsedMs": 44738,
+      "timedOut": false,
+      "result": {
+        "code": 0,
+        "signal": null
+      },
+      "remainingOwnedPids": []
+    },
+    {
+      "attempt": 11,
+      "passed": true,
+      "elapsedMs": 41839,
+      "timedOut": false,
+      "result": {
+        "code": 0,
+        "signal": null
+      },
+      "remainingOwnedPids": []
+    }
+  ],
+  "frozenEvidence": {
+    "manifestSha256": "0d2db5eb7e4aa37168d98ed828994e2a4dd106c9f386c47de9c9f67a8374bc45",
+    "rawFileCount": 257,
+    "primary": "/private/var/folders/1d/6__4f4y51g90nblfptt8s9v80000gn/T/codeshell-macos-keychain-540kn9t1/final-3e39bf7b/final-manifest.json",
+    "mirror": "/Users/admin/.codex/worktrees/macos-keychain-acceptance/codeshell/node_modules/.cache/macos-keychain-acceptance/final-3e39bf7b/final-manifest.json",
+    "twoCopiesVerified": true
+  },
+  "scope": [
+    "private HOME and stripped provider configuration",
+    "pre-Core exact-origin fetch/http/https guard and seven negative probes in parent/Main/actual worker",
+    "owned parent Playwright GET-upgrade exception only",
+    "real SafeStorage API and Main-only HMAC; no independent OS attestation",
+    "cold Main deliberately creates no worker or provider call",
+    "metadata-only OS default reference, no Keychain data/item enumeration/settings changes",
+    "all failed attempts preserved; attempt8 exact original extra-request cause unproven"
+  ]
+}
