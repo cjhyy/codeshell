@@ -92,9 +92,16 @@ SDK Engine 验收还要求已 verified 原操作归档后不重发，另一个 u
 终态和 transcript 仍为 unverified_write，冷新 Run 仍零重发。本测试不替代真实 provider 写入、
 真实账号或付费模型验收。
 
-最终本机受控矩阵实际 Node v22.16.0，PID 95250／PPID 95239；canonical active 16,776,392 B，
+最终本机受控矩阵实际 Node v22.16.0，PID 243／PPID 225；canonical active 16,776,392 B，
 实际文件 16,776,704 B。七次桶内容读共 8,992,432 B；full count、byte-full metadata、GC＋lookup＋
-retain＋readback 三路径锁内分别为 140.773／178.254／350.924 ms。父及竞争子进程全部锁内
-最大 1,320.141 ms；崩溃后等待原 10 秒 stale 的时间不算锁内耗时。两组八进程竞争、四个一般
+retain＋readback 三路径锁内分别为 198.022／190.691／363.878 ms。父及竞争子进程全部锁内
+最大 1,253.695 ms；崩溃后等待原 10 秒 stale 的时间不算锁内耗时。两组八进程竞争、四个一般
 崩溃点和一个 verified 未提交需修复点均终态通过。实际恢复正文 536,870,912 B／768 槽／384 ID，
 无稀疏文件或正文删除。此实测不代表任意硬件的延迟 SLA。
+
+初版 `235b4245` 的真实 Windows CI 有 112 pass／3 fail：新增 POSIX mode 检查拒绝了
+Windows 合成 mode，导致两项恢复用例提前 blocked 与一项压缩失败。原日志和旧 manifest
+保持不变。修复仅在 POSIX 主机执行 mode 私有校验，Windows 保留原 profile custody、
+regular／单 link／no-symlink／有界 UTF8／HMAC 检查；新平台策略测试也注册至真实 Windows
+shard。修复后新 package、工作区 types、相关测试及实际编译 Node／SDK 矩阵已重新验收；
+真实 Windows 与完整组合 CI 以最终 head 的 PR checks 为准。
