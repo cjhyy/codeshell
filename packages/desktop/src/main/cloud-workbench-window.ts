@@ -1,4 +1,13 @@
-import { app, BrowserWindow, dialog, session, shell, systemPreferences } from "electron";
+import {
+  app,
+  BrowserWindow,
+  desktopCapturer,
+  dialog,
+  session,
+  shell,
+  systemPreferences,
+} from "electron";
+import { createCloudWorkbenchDisplayCapture } from "./cloud-workbench-capture.js";
 import { basename, join } from "node:path";
 import {
   cloudWorkbenchPartition,
@@ -41,6 +50,7 @@ export async function openCloudWorkbench(rawAddress: unknown): Promise<{ address
   });
   windows.set(address, win);
   const allowed = new Set<string>();
+  let captureRevision = 0;
   const trustedRequest = (contents: Electron.WebContents | null, url: string): boolean =>
     !win.isDestroyed() &&
     contents === win.webContents &&
@@ -48,6 +58,7 @@ export async function openCloudWorkbench(rawAddress: unknown): Promise<{ address
     isCloudWorkbenchOrigin(address, contents.getURL());
   browserSession.setPermissionCheckHandler((contents, permission, requestingOrigin, details) => {
     if (!trustedRequest(contents, details.securityOrigin ?? requestingOrigin)) return false;
+    if (String(permission) === "display-capture") return details.isMainFrame === true;
     if (permission === "clipboard-sanitized-write" || permission === "fullscreen") return true;
     return permission === "media"
       ? allowed.has(`media:${details.mediaType}`)
@@ -55,6 +66,7 @@ export async function openCloudWorkbench(rawAddress: unknown): Promise<{ address
   });
   browserSession.setPermissionRequestHandler((contents, permission, callback, details) => {
     if (!trustedRequest(contents, details.requestingUrl)) return callback(false);
+    if (String(permission) === "display-capture") return callback(details.isMainFrame === true);
     if (permission === "clipboard-sanitized-write" || permission === "fullscreen")
       return callback(true);
     const mediaTypes = "mediaTypes" in details ? (details.mediaTypes ?? []) : [];
@@ -91,6 +103,45 @@ export async function openCloudWorkbench(rawAddress: unknown): Promise<{ address
       else allowed.add(permission);
       return true;
     })().then(callback, () => callback(false));
+  });
+  const displayCapture = createCloudWorkbenchDisplayCapture({
+    revision: () => captureRevision,
+    isTrusted: (frame, origin) =>
+      !win.isDestroyed() &&
+      frame === win.webContents.mainFrame &&
+      trustedRequest(win.webContents, frame.url) &&
+      isCloudWorkbenchOrigin(address, origin),
+    getSources: () =>
+      desktopCapturer.getSources({
+        types: ["screen", "window"],
+        thumbnailSize: { width: 0, height: 0 },
+      }),
+    choose: async (sources, more) =>
+      (
+        await dialog.showMessageBox(win, {
+          type: "question",
+          title: "选择要录制的画面",
+          message: "只录制你选择的屏幕或窗口",
+          buttons: [
+            "取消",
+            ...sources.map((source) => source.name),
+            ...(more ? ["查看更多窗口"] : []),
+          ],
+          defaultId: 0,
+          cancelId: 0,
+          noLink: true,
+        })
+      ).response,
+    systemAudio: process.platform === "win32",
+  });
+  browserSession.setDisplayMediaRequestHandler(
+    (request, callback) => {
+      void displayCapture(request, callback);
+    },
+    { useSystemPicker: false },
+  );
+  win.webContents.on("did-start-navigation", (_event, _url, _inPlace, mainFrame) => {
+    if (mainFrame) captureRevision++;
   });
   win.on("page-title-updated", (event) => event.preventDefault());
   win.webContents.setWindowOpenHandler(({ url }) => {
@@ -141,6 +192,7 @@ export async function openCloudWorkbench(rawAddress: unknown): Promise<{ address
   };
   browserSession.on("will-download", download);
   win.once("closed", () => {
+    captureRevision++;
     windows.delete(address);
     allowed.clear();
     navigation.reset();

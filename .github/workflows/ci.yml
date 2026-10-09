@@ -307,6 +307,8 @@ jobs:
           sudo apparmor_parser -r /tmp/codeshell-audio-chromium.apparmor
       - name: Browser recording and interrupted upload recovery
         run: bun scripts/smoke-panel-audio-capture.mjs
+      - name: Browser video recording and interrupted upload recovery
+        run: bun scripts/smoke-panel-video-capture.mjs
 
   tests-windows:
     name: tests (windows port — real win32)
