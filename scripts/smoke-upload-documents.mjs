@@ -2,23 +2,36 @@
 import assert from "node:assert/strict";
 import {
   existsSync,
+  linkSync,
   mkdirSync,
   mkdtempSync,
   readdirSync,
   readFileSync,
+  renameSync,
   rmSync,
+  statSync,
   writeFileSync,
 } from "node:fs";
 import { tmpdir } from "node:os";
 import { spawnSync } from "node:child_process";
+import { createHash } from "node:crypto";
+import http from "node:http";
+import net from "node:net";
 import { join, resolve } from "node:path";
-import { createManagedDocumentParserResolver } from "../packages/core/dist/sources/documents/runtime.js";
 import { officeZip, textPdf, wordXml } from "../tests/fixtures/upload-documents.mjs";
-import { ToolRegistry } from "../packages/core/dist/tool-system/registry.js";
-import { ToolExecutor } from "../packages/core/dist/tool-system/executor.js";
-import { PermissionClassifier } from "../packages/core/dist/tool-system/permission.js";
-import { HookRegistry } from "../packages/core/dist/hooks/registry.js";
-import { invalidateUploadedDocumentIndex } from "../packages/core/dist/index.internal.js";
+import { denyDocumentSmokeNetwork } from "./upload-document-smoke-isolation.mjs";
+
+denyDocumentSmokeNetwork();
+assert.throws(() => fetch("https://document-smoke.invalid/"), /refused a network request/);
+assert.throws(() => http.request("http://127.0.0.1:9/"), /refused a network request/);
+assert.throws(() => net.connect({ host: "127.0.0.1", port: 9 }), /refused a network request/);
+const { createManagedDocumentParserResolver } =
+  await import("../packages/core/dist/sources/documents/runtime.js");
+const { ToolRegistry } = await import("../packages/core/dist/tool-system/registry.js");
+const { ToolExecutor } = await import("../packages/core/dist/tool-system/executor.js");
+const { PermissionClassifier } = await import("../packages/core/dist/tool-system/permission.js");
+const { HookRegistry } = await import("../packages/core/dist/hooks/registry.js");
+const { invalidateUploadedDocumentIndex } = await import("../packages/core/dist/index.internal.js");
 
 const cwd = mkdtempSync(join(tmpdir(), "codeshell-upload-native-"));
 const previousHome = process.env.CODE_SHELL_HOME;
@@ -148,20 +161,28 @@ try {
       await engine.dispose();
     }
   }
-  // A workspace can edit a well-shaped disk index and its claimed source hash.
-  // Neither a warm process nor a cold process may return that forged text.
+  // Actual reads created no disk cache. Simulate a pre-existing workspace index:
+  // neither warm/cold reads nor invalidation may consume or modify its bytes.
   const indexRoot = join(cwd, ".code-shell", "source-index");
-  const docxIndexPath = readdirSync(indexRoot)
-    .map((name) => join(indexRoot, name))
-    .find((path) => JSON.parse(readFileSync(path, "utf8")).resourceId === "brief.docx");
-  const forged = JSON.parse(readFileSync(docxIndexPath, "utf8"));
-  forged.chunks.forEach((chunk) => {
-    // Preserve every schema/hash/offset/chunk-ID field and the text length.
-    chunk.text = `FORGED ${chunk.text}`.slice(0, chunk.text.length);
+  assert.equal(existsSync(indexRoot), false);
+  assert.deepEqual(readdirSync(join(cwd, ".code-shell")), ["uploads"]);
+  mkdirSync(indexRoot);
+  const docxIndexPath = join(
+    indexRoot,
+    `${createHash("sha256").update("brief.docx").digest("hex")}.json`,
+  );
+  const legacyBytes = JSON.stringify({
+    resourceId: "brief.docx",
+    chunks: [{ text: "FORGED milestone" }],
   });
-  writeFileSync(docxIndexPath, JSON.stringify(forged));
+  writeFileSync(docxIndexPath, legacyBytes);
+  const linkedOriginal = join(indexRoot, "original-hardlink.docx");
+  const originalBytes = readFileSync(join(root, "brief.docx"));
+  linkSync(join(root, "brief.docx"), linkedOriginal);
+  const linkedIdentity = statSync(linkedOriginal);
   assert.ok(!(await run("brief.docx", { query: "FORGED" })).includes("FORGED"));
   const coreUrl = import.meta.resolve("@cjhyy/code-shell-core");
+  const isolationUrl = import.meta.resolve("./upload-document-smoke-isolation.mjs");
   const cold = spawnSync(
     process.execPath,
     [
@@ -169,7 +190,12 @@ try {
       "-e",
       `
     import assert from "node:assert/strict";
-    import { ToolRegistry, ToolExecutor, PermissionClassifier, HookRegistry } from ${JSON.stringify(coreUrl)};
+    import { createHash } from "node:crypto";
+    import { denyDocumentSmokeNetwork } from ${JSON.stringify(isolationUrl)};
+    denyDocumentSmokeNetwork();
+    assert.equal(process.env.HOME, ${JSON.stringify(process.env.HOME)});
+    assert.equal(process.env.USERPROFILE, process.env.HOME);
+    const { ToolRegistry, ToolExecutor, PermissionClassifier, HookRegistry } = await import(${JSON.stringify(coreUrl)});
     const executor = new ToolExecutor(new ToolRegistry({ builtinTools: ["ReadSource"] }),
       new PermissionClassifier([{tool:"ReadSource",decision:"allow"}]), new HookRegistry());
     executor.setContext({ cwd: ${JSON.stringify(cwd)}, settingsScope: "full" });
@@ -179,25 +205,39 @@ try {
     assert.equal(Boolean(result.isError), false, JSON.stringify(result));
     assert.ok(result.result.includes("项目预算 milestone"), result.result);
     assert.ok(!result.result.includes("FORGED"), result.result);
-    console.log("cold cache rebuilt from original bytes");
+    console.log(JSON.stringify({ pid:process.pid, ppid:process.ppid, node:process.versions.node,
+      homeSha256:createHash("sha256").update(process.env.HOME).digest("hex"),
+      index:"original-parsed/no-disk-cache" }));
   `,
     ],
     { env: process.env, encoding: "utf8", timeout: 20_000 },
   );
   assert.equal(cold.status, 0, cold.stderr + cold.stdout);
-  assert.ok(!readFileSync(docxIndexPath, "utf8").includes("FORGED"));
+  assert.equal(readFileSync(docxIndexPath, "utf8"), legacyBytes);
   writeFileSync(
-    join(root, "brief.docx"),
+    join(root, "replacement.docx"),
     officeZip({ "word/document.xml": wordXml("Replacement milestone") }),
   );
+  renameSync(join(root, "replacement.docx"), join(root, "brief.docx"));
   assert.ok((await run("brief.docx", { query: "Replacement" })).includes("Replacement milestone"));
   assert.ok(!(await run("brief.docx", { query: "项目预算" })).includes("项目预算 milestone"));
   invalidateUploadedDocumentIndex(cwd, "brief.docx");
   rmSync(join(root, "brief.docx"));
   assert.ok((await run("brief.docx", { query: "milestone" }, true)).startsWith("Error:"));
+  assert.equal(readFileSync(docxIndexPath, "utf8"), legacyBytes);
+  assert.deepEqual(readFileSync(linkedOriginal), originalBytes);
+  assert.equal(statSync(linkedOriginal).ino, linkedIdentity.ino);
+  assert.deepEqual(
+    readdirSync(indexRoot).sort(),
+    [docxIndexPath.slice(indexRoot.length + 1), "original-hardlink.docx"].sort(),
+  );
   console.log(
     JSON.stringify({
       node: process.versions.node,
+      pid: process.pid,
+      ppid: process.ppid,
+      homeSha256: createHash("sha256").update(process.env.HOME).digest("hex"),
+      coldConsumer: JSON.parse(cold.stdout.trim()),
       parserRuntime: managedRoot ? "verified-host-managed-node" : "host-runtime",
       docx: "actual-parser",
       pdf: missingPdf
@@ -205,8 +245,9 @@ try {
         : supportsPdf
           ? "actual-parser"
           : "actionable-version-gate",
-      index: "query/replace/delete-authorized+forged-cold-cache-rejected",
-      remainingIndexes: readdirSync(join(cwd, ".code-shell", "source-index")).length,
+      index: "query/replace/delete-authorized+memory-only+cold-original-parse",
+      newDerivedDiskFiles: 0,
+      legacyFilesPreserved: readdirSync(indexRoot).length,
     }),
   );
 } finally {
