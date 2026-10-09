@@ -79,6 +79,7 @@ describe("CLI Link sessions", () => {
     };
     for (const [action, params] of [
       ["create_issue", { owner: "acme", repo: "repo", title: "Synthetic" }],
+      ["update_issue", { owner: "acme", repo: "repo", issue_number: 7, state: "closed" }],
       ["set_starred", { owner: "acme", repo: "repo", starred: true }],
     ] as const)
       await expect(executeCliLinkAction("github", action, params, {}, run)).rejects.toThrow(
@@ -97,6 +98,7 @@ describe("CLI Link sessions", () => {
     expect(validation.capabilityIds).toContain("github.get_starred");
     expect(validation.capabilityIds).not.toContain("github.create_issue");
     expect(validation.capabilityIds).not.toContain("github.set_starred");
+    expect(validation.capabilityIds).not.toContain("github.update_issue");
   });
 
   test("normalizes GitLab project results", async () => {

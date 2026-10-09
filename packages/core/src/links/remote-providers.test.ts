@@ -123,11 +123,13 @@ function params(provider: RemoteLinkProviderId, action: string): Record<string, 
               ? { pull_number: 8 }
               : action === "get_file"
                 ? { path: "docs/guide.md", ref: "main" }
-                : action === "create_issue"
-                  ? { title: "Explicitly approved fixture", body: "Synthetic data" }
-                  : action === "set_starred"
-                    ? { starred: true }
-                    : {}),
+                : action === "update_issue"
+                  ? { issue_number: 7, state: "closed" }
+                  : action === "create_issue"
+                    ? { title: "Explicitly approved fixture", body: "Synthetic data" }
+                    : action === "set_starred"
+                      ? { starred: true }
+                      : {}),
         };
   if (provider === "sentry" && action === "list_projects")
     return { organization: resources.sentry };
@@ -147,7 +149,7 @@ function result(provider: RemoteLinkProviderId, action: string, body: any): unkn
   if (provider === "github") {
     if (action === "get_repository") return { id: 123, full_name: "owner/repo" };
     if (action === "get_starred") return { starred: false };
-    if (action === "set_starred") return { acknowledged: true };
+    if (action === "set_starred" || action === "update_issue") return { acknowledged: true };
     if (action === "list_repositories")
       return [
         { id: 1, full_name: "owner/repo" },

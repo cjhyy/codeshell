@@ -132,6 +132,7 @@ for (const provider of ["github", "gitlab"])
     expect(current.meta?.linkLastVerifiedAt).toBe(f.input.verifiedAt);
     expect(current.meta?.linkCapabilityIds).toEqual(f.credential.meta?.linkCapabilityIds);
     expect(current.meta?.linkCapabilityIds).not.toContain("github.set_starred");
+    expect(current.meta?.linkCapabilityIds).not.toContain("github.update_issue");
     expect(JSON.stringify(result)).not.toContain("access");
   });
 

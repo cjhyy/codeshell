@@ -43,7 +43,8 @@ export function allowsLinkAction(
   const ids = credential.meta?.linkCapabilityIds;
   if (
     credential.meta?.linkExecutionRuntime === "server" ||
-    (provider === "github" && (githubStarActionIds as readonly string[]).includes(action))
+    (provider === "github" &&
+      (action === "update_issue" || (githubStarActionIds as readonly string[]).includes(action)))
   )
     return ids?.includes(`${provider}.${action}`) === true;
   return !ids?.length || ids.includes(`${provider}.${action}`);

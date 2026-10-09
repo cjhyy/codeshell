@@ -1,3 +1,4 @@
+import { githubIssueStateParameters } from "./github-issue-state.js";
 import { asRecord, intParam, pathParam, pathSegmentParam, pick, stringParam } from "./http.js";
 
 /** Executable authority is reviewed Host code; a discovery document cannot extend this list. */
@@ -15,6 +16,7 @@ export const REMOTE_LINK_PROVIDER_ADAPTERS = [
       "list_pull_requests",
       "get_pull_request",
       "create_issue",
+      "update_issue",
       "get_repository",
       "get_starred",
       "set_starred",
@@ -212,6 +214,10 @@ export function prepareRemoteLinkAction(
     const owner = pathSegmentParam(params, "owner", { required: true, maxLength: 100 })!;
     const repo = pathSegmentParam(params, "repo", { required: true, maxLength: 100 })!;
     const repository = requireResource(`${owner}/${repo}`);
+    if (action === "update_issue") {
+      const canonical = githubIssueStateParameters(params);
+      return { repository, issue_number: canonical.issue_number, state: canonical.state };
+    }
     if (action === "get_issue") {
       assertKeys(params, ["owner", "repo", "issue_number"]);
       return { repository, number: intParam(params, "issue_number", 0, Number.MAX_SAFE_INTEGER) };
@@ -318,6 +324,10 @@ export function prepareRemoteLinkAction(
 }
 
 const issueFields = [
+  "id",
+  "url",
+  "repository_url",
+  "pull_request",
   "number",
   "title",
   "body",
@@ -411,7 +421,7 @@ export function normalizeRemoteLinkActionResult(
       if (typeof record.starred !== "boolean") throw new Error("Invalid remote Star state");
       return { starred: record.starred };
     }
-    if (action === "set_starred") {
+    if (action === "set_starred" || action === "update_issue") {
       if (record.acknowledged !== true) throw new Error("Invalid remote Star acknowledgement");
       return { acknowledged: true };
     }

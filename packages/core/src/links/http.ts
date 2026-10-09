@@ -27,7 +27,7 @@ export class LinkProviderHttpError extends Error {
 
 export interface LinkHttpRequest {
   url: URL;
-  method?: "GET" | "POST" | "PUT" | "DELETE";
+  method?: "GET" | "POST" | "PUT" | "DELETE" | "PATCH";
   headers: Record<string, string>;
   body?: unknown;
   signal?: AbortSignal;

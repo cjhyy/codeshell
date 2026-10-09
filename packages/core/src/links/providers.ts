@@ -1,3 +1,4 @@
+import { githubIssueStateParameters } from "./github-issue-state.js";
 import { githubRepositoryParameters, githubSetStarredParameters } from "./github-star.js";
 import {
   asArray,
@@ -48,7 +49,7 @@ async function request(
   context: LocalLinkActionContext | Omit<LocalLinkActionContext, "params">,
   url: string | URL,
   options: {
-    method?: "GET" | "POST";
+    method?: "GET" | "POST" | "PATCH";
     headers?: Record<string, string>;
     body?: unknown;
   } = {},
@@ -338,6 +339,10 @@ const github: LocalLinkProviderSpec = {
             { headers: githubHeaders(ctx.token) },
           ),
           [
+            "id",
+            "url",
+            "repository_url",
+            "pull_request",
             "number",
             "title",
             "body",
@@ -396,6 +401,22 @@ const github: LocalLinkProviderSpec = {
           ],
         );
       },
+    ),
+    action(
+      "update_issue",
+      "关闭或重开 Issue",
+      "设置已有 Issue 的状态并独立验证；params: owner, repo, issue_number（整数）, state（open 或 closed）。不支持 PR 或其它字段。",
+      async (ctx) => {
+        const { owner, repo, issue_number, state } = githubIssueStateParameters(ctx.params);
+        // The response is only an acknowledgement; the owning controller reads independently.
+        await request(ctx, `https://api.github.com/repos/${owner}/${repo}/issues/${issue_number}`, {
+          method: "PATCH",
+          headers: githubHeaders(ctx.token),
+          body: { state },
+        });
+        return { acknowledged: true };
+      },
+      "write",
     ),
     action(
       "create_issue",
