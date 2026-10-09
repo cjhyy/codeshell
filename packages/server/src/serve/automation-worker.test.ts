@@ -16,6 +16,7 @@ afterEach(async () => {
 });
 const script = `
 const {createInterface}=require('node:readline');
+const {existsSync}=require('node:fs');
 const send=value=>process.stdout.write(JSON.stringify({jsonrpc:'2.0',...value})+'\\n');
 let running; const approvals=[];
 createInterface({input:process.stdin}).on('line',line=>{
@@ -23,7 +24,7 @@ createInterface({input:process.stdin}).on('line',line=>{
  if(frame.method==='agent/run'){
   running=frame;
   if(params.task==='crash'){process.exit(7);return;}
-  if(params.task==='silent'){process.on('SIGTERM',()=>setTimeout(()=>process.exit(0),150));send({method:'test/silent-ready'});return;}
+  if(params.task==='silent'){process.on('SIGTERM',()=>{send({method:'test/silent-stopping'});setInterval(()=>{if(existsSync(exitReleasePath))process.exit(0);},5);});send({method:'test/silent-ready'});return;}
   send({method:'agent/runAccepted',params:{requestId:frame.id,sessionId:params.sessionId}});
   if(params.task==='hold')return;
   const approval={method:'agent/approvalRequest',params:{sessionId:params.sessionId,requestId:'approval-1',connectionId:'worker-route',generation:42,request:{toolName:params.task==='internal'?'__panel_action__':'Write',args:{file_path:'proof.txt'},description:'test approval'}}};
@@ -40,10 +41,13 @@ createInterface({input:process.stdin}).on('line',line=>{
 function fixture(timeout = 5000) {
   const root = mkdtempSync(join(tmpdir(), "automation-worker-"));
   const file = join(root, "worker.cjs");
-  writeFileSync(file, script);
+  const exitReleasePath = join(root, "allow-exit");
+  const allowExit = () => writeFileSync(exitReleasePath, "release");
+  writeFileSync(file, `const exitReleasePath=${JSON.stringify(exitReleasePath)};\n${script}`);
   let held = false,
     released = 0,
-    ready = false;
+    ready = false,
+    stopping = false;
   const bridge = new WorkerBridgeCore({
     entryPath: file,
     execPath: "node",
@@ -67,8 +71,10 @@ function fixture(timeout = 5000) {
     const message = JSON.parse(line);
     if (message.method === "agent/approvalRequest") worker.handleApproval(message.params);
     if (message.method === "test/silent-ready") ready = true;
+    if (message.method === "test/silent-stopping") stopping = true;
   });
   cleanup.push(async () => {
+    allowExit();
     await bridge.stopAndWait();
     rmSync(root, { recursive: true, force: true });
   });
@@ -114,6 +120,8 @@ function fixture(timeout = 5000) {
     held: () => held,
     released: () => released,
     ready: () => ready,
+    stopping: () => stopping,
+    allowExit,
   };
 }
 async function until(condition: () => boolean) {
@@ -214,8 +222,12 @@ test("admission timeout waits for actual process exit before releasing the Sessi
     (error) => error,
   );
   await until(f.ready);
-  await Bun.sleep(260);
+  // The admission clock starts before child startup. Observe real SIGTERM
+  // delivery and hold that process alive instead of guessing a timing window.
+  await until(f.stopping);
   expect(f.held()).toBe(true);
+  expect(f.bridge.hasChild()).toBe(true);
+  f.allowExit();
   expect(await rejected).toBeInstanceOf(HubAutomationUncertainError);
   expect(f.bridge.hasChild()).toBe(false);
   expect(f.released()).toBe(1);
