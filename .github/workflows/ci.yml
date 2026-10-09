@@ -172,6 +172,9 @@ jobs:
       - name: compiled SDK verified Link write lifecycle
         if: matrix.shard == 'core-engine'
         run: node scripts/run-isolated-node-smoke.mjs scripts/smoke-verified-link-write.mjs
+      - name: compiled SDK GitHub Issue close/reopen lifecycle
+        if: matrix.shard == 'core-engine'
+        run: bun run test:github-issue-state
       - name: compiled SDK GitHub Star lifecycle
         if: matrix.shard == 'core-engine'
         run: bun run test:github-star

@@ -1,3 +1,5 @@
+import { verifiedGithubUpdateIssue } from "./verified-issue-state.js";
+import { githubIssueStateParameters } from "./github-issue-state.js";
 import { githubSetStarredParameters } from "./github-star.js";
 import { verifiedGithubSetStarred } from "./verified-star.js";
 import type { ToolDefinition } from "../types.js";
@@ -36,6 +38,7 @@ export const linkActionToolDef: ToolDefinition = {
     "read access and independently verifies the created issue. An unknown result blocks further " +
     "writes in the Session; do not resend or alter parameters to work around it. One issue may " +
     "be created per trusted user intent; a new batch needs separate Host-owned operation slots. " +
+    "GitHub update_issue only closes/reopens non-PR issues; requires explicit get_repository/get_issue/update_issue grants, verifies immutable IDs and desired state, and never retries an unknown write. " +
     "GitHub set_starred requires explicit get_repository/get_starred/set_starred grants, verifies " +
     "the fixed repository and desired boolean state, and permits one target per trusted intent. " +
     "A verified unchanged result means no write was sent. CLI bindings expose read actions only; " +
@@ -284,7 +287,7 @@ export async function linkActionTool(
     });
   }
   const reviewedWrite =
-    providerId === "github" && ["create_issue", "set_starred"].includes(actionId);
+    providerId === "github" && ["create_issue", "set_starred", "update_issue"].includes(actionId);
   if ((action.risk === "write" && !reviewedWrite) || (reviewedWrite && action.risk !== "write"))
     return JSON.stringify({
       kind: "error",
@@ -314,6 +317,8 @@ export async function linkActionTool(
       params = githubCreateIssueParameters(params);
     if (providerId === "github" && actionId === "set_starred")
       params = githubSetStarredParameters(params);
+    if (providerId === "github" && actionId === "update_issue")
+      params = githubIssueStateParameters(params);
   } catch (error) {
     return JSON.stringify({ kind: "error", error: String(error) });
   }
@@ -460,6 +465,20 @@ export async function linkActionTool(
           "Verified writes require the owning Engine and tool authorization pipeline.",
         );
       const outcome = await verifiedGithubSetStarred({
+        ctx,
+        connection: connection.credential,
+        params,
+        assertConnected,
+        execute,
+      });
+      operation = outcome.receipt;
+      data = outcome.data;
+    } else if (providerId === "github" && actionId === "update_issue") {
+      if (!ctx?.operations || !ctx.executeBoundTool)
+        throw new Error(
+          "Verified writes require the owning Engine and tool authorization pipeline.",
+        );
+      const outcome = await verifiedGithubUpdateIssue({
         ctx,
         connection: connection.credential,
         params,

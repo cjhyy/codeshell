@@ -108,6 +108,7 @@ describe("LinkAction connection discovery", () => {
       "github.get_repository",
       "github.get_starred",
       "github.create_issue",
+      "github.update_issue",
       "github.set_starred",
     ];
     const state = installAccess([credential]);
