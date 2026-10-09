@@ -83,7 +83,7 @@ describe("finalizeRunSuccess", () => {
           memory++;
         },
         updatePersistedSessionState: () => {},
-        persistFinalRunState: () => {},
+        persistFinalRunState: () => true,
         markRunAccountingFinalized: () => {},
         costStoreSerialize: undefined,
         profile: undefined,
@@ -153,7 +153,7 @@ describe("finalizeRunSuccess", () => {
         }),
         runMemoryPipeline: () => {},
         updatePersistedSessionState: () => {},
-        persistFinalRunState: () => {},
+        persistFinalRunState: () => true,
         markRunAccountingFinalized: () => {},
         costStoreSerialize: undefined,
         profile: undefined,
@@ -162,6 +162,13 @@ describe("finalizeRunSuccess", () => {
 
       expect(result.usage.promptTokens).toBe(3400);
       expect(events).toEqual([
+        expect.objectContaining({
+          type: "usage_update",
+          promptTokensSource: "session_cumulative",
+          cumulativePromptTokens: 12400,
+          cumulativeCacheReadTokens: 2550,
+          cumulativeCacheCreationTokens: 120,
+        }),
         {
           type: "usage_update",
           promptTokens: 0,
@@ -228,6 +235,7 @@ describe("finalizeRunSuccess", () => {
       updatePersistedSessionState: () => undefined,
       persistFinalRunState: (state) => {
         persisted = structuredClone(state) as unknown as Record<string, unknown>;
+        return true;
       },
       markRunAccountingFinalized: () => undefined,
       costStoreSerialize: undefined,
