@@ -10,6 +10,7 @@ import { OperationController, createSessionOperationController } from "./control
 import { createLinkOperationReviewStore } from "../links/operation-review.js";
 import { readOperationSessionOwner } from "./session-owner.js";
 import { OperationReviewStore } from "./review-store.js";
+import { seedRetentionMetadata } from "../../../../scripts/fixtures/operation-retention-data.mjs";
 
 const roots: string[] = [];
 afterEach(() => roots.splice(0).forEach((root) => rmSync(root, { recursive: true, force: true })));
@@ -60,6 +61,56 @@ function fixture() {
   };
   return { root, directory, sessionId, state, save, ledger, plan, unknown, store, resolve };
 }
+
+test("compaction keeps real durable Session review, observations and archived incarnation fencing", () => {
+  const f = fixture();
+  const owner = f.ledger();
+  const planned = owner.prepare(f.plan);
+  const attempt = owner.claim(planned.id).receipt.attemptId!;
+  owner.settle(planned.id, attempt, "succeeded", { reference: { id: "original/verified" } });
+  const verified = owner.settle(planned.id, attempt, "verified");
+  const unknown = f.unknown("uncertain-intent");
+  const store = new OperationReviewStore(f.root);
+  const initial = store.review(f.sessionId);
+  store.observe(
+    f.sessionId,
+    initial.owner,
+    unknown.id,
+    initial.records[0].revision,
+    "matches_current",
+    ["github.get_issue"],
+    { id: 42 },
+    () => {},
+  );
+  const path = join(f.root, ".operations", "ledger.json");
+  const before = JSON.parse(readFileSync(path, "utf8"));
+  seedRetentionMetadata(f.root);
+  f.ledger().prepare({ ...f.plan, intentId: "after-compaction" });
+  const current = JSON.parse(readFileSync(path, "utf8"));
+  expect(current.schema).toBe(2);
+  expect(current.records[verified.id]).toBeUndefined();
+  expect(current.records[unknown.id]).toEqual(unknown);
+  expect(current.observations[unknown.id]).toEqual(before.observations[unknown.id]);
+  const bytes = readFileSync(path, "utf8");
+  const review = store.review(f.sessionId);
+  expect(review.records).toHaveLength(1);
+  expect(review.records[0].id).toBe(unknown.id);
+  expect(review.records[0].observation?.result).toBe("matches_current");
+  expect(
+    store.readRecovery(f.sessionId, review.owner, unknown.id, review.records[0].revision, () => {})
+      .receipt,
+  ).toEqual(unknown);
+  expect(store.provePlan(f.sessionId, verified, f.plan)).toBe(true);
+  expect(readFileSync(path, "utf8")).toBe(bytes);
+  expect(f.ledger().hasUnverifiedWrites(f.sessionId)).toBe(true);
+  expect(f.ledger().sealForFinalization(f.sessionId)).toBe(true);
+  expect(f.ledger().prepare(f.plan)).toEqual(verified);
+  f.state.startedAt++;
+  f.state.costState = new UsageLedger().sessionState(f.sessionId, f.root);
+  f.save();
+  expect(() => f.ledger().prepare(f.plan)).toThrow("immutable");
+  expect(new OperationLedger(f.root).claim(verified.id).claimed).toBe(false);
+});
 
 test("resolution is independent, durable, masked, and never changes the original attempt or Run", () => {
   const f = fixture();
@@ -191,7 +242,7 @@ test("an actual failed atomic rename cannot publish a resolution or release its 
   const f = fixture();
   const original = f.unknown();
   const path = join(f.root, ".operations/ledger.json");
-  const backup = path + ".test-backup";
+  const backup = join(f.root, "ledger.test-backup");
   const before = readFileSync(path, "utf8");
   const review = f.store.review(f.sessionId);
   try {
@@ -221,7 +272,7 @@ test("failed observation storage and stale revision preserve the exact unknown r
   const store = new OperationReviewStore(f.root);
   const review = store.review(f.sessionId);
   const path = join(f.root, ".operations/ledger.json");
-  const backup = path + ".test-backup";
+  const backup = join(f.root, "ledger.test-backup");
   const before = readFileSync(path, "utf8");
   const observe = (revision: string, assertIdle = () => {}) =>
     store.observe(

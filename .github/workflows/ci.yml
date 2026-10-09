@@ -73,6 +73,8 @@ jobs:
           node-version: "22.16.0"
       - name: Owned external CLI output through authenticated Mobile WS and actual hook
         run: bun run test:mobile-external-output-journal
+      - name: Bounded operation retention, actual process crash and cold write barrier
+        run: bun run test:operation-retention
       - name: Native Core output journal through authenticated Mobile WS and actual hook
         run: bun run test:mobile-output-journal
 
@@ -333,6 +335,7 @@ jobs:
             packages/core/src/tool-system/builtin/crlf.test.ts `
             packages/core/src/tool-system/sandbox/sandbox-win32.test.ts `
             packages/core/src/utils/exec.test.ts `
+            packages/core/src/operations/files.test.ts `
             packages/core/src/operations/controller.test.ts `
             packages/core/src/operations/review-store.test.ts `
             packages/core/src/operations/resolver.test.ts `

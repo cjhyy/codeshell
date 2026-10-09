@@ -51,6 +51,7 @@
     "test:upload-documents": "node scripts/run-isolated-node-smoke.mjs scripts/smoke-upload-documents.mjs",
     "test:github-issue-state": "node scripts/run-isolated-node-smoke.mjs scripts/smoke-github-issue-state.mjs",
     "test:github-star": "node scripts/run-isolated-node-smoke.mjs scripts/smoke-github-star.mjs",
+    "test:operation-retention": "node scripts/run-isolated-node-smoke.mjs scripts/smoke-operation-retention.mjs && node scripts/run-isolated-node-smoke.mjs scripts/smoke-verified-link-write.mjs --retention",
     "test:mobile-external-output-journal": "node scripts/run-mobile-external-output-smoke.mjs",
     "test:mobile-output-journal": "node scripts/run-isolated-node-smoke.mjs scripts/smoke-mobile-output-journal.mjs",
     "test:output-journal": "node scripts/run-isolated-node-smoke.mjs scripts/smoke-output-journal.mjs",
