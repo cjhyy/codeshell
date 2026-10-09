@@ -95,6 +95,7 @@ async function resourcesFor(
       cwd,
       settingsScope: ctx?.settingsScope ?? "project",
       signal: ctx?.signal,
+      ...(access.kind === "mcp-resource" ? { mcpContext: ctx } : {}),
     })) ?? []
   );
 }
@@ -498,6 +499,7 @@ export async function readSourceTool(
       cwd,
       settingsScope: ctx?.settingsScope ?? "project",
       executeBoundTool: ctx?.executeBoundTool,
+      ...(access.kind === "mcp-resource" ? { mcpContext: ctx } : {}),
       documentParserExecutable: ctx?.documentParserExecutable,
       ...(typeof query === "string" ? { query, limit: typeof limit === "number" ? limit : 5 } : {}),
       ...(typeof chunk === "string" ? { chunk } : {}),

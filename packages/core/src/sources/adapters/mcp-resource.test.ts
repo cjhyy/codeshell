@@ -1,4 +1,5 @@
 import { describe, expect, test } from "bun:test";
+import type { ToolContext } from "../../tool-system/context.js";
 import type { SourceDefinition } from "../types.js";
 import { createMcpResourceAdapter } from "./mcp-resource.js";
 
@@ -58,6 +59,36 @@ describe("mcp-resource adapter", () => {
         signal: controller.signal,
       }),
     ).toEqual({ resourceId: "issue://1", text: "A中", truncated: true });
+  });
+
+  test("passes the original owning context and signal through injected managers", async () => {
+    const controller = new AbortController();
+    const context = { cwd: "/synthetic", allowedMcpServers: new Set(["github"]) } as ToolContext;
+    const adapter = createMcpResourceAdapter((options) => {
+      expect(options?.mcpContext).toBe(context);
+      return {
+        async listResources(server, signal, workspace) {
+          expect(server).toBe("github");
+          expect(signal).toBe(controller.signal);
+          expect(workspace).toBe(context);
+          return [];
+        },
+        async readResource(server, uri, signal, workspace) {
+          expect(server).toBe("github");
+          expect(uri).toBe("issue://1");
+          expect(signal).toBe(controller.signal);
+          expect(workspace).toBe(context);
+          return "bound";
+        },
+      };
+    });
+    const options = { signal: controller.signal, mcpContext: context };
+    await adapter.listResources(definition, "resources", options);
+    expect(await adapter.read(definition, "issue://1", { ...options, maxBytes: 10 })).toEqual({
+      resourceId: "issue://1",
+      text: "bound",
+      truncated: false,
+    });
   });
 
   test("rejects missing or blank adapterConfig.server", async () => {

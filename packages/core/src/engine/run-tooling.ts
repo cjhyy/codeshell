@@ -29,6 +29,21 @@ import type { EngineRunOptions, RunBehaviorProfile } from "./run-types.js";
 import { RunToolSurface } from "../tool-system/run-tool-surface.js";
 import { logger } from "../logging/logger.js";
 
+/** Fold once per Run from the unmodified transport baseline; unknown names cannot create servers. */
+export function snapshotRunMcpServers(
+  baseline: Record<string, MCPServerConfig>,
+  overrides?: Record<string, CapabilityOverride>,
+): Record<string, MCPServerConfig> {
+  return Object.fromEntries(
+    Object.entries(baseline).map(([name, config]) => {
+      const snapshot = structuredClone(config);
+      const override = overrides?.[name];
+      if (override === "on" || override === "off") snapshot.enabled = override === "on";
+      return [name, snapshot];
+    }),
+  );
+}
+
 /** Keep capability discovery complete while freezing schemas once per model step. */
 export function initializeRunToolSurface(
   toolCtx: ToolContext,
@@ -412,10 +427,9 @@ export function assembleRunToolDefs(args: {
   // registers its tools into the SHARED registry, and without this filter
   // they leaked into every session (e.g. chrome-devtools tools showing up
   // in a project that never enabled the plugin). Keep an MCP tool only when
-  // its server is in THIS session's merged config.mcpServers — which
-  // already folds the project's capabilityOverrides. Gated on the config
-  // being present: engines without one (sub-agents, bare tests) have no
-  // MCP tools in their private registries anyway.
+  // its server is in this Run's effective MCP snapshot. The Engine folds
+  // Profile/project/local overrides once before connection, and reuses that
+  // same snapshot for every tool-surface refresh throughout the Run.
   const allowedMcpServers = new Set(
     args.mcpDisabled
       ? []

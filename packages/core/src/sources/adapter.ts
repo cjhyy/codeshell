@@ -9,6 +9,8 @@ export interface SourceAdapterContext {
   settingsScope?: SettingsScope;
   signal?: AbortSignal;
   executeBoundTool?: ToolContext["executeBoundTool"];
+  /** Owning Run's native MCP binding; never supplied by source arguments. */
+  mcpContext?: ToolContext;
   assertAuthorized?: () => void;
   documentParserExecutable?: ToolContext["documentParserExecutable"];
 }

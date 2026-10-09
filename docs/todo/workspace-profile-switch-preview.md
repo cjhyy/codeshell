@@ -13,7 +13,7 @@ Desktop 项目设置的数字人区块和数字人页的“设为／取消项目
 
 预览仅读取配置、Profile 定义、发现清单与数据源绑定／凭据状态元数据。SettingsManager 保持 migration 的内存计算，但跳过备份与写回。预览不安装依赖、不执行工具版本探测，也不读取项目指令、记忆正文或解密凭据。依赖安装的既有确认流程结束后才生成最终预览。
 
-预览显示 Profile 指令是否变化及长度、portable memory 挂载身份、现有能力配置开关差异、尚未发现的能力声明，以及数据源规则与项目绑定的实际交集。能力配置不代表已安装、已连接或已授权；MCP Profile overrides 尚未进入运行时 diskDefaults，故只称配置声明。Desktop 独占能力语义保持只处理已发现 Skills，不扩大到插件、MCP 或 Agent。
+预览显示 Profile 指令是否变化及长度、portable memory 挂载身份、现有能力配置开关差异、尚未发现的能力声明，以及数据源规则与项目绑定的实际交集。能力配置不代表已安装、已连接或已授权。MCP 在每次 Run 开始从原始 transport 配置合并 Session Profile／项目默认快照、项目与本机开关；连接、工具可见性和执行白名单共用该 Run 的同一份快照。运行中重载在下一次 Run 生效，具体边界见 [MCP 运行时交付](profile-mcp-runtime-delivery.md)。Desktop 独占能力语义保持只处理已发现 Skills，不扩大到插件、MCP 或 Agent。
 
 采用以 SHA-256 expectedRevision 比较 Profile 定义、当前默认、项目／本机直接覆盖、发现清单与数据源状态。Main 在 mutation gate 内重新解析目标；配置比较与 profile 子树写入共用现有项目 scope 锁。目标或配置变化返回 stale，界面刷新预览并要求再次确认，不静默转写新根目录。取消、任务忙、旧预览均不写 Profile，也不触发重载。异步返回属于旧 UI 目标时丢弃。
 
