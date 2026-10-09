@@ -4,7 +4,15 @@
 import assert from "node:assert/strict";
 import { createHash } from "node:crypto";
 import { spawnSync } from "node:child_process";
-import { chmodSync, mkdirSync, readFileSync, realpathSync, writeFileSync } from "node:fs";
+import {
+  chmodSync,
+  closeSync,
+  mkdirSync,
+  openSync,
+  readFileSync,
+  realpathSync,
+  writeFileSync,
+} from "node:fs";
 import http from "node:http";
 import https from "node:https";
 import { homedir } from "node:os";
@@ -91,6 +99,7 @@ async function runtimeCase(
     revokeAtCreate = false,
     action,
     negative = false,
+    pluginMode = false,
   } = {},
 ) {
   stage = name;
@@ -167,7 +176,13 @@ async function runtimeCase(
   let output, error;
   try {
     const captured = resources?.(host);
-    const permit = issue({ command, timeoutMs, event: "pre_tool_use", resources: captured });
+    const permit = issue({
+      command,
+      timeoutMs,
+      event: "pre_tool_use",
+      resources: captured,
+      plugin: pluginMode,
+    });
     try {
       output = await scope.run(permit, "{}");
     } catch (caught) {
@@ -229,6 +244,7 @@ try {
     action: "dispose",
     negative: true,
   });
+  await runtimeCase("output-bound", { command: "head -c 1049000 /dev/zero", negative: true });
   stage = "OS-negative-probe";
   const canary = join(home, "unmounted-host-canary.txt");
   writeFileSync(canary, "private synthetic canary", { mode: 0o600 });
@@ -240,26 +256,37 @@ try {
   writeFileSync(probePath, probeSource, { mode: 0o600 });
   const inputPath = join(home, "approved.txt");
   writeFileSync(inputPath, "synthetic approved hook input", { mode: 0o600 });
-  const os = await runtimeCase("OS-negative-probe", {
-    command: "node /resources/probe.mjs",
-    resources: (host) =>
-      host.capture([
-        {
-          path: realpathSync(probePath),
-          name: "probe.mjs",
-          assertReadable() {
-            assert.equal(readFileSync(probePath, "utf8"), probeSource);
+  const canaryDescriptor = openSync(canary, "r");
+  const previousCanary = process.env.CODESHELL_PROBE_CANARY;
+  process.env.CODESHELL_PROBE_CANARY = "synthetic Host environment must not enter Hook";
+  let os;
+  try {
+    os = await runtimeCase("OS-negative-probe", {
+      command: "node /resources/probe.mjs",
+      pluginMode: true,
+      resources: (host) =>
+        host.capture([
+          {
+            path: realpathSync(probePath),
+            name: "probe.mjs",
+            assertReadable() {
+              assert.equal(readFileSync(probePath, "utf8"), probeSource);
+            },
           },
-        },
-        {
-          path: realpathSync(inputPath),
-          name: "inputs/approved.txt",
-          assertReadable() {
-            assert.equal(readFileSync(inputPath, "utf8"), "synthetic approved hook input");
+          {
+            path: realpathSync(inputPath),
+            name: "inputs/approved.txt",
+            assertReadable() {
+              assert.equal(readFileSync(inputPath, "utf8"), "synthetic approved hook input");
+            },
           },
-        },
-      ]),
-  });
+        ]),
+    });
+  } finally {
+    closeSync(canaryDescriptor);
+    if (previousCanary === undefined) delete process.env.CODESHELL_PROBE_CANARY;
+    else process.env.CODESHELL_PROBE_CANARY = previousCanary;
+  }
   const kernel = JSON.parse(os.output.stdout.trim().split("\n").at(-1));
   assert.deepEqual(kernel.failed, []);
   assert.equal(kernel.checks.capturedChild.error, "EPERM");

@@ -22,6 +22,16 @@ checks.approvedRead =
   fs.readFileSync("/resources/inputs/approved.txt", "utf8") === "synthetic approved hook input";
 fs.writeFileSync("/scratch/allowed.txt", "private scratch");
 checks.privateWrite = fs.readFileSync("/scratch/allowed.txt", "utf8") === "private scratch";
+checks.pluginAliases =
+  process.env.CODESHELL_PLUGIN_ROOT === "/resources" &&
+  process.env.PLUGIN_ROOT === "/resources" &&
+  process.env.CODESHELL_PLUGIN_DATA === "/scratch/plugin-data" &&
+  process.env.PLUGIN_DATA === "/scratch/plugin-data" &&
+  process.env.CLAUDE_PLUGIN_ROOT === undefined &&
+  process.env.CLAUDE_PLUGIN_DATA === undefined;
+fs.writeFileSync(process.env.CODESHELL_PLUGIN_DATA + "/private.txt", "private plugin data");
+checks.pluginDataWrite =
+  fs.readFileSync("/scratch/plugin-data/private.txt", "utf8") === "private plugin data";
 checks.inputWrite = attempt(() => fs.writeFileSync("/resources/inputs/approved.txt", "wrong"));
 checks.rootWrite = attempt(() => fs.writeFileSync("/var/wrong.txt", "wrong"));
 checks.unmountedHostRead = attempt(() => fs.readFileSync(canary));

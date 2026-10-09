@@ -1,7 +1,15 @@
 /** Actual negative CLI/custody paths; run in a fresh real private HOME. */
 import assert from "node:assert/strict";
 import { spawnSync } from "node:child_process";
-import { mkdirSync, readFileSync, readdirSync, realpathSync, writeFileSync } from "node:fs";
+import {
+  mkdirSync,
+  mkdtempSync,
+  readFileSync,
+  readdirSync,
+  realpathSync,
+  rmSync,
+  writeFileSync,
+} from "node:fs";
 import http from "node:http";
 import https from "node:https";
 import net from "node:net";
@@ -31,6 +39,7 @@ const docker = (...args) => {
 // daemon. It holds create before forwarding to exercise real Docker CLI timeout;
 // it cannot route to a provider, account or Internet endpoint.
 const nativeRequest = http.request;
+const nativeUnixConnect = net.createConnection;
 const deny = () => {
   throw new Error("Cleanup fixture refused network");
 };
@@ -113,7 +122,7 @@ async function failedCase(
   writeFileSync(join(evidence, `${name}.json`), JSON.stringify(result, null, 2), { mode: 0o600 });
   return result;
 }
-let proxy;
+let proxy, proxyRoot;
 const sockets = new Set();
 try {
   const rejected = await failedCase("create-rejected-no-container", { comma: true });
@@ -148,7 +157,10 @@ try {
   results.push({ name: "fixture-owned-container-removal", ...removed });
   const requests = [],
     daemonSocket = config.endpoint.slice("unix://".length);
-  const socket = join(home, "explicit-docker-fault-proxy.sock");
+  const daemonAgent = new http.Agent({ keepAlive: false });
+  daemonAgent.createConnection = () => nativeUnixConnect({ path: daemonSocket });
+  proxyRoot = realpathSync(mkdtempSync("/tmp/codeshell-hook-proxy-"));
+  const socket = join(proxyRoot, "daemon.sock");
   proxy = http.createServer(async (request, response) => {
     const chunks = [];
     for await (const chunk of request) chunks.push(Buffer.from(chunk));
@@ -170,6 +182,7 @@ try {
         path: request.url,
         method: request.method,
         headers: request.headers,
+        agent: daemonAgent,
       },
       (result) => {
         response.writeHead(result.statusCode, result.headers);
@@ -183,7 +196,10 @@ try {
     sockets.add(client);
     client.once("close", () => sockets.delete(client));
   });
-  await new Promise((done) => proxy.listen(socket, done));
+  await new Promise((done, reject) => {
+    proxy.once("error", reject);
+    proxy.listen(socket, done);
+  });
   const uncertain = await failedCase("create-timeout-absence-not-cleanup", {
     runtime: { ...config, endpoint: `unix://${socket}` },
     expectUnproven: true,
@@ -215,7 +231,9 @@ try {
   );
   console.log(`Constrained Hook cleanup negatives passed: ${evidence}`);
 } finally {
-  process.env.TMPDIR = previousTmp;
+  if (previousTmp === undefined) delete process.env.TMPDIR;
+  else process.env.TMPDIR = previousTmp;
   for (const socket of sockets) socket.destroy();
   if (proxy) await new Promise((done) => proxy.close(done));
+  if (proxyRoot) rmSync(proxyRoot, { recursive: true, force: true });
 }

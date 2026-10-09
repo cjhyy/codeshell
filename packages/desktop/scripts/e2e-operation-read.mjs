@@ -254,7 +254,11 @@ async function guardedProcesses() {
       .map(JSON.parse);
     assert.ok(
       receipts.every(
-        (row) => row.homeId === homeId && row.origin === origin && row.negativeProbes === 8,
+        (row) =>
+          row.homeId === homeId &&
+          row.origin === origin &&
+          row.negativeProbes === 8 &&
+          row.childNegativeProbes === 3,
       ),
     );
     if (
