@@ -1,6 +1,4 @@
 import { createDesktopRemoteServices } from "./desktop-remote-services.js";
-import { registerCloudAccountIpc } from "./cloud-account-ipc.js";
-import { registerDeviceRelayIpc } from "./device-relay-ipc.js";
 import { registerProjectPanelIpc } from "./project-panel-ipc.js";
 import { registerProfileSwitchIpc } from "./profile-switch-ipc.js";
 import { registerRemoteLinkIpc } from "./remote-link-ipc.js";
@@ -1011,7 +1009,8 @@ const tunnelManager = new TunnelManager({
 const accessPasscode = new AccessPasscode({
   filePath: resolve(app.getPath("userData"), "mobile-remote", "access.json"),
 });
-const { cloudAccountManager, mobileRemoteController } = createDesktopRemoteServices({
+const { mobileRemoteController } = createDesktopRemoteServices({
+  ipcMain,
   userDataDir: app.getPath("userData"),
   environmentDir: join(codeShellHome(), "desktop"),
   safeStorage,
@@ -5481,20 +5480,6 @@ const startMobileRemote = (opts?: { mode?: "lan" | "tunnel" | "relay" }) =>
 const stopMobileRemote = () => mobileRemoteController.stop();
 const createMobileRemotePairingUrl = () => mobileRemoteController.pairingUrl();
 const getMobileRemoteGatewayStatus = () => mobileRemoteController.status();
-registerCloudAccountIpc({
-  ipcMain,
-  manager: cloudAccountManager,
-  isMainWindow: (contents) => {
-    const window = BrowserWindow.fromWebContents(contents);
-    return !!window && mainWindows.has(window);
-  },
-});
-registerDeviceRelayIpc({
-  ipcMain,
-  controller: mobileRemoteController,
-  isMainWindow: (sender) =>
-    [...mainWindows].some((window) => !window.isDestroyed() && window.webContents === sender),
-});
 
 ipcMain.handle("mobileRemote:listDevices", async () => mobileDevices.listDevices());
 ipcMain.handle("mobileRemote:revokeDevice", async (_e, id: string) => {

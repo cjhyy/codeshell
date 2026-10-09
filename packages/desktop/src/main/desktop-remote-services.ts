@@ -1,4 +1,4 @@
-import type { BrowserWindow, SafeStorage } from "electron";
+import type { BrowserWindow, IpcMain, SafeStorage, WebContents } from "electron";
 import { resolve } from "node:path";
 import type {
   AccessPasscode,
@@ -10,9 +10,12 @@ import { CloudAccountManager } from "./cloud-account-manager.js";
 import { CloudAccountStore } from "./cloud-account-store.js";
 import { DeviceRelayStore, type RelaySecretCipher } from "./device-relay-store.js";
 import { MobileRemoteController } from "./mobile-remote-controller.js";
+import { registerCloudAccountIpc } from "./cloud-account-ipc.js";
+import { registerDeviceRelayIpc } from "./device-relay-ipc.js";
 
 /** Compose optional cloud identity and its remote-access lifecycle without starting either. */
 export function createDesktopRemoteServices(options: {
+  ipcMain: Pick<IpcMain, "handle">;
   userDataDir: string;
   environmentDir: string;
   safeStorage: Pick<
@@ -60,6 +63,16 @@ export function createDesktopRemoteServices(options: {
           window.webContents.send("mobileRemote:relayStatusChanged", status);
       }
     },
+  });
+  const isMainWindow = (contents: WebContents) =>
+    [...options.windows()].some(
+      (window) => !window.isDestroyed() && window.webContents === contents,
+    );
+  registerCloudAccountIpc({ ipcMain: options.ipcMain, manager: cloudAccountManager, isMainWindow });
+  registerDeviceRelayIpc({
+    ipcMain: options.ipcMain,
+    controller: mobileRemoteController,
+    isMainWindow,
   });
   return { cloudAccountManager, mobileRemoteController };
 }

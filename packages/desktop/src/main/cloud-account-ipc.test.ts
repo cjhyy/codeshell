@@ -29,6 +29,11 @@ test("cloud account IPC rejects non-main frames and rechecks ownership after log
       cancelSignIn: () => {},
     } as any,
   });
+  expect([...handlers.keys()].sort()).toEqual(
+    ["status", "login", "register", "github", "linkGitHub", "cancelSignIn", "logout"]
+      .map((name) => `cloudAccount:${name}`)
+      .sort(),
+  );
   for (const handler of handlers.values()) {
     expect(() => handler({ ...event, senderFrame: {} }, {})).toThrow();
     expect(() => handler({ ...event, sender: { ...sender } }, {})).toThrow();
@@ -37,6 +42,11 @@ test("cloud account IPC rejects non-main frames and rechecks ownership after log
     handlers.get(`cloudAccount:${name}`)!(event, {});
     expect(authorized!()).toBe(true);
   }
+  const originalFrame = sender.mainFrame;
+  sender.mainFrame = {};
+  expect(authorized!()).toBe(false);
+  for (const handler of handlers.values()) expect(() => handler(event, {})).toThrow();
+  sender.mainFrame = originalFrame;
   destroyed = true;
   expect(authorized!()).toBe(false);
   for (const handler of handlers.values()) expect(() => handler(event, {})).toThrow();
