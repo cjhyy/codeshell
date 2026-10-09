@@ -31,7 +31,7 @@ import {
 import { randomUUID } from "node:crypto";
 import { dirname, join } from "node:path";
 import { homedir } from "node:os";
-import { validateSchedule, type CronJob } from "./scheduler.js";
+import { validateJobTiming, type CronJob } from "./scheduler.js";
 import { logger } from "../logging/logger.js";
 import { lockSync } from "../utils/lockfile.js";
 
@@ -227,7 +227,14 @@ function normalizeJob(value: unknown, strict: boolean): CronJob | undefined {
   }
 
   try {
-    validateSchedule(raw.schedule, typeof raw.timezone === "string" ? raw.timezone : undefined);
+    validateJobTiming({
+      schedule: raw.schedule,
+      timezone: typeof raw.timezone === "string" ? raw.timezone : undefined,
+      once: raw.once,
+      runAt: raw.runAt,
+      missedPolicy: raw.missedPolicy,
+      catchUpUntil: raw.catchUpUntil,
+    });
   } catch {
     return invalid("schedule");
   }
@@ -236,6 +243,11 @@ function normalizeJob(value: unknown, strict: boolean): CronJob | undefined {
     id: raw.id,
     name: raw.name,
     schedule: raw.schedule,
+    ...(typeof raw.runAt === "number" ? { runAt: raw.runAt } : {}),
+    ...(raw.missedPolicy === "skip" || raw.missedPolicy === "fire-once"
+      ? { missedPolicy: raw.missedPolicy }
+      : {}),
+    ...(typeof raw.catchUpUntil === "number" ? { catchUpUntil: raw.catchUpUntil } : {}),
     prompt: raw.prompt,
     enabled: raw.enabled,
     runCount: raw.runCount as number,
