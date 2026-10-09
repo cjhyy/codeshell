@@ -84,7 +84,7 @@ if (process.env.CODESHELL_OPERATION_READ_CHILD === "1") {
       expect(allowed.hostname).toBe("127.0.0.1");
       expect(Number(allowed.port)).toBeGreaterThan(0);
       const summary = assertBunTestCompletion(report);
-      expect(summary.tests).toBe(28);
+      expect(summary.tests).toBe(47);
       expect(summary.skipped).toBe(0);
       const retained = join(reports, "child.junit.xml");
       copyFileSync(report, retained);
