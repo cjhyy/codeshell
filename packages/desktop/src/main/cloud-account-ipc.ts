@@ -18,11 +18,14 @@ export function registerCloudAccountIpc(options: {
     owner(event);
     return options.manager.status();
   });
-  for (const kind of ["login", "register"] as const)
-    options.ipcMain.handle(`cloudAccount:${kind}`, (event, input: CloudAccountLogin) => {
-      owner(event);
-      return options.manager.signIn(kind, input, () => allowed(event));
-    });
+  options.ipcMain.handle("cloudAccount:login", (event, input: CloudAccountLogin) => {
+    owner(event);
+    return options.manager.signIn("login", input, () => allowed(event));
+  });
+  options.ipcMain.handle("cloudAccount:register", (event, input: CloudAccountLogin) => {
+    owner(event);
+    return options.manager.signIn("register", input, () => allowed(event));
+  });
   options.ipcMain.handle(
     "cloudAccount:github",
     (event, input: { origin: string; deviceName?: string }) => {
