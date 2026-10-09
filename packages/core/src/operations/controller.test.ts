@@ -6,6 +6,7 @@ import { spawn } from "node:child_process";
 import { OperationController, OperationFailure, type OperationAdapter } from "./controller.js";
 import { canonicalOperationValue, OperationLedger, type OperationPlan } from "./ledger.js";
 import { PlaintextCipher } from "../credentials/cipher.js";
+import { OperationRecoveryFiles } from "./recovery.js";
 
 const roots: string[] = [];
 const root = () => {
@@ -46,6 +47,95 @@ const deferred = () => {
   });
   return { promise, resolve };
 };
+
+test("original private recovery inputs persist before the one send and survive a cold lost response", async () => {
+  const directory = root();
+  const cipher = new PlaintextCipher();
+  const ledger = new OperationLedger(directory, cipher);
+  let sends = 0;
+  const input = { authority: "original-account-grant", identity: { targetId: 42 } };
+  const receipt = await new OperationController(ledger).run(
+    plan(),
+    adapter({
+      recoveryInput: (phase) => (phase === "prepared" ? input : undefined),
+      execute: async () => {
+        sends++;
+        const snapshot = JSON.parse(
+          readFileSync(join(directory, ".operations/ledger.json"), "utf8"),
+        );
+        expect(snapshot.records[Object.keys(snapshot.records)[0]!].recovery.prepared).toHaveLength(
+          64,
+        );
+        throw new Error("lost response");
+      },
+    }),
+  );
+  expect(receipt.state).toBe("unknown");
+  const snapshot = JSON.parse(readFileSync(join(directory, ".operations/ledger.json"), "utf8"));
+  const key = Buffer.from(cipher.decrypt(snapshot.key), "hex");
+  const coldInput = JSON.parse(
+    new OperationRecoveryFiles(join(directory, ".operations")).read(
+      key,
+      receipt.id,
+      receipt.recovery!.prepared,
+    ),
+  );
+  expect(coldInput).toEqual({ schema: 1, plan: plan(), payload: input });
+  expect(ledger.provePlan(receipt, coldInput.plan)).toBe(true);
+  expect(ledger.provePlan(receipt, { ...coldInput.plan, account: "different" })).toBe(false);
+  expect(ledger.provePlan(receipt, { ...coldInput.plan, parameters: { body: "changed" } })).toBe(
+    false,
+  );
+  expect(
+    (await new OperationController(new OperationLedger(directory, cipher)).run(plan(), adapter()))
+      .state,
+  ).toBe("unknown");
+  expect(sends).toBe(1);
+  expect(() => ledger.captureRecovery(plan(), receipt.id, "identity", input)).toThrow();
+  expect(
+    JSON.parse(readFileSync(join(directory, ".operations/ledger.json"), "utf8")).records[
+      receipt.id
+    ],
+  ).toEqual(receipt);
+});
+
+test("private input checkpoint failure blocks before send; failed verification still saves its original identity", async () => {
+  const directory = root();
+  const ledger = new OperationLedger(directory);
+  let sends = 0;
+  const original = ledger.captureRecovery.bind(ledger);
+  ledger.captureRecovery = () => {
+    throw new Error("storage unavailable");
+  };
+  const blocked = await new OperationController(ledger).run(
+    plan(),
+    adapter({
+      recoveryInput: () => ({ prepared: true }),
+      execute: async () => {
+        sends++;
+        return { id: "123" };
+      },
+    }),
+  );
+  expect(blocked.state).toBe("blocked");
+  expect(sends).toBe(0);
+  ledger.captureRecovery = original;
+  const nextPlan = plan({ intentId: "separate-intent" });
+  const receipt = await new OperationController(ledger).run(
+    nextPlan,
+    adapter({
+      recoveryInput: (phase) =>
+        phase === "prepared" ? { identity: null } : { identity: { id: 123 } },
+      verify: async () => false,
+    }),
+  );
+  expect(receipt.state).toBe("succeeded");
+  expect(receipt.recovery!.identity).toHaveLength(64);
+  ledger.sealForFinalization(nextPlan.sessionId);
+  expect(() =>
+    ledger.captureRecovery(nextPlan, receipt.id, "identity", { identity: { id: 999 } }),
+  ).toThrow("finalized");
+});
 
 test("durable verified receipt replays without another send; raw input is absent and ownership is isolated", async () => {
   const directory = root();

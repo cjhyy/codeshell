@@ -6,6 +6,7 @@ import type { ResolvedRendererConfigurationTarget } from "./renderer-configurati
 import type {
   OperationResolutionReview,
   OperationResolutionResult,
+  OperationReadResult,
 } from "../shared/operation-resolution.js";
 
 type OperationReviewStore = ReturnType<typeof createLinkOperationReviewStore>;
@@ -14,7 +15,8 @@ interface Deps {
   ipc: Pick<IpcMain, "handle" | "removeHandler">;
   windows(): BrowserWindow[];
   enabled(): boolean;
-  store: Pick<OperationReviewStore, "review" | "resolve">;
+  store: Pick<OperationReviewStore, "review" | "resolve"> &
+    Partial<Pick<OperationReviewStore, "reconcile">>;
   resolveTarget(input: unknown): Promise<ResolvedRendererConfigurationTarget>;
   trusted(cwd: string): Promise<boolean>;
   trustedSync(cwd: string): boolean;
@@ -126,6 +128,96 @@ export function registerOperationResolutionIpc(deps: Deps): () => void {
     },
   );
   handle(
+    "operationResolution:reconcile",
+    async (window, args, check): Promise<OperationReadResult> => {
+      if (args.length !== 1 || !deps.store.reconcile)
+        throw new Error("Operation read review unavailable");
+      const input = inputRecord(args[0], ["reviewToken", "operationId", "revision"]);
+      const prior = previews.get(input.reviewToken);
+      const record = prior?.snapshot.records.find(
+        (record) =>
+          record.id === input.operationId &&
+          record.revision === input.revision &&
+          record.canResolve,
+      );
+      if (
+        !prior ||
+        !record ||
+        prior.window !== window ||
+        prior.frame !== window.webContents.mainFrame ||
+        prior.expiresAt <= Date.now()
+      )
+        throw new Error("Operation review expired or changed; refresh the activity record");
+      previews.delete(input.reviewToken);
+      const workspace = prior.snapshot.owner.state.workspace as { root?: unknown } | undefined;
+      const cwd = typeof workspace?.root === "string" ? workspace.root : prior.target.cwd;
+      const executionRoot = rootIdentity(cwd);
+      const assertCurrent = () => {
+        check();
+        if (
+          Date.now() > prior.expiresAt ||
+          deps.isSessionRunning(prior.sessionId) ||
+          !deps.trustedSync(prior.target.cwd) ||
+          deps.authorityRevision() !== prior.authority ||
+          rootIdentity(prior.target.cwd) !== prior.root ||
+          rootIdentity(cwd) !== executionRoot
+        )
+          throw new Error("Operation Session or project changed; refresh the activity record");
+      };
+      assertCurrent();
+      const confirmation = await deps.confirm(window, {
+        type: "question",
+        title: "独立只读核查 / Independent read-only review",
+        message: "读取原资源的当前状态？ / Read the original resource's current state?",
+        detail: `${record.service} / ${record.action}\n\n这是用户发起的独立 Host 只读核查，遵守当前项目设置、工具禁用和原连接授权；不会启动模型或重发写入。可能发送 get_repository / get_starred / get_issue 中最多两项固定读取。匹配当前状态不能证明原写入成功，原任务与未知阻断均不改变。证据不足时仍需人工核查。\n\nThis independent Host read uses current project settings, tool controls and the original connection grant. It starts no model and resends no write. At most two fixed get_repository / get_starred / get_issue reads may run. Matching current state does not prove the original write succeeded. The original Run and uncertainty barrier remain unchanged. Missing evidence still requires manual review.`,
+        buttons: ["取消 / Cancel", "只读核查 / Read only"],
+        defaultId: 0,
+        cancelId: 0,
+        noLink: true,
+      });
+      check();
+      if (confirmation.response !== 1) return { status: "cancelled" };
+      const current = await authority(prior.sessionId, check);
+      if (
+        JSON.stringify(current.target) !== JSON.stringify(prior.target) ||
+        current.authority !== prior.authority ||
+        current.root !== prior.root
+      )
+        throw new Error("Operation Session or project changed; refresh the activity record");
+      assertCurrent();
+      const observation = await deps.store.reconcile(
+        prior.sessionId,
+        prior.snapshot.owner,
+        input.operationId,
+        input.revision,
+        {
+          cwd,
+          // The Desktop stdio Host configures full settings. Core intersects
+          // credential access with the original prepared (or legacy) scope.
+          settingsScope: "full",
+          assertCurrent,
+          approveRead: async (action, target) => {
+            assertCurrent();
+            const permission = await deps.confirm(window, {
+              type: "question",
+              title: "只读权限确认 / Read permission",
+              message: `当前权限规则要求确认 ${action} / Current rules require approval for ${action}`,
+              detail: `${target}\n\n仅允许本次固定读取，不保存权限，不扩展连接授权。 / Allow this fixed read once without saving a permission or expanding the connection grant.`,
+              buttons: ["拒绝 / Deny", "允许本次读取 / Allow once"],
+              defaultId: 0,
+              cancelId: 0,
+              noLink: true,
+            });
+            assertCurrent();
+            return permission.response === 1;
+          },
+        },
+      );
+      assertCurrent();
+      return { status: "observed", observation };
+    },
+  );
+  handle(
     "operationResolution:resolve",
     async (window, args, check): Promise<OperationResolutionResult> => {
       if (args.length !== 1) throw new Error("Invalid operation resolution");
@@ -194,5 +286,6 @@ export function registerOperationResolutionIpc(deps: Deps): () => void {
     previews.clear();
     deps.ipc.removeHandler("operationResolution:review");
     deps.ipc.removeHandler("operationResolution:resolve");
+    deps.ipc.removeHandler("operationResolution:reconcile");
   };
 }

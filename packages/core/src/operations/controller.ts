@@ -43,6 +43,8 @@ export interface OperationAdapter {
   execute(): Promise<OperationReference>;
   /** Independent permission-gated read, never trusting the write response as proof. */
   verify(reference: OperationReference): Promise<boolean>;
+  /** Optional original private inputs; never model output or a later reconciliation read. */
+  recoveryInput?(phase: "prepared" | "identity"): unknown | undefined;
 }
 
 function category(error: unknown): OperationError {
@@ -72,6 +74,9 @@ export class OperationController {
         adapter.assertAuthorized();
         if (!(await adapter.authorize())) throw new OperationFailure("cancelled");
         adapter.assertAuthorized();
+        const preparedRecovery = adapter.recoveryInput?.("prepared");
+        if (preparedRecovery !== undefined)
+          this.ledger.captureRecovery(plan, receipt.id, "prepared", preparedRecovery);
         const claim = this.ledger.claim(receipt.id);
         receipt = claim.receipt;
         if (!claim.claimed)
@@ -101,6 +106,9 @@ export class OperationController {
         });
       const verified = await adapter.verify(structuredClone(receipt.reference));
       adapter.assertAuthorized();
+      const identityRecovery = adapter.recoveryInput?.("identity");
+      if (identityRecovery !== undefined)
+        this.ledger.captureRecovery(plan, receipt.id, "identity", identityRecovery);
       if (!verified)
         this.verificationFailures.set(
           receipt.id,

@@ -247,6 +247,53 @@ describe("TaskInboxPage", () => {
     expect(button("刷新记录")).toBeDefined();
   });
 
+  test("existing activity card shows an independent read observation while retaining unknown and manual resolution", async () => {
+    const calls: unknown[] = [];
+    let observation: unknown;
+    (window.codeshell as any).operationResolution = {
+      review: async () => ({
+        reviewToken: "native-read-token",
+        truncated: false,
+        records: [
+          {
+            id: "op",
+            revision: "cas",
+            service: "github",
+            action: "set_starred",
+            state: "unknown",
+            createdAt: 1,
+            hasReference: true,
+            canResolve: true,
+            observation,
+          },
+        ],
+      }),
+      reconcile: async (input: unknown) => {
+        calls.push(input);
+        observation = {
+          id: "read",
+          at: 2,
+          result: "matches_current",
+          actions: ["github.get_starred"],
+        };
+        return { status: "observed", observation };
+      },
+    };
+    await render();
+    await settle(() =>
+      requests[0].request.resolve(snapshot([row("uncertain", { status: "failed" })])),
+    );
+    await click(button("外部写入人工处理"));
+    await click(button("只读核查…"));
+    expect(calls).toEqual([
+      { reviewToken: "native-read-token", operationId: "op", revision: "cas" },
+    ]);
+    expect(textOf(container)).toContain("当前状态匹配；不能证明原写入成功");
+    expect(textOf(container)).toContain("结果仍未知");
+    expect(button("人工核查后处理…")).toBeDefined();
+    expect(cards()).toHaveLength(1);
+  });
+
   test("groups waiting first, labels filters and exposes only real capabilities", async () => {
     await render();
     await settle(() =>

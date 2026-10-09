@@ -62,6 +62,64 @@ export function OperationResolutionReview({ sessionId }: { sessionId: string }) 
       setBusy(false);
     }
   };
+  const reconcile = async (operationId: string, revision: string) => {
+    if (!review || pending.current) return;
+    pending.current = true;
+    setBusy(true);
+    setError(null);
+    let observed = false;
+    try {
+      const result = await window.codeshell.operationResolution.reconcile({
+        reviewToken: review.reviewToken,
+        operationId,
+        revision,
+      });
+      observed = result.status === "observed";
+      setReview(await window.codeshell.operationResolution.review(sessionId));
+    } catch {
+      setReview(null);
+      setError(
+        observed
+          ? zh
+            ? "只读观测已保存；刷新失败，请刷新记录查看。原结果仍未知。"
+            : "The read observation was saved. Refresh records to view it; the original result remains unknown."
+          : zh
+            ? "只读核查未确认，请刷新后重试；原结果仍未知。"
+            : "The read review could not be confirmed. Refresh and retry; the original result remains unknown.",
+      );
+    } finally {
+      pending.current = false;
+      setBusy(false);
+    }
+  };
+  const observationText = (result: string) => {
+    const labels: Record<string, [string, string]> = {
+      matches_current: [
+        "当前状态匹配；不能证明原写入成功",
+        "Current state matches; this does not prove the original write succeeded",
+      ],
+      differs_current: [
+        "当前状态不同；原结果仍未知",
+        "Current state differs; the original result remains unknown",
+      ],
+      identity_changed: [
+        "原资源身份不匹配；无法核查",
+        "Original resource identity does not match; cannot verify",
+      ],
+      unavailable: [
+        "原始证据不足或读取不可用；仍需人工核查",
+        "Original evidence is insufficient or the read is unavailable; manual review is still needed",
+      ],
+      permission_denied: ["只读核查被当前权限拒绝", "Current permissions denied the read review"],
+      hooks_unavailable: [
+        "配置的工具 Hook 暂不支持独立核查；未发送读取，请人工核查",
+        "Configured tool hooks cannot run in an independent review yet. No read was sent; review manually.",
+      ],
+    };
+    return (
+      labels[result]?.[zh ? 0 : 1] ?? (zh ? "原结果仍未知" : "Original result remains unknown")
+    );
+  };
   return (
     <section
       className="space-y-2 border-t border-border/60 pt-2"
@@ -120,16 +178,33 @@ export function OperationResolutionReview({ sessionId }: { sessionId: string }) 
                     : "No original reference. Review at the provider yourself."}
                 </p>
               )}
+              {record.observation && (
+                <p className="text-muted-foreground" role="status">
+                  {observationText(record.observation.result)} ·{" "}
+                  {new Date(record.observation.at).toLocaleString(zh ? "zh-CN" : "en-US")}
+                </p>
+              )}
               {record.canResolve && (
-                <Button
-                  type="button"
-                  size="sm"
-                  variant="outline"
-                  disabled={busy}
-                  onClick={() => void resolve(record.id, record.revision)}
-                >
-                  {zh ? "人工核查后处理…" : "Accept after manual review…"}
-                </Button>
+                <div className="flex flex-wrap gap-2">
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="outline"
+                    disabled={busy}
+                    onClick={() => void reconcile(record.id, record.revision)}
+                  >
+                    {zh ? "只读核查…" : "Read-only review…"}
+                  </Button>
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="outline"
+                    disabled={busy}
+                    onClick={() => void resolve(record.id, record.revision)}
+                  >
+                    {zh ? "人工核查后处理…" : "Accept after manual review…"}
+                  </Button>
+                </div>
               )}
               {!record.canResolve && !record.resolvedAt && (
                 <p>

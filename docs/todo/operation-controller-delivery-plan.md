@@ -65,7 +65,8 @@ local PAT、OAuth 和 remote Link 使用这条控制路径。未经所属 Engine
 与已落盘计划冲突。不同 model tool-call ID 不产生新 slot。Session 中存在已发送但未验证
 的操作时，新意图也不能自动再写。单目标 Star 已实现固定布尔 desired state、持久仓库 ID
 和独立 identity/state 回读，详见 [Star 交付边界](github-star-actions-delivery.md)。批量创建的
-Host 固定 slots、其他 provider 写语义及独立 provider 只读复核仍需后续实现。
+Host 固定 slots、其他 provider 写语义仍需后续实现。三个已审阅 GitHub 写消费者的
+独立 provider 只读复核已接入现有活动记录，详见下节，配置工具 Hook 的兼容仍待实现。
 `update_issue` 的显式关闭／重开及独立回读已实现，见 [Issue 状态交付](github-issue-state-delivery.md)。
 现有活动记录已提供原生确认的人工接受不确定性入口，详见下节；它不把旧操作或旧 Run
 改成成功。没有 number 的未知结果不会用标题搜索冒充验收，也不支持直接修改账本来回滚。
@@ -98,6 +99,40 @@ RPC，不保存正文/凭据，也不是针对同用户任意代码的防篡改�
 新增终态 `unverified_write` 已接入 Web reducer、终端提示和现有活动记录状态，不新增入口。
 Host 的纠正消息同时写入 Transcript 和下一回合缓存，恢复历史保留原模型输出及其后的
 未验证说明，不能仅依靠一次性的 error stream event 修正成功措辞。
+
+## 独立只读核查
+
+现有活动记录中的“只读核查”由用户明确触发，经过默认取消的原生确认，再通过当前
+Host 设置、Profile 解析、builtin 控制、完整 ToolExecutor 固定输入和每次 await 后的
+权限检查。当前规则要求 ask 时另作一次性原生批准，不保存规则或扩大连接 grant。
+这是独立 Host 读取，不构造 Engine，也不声称恢复没有落盘的 Engine 瞬态权限模式。
+Desktop 的权威 Host scope 为 full；凭据访问与原操作保存的 scope 求交，缺少原 scope
+的旧记录保守使用 project，不能借此访问 global-only 连接；当前 global deny 仍生效。
+
+固定支持 GitHub create_issue、set_starred、update_issue 原操作的 get_issue，或
+get_repository 与 get_starred／get_issue 组合。原账号、连接、grant、计划 HMAC 和
+不可变资源 ID 必须一致，最多两项读取。当前状态匹配仅代表当前状态，不证明原写入的
+因果关系，既不重发原写入，也不修改原 unknown、attempt、Run 或解除写入阻断。
+每次核查以原 receipt revision／owner incarnation 作 CAS，保存独立观测及证据 HMAC，
+每项最多 20 次，达到上限在请求前拒绝。原生人工接受不确定性仍是独立入口。
+
+新操作在发送前保存加密的不可变计划与权威快照，原验证取得的不可变 create Issue ID
+另存一个版本；普通账本只有摘要指针。私有正文上限 512 KiB、加密 JSON 包络上限
+704 KiB，覆盖原 20,000 字符正文及最坏 JSON 转义／计划中双份正文，字符上限不变。
+未配置 Host cipher 的 SDK 仍使用 owner-only root key，不宣称 OS 隔离或断电 durability。
+旧 Star／Issue 状态可从原 reference、配对 typed tool_use／tool_result 和可信用户 intent
+重建精确 HMAC 计划。旧 create number、标题搜索、Hook 文字或缺失响应都不能制造
+不可变 Issue ID；证据不足时零读取，保留人工核查路径。
+
+独立 Host 尚不执行匹配 LinkAction 的 settings/plugin 可执行工具／权限 Hook：其任意
+子进程不能在本合同下保证零写与忠实的 Engine 上下文。检测到相关已启用 Hook 会记录
+hooks_unavailable，活动卡明确显示未发送读取并要求人工核查，不能称作生产 Hook 支持。
+未匹配 LinkAction 的 Hook、SessionStart／Stop 等本读取不会触发的生命周期 Hook 不阻塞。
+完整配置 Hook 的独立安全执行支持仍是 TODO。没有真实第三方账号或付费模型验收。
+
+受控验证覆盖 SDK／HTTP 三个消费者、原账号／资源／权限变化、旧记录证据、并发 CAS、
+最大正文冷恢复和观测上限，以及实际编译 Engine→Main／preload／现有活动卡→冷 Main：
+原生取消零请求，批准后固定 GET，冷重开保留观测，旧 intent 零重发，新 intent 仍阻断。
 
 ## 人工接受不确定性
 

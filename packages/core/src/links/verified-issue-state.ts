@@ -4,6 +4,7 @@ import type { CredentialMetadata } from "../credentials/access.js";
 import type { OperationReceipt } from "../operations/ledger.js";
 import { OperationFailure } from "../operations/controller.js";
 import { boundToolResult } from "../tool-system/bound-tool-result.js";
+import { githubOperationPlan, githubRecoveryInput } from "./operation-recovery.js";
 import { asRecord } from "./http.js";
 import {
   githubIssueIdentity,
@@ -59,23 +60,18 @@ export async function verifiedGithubUpdateIssue(options: {
   let repositoryId: number | undefined;
   let issueId: number | undefined;
   const receipt = await ctx.operations.controller.run(
+    githubOperationPlan(
+      ctx.operations.sessionId,
+      ctx.originClientMessageId ?? ctx.operations.runId,
+      connection,
+      "update_issue",
+      params,
+    ),
     {
-      sessionId: ctx.operations.sessionId,
-      intentId: `${ctx.originClientMessageId ?? ctx.operations.runId}:github.update_issue`,
-      service: "github",
-      action: "update_issue",
-      channel: connection.meta?.linkExecutionRuntime === "server" ? "remote-link" : "local-link",
-      account: {
-        id: connection.meta?.linkAccountId ?? null,
-        connectionId: connection.id,
-        grant: connection.meta?.linkRemoteGrantId ?? null,
-        verifiedAt: connection.meta?.linkLastVerifiedAt ?? null,
-      },
-      target,
-      parameters: params,
-      postcondition: { kind: "github.issue.state", state: params.state },
-    },
-    {
+      recoveryInput: (phase) =>
+        phase === "prepared"
+          ? githubRecoveryInput(ctx, connection, { repositoryId: repositoryId!, issueId: issueId! })
+          : undefined,
       assertAuthorized: assertConnected,
       preflight: async () => {
         if (

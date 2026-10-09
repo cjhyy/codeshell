@@ -114,12 +114,18 @@ describe("architecture growth budgets", () => {
         // Nine local-only Lab routes: eight existing operations plus P2 native
         // adoption. Exact body/scope review and post-dialog revalidation remain
         // in this owner-scoped registrar; ordinary RPC cannot approve adoption.
-        matches("packages/desktop/src/main/optimization-lab-ipc.ts", /handle\("optimizationLab:/g),
+        matches("packages/desktop/src/main/optimization-lab-ipc.ts", /handle\("optimizationLab:/g) +
+        // Count the two existing native manual-review routes and the new
+        // fixed-read reconciliation route; extraction must not hide them.
+        matches(
+          "packages/desktop/src/main/operation-resolution-ipc.ts",
+          /handle\(\s*"operationResolution:/g,
+        ),
       // +1 read-only, bounded Session output-journal page route. Its file/owner
       // validation and recovery algorithm stay in Core and the extracted adapters.
       // +2 metadata-only Profile preview and revision-checked adoption routes.
       // +3 preview/cancel/reviewed-save operations, without installation authority.
-    ).toBeLessThanOrEqual(327);
+    ).toBeLessThanOrEqual(330);
     // v0.8.17 added the reviewed Panel catalog/task bridge to both preload
     // surfaces. Mimi's bounded transcript pagination adds one typed invoke;
     // the validation and file-reading implementation remain extracted in main.
@@ -154,8 +160,9 @@ describe("architecture growth budgets", () => {
         matches("packages/desktop/src/preload/session-transcript-api.ts", /ipc\.invoke\(/g) +
         matches("packages/desktop/src/preload/task-inbox-api.ts", /ipc\.invoke\(/g) +
         matches("packages/desktop/src/preload/profile-plugin-export-api.ts", /ipc\.invoke\(/g) +
-        matches("packages/desktop/src/preload/optimization-lab-api.ts", /ipc\.invoke\(/g),
-    ).toBeLessThanOrEqual(320);
+        matches("packages/desktop/src/preload/optimization-lab-api.ts", /ipc\.invoke\(/g) +
+        matches("packages/desktop/src/preload/operation-resolution-api.ts", /ipc\.invoke\(/g),
+    ).toBeLessThanOrEqual(323);
     // GitHub skill previews and Panel task hosting carry main-issued review and
     // ownership fields across the typed preload boundary. The optional Mimi
     // transcript-page method adds its bounded response shape without widening
