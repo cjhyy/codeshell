@@ -122,7 +122,8 @@ The final external fixture passed all 18 cases under Node 22.16. Both providers
 recovered exactly 9,439,680 UTF-8 bytes in separate cold Main processes. The raw
 guard recorded 23 actual Node pre-import identities, each with four negative
 probes and the same private HOME/interpreter hash; its request/cold-process
-aggregate includes 22 PIDs because one CLI exits before a physical turn request.
+aggregate includes 22 PIDs because one allowed CLI instance has no physical-turn
+request record.
 The combined Native Core Mobile fixture also passed authenticated reconnect,
 same-epoch gap, actual AgentServer inputs and frozen append joining. That separate
 regression does not demonstrate a Mobile external CLI adapter.
