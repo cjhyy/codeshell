@@ -27,7 +27,9 @@ export interface DeviceRelayConnectorOptions {
   relayOrigin: string;
   hostId: string;
   publicOrigin: string;
-  credential: string;
+  credential?: string;
+  /** Main-owned rotating credentials, resolved before each control connection. */
+  getCredential?: (signal: AbortSignal) => Promise<string>;
   /** Target is always 127.0.0.1; stopping its Host revokes this capability. */
   localHost: RelayLocalTarget;
   /** Additional trusted CA for private installations; TLS verification stays enabled. */
@@ -48,7 +50,8 @@ export function createDeviceRelayConnector(
     !isRelayOrigin(options.relayOrigin) ||
     !isRelayOrigin(options.publicOrigin) ||
     !isRelayHostId(options.hostId) ||
-    !isRelayToken(options.credential) ||
+    (!options.getCredential && !isRelayToken(options.credential)) ||
+    (options.getCredential !== undefined && typeof options.getCredential !== "function") ||
     !options.localHost ||
     !Number.isInteger(options.localHost.port) ||
     options.localHost.port < 1 ||
@@ -71,6 +74,7 @@ export function createDeviceRelayConnector(
   let control: WebSocket | undefined;
   let reconnect: ReturnType<typeof setTimeout> | undefined;
   let failures = 0;
+  let credentialAttempt: AbortController | undefined;
   const pending = new Set<Promise<void>>();
   const streams = new Set<RelayLocalStream>();
   const state = (value: DeviceRelayState) => {
@@ -82,16 +86,59 @@ export function createDeviceRelayConnector(
   };
   const track = (done: Promise<void>) => {
     pending.add(done);
-    void done.finally(() => pending.delete(done));
+    void done.finally(() => pending.delete(done)).catch(() => {});
   };
-  const connect = (attempt: number) => {
+  const retry = (attempt: number) => {
+    if (!running || generation !== attempt || config.localHost.signal.aborted) return;
+    const delay = Math.min(30_000, 500 * 2 ** Math.min(failures++, 6));
+    reconnect = setTimeout(() => track(connect(attempt)), delay * (0.75 + Math.random() * 0.5));
+  };
+  const connect = async (attempt: number) => {
     if (!running || generation !== attempt || config.localHost.signal.aborted) return;
     state("connecting");
     if (!running || generation !== attempt || config.localHost.signal.aborted) return;
+    const acquisition = new AbortController();
+    credentialAttempt?.abort();
+    credentialAttempt = acquisition;
+    let credential: string;
+    try {
+      credential = config.getCredential
+        ? await new Promise<string>((resolve, reject) => {
+            const abort = () => reject(new Error("Relay credential acquisition cancelled"));
+            acquisition.signal.addEventListener("abort", abort, { once: true });
+            Promise.resolve()
+              .then(() => config.getCredential!(acquisition.signal))
+              .then(resolve, reject)
+              .finally(() => acquisition.signal.removeEventListener("abort", abort))
+              .catch(() => {});
+          })
+        : config.credential!;
+      if (!isRelayToken(credential)) throw new Error("Invalid relay credential");
+    } catch (error) {
+      if (!running || generation !== attempt || acquisition.signal.aborted) return;
+      if (
+        (error as { status?: number } | null)?.status === 401 ||
+        (error as { status?: number } | null)?.status === 403
+      ) {
+        running = false;
+        state("unauthorized");
+      } else {
+        state("disconnected");
+        retry(attempt);
+      }
+      return;
+    }
+    if (
+      !running ||
+      generation !== attempt ||
+      acquisition.signal.aborted ||
+      config.localHost.signal.aborted
+    )
+      return;
     const url = new URL(RELAY_CONNECT_PATH, config.relayOrigin);
     url.protocol = "wss:";
     const ws = new WebSocket(url, {
-      headers: { Authorization: `Bearer ${config.credential}` },
+      headers: { Authorization: `Bearer ${credential}` },
       ca: config.ca,
       followRedirects: false,
       perMessageDeflate: false,
@@ -120,8 +167,7 @@ export function createDeviceRelayConnector(
             state("disconnected");
             if (!running || generation !== attempt || control || config.localHost.signal.aborted)
               return resolve();
-            const delay = Math.min(30_000, 500 * 2 ** Math.min(failures++, 6));
-            reconnect = setTimeout(() => connect(attempt), delay * (0.75 + Math.random() * 0.5));
+            retry(attempt);
           }
           resolve();
         }),
@@ -184,7 +230,7 @@ export function createDeviceRelayConnector(
           ws.send(JSON.stringify({ type: "failed", v: 1, leaseId, streamId: message.streamId }));
       };
       if (streams.size >= RELAY_MAX_STREAMS) return failed();
-      const stream = openRelayStream(config, message, failed);
+      const stream = openRelayStream({ ...config, credential }, message, failed);
       owned.set(message.streamId, stream);
       streams.add(stream);
       const done = stream.done.then(() => {
@@ -202,13 +248,16 @@ export function createDeviceRelayConnector(
       config.localHost.signal.addEventListener("abort", revoke, { once: true });
       running = true;
       failures = 0;
-      connect(++generation);
+      const acquisition = connect(++generation);
+      track(acquisition);
     },
     close() {
       if (closing) return closing;
       running = false;
       config.localHost.signal.removeEventListener("abort", revoke);
       generation++;
+      credentialAttempt?.abort();
+      credentialAttempt = undefined;
       clearTimeout(reconnect);
       reconnect = undefined;
       control?.terminate();

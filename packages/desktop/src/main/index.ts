@@ -1,3 +1,6 @@
+import { CloudAccountManager } from "./cloud-account-manager.js";
+import { CloudAccountStore } from "./cloud-account-store.js";
+import { registerCloudAccountIpc } from "./cloud-account-ipc.js";
 import { MobileRemoteController } from "./mobile-remote-controller.js";
 import { DeviceRelayStore } from "./device-relay-store.js";
 import { registerDeviceRelayIpc } from "./device-relay-ipc.js";
@@ -1011,7 +1014,23 @@ const tunnelManager = new TunnelManager({
 const accessPasscode = new AccessPasscode({
   filePath: resolve(app.getPath("userData"), "mobile-remote", "access.json"),
 });
+const cloudAccountManager = new CloudAccountManager({
+  store: new CloudAccountStore(resolve(app.getPath("userData"), "cloud-account", "session.enc"), {
+    available: () =>
+      safeStorage.isEncryptionAvailable() &&
+      (process.platform !== "linux" || safeStorage.getSelectedStorageBackend() !== "basic_text"),
+    encrypt: (value) => safeStorage.encryptString(value),
+    decrypt: (value) => safeStorage.decryptString(value),
+  }),
+  openExternal: (url) => shell.openExternal(url),
+  retireRelay: (identity) => mobileRemoteController.retireAccountRelay(identity),
+  changed: (status) => {
+    for (const window of mainWindows)
+      if (!window.isDestroyed()) window.webContents.send("cloudAccount:statusChanged", status);
+  },
+});
 const mobileRemoteController = new MobileRemoteController({
+  account: cloudAccountManager,
   host: mobileRemote,
   tunnel: tunnelManager,
   binary: cloudflaredBinary,
@@ -5489,6 +5508,14 @@ const startMobileRemote = (opts?: { mode?: "lan" | "tunnel" | "relay" }) =>
 const stopMobileRemote = () => mobileRemoteController.stop();
 const createMobileRemotePairingUrl = () => mobileRemoteController.pairingUrl();
 const getMobileRemoteGatewayStatus = () => mobileRemoteController.status();
+registerCloudAccountIpc({
+  ipcMain,
+  manager: cloudAccountManager,
+  isMainWindow: (contents) => {
+    const window = BrowserWindow.fromWebContents(contents);
+    return !!window && mainWindows.has(window);
+  },
+});
 registerDeviceRelayIpc({
   ipcMain,
   controller: mobileRemoteController,

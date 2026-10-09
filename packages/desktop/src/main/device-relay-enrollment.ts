@@ -9,10 +9,11 @@ export function validateRelayEnrollment(input: DesktopRelayEnrollment) {
     !input ||
     !isRelayOrigin(input.relayOrigin) ||
     input.relayOrigin.length > 2048 ||
-    !isRelayToken(input.ticket) ||
+    (input.authorization !== undefined && input.authorization !== "account") ||
+    (input.authorization !== "account" && !isRelayToken(input.ticket)) ||
     typeof input.name !== "string" ||
     !input.name.trim() ||
-    input.name.trim().length > 100 ||
+    input.name.trim().length > (input.authorization === "account" ? 80 : 100) ||
     /[\x00-\x1f\x7f]/.test(input.name)
   )
     throw new Error("请填写 HTTPS 目录地址、有效的一次性登记票据和电脑名称。");
@@ -85,4 +86,38 @@ export function enrollRelayComputer(
     req.on("error", () => reject(new Error("电脑登记未完成，请检查连接后使用新票据重新登记。")));
     req.end(bytes);
   });
+}
+
+/** Account token is supplied only by main, for the exact signed-in service origin. */
+export async function enrollAccountRelayComputer(
+  input: DesktopRelayEnrollment,
+  environmentId: string,
+  token: string,
+  accountId: string,
+  signal: AbortSignal,
+  transport: import("./cloud-account-http.js").CloudAccountTransport,
+): Promise<RelayRegistration> {
+  validateRelayEnrollment(input);
+  const data = await transport({
+    origin: input.relayOrigin,
+    path: "/api/v1/remote-hosts/enroll",
+    token,
+    body: { environmentId, name: input.name.trim() },
+    signal,
+  });
+  const registration = {
+    ...(data as object),
+    relayOrigin: input.relayOrigin,
+    name: input.name.trim(),
+  } as RelayRegistration;
+  if (
+    !validRegistration(registration) ||
+    registration.environmentId !== environmentId ||
+    registration.accountId !== accountId ||
+    !registration.refreshToken ||
+    !registration.credentialExpiresAt ||
+    registration.credentialExpiresAt <= Date.now()
+  )
+    throw new Error("云服务返回了无效的电脑授权。");
+  return registration;
 }

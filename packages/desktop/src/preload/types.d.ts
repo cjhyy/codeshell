@@ -1,3 +1,4 @@
+import type { CloudAccountApi } from "../shared/cloud-account.js";
 import type { DesktopRelayApi } from "../shared/device-relay.js";
 /**
  * Renderer-visible types for window.codeshell. Imports `type`-only from
@@ -1545,6 +1546,7 @@ export interface CodeshellApi
   onBrowserAnchorRemoveFromPopout(cb: (anchorId: unknown) => void): () => void;
 
   /** Open a cloud workbench in a browser-only native window, isolated from local projects. */
+  cloudAccount: CloudAccountApi;
   openCloudWorkbench(address: string): Promise<{ address: string }>;
   openExternal(url: string): Promise<void>;
   revealInFinder(path: string, cwd?: string): Promise<void>;
