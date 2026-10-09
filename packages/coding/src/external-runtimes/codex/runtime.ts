@@ -87,7 +87,7 @@ export class CodexRuntime {
   private started = false;
   private resumed = false;
   private firstTurn = true;
-  private activeTurn?: { id?: string; resolve: () => void };
+  private activeTurn?: { id?: string; resolve: () => void; onEvent?: (event: StreamEvent) => void };
 
   constructor(
     private readonly options: CodexRuntimeOptions,
@@ -210,11 +210,14 @@ export class CodexRuntime {
    * tombstones are what keep a late `turn/started` from reactivating a session
    * that already reported terminal.
    */
-  async send(input: ExternalRuntimeTurnInput): Promise<CodexTurnHandle> {
+  async send(
+    input: ExternalRuntimeTurnInput,
+    onEvent?: (event: StreamEvent) => void,
+  ): Promise<CodexTurnHandle> {
     if (!this.threadId) throw new Error("CodexRuntime.send() before start()");
     let resolveDone!: () => void;
     const done = new Promise<void>((resolve) => (resolveDone = resolve));
-    this.activeTurn = { resolve: resolveDone };
+    this.activeTurn = { resolve: resolveDone, onEvent };
 
     let text = textWithAttachmentReferences(input);
     if (this.firstTurn && !this.resumed && this.options.initialContext) {
@@ -302,7 +305,7 @@ export class CodexRuntime {
 
   private emitEvent(event: StreamEvent): void {
     try {
-      this.hooks.onEvent?.(event);
+      (this.activeTurn?.onEvent ?? this.hooks.onEvent)?.(event);
     } catch (error) {
       this.log("runtime.event_handler_failed", {
         error: error instanceof Error ? error.name : "unknown",

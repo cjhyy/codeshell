@@ -164,6 +164,8 @@ export class ExternalRuntimeService {
       configurationKey: string;
       ownerWebContentsId?: number;
       forwardEvent: (event: StreamEvent) => void;
+      outputFailure: () => ExternalRuntimeTurnOutcome;
+      providerTurn?: symbol;
       /** Serializes turns so one recorder can never be reset by an overlapping send. */
       turnTail: Promise<void>;
       /**
@@ -189,9 +191,14 @@ export class ExternalRuntimeService {
   private backgroundWorkUnsubscribe?: () => void;
   private readonly prepareCodexLaunch: (cwd: string) => Promise<CodexLaunch>;
   private readonly goals: ExternalRuntimeGoals;
+  private readonly goalEventScopes = new Map<string, (event: StreamEvent) => void>();
 
   constructor(private readonly deps: ExternalRuntimeServiceDeps) {
-    this.goals = new ExternalRuntimeGoals((sessionId, event) => this.emitSafely(sessionId, event));
+    this.goals = new ExternalRuntimeGoals((sessionId, event) => {
+      const owned = this.goalEventScopes.get(sessionId);
+      if (owned) owned(event);
+      else this.emitSafely(sessionId, event);
+    });
     this.prepareCodexLaunch = deps.prepareCodexLaunch ?? createCodexLaunchResolver();
     this.backgroundWorkUnsubscribe = deps.backgroundWork?.subscribe((sessionId, event) => {
       if (!this.sessions.has(sessionId)) return;
@@ -202,6 +209,22 @@ export class ExternalRuntimeService {
         this.maybeWakeForBackgroundWork(sessionId);
       }
     });
+  }
+
+  /** Bind only this synchronous Goal operation's output, never a later control action. */
+  private withGoalOutput<T>(
+    sessionId: string,
+    publish: (event: StreamEvent) => void,
+    operation: () => T,
+  ): T {
+    const previous = this.goalEventScopes.get(sessionId);
+    this.goalEventScopes.set(sessionId, publish);
+    try {
+      return operation();
+    } finally {
+      if (previous) this.goalEventScopes.set(sessionId, previous);
+      else this.goalEventScopes.delete(sessionId);
+    }
   }
 
   /** Whether the product currently permits an external runtime at all. */
@@ -704,30 +727,58 @@ export class ExternalRuntimeService {
           isReadOnly: name === "get_goal",
           isConcurrencySafe: false,
         },
-        async (args) => {
+        async (args, context) => {
           if (!lifecycle.active) throw new Error("This external runtime has been replaced");
-          return JSON.stringify(
-            name === "get_goal"
-              ? this.goals.get(request.sessionId)
-              : this.goals.settle(
-                  request.sessionId,
-                  name === "complete_goal" ? "completed" : "cancelled",
-                  args,
-                ),
-          );
+          const operation = () =>
+            JSON.stringify(
+              name === "get_goal"
+                ? this.goals.get(request.sessionId)
+                : this.goals.settle(
+                    request.sessionId,
+                    name === "complete_goal" ? "completed" : "cancelled",
+                    args,
+                  ),
+            );
+          return context?.streamCallback
+            ? this.withGoalOutput(
+                request.sessionId,
+                (event) => {
+                  void context.streamCallback?.(event);
+                },
+                operation,
+              )
+            : operation();
         },
       );
     }
+    let outputFailureReported = false;
+    const outputFailure = (): ExternalRuntimeTurnOutcome => {
+      lifecycle.faulted = true;
+      lifecycle.turnActive = false;
+      const owned = recorder.isCurrentOutputOwner;
+      const outcome = recorder.failOutput();
+      if (owned && lifecycle.active && !outputFailureReported) {
+        outputFailureReported = true;
+        this.emitSafely(request.sessionId, {
+          type: "error",
+          error: outcome.text!,
+          outputRecovery: "incomplete",
+        });
+        this.emitSafely(request.sessionId, {
+          type: "turn_complete",
+          reason: "model_error",
+          outputRecovery: "incomplete",
+        });
+      }
+      return outcome;
+    };
     const forwardEvent = (event: StreamEvent): void => {
       // A provider process may flush buffered output while close() is in flight.
       // Once this concrete runtime has been stopped/replaced, its events belong
       // to the old generation and must not enter the new business-session stream.
-      if (!lifecycle.active) return;
+      if (!lifecycle.active || !lifecycle.turnActive) return;
       // Once a turn has reached its terminal boundary, buffered provider output
       // belongs to that closed generation and must not bleed into the next turn.
-      if (!lifecycle.turnActive && recorder.isTurnFinished && event.type !== "session_started") {
-        return;
-      }
       // Provider thread/session ids are resume keys, not CodeShell identities.
       // Normalize at the Desktop boundary as defense-in-depth even though each
       // translator should already honor this contract.
@@ -736,13 +787,9 @@ export class ExternalRuntimeService {
           ? { ...event, sessionId: request.sessionId }
           : event;
       try {
-        recorder.onEvent(normalized);
-      } finally {
-        // A provider final reply closes one provider turn, not the enclosing
-        // Goal run. Publish only its final boundary after continuation ends.
-        if (!(normalized.type === "turn_complete" && lifecycle.goalRunActive)) {
-          this.emitSafely(request.sessionId, normalized);
-        }
+        // Intermediate Goal terminals close provider turns, not the logical run.
+        const published = recorder.onEvent(normalized, lifecycle.goalRunActive);
+        if (published) this.emitSafely(request.sessionId, published);
         if (normalized.type === "turn_complete") lifecycle.turnActive = false;
         const run = this.goals.running(request.sessionId);
         if (
@@ -751,7 +798,11 @@ export class ExternalRuntimeService {
           this.goals.isCurrent(run) &&
           run.tokensUsed + recorder.turnTokensUsed >= run.tokenBudget
         ) {
-          this.goals.pause(run, "达到本轮 token 预算");
+          this.withGoalOutput(
+            request.sessionId,
+            (event) => this.emitSafely(request.sessionId, recorder.recordControlOutput(event)),
+            () => this.goals.pause(run, "达到本轮 token 预算"),
+          );
           void this.interruptGoalTurn(request.sessionId, run).catch((error) => {
             lifecycle.faulted = true;
             dlog("external-runtime", "goal.interrupt_failed", {
@@ -760,6 +811,8 @@ export class ExternalRuntimeService {
             });
           });
         }
+      } catch {
+        outputFailure();
       }
     };
     const contextOverrides = {
@@ -916,6 +969,7 @@ export class ExternalRuntimeService {
       lifecycle,
       goalToolsAvailable,
       forwardEvent,
+      outputFailure,
       ...(ownerId !== undefined ? { ownerWebContentsId: ownerId } : {}),
       ...(request.model ? { model: request.model } : {}),
     });
@@ -969,6 +1023,17 @@ export class ExternalRuntimeService {
           return { ok: true, reason: "completed", streamed: true };
         }
       }
+      if (entry.recorder.outputFailed) return entry.recorder.finishIfMissing();
+      // A failed physical start may still produce delayed notifications. It
+      // cannot be reused by a previously queued logical submission; ensure()
+      // must replace the failed process before another request is accepted.
+      if (entry.lifecycle.faulted)
+        return {
+          ok: false,
+          reason: "model_error",
+          streamed: true,
+          text: "External runtime failed; start a replacement before sending again.",
+        };
       const inheritedGoal = this.goals.read(sessionId);
       if (
         !turnInput.disableGoal &&
@@ -977,7 +1042,28 @@ export class ExternalRuntimeService {
       ) {
         throw new Error("External goals require host tools and execution mode, not plan mode");
       }
-      const goalRun = this.goals.start(sessionId, turnInput.goal, turnInput.disableGoal);
+      // Application conflicts are rejected before mutating any run buffers or Goal.
+      entry.recorder.assertNewSubmission(turnInput);
+      const initialGoalEvents: StreamEvent[] = [];
+      const goalRun = this.withGoalOutput(
+        sessionId,
+        (event) => initialGoalEvents.push(event),
+        () => this.goals.start(sessionId, turnInput.goal, turnInput.disableGoal),
+      );
+      let logicalRunId: string | undefined;
+      const publishGoalOutput = (event: StreamEvent) => {
+        if (
+          !logicalRunId ||
+          entry.recorder.outputRunId !== logicalRunId ||
+          !entry.recorder.isCurrentOutputOwner
+        )
+          return;
+        try {
+          this.emitSafely(sessionId, entry.recorder.recordControlOutput(event));
+        } catch {
+          entry.outputFailure();
+        }
+      };
       entry.lifecycle.goalRunActive = goalRun !== undefined;
       let deadlineTimer: ReturnType<typeof setTimeout> | undefined;
       const armDeadline = () => {
@@ -986,7 +1072,9 @@ export class ExternalRuntimeService {
           () => {
             if (!this.goals.isCurrent(goalRun)) return;
             if (this.goals.remainingTime(goalRun) > 0) return armDeadline();
-            this.goals.pause(goalRun, "达到本轮时间预算");
+            this.withGoalOutput(sessionId, publishGoalOutput, () =>
+              this.goals.pause(goalRun, "达到本轮时间预算"),
+            );
             void this.interruptGoalTurn(sessionId, goalRun).catch((error) => {
               entry.lifecycle.faulted = true;
               dlog("external-runtime", "goal.interrupt_failed", {
@@ -1016,75 +1104,116 @@ export class ExternalRuntimeService {
           }
         : providerInput;
       let finalOutcome: ExternalRuntimeTurnOutcome | undefined;
-      try {
-        while (true) {
-          entry.lifecycle.turnActive = true;
-          try {
-            // Keep the original user text in the shared transcript. The Goal's
-            // control instructions are provider context, never a new user request.
-            entry.recorder.beginTurn(goalRun && goalRun.turns === 0 ? providerInput : nextInput);
-            if (nextInput.displayText && !nextInput.injected) {
-              this.emitSafely(sessionId, {
-                type: "session_user_message",
-                text: nextInput.displayText,
-                ...(nextInput.clientMessageId
-                  ? { clientMessageId: nextInput.clientMessageId }
-                  : {}),
-              });
+      let providerRound = 0;
+      const runProviderRounds = async (): Promise<ExternalRuntimeTurnOutcome> => {
+        try {
+          while (true) {
+            entry.lifecycle.turnActive = true;
+            let prepared = false;
+            try {
+              const user = entry.recorder.beginTurn(
+                goalRun && providerRound === 0 ? providerInput : nextInput,
+                providerRound > 0,
+              );
+              prepared = true;
+              const physicalTurn = Symbol("provider-turn");
+              entry.providerTurn = physicalTurn;
+              const runId = entry.recorder.outputRunId;
+              if (providerRound === 0) {
+                logicalRunId = runId;
+                this.emitSafely(sessionId, entry.recorder.startEvent());
+                for (const event of initialGoalEvents) publishGoalOutput(event);
+                if (entry.recorder.outputFailed) return entry.recorder.finishIfMissing();
+              }
+              const onEvent = (event: StreamEvent) => {
+                if (
+                  this.sessions.get(sessionId) !== entry ||
+                  !entry.lifecycle.active ||
+                  entry.providerTurn !== physicalTurn ||
+                  entry.recorder.outputRunId !== runId
+                )
+                  return;
+                entry.forwardEvent(event);
+              };
+              if (nextInput.displayText && !nextInput.injected) this.emitSafely(sessionId, user);
+              const turn = await entry.session.send(nextInput, onEvent);
+              await turn.done;
+            } catch (error) {
+              if (!prepared) return entry.outputFailure();
+              if (!entry.lifecycle.active || this.sessions.get(sessionId) !== entry) {
+                return entry.recorder.finishIfMissing();
+              }
+              const detail = error instanceof Error ? error.message : String(error);
+              entry.forwardEvent({ type: "error", error: detail });
+              entry.forwardEvent({ type: "turn_complete", reason: "model_error" });
             }
-            const turn = await entry.session.send(nextInput);
-            await turn.done;
-          } catch (error) {
             if (!entry.lifecycle.active || this.sessions.get(sessionId) !== entry) {
               return entry.recorder.finishIfMissing();
             }
-            const detail = error instanceof Error ? error.message : String(error);
-            entry.forwardEvent({ type: "error", error: detail });
-            entry.forwardEvent({ type: "turn_complete", reason: "model_error" });
+            if (entry.recorder.outputFailed) return entry.recorder.finishIfMissing();
+            if (entry.session.runtimeSessionId) {
+              this.persistBindingSafely(sessionId, {
+                kind: entry.kind,
+                cwd: entry.cwd,
+                runtimeSessionId: entry.session.runtimeSessionId,
+                ...(entry.model ? { model: entry.model } : {}),
+              });
+            }
+            if (!entry.recorder.isTurnFinished) {
+              entry.forwardEvent({
+                type: "turn_complete",
+                reason:
+                  acceptedGeneration !== entry.lifecycle.interruptGeneration
+                    ? "aborted_streaming"
+                    : "completed",
+              });
+            }
+            finalOutcome = entry.recorder.finishIfMissing();
+            if (
+              !goalRun ||
+              finalOutcome.reason !== "completed" ||
+              acceptedGeneration !== entry.lifecycle.interruptGeneration ||
+              !this.withGoalOutput(sessionId, publishGoalOutput, () =>
+                this.goals.afterTurn(
+                  goalRun,
+                  entry.recorder.turnTokensUsed,
+                  finalOutcome!.text ?? "",
+                ),
+              ) ||
+              entry.recorder.outputFailed
+            ) {
+              return finalOutcome;
+            }
+            providerRound++;
+            nextInput = {
+              text: withBackground(
+                `继续处理尚未完成的目标。\n\n${this.goals.instruction(goalRun)}`,
+                this.deps.backgroundWork?.drainMessage(sessionId),
+              ),
+              displayText: "继续处理尚未完成的目标。",
+              injected: true,
+            };
           }
-          if (!entry.lifecycle.active || this.sessions.get(sessionId) !== entry) {
-            return entry.recorder.finishIfMissing();
+        } finally {
+          if (deadlineTimer) clearTimeout(deadlineTimer);
+          if (goalRun) {
+            this.withGoalOutput(sessionId, publishGoalOutput, () => this.goals.end(goalRun));
+            if (entry.lifecycle.active && finalOutcome && !entry.recorder.outputFailed) {
+              try {
+                const terminal = entry.recorder.completeRun(finalOutcome.reason);
+                if (terminal) this.emitSafely(sessionId, terminal);
+              } catch {
+                entry.outputFailure();
+              }
+            }
           }
-          if (entry.session.runtimeSessionId) {
-            this.persistBindingSafely(sessionId, {
-              kind: entry.kind,
-              cwd: entry.cwd,
-              runtimeSessionId: entry.session.runtimeSessionId,
-              ...(entry.model ? { model: entry.model } : {}),
-            });
-          }
-          if (!entry.recorder.isTurnFinished) {
-            entry.forwardEvent({ type: "turn_complete", reason: "completed" });
-          }
-          finalOutcome = entry.recorder.finishIfMissing();
-          if (
-            !goalRun ||
-            finalOutcome.reason !== "completed" ||
-            acceptedGeneration !== entry.lifecycle.interruptGeneration ||
-            !this.goals.afterTurn(goalRun, entry.recorder.turnTokensUsed, finalOutcome.text ?? "")
-          ) {
-            return finalOutcome;
-          }
-          nextInput = {
-            text: withBackground(
-              `继续处理尚未完成的目标。\n\n${this.goals.instruction(goalRun)}`,
-              this.deps.backgroundWork?.drainMessage(sessionId),
-            ),
-            displayText: "继续处理尚未完成的目标。",
-            injected: true,
-          };
+          entry.lifecycle.goalRunActive = false;
+          entry.lifecycle.turnActive = false;
+          entry.providerTurn = undefined;
         }
-      } finally {
-        if (deadlineTimer) clearTimeout(deadlineTimer);
-        if (goalRun) {
-          this.goals.end(goalRun);
-          if (entry.lifecycle.active && finalOutcome) {
-            this.emitSafely(sessionId, { type: "turn_complete", reason: finalOutcome.reason });
-          }
-        }
-        entry.lifecycle.goalRunActive = false;
-        entry.lifecycle.turnActive = false;
-      }
+      };
+      const outcome = await runProviderRounds();
+      return entry.recorder.outputFailed ? entry.recorder.finishIfMissing() : outcome;
     };
     const runTurn = async (): Promise<ExternalRuntimeTurnOutcome> => {
       const outcome = await runTurnExclusive();
@@ -1157,16 +1286,13 @@ export class ExternalRuntimeService {
         reason: "aborted_streaming" as const,
       };
       try {
-        entry.recorder.onEvent(terminalEvent);
-      } catch (error) {
-        dlog("external-runtime", "session.stop_record_failed", {
-          sessionId,
-          error: error instanceof Error ? error.message : String(error),
-        });
-      } finally {
-        this.emitSafely(sessionId, terminalEvent);
-        entry.lifecycle.turnActive = false;
+        const terminal =
+          entry.recorder.onEvent(terminalEvent) ?? entry.recorder.completeRun(terminalEvent.reason);
+        if (terminal) this.emitSafely(sessionId, terminal);
+      } catch {
+        entry.outputFailure();
       }
+      entry.lifecycle.turnActive = false;
     }
     // Invalidate callbacks before awaiting close(): close may itself trigger a
     // final provider event, and a restart can claim the same business id as soon

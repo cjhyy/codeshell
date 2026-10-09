@@ -20,6 +20,7 @@ import {
   type StreamEvent,
   type TerminalReason,
 } from "@cjhyy/code-shell-core";
+import { SessionOutputJournal, outputUserMessage } from "@cjhyy/code-shell-core/internal";
 import {
   textWithAttachmentReferences,
   type ExternalRuntimeKind,
@@ -196,6 +197,16 @@ export interface ExternalRuntimeTurnOutcome {
 export class ExternalRuntimeSessionRecorder {
   private readonly manager = new SessionManager();
   private readonly transcript;
+  private readonly directoryIdentity: { dev: number; ino: number };
+  private readonly cwd: string;
+  private readonly startedAt: number;
+  private readonly accountingSessionId: string | undefined;
+  private journal: SessionOutputJournal | undefined;
+  private runId: string | undefined;
+  private runClosed = true;
+  private persistenceFailed = false;
+  private boundaryId: string | undefined;
+
   private textBuffer = "";
   private finalText = "";
   private pendingToolBlocks: ContentBlock[] = [];
@@ -254,6 +265,12 @@ export class ExternalRuntimeSessionRecorder {
       this.manager.migrateSessionMainRoot(sessionId, projectBinding, cwd);
     }
     this.transcript = bundle.transcript;
+    this.cwd = bundle.state.cwd;
+    this.startedAt = bundle.state.startedAt;
+    this.accountingSessionId = bundle.state.costState?.accountingSessionId;
+    this.manager.registerSessionGeneration(sessionId);
+    const directory = lstatSync(join(this.manager.getStorageDir(), sessionId));
+    this.directoryIdentity = { dev: directory.dev, ino: directory.ino };
     const sameModel = bundle.state.model === model && bundle.state.provider === provider;
     this.usage = sameModel
       ? {
@@ -273,7 +290,22 @@ export class ExternalRuntimeSessionRecorder {
     }
   }
 
-  beginTurn(input: RecordedExternalRuntimeTurnInput): void {
+  assertNewSubmission(input: RecordedExternalRuntimeTurnInput): void {
+    if (input.clientMessageId && this.transcript.hasClientMessageId(input.clientMessageId))
+      throw new Error(
+        "External submission clientMessageId was already recorded; refusing to repeat it",
+      );
+  }
+
+  recordControlOutput(event: StreamEvent): StreamEvent {
+    if (this.runClosed) throw new Error("Session output run is closed");
+    return this.appendOutput(event);
+  }
+
+  beginTurn(input: RecordedExternalRuntimeTurnInput, continueRun = false): StreamEvent {
+    this.assertNewSubmission(input);
+    this.assertOwner(continueRun);
+    if (this.persistenceFailed) throw new Error("Session output recovery is incomplete");
     this.textBuffer = "";
     this.finalText = "";
     this.pendingToolBlocks = [];
@@ -283,24 +315,150 @@ export class ExternalRuntimeSessionRecorder {
     this.lastError = undefined;
     this.outcome = undefined;
     const persistedText = textWithAttachmentReferences(input);
-    this.transcript.appendMessage("user", persistedText, {
+    const user = this.transcript.appendMessage("user", persistedText, {
       ...(input.clientMessageId ? { clientMessageId: input.clientMessageId } : {}),
       ...(input.displayText ? { displayText: input.displayText } : {}),
       ...(input.injected === true ? { injected: true } : {}),
     });
-    const state = this.manager.readSessionState(this.sessionId);
-    this.manager.updateSessionState(this.sessionId, {
+    if (!continueRun) {
+      const state = this.manager.readSessionState(this.sessionId);
+      if (!state) throw new Error("Session no longer exists");
+      this.runId = user.id;
+      this.runClosed = false;
+      this.manager.startSessionRun(state, user.id, input.clientMessageId);
+    }
+    // A failed user write must stop the physical CLI request, even though the
+    // ordinary Transcript append API deliberately reports failures as sticky state.
+    this.transcript.sync();
+    this.manager.updateSessionRunState(this.sessionId, this.runId!, (state) => ({
       status: "active",
       model: this.model,
       provider: this.provider,
       lastCompletionKind: undefined,
-      ...(!state?.summary && input.text.trim()
+      ...(!state.summary && input.text.trim()
         ? { summary: input.text.trim().replace(/\s+/g, " ").slice(0, 200) }
         : {}),
+    }));
+    if (!continueRun) {
+      const events = this.transcript.getEvents();
+      const index = events.findIndex((event) => event.id === user.id);
+      this.journal = new SessionOutputJournal(
+        this.manager.getStorageDir(),
+        this.sessionId,
+        this.runId!,
+        index > 0 ? events[index - 1].id : undefined,
+      );
+    }
+    return this.appendOutput(outputUserMessage(user.data, this.sessionId, this.cwd));
+  }
+
+  get isCurrentOutputOwner(): boolean {
+    try {
+      this.assertOwner(true, true);
+      return true;
+    } catch {
+      return false;
+    }
+  }
+
+  startEvent(): StreamEvent {
+    return this.appendOutput({
+      type: "session_started",
+      sessionId: this.sessionId,
+      runId: this.runId,
+      promptTokens: 0,
     });
   }
 
-  onEvent(event: StreamEvent): void {
+  get outputFailed(): boolean {
+    return this.persistenceFailed;
+  }
+  get outputRunId(): string | undefined {
+    return this.runId;
+  }
+
+  /** Sticky even when a CLI adapter catches its consumer's callback exception. */
+  failOutput(): ExternalRuntimeTurnOutcome {
+    this.persistenceFailed = true;
+    this.runClosed = true;
+    this.outcome = {
+      ok: false,
+      reason: "model_error",
+      streamed: true,
+      text: "Session output recovery is incomplete; no further CLI request was started.",
+    };
+    try {
+      // The journal may already have persisted its sticky barrier before its
+      // exception reached us. Its actual owner must still publish failed status.
+      this.assertOwner(true, true);
+      this.manager.updateSessionState(
+        this.sessionId,
+        {
+          status: "model_error",
+          outputRecoveryIncomplete: true,
+        },
+        this.runId,
+      );
+    } catch {
+      /* A stale owner or unavailable disk cannot weaken the live fence. */
+    }
+    return this.outcome;
+  }
+
+  private assertOwner(requireRun = true, allowIncomplete = false): void {
+    if (!this.manager.isSessionGenerationCurrent(this.sessionId))
+      throw new Error("Session output owner was closed");
+    const directory = lstatSync(join(this.manager.getStorageDir(), this.sessionId));
+    const state = this.manager.readSessionState(this.sessionId);
+    if (
+      directory.isSymbolicLink() ||
+      directory.dev !== this.directoryIdentity.dev ||
+      directory.ino !== this.directoryIdentity.ino ||
+      !state ||
+      state.sessionId !== this.sessionId ||
+      state.startedAt !== this.startedAt ||
+      (this.accountingSessionId !== undefined &&
+        state.costState?.accountingSessionId !== this.accountingSessionId) ||
+      (requireRun && (!this.runId || state.runId !== this.runId))
+    )
+      throw new Error("Session output owner was superseded or deleted");
+    if (state.outputRecoveryIncomplete && !allowIncomplete)
+      throw new Error("Session output recovery is incomplete");
+  }
+
+  private appendOutput(event: StreamEvent): StreamEvent {
+    this.assertOwner();
+    if (this.persistenceFailed || !this.journal)
+      throw new Error("Session output recovery is incomplete");
+    if (this.transcript.flushFailed()) throw new Error("Transcript persistence is incomplete");
+    if (event.type === "session_started") event = { ...event, runId: this.runId };
+    return { ...event, outputCursor: this.journal.append(event) };
+  }
+
+  /** One terminal for the whole logical submission, including Goal continuations. */
+  completeRun(reason: TerminalReason): StreamEvent | undefined {
+    if (this.runClosed) return undefined;
+    this.assertOwner();
+    this.manager.updateSessionState(
+      this.sessionId,
+      {
+        status: reason,
+        ...(reason === "completed" && this.boundaryId
+          ? { completedSnapshotVersion: 1, completedThroughEventId: this.boundaryId }
+          : {}),
+      },
+      this.runId,
+    );
+    const event = this.appendOutput({ type: "turn_complete", reason });
+    this.runClosed = true;
+    return event;
+  }
+
+  onEvent(event: StreamEvent, providerTerminalOnly = false): StreamEvent | undefined {
+    if (!this.runId && event.type === "session_started") return event;
+    this.assertOwner();
+    if (this.persistenceFailed) throw new Error("Session output recovery is incomplete");
+    if (this.outcome || this.runClosed) return undefined;
     switch (event.type) {
       case "text_delta":
         // Assistant prose after a tool call closes that call's block, so settle
@@ -401,13 +559,18 @@ export class ExternalRuntimeSessionRecorder {
         this.transcript.appendError(event.error, { source: "external-runtime" });
         break;
       case "turn_complete":
-        this.finish(event.reason);
+        this.finish(event.reason, !providerTerminalOnly);
         break;
     }
+    if (event.type === "turn_complete" && providerTerminalOnly) return undefined;
+    const published = this.appendOutput(event);
+    if (event.type === "turn_complete") this.runClosed = true;
+    return published;
   }
 
   finishIfMissing(): ExternalRuntimeTurnOutcome {
-    if (!this.outcome) this.finish(this.lastError ? "model_error" : "completed");
+    if (!this.outcome)
+      this.onEvent({ type: "turn_complete", reason: this.lastError ? "model_error" : "completed" });
     return this.outcome!;
   }
 
@@ -458,7 +621,7 @@ export class ExternalRuntimeSessionRecorder {
     }
   }
 
-  private finish(reason: TerminalReason): void {
+  private finish(reason: TerminalReason, terminalRun: boolean): void {
     if (this.outcome) return;
     this.flushAssistantText();
     // Before the synthetic results below: a tool_use record must precede its
@@ -475,10 +638,15 @@ export class ExternalRuntimeSessionRecorder {
     }
     this.unresolvedTools.clear();
     const boundary = this.transcript.appendTurnBoundary();
-    const state = this.manager.readSessionState(this.sessionId);
+    this.transcript.sync();
+    this.boundaryId = boundary.id;
     const promptTokens = this.usage.promptTokens;
     const completionTokens = this.usage.completionTokens;
     const turnPromptTokens = Math.max(0, promptTokens - this.usageAtTurnStart.promptTokens);
+    const turnCompletionTokens = Math.max(
+      0,
+      completionTokens - this.usageAtTurnStart.completionTokens,
+    );
     const turnCacheReadTokens = Math.max(
       0,
       this.usage.cacheReadTokens - this.usageAtTurnStart.cacheReadTokens,
@@ -487,21 +655,24 @@ export class ExternalRuntimeSessionRecorder {
       0,
       this.usage.cacheCreationTokens - this.usageAtTurnStart.cacheCreationTokens,
     );
-    this.manager.updateSessionState(this.sessionId, {
-      status: reason,
-      turnCount: (state?.turnCount ?? 0) + 1,
-      turnSeq: (state?.turnSeq ?? 0) + 1,
+    this.manager.updateSessionRunState(this.sessionId, this.runId!, (state) => ({
+      status: terminalRun ? reason : "active",
+      turnCount: (state.turnCount ?? 0) + 1,
       tokenUsage: {
-        promptTokens,
-        completionTokens,
-        totalTokens: promptTokens + completionTokens,
-        cacheReadTokens: this.usage.cacheReadTokens,
-        cacheCreationTokens: this.usage.cacheCreationTokens,
+        promptTokens: state.tokenUsage.promptTokens + turnPromptTokens,
+        completionTokens: state.tokenUsage.completionTokens + turnCompletionTokens,
+        totalTokens: state.tokenUsage.totalTokens + turnPromptTokens + turnCompletionTokens,
+        cacheReadTokens: (state.tokenUsage.cacheReadTokens ?? 0) + turnCacheReadTokens,
+        cacheCreationTokens: (state.tokenUsage.cacheCreationTokens ?? 0) + turnCacheCreationTokens,
       },
-      cumulativePromptTokens: (state?.cumulativePromptTokens ?? 0) + turnPromptTokens,
-      cumulativeCacheReadTokens: (state?.cumulativeCacheReadTokens ?? 0) + turnCacheReadTokens,
+      cumulativePromptTokens:
+        (state.cumulativePromptTokens ?? state.tokenUsage.promptTokens) + turnPromptTokens,
+      cumulativeCacheReadTokens:
+        (state.cumulativeCacheReadTokens ?? state.tokenUsage.cacheReadTokens ?? 0) +
+        turnCacheReadTokens,
       cumulativeCacheCreationTokens:
-        (state?.cumulativeCacheCreationTokens ?? 0) + turnCacheCreationTokens,
+        (state.cumulativeCacheCreationTokens ?? state.tokenUsage.cacheCreationTokens ?? 0) +
+        turnCacheCreationTokens,
       ...(this.contextAnchorPromptTokens > 0
         ? {
             contextUsageAnchor: {
@@ -513,10 +684,10 @@ export class ExternalRuntimeSessionRecorder {
             },
           }
         : {}),
-      ...(reason === "completed"
+      ...(terminalRun && reason === "completed"
         ? { completedSnapshotVersion: 1, completedThroughEventId: boundary.id }
         : {}),
-    });
+    }));
     this.outcome = {
       ok: reason === "completed",
       reason,

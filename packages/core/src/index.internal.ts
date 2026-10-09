@@ -6,6 +6,8 @@
  * consumers should import from `@cjhyy/code-shell-core` instead.
  */
 
+export { outputUserMessage } from "./engine/run-output-user-message.js";
+
 // ─── Utils (shared primitives used by TUI) ───────────────────────
 
 export {

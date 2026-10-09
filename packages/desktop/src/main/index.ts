@@ -1619,8 +1619,7 @@ async function createWindow(): Promise<BrowserWindow> {
       // Route events to the window that owns the session, not every window: a
       // second window showing a different session must not receive its stream.
       emit: (sessionId, event) => {
-        const ownerId = externalBridge.panelOwnerWebContentsId(sessionId);
-        sendToOwnerWindow(ownerId, "externalRuntime:event", { sessionId, event });
+        externalBridge.ingestOwnedExternalEvent(sessionId, event);
         taskInboxService?.scheduleRefresh();
       },
       sessionStateChanged: (sessionId, active, ownerId) => {

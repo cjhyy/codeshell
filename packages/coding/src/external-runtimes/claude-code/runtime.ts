@@ -52,22 +52,17 @@ export interface ClaudeTurnHandle {
 export class ClaudeCodeRuntime {
   readonly kind = "claude-code" as const;
   private readonly log: (event: string, data: Record<string, unknown>) => void;
-  private translator: ClaudeEventTranslator;
   private child?: ChildProcessWithoutNullStreams;
   private claudeSessionId?: string;
   private closed = false;
   private firstTurn = true;
-  private terminalSeen = false;
+  private turnCount = 0;
 
   constructor(
     private readonly options: ClaudeRuntimeOptions,
     private readonly hooks: ClaudeRuntimeHooks = {},
   ) {
     this.log = options.log ?? (() => {});
-    this.translator = new ClaudeEventTranslator({
-      sessionId: options.businessSessionId,
-      codeshellServerName: options.serverName ?? CLAUDE_MCP_SERVER_NAME,
-    });
     this.claudeSessionId = options.resumeRuntimeSessionId;
   }
 
@@ -84,11 +79,19 @@ export class ClaudeCodeRuntime {
    * positional prompt after it is swallowed as another config value (measured),
    * and a prompt on the command line would also be visible in `ps`.
    */
-  async send(input: ExternalRuntimeTurnInput): Promise<ClaudeTurnHandle> {
+  async send(
+    input: ExternalRuntimeTurnInput,
+    onEvent?: (event: StreamEvent) => void,
+  ): Promise<ClaudeTurnHandle> {
     if (this.closed) throw new Error("ClaudeCodeRuntime is closed");
     if (this.child) throw new Error("a turn is already running");
-    this.terminalSeen = false;
-    this.translator.beginTurn();
+    let terminalSeen = false;
+    const turnNumber = ++this.turnCount;
+    const translator = new ClaudeEventTranslator({
+      sessionId: this.options.businessSessionId,
+      codeshellServerName: this.options.serverName ?? CLAUDE_MCP_SERVER_NAME,
+    });
+    translator.beginTurn();
 
     const wiring = claudeBridgeArgs({
       bridge: this.options.bridge,
@@ -126,7 +129,15 @@ export class ClaudeCodeRuntime {
 
     child.stdout.setEncoding("utf8");
     const lines = createInterface({ input: child.stdout, crlfDelay: Infinity });
-    lines.on("line", (line) => this.onLine(line));
+    lines.on("line", (line) => {
+      this.onLine(line, translator, (event) => {
+        if (event.type === "turn_complete") terminalSeen = true;
+        this.emit(
+          event.type === "stream_request_start" ? { ...event, turnNumber } : event,
+          onEvent,
+        );
+      });
+    });
 
     child.stderr.setEncoding("utf8");
     child.stderr.on("data", (chunk: string) => {
@@ -150,12 +161,12 @@ export class ClaudeCodeRuntime {
         // Clean up the config file that carried the bearer token.
         wiring.cleanup();
         this.child = undefined;
-        if (!this.terminalSeen) {
+        if (!terminalSeen) {
           const detail =
             error?.message ??
             `Claude Code exited without a terminal result (code ${code ?? "unknown"})`;
-          this.emit({ type: "error", error: detail });
-          this.emit({ type: "turn_complete", reason: "model_error" });
+          this.emit({ type: "error", error: detail }, onEvent);
+          this.emit({ type: "turn_complete", reason: "model_error" }, onEvent);
         }
         resolve();
       };
@@ -169,7 +180,11 @@ export class ClaudeCodeRuntime {
     return { done };
   }
 
-  private onLine(line: string): void {
+  private onLine(
+    line: string,
+    translator: ClaudeEventTranslator,
+    emit: (event: StreamEvent) => void,
+  ): void {
     if (!line.trim()) return;
     let parsed: unknown;
     try {
@@ -179,12 +194,9 @@ export class ClaudeCodeRuntime {
       this.log("claude.unparsable_line", { bytes: line.length });
       return;
     }
-    for (const event of this.translator.translate(parsed)) {
-      if (event.type === "turn_complete") this.terminalSeen = true;
-      this.emit(event);
-    }
-    if (!this.claudeSessionId && this.translator.runtimeSessionId) {
-      this.claudeSessionId = this.translator.runtimeSessionId;
+    for (const event of translator.translate(parsed)) emit(event);
+    if (!this.claudeSessionId && translator.runtimeSessionId) {
+      this.claudeSessionId = translator.runtimeSessionId;
       this.log("claude.session_started", {
         businessSessionId: this.options.businessSessionId,
         runtimeSessionIdPrefix: this.claudeSessionId.slice(0, 8),
@@ -192,9 +204,9 @@ export class ClaudeCodeRuntime {
     }
   }
 
-  private emit(event: StreamEvent): void {
+  private emit(event: StreamEvent, onEvent?: (event: StreamEvent) => void): void {
     try {
-      this.hooks.onEvent?.(event);
+      (onEvent ?? this.hooks.onEvent)?.(event);
     } catch (error) {
       this.log("claude.event_handler_failed", {
         error: error instanceof Error ? error.name : "unknown",
@@ -222,9 +234,6 @@ export class ClaudeCodeRuntime {
   /** Start a fresh conversation on the next `send()`, discarding resume state. */
   resetConversation(): void {
     this.claudeSessionId = undefined;
-    this.translator = new ClaudeEventTranslator({
-      sessionId: this.options.businessSessionId,
-      codeshellServerName: this.options.serverName ?? CLAUDE_MCP_SERVER_NAME,
-    });
+    this.turnCount = 0;
   }
 }

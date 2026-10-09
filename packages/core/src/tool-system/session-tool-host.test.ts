@@ -650,3 +650,75 @@ describe("SessionToolHost", () => {
 function record0(result: { isError?: boolean }): boolean {
   return result.isError === true;
 }
+
+test("each asynchronous tool keeps the output sink captured before its first await", async () => {
+  let release!: () => void;
+  const blocked = new Promise<void>((resolve) => {
+    release = resolve;
+  });
+  const first: StreamEvent[] = [];
+  const second: StreamEvent[] = [];
+  let sink: ((event: StreamEvent) => void) | undefined;
+  const registry = new ToolRegistry({
+    toolCatalog: [
+      {
+        definition: {
+          name: "CapturedRead",
+          description: "fixture",
+          inputSchema: { type: "object", properties: {} },
+          source: "builtin",
+          permissionDefault: "allow",
+          isReadOnly: true,
+          isConcurrencySafe: true,
+        },
+        execute: async (_args: Record<string, unknown>, context?: ToolContext) => {
+          await blocked;
+          await context?.streamCallback?.({ type: "text_delta", text: "owned tool output" });
+          return "done";
+        },
+        exposure: {
+          presetTags: ["general"],
+          defaultPermissionRules: [{ tool: "CapturedRead", decision: "allow" }],
+        },
+      },
+    ] as unknown as BuiltinTool[],
+  });
+  const host = createSessionToolHost({
+    businessSessionId: "captured-output",
+    cwd: process.cwd(),
+    registry,
+    permissionMode: "default",
+    presetRules: [{ tool: "CapturedRead", decision: "allow" }],
+    projectTrusted: true,
+    planMode: false,
+    exposure: { mode: "allowlist", toolNames: new Set(["CapturedRead"]) },
+    visibility: { cwd: process.cwd(), hasGoal: false, host: "desktop", isSubAgent: false },
+    getStreamCallback: () => sink,
+  });
+  const unownedCall = host.execute({ id: "unowned", name: "CapturedRead", input: {} });
+  sink = (event) => {
+    first.push(event);
+  };
+  const oldCall = host.execute({ id: "old", name: "CapturedRead", input: {} });
+  sink = (event) => {
+    second.push(event);
+  };
+  const newCall = host.execute({ id: "new", name: "CapturedRead", input: {} });
+  release();
+  expect((await unownedCall).isError).not.toBe(true);
+  expect((await oldCall).isError).not.toBe(true);
+  expect((await newCall).isError).not.toBe(true);
+  expect(first.map((event) => event.type)).toEqual(["tool_use_start", "text_delta", "tool_result"]);
+  expect(second.map((event) => event.type)).toEqual([
+    "tool_use_start",
+    "text_delta",
+    "tool_result",
+  ]);
+  expect(first.find((event) => event.type === "tool_result")).toMatchObject({
+    result: { id: "old" },
+  });
+  expect(second.find((event) => event.type === "tool_result")).toMatchObject({
+    result: { id: "new" },
+  });
+  await host.dispose();
+});
