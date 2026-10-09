@@ -9,9 +9,8 @@ test("quit waits for saves and actual child cleanup, coalesces retries and permi
   const childCleanup = new Promise<void>((resolve) => {
     release = resolve;
   });
-  let handler: ReturnType<typeof createDesktopShutdownHandler>;
   const event = { preventDefault: () => calls.push("block") };
-  handler = createDesktopShutdownHandler({
+  const handler = createDesktopShutdownHandler({
     ownsInstance: () => true,
     flushRenderers: async () => {
       calls.push("save");
