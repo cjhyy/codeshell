@@ -745,6 +745,9 @@ try {
         settingsPath,
         JSON.stringify({
           permissions: { rules: readRules },
+          // The bounds startup grants only the Settings plan. Keep its approved
+          // fixture plugin disabled while testing independent inline decisions.
+          ...(finiteBounds ? { disabledPlugins: ["finite-hook-fixture"] } : {}),
           hooks: [{ event: "pre_tool_use", command }],
         }),
       );
