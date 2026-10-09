@@ -1,5 +1,5 @@
 import { expect, test } from "bun:test";
-import { mkdtempSync, rmSync } from "node:fs";
+import { mkdirSync, mkdtempSync, renameSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { SessionManager } from "@cjhyy/code-shell-core";
@@ -240,5 +240,89 @@ test("actual mounted project metadata fence rejects revocation after asynchronou
       force: true,
     });
     rmSync(cwd, { recursive: true, force: true });
+  }
+});
+
+test("legacy native Session binds the currently registered project without inventing a persisted binding", async () => {
+  const cwd = mkdtempSync(join(tmpdir(), "mobile-legacy-authority-"));
+  const project = await getProjectStore().createFromPath(cwd);
+  const manager = new SessionManager();
+  const session = manager.create(cwd, "gpt-4o", "openai");
+  try {
+    const authority = await mobileSessionCommandAuthority(session.state.sessionId);
+    expect(() => authority.assertCurrent()).not.toThrow();
+    expect(manager.readSessionState(session.state.sessionId)?.project).toBeUndefined();
+    await getProjectStore().remove(project.id);
+    expect(() => authority.assertCurrent()).toThrow();
+  } finally {
+    rmSync(join(manager.getStorageDir(), session.state.sessionId), {
+      recursive: true,
+      force: true,
+    });
+    rmSync(cwd, { recursive: true, force: true });
+  }
+});
+
+test("actual worktree replacement after final async cancel authority cannot interrupt its captured run", async () => {
+  const main = mkdtempSync(join(tmpdir(), "mobile-worktree-cancel-"));
+  const cwd = join(main, "worktree");
+  mkdirSync(cwd);
+  const project = await getProjectStore().createFromPath(main);
+  const manager = new SessionManager();
+  const session = manager.create(main, "codex/synthetic", "codex");
+  const sessionId = session.state.sessionId;
+  manager.migrateSessionMainRoot(
+    sessionId,
+    { projectId: project.id, mainRootId: project.roots[0]!.id },
+    main,
+  );
+  manager.setSessionWorkspace(sessionId, {
+    root: cwd,
+    kind: "worktree",
+    worktree: { path: cwd, branch: "fixture", baseRef: "main", createdBy: "codeshell" },
+  });
+  const runtime = {};
+  let cancelled = 0,
+    reads = 0;
+  const service = {
+    get: () => runtime,
+    getCwd: () => cwd,
+    captureActiveRun: () => ({ session: runtime, runId: "actual-run" }),
+    interrupt: async () => {
+      cancelled++;
+    },
+  } as unknown as ExternalRuntimeService;
+  const commands = new MobileExternalRuntimeCommands({
+    authenticated: () => true,
+    authority: async () => {
+      const authority = await mobileSessionCommandAuthority(sessionId);
+      if (++reads === 3) {
+        renameSync(cwd, join(main, "retired"));
+        mkdirSync(cwd);
+      }
+      return authority;
+    },
+    owner: () => 77,
+    service: () => service,
+    isExternal: () => true,
+    exists: () => true,
+    attachmentPath: async (path) => path,
+  });
+  try {
+    await commands.observe({
+      type: "session.select",
+      viewerId: "tab",
+      deviceId: "phone",
+      sessionId,
+    });
+    await expect(commands.stop("tab", "phone", sessionId)).rejects.toThrow();
+    expect(cancelled).toBe(0);
+    expect(session.transcript.getEvents().filter((event) => event.type === "message")).toHaveLength(
+      0,
+    );
+  } finally {
+    await getProjectStore().remove(project.id);
+    rmSync(join(manager.getStorageDir(), sessionId), { recursive: true, force: true });
+    rmSync(main, { recursive: true, force: true });
   }
 });

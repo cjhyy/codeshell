@@ -55,10 +55,14 @@ sent/finalize only after canonical input and the output journal commit. Image
 paths are revalidated against the same project inside the actual service queue.
 The final synchronous socket/selection/owner/Runtime fence runs after async
 checks and before canonical/Goal/run mutation. The same synchronous boundary
-rechecks the captured Session/project/workspace and registered root identity; a
-project removal after the last await cannot append an input or start a request. The actual canonical image
-projection carries display paths and metadata, never image base64. Provider input
-still receives the original text and validated paths.
+rechecks the captured Session/project/workspace, actual main and execution
+directory type/device/inode, and registered root identity. Project removal,
+worktree deletion, replacement or a symlink after the last await cannot append
+an input or start a request; cancel uses this fence too. Legacy native Sessions
+retain their existing registered-root authority without inventing a persisted
+project binding. The existing external Runtime cwd/start restrictions remain.
+The actual canonical image projection carries display paths and metadata, never
+image base64. Provider input still receives the original text and validated paths.
 
 Acceptance means durable input, not model completion. A five-second pre-accept
 queue deadline fences that queued submission before any later physical request;
