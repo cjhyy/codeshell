@@ -326,3 +326,41 @@ test("actual worktree replacement after final async cancel authority cannot inte
     rmSync(main, { recursive: true, force: true });
   }
 });
+
+test("project binding changed during an actual asynchronous root probe cannot become a fresh command grant", async () => {
+  const cwd = mkdtempSync(join(tmpdir(), "mobile-await-authority-"));
+  const store = getProjectStore();
+  const project = await store.createFromPath(cwd);
+  const manager = new SessionManager();
+  const session = manager.create(cwd, "codex/synthetic", "codex");
+  const sessionId = session.state.sessionId;
+  manager.migrateSessionMainRoot(
+    sessionId,
+    { projectId: project.id, mainRootId: project.roots[0]!.id },
+    cwd,
+  );
+  const get = store.get;
+  let changed = false;
+  store.get = async (id) => {
+    const result = await get.call(store, id);
+    if (id === project.id && !changed) {
+      changed = true;
+      manager.updateSessionState(sessionId, {
+        project: { projectId: "replacement-project", mainRootId: "replacement-root" },
+      });
+    }
+    return result;
+  };
+  try {
+    await expect(mobileSessionCommandAuthority(sessionId)).rejects.toThrow();
+    expect(changed).toBe(true);
+    expect(session.transcript.getEvents().filter((event) => event.type === "message")).toHaveLength(
+      0,
+    );
+  } finally {
+    store.get = get;
+    await store.remove(project.id);
+    rmSync(join(manager.getStorageDir(), sessionId), { recursive: true, force: true });
+    rmSync(cwd, { recursive: true, force: true });
+  }
+});

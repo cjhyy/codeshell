@@ -30,6 +30,8 @@ export async function mobileSessionCommandAuthority(sessionId: string) {
   if (
     !boundState ||
     boundState.startedAt !== state.startedAt ||
+    JSON.stringify([boundState.cwd, boundState.project, boundState.workspace]) !==
+      JSON.stringify([state.cwd, state.project, state.workspace]) ||
     boundState.ephemeral ||
     boundState.parentSessionId ||
     boundState.kind === "pet" ||
