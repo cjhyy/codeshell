@@ -277,6 +277,16 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y dbus-x11 gnome-keyring libsecret-tools
           bash scripts/run-electron-e2e-keyring.sh
+      - name: Preserve synthetic operation-read failure evidence
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: operation-read-synthetic-failure
+          path: |
+            /tmp/codeshell-operation-read-*/home/evidence/failure.json
+            /tmp/codeshell-operation-read-*/home/evidence/failed.png
+          if-no-files-found: ignore
+          retention-days: 7
       - name: install browser for real Hub panel recovery
         working-directory: packages/desktop
         run: bunx playwright install --with-deps chromium

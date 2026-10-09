@@ -171,6 +171,8 @@ let app,
   success = false,
   physicalRequests = 0;
 const observations = [];
+const mainStderr = [];
+let rendererErrors = [];
 async function guardedProcesses() {
   const mainPid = app.process().pid;
   const homeId = createHash("sha256").update(isolated.home).digest("hex");
@@ -296,8 +298,12 @@ try {
     env: fixture.env,
     mainEntry: fixture.mainEntry,
   });
+  app.process().stderr?.on("data", (chunk) => {
+    mainStderr.push(String(chunk));
+    while (mainStderr.join("").length > 32_768) mainStderr.shift();
+  });
   win = await findCodeShellWindow(app);
-  const rendererErrors = captureRendererErrors(win);
+  rendererErrors = captureRendererErrors(win);
   await win.setViewportSize({ width: 1440, height: 980 });
   const viewOnly = win.getByRole("button", { name: /^(仅查看|View only)/ });
   if (
@@ -312,10 +318,12 @@ try {
     window.dispatchEvent(new Event("codeshell:language-changed"));
   });
   await app.evaluate(({ dialog }) => {
-    globalThis.__readDialogs = { accept: false, prompts: [] };
+    globalThis.__readDialogs = { accept: false, prompts: [], answers: [] };
     dialog.showMessageBox = async (_window, options) => {
       globalThis.__readDialogs.prompts.push(options);
-      return { response: globalThis.__readDialogs.accept ? 1 : 0 };
+      const response = globalThis.__readDialogs.accept ? 1 : 0;
+      globalThis.__readDialogs.answers.push(response);
+      return { response };
     };
   });
   Object.assign(
@@ -458,7 +466,21 @@ try {
   await win.reload();
   const card = await activityReview();
   await card.getByRole("button", { name: "Read-only review…", exact: true }).click();
-  await card.getByRole("button", { name: "Read-only review…", exact: true }).waitFor();
+  // Visibility alone does not prove cancellation: the button remains mounted
+  // while its IPC is pending. Wait for the actual native answer AND completed
+  // renderer refresh before changing settings or the next dialog answer.
+  for (let attempt = 0; ; attempt++) {
+    const answers = await app.evaluate(() => globalThis.__readDialogs.answers);
+    if (
+      answers.length === 1 &&
+      answers[0] === 0 &&
+      (await card.getByRole("button", { name: "Read-only review…", exact: true }).isEnabled())
+    )
+      break;
+    if (attempt >= 150) throw new Error("Native cancellation did not finish and refresh");
+    await new Promise((done) => setTimeout(done, 100));
+  }
+  assert.equal(await card.getByRole("alert").count(), 0);
   assert.equal(calls.length, beforeReview);
   assert.equal(JSON.parse(await readFile(ledgerPath, "utf8")).observations, undefined);
   stage = "native fixed read and current ask permission record independent observation";
@@ -580,10 +602,48 @@ try {
   console.log(`Operation read native acceptance passed. Evidence: ${evidenceDir}`);
 } catch (error) {
   await win?.screenshot({ path: join(evidenceDir, "failed.png") }).catch(() => undefined);
-  await writeFile(
-    join(evidenceDir, "failure.json"),
-    JSON.stringify({ stage, error: String(error), calls }, null, 2),
-  ).catch(() => undefined);
+  const ledger = await readFile(
+    join(isolated.codeShellHome, "sessions/.operations/ledger.json"),
+    "utf8",
+  )
+    .then(JSON.parse)
+    .catch(() => null);
+  const failure = {
+    stage,
+    error: String(error),
+    source: sourceEvidence,
+    // All data below belongs to this private synthetic fixture. Do not include
+    // recovery ciphertext, private input bodies or arbitrary Host application files.
+    calls,
+    records: Object.values(ledger?.records ?? {}).map((record) => ({
+      id: record.id,
+      state: record.state,
+      attemptId: record.attemptId,
+    })),
+    observations: Object.values(ledger?.observations ?? {})
+      .flat()
+      .map((observation) => ({
+        result: observation.result,
+        actions: observation.actions,
+        reason: observation.evidence?.reason,
+      })),
+    dialogs: await app
+      ?.evaluate(() => ({
+        answers: globalThis.__readDialogs?.answers,
+        titles: globalThis.__readDialogs?.prompts.map((prompt) => prompt.title),
+      }))
+      .catch(() => null),
+    activityText: await win
+      ?.locator(`[data-task-key="session:${sessionId}"]`)
+      .innerText({ timeout: 1000 })
+      .catch(() => null),
+    mainStderr: mainStderr.join("").slice(-16_384),
+    rendererErrors: rendererErrors.map((error) => String(error.message)),
+  };
+  await writeFile(join(evidenceDir, "failure.json"), JSON.stringify(failure, null, 2)).catch(
+    () => undefined,
+  );
+  console.error(`Synthetic operation-read failure receipt: ${JSON.stringify(failure)}`);
   console.error(`Operation read failed at ${stage}; evidence: ${evidenceDir}`);
   throw error;
 } finally {
