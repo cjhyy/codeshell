@@ -7,19 +7,23 @@ existing implementation; it is not an independent OS attestation, a signed
 installer acceptance, a real provider bill, or a deployment.
 
 The first successful run used test checkpoint `e6768bed801e232905f2ccfb21c56292eba59a57`
-on source main `8dd491d0`. The task subsequently normally merged main `a1fd082c`.
-The final combined native run at `eea6f4848c8d46ef462dfdae93fcdac30792f441` passed in
-42.907 seconds: Main `19647`, worker `20160`, cold Main `21533`, ten local HTTP
+on source main `8dd491d0`. The task subsequently normally merged main `a535c8ed`.
+The final combined native run at `1d961632b2e48a02f4c27ab50b2f28519f0da801` passed in
+42.569 seconds: Main `30502`, worker `31032`, cold Main `32619`, ten local HTTP
 requests, zero unavailable-custody sends and zero cold-restart sends. All local
-package/build/type/helper/signing/lint gates passed. The
-[final acceptance receipt](macos-keychain-acceptance-final-receipt.json) binds 314 frozen raw
-files in two verified copies with manifest SHA256
-`2327c05fe1c13e2e44c204228e191bfb3a8529c6568c70b1c771145ded36d9b0`.
-The [earlier combined receipt](macos-keychain-acceptance-receipt.json) and its
-257-file manifest remain byte-for-byte unchanged. The later change runs the
+package/build/type/helper/signing/lint gates passed again on that source. The
+[combined acceptance receipt](macos-keychain-acceptance-combined-receipt.json) binds 58
+new frozen raw files in two verified copies with manifest SHA256
+`029b513749e5414d7deb163faf799a998ea905b980fd8fd2f1d806c6b90f960f`.
+The [preceding acceptance receipt](macos-keychain-acceptance-final-receipt.json), its
+314-file manifest, and the [earlier receipt](macos-keychain-acceptance-receipt.json)
+with its 257-file manifest remain byte-for-byte unchanged. The later change runs the
 Node-owned HTTP control assertion under a bounded real Node child when collected
 by Bun and pins that Desktop CI shard to Node 22.16.0; affected Node/Bun helpers
-and the native acceptance were rerun at the final source checkpoint.
+and the native acceptance were rerun. The final normal main merge includes the
+Session operation-controller binding and Desktop operation-review registration;
+the package, workspace/Desktop builds, twelve typechecks, 93 focused tests and
+actual Mac acceptance were repeated against this combination.
 Subsequent delivery edits are documentation/evidence only. No production
 signing, cipher, transport, or user interface was changed.
 
@@ -120,21 +124,22 @@ processes. Genuine OS authorization is never automatically handled.
 
 ## Preserved failures
 
-| Attempt | Result retained without reinterpretation                                                                                                                         |
-| ------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| 1       | Launch failed before Main/OS evidence; initial smoke cleanup was not reached.                                                                                    |
-| 2       | Parent HTTP guard blocked Playwright's inspector transport; corrected by the exact owned-endpoint exception.                                                     |
-| 3       | Legacy recent-project data did not register a project in the current registry.                                                                                   |
-| 4       | 180-second deadline after project setup; no precise original blocking phase established.                                                                         |
-| 5       | The project name matched three UI elements; narrowed to the actual sidebar button.                                                                               |
-| 6       | The private project's application trust dialog blocked navigation; ordinary trust flow corrected.                                                                |
-| 7       | Actual native availability call blocked with missing private default metadata; owned sample and metadata comparison retained.                                    |
-| 8       | Native availability passed, but the zero-total-request assertion failed; no original per-request receipt exists, so its exact cause remains unproven.            |
-| 9       | Main/worker, zero-send injection and real HMAC verification passed; cold Main created no worker and the harness incorrectly required one.                        |
-| 10      | Full native API, zero-send, wire HMAC, cold restart, persistent identity and existing panel smoke passed; all owned processes exited.                            |
-| 11      | The normal main merge passed the same full native acceptance and all owned processes exited.                                                                     |
-| 12      | Stale metadata file identity failed preflight before any Electron or worker was spawned; same path/owner, inode change of unproven origin.                       |
-| 13      | Final source including the bounded Node control-test bridge passed full native acceptance and before/after metadata identity checks; all owned processes exited. |
+| Attempt | Result retained without reinterpretation                                                                                                                                        |
+| ------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 1       | Launch failed before Main/OS evidence; initial smoke cleanup was not reached.                                                                                                   |
+| 2       | Parent HTTP guard blocked Playwright's inspector transport; corrected by the exact owned-endpoint exception.                                                                    |
+| 3       | Legacy recent-project data did not register a project in the current registry.                                                                                                  |
+| 4       | 180-second deadline after project setup; no precise original blocking phase established.                                                                                        |
+| 5       | The project name matched three UI elements; narrowed to the actual sidebar button.                                                                                              |
+| 6       | The private project's application trust dialog blocked navigation; ordinary trust flow corrected.                                                                               |
+| 7       | Actual native availability call blocked with missing private default metadata; owned sample and metadata comparison retained.                                                   |
+| 8       | Native availability passed, but the zero-total-request assertion failed; no original per-request receipt exists, so its exact cause remains unproven.                           |
+| 9       | Main/worker, zero-send injection and real HMAC verification passed; cold Main created no worker and the harness incorrectly required one.                                       |
+| 10      | Full native API, zero-send, wire HMAC, cold restart, persistent identity and existing panel smoke passed; all owned processes exited.                                           |
+| 11      | The normal main merge passed the same full native acceptance and all owned processes exited.                                                                                    |
+| 12      | Stale metadata file identity failed preflight before any Electron or worker was spawned; same path/owner, inode change of unproven origin.                                      |
+| 13      | Final source including the bounded Node control-test bridge passed full native acceptance and before/after metadata identity checks; all owned processes exited.                |
+| 14      | Normal main `a535c8ed` combination passed a newly built full native acceptance with distinct Main/worker/cold Main and unchanged ordinary metadata; all owned processes exited. |
 
 Attempt 8 is not reclassified as a pass. Subsequent instrumentation proved the
 availability wrapper was used and no cached key bypassed its check. Waiting for
@@ -151,6 +156,18 @@ version, PID/PPID and HOME hash. Its 10-second deadline sends TERM, then KILL on
 the same child handle and awaits terminal cleanup. Both final Node and Bun
 helper combinations pass thirteen tests with zero failures/skips on macOS.
 
+The first PR CI at `a369e423` preserved one further environment failure: its
+new Node 22.16 floor exposed an existing pure Node fixture that directly imports
+`link-loopback-callback.ts` without enabling TypeScript stripping. That child
+failed before its product assertions; the other eleven jobs, including Electron
+E2E, passed. The test now supplies `--experimental-strip-types` explicitly and
+retains all shutdown/listener assertions. On private Node 22.16, the original
+case plus helpers passed 22 tests, and the same full Desktop shard passed 4,829
+tests with 69 existing skips and zero failures before the normal main merge.
+The final combined focused shard passed 93 tests with zero skips/failures.
+The original CI job log and run metadata are in the new frozen receipt; neither
+this failure nor earlier failed attempts are relabeled as passing evidence.
+
 ## Reproduction
 
 Use actual Node 22.16.0. Complete `bun run test:package-release`, workspace build
@@ -166,7 +183,7 @@ node scripts/run-isolated-node-smoke.mjs packages/desktop/scripts/macos-keychain
 ```
 
 The last command runs the Node test module in a private environment. The
-accompanying receipt records the exact commands used for all thirteen Node tests
+accompanying receipts record the exact commands used for all thirteen Node tests
 and the final native repeat. POSIX ownership and
 mode cases explicitly require that platform contract; the XML-shape test is
 portable. None of these fixtures requires a real provider or account.

@@ -1,0 +1,138 @@
+{
+  "version": 1,
+  "runtimeSourceCommit": "1d961632b2e48a02f4c27ab50b2f28519f0da801",
+  "normallyMergedMain": "a535c8ed92ddc985d018f44847cbf85a09d7dca2",
+  "sourceTree": "cf922c4e7856b5d158c8dc01b1f824d10b125c0b",
+  "sourceDiffSha256": "a1985d31fead2d65b53ca67512d6d1acb918d9225f089d8988079fee5accb52a",
+  "compiledFingerprints": [
+    {
+      "path": "packages/desktop/out/main/index.mjs",
+      "bytes": 4995717,
+      "sha256": "1c19bde89ebcd1b8fc766202e3fca7b43847369918eca8af7279debf16387f56"
+    },
+    {
+      "path": "packages/desktop/out/preload/index.cjs",
+      "bytes": 76473,
+      "sha256": "23d97d615ab118ba24049b11e3a238167fcf5395b63160dc341df9acc9b91602"
+    },
+    {
+      "path": "packages/core/dist/engine/engine.js",
+      "bytes": 203490,
+      "sha256": "eca3f332cbcda633f726087e7f9df5c59ca9308f6d47198c9b2f29014a24052f"
+    },
+    {
+      "path": "packages/core/dist/operations/controller.js",
+      "bytes": 4710,
+      "sha256": "5d4011f1c036f1fcb968fea4ecba63d5efeca73448a3d0912a69571256b39a3f"
+    }
+  ],
+  "productionSourceChanges": [],
+  "testOnlySourceChange": "packages/desktop/src/main/link-system-browser.test.ts",
+  "native": {
+    "runtimeSourceCommit": "1d961632b2e48a02f4c27ab50b2f28519f0da801",
+    "operatorDefaultMetadataUnchanged": true,
+    "defaultPathHash": "bf5b7026c780c552ffd8ea51bbbcd50625c87d3f32112c15d86ef5649abdc636",
+    "launchPassed": true,
+    "elapsedMs": 42569,
+    "remainingOwnedPids": [],
+    "firstMainPid": 30502,
+    "firstWorkerPid": 31032,
+    "coldMainPid": 32619,
+    "coldWorkerCreated": false,
+    "localProviderRequests": 10,
+    "coldProviderRequests": 0,
+    "zeroUnavailableRequests": true,
+    "proof": {
+      "boundaries": 5,
+      "attempts": 6,
+      "encryptedKeys": 1,
+      "keyRecordsDigest": "5f0c62c71db3419e5b8bb033f5f2955a7da0547482078be868e779496f49255a",
+      "syntheticRoundTrip": true
+    },
+    "originalWireHmacVerifiedInMain": true,
+    "persistentCiphertextAndKeyIdentityUnchanged": true
+  },
+  "nativeNodeControlChild": {
+    "node": "v22.16.0",
+    "executable": "/private/tmp/codeshell-services-runtime-0927.wnUxrv/node-v22.16.0-darwin-arm64/bin/node",
+    "executableHash": "a45751fbfe88440bebff63cd44814e4ed6deb642bc3e3c4a14c4f8ae0ed9e019",
+    "pid": 30279,
+    "ppid": 30277,
+    "homeHash": "4939d0a447f0de61a0d0d912923026ec120fe4c03779645f1416e693b6f721b3",
+    "upgrades": 1
+  },
+  "gates": {
+    "package": {
+      "tarballs": 9,
+      "typedEntries": 47,
+      "runtimeEntries": 45
+    },
+    "workspaceBuild": true,
+    "desktopBuild": true,
+    "workspaceTypechecks": 12,
+    "focused": {
+      "tests": 93,
+      "files": 15,
+      "assertions": 442,
+      "failures": 0,
+      "skipped": 0
+    },
+    "nodeHelpers": {
+      "tests": 13,
+      "failures": 0,
+      "skippedOnMac": 0
+    },
+    "lint": {
+      "errors": 0,
+      "warnings": 105,
+      "atExistingBaseline": true
+    },
+    "engineBypassGuard": true,
+    "workflowPathsGuard": true,
+    "preMergeFullDesktop": {
+      "sourceCommit": "a7d08d4f",
+      "passed": 4829,
+      "existingSkipped": 69,
+      "failures": 0,
+      "tests": 4898,
+      "files": 584
+    }
+  },
+  "originalCiFailure": {
+    "runId": 37885307104,
+    "head": "a369e4235a7ff4ecba2c0934265ada2c43afbd02",
+    "success": 11,
+    "jobs": 12,
+    "failedJob": 113673872213,
+    "reason": "Node 22.16 requires explicit --experimental-strip-types for the existing pure Node TypeScript fixture; no product assertion ran in that one failure"
+  },
+  "priorEvidence": [
+    {
+      "manifestSha256": "0d2db5eb7e4aa37168d98ed828994e2a4dd106c9f386c47de9c9f67a8374bc45",
+      "primary": "/private/var/folders/1d/6__4f4y51g90nblfptt8s9v80000gn/T/codeshell-macos-keychain-540kn9t1/final-3e39bf7b/final-manifest.json",
+      "mirror": "/Users/admin/.codex/worktrees/macos-keychain-acceptance/codeshell/node_modules/.cache/macos-keychain-acceptance/final-3e39bf7b/final-manifest.json",
+      "unchanged": true
+    },
+    {
+      "manifestSha256": "2327c05fe1c13e2e44c204228e191bfb3a8529c6568c70b1c771145ded36d9b0",
+      "primary": "/private/var/folders/1d/6__4f4y51g90nblfptt8s9v80000gn/T/codeshell-macos-keychain-540kn9t1/final-eea6f484/final-manifest.json",
+      "mirror": "/Users/admin/.codex/worktrees/macos-keychain-acceptance/codeshell/node_modules/.cache/macos-keychain-acceptance/final-eea6f484/final-manifest.json",
+      "unchanged": true
+    }
+  ],
+  "rawFileCount": 58,
+  "scope": [
+    "new native runtime proof at the normally merged main",
+    "private HOME; no inherited provider credentials",
+    "real SafeStorage/native cold HMAC; no independent OS attestation",
+    "pre-Core JS fetch/http/https probes, no raw socket/Chromium/OS confinement claim",
+    "only existing app SafeStorage item and bounded metadata singleton; no enumeration/unlock/OS setter/UI automation"
+  ],
+  "frozenEvidence": {
+    "manifestSha256": "029b513749e5414d7deb163faf799a998ea905b980fd8fd2f1d806c6b90f960f",
+    "rawFileCount": 58,
+    "primary": "/private/var/folders/1d/6__4f4y51g90nblfptt8s9v80000gn/T/codeshell-macos-keychain-540kn9t1/final-1d961632/final-manifest.json",
+    "mirror": "/Users/admin/.codex/worktrees/macos-keychain-acceptance/codeshell/node_modules/.cache/macos-keychain-acceptance/final-1d961632/final-manifest.json",
+    "twoCopiesVerified": true
+  }
+}
