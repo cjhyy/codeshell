@@ -138,6 +138,22 @@ export class ToolExecutor {
     callIn: ToolCall,
     constraint?: { pinnedInput: string; assertAuthorized?: () => void },
   ): Promise<ToolResult> {
+    if (!this.toolCtx?.operations?.onToolFailure)
+      return this.executeSingleAuthorized(callIn, constraint);
+    try {
+      const result = await this.executeSingleAuthorized(callIn, constraint);
+      if (result.isError) await this.toolCtx?.operations?.onToolFailure?.();
+      return result;
+    } catch (error) {
+      await this.toolCtx?.operations?.onToolFailure?.();
+      throw error;
+    }
+  }
+
+  private async executeSingleAuthorized(
+    callIn: ToolCall,
+    constraint?: { pinnedInput: string; assertAuthorized?: () => void },
+  ): Promise<ToolResult> {
     // Local `call` so we can rewrite args via pre_tool_use updatedInput
     // without mutating the caller's object.
     let call: ToolCall = callIn;

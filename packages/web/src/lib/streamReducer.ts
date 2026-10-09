@@ -136,6 +136,7 @@ function runStateForReason(reason: string): RunState {
     case "model_error":
     case "image_error":
     case "replay_incomplete":
+    case "batch_incomplete":
     case "unverified_write":
       return "error";
     // "completed", "max_turns", "goal_budget_exhausted", "stop_hook_prevented",

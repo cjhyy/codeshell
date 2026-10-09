@@ -134,6 +134,7 @@ export async function finalizeRunSuccess(args: {
   profile: RunBehaviorProfile | undefined;
   getProfileReportedResults: () => Record<string, unknown> | undefined;
   hasUnverifiedWrites?: () => boolean;
+  hasIncompleteBatch?: () => Promise<boolean>;
 }): Promise<EngineResult> {
   const {
     session,
@@ -159,27 +160,35 @@ export async function finalizeRunSuccess(args: {
   } catch {
     unverified = true;
   }
-  const blockCompletion = originalResult.reason === "completed" && unverified;
-  const verificationNotice =
-    "外部写操作尚未通过独立回读验证，任务未标记完成。请先确认已发送操作的实际结果，避免重复写入。";
+  let incompleteBatch: boolean;
+  try {
+    incompleteBatch = (await args.hasIncompleteBatch?.()) === true;
+  } catch {
+    incompleteBatch = true;
+  }
+  const blocked = unverified || incompleteBatch;
+  const blockCompletion = originalResult.reason === "completed" && blocked;
+  const verificationNotice = unverified
+    ? "外部写操作尚未通过独立回读验证，任务未标记完成。请先确认已发送操作的实际结果，避免重复写入。"
+    : "批量操作尚未全部完成验证。剩余项目已停止，不会自动继续；请在活动记录查看各项结果。";
   // Preserve the original model output as an audit record, followed by a Host
   // correction that survives both the next turn's cache and a disk replay.
   // An error stream event alone would leave the old success claim in history.
-  const messages = unverified
+  const messages = blocked
     ? [...originalResult.messages, { role: "assistant" as const, content: verificationNotice }]
     : originalResult.messages;
-  if (unverified) {
+  if (blocked) {
     session.transcript.appendMessage("assistant", verificationNotice, { authority: "system" });
   }
   const result: TurnLoopRunResult = blockCompletion
     ? {
         ...originalResult,
-        reason: "unverified_write",
+        reason: unverified ? "unverified_write" : "batch_incomplete",
         completionKind: undefined,
         text: verificationNotice,
         messages,
       }
-    : unverified
+    : blocked
       ? { ...originalResult, messages }
       : originalResult;
   if (blockCompletion) options?.onStream?.({ type: "error", error: result.text });

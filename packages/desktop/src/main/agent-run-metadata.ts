@@ -1,3 +1,4 @@
+import { isOperationBatchAuthorityFrame } from "@cjhyy/code-shell-core/internal";
 import type { ParsedRpc } from "./agent-bridge-fallback.js";
 import type { WorkerFrameMeta } from "@cjhyy/code-shell-server/worker";
 import { canonicalKey, type WorkspaceContext } from "@cjhyy/code-shell-core/internal";
@@ -25,6 +26,7 @@ export interface ResolvedAgentProjectRun {
 
 export interface AgentRunMetadataDeps {
   isProjectTrusted: (cwd: string) => boolean;
+  isTrustedOperationBatchRequest?: (id: unknown) => boolean;
   resolveProjectRun?: (
     projectId: string,
     sessionId: string,
@@ -77,12 +79,20 @@ export function prepareAgentRunMetadata(
   meta: WorkerFrameMeta,
   deps: AgentRunMetadataDeps,
 ): PreparedAgentRunMetadata {
-  let parsed: ParsedRpc = {};
+  // sendLine is consumed as NDJSON by the worker. One Main ingress call must
+  // authorize exactly one physical frame, including replies without a method.
+  if (typeof line !== "string" || /[\r\n]/.test(line))
+    throw new AgentRunMetadataError("Agent ingress requires one JSON frame");
+  if (isOperationBatchAuthorityFrame(line))
+    throw new AgentRunMetadataError("Operation batch authority is a private Host channel");
+  let parsed: ParsedRpc;
   try {
     parsed = JSON.parse(line) as ParsedRpc;
   } catch {
-    return { parsed, outLine: line, meta };
+    throw new AgentRunMetadataError("Agent ingress requires one JSON frame");
   }
+  if (!parsed || typeof parsed !== "object" || Array.isArray(parsed))
+    throw new AgentRunMetadataError("Agent ingress requires one JSON object frame");
   if (parsed.method === "agent/backgroundWorkCancel" && meta.origin !== "host") {
     throw new AgentRunMetadataError("Background task controls require host authority");
   }
@@ -101,6 +111,11 @@ export function prepareAgentRunMetadata(
     typeof paramsRecord?.browserPartition === "string" ? paramsRecord.browserPartition : undefined;
 
   if (paramsRecord) {
+    if (
+      Object.hasOwn(paramsRecord, "operationBatchToken") &&
+      (meta.origin !== "host" || !deps.isTrustedOperationBatchRequest?.(parsed.id))
+    )
+      throw new AgentRunMetadataError("Operation batch Run requires private Native admission");
     delete paramsRecord.bucket;
     delete paramsRecord.browserPartition;
     delete paramsRecord.workspaceContext;

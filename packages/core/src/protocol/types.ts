@@ -124,6 +124,8 @@ export interface RunParams {
   attachments?: InputAttachmentMeta[];
   /** Stable id for the user's submit intent; duplicate ids are idempotent. */
   clientMessageId?: string;
+  /** Private Main-issued Run nonce; Desktop rejects this field on all ordinary inbound paths. */
+  operationBatchToken?: string;
   /**
    * Archive the preceding history after this message is durably appended and
    * before its first model call. `clientMessageId` is the exclusive end anchor.

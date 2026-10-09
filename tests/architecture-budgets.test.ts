@@ -82,7 +82,10 @@ describe("architecture growth budgets", () => {
     // stay in mobile-remote modules; no IPC route or public export is added here.
     // Awaited constrained Hook cleanup uses the extracted desktop-shutdown quit
     // coordinator. Its failure/retry gate reduces Main without raising this limit.
-    expect(lines("packages/desktop/src/main/index.ts")).toBeLessThanOrEqual(7_201);
+    // Native batch entry adds only registrar/combined-disposal wiring here.
+    // Main policy, immutable permits and Native approval remain in operation-batch-*.
+    // Pin the concrete composed result; no allowance for future features.
+    expect(lines("packages/desktop/src/main/index.ts")).toBeLessThanOrEqual(7_202);
     expect(lines("packages/desktop/src/main/project-panel-ipc.ts")).toBeLessThanOrEqual(322);
     // The five generic Link authorization operations reuse the window/project
     // owner and live reauthorization guard here. Challenge state, provider
@@ -127,12 +130,15 @@ describe("architecture growth budgets", () => {
         matches(
           "packages/desktop/src/main/operation-resolution-ipc.ts",
           /handle\(\s*"operationResolution:/g,
-        ),
+        ) +
+        // Exactly two Native batch routes: bounded options and manual approval.
+        // Main alone issues the private Run nonce; extraction cannot hide IPC growth.
+        matches("packages/desktop/src/main/operation-batch-ipc.ts", /handle\("operationBatch:/g),
       // +1 read-only, bounded Session output-journal page route. Its file/owner
       // validation and recovery algorithm stay in Core and the extracted adapters.
       // +2 metadata-only Profile preview and revision-checked adoption routes.
       // +3 preview/cancel/reviewed-save operations, without installation authority.
-    ).toBeLessThanOrEqual(337);
+    ).toBeLessThanOrEqual(339);
     // v0.8.17 added the reviewed Panel catalog/task bridge to both preload
     // surfaces. Mimi's bounded transcript pagination adds one typed invoke;
     // the validation and file-reading implementation remain extracted in main.
@@ -173,8 +179,11 @@ describe("architecture growth budgets", () => {
         matches("packages/desktop/src/preload/task-inbox-api.ts", /ipc\.invoke\(/g) +
         matches("packages/desktop/src/preload/profile-plugin-export-api.ts", /ipc\.invoke\(/g) +
         matches("packages/desktop/src/preload/optimization-lab-api.ts", /ipc\.invoke\(/g) +
-        matches("packages/desktop/src/preload/operation-resolution-api.ts", /ipc\.invoke\(/g),
-    ).toBeLessThanOrEqual(330);
+        matches("packages/desktop/src/preload/operation-resolution-api.ts", /ipc\.invoke\(/g) +
+        // The same two reviewed options/start adapters return no private nonce.
+        // Pin their actual contract growth with no allowance for future invokes.
+        matches("packages/desktop/src/preload/operation-batch-api.ts", /ipc\.invoke\(/g),
+    ).toBeLessThanOrEqual(332);
     // GitHub skill previews and Panel task hosting carry main-issued review and
     // ownership fields across the typed preload boundary. The optional Mimi
     // transcript-page method adds its bounded response shape without widening
@@ -246,7 +255,9 @@ describe("architecture growth budgets", () => {
     // drops this metadata cache; no observer, tool resolver or grant is retained.
     // +32 ingress lines resolve the existing Session owner and forward bounded
     // journal queries; persistence, cursor validation and paging remain extracted.
-    expect(lines("packages/core/src/protocol/server.ts")).toBeLessThanOrEqual(5_170);
+    // +4 private-token forwarding lines at the two existing Run paths. Main
+    // admission and worker batch authority remain in their dedicated owners.
+    expect(lines("packages/core/src/protocol/server.ts")).toBeLessThanOrEqual(5_174);
     // Topic-boundary archival stays inside run startup. Synthetic worktree
     // authority is only a public delegation seam here; its implementation was
     // extracted to engine-workspace-authority.ts. The run-yield visibility
@@ -305,7 +316,11 @@ describe("architecture growth budgets", () => {
     // private run state together avoids adding another mutable ownership seam.
     // Pin the concrete result, with no allowance for future features.
     // +3 composition lines bind operations to persisted Session ownership in the extracted factory.
-    expect(lines("packages/core/src/engine/engine.ts")).toBeLessThanOrEqual(5_024);
+    // Native batches add only pre-model mode rejection, concrete Run context
+    // and finalizer wiring. Policy/permit/ledger/failure latch live in dedicated
+    // owners; another forwarding wrapper would not improve that boundary.
+    // Pin exact formatted owner composition, without future-feature headroom.
+    expect(lines("packages/core/src/engine/engine.ts")).toBeLessThanOrEqual(5_038);
   });
 
   test("published entry points cannot silently expand their compatibility surface", () => {
@@ -364,7 +379,10 @@ describe("architecture growth budgets", () => {
       // +3 reviewed Host-only contracts: native operation Hook host, constrained
       // process host, and its opaque permit/resource/runtime types. Published
       // public/extension contracts remain unchanged; allow no future exports.
-      "packages/core/src/index.internal.ts": 101,
+      // +4 Native batch Host-only declarations: issuer/policy, persisted owner,
+      // existing Link authority helpers, and private worker RPC frame/types.
+      // No model, stable public SDK or extension authority is added.
+      "packages/core/src/index.internal.ts": 105,
       "packages/coding/src/index.ts": 12,
       "packages/arena/src/index.ts": 19,
       // +1 for conversation-session.ts, which re-exports the four modules

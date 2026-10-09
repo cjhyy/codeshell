@@ -209,6 +209,21 @@ export async function linkActionTool(
   ctx?: ToolContext,
   getCliStatus: typeof getCliLinkStatus = getCliLinkStatus,
 ): Promise<string> {
+  if (!ctx?.operations?.onToolFailure) return executeLinkAction(args, ctx, getCliStatus);
+  const result = await executeLinkAction(args, ctx, getCliStatus);
+  if (
+    ctx?.operations?.onToolFailure &&
+    ["error", "cancelled", "unverified_write"].includes(JSON.parse(result).kind)
+  )
+    await ctx.operations.onToolFailure();
+  return result;
+}
+
+async function executeLinkAction(
+  args: Record<string, unknown>,
+  ctx: ToolContext | undefined,
+  getCliStatus: typeof getCliLinkStatus,
+): Promise<string> {
   if (args.provider !== undefined && typeof args.provider !== "string") {
     return JSON.stringify({ kind: "error", error: "LinkAction provider must be a string." });
   }

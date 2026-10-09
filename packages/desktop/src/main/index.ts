@@ -1,3 +1,4 @@
+import { registerOperationBatchHost } from "./operation-batch-host.js";
 import { createDesktopRemoteServices } from "./desktop-remote-services.js";
 import { createDesktopShutdownHandler } from "./desktop-shutdown.js";
 import { registerProjectPanelIpc } from "./project-panel-ipc.js";
@@ -6946,6 +6947,15 @@ taskInboxDisposers.push(
   registerTaskInboxIpc(ipcMain, () => [...mainWindows], taskInboxService, taskInboxEnabled),
   sessionCatalogStore.onChanged(() => taskInboxService?.scheduleRefresh()),
 );
+const disposeOperationBatchHost = registerOperationBatchHost({
+  windows: () => [...mainWindows],
+  enabled: taskInboxEnabled,
+  bridge: () => bridge ?? undefined,
+  isSessionRunning: (id) =>
+    taskInboxAutomationSessions.has(id) ||
+    bridge?.isSessionRunning(id) === true ||
+    externalRuntimeService?.isSessionRunning(id) === true,
+});
 const disposeOperationResolutionHost = registerOperationResolutionHost({
   windows: () => [...mainWindows],
   enabled: taskInboxEnabled,
@@ -7121,7 +7131,10 @@ app.on(
   createDesktopShutdownHandler({
     ownsInstance: () => ownsDesktopInstance,
     flushRenderers: () => sessionCatalogIpc.flushRenderers(),
-    disposeOperationResolution: disposeOperationResolutionHost,
+    disposeOperationResolution: async () => {
+      await disposeOperationBatchHost();
+      await disposeOperationResolutionHost();
+    },
     onError: (phase, error) => dlog("main", phase, { error: String(error) }),
     cleanup: async () => {
       taskInboxService?.dispose();

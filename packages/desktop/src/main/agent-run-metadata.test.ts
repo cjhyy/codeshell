@@ -124,10 +124,138 @@ describe("prepareAgentRunMetadata", () => {
     expect(JSON.parse(untrusted.outLine).params.projectTrusted).toBe(false);
   });
 
-  test("non-run or malformed lines pass through", () => {
+  test("non-run object frames pass through", () => {
     const query = JSON.stringify({ method: "agent/query", params: { sessionId: "s1" } });
     expect(prepareAgentRunMetadata(query, meta, baseDeps()).outLine).toBe(query);
-    expect(prepareAgentRunMetadata("{not json", meta, baseDeps()).outLine).toBe("{not json");
+  });
+
+  test("all origins reject malformed JSON instead of forwarding it to the worker", () => {
+    for (const origin of ["renderer", "mobile", "host"] as const) {
+      for (const line of ["", " \t ", "{not json", '{"method":', "{}{}", "{} trailing"]) {
+        expect(() =>
+          prepareAgentRunMetadata(line, { origin, producer: "frame-test" }, baseDeps()),
+        ).toThrow(AgentRunMetadataError);
+      }
+    }
+  });
+
+  test("all origins reject non-string IPC payloads and non-object JSON frames", () => {
+    const payloads: unknown[] = [null, [], {}, undefined, 1, true];
+    const jsonValues = ["null", "[]", '[{"method":"agent/query"}]', "1", "true", '"text"'];
+    for (const origin of ["renderer", "mobile", "host"] as const) {
+      const frameMeta = { origin, producer: "frame-test" };
+      for (const payload of payloads) {
+        expect(() => prepareAgentRunMetadata(payload as string, frameMeta, baseDeps())).toThrow(
+          AgentRunMetadataError,
+        );
+      }
+      for (const line of jsonValues) {
+        expect(() => prepareAgentRunMetadata(line, frameMeta, baseDeps())).toThrow(
+          AgentRunMetadataError,
+        );
+      }
+    }
+  });
+
+  test("all origins reject a second physical frame containing private batch authority", () => {
+    const ordinary = JSON.stringify({
+      jsonrpc: "2.0",
+      id: "ordinary-query",
+      method: "agent/query",
+      params: { sessionId: "s1" },
+    });
+    const privateFrames = [
+      JSON.stringify({
+        jsonrpc: "2.0",
+        id: "operation-batch-authority-request",
+        method: "desktop/operationBatch",
+        params: { phase: "resolve" },
+      }),
+      JSON.stringify({
+        jsonrpc: "2.0",
+        id: "operation-batch-authority-reply",
+        result: { kind: "batch", index: 0, count: 2 },
+      }),
+      JSON.stringify({
+        jsonrpc: "2.0",
+        id: "trusted-batch-run",
+        method: "agent/run",
+        params: {
+          sessionId: "s1",
+          cwd: "/repo",
+          operationBatchToken: "00000000-0000-4000-8000-000000000001",
+        },
+      }),
+    ];
+    for (const origin of ["renderer", "mobile", "host"] as const) {
+      for (const separator of ["\n", "\r", "\r\n"]) {
+        for (const privateFrame of privateFrames) {
+          for (const line of [
+            ordinary + separator + privateFrame,
+            privateFrame + separator + ordinary,
+          ]) {
+            expect(() =>
+              prepareAgentRunMetadata(
+                line,
+                { origin, producer: "frame-test" },
+                {
+                  ...baseDeps(),
+                  isNoRepoCwd: () => true,
+                  isTrustedOperationBatchRequest: () => true,
+                },
+              ),
+            ).toThrow(AgentRunMetadataError);
+          }
+        }
+      }
+    }
+  });
+
+  test("all origins reject leading and trailing physical line breaks", () => {
+    const query = JSON.stringify({ method: "agent/query", params: { sessionId: "s1" } });
+    for (const origin of ["renderer", "mobile", "host"] as const) {
+      for (const separator of ["\n", "\r", "\r\n"]) {
+        for (const line of [separator + query, query + separator, separator + query + separator]) {
+          expect(() =>
+            prepareAgentRunMetadata(line, { origin, producer: "frame-test" }, baseDeps()),
+          ).toThrow(AgentRunMetadataError);
+        }
+      }
+    }
+  });
+
+  test("all origins allow spaces and tabs around one object frame", () => {
+    const query = JSON.stringify({ method: "agent/query", params: { sessionId: "s1" } });
+    const line = ` \t${query}\t `;
+    for (const origin of ["renderer", "mobile", "host"] as const) {
+      const prepared = prepareAgentRunMetadata(
+        line,
+        { origin, producer: "frame-test" },
+        baseDeps(),
+      );
+      expect(prepared.outLine).toBe(line);
+      expect(prepared.parsed).toEqual(JSON.parse(query));
+    }
+  });
+
+  test("all origins preserve JSON-escaped line breaks inside a legal Run frame", () => {
+    const prompt = "first line\nsecond line\r\nthird line";
+    const line = JSON.stringify({
+      method: "agent/run",
+      params: { sessionId: "s1", cwd: "/repo", prompt },
+    });
+    expect(line.includes("\n")).toBe(false);
+    expect(line.includes("\r")).toBe(false);
+    for (const origin of ["renderer", "mobile", "host"] as const) {
+      const prepared = prepareAgentRunMetadata(
+        line,
+        { origin, producer: "frame-test" },
+        { ...baseDeps(), isNoRepoCwd: () => true },
+      );
+      expect(JSON.parse(prepared.outLine).params.prompt).toBe(prompt);
+      expect(prepared.outLine.includes("\n")).toBe(false);
+      expect(prepared.outLine.includes("\r")).toBe(false);
+    }
   });
 
   test("records trusted origin metadata and strips renderer-supplied workspace authority", () => {

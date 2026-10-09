@@ -36,6 +36,10 @@ export class OperationFailure extends Error {
 export interface OperationAdapter {
   /** Live authority check; called again after every asynchronous stage. */
   assertAuthorized(): void;
+  /** Host callback rechecks live batch authority around asynchronous stages. */
+  checkAuthorized?(): Promise<void>;
+  /** Fixed predecessor from a Native-approved manifest, never model input. */
+  previousVerifiedId?: string;
   preflight(): Promise<void>;
   validate(): Promise<void>;
   authorize(): Promise<boolean>;
@@ -63,21 +67,30 @@ export class OperationController {
     // Another process may still own the send. A restart cannot establish whether
     // it reached the provider, so neither caller is allowed to replay it.
     if (receipt.state === "running") return this.ledger.sealPending(receipt.id);
-    try {
+    const check = async () => {
       adapter.assertAuthorized();
+      await adapter.checkAuthorized?.();
+      adapter.assertAuthorized();
+    };
+    try {
+      if (adapter.checkAuthorized) await check();
+      else adapter.assertAuthorized();
       if (receipt.state === "planned" && this.ledger.hasUnverifiedWrites(plan.sessionId))
         throw new OperationFailure("stale_reference");
       await adapter.preflight();
-      adapter.assertAuthorized();
+      if (adapter.checkAuthorized) await check();
+      else adapter.assertAuthorized();
       if (receipt.state === "planned") {
         await adapter.validate();
-        adapter.assertAuthorized();
+        if (adapter.checkAuthorized) await check();
+        else adapter.assertAuthorized();
         if (!(await adapter.authorize())) throw new OperationFailure("cancelled");
-        adapter.assertAuthorized();
+        if (adapter.checkAuthorized) await check();
+        else adapter.assertAuthorized();
         const preparedRecovery = adapter.recoveryInput?.("prepared");
         if (preparedRecovery !== undefined)
           this.ledger.captureRecovery(plan, receipt.id, "prepared", preparedRecovery);
-        const claim = this.ledger.claim(receipt.id);
+        const claim = this.ledger.claim(receipt.id, adapter.previousVerifiedId);
         receipt = claim.receipt;
         if (!claim.claimed)
           return receipt.state === "running" ? this.ledger.sealPending(receipt.id) : receipt;
@@ -98,14 +111,16 @@ export class OperationController {
           }
         }
       }
-      adapter.assertAuthorized();
+      if (adapter.checkAuthorized) await check();
+      else adapter.assertAuthorized();
       if (!receipt.reference) throw new OperationFailure("validation");
       if ((this.verificationFailures.get(receipt.id) ?? 0) >= 2)
         return this.ledger.settle(receipt.id, receipt.attemptId, "succeeded", {
           error: "postcondition_failed",
         });
       const verified = await adapter.verify(structuredClone(receipt.reference));
-      adapter.assertAuthorized();
+      if (adapter.checkAuthorized) await check();
+      else adapter.assertAuthorized();
       const identityRecovery = adapter.recoveryInput?.("identity");
       if (identityRecovery !== undefined)
         this.ledger.captureRecovery(plan, receipt.id, "identity", identityRecovery);
