@@ -10,7 +10,8 @@ export async function mobileSessionCommandAuthority(sessionId: string) {
   assertDesktopSessionId(sessionId);
   const directory = lstatSync(join(sessionsRoot(), sessionId));
   if (!directory.isDirectory() || directory.isSymbolicLink()) throw new Error("invalid Session");
-  const state = new SessionManager().readSessionState(sessionId);
+  const manager = new SessionManager();
+  const state = manager.readSessionState(sessionId);
   if (
     !state ||
     state.ephemeral ||
@@ -39,7 +40,46 @@ export async function mobileSessionCommandAuthority(sessionId: string) {
     root.ino,
     authority.workspace.root,
   ]);
+  const sessionAuthority = JSON.stringify([
+    state.startedAt,
+    state.cwd,
+    state.project,
+    manager.getSessionWorkspace(sessionId),
+  ]);
+  const assertCurrent = () => {
+    const now = manager.readSessionState(sessionId);
+    const session = lstatSync(join(sessionsRoot(), sessionId));
+    const currentRoot = lstatSync(authority.mainRoot);
+    const mounted = getProjectStore().isNoRepoCwd(authority.mainRoot)
+      ? undefined
+      : getProjectStore().resolveExactRootSync(authority.mainRoot);
+    if (
+      !now ||
+      now.outputRecoveryIncomplete ||
+      !session.isDirectory() ||
+      session.isSymbolicLink() ||
+      session.dev !== directory.dev ||
+      session.ino !== directory.ino ||
+      !currentRoot.isDirectory() ||
+      currentRoot.isSymbolicLink() ||
+      currentRoot.dev !== root.dev ||
+      currentRoot.ino !== root.ino ||
+      JSON.stringify([
+        now.startedAt,
+        now.cwd,
+        now.project,
+        manager.getSessionWorkspace(sessionId),
+      ]) !== sessionAuthority ||
+      (!getProjectStore().isNoRepoCwd(authority.mainRoot) &&
+        (!mounted ||
+          mounted.project.id !== authority.projectId ||
+          mounted.mainRoot.id !== authority.mainRootId))
+    )
+      throw new Error("Session command authority changed");
+  };
+  assertCurrent();
   return {
+    assertCurrent,
     stamp,
     cwd: authority.workspace.root,
     projectId: authority.projectId,

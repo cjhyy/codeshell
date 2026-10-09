@@ -54,7 +54,9 @@ claim/materialize validated image bytes, submit the stable message ID, then mark
 sent/finalize only after canonical input and the output journal commit. Image
 paths are revalidated against the same project inside the actual service queue.
 The final synchronous socket/selection/owner/Runtime fence runs after async
-checks and before canonical/Goal/run mutation. The actual canonical image
+checks and before canonical/Goal/run mutation. The same synchronous boundary
+rechecks the captured Session/project/workspace and registered root identity; a
+project removal after the last await cannot append an input or start a request. The actual canonical image
 projection carries display paths and metadata, never image base64. Provider input
 still receives the original text and validated paths.
 

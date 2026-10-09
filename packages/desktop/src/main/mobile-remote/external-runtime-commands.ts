@@ -17,7 +17,13 @@ export function isPersistedExternalRuntime(
   );
 }
 
-type Authority = { stamp: string; cwd: string; projectId?: string | null; rootId?: string | null };
+type Authority = {
+  stamp: string;
+  cwd: string;
+  projectId?: string | null;
+  rootId?: string | null;
+  assertCurrent: () => void;
+};
 type Selection = { sessionId: string; deviceId: string; authority?: Authority; owner?: number };
 export interface MobileExternalRuntimeCommandsDeps {
   authenticated: (viewer: string, device: string) => boolean;
@@ -193,6 +199,7 @@ export class MobileExternalRuntimeCommands {
                 throw new Error("External queued submission was revoked");
             },
             assertInputOwner: () => {
+              captured.authority.assertCurrent();
               if (
                 expired ||
                 !viewer ||
@@ -232,6 +239,7 @@ export class MobileExternalRuntimeCommands {
     const final = await this.authorize(viewer, device, sessionId);
     if (final.selection !== captured.selection || final.runtime !== captured.runtime)
       throw new Error("External cancel authority changed");
+    final.authority.assertCurrent();
     await captured.service.interrupt(sessionId, captured.owner, run);
   }
 }

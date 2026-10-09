@@ -1,4 +1,10 @@
 import { expect, test } from "bun:test";
+import { mkdtempSync, rmSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+import { SessionManager } from "@cjhyy/code-shell-core";
+import { getProjectStore } from "../project-store.js";
+import { mobileSessionCommandAuthority } from "./output-recovery-authority.js";
 import {
   MobileExternalRuntimeCommands,
   isPersistedExternalRuntime,
@@ -34,6 +40,7 @@ function harness() {
       expect(actualOwner).toBe(77);
       beforeInput = async () => {
         await hooks.beforeInput();
+        afterBeforeInput?.();
         hooks.assertInputOwner?.();
         physical++;
         accepts++;
@@ -43,11 +50,21 @@ function harness() {
       return { ok: true, reason: "completed", streamed: true };
     },
   } as unknown as ExternalRuntimeService;
+  let afterBeforeInput: (() => void) | undefined;
   let afterAuthority: (() => void) | undefined;
   const commands = new MobileExternalRuntimeCommands({
     authenticated: (viewer, device) => authenticated && viewer === "tab" && device === "phone",
     authority: async () => {
-      const value = { stamp, cwd: "/workspace", projectId: "project", rootId: "root" };
+      const capturedStamp = stamp;
+      const value = {
+        stamp,
+        cwd: "/workspace",
+        projectId: "project",
+        rootId: "root",
+        assertCurrent: () => {
+          if (stamp !== capturedStamp) throw new Error("project revoked before input");
+        },
+      };
       afterAuthority?.();
       return value;
     },
@@ -101,6 +118,9 @@ function harness() {
     },
     onAuthority: (fn: () => void) => {
       afterAuthority = fn;
+    },
+    afterBeforeInput: (fn: () => void) => {
+      afterBeforeInput = fn;
     },
     changeRun: () => {
       run = "run-b";
@@ -184,4 +204,41 @@ test("persisted external provider cannot become native merely because its model 
   expect(isPersistedExternalRuntime({ provider: "claude-code", model: "malformed" })).toBe(true);
   expect(isPersistedExternalRuntime({ provider: "other", model: "codex/synthetic" })).toBe(true);
   expect(isPersistedExternalRuntime({ provider: "openai", model: "gpt-4o" })).toBe(false);
+});
+
+test("project revocation after the final async check is fenced synchronously before physical input", async () => {
+  const f = harness();
+  await f.select();
+  const target = await f.commands.prepare("tab", "phone", "external");
+  f.afterBeforeInput(f.changeProject);
+  expect((await target.submit(f.request)).ok).toBe(false);
+  expect(f.physical()).toBe(0);
+  expect(f.accepts()).toBe(0);
+});
+
+test("actual mounted project metadata fence rejects revocation after asynchronous authority returned", async () => {
+  const cwd = mkdtempSync(join(tmpdir(), "mobile-command-authority-"));
+  const project = await getProjectStore().createFromPath(cwd);
+  const manager = new SessionManager();
+  const session = manager.create(cwd, "codex/synthetic", "codex");
+  manager.migrateSessionMainRoot(
+    session.state.sessionId,
+    { projectId: project.id, mainRootId: project.roots[0]!.id },
+    cwd,
+  );
+  try {
+    const authority = await mobileSessionCommandAuthority(session.state.sessionId);
+    expect(() => authority.assertCurrent()).not.toThrow();
+    await getProjectStore().remove(project.id);
+    expect(() => authority.assertCurrent()).toThrow("authority changed");
+    expect(session.transcript.getEvents().filter((event) => event.type === "message")).toHaveLength(
+      0,
+    );
+  } finally {
+    rmSync(join(manager.getStorageDir(), session.state.sessionId), {
+      recursive: true,
+      force: true,
+    });
+    rmSync(cwd, { recursive: true, force: true });
+  }
 });
