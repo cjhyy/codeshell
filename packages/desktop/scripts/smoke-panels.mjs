@@ -5,7 +5,8 @@
  * dock panels plus Settings. L2 sends real provider HTTP requests through the
  * engine to a local scripted SSE server, including tool execution and cache
  * usage. HOME, CODE_SHELL_HOME, Electron userData, and provider credentials are
- * all temporary, so the suite cannot read or mutate a developer's profile.
+ * all temporary. Native safeStorage deliberately accesses the current user's
+ * application-specific OS key storage through the ordinary Electron API.
  */
 /* global document, localStorage */
 import { mkdir, readFile, writeFile } from "node:fs/promises";
@@ -59,6 +60,7 @@ const projectPath = join(isolated.home, "smoke-project");
 let app;
 let win;
 let acceptanceResult;
+let smokePassed = false;
 let restartedRendererErrors = [];
 
 async function verifiedProcesses() {
@@ -683,9 +685,10 @@ try {
   const pageErrors = rendererErrors.length + restartedRendererErrors.length;
   assert(pageErrors === 0, `renderer emitted ${pageErrors} page error(s)`);
   console.log("CodeShell Electron smoke: passed");
+  smokePassed = true;
 } finally {
-  if (macosAcceptance && !acceptanceResult)
-    await saveAcceptanceEvidence("failed").catch((error) =>
+  if (macosAcceptance && !smokePassed)
+    await saveAcceptanceEvidence("failed", { keychainResult: acceptanceResult }).catch((error) =>
       console.error(`Could not preserve failure evidence: ${error.message}`),
     );
   await app?.close().catch(() => undefined);

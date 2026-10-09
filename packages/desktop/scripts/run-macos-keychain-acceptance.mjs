@@ -5,6 +5,7 @@ import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { createBunTestEnvironment } from "../../../scripts/bun-test-completion.mjs";
+import { rememberOwnedProcesses } from "./process-custody.mjs";
 
 if (process.platform !== "darwin" || process.version !== "v22.16.0")
   throw new Error("Run this macOS acceptance with the actual Node 22.16.0 floor runtime");
@@ -45,19 +46,15 @@ const child = spawn(process.execPath, [join(appDir, "scripts", "smoke-panels.mjs
   stdio: "inherit",
   detached: true,
 });
+const completion = new Promise((resolveResult) => {
+  child.once("error", (error) => resolveResult({ code: null, signal: null, error: error.message }));
+  child.once("close", (code, signal) => resolveResult({ code, signal }));
+});
+// Capture once. Later PID reuse can never reseed or replace this authority.
+const rootProcess = processes().find((item) => item.pid === child.pid && item.ppid === process.pid);
+if (rootProcess) owned.set(rootProcess.pid, rootProcess);
 const remember = () => {
-  const current = processes();
-  const ids = new Set([child.pid]);
-  let changed = true;
-  while (changed) {
-    changed = false;
-    for (const item of current)
-      if (ids.has(item.ppid) && !ids.has(item.pid)) {
-        ids.add(item.pid);
-        changed = true;
-      }
-  }
-  for (const item of current) if (ids.has(item.pid)) owned.set(item.pid, item);
+  rememberOwnedProcesses(owned, processes());
 };
 const signalOwned = (signal) => {
   const current = new Map(processes().map((item) => [item.pid, item]));
@@ -81,12 +78,11 @@ const deadline = setTimeout(() => {
 }, 180_000);
 const killDeadline = setTimeout(() => signalOwned("SIGKILL"), 183_000);
 try {
+  if (!rootProcess)
+    throw new Error("Could not establish the fixture child's initial process identity");
   remember();
   console.log(`macOS Keychain acceptance evidence: ${directory}`);
-  result = await new Promise((resolveResult, reject) => {
-    child.once("error", reject);
-    child.once("close", (code, signal) => resolveResult({ code, signal }));
-  });
+  result = await completion;
   if (timedOut || result.code !== 0 || result.signal)
     throw new Error(
       `Keychain acceptance failed (${timedOut ? "180s deadline; OS interaction may be pending" : (result.signal ?? result.code)}). Do not approve any OS dialog automatically.`,
@@ -102,6 +98,7 @@ try {
   signalOwned("SIGTERM");
   await new Promise((done) => setTimeout(done, 500));
   signalOwned("SIGKILL");
+  await new Promise((done) => setTimeout(done, 200));
   const remaining = processes().filter((item) => owned.get(item.pid)?.birth === item.birth);
   if (remaining.length) process.exitCode = 1;
   writeFileSync(
@@ -111,6 +108,7 @@ try {
         node: process.version,
         launcherPid: process.pid,
         launcherPpid: process.ppid,
+        childRoot: rootProcess,
         parentHomeHash: createHash("sha256").update(environment.HOME).digest("hex"),
         elapsedMs: Date.now() - started,
         timedOut,
