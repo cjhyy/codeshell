@@ -1,4 +1,6 @@
-import type { PetHostActionContext } from "./pet-dispatch-service.js";
+import { selectPetMemories } from "@cjhyy/code-shell-pet";
+import type { MobileRemoteGatewayStatus } from "../im-gateway-control-server.js";
+import type { PetHostActionContext, PetWorldContextInput } from "./pet-dispatch-service.js";
 import type { PetMemoryStore } from "./pet-memory-store.js";
 
 export function createPetMemoryHost(store: PetMemoryStore) {
@@ -32,5 +34,31 @@ export function createPetMemoryHost(store: PetMemoryStore) {
       return { action, id: entry.id };
     }
     throw new Error("invalid memory action");
+  };
+}
+
+/** Every manager turn recalls from the same durable store the Host action edits. */
+export function createPetMemoryWorldContext(
+  store: PetMemoryStore,
+  remoteStatus: () => MobileRemoteGatewayStatus,
+) {
+  return async (input: PetWorldContextInput): Promise<Record<string, unknown>> => {
+    await store.load();
+    const remote = remoteStatus();
+    const recalled = selectPetMemories(store.list(), {
+      message: input.message,
+      originRef: input.originRef,
+      groundedObjectives: input.groundedTasks.map((task) => task.objective),
+      taskIds: input.groundedTasks.map((task) => task.taskId),
+    });
+    return {
+      ...recalled,
+      mobileRemote: {
+        running: remote.running,
+        tunnelConnected: remote.tunnelConnected,
+        passcodeSet: remote.passcodeSet,
+        ...(remote.url ? { url: remote.url } : {}),
+      },
+    };
   };
 }

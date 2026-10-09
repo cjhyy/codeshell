@@ -178,15 +178,14 @@ import {
 } from "./pet/pet-dispatch-service.js";
 import { enrichPetChatReplyWithHostActions } from "./pet/host-action-reply.js";
 import { PetMemoryStore } from "./pet/pet-memory-store.js";
+import { createPetMemoryHost, createPetMemoryWorldContext } from "./pet/pet-memory-host.js";
 import { PetWorkDelegationHost } from "./pet/pet-work-delegation-host.js";
 import { PetAttentionPolicy } from "./pet/pet-attention-policy.js";
 import { PetReceiptStore } from "./pet/pet-receipt-store.js";
 import { PetWorkInboxStore } from "./pet/pet-work-inbox-store.js";
 import { PetHostActionReceiptStore } from "./pet/pet-host-action-receipts.js";
 import { archivePetSessionsBySelector } from "./pet/pet-session-archive.js";
-import { createPetFollowUpService } from "./pet/pet-follow-up-service.js";
-import { createPetFollowUpHost } from "./pet/pet-follow-up-host.js";
-import { PetRegisteredFollowUpStore } from "./pet/pet-registered-follow-up-store.js";
+import { createPetFollowUpRuntime } from "./pet/pet-follow-up-runtime.js";
 import {
   PetFollowUpWakeCoordinator,
   isPetFollowUpWakeJob,
@@ -205,11 +204,7 @@ import {
   takeOverLinkedSessionFromIpc,
 } from "./cc-room/linked-session-ipc.js";
 import { resolveLinkedSessionFromDisk } from "./cc-room/linked-session-resolver.js";
-import {
-  DEFAULT_SEGMENT_IDLE_MS,
-  buildMigrationSummary,
-  selectPetMemories,
-} from "@cjhyy/code-shell-pet";
+import { DEFAULT_SEGMENT_IDLE_MS, buildMigrationSummary } from "@cjhyy/code-shell-pet";
 import { searchSessionTranscripts } from "@cjhyy/code-shell-pet/disclosure";
 import { materializeOutgoingAttachments } from "@cjhyy/code-shell-chat";
 import { createReusableSessionResolver } from "./pet/reusable-session-resolver.js";
@@ -2069,90 +2064,25 @@ async function createWindow(): Promise<BrowserWindow> {
       store: petSummaryStore,
       cwd: resolveNoRepoCwd(),
     });
-    const registeredFollowUps = new PetRegisteredFollowUpStore(
-      resolve(app.getPath("userData"), "pet", "follow-ups.json"),
-    );
-    const petFollowUps = createPetFollowUpService({
-      listSessions: () => aggregator.getSnapshot().sessions,
+    const followUpRuntime = await createPetFollowUpRuntime({
+      filePath: resolve(app.getPath("userData"), "pet", "follow-ups.json"),
+      sessions: () => aggregator.getSnapshot().sessions,
       summaryStore: petSummaryStore,
       summaryService: petSummaryService,
       inbox: petWorkInbox,
-      registered: registeredFollowUps,
-    });
-    const followUpHost = createPetFollowUpHost({
-      store: registeredFollowUps,
-      service: petFollowUps,
       tasks: longTaskStore,
-      sessions: () => aggregator.getSnapshot().sessions,
-    });
-    petFollowUpWakeCoordinator = new PetFollowUpWakeCoordinator({
-      store: registeredFollowUps,
+      longTasks: longTaskCoordinator,
       scheduler: () => {
         if (!automationHandle) throw new Error("follow-up scheduler is not initialized");
         return automationHandle.scheduler;
       },
-      notify: async (item, text, key) => {
-        const deliveryKey = createHash("sha256").update(key).digest("hex");
-        if (item.completionTarget) {
-          await publishGatewayControlEvent({
-            deliveryKey,
-            type: "pet.task.reported",
-            title: item.title,
-            text,
-            target: {
-              channel: item.completionTarget.channel,
-              target: item.completionTarget.target,
-            },
-          });
-        }
-        const outcome = await desktopNotifier?.notify({
-          key: deliveryKey,
-          title: item.title,
-          body: text,
-        });
-        if (!item.completionTarget && outcome === "failed")
-          throw new Error("桌面提醒未能显示，请在需要跟进中查看");
-      },
-      resume: async (item) => {
-        const source = aggregator
-          .getSnapshot()
-          .sessions.find((row) => row.agentSessionId === item.sourceSessionId);
-        if (!source || source.external)
-          return {
-            launched: false,
-            text: "原任务已不存在或不受当前 Host 支持，未启动新的任务。请重新选择。",
-          };
-        if (source.pendingDecisionCount > 0)
-          return { launched: false, text: "原任务正在等待你的决定，已保留跟进，未绕过审批。" };
-        if (source.runState === "running" || source.runState === "queued")
-          return { launched: false, text: "原任务已在运行，未重复启动。" };
-        if (item.taskId) {
-          const task = longTaskStore.get(item.taskId);
-          if (!task || task.sessionId !== item.sourceSessionId)
-            return { launched: false, text: "跟进关联的原任务已变化，请核对后再续办。" };
-          if (task.status === "paused" || task.status === "interrupted") {
-            const result = await longTaskCoordinator.control({ action: "resume", taskId: task.id });
-            if (!result.ok) return { launched: false, text: `未能续办原任务：${result.message}` };
-            return {
-              launched: true,
-              text: "已续办原任务，完成后会报告实际结果。",
-              taskId: task.id,
-            };
-          }
-          if (task.status === "waiting")
-            return {
-              launched: false,
-              text: task.waitingFor ?? "原任务仍在等待外部结果或你的决定，未重复启动。",
-            };
-          if (task.status === "cancelled")
-            return { launched: false, text: "原任务已取消，未自动重启。" };
-        }
-        if (!petDispatchService) throw new Error("Mimi dispatch service is unavailable");
-        return petDispatchService.wakeFollowUp(item);
-      },
+      publish: publishGatewayControlEvent,
+      notify: async (input) => desktopNotifier?.notify(input),
+      dispatch: () => petDispatchService,
       onError: (error) => dlog("main", "pet.followUp.wake.failed", { error: String(error) }),
     });
-    await petFollowUpWakeCoordinator.prepare();
+    const { registeredFollowUps, petFollowUps, followUpHost } = followUpRuntime;
+    petFollowUpWakeCoordinator = followUpRuntime.coordinator;
     // Entering a Work Session from a chat: the store, bridge, bind executor
     // and reply delivery are composed in session-bridge-wiring.ts so this
     // root only names the collaborators it already owns.
@@ -2204,25 +2134,7 @@ async function createWindow(): Promise<BrowserWindow> {
           petSegmentController?.onDelegationClosed(closure) ?? Promise.resolve(),
       },
       longTasks: longTaskCoordinator,
-      validateFollowUpContinuation: (item) => {
-        const current = registeredFollowUps.get(item.id);
-        if (
-          !current ||
-          current.revision !== item.revision ||
-          current.status !== "open" ||
-          current.wake.status !== "claimed"
-        )
-          throw new Error("跟进授权已变化，未自动续办");
-        if (item.taskId) {
-          const task = longTaskStore.get(item.taskId);
-          if (
-            !task ||
-            task.sessionId !== item.sourceSessionId ||
-            ["cancelled", "waiting", "running", "queued"].includes(task.status)
-          )
-            throw new Error("原任务已取消、正在运行或等待决定，未自动续办");
-        }
-      },
+      validateFollowUpContinuation: followUpRuntime.validateContinuation,
       taskInbox: async () => {
         if (!taskInboxService || !taskInboxEnabled()) throw new Error("Task inbox is unavailable");
         return taskInboxPetView(await taskInboxService.reconcile());
@@ -2310,36 +2222,7 @@ async function createWindow(): Promise<BrowserWindow> {
             status: watched.task.status,
           };
         },
-        memory: async (payload, context) => {
-          const action = payload.action;
-          const text = typeof payload.text === "string" ? payload.text : "";
-          const memoryId = typeof payload.memoryId === "string" ? payload.memoryId : "";
-          if (action === "remember") {
-            const before = new Map(
-              petMemoryStoreInstance.list().map((entry) => [entry.id, entry] as const),
-            );
-            const entry = await petMemoryStoreInstance.remember(text, "mimi", {
-              originRef: context?.originRef,
-              taskIds: context?.groundedTasks?.map((task) => task.taskId),
-            });
-            const previous = before.get(entry.id);
-            const unchanged =
-              previous !== undefined &&
-              previous.text === entry.text &&
-              previous.source === entry.source &&
-              previous.updatedAt === entry.updatedAt;
-            return { action, id: entry.id, ...(unchanged ? { unchanged: true } : {}) };
-          }
-          if (action === "update") {
-            const entry = await petMemoryStoreInstance.update(memoryId, text);
-            return { action, id: entry.id };
-          }
-          if (action === "forget") {
-            const entry = await petMemoryStoreInstance.forget(memoryId);
-            return { action, id: entry.id };
-          }
-          throw new Error("invalid memory action");
-        },
+        memory: createPetMemoryHost(petMemoryStoreInstance),
         followUpMutation: followUpHost,
         sessionBind: async (payload, context) =>
           sessionBridge
@@ -2415,25 +2298,10 @@ async function createWindow(): Promise<BrowserWindow> {
           };
         },
       },
-      worldContext: async (input) => {
-        await petMemoryStoreInstance.load();
-        const remote = getMobileRemoteGatewayStatus();
-        const recalled = selectPetMemories(petMemoryStoreInstance.list(), {
-          message: input.message,
-          originRef: input.originRef,
-          groundedObjectives: input.groundedTasks.map((task) => task.objective),
-          taskIds: input.groundedTasks.map((task) => task.taskId),
-        });
-        return {
-          ...recalled,
-          mobileRemote: {
-            running: remote.running,
-            tunnelConnected: remote.tunnelConnected,
-            passcodeSet: remote.passcodeSet,
-            ...(remote.url ? { url: remote.url } : {}),
-          },
-        };
-      },
+      worldContext: createPetMemoryWorldContext(
+        petMemoryStoreInstance,
+        getMobileRemoteGatewayStatus,
+      ),
       listWorkspaces: () => mobileOrchestrator.projectList(),
       listFollowUps: () => petFollowUps.listOpen(),
       listOutboundTargets: async () =>
@@ -3573,7 +3441,7 @@ app.whenReady().then(async () => {
   void warmTrustCache()
     .then(() => panelAppBridge.initializeMedia())
     .catch((error) => dlog("main", "panel.media.recovery.failed", { error: String(error) }));
-  void createWindow();
+  const initialWindowReady = createWindow();
   initUpdater();
   sweepStaleLeases(); // clear any cookie-lease temp files left by a prior crash
   sweepStaleCredentialCookies(); // clear UseCredential temp cookies.txt left by a prior crash
@@ -3592,6 +3460,8 @@ app.whenReady().then(async () => {
   // jobs are restored from ~/.code-shell/cron.json. Cron follows the app
   // lifecycle by design (docs/automation-plan-2026-05-31.md, D2).
   try {
+    // Recover Mimi's ledger and initialize dispatch before restored timers can fire.
+    await initialWindowReady;
     // Feed in-main automation Engine events into the bridge's per-session
     // snapshot + renderer stream, so automation sessions reconnect identically
     // to interactive chat. `bridge?.` safely no-ops if a job somehow fires
