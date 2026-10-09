@@ -4,7 +4,9 @@ import type { CredentialMetadata } from "../credentials/access.js";
 import type { OperationReceipt } from "../operations/ledger.js";
 import { OperationFailure } from "../operations/controller.js";
 import { asRecord, pathSegmentParam, stringParam } from "./http.js";
+import { githubIssueIdentity } from "./github-issue-state.js";
 import { boundToolResult } from "../tool-system/bound-tool-result.js";
+import { githubOperationPlan, githubRecoveryInput } from "./operation-recovery.js";
 
 /** Fixed GitHub semantics live beside the provider, not in the generic controller. */
 export function githubCreateIssueParameters(
@@ -57,31 +59,22 @@ export async function verifiedGithubCreateIssue(options: {
     return output.data;
   };
   let data: unknown;
+  let originalIssueIdentity: Record<string, unknown> | undefined;
   const receipt = await ctx.operations.controller.run(
+    githubOperationPlan(
+      ctx.operations.sessionId,
+      ctx.originClientMessageId ?? ctx.operations.runId,
+      connection,
+      "create_issue",
+      params,
+    ),
     {
-      sessionId: ctx.operations.sessionId,
-      // A semantic duplicate within one user intent shares one durable claim even
-      // when the model invents another tool-call ID. Later explicit user turns differ.
-      intentId: `${ctx.originClientMessageId ?? ctx.operations.runId}:github.create_issue`,
-      service: "github",
-      action: "create_issue",
-      channel: connection.meta?.linkExecutionRuntime === "server" ? "remote-link" : "local-link",
-      account: {
-        id: connection.meta?.linkAccountId ?? null,
-        connectionId: connection.id,
-        grant: connection.meta?.linkRemoteGrantId ?? null,
-        verifiedAt: connection.meta?.linkLastVerifiedAt ?? null,
-      },
-      target: { owner: params.owner, repo: params.repo },
-      parameters: params,
-      postcondition: {
-        kind: "github.issue.matches",
-        title: params.title,
-        body: params.body ?? "",
-        state: "open",
-      },
-    },
-    {
+      recoveryInput: (phase) =>
+        phase === "prepared"
+          ? githubRecoveryInput(ctx, connection, null)
+          : originalIssueIdentity
+            ? githubRecoveryInput(ctx, connection, originalIssueIdentity)
+            : undefined,
       assertAuthorized: assertConnected,
       preflight: async () => {
         if (
@@ -151,6 +144,13 @@ export async function verifiedGithubCreateIssue(options: {
             issue_number: Number(reference.id),
           }),
         );
+        const identity = githubIssueIdentity(observed, {
+          owner: params.owner as string,
+          repo: params.repo as string,
+          issue_number: Number(reference.id),
+        });
+        if (identity)
+          originalIssueIdentity = { issueId: identity.id, issueNumber: Number(reference.id) };
         return (
           observed?.number === Number(reference.id) &&
           observed.title === params.title &&

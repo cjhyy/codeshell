@@ -4,6 +4,7 @@ import { join, resolve } from "node:path";
 import { z } from "zod";
 import { getDefaultCredentialCipher, type EncryptionCipher } from "../credentials/cipher.js";
 import { mutateJsonFile } from "../utils/file-mutex.js";
+import { OperationRecoveryFiles } from "./recovery.js";
 
 export const operationStates = [
   "planned",
@@ -46,6 +47,7 @@ const recordSchema = z
     reference: reference.optional(),
     error: z.enum(operationErrors).optional(),
     verifiedAt: z.number().int().nonnegative().optional(),
+    recovery: z.object({ prepared: digest, identity: digest.optional() }).strict().optional(),
   })
   .strict();
 export type OperationReceipt = z.infer<typeof recordSchema>;
@@ -73,6 +75,13 @@ export interface OperationPlan {
   target: unknown;
   parameters: unknown;
   postcondition: unknown;
+}
+
+/** Trusted adapter evidence only. Domain interpretation belongs to the adapter. */
+export interface OperationRecoveryInput {
+  schema: 1;
+  plan: OperationPlan;
+  payload: unknown;
 }
 
 /** Reject non-JSON, cycles, oversized/deep values, and ambiguous key ordering. */
@@ -194,6 +203,76 @@ export class OperationLedger {
         .update(canonicalOperationValue([purpose, value]))
         .digest("hex")
     );
+  }
+
+  private matchesPlan(key: Buffer, receipt: OperationReceipt, plan: OperationPlan): boolean {
+    return (
+      receipt.owner === this.hash(key, "owner", plan.sessionId) &&
+      receipt.id ===
+        this.hash(key, "intent", [plan.sessionId, plan.intentId, plan.intentVariant ?? null]) &&
+      receipt.fingerprint ===
+        this.hash(key, "plan", [
+          plan.service,
+          plan.action,
+          plan.channel,
+          plan.account,
+          plan.target,
+          plan.parameters,
+          plan.postcondition,
+        ])
+    );
+  }
+
+  /** Capture original inputs before send, then at most one original immutable read identity. */
+  captureRecovery(
+    plan: OperationPlan,
+    id: string,
+    phase: "prepared" | "identity",
+    payload: unknown,
+  ): void {
+    if (this.finalizedSessions.has(plan.sessionId) || this.sealedIds.has(id))
+      throw new Error("Operation recovery has finalized");
+    this.transact((state, key) => {
+      const receipt = state.records[digest.parse(id)];
+      if (
+        !receipt ||
+        !this.matchesPlan(key, receipt, plan) ||
+        this.knownOwners.get(id) !== plan.sessionId ||
+        receipt.state !== (phase === "prepared" ? "planned" : "succeeded")
+      )
+        throw new Error("Operation recovery input changed");
+      const input: OperationRecoveryInput = { schema: 1, plan, payload };
+      const stored = new OperationRecoveryFiles(this.directory).save(
+        key,
+        id,
+        canonicalOperationValue(input),
+      );
+      if (phase === "prepared") {
+        if (receipt.recovery && receipt.recovery.prepared !== stored)
+          throw new Error("Prepared operation recovery is immutable");
+        receipt.recovery ??= { prepared: stored };
+      } else {
+        if (!receipt.recovery) throw new Error("Original prepared recovery input is missing");
+        if (receipt.recovery.identity && receipt.recovery.identity !== stored)
+          throw new Error("Original operation read identity is immutable");
+        receipt.recovery.identity = stored;
+      }
+      return { value: state, result: undefined };
+    });
+  }
+
+  /** Exact plan proof for a trusted adapter's candidate; never exposes the ledger key. */
+  provePlan(receipt: OperationReceipt, plan: OperationPlan): boolean {
+    return this.transact((state, key) => {
+      const current = state.records[digest.parse(receipt.id)];
+      return {
+        result:
+          !!current &&
+          current.fingerprint === receipt.fingerprint &&
+          current.attemptId === receipt.attemptId &&
+          this.matchesPlan(key, current, plan),
+      };
+    });
   }
 
   prepare(plan: OperationPlan): OperationReceipt {
