@@ -46,6 +46,12 @@ hook 已修改、尚未持久化的 live 状态。该事件表示累计快照，
 保留真实 PID/PPID、private HOME 摘要和合成状态证据。模型响应由内存 fake provider 产生，
 没有 worker、真实账号、真实模型或 HTTP 请求；JS guard 不等于 OS 网络沙箱。
 
+正常合入最新主干后，串行 package release gate 完成 9 tarball / 47 typed entry / 45 runtime
+import；全量 build 与 12 工作区 typecheck、95 项相关回归、独立 wrapper 的上述 21 项实际
+Engine 场景及 5 项 TUI App 回归通过。ESLint 为零错误、105 条既有 baseline warning；
+Prettier、engine-bypass、workflow paths 和 architecture/package boundaries 检查通过。
+Engine 为 5,001 行，低于既有 5,024 行预算，未调整预算。
+
 ## 保留边界
 
 关闭 epoch 撤销后的 foreign R1 callback 仍不能写 legacy 累计；其 ledger receipt 与冷累计可能不同，
