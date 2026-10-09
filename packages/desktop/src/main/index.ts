@@ -1,8 +1,5 @@
-import { CloudAccountManager } from "./cloud-account-manager.js";
-import { CloudAccountStore } from "./cloud-account-store.js";
+import { createDesktopRemoteServices } from "./desktop-remote-services.js";
 import { registerCloudAccountIpc } from "./cloud-account-ipc.js";
-import { MobileRemoteController } from "./mobile-remote-controller.js";
-import { DeviceRelayStore } from "./device-relay-store.js";
 import { registerDeviceRelayIpc } from "./device-relay-ipc.js";
 import { registerProjectPanelIpc } from "./project-panel-ipc.js";
 import { registerProfileSwitchIpc } from "./profile-switch-ipc.js";
@@ -1014,40 +1011,16 @@ const tunnelManager = new TunnelManager({
 const accessPasscode = new AccessPasscode({
   filePath: resolve(app.getPath("userData"), "mobile-remote", "access.json"),
 });
-const cloudAccountManager = new CloudAccountManager({
-  store: new CloudAccountStore(resolve(app.getPath("userData"), "cloud-account", "session.enc"), {
-    available: () =>
-      safeStorage.isEncryptionAvailable() &&
-      (process.platform !== "linux" || safeStorage.getSelectedStorageBackend() !== "basic_text"),
-    encrypt: (value) => safeStorage.encryptString(value),
-    decrypt: (value) => safeStorage.decryptString(value),
-  }),
+const { cloudAccountManager, mobileRemoteController } = createDesktopRemoteServices({
+  userDataDir: app.getPath("userData"),
+  environmentDir: join(codeShellHome(), "desktop"),
+  safeStorage,
+  windows: () => mainWindows,
   openExternal: (url) => shell.openExternal(url),
-  retireRelay: (identity) => mobileRemoteController.retireAccountRelay(identity),
-  changed: (status) => {
-    for (const window of mainWindows)
-      if (!window.isDestroyed()) window.webContents.send("cloudAccount:statusChanged", status);
-  },
-});
-const mobileRemoteController = new MobileRemoteController({
-  account: cloudAccountManager,
   host: mobileRemote,
   tunnel: tunnelManager,
   binary: cloudflaredBinary,
   passcode: accessPasscode,
-  environmentDir: join(codeShellHome(), "desktop"),
-  store: new DeviceRelayStore(resolve(app.getPath("userData"), "mobile-remote", "relay.enc"), {
-    available: () =>
-      safeStorage.isEncryptionAvailable() &&
-      (process.platform !== "linux" || safeStorage.getSelectedStorageBackend() !== "basic_text"),
-    encrypt: (value) => safeStorage.encryptString(value),
-    decrypt: (value) => safeStorage.decryptString(value),
-  }),
-  changed: (status) => {
-    for (const window of mainWindows) {
-      if (!window.isDestroyed()) window.webContents.send("mobileRemote:relayStatusChanged", status);
-    }
-  },
 });
 let gatewayControlServer: GatewayControlServer | undefined;
 let sessionBridge: SessionBridgeWiring | undefined;

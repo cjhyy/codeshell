@@ -152,6 +152,7 @@ describe("architecture growth budgets", () => {
     // above even when no renderer adapter exists; do not equate the totals.
     expect(
       matches("packages/desktop/src/preload/device-relay-api.ts", /ipcRenderer\.invoke\(/g) +
+        matches("packages/desktop/src/preload/mobile-remote-api.ts", /ipcRenderer\.invoke\(/g) +
         matches("packages/desktop/src/preload/index.ts", /ipcRenderer\.invoke\(/g) +
         matches(
           "packages/desktop/src/preload/project-panel-version-api.ts",
