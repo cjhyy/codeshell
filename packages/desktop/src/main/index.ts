@@ -4,6 +4,7 @@ import { registerDeviceRelayIpc } from "./device-relay-ipc.js";
 import { registerProjectPanelIpc } from "./project-panel-ipc.js";
 import { registerProfileSwitchIpc } from "./profile-switch-ipc.js";
 import { registerRemoteLinkIpc } from "./remote-link-ipc.js";
+import { registerOperationResolutionHost } from "./operation-resolution-host.js";
 /**
  * Electron main entry — broker between renderer (ipcMain) and the
  * agent worker subprocess (stdio JSON-RPC). See agent-bridge.ts.
@@ -6950,6 +6951,14 @@ const taskInboxService = createTaskInboxService({
 });
 taskInboxDisposers.push(
   registerTaskInboxIpc(ipcMain, () => [...mainWindows], taskInboxService, taskInboxEnabled),
+  registerOperationResolutionHost({
+    windows: () => [...mainWindows],
+    enabled: taskInboxEnabled,
+    isSessionRunning: (id) =>
+      taskInboxAutomationSessions.has(id) ||
+      !!bridge?.isSessionRunning(id) ||
+      !!externalRuntimeService?.isSessionRunning(id),
+  }),
   sessionCatalogStore.onChanged(() => taskInboxService?.scheduleRefresh()),
 );
 ipcMain.handle("runs:delete", async (_e, runId: string) => {

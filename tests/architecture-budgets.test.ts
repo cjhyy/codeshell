@@ -75,7 +75,9 @@ describe("architecture growth budgets", () => {
     // Target authority, planning and locking stay in the extracted registrar/service.
     // +9 composition lines for the extracted, owner-scoped static export registrar.
     // +2 composition lines advertise native Mobile recovery and revoke retired viewers.
-    expect(lines("packages/desktop/src/main/index.ts")).toBeLessThanOrEqual(7_188);
+    // +8 composition lines register the extracted native operation-resolution host.
+    // Receipt review, confirmation authority and locking live outside this root.
+    expect(lines("packages/desktop/src/main/index.ts")).toBeLessThanOrEqual(7_196);
     expect(lines("packages/desktop/src/main/project-panel-ipc.ts")).toBeLessThanOrEqual(322);
     // The five generic Link authorization operations reuse the window/project
     // owner and live reauthorization guard here. Challenge state, provider
@@ -134,7 +136,8 @@ describe("architecture growth budgets", () => {
     // the extracted read-only service. The actual combined root is 1_871 lines.
     // +7 typed Profile review/adoption adapter lines, with no renderer file access.
     // +2 import/composition lines for the extracted static export contract.
-    expect(lines("packages/desktop/src/preload/index.ts")).toBeLessThanOrEqual(1_880);
+    // +2 composition lines for masked native operation review; no resolution logic in preload.
+    expect(lines("packages/desktop/src/preload/index.ts")).toBeLessThanOrEqual(1_882);
     // Include all nine extracted Lab invokes and the five generic Link
     // challenge invokes plus usage history. Main-only routes remain counted
     // above even when no renderer adapter exists; do not equate the totals.
@@ -167,7 +170,8 @@ describe("architecture growth budgets", () => {
     // +9 declaration lines for the optional bounded output-journal adapter.
     // +9 typed Profile metadata preview and CAS adoption declarations.
     // Static export API is composed through one type-only import/extends seam.
-    expect(lines("packages/desktop/src/preload/types.d.ts")).toBeLessThanOrEqual(2_974);
+    // +3 type-only native review declaration lines reuse the extracted API contract.
+    expect(lines("packages/desktop/src/preload/types.d.ts")).toBeLessThanOrEqual(2_977);
     // The responsive-sidebar work extracts ResponsiveSidebar (132),
     // useResponsiveSidebar (61) and useSessionHistorySync (127) into
     // renderer/app/, so the 320 lines of behaviour live outside this file and
@@ -278,7 +282,8 @@ describe("architecture growth budgets", () => {
     // revocation, progress/late accounting and successor isolation; keeping this
     // private run state together avoids adding another mutable ownership seam.
     // Pin the concrete result, with no allowance for future features.
-    expect(lines("packages/core/src/engine/engine.ts")).toBeLessThanOrEqual(5_021);
+    // +3 composition lines bind operations to persisted Session ownership in the extracted factory.
+    expect(lines("packages/core/src/engine/engine.ts")).toBeLessThanOrEqual(5_024);
   });
 
   test("published entry points cannot silently expand their compatibility surface", () => {
@@ -332,7 +337,9 @@ describe("architecture growth budgets", () => {
       // +1 existing canonical input projection shared by Core and Desktop's
       // owned external Runtime journal; avoids divergent input/attachment rules.
       // It adds no stable public SDK or extension surface or execution authority.
-      "packages/core/src/index.internal.ts": 97,
+      // +1 native activity review store for masked receipts and CAS operator decisions.
+      // Desktop Main is its sole consumer; no worker/model/public SDK resolution authority.
+      "packages/core/src/index.internal.ts": 98,
       "packages/coding/src/index.ts": 12,
       "packages/arena/src/index.ts": 19,
       // +1 for conversation-session.ts, which re-exports the four modules
