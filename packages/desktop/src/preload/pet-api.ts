@@ -282,11 +282,19 @@ export interface PetLatestSessionResult {
  */
 export interface PetSessionSummaryRow {
   followUpId: string;
-  sessionId: string;
+  kind?: "derived-session" | "registered";
+  sessionId?: string;
   title: string;
   workspace?: string;
-  terminalAt: number;
+  terminalAt?: number;
   text: string;
+  revision?: number;
+  wakeAt?: number;
+  timezone?: string;
+  intent?: "remind" | "resume";
+  wakeState?: "scheduled" | "claimed" | "notified" | "launched" | "failed" | "unknown";
+  wakeDetail?: string;
+  status?: "open" | "completed" | "dismissed" | "cancelled";
 }
 
 /** One durable Mimi memory entry; editable from the UI and from Mimi's Memory tool. */
@@ -362,6 +370,10 @@ export interface PetApi {
   onMemoriesChanged?(listener: (entries: PetMemoryEntry[]) => void): () => void;
   getLatestResult?(sessionId: string): Promise<PetLatestSessionResult | null>;
   getSummaries?(): Promise<PetSessionSummaryRow[]>;
+  controlFollowUp?(
+    request: import("../shared/pet-follow-up-control.js").PetFollowUpControlRequest,
+  ): Promise<unknown>;
+  onFollowUpsChanged?(listener: () => void): () => void;
   listJournal?(): Promise<PetJournalEntry[]>;
   onJournalChanged?(listener: (entries: PetJournalEntry[]) => void): () => void;
   getSegmentMessages?(range: { start: number; end: number }): Promise<PetSegmentMessage[]>;
@@ -462,6 +474,12 @@ export function createPetApi(ipcRenderer: PetIpcRenderer): PetApi {
         sessionId,
       ) as Promise<PetLatestSessionResult | null>,
     getSummaries: () => ipcRenderer.invoke("pet:summaries-get") as Promise<PetSessionSummaryRow[]>,
+    controlFollowUp: (request) => ipcRenderer.invoke("pet:follow-up-control", request),
+    onFollowUpsChanged: (listener) => {
+      const handler = (): void => listener();
+      ipcRenderer.on("pet:follow-ups-changed", handler);
+      return () => ipcRenderer.removeListener("pet:follow-ups-changed", handler);
+    },
     listJournal: () => ipcRenderer.invoke("pet:journal-get") as Promise<PetJournalEntry[]>,
     onJournalChanged: (listener) => {
       const handler = (_event: unknown, payload: unknown): void =>

@@ -24,6 +24,8 @@ import {
   type PetHostActionReceiptRecorder,
 } from "./pet-host-action-completion.js";
 import { isPetChatModelKey } from "../../shared/pet-settings.js";
+import type { PetFollowUpControlRequest } from "../../shared/pet-follow-up-control.js";
+import type { PetFollowUpSummaryRow } from "./pet-follow-up-service.js";
 
 export const PET_SNAPSHOT_CHANNEL = "pet:get-snapshot";
 export const PET_WORK_MEMORY_CHANNEL = "pet:get-work-memory";
@@ -50,6 +52,8 @@ export const PET_MEMORY_REMOVE_CHANNEL = "pet:memory-remove";
 export const PET_MEMORY_EVENT_CHANNEL = "pet:memories-changed";
 export const PET_LATEST_RESULT_CHANNEL = "pet:session-latest-result";
 export const PET_SUMMARIES_CHANNEL = "pet:summaries-get";
+export const PET_FOLLOW_UP_CONTROL_CHANNEL = "pet:follow-up-control";
+export const PET_FOLLOW_UP_EVENT_CHANNEL = "pet:follow-ups-changed";
 export const PET_JOURNAL_LIST_CHANNEL = "pet:journal-get";
 export const PET_JOURNAL_EVENT_CHANNEL = "pet:journal-changed";
 export const PET_SEGMENT_TRANSCRIPT_CHANNEL = "pet:segment-transcript";
@@ -162,16 +166,9 @@ export interface PetIpcLatestResult {
  * persistent store.
  */
 export interface PetIpcSummaries {
-  collect(): Promise<
-    Array<{
-      followUpId: string;
-      sessionId: string;
-      title: string;
-      workspace?: string;
-      terminalAt: number;
-      text: string;
-    }>
-  >;
+  collect(): Promise<PetFollowUpSummaryRow[]>;
+  control?(request: PetFollowUpControlRequest): Promise<unknown>;
+  subscribe?(listener: () => void): () => void;
 }
 
 /** The Mimi event journal: one entry per closed topic segment, newest-first. */
@@ -323,6 +320,32 @@ function parseWorkInboxUpdate(
     throw new Error("invalid work inbox update");
   }
   return { action: "add", ids: record.ids as string[] };
+}
+
+function parseFollowUpControl(value: unknown): PetFollowUpControlRequest {
+  if (!value || typeof value !== "object" || Array.isArray(value)) {
+    throw new Error("invalid follow-up control");
+  }
+  const row = value as Record<string, unknown>;
+  const reschedule = row.action === "reschedule";
+  const keys = reschedule
+    ? ["action", "followUpId", "expectedRevision", "wakeAt", "timezone"]
+    : ["action", "followUpId", "expectedRevision"];
+  if (
+    Object.keys(row).some((key) => !keys.includes(key)) ||
+    !["cancel", "complete", "dismiss", "reschedule"].includes(String(row.action)) ||
+    typeof row.followUpId !== "string" ||
+    !/^registered-followup-[a-f0-9]{24}$/u.test(row.followUpId) ||
+    !Number.isSafeInteger(row.expectedRevision) ||
+    Number(row.expectedRevision) < 1 ||
+    (reschedule &&
+      (!Number.isSafeInteger(row.wakeAt) ||
+        Number(row.wakeAt) <= Date.now() ||
+        typeof row.timezone !== "string" ||
+        row.timezone.length > 100))
+  )
+    throw new Error("invalid follow-up control");
+  return row as PetFollowUpControlRequest;
 }
 
 function parseLongTaskControl(value: unknown): PetLongTaskControlRequest {
@@ -605,6 +628,13 @@ export function registerPetIpc(options: {
       if (args.length !== 0) throw new Error("pet:summaries-get does not accept arguments");
       return afterReady(options.ready, () => options.summaries!.collect());
     });
+    if (options.summaries.control) {
+      options.ipcMain.handle(PET_FOLLOW_UP_CONTROL_CHANNEL, (_event, ...args) => {
+        if (args.length !== 1) throw new Error("invalid follow-up control");
+        const request = parseFollowUpControl(args[0]);
+        return afterReady(options.ready, () => options.summaries!.control!(request));
+      });
+    }
   }
   if (options.journal) {
     options.ipcMain.handle(PET_JOURNAL_LIST_CHANNEL, (_event, ...args) => {
@@ -662,6 +692,11 @@ export function registerPetIpc(options: {
       }
     });
   });
+  const unsubscribeFollowUps = options.summaries?.subscribe?.(() => {
+    for (const window of options.windows()) {
+      if (!window.isDestroyed()) window.webContents.send(PET_FOLLOW_UP_EVENT_CHANNEL, null);
+    }
+  });
   const unsubscribeJournal = options.journal?.subscribe(() => {
     void Promise.resolve(options.journal!.list()).then((entries) => {
       for (const window of options.windows()) {
@@ -695,6 +730,7 @@ export function registerPetIpc(options: {
     unsubscribeLongTasks?.();
     unsubscribeWorkInbox?.();
     unsubscribeMemories?.();
+    unsubscribeFollowUps?.();
     unsubscribeJournal?.();
     options.ipcMain.removeHandler(PET_SNAPSHOT_CHANNEL);
     options.ipcMain.removeHandler(PET_WORK_MEMORY_CHANNEL);
@@ -723,6 +759,7 @@ export function registerPetIpc(options: {
     }
     if (options.latestResult) options.ipcMain.removeHandler(PET_LATEST_RESULT_CHANNEL);
     if (options.summaries) options.ipcMain.removeHandler(PET_SUMMARIES_CHANNEL);
+    if (options.summaries?.control) options.ipcMain.removeHandler(PET_FOLLOW_UP_CONTROL_CHANNEL);
     if (options.journal) {
       options.ipcMain.removeHandler(PET_JOURNAL_LIST_CHANNEL);
       options.ipcMain.removeHandler(PET_SEGMENT_TRANSCRIPT_CHANNEL);

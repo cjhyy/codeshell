@@ -24,7 +24,7 @@ import { readLastTodoSnapshot } from "../tool-system/builtin/task.js";
 import { getMergedCatalog } from "../model-catalog/index.js";
 import { modelEntriesFromConnections } from "./model-connections-pool.js";
 import {
-  cumulativeCacheHitRate,
+  addTokenUsage,
   foldRunUsage,
   normalizeCumulativeUsageCounters,
   type CumulativeUsageCounters,
@@ -101,6 +101,11 @@ import {
   type SyntheticRunWorkspace,
 } from "./engine-workspace-authority.js";
 import { createRunUsageAccounting, wireRunModelFacade } from "./run-accounting.js";
+import {
+  persistRunState,
+  sessionCumulativeUsageUpdate,
+  type RunningSessionState,
+} from "./run-state-persistence.js";
 import { logger, runWithSid } from "../logging/logger.js";
 import { UsageLedger } from "../cost-ledger/store.js";
 import { withUsageOwner, type UsageOwner } from "../cost-ledger/context.js";
@@ -442,15 +447,7 @@ export class Engine {
   /** Original transcript identity survives Goal-control rebases of the live state. */
   private readonly runIds = new WeakMap<SessionState, string>();
   /** Stable through pre-loop awaits, finalization/end hooks, and outer cleanup. */
-  private runningSession?: {
-    sessionId: string;
-    runId: string;
-    state: SessionState;
-    committedUsage: TokenUsage;
-    committedAnchor: SessionState["contextUsageAnchor"];
-    finalized: boolean;
-    ownUsage?: () => TokenUsage;
-  };
+  private runningSession?: RunningSessionState;
   /**
    * Same-instance run guard. Engine owns single-valued live controls and one
    * HookRegistry, so a second run must not enter until the first has completed
@@ -2679,10 +2676,7 @@ export class Engine {
     const accounting = createRunUsageAccounting({
       session,
       sid,
-      resumeState: (s) => this.sessionManager.resume(s).state,
-      updatePersistedSessionState: (s, patch) =>
-        this.updatePersistedSessionState(s, patch, sourceRunId),
-      costState: () => this.usageCostState(sid),
+      persistExternalBilledUsage: (usage) => this.persistAuxiliaryRunUsage(sid, usage, sourceRunId),
       recordGoalJudgeUsage: (usage) => turnLoop.recordGoalJudgeUsage(usage),
     });
     const { recordCumulativeUsage, recordExternalBilledUsage } = accounting;
@@ -3441,31 +3435,12 @@ export class Engine {
           // baseline + this run's running total (idempotent per boundary,
           // accumulates across runs; carries cacheRead/cacheCreation too).
           session.state.tokenUsage = foldRunUsage(usageBaseline, getRunUsage());
+          session.state.costState = this.usageCostState(session.state.sessionId);
+          if (!this.persistRunProgress(session.state)) return;
           // Surface the whole-session monotonic cache counts to the UI.
           // Separate from turn-loop's authoritative per-response emit (which
           // drives the live context reading and single-turn metric).
-          const cumulative = normalizeCumulativeUsageCounters(
-            session.state,
-            session.state.tokenUsage,
-          );
-          const cumulativeHitRate = cumulativeCacheHitRate(cumulative);
-          options?.onStream?.({
-            type: "usage_update",
-            promptTokens: cumulative.cumulativePromptTokens,
-            promptTokensSource: "session_cumulative",
-            promptTokensConfidence: "high",
-            cumulativePromptTokens: cumulative.cumulativePromptTokens,
-            cumulativeCacheReadTokens: cumulative.cumulativeCacheReadTokens,
-            cumulativeCacheCreationTokens: cumulative.cumulativeCacheCreationTokens,
-            ...(cumulativeHitRate !== undefined
-              ? { cumulativeCacheHitRate: cumulativeHitRate }
-              : {}),
-            sessionPromptTokens: cumulative.cumulativePromptTokens,
-            sessionCacheReadTokens: cumulative.cumulativeCacheReadTokens,
-            sessionCacheCreationTokens: cumulative.cumulativeCacheCreationTokens,
-          });
-          session.state.costState = this.usageCostState(session.state.sessionId);
-          this.persistRunProgress(session.state);
+          options?.onStream?.(sessionCumulativeUsageUpdate(session.state));
         },
       },
     );
@@ -3748,7 +3723,6 @@ export class Engine {
     if (this.runningSession && this.runningSession.runId !== sourceRunId) return;
     if (this.runningSession?.sessionId === sessionId) {
       Object.assign(this.runningSession.state, partial, { stateRevision });
-      this.rememberRunAccounting(this.runningSession.state, partial);
     }
     if (this.activeRunSession?.state.sessionId !== sessionId) return;
     Object.assign(this.activeRunSession.state, partial, { stateRevision });
@@ -3836,27 +3810,21 @@ export class Engine {
     };
   }
 
-  private rememberRunAccounting(state: SessionState, partial?: SessionStateFieldPatch): void {
-    if (this.runningSession?.state === state) {
-      if (
-        !partial ||
-        [
-          "tokenUsage",
-          "cumulativePromptTokens",
-          "cumulativeCacheReadTokens",
-          "cumulativeCacheCreationTokens",
-        ].some((field) => Object.prototype.hasOwnProperty.call(partial, field))
-      ) {
-        this.runningSession.committedUsage = this.runningSession.ownUsage?.() ?? {
-          promptTokens: 0,
-          completionTokens: 0,
-          totalTokens: 0,
-        };
-      }
-      if (!partial || Object.prototype.hasOwnProperty.call(partial, "contextUsageAnchor")) {
-        this.runningSession.committedAnchor = structuredClone(state.contextUsageAnchor);
-      }
-    }
+  private persistAuxiliaryRunUsage(
+    sessionId: string,
+    usage: TokenUsage,
+    sourceRunId?: string,
+  ): void {
+    const capturedUsage = structuredClone(usage);
+    const persisted = this.sessionManager.recordAuxiliaryUsage(sessionId, capturedUsage, () =>
+      this.usageCostState(sessionId),
+    );
+    const running = this.runningSession;
+    if (running?.sessionId !== sessionId || running.runId !== sourceRunId) return;
+    Object.assign(running.state, persisted);
+    // Only this auxiliary delta won the CAS. Primary usage may still be
+    // uncommitted after a failed heartbeat/final write.
+    running.committedUsage = addTokenUsage(running.committedUsage, capturedUsage);
   }
 
   private uncommittedRunUsage(running: NonNullable<Engine["runningSession"]>): TokenUsage {
@@ -3896,17 +3864,28 @@ export class Engine {
     } satisfies SessionRunFinalStatePatch;
   }
 
-  private persistFinalRunState(state: SessionState): void {
+  private persistFinalRunState(state: SessionState): boolean {
     const finalFields = this.finalRunStateFields(state);
     if (this.runningSession?.state === state) this.runningSession.finalized = true;
-    if (!this.sessionManager.saveStateOrUpdateFields(state, finalFields, this.runIds.get(state))) {
+    if (!this.persistOwnedRunState(state, finalFields)) {
       logger.warn("session.final_state_persist_failed", { sessionId: state.sessionId });
-    } else {
-      this.rememberRunAccounting(state);
+      return false;
     }
+    return true;
   }
 
-  private persistRunProgress(state: SessionState): void {
+  private persistOwnedRunState(state: SessionState, fields: SessionStateFieldPatch): boolean {
+    return persistRunState({
+      manager: this.sessionManager,
+      state,
+      fields,
+      runId: this.runIds.get(state),
+      running: this.runningSession,
+      costState: () => this.usageCostState(state.sessionId),
+    });
+  }
+
+  private persistRunProgress(state: SessionState): boolean {
     const progressFields = {
       status: state.status,
       turnCount: state.turnCount,
@@ -3918,13 +3897,11 @@ export class Engine {
       contextUsageAnchor: state.contextUsageAnchor,
       costState: state.costState,
     } satisfies SessionStateFieldPatch;
-    if (
-      !this.sessionManager.saveStateOrUpdateFields(state, progressFields, this.runIds.get(state))
-    ) {
+    if (!this.persistOwnedRunState(state, progressFields)) {
       logger.warn("session.run_progress_persist_failed", { sessionId: state.sessionId });
-    } else {
-      this.rememberRunAccounting(state);
+      return false;
     }
+    return true;
   }
 
   getConfig(): EngineConfig {

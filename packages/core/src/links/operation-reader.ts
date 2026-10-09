@@ -44,7 +44,7 @@ export function createGithubOperationReader(options: {
 }) {
   const policy = () => {
     const settings = new SettingsManager(options.cwd, options.settingsScope, true);
-    settings.load(undefined, { persistMigrations: false });
+    settings.load(undefined, { persistMigrations: false, hookOrigins: true });
     const profile = resolveRunProfileState({
       sessionWorkspaceProfile: options.sessionProfile,
       cwd: options.cwd,
@@ -91,11 +91,23 @@ export function createGithubOperationReader(options: {
   if (original.configuredHooks.descriptors.length && !options.hookProcesses)
     throw new OperationReadFailure("hooks_unavailable");
   let configured: ReturnType<typeof createOperationHookRegistry> | undefined;
-  const assertAuthorized = () => {
+  const context = {
+    cwd: options.cwd,
+    settingsScope: options.settingsScope,
+    profileName: original.profileName,
+  };
+  // Fresh review authority never enters resource callbacks. Native cached
+  // snapshots must not retain this review's owner, signal or SettingsManager.
+  const assertBaseAuthorized = () => {
     options.assertAuthorized();
-    configured?.assertResourcesCurrent();
     if (options.signal.aborted) throw new Error("Operation read cancelled");
-    if (policy().revision !== original.revision) throw new Error("Operation read policy changed");
+    const current = policy();
+    options.hookProcesses?.assertApplicable?.(current.configuredHooks.descriptors, context);
+    if (current.revision !== original.revision) throw new Error("Operation read policy changed");
+  };
+  const assertAuthorized = () => {
+    assertBaseAuthorized();
+    configured?.assertResourcesCurrent();
   };
   if (original.configuredHooks.descriptors.length) {
     try {
@@ -103,7 +115,8 @@ export function createGithubOperationReader(options: {
         descriptors: original.configuredHooks.descriptors,
         processes: options.hookProcesses!,
         signal: options.signal,
-        assertAuthorized,
+        assertAuthorized: assertBaseAuthorized,
+        context,
       });
     } catch {
       throw new OperationReadFailure("hooks_unavailable");

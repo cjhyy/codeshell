@@ -178,13 +178,19 @@ import {
 } from "./pet/pet-dispatch-service.js";
 import { enrichPetChatReplyWithHostActions } from "./pet/host-action-reply.js";
 import { PetMemoryStore } from "./pet/pet-memory-store.js";
+import { createPetMemoryHost, createPetMemoryWorldContext } from "./pet/pet-memory-host.js";
 import { PetWorkDelegationHost } from "./pet/pet-work-delegation-host.js";
 import { PetAttentionPolicy } from "./pet/pet-attention-policy.js";
 import { PetReceiptStore } from "./pet/pet-receipt-store.js";
 import { PetWorkInboxStore } from "./pet/pet-work-inbox-store.js";
 import { PetHostActionReceiptStore } from "./pet/pet-host-action-receipts.js";
 import { archivePetSessionsBySelector } from "./pet/pet-session-archive.js";
-import { createPetFollowUpService } from "./pet/pet-follow-up-service.js";
+import { createPetFollowUpRuntime } from "./pet/pet-follow-up-runtime.js";
+import {
+  PetFollowUpWakeCoordinator,
+  isPetFollowUpWakeJob,
+} from "./pet/pet-follow-up-wake-coordinator.js";
+import { PetContextLinkStore } from "./pet/pet-context-links.js";
 import { PetWorkMemoryStore } from "./pet/pet-work-memory-store.js";
 import { PetSegmentController, type PetArchiveAnchors } from "./pet/pet-segment-controller.js";
 import { recordPetDelegationClosureBestEffort } from "./pet/pet-delegation-closure.js";
@@ -847,6 +853,7 @@ let petStateAggregator: PetStateAggregator | null = null;
 let petExternalVisibilityController: ExternalSessionVisibilityController | null = null;
 let reconcileExternalAdapters: (() => Promise<void>) | null = null;
 let petDispatchService: PetDispatchService | null = null;
+let petFollowUpWakeCoordinator: PetFollowUpWakeCoordinator | null = null;
 // The dispatcher exists before its worker and durable stores finish loading.
 // IM delivery shares the same completed initialization boundary as Pet IPC.
 let petRuntimeReady = false;
@@ -2057,12 +2064,25 @@ async function createWindow(): Promise<BrowserWindow> {
       store: petSummaryStore,
       cwd: resolveNoRepoCwd(),
     });
-    const petFollowUps = createPetFollowUpService({
-      listSessions: () => aggregator.getSnapshot().sessions,
+    const followUpRuntime = await createPetFollowUpRuntime({
+      filePath: resolve(app.getPath("userData"), "pet", "follow-ups.json"),
+      sessions: () => aggregator.getSnapshot().sessions,
       summaryStore: petSummaryStore,
       summaryService: petSummaryService,
       inbox: petWorkInbox,
+      tasks: longTaskStore,
+      longTasks: longTaskCoordinator,
+      scheduler: () => {
+        if (!automationHandle) throw new Error("follow-up scheduler is not initialized");
+        return automationHandle.scheduler;
+      },
+      publish: publishGatewayControlEvent,
+      notify: async (input) => desktopNotifier?.notify(input),
+      dispatch: () => petDispatchService,
+      onError: (error) => dlog("main", "pet.followUp.wake.failed", { error: String(error) }),
     });
+    const { registeredFollowUps, petFollowUps, followUpHost } = followUpRuntime;
+    petFollowUpWakeCoordinator = followUpRuntime.coordinator;
     // Entering a Work Session from a chat: the store, bridge, bind executor
     // and reply delivery are composed in session-bridge-wiring.ts so this
     // root only names the collaborators it already owns.
@@ -2114,11 +2134,15 @@ async function createWindow(): Promise<BrowserWindow> {
           petSegmentController?.onDelegationClosed(closure) ?? Promise.resolve(),
       },
       longTasks: longTaskCoordinator,
+      validateFollowUpContinuation: followUpRuntime.validateContinuation,
       taskInbox: async () => {
         if (!taskInboxService || !taskInboxEnabled()) throw new Error("Task inbox is unavailable");
         return taskInboxPetView(await taskInboxService.reconcile());
       },
       hostActionReceipts: petHostActionReceipts,
+      contextLinks: new PetContextLinkStore(
+        resolve(app.getPath("userData"), "pet", "context-links.json"),
+      ),
       // Atomic CodeShell capabilities Mimi may request via her host-action
       // tools; each runs only after her turn, and the real outcome is folded
       // into the reply. The key set gates which tools the worker exposes.
@@ -2198,41 +2222,8 @@ async function createWindow(): Promise<BrowserWindow> {
             status: watched.task.status,
           };
         },
-        memory: async (payload) => {
-          const action = payload.action;
-          const text = typeof payload.text === "string" ? payload.text : "";
-          const memoryId = typeof payload.memoryId === "string" ? payload.memoryId : "";
-          if (action === "remember") {
-            const before = new Map(
-              petMemoryStoreInstance.list().map((entry) => [entry.id, entry] as const),
-            );
-            const entry = await petMemoryStoreInstance.remember(text, "mimi");
-            const previous = before.get(entry.id);
-            const unchanged =
-              previous !== undefined &&
-              previous.text === entry.text &&
-              previous.source === entry.source &&
-              previous.updatedAt === entry.updatedAt;
-            return { action, id: entry.id, ...(unchanged ? { unchanged: true } : {}) };
-          }
-          if (action === "update") {
-            const entry = await petMemoryStoreInstance.update(memoryId, text);
-            return { action, id: entry.id };
-          }
-          if (action === "forget") {
-            const entry = await petMemoryStoreInstance.forget(memoryId);
-            return { action, id: entry.id };
-          }
-          throw new Error("invalid memory action");
-        },
-        followUpMutation: async (payload) => {
-          const action = payload.action;
-          const followUpId = typeof payload.followUpId === "string" ? payload.followUpId : "";
-          if ((action !== "complete" && action !== "dismiss") || !followUpId) {
-            throw new Error("invalid follow-up mutation request");
-          }
-          return petFollowUps.mutate({ action, followUpId });
-        },
+        memory: createPetMemoryHost(petMemoryStoreInstance),
+        followUpMutation: followUpHost,
         sessionBind: async (payload, context) =>
           sessionBridge
             ? sessionBridge.sessionBindExecutor(payload, context)
@@ -2307,31 +2298,10 @@ async function createWindow(): Promise<BrowserWindow> {
           };
         },
       },
-      worldContext: async () => {
-        await petMemoryStoreInstance.load();
-        const remote = getMobileRemoteGatewayStatus();
-        const allMemories = petMemoryStoreInstance.list();
-        const visibleMemories = allMemories.slice(0, 24);
-        return {
-          memories: visibleMemories.map(({ id, text, source, updatedAt }) => ({
-            id,
-            text,
-            source,
-            updatedAt,
-          })),
-          memoryWindow: {
-            visibleCount: visibleMemories.length,
-            totalCount: allMemories.length,
-            truncated: visibleMemories.length < allMemories.length,
-          },
-          mobileRemote: {
-            running: remote.running,
-            tunnelConnected: remote.tunnelConnected,
-            passcodeSet: remote.passcodeSet,
-            ...(remote.url ? { url: remote.url } : {}),
-          },
-        };
-      },
+      worldContext: createPetMemoryWorldContext(
+        petMemoryStoreInstance,
+        getMobileRemoteGatewayStatus,
+      ),
       listWorkspaces: () => mobileOrchestrator.projectList(),
       listFollowUps: () => petFollowUps.listOpen(),
       listOutboundTargets: async () =>
@@ -2681,6 +2651,8 @@ async function createWindow(): Promise<BrowserWindow> {
       latestResult: createLatestResultCache(petSessionsRootDir),
       summaries: {
         collect: () => petFollowUps.collect(),
+        control: (request) => followUpHost({ ...request }),
+        subscribe: (listener) => registeredFollowUps.subscribe(listener),
       },
       journal: {
         list: async () => {
@@ -3469,7 +3441,7 @@ app.whenReady().then(async () => {
   void warmTrustCache()
     .then(() => panelAppBridge.initializeMedia())
     .catch((error) => dlog("main", "panel.media.recovery.failed", { error: String(error) }));
-  void createWindow();
+  const initialWindowReady = createWindow();
   initUpdater();
   sweepStaleLeases(); // clear any cookie-lease temp files left by a prior crash
   sweepStaleCredentialCookies(); // clear UseCredential temp cookies.txt left by a prior crash
@@ -3488,6 +3460,8 @@ app.whenReady().then(async () => {
   // jobs are restored from ~/.code-shell/cron.json. Cron follows the app
   // lifecycle by design (docs/automation-plan-2026-05-31.md, D2).
   try {
+    // Recover Mimi's ledger and initialize dispatch before restored timers can fire.
+    await initialWindowReady;
     // Feed in-main automation Engine events into the bridge's per-session
     // snapshot + renderer stream, so automation sessions reconnect identically
     // to interactive chat. `bridge?.` safely no-ops if a job somehow fires
@@ -3572,8 +3546,28 @@ app.whenReady().then(async () => {
     );
     automationHandle = startAutomation({
       store: new CronStore(defaultCronStorePath()),
-      runner: automationRunner,
+      runner: async (request) => {
+        if (!isPetFollowUpWakeJob(request.job)) return automationRunner(request);
+        if (!petFollowUpWakeCoordinator)
+          return {
+            text: "Mimi 跟进服务不可用",
+            reason: "unavailable",
+            stop: { reason: "Mimi 跟进服务不可用" },
+          };
+        await petFollowUpWakeCoordinator.wake(request.job);
+        return { text: "Registered follow-up wake handled", reason: "done" };
+      },
       onJobEvent: (event) => {
+        if (isPetFollowUpWakeJob(event.job)) {
+          if (event.type === "job_missed")
+            void petFollowUpWakeCoordinator
+              ?.missed(event.job)
+              .catch((error) =>
+                dlog("main", "pet.followUp.missed.failed", { error: String(error) }),
+              );
+          if (event.type === "job_error") petFollowUpWakeCoordinator?.repairSoon();
+          return;
+        }
         if (event.type !== "job_start") {
           for (const [sessionId, jobId] of taskInboxAutomationSessions) {
             if (jobId === event.job.id) taskInboxAutomationSessions.delete(sessionId);
@@ -3588,6 +3582,7 @@ app.whenReady().then(async () => {
     });
     // Expose the live scheduler to the automation IPC service (Phase 3 UI).
     setAutomationScheduler(automationHandle.scheduler);
+    await petFollowUpWakeCoordinator?.start();
     // startAutomation installed the default executor (bindCronToEngine):
     // every cron job runs one headless codeshell turn. Driving Claude Code is
     // just one such turn calling DriveClaudeCode — no CC-specific scheduling.
@@ -7141,6 +7136,8 @@ app.on(
       petExternalVisibilityController = null;
       reconcileExternalAdapters = null;
       petDispatchService = null;
+      petFollowUpWakeCoordinator?.stop();
+      petFollowUpWakeCoordinator = null;
       petHostActionReceiptService = null;
       petImDecisions?.stop();
       petImDecisions = null;

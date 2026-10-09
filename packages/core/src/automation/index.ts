@@ -82,9 +82,10 @@ export {
   nextCronTime,
   type ParsedCron,
 } from "./cron-expr.js";
-export { validateSchedule } from "./scheduler.js";
+export { validateSchedule, validateJobTiming } from "./scheduler.js";
 export type {
   CronPermissionLevel,
+  CronMissedPolicy,
   CronTemplateSource,
   CreateJobOptions,
   UpdateJobPatch,

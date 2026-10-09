@@ -35,6 +35,7 @@ describe("Mimi atomic manager tools", () => {
   test("reads the same Needs follow-up rows exposed by the desktop", async () => {
     const items: PetFollowUpItem[] = [
       {
+        kind: "derived-session",
         id: "followup-a",
         title: "发布准备",
         text: "整理发布说明",
@@ -44,6 +45,7 @@ describe("Mimi atomic manager tools", () => {
         workspaceId: "workspace-a",
       },
       {
+        kind: "derived-session",
         id: "followup-b",
         title: "旧记录",
         text: "旧记录",

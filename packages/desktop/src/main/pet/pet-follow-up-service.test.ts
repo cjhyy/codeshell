@@ -7,6 +7,10 @@ import { petFollowUpId } from "./pet-follow-up-id.js";
 import type { PetSummaryService } from "./pet-summary-service.js";
 import type { PetSummaryEntry, PetSummaryStore } from "./pet-summary-store.js";
 import type { PetWorkInboxSnapshot } from "./pet-work-inbox-store.js";
+import { PetRegisteredFollowUpStore } from "./pet-registered-follow-up-store.js";
+import { mkdtemp, rm } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 
 function session(
   id: string,
@@ -86,6 +90,7 @@ describe("PetFollowUpService", () => {
     const followUpId = petFollowUpId("session-a", 100);
     expect(rows).toEqual([
       {
+        kind: "derived-session",
         followUpId,
         sessionId: "session-a",
         title: "Release",
@@ -96,6 +101,7 @@ describe("PetFollowUpService", () => {
     ]);
     expect(open).toEqual([
       {
+        kind: "derived-session",
         id: followUpId,
         title: "Release",
         text: "decide whether to publish",
@@ -226,5 +232,100 @@ describe("PetFollowUpService", () => {
     expect(settled.filter((result) => result.status === "fulfilled")).toHaveLength(1);
     expect(settled.filter((result) => result.status === "rejected")).toHaveLength(1);
     expect(workInbox.flushes).toBe(1);
+  });
+
+  test("unifies independently registered reminders and derived work without inventing a Session", async () => {
+    const root = await mkdtemp(join(tmpdir(), "pet-followup-feed-"));
+    try {
+      const registered = new PetRegisteredFollowUpStore(join(root, "registered.json"), {
+        now: () => 1_000,
+      });
+      const service = createPetFollowUpService({
+        listSessions: () => [session("session-a", { terminalAt: 100 })],
+        summaryStore: summaryStore({ "session-a": { terminalAt: 100, text: "发布前决定" } }),
+        summaryService: { summarize: async () => null },
+        inbox: inbox(),
+        registered,
+      });
+      const row = await service.register({
+        operationKey: "user-turn",
+        title: "交材料",
+        text: "提醒我交材料",
+        wakeAt: 5_000,
+        timezone: "Asia/Singapore",
+        intent: "remind",
+      });
+      const open = await service.listOpen();
+      expect(open).toHaveLength(2);
+      expect(open[0]).toMatchObject({
+        kind: "registered",
+        id: row.id,
+        revision: 1,
+        wakeAt: 5_000,
+        wakeState: "scheduled",
+        status: "open",
+      });
+      expect(open[0]!.sessionSelector).toBeUndefined();
+      expect(open[1]!.kind).toBe("derived-session");
+      await expect(service.mutate({ action: "complete", followUpId: row.id })).rejects.toThrow(
+        "expectedRevision",
+      );
+      await service.mutate({ action: "complete", followUpId: row.id, expectedRevision: 1 });
+      expect(await service.listOpen()).toHaveLength(1);
+      expect((await service.collect()).find((item) => item.followUpId === row.id)).toMatchObject({
+        kind: "registered",
+        status: "completed",
+        revision: 2,
+      });
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  test("canonical native controls fence wake callbacks and preserve unknown delivery detail", async () => {
+    const root = await mkdtemp(join(tmpdir(), "pet-followup-feed-"));
+    try {
+      let now = 1_000;
+      const registered = new PetRegisteredFollowUpStore(join(root, "registered.json"), {
+        now: () => now,
+      });
+      const service = createPetFollowUpService({
+        listSessions: () => [],
+        summaryStore: summaryStore(),
+        summaryService: { summarize: async () => null },
+        inbox: inbox(),
+        registered,
+      });
+      const row = await service.register({
+        operationKey: "turn",
+        title: "提醒",
+        text: "提醒",
+        wakeAt: 2_000,
+        timezone: "UTC",
+        intent: "remind",
+      });
+      now = 2_000;
+      await registered.claimWake(row.id, 1);
+      await registered.completeWake(row.id, 1, {
+        status: "unknown",
+        detail: "可能已发送，未盲目重试",
+      });
+      expect((await service.listOpen())[0]).toMatchObject({
+        wakeState: "unknown",
+        wakeDetail: "可能已发送，未盲目重试",
+      });
+      await service.mutate({
+        action: "reschedule",
+        followUpId: row.id,
+        expectedRevision: 1,
+        wakeAt: 3_000,
+        timezone: "Asia/Singapore",
+      });
+      expect(await registered.claimWake(row.id, 1)).toBeUndefined();
+      await service.mutate({ action: "cancel", followUpId: row.id, expectedRevision: 2 });
+      expect(await service.listOpen()).toEqual([]);
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
   });
 });

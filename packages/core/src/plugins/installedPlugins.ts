@@ -17,6 +17,7 @@ import { join } from "node:path";
 import { homedir } from "node:os";
 import type { InstalledPluginsV2, PluginInstallEntry, StoredPluginHookReview } from "./types.js";
 import { mutateJsonFile } from "../utils/file-mutex.js";
+import { readInstalledPluginSnapshot } from "./installedPluginSnapshot.js";
 
 const MAX_PLUGIN_KEYS = 2_048;
 const MAX_INSTALLS_PER_KEY = 16;
@@ -181,6 +182,20 @@ export function readInstalledPlugins(): InstalledPluginsV2 {
     if (descriptor !== undefined) closeSync(descriptor);
   }
   return { version: 2, plugins: {} };
+}
+
+/** Host Hook provenance comes from one stable bounded RAW registry read. */
+export function readInstalledPluginsForHookHost():
+  | { data: InstalledPluginsV2; identity: string }
+  | undefined {
+  try {
+    const snapshot = readInstalledPluginSnapshot(installedPluginsPath());
+    const data = registryOf(JSON.parse(snapshot.content));
+    if (data) return { data, identity: snapshot.identity };
+  } catch {
+    // Ordinary loaders keep their legacy behavior; no resource origin is issued.
+  }
+  return undefined;
 }
 
 export function writeInstalledPlugins(data: InstalledPluginsV2): void {

@@ -127,6 +127,7 @@ const expectedRuntimeExportsByPartition = {
     "parseCronExpression",
     "nextCronTime",
     "validateSchedule",
+    "validateJobTiming",
     "resolveWritePolicy",
     "wrapUntrustedInput",
     "runWriteJobInWorktree",

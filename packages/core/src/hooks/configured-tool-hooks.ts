@@ -3,6 +3,8 @@ import { join } from "node:path";
 import type { SettingsManager } from "../settings/manager.js";
 import { userHome, type SettingsScope } from "../settings/manager.js";
 import { listPluginHooksForHost, matcherAccepts } from "../plugins/loadPluginHooks.js";
+import type { PluginHookSource } from "../plugins/loadPluginHooks.js";
+import type { SettingsHookOrigin } from "../settings/hook-provenance.js";
 import { installedPluginsPath } from "../plugins/installedPlugins.js";
 import { shellHookMatches } from "./shell-runner.js";
 import type { HookEventName } from "./events.js";
@@ -25,6 +27,7 @@ export interface ConfiguredToolHook {
   timeoutMs: number;
   cwd?: string;
   pluginInstallPath?: string;
+  source?: PluginHookSource | SettingsHookOrigin;
 }
 
 function fileIdentity(path: string): unknown {
@@ -56,6 +59,7 @@ export function prepareConfiguredToolHooks(options: {
 }) {
   const events = new Set<HookEventName>(TOOL_HOOK_EVENTS);
   const definitions = options.settings.get().hooks ?? [];
+  const origins = options.settings.getHookOrigins();
   const plugins = listPluginHooksForHost(options.disabledPlugins);
   const descriptors: ConfiguredToolHook[] = [];
   for (const [index, hook] of definitions.entries()) {
@@ -75,6 +79,7 @@ export function prepareConfiguredToolHooks(options: {
         command: hook.command,
         timeoutMs: Math.min(hook.timeout_ms ?? 60000, 60000),
         ...(hook.cwd === undefined ? {} : { cwd: hook.cwd }),
+        ...(origins[index] === undefined ? {} : { source: origins[index] }),
       });
   }
   for (const [index, hook] of plugins.entries()) {
@@ -97,6 +102,7 @@ export function prepareConfiguredToolHooks(options: {
       command: hook.command,
       timeoutMs: Math.min(hook.timeoutMs ?? 60000, 60000),
       pluginInstallPath: hook.installPath,
+      source: hook.source,
     });
   }
   const stateRoots = [

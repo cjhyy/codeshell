@@ -27,6 +27,7 @@ import type {
   PetWorkspaceOption,
   PetWorkDelegation,
   PetFollowUpItem,
+  PetRegisteredFollowUp,
   PetOutboundTargetOption,
 } from "@cjhyy/code-shell-pet";
 import type { InputAttachmentMeta } from "@cjhyy/code-shell-server/storage";
@@ -36,6 +37,32 @@ import type { PetPersonalization } from "../../shared/pet-settings.js";
 import type { PetSegmentClosed, PetSegmentTurnStart } from "./pet-segment-controller.js";
 import type { PetChatAttachment } from "../../shared/pet-chat-attachments.js";
 import type { TaskInboxPetView } from "../task-inbox/task-inbox-pet-view.js";
+import type { PetContextOriginRef, PetGroundedTaskRef } from "@cjhyy/code-shell-pet";
+import {
+  petContextOriginForSource,
+  type PetContextEventKind,
+  type PetContextLinkStore,
+} from "./pet-context-links.js";
+
+export interface PetWorldContextInput {
+  message: string;
+  clientMessageId: string;
+  eventKind: PetContextEventKind;
+  originRef: PetContextOriginRef;
+  /** Related host-ledger references, not current instructions or continuation authority. */
+  groundedTasks: PetGroundedTaskRef[];
+  associationState: "available" | "unavailable" | "disabled";
+}
+
+function contextAssociationFor(input: PetWorldContextInput): Record<string, unknown> {
+  return {
+    originRef: input.originRef,
+    eventKind: input.eventKind,
+    clientMessageId: input.clientMessageId,
+    groundedTasks: input.groundedTasks,
+    associationState: input.associationState,
+  };
+}
 
 export interface PetAutoDelegation {
   clientMessageId: string;
@@ -105,6 +132,8 @@ export interface PetReusableSessionCandidate {
 
 export interface PetHostActionContext {
   originClientMessageId: string;
+  /** Host-authored slot within the persisted manager result. */
+  actionIndex?: number;
   /** Host clock captured before Mimi begins composing this turn. */
   requestedAt: number;
   /** Host-authenticated route of the current IM turn, never model supplied. */
@@ -118,6 +147,8 @@ export interface PetHostActionContext {
   senderId?: string;
   /** Adapter-authenticated private-chat signal; unknown conversations cannot bind. */
   isDirectMessage?: boolean;
+  originRef?: PetContextOriginRef;
+  groundedTasks?: PetGroundedTaskRef[];
 }
 
 /** Host-side executor for one Mimi host-action kind; throws to signal failure. */
@@ -148,6 +179,8 @@ export type PetDispatchCommand =
       model?: string;
       preferredProjectPath?: string;
       attachments?: InputAttachmentMeta[];
+      /** Main-only wake authority; renderer IPC deliberately rejects this field. */
+      hostWake?: PetRegisteredFollowUp;
       source?: {
         kind: "im-gateway";
         channel: string;
@@ -293,6 +326,8 @@ interface PetDispatchOptions {
   startWorkSession?(
     delegation: PetAutoDelegation,
   ): Promise<{ sessionId: string; cwd: string; taskId?: string }>;
+  /** Revalidate delayed authority immediately before launch, after manager admission/model work. */
+  validateFollowUpContinuation?(item: PetRegisteredFollowUp): Promise<void> | void;
   /**
    * Atomic CodeShell capabilities executed on Mimi's behalf after her turn,
    * keyed by host-action kind (e.g. mobileRemote, longTaskControl, memory).
@@ -311,7 +346,11 @@ interface PetDispatchOptions {
    */
   hostActionReceipts?: PetHostActionReceiptStore;
   /** Extra bounded world fields (memories, tunnel status, ...) for each turn. */
-  worldContext?(): Promise<Record<string, unknown>> | Record<string, unknown>;
+  worldContext?(
+    input: PetWorldContextInput,
+  ): Promise<Record<string, unknown>> | Record<string, unknown>;
+  /** Read-only source/task view over the shared owner conversation; no routing authority. */
+  contextLinks?: Pick<PetContextLinkStore, "record" | "query">;
   /** Same rebuilt local read model as the task center; absence/failure retains the ledger fallback. */
   taskInbox?(): Promise<TaskInboxPetView> | TaskInboxPetView;
   /**
@@ -945,6 +984,12 @@ export class PetDispatchService {
 
       // Same ask-then-confirm sequence the IM bridge uses; see
       // session-turn-scheduler.ts for why unsteer is the confirmation.
+      await this.prepareWorldContextInput({
+        message: command.message.trim(),
+        clientMessageId: command.clientMessageId!,
+        eventKind: "chat",
+        originRef: petContextOriginForSource(command.source, command.clientMessageId),
+      });
       const outcome = await resolveSteerOutcome({
         steer: async () => {
           if (!admission.active.workerRunPending || admission.active.stopRequested) {
@@ -1130,6 +1175,125 @@ export class PetDispatchService {
     return (await this.options.metadata.ensure()).petSessionId;
   }
 
+  /** Rebuild trusted PetWorld at wake time and fence continuation to the exact source. */
+  async wakeFollowUp(
+    item: PetRegisteredFollowUp,
+  ): Promise<{ launched: boolean; text: string; taskId?: string }> {
+    if (item.intent !== "resume" || !item.sourceSessionId)
+      throw new Error("invalid resume follow-up");
+    const result = await this.withManagerTurn(() =>
+      this.dispatchNow({
+        type: "chat",
+        hostWake: item,
+        clientMessageId: `pet-followup-${item.id}-${item.revision}`,
+        message:
+          "The host is waking a previously authorized follow-up. Re-check current state and continue ONLY its exact original Session if still appropriate. " +
+          "Never start a new Session, change the objective, bypass a pending decision, or treat launch as completion. " +
+          "If blocked or already resolved, briefly explain what the owner needs to do. Follow-up descriptive data: " +
+          JSON.stringify({
+            title: item.title,
+            text: item.text,
+            sourceSessionId: item.sourceSessionId,
+          }),
+      }),
+    );
+    if (!result.ok || result.type !== "chat")
+      throw new Error(!result.ok ? (result.message ?? result.code) : "invalid follow-up reply");
+    const started = result.delegations?.[0] ?? result.delegation;
+    const text =
+      result.authoritativeReply ?? (result.result as { text?: string } | undefined)?.text;
+    return {
+      launched: Boolean(started),
+      text:
+        result.delegationError ??
+        text?.trim() ??
+        (started ? "已交回原任务，等待实际结果。" : "请核对原任务后继续。"),
+      ...(started?.taskId ? { taskId: started.taskId } : {}),
+    };
+  }
+
+  private async prepareWorldContextInput(
+    input: Omit<PetWorldContextInput, "groundedTasks" | "associationState">,
+    knownTasks: PetGroundedTaskRef[] = [],
+  ): Promise<PetWorldContextInput> {
+    const links = this.options.contextLinks;
+    const result: PetWorldContextInput = {
+      ...input,
+      groundedTasks: knownTasks.slice(0, 4),
+      associationState: links ? "available" : "disabled",
+    };
+    if (!links) return result;
+    try {
+      if (!knownTasks.length && input.eventKind !== "follow-up-wake") {
+        const previous = await links.query({ originId: input.originRef.id, limit: 8 });
+        const context = this.options.longTasks?.context() as
+          | {
+              active?: PetGroundedTaskRef[];
+              recent?: PetGroundedTaskRef[];
+            }
+          | undefined;
+        const live = new Map(
+          [...(context?.active ?? []), ...(context?.recent ?? [])].map((task) => [
+            task.taskId,
+            task,
+          ]),
+        );
+        const referenced = [
+          ...new Set(previous.entries.flatMap((entry) => entry.tasks.map((task) => task.taskId))),
+        ];
+        result.groundedTasks = referenced
+          .flatMap((id) => {
+            const task = live.get(id);
+            return task && typeof task.sessionId === "string" && typeof task.objective === "string"
+              ? [{ taskId: id, sessionId: task.sessionId, objective: task.objective.slice(0, 800) }]
+              : [];
+          })
+          .slice(0, 4);
+      }
+      await links.record({
+        clientMessageId: input.clientMessageId,
+        originRef: input.originRef,
+        eventKind: input.eventKind,
+        at: Date.now(),
+        tasks: result.groundedTasks,
+      });
+    } catch {
+      // This index is a disposable query view. Failure never authorizes a
+      // guessed task or blocks the user's chat; expose degraded coverage.
+      result.associationState = "unavailable";
+    }
+    return result;
+  }
+
+  private async recordContextTasks(
+    input: PetWorldContextInput,
+    tasks: PetGroundedTaskRef[],
+  ): Promise<void> {
+    if (!tasks.length) return;
+    const known = new Map([...input.groundedTasks, ...tasks].map((task) => [task.taskId, task]));
+    input.groundedTasks = [...known.values()].slice(-4);
+    if (!this.options.contextLinks) return;
+    try {
+      await this.options.contextLinks.record({
+        clientMessageId: input.clientMessageId,
+        originRef: input.originRef,
+        eventKind: input.eventKind,
+        at: Date.now(),
+        tasks: input.groundedTasks,
+      });
+    } catch {
+      input.associationState = "unavailable";
+    }
+  }
+
+  private async recallWorld(input: PetWorldContextInput): Promise<Record<string, unknown>> {
+    const extras = await this.options.worldContext?.(input);
+    return {
+      ...(extras?.memories !== undefined ? { memories: extras.memories } : {}),
+      ...(extras?.memoryWindow !== undefined ? { memoryWindow: extras.memoryWindow } : {}),
+    };
+  }
+
   /**
    * Turn a trusted Work Session terminal signal into a durable Mimi manager
    * decision. Mimi may report/ask the user, or start one bounded follow-up.
@@ -1223,12 +1387,24 @@ export class PetDispatchService {
         completedAt: task.completedAt ?? task.updatedAt,
       };
       const personalization = await this.currentPersonalization();
+      const contextInput = await this.prepareWorldContextInput(
+        {
+          message: task.objective,
+          clientMessageId: `pet-context-closure:${task.id}:${task.attempt}:${task.status}`,
+          eventKind: "task-result",
+          originRef: petContextOriginForSource(task.completionTarget, task.originClientMessageId),
+        },
+        [{ taskId: task.id, sessionId: task.sessionId, objective: task.objective.slice(0, 800) }],
+      );
+      const recall = await this.recallWorld(contextInput);
       const runtimeContext = stringifyBoundedPetWorld({
         version: snapshot.version,
         generation: snapshot.generation,
         observedAt: snapshot.observedAt,
         workerState: snapshot.workerState,
         ...(personalization ? { personalization } : {}),
+        ...recall,
+        contextAssociation: contextAssociationFor(contextInput),
         ...(task.completionTarget
           ? {
               currentMessageSource: {
@@ -1573,12 +1749,26 @@ export class PetDispatchService {
     const metadata = await this.options.metadata.ensure();
     const snapshot = this.options.aggregator.getSnapshot();
     const personalization = await this.currentPersonalization();
+    const contextInput = await this.prepareWorldContextInput(
+      {
+        message,
+        clientMessageId: `pet-report:${report.reportId}`,
+        eventKind: "session-report",
+        originRef: petContextOriginForSource(completionTarget, report.reportId),
+      },
+      task
+        ? [{ taskId: task.id, sessionId: task.sessionId, objective: task.objective.slice(0, 800) }]
+        : [],
+    );
+    const recall = await this.recallWorld(contextInput);
     const runtimeContext = stringifyBoundedPetWorld({
       version: snapshot.version,
       generation: snapshot.generation,
       observedAt: snapshot.observedAt,
       workerState: snapshot.workerState,
       ...(personalization ? { personalization } : {}),
+      ...recall,
+      contextAssociation: contextAssociationFor(contextInput),
       ...(canGatewayReply && completionTarget
         ? {
             currentMessageSource: {
@@ -1804,22 +1994,23 @@ export class PetDispatchService {
         const replyAttachmentKinds = replyAttachmentKindsFor(command.source);
         const gatewayReplyCapability = gatewayReplyCapabilityFor(command.source);
         const gatewayCatalog = gatewayCatalogFor(command.source);
-        const currentCompletionTarget: PetLongTaskCompletionTarget | undefined = command.source
-          ?.target
-          ? {
-              kind: "im-gateway",
-              channel: command.source.channel,
-              target: command.source.target,
-              ...(command.source.senderId
-                ? {
-                    senderId: command.source.senderId,
-                    isDirectMessage: command.source.isDirectMessage === true,
-                  }
-                : {}),
-              replyButton: command.source.capabilities?.outbound.button ?? "link",
-              ...(replyAttachmentKinds.length > 0 ? { replyAttachmentKinds } : {}),
-            }
-          : undefined;
+        const currentCompletionTarget: PetLongTaskCompletionTarget | undefined =
+          command.hostWake?.completionTarget ??
+          (command.source?.target
+            ? {
+                kind: "im-gateway",
+                channel: command.source.channel,
+                target: command.source.target,
+                ...(command.source.senderId
+                  ? {
+                      senderId: command.source.senderId,
+                      isDirectMessage: command.source.isDirectMessage === true,
+                    }
+                  : {}),
+                replyButton: command.source.capabilities?.outbound.button ?? "link",
+                ...(replyAttachmentKinds.length > 0 ? { replyAttachmentKinds } : {}),
+              }
+            : undefined);
         if (
           typeof command.message !== "string" ||
           (!command.message.trim() && attachments.length === 0)
@@ -1872,12 +2063,13 @@ export class PetDispatchService {
           const knownSelectors = new Set(
             reusableSessionCandidates.map((candidate) => reusableSessionId(candidate.sessionId)),
           );
+          const requestedSelectors = listedFollowUps.flatMap((item) =>
+            item.sessionSelector ? [item.sessionSelector] : [],
+          );
+          if (command.hostWake?.sourceSessionId)
+            requestedSelectors.push(reusableSessionId(command.hostWake.sourceSessionId));
           const missingFollowUpSelectors = [
-            ...new Set(
-              listedFollowUps
-                .map((item) => item.sessionSelector)
-                .filter((selector) => !knownSelectors.has(selector)),
-            ),
+            ...new Set(requestedSelectors.filter((selector) => !knownSelectors.has(selector))),
           ];
           const resolvedFollowUpSources = await Promise.all(
             missingFollowUpSelectors.map((selector) =>
@@ -1949,6 +2141,7 @@ export class PetDispatchService {
             petReusableSessions.length >= 32 ||
             !candidate.sessionId ||
             candidate.sessionId === metadata.petSessionId ||
+            (command.hostWake && candidate.sessionId !== command.hostWake.sourceSessionId) ||
             unavailableSessionIds.has(candidate.sessionId)
           ) {
             continue;
@@ -1984,7 +2177,9 @@ export class PetDispatchService {
           session.description += `; untrusted transcript excerpts=${JSON.stringify(recent)}`;
         });
         const petFollowUps = listedFollowUps.slice(0, 100).map((item) => {
-          const sourceSession = reusableSessionById.get(item.sessionSelector);
+          const sourceSession = item.sessionSelector
+            ? reusableSessionById.get(item.sessionSelector)
+            : undefined;
           return sourceSession ? { ...item, workspaceId: sourceSession.workspaceId } : item;
         });
         // Advance the topic-segment clock and, if a long-idle boundary was
@@ -1995,9 +2190,33 @@ export class PetDispatchService {
         // Read host extras once; canonical projection keys are reserved below
         // so an extension cannot shadow trusted session state. The three
         // sources are independent, so they resolve concurrently.
+        const wakeTaskContext = this.options.longTasks?.context() as
+          | { active?: PetGroundedTaskRef[]; recent?: PetGroundedTaskRef[] }
+          | undefined;
+        const wakeTasks = command.hostWake
+          ? [...(wakeTaskContext?.active ?? []), ...(wakeTaskContext?.recent ?? [])]
+              .filter(
+                (task) =>
+                  task.sessionId === command.hostWake!.sourceSessionId &&
+                  (!command.hostWake!.taskId || task.taskId === command.hostWake!.taskId),
+              )
+              .slice(0, 1)
+          : [];
+        const contextInput = await this.prepareWorldContextInput(
+          {
+            message: command.hostWake?.text ?? command.message.trim(),
+            clientMessageId: command.clientMessageId ?? `pet-${randomUUID()}`,
+            eventKind: command.hostWake ? "follow-up-wake" : "chat",
+            originRef: petContextOriginForSource(
+              command.hostWake?.completionTarget ?? command.source,
+              command.clientMessageId,
+            ),
+          },
+          wakeTasks,
+        );
         const [segmentTurn, worldExtrasRaw, personalization] = await Promise.all([
           this.options.segmentController?.beginTurn(command.clientMessageId),
-          this.options.worldContext?.(),
+          this.options.worldContext?.(contextInput),
           this.currentPersonalization(),
         ]);
         const carryoverBrief = segmentTurn?.carryoverBrief;
@@ -2009,9 +2228,11 @@ export class PetDispatchService {
           "followUpMutation",
           "sessionArchive",
           "outboundMessage",
+          "memory",
         ]);
-        const hostActionKinds =
-          command.source?.kind === "im-gateway"
+        const hostActionKinds = command.hostWake
+          ? []
+          : command.source?.kind === "im-gateway"
             ? Object.keys(this.options.hostActions ?? {})
                 .filter(
                   (kind) =>
@@ -2036,6 +2257,8 @@ export class PetDispatchService {
           "memoryWindow",
           "followUps",
           "outboundTargets",
+          "hostWake",
+          "contextAssociation",
         ]);
         const remainingWorldExtras = Object.fromEntries(
           Object.entries(worldExtras)
@@ -2053,16 +2276,30 @@ export class PetDispatchService {
           observedAt: projectionWorld.observedAt,
           workerState: projectionWorld.workerState,
           ...(personalization ? { personalization } : {}),
+          contextAssociation: contextAssociationFor(contextInput),
           // Always state the source explicitly. Mimi reuses one long-lived
           // Session across desktop and IM turns; omitting this field on
           // desktop makes old IM history an ambiguous signal and can tempt the
           // model to hallucinate a route-bound GatewayReply call.
-          currentMessageSource: command.source
+          currentMessageSource: command.hostWake
+            ? { kind: "follow-up-wake", channel: "mimi" }
+            : command.source
+              ? {
+                  kind: command.source.kind,
+                  channel: command.source.channel.slice(0, 32),
+                }
+              : { kind: "desktop", channel: "mimi" },
+          ...(command.hostWake
             ? {
-                kind: command.source.kind,
-                channel: command.source.channel.slice(0, 32),
+                hostWake: {
+                  id: command.hostWake.id,
+                  revision: command.hostWake.revision,
+                  sourceSessionId: command.hostWake.sourceSessionId,
+                  instruction:
+                    "Only the exact original reusable Session is authorized. Do not create another task or widen scope.",
+                },
               }
-            : { kind: "desktop", channel: "mimi" },
+            : {}),
           ...(gatewayCatalog
             ? {
                 currentMessageCapabilities: {
@@ -2108,6 +2345,7 @@ export class PetDispatchService {
         const response = await this.requestChatRun(command, {
           sessionId: metadata.petSessionId,
           task: command.message.trim(),
+          ...(command.hostWake ? { injected: true, disableGoal: true, skillAllowlist: [] } : {}),
           ...(managerModel ? { model: managerModel } : {}),
           ...(attachments.length > 0 ? { attachments } : {}),
           petRuntimeContext: runtimeContext,
@@ -2227,6 +2465,20 @@ export class PetDispatchService {
           };
         }
         let delegations: PetStartedDelegation[] = [];
+        if (
+          command.hostWake &&
+          (resolvedDelegations.length > 1 ||
+            resolvedDelegations.some(
+              ({ reusableSession }) =>
+                reusableSession?.sessionId !== command.hostWake!.sourceSessionId,
+            ))
+        ) {
+          return {
+            ok: false,
+            code: "worker-error",
+            message: "Follow-up wake may continue only its original Session",
+          };
+        }
         let delegationError: string | undefined;
         const delegationClientMessageId = command.clientMessageId ?? `pet-${randomUUID()}`;
         if (resolvedDelegations.length > 0) {
@@ -2250,7 +2502,25 @@ export class PetDispatchService {
             delegationError = "Mimi work delegation host is unavailable";
           } else {
             const outcomes = await Promise.allSettled(
-              requests.map((request) => this.options.startWorkSession!(request)),
+              requests.map(async (request) => {
+                if (command.hostWake) {
+                  const source = this.options.aggregator
+                    .getSnapshot()
+                    .sessions.find(
+                      (row) => row.agentSessionId === command.hostWake!.sourceSessionId,
+                    );
+                  if (
+                    !source ||
+                    source.external ||
+                    source.runState === "running" ||
+                    source.runState === "queued" ||
+                    source.pendingDecisionCount > 0
+                  )
+                    throw new Error("原任务状态已变化，未自动续办");
+                  await this.options.validateFollowUpContinuation?.(command.hostWake);
+                }
+                return this.options.startWorkSession!(request);
+              }),
             );
             delegations = outcomes.flatMap((outcome, index) => {
               const request = requests[index]!;
@@ -2285,6 +2555,20 @@ export class PetDispatchService {
             }
           }
         }
+        await this.recordContextTasks(
+          contextInput,
+          delegations.flatMap((delegation) =>
+            delegation.taskId
+              ? [
+                  {
+                    taskId: delegation.taskId,
+                    sessionId: delegation.sessionId,
+                    objective: delegation.task.slice(0, 800),
+                  },
+                ]
+              : [],
+          ),
+        );
         let replyResult = response.result;
         let runReason =
           response.result && typeof response.result === "object"
@@ -2417,6 +2701,8 @@ export class PetDispatchService {
             ...(currentCompletionTarget ? { completionTarget: currentCompletionTarget } : {}),
             ...(command.source?.senderId ? { senderId: command.source.senderId } : {}),
             isDirectMessage: command.source?.isDirectMessage === true,
+            originRef: contextInput.originRef,
+            groundedTasks: contextInput.groundedTasks,
           },
         );
         // Launch acceptance is not task completion. PetLongTaskCoordinator owns
@@ -2513,18 +2799,27 @@ export class PetDispatchService {
             executions.push({ ...request, ok: false, error: "操作重放回执类型不匹配，未执行" });
             continue;
           }
-          executions.push(
-            prior.ok
-              ? { ...request, ok: true, result: prior.result }
-              : { ...request, ok: false, error: prior.error ?? "host action failed" },
-          );
-          continue;
+          const recoverInternalRegistration =
+            prior.phase === "claimed" &&
+            request.kind === "followUpMutation" &&
+            request.payload.action === "register";
+          if (!recoverInternalRegistration) {
+            executions.push(
+              prior.ok
+                ? { ...request, ok: true, result: prior.result }
+                : { ...request, ok: false, error: prior.error ?? "host action failed" },
+            );
+            continue;
+          }
         }
       }
 
       try {
         const blockedReason = blockedReasons?.get(request.kind);
-        if (blockedReason) throw new Error(blockedReason);
+        const isFutureFollowUpEdit =
+          request.kind === "followUpMutation" &&
+          ["register", "reschedule", "cancel"].includes(String(request.payload.action));
+        if (blockedReason && !isFutureFollowUpEdit) throw new Error(blockedReason);
         if (request.kind === "gatewayReply") {
           if (!gatewayReplyCapability) throw new Error("Gateway 回复能力不可用");
           const attachmentPaths = request.payload.attachmentPaths;
@@ -2537,7 +2832,10 @@ export class PetDispatchService {
             throw new Error("Gateway 渠道不支持所请求的附件");
           }
         }
-        const result = await executor(request.payload, context);
+        const result = await executor(
+          request.payload,
+          context ? { ...context, actionIndex } : undefined,
+        );
         if (
           request.kind === "gatewayReply" &&
           (!gatewayReplyCapability || !gatewayReplyResultFits(result, gatewayReplyCapability))

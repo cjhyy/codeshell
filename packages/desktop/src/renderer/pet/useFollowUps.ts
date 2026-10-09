@@ -23,6 +23,8 @@ export function useFollowUps(snapshotVersion: number | null): readonly PetSessio
   const [rows, setRows] = React.useState<readonly PetSessionSummaryRow[]>(EMPTY);
   const seqRef = React.useRef(0);
   const loadedOnceRef = React.useRef(false);
+  const [changeVersion, refresh] = React.useReducer((value: number) => value + 1, 0);
+  React.useEffect(() => window.codeshell.pet?.onFollowUpsChanged?.(refresh), []);
 
   React.useEffect(() => {
     if (snapshotVersion === null) return;
@@ -47,7 +49,7 @@ export function useFollowUps(snapshotVersion: number | null): readonly PetSessio
       disposed = true;
       clearTimeout(timer);
     };
-  }, [snapshotVersion]);
+  }, [snapshotVersion, changeVersion]);
 
   return rows;
 }

@@ -18,6 +18,46 @@ function row(overrides: Partial<PetSessionSummaryRow> = {}): PetSessionSummaryRo
 }
 
 describe("PetFollowUpSectionView", () => {
+  test("shows standalone registered reminders with schedule and controls, without a fake source Session", () => {
+    const html = renderToStaticMarkup(
+      <PetFollowUpSectionView
+        rows={[
+          row({
+            kind: "registered",
+            status: "open",
+            sessionId: undefined,
+            terminalAt: undefined,
+            revision: 2,
+            wakeAt: 1_800_000_000_000,
+            timezone: "Asia/Singapore",
+            intent: "remind",
+            wakeState: "scheduled",
+          }),
+        ]}
+        onOpen={() => {}}
+        onControl={async () => {}}
+      />,
+    );
+    expect(html).toContain("Asia/Singapore");
+    expect(html).toContain("改期");
+    expect(html).toContain("取消跟进");
+    expect(html).not.toContain("data-pet-follow-up-open=");
+  });
+  test("does not render cancelled registrations and disables handling while a wake is claimed", () => {
+    expect(
+      renderToStaticMarkup(
+        <PetFollowUpSectionView rows={[row({ kind: "registered", status: "cancelled" })]} />,
+      ),
+    ).toBe("");
+    const html = renderToStaticMarkup(
+      <PetFollowUpSectionView
+        rows={[row({ kind: "registered", status: "open", wakeState: "claimed", revision: 1 })]}
+        onControl={async () => {}}
+      />,
+    );
+    expect(html).toContain("disabled");
+    expect(html).not.toContain("取消跟进");
+  });
   test("renders each row's title, workspace, and full follow-up text", () => {
     const html = renderToStaticMarkup(
       <PetFollowUpSectionView

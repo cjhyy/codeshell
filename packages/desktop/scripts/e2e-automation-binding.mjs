@@ -1,11 +1,13 @@
 /*
  * Real Electron regression for choosing an automation's conversation context.
- * Uses an isolated home and synthetic IPC metadata/mutations. No model is
- * configured, no prompt is sent, and no real automation is created or run.
+ * Uses an isolated home. A persisted reminder exercises the real cold-start
+ * scheduler before synthetic IPC metadata/mutations exercise binding controls.
+ * No model is configured and no model or Work Session execution is allowed.
  * CODESHELL_AUTOMATION_SCREENSHOT_DIR enables optional preview images.
  */
-/* global document, getComputedStyle, localStorage */
-import { mkdir, writeFile } from "node:fs/promises";
+/* global document, getComputedStyle, localStorage, window */
+import { createHash } from "node:crypto";
+import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import {
@@ -24,6 +26,8 @@ const screenshotDir = process.env.CODESHELL_AUTOMATION_SCREENSHOT_DIR;
 const jobName = "每日工作摘要";
 const localTitle = "工作进度与计划";
 const diskTitle = "发布前的对话回顾";
+const followUpPath = join(isolated.userDataDir, "pet", "follow-ups.json");
+const cronPath = join(isolated.codeShellHome, "cron.json");
 let app;
 let win;
 let processLog = "";
@@ -33,6 +37,136 @@ const detail = () => win.getByRole("region", { name: jobName, exact: true });
 const picker = () => execution().getByRole("combobox", { name: "绑定的对话", exact: true });
 const save = () => execution().getByRole("button", { name: "保存执行方式", exact: true });
 const mode = (name) => execution().getByRole("button", { name, exact: true });
+
+async function seedStartupReminder() {
+  const now = Date.now();
+  const operationKey = "e2e-automation-binding:startup-reminder";
+  const definition = {
+    title: "启动时恢复的明确提醒",
+    text: "提醒我核对发布清单，不要启动工作会话。",
+    wakeAt: now - 5_000,
+    timezone: "Asia/Singapore",
+    intent: "remind",
+    missedPolicy: "fire-once",
+    catchUpUntil: now + 3_600_000,
+  };
+  const id = `registered-followup-${createHash("sha256").update(operationKey).digest("hex").slice(0, 24)}`;
+  const registrationKey = createHash("sha256")
+    .update(
+      JSON.stringify([
+        definition.title,
+        definition.text,
+        definition.wakeAt,
+        definition.timezone,
+        definition.intent,
+        null,
+        null,
+        null,
+        definition.missedPolicy,
+        definition.catchUpUntil,
+      ]),
+    )
+    .digest("hex");
+  const reminder = {
+    id,
+    operationKey,
+    registrationKey,
+    ...definition,
+    revision: 1,
+    status: "open",
+    createdAt: now - 60_000,
+    updatedAt: now - 60_000,
+    wake: { revision: 1, status: "scheduled" },
+  };
+  const creationKey = `mimi-follow-up:${id}:1`;
+  await mkdir(dirname(followUpPath), { recursive: true, mode: 0o700 });
+  await writeFile(followUpPath, JSON.stringify({ version: 1, entries: [reminder] }), {
+    mode: 0o600,
+  });
+  await writeFile(
+    cronPath,
+    JSON.stringify({
+      version: 1,
+      jobs: [
+        {
+          id: "startup-reminder-cron",
+          name: definition.title,
+          prompt: "Registered follow-up wake",
+          schedule: "once",
+          once: true,
+          runAt: definition.wakeAt,
+          nextRun: definition.wakeAt,
+          timezone: definition.timezone,
+          missedPolicy: definition.missedPolicy,
+          catchUpUntil: definition.catchUpUntil,
+          creationKey,
+          enabled: true,
+          runCount: 0,
+          createdAt: reminder.createdAt,
+        },
+      ],
+    }),
+    { mode: 0o600 },
+  );
+  return { ...reminder, creationKey };
+}
+
+async function checkStartupReminder(reminder) {
+  // Read the real ledger before replacing any IPC handler. A restored once job
+  // must not be consumed while createWindow is still preparing its coordinator.
+  const deadline = Date.now() + 20_000;
+  let row;
+  let jobs;
+  do {
+    const ledger = JSON.parse(await readFile(followUpPath, "utf8"));
+    row = ledger.entries.find((entry) => entry.id === reminder.id);
+    jobs = JSON.parse(await readFile(cronPath, "utf8")).jobs;
+    if (
+      row?.wake.status === "notified" &&
+      !jobs.some((job) => job.creationKey === reminder.creationKey)
+    )
+      break;
+    await new Promise((resolveWait) => setTimeout(resolveWait, 100));
+  } while (Date.now() < deadline);
+  assert(
+    row?.wake.status === "notified",
+    `Cold-start reminder must settle as notified, got ${JSON.stringify(row?.wake)}`,
+  );
+  assert(
+    row.revision === 1 && row.status === "open" && row.wake.revision === 1,
+    "Waking preserves the canonical obligation and its revision",
+  );
+  assert(
+    row.wake.claimedAt >= reminder.wakeAt && row.wake.completedAt >= row.wake.claimedAt,
+    "Reminder persisted a claim before its terminal wake outcome",
+  );
+  assert(
+    row.wake.detail === reminder.text && row.wake.taskId === undefined,
+    "Reminder reports its requested text without a fabricated Work Session",
+  );
+  assert(
+    !jobs.some((job) => job.creationKey === reminder.creationKey),
+    "Successful one-shot reminder consumed its cron projection",
+  );
+  const state = await win.evaluate(async () => ({
+    summaries: await window.codeshell.pet.getSummaries(),
+    projection: await window.codeshell.pet.getSnapshot(),
+    longTasks: await window.codeshell.pet.getLongTasks(),
+  }));
+  const visible = state.summaries.find((entry) => entry.followUpId === reminder.id);
+  assert(
+    visible?.kind === "registered" &&
+      visible.intent === "remind" &&
+      visible.wakeState === "notified" &&
+      visible.wakeDetail === reminder.text,
+    "Production follow-up IPC exposes the canonical reminder outcome",
+  );
+  assert(
+    state.projection.sessions.length === 0 && state.longTasks.tasks.length === 0,
+    "Reminder waking creates no Work Session or long task",
+  );
+  console.log("PASS: cold-start registered reminder settles once without a Work Session");
+}
 
 async function screenshot(name) {
   if (screenshotDir) {
@@ -514,11 +648,30 @@ try {
     `${JSON.stringify({ autoUpdates: false })}\n`,
     { mode: 0o600 },
   );
+  const startupReminder = await seedStartupReminder();
+  // Deny remote execution before Main/Core imports and in inherited Node
+  // workers. The reminder path only needs the local ledger and desktop notice.
+  const networkGuard = join(isolated.home, "deny-network.cjs");
+  await writeFile(
+    networkGuard,
+    `const deny = () => { throw new Error("Automation binding fixture forbids network"); };
+globalThis.fetch = async () => deny();
+for (const name of ["node:http", "node:https"]) {
+  const transport = require(name);
+  transport.request = deny;
+  transport.get = deny;
+}
+require("node:module").syncBuiltinESMExports();
+`,
+    { mode: 0o600 },
+  );
   if (screenshotDir) await mkdir(screenshotDir, { recursive: true });
   app = await launchCodeShellElectron({
     appDir,
     home: isolated.home,
     userDataDir: isolated.userDataDir,
+    mainBootstrap: networkGuard,
+    env: { NODE_OPTIONS: `--require ${networkGuard}` },
   });
   app.process().stderr?.on("data", (chunk) => {
     processLog = (processLog + chunk.toString()).slice(-16_000);
@@ -527,6 +680,7 @@ try {
   const errors = captureRendererErrors(win);
   await win.setViewportSize({ width: 1280, height: 820 });
   await dismissTrustDialog();
+  await checkStartupReminder(startupReminder);
   await installFixture();
   await win.reload();
   await openAutomations();

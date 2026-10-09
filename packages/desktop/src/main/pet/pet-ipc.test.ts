@@ -17,6 +17,81 @@ function snapshot(): DesktopPetProjectionSnapshot {
 }
 
 describe("registerPetIpc", () => {
+  test("registered controls require an exact current revision and reject invented host authority", async () => {
+    const handlers = new Map<string, (event: unknown, ...args: unknown[]) => unknown>();
+    const calls: unknown[] = [];
+    const removed: string[] = [];
+    const dispose = registerPetIpc({
+      ipcMain: {
+        handle: (name, handler) => handlers.set(name, handler),
+        removeHandler: (name) => removed.push(name),
+      },
+      aggregator: {
+        getSnapshot: snapshot,
+        subscribe: () => () => {},
+        resolveNavigation: async () => ({ status: "not-found" }),
+      },
+      summaries: {
+        collect: async () => [],
+        control: async (input) => {
+          calls.push(input);
+          return { ok: true };
+        },
+      },
+      windows: () => [],
+    });
+    const control = handlers.get("pet:follow-up-control")!;
+    const valid = {
+      action: "cancel",
+      followUpId: `registered-followup-${"a".repeat(24)}`,
+      expectedRevision: 3,
+    };
+    expect(await control({}, valid)).toEqual({ ok: true });
+    expect(() => control({}, { ...valid, expectedRevision: undefined })).toThrow(
+      "invalid follow-up",
+    );
+    expect(() =>
+      control({}, { ...valid, completionTarget: { channel: "wechat", target: "invented" } }),
+    ).toThrow("invalid follow-up");
+    expect(() =>
+      control(
+        {},
+        { ...valid, action: "reschedule", wakeAt: Date.now() - 1, timezone: "Asia/Singapore" },
+      ),
+    ).toThrow("invalid follow-up");
+    expect(calls).toEqual([valid]);
+    dispose();
+    expect(removed).toContain("pet:follow-up-control");
+  });
+  test("broadcasts registered follow-up updates and disposes the subscription", () => {
+    let change: (() => void) | undefined;
+    let unsubscribed = false;
+    const sent: string[] = [];
+    const dispose = registerPetIpc({
+      ipcMain: { handle: () => {}, removeHandler: () => {} },
+      aggregator: {
+        getSnapshot: snapshot,
+        subscribe: () => () => {},
+        resolveNavigation: async () => ({ status: "not-found" }),
+      },
+      summaries: {
+        collect: async () => [],
+        subscribe: (listener) => {
+          change = listener;
+          return () => {
+            unsubscribed = true;
+          };
+        },
+      },
+      windows: () => [
+        { isDestroyed: () => false, webContents: { send: (channel) => sent.push(channel) } },
+      ],
+    });
+    change!();
+    expect(sent).toEqual(["pet:follow-ups-changed"]);
+    dispose();
+    expect(unsubscribed).toBe(true);
+  });
   test("broadcasts durable Mimi transcript invalidations to every live window", () => {
     const sent: Array<[string, unknown]> = [];
     const event = broadcastPetChatTranscriptUpdated(

@@ -131,6 +131,7 @@ export type {
   ConstrainedReadableResource,
   ConstrainedProcessReceipt,
   ConstrainedProcessOutput,
+  ConstrainedProcessLaunch,
 } from "./runtime/constrained-process/types.js";
 
 export { getInteractiveApprovalBackend } from "./tool-system/permission.js";
@@ -159,6 +160,7 @@ export {
   type CronJob,
   type CronJobLifecycleEvent,
   type CronPermissionLevel,
+  type CronMissedPolicy,
   type CronTemplateSource,
   type CreateJobOptions,
   type UpdateJobPatch,
@@ -174,6 +176,7 @@ export {
   parseCronExpression,
   nextCronTime,
   validateSchedule,
+  validateJobTiming,
   type ParsedCron,
   resolveWritePolicy,
   wrapUntrustedInput,

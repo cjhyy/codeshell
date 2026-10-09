@@ -14,6 +14,7 @@ import { tmpdir } from "node:os";
 import { dirname, isAbsolute, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { captureResources, sha256 } from "./resources.js";
+import { validateProcessLaunch } from "./layout.js";
 import type {
   ConstrainedDockerRuntime,
   ConstrainedProcessHost,
@@ -21,6 +22,7 @@ import type {
   ConstrainedProcessPermit,
   ConstrainedProcessResources,
   ConstrainedProcessScope,
+  ConstrainedProcessLaunch,
 } from "./types.js";
 
 const POLICY_SHA256 = "3876dafd126ec750b38c5c9793884c9d7868d52e0fc2383f939a92c826c77e83";
@@ -40,8 +42,9 @@ const field=(name)=>status.match(new RegExp('^'+name+':\\\\s*(.*)$','m'))?.[1]?.
 for(const path of ['/scratch/home','/scratch/config','/scratch/data','/scratch/cache','/scratch/state','/scratch/tmp','/scratch/work','/scratch/plugin-data'])mkdirSync(path,{recursive:true,mode:0o700});
 const runtime={pid:process.pid,ppid:process.ppid,uid:process.getuid(),executable:process.execPath,sha256:createHash('sha256').update(readFileSync(process.execPath)).digest('hex'),version:process.version,capEff:field('CapEff'),capBnd:field('CapBnd'),noNewPrivs:field('NoNewPrivs'),seccomp:field('Seccomp')};
 if(runtime.pid!==1||runtime.ppid!==0||runtime.uid!==65534||runtime.executable!==process.argv[4]||runtime.sha256!==process.argv[3]||runtime.capEff!=='0000000000000000'||runtime.capBnd!=='0000000000000000'||runtime.noNewPrivs!=='1'||runtime.seccomp!=='2')process.exit(125);
+const launch=JSON.parse(process.argv[2]);
 process.stdout.write(JSON.stringify(runtime)+'\\n',()=>{
-const child=spawn('/bin/sh',['-c',process.argv[2]],{cwd:'/scratch/work',env:process.env,stdio:'inherit'});
+const child=spawn(launch.interpreter==='node'?process.argv[4]:'/bin/sh',launch.interpreter?[...(launch.interpreter==='node'?['--max-old-space-size=64']:[]),('/resources/'+launch.entry),...launch.argv]:['-c',launch.command],{cwd:launch.cwd===undefined?'/scratch/work':launch.cwd==='.'?'/resources':'/resources/'+launch.cwd,env:process.env,stdio:'inherit'});
 child.on('error',()=>process.exit(125));child.on('close',(code)=>process.exit(code??125));
 });
 `;
@@ -126,9 +129,9 @@ export function createConstrainedDockerProcessHost(
   let disposed = false;
 
   return {
-    capture(grants) {
+    capture(grants, layout) {
       if (disposed) throw new Error("Constrained runtime disposed");
-      const resources = captureResources(grants);
+      const resources = captureResources(grants, layout);
       const token = Object.freeze({}) as ConstrainedProcessResources;
       resourceTokens.set(token, resources);
       return token;
@@ -153,6 +156,7 @@ export function createConstrainedDockerProcessHost(
           event: string;
           plugin: boolean;
           resources: ReturnType<typeof captureResources>;
+          launch?: Readonly<ConstrainedProcessLaunch>;
         }
       >();
       const invocations = new Set<Invocation>();
@@ -374,6 +378,8 @@ export function createConstrainedDockerProcessHost(
         mkdirSync(code, { mode: 0o755 });
         mkdirSync(resources, { mode: 0o755 });
         writeFileSync(join(code, "bootstrap.mjs"), BOOTSTRAP, { mode: 0o444 });
+        for (const directory of spec.resources.directories)
+          mkdirSync(join(resources, directory), { recursive: true, mode: 0o755 });
         for (const resource of spec.resources.resources) {
           const target = join(resources, resource.name);
           mkdirSync(dirname(target), { recursive: true, mode: 0o755 });
@@ -411,7 +417,7 @@ export function createConstrainedDockerProcessHost(
             "TMP=/scratch/tmp",
             "TEMP=/scratch/tmp",
             `CODESHELL_HOOK_EVENT=${spec.event}`,
-            "CODESHELL_HOOK_CWD=/scratch/work",
+            `CODESHELL_HOOK_CWD=${spec.launch?.cwd === undefined ? "/scratch/work" : spec.launch.cwd === "." ? "/resources" : `/resources/${spec.launch.cwd}`}`,
             ...(spec.plugin
               ? [
                   "CODESHELL_PLUGIN_ROOT=/resources",
@@ -464,7 +470,7 @@ export function createConstrainedDockerProcessHost(
             config.nodeExecutable,
             "--max-old-space-size=64",
             "/code/bootstrap.mjs",
-            spec.command,
+            JSON.stringify(spec.launch ?? { command: spec.command }),
             config.nodeExecutableSha256,
             config.nodeExecutable,
           ]);
@@ -554,6 +560,7 @@ export function createConstrainedDockerProcessHost(
               hostPid: 0,
               removed: true,
               resourcesSha256: spec.resources.sha256,
+              ...(spec.launch ? { planSha256: spec.launch.planSha256 } : {}),
             },
           };
         } catch (error) {
@@ -609,6 +616,13 @@ export function createConstrainedDockerProcessHost(
             ? resourceTokens.get(spec.resources)
             : captureResources([]);
           if (!resources) throw new Error("Foreign constrained resource capability");
+          const launch = spec.launch
+            ? validateProcessLaunch(
+                spec.launch,
+                resources.resources.map((resource) => resource.name),
+                resources.directories,
+              )
+            : undefined;
           resources.assertCurrent();
           issuedResources.add(resources);
           const permit = Object.freeze({}) as ConstrainedProcessPermit;
@@ -618,6 +632,7 @@ export function createConstrainedDockerProcessHost(
             event: spec.event,
             plugin: spec.plugin === true,
             resources,
+            launch,
           });
           return permit;
         },
