@@ -1,17 +1,6 @@
-import { createHash, randomUUID } from "node:crypto";
-import {
-  closeSync,
-  constants,
-  fstatSync,
-  lstatSync,
-  mkdirSync,
-  openSync,
-  realpathSync,
-  renameSync,
-  rmSync,
-  writeFileSync,
-} from "node:fs";
-import { isAbsolute, join, relative, resolve, sep } from "node:path";
+import { createHash } from "node:crypto";
+import { realpathSync } from "node:fs";
+import { resolve } from "node:path";
 import { parseDocumentIsolated } from "./worker.js";
 import {
   DOCUMENT_PARSER_VERSION,
@@ -21,11 +10,10 @@ import {
   type ParsedDocument,
 } from "./types.js";
 
-const INDEX_MAX_BYTES = 8 * 1024 * 1024;
 const CHUNK_SIZE = 3_000;
 const CHUNK_OVERLAP = 200;
-// Disk bytes are workspace-writable and never authenticate derived text.
 // Only indexes parsed from original bytes in this process can be reused.
+// Legacy workspace-writable source-index files are never read, written or removed.
 const trustedIndexes = new Map<
   string,
   { cwd: string; resourceId: string; index: DocumentIndex; bytes: number }
@@ -50,41 +38,6 @@ function remember(key: string, cwd: string, index: DocumentIndex): void {
 
 export function uploadedDocumentHash(bytes: Uint8Array): string {
   return createHash("sha256").update(bytes).digest("hex");
-}
-
-function inside(root: string, path: string): boolean {
-  const rel = relative(root, path);
-  return rel !== ".." && !rel.startsWith(`..${sep}`) && !isAbsolute(rel);
-}
-
-function indexDirectory(cwd: string, create: boolean): string | undefined {
-  const workspace = realpathSync(resolve(cwd));
-  const state = join(workspace, ".code-shell");
-  const stateInfo = lstatSync(state);
-  if (
-    stateInfo.isSymbolicLink() ||
-    !stateInfo.isDirectory() ||
-    !inside(workspace, realpathSync(state))
-  )
-    throw new Error("Project state directory is unavailable for document indexes");
-  const root = join(state, "source-index");
-  try {
-    const info = lstatSync(root);
-    if (info.isSymbolicLink() || !info.isDirectory())
-      throw new Error("Document index directory must be a regular directory");
-  } catch (error) {
-    if ((error as NodeJS.ErrnoException).code !== "ENOENT") throw error;
-    if (!create) return undefined;
-    mkdirSync(root, { mode: 0o700 });
-  }
-  const real = realpathSync(root);
-  if (!inside(realpathSync(state), real))
-    throw new Error("Document index directory escapes workspace");
-  return real;
-}
-
-function indexName(resourceId: string): string {
-  return `${createHash("sha256").update(resourceId).digest("hex")}.json`;
 }
 
 function chunkId(
@@ -136,50 +89,7 @@ function buildIndex(resourceId: string, bytes: Uint8Array, parsed: ParsedDocumen
   return index;
 }
 
-function writeIndex(cwd: string, index: DocumentIndex): void {
-  const directory = indexDirectory(cwd, true)!;
-  const before = lstatSync(directory);
-  const assertDirectory = () => {
-    const current = lstatSync(directory);
-    if (
-      current.dev !== before.dev ||
-      current.ino !== before.ino ||
-      indexDirectory(cwd, false) !== directory
-    )
-      throw new Error("Document index directory changed during publication");
-  };
-  const name = indexName(index.resourceId);
-  const temp = join(directory, `.${name}.${randomUUID()}.tmp`);
-  let fd: number | undefined;
-  try {
-    const data = JSON.stringify(index);
-    if (Buffer.byteLength(data) > INDEX_MAX_BYTES)
-      throw new Error("Document index exceeds its storage limit");
-    fd = openSync(
-      temp,
-      constants.O_WRONLY | constants.O_CREAT | constants.O_EXCL | (constants.O_NOFOLLOW ?? 0),
-      0o600,
-    );
-    assertDirectory();
-    const descriptor = fstatSync(fd);
-    const target = lstatSync(temp);
-    if (
-      !descriptor.isFile() ||
-      target.isSymbolicLink() ||
-      target.ino !== descriptor.ino ||
-      target.dev !== descriptor.dev
-    )
-      throw new Error("Document index target changed before publication");
-    writeFileSync(fd, data);
-    assertDirectory();
-    renameSync(temp, join(directory, name));
-  } finally {
-    if (fd !== undefined) closeSync(fd);
-    rmSync(temp, { force: true });
-  }
-}
-
-/** Derived bytes are private to this project; every read still needs the original resource. */
+/** Bounded process-local derived bytes; every read still needs the original resource. */
 export async function loadUploadedDocumentIndex(
   cwd: string,
   resourceId: string,
@@ -201,8 +111,6 @@ export async function loadUploadedDocumentIndex(
   ]);
   const cached = trustedIndexes.get(key);
   if (cached) {
-    // Still reject a replaced/symlinked state/cache directory on a memory hit.
-    indexDirectory(cwd, false);
     options.assertCurrent();
     trustedIndexes.delete(key);
     trustedIndexes.set(key, cached);
@@ -215,18 +123,16 @@ export async function loadUploadedDocumentIndex(
   options.signal?.throwIfAborted();
   options.assertCurrent();
   const index = buildIndex(resourceId, bytes, parsed);
-  writeIndex(cwd, index);
   options.assertCurrent();
   remember(key, workspace, index);
   return index;
 }
 
+/** Invalidate only this process's cache, without touching legacy or unknown disk files. */
 export function invalidateUploadedDocumentIndex(cwd: string, resourceId: string): void {
   const workspace = realpathSync(resolve(cwd));
   for (const [key, value] of trustedIndexes)
     if (value.cwd === workspace && value.resourceId === resourceId) trustedIndexes.delete(key);
-  const directory = indexDirectory(cwd, false);
-  if (directory) rmSync(join(directory, indexName(resourceId)), { force: true });
 }
 
 export function documentIndexText(index: DocumentIndex): string {

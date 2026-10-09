@@ -512,8 +512,12 @@ function assertUploadedDocumentConsumer(consumerDirectory: string): void {
     join(consumerDirectory, "upload-documents.mjs"),
     readFileSync(join(REPO_ROOT, "tests/fixtures/upload-documents.mjs")),
   );
+  writeFileSync(
+    join(consumerDirectory, "upload-document-smoke-isolation.mjs"),
+    readFileSync(join(REPO_ROOT, "scripts/upload-document-smoke-isolation.mjs")),
+  );
   runCommand(
-    "packed uploaded document parser, index and cold-cache authority (Node)",
+    "packed uploaded documents: memory-only index and untouched legacy files (Node)",
     "node",
     [path],
     consumerDirectory,
