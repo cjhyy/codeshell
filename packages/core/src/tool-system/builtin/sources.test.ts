@@ -62,6 +62,31 @@ describe("ListSources", () => {
 });
 
 describe("ReadSource", () => {
+  test("non-MCP adapters retain the limited context for metadata and content", async () => {
+    let metadata = 0;
+    let content = 0;
+    registerConnectorAdapter({
+      ...mockAdapter,
+      async listResources(...args) {
+        expect(args[2]).not.toHaveProperty("mcpContext");
+        metadata++;
+        return mockAdapter.listResources(...args);
+      },
+      async read(...args) {
+        expect(args[2]).not.toHaveProperty("mcpContext");
+        content++;
+        return mockAdapter.read(...args);
+      },
+    });
+    const out = await readSourceTool(
+      { source: "m1", scope: "alpha", resource: "alpha/doc-1" },
+      ctx(),
+    );
+    expect(out).toContain("alpha doc one");
+    expect(metadata).toBe(1);
+    expect(content).toBe(1);
+  });
+
   test.each(["metadata", "content", "profile", "pin"])(
     "rejects changed authority after %s await",
     async (change) => {

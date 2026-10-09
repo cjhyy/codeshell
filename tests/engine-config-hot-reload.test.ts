@@ -106,24 +106,23 @@ describe("Engine.refreshRuntimeConfig", () => {
     }
   });
 
-  it("reconciles MCP servers on hot-reload (connect added + disconnect removed)", async () => {
+  it("updates the next-Run MCP baseline without reconciling the current Run", () => {
     const cwd = makeProject({});
     try {
       const engine = newEngine(cwd);
       const reconciled: Array<Record<string, unknown>> = [];
-      // Inject a fake MCPManager so we can spy on reconcile without spawning.
-      // refreshRuntimeConfig now drives a single idempotent reconcile() call
-      // (which internally connects added + disconnects removed servers).
+      // Reload must leave the current Run's shared-pool scope untouched.
+      // Actual connection changes at the next Run are covered by the guarded
+      // profile-mcp-runtime Engine fixture.
       (engine as any).mcpManager = {
         reconcile: async (servers: Record<string, unknown>) => {
           reconciled.push(servers);
         },
       };
-      engine.refreshRuntimeConfig({ mcpServers: { foo: { command: "x" } as any } }, 1);
-      // refreshRuntimeConfig schedules the reconcile asynchronously (void); give it a tick.
-      await new Promise((r) => setTimeout(r, 5));
-      expect(reconciled.length).toBe(1);
-      expect(reconciled[0]).toEqual({ foo: { command: "x" } });
+      const baseline = { foo: { command: "x" } };
+      engine.refreshRuntimeConfig({ mcpServers: baseline }, 1);
+      expect(reconciled).toEqual([]);
+      expect(engine.getConfig().mcpServers).toEqual(baseline);
     } finally {
       rmSync(cwd, { recursive: true, force: true });
     }

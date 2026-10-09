@@ -175,6 +175,7 @@ import {
   buildRunToolContext,
   buildRunPermissionPipeline,
   connectRunMcp,
+  snapshotRunMcpServers,
   assembleRunToolDefs,
   initializeRunToolSurface,
 } from "./run-tooling.js";
@@ -3127,7 +3128,10 @@ export class Engine {
       }),
     );
 
-    const mcpServers = this.config.mcpServers ?? {};
+    const mcpServers = snapshotRunMcpServers(
+      this.config.mcpServers ?? {},
+      effectiveProjectOverrides(this.getSettingsManager(), cwd, sessionProfileOverrides)?.mcp,
+    );
     const mcpDisabled = profile?.disableMcp === true;
     const mcpFailures = await connectRunMcp({
       toolContext: toolCtx,
@@ -3180,7 +3184,7 @@ export class Engine {
           behaviorProfileId: profile?.id ?? options?.behaviorMode,
           profileMeta: profile?.buildVisibilityMeta?.(profileParams),
           builtinOverride: this.readBuiltinOverride(toolCtx.cwd, sessionProfileOverrides),
-          mcpServers: this.config.mcpServers ?? {},
+          mcpServers,
           mcpDisabled,
           featureFlags: this.readFeatureFlags(),
           toolGuards: this.toolGuards,
@@ -3942,9 +3946,8 @@ export class Engine {
 
   /**
    * Config hot-reload "layer 2": merge a disk-default config patch into this
-   * ALREADY-RUNNING session's `this.config`, reload settings hooks, and
-   * incrementally connect any newly-added MCP servers. Applied at the next
-   * turn boundary — an in-flight turn is NOT interrupted: it keeps using the
+   * ALREADY-RUNNING session's `this.config` and reload settings hooks.
+   * Prompt changes apply at the next turn boundary — an in-flight turn keeps using the
    * PromptComposer it was built with, and the next turn rebuilds the composer
    * from the freshly-merged config (composer is rebuilt per-turn).
    *
@@ -3952,10 +3955,9 @@ export class Engine {
    * payloads are dropped so out-of-order reload deliveries can't let an older
    * config clobber a newer one (Q5).
    *
-   * MCP: reconciles the shared MCP pool against the new disk-default server
-   * set. Added servers connect idempotently; removed/disabled servers are
-   * disconnected and their registered MCP tools are unregistered so plugin
-   * disable takes effect without an Electron restart.
+   * MCP: preserve the current Run's connection/tool snapshot. At the next Run,
+   * connectAll applies the new baseline plus that Run's Profile/project/local
+   * overrides, and releases only scopes no owner still requires.
    *
    * Preset (#2): a preset hot-reload re-resolves `this.preset` so the next-turn
    * PromptComposer picks up the new preset's system prompt / behavior — that's
@@ -4014,19 +4016,9 @@ export class Engine {
       this.preset = nextPreset;
     }
     this.reloadHooks();
-    if (patch.mcpServers && this.mcpManager) {
-      // Fire-and-forget reconcile (connect added / disconnect removed servers).
-      // It must NOT surface as an unhandled rejection: a single flaky server
-      // that fails to connect/disconnect during hot-reload would otherwise
-      // crash the host process (or be silently swallowed). Catch + log so the
-      // reconcile is best-effort and the next reload can retry.
-      void this.mcpManager.reconcile(patch.mcpServers, this).catch((err) => {
-        logger.error("engine.mcp_reconcile_failed", {
-          error: err instanceof Error ? err.message : String(err),
-          version,
-        });
-      });
-    }
+    // MCP ownership and tool authority are Run-scoped. Keep this Run's frozen
+    // transport/overlay snapshot; the next Run's connectAll updates only this
+    // owner's desired connections and prunes scopes no sibling still needs.
     this.lastAppliedConfigVersion = version;
   }
 
