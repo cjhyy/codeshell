@@ -12,6 +12,7 @@
  * as no-op switches.
  */
 import React, { useState } from "react";
+import { CloudAccountSettings } from "./CloudAccountSettings";
 import { PermissionSection } from "./PermissionSection";
 import { UpdaterSettingsRow } from "../updater/UpdaterBanner";
 import { loadUILanguage, saveUILanguage, languageLabel, type UILanguage } from "../uiLanguage";
@@ -77,6 +78,7 @@ export function GeneralSection({ scope, activeProjectPath }: Props) {
           project scope — only the permission default is per-project. */}
       {scope === "user" && (
         <>
+          <CloudAccountSettings />
           <LanguageBlock />
           <UpdaterSettingsRow />
         </>

@@ -14,10 +14,13 @@ export interface DesktopRelayStatus {
   publicOrigin?: string;
   hostId?: string;
   name?: string;
+  accountId?: string;
 }
 export interface DesktopRelayEnrollment {
   relayOrigin: string;
-  ticket: string;
+  ticket?: string;
+  /** Explicit account authorization; omitting this preserves legacy ticket enrollment. */
+  authorization?: "account";
   name: string;
 }
 export interface DesktopRelayApi {
