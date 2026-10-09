@@ -88,6 +88,7 @@ import {
   type SummaryForkOptions,
   type SessionBundle,
   type SessionStateFieldPatch,
+  type SessionRunFinalStatePatch,
   type GoalTerminalSaveOutcome,
 } from "../session/session-manager.js";
 import type { SessionMessageRouter } from "../session/session-message.js";
@@ -441,6 +442,16 @@ export class Engine {
   private activeRunSession: SessionBundle | null = null;
   /** Original transcript identity survives Goal-control rebases of the live state. */
   private readonly runIds = new WeakMap<SessionState, string>();
+  /** Stable through pre-loop awaits, finalization/end hooks, and outer cleanup. */
+  private runningSession?: {
+    sessionId: string;
+    runId: string;
+    state: SessionState;
+    committedUsage: TokenUsage;
+    committedAnchor: SessionState["contextUsageAnchor"];
+    finalized: boolean;
+    ownUsage?: () => TokenUsage;
+  };
   /**
    * Same-instance run guard. Engine owns single-valued live controls and one
    * HookRegistry, so a second run must not enter until the first has completed
@@ -1404,6 +1415,16 @@ export class Engine {
       await this.ready();
       if (this.disposed) throw new Error("Engine has been disposed");
       return await this.runExclusive(task, options);
+    } catch (error) {
+      // Once a run is durably claimed, even a pre-loop initialization failure
+      // must produce terminal fields for its closing owner before settlement.
+      const running = this.runningSession;
+      if (running && !running.finalized) {
+        running.state.status = options?.signal?.aborted ? "aborted_streaming" : "model_error";
+        delete running.state.lastCompletionKind;
+        this.persistFinalRunState(running.state);
+      }
+      throw error;
     } finally {
       try {
         await this.activeRunScope?.dispose();
@@ -1421,6 +1442,7 @@ export class Engine {
             this.permissionController.applyPending();
           } finally {
             this.runInProgress = false;
+            this.runningSession = undefined;
             this.runAbort = undefined;
             settle();
           }
@@ -1663,13 +1685,21 @@ export class Engine {
       releaseClientMessageId,
     } = openedResult.opened;
     const session = openedResult.opened.session;
+    this.runIds.set(session.state, runId);
+    this.runningSession = {
+      sessionId: session.state.sessionId,
+      runId,
+      state: session.state,
+      committedUsage: { promptTokens: 0, completionTokens: 0, totalTokens: 0 },
+      committedAnchor: structuredClone(session.state.contextUsageAnchor),
+      finalized: false,
+    };
     const sessionLifetime = await this.openSessionLifetime(session.state.sessionId);
     this.activeRunScope = sessionLifetime.scope.child("run", runId);
     toolCtx.capabilityServices = Object.freeze({
       ...this.engineServices,
       ...sessionLifetime.services,
     });
-    this.runIds.set(session.state, runId);
     toolCtx.operations = {
       controller: new OperationController(new OperationLedger(this.sessionManager.getStorageDir())),
       resolver: new CapabilityResolver(),
@@ -1926,6 +1956,10 @@ export class Engine {
           dynamicContextMsg,
           retainedContextMessages,
         });
+        if (this.runningSession?.runId === runId) {
+          this.runningSession.ownUsage = () =>
+            foldRunUsage({ promptTokens: 0, completionTokens: 0, totalTokens: 0 }, getRunUsage());
+        }
 
         let result: Awaited<ReturnType<typeof turnLoop.run>>;
         let firstGoalTermination: GoalTerminationReason | undefined;
@@ -2065,6 +2099,7 @@ export class Engine {
       getProfileReportedResults,
       hasUnverifiedWrites,
     } = args;
+    const sourceRunId = this.runIds.get(session.state);
     return finalizeRunSuccess({
       session,
       result,
@@ -2086,7 +2121,8 @@ export class Engine {
       recordExternalBilledUsage,
       runMemoryPipeline: (transcript, sessionId, runCwd, client, record) =>
         this.runMemoryPipeline(transcript, sessionId, runCwd, client, record),
-      updatePersistedSessionState: (s, patch) => this.updatePersistedSessionState(s, patch),
+      updatePersistedSessionState: (s, patch) =>
+        this.updatePersistedSessionState(s, patch, sourceRunId),
       persistFinalRunState: (state) => this.persistFinalRunState(state),
       markRunAccountingFinalized: () => accounting.markRunAccountingFinalized(),
       costStoreSerialize: () => this.usageCostState(session.state.sessionId),
@@ -2636,11 +2672,13 @@ export class Engine {
 
     // eslint-disable-next-line prefer-const
     let turnLoop!: TurnLoop;
+    const sourceRunId = this.runIds.get(session.state);
     const accounting = createRunUsageAccounting({
       session,
       sid,
       resumeState: (s) => this.sessionManager.resume(s).state,
-      updatePersistedSessionState: (s, patch) => this.updatePersistedSessionState(s, patch),
+      updatePersistedSessionState: (s, patch) =>
+        this.updatePersistedSessionState(s, patch, sourceRunId),
       costState: () => this.usageCostState(sid),
       recordGoalJudgeUsage: (usage) => turnLoop.recordGoalJudgeUsage(usage),
     });
@@ -3696,8 +3734,19 @@ export class Engine {
    * Apply a field-level disk update and rebase this Engine's matching live
    * bundle onto the returned revision so its next whole-state CAS can proceed.
    */
-  private updatePersistedSessionState(sessionId: string, partial: SessionStateFieldPatch): void {
+  private updatePersistedSessionState(
+    sessionId: string,
+    partial: SessionStateFieldPatch,
+    sourceRunId?: string,
+  ): void {
     const stateRevision = this.sessionManager.updateSessionState(sessionId, partial);
+    // A previous run's fire-and-forget title/memory request can settle during
+    // a later run. Its legitimate disk update is not that later run's usage.
+    if (this.runningSession && this.runningSession.runId !== sourceRunId) return;
+    if (this.runningSession?.sessionId === sessionId) {
+      Object.assign(this.runningSession.state, partial, { stateRevision });
+      this.rememberRunAccounting(this.runningSession.state, partial);
+    }
     if (this.activeRunSession?.state.sessionId !== sessionId) return;
     Object.assign(this.activeRunSession.state, partial, { stateRevision });
   }
@@ -3758,14 +3807,82 @@ export class Engine {
     return outcome;
   }
 
-  private persistFinalRunState(state: SessionState): void {
+  /** Called by the closing host after revocation, then committed only after settled. */
+  prepareSessionCloseFinalization(sessionId: string, closingEpoch: number): () => void {
+    const running = this.runningSession;
+    if (running?.sessionId !== sessionId) return () => {};
+    const finalizer = this.sessionManager.createClosingRunFinalizer(
+      sessionId,
+      closingEpoch,
+      running.runId,
+    );
+    if (!finalizer) return () => {};
+    let consumed = false;
+    return () => {
+      if (consumed || !running.finalized) return;
+      consumed = true;
+      if (
+        !finalizer.commit(() => ({
+          fields: this.finalRunStateFields(running.state),
+          usageDelta: this.uncommittedRunUsage(running),
+          previousContextUsageAnchor: running.committedAnchor,
+        }))
+      ) {
+        logger.warn("session.closing_final_state_persist_failed", { sessionId });
+      }
+    };
+  }
+
+  private rememberRunAccounting(state: SessionState, partial?: SessionStateFieldPatch): void {
+    if (this.runningSession?.state === state) {
+      if (
+        !partial ||
+        [
+          "tokenUsage",
+          "cumulativePromptTokens",
+          "cumulativeCacheReadTokens",
+          "cumulativeCacheCreationTokens",
+        ].some((field) => Object.prototype.hasOwnProperty.call(partial, field))
+      ) {
+        this.runningSession.committedUsage = this.runningSession.ownUsage?.() ?? {
+          promptTokens: 0,
+          completionTokens: 0,
+          totalTokens: 0,
+        };
+      }
+      if (!partial || Object.prototype.hasOwnProperty.call(partial, "contextUsageAnchor")) {
+        this.runningSession.committedAnchor = structuredClone(state.contextUsageAnchor);
+      }
+    }
+  }
+
+  private uncommittedRunUsage(running: NonNullable<Engine["runningSession"]>): TokenUsage {
+    const current = running.ownUsage?.() ?? {
+      promptTokens: 0,
+      completionTokens: 0,
+      totalTokens: 0,
+    };
+    const previous = running.committedUsage;
+    return {
+      promptTokens: current.promptTokens - previous.promptTokens,
+      completionTokens: current.completionTokens - previous.completionTokens,
+      totalTokens: current.totalTokens - previous.totalTokens,
+      cacheReadTokens: (current.cacheReadTokens ?? 0) - (previous.cacheReadTokens ?? 0),
+      cacheCreationTokens: (current.cacheCreationTokens ?? 0) - (previous.cacheCreationTokens ?? 0),
+    };
+  }
+
+  private finalRunStateFields(
+    state: SessionState,
+    usage = state.tokenUsage,
+  ): SessionRunFinalStatePatch {
     state.costState = this.usageCostState(state.sessionId);
-    const finalFields = {
+    return {
       status: state.status,
       lastCompletionKind: state.lastCompletionKind,
       turnCount: state.turnCount,
       turnSeq: state.turnSeq,
-      tokenUsage: state.tokenUsage,
+      tokenUsage: usage,
       cumulativePromptTokens: state.cumulativePromptTokens,
       cumulativeCacheReadTokens: state.cumulativeCacheReadTokens,
       cumulativeCacheCreationTokens: state.cumulativeCacheCreationTokens,
@@ -3773,9 +3890,16 @@ export class Engine {
       costState: state.costState,
       completedSnapshotVersion: state.completedSnapshotVersion,
       completedThroughEventId: state.completedThroughEventId,
-    } satisfies SessionStateFieldPatch;
+    } satisfies SessionRunFinalStatePatch;
+  }
+
+  private persistFinalRunState(state: SessionState): void {
+    const finalFields = this.finalRunStateFields(state);
+    if (this.runningSession?.state === state) this.runningSession.finalized = true;
     if (!this.sessionManager.saveStateOrUpdateFields(state, finalFields, this.runIds.get(state))) {
       logger.warn("session.final_state_persist_failed", { sessionId: state.sessionId });
+    } else {
+      this.rememberRunAccounting(state);
     }
   }
 
@@ -3795,6 +3919,8 @@ export class Engine {
       !this.sessionManager.saveStateOrUpdateFields(state, progressFields, this.runIds.get(state))
     ) {
       logger.warn("session.run_progress_persist_failed", { sessionId: state.sessionId });
+    } else {
+      this.rememberRunAccounting(state);
     }
   }
 

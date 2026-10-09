@@ -270,7 +270,14 @@ describe("architecture growth budgets", () => {
     // Progressive tools add exactly 10 wiring lines: a run-local surface wraps
     // the existing catalog assembler and supplies active/eligible callbacks.
     // Selection, immutable snapshots and execution gates stay in their owners.
-    expect(lines("packages/core/src/engine/engine.ts")).toBeLessThanOrEqual(4_895);
+    // Active-close adds exactly 126 reviewed owner-wiring lines: stable actual
+    // run identity, private own-usage checkpoint and settled close handoff.
+    // Permission projection, durable ledger and CAS/epoch validation stay in
+    // their existing owners. Fourteen actual Engine cases cover immediate
+    // revocation, progress/late accounting and successor isolation; keeping this
+    // private run state together avoids adding another mutable ownership seam.
+    // Pin the concrete result, with no allowance for future features.
+    expect(lines("packages/core/src/engine/engine.ts")).toBeLessThanOrEqual(5_021);
   });
 
   test("published entry points cannot silently expand their compatibility surface", () => {

@@ -544,12 +544,14 @@ export class ChatSessionManager {
     const generation = this.sessionGeneration.get(sessionId) ?? 0;
     const invalidated = sessionManager?.incrementSessionGeneration(sessionId) ?? generation + 1;
     this.sessionGeneration.set(sessionId, invalidated);
+    const finalizeClosedRun = s.engine.prepareSessionCloseFinalization?.(sessionId, invalidated);
     s.cancel();
     clearSessionPathApprovals(sessionId);
     clearInteractiveApprovalSession(sessionId);
     clearCredentialSessionAllow(sessionId);
     clearInjectCredentialSessionAllow(sessionId);
     const finishClose = () => {
+      finalizeClosedRun?.();
       sessionManager?.forgetEphemeralSession?.(sessionId);
       if (this.sessions.get(sessionId) === s) this.sessions.delete(sessionId);
       if (markClosed) this.rememberClosedSession(sessionId);
