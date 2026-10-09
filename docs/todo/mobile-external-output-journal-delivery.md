@@ -40,6 +40,11 @@ does not call `ensure`, allocate a replacement CLI, or inject a native worker fo
 an external Session. An external selection remains classified as external when
 its state disappears or its ID is reused; it cannot silently switch producers.
 Missing state or a cold Main without a live instance rejects input. A live
+viewer must hold its current selection for an explicit existing Session command;
+an unselected or capacity-refused viewer cannot fall through to a native
+producer. The 128-entry command/source maps refuse new entries instead of
+forgetting an existing external identity. The device's freshly minted native
+Session retains its existing first-input route. A live
 Runtime with no journal yet remains selected via the optional generic
 `journalRequired` readiness flag. Its genuinely unavailable initial journal
 ends loading and waits passively for a real first cursor, without publishing an

@@ -364,3 +364,51 @@ test("project binding changed during an actual asynchronous root probe cannot be
     rmSync(cwd, { recursive: true, force: true });
   }
 });
+
+test("command capacity rejects a new viewer without forgetting an old external producer identity", async () => {
+  let external = true;
+  const commands = new MobileExternalRuntimeCommands({
+    authenticated: () => true,
+    authority: async () => ({ stamp: "same-incarnation", cwd: "/workspace", assertCurrent() {} }),
+    owner: () => 77,
+    service: () => null,
+    isExternal: () => external,
+    exists: () => true,
+    attachmentPath: async (path) => path,
+  });
+  for (let i = 0; i < 129; i++)
+    await commands.observe({
+      type: "session.select",
+      sessionId: "same-id",
+      viewerId: `tab-${i}`,
+      deviceId: "phone",
+    });
+  external = false; // A later native Session reuses the old external ID.
+  expect(commands.isExternal("same-id", "tab-0")).toBe(true);
+  expect(commands.isExternal("same-id", "tab-128")).toBe(true);
+  await expect(commands.prepare("tab-128", "phone", "same-id")).rejects.toThrow(
+    "selection unavailable",
+  );
+});
+
+test("an explicit existing native Session needs the current viewer selection, while a freshly minted native route remains available", async () => {
+  const commands = new MobileExternalRuntimeCommands({
+    authenticated: () => true,
+    authority: async () => ({ stamp: "native-incarnation", cwd: "/workspace", assertCurrent() {} }),
+    owner: () => undefined,
+    service: () => null,
+    isExternal: () => false,
+    exists: () => true,
+    attachmentPath: async (path) => path,
+  });
+  expect(commands.isExternal("native", "tab")).toBe(true);
+  expect(commands.isExternal("fresh-device-native", "tab", true)).toBe(false);
+  await commands.observe({
+    type: "session.select",
+    sessionId: "native",
+    viewerId: "tab",
+    deviceId: "phone",
+  });
+  expect(commands.isExternal("native", "tab")).toBe(false);
+  expect(commands.isExternal("unselected-native", "tab")).toBe(true);
+});

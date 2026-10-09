@@ -24,7 +24,13 @@ type Authority = {
   rootId?: string | null;
   assertCurrent: () => void;
 };
-type Selection = { sessionId: string; deviceId: string; authority?: Authority; owner?: number };
+type Selection = {
+  sessionId: string;
+  deviceId: string;
+  external: boolean;
+  authority?: Authority;
+  owner?: number;
+};
 export interface MobileExternalRuntimeCommandsDeps {
   authenticated: (viewer: string, device: string) => boolean;
   authority: (sessionId: string) => Promise<Authority>;
@@ -48,10 +54,16 @@ export class MobileExternalRuntimeCommands {
     if (releaseRoute) this.externalRoutes.delete(viewer);
   }
   isExternal(sessionId: string, viewer?: string, newlyMintedNative = false): boolean {
+    const selection = viewer ? this.selections.get(viewer) : undefined;
     return (
       (!newlyMintedNative && !this.deps.exists(sessionId)) ||
       this.deps.isExternal(sessionId) ||
-      (!!viewer && this.externalRoutes.get(viewer) === sessionId)
+      (!!viewer && this.externalRoutes.get(viewer) === sessionId) ||
+      // An evicted/refused/unselected viewer has no proof that an explicit
+      // Session still uses its native producer. Never fall through to Core.
+      (!!viewer &&
+        !newlyMintedNative &&
+        (!selection || selection.sessionId !== sessionId || selection.external))
     );
   }
 
@@ -73,14 +85,18 @@ export class MobileExternalRuntimeCommands {
     this.revoke(viewer);
     if (!this.deps.authenticated(viewer, device)) return;
     // Match the bounded recovery subscriptions; no unbounded per-socket state.
-    if (this.selections.size >= 128) this.revoke(this.selections.keys().next().value!);
-    const external = this.isExternal(event.sessionId, viewer) || !this.deps.exists(event.sessionId);
+    if (this.selections.size >= 128) return;
+    // Initial classification uses persisted producer identity. The command
+    // routing guard above separately requires a current accepted selection.
+    const external =
+      this.deps.isExternal(event.sessionId) ||
+      this.externalRoutes.get(viewer) === event.sessionId ||
+      !this.deps.exists(event.sessionId);
     if (external) {
-      if (!this.externalRoutes.has(viewer) && this.externalRoutes.size >= 128)
-        this.externalRoutes.delete(this.externalRoutes.keys().next().value!);
+      if (!this.externalRoutes.has(viewer) && this.externalRoutes.size >= 128) return;
       this.externalRoutes.set(viewer, event.sessionId);
     }
-    const selection: Selection = { sessionId: event.sessionId, deviceId: device };
+    const selection: Selection = { sessionId: event.sessionId, deviceId: device, external };
     this.selections.set(viewer, selection);
     try {
       const authority = await this.deps.authority(event.sessionId);

@@ -3,7 +3,7 @@
 import assert from "node:assert/strict";
 import { createHash } from "node:crypto";
 import { spawn } from "node:child_process";
-import { mkdirSync, readFileSync, statSync } from "node:fs";
+import { mkdirSync, readFileSync, renameSync, statSync } from "node:fs";
 import { join } from "node:path";
 import { act } from "react";
 import { SessionManager, sessionsRoot } from "@cjhyy/code-shell-core";
@@ -599,6 +599,135 @@ export async function run(root: string, port: number) {
       "actual Mobile cancel targets only the captured existing external run with one aborted journal terminal",
     );
     await service.stop("external-held", 77);
+    // Actual authenticated sockets exercise the bounded command/source maps.
+    // No Runtime is constructed for this metadata-only capacity Session.
+    const capacityId = "capacity-reused";
+    const capacityManager = new SessionManager();
+    capacityManager.create(cwd, "codex/synthetic", "codex", capacityId);
+    capacityManager.migrateSessionMainRoot(
+      capacityId,
+      { projectId: project.id, mainRootId: project.roots[0]!.id },
+      cwd,
+    );
+    owners.set(capacityId, 77);
+    const selected = new Map<string, () => void>();
+    const actualViewers = new Set<string>();
+    let capacityCommands!: MobileExternalRuntimeCommands;
+    const capacityRemote = new RemoteHostManager({
+      devices,
+      onClientEvent: async (raw) => {
+        const event = raw as Parameters<typeof handleClientEvent>[1];
+        assert(capacityRemote.hasAuthenticatedViewer(event.viewerId!, event.deviceId!));
+        actualViewers.add(event.viewerId!);
+        if (event.type === "session.select") {
+          await capacityCommands.observe(event);
+          selected.get(event.recoveryId!)?.();
+        } else
+          await handleClientEvent(
+            {
+              ...context,
+              remote: capacityRemote,
+              outputRecovery: undefined,
+              externalCommands: capacityCommands,
+            },
+            event,
+          );
+      },
+    });
+    capacityCommands = new MobileExternalRuntimeCommands({
+      authenticated: (viewer, id) => capacityRemote.hasAuthenticatedViewer(viewer, id),
+      authority: mobileSessionCommandAuthority,
+      owner: (id) => owners.get(id),
+      service: () => service,
+      isExternal: (id) => isPersistedExternalRuntime(capacityManager.readSessionState(id)),
+      exists: (id) => !!capacityManager.readSessionState(id),
+      attachmentPath: requireRendererProjectEntryPath,
+    });
+    const capacitySockets: WebSocket[] = [];
+    const waitMessage = (socket: WebSocket, match: (event: any) => boolean) =>
+      new Promise<any>((done, reject) => {
+        const timer = setTimeout(() => {
+          socket.removeEventListener("message", listener);
+          reject(new Error("capacity socket reply deadline"));
+        }, 5000);
+        const listener = (message: MessageEvent) => {
+          const event = JSON.parse(String(message.data));
+          if (match(event)) {
+            clearTimeout(timer);
+            socket.removeEventListener("message", listener);
+            done(event);
+          }
+        };
+        socket.addEventListener("message", listener);
+      });
+    try {
+      const started = await capacityRemote.start({ host: "127.0.0.1", port: 0 });
+      for (let i = 0; i < 129; i++) {
+        const socket = new NativeWebSocket(`ws://127.0.0.1:${started.port}/ws`);
+        capacitySockets.push(socket);
+        await new Promise<void>((done, reject) => {
+          socket.addEventListener("open", () => done(), { once: true });
+          socket.addEventListener("error", reject, { once: true });
+        });
+        const authenticated = waitMessage(socket, (event) => event.type === "auth.ok");
+        socket.send(
+          JSON.stringify({
+            type: "auth.device",
+            deviceId: device.id,
+            secretHash: "synthetic-mobile-secret",
+          }),
+        );
+        await authenticated;
+        const recoveryId = `capacity-${i}`;
+        const observed = new Promise<void>((done) => selected.set(recoveryId, done));
+        socket.send(JSON.stringify({ type: "session.select", sessionId: capacityId, recoveryId }));
+        await observed;
+      }
+      assert.equal(actualViewers.size, 129);
+      renameSync(join(sessionsRoot(), capacityId), join(root, "retired-capacity-session"));
+      capacityManager.create(cwd, "gpt-4o", "openai", capacityId);
+      capacityManager.migrateSessionMainRoot(
+        capacityId,
+        { projectId: project.id, mainRootId: project.roots[0]!.id },
+        cwd,
+      );
+      assert(!isPersistedExternalRuntime(capacityManager.readSessionState(capacityId)));
+      const beforeCapacity = turns();
+      for (const i of [0, 128]) {
+        const socket = capacitySockets[i]!;
+        const clientMessageId = `capacity-denied-${i}`;
+        const denied = waitMessage(
+          socket,
+          (event) => event.type === "error" && event.clientMessageId === clientMessageId,
+        );
+        socket.send(
+          JSON.stringify({
+            type: "chat.send",
+            sessionId: capacityId,
+            text: "must not switch producer",
+            clientMessageId,
+          }),
+        );
+        await denied;
+      }
+      assert.equal(turns(), beforeCapacity);
+      assert.equal(nativeStarts, 0);
+      assert.equal(
+        capacityManager
+          .resume(capacityId)
+          .transcript.getEvents()
+          .filter((event) => event.type === "message").length,
+        0,
+      );
+      output.authenticatedCapacityViewers = actualViewers.size;
+      cases.push(
+        "129 actual authenticated viewers preserve old external source at capacity and deny same-ID native fallback with zero input/execution",
+      );
+    } finally {
+      for (const socket of capacitySockets) socket.close();
+      await capacityRemote.stop();
+      owners.delete(capacityId);
+    }
     other.close();
     assert(
       !otherEvents.some(
