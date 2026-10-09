@@ -78,8 +78,12 @@ export interface GatewayControlServerOptions {
     | Promise<{ pairingUrl: string; expiresAt: number }>
     | { pairingUrl: string; expiresAt: number };
   petChat?: (request: PetChatControlRequest) => Promise<PetChatControlResult>;
+  /** Return false until Mimi can accept a turn without losing its message. */
+  isPetChatReady?: () => boolean;
   /** Where one inbound IM message should go: a bound Session, or Mimi. */
   routeSession?: (request: SessionRouteControlRequest) => Promise<unknown>;
+  /** Return false until persisted conversation bindings have been restored. */
+  isSessionRouteReady?: () => boolean;
 }
 
 export interface GatewayControlEventInput {
@@ -502,11 +506,15 @@ export class GatewayControlServer {
       }
       if (req.method === "POST" && req.url === "/v1/session/route" && this.opts.routeSession) {
         const body = parseSessionRouteRequest(await readJsonBody(req, 64 * 1024));
+        if (this.opts.isSessionRouteReady?.() === false) {
+          throw new GatewayControlRequestError("会话路由正在启动，消息将稍后重试", 503);
+        }
         sendJson(res, 200, await this.opts.routeSession(body));
         return;
       }
       if (req.method === "POST" && req.url === "/v1/pet/chat/start" && this.opts.petChat) {
         const body = parsePetChatRequest(await readJsonBody(req, 32 * 1024 * 1024));
+        this.assertPetChatReady();
         sendJson(res, 202, this.chatRequests.start(body));
         return;
       }
@@ -532,6 +540,7 @@ export class GatewayControlServer {
       }
       if (req.method === "POST" && req.url === "/v1/pet/chat" && this.opts.petChat) {
         const body = parsePetChatRequest(await readJsonBody(req, 32 * 1024 * 1024));
+        this.assertPetChatReady();
         sendJson(res, 200, await this.opts.petChat(body));
         return;
       }
@@ -546,6 +555,14 @@ export class GatewayControlServer {
         error: "operation_failed",
         message: error instanceof Error ? error.message : String(error),
       });
+    }
+  }
+
+  private assertPetChatReady(): void {
+    if (this.opts.isPetChatReady?.() === false) {
+      // Reject before creating a correlated ticket: a cached startup failure
+      // would otherwise prevent the durable inbox from retrying once ready.
+      throw new GatewayControlRequestError("Mimi Pet 正在启动，消息将稍后重试", 503);
     }
   }
 

@@ -3,7 +3,10 @@ import { mkdtempSync, readFileSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { GatewayControlServer } from "./im-gateway-control-server.js";
-import { DesktopControlClient } from "../../../chat/src/desktop-control-client.js";
+import {
+  DesktopControlClient,
+  DesktopControlUnavailableError,
+} from "../../../chat/src/desktop-control-client.js";
 import type { DesktopGatewayConfig } from "../../../chat/src/config.js";
 import { createBoundSessionChat } from "../../../chat/src/bound-session-chat.js";
 import { createMimiPetChat } from "../../../chat/src/gateway.js";
@@ -17,6 +20,142 @@ afterEach(() => {
 });
 
 describe("desktop control protocol integration", () => {
+  test("retains two startup messages until routes and Mimi are ready, then dispatches each once", async () => {
+    const root = mkdtempSync(join(tmpdir(), "codeshell-gateway-startup-readiness-"));
+    roots.push(root);
+    const descriptorPath = join(root, "desktop-control.json");
+    const inboxPath = join(root, "inbox.json");
+    let routesReady = false;
+    let petReady = false;
+    const routed: string[] = [];
+    const dispatched: string[] = [];
+    const replies: string[] = [];
+    const errors: Array<{ error: unknown; messageId?: string }> = [];
+    const server = new GatewayControlServer({
+      descriptorPath,
+      open: async () => {
+        throw new Error("unexpected open");
+      },
+      close: async () => {},
+      pairingUrl: () => {
+        throw new Error("unexpected pairing");
+      },
+      status: () => ({
+        running: false,
+        tunnelRunning: false,
+        tunnelConnected: false,
+        passcodeSet: true,
+        onlineDeviceCount: 0,
+      }),
+      isSessionRouteReady: () => routesReady,
+      isPetChatReady: () => petReady,
+      routeSession: async (input) => {
+        routed.push(input.messageId!);
+        return { kind: "not-bound" };
+      },
+      petChat: async (input) => {
+        dispatched.push(input.origin!.messageId!);
+        return { text: `收到 ${input.origin!.messageId}`, petSessionId: "pet-startup" };
+      },
+    });
+    const client = new DesktopControlClient({
+      descriptorPath,
+      autoLaunch: false,
+      args: [],
+      startupTimeoutMs: 1_000,
+    });
+    const mimi = createMimiPetChat({ desktop: client });
+    const boundSession = createBoundSessionChat({ desktop: client });
+    const adapter = {
+      channel: "wechat",
+      capabilities: BUILTIN_CHANNEL_CAPABILITIES.wechat,
+      run: async () => {},
+      send: async () => {},
+    };
+    const queue = new DeliveryQueue(
+      {
+        path: inboxPath,
+        maxPending: 10,
+        maxConcurrent: 1,
+        maxPerTarget: 1,
+        retryBaseMs: 20,
+        retryMaxMs: 20,
+        completedTtlMs: 60_000,
+      },
+      async (_adapterId, message) => {
+        const context = {
+          message,
+          adapter,
+          reply: async (reply: { text: string }) => {
+            replies.push(reply.text);
+          },
+        };
+        await boundSession(context, () => mimi(context, async () => {}));
+      },
+      (error, message) => errors.push({ error, messageId: message.messageId }),
+    );
+    const messages: ChannelMessage[] = ["first", "second"].map((messageId) => ({
+      channel: "wechat",
+      target: "owner",
+      senderId: "owner",
+      isDirectMessage: true,
+      messageId,
+      text: "香港找工作用什么软件",
+    }));
+    const until = async (predicate: () => boolean) => {
+      const deadline = Date.now() + 5_000;
+      while (!predicate()) {
+        if (Date.now() > deadline) throw new Error("Startup readiness retry did not settle");
+        await new Promise((resolveWait) => setTimeout(resolveWait, 5));
+      }
+    };
+    const retriedBoth = (reason: string) =>
+      new Set(
+        errors
+          .filter(
+            ({ error }) =>
+              error instanceof DesktopControlUnavailableError && error.message.includes(reason),
+          )
+          .map(({ messageId }) => messageId),
+      ).size === 2;
+    const expectRetained = () => {
+      const inbox = JSON.parse(readFileSync(inboxPath, "utf8"));
+      expect(inbox.pending).toHaveLength(2);
+      expect(Object.keys(inbox.completed)).toHaveLength(0);
+      expect(dispatched).toHaveLength(0);
+      expect(replies).toHaveLength(0);
+    };
+    try {
+      await server.start();
+      await queue.start();
+      for (const message of messages) await queue.enqueue("wechat", message);
+      await until(() => retriedBoth("会话路由正在启动"));
+      expect(routed).toHaveLength(0);
+      expectRetained();
+
+      routesReady = true;
+      await until(() => retriedBoth("Mimi Pet 正在启动"));
+      expectRetained();
+
+      // The same message identities must recover immediately, rather than
+      // replay a failed ticket cached for the normal ten-minute retention.
+      petReady = true;
+      await until(() => queue.status().pending === 0 && replies.length === 2);
+      expect([...dispatched].sort()).toEqual(["first", "second"]);
+      expect([...replies].sort()).toEqual(["收到 first", "收到 second"]);
+      for (const message of messages) {
+        expect(await queue.enqueue("wechat", message)).toBe("duplicate");
+      }
+      const completed = JSON.parse(readFileSync(inboxPath, "utf8"));
+      expect(completed.pending).toHaveLength(0);
+      expect(Object.keys(completed.completed)).toHaveLength(2);
+      expect(dispatched).toHaveLength(2);
+    } finally {
+      queue.stop();
+      await server.stop();
+    }
+  });
+
   test("replays two retained WeChat messages once after automatic descriptor recovery", async () => {
     const root = mkdtempSync(join(tmpdir(), "codeshell-gateway-recovery-"));
     roots.push(root);

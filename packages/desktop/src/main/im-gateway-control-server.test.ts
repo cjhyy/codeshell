@@ -28,6 +28,75 @@ afterEach(() => {
 });
 
 describe("GatewayControlServer", () => {
+  test("returns retryable startup responses before routing or creating Mimi tickets", async () => {
+    const root = mkdtempSync(join(tmpdir(), "codeshell-control-chat-readiness-"));
+    roots.push(root);
+    let petReady = false;
+    let routesReady = false;
+    let petCalls = 0;
+    let routeCalls = 0;
+    const server = makeServer(join(root, "desktop-control.json"), {
+      isPetChatReady: () => petReady,
+      isSessionRouteReady: () => routesReady,
+      petChat: async () => {
+        petCalls++;
+        return { text: "ready", petSessionId: "pet-ready" };
+      },
+      routeSession: async () => {
+        routeCalls++;
+        return { kind: "not-bound" };
+      },
+    });
+    try {
+      const descriptor = await server.start();
+      const post = (path: string, body: unknown) =>
+        fetch(`${descriptor.baseUrl}${path}`, {
+          method: "POST",
+          headers: {
+            authorization: `Bearer ${descriptor.token}`,
+            "content-type": "application/json",
+          },
+          body: JSON.stringify(body),
+        });
+      for (const path of ["/v1/pet/chat/start", "/v1/pet/chat"]) {
+        const blocked = await post(path, { message: "retained startup message" });
+        expect(blocked.status).toBe(503);
+        expect(await blocked.json()).toMatchObject({ error: "operation_failed" });
+      }
+      const route = {
+        channel: "wechat",
+        target: "owner",
+        senderId: "owner",
+        messageId: "startup-message",
+        text: "retained startup message",
+        isDirectMessage: true,
+      };
+      expect((await post("/v1/session/route", route)).status).toBe(503);
+      expect(petCalls).toBe(0);
+      expect(routeCalls).toBe(0);
+      expect((await call(descriptor, "GET", "/v1/status")).status).toBe(200);
+
+      routesReady = true;
+      expect((await post("/v1/session/route", route)).status).toBe(200);
+      expect(routeCalls).toBe(1);
+      expect((await post("/v1/pet/chat/start", { message: route.text })).status).toBe(503);
+      petReady = true;
+      const started = await post("/v1/pet/chat/start", { message: route.text });
+      expect(started.status).toBe(202);
+      const ticket = (await started.json()) as { requestId: string };
+      const result = await call(
+        descriptor,
+        "GET",
+        `/v1/pet/chat/result/${ticket.requestId}?waitMs=1000`,
+      );
+      expect(await result.json()).toMatchObject({ text: "ready", petSessionId: "pet-ready" });
+      expect((await post("/v1/pet/chat", { message: route.text })).status).toBe(200);
+      expect(petCalls).toBe(2);
+    } finally {
+      await server.stop();
+    }
+  });
+
   test("repairs a lost live descriptor with the same credential and stops recovery on shutdown", async () => {
     const root = mkdtempSync(join(tmpdir(), "codeshell-control-recovery-"));
     roots.push(root);
