@@ -9,13 +9,12 @@ import {
 import { randomUUID } from "node:crypto";
 import {
   createLinkService,
-  remoteLinkFromEnvironment,
   type LinkConnectionInput,
   type LinkAuthorizationResponse,
 } from "@cjhyy/code-shell-server/links";
 import { createNativeRemoteLinkManager } from "./remote-link-manager.js";
 import { openNativeLinkAuthorization } from "./remote-link-window.js";
-import { desktopRemoteLinkEnvironment } from "./desktop-remote-link-configuration.js";
+import { desktopRemoteLinkConfiguration } from "./desktop-remote-link-configuration.js";
 
 /** Window-owned authorization managers retire on navigation and destruction. */
 export function registerRemoteLinkIpc(deps: {
@@ -69,15 +68,7 @@ export function registerRemoteLinkIpc(deps: {
       manager = createNativeRemoteLinkManager({
         service: createLinkService({
           cwd: cwd || undefined,
-          remoteLink: () => {
-            const environment = desktopRemoteLinkEnvironment(process.env, app.isPackaged);
-            return environment?.CODE_SHELL_REMOTE_LINK_DESKTOP_ORIGIN
-              ? remoteLinkFromEnvironment(
-                  environment,
-                  environment.CODE_SHELL_REMOTE_LINK_DESKTOP_ORIGIN,
-                )
-              : undefined;
-          },
+          remoteLink: () => desktopRemoteLinkConfiguration(process.env, app.isPackaged),
           withMutation: (write) => deps.withMutation(cwd, write),
           onChanged: deps.onChanged,
           allowCliLogin: true,

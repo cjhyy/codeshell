@@ -1,3 +1,5 @@
+import { remoteLinkFromEnvironment } from "@cjhyy/code-shell-server/links";
+
 /** Public deployment metadata only. Provider credentials remain in the Link service. */
 export const packagedRemoteLinkEnvironment: Readonly<NodeJS.ProcessEnv> = Object.freeze({
   CODE_SHELL_REMOTE_LINK_ISSUER: "https://115.159.45.55:8443",
@@ -18,4 +20,15 @@ export function desktopRemoteLinkEnvironment(
     "CODE_SHELL_REMOTE_LINK_DESKTOP_ORIGIN",
   ].some((key) => environment[key] !== undefined);
   return custom || !isPackaged ? environment : packagedRemoteLinkEnvironment;
+}
+
+/** Resolve the selected deployment through the Host's existing origin validation. */
+export function desktopRemoteLinkConfiguration(
+  environment: NodeJS.ProcessEnv,
+  isPackaged: boolean,
+) {
+  const selected = desktopRemoteLinkEnvironment(environment, isPackaged);
+  return selected?.CODE_SHELL_REMOTE_LINK_DESKTOP_ORIGIN
+    ? remoteLinkFromEnvironment(selected, selected.CODE_SHELL_REMOTE_LINK_DESKTOP_ORIGIN)
+    : undefined;
 }
