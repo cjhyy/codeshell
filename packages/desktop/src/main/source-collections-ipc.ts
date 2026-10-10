@@ -7,8 +7,9 @@ interface CollectionIpcDeps {
 
 /** Per-invocation authority and cancellation belong to Main, never to renderer arguments. */
 export function registerSourceCollectionIpc(deps: CollectionIpcDeps): void {
-  for (const method of ["create", "get", "update", "pick", "delete"] as const) {
-    deps.ipcMain.handle(`sources:collections:${method}`, async (event, ...args) => {
+  const listener =
+    (method: keyof SourceCollectionApi) =>
+    async (event: any, ...args: any[]) => {
       const operation = deps.open(event);
       try {
         const invoke = operation.api[method] as (...parameters: any[]) => Promise<unknown>;
@@ -16,6 +17,10 @@ export function registerSourceCollectionIpc(deps: CollectionIpcDeps): void {
       } finally {
         operation.dispose();
       }
-    });
-  }
+    };
+  deps.ipcMain.handle("sources:collections:create", listener("create"));
+  deps.ipcMain.handle("sources:collections:get", listener("get"));
+  deps.ipcMain.handle("sources:collections:update", listener("update"));
+  deps.ipcMain.handle("sources:collections:pick", listener("pick"));
+  deps.ipcMain.handle("sources:collections:delete", listener("delete"));
 }

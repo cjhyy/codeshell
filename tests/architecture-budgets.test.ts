@@ -106,8 +106,7 @@ describe("architecture growth budgets", () => {
     // login, register, github, linkGitHub, cancelSignIn and logout. Their results
     // expose only public account state; access/refresh tokens remain in Main.
     // Include the extracted registrar and raise only this contract baseline by seven.
-    // Five collection operations use a fixed method table. Count its five literal
-    // method names, not the single loop registration, so extraction cannot hide growth.
+    // Count all five explicit collection operations in the extracted registrar.
     expect(
       matches("packages/desktop/src/main/index.ts", /ipcMain\.handle\(/g) +
         matches("packages/desktop/src/main/project-panel-ipc.ts", /ipcMain\.handle\(/g) +
@@ -119,10 +118,7 @@ describe("architecture growth budgets", () => {
         matches("packages/desktop/src/main/session-transcript-ipc.ts", /ipcMain\.handle\(/g) +
         matches("packages/desktop/src/main/profile-switch-ipc.ts", /ipcMain\.handle\(/g) +
         matches("packages/desktop/src/main/profile-plugin-export-ipc.ts", /ipcMain\.handle\(/g) +
-        matches(
-          "packages/desktop/src/main/source-collections-ipc.ts",
-          /"(?:create|get|update|pick|delete)"/g,
-        ) +
+        matches("packages/desktop/src/main/source-collections-ipc.ts", /ipcMain\.handle\(/g) +
         matches("packages/desktop/src/main/task-inbox/task-inbox-ipc.ts", /handle\("taskInbox:/g) +
         // Nine local-only Lab routes: eight existing operations plus P2 native
         // adoption. Exact body/scope review and post-dialog revalidation remain
