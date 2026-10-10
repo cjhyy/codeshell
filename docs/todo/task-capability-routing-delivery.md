@@ -22,6 +22,8 @@
 本地完成以下验证，均以进程退出码 0 为准：
 
 - Guarded 匹配器分片 11 案、第一方及 coding preset 分片 37 案、实际 Engine 分片 8 案、既有渐进工具面及架构回归分片 56 案，零失败、零跳过。覆盖排名、词边界、NFKC、无效规则回退、预算与继承追加、可用性求交、显式 allowlist、eager 和 legacy 兼容。
+- 副对话兼容分片 4 案通过：显式编辑任务保留 Write／Edit，经真实 ToolSearch 选择后下一步骤加载 Bash；两步均继续禁用 Agent。这个行为区分初始 schema 与执行权限。
+- 既有优化实验室账本分片 22 案通过。崩溃夹具的父子进程共享已授权 grant 的受控时钟，避免持久写入与 100 毫秒墙钟租约竞速；保持原 TTL、真实 SIGKILL、租约过期后换主、未知支出与防重复操作断言。生产租约机制不变。
 - `bun run test:task-routing` 使用真实编译包及合成 OpenAI-compatible HTTP 响应，实际执行本地 Read、绑定资料集 ReadSource 和 coding ApplyPatch。三个任务首轮分别为 11／15／13 个工具；同批 inactive 调用在审批、hook 和 handler 前拒绝，SDK retry 使用同一 schema，下一 Run 重新路由且不继承前一次 ToolSearch 选择，完整 catalog 保留。
 - 该 Node consumer 在 Core 导入前限定网络到本地精确 origin；27 次 HTTP 请求中 16 次为主工具请求、11 次为无工具辅助请求。两个越界负探针被拒绝。六个路由事件不含任务 canary；五个 Engine、HTTP server 和临时 fixture 完成收尾后才输出成功报告。私有 HOME 与网络补丁属于测试隔离，不等于 OS 沙箱。
 - `bun run test:deferred-tools` 原有编译 SDK consumer 通过；package-release 检查通过 9 个 tarball、47 个类型入口；完整工作区构建与类型检查、格式检查、lint 基线、engine-bypass 和 workflow test paths 检查通过。新增编译 consumer 已纳入 CI。
