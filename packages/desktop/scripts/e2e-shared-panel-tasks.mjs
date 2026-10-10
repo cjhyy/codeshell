@@ -304,6 +304,24 @@ console.log(JSON.stringify({bookmark, device: devices.addDevice({name:"Shared ta
     ...(confined ? { mainEntry: confined.mainEntry, env: confined.env } : {}),
   });
   const win = await findCodeShellWindow(electron);
+  if (worktreeDirectories) {
+    const storage = await electron.evaluate(({ app, safeStorage }) => ({
+      available: safeStorage.isEncryptionAvailable(),
+      backend: process.platform === "linux" ? safeStorage.getSelectedStorageBackend() : null,
+      roundtrip:
+        safeStorage.decryptString(safeStorage.encryptString("directory-keyring-fixture")) ===
+        "directory-keyring-fixture",
+      mockKeychain: app.commandLine.hasSwitch("use-mock-keychain"),
+      passwordStore: app.commandLine.getSwitchValue("password-store"),
+    }));
+    assert.equal(storage.available, true);
+    assert.equal(storage.roundtrip, true);
+    assert.equal(storage.mockKeychain, false);
+    if (process.platform === "linux") {
+      assert.equal(storage.backend, "gnome_libsecret");
+      assert.equal(storage.passwordStore, "gnome-libsecret");
+    }
+  }
   const viewOnly = win.getByRole("button", { name: /仅查看|View only/i });
   if (
     await viewOnly.waitFor({ state: "visible", timeout: 3000 }).then(
