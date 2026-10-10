@@ -701,9 +701,12 @@ export function MemoryStoreView({
           scope={promotion.scope}
           source={promotion.entry}
           onClose={() => setPromotion(null)}
-          onCopied={(profile) => {
+          onCopied={(profile, portableMemory) => {
             setPromotion(null);
-            setNotice(t("settingsX.memory.promotionDone", { profile }));
+            setNotice(
+              t("settingsX.memory.promotionDone", { profile }) +
+                (portableMemory ? "" : ` ${t("settingsX.memory.promotionDisabled")}`),
+            );
           }}
         />
       )}
@@ -1168,7 +1171,13 @@ function ViewEntry({
         </div>
         <div className="flex shrink-0 items-center gap-1">
           {onPromote ? (
-            <Button type="button" variant="ghost" size="sm" className="h-8 gap-1 px-2 text-xs" onClick={onPromote}>
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              className="h-8 gap-1 px-2 text-xs"
+              onClick={onPromote}
+            >
               <Copy size={12} />
               <span>{t("settingsX.memory.promotionTitle")}</span>
             </Button>
@@ -1239,19 +1248,35 @@ function ViewEntry({
 function MemoryEntryMeta({ entry }: { entry: RendererMemoryEntryFull }) {
   const { t } = useT();
   const origin = memoryOrigin(entry.origin);
-  const rows: Array<{ label: string; value?: string | number }> = [
-    { label: t("settingsX.memory.metaId"), value: entry.id },
-    { label: t("settingsX.memory.metaOrigin"), value: t(memoryOriginLabelKey(origin)) },
-    { label: t("settingsX.memory.metaCreatedAt"), value: entry.createdAt ?? entry.created },
-    { label: t("settingsX.memory.metaUpdatedAt"), value: entry.updatedAt },
-    { label: t("settingsX.memory.metaLastUsedAt"), value: entry.lastUsedAt ?? entry.lastUsed },
-    { label: t("settingsX.memory.metaUseCount"), value: memoryUseCount(entry) },
-    { label: t("settingsX.memory.metaUpdateCount"), value: memoryUpdateCount(entry) },
+  const rows: Array<{ id: string; label: string; value?: string | number }> = [
+    { id: "id", label: t("settingsX.memory.metaId"), value: entry.id },
+    {
+      id: "origin",
+      label: t("settingsX.memory.metaOrigin"),
+      value: t(memoryOriginLabelKey(origin)),
+    },
+    {
+      id: "createdAt",
+      label: t("settingsX.memory.metaCreatedAt"),
+      value: entry.createdAt ?? entry.created,
+    },
+    { id: "updatedAt", label: t("settingsX.memory.metaUpdatedAt"), value: entry.updatedAt },
+    {
+      id: "lastUsedAt",
+      label: t("settingsX.memory.metaLastUsedAt"),
+      value: entry.lastUsedAt ?? entry.lastUsed,
+    },
+    { id: "useCount", label: t("settingsX.memory.metaUseCount"), value: memoryUseCount(entry) },
+    {
+      id: "updateCount",
+      label: t("settingsX.memory.metaUpdateCount"),
+      value: memoryUpdateCount(entry),
+    },
   ];
   return (
     <dl className="mt-3 grid grid-cols-[max-content_minmax(0,1fr)] gap-x-2 gap-y-1 text-xs">
       {rows.map((row) => (
-        <React.Fragment key={row.label}>
+        <React.Fragment key={row.id}>
           <dt className="text-muted-foreground">{row.label}</dt>
           <dd className="min-w-0 truncate font-mono text-foreground">{row.value ?? "-"}</dd>
         </React.Fragment>

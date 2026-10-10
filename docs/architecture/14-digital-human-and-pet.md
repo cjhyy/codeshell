@@ -65,9 +65,13 @@ the profile has `portableMemory: true`.
 
 Core memory resolution still covers only the first three rows: global →
 profile → project, with the more specific project layer closest to the
-current task. The editor does not copy project Skills or project memory into a
-profile. Pet memory is a separate Desktop-hosted manager store and never enters
-that Core resolution chain.
+current task. The project memory editor can explicitly copy a selected user or
+dream entry into a chosen digital human after editing and reviewing its final
+content. The copy receives a new identity and manual ownership; the project
+original stays in place. It participates in the existing profile layer only
+when that profile enables portable memory. Project Skills are not copied, and
+automatic dream still does not write profile memory. Pet memory is a separate
+Desktop-hosted manager store and never enters that Core resolution chain.
 
 ## Pet / Mimi memory
 

@@ -82,7 +82,9 @@ describe("architecture growth budgets", () => {
     // stay in mobile-remote modules; no IPC route or public export is added here.
     // Awaited constrained Hook cleanup uses the extracted desktop-shutdown quit
     // coordinator. Its failure/retry gate reduces Main without raising this limit.
-    expect(lines("packages/desktop/src/main/index.ts")).toBeLessThanOrEqual(7_201);
+    // Seven composition lines register reviewed project-to-Profile memory copies;
+    // review custody and storage validation remain in their extracted modules.
+    expect(lines("packages/desktop/src/main/index.ts")).toBeLessThanOrEqual(7_208);
     expect(lines("packages/desktop/src/main/project-panel-ipc.ts")).toBeLessThanOrEqual(322);
     // The five generic Link authorization operations reuse the window/project
     // owner and live reauthorization guard here. Challenge state, provider
@@ -135,7 +137,8 @@ describe("architecture growth budgets", () => {
       // validation and recovery algorithm stay in Core and the extracted adapters.
       // +2 metadata-only Profile preview and revision-checked adoption routes.
       // +3 preview/cancel/reviewed-save operations, without installation authority.
-    ).toBeLessThanOrEqual(342);
+      // +2 project-memory copy preview/commit operations, bound to a main-frame review.
+    ).toBeLessThanOrEqual(344);
     // v0.8.17 added the reviewed Panel catalog/task bridge to both preload
     // surfaces. Mimi's bounded transcript pagination adds one typed invoke;
     // the validation and file-reading implementation remain extracted in main.
@@ -156,7 +159,8 @@ describe("architecture growth budgets", () => {
     // +7 typed Profile review/adoption adapter lines, with no renderer file access.
     // +2 import/composition lines for the extracted static export contract.
     // +2 composition lines for masked native operation review; no resolution logic in preload.
-    expect(lines("packages/desktop/src/preload/index.ts")).toBeLessThanOrEqual(1_882);
+    // +2 import/composition lines for the reviewed memory-copy API.
+    expect(lines("packages/desktop/src/preload/index.ts")).toBeLessThanOrEqual(1_884);
     // Include all nine extracted Lab invokes and the five generic Link
     // challenge invokes plus usage history. Main-only routes remain counted
     // above even when no renderer adapter exists; do not equate the totals.
@@ -179,7 +183,8 @@ describe("architecture growth budgets", () => {
         matches("packages/desktop/src/preload/optimization-lab-api.ts", /ipc\.invoke\(/g) +
         matches("packages/desktop/src/preload/operation-resolution-api.ts", /ipc\.invoke\(/g),
       // Five reviewed collection invokes. Native file paths never arrive as renderer arguments.
-    ).toBeLessThanOrEqual(335);
+      // +2 memory-copy invokes; commit carries only the reviewed token and project.
+    ).toBeLessThanOrEqual(337);
     // GitHub skill previews and Panel task hosting carry main-issued review and
     // ownership fields across the typed preload boundary. The optional Mimi
     // transcript-page method adds its bounded response shape without widening
@@ -198,7 +203,8 @@ describe("architecture growth budgets", () => {
     // +9 typed Profile metadata preview and CAS adoption declarations.
     // Static export API is composed through one type-only import/extends seam.
     // +3 type-only native review declaration lines reuse the extracted API contract.
-    expect(lines("packages/desktop/src/preload/types.d.ts")).toBeLessThanOrEqual(2_977);
+    // +6 type-only declaration lines compose the extracted memory-copy API.
+    expect(lines("packages/desktop/src/preload/types.d.ts")).toBeLessThanOrEqual(2_983);
     // The responsive-sidebar work extracts ResponsiveSidebar (132),
     // useResponsiveSidebar (61) and useSessionHistorySync (127) into
     // renderer/app/, so the 320 lines of behaviour live outside this file and

@@ -5,9 +5,9 @@ import {
   fstatSync,
   lstatSync,
   openSync,
+  opendirSync,
   readSync,
-  readdirSync,
-  type Stats,
+  type BigIntStats,
 } from "node:fs";
 import { homedir } from "node:os";
 import { join } from "node:path";
@@ -34,13 +34,17 @@ function object(value: unknown, keys: string[]): Record<string, unknown> {
     throw new Error("unexpected memory promotion field");
   return value as Record<string, unknown>;
 }
-function text(value: unknown, max: number, multiline = false): string {
+function text(
+  value: unknown,
+  max: number,
+  options: { multiline?: boolean; allowEmpty?: boolean } = {},
+): string {
   if (
     typeof value !== "string" ||
-    !value.trim() ||
+    (!options.allowEmpty && !value.trim()) ||
     Buffer.byteLength(value) > max ||
     value.includes("\0") ||
-    (!multiline && /[\r\n]/.test(value))
+    (!options.multiline && /[\r\n]/.test(value))
   )
     throw new Error("invalid memory promotion text");
   return value;
@@ -59,9 +63,9 @@ export function parseMemoryPromotionPreview(value: unknown): PreviewProfileMemor
     throw new Error("invalid memory pin");
   const draft: ProfileMemoryPromotionDraft = {
     name: text(raw.name, 512),
-    description: text(raw.description, 4096),
+    description: text(raw.description, 4096, { allowEmpty: true }),
     type: raw.type as ProfileMemoryPromotionDraft["type"],
-    content: text(raw.content, 256 * 1024, true),
+    content: text(raw.content, 256 * 1024, { multiline: true, allowEmpty: true }),
     ...(raw.pinned === undefined ? {} : { pinned: raw.pinned }),
   };
   return {
@@ -91,16 +95,21 @@ function directory(path: string): boolean {
     throw error;
   }
 }
-function identity(info: Stats): string {
-  return [info.dev, info.ino, info.size, info.mtimeMs, info.ctimeMs].join(":");
+function identity(info: BigIntStats): string {
+  return [info.dev, info.ino, info.size, info.mtimeNs, info.ctimeNs].join(":");
 }
 function fileProof(path: string, limit = MAX_FILE_BYTES): string {
-  const before = lstatSync(path);
-  if (!before.isFile() || before.isSymbolicLink() || before.size > limit)
+  const before = lstatSync(path, { bigint: true });
+  if (!before.isFile() || before.isSymbolicLink() || before.size > BigInt(limit))
     throw new Error("unsafe memory file");
-  const descriptor = openSync(path, constants.O_RDONLY | (constants.O_NOFOLLOW ?? 0));
+  // A regular file may be replaced by a FIFO between lstat and open. Do not
+  // block Main waiting for its writer before the descriptor type can be checked.
+  const descriptor = openSync(
+    path,
+    constants.O_RDONLY | (constants.O_NOFOLLOW ?? 0) | (constants.O_NONBLOCK ?? 0),
+  );
   try {
-    const opened = fstatSync(descriptor);
+    const opened = fstatSync(descriptor, { bigint: true });
     if (!opened.isFile() || identity(opened) !== identity(before))
       throw new Error("memory file changed");
     const bytes = Buffer.alloc(limit + 1);
@@ -112,9 +121,9 @@ function fileProof(path: string, limit = MAX_FILE_BYTES): string {
     }
     if (
       count > limit ||
-      count !== opened.size ||
-      identity(fstatSync(descriptor)) !== identity(opened) ||
-      identity(lstatSync(path)) !== identity(opened)
+      BigInt(count) !== opened.size ||
+      identity(fstatSync(descriptor, { bigint: true })) !== identity(opened) ||
+      identity(lstatSync(path, { bigint: true })) !== identity(opened)
     )
       throw new Error("memory file changed or exceeded its size limit");
     // Reject malformed UTF-8 before MemoryManager's existing parser reads it.
@@ -135,6 +144,21 @@ function memoryRoot(baseDir: string, projectDir?: string): string {
     ? join(baseDir, "projects", projectDir.replace(/[/\\:]/g, "-").replace(/^-/, ""), "memory")
     : join(baseDir, "memory");
 }
+function boundedNames(path: string): string[] {
+  const dir = opendirSync(path);
+  const names: string[] = [];
+  try {
+    for (;;) {
+      const entry = dir.readSync();
+      if (!entry) return names;
+      if (names.length >= MAX_STORE_ENTRIES)
+        throw new Error("memory store exceeds review entry limit");
+      names.push(entry.name);
+    }
+  } finally {
+    dir.closeSync();
+  }
+}
 function readStore(
   baseDir: string,
   scope: "user" | "dream",
@@ -153,19 +177,18 @@ function readStore(
   if (!directory(root)) return undefined;
   // MemoryManager's constructor migrates the old flat layout. Review never
   // triggers that write: the existing memory editor must migrate it first.
-  if (readdirSync(root).some((name) => name.endsWith(".md")))
+  if (boundedNames(root).some((name) => name.endsWith(".md")))
     throw new Error("legacy memory layout requires opening the memory editor first");
   const dir = join(root, scope);
   if (!directory(dir)) return undefined;
-  const names = readdirSync(dir);
-  if (names.length > MAX_STORE_ENTRIES) throw new Error("memory store exceeds review entry limit");
-  let bytes = 0;
+  const names = boundedNames(dir);
+  let bytes = 0n;
   const proofs = new Map<string, string>();
   for (const name of names) {
     if (!name.endsWith(".md")) continue;
     proofs.set(name, fileProof(join(dir, name)));
-    bytes += lstatSync(join(dir, name)).size;
-    if (bytes > MAX_STORE_BYTES) throw new Error("memory store exceeds review byte limit");
+    bytes += lstatSync(join(dir, name), { bigint: true }).size;
+    if (bytes > BigInt(MAX_STORE_BYTES)) throw new Error("memory store exceeds review byte limit");
   }
   return { manager: new MemoryManager({ baseDir, scope, projectDir }), proofs };
 }
