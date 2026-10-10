@@ -423,7 +423,7 @@ interface VerifiedWriteResult<T = unknown> {
 
 #### Task Capability Router
 
-后续可以在 Run 开始前选择稳定的工具 Profile；权限范围仍由 `EngineRunOptions.toolAllowlist` / `RunBehaviorProfile.allowedToolNames` 控制，不能把权限 allowlist 当作渐进加载集合，也不能依赖用户 prompt 猜测静默收窄能力：
+在 Run 开始时选择稳定的初始 schema 集合；权限范围仍由 `EngineRunOptions.toolAllowlist` / `RunBehaviorProfile.allowedToolNames` 控制，不能把权限 allowlist 当作渐进加载集合，也不能依赖用户 prompt 猜测静默收窄能力：
 
 - 普通 Run 初始暴露 8–15 个相关工具；
 - 3–5 个跨任务核心工具始终可用；
@@ -455,7 +455,16 @@ ToolSearch 搜索结果应返回紧凑的名称、用途和 schema 引用。只�
 
 本地验收入口为 guarded Bun 的 `run-tool-surface.test.ts`、`tool-search.test.ts`、`run-tooling.deferred.test.ts`、`run-tooling.mcp.test.ts`、`turn-loop-deferred-tools.test.ts` 和真实 Link source consumer；编译 SDK 验收用 `bun run test:deferred-tools`，须先完成 `test:package-release`。Node wrapper 提供私有 HOME，fixture 在导入 Core 前限定网络到本地 exact origin。上传 parser smoke 明确限定 ReadSource，因为 `enabledBuiltinTools` 是增量安装，真实 harness 目录仍含 ToolSearch；parser 原有内容与授权断言全部保留。
 
-仍未实现：按任务意图自动路由、跨 Run/Session 持久 schema 选择、MCP transport 懒连接、新连接器接入、真实 provider 的长程 cache/token 收益评估。固定 preset 初始集合是当前策略；目录和选择回执的字符上限不等于精确 token 预算。源码/本地 fixture 验收不等于正式发布、真实账号或部署验收。
+当时使用固定 preset 初始集合；下面记录后续任务路由实现。目录和选择回执的字符上限不等于精确 token 预算。源码/本地 fixture 验收不等于正式发布、真实账号或部署验收。
+
+#### 2026-10-10 源码实现记录：按任务选择初始工具
+
+- `AgentPreset.initialToolRouting` 声明有界词项和工具名规则。Core 提供通用匹配、稳定排序、eligible 求交及数量预算；coding 能力包声明编码、工作树、ApplyPatch 与 LSP 规则。没有额外模型调用，也不新增 UI 入口。
+- Run 初始化只匹配当前任务一次。普通第一方匹配路径保留现有协调工具及 Goal／notes 可用性约束，优先加载相关 schema，目标为 8–15 个；ToolSearch 计入上限，可用工具不足时不补入未授权名称。继承 preset 明确追加的工具保留，可超过第一方预算。
+- 无匹配、无策略、无效策略、显式 Run／behavior allowlist、eager preset 和无 ToolSearch 的目录沿用既有路径。完整 catalog、执行权限、审批和撤权行为保留；按需选择从下一模型步骤生效，同一步重试沿用冻结快照。下一 Run 重新匹配，前一次选择不跨 Run 持久化。
+- 新增 `tool.surface.routed` 只记录规则 ID、工具名和数量；不在该事件中写入原始任务或命中词项。既有 Session 和任务日志合同不变。
+
+验证入口及边界见[任务工具路由交付记录](task-capability-routing-delivery.md)。本地词项匹配不代表完整自然语言理解，也未证明真实模型质量或成本收益。剩余包括跨 Run/Session 持久 schema 选择、MCP transport 懒连接、新连接器接入、真实 provider 的长程 cache/token 收益评估。
 
 #### Skill Listing Budget
 
@@ -616,7 +625,7 @@ OBSERVE
 
 ### Phase 2：上下文治理（P1）
 
-- [ ] 使用现有 tool allowlist 实现 Task Capability Router；
+- [x] 通过 preset 初始 schema 策略实现 Task Capability Router，权限 allowlist 保持独立；见 10.2 与交付记录；
 - [ ] Deferred Tools 从 MCP 扩展到全部非核心工具；
 - [ ] 删除 System Prompt 的逐工具重复 description；
 - [ ] 为 Skill Listing 增加预算、排序和 name-only 降级；

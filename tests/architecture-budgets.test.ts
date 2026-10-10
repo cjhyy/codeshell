@@ -333,7 +333,8 @@ describe("architecture growth budgets", () => {
       // +1 type-only signer contract lets an SDK Host supply custody without
       // exposing the key store, worker IPC or mutable default signer authority.
       // +1 collection manifest schema/types for standalone Hosts and type-only Desktop UI.
-      "packages/core/src/index.ts": 132,
+      // +1 type-only preset routing policy/rule contract; no runtime or permission authority.
+      "packages/core/src/index.ts": 133,
       // +3 reviewed Optimization Lab foundations: read-only Skill snapshots,
       // the shared file lock, and text-connection resolution (§5.2 of the plan).
       // +1 type-only LifetimeScope/Disposable contract lets capability modules
@@ -343,7 +344,8 @@ describe("architecture growth budgets", () => {
       // +4 reviewed extension statements: memory-only ephemeral signer factory,
       // read-only current logical/physical attempt identities, and signer type.
       // Isolated capability Hosts own the ephemeral signer's disposal.
-      "packages/core/src/index.extension.ts": 57,
+      // +1 the same type-only routing declarations for capability-owned presets.
+      "packages/core/src/index.extension.ts": 58,
       // Shared crash-safe persistence primitives and the Desktop-owned
       // background job registry are host-only API.
       // Speech model resolution adds one reviewed host-only module, shared by

@@ -209,9 +209,84 @@ const generalCodingExposure = derivePresetExposure("general", CODING_TOOLS);
 const terminalCodingExposure = derivePresetExposure("terminal-coding", CODING_TOOLS);
 const productFullExposure = derivePresetExposure("product-full", BUILTIN_TOOLS);
 
+function codingInitialToolRouting(
+  terminal: boolean,
+): NonNullable<AgentPreset["initialToolRouting"]> {
+  const base = generalBase.initialToolRouting!;
+  const rules = [
+    {
+      id: "coding",
+      terms: [
+        "code",
+        "coding",
+        "implement",
+        "debug",
+        "bug",
+        "fix",
+        "test",
+        "tests",
+        "refactor",
+        "repository",
+        "repo",
+        "git",
+        "commit",
+        "patch",
+        "lsp",
+        "terminal",
+        "shell",
+        "python",
+        "edit file",
+        "modify file",
+        "编程",
+        "代码",
+        "实现",
+        "修复",
+        "测试",
+        "重构",
+        "仓库",
+        "补丁",
+        "修改文件",
+        "编辑文件",
+        "改配置",
+        "报错",
+      ],
+      toolNames: terminal
+        ? ["ApplyPatch", "Bash", "Read", "Grep", "LSP", "Glob", "Edit", "NotebookEdit"]
+        : ["Bash", "Read", "Grep", "Glob", "Edit", "DriveAgent", "DriveAgentJobs"],
+    },
+    {
+      id: "worktree",
+      terms: ["worktree", "branch", "工作树", "分支"],
+      toolNames: ["Bash", "EnterWorktree", "ExitWorktree", "SwitchSessionWorkspace"],
+    },
+    ...base.rules.map((rule) =>
+      terminal && rule.id === "files"
+        ? { ...rule, toolNames: ["Read", "Glob", "Grep", "view_image"] }
+        : rule,
+    ),
+  ];
+  return {
+    ...base,
+    // Terminal-coding keeps its ApplyPatch policy. Generic file intent must not
+    // bring Write back, including when it is matched alongside another route.
+    managedToolNames: [
+      ...new Set([
+        ...base.managedToolNames.filter((name) => !terminal || name !== "Write"),
+        "ApplyPatch",
+        ...rules.flatMap((rule) => rule.toolNames),
+      ]),
+    ].filter((name) => !terminal || name !== "Write"),
+    rules: rules.map((rule) => ({
+      ...rule,
+      toolNames: terminal ? rule.toolNames.filter((name) => name !== "Write") : rule.toolNames,
+    })),
+  };
+}
+
 /** Preserve the general host profile while adding coding-package tools tagged for it. */
 export const CODING_GENERAL_PRESET: AgentPreset = {
   ...generalBase,
+  initialToolRouting: codingInitialToolRouting(false),
   builtinTools: [...generalBase.builtinTools, ...generalCodingExposure.builtinTools],
   defaultPermissionRules: [
     ...generalBase.defaultPermissionRules,
@@ -229,6 +304,7 @@ export const TERMINAL_CODING_PRESET: AgentPreset = {
     ...(generalBase.initialToolNames ?? []).filter((name) => name !== "Write"),
     "ApplyPatch",
   ],
+  initialToolRouting: codingInitialToolRouting(true),
   builtinTools: [
     ...generalBase.builtinTools,
     ...productFullExposure.builtinTools,

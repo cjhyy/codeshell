@@ -16,6 +16,7 @@ import {
   type BuiltinTool,
 } from "../tool-system/builtin/index.js";
 import type { CapabilityToolSelectionContext } from "../capabilities/index.js";
+import type { TaskToolRoutingPolicy } from "./task-tool-routing.js";
 
 export const AGENT_PRESET_NAMES = ["harness-min", "general"] as const;
 /** Built-in preset names. Module presets use arbitrary strings via AgentModule.engine.presets. */
@@ -32,6 +33,8 @@ export interface AgentPreset {
   builtinTools: string[];
   /** Initial model tools. Other eligible tools require ToolSearch selection. Omit for eager hosts. */
   initialToolNames?: readonly string[];
+  /** Task-specific initial schemas only; never grants tool eligibility or permission. */
+  initialToolRouting?: TaskToolRoutingPolicy;
   defaultPermissionRules: PermissionRule[];
 }
 
@@ -56,6 +59,133 @@ const INITIAL_GENERAL_TOOLS = [
   "cancel_goal",
 ] as const;
 
+const GENERAL_ROUTING_RULES = [
+  {
+    id: "research",
+    terms: [
+      "research",
+      "web",
+      "website",
+      "internet",
+      "browse",
+      "search",
+      "调研",
+      "搜索",
+      "网页",
+      "网站",
+      "联网",
+      "查找",
+    ],
+    toolNames: ["WebSearch", "WebFetch"],
+  },
+  {
+    id: "sources",
+    terms: [
+      "source",
+      "sources",
+      "data source",
+      "dataset",
+      "collection",
+      "uploaded",
+      "attachment",
+      "document",
+      "documents",
+      "mcp",
+      "资料",
+      "数据源",
+      "资料集",
+      "附件",
+      "上传",
+      "文档",
+    ],
+    toolNames: ["ListSources", "ReadSource", "ListMcpResources", "ReadMcpResource"],
+  },
+  {
+    id: "files",
+    terms: [
+      "file",
+      "files",
+      "folder",
+      "folders",
+      "directory",
+      "read",
+      "write",
+      "edit",
+      "image",
+      "文件",
+      "目录",
+      "文件夹",
+      "读取",
+      "写入",
+      "编辑",
+      "图片",
+    ],
+    toolNames: ["Read", "Glob", "Grep", "Write", "Edit", "view_image"],
+  },
+  {
+    id: "automation",
+    terms: [
+      "automation",
+      "schedule",
+      "scheduled",
+      "cron",
+      "remind",
+      "reminder",
+      "recurring",
+      "monitor",
+      "自动化",
+      "定时",
+      "提醒",
+      "周期",
+      "监控",
+    ],
+    toolNames: ["CronList", "CronCreate", "CronDelete", "Sleep"],
+  },
+  {
+    id: "history",
+    terms: [
+      "history",
+      "previous conversation",
+      "previous session",
+      "memory",
+      "memories",
+      "notes",
+      "历史",
+      "上次对话",
+      "之前的会话",
+      "记忆",
+      "笔记",
+    ],
+    toolNames: ["SearchHistory", "MemoryList", "MemoryRead", "Read"],
+  },
+] as const;
+
+const GENERAL_CORE_TOOLS = [
+  "ToolSearch",
+  "AskUserQuestion",
+  "AskUserQuestionAsync",
+  "Agent",
+  "TodoWrite",
+  "complete_goal",
+  "cancel_goal",
+  "SaveContextNote",
+  "NewContext",
+  "SearchHistory",
+] as const;
+
+const GENERAL_INITIAL_TOOL_ROUTING: TaskToolRoutingPolicy = {
+  managedToolNames: [
+    ...new Set([
+      ...INITIAL_GENERAL_TOOLS,
+      ...GENERAL_ROUTING_RULES.flatMap((rule) => rule.toolNames),
+    ]),
+  ],
+  coreToolNames: GENERAL_CORE_TOOLS,
+  rules: GENERAL_ROUTING_RULES,
+  minInitialTools: 8,
+  maxInitialTools: 15,
+};
+
 const HARNESS_MIN_EXPOSURE = deriveBuiltinPresetExposure("harness-min");
 const GENERAL_EXPOSURE = deriveBuiltinPresetExposure("general");
 
@@ -69,6 +199,7 @@ export const BUILTIN_AGENT_PRESETS: Record<BuiltinPresetName, AgentPreset> = {
     promptSections: ["harness-base", "orchestration", "tone"],
     builtinTools: HARNESS_MIN_EXPOSURE.builtinTools,
     initialToolNames: INITIAL_GENERAL_TOOLS,
+    initialToolRouting: GENERAL_INITIAL_TOOL_ROUTING,
     defaultPermissionRules: HARNESS_MIN_EXPOSURE.defaultPermissionRules,
   },
   general: {
@@ -79,6 +210,7 @@ export const BUILTIN_AGENT_PRESETS: Record<BuiltinPresetName, AgentPreset> = {
     promptSections: ["base", "orchestration", "browser", "tone"],
     builtinTools: GENERAL_EXPOSURE.builtinTools,
     initialToolNames: INITIAL_GENERAL_TOOLS,
+    initialToolRouting: GENERAL_INITIAL_TOOL_ROUTING,
     defaultPermissionRules: GENERAL_EXPOSURE.defaultPermissionRules,
   },
 };
