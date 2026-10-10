@@ -120,6 +120,7 @@ import { useSessionNavigation } from "./app/useSessionNavigation";
 import { useSessionHistorySync } from "./app/useSessionHistorySync";
 import { useHostSubscriptions } from "./app/useHostSubscriptions";
 import { useRunController } from "./app/useRunController";
+import { createChatLinkReadHandler } from "./chat/linkResourceIntents";
 import { usePanelBuckets } from "./app/usePanelBuckets";
 import { AppMainView, AppShell } from "./app/AppShell";
 import { switchActiveModel } from "./app/switchActiveModel";
@@ -2454,6 +2455,25 @@ function App() {
                     }
                     contextSelectionRequest={contextSelectionRequest}
                     sendBucket={activeBucket}
+                    onPrepareLinkSubmission={() => {
+                      const context = prepareAttachmentSession();
+                      return context ? { bucket: activeBucketRef.current, cwd: context.cwd } : null;
+                    }}
+                    onReadLinkResource={createChatLinkReadHandler(
+                      () => ({
+                        bucket: activeBucketRef.current,
+                        cwd: sessionUiAuthority.workspaceRoot,
+                        available: sessionUiAuthority.configurationAvailable,
+                        // setBusyForKey writes busySinceRef synchronously, before React commits.
+                        busy:
+                          busyKeys.has(activeBucketRef.current) ||
+                          busySinceRef.current.has(activeBucketRef.current),
+                        compacting: compactingBucketsRef.current.has(activeBucketRef.current),
+                      }),
+                      (text, opts) => {
+                        void send(text, opts);
+                      },
+                    )}
                     onSend={(text, opts) =>
                       send(text, {
                         ...opts,

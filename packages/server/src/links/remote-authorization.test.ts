@@ -243,6 +243,7 @@ test("Figma connects without files; adding requires browser completion and retai
   expect(initialQuery.has("resource_files")).toBe(false);
   const first = await (await f.complete(initial)).json();
   expect(first.connection).toMatchObject({ status: "connected", account: { resources: [] } });
+  expect(first.connection.account.resourceGroups).toEqual([{ id: "files", items: [] }]);
   let connection = first.connection;
   const original = f.store.resolve(connection.id)!;
   expect(
@@ -281,6 +282,9 @@ test("Figma connects without files; adding requires browser completion and retai
   connection = (await selectedResult.json()).connection;
   expect(connection.id).toBe(first.connection.id);
   expect(connection.account.resources).toEqual(["FileFirst"]);
+  expect(connection.account.resourceGroups).toEqual([
+    { id: "files", items: [{ id: "FileFirst", label: "FileFirst" }] },
+  ]);
 
   const cancelled = await f.start({
     connectionId: connection.id,
