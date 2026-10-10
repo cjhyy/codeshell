@@ -85,3 +85,16 @@ Quick Chat 临时 Engine、cold-resume storage probe 和 bootstrap seed Engine �
 这些验证使用合成模型配置和本地临时目录，没有调用付费模型，也没有启动 Electron GUI 或
 在交互式终端手工操作 TUI。模块应将自己的可取消工作注册到 owner；任意永不完成且未提供
 取消手段的第三方 factory 无法由 scope 强制终止。运行中模块热替换仍不在本设计承诺内。
+
+## Session 初始化关闭补充（2026-10-10）
+
+Session private-service 初始化现在接收当前 Run 的取消信号。取消仅在初始化期间触发已有
+scope 回滚，先执行已登记的 disposer，再等待 pending factory 并释放迟到资源；不再启动
+后续 factory。factory、取消与清理同时失败时保留各自原因。初始化结束移除监听，已初始化
+Session 的服务仍等 active Run 终态与用量收尾后释放，不改变关闭 epoch 或最终状态交接。
+
+`tests/session-initialization-close.test.ts` 的独立受控进程覆盖 Engine、Runtime 和
+ChatSessionManager 三个实际关闭入口，以及正常 active Run 的释放顺序与用量对照。
+基线三个初始化关闭均未能完成；修复后四项通过。fixture 使用私有 HOME、首次 Core import
+前的 HTTP 拒绝探针及纯内存 provider，没有调用真实模型、账号或 GUI。现有 activation、
+module lifetime 和 21 项 active-close／并发用量回归保留。源码与本地验收不代表已发行。
