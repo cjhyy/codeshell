@@ -129,10 +129,22 @@ export function formatRequirementPlan(plan: ProfileRequirementPlan): Requirement
   );
 
   const blockers = plan.missingTools.map((tool) => {
-    const base =
-      tool.reason === "not-found"
-        ? `缺少外部命令 ${tool.bin}`
-        : `${tool.bin} 版本过低：需要 ≥${tool.required}，当前 ${tool.found}`;
+    let base: string;
+    switch (tool.reason) {
+      case "not-found":
+        base = "缺少外部命令 " + tool.bin;
+        break;
+      case "too-old":
+        base = tool.bin + " 版本过低：需要 ≥" + tool.required + "，当前 " + tool.found;
+        break;
+      case "version-unknown":
+        base = "无法确认 " + tool.bin + " 的版本：需要 ≥" + tool.required;
+        break;
+      case "probe-failed":
+        base = tool.bin + " 版本探测失败";
+        if (tool.required) base += "：需要 ≥" + tool.required;
+        break;
+    }
     return tool.hint ? `${base}（${tool.hint}）` : base;
   });
 

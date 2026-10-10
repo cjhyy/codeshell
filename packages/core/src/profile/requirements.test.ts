@@ -5,6 +5,7 @@ import {
   parseToolVersion,
   planProfileRequirements,
   summarizeSkillConflicts,
+  type ToolProbeResult,
 } from "./requirements.js";
 import type { SkillRequirement } from "./types.js";
 
@@ -181,6 +182,103 @@ describe("planProfileRequirements", () => {
       { installedSkills: [], toolProbe: () => "v25.8.1" },
     );
     expect(plan.missingTools).toEqual([]);
+  });
+
+  test.each(["development build", "", "   "])(
+    "reports an unconfirmed minimum version for legacy probe output %j",
+    (output) => {
+      const plan = planProfileRequirements(
+        {
+          skills: [],
+          tools: [{ bin: "node", minVersion: "22", hint: "Install Node 22 or newer" }],
+        },
+        { installedSkills: [], toolProbe: () => output },
+      );
+      expect(plan.missingTools).toEqual([
+        {
+          bin: "node",
+          reason: "version-unknown",
+          required: "22",
+          hint: "Install Node 22 or newer",
+        },
+      ]);
+      expect(plan.needsInstall).toBe(false);
+    },
+  );
+
+  test("keeps an unversioned legacy probe compatible when no minimum is declared", () => {
+    const plan = planProfileRequirements(
+      { skills: [], tools: [{ bin: "custom-tool" }] },
+      { installedSkills: [], toolProbe: () => "development build" },
+    );
+    expect(plan.missingTools).toEqual([]);
+    expect(plan.needsInstall).toBe(false);
+  });
+
+  test.each(["latest", "22.x", "v22", ">=22", "", "22.1.0.1"])(
+    "rejects an invalid public planner minimum %j before probing",
+    (minVersion) => {
+      let probes = 0;
+      expect(() =>
+        planProfileRequirements(
+          { skills: [], tools: [{ bin: "node", minVersion }] },
+          {
+            installedSkills: [],
+            toolProbe: () => {
+              probes += 1;
+              return "v99.0.0";
+            },
+          },
+        ),
+      ).toThrow();
+      expect(probes).toBe(0);
+    },
+  );
+
+  test.each([
+    [{ status: "not-found" }, "not-found"],
+    [{ status: "failed" }, "probe-failed"],
+    [{ status: "ok", output: "" }, "version-unknown"],
+  ] satisfies [ToolProbeResult, string][])(
+    "preserves the structured probe classification %j",
+    (probe, reason) => {
+      const plan = planProfileRequirements(
+        { skills: [], tools: [{ bin: "node", minVersion: "22" }] },
+        { installedSkills: [], toolProbe: () => probe },
+      );
+      expect(plan.missingTools).toEqual([
+        {
+          bin: "node",
+          reason,
+          ...(reason === "version-unknown" || reason === "probe-failed" ? { required: "22" } : {}),
+        },
+      ]);
+      expect(plan.needsInstall).toBe(false);
+    },
+  );
+
+  test("accepts a successful empty probe when only command availability is required", () => {
+    const plan = planProfileRequirements(
+      { skills: [], tools: [{ bin: "custom-tool" }] },
+      { installedSkills: [], toolProbe: () => ({ status: "ok", output: "" }) },
+    );
+    expect(plan.missingTools).toEqual([]);
+  });
+
+  test("validates other public requirements with the existing schema before probing", () => {
+    let probes = 0;
+    const context = {
+      installedSkills: [],
+      toolProbe: () => {
+        probes += 1;
+        return "v99.0.0";
+      },
+    };
+    expect(() => planProfileRequirements({ skills: [], tools: [{ bin: "" }] }, context)).toThrow();
+    expect(() =>
+      planProfileRequirements({ skills: [req({ repo: "--version" })], tools: [] }, context),
+    ).toThrow();
+    expect(probes).toBe(0);
   });
 
   test("surfaces shadowing conflicts for the skills it is about to install", () => {

@@ -41,6 +41,7 @@ export {
   type PlannedSkillInstall,
   type ProfileRequirementPlan,
   type SkillConflict,
+  type ToolProbeResult,
 } from "./requirements.js";
 export {
   deleteWorkspaceProfile,

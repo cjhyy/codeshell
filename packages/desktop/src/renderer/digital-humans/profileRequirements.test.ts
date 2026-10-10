@@ -171,6 +171,28 @@ describe("ensureDigitalHumanRequirements", () => {
     expect(h.installCalls()).toBe(0);
   });
 
+  test.each([
+    ["node >= 22 is required, but the installed version could not be determined", true],
+    ["node >= 22 is required, but the installed version could not be determined", false],
+    ["node version check failed; verify that node >= 22 is installed", true],
+    ["node version check failed; verify that node >= 22 is installed", false],
+  ] as const)("respects the confirmation for %s (accepted: %s)", async (diagnostic, accepted) => {
+    const h = harness({
+      needsInstall: false,
+      willRun: [],
+      warnings: [],
+      blockers: [diagnostic],
+    });
+    h.options.confirm = async (options: unknown) => {
+      h.confirmations.push(options);
+      return accepted;
+    };
+    expect(await ensureDigitalHumanRequirements(h.options)).toBe(accepted);
+    expect(h.confirmations).toEqual([expect.objectContaining({ detail: diagnostic })]);
+    expect(h.installCalls()).toBe(0);
+    expect(h.toasts).toEqual([]);
+  });
+
   test("fails closed when preview or installation fails", async () => {
     const previewFailure = harness({
       needsInstall: true,

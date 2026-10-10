@@ -34,14 +34,22 @@ export interface PlannedSkillInstall {
   missing?: string[];
 }
 
-export type MissingToolReason = "not-found" | "too-old";
+export type MissingToolReason = "not-found" | "too-old" | "version-unknown" | "probe-failed";
+
+/** Hosts can distinguish execution failure from absence; legacy callbacks remain valid. */
+export type ToolProbeResult =
+  | string
+  | null
+  | { status: "ok"; output: string }
+  | { status: "not-found" }
+  | { status: "failed" };
 
 export interface MissingTool {
   bin: string;
   reason: MissingToolReason;
   /** reason=too-old 时实际探到的版本。 */
   found?: string;
-  /** reason=too-old 时 profile 要求的版本。 */
+  /** 版本过低/未知，或探测失败且声明了最低版本时 profile 要求的版本。 */
   required?: string;
   hint?: string;
 }
@@ -57,8 +65,8 @@ export interface ProfileRequirementPlan {
 export interface PlanRequirementsContext {
   /** 当前 scanner 能看到的全部 skill。 */
   installedSkills: readonly KnownSkill[];
-  /** 探测一个外部命令的版本输出；不存在返回 null。 */
-  toolProbe: (bin: string) => string | null;
+  /** 探测外部命令；兼容旧版的版本输出字符串/null（不存在）。 */
+  toolProbe: (bin: string) => ToolProbeResult;
 }
 
 /**
@@ -127,11 +135,13 @@ export function planProfileRequirements(
   requires: WorkspaceProfileRequirements | undefined,
   context: PlanRequirementsContext,
 ): ProfileRequirementPlan {
+  const checked =
+    requires === undefined ? undefined : WorkspaceProfileRequirementsSchema.parse(requires);
   const skillInstalls: PlannedSkillInstall[] = [];
   const conflicts: SkillConflict[] = [];
   const missingTools: MissingTool[] = [];
 
-  for (const requirement of requires?.skills ?? []) {
+  for (const requirement of checked?.skills ?? []) {
     if (requirement.skills && requirement.skills.length > 0) {
       // 只有落在 project 根（安装目标）的同名 skill 才算"已具备"；命中更低优先级的
       // user 根不算——那份会被这次安装遮蔽，属于要提示的冲突而非可跳过的满足。
@@ -160,9 +170,9 @@ export function planProfileRequirements(
     }
   }
 
-  for (const tool of requires?.tools ?? []) {
-    const output = context.toolProbe(tool.bin);
-    if (output === null) {
+  for (const tool of checked?.tools ?? []) {
+    const probe = context.toolProbe(tool.bin);
+    if (probe === null || (typeof probe === "object" && probe.status === "not-found")) {
       missingTools.push({
         bin: tool.bin,
         reason: "not-found",
@@ -170,9 +180,26 @@ export function planProfileRequirements(
       });
       continue;
     }
+    if (typeof probe === "object" && probe.status === "failed") {
+      missingTools.push({
+        bin: tool.bin,
+        reason: "probe-failed",
+        ...(tool.minVersion ? { required: tool.minVersion } : {}),
+        ...(tool.hint ? { hint: tool.hint } : {}),
+      });
+      continue;
+    }
     if (!tool.minVersion) continue;
+    const output = typeof probe === "string" ? probe : probe.output;
     const found = parseToolVersion(output);
-    if (found && compareToolVersions(found, tool.minVersion) < 0) {
+    if (!found) {
+      missingTools.push({
+        bin: tool.bin,
+        reason: "version-unknown",
+        required: tool.minVersion,
+        ...(tool.hint ? { hint: tool.hint } : {}),
+      });
+    } else if (compareToolVersions(found, tool.minVersion) < 0) {
       missingTools.push({
         bin: tool.bin,
         reason: "too-old",
