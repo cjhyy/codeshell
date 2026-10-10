@@ -281,6 +281,14 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y dbus-x11 gnome-keyring libsecret-tools
           bash scripts/run-electron-e2e-keyring.sh
+      - name: Preserve Profile memory copy Electron evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: profile-memory-promotion-electron
+          path: /tmp/codeshell-profile-memory-electron-*
+          if-no-files-found: ignore
+          retention-days: 7
       - name: Preserve synthetic operation-read failure evidence
         if: failure()
         uses: actions/upload-artifact@v4

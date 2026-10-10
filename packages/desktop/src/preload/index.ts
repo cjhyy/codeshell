@@ -25,6 +25,7 @@ import { createOperationResolutionApi } from "./operation-resolution-api";
 import { createOptimizationLabApi } from "./optimization-lab-api";
 import { createSessionTranscriptApi } from "./session-transcript-api";
 import { createProfilePluginExportApi } from "./profile-plugin-export-api";
+import { createProfileMemoryPromotionApi } from "./profile-memory-promotion-api";
 import { createPetApi } from "./pet-api";
 import { createProjectAuthorityApi } from "./project-authority-api";
 import { createProjectPanelVersionApi } from "./project-panel-version-api";
@@ -499,6 +500,7 @@ ipcRenderer.on("externalRuntime:approvalResolved", (_e, payload: { requestId?: u
 
 contextBridge.exposeInMainWorld("codeshell", {
   ...createProfilePluginExportApi(ipcRenderer),
+  ...createProfileMemoryPromotionApi(ipcRenderer),
   /** Main-process platform, exposed explicitly so renderer layout doesn't infer it from UA strings. */
   platform: process.platform,
   sessionCatalog: createSessionCatalogApi(ipcRenderer),

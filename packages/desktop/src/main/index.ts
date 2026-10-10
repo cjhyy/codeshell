@@ -365,6 +365,7 @@ import { QuickChatOwnershipRegistry } from "./quick-chat-ownership.js";
 import { readDirectory, readFile as fsReadFile, fileExists as fsFileExists } from "./fs-service.js";
 import { registerLocalFilePreviewIpc } from "./local-file-preview-ipc.js";
 import { registerProfilePluginExportIpc } from "./profile-plugin-export-ipc.js";
+import { registerProfileMemoryPromotionIpc } from "./profile-memory-promotion-ipc.js";
 import {
   getGitStatus,
   getGitBranches,
@@ -6704,6 +6705,12 @@ ipcMain.handle("memory:pending:reject", async (_e, name: unknown) => {
   }
   return rejectPendingMemory(name);
 });
+registerProfileMemoryPromotionIpc(
+  ipcMain,
+  (sender) =>
+    [...mainWindows].some((window) => !window.isDestroyed() && window.webContents === sender),
+  requireRendererProjectPath,
+);
 ipcMain.handle("memory:promote", async (_e, cwd: unknown, name: unknown) => {
   const authorizedCwd = await requireRendererProjectPath(cwd);
   if (typeof name !== "string" || !name || name.length > 512 || name.includes("\0")) {

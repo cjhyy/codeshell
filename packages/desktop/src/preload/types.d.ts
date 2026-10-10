@@ -49,6 +49,7 @@ import type {
 } from "@cjhyy/code-shell-capability-coding/orchestration";
 import type { TaskInboxApi } from "./task-inbox-api";
 import type { ProfilePluginExportApi } from "../shared/profile-plugin-export";
+import type { ProfileMemoryPromotionApi } from "../shared/profile-memory-promotion";
 import type { OptimizationLabApi } from "./optimization-lab-api";
 import type { PetApi } from "./pet-api";
 import type {
@@ -1028,7 +1029,11 @@ export type ImGatewayUiEvent =
     };
 
 export interface CodeshellApi
-  extends ProjectAuthorityApi, ProjectPanelVersionApi, ProfilePluginExportApi {
+  extends
+    ProjectAuthorityApi,
+    ProjectPanelVersionApi,
+    ProfilePluginExportApi,
+    ProfileMemoryPromotionApi {
   /** Main-owned sidebar catalogue and transcript checkpoints. Optional for older hosts. */
   sessionCatalog?: SessionCatalogApi;
   /** Read-only bounded Pet projection. */
