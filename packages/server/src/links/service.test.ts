@@ -108,6 +108,70 @@ async function settled(service: LinkService, id: string, context = owner) {
 }
 
 describe("shared Link management", () => {
+  test("masked remote resource references expose exact selected IDs without private metadata", () => {
+    const { service, store } = fixture();
+    const base = {
+      type: "oauth" as const,
+      label: "Figma fixture",
+      secret: JSON.stringify({ accessToken: "synthetic-hidden-token" }),
+      meta: {
+        linkProvider: "figma",
+        linkConnectionMethod: "remote-link",
+        linkExecutionRuntime: "server" as const,
+        linkExecutionBackend: "remote" as const,
+        linkRemoteState: "connected" as const,
+        linkResourceLabels: ["A display name"],
+        linkCapabilityIds: ["figma.get_file"],
+      },
+    };
+    store.save("user", { ...base, id: "missing-groups" });
+    store.save("user", {
+      ...base,
+      id: "empty-files",
+      meta: { ...base.meta, linkResourceGroups: [{ id: "files", items: [] }] },
+    });
+    store.save("user", {
+      ...base,
+      id: "selected-files",
+      meta: {
+        ...base.meta,
+        linkResourceGroups: [
+          {
+            id: "files",
+            privateField: "synthetic-private-group",
+            items: [
+              {
+                id: "ExactFileId",
+                label: "A display name",
+                privateField: "synthetic-private-item",
+              },
+            ],
+          },
+          { id: "other", items: [{ id: "OtherId", label: "Other resource" }] },
+        ] as any,
+      },
+    });
+    const snapshot = service.snapshot();
+    expect(
+      snapshot.connections.find((item) => item.id === "missing-groups")?.account?.resourceGroups,
+    ).toBeUndefined();
+    expect(
+      snapshot.connections.find((item) => item.id === "empty-files")?.account?.resourceGroups,
+    ).toEqual([{ id: "files", items: [] }]);
+    const selected = snapshot.connections.find((item) => item.id === "selected-files")!;
+    expect(selected.account?.resources).toEqual(["A display name"]);
+    expect(selected.account?.resourceGroups).toEqual([
+      { id: "files", items: [{ id: "ExactFileId", label: "A display name" }] },
+      { id: "other", items: [{ id: "OtherId", label: "Other resource" }] },
+    ]);
+    expect(JSON.stringify(snapshot)).not.toContain("synthetic-hidden-token");
+    expect(JSON.stringify(snapshot)).not.toContain("synthetic-private");
+    selected.account!.resourceGroups![0]!.items[0]!.id = "renderer-mutated";
+    expect(
+      service.snapshot().connections.find((item) => item.id === "selected-files")?.account
+        ?.resourceGroups?.[0]?.items[0]?.id,
+    ).toBe("ExactFileId");
+  });
   test("catalog is shared, cloud methods remain unavailable and responses contain no secrets", async () => {
     const { service, store, userDirectory } = fixture();
     const connection = await service.connectToken(owner, input);

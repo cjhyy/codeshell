@@ -290,6 +290,14 @@ export function createLinkService(options: LinkServiceOptions = {}) {
         id: meta.linkAccountId,
         label: meta.linkAccountLabel,
         resources: meta.linkResourceLabels?.slice(0, 100) ?? [],
+        ...(remote && meta.linkResourceGroups
+          ? {
+              resourceGroups: meta.linkResourceGroups.map((group) => ({
+                id: group.id,
+                items: group.items.map((item) => ({ id: item.id, label: item.label })),
+              })),
+            }
+          : {}),
       },
       capabilityIds: meta.linkCapabilityIds ?? [],
       verifiedAt: meta.linkLastVerifiedAt,

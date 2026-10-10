@@ -8,6 +8,26 @@ breaking.
 
 ## [Unreleased]
 
+## [0.9.31] - 2026-10-10
+
+### Added
+
+- Connect a Figma account before choosing files. Add individual design links
+  later while preserving existing file grants and requiring explicit consent.
+- Authorize a Figma file from its locally submitted chat link, then continue
+  reading in the same conversation with the selected account. File access stays
+  limited to explicitly authorized resources.
+- Include the public CodeShell Link deployment in packaged Desktop apps across
+  platforms, with complete environment overrides and an explicit disable option.
+  Provider credentials remain on the service.
+
+### Fixed
+
+- Bound GitHub Panel source-ref checks and show source refresh progress and
+  errors while reviewing updates.
+- Preserve specific file-authorization guidance through Desktop worker IPC and
+  Link-backed Source reads.
+
 ## [0.9.30] - 2026-10-10
 
 ### Added

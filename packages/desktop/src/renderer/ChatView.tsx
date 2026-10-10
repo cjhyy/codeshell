@@ -72,6 +72,9 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import type { MarkdownRootStatus } from "./Markdown";
+import { ChatLinkResources, type ChatLinkReadHandler } from "./chat/ChatLinkResources";
+import { composerLinkResources, type ChatLinkResourceIntent } from "./chat/linkResourceIntents";
+import { isDraftBucket } from "./transcripts";
 
 interface Props {
   /** Quick chats reuse the normal composer but omit durable-session controls. */
@@ -96,6 +99,10 @@ interface Props {
   onContextPackageCreated?: ContextPackageCreatedHandler;
   contextSelectionRequest?: number;
   sendBucket?: string;
+  /** Explicit file-read clicks are checked against the owner's live active-session ref. */
+  onReadLinkResource?: ChatLinkReadHandler;
+  /** Resolves and, for a draft, materializes the live target before registering a submit. */
+  onPrepareLinkSubmission?: () => { bucket: string; cwd: string } | null;
   onSend: (
     text: string,
     opts?: {
@@ -357,6 +364,8 @@ export function ChatView({
   onContextPackageCreated,
   contextSelectionRequest,
   sendBucket,
+  onReadLinkResource,
+  onPrepareLinkSubmission,
   onSend,
   onQueueInput,
   onForceSend,
@@ -434,6 +443,35 @@ export function ChatView({
   const [inputReferences, setInputReferences] = useState<InputAttachmentMeta[]>([]);
   const [localFilePaths, setLocalFilePaths] = useState<string[]>([]);
   const toast = useToast();
+  const [linkIntents, setLinkIntents] = useState<ChatLinkResourceIntent[]>([]);
+  const rememberLinkSubmission = (text: string) => {
+    if (variant !== "main" || !sendBucket || !onReadLinkResource) return {};
+    const resources = composerLinkResources(text);
+    if (!resources.length) return {};
+    // Materialize a first-send draft before recording its provenance. Subsequent reads can
+    // then target a real session instead of the shared per-project draft bucket.
+    const prepared = onPrepareLinkSubmission?.();
+    if (!prepared || !prepared.cwd || isDraftBucket(prepared.bucket)) return {};
+    const targetBucket = prepared.bucket;
+    const cwd = prepared.cwd;
+    const clientMessageId = crypto.randomUUID();
+    setLinkIntents((previous) =>
+      [
+        ...previous.filter(
+          (intent) =>
+            intent.bucket !== targetBucket ||
+            !resources.some((resource) => resource.resourceId === intent.resourceId),
+        ),
+        ...resources.map((resource) => ({
+          ...resource,
+          clientMessageId,
+          bucket: targetBucket,
+          cwd,
+        })),
+      ].slice(-20),
+    );
+    return { clientMessageId, bucket: targetBucket };
+  };
 
   // A native file drag can leave the BrowserWindow and finish in another app.
   // Electron does not guarantee that the original element receives a drop or
@@ -1042,7 +1080,10 @@ export function ChatView({
     const displayWithAnchors = encodeAnchorsForWire(displayWithLocalFiles, anchors);
     const displayPayload = encodeAttachmentsForWire(displayWithAnchors, attachments);
     const runAttachments = [...toRunAttachments(attachments), ...inputReferences];
-    const routeOpts = sendBucket ? { bucket: sendBucket } : undefined;
+    // Only the text actually submitted by this composer contributes authorization candidates.
+    // Attachment paths, injected prompts, tool results and replayed messages cannot register one.
+    const linkSubmission = rememberLinkSubmission(text);
+    const routeOpts = { ...(sendBucket ? { bucket: sendBucket } : {}), ...linkSubmission };
     if (busy)
       onQueueInput?.(withAnchors, {
         ...routeOpts,
@@ -1333,6 +1374,27 @@ export function ChatView({
         <ApprovalCard envelope={pendingApproval} onDecide={onApprovalDecide} />
       </div>
     ) : null;
+  const visibleLinkIntents = linkIntents.filter(
+    (intent) =>
+      intent.bucket === sendBucket &&
+      intent.cwd === conversationRoot &&
+      messages.some(
+        (message) =>
+          message.kind === "user" &&
+          // Queued human submissions are echoed as injected steering messages too. The
+          // local registry supplies the URL; an echo only confirms this exact submit ID.
+          message.clientMessageId === intent.clientMessageId,
+      ),
+  );
+  const chatLinkResources =
+    onReadLinkResource && visibleLinkIntents.length > 0 ? (
+      <ChatLinkResources
+        key={`${sendBucket}:${conversationRoot}`}
+        intents={visibleLinkIntents}
+        busy={busy || compacting}
+        onRead={onReadLinkResource}
+      />
+    ) : null;
 
   const showStickyApproval = !!pendingApproval && !!onApprovalDecide && !inlineApprovalVisible;
 
@@ -1478,8 +1540,20 @@ export function ChatView({
             liveTurnActive={liveTurnActive}
             onAskUserAnswer={onAskUserAnswer}
             onExtendGoal={onExtendGoal}
-            trailing={inlineApproval}
-            trailingKey={pendingApproval?.requestId ?? null}
+            trailing={
+              <>
+                {inlineApproval}
+                {chatLinkResources}
+              </>
+            }
+            trailingKey={
+              [
+                pendingApproval?.requestId,
+                ...visibleLinkIntents.map((intent) => intent.clientMessageId),
+              ]
+                .filter(Boolean)
+                .join(":") || null
+            }
             cwd={conversationRoot}
             rootId={conversationRootId}
             rootStatus={conversationRootStatus}
@@ -2072,6 +2146,7 @@ export function ChatView({
                           ];
                           onForceSend(withAnchors, {
                             ...(sendBucket ? { bucket: sendBucket } : {}),
+                            ...rememberLinkSubmission(draft.trim()),
                             attachments: runAttachments,
                             displayText: displayPayload,
                           });
