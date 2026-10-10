@@ -8,6 +8,8 @@ import {
   encodeState,
   goalEffect,
   parseUnique,
+  STATE_LIMIT,
+  StorageFailure,
   type DecodedState,
 } from "./codec.js";
 import {
@@ -70,6 +72,34 @@ describe("non-activated storage codec spike", () => {
     expect(result.state.stateRevision).toBe(7);
     expect(result.format).toBeUndefined();
     expect(result.control).toBeUndefined();
+  });
+
+  test("encoded state counts LF at the exact byte bound before decoding", () => {
+    const input = fixture();
+    const state = input.state as unknown as Record<string, unknown>;
+    state.nativePadding = "";
+    const baseBytes = Buffer.byteLength(encodeState(input));
+    const padding = "s".repeat(STATE_LIMIT - baseBytes);
+    state.nativePadding = padding;
+    const exact = encodeState(input);
+    expect(exact.endsWith("\n")).toBe(true);
+    expect(Buffer.byteLength(exact)).toBe(STATE_LIMIT);
+    expect(encodeState(decodeStateBytes(Buffer.from(exact)))).toBe(exact);
+
+    state.nativePadding = padding + "s";
+    const raw = JSON.parse(exact);
+    raw.nativePadding += "s";
+    expect(Buffer.byteLength(canonical(raw) + "\n")).toBe(STATE_LIMIT + 1);
+    let rejected = false;
+    try {
+      encodeState(input);
+    } catch (cause) {
+      rejected = true;
+      expect(cause).toBeInstanceOf(StorageFailure);
+      expect((cause as StorageFailure).reason).toBe("capacity");
+      expect((cause as Error).message).toBe("State byte bound");
+    }
+    expect(rejected).toBe(true);
   });
 
   test("unknown/lost protected version and duplicate keys fail closed", () => {

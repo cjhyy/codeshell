@@ -354,6 +354,8 @@ export function encodeState(decoded: DecodedState): string {
   }
   // Omit legal optional object fields without normalizing NaN/Infinity to null.
   const text = canonical(stateJSON(state)) + "\n";
+  if (Buffer.byteLength(text) > STATE_LIMIT)
+    throw new StorageFailure("capacity", "State byte bound");
   decodeState(text);
   return text;
 }
