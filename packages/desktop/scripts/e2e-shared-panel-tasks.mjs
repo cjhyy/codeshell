@@ -239,6 +239,15 @@ async function run() {
       "fixture",
     );
     git("worktree", "add", "-qb", "directory-fixture", project);
+    // Both directories are explicitly registered fixture roots before trust
+    // IPC. A recent worktree alone does not authorize its separate Git main.
+    await writeFile(
+      join(isolated.codeShellHome, "desktop/recents.json"),
+      JSON.stringify([
+        { path: project, name: "Task worktree", lastOpenedAt: Date.now() },
+        { path: bindingProject, name: "Task main project", lastOpenedAt: Date.now() },
+      ]),
+    );
     const output = join(isolated.home, "old-worktree-output");
     await mkdir(output);
     confined = await prepareConfinedElectronFixture({ appDir, isolated, origin: fixtureOrigin });
