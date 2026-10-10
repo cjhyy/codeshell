@@ -7,7 +7,7 @@ import { Engine } from "./engine.js";
 import { LLMClientBase } from "../llm/client-base.js";
 import { registerProvider } from "../llm/client-factory.js";
 import type { CreateMessageOptions } from "../llm/types.js";
-import type { LLMResponse } from "../types.js";
+import type { LLMResponse, ToolCall } from "../types.js";
 import type { AgentModule } from "../composition/types.js";
 
 const provider = "fake-quick-chat-restricted";
@@ -19,23 +19,29 @@ interface CapturedCall {
 }
 
 const callsByModel = new Map<string, CapturedCall[]>();
+const scriptedToolCallsByModel = new Map<string, ToolCall[][]>();
 const tempDirs: string[] = [];
 
 class QuickChatRestrictedClient extends LLMClientBase {
   protected initClient(): void {}
 
   async createMessage(options: CreateMessageOptions): Promise<LLMResponse> {
+    let toolCalls: ToolCall[] = [];
     if (options.systemPrompt.includes("Working directory:")) {
       callsByModel.get(this.model)?.push({
         systemPrompt: options.systemPrompt,
         toolNames: (options.tools ?? []).map((tool) => tool.name),
         messageText: JSON.stringify(options.messages),
       });
+      // Auxiliary requests must not consume a scripted main-task step.
+      if (options.tools?.length) {
+        toolCalls = scriptedToolCallsByModel.get(this.model)?.shift() ?? [];
+      }
     }
     const response: LLMResponse = {
-      text: "done",
-      toolCalls: [],
-      stopReason: "stop",
+      text: toolCalls.length ? "" : "done",
+      toolCalls,
+      stopReason: toolCalls.length ? "tool_use" : "stop",
       usage: { promptTokens: 1, completionTokens: 1, totalTokens: 2 },
     };
     this.recordUsage(response.usage!, options);
@@ -47,6 +53,7 @@ registerProvider(provider, QuickChatRestrictedClient);
 
 afterEach(() => {
   callsByModel.clear();
+  scriptedToolCallsByModel.clear();
   for (const dir of tempDirs.splice(0)) rmSync(dir, { recursive: true, force: true });
 });
 
@@ -138,12 +145,16 @@ describe("Engine quick-chat prompt guidance", () => {
     expect(restricted?.toolNames).not.toContain("Agent");
   });
 
-  it("keeps guidance and normal tools when the user explicitly requests an edit", async () => {
+  it("keeps edit tools and loads Bash through ToolSearch after an explicit edit request", async () => {
     const cwd = mkdtempSync(join(tmpdir(), "quick-chat-elevated-"));
     tempDirs.push(cwd);
     const model = `${provider}-${Date.now()}-${Math.random()}`;
     const calls: CapturedCall[] = [];
     callsByModel.set(model, calls);
+    scriptedToolCallsByModel.set(model, [
+      [{ id: "load-bash", toolName: "ToolSearch", args: { query: "select:Bash" } }],
+      [],
+    ]);
     const engine = new Engine({
       llm: { provider, model, apiKey: "test" } as never,
       cwd,
@@ -161,9 +172,15 @@ describe("Engine quick-chat prompt guidance", () => {
       behaviorMode: "quickChatRestricted",
     });
 
-    const elevated = calls.at(-1);
+    expect(calls).toHaveLength(2);
+    const [initial, elevated] = calls;
+    expect(initial?.systemPrompt).toContain("# Side Conversation Boundary");
+    expect(initial?.toolNames).toEqual(expect.arrayContaining(["Write", "Edit", "ToolSearch"]));
+    expect(initial?.toolNames).not.toContain("Bash");
+    expect(initial?.toolNames).not.toContain("Agent");
     expect(elevated?.systemPrompt).toContain("# Side Conversation Boundary");
     expect(elevated?.toolNames).toEqual(expect.arrayContaining(["Write", "Edit", "Bash"]));
+    expect(elevated?.messageText).toContain("Selected tools for this run: Bash");
     expect(elevated?.toolNames).not.toContain("Agent");
   });
 

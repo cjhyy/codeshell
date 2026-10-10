@@ -375,6 +375,7 @@ export {
   listPresetNames,
 } from "./preset/index.js";
 export type { AgentPreset, AgentPresetName } from "./preset/index.js";
+export type { TaskToolRoutingPolicy, TaskToolRoutingRule } from "./preset/task-tool-routing.js";
 export { loadSection, loadSections, availableSections } from "./prompt/section-loader.js";
 
 // ─── Context ─────────────────────────────────────────────────────

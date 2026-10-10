@@ -68,6 +68,8 @@ jobs:
         run: node scripts/run-external-output-journal-smoke.mjs
       - name: Compiled SDK progressive tool discovery and bound source consumer
         run: bun run test:deferred-tools
+      - name: Compiled SDK preset task routing and unchanged execution authority
+        run: bun run test:task-routing
       - uses: actions/setup-node@v7
         with:
           node-version: "22.16.0"

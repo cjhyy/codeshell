@@ -3200,6 +3200,7 @@ export class Engine {
           profileAllowedToolNames: runAllowedToolNames,
           runPlanMode,
         }),
+      { taskText, policy: this.preset.initialToolRouting },
     );
 
     return {

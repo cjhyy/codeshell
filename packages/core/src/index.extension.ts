@@ -114,6 +114,7 @@ export type {
 } from "./composition/lifetime.js";
 export { BUILTIN_AGENT_PRESETS } from "./preset/index.js";
 export type { AgentPreset } from "./preset/index.js";
+export type { TaskToolRoutingPolicy, TaskToolRoutingRule } from "./preset/task-tool-routing.js";
 export { BUILTIN_TOOLS, derivePresetExposure } from "./tool-system/builtin/index.js";
 export type { BuiltinTool } from "./tool-system/builtin/index.js";
 export { SessionManager, codeShellHome } from "./session/session-manager.js";

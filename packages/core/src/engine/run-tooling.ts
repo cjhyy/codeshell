@@ -27,6 +27,7 @@ import { applyDynamicToolDef } from "./dynamic-tool-defs.js";
 import type { PermissionController } from "./permission-controller.js";
 import type { EngineRunOptions, RunBehaviorProfile } from "./run-types.js";
 import { RunToolSurface } from "../tool-system/run-tool-surface.js";
+import { routeInitialTools, type TaskToolRoutingPolicy } from "../preset/task-tool-routing.js";
 import { logger } from "../logging/logger.js";
 
 /** Fold once per Run from the unmodified transport baseline; unknown names cannot create servers. */
@@ -49,10 +50,27 @@ export function initializeRunToolSurface(
   toolCtx: ToolContext,
   initialToolNames: readonly string[] | undefined,
   assembleCatalog: () => ToolDefinition[],
+  routing?: { taskText: string; policy?: TaskToolRoutingPolicy },
 ): ToolDefinition[] {
   const catalog = assembleCatalog();
+  const routed = routeInitialTools({
+    initialToolNames,
+    eligibleToolNames: catalog.map((tool) => tool.name),
+    taskText: routing?.taskText ?? "",
+    policy: routing?.policy,
+  });
+  if (routed.reason === "matched") {
+    logger.info("tool.surface.routed", {
+      cat: "tool",
+      reason: routed.reason,
+      ruleIds: routed.matchedRuleIds,
+      initialTools: routed.initialToolNames,
+      initialCount: routed.initialToolNames?.length ?? 0,
+      eligibleCount: catalog.length,
+    });
+  }
   const surface = new RunToolSurface(
-    catalog.some((tool) => tool.name === "ToolSearch") ? initialToolNames : undefined,
+    catalog.some((tool) => tool.name === "ToolSearch") ? routed.initialToolNames : undefined,
   );
   toolCtx.runToolSurface = surface;
   surface.updateCatalog(catalog);

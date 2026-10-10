@@ -489,8 +489,11 @@ test("SIGKILL after dispatch retains unknown expenditure on replacement process"
   const storeUrl = new URL("./store.ts", import.meta.url).href;
   const leaseUrl = new URL("./lease.ts", import.meta.url).href;
   const ledgerUrl = new URL("./ledger.ts", import.meta.url).href;
-  const script = `import { ExperimentStore } from ${JSON.stringify(storeUrl)}; import { ExperimentLease } from ${JSON.stringify(leaseUrl)}; import { ExperimentLedger } from ${JSON.stringify(ledgerUrl)}; const store=new ExperimentStore(process.argv[1]); const id=process.argv[2]; const lease=new ExperimentLease(store,{owner:'crashing',ttlMs:100}); const fence=lease.acquire(id); const ledger=new ExperimentLedger(store); ledger.beginOperation(id,fence,{operationId:'crash-op',role:'baseline',timeoutMs:1000,maxRequests:2,maxOutputTokens:100}); ledger.reserveAttempt(id,fence,{operationId:'crash-op',attemptId:'crash-attempt',estimatedTokens:100,estimatedCostUsd:0.01}); ledger.dispatch(id,fence,'crash-attempt'); console.log('dispatched'); setInterval(()=>{},1000); await new Promise(()=>{});`;
-  const child = Bun.spawn([process.execPath, "-e", script, f.root, f.id], {
+  // Test crash recovery, not whether three durable writes finish within 100ms.
+  // Use the grant's fixture clock in both processes; advance it after SIGKILL.
+  const childNow = f.now();
+  const script = `import { ExperimentStore } from ${JSON.stringify(storeUrl)}; import { ExperimentLease } from ${JSON.stringify(leaseUrl)}; import { ExperimentLedger } from ${JSON.stringify(ledgerUrl)}; const store=new ExperimentStore(process.argv[1]); const id=process.argv[2]; const now=()=>Number(process.argv[3]); const lease=new ExperimentLease(store,{owner:'crashing',ttlMs:100,now}); const fence=lease.acquire(id); const ledger=new ExperimentLedger(store,now); ledger.beginOperation(id,fence,{operationId:'crash-op',role:'baseline',timeoutMs:1000,maxRequests:2,maxOutputTokens:100}); ledger.reserveAttempt(id,fence,{operationId:'crash-op',attemptId:'crash-attempt',estimatedTokens:100,estimatedCostUsd:0.01}); ledger.dispatch(id,fence,'crash-attempt'); console.log('dispatched'); setInterval(()=>{},1000); await new Promise(()=>{});`;
+  const child = Bun.spawn([process.execPath, "-e", script, f.root, f.id, String(childNow)], {
     stdout: "pipe",
     stderr: "pipe",
   });
@@ -543,6 +546,11 @@ test("SIGKILL after dispatch retains unknown expenditure on replacement process"
     await stderrDone;
   }
   const snapshot = f.store.read(f.id);
+  expect(snapshot.lease).toMatchObject({
+    owner: "crashing",
+    heartbeatAt: childNow,
+    expiresAt: childNow + 100,
+  });
   f.advance(snapshot.lease!.expiresAt - f.now() + 1);
   const replacement = new ExperimentLease(f.store, { owner: "replacement", now: f.now });
   const fence = replacement.acquire(f.id);
