@@ -62,7 +62,13 @@ type PanelAppReviewState = { projectPath: string } & (
       preview: PanelAppPreview;
       installedVersion?: string;
     }
-  | { mode: "update"; appId: string; installedVersion: string; preview: PanelAppPreview }
+  | {
+      mode: "update";
+      appId: string;
+      rowId: string;
+      installedVersion: string;
+      preview: PanelAppPreview;
+    }
 );
 
 export function nextPanelAppBindings(value: unknown, appId: string, bound: boolean): string[] {
@@ -91,6 +97,8 @@ export function PanelsTab({ cwd, activeProjectPath, query }: Props) {
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
   const [checkingUpdate, setCheckingUpdate] = useState<string | null>(null);
+  const [updateError, setUpdateError] = useState<{ appId: string; message: string } | null>(null);
+  const updateRequestRef = useRef<object | null>(null);
   const [installBusy, setInstallBusy] = useState<"dir" | "zip" | "git" | null>(null);
   const [gitOpen, setGitOpen] = useState(false);
   const [gitUrl, setGitUrl] = useState("");
@@ -127,9 +135,19 @@ export function PanelsTab({ cwd, activeProjectPath, query }: Props) {
   const targetRef = useRef({ cwd, activeProjectPath });
   targetRef.current = { cwd, activeProjectPath };
   useEffect(() => {
+    updateRequestRef.current = null;
     setReview(null);
     setVersions(null);
+    setUpdateError(null);
+    setCheckingUpdate(null);
+    setBusy(null);
   }, [cwd, activeProjectPath]);
+  useEffect(
+    () => () => {
+      updateRequestRef.current = null;
+    },
+    [],
+  );
   const updates = usePanelAppUpdates(apps, cwd);
   const invalidateUpdates = updates.invalidate;
 
@@ -342,17 +360,27 @@ export function PanelsTab({ cwd, activeProjectPath, query }: Props) {
     if (!review) return;
     const { preview } = review;
     if (review.mode === "update") {
-      setBusy(review.appId);
-      setError(null);
+      if (updateRequestRef.current) return;
+      const request = {};
+      updateRequestRef.current = request;
+      const projectPath = review.projectPath;
+      const activeProject = activeProjectPath;
+      const isCurrent = () =>
+        updateRequestRef.current === request &&
+        targetRef.current.cwd === projectPath &&
+        targetRef.current.activeProjectPath === activeProject;
+      setBusy(review.rowId);
+      setUpdateError(null);
       try {
         const result = await window.codeshell.installPanelAppUpdate({
           id: review.appId,
           cwd: review.projectPath,
           reviewToken: preview.reviewToken,
         });
+        if (!isCurrent()) return;
         if (!result.ok) {
           setReview(null);
-          setError(result.error);
+          setUpdateError({ appId: review.appId, message: result.error });
           return;
         }
         setReview(null);
@@ -363,9 +391,17 @@ export function PanelsTab({ cwd, activeProjectPath, query }: Props) {
           variant: "success",
         });
       } catch (cause) {
-        setError(String((cause as Error)?.message ?? cause));
+        if (!isCurrent()) return;
+        setReview(null);
+        setUpdateError({
+          appId: review.appId,
+          message: String((cause as Error)?.message ?? cause),
+        });
       } finally {
-        setBusy(null);
+        if (isCurrent()) {
+          updateRequestRef.current = null;
+          setBusy(null);
+        }
       }
       return;
     }
@@ -431,9 +467,17 @@ export function PanelsTab({ cwd, activeProjectPath, query }: Props) {
   };
 
   const reviewUpdate = async (app: PanelAppExtensionSummary) => {
+    if (updateRequestRef.current || busy !== null || installBusy !== null) return;
+    const request = {};
+    updateRequestRef.current = request;
+    const activeProject = activeProjectPath;
+    const isCurrent = () =>
+      updateRequestRef.current === request &&
+      targetRef.current.cwd === cwd &&
+      targetRef.current.activeProjectPath === activeProject;
     setBusy(app.id);
     setCheckingUpdate(app.id);
-    setError(null);
+    setUpdateError(null);
     try {
       if (!cwd || !app.bindingRevision) throw new Error(t("ext.panels.bindingChanged"));
       const result = await window.codeshell.previewPanelAppUpdate(
@@ -441,23 +485,32 @@ export function PanelsTab({ cwd, activeProjectPath, query }: Props) {
         cwd,
         app.bindingRevision,
       );
-      if (targetRef.current.cwd !== cwd) return;
+      if (!isCurrent()) return;
       if (!result.ok) {
-        setError(result.error);
+        setUpdateError({ appId: app.appId, message: result.error });
         return;
       }
       setReview({
         mode: "update",
         projectPath: cwd,
         appId: app.appId,
+        rowId: app.id,
         installedVersion: app.version,
         preview: result.preview,
       });
     } catch (cause) {
-      setError(String((cause as Error)?.message ?? cause));
+      if (isCurrent()) {
+        setUpdateError({
+          appId: app.appId,
+          message: String((cause as Error)?.message ?? cause),
+        });
+      }
     } finally {
-      setCheckingUpdate(null);
-      setBusy(null);
+      if (isCurrent()) {
+        updateRequestRef.current = null;
+        setCheckingUpdate(null);
+        setBusy(null);
+      }
     }
   };
 
@@ -539,7 +592,7 @@ export function PanelsTab({ cwd, activeProjectPath, query }: Props) {
           }
           action={review.mode}
           installedVersion={review.installedVersion}
-          busy={installBusy !== null || (review.mode === "update" && busy === review.appId)}
+          busy={installBusy !== null || (review.mode === "update" && busy === review.rowId)}
           onCancel={() => setReview(null)}
           onInstall={() => void installReviewed()}
         />
@@ -1171,7 +1224,9 @@ export function PanelsTab({ cwd, activeProjectPath, query }: Props) {
                     size="sm"
                     className="h-7 gap-1 px-2 text-xs"
                     disabled={
-                      busy === app.id ||
+                      busy !== null ||
+                      checkingUpdate !== null ||
+                      installBusy !== null ||
                       !activeProjectPath ||
                       !app.bindingRevision ||
                       !app.updateSource.available
@@ -1201,13 +1256,21 @@ export function PanelsTab({ cwd, activeProjectPath, query }: Props) {
                     variant="ghost"
                     size="sm"
                     className="ml-auto h-7 gap-1 px-2 text-xs text-destructive"
-                    disabled={busy === app.id}
+                    disabled={busy !== null || checkingUpdate !== null || installBusy !== null}
                     onClick={() => void uninstall(app)}
                   >
                     <Trash2 className="h-3 w-3" aria-hidden="true" />
                     {t("ext.common.uninstall")}
                   </Button>
                 </div>
+                {updateError?.appId === app.appId && (
+                  <div
+                    role="alert"
+                    className="mt-2 rounded-md border border-status-err/30 bg-status-err/5 px-3 py-2 text-xs text-status-err"
+                  >
+                    {updateError.message}
+                  </div>
+                )}
               </div>
             </li>
           ))}

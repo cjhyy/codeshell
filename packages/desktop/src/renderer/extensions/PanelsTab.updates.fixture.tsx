@@ -36,6 +36,18 @@ function button(label: string, scope: any = document.body): any {
   return found;
 }
 
+function deferred<T>() {
+  let resolve!: (value: T) => void;
+  let reject!: (cause: Error) => void;
+  const promise = new Promise<T>((complete, fail) => {
+    resolve = complete;
+    reject = fail;
+  });
+  return { promise, resolve, reject };
+}
+
+type UpdatePreviewResult = { ok: true; preview: PanelAppPreview } | { ok: false; error: string };
+
 function panel(id = "video-studio", kind: "git" | "dir" | "zip" = "git"): PanelAppExtensionSummary {
   return {
     id: `panel-app:${id}`,
@@ -177,12 +189,15 @@ describe("Panel App update controls", () => {
     else Reflect.deleteProperty(globalThis, "localStorage");
   });
 
-  async function render(projectPath = "/tmp/project") {
+  async function render(
+    projectPath = "/tmp/project",
+    activeProjectPath: string | null = projectPath,
+  ) {
     await act(async () => {
       root.render(
         <ToastProvider>
           <DialogProvider>
-            <PanelsTab cwd={projectPath} activeProjectPath={projectPath} query="" />
+            <PanelsTab cwd={projectPath} activeProjectPath={activeProjectPath} query="" />
           </DialogProvider>
         </ToastProvider>,
       );
@@ -195,6 +210,20 @@ describe("Panel App update controls", () => {
       props(button(label)).onClick();
       await flushMicrotasks();
     });
+  }
+
+  function panelCard(appId = "video-studio") {
+    const card = nodes(container).find(
+      (node) =>
+        node.tagName === "LI" &&
+        nodes(node).some((child) => child.tagName === "DIV" && textOf(child) === appId),
+    );
+    expect(card).toBeDefined();
+    return card;
+  }
+
+  function updateAlert() {
+    return nodes(panelCard()).find((node) => props(node).role === "alert");
   }
 
   function stubRetainedVersion() {
@@ -349,6 +378,179 @@ describe("Panel App update controls", () => {
     expect(textOf(container)).toContain("v0.6.3");
     expect(textOf(container)).toContain("已是来源中的最新版本");
     expect(button("从源码更新", container)).toBeDefined();
+  });
+
+  for (const failure of ["returned", "thrown"] as const) {
+    test(`a ${failure} update preview failure stays next to its update button and can be retried`, async () => {
+      const message = "GitHub API 速率限制（每小时 60 次未鉴权请求），稍后再试";
+      Object.assign(window.codeshell, {
+        previewPanelAppUpdate: async (id: string) => {
+          previews.push(id);
+          if (failure === "thrown") throw new Error(message);
+          return { ok: false, error: message };
+        },
+      });
+      await render();
+      await click("更新到 v0.6.3");
+      expect(textOf(updateAlert())).toBe(message);
+      expect(textOf(document.body)).not.toContain("审查 Panel App 更新");
+      expect(props(button("更新到 v0.6.3")).disabled).toBe(false);
+      expect(previews).toEqual(["video-studio"]);
+      expect(installs).toEqual([]);
+
+      Object.assign(window.codeshell, {
+        previewPanelAppUpdate: async (id: string) => {
+          previews.push(id);
+          return { ok: true, preview };
+        },
+      });
+      await click("更新到 v0.6.3");
+      expect(updateAlert()).toBeUndefined();
+      expect(textOf(document.body)).toContain("审查 Panel App 更新");
+      expect(previews).toEqual(["video-studio", "video-studio"]);
+      expect(installs).toEqual([]);
+    });
+  }
+
+  test("a pending update preview exposes progress and ignores duplicate clicks", async () => {
+    const pending = deferred<UpdatePreviewResult>();
+    apps = [panel(), panel("other")];
+    Object.assign(window.codeshell, {
+      previewPanelAppUpdate: (id: string) => {
+        previews.push(id);
+        return pending.promise;
+      },
+    });
+    await render();
+    const action = button("更新到 v0.6.3", panelCard());
+    await act(async () => {
+      props(action).onClick();
+      props(action).onClick();
+      await flushMicrotasks();
+    });
+    expect(previews).toEqual(["video-studio"]);
+    expect(props(button("正在获取并校验…", panelCard())).disabled).toBe(true);
+    expect(props(button("更新到 v0.6.3", panelCard("other"))).disabled).toBe(true);
+    await act(async () => {
+      pending.resolve({ ok: true, preview });
+      await flushMicrotasks();
+    });
+    expect(textOf(document.body)).toContain("审查 Panel App 更新");
+  });
+
+  for (const completion of ["success", "returned-error", "rejected-error"] as const) {
+    test(`a late preview ${completion} cannot replace a different project's pending update`, async () => {
+      const previous = deferred<UpdatePreviewResult>();
+      const current = deferred<UpdatePreviewResult>();
+      Object.assign(window.codeshell, {
+        previewPanelAppUpdate: (id: string, cwd: string) => {
+          previews.push(id);
+          return cwd === "/tmp/project" ? previous.promise : current.promise;
+        },
+      });
+      await render();
+      await click("更新到 v0.6.3");
+      await render("/tmp/other-project");
+      await click("更新到 v0.6.3");
+      await act(async () => {
+        if (completion === "success") previous.resolve({ ok: true, preview });
+        else if (completion === "returned-error")
+          previous.resolve({ ok: false, error: "Old project preview failed" });
+        else previous.reject(new Error("Old project preview failed"));
+        await flushMicrotasks();
+      });
+      expect(updateAlert()).toBeUndefined();
+      expect(textOf(document.body)).not.toContain("审查 Panel App 更新");
+      expect(textOf(document.body)).not.toContain("Old project preview failed");
+      expect(props(button("正在获取并校验…")).disabled).toBe(true);
+      await act(async () => {
+        current.resolve({ ok: true, preview });
+        await flushMicrotasks();
+      });
+      expect(textOf(document.body)).toContain("目标项目：/tmp/other-project");
+      expect(textOf(document.body)).toContain("审查 Panel App 更新");
+    });
+  }
+
+  test("closing the active project ignores an update preview even when cwd stays the same", async () => {
+    const pending = deferred<UpdatePreviewResult>();
+    Object.assign(window.codeshell, {
+      previewPanelAppUpdate: () => pending.promise,
+    });
+    await render();
+    await click("更新到 v0.6.3");
+    await render("/tmp/project", null);
+    await act(async () => {
+      pending.resolve({ ok: true, preview });
+      await flushMicrotasks();
+    });
+    expect(textOf(document.body)).not.toContain("审查 Panel App 更新");
+    expect(textOf(document.body)).not.toContain("正在获取并校验…");
+    expect(installs).toEqual([]);
+  });
+
+  for (const failure of ["returned", "thrown"] as const) {
+    test(`a ${failure} update installation failure closes the review and reports the affected panel`, async () => {
+      Object.assign(window.codeshell, {
+        installPanelAppUpdate: async (input: unknown) => {
+          installs.push(input);
+          if (failure === "thrown") throw new Error("Update installation failed");
+          return { ok: false, error: "Update installation failed" };
+        },
+      });
+      await render();
+      await click("更新到 v0.6.3");
+      await click("确认并更新");
+      expect(textOf(updateAlert())).toBe("Update installation failed");
+      expect(textOf(document.body)).not.toContain("审查 Panel App 更新");
+      expect(textOf(document.body)).not.toContain("已更新视频工作台");
+      expect(installs).toEqual([
+        { cwd: "/tmp/project", id: "video-studio", reviewToken: preview.reviewToken },
+      ]);
+      expect(props(button("更新到 v0.6.3")).disabled).toBe(false);
+      await click("更新到 v0.6.3");
+      expect(updateAlert()).toBeUndefined();
+      expect(textOf(document.body)).toContain("审查 Panel App 更新");
+    });
+  }
+
+  test("a late update installation failure cannot clear another project's preview progress", async () => {
+    const installation = deferred<{ ok: false; error: string }>();
+    const nextPreview = deferred<UpdatePreviewResult>();
+    Object.assign(window.codeshell, {
+      installPanelAppUpdate: (input: unknown) => {
+        installs.push(input);
+        return installation.promise;
+      },
+    });
+    await render();
+    await click("更新到 v0.6.3");
+    const action = button("确认并更新");
+    await act(async () => {
+      props(action).onClick();
+      props(action).onClick();
+      await flushMicrotasks();
+    });
+    expect(installs).toHaveLength(1);
+    expect(props(button("正在应用已审查版本…")).disabled).toBe(true);
+    expect(props(button("更新到 v0.6.3", panelCard())).disabled).toBe(true);
+    Object.assign(window.codeshell, {
+      previewPanelAppUpdate: () => nextPreview.promise,
+    });
+    await render("/tmp/other-project");
+    await click("更新到 v0.6.3");
+    await act(async () => {
+      installation.resolve({ ok: false, error: "Old project installation failed" });
+      await flushMicrotasks();
+    });
+    expect(updateAlert()).toBeUndefined();
+    expect(textOf(document.body)).not.toContain("Old project installation failed");
+    expect(props(button("正在获取并校验…")).disabled).toBe(true);
+    await act(async () => {
+      nextPreview.resolve({ ok: true, preview });
+      await flushMicrotasks();
+    });
+    expect(textOf(document.body)).toContain("目标项目：/tmp/other-project");
   });
 
   test("a bound project's retained version is reviewed before the native restore token is submitted", async () => {
