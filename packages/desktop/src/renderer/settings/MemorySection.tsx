@@ -15,6 +15,7 @@ import {
   Check,
   ArrowDown,
   ArrowUp,
+  Copy,
 } from "lucide-react";
 import type {
   MemoryLevel,
@@ -38,6 +39,7 @@ import { useConfirm } from "../ui/ConfirmDialog";
 import { writeSettings } from "../settingsBus";
 import { useT } from "../i18n/I18nProvider";
 import type { TranslationKey } from "../i18n/dict";
+import { ProfileMemoryPromotionDialog } from "./ProfileMemoryPromotionDialog";
 
 interface Props {
   scope: "user" | "project";
@@ -320,6 +322,11 @@ export function MemoryStoreView({
       [],
   );
   const [selected, setSelected] = useState<RendererMemoryEntryFull | null>(null);
+  const [promotion, setPromotion] = useState<{
+    contextKey: string;
+    scope: "user" | "dream";
+    entry: RendererMemoryEntryFull & { id: string };
+  } | null>(null);
   const [drafting, setDrafting] = useState(false);
   const [draft, setDraft] = useState<SaveMemoryInput | null>(null);
   const [draftBaseline, setDraftBaseline] = useState<SaveMemoryInput | null>(null);
@@ -345,6 +352,7 @@ export function MemoryStoreView({
     ? MEMORY_SCOPES.filter((candidate) => candidate.id === "user")
     : MEMORY_SCOPES;
   const draftDirty = drafting && memoryDraftChanged(draft, draftBaseline);
+  const promotionContextKey = JSON.stringify([level, cwd, profileName, scope, selected?.id]);
 
   useEffect(() => {
     onDirtyChange?.(draftDirty);
@@ -394,6 +402,7 @@ export function MemoryStoreView({
     void refreshPending();
     entryReadGeneration.current += 1;
     setSelected(null);
+    setPromotion(null);
     setDrafting(false);
     setDraft(null);
     setDraftBaseline(null);
@@ -447,6 +456,7 @@ export function MemoryStoreView({
   const loadEntry = async (name: string): Promise<void> => {
     const generation = ++entryReadGeneration.current;
     setError(null);
+    setPromotion(null);
     setDrafting(false);
     setDraft(null);
     setDraftBaseline(null);
@@ -480,6 +490,7 @@ export function MemoryStoreView({
     if (saving) return;
     if (!(await confirmDiscardDraft())) return;
     entryReadGeneration.current += 1;
+    setPromotion(null);
     const next: SaveMemoryInput = {
       level,
       scope,
@@ -499,6 +510,7 @@ export function MemoryStoreView({
   const startEdit = async (): Promise<void> => {
     if (!selected) return;
     if (!(await confirmDiscardDraft())) return;
+    setPromotion(null);
     const next = buildEditDraft(selected, level, scope, cwd, profileName);
     setDrafting(true);
     setDraft(next);
@@ -659,6 +671,7 @@ export function MemoryStoreView({
 
   const changeScope = async (next: MemoryScope): Promise<void> => {
     if (saving || next === scope || !(await confirmDiscardDraft())) return;
+    setPromotion(null);
     setScope(next);
   };
 
@@ -681,6 +694,19 @@ export function MemoryStoreView({
 
   return (
     <>
+      {level === "project" && cwd && promotion?.contextKey === promotionContextKey && (
+        <ProfileMemoryPromotionDialog
+          key={promotionContextKey}
+          cwd={cwd}
+          scope={promotion.scope}
+          source={promotion.entry}
+          onClose={() => setPromotion(null)}
+          onCopied={(profile) => {
+            setPromotion(null);
+            setNotice(t("settingsX.memory.promotionDone", { profile }));
+          }}
+        />
+      )}
       <div
         className={cn(
           "flex flex-wrap items-center justify-between gap-2",
@@ -994,6 +1020,16 @@ export function MemoryStoreView({
               onClose={() => setSelected(null)}
               onPin={() => void togglePin(selected)}
               onDelete={() => void removeEntry(selected.name)}
+              onPromote={
+                level === "project" && cwd && selected.id && (scope === "user" || scope === "dream")
+                  ? () =>
+                      setPromotion({
+                        contextKey: promotionContextKey,
+                        scope,
+                        entry: { ...selected, id: selected.id! },
+                      })
+                  : undefined
+              }
               friendly={profilePresentation}
             />
           ) : (
@@ -1101,6 +1137,7 @@ function ViewEntry({
   onClose,
   onPin,
   onDelete,
+  onPromote,
   friendly = false,
 }: {
   entry: RendererMemoryEntryFull;
@@ -1108,6 +1145,7 @@ function ViewEntry({
   onClose: () => void;
   onPin: () => void;
   onDelete: () => void;
+  onPromote?: () => void;
   friendly?: boolean;
 }) {
   const { t } = useT();
@@ -1129,6 +1167,12 @@ function ViewEntry({
           ) : null}
         </div>
         <div className="flex shrink-0 items-center gap-1">
+          {onPromote ? (
+            <Button type="button" variant="ghost" size="sm" className="h-8 gap-1 px-2 text-xs" onClick={onPromote}>
+              <Copy size={12} />
+              <span>{t("settingsX.memory.promotionTitle")}</span>
+            </Button>
+          ) : null}
           {friendly ? (
             <Button
               type="button"

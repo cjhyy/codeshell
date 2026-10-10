@@ -117,6 +117,7 @@ describe("architecture growth budgets", () => {
         matches("packages/desktop/src/main/session-transcript-ipc.ts", /ipcMain\.handle\(/g) +
         matches("packages/desktop/src/main/profile-switch-ipc.ts", /ipcMain\.handle\(/g) +
         matches("packages/desktop/src/main/profile-plugin-export-ipc.ts", /ipcMain\.handle\(/g) +
+        matches("packages/desktop/src/main/profile-memory-promotion-ipc.ts", /ipcMain\.handle\(/g) +
         matches("packages/desktop/src/main/task-inbox/task-inbox-ipc.ts", /handle\("taskInbox:/g) +
         // Nine local-only Lab routes: eight existing operations plus P2 native
         // adoption. Exact body/scope review and post-dialog revalidation remain
@@ -172,6 +173,7 @@ describe("architecture growth budgets", () => {
         matches("packages/desktop/src/preload/session-transcript-api.ts", /ipc\.invoke\(/g) +
         matches("packages/desktop/src/preload/task-inbox-api.ts", /ipc\.invoke\(/g) +
         matches("packages/desktop/src/preload/profile-plugin-export-api.ts", /ipc\.invoke\(/g) +
+        matches("packages/desktop/src/preload/profile-memory-promotion-api.ts", /ipc\.invoke\(/g) +
         matches("packages/desktop/src/preload/optimization-lab-api.ts", /ipc\.invoke\(/g) +
         matches("packages/desktop/src/preload/operation-resolution-api.ts", /ipc\.invoke\(/g),
     ).toBeLessThanOrEqual(330);
