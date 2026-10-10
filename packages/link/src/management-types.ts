@@ -144,6 +144,8 @@ export interface LinkConnectionInput {
   label: string;
   connectionId?: string;
   expectedRevision: string | null;
+  /** User-pasted Figma file URL/key. Existing files are recovered by the Host, never this input. */
+  resourceUrl?: string;
 }
 
 export interface TokenConnectionInput extends LinkConnectionInput {

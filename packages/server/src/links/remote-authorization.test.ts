@@ -37,7 +37,11 @@ async function listen(server: Server) {
   });
   return `http://127.0.0.1:${(server.address() as { port: number }).port}`;
 }
-async function fixture(options: Pick<LinkHttpOptions, "onChanged" | "browserHandoff"> = {}) {
+async function fixture(
+  options: Pick<LinkHttpOptions, "onChanged" | "browserHandoff"> & {
+    provider?: "github" | "figma";
+  } = {},
+) {
   const directory = mkdtempSync(join(tmpdir(), "host-remote-link-"));
   cleanups.push(async () => rmSync(directory, { recursive: true, force: true }));
   const store = new CredentialStore(undefined, new PlaintextCipher(), directory);
@@ -48,6 +52,11 @@ async function fixture(options: Pick<LinkHttpOptions, "onChanged" | "browserHand
   let gate: Promise<void> | undefined;
   let revocationFails = false;
   let metadataFails = false;
+  const provider = options.provider ?? "github";
+  const scopes =
+    provider === "figma" ? ["figma:get_file", "figma:get_comments"] : ["github:list_repositories"];
+  let files: string[] = [];
+  let accountId = "1";
   const issuer = await listen(
     createServer(async (req, res) => {
       const parts: Buffer[] = [];
@@ -67,7 +76,7 @@ async function fixture(options: Pick<LinkHttpOptions, "onChanged" | "browserHand
             refresh_token: `refresh-${grantId}`,
             token_type: "Bearer",
             expires_in: 900,
-            scope: "github:list_repositories",
+            scope: scopes.join(" "),
           }),
         );
       } else if (req.url === "/api/v1/data/authorization") {
@@ -80,12 +89,38 @@ async function fixture(options: Pick<LinkHttpOptions, "onChanged" | "browserHand
         res.end(
           JSON.stringify({
             version: 1,
-            providerId: "github",
+            providerId: provider,
             connectionId,
             grantId: grants.get(access),
-            account: { id: 1, login: "fixture" },
-            scopes: ["github:list_repositories"],
-            repositories: ["owner/repo"],
+            account: { id: accountId, login: "fixture" },
+            scopes,
+            ...(provider === "figma"
+              ? {
+                  actions: ["get_file", "get_comments"],
+                  resourceGroups: [{ id: "files", items: files.map((id) => ({ id, label: id })) }],
+                }
+              : { repositories: ["owner/repo"] }),
+          }),
+        );
+      } else if (req.url === "/api/v1/links/providers" && provider === "figma") {
+        res.end(
+          JSON.stringify({
+            version: 1,
+            providers: [
+              {
+                id: "figma",
+                methods: [
+                  {
+                    id: "remote-link",
+                    authKind: "oauth",
+                    defaultAuthModeId: "browser",
+                    authModes: [{ id: "browser", kind: "redirect" }],
+                  },
+                ],
+                actions: ["get_file", "get_comments"],
+                scopes,
+              },
+            ],
           }),
         );
       } else if (req.url === "/oauth/revoke") {
@@ -137,7 +172,12 @@ async function fixture(options: Pick<LinkHttpOptions, "onChanged" | "browserHand
       ...(body ? { body: JSON.stringify(body) } : {}),
     });
   const start = async (override = {}, owner = "one") => {
-    const res = await api("/authorizations/remote", "POST", { ...input, ...override }, owner);
+    const res = await api(
+      "/authorizations/remote",
+      "POST",
+      { ...input, providerId: provider, ...override },
+      owner,
+    );
     expect(res.status).toBe(200);
     return (await res.json()) as LinkAuthorization;
   };
@@ -161,6 +201,12 @@ async function fixture(options: Pick<LinkHttpOptions, "onChanged" | "browserHand
     callback,
     complete,
     requests,
+    setFiles: (value: string[]) => {
+      files = value;
+    },
+    setAccount: (value: string) => {
+      accountId = value;
+    },
     entered,
     delay: (promise: Promise<void>) => {
       gate = promise;
@@ -189,6 +235,130 @@ async function fixture(options: Pick<LinkHttpOptions, "onChanged" | "browserHand
     },
   };
 }
+test("Figma connects without files; adding requires browser completion and retains the trusted whitelist", async () => {
+  const f = await fixture({ provider: "figma" });
+  const initial = await f.start();
+  const initialQuery = new URL(initial.redirect!.authorizationUrl).searchParams;
+  expect(initialQuery.get("resource_mode")).toBe("deferred");
+  expect(initialQuery.has("resource_files")).toBe(false);
+  const first = await (await f.complete(initial)).json();
+  expect(first.connection).toMatchObject({ status: "connected", account: { resources: [] } });
+  let connection = first.connection;
+  const original = f.store.resolve(connection.id)!;
+  expect(
+    (
+      await f.api("/authorizations/remote", "POST", {
+        ...input,
+        providerId: "figma",
+        connectionId: connection.id,
+        expectedRevision: connection.revision,
+        resourceUrl: "FileFirst",
+        resourceFiles: ["InjectedByBrowser"],
+      })
+    ).status,
+  ).toBe(400);
+  const adding = await f.start({
+    connectionId: connection.id,
+    expectedRevision: connection.revision,
+    resourceUrl: "https://www.figma.com/design/FileFirst/Design?node-id=0-1",
+  });
+  expect(new URL(adding.redirect!.authorizationUrl).searchParams.get("resource_files")).toBe(
+    '["FileFirst"]',
+  );
+  expect(f.store.resolve(connection.id)).toEqual(original);
+  expect((await f.api(`/authorizations/${adding.id}`, "DELETE")).status).toBe(200);
+  expect(f.store.resolve(connection.id)).toEqual(original);
+  expect((await f.complete(adding)).status).toBe(404);
+
+  const selected = await f.start({
+    connectionId: connection.id,
+    expectedRevision: connection.revision,
+    resourceUrl: "FileFirst",
+  });
+  f.setFiles(["FileFirst"]);
+  const selectedResult = await f.complete(selected);
+  expect(selectedResult.status).toBe(200);
+  connection = (await selectedResult.json()).connection;
+  expect(connection.id).toBe(first.connection.id);
+  expect(connection.account.resources).toEqual(["FileFirst"]);
+
+  const cancelled = await f.start({
+    connectionId: connection.id,
+    expectedRevision: connection.revision,
+    resourceUrl: "FileCancelled",
+  });
+  expect((await f.api(`/authorizations/${cancelled.id}`, "DELETE")).status).toBe(200);
+  expect(f.store.resolve(connection.id)?.meta?.linkResourceLabels).toEqual(["FileFirst"]);
+
+  const next = await f.start({
+    connectionId: connection.id,
+    expectedRevision: connection.revision,
+    resourceUrl: "FileSecond",
+  });
+  const query = new URL(next.redirect!.authorizationUrl).searchParams;
+  expect(query.get("resource_mode")).toBe("select");
+  expect(JSON.parse(query.get("resource_files")!)).toEqual(["FileFirst", "FileSecond"]);
+  f.setFiles(["FileFirst", "FileSecond"]);
+  expect((await f.complete(next)).status).toBe(200);
+  expect(f.store.resolve(connection.id)?.meta?.linkResourceLabels).toEqual([
+    "FileFirst",
+    "FileSecond",
+  ]);
+});
+
+test("Figma rejects account switching and incomplete or expanded callbacks without changing the previous connection", async () => {
+  const f = await fixture({ provider: "figma" });
+  const first = await (await f.complete(await f.start())).json();
+  const { connection } = first;
+  const original = f.store.resolve(connection.id);
+  for (const files of [[], ["RequestedFile", "UnrequestedFile"], ["RequestedFile"]]) {
+    const job = await f.start({
+      connectionId: connection.id,
+      expectedRevision: connection.revision,
+      resourceUrl: "RequestedFile",
+    });
+    f.setFiles(files);
+    if (files.length === 1) f.setAccount("different-account");
+    const response = await f.complete(job);
+    expect(response.status).toBe(files.length === 1 ? 409 : 422);
+    expect(f.store.resolve(connection.id)).toEqual(original);
+  }
+  expect(f.requests.filter((request) => request.path === "/oauth/revoke")).toHaveLength(3);
+});
+
+test("Figma file additions require an existing connection and provider-bound user input", async () => {
+  const f = await fixture({ provider: "figma" });
+  expect(
+    (
+      await f.api("/authorizations/remote", "POST", {
+        ...input,
+        providerId: "figma",
+        resourceUrl: "FileFirst",
+      })
+    ).status,
+  ).toBe(400);
+  expect(
+    (
+      await f.api("/authorizations/remote", "POST", {
+        ...input,
+        providerId: "figma",
+        connectionId: "link-remote-new",
+        resourceUrl: "FileFirst",
+      })
+    ).status,
+  ).toBe(400);
+  const github = await fixture();
+  expect(
+    (
+      await github.api("/authorizations/remote", "POST", {
+        ...input,
+        resourceUrl: "FileFirst",
+        connectionId: "some-connection",
+      })
+    ).status,
+  ).toBe(400);
+});
+
 test("private runtimes retain legacy completion without advertising a public browser callback", async () => {
   const f = await fixture({ browserHandoff: false });
   const snapshot = await (await f.api("")).json();

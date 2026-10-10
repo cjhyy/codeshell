@@ -27,6 +27,7 @@ import {
 import {
   executeRemoteLinkAction,
   isRemoteLinkCredential,
+  RemoteLinkError,
   type RemoteLinkActionRequest,
 } from "../links/remote.js";
 import {
@@ -134,6 +135,7 @@ export function createIpcCredentialAccess(
   const pending = new Map<
     string,
     {
+      method: string;
       resolve: (value: unknown) => void;
       reject: (err: Error) => void;
       timer: ReturnType<typeof setTimeout>;
@@ -167,7 +169,13 @@ export function createIpcCredentialAccess(
     clearTimeout(waiter.timer);
     waiter.cleanup?.();
     if ("error" in msg && msg.error) {
-      waiter.reject(new Error(msg.error.message));
+      const data = msg.error.data as { remoteLinkCode?: unknown } | undefined;
+      waiter.reject(
+        waiter.method === "desktop/remoteLinkAction" &&
+          data?.remoteLinkCode === "file_not_authorized"
+          ? new RemoteLinkError("file_not_authorized")
+          : new Error(msg.error.message),
+      );
     } else {
       waiter.resolve(msg.result);
     }
@@ -212,7 +220,7 @@ export function createIpcCredentialAccess(
             ? 45_000
             : 30_000,
       );
-      pending.set(id, { resolve, reject, timer, cleanup });
+      pending.set(id, { method, resolve, reject, timer, cleanup });
       signal?.addEventListener("abort", cancel, { once: true });
       transport.send({ jsonrpc: "2.0", id, method, params });
     });

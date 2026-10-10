@@ -198,15 +198,32 @@ export function LinkConnectionDialog({
             )}
           </div>
           <DialogTitle className="text-lg">
-            {t(connected ? "ext.link.authorizationConnectedTitle" : "ext.link.authorizationTitle", {
-              name: providerName,
-            })}
+            {t(
+              input.resourceUrl
+                ? connected
+                  ? "ext.link.authorizationFileAddedTitle"
+                  : "ext.link.authorizationFileTitle"
+                : connected
+                  ? "ext.link.authorizationConnectedTitle"
+                  : "ext.link.authorizationTitle",
+              {
+                name: providerName,
+              },
+            )}
           </DialogTitle>
           <DialogDescription className="max-w-[330px] text-xs leading-5">
             {t(
-              connected
-                ? "ext.link.authorizationConnectedDescription"
-                : "ext.link.authorizationDescription",
+              input.resourceUrl
+                ? connected
+                  ? "ext.link.authorizationFileAddedDescription"
+                  : "ext.link.remoteAddFileDescription"
+                : connected &&
+                    input.providerId === "figma" &&
+                    !authorization?.connection?.account?.resources.length
+                  ? "ext.link.remoteNoFiles"
+                  : connected
+                    ? "ext.link.authorizationConnectedDescription"
+                    : "ext.link.authorizationDescription",
             )}
           </DialogDescription>
         </DialogHeader>

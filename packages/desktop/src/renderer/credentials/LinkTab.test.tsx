@@ -675,6 +675,98 @@ describe("LinkTab integrations", () => {
     ).toBe("GatewayReply");
   });
 
+  test("connected Figma accounts ask for a file only when Add file is chosen", async () => {
+    const connection: LinkSnapshot["connections"][number] = {
+      id: "remote-figma",
+      providerId: "figma",
+      methodId: "remote-link",
+      runtime: "server",
+      authSource: "remote-link",
+      label: "Design account",
+      account: { id: "figma-account", label: "Designer", resources: [] },
+      capabilityIds: ["figma.get_file", "figma.get_comments"],
+      scope: "user",
+      status: "connected",
+      editable: true,
+      revision: "figma-revision",
+    };
+    const container = await renderProjectedCatalog(
+      await projectedCatalog(["figma"]),
+      [],
+      [connection],
+    );
+    const calls: unknown[][] = [];
+    const cancelled: string[] = [];
+    const expiresAt = new Date(Date.now() + 60_000).toISOString();
+    Object.assign(window.codeshell.links, {
+      authorizationStart: async (...args: unknown[]) => {
+        calls.push(args);
+        return {
+          id: "add-file-attempt",
+          providerId: "figma",
+          state: "pending",
+          step: {
+            id: "file-redirect",
+            kind: "redirect",
+            authorizationUrl: "https://fixture.invalid/oauth/authorize",
+            expiresAt,
+          },
+        };
+      },
+      authorizationGet: async () => ({ id: "add-file-attempt", state: "pending" }),
+      authorizationCancel: async (_cwd: string, id: string) => {
+        cancelled.push(id);
+      },
+    });
+    const figma = findElements(container, "ARTICLE").find(
+      (node) =>
+        reactPropsOf(node)["data-link-integration"] === "figma" &&
+        reactPropsOf(node)["data-link-runtime"] === "server",
+    );
+    expect(buttonWithLabel(figma, "添加文件")).toBeDefined();
+    expect(findElements(figma, "INPUT")).toHaveLength(0);
+    expect(reactChildText(reactPropsOf(figma).children)).toContain("账号已连接");
+    expect(calls).toHaveLength(0);
+    await act(async () => {
+      reactPropsOf(buttonWithLabel(figma, "添加文件")).onClick();
+      await flushMicrotasks();
+    });
+    const input = findElements(container, "INPUT").find(
+      (node) => reactPropsOf(node)["aria-label"] === "Figma 文件链接",
+    );
+    const url = "https://www.figma.com/design/FileChosen/Design?node-id=0-1";
+    await act(async () => {
+      reactPropsOf(input).onChange({ target: { value: url } });
+      await flushMicrotasks();
+    });
+    expect(calls).toHaveLength(0);
+    await act(async () => {
+      reactPropsOf(
+        findElements(container, "FORM").find((form) => buttonWithLabel(form, "继续授权文件")),
+      ).onSubmit({ preventDefault() {} });
+      await flushMicrotasks();
+    });
+    expect(calls).toHaveLength(1);
+    expect(calls[0].slice(2)).toEqual([
+      {
+        providerId: "figma",
+        methodId: "remote-link",
+        label: "Design account",
+        connectionId: "remote-figma",
+        expectedRevision: "figma-revision",
+        resourceUrl: url,
+      },
+      "remote-link",
+    ]);
+    expect(connection.account?.resources).toEqual([]);
+    await act(async () => {
+      reactPropsOf(buttonWithLabel(container, "取消")).onClick();
+      await flushMicrotasks();
+    });
+    expect(cancelled).toContain("add-file-attempt");
+    expect(buttonWithLabel(container, "添加文件")).toBeDefined();
+  });
+
   test("uses a sole valid connection and requires a choice when several are saved", () => {
     const local: MaskedCredentialView = {
       id: "link-github-fine-grained-pat",

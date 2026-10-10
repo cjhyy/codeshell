@@ -143,6 +143,7 @@ export function createLinkHttp(options: LinkHttpOptions) {
               "connectionId",
               "expectedRevision",
               "authModeId",
+              "resourceUrl",
             ]);
             result = await service.startAuthorization(
               owner,
@@ -211,6 +212,7 @@ export function createLinkHttp(options: LinkHttpOptions) {
               "connectionId",
               "expectedRevision",
               ...(token ? ["token"] : []),
+              ...(url.pathname.endsWith("/remote") ? ["resourceUrl"] : []),
             ]);
             result = token
               ? await service.connectToken(owner, input as unknown as TokenConnectionInput)

@@ -646,6 +646,16 @@ export const extensions = {
         remoteUnconfigured: "尚未配置桌面 Link 服务。已有连接仍可查看和断开。",
         remoteName: "远程连接名称",
         remoteAdd: "添加账号",
+        remoteAddFile: "添加文件",
+        remoteAddFileTitle: "添加 Figma 文件",
+        remoteAddFileDescription:
+          "粘贴设计文件链接，再到浏览器确认访问该文件。已有文件授权会保留。",
+        remoteFileUrl: "Figma 文件链接",
+        remoteConfirmFile: "继续授权文件",
+        remoteNoFiles: "账号已连接，尚未授权文件。需要读取设计时，点击“添加文件”并粘贴文件链接。",
+        authorizationFileTitle: "允许 Figma 文件访问",
+        authorizationFileAddedTitle: "文件已添加",
+        authorizationFileAddedDescription: "文件访问已确认，现在可以读取设计信息与评论。",
         authorizationTitle: "连接 {name}",
         authorizationConnectedTitle: "已连接 {name}",
         authorizationDescription: "完成下面的授权，即可在 CodeShell 中使用此连接。",
@@ -1713,6 +1723,18 @@ export const extensions = {
           "Desktop Link service is not configured. Existing connections can still be viewed and disconnected.",
         remoteName: "Remote connection name",
         remoteAdd: "Add account",
+        remoteAddFile: "Add file",
+        remoteAddFileTitle: "Add a Figma file",
+        remoteAddFileDescription:
+          "Paste a design file link, then confirm access in your browser. Existing file access is preserved.",
+        remoteFileUrl: "Figma file URL",
+        remoteConfirmFile: "Continue to authorize file",
+        remoteNoFiles:
+          "Account connected; no files authorized yet. When you need a design, choose Add file and paste its link.",
+        authorizationFileTitle: "Allow Figma file access",
+        authorizationFileAddedTitle: "File added",
+        authorizationFileAddedDescription:
+          "File access confirmed. You can now read its design information and comments.",
         authorizationTitle: "Connect {name}",
         authorizationConnectedTitle: "Connected to {name}",
         authorizationDescription:

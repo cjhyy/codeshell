@@ -137,7 +137,12 @@ function RemoteProviderSection({
   const [rename, setRename] = React.useState<string>();
   const [newName, setNewName] = React.useState("");
   const [disconnect, setDisconnect] = React.useState<string>();
-  const [authorization, setAuthorization] = React.useState<{ connection?: MaskedLinkConnection }>();
+  const [authorization, setAuthorization] = React.useState<{
+    connection?: MaskedLinkConnection;
+    resourceUrl?: string;
+  }>();
+  const [addingFile, setAddingFile] = React.useState<MaskedLinkConnection>();
+  const [fileUrl, setFileUrl] = React.useState("");
   const providerName = provider?.displayName ?? providerId;
   const Icon = provider?.icon === "github" ? Github : provider?.icon === "figma" ? Figma : Cable;
   const modes = provider?.authModes?.filter((mode) => mode.id === "remote-link") ?? [];
@@ -169,15 +174,20 @@ function RemoteProviderSection({
       }
     }
   };
-  const start = (connection?: MaskedLinkConnection) => {
+  const start = (connection?: MaskedLinkConnection, resourceUrl?: string) => {
     setManaging(false);
-    setAuthorization({ connection });
+    setAuthorization({ connection, resourceUrl });
+  };
+  const addFile = (connection: MaskedLinkConnection) => {
+    setFileUrl("");
+    setAddingFile(connection);
   };
   const connections =
     snapshot?.connections.filter(
       (item) => item.authSource === "remote-link" && item.providerId === providerId,
     ) ?? [];
   const connected = connections.filter((item) => item.status === "connected");
+  const editableConnected = connected.filter((item) => item.editable);
   const available = modes.some((mode) => mode.available);
   const failed = error || loadError;
   const feedback = (
@@ -227,6 +237,20 @@ function RemoteProviderSection({
                   <Check className="size-3.5" aria-hidden />
                   {t("ext.link.remoteAvailable")}
                 </span>
+                {providerId === "figma" && editableConnected.length > 0 && (
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    disabled={busy || !available}
+                    onClick={() =>
+                      editableConnected.length === 1
+                        ? addFile(editableConnected[0]!)
+                        : setManaging(true)
+                    }
+                  >
+                    {t("ext.link.remoteAddFile")}
+                  </Button>
+                )}
                 <Button size="sm" variant="outline" onClick={() => setManaging(true)}>
                   <Settings2 className="size-3.5" aria-hidden />
                   {t("ext.link.remoteManage")}
@@ -258,6 +282,11 @@ function RemoteProviderSection({
             {connected.map((item) => item.account?.label ?? item.label).join(" · ")}
           </p>
         )}
+        {providerId === "figma" &&
+          connected.length > 0 &&
+          connected.every((item) => !item.account?.resources.length) && (
+            <p className="mt-2 text-xs text-muted-foreground">{t("ext.link.remoteNoFiles")}</p>
+          )}
         {!available && connections.length > 0 && (
           <p className="mt-3 text-xs text-muted-foreground">{t("ext.link.remoteUnconfigured")}</p>
         )}
@@ -333,6 +362,16 @@ function RemoteProviderSection({
               )}
               {connection.editable ? (
                 <div className="flex flex-wrap gap-1">
+                  {providerId === "figma" && connection.status === "connected" && (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      disabled={busy || !available}
+                      onClick={() => addFile(connection)}
+                    >
+                      {t("ext.link.remoteAddFile")}
+                    </Button>
+                  )}
                   <Button
                     variant="ghost"
                     size="sm"
@@ -406,6 +445,41 @@ function RemoteProviderSection({
           )}
         </DialogContent>
       </Dialog>
+      <Dialog open={Boolean(addingFile)} onOpenChange={(open) => !open && setAddingFile(undefined)}>
+        <DialogContent className="max-w-md rounded-2xl">
+          <DialogHeader>
+            <DialogTitle>{t("ext.link.remoteAddFileTitle")}</DialogTitle>
+            <DialogDescription>{t("ext.link.remoteAddFileDescription")}</DialogDescription>
+          </DialogHeader>
+          <form
+            className="space-y-3"
+            onSubmit={(event) => {
+              event.preventDefault();
+              if (!addingFile || !fileUrl.trim()) return;
+              const connection = addingFile;
+              setAddingFile(undefined);
+              start(connection, fileUrl.trim());
+            }}
+          >
+            <Input
+              aria-label={t("ext.link.remoteFileUrl")}
+              placeholder="https://www.figma.com/design/…"
+              value={fileUrl}
+              onChange={(event) => setFileUrl(event.target.value)}
+              maxLength={1_000}
+              autoFocus
+            />
+            <div className="flex justify-end gap-2">
+              <Button type="button" variant="ghost" onClick={() => setAddingFile(undefined)}>
+                {t("common.cancel")}
+              </Button>
+              <Button type="submit" disabled={!fileUrl.trim()}>
+                {t("ext.link.remoteConfirmFile")}
+              </Button>
+            </div>
+          </form>
+        </DialogContent>
+      </Dialog>
       {authorization && (
         <LinkConnectionDialog
           key={`${cwd}:${providerId}:${authorization.connection?.id ?? "new"}`}
@@ -418,6 +492,7 @@ function RemoteProviderSection({
             label: authorization.connection?.label ?? providerName,
             ...(authorization.connection ? { connectionId: authorization.connection.id } : {}),
             expectedRevision: authorization.connection?.revision ?? null,
+            ...(authorization.resourceUrl ? { resourceUrl: authorization.resourceUrl } : {}),
           }}
           modes={modes}
           onClose={() => setAuthorization(undefined)}

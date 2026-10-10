@@ -6,13 +6,15 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { CredentialStore } from "../credentials/store.js";
 import { PlaintextCipher } from "../credentials/cipher.js";
-import { setDefaultCredentialAccess } from "../credentials/access.js";
+import { createIpcCredentialAccess, setDefaultCredentialAccess } from "../credentials/access.js";
+import { createInProcessTransport } from "../protocol/transport.js";
 import type { ToolContext } from "../tool-system/context.js";
 import { linkActionTool } from "./link-action-tool.js";
 import {
   beginRemoteLinkAuthorization,
   completeRemoteLinkAuthorization,
   executeRemoteLinkAction,
+  RemoteLinkError,
 } from "./remote.js";
 import {
   REMOTE_LINK_PROVIDER_ADAPTERS,
@@ -256,7 +258,7 @@ function result(provider: RemoteLinkProviderId, action: string, body: any): unkn
 }
 async function fixture(
   providerId: RemoteLinkProviderId,
-  options: { metadata?: (value: any) => any; scopes?: string[] } = {},
+  options: { metadata?: (value: any) => any; scopes?: string[]; resourceFiles?: string[] } = {},
 ) {
   const directory = mkdtempSync(join(tmpdir(), "all-remote-link-"));
   cleanups.push(() => rmSync(directory, { recursive: true, force: true }));
@@ -328,7 +330,7 @@ async function fixture(
   const attempt = beginRemoteLinkAuthorization(
     { issuer, clientId: "registered-client", redirectUri: "http://127.0.0.1:4900/callback" },
     Date.now(),
-    { providerId, actions: adapter.actions },
+    { providerId, actions: adapter.actions, resourceFiles: options.resourceFiles },
   );
   const connect = async () => {
     const credential = await completeRemoteLinkAuthorization(
@@ -432,6 +434,185 @@ test("authorization rejects cross-provider, expanded capabilities, ambiguous res
   }
 });
 
+test("Figma account-only grants are connected but cannot read any file or refresh a token", async () => {
+  const f = await fixture("figma", {
+    resourceFiles: [],
+    metadata: (value) => ({
+      ...value,
+      resources: [{ id: "files", items: [] }],
+      resourceGroups: [{ id: "files", items: [] }],
+    }),
+  });
+  const credential = await f.connect();
+  expect(new URL(f.attempt.authorizationUrl).searchParams.get("resource_mode")).toBe("deferred");
+  expect(credential.meta?.linkRemoteState).toBe("connected");
+  expect(credential.meta?.linkResourceGroups).toEqual([{ id: "files", items: [] }]);
+  const before = f.requests.length;
+  for (const action of f.adapter.actions) {
+    await expect(
+      f.execute(action, params("figma", action), {
+        now: () => Date.now() + 1_000_000,
+      }),
+    ).rejects.toMatchObject({ code: "file_not_authorized" });
+    await expect(f.execute(action)).rejects.toThrow("添加文件");
+  }
+  expect(f.requests).toHaveLength(before);
+  expect(f.store.resolve("selected-link")?.meta?.linkRemoteState).toBe("connected");
+});
+
+test("Figma selection is canonical, bounded and cannot silently widen or lose requested file access", async () => {
+  const url = `https://www.figma.com/design/${resources.figma}/Fixture?node-id=0-1`;
+  const f = await fixture("figma", { resourceFiles: [url, resources.figma] });
+  const query = new URL(f.attempt.authorizationUrl).searchParams;
+  expect(query.get("resource_mode")).toBe("select");
+  expect(JSON.parse(query.get("resource_files")!)).toEqual([resources.figma]);
+  await f.connect();
+  for (const resourceFiles of [[], [resources.figma, "AnotherFile"]]) {
+    const invalid = await fixture("figma", { resourceFiles });
+    await expect(invalid.connect()).rejects.toMatchObject({ code: "reconnect" });
+    expect(invalid.store.list()).toEqual([]);
+  }
+  for (const value of [
+    "https://figma.com.attacker.test/design/FileAllowed123/Fixture",
+    "https://user:pass@www.figma.com/design/FileAllowed123/Fixture",
+    "https://www.figma.com:8443/design/FileAllowed123/Fixture",
+    "http://www.figma.com/design/FileAllowed123/Fixture",
+  ]) {
+    expect(() =>
+      beginRemoteLinkAuthorization(f.attempt.configuration, Date.now(), {
+        providerId: "figma",
+        resourceFiles: [value],
+      }),
+    ).toThrow();
+  }
+  expect(() =>
+    beginRemoteLinkAuthorization(f.attempt.configuration, Date.now(), {
+      providerId: "github",
+      resourceFiles: [],
+    }),
+  ).toThrow();
+  expect(() =>
+    beginRemoteLinkAuthorization(f.attempt.configuration, Date.now(), {
+      providerId: "figma",
+      resourceFiles: Array.from({ length: 101 }, (_, i) => `File${i}`),
+    }),
+  ).toThrow();
+  const full = Array.from({ length: 100 }, (_, i) => `File${i}`);
+  const duplicate = beginRemoteLinkAuthorization(f.attempt.configuration, Date.now(), {
+    providerId: "figma",
+    resourceFiles: [...full, "https://www.figma.com/design/File0/AlreadyAdded"],
+  });
+  expect(duplicate.resourceFiles).toEqual(full);
+});
+
+test("ReadSource over worker IPC directs an ungranted Figma file to Add file without issuing provider requests", async () => {
+  const previousHome = process.env.CODE_SHELL_HOME;
+  const directory = mkdtempSync(join(tmpdir(), "figma-source-remote-http-"));
+  process.env.CODE_SHELL_HOME = directory;
+  cleanups.push(() => {
+    if (previousHome === undefined) delete process.env.CODE_SHELL_HOME;
+    else process.env.CODE_SHELL_HOME = previousHome;
+    rmSync(directory, { recursive: true, force: true });
+  });
+  const f = await fixture("figma", {
+    resourceFiles: [],
+    metadata: (value) => ({
+      ...value,
+      resources: [{ id: "files", items: [] }],
+      resourceGroups: [{ id: "files", items: [] }],
+    }),
+  });
+  await f.connect();
+  const [main, worker] = createInProcessTransport();
+  setDefaultCredentialAccess(createIpcCredentialAccess(worker));
+  main.send({
+    jsonrpc: "2.0",
+    method: "desktop/credentialSnapshot",
+    params: {
+      revision: 1,
+      entries: [
+        {
+          cwd: directory,
+          full: f.store.listMasked(),
+          project: [],
+          envFull: {},
+          envProject: {},
+        },
+      ],
+    },
+  });
+  main.onMessage((message) => {
+    if (
+      !("method" in message) ||
+      !("id" in message) ||
+      message.method !== "desktop/remoteLinkAction"
+    )
+      return;
+    void executeRemoteLinkAction(message.params as any, { store: f.store }).then(
+      (result) => main.send({ jsonrpc: "2.0", id: message.id, result }),
+      (error) =>
+        main.send({
+          jsonrpc: "2.0",
+          id: message.id,
+          error: {
+            code: -32603,
+            message: "Details are deliberately omitted by the worker boundary",
+            ...(error instanceof RemoteLinkError && error.code === "file_not_authorized"
+              ? { data: { remoteLinkCode: error.code } }
+              : {}),
+          },
+        }),
+    );
+  });
+  saveSourceDefinition({
+    id: "figma-design",
+    kind: "link",
+    label: "Design",
+    enabled: true,
+    credentialRef: "selected-link",
+    adapterConfig: {
+      providerId: "figma",
+      action: "get_file",
+      params: { file_url_or_key: resources.figma },
+    },
+  });
+  bindSource(new SettingsManager(directory, "full"), directory, {
+    sourceId: "figma-design",
+    scopes: ["figma:get_file"],
+    readPolicy: "ask",
+  });
+  const executor = new ToolExecutor(
+    new ToolRegistry({ builtinTools: ["ReadSource", "LinkAction"] }),
+    new PermissionClassifier([], "default", {
+      requestApproval: async () => ({ approved: true }),
+    }),
+    new HookRegistry(),
+  );
+  executor.setContext({ cwd: directory, settingsScope: "full" } as ToolContext);
+  const before = f.requests.length;
+  const output = await executor.executeSingle({
+    id: "figma-source",
+    toolName: "ReadSource",
+    args: { source: "figma-design", scope: "figma:get_file", resource: "result" },
+  });
+  expect(output.isError).toBe(true);
+  expect(output.error).toContain("添加文件");
+  expect(f.requests).toHaveLength(before);
+  expect(f.store.resolve("selected-link")?.meta?.linkResourceLabels).toEqual([]);
+});
+
+test("empty resource grants remain invalid for providers without deferred file selection", async () => {
+  const f = await fixture("gitlab", {
+    metadata: (value) => ({
+      ...value,
+      resources: [{ id: "projects", items: [] }],
+      resourceGroups: [{ id: "projects", items: [] }],
+    }),
+  });
+  await expect(f.connect()).rejects.toMatchObject({ code: "reconnect" });
+  expect(f.store.list()).toEqual([]);
+});
+
 test("unreviewed scopes in a token are rejected before any metadata or action request", async () => {
   const f = await fixture("gitlab", { scopes: ["gitlab:list_projects", "github:create_issue"] });
   await expect(f.connect()).rejects.toMatchObject({ code: "reconnect" });
@@ -451,7 +632,9 @@ test("resource-specific actions reject a different grant resource before sending
     const f = await fixture(provider);
     await f.connect();
     const before = f.requests.length;
-    await expect(f.execute(action, input)).rejects.toMatchObject({ code: "forbidden" });
+    await expect(f.execute(action, input)).rejects.toMatchObject({
+      code: provider === "figma" ? "file_not_authorized" : "forbidden",
+    });
     await expect(f.execute("unreviewed_write", {})).rejects.toMatchObject({ code: "forbidden" });
     expect(f.requests).toHaveLength(before);
   }

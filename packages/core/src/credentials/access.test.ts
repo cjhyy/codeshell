@@ -1,8 +1,55 @@
 import { describe, expect, test } from "bun:test";
 import { createInProcessTransport } from "../protocol/transport.js";
 import { createIpcCredentialAccess, type CredentialSnapshot } from "./access.js";
+import { RemoteLinkError } from "../links/remote.js";
 
 describe("createIpcCredentialAccess", () => {
+  test("Figma file authorization instructions survive IPC only for the bound remote action method", async () => {
+    for (const [method, code] of [
+      ["remote", "file_not_authorized"],
+      ["remote", "unreviewed_code"],
+      ["resolve", "file_not_authorized"],
+    ]) {
+      const [main, worker] = createInProcessTransport();
+      const access = createIpcCredentialAccess(worker);
+      main.onMessage((message) => {
+        if (!("id" in message) || !("method" in message)) return;
+        main.send({
+          jsonrpc: "2.0",
+          id: message.id,
+          error: {
+            code: -32603,
+            message: "Provider-supplied text must not replace the reviewed instruction",
+            data: { remoteLinkCode: code },
+          },
+        });
+      });
+      const request =
+        method === "remote"
+          ? access.executeRemoteLinkAction!({
+              id: "figma",
+              scope: "full",
+              grantId: "grant",
+              action: "get_file",
+              params: { file_url_or_key: "File" },
+            })
+          : access.resolveValue!({ id: "figma", scope: "full", purpose: "use" });
+      let error: unknown;
+      try {
+        await request;
+      } catch (cause) {
+        error = cause;
+      }
+      if (method === "remote" && code === "file_not_authorized") {
+        expect(error).toBeInstanceOf(RemoteLinkError);
+        expect((error as Error).message).toContain("添加文件");
+        expect((error as Error).message).not.toContain("Provider-supplied");
+      } else {
+        expect(error).not.toBeInstanceOf(RemoteLinkError);
+        expect((error as Error).message).toContain("Provider-supplied");
+      }
+    }
+  });
   test("propagates scoped read failures and treats missing or legacy snapshots as unknown", () => {
     const [main, worker] = createInProcessTransport();
     const access = createIpcCredentialAccess(worker);
