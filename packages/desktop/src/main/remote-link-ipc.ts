@@ -1,4 +1,5 @@
 import {
+  app,
   BrowserWindow,
   shell,
   type IpcMain,
@@ -14,6 +15,7 @@ import {
 } from "@cjhyy/code-shell-server/links";
 import { createNativeRemoteLinkManager } from "./remote-link-manager.js";
 import { openNativeLinkAuthorization } from "./remote-link-window.js";
+import { desktopRemoteLinkEnvironment } from "./desktop-remote-link-configuration.js";
 
 /** Window-owned authorization managers retire on navigation and destruction. */
 export function registerRemoteLinkIpc(deps: {
@@ -67,13 +69,15 @@ export function registerRemoteLinkIpc(deps: {
       manager = createNativeRemoteLinkManager({
         service: createLinkService({
           cwd: cwd || undefined,
-          remoteLink: () =>
-            process.env.CODE_SHELL_REMOTE_LINK_DESKTOP_ORIGIN
+          remoteLink: () => {
+            const environment = desktopRemoteLinkEnvironment(process.env, app.isPackaged);
+            return environment?.CODE_SHELL_REMOTE_LINK_DESKTOP_ORIGIN
               ? remoteLinkFromEnvironment(
-                  process.env,
-                  process.env.CODE_SHELL_REMOTE_LINK_DESKTOP_ORIGIN,
+                  environment,
+                  environment.CODE_SHELL_REMOTE_LINK_DESKTOP_ORIGIN,
                 )
-              : undefined,
+              : undefined;
+          },
           withMutation: (write) => deps.withMutation(cwd, write),
           onChanged: deps.onChanged,
           allowCliLogin: true,
