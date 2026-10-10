@@ -4,7 +4,6 @@ import { createHash } from "node:crypto";
 import {
   accessSync,
   constants,
-  existsSync,
   mkdirSync,
   mkdtempSync,
   readFileSync,
@@ -12,7 +11,7 @@ import {
   statSync,
   writeFileSync,
 } from "node:fs";
-import { delimiter, join, resolve } from "node:path";
+import { delimiter, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { createBunTestEnvironment } from "../scripts/bun-test-completion.mjs";
 
@@ -27,6 +26,106 @@ function nodeExecutable(): string {
     }
   }
   throw new Error("Background shell acceptance requires actual Node");
+}
+
+async function buildFixture(
+  root: string,
+  directory: string,
+  entry: string,
+  environment: NodeJS.ProcessEnv,
+): Promise<void> {
+  const builder = join(root, "tests/fixtures/background-shell-lifecycle-build.mjs");
+  const child = spawn(realpathSync(process.execPath), [builder, root, directory, entry], {
+    cwd: root,
+    env: environment,
+    stdio: ["ignore", "pipe", "pipe"],
+  });
+  let stdout = "";
+  let stderr = "";
+  let closed = false;
+  let timedOut = false;
+  let spawnError: Error | undefined;
+  let cleanupError: string | undefined;
+  let result: { code: number | null; signal: string | null } | undefined;
+  child.stdout!.on("data", (chunk) => (stdout += chunk));
+  child.stderr!.on("data", (chunk) => (stderr += chunk));
+  child.once("error", (error) => (spawnError = error));
+  const completed = new Promise<{ code: number | null; signal: string | null }>((resolve) => {
+    child.once("close", (code, signal) => {
+      closed = true;
+      resolve({ code, signal });
+    });
+  });
+  let deadline: ReturnType<typeof setTimeout> | undefined;
+  try {
+    result = await Promise.race([
+      completed,
+      new Promise<never>((_, reject) => {
+        deadline = setTimeout(() => {
+          timedOut = true;
+          reject(new Error("Fixture compiler exceeded 10s"));
+        }, 10_000);
+      }),
+    ]);
+    if (spawnError) throw spawnError;
+    expect(result).toEqual({ code: 0, signal: null });
+    const receipt = JSON.parse(readFileSync(join(directory, "build-result.json"), "utf8"));
+    expect(receipt).toMatchObject({
+      success: true,
+      pid: child.pid,
+      ppid: process.pid,
+      homeSha256: createHash("sha256").update(environment.HOME!).digest("hex"),
+    });
+    expect(receipt.bundleSha256).toBe(
+      createHash("sha256")
+        .update(readFileSync(join(directory, "build/entry.js")))
+        .digest("hex"),
+    );
+  } finally {
+    clearTimeout(deadline);
+    if (!closed) {
+      try {
+        if (child.exitCode === null && child.signalCode === null) child.kill("SIGKILL");
+      } catch (error) {
+        cleanupError = String(error);
+      }
+      let closeDeadline: ReturnType<typeof setTimeout> | undefined;
+      try {
+        result = await Promise.race([
+          completed,
+          new Promise<never>((_, reject) => {
+            closeDeadline = setTimeout(() => reject(new Error("Compiler did not close")), 2_000);
+          }),
+        ]);
+      } catch (error) {
+        cleanupError = String(error);
+      } finally {
+        clearTimeout(closeDeadline);
+      }
+    }
+    writeFileSync(join(directory, "build.stdout.log"), stdout, { mode: 0o600 });
+    writeFileSync(join(directory, "build.stderr.log"), stderr, { mode: 0o600 });
+    writeFileSync(
+      join(directory, "build-launcher.json"),
+      JSON.stringify(
+        {
+          parentPid: process.pid,
+          pid: child.pid,
+          result,
+          closed,
+          timedOut,
+          cleanupUnknown: !closed,
+          cleanupError,
+          spawnError: spawnError?.message,
+          builderSha256: createHash("sha256").update(readFileSync(builder)).digest("hex"),
+        },
+        null,
+        2,
+      ),
+      { mode: 0o600 },
+    );
+    console.log("Background lifecycle compiler evidence: " + directory);
+  }
 }
 
 // POSIX executable permissions and inherited pipes are exercised with real
@@ -47,30 +146,7 @@ test.skipIf(process.platform === "win32")(
       ].join("\n"),
       { mode: 0o600 },
     );
-    const built = await Bun.build({
-      entrypoints: [entry],
-      outdir: join(directory, "build"),
-      target: "node",
-      format: "esm",
-      sourcemap: "external",
-      tsconfig: join(root, "tsconfig.json"),
-      // Core's NodeNext .js specifiers refer to source .ts in this fixture.
-      // Resolve the real file without replacing any production module.
-      plugins: [
-        {
-          name: "core-source-specifiers",
-          setup(build) {
-            build.onResolve({ filter: /^\..*\.js$/ }, (args) => {
-              const source = resolve(args.resolveDir, args.path.slice(0, -3) + ".ts");
-              if (existsSync(source)) return { path: source };
-            });
-          },
-        },
-      ],
-    });
-    expect(built.success).toBe(true);
     const bundle = join(directory, "build/entry.js");
-    expect(statSync(bundle).size).toBeGreaterThan(0);
     const node = nodeExecutable();
     const fixture = join(root, "tests/fixtures/background-shell-lifecycle.fixture.mjs");
     const environment = {
@@ -79,6 +155,8 @@ test.skipIf(process.platform === "win32")(
       CODESHELL_BG_LIFECYCLE_EVIDENCE: directory,
       CODESHELL_BG_LIFECYCLE_BUNDLE: bundle,
     };
+    await buildFixture(root, directory, entry, environment);
+    expect(statSync(bundle).size).toBeGreaterThan(0);
     const report = join(directory, "junit.xml");
     const child = spawn(
       node,
@@ -230,5 +308,7 @@ test.skipIf(process.platform === "win32")(
     }
     if (cleanupUnknown) throw new Error("Owned Node cleanup is unknown");
   },
-  30_000,
+  // Includes the isolated compiler's 10s deadline and close; Node keeps its
+  // original 20s deadline plus cooperative cleanup bounds.
+  40_000,
 );
