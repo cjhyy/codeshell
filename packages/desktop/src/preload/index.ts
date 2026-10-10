@@ -1105,6 +1105,20 @@ contextBridge.exposeInMainWorld("codeshell", {
     state: "inherit" | "on" | "off",
   ) => ipcRenderer.invoke("capabilities:setOverride", target, id, state),
   listSourceCatalog: () => ipcRenderer.invoke("sources:catalogList"),
+  sourceCollections: {
+    create: (input: { label: string; description?: string }) =>
+      ipcRenderer.invoke("sources:collections:create", input),
+    get: (id: string) => ipcRenderer.invoke("sources:collections:get", id),
+    update: (
+      id: string,
+      revision: string,
+      change: import("../shared/source-collections").SourceCollectionChange,
+    ) => ipcRenderer.invoke("sources:collections:update", id, revision, change),
+    pick: (id: string, revision: string, mode: "files" | "folder") =>
+      ipcRenderer.invoke("sources:collections:pick", id, revision, mode),
+    delete: (id: string, revision: string) =>
+      ipcRenderer.invoke("sources:collections:delete", id, revision),
+  },
   saveSourceCatalog: (definition: import("@cjhyy/code-shell-core").SourceDefinition) =>
     ipcRenderer.invoke("sources:catalogSave", definition),
   deleteSourceCatalog: (id: string) => ipcRenderer.invoke("sources:catalogDelete", id),

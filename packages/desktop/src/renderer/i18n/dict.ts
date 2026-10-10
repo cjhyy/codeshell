@@ -37,6 +37,7 @@ import { digitalHumans } from "./ns/digital-humans";
 import { taskInbox } from "./ns/task-inbox";
 import { optimizationLab } from "./ns/optimization-lab";
 import { projectConfig } from "./ns/project-config";
+import { sourceCollections } from "./ns/source-collections";
 
 export const messages = {
   zh: {
@@ -52,6 +53,7 @@ export const messages = {
     ...pet.zh,
     ...digitalHumans.zh,
     ...projectConfig.zh,
+    ...sourceCollections.zh,
     ...taskInbox.zh,
     ...optimizationLab.zh,
   },
@@ -68,6 +70,7 @@ export const messages = {
     ...pet.en,
     ...digitalHumans.en,
     ...projectConfig.en,
+    ...sourceCollections.en,
     ...taskInbox.en,
     ...optimizationLab.en,
   },

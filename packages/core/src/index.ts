@@ -196,6 +196,19 @@ export {
   type SourceContent,
 } from "./sources/types.js";
 export type { ConnectorAdapter } from "./sources/adapter.js";
+export {
+  MAX_COLLECTION_ENTRIES,
+  CollectionConfigSchema,
+  CollectionEntrySchema,
+  CollectionLocalEntrySchema,
+  CollectionUrlEntrySchema,
+  type CollectionConfig,
+  type CollectionEntry,
+  type CollectionLocalEntry,
+  type CollectionUrlEntry,
+  type LocalCollectionEntry,
+  type UrlCollectionEntry,
+} from "./sources/collection.js";
 export type {
   SourceAccessStatus,
   CredentialStatusFn,

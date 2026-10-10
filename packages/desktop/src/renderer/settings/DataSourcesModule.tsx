@@ -9,8 +9,8 @@ interface Props {
 }
 
 /**
- * 设置中心「数据源」模块。全局 scope = 连接目录(与凭证页共享同一组件,
- * 单一数据源);项目 scope = 该项目的绑定与上传(复用项目配置组件)。
+ * Global scope owns reusable collections and advanced sources; project scope
+ * saves explicit references and retains existing project-local uploads.
  */
 export function DataSourcesModule({ scope, projectId }: Props) {
   const { t } = useT();
@@ -20,7 +20,7 @@ export function DataSourcesModule({ scope, projectId }: Props) {
   }
   return (
     <div className="flex flex-col gap-4">
-      <p className="text-xs text-muted-foreground">{t("settingsX.dataSources.globalHint")}</p>
+      <p className="text-xs text-muted-foreground">{t("sourceCollections.globalHint")}</p>
       <DataSourceCatalogSection />
     </div>
   );
