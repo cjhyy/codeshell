@@ -2464,15 +2464,12 @@ function App() {
                         bucket: activeBucketRef.current,
                         cwd: sessionUiAuthority.workspaceRoot,
                         available: sessionUiAuthority.configurationAvailable,
-                        // setBusyForKey writes busySinceRef synchronously, before React commits.
                         busy:
                           busyKeys.has(activeBucketRef.current) ||
                           busySinceRef.current.has(activeBucketRef.current),
                         compacting: compactingBucketsRef.current.has(activeBucketRef.current),
                       }),
-                      (text, opts) => {
-                        void send(text, opts);
-                      },
+                      send,
                     )}
                     onSend={(text, opts) =>
                       send(text, {

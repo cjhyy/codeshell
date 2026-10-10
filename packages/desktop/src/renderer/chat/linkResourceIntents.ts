@@ -21,6 +21,7 @@ export type ChatLinkReadHandler = (
   cwd: string,
 ) => boolean;
 
+/** The owner's busy predicate includes setBusyForKey's synchronous ref, before React commits. */
 export function createChatLinkReadHandler(
   current: () => {
     bucket: string;
