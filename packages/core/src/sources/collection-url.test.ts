@@ -1,11 +1,15 @@
-import { afterAll, describe, expect, test } from "bun:test";
-import { createHash } from "node:crypto";
+import { afterAll, describe, expect, spyOn, test } from "bun:test";
+import { createHash, randomUUID } from "node:crypto";
 import { EventEmitter } from "node:events";
+import { mkdtempSync, realpathSync, rmSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import http from "node:http";
 import https from "node:https";
 import net from "node:net";
 import { syncBuiltinESMExports } from "node:module";
 import { Readable } from "node:stream";
+import { officeZip, textPdf, wordXml } from "../../../../tests/fixtures/upload-documents.mjs";
 
 // Install before the first source/transport import. The injected transport below
 // permits one exact synthetic origin and never opens a network socket.
@@ -37,8 +41,9 @@ syncBuiltinESMExports();
 expect(() => fetch("https://outside.invalid/probe")).toThrow("denied outbound");
 expect(() => https.request("https://outside.invalid/probe")).toThrow("denied outbound");
 expect(denied).toHaveLength(2);
-const { normalizeCollectionUrl, createCollectionUrlDownloaderForTests } =
-  await import("./collection-url.js");
+const urlModule = await import("./collection-url.js");
+const { normalizeCollectionUrl, createCollectionUrlDownloaderForTests, collectionUrlDocumentName } =
+  urlModule;
 afterAll(() => {
   expect(denied).toHaveLength(2);
   for (const [index, surface] of prior.entries()) {
@@ -415,4 +420,125 @@ describe("collection URL pinned transport and bounded proof", () => {
     await expect(broken.download({ url: URL_FILE })).rejects.toThrow("fixture transport failed");
     broken.assertClosed();
   });
+});
+
+describe("static-link document metadata reaches the real collection consumers", () => {
+  test("parser hints use the final filename or supported MIME without inventing unsupported types", () => {
+    const hint = (path: string, mimeType = "application/octet-stream", savedName?: string) =>
+      collectionUrlDocumentName({ finalUrl: ORIGIN + path, mimeType }, savedName);
+    expect(hint("/manual.DOCX?filename=bad.txt")).toBe("manual.DOCX");
+    expect(hint("/download", "application/pdf")).toBe("download.pdf");
+    expect(hint("/download.php", "application/pdf")).toBe("download.php.pdf");
+    expect(hint("/download", "application/octet-stream", "legacy.docx")).toBe("legacy.docx");
+    expect(hint("/manual.xlsx", "application/octet-stream", "legacy.docx")).toBe("manual.xlsx");
+    expect(hint("/download", "application/zip")).toBe("download");
+    expect(hint("/download", "application/msword")).toBe("download");
+    expect(hint("/download", "__proto__")).toBe("download");
+    expect(hint("/%E8%B5%84%E6%96%99", "application/pdf")).toBe("资料.pdf");
+    expect(hint("/" + "x".repeat(512), "application/pdf")).toHaveLength(512);
+    for (const path of ["/bad%", "/bad%2fname", "/bad%5cname", "/bad%00name", "/bad%0aname"])
+      expect(() => hint(path, "application/pdf")).toThrow("链接文件名无效");
+    expect(denied).toHaveLength(2);
+  });
+
+  const documents = [
+    {
+      name: "download",
+      format: "docx",
+      mime: "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+      bytes: officeZip({ "word/document.xml": wordXml("legacy static milestone") }),
+    },
+    {
+      name: "download",
+      format: "pptx",
+      mime: "application/vnd.openxmlformats-officedocument.presentationml.presentation",
+      bytes: officeZip({
+        "ppt/slides/slide1.xml":
+          '<a:p xmlns:a="urn:a"><a:r><a:t>legacy static milestone</a:t></a:r></a:p>',
+      }),
+    },
+    {
+      name: "download",
+      format: "xlsx",
+      mime: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+      bytes: officeZip({
+        "xl/worksheets/sheet1.xml":
+          '<worksheet><sheetData><row><c r="A1" t="inlineStr"><is><t>legacy static milestone</t></is></c></row></sheetData></worksheet>',
+      }),
+    },
+    {
+      name: "download",
+      format: "pdf",
+      mime: "application/pdf",
+      bytes: textPdf("legacy static milestone"),
+    },
+    {
+      name: "legacy.docx",
+      format: "docx",
+      mime: "application/octet-stream",
+      bytes: officeZip({ "word/document.xml": wordXml("legacy static milestone") }),
+    },
+  ];
+  test.each(documents)(
+    "saved $name URL records parse actual $format bytes and recheck the version on cached reads",
+    async ({ bytes, mime, format, name }) => {
+      const f = fixture([
+        {
+          chunks: [bytes],
+          headers: { "content-type": mime },
+        },
+        {
+          chunks: [Buffer.concat([bytes, Buffer.from("changed")])],
+          headers: { "content-type": mime },
+        },
+      ]);
+      const download = spyOn(urlModule, "downloadCollectionUrl").mockImplementation(f.download);
+      const root = realpathSync(mkdtempSync(join(tmpdir(), "collection-url-read-")));
+      try {
+        const { collectionAdapter } = await import("./adapters/collection.js");
+        const definition = {
+          id: "static_docs",
+          kind: "collection" as const,
+          label: "Static docs",
+          enabled: true,
+          adapterConfig: {
+            version: 1,
+            revision: randomUUID(),
+            entries: [
+              {
+                id: "entry_legacy",
+                kind: "url",
+                name,
+                url: ORIGIN + "/download",
+                sizeBytes: bytes.length,
+                sha256: digest(bytes),
+                checkedAt: new Date().toISOString(),
+              },
+            ],
+          },
+        };
+        const result = await collectionAdapter.read(definition, "entry_legacy", {
+          cwd: root,
+          maxBytes: 4096,
+          assertAuthorized: () => {},
+          query: "milestone",
+        });
+        expect(result.text).toContain("legacy static milestone");
+        expect(result.text).toContain(`"format":"${format}"`);
+        expect(result.resourceId).toBe("entry_legacy");
+        expect(definition.adapterConfig.entries[0]!.name).toBe(name);
+        await expect(
+          collectionAdapter.read(definition, "entry_legacy", {
+            cwd: root,
+            maxBytes: 4096,
+            assertAuthorized: () => {},
+          }),
+        ).rejects.toThrow("Static file changed; refresh the collection entry");
+        f.assertClosed();
+      } finally {
+        download.mockRestore();
+        rmSync(root, { recursive: true, force: true });
+      }
+    },
+  );
 });

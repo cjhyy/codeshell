@@ -2,7 +2,7 @@
 import type { ConnectorAdapter, SourceAdapterContext } from "../adapter.js";
 import { collectionConfig } from "../collection.js";
 import { readCollectionLocalFile } from "../collection-local.js";
-import { downloadCollectionUrl } from "../collection-url.js";
+import { collectionUrlDocumentName, downloadCollectionUrl } from "../collection-url.js";
 import {
   documentIndexText,
   loadUploadedDocumentIndex,
@@ -48,10 +48,14 @@ export const collectionAdapter: ConnectorAdapter = {
     const config = collectionConfig(definition);
     const entry = config.entries.find((item) => item.id === resourceId);
     if (!entry) throw new Error("Collection file is no longer selected");
-    const bytes =
-      entry.kind === "local"
-        ? readCollectionLocalFile(entry, options)
-        : (await downloadCollectionUrl({ url: entry.url, expected: entry }, options)).bytes;
+    let bytes: Uint8Array;
+    let documentName = entry.name;
+    if (entry.kind === "local") bytes = readCollectionLocalFile(entry, options);
+    else {
+      const downloaded = await downloadCollectionUrl({ url: entry.url, expected: entry }, options);
+      bytes = downloaded.bytes;
+      documentName = collectionUrlDocumentName(downloaded.proof, entry.name);
+    }
     const assertCurrent = () => {
       options.signal?.throwIfAborted();
       options.assertAuthorized!();
@@ -61,7 +65,7 @@ export const collectionAdapter: ConnectorAdapter = {
       signal: options.signal,
       assertCurrent,
       resolveExecutable: options.documentParserExecutable,
-      documentName: entry.name,
+      documentName,
     });
     let text: string;
     if (options.query !== undefined)

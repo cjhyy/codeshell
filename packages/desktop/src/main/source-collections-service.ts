@@ -10,6 +10,7 @@ import {
 import {
   captureCollectionLocalFile,
   collectionConfig,
+  collectionUrlDocumentName,
   deleteSourceDefinition,
   downloadCollectionUrl,
   normalizeCollectionUrl,
@@ -184,16 +185,10 @@ export function createSourceCollectionService(deps: CollectionServiceDeps): Sour
       { signal: deps.signal, assertAuthorized: assertCurrent },
     );
     assertCurrent();
-    let name: string;
-    try {
-      name = decodeURIComponent(new URL(normalized).pathname.split("/").pop() || "document.txt");
-    } catch {
-      throw new Error("链接文件名无效。");
-    }
     return {
       id,
       kind: "url",
-      name,
+      name: collectionUrlDocumentName(proof),
       url: normalized,
       sizeBytes: proof.sizeBytes,
       sha256: proof.sha256,
