@@ -2,6 +2,8 @@ import { createDesktopRemoteServices } from "./desktop-remote-services.js";
 import { createDesktopShutdownHandler } from "./desktop-shutdown.js";
 import { registerProjectPanelIpc } from "./project-panel-ipc.js";
 import { registerProfileSwitchIpc } from "./profile-switch-ipc.js";
+import { registerSourceCollectionIpc } from "./source-collections-ipc.js";
+import { openSourceCollectionOperation } from "./source-collections-host.js";
 import { registerRemoteLinkIpc } from "./remote-link-ipc.js";
 import { registerOperationResolutionHost } from "./operation-resolution-host.js";
 /**
@@ -3696,6 +3698,10 @@ ipcMain.handle(
     setCapabilityOverride(cwd, id, state);
   },
 );
+registerSourceCollectionIpc({
+  ipcMain,
+  open: (event) => openSourceCollectionOperation(event, (window) => mainWindows.has(window)),
+});
 ipcMain.handle("sources:catalogList", async () => listSourceCatalog());
 ipcMain.handle("sources:catalogSave", async (_e, definition: unknown) => {
   if (typeof definition !== "object" || definition === null || Array.isArray(definition)) {

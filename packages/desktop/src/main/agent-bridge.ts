@@ -60,6 +60,7 @@ import {
 } from "./browser-runtime/index.js";
 import {
   executeRemoteLinkAction,
+  RemoteLinkError,
   executeLocalOAuthLinkAction,
   type LocalOAuthLinkActionRequest,
   type RemoteLinkActionRequest,
@@ -1196,7 +1197,15 @@ export class AgentBridge implements PetStateBridge {
         reply = {
           jsonrpc: "2.0",
           id,
-          error: { code: -32603, message: err instanceof Error ? err.message : String(err) },
+          error: {
+            code: -32603,
+            message: err instanceof Error ? err.message : String(err),
+            ...(parsed.method === "desktop/remoteLinkAction" &&
+            err instanceof RemoteLinkError &&
+            err.code === "file_not_authorized"
+              ? { data: { remoteLinkCode: err.code } }
+              : {}),
+          },
         };
       }
       if (

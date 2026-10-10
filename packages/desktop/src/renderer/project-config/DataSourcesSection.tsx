@@ -4,6 +4,7 @@ import type {
   SourceDefinition,
   SourceResourceMeta,
   SourceScope,
+  WorkspaceSourceBinding,
 } from "@cjhyy/code-shell-core";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -14,6 +15,7 @@ import { useToast } from "../ui/ToastProvider";
 import { useConfirm } from "../ui/DialogProvider";
 
 interface WorkspaceSourceSnapshot {
+  bindings: WorkspaceSourceBinding[];
   access: EffectiveSourceAccess[];
   uploads: SourceResourceMeta[];
 }
@@ -37,6 +39,7 @@ function statusLabel(t: TFunction, status: EffectiveSourceAccess["status"]): str
 }
 
 function kindLabel(t: TFunction, kind: string): string {
+  if (kind === "collection") return t("sourceCollections.kind");
   if (kind === "mock") return t("projectConfig.dataSources.kindMock");
   if (kind === "mcp-resource") return t("projectConfig.dataSources.kindMcpResource");
   if (kind === "link") return t("ext.link.sourcesKindLink");
@@ -53,11 +56,29 @@ export function DataSourcesSection({
   /** Test seam; production uses the app-level themed confirmation dialog. */
   confirmDeleteUpload?: (upload: SourceResourceMeta) => Promise<boolean>;
 }) {
+  // A changed project owns a fresh form; old confirmations and responses cannot write for it.
+  return (
+    <ProjectDataSources
+      key={projectId}
+      projectId={projectId}
+      confirmDeleteUpload={confirmDeleteUpload}
+    />
+  );
+}
+
+function ProjectDataSources({
+  projectId,
+  confirmDeleteUpload,
+}: {
+  projectId: string;
+  confirmDeleteUpload?: (upload: SourceResourceMeta) => Promise<boolean>;
+}) {
   const { t } = useT();
   const toast = useToast();
   const confirm = useConfirm();
   const [catalog, setCatalog] = React.useState<SourceDefinition[]>([]);
   const [snapshot, setSnapshot] = React.useState<WorkspaceSourceSnapshot>({
+    bindings: [],
     access: [],
     uploads: [],
   });
@@ -69,21 +90,43 @@ export function DataSourcesSection({
   const [loadingScopes, setLoadingScopes] = React.useState(false);
   const [busy, setBusy] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
+  const [editingBinding, setEditingBinding] = React.useState(false);
+  const [selectionMode, setSelectionMode] = React.useState<"all" | "selected">("selected");
+  const [missingSelection, setMissingSelection] = React.useState(0);
   const scopeRequest = React.useRef(0);
+  const loadRequest = React.useRef(0);
+  const active = React.useRef(true);
+  const busyLock = React.useRef(false);
+  React.useLayoutEffect(() => {
+    active.current = true;
+    return () => {
+      active.current = false;
+      scopeRequest.current += 1;
+      loadRequest.current += 1;
+    };
+  }, []);
 
   const refresh = React.useCallback(async () => {
+    const request = ++loadRequest.current;
     try {
       const [nextCatalog, nextSnapshot] = await Promise.all([
         window.codeshell.listSourceCatalog(),
         window.codeshell.projectSourceAccess(projectId),
       ]);
+      if (!active.current || request !== loadRequest.current) return false;
       setCatalog(nextCatalog);
-      setSnapshot({ access: nextSnapshot.access, uploads: nextSnapshot.uploads });
+      setSnapshot({
+        bindings: nextSnapshot.bindings ?? [],
+        access: nextSnapshot.access,
+        uploads: nextSnapshot.uploads,
+      });
       setError(null);
+      return true;
     } catch (caught) {
-      setError(errorText(caught));
+      if (active.current && request === loadRequest.current) setError(errorText(caught));
+      return false;
     } finally {
-      setLoading(false);
+      if (active.current && request === loadRequest.current) setLoading(false);
     }
   }, [projectId]);
 
@@ -95,31 +138,42 @@ export function DataSourcesSection({
     operation: () => Promise<unknown>,
     opts?: { clearSelection?: boolean; successMessage?: string },
   ) => {
+    if (busyLock.current || !active.current) return;
+    busyLock.current = true;
     setBusy(true);
     setError(null);
     try {
       await operation();
-      await refresh();
+      if (!active.current || !(await refresh())) return;
       if (opts?.clearSelection) {
         scopeRequest.current += 1;
         setSelectedSourceId("");
         setScopes([]);
         setSelectedScopes(new Set());
         setReadPolicy("ask");
+        setEditingBinding(false);
+        setMissingSelection(0);
+        setSelectionMode("selected");
       }
       if (opts?.successMessage) toast({ message: opts.successMessage });
     } catch (caught) {
-      setError(errorText(caught));
+      if (active.current) setError(errorText(caught));
     } finally {
-      setBusy(false);
+      busyLock.current = false;
+      if (active.current) setBusy(false);
     }
   };
 
-  const selectSource = async (sourceId: string) => {
+  const selectSource = async (sourceId: string, binding?: WorkspaceSourceBinding) => {
+    if (busyLock.current || !active.current) return;
     const request = ++scopeRequest.current;
     setSelectedSourceId(sourceId);
     setScopes([]);
     setSelectedScopes(new Set());
+    setSelectionMode("selected");
+    setMissingSelection(0);
+    setEditingBinding(Boolean(binding));
+    setReadPolicy(binding?.readPolicy ?? "ask");
     setError(null);
     if (!sourceId) {
       setLoadingScopes(false);
@@ -128,15 +182,24 @@ export function DataSourcesSection({
     setLoadingScopes(true);
     try {
       const next = await window.codeshell.listSourceScopes(sourceId);
-      if (scopeRequest.current === request) setScopes(next);
+      if (active.current && scopeRequest.current === request) {
+        setScopes(next);
+        if (binding) {
+          const ids = new Set(next.map((item) => item.id));
+          setSelectedScopes(new Set(binding.scopes.filter((id) => ids.has(id))));
+          setMissingSelection(binding.scopes.filter((id) => !ids.has(id)).length);
+        }
+      }
     } catch (caught) {
-      if (scopeRequest.current === request) setError(errorText(caught));
+      if (active.current && scopeRequest.current === request) setError(errorText(caught));
     } finally {
-      if (scopeRequest.current === request) setLoadingScopes(false);
+      if (active.current && scopeRequest.current === request) setLoadingScopes(false);
     }
   };
 
   const toggleScope = (scopeId: string, checked: boolean) => {
+    if (busyLock.current || loadingScopes) return;
+    setSelectionMode("selected");
     setSelectedScopes((current) => {
       const next = new Set(current);
       if (checked) next.add(scopeId);
@@ -145,8 +208,35 @@ export function DataSourcesSection({
     });
   };
 
-  const boundIds = new Set(snapshot.access.map((item) => item.sourceId));
-  const available = catalog.filter((source) => source.enabled && !boundIds.has(source.id));
+  const boundIds = new Set(snapshot.bindings.map((item) => item.sourceId));
+  const available = catalog.filter(
+    (source) => (source.enabled && !boundIds.has(source.id)) || source.id === selectedSourceId,
+  );
+  const selectedSource = catalog.find((source) => source.id === selectedSourceId);
+  const isCollection = selectedSource?.kind === "collection";
+  const visibleAccess = snapshot.bindings
+    .filter((binding) => binding.sourceId !== "project-uploads")
+    .map((binding) => {
+      const definition = catalog.find((item) => item.id === binding.sourceId);
+      const projected = snapshot.access.find((item) => item.sourceId === binding.sourceId);
+      return {
+        ...binding,
+        label: definition?.label ?? projected?.label ?? binding.sourceId,
+        kind: definition?.kind ?? projected?.kind ?? "unknown",
+        status: (!definition
+          ? "dangling"
+          : !definition.enabled
+            ? "unavailable"
+            : (projected?.status ?? "unavailable")) as EffectiveSourceAccess["status"],
+        profileUnavailable: Boolean(definition?.enabled && !projected),
+        profileRestricted: Boolean(
+          projected &&
+          (projected.scopes.length < binding.scopes.length ||
+            projected.readPolicy !== binding.readPolicy),
+        ),
+        effectiveScopes: projected?.scopes.length ?? 0,
+      };
+    });
 
   if (loading) {
     return (
@@ -168,22 +258,27 @@ export function DataSourcesSection({
         <h2 className="text-base font-semibold text-foreground">
           {t("projectConfig.dataSources.title")}
         </h2>
-        <p className="text-xs text-muted-foreground">{t("projectConfig.dataSources.subtitle")}</p>
+        <p className="text-xs text-muted-foreground">{t("sourceCollections.projectHint")}</p>
       </div>
 
-      {error ? <p className="text-xs text-status-err">{error}</p> : null}
+      {error ? (
+        <p role="alert" className="text-xs text-status-err">
+          {error}
+        </p>
+      ) : null}
 
       <div className="space-y-3 rounded-md border border-border p-3">
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div>
             <h3 className="text-sm font-medium text-foreground">
-              {t("projectConfig.dataSources.uploadTitle")}
+              {t("sourceCollections.projectFiles")}
             </h3>
             <p className="text-xs text-muted-foreground">
-              {t("projectConfig.dataSources.uploadSubtitle")}
+              {t("sourceCollections.projectFilesHint")}
             </p>
           </div>
           <Button
+            type="button"
             size="sm"
             disabled={busy}
             onClick={() =>
@@ -212,6 +307,7 @@ export function DataSourcesSection({
                   <p className="text-xs text-muted-foreground">{formatBytes(upload.sizeBytes)}</p>
                 </div>
                 <Button
+                  type="button"
                   size="sm"
                   variant="outline"
                   disabled={busy}
@@ -227,7 +323,7 @@ export function DataSourcesSection({
                           destructive: true,
                         });
                     void approval.then((accepted) => {
-                      if (!accepted) return;
+                      if (!accepted || !active.current) return;
                       void act(() => window.codeshell.deleteProjectUpload(projectId, upload.name), {
                         successMessage: t("projectConfig.dataSources.deleteUploadDone"),
                       });
@@ -251,11 +347,11 @@ export function DataSourcesSection({
             {t("projectConfig.dataSources.boundSubtitle")}
           </p>
         </div>
-        {snapshot.access.length === 0 ? (
+        {visibleAccess.length === 0 ? (
           <p className="text-xs text-muted-foreground">{t("projectConfig.dataSources.noBound")}</p>
         ) : (
           <ul className="space-y-2">
-            {snapshot.access.map((item) => (
+            {visibleAccess.map((item) => (
               <li
                 key={item.sourceId}
                 data-source-access
@@ -274,14 +370,45 @@ export function DataSourcesSection({
                         : t("projectConfig.dataSources.readPolicyDeny")}
                     </Badge>
                   </div>
+                  {item.profileUnavailable && (
+                    <p className="text-xs text-muted-foreground">
+                      {t("sourceCollections.profileUnavailable")}
+                    </p>
+                  )}
+                  {item.profileRestricted && (
+                    <p className="text-xs text-muted-foreground">
+                      {t("sourceCollections.profileRestricted", { count: item.effectiveScopes })}
+                    </p>
+                  )}
                   <p className="truncate text-xs text-muted-foreground">
                     {t("projectConfig.dataSources.scopes", {
-                      scopes: item.scopes.join(", ") || "—",
+                      scopes:
+                        item.kind === "collection"
+                          ? t("sourceCollections.filesSelected", { count: item.scopes.length })
+                          : item.scopes.join(", ") || "—",
                     })}
                   </p>
                 </div>
-                {item.sourceId !== "project-uploads" ? (
+                <div className="flex shrink-0 flex-wrap gap-2">
+                  {snapshot.bindings.find((binding) => binding.sourceId === item.sourceId) &&
+                    catalog.some((source) => source.id === item.sourceId) && (
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant="outline"
+                        disabled={busy}
+                        onClick={() =>
+                          void selectSource(
+                            item.sourceId,
+                            snapshot.bindings.find((binding) => binding.sourceId === item.sourceId),
+                          )
+                        }
+                      >
+                        {t("sourceCollections.editReference")}
+                      </Button>
+                    )}
                   <Button
+                    type="button"
                     size="sm"
                     variant="outline"
                     disabled={busy}
@@ -296,9 +423,7 @@ export function DataSourcesSection({
                   >
                     {t("projectConfig.dataSources.unbind")}
                   </Button>
-                ) : (
-                  <Badge variant="outline">{t("projectConfig.dataSources.builtinBadge")}</Badge>
-                )}
+                </div>
               </li>
             ))}
           </ul>
@@ -308,16 +433,18 @@ export function DataSourcesSection({
       <div className="space-y-3 rounded-md border border-border p-3">
         <div>
           <h3 className="text-sm font-medium text-foreground">
-            {t("projectConfig.dataSources.bindTitle")}
+            {t(
+              editingBinding
+                ? "sourceCollections.editReference"
+                : "projectConfig.dataSources.bindTitle",
+            )}
           </h3>
           <p className="text-xs text-muted-foreground">
             {t("projectConfig.dataSources.bindSubtitle")}
           </p>
         </div>
         {available.length === 0 ? (
-          <p className="text-xs text-muted-foreground">
-            {t("projectConfig.dataSources.noSources")}
-          </p>
+          <p className="text-xs text-muted-foreground">{t("sourceCollections.availableHint")}</p>
         ) : (
           <>
             <label className="block space-y-1 text-xs text-muted-foreground">
@@ -337,6 +464,33 @@ export function DataSourcesSection({
               />
             </label>
 
+            {isCollection && (
+              <div className="space-y-2">
+                <SimpleSelect<"all" | "selected">
+                  size="sm"
+                  value={selectionMode}
+                  disabled={busy || loadingScopes}
+                  ariaLabel={t("sourceCollections.kind")}
+                  onChange={(mode) => {
+                    setSelectionMode(mode);
+                    if (mode === "all") setSelectedScopes(new Set(scopes.map((item) => item.id)));
+                    else setSelectedScopes(new Set());
+                  }}
+                  options={[
+                    { value: "all", label: t("sourceCollections.allCurrent") },
+                    { value: "selected", label: t("sourceCollections.selected") },
+                  ]}
+                />
+                <p className="text-xs text-muted-foreground">
+                  {t("sourceCollections.currentOnly")}
+                </p>
+                {missingSelection > 0 && (
+                  <p className="text-xs text-status-err">
+                    {t("sourceCollections.removedSelection", { count: missingSelection })}
+                  </p>
+                )}
+              </div>
+            )}
             <fieldset className="space-y-2" disabled={busy || loadingScopes}>
               <legend className="text-xs font-medium text-foreground">
                 {t("projectConfig.dataSources.scopeLabel")}
@@ -365,6 +519,9 @@ export function DataSourcesSection({
                         value={scope.id}
                         data-scope-id={scope.id}
                         checked={selectedScopes.has(scope.id)}
+                        disabled={
+                          busy || loadingScopes || (isCollection && selectionMode === "all")
+                        }
                         onCheckedChange={(checked) => toggleScope(scope.id, checked === true)}
                       />
                       <span className="min-w-0">
@@ -405,8 +562,14 @@ export function DataSourcesSection({
             </label>
 
             <Button
+              type="button"
               size="sm"
-              disabled={busy || !selectedSourceId || selectedScopes.size === 0}
+              disabled={
+                busy ||
+                loadingScopes ||
+                !selectedSourceId ||
+                (!editingBinding && selectedScopes.size === 0)
+              }
               onClick={() =>
                 void act(
                   () =>
@@ -424,8 +587,23 @@ export function DataSourcesSection({
                 )
               }
             >
-              {t("projectConfig.dataSources.bind")}
+              {t(
+                editingBinding
+                  ? "sourceCollections.saveReference"
+                  : "projectConfig.dataSources.bind",
+              )}
             </Button>
+            {selectedSourceId && (
+              <Button
+                type="button"
+                size="sm"
+                variant="ghost"
+                disabled={busy}
+                onClick={() => void selectSource("")}
+              >
+                {t("sourceCollections.cancel")}
+              </Button>
+            )}
           </>
         )}
       </div>

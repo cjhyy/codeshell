@@ -55,6 +55,31 @@ export interface RemoteLinkResourceGroup {
   items: Array<{ id: string; label: string }>;
 }
 
+export class RemoteLinkResourceNotGrantedError extends Error {
+  constructor() {
+    super("请先在 Figma 连接卡片中点击“添加文件”，粘贴文件链接并确认授权后再读取。");
+    this.name = "RemoteLinkResourceNotGrantedError";
+  }
+}
+
+export function normalizeRemoteFigmaFileInput(value: unknown): string {
+  if (typeof value !== "string" || !value || value.length > 1_000 || /[\x00-\x20\x7f]/.test(value))
+    throw new Error("Invalid Figma file URL");
+  let key = value;
+  if (value.startsWith("https://")) {
+    const url = new URL(value);
+    if (
+      !["figma.com", "www.figma.com"].includes(url.hostname) ||
+      url.username ||
+      url.password ||
+      url.port
+    )
+      throw new Error("Invalid Figma file URL");
+    key = url.pathname.match(/^\/(?:file|design|board)\/([^/]+)(?:\/|$)/)?.[1] ?? "";
+  }
+  return normalizeRemoteLinkResourceId("figma", key);
+}
+
 export const LEGACY_GITHUB_ACTIONS = ["list_repositories", "list_issues", "get_issue"] as const;
 export function getRemoteLinkProviderAdapter(id: string): RemoteLinkProviderAdapter | undefined {
   return REMOTE_LINK_PROVIDER_ADAPTERS.find((adapter) => adapter.id === id);
@@ -141,7 +166,7 @@ export function parseRemoteLinkResourceGroups(
   if (
     group?.id !== adapter.group ||
     !Array.isArray(group.items) ||
-    !group.items.length ||
+    (!group.items.length && providerId !== "figma") ||
     group.items.length > 100
   )
     throw new Error("Invalid remote Link resources");
@@ -203,7 +228,10 @@ export function prepareRemoteLinkAction(
   const allowed = selected(providerId, groups);
   const requireResource = (value: unknown) => {
     const id = normalizeRemoteLinkResourceId(providerId, value);
-    if (!allowed.has(id)) throw new Error("Remote Link resource is outside this grant");
+    if (!allowed.has(id)) {
+      if (providerId === "figma") throw new RemoteLinkResourceNotGrantedError();
+      throw new Error("Remote Link resource is outside this grant");
+    }
     return id;
   };
   if (providerId === "github") {
@@ -279,14 +307,7 @@ export function prepareRemoteLinkAction(
     const raw =
       stringParam(params, "file_url_or_key", { maxLength: 1_000 }) ??
       stringParam(params, "file_key", { maxLength: 200 });
-    let key = raw;
-    if (raw?.startsWith("https://")) {
-      const url = new URL(raw);
-      if (url.hostname !== "figma.com" && !url.hostname.endsWith(".figma.com"))
-        throw new Error("Invalid Figma file URL");
-      key = url.pathname.match(/^\/(?:file|design|board)\/([^/]+)/)?.[1];
-    }
-    return { file_url_or_key: requireResource(key) };
+    return { file_url_or_key: requireResource(normalizeRemoteFigmaFileInput(raw)) };
   }
   const limitProviders = ["gitlab", "vercel", "slack", "linear", "todoist"];
   const supportsLimit =

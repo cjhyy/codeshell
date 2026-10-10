@@ -21,6 +21,7 @@ import {
   userHome,
   panelAppsRoot,
   previewLocalPanelApp,
+  resolveGitHubPanelAppCommit,
   resolvePanelAppBindingPolicy,
   uninstallPanelApp,
   type GitPanelAppSourceInput,
@@ -29,7 +30,7 @@ import {
   type PanelAppSourceInput,
 } from "@cjhyy/code-shell-core";
 import { mutateJsonFile } from "@cjhyy/code-shell-core/internal";
-import { getRefCommit, parseGithubUrl } from "@cjhyy/code-shell-core/internal/skills";
+import { parseGithubUrl } from "@cjhyy/code-shell-core/internal/skills";
 import type {
   ManagedPanel,
   PanelCompatibility,
@@ -114,7 +115,7 @@ export function publicPanelError(error: unknown): PanelManagementError {
   if (
     /(?:ENOTFOUND|EAI_AGAIN|ECONNRESET|ECONNREFUSED|UND_ERR_SOCKET)/.test(code) ||
     /^(?:fetch failed|Failed to fetch)$/i.test(message) ||
-    /GitHub source download failed/i.test(message)
+    /GitHub source (?:download|ref lookup) failed/i.test(message)
   )
     return new PanelManagementError(
       502,
@@ -147,7 +148,7 @@ export interface PanelManagementOptions {
   compatibility?: (app: Pick<PanelAppPreview, "permissions" | "agent">) => PanelCompatibility;
   now?: () => number;
   /** Network seam only; production still uses the reviewed Core installer. */
-  resolveCommit?: typeof getRefCommit;
+  resolveCommit?: (info: { owner: string; repo: string }, ref: string) => Promise<string>;
 }
 
 interface StoredOrigin {
@@ -517,10 +518,9 @@ export function createPanelManagement(options: PanelManagementOptions) {
     const ref = parsed.source.ref ?? "HEAD";
     const commit = SHA.test(ref)
       ? ref.toLowerCase()
-      : await (options.resolveCommit ?? getRefCommit)(
-          { owner: parsed.owner, repo: parsed.repo },
-          ref,
-        );
+      : options.resolveCommit
+        ? await options.resolveCommit({ owner: parsed.owner, repo: parsed.repo }, ref)
+        : await resolveGitHubPanelAppCommit(parsed.source);
     await guard();
     if (!SHA.test(commit))
       throw new PanelManagementError(502, "invalid_source", "GitHub 没有返回有效的提交版本。");

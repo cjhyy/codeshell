@@ -20,6 +20,8 @@ import { MAX_DOCUMENT_BYTES } from "../../sources/documents/types.js";
 import { defaultMcpResourceAdapter } from "../../sources/adapters/mcp-resource.js";
 import { linkSourceAdapter } from "../../sources/adapters/link.js";
 import { mockAdapter } from "../../sources/adapters/mock.js";
+import { collectionAdapter } from "../../sources/adapters/collection.js";
+import { collectionConfig } from "../../sources/collection.js";
 import { defaultCredentialStatus } from "../../sources/credential-status.js";
 import { resolveEffectiveSourceAccess, type EffectiveSourceAccess } from "../../sources/resolve.js";
 import { truncateUtf8Text } from "../../sources/truncate-utf8.js";
@@ -54,6 +56,7 @@ export function registerBuiltinSourceAdapters(): void {
   registerConnectorAdapter(localFilesAdapter);
   registerConnectorAdapter(mcpResourceAdapter);
   registerConnectorAdapter(linkSourceAdapter);
+  registerConnectorAdapter(collectionAdapter);
 }
 
 registerBuiltinSourceAdapters();
@@ -124,6 +127,25 @@ export async function listSourcesTool(
     );
     if (item.status !== "ok") continue;
 
+    if (item.kind === "collection" && item.definition) {
+      // One synchronous metadata projection. No per-file await, parsing of
+      // originals, DNS or repeated whole-manifest parsing for 1,000 scopes.
+      const entries = new Map(
+        collectionConfig(item.definition).entries.map((entry) => [entry.id, entry]),
+      );
+      for (const scope of item.scopes) {
+        lines.push(`### scope: ${scope}`);
+        const entry = entries.get(scope);
+        if (entry)
+          lines.push(
+            `- ${entry.relativePath ?? entry.name} (resource: ${entry.id}, ${entry.sizeBytes}B)`,
+          );
+      }
+      if (!authorityIsCurrent(item, cwd, ctx))
+        return "Error: source authorization changed during listing.";
+      continue;
+    }
+
     for (const scope of item.scopes) {
       let resources: SourceResourceMeta[] = [];
       try {
@@ -155,7 +177,7 @@ export async function listSourcesTool(
 export const readSourceToolDef: ToolDefinition = {
   name: "ReadSource",
   description:
-    "Read one exact resource from a bound data source (requires approval). Uploaded UTF-8 text, DOCX/PPTX/XLSX and PDF documents are parsed locally; PDF requires Node.js 22.13+. Optional query performs local lexical search (limit 1–20); optional chunk reads a returned chunk id. For cross-file search, use resources instead of resource: explicitly select 1–8 uploaded files in the same source/scope and supply query. Each file retains its own approval; any failure returns no collection results. No implicit whole-project scan. Query and chunk cannot be combined.",
+    "Read one exact resource from a bound data source (requires approval). Uploaded files and shared document collections support local UTF-8 text, DOCX/PPTX/XLSX and PDF extraction; PDF requires Node.js 22.13+. Optional query performs local lexical search (limit 1–20); optional chunk reads a returned chunk id. Each shared collection file has its own scope; changed files require an explicit collection update. For cross-file search, use resources instead of resource: explicitly select 1–8 uploaded files in the same source/scope and supply query. Each file retains its own approval; any failure returns no collection results. No implicit whole-project scan or automatic collection synchronization. Query and chunk cannot be combined.",
   inputSchema: {
     type: "object",
     properties: {
@@ -424,8 +446,8 @@ export async function readSourceTool(
   const chunk = args.chunk;
   const limit = args.limit;
   if (query !== undefined || chunk !== undefined || limit !== undefined) {
-    if (access.kind !== "local-files")
-      return "Error: document queries and chunks are available only for uploaded files.";
+    if (access.kind !== "local-files" && access.kind !== "collection")
+      return "Error: document queries and chunks are available only for uploaded files or document collections.";
     if (
       query !== undefined &&
       (typeof query !== "string" || !query.trim() || query.length > 512 || query.includes("\0"))

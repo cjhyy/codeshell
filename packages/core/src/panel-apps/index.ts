@@ -63,3 +63,4 @@ export {
   type PanelAppUpdateCheck,
   type InstalledPanelAppUpdateIdentity,
 } from "./update-check.js";
+export { resolveGitHubPanelAppCommit } from "./github-ref.js";

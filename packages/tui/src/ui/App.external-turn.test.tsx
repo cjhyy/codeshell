@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, test } from "bun:test";
 import type { AgentClient, StreamEvent } from "@cjhyy/code-shell-core";
-import React from "react";
+import React, { act } from "react";
 import { flush, mount, plainText } from "../../../../tests/render-fixtures.js";
 import { forceRedraw } from "../render/index.js";
 import { App } from "./App.js";
@@ -94,20 +94,30 @@ describe("App server-driven turn lifecycle", () => {
 
   test("session cumulative usage never replaces provider, estimate or legacy context readings", async () => {
     const client = new FakeAgentClient();
-    const harness = mount(
-      <App
-        client={client as unknown as AgentClient}
-        model="test-model"
-        effort="medium"
-        maxTurns={4}
-        cwd="/tmp"
-        maxContextTokens={16_000}
-        sessionId="usage-context"
-        queryGuard={new QueryGuard()}
-      />,
+    const actEnvironment = globalThis as typeof globalThis & {
+      IS_REACT_ACT_ENVIRONMENT?: boolean;
+    };
+    const previousActEnvironment = Object.getOwnPropertyDescriptor(
+      actEnvironment,
+      "IS_REACT_ACT_ENVIRONMENT",
     );
+    let harness!: ReturnType<typeof mount>;
+    actEnvironment.IS_REACT_ACT_ENVIRONMENT = true;
     try {
-      await flush();
+      await act(async () => {
+        harness = mount(
+          <App
+            client={client as unknown as AgentClient}
+            model="test-model"
+            effort="medium"
+            maxTurns={4}
+            cwd="/tmp"
+            maxContextTokens={16_000}
+            sessionId="usage-context"
+            queryGuard={new QueryGuard()}
+          />,
+        );
+      });
       for (const event of [
         { type: "usage_update", promptTokens: 1600, promptTokensSource: "provider_usage" },
         {
@@ -119,10 +129,11 @@ describe("App server-driven turn lifecycle", () => {
         { type: "usage_update", promptTokens: 4800 },
         { type: "usage_update", promptTokens: 3200, promptTokensSource: "heuristic_estimate" },
       ] as StreamEvent[]) {
-        client.emit("usage-context", event);
-        await flush();
+        // A macrotask flush does not guarantee that React committed this update.
+        await act(async () => {
+          client.emit("usage-context", event);
+        });
         forceRedraw({ stdout: harness.stdout as NodeJS.WriteStream });
-        await flush();
       }
       const text = plainText(harness);
       expect(text).toContain("10% ctx");
@@ -130,7 +141,17 @@ describe("App server-driven turn lifecycle", () => {
       expect(text).toContain("20% ctx");
       expect(text).not.toContain("94% ctx");
     } finally {
-      harness.unmount();
+      try {
+        await act(async () => {
+          harness?.unmount();
+        });
+      } finally {
+        if (previousActEnvironment) {
+          Object.defineProperty(actEnvironment, "IS_REACT_ACT_ENVIRONMENT", previousActEnvironment);
+        } else {
+          delete actEnvironment.IS_REACT_ACT_ENVIRONMENT;
+        }
+      }
     }
   });
 

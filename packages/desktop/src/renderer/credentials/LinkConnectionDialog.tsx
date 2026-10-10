@@ -1,6 +1,10 @@
 import React from "react";
 import { Check, ExternalLink, Loader2, ShieldCheck, type LucideIcon } from "lucide-react";
-import type { LinkConnectionInput, LinkProviderView } from "@cjhyy/code-shell-link";
+import type {
+  LinkConnectionInput,
+  LinkProviderView,
+  MaskedLinkConnection,
+} from "@cjhyy/code-shell-link";
 import {
   LinkAuthorizationController,
   LinkAuthorizationStepView,
@@ -40,7 +44,7 @@ export function LinkConnectionDialog({
   modes: NonNullable<LinkProviderView["authModes"]>;
   authGuide?: LinkAuthGuide;
   onClose: () => void;
-  onConnected: () => void;
+  onConnected: (connection?: MaskedLinkConnection) => void;
 }) {
   const { t, lang } = useT();
   const requestId = React.useRef<string | undefined>(undefined);
@@ -102,7 +106,7 @@ export function LinkConnectionDialog({
   React.useEffect(() => {
     if (!connected || !authorization || completed.current === authorization.id) return;
     completed.current = authorization.id;
-    onConnected();
+    onConnected(authorization.connection);
   }, [authorization, connected, onConnected]);
   React.useEffect(() => {
     if (
@@ -183,7 +187,10 @@ export function LinkConnectionDialog({
       setInstalling(false);
     }
   };
-  const labels: Partial<LinkAuthorizationLabels> = authorizationLabels(lang);
+  const labels: Partial<LinkAuthorizationLabels> = authorizationLabels(
+    lang,
+    Boolean(input.resourceUrl),
+  );
   return (
     <Dialog open onOpenChange={(open) => !open && close()}>
       <DialogContent className="link-authorization-dialog w-[calc(100%-2rem)] max-h-[calc(100vh-2rem)] overflow-y-auto rounded-2xl p-0 sm:max-w-[440px]">
@@ -198,15 +205,32 @@ export function LinkConnectionDialog({
             )}
           </div>
           <DialogTitle className="text-lg">
-            {t(connected ? "ext.link.authorizationConnectedTitle" : "ext.link.authorizationTitle", {
-              name: providerName,
-            })}
+            {t(
+              input.resourceUrl
+                ? connected
+                  ? "ext.link.authorizationFileAddedTitle"
+                  : "ext.link.authorizationFileTitle"
+                : connected
+                  ? "ext.link.authorizationConnectedTitle"
+                  : "ext.link.authorizationTitle",
+              {
+                name: providerName,
+              },
+            )}
           </DialogTitle>
           <DialogDescription className="max-w-[330px] text-xs leading-5">
             {t(
-              connected
-                ? "ext.link.authorizationConnectedDescription"
-                : "ext.link.authorizationDescription",
+              input.resourceUrl
+                ? connected
+                  ? "ext.link.authorizationFileAddedDescription"
+                  : "ext.link.remoteAddFileDescription"
+                : connected &&
+                    input.providerId === "figma" &&
+                    !authorization?.connection?.account?.resources.length
+                  ? "ext.link.remoteNoFiles"
+                  : connected
+                    ? "ext.link.authorizationConnectedDescription"
+                    : "ext.link.authorizationDescription",
             )}
           </DialogDescription>
         </DialogHeader>
@@ -215,6 +239,11 @@ export function LinkConnectionDialog({
           aria-live="polite"
           data-link-authorization-step={authorization?.step?.kind}
         >
+          {input.resourceUrl && (
+            <p className="break-all rounded-lg bg-muted/50 px-3 py-2 text-xs leading-5">
+              {input.resourceUrl}
+            </p>
+          )}
           {!connected && availableModes.length > 1 && (
             <div
               className="flex flex-wrap gap-1 rounded-lg bg-muted/65 p-1"
@@ -357,17 +386,23 @@ export function LinkConnectionDialog({
   );
 }
 
-function authorizationLabels(lang: "zh" | "en"): Partial<LinkAuthorizationLabels> {
+function authorizationLabels(
+  lang: "zh" | "en",
+  addingFile = false,
+): Partial<LinkAuthorizationLabels> {
   return lang === "zh"
     ? {
         submit: "验证并连接",
         openPage: "在系统浏览器中继续授权",
-        waitingBrowser: "请在系统浏览器中完成登录、二次验证和授权。完成后会自动回到 CodeShell。",
+        waitingBrowser: addingFile
+          ? "请在系统浏览器中确认此文件的只读授权。完成后会自动回到 CodeShell。"
+          : "请在系统浏览器中完成登录、二次验证和授权。完成后会自动回到 CodeShell。",
       }
     : {
         openPage: "Continue in your browser",
-        waitingBrowser:
-          "Complete sign-in, two-factor verification, and authorization in your browser. CodeShell will return automatically when the connection is saved.",
+        waitingBrowser: addingFile
+          ? "Confirm read-only access to this file in your browser. CodeShell will return automatically when it is saved."
+          : "Complete sign-in, two-factor verification, and authorization in your browser. CodeShell will return automatically when the connection is saved.",
         deviceInstruction: "Enter this code on the authorization page:",
         copy: "Copy code",
         submit: "Verify and connect",

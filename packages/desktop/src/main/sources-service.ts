@@ -74,10 +74,17 @@ export function catalogList() {
 }
 
 export function catalogSave(definition: Parameters<typeof saveSourceDefinition>[0]): void {
+  if (
+    definition.kind === "collection" ||
+    readSourceDefinition(definition.id)?.kind === "collection"
+  )
+    throw new Error("资料集请通过文件选择和资料集编辑界面修改。");
   saveSourceDefinition(definition);
 }
 
 export function catalogDelete(id: string): void {
+  if (readSourceDefinition(id)?.kind === "collection")
+    throw new Error("请先查看资料集引用影响，再删除资料集。");
   deleteSourceDefinition(id);
 }
 

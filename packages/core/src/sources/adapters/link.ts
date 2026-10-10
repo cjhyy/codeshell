@@ -50,6 +50,12 @@ export const linkSourceAdapter: ConnectorAdapter = {
     options.signal?.throwIfAborted();
     const result = JSON.parse(output);
     if (
+      view.providerId === "figma" &&
+      result.kind === "error" &&
+      result.code === "file_not_authorized"
+    )
+      throw new Error("请先在 Figma 连接卡片中点击“添加文件”，粘贴文件链接并确认授权后再读取。");
+    if (
       result.kind !== "action_result" ||
       result.connectionId !== definition.credentialRef ||
       result.provider !== view.providerId ||

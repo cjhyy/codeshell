@@ -110,7 +110,13 @@ export interface MaskedLinkConnection {
   runtime: "local" | "server";
   authSource: "manual-token" | "cli-session" | "browser-oauth" | "remote-link";
   status: "connected" | "expired" | "invalid" | "unavailable";
-  account?: { id?: string; label?: string; resources: string[] };
+  account?: {
+    id?: string;
+    label?: string;
+    resources: string[];
+    /** Exact Host-selected resource references; display labels are never authorization IDs. */
+    resourceGroups?: Array<{ id: string; items: Array<{ id: string; label: string }> }>;
+  };
   capabilityIds: string[];
   verifiedAt?: string;
   expiresAt?: string;
@@ -144,6 +150,8 @@ export interface LinkConnectionInput {
   label: string;
   connectionId?: string;
   expectedRevision: string | null;
+  /** User-pasted Figma file URL/key. Existing files are recovered by the Host, never this input. */
+  resourceUrl?: string;
 }
 
 export interface TokenConnectionInput extends LinkConnectionInput {

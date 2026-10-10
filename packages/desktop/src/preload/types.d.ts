@@ -1820,6 +1820,7 @@ export interface CodeshellApi
     state: "inherit" | "on" | "off",
   ): Promise<void>;
   listSourceCatalog(): Promise<SourceDefinition[]>;
+  sourceCollections: import("../shared/source-collections").SourceCollectionApi;
   saveSourceCatalog(definition: SourceDefinition): Promise<void>;
   deleteSourceCatalog(id: string): Promise<void>;
   projectSourceAccess(projectId: string): Promise<{

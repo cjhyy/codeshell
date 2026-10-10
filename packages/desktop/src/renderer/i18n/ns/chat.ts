@@ -2,6 +2,21 @@
 export const chat = {
   zh: {
     chat: {
+      linkResource: {
+        title: "Figma 文件",
+        description: "首次读取此文件需要确认只读授权。",
+        granted: "此文件已授权，可以读取文件摘要和评论。",
+        account: "使用账号",
+        chooseAccount: "选择 Figma 连接",
+        connect: "连接 Figma",
+        authorize: "授权此文件",
+        read: "读取文件",
+        sent: "已发送读取请求",
+        changed: "连接或权限已变化，请确认当前账号后重试。",
+        sessionChanged: "会话已切换或正在运行，请回到原会话后重试。",
+        unavailable: "此连接暂时不能添加文件，请检查 Link 服务或连接权限。",
+        readPrompt: "请使用 LinkAction 读取这个 Figma 文件的摘要。参数：{arguments}",
+      },
       loadingSession: "正在加载会话…",
       loadEarlierHistory: "加载更早记录",
       loadingEarlierHistory: "正在加载更早记录…",
@@ -265,6 +280,23 @@ export const chat = {
   },
   en: {
     chat: {
+      linkResource: {
+        title: "Figma file",
+        description: "Confirm read-only access before reading this file for the first time.",
+        granted: "This file is authorized. File summaries and comments can be read.",
+        account: "Account",
+        chooseAccount: "Choose a Figma connection",
+        connect: "Connect Figma",
+        authorize: "Authorize this file",
+        read: "Read file",
+        sent: "Read request sent",
+        changed: "The connection or permissions changed. Review the account and try again.",
+        sessionChanged:
+          "The session changed or is busy. Return to the original chat and try again.",
+        unavailable:
+          "This connection cannot add files. Check the Link service or connection access.",
+        readPrompt: "Use LinkAction to read this Figma file summary. Arguments: {arguments}",
+      },
       loadingSession: "Loading conversation…",
       loadEarlierHistory: "Load earlier messages",
       loadingEarlierHistory: "Loading earlier messages…",

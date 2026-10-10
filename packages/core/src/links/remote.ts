@@ -8,9 +8,11 @@ import {
   getRemoteLinkProviderAdapter,
   LEGACY_GITHUB_ACTIONS,
   normalizeRemoteLinkActionResult,
+  normalizeRemoteFigmaFileInput,
   parseRemoteLinkResourceGroups,
   prepareRemoteLinkAction,
   reviewedRemoteLinkActions,
+  RemoteLinkResourceNotGrantedError,
   type RemoteLinkProviderId,
 } from "./remote-adapters.js";
 
@@ -25,6 +27,7 @@ export class RemoteLinkError extends Error {
       | "reconnect"
       | "changed"
       | "forbidden"
+      | "file_not_authorized"
       | "busy",
   ) {
     super(
@@ -34,6 +37,8 @@ export class RemoteLinkError extends Error {
         reconnect: "Link 授权失效或刷新结果不明，请重新连接。",
         changed: "Link 连接已改变，请重新选择。",
         forbidden: "这个 Link 授权不允许该操作或资源。",
+        file_not_authorized:
+          "请先在 Figma 连接卡片中点击“添加文件”，粘贴文件链接并确认授权后再读取。",
         busy: "Link 正在刷新授权；若重启后仍未完成，请重新连接。",
       }[code],
     );
@@ -54,6 +59,8 @@ export interface RemoteLinkAttempt {
   authorizationUrl: string;
   providerId?: RemoteLinkProviderId;
   actions?: string[];
+  /** Exact file selection requested by the Host; [] connects the Figma account only. */
+  resourceFiles?: string[];
 }
 function string(value: unknown, max = 4096): string {
   if (typeof value !== "string" || !value || value.length > max || /[\x00-\x20\x7f]/.test(value))
@@ -82,7 +89,11 @@ function origin(value: string): string {
 export function beginRemoteLinkAuthorization(
   configuration: RemoteLinkConfiguration,
   now = Date.now(),
-  capabilities: { providerId: string; actions?: readonly string[] } = {
+  capabilities: {
+    providerId: string;
+    actions?: readonly string[];
+    resourceFiles?: readonly string[];
+  } = {
     providerId: "github",
     actions: LEGACY_GITHUB_ACTIONS,
   },
@@ -128,10 +139,30 @@ export function beginRemoteLinkAuthorization(
     scope: actions.map((action) => `${adapter.id}:${action}`).join(" "),
   }))
     url.searchParams.set(key, value);
+  let resourceFiles: string[] | undefined;
+  if (capabilities.resourceFiles !== undefined) {
+    if (
+      adapter.id !== "figma" ||
+      !Array.isArray(capabilities.resourceFiles) ||
+      capabilities.resourceFiles.length > 101
+    )
+      throw new RemoteLinkError("invalid_request");
+    try {
+      resourceFiles = [...new Set(capabilities.resourceFiles.map(normalizeRemoteFigmaFileInput))];
+      if (resourceFiles.length > 100 || JSON.stringify(resourceFiles).length > 20_000)
+        throw new Error("Too many Figma files");
+    } catch {
+      throw new RemoteLinkError("invalid_request");
+    }
+    url.searchParams.set("resource_mode", resourceFiles.length ? "select" : "deferred");
+    if (resourceFiles.length) url.searchParams.set("resource_files", JSON.stringify(resourceFiles));
+  }
+  if (url.href.length > 32_768) throw new RemoteLinkError("invalid_request");
   return {
     configuration: config,
     providerId: adapter.id,
     actions,
+    ...(resourceFiles !== undefined ? { resourceFiles } : {}),
     state,
     verifier,
     expiresAt: now + 10 * 60_000,
@@ -309,6 +340,14 @@ export async function completeRemoteLinkAuthorization(
   let resourceGroups;
   try {
     resourceGroups = parseRemoteLinkResourceGroups(providerId, authorization);
+    if (attempt.resourceFiles !== undefined) {
+      const selected = resourceGroups[0]!.items.map((item) => item.id);
+      if (
+        selected.length !== attempt.resourceFiles.length ||
+        attempt.resourceFiles.some((id) => !selected.includes(id))
+      )
+        throw new Error("Unexpected Figma file authorization");
+    }
   } catch {
     throw new RemoteLinkError("reconnect");
   }
@@ -484,6 +523,8 @@ export async function executeRemoteLinkAction(
       return prepareRemoteLinkAction(providerId, input.action, input.params, resources(credential));
     } catch (error) {
       if (error instanceof RemoteLinkError) throw error;
+      if (error instanceof RemoteLinkResourceNotGrantedError)
+        throw new RemoteLinkError("file_not_authorized");
       throw new RemoteLinkError("forbidden");
     }
   };

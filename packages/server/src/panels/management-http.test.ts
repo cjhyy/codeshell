@@ -194,6 +194,12 @@ test("known GitHub failures distinguish timeouts, unavailable repositories, upst
       "github_network",
     ],
     [new Error("GitHub source download failed: fetch failed"), 502, "github_network"],
+    [new Error("GitHub source ref lookup failed: fetch failed"), 502, "github_network"],
+    [
+      new Error("GitHub source ref lookup failed: GitHub source ref lookup timed out"),
+      504,
+      "github_timeout",
+    ],
   ];
   for (const [error, status, code] of cases)
     expect(publicPanelError(error)).toMatchObject({ status, code });

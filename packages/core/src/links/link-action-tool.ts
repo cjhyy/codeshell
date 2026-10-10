@@ -16,7 +16,7 @@ import {
   getCliLinkStatus,
   isCliLinkProvider,
 } from "./cli.js";
-import { isRemoteLinkCredential } from "./remote.js";
+import { isRemoteLinkCredential, RemoteLinkError } from "./remote.js";
 import { getLinkStatus } from "./status.js";
 import { allowsLinkAction, linkAuthoritySnapshot } from "./authority.js";
 import { canonicalOperationValue } from "../operations/ledger.js";
@@ -513,6 +513,7 @@ export async function linkActionTool(
       provider: providerId,
       action: actionId,
       error: error instanceof Error ? error.message : String(error),
+      ...(error instanceof RemoteLinkError ? { code: error.code } : {}),
     });
   } finally {
     unsubscribe?.();

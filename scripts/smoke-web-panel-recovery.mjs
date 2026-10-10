@@ -1,5 +1,5 @@
 /** Real Node Hub + production Web UI + Core installer. Only GitHub's upstream
- * commit/archive replies are controlled, using a temporary Git repository.
+ * Git ref/archive replies are controlled, using a temporary Git repository.
  * No browser API routes, package grants, authentication or storage are mocked.
  * Requires `bun run build` and Playwright Chromium from Desktop dependencies.
  */
@@ -30,12 +30,37 @@ if (process.argv[2] === "--host") {
     await import("../packages/server/dist/index.serve.js");
   const originalFetch = globalThis.fetch;
   let brokenArchive = false;
+  let refLookups = 0;
   const downloads = [];
   globalThis.fetch = async (input, init) => {
     const url = new URL(input instanceof Request ? input.url : String(input));
-    if (url.origin === "https://api.github.com") {
-      assert.equal(url.pathname, "/repos/codeshell-tests/web-recovery/commits/main");
-      return Response.json({ sha: String(git(repo, "rev-parse", "HEAD")).trim() });
+    if (url.origin === "https://github.com") {
+      assert.equal(url.href, `${sourceUrl}.git/info/refs?service=git-upload-pack`);
+      assert.equal(init?.method, "GET");
+      assert.equal(init?.redirect, "error");
+      assert.equal(init?.credentials, "omit");
+      assert.equal(new Headers(init?.headers).has("Git-Protocol"), false);
+      refLookups++;
+      const service = "# service=git-upload-pack\n";
+      const prefix = `${(Buffer.byteLength(service) + 4).toString(16).padStart(4, "0")}${service}0000`;
+      const bytes = Buffer.concat([
+        Buffer.from(prefix),
+        git(
+          repo,
+          "-c",
+          "protocol.version=0",
+          "upload-pack",
+          "--stateless-rpc",
+          "--advertise-refs",
+          ".",
+        ),
+      ]);
+      return new Response(bytes, {
+        headers: {
+          "content-type": "application/x-git-upload-pack-advertisement",
+          "content-length": String(bytes.length),
+        },
+      });
     }
     if (url.origin === "https://codeload.github.com") {
       assert.ok(url.pathname.startsWith("/codeshell-tests/web-recovery/zip/"));
@@ -75,7 +100,8 @@ if (process.argv[2] === "--host") {
       let result;
       if (message.kind === "sourceFailure") {
         brokenArchive = message.enabled;
-      } else if (message.kind === "downloads") result = downloads;
+      } else if (message.kind === "refLookups") result = refLookups;
+      else if (message.kind === "downloads") result = downloads;
       else if (message.kind === "stop") {
         await Promise.all(servers.map((server) => server.close()));
         process.send({ request: message.request });
@@ -376,6 +402,7 @@ if (process.argv[2] === "--host") {
     await first.getByRole("alert").waitFor();
     assert.equal((await panel(0)).packageDigest, beforeFailure.packageDigest);
     await command("sourceFailure", { enabled: false });
+    assert.ok((await command("refLookups")) > 0, "Source review must resolve Git refs");
     assert.ok((await command("downloads")).includes(originalCommit));
     assert.ok((await command("downloads")).includes(updatedCommit));
     await rm(repo, { recursive: true });
@@ -391,12 +418,14 @@ if (process.argv[2] === "--host") {
       await document(index, "2.0.0", `Project ${index} edits`);
     }
     assert.deepEqual(await command("downloads"), [], "Restart must not need the deleted source");
+    assert.equal(await command("refLookups"), 0, "Restart must not resolve deleted source refs");
     assert.deepEqual(errors, []);
     console.log(
       JSON.stringify({
         realNodeHub: true,
         realBrowserUi: true,
         controlledGitHubSource: true,
+        realGitRefAdvertisement: true,
         reviewedInstallAndUpdate: true,
         reviewedCommitSurvivesUpstreamChange: true,
         fullHostProcessRestart: true,

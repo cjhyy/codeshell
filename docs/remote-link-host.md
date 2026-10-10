@@ -225,7 +225,12 @@ CODE_SHELL_REMOTE_LINK_CLIENT_ID=registered-desktop-web-client
 本地 CLI／Token 连接继续可用；保存多个连接时必须明确选择，失效后不自动换账号。
 GitHub 原始凭据留在 Link，原生页面只收到脱敏快照及授权结果。
 
-Desktop 主进程启动环境可配置：
+正式打包的 Desktop 默认使用 CodeShell 的公开 Link 部署（服务地址、公开 PKCE
+客户端 ID 和本机回调 origin），Windows、macOS 和 Linux 使用同一配置。第三方
+凭据和服务管理密钥不随安装包分发。开发运行仍需显式配置；只有打开 Link 页面或
+主动发起连接时才使用服务，不会在启动时自动登录或授权资源。
+
+Desktop 主进程启动环境可覆盖整个部署：
 
 ```sh
 CODE_SHELL_REMOTE_LINK_DESKTOP_ORIGIN=http://127.0.0.1:43827
@@ -233,11 +238,16 @@ CODE_SHELL_REMOTE_LINK_ISSUER=https://link.example
 CODE_SHELL_REMOTE_LINK_CLIENT_ID=registered-desktop-client
 ```
 
+只要提供任意部署覆盖字段，就不再补入默认部署的其他字段，以免把私有客户端
+或密钥发送到公开服务。设置 `CODE_SHELL_REMOTE_LINK_DISABLED=1` 可关闭原生
+远程 Link；该设置也优先于显式覆盖。本地 CLI／Token 连接不受影响。
+
 在 Link 为原生桌面登记公开 PKCE 客户端和精确回调
 `http://127.0.0.1:43827/link/callback`。主进程在打开系统浏览器前绑定该回环 HTTP 地址，
 只监听 `127.0.0.1`，不开放局域网端口。回调 origin 来自受信启动配置，当前原生桌面入口
 固定使用 `http://127.0.0.1:43827`；不能带路径。端口被其他进程占用时明确报错，
-不会改用未登记的端口。未设置 `DESKTOP_ORIGIN` 时不启用新增原生授权。
+不会改用未登记的端口。开发运行或自定义部署未设置 `DESKTOP_ORIGIN` 时不启用
+原生授权。
 
 原生桌面和配对 Web 回调地址不同，需分别登记。当前两个入口共享该进程的
 `CLIENT_ID`；同时启用时，在同一个公开 PKCE 客户端中登记两个准确回调。若分开部署，

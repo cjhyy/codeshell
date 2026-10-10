@@ -290,6 +290,14 @@ export function createLinkService(options: LinkServiceOptions = {}) {
         id: meta.linkAccountId,
         label: meta.linkAccountLabel,
         resources: meta.linkResourceLabels?.slice(0, 100) ?? [],
+        ...(remote && meta.linkResourceGroups
+          ? {
+              resourceGroups: meta.linkResourceGroups.map((group) => ({
+                id: group.id,
+                items: group.items.map((item) => ({ id: item.id, label: item.label })),
+              })),
+            }
+          : {}),
       },
       capabilityIds: meta.linkCapabilityIds ?? [],
       verifiedAt: meta.linkLastVerifiedAt,
@@ -852,6 +860,8 @@ export function createLinkService(options: LinkServiceOptions = {}) {
   ): Promise<LinkAuthorization> {
     await authorize(context);
     const authModeId = string(rawAuthModeId, 80);
+    if (input?.resourceUrl !== undefined && authModeId !== "remote-link")
+      throw new LinkServiceError(400, "invalid_request");
     if (authModeId === "remote-link") await refreshRemoteCatalog(context);
     const provider = snapshot().providers.find((candidate) => candidate.id === input?.providerId);
     const mode = provider?.authModes?.find(
@@ -1256,7 +1266,12 @@ export function createLinkService(options: LinkServiceOptions = {}) {
     if (
       !input ||
       input.methodId !== "remote-link" ||
-      !REMOTE_LINK_ADAPTERS.some((adapter) => adapter.id === input.providerId)
+      !REMOTE_LINK_ADAPTERS.some((adapter) => adapter.id === input.providerId) ||
+      (input.resourceUrl !== undefined &&
+        (input.providerId !== "figma" ||
+          !input.connectionId ||
+          typeof input.resourceUrl !== "string" ||
+          !input.resourceUrl))
     )
       throw new LinkServiceError(400, "invalid_request");
     const config = options.remoteLink?.();
@@ -1282,11 +1297,23 @@ export function createLinkService(options: LinkServiceOptions = {}) {
         throw new LinkServiceError(409, "conflict");
     }
     const prepared = { id, expected, input: { ...input, label: string(input.label) } };
+    if (input.resourceUrl !== undefined && !expected)
+      throw new LinkServiceError(400, "invalid_request");
     let attempt: RemoteLinkAttempt;
     try {
+      let resourceFiles: string[] | undefined;
+      if (input.providerId === "figma") {
+        // Recover the old whitelist from Host custody. Browser input can only suggest one new file.
+        const groups = expected?.meta?.linkResourceGroups;
+        if (expected && (!groups || groups.length !== 1 || groups[0]?.id !== "files"))
+          throw new Error("Invalid saved Figma resources");
+        resourceFiles = groups?.[0]?.items.map((item) => item.id) ?? [];
+        if (input.resourceUrl !== undefined) resourceFiles.push(input.resourceUrl);
+      }
       attempt = beginRemoteLinkAuthorization(config, now(), {
         providerId: input.providerId,
         actions: capabilities.actions,
+        ...(resourceFiles !== undefined ? { resourceFiles } : {}),
       });
     } catch {
       throw new LinkServiceError(400, "invalid_request");
@@ -1360,6 +1387,12 @@ export function createLinkService(options: LinkServiceOptions = {}) {
         },
       );
       await check();
+      if (
+        job.attempt.providerId === "figma" &&
+        job.prepared.expected &&
+        credential.meta?.linkAccountId !== job.prepared.expected.meta?.linkAccountId
+      )
+        throw new LinkServiceError(409, "conflict");
       const guarded = {
         ownerId: context.ownerId,
         authorize: async () => {
