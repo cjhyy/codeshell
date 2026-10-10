@@ -1,6 +1,6 @@
 # 项目记忆复制到数字人
 
-状态：2026-10-10 已实现并通过本地分片、类型和构建检查；集成与实际 Electron 验证另记，尚未发行。
+状态：2026-10-10 已实现并通过本地分片、类型、构建及实际 macOS Electron 流程；最终 CI 与合并状态见 [PR #126](https://github.com/cjhyy/codeshell/pull/126)，尚未发行。
 
 ## 使用流程
 
@@ -30,5 +30,9 @@
 后端受控分片 29 项通过，覆盖实际 MemoryManager 存储、预览不写、原件保留、一次消费、过期、改动与同名冲突、原件身份替换和符号链接、旧 ID／空字段兼容、平铺布局不迁移、项目撤权、主帧导航／进程终止／帧身份变化及授权等待期间失效。POSIX 子进程实际将普通文件在打开前替换为 FIFO，验证不会阻塞 Main 且不写目标。真实 run-setup 与 PromptComposer 消费者验证 portableMemory 开关决定副本是否注入。
 
 Renderer 分片 28 项通过，其中 19 个隔离子进程运行真实 React 组件交互，覆盖项目 user／dream 入口、最终编辑全文审阅、取消、切换项目／scope／原件后拒绝旧响应、提交锁、列表失败重试、关闭回调、同名或提交冲突后重新审阅、服务端最终草稿及未启用目标的成功提示。另覆盖原记忆组件回归和中英字典一致性。
+
+实际 macOS Electron 验证从生产设置页进入 MemorySection，编辑并审阅最终全文，经原有 Main handler 创建两个副本。共观测到 4 次 preview（包含取消后重审及一次同名拒绝）和 2 次 commit；取消不提交，重名不覆盖，user／dream 来源均生成新的手动 user 记忆。磁盘正文、摘要、类型、置顶、独立 ID、新建生命周期，以及两条原件和索引、两个 Profile 定义的字节保留均通过。另一项目的真实 run-setup／PromptComposer 验证 enabled 目标注入、disabled 目标不注入。Main 正常退出，隔离 HOME 清理；没有 Worker、模型、HTTP 请求或 Renderer 异常。
+
+可重复入口为 Desktop 的 `bun run test:e2e:profile-memory-promotion`，也纳入完整 `test:e2e` 链。证据目录位于隔离 HOME 外，保留审阅截图、原始日志及最终回执；CI 无论成功或失败均上传该目录。本场景不执行凭据加密，因此不作为密钥环或真实账号验收。
 
 架构预算与 Main/preload IPC 合约 5 项通过。依赖包构建、全 workspace 类型检查、Desktop main/preload/renderer/mobile/extension 生产构建和 ESLint warning baseline 通过。测试使用隔离的应用目录，Core 导入前安装 HTTP fixture 守卫并执行负探针；没有真实账号、模型请求或第三方服务验收。JavaScript 守卫不等同 OS 沙箱。
