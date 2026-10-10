@@ -2013,7 +2013,16 @@ describe("Desktop and Web shared native coordinator", () => {
       recovery: "retry",
       requestKey: "both-devices",
     });
-    const event = await waitRuntimeEvent(f, f.grant.instanceId, "tasks.changed");
+    const event = await waitRuntimeEvent(
+      f,
+      f.grant.instanceId,
+      "tasks.changed",
+      0,
+      ({ payload }) =>
+        payload.id === native.id &&
+        payload.status === "running" &&
+        (payload.progress as { stage?: string } | undefined)?.stage === "waiting",
+    );
     expect(event.payload.id).toBe(native.id);
     expect(event.payload.scope).toEqual(f.nativeScope);
     expect(event.payload).not.toHaveProperty("input");
@@ -2035,7 +2044,7 @@ describe("Desktop and Web shared native coordinator", () => {
     // executor's durable progress proves the project task has actually started.
     await waitRuntimeEvent(
       f,
-      observer.instanceId,
+      f.grant.instanceId,
       "tasks.changed",
       0,
       ({ payload }) =>

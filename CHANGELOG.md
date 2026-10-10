@@ -8,6 +8,43 @@ breaking.
 
 ## [Unreleased]
 
+## [0.9.30] - 2026-10-10
+
+### Added
+
+- Register durable Mimi reminders or explicitly authorized continuation of the
+  original task; inspect, reschedule and cancel them in one follow-up list.
+  Recall memories by the current question and task objectives. Desktop startup
+  recovers due items within the default 24-hour window without replaying
+  uncertain sends or launches. Wakes require the desktop app to be running.
+- Recover committed native and owned external CLI output in paired Mobile
+  sessions across gaps and reconnects, with selected-viewer authority and
+  idempotent input handling.
+- Query up to eight explicitly selected uploaded documents with local lexical
+  ranking and exact source/chunk references. Preserve each file's authorization
+  checks and bounded parsing.
+- Record camera or screen video through a trusted Web Panel chooser, with
+  preview, explicit project save and bounded device and transfer lifetimes.
+- Add optional Desktop cloud-account sign-in and explicit account-authorized
+  device registration while preserving anonymous local use. Account and relay
+  credentials remain in native encrypted custody; service deployment and real
+  account acceptance remain separate.
+- Add approved GitHub Issue close/reopen actions and independent review of
+  uncertain writes without resending them. Preserve sealed operation receipts
+  in bounded authenticated archives.
+- Support explicitly authorized finite Node/sh Hook resource plans for
+  independent operation review through a configured local Docker runtime.
+
+### Fixed
+
+- Apply Profile MCP switches consistently to each Run's connection, tool and
+  source snapshot; report failed or unparseable external tool-version checks
+  separately.
+- Preserve concurrent Session usage during Run saves, cancel pending service
+  initialization when Sessions close, restore Mimi control messaging reliably
+  during startup, and negotiate Link catalog capabilities without granting new
+  actions to existing connections.
+
 ## [0.9.28] - 2026-10-09
 
 ### Added
