@@ -16,6 +16,7 @@ import {
 import type { InstalledPanelApp } from "@cjhyy/code-shell-core";
 import { dirname, isAbsolute, join } from "node:path";
 import { acquireFileLock } from "@cjhyy/code-shell-core/internal";
+import { createHubPanelBinding } from "./hub-binding.js";
 
 export type PanelDirectoryAuthorizer = (
   app: InstalledPanelApp,
@@ -23,9 +24,63 @@ export type PanelDirectoryAuthorizer = (
   workspacePath: string,
 ) => Promise<void>;
 
+/** Host-only proof that a workspace still belongs to the expected main project. */
+export function createPanelDirectoryProjectScope(
+  workspacePath: string,
+  expectedProjectPath: string,
+): { projectPath: string; assertCurrent(): void } {
+  for (const path of [workspacePath, expectedProjectPath]) {
+    if (!isAbsolute(path) || path.length > 32_768 || path.includes("\0"))
+      throw new Error("Invalid Panel directory project scope");
+  }
+  const binding = createHubPanelBinding(workspacePath);
+  binding.assertBinding();
+  const projectPath = realpathSync(expectedProjectPath);
+  const identity = lstatSync(projectPath);
+  if (
+    !identity.isDirectory() ||
+    identity.isSymbolicLink() ||
+    realpathSync(binding.bindingCwd) !== projectPath
+  )
+    throw new Error("Panel directory project scope is unavailable");
+  const assertCurrent = () => {
+    binding.assertBinding();
+    const current = lstatSync(projectPath);
+    if (
+      !current.isDirectory() ||
+      current.isSymbolicLink() ||
+      current.dev !== identity.dev ||
+      current.ino !== identity.ino ||
+      realpathSync(expectedProjectPath) !== projectPath ||
+      realpathSync(binding.bindingCwd) !== projectPath
+    )
+      throw new Error("Panel directory project scope changed");
+  };
+  assertCurrent();
+  return { projectPath, assertCurrent };
+}
+
 export function desktopPanelDirectoryBookmarks(dataDir: string) {
+  const scopes = new Map<string, ReturnType<typeof createPanelDirectoryProjectScope>>();
   return new PanelAppDirectoryBookmarks(join(dataDir, "panel-app-directory-bookmarks.json"), {
     legacyFiles: [join(dataDir, "panel-web-directory-bookmarks.json")],
+    isLegacyProjectScope(expectedProjectPath, legacyProjectPath) {
+      const key = JSON.stringify([expectedProjectPath, legacyProjectPath]);
+      try {
+        let scope = scopes.get(key);
+        if (!scope) {
+          scope = createPanelDirectoryProjectScope(legacyProjectPath, expectedProjectPath);
+          if (scopes.size >= 64) scopes.delete(scopes.keys().next().value!);
+          scopes.set(key, scope);
+        }
+        // Keep a failed proof frozen: replacing Git metadata must not silently
+        // reauthorize this instance's previously verified worktree association.
+        scope.assertCurrent();
+        return true;
+      } catch {
+        return false;
+      }
+    },
   });
 }
 
@@ -130,7 +185,11 @@ function write(file: string, bookmarks: Bookmark[]): void {
 export class PanelAppDirectoryBookmarks {
   constructor(
     private readonly file: string,
-    private readonly options: { legacyFiles?: readonly string[] } = {},
+    private readonly options: {
+      legacyFiles?: readonly string[];
+      /** Supplied only by a trusted Host, never by Panel or browser input. */
+      isLegacyProjectScope?: (expectedProjectPath: string, legacyProjectPath: string) => boolean;
+    } = {},
   ) {}
 
   remember(appId: string, projectPath: string, path: string): string {
@@ -196,8 +255,19 @@ export class PanelAppDirectoryBookmarks {
         }
       }
     }
-    if (!bookmark || bookmark.appId !== appId || bookmark.projectPath !== projectPath)
+    if (!bookmark || bookmark.appId !== appId)
       throw new Error("Saved directory is unavailable; choose it again");
+    const savedProjectPath = bookmark.projectPath;
+    const assertProjectScope = () => {
+      if (savedProjectPath === projectPath) return;
+      try {
+        if (this.options.isLegacyProjectScope?.(projectPath, savedProjectPath) === true) return;
+      } catch {
+        // The Host proof is optional; a failed proof never relaxes exact scope.
+      }
+      throw new Error("Saved directory is unavailable; choose it again");
+    };
+    assertProjectScope();
     try {
       const info = lstatSync(bookmark.path);
       if (
@@ -236,6 +306,7 @@ export class PanelAppDirectoryBookmarks {
         release();
       }
     }
+    assertProjectScope();
     return bookmark.path;
   }
 }

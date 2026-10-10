@@ -23,7 +23,7 @@
     "build:mobile": "vite build -c vite.mobile.config.ts",
     "mock-provider": "bun run scripts/mock-provider-server.mjs",
     "test:mock-provider": "bun test scripts/mock-provider-server.test.mjs",
-    "test:e2e": "node scripts/smoke-panels.mjs && node scripts/e2e-settings.mjs && node scripts/e2e-link.mjs && node scripts/e2e-digital-humans.mjs && node ../../scripts/run-isolated-node-smoke.mjs scripts/e2e-profile-plugin-export.mjs && node ../../scripts/run-isolated-node-smoke.mjs scripts/e2e-profile-memory-promotion.mjs && node scripts/e2e-panel-app.mjs && node scripts/e2e-panel-recovery-ui.mjs && node scripts/e2e-search.mjs && node scripts/e2e-navigation.mjs && node scripts/e2e-workspace-pages.mjs && node scripts/e2e-automation-binding.mjs && node scripts/e2e-operations-pages.mjs && node scripts/e2e-activity-history.mjs && node scripts/e2e-runtime-cost-history.mjs && node scripts/e2e-operation-resolution.mjs && node scripts/e2e-operation-read.mjs && node scripts/e2e-model-settings.mjs && node scripts/e2e-task-inbox.mjs && node scripts/e2e-task-inbox-sources.mjs && node scripts/e2e-optimization-lab.mjs",
+    "test:e2e": "node scripts/smoke-panels.mjs && node scripts/e2e-settings.mjs && node scripts/e2e-link.mjs && node scripts/e2e-digital-humans.mjs && node ../../scripts/run-isolated-node-smoke.mjs scripts/e2e-profile-plugin-export.mjs && node ../../scripts/run-isolated-node-smoke.mjs scripts/e2e-profile-memory-promotion.mjs && node scripts/e2e-panel-app.mjs && node scripts/e2e-panel-recovery-ui.mjs && node scripts/e2e-search.mjs && node scripts/e2e-navigation.mjs && node scripts/e2e-workspace-pages.mjs && node scripts/e2e-automation-binding.mjs && node scripts/e2e-operations-pages.mjs && node scripts/e2e-activity-history.mjs && node scripts/e2e-runtime-cost-history.mjs && node scripts/e2e-operation-resolution.mjs && node scripts/e2e-operation-read.mjs && node scripts/e2e-model-settings.mjs && node scripts/e2e-task-inbox.mjs && node scripts/e2e-task-inbox-sources.mjs && node scripts/e2e-optimization-lab.mjs && node ../../scripts/run-isolated-node-smoke.mjs scripts/e2e-shared-panel-tasks.mjs --worktree-directories",
     "test:e2e:automation-binding": "node scripts/e2e-automation-binding.mjs",
     "test:e2e:task-inbox-sources": "node scripts/e2e-task-inbox-sources.mjs",
     "test:e2e:link": "node scripts/e2e-link.mjs",
@@ -62,7 +62,8 @@
     "test:e2e:optimization-lab": "node scripts/e2e-optimization-lab.mjs",
     "test:upload-asar": "node ../../scripts/run-isolated-node-smoke.mjs scripts/smoke-upload-asar.mjs",
     "test:e2e:operation-resolution": "node scripts/e2e-operation-resolution.mjs",
-    "test:e2e:operation-read": "node scripts/e2e-operation-read.mjs"
+    "test:e2e:operation-read": "node scripts/e2e-operation-read.mjs",
+    "test:e2e:worktree-directories": "node ../../scripts/run-isolated-node-smoke.mjs scripts/e2e-shared-panel-tasks.mjs --worktree-directories"
   },
   "build": {
     "appId": "com.cjhyy.codeshell",

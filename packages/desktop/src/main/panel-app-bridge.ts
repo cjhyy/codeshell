@@ -43,6 +43,7 @@ import {
   taskCookieFromInput,
   taskCookieSelection,
   createSharedPanelToolHost,
+  createPanelDirectoryProjectScope,
   desktopPanelDirectoryBookmarks,
   type SharedPanelToolHost,
   createPanelToolExecutor,
@@ -1907,29 +1908,37 @@ export class PanelAppBridge {
   private async getKnownProcessDirectory(binding: GuestBinding, params: unknown): Promise<unknown> {
     const name = (params as { name?: unknown } | null)?.name;
     if (name === "project") {
-      const root = await this.trustedWorkspaceRoot(binding);
-      const selected = await this.processService.grantDirectory(this.processOwner(binding), root);
+      const scope = await this.directoryProjectScope(binding);
+      const owner = this.processOwner(binding);
+      const selected = await this.processService.grantDirectory(owner, scope.workspacePath, scope);
+      scope.assertCurrent();
       const bookmark = this.directoryBookmarks.remember(
         binding.resource.descriptor.appId,
-        root,
+        scope.projectPath,
         selected.path,
       );
-      this.processService.directoryPath(this.processOwner(binding), selected.handle);
+      this.processService.directoryPath(owner, selected.handle);
       return { ...selected, bookmark };
     }
     if (name === "downloads") {
+      const scope =
+        binding.cwd && this.options.isWorkspaceTrusted(binding.cwd)
+          ? await this.directoryProjectScope(binding)
+          : undefined;
+      const owner = this.processOwner(binding);
       const selected = await this.processService.grantDirectory(
-        this.processOwner(binding),
+        owner,
         app.getPath("downloads"),
+        scope,
       );
-      if (!binding.cwd || !this.options.isWorkspaceTrusted(binding.cwd)) return selected;
-      const projectPath = await this.trustedWorkspaceRoot(binding);
+      if (!scope) return selected;
+      scope.assertCurrent();
       const bookmark = this.directoryBookmarks.remember(
         binding.resource.descriptor.appId,
-        projectPath,
+        scope.projectPath,
         selected.path,
       );
-      this.processService.directoryPath(this.processOwner(binding), selected.handle);
+      this.processService.directoryPath(owner, selected.handle);
       return { ...selected, bookmark };
     }
     if (name === "user-bin") {
@@ -2085,18 +2094,24 @@ export class PanelAppBridge {
   private async pickProcessDirectory(binding: GuestBinding): Promise<unknown> {
     const owner = BrowserWindow.fromId(binding.ownerWindowId);
     if (!owner || owner.isDestroyed()) throw new Error("owner window is unavailable");
+    const scope = await this.directoryProjectScope(binding);
     const selected = await dialog.showOpenDialog(owner, {
       title: "Choose output directory",
       defaultPath: app.getPath("downloads"),
       properties: ["openDirectory", "createDirectory"],
     });
     if (selected.canceled || selected.filePaths.length !== 1) return { cancelled: true };
-    const projectPath = await this.trustedWorkspaceRoot(binding);
+    scope.assertCurrent();
     const processOwner = this.processOwner(binding);
-    const grant = await this.processService.grantDirectory(processOwner, selected.filePaths[0]);
+    const grant = await this.processService.grantDirectory(
+      processOwner,
+      selected.filePaths[0],
+      scope,
+    );
+    scope.assertCurrent();
     const bookmark = this.directoryBookmarks.remember(
       binding.resource.descriptor.appId,
-      projectPath,
+      scope.projectPath,
       grant.path,
     );
     this.processService.directoryPath(processOwner, grant.handle);
@@ -2104,16 +2119,57 @@ export class PanelAppBridge {
   }
 
   private async restoreProcessDirectory(binding: GuestBinding, params: unknown): Promise<unknown> {
-    const projectPath = await this.trustedWorkspaceRoot(binding);
+    const scope = await this.directoryProjectScope(binding);
     const bookmark = (params as { bookmark?: unknown } | null)?.bookmark;
     const path = this.directoryBookmarks.restore(
       binding.resource.descriptor.appId,
-      projectPath,
+      scope.projectPath,
       bookmark,
     );
-    const grant = await this.processService.grantDirectory(this.processOwner(binding), path);
-    this.directoryBookmarks.restore(binding.resource.descriptor.appId, projectPath, bookmark);
+    const owner = this.processOwner(binding);
+    const grant = await this.processService.grantDirectory(owner, path, scope);
+    scope.assertCurrent();
+    this.directoryBookmarks.restore(binding.resource.descriptor.appId, scope.projectPath, bookmark);
+    this.processService.directoryPath(owner, grant.handle);
     return { ...grant, bookmark };
+  }
+
+  /** Directory grants belong to the bound project; execution retains its workspace root. */
+  private async directoryProjectScope(binding: GuestBinding) {
+    const cwd = binding.cwd;
+    const projectPath = binding.projectPath;
+    const descriptor = binding.resource?.descriptor;
+    const revision = descriptor?.revision;
+    const appId = descriptor?.appId;
+    let topology: ReturnType<typeof createPanelDirectoryProjectScope> | undefined;
+    const assertCurrent = () => {
+      if (
+        !cwd ||
+        !projectPath ||
+        !descriptor ||
+        binding.cwd !== cwd ||
+        binding.projectPath !== projectPath ||
+        binding.resource.descriptor !== descriptor ||
+        descriptor.revision !== revision ||
+        descriptor.appId !== appId ||
+        this.guests.get(binding.guest.id) !== binding ||
+        binding.guest.isDestroyed() ||
+        !this.options.isWorkspaceTrusted(cwd) ||
+        !this.options.isWorkspaceTrusted(projectPath)
+      )
+        throw new PanelBridgeError(
+          "REVOKED",
+          "Directory workspace or project authorization changed",
+        );
+      this.assertProjectBinding(binding);
+      topology?.assertCurrent();
+    };
+    assertCurrent();
+    const workspacePath = await this.trustedWorkspaceRoot(binding);
+    assertCurrent();
+    topology = createPanelDirectoryProjectScope(workspacePath, projectPath);
+    assertCurrent();
+    return { workspacePath, projectPath: topology.projectPath, assertCurrent };
   }
 
   private async openProcessDirectory(binding: GuestBinding, params: unknown): Promise<boolean> {

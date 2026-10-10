@@ -1,8 +1,31 @@
-import { expect, test } from "bun:test";
+import { afterAll, expect, test } from "bun:test";
 import { chmod, mkdir, mkdtemp, readFile, realpath, rm } from "node:fs/promises";
+import http from "node:http";
+import https from "node:https";
+import { syncBuiltinESMExports } from "node:module";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { hubPanelDirectoryBookmarks, PanelAppDirectoryBookmarks } from "./directory-bookmarks.js";
+import { installLocalNetworkGuard } from "../../../../scripts/runtime-cost-smoke-isolation.mjs";
+
+if (!process.env.CODE_SHELL_TEST_HOME || !process.env.HOME)
+  throw new Error("Private HOME required");
+const originalFetch = globalThis.fetch;
+const originals = [http.request, http.get, https.request, https.get];
+const marker = Symbol.for("codeshell.cost-smoke.network-guard");
+const previousMarker = Object.getOwnPropertyDescriptor(globalThis, marker);
+installLocalNetworkGuard("http://127.0.0.1:9");
+expect(() => fetch("https://panel-bookmark.invalid/")).toThrow("non-fixture");
+expect(() => http.get("http://127.0.0.1:8/")).toThrow("non-fixture");
+afterAll(() => {
+  globalThis.fetch = originalFetch;
+  [http.request, http.get, https.request, https.get] = originals;
+  if (previousMarker) Object.defineProperty(globalThis, marker, previousMarker);
+  else delete (globalThis as any)[marker];
+  syncBuiltinESMExports();
+});
+
+const { hubPanelDirectoryBookmarks, PanelAppDirectoryBookmarks } =
+  await import("./directory-bookmarks.js");
 
 test("Hub directory bookmarks and mutex stay in the writable data volume", async () => {
   const root = await realpath(await mkdtemp(join(tmpdir(), "panel-bookmark-volume-")));

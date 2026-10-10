@@ -367,14 +367,21 @@ export class PanelAppProcessService {
   async grantDirectory(
     owner: PanelProcessOwner,
     path: string,
+    options: { assertCurrent?: () => void } = {},
   ): Promise<{ handle: string; path: string; name: string }> {
     owner = { ...owner };
     const epoch = this.epoch(owner);
+    options.assertCurrent?.();
     await this.authorize(owner, epoch);
+    options.assertCurrent?.();
     const resolved = await realpath(path);
+    options.assertCurrent?.();
     await this.authorize(owner, epoch);
+    options.assertCurrent?.();
     const info = await stat(resolved);
+    options.assertCurrent?.();
     await this.authorize(owner, epoch);
+    options.assertCurrent?.();
     this.assertLive(owner, epoch);
     if (!info.isDirectory()) throw new Error("selected process directory is not a directory");
     const handle = randomUUID();
