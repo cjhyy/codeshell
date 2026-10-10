@@ -12,6 +12,7 @@ import {
   invalidateSkillCache,
   planProfileRequirements,
   scanSkills,
+  type ToolProbeResult,
   type WorkspaceProfile,
 } from "@cjhyy/code-shell-core";
 import {
@@ -626,17 +627,20 @@ export async function installProfileRequirements(
   return { ok: errors.length === 0, errors };
 }
 
-/** 探测外部命令版本；不存在返回 null（区别于「存在但版本低」）。 */
-function probeTool(bin: string): string | null {
+/** 只把成功退出的输出用于版本比较；不存在与执行失败分别诊断。 */
+function probeTool(bin: string): ToolProbeResult {
   // bin 来自 profile，故只允许命令名，绝不含路径分隔符或 shell 元字符。
-  if (!/^[A-Za-z0-9._-]{1,64}$/.test(bin)) return null;
+  if (!/^[A-Za-z0-9._-]{1,64}$/.test(bin)) return { status: "failed" };
   const probe = spawnSync(bin, ["--version"], {
     encoding: "utf8",
     timeout: 10_000,
     windowsHide: true,
   });
-  if (probe.error || probe.status === null) return null;
-  return `${probe.stdout ?? ""}${probe.stderr ?? ""}`.trim() || null;
+  if ((probe.error as NodeJS.ErrnoException | undefined)?.code === "ENOENT") {
+    return { status: "not-found" };
+  }
+  if (probe.error || probe.status !== 0 || probe.signal) return { status: "failed" };
+  return { status: "ok", output: (probe.stdout ?? "").concat(probe.stderr ?? "").trim() };
 }
 
 /**

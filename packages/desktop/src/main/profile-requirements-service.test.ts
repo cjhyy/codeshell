@@ -135,6 +135,29 @@ describe("installSkillRequirement", () => {
 });
 
 describe("formatRequirementPlan", () => {
+  test("distinguishes an unconfirmed minimum and a failed probe from an old version", () => {
+    const summary = formatRequirementPlan({
+      skillInstalls: [],
+      conflicts: [],
+      missingTools: [
+        { bin: "custom-tool", reason: "version-unknown", required: "22", hint: "Check the CLI" },
+        { bin: "broken-tool", reason: "probe-failed", required: "7" },
+      ],
+      needsInstall: false,
+    });
+    expect(summary.blockers).toHaveLength(2);
+    expect(summary.blockers[0]).toContain("custom-tool");
+    expect(summary.blockers[0]).toContain("无法确认");
+    expect(summary.blockers[0]).toContain("≥22");
+    expect(summary.blockers[0]).toContain("Check the CLI");
+    expect(summary.blockers[1]).toContain("broken-tool");
+    expect(summary.blockers[1]).toContain("探测失败");
+    expect(summary.blockers[1]).toContain("≥7");
+    expect(summary.blockers.join(" ")).not.toContain("版本过低");
+    expect(summary.blockers.join(" ")).not.toContain("undefined");
+    expect(summary.willRun).toEqual([]);
+  });
+
   test("describes installs, conflicts and missing tools for the confirm dialog", () => {
     const summary = formatRequirementPlan({
       skillInstalls: [{ requirement: req({ skills: ["media-use"] }), missing: ["media-use"] }],

@@ -177,6 +177,7 @@ export {
   type PlannedSkillInstall,
   type ProfileRequirementPlan,
   type SkillConflict,
+  type ToolProbeResult,
 } from "./profile/index.js";
 
 // ─── Workspace data sources ─────────────────────────────────────
