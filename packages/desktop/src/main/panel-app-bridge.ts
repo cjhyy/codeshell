@@ -2141,7 +2141,7 @@ export class PanelAppBridge {
     const descriptor = binding.resource?.descriptor;
     const revision = descriptor?.revision;
     const appId = descriptor?.appId;
-    let topology: ReturnType<typeof createPanelDirectoryProjectScope> | undefined;
+    let topology: ReturnType<typeof createPanelDirectoryProjectScope> | undefined = undefined;
     const assertCurrent = () => {
       if (
         !cwd ||
