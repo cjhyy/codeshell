@@ -98,6 +98,8 @@ export async function loadUploadedDocumentIndex(
     signal?: AbortSignal;
     assertCurrent: () => void;
     resolveExecutable?: (signal?: AbortSignal) => Promise<string>;
+    /** Stable resource ids may differ from the selected document filename. */
+    documentName?: string;
   },
 ): Promise<DocumentIndex> {
   options.signal?.throwIfAborted();
@@ -108,6 +110,7 @@ export async function loadUploadedDocumentIndex(
     resourceId,
     uploadedDocumentHash(bytes),
     DOCUMENT_PARSER_VERSION,
+    options.documentName ?? resourceId,
   ]);
   const cached = trustedIndexes.get(key);
   if (cached) {
@@ -116,7 +119,7 @@ export async function loadUploadedDocumentIndex(
     trustedIndexes.set(key, cached);
     return cached.index;
   }
-  const parsed = await parseDocumentIsolated(bytes, resourceId, {
+  const parsed = await parseDocumentIsolated(bytes, options.documentName ?? resourceId, {
     signal: options.signal,
     resolveExecutable: options.resolveExecutable,
   });

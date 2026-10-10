@@ -7,7 +7,7 @@ import { z } from "zod";
 
 export const SOURCE_ID_RE = /^[a-z0-9][a-z0-9_-]{0,63}$/;
 
-export const SOURCE_KINDS = ["mock", "mcp-resource", "local-files", "link"] as const;
+export const SOURCE_KINDS = ["mock", "mcp-resource", "local-files", "link", "collection"] as const;
 export type SourceKind = (typeof SOURCE_KINDS)[number];
 
 export const SourceDefinitionSchema = z.object({

@@ -175,6 +175,11 @@ const expectedRuntimeExportsByPartition = {
   extendedHostTypes: [],
   sourcesProfilesCapabilityControl: [
     "sourceCatalogPath",
+    "collectionConfig",
+    "captureCollectionLocalFile",
+    "readCollectionLocalFile",
+    "normalizeCollectionUrl",
+    "downloadCollectionUrl",
     "listSourceDefinitions",
     "readSourceDefinition",
     "saveSourceDefinition",
@@ -285,6 +290,11 @@ const expectedRuntimeExports = Object.values(expectedRuntimeExportsByPartition).
 // Host-only symbols that must NOT leak back onto the public root barrel.
 // (Representative sample across the removed @internal partitions.)
 const hostOnlySamples = [
+  "collectionConfig",
+  "captureCollectionLocalFile",
+  "readCollectionLocalFile",
+  "downloadCollectionUrl",
+  "normalizeCollectionUrl",
   "createConstrainedDockerProcessHost",
   "createOperationHookHost",
   "ModelRequestKeyStore",
@@ -383,6 +393,11 @@ const extensionRuntimeContract = [
 // Stable workspace data-source schema/constants surface. Host runtime belongs
 // to /internal; renderer/preload consumers only need these values and types.
 const sourcePublicRuntimeContract = [
+  "MAX_COLLECTION_ENTRIES",
+  "CollectionConfigSchema",
+  "CollectionEntrySchema",
+  "CollectionLocalEntrySchema",
+  "CollectionUrlEntrySchema",
   "SOURCE_ID_RE",
   "SOURCE_KINDS",
   "SourceDefinitionSchema",

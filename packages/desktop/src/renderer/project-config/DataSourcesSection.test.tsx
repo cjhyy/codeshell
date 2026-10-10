@@ -79,7 +79,9 @@ const uploadedBrief: SourceResourceMeta = {
 function snapshot(
   access: EffectiveSourceAccess[] = [],
   uploads: SourceResourceMeta[] = [],
-  bindings: WorkspaceSourceBinding[] = [],
+  bindings: WorkspaceSourceBinding[] = access
+    .filter((item) => item.sourceId !== "project-uploads")
+    .map(({ sourceId, scopes, readPolicy }) => ({ sourceId, scopes, readPolicy })),
 ) {
   return { access, uploads, bindings };
 }

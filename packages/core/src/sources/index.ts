@@ -1,4 +1,6 @@
 export * from "./types.js";
+export * from "./collection.js";
+export * from "./collection-local.js";
 export * from "./catalog.js";
 export * from "./adapter.js";
 export * from "./adapters/mock.js";

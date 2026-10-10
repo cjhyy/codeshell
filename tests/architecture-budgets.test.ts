@@ -106,6 +106,7 @@ describe("architecture growth budgets", () => {
     // login, register, github, linkGitHub, cancelSignIn and logout. Their results
     // expose only public account state; access/refresh tokens remain in Main.
     // Include the extracted registrar and raise only this contract baseline by seven.
+    // Count all five explicit collection operations in the extracted registrar.
     expect(
       matches("packages/desktop/src/main/index.ts", /ipcMain\.handle\(/g) +
         matches("packages/desktop/src/main/project-panel-ipc.ts", /ipcMain\.handle\(/g) +
@@ -117,6 +118,7 @@ describe("architecture growth budgets", () => {
         matches("packages/desktop/src/main/session-transcript-ipc.ts", /ipcMain\.handle\(/g) +
         matches("packages/desktop/src/main/profile-switch-ipc.ts", /ipcMain\.handle\(/g) +
         matches("packages/desktop/src/main/profile-plugin-export-ipc.ts", /ipcMain\.handle\(/g) +
+        matches("packages/desktop/src/main/source-collections-ipc.ts", /ipcMain\.handle\(/g) +
         matches("packages/desktop/src/main/task-inbox/task-inbox-ipc.ts", /handle\("taskInbox:/g) +
         // Nine local-only Lab routes: eight existing operations plus P2 native
         // adoption. Exact body/scope review and post-dialog revalidation remain
@@ -132,7 +134,7 @@ describe("architecture growth budgets", () => {
       // validation and recovery algorithm stay in Core and the extracted adapters.
       // +2 metadata-only Profile preview and revision-checked adoption routes.
       // +3 preview/cancel/reviewed-save operations, without installation authority.
-    ).toBeLessThanOrEqual(337);
+    ).toBeLessThanOrEqual(342);
     // v0.8.17 added the reviewed Panel catalog/task bridge to both preload
     // surfaces. Mimi's bounded transcript pagination adds one typed invoke;
     // the validation and file-reading implementation remain extracted in main.
@@ -174,7 +176,8 @@ describe("architecture growth budgets", () => {
         matches("packages/desktop/src/preload/profile-plugin-export-api.ts", /ipc\.invoke\(/g) +
         matches("packages/desktop/src/preload/optimization-lab-api.ts", /ipc\.invoke\(/g) +
         matches("packages/desktop/src/preload/operation-resolution-api.ts", /ipc\.invoke\(/g),
-    ).toBeLessThanOrEqual(330);
+      // Five reviewed collection invokes. Native file paths never arrive as renderer arguments.
+    ).toBeLessThanOrEqual(335);
     // GitHub skill previews and Panel task hosting carry main-issued review and
     // ownership fields across the typed preload boundary. The optional Mimi
     // transcript-page method adds its bounded response shape without widening
@@ -321,7 +324,8 @@ describe("architecture growth budgets", () => {
       // Parser executables and cache invalidation remain Host-only below.
       // +1 type-only signer contract lets an SDK Host supply custody without
       // exposing the key store, worker IPC or mutable default signer authority.
-      "packages/core/src/index.ts": 131,
+      // +1 collection manifest schema/types for standalone Hosts and type-only Desktop UI.
+      "packages/core/src/index.ts": 132,
       // +3 reviewed Optimization Lab foundations: read-only Skill snapshots,
       // the shared file lock, and text-connection resolution (§5.2 of the plan).
       // +1 type-only LifetimeScope/Disposable contract lets capability modules
@@ -364,7 +368,8 @@ describe("architecture growth budgets", () => {
       // +3 reviewed Host-only contracts: native operation Hook host, constrained
       // process host, and its opaque permit/resource/runtime types. Published
       // public/extension contracts remain unchanged; allow no future exports.
-      "packages/core/src/index.internal.ts": 101,
+      // +3 Host-only collection validation, selected-file capture/read and public-HTTPS transport.
+      "packages/core/src/index.internal.ts": 104,
       "packages/coding/src/index.ts": 12,
       "packages/arena/src/index.ts": 19,
       // +1 for conversation-session.ts, which re-exports the four modules

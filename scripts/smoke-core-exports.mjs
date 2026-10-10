@@ -35,6 +35,11 @@ assert.equal(typeof publicApi.createServer, "function");
 // internal-only value (`BUILTIN_CATALOG`) even though the separation was
 // correct and the four source-level contract tests passed.
 const hostOnlySamples = [
+  "collectionConfig",
+  "captureCollectionLocalFile",
+  "readCollectionLocalFile",
+  "downloadCollectionUrl",
+  "normalizeCollectionUrl",
   "createConstrainedDockerProcessHost",
   "createOperationHookHost",
   "inspectProjectSettingsRecovery",
@@ -123,9 +128,12 @@ assert.equal("Arena" in internalApi, false);
 // separation itself was intact; only the pin had drifted.
 // Includes the reviewed host-only managed-runtime and model-instance types;
 // neither surface is added to the stable public root.
+// Include the already-exported process-launch and missed-cron contracts;
+// the compiled declaration pin must describe the current Host surface.
 const expectedInternalTypeExports = [
   "ConstrainedDockerRuntime",
   "ConstrainedProcessHost",
+  "ConstrainedProcessLaunch",
   "ConstrainedProcessPermit",
   "ConstrainedProcessResources",
   "ConstrainedProcessScope",
@@ -153,6 +161,7 @@ const expectedInternalTypeExports = [
   "CronExecutionOutcome",
   "CronJob",
   "CronJobLifecycleEvent",
+  "CronMissedPolicy",
   "CronPermissionLevel",
   "CronRunRequest",
   "CronRunResult",
