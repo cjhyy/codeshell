@@ -297,6 +297,105 @@ describe("composition activation ownership", () => {
     expect(released).toEqual(["ready", "late"]);
   });
 
+  test("already-cancelled private service initialization does not start factories", async () => {
+    const scope = new LifetimeScope("session", "already-cancelled");
+    const controller = new AbortController();
+    const reason = new Error("cancelled before initialization");
+    controller.abort(reason);
+    let created = 0;
+    const values = {};
+    const pending = createPrivateServices(
+      [
+        {
+          key: "not-started",
+          moduleId: "not-started",
+          value: {
+            scope: "session",
+            create() {
+              created++;
+            },
+          },
+        },
+      ],
+      "session",
+      scope,
+      {} as never,
+      values,
+      controller.signal,
+    );
+    const error = await pending.catch((error) => error);
+    expect(error).toBeInstanceOf(AggregateError);
+    expect(error.errors).toEqual([reason]);
+    expect(created).toBe(0);
+    expect(scope.disposed).toBe(true);
+    expect(values).toEqual({});
+  });
+
+  test("cancellation retains simultaneous factory and cleanup failures without starting later services", async () => {
+    const scope = new LifetimeScope("session", "cancel-and-fail");
+    const controller = new AbortController();
+    const cancelled = new Error("initialization cancelled");
+    const failed = new Error("factory failed during cancellation");
+    const cleanup = new Error("owned cleanup failed");
+    let released = 0;
+    let laterCreated = 0;
+    const values = {};
+    const pending = createPrivateServices(
+      [
+        {
+          key: "ready",
+          moduleId: "ready",
+          value: {
+            scope: "session",
+            create: () => "owned",
+            dispose() {
+              released++;
+              throw cleanup;
+            },
+          },
+        },
+        {
+          key: "cancel-and-fail",
+          moduleId: "cancel-and-fail",
+          value: {
+            scope: "session",
+            async create() {
+              controller.abort(cancelled);
+              throw failed;
+            },
+          },
+        },
+        {
+          key: "later",
+          moduleId: "later",
+          value: {
+            scope: "session",
+            create() {
+              laterCreated++;
+            },
+          },
+        },
+      ],
+      "session",
+      scope,
+      {} as never,
+      values,
+      controller.signal,
+    );
+    const error = await pending.catch((error) => error);
+    expect(error).toBeInstanceOf(AggregateError);
+    expect(error.errors).toContain(failed);
+    expect(error.errors).toContain(cancelled);
+    expect(error.errors.find((entry: unknown) => entry instanceof AggregateError)?.errors).toEqual([
+      cleanup,
+    ]);
+    expect(released).toBe(1);
+    expect(laterCreated).toBe(0);
+    expect(values).toEqual({});
+    await expect(scope.dispose()).rejects.toThrow("Disposal failed");
+    expect(released).toBe(1);
+  });
+
   test("an observer's captured query callback cannot leave a registration after its owner closes", async () => {
     const scope = new LifetimeScope("host", "late-observer");
     const queries = new Map();

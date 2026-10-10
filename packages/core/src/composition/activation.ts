@@ -76,6 +76,7 @@ export function createPrivateServices(
   scope: LifetimeScope,
   host: ModuleServiceHost,
   values: Record<string, unknown>,
+  signal?: AbortSignal,
 ): Promise<void> {
   const pending: Promise<void>[] = [];
   let rollback: Promise<void> | undefined;
@@ -102,9 +103,14 @@ export function createPrivateServices(
       return release();
     });
   };
+  // Only initialization owns this listener. Settled Session services remain
+  // alive until their normal owner closes after the active run has settled.
+  signal?.addEventListener("abort", beginRollback, { once: true });
   try {
+    signal?.throwIfAborted();
     for (const { moduleId, value: declaration } of contributions) {
       if (declaration.scope !== kind) continue;
+      signal?.throwIfAborted();
       const value = declaration.create(host);
       if (value && typeof (value as Promise<unknown>).then === "function") {
         pending.push(
@@ -121,17 +127,20 @@ export function createPrivateServices(
     beginRollback();
     pending.push(Promise.reject(error));
   }
-  return Promise.allSettled(pending).then(async (results) => {
-    const errors = results.flatMap((result) =>
-      result.status === "rejected" ? [result.reason] : [],
-    );
-    if (errors.length) {
-      try {
-        await (rollback ?? scope.dispose());
-      } catch (error) {
-        errors.push(error);
+  return Promise.allSettled(pending)
+    .then(async (results) => {
+      const errors = results.flatMap((result) =>
+        result.status === "rejected" ? [result.reason] : [],
+      );
+      if (signal?.aborted && !errors.includes(signal.reason)) errors.push(signal.reason);
+      if (errors.length) {
+        try {
+          await (rollback ?? scope.dispose());
+        } catch (error) {
+          errors.push(error);
+        }
+        throw new AggregateError(errors, "Private service activation failed");
       }
-      throw new AggregateError(errors, "Private service activation failed");
-    }
-  });
+    })
+    .finally(() => signal?.removeEventListener("abort", beginRollback));
 }

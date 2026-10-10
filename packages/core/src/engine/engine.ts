@@ -844,7 +844,9 @@ export class Engine {
 
   private async openSessionLifetime(
     sessionId: string,
+    signal?: AbortSignal,
   ): Promise<{ scope: LifetimeScope; services: Record<string, unknown> }> {
+    signal?.throwIfAborted();
     const current = this.sessionLifetimes.get(sessionId);
     if (current) return current;
     const record = { scope: this.lifetime.child("session", sessionId), services: {} };
@@ -858,6 +860,7 @@ export class Engine {
       record.scope,
       this.moduleServiceHost(sessionId),
       record.services,
+      signal,
     );
     return record;
   }
@@ -1691,7 +1694,10 @@ export class Engine {
       committedAnchor: structuredClone(session.state.contextUsageAnchor),
       finalized: false,
     };
-    const sessionLifetime = await this.openSessionLifetime(session.state.sessionId);
+    const sessionLifetime = await this.openSessionLifetime(
+      session.state.sessionId,
+      options?.signal,
+    );
     this.activeRunScope = sessionLifetime.scope.child("run", runId);
     toolCtx.capabilityServices = Object.freeze({
       ...this.engineServices,
