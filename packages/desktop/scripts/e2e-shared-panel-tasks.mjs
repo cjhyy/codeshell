@@ -251,15 +251,23 @@ async function run() {
     const output = join(isolated.home, "old-worktree-output");
     await mkdir(output);
     confined = await prepareConfinedElectronFixture({ appDir, isolated, origin: fixtureOrigin });
-    // Fix this fixture's production LAN listener to the exact owned origin.
+    // Production resolves "lan" to a concrete IPv4 before listening. Bind the
+    // fixture's one ephemeral HTTP listener to its reserved loopback origin.
     // The HTTP routes, pairing and Panel/task handlers remain production code.
     const entry = await readFile(confined.mainEntry, "utf8");
     const listener = `import fixtureHttp from "node:http";
+import { isIPv4 as fixtureIsIPv4 } from "node:net";
 const fixtureListen = fixtureHttp.Server.prototype.listen;
 fixtureHttp.Server.prototype.listen = function (port, host, ...args) {
-  if (port === 0 && host === "0.0.0.0") {
+  if (port === 0 && fixtureIsIPv4(host) && host !== "0.0.0.0") {
+    if (globalThis.__worktreeDirectoryListener)
+      throw new Error("Worktree fixture received another ephemeral HTTP listener");
+    globalThis.__worktreeDirectoryListener = { requestedHost: host, pid: process.pid };
     port = ${new URL(fixtureOrigin).port};
     host = "127.0.0.1";
+    this.once("listening", () => {
+      globalThis.__worktreeDirectoryListener.address = this.address();
+    });
   }
   return fixtureListen.call(this, port, host, ...args);
 };
@@ -467,7 +475,16 @@ console.log(JSON.stringify({bookmark, device: devices.addDevice({name:"Shared ta
   const remote = await win.evaluate(() => window.codeshell.mobileRemote.start({ mode: "lan" }));
   assert.ok(remote.url, "Remote server did not start");
   const base = fixtureOrigin ?? new URL(remote.url).origin;
-  if (worktreeDirectories) assert.equal(new URL(remote.url).port, new URL(base).port);
+  if (worktreeDirectories) {
+    assert.equal(new URL(remote.url).port, new URL(base).port);
+    const listener = await electron.evaluate(() => globalThis.__worktreeDirectoryListener);
+    assert.equal(listener.pid, electron.process().pid);
+    assert.deepEqual(listener.address, {
+      address: "127.0.0.1",
+      family: "IPv4",
+      port: Number(new URL(base).port),
+    });
+  }
   let cookie;
   const request = (path, method = "GET", body) =>
     fetch(base + path, {
