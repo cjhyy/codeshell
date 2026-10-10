@@ -150,6 +150,89 @@ describe("shared Web panel management with the real Core installer", () => {
     expect((await api.snapshot()).panels[0]?.version).toBe("2.0.0");
   });
 
+  function useAdvertisedRefs() {
+    const archiveFetch = globalThis.fetch;
+    let refLookups = 0;
+    globalThis.fetch = Object.assign(
+      async (url: string | URL | Request, init?: RequestInit) => {
+        const target = new URL(String(url));
+        if (target.origin === "https://github.com") {
+          expect(target.pathname).toBe("/codeshell-tests/panels.git/info/refs");
+          expect(target.search).toBe("?service=git-upload-pack");
+          expect(init?.redirect).toBe("error");
+          refLookups++;
+          const packet = (value: string) =>
+            (Buffer.byteLength(value) + 4).toString(16).padStart(4, "0") + value;
+          return new Response(
+            packet("# service=git-upload-pack\n") +
+              "0000" +
+              packet(`${commit} HEAD\0symref=HEAD:refs/heads/main\n`) +
+              packet(`${commit} refs/heads/main\n`) +
+              "0000",
+            { headers: { "content-type": "application/x-git-upload-pack-advertisement" } },
+          );
+        }
+        // The archive fixture rejects every origin other than codeload, including api.github.com.
+        return archiveFetch(url, init);
+      },
+      { preconnect: previousFetch.preconnect },
+    ) as typeof fetch;
+    return () => refLookups;
+  }
+
+  test("the default resolver previews and installs immutable updates without the rate-limited GitHub API", async () => {
+    const refLookups = useAdvertisedRefs();
+    const api = service({ resolveCommit: undefined });
+    await api.install(owner, (await api.preview(owner, input)).reviewToken);
+    const current = (await api.snapshot()).panels[0]!;
+    writePanel("2.0.0");
+    const reviewedCommit = commit;
+    const review = await api.previewUpdate(owner, current.id, current.revision);
+    expect(review.source.commit).toBe(reviewedCommit);
+    writePanel("3.0.0");
+    await api.install(owner, review.reviewToken);
+    expect((await api.snapshot()).panels[0]?.version).toBe("2.0.0");
+    expect((await listInstalledPanelApps())[0]?.source).toMatchObject({ ref: "main" });
+    expect(refLookups()).toBe(2);
+    expect(fetches).toEqual([current.source!.commit, reviewedCommit]);
+  });
+
+  test("Desktop project updates use the default ref resolver and retain the reviewed SHA when HEAD moves", async () => {
+    const refLookups = useAdvertisedRefs();
+    const api = service({
+      projectPackages: true,
+      allowLocalSources: true,
+      resolveCommit: undefined,
+    });
+    const originalCommit = commit;
+    const initial = await api.previewProjectSource(owner, input);
+    await api.install(owner, initial.reviewToken);
+    const current = (await api.snapshot()).panels[0]!;
+    writePanel("2.0.0");
+    const reviewedCommit = commit;
+    const review = await api.previewProjectUpdate(owner, current.id, current.revision);
+    expect(review.preview.version).toBe("2.0.0");
+    expect(review.installedVersion).toBe("1.0.0");
+    writePanel("3.0.0");
+    await api.install(owner, review.reviewToken, true, {
+      overwrite: true,
+      expectedId: current.id,
+    });
+    const selected = (await listProjectPanelApps(cwd))[0]!;
+    expect(selected.version).toBe("2.0.0");
+    expect(selected.source).toMatchObject({ ref: "main" });
+    expect(readFileSync(join(selected.installPath, "app/index.html"), "utf8")).toContain(
+      "Version 2.0.0",
+    );
+    expect((await listInstalledPanelApps())[0]?.source).toMatchObject({ ref: "main" });
+    expect(projectPanelAppPackagePins(cwd)[current.id]).toEqual({
+      version: "2.0.0",
+      packageDigest: selected.packageDigest!,
+    });
+    expect(refLookups()).toBe(2);
+    expect(fetches).toEqual([originalCommit, reviewedCommit]);
+  });
+
   test("scoped management snapshots keep current authorization and do not return another app", async () => {
     const api = service({ projectPackages: true });
     await api.install(owner, (await api.preview(owner, input)).reviewToken);

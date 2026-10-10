@@ -1,5 +1,6 @@
 import { open, rm } from "node:fs/promises";
 import { PanelAppInstallError } from "./paths.js";
+import { withPanelSourceAbort } from "./github-request.js";
 
 const GITHUB_ARCHIVE_TIMEOUT_MS = 45_000;
 const MAX_GITHUB_ARCHIVE_BYTES = 128 * 1024 * 1024;
@@ -52,87 +53,104 @@ export async function downloadGitHubPanelAppArchive(
   source: GitHubPanelAppArchiveSource,
   targetPath: string,
   fetchImpl: PanelAppArchiveFetch = globalThis.fetch,
+  options: { timeoutMs?: number } = {},
 ): Promise<void> {
   if (typeof fetchImpl !== "function") {
     throw new PanelAppInstallError("GitHub source download is unavailable");
   }
   const url = githubArchiveUrl(source);
-  let response: Response;
+  const controller = new AbortController();
+  const timeout = setTimeout(
+    () => controller.abort(new Error("GitHub source download timed out")),
+    options.timeoutMs ?? GITHUB_ARCHIVE_TIMEOUT_MS,
+  );
+  let response: Response | undefined;
+  let reader: ReadableStreamDefaultReader<Uint8Array> | undefined;
   try {
-    response = await fetchImpl(url, {
-      method: "GET",
-      redirect: "error",
-      headers: {
-        Accept: "application/zip, application/octet-stream",
-        "Accept-Encoding": "identity",
-        "User-Agent": USER_AGENT,
-      },
-      signal: AbortSignal.timeout(GITHUB_ARCHIVE_TIMEOUT_MS),
-    });
-  } catch (error) {
-    throw new PanelAppInstallError(
-      `GitHub source download failed: ${error instanceof Error ? error.message : String(error)}`,
+    response = await withPanelSourceAbort(
+      fetchImpl(url, {
+        method: "GET",
+        redirect: "error",
+        headers: {
+          Accept: "application/zip, application/octet-stream",
+          "Accept-Encoding": "identity",
+          "User-Agent": USER_AGENT,
+        },
+        signal: controller.signal,
+      }),
+      controller.signal,
     );
-  }
-  if (response.status === 404) {
-    throw new PanelAppInstallError("GitHub repository or ref was not found");
-  }
-  if (!response.ok) {
-    throw new PanelAppInstallError(
-      `GitHub source download returned HTTP ${response.status} ${response.statusText}`,
-    );
-  }
-  const declaredText = response.headers.get("content-length");
-  const declared = declaredText ? Number(declaredText) : undefined;
-  if (
-    declaredText &&
-    (!/^[0-9]+$/.test(declaredText) ||
-      !Number.isSafeInteger(declared) ||
-      declared! > MAX_GITHUB_ARCHIVE_BYTES)
-  ) {
-    throw new PanelAppInstallError(
-      `GitHub source archive exceeds ${MAX_GITHUB_ARCHIVE_BYTES} bytes`,
-    );
-  }
-  if (!response.body) {
-    throw new PanelAppInstallError("GitHub source download returned an empty response");
-  }
+    if (response.status === 404) {
+      throw new PanelAppInstallError("GitHub repository or ref was not found");
+    }
+    if (!response.ok) {
+      throw new PanelAppInstallError(
+        `GitHub source download returned HTTP ${response.status} ${response.statusText}`,
+      );
+    }
+    const declaredText = response.headers.get("content-length");
+    const declared = declaredText ? Number(declaredText) : undefined;
+    if (
+      declaredText &&
+      (!/^[0-9]+$/.test(declaredText) ||
+        !Number.isSafeInteger(declared) ||
+        declared! > MAX_GITHUB_ARCHIVE_BYTES)
+    ) {
+      throw new PanelAppInstallError(
+        `GitHub source archive exceeds ${MAX_GITHUB_ARCHIVE_BYTES} bytes`,
+      );
+    }
+    if (!response.body) {
+      throw new PanelAppInstallError("GitHub source download returned an empty response");
+    }
 
-  const output = await open(targetPath, "wx", 0o600);
-  let total = 0;
-  let header = Buffer.alloc(0);
-  try {
-    for await (const value of response.body) {
-      const chunk = Buffer.from(value);
-      total += chunk.length;
-      if (total > MAX_GITHUB_ARCHIVE_BYTES) {
+    const output = await open(targetPath, "wx", 0o600);
+    let total = 0;
+    let header = Buffer.alloc(0);
+    try {
+      reader = response.body.getReader();
+      for (;;) {
+        const { value, done } = await withPanelSourceAbort(reader.read(), controller.signal);
+        if (done) break;
+        const chunk = Buffer.from(value);
+        total += chunk.length;
+        if (total > MAX_GITHUB_ARCHIVE_BYTES) {
+          throw new PanelAppInstallError(
+            `GitHub source archive exceeds ${MAX_GITHUB_ARCHIVE_BYTES} bytes`,
+          );
+        }
+        if (header.length < 4) {
+          header = Buffer.concat([header, chunk.subarray(0, 4 - header.length)]);
+        }
+        await output.write(chunk);
+      }
+      if (declared !== undefined && total !== declared) {
         throw new PanelAppInstallError(
-          `GitHub source archive exceeds ${MAX_GITHUB_ARCHIVE_BYTES} bytes`,
+          "GitHub source archive length does not match Content-Length",
         );
       }
-      if (header.length < 4) {
-        header = Buffer.concat([header, chunk.subarray(0, 4 - header.length)]);
+      if (
+        header.length !== 4 ||
+        header[0] !== 0x50 ||
+        header[1] !== 0x4b ||
+        !((header[2] === 0x03 && header[3] === 0x04) || (header[2] === 0x05 && header[3] === 0x06))
+      ) {
+        throw new PanelAppInstallError("GitHub source response is not a ZIP archive");
       }
-      await output.write(chunk);
+    } catch (error) {
+      await output.close();
+      await rm(targetPath, { force: true }).catch(() => undefined);
+      throw error;
     }
-    if (declared !== undefined && total !== declared) {
-      throw new PanelAppInstallError("GitHub source archive length does not match Content-Length");
-    }
-    if (
-      header.length !== 4 ||
-      header[0] !== 0x50 ||
-      header[1] !== 0x4b ||
-      !((header[2] === 0x03 && header[3] === 0x04) || (header[2] === 0x05 && header[3] === 0x06))
-    ) {
-      throw new PanelAppInstallError("GitHub source response is not a ZIP archive");
-    }
-  } catch (error) {
     await output.close();
-    await rm(targetPath, { force: true }).catch(() => undefined);
+  } catch (error) {
     if (error instanceof PanelAppInstallError) throw error;
     throw new PanelAppInstallError(
       `GitHub source download failed: ${error instanceof Error ? error.message : String(error)}`,
     );
+  } finally {
+    clearTimeout(timeout);
+    // Cancellation must not strand a deadline if a peer stops transmitting.
+    void (reader ? reader.cancel() : response?.body?.cancel())?.catch(() => undefined);
   }
-  await output.close();
 }

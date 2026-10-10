@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
-import { existsSync, mkdtempSync, readFileSync, rmSync } from "node:fs";
+import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
 import { downloadGitHubPanelAppArchive, type PanelAppArchiveFetch } from "./github-archive.js";
@@ -77,5 +77,55 @@ describe("GitHub Panel App source archives", () => {
       ),
     ).rejects.toThrow(/exceeds/);
     expect(existsSync(target)).toBe(false);
+  });
+
+  test("enforces the deadline even if the request ignores AbortSignal", async () => {
+    const target = join(scratch, "source.zip");
+    await expect(
+      downloadGitHubPanelAppArchive(
+        { url: "https://github.com/acme/panels.git", ref: "main" },
+        target,
+        () => new Promise(() => undefined),
+        { timeoutMs: 5 },
+      ),
+    ).rejects.toThrow("download timed out");
+    expect(existsSync(target)).toBe(false);
+  });
+
+  test("enforces a stalled-body deadline and removes the partial ZIP without awaiting cancellation", async () => {
+    const target = join(scratch, "source.zip");
+    let cancelled = false;
+    const body = new ReadableStream<Uint8Array>({
+      start(controller) {
+        controller.enqueue(Buffer.from([0x50, 0x4b, 0x03, 0x04]));
+      },
+      cancel() {
+        cancelled = true;
+        return new Promise(() => undefined);
+      },
+    });
+    await expect(
+      downloadGitHubPanelAppArchive(
+        { url: "https://github.com/acme/panels.git", ref: "main" },
+        target,
+        async () => new Response(body),
+        { timeoutMs: 10 },
+      ),
+    ).rejects.toThrow("download timed out");
+    expect(cancelled).toBe(true);
+    expect(existsSync(target)).toBe(false);
+  });
+
+  test("a failed exclusive open preserves an existing file", async () => {
+    const target = join(scratch, "source.zip");
+    writeFileSync(target, "existing archive");
+    await expect(
+      downloadGitHubPanelAppArchive(
+        { url: "https://github.com/acme/panels.git", ref: "main" },
+        target,
+        async () => new Response(Buffer.from([0x50, 0x4b, 0x03, 0x04])),
+      ),
+    ).rejects.toThrow("EEXIST");
+    expect(readFileSync(target, "utf8")).toBe("existing archive");
   });
 });

@@ -453,6 +453,7 @@ export {
   checkInstalledPanelAppUpdate,
   checkSelectedPanelAppUpdate,
   getInstalledPanelAppUpdateIdentity,
+  resolveGitHubPanelAppCommit,
   discoverGitPanelApps,
   installReviewedLocalPanelApp,
   installReviewedPanelAppUpdate,
