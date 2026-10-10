@@ -948,11 +948,17 @@ async function runtimeEvents(f: RuntimeFixture, instance: string, after = 0, own
   return response.json() as Promise<{ events: RuntimeEvent[]; cursor: number }>;
 }
 
-async function waitRuntimeEvent(f: RuntimeFixture, instance: string, name: string, after = 0) {
+async function waitRuntimeEvent(
+  f: RuntimeFixture,
+  instance: string,
+  name: string,
+  after = 0,
+  predicate: (event: RuntimeEvent) => boolean = () => true,
+) {
   const deadline = Date.now() + 5_000;
   while (Date.now() < deadline) {
     const batch = await runtimeEvents(f, instance, after);
-    const event = batch.events.find((item) => item.event === name);
+    const event = batch.events.find((item) => item.event === name && predicate(item));
     if (event) return event;
     await new Promise((done) => setTimeout(done, 10));
   }
@@ -2025,6 +2031,18 @@ describe("Desktop and Web shared native coordinator", () => {
     const f = await sharedFixture();
     const job = await f.start("phone-start");
     const observer = await f.prepare("owner-b");
+    // Submission acknowledges queued work; exercise logout only after the
+    // executor's durable progress proves the project task has actually started.
+    await waitRuntimeEvent(
+      f,
+      observer.instanceId,
+      "tasks.changed",
+      0,
+      ({ payload }) =>
+        payload.id === job.id &&
+        payload.status === "running" &&
+        (payload.progress as { stage?: string } | undefined)?.stage === "waiting",
+    );
     f.state.owners.delete("owner-a");
     f.runtime.cancelOwner("owner-a");
     expect((await f.call("tasks.list")).status).toBe(401);
