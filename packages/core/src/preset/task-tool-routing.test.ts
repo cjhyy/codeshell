@@ -102,6 +102,32 @@ describe("Preset task schema routing", () => {
     expect(new Set(result.initialToolNames).size).toBe(15);
   });
 
+  test("reserves discovery capacity without truncating declared core tools", () => {
+    const withoutSearch = managed.filter((name) => name !== "ToolSearch").slice(0, 15);
+    const tooMany = route("alpha", {
+      policy: policy({ coreToolNames: withoutSearch }),
+    });
+    expect(tooMany.reason).toBe("invalid_policy");
+    expect(tooMany.initialToolNames).toBe(initial);
+    expect(tooMany.matchedRuleIds).toEqual([]);
+
+    const fourteen = withoutSearch.slice(0, 14);
+    const automaticSearch = route("alpha", {
+      policy: policy({ coreToolNames: fourteen }),
+    });
+    expect(automaticSearch.reason).toBe("matched");
+    expect(automaticSearch.initialToolNames).toEqual(["ToolSearch", ...fourteen]);
+    expect(automaticSearch.initialToolNames).toHaveLength(15);
+
+    const withSearch = ["ToolSearch", ...fourteen];
+    const declaredSearch = route("alpha", {
+      policy: policy({ coreToolNames: withSearch }),
+    });
+    expect(declaredSearch.reason).toBe("matched");
+    expect(declaredSearch.initialToolNames).toEqual(withSearch);
+    expect(declaredSearch.initialToolNames).toHaveLength(15);
+  });
+
   test("uses the unchanged legacy initial set for unmatched and bounded-away text", () => {
     for (const text of ["unmatched", `${"x".repeat(16_384)} alpha`]) {
       const result = route(text);

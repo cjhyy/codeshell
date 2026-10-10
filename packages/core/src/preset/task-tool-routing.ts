@@ -70,7 +70,7 @@ function validatePolicy(policy: TaskToolRoutingPolicy): ValidPolicy | undefined 
     min < 8 ||
     max > MAX_INITIAL_TOOLS ||
     min > max ||
-    core.length > max
+    core.length + (core.includes("ToolSearch") ? 0 : 1) > max
   ) {
     return undefined;
   }
