@@ -10,6 +10,7 @@ import {
 } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import * as fsPromises from "node:fs/promises";
 import { saveWorkspaceProfile } from "@cjhyy/code-shell-core/internal";
 import {
   activateProfile,
@@ -972,6 +973,47 @@ describe("desktop profiles service", () => {
       expect(listProfiles().some((p) => p.name === "seedance")).toBe(false);
     });
   }
+
+  test("force delete fails closed when a metadata writer replaces state during final scan", async () => {
+    const manager = new SessionManager();
+    manager.create(cwd, "model", "provider", "replaced");
+    manager.updateSessionState("replaced", { workspaceProfile: "seedance" });
+    const file = join(home, "sessions", "replaced", "state.json");
+    const iterate = SessionManager.prototype.iterateSessionIdsByWorkspaceProfile;
+    const open = fsPromises.open;
+    let scans = 0;
+    let replaced = false;
+    const scanProbe = spyOn(
+      SessionManager.prototype,
+      "iterateSessionIdsByWorkspaceProfile",
+    ).mockImplementation(async function* (name, options) {
+      const first = ++scans === 1;
+      yield* iterate.call(this, name, options);
+      if (first) manager.updateSessionState("replaced", { workspaceProfile: "seedance" });
+    });
+    const openProbe = spyOn(fsPromises, "open").mockImplementation(async (...args) => {
+      if (scans === 2 && args[0] === file && !replaced) {
+        replaced = true;
+        // The normal writer atomically renames state.json after the scanner's lstat.
+        manager.updateSessionState("replaced", { title: "concurrent metadata" });
+      }
+      return open(...args);
+    });
+    try {
+      await expect(forceDeleteProfile("seedance")).rejects.toThrow(/state changed/);
+      expect(replaced).toBe(true);
+      expect(listProfiles().some((p) => p.name === "seedance")).toBe(true);
+      expect(manager.readSessionState("replaced")).toMatchObject({
+        workspaceProfile: "seedance",
+        title: "concurrent metadata",
+      });
+    } finally {
+      openProbe.mockRestore();
+      scanProbe.mockRestore();
+    }
+    await forceDeleteProfile("seedance");
+    expect(listProfiles().some((p) => p.name === "seedance")).toBe(false);
+  });
 
   test("force delete removes a team that would drop below two members", async () => {
     saveWorkspaceProfile({

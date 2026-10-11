@@ -47,7 +47,7 @@ export async function* iterateProfileReferences(
         opened.ino !== info.ino ||
         opened.size > MAX_STATE_BYTES
       ) {
-        continue;
+        throw new Error(`Session state changed during profile reference scan: ${entry.name}`);
       }
       // Bound the read even if another process grows or replaces the file.
       const bytes = Buffer.alloc(opened.size + 1);
@@ -57,7 +57,9 @@ export async function* iterateProfileReferences(
         if (!result.bytesRead) break;
         length += result.bytesRead;
       }
-      if (length !== opened.size) continue;
+      if (length !== opened.size) {
+        throw new Error(`Session state changed during profile reference scan: ${entry.name}`);
+      }
       let state: { workspaceProfile?: unknown; archivedAt?: unknown };
       try {
         state = JSON.parse(bytes.subarray(0, length).toString("utf8"));

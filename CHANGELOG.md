@@ -8,6 +8,13 @@ breaking.
 
 ## [Unreleased]
 
+### Fixed
+
+- Unbind every persistent Session before deleting a digital human, including
+  archived history and more than 100 references. Scan asynchronously, preserve
+  concurrently selected profiles, and keep the definition on failed writes or
+  newly observed bindings.
+
 ## [0.9.32] - 2026-10-11
 
 ### Added
