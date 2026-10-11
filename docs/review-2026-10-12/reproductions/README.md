@@ -37,3 +37,7 @@ node scripts/run-isolated-node-smoke.mjs docs/review-2026-10-12/reproductions/cr
 第十八轮新增3文件8测试165个Bun expect，两基线分别guarded通过：context-cancel 1/3/82，model-switch 1/3/46，hub-session-operations 1/2/37。没有额外native/helper断言计数；真实Engine仅上下文自有内存provider，Hub实际Core配fake Engine/内存worker，模型选择无Core运行。Hub最终各12条act警告保留，早期EACCES/30秒锁等待Bun诊断单独归档、不计正式发现或通过次数。
 
 第十九轮没有新增Bun文件/测试/expect，当前通用仍79文件236测试；standalone原生脚本另在`../validation/file-mutex-round19/`，用maintained run-isolated-node-smoke执行、真实等待30秒，两基线各38 Node assert/Completed。不得放进默认30秒Bun collector冒充成功或与通用数累加。
+
+第二十轮原生模型存储契约脚本另在`../validation/model-native-round20/`，maintained native isolator执行；作者与主审latest各31 Node断言，Bun增量0、finding增量0。纯HTML/owned Main，不是产品hook/App E2E。
+
+第二十轮Goal/Sleep新增1个通用便携文件4测试72个Bun expect，两基线各guarded通过，当前80文件240测试。actual Main callback/App closures/preload/StatusPopover与actual Core/Engine/磁盘分层，无完整Electron/worker；provider全内存。三份harness失败与4/68早一版成功单列原始归档，最终为4/72、不重复累计。

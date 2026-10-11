@@ -1,7 +1,7 @@
 {
   "baseline": "a66f4ef291f304ee4df9da8095a90671d9a8f140",
-  "reproductionFiles": 79,
-  "reproductionTests": 236,
+  "reproductionFiles": 80,
+  "reproductionTests": 240,
   "reproductionSkipped": 0,
   "changedTestFiles": 8,
   "changedExecutedTests": 156,
@@ -28,5 +28,10 @@
   "round19NativeAssertions": 38,
   "round19BunFilesAdded": 0,
   "round19BunTestsAdded": 0,
-  "round19Note": "Standalone maintained native Node isolator, 38 manual Node assertions per baseline, actual HubAuth lock EACCES blocks event loop for real 30 seconds; no worker/model/CLI; Node25.8.1/darwin arm64; Connection:close fresh HTTP caller; not Bun expects/tests"
+  "round19Note": "Standalone maintained native Node isolator, 38 manual Node assertions per baseline, actual HubAuth lock EACCES blocks event loop for real 30 seconds; no worker/model/CLI; Node25.8.1/darwin arm64; Connection:close fresh HTTP caller; not Bun expects/tests",
+  "round20BunFilesAdded": 1,
+  "round20BunTestsAdded": 4,
+  "round20BunExpects": 72,
+  "round20ModelStorageNativeAssertions": 31,
+  "round20Note": "Goal actual Main callback/App closures/preload/StatusPopover, actual Core/Engine/ProjectStore/Host authority with owned in-memory provider; no actual worker/Electron/model provider/network. Native model storage is separate latest owned Electron pure-HTML contract, 31 assertions per run, no product hook/App. R29 reclassified P3; R78/R79 P2."
 }

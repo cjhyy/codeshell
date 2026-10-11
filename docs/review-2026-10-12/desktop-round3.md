@@ -13,7 +13,7 @@ Snapshot: `/Users/admin/.codex/worktrees/server-desktop-review-20261012/codeshel
 - **Confidence:** high. Limited to the initial/settings-refresh window; this is not a claim that all ordinary post-load toggles lose settings.
 - **Fix direction:** initialize authoritative settings independently, keep switches unavailable until ready, and fence refresh snapshots against later user mutations; preserve other entries in durable array updates.
 
-## D12 [P2] Completing startup project-bucket migration removes a subsequently added project from the live UI
+## D12 [P3，第二十轮降级] Completing startup project-bucket migration removes a subsequently added project from the live UI
 
 - **Primary location:** `packages/desktop/src/renderer/app/useProjectRegistrySync.ts:57–62`; live onChanged projection at `32–43`.
 - **Actual entry / trigger:** upgrade startup with a cached legacy renderer project id remapping to the existing V2 registry id, and a stored transcript requiring asynchronous copy into the new project bucket. While that copy is pending, use the normal Add Project picker to add and select another project.
@@ -36,3 +36,5 @@ Snapshot: `/Users/admin/.codex/worktrees/server-desktop-review-20261012/codeshel
 - **Fix direction:** synchronously reject/serialize duplicate UI and Main workspace mutations, and make creation rollback prove ownership of the specific worktree/branch created by that invocation before removing either. A preexisting-path Boolean taken before concurrent creation is not sufficient ownership proof.
 
 第十轮独立复核见 [desktop-quality-round10.md](desktop-quality-round10.md)，保留 R28/R29 并补真实 Main 写入/广播恢复，未增加正式发现。
+
+第二十轮R29由P2降为P3，见[只读交叉裁定](r29-priority-round20.md)。保留真实配置流程阻断；Main/对话未删除、真实重命名广播恢复及狭窄升级迁移窗口支持较低优先级。既有测试未重跑，不推导实际任务错项目或全部发送安全。

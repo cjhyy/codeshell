@@ -1,6 +1,6 @@
 # 用户流程覆盖与修复顺序
 
-这是截至第十九轮的流程地图；正式编号、级别和触发条件以 [主报告](README.md) 与各附录为准。正常路径通过不代表相邻失败路径已正确处理。缺陷表征测试通过表示复现成立，没有实施产品修复。
+这是截至第二十轮的流程地图；正式编号、级别和触发条件以 [主报告](README.md) 与各附录为准。正常路径通过不代表相邻失败路径已正确处理。缺陷表征测试通过表示复现成立，没有实施产品修复。
 
 | 用户要完成的事 | 已检查的正常路径及证据层级 | 仍有的问题与可见影响 |
 | --- | --- | --- |
@@ -20,6 +20,7 @@
 | 修改项目名称、模型、Skills、MCP、凭据 | 真实Electron模型/设置/凭据；真实store写盘与恢复 | R25旧完整表单回滚他端字段；R26冲突刷新没更新编辑revision；R27旧probe覆盖新配置；R28初始设置未到时开关写空列表；R29旧项目投影覆盖新广播；R75另一已打开窗口保存自身模型旧整图抹掉先前窗口持久偏好，重开回默认、重新选择恢复；R71项目rename真实拒写仍显示新名且无提示，普通广播回旧名、再次rename恢复；R42账号ID碰撞；R43拒写无反馈；R70自定义指令autosave失败清pending，存储修复后blur/离开不重试、未保存稿消失 |
 | 安装插件、更新和重装 | 真实Plugin服务、本地Git及review显式覆盖；[插件复核](plugin-quality-round9.md) | R51卸载后旧installed任务卡住重装；R52相对源校验失败前删旧cache；R53文件夹临时快照被持久保存为更新源 |
 | 运行自动化、看进度和历史 | 实际ChatSession FIFO与调度/展示控制；[自动化审查](automation-round5.md) | R44非once续接超时提前结算仍可重复排队；R45拒绝运行却向网关/生命周期发布completed；R46历史归属错误；R47界面未订阅自动停用；R48缺disabledReason；R63普通通知等待占住串行队列，urgent停用通知也被延迟（实际notifier/route+注入时钟，无OS通知） |
+| 暂停目标后继续执行 | [实际Main/preload/Goal组件与Core/Engine/磁盘](goal-sleep-round20.md)，内存provider，合法Host权威正常对照 | R78无worker Resume只写状态并成功回执，不驱动任务；R79有worker但bound会话非resident时漏WorkspaceContext，模型前拒绝却无失败结算；普通authorized run服务恢复正常，完整Desktop发送未执行 |
 | 恢复归档、查询资料集、录音 | 历史恢复、真实Collection Engine本地client；真实录音组件模拟设备 | R76异步回答的Core续接仍运行而Host判空闲，允许归档隐藏当前历史行，实际API恢复正常；R39成功恢复后自busy误挡导航；R72设置取消归档漏权威Core writer，renderer live但Core仍归档，正式folders可移除仍绑定secondary后resolver拒绝root_removed，历史/物理目录保留；R49已知原件变更指引丢失；R50同document双pending启动录音，stop/unmount只释放最后一份 |
 
 建议先修 R35 的创建/回滚所有权，同时处理会话与输入身份、审批待处理状态和不确定回执。之后处理关闭资源屏障、持久写入/更新原子性与配置冲突，再修搜索范围提示、状态同步和恢复时多余确认。这个顺序依据数据风险和用户能否继续任务，不依据发现时间或问题数量。
@@ -37,3 +38,9 @@
 第十八轮[上下文取消](context-cancel-round18.md)新增R74/P3：summary期间composer隐藏且退出禁用，没有正常用户cancel；30秒RPC超时只恢复UI，实际Core仍运行。服务级cancel/正常完成正常；迟到target发现仅源码，不称历史丢失。[模型偏好](model-switch-round18.md)与[Hub续接归档](hub-session-operations-round18.md)新增R75/R76各P3。当前正式76=1P1/49P2/26P3，便携79文件236测试分别在两基线通过；本轮无真实模型/完整Electron/worker。
 
 第十九轮[原生认证锁权限恢复](file-mutex-round19.md)新增R77/P2：正常已初始化Hub的dataDir（hub的parent）失去写权限而hub仍可读/可chmod，真实EACCES在认证锁发生，Core无差别同步重试阻塞同process /health与timer约30秒。两基线各standalone38 Node assert，修权限后同稿API重试和真实跨进程短争用正常。正式77=1P1/50P2/26P3，common Bun仍79文件236测试；不称titlehandler已抵达、所有只读存储都会阻塞、永久死锁/数据丢失或完整UI/其他平台实测。
+
+第二十轮[原生模型存储补证](model-native-round20.md)新增发现0：latest owned Electron33/macOS的两个独立defaultSession窗口、同精确file URL真实localStorage共享、storage event及reload成立，晚开窗口/独立partition正常。作者与主审各31 Node断言独立记录，Bun0；与第十八轮实际组件证据分层，不冒充完整App/hook原生E2E或真实模型请求。
+
+第二十轮[优先级交叉复核](r29-priority-round20.md)将R29由P2降P3，缺陷及其项目配置阻断仍保留；没有持久项目/对话丢失或错项目执行证据，真实重命名广播恢复已证明。当前77=1P1/49P2/27P3；旧轮50/26为当时分级，不回写历史执行记录。
+
+第二十轮[Goal冷恢复](goal-sleep-round20.md)经独立审计新增R78/R79各P2，两个不同Main/Core根因；两基线各新增1文件4测试72个Bun expect，通用80文件240测试。当前79=1P1/51P2/27P3。目标/历史保留，合法workspace安全拒绝正常，不声称真实worker、完整App/Electron、错项目执行或提供方错误。

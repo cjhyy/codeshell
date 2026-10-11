@@ -2,7 +2,9 @@
 
 Scope: independent reachability, ownership and recovery review of existing R04 / R05 / R07 / R13 / R28 / R29. Latest source snapshot is `/Users/admin/.codex/worktrees/review-latest-20261012/codeshell`, commit `a66f4ef291f304ee4df9da8095a90671d9a8f140`. Read CODESHELL.md, the old main report, Desktop rounds 1/3, quality-audit notes, existing portable fixtures and logs. No product source, repository report, build output or goal state was changed. All six relevant implementations listed below have no source diff between `84740d56` and `a66f4ef2`; these are not newly introduced by the latest snapshot.
 
-**Verdict: retain all six P2 findings.** This round adds no new defect. Strong counterevidence narrows R05 to stale path/metadata plus blocked execution, R07 to a Core `exited` event while an independent external turn remains active, R13 to a throwing submit handler rather than permanent renderer failure, and R29 to a recoverable live projection error rather than durable project deletion. R28 requires an incomplete authoritative initial refresh; ordinary post-load toggles preserve unrelated entries.
+第二十轮依据触发范围与既有恢复将R29降为P3，见[后续交叉裁定](r29-priority-round20.md)；下文六项P2是第十轮历史裁定，原证据与恢复仍成立。
+
+**Historical verdict: retain all six P2 findings.** This round adds no new defect. Strong counterevidence narrows R05 to stale path/metadata plus blocked execution, R07 to a Core `exited` event while an independent external turn remains active, R13 to a throwing submit handler rather than permanent renderer failure, and R29 to a recoverable live projection error rather than durable project deletion. R28 requires an incomplete authoritative initial refresh; ordinary post-load toggles preserve unrelated entries.
 
 ## Targeted controls and evidence
 

@@ -1,0 +1,103 @@
+{
+  "timestampSingapore": "2026-10-12 06:40",
+  "findings": 79,
+  "priorities": {
+    "P1": 1,
+    "P2": 51,
+    "P3": 27
+  },
+  "topMarkdownLocalLinks": 1071,
+  "sourceLineLinks": 705,
+  "completedCommonRuns": [
+    {
+      "tree": "/Users/admin/.codex/worktrees/server-desktop-review-20261012/codeshell",
+      "files": 80,
+      "tests": 240,
+      "round18BunExpects": 165,
+      "round17BunHelperManualAssertions": 91,
+      "productTrackedDiff": []
+    },
+    {
+      "tree": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell",
+      "files": 80,
+      "tests": 240,
+      "round18BunExpects": 165,
+      "round17BunHelperManualAssertions": 91,
+      "productTrackedDiff": []
+    }
+  ],
+  "latestOnlyFiles": 3,
+  "latestOnlyTests": 8,
+  "round18NewFiles": 3,
+  "round18NewTests": 8,
+  "round18BunExpects": 165,
+  "round18Scope": "No new native/helper assertions; context actual Engine/owned in-memory provider and mocked Electron IPC; model actual components/shared MemoryStorage with run params adapter only; Hub actual authenticated HTTP/WS+actual Core/ChatManager with fake Engine/memory worker; no actual worker/Electron/provider",
+  "latestFetchSingapore": "2026-10-12 06:23",
+  "originMain": "a66f4ef291f304ee4df9da8095a90671d9a8f140",
+  "errors": [],
+  "round19NewBunFiles": 0,
+  "round19NewBunTests": 0,
+  "round19NativeStandalone": [
+    {
+      "tree": "/Users/admin/.codex/worktrees/server-desktop-review-20261012/codeshell",
+      "assertions": 38,
+      "sourceSha256": "9e2c0f526ef405086269ef303a6af4ce16026042a8b4e1ab73d3d89ab2040583",
+      "closedNormally": true,
+      "actualFault": "HubAuthStore.authenticate -> data/hub.lock EACCES",
+      "healthMs": 30021.919334,
+      "hostTimerGapMs": 30034.154792
+    },
+    {
+      "tree": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell",
+      "assertions": 38,
+      "sourceSha256": "9e2c0f526ef405086269ef303a6af4ce16026042a8b4e1ab73d3d89ab2040583",
+      "closedNormally": true,
+      "actualFault": "HubAuthStore.authenticate -> data/hub.lock EACCES",
+      "healthMs": 30028.48975,
+      "hostTimerGapMs": 30044.583375
+    }
+  ],
+  "round19Scope": "Actual Node25.8.1/darwin arm64 Host, HubAuth setup/Cookie/HTTP + real EACCES before title handler; fresh Connection:close caller; actual 30 seconds; no worker/model/CLI; title editor UI static only; native assertions separate from Bun",
+  "round20GoalRuns": [
+    {
+      "tree": "/Users/admin/.codex/worktrees/server-desktop-review-20261012/codeshell",
+      "files": 1,
+      "tests": 4,
+      "bunExpects": 72,
+      "sourceSha256": "b9af1cb777b5fb030839600ced33d4ea369306ee7272127c9f57744d59f490b6",
+      "networkCalls": 0,
+      "subprocessCalls": 0
+    },
+    {
+      "tree": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell",
+      "files": 1,
+      "tests": 4,
+      "bunExpects": 72,
+      "sourceSha256": "b9af1cb777b5fb030839600ced33d4ea369306ee7272127c9f57744d59f490b6",
+      "networkCalls": 0,
+      "subprocessCalls": 0
+    }
+  ],
+  "round20BunFilesAdded": 1,
+  "round20BunTestsAdded": 4,
+  "round20BunExpects": 72,
+  "round20ModelStorageNative": {
+    "latestOnly": true,
+    "rootAssertions": 31,
+    "authorAssertionsSeparate": 31,
+    "scope": "owned Electron33 pure HTML/defaultSession/same exact file/reload; no product App/hook/worker/model",
+    "sourceSha256": "8cb93bb7c8f304501980dcf040036e3369a310888d1e82880d62144c10811f51",
+    "closedNormally": true
+  },
+  "round20ReclassifiedFindings": [
+    {
+      "id": "R29",
+      "from": "P2",
+      "to": "P3"
+    }
+  ],
+  "round20NewFindings": [
+    "R78/P2",
+    "R79/P2"
+  ]
+}

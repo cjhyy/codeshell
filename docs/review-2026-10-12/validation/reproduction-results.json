@@ -232,6 +232,14 @@
     "skipped": 0
   },
   {
+    "file": "docs/review-2026-10-12/reproductions/goal-sleep-round20/goal-resume.test.tsx",
+    "log": "docs/review-2026-10-12/reproductions/goal-sleep-round20/goal-resume.test.tsx.log",
+    "code": 0,
+    "signal": null,
+    "tests": 4,
+    "skipped": 0
+  },
+  {
     "file": "docs/review-2026-10-12/reproductions/hub-session-operations-round18/session-followup.test.tsx",
     "log": "docs/review-2026-10-12/reproductions/hub-session-operations-round18/session-followup.test.tsx.log",
     "code": 0,

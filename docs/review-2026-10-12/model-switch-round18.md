@@ -78,3 +78,7 @@ Completed：本轮最终 a66f **3 tests / 46 expect / 0 fail / 0 skip**；一个
 [便携脚本](reproductions/model-switch-round18/model-preferences.test.tsx)、[初始基线最终日志](reproductions/model-switch-round18/model-preferences.test.tsx.log)、[最新基线最终日志](validation/latest-a66f4ef2/repro__model-switch-round18__model-preferences.test.tsx.log)、[独立质量核对](model-switch-quality-round18.md)。原始作者材料在validation/original-model-switch-round18/，保留早期失败诊断。
 
 两个React roots和shared MemoryStorage对应源码所示主窗口共享存储；没有真实BrowserWindow/localStorage实验。runAfterModelSwitch只记录fallback参数，未执行Core或模型。初始/最新各自[observations](reproductions/model-switch-round18/observations.json)及最新归档JSON保留；当前窗口仍显示原值，重开丢偏好，可重新选择恢复。
+
+## 第二十轮原生存储边界补证
+
+第十八轮组件fixture的shared MemoryStorage边界仍保留；此后已另用真实Electron33/macOS的owned Main与纯HTML验证defaultSession、同一file URL共享localStorage、真实storage event/reload及晚开窗口/独立partition正常控制。作者与主审latest分别一次31 Node断言，Bun新增0，finding新增0。未加载产品App、ModelPill或hook，不冒称完整Electron模型选择E2E。详见[原生补证](model-native-round20.md)和[主审核对](model-native-quality-round20.md)。R75仍P3。
