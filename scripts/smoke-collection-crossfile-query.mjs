@@ -285,7 +285,9 @@ if (process.argv[2] === "--cold") {
         chunk: match.id,
       });
       assert.equal(Boolean(exact.isError), false, JSON.stringify(exact));
-      assert.ok(exact.result.includes(match.text));
+      const chunk = parse(exact);
+      for (const field of ["resourceId", "sourceHash", "id", "partIndex", "start", "end", "text"])
+        assert.equal(chunk[field], match[field], field);
     }
     const denied = executor(projectA, new HookRegistry(), [
       { tool: "ReadSource", argsPattern: { resource: "^entry_b$" }, decision: "deny" },
