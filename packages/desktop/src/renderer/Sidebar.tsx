@@ -42,6 +42,7 @@ import { NO_REPO_KEY, bucketKey, type SessionIndex, type SessionSummary } from "
 import type { SessionStatus } from "./sessionStatus";
 import { useT } from "./i18n";
 import { PetSidebarEntry } from "./pet/PetSidebarEntry";
+import { AccountSidebarEntry } from "./account/AccountSidebarEntry";
 import { compactSidebarSessions, sortSidebarSessions } from "./sidebarSessionVisibility";
 import { Button } from "@/components/ui/button";
 import {
@@ -518,6 +519,7 @@ export function Sidebar({
       </div>
 
       <div className="border-t border-border/70 bg-card/40 px-3 py-2">
+        <AccountSidebarEntry />
         <div className="flex items-center gap-1.5">
           <div className="min-w-0 flex-1">
             <SettingsMenu
