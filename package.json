@@ -60,7 +60,8 @@
   },
   "dependencies": {
     "@cjhyy/code-shell-core": "workspace:*",
-    "@cjhyy/code-shell-tui": "workspace:*"
+    "@cjhyy/code-shell-tui": "workspace:*",
+    "proxy-addr": "2.0.8"
   },
   "workspaces": [
     "packages/*"
