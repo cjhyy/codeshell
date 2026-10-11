@@ -9,14 +9,14 @@
 证据目录：`/tmp/codeshell-review-20261012`。
 持续调度：heartbeat `codeshell-10-12-11`，每小时整点与半点；截止后交付报告并停用。01:34 已将原 00:52 锚点改为整点/半点，覆盖 11:00 截止时刻。
 
-## 当前状态（新加坡 02:57）
+## 当前状态（新加坡 03:20）
 
 - 截止前不要标 complete。到 11:00 停止新增审查、收束证据、交付最终报告，停用 heartbeat，再完成目标。01:22 的 get_goal 返回 blocked（本轮主代理未请求该变更）；实际仍在推进，没有需要用户解除的阻塞，按用户 heartbeat 继续审查。工具没有 active 状态参数，不要伪造恢复调用；截止交付后再设 complete。
 - 已读 CODESHELL.md，已 fetch origin 并创建独立工作区。产品代码无改动，只有本报告目录。01:30 origin/main 更新至 a66f4ef291f304ee4df9da8095a90671d9a8f140（0.9.33），新增 Panel stable project scope 和跨文件 collection query。另建 /Users/admin/.codex/worktrees/review-latest-20261012/codeshell，分支 codex/review/latest-20261012；冻结安装、全工作区及 Desktop 构建、类型检查、差异测试和既有发现复查均完成。旧工作区与证据不切换基线。
 - 已完成 frozen install、全工作区 build、typecheck:workspaces、Desktop build。
 - Server/Web 141 文件 / 1428 测试、Desktop renderer 282 文件 / 2397 测试、Desktop main 283 文件 / 2461 测试全部通过，合计706文件6286测试0失败0跳过。
 - 真实 Electron navigation/settings/workspace-pages/model-settings/digital-humans/panel-recovery-ui 全部通过；native output-journal 与 mobile-output-journal smoke 也通过。日志已保存 validation/。
-- 正式报告目前 R01–R57：1 P1、43 P2、13 P3。R35/D13 为重复Enter创建工作区时 unsafe rollback 删除成功请求worktree/分支/未提交文件，独立质量复查认可P1。R36是worker.stdin异步EPIPE导致NodeHost退出。
+- 正式报告目前 R01–R62：1 P1、44 P2、17 P3。R35/D13 为重复Enter创建工作区时 unsafe rollback 删除成功请求worktree/分支/未提交文件，独立质量复查认可P1。R36是worker.stdin异步EPIPE导致NodeHost退出。
 - 第一至四轮已收束；便携证据29个文件55个测试全部最终通过，含缺陷表征与用于排除误报的正常契约。原始 /tmp 证据已复制并修正相对导入/子进程入口，别把原始带绝对路径的脚本覆盖回去。
 - quality-audit.md 已对D13/D1/R21/W11独立复核；主结论成立。已收窄D1普通send传输失败措辞、R21原生HubWeb范围。文件历史恢复误拦截按P3列R39（记录保留且额外确认可完成），原代理建议P2已在归档附录标明重新分级。
 - 第五轮已收束：Web 2P2、Credentials 1P2+1P3、Automation 4P2+1P3；便携复制后三个Bun文件16测试通过，实际Electron凭据4场景通过。该轮后共32个便携Bun文件71测试，凭据native脚本另计；第六轮后的新总数见下一条。review_quality_audit 已独立确认第五轮九项因果与分级，保留7P2+2P3，见quality-round5.md；R45仅网关/生命周期通知，不泛指OS成功通知。
@@ -30,12 +30,12 @@
 - `/tmp/codeshell-review-20261012/` 为 root 原始日志。原始各代理证据位于同前缀的 `-desktop`、`-web-flow`、`-server-*`、`-desktop-round2`、`-web-round2`、`-runtime-round3` 等目录。
 - 原 native Hub smoke 的模型 fixture 直接调用尚未加载的 Write，先超时；临时适配 ToolSearch 后暴露 R21。真实 worker 首次 run 发生于 session 创建之前，baseline=0；journal legacy base 已生成后 snapshot 再裁空，production chatFromOutputJournal 拒绝恢复。
 - `hub-smoke-remaining.mjs` 显式排除已复现 R21 后，其余 approval/cancel/export/archive/restart/history resume 已通过。不能写“原 smoke 全部通过”。
-- 便携脚本第一至七轮已在本目录重跑成功；当前52文件138测试汇总 validation/reproduction-results.json。新增脚本复制后单独重跑，不必每次重跑已验证全部脚本。
+- 便携脚本第一至七轮已在本目录重跑成功；当前58文件186测试汇总 validation/reproduction-results.json。新增脚本复制后单独重跑，不必每次重跑已验证全部脚本。
 - 报告数量和测试数量及时依据收束的脚本更新；条件性失败与实际可恢复方式必须说明。
 
 ## 后续
 
-继续第十轮既有问题反证与新领域审查，重点实际生产门禁、恢复方式和条件性结论，避免为增加问题数量而重复或扩大条件性结论。至少每小时核对origin/main是否更新；若更新，保留当前快照和证据、明确新差异，不在已有分支混写产品变更。截止前持续更新报告和便携证据，不把已知TODO、测试harness故障或静态猜测列作新缺陷。所有报告改动仅本任务docs目录，阶段证据保存在本任务分支，后续继续更新；不合并到main、不发布PR。
+继续第十四轮既有问题反证与新领域审查，重点实际生产门禁、恢复方式和条件性结论，避免为增加问题数量而重复或扩大条件性结论。至少每小时核对origin/main是否更新；若更新，保留当前快照和证据、明确新差异，不在已有分支混写产品变更。截止前持续更新报告和便携证据，不把已知TODO、测试harness故障或静态猜测列作新缺陷。所有报告改动仅本任务docs目录，阶段证据保存在本任务分支，后续继续更新；不合并到main、不发布PR。
 
 阶段提交：5c3c6746 第一至四轮，3c30e798 第五轮及0.9.33复查；eb2270ff 第六轮资料集、Panel和录音证据；415650c1 第七至九轮插件/身份/QuickChat及恢复范围复核。报告工作区只改docs。最新快照只多了本任务未跟踪docs，产品tracked文件干净。02:21 已再次 fetch，origin/main 仍为 a66f4ef2；下一次宜03:00–03:20核对。
 
@@ -60,3 +60,11 @@
 02:57再次fetch，origin/main仍a66f4ef2，两个冻结快照保持不变；下一次宜03:45–04:00检查。02:58报告核验：57项编号连续唯一，1/43/13分级一致，183个顶层Markdown链接与92个源码行号链接存在，52个通用文件在两基线138测试均有最终guarded完成记录，新功能3文件8测试；git产品diff为空。heartbeat仍ACTIVE并覆盖11:00，不能提前停用。
 
 02:59阶段报告已提交f92699ae（第十一至十二轮57项/52文件138测试及流程地图）。归档导航harness失败日志仅去除两处行尾空白以满足git diff --check，原始/tmp日志保留不动，未更改断言或错误内容。主报告已请求在Codex文件面板显示；UI返回queued，不视为实际已显示。
+
+03:20 第十三轮完成：新增 R58/P2 合法 managed worktree 新建终端被 Main project-root 门禁拒绝；R59/P3 最近20内 root commit Review 被无父range吞错为空；R60/P3 侧栏fs删除失败先永久同键tombstone且仅日志；R61/P3 同项目双窗口普通选择同步抢导航；R62/P3 离开CLI后已有Read审批仍阻塞新稿。全部有正常/恢复反证和独立只读核对，正式62=1P1/44P2/17P3。Core历史没有据这些新证据丢失；Terminal拒绝在native PTY前，未启动实际PTY；Review实际service+viewer，完整菜单接线静态；侧栏实际组件/持久/fs，完整Main前置close/cleanup静态；双窗实际Main-store/IPC/preload/双persistence+AST选择链，没有完整Electron/真实发送；Web实际hook/controller/生产按钮回调，未重启CLI/模型。两位代理都用过临时W23，正式R60=W23、R62=W24，避免混同。
+
+新增通用6文件48测试304断言在两基线分别guarded通过，其中catalog-protections的33既有测试只计一次。当前通用58文件186测试0最终fail/skip；新功能专项仍3文件8测试，native凭据4场景另计。便携复制修正硬编码repo/evidence及旧snapshot标签，补HOME断言，不修改产品；原始日志另存validation/original-*-round13，/tmp原件保留。报告QC62编号连续唯一，280个顶层Markdown本地链接、165个源码行号链接存在，两份58/186metadata与所有完成日志一致。03:19 heartbeat工具view+TOML确认仍ACTIVE，覆盖11:00；截止未到，不complete或停用。
+
+本轮三个agent已收束，第十四轮待下一heartbeat继续，可优先检查尚未覆盖的终端tab关闭/窗口owner、文件路由正常权限/错误反馈、系统通知点击导航与异常恢复，严格不启动真实模型/账号。最新origin核对仍02:57 a66f；下一次03:45–04:00再fetch。两个冻结快照保持不变，不clean/build；本轮最终只读语义复核无实质错误，统计与五项证据/恢复边界一致；仅本任务docs进入checkpoint。
+
+03:22 第十三轮最终独立语义检查通过，无新增执行计数。catalog便携evidence目录改用fileURLToPath以支持含空格路径，两个快照各单独再过3测试24断言，不重复累加。归档一份原始log去掉末尾空白行满足staged diff --check，/tmp原件未改。下一heartbeat继续实质审查，当前距11:00仍约7小时38分，保持调度ACTIVE，不提前交付最终或complete。

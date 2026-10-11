@@ -1,0 +1,12 @@
+bun test v1.3.11 (af24e281)
+
+docs/review-2026-10-12/reproductions/terminal-review-round13/terminal-worktree.test.tsx:
+fatal: not a git repository (or any of the parent directories): .git
+{"rootStatus":"ok","managedWorkspace":"worktree","rendererPtyCwd":"/private/var/folders/1d/6__4f4y51g90nblfptt8s9v80000gn/T/codeshell-terminal-worktree-round13-JjJrZN/.worktrees/terminal-fixture-worktree","error":"project path is not registered with CodeShell","rejectedBeforeNativeSpawn":true,"primaryControl":true,"actualNativePtyStarted":false}
+(pass) CONFIRMED valid managed-worktree Terminal is rejected by actual Main path validation before native spawn; primary-root control succeeds [1337.95ms]
+
+ 1 pass
+ 0 fail
+ 18 expect() calls
+Ran 1 test across 1 file. [2.38s]
+Completed Bun shard: 1 tests, 0 skipped; 0 failures.

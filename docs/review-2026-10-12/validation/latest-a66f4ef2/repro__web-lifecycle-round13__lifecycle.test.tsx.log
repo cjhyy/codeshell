@@ -1,0 +1,15 @@
+bun test v1.3.11 (af24e281)
+
+docs/review-2026-10-12/reproductions/web-lifecycle-round13/lifecycle.test.tsx:
+(pass) socket reconnect replaces one transport, rejects old generation, and unmount removes wake listeners [9.80ms]
+(pass) CC catchup deduplicates seq and late room data does not replace a selected native session [3.30ms]
+(pass) Hub revoked transport rejects pending RPC and prevents reconnect; explicit re-connect uses new IDs [853.23ms]
+(pass) transcript viewer switch/unsubscribe preserves another viewer and late old-room unsubscribe [14.11ms]
+(pass) actual leave-CLI button without approval permits idle UI and ignores later old-room approvals [3.48ms]
+(pass) actual leave-CLI button retains the old approval and blocks independent native send until reselection [2.82ms]
+
+ 6 pass
+ 0 fail
+ 47 expect() calls
+Ran 6 tests across 1 file. [1.51s]
+Completed Bun shard: 6 tests, 0 skipped; 0 failures.

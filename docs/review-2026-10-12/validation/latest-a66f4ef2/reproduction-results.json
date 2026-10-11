@@ -173,6 +173,24 @@
     "skipped": 0
   },
   {
+    "file": "docs/review-2026-10-12/reproductions/multiwindow-round13/catalog-protections.test.ts",
+    "code": 0,
+    "log": "docs/review-2026-10-12/reproductions/multiwindow-round13/catalog-protections.test.ts.log",
+    "signal": null,
+    "tests": 33,
+    "skipped": 0,
+    "archiveLog": "validation/latest-a66f4ef2/repro__multiwindow-round13__catalog-protections.test.ts.log"
+  },
+  {
+    "file": "docs/review-2026-10-12/reproductions/multiwindow-round13/catalog-window-selection.test.tsx",
+    "code": 0,
+    "log": "docs/review-2026-10-12/reproductions/multiwindow-round13/catalog-window-selection.test.tsx.log",
+    "signal": null,
+    "tests": 3,
+    "skipped": 0,
+    "archiveLog": "validation/latest-a66f4ef2/repro__multiwindow-round13__catalog-window-selection.test.tsx.log"
+  },
+  {
     "file": "docs/review-2026-10-12/reproductions/plugins-round7/plugins-lifecycle.test.tsx",
     "log": "docs/review-2026-10-12/reproductions/plugins-round7/plugins-lifecycle.test.tsx.log",
     "code": 0,
@@ -362,6 +380,33 @@
     "skipped": 0
   },
   {
+    "file": "docs/review-2026-10-12/reproductions/session-actions-round13/session-delete-recovery.test.tsx",
+    "code": 0,
+    "log": "docs/review-2026-10-12/reproductions/session-actions-round13/session-delete-recovery.test.tsx.log",
+    "signal": null,
+    "tests": 4,
+    "skipped": 0,
+    "archiveLog": "validation/latest-a66f4ef2/repro__session-actions-round13__session-delete-recovery.test.tsx.log"
+  },
+  {
+    "file": "docs/review-2026-10-12/reproductions/terminal-review-round13/review-first-commit.test.tsx",
+    "code": 0,
+    "log": "docs/review-2026-10-12/reproductions/terminal-review-round13/review-first-commit.test.tsx.log",
+    "signal": null,
+    "tests": 1,
+    "skipped": 0,
+    "archiveLog": "validation/latest-a66f4ef2/repro__terminal-review-round13__review-first-commit.test.tsx.log"
+  },
+  {
+    "file": "docs/review-2026-10-12/reproductions/terminal-review-round13/terminal-worktree.test.tsx",
+    "code": 0,
+    "log": "docs/review-2026-10-12/reproductions/terminal-review-round13/terminal-worktree.test.tsx.log",
+    "signal": null,
+    "tests": 1,
+    "skipped": 0,
+    "archiveLog": "validation/latest-a66f4ef2/repro__terminal-review-round13__terminal-worktree.test.tsx.log"
+  },
+  {
     "file": "docs/review-2026-10-12/reproductions/transfer-round12/desktop-save-import.test.tsx",
     "log": "docs/review-2026-10-12/reproductions/transfer-round12/desktop-save-import.test.tsx.log",
     "code": 0,
@@ -387,6 +432,15 @@
     "archiveLog": "validation/latest-a66f4ef2/repro__voice-round6__voice-lifecycle.test.tsx.log",
     "tests": 9,
     "skipped": 0
+  },
+  {
+    "file": "docs/review-2026-10-12/reproductions/web-lifecycle-round13/lifecycle.test.tsx",
+    "code": 0,
+    "log": "docs/review-2026-10-12/reproductions/web-lifecycle-round13/lifecycle.test.tsx.log",
+    "signal": null,
+    "tests": 6,
+    "skipped": 0,
+    "archiveLog": "validation/latest-a66f4ef2/repro__web-lifecycle-round13__lifecycle.test.tsx.log"
   },
   {
     "file": "docs/review-2026-10-12/reproductions/web-round2/settings-review.test.tsx",

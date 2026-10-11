@@ -20,6 +20,8 @@ node docs/review-2026-10-12/run-reproductions.mjs
 node scripts/run-isolated-node-smoke.mjs docs/review-2026-10-12/reproductions/credentials-round5/credentials-e2e.mjs
 ```
 
-截至第十二轮，初始基线 Bun 便携证据共 52 个文件、138 个测试；同样在 0.9.33 分别复核。凭据脚本另含 4 个实际 UI 场景。新功能专项另见 `latest-reproductions/` 与 `run-latest-reproductions.mjs`。
+截至第十三轮，初始基线 Bun 便携证据共 58 个文件、186 个测试；同样在 0.9.33 分别复核。凭据脚本另含 4 个实际 UI 场景。新功能专项另见 `latest-reproductions/` 与 `run-latest-reproductions.mjs`。
 
 第十一轮的工作区恢复与搜索脚本共新增4文件8测试；stable project scope恢复对照仅在0.9.33新功能目录。原生下载脚本及单次运行证据在 `../validation/download-round11/`，不计入Bun总数。
+
+第十三轮新增6文件48测试304断言，两基线分别通过；包含终端/Review 2测试、会话操作4测试、多窗口36测试（其中33为既有保护wrapper）、配对Web生命周期6测试。缺陷与正常控制、完整Electron/native与组件替身范围见各专项附录。

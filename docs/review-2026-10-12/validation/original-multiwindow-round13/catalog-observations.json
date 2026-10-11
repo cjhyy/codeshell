@@ -1,0 +1,23 @@
+{
+  "snapshot": "a66f4ef291f304ee4df9da8095a90671d9a8f140",
+  "mode": "actual-Main-store-IPC-preload-and-renderer-persistence; exact-AST-hook-navigation-App-selector",
+  "observations": [
+    {
+      "case": "same-project",
+      "peerSelectionReplacesActive": true,
+      "reciprocal": true,
+      "transcriptOrRowsDeleted": false,
+      "fullElectronExecuted": false
+    },
+    {
+      "case": "different-project",
+      "peerSelectionDoesNotChangeVisibleSession": true
+    },
+    {
+      "case": "merge-and-delete",
+      "independentFieldsPreserved": true,
+      "staleResurrectionBlocked": true,
+      "reopenedStoreMatches": true
+    }
+  ]
+}

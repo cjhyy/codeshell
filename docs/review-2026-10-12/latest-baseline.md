@@ -10,10 +10,10 @@
 | --- | --- | --- |
 | frozen install、workspaces build、Desktop build、typecheck:workspaces | 全部通过 | `validation/latest-a66f4ef2/{install,build,desktop-build,typecheck}.log` |
 | 8 个新增或修改测试文件 | 156 项实际执行、0 失败、0 跳过 | `validation/latest-a66f4ef2/changed-test-results.json` |
-| 既有便携缺陷表征和正常契约 | 52 文件、138 测试、0 失败、0 跳过 | `validation/latest-a66f4ef2/reproduction-results.json` |
+| 既有便携缺陷表征和正常契约 | 58 文件、186 测试、0 失败、0 跳过 | `validation/latest-a66f4ef2/reproduction-results.json` |
 | 凭据实际 Electron/IPC/store | 4 场景通过 | `validation/latest-a66f4ef2/credentials__credentials-e2e.mjs.log` |
 
-复现“通过”表示当前仍观察到被测缺陷。52 个文件并非 52 项问题，一份文件可能覆盖多项发现，也包含正常对照。新快照结果没有加到原基线 6286 个现有测试的总数中，以免重复计数。
+复现“通过”表示当前仍观察到被测缺陷。58 个文件并非 58 项问题，一份文件可能覆盖多项发现，也包含正常对照。新快照结果没有加到原基线 6286 个现有测试的总数中，以免重复计数。
 
 ## 两处测试入口适配
 
@@ -35,3 +35,5 @@
 第十一轮新增通用4文件8测试108断言，两快照分别通过，当前50文件133测试。stable scope恢复对照另1文件1测试9断言仅新快照，总新功能专项3文件8测试。真实Electron搜索UI与下载恢复native smoke均仅新快照执行并单列，不加入Bun计数。R55/R56两快照复现；R57原生实验仅a66f，关键5文件旧新diff为空。
 
 第十二轮文件传输、导出、图片保存与磁盘导入正常控制：新增2个通用文件5测试136断言，两基线分别通过；正式新增0。通用总52文件138测试。Bun取消诊断超时单列为不确定harness结果，不计通过或Node产品缺陷。
+
+第十三轮终端、首次提交Review、侧栏删除、多窗口目录与配对Web离开审批：新增6个通用文件48测试304断言，两基线分别guarded通过；当前通用58文件186测试0fail/skip。新正式R58/P2、R59–R62/P3，均旧实现本轮新发现，未归因于0.9.33变更。多窗口33个既有保护测试通过wrapper计在6文件中，不额外再加一次。

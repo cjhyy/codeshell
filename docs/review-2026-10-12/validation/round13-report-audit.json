@@ -1,0 +1,31 @@
+{
+  "timestampSingapore": "2026-10-12 03:20",
+  "findings": 62,
+  "priorities": {
+    "P1": 1,
+    "P2": 44,
+    "P3": 17
+  },
+  "topMarkdownLocalLinks": 280,
+  "sourceLineLinks": 165,
+  "completedCommonRuns": [
+    {
+      "metadata": "validation/reproduction-results.json",
+      "files": 58,
+      "tests": 186,
+      "skip": 0,
+      "finalFailures": 0
+    },
+    {
+      "metadata": "validation/latest-a66f4ef2/reproduction-results.json",
+      "files": 58,
+      "tests": 186,
+      "skip": 0,
+      "finalFailures": 0
+    }
+  ],
+  "latestOnlyFiles": 3,
+  "latestOnlyTests": 8,
+  "productTrackedDiff": [],
+  "errors": []
+}
