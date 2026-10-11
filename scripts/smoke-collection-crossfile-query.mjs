@@ -63,6 +63,12 @@ syncBuiltinESMExports();
 const coreEntry = fileURLToPath(import.meta.resolve("@cjhyy/code-shell-core"));
 const coreDist = dirname(coreEntry);
 assert.equal(
+  realpathSync(
+    fileURLToPath(new URL("../packages/core/dist/tool-system/executor.js", import.meta.url)),
+  ),
+  realpathSync(join(coreDist, "tool-system/executor.js")),
+);
+assert.equal(
   dirname(fileURLToPath(import.meta.resolve("@cjhyy/code-shell-core/internal"))),
   coreDist,
 );
@@ -88,6 +94,7 @@ const runtime = {
     [
       "index.js",
       "tool-system/builtin/sources.js",
+      "tool-system/executor.js",
       "sources/adapters/collection.js",
       "sources/collection-local.js",
       "sources/collection-url.js",
@@ -312,15 +319,24 @@ if (process.argv[2] === "--cold") {
       originalHashes,
     );
     const hooks = new HookRegistry();
+    let replacements = 0;
     hooks.register("on_tool_start", ({ data }) => {
       if (data.args?.resource === "entry_b") {
+        replacements++;
+        const before = lstatSync(text, { bigint: true });
         const replacement = join(originals, "replacement.txt");
         writeFileSync(replacement, readFileSync(text));
         renameSync(replacement, text);
+        assert.notEqual(lstatSync(text, { bigint: true }).ino, before.ino);
+        assert.equal(hash(readFileSync(text)), originalHashes[0]);
       }
       return {};
     });
-    assert.equal((await run(executor(projectA, hooks), argsFor())).isError, true);
+    const replaced = await run(executor(projectA, hooks), argsFor());
+    assert.equal(replacements, 1);
+    assert.equal(replaced.isError, true);
+    assert.equal(replaced.result, undefined);
+    assert.match(replaced.error, /Collection file changed/);
     console.log(
       JSON.stringify({
         role: "host",
