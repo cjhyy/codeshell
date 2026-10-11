@@ -1,0 +1,47 @@
+bun test v1.3.11 (af24e281)
+
+../../../../../../private/tmp/codeshell-review-20261012-browser-lifecycle-round21.test.tsx:
+135 |   sender = 71; known = false;
+136 |   await expect(api.beginChromeBrowserRuntimePairing({ sessionId })).rejects.toThrow("live CodeShell task");
+137 |   known = true;
+138 |   await grantFromUi(f, "owned-grant-round21-0001");
+139 |   expect(f.backend.status(sessionId).connected).toBe(true);
+140 |   expect(button(f, revokeLabel)).toBeDefined();
+                                       ^
+error: expect(received).toBeDefined()
+
+Received: undefined
+
+      at <anonymous> (/private/tmp/codeshell-review-20261012-browser-lifecycle-round21.test.tsx:140:34)
+(fail) idle Chrome disconnect survives real Panel status polls as active; formal owner gates reject other senders [2028.81ms]
+107 | function button(f: any, label: string) { return nodes(f.container).find(n => n.tagName === "BUTTON" && props(n)["aria-label"] === label); }
+108 | const connectLabel = "连接已登录的 Chrome 标签";
+109 | const revokeLabel = "撤销 Chrome 标签授权";
+110 | async function click(f: any, label: string) {
+111 |   const node = button(f, label);
+112 |   if (!node || props(node).disabled) throw Error("missing enabled button: " + label);
+                                                 ^
+error: missing enabled button: 撤销 Chrome 标签授权
+      at click (/private/tmp/codeshell-review-20261012-browser-lifecycle-round21.test.tsx:112:44)
+      at <anonymous> (/private/tmp/codeshell-review-20261012-browser-lifecycle-round21.test.tsx:160:9)
+(fail) explicit revoke then fresh pairing recovers through actual UI, preload and Main callbacks [2007.38ms]
+181 |   await grantFromUi(f, "owned-grant-round21-0004");
+182 |   f.disconnect();
+183 |   expect(f.backend.status(sessionId).granted).toBeDefined();
+184 |   const result = JSON.parse((await f.backend.dispatch(sessionId, { action: "navigate", url: tab.url }))!);
+185 |   expect(result.ok).toBe(false);
+186 |   expect(result.detail).toContain("grant expired or was revoked");
+                              ^
+error: expect(received).toContain(expected)
+
+Expected to contain: "grant expired or was revoked"
+Received: "Chrome connection ended. Reauthorize the original tab or explicitly choose another browser source."
+
+      at <anonymous> (/private/tmp/codeshell-review-20261012-browser-lifecycle-round21.test.tsx:186:25)
+(fail) an action after idle disconnect correctly closes the old grant and the following Panel poll clears active UI [2029.79ms]
+
+ 0 pass
+ 3 fail
+ 17 expect() calls
+Ran 3 tests across 1 file. [6.65s]
+Bun test process failed (1)

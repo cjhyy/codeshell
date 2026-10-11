@@ -41,3 +41,5 @@ node scripts/run-isolated-node-smoke.mjs docs/review-2026-10-12/reproductions/cr
 第二十轮原生模型存储契约脚本另在`../validation/model-native-round20/`，maintained native isolator执行；作者与主审latest各31 Node断言，Bun增量0、finding增量0。纯HTML/owned Main，不是产品hook/App E2E。
 
 第二十轮Goal/Sleep新增1个通用便携文件4测试72个Bun expect，两基线各guarded通过，当前80文件240测试。actual Main callback/App closures/preload/StatusPopover与actual Core/Engine/磁盘分层，无完整Electron/worker；provider全内存。三份harness失败与4/68早一版成功单列原始归档，最终为4/72、不重复累计。
+
+第二十一轮BrowserPanel idle失联反馈及恢复新增1通用文件3测试40个Bun expect，两基线各guarded通过，当前81文件243测试。实际React/Panel/preload/Main callbacks/Backend，Native与Session/owner目录为owned内存适配器；没有实际Chrome/Electron/网络，实际等待两次2秒轮询，显式重配与动作fail-closed对照正常。首次文字期望支架失败单独归档，作者重复运行不累计。

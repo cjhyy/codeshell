@@ -40,6 +40,14 @@
     "skipped": 0
   },
   {
+    "file": "docs/review-2026-10-12/reproductions/browser-lifecycle-round21/browser-lifecycle.test.tsx",
+    "log": "docs/review-2026-10-12/reproductions/browser-lifecycle-round21/browser-lifecycle.test.tsx.log",
+    "code": 0,
+    "signal": null,
+    "tests": 3,
+    "skipped": 0
+  },
+  {
     "file": "docs/review-2026-10-12/reproductions/cli-recovery-round15/room-recovery-controls.test.ts",
     "log": "docs/review-2026-10-12/reproductions/cli-recovery-round15/room-recovery-controls.test.ts.log",
     "code": 0,

@@ -2,17 +2,17 @@
 
 本次审查覆盖服务端、Electron 桌面端、配对 Web 与移动端的日常流程，重点检查消息发送、审批、取消、切换会话、恢复和项目上下文。问题只在有代码证据或可复现结果后列入正式发现。
 
-审查进行中，截止时间为新加坡时间 2026 年 10 月 12 日 11:00。初始审查基线为 `84740d56e55517b004948a0a0e07649ad6fbf998`，对应启动审查时的 `origin/main`。01:30 拉取发现主分支已更新至 `a66f4ef291f304ee4df9da8095a90671d9a8f140`（0.9.33）；已另建隔离快照复查差异，原始复现和行号仍按初始基线保存。80 个便携 Bun 复现文件共 240 测试，以及实际 Electron 凭据 4 场景，已在新快照复查成立；详见[0.9.33 差异复查](latest-baseline.md)。产品代码保持原样，报告保存在独立分支 `codex/review/server-desktop-20261012`。
+审查进行中，截止时间为新加坡时间 2026 年 10 月 12 日 11:00。初始审查基线为 `84740d56e55517b004948a0a0e07649ad6fbf998`，对应启动审查时的 `origin/main`。01:30 拉取发现主分支已更新至 `a66f4ef291f304ee4df9da8095a90671d9a8f140`（0.9.33）；已另建隔离快照复查差异，原始复现和行号仍按初始基线保存。81 个便携 Bun 复现文件共 243 测试，以及实际 Electron 凭据 4 场景，已在新快照复查成立；详见[0.9.33 差异复查](latest-baseline.md)。产品代码保持原样，报告保存在独立分支 `codex/review/server-desktop-20261012`。
 
 用户流程、正常对照与修复顺序见[流程覆盖地图](flow-coverage.md)。
 
 ## 当前结论
 
-当前已收束 79 项问题：1 项 P1、51 项 P2、27 项 P3。优先处理审批状态、任务回执和会话身份；这些问题会让任务无法继续、重复执行，或把用户输入带到另一个会话。P1 表示有未提交文件丢失风险、应优先修复；P2 表示重要流程持续受阻、状态被错误持久化或有错误执行风险，应安排修复；P3 表示影响较小或触发范围较窄、可通过现有操作恢复的问题。分级同时考虑影响与触发条件，不能只按是否可重试判断。尚未证实的候选不计入数量。
+当前已收束 80 项问题：1 项 P1、51 项 P2、28 项 P3。优先处理审批状态、任务回执和会话身份；这些问题会让任务无法继续、重复执行，或把用户输入带到另一个会话。P1 表示有未提交文件丢失风险、应优先修复；P2 表示重要流程持续受阻、状态被错误持久化或有错误执行风险，应安排修复；P3 表示影响较小或触发范围较窄、可通过现有操作恢复的问题。分级同时考虑影响与触发条件，不能只按是否可重试判断。尚未证实的候选不计入数量。
 
 **最先修 R35：创建工作区时重复 Enter，失败请求的回滚可以删除另一个已成功请求的 worktree、分支和未提交文件。** 此项已由独立代理复查入口与真实 Git 时序，见 [独立质量复核](quality-audit.md)。第五轮九项也已[独立复核](quality-round5.md)，均保留，网关通知等条件已收窄。
 
-以下是持续审查的阶段记录，截止前还会补充。复现测试的“通过”表示已稳定观察到当前缺陷，并不表示缺陷已经修复。R01–R48 的原始分析针对初始基线，并已在 0.9.33 复查；R49 针对新快照；R50–R56 在两基线均存在并已分别复现；R57 关键源码两基线相同，原生实验仅在 0.9.33 执行。R58–R65 的便携证据在两基线分别复现并通过正常对照；R64 的真实 Electron reload 身份门禁仅在 a66f/macOS 补证，未运行真实 PTY。R66–R68 的便携证据也已在两基线分别通过；R68包含真实Node/ws慢读实验，每次最多24MiB输出，没有真实Main worker或OOM实验。R69/P2与R70/P3及第十六轮正常控制也已在两基线分别通过。R71/P3、R72/P2、R73/P2及第十七轮正常控制已在两基线分别guarded通过；本轮没有真实worker/模型或Electron实验。R74–R76/P3及第十八轮正常控制也在两基线分别guarded通过；实际Core/Engine范围与React/IPC/worker替身按附录区分，未启动真实模型。R77/P2用maintained Node isolator在两基线分别原生复现，各38个Node assert独立计数，不增加通用Bun测试。R78/R79/P2的Goal冷恢复及正常控制已在两基线各guarded通过1文件4测试72个Bun expect；实际Main callback/App closures/renderer/preload与Core/Engine分层，内存provider，无完整App/worker/Electron。行号按各专项附录的基线解释。
+以下是持续审查的阶段记录，截止前还会补充。复现测试的“通过”表示已稳定观察到当前缺陷，并不表示缺陷已经修复。R01–R48 的原始分析针对初始基线，并已在 0.9.33 复查；R49 针对新快照；R50–R56 在两基线均存在并已分别复现；R57 关键源码两基线相同，原生实验仅在 0.9.33 执行。R58–R65 的便携证据在两基线分别复现并通过正常对照；R64 的真实 Electron reload 身份门禁仅在 a66f/macOS 补证，未运行真实 PTY。R66–R68 的便携证据也已在两基线分别通过；R68包含真实Node/ws慢读实验，每次最多24MiB输出，没有真实Main worker或OOM实验。R69/P2与R70/P3及第十六轮正常控制也已在两基线分别通过。R71/P3、R72/P2、R73/P2及第十七轮正常控制已在两基线分别guarded通过；本轮没有真实worker/模型或Electron实验。R74–R76/P3及第十八轮正常控制也在两基线分别guarded通过；实际Core/Engine范围与React/IPC/worker替身按附录区分，未启动真实模型。R77/P2用maintained Node isolator在两基线分别原生复现，各38个Node assert独立计数，不增加通用Bun测试。R78/R79/P2的Goal冷恢复及正常控制已在两基线各guarded通过1文件4测试72个Bun expect；实际Main callback/App closures/renderer/preload与Core/Engine分层，内存provider，无完整App/worker/Electron。R80/P3的Chrome闲置断线反馈已在两基线各guarded通过1文件3测试40个Bun expect；实际Panel/Backend与preload/Main callbacks，Native传输及owner目录为内存适配器，没有真实Chrome/Electron。行号按各专项附录的基线解释。
 
 | 编号 | 级别 | 流程与实际影响                                                                        | 详细证据                                             |
 | ---- | ---- | ------------------------------------------------------------------------------------- | ---------------------------------------------------- |
@@ -95,6 +95,7 @@
 | R77 | P2 | Hub数据目录dataDir失去写权限，认证锁对EACCES同步重试约30秒，健康路由与Host定时器也被阻塞 | [原生文件锁 FM19-1](file-mutex-round19.md)，第十九轮；修权限后重试正常 |
 | R78 | P2 | 无live worker恢复暂停Goal仅持久改为active并回成功，实际没有启动或派发续接 | [Goal冷启动 G20-1](goal-sleep-round20.md)，第二十轮；编辑/暂停/删除正常 |
 | R79 | P2 | worker活着但bound会话非resident时，Goal续接缺WorkspaceContext，模型前失败却未回滚或提示 | [Goal bound冷恢复 G20-2](goal-sleep-round20.md)，第二十轮；正常授权run可恢复 |
+| R80 | P3 | Chrome闲置断线后正常轮询仍显示正在使用，需先断开再重新授权；动作门禁正确拒绝 | [浏览器连接 B21-1](browser-lifecycle-round21.md)，第二十一轮 |
 
 第一轮完整分析：[Desktop](desktop-round1.md)、[Server](server-round1.md)、[Web/配对端](web-round1.md)。后续专项分析会继续补充到本目录。已有结论还经[CLI 范围复核](cli-quality-round9.md)与[资源回收范围复核](resource-quality-round8.md)收窄恢复及平台条件。
 
@@ -241,6 +242,10 @@ R76实际Core async-answer enqueue产生续接turn，所有Core帧传给实际Ho
 
 第二十轮[最终只读整合核验](quality-round20.md)通过，无实质矛盾，新增执行0；分级、80/240与原生31分账、Goal恢复边界及两处历史阶段数措辞已核对。
 
+第二十一轮[浏览器连接与恢复](browser-lifecycle-round21.md)新增R80/P3：已配对Chrome在闲置中Native transport结束且无新hello/动作时，Host已有connected=false，实际Panel两次正常2秒轮询仍显示“正在使用”并仅给断开。下一动作正确NEEDS_HUMAN，显式断开→fresh hello→重新配对恢复；新grant的高层只读listTabs经过owned tab.get正常。保留执行和exact tab/grant门禁，不称离线仍可操作或永久失效。主审两冻结快照各新1文件3测试40expect/Completed，累计81文件243测试；当前80=1P1/51P2/28P3。[独立质量审计](browser-quality-round21.md)及[取消、child/owner关闭盘点](browser-cancel-gates-round21.md)新增执行0，parent Stop仅留未验证边界。
+
+第二十一轮[最终只读整合审计](quality-round21.md)通过，新增执行0；作者latest原始收据与root双基线便携重跑分别归档，唯一证据归属措辞已修正，分级、81/243及恢复边界无未解决实质矛盾。
+
 ## 验证范围
 
 | 验证                            | 结果                                                                      | 证据                                                     |
@@ -291,6 +296,7 @@ R76实际Core async-answer enqueue产生续接turn，所有Core帧传给实际Ho
 | 第十九轮文件锁权限恢复 | 两冻结基线分别standalone原生38 Node assert/Completed，真实30秒；Bun增量0 | [原生脚本/结果](file-mutex-round19.md) |
 | 第二十轮Goal冷恢复 | 新通用1文件4测试72个Bun expect，两基线分别通过；实际Core/Engine内存provider，无worker | [两个根因及正常控制](goal-sleep-round20.md) |
 | 第二十轮原生模型存储/优先级 | latest owned Electron storage作者/主审各31 Node assert分列，Bun0；15项只读抽样，R29降P3 | [原生边界](model-native-round20.md)、[优先级](priority-quality-round20.md) |
+| 第二十一轮Browser idle连接/恢复 | 新通用1文件3测试40个Bun expect，两基线分别通过；无真实Chrome/Electron/native relay | [触发、反馈及恢复](browser-lifecycle-round21.md) |
 | Desktop renderer 现有逐文件测试 | 282 文件、2397 测试、0 失败                                               | `validation/desktop-renderer-results.json`               |
 | Desktop main 现有逐文件测试     | 283 文件、2461 测试、0 失败                                               | `validation/desktop-main-results.json`                   |
 | native Hub smoke                | 未通过，不计成功；先遇到过期工具 fixture，再暴露 R21                      | `/tmp/codeshell-review-20261012/hub-smoke*.log`          |
@@ -304,6 +310,6 @@ R76实际Core async-answer enqueue产生续接turn，所有Core帧传给实际Ho
 
 ## 后续检查
 
-0.9.33 的 Panel 项目身份与跨文件 Collection 查询差异、已有便携复现适用范围已核对。认证连接与 Agent Plugins 安装恢复已收束；Quick Chat 生命周期已收束；第十轮独立反证已完成审批、Web意图/配置/草稿和Desktop异步状态，详见 [Web复核](web-quality-round10.md)、[审批复核](approval-quality-round10.md)。第十一轮工作区/Panel反证新增0，搜索与导航新增2P3，下载生命周期新增1P2；第十二轮独立质量复核保留三个新发现的限定分级，文件传输/导入导出正常控制新增0。第十三轮新增1P2+4P3并已独立核对，新增6份证据两基线通过；第十四轮再补3P3与R58图片扩展，新增4文件13测试两基线通过；第十五轮再补CLI接管/设置状态/慢连接3项，第十六轮再补目录修复/自动保存2项并完成Link/MCP正常控制，第十七轮补会话操作/Hub回答3项及上下文正常控制，第十八轮补上下文取消/模型偏好/Hub续接三项P3，第十九轮补原生认证锁EACCES阻塞1项P2，该阶段通用79文件236测试、native各38断言独立列；第二十轮再补Goal冷恢复两项P2和1文件4测试72expect，当前通用80文件240测试、正式79=1P1/51P2/27P3，另有R75原生存储补证与R29降级。继续检查新增主分支差异与尚未覆盖的失败恢复。已有 TODO 中明确后置的能力与尚未发行的修复单独核对，不将其重复列为新缺陷。
+0.9.33 的 Panel 项目身份与跨文件 Collection 查询差异、已有便携复现适用范围已核对。认证连接与 Agent Plugins 安装恢复已收束；Quick Chat 生命周期已收束；第十轮独立反证已完成审批、Web意图/配置/草稿和Desktop异步状态，详见 [Web复核](web-quality-round10.md)、[审批复核](approval-quality-round10.md)。第十一轮工作区/Panel反证新增0，搜索与导航新增2P3，下载生命周期新增1P2；第十二轮独立质量复核保留三个新发现的限定分级，文件传输/导入导出正常控制新增0。第十三轮新增1P2+4P3并已独立核对，新增6份证据两基线通过；第十四轮再补3P3与R58图片扩展，新增4文件13测试两基线通过；第十五轮再补CLI接管/设置状态/慢连接3项，第十六轮再补目录修复/自动保存2项并完成Link/MCP正常控制，第十七轮补会话操作/Hub回答3项及上下文正常控制，第十八轮补上下文取消/模型偏好/Hub续接三项P3，第十九轮补原生认证锁EACCES阻塞1项P2，该阶段通用79文件236测试、native各38断言独立列；第二十轮再补Goal冷恢复两项P2和1文件4测试72expect，该阶段通用80文件240测试、正式79=1P1/51P2/27P3，另有R75原生存储补证与R29降级。第二十一轮补Chrome闲置断线反馈1项P3及1文件3测试40expect，当前通用81文件243测试、正式80=1P1/51P2/28P3。继续检查新增主分支差异与尚未覆盖的失败恢复。已有 TODO 中明确后置的能力与尚未发行的修复单独核对，不将其重复列为新缺陷。
 
 未进行真实付费模型、真实第三方账号、生产数据迁移或发行部署。CLI 模型行为通过可控 fixture 与实际 Host 路由验证，无法据此声称所有真实提供方端到端流程均已通过。静态候选及测试 harness 自身问题单独记录，不冒充产品发现。

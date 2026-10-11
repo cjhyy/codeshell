@@ -1,0 +1,12 @@
+bun test v1.3.11 (af24e281)
+
+../../../../../../private/tmp/codeshell-review-20261012-browser-lifecycle-round21.test.tsx:
+(pass) idle Chrome disconnect survives real Panel status polls as active; formal owner gates reject other senders [6041.54ms]
+(pass) explicit revoke then fresh pairing recovers through actual UI, preload and Main callbacks [4029.36ms]
+(pass) an action after idle disconnect correctly closes the old grant and the following Panel poll clears active UI [4027.02ms]
+
+ 3 pass
+ 0 fail
+ 40 expect() calls
+Ran 3 tests across 1 file. [14.46s]
+Completed Bun shard: 3 tests, 0 skipped; 0 failures.

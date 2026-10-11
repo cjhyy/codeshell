@@ -1,6 +1,6 @@
 # 用户流程覆盖与修复顺序
 
-这是截至第二十轮的流程地图；正式编号、级别和触发条件以 [主报告](README.md) 与各附录为准。正常路径通过不代表相邻失败路径已正确处理。缺陷表征测试通过表示复现成立，没有实施产品修复。
+这是截至第二十一轮的流程地图；正式编号、级别和触发条件以 [主报告](README.md) 与各附录为准。正常路径通过不代表相邻失败路径已正确处理。缺陷表征测试通过表示复现成立，没有实施产品修复。
 
 | 用户要完成的事 | 已检查的正常路径及证据层级 | 仍有的问题与可见影响 |
 | --- | --- | --- |
@@ -15,6 +15,7 @@
 | 关闭/删除会话，回收后台资源 | Core正常close barrier现有28测试；[下载原生实验](download-round11.md)包含普通任务与专用kill对照 | R30 终态拒写令任务持续running；R31 Node Hub未等Panel强制终止；R57新worker已恢复的orphaned下载被close/killAll跳过，完整Desktop删除仅静态接线；R60侧栏fs删除失败先tombstone，历史页可修复权限后重试 |
 | 创建worktree、移除项目、再恢复 | 真实Git并发与恢复；[工作区复核](workspace-quality-round11.md) | **R35/P1** 失败请求回滚能删除成功请求的worktree/branch，特定窗口可丢未提交文件；R24冷owner需重加项目、恢复原会话后再释放；R69旧secondary物理缺失时正式修复到健康primary仍被全roots校验阻断，恢复旧路径或多步服务级workaround可恢复 |
 | 打开和管理Panel | 真实Electron安装/恢复E2E；真实ProjectStore和权限边界控制 | R22合法secondary root被拒；R23单目录失败或65项目批次使当前renderer Panel App entries清空；包、绑定、内置面板仍在 |
+| 连接已登录Chrome并恢复断线 | [实际BrowserPanel/preload/Main callbacks/Backend](browser-lifecycle-round21.md)，受控Native transport，无真实Chrome/Electron | R80/P3闲置断线时connected=false仍显示正在使用、仅提供断开；显式断开→新hello→重配恢复，动作正确NEEDS_HUMAN，新grant高层只读RPC正常 |
 | 在工作区开终端并审阅提交 | [真实Git+实际终端hook/Main门禁、ReviewService+viewer](terminal-review-round13.md)，native PTY边界替身 | R58合法managed worktree新终端被注册根门禁拒绝；R59最近20内首提交差异被错误显示为无变化；R64恢复后先关tab再新建可能接回旧壳，再次关闭重开恢复 |
 | 浏览目录和图片、修复读取失败 | [实际FilesPanel/HubFiles+真实文件服务](file-navigation-round14.md)，Desktop Main AST与Web自有HTTP服务 | R58合法managed worktree普通PNG预览被注册根门禁拒绝，文本正常；R65目录EACCES静默空树，修权限刷新恢复；Web移动/权限/重试与迟到结果控制正常 |
 | 修改项目名称、模型、Skills、MCP、凭据 | 真实Electron模型/设置/凭据；真实store写盘与恢复 | R25旧完整表单回滚他端字段；R26冲突刷新没更新编辑revision；R27旧probe覆盖新配置；R28初始设置未到时开关写空列表；R29旧项目投影覆盖新广播；R75另一已打开窗口保存自身模型旧整图抹掉先前窗口持久偏好，重开回默认、重新选择恢复；R71项目rename真实拒写仍显示新名且无提示，普通广播回旧名、再次rename恢复；R42账号ID碰撞；R43拒写无反馈；R70自定义指令autosave失败清pending，存储修复后blur/离开不重试、未保存稿消失 |
@@ -44,3 +45,5 @@
 第二十轮[优先级交叉复核](r29-priority-round20.md)将R29由P2降P3，缺陷及其项目配置阻断仍保留；没有持久项目/对话丢失或错项目执行证据，真实重命名广播恢复已证明。当前77=1P1/49P2/27P3；旧轮50/26为当时分级，不回写历史执行记录。
 
 第二十轮[Goal冷恢复](goal-sleep-round20.md)经独立审计新增R78/R79各P2，两个不同Main/Core根因；两基线各新增1文件4测试72个Bun expect，通用80文件240测试。当前79=1P1/51P2/27P3。目标/历史保留，合法workspace安全拒绝正常，不声称真实worker、完整App/Electron、错项目执行或提供方错误。
+
+第二十一轮[Browser生命周期](browser-lifecycle-round21.md)新增R80/P3，主审双基线各1文件3测试40expect，累计81/243、正式80=1/51/28；[取消/owner关闭盘点](browser-cancel-gates-round21.md)新增执行0/正式0。只将idle连接反馈收录，不把parent Stop静态边界或已正确阻断动作当缺陷。

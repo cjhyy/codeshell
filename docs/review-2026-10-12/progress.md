@@ -9,17 +9,17 @@
 证据目录：`/tmp/codeshell-review-20261012`。
 持续调度：heartbeat `codeshell-10-12-11`，每小时整点与半点；截止后交付报告并停用。01:34 已将原 00:52 锚点改为整点/半点，覆盖 11:00 截止时刻。
 
-## 当前状态（新加坡 06:40）
+## 当前状态（新加坡 06:51）
 
 - 截止11:00前继续实质审查，不提前complete或停用heartbeat。05:49 get_goal仍返回blocked（主审未请求、实际工作无阻塞），工具不能设active；按用户授权继续，截止交付后才complete。
 - 初始产品84740d56与最新a66f4ef2分别冻结在本聊天两个独立工作区；只写本任务docs，不改产品、不build/clean、不触碰原工作区/其他任务。最新已冻结install、全workspace/Desktop build、typecheck:workspaces及变更文件测试通过。
-- 正式R01–R79：1P1/51P2/27P3。第二十轮R29由P2降P3并新增R78/R79各P2；真实配置阻断保留，Main/历史及恢复证据不变。R35/D13真实Git失败回滚可删除成功worktree/branch及特定时窗未提交文件，保留P1；R36真实Node25/darwin stdin EPIPE退出保留P2，平台边界不扩大。
+- 正式R01–R80：1P1/51P2/28P3。第二十轮R29由P2降P3并新增R78/R79各P2；真实配置阻断保留，Main/历史及恢复证据不变。R35/D13真实Git失败回滚可删除成功worktree/branch及特定时窗未提交文件，保留P1；R36真实Node25/darwin stdin EPIPE退出保留P2，平台边界不扩大。
 - 第十八轮新增R74/P3上下文摘要没有可用用户cancel且RPC超时不取消Core；R75/P3多窗口旧偏好整图覆盖另一已存模型选择；R76/P3异步回答续接实际Core busy而Hub仍判idle，允许归档隐藏当前历史行。分别有独立审计，正常与恢复控制均保留，最终只读整合审计已通过。
-- 通用便携80文件240测试，84740/a66f分别guarded通过，最终0fail/skip；第十八轮新3文件8测试165个Bun expect，该轮无新native/helper计数；第十九轮standalone native各38 Node assert另列、Bun增量0。旧native/helper断言仍独立列。最新功能专项另3文件8测试，实际Electron凭据另4场景，不重复加到通用数。
+- 通用便携81文件243测试，84740/a66f分别guarded通过，最终0fail/skip；第十八轮新3文件8测试165个Bun expect，该轮无新native/helper计数；第十九轮standalone native各38 Node assert另列、Bun增量0。旧native/helper断言仍独立列。最新功能专项另3文件8测试，实际Electron凭据另4场景，不重复加到通用数。
 - 原有Server/Web141/1428、Desktop renderer282/2397、Desktop main283/2461合计706文件6286测试全过；实际Electron navigation/settings/workspace-pages/model-settings/digital-humans/panel-recovery-ui与native output-journal/mobile-output-journal记录保留，不随新轮重复执行计数。native Hub初始smoke未通过，另见下方限制。
 - 新脚本在reproductions/，元数据在validation/reproduction-results.json及validation/latest-a66f4ef2/reproduction-results.json。所有开发失败/替身边界归档，PASS为缺陷表征成立，并非产品修复。
 - 第十九轮native file-mutex/EACCES已收束为R77/P2，真实发生点在HubAuth认证锁，不是titlehandler；两冻结基线各38 Node assert/Completed，Bun增量0，四份早期失败诊断单列。最终整合语义检查已通过。
-- heartbeat05:49工具view及TOML确认ACTIVE/每小时整点半点。第十九轮checkpoint d271ae8f（docs-only）；第二十轮原生模型存储补证、优先级复核及Goal/Sleep实质审查/两份独立核对完成，最终整合核验通过，准备保存docs-only检查点。持续至11:00，不发布、不联系他人、不调用真实付费模型/账号/CLI。
+- heartbeat05:49工具view及TOML确认ACTIVE/每小时整点半点。第十九轮checkpoint d271ae8f（docs-only）；第二十轮检查点177446cc已保存；第二十一轮Browser闲置断线反馈及恢复已双基线复现，最终只读整合语义检查已通过，准备保存docs-only检查点。持续至11:00，不发布、不联系他人、不调用真实付费模型/账号/CLI。
 
 ## 关键证据与注意事项
 
@@ -27,12 +27,12 @@
 - `/tmp/codeshell-review-20261012/` 为 root 原始日志。原始各代理证据位于同前缀的 `-desktop`、`-web-flow`、`-server-*`、`-desktop-round2`、`-web-round2`、`-runtime-round3` 等目录。
 - 原 native Hub smoke 的模型 fixture 直接调用尚未加载的 Write，先超时；临时适配 ToolSearch 后暴露 R21。真实 worker 首次 run 发生于 session 创建之前，baseline=0；journal legacy base 已生成后 snapshot 再裁空，production chatFromOutputJournal 拒绝恢复。
 - `hub-smoke-remaining.mjs` 显式排除已复现 R21 后，其余 approval/cancel/export/archive/restart/history resume 已通过。不能写“原 smoke 全部通过”。
-- 便携脚本第一至七轮已在本目录重跑成功；当前80文件240测试汇总 validation/reproduction-results.json。新增脚本复制后单独重跑，不必每次重跑已验证全部脚本。
+- 便携脚本第一至七轮已在本目录重跑成功；当前81文件243测试汇总 validation/reproduction-results.json。新增脚本复制后单独重跑，不必每次重跑已验证全部脚本。
 - 报告数量和测试数量及时依据收束的脚本更新；条件性失败与实际可恢复方式必须说明。
 
 ## 后续
 
-继续第二十轮及后续既有问题反证与新领域审查，重点实际生产门禁、恢复方式和条件性结论，避免为增加问题数量而重复或扩大条件性结论。至少每小时核对origin/main是否更新；若更新，保留当前快照和证据、明确新差异，不在已有分支混写产品变更。截止前持续更新报告和便携证据，不把已知TODO、测试harness故障或静态猜测列作新缺陷。所有报告改动仅本任务docs目录，阶段证据保存在本任务分支，后续继续更新；不合并到main、不发布PR。
+继续第二十一轮及后续既有问题反证与新领域审查，重点实际生产门禁、恢复方式和条件性结论，避免为增加问题数量而重复或扩大条件性结论。至少每小时核对origin/main是否更新；若更新，保留当前快照和证据、明确新差异，不在已有分支混写产品变更。截止前持续更新报告和便携证据，不把已知TODO、测试harness故障或静态猜测列作新缺陷。所有报告改动仅本任务docs目录，阶段证据保存在本任务分支，后续继续更新；不合并到main、不发布PR。
 
 阶段提交：5c3c6746 第一至四轮，3c30e798 第五轮及0.9.33复查；eb2270ff 第六轮资料集、Panel和录音证据；415650c1 第七至九轮插件/身份/QuickChat及恢复范围复核。报告工作区只改docs。最新快照只多了本任务未跟踪docs，产品tracked文件干净。02:21 已再次 fetch，origin/main 仍为 a66f4ef2；下一次宜03:00–03:20核对。
 
@@ -134,3 +134,9 @@ R53优先级抽查已收束，保留P2的持续Update契约失效理由及审计
 06:40第二十轮最终独立整合语义核验通过，新增执行0；79=1/51/27、通用80/240、新Goal1/4/72及native storage作者/root各31分账无实质矛盾。已修正native补证阶段79/236与同轮Goal后80/240的历史语境，以及README后续段。准备保存本任务docs-only检查点；第21轮BrowserPanel idle连接/撤权显示正在/tmp预审，尚无正式新项。原工作区和两个冻结产品快照不改，06:23 origin仍a66f、下次07:10–07:20；继续11:00，heartbeat ACTIVE、不提前complete。
 
 06:40最终机械收据更新为1071个顶层本地Markdown链接、705源码行号、0error，70个staged路径全部是本任务docs，diff --check通过。第二十轮docs-only检查点包含此最终进度，精确HEAD见git log；第21轮只/tmp继续，截止未到。
+
+06:47第二十一轮确认R80/B21-1/P3：已配对Chrome闲置Native断线，无新hello/动作/TTL时status有connected=false但保留grant，实际Panel两次2秒轮询仍“正在使用”、无alert且只给断开；下一动作正确NEEDS_HUMAN，显式断开→新hello→重配恢复，新grant高层只读listTabs经过owned tab.get正常。实际Panel/React/preload/Main源回调/ChromeBackend，Native transport/Session owner目录内存适配，无真实Chrome/Electron/relay/worker/model/network/CLI。主审冻结同源两基线各1文件3测试40expect/Completed，新增1/3，通用81/243，正式80=1P1/51P2/28P3；作者重复不累计，首次错误文字期望harness0/3/17归档。child/撤权/owner关闭只读盘点新增0，parent Stop仅未验证边界。所有改动仅本任务docs，原工作区6034df8a保持；06:23origin仍a66f、07:10–07:20再核对，11:00未到不complete/停用。
+
+06:51第二十一轮最终独立整合审计通过，新增执行0；正式80=1P1/51P2/28P3、通用两基线各81文件243测试、新Browser各1/3/40及SHA一致。已将独立审计引用的作者日志指回original latest归档，root portable初始及latest收据单列，计数未变。原始first0/3/17harness保留，fresh hello/TTL独立恢复仅静态，不将parent Stop候选收录。第22轮自然Browser ready/disabled等待与Stop边界在/tmp可行性审查，尚未native启动、没有正式新项/测试计数；如需owned Electron须先核完整隔离guard，不动产品dist/源码。06:23origin仍a66f，07:10–07:20再fetch。heartbeat继续ACTIVE至11:00，不提前complete/停用。
+
+06:52第二十一轮最终机械核对1112个顶层Markdown本地链接、721个源码行号、0error；两metadata81/243、Browser同源两基线各3/40/Completed、网络/子进程0、产品tracked diff为空。33个staged路径全部是本任务docs且diff --check通过，准备保存阶段检查点；精确提交以git log为准。

@@ -10,10 +10,10 @@
 | --- | --- | --- |
 | frozen install、workspaces build、Desktop build、typecheck:workspaces | 全部通过 | `validation/latest-a66f4ef2/{install,build,desktop-build,typecheck}.log` |
 | 8 个新增或修改测试文件 | 156 项实际执行、0 失败、0 跳过 | `validation/latest-a66f4ef2/changed-test-results.json` |
-| 既有便携缺陷表征和正常契约 | 80 文件、240 测试、0 失败、0 跳过 | `validation/latest-a66f4ef2/reproduction-results.json` |
+| 既有便携缺陷表征和正常契约 | 81 文件、243 测试、0 失败、0 跳过 | `validation/latest-a66f4ef2/reproduction-results.json` |
 | 凭据实际 Electron/IPC/store | 4 场景通过 | `validation/latest-a66f4ef2/credentials__credentials-e2e.mjs.log` |
 
-复现“通过”表示当前仍观察到被测缺陷。80 个文件并非 80 项问题，一份文件可能覆盖多项发现，也包含正常对照。新快照结果没有加到原基线 6286 个现有测试的总数中，以免重复计数。
+复现“通过”表示当前仍观察到被测缺陷。81 个文件并非 81 项问题，一份文件可能覆盖多项发现，也包含正常对照。新快照结果没有加到原基线 6286 个现有测试的总数中，以免重复计数。
 
 ## 两处测试入口适配
 
@@ -57,3 +57,5 @@
 第二十轮R75/P3原生存储契约补证仅latest Electron33/macOS：作者与主审同源脚本各一次31 Node断言/Completed、owned Main exit0及privateHOME清理；纯HTML不加载产品Main/preload/hook。并未在两个产品基线各跑完整App，不增加Bun或finding；见[补证](model-native-round20.md)。
 
 第二十轮[Goal/Sleep](goal-sleep-round20.md)两根因R78/R79均P2，原关键实现两快照相同，root仍分别guarded复跑4tests72expect并保留两份日志；通用80文件240测试。无worker Main fallback与cold bound Core权威缺失分层，真实Engine只用内存provider，正常resident/legacy/普通authorized run恢复控制正常，无实际worker/Electron/提供方。
+
+第二十一轮[Browser闲置失联反馈](browser-lifecycle-round21.md)R80/P3关键源码两基线相同，root同源分别guarded复跑1文件3测试40expect/Completed，累计81文件243测试。实际2秒轮询/显式重新配对/动作门禁正常控制，无真实Chrome/Electron/native relay/网络；见[双基线收据](validation/round21-browser-results.json)。
