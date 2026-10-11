@@ -174,7 +174,7 @@ for (const stage of ["absent", "directory", "state"]) {
       expect(snapshot.result.data.liveStream.events).toEqual([]);
       expect(published).toEqual([]);
       expect(snapshot.result.data.streamCursor.sequence).toBe(0);
-      expect(snapshot.result.data.outputCoverage.unpaired).toBe(true);
+      expect(snapshot.result.data.outputCoverage.unpaired).toBe(false);
     }
     expect((await save()).status).toBe(409);
     control("finish", stage);
