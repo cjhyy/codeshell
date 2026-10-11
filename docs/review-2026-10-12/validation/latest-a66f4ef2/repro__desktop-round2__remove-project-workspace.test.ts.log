@@ -1,0 +1,15 @@
+bun test v1.3.11 (af24e281)
+
+docs/review-2026-10-12/reproductions/desktop-round2/remove-project-workspace.test.ts:
+workspace release failed before archive {
+  sessionId: "idle-disk-session",
+  error: "Session root status root_removed: project 62c9f18f-db12-4746-8c20-ee1f5b4cff46 is unavailable",
+}
+{"calls":["remove","release","archive"],"releaseResult":{"sessionId":"idle-disk-session","ok":false,"status":"error","error":"Session root status root_removed: project 62c9f18f-db12-4746-8c20-ee1f5b4cff46 is unavailable"},"archived":true,"retainedWorkspace":{"root":"/private/var/folders/1d/6__4f4y51g90nblfptt8s9v80000gn/T/codeshell-review-remove-project-Q3wCAK/.worktrees/fixture-work-idle-dis","kind":"worktree","worktree":{"path":"/private/var/folders/1d/6__4f4y51g90nblfptt8s9v80000gn/T/codeshell-review-remove-project-Q3wCAK/.worktrees/fixture-work-idle-dis","branch":"worktree/fixture-work-idle-dis","baseRef":"main","createdBy":"codeshell"}},"occupiedBy":["idle-disk-session"]}
+(pass) CONFIRMED removing a project tombstones it before archived worktree sessions can detach [1018.65ms]
+
+ 1 pass
+ 0 fail
+ 10 expect() calls
+Ran 1 test across 1 file. [1454.00ms]
+Completed Bun shard: 1 tests, 0 skipped; 0 failures.

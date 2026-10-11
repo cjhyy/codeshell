@@ -1,0 +1,30 @@
+{
+  "frames": [
+    {
+      "jsonrpc": "2.0",
+      "id": "mobile-agent-run-1791740328320-0",
+      "method": "agent/run",
+      "params": {
+        "task": "本地 fixture，无真实模型",
+        "sessionId": "s-fixture",
+        "requireExisting": true,
+        "projectId": "p",
+        "rootId": "r"
+      }
+    }
+  ],
+  "events": [
+    {
+      "type": "job_start"
+    },
+    {
+      "type": "job_end"
+    }
+  ],
+  "notification": {
+    "deliveryKey": "8dc41087b257010f95fc0d919909cfbef8f4e972bf4668c47704b0d560da2f14",
+    "type": "automation.completed",
+    "title": "自动化任务完成",
+    "text": "定时任务「续接任务」已完成（用时 0 秒）。可在 CodeShell 中查看完整结果。"
+  }
+}

@@ -22,7 +22,7 @@ $ bun run --filter '@cjhyy/code-shell-link' build && bun run --filter '@cjhyy/co
 @cjhyy/code-shell-web build: ../dist-app/index.html                   0.57 kB │ gzip:   0.33 kB
 @cjhyy/code-shell-web build: ../dist-app/assets/index-kPe-x_IE.css   64.49 kB │ gzip:  12.02 kB
 @cjhyy/code-shell-web build: ../dist-app/assets/index-hVyQ_FRP.js   650.28 kB │ gzip: 202.67 kB
-@cjhyy/code-shell-web build: 
+@cjhyy/code-shell-web build:
 @cjhyy/code-shell-web build: (!) Some chunks are larger than 500 kB after minification. Consider:
 @cjhyy/code-shell-web build: - Using dynamic import() to code-split the application
 @cjhyy/code-shell-web build: - Use build.rollupOptions.output.manualChunks to improve chunking: https://rollupjs.org/configuration-options/#output-manualchunks

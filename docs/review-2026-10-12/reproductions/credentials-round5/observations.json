@@ -1,0 +1,69 @@
+{
+  "baseline": "84740d56",
+  "observations": [
+    {
+      "scenario": "sequential new logins overwrite renamed first account",
+      "beforeSecond": {
+        "id": "example__account",
+        "label": "Fixture Alice",
+        "autoUseByAI": true,
+        "autoInjectByAI": true,
+        "meta": {
+          "platform": "example",
+          "domain": "accounts.example.test",
+          "scope": "all",
+          "switchMode": "clear",
+          "autoRefreshFromBrowser": false,
+          "note": "Original fixture metadata marker"
+        }
+      },
+      "afterSecond": [
+        {
+          "id": "example__account",
+          "label": "账号",
+          "autoUseByAI": null,
+          "autoInjectByAI": null,
+          "meta": {
+            "platform": "example",
+            "domain": "accounts.example.test",
+            "scope": "all",
+            "switchMode": "merge",
+            "autoRefreshFromBrowser": false
+          }
+        }
+      ],
+      "oldCookieValueReplaced": true,
+      "oldMetadataMarkerAbsent": true
+    },
+    {
+      "scenario": "two distinct Chinese account names overwrite",
+      "before": [
+        {
+          "id": "browser__account",
+          "label": "工作账号"
+        }
+      ],
+      "after": [
+        {
+          "id": "browser__account",
+          "label": "个人账号"
+        }
+      ],
+      "oldCookieValueReplaced": true
+    },
+    {
+      "scenario": "Token save real store failure has no user feedback",
+      "pageerror": "Error invoking remote method 'credentials:save': Error: refusing to modify an unreadable credential store; move the corrupt file aside to start a new one",
+      "visibleAlerts": [],
+      "draftId": "fixture-token",
+      "draftSecretRetained": true
+    },
+    {
+      "scenario": "store restored then same Save succeeds",
+      "passed": true
+    }
+  ],
+  "pageerrors": [
+    "Error invoking remote method 'credentials:save': Error: refusing to modify an unreadable credential store; move the corrupt file aside to start a new one"
+  ]
+}

@@ -1,0 +1,85 @@
+[
+  {
+    "file": "packages/core/src/tool-system/builtin/sources-collection-query.test.ts",
+    "log": "validation/latest-a66f4ef2/packages__core__src__tool-system__builtin__sources-collection-query.test.ts.log",
+    "code": 0,
+    "signal": null,
+    "registeredTests": 51,
+    "skippedTests": 0,
+    "executedTests": 51,
+    "failureCount": 0
+  },
+  {
+    "file": "packages/desktop/src/main/desktop-web-panels.test.ts",
+    "log": "validation/latest-a66f4ef2/packages__desktop__src__main__desktop-web-panels.test.ts.log",
+    "code": 0,
+    "signal": null,
+    "registeredTests": 1,
+    "skippedTests": 0,
+    "executedTests": 1,
+    "failureCount": 0
+  },
+  {
+    "file": "packages/desktop/src/main/panel-automation-host.test.ts",
+    "log": "validation/latest-a66f4ef2/packages__desktop__src__main__panel-automation-host.test.ts.log",
+    "code": 0,
+    "signal": null,
+    "registeredTests": 5,
+    "skippedTests": 0,
+    "executedTests": 5,
+    "failureCount": 0
+  },
+  {
+    "file": "packages/desktop/src/main/panel-project-binding.test.ts",
+    "log": "validation/latest-a66f4ef2/packages__desktop__src__main__panel-project-binding.test.ts.log",
+    "code": 0,
+    "signal": null,
+    "registeredTests": 17,
+    "skippedTests": 0,
+    "executedTests": 17,
+    "failureCount": 0
+  },
+  {
+    "file": "packages/desktop/src/main/panel-project-scope.test.ts",
+    "log": "validation/latest-a66f4ef2/packages__desktop__src__main__panel-project-scope.test.ts.log",
+    "code": 0,
+    "signal": null,
+    "registeredTests": 5,
+    "skippedTests": 0,
+    "executedTests": 5,
+    "failureCount": 0
+  },
+  {
+    "file": "packages/desktop/tests/panel-app-main.test.ts",
+    "log": "validation/latest-a66f4ef2/panel-fixture-expanded.log",
+    "code": 0,
+    "signal": null,
+    "registeredTests": 69,
+    "skippedTests": 0,
+    "executedTests": 69,
+    "failureCount": 0,
+    "initialSkippedTests": 69,
+    "initialLog": "validation/latest-a66f4ef2/packages__desktop__tests__panel-app-main.test.ts.log",
+    "entryPoint": "packages/desktop/src/main/panel-app-protocol.test.ts; expanded count wrapper in validation/panel-fixture-counts.test.ts"
+  },
+  {
+    "file": "packages/server/src/panels/project-scope-http.test.ts",
+    "log": "validation/latest-a66f4ef2/packages__server__src__panels__project-scope-http.test.ts.log",
+    "code": 0,
+    "signal": null,
+    "registeredTests": 1,
+    "skippedTests": 0,
+    "executedTests": 1,
+    "failureCount": 0
+  },
+  {
+    "file": "packages/server/src/panels/project-scope.test.ts",
+    "log": "validation/latest-a66f4ef2/packages__server__src__panels__project-scope.test.ts.log",
+    "code": 0,
+    "signal": null,
+    "registeredTests": 7,
+    "skippedTests": 0,
+    "executedTests": 7,
+    "failureCount": 0
+  }
+]

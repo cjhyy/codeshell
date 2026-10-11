@@ -1,51 +1,15 @@
 [
   {
-    "file": "docs/review-2026-10-12/reproductions/desktop/approval-queue.test.tsx",
-    "log": "docs/review-2026-10-12/reproductions/desktop/approval-queue.test.tsx.log",
+    "file": "docs/review-2026-10-12/reproductions/automation-round5/desktop-display.test.tsx",
+    "log": "docs/review-2026-10-12/reproductions/automation-round5/desktop-display.test.tsx.log",
     "code": 0,
-    "signal": null,
-    "tests": 2,
-    "skipped": 0
+    "signal": null
   },
   {
-    "file": "docs/review-2026-10-12/reproductions/desktop/composer-session.test.tsx",
-    "log": "docs/review-2026-10-12/reproductions/desktop/composer-session.test.tsx.log",
+    "file": "docs/review-2026-10-12/reproductions/automation-round5/resume-outcome.test.ts",
+    "log": "docs/review-2026-10-12/reproductions/automation-round5/resume-outcome.test.ts.log",
     "code": 0,
-    "signal": null,
-    "tests": 2,
-    "skipped": 0
-  },
-  {
-    "file": "docs/review-2026-10-12/reproductions/desktop/concurrent-approvals.test.ts",
-    "log": "docs/review-2026-10-12/reproductions/desktop/concurrent-approvals.test.ts.log",
-    "code": 0,
-    "signal": null,
-    "tests": 1,
-    "skipped": 0
-  },
-  {
-    "file": "docs/review-2026-10-12/reproductions/desktop/preload-envelope.test.ts",
-    "log": "docs/review-2026-10-12/reproductions/desktop/preload-envelope.test.ts.log",
-    "code": 0,
-    "signal": null,
-    "tests": 2,
-    "skipped": 0
-  },
-  {
-    "file": "docs/review-2026-10-12/reproductions/desktop/run-controller.test.tsx",
-    "log": "docs/review-2026-10-12/reproductions/desktop/run-controller.test.tsx.log",
-    "code": 0,
-    "signal": null,
-    "tests": 5,
-    "skipped": 0
-  },
-  {
-    "file": "docs/review-2026-10-12/reproductions/desktop/worker-external.test.tsx",
-    "log": "docs/review-2026-10-12/reproductions/desktop/worker-external.test.tsx.log",
-    "code": 0,
-    "signal": null,
-    "tests": 1,
-    "skipped": 0
+    "signal": null
   },
   {
     "file": "docs/review-2026-10-12/reproductions/desktop-round2/panel-multiroot.test.tsx",
@@ -93,6 +57,54 @@
     "code": 0,
     "signal": null,
     "tests": 2,
+    "skipped": 0
+  },
+  {
+    "file": "docs/review-2026-10-12/reproductions/desktop/approval-queue.test.tsx",
+    "log": "docs/review-2026-10-12/reproductions/desktop/approval-queue.test.tsx.log",
+    "code": 0,
+    "signal": null,
+    "tests": 2,
+    "skipped": 0
+  },
+  {
+    "file": "docs/review-2026-10-12/reproductions/desktop/composer-session.test.tsx",
+    "log": "docs/review-2026-10-12/reproductions/desktop/composer-session.test.tsx.log",
+    "code": 0,
+    "signal": null,
+    "tests": 2,
+    "skipped": 0
+  },
+  {
+    "file": "docs/review-2026-10-12/reproductions/desktop/concurrent-approvals.test.ts",
+    "log": "docs/review-2026-10-12/reproductions/desktop/concurrent-approvals.test.ts.log",
+    "code": 0,
+    "signal": null,
+    "tests": 1,
+    "skipped": 0
+  },
+  {
+    "file": "docs/review-2026-10-12/reproductions/desktop/preload-envelope.test.ts",
+    "log": "docs/review-2026-10-12/reproductions/desktop/preload-envelope.test.ts.log",
+    "code": 0,
+    "signal": null,
+    "tests": 2,
+    "skipped": 0
+  },
+  {
+    "file": "docs/review-2026-10-12/reproductions/desktop/run-controller.test.tsx",
+    "log": "docs/review-2026-10-12/reproductions/desktop/run-controller.test.tsx.log",
+    "code": 0,
+    "signal": null,
+    "tests": 5,
+    "skipped": 0
+  },
+  {
+    "file": "docs/review-2026-10-12/reproductions/desktop/worker-external.test.tsx",
+    "log": "docs/review-2026-10-12/reproductions/desktop/worker-external.test.tsx.log",
+    "code": 0,
+    "signal": null,
+    "tests": 1,
     "skipped": 0
   },
   {
@@ -184,6 +196,28 @@
     "skipped": 0
   },
   {
+    "file": "docs/review-2026-10-12/reproductions/web-round2/settings-review.test.tsx",
+    "log": "docs/review-2026-10-12/reproductions/web-round2/settings-review.test.tsx.log",
+    "code": 0,
+    "signal": null,
+    "tests": 3,
+    "skipped": 0
+  },
+  {
+    "file": "docs/review-2026-10-12/reproductions/web-round3/mobile-lifecycle-review.test.tsx",
+    "log": "docs/review-2026-10-12/reproductions/web-round3/mobile-lifecycle-review.test.tsx.log",
+    "code": 0,
+    "signal": null,
+    "tests": 5,
+    "skipped": 0
+  },
+  {
+    "file": "docs/review-2026-10-12/reproductions/web-round5/recovery-review.test.tsx",
+    "log": "docs/review-2026-10-12/reproductions/web-round5/recovery-review.test.tsx.log",
+    "code": 0,
+    "signal": null
+  },
+  {
     "file": "docs/review-2026-10-12/reproductions/web/flow-review.test.tsx",
     "log": "docs/review-2026-10-12/reproductions/web/flow-review.test.tsx.log",
     "code": 0,
@@ -213,22 +247,6 @@
     "code": 0,
     "signal": null,
     "tests": 3,
-    "skipped": 0
-  },
-  {
-    "file": "docs/review-2026-10-12/reproductions/web-round2/settings-review.test.tsx",
-    "log": "docs/review-2026-10-12/reproductions/web-round2/settings-review.test.tsx.log",
-    "code": 0,
-    "signal": null,
-    "tests": 3,
-    "skipped": 0
-  },
-  {
-    "file": "docs/review-2026-10-12/reproductions/web-round3/mobile-lifecycle-review.test.tsx",
-    "log": "docs/review-2026-10-12/reproductions/web-round3/mobile-lifecycle-review.test.tsx.log",
-    "code": 0,
-    "signal": null,
-    "tests": 5,
     "skipped": 0
   }
 ]

@@ -1,0 +1,14 @@
+bun test v1.3.11 (af24e281)
+
+packages/desktop/src/main/panel-automation-host.test.ts:
+(pass) Web shares native job identity, definitions, pause and deletion through the live scheduler [21.70ms]
+(pass) device revocation during persisted session lookup prevents writes and data disclosure [2.09ms]
+(pass) synchronous transport fence checks the final authorization await before mutation [0.40ms]
+(pass) wire calls cannot forge workspace, identity, permission, or method-specific fields [0.21ms]
+(pass) paired conditional mutations detect native edits and exclude execution statistics [4.23ms]
+
+ 5 pass
+ 0 fail
+ 42 expect() calls
+Ran 5 tests across 1 file. [541.00ms]
+Completed Bun shard: 5 tests, 0 skipped; 0 failures.

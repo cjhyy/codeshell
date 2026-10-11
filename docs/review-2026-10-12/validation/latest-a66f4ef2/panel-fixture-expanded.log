@@ -1,0 +1,89 @@
+bun test v1.3.11 (af24e281)
+
+docs/review-2026-10-12/validation/panel-fixture-counts.test.ts:
+bun test v1.3.11 (af24e281)
+
+
+packages/desktop/tests/panel-app-main.test.ts:
+(pass) Panel App protocol > registers Panel, theme, and media schemes together as secure before app readiness [0.19ms]
+(pass) Panel App protocol > serves declared static assets with strict security headers [7.80ms]
+(pass) Panel App protocol > serves installed MP3 and WAV files with audio MIME types and strict headers [9.01ms]
+(pass) Panel App protocol > streams managed media with Range only from its bound app and project [5.34ms]
+(pass) Panel App protocol > managed media rejects a missing permission and a cross-app partition [4.48ms]
+(pass) Panel App protocol > external media uses the same scoped Range route and requires resources permission [4.35ms]
+(pass) Panel App protocol > external media closes active streams on request revocation [2.21ms]
+(pass) Panel App protocol > external media closes active streams on app revocation [2.24ms]
+(pass) Panel App protocol > external media closes active streams on uninstall revocation [2.26ms]
+(pass) Panel App protocol > revoking media during a pending open prevents late publication and closes its body [2.21ms]
+(pass) Panel App protocol > managed media refuses active or non-media MIME types and closes rejected streams [2.14ms]
+(pass) Panel App protocol > rejects traversal, query strings, dotfiles, and assets outside the panel tree [2.29ms]
+(pass) Panel App protocol > permits local blob media previews while keeping execution and network isolated [123.78ms]
+(pass) Panel App protocol > rejects a symlink escape even when the extension is allowed [7.49ms]
+(pass) Panel App protocol > uses separate WebView partitions for separate projects [2.15ms]
+(pass) Panel App protocol > capture permission is scoped, revocable and requires explicit screen selection [5.13ms]
+(pass) Panel App protocol > grants microphone-only media access only to a reviewed audio Panel App [5.07ms]
+(pass) PanelAppBridge > native reference selection returns opaque persistent resources and previews selected original ranges [63.83ms]
+(pass) PanelAppBridge > reference picker rejects a late native selection after guest revocation [8.69ms]
+(pass) PanelAppBridge > reference picker rejects a late native selection after trust revocation [8.33ms]
+(pass) PanelAppBridge > reference picker rejects a late native selection after shutdown revocation [8.71ms]
+(pass) PanelAppBridge > reference picker rejects a late native selection after deadline revocation [205.60ms]
+(pass) PanelAppBridge > whole-file resource transfers outlive ordinary RPCs and return their committed receipts [1179.28ms]
+(pass) PanelAppBridge > a resource capture interrupted by deadline stops copying and cleans its partial file [1026.60ms]
+(pass) PanelAppBridge > a resource capture interrupted by guest stops copying and cleans its partial file [41.48ms]
+(pass) PanelAppBridge > a resource capture interrupted by shutdown stops copying and cleans its partial file [43.14ms]
+(pass) PanelAppBridge > generic resources cross the bridge with bounded bytes, scoped tool hand-off and capability-gated tasks [147.56ms]
+(pass) PanelAppBridge > background task routing uses the stable project and isolates revision events [19.96ms]
+(pass) PanelAppBridge > a prepared project panel can use resources and tasks before a new chat has a cwd [54.97ms]
+(pass) PanelAppBridge > gates process primitives and scopes user-selected directory handles [50.59ms]
+(pass) PanelAppBridge > fails closed before prepare and after a project binding is revoked [0.41ms]
+(pass) PanelAppBridge > invokes only declared Agent tools and accepts a response from the bound guest [2.05ms]
+(pass) PanelAppBridge > clears an Agent tool request when the guest send fails synchronously [0.63ms]
+(pass) PanelAppBridge > ignores an Agent tool response from a different guest [12.88ms]
+(pass) PanelAppBridge > rejects an in-flight Agent tool immediately when its app is revoked [0.69ms]
+(pass) PanelAppBridge > binds scope from the trusted host and exposes only permitted context [0.07ms]
+(pass) PanelAppBridge > holds startup context and capability calls until the project scope is bound [1.80ms]
+(pass) PanelAppBridge > defaults to zero call permissions and rejects an unbound sender [0.28ms]
+(pass) PanelAppBridge > denies workspace.info when the panel has not declared the permission [0.12ms]
+(pass) PanelAppBridge > denies notifications.send when the panel has not declared the permission [0.26ms]
+(pass) PanelAppBridge > keeps Panel Cookie login host-owned and returns only matching masked accounts [0.79ms]
+(pass) PanelAppBridge > authorizes a Cookie as an opaque executable-bound process argument [9.17ms]
+(pass) PanelAppBridge > never resolves a Cookie account from a shorter or bare-suffix host [0.50ms]
+(pass) PanelAppBridge > requires a trusted workspace before reaching saved Cookie credentials [0.39ms]
+(pass) PanelAppBridge > scopes Panel automations to the bound workspace and task [3.51ms]
+(pass) PanelAppBridge > transcribes bounded microphone audio only with explicit permission [0.84ms]
+(pass) PanelAppBridge > does not expose transcription settings in an untrusted workspace [0.17ms]
+(pass) PanelAppBridge > enforces payload limits and revokes a destroyed guest [0.15ms]
+(pass) PanelAppBridge > rejects prompt submission while the trusted session scope is busy [0.38ms]
+(pass) PanelAppBridge > serializes storage mutations, persists atomically, and enforces quota [32.02ms]
+(pass) PanelAppBridge > two bridge instances share the storage lock without blocking its async holder [126.48ms]
+(pass) PanelAppBridge > accepts a recovery snapshot larger than the generic call limit within storage quota [19.06ms]
+(pass) PanelAppBridge > confirms external URLs and rejects unsafe schemes [0.77ms]
+(pass) PanelAppBridge > enforces call rate, timeout, and result size independently [260.58ms]
+(pass) PanelAppBridge > agent.submitPrompt accepts immediately instead of awaiting the agent [1.57ms]
+(pass) PanelAppBridge > agent.submitPrompt routes a Codex session to the external runtime only [13.60ms]
+(pass) PanelAppBridge > a Codex startup failure is surfaced without falling back to the native worker [14.98ms]
+(pass) PanelAppBridge > an external output failure frees the Panel submit slot without native fallback or duplicate error [26.79ms]
+(pass) PanelAppBridge > a Panel turn reuses a compatible live Codex runtime without rebuilding handoff [16.63ms]
+(pass) PanelAppBridge > agent.submitPrompt rejects a second submit while the first is in flight [3.31ms]
+(pass) PanelAppBridge > agent.submitPrompt frees its in-flight slot after the worker fails [18.27ms]
+(pass) PanelAppBridge > agent.submitPrompt reports a background worker failure into the session [15.38ms]
+(pass) PanelAppBridge > returns read-only workspace metadata with a best-effort git branch [30.69ms]
+(pass) PanelAppBridge > reads, lists, and atomically writes allowlisted files in a trusted workspace [592.09ms]
+(pass) PanelAppBridge > media workspace import checks trust for its actual worktree cwd [6.25ms]
+(pass) PanelAppBridge > keeps workspace read and write permissions independent [7.47ms]
+(pass) PanelAppBridge > rejects traversing, hidden, binary, symlink, and untrusted workspace paths [9.62ms]
+(pass) PanelAppBridge > sends title-prefixed system notifications under a dedicated per-window cap [0.56ms]
+(pass) Desktop project package variants > project-scoped pages and native jobs remain consistent with paired HTTP [740.20ms]
+
+ 69 pass
+ 0 fail
+ 515 expect() calls
+Ran 69 tests across 1 file. [5.36s]
+
+(pass) record the full supported Panel fixture counts after enabling its internal flag [5380.75ms]
+
+ 1 pass
+ 0 fail
+ 4 expect() calls
+Ran 1 test across 1 file. [5.43s]
+Completed Bun shard: 1 tests, 0 skipped; 0 failures.

@@ -37,9 +37,14 @@ const method = declaration.members.find(
 const compiled = ts.transpileModule(`class Bridge { ${method.getText(parsed)} }`, {
   compilerOptions: { target: ts.ScriptTarget.ES2022, module: ts.ModuleKind.CommonJS },
 }).outputText;
+// 0.9.33 bindGuest became async and rechecks the same owner/guest after awaits.
+// Supply those VM globals and stable fixture identities; awaiting also supports
+// the original synchronous baseline. Production code is unchanged.
+const owner = { id: 1, isDestroyed: () => false };
 const Bridge = runInNewContext(`${compiled}\nBridge`, {
   resolvePanelAppBindingProjectPath,
-  BrowserWindow: { fromWebContents: () => ({ id: 1 }) },
+  BrowserWindow: { fromWebContents: () => owner },
+  AbortController,
   PANEL_APP_API_VERSION: 14,
 });
 let fixtureRoot = "";
@@ -116,11 +121,12 @@ test("CONFIRMED valid secondary-root session cannot bind its project's installed
     ownerWindowId: 1,
     resource: { descriptor },
     projectPath: primary,
-    guest: { isDestroyed: () => false, send() {} },
+    guest: { id: 42, isDestroyed: () => false, send() {} },
   };
   const bridge = new Bridge();
   bridge.guests = new Map([[42, binding]]);
   bridge.assertProjectBinding = () => {};
+  bridge.assertTrustedHost = () => {};
   bridge.capabilitiesFor = () => ({});
   const input = {
     guestId: 42,
@@ -133,8 +139,8 @@ test("CONFIRMED valid secondary-root session cannot bind its project's installed
   };
   // Same-project primary-root control succeeds; only the valid secondary-root
   // cwd triggers the real production rejection before any guest API runs.
-  expect(bridge.bindGuest({}, { ...input, cwd: primary })).toBe(true);
-  expect(() => bridge.bindGuest({}, input)).toThrow(
+  expect(await bridge.bindGuest({}, { ...input, cwd: primary })).toBe(true);
+  await expect(Promise.resolve().then(() => bridge.bindGuest({}, input))).rejects.toThrow(
     "Panel App workspace does not belong to its bound project",
   );
 

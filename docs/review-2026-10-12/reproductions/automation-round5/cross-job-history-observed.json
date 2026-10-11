@@ -1,0 +1,45 @@
+{
+  "job": {
+    "id": "1",
+    "revision": "b7e42308761aba232e7828cd2ea4a6750b6b68c5b52f664506c7d17fdadd9cf2",
+    "name": "每日盘点",
+    "schedule": "1h",
+    "prompt": "inventory fixture",
+    "enabled": true,
+    "cwd": "/fixture",
+    "projectId": "p",
+    "rootId": "r",
+    "timezone": null,
+    "permissionLevel": null,
+    "lastRun": 1791740341475,
+    "nextRun": 1791743941475,
+    "runCount": 1,
+    "createdAt": 1791740341475,
+    "lastRunId": null,
+    "once": false,
+    "resumeSessionId": null,
+    "templateSource": null
+  },
+  "disk": [
+    {
+      "id": "inventory",
+      "engineSessionId": "inventory",
+      "cwd": "/fixture",
+      "title": "inventory fixture",
+      "origin": "automation",
+      "updatedAt": 1791740341475
+    },
+    {
+      "id": "unrelated",
+      "engineSessionId": "unrelated",
+      "cwd": "/fixture",
+      "title": "UNRELATED: publish weekly financial report",
+      "origin": "automation",
+      "updatedAt": 1791740342475
+    }
+  ],
+  "detail": "每日盘点每小时 · UTC活跃立即运行下次运行约 1 小时后10/11/2026, 6:39:01 PM上次运行刚刚10/11/2026, 5:39:01 PM运行次数1任务指令编辑inventory fixture执行方式每次新建对话适合独立任务，每次单独记录结果。续接已有对话沿用之前的讨论，持续积累进展。配置频率时区全部时区UTC权限项目运行 session最近 10/11, 05:39 PMUNRELATED: publish weekly financial report10/11, 05:39 PM对话记录查看inventory fixture10/11, 05:39 PM对话记录查看",
+  "opened": [
+    "unrelated"
+  ]
+}

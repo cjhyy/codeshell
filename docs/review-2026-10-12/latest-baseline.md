@@ -1,0 +1,29 @@
+# 0.9.33 主分支差异复查
+
+01:30（Asia/Singapore）拉取发现 origin/main 从初始审查基线 `84740d56e55517b004948a0a0e07649ad6fbf998` 更新至 `a66f4ef291f304ee4df9da8095a90671d9a8f140`，版本 0.9.33。主要新增 Panel 稳定项目身份与共享 Collection 跨文件查询，另有发行记录和版本号更新，共 54 个路径变化。没有将新产品代码合入原报告分支。
+
+新隔离工作区：`/Users/admin/.codex/worktrees/review-latest-20261012/codeshell`，分支 `codex/review/latest-20261012`。原始报告与证据继续保留在 `server-desktop-review-20261012/codeshell`。两者产品均无手工改动；Desktop build 自动生成的 tracked extension bundle 已核对并只还原该构建产物。
+
+## 已完成验证
+
+| 范围 | 最终结果 | 记录 |
+| --- | --- | --- |
+| frozen install、workspaces build、Desktop build、typecheck:workspaces | 全部通过 | `validation/latest-a66f4ef2/{install,build,desktop-build,typecheck}.log` |
+| 8 个新增或修改测试文件 | 156 项实际执行、0 失败、0 跳过 | `validation/latest-a66f4ef2/changed-test-results.json` |
+| 既有便携缺陷表征和正常契约 | 32 文件、71 测试、0 失败、0 跳过 | `validation/latest-a66f4ef2/reproduction-results.json` |
+| 凭据实际 Electron/IPC/store | 4 场景通过 | `validation/latest-a66f4ef2/credentials__credentials-e2e.mjs.log` |
+
+复现“通过”表示当前仍观察到被测缺陷。32 个文件并非 32 项问题，一份文件可能覆盖多项发现，也包含正常对照。新快照结果没有加到原基线 6286 个现有测试的总数中，以免重复计数。
+
+## 两处测试入口适配
+
+1. Panel bindGuest 从同步改为异步，原 VM fixture 未提供 AbortController 和可重复检查的 owner/guest 身份，首次新快照跑失败。仅改审查 fixture，使它同时支持同步和异步接口，并提供稳定的模拟身份。原基线、新快照均重跑通过。生产方法仍在进入新 scope resolver 前拒绝合法 secondary root，R22 未被修复。
+2. `packages/desktop/tests/panel-app-main.test.ts` 必须经 `panel-app-protocol.test.ts` 子进程入口设置内部标记。直接 guarded 运行注册 69 项但全跳过；环境变量直接传入也会被外层隔离器清除。随后运行正式 spawner 成功，并用同样子进程机制的 `validation/panel-fixture-counts.test.ts` 展开日志，确认 69 pass、0 skip。最初的跳过日志保留，最终结果指向 `panel-fixture-expanded.log`。外层仍使用 guarded runner，子进程继承其隔离 HOME 和无凭据环境。
+
+## 适用范围
+
+主报告 R01–R48 的源码行号仍指初始基线；新快照可能因新增 import/声明发生行号偏移。既有便携证据和实际凭据 UI 场景在 0.9.33 下仍成立。R21 的二次验证复用初轮真实 native Hub 捕获，并执行新快照的生产恢复函数与 replay；本轮没有重新宣称完整原 native Hub smoke 已通过。
+
+凭据脚本原始 observations 中保留了 fixture 作者写死的 `84740d56` 标签；本次实际执行入口、工作区和构建为新快照，已在 `validation/latest-a66f4ef2/summary.json` 单独记录，避免将旧标签误认成运行目录。模拟 Cookie 和 plain cipher 回退等限制与原附录相同。
+
+第六轮继续专项审查新 Panel scope、共享 Collection 失败恢复及语音输入流程。确认的新快照问题将标注本快照，不把新功能尚不存在于旧基线的测试塞入旧基线默认复现入口。
