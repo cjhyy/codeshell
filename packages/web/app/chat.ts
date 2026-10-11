@@ -10,7 +10,13 @@ import {
   type ChatState,
 } from "../src/lib/streamReducer.js";
 import { replayTranscript } from "../src/lib/transcriptReplay.js";
-import type { HubStreamCursor, SessionDetailData, StreamEventPayload } from "./protocol.js";
+import { assertOutputCoverage, OutputCoverage } from "../src/lib/outputCoverage.js";
+import type {
+  HubOutputCoverage,
+  HubStreamCursor,
+  SessionDetailData,
+  StreamEventPayload,
+} from "./protocol.js";
 import type { OutputJournalOptions, OutputJournalPage } from "@cjhyy/code-shell-core/internal";
 import {
   applyOutputJournalPage,
@@ -66,9 +72,33 @@ export async function chatFromOutputJournal(
   read: (options: OutputJournalOptions) => Promise<OutputJournalPage>,
   buffered: StreamEventPayload[],
   latestOutputCursor?: () => string | undefined,
+  finalCoverage?: () => Promise<HubOutputCoverage>,
+  canContinue: () => boolean = () => true,
 ): Promise<{ chat: ChatState; outputCursor: string } | null> {
   let page = data.outputJournal ?? (await read({}));
-  if (page.status === "unavailable") return null;
+  if (!canContinue()) throw new Error("Output recovery cancelled");
+  if (page.status === "unavailable") {
+    const proof = finalCoverage ? await finalCoverage() : data.outputCoverage;
+    if (!canContinue()) throw new Error("Output recovery cancelled");
+    for (const known of [data.outputCoverage, proof])
+      assertOutputCoverage(
+        { unpaired: known?.unpaired, inputIds: known?.inputIds },
+        {},
+        () => false,
+      );
+    if (
+      proof?.outputCursor ||
+      latestOutputCursor?.() ||
+      buffered.some((p) => p.event.outputCursor)
+    ) {
+      page = await read({});
+      if (page.status === "unavailable") throw new Error("Output recovery journal is unavailable");
+    } else {
+      if (proof?.journalIdentity || data.outputCoverage?.journalIdentity)
+        throw new Error("Output recovery journal is unavailable");
+      return null;
+    }
+  }
   if (
     page.status !== "ok" ||
     !page.legacyBaseThroughEventId ||
@@ -82,7 +112,8 @@ export async function chatFromOutputJournal(
   let pages = 0;
   const fold = async () => {
     while (true) {
-      if (++pages > 2048) throw new Error("Output recovery exceeded its page budget");
+      if (!canContinue() || ++pages > 2048)
+        throw new Error("Output recovery exceeded its page budget");
       const complete = applyOutputJournalPage(state, page, (event) => {
         chat = reduceStream(chat, event);
       });
@@ -96,19 +127,49 @@ export async function chatFromOutputJournal(
   // latest retained durable cursor freezes another exact prefix; the log fills
   // every intervening record, rather than replaying an arbitrary buffered tail.
   for (let round = 0; round < 8; round++) {
-    const latest =
-      latestOutputCursor?.() ??
-      [...buffered].reverse().find((payload) => typeof payload.event.outputCursor === "string")
-        ?.event.outputCursor;
-    if (typeof latest !== "string") break;
+    const proof = finalCoverage ? await finalCoverage() : data.outputCoverage;
+    if (!canContinue()) throw new Error("Output recovery cancelled");
+    assertOutputCoverage({ ...proof, inputIds: undefined }, page, () => true);
+    let latest: string | undefined;
+    for (const cursor of [
+      proof?.outputCursor,
+      latestOutputCursor?.(),
+      ...buffered.map((p) => p.event.outputCursor),
+    ]) {
+      if (typeof cursor !== "string") continue;
+      const order = latest ? compareOutputCursors(cursor, latest) : 1;
+      if (order === undefined) throw new Error("Output recovery journal changed");
+      if (order > 0) latest = cursor;
+    }
+    if (typeof latest !== "string") {
+      if (proof)
+        assertOutputCoverage(proof, page, (id) =>
+          chat.items.some((item) => item.kind === "user" && item.clientMessageId === id),
+        );
+      break;
+    }
     const order = compareOutputCursors(latest, state.cursor!);
     if (order === undefined) throw new Error("Output recovery journal changed");
-    if (order <= 0) break;
+    if (order <= 0) {
+      if (proof)
+        assertOutputCoverage(proof, page, (id) =>
+          chat.items.some((item) => item.kind === "user" && item.clientMessageId === id),
+        );
+      break;
+    }
     if (round === 7) throw new Error("Output recovery could not catch up within its round budget");
     state = { incomplete: false, cursor: state.appliedCursor };
     page = await read({ after: state.cursor, through: latest });
     await fold();
   }
+  const bufferedCoverage = new OutputCoverage();
+  for (const payload of buffered) bufferedCoverage.observe(payload.event);
+  assertOutputCoverage(
+    { unpaired: bufferedCoverage.incomplete, inputIds: bufferedCoverage.inputIds },
+    page,
+    (id) => chat.items.some((item) => item.kind === "user" && item.clientMessageId === id),
+    { requireIdentity: false },
+  );
   for (const payload of buffered) {
     const value = payload.event.outputCursor;
     if (typeof value === "string") {

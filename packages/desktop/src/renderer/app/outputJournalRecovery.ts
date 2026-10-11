@@ -2,6 +2,8 @@ import type { SessionSnapshot, FoldItem } from "../../preload/types";
 import type { OutputJournalOptions, OutputJournalPage } from "@cjhyy/code-shell-core/internal";
 import {
   applyOutputJournalPage,
+  assertOutputCoverage,
+  OutputCoverage,
   compareOutputCursors,
   type OutputJournalRecovery,
 } from "@cjhyy/code-shell-web";
@@ -26,7 +28,22 @@ export async function recoverDesktopOutputJournal(args: {
   snapshot: SessionSnapshot;
 } | null> {
   let page = await args.read({});
-  if (page.status === "unavailable") return null;
+  if (page.status === "unavailable") {
+    const snapshot = await args.snapshot();
+    if (!args.canContinue()) throw new Error("Output recovery stopped");
+    assertOutputCoverage(
+      { unpaired: snapshot.outputUnpaired, inputIds: snapshot.outputInputIds },
+      {},
+      () => false,
+    );
+    if (snapshot.outputCursor || args.latestObservedCursor()) {
+      page = await args.read({});
+      if (page.status === "unavailable") throw new Error("Output recovery journal is unavailable");
+    } else {
+      if (snapshot.outputJournalIdentity) throw new Error("Output recovery journal is unavailable");
+      return null;
+    }
+  }
   if (!page.legacyBaseComplete || !page.legacyBaseItems)
     throw new Error("Output recovery has no exact legacy base");
   let state = foldTranscript(page.legacyBaseItems);
@@ -59,23 +76,36 @@ export async function recoverDesktopOutputJournal(args: {
       if (order === undefined) throw new Error("Output recovery journal changed");
       if (order > 0) target = value;
     }
-    // A current Core stream always has durable cursors. Old workers and other
-    // producers remain on the legacy barrier rather than inventing a mapping.
-    if (
-      snapshot.events.some(
-        ({ event }) =>
-          !event.outputCursor &&
-          [
-            "stream_request_start",
-            "text_delta",
-            "thinking_delta",
-            "tool_use_start",
-            "assistant_message",
-            "turn_complete",
-          ].includes(event.type),
-      )
-    )
-      throw new Error("Snapshot contains unpaired legacy output");
+    if (!args.canContinue()) throw new Error("Output recovery stopped");
+    assertOutputCoverage(
+      {
+        unpaired: snapshot.outputUnpaired,
+        inputIds: target === recovery.cursor ? snapshot.outputInputIds : undefined,
+        incarnation: snapshot.outputCoverageIdentity,
+        journalIdentity: snapshot.outputJournalIdentity,
+      },
+      page,
+      (id) =>
+        state.messages.some((message) => message.kind === "user" && message.clientMessageId === id),
+    );
+    // Legacy Main peers have no durable coverage field: retain their suffix
+    // barrier using the same display classifier, including background results.
+    if (snapshot.outputCoverageIdentity === undefined) {
+      const proof = new OutputCoverage();
+      for (const { event } of snapshot.events) proof.observe(event);
+      assertOutputCoverage(
+        {
+          unpaired: proof.incomplete,
+          inputIds: target === recovery.cursor ? proof.inputIds : undefined,
+        },
+        page,
+        (id) =>
+          state.messages.some(
+            (message) => message.kind === "user" && message.clientMessageId === id,
+          ),
+        { requireIdentity: false },
+      );
+    }
     if (target === recovery.cursor) {
       return {
         state: {

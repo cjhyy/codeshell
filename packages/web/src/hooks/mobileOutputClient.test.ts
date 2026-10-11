@@ -8,6 +8,7 @@ import {
   readOutputJournal,
 } from "../../../core/src/session/output-journal.js";
 import { transcriptToStreamEvents } from "../lib/transcriptReplay.js";
+import { SessionOutputCoverageStore } from "../../../core/src/session/output-coverage-state.js";
 import { MobileOutputClient } from "./mobileOutputClient.js";
 import type { MobileClientEvent, MobileServerEvent } from "@cjhyy/code-shell-core";
 
@@ -60,7 +61,13 @@ function fixture(id = "external", pendingJournal = false) {
             page,
             legacyBaseComplete: true,
             legacyBase: { throughEventId: baseId, events: legacyEvents },
-            snapshot: { epoch: "main", nextSeq: 10, outputCursor: cursor, unpaired: false },
+            snapshot: {
+              ...new SessionOutputCoverageStore(() => root).read(id),
+              epoch: "main",
+              nextSeq: 10,
+              outputCursor: cursor,
+              unpaired: false,
+            },
           });
         }
       });

@@ -31,6 +31,7 @@ export * from "./hooks/remoteAppSync.js";
 export * from "./lib/streamReducer.js";
 export * from "./lib/transcriptReplay.js";
 export * from "./lib/outputJournalRecovery.js";
+export * from "./lib/outputCoverage.js";
 export * from "./lib/messageMappers.js";
 
 // ── Pure helpers ─────────────────────────────────────────────────────────────

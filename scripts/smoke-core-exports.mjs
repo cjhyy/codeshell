@@ -35,6 +35,7 @@ assert.equal(typeof publicApi.createServer, "function");
 // internal-only value (`BUILTIN_CATALOG`) even though the separation was
 // correct and the four source-level contract tests passed.
 const hostOnlySamples = [
+  "SessionOutputCoverageStore",
   "collectionConfig",
   "captureCollectionLocalFile",
   "readCollectionLocalFile",
@@ -131,6 +132,7 @@ assert.equal("Arena" in internalApi, false);
 // Include the already-exported process-launch and missed-cron contracts;
 // the compiled declaration pin must describe the current Host surface.
 const expectedInternalTypeExports = [
+  "SessionOutputCoverageProof",
   "ConstrainedDockerRuntime",
   "ConstrainedProcessHost",
   "ConstrainedProcessLaunch",

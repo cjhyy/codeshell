@@ -27,6 +27,10 @@ export interface SessionSnapshot {
   /** Main-authoritative top-level run state. Missing on legacy snapshots. */
   topLevelRunning?: boolean;
   outputCursor?: string;
+  outputUnpaired?: boolean;
+  outputInputIds?: string[];
+  outputCoverageIdentity?: string;
+  outputJournalIdentity?: string;
 }
 
 /**

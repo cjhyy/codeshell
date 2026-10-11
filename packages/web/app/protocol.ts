@@ -40,7 +40,17 @@ export interface HubStreamCursor {
   sequence: number;
 }
 
+export interface HubOutputCoverage {
+  unpaired: boolean;
+  inputIds: string[];
+  incarnation?: string;
+  journalIdentity?: string;
+  outputCursor?: string;
+  streamCursor?: HubStreamCursor;
+}
+
 export interface SessionDetailData {
+  outputCoverage?: HubOutputCoverage;
   outputJournal?: import("@cjhyy/code-shell-core/internal").OutputJournalPage;
   legacyBaseComplete?: boolean;
   state: Record<string, unknown>;
@@ -265,6 +275,10 @@ export class ProtocolClient {
       sessionId,
       ...(outputRecovery ? { outputRecovery: true } : {}),
     });
+  }
+
+  outputCoverage(sessionId: string): Promise<{ type: string; data: HubOutputCoverage }> {
+    return this.request("agent/query", { type: "output_coverage", sessionId });
   }
 
   outputJournal(

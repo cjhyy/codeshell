@@ -338,6 +338,9 @@ export interface SessionState {
   outputRecoveryIncomplete?: boolean;
   /** Immutable journal header pin, committed before any output cursor is published. */
   outputJournalIdentity?: string;
+  /** Host-only coverage proof; never authorizes a run or claims no-run output persistence. */
+  outputCoverageIdentity?: string;
+  outputCoverage?: import("./session/output-coverage-state.js").PersistedOutputCoverage;
   clientMessageId?: string;
   /**
    * Monotonic prompt-cache counters for the whole session. These only increase
