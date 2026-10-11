@@ -27,6 +27,8 @@ export interface CollectionUrlInput {
 export interface CollectionUrlOptions {
   signal?: AbortSignal;
   assertAuthorized?: () => void;
+  /** Trusted corpus caller: reserve response bytes before accepting/allocating them. */
+  reserveInputBytes?: (bytes: number) => void;
 }
 
 export interface CollectionUrlDownload {
@@ -214,6 +216,7 @@ function readHop(
   dependencies: TransportDependencies,
   signal: AbortSignal,
   assertAuthorized: () => void,
+  reserveInputBytes?: (bytes: number) => void,
 ): Promise<Hop> {
   return new Promise((resolve, reject) => {
     let request: ReturnType<typeof https.request> | undefined;
@@ -227,6 +230,7 @@ function readHop(
     const chunks: Buffer[] = [];
     const hash = createHash("sha256");
     let bytes = 0,
+      reservedBytes = 0,
       expectedLength: number | undefined;
     const finish = () => {
       if (!requestClosed || (response && !responseClosed)) return;
@@ -307,6 +311,8 @@ function readHop(
             if (!/^\d+$/.test(rawLength) || BigInt(rawLength) > BigInt(MAX_DOCUMENT_BYTES))
               throw new Error("Static file exceeds the 20 MiB download limit");
             expectedLength = Number(rawLength);
+            reserveInputBytes?.(expectedLength);
+            reservedBytes = expectedLength;
           }
           const mimeType = (incoming.headers["content-type"] ?? "application/octet-stream")
             .split(";")[0]
@@ -321,6 +327,10 @@ function readHop(
               signal.throwIfAborted();
               if (chunk.length > MAX_DOCUMENT_BYTES - bytes)
                 throw new Error("Static file exceeds the 20 MiB download limit");
+              if (bytes + chunk.length > reservedBytes) {
+                reserveInputBytes?.(bytes + chunk.length - reservedBytes);
+                reservedBytes = bytes + chunk.length;
+              }
               bytes += chunk.length;
               hash.update(chunk);
               chunks.push(chunk);
@@ -404,6 +414,9 @@ function createDownloader(dependencies: TransportDependencies) {
       TIMEOUT_MS,
     );
     try {
+      // Resume the owning corpus computation budget after permission/hooks,
+      // before DNS/network waiting. Revalidation downloads omit this sink.
+      options.reserveInputBytes?.(0);
       let current = new URL(requestedUrl);
       for (let redirects = 0; ; redirects++) {
         controller.signal.throwIfAborted();
@@ -419,6 +432,7 @@ function createDownloader(dependencies: TransportDependencies) {
           dependencies,
           controller.signal,
           assertAuthorized,
+          options.reserveInputBytes,
         );
         if ("redirect" in result) {
           const next = new URL(normalizeCollectionUrl(result.redirect));
