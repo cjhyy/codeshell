@@ -251,17 +251,32 @@ async function run() {
     const output = join(isolated.home, "old-worktree-output");
     await mkdir(output);
     confined = await prepareConfinedElectronFixture({ appDir, isolated, origin: fixtureOrigin });
-    // Production resolves "lan" to a concrete IPv4 before listening. Bind the
-    // fixture's one ephemeral HTTP listener to its reserved loopback origin.
+    // Arm only for this remote start, after Main's other startup listeners.
+    // No external interfaces makes the production LAN resolver choose its
+    // loopback fallback, so its advertised URL and same-origin checks agree.
     // The HTTP routes, pairing and Panel/task handlers remain production code.
     const entry = await readFile(confined.mainEntry, "utf8");
     const listener = `import fixtureHttp from "node:http";
-import { isIPv4 as fixtureIsIPv4 } from "node:net";
+import fixtureOs from "node:os";
+import { syncBuiltinESMExports as fixtureSyncBuiltinESMExports } from "node:module";
 const fixtureListen = fixtureHttp.Server.prototype.listen;
+const fixtureNetworkInterfaces = fixtureOs.networkInterfaces;
+let fixtureListenerArmed = false;
+globalThis.__armWorktreeDirectoryListener = () => {
+  if (fixtureListenerArmed || globalThis.__worktreeDirectoryListener)
+    throw new Error("Worktree fixture remote listener was already armed");
+  fixtureOs.networkInterfaces = () => ({});
+  fixtureSyncBuiltinESMExports();
+  fixtureListenerArmed = true;
+};
+globalThis.__restoreWorktreeDirectoryInterfaces = () => {
+  fixtureListenerArmed = false;
+  fixtureOs.networkInterfaces = fixtureNetworkInterfaces;
+  fixtureSyncBuiltinESMExports();
+};
 fixtureHttp.Server.prototype.listen = function (port, host, ...args) {
-  if (port === 0 && fixtureIsIPv4(host) && host !== "0.0.0.0") {
-    if (globalThis.__worktreeDirectoryListener)
-      throw new Error("Worktree fixture received another ephemeral HTTP listener");
+  if (fixtureListenerArmed && port === 0 && host === "127.0.0.1") {
+    fixtureListenerArmed = false;
     globalThis.__worktreeDirectoryListener = { requestedHost: host, pid: process.pid };
     port = ${new URL(fixtureOrigin).port};
     host = "127.0.0.1";
@@ -472,12 +487,21 @@ console.log(JSON.stringify({bookmark, device: devices.addDevice({name:"Shared ta
     await new Promise((done, reject) =>
       reservation.close((error) => (error ? reject(error) : done())),
     );
-  const remote = await win.evaluate(() => window.codeshell.mobileRemote.start({ mode: "lan" }));
+  let remote;
+  try {
+    if (worktreeDirectories)
+      await electron.evaluate(() => globalThis.__armWorktreeDirectoryListener());
+    remote = await win.evaluate(() => window.codeshell.mobileRemote.start({ mode: "lan" }));
+  } finally {
+    if (worktreeDirectories)
+      await electron.evaluate(() => globalThis.__restoreWorktreeDirectoryInterfaces());
+  }
   assert.ok(remote.url, "Remote server did not start");
   const base = fixtureOrigin ?? new URL(remote.url).origin;
   if (worktreeDirectories) {
-    assert.equal(new URL(remote.url).port, new URL(base).port);
+    assert.equal(new URL(remote.url).origin, base);
     const listener = await electron.evaluate(() => globalThis.__worktreeDirectoryListener);
+    assert.ok(listener, "Remote start did not capture its armed listener");
     assert.equal(listener.pid, electron.process().pid);
     assert.deepEqual(listener.address, {
       address: "127.0.0.1",
