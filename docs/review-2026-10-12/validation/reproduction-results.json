@@ -64,6 +64,14 @@
     "skipped": 0
   },
   {
+    "file": "docs/review-2026-10-12/reproductions/command-recovery-round16/mcp-owner-controls.test.ts",
+    "log": "docs/review-2026-10-12/reproductions/command-recovery-round16/mcp-owner-controls.test.ts.log",
+    "code": 0,
+    "signal": null,
+    "tests": 1,
+    "skipped": 0
+  },
+  {
     "file": "docs/review-2026-10-12/reproductions/connection-recovery-round15/hub-outbound-control.test.ts",
     "log": "docs/review-2026-10-12/reproductions/connection-recovery-round15/hub-outbound-control.test.ts.log",
     "code": 0,
@@ -208,6 +216,14 @@
     "skipped": 0
   },
   {
+    "file": "docs/review-2026-10-12/reproductions/link-recovery-round16/link-recovery.test.tsx",
+    "log": "docs/review-2026-10-12/reproductions/link-recovery-round16/link-recovery.test.tsx.log",
+    "code": 0,
+    "signal": null,
+    "tests": 5,
+    "skipped": 0
+  },
+  {
     "file": "docs/review-2026-10-12/reproductions/multiwindow-round13/catalog-protections.test.ts",
     "code": 0,
     "log": "docs/review-2026-10-12/reproductions/multiwindow-round13/catalog-protections.test.ts.log",
@@ -237,6 +253,14 @@
     "code": 0,
     "signal": null,
     "tests": 7,
+    "skipped": 0
+  },
+  {
+    "file": "docs/review-2026-10-12/reproductions/project-recovery-round16/root-repair.test.tsx",
+    "log": "docs/review-2026-10-12/reproductions/project-recovery-round16/root-repair.test.tsx.log",
+    "code": 0,
+    "signal": null,
+    "tests": 3,
     "skipped": 0
   },
   {
@@ -413,6 +437,14 @@
     "log": "docs/review-2026-10-12/reproductions/session-actions-round13/session-delete-recovery.test.tsx.log",
     "signal": null,
     "tests": 4,
+    "skipped": 0
+  },
+  {
+    "file": "docs/review-2026-10-12/reproductions/settings-round16/settings-lifecycle.test.ts",
+    "log": "docs/review-2026-10-12/reproductions/settings-round16/settings-lifecycle.test.ts.log",
+    "code": 0,
+    "signal": null,
+    "tests": 1,
     "skipped": 0
   },
   {

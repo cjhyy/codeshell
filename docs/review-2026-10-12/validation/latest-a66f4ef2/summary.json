@@ -1,7 +1,7 @@
 {
   "baseline": "a66f4ef291f304ee4df9da8095a90671d9a8f140",
-  "reproductionFiles": 68,
-  "reproductionTests": 211,
+  "reproductionFiles": 72,
+  "reproductionTests": 221,
   "reproductionSkipped": 0,
   "changedTestFiles": 8,
   "changedExecutedTests": 156,
@@ -16,5 +16,8 @@
   "latestOnlyReproductionFiles": 3,
   "latestOnlyReproductionTests": 8,
   "round15NativeOutboundAssertions": 33,
-  "round15NativeOutboundNote": "one wrapped native test in each baseline; 33 native assertions separately from Bun expects; max 24 MiB text payload; no actual Main/worker/model/OOM"
+  "round15NativeOutboundNote": "one wrapped native test in each baseline; 33 native assertions separately from Bun expects; max 24 MiB text payload; no actual Main/worker/model/OOM",
+  "round16NativeMcpAssertions": 22,
+  "round16BunHelperAssertions": 27,
+  "round16HelperNote": "one MCP Node wrapper test with 22 native assertions and one Settings owned Bun helper wrapper with 27 manual assertions per baseline; both contained in 4 new files / 10 tests / 104 Bun expects, no additional tests"
 }

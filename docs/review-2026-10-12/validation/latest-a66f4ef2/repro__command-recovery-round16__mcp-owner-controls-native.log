@@ -1,0 +1,1 @@
+PASS native actual-auth MCP early body abort/cancel/disconnect/logout recovery; 22 assertions

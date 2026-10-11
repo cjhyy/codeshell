@@ -9,14 +9,14 @@
 证据目录：`/tmp/codeshell-review-20261012`。
 持续调度：heartbeat `codeshell-10-12-11`，每小时整点与半点；截止后交付报告并停用。01:34 已将原 00:52 锚点改为整点/半点，覆盖 11:00 截止时刻。
 
-## 当前状态（新加坡 04:24）
+## 当前状态（新加坡 04:46）
 
 - 截止前不要标 complete。到 11:00 停止新增审查、收束证据、交付最终报告，停用 heartbeat，再完成目标。01:22 的 get_goal 返回 blocked（本轮主代理未请求该变更）；实际仍在推进，没有需要用户解除的阻塞，按用户 heartbeat 继续审查。工具没有 active 状态参数，不要伪造恢复调用；截止交付后再设 complete。
 - 已读 CODESHELL.md，已 fetch origin 并创建独立工作区。产品代码无改动，只有本报告目录。01:30 origin/main 更新至 a66f4ef291f304ee4df9da8095a90671d9a8f140（0.9.33），新增 Panel stable project scope 和跨文件 collection query。另建 /Users/admin/.codex/worktrees/review-latest-20261012/codeshell，分支 codex/review/latest-20261012；冻结安装、全工作区及 Desktop 构建、类型检查、差异测试和既有发现复查均完成。旧工作区与证据不切换基线。
 - 已完成 frozen install、全工作区 build、typecheck:workspaces、Desktop build。
 - Server/Web 141 文件 / 1428 测试、Desktop renderer 282 文件 / 2397 测试、Desktop main 283 文件 / 2461 测试全部通过，合计706文件6286测试0失败0跳过。
 - 真实 Electron navigation/settings/workspace-pages/model-settings/digital-humans/panel-recovery-ui 全部通过；native output-journal 与 mobile-output-journal smoke 也通过。日志已保存 validation/。
-- 正式报告目前 R01–R68：1 P1、46 P2、21 P3。R35/D13 为重复Enter创建工作区时 unsafe rollback 删除成功请求worktree/分支/未提交文件，独立质量复查认可P1。R36是worker.stdin异步EPIPE导致NodeHost退出。
+- 正式报告目前 R01–R70：1 P1、47 P2、22 P3。R35/D13 为重复Enter创建工作区时 unsafe rollback 删除成功请求worktree/分支/未提交文件，独立质量复查认可P1。R36是worker.stdin异步EPIPE导致NodeHost退出。
 - 第一至四轮已收束；便携证据29个文件55个测试全部最终通过，含缺陷表征与用于排除误报的正常契约。原始 /tmp 证据已复制并修正相对导入/子进程入口，别把原始带绝对路径的脚本覆盖回去。
 - quality-audit.md 已对D13/D1/R21/W11独立复核；主结论成立。已收窄D1普通send传输失败措辞、R21原生HubWeb范围。文件历史恢复误拦截按P3列R39（记录保留且额外确认可完成），原代理建议P2已在归档附录标明重新分级。
 - 第五轮已收束：Web 2P2、Credentials 1P2+1P3、Automation 4P2+1P3；便携复制后三个Bun文件16测试通过，实际Electron凭据4场景通过。该轮后共32个便携Bun文件71测试，凭据native脚本另计；第六轮后的新总数见下一条。review_quality_audit 已独立确认第五轮九项因果与分级，保留7P2+2P3，见quality-round5.md；R45仅网关/生命周期通知，不泛指OS成功通知。
@@ -30,7 +30,7 @@
 - `/tmp/codeshell-review-20261012/` 为 root 原始日志。原始各代理证据位于同前缀的 `-desktop`、`-web-flow`、`-server-*`、`-desktop-round2`、`-web-round2`、`-runtime-round3` 等目录。
 - 原 native Hub smoke 的模型 fixture 直接调用尚未加载的 Write，先超时；临时适配 ToolSearch 后暴露 R21。真实 worker 首次 run 发生于 session 创建之前，baseline=0；journal legacy base 已生成后 snapshot 再裁空，production chatFromOutputJournal 拒绝恢复。
 - `hub-smoke-remaining.mjs` 显式排除已复现 R21 后，其余 approval/cancel/export/archive/restart/history resume 已通过。不能写“原 smoke 全部通过”。
-- 便携脚本第一至七轮已在本目录重跑成功；当前68文件211测试汇总 validation/reproduction-results.json。新增脚本复制后单独重跑，不必每次重跑已验证全部脚本。
+- 便携脚本第一至七轮已在本目录重跑成功；当前72文件221测试汇总 validation/reproduction-results.json。新增脚本复制后单独重跑，不必每次重跑已验证全部脚本。
 - 报告数量和测试数量及时依据收束的脚本更新；条件性失败与实际可恢复方式必须说明。
 
 ## 后续
@@ -88,3 +88,13 @@
 04:21机械核验522顶层Markdown本地链接、335个有效源码行号，68编号连续唯一，两份68/211metadata与完成日志一致，新功能3文件8测试不变，两个产品tracked diff均空。04:21 get_goal仍返回blocked（本轮未请求、无实际阻塞）；继续用户heartbeat，截止11:00交付后才complete。automation工具view已调用，TOML只读检查仍ACTIVE/整点半点。最后独立语义整合正在收尾，产品不改，不build/clean。origin上次03:43 a66f，下一heartbeat04:30–04:40再fetch。
 
 04:23再次fetch origin/main仍为a66f4ef291f304ee4df9da8095a90671d9a8f140，两冻结快照维持不变；下一次宜05:10–05:20核对，不在04:30重复fetch。04:24最终只读语义核验通过，三项正式新增及68/211计数无实质冲突；无需新测试。保持heartbeat ACTIVE，11:00交付后才complete。下一轮可检查Desktop项目重命名/目录变化后的恢复、服务端错误协议和取消后的归属清理；优先反证已有项，不为增加数量重复立项。
+
+04:46第十六轮已完成实质审查与两项独立质量复核：R69/PR16-1/P2为已登记secondary实际ENOENT时，正式修复到健康primary在迁移前构造全roots context再次校验坏source而失败；实际Sidebar/authority/Main registration/store/Core磁盘证据，错误toast正确且state/index未变，无文件/历史删除。恢复原目录+同按钮成功；原目录仍缺失时Core归档→Main移除root→Core恢复→Main迁移成功仅服务级workaround，完整UI静态，cold/noWorker动态，不泛指resident。保留target身份/symlink/owner安全校验。R70/S16-1/P3为实际SettingsPage自定义指令保存真实EISDIR后hook先清pending且无catch/retry，存储在稿仍可见时恢复，blur/Back无新写入、重开旧值；重新输入保存成功。仅未保存新稿，不称所有设置/旧成功数据删除，与R43显式Save保稿独立。
+
+Link实际组件/controller/native manager/server service/store在取消startup迟到、begin失败显式重试、commit回包丢失authorizationGet状态查询、cwd key重挂取消validation、迟到内存OAuth句柄关闭5控制正常；没有实际OAuth/window/provider。Server MCP真实HubAuth、actualauth callbacks+owned HTTP协议控制注册前body abort、同/异owner取消、429、断线重试、logout撤权正常。人工ownerGate候选因为production auth为同步read/store只返回已完成Promise，注入长异步不能证明可达，明确剔除。正式新增2，当前70=1P1/47P2/22P3。
+
+新增4文件10测试104个Bun expect在84740/a66f分别guarded通过，累计72文件221测试0最终fail/skip；Settings owned Bun helper另27手工assert、MCP wrapped Node另22断言/基线，不增加Bun测试。原始诊断/harness失败单独归档、不进collector。报告与metadata已整合，等待最终机械和只读语义核验。04:23fetch仍a66f，下次05:10–05:20，不重复拉取；heartbeat保持ACTIVE至11:00，不提前complete。
+
+04:48机械核验70个编号连续唯一、1/47/22分级一致，594个顶层Markdown本地链接与381个源码行号有效；两份72/221metadata和所有guarded完成日志一致，4个新文件10测试104个Bun expect及helper27/Node22分别核对。两个产品tracked diff为空，staged diff --check通过。04:48 get_goal仍blocked（主审未请求且无实际阻塞），继续用户heartbeat；TOML只读仍ACTIVE/整点半点，11:00交付后才停用/complete。原始诊断完整归档，未清理或改动其它任务。
+
+04:49第十六轮最终只读语义核验通过，无实质冲突；Link恢复叙述进一步明确authorizationGet是本地桥状态查询，未做HTTP GET/原生IPC实验。新增执行0。报告只改本任务docs，准备保存阶段检查点。下一轮优先反证现有严重问题并检查尚未覆盖的会话重命名/移动/保存失败恢复和服务端任务路由，避免重复编号。05:10–05:20再fetch；11:00前继续，保持heartbeat ACTIVE。

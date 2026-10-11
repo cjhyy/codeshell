@@ -1,0 +1,136 @@
+import assert from "node:assert/strict";
+import { createServer, request } from "node:http";
+import { mkdtempSync, mkdirSync, writeFileSync, rmSync } from "node:fs";
+import { join, dirname } from "node:path";
+import { tmpdir } from "node:os";
+import { fileURLToPath } from "node:url";
+import { setTimeout as delay } from "node:timers/promises";
+if (!process.env.CODE_SHELL_TEST_HOME || !process.env.HOME?.includes("codeshell-native-smoke-"))
+  throw new Error("Use maintained native isolator");
+const repo = process.cwd(), evidence = dirname(fileURLToPath(import.meta.url));
+const reserve = createServer();
+await new Promise((resolve) => reserve.listen(0, "127.0.0.1", resolve));
+const port = reserve.address().port;
+await new Promise((resolve) => reserve.close(resolve));
+const origin = `http://127.0.0.1:${port}`;
+const { installLocalNetworkGuard } = await import(`${repo}/scripts/runtime-cost-smoke-isolation.mjs`);
+installLocalNetworkGuard(origin);
+const { createHubMcpConfiguration } = await import(`${repo}/packages/server/dist/hub/mcp-configuration.js`);
+const dir = mkdtempSync(join(tmpdir(), "owned-mcp-cancel-"));
+mkdirSync(join(dir, ".code-shell"));
+writeFileSync(join(dir, ".code-shell", "settings.json"), JSON.stringify({ mcpServers: {
+  owned: { transport: "streamable-http", url: `${origin}/owned-mcp`, enabled: false },
+} }));
+let assertions = 0, ownerWaiting = false, releaseOwner, holdRequest, holdResponse, heldHandlerDone = false;
+const ownerGate = new Promise((resolve) => { releaseOwner = resolve; });
+let mode = "hang", initializes = 0, upstreamClosed = 0;
+const upstream = new Set(), clients = new Set(), observations = [];
+const check = (value, label) => { assertions++; assert.ok(value, label); };
+const equal = (actual, expected, label) => { assertions++; assert.deepEqual(actual, expected, label); };
+async function until(test, label, timeout = 3000) {
+  const start = Date.now();
+  while (!test()) { if (Date.now() - start > timeout) throw new Error(`Timed out: ${label}`); await delay(5); }
+}
+const api = createHubMcpConfiguration({
+  cwd: dir,
+  // Real route/body/probe handling; authentication authority is a test fixture.
+  // This existing async production injection point models a delayed owner read.
+  isAuthorized: async (req) => ["owned-A", "owned-B"].includes(req.headers.cookie),
+  ownerId: async (req) => {
+    if (req.headers["x-owned-hold"] === "yes") { ownerWaiting = true; await ownerGate; }
+    return req.headers.cookie;
+  },
+  probeTimeoutMs: 1500,
+});
+const server = createServer(async (req, res) => {
+  try {
+    if (req.url === "/owned-mcp") {
+      const chunks = []; for await (const chunk of req) chunks.push(chunk);
+      const message = JSON.parse(Buffer.concat(chunks).toString());
+      if (message.id === undefined) { res.writeHead(202); res.end(); return; }
+      if (message.method === "initialize") {
+        initializes++;
+        if (mode === "hang") {
+          upstream.add(res); res.once("close", () => { upstream.delete(res); upstreamClosed++; });
+          return;
+        }
+      }
+      res.writeHead(200, { "content-type": "application/json" });
+      res.end(JSON.stringify({ jsonrpc: "2.0", id: message.id, result: message.method === "initialize"
+        ? { protocolVersion: "2024-11-05", capabilities: { tools: {} }, serverInfo: { name: "owned", version: "1" } }
+        : { tools: [{ name: "owned_echo", inputSchema: { type: "object", properties: {} } }] } }));
+      return;
+    }
+    if (req.headers["x-owned-hold"] === "yes") { holdRequest = req; holdResponse = res; }
+    const handled = await api.handle(req, res);
+    if (req.headers["x-owned-hold"] === "yes") heldHandlerDone = true;
+    if (!handled) { res.writeHead(404); res.end(); }
+  } catch (error) { console.error("owned fixture route error", error); res.destroy(error); }
+});
+server.on("connection", (socket) => { clients.add(socket); socket.once("close", () => clients.delete(socket)); });
+await new Promise((resolve) => server.listen(port, "127.0.0.1", resolve));
+const endpoint = "/api/v1/mcp/servers/owned/";
+const call = (action, owner = "owned-A") => fetch(`${origin}${endpoint}${action}`, { method: "POST", headers: { "content-type": "application/json", cookie: owner }, body: "{}" });
+function rawProbe(hold = false) {
+  const req = request(`${origin}${endpoint}probe`, { method: "POST", headers: { "content-type": "application/json", "content-length": "2", cookie: "owned-A", ...(hold ? { "x-owned-hold": "yes" } : {}) } });
+  req.on("error", () => {}); req.end("{}"); return req;
+}
+let initial;
+const deadline = setTimeout(() => { releaseOwner(); initial?.destroy(); for (const res of upstream) res.destroy(); for (const socket of clients) socket.destroy(); void api.close(); }, 10000);
+try {
+  initial = rawProbe(true);
+  await until(() => ownerWaiting, "probe paused at async owner lookup");
+  equal(initializes, 0);
+  const early = await call("cancel-probe");
+  equal(early.status, 200); equal(await early.json(), { cancelled: false });
+  initial.destroy();
+  await until(() => holdResponse.destroyed && holdRequest.socket.destroyed, "actual original HTTP response/socket closed");
+  check(holdResponse.destroyed); check(holdRequest.socket.destroyed);
+  releaseOwner();
+  await until(() => initializes === 1, "actual MCP initialize after original socket was closed");
+  check(!heldHandlerDone, "late probe still owns an active slot");
+  const retryWhileGhost = await call("probe");
+  equal(retryWhileGhost.status, 429);
+  check((await retryWhileGhost.json()).error.includes("连接测试正在运行"));
+  const wrongOwner = await call("cancel-probe", "owned-B");
+  equal(await wrongOwner.json(), { cancelled: false });
+  equal(initializes, 1);
+  const stopGhost = await call("cancel-probe");
+  equal(await stopGhost.json(), { cancelled: true });
+  await until(() => heldHandlerDone && upstreamClosed >= 1, "explicit second cancellation cleans ghost probe");
+  equal(initializes, 1);
+  observations.push({ phase: "early-cancel", actualOriginalHttpClosedBeforeOwnerResolved: true, cancelResult: false, initializesAfterOriginalClose: initializes,
+    nextProbeStatus: 429, otherOwnerCannotCancel: true, sameOwnerSecondCancel: true });
+
+  mode = "complete";
+  const restored = await call("probe"); const restoredBody = await restored.json();
+  equal(restored.status, 200); equal(restoredBody.status, "ok"); equal(restoredBody.toolCount, 1);
+  observations.push({ phase: "normal-retry", result: restoredBody.status, toolCount: restoredBody.toolCount });
+
+  mode = "hang";
+  const beforeNormal = initializes, beforeClosed = upstreamClosed;
+  const normal = call("probe");
+  await until(() => initializes === beforeNormal + 1, "registered probe started");
+  const stopNormal = await call("cancel-probe"); equal(await stopNormal.json(), { cancelled: true });
+  const normalResult = await normal; equal(normalResult.status, 200); equal((await normalResult.json()).status, "cancelled");
+  await until(() => upstreamClosed > beforeClosed, "normal explicit cancellation closes own upstream");
+  observations.push({ phase: "normal-cancel", cancelled: true, upstreamClosed: true });
+
+  const beforeDisconnect = initializes, beforeDisconnectClosed = upstreamClosed;
+  const disconnect = rawProbe();
+  await until(() => initializes === beforeDisconnect + 1, "registered disconnect control started");
+  disconnect.destroy();
+  await until(() => upstreamClosed > beforeDisconnectClosed, "normal disconnect closes probe after registration");
+  mode = "complete";
+  const afterDisconnect = await call("probe"); equal(afterDisconnect.status, 200); equal((await afterDisconnect.json()).status, "ok");
+  observations.push({ phase: "normal-disconnect", upstreamClosed: true, nextProbe: "ok" });
+  console.log(`PASS native MCP early cancel/closed-owner gap and normal controls; ${assertions} assertions`);
+} finally {
+  clearTimeout(deadline); releaseOwner(); initial?.destroy();
+  await api.close();
+  for (const res of upstream) res.destroy();
+  for (const socket of clients) socket.destroy();
+  server.closeAllConnections(); await new Promise((resolve) => server.close(resolve));
+  rmSync(dir, { recursive: true, force: true });
+  writeFileSync(join(evidence, "mcp-early-cancel-observed.json"), JSON.stringify({ origin, node: process.version, assertions, observations }, null, 2));
+}

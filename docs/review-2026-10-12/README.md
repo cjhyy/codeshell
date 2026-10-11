@@ -2,17 +2,17 @@
 
 本次审查覆盖服务端、Electron 桌面端、配对 Web 与移动端的日常流程，重点检查消息发送、审批、取消、切换会话、恢复和项目上下文。问题只在有代码证据或可复现结果后列入正式发现。
 
-审查进行中，截止时间为新加坡时间 2026 年 10 月 12 日 11:00。初始审查基线为 `84740d56e55517b004948a0a0e07649ad6fbf998`，对应启动审查时的 `origin/main`。01:30 拉取发现主分支已更新至 `a66f4ef291f304ee4df9da8095a90671d9a8f140`（0.9.33）；已另建隔离快照复查差异，原始复现和行号仍按初始基线保存。68 个便携 Bun 复现文件共 211 测试，以及实际 Electron 凭据 4 场景，已在新快照复查成立；详见[0.9.33 差异复查](latest-baseline.md)。产品代码保持原样，报告保存在独立分支 `codex/review/server-desktop-20261012`。
+审查进行中，截止时间为新加坡时间 2026 年 10 月 12 日 11:00。初始审查基线为 `84740d56e55517b004948a0a0e07649ad6fbf998`，对应启动审查时的 `origin/main`。01:30 拉取发现主分支已更新至 `a66f4ef291f304ee4df9da8095a90671d9a8f140`（0.9.33）；已另建隔离快照复查差异，原始复现和行号仍按初始基线保存。72 个便携 Bun 复现文件共 221 测试，以及实际 Electron 凭据 4 场景，已在新快照复查成立；详见[0.9.33 差异复查](latest-baseline.md)。产品代码保持原样，报告保存在独立分支 `codex/review/server-desktop-20261012`。
 
 用户流程、正常对照与修复顺序见[流程覆盖地图](flow-coverage.md)。
 
 ## 当前结论
 
-当前已收束 68 项问题：1 项 P1、46 项 P2、21 项 P3。优先处理审批状态、任务回执和会话身份；这些问题会让任务无法继续、重复执行，或把用户输入带到另一个会话。P1 表示有未提交文件丢失风险、应优先修复；P2 表示正常使用可触发、应安排修复；P3 表示影响较小或触发条件较窄、已有恢复入口的问题。尚未证实的候选不计入数量。
+当前已收束 70 项问题：1 项 P1、47 项 P2、22 项 P3。优先处理审批状态、任务回执和会话身份；这些问题会让任务无法继续、重复执行，或把用户输入带到另一个会话。P1 表示有未提交文件丢失风险、应优先修复；P2 表示正常使用可触发、应安排修复；P3 表示影响较小或触发条件较窄、已有恢复入口的问题。尚未证实的候选不计入数量。
 
 **最先修 R35：创建工作区时重复 Enter，失败请求的回滚可以删除另一个已成功请求的 worktree、分支和未提交文件。** 此项已由独立代理复查入口与真实 Git 时序，见 [独立质量复核](quality-audit.md)。第五轮九项也已[独立复核](quality-round5.md)，均保留，网关通知等条件已收窄。
 
-以下是持续审查的阶段记录，截止前还会补充。复现测试的“通过”表示已稳定观察到当前缺陷，并不表示缺陷已经修复。R01–R48 的原始分析针对初始基线，并已在 0.9.33 复查；R49 针对新快照；R50–R56 在两基线均存在并已分别复现；R57 关键源码两基线相同，原生实验仅在 0.9.33 执行。R58–R65 的便携证据在两基线分别复现并通过正常对照；R64 的真实 Electron reload 身份门禁仅在 a66f/macOS 补证，未运行真实 PTY。R66–R68 的便携证据也已在两基线分别通过；R68包含真实Node/ws慢读实验，每次最多24MiB输出，没有真实Main worker或OOM实验。行号按各专项附录的基线解释。
+以下是持续审查的阶段记录，截止前还会补充。复现测试的“通过”表示已稳定观察到当前缺陷，并不表示缺陷已经修复。R01–R48 的原始分析针对初始基线，并已在 0.9.33 复查；R49 针对新快照；R50–R56 在两基线均存在并已分别复现；R57 关键源码两基线相同，原生实验仅在 0.9.33 执行。R58–R65 的便携证据在两基线分别复现并通过正常对照；R64 的真实 Electron reload 身份门禁仅在 a66f/macOS 补证，未运行真实 PTY。R66–R68 的便携证据也已在两基线分别通过；R68包含真实Node/ws慢读实验，每次最多24MiB输出，没有真实Main worker或OOM实验。R69/P2与R70/P3及第十六轮正常控制也已在两基线分别通过。行号按各专项附录的基线解释。
 
 | 编号 | 级别 | 流程与实际影响                                                                        | 详细证据                                             |
 | ---- | ---- | ------------------------------------------------------------------------------------- | ---------------------------------------------------- |
@@ -84,6 +84,8 @@
 | R66 | P2 | 旧观察视图接管显示default，仍复用并发重开的bypass实例，同default重开不恢复 | [CLI接管 C15-1](cli-recovery-round15.md)，第十五轮 |
 | R67 | P3 | 另一窗口开启LAN后，已挂载远程设置仍显示关闭、禁用停止；重挂或再开启可恢复 | [远程设置 MR1](remote-settings-round15.md)，第十五轮 |
 | R68 | P2 | 配对端慢连接的直播/设备发送绕过已有backlog门禁，实际队列增长仍保持在线 | [连接 W26](connection-recovery-round15.md)，第十五轮 |
+| R69 | P2 | 原secondary目录缺失，正式修复到健康primary仍被旧source全roots校验阻断 | [项目目录 PR16-1](project-recovery-round16.md)，第十六轮 |
+| R70 | P3 | 自定义指令自动保存拒写后清掉pending，存储恢复也不重试，离开丢未保存稿 | [设置保存 S16-1](settings-recovery-round16.md)，第十六轮 |
 
 第一轮完整分析：[Desktop](desktop-round1.md)、[Server](server-round1.md)、[Web/配对端](web-round1.md)。后续专项分析会继续补充到本目录。已有结论还经[CLI 范围复核](cli-quality-round9.md)与[资源回收范围复核](resource-quality-round8.md)收窄恢复及平台条件。
 
@@ -194,6 +196,12 @@ R57 的原生本地慢下载在自身 worker 崩溃后恢复为 orphaned；真�
 
 第十五轮[最终只读语义核验](quality-round15.md)通过，三项新增发现、计数、去重、恢复与证据边界无实质冲突；未新增执行。
 
+第十六轮新增R69/P2、R70/P3，均独立复核。R69的合法target已通过验证，迁移前全roots构造却重新要求缺失source有效；应建立安全修复/脱离失效根的契约，保留Main身份、target挂载与owner fence，不可直接删除根安全校验。恢复原目录再点修复成功；不恢复原路径的归档→移除坏root→恢复→迁移仅服务级验证，完整UI接线静态，没有历史/文件删除。R70限定实际自定义指令拒写后失败pending丢失，页面仍可复制/重新输入；存储修复后仅blur/返回无重试，重开旧值。应保留原target/value和保存失败状态，提供同值重试。与R43 Token显式Save仍保稿的恢复契约独立，不称所有设置或已落盘旧数据丢失。见[项目质量复核](project-recovery-quality-round16.md)、[设置质量复核](settings-recovery-quality-round16.md)。
+
+[Link授权恢复](link-recovery-round16.md)和[Server MCP取消/归属恢复](command-recovery-round16.md)正式新增0；前者为实际组件/service配合可控validation/transport/内存OAuth句柄，后者为真实HubAuth与owned loopback HTTP MCP模块，没有真实提供方、完整HeadlessServer或原生Electron。人工延迟owner的取消候选因生产认证同步而剔除，不计问题或最终正常测试。
+
+第十六轮[最终只读语义核验](quality-round16.md)通过；编号、统计、恢复和替身边界一致，新增执行0。Link状态核对指authorizationGet本地桥查询，没有HTTP GET或原生IPC传输实验。
+
 ## 验证范围
 
 | 验证                            | 结果                                                                      | 证据                                                     |
@@ -238,6 +246,7 @@ R57 的原生本地慢下载在自身 worker 崩溃后恢复为 orphaned；真�
 | 第十四轮通知/终端/文件失败恢复 | 新通用4文件13测试130断言，两基线分别通过；3项新P3，R58图片扩展及正常控制 | [通知](notification-round14.md)、[终端](terminal-lifecycle-round14.md)、[文件](file-navigation-round14.md) |
 | 第十五轮CLI接管/远程设置/连接恢复 | 新通用6文件12测试142个Bun断言，两基线分别通过；wrapped native各另33断言，最多24MiB负载，不重复算Bun测试 | [CLI](cli-recovery-round15.md)、[设置](remote-settings-round15.md)、[连接](connection-recovery-round15.md) |
 | Electron reload 身份补证 | 仅a66f/macOS；初始+两次reload token、真实WebContents对象均保持，无worker/真实PTY | [脚本及日志](validation/terminal-lifecycle-round14/reload-identity.log) |
+| 第十六轮项目/设置/Link/MCP恢复 | 新通用4文件10测试104个Bun expect，两基线通过；Settings Bun helper另27手工断言、MCP Node另22断言，不额外算测试 | [项目](project-recovery-round16.md)、[设置](settings-recovery-round16.md)、[Link](link-recovery-round16.md)、[取消](command-recovery-round16.md) |
 | Desktop renderer 现有逐文件测试 | 282 文件、2397 测试、0 失败                                               | `validation/desktop-renderer-results.json`               |
 | Desktop main 现有逐文件测试     | 283 文件、2461 测试、0 失败                                               | `validation/desktop-main-results.json`                   |
 | native Hub smoke                | 未通过，不计成功；先遇到过期工具 fixture，再暴露 R21                      | `/tmp/codeshell-review-20261012/hub-smoke*.log`          |
@@ -251,6 +260,6 @@ R57 的原生本地慢下载在自身 worker 崩溃后恢复为 orphaned；真�
 
 ## 后续检查
 
-0.9.33 的 Panel 项目身份与跨文件 Collection 查询差异、已有便携复现适用范围已核对。认证连接与 Agent Plugins 安装恢复已收束；Quick Chat 生命周期已收束；第十轮独立反证已完成审批、Web意图/配置/草稿和Desktop异步状态，详见 [Web复核](web-quality-round10.md)、[审批复核](approval-quality-round10.md)。第十一轮工作区/Panel反证新增0，搜索与导航新增2P3，下载生命周期新增1P2；第十二轮独立质量复核保留三个新发现的限定分级，文件传输/导入导出正常控制新增0。第十三轮新增1P2+4P3并已独立核对，新增6份证据两基线通过；第十四轮再补3P3与R58图片扩展，新增4文件13测试两基线通过；第十五轮再补CLI接管/设置状态/慢连接3项，通用累计68文件211测试；继续检查新增主分支差异与尚未覆盖的失败恢复。已有 TODO 中明确后置的能力与尚未发行的修复单独核对，不将其重复列为新缺陷。
+0.9.33 的 Panel 项目身份与跨文件 Collection 查询差异、已有便携复现适用范围已核对。认证连接与 Agent Plugins 安装恢复已收束；Quick Chat 生命周期已收束；第十轮独立反证已完成审批、Web意图/配置/草稿和Desktop异步状态，详见 [Web复核](web-quality-round10.md)、[审批复核](approval-quality-round10.md)。第十一轮工作区/Panel反证新增0，搜索与导航新增2P3，下载生命周期新增1P2；第十二轮独立质量复核保留三个新发现的限定分级，文件传输/导入导出正常控制新增0。第十三轮新增1P2+4P3并已独立核对，新增6份证据两基线通过；第十四轮再补3P3与R58图片扩展，新增4文件13测试两基线通过；第十五轮再补CLI接管/设置状态/慢连接3项，第十六轮再补目录修复/自动保存2项并完成Link/MCP正常控制，通用累计72文件221测试；继续检查新增主分支差异与尚未覆盖的失败恢复。已有 TODO 中明确后置的能力与尚未发行的修复单独核对，不将其重复列为新缺陷。
 
 未进行真实付费模型、真实第三方账号、生产数据迁移或发行部署。CLI 模型行为通过可控 fixture 与实际 Host 路由验证，无法据此声称所有真实提供方端到端流程均已通过。静态候选及测试 harness 自身问题单独记录，不冒充产品发现。
