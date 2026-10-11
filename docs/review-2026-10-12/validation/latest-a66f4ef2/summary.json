@@ -37,5 +37,11 @@
   "round21BunFilesAdded": 1,
   "round21BunTestsAdded": 3,
   "round21BunExpects": 40,
-  "round21Note": "R80/P3 idle Chrome disconnect active UI; actual BrowserPanel/React/preload/Main source callbacks/ChromeBackend with memory Native transport and known-session/owner directory; no actual Chrome/Electron/native relay/worker/model/network/subprocess; actual 2s polls; explicit revoke/new hello/fresh pairing and action fail-closed normal controls."
+  "round21Note": "R80/P3 idle Chrome disconnect active UI; actual BrowserPanel/React/preload/Main source callbacks/ChromeBackend with memory Native transport and known-session/owner directory; no actual Chrome/Electron/native relay/worker/model/network/subprocess; actual 2s polls; explicit revoke/new hello/fresh pairing and action fail-closed normal controls.",
+  "round22BunFilesAdded": 0,
+  "round22BunTestsAdded": 0,
+  "round22NativeStandaloneAssertionsPerRun": 66,
+  "round22NativeRootRuns": 2,
+  "round22NativeAuthorRunsSeparate": 1,
+  "round22Note": "R81/P2 parent Browser ready wait continues to submit old Input after actual Core Stop settled; real owned Electron Chromium, actual Core/Engine with deterministic memory provider, actual preload/native IPC and extracted Main; legacy unbound Session, owned Host factory/in-process stdio; no full App/worker/Chrome/provider; six harness failures preserved, read-only info retries author0/rootinitial2/rootlatest1, no mutation retries."
 }

@@ -59,3 +59,5 @@
 第二十轮[Goal/Sleep](goal-sleep-round20.md)两根因R78/R79均P2，原关键实现两快照相同，root仍分别guarded复跑4tests72expect并保留两份日志；通用80文件240测试。无worker Main fallback与cold bound Core权威缺失分层，真实Engine只用内存provider，正常resident/legacy/普通authorized run恢复控制正常，无实际worker/Electron/提供方。
 
 第二十一轮[Browser闲置失联反馈](browser-lifecycle-round21.md)R80/P3关键源码两基线相同，root同源分别guarded复跑1文件3测试40expect/Completed，累计81文件243测试。实际2秒轮询/显式重新配对/动作门禁正常控制，无真实Chrome/Electron/native relay/网络；见[双基线收据](validation/round21-browser-results.json)。
+
+第二十二轮[Browser Stop](browser-stop-round22.md)新增R81/P2，十二个关键产品source两基线及作者manifest同SHA；root同源分别maintained native通过66 Node断言/Completed，作者latest另66独立账本，不合并198 suite。三次已知Main/renderer共9PID均已退出、privateHOME清理；只读info重试作者0/root旧2/root新1，mutation未重试。Bun仍81文件243测试，详见[分账收据](validation/round22-browser-stop-results.json)。

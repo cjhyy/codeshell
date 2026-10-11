@@ -1,0 +1,17 @@
+Electron fixture: Main network/home guard verified; no worker was created
+AssertionError [ERR_ASSERTION]: Expected values to be strictly deep-equal:
++ actual - expected
+
++ 'max_turns'
+- 'completed'
+
+    at equal (file:///private/tmp/codeshell-review-20261012-browser-stop-round22/browser-stop-native.mjs:69:69)
+    at file:///private/tmp/codeshell-review-20261012-browser-stop-round22/browser-stop-native.mjs:150:32 {
+  generatedMessage: true,
+  code: 'ERR_ASSERTION',
+  actual: 'max_turns',
+  expected: 'completed',
+  operator: 'deepStrictEqual',
+  diff: 'simple'
+}
+Native smoke failed (1)

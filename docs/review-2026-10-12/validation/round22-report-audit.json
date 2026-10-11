@@ -1,0 +1,275 @@
+{
+  "timestampSingapore": "2026-10-12 07:38",
+  "findings": 81,
+  "priorities": {
+    "P1": 1,
+    "P2": 52,
+    "P3": 28
+  },
+  "topMarkdownLocalLinks": 1211,
+  "sourceLineLinks": 776,
+  "completedCommonRuns": [
+    {
+      "tree": "/Users/admin/.codex/worktrees/server-desktop-review-20261012/codeshell",
+      "files": 81,
+      "tests": 243,
+      "round18BunExpects": 165,
+      "round17BunHelperManualAssertions": 91,
+      "productTrackedDiff": []
+    },
+    {
+      "tree": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell",
+      "files": 81,
+      "tests": 243,
+      "round18BunExpects": 165,
+      "round17BunHelperManualAssertions": 91,
+      "productTrackedDiff": []
+    }
+  ],
+  "latestOnlyFiles": 3,
+  "latestOnlyTests": 8,
+  "round18NewFiles": 3,
+  "round18NewTests": 8,
+  "round18BunExpects": 165,
+  "round18Scope": "No new native/helper assertions; context actual Engine/owned in-memory provider and mocked Electron IPC; model actual components/shared MemoryStorage with run params adapter only; Hub actual authenticated HTTP/WS+actual Core/ChatManager with fake Engine/memory worker; no actual worker/Electron/provider",
+  "latestFetchSingapore": "2026-10-12 07:07",
+  "originMain": "a66f4ef291f304ee4df9da8095a90671d9a8f140",
+  "errors": [],
+  "round19NewBunFiles": 0,
+  "round19NewBunTests": 0,
+  "round19NativeStandalone": [
+    {
+      "tree": "/Users/admin/.codex/worktrees/server-desktop-review-20261012/codeshell",
+      "assertions": 38,
+      "sourceSha256": "9e2c0f526ef405086269ef303a6af4ce16026042a8b4e1ab73d3d89ab2040583",
+      "closedNormally": true,
+      "actualFault": "HubAuthStore.authenticate -> data/hub.lock EACCES",
+      "healthMs": 30021.919334,
+      "hostTimerGapMs": 30034.154792
+    },
+    {
+      "tree": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell",
+      "assertions": 38,
+      "sourceSha256": "9e2c0f526ef405086269ef303a6af4ce16026042a8b4e1ab73d3d89ab2040583",
+      "closedNormally": true,
+      "actualFault": "HubAuthStore.authenticate -> data/hub.lock EACCES",
+      "healthMs": 30028.48975,
+      "hostTimerGapMs": 30044.583375
+    }
+  ],
+  "round19Scope": "Actual Node25.8.1/darwin arm64 Host, HubAuth setup/Cookie/HTTP + real EACCES before title handler; fresh Connection:close caller; actual 30 seconds; no worker/model/CLI; title editor UI static only; native assertions separate from Bun",
+  "round20GoalRuns": [
+    {
+      "tree": "/Users/admin/.codex/worktrees/server-desktop-review-20261012/codeshell",
+      "files": 1,
+      "tests": 4,
+      "bunExpects": 72,
+      "sourceSha256": "b9af1cb777b5fb030839600ced33d4ea369306ee7272127c9f57744d59f490b6",
+      "networkCalls": 0,
+      "subprocessCalls": 0
+    },
+    {
+      "tree": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell",
+      "files": 1,
+      "tests": 4,
+      "bunExpects": 72,
+      "sourceSha256": "b9af1cb777b5fb030839600ced33d4ea369306ee7272127c9f57744d59f490b6",
+      "networkCalls": 0,
+      "subprocessCalls": 0
+    }
+  ],
+  "round20BunFilesAdded": 1,
+  "round20BunTestsAdded": 4,
+  "round20BunExpects": 72,
+  "round20ModelStorageNative": {
+    "latestOnly": true,
+    "rootAssertions": 31,
+    "authorAssertionsSeparate": 31,
+    "scope": "owned Electron33 pure HTML/defaultSession/same exact file/reload; no product App/hook/worker/model",
+    "sourceSha256": "8cb93bb7c8f304501980dcf040036e3369a310888d1e82880d62144c10811f51",
+    "closedNormally": true
+  },
+  "round20ReclassifiedFindings": [
+    {
+      "id": "R29",
+      "from": "P2",
+      "to": "P3"
+    }
+  ],
+  "round20NewFindings": [
+    "R78/P2",
+    "R79/P2"
+  ],
+  "round21BrowserRuns": [
+    {
+      "tree": "/Users/admin/.codex/worktrees/server-desktop-review-20261012/codeshell",
+      "files": 1,
+      "tests": 3,
+      "bunExpects": 40,
+      "sourceSha256": "ef376b426f71dc862ec7ce2f6ac0861997fcd1f21a7883d49d7e015c6e20c8f0",
+      "networkCalls": 0,
+      "subprocessCalls": 0,
+      "actualStatusPollsAfterDisconnect": 2
+    },
+    {
+      "tree": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell",
+      "files": 1,
+      "tests": 3,
+      "bunExpects": 40,
+      "sourceSha256": "ef376b426f71dc862ec7ce2f6ac0861997fcd1f21a7883d49d7e015c6e20c8f0",
+      "networkCalls": 0,
+      "subprocessCalls": 0,
+      "actualStatusPollsAfterDisconnect": 2
+    }
+  ],
+  "round21BunFilesAdded": 1,
+  "round21BunTestsAdded": 3,
+  "round21BunExpects": 40,
+  "round21NewFindings": [
+    "R80/P3"
+  ],
+  "round21Scope": "Actual BrowserPanel/React/preload/Main source callbacks/ChromeBackend, memory Native transport and live Session/owner directory; actual 2s polls and new grant secureBridge.listTabs through owned tab.get; no actual Chrome/Electron/native relay/worker/model/network/subprocess; independent audits add no execution",
+  "round22NewFindings": [
+    "R81/P2"
+  ],
+  "round22BunFilesAdded": 0,
+  "round22BunTestsAdded": 0,
+  "round22StandaloneNativeExecutions": [
+    {
+      "execution": "author-latest",
+      "baseline": "a66f4ef291f304ee4df9da8095a90671d9a8f140",
+      "assertions": 66,
+      "completed": true,
+      "sourceSha256": {
+        "browser-stop-native.mjs": "11bc7a9cf31d53a69c55191b89fe08d621e4857621175841bb13a446d97c320d",
+        "owned-main-template.mjs": "1f9213c591383ae16b4ac41adaabcce8be298fcf143503909eb067cc7dbaf26b"
+      },
+      "coreSettledSequence": 2,
+      "enabledSequence": 3,
+      "inputSequences": [
+        5,
+        6,
+        7
+      ],
+      "hitsAfterEnable": 1,
+      "lateApproveError": {
+        "code": -32602,
+        "message": "No pending approval for session owned-browser-stop-round22-session: ddiLRUeLi37_"
+      },
+      "readOnlyInfoRetries": 0,
+      "mutationRetries": 0,
+      "ownedMainAndRendererPids": [
+        {
+          "pid": 17522,
+          "absent": true
+        },
+        {
+          "pid": 17587,
+          "absent": true
+        },
+        {
+          "pid": 17588,
+          "absent": true
+        }
+      ],
+      "isolatedHomeRemoved": true,
+      "closeReceipt": {
+        "code": 0,
+        "signal": null
+      },
+      "archive": "validation/original-browser-stop-round22/final-author"
+    },
+    {
+      "execution": "root-initial",
+      "baseline": "84740d56e55517b004948a0a0e07649ad6fbf998",
+      "assertions": 66,
+      "completed": true,
+      "sourceSha256": {
+        "browser-stop-native.mjs": "11bc7a9cf31d53a69c55191b89fe08d621e4857621175841bb13a446d97c320d",
+        "owned-main-template.mjs": "1f9213c591383ae16b4ac41adaabcce8be298fcf143503909eb067cc7dbaf26b"
+      },
+      "coreSettledSequence": 2,
+      "enabledSequence": 3,
+      "inputSequences": [
+        5,
+        6,
+        7
+      ],
+      "hitsAfterEnable": 1,
+      "lateApproveError": {
+        "code": -32602,
+        "message": "No pending approval for session owned-browser-stop-round22-session: NPhVx7rK_Ij3"
+      },
+      "readOnlyInfoRetries": 2,
+      "mutationRetries": 0,
+      "ownedMainAndRendererPids": [
+        {
+          "pid": 18509,
+          "absent": true
+        },
+        {
+          "pid": 18620,
+          "absent": true
+        },
+        {
+          "pid": 18622,
+          "absent": true
+        }
+      ],
+      "isolatedHomeRemoved": true,
+      "closeReceipt": {
+        "code": 0,
+        "signal": null
+      },
+      "archive": "validation/browser-stop-round22"
+    },
+    {
+      "execution": "root-latest",
+      "baseline": "a66f4ef291f304ee4df9da8095a90671d9a8f140",
+      "assertions": 66,
+      "completed": true,
+      "sourceSha256": {
+        "browser-stop-native.mjs": "11bc7a9cf31d53a69c55191b89fe08d621e4857621175841bb13a446d97c320d",
+        "owned-main-template.mjs": "1f9213c591383ae16b4ac41adaabcce8be298fcf143503909eb067cc7dbaf26b"
+      },
+      "coreSettledSequence": 2,
+      "enabledSequence": 3,
+      "inputSequences": [
+        5,
+        6,
+        7
+      ],
+      "hitsAfterEnable": 1,
+      "lateApproveError": {
+        "code": -32602,
+        "message": "No pending approval for session owned-browser-stop-round22-session: Q623tNDaYz_7"
+      },
+      "readOnlyInfoRetries": 1,
+      "mutationRetries": 0,
+      "ownedMainAndRendererPids": [
+        {
+          "pid": 18950,
+          "absent": true
+        },
+        {
+          "pid": 19106,
+          "absent": true
+        },
+        {
+          "pid": 19108,
+          "absent": true
+        }
+      ],
+      "isolatedHomeRemoved": true,
+      "closeReceipt": {
+        "code": 0,
+        "signal": null
+      },
+      "archive": "validation/latest-a66f4ef2/browser-stop-round22"
+    }
+  ],
+  "round22AuthorPriorHarnessFailures": 6,
+  "round22Scope": "Actual Core/Engine with deterministic memory provider, actual preload/native IPC and extracted unmodified Main callbacks, actual runtime/adapter/Puppeteer/owned Chromium DOM; legal legacy unbound Session; in-process stdio and owned BrowserHost factory; no full App, actual worker, real provider, Chrome extension, external account/site; guards are application-level, not OS-wide proof",
+  "round22Local6034ReadOnlyFindingsAdded": 0,
+  "round22Local6034Executions": 0
+}

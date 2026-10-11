@@ -1,6 +1,6 @@
 # 用户流程覆盖与修复顺序
 
-这是截至第二十一轮的流程地图；正式编号、级别和触发条件以 [主报告](README.md) 与各附录为准。正常路径通过不代表相邻失败路径已正确处理。缺陷表征测试通过表示复现成立，没有实施产品修复。
+这是截至第二十二轮的流程地图；正式编号、级别和触发条件以 [主报告](README.md) 与各附录为准。正常路径通过不代表相邻失败路径已正确处理。缺陷表征测试通过表示复现成立，没有实施产品修复。
 
 | 用户要完成的事 | 已检查的正常路径及证据层级 | 仍有的问题与可见影响 |
 | --- | --- | --- |
@@ -11,7 +11,7 @@
 | 在多个项目/会话之间切换 | 真实 Electron导航E2E；真实组件和Core完整磁盘session的[搜索导航复现](search-routing-round11.md) | R04 展开回写覆盖新会话草稿；R05 附件未按会话隔离；R16 配对页签广播和迟到打开；R55 当前renderer索引缺目标会话时，磁盘打开迟到抢回新选择；R61同项目双窗口共享选择，彼此抢当前会话 |
 | 搜索旧对话并打开结果 | 真实 Electron搜索：焦点、IME、滚动、选择、重试、快捷键、三种宽度；内容IPC为本地可控回复 | R56 实际内容搜索超过500候选未标覆盖不足，空结果可误导；有界扫描本身是既有设计 |
 | 拖入文件、上传并发送 | 真实组件输入引用、Core拒绝错误会话附件；[Quick Chat](quickchat-round8.md)、[上传审查](server-round1.md) | R17 删除chip不释放配额；R20 接收/发送图片大小限制不一致；R34 断线旧上传继续阻塞；R54 内部PNG payload已送达Quick Chat后静默丢弃，原生跨窗口拖动未实测 |
-| 停止任务或切到别处让其继续 | 原生Hub smoke剩余流程、Core关闭屏障正常控制；[运行时复核](resource-quality-round8.md) | R07 外部CLI仍忙却失去busy；R08 Web CLI停止协议错误；R15 外部队列依赖前台选择；R18 启动失败句柄阻止同模式重试；R36 Node Host EPIPE退出 |
+| 停止任务或切到别处让其继续 | 原生Hub smoke剩余流程、Core关闭屏障正常控制；[运行时复核](resource-quality-round8.md) | R07 外部CLI仍忙却失去busy；R08 Web CLI停止协议错误；R15 外部队列依赖前台选择；R18 启动失败句柄阻止同模式重试；R36 Node Host EPIPE退出；R81 Core Stop已完成但Main自然ready中的旧点击继续发出Input，真实owned Chromium复现 |
 | 关闭/删除会话，回收后台资源 | Core正常close barrier现有28测试；[下载原生实验](download-round11.md)包含普通任务与专用kill对照 | R30 终态拒写令任务持续running；R31 Node Hub未等Panel强制终止；R57新worker已恢复的orphaned下载被close/killAll跳过，完整Desktop删除仅静态接线；R60侧栏fs删除失败先tombstone，历史页可修复权限后重试 |
 | 创建worktree、移除项目、再恢复 | 真实Git并发与恢复；[工作区复核](workspace-quality-round11.md) | **R35/P1** 失败请求回滚能删除成功请求的worktree/branch，特定窗口可丢未提交文件；R24冷owner需重加项目、恢复原会话后再释放；R69旧secondary物理缺失时正式修复到健康primary仍被全roots校验阻断，恢复旧路径或多步服务级workaround可恢复 |
 | 打开和管理Panel | 真实Electron安装/恢复E2E；真实ProjectStore和权限边界控制 | R22合法secondary root被拒；R23单目录失败或65项目批次使当前renderer Panel App entries清空；包、绑定、内置面板仍在 |
@@ -47,3 +47,5 @@
 第二十轮[Goal冷恢复](goal-sleep-round20.md)经独立审计新增R78/R79各P2，两个不同Main/Core根因；两基线各新增1文件4测试72个Bun expect，通用80文件240测试。当前79=1P1/51P2/27P3。目标/历史保留，合法workspace安全拒绝正常，不声称真实worker、完整App/Electron、错项目执行或提供方错误。
 
 第二十一轮[Browser生命周期](browser-lifecycle-round21.md)新增R80/P3，主审双基线各1文件3测试40expect，累计81/243、正式80=1/51/28；[取消/owner关闭盘点](browser-cancel-gates-round21.md)新增执行0/正式0。只将idle连接反馈收录，不把parent Stop静态边界或已正确阻断动作当缺陷。
+
+第二十二轮[Browser Stop输入边界](browser-stop-round22.md)新增R81/P2，作者与主审两基线各standalone native66 Node断言分账，Bun增量0、通用仍81/243；formal81=1P1/52P2/28P3。Core正确终结任务及拒绝旧reply，问题限Main未传播请求取消、尚无输入的ready窗口；不是已提交动作回滚、完整App/worker/Chrome或危险操作实测。[本地6034侧栏账号差异预审](sidebar-account-local-round22.md)新增0/执行0、仅local commit。

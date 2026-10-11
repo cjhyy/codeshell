@@ -1,0 +1,20 @@
+{
+  "completed": false,
+  "prepareOnly": false,
+  "failure": {
+    "name": "Error",
+    "message": "actual driver readiness wait not reached",
+    "stack": "Error: actual driver readiness wait not reached\n    at until (file:///private/tmp/codeshell-review-20261012-browser-stop-round22/browser-stop-native.mjs:73:241)\n    at async file:///private/tmp/codeshell-review-20261012-browser-stop-round22/browser-stop-native.mjs:99:5"
+  },
+  "assertions": 15,
+  "appPid": 12690,
+  "closeReceipt": {
+    "code": 0,
+    "signal": null
+  },
+  "cleanupErrors": [],
+  "isolatedHome": "/private/var/folders/1d/6__4f4y51g90nblfptt8s9v80000gn/T/codeshell-browser-stop-round22-QA2i31",
+  "isolatedHomeRemoved": true,
+  "productMainLoaded": false,
+  "actualWorkerModelCliStarted": false
+}

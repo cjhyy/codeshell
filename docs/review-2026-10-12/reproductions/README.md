@@ -43,3 +43,5 @@ node scripts/run-isolated-node-smoke.mjs docs/review-2026-10-12/reproductions/cr
 第二十轮Goal/Sleep新增1个通用便携文件4测试72个Bun expect，两基线各guarded通过，当前80文件240测试。actual Main callback/App closures/preload/StatusPopover与actual Core/Engine/磁盘分层，无完整Electron/worker；provider全内存。三份harness失败与4/68早一版成功单列原始归档，最终为4/72、不重复累计。
 
 第二十一轮BrowserPanel idle失联反馈及恢复新增1通用文件3测试40个Bun expect，两基线各guarded通过，当前81文件243测试。实际React/Panel/preload/Main callbacks/Backend，Native与Session/owner目录为owned内存适配器；没有实际Chrome/Electron/网络，实际等待两次2秒轮询，显式重配与动作fail-closed对照正常。首次文字期望支架失败单独归档，作者重复运行不累计。
+
+第二十二轮Browser Stop没有新增Bun文件或测试，通用仍81文件243测试。standalone native入口在`../validation/browser-stop-round22/`，用maintained run-isolated-node-smoke运行；作者latest与主审两基线各66 Node断言独立记账、三个场景，不混入Bun collector。前六次支架失败保留于original归档，不计成功；实际Core内存provider/nativeIPC/runtime/Puppeteer/ownedChromium，非完整App/真实worker/Chrome。
