@@ -1,6 +1,6 @@
 # Profile 外部工具依赖诊断
 
-2026-10-10，源码修复，尚未发行。
+2026-10-10，源码修复，已包含于 [v0.9.32](https://github.com/cjhyy/codeshell/releases/tag/v0.9.32)。
 
 `planProfileRequirements` 在调用任何工具探测前，使用现有 requirements schema
 校验完整声明。旧的 `string | null` 探测回调保持兼容；Host 可返回结构化结果，区分

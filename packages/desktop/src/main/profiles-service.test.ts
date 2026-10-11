@@ -1,4 +1,4 @@
-import { afterEach, beforeEach, describe, expect, test } from "bun:test";
+import { afterEach, beforeEach, describe, expect, spyOn, test } from "bun:test";
 import {
   mkdirSync,
   mkdtempSync,
@@ -10,6 +10,7 @@ import {
 } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import * as fsPromises from "node:fs/promises";
 import { saveWorkspaceProfile } from "@cjhyy/code-shell-core/internal";
 import {
   activateProfile,
@@ -32,6 +33,7 @@ import {
   setSessionWorkspaceProfile,
 } from "./profiles-service.js";
 import { SessionManager, SettingsManager } from "@cjhyy/code-shell-core";
+import { lockSync } from "../../../core/src/utils/lockfile.js";
 
 let home: string;
 let cwd: string;
@@ -828,7 +830,7 @@ describe("desktop profiles service", () => {
       lead: "seedance",
     });
 
-    const result = forceDeleteProfile("seedance", { cwd });
+    const result = await forceDeleteProfile("seedance", { cwd });
     expect(result.unboundSessions).toEqual(["session-a"]);
     expect(result.updatedTeams).toEqual(["Trio"]);
     expect(listProfiles().some((p) => p.name === "seedance")).toBe(false);
@@ -846,6 +848,171 @@ describe("desktop profiles service", () => {
     const team = teamService.readDigitalHumanTeam("trio");
     expect(team?.members).toEqual(["developer", "reviewer"]);
     expect(team?.lead).toBeUndefined();
+  });
+
+  test("force delete unbinds over 100 Sessions including archived history", async () => {
+    const ids = Array.from({ length: 205 }, (_, i) => `bound-${String(i).padStart(3, "0")}`);
+    for (const [index, id] of ids.entries()) {
+      const dir = join(home, "sessions", id);
+      mkdirSync(dir, { recursive: true });
+      writeFileSync(
+        join(dir, "state.json"),
+        JSON.stringify({
+          sessionId: id,
+          workspaceProfile: "seedance",
+          title: id,
+          ...(index % 2 === 0 ? { archivedAt: 1785137194100 } : {}),
+        }),
+      );
+      writeFileSync(join(dir, "transcript.jsonl"), `original transcript ${id}\n`);
+    }
+    const unrelated = join(home, "sessions", "unrelated");
+    mkdirSync(unrelated, { recursive: true });
+    const unrelatedState = JSON.stringify({
+      sessionId: "unrelated",
+      workspaceProfile: "developer",
+    });
+    writeFileSync(join(unrelated, "state.json"), unrelatedState);
+
+    const deleting = forceDeleteProfile("seedance");
+    const first = await Promise.race([
+      deleting.then(() => "deleted"),
+      new Promise<string>((resolve) => setTimeout(() => resolve("heartbeat"), 0)),
+    ]);
+    expect(first).toBe("heartbeat");
+    const result = await deleting;
+    expect(result.unboundSessions.sort()).toEqual(ids);
+    expect(listProfiles().some((p) => p.name === "seedance")).toBe(false);
+    expect(new SessionManager().findSessionIdsByWorkspaceProfile("seedance", 100)).toEqual([]);
+    for (const [index, id] of ids.entries()) {
+      const dir = join(home, "sessions", id);
+      const state = JSON.parse(readFileSync(join(dir, "state.json"), "utf8"));
+      expect(state.workspaceProfile).toBeUndefined();
+      expect(state.title).toBe(id);
+      expect(state.archivedAt).toBe(index % 2 === 0 ? 1785137194100 : undefined);
+      expect(readFileSync(join(dir, "transcript.jsonl"), "utf8")).toBe(
+        `original transcript ${id}\n`,
+      );
+    }
+    expect(readFileSync(join(unrelated, "state.json"), "utf8")).toBe(unrelatedState);
+  });
+
+  test("force delete preserves the definition, team and default when a binding write fails", async () => {
+    const manager = new SessionManager();
+    manager.create(cwd, "model", "provider", "locked");
+    manager.updateSessionState("locked", { workspaceProfile: "seedance", title: "kept" });
+    saveWorkspaceProfile({
+      name: "developer",
+      label: "Developer",
+      basePreset: "general",
+      plugins: [],
+      skills: [],
+      mcp: [],
+      agents: [],
+      portableMemory: false,
+    });
+    const teamService = await import("./digital-human-team-service.js");
+    teamService.saveDigitalHumanTeam({
+      id: "locked-pair",
+      name: "Locked Pair",
+      members: ["seedance", "developer"],
+      mode: "divide",
+    });
+    activateProfile(cwd, "seedance");
+    const file = join(home, "sessions", "locked", "state.json");
+    const before = readFileSync(file, "utf8");
+    const release = lockSync(file, { stale: 10_000, retries: 0, realpath: false });
+    try {
+      await expect(forceDeleteProfile("seedance", { cwd })).rejects.toThrow(/lock contention/);
+      expect(readFileSync(file, "utf8")).toBe(before);
+      expect(listProfiles(cwd).find((p) => p.name === "seedance")?.active).toBe(true);
+      expect(teamService.readDigitalHumanTeam("locked-pair")?.members).toEqual([
+        "seedance",
+        "developer",
+      ]);
+    } finally {
+      release();
+    }
+    expect((await forceDeleteProfile("seedance", { cwd })).unboundSessions).toEqual(["locked"]);
+    expect(manager.readSessionWorkspaceProfile("locked")).toBeUndefined();
+    expect(manager.readSessionState("locked")?.title).toBe("kept");
+  });
+
+  for (const change of ["rebound", "new"] as const) {
+    test(`force delete preserves the definition after a ${change} binding appears`, async () => {
+      const manager = new SessionManager();
+      manager.create(cwd, "model", "provider", "existing");
+      manager.updateSessionState("existing", { workspaceProfile: "seedance", title: "kept" });
+      const iterate = SessionManager.prototype.iterateSessionIdsByWorkspaceProfile;
+      let scans = 0;
+      const probe = spyOn(
+        SessionManager.prototype,
+        "iterateSessionIdsByWorkspaceProfile",
+      ).mockImplementation(async function* (name, options) {
+        const first = ++scans === 1;
+        yield* iterate.call(this, name, options);
+        // Actual state writes at a deterministic interleaving after the first scan.
+        if (first) {
+          const id = change === "new" ? "new-session" : "existing";
+          if (change === "new") manager.create(cwd, "model", "provider", id);
+          manager.updateSessionState(id, { workspaceProfile: "seedance" });
+        }
+      });
+      try {
+        await expect(forceDeleteProfile("seedance", { cwd })).rejects.toThrow(/bindings changed/);
+        expect(scans).toBe(2);
+        expect(listProfiles().some((p) => p.name === "seedance")).toBe(true);
+        expect(
+          manager.readSessionWorkspaceProfile(change === "new" ? "new-session" : "existing"),
+        ).toBe("seedance");
+        expect(manager.readSessionState("existing")?.title).toBe("kept");
+      } finally {
+        probe.mockRestore();
+      }
+      await forceDeleteProfile("seedance", { cwd });
+      expect(listProfiles().some((p) => p.name === "seedance")).toBe(false);
+    });
+  }
+
+  test("force delete fails closed when a metadata writer replaces state during final scan", async () => {
+    const manager = new SessionManager();
+    manager.create(cwd, "model", "provider", "replaced");
+    manager.updateSessionState("replaced", { workspaceProfile: "seedance" });
+    const file = join(home, "sessions", "replaced", "state.json");
+    const iterate = SessionManager.prototype.iterateSessionIdsByWorkspaceProfile;
+    const open = fsPromises.open;
+    let scans = 0;
+    let replaced = false;
+    const scanProbe = spyOn(
+      SessionManager.prototype,
+      "iterateSessionIdsByWorkspaceProfile",
+    ).mockImplementation(async function* (name, options) {
+      const first = ++scans === 1;
+      yield* iterate.call(this, name, options);
+      if (first) manager.updateSessionState("replaced", { workspaceProfile: "seedance" });
+    });
+    const openProbe = spyOn(fsPromises, "open").mockImplementation(async (...args) => {
+      if (scans === 2 && args[0] === file && !replaced) {
+        replaced = true;
+        // The normal writer atomically renames state.json after the scanner's lstat.
+        manager.updateSessionState("replaced", { title: "concurrent metadata" });
+      }
+      return open(...args);
+    });
+    try {
+      await expect(forceDeleteProfile("seedance")).rejects.toThrow(/state changed/);
+      expect(replaced).toBe(true);
+      expect(listProfiles().some((p) => p.name === "seedance")).toBe(true);
+      expect(manager.readSessionState("replaced")).toMatchObject({
+        workspaceProfile: "seedance",
+        title: "concurrent metadata",
+      });
+    } finally {
+      openProbe.mockRestore();
+      scanProbe.mockRestore();
+    }
+    await forceDeleteProfile("seedance");
+    expect(listProfiles().some((p) => p.name === "seedance")).toBe(false);
   });
 
   test("force delete removes a team that would drop below two members", async () => {
@@ -867,16 +1034,16 @@ describe("desktop profiles service", () => {
       mode: "divide",
     });
 
-    const result = forceDeleteProfile("seedance", { cwd });
+    const result = await forceDeleteProfile("seedance", { cwd });
     // A one-member team cannot be saved (schema requires 2..8), so it is removed
     // rather than left in an unparseable state.
     expect(result.removedTeams).toEqual(["Pair"]);
     expect(teamService.readDigitalHumanTeam("pair")).toBeUndefined();
   });
 
-  test("force delete clears the active project default", () => {
+  test("force delete clears the active project default", async () => {
     activateProfile(cwd, "seedance");
-    const result = forceDeleteProfile("seedance", { cwd });
+    const result = await forceDeleteProfile("seedance", { cwd });
     expect(result.clearedProjectDefault).toBe(true);
     expect(listProfiles(cwd).some((p) => p.name === "seedance")).toBe(false);
   });

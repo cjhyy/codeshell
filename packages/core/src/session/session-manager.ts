@@ -54,6 +54,7 @@ import {
   type PersistedGoalTerminationReason,
 } from "../goal/lifecycle.js";
 import { lockSync } from "../utils/lockfile.js";
+import { iterateProfileReferences } from "./profile-references.js";
 import type { SessionWorkspaceCapability } from "../capabilities/index.js";
 
 // Shared close epochs for SessionManager instances in this process. Concurrent
@@ -904,6 +905,24 @@ export class SessionManager {
     }
   }
 
+  /** Clear this binding only while its latest durable value still matches. */
+  clearSessionWorkspaceProfile(sessionId: string, expectedProfile: string): boolean {
+    let cleared = false;
+    this.mergeSessionState(sessionId, (current) => {
+      cleared = current.workspaceProfile === expectedProfile;
+      return cleared ? { workspaceProfile: undefined } : undefined;
+    });
+    return cleared;
+  }
+
+  /** Visit all durable profile references without blocking on a synchronous full scan. */
+  iterateSessionIdsByWorkspaceProfile(
+    profileName: string,
+    options: { includeArchived?: boolean } = {},
+  ): AsyncGenerator<string> {
+    return iterateProfileReferences(this.sessionsDir, profileName, options, assertSafeSessionId);
+  }
+
   /**
    * Find durable Sessions currently bound to one digital-human profile without loading
    * transcripts. Used by profile deletion guards so a reusable/historical
@@ -1557,7 +1576,7 @@ export class SessionManager {
 
   private mergeSessionState(
     sessionId: string,
-    update: (current: Readonly<SessionState>) => SessionStateFieldPatch,
+    update: (current: Readonly<SessionState>) => SessionStateFieldPatch | undefined,
     expectedRunId?: string,
   ): number {
     assertSafeSessionId(sessionId);
@@ -1569,6 +1588,9 @@ export class SessionManager {
         throw new SessionError(`Session run identity conflict for ${sessionId}`);
       }
       const partial = update(structuredClone(state));
+      // A conditional metadata update may stop after a CAS retry observes a
+      // different owner. Do not write or advance that owner's revision.
+      if (partial === undefined) return state.stateRevision ?? 0;
       if (
         partial.kind !== undefined &&
         normalizedSessionKind(partial.kind) !== normalizedSessionKind(state.kind)

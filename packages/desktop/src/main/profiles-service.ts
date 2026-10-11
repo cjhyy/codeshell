@@ -689,10 +689,10 @@ export interface ForceDeleteProfileResult {
  * 绝不删除会话本身。团队若因移除成员跌破 schema 的 2 人下限则整体删除（一人团队
  * 无法保存，留着会变成读不出来的坏文件）；lead 被删则一并清空。
  */
-export function forceDeleteProfile(
+export async function forceDeleteProfile(
   name: string,
   options: DeleteProfileOptions = {},
-): ForceDeleteProfileResult {
+): Promise<ForceDeleteProfileResult> {
   if (!WORKSPACE_PROFILE_NAME_RE.test(name)) throw new Error("invalid digital-human profile id");
   if (!readWorkspaceProfile(name)) {
     return {
@@ -707,10 +707,10 @@ export function forceDeleteProfile(
   // still be a dangling reference after the definition is gone.
   const sessions = new SessionManager();
   const unboundSessions: string[] = [];
-  for (const sessionId of sessions.findSessionIdsByWorkspaceProfile(name, 100)) {
-    const state = sessions.readSessionState(sessionId);
-    if (!state) continue;
-    if (sessions.saveStateOrUpdateFields(state, { workspaceProfile: undefined })) {
+  for await (const sessionId of sessions.iterateSessionIdsByWorkspaceProfile(name)) {
+    // Persistence errors propagate before teams/settings/the definition are
+    // changed. A concurrently selected different profile is left untouched.
+    if (sessions.clearSessionWorkspaceProfile(sessionId, name)) {
       unboundSessions.push(sessionId);
     }
   }
@@ -760,6 +760,9 @@ export function forceDeleteProfile(
     }
   }
 
+  for await (const _sessionId of sessions.iterateSessionIdsByWorkspaceProfile(name)) {
+    throw new Error(`Session bindings changed; profile ${name} was preserved`);
+  }
   deleteWorkspaceProfile(name);
   return { unboundSessions, updatedTeams, removedTeams, clearedProjectDefault };
 }

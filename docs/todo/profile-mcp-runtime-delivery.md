@@ -1,6 +1,6 @@
 # Profile MCP 运行时开关
 
-本增量只把已有 MCP 能力开关接入 Core 执行路径，不新增服务器、账号、授权、导航入口或 Desktop 独占能力语义。当前为源码与本地受控验收，尚未发行，也不代替真实 MCP 服务验收。
+本增量只把已有 MCP 能力开关接入 Core 执行路径，不新增服务器、账号、授权、导航入口或 Desktop 独占能力语义。现有开关能力已包含于 [v0.9.32](https://github.com/cjhyy/codeshell/releases/tag/v0.9.32)；本地受控验收不代替真实 MCP 服务验收。
 
 每次 Run 开始，Engine 从未覆盖的 `config.mcpServers` 基线复制一份配置，并通过既有 `effectiveProjectOverrides` 读取 MCP 桶：显式 Session Profile 替代项目默认 Profile 快照，直接项目覆盖优先、本机覆盖最后。只改变已配置服务器的 `enabled`，未知名称不能创建服务器；`inherit` 恢复原始基线，不把上次 Run 的覆盖结果当成基线。Profile 声明仍只能打开已存在服务器，不增加资源或凭据权限。
 
