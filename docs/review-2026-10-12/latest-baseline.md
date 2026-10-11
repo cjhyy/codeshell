@@ -10,10 +10,10 @@
 | --- | --- | --- |
 | frozen install、workspaces build、Desktop build、typecheck:workspaces | 全部通过 | `validation/latest-a66f4ef2/{install,build,desktop-build,typecheck}.log` |
 | 8 个新增或修改测试文件 | 156 项实际执行、0 失败、0 跳过 | `validation/latest-a66f4ef2/changed-test-results.json` |
-| 既有便携缺陷表征和正常契约 | 62 文件、199 测试、0 失败、0 跳过 | `validation/latest-a66f4ef2/reproduction-results.json` |
+| 既有便携缺陷表征和正常契约 | 68 文件、211 测试、0 失败、0 跳过 | `validation/latest-a66f4ef2/reproduction-results.json` |
 | 凭据实际 Electron/IPC/store | 4 场景通过 | `validation/latest-a66f4ef2/credentials__credentials-e2e.mjs.log` |
 
-复现“通过”表示当前仍观察到被测缺陷。62 个文件并非 62 项问题，一份文件可能覆盖多项发现，也包含正常对照。新快照结果没有加到原基线 6286 个现有测试的总数中，以免重复计数。
+复现“通过”表示当前仍观察到被测缺陷。68 个文件并非 68 项问题，一份文件可能覆盖多项发现，也包含正常对照。新快照结果没有加到原基线 6286 个现有测试的总数中，以免重复计数。
 
 ## 两处测试入口适配
 
@@ -39,3 +39,7 @@
 第十三轮终端、首次提交Review、侧栏删除、多窗口目录与配对Web离开审批：新增6个通用文件48测试304断言，两基线分别guarded通过；当前通用58文件186测试0fail/skip。新正式R58/P2、R59–R62/P3，均旧实现本轮新发现，未归因于0.9.33变更。多窗口33个既有保护测试通过wrapper计在6文件中，不额外再加一次。
 
 第十四轮新增4个通用文件13测试130断言，两快照分别guarded通过；通用累计62文件199测试0fail/skip。新增R63–R65/P3，R58补同根因图片操作，不另加编号。真实Electron reload身份另仅在a66f/macOS验证1场景、两次reload，无worker或真实PTY；native实验不并入Bun总数。03:43再次fetch，origin/main仍为a66f4ef2。
+
+第十五轮新6文件12测试142个Bun断言在两快照分别guarded通过，通用累计68文件211测试0fail/skip。R66/P2接管实例mode、R67/P3远程设置LAN状态、R68/P2直播outbound backlog均旧实现新发现。R68每快照wrapped native另33断言，不另加Bun测试；84740与a66f各在24MiB负载上限停止，精确backlog数值和恢复记录见连接附录/归档json，不把TCP缓冲差异当产品行为差异。无真实CLI/Main worker/付费模型或OOM实验。
+
+04:23再次fetch，origin/main仍a66f4ef2；两冻结产品快照没有更新或混写产品代码。

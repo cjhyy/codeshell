@@ -1,0 +1,24 @@
+bun test v1.3.11 (af24e281)
+
+../../../../../../private/tmp/codeshell-review-20261012-cli-recovery-round15/room-recovery-controls.test.ts:
+{"control":"room-close-mode-restore","oldAgentEventsIgnored":true,"pendingApprovalCancelledBeforeNewAgent":true,"sameRoomRestoredFromDisk":true,"actualCliSpawned":false}
+12 | net.connect = net.createConnection = deny as any; tls.connect = deny as any;
+13 | const { RoomManager } = await import(`${repo}/packages/server/src/mobile-remote/room-manager.ts`);
+14 | const { TranscriptSubscriptionManager } = await import(`${repo}/packages/desktop/src/main/cc-room/transcript-subscriptions.ts`);
+15 | const { ApprovalBridge } = await import(`${repo}/packages/desktop/src/main/cc-room/approval-bridge.ts`);
+16 | let temporary = ""; const cleanup: Array<() => void> = [];
+17 | afterEach(() => { for (const f of cleanup.splice(0)) f(); if (temporary) rmSync(temporary, { recursive: true, force: true }); temporary = ""; });
+                                                          ^
+TypeError: bridge.cancelAll is not a function. (In 'bridge.cancelAll()', 'bridge.cancelAll' is undefined)
+      at <anonymous> (/private/tmp/codeshell-review-20261012-cli-recovery-round15/room-recovery-controls.test.ts:17:54)
+(fail) CONTROL close/reopen and changed-mode restart reject old-agent output and approvals; persisted room identity resumes after manager recreation [30.08ms]
+{"control":"viewer-disconnect-and-room-reopen","perViewerRelease":true,"finalBytesDrained":true,"stableSnapshotWithoutLiveDuplicate":true,"actualWatcherOnOwnedFile":true}
+(pass) CONTROL viewer disconnect releases only its subscription, final room close drains output, and resubscribe obtains stable history without duplicate pushes [5.35ms]
+{"control":"synchronous-start-retry","retrySameModeWorks":true,"kindIdentitySeparated":true,"distinctFromR18AsyncError":true}
+(pass) CONTROL synchronous failed start is retired and same-mode retry works; room kinds do not share an external identity [18.97ms]
+
+ 2 pass
+ 1 fail
+ 40 expect() calls
+Ran 3 tests across 1 file. [449.00ms]
+Bun test process failed (1)

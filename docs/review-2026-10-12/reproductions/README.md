@@ -20,10 +20,12 @@ node docs/review-2026-10-12/run-reproductions.mjs
 node scripts/run-isolated-node-smoke.mjs docs/review-2026-10-12/reproductions/credentials-round5/credentials-e2e.mjs
 ```
 
-截至第十四轮，初始基线 Bun 便携证据共 62 个文件、199 个测试；同样在 0.9.33 分别复核。凭据脚本另含 4 个实际 UI 场景。新功能专项另见 `latest-reproductions/` 与 `run-latest-reproductions.mjs`。
+截至第十五轮，初始基线 Bun 便携证据共 68 个文件、211 个测试；同样在 0.9.33 分别复核。凭据脚本另含 4 个实际 UI 场景。新功能专项另见 `latest-reproductions/` 与 `run-latest-reproductions.mjs`。
 
 第十一轮的工作区恢复与搜索脚本共新增4文件8测试；stable project scope恢复对照仅在0.9.33新功能目录。原生下载脚本及单次运行证据在 `../validation/download-round11/`，不计入Bun总数。
 
 第十三轮新增6文件48测试304断言，两基线分别通过；包含终端/Review 2测试、会话操作4测试、多窗口36测试（其中33为既有保护wrapper）、配对Web生命周期6测试。缺陷与正常控制、完整Electron/native与组件替身范围见各专项附录。
 
 第十四轮通知1文件3测试19断言、终端1文件6测试41断言、Desktop/Web文件2文件4测试70断言；合计新增4文件13测试130断言，两基线分别通过。真实Electron reload身份单列 `../validation/terminal-lifecycle-round14/`，仅a66f/macOS，不计为Bun或真实PTY实验。
+
+第十五轮新增6文件12测试142个Bun断言，两基线分别guarded通过：CLI3文件7测试108断言，远程设置1文件3测试23断言，连接2文件2测试11断言。连接的native-outbound.test.ts通过run-isolated-node-smoke调用同目录outbound-native.mjs，另有33个native断言/基线，已包在一个Bun测试内，不另算新Bun文件或测试。原始诊断位于validation/original-connection-recovery-round15/diagnostics，文件后缀不是活动test，不收集/累计。

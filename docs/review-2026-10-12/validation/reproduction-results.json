@@ -40,6 +40,46 @@
     "skipped": 0
   },
   {
+    "file": "docs/review-2026-10-12/reproductions/cli-recovery-round15/room-recovery-controls.test.ts",
+    "log": "docs/review-2026-10-12/reproductions/cli-recovery-round15/room-recovery-controls.test.ts.log",
+    "code": 0,
+    "signal": null,
+    "tests": 3,
+    "skipped": 0
+  },
+  {
+    "file": "docs/review-2026-10-12/reproductions/cli-recovery-round15/takeover-mode.test.tsx",
+    "log": "docs/review-2026-10-12/reproductions/cli-recovery-round15/takeover-mode.test.tsx.log",
+    "code": 0,
+    "signal": null,
+    "tests": 2,
+    "skipped": 0
+  },
+  {
+    "file": "docs/review-2026-10-12/reproductions/cli-recovery-round15/web-room-recovery.test.tsx",
+    "log": "docs/review-2026-10-12/reproductions/cli-recovery-round15/web-room-recovery.test.tsx.log",
+    "code": 0,
+    "signal": null,
+    "tests": 2,
+    "skipped": 0
+  },
+  {
+    "file": "docs/review-2026-10-12/reproductions/connection-recovery-round15/hub-outbound-control.test.ts",
+    "log": "docs/review-2026-10-12/reproductions/connection-recovery-round15/hub-outbound-control.test.ts.log",
+    "code": 0,
+    "signal": null,
+    "tests": 1,
+    "skipped": 0
+  },
+  {
+    "file": "docs/review-2026-10-12/reproductions/connection-recovery-round15/native-outbound.test.ts",
+    "log": "docs/review-2026-10-12/reproductions/connection-recovery-round15/native-outbound.test.ts.log",
+    "code": 0,
+    "signal": null,
+    "tests": 1,
+    "skipped": 0
+  },
+  {
     "file": "docs/review-2026-10-12/reproductions/desktop-round2/panel-multiroot.test.tsx",
     "log": "docs/review-2026-10-12/reproductions/desktop-round2/panel-multiroot.test.tsx.log",
     "code": 0,
@@ -269,6 +309,14 @@
     "code": 0,
     "signal": null,
     "tests": 7,
+    "skipped": 0
+  },
+  {
+    "file": "docs/review-2026-10-12/reproductions/remote-settings-round15/remote-settings.test.tsx",
+    "log": "docs/review-2026-10-12/reproductions/remote-settings-round15/remote-settings.test.tsx.log",
+    "code": 0,
+    "signal": null,
+    "tests": 3,
     "skipped": 0
   },
   {

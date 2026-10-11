@@ -1,0 +1,15 @@
+bun test v1.3.11 (af24e281)
+
+docs/review-2026-10-12/reproductions/cli-recovery-round15/room-recovery-controls.test.ts:
+{"control":"room-close-mode-restore","oldAgentEventsIgnored":true,"pendingApprovalCancelledBeforeNewAgent":true,"sameRoomRestoredFromDisk":true,"actualCliSpawned":false}
+(pass) CONTROL close/reopen and changed-mode restart reject old-agent output and approvals; persisted room identity resumes after manager recreation [31.85ms]
+{"control":"viewer-disconnect-and-room-reopen","perViewerRelease":true,"finalBytesDrained":true,"stableSnapshotWithoutLiveDuplicate":true,"actualWatcherOnOwnedFile":true}
+(pass) CONTROL viewer disconnect releases only its subscription, final room close drains output, and resubscribe obtains stable history without duplicate pushes [4.35ms]
+{"control":"synchronous-start-retry","retrySameModeWorks":true,"kindIdentitySeparated":true,"distinctFromR18AsyncError":true}
+(pass) CONTROL synchronous failed start is retired and same-mode retry works; room kinds do not share an external identity [19.68ms]
+
+ 3 pass
+ 0 fail
+ 40 expect() calls
+Ran 3 tests across 1 file. [542.00ms]
+Completed Bun shard: 3 tests, 0 skipped; 0 failures.
