@@ -63,6 +63,7 @@ export type ChatItem =
       agentId?: string;
     }
   | { kind: "subagent"; id: string; agentId: string; label: string; status: string }
+  | { kind: "system"; id: string; text: string }
   | { kind: "system_error"; id: string; text: string };
 
 export interface ChatState {
@@ -601,6 +602,28 @@ export function reduceStream(state: ChatState, raw: unknown): ChatState {
             ? { ...i, status: event.error ? "error" : "completed" }
             : i,
         ),
+      };
+    }
+
+    case "background_agent_completed": {
+      const agentId = typeof event.agentId === "string" ? event.agentId : "";
+      const failed = event.status === "failed";
+      const status = failed ? "error" : event.status === "cancelled" ? "cancelled" : "completed";
+      const name = typeof event.name === "string" ? event.name : "后台任务";
+      const preview = failed
+        ? (event.error ?? event.description)
+        : (event.finalText ?? event.description);
+      const text = `${name} · ${status}${typeof preview === "string" && preview.trim() ? `: ${preview.trim().slice(0, 240)}` : ""}`;
+      const [id, next] = freshId("bg-done");
+      return {
+        ...next,
+        // A late background result cannot finish the concurrently active turn.
+        items: [
+          ...s.items.map((item) =>
+            item.kind === "subagent" && item.agentId === agentId ? { ...item, status } : item,
+          ),
+          { kind: "system", id, text },
+        ],
       };
     }
 

@@ -410,6 +410,7 @@ export function transcriptMarkdown(title: string, transcript: readonly unknown[]
       );
       if (item.result) sections.push(fenced(item.result));
     } else if (item.kind === "system_error") sections.push(`### 错误\n\n${item.text}`);
+    else if (item.kind === "system") sections.push(`### 通知\n\n${item.text}`);
     else sections.push(`### 子代理：${item.label}\n\n${item.status}`);
   }
   return sections.join("\n\n") + "\n";

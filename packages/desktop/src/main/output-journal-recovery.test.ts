@@ -2,7 +2,7 @@ import { expect, test } from "bun:test";
 import { rmSync } from "node:fs";
 import { join } from "node:path";
 import { SessionManager, sessionsRoot } from "@cjhyy/code-shell-core";
-import { SessionOutputJournal } from "@cjhyy/code-shell-core/internal";
+import { SessionOutputJournal, SessionOutputCoverageStore } from "@cjhyy/code-shell-core/internal";
 import { registerSessionTranscriptIpc } from "./session-transcript-ipc.js";
 import { SessionSnapshotStore } from "./SessionSnapshotStore.js";
 import { recoverDesktopOutputJournal } from "../renderer/app/outputJournalRecovery.js";
@@ -14,7 +14,10 @@ test("actual Main IPC recovers output evicted from the snapshot and survives Mai
   const session = manager.create(root, "fixture", "fixture", id);
   manager.startSessionRun(session.state, "run");
   const writer = new SessionOutputJournal(root, id, "run", session.transcript.getEvents()[0].id);
-  const snapshots = new SessionSnapshotStore({ maxPerSession: 2 });
+  const snapshots = new SessionSnapshotStore({
+    maxPerSession: 2,
+    coverage: new SessionOutputCoverageStore(() => root),
+  });
   const handlers = new Map<string, (...args: any[]) => any>();
   registerSessionTranscriptIpc({
     handle: (channel, listener) => {
@@ -44,7 +47,9 @@ test("actual Main IPC recovers output evicted from the snapshot and survives Mai
         done: false,
       }),
     );
-    const restarted = new SessionSnapshotStore();
+    const restarted = new SessionSnapshotStore({
+      coverage: new SessionOutputCoverageStore(() => root),
+    });
     const after = await recover(restarted);
     expect(after?.outputCursor).toBe(before?.outputCursor);
     expect(after?.snapshot.epoch).not.toBe(before?.snapshot.epoch);

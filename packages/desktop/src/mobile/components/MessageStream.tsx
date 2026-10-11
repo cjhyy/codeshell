@@ -145,6 +145,12 @@ function Row({ item }: { item: ChatItem }) {
           <span className="min-w-0 flex-1 truncate">{item.label}</span>
         </div>
       );
+    case "system":
+      return (
+        <div className="ml-9 rounded-lg border border-border/65 px-3 py-2 text-xs text-muted-foreground">
+          {item.text}
+        </div>
+      );
     case "system_error":
       return (
         <div className="ml-9 rounded-lg border border-status-err/40 bg-status-err/10 px-3 py-2 text-xs text-status-err">

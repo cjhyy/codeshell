@@ -25,7 +25,11 @@ import type { Duplex } from "node:stream";
 import { randomBytes, randomUUID } from "node:crypto";
 import { WebSocketServer, type WebSocket } from "ws";
 import { SessionManager, SettingsManager } from "@cjhyy/code-shell-core";
-import { readOutputJournal, readOutputJournalLegacyBase } from "@cjhyy/code-shell-core/internal";
+import {
+  SessionOutputCoverageStore,
+  readOutputJournal,
+  readOutputJournalLegacyBase,
+} from "@cjhyy/code-shell-core/internal";
 import { AccessPasscode } from "../mobile-remote/access-passcode.js";
 import { resolveSafe } from "../mobile-remote/mobile-static.js";
 import { contentTypeFor } from "../static-files.js";
@@ -214,7 +218,10 @@ export async function startHeadlessServer(opts: HeadlessServeOptions): Promise<H
   // Independent of response routing: leaving a tab does not stop its worker run.
   const runningSessions = new Map<string, string>();
   const runOwners = new Map<string, string>();
-  const runReplay = new HubRunReplay();
+  const runReplay = new HubRunReplay(
+    undefined,
+    new SessionOutputCoverageStore(() => sessionRootDir),
+  );
   const runInputs = new Map<
     string,
     {
@@ -246,14 +253,21 @@ export async function startHeadlessServer(opts: HeadlessServeOptions): Promise<H
   const notify = (method: string, params: unknown): void => {
     broadcast(JSON.stringify({ jsonrpc: "2.0", method, params }));
   };
-  const publishStream = (sessionId: string, event: unknown): void => {
-    const cursor = runReplay.append(sessionId, event);
+  const publishStream = (sessionId: string, event: unknown): boolean => {
+    let cursor;
+    try {
+      cursor = runReplay.append(sessionId, event);
+    } catch {
+      log("stream.coverage_unavailable", { sessionId });
+      return false;
+    }
     notify("agent/streamEvent", {
       sessionId,
       event,
       hubSequence: cursor.sequence,
       hubEpoch: cursor.epoch,
     });
+    return true;
   };
   const leases = new ApprovalLeases((lease) => notify("serve/approvalLease", lease));
   const authReaper = hubAuth
@@ -342,6 +356,7 @@ export async function startHeadlessServer(opts: HeadlessServeOptions): Promise<H
         const params = message.params as { sessionId?: unknown; event?: unknown } | undefined;
         if (typeof params?.sessionId === "string" && params.event !== undefined) {
           let event = params.event;
+          let deliveredInput: { echoed: boolean } | undefined;
           const value = event as Record<string, unknown> | null;
           if (value?.type === "session_user_message" && typeof value.clientMessageId === "string") {
             const input = [...runInputs.values()].find(
@@ -351,11 +366,17 @@ export async function startHeadlessServer(opts: HeadlessServeOptions): Promise<H
             );
             if (input) {
               if (input.echoed) return;
-              input.echoed = true;
-              event = input.event;
+              deliveredInput = input;
+              event = {
+                ...input.event,
+                ...(typeof value.outputCursor === "string"
+                  ? { outputCursor: value.outputCursor }
+                  : {}),
+              };
             }
           }
-          publishStream(params.sessionId, event);
+          if (publishStream(params.sessionId, event) && deliveredInput)
+            deliveredInput.echoed = true;
           return;
         }
       }
@@ -364,8 +385,7 @@ export async function startHeadlessServer(opts: HeadlessServeOptions): Promise<H
         const requestId = String(params?.requestId);
         const input = runInputs.get(requestId);
         if (input && !input.echoed) {
-          input.echoed = true;
-          publishStream(input.sessionId, input.event);
+          input.echoed = publishStream(input.sessionId, input.event);
         }
         const route = pendingWorkerResponses.get(requestId);
         if (route)
@@ -626,7 +646,11 @@ export async function startHeadlessServer(opts: HeadlessServeOptions): Promise<H
         dataDir: opts.dataDir,
         isAuthorized: configurationOptions.isAuthorized,
         isRunning,
-        onChanged: (sessionId) => notify("serve/sessionsChanged", { sessionId }),
+        onChanged: (sessionId) => {
+          if (!existsSync(join(sessionRootDir, sessionId, "state.json")))
+            runReplay.forget(sessionId);
+          notify("serve/sessionsChanged", { sessionId });
+        },
       })
     : undefined;
   const files = hubAuth
@@ -1374,7 +1398,12 @@ function replyToHostSessionQuery(
       result: { type: "sessions", data: sessions },
     });
   }
-  if (queryType !== "session_detail" && queryType !== "output_journal") return undefined;
+  if (
+    queryType !== "session_detail" &&
+    queryType !== "output_journal" &&
+    queryType !== "output_coverage"
+  )
+    return undefined;
 
   const sessionId = message.params?.sessionId;
   if (typeof sessionId !== "string" || sessionId.length === 0) {
@@ -1387,6 +1416,28 @@ function replyToHostSessionQuery(
     if (!state) throw new Error("Session not found in this workspace");
     if (resolve(state.cwd) !== workspaceCwd) {
       return hostQueryError(message.id, -32001, "Session not found in this workspace");
+    }
+    if (queryType === "output_coverage") {
+      // Completed RAM entries can be retired once their proof belongs to disk.
+      // Freeze the real current journal head, so a lost live notification or
+      // run finish during pagination cannot hide a later durable prefix.
+      const head = readOutputJournal(sessionManager.getStorageDir(), sessionId, { maxFrames: 1 });
+      const coverage = runReplay?.outputCoverage(sessionId);
+      return JSON.stringify({
+        jsonrpc: "2.0",
+        id: message.id,
+        result: {
+          type: "output_coverage",
+          data: {
+            ...coverage,
+            unpaired:
+              !!coverage?.unpaired ||
+              (head.status !== "ok" &&
+                (head.status !== "unavailable" || !!coverage?.journalIdentity)),
+            ...(head.through ? { outputCursor: head.through } : {}),
+          },
+        },
+      });
     }
     if (queryType === "output_journal") {
       const data = readOutputJournal(sessionManager.getStorageDir(), sessionId, {

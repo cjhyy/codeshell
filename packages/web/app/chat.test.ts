@@ -11,6 +11,7 @@ import {
   readOutputJournal,
   readOutputJournalLegacyBase,
 } from "../../core/src/session/output-journal.js";
+import { SessionOutputCoverageStore } from "../../core/src/session/output-coverage-state.js";
 import {
   outputUserInputFixture,
   outputForwardedInputFixture,
@@ -38,7 +39,12 @@ for (const mode of [
       );
       expect(base.complete).toBe(true);
       const result = await chatFromOutputJournal(
-        { state: {}, transcript: base.events, outputJournal: page },
+        {
+          state: {},
+          transcript: base.events,
+          outputJournal: page,
+          outputCoverage: new SessionOutputCoverageStore(() => fixture.sessionRoot).read("saved"),
+        },
         async (options) => read(options),
         [],
       );

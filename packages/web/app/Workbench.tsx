@@ -662,6 +662,12 @@ export function Workbench({
                         ↳ {item.label} · {subagentStatusLabel(item.status)}
                       </div>
                     );
+                  case "system":
+                    return (
+                      <div key={item.id} className="msg info">
+                        {item.text}
+                      </div>
+                    );
                   case "system_error":
                     return (
                       <div key={item.id} className="msg error">

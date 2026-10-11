@@ -18,6 +18,10 @@ import {
 import { join } from "node:path";
 import type { StreamEvent, TranscriptEvent } from "../types.js";
 import { lockSync } from "../utils/lockfile.js";
+import {
+  acknowledgeOutputCoverageAnchor,
+  outputCoverageIncarnation,
+} from "./output-coverage-state.js";
 
 const MAX_JOURNAL_BYTES = 128 * 1024 * 1024;
 const MAX_RECORD_BYTES = 256 * 1024;
@@ -89,6 +93,8 @@ export interface OutputJournalOptions {
 }
 export interface OutputJournalPage {
   version: 1;
+  /** Host coverage binds this prefix to the current Session directory incarnation. */
+  coverageIdentity?: string;
   status: "ok" | "unavailable" | "cursor_invalid" | "incomplete";
   /** All pages in a recovery use the same frozen through cursor. */
   from?: string;
@@ -536,6 +542,11 @@ export function readOutputJournal(
     return {
       version: 1,
       status: "ok",
+      coverageIdentity: outputCoverageIncarnation(
+        location.root,
+        sessionId,
+        location.state.startedAt!,
+      ),
       from: token(identity, after),
       through: token(identity, through),
       next: token(identity, next),
@@ -779,6 +790,23 @@ export class SessionOutputJournal {
       // receive the same guarantee, rather than relying on eventual close.
       fsyncSync(fd);
       this.assertOwner();
+      if (
+        event.type === "session_user_message" &&
+        !event.injected &&
+        !(event as { agentId?: unknown }).agentId &&
+        !["agent", "system", "policy"].includes(String(event.authority))
+      )
+        try {
+          acknowledgeOutputCoverageAnchor(
+            this.location.root,
+            this.location.state.sessionId!,
+            this.identityPin,
+            event.clientMessageId,
+          );
+        } catch {
+          // A failed acknowledgement retains pending/invalid coverage. This
+          // observational proof must never revoke the next model run.
+        }
       this.position = next;
       this.verifiedStamp = fileStamp(fd);
       return token(this.identity, next);

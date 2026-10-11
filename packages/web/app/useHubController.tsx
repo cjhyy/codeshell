@@ -263,6 +263,13 @@ export function useHubController({
             async (options) => (await client.outputJournal(sessionId, options)).data,
             load.events,
             () => load.latestOutputCursor,
+            detail.data.outputCoverage
+              ? async () => (await client.outputCoverage(sessionId)).data
+              : undefined,
+            () =>
+              mounted.current &&
+              loadingTranscript.current === load &&
+              activeIdRef.current === sessionId,
           );
           if (durable) {
             restored = durable.chat;

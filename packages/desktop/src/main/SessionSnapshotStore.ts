@@ -19,6 +19,7 @@
  */
 
 import { randomUUID } from "node:crypto";
+import type { SessionOutputCoverageStore } from "@cjhyy/code-shell-core/internal";
 import { OutputCoverage } from "./output-coverage.js";
 
 /** One snapshot entry: the forwarded event plus its assigned sequence. */
@@ -39,6 +40,8 @@ export interface Snapshot {
   outputCursor?: string;
   outputUnpaired?: boolean;
   outputInputIds?: string[];
+  outputCoverageIdentity?: string;
+  outputJournalIdentity?: string;
 }
 
 interface SessionLog {
@@ -50,6 +53,8 @@ interface SessionLog {
   bytes: number;
   outputCursor?: string;
   coverage: OutputCoverage;
+  persistedBlocked?: boolean;
+  publicationFailed?: boolean;
 }
 
 const DEFAULT_MAX_PER_SESSION = 2000;
@@ -64,11 +69,15 @@ export class SessionSnapshotStore {
   private coverageBytes = 0;
   private readonly sizes = new WeakMap<SnapshotEntry, number>();
 
+  private readonly persistence?: SessionOutputCoverageStore;
+
   constructor(opts?: {
+    coverage?: SessionOutputCoverageStore;
     maxPerSession?: number;
     maxBytesPerSession?: number;
     maxTotalBytes?: number;
   }) {
+    this.persistence = opts?.coverage;
     this.maxPerSession = opts?.maxPerSession ?? DEFAULT_MAX_PER_SESSION;
     this.maxBytesPerSession = opts?.maxBytesPerSession ?? 8 * 1024 * 1024;
     this.maxTotalBytes = opts?.maxTotalBytes ?? 64 * 1024 * 1024;
@@ -88,9 +97,35 @@ export class SessionSnapshotStore {
       this.logs.set(sessionId, log);
     }
     this.coverageBytes -= log.coverage.memoryBytes;
+    const previousCoverage = log.coverage;
+    log.coverage = previousCoverage.copy();
     log.coverage.observe(event);
     if (this.coverageBytes + log.coverage.memoryBytes > 4 * 1024 * 1024)
       log.coverage.discardProof();
+    if (
+      this.persistence &&
+      ((log.coverage.incomplete && !log.persistedBlocked) || log.coverage.inputIds.length)
+    ) {
+      try {
+        const proof = this.persistence.record(sessionId, {
+          unpaired: log.coverage.incomplete,
+          inputIds: log.coverage.inputIds,
+        });
+        if (!proof.incarnation)
+          throw new Error("Session output coverage is unavailable before publication");
+        if (proof.incarnation) {
+          log.coverage.acknowledgeInputs(log.coverage.inputIds);
+          log.persistedBlocked = proof.unpaired;
+        }
+      } catch (cause) {
+        // No event was published. Keep a per-Host uncertainty barrier without
+        // persisting this dropped event as a permanent visible gap next time.
+        log.coverage = previousCoverage;
+        log.publicationFailed = true;
+        this.coverageBytes += log.coverage.memoryBytes;
+        throw cause;
+      }
+    }
     this.coverageBytes += log.coverage.memoryBytes;
     const lifecycle = event as { type?: unknown; agentId?: unknown; outputCursor?: unknown } | null;
     if (typeof lifecycle?.outputCursor === "string" && lifecycle.outputCursor.length <= 2048)
@@ -132,8 +167,16 @@ export class SessionSnapshotStore {
    * strictly-greater seq (the increment the client is missing).
    */
   get(sessionId: string, sinceSeq = 0): Snapshot {
+    const proof = this.persistence?.read(sessionId);
+    const coverage = {
+      ...(proof?.unpaired ? { outputUnpaired: true } : {}),
+      ...(proof?.inputIds.length ? { outputInputIds: proof.inputIds } : {}),
+      ...(proof?.incarnation ? { outputCoverageIdentity: proof.incarnation } : {}),
+      ...(proof?.journalIdentity ? { outputJournalIdentity: proof.journalIdentity } : {}),
+    };
     const log = this.logs.get(sessionId);
-    if (!log) return { epoch: this.epoch, events: [], nextSeq: 1, topLevelRunning: false };
+    if (!log)
+      return { epoch: this.epoch, events: [], nextSeq: 1, topLevelRunning: false, ...coverage };
     const events = sinceSeq > 0 ? log.events.filter((e) => e.seq > sinceSeq) : log.events.slice();
     return {
       epoch: this.epoch,
@@ -141,8 +184,13 @@ export class SessionSnapshotStore {
       nextSeq: log.nextSeq,
       topLevelRunning: log.topLevelRunning,
       ...(log.outputCursor ? { outputCursor: log.outputCursor } : {}),
-      ...(log.coverage.incomplete ? { outputUnpaired: true } : {}),
-      ...(log.coverage.inputIds.length ? { outputInputIds: log.coverage.inputIds } : {}),
+      ...coverage,
+      ...(log.coverage.incomplete || log.publicationFailed || proof?.unpaired
+        ? { outputUnpaired: true }
+        : {}),
+      ...([...(proof?.inputIds ?? []), ...log.coverage.inputIds].length
+        ? { outputInputIds: [...new Set([...(proof?.inputIds ?? []), ...log.coverage.inputIds])] }
+        : {}),
     };
   }
 
@@ -160,6 +208,7 @@ export class SessionSnapshotStore {
 
   /** Drop a single session's snapshot (e.g. when the session is deleted). */
   forget(sessionId: string): void {
+    this.persistence?.forget(sessionId);
     this.totalBytes -= this.logs.get(sessionId)?.bytes ?? 0;
     this.coverageBytes -= this.logs.get(sessionId)?.coverage.memoryBytes ?? 0;
     this.logs.delete(sessionId);

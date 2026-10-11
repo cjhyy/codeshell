@@ -1,3 +1,5 @@
+import { OutputCoverage } from "@cjhyy/code-shell-web";
+import type { SessionOutputCoverageStore } from "@cjhyy/code-shell-core/internal";
 import { randomUUID } from "node:crypto";
 
 export interface HubStreamCursor {
@@ -24,6 +26,16 @@ export class HubRunReplay {
   private sequence = 0;
   private totalBytes = 0;
   private readonly sessions = new Map<string, RunLog>();
+  private readonly coverage = new Map<
+    string,
+    {
+      proof: OutputCoverage;
+      outputCursor?: string;
+      persistedBlocked?: boolean;
+      publicationFailed?: boolean;
+    }
+  >();
+  private coverageBytes = 0;
 
   constructor(
     private readonly limits: { maxBytes: number; maxEvents: number; maxTotalBytes?: number } = {
@@ -31,6 +43,7 @@ export class HubRunReplay {
       maxEvents: 16_000,
       maxTotalBytes: 64 * 1024 * 1024,
     },
+    private readonly persistence?: SessionOutputCoverageStore,
   ) {}
 
   begin(sessionId: string, requestId: string, baselineEvents: number): void {
@@ -54,6 +67,43 @@ export class HubRunReplay {
   }
 
   append(sessionId: string, event: unknown): HubStreamCursor {
+    let coverage = this.coverage.get(sessionId);
+    if (!coverage) {
+      coverage = { proof: new OutputCoverage() };
+      this.coverage.set(sessionId, coverage);
+    }
+    this.coverageBytes -= coverage.proof.memoryBytes;
+    const previousProof = coverage.proof;
+    coverage.proof = previousProof.copy();
+    coverage.proof.observe(event);
+    if (this.coverageBytes + coverage.proof.memoryBytes > 4 * 1024 * 1024)
+      coverage.proof.discardProof();
+    try {
+      if (
+        this.persistence &&
+        ((coverage.proof.incomplete && !coverage.persistedBlocked) ||
+          coverage.proof.inputIds.length)
+      ) {
+        const saved = this.persistence.record(sessionId, {
+          unpaired: coverage.proof.incomplete,
+          inputIds: coverage.proof.inputIds,
+        });
+        if (!saved.incarnation)
+          throw new Error("Session output coverage is unavailable before publication");
+        if (saved.incarnation) {
+          coverage.proof.acknowledgeInputs(coverage.proof.inputIds);
+          coverage.persistedBlocked = saved.unpaired;
+        }
+      }
+    } catch (cause) {
+      coverage.proof = previousProof;
+      coverage.publicationFailed = true;
+      throw cause;
+    } finally {
+      this.coverageBytes += coverage.proof.memoryBytes;
+    }
+    const outputCursor = (event as { outputCursor?: unknown } | null)?.outputCursor;
+    if (typeof outputCursor === "string") coverage.outputCursor = outputCursor;
     const sequence = ++this.sequence;
     const log = this.sessions.get(sessionId);
     if (log && !log.truncated) {
@@ -88,7 +138,48 @@ export class HubRunReplay {
     if (!log.requests.size) {
       this.totalBytes -= log.bytes;
       this.sessions.delete(sessionId);
+      this.retireCoverage(sessionId);
     }
+  }
+
+  private retireCoverage(sessionId: string): void {
+    const live = this.coverage.get(sessionId);
+    if (!live || !this.persistence || live.publicationFailed) return;
+    const saved = this.persistence.read(sessionId);
+    // Only disk-owned proof can outlive RAM. In-memory-only embedders retain
+    // their existing gap barrier, and an unknown publication failure stays live.
+    if (
+      saved.status === "incomplete" ||
+      !saved.incarnation ||
+      live.proof.inputIds.length ||
+      (live.proof.incomplete && !saved.unpaired)
+    )
+      return;
+    this.coverageBytes -= live.proof.memoryBytes;
+    this.coverage.delete(sessionId);
+  }
+
+  outputCoverage(sessionId: string) {
+    const saved = this.persistence?.read(sessionId);
+    const live = this.coverage.get(sessionId);
+    return {
+      unpaired: !!saved?.unpaired || !!live?.proof.incomplete || !!live?.publicationFailed,
+      inputIds: [...new Set([...(saved?.inputIds ?? []), ...(live?.proof.inputIds ?? [])])],
+      ...(saved?.incarnation ? { incarnation: saved.incarnation } : {}),
+      ...(saved?.journalIdentity ? { journalIdentity: saved.journalIdentity } : {}),
+      ...(live?.outputCursor ? { outputCursor: live.outputCursor } : {}),
+      streamCursor: { epoch: this.epoch, sequence: this.sequence },
+    };
+  }
+
+  forget(sessionId: string): void {
+    const log = this.sessions.get(sessionId);
+    if (log) this.totalBytes -= log.bytes;
+    this.sessions.delete(sessionId);
+    const coverage = this.coverage.get(sessionId);
+    if (coverage) this.coverageBytes -= coverage.proof.memoryBytes;
+    this.coverage.delete(sessionId);
+    this.persistence?.forget(sessionId);
   }
 
   snapshot<T>(sessionId: string, durableEvents: readonly T[]) {
@@ -97,6 +188,7 @@ export class HubRunReplay {
       transcript:
         log && !log.truncated ? durableEvents.slice(0, log.baselineEvents) : durableEvents.slice(),
       streamCursor: { epoch: this.epoch, sequence: this.sequence },
+      outputCoverage: this.outputCoverage(sessionId),
       ...(log
         ? { liveStream: { events: structuredClone(log.events), truncated: log.truncated } }
         : {}),
@@ -106,5 +198,6 @@ export class HubRunReplay {
   clear(): void {
     this.sessions.clear();
     this.totalBytes = 0;
+    for (const sessionId of this.coverage.keys()) this.retireCoverage(sessionId);
   }
 }

@@ -6,6 +6,11 @@
  * consumers should import from `@cjhyy/code-shell-core` instead.
  */
 
+export {
+  SessionOutputCoverageStore,
+  type SessionOutputCoverageProof,
+} from "./session/output-coverage-state.js";
+
 export { outputUserMessage } from "./engine/run-output-user-message.js";
 
 // ─── Utils (shared primitives used by TUI) ───────────────────────
