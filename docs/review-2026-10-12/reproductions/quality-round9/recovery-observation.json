@@ -1,0 +1,13 @@
+{
+  "fixtureSourceBaseline": "a66f4ef291f304ee4df9da8095a90671d9a8f140",
+  "oldVersion": "1.0.0",
+  "overwriteVersion": "2.0.0",
+  "sameInstallPath": true,
+  "registryEntries": 1,
+  "originalDirectoryPresent": true,
+  "storedUpdateSourcePresent": false,
+  "explicitOverwriteRestoresContent": true,
+  "subsequentMoreUpdateStillFails": true,
+  "negativeProbes": 2,
+  "unexpectedTransports": 0
+}

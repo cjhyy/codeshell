@@ -2,15 +2,15 @@
 
 本次审查覆盖服务端、Electron 桌面端、配对 Web 与移动端的日常流程，重点检查消息发送、审批、取消、切换会话、恢复和项目上下文。问题只在有代码证据或可复现结果后列入正式发现。
 
-审查进行中，截止时间为新加坡时间 2026 年 10 月 12 日 11:00。初始审查基线为 `84740d56e55517b004948a0a0e07649ad6fbf998`，对应启动审查时的 `origin/main`。01:30 拉取发现主分支已更新至 `a66f4ef291f304ee4df9da8095a90671d9a8f140`（0.9.33）；已另建隔离快照复查差异，原始复现和行号仍按初始基线保存。33 个便携 Bun 复现文件共 80 测试，以及实际 Electron 凭据 4 场景，已在新快照复查成立；详见[0.9.33 差异复查](latest-baseline.md)。产品代码保持原样，报告保存在独立分支 `codex/review/server-desktop-20261012`。
+审查进行中，截止时间为新加坡时间 2026 年 10 月 12 日 11:00。初始审查基线为 `84740d56e55517b004948a0a0e07649ad6fbf998`，对应启动审查时的 `origin/main`。01:30 拉取发现主分支已更新至 `a66f4ef291f304ee4df9da8095a90671d9a8f140`（0.9.33）；已另建隔离快照复查差异，原始复现和行号仍按初始基线保存。40 个便携 Bun 复现文件共 111 测试，以及实际 Electron 凭据 4 场景，已在新快照复查成立；详见[0.9.33 差异复查](latest-baseline.md)。产品代码保持原样，报告保存在独立分支 `codex/review/server-desktop-20261012`。
 
 ## 当前结论
 
-当前已收束 50 项问题：1 项 P1、41 项 P2、8 项 P3。优先处理审批状态、任务回执和会话身份；这些问题会让任务无法继续、重复执行，或把用户输入带到另一个会话。P1 表示有未提交文件丢失风险、应优先修复；P2 表示正常使用可触发、应安排修复；P3 表示影响较小的失败反馈或一致性问题。尚未证实的候选不计入数量。
+当前已收束 54 项问题：1 项 P1、44 项 P2、9 项 P3。优先处理审批状态、任务回执和会话身份；这些问题会让任务无法继续、重复执行，或把用户输入带到另一个会话。P1 表示有未提交文件丢失风险、应优先修复；P2 表示正常使用可触发、应安排修复；P3 表示影响较小的失败反馈或一致性问题。尚未证实的候选不计入数量。
 
 **最先修 R35：创建工作区时重复 Enter，失败请求的回滚可以删除另一个已成功请求的 worktree、分支和未提交文件。** 此项已由独立代理复查入口与真实 Git 时序，见 [独立质量复核](quality-audit.md)。第五轮九项也已[独立复核](quality-round5.md)，均保留，网关通知等条件已收窄。
 
-以下是持续审查的阶段记录，截止前还会补充。复现测试的“通过”表示已稳定观察到当前缺陷，并不表示缺陷已经修复。R01–R48 的原始分析针对初始基线，并已在 0.9.33 复查；R49 针对新快照；R50 在两基线均存在并已分别复现，行号按各专项附录的基线解释。
+以下是持续审查的阶段记录，截止前还会补充。复现测试的“通过”表示已稳定观察到当前缺陷，并不表示缺陷已经修复。R01–R48 的原始分析针对初始基线，并已在 0.9.33 复查；R49 针对新快照；R50–R54 在两基线均存在并已分别复现，行号按各专项附录的基线解释。
 
 | 编号 | 级别 | 流程与实际影响                                                                        | 详细证据                                             |
 | ---- | ---- | ------------------------------------------------------------------------------------- | ---------------------------------------------------- |
@@ -32,9 +32,9 @@
 | R15  | P2   | 外部 CLI 后续消息只在当前会话推进，切到别处后队列停住                                 | Desktop D3                                           |
 | R16  | P2   | CC 打开回包广播到同设备全部页签，也会覆盖用户较新的会话选择                           | Web W2                                               |
 | R17  | P2   | 删除草稿附件不释放上传配额，空输入框仍被 16 个文件上限卡住                            | Server S3                                            |
-| R18  | P2   | CLI 启动失败留下“运行中”句柄，安装/修复后直接重开仍不能恢复                           | Server S4                                            |
+| R18  | P2   | CLI 启动失败留下“运行中”句柄，安装/修复后同模式重开仍不能恢复                           | Server S4                                            |
 | R19  | P2   | 同步审批发送后遇到 worker 响应错误，卡片不恢复，缺少直接重试入口                      | Web W6，影响取决于请求仍在等待                       |
-| R20  | P3   | Hub 接受 10–20 MiB 图片，发送阶段才因 10 MiB 限制失败                                 | Server S5                                            |
+| R20  | P3   | Hub 接受超过 10、至多 20 MiB 图片，发送阶段才因 10 MiB 限制失败                                 | Server S5                                            |
 | R21  | P2   | Hub Web 新会话首次运行中刷新，完整输出日志的 legacy anchor 被空基线裁掉，前端拒绝恢复 | Root R21                                             |
 | R22  | P2   | 多根项目会话迁移到合法 secondary root 后，已绑定 Panel 被错误视为跨项目而打不开       | Desktop D8，第二轮                                   |
 | R23  | P2   | 一个无效的已追踪项目目录让全部健康项目的 Panel 消失；65 个健康项目也触发批量上限      | Desktop D9，第二轮                                   |
@@ -64,12 +64,16 @@
 | R48  | P3   | 自动停用原因在 Desktop 摘要中丢失，重开详情只能看到普通暂停                            | Automation A5，第五轮；底层原因仍持久保留           |
 | R49  | P3   | 共享资料集跨文件查询吞掉已知原件变更的恢复指引，用户无法确定需更新哪个文件              | Collection，第六轮；0.9.33 新可达路径               |
 | R50  | P2   | 等待麦克风启动时双击创建两份录音，停止及组件卸载只释放最后一份                         | Voice W17，第六轮；同一 renderer document 存活期间 |
+| R51 | P2 | 成功安装后卸载，旧 installed 任务仍禁用市场重装，实际目录和注册已不存在 | Agent Plugins W18，第七轮；同一 Main 生命周期 |
+| R52 | P2 | 市场相对路径源更新校验失败前删除旧插件，旧注册指向不存在目录 | Agent Plugins W19，第七轮；有效新源可重新安装恢复 |
+| R53 | P2 | 从文件夹预览安装把临时快照记成更新源，快照已删，原文件夹仍在也无法更新 | Agent Plugins W20，第七轮；旧安装内容保留 |
+| R54 | P3 | Quick Chat 收到文件面板 PNG 的内部拖放数据后静默丢弃，不产生图片或路径引用 | Quick Chat Q1，第八轮；系统图片拖入可用 |
 
-第一轮完整分析：[Desktop](desktop-round1.md)、[Server](server-round1.md)、[Web/配对端](web-round1.md)。后续专项分析会继续补充到本目录。
+第一轮完整分析：[Desktop](desktop-round1.md)、[Server](server-round1.md)、[Web/配对端](web-round1.md)。后续专项分析会继续补充到本目录。已有结论还经[CLI 范围复核](cli-quality-round9.md)与[资源回收范围复核](resource-quality-round8.md)收窄恢复及平台条件。
 
 第二轮完整分析：[Desktop 项目/Panel](desktop-round2.md)、[Web 配置/Skills/MCP](web-round2.md)。所有已收束脚本和日志保存在 [reproductions](reproductions/README.md)，可在当前工作区或相同基线的其他 checkout 重跑。
 
-第三轮持续补充：[Desktop 插件/项目初始化](desktop-round3.md)、[手机配对/草稿/上传](web-round3.md)、[后台任务与 Node 主机退出](runtime-round3.md)。第四轮：[文件与历史流程](files-round4.md)。第五轮：[发送失败与刷新保护](web-round5.md)、[凭据新增与保存](credentials-round5.md)、[自动化执行与状态](automation-round5.md)。第六轮：[共享资料集恢复](collections-round6.md)、[录音生命周期](voice-round6.md)，已[独立复核](quality-round6.md)；[Panel 项目身份差异复查](panels-round6.md)没有新增正式问题。
+第三轮持续补充：[Desktop 插件/项目初始化](desktop-round3.md)、[手机配对/草稿/上传](web-round3.md)、[后台任务与 Node 主机退出](runtime-round3.md)。第四轮：[文件与历史流程](files-round4.md)。第五轮：[发送失败与刷新保护](web-round5.md)、[凭据新增与保存](credentials-round5.md)、[自动化执行与状态](automation-round5.md)。第六轮：[共享资料集恢复](collections-round6.md)、[录音生命周期](voice-round6.md)，已[独立复核](quality-round6.md)；[Panel 项目身份差异复查](panels-round6.md)没有新增正式问题。第七轮：[Agent Plugins 生命周期](plugins-round7.md)新增 R51–R53，并经[独立复核](plugin-quality-round9.md)保留；[身份与连接恢复](auth-round7.md)新增 0，正常契约已复现。第八轮：[Quick Chat 生命周期](quickchat-round8.md)新增 R54/P3；[Link 授权边界](links-round8.md)未确认新问题；[更新器候选独立反证](updater-candidate-audit.md)已排除。
 
 ## 需要先修的边界
 
@@ -93,7 +97,7 @@ R04、R05 分别涉及迟到的异步展开和组件内附件状态。发起操�
 
 ### 控件必须对应实际运行时
 
-R02 和 R08 的共因是 CLI 房间仍使用原生会话的权限和停止回调。界面需要显示房间实际启动模式，并用显式房间协议取消或重启 CLI。R07 则需要记录每个运行的 runtime 来源，Core worker 退出只能清理 Core 活动。R15 的后台队列推进应独立于当前显示的会话。
+R02 和 R08 的共因是 CLI 房间仍使用原生会话的权限和停止回调。R02 限定实际以 bypass 启动的受信任工作区；非受信任 cwd 的 bypass 请求会被服务端降为 default。界面需要显示房间实际启动模式，并用显式房间协议取消或重启 CLI。R07 则需要记录每个运行的 runtime 来源，Core worker 退出只能清理 Core 活动。R15 的后台队列推进应独立于当前显示的会话。
 
 ### 新会话首次运行中的恢复不能裁掉日志基点
 
@@ -103,7 +107,7 @@ R21 的真实 native Hub + Core + 本地模拟模型响应中，`outputJournal.s
 
 ### 主机启动与资源回收要保持正在使用的资源
 
-R09 中第二个实例因端口占用退出，第一个实例仍健康，但其附件已被删除。应在任何清理前取得数据目录的独占租约，或按实例分区并只回收已证明不再使用的文件。R17 则需要显式丢弃上传的接口；单纯从草稿 UI 删除不等于释放服务器资源。R18 应在 failed spawn 的 error 路径也退役对应 ChildProcess，允许正常重开重试。
+R09 中第二个实例因端口占用退出，第一个实例仍健康，但其附件已被删除。应在任何清理前取得数据目录的独占租约，或按实例分区并只回收已证明不再使用的文件。R17 则需要显式丢弃上传的接口；新登录仅可能绕过 owner 配额，旧文件仍占全局 32 槽/128 MiB，并非可靠恢复；TTL/sweep 或重启才回收此批文件。单纯从草稿 UI 删除不等于释放服务器资源。R18 应在 failed spawn 的 error 路径也退役对应 ChildProcess，允许同模式重开重试。当前侧栏新鲜 probe 通常挡住缺少 CLI 的选择；已验证触发限定成功/陈旧 probe 后的真实异步启动失败。显式 close 或更改模式可触发重新 spawn，是现有恢复入口。
 
 R22 已用真实 ProjectStore、SessionManager 和生产 bindGuest 方法复现：会话权限判定为同项目且 rootStatus=ok，但 Panel binding 只接受 primary path。应以项目 ID 与授权根集合校验所属项目，而不能把合法 secondary root 当作其他项目。
 
@@ -129,7 +133,7 @@ R32 的 localStorage 读取仍可用、写入抛 QuotaExceededError 时，safeSe
 
 R34 需给每个上传绑定 AbortController 和 connectionGeneration。重连成功只说明 WebSocket 可用，不能证明先前 HTTP PUT 已结束；旧请求仍占用全局 sendingRef，界面没有独立上传取消入口。主机已有票据到期中止，不能据此省略客户端恢复路径。
 
-R36 还需监听每个 worker stdin 的异步错误并结算相关请求。现有 ChildProcess error/exit 处理不能替代 Socket 的 error listener；真实 Node fixture 在 sendLine 返回 true 后因 EPIPE 退出 1。已验证请求大小低于生产 WS 上限。
+R36 还需监听每个 worker stdin 的异步错误并结算相关请求。现有 ChildProcess error/exit 处理不能替代 Socket 的 error listener；真实 Node fixture 在 sendLine 返回 true 后因 EPIPE 退出 1。已验证请求大小低于生产 WS 上限；实际退出证据针对原生 Node Hub/serve，未验证 Electron 主进程的退出语义。
 
 R37 不能泛化为任意已保存会话误执行：已保存会话有 authority gate；已由本设备创建但尚未落盘的 freshNative 会话有合法例外，离线新建丢包后恰好仍指向旧 A。应拒绝离线新建或保留并重发同一个创建意图，在确认目标 B 前不能发送任务。R38 应把即时本地退出与有界的服务端撤销请求分开，HTTP 黑洞不能让本地退出悬住。
 
@@ -154,6 +158,10 @@ R46 应以 cronJobId 关联实时及持久执行记录。日期标题完整相�
 R49 中拒绝变更原件与整次查询不返回部分正文都是正确保护；缺陷仅是跨文件父结果吞掉已知、安全的更新指引。实际 Engine 流和下一轮消息都只收到通用错误，而单文件读取能明确建议更新资料集。建议提供错误分类与已选择文件的身份，避免一概回传任意子错误。正常 Desktop refresh 后同 ID 查询可恢复。
 
 R50 需要在首个 await 前阻止并发录音启动，并在取消/卸载时使 pending generation 失效。现有逻辑只保存最后一份 recorder/stream，第二次成功会覆盖引用并清掉首份最大录制时长定时器；按停止及切走聊天视图都未回收首份。真实组件+模拟设备在两基线均复现；未使用真实硬件，结论不包括 document unload 或窗口销毁之后。Web Panel 录音已有 requesting/generation 与取消保护，正常对照通过。
+
+R51 的成功任务必须与当前安装清单核对，卸载后不能再用历史 job 表示“已安装”。R52 只在市场相对路径源中复现：先删除同一个 `local` cache 目录，再校验新 manifest；无效更新丢掉旧文件，却留旧注册。应先暂存校验再原子替换。R53 则是从文件夹的 review 安装：内容快照保持审核一致性是正确的，但持久更新来源必须保留原目录，不能保存随后已清除的临时 snapshot。三项触发与修复位置独立。R53 可从原文件夹重新预览并显式覆盖安装，将内容更新到 v2；无需先卸载，但新的更新源仍是临时快照，后续“更多→更新”继续失败。
+
+R54 限定文件面板产生的内部图片 payload 已送达 Quick Chat：缺少 `onAttachImagePath`，图片分支 optional call 后直接返回，没有图片 chip、路径引用或错误。PDF 内部拖入与系统 PNG 拖入对照正常。真实组件 handler 已复现，尚未实测原生 Electron 跨窗口拖动，不声称原文件字节丢失。
 
 ## 验证范围
 
@@ -184,6 +192,10 @@ R50 需要在首个 await 前阻止并发录音启动，并在取消/卸载时�
 | 第六轮 Collection 恢复         | 新快照 1 文件、4 测试、32 断言、0 失败；真实 Engine 本地 deterministic client | `latest-reproductions/collections-round6/`             |
 | 第六轮 Panel 身份边界          | 新快照自定义 1 文件、3 测试、26 断言通过；R22仍适用，legacy重开是正确保护 | `latest-reproductions/panels-round6/`                  |
 | 第六轮录音生命周期/恢复        | 1 文件、9 测试、87 断言，初始/新快照分别通过；含Panel上传重试与取消对照   | `reproductions/voice-round6/`                          |
+| 第七轮 Agent Plugins | 1 文件、7 测试、61 断言；初始/新快照分别通过，真实服务与本地 Git | `reproductions/plugins-round7/` |
+| 第七轮身份/连接恢复 | 3 文件、13 测试、87 Bun 断言；两基线通过，含 2 个 native Node 子进程 | `reproductions/auth-round7/` |
+| 第八轮 Quick Chat 生命周期 | 新增便携1文件7测试53断言，两基线分别通过；其余76既有测试仅单列复查 | `reproductions/quickchat-round8/`、`validation/quickchat-round8/` |
+| 第九轮 CLI/插件恢复反证 | 新便携2文件4测试52断言，两基线通过；没有新发现 | `reproductions/quality-round9/` |
 | Desktop renderer 现有逐文件测试 | 282 文件、2397 测试、0 失败                                               | `validation/desktop-renderer-results.json`               |
 | Desktop main 现有逐文件测试     | 283 文件、2461 测试、0 失败                                               | `validation/desktop-main-results.json`                   |
 | native Hub smoke                | 未通过，不计成功；先遇到过期工具 fixture，再暴露 R21                      | `/tmp/codeshell-review-20261012/hub-smoke*.log`          |
@@ -197,6 +209,6 @@ R50 需要在首个 await 前阻止并发录音启动，并在取消/卸载时�
 
 ## 后续检查
 
-继续核对 0.9.33 的 Panel 项目身份与跨文件 Collection 查询差异，并将已收束的便携复现移到新快照验证适用范围。已有 TODO 中明确后置的能力与尚未发行的修复单独核对，不将其重复列为新缺陷。
+0.9.33 的 Panel 项目身份与跨文件 Collection 查询差异、已有便携复现适用范围已核对。认证连接与 Agent Plugins 安装恢复已收束；Quick Chat 生命周期已收束；继续独立反证已有 CLI 房间、资源回收和插件结论，核对可恢复方式与平台边界。已有 TODO 中明确后置的能力与尚未发行的修复单独核对，不将其重复列为新缺陷。
 
 未进行真实付费模型、真实第三方账号、生产数据迁移或发行部署。CLI 模型行为通过可控 fixture 与实际 Host 路由验证，无法据此声称所有真实提供方端到端流程均已通过。静态候选及测试 harness 自身问题单独记录，不冒充产品发现。

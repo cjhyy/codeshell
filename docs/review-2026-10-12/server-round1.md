@@ -31,18 +31,19 @@ Product sources read-only. Reproductions use guarded runner, isolated HOME, fake
 - Primary: `packages/web/app/useHubController.tsx:734-736` (removeFile is local only); backend cap `packages/server/src/hub/uploads.ts:87-92` and TTL `14`.
 - Uploads reserve one of 16 owner slots. Removing a composer attachment only updates SessionDrafts; no corresponding server DELETE/cancel operation exists. The server releases only after accepted run completion or 15-minute expiry.
 - Trigger: select 16 files and then remove all of them, or add/remove a single file 16 times. Try to select the replacement attachment.
-- Impact: composer shows zero attachments, but the next PUT returns 429 “send the current attachments first”. There are no visible attachments to send, so normal editing cannot recover until TTL, new login, or service restart. Large discarded files also retain the 128 MiB global quota.
+- Impact: composer shows zero attachments, but the next PUT returns 429 “send the current attachments first”. There are no visible attachments to send, so normal editing cannot recover until TTL/sweep or service restart. A new login only conditionally bypasses the owner limit: discarded files still occupy global 32-slot / 128 MiB quota, so re-login is not a generally reliable recovery.
 - Evidence: `/tmp/codeshell-review-20261012-server-uploads.test.ts`, first case; 16 PUT 201, draft files length 0, 16 spools still present, replacement PUT 429.
 - Gap: existing upload ownership/release tests cover worker failures and successful use, not explicit draft removal.
 - Suggested direction: add an owner-bound discard endpoint and call it when removing/replacing a draft attachment.
 - Confidence: high.
 
-## S4 [P2] Claude room spawn failure leaves an unrecoverable “running” handle
+## S4 [P2] Claude room spawn failure leaves a stale “running” handle that blocks same-mode retry
 
 - Primary: `packages/server/src/mobile-remote/resident-agent.ts:207-215`; `isRunning` at `236-238`; room registration guard `packages/server/src/mobile-remote/room-manager.ts:1009`.
 - Node failed spawn emits child `error` without `exit`. This handler publishes only the error, while cleanup is exclusively in `exit`; the failed ChildProcess remains assigned.
 - Trigger: room creation/open hits ENOENT, EACCES, missing/moved cwd, or spawn resource failure. Repair/install CLI and reopen the same room.
-- Impact: isOpen/open continue to claim running, RoomManager never constructs a replacement agent, and every later send returns false. User must explicitly close the room before reopening; the error text recommends installing CLI but the implied retry cannot work.
+- Trigger scope: a stale/successful probe followed by executable, permission or cwd change, or another asynchronous spawn failure. Fresh missing-CLI sidebar probes normally hide session choices. Synchronous start throws and actual exit events already clean up correctly.
+- Impact: isOpen/open continue to claim running, RoomManager never constructs a replacement agent, and every later send returns false. Installing/fixing the CLI and reopening with the same mode cannot work; explicitly closing the room or selecting a different mode causes replacement spawn and can recover. The error text recommends installing CLI without explaining that same-mode retry remains blocked.
 - Evidence: `/tmp/codeshell-review-20261012-server-room-spawn.test.ts`, guarded runner: 1 pass, 6 expects. Missing fake CLI → error → create executable at same path → reopening still has created=1, isOpen=true, send=false.
 - Gap: resident-agent tests cover parsing/control wire shape only, not actual failed ChildProcess lifecycle.
 - Suggested direction: retire the exact failed child and publish a terminal lifecycle event so RoomManager releases that agent and allows retry.
@@ -51,7 +52,7 @@ Product sources read-only. Reproductions use guarded runner, isolated HOME, fake
 ## S5 [P3] Hub accepts images above its staging limit and fails only on Send
 
 - Primary: `packages/server/src/hub/uploads.ts:94-97`, image routing `212-214`; actual image limit `packages/server/src/attachment-service.ts:244-245` (10 MiB).
-- PUT accepts up to 20 MiB regardless of MIME; browser uploadFile has no image-size precheck. Image staging enforces 10 MiB only when sending.
+- PUT accepts up to 20 MiB regardless of MIME; the inconsistent image interval is (10 MiB, 20 MiB], excluding exactly 10 MiB; browser uploadFile has no image-size precheck. Image staging enforces 10 MiB only when sending.
 - Trigger: upload a PNG/JPEG between 10 and 20 MiB.
 - Impact: upload returns 201 and appears successful, then Send fails. The original same attachment draft is restored and repeated sends cannot succeed. Unsupported image MIME types have an analogous late failure.
 - Evidence: `/tmp/codeshell-review-20261012-server-uploads.test.ts`, second case: image/png 11 MiB PUT 201, prepare throws image size limit.

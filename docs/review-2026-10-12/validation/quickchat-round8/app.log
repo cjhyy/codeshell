@@ -1,0 +1,66 @@
+bun test v1.3.11 (af24e281)
+
+packages/desktop/src/renderer/AppQuickChat.test.tsx:
+(pass) App quick-chat integration > loads native choices before runtime discovery and preserves selection when models refresh [34.11ms]
+(pass) App quick-chat integration > does not rebind an external runtime session to the renderer browser bucket [13.06ms]
+(pass) App quick-chat integration > migrates a saved 0.8.0 Codex model before rendering or sending [20.81ms]
+(pass) App quick-chat integration > switches external to native without configuring the worker with an external key [22.99ms]
+(pass) App quick-chat integration > selecting an external model does not send its key to native configure [22.86ms]
+(pass) App quick-chat integration > keeps a main-composer model change local to its session [21.44ms]
+(pass) App quick-chat integration > moves same-tick composer callbacks to the draft bucket when starting a new conversation [21.51ms]
+(pass) App quick-chat integration > materializes a draft when its panel is opened without sending a message [23.07ms]
+(pass) App quick-chat integration > routes a same-tick send after new conversation away from the previous session [21.82ms]
+(pass) App quick-chat integration > global new conversation reveals its collapsed project and first sent Session [23.90ms]
+(pass) App quick-chat integration > project new conversation reveals its collapsed project and first sent Session [20.80ms]
+(pass) App quick-chat integration > routes a same-tick send from a draft callback to the selected existing session [21.19ms]
+(pass) App quick-chat integration > marks an existing session as awaiting hydration after it is selected from draft [20.39ms]
+(pass) App quick-chat integration > restores busy when the remount snapshot contains an unfinished turn [21.24ms]
+An update to App inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://react.dev/link/wrap-tests-with-act
+(pass) App quick-chat integration > external Goal sends establish the top-bar projection and restore paused goals across sessions [55.54ms]
+(pass) App quick-chat integration > a rejected late answer cannot overwrite an externally cancelled question or publish success [6.47ms]
+(pass) App quick-chat integration > hydrates a persisted paused goal before rendering the top-bar projection [975.48ms]
+(pass) App quick-chat integration > restores busy from a session_started-only snapshot [25.92ms]
+(pass) App quick-chat integration > restores busy from the authoritative marker after the start event was evicted [20.57ms]
+(pass) App quick-chat integration > keeps idle when the authoritative marker overrides an unterminated start [20.19ms]
+(pass) App quick-chat integration > keeps busy after a streaming tombstone while the top-level turn is unfinished [22.09ms]
+(pass) App quick-chat integration > restores busy from the full snapshot when the persisted cursor has no new tail [22.73ms]
+(pass) App quick-chat integration > does not restore busy when the snapshot top-level turn completed [21.61ms]
+(pass) App quick-chat integration > routes composer attachments only to the owning quick-chat run [22.44ms]
+(pass) App quick-chat integration > keeps a quick-chat model selection local and uses it for that side session [22.69ms]
+(pass) App quick-chat integration > filters external Agent Runtime models out of Quick Chat and uses a native fallback [23.89ms]
+(pass) App quick-chat integration > round-trips one quick chat through every elevation while another quick chat and main stay unchanged [21.57ms]
+(pass) App quick-chat integration > always sends side guidance while the pill changes only the real permission mode [22.60ms]
+(pass) App quick-chat integration > renders a visible error and clears busy when a quick-chat run is rejected [23.27ms]
+(pass) App quick-chat integration > defaults to a full fork of the owner engine session before becoming ready [21.23ms]
+(pass) App quick-chat integration > expires process-local quick chats when their worker exits [21.54ms]
+(pass) App quick-chat integration > starts the full quick-chat UI empty without reading the inherited target transcript [23.95ms]
+(pass) App quick-chat integration > keeps parent turns emitted after opening out of the existing quick chat [172.21ms]
+(pass) App quick-chat integration > a failed fork can explicitly fall back to a blank quick chat [24.77ms]
+(pass) App quick-chat integration > switching to blank while a fork is pending ignores and cleans the late fork [19.74ms]
+(pass) App quick-chat integration > closing a tab while fork is deferred prevents late hydrate and cleans the claim [20.53ms]
+(pass) App quick-chat integration > unmount while fork is deferred prevents late hydrate and cleans the claim [3.25ms]
+(pass) App quick-chat integration > a delayed disk page never deletes quick chats owned by main or opened mid-scan [17.27ms]
+(pass) App quick-chat integration > two quick chats and a normal chat isolate drafts, text, tools, busy state, and stop [163.81ms]
+(pass) App quick-chat integration > closing a quick-chat tab immediately evicts its buffered transcript state [161.67ms]
+(pass) App quick-chat integration > retries transient main-process cleanup failures when a quick-chat tab closes [607.52ms]
+(pass) App quick-chat integration > late composer setters cannot restore state after close or replacement [26.72ms]
+(pass) App quick-chat integration > late approvals and AskUser from a closed quick chat fail closed while parent approval routes normally [19.83ms]
+(pass) App quick-chat integration > late approvals and AskUser from a replaced quick chat cannot enter its replacement or parent [20.33ms]
+(pass) App quick-chat integration > tool approvals stay on their owning quick or normal session [23.38ms]
+(pass) App quick-chat integration > asynchronous answers stay pending until accepted and can retry a failed delivery [22.56ms]
+(pass) App quick-chat integration > AskUser prompts and answers stay on their owning quick or normal session [20.38ms]
+
+ 47 pass
+ 0 fail
+ 244 expect() calls
+Ran 47 tests across 1 file. [3.68s]
+Completed Bun shard: 47 tests, 0 skipped; 0 failures.

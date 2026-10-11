@@ -1,0 +1,14 @@
+bun test v1.3.11 (af24e281)
+
+docs/review-2026-10-12/reproductions/auth-round7/browser-recovery.test.tsx:
+(pass) paired socket reconnects on focus with retained credentials, ignores late old frames, and stops on logout [29.98ms]
+(pass) Hub transport treats revoke as explicit auth loss and transport failure as retryable [1707.73ms]
+(pass) Desktop initial HTTP handshake failure renders an actionable retry and retry succeeds [12.01ms]
+(pass) Desktop HTTP cookie expiry triggers a new handshake while retaining the current unsent draft [14.81ms]
+(pass) Hub auth gate gives a login instruction after revocation, recovers a newly shared cookie on focus, and preserves active view on temporary check failure [10.82ms]
+
+ 5 pass
+ 0 fail
+ 26 expect() calls
+Ran 5 tests across 1 file. [2.61s]
+Completed Bun shard: 5 tests, 0 skipped; 0 failures.

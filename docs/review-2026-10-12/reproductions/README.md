@@ -20,4 +20,4 @@ node docs/review-2026-10-12/run-reproductions.mjs
 node scripts/run-isolated-node-smoke.mjs docs/review-2026-10-12/reproductions/credentials-round5/credentials-e2e.mjs
 ```
 
-截至第六轮，初始基线 Bun 便携证据共 33 个文件、80 个测试；同样在 0.9.33 分别复核。凭据脚本另含 4 个实际 UI 场景。新功能专项另见 `latest-reproductions/` 与 `run-latest-reproductions.mjs`。
+截至第八轮，初始基线 Bun 便携证据共 40 个文件、111 个测试；同样在 0.9.33 分别复核。凭据脚本另含 4 个实际 UI 场景。新功能专项另见 `latest-reproductions/` 与 `run-latest-reproductions.mjs`。

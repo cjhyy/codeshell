@@ -1,17 +1,48 @@
 [
   {
+    "file": "docs/review-2026-10-12/reproductions/auth-round7/auth-lifecycle.test.ts",
+    "log": "docs/review-2026-10-12/reproductions/auth-round7/auth-lifecycle.test.ts.log",
+    "code": 0,
+    "signal": null,
+    "tests": 6,
+    "skipped": 0,
+    "archiveLog": "validation/latest-a66f4ef2/repro__auth-round7__auth-lifecycle.test.ts.log"
+  },
+  {
+    "file": "docs/review-2026-10-12/reproductions/auth-round7/browser-recovery.test.tsx",
+    "log": "docs/review-2026-10-12/reproductions/auth-round7/browser-recovery.test.tsx.log",
+    "code": 0,
+    "signal": null,
+    "tests": 5,
+    "skipped": 0,
+    "archiveLog": "validation/latest-a66f4ef2/repro__auth-round7__browser-recovery.test.tsx.log"
+  },
+  {
+    "file": "docs/review-2026-10-12/reproductions/auth-round7/native-download.test.ts",
+    "log": "docs/review-2026-10-12/reproductions/auth-round7/native-download.test.ts.log",
+    "code": 0,
+    "signal": null,
+    "tests": 2,
+    "skipped": 0,
+    "archiveLog": "validation/latest-a66f4ef2/repro__auth-round7__native-download.test.ts.log"
+  },
+  {
     "file": "docs/review-2026-10-12/reproductions/automation-round5/desktop-display.test.tsx",
     "log": "docs/review-2026-10-12/reproductions/automation-round5/desktop-display.test.tsx.log",
     "code": 0,
     "signal": null,
-    "archiveLog": "validation/latest-a66f4ef2/repro__automation-round5__desktop-display.test.tsx.log"
+    "archiveLog": "validation/latest-a66f4ef2/repro__automation-round5__desktop-display.test.tsx.log",
+    "tests": 4,
+    "skipped": 0
   },
   {
     "file": "docs/review-2026-10-12/reproductions/automation-round5/resume-outcome.test.ts",
     "log": "docs/review-2026-10-12/reproductions/automation-round5/resume-outcome.test.ts.log",
     "code": 0,
     "signal": null,
-    "archiveLog": "validation/latest-a66f4ef2/repro__automation-round5__resume-outcome.test.ts.log"
+    "archiveLog": "validation/latest-a66f4ef2/repro__automation-round5__resume-outcome.test.ts.log",
+    "tests": 3,
+    "skipped": 0
   },
   {
     "file": "docs/review-2026-10-12/reproductions/desktop-round2/panel-multiroot.test.tsx",
@@ -20,216 +51,314 @@
     "signal": null,
     "initialCode": 1,
     "recheck": "0.9.33 bindGuest is async; supplied stable VM owner/guest and AbortController, awaited both sync/async versions; production code unchanged",
-    "archiveLog": "validation/latest-a66f4ef2/repro__desktop-round2__panel-multiroot.test.tsx.log"
+    "archiveLog": "validation/latest-a66f4ef2/repro__desktop-round2__panel-multiroot.test.tsx.log",
+    "tests": 1,
+    "skipped": 0
   },
   {
     "file": "docs/review-2026-10-12/reproductions/desktop-round2/panel-registry-batch.test.ts",
     "log": "docs/review-2026-10-12/reproductions/desktop-round2/panel-registry-batch.test.ts.log",
     "code": 0,
     "signal": null,
-    "archiveLog": "validation/latest-a66f4ef2/repro__desktop-round2__panel-registry-batch.test.ts.log"
+    "archiveLog": "validation/latest-a66f4ef2/repro__desktop-round2__panel-registry-batch.test.ts.log",
+    "tests": 3,
+    "skipped": 0
   },
   {
     "file": "docs/review-2026-10-12/reproductions/desktop-round2/remove-project-workspace.test.ts",
     "log": "docs/review-2026-10-12/reproductions/desktop-round2/remove-project-workspace.test.ts.log",
     "code": 0,
     "signal": null,
-    "archiveLog": "validation/latest-a66f4ef2/repro__desktop-round2__remove-project-workspace.test.ts.log"
+    "archiveLog": "validation/latest-a66f4ef2/repro__desktop-round2__remove-project-workspace.test.ts.log",
+    "tests": 1,
+    "skipped": 0
   },
   {
     "file": "docs/review-2026-10-12/reproductions/desktop-round3/plugin-settings-race.test.tsx",
     "log": "docs/review-2026-10-12/reproductions/desktop-round3/plugin-settings-race.test.tsx.log",
     "code": 0,
     "signal": null,
-    "archiveLog": "validation/latest-a66f4ef2/repro__desktop-round3__plugin-settings-race.test.tsx.log"
+    "archiveLog": "validation/latest-a66f4ef2/repro__desktop-round3__plugin-settings-race.test.tsx.log",
+    "tests": 1,
+    "skipped": 0
   },
   {
     "file": "docs/review-2026-10-12/reproductions/desktop-round3/project-initial-snapshot.test.tsx",
     "log": "docs/review-2026-10-12/reproductions/desktop-round3/project-initial-snapshot.test.tsx.log",
     "code": 0,
     "signal": null,
-    "archiveLog": "validation/latest-a66f4ef2/repro__desktop-round3__project-initial-snapshot.test.tsx.log"
+    "archiveLog": "validation/latest-a66f4ef2/repro__desktop-round3__project-initial-snapshot.test.tsx.log",
+    "tests": 1,
+    "skipped": 0
   },
   {
     "file": "docs/review-2026-10-12/reproductions/desktop-round3/worktree-duplicate-create.test.tsx",
     "log": "docs/review-2026-10-12/reproductions/desktop-round3/worktree-duplicate-create.test.tsx.log",
     "code": 0,
     "signal": null,
-    "archiveLog": "validation/latest-a66f4ef2/repro__desktop-round3__worktree-duplicate-create.test.tsx.log"
+    "archiveLog": "validation/latest-a66f4ef2/repro__desktop-round3__worktree-duplicate-create.test.tsx.log",
+    "tests": 2,
+    "skipped": 0
   },
   {
     "file": "docs/review-2026-10-12/reproductions/desktop/approval-queue.test.tsx",
     "log": "docs/review-2026-10-12/reproductions/desktop/approval-queue.test.tsx.log",
     "code": 0,
     "signal": null,
-    "archiveLog": "validation/latest-a66f4ef2/repro__desktop__approval-queue.test.tsx.log"
+    "archiveLog": "validation/latest-a66f4ef2/repro__desktop__approval-queue.test.tsx.log",
+    "tests": 2,
+    "skipped": 0
   },
   {
     "file": "docs/review-2026-10-12/reproductions/desktop/composer-session.test.tsx",
     "log": "docs/review-2026-10-12/reproductions/desktop/composer-session.test.tsx.log",
     "code": 0,
     "signal": null,
-    "archiveLog": "validation/latest-a66f4ef2/repro__desktop__composer-session.test.tsx.log"
+    "archiveLog": "validation/latest-a66f4ef2/repro__desktop__composer-session.test.tsx.log",
+    "tests": 2,
+    "skipped": 0
   },
   {
     "file": "docs/review-2026-10-12/reproductions/desktop/concurrent-approvals.test.ts",
     "log": "docs/review-2026-10-12/reproductions/desktop/concurrent-approvals.test.ts.log",
     "code": 0,
     "signal": null,
-    "archiveLog": "validation/latest-a66f4ef2/repro__desktop__concurrent-approvals.test.ts.log"
+    "archiveLog": "validation/latest-a66f4ef2/repro__desktop__concurrent-approvals.test.ts.log",
+    "tests": 1,
+    "skipped": 0
   },
   {
     "file": "docs/review-2026-10-12/reproductions/desktop/preload-envelope.test.ts",
     "log": "docs/review-2026-10-12/reproductions/desktop/preload-envelope.test.ts.log",
     "code": 0,
     "signal": null,
-    "archiveLog": "validation/latest-a66f4ef2/repro__desktop__preload-envelope.test.ts.log"
+    "archiveLog": "validation/latest-a66f4ef2/repro__desktop__preload-envelope.test.ts.log",
+    "tests": 2,
+    "skipped": 0
   },
   {
     "file": "docs/review-2026-10-12/reproductions/desktop/run-controller.test.tsx",
     "log": "docs/review-2026-10-12/reproductions/desktop/run-controller.test.tsx.log",
     "code": 0,
     "signal": null,
-    "archiveLog": "validation/latest-a66f4ef2/repro__desktop__run-controller.test.tsx.log"
+    "archiveLog": "validation/latest-a66f4ef2/repro__desktop__run-controller.test.tsx.log",
+    "tests": 5,
+    "skipped": 0
   },
   {
     "file": "docs/review-2026-10-12/reproductions/desktop/worker-external.test.tsx",
     "log": "docs/review-2026-10-12/reproductions/desktop/worker-external.test.tsx.log",
     "code": 0,
     "signal": null,
-    "archiveLog": "validation/latest-a66f4ef2/repro__desktop__worker-external.test.tsx.log"
+    "archiveLog": "validation/latest-a66f4ef2/repro__desktop__worker-external.test.tsx.log",
+    "tests": 1,
+    "skipped": 0
   },
   {
     "file": "docs/review-2026-10-12/reproductions/files-round4/archived-open.test.ts",
     "log": "docs/review-2026-10-12/reproductions/files-round4/archived-open.test.ts.log",
     "code": 0,
     "signal": null,
-    "archiveLog": "validation/latest-a66f4ef2/repro__files-round4__archived-open.test.ts.log"
+    "archiveLog": "validation/latest-a66f4ef2/repro__files-round4__archived-open.test.ts.log",
+    "tests": 1,
+    "skipped": 0
   },
   {
     "file": "docs/review-2026-10-12/reproductions/files-round4/daily-contracts.test.ts",
     "log": "docs/review-2026-10-12/reproductions/files-round4/daily-contracts.test.ts.log",
     "code": 0,
     "signal": null,
-    "archiveLog": "validation/latest-a66f4ef2/repro__files-round4__daily-contracts.test.ts.log"
+    "archiveLog": "validation/latest-a66f4ef2/repro__files-round4__daily-contracts.test.ts.log",
+    "tests": 2,
+    "skipped": 0
+  },
+  {
+    "file": "docs/review-2026-10-12/reproductions/plugins-round7/plugins-lifecycle.test.tsx",
+    "log": "docs/review-2026-10-12/reproductions/plugins-round7/plugins-lifecycle.test.tsx.log",
+    "code": 0,
+    "signal": null,
+    "tests": 7,
+    "skipped": 0,
+    "archiveLog": "validation/latest-a66f4ef2/repro__plugins-round7__plugins-lifecycle.test.tsx.log"
+  },
+  {
+    "file": "docs/review-2026-10-12/reproductions/quality-round9/cli-normal-controls.test.tsx",
+    "log": "docs/review-2026-10-12/reproductions/quality-round9/cli-normal-controls.test.tsx.log",
+    "code": 0,
+    "signal": null,
+    "tests": 3,
+    "skipped": 0,
+    "archiveLog": "validation/latest-a66f4ef2/repro__quality-round9__cli-normal-controls.test.tsx.log"
+  },
+  {
+    "file": "docs/review-2026-10-12/reproductions/quality-round9/reviewed-overwrite.test.ts",
+    "log": "docs/review-2026-10-12/reproductions/quality-round9/reviewed-overwrite.test.ts.log",
+    "code": 0,
+    "signal": null,
+    "tests": 1,
+    "skipped": 0,
+    "archiveLog": "validation/latest-a66f4ef2/repro__quality-round9__reviewed-overwrite.test.ts.log"
+  },
+  {
+    "file": "docs/review-2026-10-12/reproductions/quickchat-round8/quickchat-lifecycle.test.tsx",
+    "log": "docs/review-2026-10-12/reproductions/quickchat-round8/quickchat-lifecycle.test.tsx.log",
+    "code": 0,
+    "signal": null,
+    "tests": 7,
+    "skipped": 0,
+    "archiveLog": "validation/latest-a66f4ef2/repro__quickchat-round8__quickchat-lifecycle.test.tsx.log"
   },
   {
     "file": "docs/review-2026-10-12/reproductions/root/first-run-recovery.test.ts",
     "log": "docs/review-2026-10-12/reproductions/root/first-run-recovery.test.ts.log",
     "code": 0,
     "signal": null,
-    "archiveLog": "validation/latest-a66f4ef2/repro__root__first-run-recovery.test.ts.log"
+    "archiveLog": "validation/latest-a66f4ef2/repro__root__first-run-recovery.test.ts.log",
+    "tests": 2,
+    "skipped": 0
   },
   {
     "file": "docs/review-2026-10-12/reproductions/runtime-round3/panel-process-close.test.ts",
     "log": "docs/review-2026-10-12/reproductions/runtime-round3/panel-process-close.test.ts.log",
     "code": 0,
     "signal": null,
-    "archiveLog": "validation/latest-a66f4ef2/repro__runtime-round3__panel-process-close.test.ts.log"
+    "archiveLog": "validation/latest-a66f4ef2/repro__runtime-round3__panel-process-close.test.ts.log",
+    "tests": 1,
+    "skipped": 0
   },
   {
     "file": "docs/review-2026-10-12/reproductions/runtime-round3/tool-job-final-write.test.ts",
     "log": "docs/review-2026-10-12/reproductions/runtime-round3/tool-job-final-write.test.ts.log",
     "code": 0,
     "signal": null,
-    "archiveLog": "validation/latest-a66f4ef2/repro__runtime-round3__tool-job-final-write.test.ts.log"
+    "archiveLog": "validation/latest-a66f4ef2/repro__runtime-round3__tool-job-final-write.test.ts.log",
+    "tests": 2,
+    "skipped": 0
   },
   {
     "file": "docs/review-2026-10-12/reproductions/runtime-round3/worker-pipe-close.test.ts",
     "log": "docs/review-2026-10-12/reproductions/runtime-round3/worker-pipe-close.test.ts.log",
     "code": 0,
     "signal": null,
-    "archiveLog": "validation/latest-a66f4ef2/repro__runtime-round3__worker-pipe-close.test.ts.log"
+    "archiveLog": "validation/latest-a66f4ef2/repro__runtime-round3__worker-pipe-close.test.ts.log",
+    "tests": 1,
+    "skipped": 0
   },
   {
     "file": "docs/review-2026-10-12/reproductions/server/cc-approval-recovery.test.tsx",
     "log": "docs/review-2026-10-12/reproductions/server/cc-approval-recovery.test.tsx.log",
     "code": 0,
     "signal": null,
-    "archiveLog": "validation/latest-a66f4ef2/repro__server__cc-approval-recovery.test.tsx.log"
+    "archiveLog": "validation/latest-a66f4ef2/repro__server__cc-approval-recovery.test.tsx.log",
+    "tests": 2,
+    "skipped": 0
   },
   {
     "file": "docs/review-2026-10-12/reproductions/server/double-start.test.ts",
     "log": "docs/review-2026-10-12/reproductions/server/double-start.test.ts.log",
     "code": 0,
     "signal": null,
-    "archiveLog": "validation/latest-a66f4ef2/repro__server__double-start.test.ts.log"
+    "archiveLog": "validation/latest-a66f4ef2/repro__server__double-start.test.ts.log",
+    "tests": 1,
+    "skipped": 0
   },
   {
     "file": "docs/review-2026-10-12/reproductions/server/questions.test.ts",
     "log": "docs/review-2026-10-12/reproductions/server/questions.test.ts.log",
     "code": 0,
     "signal": null,
-    "archiveLog": "validation/latest-a66f4ef2/repro__server__questions.test.ts.log"
+    "archiveLog": "validation/latest-a66f4ef2/repro__server__questions.test.ts.log",
+    "tests": 1,
+    "skipped": 0
   },
   {
     "file": "docs/review-2026-10-12/reproductions/server/room-spawn.test.ts",
     "log": "docs/review-2026-10-12/reproductions/server/room-spawn.test.ts.log",
     "code": 0,
     "signal": null,
-    "archiveLog": "validation/latest-a66f4ef2/repro__server__room-spawn.test.ts.log"
+    "archiveLog": "validation/latest-a66f4ef2/repro__server__room-spawn.test.ts.log",
+    "tests": 1,
+    "skipped": 0
   },
   {
     "file": "docs/review-2026-10-12/reproductions/server/uploads.test.ts",
     "log": "docs/review-2026-10-12/reproductions/server/uploads.test.ts.log",
     "code": 0,
     "signal": null,
-    "archiveLog": "validation/latest-a66f4ef2/repro__server__uploads.test.ts.log"
+    "archiveLog": "validation/latest-a66f4ef2/repro__server__uploads.test.ts.log",
+    "tests": 2,
+    "skipped": 0
   },
   {
     "file": "docs/review-2026-10-12/reproductions/voice-round6/voice-lifecycle.test.tsx",
     "log": "docs/review-2026-10-12/reproductions/voice-round6/voice-lifecycle.test.tsx.log",
     "code": 0,
     "signal": null,
-    "archiveLog": "validation/latest-a66f4ef2/repro__voice-round6__voice-lifecycle.test.tsx.log"
+    "archiveLog": "validation/latest-a66f4ef2/repro__voice-round6__voice-lifecycle.test.tsx.log",
+    "tests": 9,
+    "skipped": 0
   },
   {
     "file": "docs/review-2026-10-12/reproductions/web-round2/settings-review.test.tsx",
     "log": "docs/review-2026-10-12/reproductions/web-round2/settings-review.test.tsx.log",
     "code": 0,
     "signal": null,
-    "archiveLog": "validation/latest-a66f4ef2/repro__web-round2__settings-review.test.tsx.log"
+    "archiveLog": "validation/latest-a66f4ef2/repro__web-round2__settings-review.test.tsx.log",
+    "tests": 3,
+    "skipped": 0
   },
   {
     "file": "docs/review-2026-10-12/reproductions/web-round3/mobile-lifecycle-review.test.tsx",
     "log": "docs/review-2026-10-12/reproductions/web-round3/mobile-lifecycle-review.test.tsx.log",
     "code": 0,
     "signal": null,
-    "archiveLog": "validation/latest-a66f4ef2/repro__web-round3__mobile-lifecycle-review.test.tsx.log"
+    "archiveLog": "validation/latest-a66f4ef2/repro__web-round3__mobile-lifecycle-review.test.tsx.log",
+    "tests": 5,
+    "skipped": 0
   },
   {
     "file": "docs/review-2026-10-12/reproductions/web-round5/recovery-review.test.tsx",
     "log": "docs/review-2026-10-12/reproductions/web-round5/recovery-review.test.tsx.log",
     "code": 0,
     "signal": null,
-    "archiveLog": "validation/latest-a66f4ef2/repro__web-round5__recovery-review.test.tsx.log"
+    "archiveLog": "validation/latest-a66f4ef2/repro__web-round5__recovery-review.test.tsx.log",
+    "tests": 9,
+    "skipped": 0
   },
   {
     "file": "docs/review-2026-10-12/reproductions/web/flow-review.test.tsx",
     "log": "docs/review-2026-10-12/reproductions/web/flow-review.test.tsx.log",
     "code": 0,
     "signal": null,
-    "archiveLog": "validation/latest-a66f4ef2/repro__web__flow-review.test.tsx.log"
+    "archiveLog": "validation/latest-a66f4ef2/repro__web__flow-review.test.tsx.log",
+    "tests": 4,
+    "skipped": 0
   },
   {
     "file": "docs/review-2026-10-12/reproductions/web/hub-async-review.test.tsx",
     "log": "docs/review-2026-10-12/reproductions/web/hub-async-review.test.tsx.log",
     "code": 0,
     "signal": null,
-    "archiveLog": "validation/latest-a66f4ef2/repro__web__hub-async-review.test.tsx.log"
+    "archiveLog": "validation/latest-a66f4ef2/repro__web__hub-async-review.test.tsx.log",
+    "tests": 1,
+    "skipped": 0
   },
   {
     "file": "docs/review-2026-10-12/reproductions/web/intent-id-review.test.ts",
     "log": "docs/review-2026-10-12/reproductions/web/intent-id-review.test.ts.log",
     "code": 0,
     "signal": null,
-    "archiveLog": "validation/latest-a66f4ef2/repro__web__intent-id-review.test.ts.log"
+    "archiveLog": "validation/latest-a66f4ef2/repro__web__intent-id-review.test.ts.log",
+    "tests": 1,
+    "skipped": 0
   },
   {
     "file": "docs/review-2026-10-12/reproductions/web/room-controls-review.test.tsx",
     "log": "docs/review-2026-10-12/reproductions/web/room-controls-review.test.tsx.log",
     "code": 0,
     "signal": null,
-    "archiveLog": "validation/latest-a66f4ef2/repro__web__room-controls-review.test.tsx.log"
+    "archiveLog": "validation/latest-a66f4ef2/repro__web__room-controls-review.test.tsx.log",
+    "tests": 3,
+    "skipped": 0
   }
 ]
