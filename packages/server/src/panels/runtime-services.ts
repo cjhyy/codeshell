@@ -61,6 +61,8 @@ export interface PanelRuntimeScope {
   permissions: readonly string[];
   /** Checks the live owner, its project binding, and the installed revision. */
   isAuthorized: () => Promise<boolean>;
+  /** Optional synchronous transport check at the storage publication boundary. */
+  assertAuthorized?: () => void;
 }
 
 type Identity = { dev: number; ino: number };
@@ -209,13 +211,25 @@ export class PanelRuntimeServices {
         if (change) {
           const result = applyPanelAppStorageChange(state, change);
           if (result.updated)
-            await writePanelAppStorage(file, state, quota, () => authorized(scope));
+            await writePanelAppStorage(
+              file,
+              state,
+              quota,
+              () => authorized(scope),
+              scope.assertAuthorized,
+            );
           return result;
         }
         const existed = Object.hasOwn(state, key);
         if (method === "storage.set") state[key] = JSON.parse(encoded!);
         else delete state[key];
-        await writePanelAppStorage(file, state, quota, () => authorized(scope));
+        await writePanelAppStorage(
+          file,
+          state,
+          quota,
+          () => authorized(scope),
+          scope.assertAuthorized,
+        );
         return method === "storage.set" ? true : existed;
       } finally {
         release();

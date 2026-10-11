@@ -2198,7 +2198,36 @@ describeIsolated("PanelAppBridge", () => {
       call("automations.createUnique", { ...uniqueInput, creationKey: firstKey }),
     ).rejects.toThrow(/authority fields/);
     await bindBridgeGuest(28, { sessionId: "session-2", bucket: "repo::session-2" });
-    await call("automations.createUnique", uniqueInput);
+    const beforeReboundCalls = [created.length, listedScopes.length, updatedScopes.length];
+    for (const [method, params] of [
+      ["automations.list", {}],
+      ["automations.create", { name: "blocked", schedule: "1h", prompt: "p" }],
+      ["automations.createUnique", uniqueInput],
+      ["automations.update", { id: "scoped", prompt: "blocked" }],
+      ["automations.pause", { id: "scoped" }],
+      ["automations.resume", { id: "scoped" }],
+      ["automations.delete", { id: "scoped" }],
+      ["automations.runNow", { id: "scoped" }],
+    ])
+      await expect(call(method as string, params)).rejects.toMatchObject({
+        code: "SESSION_CHANGED",
+      });
+    expect([created.length, listedScopes.length, updatedScopes.length]).toEqual(beforeReboundCalls);
+    await bindBridgeGuest(28);
+    await expect(call("automations.createUnique", uniqueInput)).rejects.toMatchObject({
+      code: "SESSION_CHANGED",
+    });
+    expect(created).toHaveLength(beforeReboundCalls[0]);
+
+    const reopenedGuest = fakeGuest(128);
+    bridge.registerGuest(
+      reopenedGuest as any,
+      panelAppElectronMock.ownerWindow as any,
+      bridgeResource(["context.session", "context.workspace", "automations.manage"]) as any,
+      "/repo",
+    );
+    await bindBridgeGuest(128, { sessionId: "session-2", bucket: "repo::session-2" });
+    await panelGuestHandler()({ sender: reopenedGuest }, "automations.createUnique", uniqueInput);
     expect(created.at(-1).input.creationKey).not.toBe(firstKey);
     expect(created.at(-1).scope.resumeSessionId).toBe("session-2");
   });

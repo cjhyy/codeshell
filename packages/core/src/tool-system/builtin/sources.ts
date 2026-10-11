@@ -20,8 +20,13 @@ import { MAX_DOCUMENT_BYTES } from "../../sources/documents/types.js";
 import { defaultMcpResourceAdapter } from "../../sources/adapters/mcp-resource.js";
 import { linkSourceAdapter } from "../../sources/adapters/link.js";
 import { mockAdapter } from "../../sources/adapters/mock.js";
-import { collectionAdapter } from "../../sources/adapters/collection.js";
+import {
+  collectionAdapter,
+  readCollectionDocument,
+  type CollectionDocumentRead,
+} from "../../sources/adapters/collection.js";
 import { collectionConfig } from "../../sources/collection.js";
+import { collectionLocalDirectoryIdentity } from "../../sources/collection-local.js";
 import { defaultCredentialStatus } from "../../sources/credential-status.js";
 import { resolveEffectiveSourceAccess, type EffectiveSourceAccess } from "../../sources/resolve.js";
 import { truncateUtf8Text } from "../../sources/truncate-utf8.js";
@@ -39,14 +44,19 @@ const MAX_COLLECTION_INDEX_BYTES = 4 * 1024 * 1024;
 const COLLECTION_TIMEOUT_MS = 30_000;
 // Symbol identity stays in this module. No model JSON, hook args or result
 // prose can create a receipt sink; the executor passes it only to this call.
-const documentQueryService = Symbol("uploaded-document-query");
+const documentQueryService = Symbol("authorized-document-query");
+type DocumentQueryRead = UploadedDocumentRead | CollectionDocumentRead;
+interface SelectedDocument {
+  scope: string;
+  resource: string;
+}
 interface DocumentQueryService {
   source: string;
   scope: string;
   resource: string;
   query: string;
   reserveInputBytes(bytes: number): void;
-  capture(receipt: UploadedDocumentRead): void;
+  capture(receipt: DocumentQueryRead): void;
 }
 const mcpResourceAdapter = defaultMcpResourceAdapter();
 
@@ -177,7 +187,7 @@ export async function listSourcesTool(
 export const readSourceToolDef: ToolDefinition = {
   name: "ReadSource",
   description:
-    "Read one exact resource from a bound data source (requires approval). Uploaded files and shared document collections support local UTF-8 text, DOCX/PPTX/XLSX and PDF extraction; PDF requires Node.js 22.13+. Optional query performs local lexical search (limit 1–20); optional chunk reads a returned chunk id. Each shared collection file has its own scope; changed files require an explicit collection update. For cross-file search, use resources instead of resource: explicitly select 1–8 uploaded files in the same source/scope and supply query. Each file retains its own approval; any failure returns no collection results. No implicit whole-project scan or automatic collection synchronization. Query and chunk cannot be combined.",
+    "Read one exact resource from a bound data source (requires approval). Uploaded files and shared document collections support UTF-8 text, DOCX/PPTX/XLSX and PDF extraction; PDF requires Node.js 22.13+. Optional query performs local lexical search (limit 1–20); optional chunk reads a returned chunk id. For cross-file search, supply query and select 1–8 resources: uploads use string ids plus their common scope; a shared collection uses [{scope, resource}] and omits outer scope. Every collection file has its own explicitly bound scope. Each file retains its own approval; any failure returns no corpus results. URL files are downloaded again before return for sequential version checks, not an atomic remote snapshot. Changed files require an explicit collection update. No implicit whole-project scan or automatic synchronization. Query and chunk cannot be combined.",
   inputSchema: {
     type: "object",
     properties: {
@@ -189,16 +199,29 @@ export const readSourceToolDef: ToolDefinition = {
         minItems: 1,
         maxItems: MAX_COLLECTION_FILES,
         uniqueItems: true,
-        items: { type: "string", minLength: 1, maxLength: 512 },
+        items: {
+          oneOf: [
+            { type: "string", minLength: 1, maxLength: 512 },
+            {
+              type: "object",
+              properties: {
+                scope: { type: "string", minLength: 1, maxLength: 512 },
+                resource: { type: "string", minLength: 1, maxLength: 512 },
+              },
+              required: ["scope", "resource"],
+              additionalProperties: false,
+            },
+          ],
+        },
         description:
-          "Cross-file query only: explicit uploaded resource ids in this same source/scope; excludes resource and chunk",
+          "Cross-file query: uploads use string ids plus outer scope; shared collections use exact {scope, resource} pairs without outer scope. Select one source only; excludes resource and chunk",
       },
       query: {
         type: "string",
         minLength: 1,
         maxLength: 512,
         description:
-          "Uploaded documents only: local lexical search terms within the exact selected resources",
+          "Uploaded documents or shared collections: local lexical search terms within the exact selected resources",
       },
       limit: {
         type: "integer",
@@ -209,16 +232,23 @@ export const readSourceToolDef: ToolDefinition = {
       chunk: {
         type: "string",
         pattern: "^c_[a-f0-9]{24}$",
-        description:
-          "Uploaded document only: exact chunk id from a prior query of the current file version",
+        description: "Exact chunk id from a prior query of the current document version",
       },
     },
-    required: ["source", "scope"],
+    required: ["source"],
     oneOf: [
-      { required: ["resource"], not: { required: ["resources"] } },
+      { required: ["scope", "resource"], not: { required: ["resources"] } },
+      {
+        required: ["scope", "resources", "query"],
+        properties: { resources: { items: { type: "string" } } },
+        not: { anyOf: [{ required: ["resource"] }, { required: ["chunk"] }] },
+      },
       {
         required: ["resources", "query"],
-        not: { anyOf: [{ required: ["resource"] }, { required: ["chunk"] }] },
+        properties: { resources: { items: { type: "object" } } },
+        not: {
+          anyOf: [{ required: ["scope"] }, { required: ["resource"] }, { required: ["chunk"] }],
+        },
       },
     ],
   },
@@ -239,22 +269,47 @@ async function querySourceCollection(
   let remainingMs = COLLECTION_TIMEOUT_MS;
   let activeSince = performance.now();
   let budgetActive = true;
+  const sharedCollection = access.kind === "collection";
+  const validId = (value: unknown): value is string =>
+    typeof value === "string" && Boolean(value) && value.length <= 512 && !value.includes("\0");
   if (
     args.resource !== undefined ||
     args.chunk !== undefined ||
     !Array.isArray(args.resources) ||
     args.resources.length < 1 ||
     args.resources.length > MAX_COLLECTION_FILES ||
-    args.resources.some(
-      (item) => typeof item !== "string" || !item || item.length > 512 || item.includes("\0"),
-    ) ||
-    new Set(args.resources).size !== args.resources.length
+    (sharedCollection && args.scope !== undefined) ||
+    args.resources.some((item) =>
+      sharedCollection
+        ? !item ||
+          typeof item !== "object" ||
+          Array.isArray(item) ||
+          !validId(item.scope) ||
+          !validId(item.resource) ||
+          Object.keys(item).some((key) => key !== "scope" && key !== "resource")
+        : !validId(item),
+    )
   )
-    return "Error: collection query requires 1–8 unique resource ids and excludes resource/chunk.";
+    return "Error: collection query requires 1–8 exact selections: uploaded string ids with scope, or shared {scope, resource} pairs without outer scope; excludes resource/chunk.";
+  const selected: SelectedDocument[] = args.resources.map((item) =>
+    sharedCollection ? { scope: item.scope, resource: item.resource } : { scope, resource: item },
+  );
+  if (new Set(selected.map((item) => JSON.stringify(item))).size !== selected.length)
+    return "Error: collection query requires unique resource selections.";
+  selected.sort((left, right) =>
+    left.scope < right.scope
+      ? -1
+      : left.scope > right.scope
+        ? 1
+        : left.resource < right.resource
+          ? -1
+          : left.resource > right.resource
+            ? 1
+            : 0,
+  );
   if (!ctx?.executeBoundTool || !ctx.previewToolPermission)
     return "Error: collection queries require the owning tool authorization pipeline.";
-  const resources = [...(args.resources as string[])].sort();
-  const receipts: UploadedDocumentRead[] = [];
+  const receipts: DocumentQueryRead[] = [];
   const deadline = new AbortController();
   const combined = signal ? AbortSignal.any([signal, deadline.signal]) : deadline.signal;
   let timer: ReturnType<typeof setTimeout> | undefined;
@@ -277,10 +332,16 @@ async function querySourceCollection(
     armTimer();
   };
   let directoryIdentity: string | undefined;
-  const callArgs = (resource: string) => ({
+  const localDirectories = new Map<string, string>();
+  const entries = sharedCollection
+    ? collectionConfig(access.definition!).entries.filter((entry) =>
+        selected.some((item) => item.resource === entry.id),
+      )
+    : [];
+  const callArgs = (item: SelectedDocument) => ({
     source: access.sourceId,
-    scope,
-    resource,
+    scope: item.scope,
+    resource: item.resource,
     query,
     limit: 1,
   });
@@ -291,30 +352,51 @@ async function querySourceCollection(
       !authorityIsCurrent(access, cwd, ctx) ||
       ctx.disabledBuiltins?.has("ReadSource") ||
       (ctx.allowedToolNames && !ctx.allowedToolNames.has("ReadSource")) ||
-      resources.some(
-        (resource) => ctx.previewToolPermission!("ReadSource", callArgs(resource)) === "deny",
+      selected.some(
+        (item) =>
+          !access.scopes.includes(item.scope) ||
+          ctx.previewToolPermission!("ReadSource", callArgs(item)) === "deny",
       )
     )
       throw new Error("Source authorization changed or a selected resource is denied");
     if (
       directoryIdentity !== undefined &&
-      uploadedDocumentDirectoryIdentity(cwd, resources[0]) !== directoryIdentity
+      uploadedDocumentDirectoryIdentity(cwd, selected[0].resource) !== directoryIdentity
     )
       throw new Error("Uploaded document workspace or directory changed during collection query");
+    for (const entry of entries) {
+      const identity = localDirectories.get(entry.id);
+      if (
+        identity !== undefined &&
+        entry.kind === "local" &&
+        collectionLocalDirectoryIdentity(entry) !== identity
+      )
+        throw new Error("Collection file directory changed during collection query");
+    }
   };
   try {
     armTimer();
     // All known deny/metadata/size checks precede the first content read. A
     // forecast never grants a read: each child still runs real approval/hooks.
     assertAuthorized();
-    const metadata = await resourcesFor(access, scope, cwd, ctx);
-    assertAuthorized();
+    const metadata = new Map<string, SourceResourceMeta[]>();
+    for (const item of selected) {
+      if (metadata.has(item.scope)) continue;
+      metadata.set(item.scope, await resourcesFor(access, item.scope, cwd, ctx));
+      assertAuthorized();
+    }
     let advertisedBytes = 0;
-    for (const resource of resources) {
-      const item = metadata.find(
-        (candidate) => candidate.id === resource && candidate.scopeId === scope,
-      );
-      if (!item) throw new Error(`Selected resource "${resource}" is not listed in this scope`);
+    for (const selection of selected) {
+      const item = metadata
+        .get(selection.scope)!
+        .find(
+          (candidate) =>
+            candidate.id === selection.resource && candidate.scopeId === selection.scope,
+        );
+      if (!item)
+        throw new Error(
+          `Selected resource "${selection.resource}" is not listed in scope "${selection.scope}"`,
+        );
       if (
         !Number.isSafeInteger(item.sizeBytes) ||
         item.sizeBytes! < 0 ||
@@ -327,16 +409,22 @@ async function querySourceCollection(
     }
     if (advertisedBytes > MAX_COLLECTION_INPUT_BYTES)
       throw new Error("Collection query exceeds the 40 MiB total input limit; select fewer files");
-    directoryIdentity = uploadedDocumentDirectoryIdentity(cwd, resources[0]);
+    if (sharedCollection) {
+      for (const item of selected) {
+        const entry = entries.find((candidate) => candidate.id === item.resource);
+        if (entry?.kind === "local")
+          localDirectories.set(entry.id, collectionLocalDirectoryIdentity(entry));
+      }
+    } else directoryIdentity = uploadedDocumentDirectoryIdentity(cwd, selected[0].resource);
     let inputBytes = 0;
     let indexBytes = 0;
-    for (const resource of resources) {
+    for (const selection of selected) {
       assertAuthorized();
-      let receipt: UploadedDocumentRead | undefined;
+      let receipt: DocumentQueryRead | undefined;
       const service: DocumentQueryService = Object.freeze({
         source: access.sourceId,
-        scope,
-        resource,
+        scope: selection.scope,
+        resource: selection.resource,
         query,
         reserveInputBytes(bytes: number) {
           // Child permission / pre-start Hook waiting is not parser compute.
@@ -347,10 +435,14 @@ async function querySourceCollection(
             throw new Error("Collection query exceeds the 40 MiB actual input limit");
           inputBytes += bytes;
         },
-        capture(value: UploadedDocumentRead) {
+        capture(value: DocumentQueryRead) {
           assertAuthorized();
-          if (receipt || value.index.resourceId !== resource || !Object.isFrozen(value.index))
-            throw new Error("Invalid uploaded document query receipt");
+          if (
+            receipt ||
+            value.index.resourceId !== selection.resource ||
+            !Object.isFrozen(value.index)
+          )
+            throw new Error("Invalid authorized document query receipt");
           const bytes = Buffer.byteLength(JSON.stringify(value.index));
           if (indexBytes + bytes > MAX_COLLECTION_INDEX_BYTES)
             throw new Error("Collection query exceeds the 4 MiB index limit; select fewer files");
@@ -364,7 +456,7 @@ async function querySourceCollection(
           {
             id: `source-query-${randomUUID()}`,
             toolName: "ReadSource",
-            args: callArgs(resource),
+            args: callArgs(selection),
           },
           {
             signal: combined,
@@ -383,14 +475,32 @@ async function querySourceCollection(
       // Includes earlier files while a later approval/parse was awaiting.
       for (const original of receipts) original.assertCurrent();
     }
+    const corpus = searchDocumentIndexes(
+      receipts.map((item) => item.index),
+      query,
+      limit,
+    );
+    const scopeFor = (resourceId: string) =>
+      selected.find((item) => item.resource === resourceId)!.scope;
     const result = {
       source: access.sourceId,
-      scope,
-      ...searchDocumentIndexes(
-        receipts.map((item) => item.index),
-        query,
-        limit,
-      ),
+      ...(sharedCollection ? {} : { scope }),
+      ...corpus,
+      ...(sharedCollection
+        ? {
+            resources: corpus.resources.map((item) => ({
+              ...item,
+              scopeId: scopeFor(item.resourceId),
+            })),
+            matches: corpus.matches.map((item) => ({
+              ...item,
+              scopeId: scopeFor(item.resourceId),
+            })),
+            ...(receipts.some((item) => "revalidateRemote" in item && item.revalidateRemote)
+              ? { remoteConsistency: "sequential_revalidation" as const }
+              : {}),
+          }
+        : {}),
     };
     let output = JSON.stringify(scrubSecretValue(result));
     while (Buffer.byteLength(output) > DEFAULT_MAX_BYTES && result.matches.length) {
@@ -401,14 +511,25 @@ async function querySourceCollection(
     }
     if (Buffer.byteLength(output) > DEFAULT_MAX_BYTES)
       throw new Error("Collection metadata exceeds the output limit");
-    // No await between all original identity/hash checks and the final result.
+    // URL observations are sequential redownloads, never an atomic snapshot.
+    // Afterwards the local originals and all authority are checked synchronously.
+    for (const original of receipts) {
+      if ("revalidateRemote" in original && original.revalidateRemote) {
+        assertAuthorized();
+        await original.revalidateRemote();
+        assertAuthorized();
+      }
+    }
+    // No await between all local identity/hash checks and the final result.
     assertAuthorized();
     for (const original of receipts) original.assertCurrent();
     assertAuthorized();
-    return wrapUntrustedInput(
+    const wrapped = wrapUntrustedInput(
       output,
-      `source=${access.sourceId} scope=${scope} resources=${JSON.stringify(resources)}`,
+      `source=${access.sourceId}${sharedCollection ? "" : ` scope=${scope}`} resources=${JSON.stringify(sharedCollection ? selected : selected.map((item) => item.resource))}`,
     );
+    assertAuthorized();
+    return wrapped;
   } catch (error) {
     return `Error: collection query failed: ${error instanceof Error ? error.message : String(error)}`;
   } finally {
@@ -434,7 +555,10 @@ export async function readSourceTool(
   if (access.readPolicy === "deny") {
     return `Error: source "${source}" is metadata-only in this workspace (readPolicy: deny).`;
   }
-  if (!access.scopes.includes(scope)) {
+  if (
+    !(access.kind === "collection" && args.resources !== undefined) &&
+    !access.scopes.includes(scope)
+  ) {
     return `Error: scope "${scope}" is not bound for source "${source}".`;
   }
   if (!access.definition) return `Error: source "${source}" is dangling.`;
@@ -470,11 +594,11 @@ export async function readSourceTool(
 
   if (args.resources !== undefined) {
     if (
-      access.kind !== "local-files" ||
-      source !== LOCAL_FILES_SOURCE_ID ||
+      (access.kind !== "collection" &&
+        (access.kind !== "local-files" || source !== LOCAL_FILES_SOURCE_ID)) ||
       typeof query !== "string"
     )
-      return "Error: collection queries require query and the uploaded files source.";
+      return "Error: collection queries require query and an uploaded files or shared collection source.";
     return querySourceCollection(
       args,
       access,
@@ -487,7 +611,7 @@ export async function readSourceTool(
     );
   }
   if (typeof args.resource !== "string" || !resource)
-    return "Error: choose one exact resource or an explicit uploaded resources query.";
+    return "Error: choose one exact resource or an explicit document resources query.";
 
   try {
     // Validate resource ownership from the selected scope's metadata before
@@ -535,7 +659,12 @@ export async function readSourceTool(
             ...options,
             reserveInputBytes: service.reserveInputBytes,
           })
-        : undefined;
+        : service && adapter === collectionAdapter
+          ? await readCollectionDocument(access.definition, resource, {
+              ...options,
+              reserveInputBytes: service.reserveInputBytes,
+            })
+          : undefined;
     const content = receipt?.content ?? (await adapter.read(access.definition, resource, options));
     signal?.throwIfAborted();
     if (!authorityIsCurrent(access, cwd, ctx))

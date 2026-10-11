@@ -31,6 +31,7 @@ export function createDesktopPanelAutomationHost(
         authorityDeps(),
       );
       if (!(await scope.isAuthorized())) throw Error("Panel automation authorization expired");
+      scope.assertAuthorized?.();
       const s = scheduler();
       s.loadJobs();
       const owns = (job: ReturnType<typeof s.list>[number]) =>

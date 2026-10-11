@@ -1,7 +1,7 @@
 import { panelVideoLimits, panelVideoOptions } from "./browser-capture.js";
 import { panelExecutionGate, PanelExecutionBusyError } from "./execution-gate.js";
 import { randomBytes, createHash } from "node:crypto";
-import { constants } from "node:fs";
+import { constants, lstatSync } from "node:fs";
 import { lstat, mkdir, open, opendir, realpath, type FileHandle } from "node:fs/promises";
 import { homedir } from "node:os";
 import { dirname, extname, join, resolve, sep } from "node:path";
@@ -60,6 +60,7 @@ import {
 import { PanelManagementError } from "./management.js";
 import type { PanelSnapshot } from "./types.js";
 import { panelAutomationMethods, type PanelAutomationHost } from "./automations.js";
+import type { PanelProjectScopeBinding } from "./project-scope.js";
 
 const ASSETS = "/api/v1/panel-assets/";
 const ROOT = "/api/v1/panels/runtime/";
@@ -182,6 +183,7 @@ export const panelWebCompatibility = (
 });
 
 interface Grant {
+  projectScope?: PanelProjectScopeBinding;
   sharedTools?: SharedPanelToolBinding;
   unsubscribeTools?: () => void;
   guestId: number;
@@ -230,6 +232,8 @@ export interface PanelRuntimeOptions {
   projectPackages?: boolean;
   dataDir: string;
   host: "hub" | "desktop";
+  /** Host authority only, never a field accepted from Panel HTTP requests. */
+  projectScope?: () => Promise<PanelProjectScopeBinding | undefined>;
   publicPathPrefix?: string;
   snapshot: (appId?: string) => Promise<PanelSnapshot>;
   ownerId: (request: IncomingMessage) => Promise<string | undefined>;
@@ -1152,6 +1156,7 @@ export function createPanelRuntime(options: PanelRuntimeOptions) {
       return false;
     }
     try {
+      grant.projectScope?.assertCurrent();
       const panel = (await snapshot(grant.app.id)).panels.find(
         (candidate) => candidate.id === grant.app.id,
       );
@@ -1164,6 +1169,7 @@ export function createPanelRuntime(options: PanelRuntimeOptions) {
           options.bindingCwd ?? options.cwd,
           options.cwd,
         );
+      grant.projectScope?.assertCurrent();
       const valid =
         !closed &&
         grants.get(grant.id) === grant &&
@@ -1373,7 +1379,17 @@ export function createPanelRuntime(options: PanelRuntimeOptions) {
         context.sessionId = input.sessionId;
         context.busy = false;
       }
+      const projectScope = app.permissions.includes("context.workspace")
+        ? await options.projectScope?.()
+        : undefined;
+      if (projectScope) {
+        projectScope.assertCurrent();
+        context.projectScope = { ...projectScope.scope };
+      }
+      if (closed || generation !== startedGeneration || preparation.cancelled)
+        error(410, "面板授权已失效，请重新打开。");
       const grant: Grant = {
+        projectScope,
         sharedTools,
         guestId: ++nextGuest,
         id,
@@ -1834,6 +1850,7 @@ export function createPanelRuntime(options: PanelRuntimeOptions) {
         error(400, "面板通知内容无效。");
       return { effect: method, title: value.title ?? grant.app.title.default, body: value.body };
     }
+    const expectedRevision = grant.revision;
     return services.call(
       {
         appId: grant.app.id,
@@ -1841,6 +1858,27 @@ export function createPanelRuntime(options: PanelRuntimeOptions) {
         projectPath: options.bindingCwd ?? options.cwd,
         permissions: grant.app.permissions,
         isAuthorized: () => authorized(grant),
+        assertAuthorized: () => {
+          try {
+            grant.projectScope?.assertCurrent();
+            const root = lstatSync(grant.root);
+            if (
+              closed ||
+              grants.get(grant.id) !== grant ||
+              byGuest.get(grant.guestId) !== grant ||
+              grant.revision !== expectedRevision ||
+              grant.expiresAt <= now() ||
+              !grant.app.permissions.includes("storage") ||
+              root.isSymbolicLink() ||
+              !root.isDirectory() ||
+              root.dev + ":" + root.ino !== grant.rootIdentity
+            )
+              throw new PanelBridgeError("REVOKED", "Panel App storage scope changed");
+          } catch (cause) {
+            remove(grant);
+            throw cause;
+          }
+        },
       },
       method,
       params,

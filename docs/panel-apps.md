@@ -154,6 +154,27 @@ write. A new Host capability does not by itself migrate every Panel's storage.
 
 No Host capability is granted by default.
 
+With `context.workspace`, implementing Hosts also supply
+`context.projectScope = { version: 1, environmentId, projectId, rootId }` after
+resolving the registered project and verifying its execution root. All four
+fields are required. These opaque IDs describe the Host environment, project,
+and execution root; they grant no additional permissions. Native Desktop and its
+paired Web facade share the same registry, environment, and IDs. Separate roots
+and Git worktrees remain distinct. Older Hosts and unregistered Desktop roots
+may omit the field; clients must then retain their conservative session scope.
+
+A guest's scope is frozen and revalidated on bind, context reads, and Host
+calls. Project deletion/recreation, a changed registered root, an environment
+replacement, or a replaced directory invalidates the guest permanently. A
+session change within a valid project does not revoke project file/process/task
+access. `agent.submitPrompt` and `automations.*` stay bound to the first real
+session: changing or losing that session permanently rejects these calls with
+`SESSION_CHANGED`, including a change back to the original session. Reopen the
+Panel to establish a new session binding. Main enforces this before dispatch
+and after asynchronous authorization, even when the guest has not yet received
+`context.changed`. See the [delivery boundary](todo/panel-project-scope-delivery.md)
+for implementation and validation details.
+
 | Permission                | Capability                                                                                                                                                                                                                                                           |
 | ------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `context.session`         | Adds session ID and busy state to context.                                                                                                                                                                                                                           |

@@ -2,6 +2,7 @@ import { mock } from "bun:test";
 import assert from "node:assert/strict";
 import { createServer } from "node:http";
 import { mkdirSync, readFileSync, realpathSync, writeFileSync } from "node:fs";
+import http from "node:http";
 import { join, resolve } from "node:path";
 
 const root = realpathSync(process.argv[2]);
@@ -60,10 +61,43 @@ mock.module("electron", () => ({
     },
   },
 }));
+const server = createServer((request, response) => {
+  void api
+    .handle(request, response, { baseUrl })
+    .then((handled) => {
+      if (!handled) {
+        response.writeHead(404);
+        response.end();
+      }
+    })
+    .catch((error) => {
+      response.writeHead(500);
+      response.end(String(error));
+    });
+});
+await new Promise((resolve) => server.listen(0, "127.0.0.1", resolve));
+const baseUrl = `http://127.0.0.1:${server.address().port}`;
+const { installLocalNetworkGuard } = await import(
+  join(repository, "scripts/runtime-cost-smoke-isolation.mjs")
+);
+installLocalNetworkGuard(baseUrl);
+assert.throws(() => fetch("https://scope.invalid/"), /non-fixture/);
+assert.throws(() => http.get("http://127.0.0.1:9/"), /non-fixture/);
 // Exercise current runtime sources without imposing a competing package build on the host.
 const panelsModule = await import(join(repository, "packages/server/src/index.panels.ts"));
 mock.module("@cjhyy/code-shell-server/panels", () => panelsModule);
 const { createDesktopWebService } = await import(join(desktopMain, "desktop-web-service.ts"));
+const { getProjectStore } = await import(join(desktopMain, "project-store.ts"));
+const { createDesktopPanelProjectScopeResolver } = await import(
+  join(desktopMain, "panel-project-scope.ts")
+);
+const projectStore = getProjectStore();
+await projectStore.createFromPath(first);
+await projectStore.createFromPath(second);
+const resolveProjectScope = createDesktopPanelProjectScopeResolver({
+  store: projectStore,
+  environmentDir: join(root, "code-shell-home", "desktop"),
+});
 const { createDesktopPanelAutomationHost } = await import(
   join(desktopMain, "panel-automation-host.ts")
 );
@@ -139,6 +173,7 @@ const allowed = new Set([first, second, forged]);
 const api = createDesktopWebService({
   devices,
   automations: automationHost,
+  resolveProjectScope,
   sharedToolJobs: {
     bind: async () => {
       throw new Error("This storage-only fixture must not bind native tasks");
@@ -153,22 +188,6 @@ const api = createDesktopWebService({
   resolveWorkspace: async (cwd) => (allowed.has(cwd ?? first) ? (cwd ?? first) : undefined),
   onSessionsChanged: () => {},
 });
-const server = createServer((request, response) => {
-  void api
-    .handle(request, response, { baseUrl })
-    .then((handled) => {
-      if (!handled) {
-        response.writeHead(404);
-        response.end();
-      }
-    })
-    .catch((error) => {
-      response.writeHead(500);
-      response.end(String(error));
-    });
-});
-await new Promise((resolve) => server.listen(0, "127.0.0.1", resolve));
-const baseUrl = `http://127.0.0.1:${server.address().port}`;
 let cookie;
 async function request(
   path,
@@ -225,6 +244,24 @@ try {
   assert.equal((await request("/api/v1/panels", { cwd: forged })).status, 403);
   const grantA = await prepare(first);
   const grantB = await prepare(second);
+  const nativeScope = await resolveProjectScope(first, first);
+  assert.deepEqual(grantA.context.projectScope, nativeScope.scope);
+  const switchedSession = await prepare(first, "other-session");
+  assert.deepEqual(switchedSession.context.projectScope, nativeScope.scope);
+  assert.notEqual(grantA.context.projectScope.projectId, grantB.context.projectScope.projectId);
+  assert.equal(
+    (await call(first, grantA, "context.get")).projectScope.environmentId,
+    nativeScope.scope.environmentId,
+  );
+  const forgedScope = await request("/api/v1/panels/runtime/prepare", {
+    method: "POST",
+    body: {
+      appId: "desktop-panel",
+      revision: (await list(first)).revision,
+      projectScope: nativeScope.scope,
+    },
+  });
+  assert.equal(forgedScope.status, 400);
   assert.ok(grantA.context.availableMethods.includes("automations.createUnique"));
   assert.equal(
     grantA.limitations.some((reason) => reason.includes("automations.manage")),
@@ -352,6 +389,9 @@ try {
       forgedBindingRejected: true,
       sharedAutomationScheduler: true,
       automationTaskScope: true,
+      nativePairedProjectScope: true,
+      sessionIndependentProjectScope: true,
+      forgedProjectScopeRejected: true,
     }),
   );
 } finally {

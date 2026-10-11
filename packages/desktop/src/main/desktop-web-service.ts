@@ -18,6 +18,7 @@ import {
   type SharedPanelToolHost,
   type PanelDirectoryAuthorizer,
   type PanelAutomationHost,
+  type PanelProjectScopeBinding,
 } from "@cjhyy/code-shell-server/panels";
 import type { TrustedDeviceStore } from "@cjhyy/code-shell-server/mobile-remote";
 import type { AgentBridge } from "./agent-bridge.js";
@@ -28,6 +29,10 @@ export function createDesktopWebService(options: {
   sharedToolJobs: SharedPanelToolHost;
   automations?: PanelAutomationHost;
   authorizePanelDirectory: PanelDirectoryAuthorizer;
+  resolveProjectScope?: (
+    projectPath: string,
+    cwd: string,
+  ) => Promise<PanelProjectScopeBinding | undefined>;
   getBridge: () => AgentBridge | null;
   remoteLink?: () => RemoteLinkConfiguration | undefined;
   resolveWorkspace: (input: string | undefined, deviceId: string) => Promise<string | undefined>;
@@ -95,6 +100,8 @@ export function createDesktopWebService(options: {
               // Match Electron's existing panel storage exactly, including custom profiles.
               dataDir: app.getPath("userData"),
               host: "desktop",
+              projectScope: () =>
+                options.resolveProjectScope?.(bindingCwd, cwd) ?? Promise.resolve(undefined),
               projectPackages: true,
               sharedToolJobs: options.sharedToolJobs,
               automations: options.automations,

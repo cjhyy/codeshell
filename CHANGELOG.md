@@ -8,7 +8,18 @@ breaking.
 
 ## [Unreleased]
 
+### Added
+
+- Query explicitly selected files in one shared document collection together,
+  with unified lexical ranking and exact source references. Each file retains
+  its own approval and version checks; existing uploaded-file queries remain compatible.
+
 ### Fixed
+
+- Preserve Panel project work across chat changes using Host-verified environment,
+  project and execution-root identities. Project changes permanently revoke the
+  old page, while prompt submission and automation operations retain their original
+  session. Download and Video Studio support this in their matching Panel update.
 
 - Preserve recovery coverage for visible output without a journal cursor across
   memory eviction, Run completion and Host restart. Desktop, Mobile and Hub verify

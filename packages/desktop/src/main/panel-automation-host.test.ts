@@ -108,6 +108,41 @@ test("device revocation during persisted session lookup prevents writes and data
   }
 });
 
+test("synchronous transport fence checks the final authorization await before mutation", async () => {
+  const s = new CronScheduler();
+  s.setExecutionEnabled(false);
+  let active = true;
+  let checks = 0;
+  const host = createDesktopPanelAutomationHost(
+    () => deps,
+    () => s,
+  );
+  try {
+    await expect(
+      host.call(
+        {
+          ...scope,
+          isAuthorized: async () => {
+            if (++checks === 2)
+              queueMicrotask(() => {
+                active = false;
+              });
+            return true;
+          },
+          assertAuthorized: () => {
+            if (!active) throw Error("transport revoked");
+          },
+        },
+        "automations.create",
+        { name: "daily", schedule: "1h", prompt: "check" },
+      ),
+    ).rejects.toThrow("transport revoked");
+    expect(s.list()).toEqual([]);
+  } finally {
+    s.stopAll();
+  }
+});
+
 test("wire calls cannot forge workspace, identity, permission, or method-specific fields", () => {
   for (const extra of [
     { cwd: "/b" },

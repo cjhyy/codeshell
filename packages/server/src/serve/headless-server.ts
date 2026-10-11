@@ -44,6 +44,7 @@ import { createHubMcpConfiguration } from "../hub/mcp-configuration.js";
 import { createLinkHttp } from "../links/http.js";
 import { createPanelHttp } from "../panels/http.js";
 import { createHubPanelBinding } from "../panels/hub-binding.js";
+import { capturePanelProjectScope } from "../panels/project-scope.js";
 import {
   createHubSessions,
   hubSessionPreview,
@@ -603,6 +604,16 @@ export async function startHeadlessServer(opts: HeadlessServeOptions): Promise<H
         ...panelBinding,
         dataDir: opts.dataDir,
         host: "hub",
+        projectScope: () => {
+          if (!environment || !panelBinding) throw new Error("Hub project identity is unavailable");
+          return capturePanelProjectScope({
+            environmentDir: opts.dataDir,
+            environmentId: environment.id,
+            projectPath: panelBinding.bindingCwd,
+            cwd: workspaceCwd,
+            assertAuthority: panelBinding.assertBinding,
+          });
+        },
         automations: {
           conditionalMutations: true,
           call: (scope, method, params) => {

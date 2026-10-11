@@ -54,6 +54,7 @@ export const panelBridgeLimits = Object.freeze({
 export type PanelBridgeErrorCode =
   | "PERMISSION_DENIED"
   | "REVOKED"
+  | "SESSION_CHANGED"
   | "NOT_SUPPORTED"
   | "RATE_LIMITED"
   | "PARAMS_TOO_LARGE"
@@ -95,6 +96,7 @@ export function panelRuntimeCapabilities(input: {
     errors: [
       "PERMISSION_DENIED",
       "REVOKED",
+      "SESSION_CHANGED",
       "NOT_SUPPORTED",
       "RATE_LIMITED",
       "PARAMS_TOO_LARGE",
