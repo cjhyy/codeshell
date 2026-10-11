@@ -78,6 +78,7 @@ export class HubRunReplay {
     coverage.proof.observe(event);
     if (this.coverageBytes + coverage.proof.memoryBytes > 4 * 1024 * 1024)
       coverage.proof.discardProof();
+    let withheldBeforeSession = false;
     try {
       if (
         this.persistence &&
@@ -88,8 +89,10 @@ export class HubRunReplay {
           unpaired: coverage.proof.incomplete,
           inputIds: coverage.proof.inputIds,
         });
-        if (!saved.incarnation)
+        if (!saved.incarnation) {
+          withheldBeforeSession = saved.status === "unavailable";
           throw new Error("Session output coverage is unavailable before publication");
+        }
         if (saved.incarnation) {
           coverage.proof.acknowledgeInputs(coverage.proof.inputIds);
           coverage.persistedBlocked = saved.unpaired;
@@ -97,7 +100,7 @@ export class HubRunReplay {
       }
     } catch (cause) {
       coverage.proof = previousProof;
-      coverage.publicationFailed = true;
+      if (!withheldBeforeSession) coverage.publicationFailed = true;
       throw cause;
     } finally {
       this.coverageBytes += coverage.proof.memoryBytes;

@@ -7,6 +7,7 @@ import { mkdirSync, readFileSync, renameSync, statSync } from "node:fs";
 import { join } from "node:path";
 import { act } from "react";
 import { SessionManager, sessionsRoot } from "@cjhyy/code-shell-core";
+import { SessionOutputCoverageStore } from "@cjhyy/code-shell-core/internal";
 import { RemoteHostManager, TrustedDeviceStore } from "@cjhyy/code-shell-server/mobile-remote";
 import { ExternalRuntimeService } from "../../packages/desktop/src/main/external-runtime-service.js";
 import { SessionSnapshotStore } from "../../packages/desktop/src/main/SessionSnapshotStore.js";
@@ -47,7 +48,9 @@ export async function run(root: string, port: number) {
   mkdirSync(cwd, { mode: 0o700 });
   const project = await getProjectStore().createFromPath(cwd);
   const owners = new Map<string, number>();
-  let snapshots = new SessionSnapshotStore();
+  let snapshots = new SessionSnapshotStore({
+    coverage: new SessionOutputCoverageStore(sessionsRoot),
+  });
   const desktop: Array<{ id: number; event: unknown }> = [];
   const windows = [77, 88].map((id) => ({
     isDestroyed: () => false,
@@ -403,7 +406,9 @@ export async function run(root: string, port: number) {
       await remote.stop();
       await sleep(20);
     });
-    snapshots = new SessionSnapshotStore();
+    snapshots = new SessionSnapshotStore({
+      coverage: new SessionOutputCoverageStore(sessionsRoot),
+    });
     await remote.start({ host: "127.0.0.1", port });
     await until(
       () =>
@@ -762,7 +767,9 @@ export async function run(root: string, port: number) {
 
 /** Second actual Node Main: empty RAM, real paired WS, production page authority, no runtime construction. */
 export async function cold(root: string, port: number, sessionId: string) {
-  const snapshots = new SessionSnapshotStore();
+  const snapshots = new SessionSnapshotStore({
+    coverage: new SessionOutputCoverageStore(sessionsRoot),
+  });
   const devices = new TrustedDeviceStore(join(root, "trusted-devices.json"));
   const device = devices.listDevices()[0]!;
   let recovery!: MobileOutputRecovery;

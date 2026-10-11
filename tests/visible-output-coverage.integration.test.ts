@@ -91,13 +91,10 @@ afterAll(() => {
   if (failures.length) throw new AggregateError(failures, "Coverage fixture cleanup failed");
 });
 let sequence = 0;
-function fixture() {
+function fixture(prestate = false) {
   const root = sessionsRoot(),
     id = `coverage-${++sequence}`;
   const manager = new SessionManager(root);
-  const session = manager.create(root, "fixture", "fixture", id);
-  manager.startSessionRun(session.state, "run");
-  const writer = new SessionOutputJournal(root, id, "run", session.transcript.getEvents()[0].id);
   const makeStore = () =>
     new SessionSnapshotStore({
       maxPerSession: 1,
@@ -112,7 +109,27 @@ function fixture() {
     },
   ];
   const emit = (event: any) => publishOwnedExternalStream(snapshots, windows, 7, id, event);
-  const publish = (event: any) => emit({ ...event, outputCursor: writer.append(event) });
+  const hub = prestate
+    ? new HubRunReplay(undefined, new SessionOutputCoverageStore(() => root))
+    : undefined;
+  if (hub) {
+    hub.begin(id, "request", 0);
+    const input = { type: "session_user_message", text: "question", clientMessageId: "input" };
+    expect(emit(input)).toBeUndefined();
+    expect(sends).toHaveLength(0);
+    expect(snapshots.get(id).outputUnpaired).toBeUndefined();
+    expect(() => hub.append(id, input)).toThrow("unavailable before publication");
+    expect(hub.outputCoverage(id).unpaired).toBe(false);
+    expect(() => readFileSync(join(root, id, "state.json"))).toThrow();
+  }
+  const session = manager.create(root, "fixture", "fixture", id);
+  manager.startSessionRun(session.state, "run");
+  const writer = new SessionOutputJournal(root, id, "run", session.transcript.getEvents()[0].id);
+  const publish = (event: any) => {
+    const recorded = { ...event, outputCursor: writer.append(event) };
+    hub?.append(id, recorded);
+    return emit(recorded);
+  };
   const handlers = new Map<string, (...args: any[]) => any>();
   registerSessionTranscriptIpc({
     handle: (channel, listener) => {
@@ -185,6 +202,7 @@ function fixture() {
     mobileSelect,
     mobileRead,
     mobileRecover,
+    hub,
     revoke: () => {
       authority = "revoked";
     },
@@ -210,6 +228,50 @@ test("actual owned Main publication + IPC/Desktop/Mobile recover a healthy curso
   expect((await f.mobileRecover())?.outputCursor).toBe(mobile?.outputCursor);
   expect(f.snapshots().epoch).not.toBe(epoch);
   expect(f.sends).toHaveLength(4);
+});
+
+test("a withheld pre-state user echo recovers its real journal on the same Main and Hub Hosts", async () => {
+  const f = fixture(true);
+  const epoch = f.snapshots().epoch;
+  await f.mobileSelect();
+  const desktop = await f.desktop(),
+    mobile = await f.mobileRecover();
+  expect(desktop?.state.messages.find((item) => item.kind === "user")).toMatchObject({
+    text: "question",
+    clientMessageId: "input",
+  });
+  expect(mobile?.chat.items.find((item) => item.kind === "user")).toMatchObject({
+    text: "question",
+    clientMessageId: "input",
+  });
+  expect(f.snapshots().epoch).toBe(epoch);
+  expect(f.snapshots().get(f.id).outputUnpaired).toBeUndefined();
+  expect(f.snapshots().get(f.id).outputInputIds).toBeUndefined();
+  expect(f.sends).toHaveLength(4);
+  f.hub!.finish(f.id, "request");
+  const page = readOutputJournal(f.root, f.id),
+    base = readOutputJournalLegacyBase(f.root, f.id, page.legacyBaseThroughEventId);
+  const recovered = await chatFromOutputJournal(
+    {
+      state: {},
+      transcript: base.events as unknown as Record<string, unknown>[],
+      outputJournal: page,
+      outputCoverage: f.hub!.outputCoverage(f.id),
+    },
+    async (options) => readOutputJournal(f.root, f.id, options),
+    [],
+    () => undefined,
+    () => Promise.resolve(f.hub!.outputCoverage(f.id)),
+  );
+  expect(recovered?.chat.items.find((item) => item.kind === "user")).toMatchObject({
+    text: "question",
+    clientMessageId: "input",
+  });
+  expect(
+    recovered?.chat.items.some(
+      (item) => item.kind === "assistant" && item.text === "recorded answer",
+    ),
+  ).toBe(true);
 });
 
 for (const type of [
@@ -493,7 +555,7 @@ test("visible publication before a real Session exists is withheld and never man
     ),
   ).toBeUndefined();
   expect(sends).toHaveLength(0);
-  expect(store.get(id).outputUnpaired).toBe(true);
+  expect(store.get(id).outputUnpaired).toBeUndefined();
   expect(() => readFileSync(join(root, id, "state.json"))).toThrow();
 });
 

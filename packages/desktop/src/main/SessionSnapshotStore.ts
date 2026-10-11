@@ -106,22 +106,25 @@ export class SessionSnapshotStore {
       this.persistence &&
       ((log.coverage.incomplete && !log.persistedBlocked) || log.coverage.inputIds.length)
     ) {
+      let withheldBeforeSession = false;
       try {
         const proof = this.persistence.record(sessionId, {
           unpaired: log.coverage.incomplete,
           inputIds: log.coverage.inputIds,
         });
-        if (!proof.incarnation)
+        if (!proof.incarnation) {
+          withheldBeforeSession = proof.status === "unavailable";
           throw new Error("Session output coverage is unavailable before publication");
+        }
         if (proof.incarnation) {
           log.coverage.acknowledgeInputs(log.coverage.inputIds);
           log.persistedBlocked = proof.unpaired;
         }
       } catch (cause) {
-        // No event was published. Keep a per-Host uncertainty barrier without
-        // persisting this dropped event as a permanent visible gap next time.
+        // A not-yet-created Session had no publication or uncertain write. A
+        // real persistence/identity failure still keeps its per-Host barrier.
         log.coverage = previousCoverage;
-        log.publicationFailed = true;
+        if (!withheldBeforeSession) log.publicationFailed = true;
         this.coverageBytes += log.coverage.memoryBytes;
         throw cause;
       }

@@ -27,6 +27,7 @@ const identity = () => ({
 const adapters = process.env.CODESHELL_OUTPUT_ADAPTERS;
 assert(adapters);
 const core = await import("@cjhyy/code-shell-core");
+const { SessionOutputCoverageStore } = await import("@cjhyy/code-shell-core/internal");
 const coding = await import(
   pathToFileURL(join(repo, "packages/coding/dist/external-runtimes/index.js"))
 );
@@ -60,7 +61,10 @@ const assistantText = (recovery) =>
     .map((item) => item.text)
     .join("");
 if (process.argv[2] === "cold") {
-  const recovery = await recover(process.argv[3], new SessionSnapshotStore());
+  const recovery = await recover(
+    process.argv[3],
+    new SessionSnapshotStore({ coverage: new SessionOutputCoverageStore(core.sessionsRoot) }),
+  );
   assert(recovery);
   console.log(
     JSON.stringify({
@@ -94,7 +98,9 @@ const turns = () => requests().filter((event) => event.event === "physical-turn"
 const part = (index) => `${index.toString().padStart(4, "0")}-汉🙂${"x".repeat(48 * 1024)}\n`;
 const owner = { isDestroyed: () => false, webContents: { id: 77 } };
 function createService(onEvent = () => {}) {
-  const snapshots = new SessionSnapshotStore();
+  const snapshots = new SessionSnapshotStore({
+    coverage: new SessionOutputCoverageStore(core.sessionsRoot),
+  });
   const live = [];
   const wrongOwner = [];
   const windows = [
