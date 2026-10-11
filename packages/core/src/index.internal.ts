@@ -284,7 +284,11 @@ export {
 export { registerConnectorAdapter, connectorAdapterFor } from "./sources/adapter.js";
 export { collectionConfig } from "./sources/collection.js";
 export { captureCollectionLocalFile, readCollectionLocalFile } from "./sources/collection-local.js";
-export { normalizeCollectionUrl, downloadCollectionUrl } from "./sources/collection-url.js";
+export {
+  normalizeCollectionUrl,
+  downloadCollectionUrl,
+  collectionUrlDocumentName,
+} from "./sources/collection-url.js";
 export { mockAdapter } from "./sources/adapters/mock.js";
 export {
   LOCAL_FILES_SOURCE_ID,

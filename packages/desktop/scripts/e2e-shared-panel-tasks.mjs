@@ -6,13 +6,17 @@ import { createHash, randomBytes } from "node:crypto";
 import { mkdir, readFile, readdir, realpath, writeFile } from "node:fs/promises";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
-import { TrustedDeviceStore } from "@cjhyy/code-shell-server/mobile-remote";
+import { execFileSync } from "node:child_process";
+import { createServer } from "node:http";
+import { rename } from "node:fs/promises";
+import { prepareConfinedElectronFixture } from "./confined-electron-fixture.mjs";
 import {
   findCodeShellWindow,
   launchCodeShellElectron,
   makeIsolatedElectronHome,
 } from "./electron-harness.mjs";
 
+const worktreeDirectories = process.argv.includes("--worktree-directories");
 const legacyProjects = process.argv.includes("--legacy-projects");
 const projectPins = legacyProjects || process.argv.includes("--project-pins");
 const appDir = resolve(dirname(fileURLToPath(import.meta.url)), "..");
@@ -23,6 +27,7 @@ isolated.home = await realpath(isolated.home);
 isolated.codeShellHome = join(isolated.home, ".code-shell");
 isolated.userDataDir = join(isolated.home, "electron-user-data");
 const project = join(isolated.home, "task-project");
+const bindingProject = worktreeDirectories ? join(isolated.home, "main-project") : project;
 const automationSessionId = "shared-automation-session";
 const install = join(isolated.codeShellHome, "panel-apps", "task-fixture");
 const installedAt = new Date().toISOString();
@@ -67,6 +72,10 @@ const manifest = {
   },
 };
 let electron;
+let reservation;
+let confined;
+let fixtureOrigin;
+let oldWorktreeBookmark;
 async function until(read, message) {
   const deadline = Date.now() + 15000;
   while (Date.now() < deadline) {
@@ -76,7 +85,17 @@ async function until(read, message) {
   }
   throw new Error(message);
 }
-try {
+async function run() {
+  if (worktreeDirectories) {
+    assert.ok(process.env.CODE_SHELL_TEST_HOME, "run-isolated-node-smoke.mjs is required");
+    assert.equal(projectPins, false, "worktree directories is an independent acceptance mode");
+    reservation = createServer((_req, response) => response.end("fixture"));
+    await new Promise((done, reject) => {
+      reservation.once("error", reject);
+      reservation.listen(0, "127.0.0.1", done);
+    });
+    fixtureOrigin = `http://127.0.0.1:${reservation.address().port}`;
+  }
   await Promise.all([
     mkdir(join(install, ".codeshell-panel"), { recursive: true }),
     mkdir(join(install, "app/tools"), { recursive: true }),
@@ -204,15 +223,137 @@ try {
       else process.env.HOME = previousHome;
     }
   }
+  if (worktreeDirectories) {
+    await rename(project, bindingProject);
+    const git = (...args) =>
+      execFileSync("git", ["-C", bindingProject, ...args], { stdio: "pipe" });
+    git("init", "-q");
+    git("add", ".");
+    git(
+      "-c",
+      "user.name=Fixture",
+      "-c",
+      "user.email=fixture@example.invalid",
+      "commit",
+      "-qm",
+      "fixture",
+    );
+    git("worktree", "add", "-qb", "directory-fixture", project);
+    // Both directories are explicitly registered fixture roots before trust
+    // IPC. A recent worktree alone does not authorize its separate Git main.
+    await writeFile(
+      join(isolated.codeShellHome, "desktop/recents.json"),
+      JSON.stringify([
+        { path: project, name: "Task worktree", lastOpenedAt: Date.now() },
+        { path: bindingProject, name: "Task main project", lastOpenedAt: Date.now() },
+      ]),
+    );
+    const output = join(isolated.home, "old-worktree-output");
+    await mkdir(output);
+    confined = await prepareConfinedElectronFixture({ appDir, isolated, origin: fixtureOrigin });
+    // Arm only for this remote start, after Main's other startup listeners.
+    // No external interfaces makes the production LAN resolver choose its
+    // loopback fallback, so its advertised URL and same-origin checks agree.
+    // The HTTP routes, pairing and Panel/task handlers remain production code.
+    const entry = await readFile(confined.mainEntry, "utf8");
+    const listener = `import fixtureHttp from "node:http";
+import fixtureOs from "node:os";
+import { syncBuiltinESMExports as fixtureSyncBuiltinESMExports } from "node:module";
+const fixtureListen = fixtureHttp.Server.prototype.listen;
+const fixtureNetworkInterfaces = fixtureOs.networkInterfaces;
+let fixtureListenerArmed = false;
+globalThis.__armWorktreeDirectoryListener = () => {
+  if (fixtureListenerArmed || globalThis.__worktreeDirectoryListener)
+    throw new Error("Worktree fixture remote listener was already armed");
+  fixtureOs.networkInterfaces = () => ({});
+  fixtureSyncBuiltinESMExports();
+  fixtureListenerArmed = true;
+};
+globalThis.__restoreWorktreeDirectoryInterfaces = () => {
+  fixtureListenerArmed = false;
+  fixtureOs.networkInterfaces = fixtureNetworkInterfaces;
+  fixtureSyncBuiltinESMExports();
+};
+fixtureHttp.Server.prototype.listen = function (port, host, ...args) {
+  if (fixtureListenerArmed && port === 0 && host === "127.0.0.1") {
+    fixtureListenerArmed = false;
+    globalThis.__worktreeDirectoryListener = { requestedHost: host, pid: process.pid };
+    port = ${new URL(fixtureOrigin).port};
+    host = "127.0.0.1";
+    this.once("listening", () => {
+      globalThis.__worktreeDirectoryListener.address = this.address();
+    });
+  }
+  return fixtureListen.call(this, port, host, ...args);
+};
+`;
+    await writeFile(confined.mainEntry, listener + entry, { mode: 0o600 });
+  }
   const secret = randomBytes(32).toString("hex");
-  const devices = new TrustedDeviceStore(join(isolated.userDataDir, "mobile-remote/devices.json"));
-  const device = devices.addDevice({ name: "Shared task test browser", secretHash: secret });
+  let device;
+  if (worktreeDirectories) {
+    // Keep Playwright's own inspector transport outside the application guard.
+    // The parent imports no Core/Server in this mode; seed production stores in
+    // a separate private process guarded before its first package import.
+    const seed = `import assert from "node:assert/strict";
+const { installLocalNetworkGuard } = await import(${JSON.stringify(new URL("../../../scripts/runtime-cost-smoke-isolation.mjs", import.meta.url).href)});
+installLocalNetworkGuard(${JSON.stringify(fixtureOrigin)});
+assert.throws(() => fetch("https://directory-guard.invalid/"), /non-fixture/);
+const { PanelAppDirectoryBookmarks } = await import("@cjhyy/code-shell-server/panels");
+const { TrustedDeviceStore } = await import("@cjhyy/code-shell-server/mobile-remote");
+const bookmark = new PanelAppDirectoryBookmarks(${JSON.stringify(join(isolated.userDataDir, "panel-app-directory-bookmarks.json"))}).remember(${JSON.stringify(manifest.id)}, ${JSON.stringify(project)}, ${JSON.stringify(join(isolated.home, "old-worktree-output"))});
+const devices = new TrustedDeviceStore(${JSON.stringify(join(isolated.userDataDir, "mobile-remote/devices.json"))});
+console.log(JSON.stringify({bookmark, device: devices.addDevice({name:"Shared task test browser",secretHash:${JSON.stringify(secret)}})}));
+`;
+    const seeded = JSON.parse(
+      execFileSync(process.execPath, ["--input-type=module", "-e", seed], {
+        cwd: appDir,
+        env: {
+          ...process.env,
+          HOME: isolated.home,
+          USERPROFILE: isolated.home,
+          CODE_SHELL_HOME: isolated.codeShellHome,
+          CODE_SHELL_TEST_HOME: isolated.codeShellHome,
+        },
+        encoding: "utf8",
+        timeout: 15000,
+      }),
+    );
+    oldWorktreeBookmark = seeded.bookmark;
+    device = seeded.device;
+  } else {
+    const { TrustedDeviceStore } = await import("@cjhyy/code-shell-server/mobile-remote");
+    const devices = new TrustedDeviceStore(
+      join(isolated.userDataDir, "mobile-remote/devices.json"),
+    );
+    device = devices.addDevice({ name: "Shared task test browser", secretHash: secret });
+  }
   electron = await launchCodeShellElectron({
     appDir,
     home: isolated.home,
     userDataDir: isolated.userDataDir,
+    ...(worktreeDirectories ? { timeout: 30000 } : {}),
+    ...(confined ? { mainEntry: confined.mainEntry, env: confined.env } : {}),
   });
   const win = await findCodeShellWindow(electron);
+  if (worktreeDirectories) {
+    const storage = await electron.evaluate(({ app, safeStorage }) => ({
+      available: safeStorage.isEncryptionAvailable(),
+      backend: process.platform === "linux" ? safeStorage.getSelectedStorageBackend() : null,
+      roundtrip:
+        safeStorage.decryptString(safeStorage.encryptString("directory-keyring-fixture")) ===
+        "directory-keyring-fixture",
+      mockKeychain: app.commandLine.hasSwitch("use-mock-keychain"),
+      passwordStore: app.commandLine.getSwitchValue("password-store"),
+    }));
+    assert.equal(storage.available, true);
+    assert.equal(storage.roundtrip, true);
+    assert.equal(storage.mockKeychain, false);
+    if (process.platform === "linux") {
+      assert.equal(storage.backend, "gnome_libsecret");
+      assert.equal(storage.passwordStore, "gnome-libsecret");
+    }
+  }
   const viewOnly = win.getByRole("button", { name: /仅查看|View only/i });
   if (
     await viewOnly.waitFor({ state: "visible", timeout: 3000 }).then(
@@ -222,6 +363,10 @@ try {
   )
     await viewOnly.click();
   await win.evaluate((cwd) => window.codeshell.setTrust(cwd, "trusted"), project);
+  if (worktreeDirectories) {
+    await win.evaluate((cwd) => window.codeshell.setTrust(cwd, "trusted"), bindingProject);
+    await confined.assertWorker(electron, { requireWorker: false });
+  }
   const registeredProject = await win.evaluate(async (cwd) => {
     const projects = await window.codeshell.projectRegistry.list();
     return projects.find((entry) => entry.roots.some((root) => root.path === cwd));
@@ -272,7 +417,7 @@ try {
   assert.equal(bindingAfter.version, "1.0.0");
   assert.ok(bindingAfter.packageDigest);
   const boundSettings = JSON.parse(
-    await readFile(join(project, ".code-shell/settings.json"), "utf8"),
+    await readFile(join(bindingProject, ".code-shell/settings.json"), "utf8"),
   );
   assert.equal(boundSettings.panelAppPins[manifest.id].packageDigest, bindingAfter.packageDigest);
   const currentPanel = await win.evaluate(
@@ -338,9 +483,32 @@ try {
         .catch(() => false),
     "Panel bridge not ready",
   );
-  const remote = await win.evaluate(() => window.codeshell.mobileRemote.start({ mode: "lan" }));
+  if (reservation?.listening)
+    await new Promise((done, reject) =>
+      reservation.close((error) => (error ? reject(error) : done())),
+    );
+  let remote;
+  try {
+    if (worktreeDirectories)
+      await electron.evaluate(() => globalThis.__armWorktreeDirectoryListener());
+    remote = await win.evaluate(() => window.codeshell.mobileRemote.start({ mode: "lan" }));
+  } finally {
+    if (worktreeDirectories)
+      await electron.evaluate(() => globalThis.__restoreWorktreeDirectoryInterfaces());
+  }
   assert.ok(remote.url, "Remote server did not start");
-  const base = new URL(remote.url).origin;
+  const base = fixtureOrigin ?? new URL(remote.url).origin;
+  if (worktreeDirectories) {
+    assert.equal(new URL(remote.url).origin, base);
+    const listener = await electron.evaluate(() => globalThis.__worktreeDirectoryListener);
+    assert.ok(listener, "Remote start did not capture its armed listener");
+    assert.equal(listener.pid, electron.process().pid);
+    assert.deepEqual(listener.address, {
+      address: "127.0.0.1",
+      family: "IPv4",
+      port: Number(new URL(base).port),
+    });
+  }
   let cookie;
   const request = (path, method = "GET", body) =>
     fetch(base + path, {
@@ -383,6 +551,83 @@ try {
     request(`/api/v1/panels/runtime/${phone.instanceId}/call`, "POST", { method, params }).then(
       json,
     );
+  if (worktreeDirectories) {
+    const known = await desktop("filesystem.getKnownDirectory", { name: "project" });
+    assert.equal(known.path, project, "execution directory must remain the worktree");
+    assert.equal(
+      (await phoneCall("filesystem.restoreDirectory", { bookmark: known.bookmark })).path,
+      project,
+    );
+    const oldDirectory = await desktop("filesystem.restoreDirectory", {
+      bookmark: oldWorktreeBookmark,
+    });
+    assert.equal(oldDirectory.path, join(isolated.home, "old-worktree-output"));
+    assert.equal(
+      (await phoneCall("filesystem.restoreDirectory", { bookmark: oldWorktreeBookmark })).path,
+      oldDirectory.path,
+    );
+    const output = join(isolated.home, "explicit-worktree-output");
+    await mkdir(output);
+    await electron.evaluate(({ dialog }, path) => {
+      dialog.showOpenDialog = async () => ({ canceled: false, filePaths: [path] });
+      dialog.showMessageBox = async () => ({ response: 0, checkboxChecked: false });
+    }, output);
+    const picked = await desktop("filesystem.pickDirectory", {});
+    assert.equal(
+      (await phoneCall("filesystem.restoreDirectory", { bookmark: picked.bookmark })).path,
+      output,
+    );
+    const records = JSON.parse(
+      await readFile(join(isolated.userDataDir, "panel-app-directory-bookmarks.json"), "utf8"),
+    ).bookmarks;
+    assert.equal(records.find((item) => item.id === picked.bookmark).projectPath, bindingProject);
+    assert.equal(records.find((item) => item.id === known.bookmark).projectPath, bindingProject);
+    assert.equal(
+      records.find((item) => item.id === oldWorktreeBookmark).projectPath,
+      project,
+      "old scope is preserved for downgrade",
+    );
+    const started = await desktop("tasks.start", {
+      entry: "worker",
+      recovery: "retry",
+      requestKey: "worktree-directory-delivery",
+      input: {
+        request: { message: "worktree receipt", delayMs: 0 },
+        directoryArguments: [
+          { argumentName: "--output-dir", directory: "bookmark", bookmark: picked.bookmark },
+        ],
+      },
+    });
+    const completed = await until(async () => {
+      const task = await phoneCall("tasks.get", { id: started.id });
+      assert.ok(
+        !["failed", "cancelled", "interrupted"].includes(task.status),
+        JSON.stringify(task.error),
+      );
+      return task.status === "succeeded" ? task : undefined;
+    }, "worktree background directory delivery did not finish");
+    assert.equal(completed.id, started.id);
+    assert.equal(await readFile(join(output, "worktree receipt.txt"), "utf8"), "worktree receipt");
+    assert.equal(
+      (await desktop("tasks.find", { requestKey: "worktree-directory-delivery" })).id,
+      started.id,
+    );
+    console.log(
+      JSON.stringify({
+        valid: true,
+        actualElectronMain: true,
+        nativeGuestBridge: true,
+        pairedDesktopHttp: true,
+        actualNodeBackgroundDelivery: true,
+        exactOutput: true,
+        workingDirectoryPreserved: true,
+        mainProjectBookmarkScope: true,
+        legacyIdPreserved: true,
+        mainPid: electron.process().pid,
+      }),
+    );
+    return;
+  }
   assert.ok(phone.context.availableMethods.includes("automations.createUnique"));
   const automationInput = {
     key: "shared-reminder",
@@ -1009,7 +1254,11 @@ try {
       resultRecovered: true,
     }),
   );
+}
+try {
+  await run();
 } finally {
+  if (reservation?.listening) await new Promise((done) => reservation.close(done));
   await electron?.close();
   await isolated.cleanup();
 }

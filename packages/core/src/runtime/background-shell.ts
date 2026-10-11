@@ -186,7 +186,7 @@ export class BackgroundShellManager {
 
     const profileStartedAt = backgroundSpawnProfileEnabled() ? performance.now() : 0;
     const shell = opts.shell ?? defaultShellBinary();
-    const { file, args } = resolveSpawnTarget(opts.command, {
+    const { file, args, cleanup } = resolveSpawnTarget(opts.command, {
       cwd: opts.cwd,
       shell,
       sandbox: opts.sandbox,
@@ -194,6 +194,20 @@ export class BackgroundShellManager {
     const baseEnv =
       opts.sandbox && opts.sandbox.name !== "off" ? buildSandboxEnv() : { ...process.env };
     const env = mergeShellEnv(baseEnv, opts.shellEnv);
+
+    // Own backend resources even when spawn throws or returns a no-pid child.
+    // A child's error need not end its process or pipes; only close releases
+    // resources after a successful spawn. Guard before invoking user cleanup.
+    let cleanedUp = false;
+    const cleanupOnce = (): void => {
+      if (cleanedUp) return;
+      cleanedUp = true;
+      try {
+        cleanup?.();
+      } catch (err) {
+        logger.warn("bg_shell.cleanup_error", { error: (err as Error).message });
+      }
+    };
 
     let child: ChildProcess;
     try {
@@ -210,9 +224,17 @@ export class BackgroundShellManager {
         stdio: ["ignore", "pipe", "pipe"],
       });
     } catch (err) {
+      cleanupOnce();
       logBackgroundSpawnProfile(file, args, elapsedProfileMs(profileStartedAt), "spawn_failed");
       return { ok: false, error: `Failed to spawn background shell: ${(err as Error).message}` };
     }
+
+    // Node emits spawn failures asynchronously, including when pid is absent.
+    // Install both owners before any early return or successful-shell setup.
+    child.on("error", (err) => {
+      logger.warn("bg_shell.child_error", { pgid: child.pid, error: (err as Error).message });
+    });
+    child.once("close", cleanupOnce);
     logBackgroundSpawnProfile(file, args, elapsedProfileMs(profileStartedAt), "started");
 
     if (child.pid === undefined) {
@@ -285,10 +307,6 @@ export class BackgroundShellManager {
     };
     child.stdout?.on("data", onData);
     child.stderr?.on("data", onData);
-
-    child.on("error", (err) => {
-      logger.warn("bg_shell.child_error", { shellId, error: (err as Error).message });
-    });
 
     child.on("exit", (code, sig) => {
       // Only natural exits land here as "exited"; kill() sets "killed" first.

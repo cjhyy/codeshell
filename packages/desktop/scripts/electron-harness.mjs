@@ -25,6 +25,7 @@ export async function launchCodeShellElectron({
   env = {},
   mainEntry,
   mainBootstrap,
+  timeout,
 }) {
   // Playwright's Electron loader appends password-store=basic and
   // use-mock-keychain. Undo those test defaults after its loader, before
@@ -55,6 +56,7 @@ appendFileSync(${JSON.stringify(join(home, "real-keyring-bootstrap.jsonl"))}, JS
     { mode: 0o600 },
   );
   return electron.launch({
+    ...(timeout === undefined ? {} : { timeout }),
     args: [
       "--require",
       keyringBootstrap,

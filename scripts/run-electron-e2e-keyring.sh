@@ -6,7 +6,7 @@ set -euo pipefail
 unset DBUS_SESSION_BUS_ADDRESS DBUS_SESSION_BUS_PID DBUS_SESSION_BUS_WINDOWID
 unset DBUS_STARTER_ADDRESS DBUS_STARTER_BUS_TYPE
 unset GNOME_KEYRING_CONTROL GNOME_KEYRING_PID SSH_AUTH_SOCK SSH_AGENT_PID
-exec dbus-run-session -- bash -euo pipefail <<'PRIVATE_SESSION'
+exec dbus-run-session -- bash -euo pipefail -s -- "$@" <<'PRIVATE_SESSION'
 fixture_keyring_root=$(mktemp -d)
 fixture_keyring_pid=
 cleanup() {
@@ -46,5 +46,9 @@ test "$(cat "$fixture_keyring_root/readiness")" = codeshell-ci-readiness
 secret-tool clear codeshell-fixture readiness
 echo 'Electron CI: private SecretService unlocked and verified'
 
-xvfb-run -a bun run --cwd packages/desktop test:e2e
+if test "$#" -gt 0; then
+  "$@"
+else
+  xvfb-run -a bun run --cwd packages/desktop test:e2e
+fi
 PRIVATE_SESSION

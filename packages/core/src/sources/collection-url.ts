@@ -34,6 +34,39 @@ export interface CollectionUrlDownload {
   proof: CollectionUrlProof;
 }
 
+const DOCUMENT_MIME_EXTENSIONS = new Map([
+  ["application/pdf", ".pdf"],
+  ["application/vnd.openxmlformats-officedocument.wordprocessingml.document", ".docx"],
+  ["application/vnd.openxmlformats-officedocument.presentationml.presentation", ".pptx"],
+  ["application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", ".xlsx"],
+]);
+const DOCUMENT_EXTENSION = /\.(pdf|docx|pptx|xlsx)$/i;
+
+/** Parser hint from a completed, authorized download; it grants no new URL or file access. */
+export function collectionUrlDocumentName(
+  proof: Pick<CollectionUrlProof, "finalUrl" | "mimeType">,
+  savedName?: string,
+): string {
+  let name: string;
+  try {
+    name = decodeURIComponent(new URL(proof.finalUrl).pathname.split("/").pop() || "document");
+  } catch {
+    throw new Error("链接文件名无效。");
+  }
+  const extension = DOCUMENT_MIME_EXTENSIONS.get(proof.mimeType);
+  if (extension) {
+    if (!name.toLowerCase().endsWith(extension))
+      name = name.slice(0, 512 - extension.length) + extension;
+  } else if (!DOCUMENT_EXTENSION.test(name) && savedName) {
+    // Older manifests may already carry a useful filename while the endpoint
+    // and its generic MIME carry no document type. Do not migrate those records.
+    name = savedName;
+  }
+  if (!name || name.length > 512 || /[\u0000-\u001f\u007f/\\]/.test(name))
+    throw new Error("链接文件名无效。");
+  return name;
+}
+
 /** Pure validation: listing a saved URL must never resolve DNS or make a request. */
 export function normalizeCollectionUrl(raw: unknown): string {
   if (
