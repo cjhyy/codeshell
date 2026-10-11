@@ -8,6 +8,8 @@ breaking.
 
 ## [Unreleased]
 
+## [0.9.33] - 2026-10-12
+
 ### Added
 
 - Query explicitly selected files in one shared document collection together,

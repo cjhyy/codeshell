@@ -1,6 +1,6 @@
 # 资料集跨文件词法查询
 
-2026-10-11。复用已发布资料集和 `ReadSource`，在同一资料集内查询明确选定的多个文件；本次源码增量尚未发行。不新增侧栏、第三方账号、同步服务、OCR 或语义检索。
+2026-10-11。复用已发布资料集和 `ReadSource`，在同一资料集内查询明确选定的多个文件；本次源码增量纳入 0.9.33 版本。不新增侧栏、第三方账号、同步服务、OCR 或语义检索。
 
 ## 输入与来源引用
 
@@ -52,4 +52,4 @@ URL 初次读取仍使用既有无凭据 HTTPS transport、公共 IP/DNS 检查�
 
 2026-10-12 集成本地验收：Host 与资料集组合回归 103 项、562 次断言，零失败、零跳过；9 个发布 tarball、47 个类型入口及 45 个运行入口检查通过，12 个 workspace 类型检查和 Desktop 构建通过。ESLint 零错误、105 项既有基线警告。
 
-新增 `bun run test:collection-documents` 使用编译后的同树 SDK / ToolExecutor、真实 Engine 和独立解析进程，验证两项目复用、父查询及逐文件审批、稳定排序、逐 chunk 精确复读、显式拒绝、同内容 inode 替换拒绝，以及冷 Node 进程重新读取。实际运行于 Node 25.8.1 与 Electron 对应的 Node 20.18.3，既有 uploads 编译 SDK 验收及 Core 导出检查也通过。使用合成模型回复和受控本地输入，没有真实 provider 调用；这些进程验收不等于原生 Electron UI 验收。完整 CI 与主仓库合并状态另由本次 PR 记录，尚未新增发行版本。
+新增 `bun run test:collection-documents` 使用编译后的同树 SDK / ToolExecutor、真实 Engine 和独立解析进程，验证两项目复用、父查询及逐文件审批、稳定排序、逐 chunk 精确复读、显式拒绝、同内容 inode 替换拒绝，以及冷 Node 进程重新读取。实际运行于 Node 25.8.1 与 Electron 对应的 Node 20.18.3，既有 uploads 编译 SDK 验收及 Core 导出检查也通过。使用合成模型回复和受控本地输入，没有真实 provider 调用；这些进程验收不等于原生 Electron UI 验收。主仓库 [PR134](https://github.com/cjhyy/codeshell/pull/134) 的最终提交 `456668b1` 已通过 12/12 项完整 CI 并正常合并；v0.9.33 的实际发布状态以 Release 和发布任务为准。

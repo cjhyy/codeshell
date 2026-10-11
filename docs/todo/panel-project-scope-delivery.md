@@ -106,5 +106,8 @@ deploy an application.
 The compatible Download and Video Studio changes are merged in
 [Panel PR 69](https://github.com/cjhyy/codeshell-panel-apps/pull/69), with all
 14 jobs across its push and PR CI runs successful. The Panel merge tree matches
-the tested commit. Host CI/merge and any future release are recorded separately;
-no new Panel release or installation is claimed here.
+the tested commit. Host [PR 134](https://github.com/cjhyy/codeshell/pull/134) is
+merged with all 12 CI jobs successful at final head `456668b1`. This includes
+the repository Electron E2E gate; it is not a dedicated physical-device or
+provider acceptance of this new contract. v0.9.33 publication is verified
+separately. No new Panel release or installation is claimed here.
