@@ -1,4 +1,4 @@
-import { readdirSync, openSync, closeSync, writeFileSync } from "node:fs";
+import { readdirSync, readFileSync, openSync, closeSync, writeFileSync } from "node:fs";
 import { dirname, join, relative, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { spawn } from "node:child_process";
@@ -28,7 +28,13 @@ for (const file of collect(join(directory, "reproductions")).sort()) {
     child.once("close", (code, signal) => done({ code, signal }));
   });
   closeSync(descriptor);
-  results.push({ file: relative(root, file), log: relative(root, log), ...result });
+  const completion = readFileSync(log, "utf8").match(
+    /Completed Bun shard: (\d+) tests, (\d+) skipped; 0 failures\./,
+  );
+  const counts = completion
+    ? { tests: Number(completion[1]), skipped: Number(completion[2]) }
+    : { tests: null, skipped: null };
+  results.push({ file: relative(root, file), log: relative(root, log), ...result, ...counts });
   console.log(`${result.code === 0 ? "PASS" : "FAILED"} ${relative(root, file)}`);
   writeFileSync(
     join(directory, "validation/reproduction-results.json"),

@@ -1,0 +1,11 @@
+bun test v1.3.11 (af24e281)
+
+docs/review-2026-10-12/reproductions/quality-round10/modern-intent-recovery.test.tsx:
+(pass) normal: acknowledged task does not restore a resendable draft after reconnect [71.86ms]
+(pass) confirmed: journal recovery with matching input identity does not reconcile a lost mobile ACK [83.95ms]
+
+ 2 pass
+ 0 fail
+ 23 expect() calls
+Ran 2 tests across 1 file. [1131.00ms]
+Completed Bun shard: 2 tests, 0 skipped; 0 failures.

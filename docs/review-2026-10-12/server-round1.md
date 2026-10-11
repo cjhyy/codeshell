@@ -71,13 +71,12 @@ Product sources read-only. Reproductions use guarded runner, isolated HOME, fake
 - Suggested direction: retain pending payloads in ApprovalBridge and expose an authenticated per-room snapshot/replay; merge it on room activation and reconnect.
 - Confidence: high.
 
-## S7 [P2] Offline CC approval click clears the card even when no response was sent
+## S7 [P3] CC approval is dropped if transport fails before the UI leaves its online state
 
-- Primary: `packages/web/src/hooks/useRemoteApp.ts:1450-1452`.
-- `respondCcApproval` ignores `socket.send`'s false return and immediately removes the request from both the synchronous ref and visible state. The neighboring Core `respondApproval` path correctly checks `if (!sent) return`.
-- Trigger: a CC approval card is visible; phone loses WebSocket connectivity; user taps allow/deny.
-- Impact: nothing is sent, yet the card disappears. Reconnect requests room history without pending approvals, so the still-blocked tool cannot be approved afterward and eventually auto-denies.
-- Evidence: `/tmp/codeshell-review-20261012-server-cc-approval-recovery.test.tsx`, case 2: close socket → respond → no new frame and zero cards → reconnect + history replay → zero cards.
-- Gap: Core async approval delivery failures are tested; CC response transport failure is not.
-- Suggested direction: retain card when send fails, and preferably clear only after the host acknowledges/resolves the exact request.
-- Confidence: high.
+- Primary: `packages/web/src/hooks/useRemoteApp.ts:1450–1452`, which ignores `socket.send=false` and immediately removes the card.
+- Actual current UI has a correct offline gate: mobile/main mounts shared DesktopApp; `DesktopControls.tsx:306` refuses a non-online handler, and `:343,361,401,405` disables all decision buttons. Normal fully-offline clicking is not a supported trigger.
+- Narrow trigger: the underlying WebSocket is CLOSING/CLOSED or send fails while the rendered approval still has an online snapshot. The real DesktopApproval handler proceeds, send returns false, and the hook consumes the unsent request. This event-order window was made deterministic in the fixture; no naturally occurring browser close/click timing was captured.
+- Impact: no response reaches the actual local resident stdio process, while the visible card is gone. Reconnect cannot obtain a CC pending snapshot (R10); another card-holding client or direct host response may resolve it, otherwise the bridge denies after five minutes or room close.
+- Evidence: the old `cc-approval-recovery.test.tsx` directly calls the hook after close; it proves send-failure consumption only, not UI reachability. New actual component controls show fully offline keeps the card, while readyState=CLOSING without close dispatch removes it. Real ResidentAgentProcess, RoomManager and ApprovalBridge keep the original request pending until explicit response; see [第十轮独立复核](approval-quality-round10.md).
+- Scope: conditional delivery/recovery gap, P3 after independent review. Normal Core responses check `if (!sent) return`. Do not generalize to all offline approvals, Core or Hub.
+- Suggested direction: retain the request when send fails and clear by a matching acknowledged/resolved identity.

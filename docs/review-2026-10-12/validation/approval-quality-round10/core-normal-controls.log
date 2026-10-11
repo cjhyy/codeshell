@@ -1,0 +1,29 @@
+bun test v1.3.11 (af24e281)
+
+../../../../../../private/tmp/codeshell-review-20261012-approval-quality-round10-core.test.ts:
+(pass) AgentServer asynchronous user questions > returns immediately and keeps a question pending after the requesting run completes [7.45ms]
+(pass) AgentServer asynchronous user questions > steers an answer into the running session without starting a duplicate turn [3.90ms]
+(pass) AgentServer asynchronous user questions > keeps failed preflight retryable and only resolves the card after successful admission [8.63ms]
+(pass) AgentServer asynchronous user questions > deduplicates an in-flight answer and keeps the idle session alive during preflight [5.99ms]
+(pass) AgentServer asynchronous user questions > does not acknowledge or restart an answer cancelled during preflight [5.89ms]
+(pass) AgentServer asynchronous user questions > queues an old answer behind a different run with original authority and acknowledges before that run ends [11.48ms]
+(pass) AgentServer asynchronous user questions > keeps an admitted answer recoverable when its later run fails [5.58ms]
+(pass) AgentServer asynchronous user questions > starts an idle follow-up with the requesting turn's permission and tool limits [5.93ms]
+(pass) AgentServer asynchronous user questions > requeues an accepted steer if the run finishes before consuming it [5.81ms]
+(pass) AgentServer asynchronous user questions > rejects a mismatched session and accepts each answer only once [6.60ms]
+(pass) AgentServer asynchronous user questions > cancels outstanding questions without treating cancellation as an answer [3.34ms]
+(pass) AgentServer asynchronous user questions > closes a completed session's outstanding question without resuming it [5.97ms]
+(pass) AgentServer asynchronous user questions > does not continue without an actual answer: {"approved":false,"reason":"declined"} [3.20ms]
+(pass) AgentServer asynchronous user questions > does not continue without an actual answer: {"approved":true,"answer":"   "} [3.01ms]
+(pass) AgentServer asynchronous user questions > does not revive an unconsumed answer after Stop followed immediately by a new user turn [6.95ms]
+(pass) AgentServer asynchronous user questions > keeps idle sessions resident while a question is pending and permits eviction after cancellation [3.36ms]
+(pass) AgentServer AskUserQuestion session isolation > resolves an askUser answer only for the matching sessionId and requestId [20.43ms]
+(pass) AgentServer AskUserQuestion session isolation > resolves a pending askUser when closeSession deletes the session [13.19ms]
+(pass) duplicate Bash controls resolve the visible prompt with one terminal denial [21.00ms]
+(pass) duplicate AskUserQuestion controls resolve the visible prompt with one terminal denial [20.52ms]
+
+ 20 pass
+ 0 fail
+ 104 expect() calls
+Ran 20 tests across 1 file. [465.00ms]
+Completed Bun shard: 20 tests, 0 skipped; 0 failures.

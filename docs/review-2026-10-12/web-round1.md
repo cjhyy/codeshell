@@ -9,11 +9,13 @@ Production entry verified: `packages/desktop/src/mobile/main.tsx:4,14` renders s
 
 Primary locations: `packages/web/src/hooks/useRemoteApp.ts:1278-1280` (fresh UUID every call), `:1339-1347` (sent request without ACK becomes false), `packages/web/app/DesktopApp.tsx:362-370` (restores resendable draft), `:478` (`uncertain: false`).
 
-Trigger: paired Desktop browser sends a native task; worker accepts and finishes it, but the `chat.accepted` reply is lost or delayed beyond 15 seconds. The controller restores the original draft and invites retry, with no “uncertain receipt” state or history reconciliation. Retrying the restored task uses a different clientMessageId. It is a new intent to Core, and executes again. Disconnect after acceptance followed by reconnect creates the same class of window; running-state gates only delay retry until the previous run is complete, they do not deduplicate it.
+Trigger: paired Desktop browser submits a native task that the worker has accepted; the connection closes before `chat.accepted` reaches the browser. The task continues and completes while offline. Reconnect restores the original clientMessageId and complete answer from the modern output journal, but the failure-restored ordinary draft is not reconciled with that durable receipt. Retrying it generates a different clientMessageId and is admitted as a new intent after the prior run ends. This is the production-relevant ordering; withholding only one ACK while continuing an otherwise ordered live WebSocket is the older fixture simplification, not the sole reachability argument.
 
 Evidence: `flow-review.test.tsx` test “lost ACK after completed work…” delivers real stream_request_start/text_delta/turn_complete through `useRemoteApp`, withholds chat.accepted, waits 15,030 ms, verifies controller draft restored, uncertain=false, second send admitted, and two distinct UUIDs. `intent-id-review.test.ts` runs the real Engine with a fake provider: same message + same UUID replays the first result (1 provider call), same message + a new UUID completes again (2 provider calls). 1 test / 4 assertions / 0 failures in 659 ms.
 
-Impact: repeated file edits, commands, or other task effects despite one original submit intent. Suggested fix: retain intent ID with pending submitted draft; reconcile durable receipt/history before enabling retry, like `useHubController` already does. Room sends additionally lack server deduplication and need their own receipt contract.
+Modern recovery evidence: 第十轮使用真实 Main MobileOutputRecovery、SessionOutputJournal 和 completed 持久状态，在 ACK 前断线、离线完成、outputJournal=1 重连后恢复原输入ID及答案，草稿仍可用新ID发送。正常 ACK 后重连保持空稿。两基线各2测试23断言通过，见 [web-quality-round10.md](web-quality-round10.md)。
+
+Impact: the same user intent can execute as a new task and repeat its effects; the tests do not claim every retry repeats a particular Bash/file side effect. Suggested fix: retain intent ID with pending submitted draft; reconcile durable receipt/history before enabling retry, like `useHubController` already does. Room receipt/deduplication is outside this evidence; this finding applies to native paired sends.
 
 Confidence: high; client retry and real Engine behavior separately reproduced, no paid requests.
 
@@ -71,17 +73,17 @@ Impact: a nonblocking/optional question turns into a conversation-wide blocking 
 
 Confidence: high; Desktop shared-controller failure reproduced, Core idle contract verified in existing test.
 
-## W6 [P2, lower priority] A failed synchronous approval delivery loses its retry card
+## W6 [P3] A failed synchronous approval delivery has no immediate card recovery while the same request is still pending
 
-Primary locations: `packages/web/src/hooks/useRemoteApp.ts:1573-1583` and `:911-915`, server `packages/desktop/src/main/mobile-remote/handle-client-event.ts:474-477`.
+Primary location: `packages/web/src/hooks/useRemoteApp.ts:1574–1583` consumes an ordinary Core approval after send=true; `:911–915` handles an approvalId error without restoring it. Main `mobile-remote/handle-client-event.ts:140–185,467–477` waits up to ten seconds for control delivery.
 
-Trigger: user approves an ordinary tool request. The client deletes the card immediately after ws.send, before worker acknowledgement. Main times out waiting on the busy/unresponsive worker or returns an approval error; its event carries approvalId. The error handler only clears the async-submission set and shows a temporary notice, and never restores the removed synchronous card. Server pending approvals are replayed on explicit select/resync, not on this error.
+Narrow trigger: the same worker/session still owns the pending request, but has not processed approve before delivery fails or the control budget expires. Normal tool execution being busy is insufficient: Core's approve handler immediately consumes the matched pending request and returns success, without waiting for the tool or turn to finish. No-pending, closed-session, dead-worker and already-successful late-approve errors must not be described as a still-blocked original request.
 
-Evidence: flow-review.test.tsx shows a pending Bash request, clicks respondApproval, returns `{type:"error",approvalId:"approve-1",message:"worker did not respond"}`, and verifies card remains absent. Async questions already implement the safer “keep until resolved, unlock on failure” behavior.
+New evidence uses real Core pending state and the real Main helper, holds incoming approve at a controlled processing seam, and substitutes 20ms for the production ten-second test budget. The correlated error leaves a pending resolver with no card. This proves the conditional implementation gap; it is not an observed real worker ten-second stall. The old flow-review error-only injection did not by itself prove pending state.
 
-Impact: if the tool is still waiting, user has no card to retry until manually selecting/reconnecting; view can look idle while backend remains blocked. Suggested fix: use a pending state until approval.resolved, and unlock on approval-specific errors, for synchronous and asynchronous cards alike.
+Recovery: the error itself only shows a transient notice. The next valid resync can replay the pending card; not just manual reselection/reconnection, but also focus/pageshow/visible/online events with a usable connection. The new control dispatches focus, observes matching session.sync, replays the real cache and restores the card. The outputJournal branch sends authorized session.select and has the same replay route (source checked). Core tool approvals also have a five-minute bound. Hub and Desktop CC retain their cards until successful response and are normal counterexamples.
 
-Confidence: high for UI loss; actual timeout leaving the worker pending depends on worker stall. Lower value than W1-W5.
+Suggested direction: preserve a submitting synchronous approval until matching resolution, release submitting state on delivery failure and request immediate authenticated pending resync. Independent review downgraded this conditional, recoverable gap to P3; see [approval-quality-round10.md](approval-quality-round10.md).
 
 ## Completed guarded reproductions
 

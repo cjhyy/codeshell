@@ -10,10 +10,10 @@
 | --- | --- | --- |
 | frozen install、workspaces build、Desktop build、typecheck:workspaces | 全部通过 | `validation/latest-a66f4ef2/{install,build,desktop-build,typecheck}.log` |
 | 8 个新增或修改测试文件 | 156 项实际执行、0 失败、0 跳过 | `validation/latest-a66f4ef2/changed-test-results.json` |
-| 既有便携缺陷表征和正常契约 | 40 文件、111 测试、0 失败、0 跳过 | `validation/latest-a66f4ef2/reproduction-results.json` |
+| 既有便携缺陷表征和正常契约 | 46 文件、125 测试、0 失败、0 跳过 | `validation/latest-a66f4ef2/reproduction-results.json` |
 | 凭据实际 Electron/IPC/store | 4 场景通过 | `validation/latest-a66f4ef2/credentials__credentials-e2e.mjs.log` |
 
-复现“通过”表示当前仍观察到被测缺陷。40 个文件并非 40 项问题，一份文件可能覆盖多项发现，也包含正常对照。新快照结果没有加到原基线 6286 个现有测试的总数中，以免重复计数。
+复现“通过”表示当前仍观察到被测缺陷。46 个文件并非 46 项问题，一份文件可能覆盖多项发现，也包含正常对照。新快照结果没有加到原基线 6286 个现有测试的总数中，以免重复计数。
 
 ## 两处测试入口适配
 
@@ -29,3 +29,5 @@
 第六轮已确认共享 Collection 恢复指引 R49/P3、旧录音生命周期缺陷 R50/P2；Panel scope 没有正式新增，R22仍适用。新功能的2文件7测试另见 latest-reproductions/，录音9测试已在两基线分别通过。第七轮身份/连接正常契约 3 文件13测试、Agent Plugins 1文件7测试均已在两基线通过，R51–R53 是旧缺陷新发现；不把旧基线尚无的新功能测试塞入默认入口。
 
 第八轮 Quick Chat R54/P3 及其正常对照7测试也已在两快照分别通过；正式范围限定已送达组件的内部图片 payload，未实测原生跨窗口拖动。更新器 shutdown 候选因平台模拟不符未列正式发现。
+
+第十轮新增六份便携正常/恢复控制，两快照各14测试112断言通过；原有发现新增0，R11/R19依据实际门禁降P3并收窄。总通用46文件125测试。Core关闭28测试和审批正常20测试为现有套件专项复跑，另存validation，不计入该便携总数。

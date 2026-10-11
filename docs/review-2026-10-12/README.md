@@ -2,11 +2,11 @@
 
 本次审查覆盖服务端、Electron 桌面端、配对 Web 与移动端的日常流程，重点检查消息发送、审批、取消、切换会话、恢复和项目上下文。问题只在有代码证据或可复现结果后列入正式发现。
 
-审查进行中，截止时间为新加坡时间 2026 年 10 月 12 日 11:00。初始审查基线为 `84740d56e55517b004948a0a0e07649ad6fbf998`，对应启动审查时的 `origin/main`。01:30 拉取发现主分支已更新至 `a66f4ef291f304ee4df9da8095a90671d9a8f140`（0.9.33）；已另建隔离快照复查差异，原始复现和行号仍按初始基线保存。40 个便携 Bun 复现文件共 111 测试，以及实际 Electron 凭据 4 场景，已在新快照复查成立；详见[0.9.33 差异复查](latest-baseline.md)。产品代码保持原样，报告保存在独立分支 `codex/review/server-desktop-20261012`。
+审查进行中，截止时间为新加坡时间 2026 年 10 月 12 日 11:00。初始审查基线为 `84740d56e55517b004948a0a0e07649ad6fbf998`，对应启动审查时的 `origin/main`。01:30 拉取发现主分支已更新至 `a66f4ef291f304ee4df9da8095a90671d9a8f140`（0.9.33）；已另建隔离快照复查差异，原始复现和行号仍按初始基线保存。46 个便携 Bun 复现文件共 125 测试，以及实际 Electron 凭据 4 场景，已在新快照复查成立；详见[0.9.33 差异复查](latest-baseline.md)。产品代码保持原样，报告保存在独立分支 `codex/review/server-desktop-20261012`。
 
 ## 当前结论
 
-当前已收束 54 项问题：1 项 P1、44 项 P2、9 项 P3。优先处理审批状态、任务回执和会话身份；这些问题会让任务无法继续、重复执行，或把用户输入带到另一个会话。P1 表示有未提交文件丢失风险、应优先修复；P2 表示正常使用可触发、应安排修复；P3 表示影响较小的失败反馈或一致性问题。尚未证实的候选不计入数量。
+当前已收束 54 项问题：1 项 P1、42 项 P2、11 项 P3。优先处理审批状态、任务回执和会话身份；这些问题会让任务无法继续、重复执行，或把用户输入带到另一个会话。P1 表示有未提交文件丢失风险、应优先修复；P2 表示正常使用可触发、应安排修复；P3 表示影响较小或触发条件较窄、已有恢复入口的问题。尚未证实的候选不计入数量。
 
 **最先修 R35：创建工作区时重复 Enter，失败请求的回滚可以删除另一个已成功请求的 worktree、分支和未提交文件。** 此项已由独立代理复查入口与真实 Git 时序，见 [独立质量复核](quality-audit.md)。第五轮九项也已[独立复核](quality-round5.md)，均保留，网关通知等条件已收窄。
 
@@ -25,7 +25,7 @@
 | R08  | P2   | 配对浏览器 CLI 房间的停止按钮发送原生 run.stop，实际房间继续运行                      | Web W3                                               |
 | R09  | P2   | 第二个 Hub 启动失败前删除第一个实例仍在使用的上传文件                                 | Server S1                                            |
 | R10  | P2   | CC 房间切换或离线后无法恢复待审批卡片，服务端一直等待直到超时                         | Server S6                                            |
-| R11  | P2   | CC 审批离线点击后未发出响应却移除卡片，重连后仍无法操作                               | Server S7                                            |
+| R11  | P3   | 连接失效但界面尚显示在线的短窗口，CC 审批发送失败仍删卡 | Server S7；正常离线有禁用及 handler 保护 |
 | R12  | P2   | CC 一次多题澄清仅能回答首题，后续题目随控制请求被消费                                 | Server S2                                            |
 | R13  | P2   | 切换澄清题后旧选择索引残留，选项数变少时提交抛异常                                    | Desktop D6                                           |
 | R14  | P2   | 可稍后回答的异步问题在任务完成后仍阻塞新的独立任务                                    | Web W5                                               |
@@ -33,7 +33,7 @@
 | R16  | P2   | CC 打开回包广播到同设备全部页签，也会覆盖用户较新的会话选择                           | Web W2                                               |
 | R17  | P2   | 删除草稿附件不释放上传配额，空输入框仍被 16 个文件上限卡住                            | Server S3                                            |
 | R18  | P2   | CLI 启动失败留下“运行中”句柄，安装/修复后同模式重开仍不能恢复                           | Server S4                                            |
-| R19  | P2   | 同步审批发送后遇到 worker 响应错误，卡片不恢复，缺少直接重试入口                      | Web W6，影响取决于请求仍在等待                       |
+| R19  | P3   | 同步审批未被处理且请求仍 pending 时交付失败，错误本身不恢复卡片 | Web W6；下一次有效 resync 可恢复 |
 | R20  | P3   | Hub 接受超过 10、至多 20 MiB 图片，发送阶段才因 10 MiB 限制失败                                 | Server S5                                            |
 | R21  | P2   | Hub Web 新会话首次运行中刷新，完整输出日志的 legacy anchor 被空基线裁掉，前端拒绝恢复 | Root R21                                             |
 | R22  | P2   | 多根项目会话迁移到合法 secondary root 后，已绑定 Panel 被错误视为跨项目而打不开       | Desktop D8，第二轮                                   |
@@ -73,7 +73,7 @@
 
 第二轮完整分析：[Desktop 项目/Panel](desktop-round2.md)、[Web 配置/Skills/MCP](web-round2.md)。所有已收束脚本和日志保存在 [reproductions](reproductions/README.md)，可在当前工作区或相同基线的其他 checkout 重跑。
 
-第三轮持续补充：[Desktop 插件/项目初始化](desktop-round3.md)、[手机配对/草稿/上传](web-round3.md)、[后台任务与 Node 主机退出](runtime-round3.md)。第四轮：[文件与历史流程](files-round4.md)。第五轮：[发送失败与刷新保护](web-round5.md)、[凭据新增与保存](credentials-round5.md)、[自动化执行与状态](automation-round5.md)。第六轮：[共享资料集恢复](collections-round6.md)、[录音生命周期](voice-round6.md)，已[独立复核](quality-round6.md)；[Panel 项目身份差异复查](panels-round6.md)没有新增正式问题。第七轮：[Agent Plugins 生命周期](plugins-round7.md)新增 R51–R53，并经[独立复核](plugin-quality-round9.md)保留；[身份与连接恢复](auth-round7.md)新增 0，正常契约已复现。第八轮：[Quick Chat 生命周期](quickchat-round8.md)新增 R54/P3；[Link 授权边界](links-round8.md)未确认新问题；[更新器候选独立反证](updater-candidate-audit.md)已排除。
+第三轮持续补充：[Desktop 插件/项目初始化](desktop-round3.md)、[手机配对/草稿/上传](web-round3.md)、[后台任务与 Node 主机退出](runtime-round3.md)。第四轮：[文件与历史流程](files-round4.md)。第五轮：[发送失败与刷新保护](web-round5.md)、[凭据新增与保存](credentials-round5.md)、[自动化执行与状态](automation-round5.md)。第六轮：[共享资料集恢复](collections-round6.md)、[录音生命周期](voice-round6.md)，已[独立复核](quality-round6.md)；[Panel 项目身份差异复查](panels-round6.md)没有新增正式问题。第七轮：[Agent Plugins 生命周期](plugins-round7.md)新增 R51–R53，并经[独立复核](plugin-quality-round9.md)保留；[身份与连接恢复](auth-round7.md)新增 0，正常契约已复现。第八轮：[Quick Chat 生命周期](quickchat-round8.md)新增 R54/P3；[Link 授权边界](links-round8.md)未确认新问题；[更新器候选独立反证](updater-candidate-audit.md)已排除。第十轮[Desktop 异步状态与恢复复核](desktop-quality-round10.md)保留六项P2并收窄影响；[Session 关闭屏障复核](session-close-round10.md)新增 0，现有正常套件 28 测试通过。
 
 ## 需要先修的边界
 
@@ -87,7 +87,7 @@ R35 的界面创建按钮已禁用，但输入框 Enter 没有 busyAction 检查
 
 R01 的触发是两个并行 GenerateImage 请求：批准第一个后，第二个复用 ApprovalCard 的已决定状态，没有剩余按钮。真实 Core 的并行工具队列已经确认会同时产生这两个审批，并非人为构造的不可能状态。R13 是同类身份缺失在 AskUserMessageView 的表现，但会直接触发提交异常。
 
-R10、R11、R19 分别缺少待审批快照、传输失败保留和回包错误恢复。修复时应保留请求 ID 与待提交状态，按服务端 resolved 回包清除，房间激活与重连时补齐 pending snapshot。单独补一个前端按钮无法解决重连丢失。R14 还需把真正阻塞的审批与可异步回答的问题分开。
+R10、R11、R19 分别缺少待审批快照、传输失败保留和回包错误恢复。第十轮[审批独立复核](approval-quality-round10.md)将 R11/R19 降为 P3：正常离线 UI 有保护，R11 只保留传输已失效而界面仍在线的事件窗口；R19 必须是答复尚未消费且仍 pending，有效 resync 可恢复，普通 worker 忙碌不足以触发。修复时应保留请求 ID 与待提交状态，按服务端 resolved 回包清除，房间激活与重连时补齐 pending snapshot。单独补一个前端按钮无法解决重连丢失。R14 还需把真正阻塞的审批与可异步回答的问题分开。
 
 ### 重试必须保留原意图，切换必须保留会话身份
 
@@ -119,7 +119,7 @@ R25 用完整认证 Hub 和真实配置写入门禁验证：两端从同一快�
 
 R26 应提供保留草稿的差异核对和读取最新版本操作，不能只刷新列表并清掉错误。R27 应把 probe 结果绑定被测配置的 revision，配置刷新后拒绝旧结果；服务端取消已经结束的 probe 不能撤回网络中迟到的成功响应。
 
-R28 的初始状态把禁用列表设为空，但插件列表独立先加载完成，开关已经能写整个配置。应在设置快照可用前禁用修改，并按修改字段或最新 revision 更新；旧初始化响应也不能覆写更新的设置。R29 则发生在真实旧会话迁移等待磁盘写入时，新增项目 B 的广播先应用，迁移结束后旧列表 A 又覆盖它。应给项目初始快照和广播统一的版本检查，避免 Main 有 A+B、界面只剩 A 而 activeProjectId 仍指向 B。
+R28 的初始状态把禁用列表设为空，但插件列表独立先加载完成，开关已经能写整个配置。应在设置快照可用前禁用修改，并按修改字段或最新 revision 更新；Main 的 skill 扫描同步，已验证窗口是 renderer 插件行先显示、权威初始 refresh 尚未完成，包含 IPC 和异步设置读取；旧初始化响应也不能覆写更新的设置。R29 则发生在真实旧会话迁移等待磁盘写入时，新增项目 B 的广播先应用，迁移结束后旧列表 A 又覆盖它。应给项目初始快照和广播统一的版本检查，避免 Main 有 A+B、界面只剩 A 而 activeProjectId 仍指向 B。
 
 ### 后台任务和主机退出要给出真实终态
 
@@ -196,6 +196,9 @@ R54 限定文件面板产生的内部图片 payload 已送达 Quick Chat：缺�
 | 第七轮身份/连接恢复 | 3 文件、13 测试、87 Bun 断言；两基线通过，含 2 个 native Node 子进程 | `reproductions/auth-round7/` |
 | 第八轮 Quick Chat 生命周期 | 新增便携1文件7测试53断言，两基线分别通过；其余76既有测试仅单列复查 | `reproductions/quickchat-round8/`、`validation/quickchat-round8/` |
 | 第九轮 CLI/插件恢复反证 | 新便携2文件4测试52断言，两基线通过；没有新发现 | `reproductions/quality-round9/` |
+| 第十轮 Desktop 恢复反证 | 新便携4文件7测试51断言，两基线通过；六项保留、新增0 | `reproductions/quality-round10/` |
+| 第十轮审批与现代日志反证 | 新便携2文件7测试61断言，两基线通过；R11/R19降P3、R03保留P2 | `reproductions/quality-round10/` |
+| 第十轮 Session close 正常契约 | 现有3文件28测试通过；未计入便携复现总数 | `validation/session-close-round10/` |
 | Desktop renderer 现有逐文件测试 | 282 文件、2397 测试、0 失败                                               | `validation/desktop-renderer-results.json`               |
 | Desktop main 现有逐文件测试     | 283 文件、2461 测试、0 失败                                               | `validation/desktop-main-results.json`                   |
 | native Hub smoke                | 未通过，不计成功；先遇到过期工具 fixture，再暴露 R21                      | `/tmp/codeshell-review-20261012/hub-smoke*.log`          |
@@ -209,6 +212,6 @@ R54 限定文件面板产生的内部图片 payload 已送达 Quick Chat：缺�
 
 ## 后续检查
 
-0.9.33 的 Panel 项目身份与跨文件 Collection 查询差异、已有便携复现适用范围已核对。认证连接与 Agent Plugins 安装恢复已收束；Quick Chat 生命周期已收束；继续独立反证已有 CLI 房间、资源回收和插件结论，核对可恢复方式与平台边界。已有 TODO 中明确后置的能力与尚未发行的修复单独核对，不将其重复列为新缺陷。
+0.9.33 的 Panel 项目身份与跨文件 Collection 查询差异、已有便携复现适用范围已核对。认证连接与 Agent Plugins 安装恢复已收束；Quick Chat 生命周期已收束；第十轮独立反证已完成审批、Web意图/配置/草稿和Desktop异步状态，详见 [Web复核](web-quality-round10.md)、[审批复核](approval-quality-round10.md)。继续审查工作区/Panel保护、搜索与导航、下载生命周期，核对可恢复方式与平台边界。已有 TODO 中明确后置的能力与尚未发行的修复单独核对，不将其重复列为新缺陷。
 
 未进行真实付费模型、真实第三方账号、生产数据迁移或发行部署。CLI 模型行为通过可控 fixture 与实际 Host 路由验证，无法据此声称所有真实提供方端到端流程均已通过。静态候选及测试 harness 自身问题单独记录，不冒充产品发现。

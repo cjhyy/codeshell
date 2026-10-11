@@ -1,0 +1,18 @@
+bun test v1.3.11 (af24e281)
+
+packages/core/src/protocol/chat-session-manager.lifecycle.test.ts:
+(pass) ChatSessionManager serialized lifecycle > shutdown awaits an already evicted Engine and rejects new Session acquisition [0.95ms]
+(pass) ChatSessionManager serialized lifecycle > keeps process-local Quick Chat alive until its owner explicitly closes it [0.14ms]
+(pass) ChatSessionManager serialized lifecycle > forgets a process-local Quick Chat even when it never started a run [1.55ms]
+(pass) ChatSessionManager serialized lifecycle > bounds closed-session tombstones and evicts the oldest id [1.28ms]
+(pass) ChatSessionManager serialized lifecycle > fences a closing Engine's late save before reopening the same sid [27.98ms]
+(pass) ChatSessionManager serialized lifecycle > keeps the live Map entry until the active run settles [0.19ms]
+(pass) ChatSessionManager serialized lifecycle > preserves ordinary close-open-run serialization [0.09ms]
+(pass) ChatSessionManager serialized lifecycle > holds queued turns behind an exclusive summary operation [0.16ms]
+(pass) ChatSessionManager serialized lifecycle > applies a model switch requested during exclusive work before the queued run [0.13ms]
+
+ 9 pass
+ 0 fail
+ 40 expect() calls
+Ran 9 tests across 1 file. [180.00ms]
+Completed Bun shard: 9 tests, 0 skipped; 0 failures.

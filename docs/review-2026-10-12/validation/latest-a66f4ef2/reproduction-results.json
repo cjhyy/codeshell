@@ -182,6 +182,60 @@
     "archiveLog": "validation/latest-a66f4ef2/repro__plugins-round7__plugins-lifecycle.test.tsx.log"
   },
   {
+    "file": "docs/review-2026-10-12/reproductions/quality-round10/approval-lifecycle-controls.test.tsx",
+    "log": "docs/review-2026-10-12/reproductions/quality-round10/approval-lifecycle-controls.test.tsx.log",
+    "code": 0,
+    "signal": null,
+    "tests": 5,
+    "skipped": 0,
+    "archiveLog": "validation/latest-a66f4ef2/repro__quality-round10__approval-lifecycle-controls.test.tsx.log"
+  },
+  {
+    "file": "docs/review-2026-10-12/reproductions/quality-round10/composer-recovery-controls.test.tsx",
+    "log": "docs/review-2026-10-12/reproductions/quality-round10/composer-recovery-controls.test.tsx.log",
+    "code": 0,
+    "signal": null,
+    "tests": 3,
+    "skipped": 0,
+    "archiveLog": "validation/latest-a66f4ef2/repro__quality-round10__composer-recovery-controls.test.tsx.log"
+  },
+  {
+    "file": "docs/review-2026-10-12/reproductions/quality-round10/modern-intent-recovery.test.tsx",
+    "log": "docs/review-2026-10-12/reproductions/quality-round10/modern-intent-recovery.test.tsx.log",
+    "code": 0,
+    "signal": null,
+    "tests": 2,
+    "skipped": 0,
+    "archiveLog": "validation/latest-a66f4ef2/repro__quality-round10__modern-intent-recovery.test.tsx.log"
+  },
+  {
+    "file": "docs/review-2026-10-12/reproductions/quality-round10/plugin-settings-durable-controls.test.tsx",
+    "log": "docs/review-2026-10-12/reproductions/quality-round10/plugin-settings-durable-controls.test.tsx.log",
+    "code": 0,
+    "signal": null,
+    "tests": 2,
+    "skipped": 0,
+    "archiveLog": "validation/latest-a66f4ef2/repro__quality-round10__plugin-settings-durable-controls.test.tsx.log"
+  },
+  {
+    "file": "docs/review-2026-10-12/reproductions/quality-round10/project-recovery-control.test.tsx",
+    "log": "docs/review-2026-10-12/reproductions/quality-round10/project-recovery-control.test.tsx.log",
+    "code": 0,
+    "signal": null,
+    "tests": 1,
+    "skipped": 0,
+    "archiveLog": "validation/latest-a66f4ef2/repro__quality-round10__project-recovery-control.test.tsx.log"
+  },
+  {
+    "file": "docs/review-2026-10-12/reproductions/quality-round10/question-recovery-control.test.tsx",
+    "log": "docs/review-2026-10-12/reproductions/quality-round10/question-recovery-control.test.tsx.log",
+    "code": 0,
+    "signal": null,
+    "tests": 1,
+    "skipped": 0,
+    "archiveLog": "validation/latest-a66f4ef2/repro__quality-round10__question-recovery-control.test.tsx.log"
+  },
+  {
     "file": "docs/review-2026-10-12/reproductions/quality-round9/cli-normal-controls.test.tsx",
     "log": "docs/review-2026-10-12/reproductions/quality-round9/cli-normal-controls.test.tsx.log",
     "code": 0,

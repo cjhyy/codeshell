@@ -21,7 +21,7 @@ Primary location: `packages/desktop/src/renderer/ChatView.tsx:443-444`, `:1082-1
 
 Trigger: in A drag/select a workspace text file, switch to B without sending, submit B's own prompt.
 
-Impact: B's prompt gains A's literal path and structured attachment with `sessionId: A`; canonical Core rejects it with session mismatch (`packages/core/src/engine/input-attachments.ts:131-143`), so unrelated B work cannot start. With native runs, D1 hides that reason. File paths can also leak into an unrelated project's prompt.
+Impact: B's prompt gains A's literal path and structured attachment with `sessionId: A`; canonical Core rejects it with session mismatch (`packages/core/src/engine/input-attachments.ts:131-143`), so unrelated B work cannot start. With native runs, D1 hides that reason. A 的路径进入 B 的提交文本；Core 在 stat/read 之前拒绝会话不匹配，未证明读取 A 文件内容或让模型接收到该内容。移除 B 中可见的残留文件 chip 后可以正常发送；这不等于按会话保留了 A 的附件草稿。
 
 Verification: `composer-session.test.tsx` renders the actual ChatView, drops `/tmp/only-for-A.txt` in A, switches to B, sends `查看 B 的任务`, and confirms bucket B plus attachment sessionId A. The real `buildInputAttachmentContext` reports `session mismatch: expected B, got A` (1 pass / 5 assertions). Confidence: high.
 
@@ -67,13 +67,13 @@ Verification: second case in `composer-session.test.tsx` renders actual ChatView
 
 Suggested correction: capture the source bucket and draft revision at invocation, write results to that source draft, and preserve text edited during expansion.
 
-## D6 [P2] Sticky AskUser state crosses request boundaries and can crash the next question
+## D6 [P2] Sticky AskUser state crosses request boundaries and breaks the next question submit
 
 Primary location: `packages/desktop/src/renderer/ChatView.tsx:1573`; unsafe retained-index dereference at `packages/desktop/src/renderer/messages/AskUserMessageView.tsx:108`.
 
 Trigger: A has a pending multi-select question with three options and the user selects option 3. Switch directly to B with a pending multi-select question containing one option. The unkeyed sticky AskUserMessageView reuses local picked={2} (`AskUserMessageView.tsx:33`) for B.
 
-Impact: B's submit button is enabled with no visible selection; clicking it attempts `message.options[2].label` and throws TypeError. The unseen stale index remains, so clicking B's visible option does not clear the invalid pick; the user must remount the surface to recover.
+Impact: B's submit button is enabled with no visible selection; clicking it attempts `message.options[2].label` and throws TypeError. The unseen stale index remains, so clicking B's visible option does not clear the invalid pick; the user must remount the surface to recover. 切到一个没有待回答问题的会话 C 再回 B 即可重新挂载并正常提交，不需要重启 Electron；已验证的是提交 handler 抛错，并非整个 renderer 崩溃。
 
 Verification: second case in `approval-queue.test.tsx` renders actual ChatView, selects the third A option, switches to shorter B question, and asserts B submit is enabled and clicking throws (1 relevant pass / 3 assertions). Confidence: high. This shares D4's missing request identity pattern but affects a distinct component and user interaction.
 
@@ -85,7 +85,7 @@ Primary location: `packages/desktop/src/renderer/app/useHostSubscriptions.ts:102
 
 Trigger: a native Core session and a Codex/Claude external session run concurrently; the Core worker exits/crashes while the external provider process keeps running. Main broadcasts exited via `packages/desktop/src/main/agent-bridge.ts:395-409`. The renderer blindly removes all buckets in engineToBucketRef from busyKeys, including external sessions.
 
-Impact: the external session falsely becomes idle and its Stop button disappears while it can still stream or execute tools. An external queued follow-up can also start its renderer send path prematurely. The worker lifecycle already distinguishes native/external approvals, but not busy state.
+Impact: the external session falsely becomes idle and its Stop button disappears while it can still stream or execute tools. An external queued follow-up can also start its renderer send path prematurely; Main still serializes that runtime's turns, so this is not evidence of concurrent execution. 外部 sessionState 不会补回 busy，普通 text delta 也不会；后续有效 session_started 可重新标 busy，正常终态会结束此窗口，路由仍保留。 The worker lifecycle already distinguishes native/external approvals, but not busy state.
 
 Verification: `worker-external.test.tsx` uses the real useHostSubscriptions hook with native and external bucket routes and two busy flags. Delivering `{type:"exited",code:1}` clears both, although no external runtime termination occurred (1 pass / 3 assertions). Confidence: high for logic and the crash trigger; no claim that clean exits occur after every production run (the source comment says that, but worker residency should be checked separately).
 
@@ -107,3 +107,5 @@ node scripts/run-bun-test-shard.mjs --timeout 30000 /tmp/codeshell-review-202610
 Total: 13 passing reproducibility checks (including assertions of the buggy behavior), zero final failures. Per-file counts: preload 2, controller 5, composer 2, approval/question 2, production concurrency 1, worker lifecycle 1. Early harness errors (missing React DOM path, missing IntersectionObserver, localized button label mismatch) were corrected in /tmp; they were fixture issues, not counted as product findings.
 
 Saved runner output: corresponding `*.log` files in this directory. `validation-summary.txt` records test counts.
+
+第十轮独立生产门禁与恢复复核见 [desktop-quality-round10.md](desktop-quality-round10.md)，六项P2均保留，补充正常/恢复控制并收窄影响。
