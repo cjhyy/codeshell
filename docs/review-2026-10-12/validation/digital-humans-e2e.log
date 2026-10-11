@@ -1,0 +1,8 @@
+PASS: project-config-overview light/dark layouts at 1280, 820, and 390px
+PASS: project-config-instructions light/dark layouts at 1280, 820, and 390px
+PASS: project configuration groups, scoped file-check retry, keyboard focus, and no external editor
+PASS: digital-humans-mine light/dark layouts at 1280, 820, and 390px
+PASS: digital-humans-teams light/dark layouts at 1280, 820, and 390px
+PASS: digital-humans-market light/dark layouts at 1280, 820, and 390px
+PASS: digital-human library search clearing across mine, teams, and market
+CodeShell Electron digital-human E2E: passed

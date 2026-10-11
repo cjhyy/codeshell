@@ -1,0 +1,10 @@
+bun test v1.3.11 (af24e281)
+
+docs/review-2026-10-12/reproductions/desktop/worker-external.test.tsx:
+(pass) host subscriptions and recovery > CONFIRMED Core worker exit clears a still-running external runtime busy flag [7.37ms]
+
+ 1 pass
+ 0 fail
+ 3 expect() calls
+Ran 1 test across 1 file. [140.00ms]
+Completed Bun shard: 1 tests, 0 skipped; 0 failures.

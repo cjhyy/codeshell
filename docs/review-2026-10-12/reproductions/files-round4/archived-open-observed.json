@@ -1,0 +1,13 @@
+{
+  "archived": false,
+  "sessionId": "MRSGPNNrfJXi9L70",
+  "storedArchivedAt": null,
+  "opened": [],
+  "prompt": "还有未保存的修改离开会丢弃未提交的修改；切换项目还会清除未发送的草稿和附件。已经提交的操作可能仍会完成，请等待结果后再离开。留在此页放弃修改并离开",
+  "requests": [
+    "GET /api/v1/environment",
+    "GET /api/v1/sessions?archived=false&limit=50",
+    "GET /api/v1/sessions?archived=true&limit=50",
+    "PATCH /api/v1/sessions/MRSGPNNrfJXi9L70"
+  ]
+}

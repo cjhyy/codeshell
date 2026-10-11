@@ -1,0 +1,6 @@
+PASS: extensions heading and light/dark layouts at 1280, 820, and 390px
+PASS: credentials heading and light/dark layouts at 1280, 820, and 390px
+PASS: credential keyboard activation, responsive focus, metadata filtering, and clear-search focus
+PASS: automation heading and light/dark layouts at 1280, 820, and 390px
+PASS: automation keyboard selection, one-time labels, and cancel-only instruction editing
+PASS: workspace page layouts, native dark controls, and keyboard interactions

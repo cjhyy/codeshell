@@ -1,0 +1,9 @@
+PASS: Node CLI, Web build, health, administrator setup and authenticated WebSocket
+PASS: real Core worker, local model SSE, streamed reply and persisted transcript
+PASS: Web settings change the real worker model and Skill prompt in the same existing session without restarting
+PASS: tool waits for a Hub approval lease, then writes only the temporary workspace
+KNOWN R21: active first-run journal has no legacy base in response; this recovery check is excluded below
+PASS: stop interrupts an active model stream
+PASS: rename, Markdown export, archive and restore operate on real saved sessions
+PASS: restart preserves administrator, login sessions and conversation history; real Worker resumes it
+Remaining Hub checks passed with R21 recovery excluded and ToolSearch fixture adapted. No external model service was used.

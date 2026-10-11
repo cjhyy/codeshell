@@ -1,0 +1,14 @@
+bun test v1.3.11 (af24e281)
+
+docs/review-2026-10-12/reproductions/desktop/run-controller.test.tsx:
+(pass) CONFIRMED native send silently loses image_error [10.10ms]
+(pass) CONFIRMED native send silently loses Main gate [0.33ms]
+(pass) CONFIRMED native send silently loses transport reject [0.29ms]
+(pass) control: bare runtime error is visible [0.40ms]
+(pass) CONFIRMED queue is stranded when its conversation finishes in background [0.54ms]
+
+ 5 pass
+ 0 fail
+ 15 expect() calls
+Ran 5 tests across 1 file. [151.00ms]
+Completed Bun shard: 5 tests, 0 skipped; 0 failures.

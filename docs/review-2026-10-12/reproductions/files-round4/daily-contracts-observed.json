@@ -1,0 +1,21 @@
+{
+  "files": {
+    "paths": ["documents", "empty.txt", "large.txt"],
+    "nestedPath": "documents",
+    "unicodePreviewMatchesDownload": true,
+    "emptyDownloadBytes": 0,
+    "previewBytes": 524288
+  },
+  "history": {
+    "firstPage": 50,
+    "secondPage": 2,
+    "uniqueIds": 52,
+    "sameTimestampPagination": true,
+    "searchIds": ["8apLXFR5Bd8v-zvS"],
+    "archiveAndTitlePersistedAcrossServiceReopen": true,
+    "markdownContainsUserAndAssistant": true,
+    "runningExportStatus": 409,
+    "runningRestoreStatus": 409,
+    "changes": 3
+  }
+}

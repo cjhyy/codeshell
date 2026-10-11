@@ -1,0 +1,989 @@
+[
+  {
+    "file": "packages/server/src/attachment-service.test.ts",
+    "log": "/tmp/codeshell-review-20261012/baseline/000-attachment-service.test.ts.log",
+    "code": 0,
+    "signal": null,
+    "milliseconds": 396
+  },
+  {
+    "file": "packages/server/src/desktop-web/download-revocation.native.test.ts",
+    "log": "/tmp/codeshell-review-20261012/baseline/001-download-revocation.native.test.ts.log",
+    "code": 0,
+    "signal": null,
+    "milliseconds": 2923
+  },
+  {
+    "file": "packages/server/src/desktop-web/http-api.test.ts",
+    "log": "/tmp/codeshell-review-20261012/baseline/002-http-api.test.ts.log",
+    "code": 0,
+    "signal": null,
+    "milliseconds": 1299
+  },
+  {
+    "file": "packages/server/src/environment-identity.test.ts",
+    "log": "/tmp/codeshell-review-20261012/baseline/003-environment-identity.test.ts.log",
+    "code": 0,
+    "signal": null,
+    "milliseconds": 165
+  },
+  {
+    "file": "packages/server/src/hub/approval-lease.test.ts",
+    "log": "/tmp/codeshell-review-20261012/baseline/004-approval-lease.test.ts.log",
+    "code": 0,
+    "signal": null,
+    "milliseconds": 131
+  },
+  {
+    "file": "packages/server/src/hub/auth-http.test.ts",
+    "log": "/tmp/codeshell-review-20261012/baseline/005-auth-http.test.ts.log",
+    "code": 0,
+    "signal": null,
+    "milliseconds": 1061
+  },
+  {
+    "file": "packages/server/src/hub/auth-store.test.ts",
+    "log": "/tmp/codeshell-review-20261012/baseline/006-auth-store.test.ts.log",
+    "code": 0,
+    "signal": null,
+    "milliseconds": 2303
+  },
+  {
+    "file": "packages/server/src/hub/configuration.test.ts",
+    "log": "/tmp/codeshell-review-20261012/baseline/007-configuration.test.ts.log",
+    "code": 0,
+    "signal": null,
+    "milliseconds": 1255
+  },
+  {
+    "file": "packages/server/src/hub/files.test.ts",
+    "log": "/tmp/codeshell-review-20261012/baseline/008-files.test.ts.log",
+    "code": 0,
+    "signal": null,
+    "milliseconds": 521
+  },
+  {
+    "file": "packages/server/src/hub/mcp-configuration.test.ts",
+    "log": "/tmp/codeshell-review-20261012/baseline/009-mcp-configuration.test.ts.log",
+    "code": 0,
+    "signal": null,
+    "milliseconds": 2655
+  },
+  {
+    "file": "packages/server/src/hub/model-probe.test.ts",
+    "log": "/tmp/codeshell-review-20261012/baseline/010-model-probe.test.ts.log",
+    "code": 0,
+    "signal": null,
+    "milliseconds": 2672
+  },
+  {
+    "file": "packages/server/src/hub/outbound-transport.test.ts",
+    "log": "/tmp/codeshell-review-20261012/baseline/011-outbound-transport.test.ts.log",
+    "code": 0,
+    "signal": null,
+    "milliseconds": 149
+  },
+  {
+    "file": "packages/server/src/hub/run-replay.test.ts",
+    "log": "/tmp/codeshell-review-20261012/baseline/012-run-replay.test.ts.log",
+    "code": 0,
+    "signal": null,
+    "milliseconds": 181
+  },
+  {
+    "file": "packages/server/src/hub/session-management.test.ts",
+    "log": "/tmp/codeshell-review-20261012/baseline/013-session-management.test.ts.log",
+    "code": 0,
+    "signal": null,
+    "milliseconds": 1047
+  },
+  {
+    "file": "packages/server/src/hub/skills-management.test.ts",
+    "log": "/tmp/codeshell-review-20261012/baseline/014-skills-management.test.ts.log",
+    "code": 0,
+    "signal": null,
+    "milliseconds": 1911
+  },
+  {
+    "file": "packages/server/src/index.exports.test.ts",
+    "log": "/tmp/codeshell-review-20261012/baseline/015-index.exports.test.ts.log",
+    "code": 0,
+    "signal": null,
+    "milliseconds": 858
+  },
+  {
+    "file": "packages/server/src/links/authorization-steps.test.ts",
+    "log": "/tmp/codeshell-review-20261012/baseline/016-authorization-steps.test.ts.log",
+    "code": 0,
+    "signal": null,
+    "milliseconds": 677
+  },
+  {
+    "file": "packages/server/src/links/browser-handoff.test.ts",
+    "log": "/tmp/codeshell-review-20261012/baseline/017-browser-handoff.test.ts.log",
+    "code": 0,
+    "signal": null,
+    "milliseconds": 207
+  },
+  {
+    "file": "packages/server/src/links/http.test.ts",
+    "log": "/tmp/codeshell-review-20261012/baseline/018-http.test.ts.log",
+    "code": 0,
+    "signal": null,
+    "milliseconds": 2116
+  },
+  {
+    "file": "packages/server/src/links/remote-authorization.test.ts",
+    "log": "/tmp/codeshell-review-20261012/baseline/019-remote-authorization.test.ts.log",
+    "code": 0,
+    "signal": null,
+    "milliseconds": 1804
+  },
+  {
+    "file": "packages/server/src/links/remote-catalog.test.ts",
+    "log": "/tmp/codeshell-review-20261012/baseline/020-remote-catalog.test.ts.log",
+    "code": 0,
+    "signal": null,
+    "milliseconds": 810
+  },
+  {
+    "file": "packages/server/src/links/remote-configuration.test.ts",
+    "log": "/tmp/codeshell-review-20261012/baseline/021-remote-configuration.test.ts.log",
+    "code": 0,
+    "signal": null,
+    "milliseconds": 686
+  },
+  {
+    "file": "packages/server/src/links/service.test.ts",
+    "log": "/tmp/codeshell-review-20261012/baseline/022-service.test.ts.log",
+    "code": 0,
+    "signal": null,
+    "milliseconds": 1111
+  },
+  {
+    "file": "packages/server/src/mobile-remote/access-passcode.test.ts",
+    "log": "/tmp/codeshell-review-20261012/baseline/023-access-passcode.test.ts.log",
+    "code": 0,
+    "signal": null,
+    "milliseconds": 1394
+  },
+  {
+    "file": "packages/server/src/mobile-remote/cloudflared-binary.test.ts",
+    "log": "/tmp/codeshell-review-20261012/baseline/024-cloudflared-binary.test.ts.log",
+    "code": 0,
+    "signal": null,
+    "milliseconds": 195
+  },
+  {
+    "file": "packages/server/src/mobile-remote/codex-parse.test.ts",
+    "log": "/tmp/codeshell-review-20261012/baseline/025-codex-parse.test.ts.log",
+    "code": 0,
+    "signal": null,
+    "milliseconds": 150
+  },
+  {
+    "file": "packages/server/src/mobile-remote/codex-room-agent.test.ts",
+    "log": "/tmp/codeshell-review-20261012/baseline/026-codex-room-agent.test.ts.log",
+    "code": 0,
+    "signal": null,
+    "milliseconds": 159
+  },
+  {
+    "file": "packages/server/src/mobile-remote/mobile-attachments.test.ts",
+    "log": "/tmp/codeshell-review-20261012/baseline/027-mobile-attachments.test.ts.log",
+    "code": 0,
+    "signal": null,
+    "milliseconds": 228
+  },
+  {
+    "file": "packages/server/src/mobile-remote/mobile-chat-turn.test.ts",
+    "log": "/tmp/codeshell-review-20261012/baseline/028-mobile-chat-turn.test.ts.log",
+    "code": 0,
+    "signal": null,
+    "milliseconds": 261
+  },
+  {
+    "file": "packages/server/src/mobile-remote/mobile-client-event-validator.test.ts",
+    "log": "/tmp/codeshell-review-20261012/baseline/029-mobile-client-event-validator.test.ts.log",
+    "code": 0,
+    "signal": null,
+    "milliseconds": 158
+  },
+  {
+    "file": "packages/server/src/mobile-remote/mobile-run-dispatch.test.ts",
+    "log": "/tmp/codeshell-review-20261012/baseline/030-mobile-run-dispatch.test.ts.log",
+    "code": 0,
+    "signal": null,
+    "milliseconds": 157
+  },
+  {
+    "file": "packages/server/src/mobile-remote/mobile-static.test.ts",
+    "log": "/tmp/codeshell-review-20261012/baseline/031-mobile-static.test.ts.log",
+    "code": 0,
+    "signal": null,
+    "milliseconds": 196
+  },
+  {
+    "file": "packages/server/src/mobile-remote/mobile-upload-service.test.ts",
+    "log": "/tmp/codeshell-review-20261012/baseline/032-mobile-upload-service.test.ts.log",
+    "code": 0,
+    "signal": null,
+    "milliseconds": 245
+  },
+  {
+    "file": "packages/server/src/mobile-remote/pairing.test.ts",
+    "log": "/tmp/codeshell-review-20261012/baseline/033-pairing.test.ts.log",
+    "code": 0,
+    "signal": null,
+    "milliseconds": 129
+  },
+  {
+    "file": "packages/server/src/mobile-remote/pending-approvals.test.ts",
+    "log": "/tmp/codeshell-review-20261012/baseline/034-pending-approvals.test.ts.log",
+    "code": 0,
+    "signal": null,
+    "milliseconds": 128
+  },
+  {
+    "file": "packages/server/src/mobile-remote/remote-host-manager.native.test.ts",
+    "log": "/tmp/codeshell-review-20261012/baseline/035-remote-host-manager.native.test.ts.log",
+    "code": 0,
+    "signal": null,
+    "milliseconds": 335
+  },
+  {
+    "file": "packages/server/src/mobile-remote/remote-host-manager.test.ts",
+    "log": "/tmp/codeshell-review-20261012/baseline/036-remote-host-manager.test.ts.log",
+    "code": 0,
+    "signal": null,
+    "milliseconds": 1122
+  },
+  {
+    "file": "packages/server/src/mobile-remote/resident-agent.test.ts",
+    "log": "/tmp/codeshell-review-20261012/baseline/037-resident-agent.test.ts.log",
+    "code": 0,
+    "signal": null,
+    "milliseconds": 132
+  },
+  {
+    "file": "packages/server/src/mobile-remote/room-manager.append-scaling.test.ts",
+    "log": "/tmp/codeshell-review-20261012/baseline/038-room-manager.append-scaling.test.ts.log",
+    "code": 0,
+    "signal": null,
+    "milliseconds": 1459
+  },
+  {
+    "file": "packages/server/src/mobile-remote/room-manager.rejected-send.test.ts",
+    "log": "/tmp/codeshell-review-20261012/baseline/039-room-manager.rejected-send.test.ts.log",
+    "code": 0,
+    "signal": null,
+    "milliseconds": 191
+  },
+  {
+    "file": "packages/server/src/mobile-remote/room-manager.test.ts",
+    "log": "/tmp/codeshell-review-20261012/baseline/040-room-manager.test.ts.log",
+    "code": 0,
+    "signal": null,
+    "milliseconds": 540
+  },
+  {
+    "file": "packages/server/src/mobile-remote/trusted-device-store.test.ts",
+    "log": "/tmp/codeshell-review-20261012/baseline/041-trusted-device-store.test.ts.log",
+    "code": 0,
+    "signal": null,
+    "milliseconds": 2841
+  },
+  {
+    "file": "packages/server/src/mobile-remote/tunnel-manager.test.ts",
+    "log": "/tmp/codeshell-review-20261012/baseline/042-tunnel-manager.test.ts.log",
+    "code": 0,
+    "signal": null,
+    "milliseconds": 407
+  },
+  {
+    "file": "packages/server/src/mobile-remote/upload-revocation.native.test.ts",
+    "log": "/tmp/codeshell-review-20261012/baseline/043-upload-revocation.native.test.ts.log",
+    "code": 0,
+    "signal": null,
+    "milliseconds": 787
+  },
+  {
+    "file": "packages/server/src/mobile-remote/viewer-identity.test.ts",
+    "log": "/tmp/codeshell-review-20261012/baseline/044-viewer-identity.test.ts.log",
+    "code": 0,
+    "signal": null,
+    "milliseconds": 123
+  },
+  {
+    "file": "packages/server/src/panels/agent-task-execution.test.ts",
+    "log": "/tmp/codeshell-review-20261012/baseline/045-agent-task-execution.test.ts.log",
+    "code": 0,
+    "signal": null,
+    "milliseconds": 136
+  },
+  {
+    "file": "packages/server/src/panels/agent-task-host.integration.test.ts",
+    "log": "/tmp/codeshell-review-20261012/baseline/046-agent-task-host.integration.test.ts.log",
+    "code": 0,
+    "signal": null,
+    "milliseconds": 1256
+  },
+  {
+    "file": "packages/server/src/panels/agent-task-host.test.ts",
+    "log": "/tmp/codeshell-review-20261012/baseline/047-agent-task-host.test.ts.log",
+    "code": 0,
+    "signal": null,
+    "milliseconds": 949
+  },
+  {
+    "file": "packages/server/src/panels/connections.test.ts",
+    "log": "/tmp/codeshell-review-20261012/baseline/048-connections.test.ts.log",
+    "code": 0,
+    "signal": null,
+    "milliseconds": 478
+  },
+  {
+    "file": "packages/server/src/panels/directory-bookmarks.test.ts",
+    "log": "/tmp/codeshell-review-20261012/baseline/049-directory-bookmarks.test.ts.log",
+    "code": 0,
+    "signal": null,
+    "milliseconds": 700
+  },
+  {
+    "file": "packages/server/src/panels/directory-bookmarks.worktree.test.ts",
+    "log": "/tmp/codeshell-review-20261012/baseline/050-directory-bookmarks.worktree.test.ts.log",
+    "code": 0,
+    "signal": null,
+    "milliseconds": 11268
+  },
+  {
+    "file": "packages/server/src/panels/execution-gate.test.ts",
+    "log": "/tmp/codeshell-review-20261012/baseline/051-execution-gate.test.ts.log",
+    "code": 0,
+    "signal": null,
+    "milliseconds": 146
+  },
+  {
+    "file": "packages/server/src/panels/hub-automations.test.ts",
+    "log": "/tmp/codeshell-review-20261012/baseline/052-hub-automations.test.ts.log",
+    "code": 0,
+    "signal": null,
+    "milliseconds": 2859
+  },
+  {
+    "file": "packages/server/src/panels/hub-binding.test.ts",
+    "log": "/tmp/codeshell-review-20261012/baseline/053-hub-binding.test.ts.log",
+    "code": 0,
+    "signal": null,
+    "milliseconds": 5256
+  },
+  {
+    "file": "packages/server/src/panels/management-http.test.ts",
+    "log": "/tmp/codeshell-review-20261012/baseline/054-management-http.test.ts.log",
+    "code": 0,
+    "signal": null,
+    "milliseconds": 1220
+  },
+  {
+    "file": "packages/server/src/panels/management.test.ts",
+    "log": "/tmp/codeshell-review-20261012/baseline/055-management.test.ts.log",
+    "code": 0,
+    "signal": null,
+    "milliseconds": 18263
+  },
+  {
+    "file": "packages/server/src/panels/package-mutation.test.ts",
+    "log": "/tmp/codeshell-review-20261012/baseline/056-package-mutation.test.ts.log",
+    "code": 0,
+    "signal": null,
+    "milliseconds": 556
+  },
+  {
+    "file": "packages/server/src/panels/process-files.test.ts",
+    "log": "/tmp/codeshell-review-20261012/baseline/057-process-files.test.ts.log",
+    "code": 0,
+    "signal": null,
+    "milliseconds": 397
+  },
+  {
+    "file": "packages/server/src/panels/process-protocol.test.ts",
+    "log": "/tmp/codeshell-review-20261012/baseline/058-process-protocol.test.ts.log",
+    "code": 0,
+    "signal": null,
+    "milliseconds": 1080
+  },
+  {
+    "file": "packages/server/src/panels/process-service.test.ts",
+    "log": "/tmp/codeshell-review-20261012/baseline/059-process-service.test.ts.log",
+    "code": 0,
+    "signal": null,
+    "milliseconds": 2830
+  },
+  {
+    "file": "packages/server/src/panels/process-state.test.ts",
+    "log": "/tmp/codeshell-review-20261012/baseline/060-process-state.test.ts.log",
+    "code": 0,
+    "signal": null,
+    "milliseconds": 158
+  },
+  {
+    "file": "packages/server/src/panels/project-packages.test.ts",
+    "log": "/tmp/codeshell-review-20261012/baseline/061-project-packages.test.ts.log",
+    "code": 0,
+    "signal": null,
+    "milliseconds": 9107
+  },
+  {
+    "file": "packages/server/src/panels/resources/clone.test.ts",
+    "log": "/tmp/codeshell-review-20261012/baseline/062-clone.test.ts.log",
+    "code": 0,
+    "signal": null,
+    "milliseconds": 153
+  },
+  {
+    "file": "packages/server/src/panels/resources/references.test.ts",
+    "log": "/tmp/codeshell-review-20261012/baseline/063-references.test.ts.log",
+    "code": 0,
+    "signal": null,
+    "milliseconds": 478
+  },
+  {
+    "file": "packages/server/src/panels/resources/resources.test.ts",
+    "log": "/tmp/codeshell-review-20261012/baseline/064-resources.test.ts.log",
+    "code": 0,
+    "signal": null,
+    "milliseconds": 1268
+  },
+  {
+    "file": "packages/server/src/panels/runtime-services.test.ts",
+    "log": "/tmp/codeshell-review-20261012/baseline/065-runtime-services.test.ts.log",
+    "code": 0,
+    "signal": null,
+    "milliseconds": 858
+  },
+  {
+    "file": "packages/server/src/panels/runtime.test.ts",
+    "log": "/tmp/codeshell-review-20261012/baseline/066-runtime.test.ts.log",
+    "code": 0,
+    "signal": null,
+    "milliseconds": 6194
+  },
+  {
+    "file": "packages/server/src/panels/task-cookie-host.test.ts",
+    "log": "/tmp/codeshell-review-20261012/baseline/067-task-cookie-host.test.ts.log",
+    "code": 0,
+    "signal": null,
+    "milliseconds": 1125
+  },
+  {
+    "file": "packages/server/src/panels/task-cookies.test.ts",
+    "log": "/tmp/codeshell-review-20261012/baseline/068-task-cookies.test.ts.log",
+    "code": 0,
+    "signal": null,
+    "milliseconds": 757
+  },
+  {
+    "file": "packages/server/src/panels/tool-executor.test.ts",
+    "log": "/tmp/codeshell-review-20261012/baseline/069-tool-executor.test.ts.log",
+    "code": 0,
+    "signal": null,
+    "milliseconds": 6802
+  },
+  {
+    "file": "packages/server/src/panels/tool-jobs.test.ts",
+    "log": "/tmp/codeshell-review-20261012/baseline/070-tool-jobs.test.ts.log",
+    "code": 0,
+    "signal": null,
+    "milliseconds": 1089
+  },
+  {
+    "file": "packages/server/src/panels/worktree-directory-flow.test.ts",
+    "log": "/tmp/codeshell-review-20261012/baseline/071-worktree-directory-flow.test.ts.log",
+    "code": 0,
+    "signal": null,
+    "milliseconds": 13893
+  },
+  {
+    "file": "packages/server/src/project-runtime/backup.test.ts",
+    "log": "/tmp/codeshell-review-20261012/baseline/072-backup.test.ts.log",
+    "code": 0,
+    "signal": null,
+    "milliseconds": 995
+  },
+  {
+    "file": "packages/server/src/project-runtime/control-server.test.ts",
+    "log": "/tmp/codeshell-review-20261012/baseline/073-control-server.test.ts.log",
+    "code": 0,
+    "signal": null,
+    "milliseconds": 885
+  },
+  {
+    "file": "packages/server/src/project-runtime/control-shutdown.integration.test.ts",
+    "log": "/tmp/codeshell-review-20261012/baseline/074-control-shutdown.integration.test.ts.log",
+    "code": 0,
+    "signal": null,
+    "milliseconds": 2876
+  },
+  {
+    "file": "packages/server/src/project-runtime/docker-provider.test.ts",
+    "log": "/tmp/codeshell-review-20261012/baseline/075-docker-provider.test.ts.log",
+    "code": 0,
+    "signal": null,
+    "milliseconds": 790
+  },
+  {
+    "file": "packages/server/src/project-runtime/lifecycle.test.ts",
+    "log": "/tmp/codeshell-review-20261012/baseline/076-lifecycle.test.ts.log",
+    "code": 0,
+    "signal": null,
+    "milliseconds": 1220
+  },
+  {
+    "file": "packages/server/src/project-runtime/managed-entry.test.ts",
+    "log": "/tmp/codeshell-review-20261012/baseline/077-managed-entry.test.ts.log",
+    "code": 0,
+    "signal": null,
+    "milliseconds": 985
+  },
+  {
+    "file": "packages/server/src/project-runtime/manager.test.ts",
+    "log": "/tmp/codeshell-review-20261012/baseline/078-manager.test.ts.log",
+    "code": 0,
+    "signal": null,
+    "milliseconds": 1762
+  },
+  {
+    "file": "packages/server/src/project-runtime/proxy.integration.test.ts",
+    "log": "/tmp/codeshell-review-20261012/baseline/079-proxy.integration.test.ts.log",
+    "code": 0,
+    "signal": null,
+    "milliseconds": 937
+  },
+  {
+    "file": "packages/server/src/project-runtime/proxy.test.ts",
+    "log": "/tmp/codeshell-review-20261012/baseline/080-proxy.test.ts.log",
+    "code": 0,
+    "signal": null,
+    "milliseconds": 5004
+  },
+  {
+    "file": "packages/server/src/project-runtime/registry.test.ts",
+    "log": "/tmp/codeshell-review-20261012/baseline/081-registry.test.ts.log",
+    "code": 0,
+    "signal": null,
+    "milliseconds": 801
+  },
+  {
+    "file": "packages/server/src/remote-relay/relay.native.test.ts",
+    "log": "/tmp/codeshell-review-20261012/baseline/082-relay.native.test.ts.log",
+    "code": 0,
+    "signal": null,
+    "milliseconds": 8566
+  },
+  {
+    "file": "packages/server/src/serve/automation-worker-policy.integration.test.ts",
+    "log": "/tmp/codeshell-review-20261012/baseline/083-automation-worker-policy.integration.test.ts.log",
+    "code": 0,
+    "signal": null,
+    "milliseconds": 1749
+  },
+  {
+    "file": "packages/server/src/serve/automation-worker.test.ts",
+    "log": "/tmp/codeshell-review-20261012/baseline/084-automation-worker.test.ts.log",
+    "code": 0,
+    "signal": null,
+    "milliseconds": 1351
+  },
+  {
+    "file": "packages/server/src/serve/cli.test.ts",
+    "log": "/tmp/codeshell-review-20261012/baseline/085-cli.test.ts.log",
+    "code": 0,
+    "signal": null,
+    "milliseconds": 446
+  },
+  {
+    "file": "packages/server/src/serve/headless-backpressure.test.ts",
+    "log": "/tmp/codeshell-review-20261012/baseline/086-headless-backpressure.test.ts.log",
+    "code": 0,
+    "signal": null,
+    "milliseconds": 1641
+  },
+  {
+    "file": "packages/server/src/serve/headless-lifecycle.test.ts",
+    "log": "/tmp/codeshell-review-20261012/baseline/087-headless-lifecycle.test.ts.log",
+    "code": 0,
+    "signal": null,
+    "milliseconds": 3439
+  },
+  {
+    "file": "packages/server/src/serve/headless-server.test.ts",
+    "log": "/tmp/codeshell-review-20261012/baseline/088-headless-server.test.ts.log",
+    "code": 0,
+    "signal": null,
+    "milliseconds": 2588
+  },
+  {
+    "file": "packages/server/src/serve/hub-automations.integration.test.ts",
+    "log": "/tmp/codeshell-review-20261012/baseline/089-hub-automations.integration.test.ts.log",
+    "code": 0,
+    "signal": null,
+    "milliseconds": 3827
+  },
+  {
+    "file": "packages/server/src/serve/hub-panel-loopback.test.ts",
+    "log": "/tmp/codeshell-review-20261012/baseline/090-hub-panel-loopback.test.ts.log",
+    "code": 0,
+    "signal": null,
+    "milliseconds": 3557
+  },
+  {
+    "file": "packages/server/src/serve/hub-panels.test.ts",
+    "log": "/tmp/codeshell-review-20261012/baseline/091-hub-panels.test.ts.log",
+    "code": 0,
+    "signal": null,
+    "milliseconds": 1405
+  },
+  {
+    "file": "packages/server/src/serve/hub-server.test.ts",
+    "log": "/tmp/codeshell-review-20261012/baseline/092-hub-server.test.ts.log",
+    "code": 0,
+    "signal": null,
+    "milliseconds": 3601
+  },
+  {
+    "file": "packages/server/src/serve/settings-recovery-cli.test.ts",
+    "log": "/tmp/codeshell-review-20261012/baseline/093-settings-recovery-cli.test.ts.log",
+    "code": 0,
+    "signal": null,
+    "milliseconds": 470
+  },
+  {
+    "file": "packages/server/src/session-titles-store.test.ts",
+    "log": "/tmp/codeshell-review-20261012/baseline/094-session-titles-store.test.ts.log",
+    "code": 0,
+    "signal": null,
+    "milliseconds": 527
+  },
+  {
+    "file": "packages/server/src/sessions-service.archive-race.test.ts",
+    "log": "/tmp/codeshell-review-20261012/baseline/095-sessions-service.archive-race.test.ts.log",
+    "code": 0,
+    "signal": null,
+    "milliseconds": 507
+  },
+  {
+    "file": "packages/server/src/sessions-service.disk.test.ts",
+    "log": "/tmp/codeshell-review-20261012/baseline/096-sessions-service.disk.test.ts.log",
+    "code": 0,
+    "signal": null,
+    "milliseconds": 847
+  },
+  {
+    "file": "packages/server/src/sessions-service.home.test.ts",
+    "log": "/tmp/codeshell-review-20261012/baseline/097-sessions-service.home.test.ts.log",
+    "code": 0,
+    "signal": null,
+    "milliseconds": 450
+  },
+  {
+    "file": "packages/server/src/sessions-service.test.ts",
+    "log": "/tmp/codeshell-review-20261012/baseline/098-sessions-service.test.ts.log",
+    "code": 0,
+    "signal": null,
+    "milliseconds": 820
+  },
+  {
+    "file": "packages/server/src/worker-bridge-core.test.ts",
+    "log": "/tmp/codeshell-review-20261012/baseline/099-worker-bridge-core.test.ts.log",
+    "code": 0,
+    "signal": null,
+    "milliseconds": 1513
+  },
+  {
+    "file": "packages/web/app/DesktopApp.test.tsx",
+    "log": "/tmp/codeshell-review-20261012/baseline/100-DesktopApp.test.tsx.log",
+    "code": 0,
+    "signal": null,
+    "milliseconds": 500
+  },
+  {
+    "file": "packages/web/app/HubLinks.test.tsx",
+    "log": "/tmp/codeshell-review-20261012/baseline/101-HubLinks.test.tsx.log",
+    "code": 0,
+    "signal": null,
+    "milliseconds": 317
+  },
+  {
+    "file": "packages/web/app/HubPanels.test.tsx",
+    "log": "/tmp/codeshell-review-20261012/baseline/102-HubPanels.test.tsx.log",
+    "code": 0,
+    "signal": null,
+    "milliseconds": 236
+  },
+  {
+    "file": "packages/web/app/LinkCallback.test.tsx",
+    "log": "/tmp/codeshell-review-20261012/baseline/103-LinkCallback.test.tsx.log",
+    "code": 0,
+    "signal": null,
+    "milliseconds": 190
+  },
+  {
+    "file": "packages/web/app/MessageContent.test.tsx",
+    "log": "/tmp/codeshell-review-20261012/baseline/104-MessageContent.test.tsx.log",
+    "code": 0,
+    "signal": null,
+    "milliseconds": 318
+  },
+  {
+    "file": "packages/web/app/PanelHost.test.tsx",
+    "log": "/tmp/codeshell-review-20261012/baseline/105-PanelHost.test.tsx.log",
+    "code": 0,
+    "signal": null,
+    "milliseconds": 898
+  },
+  {
+    "file": "packages/web/app/ProjectsGate.test.tsx",
+    "log": "/tmp/codeshell-review-20261012/baseline/106-ProjectsGate.test.tsx.log",
+    "code": 0,
+    "signal": null,
+    "milliseconds": 387
+  },
+  {
+    "file": "packages/web/app/Workbench.panels.test.ts",
+    "log": "/tmp/codeshell-review-20261012/baseline/107-Workbench.panels.test.ts.log",
+    "code": 0,
+    "signal": null,
+    "milliseconds": 372
+  },
+  {
+    "file": "packages/web/app/api-context.test.ts",
+    "log": "/tmp/codeshell-review-20261012/baseline/108-api-context.test.ts.log",
+    "code": 0,
+    "signal": null,
+    "milliseconds": 140
+  },
+  {
+    "file": "packages/web/app/approvals.test.ts",
+    "log": "/tmp/codeshell-review-20261012/baseline/109-approvals.test.ts.log",
+    "code": 0,
+    "signal": null,
+    "milliseconds": 126
+  },
+  {
+    "file": "packages/web/app/auth.test.ts",
+    "log": "/tmp/codeshell-review-20261012/baseline/110-auth.test.ts.log",
+    "code": 0,
+    "signal": null,
+    "milliseconds": 129
+  },
+  {
+    "file": "packages/web/app/chat.test.ts",
+    "log": "/tmp/codeshell-review-20261012/baseline/111-chat.test.ts.log",
+    "code": 0,
+    "signal": null,
+    "milliseconds": 1726
+  },
+  {
+    "file": "packages/web/app/configuration.test.ts",
+    "log": "/tmp/codeshell-review-20261012/baseline/112-configuration.test.ts.log",
+    "code": 0,
+    "signal": null,
+    "milliseconds": 153
+  },
+  {
+    "file": "packages/web/app/drafts.test.ts",
+    "log": "/tmp/codeshell-review-20261012/baseline/113-drafts.test.ts.log",
+    "code": 0,
+    "signal": null,
+    "milliseconds": 142
+  },
+  {
+    "file": "packages/web/app/environments.test.ts",
+    "log": "/tmp/codeshell-review-20261012/baseline/114-environments.test.ts.log",
+    "code": 0,
+    "signal": null,
+    "milliseconds": 142
+  },
+  {
+    "file": "packages/web/app/mcp-configuration.test.ts",
+    "log": "/tmp/codeshell-review-20261012/baseline/115-mcp-configuration.test.ts.log",
+    "code": 0,
+    "signal": null,
+    "milliseconds": 150
+  },
+  {
+    "file": "packages/web/app/panel-audio-capture.test.ts",
+    "log": "/tmp/codeshell-review-20261012/baseline/116-panel-audio-capture.test.ts.log",
+    "code": 0,
+    "signal": null,
+    "milliseconds": 144
+  },
+  {
+    "file": "packages/web/app/panel-audio-upload.test.ts",
+    "log": "/tmp/codeshell-review-20261012/baseline/117-panel-audio-upload.test.ts.log",
+    "code": 0,
+    "signal": null,
+    "milliseconds": 148
+  },
+  {
+    "file": "packages/web/app/panel-resource-upload.test.ts",
+    "log": "/tmp/codeshell-review-20261012/baseline/118-panel-resource-upload.test.ts.log",
+    "code": 0,
+    "signal": null,
+    "milliseconds": 161
+  },
+  {
+    "file": "packages/web/app/panel-runtime-connection.test.ts",
+    "log": "/tmp/codeshell-review-20261012/baseline/119-panel-runtime-connection.test.ts.log",
+    "code": 0,
+    "signal": null,
+    "milliseconds": 263
+  },
+  {
+    "file": "packages/web/app/panel-video-capture.test.ts",
+    "log": "/tmp/codeshell-review-20261012/baseline/120-panel-video-capture.test.ts.log",
+    "code": 0,
+    "signal": null,
+    "milliseconds": 144
+  },
+  {
+    "file": "packages/web/app/protocol.test.ts",
+    "log": "/tmp/codeshell-review-20261012/baseline/121-protocol.test.ts.log",
+    "code": 0,
+    "signal": null,
+    "milliseconds": 1863
+  },
+  {
+    "file": "packages/web/app/remote-link-authorization.test.ts",
+    "log": "/tmp/codeshell-review-20261012/baseline/122-remote-link-authorization.test.ts.log",
+    "code": 0,
+    "signal": null,
+    "milliseconds": 208
+  },
+  {
+    "file": "packages/web/app/service-worker.test.ts",
+    "log": "/tmp/codeshell-review-20261012/baseline/123-service-worker.test.ts.log",
+    "code": 0,
+    "signal": null,
+    "milliseconds": 148
+  },
+  {
+    "file": "packages/web/app/skills-management.test.ts",
+    "log": "/tmp/codeshell-review-20261012/baseline/124-skills-management.test.ts.log",
+    "code": 0,
+    "signal": null,
+    "milliseconds": 177
+  },
+  {
+    "file": "packages/web/app/useHubController.test.tsx",
+    "log": "/tmp/codeshell-review-20261012/baseline/125-useHubController.test.tsx.log",
+    "code": 0,
+    "signal": null,
+    "milliseconds": 202
+  },
+  {
+    "file": "packages/web/src/hooks/mobileOutputClient.test.ts",
+    "log": "/tmp/codeshell-review-20261012/baseline/126-mobileOutputClient.test.ts.log",
+    "code": 0,
+    "signal": null,
+    "milliseconds": 721
+  },
+  {
+    "file": "packages/web/src/hooks/remoteAppSync.test.ts",
+    "log": "/tmp/codeshell-review-20261012/baseline/127-remoteAppSync.test.ts.log",
+    "code": 0,
+    "signal": null,
+    "milliseconds": 141
+  },
+  {
+    "file": "packages/web/src/hooks/useRemoteApp.test.tsx",
+    "log": "/tmp/codeshell-review-20261012/baseline/128-useRemoteApp.test.tsx.log",
+    "code": 0,
+    "signal": null,
+    "milliseconds": 15428
+  },
+  {
+    "file": "packages/web/src/hooks/useRemoteSocket.test.tsx",
+    "log": "/tmp/codeshell-review-20261012/baseline/129-useRemoteSocket.test.tsx.log",
+    "code": 0,
+    "signal": null,
+    "milliseconds": 282
+  },
+  {
+    "file": "packages/web/src/lib/deviceCredential.test.ts",
+    "log": "/tmp/codeshell-review-20261012/baseline/130-deviceCredential.test.ts.log",
+    "code": 0,
+    "signal": null,
+    "milliseconds": 146
+  },
+  {
+    "file": "packages/web/src/lib/format.test.ts",
+    "log": "/tmp/codeshell-review-20261012/baseline/131-format.test.ts.log",
+    "code": 0,
+    "signal": null,
+    "milliseconds": 149
+  },
+  {
+    "file": "packages/web/src/lib/messageMappers.test.ts",
+    "log": "/tmp/codeshell-review-20261012/baseline/132-messageMappers.test.ts.log",
+    "code": 0,
+    "signal": null,
+    "milliseconds": 132
+  },
+  {
+    "file": "packages/web/src/lib/mobileAttachments.test.ts",
+    "log": "/tmp/codeshell-review-20261012/baseline/133-mobileAttachments.test.ts.log",
+    "code": 0,
+    "signal": null,
+    "milliseconds": 147
+  },
+  {
+    "file": "packages/web/src/lib/outputJournalRecovery.test.ts",
+    "log": "/tmp/codeshell-review-20261012/baseline/134-outputJournalRecovery.test.ts.log",
+    "code": 0,
+    "signal": null,
+    "milliseconds": 292
+  },
+  {
+    "file": "packages/web/src/lib/pairing.test.ts",
+    "log": "/tmp/codeshell-review-20261012/baseline/135-pairing.test.ts.log",
+    "code": 0,
+    "signal": null,
+    "milliseconds": 150
+  },
+  {
+    "file": "packages/web/src/lib/riskClassify.test.ts",
+    "log": "/tmp/codeshell-review-20261012/baseline/136-riskClassify.test.ts.log",
+    "code": 0,
+    "signal": null,
+    "milliseconds": 152
+  },
+  {
+    "file": "packages/web/src/lib/streamReducer.test.ts",
+    "log": "/tmp/codeshell-review-20261012/baseline/137-streamReducer.test.ts.log",
+    "code": 0,
+    "signal": null,
+    "milliseconds": 145
+  },
+  {
+    "file": "packages/web/src/lib/transcriptReplay.test.ts",
+    "log": "/tmp/codeshell-review-20261012/baseline/138-transcriptReplay.test.ts.log",
+    "code": 0,
+    "signal": null,
+    "milliseconds": 153
+  },
+  {
+    "file": "packages/web/src/link-authorization-view.test.tsx",
+    "log": "/tmp/codeshell-review-20261012/baseline/139-link-authorization-view.test.tsx.log",
+    "code": 0,
+    "signal": null,
+    "milliseconds": 550
+  },
+  {
+    "file": "packages/web/src/link-authorization.test.ts",
+    "log": "/tmp/codeshell-review-20261012/baseline/140-link-authorization.test.ts.log",
+    "code": 0,
+    "signal": null,
+    "milliseconds": 225
+  }
+]

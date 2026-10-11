@@ -1,0 +1,234 @@
+[
+  {
+    "file": "docs/review-2026-10-12/reproductions/desktop/approval-queue.test.tsx",
+    "log": "docs/review-2026-10-12/reproductions/desktop/approval-queue.test.tsx.log",
+    "code": 0,
+    "signal": null,
+    "tests": 2,
+    "skipped": 0
+  },
+  {
+    "file": "docs/review-2026-10-12/reproductions/desktop/composer-session.test.tsx",
+    "log": "docs/review-2026-10-12/reproductions/desktop/composer-session.test.tsx.log",
+    "code": 0,
+    "signal": null,
+    "tests": 2,
+    "skipped": 0
+  },
+  {
+    "file": "docs/review-2026-10-12/reproductions/desktop/concurrent-approvals.test.ts",
+    "log": "docs/review-2026-10-12/reproductions/desktop/concurrent-approvals.test.ts.log",
+    "code": 0,
+    "signal": null,
+    "tests": 1,
+    "skipped": 0
+  },
+  {
+    "file": "docs/review-2026-10-12/reproductions/desktop/preload-envelope.test.ts",
+    "log": "docs/review-2026-10-12/reproductions/desktop/preload-envelope.test.ts.log",
+    "code": 0,
+    "signal": null,
+    "tests": 2,
+    "skipped": 0
+  },
+  {
+    "file": "docs/review-2026-10-12/reproductions/desktop/run-controller.test.tsx",
+    "log": "docs/review-2026-10-12/reproductions/desktop/run-controller.test.tsx.log",
+    "code": 0,
+    "signal": null,
+    "tests": 5,
+    "skipped": 0
+  },
+  {
+    "file": "docs/review-2026-10-12/reproductions/desktop/worker-external.test.tsx",
+    "log": "docs/review-2026-10-12/reproductions/desktop/worker-external.test.tsx.log",
+    "code": 0,
+    "signal": null,
+    "tests": 1,
+    "skipped": 0
+  },
+  {
+    "file": "docs/review-2026-10-12/reproductions/desktop-round2/panel-multiroot.test.tsx",
+    "log": "docs/review-2026-10-12/reproductions/desktop-round2/panel-multiroot.test.tsx.log",
+    "code": 0,
+    "signal": null,
+    "tests": 1,
+    "skipped": 0
+  },
+  {
+    "file": "docs/review-2026-10-12/reproductions/desktop-round2/panel-registry-batch.test.ts",
+    "log": "docs/review-2026-10-12/reproductions/desktop-round2/panel-registry-batch.test.ts.log",
+    "code": 0,
+    "signal": null,
+    "tests": 3,
+    "skipped": 0
+  },
+  {
+    "file": "docs/review-2026-10-12/reproductions/desktop-round2/remove-project-workspace.test.ts",
+    "log": "docs/review-2026-10-12/reproductions/desktop-round2/remove-project-workspace.test.ts.log",
+    "code": 0,
+    "signal": null,
+    "tests": 1,
+    "skipped": 0
+  },
+  {
+    "file": "docs/review-2026-10-12/reproductions/desktop-round3/plugin-settings-race.test.tsx",
+    "log": "docs/review-2026-10-12/reproductions/desktop-round3/plugin-settings-race.test.tsx.log",
+    "code": 0,
+    "signal": null,
+    "tests": 1,
+    "skipped": 0
+  },
+  {
+    "file": "docs/review-2026-10-12/reproductions/desktop-round3/project-initial-snapshot.test.tsx",
+    "log": "docs/review-2026-10-12/reproductions/desktop-round3/project-initial-snapshot.test.tsx.log",
+    "code": 0,
+    "signal": null,
+    "tests": 1,
+    "skipped": 0
+  },
+  {
+    "file": "docs/review-2026-10-12/reproductions/desktop-round3/worktree-duplicate-create.test.tsx",
+    "log": "docs/review-2026-10-12/reproductions/desktop-round3/worktree-duplicate-create.test.tsx.log",
+    "code": 0,
+    "signal": null,
+    "tests": 2,
+    "skipped": 0
+  },
+  {
+    "file": "docs/review-2026-10-12/reproductions/files-round4/archived-open.test.ts",
+    "log": "docs/review-2026-10-12/reproductions/files-round4/archived-open.test.ts.log",
+    "code": 0,
+    "signal": null,
+    "tests": 1,
+    "skipped": 0
+  },
+  {
+    "file": "docs/review-2026-10-12/reproductions/files-round4/daily-contracts.test.ts",
+    "log": "docs/review-2026-10-12/reproductions/files-round4/daily-contracts.test.ts.log",
+    "code": 0,
+    "signal": null,
+    "tests": 2,
+    "skipped": 0
+  },
+  {
+    "file": "docs/review-2026-10-12/reproductions/root/first-run-recovery.test.ts",
+    "log": "docs/review-2026-10-12/reproductions/root/first-run-recovery.test.ts.log",
+    "code": 0,
+    "signal": null,
+    "tests": 2,
+    "skipped": 0
+  },
+  {
+    "file": "docs/review-2026-10-12/reproductions/runtime-round3/panel-process-close.test.ts",
+    "log": "docs/review-2026-10-12/reproductions/runtime-round3/panel-process-close.test.ts.log",
+    "code": 0,
+    "signal": null,
+    "tests": 1,
+    "skipped": 0
+  },
+  {
+    "file": "docs/review-2026-10-12/reproductions/runtime-round3/tool-job-final-write.test.ts",
+    "log": "docs/review-2026-10-12/reproductions/runtime-round3/tool-job-final-write.test.ts.log",
+    "code": 0,
+    "signal": null,
+    "tests": 2,
+    "skipped": 0
+  },
+  {
+    "file": "docs/review-2026-10-12/reproductions/runtime-round3/worker-pipe-close.test.ts",
+    "log": "docs/review-2026-10-12/reproductions/runtime-round3/worker-pipe-close.test.ts.log",
+    "code": 0,
+    "signal": null,
+    "tests": 1,
+    "skipped": 0
+  },
+  {
+    "file": "docs/review-2026-10-12/reproductions/server/cc-approval-recovery.test.tsx",
+    "log": "docs/review-2026-10-12/reproductions/server/cc-approval-recovery.test.tsx.log",
+    "code": 0,
+    "signal": null,
+    "tests": 2,
+    "skipped": 0
+  },
+  {
+    "file": "docs/review-2026-10-12/reproductions/server/double-start.test.ts",
+    "log": "docs/review-2026-10-12/reproductions/server/double-start.test.ts.log",
+    "code": 0,
+    "signal": null,
+    "tests": 1,
+    "skipped": 0
+  },
+  {
+    "file": "docs/review-2026-10-12/reproductions/server/questions.test.ts",
+    "log": "docs/review-2026-10-12/reproductions/server/questions.test.ts.log",
+    "code": 0,
+    "signal": null,
+    "tests": 1,
+    "skipped": 0
+  },
+  {
+    "file": "docs/review-2026-10-12/reproductions/server/room-spawn.test.ts",
+    "log": "docs/review-2026-10-12/reproductions/server/room-spawn.test.ts.log",
+    "code": 0,
+    "signal": null,
+    "tests": 1,
+    "skipped": 0
+  },
+  {
+    "file": "docs/review-2026-10-12/reproductions/server/uploads.test.ts",
+    "log": "docs/review-2026-10-12/reproductions/server/uploads.test.ts.log",
+    "code": 0,
+    "signal": null,
+    "tests": 2,
+    "skipped": 0
+  },
+  {
+    "file": "docs/review-2026-10-12/reproductions/web/flow-review.test.tsx",
+    "log": "docs/review-2026-10-12/reproductions/web/flow-review.test.tsx.log",
+    "code": 0,
+    "signal": null,
+    "tests": 4,
+    "skipped": 0
+  },
+  {
+    "file": "docs/review-2026-10-12/reproductions/web/hub-async-review.test.tsx",
+    "log": "docs/review-2026-10-12/reproductions/web/hub-async-review.test.tsx.log",
+    "code": 0,
+    "signal": null,
+    "tests": 1,
+    "skipped": 0
+  },
+  {
+    "file": "docs/review-2026-10-12/reproductions/web/intent-id-review.test.ts",
+    "log": "docs/review-2026-10-12/reproductions/web/intent-id-review.test.ts.log",
+    "code": 0,
+    "signal": null,
+    "tests": 1,
+    "skipped": 0
+  },
+  {
+    "file": "docs/review-2026-10-12/reproductions/web/room-controls-review.test.tsx",
+    "log": "docs/review-2026-10-12/reproductions/web/room-controls-review.test.tsx.log",
+    "code": 0,
+    "signal": null,
+    "tests": 3,
+    "skipped": 0
+  },
+  {
+    "file": "docs/review-2026-10-12/reproductions/web-round2/settings-review.test.tsx",
+    "log": "docs/review-2026-10-12/reproductions/web-round2/settings-review.test.tsx.log",
+    "code": 0,
+    "signal": null,
+    "tests": 3,
+    "skipped": 0
+  },
+  {
+    "file": "docs/review-2026-10-12/reproductions/web-round3/mobile-lifecycle-review.test.tsx",
+    "log": "docs/review-2026-10-12/reproductions/web-round3/mobile-lifecycle-review.test.tsx.log",
+    "code": 0,
+    "signal": null,
+    "tests": 5,
+    "skipped": 0
+  }
+]
