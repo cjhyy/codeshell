@@ -355,6 +355,7 @@ export class Engine {
     { scope: LifetimeScope; services: Record<string, unknown> }
   >();
   private activeRunScope: LifetimeScope | undefined;
+  private releaseMcpRun: (() => Promise<void>) | undefined;
   private activeGoalRegistration: Dispose | undefined;
   private moduleReady!: Promise<void>;
   private moduleActivationPending = true;
@@ -1427,8 +1428,13 @@ export class Engine {
       throw error;
     } finally {
       try {
-        await this.activeRunScope?.dispose();
+        try {
+          await this.activeRunScope?.dispose();
+        } finally {
+          await this.releaseMcpRun?.();
+        }
       } finally {
+        this.releaseMcpRun = undefined;
         this.activeRunScope = undefined;
         this.activeInstructionSessionId = undefined;
         try {
@@ -3150,6 +3156,9 @@ export class Engine {
       runtimePool: this.runtime?.mcpPool,
       toolRegistry: this.toolRegistry,
       engineForConnect: this,
+      retainRun: (release) => {
+        this.releaseMcpRun = release;
+      },
       emitNotificationHook: (payload) => {
         void this.emitHook("notification", payload);
       },
