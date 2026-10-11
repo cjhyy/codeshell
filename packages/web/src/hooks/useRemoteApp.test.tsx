@@ -1686,7 +1686,8 @@ test("the actual Desktop hook/controller pair keeps drafts through create and se
 describe("useRemoteApp native output journal", () => {
   async function connectedJournal() {
     const { SessionManager } = await import("@cjhyy/code-shell-core");
-    const { SessionOutputJournal } = await import("@cjhyy/code-shell-core/internal");
+    const { SessionOutputJournal, SessionOutputCoverageStore } =
+      await import("@cjhyy/code-shell-core/internal");
     const { SessionSnapshotStore } =
       await import("../../../desktop/src/main/SessionSnapshotStore.js");
     const { MobileOutputRecovery } =
@@ -1704,7 +1705,12 @@ describe("useRemoteApp native output journal", () => {
       "run",
       session.transcript.getEvents()[0].id,
     );
-    let snapshots = new SessionSnapshotStore({ maxPerSession: 2 });
+    const createSnapshots = () =>
+      new SessionSnapshotStore({
+        maxPerSession: 2,
+        coverage: new SessionOutputCoverageStore(() => root),
+      });
+    let snapshots = createSnapshots();
     const publish = (event: import("@cjhyy/code-shell-core").StreamEvent) => {
       const raw = { ...event, outputCursor: writer.append(event) };
       return {
@@ -1799,7 +1805,7 @@ describe("useRemoteApp native output journal", () => {
       root,
       service,
       restart: () => {
-        snapshots = new SessionSnapshotStore({ maxPerSession: 2 });
+        snapshots = createSnapshots();
       },
       revoke: () => {
         revoked = true;

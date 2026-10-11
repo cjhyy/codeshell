@@ -160,10 +160,22 @@ for (const stage of ["absent", "directory", "state"]) {
     expect(snapshot.error).toBeUndefined();
     expect(snapshot.result.data.running).toBe(true);
     expect(snapshot.result.data.transcript).toEqual([]);
-    expect(snapshot.result.data.liveStream.events.map((item: any) => item.event.type)).toEqual([
-      "session_user_message",
-      "text_delta",
-    ]);
+    const published = origin.received.filter((message) => message.method === "agent/streamEvent");
+    if (stage === "state") {
+      expect(snapshot.result.data.liveStream.events.map((item: any) => item.event.type)).toEqual([
+        "session_user_message",
+        "text_delta",
+      ]);
+      expect(published).toHaveLength(2);
+      expect(snapshot.result.data.liveStream.events.map((item: any) => item.event)).toEqual(
+        published.map((message) => message.params.event),
+      );
+    } else {
+      expect(snapshot.result.data.liveStream.events).toEqual([]);
+      expect(published).toEqual([]);
+      expect(snapshot.result.data.streamCursor.sequence).toBe(0);
+      expect(snapshot.result.data.outputCoverage.unpaired).toBe(true);
+    }
     expect((await save()).status).toBe(409);
     control("finish", stage);
     await client.wait(
