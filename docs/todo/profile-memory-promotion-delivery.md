@@ -1,6 +1,6 @@
 # 项目记忆复制到数字人
 
-状态：2026-10-10 已实现并通过本地分片、类型、构建及实际 macOS Electron 流程；最终 CI 与合并状态见 [PR #126](https://github.com/cjhyy/codeshell/pull/126)，尚未发行。
+状态：2026-10-10 已实现并通过本地分片、类型、构建及实际 macOS Electron 流程；最终 CI 与合并状态见 [PR #126](https://github.com/cjhyy/codeshell/pull/126)，已包含于 [v0.9.32](https://github.com/cjhyy/codeshell/releases/tag/v0.9.32)。
 
 ## 使用流程
 
