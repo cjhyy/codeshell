@@ -21,6 +21,8 @@ export interface PanelAutomationScope {
   sessionId: string;
   /** Host-selected installed package revision, never a field from Panel call JSON. */
   revision?: string;
+  /** Optional synchronous transport fence immediately before a Host mutation. */
+  assertAuthorized?(): void;
   isAuthorized(): Promise<boolean>;
 }
 /** Borrowed Host service. A page/transport closing never stops the scheduler. */

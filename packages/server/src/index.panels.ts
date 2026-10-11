@@ -3,6 +3,8 @@ export * from "./panels/automations.js";
 export * from "./panels/hub-automations.js";
 export { createPanelManagement, PanelManagementError } from "./panels/management.js";
 export { createPanelRuntime, panelWebCompatibility } from "./panels/runtime.js";
+export { createHubPanelBinding } from "./panels/hub-binding.js";
+export * from "./panels/project-scope.js";
 export { PanelRuntimeServices } from "./panels/runtime-services.js";
 export * from "./panels/process-service.js";
 export * from "./panels/agent-task-service.js";

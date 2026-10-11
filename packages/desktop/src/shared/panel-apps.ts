@@ -155,6 +155,13 @@ export interface PanelAppHostContext {
   busy?: boolean;
   cwd?: string;
   trusted?: boolean;
+  /** Host-resolved context identity; it never grants permissions. */
+  projectScope?: {
+    version: 1;
+    environmentId: string;
+    projectId: string;
+    rootId: string;
+  };
   apiVersion: typeof PANEL_APP_API_VERSION;
   host?: "desktop" | "hub";
   availableMethods?: string[];

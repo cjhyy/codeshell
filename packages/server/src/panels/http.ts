@@ -5,11 +5,13 @@ import type { SharedPanelToolHost } from "./shared-tool-jobs.js";
 import type { PanelAutomationHost } from "./automations.js";
 import { createPanelRuntime, panelWebCompatibility } from "./runtime.js";
 import { createPanelAgentTaskHost, type PanelAgentTaskHostOptions } from "./agent-task-host.js";
+import type { PanelProjectScopeBinding } from "./project-scope.js";
 
 export function createPanelHttp(
   options: PanelManagementHttpOptions & {
     dataDir: string;
     host: "hub" | "desktop";
+    projectScope?: () => Promise<PanelProjectScopeBinding | undefined>;
     publicPathPrefix?: string;
     agentTaskOptions?: PanelAgentTaskHostOptions;
     sharedToolJobs?: SharedPanelToolHost;

@@ -8,16 +8,22 @@ import {
 import { acquireLockOnPath } from "@cjhyy/code-shell-core/internal";
 import { isDeepStrictEqual } from "node:util";
 import { createHash, randomUUID } from "node:crypto";
-import { constants, type Stats } from "node:fs";
+import {
+  chmodSync,
+  constants,
+  linkSync,
+  lstatSync,
+  realpathSync,
+  renameSync,
+  type Stats,
+} from "node:fs";
 import {
   chmod,
-  link,
   lstat,
   mkdir,
   open,
   readdir,
   realpath,
-  rename,
   rm,
   stat,
   writeFile,
@@ -59,6 +65,7 @@ import {
   panelBridgeFailure,
   panelAutomationCreationKey,
   type PanelAutomationHost,
+  type PanelProjectScopeBinding,
 } from "@cjhyy/code-shell-server/panels";
 import { installedPanelAppRevision } from "./panel-apps-service.js";
 import type { PanelAppInspectionCache } from "./panel-app-inspection-cache.js";
@@ -160,6 +167,13 @@ interface GuestBinding {
   bucket?: string;
   /** Project selected during prepare; immutable for this guest. */
   projectPath: string;
+  projectScope?: PanelProjectScopeBinding;
+  projectScopeRevoked?: boolean;
+  bindGeneration?: number;
+  bindController?: AbortController;
+  /** A guest can keep project access, but must never retarget a session action. */
+  sensitiveSessionId?: string;
+  sensitiveSessionRevoked?: boolean;
   /** Active session/worktree root; available only after renderer binding. */
   cwd?: string;
   /**
@@ -201,6 +215,11 @@ export interface PanelAppBridgeOptions {
   isWorkspaceTrusted(cwd: string): boolean;
   /** Rechecked on prepare, bind, Agent invocation, and every Host call. */
   isPanelAppBound(projectPath: string, appId: string): boolean;
+  /** Shared with paired Web; IDs are resolved by Main, never accepted from a guest. */
+  resolveProjectScope?(
+    projectPath: string,
+    cwd: string,
+  ): Promise<PanelProjectScopeBinding | undefined>;
   getAgentBridge(): AgentBridge | null;
   getExternalRuntimeService?(): ExternalRuntimeService | null;
   /** Canonical transcript handoff used only when a fresh external thread starts. */
@@ -680,6 +699,7 @@ export class PanelAppBridge {
 
   async shutdownMedia(): Promise<void> {
     this.resourceTransfersStopping = true;
+    for (const binding of this.guests.values()) binding.bindController?.abort();
     revokePanelAppMediaReads();
     for (const controller of this.resourceTransfers.keys()) controller.abort();
     await Promise.all([...this.resourceTransfers.values()].map(({ settled }) => settled));
@@ -736,6 +756,7 @@ export class PanelAppBridge {
   }
 
   revokeGuest(guestId: number): void {
+    this.guests.get(guestId)?.bindController?.abort();
     for (const [controller, transfer] of this.resourceTransfers)
       if (transfer.guestId === guestId) controller.abort();
     this.processService.revokeGuest(guestId);
@@ -924,7 +945,7 @@ export class PanelAppBridge {
     );
   }
 
-  private bindGuest(sender: WebContents, input: PanelAppBindInput): boolean {
+  private async bindGuest(sender: WebContents, input: PanelAppBindInput): Promise<boolean> {
     if (
       !input ||
       !Number.isSafeInteger(input.guestId) ||
@@ -936,6 +957,7 @@ export class PanelAppBridge {
     ) {
       throw new Error("invalid Panel App binding");
     }
+    if (this.resourceTransfersStopping) throw new Error("Panel App Host is stopping");
     const binding = this.guests.get(input.guestId);
     const owner = BrowserWindow.fromWebContents(sender);
     if (!binding || !owner || binding.ownerWindowId !== owner.id) {
@@ -984,10 +1006,62 @@ export class PanelAppBridge {
       throw new Error("Panel App workspace does not belong to its bound project");
     }
     this.assertProjectBinding(binding);
-    binding.bucket = input.bucket;
     // Installed panels are already bound to a verified project. A new chat may
     // not have a session workspace yet, but that must not remove project access.
     const cwd = input.cwd ?? binding.projectPath;
+    input = { ...input };
+    binding.bindController?.abort();
+    const controller = new AbortController();
+    binding.bindController = controller;
+    const generation = (binding.bindGeneration ?? 0) + 1;
+    binding.bindGeneration = generation;
+    // Busy/theme/Session updates reuse their frozen proof. Its guard still
+    // rereads registry and mount identities; no repeated Git subprocess probe.
+    let projectScope = binding.cwd === cwd ? binding.projectScope : undefined;
+    if (
+      !projectScope &&
+      binding.resource.descriptor.permissions.includes("context.workspace") &&
+      this.options.resolveProjectScope
+    ) {
+      let onAbort: (() => void) | undefined;
+      try {
+        projectScope = await Promise.race([
+          this.options.resolveProjectScope(binding.projectPath, cwd),
+          new Promise<never>((_resolve, reject) => {
+            onAbort = () => reject(new Error("Panel App binding was superseded or closed"));
+            controller.signal.addEventListener("abort", onAbort, { once: true });
+          }),
+        ]);
+      } finally {
+        if (onAbort) controller.signal.removeEventListener("abort", onAbort);
+      }
+    }
+    this.assertTrustedHost(sender);
+    if (
+      controller.signal.aborted ||
+      binding.bindGeneration !== generation ||
+      this.guests.get(binding.guest.id) !== binding ||
+      binding.guest.isDestroyed() ||
+      owner.isDestroyed() ||
+      BrowserWindow.fromWebContents(sender) !== owner ||
+      this.resourceTransfersStopping
+    )
+      throw new Error("Panel App binding was superseded or closed");
+    this.assertProjectBinding(binding);
+    projectScope?.assertCurrent();
+    if (
+      binding.projectScope &&
+      (!projectScope || !isDeepStrictEqual(binding.projectScope.scope, projectScope.scope))
+    ) {
+      binding.projectScopeRevoked = true;
+      throw new Error("Panel project scope changed; reopen the panel");
+    }
+    binding.projectScope ??= projectScope;
+    const sessionId = input.sessionId || undefined;
+    if (binding.sensitiveSessionId && binding.sensitiveSessionId !== sessionId)
+      binding.sensitiveSessionRevoked = true;
+    binding.sensitiveSessionId ??= sessionId;
+    binding.bucket = input.bucket;
     binding.cwd = cwd;
     binding.execution = {
       cwd: input.projectPath,
@@ -1007,7 +1081,11 @@ export class PanelAppBridge {
         ? { sessionId: input.sessionId, busy: input.busy === true }
         : {}),
       ...(binding.resource.descriptor.permissions.includes("context.workspace")
-        ? { cwd, trusted: this.options.isWorkspaceTrusted(cwd) }
+        ? {
+            cwd,
+            trusted: this.options.isWorkspaceTrusted(cwd),
+            ...(binding.projectScope ? { projectScope: { ...binding.projectScope.scope } } : {}),
+          }
         : {}),
     };
     if (!binding.guest.isDestroyed()) {
@@ -1170,6 +1248,11 @@ export class PanelAppBridge {
     if (jsonBytes(result) > resultLimit) {
       throw new PanelBridgeError("RESULT_TOO_LARGE", "Panel App result is too large");
     }
+    // An operation may await file/process work while its guest or mounted root
+    // is revoked. Do not disclose a result from a proof that no longer holds.
+    this.assertLiveProjectBinding(binding);
+    if (method === "agent.submitPrompt" || method.startsWith("automations."))
+      this.assertSessionBinding(binding);
     return result;
   }
 
@@ -1180,6 +1263,14 @@ export class PanelAppBridge {
   }
 
   private assertProjectBinding(binding: GuestBinding): void {
+    if (binding.projectScopeRevoked)
+      throw new Error("Panel project scope was revoked; reopen the panel");
+    try {
+      binding.projectScope?.assertCurrent();
+    } catch (cause) {
+      binding.projectScopeRevoked = true;
+      throw cause;
+    }
     if (
       !this.options.isPanelAppBound(binding.projectPath, binding.resource.descriptor.appId) ||
       !isPanelAppDescriptorSelected(binding.resource.descriptor, binding.projectPath)
@@ -1188,6 +1279,22 @@ export class PanelAppBridge {
         `Panel App '${binding.resource.descriptor.appId}' is no longer bound to this project`,
       );
     }
+  }
+
+  private assertSessionBinding(binding: GuestBinding): void {
+    this.assertLiveProjectBinding(binding);
+    if (binding.sensitiveSessionRevoked || binding.sensitiveSessionId !== binding.context.sessionId)
+      throw new PanelBridgeError("SESSION_CHANGED", "Panel session changed; reopen the panel");
+  }
+
+  private assertLiveProjectBinding(binding: GuestBinding): void {
+    this.assertProjectBinding(binding);
+    if (
+      this.guests.get(binding.guest.id) !== binding ||
+      binding.guest.isDestroyed() ||
+      this.resourceTransfersStopping
+    )
+      throw new PanelBridgeError("REVOKED", "Panel App scope is no longer bound");
   }
 
   private capabilitiesFor(binding: GuestBinding) {
@@ -1673,6 +1780,14 @@ export class PanelAppBridge {
     params: unknown,
     signal?: AbortSignal,
   ): Promise<unknown> {
+    // Main can receive a rebind before the guest receives context.changed.
+    // Enforce the original session at the actual dispatch boundary as well.
+    if (method === "agent.submitPrompt" || method.startsWith("automations."))
+      this.assertSessionBinding(binding);
+    if (method.startsWith("automations.") && this.options.automations?.conditional) {
+      this.requirePermission(binding, "automations.manage");
+      return this.conditionalPanelAutomation(binding, method, params);
+    }
     if (method.startsWith("tasks.")) return this.dispatchToolJobs(binding, method, params);
     if (method.startsWith("resources.")) {
       this.requirePermission(binding, "resources");
@@ -2242,6 +2357,7 @@ export class PanelAppBridge {
   }
 
   private panelAutomationHost(binding: GuestBinding) {
+    this.assertSessionBinding(binding);
     const host = this.options.automations;
     if (!host) throw new Error("Panel App automation host is unavailable");
     if (!binding.context.cwd || !binding.context.sessionId) {
@@ -2271,6 +2387,7 @@ export class PanelAppBridge {
         cwd,
         sessionId,
         revision: binding.resource.descriptor.revision,
+        assertAuthorized: () => this.assertSessionBinding(binding),
         isAuthorized: async () => {
           if (
             this.guests.get(binding.guest.id) !== binding ||
@@ -2281,7 +2398,7 @@ export class PanelAppBridge {
           )
             return false;
           try {
-            this.assertProjectBinding(binding);
+            this.assertSessionBinding(binding);
             return true;
           } catch {
             return false;
@@ -2303,13 +2420,16 @@ export class PanelAppBridge {
 
   private async listPanelAutomations(binding: GuestBinding): Promise<unknown> {
     const host = this.panelAutomationHost(binding);
-    return { automations: await host.list(this.panelAutomationScope(binding)) };
+    const automations = await host.list(this.panelAutomationScope(binding));
+    this.assertSessionBinding(binding);
+    return { automations };
   }
 
   private async requireScopedPanelAutomation(binding: GuestBinding, id: string) {
     const host = this.panelAutomationHost(binding);
     const scope = this.panelAutomationScope(binding);
     const automation = (await host.list(scope)).find((job) => job.id === id);
+    this.assertSessionBinding(binding);
     if (!automation) {
       throw new Error("Panel App automation is not available in this project task");
     }
@@ -2385,6 +2505,7 @@ export class PanelAppBridge {
   private async updatePanelAutomation(binding: GuestBinding, params: unknown): Promise<unknown> {
     const id = this.automationId(params);
     const { host, scope } = await this.requireScopedPanelAutomation(binding, id);
+    this.assertSessionBinding(binding);
     const input = params as {
       name?: unknown;
       schedule?: unknown;
@@ -2450,6 +2571,7 @@ export class PanelAppBridge {
   ): Promise<unknown> {
     const id = this.automationId(params);
     const { host } = await this.requireScopedPanelAutomation(binding, id);
+    this.assertSessionBinding(binding);
     if (method === "automations.pause") return { ok: await host.pause(id) };
     if (method === "automations.resume") return { ok: await host.resume(id) };
     if (method === "automations.delete") return { ok: await host.delete(id) };
@@ -2743,14 +2865,14 @@ export class PanelAppBridge {
     const file = this.storagePath(binding);
     const key = this.storageKey(params);
     const change = method === "storage.compareAndSet" ? panelAppStorageChange(params) : null;
-    const assertAuthorized = async () => {
+    const assertAuthorized = () => {
       if (
         this.guests.get(binding.guest.id) !== binding ||
         binding.guest.isDestroyed() ||
         binding.projectPath !== projectPath
       )
         throw new PanelBridgeError("REVOKED", "Panel App storage scope changed");
-      this.assertProjectBinding(binding);
+      this.assertLiveProjectBinding(binding);
       this.requirePermission(binding, "storage");
     };
     if (!change) {
@@ -2766,7 +2888,13 @@ export class PanelAppBridge {
       const storage = await readPanelAppStorage(file, this.storageQuotaBytes());
       const result = applyPanelAppStorageChange(storage, change);
       if (result.updated)
-        await writePanelAppStorage(file, storage, this.storageQuotaBytes(), assertAuthorized);
+        await writePanelAppStorage(
+          file,
+          storage,
+          this.storageQuotaBytes(),
+          async () => assertAuthorized(),
+          assertAuthorized,
+        );
       await assertAuthorized();
       return result;
     });
@@ -2781,7 +2909,7 @@ export class PanelAppBridge {
     return this.withStorageMutation(binding, async (file) => {
       const storage = await this.readStorage(binding);
       storage[key] = jsonValue;
-      await this.writeStorage(file, storage);
+      await this.writeStorage(binding, file, storage);
       return true;
     });
   }
@@ -2792,13 +2920,27 @@ export class PanelAppBridge {
       const storage = await this.readStorage(binding);
       const existed = Object.prototype.hasOwnProperty.call(storage, key);
       delete storage[key];
-      await this.writeStorage(file, storage);
+      await this.writeStorage(binding, file, storage);
       return existed;
     });
   }
 
-  private async writeStorage(file: string, storage: Record<string, unknown>): Promise<void> {
-    await writePanelAppStorage(file, storage, this.storageQuotaBytes());
+  private async writeStorage(
+    binding: GuestBinding,
+    file: string,
+    storage: Record<string, unknown>,
+  ): Promise<void> {
+    const assertAuthorized = () => {
+      this.assertLiveProjectBinding(binding);
+      this.requirePermission(binding, "storage");
+    };
+    await writePanelAppStorage(
+      file,
+      storage,
+      this.storageQuotaBytes(),
+      async () => assertAuthorized(),
+      assertAuthorized,
+    );
   }
 
   private async withStorageMutation<T>(
@@ -2816,7 +2958,9 @@ export class PanelAppBridge {
     await ready;
     let releaseFileLock: (() => void) | undefined;
     try {
+      this.assertLiveProjectBinding(binding);
       await preparePanelAppStorage(file);
+      this.assertLiveProjectBinding(binding);
       // Other bridge instances can mutate the same file. Try once per tick so
       // their async writes and lock heartbeats can finish while we wait. Keep
       // the per-file lock shared with remote Panel storage and other processes.
@@ -2829,8 +2973,10 @@ export class PanelAppBridge {
           if ((error as NodeJS.ErrnoException).code !== "ELOCKED" || Date.now() >= deadline)
             throw error;
           await new Promise((resolve) => setTimeout(resolve, 20));
+          this.assertLiveProjectBinding(binding);
         }
       }
+      this.assertLiveProjectBinding(binding);
       return await mutate(file);
     } finally {
       releaseFileLock?.();
@@ -2875,6 +3021,7 @@ export class PanelAppBridge {
   }
 
   private async submitPrompt(binding: GuestBinding, params: unknown): Promise<unknown> {
+    this.assertSessionBinding(binding);
     const input = params as { prompt?: unknown; displayText?: unknown } | null;
     const task = input?.prompt;
     if (
@@ -2930,6 +3077,7 @@ export class PanelAppBridge {
     // the selected model while handoff context is loading; one submission must
     // never mix the old provider kind with a new model key.
     const execution = { ...binding.execution };
+    const bucket = binding.bucket;
     const parsedRuntime = execution.modelKey
       ? parseExternalRuntimeModelKey(execution.modelKey)
       : null;
@@ -2953,11 +3101,13 @@ export class PanelAppBridge {
           };
           if (!service.isCompatible(startRequest)) {
             const initialContext = await this.options.externalRuntimeInitialContext?.(sessionId);
+            this.assertSessionBinding(binding);
             await service.ensure({
               ...startRequest,
               ...(initialContext ? { initialContext } : {}),
             });
           }
+          this.assertSessionBinding(binding);
           const outcome = await service.send(sessionId, {
             text: task.trim(),
             displayText,
@@ -2972,6 +3122,7 @@ export class PanelAppBridge {
           };
         }
       : async (): Promise<{ ok: boolean; message?: string; failureStreamed: boolean }> => {
+          this.assertSessionBinding(binding);
           const result = await bridge.requestWorker(
             "agent/run",
             {
@@ -2980,7 +3131,7 @@ export class PanelAppBridge {
               clientMessageId,
               sessionId,
               cwd,
-              bucket: binding.bucket,
+              bucket,
               ...(execution.modelKey ? { model: execution.modelKey } : {}),
             },
             PANEL_AGENT_RUN_TIMEOUT_MS,
@@ -3293,23 +3444,32 @@ export class PanelAppBridge {
     return { buffer: buffer.subarray(0, bytesRead), metadata };
   }
 
-  private async ensureWorkspaceDirectory(root: string, relativeDirectory: string): Promise<string> {
+  private async ensureWorkspaceDirectory(
+    root: string,
+    relativeDirectory: string,
+    assertCurrent = () => {},
+  ): Promise<string> {
+    assertCurrent();
     if (relativeDirectory === ".") return root;
     let current = root;
     for (const segment of relativeDirectory.split(/[\\/]/)) {
       current = join(current, segment);
       try {
         const metadata = await lstat(current);
+        assertCurrent();
         if (metadata.isSymbolicLink() || !metadata.isDirectory()) {
           throw new Error("workspace path contains an unsafe directory");
         }
       } catch (error) {
         if ((error as NodeJS.ErrnoException).code !== "ENOENT") throw error;
+        assertCurrent();
         try {
           await mkdir(current, { mode: 0o755 });
+          assertCurrent();
         } catch (mkdirError) {
           if ((mkdirError as NodeJS.ErrnoException).code !== "EEXIST") throw mkdirError;
           const metadata = await lstat(current);
+          assertCurrent();
           if (metadata.isSymbolicLink() || !metadata.isDirectory()) {
             throw new Error("workspace path contains an unsafe directory", {
               cause: mkdirError,
@@ -3318,6 +3478,7 @@ export class PanelAppBridge {
         }
       }
       const canonical = await realpath(current);
+      assertCurrent();
       if (!this.isWithinWorkspace(root, canonical)) {
         throw new Error("workspace path escapes the root");
       }
@@ -3428,16 +3589,34 @@ export class PanelAppBridge {
     maxExistingBytes: number,
   ): Promise<unknown> {
     const root = await this.trustedWorkspaceRoot(binding);
+    this.assertLiveProjectBinding(binding);
+    const assertRoot = this.pinWorkspaceDirectory(root);
+    const assertAuthorized = () => {
+      this.assertLiveProjectBinding(binding);
+      assertRoot();
+    };
     const target = resolve(root, ...relativePath.split("/"));
     if (!this.isWithinWorkspace(root, target)) throw new Error("workspace path escapes the root");
     return this.withWorkspaceWrite(target, async () => {
-      const parent = await this.ensureWorkspaceDirectory(root, dirname(relativePath));
+      assertAuthorized();
+      const parent = await this.ensureWorkspaceDirectory(
+        root,
+        dirname(relativePath),
+        assertAuthorized,
+      );
+      assertAuthorized();
+      const assertParent = this.pinWorkspaceDirectory(parent);
+      const assertCommit = () => {
+        assertAuthorized();
+        assertParent();
+      };
       const canonicalTarget = join(parent, basename(relativePath));
       let currentModifiedAt: number | null = null;
       let currentRevision: string | null = null;
       let targetMode = 0o644;
       try {
         const metadata = await lstat(canonicalTarget);
+        assertCommit();
         if (metadata.isSymbolicLink() || !metadata.isFile()) {
           throw new Error("workspace target is not a regular file");
         }
@@ -3446,6 +3625,7 @@ export class PanelAppBridge {
         if (expectedRevision !== undefined) {
           const handle = await open(canonicalTarget, constants.O_RDONLY | constants.O_NOFOLLOW);
           try {
+            assertCommit();
             currentRevision = workspaceRevision(
               (await this.readBoundedWorkspaceFile(handle, maxExistingBytes)).buffer,
             );
@@ -3456,6 +3636,7 @@ export class PanelAppBridge {
       } catch (error) {
         if ((error as NodeJS.ErrnoException).code !== "ENOENT") throw error;
       }
+      assertCommit();
       const hasExpectation = expectedModifiedAt !== undefined;
       const conflicts =
         expectedRevision !== undefined
@@ -3469,26 +3650,39 @@ export class PanelAppBridge {
 
       const temporary = join(parent, `.${basename(relativePath)}.${randomUUID()}.tmp`);
       try {
-        await writeFile(temporary, content, { mode: 0o600 });
+        await writeFile(temporary, content, { mode: 0o600, flag: "wx" });
+        assertCommit();
         const createOnly = expectedRevision === undefined && expectedModifiedAt === null;
         if (createOnly) {
           try {
-            await link(temporary, canonicalTarget);
+            linkSync(temporary, canonicalTarget);
           } catch (error) {
             if ((error as NodeJS.ErrnoException).code === "EEXIST") {
               throw new Error("workspace file changed since it was opened", { cause: error });
             }
             throw error;
           }
-          await rm(temporary, { force: true }).catch(() => undefined);
         } else {
-          await rename(temporary, canonicalTarget);
+          renameSync(temporary, canonicalTarget);
         }
-        await chmod(canonicalTarget, targetMode).catch(() => undefined);
+        try {
+          chmodSync(canonicalTarget, targetMode);
+        } catch {
+          /* Preserve best-effort mode behavior. */
+        }
       } catch (error) {
-        await rm(temporary, { force: true }).catch(() => undefined);
+        try {
+          assertRoot();
+          assertParent();
+          await rm(temporary, { force: true });
+        } catch {
+          /* Never clean up inside a replaced directory. */
+        }
         throw error;
       }
+      assertCommit();
+      await rm(temporary, { force: true }).catch(() => undefined);
+      assertCommit();
       const metadata = await stat(canonicalTarget);
       return {
         path: relativePath,
@@ -3497,6 +3691,25 @@ export class PanelAppBridge {
         revision: workspaceRevision(content),
       };
     });
+  }
+
+  private pinWorkspaceDirectory(path: string): () => void {
+    const canonical = realpathSync(path);
+    const pin = lstatSync(canonical, { bigint: true });
+    if (!pin.isDirectory() || pin.isSymbolicLink())
+      throw new Error("workspace directory is unsafe");
+    return () => {
+      const current = lstatSync(path, { bigint: true });
+      if (
+        realpathSync(path) !== canonical ||
+        !current.isDirectory() ||
+        current.isSymbolicLink() ||
+        current.dev !== pin.dev ||
+        current.ino !== pin.ino ||
+        current.birthtimeNs !== pin.birthtimeNs
+      )
+        throw new Error("workspace directory changed during write");
+    };
   }
 
   private async withWorkspaceWrite<T>(file: string, mutate: () => Promise<T>): Promise<T> {

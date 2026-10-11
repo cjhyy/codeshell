@@ -523,6 +523,7 @@ import {
 } from "./updater.js";
 import { loadRecents, loadProjects } from "./recents-store.js";
 import { getProjectStore } from "./project-store.js";
+import { createDesktopPanelProjectScopeResolver } from "./panel-project-scope.js";
 import { registerProjectAuthorityIpc } from "./project-authority-ipc.js";
 import { reviewService } from "./review-service.js";
 import { loadWindowState, saveWindowState } from "./window-state-store.js";
@@ -656,11 +657,16 @@ let chromeNativeRegistration: ChromeNativeRegistrationResult | undefined;
 let externalRuntimeService: ExternalRuntimeService | null = null;
 /** Routes external-runtime tool approvals to the renderer's existing dialog. */
 let externalRuntimeApprovals: ExternalRuntimeApprovals | null = null;
+const resolvePanelProjectScope = createDesktopPanelProjectScopeResolver({
+  environmentDir: join(codeShellHome(), "desktop"),
+  store: getProjectStore(),
+});
 const panelAppBridge = new PanelAppBridge({
   isTrustedHost: (sender) =>
     [...mainWindows].some((window) => !window.isDestroyed() && window.webContents === sender),
   isWorkspaceTrusted: (cwd) => getTrustCachedSync(cwd) === "trusted",
   isPanelAppBound: isPanelAppBoundToProject,
+  resolveProjectScope: resolvePanelProjectScope,
   getAgentBridge: () => bridge,
   getExternalRuntimeService: () => externalRuntimeService,
   externalRuntimeInitialContext: async (sessionId) =>
@@ -964,6 +970,7 @@ const mobileRemote = new RemoteHostManager({
     devices: mobileDevices,
     automations: createDesktopPanelAutomationHost(desktopAutomationAuthorityDeps),
     sharedToolJobs: panelAppBridge.sharedToolJobs(),
+    resolveProjectScope: resolvePanelProjectScope,
     authorizePanelDirectory: (app, projectPath, workspacePath) =>
       panelAppBridge.authorizePanelDirectory(app, projectPath, workspacePath),
     getBridge: () => bridge,

@@ -1,5 +1,5 @@
 import { createHash, randomUUID } from "node:crypto";
-import { constants } from "node:fs";
+import { constants, renameSync } from "node:fs";
 import { chmod, lstat, mkdir, open, rename, rm, writeFile } from "node:fs/promises";
 import { dirname, join } from "node:path";
 
@@ -195,6 +195,7 @@ export async function writePanelAppStorage(
   storage: PanelAppStorage,
   quotaBytes: number,
   beforeCommit?: () => Promise<void>,
+  finalCommitFence?: () => void,
 ): Promise<void> {
   const quota = panelAppStorageQuotaBytes(quotaBytes);
   const entries = Object.entries(storage);
@@ -221,7 +222,10 @@ export async function writePanelAppStorage(
     // Recheck both authorization and the target after staging, before publishing.
     await beforeCommit?.();
     await preparePanelAppStorage(file);
-    await rename(temporary, file);
+    if (finalCommitFence) {
+      finalCommitFence();
+      renameSync(temporary, file);
+    } else await rename(temporary, file);
     if (process.platform !== "win32") await chmod(file, 0o600);
   } finally {
     await rm(temporary, { force: true }).catch(() => undefined);
