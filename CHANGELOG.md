@@ -10,6 +10,11 @@ breaking.
 
 ### Fixed
 
+- Reload changed MCP transport declarations on the next Run while preserving
+  current Runs, sibling sessions and explicit SDK connections. Reuse identical
+  handshakes, retain the captured configuration across directory changes and
+  finalization hooks, and release transports after their last consumer settles.
+
 - Unbind every persistent Session before deleting a digital human, including
   archived history and more than 100 references. Scan asynchronously, preserve
   concurrently selected profiles, and keep the definition on failed writes or
