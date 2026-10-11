@@ -99,6 +99,15 @@
     "archiveLog": "validation/latest-a66f4ef2/repro__connection-recovery-round15__native-outbound.test.ts.log"
   },
   {
+    "file": "docs/review-2026-10-12/reproductions/context-recovery-round17/context-recovery.test.tsx",
+    "log": "docs/review-2026-10-12/reproductions/context-recovery-round17/context-recovery.test.tsx.log",
+    "code": 0,
+    "signal": null,
+    "tests": 4,
+    "skipped": 0,
+    "archiveLog": "validation/latest-a66f4ef2/repro__context-recovery-round17__context-recovery.test.tsx.log"
+  },
+  {
     "file": "docs/review-2026-10-12/reproductions/desktop-round2/panel-multiroot.test.tsx",
     "log": "docs/review-2026-10-12/reproductions/desktop-round2/panel-multiroot.test.tsx.log",
     "code": 0,
@@ -443,6 +452,24 @@
     "archiveLog": "validation/latest-a66f4ef2/repro__search-routing-round11__search-cap-ui.test.tsx.log"
   },
   {
+    "file": "docs/review-2026-10-12/reproductions/server-routing-round17/core-configure-controls.test.ts",
+    "log": "docs/review-2026-10-12/reproductions/server-routing-round17/core-configure-controls.test.ts.log",
+    "code": 0,
+    "signal": null,
+    "tests": 1,
+    "skipped": 0,
+    "archiveLog": "validation/latest-a66f4ef2/repro__server-routing-round17__core-configure-controls.test.ts.log"
+  },
+  {
+    "file": "docs/review-2026-10-12/reproductions/server-routing-round17/hub-routing.test.ts",
+    "log": "docs/review-2026-10-12/reproductions/server-routing-round17/hub-routing.test.ts.log",
+    "code": 0,
+    "signal": null,
+    "tests": 1,
+    "skipped": 0,
+    "archiveLog": "validation/latest-a66f4ef2/repro__server-routing-round17__hub-routing.test.ts.log"
+  },
+  {
     "file": "docs/review-2026-10-12/reproductions/server/cc-approval-recovery.test.tsx",
     "log": "docs/review-2026-10-12/reproductions/server/cc-approval-recovery.test.tsx.log",
     "code": 0,
@@ -495,6 +522,15 @@
     "tests": 4,
     "skipped": 0,
     "archiveLog": "validation/latest-a66f4ef2/repro__session-actions-round13__session-delete-recovery.test.tsx.log"
+  },
+  {
+    "file": "docs/review-2026-10-12/reproductions/session-operations-round17/session-operations.test.ts",
+    "log": "docs/review-2026-10-12/reproductions/session-operations-round17/session-operations.test.ts.log",
+    "code": 0,
+    "signal": null,
+    "tests": 1,
+    "skipped": 0,
+    "archiveLog": "validation/latest-a66f4ef2/repro__session-operations-round17__session-operations.test.ts.log"
   },
   {
     "file": "docs/review-2026-10-12/reproductions/settings-round16/settings-lifecycle.test.ts",

@@ -1,0 +1,13 @@
+bun test v1.3.11 (af24e281)
+
+docs/review-2026-10-12/reproductions/context-recovery-round17/context-recovery.test.tsx:
+(pass) actual context UI and actual Core summary failure preserve selection for retry; successful target contains only transfer summary [126.65ms]
+(pass) actual Core rejects invalid source range or existing target before any owned summarizer call [18.83ms]
+(pass) actual Core cancel aborts exclusive summary without publishing and permits a subsequent retry [46.54ms]
+(pass) actual context UI delivers a delayed real Core target callback without activating after switching the source session [96.72ms]
+
+ 4 pass
+ 0 fail
+ 40 expect() calls
+Ran 4 tests across 1 file. [1498.00ms]
+Completed Bun shard: 4 tests, 0 skipped; 0 failures.

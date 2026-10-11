@@ -2,17 +2,17 @@
 
 本次审查覆盖服务端、Electron 桌面端、配对 Web 与移动端的日常流程，重点检查消息发送、审批、取消、切换会话、恢复和项目上下文。问题只在有代码证据或可复现结果后列入正式发现。
 
-审查进行中，截止时间为新加坡时间 2026 年 10 月 12 日 11:00。初始审查基线为 `84740d56e55517b004948a0a0e07649ad6fbf998`，对应启动审查时的 `origin/main`。01:30 拉取发现主分支已更新至 `a66f4ef291f304ee4df9da8095a90671d9a8f140`（0.9.33）；已另建隔离快照复查差异，原始复现和行号仍按初始基线保存。72 个便携 Bun 复现文件共 221 测试，以及实际 Electron 凭据 4 场景，已在新快照复查成立；详见[0.9.33 差异复查](latest-baseline.md)。产品代码保持原样，报告保存在独立分支 `codex/review/server-desktop-20261012`。
+审查进行中，截止时间为新加坡时间 2026 年 10 月 12 日 11:00。初始审查基线为 `84740d56e55517b004948a0a0e07649ad6fbf998`，对应启动审查时的 `origin/main`。01:30 拉取发现主分支已更新至 `a66f4ef291f304ee4df9da8095a90671d9a8f140`（0.9.33）；已另建隔离快照复查差异，原始复现和行号仍按初始基线保存。76 个便携 Bun 复现文件共 228 测试，以及实际 Electron 凭据 4 场景，已在新快照复查成立；详见[0.9.33 差异复查](latest-baseline.md)。产品代码保持原样，报告保存在独立分支 `codex/review/server-desktop-20261012`。
 
 用户流程、正常对照与修复顺序见[流程覆盖地图](flow-coverage.md)。
 
 ## 当前结论
 
-当前已收束 70 项问题：1 项 P1、47 项 P2、22 项 P3。优先处理审批状态、任务回执和会话身份；这些问题会让任务无法继续、重复执行，或把用户输入带到另一个会话。P1 表示有未提交文件丢失风险、应优先修复；P2 表示正常使用可触发、应安排修复；P3 表示影响较小或触发条件较窄、已有恢复入口的问题。尚未证实的候选不计入数量。
+当前已收束 73 项问题：1 项 P1、49 项 P2、23 项 P3。优先处理审批状态、任务回执和会话身份；这些问题会让任务无法继续、重复执行，或把用户输入带到另一个会话。P1 表示有未提交文件丢失风险、应优先修复；P2 表示正常使用可触发、应安排修复；P3 表示影响较小或触发条件较窄、已有恢复入口的问题。尚未证实的候选不计入数量。
 
 **最先修 R35：创建工作区时重复 Enter，失败请求的回滚可以删除另一个已成功请求的 worktree、分支和未提交文件。** 此项已由独立代理复查入口与真实 Git 时序，见 [独立质量复核](quality-audit.md)。第五轮九项也已[独立复核](quality-round5.md)，均保留，网关通知等条件已收窄。
 
-以下是持续审查的阶段记录，截止前还会补充。复现测试的“通过”表示已稳定观察到当前缺陷，并不表示缺陷已经修复。R01–R48 的原始分析针对初始基线，并已在 0.9.33 复查；R49 针对新快照；R50–R56 在两基线均存在并已分别复现；R57 关键源码两基线相同，原生实验仅在 0.9.33 执行。R58–R65 的便携证据在两基线分别复现并通过正常对照；R64 的真实 Electron reload 身份门禁仅在 a66f/macOS 补证，未运行真实 PTY。R66–R68 的便携证据也已在两基线分别通过；R68包含真实Node/ws慢读实验，每次最多24MiB输出，没有真实Main worker或OOM实验。R69/P2与R70/P3及第十六轮正常控制也已在两基线分别通过。行号按各专项附录的基线解释。
+以下是持续审查的阶段记录，截止前还会补充。复现测试的“通过”表示已稳定观察到当前缺陷，并不表示缺陷已经修复。R01–R48 的原始分析针对初始基线，并已在 0.9.33 复查；R49 针对新快照；R50–R56 在两基线均存在并已分别复现；R57 关键源码两基线相同，原生实验仅在 0.9.33 执行。R58–R65 的便携证据在两基线分别复现并通过正常对照；R64 的真实 Electron reload 身份门禁仅在 a66f/macOS 补证，未运行真实 PTY。R66–R68 的便携证据也已在两基线分别通过；R68包含真实Node/ws慢读实验，每次最多24MiB输出，没有真实Main worker或OOM实验。R69/P2与R70/P3及第十六轮正常控制也已在两基线分别通过。R71/P3、R72/P2、R73/P2及第十七轮正常控制已在两基线分别guarded通过；本轮没有真实worker/模型或Electron实验。行号按各专项附录的基线解释。
 
 | 编号 | 级别 | 流程与实际影响                                                                        | 详细证据                                             |
 | ---- | ---- | ------------------------------------------------------------------------------------- | ---------------------------------------------------- |
@@ -86,6 +86,9 @@
 | R68 | P2 | 配对端慢连接的直播/设备发送绕过已有backlog门禁，实际队列增长仍保持在线 | [连接 W26](connection-recovery-round15.md)，第十五轮 |
 | R69 | P2 | 原secondary目录缺失，正式修复到健康primary仍被旧source全roots校验阻断 | [项目目录 PR16-1](project-recovery-round16.md)，第十六轮 |
 | R70 | P3 | 自定义指令自动保存拒写后清掉pending，存储恢复也不重试，离开丢未保存稿 | [设置保存 S16-1](settings-recovery-round16.md)，第十六轮 |
+| R71 | P3 | 项目重命名拒写后仍显示新名称，无失败提示，普通同步后回旧名 | [会话操作 SO17-1](session-operations-round17.md)，第十七轮 |
+| R72 | P2 | 设置页取消归档只恢复桌面catalog，Core仍归档，随后可移除恢复行仍绑定的secondary root | [会话操作 SO17-2](session-operations-round17.md)，第十七轮；历史和物理目录保留 |
+| R73 | P2 | 配置保存窗口内回答idle异步问题，lease已提交却未派发，重试和重连无法恢复旧题 | [Hub路由 H17-1](server-routing-round17.md)，第十七轮；取消后重新提问可恢复 |
 
 第一轮完整分析：[Desktop](desktop-round1.md)、[Server](server-round1.md)、[Web/配对端](web-round1.md)。后续专项分析会继续补充到本目录。已有结论还经[CLI 范围复核](cli-quality-round9.md)与[资源回收范围复核](resource-quality-round8.md)收窄恢复及平台条件。
 
@@ -202,6 +205,14 @@ R57 的原生本地慢下载在自身 worker 崩溃后恢复为 orphaned；真�
 
 第十六轮[最终只读语义核验](quality-round16.md)通过；编号、统计、恢复和替身边界一致，新增执行0。Link状态核对指authorizationGet本地桥查询，没有HTTP GET或原生IPC传输实验。
 
+第十七轮新增R71/P3、R72/P2、R73/P2，均经独立质量核对。R71需将项目名称提交与真实持久结果绑定，保留失败稿和重试，不让旧失败回滚覆盖新名称；正常会话标题拒写保稿/同值重试对照通过。R72需按engineSessionId调用权威Main恢复并等成功后更新catalog，现有root保护正确，不能靠放宽失效root门禁修复。Settings“取消归档”后Core marker仍在，正式项目文件夹UI可移除仍绑定的secondary，随后实际resolver拒绝root_removed；没有执行后续真实run、历史或物理目录删除。正确Main恢复primitive动态有效，但没有纯Desktop可见恢复UI workaround；移除root后还需恢复挂载/迁移。见[Desktop独立审计](session-operations-quality-round17.md)。
+
+R73应在配置admission通过后再submit，或对明确未派发早退回滚lease并广播pending；保留正常已派发决策等待ACK的one-shot保护。submitted没有TTL/断线释放，配置完成不重播、重连快照排除；实际controller Stop和分层Core cancel能取消旧题后重问，不交付旧答案。实际Host认证HTTP/WS+React卡片采用内存worker边界，实际Core AgentServer/ChatManager的configure控制采用fake engine/runtime；真实Engine无replay仅静态，未称完整worker E2E。见[Server独立审计](server-routing-quality-round17.md)。
+
+[上下文打包正常控制](context-recovery-round17.md)新增0：实际Engine配owned内存LLMClientBase证明失败保选择可重试、非法输入早拒、Core cancel无半目标、迟到target不激活；完整App注册和Desktop Stop接线未动态验证。[独立控制审计](context-recovery-quality-round17.md)与[严重问题反证](high-risk-quality-round17.md)新增执行0；后者保留R35/P1、R36/P2并限定真实Git/Node25/darwin证据，不扩到全平台。
+
+第十七轮[最终只读整合核验](quality-round17.md)通过；三项分级、去重、恢复、两基线统计和替身边界无实质冲突，新增执行0。
+
 ## 验证范围
 
 | 验证                            | 结果                                                                      | 证据                                                     |
@@ -247,6 +258,7 @@ R57 的原生本地慢下载在自身 worker 崩溃后恢复为 orphaned；真�
 | 第十五轮CLI接管/远程设置/连接恢复 | 新通用6文件12测试142个Bun断言，两基线分别通过；wrapped native各另33断言，最多24MiB负载，不重复算Bun测试 | [CLI](cli-recovery-round15.md)、[设置](remote-settings-round15.md)、[连接](connection-recovery-round15.md) |
 | Electron reload 身份补证 | 仅a66f/macOS；初始+两次reload token、真实WebContents对象均保持，无worker/真实PTY | [脚本及日志](validation/terminal-lifecycle-round14/reload-identity.log) |
 | 第十六轮项目/设置/Link/MCP恢复 | 新通用4文件10测试104个Bun expect，两基线通过；Settings Bun helper另27手工断言、MCP Node另22断言，不额外算测试 | [项目](project-recovery-round16.md)、[设置](settings-recovery-round16.md)、[Link](link-recovery-round16.md)、[取消](command-recovery-round16.md) |
+| 第十七轮会话操作/Hub路由/上下文正常控制 | 新通用4文件7测试77个Bun expect，两基线通过；owned Bun helper另91手工assert，包含在wrapper内 | [会话](session-operations-round17.md)、[路由](server-routing-round17.md)、[上下文](context-recovery-round17.md) |
 | Desktop renderer 现有逐文件测试 | 282 文件、2397 测试、0 失败                                               | `validation/desktop-renderer-results.json`               |
 | Desktop main 现有逐文件测试     | 283 文件、2461 测试、0 失败                                               | `validation/desktop-main-results.json`                   |
 | native Hub smoke                | 未通过，不计成功；先遇到过期工具 fixture，再暴露 R21                      | `/tmp/codeshell-review-20261012/hub-smoke*.log`          |
@@ -260,6 +272,6 @@ R57 的原生本地慢下载在自身 worker 崩溃后恢复为 orphaned；真�
 
 ## 后续检查
 
-0.9.33 的 Panel 项目身份与跨文件 Collection 查询差异、已有便携复现适用范围已核对。认证连接与 Agent Plugins 安装恢复已收束；Quick Chat 生命周期已收束；第十轮独立反证已完成审批、Web意图/配置/草稿和Desktop异步状态，详见 [Web复核](web-quality-round10.md)、[审批复核](approval-quality-round10.md)。第十一轮工作区/Panel反证新增0，搜索与导航新增2P3，下载生命周期新增1P2；第十二轮独立质量复核保留三个新发现的限定分级，文件传输/导入导出正常控制新增0。第十三轮新增1P2+4P3并已独立核对，新增6份证据两基线通过；第十四轮再补3P3与R58图片扩展，新增4文件13测试两基线通过；第十五轮再补CLI接管/设置状态/慢连接3项，第十六轮再补目录修复/自动保存2项并完成Link/MCP正常控制，通用累计72文件221测试；继续检查新增主分支差异与尚未覆盖的失败恢复。已有 TODO 中明确后置的能力与尚未发行的修复单独核对，不将其重复列为新缺陷。
+0.9.33 的 Panel 项目身份与跨文件 Collection 查询差异、已有便携复现适用范围已核对。认证连接与 Agent Plugins 安装恢复已收束；Quick Chat 生命周期已收束；第十轮独立反证已完成审批、Web意图/配置/草稿和Desktop异步状态，详见 [Web复核](web-quality-round10.md)、[审批复核](approval-quality-round10.md)。第十一轮工作区/Panel反证新增0，搜索与导航新增2P3，下载生命周期新增1P2；第十二轮独立质量复核保留三个新发现的限定分级，文件传输/导入导出正常控制新增0。第十三轮新增1P2+4P3并已独立核对，新增6份证据两基线通过；第十四轮再补3P3与R58图片扩展，新增4文件13测试两基线通过；第十五轮再补CLI接管/设置状态/慢连接3项，第十六轮再补目录修复/自动保存2项并完成Link/MCP正常控制，第十七轮补会话操作/Hub回答3项及上下文正常控制，通用累计76文件228测试；继续检查新增主分支差异与尚未覆盖的失败恢复。已有 TODO 中明确后置的能力与尚未发行的修复单独核对，不将其重复列为新缺陷。
 
 未进行真实付费模型、真实第三方账号、生产数据迁移或发行部署。CLI 模型行为通过可控 fixture 与实际 Host 路由验证，无法据此声称所有真实提供方端到端流程均已通过。静态候选及测试 harness 自身问题单独记录，不冒充产品发现。

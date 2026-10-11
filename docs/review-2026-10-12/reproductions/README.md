@@ -20,7 +20,7 @@ node docs/review-2026-10-12/run-reproductions.mjs
 node scripts/run-isolated-node-smoke.mjs docs/review-2026-10-12/reproductions/credentials-round5/credentials-e2e.mjs
 ```
 
-截至第十六轮，初始基线 Bun 便携证据共 72 个文件、221 个测试；同样在 0.9.33 分别复核。凭据脚本另含 4 个实际 UI 场景。新功能专项另见 `latest-reproductions/` 与 `run-latest-reproductions.mjs`。
+截至第十七轮，初始基线 Bun 便携证据共 76 个文件、228 个测试；同样在 0.9.33 分别复核。凭据脚本另含 4 个实际 UI 场景。新功能专项另见 `latest-reproductions/` 与 `run-latest-reproductions.mjs`。
 
 第十一轮的工作区恢复与搜索脚本共新增4文件8测试；stable project scope恢复对照仅在0.9.33新功能目录。原生下载脚本及单次运行证据在 `../validation/download-round11/`，不计入Bun总数。
 
@@ -31,3 +31,5 @@ node scripts/run-isolated-node-smoke.mjs docs/review-2026-10-12/reproductions/cr
 第十五轮新增6文件12测试142个Bun断言，两基线分别guarded通过：CLI3文件7测试108断言，远程设置1文件3测试23断言，连接2文件2测试11断言。连接的native-outbound.test.ts通过run-isolated-node-smoke调用同目录outbound-native.mjs，另有33个native断言/基线，已包在一个Bun测试内，不另算新Bun文件或测试。原始诊断位于validation/original-connection-recovery-round15/diagnostics，文件后缀不是活动test，不收集/累计。
 
 第十六轮新增4文件10测试104个Bun expect，两基线分别guarded通过：项目1文件3测试27断言，设置1文件1测试2个expect，Link1文件5测试73断言，MCP1文件1测试2个expect。设置owned Bun helper另27个手工assert，MCP经maintained native isolator另22个Node断言；都包含在对应wrapper测试内，不增加Bun测试/expect。人工owner-delay诊断在validation/original-command-recovery-round16/diagnostics，仅文本后缀、不进collector。
+
+第十七轮新增4文件7测试77个Bun expect，两基线分别guarded通过：上下文1文件4测试40、会话操作1wrapper文件1测试2、Server2文件2测试35。会话操作owned Bun helper另91手工assert，属于wrapper内，不另加测试/expect或称native。Hub首次旧快照reconnect读取过早的harness日志单独归档；最终fixture等待snapshot receipt后两基线各1/20通过，未修改产品。

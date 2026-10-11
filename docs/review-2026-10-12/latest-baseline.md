@@ -10,10 +10,10 @@
 | --- | --- | --- |
 | frozen install、workspaces build、Desktop build、typecheck:workspaces | 全部通过 | `validation/latest-a66f4ef2/{install,build,desktop-build,typecheck}.log` |
 | 8 个新增或修改测试文件 | 156 项实际执行、0 失败、0 跳过 | `validation/latest-a66f4ef2/changed-test-results.json` |
-| 既有便携缺陷表征和正常契约 | 72 文件、221 测试、0 失败、0 跳过 | `validation/latest-a66f4ef2/reproduction-results.json` |
+| 既有便携缺陷表征和正常契约 | 76 文件、228 测试、0 失败、0 跳过 | `validation/latest-a66f4ef2/reproduction-results.json` |
 | 凭据实际 Electron/IPC/store | 4 场景通过 | `validation/latest-a66f4ef2/credentials__credentials-e2e.mjs.log` |
 
-复现“通过”表示当前仍观察到被测缺陷。72 个文件并非 72 项问题，一份文件可能覆盖多项发现，也包含正常对照。新快照结果没有加到原基线 6286 个现有测试的总数中，以免重复计数。
+复现“通过”表示当前仍观察到被测缺陷。76 个文件并非 76 项问题，一份文件可能覆盖多项发现，也包含正常对照。新快照结果没有加到原基线 6286 个现有测试的总数中，以免重复计数。
 
 ## 两处测试入口适配
 
@@ -45,3 +45,5 @@
 04:23再次fetch，origin/main仍a66f4ef2；两冻结产品快照没有更新或混写产品代码。
 
 第十六轮4个新通用文件10测试104个Bun expect在两冻结快照分别guarded通过，当前72文件221测试0fail/skip。R69/P2为已登记secondary物理缺失时修复迁移被全roots校验阻断，R70/P3为自定义指令自动保存拒写后pending清空导致离开失稿；均旧实现新发现，两个独立审计通过。Link5测试及真实HubAuth/MCP正常控制新增0；后者wrapped Node22断言、设置owned Bun helper27手工assert另列，不重复增加测试。无完整Electron/HeadlessServer/真实OAuth、模型或CLI实验。
+
+05:07再次fetch，origin/main仍a66f4ef2。第十七轮4新文件7测试77个Bun expect两基线分别通过，当前通用76文件228测试。R71/P3项目rename拒写、R72/P2设置恢复漏Core writer、R73/P2配置早退污染approval lease均旧实现新发现。owned Bun helper91手工assert只包含在一个wrapper，不是native。上下文实际Engine使用自有内存provider；Hub实际HTTP/WS使用内存worker桥、Core配置控制fake engine/runtime，未启动真实worker/付费模型。三份独立审计及严重问题反证新增执行0。

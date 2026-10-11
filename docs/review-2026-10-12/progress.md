@@ -98,3 +98,13 @@ Link实际组件/controller/native manager/server service/store在取消startup�
 04:48机械核验70个编号连续唯一、1/47/22分级一致，594个顶层Markdown本地链接与381个源码行号有效；两份72/221metadata和所有guarded完成日志一致，4个新文件10测试104个Bun expect及helper27/Node22分别核对。两个产品tracked diff为空，staged diff --check通过。04:48 get_goal仍blocked（主审未请求且无实际阻塞），继续用户heartbeat；TOML只读仍ACTIVE/整点半点，11:00交付后才停用/complete。原始诊断完整归档，未清理或改动其它任务。
 
 04:49第十六轮最终只读语义核验通过，无实质冲突；Link恢复叙述进一步明确authorizationGet是本地桥状态查询，未做HTTP GET/原生IPC实验。新增执行0。报告只改本任务docs，准备保存阶段检查点。下一轮优先反证现有严重问题并检查尚未覆盖的会话重命名/移动/保存失败恢复和服务端任务路由，避免重复编号。05:10–05:20再fetch；11:00前继续，保持heartbeat ACTIVE。
+
+05:22第十七轮已整合：新增R71/P3项目重命名拒写无反馈、R72/P2设置取消归档漏Core writer后可移除仍绑定secondary、R73/P2配置保存早退污染idle异步问题lease，三项独立审计均支持收录。正式73=1P1/49P2/23P3。R72真实resolver拒绝root_removed，未实际run、历史和物理目录保留；正确Main restore primitive正常，但没有纯Desktop可见恢复UI workaround。R73真实Host HTTP/WS+controller/card、内存worker桥；Core configure/cancel实际protocol+fake engine/runtime；submitted无TTL/重连恢复，取消旧题再重问有效，不称交付旧答案。R71普通广播回旧名、重新prompt恢复，不称Electron crash。
+
+上下文正常控制actualEngine/SessionManager/MessageStream配owned LLMClientBase内存provider4测试40断言，摘要失败保选择同按钮重试/非法输入/服务级cancel/迟到不激活均正常；完整App注册、Desktop Stop仅边界未动态。严重问题独立反证保留R35P1/R36P2，新增执行0，限制Git并发写入窗口和Node25/darwin scope。
+
+新增4文件7测试77个Bun expect，84740/a66f分别guarded通过，当前通用76文件228测试0最终fail/skip；Desktop owned Bun helper另91手工assert在wrapper内，不称native或额外测试。旧快照Hub首次reconnect只等hello即读snapshot导致harness TypeError，原失败归档，便携fixture补等待实际receipt后两基线各1/20通过；没有改产品。最终Hub两日志各3条act警告如实保留。原始开发诊断单独归档不进collector。
+
+05:07fetch origin/main仍a66f4ef2；下次宜05:50–06:05再核对。两冻结产品快照不改、不build/clean、其他任务未触碰。报告/metadata待最终机械和整合语义核验；heartbeat保持ACTIVE到11:00，截止未到不complete或停用。
+
+05:25第十七轮最终只读语义核验通过，新增执行0，三项分级/去重/恢复边界无实质冲突。机械核验73连续唯一、1/49/23、两份76/228metadata及4新文件7测试77expect/helper91收据一致，产品tracked diff均空，staged diff --check通过。05:24get_goal仍blocked（主审未请求、无实际阻塞），automation工具view和TOML确认ACTIVE/整点半点；按用户heartbeat继续，11:00交付后才complete/停用。第18轮两个代理已开始自动化R44/45/46反证、Desktop上下文摘要取消入口审查，仅/tmp材料，未计入当前报告；下一heartbeat接续。

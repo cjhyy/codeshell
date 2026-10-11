@@ -1,7 +1,7 @@
 {
   "baseline": "a66f4ef291f304ee4df9da8095a90671d9a8f140",
-  "reproductionFiles": 72,
-  "reproductionTests": 221,
+  "reproductionFiles": 76,
+  "reproductionTests": 228,
   "reproductionSkipped": 0,
   "changedTestFiles": 8,
   "changedExecutedTests": 156,
@@ -19,5 +19,8 @@
   "round15NativeOutboundNote": "one wrapped native test in each baseline; 33 native assertions separately from Bun expects; max 24 MiB text payload; no actual Main/worker/model/OOM",
   "round16NativeMcpAssertions": 22,
   "round16BunHelperAssertions": 27,
-  "round16HelperNote": "one MCP Node wrapper test with 22 native assertions and one Settings owned Bun helper wrapper with 27 manual assertions per baseline; both contained in 4 new files / 10 tests / 104 Bun expects, no additional tests"
+  "round16HelperNote": "one MCP Node wrapper test with 22 native assertions and one Settings owned Bun helper wrapper with 27 manual assertions per baseline; both contained in 4 new files / 10 tests / 104 Bun expects, no additional tests",
+  "round17BunHelperAssertions": 91,
+  "round17BunExpects": 77,
+  "round17HelperNote": "4 new files / 7 tests / 77 Bun expects per baseline; owned Bun Desktop helper has 91 manual assertions inside one wrapper; no additional native tests; context actual Engine/owned in-memory LLMClientBase; Hub actual authenticated HTTP/WS + controlled memory worker; Core configure fake engine/runtime; no real model/worker/Electron in round17"
 }

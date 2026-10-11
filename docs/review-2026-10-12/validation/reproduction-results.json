@@ -88,6 +88,14 @@
     "skipped": 0
   },
   {
+    "file": "docs/review-2026-10-12/reproductions/context-recovery-round17/context-recovery.test.tsx",
+    "log": "docs/review-2026-10-12/reproductions/context-recovery-round17/context-recovery.test.tsx.log",
+    "code": 0,
+    "signal": null,
+    "tests": 4,
+    "skipped": 0
+  },
+  {
     "file": "docs/review-2026-10-12/reproductions/desktop-round2/panel-multiroot.test.tsx",
     "log": "docs/review-2026-10-12/reproductions/desktop-round2/panel-multiroot.test.tsx.log",
     "code": 0,
@@ -392,6 +400,22 @@
     "skipped": 0
   },
   {
+    "file": "docs/review-2026-10-12/reproductions/server-routing-round17/core-configure-controls.test.ts",
+    "log": "docs/review-2026-10-12/reproductions/server-routing-round17/core-configure-controls.test.ts.log",
+    "code": 0,
+    "signal": null,
+    "tests": 1,
+    "skipped": 0
+  },
+  {
+    "file": "docs/review-2026-10-12/reproductions/server-routing-round17/hub-routing.test.ts",
+    "log": "docs/review-2026-10-12/reproductions/server-routing-round17/hub-routing.test.ts.log",
+    "code": 0,
+    "signal": null,
+    "tests": 1,
+    "skipped": 0
+  },
+  {
     "file": "docs/review-2026-10-12/reproductions/server/cc-approval-recovery.test.tsx",
     "log": "docs/review-2026-10-12/reproductions/server/cc-approval-recovery.test.tsx.log",
     "code": 0,
@@ -437,6 +461,14 @@
     "log": "docs/review-2026-10-12/reproductions/session-actions-round13/session-delete-recovery.test.tsx.log",
     "signal": null,
     "tests": 4,
+    "skipped": 0
+  },
+  {
+    "file": "docs/review-2026-10-12/reproductions/session-operations-round17/session-operations.test.ts",
+    "log": "docs/review-2026-10-12/reproductions/session-operations-round17/session-operations.test.ts.log",
+    "code": 0,
+    "signal": null,
+    "tests": 1,
     "skipped": 0
   },
   {
