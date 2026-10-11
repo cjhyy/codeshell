@@ -658,7 +658,6 @@ let externalRuntimeService: ExternalRuntimeService | null = null;
 /** Routes external-runtime tool approvals to the renderer's existing dialog. */
 let externalRuntimeApprovals: ExternalRuntimeApprovals | null = null;
 const resolvePanelProjectScope = createDesktopPanelProjectScopeResolver({
-  environmentDir: join(codeShellHome(), "desktop"),
   store: getProjectStore(),
 });
 const panelAppBridge = new PanelAppBridge({

@@ -17,6 +17,7 @@ guardProjectScopeNetwork(afterAll);
 const { ProjectStore } = await import("./project-store.js");
 const { SessionCwdIndex } = await import("./session-cwd-index.js");
 const { createDesktopPanelProjectScopeResolver } = await import("./panel-project-scope.js");
+const { codeShellHome } = await import("@cjhyy/code-shell-core");
 const roots: string[] = [];
 afterEach(() => roots.splice(0).forEach((root) => rmSync(root, { recursive: true, force: true })));
 
@@ -52,6 +53,17 @@ test("native and paired composition share the exact registered scope independent
   expect(native?.scope.projectId).toBe(f.project.id);
   expect(native?.scope).not.toHaveProperty("sessionId");
   native!.assertCurrent();
+  const defaultNative = await createDesktopPanelProjectScopeResolver({ store: f.store })(
+    f.cwd,
+    f.cwd,
+  );
+  const defaultPaired = await createDesktopPanelProjectScopeResolver({
+    store: f.store,
+    environmentDir: join(codeShellHome(), "desktop"),
+  })(f.cwd, f.cwd);
+  expect(defaultNative?.scope).toEqual(defaultPaired?.scope);
+  expect(defaultNative?.scope.environmentId).not.toBe(native?.scope.environmentId);
+  defaultNative!.assertCurrent();
   const unknown = join(f.root, "unregistered");
   mkdirSync(unknown);
   expect(await f.resolve(unknown, unknown)).toBeUndefined();

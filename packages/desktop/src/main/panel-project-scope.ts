@@ -1,4 +1,6 @@
 import { realpathSync } from "node:fs";
+import { join } from "node:path";
+import { codeShellHome } from "@cjhyy/code-shell-core";
 import {
   capturePanelProjectScope,
   createHubPanelBinding,
@@ -8,9 +10,10 @@ import type { ProjectStore } from "./project-store.js";
 
 /** Native and paired Web use the same registry, environment, and execution-root inputs. */
 export function createDesktopPanelProjectScopeResolver(options: {
-  environmentDir: string;
+  environmentDir?: string;
   store: Pick<ProjectStore, "resolveExactRootSync" | "resolveProjectRootByIdSync">;
 }) {
+  const environmentDir = options.environmentDir ?? join(codeShellHome(), "desktop");
   return async (
     projectPath: string,
     cwd: string,
@@ -37,7 +40,7 @@ export function createDesktopPanelProjectScopeResolver(options: {
     };
     assertAuthority();
     return capturePanelProjectScope({
-      environmentDir: options.environmentDir,
+      environmentDir,
       projectPath,
       cwd,
       projectId,
