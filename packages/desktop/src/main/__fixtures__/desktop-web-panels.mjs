@@ -61,7 +61,6 @@ mock.module("electron", () => ({
     },
   },
 }));
-let api;
 const server = createServer((request, response) => {
   void api
     .handle(request, response, { baseUrl })
@@ -171,7 +170,7 @@ const bridge = {
   },
 };
 const allowed = new Set([first, second, forged]);
-api = createDesktopWebService({
+const api = createDesktopWebService({
   devices,
   automations: automationHost,
   resolveProjectScope,
