@@ -10,10 +10,10 @@
 | --- | --- | --- |
 | frozen install、workspaces build、Desktop build、typecheck:workspaces | 全部通过 | `validation/latest-a66f4ef2/{install,build,desktop-build,typecheck}.log` |
 | 8 个新增或修改测试文件 | 156 项实际执行、0 失败、0 跳过 | `validation/latest-a66f4ef2/changed-test-results.json` |
-| 既有便携缺陷表征和正常契约 | 46 文件、125 测试、0 失败、0 跳过 | `validation/latest-a66f4ef2/reproduction-results.json` |
+| 既有便携缺陷表征和正常契约 | 52 文件、138 测试、0 失败、0 跳过 | `validation/latest-a66f4ef2/reproduction-results.json` |
 | 凭据实际 Electron/IPC/store | 4 场景通过 | `validation/latest-a66f4ef2/credentials__credentials-e2e.mjs.log` |
 
-复现“通过”表示当前仍观察到被测缺陷。46 个文件并非 46 项问题，一份文件可能覆盖多项发现，也包含正常对照。新快照结果没有加到原基线 6286 个现有测试的总数中，以免重复计数。
+复现“通过”表示当前仍观察到被测缺陷。52 个文件并非 52 项问题，一份文件可能覆盖多项发现，也包含正常对照。新快照结果没有加到原基线 6286 个现有测试的总数中，以免重复计数。
 
 ## 两处测试入口适配
 
@@ -31,3 +31,7 @@
 第八轮 Quick Chat R54/P3 及其正常对照7测试也已在两快照分别通过；正式范围限定已送达组件的内部图片 payload，未实测原生跨窗口拖动。更新器 shutdown 候选因平台模拟不符未列正式发现。
 
 第十轮新增六份便携正常/恢复控制，两快照各14测试112断言通过；原有发现新增0，R11/R19依据实际门禁降P3并收窄。总通用46文件125测试。Core关闭28测试和审批正常20测试为现有套件专项复跑，另存validation，不计入该便携总数。
+
+第十一轮新增通用4文件8测试108断言，两快照分别通过，当前50文件133测试。stable scope恢复对照另1文件1测试9断言仅新快照，总新功能专项3文件8测试。真实Electron搜索UI与下载恢复native smoke均仅新快照执行并单列，不加入Bun计数。R55/R56两快照复现；R57原生实验仅a66f，关键5文件旧新diff为空。
+
+第十二轮文件传输、导出、图片保存与磁盘导入正常控制：新增2个通用文件5测试136断言，两基线分别通过；正式新增0。通用总52文件138测试。Bun取消诊断超时单列为不确定harness结果，不计通过或Node产品缺陷。

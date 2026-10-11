@@ -1,7 +1,7 @@
 {
   "baseline": "a66f4ef291f304ee4df9da8095a90671d9a8f140",
-  "reproductionFiles": 46,
-  "reproductionTests": 125,
+  "reproductionFiles": 52,
+  "reproductionTests": 138,
   "reproductionSkipped": 0,
   "changedTestFiles": 8,
   "changedExecutedTests": 156,
@@ -13,6 +13,6 @@
   ],
   "credentialMetadataNote": "raw observations contains historical fixture-declared 84740d56 label; script was run from latest a66f4ef2 tree, as recorded here",
   "paidModelRequests": 0,
-  "latestOnlyReproductionFiles": 2,
-  "latestOnlyReproductionTests": 7
+  "latestOnlyReproductionFiles": 3,
+  "latestOnlyReproductionTests": 8
 }

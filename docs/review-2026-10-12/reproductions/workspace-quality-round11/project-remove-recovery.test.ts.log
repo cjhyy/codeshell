@@ -1,0 +1,19 @@
+bun test v1.3.11 (af24e281)
+
+docs/review-2026-10-12/reproductions/workspace-quality-round11/project-remove-recovery.test.ts:
+workspace release failed before archive {
+  sessionId: "idle-disk-session",
+  error: "Session root status root_removed: project d2311305-0c59-417e-85a4-b6cab280bc03 is unavailable",
+}
+workspace release failed before archive {
+  sessionId: "resident-session",
+  error: "Session root status root_removed: project d2311305-0c59-417e-85a4-b6cab280bc03 is unavailable",
+}
+{"calls":["remove","release","archive","archive","archive"],"releaseResults":[{"sessionId":"idle-disk-session","ok":false,"status":"error","error":"Session root status root_removed: project d2311305-0c59-417e-85a4-b6cab280bc03 is unavailable"},{"sessionId":"resident-session","ok":false,"status":"error","error":"Session root status root_removed: project d2311305-0c59-417e-85a4-b6cab280bc03 is unavailable"}],"beforeRecovery":{"coldWorkspace":{"root":"/private/var/folders/1d/6__4f4y51g90nblfptt8s9v80000gn/T/codeshell-review-remove-project-yMHy9o/.worktrees/fixture-work-idle-dis","kind":"worktree","worktree":{"path":"/private/var/folders/1d/6__4f4y51g90nblfptt8s9v80000gn/T/codeshell-review-remove-project-yMHy9o/.worktrees/fixture-work-idle-dis","branch":"worktree/fixture-work-idle-dis","baseRef":"main","createdBy":"codeshell"}},"residentWorkspace":{"root":"/private/var/folders/1d/6__4f4y51g90nblfptt8s9v80000gn/T/codeshell-review-remove-project-yMHy9o/project","kind":"main"},"occupiedBy":["idle-disk-session"],"archived":true},"afterRecovery":{"coldWorkspace":{"root":"/private/var/folders/1d/6__4f4y51g90nblfptt8s9v80000gn/T/codeshell-review-remove-project-yMHy9o/project","kind":"main"},"occupiedBy":[],"cleaned":true}}
+(pass) CONFIRMED cold release fails after tombstone; resident helper already detaches; re-add and owner recovery permit safe cleanup [2109.48ms]
+
+ 1 pass
+ 0 fail
+ 21 expect() calls
+Ran 1 test across 1 file. [3.05s]
+Completed Bun shard: 1 tests, 0 skipped; 0 failures.

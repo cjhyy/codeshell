@@ -31,3 +31,7 @@ Read-only product review; fixtures and logs are temporary. No paid providers, us
 - Verification: `remove-project-workspace.test.ts` uses a real temporary Git repository and real created worktree, actual ProjectStore/SessionManager, actual renderer navigation function and actual release service. It records calls `remove → release → archive`, verifies release returns root_removed, durable session and UI index are archived while the worktree is still attached, re-adds the project and verifies a new session sees that archived session in occupiedBySessionIds. Actual cleanupSessionWorktreeForUi then rejects cleanup because that archived session owns it. Final log `remove-project-workspace.test.ts.log`: 1 pass, 0 fail, 10 assertions.
 - Confidence: high for idle disk-only sessions. A resident worker can release through releaseLiveWorkspace first; that path is deliberately excluded from this finding.
 - Suggested correction direction: await successful release/archive bookkeeping before removing project authority, and handle removal failure visibly so renderer and Main remain consistent.
+
+## 第十一轮恢复范围复核（权威补充）
+
+[独立工作区/Panel复核](workspace-quality-round11.md)保留D8/R22、D9/R23、D10/R24的P2。R23仅移除当前renderer Panel App entries，内置面板、健康项目、磁盘包与绑定仍保留；恢复缺目录或65→64并刷新能恢复。R24限定cold/evicted durable fallback，真实resident Core helper能在Main后续root_removed前先将workspace写回main，不计遗留owner。冷owner恢复路径已用真实Git和实际Settings回调验证：重加原项目、恢复旧归档会话、重新归档释放，随后新会话可安全清理；不是永久不可恢复或文件丢失。

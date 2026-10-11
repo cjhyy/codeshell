@@ -4,13 +4,26 @@
     "file": "docs/review-2026-10-12/latest-reproductions/collections-round6/recovery.test.ts",
     "log": "docs/review-2026-10-12/latest-reproductions/collections-round6/recovery.test.ts.log",
     "code": 0,
-    "signal": null
+    "signal": null,
+    "tests": 4,
+    "skipped": 0
   },
   {
     "baseline": "a66f4ef291f304ee4df9da8095a90671d9a8f140",
     "file": "docs/review-2026-10-12/latest-reproductions/panels-round6/native-lifecycle.test.tsx",
     "log": "docs/review-2026-10-12/latest-reproductions/panels-round6/native-lifecycle.test.tsx.log",
     "code": 0,
-    "signal": null
+    "signal": null,
+    "tests": 3,
+    "skipped": 0
+  },
+  {
+    "baseline": "a66f4ef291f304ee4df9da8095a90671d9a8f140",
+    "file": "docs/review-2026-10-12/latest-reproductions/workspace-round11/project-scope-restore.test.ts",
+    "log": "docs/review-2026-10-12/latest-reproductions/workspace-round11/project-scope-restore.test.ts.log",
+    "code": 0,
+    "signal": null,
+    "tests": 1,
+    "skipped": 0
   }
 ]

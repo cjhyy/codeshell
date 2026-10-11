@@ -9,19 +9,19 @@
 证据目录：`/tmp/codeshell-review-20261012`。
 持续调度：heartbeat `codeshell-10-12-11`，每小时整点与半点；截止后交付报告并停用。01:34 已将原 00:52 锚点改为整点/半点，覆盖 11:00 截止时刻。
 
-## 当前状态（新加坡 02:35）
+## 当前状态（新加坡 02:57）
 
 - 截止前不要标 complete。到 11:00 停止新增审查、收束证据、交付最终报告，停用 heartbeat，再完成目标。01:22 的 get_goal 返回 blocked（本轮主代理未请求该变更）；实际仍在推进，没有需要用户解除的阻塞，按用户 heartbeat 继续审查。工具没有 active 状态参数，不要伪造恢复调用；截止交付后再设 complete。
 - 已读 CODESHELL.md，已 fetch origin 并创建独立工作区。产品代码无改动，只有本报告目录。01:30 origin/main 更新至 a66f4ef291f304ee4df9da8095a90671d9a8f140（0.9.33），新增 Panel stable project scope 和跨文件 collection query。另建 /Users/admin/.codex/worktrees/review-latest-20261012/codeshell，分支 codex/review/latest-20261012；冻结安装、全工作区及 Desktop 构建、类型检查、差异测试和既有发现复查均完成。旧工作区与证据不切换基线。
 - 已完成 frozen install、全工作区 build、typecheck:workspaces、Desktop build。
 - Server/Web 141 文件 / 1428 测试、Desktop renderer 282 文件 / 2397 测试、Desktop main 283 文件 / 2461 测试全部通过，合计706文件6286测试0失败0跳过。
 - 真实 Electron navigation/settings/workspace-pages/model-settings/digital-humans/panel-recovery-ui 全部通过；native output-journal 与 mobile-output-journal smoke 也通过。日志已保存 validation/。
-- 正式报告目前 R01–R54：1 P1、42 P2、11 P3。R35/D13 为重复Enter创建工作区时 unsafe rollback 删除成功请求worktree/分支/未提交文件，独立质量复查认可P1。R36是worker.stdin异步EPIPE导致NodeHost退出。
+- 正式报告目前 R01–R57：1 P1、43 P2、13 P3。R35/D13 为重复Enter创建工作区时 unsafe rollback 删除成功请求worktree/分支/未提交文件，独立质量复查认可P1。R36是worker.stdin异步EPIPE导致NodeHost退出。
 - 第一至四轮已收束；便携证据29个文件55个测试全部最终通过，含缺陷表征与用于排除误报的正常契约。原始 /tmp 证据已复制并修正相对导入/子进程入口，别把原始带绝对路径的脚本覆盖回去。
 - quality-audit.md 已对D13/D1/R21/W11独立复核；主结论成立。已收窄D1普通send传输失败措辞、R21原生HubWeb范围。文件历史恢复误拦截按P3列R39（记录保留且额外确认可完成），原代理建议P2已在归档附录标明重新分级。
 - 第五轮已收束：Web 2P2、Credentials 1P2+1P3、Automation 4P2+1P3；便携复制后三个Bun文件16测试通过，实际Electron凭据4场景通过。该轮后共32个便携Bun文件71测试，凭据native脚本另计；第六轮后的新总数见下一条。review_quality_audit 已独立确认第五轮九项因果与分级，保留7P2+2P3，见quality-round5.md；R45仅网关/生命周期通知，不泛指OS成功通知。
 - 第六轮已收束：Panel scope正式新增0（R22仍适用，legacy Session重开为正确保护）；Collection R49/P3丢失已知变更更新指引；Voice R50/P2同一mount双启动录音泄漏。quality-round6.md独立确认两项边界；旧/新基线voice分别9测试87断言通过。新功能便携2文件7测试通过，初始通用便携现33文件80测试。
-- 第七轮已收束：身份/连接3文件13测试87断言新增0；Agent Plugins1文件7测试61断言新增R51–R53/P2，均两基线复核。第十轮后通用便携现46文件125测试。第八轮QuickChat R54/P3已收束；第九轮插件/CLI及资源审计已完成并同步收窄。三代理正第十轮独立审Web/配对发送、Desktop异步状态和审批生命周期。交付质量检查02:02的50项快照无矛盾，见delivery-audit.md。root已完成最新快照冻结安装、全工作区及Desktop构建，8个新增/修改文件最终156项通过（Panel fixture初次69skip，补正式入口及展开计数后69pass0skip），33个通用便携复现80测试通过（含第六轮录音），native凭据4场景通过；typecheck:workspaces也通过，详见latest-baseline.md和validation/latest-a66f4ef2/。禁止同快照并行clean/build，勿触碰他人工作区。
+- 第七轮已收束：身份/连接3文件13测试87断言新增0；Agent Plugins1文件7测试61断言新增R51–R53/P2，均两基线复核。第十轮后通用便携现46文件125测试。第八轮QuickChat R54/P3已收束；第九轮插件/CLI及资源审计已完成并同步收窄。第十、十一轮已收束，正在第十二轮已完成独立质量复核及文件传输审查。交付质量检查02:02的50项快照无矛盾，见delivery-audit.md。root已完成最新快照冻结安装、全工作区及Desktop构建，8个新增/修改文件最终156项通过（Panel fixture初次69skip，补正式入口及展开计数后69pass0skip），33个通用便携复现80测试通过（含第六轮录音），native凭据4场景通过；typecheck:workspaces也通过，详见latest-baseline.md和validation/latest-a66f4ef2/。禁止同快照并行clean/build，勿触碰他人工作区。
 - 不修改产品代码、不发布、不调用付费模型、不联系其他人。构建不再清理 dist，避免干扰其他专项测试。
 
 ## 关键证据与注意事项
@@ -30,7 +30,7 @@
 - `/tmp/codeshell-review-20261012/` 为 root 原始日志。原始各代理证据位于同前缀的 `-desktop`、`-web-flow`、`-server-*`、`-desktop-round2`、`-web-round2`、`-runtime-round3` 等目录。
 - 原 native Hub smoke 的模型 fixture 直接调用尚未加载的 Write，先超时；临时适配 ToolSearch 后暴露 R21。真实 worker 首次 run 发生于 session 创建之前，baseline=0；journal legacy base 已生成后 snapshot 再裁空，production chatFromOutputJournal 拒绝恢复。
 - `hub-smoke-remaining.mjs` 显式排除已复现 R21 后，其余 approval/cancel/export/archive/restart/history resume 已通过。不能写“原 smoke 全部通过”。
-- 便携脚本第一至七轮已在本目录重跑成功；当前46文件125测试汇总 validation/reproduction-results.json。新增脚本复制后单独重跑，不必每次重跑已验证全部脚本。
+- 便携脚本第一至七轮已在本目录重跑成功；当前52文件138测试汇总 validation/reproduction-results.json。新增脚本复制后单独重跑，不必每次重跑已验证全部脚本。
 - 报告数量和测试数量及时依据收束的脚本更新；条件性失败与实际可恢复方式必须说明。
 
 ## 后续
@@ -46,3 +46,15 @@
 02:26 root 正常关闭屏障反证：最新快照 SessionManager generation、ChatSessionManager lifecycle/access 三文件28测试150断言通过（含guard），见session-close-round10.md；没有新增正式发现。第十轮审批审计发现 R11 正常离线有 UI 和 handler 双保护，剩余仅 online 状态尚未刷新时传输失效窗口；等待实际组件证据后收窄并拟降P3，不先改正式计数。
 
 02:35 第十轮完成：Desktop六项保留并补恢复；Web意图/配置/草稿十项均保留，现代outputJournal补强R03；审批五项收窄，R11/R19降P3。正式54=1P1/42P2/11P3。新六份便携14测试112断言，两基线各过，总46文件125测试0fail/skip。三代理第十一轮：automation_flow_review工作区/Panel R22/23/24/35；web_remote_review搜索/导航（仅静态候选待复现）；review_quality_audit下载生命周期。产品不改、不build。下一次03:00–03:20 fetch，阶段报告待提交。
+
+02:53 第十一轮完成：搜索/导航R55/R56均P3，两基线实际完整Core session+import hook/501候选+modal复现；下载R57/P2为a66f单次isolated native smoke，Core close ACK/killAll漏orphaned而实际scoped kill正常。完整Main删除/退出仅静态，生产恢复需后续新worker启动。所有自有下载/helper/HTTP及临时数据已清理。工作区复核保留R22/23/24/35，补resident与恢复限定。新增通用4文件8测试108断言两基线分别过，总50文件133测试；stable-scope恢复另1文件1测试9断言仅新快照，新功能总3文件8测试。复制harness的重复模块路径/固定等待故障保留原log，修正fixture后pass，不算产品发现。真实Electron搜索正常E2E仅a66f通过，Main guard有receipt、无worker，不计Bun总数。第十二轮review_quality_audit只读独立审R55/56；automation_flow_review只读审R57；web_remote_review文件传输/导入导出新领域。
+
+阶段提交补记：4b107e92已保存第十轮审批降级与恢复反证。最新完整正式计数57=1P1/43P2/13P3。下一次03:00–03:20 fetch，截止11:00未到，不标complete。
+
+02:54 第十二轮两份独立质量复核完成，R55/R56保留P3、R57保留限定P2；承认既有500候选设计，缺陷仅漏报coverage，不要求无界搜索。文件传输/导入导出专项仍在进行。两份质量复核均只读，无新增运行计数。
+
+02:57 第十二轮文件传输/历史/保存完成，新增0。2份新便携5测试136断言在84740/a66f两基线分别通过，当前通用52文件138测试、0最终fail/skip；新功能专项仍3文件8测试。Bun raw取消不确定诊断单列保留，不计产品缺陷或最终通过。新增flow-coverage.md作为产品流程地图，等待一次语义检查。正式仍57=1P1/43P2/13P3；即将再次fetch核对远端并提交本轮报告，产品不改。
+
+流程地图经独立只读语义检查，已收窄本地模拟服务、R45网关通知、R54已送达payload未native跨窗、R55缺索引条件，并补齐R02；分级无冲突，无新运行。
+
+02:57再次fetch，origin/main仍a66f4ef2，两个冻结快照保持不变；下一次宜03:45–04:00检查。02:58报告核验：57项编号连续唯一，1/43/13分级一致，183个顶层Markdown链接与92个源码行号链接存在，52个通用文件在两基线138测试均有最终guarded完成记录，新功能3文件8测试；git产品diff为空。heartbeat仍ACTIVE并覆盖11:00，不能提前停用。

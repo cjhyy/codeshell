@@ -264,6 +264,22 @@
     "skipped": 0
   },
   {
+    "file": "docs/review-2026-10-12/reproductions/search-routing-round11/navigation-stale-open.test.tsx",
+    "log": "docs/review-2026-10-12/reproductions/search-routing-round11/navigation-stale-open.test.tsx.log",
+    "code": 0,
+    "signal": null,
+    "tests": 2,
+    "skipped": 0
+  },
+  {
+    "file": "docs/review-2026-10-12/reproductions/search-routing-round11/search-cap-ui.test.tsx",
+    "log": "docs/review-2026-10-12/reproductions/search-routing-round11/search-cap-ui.test.tsx.log",
+    "code": 0,
+    "signal": null,
+    "tests": 2,
+    "skipped": 0
+  },
+  {
     "file": "docs/review-2026-10-12/reproductions/server/cc-approval-recovery.test.tsx",
     "log": "docs/review-2026-10-12/reproductions/server/cc-approval-recovery.test.tsx.log",
     "code": 0,
@@ -301,6 +317,22 @@
     "code": 0,
     "signal": null,
     "tests": 2,
+    "skipped": 0
+  },
+  {
+    "file": "docs/review-2026-10-12/reproductions/transfer-round12/desktop-save-import.test.tsx",
+    "log": "docs/review-2026-10-12/reproductions/transfer-round12/desktop-save-import.test.tsx.log",
+    "code": 0,
+    "signal": null,
+    "tests": 2,
+    "skipped": 0
+  },
+  {
+    "file": "docs/review-2026-10-12/reproductions/transfer-round12/transfer-recovery.test.ts",
+    "log": "docs/review-2026-10-12/reproductions/transfer-round12/transfer-recovery.test.ts.log",
+    "code": 0,
+    "signal": null,
+    "tests": 3,
     "skipped": 0
   },
   {
@@ -365,6 +397,22 @@
     "code": 0,
     "signal": null,
     "tests": 3,
+    "skipped": 0
+  },
+  {
+    "file": "docs/review-2026-10-12/reproductions/workspace-quality-round11/panel-registry-recovery.test.ts",
+    "log": "docs/review-2026-10-12/reproductions/workspace-quality-round11/panel-registry-recovery.test.ts.log",
+    "code": 0,
+    "signal": null,
+    "tests": 3,
+    "skipped": 0
+  },
+  {
+    "file": "docs/review-2026-10-12/reproductions/workspace-quality-round11/project-remove-recovery.test.ts",
+    "log": "docs/review-2026-10-12/reproductions/workspace-quality-round11/project-remove-recovery.test.ts.log",
+    "code": 0,
+    "signal": null,
+    "tests": 1,
     "skipped": 0
   }
 ]
