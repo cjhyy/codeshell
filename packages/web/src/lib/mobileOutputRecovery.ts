@@ -5,6 +5,7 @@ import {
   compareOutputCursors,
   type OutputJournalRecovery,
 } from "./outputJournalRecovery.js";
+import { assertOutputCoverage } from "./outputCoverage.js";
 import { initialChatState, reduceStream } from "./streamReducer.js";
 
 type Reply = Extract<MobileServerEvent, { type: "session.outputJournal" }>;
@@ -47,7 +48,24 @@ export async function recoverMobileOutput(args: {
 }) {
   let reply = await args.read({});
   if (!args.canContinue()) throw new Error("Recovery cancelled");
-  if (reply.page.status === "unavailable" && args.requireJournal) {
+  if (reply.page.status === "unavailable") {
+    const snapshot = reply.snapshot;
+    assertOutputCoverage(
+      { unpaired: snapshot?.unpaired, inputIds: snapshot?.inputIds },
+      {},
+      () => true,
+    );
+    if (snapshot?.journalIdentity && !snapshot.outputCursor && !args.latestCursor())
+      throw new Error("Required output journal is unavailable");
+    // Valid live input may precede the first canonical Run. Preserve its typed
+    // retry; an already observed cursor instead requires the real reread below.
+    if (snapshot?.inputIds?.length && !snapshot.outputCursor && !args.latestCursor())
+      throw new MobilePendingInput(snapshot.inputIds);
+  }
+  if (
+    reply.page.status === "unavailable" &&
+    (args.requireJournal || reply.snapshot?.outputCursor || args.latestCursor())
+  ) {
     const snapshot = reply.snapshot;
     if (
       !snapshot ||
@@ -107,6 +125,7 @@ export async function recoverMobileOutput(args: {
         snapshot.nextSeq < 1
       )
         throw new Error("Recovery snapshot is unpaired");
+      assertOutputCoverage({ ...snapshot, inputIds: undefined }, reply.page, () => true);
       let target = recovery.cursor!;
       for (const value of [snapshot.outputCursor, args.latestCursor()]) {
         if (value === undefined) continue;
@@ -128,6 +147,9 @@ export async function recoverMobileOutput(args: {
           (id) => !chat.items.some((item) => item.kind === "user" && item.clientMessageId === id),
         );
         if (missing?.length) throw new MobilePendingInput(missing);
+        assertOutputCoverage(snapshot, reply.page, (id) =>
+          chat.items.some((item) => item.kind === "user" && item.clientMessageId === id),
+        );
         return { chat, outputCursor: recovery.cursor!, snapshot };
       }
       recovery = { incomplete: false, cursor: recovery.appliedCursor };

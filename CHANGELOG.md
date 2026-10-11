@@ -10,6 +10,16 @@ breaking.
 
 ### Fixed
 
+- Preserve recovery coverage for visible output without a journal cursor across
+  memory eviction, Run completion and Host restart. Desktop, Mobile and Hub verify
+  the current Session and journal before replacing displayed history; pending
+  input anchors remain recoverable, and background results do not end an active Run.
+
+- Reload changed MCP transport declarations on the next Run while preserving
+  current Runs, sibling sessions and explicit SDK connections. Reuse identical
+  handshakes, retain the captured configuration across directory changes and
+  finalization hooks, and release transports after their last consumer settles.
+
 - Unbind every persistent Session before deleting a digital human, including
   archived history and more than 100 references. Scan asynchronously, preserve
   concurrently selected profiles, and keep the definition on failed writes or

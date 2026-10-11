@@ -34,6 +34,7 @@ import type {
   TranscriptEventType,
 } from "../types.js";
 import { Transcript } from "./transcript.js";
+import { preserveOutputCoverage } from "./output-coverage-state.js";
 import { SessionError } from "../exceptions.js";
 import { addCumulativeUsage, addTokenUsage, normalizeCumulativeUsageCounters } from "./usage.js";
 import {
@@ -1978,6 +1979,7 @@ export class SessionManager {
       if (persisted?.outputJournalIdentity)
         state.outputJournalIdentity = persisted.outputJournalIdentity;
       if (persisted?.outputRecoveryIncomplete) state.outputRecoveryIncomplete = true;
+      preserveOutputCoverage(state, persisted ?? {});
 
       state.stateRevision = (persistedRevision ?? incomingRevision ?? 0) + 1;
       this.writeStateAtomically(target, stateForPersistence(state));

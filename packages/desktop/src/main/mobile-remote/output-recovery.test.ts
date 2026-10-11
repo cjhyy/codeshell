@@ -3,7 +3,7 @@ import { mkdtempSync, rmSync, truncateSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { SessionManager, type MobileServerEvent, type StreamEvent } from "@cjhyy/code-shell-core";
-import { SessionOutputJournal } from "@cjhyy/code-shell-core/internal";
+import { SessionOutputJournal, SessionOutputCoverageStore } from "@cjhyy/code-shell-core/internal";
 import { SessionSnapshotStore } from "../SessionSnapshotStore.js";
 import { MobileOutputRecovery } from "./output-recovery.js";
 import { recoverMobileOutput } from "../../../../web/src/lib/mobileOutputRecovery.js";
@@ -28,7 +28,10 @@ function fixture(
     "run",
     session.transcript.getEvents().at(-1)!.id,
   );
-  let snapshots = new SessionSnapshotStore({ maxPerSession: 2 });
+  let snapshots = new SessionSnapshotStore({
+    maxPerSession: 2,
+    coverage: new SessionOutputCoverageStore(() => root),
+  });
   const publish = (event: StreamEvent) =>
     snapshots.append("native", { ...event, outputCursor: writer.append(event) });
   for (const event of preliminary) snapshots.append("native", event);
@@ -86,7 +89,9 @@ function fixture(
     snapshots: () => snapshots,
     observe: (event: Record<string, unknown>) => snapshots.append("native", event),
     restart: () => {
-      snapshots = new SessionSnapshotStore();
+      snapshots = new SessionSnapshotStore({
+        coverage: new SessionOutputCoverageStore(() => root),
+      });
     },
     revokeProject: () => {
       authority = "different-root";
@@ -410,8 +415,10 @@ test("stable preliminary input is covered by the candidate's same submit identit
     canContinue: () => true,
     latestCursor: () => undefined,
   });
-  expect(result?.snapshot.inputIds).toEqual(["submit-1"]);
-  expect(result?.chat.items.filter((item) => item.kind === "user")).toHaveLength(1);
+  expect(result?.snapshot.inputIds ?? []).toEqual([]);
+  expect(result?.chat.items.filter((item) => item.kind === "user")).toMatchObject([
+    { text: "question", clientMessageId: "submit-1" },
+  ]);
 });
 
 for (const [preliminary, message] of [
@@ -441,7 +448,7 @@ test("repeat submit identity is paired to its original recorded input, not calle
     canContinue: () => true,
     latestCursor: () => undefined,
   });
-  expect(result?.snapshot.inputIds).toEqual(["submit-1"]);
+  expect(result?.snapshot.inputIds ?? []).toEqual([]);
   expect(result?.chat.items.filter((item) => item.kind === "user")).toMatchObject([
     { text: "question", clientMessageId: "submit-1" },
   ]);

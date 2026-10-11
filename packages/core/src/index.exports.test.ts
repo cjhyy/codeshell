@@ -95,6 +95,7 @@ const expectedRuntimeExportsByPartition = {
   ],
   sessionOutputRecovery: [
     "SessionOutputJournal",
+    "SessionOutputCoverageStore",
     "readOutputJournal",
     "readOutputJournalLegacyBase",
     "outputUserMessage",
@@ -291,6 +292,7 @@ const expectedRuntimeExports = Object.values(expectedRuntimeExportsByPartition).
 // Host-only symbols that must NOT leak back onto the public root barrel.
 // (Representative sample across the removed @internal partitions.)
 const hostOnlySamples = [
+  "SessionOutputCoverageStore",
   "collectionConfig",
   "captureCollectionLocalFile",
   "readCollectionLocalFile",

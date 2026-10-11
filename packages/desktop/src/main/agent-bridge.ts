@@ -67,10 +67,12 @@ import {
   ErrorCodes,
   Methods,
   SessionManager,
+  sessionsRoot,
   type MigrateSessionMainRootResult,
   type SessionProjectBinding,
   type SessionWorkspace,
 } from "@cjhyy/code-shell-core";
+import { SessionOutputCoverageStore } from "@cjhyy/code-shell-core/internal";
 import type {
   WorkspaceContext,
   ModelRequestSigner,
@@ -255,7 +257,9 @@ export class AgentBridge implements PetStateBridge {
    * reloaded renderer can re-subscribe and replay the events it missed while
    * it was gone. See SessionSnapshotStore.
    */
-  private readonly snapshots = new SessionSnapshotStore();
+  private readonly snapshots = new SessionSnapshotStore({
+    coverage: new SessionOutputCoverageStore(sessionsRoot),
+  });
   /** Sessions the CURRENT worker streamed events for (reset per spawn). */
   private workerSnapshotSessionIds = new Set<string>();
   /**
@@ -504,13 +508,19 @@ export class AgentBridge implements PetStateBridge {
         }
       : null;
     if (append) this.workerSnapshotSessionIds.add(append.sessionId);
-    const snapshotEntry = append
-      ? {
-          sessionId: append.sessionId,
-          epoch: this.snapshots.epoch,
-          ...this.snapshots.append(append.sessionId, append.event),
-        }
-      : undefined;
+    let snapshotEntry;
+    try {
+      snapshotEntry = append
+        ? {
+            sessionId: append.sessionId,
+            epoch: this.snapshots.epoch,
+            ...this.snapshots.append(append.sessionId, append.event),
+          }
+        : undefined;
+    } catch {
+      dlog("bridge", "stream.coverage_unavailable", { sessionId: append?.sessionId });
+      return;
+    }
     const liveStreamEnvelope = append
       ? {
           sessionId: append.sessionId,
@@ -2223,7 +2233,13 @@ export class AgentBridge implements PetStateBridge {
     options: { browserVisibility?: "hidden" | "milestones" | "full" } = {},
   ): void {
     const projected = annotateBrowserRuntimeStreamEvent(event, options.browserVisibility ?? "full");
-    const entry = this.snapshots.append(sessionId, projected);
+    let entry;
+    try {
+      entry = this.snapshots.append(sessionId, projected);
+    } catch {
+      dlog("bridge", "stream.coverage_unavailable", { sessionId });
+      return;
+    }
     this.safeSend("agent:streamEvent", {
       sessionId,
       event: projected,

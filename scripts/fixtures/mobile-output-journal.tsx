@@ -11,7 +11,7 @@ import {
   sessionsRoot,
   SessionManager,
 } from "@cjhyy/code-shell-core";
-import { SessionOutputJournal } from "@cjhyy/code-shell-core/internal";
+import { SessionOutputCoverageStore, SessionOutputJournal } from "@cjhyy/code-shell-core/internal";
 import { RemoteHostManager, TrustedDeviceStore } from "@cjhyy/code-shell-server/mobile-remote";
 import {
   handleClientEvent,
@@ -43,7 +43,9 @@ export async function run(origin: string, root: string, port: number) {
     pageRequests = 0,
     maximumPageBytes = 0,
     completedPages = 0;
-  let snapshots = new SessionSnapshotStore();
+  let snapshots = new SessionSnapshotStore({
+    coverage: new SessionOutputCoverageStore(sessionsRoot),
+  });
   let appendDuringReply: (() => void) | undefined;
   let frozenAppendThrough: string | undefined;
   const devices = new TrustedDeviceStore(join(root, "trusted-devices.json"));
@@ -174,7 +176,8 @@ export async function run(origin: string, root: string, port: number) {
       engine.dispose();
     };
     engine.getHookRegistry().clear();
-    let frames = 0;
+    let frames = 0,
+      withheldPrestateInputs = 0;
     let deliver!: (request: unknown) => void;
     let activeRequestId = 77;
     let resolveRun!: (result: { reason: string; text: string }) => void;
@@ -205,8 +208,27 @@ export async function run(origin: string, root: string, port: number) {
           if (message.method === "agent/streamEvent" && message.params) {
             if (message.params.event.type === "error")
               console.error(JSON.stringify({ fixtureEngineError: message.params.event }));
+            let entry;
+            try {
+              entry = snapshots.append(message.params.sessionId, message.params.event);
+            } catch (cause) {
+              // The actual AgentServer echoes input before creating its first
+              // Session. Like Main's forwardLine, do not publish a rejected
+              // frame; prove that only this specific pre-state input was held.
+              assert.equal(
+                (cause as Error).message,
+                "Session output coverage is unavailable before publication",
+              );
+              assert.equal(message.params.event.type, "session_user_message");
+              assert.equal(
+                (message.params.event as { clientMessageId?: string }).clientMessageId,
+                "stable-native-submit",
+              );
+              assert.equal(engine.sessionExistsOnDisk(message.params.sessionId), false);
+              withheldPrestateInputs++;
+              return;
+            }
             frames++;
-            const entry = snapshots.append(message.params.sessionId, message.params.event);
             remote.broadcast({
               type: "session.stream",
               sessionId: message.params.sessionId,
@@ -239,7 +261,8 @@ export async function run(origin: string, root: string, port: number) {
     assert.equal(result.reason, "completed");
     assert.equal(hash(result.text), hash(expected));
     assert.ok(frames > 2000);
-    assert.deepEqual(snapshots.get("native-mobile").outputInputIds, ["stable-native-submit"]);
+    assert.equal(withheldPrestateInputs, 1);
+    assert.equal(snapshots.get("native-mobile").outputInputIds, undefined);
     assert.equal(snapshots.get("native-mobile").outputUnpaired, undefined);
     const retained = snapshots.get("native-mobile");
     assert.ok(
@@ -321,10 +344,9 @@ export async function run(origin: string, root: string, port: number) {
     await until(() => text().length === expected.length);
     assert.equal(hash(text()), hash(expected));
     assert.equal(hook.result.current.chat.run, "completed");
-    assert.equal(
-      hook.result.current.chat.items.find((item) => item.kind === "user")?.clientMessageId,
-      "stable-native-submit",
-    );
+    const recoveredInput = hook.result.current.chat.items.find((item) => item.kind === "user");
+    assert.equal(recoveredInput?.clientMessageId, "stable-native-submit");
+    assert.equal(recoveredInput?.text, "Return local fixture output");
     assert.ok(pageRequests > 8);
     assert.ok(maximumPageBytes <= 1024 * 1024 + 16 * 1024);
     // A normal second request is produced by the same actual AgentServer.
@@ -417,7 +439,9 @@ export async function run(origin: string, root: string, port: number) {
       await remote.stop();
       await sleep(20);
     });
-    snapshots = new SessionSnapshotStore();
+    snapshots = new SessionSnapshotStore({
+      coverage: new SessionOutputCoverageStore(sessionsRoot),
+    });
     await remote.start({ host: "127.0.0.1", port });
     // An actual authenticated WS reconnect joins the new Main transport epoch.
     await until(

@@ -19,7 +19,12 @@ export function publishOwnedExternalStream(
   sessionId: string,
   event: unknown,
 ): OwnedExternalStreamEntry | undefined {
-  const entry = snapshots.append(sessionId, event);
+  let entry: SnapshotEntry;
+  try {
+    entry = snapshots.append(sessionId, event);
+  } catch {
+    return undefined;
+  } // Never let Host proof I/O escape into Engine.onStream.
   const owner = [...windows].find(
     (window) => !window.isDestroyed() && window.webContents.id === ownerId,
   );

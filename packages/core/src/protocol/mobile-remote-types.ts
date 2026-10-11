@@ -284,6 +284,8 @@ export type MobileServerEvent =
         outputCursor?: string;
         unpaired: boolean;
         inputIds?: string[];
+        incarnation?: string;
+        journalIdentity?: string;
       };
     }
   // ── Sessions ──────────────────────────────────────────────────────────

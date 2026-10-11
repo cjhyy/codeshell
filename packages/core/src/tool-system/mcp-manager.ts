@@ -32,6 +32,7 @@ import {
 } from "./mcp-connection-policy.js";
 import { codeShellHome } from "../session/session-manager.js";
 import { adaptMcpToolSchema, normalizeMcpToolArgs } from "./mcp-compat.js";
+import { snapshotMcpConnectionConfig, type McpConnectionConfig } from "./mcp-connection-config.js";
 import {
   createWorkspaceMcpClient,
   mcpConnectionKey,
@@ -51,6 +52,14 @@ interface McpRunBinding {
   context: McpWorkspaceScope;
   active: boolean;
   generation: number;
+  servers: Map<string, McpConnectionConfig>;
+  connectionKeys: Map<string, string>;
+  retainedKeys: Set<string>;
+  owner: unknown;
+  retained: boolean;
+  abort: AbortController;
+  operations: Set<Promise<unknown>>;
+  release?: Promise<void>;
 }
 type BoundMcpWorkspace = McpWorkspaceScope & { [MCP_RUN_SCOPE]?: McpRunBinding };
 
@@ -61,6 +70,7 @@ interface MCPConnection {
   scope?: McpConnectionScope;
   tools?: Map<string, McpTool>;
   config?: MCPServerConfig;
+  identity?: string;
 }
 
 interface MCPResourceInfo {
@@ -561,6 +571,9 @@ export class MCPManager {
   private desiredByOwner = new Map<unknown, Set<string>>();
   private scopeByOwner = new Map<unknown, McpWorkspaceScope>();
   private connectionKeysByOwner = new Map<unknown, Set<string>>();
+  /** Explicit SDK connections retain their selected version independently of Engines. */
+  private directSelections = new Map<string, { server: string; key: string }>();
+  private runBindings = new Set<McpRunBinding>();
   private connectionGeneration = 0;
 
   constructor(private readonly toolRegistry: ToolRegistry) {
@@ -591,19 +604,41 @@ export class MCPManager {
     owner?: unknown,
     onServerEvent?: (event: McpServerLifecycleEvent) => void,
     workspace?: McpWorkspaceScope,
+    retainRun = false,
   ): Promise<void> {
     const selectedWorkspace = workspace ?? this.scopeByOwner.get(owner);
     const scope = mcpConnectionScope(selectedWorkspace);
+    const snapshots = new Map(
+      Object.entries(servers)
+        .filter(([, config]) => config.enabled !== false)
+        .map(([name, config]) => [name, snapshotMcpConnectionConfig(config)]),
+    );
+    const connectionKeys = new Map(
+      [...snapshots].map(([name, snapshot]) => [name, this.connectionKey(name, scope, snapshot)]),
+    );
+    const previous =
+      (this.scopeByOwner.get(owner) as BoundMcpWorkspace | undefined)?.[MCP_RUN_SCOPE] ??
+      (selectedWorkspace as BoundMcpWorkspace | undefined)?.[MCP_RUN_SCOPE];
     if (selectedWorkspace) {
-      const previousContext = this.scopeByOwner.get(owner) as BoundMcpWorkspace | undefined;
-      if (previousContext?.[MCP_RUN_SCOPE]) previousContext[MCP_RUN_SCOPE]!.active = false;
-      (selectedWorkspace as BoundMcpWorkspace)[MCP_RUN_SCOPE] = {
+      const existing = (selectedWorkspace as BoundMcpWorkspace)[MCP_RUN_SCOPE];
+      if (existing?.active && existing.retained)
+        throw new Error("MCP requires a distinct context for each retained Run.");
+      const binding: McpRunBinding = {
         manager: this,
         scope,
         context: selectedWorkspace,
         active: true,
         generation: this.connectionGeneration,
+        servers: snapshots,
+        connectionKeys,
+        retainedKeys: new Set(connectionKeys.values()),
+        owner,
+        retained: retainRun,
+        abort: new AbortController(),
+        operations: new Set(),
       };
+      (selectedWorkspace as BoundMcpWorkspace)[MCP_RUN_SCOPE] = binding;
+      this.runBindings.add(binding);
     }
     const enabledNames = this.enabledServerNames(servers);
     // Register this owner's desired set up front (see reconcile's shared-pool
@@ -612,14 +647,14 @@ export class MCPManager {
     if (owner !== undefined) {
       this.desiredByOwner.set(owner, enabledNames);
       if (selectedWorkspace) this.scopeByOwner.set(owner, selectedWorkspace);
-      this.connectionKeysByOwner.set(
-        owner,
-        new Set([...enabledNames].map((name) => mcpConnectionKey(name, scope))),
-      );
+      this.connectionKeysByOwner.set(owner, new Set(connectionKeys.values()));
       this.desiredServerNames = this.unionDesired() ?? new Set<string>();
     } else if (this.desiredByOwner.size === 0) {
       this.desiredServerNames = enabledNames;
     }
+    // SDK callers retain the legacy replace-context contract. Engine Runs opt
+    // into a lease and release it only after finalization, including end hooks.
+    if (previous && !previous.retained) await this.releaseBinding(previous);
     // Codex-style toggle: skip servers explicitly disabled in settings.
     // Only the literal `false` disables — absent / true / any other value
     // stays connected, matching the schema default semantics.
@@ -636,7 +671,9 @@ export class MCPManager {
     }
 
     const results = await Promise.allSettled(
-      entries.map(([name, config]) => this.connect(name, config, selectedWorkspace)),
+      entries.map(([name]) =>
+        this.connect(name, snapshots.get(name)!.config, selectedWorkspace, owner !== undefined),
+      ),
     );
 
     for (let i = 0; i < results.length; i++) {
@@ -663,6 +700,13 @@ export class MCPManager {
 
   async reconcile(servers: Record<string, MCPServerConfig>, owner?: unknown): Promise<void> {
     const enabledNames = this.enabledServerNames(servers);
+    // An ownerless SDK reconcile replaces its direct configuration. A single
+    // Engine's reconcile must not revoke independent SDK selections.
+    if (owner === undefined) {
+      for (const [key, selection] of this.directSelections) {
+        if (!enabledNames.has(selection.server)) this.directSelections.delete(key);
+      }
+    }
     // Shared-pool semantics: this ONE pool serves every session in the worker,
     // and sessions in different projects legitimately want DIFFERENT server
     // sets (per-project capabilityOverrides). Disconnect only servers that NO
@@ -687,10 +731,13 @@ export class MCPManager {
    */
   async unregisterOwner(owner: unknown): Promise<void> {
     if (!this.desiredByOwner.delete(owner)) return;
-    const context = this.scopeByOwner.get(owner) as BoundMcpWorkspace | undefined;
-    if (context?.[MCP_RUN_SCOPE]) context[MCP_RUN_SCOPE]!.active = false;
     this.scopeByOwner.delete(owner);
     this.connectionKeysByOwner.delete(owner);
+    await Promise.all(
+      [...this.runBindings]
+        .filter((binding) => binding.owner === owner)
+        .map((binding) => this.releaseBinding(binding)),
+    );
     const desired = this.unionDesired() ?? new Set<string>();
     this.desiredServerNames = desired;
     const stale = this.listServers().filter((name) => !desired.has(name));
@@ -698,19 +745,63 @@ export class MCPManager {
     await this.pruneUnusedScopedConnections();
   }
 
+  /** Release this exact Run, never a newer Run belonging to the same Engine. */
+  async releaseRun(workspace: McpWorkspaceScope): Promise<void> {
+    const binding = (workspace as BoundMcpWorkspace)[MCP_RUN_SCOPE];
+    if (binding?.manager === this) await this.releaseBinding(binding);
+  }
+
+  private releaseBinding(binding: McpRunBinding): Promise<void> {
+    if (binding.release) return binding.release;
+    binding.active = false;
+    binding.abort.abort();
+    binding.release = (async () => {
+      // Requests have the SDK deadline and a lease-owned cancellation signal.
+      // Keep their transport alive until every consumer actually settles.
+      await Promise.allSettled([...binding.operations]);
+      this.runBindings.delete(binding);
+      await this.pruneUnusedScopedConnections();
+    })();
+    return binding.release;
+  }
+
+  private runOperation<T>(
+    workspace: McpWorkspaceScope | undefined,
+    signal: AbortSignal | undefined,
+    work: (signal: AbortSignal | undefined) => Promise<T>,
+  ): Promise<T> {
+    const binding = (workspace as BoundMcpWorkspace | undefined)?.[MCP_RUN_SCOPE];
+    if (!binding) return work(signal);
+    this.scopeForContext(workspace);
+    const signals = [signal, workspace?.signal, binding.abort.signal].filter(
+      (value): value is AbortSignal => value !== undefined,
+    );
+    const combined = AbortSignal.any(signals);
+    // Register before work can call back into disposal or another Run.
+    const operation = Promise.resolve().then(() => work(combined));
+    binding.operations.add(operation);
+    void operation.then(
+      () => binding.operations.delete(operation),
+      () => binding.operations.delete(operation),
+    );
+    return operation;
+  }
+
   private async pruneUnusedScopedConnections(): Promise<void> {
-    const wanted = new Set([...this.connectionKeysByOwner.values()].flatMap((keys) => [...keys]));
+    const wanted = new Set([
+      ...[...this.connectionKeysByOwner.values()].flatMap((keys) => [...keys]),
+      ...[...this.directSelections.values()].map(({ key }) => key),
+      ...[...this.runBindings].flatMap((binding) => [...binding.retainedKeys]),
+    ]);
     const abandoned = [...this.connecting.entries()].filter(
       ([key]) => this.managedConnectionKeys.has(key) && !wanted.has(key),
     );
     for (const [, pending] of abandoned) pending.abort.abort();
     await Promise.allSettled(abandoned.map(([, pending]) => pending.promise));
     for (const [key] of abandoned) this.managedConnectionKeys.delete(key);
-    const stale = [...this.connections.entries()].filter(
-      ([key, conn]) => conn.scope?.key && !wanted.has(key),
-    );
-    // Only owner-managed scopes are pruned. Direct SDK callers own their
-    // explicitly connected scope until disconnect()/disconnectAll().
+    const stale = [...this.connections.entries()].filter(([key]) => !this.scopeStillWanted(key));
+    // Direct SDK selections retain their explicit scope/version too. A newer
+    // explicit connect replaces only that selection, never an Engine's binding.
     await Promise.all(
       stale
         .filter(([key]) => this.managedConnectionKeys.has(key))
@@ -723,7 +814,9 @@ export class MCPManager {
   private scopeStillWanted(key: string): boolean {
     return (
       !this.managedConnectionKeys.has(key) ||
-      [...this.connectionKeysByOwner.values()].some((keys) => keys.has(key))
+      [...this.connectionKeysByOwner.values()].some((keys) => keys.has(key)) ||
+      [...this.directSelections.values()].some((selection) => selection.key === key) ||
+      [...this.runBindings].some((binding) => binding.retainedKeys.has(key))
     );
   }
 
@@ -737,9 +830,16 @@ export class MCPManager {
 
   /** Union of every registered owner's desired set; null when none registered. */
   private unionDesired(): Set<string> | null {
-    if (this.desiredByOwner.size === 0) return null;
+    if (
+      this.desiredByOwner.size === 0 &&
+      this.runBindings.size === 0 &&
+      this.directSelections.size === 0
+    )
+      return null;
     const u = new Set<string>();
     for (const names of this.desiredByOwner.values()) for (const n of names) u.add(n);
+    for (const binding of this.runBindings) for (const name of binding.servers.keys()) u.add(name);
+    for (const selection of this.directSelections.values()) u.add(selection.server);
     return u;
   }
 
@@ -753,38 +853,51 @@ export class MCPManager {
     name: string,
     config: MCPServerConfig,
     workspace?: McpWorkspaceScope,
+    managedSelection = false,
   ): Promise<void> {
-    if (workspace?.signal?.aborted) throw connectionCancelled();
-    const scope = this.scopeForContext(workspace);
-    const key = mcpConnectionKey(name, scope);
-    if ([...this.connectionKeysByOwner.values()].some((keys) => keys.has(key)))
+    return this.runOperation(workspace, workspace?.signal, async (signal) => {
+      if (signal?.aborted) throw connectionCancelled();
+      const scope = this.scopeForContext(workspace);
+      const snapshot = snapshotMcpConnectionConfig(config);
+      const binding = (workspace as BoundMcpWorkspace | undefined)?.[MCP_RUN_SCOPE];
+      const bound = binding?.servers.get(name);
+      if (binding && (!bound || bound.identity !== snapshot.identity))
+        throw new Error(`MCP server "${name}" does not match this run's configuration.`);
+      const key = this.connectionKey(name, scope, snapshot);
+      const managed = binding !== undefined || managedSelection;
       this.managedConnectionKeys.add(key);
-    if (this.connections.has(key)) {
-      logger.info("mcp.already_connected", { server: name });
-      return;
-    }
-    const inflight = this.connecting.get(key);
-    if (inflight) {
-      logger.info("mcp.connect_coalesced", { server: name });
-      return this.waitForConnection(inflight, workspace?.signal);
-    }
-    const pending: PendingMcpConnection = {
-      server: name,
-      abort: new AbortController(),
-      waiters: 0,
-      promise: Promise.resolve(),
-    };
-    pending.promise = this.performConnect(
-      name,
-      config,
-      workspace,
-      pending.abort.signal,
-      scope,
-    ).finally(() => {
-      if (this.connecting.get(key) === pending) this.connecting.delete(key);
+      if (!managed) this.directSelections.set(mcpConnectionKey(name, scope), { server: name, key });
+      try {
+        if (this.connections.has(key)) {
+          logger.info("mcp.already_connected", { server: name });
+          return;
+        }
+        const inflight = this.connecting.get(key);
+        if (inflight) {
+          logger.info("mcp.connect_coalesced", { server: name });
+          return await this.waitForConnection(inflight, signal);
+        }
+        const pending: PendingMcpConnection = {
+          server: name,
+          abort: new AbortController(),
+          waiters: 0,
+          promise: Promise.resolve(),
+        };
+        pending.promise = this.performConnect(
+          name,
+          snapshot.config,
+          workspace,
+          pending.abort.signal,
+          scope,
+        ).finally(() => {
+          if (this.connecting.get(key) === pending) this.connecting.delete(key);
+        });
+        this.connecting.set(key, pending);
+        await this.waitForConnection(pending, signal);
+      } finally {
+        await this.pruneUnusedScopedConnections();
+      }
     });
-    this.connecting.set(key, pending);
-    return this.waitForConnection(pending, workspace?.signal);
   }
 
   /** One cancelled run must not kill another run's coalesced initialization. */
@@ -850,11 +963,12 @@ export class MCPManager {
     // Freeze the negotiated authority, independent of whichever coalesced owner
     // happened to start first. Pruning aborts when no owner still wants this scope.
     const scope = initialScope ?? this.scopeForContext(workspace);
+    const key = this.connectionKey(name, scope, snapshotMcpConnectionConfig(config));
     for (let attempt = 1; attempt <= retries + 1; attempt++) {
       if (
         signal?.aborted ||
         generation !== this.connectionGeneration ||
-        !this.scopeStillWanted(mcpConnectionKey(name, scope))
+        !this.scopeStillWanted(key)
       )
         throw connectionCancelled();
       try {
@@ -882,7 +996,8 @@ export class MCPManager {
     signal?: AbortSignal,
   ): Promise<void> {
     const generation = this.connectionGeneration;
-    const key = mcpConnectionKey(name, scope);
+    const identity = snapshotMcpConnectionConfig(config);
+    const key = this.connectionKey(name, scope, identity);
     if (this.connections.has(key)) {
       logger.info("mcp.already_connected", { server: name });
       return;
@@ -1031,7 +1146,14 @@ export class MCPManager {
       await client.close();
       throw connectionCancelled();
     }
-    this.connections.set(key, { client, serverName: name, transport, scope, config });
+    this.connections.set(key, {
+      client,
+      serverName: name,
+      transport,
+      scope,
+      config,
+      identity: identity.identity,
+    });
 
     // Publish only after the entire initialization has succeeded. A cancelled
     // or timed-out tools/list cannot expose a partially initialized connection.
@@ -1047,7 +1169,7 @@ export class MCPManager {
       throw connectionCancelled();
     }
 
-    if (this.desiredServerNames && !this.desiredServerNames.has(name)) {
+    if (!this.scopeStillWanted(key)) {
       await this.disconnectConnection(key);
       return;
     }
@@ -1094,17 +1216,49 @@ export class MCPManager {
     const previous = binding?.scope;
     // Legacy cwd-only contexts retain the root granted at run start when cd
     // moves deeper. A later arbitrary directory never becomes a new root here.
-    if (workspace && !workspace.workspace && previous)
+    if (workspace && previous) {
+      if (
+        workspace.workspace &&
+        JSON.stringify(mcpConnectionScope(workspace).roots) !== JSON.stringify(previous.roots)
+      )
+        throw new Error("MCP workspace roots changed during this run.");
       return mcpScopeAtCwd(previous, workspace.cwd);
+    }
     return mcpConnectionScope(workspace);
+  }
+
+  private connectionKey(
+    serverName: string,
+    scope: McpConnectionScope,
+    snapshot: McpConnectionConfig,
+  ): string {
+    return JSON.stringify([mcpConnectionKey(serverName, scope), snapshot.identity]);
   }
 
   private findConnection(
     serverName: string,
     workspace?: McpWorkspaceScope,
   ): MCPConnection | undefined {
-    if (workspace)
-      return this.connections.get(mcpConnectionKey(serverName, this.scopeForContext(workspace)));
+    if (workspace) {
+      const scope = this.scopeForContext(workspace);
+      const binding = (workspace as BoundMcpWorkspace)[MCP_RUN_SCOPE];
+      if (binding) {
+        const snapshot = binding.servers.get(serverName);
+        return snapshot
+          ? this.connections.get(this.connectionKey(serverName, scope, snapshot))
+          : undefined;
+      }
+      const direct = this.directSelections.get(mcpConnectionKey(serverName, scope));
+      if (direct) return this.connections.get(direct.key);
+      const candidates = [...this.connections.values()].filter(
+        (conn) => conn.serverName === serverName && conn.scope?.key === scope.key,
+      );
+      if (candidates.length > 1)
+        throw new Error(`MCP server "${serverName}" requires a bound run context.`);
+      return candidates[0];
+    }
+    const direct = this.directSelections.get(serverName);
+    if (direct) return this.connections.get(direct.key);
     // Compatibility for direct SDK callers without a run context. Ambiguous
     // workspace connections require the caller to provide its actual scope.
     const candidates = [...this.connections.values()].filter(
@@ -1127,29 +1281,32 @@ export class MCPManager {
       const scope = this.scopeForContext(workspace);
       const sameRoots = (candidate: McpConnectionScope) =>
         JSON.stringify(candidate.roots) === JSON.stringify(initial.roots);
-      // Reconnect only a cwd change within this run's original authority. The
-      // configuration comes from a live server with exactly those same roots.
+      // CD retains this Run's exact configuration and roots. Never borrow a
+      // similarly named connection from a sibling or a newer configuration.
       if (sameRoots(scope)) {
         mcpScopeAtCwd(initial, workspace.cwd);
-        const source = [...this.connections.values()].find(
-          (conn) =>
-            conn.serverName === serverName && conn.scope && sameRoots(conn.scope) && conn.config,
-        );
-        if (source?.config) {
-          const key = mcpConnectionKey(serverName, scope);
-          for (const [owner, context] of this.scopeByOwner) {
-            if (context !== binding?.context) continue;
-            const keys = this.connectionKeysByOwner.get(owner)!;
-            for (const oldKey of keys) {
-              if (this.connections.get(oldKey)?.serverName === serverName) keys.delete(oldKey);
-            }
-            keys.add(key);
-            this.managedConnectionKeys.add(key);
-          }
+        const snapshot = binding.servers.get(serverName);
+        const previousKey = binding.connectionKeys.get(serverName);
+        const source = previousKey ? this.connections.get(previousKey) : undefined;
+        if (snapshot && source?.scope && sameRoots(source.scope)) {
+          const key = this.connectionKey(serverName, scope, snapshot);
+          binding.retainedKeys.add(key);
           try {
-            await this.connect(serverName, source.config, workspace);
+            await this.connect(serverName, snapshot.config, workspace, true);
             connection = this.findConnection(serverName, workspace);
-            if (connection) return connection;
+            if (connection) {
+              // Leave the prior connected key available while this handshake
+              // awaits. Concurrent CD callers can join it, and a failed attempt
+              // does not replace the source needed by the next retry.
+              for (const [owner, context] of this.scopeByOwner) {
+                if (context !== binding.context) continue;
+                const keys = this.connectionKeysByOwner.get(owner)!;
+                if (previousKey) keys.delete(previousKey);
+                keys.add(key);
+              }
+              binding.connectionKeys.set(serverName, key);
+              return connection;
+            }
           } finally {
             // The owner can close while the new transport is handshaking.
             await this.pruneUnusedScopedConnections();
@@ -1200,66 +1357,69 @@ export class MCPManager {
     args: Record<string, unknown>,
     ctx?: ToolContext,
   ): Promise<string> {
-    const connection = await this.connectionForScope(serverName, ctx);
-    const tool = connection.tools?.get(toolName);
-    if (!tool) throw new Error(`MCP tool "${toolName}" is not available in the current workspace.`);
-    const callResult = await connection.client.callTool(
-      {
-        name: toolName,
-        arguments: normalizeMcpToolArgs(
-          connection.client.getServerVersion?.()?.name,
-          tool,
-          stripInternalToolArgs(args),
-        ),
-      },
-      undefined,
-      ctx?.signal ? { signal: ctx.signal } : undefined,
-    );
-    // Extract text + image content from the result. Image blobs
-    // are spilled to ~/.code-shell/mcp_images/ so they don't bloat
-    // the LLM message tree — same pattern as the GenerateImage
-    // tool — and the model sees a textual reference it can Read
-    // on a later turn if it needs the pixels. This sidesteps the
-    // "MCP returned a 5MB screenshot → token budget exploded"
-    // failure mode that bit Codex (issue #11845); we never put
-    // raw base64 image data in the result text. See
-    // TODO-week.md #9c + docs/research-cc-vs-codex-image-handling.md §B.
-    const parts: string[] = [];
-    if (Array.isArray(callResult.content)) {
-      for (const item of callResult.content) {
-        if (typeof item === "string") {
-          parts.push(item);
-          continue;
-        }
-        if (typeof item !== "object" || item === null) continue;
-        if ("text" in item) {
-          parts.push(String((item as { text: unknown }).text));
-          continue;
-        }
-        if ((item as { type?: string }).type === "image") {
-          const block = item as { data?: string; mimeType?: string };
-          if (typeof block.data === "string" && block.data.length > 0) {
-            const note = await spillMcpImage(
-              serverName,
-              toolName,
-              block.data,
-              block.mimeType ?? "image/png",
-            );
-            parts.push(note);
+    return this.runOperation(ctx, ctx?.signal, async (signal) => {
+      const connection = await this.connectionForScope(serverName, ctx);
+      const tool = connection.tools?.get(toolName);
+      if (!tool)
+        throw new Error(`MCP tool "${toolName}" is not available in the current workspace.`);
+      const callResult = await connection.client.callTool(
+        {
+          name: toolName,
+          arguments: normalizeMcpToolArgs(
+            connection.client.getServerVersion?.()?.name,
+            tool,
+            stripInternalToolArgs(args),
+          ),
+        },
+        undefined,
+        signal ? { signal } : undefined,
+      );
+      // Extract text + image content from the result. Image blobs
+      // are spilled to ~/.code-shell/mcp_images/ so they don't bloat
+      // the LLM message tree — same pattern as the GenerateImage
+      // tool — and the model sees a textual reference it can Read
+      // on a later turn if it needs the pixels. This sidesteps the
+      // "MCP returned a 5MB screenshot → token budget exploded"
+      // failure mode that bit Codex (issue #11845); we never put
+      // raw base64 image data in the result text. See
+      // TODO-week.md #9c + docs/research-cc-vs-codex-image-handling.md §B.
+      const parts: string[] = [];
+      if (Array.isArray(callResult.content)) {
+        for (const item of callResult.content) {
+          if (typeof item === "string") {
+            parts.push(item);
+            continue;
+          }
+          if (typeof item !== "object" || item === null) continue;
+          if ("text" in item) {
+            parts.push(String((item as { text: unknown }).text));
+            continue;
+          }
+          if ((item as { type?: string }).type === "image") {
+            const block = item as { data?: string; mimeType?: string };
+            if (typeof block.data === "string" && block.data.length > 0) {
+              const note = await spillMcpImage(
+                serverName,
+                toolName,
+                block.data,
+                block.mimeType ?? "image/png",
+              );
+              parts.push(note);
+            }
           }
         }
       }
-    }
-    const body = parts.join("\n") || "(no output)";
-    // Trust boundary: MCP output is external content. Wrap it so the
-    // model sees an explicit reminder that the body comes from an
-    // untrusted server and any instructions inside are content, not
-    // commands. The marker is intentionally short so it doesn't bloat
-    // every tool result, but distinct enough that prompt-injected
-    // strings can't fake their way out.
-    const wrapped = wrapMcpOutput(serverName, toolName, body);
-    if (callResult.isError) throw new Error(wrapped);
-    return wrapped;
+      const body = parts.join("\n") || "(no output)";
+      // Trust boundary: MCP output is external content. Wrap it so the
+      // model sees an explicit reminder that the body comes from an
+      // untrusted server and any instructions inside are content, not
+      // commands. The marker is intentionally short so it doesn't bloat
+      // every tool result, but distinct enough that prompt-injected
+      // strings can't fake their way out.
+      const wrapped = wrapMcpOutput(serverName, toolName, body);
+      if (callResult.isError) throw new Error(wrapped);
+      return wrapped;
+    });
   }
 
   /**
@@ -1267,6 +1427,8 @@ export class MCPManager {
    */
   async disconnectAll(): Promise<void> {
     this.connectionGeneration++;
+    // Cancellation settles per-Run calls before their transports are closed.
+    await Promise.all([...this.runBindings].map((binding) => this.releaseBinding(binding)));
     const pending = [...this.connecting.values()];
     for (const connection of pending) connection.abort.abort();
     await Promise.allSettled(pending.map((connection) => connection.promise));
@@ -1275,10 +1437,14 @@ export class MCPManager {
     this.scopeByOwner.clear();
     this.connectionKeysByOwner.clear();
     this.managedConnectionKeys.clear();
+    this.directSelections.clear();
     this.desiredServerNames = null;
   }
 
   async disconnect(name: string): Promise<void> {
+    for (const [key, selection] of this.directSelections) {
+      if (selection.server === name) this.directSelections.delete(key);
+    }
     const pending = [...this.connecting.values()].filter(
       (connection) => connection.server === name,
     );
@@ -1296,6 +1462,9 @@ export class MCPManager {
     if (!conn) return;
     this.connections.delete(key);
     this.managedConnectionKeys.delete(key);
+    for (const [scope, selection] of this.directSelections) {
+      if (selection.key === key) this.directSelections.delete(scope);
+    }
     const name = conn.serverName;
     try {
       await conn.client.close();
@@ -1328,36 +1497,38 @@ export class MCPManager {
     signal?: AbortSignal,
     workspace?: McpWorkspaceScope,
   ): Promise<unknown> {
-    const conn = await this.connectionForScope(serverName, workspace);
-    // Forward the run's abort signal so a user Stop cancels an in-flight MCP
-    // call promptly instead of blocking until the SDK's default request timeout.
-    // (The SDK still enforces its default timeout when no signal is provided.)
-    const result = await conn.client.callTool(
-      {
-        name: toolName,
-        arguments: normalizeMcpToolArgs(
-          conn.client.getServerVersion?.()?.name,
-          conn.tools?.get(toolName),
-          stripInternalToolArgs(args),
-        ),
-      },
-      undefined,
-      signal ? { signal } : undefined,
-    );
-    const parts: string[] = [];
-    if (Array.isArray(result.content)) {
-      for (const item of result.content) {
-        if (typeof item === "object" && item !== null && "text" in item) {
-          parts.push(String(item.text));
-        } else if (typeof item === "string") {
-          parts.push(item);
+    return this.runOperation(workspace, signal, async (signal) => {
+      const conn = await this.connectionForScope(serverName, workspace);
+      // Forward the run's abort signal so a user Stop cancels an in-flight MCP
+      // call promptly instead of blocking until the SDK's default request timeout.
+      // (The SDK still enforces its default timeout when no signal is provided.)
+      const result = await conn.client.callTool(
+        {
+          name: toolName,
+          arguments: normalizeMcpToolArgs(
+            conn.client.getServerVersion?.()?.name,
+            conn.tools?.get(toolName),
+            stripInternalToolArgs(args),
+          ),
+        },
+        undefined,
+        signal ? { signal } : undefined,
+      );
+      const parts: string[] = [];
+      if (Array.isArray(result.content)) {
+        for (const item of result.content) {
+          if (typeof item === "object" && item !== null && "text" in item) {
+            parts.push(String(item.text));
+          } else if (typeof item === "string") {
+            parts.push(item);
+          }
         }
       }
-    }
-    const body = parts.join("\n") || "(no output)";
-    const wrapped = wrapMcpOutput(serverName, toolName, body);
-    if (result.isError) throw new Error(wrapped);
-    return wrapped;
+      const body = parts.join("\n") || "(no output)";
+      const wrapped = wrapMcpOutput(serverName, toolName, body);
+      if (result.isError) throw new Error(wrapped);
+      return wrapped;
+    });
   }
 
   /**
@@ -1368,29 +1539,31 @@ export class MCPManager {
     signal?: AbortSignal,
     workspace?: McpWorkspaceScope,
   ): Promise<MCPResourceInfo[]> {
-    const results: MCPResourceInfo[] = [];
-    const servers = serverName ? [serverName] : this.listServers();
+    return this.runOperation(workspace, signal, async (signal) => {
+      const results: MCPResourceInfo[] = [];
+      const servers = serverName ? [serverName] : this.listServers();
 
-    for (const name of servers) {
-      try {
-        const conn = await this.connectionForScope(name, workspace);
-        // Forward the run's abort signal so a user Stop cancels promptly
-        // instead of waiting out the SDK's default request timeout (same as
-        // callTool). The SDK still enforces its default timeout when no signal.
-        const res = await conn.client.listResources(undefined, signal ? { signal } : undefined);
-        for (const r of res.resources) {
-          results.push({
-            uri: r.uri,
-            name: r.name ?? r.uri,
-            description: r.description,
-            serverName: name,
-          });
+      for (const name of servers) {
+        try {
+          const conn = await this.connectionForScope(name, workspace);
+          // Forward the run's abort signal so a user Stop cancels promptly
+          // instead of waiting out the SDK's default request timeout (same as
+          // callTool). The SDK still enforces its default timeout when no signal.
+          const res = await conn.client.listResources(undefined, signal ? { signal } : undefined);
+          for (const r of res.resources) {
+            results.push({
+              uri: r.uri,
+              name: r.name ?? r.uri,
+              description: r.description,
+              serverName: name,
+            });
+          }
+        } catch {
+          // Server may not support resources
         }
-      } catch {
-        // Server may not support resources
       }
-    }
-    return results;
+      return results;
+    });
   }
 
   /**
@@ -1402,18 +1575,20 @@ export class MCPManager {
     signal?: AbortSignal,
     workspace?: McpWorkspaceScope,
   ): Promise<string> {
-    const conn = await this.connectionForScope(serverName, workspace);
-    // Forward the run's abort signal so a user Stop cancels promptly (same as
-    // callTool); the SDK still enforces its default timeout when no signal.
-    const result = await conn.client.readResource({ uri }, signal ? { signal } : undefined);
-    const parts: string[] = [];
-    if (Array.isArray(result.contents)) {
-      for (const item of result.contents) {
-        if (typeof item === "object" && item !== null && "text" in item) {
-          parts.push(String(item.text));
+    return this.runOperation(workspace, signal, async (signal) => {
+      const conn = await this.connectionForScope(serverName, workspace);
+      // Forward the run's abort signal so a user Stop cancels promptly (same as
+      // callTool); the SDK still enforces its default timeout when no signal.
+      const result = await conn.client.readResource({ uri }, signal ? { signal } : undefined);
+      const parts: string[] = [];
+      if (Array.isArray(result.contents)) {
+        for (const item of result.contents) {
+          if (typeof item === "object" && item !== null && "text" in item) {
+            parts.push(String(item.text));
+          }
         }
       }
-    }
-    return parts.join("\n") || "(no content)";
+      return parts.join("\n") || "(no content)";
+    });
   }
 }

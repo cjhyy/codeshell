@@ -569,7 +569,9 @@ if (process.argv[2] === "--append-worker") {
   const storage = dirname(core.sessionsRoot());
   const cwd = join(root, "workspace");
   mkdirSync(cwd);
-  const snapshots = new SessionSnapshotStore();
+  const snapshots = new SessionSnapshotStore({
+    coverage: new journalCore.SessionOutputCoverageStore(core.sessionsRoot),
+  });
   let frames = 0;
   const engine = new core.Engine({
     llm: { provider: "openai", model: "gpt-4o", apiKey: "synthetic", baseUrl: origin + "/v1" },
@@ -669,7 +671,11 @@ if (process.argv[2] === "--append-worker") {
       .map((item) => item.text)
       .join("");
     assert.equal(hash(desktopText), expectedHash);
-    const after = await recover(new SessionSnapshotStore());
+    const after = await recover(
+      new SessionSnapshotStore({
+        coverage: new journalCore.SessionOutputCoverageStore(core.sessionsRoot),
+      }),
+    );
     assert.equal(before.outputCursor, after.outputCursor);
     assert.notEqual(before.snapshot.epoch, after.snapshot.epoch);
     const workerOne = await stdioQuery(root, storage, cwd, origin, "long-output");

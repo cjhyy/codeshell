@@ -379,7 +379,8 @@ describe("architecture growth budgets", () => {
       // process host, and its opaque permit/resource/runtime types. Published
       // public/extension contracts remain unchanged; allow no future exports.
       // +3 Host-only collection validation, selected-file capture/read and public-HTTPS transport.
-      "packages/core/src/index.internal.ts": 104,
+      // +1 Host-only Session coverage proof/store; the stable SDK does not export it.
+      "packages/core/src/index.internal.ts": 105,
       "packages/coding/src/index.ts": 12,
       "packages/arena/src/index.ts": 19,
       // +1 for conversation-session.ts, which re-exports the four modules
@@ -406,7 +407,8 @@ describe("architecture growth budgets", () => {
       // Desktop and Web; transport custody, token refresh and grants remain Host
       // responsibilities. These modules import no native/credential authority.
       // +1 shared bounded output-journal recovery reducer statement.
-      "packages/web/src/index.ts": 20,
+      // +1 browser-safe coverage validator shared by Desktop and paired Mobile.
+      "packages/web/src/index.ts": 21,
     };
     for (const [path, budget] of Object.entries(exportBudgets)) {
       expect(matches(path, /^export /gm), path).toBeLessThanOrEqual(budget);

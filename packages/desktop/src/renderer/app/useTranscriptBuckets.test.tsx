@@ -19,6 +19,7 @@ import {
   readOutputJournalLegacyBase,
 } from "../../../../core/src/session/output-journal.js";
 import { SessionSnapshotStore } from "../../main/SessionSnapshotStore.js";
+import { SessionOutputCoverageStore } from "../../../../core/src/session/output-coverage-state.js";
 import { transcriptToFoldItems } from "../../main/transcript-reader.js";
 import {
   outputUserInputFixture,
@@ -157,7 +158,10 @@ describe("transcript history hydration after a background resume", () => {
       "run",
       session.transcript.getEvents()[0].id,
     );
-    const snapshots = new SessionSnapshotStore({ maxPerSession: 3 });
+    const snapshots = new SessionSnapshotStore({
+      maxPerSession: 3,
+      coverage: new SessionOutputCoverageStore(() => root),
+    });
     const publish = (event: StreamEvent) =>
       snapshots.append("saved", { ...event, outputCursor: writer.append(event) });
     try {
@@ -209,7 +213,10 @@ describe("transcript history hydration after a background resume", () => {
     test(`existing hydration preserves actual Engine ${mode} input display after RAM eviction`, async () => {
       const fixture = await outputUserInputFixture(mode);
       const steering = mode === "steer" || mode === "steer-text";
-      const snapshots = new SessionSnapshotStore({ maxPerSession: 3 });
+      const snapshots = new SessionSnapshotStore({
+        maxPerSession: 3,
+        coverage: new SessionOutputCoverageStore(() => fixture.sessionRoot),
+      });
       for (const event of fixture.events) snapshots.append("saved", event);
       try {
         initial = {};

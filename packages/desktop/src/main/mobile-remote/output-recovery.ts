@@ -259,6 +259,12 @@ export class MobileOutputRecovery {
           outputCursor: snapshot.outputCursor,
           unpaired: snapshot.outputUnpaired === true,
           ...(snapshot.outputInputIds ? { inputIds: snapshot.outputInputIds } : {}),
+          ...(snapshot.outputCoverageIdentity
+            ? { incarnation: snapshot.outputCoverageIdentity }
+            : {}),
+          ...(snapshot.outputJournalIdentity
+            ? { journalIdentity: snapshot.outputJournalIdentity }
+            : {}),
         },
       });
     } catch {
