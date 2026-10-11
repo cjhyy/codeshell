@@ -136,6 +136,22 @@
     "skipped": 0
   },
   {
+    "file": "docs/review-2026-10-12/reproductions/file-navigation-round14/desktop-files.test.tsx",
+    "log": "docs/review-2026-10-12/reproductions/file-navigation-round14/desktop-files.test.tsx.log",
+    "code": 0,
+    "signal": null,
+    "tests": 3,
+    "skipped": 0
+  },
+  {
+    "file": "docs/review-2026-10-12/reproductions/file-navigation-round14/hub-files-recovery.test.tsx",
+    "log": "docs/review-2026-10-12/reproductions/file-navigation-round14/hub-files-recovery.test.tsx.log",
+    "code": 0,
+    "signal": null,
+    "tests": 1,
+    "skipped": 0
+  },
+  {
     "file": "docs/review-2026-10-12/reproductions/files-round4/archived-open.test.ts",
     "log": "docs/review-2026-10-12/reproductions/files-round4/archived-open.test.ts.log",
     "code": 0,
@@ -163,6 +179,14 @@
     "file": "docs/review-2026-10-12/reproductions/multiwindow-round13/catalog-window-selection.test.tsx",
     "code": 0,
     "log": "docs/review-2026-10-12/reproductions/multiwindow-round13/catalog-window-selection.test.tsx.log",
+    "signal": null,
+    "tests": 3,
+    "skipped": 0
+  },
+  {
+    "file": "docs/review-2026-10-12/reproductions/notification-round14/notification-queue.test.ts",
+    "log": "docs/review-2026-10-12/reproductions/notification-round14/notification-queue.test.ts.log",
+    "code": 0,
     "signal": null,
     "tests": 3,
     "skipped": 0
@@ -341,6 +365,14 @@
     "log": "docs/review-2026-10-12/reproductions/session-actions-round13/session-delete-recovery.test.tsx.log",
     "signal": null,
     "tests": 4,
+    "skipped": 0
+  },
+  {
+    "file": "docs/review-2026-10-12/reproductions/terminal-lifecycle-round14/terminal-lifecycle.test.tsx",
+    "log": "docs/review-2026-10-12/reproductions/terminal-lifecycle-round14/terminal-lifecycle.test.tsx.log",
+    "code": 0,
+    "signal": null,
+    "tests": 6,
     "skipped": 0
   },
   {

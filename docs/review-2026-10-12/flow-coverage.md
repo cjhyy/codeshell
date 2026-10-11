@@ -1,6 +1,6 @@
 # 用户流程覆盖与修复顺序
 
-这是截至第十三轮的流程地图；正式编号、级别和触发条件以 [主报告](README.md) 与各附录为准。正常路径通过不代表相邻失败路径已正确处理。缺陷表征测试通过表示复现成立，没有实施产品修复。
+这是截至第十四轮的流程地图；正式编号、级别和触发条件以 [主报告](README.md) 与各附录为准。正常路径通过不代表相邻失败路径已正确处理。缺陷表征测试通过表示复现成立，没有实施产品修复。
 
 | 用户要完成的事 | 已检查的正常路径及证据层级 | 仍有的问题与可见影响 |
 | --- | --- | --- |
@@ -15,12 +15,15 @@
 | 关闭/删除会话，回收后台资源 | Core正常close barrier现有28测试；[下载原生实验](download-round11.md)包含普通任务与专用kill对照 | R30 终态拒写令任务持续running；R31 Node Hub未等Panel强制终止；R57新worker已恢复的orphaned下载被close/killAll跳过，完整Desktop删除仅静态接线；R60侧栏fs删除失败先tombstone，历史页可修复权限后重试 |
 | 创建worktree、移除项目、再恢复 | 真实Git并发与恢复；[工作区复核](workspace-quality-round11.md) | **R35/P1** 失败请求回滚能删除成功请求的worktree/branch，特定窗口可丢未提交文件；R24冷owner需重加项目、恢复原会话后再释放 |
 | 打开和管理Panel | 真实Electron安装/恢复E2E；真实ProjectStore和权限边界控制 | R22合法secondary root被拒；R23单目录失败或65项目批次使当前renderer Panel App entries清空；包、绑定、内置面板仍在 |
-| 在工作区开终端并审阅提交 | [真实Git+实际终端hook/Main门禁、ReviewService+viewer](terminal-review-round13.md)，native PTY边界替身 | R58合法managed worktree新终端被注册根门禁拒绝；R59最近20内首提交差异被错误显示为无变化 |
+| 在工作区开终端并审阅提交 | [真实Git+实际终端hook/Main门禁、ReviewService+viewer](terminal-review-round13.md)，native PTY边界替身 | R58合法managed worktree新终端被注册根门禁拒绝；R59最近20内首提交差异被错误显示为无变化；R64恢复后先关tab再新建可能接回旧壳，再次关闭重开恢复 |
+| 浏览目录和图片、修复读取失败 | [实际FilesPanel/HubFiles+真实文件服务](file-navigation-round14.md)，Desktop Main AST与Web自有HTTP服务 | R58合法managed worktree普通PNG预览被注册根门禁拒绝，文本正常；R65目录EACCES静默空树，修权限刷新恢复；Web移动/权限/重试与迟到结果控制正常 |
 | 修改模型、Skills、MCP、凭据 | 真实Electron模型/设置/凭据；真实store写盘与恢复 | R25旧完整表单回滚他端字段；R26冲突刷新没更新编辑revision；R27旧probe覆盖新配置；R28初始设置未到时开关写空列表；R29旧项目投影覆盖新广播；R42账号ID碰撞；R43拒写无反馈 |
 | 安装插件、更新和重装 | 真实Plugin服务、本地Git及review显式覆盖；[插件复核](plugin-quality-round9.md) | R51卸载后旧installed任务卡住重装；R52相对源校验失败前删旧cache；R53文件夹临时快照被持久保存为更新源 |
-| 运行自动化、看进度和历史 | 实际ChatSession FIFO与调度/展示控制；[自动化审查](automation-round5.md) | R44超时提前结算仍可重复排队；R45拒绝运行却向网关/生命周期发布completed；R46历史归属错误；R47界面未订阅自动停用；R48缺disabledReason |
+| 运行自动化、看进度和历史 | 实际ChatSession FIFO与调度/展示控制；[自动化审查](automation-round5.md) | R44超时提前结算仍可重复排队；R45拒绝运行却向网关/生命周期发布completed；R46历史归属错误；R47界面未订阅自动停用；R48缺disabledReason；R63普通通知等待占住串行队列，urgent停用通知也被延迟（实际notifier/route+注入时钟，无OS通知） |
 | 恢复归档、查询资料集、录音 | 历史恢复、真实Collection Engine本地client；真实录音组件模拟设备 | R39成功恢复后自busy误挡导航；R49已知原件变更指引丢失；R50同document双pending启动录音，stop/unmount只释放最后一份 |
 
 建议先修 R35 的创建/回滚所有权，同时处理会话与输入身份、审批待处理状态和不确定回执。之后处理关闭资源屏障、持久写入/更新原子性与配置冲突，再修搜索范围提示、状态同步和恢复时多余确认。这个顺序依据数据风险和用户能否继续任务，不依据发现时间或问题数量。
 
 实际验证一直使用隔离应用状态。真实Electron、native Node、Bun组件/服务测试与静态接线在各附录分别标注；没有将模拟设备当作真实麦克风验证、将mini DOM当作完整Electron输入、或将Core RPC当作完整桌面删除实测。
+
+第十四轮终端证据组合真实a66f/macOS reload身份与两基线组件/Main/service替身，未启动真实PTY；通知为实际生产默认限流参数的受控时钟，不把注入10秒写成实测墙钟等待或全局延迟上限。

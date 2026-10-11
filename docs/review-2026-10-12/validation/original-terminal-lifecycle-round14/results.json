@@ -1,0 +1,35 @@
+{
+  "snapshot": "a66f4ef291f304ee4df9da8095a90671d9a8f140",
+  "finding": "TL1 restored Terminal tab close/reopen reuses live old PTY after ordinary reload",
+  "priority": "P3",
+  "tests": 6,
+  "assertions": 41,
+  "fail": 0,
+  "skip": 0,
+  "rootElectronIdentitySupplement": {
+    "rendererPid": "71825",
+    "windowToken": "71825",
+    "webContentsId": 1,
+    "sameOwnerObject": [
+      true,
+      true,
+      true
+    ],
+    "reloadCount": 2,
+    "workerCreated": false,
+    "terminalOpened": false,
+    "actualPtyStarted": false
+  },
+  "actualPtyExecuted": false,
+  "recovery": "another close/reopen creates distinct key, second adapter spawn, no old scrollback",
+  "fullNativeTerminalFlowExecuted": false,
+  "linksChecked": 44,
+  "linkFailures": [],
+  "notificationAudit": {
+    "recommend": "P3 retain",
+    "readOnly": true,
+    "existingTests": 3,
+    "existingAssertions": 19,
+    "newTests": 0
+  }
+}

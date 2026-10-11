@@ -1,0 +1,38 @@
+bun test v1.3.11 (af24e281)
+
+../../../../../../private/tmp/codeshell-review-20261012-terminal-lifecycle-round14/terminal-lifecycle.test.tsx:
+44 | function nodes(node: any): any[] { return [node, ...Array.from(node?.childNodes ?? []).flatMap(nodes)]; }
+45 | function props(node: any) { const key = Object.keys(node).find(k => k.startsWith("__reactProps$")); return key ? node[key] : {}; }
+46 | const settle = async () => { await flushMicrotasks(); await new Promise(r => setTimeout(r, 0)); await flushMicrotasks(); };
+47 | async function until(check: () => boolean) {
+48 |   const end = Date.now() + 4000;
+49 |   while (!check()) { if (Date.now() > end) throw new Error("terminal lifecycle did not settle"); await act(settle); }
+                                                          ^
+error: terminal lifecycle did not settle
+      at until (/private/tmp/codeshell-review-20261012-terminal-lifecycle-round14/terminal-lifecycle.test.tsx:49:54)
+      at async <anonymous> (/private/tmp/codeshell-review-20261012-terminal-lifecycle-round14/terminal-lifecycle.test.tsx:125:27)
+(fail) normal close/reopen allocates a new tab identity; late old data/exit does not touch the new terminal [4234.01ms]
+134 |   const f = await fixture(); await f.mount(<TerminalPanel cwd={temporary} sessionId="term:project::session:terminal-1" />); await until(() => f.fakes.length === 1);
+135 |   await act(async () => { f.fakes[0].data("retained scrollback"); await settle(); });
+136 |   await f.mount(null); expect(f.listeners.get("pty:data")?.size).toBe(0); expect(f.listeners.get("pty:exit")?.size).toBe(0);
+137 |   expect(f.fakes[0].kills).toBe(0);
+138 |   await f.mount(<TerminalPanel cwd={temporary} sessionId="term:project::session:terminal-1" />); await until(() => f.requests.length === 2);
+139 |   expect(f.fakes).toHaveLength(1); expect(terminals.at(-1)!.output).toContain("retained scrollback");
+                                                                          ^
+error: expect(received).toContain(expected)
+
+Expected to contain: "retained scrollback"
+Received: ""
+
+      at <anonymous> (/private/tmp/codeshell-review-20261012-terminal-lifecycle-round14/terminal-lifecycle.test.tsx:139:69)
+(fail) same tab remount reattaches only its owner and replays scrollback without another spawn [144.53ms]
+(pass) late first start after tab closure cannot resize disposed xterm or replace the new tab [107.38ms]
+(pass) structured spawn refusal is visible; closing and reopening retries with a new tab successfully [105.51ms]
+(pass) Main path rejection is visible and removes no owner; a fresh valid tab can recover [95.38ms]
+(pass) natural exit is visible and new tab recovers; reaping only destroyed owners and quit cleans survivors [98.41ms]
+
+ 4 pass
+ 2 fail
+ 29 expect() calls
+Ran 6 tests across 1 file. [6.32s]
+Bun test process failed (1)

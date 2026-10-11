@@ -9,14 +9,14 @@
 证据目录：`/tmp/codeshell-review-20261012`。
 持续调度：heartbeat `codeshell-10-12-11`，每小时整点与半点；截止后交付报告并停用。01:34 已将原 00:52 锚点改为整点/半点，覆盖 11:00 截止时刻。
 
-## 当前状态（新加坡 03:20）
+## 当前状态（新加坡 03:51）
 
 - 截止前不要标 complete。到 11:00 停止新增审查、收束证据、交付最终报告，停用 heartbeat，再完成目标。01:22 的 get_goal 返回 blocked（本轮主代理未请求该变更）；实际仍在推进，没有需要用户解除的阻塞，按用户 heartbeat 继续审查。工具没有 active 状态参数，不要伪造恢复调用；截止交付后再设 complete。
 - 已读 CODESHELL.md，已 fetch origin 并创建独立工作区。产品代码无改动，只有本报告目录。01:30 origin/main 更新至 a66f4ef291f304ee4df9da8095a90671d9a8f140（0.9.33），新增 Panel stable project scope 和跨文件 collection query。另建 /Users/admin/.codex/worktrees/review-latest-20261012/codeshell，分支 codex/review/latest-20261012；冻结安装、全工作区及 Desktop 构建、类型检查、差异测试和既有发现复查均完成。旧工作区与证据不切换基线。
 - 已完成 frozen install、全工作区 build、typecheck:workspaces、Desktop build。
 - Server/Web 141 文件 / 1428 测试、Desktop renderer 282 文件 / 2397 测试、Desktop main 283 文件 / 2461 测试全部通过，合计706文件6286测试0失败0跳过。
 - 真实 Electron navigation/settings/workspace-pages/model-settings/digital-humans/panel-recovery-ui 全部通过；native output-journal 与 mobile-output-journal smoke 也通过。日志已保存 validation/。
-- 正式报告目前 R01–R62：1 P1、44 P2、17 P3。R35/D13 为重复Enter创建工作区时 unsafe rollback 删除成功请求worktree/分支/未提交文件，独立质量复查认可P1。R36是worker.stdin异步EPIPE导致NodeHost退出。
+- 正式报告目前 R01–R65：1 P1、44 P2、20 P3。R35/D13 为重复Enter创建工作区时 unsafe rollback 删除成功请求worktree/分支/未提交文件，独立质量复查认可P1。R36是worker.stdin异步EPIPE导致NodeHost退出。
 - 第一至四轮已收束；便携证据29个文件55个测试全部最终通过，含缺陷表征与用于排除误报的正常契约。原始 /tmp 证据已复制并修正相对导入/子进程入口，别把原始带绝对路径的脚本覆盖回去。
 - quality-audit.md 已对D13/D1/R21/W11独立复核；主结论成立。已收窄D1普通send传输失败措辞、R21原生HubWeb范围。文件历史恢复误拦截按P3列R39（记录保留且额外确认可完成），原代理建议P2已在归档附录标明重新分级。
 - 第五轮已收束：Web 2P2、Credentials 1P2+1P3、Automation 4P2+1P3；便携复制后三个Bun文件16测试通过，实际Electron凭据4场景通过。该轮后共32个便携Bun文件71测试，凭据native脚本另计；第六轮后的新总数见下一条。review_quality_audit 已独立确认第五轮九项因果与分级，保留7P2+2P3，见quality-round5.md；R45仅网关/生命周期通知，不泛指OS成功通知。
@@ -30,7 +30,7 @@
 - `/tmp/codeshell-review-20261012/` 为 root 原始日志。原始各代理证据位于同前缀的 `-desktop`、`-web-flow`、`-server-*`、`-desktop-round2`、`-web-round2`、`-runtime-round3` 等目录。
 - 原 native Hub smoke 的模型 fixture 直接调用尚未加载的 Write，先超时；临时适配 ToolSearch 后暴露 R21。真实 worker 首次 run 发生于 session 创建之前，baseline=0；journal legacy base 已生成后 snapshot 再裁空，production chatFromOutputJournal 拒绝恢复。
 - `hub-smoke-remaining.mjs` 显式排除已复现 R21 后，其余 approval/cancel/export/archive/restart/history resume 已通过。不能写“原 smoke 全部通过”。
-- 便携脚本第一至七轮已在本目录重跑成功；当前58文件186测试汇总 validation/reproduction-results.json。新增脚本复制后单独重跑，不必每次重跑已验证全部脚本。
+- 便携脚本第一至七轮已在本目录重跑成功；当前62文件199测试汇总 validation/reproduction-results.json。新增脚本复制后单独重跑，不必每次重跑已验证全部脚本。
 - 报告数量和测试数量及时依据收束的脚本更新；条件性失败与实际可恢复方式必须说明。
 
 ## 后续
@@ -68,3 +68,15 @@
 本轮三个agent已收束，第十四轮待下一heartbeat继续，可优先检查尚未覆盖的终端tab关闭/窗口owner、文件路由正常权限/错误反馈、系统通知点击导航与异常恢复，严格不启动真实模型/账号。最新origin核对仍02:57 a66f；下一次03:45–04:00再fetch。两个冻结快照保持不变，不clean/build；本轮最终只读语义复核无实质错误，统计与五项证据/恢复边界一致；仅本任务docs进入checkpoint。
 
 03:22 第十三轮最终独立语义检查通过，无新增执行计数。catalog便携evidence目录改用fileURLToPath以支持含空格路径，两个快照各单独再过3测试24断言，不重复累加。归档一份原始log去掉末尾空白行满足staged diff --check，/tmp原件未改。下一heartbeat继续实质审查，当前距11:00仍约7小时38分，保持调度ACTIVE，不提前交付最终或complete。
+
+03:51 第十四轮主审已收束并等待最终只读语义核验：新增R63/N1/P3普通通知限流等待持有串行队列，urgent停止通知后到仍等待；R64/TL1/P3 reload恢复后先关闭tab再新建可复用旧壳，额外close/reopen恢复；R65/W25/P3目录真实EACCES被吞为空树，修权限后刷新恢复。R58扩展合法managed worktree普通PNG预览，Session文本正常，显式single-file预览可恢复；与原终端同根因不另计。当前正式65=1P1/44P2/20P3。
+
+本轮4个新通用便携文件13测试130断言，84740/a66f分别guarded通过；累计62文件199测试，metadata与完成日志逐项匹配，新功能仍3文件8测试，凭据native4场景另计。真实Electron reload身份在a66f/macOS独立1场景、两次reload通过：token/PID71825、WebContents ID1、真实owner对象===保持；无renderer错误/worker/真实PTY，owned Electron退出0、临时HOME清理。与实际PanelArea/TerminalPanel/Main AST/preload/pty-service+native adapter替身组合证明R64条件可达，不宣称完整原生终端或Windows复现。前两次parent harness launch失败日志单列，不冒充产品失败。
+
+通知独立审计保留P3，生产Main headless Engine最多6个background Agent可从同进程bus到Main route，避免错误借用worker bus；完整模型源头/scheduler/OS show仅静态或替身，只有注入时钟前进10秒，不声称实际墙钟等待或全局延迟上限。原“同key kill/restart迟到回调”没有renderer入口，继续排除。Web Files真实本地HTTP权限、文件移动、重试和迟到结果正常。03:43再次fetch，origin/main仍a66f4ef2；下次04:30–04:40核对。
+
+03:51报告机械核验65编号连续唯一，369顶层Markdown本地链接、222有效源码行号，62/199两份metadata与完成日志一致，两个产品tracked diff为空。报告/证据仅本任务docs。保持heartbeat ACTIVE至11:00，不提前complete；本轮结束后继续第十五轮，可优先检查服务端WebSocket/配对资源关闭、CLI退出/重新连接恢复与现有问题反证，不启动真实模型/账号，不clean/build或触碰其他任务更改。
+
+03:54第十四轮两份独立质量复核及最终整合语义核验完成，无未解决实质问题。补清R58必须切回main后显式原worktree单文件预览的恢复前提，修正文档命令路径和原始脚本/便携cwd叙述，产品未改。归档Electron log去掉1处行尾空白满足staged diff --check；latest原始log保留，测试/receipt内容未改。03:53 get_goal仍返回blocked（本轮未请求、无实际工作阻塞），按用户heartbeat继续；03:52 automation工具view及TOML只读确认ACTIVE、整点半点。后续保持11:00交付后才complete和停用。
+
+03:54第十四轮docs-only检查点已保存，主报告与全部便携/原始证据可从本分支恢复；staged diff --check通过，两个产品快照不改。本轮各agent收束，下一heartbeat继续第十五轮。

@@ -155,6 +155,24 @@
     "skipped": 0
   },
   {
+    "file": "docs/review-2026-10-12/reproductions/file-navigation-round14/desktop-files.test.tsx",
+    "log": "docs/review-2026-10-12/reproductions/file-navigation-round14/desktop-files.test.tsx.log",
+    "code": 0,
+    "signal": null,
+    "tests": 3,
+    "skipped": 0,
+    "archiveLog": "validation/latest-a66f4ef2/repro__file-navigation-round14__desktop-files.test.tsx.log"
+  },
+  {
+    "file": "docs/review-2026-10-12/reproductions/file-navigation-round14/hub-files-recovery.test.tsx",
+    "log": "docs/review-2026-10-12/reproductions/file-navigation-round14/hub-files-recovery.test.tsx.log",
+    "code": 0,
+    "signal": null,
+    "tests": 1,
+    "skipped": 0,
+    "archiveLog": "validation/latest-a66f4ef2/repro__file-navigation-round14__hub-files-recovery.test.tsx.log"
+  },
+  {
     "file": "docs/review-2026-10-12/reproductions/files-round4/archived-open.test.ts",
     "log": "docs/review-2026-10-12/reproductions/files-round4/archived-open.test.ts.log",
     "code": 0,
@@ -189,6 +207,15 @@
     "tests": 3,
     "skipped": 0,
     "archiveLog": "validation/latest-a66f4ef2/repro__multiwindow-round13__catalog-window-selection.test.tsx.log"
+  },
+  {
+    "file": "docs/review-2026-10-12/reproductions/notification-round14/notification-queue.test.ts",
+    "log": "docs/review-2026-10-12/reproductions/notification-round14/notification-queue.test.ts.log",
+    "code": 0,
+    "signal": null,
+    "tests": 3,
+    "skipped": 0,
+    "archiveLog": "validation/latest-a66f4ef2/repro__notification-round14__notification-queue.test.ts.log"
   },
   {
     "file": "docs/review-2026-10-12/reproductions/plugins-round7/plugins-lifecycle.test.tsx",
@@ -387,6 +414,15 @@
     "tests": 4,
     "skipped": 0,
     "archiveLog": "validation/latest-a66f4ef2/repro__session-actions-round13__session-delete-recovery.test.tsx.log"
+  },
+  {
+    "file": "docs/review-2026-10-12/reproductions/terminal-lifecycle-round14/terminal-lifecycle.test.tsx",
+    "log": "docs/review-2026-10-12/reproductions/terminal-lifecycle-round14/terminal-lifecycle.test.tsx.log",
+    "code": 0,
+    "signal": null,
+    "tests": 6,
+    "skipped": 0,
+    "archiveLog": "validation/latest-a66f4ef2/repro__terminal-lifecycle-round14__terminal-lifecycle.test.tsx.log"
   },
   {
     "file": "docs/review-2026-10-12/reproductions/terminal-review-round13/review-first-commit.test.tsx",

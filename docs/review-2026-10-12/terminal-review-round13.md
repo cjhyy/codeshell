@@ -37,3 +37,7 @@
 两基线分别通过后的完成日志位于 `reproductions/terminal-review-round13/*.test.tsx.log` 与 `validation/latest-a66f4ef2/repro__terminal-review-round13__*.log`。相关生产文件在两基线 diff 为空；已运行两次的证据与源码相同是分开确认的事实。
 
 开发中修正了三个 fixture 适配：await 异步 store.list、补 Electron shell 导出、使用 MiniDOM 的 nodeValue/textContent 读取文本。没有修改产品使测试通过；正式数量只计最终 guarded 完成记录。两项均经独立只读因果与范围复核，不额外计测试。
+
+## 第十四轮 R58 同根因扩展
+
+合法 managed worktree 的目录与文本经 Session authority 正常读取，但普通 PNG 预览仍传 `{cwd:root}`，在 Main 图片 handler 被相同注册根门禁拒绝。两基线真实 FilesPanel/Main AST/文件服务证据及 primary、secondary、显式单文件恢复见[文件导航第十四轮](file-navigation-round14.md)。这是 R58 的另一个内置面板表现，不另加发现；不能通过放宽任意目录校验修复。
