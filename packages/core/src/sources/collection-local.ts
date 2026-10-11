@@ -9,13 +9,24 @@ import {
   readSync,
   realpathSync,
 } from "node:fs";
-import { basename, resolve } from "node:path";
+import { basename, dirname, resolve } from "node:path";
 import { CollectionLocalEntrySchema, type LocalCollectionEntry } from "./collection.js";
 import { MAX_DOCUMENT_BYTES } from "./documents/types.js";
 
 export interface CollectionReadOptions {
   signal?: AbortSignal;
   assertAuthorized?: () => void;
+}
+
+/** Metadata-only parent identity; a same-byte replacement must not reuse a receipt. */
+export function collectionLocalDirectoryIdentity(entry: LocalCollectionEntry): string {
+  const parent = dirname(entry.path);
+  if (realpathSync(parent) !== parent)
+    throw new Error("Collection file directory changed; update the collection");
+  const info = lstatSync(parent, { bigint: true });
+  if (!info.isDirectory() || info.isSymbolicLink())
+    throw new Error("Collection file directory is no longer a regular directory");
+  return JSON.stringify([parent, info.dev.toString(), info.ino.toString()]);
 }
 
 function assertAllowed(options: CollectionReadOptions): void {
@@ -27,6 +38,7 @@ function snapshot(
   path: string,
   options: CollectionReadOptions,
   expected?: Pick<LocalCollectionEntry, "dev" | "ino" | "sizeBytes" | "mtimeMs">,
+  reserveInputBytes?: (bytes: number) => void,
 ) {
   assertAllowed(options);
   if (realpathSync(path) !== path)
@@ -65,6 +77,7 @@ function snapshot(
       opened.ctimeNs !== before.ctimeNs
     )
       throw new Error("Collection file changed before reading; update the collection");
+    reserveInputBytes?.(Number(opened.size));
     const bytes = Buffer.alloc(Number(opened.size) + 1);
     let length = 0;
     while (length < bytes.length) {
@@ -140,10 +153,10 @@ export function captureCollectionLocalFile(
 /** Every read validates the selected version, including reads satisfied by a parsed cache. */
 export function readCollectionLocalFile(
   entry: LocalCollectionEntry,
-  options: CollectionReadOptions = {},
+  options: CollectionReadOptions & { reserveInputBytes?: (bytes: number) => void } = {},
 ): Uint8Array {
   const expected = CollectionLocalEntrySchema.parse(entry);
-  const current = snapshot(expected.path, options, expected);
+  const current = snapshot(expected.path, options, expected, options.reserveInputBytes);
   if (
     current.dev !== expected.dev ||
     current.ino !== expected.ino ||
