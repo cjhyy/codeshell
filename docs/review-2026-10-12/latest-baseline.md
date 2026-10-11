@@ -51,3 +51,5 @@
 第十八轮上下文取消/模型偏好/Hub续接三项P3，新增通用3文件8测试165个Bun expect，两冻结快照分别guarded通过，当前通用79文件236测试。作者latest-only记录与root双基线收据各自保存，不把源码相同替代执行。三份独立质量审计新增执行0；无真实模型/worker/Electron或新native/helper计数。
 
 05:50再次fetch，origin/main仍a66f4ef2，两个冻结快照不切换；第十八轮三份portable源码两快照SHA256完全相同，见validation/round18-portable-source-sha256.json。
+
+第十九轮R77/P2原生文件锁权限恢复：84740/a66f各一次maintained Node isolator/38 Node assert/Completed，正式首因是HubAuth认证锁data/hub.lock EACCES，不是title store。fresh /health分别约30.02/30.03秒，权限修复后重试及真实短跨进程争用正常。Node25.8.1/darwin arm64边界，不泛化只读盘/其他系统；通用Bun仍79文件236测试，native独立列账，见[file-mutex](file-mutex-round19.md)。

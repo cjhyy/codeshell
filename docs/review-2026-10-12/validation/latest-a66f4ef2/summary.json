@@ -24,5 +24,9 @@
   "round17BunExpects": 77,
   "round17HelperNote": "4 new files / 7 tests / 77 Bun expects per baseline; owned Bun Desktop helper has 91 manual assertions inside one wrapper; no additional native tests; context actual Engine/owned in-memory LLMClientBase; Hub actual authenticated HTTP/WS + controlled memory worker; Core configure fake engine/runtime; no real model/worker/Electron in round17",
   "round18BunExpects": 165,
-  "round18Note": "3 new files / 8 tests / 165 Bun expects per baseline; no new native/helper assertion counts. Context actual Engine/owned in-memory LLMClientBase and mocked Electron IPC; model actual components/shared MemoryStorage, no Core run; Hub authenticated HTTP/WS+actual Core/ChatManager with fake Engine and memory worker bridge; no actual worker/Electron/provider."
+  "round18Note": "3 new files / 8 tests / 165 Bun expects per baseline; no new native/helper assertion counts. Context actual Engine/owned in-memory LLMClientBase and mocked Electron IPC; model actual components/shared MemoryStorage, no Core run; Hub authenticated HTTP/WS+actual Core/ChatManager with fake Engine and memory worker bridge; no actual worker/Electron/provider.",
+  "round19NativeAssertions": 38,
+  "round19BunFilesAdded": 0,
+  "round19BunTestsAdded": 0,
+  "round19Note": "Standalone maintained native Node isolator, 38 manual Node assertions per baseline, actual HubAuth lock EACCES blocks event loop for real 30 seconds; no worker/model/CLI; Node25.8.1/darwin arm64; Connection:close fresh HTTP caller; not Bun expects/tests"
 }

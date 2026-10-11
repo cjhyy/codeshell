@@ -1,0 +1,62 @@
+{
+  "node": "v25.8.1",
+  "platform": "darwin",
+  "arch": "arm64",
+  "uid": 501,
+  "assertions": 10,
+  "exactOrigin": "http://127.0.0.1:56051",
+  "ownedIsolatedHome": true,
+  "nativeHeadlessHost": true,
+  "actualHubAuth": true,
+  "workerCreated": false,
+  "closedNormally": false,
+  "failure": {
+    "name": "TypeError",
+    "message": "fetch failed",
+    "stack": "TypeError: fetch failed"
+  },
+  "childReceipts": [
+    {
+      "kind": "host",
+      "pid": 52010,
+      "exitCode": 0,
+      "signal": null
+    }
+  ],
+  "observations": [],
+  "events": [
+    {
+      "child": "host",
+      "receivedAt": 1791756025984,
+      "event": "ready",
+      "url": "http://127.0.0.1:56051",
+      "sessionId": "owned-title-session"
+    },
+    {
+      "child": "host",
+      "receivedAt": 1791756026074,
+      "event": "stats",
+      "id": 1,
+      "ticks": 4,
+      "maxGapMs": 24.581332999999972,
+      "lockErrors": {},
+      "firstErrors": {},
+      "workerCreated": false,
+      "workerGeneration": 0
+    },
+    {
+      "child": "host",
+      "receivedAt": 1791756026082,
+      "event": "lock-error",
+      "code": "EACCES",
+      "path": "/private/var/folders/1d/6__4f4y51g90nblfptt8s9v80000gn/T/codeshell-native-smoke-0ED6yJ/home/owned-file-mutex-0APbJR/data/hub.lock",
+      "at": 1791756026081
+    },
+    {
+      "child": "host",
+      "receivedAt": 1791756056094,
+      "event": "stopped",
+      "workerCreated": false
+    }
+  ]
+}

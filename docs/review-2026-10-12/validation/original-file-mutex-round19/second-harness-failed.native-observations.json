@@ -1,0 +1,54 @@
+{
+  "node": "v25.8.1",
+  "platform": "darwin",
+  "arch": "arm64",
+  "uid": 501,
+  "assertions": 8,
+  "exactOrigin": "http://127.0.0.1:54779",
+  "ownedIsolatedHome": true,
+  "nativeHeadlessHost": true,
+  "actualHubAuth": true,
+  "workerCreated": false,
+  "closedNormally": false,
+  "failure": {
+    "name": "Error",
+    "message": "Timed out: actual mkdir EACCES receipt",
+    "stack": "Error: Timed out: actual mkdir EACCES receipt\n    at until (file:///private/tmp/codeshell-review-20261012-file-mutex-round19/file-mutex-host.mjs:138:61)\n    at async file:///private/tmp/codeshell-review-20261012-file-mutex-round19/file-mutex-host.mjs:192:5"
+  },
+  "childReceipts": [
+    {
+      "kind": "host",
+      "pid": 49860,
+      "exitCode": 0,
+      "signal": null
+    }
+  ],
+  "observations": [],
+  "events": [
+    {
+      "child": "host",
+      "receivedAt": 1791755822967,
+      "event": "ready",
+      "url": "http://127.0.0.1:54779",
+      "sessionId": "owned-title-session"
+    },
+    {
+      "child": "host",
+      "receivedAt": 1791755823062,
+      "event": "stats",
+      "id": 1,
+      "ticks": 4,
+      "maxGapMs": 24.866500000000087,
+      "lockErrors": {},
+      "firstErrors": {},
+      "workerCreated": false,
+      "workerGeneration": 0
+    },
+    {
+      "child": "host",
+      "receivedAt": 1791755829118,
+      "event": "stopped",
+      "workerCreated": false
+    }
+  ]
+}

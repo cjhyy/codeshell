@@ -1,6 +1,6 @@
 # 用户流程覆盖与修复顺序
 
-这是截至第十八轮的流程地图；正式编号、级别和触发条件以 [主报告](README.md) 与各附录为准。正常路径通过不代表相邻失败路径已正确处理。缺陷表征测试通过表示复现成立，没有实施产品修复。
+这是截至第十九轮的流程地图；正式编号、级别和触发条件以 [主报告](README.md) 与各附录为准。正常路径通过不代表相邻失败路径已正确处理。缺陷表征测试通过表示复现成立，没有实施产品修复。
 
 | 用户要完成的事 | 已检查的正常路径及证据层级 | 仍有的问题与可见影响 |
 | --- | --- | --- |
@@ -35,3 +35,5 @@
 第十七轮另补[上下文打包失败/取消/迟到控制](context-recovery-round17.md)：实际MessageStream/Core/Engine/磁盘+owned内存provider，四正常控制无新增；完整App注册和Desktop Stop未动态验证。[R35/R36严重问题反证](high-risk-quality-round17.md)保留原分级，无新增执行，不泛化平台或恢复。当前正式73=1P1/49P2/23P3，便携76文件228测试分别在两基线通过。
 
 第十八轮[上下文取消](context-cancel-round18.md)新增R74/P3：summary期间composer隐藏且退出禁用，没有正常用户cancel；30秒RPC超时只恢复UI，实际Core仍运行。服务级cancel/正常完成正常；迟到target发现仅源码，不称历史丢失。[模型偏好](model-switch-round18.md)与[Hub续接归档](hub-session-operations-round18.md)新增R75/R76各P3。当前正式76=1P1/49P2/26P3，便携79文件236测试分别在两基线通过；本轮无真实模型/完整Electron/worker。
+
+第十九轮[原生认证锁权限恢复](file-mutex-round19.md)新增R77/P2：正常已初始化Hub的dataDir（hub的parent）失去写权限而hub仍可读/可chmod，真实EACCES在认证锁发生，Core无差别同步重试阻塞同process /health与timer约30秒。两基线各standalone38 Node assert，修权限后同稿API重试和真实跨进程短争用正常。正式77=1P1/50P2/26P3，common Bun仍79文件236测试；不称titlehandler已抵达、所有只读存储都会阻塞、永久死锁/数据丢失或完整UI/其他平台实测。

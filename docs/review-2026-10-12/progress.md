@@ -9,17 +9,17 @@
 证据目录：`/tmp/codeshell-review-20261012`。
 持续调度：heartbeat `codeshell-10-12-11`，每小时整点与半点；截止后交付报告并停用。01:34 已将原 00:52 锚点改为整点/半点，覆盖 11:00 截止时刻。
 
-## 当前状态（新加坡 05:50）
+## 当前状态（新加坡 06:06）
 
 - 截止11:00前继续实质审查，不提前complete或停用heartbeat。05:49 get_goal仍返回blocked（主审未请求、实际工作无阻塞），工具不能设active；按用户授权继续，截止交付后才complete。
 - 初始产品84740d56与最新a66f4ef2分别冻结在本聊天两个独立工作区；只写本任务docs，不改产品、不build/clean、不触碰原工作区/其他任务。最新已冻结install、全workspace/Desktop build、typecheck:workspaces及变更文件测试通过。
-- 正式R01–R76：1P1/49P2/26P3。R35/D13真实Git失败回滚可删除成功worktree/branch及特定时窗未提交文件，保留P1；R36真实Node25/darwin stdin EPIPE退出保留P2，平台边界不扩大。
+- 正式R01–R77：1P1/50P2/26P3。R35/D13真实Git失败回滚可删除成功worktree/branch及特定时窗未提交文件，保留P1；R36真实Node25/darwin stdin EPIPE退出保留P2，平台边界不扩大。
 - 第十八轮新增R74/P3上下文摘要没有可用用户cancel且RPC超时不取消Core；R75/P3多窗口旧偏好整图覆盖另一已存模型选择；R76/P3异步回答续接实际Core busy而Hub仍判idle，允许归档隐藏当前历史行。分别有独立审计，正常与恢复控制均保留，最终只读整合审计已通过。
-- 通用便携79文件236测试，84740/a66f分别guarded通过，最终0fail/skip；本轮新3文件8测试165个Bun expect。旧native/helper断言仍独立列，无本轮新native/helper计数。最新功能专项另3文件8测试，实际Electron凭据另4场景，不重复加到通用数。
+- 通用便携79文件236测试，84740/a66f分别guarded通过，最终0fail/skip；第十八轮新3文件8测试165个Bun expect，该轮无新native/helper计数；第十九轮standalone native各38 Node assert另列、Bun增量0。旧native/helper断言仍独立列。最新功能专项另3文件8测试，实际Electron凭据另4场景，不重复加到通用数。
 - 原有Server/Web141/1428、Desktop renderer282/2397、Desktop main283/2461合计706文件6286测试全过；实际Electron navigation/settings/workspace-pages/model-settings/digital-humans/panel-recovery-ui与native output-journal/mobile-output-journal记录保留，不随新轮重复执行计数。native Hub初始smoke未通过，另见下方限制。
 - 新脚本在reproductions/，元数据在validation/reproduction-results.json及validation/latest-a66f4ef2/reproduction-results.json。所有开发失败/替身边界归档，PASS为缺陷表征成立，并非产品修复。
-- 第十九轮native file-mutex/EACCES权限拒绝恢复调查刚开始，材料仅/tmp，不计正式数量。不得以第十八轮Bun30秒诊断直接声称真实Node Host阻塞。
-- heartbeat05:49工具view及TOML确认ACTIVE/每小时整点半点。最近checkpoint47cebcf4（第十七轮）；本轮报告尚待最终语义核验及docs-only提交。持续至11:00，不发布、不联系他人、不调用真实付费模型/账号/CLI。
+- 第十九轮native file-mutex/EACCES已收束为R77/P2，真实发生点在HubAuth认证锁，不是titlehandler；两冻结基线各38 Node assert/Completed，Bun增量0，四份早期失败诊断单列。最终整合语义检查已通过。
+- heartbeat05:49工具view及TOML确认ACTIVE/每小时整点半点。最近checkpoint4e7672fd（第十八轮，58文件docs-only）；第十九轮最终语义核验已通过，docs-only检查点包含本文件最终记录，精确HEAD见git log。持续至11:00，不发布、不联系他人、不调用真实付费模型/账号/CLI。
 
 ## 关键证据与注意事项
 
@@ -114,3 +114,9 @@ Link实际组件/controller/native manager/server service/store在取消startup�
 05:51 staged diff检查发现6份本任务归档harness log共8行行尾空白；只去除归档副本行尾空格以通过git检查，/tmp原始文件、错误内容及最终断言不动。
 
 05:52第十八轮最终只读整合审计通过，无实质矛盾，新增执行0；76项分级、79/236通用收据、恢复边界及851/563链接记录一致。已追加真实Engine marker field-level写入的静态反证，未冒称完整Engine动态flush。报告准备保存docs-only阶段检查点；第十九轮native file-mutex仍仅/tmp调查，不计本轮发现。heartbeat保持ACTIVE到11:00，不提前complete/停用。
+
+06:06第十九轮实质审查和独立质量复核完成：R77/FM19-1/P2为实际HubAuthStore authenticate acquireFileLock(data/hub/auth.json)先在data/hub.lock遇EACCES，file-mutex catch-all同步退避30秒，全Host事件循环/健康路由被拖住。dataDir0500而hub可读/遍历/可chmod700是明确前提；titlePATCH仅触发入口，titlehandler未抵达。最早诊断observer错实例/非canonical/忽略auth前置及ECONNRESET单列，未冒充产品native crash或额外发现。主审两基线native各38断言/Completed，health约30.02/30.03秒、Hosttimer gap30.03/30.04秒；修权限后ENV/同稿title200且<10ms、短争用约0.40/0.39秒成功。全部owned host/holder exit0、HOME/root已删除、无worker。正式77=1P1/50P2/26P3，Bun仍79/236，不增native wrapper/test；standalone结果另计。
+
+第十八轮检查点4e7672fd已保存，最终QC追加整合审计链接后为852个顶层本地Markdown链接/563源码行号、0error，产品不改。05:50fetch仍a66f，下次06:40–06:50；heartbeat保持ACTIVE至11:00，目标不能提前complete/调度不能提前停用。第十九轮待最终机械与整合语义核验后保存docs-only检查点。
+
+06:12第十九轮最终只读整合审计通过，新增执行0；修正当前状态中第18/19轮native计数歧义，收窄API前认证表述为未被公开/auth handler提前处理的业务API。正式R77/P2、77=1/50/26、Bun79/236不增、两native各38独立assert及恢复/清理无实质矛盾。所有文档/证据仅本任务docs。第20轮已委派automation_flow_review补核R75真实Electron共享存储边界，先评估maintained guard/隔离HOME/无worker可行性，只/tmp、不build/改产品；不先计新增发现/执行。下一heartbeat接续。05:50fetch仍a66f，下次06:40–06:50。11:00未到，heartbeat保持ACTIVE，目标不complete。

@@ -1,0 +1,22 @@
+[
+  {
+    "tree": "/Users/admin/.codex/worktrees/server-desktop-review-20261012/codeshell",
+    "ownedRootRemoved": true,
+    "isolatedRootRemoved": true,
+    "childPidsAbsent": [
+      53422,
+      53637
+    ],
+    "additionalTestCount": 0
+  },
+  {
+    "tree": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell",
+    "ownedRootRemoved": true,
+    "isolatedRootRemoved": true,
+    "childPidsAbsent": [
+      53421,
+      53636
+    ],
+    "additionalTestCount": 0
+  }
+]

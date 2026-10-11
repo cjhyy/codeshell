@@ -8,11 +8,11 @@
 
 ## 当前结论
 
-当前已收束 76 项问题：1 项 P1、49 项 P2、26 项 P3。优先处理审批状态、任务回执和会话身份；这些问题会让任务无法继续、重复执行，或把用户输入带到另一个会话。P1 表示有未提交文件丢失风险、应优先修复；P2 表示正常使用可触发、应安排修复；P3 表示影响较小或触发条件较窄、已有恢复入口的问题。尚未证实的候选不计入数量。
+当前已收束 77 项问题：1 项 P1、50 项 P2、26 项 P3。优先处理审批状态、任务回执和会话身份；这些问题会让任务无法继续、重复执行，或把用户输入带到另一个会话。P1 表示有未提交文件丢失风险、应优先修复；P2 表示正常使用可触发、应安排修复；P3 表示影响较小或触发条件较窄、已有恢复入口的问题。尚未证实的候选不计入数量。
 
 **最先修 R35：创建工作区时重复 Enter，失败请求的回滚可以删除另一个已成功请求的 worktree、分支和未提交文件。** 此项已由独立代理复查入口与真实 Git 时序，见 [独立质量复核](quality-audit.md)。第五轮九项也已[独立复核](quality-round5.md)，均保留，网关通知等条件已收窄。
 
-以下是持续审查的阶段记录，截止前还会补充。复现测试的“通过”表示已稳定观察到当前缺陷，并不表示缺陷已经修复。R01–R48 的原始分析针对初始基线，并已在 0.9.33 复查；R49 针对新快照；R50–R56 在两基线均存在并已分别复现；R57 关键源码两基线相同，原生实验仅在 0.9.33 执行。R58–R65 的便携证据在两基线分别复现并通过正常对照；R64 的真实 Electron reload 身份门禁仅在 a66f/macOS 补证，未运行真实 PTY。R66–R68 的便携证据也已在两基线分别通过；R68包含真实Node/ws慢读实验，每次最多24MiB输出，没有真实Main worker或OOM实验。R69/P2与R70/P3及第十六轮正常控制也已在两基线分别通过。R71/P3、R72/P2、R73/P2及第十七轮正常控制已在两基线分别guarded通过；本轮没有真实worker/模型或Electron实验。R74–R76/P3及第十八轮正常控制也在两基线分别guarded通过；实际Core/Engine范围与React/IPC/worker替身按附录区分，未启动真实模型。行号按各专项附录的基线解释。
+以下是持续审查的阶段记录，截止前还会补充。复现测试的“通过”表示已稳定观察到当前缺陷，并不表示缺陷已经修复。R01–R48 的原始分析针对初始基线，并已在 0.9.33 复查；R49 针对新快照；R50–R56 在两基线均存在并已分别复现；R57 关键源码两基线相同，原生实验仅在 0.9.33 执行。R58–R65 的便携证据在两基线分别复现并通过正常对照；R64 的真实 Electron reload 身份门禁仅在 a66f/macOS 补证，未运行真实 PTY。R66–R68 的便携证据也已在两基线分别通过；R68包含真实Node/ws慢读实验，每次最多24MiB输出，没有真实Main worker或OOM实验。R69/P2与R70/P3及第十六轮正常控制也已在两基线分别通过。R71/P3、R72/P2、R73/P2及第十七轮正常控制已在两基线分别guarded通过；本轮没有真实worker/模型或Electron实验。R74–R76/P3及第十八轮正常控制也在两基线分别guarded通过；实际Core/Engine范围与React/IPC/worker替身按附录区分，未启动真实模型。R77/P2用maintained Node isolator在两基线分别原生复现，各38个Node assert独立计数，不增加通用Bun测试。行号按各专项附录的基线解释。
 
 | 编号 | 级别 | 流程与实际影响                                                                        | 详细证据                                             |
 | ---- | ---- | ------------------------------------------------------------------------------------- | ---------------------------------------------------- |
@@ -92,6 +92,7 @@
 | R74 | P3 | 上下文摘要期间没有可用取消按钮，30秒RPC超时恢复UI却未取消后台摘要 | [上下文取消 C18-1](context-cancel-round18.md)，第十八轮；Core取消正常 |
 | R75 | P3 | 另一已打开项目窗口保存自己的会话模型，旧整图抹掉先前窗口已存偏好，重开回默认 | [模型偏好 M18-1](model-switch-round18.md)，第十八轮；重新选择可恢复 |
 | R76 | P3 | 异步答案已接受并触发续接运行，Hub误判空闲而允许归档、隐藏当前历史行 | [Hub会话 HS18-1](hub-session-operations-round18.md)，第十八轮；实际恢复API正常 |
+| R77 | P2 | Hub数据目录dataDir失去写权限，认证锁对EACCES同步重试约30秒，健康路由与Host定时器也被阻塞 | [原生文件锁 FM19-1](file-mutex-round19.md)，第十九轮；修权限后重试正常 |
 
 第一轮完整分析：[Desktop](desktop-round1.md)、[Server](server-round1.md)、[Web/配对端](web-round1.md)。后续专项分析会继续补充到本目录。已有结论还经[CLI 范围复核](cli-quality-round9.md)与[资源回收范围复核](resource-quality-round8.md)收窄恢复及平台条件。
 
@@ -226,6 +227,10 @@ R76实际Core async-answer enqueue产生续接turn，所有Core帧传给实际Ho
 
 第十八轮[最终只读整合审计](quality-round18.md)通过，无实质矛盾，新增执行0；三项P3、双基线收据、恢复和替身边界一致。
 
+第十九轮新增R77/P2：真实已初始化Hub的数据目录dataDir从0700变0500、hub子目录仍可读/遍历/可chmod700时，合法标题PATCH先在HubAuth认证锁的data/hub.lock发生EACCES；尚未进入title mutation。Core file-mutex对非争用错误也同步退避整个30秒预算，独立进程发起的fresh /health和Host20ms timer都约30秒不能调度。84740/a66f各原生38断言通过，健康请求分别30,021.92/30,028.49ms；修权限后ENV与同稿标题立即成功，真实跨进程短争用正常，所有owned子进程/目录清理。应分类立即拒绝非争用错误，保留认证及跨进程锁；不能故障时无锁写入。只验证Node25.8.1/darwin arm64、fresh Connection:close请求，不泛指所有只读磁盘、Electron/Linux/Windows、真实worker暂停或数据丢失。四份早期harness诊断单列，独立审计新增执行0；详见[原生报告](file-mutex-round19.md)与[独立核对](file-mutex-quality-round19.md)。
+
+第十九轮[最终只读整合审计](quality-round19.md)通过，新增执行0；认证首因、精确权限/客户端连接前提、恢复及native/Bun分账一致，两个措辞收窄已完成。
+
 ## 验证范围
 
 | 验证                            | 结果                                                                      | 证据                                                     |
@@ -273,6 +278,7 @@ R76实际Core async-answer enqueue产生续接turn，所有Core帧传给实际Ho
 | 第十六轮项目/设置/Link/MCP恢复 | 新通用4文件10测试104个Bun expect，两基线通过；Settings Bun helper另27手工断言、MCP Node另22断言，不额外算测试 | [项目](project-recovery-round16.md)、[设置](settings-recovery-round16.md)、[Link](link-recovery-round16.md)、[取消](command-recovery-round16.md) |
 | 第十七轮会话操作/Hub路由/上下文正常控制 | 新通用4文件7测试77个Bun expect，两基线通过；owned Bun helper另91手工assert，包含在wrapper内 | [会话](session-operations-round17.md)、[路由](server-routing-round17.md)、[上下文](context-recovery-round17.md) |
 | 第十八轮上下文取消/模型偏好/Hub续接 | 新通用3文件8测试165个Bun expect，两基线通过；本轮没有额外native/helper计数 | [上下文](context-cancel-round18.md)、[模型](model-switch-round18.md)、[Hub](hub-session-operations-round18.md) |
+| 第十九轮文件锁权限恢复 | 两冻结基线分别standalone原生38 Node assert/Completed，真实30秒；Bun增量0 | [原生脚本/结果](file-mutex-round19.md) |
 | Desktop renderer 现有逐文件测试 | 282 文件、2397 测试、0 失败                                               | `validation/desktop-renderer-results.json`               |
 | Desktop main 现有逐文件测试     | 283 文件、2461 测试、0 失败                                               | `validation/desktop-main-results.json`                   |
 | native Hub smoke                | 未通过，不计成功；先遇到过期工具 fixture，再暴露 R21                      | `/tmp/codeshell-review-20261012/hub-smoke*.log`          |
@@ -286,6 +292,6 @@ R76实际Core async-answer enqueue产生续接turn，所有Core帧传给实际Ho
 
 ## 后续检查
 
-0.9.33 的 Panel 项目身份与跨文件 Collection 查询差异、已有便携复现适用范围已核对。认证连接与 Agent Plugins 安装恢复已收束；Quick Chat 生命周期已收束；第十轮独立反证已完成审批、Web意图/配置/草稿和Desktop异步状态，详见 [Web复核](web-quality-round10.md)、[审批复核](approval-quality-round10.md)。第十一轮工作区/Panel反证新增0，搜索与导航新增2P3，下载生命周期新增1P2；第十二轮独立质量复核保留三个新发现的限定分级，文件传输/导入导出正常控制新增0。第十三轮新增1P2+4P3并已独立核对，新增6份证据两基线通过；第十四轮再补3P3与R58图片扩展，新增4文件13测试两基线通过；第十五轮再补CLI接管/设置状态/慢连接3项，第十六轮再补目录修复/自动保存2项并完成Link/MCP正常控制，第十七轮补会话操作/Hub回答3项及上下文正常控制，第十八轮补上下文取消/模型偏好/Hub续接三项P3，通用累计79文件236测试；继续检查新增主分支差异与尚未覆盖的失败恢复。已有 TODO 中明确后置的能力与尚未发行的修复单独核对，不将其重复列为新缺陷。
+0.9.33 的 Panel 项目身份与跨文件 Collection 查询差异、已有便携复现适用范围已核对。认证连接与 Agent Plugins 安装恢复已收束；Quick Chat 生命周期已收束；第十轮独立反证已完成审批、Web意图/配置/草稿和Desktop异步状态，详见 [Web复核](web-quality-round10.md)、[审批复核](approval-quality-round10.md)。第十一轮工作区/Panel反证新增0，搜索与导航新增2P3，下载生命周期新增1P2；第十二轮独立质量复核保留三个新发现的限定分级，文件传输/导入导出正常控制新增0。第十三轮新增1P2+4P3并已独立核对，新增6份证据两基线通过；第十四轮再补3P3与R58图片扩展，新增4文件13测试两基线通过；第十五轮再补CLI接管/设置状态/慢连接3项，第十六轮再补目录修复/自动保存2项并完成Link/MCP正常控制，第十七轮补会话操作/Hub回答3项及上下文正常控制，第十八轮补上下文取消/模型偏好/Hub续接三项P3，第十九轮补原生认证锁EACCES阻塞1项P2，通用仍79文件236测试、native各38断言独立列；继续检查新增主分支差异与尚未覆盖的失败恢复。已有 TODO 中明确后置的能力与尚未发行的修复单独核对，不将其重复列为新缺陷。
 
 未进行真实付费模型、真实第三方账号、生产数据迁移或发行部署。CLI 模型行为通过可控 fixture 与实际 Host 路由验证，无法据此声称所有真实提供方端到端流程均已通过。静态候选及测试 harness 自身问题单独记录，不冒充产品发现。
