@@ -2,17 +2,17 @@
 
 本次审查覆盖服务端、Electron 桌面端、配对 Web 与移动端的日常流程，重点检查消息发送、审批、取消、切换会话、恢复和项目上下文。问题只在有代码证据或可复现结果后列入正式发现。
 
-审查进行中，截止时间为新加坡时间 2026 年 10 月 12 日 11:00。初始审查基线为 `84740d56e55517b004948a0a0e07649ad6fbf998`，对应启动审查时的 `origin/main`。01:30 拉取发现主分支已更新至 `a66f4ef291f304ee4df9da8095a90671d9a8f140`（0.9.33）；已另建隔离快照复查差异，原始复现和行号仍按初始基线保存。76 个便携 Bun 复现文件共 228 测试，以及实际 Electron 凭据 4 场景，已在新快照复查成立；详见[0.9.33 差异复查](latest-baseline.md)。产品代码保持原样，报告保存在独立分支 `codex/review/server-desktop-20261012`。
+审查进行中，截止时间为新加坡时间 2026 年 10 月 12 日 11:00。初始审查基线为 `84740d56e55517b004948a0a0e07649ad6fbf998`，对应启动审查时的 `origin/main`。01:30 拉取发现主分支已更新至 `a66f4ef291f304ee4df9da8095a90671d9a8f140`（0.9.33）；已另建隔离快照复查差异，原始复现和行号仍按初始基线保存。79 个便携 Bun 复现文件共 236 测试，以及实际 Electron 凭据 4 场景，已在新快照复查成立；详见[0.9.33 差异复查](latest-baseline.md)。产品代码保持原样，报告保存在独立分支 `codex/review/server-desktop-20261012`。
 
 用户流程、正常对照与修复顺序见[流程覆盖地图](flow-coverage.md)。
 
 ## 当前结论
 
-当前已收束 73 项问题：1 项 P1、49 项 P2、23 项 P3。优先处理审批状态、任务回执和会话身份；这些问题会让任务无法继续、重复执行，或把用户输入带到另一个会话。P1 表示有未提交文件丢失风险、应优先修复；P2 表示正常使用可触发、应安排修复；P3 表示影响较小或触发条件较窄、已有恢复入口的问题。尚未证实的候选不计入数量。
+当前已收束 76 项问题：1 项 P1、49 项 P2、26 项 P3。优先处理审批状态、任务回执和会话身份；这些问题会让任务无法继续、重复执行，或把用户输入带到另一个会话。P1 表示有未提交文件丢失风险、应优先修复；P2 表示正常使用可触发、应安排修复；P3 表示影响较小或触发条件较窄、已有恢复入口的问题。尚未证实的候选不计入数量。
 
 **最先修 R35：创建工作区时重复 Enter，失败请求的回滚可以删除另一个已成功请求的 worktree、分支和未提交文件。** 此项已由独立代理复查入口与真实 Git 时序，见 [独立质量复核](quality-audit.md)。第五轮九项也已[独立复核](quality-round5.md)，均保留，网关通知等条件已收窄。
 
-以下是持续审查的阶段记录，截止前还会补充。复现测试的“通过”表示已稳定观察到当前缺陷，并不表示缺陷已经修复。R01–R48 的原始分析针对初始基线，并已在 0.9.33 复查；R49 针对新快照；R50–R56 在两基线均存在并已分别复现；R57 关键源码两基线相同，原生实验仅在 0.9.33 执行。R58–R65 的便携证据在两基线分别复现并通过正常对照；R64 的真实 Electron reload 身份门禁仅在 a66f/macOS 补证，未运行真实 PTY。R66–R68 的便携证据也已在两基线分别通过；R68包含真实Node/ws慢读实验，每次最多24MiB输出，没有真实Main worker或OOM实验。R69/P2与R70/P3及第十六轮正常控制也已在两基线分别通过。R71/P3、R72/P2、R73/P2及第十七轮正常控制已在两基线分别guarded通过；本轮没有真实worker/模型或Electron实验。行号按各专项附录的基线解释。
+以下是持续审查的阶段记录，截止前还会补充。复现测试的“通过”表示已稳定观察到当前缺陷，并不表示缺陷已经修复。R01–R48 的原始分析针对初始基线，并已在 0.9.33 复查；R49 针对新快照；R50–R56 在两基线均存在并已分别复现；R57 关键源码两基线相同，原生实验仅在 0.9.33 执行。R58–R65 的便携证据在两基线分别复现并通过正常对照；R64 的真实 Electron reload 身份门禁仅在 a66f/macOS 补证，未运行真实 PTY。R66–R68 的便携证据也已在两基线分别通过；R68包含真实Node/ws慢读实验，每次最多24MiB输出，没有真实Main worker或OOM实验。R69/P2与R70/P3及第十六轮正常控制也已在两基线分别通过。R71/P3、R72/P2、R73/P2及第十七轮正常控制已在两基线分别guarded通过；本轮没有真实worker/模型或Electron实验。R74–R76/P3及第十八轮正常控制也在两基线分别guarded通过；实际Core/Engine范围与React/IPC/worker替身按附录区分，未启动真实模型。行号按各专项附录的基线解释。
 
 | 编号 | 级别 | 流程与实际影响                                                                        | 详细证据                                             |
 | ---- | ---- | ------------------------------------------------------------------------------------- | ---------------------------------------------------- |
@@ -59,7 +59,7 @@
 | R41  | P2   | Hub 未确认送达的意图不计入刷新保护，实际未接受时刷新会丢掉唯一内存副本                | Web W16，第五轮；真实认证 Hub 补强                  |
 | R42  | P2   | 新增 Cookie 账号用名称生成 ID，默认名或中文名碰撞会覆盖旧账号及权限                   | Credentials C1，第五轮；实际 Electron/IPC/store     |
 | R43  | P3   | Token 保存遭遇真实存储拒写时没有可见错误，草稿保留但用户不知道失败原因                 | Credentials C2，第五轮                             |
-| R44  | P2   | 续接自动化超过 120 秒后提前结算，worker 仍执行时同一计划可以再次排入                   | Automation A1，第五轮；实际 ChatSession FIFO        |
+| R44  | P2   | 续接自动化超过 120 秒后提前结算，worker 仍执行时保留的非once计划可以再次排入                   | Automation A1，第五轮；实际 ChatSession FIFO        |
 | R45  | P2   | worker 明确拒绝续接运行，网关/生命周期仍宣告 completed                 | Automation A2，第五轮                              |
 | R46  | P2   | 自动化执行历史按名称/时间认领，遗漏真实实时记录并混入同项目其他任务的结果               | Automation A3，第五轮；合并身份关联根因             |
 | R47  | P2   | 任务异步自动停用后，当前自动化页面仍显示活跃和旧下次运行时间                           | Automation A4，第五轮                              |
@@ -89,6 +89,9 @@
 | R71 | P3 | 项目重命名拒写后仍显示新名称，无失败提示，普通同步后回旧名 | [会话操作 SO17-1](session-operations-round17.md)，第十七轮 |
 | R72 | P2 | 设置页取消归档只恢复桌面catalog，Core仍归档，随后可移除恢复行仍绑定的secondary root | [会话操作 SO17-2](session-operations-round17.md)，第十七轮；历史和物理目录保留 |
 | R73 | P2 | 配置保存窗口内回答idle异步问题，lease已提交却未派发，重试和重连无法恢复旧题 | [Hub路由 H17-1](server-routing-round17.md)，第十七轮；取消后重新提问可恢复 |
+| R74 | P3 | 上下文摘要期间没有可用取消按钮，30秒RPC超时恢复UI却未取消后台摘要 | [上下文取消 C18-1](context-cancel-round18.md)，第十八轮；Core取消正常 |
+| R75 | P3 | 另一已打开项目窗口保存自己的会话模型，旧整图抹掉先前窗口已存偏好，重开回默认 | [模型偏好 M18-1](model-switch-round18.md)，第十八轮；重新选择可恢复 |
+| R76 | P3 | 异步答案已接受并触发续接运行，Hub误判空闲而允许归档、隐藏当前历史行 | [Hub会话 HS18-1](hub-session-operations-round18.md)，第十八轮；实际恢复API正常 |
 
 第一轮完整分析：[Desktop](desktop-round1.md)、[Server](server-round1.md)、[Web/配对端](web-round1.md)。后续专项分析会继续补充到本目录。已有结论还经[CLI 范围复核](cli-quality-round9.md)与[资源回收范围复核](resource-quality-round8.md)收窄恢复及平台条件。
 
@@ -156,7 +159,7 @@ R34 需给每个上传绑定 AbortController 和 connectionGeneration。重连�
 
 R36 还需监听每个 worker stdin 的异步错误并结算相关请求。现有 ChildProcess error/exit 处理不能替代 Socket 的 error listener；真实 Node fixture 在 sendLine 返回 true 后因 EPIPE 退出 1。已验证请求大小低于生产 WS 上限；实际退出证据针对原生 Node Hub/serve，未验证 Electron 主进程的退出语义。
 
-R37 不能泛化为任意已保存会话误执行：已保存会话有 authority gate；已由本设备创建但尚未落盘的 freshNative 会话有合法例外，离线新建丢包后恰好仍指向旧 A。应拒绝离线新建或保留并重发同一个创建意图，在确认目标 B 前不能发送任务。R38 应把即时本地退出与有界的服务端撤销请求分开，HTTP 黑洞不能让本地退出悬住。
+R37 不能泛化为任意已保存会话误执行：已保存会话有 authority gate；已由本设备创建但尚未落盘的 freshNative 会话有合法例外，离线新建丢包后恰好仍指向旧 A。应拒绝离线新建或保留并重发同一个创建意图，在确认目标 B 前不能发送任务。第十八轮[独立反证](fresh-project-quality-round18.md)保留P2，明确正式按钮接线静态、实际controller/server/metadata动态、worker止于受控accepted，无真实文件副作用或越权。R38 应把即时本地退出与有界的服务端撤销请求分开，HTTP 黑洞不能让本地退出悬住。
 
 R39 的记录已经正确恢复，额外“放弃修改并离开”也能完成导航，因此按 P3 流程缺陷处理。应在成功提交且 busy 导航门禁真正结算后打开会话，保留对真实草稿和仍在提交操作的保护。
 
@@ -172,9 +175,9 @@ R42 的两条正常新增流程均通过真实 Electron、IPC 和 CredentialStor
 
 ### 自动化应按真实终态和任务 ID 呈现
 
-R44 的 120 秒是等待最终结果的整轮超时，收到 runAccepted 也不会解除；超时后 scheduler 清除同 job 运行保护，真实 ChatSession 仍 busy。第二次触发会 FIFO 排入同一提示，第一轮结束后再次执行。应区分 admission 与 completion，并在实际 worker 终态或明确取消前保留运行占用，不能只扩大超时。R45 是独立的即时失败：JSON-RPC error 被转换成普通 reason，最终映射 automation.completed；应保留失败语义。
+R44 的 120 秒是等待最终结果的整轮超时，收到 runAccepted 也不会解除；超时后 scheduler 清除同 job 运行保护，真实 ChatSession 仍 busy。仍存在的非once/周期任务第二次触发会 FIFO 排入同一提示，第一轮结束后再次执行；once任务结算会删除，不据此声称同id重复触发。应区分 admission 与 completion，并在实际 worker 终态或明确取消前保留运行占用，不能只扩大超时。R45 是独立的即时失败：JSON-RPC error 被转换成普通 reason，最终映射 automation.completed；应保留失败语义。
 
-R46 应以 cronJobId 关联实时及持久执行记录。日期标题完整相等会漏掉真实记录，同项目 24 小时回退又会认领其他任务；去重不等于确认归属。R47 需要让已打开的自动化详情订阅生命周期更新，R48 需要透传持久的 disabledReason，避免自动停用与手动暂停无法区分。底层调度器及 Hub 的相应保护已单独核对，没有把这些桌面展示问题泛化为整个自动化系统失效。
+R46 应消费现有cronJobId关联实时及持久执行记录；catalog已持久该字段，headless state还可带automation:job:hash的clientMessageId，详情未使用。当前轮clientMessageId会被后续人工run更新，仍需稳定job provenance。日期标题完整相等会漏掉真实记录，同项目 24 小时回退又会认领其他任务；去重不等于确认归属。R47 需要让已打开的自动化详情订阅生命周期更新，R48 需要透传持久的 disabledReason，避免自动停用与手动暂停无法区分。底层调度器及 Hub 的相应保护已单独核对，没有把这些桌面展示问题泛化为整个自动化系统失效。
 
 R49 中拒绝变更原件与整次查询不返回部分正文都是正确保护；缺陷仅是跨文件父结果吞掉已知、安全的更新指引。实际 Engine 流和下一轮消息都只收到通用错误，而单文件读取能明确建议更新资料集。建议提供错误分类与已选择文件的身份，避免一概回传任意子错误。正常 Desktop refresh 后同 ID 查询可恢复。
 
@@ -212,6 +215,16 @@ R73应在配置admission通过后再submit，或对明确未派发早退回滚le
 [上下文打包正常控制](context-recovery-round17.md)新增0：实际Engine配owned内存LLMClientBase证明失败保选择可重试、非法输入早拒、Core cancel无半目标、迟到target不激活；完整App注册和Desktop Stop接线未动态验证。[独立控制审计](context-recovery-quality-round17.md)与[严重问题反证](high-risk-quality-round17.md)新增执行0；后者保留R35/P1、R36/P2并限定真实Git/Node25/darwin证据，不扩到全平台。
 
 第十七轮[最终只读整合核验](quality-round17.md)通过；三项分级、去重、恢复、两基线统计和替身边界无实质冲突，新增执行0。
+
+第十八轮[自动化独立反证](automation-quality-round18.md)新增执行0、发现0，保留R44–R46/P2，收窄非once再排队、实际RPC error/已配置授权网关、已有强ID未消费的范围；不称所有provider错误或普通OS通知。
+
+第十八轮新增R74–R76三项P3，均经独立质量核对并在两冻结产品快照分别guarded复现。R74实际ChatView/MessageStream隐藏composer并禁退出，实际preload超时只丢pending、不发Core cancel；实际Engine配内存LLMClientBase证明迟到target仍可落盘，未证明历史丢失或永久锁死。应提供带operation/session身份的摘要取消入口，区分RPC超时和实际运行，避免迟到cancel取消新任务。见[上下文审计](context-cancel-quality-round18.md)。
+
+R75实际ModelPill与偏好hook在两个React roots/shared MemoryStorage复现旧整图覆盖；生产新窗口共享存储接线仅源码。当前A仍保留内存选择，重开A回默认；再次选择可恢复。修复按bucket的权威写入及跨窗同步，不能只靠无条件整图read-merge-write。没有实际模型误用/费用或权限绕过。见[模型审计](model-switch-quality-round18.md)。
+
+R76实际Core async-answer enqueue产生续接turn，所有Core帧传给实际Host，但Host只追外部agent/run请求寿命，历史running=false，实际组件和API允许归档并隐藏当前行。恢复API清marker及受控follow-up完成正常；真实Engine transcript flush/完整worker和恢复按钮仅边界未执行。应统一所有run producer的session/generation活动投影，保留async答案admission即ACK的正确边界。正常标题409/非文件registry500/临时会话404均保稿可恢复。见[Hub审计](hub-session-operations-quality-round18.md)。
+
+第十八轮[最终只读整合审计](quality-round18.md)通过，无实质矛盾，新增执行0；三项P3、双基线收据、恢复和替身边界一致。
 
 ## 验证范围
 
@@ -259,6 +272,7 @@ R73应在配置admission通过后再submit，或对明确未派发早退回滚le
 | Electron reload 身份补证 | 仅a66f/macOS；初始+两次reload token、真实WebContents对象均保持，无worker/真实PTY | [脚本及日志](validation/terminal-lifecycle-round14/reload-identity.log) |
 | 第十六轮项目/设置/Link/MCP恢复 | 新通用4文件10测试104个Bun expect，两基线通过；Settings Bun helper另27手工断言、MCP Node另22断言，不额外算测试 | [项目](project-recovery-round16.md)、[设置](settings-recovery-round16.md)、[Link](link-recovery-round16.md)、[取消](command-recovery-round16.md) |
 | 第十七轮会话操作/Hub路由/上下文正常控制 | 新通用4文件7测试77个Bun expect，两基线通过；owned Bun helper另91手工assert，包含在wrapper内 | [会话](session-operations-round17.md)、[路由](server-routing-round17.md)、[上下文](context-recovery-round17.md) |
+| 第十八轮上下文取消/模型偏好/Hub续接 | 新通用3文件8测试165个Bun expect，两基线通过；本轮没有额外native/helper计数 | [上下文](context-cancel-round18.md)、[模型](model-switch-round18.md)、[Hub](hub-session-operations-round18.md) |
 | Desktop renderer 现有逐文件测试 | 282 文件、2397 测试、0 失败                                               | `validation/desktop-renderer-results.json`               |
 | Desktop main 现有逐文件测试     | 283 文件、2461 测试、0 失败                                               | `validation/desktop-main-results.json`                   |
 | native Hub smoke                | 未通过，不计成功；先遇到过期工具 fixture，再暴露 R21                      | `/tmp/codeshell-review-20261012/hub-smoke*.log`          |
@@ -272,6 +286,6 @@ R73应在配置admission通过后再submit，或对明确未派发早退回滚le
 
 ## 后续检查
 
-0.9.33 的 Panel 项目身份与跨文件 Collection 查询差异、已有便携复现适用范围已核对。认证连接与 Agent Plugins 安装恢复已收束；Quick Chat 生命周期已收束；第十轮独立反证已完成审批、Web意图/配置/草稿和Desktop异步状态，详见 [Web复核](web-quality-round10.md)、[审批复核](approval-quality-round10.md)。第十一轮工作区/Panel反证新增0，搜索与导航新增2P3，下载生命周期新增1P2；第十二轮独立质量复核保留三个新发现的限定分级，文件传输/导入导出正常控制新增0。第十三轮新增1P2+4P3并已独立核对，新增6份证据两基线通过；第十四轮再补3P3与R58图片扩展，新增4文件13测试两基线通过；第十五轮再补CLI接管/设置状态/慢连接3项，第十六轮再补目录修复/自动保存2项并完成Link/MCP正常控制，第十七轮补会话操作/Hub回答3项及上下文正常控制，通用累计76文件228测试；继续检查新增主分支差异与尚未覆盖的失败恢复。已有 TODO 中明确后置的能力与尚未发行的修复单独核对，不将其重复列为新缺陷。
+0.9.33 的 Panel 项目身份与跨文件 Collection 查询差异、已有便携复现适用范围已核对。认证连接与 Agent Plugins 安装恢复已收束；Quick Chat 生命周期已收束；第十轮独立反证已完成审批、Web意图/配置/草稿和Desktop异步状态，详见 [Web复核](web-quality-round10.md)、[审批复核](approval-quality-round10.md)。第十一轮工作区/Panel反证新增0，搜索与导航新增2P3，下载生命周期新增1P2；第十二轮独立质量复核保留三个新发现的限定分级，文件传输/导入导出正常控制新增0。第十三轮新增1P2+4P3并已独立核对，新增6份证据两基线通过；第十四轮再补3P3与R58图片扩展，新增4文件13测试两基线通过；第十五轮再补CLI接管/设置状态/慢连接3项，第十六轮再补目录修复/自动保存2项并完成Link/MCP正常控制，第十七轮补会话操作/Hub回答3项及上下文正常控制，第十八轮补上下文取消/模型偏好/Hub续接三项P3，通用累计79文件236测试；继续检查新增主分支差异与尚未覆盖的失败恢复。已有 TODO 中明确后置的能力与尚未发行的修复单独核对，不将其重复列为新缺陷。
 
 未进行真实付费模型、真实第三方账号、生产数据迁移或发行部署。CLI 模型行为通过可控 fixture 与实际 Host 路由验证，无法据此声称所有真实提供方端到端流程均已通过。静态候选及测试 harness 自身问题单独记录，不冒充产品发现。

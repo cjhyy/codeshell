@@ -1,0 +1,23 @@
+bun test v1.3.11 (af24e281)
+
+../../../../../../private/tmp/codeshell-review-20261012-hub-session-operations-round18/session-followup.test.tsx:
+
+# Unhandled error between tests
+-------------------------------
+109 |     const server = new AgentServer({ chatManager: coreManager, workerGeneration: () => 1, settingsReader: () => new SettingsManager(cwd, "full").get(), transport: { send: (value: any) => bridge.emit(value), onMessage: (cb: any) => receive = cb, close() {} } as any);
+                                                                                                                                                                                                                                                                              ^
+error: Expected "}" but found ")"
+    at /private/tmp/codeshell-review-20261012-hub-session-operations-round18/session-followup.test.tsx:109:265
+
+109 |     const server = new AgentServer({ chatManager: coreManager, workerGeneration: () => 1, settingsReader: () => new SettingsManager(cwd, "full").get(), transport: { send: (value: any) => bridge.emit(value), onMessage: (cb: any) => receive = cb, close() {} } as any);
+                                                                                                                                                                                                                                                                               ^
+error: Expected ")" but found ";"
+    at /private/tmp/codeshell-review-20261012-hub-session-operations-round18/session-followup.test.tsx:109:266
+-------------------------------
+
+
+ 0 pass
+ 1 fail
+ 1 error
+Ran 1 test across 1 file. [178.00ms]
+Bun test process failed (1)

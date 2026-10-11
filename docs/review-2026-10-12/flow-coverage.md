@@ -1,6 +1,6 @@
 # 用户流程覆盖与修复顺序
 
-这是截至第十七轮的流程地图；正式编号、级别和触发条件以 [主报告](README.md) 与各附录为准。正常路径通过不代表相邻失败路径已正确处理。缺陷表征测试通过表示复现成立，没有实施产品修复。
+这是截至第十八轮的流程地图；正式编号、级别和触发条件以 [主报告](README.md) 与各附录为准。正常路径通过不代表相邻失败路径已正确处理。缺陷表征测试通过表示复现成立，没有实施产品修复。
 
 | 用户要完成的事 | 已检查的正常路径及证据层级 | 仍有的问题与可见影响 |
 | --- | --- | --- |
@@ -17,10 +17,10 @@
 | 打开和管理Panel | 真实Electron安装/恢复E2E；真实ProjectStore和权限边界控制 | R22合法secondary root被拒；R23单目录失败或65项目批次使当前renderer Panel App entries清空；包、绑定、内置面板仍在 |
 | 在工作区开终端并审阅提交 | [真实Git+实际终端hook/Main门禁、ReviewService+viewer](terminal-review-round13.md)，native PTY边界替身 | R58合法managed worktree新终端被注册根门禁拒绝；R59最近20内首提交差异被错误显示为无变化；R64恢复后先关tab再新建可能接回旧壳，再次关闭重开恢复 |
 | 浏览目录和图片、修复读取失败 | [实际FilesPanel/HubFiles+真实文件服务](file-navigation-round14.md)，Desktop Main AST与Web自有HTTP服务 | R58合法managed worktree普通PNG预览被注册根门禁拒绝，文本正常；R65目录EACCES静默空树，修权限刷新恢复；Web移动/权限/重试与迟到结果控制正常 |
-| 修改项目名称、模型、Skills、MCP、凭据 | 真实Electron模型/设置/凭据；真实store写盘与恢复 | R25旧完整表单回滚他端字段；R26冲突刷新没更新编辑revision；R27旧probe覆盖新配置；R28初始设置未到时开关写空列表；R29旧项目投影覆盖新广播；R71项目rename真实拒写仍显示新名且无提示，普通广播回旧名、再次rename恢复；R42账号ID碰撞；R43拒写无反馈；R70自定义指令autosave失败清pending，存储修复后blur/离开不重试、未保存稿消失 |
+| 修改项目名称、模型、Skills、MCP、凭据 | 真实Electron模型/设置/凭据；真实store写盘与恢复 | R25旧完整表单回滚他端字段；R26冲突刷新没更新编辑revision；R27旧probe覆盖新配置；R28初始设置未到时开关写空列表；R29旧项目投影覆盖新广播；R75另一已打开窗口保存自身模型旧整图抹掉先前窗口持久偏好，重开回默认、重新选择恢复；R71项目rename真实拒写仍显示新名且无提示，普通广播回旧名、再次rename恢复；R42账号ID碰撞；R43拒写无反馈；R70自定义指令autosave失败清pending，存储修复后blur/离开不重试、未保存稿消失 |
 | 安装插件、更新和重装 | 真实Plugin服务、本地Git及review显式覆盖；[插件复核](plugin-quality-round9.md) | R51卸载后旧installed任务卡住重装；R52相对源校验失败前删旧cache；R53文件夹临时快照被持久保存为更新源 |
-| 运行自动化、看进度和历史 | 实际ChatSession FIFO与调度/展示控制；[自动化审查](automation-round5.md) | R44超时提前结算仍可重复排队；R45拒绝运行却向网关/生命周期发布completed；R46历史归属错误；R47界面未订阅自动停用；R48缺disabledReason；R63普通通知等待占住串行队列，urgent停用通知也被延迟（实际notifier/route+注入时钟，无OS通知） |
-| 恢复归档、查询资料集、录音 | 历史恢复、真实Collection Engine本地client；真实录音组件模拟设备 | R39成功恢复后自busy误挡导航；R72设置取消归档漏权威Core writer，renderer live但Core仍归档，正式folders可移除仍绑定secondary后resolver拒绝root_removed，历史/物理目录保留；R49已知原件变更指引丢失；R50同document双pending启动录音，stop/unmount只释放最后一份 |
+| 运行自动化、看进度和历史 | 实际ChatSession FIFO与调度/展示控制；[自动化审查](automation-round5.md) | R44非once续接超时提前结算仍可重复排队；R45拒绝运行却向网关/生命周期发布completed；R46历史归属错误；R47界面未订阅自动停用；R48缺disabledReason；R63普通通知等待占住串行队列，urgent停用通知也被延迟（实际notifier/route+注入时钟，无OS通知） |
+| 恢复归档、查询资料集、录音 | 历史恢复、真实Collection Engine本地client；真实录音组件模拟设备 | R76异步回答的Core续接仍运行而Host判空闲，允许归档隐藏当前历史行，实际API恢复正常；R39成功恢复后自busy误挡导航；R72设置取消归档漏权威Core writer，renderer live但Core仍归档，正式folders可移除仍绑定secondary后resolver拒绝root_removed，历史/物理目录保留；R49已知原件变更指引丢失；R50同document双pending启动录音，stop/unmount只释放最后一份 |
 
 建议先修 R35 的创建/回滚所有权，同时处理会话与输入身份、审批待处理状态和不确定回执。之后处理关闭资源屏障、持久写入/更新原子性与配置冲突，再修搜索范围提示、状态同步和恢复时多余确认。这个顺序依据数据风险和用户能否继续任务，不依据发现时间或问题数量。
 
@@ -33,3 +33,5 @@
 第十六轮[目录修复](project-recovery-round16.md)、[自动保存恢复](settings-recovery-round16.md)、[Link授权](link-recovery-round16.md)、[MCP取消](command-recovery-round16.md)新增4文件10测试两基线通过。项目/设置各新增一项；Link授权与真实HubAuth+owned HTTP MCP模块的取消/断线/logout/重试控制正常。项目无历史/文件删除，归档绕过仅服务步骤；设置仅未保存自定义指令失败稿。组件与Main callback本地桥不冒充完整Electron；内存OAuth句柄和本地MCP协议fixture不冒充真实提供方。
 
 第十七轮另补[上下文打包失败/取消/迟到控制](context-recovery-round17.md)：实际MessageStream/Core/Engine/磁盘+owned内存provider，四正常控制无新增；完整App注册和Desktop Stop未动态验证。[R35/R36严重问题反证](high-risk-quality-round17.md)保留原分级，无新增执行，不泛化平台或恢复。当前正式73=1P1/49P2/23P3，便携76文件228测试分别在两基线通过。
+
+第十八轮[上下文取消](context-cancel-round18.md)新增R74/P3：summary期间composer隐藏且退出禁用，没有正常用户cancel；30秒RPC超时只恢复UI，实际Core仍运行。服务级cancel/正常完成正常；迟到target发现仅源码，不称历史丢失。[模型偏好](model-switch-round18.md)与[Hub续接归档](hub-session-operations-round18.md)新增R75/R76各P3。当前正式76=1P1/49P2/26P3，便携79文件236测试分别在两基线通过；本轮无真实模型/完整Electron/worker。

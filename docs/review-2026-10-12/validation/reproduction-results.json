@@ -88,6 +88,14 @@
     "skipped": 0
   },
   {
+    "file": "docs/review-2026-10-12/reproductions/context-cancel-round18/context-cancel.test.ts",
+    "log": "docs/review-2026-10-12/reproductions/context-cancel-round18/context-cancel.test.ts.log",
+    "code": 0,
+    "signal": null,
+    "tests": 3,
+    "skipped": 0
+  },
+  {
     "file": "docs/review-2026-10-12/reproductions/context-recovery-round17/context-recovery.test.tsx",
     "log": "docs/review-2026-10-12/reproductions/context-recovery-round17/context-recovery.test.tsx.log",
     "code": 0,
@@ -224,11 +232,27 @@
     "skipped": 0
   },
   {
+    "file": "docs/review-2026-10-12/reproductions/hub-session-operations-round18/session-followup.test.tsx",
+    "log": "docs/review-2026-10-12/reproductions/hub-session-operations-round18/session-followup.test.tsx.log",
+    "code": 0,
+    "signal": null,
+    "tests": 2,
+    "skipped": 0
+  },
+  {
     "file": "docs/review-2026-10-12/reproductions/link-recovery-round16/link-recovery.test.tsx",
     "log": "docs/review-2026-10-12/reproductions/link-recovery-round16/link-recovery.test.tsx.log",
     "code": 0,
     "signal": null,
     "tests": 5,
+    "skipped": 0
+  },
+  {
+    "file": "docs/review-2026-10-12/reproductions/model-switch-round18/model-preferences.test.tsx",
+    "log": "docs/review-2026-10-12/reproductions/model-switch-round18/model-preferences.test.tsx.log",
+    "code": 0,
+    "signal": null,
+    "tests": 3,
     "skipped": 0
   },
   {

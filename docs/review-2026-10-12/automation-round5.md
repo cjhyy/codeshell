@@ -6,7 +6,7 @@
 
 证据目录：`/tmp/codeshell-review-20261012-automation-round5/`。
 
-## A1 — P2：续接自动化超过 120 秒后退出运行保护，前一轮仍运行时可再入队同一个任务
+## A1 — P2：非once续接自动化超过 120 秒后退出运行保护，前一轮仍运行时可再入队同一个任务
 
 **位置**
 
@@ -47,7 +47,7 @@
 
 **可达操作及实际影响**
 
-有效绑定已有对话后点击“立即运行”或等待计划触发，worker 因初始化、提供方配置/请求错误或其他真实 JSON-RPC error 拒绝该轮。失败由 helper 正确识别，但 Main 随后吞掉错误状态。scheduler 仍发 job_end，发往已配置网关的控制事件宣称“已完成”，没有该错误详情；用户不能依赖自动化生命周期判断任务成功。
+有效绑定已有对话后点击“立即运行”或等待计划触发，worker/bridge返回实际JSON-RPC error拒绝该轮，例如Core会话容量/初始化拒绝；不泛指通常返回EngineResult的所有提供方错误。失败由 helper 正确识别，但 Main 随后吞掉错误状态。scheduler 仍发 job_end，发往已配置网关的控制事件宣称“已完成”，没有该错误详情；用户不能依赖自动化生命周期判断任务成功。
 
 **复现**
 
@@ -85,7 +85,7 @@
 - 原始对话/侧栏记录没有丢失，本项是自动化详情的归属错误。
 - disk fallback 对非空 job.cwd 有 cwd 过滤，对非 automation origin 也过滤；因此已复现影响限定为同项目的 automation sessions，不声称能访问未授权数据。
 - session list 本身跳过 archived；已有 seenSessionIds/seenRunIds 会去重，但去重不能确认归属。
-- 建议实时路径优先 cronJobId，并把该身份随 transcript/session metadata 持久化；名称、共同项目和 24 小时只能做迁移提示，不应直接认领。
+- 建议实时路径消费已持久于catalog的cronJobId；独立headless的state也可持久automation:job:hash clientMessageId，但它属于当前轮，后续人工run会覆盖。应为磁盘历史建立稳定job provenance，不能称现有强身份都未持久化。名称、共同项目和24小时只能做迁移提示，不应直接认领。
 
 ## A4 — P2：执行后自动停用，仍打开的自动化页面长期显示“活跃”
 
@@ -152,3 +152,5 @@ node scripts/run-bun-test-shard.mjs --timeout 30000 /tmp/codeshell-review-202610
 - `desktop-display-test.log`：4 tests、18 assertions、0 failures、0 skipped。
 - 合计 2 文件、7 tests、38 assertions，全通过。通过表示缺陷表征稳定复现，不表示缺陷修复。
 - 所有 Core/Host 动态导入前安装精确 loopback origin guard；fixture 无实际网络请求。guarded runner 提供独立 HOME、应用状态和移除凭据的环境。Main closure 抽取仅用于避免启动 Electron，其生产分支未重写；timeout fixture 唯一时间缩放已在脚本和 JSON 记录。
+
+第十八轮只读反证见[独立审计](automation-quality-round18.md)：新增运行0；R44同job再排队限结算后仍存在的非once任务，once会删除；R45限定实际JSON-RPC error被错误归类、配置/授权有效的网关生命周期链，未实际外发；R46已有catalog cronJobId及headless可持久clientMessageId，详情未消费，不能写为所有强身份缺失。三项仍P2，旧双基线2文件7测试38断言不重复累计。
