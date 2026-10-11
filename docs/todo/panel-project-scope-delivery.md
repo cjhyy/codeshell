@@ -91,3 +91,20 @@ These checks establish source behavior and actual HTTP integration. Native
 Electron UI interaction, full package-release/type/Desktop gates, merging,
 deployment and publication are the integrating task's separate acceptance
 steps; this delivery does not claim those steps have run.
+
+### Integrated local acceptance (2026-10-12)
+
+The combined Host/collection guarded regression shard passes 103 tests with
+562 assertions, zero failures and zero skips. Package checks pass for nine
+tarballs, 47 typed entrypoints and 45 runtime entrypoints. All 12 workspace
+typechecks and the Desktop build pass. ESLint reports zero errors and the
+existing 105-warning baseline. The compiled collection SDK acceptance passes
+under Node 25.8.1 and Electron's Node 20.18.3; the existing uploads SDK and Core
+export checks also pass. These checks do not exercise native Electron UI or
+deploy an application.
+
+The compatible Download and Video Studio changes are merged in
+[Panel PR 69](https://github.com/cjhyy/codeshell-panel-apps/pull/69), with all
+14 jobs across its push and PR CI runs successful. The Panel merge tree matches
+the tested commit. Host CI/merge and any future release are recorded separately;
+no new Panel release or installation is claimed here.

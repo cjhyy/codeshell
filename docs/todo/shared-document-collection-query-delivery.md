@@ -49,3 +49,7 @@ URL 初次读取仍使用既有无凭据 HTTPS transport、公共 IP/DNS 检查�
 源码回归使用隔离 HOME 的 guarded runner、真实 ToolExecutor/permission/Hook 与真实解析 worker，覆盖两项目复用、Office/CJK、统一评分、chunk 复读、逐项拒绝、Hook 改参、Profile/pin/permission/binding/revision 变化、文件／目录替换、URL 最终变更和预算／取消。URL fixture 在首次 Core 导入前安装明确 JS API 禁网 guard，使用精确合成 origin 的 TLS/HTTP 事件执行生产 downloader，并核对两次真实逻辑下载及关闭；不代表真实公网、网盘账号或 OS 级网络隔离。编译后 SDK、完整构建和组合 CI 的最终证据由本次集成交付记录补充。
 
 当前源码验收：新增 51 项 / 308 次断言，既有 uploads／单文件／资料集／URL／parser index 回归 127 项 / 955 次断言，均零失败、零跳过；修改的 TS 文件通过 targeted ESLint。将同一个跨 scope 两项目用例放入 `84740d56` 的隔离归档源码后，真实旧 ToolExecutor 以旧 schema 缺少外层 scope 拒绝，当前实现通过。
+
+2026-10-12 集成本地验收：Host 与资料集组合回归 103 项、562 次断言，零失败、零跳过；9 个发布 tarball、47 个类型入口及 45 个运行入口检查通过，12 个 workspace 类型检查和 Desktop 构建通过。ESLint 零错误、105 项既有基线警告。
+
+新增 `bun run test:collection-documents` 使用编译后的同树 SDK / ToolExecutor、真实 Engine 和独立解析进程，验证两项目复用、父查询及逐文件审批、稳定排序、逐 chunk 精确复读、显式拒绝、同内容 inode 替换拒绝，以及冷 Node 进程重新读取。实际运行于 Node 25.8.1 与 Electron 对应的 Node 20.18.3，既有 uploads 编译 SDK 验收及 Core 导出检查也通过。使用合成模型回复和受控本地输入，没有真实 provider 调用；这些进程验收不等于原生 Electron UI 验收。完整 CI 与主仓库合并状态另由本次 PR 记录，尚未新增发行版本。
