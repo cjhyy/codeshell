@@ -42,7 +42,11 @@ no journal and no known gap keeps its existing transcript fallback.
 
 Publication failure is isolated: Main/Hub withhold that event, retain uncertainty
 for the current Host and continue handling subsequent recorded runs. Missing
-Sessions are never created for background/Goal output. Hub commits its preliminary
+Sessions are never created for background/Goal output. When the proof store
+explicitly reports an unbound, not-yet-created Session, the withheld event does
+not add a permanent failure barrier: the same Host can recover the later real
+canonical journal. Actual lock, persistence and previously bound identity failures
+retain their existing barriers. Hub commits its preliminary
 user-echo flag only after actual publication, allowing the later canonical user
 anchor to appear when a new Session did not yet exist. Ended Hub sessions release
 RAM coverage once disk owns its proof (including a known gap without a journal);
@@ -52,10 +56,11 @@ Main or Hub indefinitely.
 
 Finite acceptance in this task:
 
-- 17 guarded integration cases exercise actual journal writes, Main publication,
+- 18 guarded integration cases exercise actual journal writes, Main publication,
   transcript IPC, Desktop/Mobile recovery and Hub replay. They include 140 actual
   input/anchor acknowledgements within a run, 32 completed journal-backed Sessions,
-  a completed no-journal gap, delete/reuse and final-page deletion, context-compaction
+  a completed no-journal gap, same-Host recovery after a withheld first input,
+  delete/reuse and final-page deletion, context-compaction
   display boundaries, a bounded FIFO child and a real Core Engine fixture. A real
   MobileOutputClient/Main-service case holds a preliminary input before the first
   journal and commits only after its later canonical input/boundary arrives.
