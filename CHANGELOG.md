@@ -8,6 +8,31 @@ breaking.
 
 ## [Unreleased]
 
+## [0.9.32] - 2026-10-11
+
+### Added
+
+- Create reusable document collections in Settings from local files, a folder's
+  current file list, or public HTTPS static-file links. Projects select the files
+  they use, while existing project uploads remain private to that project. Local
+  originals stay in place, and no additional sidebar is introduced.
+- Read and query authorized collection documents through the existing bounded
+  text, PDF and Office parsers. Static links retain explicit content versions;
+  extensionless download addresses and same-origin redirects select the supported
+  parser from the verified response.
+- Review and copy a project memory into a selected digital human's portable
+  memory, with editable content, a new identity and the original memory preserved.
+- Choose initial tool definitions from preset task rules without an additional
+  model request. Authorized tools remain discoverable through ToolSearch.
+
+### Fixed
+
+- Share Panel directory bookmarks between a registered Git worktree and its main
+  project while preserving the actual working directory, existing bookmark IDs
+  and project authorization checks.
+- Handle asynchronous background Shell startup errors and release sandbox spawn
+  resources exactly once after process closure, including failed launches.
+
 ## [0.9.31] - 2026-10-10
 
 ### Added
