@@ -267,6 +267,7 @@ export async function connectRunMcp(args: {
   toolContext?: Parameters<MCPManager["connectAll"]>[3] &
     Pick<ToolContext, "mcpServerFailures" | "allowedMcpServers">;
   emitNotificationHook: (payload: Record<string, unknown>) => void;
+  retainRun?: (release: () => Promise<void>) => void;
 }): Promise<ReadonlyMap<string, string>> {
   const failures = new Map<string, string>();
   if (args.toolContext) args.toolContext.mcpServerFailures = failures;
@@ -279,6 +280,8 @@ export async function connectRunMcp(args: {
   }
   const manager = args.getManager();
   if (!manager) return failures;
+  if (args.toolContext && args.retainRun)
+    args.retainRun(() => manager.releaseRun(args.toolContext!));
   await manager.connectAll(
     enabledServers,
     args.engineForConnect,
@@ -297,6 +300,7 @@ export async function connectRunMcp(args: {
       });
     },
     args.toolContext,
+    args.retainRun !== undefined,
   );
   manager.syncToolsToRegistry(
     args.toolRegistry,
