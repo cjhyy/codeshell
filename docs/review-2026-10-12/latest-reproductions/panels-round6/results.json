@@ -1,0 +1,13 @@
+{
+  "baseline": "a66f4ef291f304ee4df9da8095a90671d9a8f140",
+  "newConfirmedFindings": 0,
+  "existingFindingStillApplicable": ["R22"],
+  "verifiedNonFindingBoundary": "legacy-engine-id model switch requires reopening session-sensitive Panel guest",
+  "files": 5,
+  "tests": 33,
+  "bunExpectCalls": 154,
+  "failures": 0,
+  "skipped": 0,
+  "realModelCalls": 0,
+  "productEdits": false
+}

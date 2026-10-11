@@ -1,0 +1,48 @@
+bun test v1.3.11 (af24e281)
+
+packages/desktop/src/main/panel-project-binding.test.ts:
+(pass) native context takes all stable identity fields only from the Host and survives Session rebinding [3.73ms]
+(pass) without context.workspace the resolver is never called and identity is never exposed [0.42ms]
+(pass) older asynchronous binds cannot replace a newer Session, bucket or identity [0.82ms]
+(pass) guest revocation cancels a pending bind without waiting for its resolver [0.38ms]
+(pass) owner and authorization are rechecked after scope resolution [0.81ms]
+(pass) changed identity or revoked mount permanently rejects bind, context.get and Host calls [8.59ms]
+(pass) frozen authority guard runs on context.get, every Host call and repeated bind [1.23ms]
+(pass) actual Main call rechecks the frozen scope and guest before returning an awaited result [1.94ms]
+(pass) actual Main bridge rejects session-sensitive IPC after precheck and rebind before guest event delivery [1.56ms]
+(pass) first real session is frozen and losing it permanently revokes sensitive actions [0.84ms]
+(pass) automation lookup await cannot authorize a mutation after Main rebinds the guest [2.84ms]
+(pass) external runtime context await rechecks the session before ensure or send [0.62ms]
+(pass) real production automation Host rechecks native session after durable authority lookup [1.53ms]
+(pass) queued/staged workspace writes never commit into a replaced root or parent [219.10ms]
+(pass) guarded workspace writes retain ordinary create and replace behavior [18.97ms]
+(pass) legacy storage writes use the real before-commit authorization hook [9.78ms]
+(pass) real final storage prepare cannot publish after guest or registry revocation [70.75ms]
+
+packages/desktop/src/main/panel-project-scope.test.ts:
+fatal: not a git repository (or any of the parent directories): .git
+(pass) native and paired composition share the exact registered scope independent of Session [123.56ms]
+fatal: not a git repository (or any of the parent directories): .git
+fatal: not a git repository (or any of the parent directories): .git
+(pass) each registered root keeps its own execution identity within one project [131.90ms]
+fatal: not a git repository (or any of the parent directories): .git
+(pass) project deletion/recreation or root ID changes cannot rebind an existing scope [114.25ms]
+fatal: not a git repository (or any of the parent directories): .git
+(pass) same-path mount replacement never inherits the existing scope [89.92ms]
+fatal: not a git repository (or any of the parent directories): .git
+(pass) real Git worktrees share project identity and have distinct execution roots [585.42ms]
+
+packages/server/src/panels/project-scope.test.ts:
+(pass) scope is stable across fresh Host captures and ordinary root contents change [10.48ms]
+(pass) execution roots, registry root IDs, projects and environments remain distinct [17.35ms]
+(pass) same-path root replacement invalidates an old binding and gives fresh scope a new root ID [13.05ms]
+(pass) project directory replacement and authority revocation are sticky [12.85ms]
+(pass) environment deletion, replacement and descriptor mismatch cannot silently change identity [11.46ms]
+(pass) nonregular environment metadata is refused without blocking [16.07ms]
+(pass) network guard denies both probes before Host imports [0.07ms]
+
+ 29 pass
+ 0 fail
+ 127 expect() calls
+Ran 29 tests across 3 files. [2.30s]
+Completed Bun shard: 29 tests, 0 skipped; 0 failures.

@@ -1,7 +1,7 @@
 {
   "baseline": "a66f4ef291f304ee4df9da8095a90671d9a8f140",
-  "reproductionFiles": 32,
-  "reproductionTests": 71,
+  "reproductionFiles": 33,
+  "reproductionTests": 80,
   "reproductionSkipped": 0,
   "changedTestFiles": 8,
   "changedExecutedTests": 156,
@@ -12,5 +12,7 @@
     "Panel fixture initially skipped 69; supported spawner passed; expanded wrapper confirmed 69 executed, 0 skipped"
   ],
   "credentialMetadataNote": "raw observations contains historical fixture-declared 84740d56 label; script was run from latest a66f4ef2 tree, as recorded here",
-  "paidModelRequests": 0
+  "paidModelRequests": 0,
+  "latestOnlyReproductionFiles": 2,
+  "latestOnlyReproductionTests": 7
 }

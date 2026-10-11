@@ -9,18 +9,19 @@
 证据目录：`/tmp/codeshell-review-20261012`。
 持续调度：heartbeat `codeshell-10-12-11`，每小时整点与半点；截止后交付报告并停用。01:34 已将原 00:52 锚点改为整点/半点，覆盖 11:00 截止时刻。
 
-## 当前状态（新加坡 01:52）
+## 当前状态（新加坡 01:59）
 
 - 截止前不要标 complete。到 11:00 停止新增审查、收束证据、交付最终报告，停用 heartbeat，再完成目标。01:22 的 get_goal 返回 blocked（本轮主代理未请求该变更）；实际仍在推进，没有需要用户解除的阻塞，按用户 heartbeat 继续审查。工具没有 active 状态参数，不要伪造恢复调用；截止交付后再设 complete。
 - 已读 CODESHELL.md，已 fetch origin 并创建独立工作区。产品代码无改动，只有本报告目录。01:30 origin/main 更新至 a66f4ef291f304ee4df9da8095a90671d9a8f140（0.9.33），新增 Panel stable project scope 和跨文件 collection query。另建 /Users/admin/.codex/worktrees/review-latest-20261012/codeshell，分支 codex/review/latest-20261012；冻结安装完成，正构建后做差异与既有发现复查。旧工作区与证据不切换基线。
 - 已完成 frozen install、全工作区 build、typecheck:workspaces、Desktop build。
 - Server/Web 141 文件 / 1428 测试、Desktop renderer 282 文件 / 2397 测试、Desktop main 283 文件 / 2461 测试全部通过，合计706文件6286测试0失败0跳过。
 - 真实 Electron navigation/settings/workspace-pages/model-settings/digital-humans/panel-recovery-ui 全部通过；native output-journal 与 mobile-output-journal smoke 也通过。日志已保存 validation/。
-- 正式报告目前 R01–R48：1 P1、40 P2、7 P3。R35/D13 为重复Enter创建工作区时 unsafe rollback 删除成功请求worktree/分支/未提交文件，独立质量复查认可P1。R36是worker.stdin异步EPIPE导致NodeHost退出。
+- 正式报告目前 R01–R50：1 P1、41 P2、8 P3。R35/D13 为重复Enter创建工作区时 unsafe rollback 删除成功请求worktree/分支/未提交文件，独立质量复查认可P1。R36是worker.stdin异步EPIPE导致NodeHost退出。
 - 第一至四轮已收束；便携证据29个文件55个测试全部最终通过，含缺陷表征与用于排除误报的正常契约。原始 /tmp 证据已复制并修正相对导入/子进程入口，别把原始带绝对路径的脚本覆盖回去。
 - quality-audit.md 已对D13/D1/R21/W11独立复核；主结论成立。已收窄D1普通send传输失败措辞、R21原生HubWeb范围。文件历史恢复误拦截按P3列R39（记录保留且额外确认可完成），原代理建议P2已在归档附录标明重新分级。
-- 第五轮已收束：Web 2P2、Credentials 1P2+1P3、Automation 4P2+1P3；便携复制后三个Bun文件16测试通过，实际Electron凭据4场景通过。现共32个便携Bun文件71测试，凭据native脚本另计。review_quality_audit 已独立确认第五轮九项因果与分级，保留7P2+2P3，见quality-round5.md；R45仅网关/生命周期通知，不泛指OS成功通知。
-- 第六轮：automation_flow_review 在最新快照审Panel scope，credential_ui_review 已收束Collection跨文件失败信息候选1P3，交质量代理复核（tmp/collections-round6）；web_remote_review 正审语音/音频输入；root已完成最新快照冻结安装、全工作区及Desktop构建，8个新增/修改文件最终156项通过（Panel fixture初次69skip，补正式入口及展开计数后69pass0skip），32个既有便携复现71测试通过，native凭据4场景通过；typecheck:workspaces也通过，详见latest-baseline.md和validation/latest-a66f4ef2/。禁止同快照并行clean/build，勿触碰他人工作区。
+- 第五轮已收束：Web 2P2、Credentials 1P2+1P3、Automation 4P2+1P3；便携复制后三个Bun文件16测试通过，实际Electron凭据4场景通过。该轮后共32个便携Bun文件71测试，凭据native脚本另计；第六轮后的新总数见下一条。review_quality_audit 已独立确认第五轮九项因果与分级，保留7P2+2P3，见quality-round5.md；R45仅网关/生命周期通知，不泛指OS成功通知。
+- 第六轮已收束：Panel scope正式新增0（R22仍适用，legacy Session重开为正确保护）；Collection R49/P3丢失已知变更更新指引；Voice R50/P2同一mount双启动录音泄漏。quality-round6.md独立确认两项边界；旧/新基线voice分别9测试87断言通过。新功能便携2文件7测试通过，初始通用便携现33文件80测试。
+- 第七轮：automation_flow_review审身份/连接生命周期（auth-round7），web_remote_review审Agent Plugins安装/更新/卸载（plugins-round7），quality代理审交付资料准确性（delivery-audit）。所有证据前缀/tmp/codeshell-review-20261012-；root正整理新轮。root已完成最新快照冻结安装、全工作区及Desktop构建，8个新增/修改文件最终156项通过（Panel fixture初次69skip，补正式入口及展开计数后69pass0skip），32个既有便携复现71测试通过，native凭据4场景通过；typecheck:workspaces也通过，详见latest-baseline.md和validation/latest-a66f4ef2/。禁止同快照并行clean/build，勿触碰他人工作区。
 - 不修改产品代码、不发布、不调用付费模型、不联系其他人。构建不再清理 dist，避免干扰其他专项测试。
 
 ## 关键证据与注意事项
@@ -35,3 +36,5 @@
 ## 后续
 
 继续第五轮专项审查，重点新领域和已确认问题的反证，避免为增加问题数量而重复或扩大条件性结论。至少每小时核对origin/main是否更新；若更新，保留当前快照和证据、明确新差异，不在已有分支混写产品变更。截止前持续更新报告和便携证据，不把已知TODO、测试harness故障或静态猜测列作新缺陷。所有报告改动仅本任务docs目录，阶段证据保存在本任务分支，后续继续更新；不合并到main、不发布PR。
+
+阶段提交：5c3c6746 第一至四轮，3c30e798 第五轮及0.9.33复查；第六轮材料正在保存。报告工作区只改docs。最新快照只多了本任务未跟踪docs，产品tracked文件干净。01:30拉取后未再次fetch，下一次宜02:30左右核对。

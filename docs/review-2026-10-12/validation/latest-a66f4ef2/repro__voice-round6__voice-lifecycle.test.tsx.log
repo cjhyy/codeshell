@@ -1,0 +1,19 @@
+bun test v1.3.11 (af24e281)
+
+docs/review-2026-10-12/reproductions/voice-round6/voice-lifecycle.test.tsx:
+VOICE_DOUBLE_START_LEAK {"startedRecorders":2,"stoppedRecorders":1,"firstTrackStopCalls":0,"firstStillRecordingAfterUnmount":true}
+(pass) confirmed: double click while media permission is pending starts two recorders; stop and unmount leak the first [22.56ms]
+(pass) normal: one recording stops recorder and track when the surface unmounts [2.90ms]
+(pass) normal: denied permission starts no device; granting permission on retry records and appends transcript [3.65ms]
+(pass) normal: unmount while getUserMedia is pending releases late tracks without starting recorder [1.71ms]
+(pass) normal limitation: failed transcription preserves typed draft and permits a new take, but has no retry of failed audio [4.65ms]
+(pass) normal: Web Panel prevents a second start while requesting, and abort releases late permission result [0.97ms]
+(pass) normal: Web Panel microphone denial remains retryable; recording retains review audio and abort clears it [0.66ms]
+(pass) normal: real Web audio dialog keeps playback/download after lost write; save retries same identity without duplicate bytes [17.49ms]
+(pass) normal: cancelling real Web audio dialog during pending save aborts signal, revokes local URL, and ignores late receipt [12.40ms]
+
+ 9 pass
+ 0 fail
+ 87 expect() calls
+Ran 9 tests across 1 file. [739.00ms]
+Completed Bun shard: 9 tests, 0 skipped; 0 failures.

@@ -1,0 +1,80 @@
+{
+  "baseline": "a66f4ef291f304ee4df9da8095a90671d9a8f140",
+  "pid": 96784,
+  "ppid": 96774,
+  "bun": "1.3.11",
+  "node": "24.3.0",
+  "homeSha256": "73fa6998773ce9e95195485c4535eb45ecad502fc45186508954ac5fd4b2df96",
+  "executableSha256": "1d77af7bfd811aebb7d37bec496a5eed14fe227ded3ab7866d2f39786e8107b6",
+  "negativeProbesBeforeCore": 5,
+  "compiled": {
+    "tool-system/builtin/sources.js": "dd177da1cff2b8a970a700c278c0db926d6279944ab421ed4137d186c881c0cb",
+    "sources/adapters/collection.js": "e0335bef498dabeec976cda9baa52c72fbd4fbe75701366dd96e07c0dffec8cb",
+    "sources/collection-local.js": "ab4064f3c34bd50df6edeab597305fd42d3a94c6244039a319a15cd44fb02e00",
+    "sources/collection-url.js": "8f1bc929715e620ad478fff5c5cfedae430767b675288234a4806252b5da84c0",
+    "tool-system/executor.js": "b575472e22c537716b8597dd789e9e05055ef0491aac8ba324f94e464b3b994a"
+  },
+  "observations": [
+    {
+      "scenario": "changed-original-refresh-retry",
+      "corpusError": "Error: collection query failed: A selected document read was denied, failed or produced no trusted receipt",
+      "singleError": "Error: read failed: Collection file changed since selection; update the collection before reading",
+      "statusBeforeRefresh": "changed",
+      "statusAfterRefresh": "ready",
+      "stableEntryId": true,
+      "matchesBefore": 2,
+      "matchesAfter": 2
+    },
+    {
+      "scenario": "approval-refusal-retry",
+      "error": "Error: collection query failed: A selected document read was denied, failed or produced no trusted receipt",
+      "partialCorpusReturned": false,
+      "requests": [
+        "corpus",
+        {
+          "scope": "entry_748bf447-c988-4f5d-ba9d-d533ffb37f34",
+          "resource": "entry_748bf447-c988-4f5d-ba9d-d533ffb37f34"
+        },
+        {
+          "scope": "entry_ca6c9837-3f14-41e6-9bd5-3d43fdce1228",
+          "resource": "entry_ca6c9837-3f14-41e6-9bd5-3d43fdce1228"
+        },
+        "corpus",
+        {
+          "scope": "entry_748bf447-c988-4f5d-ba9d-d533ffb37f34",
+          "resource": "entry_748bf447-c988-4f5d-ba9d-d533ffb37f34"
+        },
+        {
+          "scope": "entry_ca6c9837-3f14-41e6-9bd5-3d43fdce1228",
+          "resource": "entry_ca6c9837-3f14-41e6-9bd5-3d43fdce1228"
+        }
+      ],
+      "retryMatches": 2
+    },
+    {
+      "scenario": "engine-conversation-error-visibility",
+      "streamResults": [
+        {
+          "id": "round6-corpus",
+          "toolName": "ReadSource",
+          "error": "Error: collection query failed: A selected document read was denied, failed or produced no trusted receipt",
+          "isError": true
+        }
+      ],
+      "nextFixtureResponseToolResults": [
+        "Error: Error: collection query failed: A selected document read was denied, failed or produced no trusted receipt"
+      ],
+      "specificChildReasonVisible": false,
+      "failingScopeVisible": false,
+      "deterministicInProcessClient": true
+    },
+    {
+      "scenario": "revision-conflict-reload-retry",
+      "conflict": "Error: 资料集已在其他窗口更新，请刷新后重试。",
+      "newerRevisionRetained": true,
+      "savedLabel": "Recovered draft",
+      "selectedIdsPreserved": true
+    }
+  ],
+  "unexpectedRequests": 0
+}

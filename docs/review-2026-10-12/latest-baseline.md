@@ -10,10 +10,10 @@
 | --- | --- | --- |
 | frozen install、workspaces build、Desktop build、typecheck:workspaces | 全部通过 | `validation/latest-a66f4ef2/{install,build,desktop-build,typecheck}.log` |
 | 8 个新增或修改测试文件 | 156 项实际执行、0 失败、0 跳过 | `validation/latest-a66f4ef2/changed-test-results.json` |
-| 既有便携缺陷表征和正常契约 | 32 文件、71 测试、0 失败、0 跳过 | `validation/latest-a66f4ef2/reproduction-results.json` |
+| 既有便携缺陷表征和正常契约 | 33 文件、80 测试、0 失败、0 跳过 | `validation/latest-a66f4ef2/reproduction-results.json` |
 | 凭据实际 Electron/IPC/store | 4 场景通过 | `validation/latest-a66f4ef2/credentials__credentials-e2e.mjs.log` |
 
-复现“通过”表示当前仍观察到被测缺陷。32 个文件并非 32 项问题，一份文件可能覆盖多项发现，也包含正常对照。新快照结果没有加到原基线 6286 个现有测试的总数中，以免重复计数。
+复现“通过”表示当前仍观察到被测缺陷。33 个文件并非 33 项问题，一份文件可能覆盖多项发现，也包含正常对照。新快照结果没有加到原基线 6286 个现有测试的总数中，以免重复计数。
 
 ## 两处测试入口适配
 
@@ -26,4 +26,4 @@
 
 凭据脚本原始 observations 中保留了 fixture 作者写死的 `84740d56` 标签；本次实际执行入口、工作区和构建为新快照，已在 `validation/latest-a66f4ef2/summary.json` 单独记录，避免将旧标签误认成运行目录。模拟 Cookie 和 plain cipher 回退等限制与原附录相同。
 
-第六轮继续专项审查新 Panel scope、共享 Collection 失败恢复及语音输入流程。确认的新快照问题将标注本快照，不把新功能尚不存在于旧基线的测试塞入旧基线默认复现入口。
+第六轮已确认共享 Collection 恢复指引 R49/P3、旧录音生命周期缺陷 R50/P2；Panel scope 没有正式新增，R22仍适用。新功能的2文件7测试另见 latest-reproductions/，录音9测试已在两基线分别通过。第七轮继续身份连接和 Agent Plugins 流程；不把旧基线尚无的新功能测试塞入默认入口。

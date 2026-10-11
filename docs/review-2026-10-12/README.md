@@ -2,15 +2,15 @@
 
 本次审查覆盖服务端、Electron 桌面端、配对 Web 与移动端的日常流程，重点检查消息发送、审批、取消、切换会话、恢复和项目上下文。问题只在有代码证据或可复现结果后列入正式发现。
 
-审查进行中，截止时间为新加坡时间 2026 年 10 月 12 日 11:00。初始审查基线为 `84740d56e55517b004948a0a0e07649ad6fbf998`，对应启动审查时的 `origin/main`。01:30 拉取发现主分支已更新至 `a66f4ef291f304ee4df9da8095a90671d9a8f140`（0.9.33）；已另建隔离快照复查差异，原始复现和行号仍按初始基线保存。32 个便携 Bun 复现文件共 71 测试，以及实际 Electron 凭据 4 场景，已在新快照复查成立；详见[0.9.33 差异复查](latest-baseline.md)。产品代码保持原样，报告保存在独立分支 `codex/review/server-desktop-20261012`。
+审查进行中，截止时间为新加坡时间 2026 年 10 月 12 日 11:00。初始审查基线为 `84740d56e55517b004948a0a0e07649ad6fbf998`，对应启动审查时的 `origin/main`。01:30 拉取发现主分支已更新至 `a66f4ef291f304ee4df9da8095a90671d9a8f140`（0.9.33）；已另建隔离快照复查差异，原始复现和行号仍按初始基线保存。33 个便携 Bun 复现文件共 80 测试，以及实际 Electron 凭据 4 场景，已在新快照复查成立；详见[0.9.33 差异复查](latest-baseline.md)。产品代码保持原样，报告保存在独立分支 `codex/review/server-desktop-20261012`。
 
 ## 当前结论
 
-当前已收束 48 项问题：1 项 P1、40 项 P2、7 项 P3。优先处理审批状态、任务回执和会话身份；这些问题会让任务无法继续、重复执行，或把用户输入带到另一个会话。P1 表示有未提交文件丢失风险、应优先修复；P2 表示正常使用可触发、应安排修复；P3 表示影响较小的失败反馈或一致性问题。尚未证实的候选不计入数量。
+当前已收束 50 项问题：1 项 P1、41 项 P2、8 项 P3。优先处理审批状态、任务回执和会话身份；这些问题会让任务无法继续、重复执行，或把用户输入带到另一个会话。P1 表示有未提交文件丢失风险、应优先修复；P2 表示正常使用可触发、应安排修复；P3 表示影响较小的失败反馈或一致性问题。尚未证实的候选不计入数量。
 
 **最先修 R35：创建工作区时重复 Enter，失败请求的回滚可以删除另一个已成功请求的 worktree、分支和未提交文件。** 此项已由独立代理复查入口与真实 Git 时序，见 [独立质量复核](quality-audit.md)。第五轮九项也已[独立复核](quality-round5.md)，均保留，网关通知等条件已收窄。
 
-以下是持续审查的阶段记录，截止前还会补充。复现测试的“通过”表示已稳定观察到当前缺陷，并不表示缺陷已经修复。所有问题均针对上述基线。
+以下是持续审查的阶段记录，截止前还会补充。复现测试的“通过”表示已稳定观察到当前缺陷，并不表示缺陷已经修复。R01–R48 的原始分析针对初始基线，并已在 0.9.33 复查；R49 针对新快照；R50 在两基线均存在并已分别复现，行号按各专项附录的基线解释。
 
 | 编号 | 级别 | 流程与实际影响                                                                        | 详细证据                                             |
 | ---- | ---- | ------------------------------------------------------------------------------------- | ---------------------------------------------------- |
@@ -62,12 +62,14 @@
 | R46  | P2   | 自动化执行历史按名称/时间认领，遗漏真实实时记录并混入同项目其他任务的结果               | Automation A3，第五轮；合并身份关联根因             |
 | R47  | P2   | 任务异步自动停用后，当前自动化页面仍显示活跃和旧下次运行时间                           | Automation A4，第五轮                              |
 | R48  | P3   | 自动停用原因在 Desktop 摘要中丢失，重开详情只能看到普通暂停                            | Automation A5，第五轮；底层原因仍持久保留           |
+| R49  | P3   | 共享资料集跨文件查询吞掉已知原件变更的恢复指引，用户无法确定需更新哪个文件              | Collection，第六轮；0.9.33 新可达路径               |
+| R50  | P2   | 等待麦克风启动时双击创建两份录音，停止及组件卸载只释放最后一份                         | Voice W17，第六轮；同一 renderer document 存活期间 |
 
 第一轮完整分析：[Desktop](desktop-round1.md)、[Server](server-round1.md)、[Web/配对端](web-round1.md)。后续专项分析会继续补充到本目录。
 
 第二轮完整分析：[Desktop 项目/Panel](desktop-round2.md)、[Web 配置/Skills/MCP](web-round2.md)。所有已收束脚本和日志保存在 [reproductions](reproductions/README.md)，可在当前工作区或相同基线的其他 checkout 重跑。
 
-第三轮持续补充：[Desktop 插件/项目初始化](desktop-round3.md)、[手机配对/草稿/上传](web-round3.md)、[后台任务与 Node 主机退出](runtime-round3.md)。第四轮：[文件与历史流程](files-round4.md)。第五轮：[发送失败与刷新保护](web-round5.md)、[凭据新增与保存](credentials-round5.md)、[自动化执行与状态](automation-round5.md)。
+第三轮持续补充：[Desktop 插件/项目初始化](desktop-round3.md)、[手机配对/草稿/上传](web-round3.md)、[后台任务与 Node 主机退出](runtime-round3.md)。第四轮：[文件与历史流程](files-round4.md)。第五轮：[发送失败与刷新保护](web-round5.md)、[凭据新增与保存](credentials-round5.md)、[自动化执行与状态](automation-round5.md)。第六轮：[共享资料集恢复](collections-round6.md)、[录音生命周期](voice-round6.md)，已[独立复核](quality-round6.md)；[Panel 项目身份差异复查](panels-round6.md)没有新增正式问题。
 
 ## 需要先修的边界
 
@@ -149,6 +151,10 @@ R44 的 120 秒是等待最终结果的整轮超时，收到 runAccepted 也不�
 
 R46 应以 cronJobId 关联实时及持久执行记录。日期标题完整相等会漏掉真实记录，同项目 24 小时回退又会认领其他任务；去重不等于确认归属。R47 需要让已打开的自动化详情订阅生命周期更新，R48 需要透传持久的 disabledReason，避免自动停用与手动暂停无法区分。底层调度器及 Hub 的相应保护已单独核对，没有把这些桌面展示问题泛化为整个自动化系统失效。
 
+R49 中拒绝变更原件与整次查询不返回部分正文都是正确保护；缺陷仅是跨文件父结果吞掉已知、安全的更新指引。实际 Engine 流和下一轮消息都只收到通用错误，而单文件读取能明确建议更新资料集。建议提供错误分类与已选择文件的身份，避免一概回传任意子错误。正常 Desktop refresh 后同 ID 查询可恢复。
+
+R50 需要在首个 await 前阻止并发录音启动，并在取消/卸载时使 pending generation 失效。现有逻辑只保存最后一份 recorder/stream，第二次成功会覆盖引用并清掉首份最大录制时长定时器；按停止及切走聊天视图都未回收首份。真实组件+模拟设备在两基线均复现；未使用真实硬件，结论不包括 document unload 或窗口销毁之后。Web Panel 录音已有 requesting/generation 与取消保护，正常对照通过。
+
 ## 验证范围
 
 | 验证                            | 结果                                                                      | 证据                                                     |
@@ -175,6 +181,9 @@ R46 应以 cronJobId 关联实时及持久执行记录。日期标题完整相�
 | 第五轮发送失败/刷新保护         | 1 文件、9 测试、56 断言、0 失败；含真实认证 Hub                          | `reproductions/web-round5/`                              |
 | 第五轮自动化执行/展示           | 2 文件、7 测试、38 断言、0 失败                                         | `reproductions/automation-round5/`                       |
 | 第五轮凭据实际 Electron         | 4 场景通过；Cookie 两种碰撞、Token 拒写无提示及恢复后重试                 | `reproductions/credentials-round5/credentials-e2e.mjs.log` |
+| 第六轮 Collection 恢复         | 新快照 1 文件、4 测试、32 断言、0 失败；真实 Engine 本地 deterministic client | `latest-reproductions/collections-round6/`             |
+| 第六轮 Panel 身份边界          | 新快照自定义 1 文件、3 测试、26 断言通过；R22仍适用，legacy重开是正确保护 | `latest-reproductions/panels-round6/`                  |
+| 第六轮录音生命周期/恢复        | 1 文件、9 测试、87 断言，初始/新快照分别通过；含Panel上传重试与取消对照   | `reproductions/voice-round6/`                          |
 | Desktop renderer 现有逐文件测试 | 282 文件、2397 测试、0 失败                                               | `validation/desktop-renderer-results.json`               |
 | Desktop main 现有逐文件测试     | 283 文件、2461 测试、0 失败                                               | `validation/desktop-main-results.json`                   |
 | native Hub smoke                | 未通过，不计成功；先遇到过期工具 fixture，再暴露 R21                      | `/tmp/codeshell-review-20261012/hub-smoke*.log`          |

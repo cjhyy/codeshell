@@ -177,6 +177,13 @@
     "archiveLog": "validation/latest-a66f4ef2/repro__server__uploads.test.ts.log"
   },
   {
+    "file": "docs/review-2026-10-12/reproductions/voice-round6/voice-lifecycle.test.tsx",
+    "log": "docs/review-2026-10-12/reproductions/voice-round6/voice-lifecycle.test.tsx.log",
+    "code": 0,
+    "signal": null,
+    "archiveLog": "validation/latest-a66f4ef2/repro__voice-round6__voice-lifecycle.test.tsx.log"
+  },
+  {
     "file": "docs/review-2026-10-12/reproductions/web-round2/settings-review.test.tsx",
     "log": "docs/review-2026-10-12/reproductions/web-round2/settings-review.test.tsx.log",
     "code": 0,
