@@ -164,6 +164,7 @@ try {
       mainEntry: fixture.mainEntry,
       env: fixture.electronEnv,
     });
+    await fixture.assertGuards(app);
     const win = await findCodeShellWindow(app),
       errors = captureRendererErrors(win);
     const viewOnly = win.getByRole("button", { name: /仅查看|View only/i });
@@ -435,6 +436,7 @@ try {
       mainEntry: fixture.mainEntry,
       env: fixture.electronEnv,
     });
+    await fixture.assertGuards(app);
     const cold = await findCodeShellWindow(app);
     const status = await cold.evaluate(() => window.codeshell.cloudAccount.status());
     assert(

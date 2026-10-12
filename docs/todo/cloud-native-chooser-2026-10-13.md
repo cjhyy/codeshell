@@ -26,6 +26,9 @@ ProjectControlServer。Account HTTP/authority、Runtime provider 和远端 HTML 
   安装 Node/native net guard 和 ready/session hook。Main 保持在 ready 前注册协议，
   较早的 ready hook 安装 defaultSession 限制并执行 Chromium 负探针；每个产品窗口的
   session 也在创建时安装限制。原生 gate 必须确认全部负探针回执。
+  ESM 入口仅 await 生产 Main 导入，ready 探针由启动后的实际 Main evaluate 等待，
+  避免顶层等待 ready 阻塞初始化；顺序遵循锁定版
+  [Electron ESM 合同](https://github.com/electron/electron/blob/v33.4.11/docs/tutorial/esm.md)。
 
 ## Linux 原生 gate（CI 待执行）
 
@@ -33,6 +36,8 @@ ProjectControlServer。Account HTTP/authority、Runtime provider 和远端 HTML 
 入口先清除继承的 Host/凭据/DBus 环境，再创建私有 SecretService；验证实际 daemon
 PID、可执行文件、foreground/control directory 与私有目录后才交给 Electron。
 真实 safeStorage 必须报告 `gnome_libsecret`，拒绝 mock-keychain/basic_text。
+入口移除 Playwright 追加的 `no-sandbox` 并在 ready 前启用 sandbox，实际 Main 断言
+该禁用开关不存在；远端窗口仍须核对其生产隔离属性。
 该 gate 仅支持 Linux；不以重试 macOS 系统钥匙串代替当前独立的 Pet 原生验收。
 
 脚本要求完成：
