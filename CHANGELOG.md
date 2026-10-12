@@ -12,6 +12,8 @@ breaking.
 
 - Compact the sidebar account entry into an avatar icon beside Settings, with
   account details on hover and in accessible descriptions.
+- Remove the duplicate cloud account form from General settings; manage the
+  account through the sidebar avatar.
 
 ## [0.9.35] - 2026-10-12
 
