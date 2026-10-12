@@ -1,0 +1,47 @@
+{
+  "deadlineSingapore": "2026-10-12T11:00:00+08:00",
+  "finalizedAtSingapore": "2026-10-12T11:03:28.831857+08:00",
+  "findings": 86,
+  "priorities": {
+    "P1": 1,
+    "P2": 52,
+    "P3": 33
+  },
+  "commonPerFrozenSnapshot": {
+    "files": 86,
+    "tests": 251
+  },
+  "previousBaseline": {
+    "files": 706,
+    "tests": 6286
+  },
+  "lastOriginFetchSingapore": "2026-10-12 10:35",
+  "originMain": "a66f4ef291f304ee4df9da8095a90671d9a8f140",
+  "productChanges": false,
+  "paidModelRequests": false,
+  "report": "README.md",
+  "handoff": "repair-handoff.md",
+  "sourceReportCheckpoint": "cd873fd222c94dcb7803ab9624374235e30ff78f",
+  "reviewRounds": 29,
+  "state": "Final report and evidence QC complete; awaiting UI delivery and authorized scheduler/goal cleanup.",
+  "finalMechanicalQc": {
+    "timestampSingapore": "2026-10-12 11:03",
+    "errors": [],
+    "topMarkdownLocalLinks": 1784,
+    "sourceLineLinks": 1033,
+    "receipt": "validation/round29-report-audit.json"
+  },
+  "workspaceChecks": {
+    "primaryProductDiffAgainstFrozenBaseline": [],
+    "latestTrackedDiff": [],
+    "originalHead": "6034df8a3f177609aeab09253bc525b0445ca5ac",
+    "originalStatus": "clean; preserved",
+    "checkedAtSingapore": "2026-10-12T11:04:23.162572+08:00"
+  },
+  "finalIndependentReview": {
+    "agent": "/root/goal_sleep_review",
+    "checkedAtSingapore": "2026-10-12 11:03:46",
+    "mode": "read-only delivery audit; no new product review or test execution",
+    "result": "Counts, R35 priority, validation scope and pending tool-action wording agree. Historical plan header and fetch/reporting time wording clarified."
+  }
+}

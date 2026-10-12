@@ -9,9 +9,9 @@
 证据目录：`/tmp/codeshell-review-20261012`。
 持续调度：heartbeat `codeshell-10-12-11`，每小时整点与半点；截止后交付报告并停用。01:34 已将原 00:52 锚点改为整点/半点，覆盖 11:00 截止时刻。
 
-## 当前状态（新加坡 10:51）
+## 最终状态（新加坡 11:03）
 
-- 截止11:00前继续实质审查，不提前complete或停用heartbeat。07:30 get_goal仍返回blocked（主审未请求、实际工作无阻塞），工具不能设active；按用户授权继续，截止交付后才complete。
+- 已到11:00截止，停止新增审查；报告与修复交接已完成，交付后将目标标记complete并停用本次heartbeat。历史工具blocked不代表本次review未完成。
 - 初始产品84740d56与最新a66f4ef2分别冻结在本聊天两个独立工作区；只写本任务docs，不改产品、不build/clean、不触碰原工作区/其他任务。最新已冻结install、全workspace/Desktop build、typecheck:workspaces及变更文件测试通过。
 - 正式R01–R86：1P1/52P2/33P3。第二十轮R29由P2降P3并新增R78/R79各P2；真实配置阻断保留，Main/历史及恢复证据不变。R35/D13真实Git失败回滚可删除成功worktree/branch及特定时窗未提交文件，保留P1；R36真实Node25/darwin stdin EPIPE退出保留P2，平台边界不扩大。
 - 第十八轮新增R74/P3上下文摘要没有可用用户cancel且RPC超时不取消Core；R75/P3多窗口旧偏好整图覆盖另一已存模型选择；R76/P3异步回答续接实际Core busy而Hub仍判idle，允许归档隐藏当前历史行。分别有独立审计，正常与恢复控制均保留，最终只读整合审计已通过。
@@ -30,7 +30,7 @@
 - 便携脚本第一至七轮已在本目录重跑成功；当前86文件251测试汇总 validation/reproduction-results.json。新增脚本复制后单独重跑，不必每次重跑已验证全部脚本。
 - 报告数量和测试数量及时依据收束的脚本更新；条件性失败与实际可恢复方式必须说明。
 
-## 后续
+## 历史后续计划（已截止）
 
 继续第二十二轮及后续既有问题反证与新领域审查，重点实际生产门禁、恢复方式和条件性结论，避免为增加问题数量而重复或扩大条件性结论。至少每小时核对origin/main是否更新；若更新，保留当前快照和证据、明确新差异，不在已有分支混写产品变更。截止前持续更新报告和便携证据，不把已知TODO、测试harness故障或静态猜测列作新缺陷。所有报告改动仅本任务docs目录，阶段证据保存在本任务分支，后续继续更新；不合并到main、不发布PR。
 
@@ -183,10 +183,12 @@ R53优先级抽查已收束，保留P2的持续Update契约失效理由及审计
 
 10:35第二十八轮修复交接排序独立静态审已采纳，六组明确可并行/非52P2逐项验收，补R09/R01/R06/R58/R68/R77并收窄R36生产WorkerBridgeCore/原生Node范围，所有proposal不称已修或新测试。706rawtar逐member与独立73ad receipt哈希/大小/count一致，六对构建/UI独立反证明确不从文本推断缺失外层exit。机械QC1711顶层本地Markdown链接/1032源码行号、0error，86=1/52/33、双common86/251及产品tracked diff保持。最终整合只读语义QC进行中；R27检查点7c61657b已保存。09:39origin仍a66f，下次10:25–10:35；11:00未到继续，不complete/停用。
 
-10:37再次实际fetch origin/main仍a66f4ef291f304ee4df9da8095a90671d9a8f140，两个冻结产品快照不动。第二十八轮机械核验更新1715顶层本地Markdown链接/1032源码行号/0error，26个staged路径全为任务docs，cached whitespace通过；现有706/6286归档只计保存证据，不增加执行。最后整合语义QC收束中；到11:00停止新增审查并交付，当前不complete/停用。
+10:37记录：10:35实际fetch origin/main仍a66f4ef291f304ee4df9da8095a90671d9a8f140，两个冻结产品快照不动。第二十八轮机械核验更新1715顶层本地Markdown链接/1032源码行号/0error，26个staged路径全为任务docs，cached whitespace通过；现有706/6286归档只计保存证据，不增加执行。最后整合语义QC收束中；到11:00停止新增审查并交付，当前不complete/停用。
 
 10:38第二十八轮最终独立整合语义QC通过，新增finding/执行0，无实质矛盾。JSON层706份archive manifest对独立receipt逐file/path/bytes/hash/tests一致；846/219 span、blank静态正常链与R86非null区别、handoff六组可并行/非已修验收均核真。主审已独立打开709members逐字节验证，质量审不冒称再次执行该核。原件与/tmp→持久receipt链接分开保存。当前86=1/52/33、双common86/251保持；原工作区6034df8a clean、两个产品tracked diff均空。10:35origin仍a66f；11:00未到不complete/停用，准备保存docs-only检查点。
 
 10:41第28轮docs-only检查点0feef0cd已保存，当前工作区clean。已在/tmp/codeshell-review-deadline-finalize.py准备截止后状态脚本，内置SG>=2026-10-12 11:00断言，当前未执行；下一heartbeat先核clock，若已到截止，停止新增审查，执行最终状态/机械QC并交付README和repair-handoff，再complete目标、通过automation工具将codeshell-10-12-11改PAUSED。heartbeat仍ACTIVE整点半点，不能提前停用。当前没有未收束的审查候选、未清理的本轮实验或产品改动；不为增加数量重跑已过测试。
 
 10:51第二十九轮证据可读性核对完成，新增finding/产品import/fixture/test执行0。作者与独立审计逐54项核17实际文档heading/正文，Web20项另交叉核0冲突；主审只把R01–R54原完整标签加正确文件链接，前三cell编号/级别/影响字节不变，R55–R86原32links保持。R21唯一self为README.md:136，不杜撰root附录；R35D13、R42CredentialsC1、R36T3等易混编号均已查。当前86正式项都有有效入口，86=1/52/33、双common86/251不变。机械QC当时1779本地链接/1033行号/0error，独立补链后SHA3ceff228与mapping一致；后续只加footer/progress。R28检查点0feef0cd及截止准备c68980b0均保存，11:00未到不complete/停用；截止脚本路径仍/tmp/codeshell-review-deadline-finalize.py（有时间断言，未执行）。
+
+11:03已到截止，停止新增审查。最终86=1/52/33、双common86/251、旧baseline706/6286及native/latest-only分账保持；R29 docs-only检查点cd873fd2及R28检查点0feef0cd已保存。当前只做最终状态、交付和调度停用，不再新建候选或测试。精确结束检查、goal与heartbeat结果写入最终交付收据。
