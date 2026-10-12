@@ -29,7 +29,11 @@ import {
   type SaveDialogOptions,
   type IpcMainInvokeEvent,
 } from "electron";
-import { openCloudWorkbench } from "./cloud-workbench-window.js";
+import {
+  openCloudWorkbench,
+  openManagedCloudWorkbench,
+  closeManagedCloudWorkbench,
+} from "./cloud-workbench-window.js";
 import {
   createDesktopManagedRuntimeProvider,
   createManagedRuntimeHandlers,
@@ -1034,7 +1038,7 @@ const accessPasscode = new AccessPasscode({
 let prepareAccountGitHubLink:
   | ReturnType<typeof registerRemoteLinkIpc>["prepareGitHubLink"]
   | undefined = undefined;
-const { mobileRemoteController } = createDesktopRemoteServices({
+const { mobileRemoteController, cloudManagementManager } = createDesktopRemoteServices({
   ipcMain,
   userDataDir: app.getPath("userData"),
   environmentDir: join(codeShellHome(), "desktop"),
@@ -1049,6 +1053,8 @@ const { mobileRemoteController } = createDesktopRemoteServices({
   tunnel: tunnelManager,
   binary: cloudflaredBinary,
   passcode: accessPasscode,
+  cloudWindows: { open: openManagedCloudWorkbench, close: closeManagedCloudWorkbench },
+  openLegacyCloud: openCloudWorkbench,
 });
 let gatewayControlServer: GatewayControlServer | undefined;
 let sessionBridge: SessionBridgeWiring | undefined;
@@ -6418,13 +6424,6 @@ async function sweepStaleWorktrees(reason: string): Promise<void> {
   }
 }
 
-ipcMain.handle("cloud:open-workbench", async (event, address: unknown) => {
-  const owner = BrowserWindow.fromWebContents(event.sender);
-  if (!owner || !mainWindows.has(owner) || event.senderFrame !== event.sender.mainFrame)
-    throw new Error("云端入口仅允许从主窗口打开。");
-  return openCloudWorkbench(address);
-});
-
 ipcMain.handle("shell:openExternal", async (_e, url: string) => {
   if (typeof url !== "string" || !url || url.length > 16_384 || url.includes("\0")) {
     throw new Error("openExternal requires a bounded url");
@@ -7223,6 +7222,7 @@ app.on(
       await Promise.allSettled([
         imGatewayService.dispose(),
         mobileRemoteController.dispose(),
+        cloudManagementManager.dispose(),
         gatewayControlServer?.stop(),
         petWorkInboxFlush,
         petLongTaskFlush,

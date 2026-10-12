@@ -75,7 +75,7 @@ function setup(
     prepareGitHubLink,
     request: async (input) => {
       requests.push(input);
-      return transport ? transport(input) : {};
+      return transport ? transport(input) : input.path.endsWith("/logout") ? { ok: true } : {};
     },
     changed: (value) => events.push(value),
     retireRelay: async (identity) => {
@@ -219,7 +219,7 @@ test("late Link view and acknowledgements are fenced by owner and account incarn
           ? response.promise
           : req.path.endsWith("login")
             ? next
-            : {},
+            : { ok: true },
       );
       let owned = true;
       const request = {
@@ -546,7 +546,9 @@ test("rotating refresh is singleflight, persisted before use and scoped to the s
 test("logout fences late refresh and login results, retiring only account-scoped relay identity", async () => {
   const old = grant({ accessTokenExpiresAt: Date.now() + 1000 });
   const response = deferred<unknown>();
-  const ctx = setup(old, async (input) => (input.path.endsWith("refresh") ? response.promise : {}));
+  const ctx = setup(old, async (input) =>
+    input.path.endsWith("refresh") ? response.promise : { ok: true },
+  );
   const pending = ctx.manager.getCredential(origin).catch(() => "cancelled");
   const logout = ctx.manager.logout();
   expect(ctx.manager.status().state).toBe("signed-out");
@@ -678,6 +680,28 @@ test("failed server revocation reports uncertainty after local logout; local cre
   expect(ctx.saved()).toBeUndefined();
   expect(ctx.manager.status().state).toBe("signed-out");
   expect(ctx.retired).toHaveLength(1);
+});
+
+test.each([{}, { ok: false }, { revoked: false }, { revoked: true }, { ok: "true" }, null, []])(
+  "Account logout does not confirm an invalid revocation acknowledgement: %j",
+  async (ack) => {
+    const old = grant();
+    const ctx = setup(old, async () => ack);
+    await expect(ctx.manager.logout()).rejects.toThrow("服务端未确认撤销");
+    expect(ctx.saved()).toBeUndefined();
+    expect(ctx.manager.status().state).toBe("signed-out");
+    expect(ctx.retired).toEqual([{ origin, accountId: old.account.id }]);
+    expect(ctx.requests).toMatchObject([
+      { origin, path: "/api/v1/account/logout", token: old.accessToken, body: {} },
+    ]);
+  },
+);
+
+test("Account logout accepts the real service revocation acknowledgement", async () => {
+  const ctx = setup(grant(), async () => ({ ok: true }));
+  await ctx.manager.logout();
+  expect(ctx.saved()).toBeUndefined();
+  expect(ctx.manager.status().state).toBe("signed-out");
 });
 
 test("cancelling GitHub login aborts the private polling proof and cannot accept a late grant", async () => {
@@ -854,7 +878,9 @@ test("logout, session replacement and owner closure fence a late profile respons
         ? response.promise
         : request.path.endsWith("login")
           ? next
-          : {},
+          : request.path.endsWith("logout")
+            ? { ok: true }
+            : {},
     );
     const result = ctx.manager
       .profile({ origin, accountId: old.account.id, action: "read" }, () => authorized)

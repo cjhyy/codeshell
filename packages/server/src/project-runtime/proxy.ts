@@ -2,7 +2,7 @@ import { request as httpRequest, type IncomingMessage, type ServerResponse } fro
 import { Transform, type Duplex } from "node:stream";
 import { WebSocket, WebSocketServer, type RawData } from "ws";
 import { HUB_SESSION_COOKIE, type HubAuth } from "../hub/auth-http.js";
-import type { HubSession } from "../hub/auth-store.js";
+import type { ProjectControlAuthority, ProjectControlSession } from "./control-authority.js";
 import type { ProjectRuntimeConnection } from "./types.js";
 import { createLinkBrowserHandoff } from "../links/browser-handoff.js";
 import type { LinkAuthorization } from "@cjhyy/code-shell-link";
@@ -10,8 +10,8 @@ import type { LinkAuthorization } from "@cjhyy/code-shell-link";
 export type RuntimeTarget = ProjectRuntimeConnection;
 
 export interface ProjectRuntimeProxyOptions {
-  auth: HubAuth;
-  resolveTarget(projectId: string, session: HubSession): Promise<RuntimeTarget>;
+  auth: HubAuth | ProjectControlAuthority;
+  resolveTarget(projectId: string, session: ProjectControlSession): Promise<RuntimeTarget>;
   publicOrigin: () => string;
   /** Stop this runtime if its private logout cannot acknowledge revocation.
    * Dispatched after retirement settles; may call back into revokeProject. */
@@ -114,7 +114,7 @@ export function createProjectRuntimeProxy(options: ProjectRuntimeProxyOptions) {
   let sweeping = false;
   let queuedFrameBytes = 0;
 
-  function liveSession(id: string): HubSession {
+  function liveSession(id: string): ProjectControlSession {
     if (closed || revokedOwners.has(id)) throw new ProxyError(401, "Project session expired");
     const session = options.auth.store.listSessions().find((item) => item.id === id);
     if (!session || session.expiresAt <= Date.now())
@@ -122,7 +122,7 @@ export function createProjectRuntimeProxy(options: ProjectRuntimeProxyOptions) {
     return session;
   }
 
-  function assertLease(lease: Lease): HubSession {
+  function assertLease(lease: Lease): ProjectControlSession {
     const session = liveSession(lease.sessionId);
     if (lease.revoked || (projectRevisions.get(lease.projectId) ?? 0) !== lease.projectRevision)
       throw new ProxyError(410, "Project runtime changed; reopen the project");
@@ -131,6 +131,8 @@ export function createProjectRuntimeProxy(options: ProjectRuntimeProxyOptions) {
 
   async function validate(lease: Lease): Promise<void> {
     const session = assertLease(lease);
+    if ("revalidate" in options.auth) await options.auth.revalidate(session);
+    assertLease(lease);
     const current = checkedTarget(await options.resolveTarget(lease.projectId, session));
     assertLease(lease);
     if (!sameTarget(current, lease.target)) {
@@ -262,7 +264,9 @@ export function createProjectRuntimeProxy(options: ProjectRuntimeProxyOptions) {
     // random capability takes this path; another signed-in owner cannot borrow it.
     if (
       req.headers.authorization !== undefined ||
-      req.headers.cookie?.includes(`${HUB_SESSION_COOKIE}=`)
+      req.headers.cookie?.includes(
+        `${"cookieName" in options.auth ? options.auth.cookieName : HUB_SESSION_COOKIE}=`,
+      )
     ) {
       const session = await options.auth.authenticate(req);
       if (!session || session.id !== grant.lease.sessionId)

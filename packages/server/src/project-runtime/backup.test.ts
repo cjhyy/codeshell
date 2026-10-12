@@ -161,3 +161,37 @@ test("restore rejects symbolic-link parents in control metadata before opening e
     }),
   ).rejects.toThrow("ordinary directory");
 });
+
+test("restore rejects discarded nested control directories before Docker or destination creation", async () => {
+  const source = await root();
+  await mkdir(join(source, "control"));
+  await mkdir(join(source, "volumes"));
+  const entry = { sha256: "a".repeat(64), bytes: 2 };
+  for (const obsolete of [
+    "project-runtime-secrets",
+    "administrator-setup.txt",
+    "environment.json",
+  ]) {
+    const destination = join(await root(), "restored");
+    await writeFile(
+      join(source, "manifest.json"),
+      JSON.stringify({
+        format: "codeshell.project-installation-backup",
+        version: 1,
+        installationId: "12345678-1234-1234-1234-123456789abc",
+        projects: [],
+        volumes: [],
+        control: {
+          "hub/auth.json": entry,
+          "project-control/registry.json": entry,
+          "project-control/initialized": entry,
+          [obsolete + "/nested"]: entry,
+        },
+      }),
+    );
+    await expect(restoreProjectInstallation({ source, destination, helperImage })).rejects.toThrow(
+      "Invalid backup control entry",
+    );
+    await expect(readFile(join(destination, "restore-in-progress"))).rejects.toThrow();
+  }
+});
