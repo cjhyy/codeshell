@@ -4,6 +4,8 @@ CodeShell opens and runs local projects without an account or an account-server
 connection. The sidebar account entry and Settings → General open the same
 optional cloud account flow, with GitHub sign-in first, separate password login
 and account-creation modes, GitHub identity binding, and logout.
+The account entry is a compact avatar icon beside Settings in the sidebar footer;
+its hover text and accessible description retain the account name and state.
 The service address defaults to `https://115.159.45.55` and remains editable for
 self-hosted deployments. Prefilling it does not initiate an account connection;
 the selected server must expose the account API before sign-in is available.
