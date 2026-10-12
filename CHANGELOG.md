@@ -8,6 +8,8 @@ breaking.
 
 ## [Unreleased]
 
+## [0.9.36] - 2026-10-13
+
 ### Added
 
 - Edit the display nickname and password login username independently in the
@@ -17,6 +19,8 @@ breaking.
 
 ### Fixed
 
+- Include bound Panel package Skills in the TUI `/skills` list, respecting the
+  project's selected package version and disabled Panels without opening a page.
 - Compact the sidebar account entry into an avatar icon beside Settings, with
   account details on hover and in accessible descriptions.
 - Remove the duplicate cloud account form from General settings; manage the
