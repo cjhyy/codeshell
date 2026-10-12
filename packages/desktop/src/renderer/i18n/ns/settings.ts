@@ -5,6 +5,23 @@ export const settingsNs = {
       cloudAccount: {
         title: "CodeShell 云账号（可选）",
         manage: "账号管理",
+        profileTitle: "账号资料",
+        displayName: "昵称",
+        displayNameHelp: "昵称用于显示，可包含中文和 emoji；1–64 个字符。不会改变登录用户名。",
+        displayNameInvalid: "昵称需为 1–64 个字符，不能包含控制字符。",
+        loginUsername: "登录用户名",
+        profileUsernameHelp:
+          "用户名用于密码登录，需为 3–64 位字母、数字、点、下划线或连字符。修改后使用新用户名；GitHub 登录不受影响。",
+        profileUsernameInvalid:
+          "用户名需为 3–64 位，以字母或数字开头，可包含字母、数字、点、下划线和连字符。",
+        profileUsernameUnavailable: "此用户名已被使用，请换一个用户名。",
+        profileSave: "保存资料",
+        profileSaving: "正在同步资料…",
+        profileSaved: "账号资料已保存。",
+        profileUnavailable: "此云服务尚未启用资料编辑，或能力检查尚未完成。",
+        profileStorageFailed: "云端资料已同步，但本机保存失败，请重试同步。",
+        profileAuthFailed: "账号登录已失效，请重新登录后编辑资料。",
+        profileFailed: "无法同步账号资料，请检查网络后重试。",
         signInAccount: "登录账号",
         localMode: "本地模式 · 未登录",
         signedIn: "CodeShell 云账号",
@@ -1055,6 +1072,26 @@ export const settingsNs = {
       cloudAccount: {
         title: "CodeShell cloud account (optional)",
         manage: "Manage account",
+        profileTitle: "Account profile",
+        displayName: "Nickname",
+        displayNameHelp:
+          "Shown as your name; Chinese characters and emoji are supported. Use 1–64 characters. Your sign-in username stays separate.",
+        displayNameInvalid: "Use 1–64 characters without control characters for your nickname.",
+        loginUsername: "Sign-in username",
+        profileUsernameHelp:
+          "Used for password sign-in. Use 3–64 letters, numbers, dots, underscores or hyphens. After changing it, sign in with the new username. GitHub sign-in is unaffected.",
+        profileUsernameInvalid:
+          "Use 3–64 letters, numbers, dots, underscores or hyphens, starting with a letter or number.",
+        profileUsernameUnavailable: "This username is already taken. Choose another one.",
+        profileSave: "Save profile",
+        profileSaving: "Syncing profile…",
+        profileSaved: "Account profile saved.",
+        profileUnavailable:
+          "Profile editing is unavailable on this service, or its capability check is still pending.",
+        profileStorageFailed:
+          "Your cloud profile was synced, but saving it on this device failed. Retry syncing.",
+        profileAuthFailed: "Your account session has expired. Sign in again to edit your profile.",
+        profileFailed: "Unable to sync your account profile. Check your connection and retry.",
         signInAccount: "Sign in to CodeShell",
         localMode: "Local mode · Not signed in",
         signedIn: "CodeShell cloud account",

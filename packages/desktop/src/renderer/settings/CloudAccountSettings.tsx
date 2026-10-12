@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { useT } from "../i18n/I18nProvider";
 import { useToast } from "../ui/ToastProvider";
 import { CloudAccountLinks } from "./CloudAccountLinks";
+import { CloudAccountProfile } from "./CloudAccountProfile";
 import {
   DEFAULT_CLOUD_ACCOUNT_ORIGIN,
   type CloudAccountCapabilities,
@@ -220,8 +221,18 @@ export function CloudAccountSettings({ embedded = false }: { embedded?: boolean 
       {status.account ? (
         <div className="space-y-2 text-sm">
           <p className="break-all">
-            {status.account.username} · {status.origin}
+            {status.account.displayName || status.account.username} · {status.origin}
           </p>
+          {status.state === "signed-in" && status.origin && (
+            <CloudAccountProfile
+              key={`profile:${authorityGeneration}`}
+              account={status.account}
+              identity={{ origin: status.origin, accountId: status.account.id }}
+              enabled={capabilities?.profileEnabled === true}
+              pending={pending}
+              current={() => authorityGenerationRef.current === authorityGeneration}
+            />
+          )}
           <p className="text-muted-foreground">{t("settingsX.cloudAccount.linkDescription")}</p>
           <div className="flex flex-wrap gap-2">
             <Button

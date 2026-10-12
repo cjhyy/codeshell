@@ -16,6 +16,7 @@ export const cloudAccountApi: CloudAccountApi = {
   signInWithGitHub: (input) => github({ mode: "login", input }),
   linkGitHub: () => github({ mode: "link" }),
   manageLinks: (input) => ipcRenderer.invoke("cloudAccount:links", input),
+  profile: (input) => ipcRenderer.invoke("cloudAccount:profile", input),
   cancelSignIn: () => ipcRenderer.invoke("cloudAccount:cancelSignIn"),
   logout: () => ipcRenderer.invoke("cloudAccount:logout"),
   onStatus(callback) {

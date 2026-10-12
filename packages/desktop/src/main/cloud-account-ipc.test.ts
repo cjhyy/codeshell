@@ -33,12 +33,25 @@ test("cloud account IPC rejects non-main frames and rechecks ownership after log
       manageLinks: (_input, allowed) => {
         authorized = allowed;
       },
+      profile: (_input, allowed) => {
+        authorized = allowed;
+      },
       logout: () => {},
       cancelSignIn: () => {},
     } as any,
   });
   expect([...handlers.keys()].sort()).toEqual(
-    ["status", "capabilities", "login", "register", "github", "links", "cancelSignIn", "logout"]
+    [
+      "status",
+      "capabilities",
+      "login",
+      "register",
+      "github",
+      "links",
+      "profile",
+      "cancelSignIn",
+      "logout",
+    ]
       .map((name) => `cloudAccount:${name}`)
       .sort(),
   );
@@ -58,6 +71,14 @@ test("cloud account IPC rejects non-main frames and rechecks ownership after log
   for (const [name, input] of [
     ["github", { mode: "login", input: { origin: "https://account.example" } }],
     ["github", { mode: "link" }],
+    [
+      "profile",
+      {
+        action: "read",
+        origin: "https://account.example",
+        accountId: "10000000-0000-0000-0000-000000000001",
+      },
+    ],
     [
       "links",
       {

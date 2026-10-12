@@ -8,6 +8,13 @@ breaking.
 
 ## [Unreleased]
 
+### Added
+
+- Edit the display nickname and password login username independently in the
+  sidebar account dialog, preserving the account's GitHub, device and Link ownership.
+- Open the browser account profile portal from the cloud account menu without
+  passing credentials in its URL.
+
 ### Fixed
 
 - Compact the sidebar account entry into an avatar icon beside Settings, with

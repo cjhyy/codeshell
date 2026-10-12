@@ -8,12 +8,14 @@ import type {
   CloudAccountStatus,
   CloudAccountLinksRequest,
   CloudAccountLinksResult,
+  CloudAccountProfileRequest,
 } from "../shared/cloud-account.js";
 import {
   accountLinksRequest,
   accountLinkView,
   accountLinkRevocation,
 } from "./cloud-account-links.js";
+import { accountProfile, accountProfileRequest } from "./cloud-account-profile.js";
 import {
   CloudAccountStore,
   validCloudAccountGrant,
@@ -48,7 +50,13 @@ function savedGrant(value: SavedCloudAccount, origin: string): SavedCloudAccount
     accessTokenExpiresAt: value.accessTokenExpiresAt,
     refreshTokenExpiresAt: value.refreshTokenExpiresAt,
     sessionId: value.sessionId,
-    account: { id: value.account.id, username: value.account.username },
+    account: {
+      id: value.account.id,
+      username: value.account.username,
+      ...(value.account.displayName === undefined
+        ? {}
+        : { displayName: value.account.displayName }),
+    },
     ...(value.kind === undefined ? {} : { kind: value.kind }),
     ...(value.audience === undefined ? {} : { audience: value.audience }),
     ...(value.hostId === undefined ? {} : { hostId: value.hostId }),
@@ -112,6 +120,9 @@ export class CloudAccountManager {
   private readonly request: CloudAccountTransport;
   private githubConnection?: CloudAccountStatus["githubConnection"];
   private pendingGitHubLink?: PreparedGitHubLink;
+  private profileRevision = 0;
+  private profileRequestRevision = 0;
+  private profileUpdate?: object;
   constructor(
     private readonly deps: {
       store: CloudAccountStore;
@@ -167,7 +178,8 @@ export class CloudAccountManager {
       typeof value.githubEnabled !== "boolean" ||
       (value.githubLinkEnabled !== undefined && typeof value.githubLinkEnabled !== "boolean") ||
       (value.linkManagementEnabled !== undefined &&
-        typeof value.linkManagementEnabled !== "boolean")
+        typeof value.linkManagementEnabled !== "boolean") ||
+      (value.profileEnabled !== undefined && typeof value.profileEnabled !== "boolean")
     )
       throw new Error("云服务返回了无效的账号能力信息。");
     return {
@@ -179,6 +191,7 @@ export class CloudAccountManager {
       ...(value.linkManagementEnabled === undefined
         ? {}
         : { linkManagementEnabled: value.linkManagementEnabled }),
+      ...(value.profileEnabled === undefined ? {} : { profileEnabled: value.profileEnabled }),
     };
   }
   private publish(state: CloudAccountStatus["state"]) {
@@ -198,6 +211,7 @@ export class CloudAccountManager {
     this.operation = new AbortController();
     this.refresh = undefined;
     this.refreshResponse = undefined;
+    this.profileUpdate = undefined;
   }
   private current(generation: number, authorized: () => boolean) {
     if (generation !== this.generation || this.operation.signal.aborted || !authorized())
@@ -382,6 +396,67 @@ export class CloudAccountManager {
     return input.action === "list"
       ? { action: "list", view: accountLinkView(value) }
       : accountLinkRevocation(value, input);
+  }
+  async profile(
+    raw: CloudAccountProfileRequest,
+    authorized: () => boolean = () => true,
+  ): Promise<CloudAccountStatus> {
+    const input = accountProfileRequest(raw);
+    this.load();
+    if (this.profileUpdate) throw new Error("账号资料正在保存，请稍后重试。");
+    const saved = this.saved;
+    const generation = this.generation;
+    const signal = this.operation.signal;
+    const revision = ++this.profileRequestRevision;
+    const current = () => {
+      this.current(generation, authorized);
+      if (
+        !saved ||
+        !this.saved ||
+        this.state !== "signed-in" ||
+        this.saved.sessionId !== saved.sessionId ||
+        this.saved.origin !== input.origin ||
+        this.saved.account.id !== input.accountId ||
+        revision !== this.profileRequestRevision
+      )
+        throw new Error("云账号操作已取消。");
+    };
+    current();
+    const update = input.action === "update" ? {} : undefined;
+    if (update) this.profileUpdate = update;
+    try {
+      const token = await this.getCredential(input.origin, input.accountId, signal);
+      current();
+      const value = await this.request({
+        origin: input.origin,
+        path: "/api/v1/account/profile",
+        method: input.action === "read" ? "GET" : "PATCH",
+        token,
+        signal,
+        ...(input.action === "read"
+          ? {}
+          : {
+              body: {
+                ...(input.displayName === undefined ? {} : { displayName: input.displayName }),
+                ...(input.username === undefined ? {} : { username: input.username }),
+              },
+            }),
+      });
+      current();
+      const account = accountProfile(value, input.accountId);
+      const next = { ...this.saved!, account };
+      try {
+        this.deps.store.save(next);
+      } catch {
+        throw new Error("账号资料同步后无法保存到本机，请重试。");
+      }
+      this.profileRevision++;
+      this.saved = next;
+      this.publish("signed-in");
+      return this.status();
+    } finally {
+      if (update && this.profileUpdate === update) this.profileUpdate = undefined;
+    }
   }
   signInWithGitHub(input: CloudAccountGitHubLogin, authorized: () => boolean = () => true) {
     return this.github(input, authorized);
@@ -676,6 +751,7 @@ export class CloudAccountManager {
     if (saved.accessTokenExpiresAt > this.now() + 30_000) return saved.accessToken;
     if (!this.refresh) {
       const generation = this.generation;
+      const profileRevision = this.profileRevision;
       const operationSignal = this.operation.signal;
       // A logout can await this one response to revoke the rotated token without
       // persisting it. Client cancellation fences use, not the bounded request.
@@ -690,7 +766,13 @@ export class CloudAccountManager {
           const grant = await response;
           this.validGrant(grant, origin);
           try {
-            this.current(generation, () => this.saved === saved && !operationSignal.aborted);
+            this.current(
+              generation,
+              () =>
+                this.saved?.sessionId === saved.sessionId &&
+                this.saved?.account.id === saved.account.id &&
+                !operationSignal.aborted,
+            );
           } catch (error) {
             if (!this.revocationResponses.has(response)) void this.revoke({ ...grant, origin });
             throw error;
@@ -698,6 +780,9 @@ export class CloudAccountManager {
           if (grant.account.id !== saved.account.id || grant.sessionId !== saved.sessionId)
             throw new Error("云账号授权发生变化，请重新登录。");
           const next = savedGrant(grant, origin);
+          // A refresh issued before a profile update may carry its older label.
+          if (profileRevision !== this.profileRevision && this.saved?.sessionId === saved.sessionId)
+            next.account = { ...this.saved.account };
           try {
             this.deps.store.save(next);
           } catch (error) {

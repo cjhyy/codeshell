@@ -26,6 +26,13 @@ function deferred<T>() {
   });
   return { promise, resolve };
 }
+async function waitForRequest(requests: CloudAccountRequest[], path?: string) {
+  const deadline = Date.now() + 1000;
+  while (!requests.some((request) => !path || request.path.endsWith(path))) {
+    if (Date.now() >= deadline) throw new Error("Expected fixture request did not start");
+    await new Promise((done) => setTimeout(done, 0));
+  }
+}
 function setup(
   initial?: SavedCloudAccount,
   transport?: CloudAccountTransport,
@@ -483,6 +490,7 @@ test("capability discovery requires boolean registration and GitHub flags", asyn
     { registrationAllowed: "true", githubEnabled: true },
     { registrationAllowed: true, githubEnabled: 1 },
     { registrationAllowed: true, githubEnabled: null },
+    { registrationAllowed: true, githubEnabled: true, profileEnabled: "true" },
   ]) {
     const ctx = setup(undefined, async () => response);
     await expect(ctx.manager.capabilities(origin)).rejects.toThrow("无效的账号能力信息");
@@ -754,4 +762,218 @@ test("refresh persistence and relay cleanup failures still revoke the rotated ro
     [next.accessToken],
   );
   await expect(ctx.manager.getCredential(origin)).rejects.toThrow("登录");
+});
+
+test("profile edits keep the same session, persist the normalized nickname, and expose no server fields", async () => {
+  const old = grant();
+  const ctx = setup(old, async () => ({
+    account: {
+      ...old.account,
+      username: "alice-new",
+      displayName: "é 👩‍💻",
+      accessToken: "private-response-value",
+    },
+  }));
+  const result = await ctx.manager.profile({
+    origin,
+    accountId: old.account.id,
+    action: "update",
+    username: " Alice-New ",
+    displayName: " e\u0301 👩‍💻 ",
+  });
+  const request = ctx.requests[0];
+  expect(request.method).toBe("PATCH");
+  expect(request.path).toBe("/api/v1/account/profile");
+  expect(request.token).toBe(old.accessToken);
+  expect(request.body).toEqual({ username: "alice-new", displayName: "é 👩‍💻" });
+  expect(result.account).toEqual({
+    id: old.account.id,
+    username: "alice-new",
+    displayName: "é 👩‍💻",
+  });
+  expect(ctx.saved()).toEqual({ ...old, account: result.account });
+  expect(ctx.retired).toHaveLength(0);
+  expect(JSON.stringify(ctx.events)).not.toContain("private-response-value");
+  expect(JSON.stringify(ctx.events)).not.toContain(old.accessToken);
+});
+
+test("profile calls reject cross-account authority and invalid names before any request", async () => {
+  const old = grant();
+  const ctx = setup(old);
+  for (const identity of [
+    { origin: "https://other.example", accountId: old.account.id },
+    { origin, accountId: randomUUID() },
+  ]) {
+    await expect(ctx.manager.profile({ ...identity, action: "read" })).rejects.toThrow();
+  }
+  for (const displayName of [
+    "",
+    " ",
+    "a\u0000b",
+    "a\u202eb",
+    "a\u061cb",
+    "\nAlice",
+    "\ufeffAlice",
+    "a\u200bb",
+    "\ud800",
+    "界".repeat(65),
+  ]) {
+    await expect(
+      ctx.manager.profile({ origin, accountId: old.account.id, action: "update", displayName }),
+    ).rejects.toThrow();
+  }
+  for (const username of ["ab", "中文名", "a b", "a".repeat(65)]) {
+    await expect(
+      ctx.manager.profile({ origin, accountId: old.account.id, action: "update", username }),
+    ).rejects.toThrow();
+  }
+  expect(ctx.requests).toHaveLength(0);
+  expect(ctx.writes()).toBe(0);
+});
+
+test("profile read validates the returned account and saving failure never publishes success", async () => {
+  const old = grant();
+  for (const account of [
+    { ...old.account, id: randomUUID(), displayName: "Alice" },
+    { ...old.account, displayName: "bad\u2066name" },
+    { ...old.account, displayName: "" },
+  ]) {
+    const ctx = setup(old, async () => ({ account }));
+    await expect(
+      ctx.manager.profile({ origin, accountId: old.account.id, action: "read" }),
+    ).rejects.toThrow();
+    expect(ctx.saved()).toEqual(old);
+    expect(ctx.writes()).toBe(0);
+  }
+  const ctx = setup(old, async () => ({
+    account: { ...old.account, displayName: "New nickname" },
+  }));
+  ctx.failSave();
+  await expect(
+    ctx.manager.profile({
+      origin,
+      accountId: old.account.id,
+      action: "update",
+      displayName: "New nickname",
+    }),
+  ).rejects.toThrow("无法保存到本机");
+  expect(ctx.saved()).toEqual(old);
+  expect(ctx.events).toHaveLength(0);
+});
+
+test("logout, session replacement and owner closure fence a late profile response", async () => {
+  for (const action of ["logout", "replace", "same-account", "owner"] as const) {
+    const old = grant();
+    const next = grant({
+      account: {
+        id: action === "same-account" ? old.account.id : randomUUID(),
+        username: "bob",
+        displayName: "Bob",
+      },
+    });
+    let authorized = true;
+    const response = deferred<unknown>();
+    const ctx = setup(old, async (request) =>
+      request.path.endsWith("profile")
+        ? response.promise
+        : request.path.endsWith("login")
+          ? next
+          : {},
+    );
+    const result = ctx.manager
+      .profile({ origin, accountId: old.account.id, action: "read" }, () => authorized)
+      .catch((error) => error);
+    await waitForRequest(ctx.requests, "profile");
+    if (action === "logout") await ctx.manager.logout();
+    else if (action === "owner") authorized = false;
+    else
+      await ctx.manager.signIn("login", {
+        origin,
+        username: "bob",
+        password: "another fixture password",
+      });
+    response.resolve({ account: { ...old.account, displayName: "Late nickname" } });
+    expect((await result).message).toContain("取消");
+    expect(ctx.saved()?.account).toEqual(
+      action === "logout" ? undefined : action === "owner" ? old.account : next.account,
+    );
+  }
+});
+
+test("a profile read started before an edit cannot restore its older label", async () => {
+  const old = grant();
+  const response = deferred<unknown>();
+  const ctx = setup(old, async (request) =>
+    request.method === "GET"
+      ? response.promise
+      : { account: { ...old.account, displayName: "New nickname" } },
+  );
+  const reading = ctx.manager
+    .profile({ origin, accountId: old.account.id, action: "read" })
+    .catch((error) => error);
+  await waitForRequest(ctx.requests);
+  await ctx.manager.profile({
+    origin,
+    accountId: old.account.id,
+    action: "update",
+    displayName: "New nickname",
+  });
+  response.resolve({ account: { ...old.account, displayName: "Old nickname" } });
+  expect((await reading).message).toContain("取消");
+  expect(ctx.saved()?.account.displayName).toBe("New nickname");
+});
+
+test("a refresh already in flight preserves a nickname saved after it started", async () => {
+  const old = grant();
+  const profile = deferred<unknown>();
+  const refresh = deferred<unknown>();
+  const ctx = setup(old, async (request) =>
+    request.path.endsWith("profile") ? profile.promise : refresh.promise,
+  );
+  const editing = ctx.manager.profile({
+    origin,
+    accountId: old.account.id,
+    action: "update",
+    displayName: "New nickname",
+  });
+  await waitForRequest(ctx.requests);
+  old.accessTokenExpiresAt = Date.now() + 1000;
+  const refreshing = ctx.manager.getCredential(origin);
+  const rotated = grant({
+    account: { ...old.account, displayName: "Old nickname" },
+    sessionId: old.sessionId,
+  });
+  profile.resolve({ account: { ...old.account, displayName: "New nickname" } });
+  await editing;
+  refresh.resolve(rotated);
+  expect(await refreshing).toBe(rotated.accessToken);
+  expect(ctx.saved()?.account.displayName).toBe("New nickname");
+  expect(ctx.saved()?.refreshToken).toBe(rotated.refreshToken);
+});
+
+test("another window cannot overlap or cancel an active profile edit", async () => {
+  const old = grant();
+  const response = deferred<unknown>();
+  const ctx = setup(old, async () => response.promise);
+  const editing = ctx.manager.profile({
+    origin,
+    accountId: old.account.id,
+    action: "update",
+    displayName: "First nickname",
+  });
+  await waitForRequest(ctx.requests);
+  for (const action of ["read", "update"] as const) {
+    await expect(
+      ctx.manager.profile({
+        origin,
+        accountId: old.account.id,
+        action,
+        ...(action === "update" ? { displayName: "Second nickname" } : {}),
+      }),
+    ).rejects.toThrow("正在保存");
+  }
+  expect(ctx.requests).toHaveLength(1);
+  response.resolve({ account: { ...old.account, displayName: "First nickname" } });
+  await editing;
+  expect(ctx.saved()?.account.displayName).toBe("First nickname");
 });
