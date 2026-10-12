@@ -425,6 +425,7 @@ try {
         try {
           receipt = settingsRecoveryFixtureEvidence(output, passed, entryHash);
         } catch (error) {
+          const failures = [error];
           try {
             await persistReceipt({
               passed: false,
@@ -432,14 +433,12 @@ try {
               cliEntryHash: entryHash,
             });
           } catch (receiptError) {
-            throw new AggregateError(
-              [error, receiptError],
-              "Recovery proof and persistence failed",
-              {
-                cause: error,
-              },
-            );
+            failures.push(receiptError);
           }
+          if (failures.length > 1)
+            throw new AggregateError(failures, "Recovery proof and persistence failed", {
+              cause: error,
+            });
           throw error;
         }
         await persistReceipt(receipt);
