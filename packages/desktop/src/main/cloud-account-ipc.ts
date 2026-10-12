@@ -2,6 +2,7 @@ import type { IpcMain, IpcMainInvokeEvent, WebContents } from "electron";
 import type { CloudAccountLogin } from "../shared/cloud-account.js";
 import { accountGitHubRequest, accountLinksRequest } from "./cloud-account-links.js";
 import type { CloudAccountManager } from "./cloud-account-manager.js";
+import { accountProfileRequest } from "./cloud-account-profile.js";
 
 export function registerCloudAccountIpc(options: {
   ipcMain: Pick<IpcMain, "handle">;
@@ -41,6 +42,10 @@ export function registerCloudAccountIpc(options: {
   options.ipcMain.handle("cloudAccount:links", (event, raw: unknown) => {
     owner(event);
     return options.manager.manageLinks(accountLinksRequest(raw), () => allowed(event));
+  });
+  options.ipcMain.handle("cloudAccount:profile", (event, raw: unknown) => {
+    owner(event);
+    return options.manager.profile(accountProfileRequest(raw), () => allowed(event));
   });
   options.ipcMain.handle("cloudAccount:cancelSignIn", (event) => {
     owner(event);

@@ -2,6 +2,11 @@ import { expect, test } from "bun:test";
 import { fileURLToPath } from "node:url";
 
 const scenarios = {
+  "profile-success":
+    "keeps nickname and sign-in username separate and updates the avatar after saving",
+  "profile-failure": "preserves profile drafts and explains a username conflict without IPC noise",
+  "profile-stale": "ignores a late profile response after switching accounts",
+  "profile-unavailable": "disables profile editing for services without the capability",
   authentication: "opens account management and keeps login, registration, and logout in sync",
   github: "offers GitHub sign-in and cancellation from the sidebar",
   composition: "preserves account drafts when Escape cancels Chinese input composition",

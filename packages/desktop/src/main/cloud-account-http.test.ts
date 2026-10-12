@@ -57,6 +57,10 @@ async function rejected(send, status, message) {
 }
 try {
   const cases = [
+    ["profile", 400, "invalid_display_name", "昵称需为 1–64 个字符，不能包含控制字符。"],
+    ["profile", 400, "invalid_username", "用户名需为 3–64 位字母、数字、点、下划线或连字符，并以字母或数字开头。"],
+    ["profile", 409, "username_unavailable", "此用户名已被使用，请换一个用户名。"],
+    ["profile", 404, "account_endpoint_not_found", "此云服务尚未启用账号资料编辑。"],
     ["register", 409, "username_unavailable", "此用户名已被使用，请换一个用户名。"],
     ["login", 401, "invalid_credentials", "用户名或密码错误，请重新输入。"],
     ["register", 403, "registration_disabled", "此云服务暂未开放注册，请登录已有账号。"],
@@ -121,6 +125,15 @@ try {
     { path: revokePath, body: { id: "other" } }, { path: "/api/v1/account/links/clients/10000000-0000-0000-0000-000000000001" },
   ]) await assert.rejects(() => transport({ origin, method: "DELETE", ...input }));
   assert.equal(requests, beforeInvalidDelete);
+  const profilePath = "/api/v1/account/profile";
+  reply = { status: 200, body: { account: { displayName: "Fixture nickname" } } };
+  await transport({ origin, path: profilePath, method: "PATCH", token: "fixture-root-token", body: { displayName: "Fixture nickname" } });
+  assert.deepEqual(lastRequest, { method: "PATCH", url: profilePath, token: "Bearer fixture-root-token" });
+  const beforeInvalidPatch = requests;
+  for (const path of ["/api/v1/account/logout", profilePath + "?all=true", profilePath + "/other"]) {
+    await assert.rejects(() => transport({ origin, method: "PATCH", path, body: {} }));
+  }
+  assert.equal(requests, beforeInvalidPatch);
   reply = { status: 200, body: { data: "x".repeat(20_000) } };
   assert.equal((await transport({ origin, path: "/api/v1/account/links", method: "GET" })).data.length, 20_000);
   await rejected(() => transport({ origin, path: "/api/v1/account/links", method: "POST" }), 0, generic);

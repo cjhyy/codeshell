@@ -46,6 +46,8 @@ const capabilityRequests: Array<{
 let capabilityAttempts = 0;
 const credentials: Array<{ action: string; input: CloudAccountLogin }> = [];
 const authenticationRequest = deferred<CloudAccountStatus>();
+const profileRequest = deferred<CloudAccountStatus>();
+const profileCalls: Array<Parameters<CloudAccountApi["profile"]>[0]> = [];
 let current: CloudAccountStatus = { state: "signed-out" };
 let subscriptions = 0;
 let unsubscriptions = 0;
@@ -69,6 +71,24 @@ const authenticate = async (action: string, input: CloudAccountLogin) => {
   return current;
 };
 const api: CloudAccountApi = {
+  profile: async (input) => {
+    assert.ok(scenario.startsWith("profile-") && scenario !== "profile-unavailable");
+    profileCalls.push(input);
+    if (input.action === "update" && scenario === "profile-failure")
+      throw new Error(
+        "Error invoking remote method 'cloudAccount:profile': Error: 此用户名已被使用，请换一个用户名。",
+      );
+    if (input.action === "update" && scenario === "profile-stale") return profileRequest.promise;
+    emit({
+      ...current,
+      account: {
+        ...current.account!,
+        displayName: input.action === "read" ? "原昵称" : input.displayName,
+        username: input.action === "read" ? current.account!.username : input.username!,
+      },
+    });
+    return current;
+  },
   manageLinks: async () => {
     throw new Error("Sidebar fixture does not authorize Link management requests");
   },
@@ -83,6 +103,7 @@ const api: CloudAccountApi = {
       return Promise.reject(new Error("Discovery unavailable"));
     }
     return Promise.resolve({
+      profileEnabled: scenario.startsWith("profile-") && scenario !== "profile-unavailable",
       registrationAllowed: !["registration-unavailable", "github-registration-closed"].includes(
         scenario,
       ),
@@ -276,7 +297,48 @@ try {
   await settle(() => root.render(<AccountSidebarEntry />));
   assert.equal(listeners.size, 1, "The footer listens even before management opens");
 
-  if (scenario === "authentication") {
+  if (scenario.startsWith("profile-")) {
+    await settle(() => emit(signedIn("github-123")));
+    await open();
+    await settleCapabilities();
+    if (scenario === "profile-unavailable") {
+      assert.equal(profileCalls.length, 0);
+      assert.equal(props(button("保存资料")).disabled, true);
+      assert.equal(props(input("昵称")).disabled, true);
+      assert.ok(text(dialog()!).includes("此云服务尚未启用资料编辑"));
+    } else {
+      assert.equal(profileCalls[0]?.action, "read");
+      assertSignedIn("原昵称");
+      assert.equal(props(input("登录用户名")).value, "github-123");
+      await change(input("昵称"), "bad\u202ename");
+      assert.equal(props(button("保存资料")).disabled, true);
+      await change(input("昵称"), " e\u0301 中文 👩‍💻 ");
+      await change(input("登录用户名"), " Alice-New ");
+      await click(button("保存资料"));
+      assert.deepEqual(profileCalls[1], {
+        action: "update",
+        origin: current.origin,
+        accountId: "account-github-123",
+        displayName: "é 中文 👩‍💻",
+        username: "alice-new",
+      });
+      if (scenario === "profile-failure") {
+        assert.ok(text(dialog()!).includes("此用户名已被使用"));
+        assert.ok(!text(dialog()!).includes("Error invoking"));
+        assert.equal(props(input("昵称")).value, " e\u0301 中文 👩‍💻 ");
+        assert.ok(!text(dialog()!).includes("账号资料已保存。"));
+      } else if (scenario === "profile-stale") {
+        await settle(() => emit(signedIn("bob")));
+        await settle(() => profileRequest.resolve(signedIn("late-old-user")));
+        assert.ok(!text(dialog()!).includes("账号资料已保存。"));
+        assert.ok(!text(dialog()!).includes("late-old-user"));
+      } else {
+        assertSignedIn("é 中文 👩‍💻");
+        assert.equal(props(input("登录用户名")).value, "alice-new");
+        assert.ok(text(dialog()!).includes("账号资料已保存。"));
+      }
+    }
+  } else if (scenario === "authentication") {
     assertSignedOut();
     assert.equal(dialog(), undefined, "The initial account entry does not interrupt local work");
     await open();

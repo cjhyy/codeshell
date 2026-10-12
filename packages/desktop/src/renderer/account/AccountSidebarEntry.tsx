@@ -49,8 +49,9 @@ export function AccountSidebarEntry() {
   }, []);
 
   const username = status.account?.username;
-  const label = username || t("settingsX.cloudAccount.signInAccount");
-  const accessibleLabel = username ? `${t("settingsX.cloudAccount.manage")}: ${username}` : label;
+  const name = status.account?.displayName || username;
+  const label = name || t("settingsX.cloudAccount.signInAccount");
+  const accessibleLabel = name ? `${t("settingsX.cloudAccount.manage")}: ${name}` : label;
   const detail = unavailable
     ? t("settingsX.cloudAccount.unavailable")
     : status.state === "signed-in"
@@ -77,7 +78,7 @@ export function AccountSidebarEntry() {
             className="flex size-6 items-center justify-center rounded-full border border-border/70 bg-muted text-xs font-semibold text-foreground"
             aria-hidden
           >
-            {username ? Array.from(username)[0]?.toUpperCase() : <UserRound size={14} />}
+            {name ? Array.from(name)[0]?.toUpperCase() : <UserRound size={14} />}
           </span>
         </Button>
       </DialogTrigger>
