@@ -152,7 +152,9 @@ describe("architecture growth budgets", () => {
       // +2 metadata-only Profile preview and revision-checked adoption routes.
       // +3 preview/cancel/reviewed-save operations, without installation authority.
       // +2 project-memory copy preview/commit operations, bound to a main-frame review.
-    ).toBeLessThanOrEqual(345);
+      // +1 main-frame-owned Account profile read/update operation, bound to the
+      // signed-in origin/UUID. Only public names cross IPC; credentials stay in Main.
+    ).toBeLessThanOrEqual(346);
     // v0.8.17 added the reviewed Panel catalog/task bridge to both preload
     // surfaces. Mimi's bounded transcript pagination adds one typed invoke;
     // the validation and file-reading implementation remain extracted in main.
@@ -198,7 +200,9 @@ describe("architecture growth budgets", () => {
         matches("packages/desktop/src/preload/operation-resolution-api.ts", /ipc\.invoke\(/g),
       // Five reviewed collection invokes. Native file paths never arrive as renderer arguments.
       // +2 memory-copy invokes; commit carries only the reviewed token and project.
-    ).toBeLessThanOrEqual(338);
+      // +1 typed cloudAccount:profile invoke mirrors the single reviewed Main
+      // read/update route above; no credential-read or additional route is added.
+    ).toBeLessThanOrEqual(339);
     // GitHub skill previews and Panel task hosting carry main-issued review and
     // ownership fields across the typed preload boundary. The optional Mimi
     // transcript-page method adds its bounded response shape without widening
