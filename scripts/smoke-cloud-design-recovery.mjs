@@ -1,6 +1,7 @@
 /* Production Design UI against two installed candidate packages and real Docker volumes. */
 /* global document */
 import assert from "node:assert/strict";
+import { assertDockerBrowserGuard } from "./docker-candidate-browser-guard.mjs";
 import { createHash } from "node:crypto";
 import { createRequire } from "node:module";
 import { mkdir, readFile, writeFile } from "node:fs/promises";
@@ -16,6 +17,7 @@ const PIXEL =
 const hash = async (value) => createHash("sha256").update(value).digest("hex");
 
 export async function verifyCloudDesignRecovery({
+  browserGuard,
   docker,
   request,
   serverUrl,
@@ -28,6 +30,7 @@ export async function verifyCloudDesignRecovery({
   scratch,
   evidenceDir,
 }) {
+  assertDockerBrowserGuard(browserGuard);
   // Fixture encoding uses the exact installed Panel's public document modules.
   const module = (name) =>
     import(pathToFileURL(join(candidatePanels, "design-studio/app", name)).href);
@@ -89,12 +92,12 @@ export async function verifyCloudDesignRecovery({
     );
   await mkdir(evidenceDir, { recursive: true });
   async function browserRun(action) {
-    const browser = await chromium.launch();
+    const browser = await chromium.launch({ channel: "chromium", chromiumSandbox: true });
     const pages = [],
       errors = [];
     try {
       const open = async (project) => {
-        const context = await browser.newContext({
+        const context = await browserGuard.createContext(browser, {
           viewport: { width: 1440, height: 1000 },
           acceptDownloads: true,
         });

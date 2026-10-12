@@ -1,6 +1,7 @@
 /* Actual candidate Job Hunt UI, authenticated Cloud proxy and Docker project volumes. */
 /* global window, document */
 import assert from "node:assert/strict";
+import { assertDockerBrowserGuard } from "./docker-candidate-browser-guard.mjs";
 import { createHash } from "node:crypto";
 import { createRequire } from "node:module";
 import { mkdir, readFile, writeFile } from "node:fs/promises";
@@ -29,6 +30,7 @@ async function until(read, description, timeout = 150_000) {
 }
 
 export async function verifyCloudJobHuntRecovery({
+  browserGuard,
   speechFixture,
   docker,
   request,
@@ -40,6 +42,7 @@ export async function verifyCloudJobHuntRecovery({
   projectB,
   evidenceDir,
 }) {
+  assertDockerBrowserGuard(browserGuard);
   await mkdir(evidenceDir, { recursive: true });
   const source = (schemaVersion, markdown) => ({
     schemaVersion,
@@ -130,7 +133,7 @@ export async function verifyCloudJobHuntRecovery({
       errors = [];
     try {
       const open = async (project) => {
-        const context = await browser.newContext({
+        const context = await browserGuard.createContext(browser, {
           viewport: { width: 1440, height: 1000 },
           acceptDownloads: true,
           permissions: ["microphone"],
