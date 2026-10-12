@@ -23,6 +23,8 @@ import {
   releaseDockerCandidateSockets,
 } from "../scripts/docker-candidate-browser-guard.mjs";
 
+import { pinCandidateStockWebSocket } from "../scripts/docker-candidate-stock-ws.mjs";
+
 const hash = (value) => createHash("sha256").update(value).digest("hex");
 const origin = "http://127.0.0.1:32123";
 
@@ -40,6 +42,9 @@ function fixture() {
   const policy = {
     version: 1,
     role: "controller",
+    stockWebSocket: pinCandidateStockWebSocket(
+      new URL("../packages/server/package.json", import.meta.url).pathname,
+    ),
     home,
     preload,
     preloadHash: hash(readFileSync(preload)),

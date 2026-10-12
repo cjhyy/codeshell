@@ -36,6 +36,11 @@ import {
   validateCandidateDriverDocker,
 } from "./docker-candidate-driver.mjs";
 
+import {
+  pinCandidateStockWebSocket,
+  loadCandidateStockWebSocket,
+} from "./docker-candidate-stock-ws.mjs";
+
 const moduleRoot = dirname(fileURLToPath(import.meta.url));
 const nativeSpawn = spawn;
 const HASH = /^[a-f0-9]{64}$/;
@@ -127,6 +132,7 @@ export async function createDockerCandidateFixture({
   downloadFixture,
   browserRequired = false,
   videoRequired = false,
+  stockWebSocketAnchor,
 } = {}) {
   if (process.platform !== "linux")
     throw new Error("Guarded Docker candidate smoke requires Linux network namespaces");
@@ -268,9 +274,13 @@ export async function createDockerCandidateFixture({
       JSON.stringify({ version: 1, helperImageId, inputHashes, buildNonce }) + "\n",
       { mode: 0o600 },
     );
+    const stockWebSocket = stockWebSocketAnchor
+      ? pinCandidateStockWebSocket(stockWebSocketAnchor)
+      : undefined;
     const moduleHashes = {};
     for (const name of [
       ...candidateRuntimeModules,
+      ...(stockWebSocket ? ["docker-candidate-stock-ws.mjs"] : []),
       "docker-candidate-controller.mjs",
       "docker-candidate-adapter.mjs",
       "docker-candidate-netns.mjs",
@@ -286,6 +296,7 @@ export async function createDockerCandidateFixture({
       guardHash: moduleHashes["docker-candidate-guard.mjs"],
       origins: [],
       children: [],
+      ...(stockWebSocket ? { stockWebSocket } : {}),
     };
     const nativePrograms = ["ffmpeg", "ffprobe", "chromium"].map((name) => ({
       path: `/usr/bin/${name}`,
@@ -401,6 +412,9 @@ export async function createDockerCandidateFixture({
       }
     }
     installed = installDockerCandidateGuard(driverPolicy, {
+      loadStockWebSocket: stockWebSocket
+        ? () => loadCandidateStockWebSocket(stockWebSocket)
+        : undefined,
       childStarted(proc) {
         children.add(proc);
         proc.once("close", () => children.delete(proc));
@@ -577,6 +591,7 @@ export async function createDockerCandidateFixture({
       helperImageId,
       imageId,
       moduleHashes,
+      WebSocket: installed.WebSocket,
       spawnController() {
         const descriptor = {
           path: node,

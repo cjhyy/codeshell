@@ -9,7 +9,6 @@
 import assert from "node:assert/strict";
 import { createHash } from "node:crypto";
 import { once } from "node:events";
-import { createRequire } from "node:module";
 import {
   existsSync,
   mkdirSync,
@@ -84,7 +83,7 @@ if (downloadFixtureIndex >= 0 && (!downloadFixture || (!candidatePanels && !down
   throw new Error("--download-fixture requires a fixture path and a Download package");
 assert.ok(existsSync(entry), "Build the server first: bun run build:server");
 assert.ok(/^[A-Za-z0-9][A-Za-z0-9._/:@-]{0,255}$/.test(image), "Invalid image name");
-const { WebSocket } = createRequire(join(serverRoot, "package.json"))("ws");
+let WebSocket;
 const scratch = realpathSync(mkdtempSync(join(tmpdir(), "codeshell-project-smoke-")));
 const dataDir = join(scratch, "data");
 const isolatedHome = join(scratch, "home");
@@ -488,6 +487,7 @@ try {
     controllerArgs,
     image,
     containerCore,
+    stockWebSocketAnchor: join(serverRoot, "package.json"),
     seccompPath: seccompProfile ? resolve(seccompProfile) : undefined,
     panelRoot: candidatePanels ?? downloadPanel,
     fixtureHashes: [nativeToolSource, fixtureModelSource(), downloadFixtureServerSource].map(
@@ -501,6 +501,7 @@ try {
     browserRequired: !!(candidatePanels || downloadPanel),
     videoRequired: !!candidatePanels && ["all", "video"].includes(candidateBusiness),
   });
+  WebSocket = guardedFixture.WebSocket;
   smokeStage = "spawn-controller";
   child = guardedFixture.spawnController();
   child.on("error", (error) => (logs += String(error)));

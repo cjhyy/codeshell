@@ -123,7 +123,7 @@ export function candidateFile(path, { maximum = 1024 * 1024, privateFile = false
 
 export function installDockerCandidateGuard(
   config,
-  { dockerCommand, runtimeChild, driverChild, childStarted } = {},
+  { dockerCommand, runtimeChild, driverChild, childStarted, loadStockWebSocket } = {},
 ) {
   if (globalThis[marker]) refuse();
   if (
@@ -236,6 +236,11 @@ export function installDockerCandidateGuard(
       closeSync(fd);
     }
   };
+  // This synchronous scope exists only inside trusted bootstrap, after all
+  // ordinary guards/probes have installed. It never delegates an HTTP request.
+  let capture;
+  let stockConnector;
+  const captureSentinel = new Error("Docker candidate stock connector observation");
   const fetcher = globalThis.fetch;
   globalThis.fetch = (input, options) => {
     check(typeof input === "string" || input instanceof URL ? input : input.url);
@@ -251,6 +256,136 @@ export function installDockerCandidateGuard(
       module[name] = function (input, ...args) {
         const url = typeof input === "string" || input instanceof URL ? new URL(input) : undefined;
         const options = url ? (typeof args[0] === "object" ? args[0] : {}) : input;
+        if (capture) {
+          if (
+            module !== http ||
+            name !== "request" ||
+            url ||
+            !options ||
+            options.host !== "127.0.0.1" ||
+            Number(options.port) !== 1 ||
+            options.path !== "/candidate-stock-identity" ||
+            options.protocol !== undefined ||
+            options.agent ||
+            options.lookup ||
+            options.socketPath ||
+            typeof options.createConnection !== "function" ||
+            capture.connector
+          )
+            refuse();
+          capture.connector = options.createConnection;
+          throw captureSentinel;
+        }
+        const connectionProperty =
+          options && Object.getOwnPropertyDescriptor(options, "createConnection");
+        if (connectionProperty && !("value" in connectionProperty)) refuse();
+        if (connectionProperty?.value) {
+          if (
+            module !== http ||
+            name !== "request" ||
+            url ||
+            connectionProperty.value !== stockConnector
+          )
+            refuse();
+          const data = (value) => {
+            if (
+              !value ||
+              ![Object.prototype, null].includes(Object.getPrototypeOf(value)) ||
+              Object.getOwnPropertySymbols(value).length
+            )
+              refuse();
+            const result = Object.create(null);
+            for (const [key, descriptor] of Object.entries(
+              Object.getOwnPropertyDescriptors(value),
+            )) {
+              if (!("value" in descriptor)) refuse();
+              result[key] = descriptor.value;
+            }
+            return result;
+          };
+          const values = data(options);
+          if (
+            values.socketPath ||
+            values.lookup ||
+            values.socket ||
+            values.localAddress ||
+            values.family ||
+            values.auth ||
+            (values.agent && values.agent !== false) ||
+            values.rejectUnauthorized === false ||
+            ![undefined, "http:"].includes(values.protocol)
+          )
+            refuse();
+          const target = new URL(`http://${values.hostname ?? values.host}:${values.port ?? 80}`);
+          check(target);
+          if (
+            (values.host && values.host !== target.hostname) ||
+            (values.hostname && values.hostname !== target.hostname) ||
+            values.method !== "GET" ||
+            typeof values.path !== "string" ||
+            !values.path.startsWith("/") ||
+            values.path.length > 4096 ||
+            /[\0\r\n]/.test(values.path) ||
+            (values.timeout !== undefined &&
+              (!Number.isSafeInteger(values.timeout) ||
+                values.timeout < 0 ||
+                values.timeout > 30000))
+          )
+            refuse();
+          const headers = data(values.headers);
+          if (Object.keys(headers).length > 64) refuse();
+          for (const [key, value] of Object.entries(headers)) {
+            if (
+              !/^[!#$%&'*+.^_`|~0-9A-Za-z-]+$/.test(key) ||
+              !["string", "number"].includes(typeof value) ||
+              String(value).length > 16384 ||
+              /[\0\r\n]/.test(String(value))
+            )
+              refuse();
+            if (key.toLowerCase() === "host" && value !== target.host) refuse();
+          }
+          const path = values.path;
+          let used = false;
+          const createConnection = (current) => {
+            if (used) refuse();
+            used = true;
+            check(target); // Revocation after request creation remains effective.
+            const route = data(current);
+            if (
+              route.socketPath ||
+              (route.path && route.path !== path) ||
+              route.lookup ||
+              route.socket ||
+              route.localAddress ||
+              route.family ||
+              route.rejectUnauthorized === false ||
+              (route.host ?? route.hostname) !== target.hostname ||
+              (route.hostname && route.hostname !== target.hostname) ||
+              Number(route.port) !== Number(target.port) ||
+              ![undefined, "http:"].includes(route.protocol)
+            )
+              refuse();
+            // Stock mutates path. No caller-supplied routing hook survives into
+            // TCP; the mutable object contains only this request's fixed target.
+            return stockConnector({ host: target.hostname, port: Number(target.port) });
+          };
+          // agent:false would make native HTTP construct a new Agent and bypass
+          // createConnection. Omit it, _defaultAgent and all other routing fields.
+          return original.call(
+            this,
+            {
+              protocol: "http:",
+              host: target.hostname,
+              port: Number(target.port),
+              method: "GET",
+              path,
+              headers,
+              ...(values.timeout === undefined ? {} : { timeout: values.timeout }),
+              createConnection,
+            },
+            ...args,
+          );
+        }
         if (
           !options ||
           options.socketPath ||
@@ -591,5 +726,33 @@ export function installDockerCandidateGuard(
     dnsNegativeProbes: dnsProbes.length,
     argvHash: candidateHash(JSON.stringify(process.argv.slice(1))),
   });
-  return { allowOrigin, revokeOrigin, record };
+  let WebSocket;
+  if (loadStockWebSocket !== undefined) {
+    if (!["driver", "controller"].includes(role) || typeof loadStockWebSocket !== "function")
+      refuse();
+    // The initialization callback is trusted setup, like dockerCommand. Neither
+    // it nor any observation/registration capability is returned to consumers.
+    WebSocket = loadStockWebSocket();
+    if (typeof WebSocket !== "function") refuse();
+    capture = {};
+    try {
+      new WebSocket("ws://127.0.0.1:1/candidate-stock-identity", {
+        followRedirects: false,
+        perMessageDeflate: false,
+      });
+      refuse();
+    } catch (error) {
+      if (error !== captureSentinel || !capture.connector) refuse();
+      stockConnector = capture.connector;
+    } finally {
+      capture = undefined;
+    }
+    record("stock-websocket-ready", {
+      packageVersion: config.stockWebSocket?.packageVersion,
+      sourceHash: config.stockWebSocket?.sourceHash,
+      observations: 1,
+      nativeRequestDelegations: 0,
+    });
+  }
+  return { allowOrigin, revokeOrigin, record, WebSocket };
 }
