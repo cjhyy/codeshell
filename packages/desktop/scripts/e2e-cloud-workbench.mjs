@@ -29,11 +29,34 @@ let primaryError;
 const ownedPids = new Set();
 async function closeApp() {
   if (!app) return;
-  const metrics = await app.evaluate(({ app }) => app.getAppMetrics().map((row) => row.pid));
-  for (const pid of metrics) ownedPids.add(pid);
-  await bounded(app.close(), "Electron application close");
-  exitedProcesses = await fixture.assertElectronExited(app, ownedPids);
-  app = undefined;
+  const closing = app;
+  const failures = [];
+  ownedPids.add(closing.process().pid);
+  try {
+    const metrics = await bounded(
+      closing.evaluate(({ app }) => app.getAppMetrics().map((row) => row.pid)),
+      "Electron process inventory",
+      5000,
+    );
+    for (const pid of metrics) ownedPids.add(pid);
+  } catch (error) {
+    failures.push(error);
+  }
+  try {
+    await bounded(closing.close(), "Electron application close");
+  } catch (error) {
+    failures.push(error);
+  }
+  try {
+    exitedProcesses = await fixture.assertElectronExited(closing, ownedPids);
+    app = undefined;
+  } catch (error) {
+    failures.push(error);
+  }
+  if (failures.length)
+    throw new AggregateError(failures, "Electron cleanup was not fully acknowledged", {
+      cause: failures[0],
+    });
 }
 
 async function captureDialog(win, chooser, step) {

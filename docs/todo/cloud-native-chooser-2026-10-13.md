@@ -19,9 +19,13 @@ ProjectControlServer。Account HTTP/authority、Runtime provider 和远端 HTML 
 - `--server-only --fail-after-ready`：实际 Server ready 后注入准备失败；parent exit 1，
   owned Server exit 0，监听器/socket/runtime 归零，失败 HOME 先保留供核验，确认
   对应 PID 已退出后由检查者删除。没有启动 Main 或调用 Keychain。
+- 实际 `closeApp` 函数的受控盘点拒绝、盘点超时、关闭拒绝和正常四条路径通过：
+  盘点失败仍尝试关闭，关闭失败仍核验已知 PID；这不是原生 Electron 故障回执。
 - 独立审查实际 Bun splitting 产物：静态闭包仅 Node builtins，Core 在 guard 安装后
-  动态导入。生成的 Main bootstrap 通过实际 Node 语法检查，生产 Main 动态导入在
-  Node、Electron native net、Chromium defaultSession 限制及负探针之后。
+  动态导入。生成的 Main bootstrap 通过实际 Node 语法检查；生产 Main 动态导入前
+  安装 Node/native net guard 和 ready/session hook。Main 保持在 ready 前注册协议，
+  较早的 ready hook 安装 defaultSession 限制并执行 Chromium 负探针；每个产品窗口的
+  session 也在创建时安装限制。原生 gate 必须确认全部负探针回执。
 
 ## Linux 原生 gate（CI 待执行）
 
@@ -42,10 +46,11 @@ PID、可执行文件、foreground/control directory 与私有目录后才交给
 6. 关闭并确认所有已记录的 Electron/worker PID 退出，冷启动同一 HOME，用原生加密
    存储恢复账号和 Cloud 项目；通过实际 preload IPC 执行根账号退出并确认 ACK。
 
-Node 网络只允许实际绑定的 fixture listener；生产 Main 前还实拒 Electron native net
-及 Chromium 请求。唯一允许的产品 child 是精确固定入口的本 Electron stdio worker，
+Node 网络只允许实际绑定的 fixture listener；生产 Main 前实拒 Electron native net，
+Chromium ready/session hook 在产品窗口前限制请求。唯一允许的产品 child 是精确固定入口的本 Electron stdio worker，
 并强制其在 Core 前安装相同 guard。关闭失败、准备失败或退出不明时保留 HOME。
-JavaScript guard 是本项测试约束，不声称提供操作系统级隔离。
+Main 的进程盘点、关闭与已知 PID 退出核验独立执行；盘点失败或超时也仍尝试关闭，
+任一步未确认均报失败并保留 HOME。JavaScript guard 是本项测试约束，不声称提供操作系统级隔离。
 
 Linux gate 未出成功回执前，原生 chooser 仍为未完成。最终合入/发版必须核对准确
 组合 head 和 CI，不能沿用早期单独候选的绿色状态。
