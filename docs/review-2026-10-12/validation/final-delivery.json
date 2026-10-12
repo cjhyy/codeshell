@@ -23,7 +23,7 @@
   "handoff": "repair-handoff.md",
   "sourceReportCheckpoint": "cd873fd222c94dcb7803ab9624374235e30ff78f",
   "reviewRounds": 29,
-  "state": "Final report and evidence QC complete; awaiting UI delivery and authorized scheduler/goal cleanup.",
+  "state": "Final report delivered; goal complete; heartbeat paused. No further product review or tests after deadline.",
   "finalMechanicalQc": {
     "timestampSingapore": "2026-10-12 11:03",
     "errors": [],
@@ -43,5 +43,27 @@
     "checkedAtSingapore": "2026-10-12 11:03:46",
     "mode": "read-only delivery audit; no new product review or test execution",
     "result": "Counts, R35 priority, validation scope and pending tool-action wording agree. Historical plan header and fetch/reporting time wording clarified."
-  }
+  },
+  "reportCommit": "703b78e5d434c2ed3adf0fdc5c94e83d3a6567d1",
+  "delivery": {
+    "reportAndHandoffLinks": "delivered in this chat commentary",
+    "codexFilePanels": "queued by open_in_codex for this thread; actual foreground display not asserted",
+    "threadId": "01a12bd4-2a78-7c70-8f89-4292335ab2eb"
+  },
+  "heartbeat": {
+    "id": "codeshell-10-12-11",
+    "status": "PAUSED",
+    "updateToolConfirmed": true,
+    "tomlReadbackConfirmed": true,
+    "namePromptScheduleTargetPreserved": true
+  },
+  "goal": {
+    "status": "complete",
+    "toolConfirmed": true,
+    "updatedAt": 1791774333,
+    "tokensUsed": 2265886,
+    "timeUsedSeconds": 2529,
+    "tokenBudget": null
+  },
+  "completedAtSingapore": "2026-10-12T11:06:25.157933+08:00"
 }
