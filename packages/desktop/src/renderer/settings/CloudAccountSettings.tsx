@@ -8,7 +8,7 @@ import {
   type CloudAccountStatus,
 } from "../../shared/cloud-account.js";
 
-export function CloudAccountSettings() {
+export function CloudAccountSettings({ embedded = false }: { embedded?: boolean }) {
   const { t } = useT();
   const toast = useToast();
   const [status, setStatus] = useState<CloudAccountStatus>({ state: "signed-out" });
@@ -16,12 +16,24 @@ export function CloudAccountSettings() {
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [busy, setBusy] = useState(false);
+  const [statusLoadFailed, setStatusLoadFailed] = useState(false);
   useEffect(() => {
     let active = true;
-    void window.codeshell.cloudAccount.status().then((next) => {
-      if (active) setStatus(next);
+    let receivedStatus = false;
+    const off = window.codeshell.cloudAccount.onStatus((next) => {
+      if (!active) return;
+      receivedStatus = true;
+      setStatusLoadFailed(false);
+      setStatus(next);
     });
-    const off = window.codeshell.cloudAccount.onStatus(setStatus);
+    void window.codeshell.cloudAccount.status().then(
+      (next) => {
+        if (active && !receivedStatus) setStatus(next);
+      },
+      () => {
+        if (active && !receivedStatus) setStatusLoadFailed(true);
+      },
+    );
     return () => {
       active = false;
       off();
@@ -32,6 +44,7 @@ export function CloudAccountSettings() {
     try {
       await work();
       setStatus(await window.codeshell.cloudAccount.status());
+      setStatusLoadFailed(false);
     } catch (error) {
       toast({
         message: error instanceof Error ? error.message : t("settingsX.cloudAccount.failed"),
@@ -48,15 +61,24 @@ export function CloudAccountSettings() {
   };
   const pending = busy || status.state === "signing-in";
   return (
-    <section className="mb-6 flex flex-col gap-3" aria-label={t("settingsX.cloudAccount.title")}>
-      <h3 className="m-0 text-[0.95rem] font-semibold">{t("settingsX.cloudAccount.title")}</h3>
-      <p className="text-sm text-muted-foreground">{t("settingsX.cloudAccount.optional")}</p>
+    <section
+      className={`flex min-w-0 flex-col gap-3 ${embedded ? "" : "mb-6"}`}
+      aria-label={t("settingsX.cloudAccount.title")}
+    >
+      {!embedded && (
+        <>
+          <h3 className="m-0 text-[0.95rem] font-semibold">{t("settingsX.cloudAccount.title")}</h3>
+          <p className="text-sm text-muted-foreground">{t("settingsX.cloudAccount.optional")}</p>
+        </>
+      )}
       <p role="status" className="text-sm">
-        {t(`settingsX.cloudAccount.state_${status.state}`)}
+        {statusLoadFailed
+          ? t("settingsX.cloudAccount.unavailable")
+          : t(`settingsX.cloudAccount.state_${status.state}`)}
       </p>
       {status.account ? (
         <div className="space-y-2 text-sm">
-          <p>
+          <p className="break-all">
             {status.account.username} · {status.origin}
           </p>
           <div className="flex flex-wrap gap-2">

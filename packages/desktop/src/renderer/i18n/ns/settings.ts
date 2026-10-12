@@ -4,6 +4,13 @@ export const settingsNs = {
     settingsX: {
       cloudAccount: {
         title: "CodeShell 云账号（可选）",
+        manage: "账号管理",
+        signInAccount: "登录账号",
+        localMode: "本地模式 · 未登录",
+        signedIn: "CodeShell 云账号",
+        signingIn: "正在登录…",
+        storageError: "账号存储不可用",
+        unavailable: "暂时无法读取账号状态",
         optional: "不登录也可使用本地项目、模型和 MCP。登录仅用于云服务，不会自动共享电脑或项目。",
         origin: "云服务地址",
         username: "账号名称",
@@ -995,6 +1002,13 @@ export const settingsNs = {
     settingsX: {
       cloudAccount: {
         title: "CodeShell cloud account (optional)",
+        manage: "Manage account",
+        signInAccount: "Sign in to CodeShell",
+        localMode: "Local mode · Not signed in",
+        signedIn: "CodeShell cloud account",
+        signingIn: "Signing in…",
+        storageError: "Account storage unavailable",
+        unavailable: "Account status is temporarily unavailable",
         optional:
           "Local projects, models and MCP work without signing in. Signing in enables cloud services and does not share this computer or its projects.",
         origin: "Cloud service address",
