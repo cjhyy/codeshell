@@ -1,5 +1,5 @@
 import { expect, test } from "bun:test";
-import { chmodSync, mkdirSync, mkdtempSync, realpathSync, rmSync } from "node:fs";
+import { chmodSync, mkdirSync, mkdtempSync, realpathSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import {
@@ -7,12 +7,36 @@ import {
   validateCandidateChromiumArguments,
   validateCandidateDriverDocker,
 } from "../scripts/docker-candidate-driver.mjs";
-import { candidatePrivateEnvironment } from "../scripts/docker-candidate-setup.mjs";
+import {
+  candidatePanelEntryHashes,
+  candidatePrivateEnvironment,
+} from "../scripts/docker-candidate-setup.mjs";
+import { candidateFile, candidateHash } from "../scripts/docker-candidate-guard.mjs";
 import {
   candidateProjectNames,
   candidateMissingContainer,
 } from "../scripts/docker-candidate-adapter.mjs";
 import { validateCandidateNativeArguments } from "../scripts/docker-candidate-native-argv.mjs";
+
+test("static Panel inventory accepts the frozen Video bundle size but remains bounded at 16 MiB", () => {
+  const directory = realpathSync(mkdtempSync(join(tmpdir(), "candidate-panel-inventory-")));
+  const entry = join(directory, "main.mjs");
+  try {
+    // Same byte size as frozen Video 0.7.3 app/main.mjs; these bytes are never executed.
+    const fixture = Buffer.alloc(8_998_507, 0x20);
+    writeFileSync(entry, fixture, { mode: 0o600 });
+    expect(candidatePanelEntryHashes(directory)).toEqual([candidateHash(fixture)]);
+    expect(() => candidateFile(entry)).toThrow("refused");
+    expect(() => candidateFile(entry, { maximum: 8 * 1024 * 1024 })).toThrow("refused");
+    const boundary = Buffer.alloc(16 * 1024 * 1024, 0x20);
+    writeFileSync(entry, boundary);
+    expect(candidatePanelEntryHashes(directory)).toEqual([candidateHash(boundary)]);
+    writeFileSync(entry, Buffer.alloc(16 * 1024 * 1024 + 1, 0x20));
+    expect(() => candidatePanelEntryHashes(directory)).toThrow("refused");
+  } finally {
+    rmSync(directory, { recursive: true, force: true });
+  }
+});
 
 test("frozen Playwright sandbox argv accepts only a real private profile and the exact capture options", () => {
   const home = realpathSync(mkdtempSync(join(tmpdir(), "candidate-browser-argv-")));
