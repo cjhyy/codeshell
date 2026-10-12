@@ -25,7 +25,39 @@ export interface CloudAccountCapabilities {
   registrationAllowed: boolean;
   githubEnabled: boolean;
   githubLinkEnabled?: boolean;
+  linkManagementEnabled?: boolean;
 }
+
+/** Account-owned metadata only. Provider credentials and global clients are never exposed. */
+export interface CloudAccountLinkView {
+  linkOrigin: string;
+  connections: Array<{
+    id: string;
+    provider: string;
+    account: { id: string; login?: string; label?: string };
+    revoked: boolean;
+  }>;
+  grants: Array<{
+    id: string;
+    connectionId: string;
+    client: { id: string; name: string };
+    scopes: string[];
+    resources: string[];
+    revoked: boolean;
+  }>;
+}
+
+export type CloudAccountLinksRequest = { origin: string; accountId: string } & (
+  | { action: "list" }
+  | { action: "revoke"; kind: "connections" | "grants"; id: string }
+);
+export type CloudAccountLinksResult =
+  | { action: "list"; view: CloudAccountLinkView }
+  | { action: "revoke"; revoked: true; kind: "connections" | "grants"; id: string };
+
+export type CloudAccountGitHubRequest =
+  | { mode: "login"; input: CloudAccountGitHubLogin }
+  | { mode: "link" };
 
 export interface CloudAccountGitHubLogin {
   origin: string;
@@ -40,6 +72,7 @@ export interface CloudAccountApi {
   register(input: CloudAccountLogin): Promise<CloudAccountStatus>;
   signInWithGitHub(input: CloudAccountGitHubLogin): Promise<CloudAccountStatus>;
   linkGitHub(): Promise<CloudAccountStatus>;
+  manageLinks(input: CloudAccountLinksRequest): Promise<CloudAccountLinksResult>;
   cancelSignIn(): Promise<void>;
   logout(): Promise<void>;
   onStatus(callback: (status: CloudAccountStatus) => void): () => void;

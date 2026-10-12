@@ -30,21 +30,15 @@ test("cloud account IPC rejects non-main frames and rechecks ownership after log
       linkGitHub: (allowed) => {
         authorized = allowed;
       },
+      manageLinks: (_input, allowed) => {
+        authorized = allowed;
+      },
       logout: () => {},
       cancelSignIn: () => {},
     } as any,
   });
   expect([...handlers.keys()].sort()).toEqual(
-    [
-      "status",
-      "capabilities",
-      "login",
-      "register",
-      "github",
-      "linkGitHub",
-      "cancelSignIn",
-      "logout",
-    ]
+    ["status", "capabilities", "login", "register", "github", "links", "cancelSignIn", "logout"]
       .map((name) => `cloudAccount:${name}`)
       .sort(),
   );
@@ -57,10 +51,31 @@ test("cloud account IPC rejects non-main frames and rechecks ownership after log
     githubEnabled: false,
   });
   expect(capabilityOrigin).toBe("https://account.example");
-  for (const name of ["login", "register", "github", "linkGitHub"]) {
+  for (const name of ["login", "register"]) {
     handlers.get(`cloudAccount:${name}`)!(event, {});
     expect(authorized!()).toBe(true);
   }
+  for (const [name, input] of [
+    ["github", { mode: "login", input: { origin: "https://account.example" } }],
+    ["github", { mode: "link" }],
+    [
+      "links",
+      {
+        action: "list",
+        origin: "https://account.example",
+        accountId: "10000000-0000-0000-0000-000000000001",
+      },
+    ],
+  ] as const) {
+    handlers.get(`cloudAccount:${name}`)!(event, input);
+    expect(authorized!()).toBe(true);
+  }
+  for (const bad of [{}, { mode: "revoke" }, { mode: "link", input: {} }]) {
+    authorized = undefined;
+    expect(() => handlers.get("cloudAccount:github")!(event, bad)).toThrow();
+    expect(authorized).toBeUndefined();
+  }
+  handlers.get("cloudAccount:github")!(event, { mode: "link" });
   const originalFrame = sender.mainFrame;
   sender.mainFrame = {};
   expect(authorized!()).toBe(false);
