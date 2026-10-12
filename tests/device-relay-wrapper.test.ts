@@ -8,7 +8,16 @@ import { DEVICE_RELAY_ACCEPTANCE_CHECKS } from "../scripts/device-relay-acceptan
 
 const roots: string[] = [];
 afterEach(() => {
-  for (const root of roots.splice(0)) rmSync(root, { recursive: true, force: true });
+  for (const root of roots.splice(0)) {
+    const launched = join(root, "launched");
+    if (existsSync(launched) && !existsSync(join(root, "wrapper-closed"))) {
+      console.error(`Preserved synthetic relay fixture without wrapper close: ${root}`);
+      continue;
+    }
+    if (existsSync(launched) && existsSync(join(root, "wrapper-closed")))
+      rmSync(resolve(readFileSync(launched, "utf8"), "../.."), { recursive: true, force: true });
+    rmSync(root, { recursive: true, force: true });
+  }
 });
 const wrapper = resolve(import.meta.dirname, "../scripts/smoke-device-relay.mjs");
 function fixture(action = "", options: { missing?: boolean; signal?: boolean } = {}) {
@@ -34,9 +43,12 @@ function fixture(action = "", options: { missing?: boolean; signal?: boolean } =
     const receipt={candidateOnly:true,protocolVersion:1,passed:true,cleanupPassed:true,
       runtime:process.version,hostHead:manifest.hostHead,servicesHead:manifest.servicesHead,
       manifestSha256:createHash("sha256").update(manifestBytes).digest("hex"),
-      details:{authShutdown:{passed:true,realScryptActions:["setup","login"],waitedForHandlersBeforeReleasingDirectory:true},phoneUploadRevocation:{abortActive:true,rejectUnused:true,preserveOther:true,preserveClaimed:true},directoryRecovery:{passed:true,revokedSnapshotCredentials:true,revokedOwnerSessions:true,revokedEnrollmentTickets:true,preservedHostOrigins:true,freshEnrollmentConnected:true,sourceUnchanged:true,incompleteRestoreRejected:true,activeServiceRejected:true}},
+      details:{preCoreGuard:{version:1,installedBeforeCore:true,
+        homeHash:createHash("sha256").update(process.env.HOME).digest("hex"),negativeProbes:12,dnsNegativeProbes:10,
+        listenersOpened:7,activeListeners:0,activeConnections:0,allListenersClosed:true,allConnectionsClosed:true},authShutdown:{passed:true,realScryptActions:["setup","login"],waitedForHandlersBeforeReleasingDirectory:true},phoneUploadRevocation:{abortActive:true,rejectUnused:true,preserveOther:true,preserveClaimed:true},directoryRecovery:{passed:true,revokedSnapshotCredentials:true,revokedOwnerSessions:true,revokedEnrollmentTickets:true,preservedHostOrigins:true,freshEnrollmentConnected:true,sourceUnchanged:true,incompleteRestoreRejected:true,activeServiceRejected:true}},
       results:${JSON.stringify(DEVICE_RELAY_ACCEPTANCE_CHECKS.map((name) => ({ name, status: "pass" })))} };
     writeFileSync(${JSON.stringify(launched)},process.env.TMPDIR);
+    writeFileSync(${JSON.stringify(join(root, "environment.json"))},JSON.stringify(process.env));
     writeFileSync(join(process.env.TMPDIR,"private-fixture-key"),"test-only");
     ${action}
     function report(){${options.missing ? "" : 'writeFileSync(process.argv[2],JSON.stringify(receipt),{flag:"wx"});'}}
@@ -53,8 +65,24 @@ function fixture(action = "", options: { missing?: boolean; signal?: boolean } =
     launched,
     cleaned,
     args,
-    run: () => execFileSync("node", args, { stdio: "pipe", timeout: 10000 }).toString(),
-    scratch: () => readFileSync(launched, "utf8"),
+    run: (env = process.env) => {
+      try {
+        const result = execFileSync(process.execPath, args, {
+          stdio: "pipe",
+          timeout: 10000,
+          env,
+        }).toString();
+        writeFileSync(join(root, "wrapper-closed"), "yes");
+        return result;
+      } catch (error) {
+        // The synthetic child has no descendants. Non-signal termination here
+        // follows the wrapper's captured child close; retain on wrapper timeout.
+        if (error && typeof error === "object" && "signal" in error && error.signal === null)
+          writeFileSync(join(root, "wrapper-closed"), "yes");
+        throw error;
+      }
+    },
+    scratch: () => resolve(readFileSync(launched, "utf8"), "../.."),
   };
 }
 
@@ -65,10 +93,32 @@ describe("installed device relay candidate gate", () => {
     expect(JSON.parse(readFileSync(candidate.output, "utf8")).results).toHaveLength(15);
     expect(existsSync(candidate.scratch())).toBe(false);
   });
+  test("isolates HOME/config/temp and omits inherited credentials, proxies and runtime injection", () => {
+    const candidate = fixture();
+    candidate.run({
+      ...process.env,
+      CODESHELL_TEST_SECRET: "must-not-inherit",
+      HTTPS_PROXY: "https://invalid.test",
+      NODE_OPTIONS: "",
+    });
+    const environment = JSON.parse(readFileSync(join(candidate.root, "environment.json"), "utf8"));
+    expect(environment.CODESHELL_TEST_SECRET).toBeUndefined();
+    expect(environment.HTTPS_PROXY).toBeUndefined();
+    expect(environment.NODE_OPTIONS).toBeUndefined();
+    expect(environment.HOME).toBe(join(candidate.scratch(), "home"));
+    expect(environment.USERPROFILE).toBe(environment.HOME);
+    expect(environment.TMPDIR).toBe(join(environment.HOME, "tmp"));
+    expect(environment.XDG_CONFIG_HOME).toBe(join(environment.HOME, "config"));
+  });
   for (const [name, action] of [
     ["a failed real-network check", 'receipt.results[0].status="fail";'],
     ["a missing revocation check", "receipt.results.splice(7,1);"],
     ["failed cleanup", "receipt.cleanupPassed=false;"],
+    ["missing pre-Core guard proof", "delete receipt.details.preCoreGuard;"],
+    ["another HOME proof", 'receipt.details.preCoreGuard.homeHash="0".repeat(64);'],
+    ["missing DNS refusal probes", "receipt.details.preCoreGuard.dnsNegativeProbes=9;"],
+    ["open owned transport", "receipt.details.preCoreGuard.activeConnections=1;"],
+    ["missing listener lifecycle", "receipt.details.preCoreGuard.listenersOpened=6;"],
     ["missing auth shutdown coverage", "delete receipt.details.authShutdown;"],
     ["missing upload revocation coverage", "delete receipt.details.phoneUploadRevocation;"],
     ["the previous fourteen-stage receipt", "receipt.results.pop();"],
@@ -101,15 +151,15 @@ describe("installed device relay candidate gate", () => {
     ["another package manifest", 'receipt.manifestSha256="c".repeat(64);'],
     ["a changed candidate during acceptance", 'writeFileSync(process.argv[4],"{}");'],
   ])
-    test(`rejects ${name} despite exit zero and cleans its scratch directory`, () => {
+    test(`rejects ${name} despite exit zero and preserves its private directory`, () => {
       const candidate = fixture(action);
       expect(candidate.run).toThrow();
-      expect(existsSync(candidate.scratch())).toBe(false);
+      expect(existsSync(candidate.scratch())).toBe(true);
     });
   test("rejects silent exit zero without new evidence", () => {
     const candidate = fixture("", { missing: true });
     expect(candidate.run).toThrow();
-    expect(existsSync(candidate.scratch())).toBe(false);
+    expect(existsSync(candidate.scratch())).toBe(true);
   });
   test("preserves old evidence and rejects it before launching", () => {
     const candidate = fixture();
@@ -131,10 +181,11 @@ describe("installed device relay candidate gate", () => {
       await once(child.stdout, "data");
       child.kill("SIGTERM");
       const [code] = await exited;
+      writeFileSync(join(candidate.root, "wrapper-closed"), "yes");
       expect(code).not.toBe(0);
       expect(stderr).toContain("acceptance failed");
       expect(readFileSync(candidate.cleaned, "utf8")).toBe("yes");
-      expect(existsSync(candidate.scratch())).toBe(false);
+      expect(existsSync(candidate.scratch())).toBe(true);
     } finally {
       clearTimeout(timer);
       child.kill("SIGKILL");
