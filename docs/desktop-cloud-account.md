@@ -61,6 +61,31 @@ registration is needed for the Desktop cloud-account flow. Email verification,
 password reset/change, and adding a password to a GitHub-only account are not
 implemented in the current account API.
 
+## Nickname and login username
+
+The sidebar avatar opens the account dialog; General settings no longer repeat the
+account form. A service reporting `profileEnabled: true` enables profile editing.
+Nickname (`displayName`) controls display text, while the unique username
+(`username`) is used for password login. They can be changed independently, and
+only changed fields are submitted. Nicknames support 1–64 Unicode code points
+including Chinese and emoji after trimming and NFC normalization; control and
+invisible direction characters are rejected. Existing accounts initially display
+their username as their nickname.
+
+Saving preserves the stable account UUID, GitHub identity, sessions, devices and
+Link ownership. After a username change, password login uses the new username;
+GitHub login still resolves by numeric identity. Renaming a GitHub-only account
+does not add a password. Main validates the returned account and saves encrypted
+credentials before publishing success. Logout, account switching, refresh and
+concurrent windows cannot publish an older profile over a newer account state.
+
+The Web cloud account menu also offers an Account profile link to the fixed
+`<accountOrigin>/api/v1/account/manage` portal. Its URL contains no credentials,
+and no link is available when the Cloud session lacks an account origin. The
+portal has its own GitHub/password login because the Cloud cookie is scoped to
+the workbench. It keeps account credentials only in page memory and offers the
+same nickname/username editing. The profile link does not authorize Link access.
+
 ## GitHub login and data connection
 
 “Continue with GitHub” defaults to “Connect GitHub too” when the selected service
