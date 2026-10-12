@@ -1,14 +1,15 @@
 import { expect, test } from "bun:test";
 import { once } from "node:events";
 import { createServer } from "node:http";
-import { createRequire } from "node:module";
 import { mkdtemp, mkdir, readFile, readdir, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { nativeNodeWorkerFixture } from "../../test-utils/native-node-worker.js";
 import { createPanelAgentTaskHost, type PanelAgentTaskScope } from "./agent-task-host.js";
 import type { PanelAgentTaskView } from "./agent-task-service.js";
 
 test("native Node Core task executes a real Write only after host approval", async () => {
+  const { workerEntryPath, codingCapabilityModule } = nativeNodeWorkerFixture();
   const root = await mkdtemp(join(tmpdir(), "panel-core-task-"));
   const workspace = join(root, "workspace");
   const home = join(root, "home");
@@ -64,16 +65,14 @@ test("native Node Core task executes a real Write only after host approval", asy
   });
   const host = createPanelAgentTaskHost({
     execPath: "node",
-    workerEntryPath: createRequire(import.meta.url).resolve(
-      "@cjhyy/code-shell-core/bin/agent-server-stdio",
-    ),
+    workerEntryPath,
     buildEnv: () => ({
       PATH: process.env.PATH,
       HOME: home,
       CODE_SHELL_HOME: join(home, ".code-shell"),
       CODE_SHELL_DATA_ROOT: join(root, "data"),
       CODE_SHELL_CREDENTIAL_ACCESS: "local",
-      CODE_SHELL_CAPABILITY_MODULES: `${import.meta.resolve("@cjhyy/code-shell-capability-coding")}#createCodingModule`,
+      CODE_SHELL_CAPABILITY_MODULES: codingCapabilityModule,
     }),
     models: () => ({
       defaultModel: "panel-fixture",

@@ -309,12 +309,20 @@ EMBEDDING.md 里的 CLI 契约（`serve --embedded` + `mcp --embedded --socket`�
 
 ### 骨架回归验证（2026-10-13）
 
-manager 的工具成功结果统一为 `ToolSuccess`。内联图片的 `contentBlocks` 同时包含经过
+manager 的工具成功结果统一为 `ToolSuccess`，注册工具和通用 `MCPTool` 复用同一个结果处理器。
+旧的文字 SDK 调用保留图片落盘引用。内联图片的 `contentBlocks` 同时包含经过
 不可信内容标记包装的文字，避免 turn loop 优先使用图片块时丢掉 AX 状态和落盘图片引用。
 5 MB 上限按 base64 解码后的字节数判断，包含恰好到达上限的带 padding 图片。
 
+每个宿主使用独立的短路径、0700 私有 socket 目录。就绪检测会真实连接 socket；Desktop 等待
+有界启动完成后才创建 worker，只有 `running` 状态会发布 MCP 声明。启动、退出、重试和关闭
+会合并并发调用；失败重启也消耗 3 次预算。旧进程未确认退出时不能再启动替代进程。显式
+socket 路径被其他监听器占用时不会删除它；崩溃后的退避和关闭也有真实 Unix socket 回归。
+
 宿主在等待 socket 就绪时收到 `stop()` 会保持 `stopped`，后续 `start()` 不能重新启动。
 SIGKILL 后等待退出事件，额外等待最多 1 秒；未确认退出时记录 `lastError`。
+Core 在代理退出后保留工具目录，下一次显式调用才按原 Run 的配置、cwd 和 roots 重连。
+失败的动作不会自动重放；重连失败、取消、目录变化和并行 workspace 也有真实子进程回归。
 
 在 worktree 根目录运行受隔离保护的 Bun shard，并显式使用根 tsconfig 的源码别名：
 
@@ -322,19 +330,45 @@ SIGKILL 后等待退出事件，额外等待最多 1 秒；未确认退出时记
 node scripts/run-bun-test-shard.mjs --tsconfig-override ./tsconfig.json --timeout 30000 \
   packages/core/src/tool-system/mcp-manager.test.ts \
   packages/desktop/src/main/computer-use/cua-driver-host.test.ts \
-  packages/desktop/src/main/computer-use/service.test.ts
+  packages/desktop/src/main/computer-use/service.test.ts \
+  tests/computer-use-cua-integration.test.ts
 ```
 
-根 tsconfig 已将 `@cjhyy/code-shell-core/extension` 映射到当前 worktree 的
-`packages/core/src/index.extension.ts`，避免 Desktop 测试读到共享 node_modules 指向的
-主 checkout 构建产物。runner 会创建独立 HOME、移除继承的凭据并验证完整 JUnit 报告。
+根 tsconfig 将 `@cjhyy/code-shell-core/extension` 映射到当前 worktree 的
+`packages/core/src/index.extension.ts`。已解除指向主 checkout 的依赖目录链接，并在本 worktree
+执行 `bun install --frozen-lockfile`，构建和正式检查不会修改主 checkout 的依赖产物。
+runner 创建独立 HOME、移除继承的凭据并验证完整 JUnit 报告。
 
-本轮实际使用 Bun 1.3.11：manager 71 项、宿主 12 项通过；加上 MCP workspace、连接配置、
-宿主声明、stdio 环境、兼容层、插件合并、feature flags、turn loop 图片结果和图片落盘，
-共 13 个文件、153 项通过，0 失败。Core 源码 `tsc --noEmit` 通过；Desktop 的
-computer-use 源码及测试在 Node-only 类型配置下通过，并将 core 别名指向 worktree 源码。
-修改的 TypeScript 文件 ESLint 通过。未运行会构建共享依赖产物的根 `typecheck` 脚本。
-这些是模拟进程和本地 MCP fixture 测试，计算器及真实 macOS TCC 验收仍待执行。
+新增 6 个 CodeShell `Engine.run` 集成场景：计算器 7+8=15、通用 MCPTool 截图、默认关闭、
+延迟启动、取消、同一活跃 Run 中崩溃后重新观察。它们使用真实子进程、Unix socket 和 stdio
+MCP 代理，模型为内存中的脚本 provider，HTTP/TCP 在导入 Core 前被拒绝。崩溃测试证明点击
+只执行一次，错误到达模型后才显式观察；新截图显示新进程的状态，最后所有子进程和 socket
+都清理完毕。6 项全部通过；宿主及 service 45 项通过，独立 OAuth/浏览器 31 项通过。
+
+正式 `bun run test:package-release` 通过（9 个 tarball、47 个类型入口、45 个运行时入口）；
+根 `bun run typecheck` 覆盖全部工作区，Desktop main/preload/renderer/mobile/扩展构建通过。
+全量 lint 为 0 错误、104 个既有警告，未超过收紧后的基线；内置工具覆盖率门槛通过。
+
+全量测试按 CI 范围分片，覆盖仓库中全部 1,818 个不同测试文件。最终报告为：
+
+| 范围                                    |  通过 | 条件跳过 | 失败 |
+| --------------------------------------- | ----: | -------: | ---: |
+| Core engine / tool-system               | 1,967 |        3 |    0 |
+| Core 其余目录                           | 3,243 |        0 |    0 |
+| Desktop 主分片                          | 5,381 |       69 |    0 |
+| 其余工作区和根 tests（包含 Cua 6 场景） | 4,508 |       72 |    0 |
+| 独立 OAuth / 浏览器测试                 |    31 |        0 |    0 |
+
+Panel 的 69 项在主进程跳过重复收集，由已通过的 wrapper 在独立 Bun 进程执行；Core 的 3 项
+和其余分片额外 3 项分别需要真实 LLM 和外部 Claude/Codex CLI，未启用。其余分片还会导入
+Desktop 的测试文件，报告包含重复注册，因此表中数量不作为互不重叠的测试总数。
+
+22 个离线验收脚本全部通过，覆盖编译产物、Hub 审批与恢复、输出日志、保留策略、移动端、
+上传与能力路由等。真实 Electron main/preload/renderer 已在本机启动并通过 L1/L2 烟测：
+流式回复、工具执行、用量回传、429 重试及文件、浏览器、review、终端和设置面板。模型请求
+由受隔离保护的本地 SSE fixture 响应。
+
+这些 Cua 场景使用模拟原生 driver；真实 cua-driver、计算器 GUI 和 macOS TCC 验收仍待执行。
 
 ### 试用步骤（macOS）
 

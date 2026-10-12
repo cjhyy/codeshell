@@ -21,6 +21,7 @@ import {
 import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
+import { applyOutputJournalPage } from "../packages/web/dist/index.js";
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const entry = join(root, "packages/server/dist/bin/code-shell-serve.js");
@@ -83,8 +84,12 @@ const modelServer = createServer((req, res) => {
     }
     if (
       task.includes("SMOKE_APPROVAL") &&
-      !messages.slice(userIndex).some((m) => m.role === "tool")
+      !messages
+        .slice(userIndex)
+        .some((m) => m.role === "tool" && m.tool_call_id === "call_hub_smoke_write")
     ) {
+      const writeActive = body.tools?.some((tool) => tool.function.name === "Write");
+      if (!writeActive) assert.ok(body.tools?.some((tool) => tool.function.name === "ToolSearch"));
       sse(
         res,
         chunk(body.model, {
@@ -92,11 +97,15 @@ const modelServer = createServer((req, res) => {
           tool_calls: [
             {
               index: 0,
-              id: "call_hub_smoke_write",
+              id: writeActive ? "call_hub_smoke_write" : "call_hub_smoke_discover_write",
               type: "function",
               function: {
-                name: "Write",
-                arguments: JSON.stringify({ file_path: proofFile, content: "approved by Hub\n" }),
+                name: writeActive ? "Write" : "ToolSearch",
+                arguments: JSON.stringify(
+                  writeActive
+                    ? { file_path: proofFile, content: "approved by Hub\n" }
+                    : { query: "select:Write" },
+                ),
               },
             },
           ],
@@ -452,21 +461,46 @@ try {
   const activeSnapshot = await viewer.request("agent/query", {
     type: "session_detail",
     sessionId: cancelSession,
+    outputRecovery: true,
   });
   assert.equal(activeSnapshot.data.running, true);
   assert.equal(activeSnapshot.data.liveStream.truncated, false);
-  const recovered = activeSnapshot.data.liveStream.events;
-  assert.equal(recovered.filter(({ event }) => event.type === "session_user_message").length, 1);
-  assert.ok(recovered.some(({ event }) => event.clientMessageId === "smoke-cancel-client-message"));
+  assert.equal(activeSnapshot.data.outputCoverage.unpaired, false);
+  assert.equal(activeSnapshot.data.legacyBaseComplete, true);
+  // A new run's input can precede Session publication and be withheld from
+  // live delivery. Fresh browsers recover it from the canonical journal.
+  const recovered = [];
+  const recovery = { incomplete: false };
+  assert.equal(
+    applyOutputJournalPage(recovery, activeSnapshot.data.outputJournal, (event) =>
+      recovered.push(event),
+    ),
+    true,
+  );
+  assert.equal(recovery.incomplete, false);
+  assert.equal(recovery.appliedCursor, activeSnapshot.data.outputCoverage.outputCursor);
+  const recoveredCursors = new Set(recovered.map((event) => event.outputCursor));
+  assert.ok(
+    activeSnapshot.data.liveStream.events.every(({ event }) =>
+      recoveredCursors.has(event.outputCursor),
+    ),
+    "The canonical journal must cover the live snapshot without replaying it twice",
+  );
+  const recoveredUsers = recovered.filter((event) => event.type === "session_user_message");
+  assert.equal(recoveredUsers.length, 1);
+  assert.equal(recoveredUsers[0].clientMessageId, "smoke-cancel-client-message");
+  assert.equal(recoveredUsers[0].text, "SMOKE_CANCEL: stream until stopped.");
   assert.equal(
     recovered
-      .filter(({ event }) => event.type === "text_delta")
-      .map(({ event }) => event.text)
+      .filter((event) => event.type === "text_delta")
+      .map((event) => event.text)
       .join(""),
     "Waiting for cancellation.",
   );
   assert.ok(
-    recovered.every(({ sequence }) => sequence <= activeSnapshot.data.streamCursor.sequence),
+    activeSnapshot.data.liveStream.events.every(
+      ({ sequence }) => sequence <= activeSnapshot.data.streamCursor.sequence,
+    ),
   );
   assert.ok(
     !JSON.stringify(activeSnapshot.data.transcript).includes("SMOKE_CANCEL"),

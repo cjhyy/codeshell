@@ -1,5 +1,5 @@
 /** Permission-mode lifecycle and approval cleanup integration coverage. */
-import { afterEach, describe, it, expect } from "bun:test";
+import { afterEach, beforeEach, describe, it, expect } from "bun:test";
 import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -49,6 +49,9 @@ function makeManager(initial: PermissionMode) {
 
 const tempDirs: string[] = [];
 let previousHome: string | undefined;
+beforeEach(() => {
+  previousHome = process.env.HOME;
+});
 
 function tempDir(prefix: string): string {
   const dir = mkdtempSync(join(tmpdir(), prefix));
@@ -275,7 +278,6 @@ describe("ChatSessionManager.close approval cleanup", () => {
   );
 
   it("clears session credential approvals for the closed session", async () => {
-    previousHome = process.env.HOME;
     process.env.HOME = tempDir("cs-credential-cleanup-home-");
     const cwd = tempDir("cs-credential-cleanup-cwd-");
     __resetCredentialSessionAllowForTests();

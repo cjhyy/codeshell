@@ -303,6 +303,11 @@ test.each([
   (window as unknown as { innerWidth: number }).innerWidth = 1200;
   (window as unknown as { codeshell: unknown }).codeshell = {
     platform: "linux",
+    cloudEnvironment: {
+      listBindings: async () => [],
+      getSelection: async (localProjectId: string) => ({ localProjectId, bindingId: null }),
+      select: async () => undefined,
+    },
     ...(persistenceMode !== "legacy" ? { sessionCatalog: catalogApi } : {}),
     log: () => undefined,
     isWindowFullscreen: async () => false,

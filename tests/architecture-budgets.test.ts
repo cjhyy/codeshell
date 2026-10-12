@@ -91,7 +91,10 @@ describe("architecture growth budgets", () => {
     // to main's live window ownership/createWindow and loading-frame lifecycle.
     // Notification content, instance binding and session validation stay in
     // extracted modules. Both additions keep the IPC route count unchanged.
-    expect(lines("packages/desktop/src/main/index.ts")).toBeLessThanOrEqual(7_245);
+    // Pin the current composition plus 24 Cua startup/shutdown wiring lines.
+    // Socket ownership, readiness, restart policy and environment filtering
+    // stay in computer-use/{service,cua-driver-host}; no IPC route is added.
+    expect(lines("packages/desktop/src/main/index.ts")).toBeLessThanOrEqual(7_277);
     expect(lines("packages/desktop/src/main/project-panel-ipc.ts")).toBeLessThanOrEqual(322);
     // The five generic Link authorization operations reuse the window/project
     // owner and live reauthorization guard here. Challenge state, provider
@@ -229,7 +232,10 @@ describe("architecture growth budgets", () => {
     // +6 generation checks keep stale project refreshes out of live UI state.
     // Nine composition lines connect the extracted notification navigation hook
     // to the existing live/disk Session selectors and unavailable-session toast.
-    expect(lines("packages/desktop/src/renderer/App.tsx")).toBeLessThanOrEqual(2_788);
+    // Existing project-runtime selection composes local/cloud session views
+    // and gates navigation until selection is ready (+144). Binding selection
+    // and connection lifecycle stay in the extracted project runtime hooks.
+    expect(lines("packages/desktop/src/renderer/App.tsx")).toBeLessThanOrEqual(2_932);
     // Goal-extension and pre-turn archive inputs now fail closed at protocol
     // ingress instead of trusting arbitrary numeric/object payloads. Manual
     // Mimi clears also validate their host-authored summary at this boundary.
@@ -359,7 +365,9 @@ describe("architecture growth budgets", () => {
       // read-only current logical/physical attempt identities, and signer type.
       // Isolated capability Hosts own the ephemeral signer's disposal.
       // +1 the same type-only routing declarations for capability-owned presets.
-      "packages/core/src/index.extension.ts": 58,
+      // +1 reviewed host MCP declaration encoder/type, consumed by Desktop's
+      // process host without persisting servers or exposing credentials.
+      "packages/core/src/index.extension.ts": 59,
       // Shared crash-safe persistence primitives and the Desktop-owned
       // background job registry are host-only API.
       // Speech model resolution adds one reviewed host-only module, shared by

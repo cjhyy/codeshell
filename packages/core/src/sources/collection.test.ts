@@ -23,6 +23,9 @@ import type { ToolContext } from "../tool-system/context.js";
 import { installLocalNetworkGuard } from "../../../../scripts/runtime-cost-smoke-isolation.mjs";
 import { officeZip, wordXml } from "../../../../tests/fixtures/upload-documents.mjs";
 
+if (!process.env.HOME || !process.env.CODE_SHELL_TEST_HOME)
+  throw new Error("Private HOME required");
+const fixtureHome = realpathSync(process.env.HOME);
 const marker = Symbol.for("codeshell.cost-smoke.network-guard");
 const previousMarker = Object.getOwnPropertyDescriptor(globalThis, marker);
 const surfaces = [
@@ -60,7 +63,7 @@ console.log(
     fixture: "collection-before-Core",
     pid: process.pid,
     ppid: process.ppid,
-    homeSha256: createHash("sha256").update(realpathSync(process.env.HOME!)).digest("hex"),
+    homeSha256: createHash("sha256").update(fixtureHome).digest("hex"),
     negativeProbes: 2,
   }),
 );

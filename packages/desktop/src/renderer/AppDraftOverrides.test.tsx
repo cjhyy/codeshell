@@ -1,6 +1,7 @@
-import { afterAll, beforeEach, describe, expect, mock, test } from "bun:test";
-import React from "react";
-import { renderToStaticMarkup } from "react-dom/server";
+import { afterAll, afterEach, beforeEach, describe, expect, mock, test } from "bun:test";
+import React, { act } from "react";
+import { createRoot, type Root } from "react-dom/client";
+import { ensureMiniDom, flushMicrotasks } from "./test-utils/renderHook";
 import { saveProjects } from "./projects";
 import { bucketKey } from "./transcripts";
 
@@ -24,6 +25,17 @@ mock.module("./ChatView", () => ({
 }));
 
 mock.module("./assets/codeshell-dog-icon.png", () => ({ default: "dog.png" }));
+mock.module("./app/AppSidebar", () => ({ Sidebar: () => null }));
+mock.module("./TopBar", () => ({ TopBar: () => null }));
+mock.module("./panels/PanelArea", () => ({ PanelArea: () => null }));
+mock.module("./workspace-trust/TrustGate", () => ({ TrustGate: () => null }));
+mock.module("./shell/SearchBar", () => ({ SearchBar: () => null }));
+mock.module("./shell/CommandPalette", () => ({
+  CommandPalette: () => null,
+  buildCommands: () => [],
+}));
+mock.module("./shell/SessionSearchModal", () => ({ SessionSearchModal: () => null }));
+mock.module("./app/useAppPetSprite", () => ({ usePetSprite: () => "dog.png" }));
 
 class MemoryLocalStorage {
   private readonly store = new Map<string, string>();
@@ -69,32 +81,114 @@ function restoreGlobalProperty(
   delete (globalThis as Record<string, unknown>)[key];
 }
 
-Object.defineProperty(globalThis, "localStorage", {
-  value: localStorageMock,
-  configurable: true,
-  writable: true,
-});
-Object.defineProperty(globalThis, "window", {
-  value: {
-    localStorage: localStorageMock,
-    addEventListener: () => undefined,
-    removeEventListener: () => undefined,
-    codeshell: {
-      platform: "linux",
-      log: () => undefined,
-      run: async (text: string, opts: Record<string, unknown>) => {
-        runCalls.push({ text, opts });
-        return { ok: true };
-      },
-      registerBrowserSessionBucket: () => undefined,
+function installCodeshellStub(): void {
+  const unsubscribe = () => undefined;
+  const project = {
+    id: "repoA",
+    name: "Repo A",
+    roots: [{ id: "root-a", path: "/tmp/repo-a", name: "Repo A", addedAt: 1 }],
+    primaryRootId: "root-a",
+    createdAt: 1,
+    updatedAt: 1,
+    lastOpenedAt: 1,
+    revision: 1,
+  };
+  (window as unknown as { codeshell: Record<string, any>; innerWidth: number }).innerWidth = 1200;
+  (window as unknown as { codeshell: Record<string, any> }).codeshell = {
+    platform: "linux",
+    cloudEnvironment: {
+      listBindings: async () => [],
+      getSelection: async (localProjectId: string) => ({ localProjectId, bindingId: null }),
+      select: async () => undefined,
     },
-  },
-  configurable: true,
-  writable: true,
-});
+    log: () => undefined,
+    isWindowFullscreen: async () => false,
+    onWindowFullscreenChange: () => unsubscribe,
+    externalRuntime: {
+      available: async () => [],
+      models: async () => [],
+      onSessionState: () => unsubscribe,
+    },
+    projectRegistry: {
+      list: async () => [project],
+      beginLegacyMigration: async () => ({ completed: true }),
+      authorizeLegacyMigration: async () => ({ status: "migrated" }),
+      completeLegacyMigration: async () => undefined,
+      resolveForCwdBatch: async () => [],
+      onChanged: () => unsubscribe,
+    },
+    mobileRemote: {
+      updatePermissionModes: async () => undefined,
+      notifyApprovalResolved: async () => undefined,
+    },
+    noRepoCwd: async () => "/tmp",
+    configure: async () => undefined,
+    registerBrowserSessionBucket: () => undefined,
+    setGitPrefs: async () => undefined,
+    getProjectGitStatus: async () => ({ branch: "main", entries: [], clean: true }),
+    getSessionGitStatus: async () => ({ branch: "main", entries: [], clean: true }),
+    getProjectGitBranches: async () => ({ isRepo: true, current: "main", branches: ["main"] }),
+    getSessionWorkspace: async () => ({ root: "/tmp/repo-a", kind: "main" }),
+    listSessionWorktrees: async () => ({
+      current: { root: "/tmp/repo-a", kind: "main" },
+      mainRoot: "/tmp/repo-a",
+      worktrees: [
+        {
+          path: "/tmp/repo-a",
+          branch: "main",
+          head: "abc123",
+          isMain: true,
+        },
+      ],
+    }),
+    getSessionWorktreeDiff: async () => ({
+      changedFiles: 0,
+      aheadCommits: 0,
+      hasUncommittedChanges: false,
+    }),
+    getSessionTranscript: async () => [],
+    subscribeSession: async () => ({ entries: [], nextSeq: 0 }),
+    goalGet: async () => ({ goal: null }),
+    listRuns: async () => [],
+    listDiskSessions: async () => ({ sessions: [], nextCursor: null }),
+    onStreamEvent: () => unsubscribe,
+    onAutomationSession: () => unsubscribe,
+    onMobileSession: () => unsubscribe,
+    onApprovalRequest: () => unsubscribe,
+    onApprovalResolved: () => unsubscribe,
+    onMobilePermissionMode: () => unsubscribe,
+    onStatus: () => unsubscribe,
+    onAgentLifecycle: () => unsubscribe,
+    onWorktreeCleanupSkipped: () => unsubscribe,
+    onBrowserAnchorFromPopout: () => unsubscribe,
+    onBrowserAnchorRemoveFromPopout: () => unsubscribe,
+    onBrowserAnchorUpdateFromPopout: () => unsubscribe,
+    syncBrowserAnchors: () => undefined,
+    onMenuEvent: () => unsubscribe,
+    getSettings: async () => ({}),
+    getModelCatalog: async () => [],
+    resolveModelMeta: async () => [],
+    setBadgeCount: async () => undefined,
+    notify: async () => undefined,
+    run: async (text: string, opts: Record<string, unknown>) => {
+      runCalls.push({ text, opts });
+      return { ok: true };
+    },
+  };
+}
+
+let root: Root | null = null;
+let restoreWindowProperties: (() => void) | undefined;
+
+async function renderApp(): Promise<void> {
+  root = createRoot(document.createElement("div"));
+  await act(async () => {
+    root?.render(<App />);
+    await flushMicrotasks();
+  });
+}
 
 const { App } = await import("./App");
-mock.restore();
 
 describe("App send draft overrides", () => {
   afterAll(() => {
@@ -103,7 +197,39 @@ describe("App send draft overrides", () => {
     restoreGlobalProperty("window", originalWindowDescriptor);
   });
 
+  afterEach(async () => {
+    if (root) {
+      await act(async () => {
+        root?.unmount();
+        await flushMicrotasks();
+      });
+      root = null;
+    }
+    restoreWindowProperties?.();
+    restoreWindowProperties = undefined;
+    restoreGlobalProperty("localStorage", originalLocalStorageDescriptor);
+  });
+
   beforeEach(() => {
+    ensureMiniDom();
+    const testWindow = window;
+    const windowProperties = ["codeshell", "localStorage", "innerWidth"].map(
+      (key) => [key, Object.getOwnPropertyDescriptor(testWindow, key)] as const,
+    );
+    restoreWindowProperties = () => {
+      for (const [key, descriptor] of windowProperties) {
+        if (descriptor) Object.defineProperty(testWindow, key, descriptor);
+        else delete (testWindow as unknown as Record<string, unknown>)[key];
+      }
+    };
+    for (const target of [globalThis, window]) {
+      Object.defineProperty(target, "localStorage", {
+        value: localStorageMock,
+        configurable: true,
+        writable: true,
+      });
+    }
+    installCodeshellStub();
     chatProps = null;
     runCalls.length = 0;
     localStorageMock.clear();
@@ -143,7 +269,7 @@ describe("App send draft overrides", () => {
       }),
     );
 
-    renderToStaticMarkup(React.createElement(App));
+    await renderApp();
 
     expect(chatProps).not.toBeNull();
     expect(chatProps!.sendBucket).toBe(bucketKey(repoId, sessionA));
@@ -181,7 +307,7 @@ describe("App send draft overrides", () => {
       JSON.stringify({ [draftBucket]: "draft-model" }),
     );
 
-    renderToStaticMarkup(React.createElement(App));
+    await renderApp();
 
     expect(chatProps).not.toBeNull();
     await chatProps!.onSend("draft goal");
