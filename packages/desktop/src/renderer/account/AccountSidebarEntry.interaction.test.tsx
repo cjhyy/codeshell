@@ -16,6 +16,18 @@ const scenarios = {
   "capabilities-retry": "retries discovery failures while keeping password login available",
   "registration-unavailable":
     "disables closed registration while allowing existing accounts to log in",
+  "registration-validation":
+    "rejects invalid registration names, short passwords, and mismatched confirmation",
+  "registration-success":
+    "registers once and signs in automatically with matching password confirmation",
+  "login-enter": "submits password login from the credential form with Enter",
+  "register-enter": "submits registration from the credential form with Enter",
+  "registration-pending":
+    "disables inputs and prevents duplicate registration submissions while pending",
+  "github-registration-closed":
+    "keeps GitHub sign-in available when password registration is closed",
+  "github-automatic-account":
+    "signs in a first-time GitHub account without entering password credentials",
 };
 
 for (const [scenario, description] of Object.entries(scenarios)) {

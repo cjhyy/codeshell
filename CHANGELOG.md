@@ -8,6 +8,26 @@ breaking.
 
 ## [Unreleased]
 
+## [0.9.34] - 2026-10-12
+
+### Added
+
+- Open the cloud account dialog from a persistent sidebar entry, with the current
+  account and sign-in state visible alongside Settings.
+
+### Fixed
+
+- Put GitHub sign-in before the password forms and explain that first-time
+  authorization creates a CodeShell account when the service allows registration.
+  Separate password login from account creation, confirm registration passwords,
+  support Enter submission, and prevent duplicate submissions.
+- Check the selected cloud service's registration and GitHub availability before
+  enabling those actions. Explain missing OAuth configuration, allow retrying
+  discovery, and preserve password login when discovery is unavailable.
+- Explain username conflicts, incorrect passwords, closed registration, and
+  GitHub linking conflicts with specific messages while keeping upstream error
+  details and credentials private.
+
 ## [0.9.33] - 2026-10-12
 
 ### Added

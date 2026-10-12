@@ -45,6 +45,7 @@ const capabilityRequests: Array<{
 }> = [];
 let capabilityAttempts = 0;
 const credentials: Array<{ action: string; input: CloudAccountLogin }> = [];
+const authenticationRequest = deferred<CloudAccountStatus>();
 let current: CloudAccountStatus = { state: "signed-out" };
 let subscriptions = 0;
 let unsubscriptions = 0;
@@ -61,6 +62,7 @@ const signedIn = (username: string): CloudAccountStatus => ({
 });
 const authenticate = async (action: string, input: CloudAccountLogin) => {
   credentials.push({ action, input });
+  if (scenario === "registration-pending") return authenticationRequest.promise;
   emit(signedIn(input.username));
   return current;
 };
@@ -76,7 +78,9 @@ const api: CloudAccountApi = {
       return Promise.reject(new Error("Discovery unavailable"));
     }
     return Promise.resolve({
-      registrationAllowed: scenario !== "registration-unavailable",
+      registrationAllowed: !["registration-unavailable", "github-registration-closed"].includes(
+        scenario,
+      ),
       githubEnabled: !["github-unavailable", "link-unavailable"].includes(scenario),
     });
   },
@@ -93,7 +97,9 @@ const api: CloudAccountApi = {
   register: (input) => authenticate("register", input),
   signInWithGitHub: async ({ origin }) => {
     githubOrigin = origin;
-    emit({ state: "signing-in" });
+    emit(
+      scenario === "github-automatic-account" ? signedIn("github-user") : { state: "signing-in" },
+    );
     return current;
   },
   linkGitHub: async () => current,
@@ -140,6 +146,11 @@ const trigger = () => {
   return button as HTMLButtonElement;
 };
 const dialog = () => nodes(document.body).find((node) => props(node).role === "dialog");
+const form = () => {
+  const found = nodes(dialog()!).find((node) => node.tagName === "FORM");
+  assert.ok(found, "Password credentials use a form that supports Enter submission");
+  return found;
+};
 const button = (label: string) => {
   const found = nodes(dialog() ?? document.body).find(
     (node) => node.tagName === "BUTTON" && text(node) === label,
@@ -169,8 +180,15 @@ const settleCapabilities = async () => {
 const click = (node: Element) =>
   settle(() => {
     assert.ok(!props(node).disabled, `Action must be enabled: ${text(node)}`);
-    props(node).onClick({ defaultPrevented: false, preventDefault() {}, currentTarget: node });
+    if (props(node).type === "submit") {
+      props(form()).onSubmit({ preventDefault() {}, currentTarget: form() });
+    } else {
+      props(node).onClick({ defaultPrevented: false, preventDefault() {}, currentTarget: node });
+    }
   });
+// The mini DOM has no browser implicit-Enter behavior; exercise the real form
+// submit handler used by Enter and the native submit button.
+const submit = () => settle(() => props(form()).onSubmit({ preventDefault() {} }));
 const change = (node: Element, value: string) =>
   settle(() => props(node).onChange({ target: { value } }));
 const open = async () => {
@@ -212,7 +230,13 @@ try {
     await open();
     assert.equal(listeners.size, 2, "The account form independently observes status");
     assert.equal(props(button("登录")).disabled, true, "Empty credentials cannot be submitted");
-    assert.equal(props(button("注册")).disabled, true);
+    assert.equal(props(button("密码登录"))["aria-pressed"], true);
+    assert.ok(
+      nodes(dialog()!).some(
+        (node) => props(node).role === "group" && props(node)["aria-label"] === "账号密码登录方式",
+      ),
+    );
+    assert.equal(props(button("创建账号")).type, "button");
     assert.equal(props(button("使用 GitHub 登录")).disabled, true);
     assert.ok(text(dialog()!).includes("正在检查可用登录方式…"));
     await settleCapabilities();
@@ -234,8 +258,10 @@ try {
     await click(button("退出云账号"));
     assertSignedOut();
     assert.equal(props(input("密码（至少 12 位）")).value, "", "Login clears the password");
+    await click(button("创建账号"));
     await change(input("账号名称"), "new-user");
     await change(input("密码（至少 12 位）"), "registration-password");
+    await change(input("确认密码"), "registration-password");
     await settleCapabilities();
     await click(button("注册"));
     assertSignedIn("new-user");
@@ -249,10 +275,13 @@ try {
     await open();
     await change(input("云服务地址"), " https://accounts.example.test/ ");
     await settleCapabilities();
+    assert.equal(props(input("账号名称")).value, "");
+    assert.equal(props(input("密码（至少 12 位）")).value, "");
     await click(button("使用 GitHub 登录"));
     assert.equal(githubOrigin, "https://accounts.example.test");
     assert.ok(text(trigger()).includes("正在登录…"));
     assert.equal(props(button("使用 GitHub 登录")).disabled, true);
+    assert.equal(credentials.length, 0, "GitHub authentication never submits a password draft");
     await click(button("取消登录"));
     assert.equal(cancellations, 1);
     assertSignedOut();
@@ -292,7 +321,7 @@ try {
     await open();
     assert.ok(text(dialog()!).includes("暂时无法读取账号状态"));
     button("登录");
-    button("注册");
+    button("创建账号");
     await settleCapabilities();
     assert.equal(props(button("使用 GitHub 登录")).disabled, false);
     await settle(() => emit(signedIn("recovered-user")));
@@ -329,6 +358,7 @@ try {
     await settleCapabilities();
     assert.equal(props(button("关联 GitHub")).disabled, true);
     assert.ok(text(dialog()!).includes("此云服务尚未配置 GitHub 登录，请使用账号密码。"));
+    assert.ok(text(dialog()!).includes("关联 GitHub 后，可用 GitHub 登录当前 CodeShell 账号"));
   } else if (scenario === "capabilities-stale") {
     await open();
     await settleCapabilities();
@@ -380,6 +410,9 @@ try {
     await settleCapabilities();
     assert.equal(capabilityAttempts, 2);
     assert.equal(props(button("使用 GitHub 登录")).disabled, false);
+    await click(button("创建账号"));
+    await change(input("密码（至少 12 位）"), "existing-user-password");
+    await change(input("确认密码"), "existing-user-password");
     assert.equal(props(button("注册")).disabled, false);
     assert.ok(!text(dialog()!).includes("无法检查云服务的登录方式"));
   } else if (scenario === "registration-unavailable") {
@@ -387,12 +420,152 @@ try {
     await settleCapabilities();
     await change(input("账号名称"), "existing-user");
     await change(input("密码（至少 12 位）"), "existing-user-password");
-    assert.equal(props(button("注册")).disabled, true);
     assert.ok(text(dialog()!).includes("此云服务暂未开放注册。"));
+    assert.equal(props(button("创建账号")).disabled, true);
     assert.equal(props(button("登录")).disabled, false);
     await click(button("登录"));
     assertSignedIn("existing-user");
     assert.equal(credentials[0]?.action, "login");
+  } else if (scenario === "registration-validation") {
+    await open();
+    await settleCapabilities();
+    await click(button("创建账号"));
+    assert.equal(props(button("创建账号"))["aria-pressed"], true);
+    assert.ok(text(dialog()!).includes("3–64 位，以字母或数字开头"));
+    assert.equal(props(input("密码（至少 12 位）")).autoComplete, "new-password");
+    assert.equal(props(input("确认密码")).autoComplete, "new-password");
+    await change(input("账号名称"), "bad name!");
+    await change(input("密码（至少 12 位）"), "registration-password");
+    await change(input("确认密码"), "registration-password");
+    assert.equal(props(button("注册")).disabled, true, "Invalid account names cannot register");
+    await submit();
+    assert.equal(credentials.length, 0);
+    await change(input("账号名称"), "valid-user");
+    await change(input("密码（至少 12 位）"), "too-short");
+    await change(input("确认密码"), "too-short");
+    assert.equal(
+      props(button("注册")).disabled,
+      true,
+      "Registration requires at least 12 characters",
+    );
+    await submit();
+    assert.equal(credentials.length, 0);
+    await change(input("密码（至少 12 位）"), "registration-password");
+    await change(input("确认密码"), "different-password");
+    assert.equal(props(input("确认密码"))["aria-invalid"], true);
+    assert.ok(text(dialog()!).includes("两次输入的密码不一致。"));
+    assert.equal(props(button("注册")).disabled, true, "Password confirmation must match");
+    await submit();
+    assert.equal(credentials.length, 0, "Enter cannot bypass registration validation");
+  } else if (scenario === "registration-success" || scenario === "register-enter") {
+    await open();
+    await settleCapabilities();
+    await change(input("云服务地址"), " https://accounts.example.test/ ");
+    await settleCapabilities();
+    await click(button("创建账号"));
+    await change(input("账号名称"), " new-user ");
+    await change(input("密码（至少 12 位）"), "registration-password");
+    await change(input("确认密码"), "registration-password");
+    assert.equal(props(button("注册")).type, "submit");
+    if (scenario === "register-enter") await submit();
+    else await click(button("注册"));
+    assert.deepEqual(credentials, [
+      {
+        action: "register",
+        input: {
+          origin: "https://accounts.example.test",
+          username: "new-user",
+          password: "registration-password",
+        },
+      },
+    ]);
+    assertSignedIn("new-user");
+    assert.equal(githubOrigin, "");
+    await click(button("退出云账号"));
+    assert.equal(props(input("密码（至少 12 位）")).value, "");
+    if (props(button("创建账号"))["aria-pressed"] === true) {
+      assert.equal(props(input("确认密码")).value, "", "Registration clears both password inputs");
+    }
+  } else if (scenario === "login-enter") {
+    await open();
+    await change(input("账号名称"), "existing-user");
+    await change(input("密码（至少 12 位）"), "existing-user-password");
+    assert.equal(props(input("密码（至少 12 位）")).autoComplete, "current-password");
+    assert.equal(props(button("登录")).type, "submit");
+    await submit();
+    assert.equal(credentials.length, 1);
+    assert.equal(credentials[0]?.action, "login");
+    assertSignedIn("existing-user");
+  } else if (scenario === "registration-pending") {
+    await open();
+    await settleCapabilities();
+    await click(button("创建账号"));
+    await change(input("账号名称"), "new-user");
+    await change(input("密码（至少 12 位）"), "registration-password");
+    await change(input("确认密码"), "registration-password");
+    await settle(() => {
+      props(form()).onSubmit({ preventDefault() {} });
+      props(form()).onSubmit({ preventDefault() {} });
+    });
+    assert.equal(
+      credentials.length,
+      1,
+      "Two submissions in one tick send one registration request",
+    );
+    assert.equal(credentials[0]?.action, "register");
+    assert.ok(text(dialog()!).includes("正在提交账号信息…"));
+    for (const label of ["云服务地址", "账号名称", "密码（至少 12 位）", "确认密码"]) {
+      assert.equal(
+        props(input(label)).disabled,
+        true,
+        `${label} is disabled while registration runs`,
+      );
+    }
+    for (const label of ["密码登录", "创建账号", "注册", "使用 GitHub 登录"]) {
+      assert.equal(
+        props(button(label)).disabled,
+        true,
+        `${label} is disabled while registration runs`,
+      );
+    }
+    await submit();
+    assert.equal(credentials.length, 1, "Pending Enter submission cannot send another request");
+    await settle(() => {
+      emit(signedIn("new-user"));
+      authenticationRequest.resolve(current);
+    });
+    assertSignedIn("new-user");
+  } else if (scenario === "github-registration-closed") {
+    await open();
+    await settleCapabilities();
+    assert.ok(text(dialog()!).includes("此云服务暂未开放注册。"));
+    assert.ok(text(dialog()!).includes("仅已关联 GitHub 的 CodeShell 账号可继续登录。"));
+    assert.equal(props(button("创建账号")).disabled, true);
+    assert.equal(props(button("使用 GitHub 登录")).disabled, false);
+    assert.equal(props(input("密码（至少 12 位）")).value, "");
+    await click(button("使用 GitHub 登录"));
+    assert.ok(
+      githubOrigin,
+      "GitHub sign-in remains available when password registration is closed",
+    );
+    assert.equal(credentials.length, 0);
+    await click(button("取消登录"));
+    assertSignedOut();
+  } else if (scenario === "github-automatic-account") {
+    await open();
+    await settleCapabilities();
+    assert.ok(
+      text(dialog()!).includes("首次授权会自动创建 CodeShell 账号，无需先注册或设置密码。"),
+    );
+    assert.equal(props(input("账号名称")).value, "");
+    assert.equal(props(input("密码（至少 12 位）")).value, "");
+    await click(button("使用 GitHub 登录"));
+    assertSignedIn("github-user");
+    assert.equal(
+      credentials.length,
+      0,
+      "GitHub creates and signs in the account without a password form",
+    );
   } else {
     assert.fail(`Unknown fixture scenario: ${scenario}`);
   }

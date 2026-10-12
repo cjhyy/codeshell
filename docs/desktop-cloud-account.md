@@ -1,8 +1,9 @@
 # Optional Desktop cloud account
 
 CodeShell opens and runs local projects without an account or an account-server
-connection. Settings → General includes an optional cloud account section with
-password registration/login, GitHub login, explicit GitHub linking, and logout.
+connection. The sidebar account entry and Settings → General open the same
+optional cloud account flow, with GitHub sign-in first, separate password login
+and account-creation modes, explicit GitHub linking, and logout.
 The service address defaults to `https://115.159.45.55` and remains editable for
 self-hosted deployments. Prefilling it does not initiate an account connection;
 the selected server must expose the account API before sign-in is available.
@@ -21,7 +22,44 @@ account server. These values belong to the server; the client secret must never
 be entered in Desktop or sent to the renderer. The public
 `GET /api/v1/account/status` reports `githubEnabled: true` only after configuration.
 Usernames use 3–64 letters, digits, periods, underscores or
-hyphens; passwords require at least 12 characters.
+hyphens, starting with a letter or digit, and are normalized to lowercase;
+passwords require at least 12 characters. Password registration asks for password
+confirmation and signs in immediately on success. Password login does not create
+an account. Both password forms support Enter submission and prevent duplicate
+submissions while a request is pending.
+
+## Registration and sign-in
+
+| Entry                       | Existing identity                                                     | New identity                                                                          |
+| --------------------------- | --------------------------------------------------------------------- | ------------------------------------------------------------------------------------- |
+| Continue with GitHub        | Signs in to the account already linked to that GitHub numeric ID      | Creates a CodeShell account and signs in after authorization, if registration is open |
+| Password login              | Signs in with the registered CodeShell username and password          | Reports invalid credentials; use Create account to register                           |
+| Create account              | Reports an unavailable username instead of replacing an account       | Creates the password account and signs in                                             |
+| Link GitHub while signed in | Keeps the current CodeShell account; repeated matching links are safe | Adds the GitHub identity to the current account instead of creating another           |
+
+GitHub sign-in never requires filling in a CodeShell username or password first.
+First-time GitHub accounts use a generated `github-<numeric-id>` username and
+have no password. A later GitHub username change still resolves to the same
+CodeShell account. The service does not merge accounts by matching names or email.
+An existing password user who wants both sign-in methods should log in with their
+password and choose Link GitHub. An identity already linked to another CodeShell
+account cannot be transferred through this flow.
+
+When registration is closed, existing password and linked GitHub accounts can
+still sign in; a new GitHub identity cannot create an account. Existing users can
+still explicitly link GitHub. When GitHub OAuth is not configured, both GitHub
+actions remain disabled with an explanation. The selected service's public
+capability response is authoritative; updating Desktop does not configure its
+OAuth App or enable registration on that server.
+
+The CodeShell cloud account is the personal identity used here. A self-hosted
+Hub administrator is a separate, instance-local management identity and its
+credentials cannot be entered as cloud-account credentials. No Hub administrator
+registration is needed for the Desktop cloud-account flow. Email verification,
+password reset/change, and adding a password to a GitHub-only account are not
+implemented in the current account API.
+
+## Local credentials and remote access
 
 Signing in does not register this computer, start remote access, upload projects,
 or authorize a phone. In Mobile Remote, “Register with current account” explicitly
