@@ -71,9 +71,15 @@ interface Fragment {
   total: number;
   data: string;
 }
+/** A real publisher identity, independent of model-run ownership. */
+export interface OutputJournalProducer {
+  kind: "protocol" | "host";
+  id: string;
+}
 interface RecordValue {
   sequence: number;
-  runId: string;
+  runId?: string;
+  producer?: OutputJournalProducer;
   event?: StreamEvent;
   fragment?: Fragment;
   previousHash: string;
@@ -81,7 +87,8 @@ interface RecordValue {
 export interface OutputJournalFrame {
   cursor: string;
   sequence: number;
-  runId: string;
+  runId?: string;
+  producer?: OutputJournalProducer;
   event?: StreamEvent;
   fragment?: Fragment;
 }
@@ -244,6 +251,57 @@ function* lines(
       throw new JournalError("incomplete", "Output record exceeds its bound");
   }
 }
+/** First independent producer uses an exact existing, bounded transcript cutover. */
+export function outputJournalCutover(
+  root: string,
+  sessionId: string,
+): {
+  startedAt: number;
+  incarnation: string;
+  legacy?: string;
+} {
+  const location = sessionLocation(root, sessionId);
+  const incarnation = outputCoverageIncarnation(
+    location.root,
+    sessionId,
+    location.state.startedAt!,
+  );
+  if (location.state.outputJournalIdentity)
+    return { startedAt: location.state.startedAt!, incarnation };
+  const fd = openRegular(join(location.directory, "transcript.jsonl"), constants.O_RDONLY);
+  try {
+    const size = fstatSync(fd).size;
+    if (size > MAX_PAGE_BYTES)
+      throw new JournalError("incomplete", "Output cutover exceeds its bound");
+    let legacy: string | undefined;
+    let count = 0;
+    let offset = 0;
+    for (const line of lines(fd, 0, size, MAX_PAGE_BYTES)) {
+      const event = JSON.parse(line.text) as TranscriptEvent;
+      if (
+        ++count > 4096 ||
+        (count === 1 && event.type !== "session_meta") ||
+        typeof event.id !== "string" ||
+        !event.data
+      )
+        throw new JournalError("incomplete", "Output cutover is unavailable");
+      legacy = event.id;
+      offset = line.end;
+    }
+    if (!legacy || offset !== size)
+      throw new JournalError("incomplete", "Output cutover is incomplete");
+    const final = sessionLocation(root, sessionId);
+    if (
+      final.stat.dev !== location.stat.dev ||
+      final.stat.ino !== location.stat.ino ||
+      final.state.startedAt !== location.state.startedAt
+    )
+      invalid("Session changed during output cutover");
+    return { startedAt: location.state.startedAt!, incarnation, legacy };
+  } finally {
+    closeSync(fd);
+  }
+}
 /** Exact bounded cutover base; reads the old prefix, never the current huge reply. */
 export function readOutputJournalLegacyBase(
   root: string,
@@ -309,6 +367,15 @@ function readHeader(fd: number, location: ReturnType<typeof sessionLocation>) {
   );
   return { header, identity, start: { sequence: 0, offset: first.value.end, hash: seed } };
 }
+function validProducer(value: unknown): value is OutputJournalProducer {
+  const producer = value as OutputJournalProducer | undefined;
+  return (
+    !!producer &&
+    ["protocol", "host"].includes(producer.kind) &&
+    typeof producer.id === "string" &&
+    SAFE_ID.test(producer.id)
+  );
+}
 function parseRecord(
   line: { text: string; end: number },
   previous: Position,
@@ -318,7 +385,10 @@ function parseRecord(
   if (
     value.sequence !== previous.sequence + 1 ||
     value.previousHash !== previous.hash ||
-    typeof value.runId !== "string" ||
+    !(
+      (typeof value.runId === "string" && !value.producer) ||
+      (value.runId === undefined && validProducer(value.producer))
+    ) ||
     !!value.event === !!value.fragment ||
     hash !== digest(JSON.stringify(value))
   )
@@ -485,7 +555,8 @@ export function readOutputJournal(
       const frame = {
         cursor: token(identity, current),
         sequence: current.sequence,
-        runId: parsed.value.runId,
+        ...(parsed.value.runId !== undefined ? { runId: parsed.value.runId } : {}),
+        ...(parsed.value.producer ? { producer: parsed.value.producer } : {}),
         ...(parsed.value.event
           ? { event: parsed.value.event }
           : { fragment: parsed.value.fragment }),
@@ -585,14 +656,22 @@ export class SessionOutputJournal {
   constructor(
     root: string,
     sessionId: string,
-    private readonly runId: string,
+    private readonly owner: string | OutputJournalProducer,
     legacyBaseThroughEventId?: string,
+    expectedIncarnation?: string,
   ) {
+    if (typeof owner !== "string" && !validProducer(owner)) invalid("Invalid output producer");
     this.location = sessionLocation(root, sessionId);
     const release = lockSync(this.location.statePath, { realpath: false, retries: 0 });
     let fd: number | undefined;
     try {
       this.location.state = this.assertOwner(true).state;
+      if (
+        expectedIncarnation !== undefined &&
+        outputCoverageIncarnation(this.location.root, sessionId, this.location.state.startedAt!) !==
+          expectedIncarnation
+      )
+        invalid("Output publisher Session was replaced before admission");
       try {
         fd = openRegular(
           this.location.file,
@@ -667,7 +746,7 @@ export class SessionOutputJournal {
       current.stat.dev !== this.location.stat.dev ||
       current.stat.ino !== this.location.stat.ino ||
       current.state.startedAt !== this.location.state.startedAt ||
-      current.state.runId !== this.runId
+      (typeof this.owner === "string" && current.state.runId !== this.owner)
     )
       invalid("Output owner was superseded or deleted");
     if (
@@ -749,32 +828,32 @@ export class SessionOutputJournal {
       if (
         stat.dev !== this.fileIdentity.dev ||
         stat.ino !== this.fileIdentity.ino ||
-        stat.size !== this.position.offset
+        stat.size < this.position.offset
       )
         invalid("Output journal changed under its owner");
       const stamp = fileStamp(fd);
-      if (stamp !== this.verifiedStamp) {
+      if (stamp !== this.verifiedStamp || stat.size !== this.position.offset) {
         // A local tool may have changed committed bytes without changing inode
         // or length. Ordinary owned appends carry their own completed stamp
         // forward, so only an unexpected stamp change requires a prefix scan.
         const loaded = readHeader(fd, this.location);
-        const verified = scan(fd, loaded.start, stat.size);
+        const verified = verifiedFile(fd, this.location.file, loaded.start, stat.size);
+        verifyPosition(fd, this.position, verified, true);
         if (
           loaded.identity !== this.identity ||
           loaded.start.hash !== this.identityPin ||
-          verified.sequence !== this.position.sequence ||
-          verified.offset !== this.position.offset ||
-          verified.hash !== this.position.hash ||
+          verified.head.offset !== stat.size ||
           fileStamp(fd) !== stamp
         )
           invalid("Output journal committed prefix changed under its owner");
+        this.position = verified.head;
       }
       let next = this.position;
       const linesToWrite: string[] = [];
       for (const payload of values) {
         const value: RecordValue = {
           sequence: next.sequence + 1,
-          runId: this.runId,
+          ...(typeof this.owner === "string" ? { runId: this.owner } : { producer: this.owner }),
           ...payload,
           previousHash: next.hash,
         };

@@ -22,6 +22,7 @@ export {
   type OutputJournalPage,
   type OutputJournalOptions,
   type OutputJournalFrame,
+  type OutputJournalProducer,
 } from "./session/output-journal.js";
 
 export {

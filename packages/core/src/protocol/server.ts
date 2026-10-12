@@ -44,6 +44,7 @@ import { ISOLATED_TASK_BEHAVIOR_MODE } from "../engine/run-types.js";
 import type { ValidatedSettings } from "../settings/schema.js";
 import { isProtectedSettingKey, SettingsManager } from "../settings/manager.js";
 import { readOutputJournal } from "../session/output-journal.js";
+import { SessionOutputPublisher } from "../session/output-publisher.js";
 import { invalidateSkillCache } from "../skills/scanner.js";
 import type { ApprovalRequest, ApprovalResult, PermissionMode, StreamEvent } from "../types.js";
 import type {
@@ -662,6 +663,7 @@ export class AgentServer {
   private diskSessionReader: SessionManager | null = null;
   /** Sessions dir for diskSessionReader; undefined → default sessions root. */
   private readonly sessionDiskRoot: string | undefined;
+  private readonly outputPublisher: SessionOutputPublisher;
   private readonly allowUsageAggregation: boolean;
   /**
    * Monotonic config-reload version, bumped per reloadSettings request so each
@@ -762,6 +764,15 @@ export class AgentServer {
     }
 
     this.transport = options.transport;
+    this.outputPublisher = new SessionOutputPublisher(
+      (sessionId) =>
+        (
+          this.chatManager?.get(sessionId)?.engine?.getSessionManager?.() ??
+          this.legacyEngine?.getSessionManager?.() ??
+          (this.diskSessionReader ??= new SessionManager(this.sessionDiskRoot))
+        ).getStorageDir(),
+      "protocol",
+    );
     this.sessionWorkspaceRpc = new SessionWorkspaceRpcHandlers({
       transport: this.transport,
       getChatManager: () => this.chatManager,
@@ -4823,6 +4834,16 @@ export class AgentServer {
   }
 
   private notify(method: string, params: Record<string, unknown>): void {
+    if (method === Methods.StreamEvent && typeof params.sessionId === "string") {
+      try {
+        params = { ...params, event: this.outputPublisher.project(params.sessionId, params.event) };
+      } catch {
+        params = {
+          ...params,
+          event: { ...(params.event as object), outputRecovery: "incomplete" },
+        };
+      }
+    }
     this.transport.send(createNotification(method, params));
   }
 
