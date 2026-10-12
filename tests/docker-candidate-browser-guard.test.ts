@@ -62,7 +62,7 @@ function fixture() {
     preloadHash: policy.preloadHash,
   });
   const rows = () => [
-    { ...common(), event: "pre-core", negativeProbes: 6 },
+    { ...common(), event: "pre-core", negativeProbes: 6, dnsNegativeProbes: 4 },
     { ...common(), event: "listener", host: "127.0.0.1", port: 32123 },
   ];
   const saveRows = (value = rows(), suffix = "") =>
@@ -235,6 +235,22 @@ const invalidAuthority = [
     (f) => {
       const rows = f.rows();
       rows[0].negativeProbes = 5;
+      f.saveRows(rows);
+    },
+  ],
+  [
+    "missing DNS negative probes",
+    (f) => {
+      const rows = f.rows();
+      delete rows[0].dnsNegativeProbes;
+      f.saveRows(rows);
+    },
+  ],
+  [
+    "wrong DNS negative probe count",
+    (f) => {
+      const rows = f.rows();
+      rows[0].dnsNegativeProbes = 5;
       f.saveRows(rows);
     },
   ],
