@@ -71,7 +71,7 @@ describe("spawnBackground + readOutput + exit notification", () => {
 
   test("non-zero exit enqueues a failed result that can wake the owning session", async () => {
     const r = mgr.spawnBackground({
-      command: "echo broken >&2; exit 7",
+      command: "echo broken >&2; exit 1",
       cwd: home,
       sessionId: "sessFailed",
     });
@@ -83,8 +83,30 @@ describe("spawnBackground + readOutput + exit notification", () => {
     expect(result?.kind).toBe("result");
     if (result?.kind !== "result") throw new Error("missing shell result notification");
     expect(result.payload.status).toBe("failed");
-    expect(result.payload.description).toContain("exit 7");
-    expect(result.payload.error).toContain(`Background shell ${r.shellId} exited with exit 7`);
+    expect(result.payload.exitCode).toBe(1);
+    expect(result.payload.signal).toBeUndefined();
+    expect(result.payload.cwd).toBe(home);
+    expect(result.payload.description).toContain("exit 1");
+    expect(result.payload.error).toContain(`Background shell ${r.shellId} exited with exit 1`);
+  });
+
+  test("external SIGTERM preserves the signal and remains a failed result", async () => {
+    const r = mgr.spawnBackground({
+      command: "exec sleep 100",
+      cwd: home,
+      sessionId: "sessTerminated",
+    });
+    if (!r.ok) throw new Error("spawn failed");
+
+    process.kill(mgr.get(r.shellId)!.pgid, "SIGTERM");
+    await until(() => mgr.get(r.shellId)?.status === "exited");
+
+    const [result] = notificationQueue.getSnapshot("sessTerminated");
+    if (result?.kind !== "result") throw new Error("missing shell result notification");
+    expect(result.payload.status).toBe("failed");
+    expect(result.payload.signal).toBe("SIGTERM");
+    expect(result.payload.exitCode).toBeUndefined();
+    expect(result.payload.cwd).toBe(home);
   });
 });
 
@@ -222,6 +244,7 @@ describe("process group kill (难点2)", () => {
     await new Promise((res) => setTimeout(res, 100));
     expect(groupAlive(pgid)).toBe(false);
     expect(mgr.get(r.shellId)?.status).toBe("killed");
+    expect(notificationQueue.getSnapshot("sessA")).toHaveLength(0);
   });
 
   test("kill is idempotent on already-exited shell", async () => {
@@ -292,7 +315,13 @@ describe("reapOrphansFromPidfiles (难点1)", () => {
     const deadFile = join(dir, "bg_dead.json");
     writeFileSync(
       deadFile,
-      JSON.stringify({ shellId: "bg_dead", pgid: 2_000_000_000, command: "x", startedAt: 1, sessionId: "ghostS" }),
+      JSON.stringify({
+        shellId: "bg_dead",
+        pgid: 2_000_000_000,
+        command: "x",
+        startedAt: 1,
+        sessionId: "ghostS",
+      }),
     );
     // An alive group: spawn a detached sleeper and write a pidfile for it.
     const { spawn } = await import("node:child_process");
@@ -301,7 +330,13 @@ describe("reapOrphansFromPidfiles (难点1)", () => {
     const liveFile = join(dir, "bg_live.json");
     writeFileSync(
       liveFile,
-      JSON.stringify({ shellId: "bg_live", pgid: live.pid, command: "sleep 30", startedAt: 1, sessionId: "ghostS" }),
+      JSON.stringify({
+        shellId: "bg_live",
+        pgid: live.pid,
+        command: "sleep 30",
+        startedAt: 1,
+        sessionId: "ghostS",
+      }),
     );
 
     const fresh = new BackgroundShellManager();
@@ -312,7 +347,11 @@ describe("reapOrphansFromPidfiles (难点1)", () => {
     expect(fresh.get("bg_live")?.status).toBe("orphaned");
 
     // Cleanup the live process.
-    try { process.kill(-live.pid!, "SIGKILL"); } catch { /* ignore */ }
+    try {
+      process.kill(-live.pid!, "SIGKILL");
+    } catch {
+      /* ignore */
+    }
   });
 });
 

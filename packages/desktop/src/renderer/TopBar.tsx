@@ -9,6 +9,7 @@ import type { ActiveGoal, TaskListMessage } from "./types";
 import { useT } from "./i18n";
 import { Button } from "@/components/ui/button";
 import { SimpleSelect } from "@/components/ui/simple-select";
+import { NotificationHistory } from "./ui/NotificationHistory";
 
 interface Props {
   projectName: string | null;
@@ -213,6 +214,7 @@ function TopBarImpl({
         )}
       </div>
       <div className="flex shrink-0 items-center gap-1 border-l border-border/60 pl-2">
+        <NotificationHistory />
         {contextSelectionAvailable && onSelectContext && (
           <span style={{ WebkitAppRegion: "no-drag" } as React.CSSProperties}>
             <IconButton

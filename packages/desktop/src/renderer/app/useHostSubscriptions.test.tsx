@@ -213,6 +213,35 @@ describe("host subscriptions and recovery", () => {
     };
   });
 
+  test("background failures retain their source conversation and structured exit details", async () => {
+    const notices: Parameters<typeof params.services.toast>[0][] = [];
+    params.services.toast = (notice) => notices.push(notice);
+    params.routing.engineToBucketRef.current.set("shell-session", "project::pinned-1");
+    hook = await renderHook(() => useHostSubscriptions(params));
+    await act(async () => {
+      listeners.get("onStreamEvent")!({
+        sessionId: "shell-session",
+        event: {
+          type: "background_agent_completed",
+          agentId: "bg-server",
+          workKind: "shell",
+          command: "python3 learning_server.py",
+          description: "Background shell exited (signal SIGTERM)",
+          status: "failed",
+          signal: "SIGTERM",
+          enqueuedAt: 1,
+        },
+      });
+      await flushMicrotasks();
+    });
+    expect(notices).toHaveLength(1);
+    expect(notices[0]?.sessionId).toBe("shell-session");
+    expect(notices[0]?.message).toContain("SIGTERM");
+    expect(notices[0]?.variant).toBe("error");
+    expect(notices[0]?.detail).toContain("workId: bg-server");
+    expect(notices[0]?.detail).toContain("sessionId: shell-session");
+  });
+
   afterEach(async () => {
     await hook?.unmount();
     hook = undefined;
