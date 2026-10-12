@@ -21,7 +21,6 @@ import { ModelPill, type ModelOption } from "./chat/ModelPill";
 import { Lightbox, type LightboxItem } from "./chat/Lightbox";
 import { ContextRing } from "./chat/ContextRing";
 import { ProjectPicker } from "./chat/ProjectPicker";
-import { ProjectRunLocation } from "./chat/ProjectRunLocation";
 import { WelcomeSuggestions } from "./chat/WelcomeSuggestions";
 import { BranchPicker } from "./chat/BranchPicker";
 import { AskUserMessageView } from "./messages/AskUserMessageView";
@@ -79,6 +78,13 @@ import { isDraftBucket } from "./transcripts";
 interface Props {
   /** Quick chats reuse the normal composer but omit durable-session controls. */
   variant?: "main" | "quickChat" | "pet";
+  /** Remote runtimes use the same chat while local-only capabilities fail closed. */
+  localRuntime?: boolean;
+  runLocationControl?: React.ReactNode;
+  composerDisabled?: boolean;
+  remoteFiles?: Array<{ id: string; name: string; size: number }>;
+  onSelectRemoteFiles?: (files: File[]) => Promise<void>;
+  onRemoveRemoteFile?: (id: string) => void;
   messages: Message[];
   /**
    * True while an EXISTING session picked from the sidebar is being hydrated
@@ -170,6 +176,7 @@ interface Props {
   /** Provider-agnostic image clarity; drives renderer-side downscale before send. */
   imageDetail?: ImageDetail;
   pendingApproval?: ApprovalRequestEnvelope | null;
+  approvalEpoch?: number;
   onApprovalDecide?: (
     decision: "approve" | "deny",
     reason?: string,
@@ -351,6 +358,12 @@ function appendReference(
 
 export function ChatView({
   variant = "main",
+  localRuntime = true,
+  runLocationControl,
+  composerDisabled = false,
+  remoteFiles = [],
+  onSelectRemoteFiles,
+  onRemoveRemoteFile,
   messages,
   awaitingHydration = false,
   historyHasMore = false,
@@ -386,6 +399,7 @@ export function ChatView({
   onPrepareAttachmentSession,
   imageDetail,
   pendingApproval,
+  approvalEpoch = 0,
   onApprovalDecide,
   permissionMode,
   onPermissionChange,
@@ -425,7 +439,7 @@ export function ChatView({
 }: Props) {
   const { t } = useT();
   const [history, setHistory] = useState<string[]>(() =>
-    variant === "main" ? loadHistory(activeProjectId) : [],
+    localRuntime && variant === "main" ? loadHistory(activeProjectId) : [],
   );
   const [historyCursor, setHistoryCursor] = useState(-1);
   const liveDraftStash = useRef<string>("");
@@ -540,7 +554,7 @@ export function ChatView({
   // mic button reflects whether voice input is usable right now.
   useEffect(() => {
     let cancelled = false;
-    if (!configurationAvailable || !conversationRoot) {
+    if (!localRuntime || !configurationAvailable || !conversationRoot) {
       setSttAvailable(false);
       return;
     }
@@ -555,7 +569,7 @@ export function ChatView({
     return () => {
       cancelled = true;
     };
-  }, [configurationAvailable, conversationRoot]);
+  }, [configurationAvailable, conversationRoot, localRuntime]);
 
   const transcribeChunks = useCallback(
     async (blob: Blob, mimeType: string) => {
@@ -696,6 +710,10 @@ export function ChatView({
   );
 
   useEffect(() => {
+    if (!localRuntime) {
+      setPluginCommands([]);
+      return;
+    }
     let cancelled = false;
     const load = async (): Promise<void> => {
       if (!configurationAvailable) {
@@ -728,7 +746,7 @@ export function ChatView({
       window.removeEventListener("codeshell:settings-changed", refresh);
       off?.();
     };
-  }, [configurationAvailable, pluginCommandTarget]);
+  }, [configurationAvailable, pluginCommandTarget, localRuntime]);
 
   const activeModel = modelOptions.find((o) => o.key === activeModelKey) ?? null;
   const activeSupportsVision = activeModel?.supportsVision === true;
@@ -742,7 +760,7 @@ export function ChatView({
         description: t("chat.slash.compactDescription"),
       });
     }
-    if (variant === "main") {
+    if (localRuntime && variant === "main") {
       commands.push({
         kind: "builtin",
         name: "/loop",
@@ -757,7 +775,7 @@ export function ChatView({
       ),
     );
     return commands;
-  }, [onCompactCommand, pluginCommands, t, variant]);
+  }, [onCompactCommand, pluginCommands, t, variant, localRuntime]);
   const slashItems = useMemo(() => {
     if (!slash) return [];
     return filterSlashCommandItems(slashCommands, slash.query);
@@ -787,10 +805,10 @@ export function ChatView({
   }, [composerSeedNonce]);
 
   useEffect(() => {
-    setHistory(variant === "main" ? loadHistory(activeProjectId) : []);
+    setHistory(localRuntime && variant === "main" ? loadHistory(activeProjectId) : []);
     setHistoryCursor(-1);
     liveDraftStash.current = "";
-  }, [activeProjectId, variant]);
+  }, [activeProjectId, variant, localRuntime]);
 
   // Auto-size the composer to its content by measuring scrollHeight. The catch:
   // scrollHeight is only right once the textarea is actually laid out at its
@@ -835,8 +853,8 @@ export function ChatView({
   // Busy no longer disables the textarea: Enter queues input for the next turn.
   // Manual compaction is the exception because it is an uncancellable RPC, not
   // an agent turn, so we block composer edits/actions until it settles.
-  const controlsDisabled = busy || compacting || expandingPluginCommand;
-  const inputDisabled = compacting || expandingPluginCommand;
+  const controlsDisabled = composerDisabled || busy || compacting || expandingPluginCommand;
+  const inputDisabled = composerDisabled || compacting || expandingPluginCommand;
   const placeholder = expandingPluginCommand
     ? t("chat.composer.placeholderExpandingCommand")
     : compacting
@@ -856,7 +874,7 @@ export function ChatView({
   };
 
   const updateInlinePickers = (value: string, caret: number): void => {
-    const nextMention = detectMention(value, caret);
+    const nextMention = localRuntime ? detectMention(value, caret) : null;
     if (nextMention) {
       if (!mention || mention.query !== nextMention.query) setMentionSelected(0);
       setMention(nextMention);
@@ -1025,7 +1043,7 @@ export function ChatView({
   };
 
   const submit = (): void => {
-    if (compacting || expandingPluginCommand) return;
+    if (composerDisabled || compacting || expandingPluginCommand) return;
     const pluginInvocation = parsePluginSlashInvocation(draft, slashCommands);
     if (pluginInvocation) {
       executeSlashCommand(pluginInvocation.command, pluginInvocation.rawArguments);
@@ -1043,7 +1061,7 @@ export function ChatView({
     const hasImages = attachments.length > 0;
     const hasAnchors = anchors.length > 0;
     const hasLocalFiles = localFilePaths.length > 0;
-    if (!text && !hasImages && !hasAnchors && !hasLocalFiles) return;
+    if (!text && !hasImages && !hasAnchors && !hasLocalFiles && remoteFiles.length === 0) return;
     const compactCommand = slashCommands.find(
       (command): command is Extract<SlashCommandItem, { kind: "builtin" }> =>
         command.kind === "builtin" && command.name === "/compact",
@@ -1100,7 +1118,7 @@ export function ChatView({
     // Snap the stream to the bottom + re-arm follow regardless of scroll pos.
     setSendEpoch((n) => n + 1);
     // Reusing the main composer must not make ephemeral side prompts durable.
-    if (withLocalFiles && variant === "main") {
+    if (localRuntime && withLocalFiles && variant === "main") {
       setHistory(pushHistory(activeProjectId, withLocalFiles));
     }
     setDraft("");
@@ -1114,8 +1132,12 @@ export function ChatView({
   };
 
   const acceptFiles = async (files: File[], origin: "paste" | "os-drop" | "picker") => {
-    if (compacting) return;
+    if (composerDisabled || compacting) return;
     if (files.length === 0) return;
+    if (!localRuntime) {
+      await onSelectRemoteFiles?.(files);
+      return;
+    }
     setAttachmentError(null);
     const { accepted, errors } = await buildAttachments(files, attachments);
     if (!mountedRef.current) return;
@@ -1195,7 +1217,11 @@ export function ChatView({
     files: File[],
     origin: "os-drop" | "picker",
   ): Promise<void> => {
-    if (compacting || files.length === 0) return;
+    if (composerDisabled || compacting || files.length === 0) return;
+    if (!localRuntime) {
+      await onSelectRemoteFiles?.(files);
+      return;
+    }
     setAttachmentError(null);
     const images: File[] = [];
     const paths: string[] = [];
@@ -1338,7 +1364,6 @@ export function ChatView({
   // placeholder below instead.
   const isNewChat =
     messages.length === 0 && !awaitingHydration && !historyFailed && !historyHasMore;
-  const activeProject = projects.find((project) => project.id === activeProjectId) ?? null;
 
   // Codex-style inline approvals: when an approval is pending, drop
   // the full ApprovalCard at the tail of the chat stream so it scrolls
@@ -1372,7 +1397,12 @@ export function ChatView({
         className="mx-4 my-2"
         data-request-id={pendingApproval.requestId}
       >
-        <ApprovalCard envelope={pendingApproval} onDecide={onApprovalDecide} />
+        <ApprovalCard
+          key={`${pendingApproval.requestId}:${approvalEpoch}`}
+          envelope={pendingApproval}
+          onDecide={onApprovalDecide}
+          allowScopes={localRuntime}
+        />
       </div>
     ) : null;
   const visibleLinkIntents = linkIntents.filter(
@@ -1423,10 +1453,10 @@ export function ChatView({
   // A drag is acceptable if it's an OS file drop OR an internal file-panel
   // image drag (carries our custom path MIME — TODO 2.1).
   const dragHasAcceptable = (dt: DataTransfer | null): boolean => {
-    if (compacting) return false;
+    if (composerDisabled || compacting) return false;
     if (!dt) return false;
     if (Array.from(dt.items ?? []).some((it) => it.kind === "file")) return true;
-    return Array.from(dt.types ?? []).includes(CODESHELL_PATH_DND_MIME);
+    return localRuntime && Array.from(dt.types ?? []).includes(CODESHELL_PATH_DND_MIME);
   };
   const onChatDragEnter = (e: React.DragEvent<HTMLDivElement>) => {
     if (dragHasAcceptable(e.dataTransfer)) {
@@ -1453,7 +1483,7 @@ export function ChatView({
     // Internal file-panel drag. Image → native image attachment; everything
     // else → a literal local-path reference, matching desktop/CLI semantics.
     const draggedPath = e.dataTransfer?.getData(CODESHELL_PATH_DND_MIME);
-    if (draggedPath) {
+    if (draggedPath && localRuntime) {
       if (classifyPath(draggedPath) === "image") {
         onAttachImagePath?.(draggedPath);
       } else {
@@ -1537,6 +1567,7 @@ export function ChatView({
               ) : undefined
             }
             turnEpoch={turnEpoch}
+            localRuntime={localRuntime}
             engineSessionId={engineSessionId}
             liveTurnActive={liveTurnActive}
             onAskUserAnswer={onAskUserAnswer}
@@ -1575,7 +1606,12 @@ export function ChatView({
           )}
           {showStickyApproval && pendingApproval && onApprovalDecide && (
             <div className="px-4">
-              <ApprovalCard envelope={pendingApproval} onDecide={onApprovalDecide} />
+              <ApprovalCard
+                key={`${pendingApproval.requestId}:${approvalEpoch}`}
+                envelope={pendingApproval}
+                onDecide={onApprovalDecide}
+                allowScopes={localRuntime}
+              />
             </div>
           )}
         </div>
@@ -1986,6 +2022,30 @@ export function ChatView({
               />
             </div>
 
+            {remoteFiles.length > 0 && (
+              <div className="mb-2 flex flex-wrap gap-2" data-remote-uploads>
+                {remoteFiles.map((file) => (
+                  <span
+                    key={file.id}
+                    className="inline-flex max-w-full items-center gap-1 rounded-md border px-2 py-1 text-xs"
+                  >
+                    <FileText size={12} /> <span className="truncate">{file.name}</span>
+                    <span className="text-muted-foreground">{formatBytes(file.size)}</span>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon"
+                      className="size-5"
+                      disabled={controlsDisabled}
+                      aria-label={t("chat.composer.removeImageAria", { name: file.name })}
+                      onClick={() => onRemoveRemoteFile?.(file.id)}
+                    >
+                      <X size={12} />
+                    </Button>
+                  </span>
+                ))}
+              </div>
+            )}
             <Input
               ref={fileInputRef}
               type="file"
@@ -2017,7 +2077,7 @@ export function ChatView({
             <div className="@container/composer-controls mt-1 min-h-8 w-full min-w-0">
               <div className="flex min-w-0 items-center justify-between gap-2">
                 <div className="flex min-w-0 items-center gap-1.5">
-                  {variant !== "pet" && (
+                  {variant !== "pet" && (localRuntime || onSelectRemoteFiles) && (
                     <Button
                       type="button"
                       variant="ghost"
@@ -2035,14 +2095,14 @@ export function ChatView({
                       <Paperclip size={14} />
                     </Button>
                   )}
-                  {variant !== "pet" && (
+                  {localRuntime && variant !== "pet" && (
                     <PermissionPill
                       value={permissionMode}
                       onChange={onPermissionChange}
                       disabled={controlsDisabled}
                     />
                   )}
-                  {variant === "main" && (
+                  {localRuntime && variant === "main" && (
                     <GoalToggle
                       enabled={goalEnabled}
                       onToggle={onGoalToggle}
@@ -2075,49 +2135,51 @@ export function ChatView({
                   />
                   {/* 语音输入(听写):点击录音 → 再点停止 → 转写填进输入框(不自动发)。
                     idle=Mic / recording=红色 Square 脉冲 / transcribing=spinner。 */}
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="icon"
-                    className={cn(
-                      "size-8 shrink-0 disabled:cursor-not-allowed",
-                      voiceState === "recording"
-                        ? "border border-status-err/60 text-status-err"
-                        : "text-muted-foreground hover:text-foreground",
-                    )}
-                    aria-label={t("chat.composer.voiceInput")}
-                    title={
-                      !sttAvailable && voiceState === "idle"
-                        ? t("chat.composer.voiceNoProviderTitle")
-                        : voiceState === "recording"
-                          ? t("chat.composer.voiceRecording")
-                          : voiceState === "transcribing"
-                            ? t("chat.composer.voiceTranscribing")
-                            : t("chat.composer.voiceInputTitle")
-                    }
-                    // Don't steal focus from the composer: a plain button click
-                    // blurs the textarea, so during record→transcribe the keyboard
-                    // can't reach it (the "录音时打不了字" bug). preventDefault on
-                    // mousedown keeps focus in the textarea so the user can keep
-                    // typing while dictating.
-                    onMouseDown={(e) => e.preventDefault()}
-                    onClick={onVoiceClick}
-                    // Disabled while transcribing, OR when no provider is configured
-                    // (and not mid-recording — never block stopping an active take).
-                    disabled={
-                      compacting ||
-                      voiceState === "transcribing" ||
-                      (!sttAvailable && voiceState === "idle")
-                    }
-                  >
-                    {voiceState === "recording" ? (
-                      <Square size={14} className="animate-pulse fill-current" />
-                    ) : voiceState === "transcribing" ? (
-                      <Loader2 size={14} className="animate-spin" />
-                    ) : (
-                      <Mic size={14} />
-                    )}
-                  </Button>
+                  {localRuntime && (
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon"
+                      className={cn(
+                        "size-8 shrink-0 disabled:cursor-not-allowed",
+                        voiceState === "recording"
+                          ? "border border-status-err/60 text-status-err"
+                          : "text-muted-foreground hover:text-foreground",
+                      )}
+                      aria-label={t("chat.composer.voiceInput")}
+                      title={
+                        !sttAvailable && voiceState === "idle"
+                          ? t("chat.composer.voiceNoProviderTitle")
+                          : voiceState === "recording"
+                            ? t("chat.composer.voiceRecording")
+                            : voiceState === "transcribing"
+                              ? t("chat.composer.voiceTranscribing")
+                              : t("chat.composer.voiceInputTitle")
+                      }
+                      // Don't steal focus from the composer: a plain button click
+                      // blurs the textarea, so during record→transcribe the keyboard
+                      // can't reach it (the "录音时打不了字" bug). preventDefault on
+                      // mousedown keeps focus in the textarea so the user can keep
+                      // typing while dictating.
+                      onMouseDown={(e) => e.preventDefault()}
+                      onClick={onVoiceClick}
+                      // Disabled while transcribing, OR when no provider is configured
+                      // (and not mid-recording — never block stopping an active take).
+                      disabled={
+                        compacting ||
+                        voiceState === "transcribing" ||
+                        (!sttAvailable && voiceState === "idle")
+                      }
+                    >
+                      {voiceState === "recording" ? (
+                        <Square size={14} className="animate-pulse fill-current" />
+                      ) : voiceState === "transcribing" ? (
+                        <Loader2 size={14} className="animate-spin" />
+                      ) : (
+                        <Mic size={14} />
+                      )}
+                    </Button>
+                  )}
                   {busy &&
                     (draft.trim() ||
                       localFilePaths.length > 0 ||
@@ -2151,7 +2213,7 @@ export function ChatView({
                             attachments: runAttachments,
                             displayText: displayPayload,
                           });
-                          if (withLocalFiles && variant === "main") {
+                          if (localRuntime && withLocalFiles && variant === "main") {
                             setHistory(pushHistory(activeProjectId, withLocalFiles));
                           }
                           setDraft("");
@@ -2192,7 +2254,9 @@ export function ChatView({
                         (!draft.trim() &&
                           attachments.length === 0 &&
                           localFilePaths.length === 0 &&
-                          anchors.length === 0) ||
+                          anchors.length === 0 &&
+                          remoteFiles.length === 0) ||
+                        composerDisabled ||
                         (attachments.length > 0 && !activeSupportsVision)
                       }
                       aria-label={t("chat.composer.send")}
@@ -2218,7 +2282,7 @@ export function ChatView({
             jump projects after a session has started. */}
           {variant === "main" && (activeProjectId !== null || (isNewChat && !engineSessionId)) && (
             <div className="mt-3 flex min-w-0 flex-wrap items-center gap-2">
-              {isNewChat && !engineSessionId && (
+              {localRuntime && isNewChat && !engineSessionId && (
                 <ProjectPicker
                   projects={projects}
                   activeProjectId={activeProjectId}
@@ -2227,12 +2291,8 @@ export function ChatView({
                   disabled={controlsDisabled}
                 />
               )}
-              <ProjectRunLocation
-                key={activeProject?.id ?? "no-project"}
-                project={activeProject}
-                disabled={controlsDisabled}
-              />
-              {isNewChat && !engineSessionId && (
+              {runLocationControl}
+              {localRuntime && isNewChat && !engineSessionId && (
                 <BranchPicker
                   projectId={activeProjectId}
                   cwd={conversationRoot}

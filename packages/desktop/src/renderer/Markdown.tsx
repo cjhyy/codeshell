@@ -153,6 +153,7 @@ import { cn } from "@/lib/utils";
 import type { SessionUiAuthority } from "./sessionUiAuthority";
 import { classifyMediaPath } from "../shared/media-preview";
 import { InlineMedia } from "./chat/InlineMedia";
+import { useLocalRuntimeActions } from "./runtime/RuntimeCapabilities";
 
 export type MarkdownRootStatus = SessionUiAuthority["rootStatus"];
 
@@ -222,6 +223,7 @@ export const streamingMarkdownClassName = cn(
  * in long sessions.
  */
 function MarkdownImpl({ text, cwd, sessionId, sessionMainRootId, rootStatus }: Props) {
+  const localActions = useLocalRuntimeActions();
   return (
     <div className={markdownBodyClassName}>
       <ReactMarkdown
@@ -257,6 +259,13 @@ function MarkdownImpl({ text, cwd, sessionId, sessionMainRootId, rootStatus }: P
               );
             }
             const localDecoded = src ? (decodePathHref(src) ?? decodeLocalPathHref(src)) : null;
+            if (!localActions && src && (localDecoded || !/^(data:|https?:|blob:)/i.test(src))) {
+              return (
+                <span title={localDecoded?.path ?? src}>
+                  {alt || basename(localDecoded?.path ?? src)}
+                </span>
+              );
+            }
             // Accept Codex-style ![label](path.mp3) as well as ordinary links.
             // Bare filenames in image syntax are relative file references too.
             const mediaPath = localDecoded?.path ?? (src ? decodeLocalMediaPath(src) : null);
@@ -311,6 +320,7 @@ function MarkdownImpl({ text, cwd, sessionId, sessionMainRootId, rootStatus }: P
             const decoded =
               schemeDecoded ?? localDecoded ?? (mediaFilename ? { path: mediaFilename } : null);
             const isPathLink = decoded !== null;
+            if (decoded && !localActions) return <span title={decoded.path}>{children}</span>;
             const mediaKind = decoded ? classifyMediaPath(decoded.path) : null;
             if (decoded && mediaKind && !decoded.line) {
               const caption = extractText(children);
@@ -553,6 +563,7 @@ function PathLink({
   isScheme: boolean;
   children?: React.ReactNode;
 }) {
+  const localActions = useLocalRuntimeActions();
   // null = still checking; true/false once known. While checking we render
   // plain text (no flash of a link that might turn out dead).
   const [exists, setExists] = useState<boolean | null>(null);
@@ -568,6 +579,10 @@ function PathLink({
 
   useEffect(() => {
     let cancelled = false;
+    if (!localActions) {
+      setExists(false);
+      return;
+    }
     // Don't blink an already-resolved link back to plain text on a re-check;
     // only show the neutral "checking" state on a genuinely new path/cwd.
     setExists((prev) => (prev === true ? true : null));
@@ -583,10 +598,10 @@ function PathLink({
     return () => {
       cancelled = true;
     };
-  }, [path, cwd, filesNonce, sessionId, sessionMainRootId, rootStatus]);
+  }, [path, cwd, filesNonce, sessionId, sessionMainRootId, rootStatus, localActions]);
 
   // Not (yet) a known-existing file → render the original text, unstyled.
-  if ((!isAbsolutePath(path) && rootStatus !== "ok") || exists !== true) {
+  if (!localActions || (!isAbsolutePath(path) && rootStatus !== "ok") || exists !== true) {
     return <span>{children}</span>;
   }
 
@@ -631,6 +646,7 @@ function InlineImageLink({
   alt?: string;
 }) {
   const { t } = useT();
+  const localActions = useLocalRuntimeActions();
   const [failed, setFailed] = useState(false);
   const [zoomed, setZoomed] = useState(false);
   const [src, setSrc] = useState<string | null>(null);
@@ -642,7 +658,8 @@ function InlineImageLink({
   // base64 data: URL. Absolute paths used as-is; relative (docs/x.png) joined
   // onto the session workspace.
   const isAbs = isAbsolutePath(path);
-  const relativeAuthorityUnavailable = !isAbs && Boolean(sessionId) && rootStatus !== "ok";
+  const relativeAuthorityUnavailable =
+    !localActions || (!isAbs && Boolean(sessionId) && rootStatus !== "ok");
   const abs = relativeAuthorityUnavailable ? null : isAbs ? path : cwd ? joinPath(cwd, path) : null;
   // Tri-state: while the IPC is in flight we render nothing rather than the
   // fallback link, so a valid image doesn't flash "link → thumbnail" on every
@@ -678,7 +695,7 @@ function InlineImageLink({
     return () => {
       cancelled = true;
     };
-  }, [abs]);
+  }, [abs, cwd]);
 
   if (relativeAuthorityUnavailable) return <span>{filename}</span>;
 

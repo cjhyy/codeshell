@@ -29,7 +29,8 @@ import {
   type SaveDialogOptions,
   type IpcMainInvokeEvent,
 } from "electron";
-import { openCloudProject, openCloudWorkbench } from "./cloud-workbench-window.js";
+import { openCloudWorkbench } from "./cloud-workbench-window.js";
+import { registerCloudEnvironmentIpc } from "./cloud-environment-ipc.js";
 import {
   createDesktopManagedRuntimeProvider,
   createManagedRuntimeHandlers,
@@ -1203,6 +1204,12 @@ const transcriptSubscriptions = new TranscriptSubscriptionManager({
 // renderer uses (chat/approvals/sessions/rooms/cc-rooms). Extracted glue —
 // see mobile-remote-orchestrator.ts.
 const projectStore = getProjectStore();
+const cloudEnvironment = registerCloudEnvironmentIpc({
+  ipcMain,
+  windows: () => mainWindows,
+  userDataDir: app.getPath("userData"),
+  assertLocalProject: (id) => projectStore.requireLive(id),
+});
 const mobileOrchestrator = new MobileRemoteOrchestrator({
   remote: mobileRemote,
   uploads: mobileUploads,
@@ -6426,13 +6433,6 @@ ipcMain.handle("cloud:open-workbench", async (event, address: unknown) => {
   return openCloudWorkbench(address);
 });
 
-ipcMain.handle("cloud:open-project", async (event, address: unknown) => {
-  const owner = BrowserWindow.fromWebContents(event.sender);
-  if (!owner || !mainWindows.has(owner) || event.senderFrame !== event.sender.mainFrame)
-    throw new Error("云端入口仅允许从主窗口打开。");
-  return openCloudProject(address);
-});
-
 ipcMain.handle("shell:openExternal", async (_e, url: string) => {
   if (typeof url !== "string" || !url || url.length > 16_384 || url.includes("\0")) {
     throw new Error("openExternal requires a bounded url");
@@ -7187,6 +7187,7 @@ app.on(
     disposeOperationResolution: disposeOperationResolutionHost,
     onError: (phase, error) => dlog("main", phase, { error: String(error) }),
     cleanup: async () => {
+      cloudEnvironment.dispose();
       taskInboxService?.dispose();
       for (const dispose of taskInboxDisposers.splice(0)) dispose();
       const cookieRefreshShutdown = cookieCredentialAutoRefresh.shutdown();

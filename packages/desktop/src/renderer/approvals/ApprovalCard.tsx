@@ -30,6 +30,8 @@ const DENY_PRESETS = [
 
 interface Props {
   envelope: ApprovalRequestEnvelope;
+  /** Remote transport supports explicit decisions for this request only. */
+  allowScopes?: boolean;
   /**
    * `scope` is the approve range (once/session/project) and `pathScope` the
    * optional path narrowing (file/dir/tool, file tools only); both omitted on
@@ -56,7 +58,7 @@ export function decidedLabel(d: {
   return translate(lang, "auto.approvalCard.approved");
 }
 
-export function ApprovalCard({ envelope, onDecide }: Props) {
+export function ApprovalCard({ envelope, onDecide, allowScopes = true }: Props) {
   const { t } = useT();
   const { request } = envelope;
   const [showRaw, setShowRaw] = useState(false);
@@ -88,8 +90,10 @@ export function ApprovalCard({ envelope, onDecide }: Props) {
   // Promote the first "session" grant to its own visible button (the common
   // "stop asking me this session" case); everything else (项目, path-scoped
   // file/dir grants) folds into the 更多范围 ▾ menu. "once" is its own button.
-  const sessionOption = options.find((o) => o.scope === "session");
-  const moreOptions = options.filter((o) => o.scope !== "once" && o !== sessionOption);
+  const sessionOption = allowScopes ? options.find((o) => o.scope === "session") : undefined;
+  const moreOptions = allowScopes
+    ? options.filter((o) => o.scope !== "once" && o !== sessionOption)
+    : [];
 
   const approve = (scope: ApproveChoice, pathScope?: ApprovePathScope, label?: string): void => {
     if (decided) return;

@@ -13,6 +13,8 @@ import {
 const MAX_BYTES = 20 * 1024 * 1024;
 const TTL_MS = 15 * 60 * 1000;
 const SAFE_ID = /^[a-zA-Z0-9_-]{8,80}$/;
+// Match the session/history boundary so existing dotted session IDs can attach files.
+const SAFE_SESSION_ID = /^(?!.*\.\.)[A-Za-z0-9_-][A-Za-z0-9_.-]{0,127}$/;
 
 export interface PreparedHubUploads {
   attachments: InputAttachmentMeta[];
@@ -180,7 +182,7 @@ export class HubUploads {
       throw new Error("invalid upload ids");
     }
     if (!ids.length) return emptyUploads();
-    if (typeof sessionId !== "string" || !/^[a-zA-Z0-9_-]{1,128}$/.test(sessionId)) {
+    if (typeof sessionId !== "string" || !SAFE_SESSION_ID.test(sessionId)) {
       throw new Error("valid sessionId required for attachments");
     }
     const records = ids.map((id) => {

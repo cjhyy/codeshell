@@ -82,16 +82,17 @@ describe("desktop IPC contract", () => {
     }
   });
 
-  test("exposes the existing cloud project entry separately from the cloud homepage", () => {
-    const mainHandles = registeredMainHandleChannels(sourceFiles("src/main"));
-    const preloadInvokes = literalChannels(
-      sourceFiles("src/preload"),
-      /ipcRenderer\.invoke\(\s*["']([^"']+)["']/g,
-    );
-    for (const channel of ["cloud:open-workbench", "cloud:open-project"]) {
-      expect(preloadInvokes).toContain(channel);
-      expect(mainHandles).toContain(channel);
-    }
+  test("native cloud environments replace the remote project window bridge", () => {
+    const main = sourceFiles("src/main")
+      .map((file) => readFileSync(file, "utf8"))
+      .join("\n");
+    const preload = sourceFiles("src/preload")
+      .map((file) => readFileSync(file, "utf8"))
+      .join("\n");
+    expect(main).toContain("registerCloudEnvironmentIpc");
+    expect(preload).toContain("cloudEnvironment: cloudEnvironmentApi");
+    expect(main).not.toContain('ipcMain.handle("cloud:open-project"');
+    expect(preload).not.toContain('ipcRenderer.invoke("cloud:open-project"');
   });
 
   test("retires legacy project and cwd project IPC while keeping V2 authorities", () => {

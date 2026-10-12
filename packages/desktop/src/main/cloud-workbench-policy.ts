@@ -22,34 +22,6 @@ export function normalizeCloudWorkbenchAddress(value: unknown): string {
   return `${url.origin}/`;
 }
 
-/** Existing projects have one opaque identifier; this is not a general navigation API. */
-export function normalizeCloudProjectAddress(value: unknown): string {
-  if (typeof value !== "string" || value.length > 2_048)
-    throw new Error("请输入已有云端项目链接。");
-  const address = value.trim();
-  if (!address || /[\x00-\x20\x7f\\]/.test(address)) throw new Error("云端项目链接格式无效。");
-  let url: URL;
-  try {
-    url = new URL(address);
-  } catch {
-    throw new Error("请输入完整的 HTTPS 云端项目链接。");
-  }
-  const projectId = url.searchParams.get("project");
-  if (
-    url.username ||
-    url.password ||
-    address.includes("#") ||
-    url.pathname !== "/" ||
-    !/^https?:\/\/[^/?#@]+\/?$/i.test(address.split("?", 1)[0]!) ||
-    url.searchParams.size !== 1 ||
-    url.search !== `?project=${projectId}` ||
-    !/^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$/i.test(projectId ?? "")
-  )
-    throw new Error("请使用仅包含 project 项目标识的云端项目链接。");
-  const origin = normalizeCloudWorkbenchAddress(url.origin);
-  return `${origin}?project=${projectId!.toLowerCase()}`;
-}
-
 export function cloudWorkbenchPartition(address: string): string {
   return `persist:codeshell-cloud-${createHash("sha256").update(new URL(address).origin).digest("hex")}`;
 }

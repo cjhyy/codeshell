@@ -5,6 +5,7 @@ import type { SessionUiAuthority } from "../sessionUiAuthority";
 import { Button } from "@/components/ui/button";
 import { useT } from "../i18n/I18nProvider";
 import { OpenWithMenu } from "./OpenWithMenu";
+import { useLocalRuntimeActions } from "../runtime/RuntimeCapabilities";
 
 interface Props {
   path: string;
@@ -36,6 +37,7 @@ export function InlineMedia(props: Props) {
 
 function MediaPlayer({ path, kind, cwd, sessionId, sessionMainRootId, rootStatus, label }: Props) {
   const { t } = useT();
+  const localActions = useLocalRuntimeActions();
   const containerRef = useRef<HTMLSpanElement>(null);
   const mediaRef = useRef<HTMLMediaElement | null>(null);
   const [visible, setVisible] = useState(false);
@@ -44,7 +46,8 @@ function MediaPlayer({ path, kind, cwd, sessionId, sessionMainRootId, rootStatus
   const [status, setStatus] = useState<"loading" | "ready" | "unavailable" | "error">("loading");
   const filename = path.replace(/\\/g, "/").split("/").pop() || path;
   const name = label?.trim() || preview?.name || filename;
-  const authorityAvailable = Boolean(sessionId) && (rootStatus == null || rootStatus === "ok");
+  const authorityAvailable =
+    localActions && Boolean(sessionId) && (rootStatus == null || rootStatus === "ok");
 
   useEffect(() => {
     const container = containerRef.current;

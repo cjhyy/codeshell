@@ -15,7 +15,6 @@ import {
   cloudWorkbenchBrowserHandoffUrl,
   createCloudWorkbenchNavigation,
   isCloudWorkbenchOrigin,
-  normalizeCloudProjectAddress,
   normalizeCloudWorkbenchAddress,
 } from "./cloud-workbench-policy.js";
 
@@ -60,10 +59,6 @@ function configureCloudSession(browserSession: Electron.Session): void {
 /** Remote workbenches get browser privileges only, with no Desktop preload or worker bridge. */
 export async function openCloudWorkbench(rawAddress: unknown): Promise<{ address: string }> {
   return openCloudWindow(normalizeCloudWorkbenchAddress(rawAddress));
-}
-
-export async function openCloudProject(rawAddress: unknown): Promise<{ address: string }> {
-  return openCloudWindow(normalizeCloudProjectAddress(rawAddress));
 }
 
 async function openCloudWindow(address: string): Promise<{ address: string }> {

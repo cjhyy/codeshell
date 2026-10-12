@@ -1,4 +1,5 @@
 import { cloudAccountApi } from "./cloud-account-api.js";
+import { cloudEnvironmentApi } from "./cloud-environment-api.js";
 import { mobileRemoteApi } from "./mobile-remote-api.js";
 /**
  * Preload — bridges the renderer (browser context) to Electron main's
@@ -892,8 +893,8 @@ contextBridge.exposeInMainWorld("codeshell", {
     autoDeleteWorktreesGraceMins: number;
   }) => ipcRenderer.invoke("git:setPrefs", prefs),
   cloudAccount: cloudAccountApi,
+  cloudEnvironment: cloudEnvironmentApi,
   openCloudWorkbench: (address: string) => ipcRenderer.invoke("cloud:open-workbench", address),
-  openCloudProject: (address: string) => ipcRenderer.invoke("cloud:open-project", address),
   openExternal: (url: string) => ipcRenderer.invoke("shell:openExternal", url),
   revealInFinder: (path: string, cwd?: string) =>
     ipcRenderer.invoke("shell:revealInFinder", path, cwd),

@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
-import { act, useState } from "react";
+import { act, useRef, useState } from "react";
 import type { LocalProject } from "../../preload/project-authority-types";
 import {
   loadProjects,
@@ -8,8 +8,13 @@ import {
   trackedProjectFromRegistry,
   type TrackedProject,
 } from "../projects";
-import type { SessionIndex } from "../transcripts";
-import { ensureMiniDom, renderHook } from "../test-utils/renderHook";
+import {
+  bucketKey,
+  loadSessionIndex,
+  upsertImportedSession,
+  type SessionIndex,
+} from "../transcripts";
+import { ensureMiniDom, flushMicrotasks, renderHook } from "../test-utils/renderHook";
 import { useTrackedProjects } from "./useTrackedProjects";
 import { useProjectRegistrySync } from "./useProjectRegistrySync";
 import { useSessionNavigation } from "./useSessionNavigation";
@@ -46,12 +51,14 @@ describe("project picker and registry synchronization", () => {
   let initialIndices: Record<string, SessionIndex>;
   let pendingPicks: Array<ReturnType<typeof deferred<LocalProject | null>>>;
   let listeners: Set<(projects: LocalProject[]) => void>;
+  let beforeSelectLocalSession: ((projectId: string | null) => Promise<boolean>) | undefined;
   let hook: Awaited<ReturnType<typeof renderHook<ReturnType<typeof useHarness>>>> | undefined;
 
   function useHarness() {
     const [projects, setProjects] = useTrackedProjects();
     const [sessionIndices, setSessionIndices] = useState(initialIndices);
     const [activeProjectId, setActiveProjectId] = useState<string | null>(null);
+    const activeBucketRef = useRef("");
     useProjectRegistrySync({
       setProjects,
       setSessionIndices,
@@ -74,9 +81,10 @@ describe("project picker and registry synchronization", () => {
       setGoalOverrides: () => {},
       panelByBucket: {},
       setPanelByBucket: () => {},
-      activeBucketRef: { current: "" },
+      activeBucketRef,
       setView: () => {},
       setRunsInitialRunId: () => {},
+      beforeSelectLocalSession,
     });
     const renderedTargets = projects.map((item) => projectIdForPath(item.path));
     return {
@@ -86,6 +94,7 @@ describe("project picker and registry synchronization", () => {
       activeProjectId,
       setSessionIndices,
       renderedTargets,
+      activeBucketRef,
     };
   }
 
@@ -108,6 +117,7 @@ describe("project picker and registry synchronization", () => {
     initialIndices = {};
     pendingPicks = [];
     listeners = new Set();
+    beforeSelectLocalSession = undefined;
     Object.defineProperty(window, "codeshell", {
       configurable: true,
       value: {
@@ -124,6 +134,12 @@ describe("project picker and registry synchronization", () => {
             listeners.add(listener);
             return () => listeners.delete(listener);
           },
+          resolveForCwdBatch: async (cwds: string[]) =>
+            cwds.map(() => ({
+              projectId: project.id,
+              rootId: project.primaryRootId,
+              created: false,
+            })),
         },
       },
     });
@@ -259,4 +275,205 @@ describe("project picker and registry synchronization", () => {
     expect(hook.result.current.sessionIndices).toEqual({});
     expect(hook.result.current.activeProjectId).toBeNull();
   });
+
+  function seedLocalSession() {
+    diskProjects = [project];
+    initialIndices = {
+      [project.id]: upsertImportedSession(project.id, {
+        ...activeIndex.sessions[0]!,
+        engineSessionId: "local-engine-session",
+      }),
+    };
+  }
+
+  function openLocalHistory(kind: "direct" | "disk" | "run") {
+    const navigation = hook!.result.current;
+    if (kind === "direct") return navigation.handleSelectSession(project.id, "travel-session");
+    if (kind === "disk")
+      return navigation.handleOpenAutomationDiskSession({
+        id: "travel-session",
+        engineSessionId: "local-engine-session",
+        cwd: project.roots[0]!.path,
+        title: "行程规划",
+        updatedAt: 2,
+      });
+    return navigation.handleOpenAutomationRunSession({
+      runId: "automation-run",
+      sessionId: "local-engine-session",
+      cwd: project.roots[0]!.path,
+      objective: "行程规划",
+      status: "completed",
+      createdAt: 1,
+      updatedAt: 2,
+      startedAt: 1,
+      finishedAt: 2,
+      error: null,
+      summary: null,
+    });
+  }
+
+  test("keeps local selection mutations synchronous when no runtime guard is supplied", async () => {
+    seedLocalSession();
+    hook = await renderHook(useHarness);
+    await act(async () => {
+      const selected = openLocalHistory("direct");
+      expect(hook!.result.current.activeBucketRef.current).toBe(
+        bucketKey(project.id, "travel-session"),
+      );
+      expect(loadSessionIndex(project.id).activeSessionId).toBe("travel-session");
+      await selected;
+    });
+    expect(hook.result.current.activeProjectId).toBe(project.id);
+  });
+
+  test.each(["direct", "disk", "run"] as const)(
+    "%s awaits local runtime persistence before activating history",
+    async (kind) => {
+      seedLocalSession();
+      const pending = deferred<boolean>();
+      const checkedProjects: Array<string | null> = [];
+      beforeSelectLocalSession = (projectId) => {
+        checkedProjects.push(projectId);
+        return pending.promise;
+      };
+      hook = await renderHook(useHarness);
+      let completed = false;
+      const opened = openLocalHistory(kind).then(() => {
+        completed = true;
+      });
+      await flushMicrotasks();
+      expect(checkedProjects).toEqual([project.id]);
+      expect(completed).toBe(false);
+      expect(hook.result.current.activeBucketRef.current).toBe("");
+      expect(loadSessionIndex(project.id).activeSessionId).toBeNull();
+      await act(async () => {
+        pending.resolve(true);
+        await opened;
+      });
+      expect(completed).toBe(true);
+      expect(hook.result.current.activeProjectId).toBe(project.id);
+      expect(hook.result.current.activeBucketRef.current).toBe(
+        bucketKey(project.id, "travel-session"),
+      );
+    },
+  );
+
+  test.each(["denied", "rejected"] as const)(
+    "aborts activation when local runtime persistence is %s",
+    async (reason) => {
+      seedLocalSession();
+      beforeSelectLocalSession = async () => {
+        if (reason === "rejected") throw new Error("Persistence unavailable");
+        return false;
+      };
+      hook = await renderHook(useHarness);
+      await act(async () => {
+        await openLocalHistory("direct");
+      });
+      expect(hook.result.current.activeProjectId).toBeNull();
+      expect(hook.result.current.activeBucketRef.current).toBe("");
+      expect(loadSessionIndex(project.id).activeSessionId).toBeNull();
+    },
+  );
+
+  test.each(["disk", "run"] as const)(
+    "%s imports history before awaiting local runtime activation",
+    async (kind) => {
+      diskProjects = [project];
+      const pending = deferred<boolean>();
+      let asked = false;
+      beforeSelectLocalSession = () => {
+        asked = true;
+        return pending.promise;
+      };
+      hook = await renderHook(useHarness);
+      let completed = false;
+      const opened = openLocalHistory(kind).then(() => {
+        completed = true;
+      });
+      await act(flushMicrotasks);
+      expect(asked).toBe(true);
+      expect(completed).toBe(false);
+      expect(loadSessionIndex(project.id).sessions[0]!.engineSessionId).toBe(
+        "local-engine-session",
+      );
+      expect(loadSessionIndex(project.id).activeSessionId).toBeNull();
+      await act(async () => {
+        pending.resolve(true);
+        await opened;
+      });
+      expect(completed).toBe(true);
+      expect(hook.result.current.activeProjectId).toBe(project.id);
+      expect(loadSessionIndex(project.id).activeSessionId).toBe(
+        kind === "disk" ? "travel-session" : "local-engine-session",
+      );
+    },
+  );
+
+  test("an older runtime completion cannot overwrite a newer selected local session", async () => {
+    seedLocalSession();
+    initialIndices[project.id] = upsertImportedSession(project.id, {
+      id: "newer-session",
+      engineSessionId: "newer-engine-session",
+      title: "新会话",
+      createdAt: 2,
+      updatedAt: 3,
+    });
+    const first = deferred<boolean>();
+    const second = deferred<boolean>();
+    let calls = 0;
+    beforeSelectLocalSession = () => (calls++ === 0 ? first.promise : second.promise);
+    hook = await renderHook(useHarness);
+    const older = openLocalHistory("direct");
+    const newer = hook.result.current.handleSelectSession(project.id, "newer-session");
+    await act(async () => {
+      second.resolve(true);
+      await newer;
+    });
+    expect(loadSessionIndex(project.id).activeSessionId).toBe("newer-session");
+    await act(async () => {
+      first.resolve(true);
+      await older;
+    });
+    expect(loadSessionIndex(project.id).activeSessionId).toBe("newer-session");
+    expect(hook.result.current.activeBucketRef.current).toBe(
+      bucketKey(project.id, "newer-session"),
+    );
+  });
+
+  test.each([true, false])(
+    "rechecks disk navigation currency after runtime persistence (existing=%s)",
+    async (existing) => {
+      if (existing) seedLocalSession();
+      else diskProjects = [project];
+      const pending = deferred<boolean>();
+      let asked = false;
+      let current = true;
+      beforeSelectLocalSession = () => {
+        asked = true;
+        return pending.promise;
+      };
+      hook = await renderHook(useHarness);
+      const opened = hook.result.current.handleOpenAutomationDiskSession(
+        {
+          id: "travel-session",
+          engineSessionId: "local-engine-session",
+          cwd: project.roots[0]!.path,
+          title: "行程规划",
+          updatedAt: 2,
+        },
+        { isCurrent: () => current, validate: async () => true },
+      );
+      await act(flushMicrotasks);
+      expect(asked).toBe(true);
+      current = false;
+      await act(async () => {
+        pending.resolve(true);
+        await opened;
+      });
+      expect(hook.result.current.activeProjectId).toBeNull();
+      expect(hook.result.current.activeBucketRef.current).toBe("");
+      expect(loadSessionIndex(project.id).activeSessionId).toBeNull();
+    },
+  );
 });

@@ -98,6 +98,7 @@ export function buildCommands(opts: {
   setViewMode: (v: ViewMode) => void;
   openPanel: (t: PanelTab) => void;
   gitReviewAvailable?: boolean;
+  localRuntime?: boolean;
   taskInboxEnabled?: boolean;
   toggleSidebar: () => void;
   toggleInspector: () => void;
@@ -111,7 +112,7 @@ export function buildCommands(opts: {
   // the language switch on the next render.
   const lang = loadUILanguage();
   const tt = (key: string) => translate(lang, key);
-  return [
+  const commands: PaletteCommand[] = [
     { id: "go.chat", label: tt("panels.palette.openChat"), run: () => setViewMode("chat") },
     {
       id: "go.files",
@@ -194,4 +195,18 @@ export function buildCommands(opts: {
       },
     },
   ];
+  return opts.localRuntime === false
+    ? commands.filter(
+        (command) =>
+          ![
+            "go.files",
+            "go.browser",
+            "go.review",
+            "go.terminal",
+            "go.quickChat",
+            "toggle.inspector",
+            "transcript.clear",
+          ].includes(command.id),
+      )
+    : commands;
 }

@@ -5,6 +5,7 @@ import { useToast } from "../ui/ToastProvider";
 import { Button } from "@/components/ui/button";
 import { useT } from "../i18n/I18nProvider";
 import { useCopyFeedback } from "../ui/useCopyFeedback";
+import { useLocalRuntimeActions } from "../runtime/RuntimeCapabilities";
 
 /** Pure decision so the close behavior is unit-testable without a DOM. */
 export function shouldCloseOnKey(key: string): boolean {
@@ -77,6 +78,7 @@ export interface LightboxProps {
  */
 export function Lightbox({ src, alt, onClose, path, cwd, name, items, index }: LightboxProps) {
   const { t } = useT();
+  const localActions = useLocalRuntimeActions();
   const toast = useToast();
   const closeRef = useRef<HTMLButtonElement>(null);
   const openerRef = useRef<HTMLElement | null>(null);
@@ -103,6 +105,7 @@ export function Lightbox({ src, alt, onClose, path, cwd, name, items, index }: L
   const imageLabel = active.alt?.trim() || filename;
 
   const onDownload = (): void => {
+    if (!localActions) return;
     void window.codeshell.saveImage(active.src, { name: filename }).then(
       (saved) => {
         // saveImage resolves to the saved path (or null/undefined if the user
@@ -122,7 +125,7 @@ export function Lightbox({ src, alt, onClose, path, cwd, name, items, index }: L
   };
   const onReveal = (): void => {
     const p = active.path;
-    if (!p) return;
+    if (!localActions || !p) return;
     void window.codeshell.openPath(p, cwd ?? undefined).then((abs) => {
       // openPath resolves the abs path; reveal that so we land on the file.
       void window.codeshell.revealInFinder(abs ?? p);
@@ -182,16 +185,18 @@ export function Lightbox({ src, alt, onClose, path, cwd, name, items, index }: L
               )}
             </Dialog.Title>
             <div className="flex items-center gap-1">
-              <Button
-                type="button"
-                size="icon"
-                variant="ghost"
-                aria-label={t("chat.lightbox.download")}
-                title={t("chat.lightbox.download")}
-                onClick={onDownload}
-              >
-                <Download size={16} />
-              </Button>
+              {localActions && (
+                <Button
+                  type="button"
+                  size="icon"
+                  variant="ghost"
+                  aria-label={t("chat.lightbox.download")}
+                  title={t("chat.lightbox.download")}
+                  onClick={onDownload}
+                >
+                  <Download size={16} />
+                </Button>
+              )}
               {active.path && (
                 <Button
                   type="button"
@@ -204,7 +209,7 @@ export function Lightbox({ src, alt, onClose, path, cwd, name, items, index }: L
                   {copied ? <Check size={16} /> : <Copy size={16} />}
                 </Button>
               )}
-              {active.path && (
+              {localActions && active.path && (
                 <Button
                   type="button"
                   size="icon"

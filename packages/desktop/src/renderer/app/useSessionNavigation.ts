@@ -1,4 +1,4 @@
-import type { Dispatch, MutableRefObject, SetStateAction } from "react";
+import { useRef, type Dispatch, type MutableRefObject, type SetStateAction } from "react";
 
 import { importAutomationRuns } from "../automation/importRuns";
 import { isCaseInsensitivePlatform } from "../automation/pathMatch";
@@ -58,6 +58,8 @@ interface Params {
   activeBucketRef: MutableRefObject<string>;
   setView: Dispatch<SetStateAction<ViewState>>;
   setRunsInitialRunId: Dispatch<SetStateAction<string | null>>;
+  /** Persist the local runtime before any local history row becomes active. */
+  beforeSelectLocalSession?: (projectId: string | null) => Promise<boolean>;
 }
 
 export interface DiskSessionOpenGuard {
@@ -82,8 +84,25 @@ export function useSessionNavigation({
   activeBucketRef,
   setView,
   setRunsInitialRunId,
+  beforeSelectLocalSession,
 }: Params) {
-  const selectSession = (projectId: string | null, sessionId: string): void => {
+  const selectionRequest = useRef(0);
+  const selectSession = async (
+    projectId: string | null,
+    sessionId: string,
+    isCurrent?: () => boolean,
+  ): Promise<void> => {
+    if (isCurrent && !isCurrent()) return;
+    const request = ++selectionRequest.current;
+    if (beforeSelectLocalSession) {
+      try {
+        if (!(await beforeSelectLocalSession(projectId))) return;
+      } catch (error) {
+        window.codeshell.log("session.select.runtime_failed", { projectId, error: String(error) });
+        return;
+      }
+    }
+    if (request !== selectionRequest.current || (isCurrent && !isCurrent())) return;
     const selectedBucket = bucketKey(projectId, sessionId);
     setUnreadBuckets((prev) => {
       if (!prev.has(selectedBucket)) return prev;
@@ -317,7 +336,7 @@ export function useSessionNavigation({
     }
     const existing = findSessionByEngineId(run.sessionId);
     if (existing) {
-      selectSession(existing.projectId, existing.session.id);
+      await selectSession(existing.projectId, existing.session.id);
       return;
     }
     const projectsNow = loadProjects();
@@ -351,7 +370,7 @@ export function useSessionNavigation({
       });
     }
     const imported = findSessionByEngineId(run.sessionId);
-    if (imported) selectSession(imported.projectId, imported.session.id);
+    if (imported) await selectSession(imported.projectId, imported.session.id);
     else {
       setRunsInitialRunId(run.runId);
       setView((view) => ({ ...view, viewMode: "runs" }));
@@ -362,11 +381,12 @@ export function useSessionNavigation({
     session: DiskSessionMeta,
     guard?: DiskSessionOpenGuard,
   ): Promise<void> => {
+    const isCurrent = guard ? () => guard.isCurrent() : undefined;
     if (guard && !guard.isCurrent()) return;
     const existing = findSessionByEngineId(session.engineSessionId);
     if (existing) {
       if (guard && existing.session.archived) return;
-      selectSession(existing.projectId, existing.session.id);
+      await selectSession(existing.projectId, existing.session.id, isCurrent);
       return;
     }
     const projectsNow = loadProjects();
@@ -378,7 +398,8 @@ export function useSessionNavigation({
       // Another importer may have finished while roots or metadata were loading.
       const latest = findSessionByEngineId(session.engineSessionId);
       if (latest) {
-        if (!latest.session.archived) selectSession(latest.projectId, latest.session.id);
+        if (!latest.session.archived)
+          await selectSession(latest.projectId, latest.session.id, isCurrent);
         return;
       }
     }
@@ -394,7 +415,7 @@ export function useSessionNavigation({
       ...prev,
       [projectBucketSegment(placement.projectId)]: nextIndex,
     }));
-    selectSession(placement.projectId, placement.summary.id);
+    await selectSession(placement.projectId, placement.summary.id, isCurrent);
   };
 
   return {

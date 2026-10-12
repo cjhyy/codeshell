@@ -1,6 +1,10 @@
 import React, { useCallback, useEffect, useMemo, useReducer, useRef, useState } from "react";
 import type { StreamEvent } from "@cjhyy/code-shell-core";
 import { ChatView } from "./ChatView";
+import { ProjectRunLocation } from "./chat/ProjectRunLocation";
+import { useProjectRuntimeSelection } from "./projects/useProjectRuntimeSelection";
+import { useCloudProjectRuntime } from "./runtime/useCloudProjectRuntime";
+import { CloudProjectWorkspace } from "./runtime/CloudProjectWorkspace";
 import type { ContextPackageCreatedOptions } from "./MessageStream";
 import { Sidebar } from "./app/AppSidebar";
 import { ResponsiveSidebar, SIDEBAR_NAVIGATION_ID } from "./app/ResponsiveSidebar";
@@ -297,6 +301,25 @@ function App() {
   const activeProjectBucketSegment = projectBucketSegmentFor(activeProjectId);
   const activeSessionId = sessionIndices[activeProjectBucketSegment]?.activeSessionId ?? null;
   const activeProject = projects.find((project) => project.id === activeProjectId) ?? null;
+  const runtimeProjectIdRef = useRef(activeProjectId);
+  runtimeProjectIdRef.current = activeProjectId;
+  const projectRuntime = useProjectRuntimeSelection(activeProjectId);
+  const cloudRuntime = useCloudProjectRuntime(projectRuntime.selectedBinding);
+  const cloudSelected = projectRuntime.bindingId !== null;
+  const visibleSessionIndices = useMemo(
+    () =>
+      cloudSelected && activeProjectId && cloudRuntime
+        ? {
+            ...sessionIndices,
+            [activeProjectId]: {
+              sessions: cloudRuntime.sessions,
+              activeSessionId: cloudRuntime.activeSessionId,
+            },
+          }
+        : sessionIndices,
+    [cloudSelected, activeProjectId, cloudRuntime, sessionIndices],
+  );
+  const [pendingNewProject, setPendingNewProject] = useState<string | undefined>(undefined);
   const [noRepoCwd, setNoRepoCwd] = useState<string | null>(null);
   const noRepoCwdRef = useRef<string | null>(null);
   noRepoCwdRef.current = noRepoCwd;
@@ -1303,6 +1326,23 @@ function App() {
     setProjects,
     activeProjectId,
     setActiveProjectId,
+    beforeSelectLocalSession: async (projectId) => {
+      if (projectId === null) return true;
+      try {
+        if (projectId === activeProjectId) {
+          if (!projectRuntime.ready || projectRuntime.bindingId !== null)
+            await projectRuntime.select(null);
+        } else
+          await window.codeshell.cloudEnvironment.select({
+            localProjectId: projectId,
+            bindingId: null,
+          });
+        return true;
+      } catch (cause) {
+        toast({ message: String(cause), variant: "error" });
+        return false;
+      }
+    },
     sessionIndices,
     setSessionIndices,
     setCollapsedProjects,
@@ -1319,7 +1359,7 @@ function App() {
 
   useNotificationSessionNavigation({
     sessionIndicesRef,
-    selectSession: handleSelectSession,
+    selectSession: selectVisibleSession,
     openDiskSession: handleOpenAutomationDiskSession,
     unavailable: (sessionId) =>
       toast({ message: t("misc.toast.sessionUnavailable"), detail: sessionId, variant: "error" }),
@@ -1404,11 +1444,14 @@ function App() {
       } else if (mod && e.key >= "1" && e.key <= "9") {
         // Cmd+N — jump to Nth session under active repo.
         const n = parseInt(e.key, 10) - 1;
-        const idx = sessionIndices[projectBucketSegmentFor(activeProjectId)];
+        const idx = visibleSessionIndices[projectBucketSegmentFor(activeProjectId)];
         const target = idx?.sessions[n];
         if (target) {
           e.preventDefault();
-          navigateFromSidebar(() => handleSelectSession(activeProjectId, target.id));
+          navigateFromSidebar(() => {
+            if (cloudSelected) cloudRuntime?.selectSession(target.id);
+            else handleSelectSession(activeProjectId, target.id);
+          });
         }
       } else if (e.key === "Escape") {
         if (paletteOpen) setPaletteOpen(false);
@@ -1422,7 +1465,9 @@ function App() {
     paletteOpen,
     searchOpen,
     sessionSearchOpen,
-    sessionIndices,
+    visibleSessionIndices,
+    cloudSelected,
+    cloudRuntime,
     activeProjectId,
     view.viewMode,
     toggleSidebar,
@@ -1695,10 +1740,11 @@ function App() {
     void window.codeshell.pet?.setActiveSession?.(engineSessionIdForActive());
   }, [activeSessionId, activeProjectBucketSegment, sessionIndices]);
 
+  const searchMessages = cloudSelected ? (cloudRuntime?.state.messages ?? []) : state.messages;
   const matchCount = useMemo(() => {
     if (!searchQuery) return 0;
     const q = searchQuery.toLowerCase();
-    return state.messages.reduce((n, m) => {
+    return searchMessages.reduce((n, m) => {
       const text =
         m.kind === "user" || m.kind === "assistant" || m.kind === "thinking" || m.kind === "system"
           ? m.text
@@ -1713,7 +1759,7 @@ function App() {
       }
       return n + count;
     }, 0);
-  }, [state.messages, searchQuery]);
+  }, [searchMessages, searchQuery]);
 
   const sessionTitleForTop = activeSessionSummary?.title ?? null;
 
@@ -2129,6 +2175,57 @@ function App() {
   const petRunningCount =
     petState.projection?.sessions.filter((session) => session.runState === "running").length ?? 0;
 
+  const runtimeControl = (
+    <ProjectRunLocation
+      key={activeProjectId ?? "no-project"}
+      project={activeProject}
+      bindings={projectRuntime.bindings}
+      selectedBinding={projectRuntime.selectedBinding}
+      loading={!projectRuntime.ready && !projectRuntime.error}
+      disabled={cloudSelected ? cloudRuntime?.status === "connected" && cloudRuntime.busy : busy}
+      onSelect={async (bindingId) => {
+        const projectId = activeProjectId;
+        await projectRuntime.select(bindingId);
+        if (
+          runtimeProjectIdRef.current === projectId &&
+          bindingId === cloudRuntime?.binding.id &&
+          cloudRuntime.status !== "connected"
+        ) {
+          await cloudRuntime.reconnect();
+        }
+      }}
+    />
+  );
+  function selectVisibleSession(projectId: string | null, sessionId: string) {
+    if (sessionId.startsWith("cloud:")) {
+      if (projectId === activeProjectId && cloudSelected) {
+        cloudRuntime?.selectSession(sessionId);
+        setViewMode("chat");
+      }
+      return;
+    }
+    void handleSelectSession(projectId, sessionId);
+  }
+  const newVisibleConversation = (projectId: string | null = activeProjectId) => {
+    if (projectId !== null && projectId === activeProjectId && !projectRuntime.ready) {
+      setPendingNewProject(projectId);
+    } else if (projectId === activeProjectId && cloudSelected) {
+      cloudRuntime?.newSession();
+      setViewMode("chat");
+    } else if (projectId !== null && projectId !== activeProjectId) {
+      setPendingNewProject(projectId);
+      setActiveProjectId(projectId);
+      setViewMode("chat");
+    } else handleNewConversationForProject(projectId);
+  };
+  useEffect(() => {
+    if (!pendingNewProject || pendingNewProject !== activeProjectId || !projectRuntime.ready)
+      return;
+    setPendingNewProject(undefined);
+    if (cloudSelected) cloudRuntime?.newSession();
+    else handleNewConversationForProject(pendingNewProject);
+  }, [pendingNewProject, activeProjectId, projectRuntime.ready, cloudSelected, cloudRuntime]);
+
   return (
     <AppShell platformClass={platformClass} sidebarCollapsed={!sidebarVisible}>
       <div
@@ -2138,37 +2235,55 @@ function App() {
         <div className="shrink-0">
           <TopBar
             projectName={sessionChromeVisible ? (activeProject?.name ?? null) : null}
-            projectPath={sessionChromeVisible ? sessionUiAuthority.mainRoot : null}
-            sessionId={sessionChromeVisible ? engineSessionIdForActive() : null}
-            sessionTitle={sessionChromeVisible ? sessionTitleForTop : null}
-            workspaceProfile={sessionChromeVisible ? activeSessionSummary?.workspaceProfile : null}
-            workspaceProfiles={sessionChromeVisible ? sessionWorkspaceProfiles : []}
+            projectPath={
+              sessionChromeVisible && !cloudSelected ? sessionUiAuthority.mainRoot : null
+            }
+            sessionId={sessionChromeVisible && !cloudSelected ? engineSessionIdForActive() : null}
+            sessionTitle={
+              sessionChromeVisible
+                ? cloudSelected
+                  ? (cloudRuntime?.sessions.find(
+                      (session) => session.id === cloudRuntime.activeSessionId,
+                    )?.title ?? null)
+                  : sessionTitleForTop
+                : null
+            }
+            workspaceProfile={
+              sessionChromeVisible && !cloudSelected ? activeSessionSummary?.workspaceProfile : null
+            }
+            workspaceProfiles={
+              sessionChromeVisible && !cloudSelected ? sessionWorkspaceProfiles : []
+            }
             workspaceProfileSwitchDisabled={busy || profileSwitchBusy}
             onWorkspaceProfileChange={(profileName) => {
               void handleSessionWorkspaceProfileChange(profileName);
             }}
-            busy={isPetSurface ? false : busy}
+            busy={isPetSurface ? false : cloudSelected ? !!cloudRuntime?.busy : busy}
             sidebarCollapsed={!sidebarVisible}
             onToggleSidebar={toggleSidebar}
             sidebarToggleRef={sidebarToggleRef}
             sidebarControlsId={SIDEBAR_NAVIGATION_ID}
             sidebarIsDialog={isNarrowWindow}
-            panelOpen={activePanelState.open}
+            panelOpen={!cloudSelected && activePanelState.open}
             onTogglePanel={togglePanel}
             panelToggleRef={panelToggleRef}
             isMac={isMac}
             isFullscreen={isFullscreen}
             // Opening a panel is allowed from a draft and materializes its
             // session on demand. Non-chat pages still have no panel dock.
-            panelAvailable={isChatView}
-            statusAvailable={sessionChromeVisible}
+            panelAvailable={isChatView && !cloudSelected}
+            statusAvailable={sessionChromeVisible && !cloudSelected}
             contextSelectionAvailable={
-              activeSessionId !== null && isChatView && !busy && !awaitingHydration
+              !cloudSelected &&
+              activeSessionId !== null &&
+              isChatView &&
+              !busy &&
+              !awaitingHydration
             }
             onSelectContext={requestContextSelection}
-            activity={sessionChromeVisible ? liveActivity : undefined}
-            tasks={sessionChromeVisible ? latestTasks : null}
-            activeGoal={sessionChromeVisible ? state.activeGoal : null}
+            activity={sessionChromeVisible && !cloudSelected ? liveActivity : undefined}
+            tasks={sessionChromeVisible && !cloudSelected ? latestTasks : null}
+            activeGoal={sessionChromeVisible && !cloudSelected ? state.activeGoal : null}
             onUpdateGoal={handleUpdateGoal}
             onGoalPausedChange={handleGoalPausedChange}
             onDeleteGoal={handleDeleteGoal}
@@ -2185,9 +2300,12 @@ function App() {
           >
             <Sidebar
               projects={projects}
-              sessions={sessionIndices}
+              sessions={visibleSessionIndices}
               activeProjectId={activeProjectId}
-              activeSessionId={activeSessionId}
+              cloudProjectId={cloudSelected ? activeProjectId : null}
+              activeSessionId={
+                cloudSelected ? (cloudRuntime?.activeSessionId ?? null) : activeSessionId
+              }
               collapsedProjects={collapsedProjects}
               revealedSessionIds={revealedSessionIds}
               sidebarCollapsed={false}
@@ -2201,7 +2319,7 @@ function App() {
               sessionStatuses={sessionStatusMap}
               onSelectProject={setActiveProjectId}
               onSelectSession={(projectId, sessionId) =>
-                navigateFromSidebar(() => handleSelectSession(projectId, sessionId))
+                navigateFromSidebar(() => selectVisibleSession(projectId, sessionId))
               }
               onToggleProject={handleToggleProject}
               onAddProject={() => {
@@ -2212,9 +2330,9 @@ function App() {
               onRenameProject={handleRenameProject}
               onArchiveAllSessions={handleArchiveAllSessions}
               onNewConversationForProject={(projectId) =>
-                navigateFromSidebar(() => handleNewConversationForProject(projectId))
+                navigateFromSidebar(() => newVisibleConversation(projectId))
               }
-              onNewConversation={() => navigateFromSidebar(handleNewConversation)}
+              onNewConversation={() => navigateFromSidebar(() => newVisibleConversation())}
               onOpenSearch={() => navigateFromSidebar(() => setSessionSearchOpen(true))}
               onNavigate={(mode) => navigateFromSidebar(() => setViewMode(mode))}
               onOpenProjectConfig={(projectId) => {
@@ -2244,7 +2362,7 @@ function App() {
           overlay the chat/composer (TODO 2.4) without covering the sidebar. */}
           <div className="relative flex min-w-0 flex-1 overflow-hidden">
             <AppMainView
-              lifecycle={isChatView ? lifecycle : null}
+              lifecycle={isChatView && !cloudSelected ? lifecycle : null}
               searchLayer={
                 !isPetSurface ? (
                   <SearchBar
@@ -2441,14 +2559,39 @@ function App() {
                     onOpenDiskSession={(session) => {
                       void handleOpenAutomationDiskSession(session);
                     }}
-                    onOpenSession={handleSelectSession}
+                    onOpenSession={selectVisibleSession}
                     sessionIndices={sessionIndices}
                     projects={projects}
                   />
                 </React.Suspense>
+              ) : !projectRuntime.ready ? (
+                <div className="flex min-h-0 flex-1 flex-col items-center justify-center gap-4 p-6">
+                  <p
+                    role={projectRuntime.error ? "alert" : "status"}
+                    className="text-sm text-muted-foreground"
+                  >
+                    {projectRuntime.error ?? t("ext.common.loading")}
+                  </p>
+                  {runtimeControl}
+                  {projectRuntime.error && (
+                    <button type="button" onClick={() => void projectRuntime.refresh()}>
+                      {t("chat.runLocation.retry")}
+                    </button>
+                  )}
+                </div>
+              ) : cloudSelected && cloudRuntime ? (
+                <CloudProjectWorkspace
+                  runtime={cloudRuntime}
+                  runLocationControl={runtimeControl}
+                  projects={projects}
+                  activeProjectId={activeProjectId}
+                  onSelectProject={setActiveProjectId}
+                  onAddProject={() => void handleAddProject()}
+                />
               ) : (
                 <>
                   <ChatView
+                    runLocationControl={runtimeControl}
                     messages={state.messages}
                     awaitingHydration={awaitingHydration}
                     historyHasMore={historyHasMore}
@@ -2616,7 +2759,7 @@ function App() {
           is reclaimed by BrowserPanel's own idle-eviction after a few minutes.
           We still gate on having tabs so an empty dock doesn't mount stray
           panel bodies before the user has opened anything. */}
-            {panelBuckets.length > 0 && (
+            {!cloudSelected && projectRuntime.ready && panelBuckets.length > 0 && (
               <React.Suspense
                 fallback={
                   shouldShowPanelDockFallback(activePanelState.open, isChatView) ? (
@@ -2685,6 +2828,7 @@ function App() {
             setViewMode,
             openPanel,
             gitReviewAvailable: reviewAvailability.available,
+            localRuntime: !cloudSelected && projectRuntime.ready,
             taskInboxEnabled,
             toggleSidebar,
             toggleInspector,
@@ -2697,13 +2841,13 @@ function App() {
           open={sessionSearchOpen}
           onClose={() => setSessionSearchOpen(false)}
           projects={projects}
-          sessions={sessionIndices}
+          sessions={visibleSessionIndices}
           activeProjectId={activeProjectId}
-          onPick={(projectId, sid) => handleSelectSession(projectId, sid)}
+          onPick={(projectId, sid) => selectVisibleSession(projectId, sid)}
         />
 
         <TrustGate
-          projectPath={sessionUiAuthority.mainRoot}
+          projectPath={!cloudSelected && projectRuntime.ready ? sessionUiAuthority.mainRoot : null}
           onDecide={() => {
             /* trust persisted in main */
           }}

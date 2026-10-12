@@ -7,6 +7,7 @@ import { openFileTarget } from "../chat/openWith";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { useT } from "../i18n/I18nProvider";
+import { useLocalRuntimeActions } from "../runtime/RuntimeCapabilities";
 import type {
   ReviewGitDiffRequest,
   ReviewRepositoryError,
@@ -103,6 +104,7 @@ export function UnifiedDiffViewer({
   onStats,
 }: Props) {
   const { t } = useT();
+  const localActions = useLocalRuntimeActions();
   const [diff, setDiff] = useState<LoadedDiff | null>(null);
   const [error, setError] = useState<string | null>(null);
 
@@ -120,6 +122,7 @@ export function UnifiedDiffViewer({
     }
     setError(null);
     setDiff(null);
+    if (!localActions) return;
     if (!reviewSessionId || !reviewRequest) {
       setError("review requires Session authority");
       return () => {
@@ -145,7 +148,7 @@ export function UnifiedDiffViewer({
     return () => {
       cancelled = true;
     };
-  }, [cwd, reviewSessionId, reviewRequest, file, diffText, range, mode]);
+  }, [cwd, reviewSessionId, reviewRequest, file, diffText, range, mode, localActions]);
 
   // Report total +/- to the parent whenever the diff (re)loads. Computed over
   // the full parsed diff (not the onlyPath-filtered view) so the summary
@@ -166,6 +169,7 @@ export function UnifiedDiffViewer({
     onStats({ added, removed });
   }, [diff]); // eslint-disable-line react-hooks/exhaustive-deps
 
+  if (!localActions && diffText === undefined) return null;
   if (error)
     return (
       <div className="rounded-md bg-status-err/10 p-3 text-sm text-status-err">
@@ -253,6 +257,7 @@ function DiffFileBlock({
   showRepository: boolean;
 }) {
   const { t } = useT();
+  const localActions = useLocalRuntimeActions();
   const title = file.newPath ?? file.oldPath ?? t("panels.diff.unknownFile");
   // Which line is currently being commented on, keyed by "hunkIdx:lineIdx".
   const [commenting, setCommenting] = useState<string | null>(null);
@@ -329,19 +334,21 @@ function DiffFileBlock({
         {/* Open in the in-app file panel (⌘/Ctrl → OS), matching path links. A
             faux button span since the header itself is interactive; nested
             interactive controls are invalid HTML. */}
-        <span
-          role="button"
-          tabIndex={0}
-          aria-label={t("panels.diff.openFile")}
-          title={t("panels.diff.openFile")}
-          className="shrink-0 rounded p-0.5 text-muted-foreground hover:bg-accent hover:text-foreground"
-          onClick={(e) => {
-            e.stopPropagation();
-            openFileTarget(e, { path: absoluteReviewPath(repoRoot, title), cwd });
-          }}
-        >
-          <ExternalLink className="h-3.5 w-3.5" />
-        </span>
+        {localActions && (
+          <span
+            role="button"
+            tabIndex={0}
+            aria-label={t("panels.diff.openFile")}
+            title={t("panels.diff.openFile")}
+            className="shrink-0 rounded p-0.5 text-muted-foreground hover:bg-accent hover:text-foreground"
+            onClick={(e) => {
+              e.stopPropagation();
+              openFileTarget(e, { path: absoluteReviewPath(repoRoot, title), cwd });
+            }}
+          >
+            <ExternalLink className="h-3.5 w-3.5" />
+          </span>
+        )}
       </Button>
       {!collapsed &&
         file.hunks.map((h, i) => (
@@ -374,19 +381,21 @@ function DiffFileBlock({
                             force-wrap or get lost off-screen on scroll. */}
                           <span className="relative block pr-6">
                             {l.text || " "}
-                            <button
-                              type="button"
-                              aria-label={t("panels.diff.commentThisLine")}
-                              title={t("panels.diff.commentThisLineTitle")}
-                              className="absolute right-0 top-1/2 -translate-y-1/2 rounded p-0.5 text-muted-foreground opacity-0 hover:bg-accent group-hover:opacity-100"
-                              onClick={() => setCommenting(commenting === key ? null : key)}
-                            >
-                              <MessageSquarePlus size={12} />
-                            </button>
+                            {localActions && (
+                              <button
+                                type="button"
+                                aria-label={t("panels.diff.commentThisLine")}
+                                title={t("panels.diff.commentThisLineTitle")}
+                                className="absolute right-0 top-1/2 -translate-y-1/2 rounded p-0.5 text-muted-foreground opacity-0 hover:bg-accent group-hover:opacity-100"
+                                onClick={() => setCommenting(commenting === key ? null : key)}
+                              >
+                                <MessageSquarePlus size={12} />
+                              </button>
+                            )}
                           </span>
                         </td>
                       </tr>
-                      {commenting === key && (
+                      {localActions && commenting === key && (
                         <tr>
                           <td colSpan={4} className="px-2">
                             <CommentBox

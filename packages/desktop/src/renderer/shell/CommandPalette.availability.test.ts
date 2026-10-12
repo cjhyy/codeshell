@@ -57,3 +57,24 @@ test("task inbox command follows its shared user feature flag", () => {
     .run();
   expect(target).toBe("task_inbox");
 });
+
+test("cloud conversations never expose commands that mutate a hidden local transcript or panel", () => {
+  ensureMiniDom();
+  const commands = buildCommands({
+    localRuntime: false,
+    gitReviewAvailable: true,
+    setViewMode: () => {},
+    openPanel: () => {},
+    toggleSidebar: () => {},
+    toggleInspector: () => {},
+    clearTranscript: () => {},
+    openSearch: () => {},
+  });
+  const ids = commands.map((command) => command.id);
+  expect(ids).not.toContain("transcript.clear");
+  expect(ids).not.toContain("go.files");
+  expect(ids).not.toContain("go.review");
+  expect(ids).not.toContain("go.terminal");
+  expect(ids).toContain("search.open");
+  expect(ids).toContain("go.settings");
+});

@@ -61,6 +61,7 @@ interface SidebarProps {
   projects: TrackedProject[];
   sessions: Record<string, SessionIndex>;
   activeProjectId: string | null;
+  cloudProjectId?: string | null;
   activeSessionId: string | null;
   collapsedProjects: Set<string>;
   revealedSessionIds?: Record<string, string>;
@@ -134,6 +135,7 @@ export function Sidebar({
   projects,
   sessions,
   activeProjectId,
+  cloudProjectId,
   activeSessionId,
   collapsedProjects,
   revealedSessionIds,
@@ -418,6 +420,7 @@ export function Sidebar({
             <ProjectGroup
               key={project.id}
               project={project}
+              localRuntime={cloudProjectId !== project.id}
               index={sessions[project.id]}
               collapsed={collapsedProjects.has(project.id)}
               isActiveProject={activeProjectId === project.id}
@@ -792,6 +795,7 @@ export function sessionMainRootLabel(
 function useProjectBranch(
   projectId: string,
   projectPath: string,
+  enabled = true,
 ): {
   branch: string | undefined;
   refresh: () => void;
@@ -801,6 +805,10 @@ function useProjectBranch(
 
   const refresh = useCallback(() => {
     const version = ++requestVersion.current;
+    if (!enabled) {
+      setBranch(undefined);
+      return;
+    }
     void window.codeshell
       .getProjectGitStatus(projectId)
       .then((status) => {
@@ -809,7 +817,7 @@ function useProjectBranch(
       .catch(() => {
         if (requestVersion.current === version) setBranch(undefined);
       });
-  }, [projectId]);
+  }, [projectId, enabled]);
 
   useEffect(() => {
     refresh();
@@ -920,7 +928,9 @@ export function ProjectGroup({
   onPinSession,
   onArchiveSession,
   workspaceChange,
+  localRuntime = true,
 }: {
+  localRuntime?: boolean;
   project: TrackedProject;
   index: SessionIndex | undefined;
   collapsed: boolean;
@@ -961,7 +971,10 @@ export function ProjectGroup({
     [activeSessionId, expandedPage, isActiveProject, live, revealedSessionId, showMore],
   );
   const hiddenLiveCount = Math.max(0, live.length - visibleLive.length);
-  const workspaceSessions = useMemo(() => (collapsed ? [] : visibleLive), [collapsed, visibleLive]);
+  const workspaceSessions = useMemo(
+    () => (collapsed || !localRuntime ? [] : visibleLive),
+    [collapsed, localRuntime, visibleLive],
+  );
   const sessionWorkspaces = useVisibleSessionWorkspaces(
     project.path,
     workspaceSessions,
@@ -970,6 +983,7 @@ export function ProjectGroup({
   const { branch: projectBranch, refresh: refreshProjectBranch } = useProjectBranch(
     project.id,
     project.path,
+    localRuntime,
   );
 
   return (
@@ -979,7 +993,7 @@ export function ProjectGroup({
           "group flex items-center gap-1 rounded-lg px-1 text-[13px] transition-colors",
           isActiveProject ? "bg-accent/70" : "hover:bg-accent/60",
         )}
-        onContextMenu={onProjectContextMenu}
+        onContextMenu={localRuntime ? onProjectContextMenu : (event) => event.preventDefault()}
       >
         <Button
           type="button"
@@ -1017,7 +1031,7 @@ export function ProjectGroup({
             onClick={(e) => {
               e.stopPropagation();
               const r = (e.currentTarget as HTMLElement).getBoundingClientRect();
-              onMenuClick(r.left, r.bottom + 2);
+              if (localRuntime) onMenuClick(r.left, r.bottom + 2);
             }}
           >
             <MoreHorizontal size={13} />
@@ -1044,9 +1058,10 @@ export function ProjectGroup({
           {live.length > 0 && (
             <ul className="ml-3 mt-1 space-y-0.5 border-l border-border/60 pl-2">
               {visibleLive.map((s, i) => {
-                const sessionWorkspace = s.engineSessionId
-                  ? sessionWorkspaces[s.engineSessionId]
-                  : undefined;
+                const sessionWorkspace =
+                  localRuntime && s.engineSessionId
+                    ? sessionWorkspaces[s.engineSessionId]
+                    : undefined;
                 const worktreeBranch = worktreeBranchOf(sessionWorkspace?.workspace);
                 const rootStatus = sessionWorkspace?.authority?.rootStatus;
                 const repairTarget =
@@ -1078,11 +1093,14 @@ export function ProjectGroup({
                     showKbd={isActiveProject && i < 5}
                     kbdIndex={i + 1}
                     onClick={() => onSelectSession(s.id)}
-                    onContextMenu={(e) => onSessionContextMenu(e, s)}
-                    onPin={() => onPinSession(s.id, !s.pinned)}
-                    onArchive={() => onArchiveSession(s.id)}
+                    onContextMenu={(e) => {
+                      if (localRuntime) onSessionContextMenu(e, s);
+                      else e.preventDefault();
+                    }}
+                    onPin={localRuntime ? () => onPinSession(s.id, !s.pinned) : undefined}
+                    onArchive={localRuntime ? () => onArchiveSession(s.id) : undefined}
                     onRepair={
-                      s.engineSessionId && repairTarget
+                      localRuntime && s.engineSessionId && repairTarget
                         ? () => {
                             void window.codeshell.projectRegistry
                               .migrateSessionMainRoot(s.engineSessionId!, repairTarget.id)
@@ -1098,7 +1116,7 @@ export function ProjectGroup({
                           }
                         : undefined
                     }
-                    onHover={refreshProjectBranch}
+                    onHover={localRuntime ? refreshProjectBranch : undefined}
                   />
                 );
               })}

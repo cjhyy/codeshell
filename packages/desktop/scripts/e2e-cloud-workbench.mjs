@@ -1,533 +1,443 @@
-/* Existing local project -> explicit cloud project, using an isolated profile. */
+/* Native existing-project runtime selection, using an authenticated protocol fixture. */
 /* global document, window */
-import { mkdir, writeFile } from "node:fs/promises";
+import { createServer } from "node:http";
+import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
-import { startProjectControlServer, resolveWebAppRoot } from "@cjhyy/code-shell-server/serve";
+import { WebSocketServer } from "ws";
 import {
   assert,
   captureRendererErrors,
   findCodeShellWindow,
   launchCodeShellElectron,
   makeIsolatedElectronHome,
-  openSettingsMenu,
   seedSessionCatalog,
 } from "./electron-harness.mjs";
 
 const appDir = resolve(dirname(fileURLToPath(import.meta.url)), "..");
-const isolated = await makeIsolatedElectronHome("codeshell-existing-cloud-e2e-");
+const isolated = await makeIsolatedElectronHome("codeshell-native-cloud-e2e-");
 const screenshotDir = process.env.CODESHELL_PROJECT_LOCATION_SCREENSHOT_DIR;
-const localAlphaPath = join(isolated.home, "Existing local alpha");
-const localBetaPath = join(isolated.home, "Existing local beta");
-const sessionId = "existing-project-location-session";
-const sessionTitle = "已有项目历史会话";
-const historicalMessage = "这是已有项目中保存的历史消息。";
-const bindingKey = (project) => `codeshell.project-cloud-target.v1:${project.id}`;
-const locationTrigger = (win) =>
-  win.getByRole("button", { name: /^(运行位置：此计算机|Work in: This computer)$/ });
-let app, control, win;
+const localPath = join(isolated.home, "Existing project");
+const sessionId = "shared-local-and-cloud-session";
+const localTitle = "已有本地会话";
+const cloudTitle = "已有云端会话";
+const localText = "仅保存在此计算机的历史消息。";
+const cloudText = "仅保存在云端的历史消息。";
+const environmentId = "11111111-1111-4111-8111-111111111111";
+const projectId = "22222222-2222-4222-8222-222222222222";
+const cookie = `cs_hub_session=${"a".repeat(43)}`;
+const password = "native-test-password";
+const rpcCalls = [];
+const sockets = new Set();
+const wss = new WebSocketServer({ noServer: true });
+const remote = new Map([[sessionId, { title: cloudTitle, records: [], running: false }]]);
+let app, win, origin;
 let processLog = "";
-
-async function captureSurface(win, surface, step) {
-  const layout = await surface.evaluate((node) => {
-    const rect = node.getBoundingClientRect();
-    return {
-      left: rect.left,
-      right: rect.right,
-      width: node.clientWidth,
-      content: node.scrollWidth,
-      viewport: window.innerWidth,
-      language: window.localStorage.getItem("codeshell.uiLanguage") ?? "zh",
-    };
-  });
-  assert(
-    layout.width > 0 &&
-      layout.left >= -1 &&
-      layout.right <= layout.viewport + 1 &&
-      layout.content <= layout.width + 1,
-    `${step} fits the ${layout.viewport}px ${layout.language} viewport`,
-  );
-  if (screenshotDir)
-    await win.screenshot({
-      path: join(
-        screenshotDir,
-        `existing-project-${step}-${layout.viewport}-${layout.language}.png`,
-      ),
-      scale: "css",
-      animations: "disabled",
-    });
+let sequence = 0;
+function history(id, user, assistant, clientMessageId) {
+  const now = Date.now();
+  return [
+    { id: `${id}-meta`, type: "session_meta", timestamp: now, data: { sessionId: id } },
+    {
+      id: `${id}-user`,
+      type: "message",
+      timestamp: now,
+      data: { role: "user", content: user, ...(clientMessageId ? { clientMessageId } : {}) },
+    },
+    { id: `${id}-turn`, type: "turn_boundary", timestamp: now, data: {} },
+    {
+      id: `${id}-assistant`,
+      type: "message",
+      timestamp: now,
+      data: { role: "assistant", content: assistant },
+    },
+  ];
 }
-
-async function openSidebar(win) {
-  const toggle = win.locator('[data-sidebar-action="toggle"]');
-  await toggle.waitFor({ state: "visible" });
-  await win.waitForFunction(() => {
-    const toggle = document.querySelector('[data-sidebar-action="toggle"]');
-    return (
-      toggle && (toggle.getAttribute("aria-haspopup") === "dialog") === window.innerWidth < 640
-    );
-  });
-  if (!(await win.locator("aside").isVisible())) await toggle.click();
-  return win.locator("aside");
-}
-
-async function closeDrawer(win) {
-  const drawer = win.getByRole("dialog", { name: /^(导航|Navigation)$/ });
-  if (await drawer.isVisible()) {
-    await win.keyboard.press("Escape");
-    await drawer.waitFor({ state: "hidden" });
+remote.get(sessionId).records = history(sessionId, "云端已有问题", cloudText);
+const server = createServer(async (req, res) => {
+  const reply = (status, value) => {
+    res.writeHead(status, { "content-type": "application/json" });
+    res.end(JSON.stringify(value));
+  };
+  if (req.url === "/api/v1/auth/status")
+    return reply(200, { initialized: true, authenticated: req.headers.cookie === cookie });
+  if (req.url === "/api/v1/auth/login" && req.method === "POST") {
+    let body = "";
+    for await (const chunk of req) body += chunk;
+    const input = JSON.parse(body);
+    if (input.username !== "owner" || input.password !== password)
+      return reply(401, { error: "Invalid login" });
+    res.setHeader("set-cookie", `${cookie}; HttpOnly; SameSite=Strict; Path=/`);
+    return reply(200, { ok: true });
   }
-}
-
-async function viewProjectReadOnly(win) {
+  if (req.headers.cookie !== cookie) return reply(401, { error: "Authentication required" });
+  if (req.url === "/api/v1/environment")
+    return reply(200, {
+      version: 1,
+      id: environmentId,
+      name: "Cloud fixture",
+      kind: "project-host",
+      entryPath: "/",
+    });
+  if (req.url === "/api/v1/projects")
+    return reply(200, {
+      projects: [
+        {
+          id: projectId,
+          name: "Existing remote project",
+          status: "running",
+          generation: 1,
+          createdAt: 123,
+          updatedAt: 123,
+        },
+      ],
+    });
+  if (req.url === `/p/${projectId}/api/v1/sessions`)
+    return reply(200, {
+      sessions: [...remote].map(([sessionId, row]) => ({
+        sessionId,
+        title: row.title,
+        startedAt: 123,
+        lastActiveAt: 123,
+        running: row.running,
+      })),
+    });
+  if (req.url === `/p/${projectId}/api/v1/configuration`)
+    return reply(200, {
+      workspace: { path: "/remote/workspace", settingsScope: "local", skillDirectories: [] },
+      defaults: {},
+      connections: [],
+      catalog: [],
+      skills: [],
+      mcpServers: [],
+      restartRequired: false,
+    });
+  return reply(404, { error: "Unknown fixture route" });
+});
+server.on("upgrade", (req, socket, head) => {
+  if (
+    req.url !== `/p/${projectId}/ws` ||
+    req.headers.cookie !== cookie ||
+    req.headers.origin !== origin
+  )
+    return socket.destroy();
+  wss.handleUpgrade(req, socket, head, (ws) => wss.emit("connection", ws));
+});
+wss.on("connection", (ws) => {
+  sockets.add(ws);
+  ws.on("close", () => sockets.delete(ws));
+  const notify = (method, params) => ws.send(JSON.stringify({ jsonrpc: "2.0", method, params }));
+  const stream = (id, event) =>
+    notify("agent/streamEvent", {
+      sessionId: id,
+      event,
+      hubEpoch: "fixture",
+      hubSequence: ++sequence,
+    });
+  const pendingRuns = new Map();
+  const finish = (id) => {
+    const run = pendingRuns.get(id);
+    if (!run) return;
+    pendingRuns.delete(id);
+    const item = remote.get(id);
+    item.running = false;
+    item.records = history(id, run.params.task, "云端原生流式回复", run.params.clientMessageId);
+    notify("agent/approvalResolved", { sessionId: id, requestId: `approval-${id}` });
+    stream(id, { type: "turn_complete" });
+    notify("serve/sessionStatus", { sessionId: id, running: false });
+    ws.send(JSON.stringify({ jsonrpc: "2.0", id: run.id, result: { ok: true } }));
+  };
+  ws.on("message", (data) => {
+    const message = JSON.parse(data.toString());
+    rpcCalls.push(message);
+    const { method, params = {}, id } = message;
+    const response = (value) => ws.send(JSON.stringify({ jsonrpc: "2.0", id, result: value }));
+    if (method === "agent/query") {
+      if (params.type === "sessions")
+        return response({
+          data: [...remote].map(([sessionId, row]) => ({
+            sessionId,
+            title: row.title,
+            startedAt: 123,
+            lastActiveAt: 123,
+            running: row.running,
+          })),
+        });
+      if (params.type === "session_detail") {
+        const item = remote.get(params.sessionId);
+        return response({
+          data: {
+            transcript: item?.records ?? [],
+            running: item?.running ?? false,
+            outputJournal: { status: "unavailable" },
+            outputCoverage: { unpaired: false, inputIds: [] },
+            streamCursor: { epoch: "fixture", sequence },
+            liveStream: { events: [], truncated: false },
+          },
+        });
+      }
+      if (params.type === "output_journal") return response({ data: { status: "unavailable" } });
+      if (params.type === "output_coverage")
+        return response({ data: { unpaired: false, inputIds: [] } });
+    }
+    if (method === "agent/run") {
+      assert(
+        !("cwd" in params) && !("projectId" in params),
+        "Native local authority cannot cross the cloud transport",
+      );
+      pendingRuns.set(params.sessionId, message);
+      remote.set(params.sessionId, {
+        title: params.task,
+        records: history(params.sessionId, params.task, "", params.clientMessageId),
+        running: true,
+      });
+      notify("agent/runAccepted", {
+        sessionId: params.sessionId,
+        clientMessageId: params.clientMessageId,
+      });
+      stream(params.sessionId, { type: "stream_request_start" });
+      stream(params.sessionId, { type: "text_delta", text: "云端原生流式回复" });
+      notify("agent/approvalRequest", {
+        sessionId: params.sessionId,
+        requestId: `approval-${params.sessionId}`,
+        request: {
+          toolName: "Shell",
+          args: { command: "echo remote" },
+          description: "云端审批测试",
+        },
+      });
+      return;
+    }
+    if (method === "agent/approve" || method === "agent/cancel") {
+      response({ ok: true });
+      finish(params.sessionId);
+      return;
+    }
+    response({});
+  });
+});
+const locationTrigger = () => win.getByRole("button", { name: /^运行位置：/ });
+const sidebar = () => win.locator("aside");
+async function dismissTrust() {
   const viewOnly = win.getByRole("button", { name: /仅查看|View only/i });
   if (
-    await viewOnly.waitFor({ state: "visible", timeout: 3000 }).then(
+    await viewOnly.waitFor({ state: "visible", timeout: 1500 }).then(
       () => true,
       () => false,
     )
   )
     await viewOnly.click();
 }
-
-async function selectProject(win, name) {
-  const sidebar = await openSidebar(win);
-  await sidebar.getByRole("button", { name, exact: true }).click();
-  await viewProjectReadOnly(win);
-  await closeDrawer(win);
-  await locationTrigger(win).waitFor({ state: "visible" });
+async function locationMenu() {
+  await locationTrigger().click();
+  return win.getByRole("menu");
 }
-
-async function openLocationMenu(win) {
-  const trigger = locationTrigger(win);
-  await trigger.click();
-  // Radix labels this menu from its trigger, which takes precedence over the
-  // content's aria-label. Identify it by the user-visible Cloud action.
-  const menu = win.getByRole("menu").filter({
-    has: win.getByRole("menuitem", { name: /^(云端|Cloud)$/, exact: true }),
-  });
-  await menu.waitFor({ state: "visible" });
-  assert(
-    await menu
-      .getByRole("menuitem", { name: /^(此计算机|This computer)$/, exact: true })
-      .isVisible(),
-    "An existing project's location menu includes this computer",
-  );
-  await captureSurface(win, menu, "menu");
-  return { trigger, menu };
+async function screenshot(step) {
+  if (screenshotDir)
+    await win.screenshot({
+      path: join(screenshotDir, `native-cloud-${step}.png`),
+      animations: "disabled",
+      scale: "css",
+    });
 }
-
-async function openCloudDialog(win, { change = false } = {}) {
-  const opened = await openLocationMenu(win);
-  await opened.menu
-    .getByRole("menuitem", {
-      name: change ? /^(更改云端项目…|Change cloud project…)$/ : /^(云端|Cloud)$/,
-      exact: true,
-    })
-    .click();
-  const dialog = win.getByRole("dialog", { name: /^(云端运行位置|Cloud run location)$/ });
-  await dialog.waitFor({ state: "visible" });
-  const input = dialog.getByRole("textbox", {
-    name: /^(已有云端项目链接|Existing cloud project URL)$/,
-  });
-  await input.waitFor({ state: "visible" });
-  await captureSurface(win, dialog, "cloud");
-  return { ...opened, dialog, input };
-}
-
-async function submitCloud(win, target, url) {
-  await target.input.fill(url);
-  const opened = app.waitForEvent("window");
-  await target.dialog.getByRole("button", { name: /^(打开云端项目|Open cloud project)$/ }).click();
-  const cloud = await opened;
-  await target.dialog.waitFor({ state: "hidden" });
-  await cloud.waitForURL(url);
-  assert(
-    await locationTrigger(win).isVisible(),
-    "The local conversation still runs on this computer",
-  );
-  return cloud;
-}
-
-async function storedBinding(win, project) {
-  return win.evaluate((key) => window.localStorage.getItem(key), bindingKey(project));
-}
-
-async function seedHistory() {
-  const directory = join(isolated.codeShellHome, "sessions", sessionId);
-  await mkdir(directory, { recursive: true });
-  const now = Date.now();
-  await writeFile(
-    join(directory, "state.json"),
-    JSON.stringify({
-      sessionId,
-      title: sessionTitle,
-      cwd: localAlphaPath,
-      origin: "desktop",
-      kind: "work",
-      parentSessionId: null,
-      status: "completed",
-      startedAt: now - 1000,
-    }),
-  );
-  const events = [
-    { type: "session_meta", data: { sessionId } },
-    { type: "message", data: { role: "user", content: "请继续已有项目。" } },
-    { type: "turn_boundary", data: {} },
-    { type: "message", data: { role: "assistant", content: historicalMessage } },
-  ].map((event, index) => ({
-    id: `${sessionId}-event-${index}`,
-    timestamp: now - 1000 + index * 100,
-    turnNumber: 1,
-    ...event,
-  }));
-  await writeFile(
-    join(directory, "transcript.jsonl"),
-    events.map(JSON.stringify).join("\n") + "\n",
-  );
-}
-
 try {
   if (screenshotDir) await mkdir(screenshotDir, { recursive: true });
+  await mkdir(localPath, { recursive: true });
   await mkdir(isolated.codeShellHome, { recursive: true });
-  await mkdir(localAlphaPath, { recursive: true });
-  await mkdir(localBetaPath, { recursive: true });
-  await writeFile(join(localAlphaPath, "README.md"), "# Existing local alpha\n");
-  await writeFile(join(localBetaPath, "README.md"), "# Existing local beta\n");
+  await writeFile(join(localPath, "README.md"), "# Existing local project\n");
   await writeFile(
     join(isolated.codeShellHome, "settings.json"),
     JSON.stringify({ autoUpdates: false }),
   );
-  control = await startProjectControlServer({
-    host: "127.0.0.1",
-    port: 0,
-    dataDir: join(isolated.home, "cloud-control"),
-    staticRootDir: resolveWebAppRoot(),
-  });
-  const password = "native-cloud-test-password";
-  const setup = await fetch(`${control.url}/api/v1/auth/setup`, {
-    method: "POST",
-    headers: { origin: control.url, "content-type": "application/json" },
-    body: JSON.stringify({ token: control.bootstrapToken, username: "test-owner", password }),
-  });
-  assert(setup.status === 200, "Cloud test administrator setup failed");
-  const cookie = setup.headers.get("set-cookie").split(";")[0];
-  await setup.arrayBuffer();
-  async function createCloudProject(name) {
-    const response = await fetch(`${control.url}/api/v1/projects`, {
-      method: "POST",
-      headers: { origin: control.url, "content-type": "application/json", cookie },
-      body: JSON.stringify({ name }),
-    });
-    assert(response.status === 201, "Precreating the existing cloud project failed");
-    return (await response.json()).project;
-  }
-  const cloudAlpha = await createCloudProject("Existing cloud alpha");
-  const cloudBeta = await createCloudProject("Existing cloud beta");
-  const alphaUrl = `${control.url}/?project=${cloudAlpha.id}`;
-  const betaUrl = `${control.url}/?project=${cloudBeta.id}`;
+  await new Promise((resolve) => server.listen(0, "127.0.0.1", resolve));
+  origin = `http://127.0.0.1:${server.address().port}`;
   app = await launchCodeShellElectron({
     appDir,
     home: isolated.home,
     userDataDir: isolated.userDataDir,
-    // Guarded Node smokes inherit an outer test HOME. Keep the session guard
-    // and the Electron-owned persisted history on this same isolated root.
     env: { CODE_SHELL_TEST_HOME: isolated.codeShellHome },
   });
   app.process().stderr?.on("data", (chunk) => {
-    processLog = (processLog + chunk.toString()).slice(-16_000);
+    processLog = (processLog + chunk.toString()).slice(-12000);
   });
   win = await findCodeShellWindow(app);
   const errors = captureRendererErrors(win);
-  const viewOnly = win.getByRole("button", { name: /仅查看|View only/i });
-  if (
-    await viewOnly.waitFor({ timeout: 2500 }).then(
-      () => true,
-      () => false,
-    )
-  )
-    await viewOnly.click();
-
-  assert(
-    await locationTrigger(win).isDisabled(),
-    "Unbound conversations cannot open a cloud project",
-  );
-  // Only the native picker is controlled. The real IPC and store register these
-  // existing folders and broadcast their authoritative project IDs.
-  await app.evaluate(
-    ({ dialog }, paths) => {
-      globalThis.projectLocationPicker = { calls: 0, paths };
-      dialog.showOpenDialog = async () => {
-        const picked = globalThis.projectLocationPicker.paths.shift();
-        globalThis.projectLocationPicker.calls += 1;
-        return picked
-          ? { canceled: false, filePaths: [picked] }
-          : { canceled: true, filePaths: [] };
-      };
-    },
-    [localAlphaPath, localBetaPath],
-  );
-  const sidebar = await openSidebar(win);
-  await sidebar
+  await dismissTrust();
+  await app.evaluate(({ dialog }, path) => {
+    dialog.showOpenDialog = async () => ({ canceled: false, filePaths: [path] });
+  }, localPath);
+  await sidebar()
     .getByRole("button", { name: /^(添加项目|Add project)$/ })
     .first()
     .click();
   await win.waitForFunction(
     async () => (await window.codeshell.projectRegistry.list()).length === 1,
   );
-  await viewProjectReadOnly(win);
-  assert(
-    (await win.getByRole("dialog", { name: /^(新项目|New project)$/ }).count()) === 0,
-    "Add project opens the local folder picker directly",
+  await dismissTrust();
+  const project = (await win.evaluate(() => window.codeshell.projectRegistry.list()))[0];
+  const directory = join(isolated.codeShellHome, "sessions", sessionId);
+  await mkdir(directory, { recursive: true });
+  await writeFile(
+    join(directory, "state.json"),
+    JSON.stringify({
+      sessionId,
+      title: localTitle,
+      cwd: localPath,
+      origin: "desktop",
+      kind: "work",
+      parentSessionId: null,
+      status: "completed",
+      startedAt: 123,
+    }),
   );
-  await locationTrigger(win).waitFor({ state: "visible" });
-  await app.evaluate(({ BrowserWindow }) => {
-    BrowserWindow.getAllWindows()[0].webContents.send("menu:add-project");
-  });
-  await win.waitForFunction(
-    async () => (await window.codeshell.projectRegistry.list()).length === 2,
+  await writeFile(
+    join(directory, "transcript.jsonl"),
+    history(sessionId, "本地已有问题", localText).map(JSON.stringify).join("\n") + "\n",
   );
-  await viewProjectReadOnly(win);
-  const projects = await win.evaluate(() => window.codeshell.projectRegistry.list());
-  const localAlpha = projects.find((project) => project.name === "Existing local alpha");
-  const localBeta = projects.find((project) => project.name === "Existing local beta");
-  assert(localAlpha && localBeta, "Both existing folders have authoritative project IDs");
-  assert(
-    (await app.evaluate(() => globalThis.projectLocationPicker.calls)) === 2,
-    "Sidebar and application menu use the native local picker",
-  );
-
-  await selectProject(win, localAlpha.name);
-  let target = await openCloudDialog(win);
-  assert(
-    await target.dialog.getByText(localAlpha.name, { exact: false }).isVisible(),
-    "Cloud location identifies its existing local project",
-  );
-  assert((await target.input.inputValue()) === "", "A project starts without a cloud binding");
-  await target.input.fill(alphaUrl);
-  await target.dialog.getByRole("button", { name: /^(取消|Cancel)$/ }).click();
-  await target.dialog.waitFor({ state: "hidden" });
-  assert(
-    (await storedBinding(win, localAlpha)) === null,
-    "Canceling does not save a cloud binding",
-  );
-
-  target = await openCloudDialog(win);
-  await target.input.fill(`${control.url}/`);
-  await target.dialog.getByRole("button", { name: /^(打开云端项目|Open cloud project)$/ }).click();
-  await target.dialog.getByRole("alert").waitFor();
-  assert(app.windows().length === 1, "A cloud homepage cannot replace an existing project URL");
-  assert((await storedBinding(win, localAlpha)) === null, "Invalid targets are not saved");
-  const cloud = await submitCloud(win, target, alphaUrl);
-  const cloudErrors = captureRendererErrors(cloud);
-  assert(
-    await cloud.evaluate(() => typeof window.codeshell === "undefined"),
-    "The cloud project cannot access the local preload",
-  );
-  await cloud.getByRole("heading", { name: "登录工作空间" }).waitFor();
-  await cloud.getByLabel("用户名", { exact: true }).fill("test-owner");
-  await cloud.getByLabel("密码", { exact: true }).fill(password);
-  await cloud.getByRole("button", { name: "登录", exact: true }).click();
-  // The real cloud records already exist. They stay stopped so this UI check
-  // needs neither a Docker runtime nor a configured model.
-  await cloud.getByRole("heading", { name: cloudAlpha.name, exact: true }).waitFor();
-  assert(cloud.url() === alphaUrl, "Login preserves the explicit existing cloud project selection");
-  assert(
-    (await storedBinding(win, localAlpha)) === alphaUrl,
-    "The normalized target is saved per local project",
-  );
-  assert(
-    JSON.stringify(await win.evaluate(() => window.codeshell.projectRegistry.list())) ===
-      JSON.stringify(projects),
-    "Opening a cloud project does not change local project authority",
-  );
-  await cloud.close();
-
-  const saved = await openLocationMenu(win);
-  const reopened = app.waitForEvent("window");
-  await saved.menu.getByRole("menuitem", { name: /^(云端|Cloud)$/, exact: true }).click();
-  const again = await reopened;
-  await again.waitForURL(alphaUrl);
-  await again.getByRole("heading", { name: cloudAlpha.name, exact: true }).waitFor();
-  assert(
-    (await win.getByRole("dialog", { name: /^(云端运行位置|Cloud run location)$/ }).count()) === 0,
-    "A saved target opens without asking for its URL again",
-  );
-  const navigatedAlphaUrl = `${alphaUrl}#kept-view`;
-  await again.goto(navigatedAlphaUrl);
-  const cloudDraft = "Keep this unsent cloud draft";
-  await again.getByPlaceholder("例如：个人网站").fill(cloudDraft);
-  const alphaWindowId = await app.evaluate(
-    ({ BrowserWindow }, url) =>
-      BrowserWindow.getAllWindows().find((window) => window.webContents.getURL() === url)?.id,
-    navigatedAlphaUrl,
-  );
-  assert(Number.isInteger(alphaWindowId), "The first cloud target owns a native window");
-
-  await selectProject(win, localBeta.name);
-  const otherTarget = await openCloudDialog(win);
-  assert(
-    (await otherTarget.input.inputValue()) === "",
-    "Another existing project does not reuse alpha's binding",
-  );
-  const other = await submitCloud(win, otherTarget, betaUrl);
-  await other.getByRole("heading", { name: cloudBeta.name, exact: true }).waitFor();
-  assert(other.url() === betaUrl, "The second local project opens its own exact cloud target");
-  assert(
-    (await storedBinding(win, localAlpha)) === alphaUrl &&
-      (await storedBinding(win, localBeta)) === betaUrl,
-    "Project bindings remain independent",
-  );
-  assert(
-    app.windows().length === 3,
-    "Two existing cloud projects on one origin coexist with Desktop",
-  );
-  assert(
-    again.url() === navigatedAlphaUrl,
-    "Opening another project preserves the first cloud window's navigation",
-  );
-  await selectProject(win, localAlpha.name);
-  const firstTarget = await openLocationMenu(win);
-  await firstTarget.menu.getByRole("menuitem", { name: /^(云端|Cloud)$/, exact: true }).click();
-  await firstTarget.menu.waitFor({ state: "hidden" });
-  await again.waitForFunction(() => document.hasFocus());
-  assert(app.windows().length === 3, "Reopening the first cloud project reuses its native window");
-  assert(
-    (await app.evaluate(
-      ({ BrowserWindow }, url) =>
-        BrowserWindow.getAllWindows().find((window) => window.webContents.getURL() === url)?.id,
-      navigatedAlphaUrl,
-    )) === alphaWindowId,
-    "The first cloud project returns to the same native window after navigating",
-  );
-  assert(
-    (await again.getByPlaceholder("例如：个人网站").inputValue()) === cloudDraft,
-    "Reopening preserves the cloud page's unsent input instead of reloading it",
-  );
-  await again.close();
-  await other.close();
-
-  await seedHistory();
   await seedSessionCatalog(win, {
-    [localAlpha.id]: {
+    [project.id]: {
       sessions: [
         {
           id: sessionId,
           engineSessionId: sessionId,
-          title: sessionTitle,
-          createdAt: Date.now(),
-          updatedAt: Date.now(),
+          title: localTitle,
+          createdAt: 123,
+          updatedAt: 123,
         },
       ],
-      activeSessionId: null,
+      activeSessionId: sessionId,
     },
   });
-  // Reload the production renderer against persisted native history and the
-  // durable registry, so runtime controls restore each saved cloud mapping.
   await win.reload();
-  await viewProjectReadOnly(win);
+  await dismissTrust();
+  await win.getByText(localText, { exact: true }).waitFor();
+  const registryBefore = await win.evaluate(() => window.codeshell.projectRegistry.list());
+  const catalogBefore = await win.evaluate(() => window.codeshell.sessionCatalog.load());
+  await (await locationMenu())
+    .getByRole("menuitem", { name: "关联云端项目…", exact: true })
+    .click();
+  const dialog = win.getByRole("dialog", { name: "关联已有云端项目" });
+  await dialog.getByLabel("云端服务地址", { exact: true }).fill(origin);
+  await dialog.getByRole("button", { name: "连接", exact: true }).click();
+  await dialog.getByLabel("用户名", { exact: true }).fill("owner");
+  await dialog.getByLabel("密码", { exact: true }).fill(password);
+  await dialog.getByRole("button", { name: "登录", exact: true }).click();
+  await dialog.getByLabel("已有云端项目", { exact: true }).selectOption(projectId);
+  await screenshot("bind");
+  await dialog.getByRole("button", { name: "使用云端", exact: true }).click();
+  await win.locator('[data-runtime="cloud"]').waitFor();
+  await sidebar().getByRole("button", { name: cloudTitle, exact: true }).click();
+  await win.getByText(cloudText, { exact: true }).waitFor();
   assert(
-    (await storedBinding(win, localAlpha)) === alphaUrl &&
-      (await storedBinding(win, localBeta)) === betaUrl,
-    "Reload restores both projects' independent cloud mappings",
+    app.windows().length === 1 && !win.url().startsWith(origin),
+    "Cloud stays in the existing native window",
   );
-  const historySidebar = await openSidebar(win);
-  const alphaGroup = historySidebar.getByRole("button", { name: localAlpha.name, exact: true });
-  if ((await alphaGroup.getAttribute("aria-expanded")) === "false") await alphaGroup.click();
-  await historySidebar.getByRole("button", { name: sessionTitle, exact: true }).click();
-  await viewProjectReadOnly(win);
-  await win.getByText(historicalMessage, { exact: true }).waitFor();
-  await locationTrigger(win).waitFor({ state: "visible" });
-  const established = await openCloudDialog(win, { change: true });
   assert(
-    (await established.input.inputValue()) === alphaUrl,
-    "Established conversations can change their project's existing cloud target",
+    (await win.getByText(localText, { exact: true }).count()) === 0,
+    "Equal local/cloud engine IDs cannot mix transcripts",
   );
-  await win.keyboard.press("Escape");
-  await established.dialog.waitFor({ state: "hidden" });
+  await screenshot("history");
+  await (await locationMenu()).getByRole("menuitem", { name: "此计算机", exact: true }).click();
+  await win.getByText(localText, { exact: true }).waitFor();
+  await (await locationMenu())
+    .getByRole("menuitem")
+    .filter({ hasText: "Existing remote project" })
+    .click();
+  await win.getByText(cloudText, { exact: true }).waitFor();
+  await sidebar().getByRole("button", { name: "在 Existing project 中开始新对话" }).click();
+  const composer = win.locator("textarea").last();
+  await composer.fill("请在云端执行");
+  await composer.press("Enter");
+  await win.getByText("云端原生流式回复", { exact: true }).waitFor();
+  await win.getByText("云端审批测试", { exact: true }).waitFor();
+  await screenshot("stream-approval");
+  await win.getByRole("button", { name: /允许一次|仅本次|Allow once/ }).click();
+  await win.waitForFunction(
+    () => !document.querySelector('[data-runtime="cloud"] button[title="停止"]'),
+  );
+  assert(
+    rpcCalls.filter((row) => row.method === "agent/run").length === 1,
+    "One native send produces one cloud run",
+  );
+  assert(
+    rpcCalls.some((row) => row.method === "agent/approve"),
+    "Native approval reaches the cloud",
+  );
+  await win.getByRole("button", { name: "停止", exact: true }).waitFor({ state: "hidden" });
+  await sidebar().getByRole("button", { name: "在 Existing project 中开始新对话" }).click();
+  await composer.fill("请在云端取消");
+  await composer.press("Enter");
+  await win.getByText("云端审批测试", { exact: true }).waitFor();
+  await win.getByRole("button", { name: "停止", exact: true }).click();
+  await win.getByRole("button", { name: "停止", exact: true }).waitFor({ state: "hidden" });
+  const cancel = rpcCalls.find((row) => row.method === "agent/cancel");
+  assert(
+    cancel && cancel.params.sessionId !== sessionId,
+    "Native stop uses the captured cloud session",
+  );
+  const firstRunCount = rpcCalls.filter((row) => row.method === "agent/run").length;
+  for (const socket of sockets) socket.terminate();
+  await win.getByRole("button", { name: "重新连接", exact: true }).waitFor();
+  await win.getByRole("button", { name: "重新连接", exact: true }).click();
+  await win.getByText("云端原生流式回复", { exact: true }).waitFor();
+  assert(
+    rpcCalls.filter((row) => row.method === "agent/run").length === firstRunCount,
+    "Reconnect never resends an executed command",
+  );
+  assert(
+    JSON.stringify(await win.evaluate(() => window.codeshell.projectRegistry.list())) ===
+      JSON.stringify(registryBefore),
+    "Remote runtime leaves local roots intact",
+  );
+  assert(
+    JSON.stringify(await win.evaluate(() => window.codeshell.sessionCatalog.load())) ===
+      JSON.stringify(catalogBefore),
+    "Cloud history never writes local session catalog",
+  );
+  await win.reload();
+  await win.locator('[data-runtime="cloud"]').waitFor();
+  assert(
+    (await locationTrigger().getAttribute("aria-label")) === "运行位置：云端",
+    "Runtime selection persists across reload",
+  );
+  await sidebar().getByRole("button", { name: cloudTitle, exact: true }).click();
+  await win.getByText(cloudText, { exact: true }).waitFor();
+  await win.setViewportSize({ width: 390, height: 844 });
+  await screenshot("390-zh");
+  assert(
+    await win.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth + 1),
+    "Native cloud fits a narrow window",
+  );
 
-  for (const language of ["zh", "en"]) {
-    if (language === "en") {
-      const settings = await openSettingsMenu(win);
-      await settings.getByRole("menuitem", { name: /^(切换语言|Switch language)$/ }).click();
-      await win
-        .getByRole("menu", { name: /^(切换语言|Switch language)$/ })
-        .getByRole("menuitemradio", { name: "English", exact: true })
-        .click();
-      await settings.waitFor({ state: "hidden" });
-      await closeDrawer(win);
-    }
-    for (const width of [1280, 390]) {
-      await win.setViewportSize({ width, height: 760 });
-      const responsive = await openCloudDialog(win, { change: true });
-      assert(
-        (await responsive.input.inputValue()) === alphaUrl,
-        "Responsive forms retain the selected project's binding",
-      );
-      await win.waitForFunction(
-        (node) => node === document.activeElement,
-        await responsive.input.elementHandle(),
-      );
-      for (let index = 0; index < 6; index++) {
-        await win.keyboard.press("Tab");
-        assert(
-          await responsive.dialog.evaluate((node) => node.contains(document.activeElement)),
-          "Cloud project form retains keyboard focus",
-        );
-      }
-      await win.keyboard.press("Escape");
-      await responsive.dialog.waitFor({ state: "hidden" });
-      await win.waitForFunction(
-        (node) => node === document.activeElement,
-        await responsive.trigger.elementHandle(),
-      );
-      assert(
-        await locationTrigger(win).isVisible(),
-        "Canceling a cloud target keeps this computer selected",
-      );
-      assert(app.windows().length === 1, "Canceling a cloud target opens no remote window");
-    }
-  }
-  assert(errors.length === 0 && cloudErrors.length === 0, "No renderer exceptions occurred");
+  await (await locationMenu()).getByRole("menuitem", { name: "此计算机", exact: true }).click();
+  await win.getByText(localText, { exact: true }).waitFor();
+  assert(
+    (await readFile(join(directory, "transcript.jsonl"), "utf8")).includes(localText),
+    "Local durable transcript survives cloud work",
+  );
+  await win.setViewportSize({ width: 1280, height: 800 });
+  await win.evaluate(() => window.localStorage.setItem("codeshell.uiLanguage", "en"));
+  await win.reload();
+  await win.getByRole("button", { name: "Work in: This computer", exact: true }).waitFor();
+  await win.getByRole("button", { name: "Work in: This computer", exact: true }).click();
+  await win.getByRole("menuitem").filter({ hasText: "Existing remote project" }).click();
+  await win.locator('[data-runtime="cloud"]').waitFor();
+  await win.getByRole("button", { name: "Work in: Cloud", exact: true }).waitFor();
+  await screenshot("1280-en");
+  assert(errors.length === 0, `Renderer errors: ${errors.join("\n")}`);
   console.log(
-    "PASS: direct local folder picker -> existing project Work in menu -> explicit cloud URL/login isolation -> per-project bindings -> same-origin project windows coexist and preserve navigation/drafts -> established conversations -> responsive Chinese/English focus and screenshots",
+    "PASS native cloud: existing project binding, one window, scoped history, streaming, approval, reconnect, persistence",
   );
 } catch (error) {
-  if (win) {
-    if (screenshotDir)
-      await win
-        .screenshot({
-          path: join(screenshotDir, "existing-project-failure.png"),
-          scale: "css",
-          animations: "disabled",
-        })
-        .catch(() => {});
-    console.error(
-      "Desktop failure state:",
-      await win
-        .evaluate(() => ({
-          text: document.body.innerText.slice(-8000),
-          sidebarButtons: Array.from(document.querySelectorAll("aside button")).map((button) => ({
-            text: button.textContent,
-            label: button.getAttribute("aria-label"),
-            title: button.getAttribute("title"),
-          })),
-          menus: Array.from(document.querySelectorAll('[role="menu"]')).map((menu) => ({
-            label: menu.getAttribute("aria-label"),
-            labelledBy: menu.getAttribute("aria-labelledby"),
-          })),
-        }))
-        .catch(() => ({})),
-    );
-    console.error(
-      "Local registry:",
-      await win.evaluate(() => window.codeshell.projectRegistry.list()).catch(() => []),
-    );
-  }
-  if (processLog) console.error("Electron output:", processLog);
-  throw error;
+  console.error(error);
+  if (screenshotDir && win) await screenshot("failure").catch(() => {});
+  if (processLog) console.error(processLog);
+  process.exitCode = 1;
 } finally {
   await app?.close().catch(() => {});
-  await control?.close();
+  for (const socket of sockets) socket.terminate();
+  wss.close();
+  server.closeAllConnections();
+  await new Promise((resolve) => server.close(resolve));
   await isolated.cleanup();
 }

@@ -9,6 +9,7 @@ import { OpenWithMenu } from "../chat/OpenWithMenu";
 import { MoreHorizontal } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useT } from "../i18n/I18nProvider";
+import { useLocalRuntimeActions } from "../runtime/RuntimeCapabilities";
 
 interface Props extends AttachmentContext {
   message: ToolMessage;
@@ -28,6 +29,7 @@ export function FileToolCard({
   ...attachmentContext
 }: Props) {
   const { t } = useT();
+  const localActions = useLocalRuntimeActions();
   const a = parsedArgs(message);
   const path =
     (typeof a.file_path === "string" && a.file_path) ||
@@ -65,7 +67,7 @@ export function FileToolCard({
         <span className="m-0 whitespace-pre-wrap break-words rounded-sm bg-muted/40 p-2 font-mono text-xs">
           {path}
         </span>
-        {path && (
+        {path && localActions && (
           <OpenWithMenu path={path} align="end">
             <Button
               type="button"
