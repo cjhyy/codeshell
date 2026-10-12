@@ -75,6 +75,7 @@ export {
 export { gte } from "./utils/semver.js";
 export { lock, lockSync, unlock, check } from "./utils/lockfile.js";
 export { acquireFileLock, acquireLockOnPath, mutateJsonFile } from "./utils/file-mutex.js";
+export { acquireWorkspaceWriteLock } from "./utils/workspace-write-lock.js";
 export { logForDebugging } from "./utils/debug.js";
 export {
   isEnvTruthy,
