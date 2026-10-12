@@ -117,7 +117,7 @@ import { useBucketOverrides } from "./app/useBucketOverrides";
 import { useTranscriptBuckets } from "./app/useTranscriptBuckets";
 import { useAutomationSessionImport } from "./app/useAutomationSessionImport";
 import { useSessionNavigation } from "./app/useSessionNavigation";
-import { NewProjectDialog } from "./projects/NewProjectDialog";
+import { useNewProjectDialog } from "./projects/NewProjectDialog";
 import { useNotificationSessionNavigation } from "./app/useNotificationSessionNavigation";
 import { useSessionHistorySync } from "./app/useSessionHistorySync";
 import { useHostSubscriptions } from "./app/useHostSubscriptions";
@@ -246,7 +246,6 @@ function App() {
   );
   /** Cmd+P / sidebar 搜索 — cross-project session picker (modal). */
   const [sessionSearchOpen, setSessionSearchOpen] = useState(false);
-  const [newProjectOpen, setNewProjectOpen] = useState(false);
   // The GLOBAL default model — the choice that seeds *new* sessions. Lives in
   // settings.defaults.text (unified catalog). Composer changes are session-local;
   // users change this global default explicitly in Settings.
@@ -1319,7 +1318,7 @@ function App() {
     setRunsInitialRunId,
   });
 
-  const handleAddProject = useCallback(() => setNewProjectOpen(true), []);
+  const [handleAddProject, newProjectDialog] = useNewProjectDialog(handleAddLocalProject);
 
   useNotificationSessionNavigation({
     sessionIndicesRef,
@@ -1436,9 +1435,6 @@ function App() {
   useEffect(() => {
     const off = window.codeshell.onMenuEvent((evt, payload) => {
       switch (evt) {
-        case "add-project":
-          void handleAddProject();
-          break;
         case "open-recent": {
           const p = payload as { path: string; name: string } | undefined;
           if (!p) return;
@@ -2208,9 +2204,7 @@ function App() {
                 navigateFromSidebar(() => handleSelectSession(projectId, sessionId))
               }
               onToggleProject={handleToggleProject}
-              onAddProject={() => {
-                void handleAddProject();
-              }}
+              onAddProject={handleAddProject}
               onRemoveProject={handleRemoveProject}
               onPinProject={handlePinProject}
               onRenameProject={handleRenameProject}
@@ -2575,9 +2569,7 @@ function App() {
                     // auto-jump was fixed separately in transcripts.ts; this is the
                     // interactive project-switch path, same symptom, different code.)
                     onSelectProject={handleNewConversationForProject}
-                    onAddProject={() => {
-                      void handleAddProject();
-                    }}
+                    onAddProject={handleAddProject}
                     configurationTarget={sessionUiAuthority.configurationTarget}
                     configurationAvailable={sessionUiAuthority.configurationAvailable}
                     conversationRoot={sessionUiAuthority.workspaceRoot}
@@ -2682,11 +2674,7 @@ function App() {
           </div>
         </div>
 
-        <NewProjectDialog
-          open={newProjectOpen}
-          onOpenChange={setNewProjectOpen}
-          onCreateLocal={handleAddLocalProject}
-        />
+        {newProjectDialog}
 
         <CommandPalette
           open={paletteOpen}

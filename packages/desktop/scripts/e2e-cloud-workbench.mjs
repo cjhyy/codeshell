@@ -6,6 +6,7 @@ import { startProjectControlServer, resolveWebAppRoot } from "@cjhyy/code-shell-
 import {
   assert,
   captureRendererErrors,
+  expandSidebar,
   findCodeShellWindow,
   launchCodeShellElectron,
   makeIsolatedElectronHome,
@@ -42,19 +43,11 @@ async function captureDialog(win, chooser, step) {
 }
 
 async function openNewProject(win) {
-  const toggle = win.locator('[data-sidebar-action="toggle"]');
-  await toggle.waitFor({ state: "visible" });
-  await win.waitForFunction(() => {
-    const toggle = document.querySelector('[data-sidebar-action="toggle"]');
-    return (
-      toggle && (toggle.getAttribute("aria-haspopup") === "dialog") === window.innerWidth < 640
-    );
-  });
+  await expandSidebar(win);
   const opener = win
     .locator("aside")
     .getByRole("button", { name: /^(新项目|New project)$/ })
     .first();
-  if (!(await opener.isVisible())) await toggle.click();
   await opener.click();
   const chooser = win.getByRole("dialog", { name: /^(新项目|New project)$/ });
   await chooser.waitFor({ state: "visible" });
