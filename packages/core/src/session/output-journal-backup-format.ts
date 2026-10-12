@@ -227,7 +227,7 @@ export function verifyBackupChain(
     header = decodeJson(first.subarray(0, newline));
   requireRepair(
     header.version === 1 &&
-      header.durableHead === 1 &&
+      (header.durableHead === undefined || header.durableHead === 1) &&
       header.sessionId === authority.sessionId &&
       header.startedAt === authority.startedAt &&
       typeof header.sessionIncarnation === "string" &&

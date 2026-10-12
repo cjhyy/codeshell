@@ -5,7 +5,8 @@ an Engine, select a provider, read a default HOME, or clear coverage failures.
 It is an unreleased implementation until its reviewed commit is included in a
 published Core package.
 
-Stop the Session's writers before maintenance. The command takes the existing
+Stop the Session's writers and historical clients before maintenance. Keep them
+stopped after a failed attempt until retry or diagnosis is complete. The command takes the existing
 `state.json.lock` lease, refuses a competing lease, and never waits while holding
 it. Every argument is explicit; the root is the directory containing Session
 subdirectories, rather than a Session directory or application HOME.
@@ -66,7 +67,15 @@ permission merely because a pending marker exists.
 
 The pending marker blocks current readers and writers. The anchor's first byte
 is then set to an invalid JSON byte and flushed, so historical readers/writers
-also refuse the intermediate state. Existing output and manifest files are
+also refuse the intermediate state. Before this byte is flushed, a historical
+v1 algorithm can still show the already damaged source as complete: it ignores
+published-head proof and pending markers. In particular, a pre-existing truncated
+v1 prefix may already pass that old algorithm before repair is invoked. Repair
+preserves that source before fencing it; it does not claim to fix an old reader
+before the durable evidence/barrier sequence. Current readers reject the damaged
+published prefix and the pending marker throughout. Stop historical clients as
+required above rather than relying on their unsupported pending-marker behavior.
+Existing output and manifest files are
 restored on the same inodes; the durable head and `state.json` are never rewritten.
 A missing retained segment named by the proved current manifest can be prepared
 from the complete bundle and published exclusively. A durable creation receipt
