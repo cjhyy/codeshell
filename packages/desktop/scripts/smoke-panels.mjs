@@ -17,6 +17,7 @@ import { fileURLToPath } from "node:url";
 import {
   assert,
   captureRendererErrors,
+  expandSidebar,
   findCodeShellWindow,
   launchCodeShellElectron,
   makeIsolatedElectronHome,
@@ -298,10 +299,14 @@ async function registerFixtureProject() {
     };
   }, projectPath);
   try {
-    await win
-      .getByRole("button", { name: /^(添加项目|Add project)$/ })
-      .first()
-      .click();
+    await expandSidebar(win);
+    const opener = win
+      .locator("aside")
+      .getByRole("button", { name: /^(新项目|New project)$/ })
+      .first();
+    await opener.click();
+    const chooser = win.getByRole("dialog", { name: /^(新项目|New project)$/ });
+    await chooser.getByRole("button", { name: /^(此计算机|This computer)$/ }).click();
     await acceptancePhase("after-picker-click");
     const project = await win.evaluate(async (path) => {
       const projects = await window.codeshell.projectRegistry.list();
