@@ -69,6 +69,8 @@ export interface ResultPayload {
   finalText?: string;
   error?: string;
   command?: string;
+  exitCode?: number;
+  signal?: string;
   ccSessionId?: string;
   changedFiles?: string[];
   cwd?: string;
@@ -101,6 +103,8 @@ interface NotificationEnvelopeBase<
   readonly status?: "completed" | "failed" | "cancelled";
   readonly workKind?: "agent" | "shell" | "video" | "cc";
   readonly command?: string;
+  readonly exitCode?: number;
+  readonly signal?: string;
   readonly finalText?: string;
   readonly ccSessionId?: string;
   readonly error?: string;
@@ -140,6 +144,8 @@ export type DirectionEnvelopeDraft = Omit<
   | "status"
   | "workKind"
   | "command"
+  | "exitCode"
+  | "signal"
   | "finalText"
   | "ccSessionId"
   | "error"
@@ -160,6 +166,8 @@ export type ProgressEnvelopeDraft = Omit<
   | "status"
   | "workKind"
   | "command"
+  | "exitCode"
+  | "signal"
   | "finalText"
   | "ccSessionId"
   | "error"
@@ -180,6 +188,8 @@ export type ResultEnvelopeDraft = Omit<
   | "status"
   | "workKind"
   | "command"
+  | "exitCode"
+  | "signal"
   | "finalText"
   | "ccSessionId"
   | "error"
@@ -228,6 +238,8 @@ export type NotificationItem = {
   status: "completed" | "failed" | "cancelled";
   workKind?: "agent" | "shell" | "video" | "cc";
   command?: string;
+  exitCode?: number;
+  signal?: string;
   finalText?: string;
   ccSessionId?: string;
   error?: string;
@@ -295,9 +307,16 @@ function isResultPayload(value: unknown): value is ResultPayload {
     !isOptionalString(value.finalText) ||
     !isOptionalString(value.error) ||
     !isOptionalString(value.command) ||
+    !isOptionalString(value.signal) ||
     !isOptionalString(value.ccSessionId) ||
     !isOptionalString(value.cwd) ||
     !isOptionalString(value.originClientMessageId)
+  ) {
+    return false;
+  }
+  if (
+    value.exitCode !== undefined &&
+    (!Number.isSafeInteger(value.exitCode) || (value.exitCode as number) < 0)
   ) {
     return false;
   }
@@ -380,6 +399,8 @@ function legacyItemToDraft(item: NotificationItem, sessionId: string): ResultEnv
       status: item.status,
       workKind,
       ...(item.command !== undefined ? { command: item.command } : {}),
+      ...(item.exitCode !== undefined ? { exitCode: item.exitCode } : {}),
+      ...(item.signal !== undefined ? { signal: item.signal } : {}),
       ...(item.finalText !== undefined ? { finalText: item.finalText } : {}),
       ...(item.ccSessionId !== undefined ? { ccSessionId: item.ccSessionId } : {}),
       ...(item.error !== undefined ? { error: item.error } : {}),
@@ -401,6 +422,8 @@ function installLegacyResultAliases(envelope: ResultEnvelope): void {
     status: () => envelope.payload.status,
     workKind: () => envelope.payload.workKind,
     command: () => envelope.payload.command,
+    exitCode: () => envelope.payload.exitCode,
+    signal: () => envelope.payload.signal,
     finalText: () => envelope.payload.finalText,
     ccSessionId: () => envelope.payload.ccSessionId,
     error: () => envelope.payload.error,
@@ -952,6 +975,8 @@ function resultEnvelopeToItem(envelope: ResultEnvelope): NotificationItem {
     status: payload.status,
     ...(payload.workKind !== "agent" ? { workKind: payload.workKind } : {}),
     ...(payload.command !== undefined ? { command: payload.command } : {}),
+    ...(payload.exitCode !== undefined ? { exitCode: payload.exitCode } : {}),
+    ...(payload.signal !== undefined ? { signal: payload.signal } : {}),
     ...(payload.finalText !== undefined ? { finalText: payload.finalText } : {}),
     ...(payload.ccSessionId !== undefined ? { ccSessionId: payload.ccSessionId } : {}),
     ...(payload.error !== undefined ? { error: payload.error } : {}),
@@ -978,6 +1003,8 @@ export function notificationItemToStreamEvent(
   if (item.name !== undefined) event.name = item.name;
   if (item.workKind !== undefined) event.workKind = item.workKind;
   if (item.command !== undefined) event.command = item.command;
+  if (item.exitCode !== undefined) event.exitCode = item.exitCode;
+  if (item.signal !== undefined) event.signal = item.signal;
   if (item.finalText !== undefined) event.finalText = item.finalText;
   if (item.error !== undefined) event.error = item.error;
   if (item.ccSessionId !== undefined) event.ccSessionId = item.ccSessionId;

@@ -256,6 +256,22 @@ export function useHostSubscriptions({
       if (event.type === "background_agent_completed") {
         toast({
           message: bgCompletionText(event),
+          ...(env.sessionId ? { sessionId: env.sessionId } : {}),
+          detail: [
+            env.sessionId ? `sessionId: ${env.sessionId}` : undefined,
+            `workId: ${event.agentId}`,
+            event.description,
+            event.command,
+            event.cwd,
+            event.exitCode !== undefined
+              ? t("misc.bgTask.exitCode", { code: event.exitCode })
+              : undefined,
+            event.signal ? t("misc.bgTask.signal", { signal: event.signal }) : undefined,
+            event.error,
+            event.finalText,
+          ]
+            .filter(Boolean)
+            .join("\n\n"),
           variant:
             event.status === "completed"
               ? "success"

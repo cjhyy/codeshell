@@ -60,6 +60,12 @@ interface Params {
   setRunsInitialRunId: Dispatch<SetStateAction<string | null>>;
 }
 
+export interface DiskSessionOpenGuard {
+  isCurrent: () => boolean;
+  /** Recheck disk/catalog availability after asynchronous workspace resolution. */
+  validate: () => Promise<boolean>;
+}
+
 export function useSessionNavigation({
   projects,
   setProjects,
@@ -352,9 +358,14 @@ export function useSessionNavigation({
     }
   };
 
-  const openAutomationDiskSession = async (session: DiskSessionMeta): Promise<void> => {
+  const openAutomationDiskSession = async (
+    session: DiskSessionMeta,
+    guard?: DiskSessionOpenGuard,
+  ): Promise<void> => {
+    if (guard && !guard.isCurrent()) return;
     const existing = findSessionByEngineId(session.engineSessionId);
     if (existing) {
+      if (guard && existing.session.archived) return;
       selectSession(existing.projectId, existing.session.id);
       return;
     }
@@ -362,6 +373,15 @@ export function useSessionNavigation({
     const projectFactory = makeCreateProjectForCwd(projectsNow);
     const cwd = session.cwd;
     const resolvedForCwd = await resolveProjectCwds([cwd], "disk-rebuild");
+    if (guard) {
+      if (!guard.isCurrent() || !(await guard.validate()) || !guard.isCurrent()) return;
+      // Another importer may have finished while roots or metadata were loading.
+      const latest = findSessionByEngineId(session.engineSessionId);
+      if (latest) {
+        if (!latest.session.archived) selectSession(latest.projectId, latest.session.id);
+        return;
+      }
+    }
     const [placement] = planDiskRebuild([{ ...session, cwd }], projectsNow, {
       caseInsensitive: isCaseInsensitivePlatform(),
       createProjectForCwd: projectFactory.createProjectForCwd,
