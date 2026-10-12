@@ -145,6 +145,8 @@ import assert from "node:assert/strict";
 import { appendFileSync } from "node:fs";
 import { installChooserGuard } from ${JSON.stringify(guardUrl)};
 installChooserGuard({ origins: ${JSON.stringify(origins)}, workerPreload: ${JSON.stringify(pathToFileURL(workerPreload).href)}, workerEntry: ${JSON.stringify(workerEntry)}, role: "main" });
+app.commandLine.removeSwitch("no-sandbox");
+app.enableSandbox();
 app.setAppPath(${JSON.stringify(appDir)});
 globalThis.chooserBlockedRequests = 0;
 const sessions = new Set();
@@ -171,18 +173,20 @@ for (const method of ["request", "fetch"]) {
   };
   assert.throws(() => net[method]("https://external.invalid/"), /refused Electron native network/);
 }
-const chromiumGuardReady = app.whenReady().then(async () => {
+globalThis.chooserChromiumGuardReady = app.whenReady().then(async () => {
 configure(session.defaultSession);
 await assert.rejects(session.defaultSession.fetch("https://external.invalid/chooser-guard-probe"));
 assert.equal(globalThis.chooserBlockedRequests, 1);
 appendFileSync(${JSON.stringify(join(home, "chooser-native-guards.jsonl"))}, JSON.stringify({ pid: process.pid, nativeNegativeProbes: 2, chromiumNegativeProbes: 1 }) + "\\n", { mode: 0o600 });
 });
+globalThis.chooserChromiumGuardReady.catch((error) => {
+  console.error("Cloud chooser Chromium guard failed", error);
+  app.exit(1);
+});
 // Main registers privileged schemes before ready. Node/native guards and the
 // earlier ready/session hooks already confine every product window/request.
-await Promise.all([
-  chromiumGuardReady,
-  import(${JSON.stringify(pathToFileURL(join(appDir, "out/main/index.mjs")).href)}),
-]);
+// Await only pre-ready work here: waiting for ready holds the ESM entry open.
+await import(${JSON.stringify(pathToFileURL(join(appDir, "out/main/index.mjs")).href)});
 `,
       { mode: 0o600 },
     );
@@ -285,6 +289,15 @@ await Promise.all([
         );
       },
       async assertGuards(app) {
+        if (app)
+          await bounded(
+            app.evaluate(async ({ app }) => {
+              if (app.commandLine.hasSwitch("no-sandbox") || !globalThis.chooserChromiumGuardReady)
+                throw new Error("Native Chromium guard or sandbox is missing");
+              await globalThis.chooserChromiumGuardReady;
+            }),
+            "Native Chromium guard readiness",
+          );
         const guards = await lines(join(home, "chooser-guards.jsonl"));
         const workers = await lines(join(home, "chooser-workers.jsonl"));
         const native = await lines(join(home, "chooser-native-guards.jsonl"));
