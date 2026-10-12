@@ -6,7 +6,6 @@ import {
   fchmodSync,
   fstatSync,
   fsyncSync,
-  ftruncateSync,
   lstatSync,
   openSync,
   readSync,
@@ -22,6 +21,7 @@ import {
   acknowledgeOutputCoverageAnchor,
   outputCoverageIncarnation,
 } from "./output-coverage-state.js";
+import { repairUncommittedOutputTail } from "./output-journal-repair.js";
 
 const MAX_JOURNAL_BYTES = 128 * 1024 * 1024;
 const MAX_RECORD_BYTES = 256 * 1024;
@@ -40,6 +40,7 @@ interface Header {
   sessionId: string;
   startedAt: number;
   legacyBaseThroughEventId?: string;
+  durableHead?: 1;
 }
 interface Position {
   sequence: number;
@@ -53,6 +54,8 @@ interface VerifiedFile {
   stamp: string;
   head: Position;
   checkpoints: Checkpoint[];
+  requiresHead: boolean;
+  lastLegacySequence: number;
 }
 // Only verified positions/hashes are cached, never output bodies. Eviction
 // affects performance only; the journal is always sufficient to rebuild them.
@@ -77,8 +80,10 @@ export interface OutputJournalProducer {
   id: string;
 }
 interface RecordValue {
+  version?: 2;
   sequence: number;
   runId?: string;
+  run?: { id: string };
   producer?: OutputJournalProducer;
   event?: StreamEvent;
   fragment?: Fragment;
@@ -197,6 +202,7 @@ function sessionLocation(root: string, sessionId: string) {
     ephemeral?: boolean;
     outputRecoveryIncomplete?: boolean;
     outputJournalIdentity?: string;
+    outputJournalHead?: { version: 1; identity: string } & Position;
   };
   try {
     state = JSON.parse(readBounded(stateFd, 1024 * 1024));
@@ -354,7 +360,8 @@ function readHeader(fd: number, location: ReturnType<typeof sessionLocation>) {
     header.startedAt !== location.state.startedAt ||
     !/^[a-f0-9]{64}$/.test(header.storageScope) ||
     typeof header.sessionIncarnation !== "string" ||
-    typeof header.journalId !== "string"
+    typeof header.journalId !== "string" ||
+    (header.durableHead !== undefined && header.durableHead !== 1)
   )
     invalid("Output journal identity changed");
   const file = fstatSync(fd);
@@ -391,8 +398,14 @@ function parseRecord(
     value.sequence !== previous.sequence + 1 ||
     value.previousHash !== previous.hash ||
     !(
-      (typeof value.runId === "string" && !value.producer) ||
-      (value.runId === undefined && validProducer(value.producer))
+      (value.version === undefined &&
+        !value.run &&
+        ((typeof value.runId === "string" && !value.producer) ||
+          (value.runId === undefined && validProducer(value.producer)))) ||
+      (value.version === 2 &&
+        value.runId === undefined &&
+        ((typeof value.run?.id === "string" && !!value.run.id && !value.producer) ||
+          (!value.run && validProducer(value.producer))))
     ) ||
     !!value.event === !!value.fragment ||
     hash !== digest(JSON.stringify(value))
@@ -415,7 +428,13 @@ function parseRecord(
     throw new JournalError("incomplete", "Invalid output fragment");
   return { value, position: { sequence: value.sequence, offset: line.end, hash } };
 }
-function scan(fd: number, start: Position, size: number, checkpoints?: Checkpoint[]): Position {
+function scan(
+  fd: number,
+  start: Position,
+  size: number,
+  checkpoints?: Checkpoint[],
+  format?: { requiresHead: boolean; lastLegacySequence: number },
+): Position {
   if (size > MAX_JOURNAL_BYTES)
     throw new JournalError("incomplete", "Output journal exceeds its storage budget");
   let current = start;
@@ -425,6 +444,10 @@ function scan(fd: number, start: Position, size: number, checkpoints?: Checkpoin
   for (const line of lines(fd, start.offset, size)) {
     const parsed = parseRecord(line, current);
     current = parsed.position;
+    if (format) {
+      if (parsed.value.version === 2) format.requiresHead = true;
+      else format.lastLegacySequence = current.sequence;
+    }
     const part = parsed.value.fragment;
     if (part) {
       if (!fragment && part.index !== 0)
@@ -468,8 +491,9 @@ function verifiedFile(fd: number, file: string, start: Position, size: number): 
     return cached;
   }
   const checkpoints: Checkpoint[] = [{ ...start, committed: true }];
-  const head = scan(fd, start, size, checkpoints);
-  const result = { stamp, head, checkpoints };
+  const format = { requiresHead: false, lastLegacySequence: 0 };
+  const head = scan(fd, start, size, checkpoints, format);
+  const result = { stamp, head, checkpoints, ...format };
   // A concurrent append may leave the frozen scan valid, but its new stamp
   // cannot certify the unseen tail. Rebuild on the next request instead.
   if (fileStamp(fd) === stamp && fstatSync(fd).size === size) {
@@ -509,6 +533,31 @@ function verifyPosition(fd: number, value: Position, verified: VerifiedFile, who
     invalid("Output cursor no longer identifies a committed prefix");
 }
 
+function publishedHead(
+  fd: number,
+  location: ReturnType<typeof sessionLocation>,
+  loaded: ReturnType<typeof readHeader>,
+  verified: VerifiedFile,
+): Position {
+  const head = location.state.outputJournalHead;
+  if (head === undefined) {
+    if (loaded.header.durableHead === 1 || verified.requiresHead)
+      throw new JournalError("incomplete", "Published output watermark is missing");
+    return verified.head; // Historical v1 data remains readable, without repair authority.
+  }
+  if (head.version !== 1)
+    throw new JournalError("incomplete", "Invalid published output watermark");
+  const position = cursor(Buffer.from(JSON.stringify(head)).toString("base64url"), loaded.identity);
+  if (
+    position.offset > verified.head.offset ||
+    position.sequence > verified.head.sequence ||
+    verified.lastLegacySequence > position.sequence
+  )
+    throw new JournalError("incomplete", "Published output prefix was lost or has an old writer");
+  verifyPosition(fd, position, verified, true);
+  return { sequence: position.sequence, offset: position.offset, hash: position.hash };
+}
+
 /** Reads only this Session root. The returned cursor survives Main/Hub/worker restarts. */
 export function readOutputJournal(
   root: string,
@@ -529,21 +578,22 @@ export function readOutputJournal(
     fd = openRegular(location.file, constants.O_RDONLY);
     const size = fstatSync(fd).size;
     const headerStamp = fileStamp(fd);
-    const { header, identity, start } = readHeader(fd, location);
+    const loaded = readHeader(fd, location);
+    const { header, identity, start } = loaded;
     if (!pinned)
       throw new JournalError("incomplete", "Output journal identity was never committed");
     const verified = verifiedFile(fd, location.file, start, size);
+    const published = publishedHead(fd, location, loaded, verified);
     const after = options.after === undefined ? start : cursor(options.after, identity);
     // The first request freezes a verified prefix. Later pages retain that prefix
     // while independent appends may advance the current file beyond it.
-    const through =
-      options.through === undefined ? verified.head : cursor(options.through, identity);
+    const through = options.through === undefined ? published : cursor(options.through, identity);
     if (
       after.offset < start.offset ||
       after.sequence > through.sequence ||
       after.offset > through.offset ||
-      through.offset > verified.head.offset ||
-      through.sequence > verified.head.sequence
+      through.offset > published.offset ||
+      through.sequence > published.sequence
     )
       invalid("Output cursor is outside the committed prefix");
     // The entire prefix is verified under this exact file stamp. Sparse
@@ -560,7 +610,9 @@ export function readOutputJournal(
       const frame = {
         cursor: token(identity, current),
         sequence: current.sequence,
-        ...(parsed.value.runId !== undefined ? { runId: parsed.value.runId } : {}),
+        ...(parsed.value.runId !== undefined || parsed.value.run
+          ? { runId: parsed.value.runId ?? parsed.value.run!.id }
+          : {}),
         ...(parsed.value.producer ? { producer: parsed.value.producer } : {}),
         ...(parsed.value.event
           ? { event: parsed.value.event }
@@ -615,6 +667,22 @@ export function readOutputJournal(
       invalid("Session was replaced during recovery");
     if (finalLocation.state.outputRecoveryIncomplete)
       throw new JournalError("incomplete", "This Session recorded an output persistence failure");
+    if (location.state.outputJournalHead !== undefined) {
+      const currentHead = finalLocation.state.outputJournalHead;
+      if (!currentHead || currentHead.version !== 1)
+        throw new JournalError("incomplete", "Published output watermark changed during recovery");
+      const currentPosition = cursor(
+        Buffer.from(JSON.stringify(currentHead)).toString("base64url"),
+        identity,
+      );
+      if (
+        currentPosition.sequence < published.sequence ||
+        currentPosition.offset < published.offset ||
+        currentPosition.offset > fstatSync(fd).size ||
+        (currentPosition.sequence === published.sequence && currentPosition.hash !== published.hash)
+      )
+        throw new JournalError("incomplete", "Published output watermark changed during recovery");
+    }
     return {
       version: 1,
       status: "ok",
@@ -669,6 +737,7 @@ export class SessionOutputJournal {
     this.location = sessionLocation(root, sessionId);
     const release = lockSync(this.location.statePath, { realpath: false, retries: 0 });
     let fd: number | undefined;
+    let created = false;
     try {
       this.location.state = this.assertOwner(true).state;
       if (
@@ -692,6 +761,7 @@ export class SessionOutputJournal {
           throw new JournalError("incomplete", "Pinned output journal was lost or truncated");
         const header: Header = {
           version: 1,
+          durableHead: 1,
           storageScope: digest(this.location.root),
           sessionIncarnation: randomUUID(),
           journalId: randomUUID(),
@@ -700,6 +770,7 @@ export class SessionOutputJournal {
           ...(legacyBaseThroughEventId ? { legacyBaseThroughEventId } : {}),
         };
         this.write(fd, JSON.stringify(header) + "\n", 0);
+        created = true;
         fsyncSync(fd);
         // Make first materialization durable along with its directory entry.
         if (process.platform !== "win32") {
@@ -716,7 +787,9 @@ export class SessionOutputJournal {
       const loaded = readHeader(fd, this.location);
       this.identity = loaded.identity;
       this.identityPin = loaded.start.hash;
-      this.position = scan(fd, loaded.start, fstatSync(fd).size);
+      const size = fstatSync(fd).size;
+      const verified = verifiedFile(fd, this.location.file, loaded.start, size);
+      this.position = verified.head;
       if (fileStamp(fd) !== scannedStamp)
         invalid("Output journal changed during owner verification");
       if (!this.location.state.outputJournalIdentity) {
@@ -727,11 +800,27 @@ export class SessionOutputJournal {
           );
         this.persistPin(this.identityPin);
       }
+      if (this.location.state.outputJournalHead === undefined) {
+        if (
+          !created &&
+          (loaded.header.durableHead === 1 ||
+            verified.requiresHead ||
+            this.position.offset !== size)
+        )
+          throw new JournalError("incomplete", "Output tail has no published watermark authority");
+        this.persistHead(this.position);
+      } else {
+        const published = publishedHead(fd, this.location, loaded, verified);
+        if (published.offset !== this.position.offset || published.hash !== this.position.hash)
+          throw new JournalError("incomplete", "Unpublished complete output requires repair");
+      }
       // Isolate only a non-newline tail or an unfinished final whole-event
       // fragment group, including complete lines. Never skip interior damage.
       if (this.position.offset !== fstatSync(fd).size) {
-        ftruncateSync(fd, this.position.offset);
-        fsyncSync(fd);
+        repairUncommittedOutputTail(fd, this.location.file, this.location.directory, {
+          identity: this.identity,
+          ...this.position,
+        });
       }
       this.fileIdentity = fstatSync(fd);
       this.verifiedStamp = fileStamp(fd);
@@ -760,15 +849,38 @@ export class SessionOutputJournal {
       !(allowUnpinned && current.state.outputJournalIdentity === undefined)
     )
       invalid("Output journal identity pin was removed or replaced");
+    if (!allowUnpinned && this.position !== undefined) {
+      const head = current.state.outputJournalHead;
+      if (!head || head.version !== 1)
+        throw new JournalError("incomplete", "Published output watermark was removed or replaced");
+      const position = cursor(
+        Buffer.from(JSON.stringify(head)).toString("base64url"),
+        this.identity,
+      );
+      if (
+        position.sequence < this.position.sequence ||
+        position.offset < this.position.offset ||
+        (position.sequence === this.position.sequence && position.hash !== this.position.hash)
+      )
+        throw new JournalError("incomplete", "Published output watermark was removed or replaced");
+    }
     return current;
   }
   private persistPin(pin: string): void {
+    this.persistProof({ outputJournalIdentity: pin });
+  }
+  private persistHead(position: Position): void {
+    this.persistProof({
+      outputJournalHead: { version: 1, identity: this.identity, ...position },
+    });
+  }
+  private persistProof(patch: Partial<ReturnType<typeof sessionLocation>["state"]>): void {
     const current = this.assertOwner(true);
     const temporary = join(this.location.directory, `.output-pin-${randomUUID()}.tmp`);
     let fd: number | undefined;
     try {
       fd = openRegular(temporary, constants.O_WRONLY | constants.O_CREAT | constants.O_EXCL);
-      this.write(fd, JSON.stringify({ ...current.state, outputJournalIdentity: pin }) + "\n", 0);
+      this.write(fd, JSON.stringify({ ...current.state, ...patch }) + "\n", 0);
       fsyncSync(fd);
       closeSync(fd);
       fd = undefined;
@@ -827,7 +939,7 @@ export class SessionOutputJournal {
     const release = lockSync(this.location.statePath, { realpath: false, retries: 0 });
     let fd: number | undefined;
     try {
-      this.assertOwner();
+      const current = this.assertOwner();
       fd = openRegular(this.location.file, constants.O_RDWR);
       const stat = fstatSync(fd);
       if (
@@ -841,13 +953,16 @@ export class SessionOutputJournal {
         // A local tool may have changed committed bytes without changing inode
         // or length. Ordinary owned appends carry their own completed stamp
         // forward, so only an unexpected stamp change requires a prefix scan.
-        const loaded = readHeader(fd, this.location);
+        const loaded = readHeader(fd, current);
         const verified = verifiedFile(fd, this.location.file, loaded.start, stat.size);
         verifyPosition(fd, this.position, verified, true);
+        const published = publishedHead(fd, current, loaded, verified);
         if (
           loaded.identity !== this.identity ||
           loaded.start.hash !== this.identityPin ||
           verified.head.offset !== stat.size ||
+          published.offset !== verified.head.offset ||
+          published.hash !== verified.head.hash ||
           fileStamp(fd) !== stamp
         )
           invalid("Output journal committed prefix changed under its owner");
@@ -857,8 +972,11 @@ export class SessionOutputJournal {
       const linesToWrite: string[] = [];
       for (const payload of values) {
         const value: RecordValue = {
+          version: 2,
           sequence: next.sequence + 1,
-          ...(typeof this.owner === "string" ? { runId: this.owner } : { producer: this.owner }),
+          ...(typeof this.owner === "string"
+            ? { run: { id: this.owner } }
+            : { producer: this.owner }),
           ...payload,
           previousHash: next.hash,
         };
@@ -874,6 +992,7 @@ export class SessionOutputJournal {
       // receive the same guarantee, rather than relying on eventual close.
       fsyncSync(fd);
       this.assertOwner();
+      this.persistHead(next);
       if (
         event.type === "session_user_message" &&
         !event.injected &&

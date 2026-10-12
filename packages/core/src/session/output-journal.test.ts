@@ -1,4 +1,5 @@
 import { afterEach, describe, expect, spyOn, test } from "bun:test";
+import { createHash } from "node:crypto";
 import {
   appendFileSync,
   chmodSync,
@@ -6,6 +7,8 @@ import {
   existsSync,
   mkdtempSync,
   readFileSync,
+  readdirSync,
+  realpathSync,
   renameSync,
   rmSync,
   statSync,
@@ -81,11 +84,8 @@ describe("Session output journal", () => {
     copyFileSync(f.file, f.file + ".replacement");
     renameSync(f.file + ".replacement", f.file);
     expect(readOutputJournal(f.root, f.id, { after: cursor }).status).toBe("cursor_invalid");
-    expect(readOutputJournal(f.root, f.id).status).toBe("ok");
-    new SessionOutputJournal(f.root, f.id, "next-run").append({
-      type: "text_delta",
-      text: "restored owner",
-    });
+    expect(readOutputJournal(f.root, f.id).status).toBe("cursor_invalid");
+    expect(() => new SessionOutputJournal(f.root, f.id, "next-run")).toThrow();
     rmSync(join(f.root, f.id), { recursive: true });
     expect(readOutputJournal(f.root, f.id).status).toBe("unavailable");
     const newSession = f.manager.create(f.root, "fixture", "fixture", f.id);
@@ -99,12 +99,22 @@ describe("Session output journal", () => {
     const cursor = f.writer.append({ type: "text_delta", text: "完整🙂" });
     const committed = readFileSync(f.file);
     appendFileSync(f.file, Buffer.from([0x7b, 0xe4, 0xb8]));
+    const originalEvidence = readFileSync(f.file);
     const torn = readOutputJournal(f.root, f.id);
     expect(torn.status).toBe("ok");
     expect(torn.through).toBe(cursor);
     expect(torn.uncommittedTail).toBe(true);
     const recovered = new SessionOutputJournal(f.root, f.id, f.runId);
     expect(readFileSync(f.file)).toEqual(committed);
+    const directory = join(f.root, f.id);
+    const receiptName = readdirSync(directory).find((name) =>
+      /^\.output-repair-.*\.json$/.test(name),
+    )!;
+    const receipt = JSON.parse(readFileSync(join(directory, receiptName), "utf8"));
+    expect(readFileSync(join(directory, receipt.evidence))).toEqual(originalEvidence);
+    expect(receipt.sha256).toBe(createHash("sha256").update(originalEvidence).digest("hex"));
+    expect(receipt.published.offset).toBe(committed.length);
+    expect(readOutputJournal(f.root, f.id).through).toBe(cursor);
     recovered.append({ type: "text_delta", text: "after crash" });
     const raw = readFileSync(f.file, "utf8");
     writeFileSync(f.file, raw.replace("完整🙂", "changed"));
@@ -302,8 +312,8 @@ describe("Session output journal", () => {
       f.file,
       readFileSync(f.file, "utf8").lastIndexOf("\n", statSync(f.file).size - 2) + 1,
     );
-    expect(readOutputJournal(f.root, f.id, { through: second }).status).toBe("cursor_invalid");
-    expect(readOutputJournal(f.root, f.id, { through: first.through }).status).toBe("ok");
+    expect(readOutputJournal(f.root, f.id, { through: second }).status).toBe("incomplete");
+    expect(readOutputJournal(f.root, f.id, { through: first.through }).status).toBe("incomplete");
     appendFileSync(f.file, "{broken}\n");
     expect(readOutputJournal(f.root, f.id).status).toBe("incomplete");
   });
@@ -328,11 +338,152 @@ describe("Session output journal", () => {
     ).toBe(true);
     const values = readFileSync(f.file, "utf8").trimEnd().split("\n");
     writeFileSync(f.file, values.slice(0, -1).join("\n") + "\n");
+    const damaged = readFileSync(f.file);
     const incompleteGroup = readOutputJournal(f.root, f.id);
+    expect(incompleteGroup.status).toBe("incomplete");
     expect(incompleteGroup.frames).toEqual([]);
-    expect(incompleteGroup.uncommittedTail).toBe(true);
-    new SessionOutputJournal(f.root, f.id, f.runId);
-    expect(readFileSync(f.file, "utf8").trimEnd().split("\n").length).toBe(1);
+    expect(() => new SessionOutputJournal(f.root, f.id, f.runId)).toThrow(
+      "Published output prefix",
+    );
+    expect(readFileSync(f.file)).toEqual(damaged);
+  });
+  test("an unpublished partial event repairs only after the complete original evidence is durable", () => {
+    const f = fixture();
+    const published = f.writer.append({ type: "text_delta", text: "published" });
+    const stateFile = join(f.root, f.id, "state.json");
+    const beforeAttempt = readFileSync(stateFile);
+    const prefix = readFileSync(f.file);
+    f.writer.append({ type: "text_delta", text: "汉🙂".repeat(40_000) });
+    // Crash while writing fragments, before committing the publish watermark.
+    writeFileSync(stateFile, beforeAttempt);
+    const lines = readFileSync(f.file, "utf8").trimEnd().split("\n");
+    writeFileSync(f.file, lines.slice(0, -1).join("\n") + "\n");
+    const original = readFileSync(f.file);
+    expect(readOutputJournal(f.root, f.id).through).toBe(published);
+    expect(readOutputJournal(f.root, f.id).uncommittedTail).toBe(true);
+    const restarted = new SessionOutputJournal(f.root, f.id, f.runId);
+    expect(readFileSync(f.file)).toEqual(prefix);
+    expect(readOutputJournal(f.root, f.id).through).toBe(published);
+    const directory = join(f.root, f.id);
+    const receiptName = readdirSync(directory).find((name) =>
+      /^\.output-repair-.*\.json$/.test(name),
+    )!;
+    const receipt = JSON.parse(readFileSync(join(directory, receiptName), "utf8"));
+    expect(readFileSync(join(directory, receipt.evidence))).toEqual(original);
+    expect(receipt.bytes).toBe(original.length);
+    expect(receipt.published.offset).toBe(prefix.length);
+    restarted.append({ type: "text_delta", text: "resumed" });
+    expect(readOutputJournal(f.root, f.id).frames.at(-1)?.event?.type).toBe("text_delta");
+  });
+  test("lost or malformed published watermarks fail closed and whole-state saves preserve the watermark", () => {
+    for (const mode of ["missing", "identity", "hash", "position"] as const) {
+      const f = fixture();
+      const published = f.writer.append({ type: "text_delta", text: "durable" });
+      const persisted = f.manager.readSessionState(f.id)!.outputJournalHead;
+      expect(persisted?.sequence).toBe(1);
+      expect(f.manager.saveState(f.session.state)).toBe(true);
+      expect(f.manager.readSessionState(f.id)!.outputJournalHead).toEqual(persisted);
+      const stateFile = join(f.root, f.id, "state.json");
+      const state = JSON.parse(readFileSync(stateFile, "utf8"));
+      if (mode === "missing") delete state.outputJournalHead;
+      else if (mode === "identity") state.outputJournalHead.identity = "a".repeat(64);
+      else if (mode === "hash") state.outputJournalHead.hash = "b".repeat(64);
+      else state.outputJournalHead.offset = 0;
+      writeFileSync(stateFile, JSON.stringify(state));
+      const original = readFileSync(f.file);
+      expect(readOutputJournal(f.root, f.id).complete).toBe(false);
+      expect(readOutputJournal(f.root, f.id, { through: published }).complete).toBe(false);
+      expect(() => new SessionOutputJournal(f.root, f.id, f.runId)).toThrow();
+      expect(() => f.writer.append({ type: "text_delta", text: "late" })).toThrow();
+      expect(readFileSync(f.file)).toEqual(original);
+    }
+  });
+  test("repair receipt failure retains the original source and never truncates unpublished bytes", () => {
+    const f = fixture();
+    f.writer.append({ type: "text_delta", text: "durable" });
+    appendFileSync(f.file, "{torn");
+    const original = readFileSync(f.file);
+    const real = fs.openSync;
+    const denied = spyOn(fs, "openSync").mockImplementation(((path: any, ...args: any[]) => {
+      if (/\.output-repair-.*\.json$/.test(String(path)))
+        throw Object.assign(new Error("repair receipt denied"), { code: "EACCES" });
+      return (real as any)(path, ...args);
+    }) as any);
+    try {
+      expect(() => new SessionOutputJournal(f.root, f.id, f.runId)).toThrow("receipt denied");
+      expect(readFileSync(f.file)).toEqual(original);
+    } finally {
+      denied.mockRestore();
+    }
+  });
+  test("watermark commit failure never publishes or adopts a complete uncommitted event", () => {
+    const f = fixture();
+    const published = f.writer.append({ type: "text_delta", text: "durable" });
+    const stateFile = realpathSync(join(f.root, f.id, "state.json"));
+    const real = fs.renameSync;
+    const denied = spyOn(fs, "renameSync").mockImplementation(((from: any, to: any) => {
+      if (String(to) === stateFile) throw new Error("watermark commit denied");
+      return real(from, to);
+    }) as any);
+    try {
+      expect(() => f.writer.append({ type: "text_delta", text: "unpublished" })).toThrow(
+        "watermark commit denied",
+      );
+    } finally {
+      denied.mockRestore();
+    }
+    const original = readFileSync(f.file);
+    const page = readOutputJournal(f.root, f.id);
+    expect(page.through).toBe(published);
+    expect(page.frames).toHaveLength(1);
+    expect(page.uncommittedTail).toBe(true);
+    expect(() => new SessionOutputJournal(f.root, f.id, f.runId)).toThrow("requires repair");
+    expect(() => f.writer.append({ type: "text_delta", text: "late" })).toThrow();
+    expect(readFileSync(f.file)).toEqual(original);
+  });
+  test("complete historical v1 data keeps its cursor during watermark migration; unknown old tails stay intact", () => {
+    for (const torn of [false, true]) {
+      const f = fixture();
+      f.writer.append({ type: "text_delta", text: "historical" });
+      const stored = readFileSync(f.file, "utf8")
+        .trimEnd()
+        .split("\n")
+        .map((line) => JSON.parse(line));
+      delete stored[0].durableHead;
+      const header = JSON.stringify(stored[0]) + "\n";
+      const pin = createHash("sha256").update(header).digest("hex");
+      const record = stored[1];
+      delete record.version;
+      record.runId = record.run.id;
+      delete record.run;
+      record.previousHash = pin;
+      delete record.hash;
+      record.hash = createHash("sha256").update(JSON.stringify(record)).digest("hex");
+      writeFileSync(f.file, header + JSON.stringify(record) + "\n" + (torn ? "{old-torn" : ""));
+      const stateFile = join(f.root, f.id, "state.json");
+      const state = JSON.parse(readFileSync(stateFile, "utf8"));
+      state.outputJournalIdentity = pin;
+      delete state.outputJournalHead;
+      writeFileSync(stateFile, JSON.stringify(state));
+      const previous = readOutputJournal(f.root, f.id);
+      expect(previous.status).toBe("ok");
+      expect(previous.frames[0].runId).toBe(f.runId);
+      const original = readFileSync(f.file);
+      if (torn) {
+        expect(() => new SessionOutputJournal(f.root, f.id, f.runId)).toThrow(
+          "no published watermark",
+        );
+        expect(readFileSync(f.file)).toEqual(original);
+      } else {
+        const migrated = new SessionOutputJournal(f.root, f.id, f.runId);
+        expect(readOutputJournal(f.root, f.id).through).toBe(previous.through);
+        migrated.append({ type: "text_delta", text: "current" });
+        const page = readOutputJournal(f.root, f.id, { after: previous.through });
+        expect(page.status).toBe("ok");
+        expect(page.frames).toHaveLength(1);
+        expect(page.frames[0].runId).toBe(f.runId);
+      }
+    }
   });
   test("legacy cutover requires the exact bounded prefix and never reads a huge later reply", () => {
     const f = fixture();

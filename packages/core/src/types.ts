@@ -338,6 +338,14 @@ export interface SessionState {
   outputRecoveryIncomplete?: boolean;
   /** Immutable journal header pin, committed before any output cursor is published. */
   outputJournalIdentity?: string;
+  /** Last fsync-completed output prefix, committed before publishing its cursor. */
+  outputJournalHead?: {
+    version: 1;
+    identity: string;
+    sequence: number;
+    offset: number;
+    hash: string;
+  };
   /** Host-only coverage proof; never authorizes a run or claims no-run output persistence. */
   outputCoverageIdentity?: string;
   outputCoverage?: import("./session/output-coverage-state.js").PersistedOutputCoverage;

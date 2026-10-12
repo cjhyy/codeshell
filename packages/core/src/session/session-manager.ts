@@ -1978,6 +1978,9 @@ export class SessionManager {
       // under this same lock while an older Session bundle remains live.
       if (persisted?.outputJournalIdentity)
         state.outputJournalIdentity = persisted.outputJournalIdentity;
+      if (persisted?.outputJournalHead)
+        state.outputJournalHead = structuredClone(persisted.outputJournalHead);
+      else delete state.outputJournalHead;
       if (persisted?.outputRecoveryIncomplete) state.outputRecoveryIncomplete = true;
       preserveOutputCoverage(state, persisted ?? {});
 
