@@ -1,6 +1,5 @@
 import { afterEach, expect, test } from "bun:test";
-import { randomUUID } from "node:crypto";
-import { execFileSync } from "node:child_process";
+import { createHash, randomUUID } from "node:crypto";
 import {
   existsSync,
   fsyncSync,
@@ -182,10 +181,14 @@ test("the real previous registry algorithm rejects the format barrier without re
   const f = await fixture();
   adoptCloudAccount(f.options);
   const before = readFileSync(f.registryFile);
-  const oldSource = execFileSync(
-    "git",
-    ["show", "9fa1194e:packages/server/src/project-runtime/registry.ts"],
-    { encoding: "utf8" },
+  // Exact historical source is checked in so this gate also runs in shallow
+  // release/PR checkouts. Verify its bytes before executing the old algorithm.
+  const oldSource = readFileSync(
+    new URL("./fixtures/registry-9fa1194e.ts.txt", import.meta.url),
+    "utf8",
+  );
+  expect(createHash("sha256").update(oldSource).digest("hex")).toBe(
+    "c74433a4907fb4e9bc72fd1b737676e427360c6cebfb29b3bf8dd164238024fd",
   );
   const file = join(f.root, "historical-registry.ts");
   writeFileSync(
