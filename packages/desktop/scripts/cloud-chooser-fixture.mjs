@@ -164,6 +164,8 @@ const configure = (session) => {
   });
 };
 app.on("web-contents-created", (_event, contents) => configure(contents.session));
+// Keep this private native fetch only for the fixed Chromium interception probe.
+const chromiumProbeFetch = net.fetch.bind(net);
 for (const method of ["request", "fetch"]) {
   const original = net[method].bind(net);
   net[method] = (input, ...args) => {
@@ -175,7 +177,7 @@ for (const method of ["request", "fetch"]) {
 }
 globalThis.chooserChromiumGuardReady = app.whenReady().then(async () => {
 configure(session.defaultSession);
-await assert.rejects(session.defaultSession.fetch("https://external.invalid/chooser-guard-probe"));
+await assert.rejects(chromiumProbeFetch("https://external.invalid/chooser-guard-probe"));
 assert.equal(globalThis.chooserBlockedRequests, 1);
 appendFileSync(${JSON.stringify(join(home, "chooser-native-guards.jsonl"))}, JSON.stringify({ pid: process.pid, nativeNegativeProbes: 2, chromiumNegativeProbes: 1 }) + "\\n", { mode: 0o600 });
 });
@@ -346,8 +348,11 @@ await import(${JSON.stringify(pathToFileURL(join(appDir, "out/main/index.mjs")).
         assert.equal(receipt.sockets, 0);
         return receipt;
       },
-      async assertElectronExited(app, pids) {
-        const child = app.process();
+      async assertElectronExited(child, pids) {
+        assert.ok(
+          child && Number.isSafeInteger(child.pid) && child.pid > 0,
+          "Captured Electron child process handle is required",
+        );
         if (child.exitCode == null && child.signalCode == null)
           await bounded(once(child, "close"), "Electron child close");
         const workers = await lines(join(home, "chooser-workers.jsonl"));
