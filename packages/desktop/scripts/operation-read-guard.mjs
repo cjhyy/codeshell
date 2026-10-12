@@ -35,6 +35,20 @@ const allowedChildren = new Set([
 for (const name of ["spawn", "spawnSync", "execFile", "execFileSync"]) {
   const original = children[name];
   children[name] = function (command, ...args) {
+    if (
+      name === "execFileSync" &&
+      command === "/bin/ps" &&
+      JSON.stringify(args[0]) === JSON.stringify(["-axo", "pid=,ppid=,lstart="])
+    ) {
+      // The parent Electron watchdog needs only process incarnation metadata.
+      // Fix both arguments and environment; other ps modes remain blocked.
+      return original.call(this, "/bin/ps", args[0], {
+        encoding: "utf8",
+        timeout: 1_500,
+        maxBuffer: 8 * 1024 * 1024,
+        env: { HOME: home, PATH: "/usr/bin:/bin", LC_ALL: "C" },
+      });
+    }
     const query = ["rev-parse", "--path-format=absolute", "--git-common-dir"];
     if (
       (command === "git" || command === "/usr/bin/git") &&

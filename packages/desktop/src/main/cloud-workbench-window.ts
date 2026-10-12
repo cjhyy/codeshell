@@ -29,7 +29,7 @@ export async function openCloudWorkbench(rawAddress: unknown): Promise<{ address
     return { address };
   }
   const browserSession = session.fromPartition(cloudWorkbenchPartition(address));
-  const title = `云端工作台 · ${new URL(address).host}`;
+  const title = `云端项目 · ${new URL(address).host}`;
   const win = new BrowserWindow({
     width: 1280,
     height: 860,
@@ -206,7 +206,7 @@ export async function openCloudWorkbench(rawAddress: unknown): Promise<{ address
     }
   } catch {
     if (!win.isDestroyed()) win.destroy();
-    throw new Error("无法打开云端工作台，请检查地址和网络连接。");
+    throw new Error("无法打开云端项目，请检查地址和网络连接。");
   }
   return { address };
 }

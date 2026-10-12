@@ -1032,7 +1032,7 @@ const accessPasscode = new AccessPasscode({
 });
 let prepareAccountGitHubLink:
   | ReturnType<typeof registerRemoteLinkIpc>["prepareGitHubLink"]
-  | undefined;
+  | undefined = undefined;
 const { mobileRemoteController } = createDesktopRemoteServices({
   ipcMain,
   userDataDir: app.getPath("userData"),
