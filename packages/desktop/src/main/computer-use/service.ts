@@ -33,23 +33,45 @@ export interface CuaComputerUseInputs {
 }
 
 export type CuaComputerUseDecision =
-  | { readonly enabled: false; readonly reason: "flag_off" | "unsupported_platform" | "driver_not_found" }
+  | {
+      readonly enabled: false;
+      readonly reason: "flag_off" | "unsupported_platform" | "driver_not_found";
+    }
   | { readonly enabled: true; readonly host: CuaDriverHost };
+
+function disabled(
+  reason: Extract<CuaComputerUseDecision, { enabled: false }>["reason"],
+  log?: CuaDriverHostOptions["log"],
+): CuaComputerUseDecision {
+  void resetCuaComputerUse().catch((error) => {
+    log?.("cua_driver_stop_failed", { error: String(error) });
+  });
+  return { enabled: false, reason };
+}
 
 /** Create (but do not start) the process-wide host when every gate passes. */
 export function initCuaComputerUse(inputs: CuaComputerUseInputs): CuaComputerUseDecision {
-  if (!isFeatureEnabled(inputs.flags, "computer_use_cua")) return { enabled: false, reason: "flag_off" };
+  if (!isFeatureEnabled(inputs.flags, "computer_use_cua")) return disabled("flag_off", inputs.log);
   // Windows/Linux embedding exists upstream but is out of scope for the spike.
-  if (inputs.platform !== "darwin") return { enabled: false, reason: "unsupported_platform" };
+  if (inputs.platform !== "darwin") return disabled("unsupported_platform", inputs.log);
   const driverPath = resolveCuaDriverPath({
     env: inputs.env ?? process.env,
     isPackaged: inputs.isPackaged,
     resourcesPath: inputs.resourcesPath,
   });
-  if (!driverPath) return { enabled: false, reason: "driver_not_found" };
+  if (!driverPath) return disabled("driver_not_found", inputs.log);
+  if (host && host.status().driverPath === driverPath && host.status().state !== "stopped") {
+    return { enabled: true, host };
+  }
+  // A changed executable replaces the registration immediately. The previous
+  // host retains its own private socket until its bounded shutdown completes.
+  void resetCuaComputerUse().catch((error) => {
+    inputs.log?.("cua_driver_stop_failed", { error: String(error) });
+  });
   const options: CuaDriverHostOptions = {
     driverPath,
     hostBundleId: CODESHELL_BUNDLE_ID,
+    parentEnv: inputs.env ?? process.env,
     log: inputs.log,
   };
   host = (inputs.createHost ?? ((o) => new CuaDriverHost(o)))(options);
@@ -61,8 +83,10 @@ export function getCuaDriverHost(): CuaDriverHost | undefined {
 }
 
 /** Test seam and shutdown helper. */
-export function resetCuaComputerUse(): void {
+export async function resetCuaComputerUse(): Promise<void> {
+  const previous = host;
   host = undefined;
+  await previous?.stop();
 }
 
 /**
@@ -72,6 +96,6 @@ export function resetCuaComputerUse(): void {
 export function hostMcpServersEnv(current: CuaDriverHost | undefined = host): string | undefined {
   if (!current) return undefined;
   const state = current.status().state;
-  if (state === "stopped" || state === "failed") return undefined;
+  if (state !== "running") return undefined;
   return encodeHostMcpServers({ [CUA_HOST_MCP_SERVER_NAME]: current.mcpDeclaration() });
 }

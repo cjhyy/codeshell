@@ -18,9 +18,19 @@
  * the design doc. This is the process skeleton only.
  */
 import { spawn as nodeSpawn, type ChildProcess, type SpawnOptions } from "node:child_process";
-import { accessSync, constants, existsSync, unlinkSync } from "node:fs";
-import { homedir, tmpdir, userInfo } from "node:os";
-import { join } from "node:path";
+import { randomBytes } from "node:crypto";
+import {
+  accessSync,
+  constants,
+  lstatSync,
+  mkdirSync,
+  rmdirSync,
+  statSync,
+  unlinkSync,
+} from "node:fs";
+import { createConnection } from "node:net";
+import { homedir, tmpdir } from "node:os";
+import { dirname, join } from "node:path";
 
 export const CUA_HOST_MCP_SERVER_NAME = "host:cua-driver";
 
@@ -55,7 +65,7 @@ export interface CuaDriverHostOptions {
   readonly socketPath?: string;
   readonly parentEnv?: NodeJS.ProcessEnv;
   readonly spawn?: SpawnFn;
-  readonly socketReady?: (path: string) => boolean;
+  readonly socketReady?: (path: string) => boolean | Promise<boolean>;
   readonly log?: (event: string, data?: Record<string, unknown>) => void;
   readonly readyTimeoutMs?: number;
   readonly maxRestarts?: number;
@@ -72,16 +82,50 @@ const KILL_GRACE_MS = 1_000;
 
 /**
  * macOS limits AF_UNIX paths to 104 bytes, which `~/Library/Application
- * Support/...` can exceed. The per-user TMPDIR is private (0700) and short.
+ * Support/...` can exceed. Each host gets its own private directory so a dev
+ * instance cannot unlink or connect to another instance's daemon socket.
  */
 export function defaultCuaSocketPath(): string {
-  return join(tmpdir(), `codeshell-cua-${userInfo().uid}.sock`);
+  const name = `cs-cua-${process.pid}-${randomBytes(6).toString("hex")}`;
+  const path = join(tmpdir(), name, "driver.sock");
+  return Buffer.byteLength(path) < 104 ? path : join("/tmp", name, "driver.sock");
+}
+
+function socketStat(path: string) {
+  try {
+    return lstatSync(path);
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code === "ENOENT") return undefined;
+    throw error;
+  }
+}
+
+/** A bound socket is not ready until its listener accepts connections. */
+async function socketAcceptsConnections(path: string): Promise<boolean> {
+  if (!socketStat(path)?.isSocket()) return false;
+  return new Promise((resolve) => {
+    const socket = createConnection(path);
+    let settled = false;
+    const finish = (ready: boolean) => {
+      if (settled) return;
+      settled = true;
+      socket.destroy();
+      resolve(ready);
+    };
+    socket.once("connect", () => finish(true));
+    socket.once("error", () => finish(false));
+    socket.setTimeout(100, () => finish(false));
+  });
+}
+
+function errorMessage(error: unknown): string {
+  return error instanceof Error ? error.message : String(error);
 }
 
 function isExecutable(path: string): boolean {
   try {
     accessSync(path, constants.X_OK);
-    return true;
+    return statSync(path).isFile();
   } catch {
     return false;
   }
@@ -114,8 +158,11 @@ export function resolveCuaDriverPath(options: {
 
 export class CuaDriverHost {
   private readonly socketPath: string;
+  private readonly socketDirectory: string | undefined;
+  private socketDirectoryCreated = false;
+  private socketClaimed = false;
   private readonly spawnFn: SpawnFn;
-  private readonly socketReady: (path: string) => boolean;
+  private readonly socketReady: (path: string) => boolean | Promise<boolean>;
   private readonly log: (event: string, data?: Record<string, unknown>) => void;
   private readonly sleep: (ms: number) => Promise<void>;
   private child: ChildProcess | undefined;
@@ -124,11 +171,14 @@ export class CuaDriverHost {
   private restarts = 0;
   private lastError: string | undefined;
   private startPromise: Promise<void> | undefined;
+  private stopPromise: Promise<void> | undefined;
+  private termination: { child: ChildProcess; promise: Promise<boolean> } | undefined;
 
   constructor(private readonly options: CuaDriverHostOptions) {
     this.socketPath = options.socketPath ?? defaultCuaSocketPath();
+    this.socketDirectory = options.socketPath ? undefined : dirname(this.socketPath);
     this.spawnFn = options.spawn ?? (nodeSpawn as SpawnFn);
-    this.socketReady = options.socketReady ?? existsSync;
+    this.socketReady = options.socketReady ?? socketAcceptsConnections;
     this.log = options.log ?? (() => {});
     this.sleep = options.sleep ?? ((ms) => new Promise((resolve) => setTimeout(resolve, ms)));
   }
@@ -158,42 +208,76 @@ export class CuaDriverHost {
 
   /** Concurrent calls coalesce into one daemon generation. */
   start(): Promise<void> {
-    if (this.state === "running") return Promise.resolve();
     if (this.state === "stopped") return Promise.reject(new Error("cua-driver host is stopped"));
-    this.startPromise ??= this.launch().finally(() => {
-      this.startPromise = undefined;
-    });
-    return this.startPromise;
+    if (this.startPromise) return this.startPromise;
+    if (this.state === "running") return Promise.resolve();
+    if (this.child) return Promise.reject(new Error("previous cua-driver daemon is still running"));
+    return this.beginStart();
   }
 
-  async stop(): Promise<void> {
+  stop(): Promise<void> {
     this.state = "stopped";
+    this.stopPromise ??= this.shutdown();
+    return this.stopPromise;
+  }
+
+  private beginStart(delay = 0): Promise<void> {
+    const startup = delay ? this.sleep(delay).then(() => this.launch()) : this.launch();
+    const pending = startup.finally(() => {
+      if (this.startPromise === pending) this.startPromise = undefined;
+    });
+    this.startPromise = pending;
+    return pending;
+  }
+
+  private async shutdown(): Promise<void> {
     const child = this.child;
-    this.child = undefined;
-    if (child && child.exitCode === null && child.signalCode === null) {
-      const exited = new Promise<void>((resolve) => child.once("exit", () => resolve()));
+    const terminated = !child || (await this.terminateChild(child));
+    if (terminated) {
+      if (this.child === child) this.child = undefined;
+      this.cleanSocket();
+    } else {
+      this.lastError = "daemon did not exit after SIGKILL";
+      this.log("cua_driver_stop_failed", { generation: this.generation, error: this.lastError });
+    }
+    this.log("cua_driver_stopped", { generation: this.generation });
+  }
+
+  private terminateChild(child: ChildProcess): Promise<boolean> {
+    if (this.termination?.child === child) return this.termination.promise;
+    const pending = this.waitForChildExit(child).finally(() => {
+      if (this.termination?.promise === pending) this.termination = undefined;
+    });
+    this.termination = { child, promise: pending };
+    return pending;
+  }
+
+  private async waitForChildExit(child: ChildProcess): Promise<boolean> {
+    if (child.exitCode !== null || child.signalCode !== null || child.pid === undefined)
+      return true;
+    let onExit: () => void = () => {};
+    const exited = new Promise<void>((resolve) => {
+      onExit = resolve;
+      child.once("exit", onExit);
+    });
+    try {
       child.kill("SIGTERM");
       const timedOut = await Promise.race([
         exited.then(() => false),
         this.sleep(STOP_GRACE_MS).then(() => true),
       ]);
-      if (timedOut) {
-        child.kill("SIGKILL");
-        const forcedExit = await Promise.race([
-          exited.then(() => true),
-          this.sleep(KILL_GRACE_MS).then(() => false),
-        ]);
-        if (!forcedExit) {
-          this.lastError = "daemon did not exit after SIGKILL";
-          this.log("cua_driver_stop_failed", {
-            generation: this.generation,
-            error: this.lastError,
-          });
-        }
-      }
+      if (!timedOut) return true;
+      child.kill("SIGKILL");
+      return await Promise.race([
+        exited.then(() => true),
+        this.sleep(KILL_GRACE_MS).then(() => false),
+      ]);
+    } catch (error) {
+      this.log("cua_driver_terminate_failed", { error: errorMessage(error) });
+      return false;
+    } finally {
+      child.removeListener("exit", onExit);
     }
-    this.removeStaleSocket();
-    this.log("cua_driver_stopped", { generation: this.generation });
   }
 
   private daemonEnv(): Record<string, string> {
@@ -212,11 +296,37 @@ export class CuaDriverHost {
     return env;
   }
 
-  private removeStaleSocket(): void {
+  private prepareSocket(): void {
+    if (Buffer.byteLength(this.socketPath) >= 104) {
+      throw new Error("cua-driver socket path exceeds the macOS 103-byte limit");
+    }
+    if (this.socketDirectory && !this.socketDirectoryCreated) {
+      mkdirSync(this.socketDirectory, { mode: 0o700 });
+      this.socketDirectoryCreated = true;
+    }
+    const stat = socketStat(this.socketPath);
+    if (stat) {
+      if (!this.socketClaimed || !stat.isSocket()) {
+        throw new Error("cua-driver socket path is already in use");
+      }
+      unlinkSync(this.socketPath);
+    }
+    this.socketClaimed = true;
+  }
+
+  private cleanSocket(): void {
+    const claimed = this.socketClaimed;
+    // Cleanup ends this generation's authority even if unlink fails. A later
+    // listener at an explicit path must never inherit our cleanup permission.
+    this.socketClaimed = false;
     try {
-      if (existsSync(this.socketPath)) unlinkSync(this.socketPath);
+      if (claimed && socketStat(this.socketPath)?.isSocket()) unlinkSync(this.socketPath);
+      if (this.socketDirectoryCreated) {
+        rmdirSync(this.socketDirectory!);
+        this.socketDirectoryCreated = false;
+      }
     } catch {
-      // Best effort; the next daemon rebinds or reports the conflict.
+      // Never recursively remove a directory or unlink an unrelated file.
     }
   }
 
@@ -225,63 +335,79 @@ export class CuaDriverHost {
   }
 
   private async launch(): Promise<void> {
-    this.state = this.generation === 0 ? "starting" : "restarting";
-    this.removeStaleSocket();
-    const generation = ++this.generation;
-    const child = this.spawnFn(
-      this.options.driverPath,
-      ["serve", "--embedded", "--socket", this.socketPath],
-      {
-        env: this.daemonEnv(),
-        // Direct child, no shell, no `open -a`: anything else would leave the
-        // app's TCC responsibility chain.
-        stdio: ["ignore", "pipe", "pipe"],
-        detached: false,
-      },
-    );
-    this.child = child;
-    child.stdout?.on("data", (chunk: Buffer) =>
-      this.log("cua_driver_stdout", { generation, text: chunk.toString("utf8").slice(0, 800) }),
-    );
-    child.stderr?.on("data", (chunk: Buffer) =>
-      this.log("cua_driver_stderr", { generation, text: chunk.toString("utf8").slice(0, 800) }),
-    );
-    let spawnError: Error | undefined;
-    child.once("error", (error) => {
-      spawnError = error;
-    });
-    child.once("exit", (code, signal) => this.onExit(generation, code, signal));
-
-    const timeout = this.options.readyTimeoutMs ?? DEFAULT_READY_TIMEOUT_MS;
-    const deadline = Date.now() + timeout;
-    while (Date.now() < deadline) {
-      // stop() can run while readiness polling is asleep. Cancellation must
-      // remain terminal instead of being reported as a retryable startup error.
-      this.throwIfStopped();
-      if (spawnError) break;
-      if (this.child !== child) {
-        this.state = "failed";
-        this.lastError = "daemon exited during startup";
-        throw new Error(this.lastError);
-      }
-      if (this.socketReady(this.socketPath)) {
-        this.state = "running";
-        this.lastError = undefined;
-        this.log("cua_driver_running", { generation, socketPath: this.socketPath });
-        return;
-      }
-      await this.sleep(50);
-    }
     this.throwIfStopped();
-    this.lastError = spawnError
-      ? `spawn failed: ${spawnError.message}`
-      : `socket not ready after ${timeout}ms`;
-    this.state = "failed";
-    if (this.child === child) {
-      this.child = undefined;
-      child.kill("SIGKILL");
+    this.state = this.generation === 0 ? "starting" : "restarting";
+    const generation = ++this.generation;
+    let child: ChildProcess | undefined;
+    try {
+      this.prepareSocket();
+      try {
+        child = this.spawnFn(
+          this.options.driverPath,
+          ["serve", "--embedded", "--socket", this.socketPath],
+          {
+            env: this.daemonEnv(),
+            // Keep the direct-child macOS TCC responsibility chain.
+            stdio: ["ignore", "pipe", "pipe"],
+            detached: false,
+          },
+        );
+      } catch (error) {
+        throw new Error(`spawn failed: ${errorMessage(error)}`, { cause: error });
+      }
+      this.child = child;
+      child.stdout?.on("data", (chunk: Buffer) =>
+        this.log("cua_driver_stdout", { generation, text: chunk.toString("utf8").slice(0, 800) }),
+      );
+      child.stderr?.on("data", (chunk: Buffer) =>
+        this.log("cua_driver_stderr", { generation, text: chunk.toString("utf8").slice(0, 800) }),
+      );
+      let spawnError: Error | undefined;
+      child.on("error", (error) => {
+        spawnError = error;
+      });
+      child.once("exit", (code, signal) => this.onExit(generation, code, signal));
+      const activeChild = child;
+      const checkStartup = () => {
+        this.throwIfStopped();
+        if (spawnError) throw new Error(`spawn failed: ${spawnError.message}`);
+        if (
+          this.child !== activeChild ||
+          activeChild.exitCode !== null ||
+          activeChild.signalCode !== null
+        ) {
+          throw new Error("daemon exited during startup");
+        }
+      };
+
+      const timeout = this.options.readyTimeoutMs ?? DEFAULT_READY_TIMEOUT_MS;
+      const deadline = Date.now() + timeout;
+      while (Date.now() < deadline) {
+        checkStartup();
+        const ready = await this.socketReady(this.socketPath);
+        checkStartup();
+        if (ready) {
+          this.state = "running";
+          this.lastError = undefined;
+          this.log("cua_driver_running", { generation, socketPath: this.socketPath });
+          return;
+        }
+        await this.sleep(50);
+      }
+      throw new Error(`socket not ready after ${timeout}ms`);
+    } catch (error) {
+      const terminated = !child || this.child !== child || (await this.terminateChild(child));
+      if (terminated) {
+        if (this.child === child) this.child = undefined;
+        this.cleanSocket();
+      }
+      this.throwIfStopped();
+      this.lastError = terminated
+        ? errorMessage(error)
+        : `${errorMessage(error)}; previous daemon did not exit after SIGKILL`;
+      this.state = "failed";
+      throw new Error(this.lastError, { cause: error });
     }
-    throw new Error(this.lastError);
   }
 
   private onExit(generation: number, code: number | null, signal: NodeJS.Signals | null): void {
@@ -289,22 +415,35 @@ export class CuaDriverHost {
     this.child = undefined;
     this.log("cua_driver_exited", { generation, code, signal });
     if (this.state !== "running") return; // startup loop reports its own failure
+    // Remove the exited generation's socket before backoff and relinquish its
+    // claim. Another listener may legitimately bind an explicit path while we
+    // wait; restart and stop must then preserve that listener.
+    this.cleanSocket();
     // In-flight actions of this generation have unknown completion; the MCP
     // proxy surfaces the broken socket and callers must re-observe. Never
     // replay an action here.
+    this.scheduleRestart(`daemon exited (code=${code}, signal=${signal})`);
+  }
+
+  private scheduleRestart(reason: string): void {
+    if (this.state === "stopped") return;
     const maxRestarts = this.options.maxRestarts ?? DEFAULT_MAX_RESTARTS;
+    if (this.child) {
+      this.state = "failed";
+      return;
+    }
     if (this.restarts >= maxRestarts) {
       this.state = "failed";
-      this.lastError = `daemon exited (code=${code}, signal=${signal}); restart budget exhausted`;
+      this.lastError = `${reason}; restart budget exhausted`;
       return;
     }
     const delay = 1_000 * 2 ** this.restarts++;
     this.state = "restarting";
-    void this.sleep(delay).then(() => {
-      if (this.state !== "restarting") return;
-      this.start().catch((error) =>
-        this.log("cua_driver_restart_failed", { error: String(error) }),
-      );
+    this.lastError = reason;
+    void this.beginStart(delay).catch((error) => {
+      if (this.state === "stopped") return;
+      this.log("cua_driver_restart_failed", { error: String(error) });
+      this.scheduleRestart(errorMessage(error));
     });
   }
 }

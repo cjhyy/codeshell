@@ -1,5 +1,13 @@
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
-import { mkdtempSync, mkdirSync, rmSync, symlinkSync, writeFileSync } from "node:fs";
+import {
+  existsSync,
+  mkdtempSync,
+  mkdirSync,
+  readFileSync,
+  rmSync,
+  symlinkSync,
+  writeFileSync,
+} from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { pathToFileURL } from "node:url";
@@ -26,20 +34,35 @@ beforeEach(() => {
     `
 import { Server } from ${JSON.stringify(import.meta.resolve("@modelcontextprotocol/sdk/server/index.js"))};
 import { StdioServerTransport } from ${JSON.stringify(import.meta.resolve("@modelcontextprotocol/sdk/server/stdio.js"))};
-import { ListToolsRequestSchema, CallToolRequestSchema, ListResourcesRequestSchema, ReadResourceRequestSchema } from ${JSON.stringify(import.meta.resolve("@modelcontextprotocol/sdk/types.js"))};
+import { InitializeRequestSchema, ListToolsRequestSchema, CallToolRequestSchema, ListResourcesRequestSchema, ReadResourceRequestSchema } from ${JSON.stringify(import.meta.resolve("@modelcontextprotocol/sdk/types.js"))};
+import { appendFileSync, existsSync } from "node:fs";
+appendFileSync(${JSON.stringify(join(directory, "starts.log"))}, process.pid + "\\n");
 const server = new Server({ name: "chrome_devtools", version: "test" }, { capabilities: { tools: {}, resources: {} } });
+if (existsSync(${JSON.stringify(join(directory, "block-initialize"))})) {
+  server.setRequestHandler(InitializeRequestSchema, async () => {
+    appendFileSync(${JSON.stringify(join(directory, "blocked-pids.log"))}, process.pid + "\\n");
+    return new Promise(() => {});
+  });
+}
 server.setRequestHandler(ListToolsRequestSchema, async () => ({ tools: [
-  { name: "take_snapshot", inputSchema: { type: "object", properties: { verbose: { type: "boolean" }, filePath: { type: "string" } } } },
-  { name: "fail", inputSchema: { type: "object", properties: {} } }
+  { name: existsSync(${JSON.stringify(join(directory, "changed-catalog"))}) ? "read_snapshot" : "take_snapshot", inputSchema: { type: "object", properties: { verbose: { type: "boolean" }, filePath: { type: "string" } } } },
+  { name: "fail", inputSchema: { type: "object", properties: {} } },
+  { name: "crash", inputSchema: { type: "object", properties: {} } }
 ] }));
 async function details(args) {
   const { roots } = await server.listRoots();
   return JSON.stringify({ roots, cwd: process.cwd(), pid: process.pid, args });
 }
-server.setRequestHandler(CallToolRequestSchema, async (request) => ({
-  isError: request.params.name === "fail",
-  content: [{ type: "text", text: request.params.name === "fail" ? "Access denied by fixture roots" : await details(request.params.arguments) }]
-}));
+server.setRequestHandler(CallToolRequestSchema, async (request) => {
+  if (request.params.name === "crash") {
+    appendFileSync(${JSON.stringify(join(directory, "crashes.log"))}, "crash\\n");
+    process.exit(1);
+  }
+  return {
+    isError: request.params.name === "fail",
+    content: [{ type: "text", text: request.params.name === "fail" ? "Access denied by fixture roots" : await details(request.params.arguments) }]
+  };
+});
 server.setRequestHandler(ListResourcesRequestSchema, async () => ({ resources: [{ uri: "test://workspace", name: process.cwd() }] }));
 server.setRequestHandler(ReadResourceRequestSchema, async () => ({ contents: [{ uri: "test://workspace", mimeType: "text/plain", text: await details({}) }] }));
 await server.connect(new StdioServerTransport());
@@ -74,7 +97,7 @@ function context(name: string, explicitWorkspace = true): ToolContext {
 
 async function call(ctx?: ToolContext, args: Record<string, unknown> = {}): Promise<any> {
   const result = await registry.executeTool("mcp_browser_take_snapshot", args, { ctx });
-  expect(result.isError).toBe(false);
+  expect(result.isError, result.error ?? result.result).toBe(false);
   return JSON.parse(result.result!.split("\n")[1]);
 }
 
@@ -82,7 +105,146 @@ function rootUri(name: string): string {
   return pathToFileURL(canonicalPath(join(directory, name))).href;
 }
 
+async function waitFor(check: () => boolean, message: string): Promise<void> {
+  const deadline = Date.now() + 2_000;
+  while (!check()) {
+    if (Date.now() >= deadline) throw new Error(message);
+    await new Promise((resolve) => setTimeout(resolve, 10));
+  }
+}
+
+function processIsAlive(pid: number): boolean {
+  try {
+    process.kill(pid, 0);
+    return true;
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code === "ESRCH") return false;
+    throw error;
+  }
+}
+
 describe("MCP workspace transport isolation", () => {
+  test("a closed transport reconnects on the next invocation without replaying the failed action", async () => {
+    const a = context("a");
+    await manager.connectAll(servers, {}, undefined, a);
+    const first = await call(a);
+    const failure = await registry.executeTool("mcp_browser_crash", {}, { ctx: a });
+    expect(failure.isError).toBe(true);
+
+    // A failed reconnect must retain the immutable Run declaration and tool
+    // catalog for another explicit retry.
+    const fixture = join(directory, "server.mjs");
+    const source = readFileSync(fixture, "utf8");
+    rmSync(fixture);
+    const unavailable = await registry.executeTool("mcp_browser_take_snapshot", {}, { ctx: a });
+    expect(unavailable.isError).toBe(true);
+    writeFileSync(fixture, source);
+
+    const second = await call(a);
+    expect(second.pid).not.toBe(first.pid);
+    expect(second.roots).toEqual(first.roots);
+    expect(second.cwd).toBe(first.cwd);
+    expect(readFileSync(join(directory, "crashes.log"), "utf8")).toBe("crash\n");
+  });
+
+  test("a no-context SDK call cannot reconnect a scoped server without its roots", async () => {
+    const a = context("a");
+    await manager.connectAll(servers, {}, undefined, a);
+    const first = await call(a);
+    expect((await registry.executeTool("mcp_browser_crash", {}, { ctx: a })).isError).toBe(true);
+    await expect(manager.callToolResult("browser", "take_snapshot", {})).rejects.toThrow(
+      "requires its workspace context to reconnect",
+    );
+    expect(readFileSync(join(directory, "starts.log"), "utf8").trim().split("\n")).toHaveLength(1);
+    const second = await call(a);
+    expect(second.roots).toEqual(first.roots);
+    expect(second.cwd).toBe(first.cwd);
+    expect(readFileSync(join(directory, "starts.log"), "utf8").trim().split("\n")).toHaveLength(2);
+  });
+
+  test("a distinct caller signal cancels reconnect initialization and cleans up its child", async () => {
+    const a = context("a");
+    servers.browser.connectTimeoutMs = 3_000;
+    servers.browser.connectRetries = 0;
+    await manager.connectAll(servers, {}, undefined, a);
+    const first = await call(a);
+    expect((await registry.executeTool("mcp_browser_crash", {}, { ctx: a })).isError).toBe(true);
+    writeFileSync(join(directory, "block-initialize"), "block");
+    const caller = new AbortController();
+    const recovery = manager
+      .callToolResult("browser", "take_snapshot", {}, caller.signal, a)
+      .catch((error) => error);
+    const blockedPids = join(directory, "blocked-pids.log");
+    try {
+      await waitFor(() => existsSync(blockedPids), "reconnect did not reach blocked initialize");
+      const pid = Number(readFileSync(blockedPids, "utf8").trim());
+      expect(processIsAlive(pid)).toBe(true);
+      expect(a.signal).toBeUndefined();
+      const abortedAt = Date.now();
+      caller.abort();
+      const error = await recovery;
+      expect(error.name).toBe("AbortError");
+      expect(Date.now() - abortedAt).toBeLessThan(2_000);
+      await waitFor(() => !processIsAlive(pid), "cancelled reconnect child is still alive");
+      expect(registry.hasTool("mcp_browser_take_snapshot")).toBe(true);
+      rmSync(join(directory, "block-initialize"));
+      const second = await call(a);
+      expect(second.pid).not.toBe(pid);
+      expect(second.roots).toEqual(first.roots);
+      expect(second.cwd).toBe(first.cwd);
+    } finally {
+      caller.abort();
+      await recovery;
+    }
+  });
+
+  test("successful reconnect removes schemas omitted by the replacement catalog", async () => {
+    const a = context("a");
+    await manager.connectAll(servers, {}, undefined, a);
+    expect(registry.hasTool("mcp_browser_take_snapshot")).toBe(true);
+    expect((await registry.executeTool("mcp_browser_crash", {}, { ctx: a })).isError).toBe(true);
+    writeFileSync(join(directory, "changed-catalog"), "replace snapshot");
+    await manager.callToolResult("browser", "read_snapshot", {}, undefined, a);
+    expect(registry.hasTool("mcp_browser_read_snapshot")).toBe(true);
+    expect(registry.hasTool("mcp_browser_take_snapshot")).toBe(false);
+    const fork = new ToolRegistry();
+    manager.syncToolsToRegistry(fork, a);
+    expect(fork.hasTool("mcp_browser_read_snapshot")).toBe(true);
+    expect(fork.hasTool("mcp_browser_take_snapshot")).toBe(false);
+  });
+
+  test("replacement catalog pruning retains tools still served by a peer workspace", async () => {
+    const a = context("a"),
+      b = context("b"),
+      ownerA = {},
+      ownerB = {};
+    await Promise.all([
+      manager.connectAll(servers, ownerA, undefined, a),
+      manager.connectAll(servers, ownerB, undefined, b),
+    ]);
+    const peer = await call(b);
+    expect((await registry.executeTool("mcp_browser_crash", {}, { ctx: a })).isError).toBe(true);
+    writeFileSync(join(directory, "changed-catalog"), "replace snapshot");
+    await manager.callToolResult("browser", "read_snapshot", {}, undefined, a);
+    expect(registry.hasTool("mcp_browser_read_snapshot")).toBe(true);
+    expect(registry.hasTool("mcp_browser_take_snapshot")).toBe(true);
+    expect((await call(b)).pid).toBe(peer.pid);
+    const firstFork = new ToolRegistry(),
+      peerFork = new ToolRegistry();
+    manager.syncToolsToRegistry(firstFork, a);
+    manager.syncToolsToRegistry(peerFork, b);
+    expect(firstFork.hasTool("mcp_browser_take_snapshot")).toBe(false);
+    expect(firstFork.hasTool("mcp_browser_read_snapshot")).toBe(true);
+    expect(peerFork.hasTool("mcp_browser_take_snapshot")).toBe(true);
+    expect(peerFork.hasTool("mcp_browser_read_snapshot")).toBe(false);
+    await manager.unregisterOwner(ownerB);
+    expect(registry.hasTool("mcp_browser_take_snapshot")).toBe(false);
+    expect(registry.hasTool("mcp_browser_read_snapshot")).toBe(true);
+    expect((await manager.callToolResult("browser", "read_snapshot", {}, undefined, a)).ok).toBe(
+      true,
+    );
+  });
+
   test("concurrent workspaces negotiate separate roots, cwd, tools and resources", async () => {
     const a = context("a"),
       b = context("b");

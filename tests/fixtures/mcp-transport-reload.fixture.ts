@@ -242,10 +242,9 @@ test("same owner retains old Run configuration across a newer Run and all tool/r
     const registered = await local.executeTool("mcp_fixture_echo", {}, { ctx });
     assert.equal(registered.isError, false);
     assert.equal(detail(registered.result).version, version);
-    assert.equal(
-      detail(await mcpToolExecute({ server: "fixture", tool: "echo" }, ctx)).version,
-      version,
-    );
+    const generic = await mcpToolExecute({ server: "fixture", tool: "echo" }, ctx);
+    assert.ok(typeof generic === "object" && "ok" in generic && generic.ok);
+    assert.equal(detail(generic.result).version, version);
     assert.match(
       String(await listMcpResourcesTool({ server: "fixture" }, ctx)),
       new RegExp(version),

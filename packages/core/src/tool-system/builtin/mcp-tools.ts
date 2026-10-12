@@ -46,8 +46,7 @@ export async function mcpToolExecute(
   try {
     const { MCPManager } = await import("../mcp-manager.js");
     const manager = MCPManager.forContext(ctx);
-    const result = await manager.callTool(server, tool, toolArgs, signal, ctx);
-    return typeof result === "string" ? result : JSON.stringify(result, null, 2);
+    return await manager.callToolResult(server, tool, toolArgs, signal, ctx);
   } catch (err) {
     return { ok: false, error: `MCP tool error: ${(err as Error).message}` };
   }

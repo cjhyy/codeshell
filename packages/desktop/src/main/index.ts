@@ -3426,7 +3426,7 @@ app.whenReady().then(async () => {
     });
     dlog("computer-use", "cua_driver_decision", decision.enabled ? { enabled: true } : decision);
     if (decision.enabled) {
-      void decision.host.start().catch((error) => {
+      await decision.host.start().catch((error) => {
         dlog("computer-use", "cua_driver_start_failed", { error: String(error) });
       });
     }

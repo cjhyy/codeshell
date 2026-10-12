@@ -15,12 +15,13 @@ import {
   spillMcpImage,
   inlineMcpImageBlock,
   MAX_MCP_INLINE_IMAGE_BYTES,
+  type McpWorkspaceScope,
 } from "./mcp-manager.js";
 import { ToolRegistry } from "./registry.js";
 import { ToolExecutor } from "./executor.js";
 import { PermissionClassifier } from "./permission.js";
 import { HookRegistry } from "../hooks/registry.js";
-import type { MCPServerConfig } from "../types.js";
+import type { MCPServerConfig, ToolResult } from "../types.js";
 import { listMcpResourcesTool } from "./builtin/mcp-tools.js";
 import { toolResultToBlock } from "../engine/turn-loop.js";
 
@@ -342,31 +343,123 @@ describe("MCPManager inline image results", () => {
       ] as unknown[],
       isError: false,
     },
-  ) {
-    const registry = new ToolRegistry({ builtinTools: [] });
-    const manager = new MCPManager(registry);
+    invocation: "registered" | "generic" | "legacy" = "registered",
+  ): Promise<ToolResult> {
+    const registry = new ToolRegistry({ builtinTools: ["MCPTool"] });
     const client = {
       listTools: async () => ({
         tools: [{ name: "shot", inputSchema: { type: "object", properties: {} } }],
       }),
       callTool: async () => response,
+      close: async () => {},
     };
-    const { mcpConnectionKey, mcpConnectionScope } = await import("./mcp-workspace.js");
-    const scope = mcpConnectionScope({ cwd: "/tmp" });
-    const key = mcpConnectionKey("cua", scope);
-    (manager as any).connections.set(key, {
-      client,
-      serverName: "cua",
-      scope,
-      config: { name: "cua", command: "cua-driver", ...config },
-    });
-    (manager as any).registerDiscoveredTools("cua", client, key, (await client.listTools()).tools);
+    const { mcpConnectionScope } = await import("./mcp-workspace.js");
+    const { snapshotMcpConnectionConfig } = await import("./mcp-connection-config.js");
+    const manager = new (class extends MCPManager {
+      protected override async performConnect(
+        name: string,
+        config: MCPServerConfig,
+        workspace?: McpWorkspaceScope,
+      ): Promise<void> {
+        const scope = mcpConnectionScope(workspace);
+        const snapshot = snapshotMcpConnectionConfig(config);
+        const key = (this as any).connectionKey(name, scope, snapshot);
+        (this as any).connections.set(key, {
+          client,
+          serverName: name,
+          scope,
+          config: snapshot.config,
+          identity: snapshot.identity,
+        });
+        (this as any).registerDiscoveredTools(name, client, key, (await client.listTools()).tools);
+      }
+    })(registry);
     const ctx = {
       cwd: "/tmp",
       ...(llm ? { llmConfig: llm } : {}),
     };
-    return registry.executeTool("mcp_cua_shot", {}, { ctx: ctx as any });
+    try {
+      await manager.connectAll(
+        { cua: { name: "cua", command: "cua-driver", ...config } },
+        {},
+        undefined,
+        ctx as any,
+      );
+      if (invocation === "legacy") {
+        return {
+          id: "legacy",
+          toolName: "shot",
+          result: String(await manager.callTool("cua", "shot", {}, undefined, ctx as any)),
+        };
+      }
+      return await registry.executeTool(
+        invocation === "generic" ? "MCPTool" : "mcp_cua_shot",
+        invocation === "generic" ? { server: "cua", tool: "shot" } : {},
+        { ctx: ctx as any },
+      );
+    } finally {
+      await manager.disconnectAll();
+    }
   }
+
+  test("generic MCPTool preserves the same wrapped text and inline screenshot", async () => {
+    const result = await runImageTool(
+      { inlineImages: true },
+      { provider: "anthropic", model: "claude-sonnet-4-6" },
+      undefined,
+      "generic",
+    );
+    expect(result.isError).toBe(false);
+    expect(result.contentBlocks?.[0]).toEqual({ type: "text", text: result.result });
+    expect(result.contentBlocks?.[1]?.source?.data).toBe(PNG);
+    expect(result.result).toContain('trust="untrusted"');
+    expect(result.result).not.toContain(PNG);
+  });
+
+  test("generic MCPTool retains image file references when inline delivery is unavailable", async () => {
+    for (const config of [{}, { inlineImages: true }]) {
+      const result = await runImageTool(
+        config,
+        { provider: "deepseek", model: "deepseek-chat" },
+        undefined,
+        "generic",
+      );
+      expect(result.isError).toBe(false);
+      expect(result.contentBlocks).toBeUndefined();
+      expect(result.result).toContain("saved=");
+      expect(result.result).toContain("window state");
+    }
+  });
+
+  test("generic MCPTool keeps an image-producing MCP error failed", async () => {
+    const result = await runImageTool(
+      { inlineImages: true },
+      { provider: "anthropic", model: "claude-sonnet-4-6" },
+      {
+        content: [
+          { type: "text", text: "screenshot failed" },
+          { type: "image", data: PNG, mimeType: "image/png" },
+        ],
+        isError: true,
+      },
+      "generic",
+    );
+    expect(result.isError).toBe(true);
+    expect(result.error).toContain("screenshot failed");
+    expect(result.contentBlocks).toBeUndefined();
+  });
+
+  test("legacy text SDK calls retain image file references even with a vision context", async () => {
+    const result = await runImageTool(
+      { inlineImages: true },
+      { provider: "anthropic", model: "claude-sonnet-4-6" },
+      undefined,
+      "legacy",
+    );
+    expect(result.result).toContain("saved=");
+    expect(result.result).toContain("window state");
+    expect(result.result).not.toContain("attached inline");
+  });
 
   test("attaches image blocks for an opted-in server under a vision model", async () => {
     const result = await runImageTool(
