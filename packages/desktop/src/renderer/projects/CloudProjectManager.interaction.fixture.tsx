@@ -161,6 +161,7 @@ window.codeshell = {
       projects.push(created);
       return { action: "create", project: structuredClone(created) };
     }
+    assert.ok("projectId" in request, "Project actions must carry their exact UUID");
     const selected = projects.find((item) => item.id === request.projectId)!;
     assert.ok(selected, "Mutation must target an actual returned project UUID");
     if (request.action !== "open") {
