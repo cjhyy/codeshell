@@ -171,12 +171,18 @@ for (const method of ["request", "fetch"]) {
   };
   assert.throws(() => net[method]("https://external.invalid/"), /refused Electron native network/);
 }
-await app.whenReady();
+const chromiumGuardReady = app.whenReady().then(async () => {
 configure(session.defaultSession);
 await assert.rejects(session.defaultSession.fetch("https://external.invalid/chooser-guard-probe"));
 assert.equal(globalThis.chooserBlockedRequests, 1);
 appendFileSync(${JSON.stringify(join(home, "chooser-native-guards.jsonl"))}, JSON.stringify({ pid: process.pid, nativeNegativeProbes: 2, chromiumNegativeProbes: 1 }) + "\\n", { mode: 0o600 });
-await import(${JSON.stringify(pathToFileURL(join(appDir, "out/main/index.mjs")).href)});
+});
+// Main registers privileged schemes before ready. Node/native guards and the
+// earlier ready/session hooks already confine every product window/request.
+await Promise.all([
+  chromiumGuardReady,
+  import(${JSON.stringify(pathToFileURL(join(appDir, "out/main/index.mjs")).href)}),
+]);
 `,
       { mode: 0o600 },
     );
