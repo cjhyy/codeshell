@@ -21,6 +21,7 @@ import { mobileRemoteApi } from "./mobile-remote-api.js";
 import { normalizeStreamEnvelope } from "../shared/stream-envelope";
 import { contextBridge, ipcRenderer, webUtils, type IpcRendererEvent } from "electron";
 import { createTaskInboxApi } from "./task-inbox-api";
+import { createNotificationNavigationApi } from "./notification-navigation-api";
 import { createOperationResolutionApi } from "./operation-resolution-api";
 import { createOptimizationLabApi } from "./optimization-lab-api";
 import { createSessionTranscriptApi } from "./session-transcript-api";
@@ -499,6 +500,7 @@ ipcRenderer.on("externalRuntime:approvalResolved", (_e, payload: { requestId?: u
 });
 
 contextBridge.exposeInMainWorld("codeshell", {
+  ...createNotificationNavigationApi(ipcRenderer),
   ...createProfilePluginExportApi(ipcRenderer),
   ...createProfileMemoryPromotionApi(ipcRenderer),
   /** Main-process platform, exposed explicitly so renderer layout doesn't infer it from UA strings. */

@@ -8,7 +8,7 @@
  * real-binary proof lives in `docs/todo/evidence/`.
  */
 import { afterEach, describe, expect, test } from "bun:test";
-import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { ToolRegistry } from "@cjhyy/code-shell-core";
@@ -92,6 +92,85 @@ describe("startExternalRuntimeSession", () => {
       expect(FIRST_PHASE_EXPOSURE.toolNames.has(tool.name)).toBe(true);
     }
   });
+
+  test.each([
+    { label: "default", pathAccess: undefined },
+    { label: "full", pathAccess: "full" },
+  ] as const)(
+    "forwards trusted $label path access through the factory to real MCP execution",
+    async ({ pathAccess }) => {
+      const dir = mkdtempSync(join(tmpdir(), "codeshell-factory-path-access-"));
+      dirs.push(dir);
+      const cwd = join(dir, "workspace");
+      mkdirSync(cwd);
+      const filePath = join(dir, ".env");
+      const responseFile = join(dir, "response.json");
+      writeFileSync(filePath, "synthetic factory attachment");
+      const session = await startExternalRuntimeSession({
+        ...BASE,
+        kind: "codex",
+        cwd,
+        pathAccess,
+        registry: new ToolRegistry({ builtinTools: ["Read"] }),
+        presetRules: [{ tool: "Read", decision: "allow" }],
+        visibility: { ...BASE.visibility, cwd },
+        codexClient: {
+          command: process.execPath,
+          args: fakeCodex(`
+  if (m.method === "turn/start") {
+    send({ id: m.id, result: { turn: { id: "turn-path-access" } } });
+    void (async () => {
+      const { writeFileSync } = await import("node:fs");
+      const config = (name) => {
+        const flag = process.argv.find((arg) => arg.startsWith(name + "="));
+        return JSON.parse(flag.slice(flag.indexOf("=") + 1));
+      };
+      const url = new URL(config("mcp_servers.codeshell_tools.url"));
+      if (url.protocol !== "http:" || url.hostname !== "127.0.0.1" || url.pathname !== "/mcp") {
+        throw new Error("unexpected fixture MCP origin");
+      }
+      const tokenEnvVar = config("mcp_servers.codeshell_tools.bearer_token_env_var");
+      const response = await fetch(url, {
+        method: "POST",
+        headers: {
+          authorization: "Bearer " + process.env[tokenEnvVar],
+          "content-type": "application/json",
+          accept: "application/json",
+        },
+        body: JSON.stringify({
+          id: 1, method: "tools/call",
+          params: { name: "Read", arguments: { file_path: ${JSON.stringify(filePath)} } },
+        }),
+      });
+      writeFileSync(${JSON.stringify(responseFile)}, await response.text());
+      send({ method: "turn/completed", params: {
+        threadId: "t-fake", turn: { id: "turn-path-access", status: "completed" },
+      } });
+    })().catch((error) => {
+      send({ method: "turn/completed", params: {
+        threadId: "t-fake", turn: { id: "turn-path-access", status: "failed", error: { message: error.message } },
+      } });
+    });
+  }
+`),
+        },
+      });
+      sessions.push(session);
+
+      const turn = await session.send({ text: "read the fixture" });
+      await turn.done;
+      const response = JSON.parse(readFileSync(responseFile, "utf8")) as {
+        result: { isError?: boolean; content: Array<{ text: string }> };
+      };
+      if (pathAccess === "full") {
+        expect(response.result.isError).toBeFalsy();
+        expect(response.result.content[0]!.text).toContain("synthetic factory attachment");
+      } else {
+        expect(response.result.isError).toBe(true);
+        expect(response.result.content[0]!.text).toContain("path requires approval");
+      }
+    },
+  );
 
   test("a Claude session assembles without spawning anything up front", async () => {
     // `claude -p` is one process per turn, so there is nothing to start until the

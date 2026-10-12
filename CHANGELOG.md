@@ -8,6 +8,25 @@ breaking.
 
 ## [Unreleased]
 
+## [0.9.35] - 2026-10-12
+
+### Added
+
+- Optionally connect GitHub alongside account sign-in using one upstream OAuth
+  authorization. First-time GitHub users receive a CodeShell account automatically;
+  the default connection option can be unchecked. Repository and action consent
+  remains explicit, with account sessions and Link credentials stored independently.
+- Show independent GitHub connection progress after login. Canceling or failing
+  the connection preserves the signed-in account; repeated login reuses the same
+  connection and retires the previous Desktop grant.
+
+### Fixed
+
+- Retain dismissed notifications in a persistent history with diagnostic details,
+  and open the originating chat from actionable background notifications.
+- Honor an explicitly selected full-access mode for Host file tools, attachments,
+  and external runtimes while retaining tool deny rules and attachment custody checks.
+
 ## [0.9.34] - 2026-10-12
 
 ### Added

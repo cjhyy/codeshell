@@ -889,6 +889,10 @@ type StreamEventPayload =
       workKind?: "agent" | "shell" | "video" | "cc";
       /** For workKind === "shell": the command that ran (for a friendly label). */
       command?: string;
+      /** Background shell process exit code, absent when terminated by a signal. */
+      exitCode?: number;
+      /** Background shell termination signal. This does not imply user cancellation. */
+      signal?: string;
       /** Final assistant text (status === "completed" only). */
       finalText?: string;
       /** Error message (status === "failed" or "cancelled" only). */

@@ -10,6 +10,8 @@ export interface DesktopNotificationInput {
   title: string;
   body: string;
   urgent?: boolean;
+  /** Conversation to open when the native notification is clicked. */
+  sessionId?: string;
 }
 
 export type DesktopNotificationOutcome =
@@ -27,7 +29,7 @@ interface DesktopNotificationReceipt {
 export interface DesktopNotifierDependencies {
   hasFocusedWindow(): boolean;
   isSupported(): boolean;
-  show(input: { title: string; body: string }): void;
+  show(input: { title: string; body: string; sessionId?: string }): void;
   now?(): number;
   sleep?(delayMs: number): Promise<void>;
   rateWindowMs?: number;
@@ -120,6 +122,9 @@ export class DesktopNotifier {
     if (!validKey(input.key)) throw new Error("desktop notification key is invalid");
     if (!validTitle(input.title)) throw new Error("desktop notification title is invalid");
     if (typeof input.body !== "string") throw new Error("desktop notification body is invalid");
+    if (input.sessionId !== undefined && !isValidDesktopNotificationSessionId(input.sessionId)) {
+      throw new Error("desktop notification sessionId is invalid");
+    }
     if (this.receipts.has(input.key)) return "duplicate";
     if (!input.urgent && this.dependencies.hasFocusedWindow()) return "focused";
     if (!this.dependencies.isSupported()) return "unsupported";
@@ -134,6 +139,7 @@ export class DesktopNotifier {
         body: Array.from(input.body.replace(/\s+/gu, " ").trim())
           .slice(0, MAX_BODY_LENGTH)
           .join(""),
+        ...(input.sessionId !== undefined ? { sessionId: input.sessionId } : {}),
       });
     } catch {
       return "failed";
@@ -179,6 +185,16 @@ export class DesktopNotifier {
         new Promise<void>((resolve) => setTimeout(resolve, delayMs)));
     }
   }
+}
+
+export function isValidDesktopNotificationSessionId(value: unknown): value is string {
+  return (
+    typeof value === "string" &&
+    value.length > 0 &&
+    value.length <= 256 &&
+    /^[A-Za-z0-9._-]+$/u.test(value) &&
+    !value.includes("..")
+  );
 }
 
 function validKey(value: unknown): value is string {
