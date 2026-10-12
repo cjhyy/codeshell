@@ -1,6 +1,7 @@
 import { EnvironmentMenu } from "./EnvironmentMenu.js";
 import React from "react";
 import { Devices } from "./Devices.js";
+import { CloudAccountControls, type CloudAccountControlsProps } from "./CloudAccountControls.js";
 import { HubSettings, type HubSettingsSection } from "./HubSettings.js";
 import { HubFiles } from "./HubFiles.js";
 import { HubSessions } from "./HubSessions.js";
@@ -53,10 +54,12 @@ export function Workbench({
   controller,
   onBackToProjects,
   projectName,
+  cloudAccount,
 }: {
   controller: WorkbenchController;
   onBackToProjects?: () => void;
   projectName?: string;
+  cloudAccount?: CloudAccountControlsProps;
 }) {
   const {
     connection,
@@ -289,7 +292,13 @@ export function Workbench({
           </span>
           <strong>CodeShell</strong>
           <span className="hub-badge">
-            {controller.host === "desktop" ? "Desktop" : hub ? "Hub" : "Web"}
+            {cloudAccount
+              ? "Cloud"
+              : controller.host === "desktop"
+                ? "Desktop"
+                : hub
+                  ? "Hub"
+                  : "Web"}
           </span>
           <button
             className="icon-button sidebar-close"
@@ -497,7 +506,8 @@ export function Workbench({
               {connectionLabel}
             </span>
           </div>
-          {controller.host === "hub" ? (
+          {cloudAccount ? <CloudAccountControls {...cloudAccount} /> : null}
+          {controller.host === "hub" && !cloudAccount ? (
             <button
               className="account-button"
               onClick={() => {
@@ -933,7 +943,7 @@ export function Workbench({
           }}
         />
       ) : null}
-      {devicesOpen && controller.host === "hub" ? (
+      {devicesOpen && controller.host === "hub" && !cloudAccount ? (
         <Devices session={session} onClose={() => setDevicesOpen(false)} onAuthLost={onAuthLost} />
       ) : null}
     </div>
