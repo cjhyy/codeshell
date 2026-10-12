@@ -151,7 +151,9 @@ describe("architecture growth budgets", () => {
       // +2 metadata-only Profile preview and revision-checked adoption routes.
       // +3 preview/cancel/reviewed-save operations, without installation authority.
       // +2 project-memory copy preview/commit operations, bound to a main-frame review.
-    ).toBeLessThanOrEqual(345);
+      // +1 owner-scoped account profile operation already integrated in
+      // f7c473556; it updates public nickname/login names without exposing tokens.
+    ).toBeLessThanOrEqual(346);
     // v0.8.17 added the reviewed Panel catalog/task bridge to both preload
     // surfaces. Mimi's bounded transcript pagination adds one typed invoke;
     // the validation and file-reading implementation remain extracted in main.
@@ -197,7 +199,8 @@ describe("architecture growth budgets", () => {
         matches("packages/desktop/src/preload/operation-resolution-api.ts", /ipc\.invoke\(/g),
       // Five reviewed collection invokes. Native file paths never arrive as renderer arguments.
       // +2 memory-copy invokes; commit carries only the reviewed token and project.
-    ).toBeLessThanOrEqual(338);
+      // +1 adapter for the integrated owner-scoped account profile operation.
+    ).toBeLessThanOrEqual(339);
     // GitHub skill previews and Panel task hosting carry main-issued review and
     // ownership fields across the typed preload boundary. The optional Mimi
     // transcript-page method adds its bounded response shape without widening
@@ -395,7 +398,8 @@ describe("architecture growth budgets", () => {
       // public/extension contracts remain unchanged; allow no future exports.
       // +3 Host-only collection validation, selected-file capture/read and public-HTTPS transport.
       // +1 Host-only Session coverage proof/store; the stable SDK does not export it.
-      "packages/core/src/index.internal.ts": 105,
+      // +1 generic cross-process workspace write lock, shared by Desktop and Server.
+      "packages/core/src/index.internal.ts": 106,
       "packages/coding/src/index.ts": 12,
       "packages/arena/src/index.ts": 19,
       // +1 for conversation-session.ts, which re-exports the four modules

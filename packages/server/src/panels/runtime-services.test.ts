@@ -1,10 +1,20 @@
 import { afterEach, describe, expect, test } from "bun:test";
 import { createHash } from "node:crypto";
-import { mkdir, mkdtemp, readFile, rename, rm, symlink, writeFile } from "node:fs/promises";
+import {
+  mkdir,
+  mkdtemp,
+  readFile,
+  readdir,
+  rename,
+  rm,
+  symlink,
+  writeFile,
+} from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { PanelRuntimeServices, type PanelRuntimeScope } from "./runtime-services.js";
 import { panelAppStoragePath } from "./storage-store.js";
+import { acquireWorkspaceWriteLock } from "../../../core/src/utils/workspace-write-lock.js";
 
 const directories: string[] = [];
 afterEach(async () => {
@@ -330,6 +340,109 @@ describe("PanelRuntimeServices", () => {
       }),
     ).rejects.toThrow("changed");
     expect(await readFile(join(cwd, "draft.txt"), "utf8")).toBe("external edit");
+  });
+
+  test("Web workspace publication holds the shared lock through staged commit", async () => {
+    const { cwd, runtime, scope } = await fixture();
+    await writeFile(join(cwd, "draft.txt"), "original");
+    const original = (await runtime.call(scope, "workspace.readText", {
+      path: "draft.txt",
+    })) as any;
+    let staged!: () => void;
+    let publish!: () => void;
+    const ready = new Promise<void>((done) => {
+      staged = done;
+    });
+    const blocked = new Promise<void>((done) => {
+      publish = done;
+    });
+    const pending = runtime.call(
+      {
+        ...scope,
+        isAuthorized: async () => {
+          if (
+            (await readdir(cwd)).some(
+              (name) => name.startsWith(".draft.txt.") && name.endsWith(".tmp"),
+            )
+          ) {
+            staged();
+            await blocked;
+          }
+          return true;
+        },
+      },
+      "workspace.writeText",
+      { path: "draft.txt", content: "panel edit", expectedRevision: original.revision },
+    );
+    await ready;
+    let acquired = false;
+    const contender = acquireWorkspaceWriteLock(cwd, "draft.txt").then(async (release) => {
+      acquired = true;
+      try {
+        return await readFile(join(cwd, "draft.txt"), "utf8");
+      } finally {
+        await release();
+      }
+    });
+    await new Promise((done) => setTimeout(done, 60));
+    expect(acquired).toBe(false);
+    publish();
+    await pending;
+    expect(await contender).toBe("panel edit");
+  });
+
+  test("Web rechecks owner authorization after waiting for an external workspace writer", async () => {
+    const { cwd, runtime, scope } = await fixture();
+    const release = await acquireWorkspaceWriteLock(cwd, "draft.txt");
+    let valid = true;
+    const pending = runtime.call(
+      { ...scope, isAuthorized: async () => valid },
+      "workspace.writeText",
+      {
+        path: "draft.txt",
+        content: "revoked",
+        expectedModifiedAt: null,
+      },
+    );
+    await new Promise((done) => setTimeout(done, 60));
+    valid = false;
+    await release();
+    await expect(pending).rejects.toThrow("no longer authorized");
+    await expect(readFile(join(cwd, "draft.txt"), "utf8")).rejects.toMatchObject({
+      code: "ENOENT",
+    });
+  });
+
+  test("Web preserves both owner revocation and a compromised lock release", async () => {
+    const { cwd, runtime, scope } = await fixture();
+    const pending = runtime.call(
+      {
+        ...scope,
+        isAuthorized: async () => {
+          const files = await readdir(cwd);
+          if (files.some((name) => name.startsWith(".draft.txt.") && name.endsWith(".tmp"))) {
+            const lock = join(
+              cwd,
+              files.find((name) => name.startsWith(".codeshell-workspace-write-"))!,
+            );
+            await rename(lock, `${lock}.original`);
+            await mkdir(lock);
+            return false;
+          }
+          return true;
+        },
+      },
+      "workspace.writeText",
+      { path: "draft.txt", content: "revoked", expectedModifiedAt: null },
+    );
+    const failure = (await pending.catch((error) => error)) as AggregateError;
+    expect(failure).toBeInstanceOf(AggregateError);
+    expect(failure.errors[0].message).toContain("no longer authorized");
+    expect(failure.errors[1].code).toBe("ELOCKCOMPROMISED");
+    expect(failure.cause).toBe(failure.errors[1]);
+    await expect(readFile(join(cwd, "draft.txt"), "utf8")).rejects.toMatchObject({
+      code: "ENOENT",
+    });
   });
 
   test("rejects traversal, hidden settings, device paths, links, and binary text", async () => {

@@ -201,6 +201,25 @@ segments ending in a dot or space. Existing-file writes require the revision or
 modification timestamp returned by the preceding read; blind overwrites are
 rejected.
 
+CodeShell 0.9.36+ holds a cross-process lock from the revision check through
+publication for Desktop and Server workspace writes, including Desktop PDF
+exports. Cooperating package CLIs use the same protocol: in the authorized file's
+parent, atomically create `.codeshell-workspace-write-<hash>.lock`, where `hash`
+is SHA-256 of `basename.normalize("NFC").toLowerCase()` encoded as UTF-8. Read
+and compare the revision only after acquisition, then stage and publish before
+releasing the unchanged lock directory. Retry acquisition asynchronously every
+25 ms for at most five seconds; never continue unlocked or remove a lock based
+only on age. A crashed writer's lock requires explicit recovery after confirming
+no writer is active. Existing text editors and older Hosts do not cooperate.
+
+Foreground and background Core `Bash` tools set
+`CODESHELL_WORKSPACE_WRITE_PROTOCOL=1` after project environment merging. A Skill
+can check this signal from the running Host before using a cooperating CLI;
+another installed binary's version and Panel API number are insufficient proof.
+The marker advertises compatibility and does not grant file access or replace
+authorization and revision checks. Do not set it manually to bypass a Skill's
+compatibility check.
+
 Panel API v3 adds a constrained PDF export. `workspace.exportPdf` renders the
 calling Panel App's current print view as A4 and writes only to a safe relative
 `.pdf` path inside the bound project. It requires `workspace.write` and the
