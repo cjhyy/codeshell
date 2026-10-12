@@ -36,6 +36,8 @@ assert.equal(typeof publicApi.createServer, "function");
 // correct and the four source-level contract tests passed.
 const hostOnlySamples = [
   "SessionOutputCoverageStore",
+  "SessionOutputPublisher",
+  "needsIndependentOutput",
   "collectionConfig",
   "captureCollectionLocalFile",
   "readCollectionLocalFile",
@@ -199,6 +201,7 @@ const expectedInternalTypeExports = [
   "OutputJournalFrame",
   "OutputJournalOptions",
   "OutputJournalPage",
+  "OutputJournalProducer",
   "ParsedCron",
   "ParsedSource",
   "PluginListRow",

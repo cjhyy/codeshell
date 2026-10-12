@@ -354,8 +354,10 @@ try {
     "Credentials remain available from Settings",
   );
   assert(
-    await settingsMenu.getByRole("menuitem", { name: "云端工作台", exact: true }).isVisible(),
-    "Cloud workbench remains available from Settings",
+    (await settingsMenu
+      .getByRole("menuitem", { name: /^(云端工作台|Cloud workbench)$/ })
+      .count()) === 0,
+    "Cloud projects are chosen from New project instead of Settings",
   );
   assert(
     (await settingsMenu.getByRole("menuitem", { name: "优化实验室", exact: true }).count()) === 0,

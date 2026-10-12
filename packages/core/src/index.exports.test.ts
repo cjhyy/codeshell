@@ -95,6 +95,8 @@ const expectedRuntimeExportsByPartition = {
   ],
   sessionOutputRecovery: [
     "SessionOutputJournal",
+    "SessionOutputPublisher",
+    "needsIndependentOutput",
     "SessionOutputCoverageStore",
     "readOutputJournal",
     "readOutputJournalLegacyBase",

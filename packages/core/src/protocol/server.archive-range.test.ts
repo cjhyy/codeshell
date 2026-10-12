@@ -73,6 +73,8 @@ describe("AgentServer archive_range query", () => {
             strategy: "range",
             before: 128_000,
             after: 40_000,
+            outputCursor: undefined,
+            outputRecovery: "incomplete",
           },
         },
       },

@@ -1,0 +1,129 @@
+{
+  "fixture": "pet-built-desktop-runtime",
+  "head": "4083718c3e77cc6e629703231d071e646821301d",
+  "artifacts": {
+    "packages/desktop/scripts/e2e-pet-runtime.mjs": "00a0e54f49dffbcc09663cb9a676f3e2adc0c89ecf728649187a6c3adc21a868",
+    "packages/desktop/out/main/index.mjs": "9a5dccc07ac70600832c86c751689b280b94b1f5e64aac053dac5b7fb33f921d",
+    "packages/desktop/out/preload/index.cjs": "11fdf6200293b5fce6ad930e252f000d1df5026c10df6e3370cd7d182fc9ce49",
+    "packages/core/dist/cli/agent-server-stdio.js": "42c082956f4ea07dcad310f6707bb84342fd28c877764662f653858808a52579",
+    "packages/pet/dist/profile.js": "30fff8f8b9c2dda726439f28b5aba1c1d42ed5f08b0a4366b74681e5f1ec9a04"
+  },
+  "launches": [
+    {
+      "mainPid": 46054,
+      "homeId": "a97be55ffe566da58c63243be051d8cf659bd83e93ff323858e13171b88dd978",
+      "receipts": [
+        {
+          "pid": 46054,
+          "ppid": 46027,
+          "origin": "http://127.0.0.1:50400",
+          "homeId": "a97be55ffe566da58c63243be051d8cf659bd83e93ff323858e13171b88dd978"
+        },
+        {
+          "pid": 46578,
+          "ppid": 46054,
+          "origin": "http://127.0.0.1:50400",
+          "homeId": "a97be55ffe566da58c63243be051d8cf659bd83e93ff323858e13171b88dd978"
+        }
+      ],
+      "spawned": [
+        {
+          "pid": 46578
+        }
+      ],
+      "workerCreated": true
+    },
+    {
+      "mainPid": 47108,
+      "homeId": "a97be55ffe566da58c63243be051d8cf659bd83e93ff323858e13171b88dd978",
+      "receipts": [
+        {
+          "pid": 47108,
+          "ppid": 46027,
+          "origin": "http://127.0.0.1:50400",
+          "homeId": "a97be55ffe566da58c63243be051d8cf659bd83e93ff323858e13171b88dd978"
+        },
+        {
+          "pid": 47429,
+          "ppid": 47108,
+          "origin": "http://127.0.0.1:50400",
+          "homeId": "a97be55ffe566da58c63243be051d8cf659bd83e93ff323858e13171b88dd978"
+        }
+      ],
+      "spawned": [
+        {
+          "pid": 47429
+        }
+      ],
+      "workerCreated": true
+    }
+  ],
+  "nativeSettings": [
+    {
+      "appName": "code-shell",
+      "mockKeychain": false,
+      "passwordStore": "",
+      "electron": "33.4.11",
+      "node": "20.18.3"
+    },
+    {
+      "appName": "code-shell",
+      "mockKeychain": false,
+      "passwordStore": "",
+      "electron": "33.4.11",
+      "node": "20.18.3"
+    }
+  ],
+  "localModelRequests": 8,
+  "sameSessionContinuation": true,
+  "sameWorkSessionContinuation": true,
+  "coldSessionAndMemoryRecovery": true,
+  "syntheticInstalledPlugin": {
+    "version": "1.0.0",
+    "initialized": true,
+    "discoveredTools": true,
+    "processes": [
+      {
+        "pid": 46977,
+        "ppid": 46578
+      }
+    ],
+    "toolCalls": 0
+  },
+  "rendererErrors": 0,
+  "actualWechatDelivery": false,
+  "operatorPluginConfiguration": false,
+  "packagedApplication": false,
+  "nativeKeychainContext": {
+    "pid": 46027,
+    "ppid": 46017,
+    "homeHash": "a97be55ffe566da58c63243be051d8cf659bd83e93ff323858e13171b88dd978",
+    "defaultPathHash": "bf5b7026c780c552ffd8ea51bbbcd50625c87d3f32112c15d86ef5649abdc636",
+    "existingRegularFile": true,
+    "privateDefaultMatches": true,
+    "operatorDefaultUnchanged": true,
+    "preferenceBytes": 337,
+    "preferenceMode": 384,
+    "scope": "new private plist singleton only; no keychain data/search-list copy, symlink, unlock, create, or OS-default mutation",
+    "operatorDefaultUnchangedAfterRuntime": true
+  },
+  "nativeStorage": [
+    {
+      "pid": 46054,
+      "completed": {
+        "isEncryptionAvailable": 6,
+        "encryptString": 2,
+        "decryptString": 4
+      }
+    },
+    {
+      "pid": 47108,
+      "completed": {
+        "isEncryptionAvailable": 1,
+        "encryptString": 0,
+        "decryptString": 1
+      }
+    }
+  ],
+  "guardScope": "Main/worker fetch/http/https; synthetic plugin denies HTTP; no Chromium/raw net/tls/OS confinement claim"
+}

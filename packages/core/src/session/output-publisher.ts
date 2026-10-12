@@ -7,6 +7,15 @@ import {
   readOutputJournal,
   type OutputJournalProducer,
 } from "./output-journal.js";
+export {
+  readOutputJournal,
+  readOutputJournalLegacyBase,
+  SessionOutputJournal,
+  type OutputJournalPage,
+  type OutputJournalOptions,
+  type OutputJournalFrame,
+  type OutputJournalProducer,
+} from "./output-journal.js";
 
 const visible = new Set([
   "session_started",
@@ -63,11 +72,35 @@ export class SessionOutputPublisher {
   private readonly producer: OutputJournalProducer;
   private readonly bindings = new Map<string, string>();
   private readonly writers = new Map<string, SessionOutputJournal>();
+  private readonly domains = new Map<string, string>();
   constructor(
     private readonly root: (sessionId: string) => string,
     kind: OutputJournalProducer["kind"],
   ) {
     this.producer = { kind, id: randomUUID() };
+  }
+
+  /** Bind before an asynchronous operation can outlive or replace its Session. */
+  capture(sessionId: string): void {
+    const at = outputJournalCutover(this.root(sessionId), sessionId);
+    const bound = this.bindings.get(sessionId);
+    if (bound !== undefined && bound !== at.incarnation)
+      throw new Error("Output publisher Session was replaced");
+    if (!bound && this.bindings.size >= 8192) throw new Error("Output publisher binding capacity");
+    this.bindings.set(sessionId, at.incarnation);
+    if (!this.writers.has(sessionId)) {
+      this.writers.set(
+        sessionId,
+        new SessionOutputJournal(
+          this.root(sessionId),
+          sessionId,
+          this.producer,
+          at.legacy,
+          at.incarnation,
+        ),
+      );
+      if (this.writers.size > 16) this.writers.delete(this.writers.keys().next().value!);
+    }
   }
 
   project(sessionId: string, raw: unknown, source?: object): unknown {
@@ -93,7 +126,7 @@ export class SessionOutputPublisher {
       throw new Error("Output publisher Session was replaced");
     // Refuse admission rather than dropping identity evidence at capacity.
     if (!bound && this.bindings.size >= 8192) throw new Error("Output publisher binding capacity");
-    const sourceKey = `${root}:${sessionId}`;
+    const sourceKey = `${at.root}:${sessionId}`;
     const published = source && publications.get(source)?.get(sourceKey);
     if (published) {
       if (published.incarnation !== incarnation)
@@ -102,13 +135,15 @@ export class SessionOutputPublisher {
       return published.event;
     }
     if (typeof existingCursor === "string") {
+      const domain = JSON.parse(Buffer.from(existingCursor, "base64url").toString("utf8")).identity;
       if (
-        !bound &&
+        (!this.domains.has(sessionId) || this.domains.get(sessionId) !== domain) &&
         readOutputJournal(root, sessionId, { after: existingCursor, through: existingCursor })
           .status !== "ok"
       )
         throw new Error("Output publisher cannot bind an unverified native cursor");
       this.bindings.set(sessionId, incarnation);
+      this.domains.set(sessionId, domain);
       return raw;
     }
     this.bindings.set(sessionId, incarnation);
@@ -119,6 +154,10 @@ export class SessionOutputPublisher {
       if (this.writers.size > 16) this.writers.delete(this.writers.keys().next().value!);
     }
     const event = { ...(raw as StreamEvent), outputCursor: writer.append(raw as StreamEvent) };
+    this.domains.set(
+      sessionId,
+      JSON.parse(Buffer.from(event.outputCursor, "base64url").toString("utf8")).identity,
+    );
     if (source) {
       let results = publications.get(source);
       if (!results) publications.set(source, (results = new Map()));

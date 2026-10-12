@@ -43,11 +43,40 @@ export function buildWrappedOnStream(args: {
     onFailure: () => void;
     allowLateMetadata?: (event: StreamEvent) => boolean;
   };
-}): StreamCallback {
+}): StreamCallback & { finish(): void } {
   const { userOnStream, getSession, setLatestTodos } = args;
   let journal: SessionOutputJournal | undefined;
   let failed = false;
-  return (event) => {
+  let streamingClosed = false;
+  let pending: StreamEvent[] = [],
+    pendingBytes = 0;
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  const failure = () => {
+    failed = true;
+    try {
+      args.outputJournal?.onFailure();
+    } catch {
+      /* Retain the live barrier when its durable marker also fails. */
+    }
+  };
+  const flush = () => {
+    if (timer) clearTimeout(timer);
+    timer = undefined;
+    const events = pending;
+    pending = [];
+    pendingBytes = 0;
+    if (!events.length) return;
+    let cursors: string[];
+    try {
+      cursors = journal!.appendBatch(events);
+    } catch (cause) {
+      failure();
+      throw cause;
+    }
+    for (let index = 0; index < events.length; index++)
+      userOnStream?.({ ...events[index], outputCursor: cursors[index] });
+  };
+  const onStream: StreamCallback = (event) => {
     event = args.prepareEvent?.(event) ?? event;
     if (args.outputJournal?.allowLateMetadata?.(event))
       return userOnStream?.({ ...event, outputCursor: undefined });
@@ -89,14 +118,30 @@ export function buildWrappedOnStream(args: {
             runId,
           });
         }
+        if (event.type === "text_delta" || event.type === "thinking_delta") {
+          if (streamingClosed) throw new Error("Run output stream is closed");
+          const bytes = Buffer.byteLength(JSON.stringify(event));
+          if (pending.length && (pending.length >= 64 || pendingBytes + bytes > 256 * 1024))
+            flush();
+          pending.push({ ...event });
+          pendingBytes += bytes;
+          if (pendingBytes >= 256 * 1024) flush();
+          else if (!timer) {
+            timer = setTimeout(() => {
+              try {
+                flush();
+              } catch {
+                failure(); /* The next/terminal event surfaces the failure. */
+              }
+            }, 8);
+            timer.unref?.();
+          }
+          return;
+        }
+        flush();
         event = { ...event, outputCursor: journal.append(event) };
       } catch (error) {
-        failed = true;
-        try {
-          args.outputJournal.onFailure();
-        } catch {
-          /* The live failure fence still applies when the disk is unavailable. */
-        }
+        failure();
         throw error;
       }
     }
@@ -116,4 +161,14 @@ export function buildWrappedOnStream(args: {
     }
     userOnStream?.(event);
   };
+  return Object.assign(onStream, {
+    finish() {
+      streamingClosed = true;
+      try {
+        flush();
+      } catch {
+        failure(); /* Finalization emits only the fenced failure result. */
+      }
+    },
+  });
 }

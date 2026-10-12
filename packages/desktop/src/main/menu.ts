@@ -47,7 +47,7 @@ export async function installAppMenu(win: BrowserWindow): Promise<void> {
           },
         },
         {
-          label: "添加项目…",
+          label: "新项目…",
           accelerator: "CmdOrCtrl+O",
           click: () => {
             win.webContents.send("menu:add-project");

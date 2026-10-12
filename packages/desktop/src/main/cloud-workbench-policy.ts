@@ -3,7 +3,7 @@ import { createNativeLinkNavigationPolicy } from "./remote-link-navigation.js";
 
 /** A saved cloud entry is an origin, never a setup/login URL or a local path. */
 export function normalizeCloudWorkbenchAddress(value: unknown): string {
-  if (typeof value !== "string" || value.length > 2_048) throw new Error("请输入云端工作台地址。");
+  if (typeof value !== "string" || value.length > 2_048) throw new Error("请输入云端服务地址。");
   const address = value.trim();
   if (!address || /[\x00-\x20\\]/.test(address)) throw new Error("云端地址格式无效。");
   let url: URL;
@@ -18,7 +18,7 @@ export function normalizeCloudWorkbenchAddress(value: unknown): string {
     url.protocol !== "https:" &&
     !(url.protocol === "http:" && ["localhost", "127.0.0.1", "[::1]"].includes(url.hostname))
   )
-    throw new Error("云端工作台需要 HTTPS；本机测试可以使用回环 HTTP 地址。");
+    throw new Error("云端服务需要 HTTPS；本机测试可以使用回环 HTTP 地址。");
   return `${url.origin}/`;
 }
 

@@ -27,6 +27,7 @@ import {
 } from "@cjhyy/code-shell-core";
 import {
   defaultSandboxConfig,
+  SessionOutputPublisher,
   type CronRunner,
   type CronRunResult,
   type CronJob,
@@ -339,6 +340,13 @@ export function buildDesktopAutomationRunner(
       // `session_started` event) so renderer routing/reconnect matches interactive
       // chat. Fall back to job.id until that event is seen.
       let sid: string | undefined;
+      const output = new SessionOutputPublisher(
+        () => engine!.getSessionManager().getStorageDir(),
+        "host",
+      );
+      const publish = (sessionId: string, event: unknown) => {
+        emit?.(sessionId, output.project(sessionId, event));
+      };
       const onStream =
         emit || onSession
           ? (e: unknown) => {
@@ -361,7 +369,7 @@ export function buildDesktopAutomationRunner(
                   });
                 }
               }
-              emit?.(sid ?? req.job.id, e);
+              publish(sid ?? req.job.id, e);
             }
           : undefined;
       try {
@@ -385,7 +393,7 @@ export function buildDesktopAutomationRunner(
         if (sid !== undefined) {
           // The envelope supplies the sessionId (emit's first arg); the `error`
           // StreamEvent itself is just { type, error } (see core types.ts).
-          emit?.(sid, {
+          publish(sid, {
             type: "error",
             error: err instanceof Error ? err.message : String(err),
           });
