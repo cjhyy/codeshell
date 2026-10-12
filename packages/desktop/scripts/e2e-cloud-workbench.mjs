@@ -34,6 +34,7 @@ const remote = new Map([[sessionId, { title: cloudTitle, records: [], running: f
 let app, win, origin;
 let processLog = "";
 let sequence = 0;
+let authenticated = true;
 function history(id, user, assistant, clientMessageId) {
   const now = Date.now();
   return [
@@ -60,17 +61,22 @@ const server = createServer(async (req, res) => {
     res.end(JSON.stringify(value));
   };
   if (req.url === "/api/v1/auth/status")
-    return reply(200, { initialized: true, authenticated: req.headers.cookie === cookie });
+    return reply(200, {
+      initialized: true,
+      authenticated: authenticated && req.headers.cookie === cookie,
+    });
   if (req.url === "/api/v1/auth/login" && req.method === "POST") {
     let body = "";
     for await (const chunk of req) body += chunk;
     const input = JSON.parse(body);
     if (input.username !== "owner" || input.password !== password)
       return reply(401, { error: "Invalid login" });
+    authenticated = true;
     res.setHeader("set-cookie", `${cookie}; HttpOnly; SameSite=Strict; Path=/`);
     return reply(200, { ok: true });
   }
-  if (req.headers.cookie !== cookie) return reply(401, { error: "Authentication required" });
+  if (!authenticated || req.headers.cookie !== cookie)
+    return reply(401, { error: "Authentication required" });
   if (req.url === "/api/v1/environment")
     return reply(200, {
       version: 1,
@@ -116,6 +122,7 @@ const server = createServer(async (req, res) => {
 });
 server.on("upgrade", (req, socket, head) => {
   if (
+    !authenticated ||
     req.url !== `/p/${projectId}/ws` ||
     req.headers.cookie !== cookie ||
     req.headers.origin !== origin
@@ -383,6 +390,28 @@ try {
   assert(
     rpcCalls.filter((row) => row.method === "agent/run").length === firstRunCount,
     "Reconnect never resends an executed command",
+  );
+  authenticated = false;
+  for (const socket of sockets) socket.terminate();
+  await win.getByText("请从运行位置菜单重新登录云端。", { exact: true }).waitFor();
+  await (await locationMenu())
+    .getByRole("menuitem", { name: "关联云端项目…", exact: true })
+    .click();
+  const signIn = win.getByRole("dialog", { name: "关联已有云端项目" });
+  await signIn.getByRole("button", { name: "连接", exact: true }).click();
+  await signIn.getByLabel("用户名", { exact: true }).fill("owner");
+  await signIn.getByLabel("密码", { exact: true }).fill(password);
+  await signIn.getByRole("button", { name: "登录", exact: true }).click();
+  await signIn.getByRole("button", { name: "使用云端", exact: true }).click();
+  await win
+    .getByText("请从运行位置菜单重新登录云端。", { exact: true })
+    .waitFor({ state: "hidden" });
+  await win.waitForFunction(
+    () => !document.querySelector('[data-runtime="cloud"] textarea')?.disabled,
+  );
+  assert(
+    rpcCalls.filter((row) => row.method === "agent/run").length === firstRunCount,
+    "Reauthentication never replays a task",
   );
   assert(
     JSON.stringify(await win.evaluate(() => window.codeshell.projectRegistry.list())) ===
