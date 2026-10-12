@@ -1,5 +1,6 @@
 /* Installed Quant browser workflow in two isolated projects; synthetic data only. */
 import assert from "node:assert/strict";
+import { assertDockerBrowserGuard } from "./docker-candidate-browser-guard.mjs";
 import { createRequire } from "node:module";
 import { mkdir, writeFile } from "node:fs/promises";
 import { join } from "node:path";
@@ -9,6 +10,7 @@ const { chromium } = createRequire(new URL("../packages/desktop/package.json", i
 );
 
 export async function verifyCloudQuantBacktest({
+  browserGuard,
   docker,
   containerA,
   projectA,
@@ -19,6 +21,7 @@ export async function verifyCloudQuantBacktest({
   candidatePanels,
   evidenceDir,
 }) {
+  assertDockerBrowserGuard(browserGuard);
   const engine = await import(pathToFileURL(join(candidatePanels, "quant-lab/app/engine.mjs")));
   const csv =
     "date,open,high,low,close,volume\n" +
@@ -102,7 +105,9 @@ export async function verifyCloudQuantBacktest({
         });
     }, 200);
     async function open(project) {
-      const context = await browser.newContext({ viewport: { width: 1440, height: 1000 } });
+      const context = await browserGuard.createContext(browser, {
+        viewport: { width: 1440, height: 1000 },
+      });
       const page = await context.newPage();
       pages.push(page);
       page.on("pageerror", (error) => errors.push(error.message));

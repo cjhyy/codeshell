@@ -1,6 +1,7 @@
 /* Actual installed Download in a Docker project, through the production Web workbench. */
 /* global window, document */
 import assert from "node:assert/strict";
+import { assertDockerBrowserGuard } from "./docker-candidate-browser-guard.mjs";
 import { mkdir, readdir, readFile, writeFile, lstat } from "node:fs/promises";
 import { join, resolve } from "node:path";
 import { createHash } from "node:crypto";
@@ -8,6 +9,10 @@ import { createRequire } from "node:module";
 const { chromium } = createRequire(new URL("../packages/desktop/package.json", import.meta.url))(
   "playwright",
 );
+
+// Fixed fixture entry bytes are exported for the controller's immutable entryHashes.
+export const downloadFixtureServerSource =
+  'import {createServer} from "node:http"; import {readFileSync,writeFileSync} from "node:fs"; const bytes=readFileSync("/workspace/fixture/source.mp4"); createServer((req,res)=>{if(!["/first.mp4","/second.mp4"].includes(req.url)){res.writeHead(404).end();return;} res.writeHead(200,{"content-type":"video/mp4","content-length":bytes.length}); res.flushHeaders(); const timer=setTimeout(()=>res.end(bytes),5000); res.on("close",()=>clearTimeout(timer));}).listen(18793,"127.0.0.1",()=>writeFileSync("/workspace/fixture/ready","ready"));';
 
 async function until(read, message, timeout = 90000) {
   const end = Date.now() + timeout;
@@ -20,6 +25,7 @@ async function until(read, message, timeout = 90000) {
 }
 
 export async function verifyCloudDownload({
+  browserGuard,
   docker,
   json,
   request,
@@ -35,6 +41,7 @@ export async function verifyCloudDownload({
   alreadyInstalled = false,
   fixturePath,
 }) {
+  assertDockerBrowserGuard(browserGuard);
   await mkdir(evidenceDir, { recursive: true });
   const files = [];
   async function collect(directory, prefix = "") {
@@ -92,7 +99,9 @@ export async function verifyCloudDownload({
   await docker(["exec", "-i", container, "node", "--input-type=module"], {
     input: `
     import { mkdirSync, writeFileSync, openSync } from "node:fs";
-    import { spawn, execFileSync } from "node:child_process";
+    import { spawn, execFile } from "node:child_process";
+    import { promisify } from "node:util";
+    const exec = promisify(execFile);
     const { previewLocalPanelApp, installReviewedLocalPanelApp } = await import(${JSON.stringify(containerCore)});
     const source = { kind: "dir", path: "/tmp/cloud-download-panel" };
     const { dirname, join } = await import("node:path");
@@ -106,8 +115,8 @@ export async function verifyCloudDownload({
       await installReviewedLocalPanelApp(source, review.reviewToken, new Date().toISOString());
     }
     mkdirSync("/workspace/fixture", { recursive: true });
-    execFileSync("ffmpeg", ["-v", "error", "-f", "lavfi", "-i", "color=c=green:s=128x72:d=1", "-c:v", "libx264", "-pix_fmt", "yuv420p", "-y", "/workspace/fixture/source.mp4"]);
-    const sourceCode = 'import {createServer} from "node:http"; import {readFileSync,writeFileSync} from "node:fs"; const bytes=readFileSync("/workspace/fixture/source.mp4"); createServer((req,res)=>{if(!["/first.mp4","/second.mp4"].includes(req.url)){res.writeHead(404).end();return;} res.writeHead(200,{"content-type":"video/mp4","content-length":bytes.length}); res.flushHeaders(); const timer=setTimeout(()=>res.end(bytes),5000); res.on("close",()=>clearTimeout(timer));}).listen(18793,"127.0.0.1",()=>writeFileSync("/workspace/fixture/ready","ready"));';
+    await exec("ffmpeg", ["-v", "error", "-f", "lavfi", "-i", "color=c=green:s=128x72:d=1", "-c:v", "libx264", "-pix_fmt", "yuv420p", "-y", "/workspace/fixture/source.mp4"]);
+    const sourceCode = ${JSON.stringify(downloadFixtureServerSource)};
     writeFileSync("/workspace/fixture/server.mjs", sourceCode);
     const output = openSync("/workspace/fixture/server.log", "a");
     spawn(process.execPath, ["/workspace/fixture/server.mjs"], { detached: true, stdio: ["ignore", output, output] }).unref();
@@ -166,7 +175,7 @@ export async function verifyCloudDownload({
         });
     }, 200);
     async function open(width) {
-      const context = await browser.newContext({
+      const context = await browserGuard.createContext(browser, {
         viewport: { width, height: 844 },
         hasTouch: width < 600,
       });

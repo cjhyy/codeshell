@@ -1,6 +1,7 @@
 /* Actual installed Video Studio in production Web and isolated Docker projects. */
 /* global document, window */
 import assert from "node:assert/strict";
+import { assertDockerBrowserGuard } from "./docker-candidate-browser-guard.mjs";
 import { createRequire } from "node:module";
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { createHash } from "node:crypto";
@@ -11,6 +12,7 @@ const { chromium } = createRequire(new URL("../packages/desktop/package.json", i
   "playwright",
 );
 export async function verifyCloudVideoRecovery({
+  browserGuard,
   serverUrl,
   password,
   projectA,
@@ -21,6 +23,7 @@ export async function verifyCloudVideoRecovery({
   request,
   panelHarness,
 }) {
+  assertDockerBrowserGuard(browserGuard);
   const seed = (id, name) => ({
     schemaVersion: 1,
     id,
@@ -129,7 +132,7 @@ export async function verifyCloudVideoRecovery({
     }, 200);
     try {
       const open = async (project) => {
-        const context = await browser.newContext({
+        const context = await browserGuard.createContext(browser, {
           viewport: { width: 1440, height: 1000 },
           acceptDownloads: true,
           permissions: ["microphone"],
