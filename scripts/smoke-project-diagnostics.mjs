@@ -1,7 +1,99 @@
 import { createHash } from "node:crypto";
+import { AssertionError } from "node:assert";
 
 const digest = (value) => createHash("sha256").update(String(value)).digest("hex");
 const finite = (value) => (typeof value === "number" && Number.isFinite(value) ? value : undefined);
+const panelIds = new Set([
+  "design-studio",
+  "job-hunt-hq",
+  "quant-lab",
+  "starter-panel",
+  "video-download",
+  "video-studio",
+]);
+const panelSteps = new Set([
+  "controlled-update",
+  "catalog-pin",
+  "retained-page",
+  "history",
+  "select-updated",
+  "stale-grant",
+  "updated-page",
+  "updated-storage",
+  "select-original",
+  "restored-page",
+  "other-project-pin",
+  "other-project-page",
+  "other-project-storage",
+]);
+const panelUiSteps = new Set([
+  "launch",
+  "context",
+  "snapshot",
+  "navigate",
+  "login",
+  "open-panels",
+  "review-first",
+  "cancel-first",
+  "review-second",
+  "evidence",
+  "confirm",
+  "verify-selection",
+  "verify-browser-errors",
+  "close",
+]);
+const panelFailures = new WeakMap();
+const ownValue = (value, key) => {
+  if (!value || (typeof value !== "object" && typeof value !== "function")) return undefined;
+  return Object.getOwnPropertyDescriptor(value, key)?.value;
+};
+
+function panelFailure(error, panelId, kind, step) {
+  if (!panelIds.has(panelId) || !(kind === "step" ? panelSteps : panelUiSteps).has(step))
+    throw new TypeError("Invalid candidate Panel diagnostic context");
+  const failure = new Error("Candidate Panel acceptance step failed", { cause: error });
+  panelFailures.set(
+    failure,
+    Object.freeze({ source: "candidate-panel-lifecycle", panelId, kind, step, error }),
+  );
+  return failure;
+}
+
+export const panelLifecycleFailure = (error, panelId, step) =>
+  panelFailure(error, panelId, "step", step);
+export const panelVersionUiFailure = (error, panelId, step) =>
+  panelFailure(error, panelId, "uiStep", step);
+
+function panelContext(error) {
+  const record = panelFailures.get(error);
+  if (!record) return undefined;
+  if (Object.keys(record).sort().join(",") !== "error,kind,panelId,source,step") return undefined;
+  if (Object.values(Object.getOwnPropertyDescriptors(record)).some((field) => !("value" in field)))
+    return undefined;
+  const { source, panelId, kind, step } = record;
+  if (
+    source !== "candidate-panel-lifecycle" ||
+    !panelIds.has(panelId) ||
+    !["step", "uiStep"].includes(kind) ||
+    !(kind === "step" ? panelSteps : panelUiSteps).has(step)
+  )
+    return undefined;
+  return record;
+}
+
+function assertionNumbers(error) {
+  if (!(error instanceof AssertionError)) return undefined;
+  const output = {};
+  for (const key of ["actual", "expected"]) {
+    const value = ownValue(error, key);
+    if (
+      typeof value === "boolean" ||
+      (typeof value === "number" && Number.isFinite(value) && Math.abs(value) <= 1_000_000)
+    )
+      output[key] = value;
+  }
+  return Object.keys(output).length ? output : undefined;
+}
 const smokeStages = new Set([
   "initializing",
   "create-fixture",
@@ -144,8 +236,40 @@ class ApprovalRunError extends Error {
 // Raw errors may contain settings, prompts, response bodies or credentials. Only
 // fixed classifications, numeric RPC codes and a fingerprint leave the scratch.
 export function summarizeFailure(error) {
+  return summarizeFailureAt(error, 0, false);
+}
+
+function summarizeFailureAt(error, depth, trustedPanel) {
+  const context = depth < 8 ? panelContext(error) : undefined;
+  if (context) {
+    const summary = summarizeFailureAt(context.error, depth + 1, true);
+    return {
+      ...summary,
+      panelLifecycle: {
+        ...(summary.panelLifecycle?.panelId === context.panelId ? summary.panelLifecycle : {}),
+        source: context.source,
+        panelId: context.panelId,
+        [context.kind]: context.step,
+      },
+    };
+  }
+  // Only our own wrapped primary failure authorizes this aggregate's cause.
+  // The thrown AggregateError still retains both primary and cleanup errors.
+  const cause = ownValue(error, "cause");
+  if (depth < 8 && error instanceof AggregateError && panelContext(cause))
+    return summarizeFailureAt(cause, depth + 1, true);
   if (error instanceof ApprovalRunError) return error.diagnostic;
-  const text = error instanceof Error ? error.message : String(error);
+  const text = trustedPanel
+    ? error instanceof Error
+      ? typeof ownValue(error, "message") === "string"
+        ? ownValue(error, "message")
+        : "Unavailable Panel error message"
+      : error === null || !["object", "function"].includes(typeof error)
+        ? String(error)
+        : "Non-Error Panel failure"
+    : error instanceof Error
+      ? error.message
+      : String(error);
   let code;
   try {
     code = finite(JSON.parse(text)?.code);
@@ -156,6 +280,7 @@ export function summarizeFailure(error) {
     categories: categories.filter(([, pattern]) => pattern.test(text)).map(([name]) => name),
     sha256: digest(text),
     guardRefusal: guardRefusal(error),
+    ...(trustedPanel && assertionNumbers(error) ? { assertion: assertionNumbers(error) } : {}),
   };
 }
 

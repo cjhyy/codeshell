@@ -6,6 +6,7 @@ import assert from "node:assert/strict";
 import { readFile, readdir } from "node:fs/promises";
 import { join } from "node:path";
 import { selectCloudPanelVersion } from "./smoke-cloud-panel-version-ui.mjs";
+import { panelLifecycleFailure } from "./smoke-project-diagnostics.mjs";
 
 const ids = [
   "design-studio",
@@ -197,46 +198,63 @@ export async function verifyCandidatePanelLifecycle({
     "PASS: six actual candidate Panels installed and project-bound in two isolated containers; five storage-capable Panels persisted separate project data",
   );
   for (const original of installed) {
-    const updated = await run(containerA, controlledUpdate, containerCore, original, marker);
-    const oldGrant = grants.get(`${projectA}:${original.id}`);
-    assert.equal((await panel(projectA, original.id)).packageDigest, original.packageDigest);
-    assert.ok(
-      !(await page(projectA, oldGrant)).includes(marker),
-      "Catalog update must not replace the project's selected package",
-    );
-    const current = await panel(projectA, original.id);
-    const history = await json(root(projectA) + `/${original.id}/versions`, {
-      method: "POST",
-      body: { expectedRevision: current.revision },
-    });
-    assert.ok(history.versions.some((item) => item.packageDigest === original.packageDigest));
-    assert.ok(history.versions.some((item) => item.packageDigest === updated.packageDigest));
-    await select(projectA, original.id, updated.packageDigest);
-    assert.ok(
-      [404, 410].includes(
-        (await request(`/p/${projectA}` + oldGrant.src, { anonymous: true, origin: "null" }))
-          .status,
-      ),
-    );
-    const changed = await prepare(projectA, original.id);
-    assert.ok((await page(projectA, changed)).includes(marker));
-    if (original.permissions.includes("storage"))
-      assert.deepEqual(
-        await panelHarness(projectA, changed).call("storage.getSnapshot", { key }),
-        snapshots.get(`${projectA}:${original.id}`),
+    let step = "controlled-update";
+    try {
+      const updated = await run(containerA, controlledUpdate, containerCore, original, marker);
+      const oldGrant = grants.get(`${projectA}:${original.id}`);
+      step = "catalog-pin";
+      assert.equal((await panel(projectA, original.id)).packageDigest, original.packageDigest);
+      step = "retained-page";
+      assert.ok(
+        !(await page(projectA, oldGrant)).includes(marker),
+        "Catalog update must not replace the project's selected package",
       );
-    await select(projectA, original.id, original.packageDigest);
-    const restored = await prepare(projectA, original.id);
-    assert.ok(!(await page(projectA, restored)).includes(marker));
-    grants.set(`${projectA}:${original.id}`, restored);
-    const other = grants.get(`${projectB}:${original.id}`);
-    assert.equal((await panel(projectB, original.id)).packageDigest, original.packageDigest);
-    assert.ok(!(await page(projectB, other)).includes(marker));
-    if (original.permissions.includes("storage"))
-      assert.deepEqual(
-        await panelHarness(projectB, other).call("storage.getSnapshot", { key }),
-        snapshots.get(`${projectB}:${original.id}`),
+      step = "history";
+      const current = await panel(projectA, original.id);
+      const history = await json(root(projectA) + `/${original.id}/versions`, {
+        method: "POST",
+        body: { expectedRevision: current.revision },
+      });
+      assert.ok(history.versions.some((item) => item.packageDigest === original.packageDigest));
+      assert.ok(history.versions.some((item) => item.packageDigest === updated.packageDigest));
+      step = "select-updated";
+      await select(projectA, original.id, updated.packageDigest);
+      step = "stale-grant";
+      assert.ok(
+        [404, 410].includes(
+          (await request(`/p/${projectA}` + oldGrant.src, { anonymous: true, origin: "null" }))
+            .status,
+        ),
       );
+      step = "updated-page";
+      const changed = await prepare(projectA, original.id);
+      assert.ok((await page(projectA, changed)).includes(marker));
+      step = "updated-storage";
+      if (original.permissions.includes("storage"))
+        assert.deepEqual(
+          await panelHarness(projectA, changed).call("storage.getSnapshot", { key }),
+          snapshots.get(`${projectA}:${original.id}`),
+        );
+      step = "select-original";
+      await select(projectA, original.id, original.packageDigest);
+      step = "restored-page";
+      const restored = await prepare(projectA, original.id);
+      assert.ok(!(await page(projectA, restored)).includes(marker));
+      grants.set(`${projectA}:${original.id}`, restored);
+      const other = grants.get(`${projectB}:${original.id}`);
+      step = "other-project-pin";
+      assert.equal((await panel(projectB, original.id)).packageDigest, original.packageDigest);
+      step = "other-project-page";
+      assert.ok(!(await page(projectB, other)).includes(marker));
+      step = "other-project-storage";
+      if (original.permissions.includes("storage"))
+        assert.deepEqual(
+          await panelHarness(projectB, other).call("storage.getSnapshot", { key }),
+          snapshots.get(`${projectB}:${original.id}`),
+        );
+    } catch (error) {
+      throw panelLifecycleFailure(error, original.id, step);
+    }
   }
   console.log(
     "PASS: all six real packages reject stale reviewed updates, retain the pinned bytes across catalog changes, and restore through actual cloud UI review, cancel and confirmation without losing project storage",
