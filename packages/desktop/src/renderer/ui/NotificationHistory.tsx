@@ -7,6 +7,7 @@ import { useT } from "../i18n";
 import { IconButton } from "./IconButton";
 import { useToastHistory } from "./ToastProvider";
 import { MAX_TOAST_HISTORY, type ToastHistoryEntry } from "./toastState";
+import { OPEN_NOTIFICATION_SESSION_EVENT } from "../app/notificationSessionNavigation";
 
 /** Inspect earlier notifications without leaving the active conversation. */
 export function NotificationHistory() {
@@ -152,6 +153,23 @@ export function NotificationHistory() {
                       <p className="whitespace-pre-wrap break-words rounded-md bg-muted/50 p-2 text-xs select-text">
                         {entry.detail}
                       </p>
+                    )}
+                    {entry.sessionId && (
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        data-notification-action="open-session"
+                        onClick={() => {
+                          setOpen(false);
+                          window.dispatchEvent(
+                            new CustomEvent(OPEN_NOTIFICATION_SESSION_EVENT, {
+                              detail: { sessionId: entry.sessionId },
+                            }),
+                          );
+                        }}
+                      >
+                        {t("misc.toast.openSession")}
+                      </Button>
                     )}
                     {copyResult?.id === entry.id && (
                       <p role="status" className="text-xs text-muted-foreground">

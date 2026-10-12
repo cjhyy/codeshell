@@ -42,6 +42,7 @@ describe("window-local toast history", () => {
       ...entry(),
       message: "日志失败\n" + "完整的错误文字".repeat(1000),
       detail: "完整的命令输出\n".repeat(1500),
+      sessionId: "origin-engine-session",
       read: true,
     };
     saveToastHistory([original]);
@@ -68,6 +69,10 @@ describe("window-local toast history", () => {
       { ...valid, id: 12 },
       { ...valid, message: null },
       { ...valid, detail: {} },
+      { ...valid, sessionId: 42 },
+      { ...valid, sessionId: "" },
+      { ...valid, sessionId: "   " },
+      { ...valid, sessionId: null },
       { ...valid, variant: "warning" },
       { ...valid, durationMs: -1 },
       { ...valid, durationMs: "8000" },

@@ -117,6 +117,7 @@ import { useBucketOverrides } from "./app/useBucketOverrides";
 import { useTranscriptBuckets } from "./app/useTranscriptBuckets";
 import { useAutomationSessionImport } from "./app/useAutomationSessionImport";
 import { useSessionNavigation } from "./app/useSessionNavigation";
+import { useNotificationSessionNavigation } from "./app/useNotificationSessionNavigation";
 import { useSessionHistorySync } from "./app/useSessionHistorySync";
 import { useHostSubscriptions } from "./app/useHostSubscriptions";
 import { useRunController } from "./app/useRunController";
@@ -1314,6 +1315,14 @@ function App() {
     activeBucketRef,
     setView,
     setRunsInitialRunId,
+  });
+
+  useNotificationSessionNavigation({
+    sessionIndicesRef,
+    selectSession: handleSelectSession,
+    openDiskSession: handleOpenAutomationDiskSession,
+    unavailable: (sessionId) =>
+      toast({ message: t("misc.toast.sessionUnavailable"), detail: sessionId, variant: "error" }),
   });
 
   const handleOpenPetTarget = createPetTargetNavigator({

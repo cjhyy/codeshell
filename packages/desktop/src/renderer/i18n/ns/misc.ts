@@ -98,6 +98,8 @@ export const misc = {
         copy: "复制通知详情",
         copied: "已复制",
         copyFailed: "复制失败，请选中文字复制。",
+        openSession: "打开会话",
+        sessionUnavailable: "对应会话已删除、已归档或暂时无法读取，请在通知详情中查看任务记录。",
       },
       app: {
         requestRejected: "本轮请求被拒绝",
@@ -124,6 +126,9 @@ export const misc = {
         completed: "✓ {name}完成:{preview}",
         failed: "✗ {name}失败:{preview}",
         cancelled: "{name}已取消:{preview}",
+        terminated: "{name}已终止:{preview}",
+        signal: "终止信号 {signal}",
+        exitCode: "退出码 {code}",
       },
       worktree: {
         cleanupSkipped:
@@ -229,6 +234,9 @@ export const misc = {
         copy: "Copy notification details",
         copied: "Copied",
         copyFailed: "Copy failed. Select the text to copy it.",
+        openSession: "Open conversation",
+        sessionUnavailable:
+          "This conversation was deleted, archived, or could not be read. Task details remain in the notification.",
       },
       app: {
         requestRejected: "This request was rejected",
@@ -259,6 +267,9 @@ export const misc = {
         completed: "✓ {name} done: {preview}",
         failed: "✗ {name} failed: {preview}",
         cancelled: "{name} cancelled: {preview}",
+        terminated: "{name} terminated: {preview}",
+        signal: "Termination signal {signal}",
+        exitCode: "Exit code {code}",
       },
       worktree: {
         cleanupSkipped:

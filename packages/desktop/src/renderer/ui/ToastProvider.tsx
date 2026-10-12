@@ -83,6 +83,7 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
         window.codeshell?.log?.("ui.toast.error", {
           message: full.message,
           ...(full.detail !== undefined ? { detail: full.detail } : {}),
+          ...(full.sessionId ? { sessionId: full.sessionId } : {}),
         });
       } catch {
         // The history remains available when the log sink fails.

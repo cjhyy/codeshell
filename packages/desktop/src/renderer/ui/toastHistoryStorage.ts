@@ -10,6 +10,8 @@ function isToastHistoryEntry(value: unknown): value is ToastHistoryEntry {
     entry.id.length > 0 &&
     typeof entry.message === "string" &&
     (entry.detail === undefined || typeof entry.detail === "string") &&
+    (entry.sessionId === undefined ||
+      (typeof entry.sessionId === "string" && entry.sessionId.trim().length > 0)) &&
     (entry.variant === "default" || entry.variant === "success" || entry.variant === "error") &&
     typeof entry.durationMs === "number" &&
     Number.isFinite(entry.durationMs) &&

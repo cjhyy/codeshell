@@ -14,6 +14,8 @@ export interface ToastOptions {
   message: string;
   /** Full diagnostic context retained in notification history. */
   detail?: string;
+  /** Originating engine session, for opening the conversation from history. */
+  sessionId?: string;
   /** Affects the accent/icon. Default "default". */
   variant?: ToastVariant;
   /** Auto-dismiss after this many ms; 0 means it stays until dismissed. */
@@ -24,6 +26,7 @@ export interface Toast {
   id: string;
   message: string;
   detail?: string;
+  sessionId?: string;
   variant: ToastVariant;
   durationMs: number;
 }
@@ -88,6 +91,7 @@ export function toastFromOptions(opts: ToastOptions): Omit<Toast, "id"> {
   return {
     message: opts.message,
     ...(opts.detail !== undefined ? { detail: opts.detail } : {}),
+    ...(opts.sessionId?.trim() ? { sessionId: opts.sessionId } : {}),
     variant: opts.variant ?? "default",
     durationMs:
       opts.durationMs ??

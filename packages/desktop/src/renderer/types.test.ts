@@ -1463,6 +1463,43 @@ describe("applyStreamEvent — background_agent_completed", () => {
     expect(toastLine).not.toContain("失败");
   });
 
+  test("terminated shells show their signal without claiming cancellation", () => {
+    const line = bgCompletionText({
+      workKind: "shell",
+      description: "Background shell exited (signal SIGTERM)",
+      command: "python3 learning_server.py --port 8877",
+      status: "failed",
+      signal: "SIGTERM",
+    });
+    expect(line).toContain("已终止");
+    expect(line).toContain("SIGTERM");
+    expect(line).toContain("learning_server.py");
+    expect(line).not.toContain("已取消");
+  });
+
+  test("nonzero shell exits retain the failure and its exit code", () => {
+    const line = bgCompletionText({
+      workKind: "shell",
+      description: "Background shell exited (exit 1)",
+      command: "python3 process.py",
+      status: "failed",
+      exitCode: 1,
+    });
+    expect(line).toContain("失败");
+    expect(line).toContain("退出码 1");
+  });
+
+  test("legacy shell failures still include their available error", () => {
+    const line = bgCompletionText({
+      workKind: "shell",
+      description: "old event",
+      command: "python3 process.py",
+      status: "failed",
+      error: "spawn denied",
+    });
+    expect(line).toContain("spawn denied");
+  });
+
   test("long finalText is clipped to a one-line preview (#2 flood)", () => {
     // A subagent that returns a multi-paragraph report must not dump the whole
     // thing into the stream line — the full text lives in its own agent card.

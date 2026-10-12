@@ -272,6 +272,10 @@ import {
 } from "./automation-host.js";
 import { automationLifecycleNotification } from "./automation-notification.js";
 import { DesktopNotifier } from "./desktop-notifier.js";
+import {
+  findNotificationWindow,
+  showNativeDesktopNotification,
+} from "./native-desktop-notification.js";
 import * as desktopNotifications from "./desktop-notification-routes.js";
 import type { CronRunResult } from "@cjhyy/code-shell-core/internal";
 import {
@@ -3351,7 +3355,33 @@ app.whenReady().then(async () => {
     {
       hasFocusedWindow: () => BrowserWindow.getFocusedWindow() !== null,
       isSupported: () => Notification.isSupported(),
-      show: (input) => new Notification(input).show(),
+      show: (input) =>
+        showNativeDesktopNotification(input, {
+          create: (options) => new Notification(options),
+          openSession: (sessionId) => {
+            void (async () => {
+              const target =
+                findNotificationWindow(mainWindows, bridge?.panelOwnerWebContentsId(sessionId)) ??
+                (await createWindow());
+              if (target.isDestroyed()) return;
+              if (target.isMinimized()) target.restore();
+              target.show();
+              target.focus();
+              const open = () => {
+                if (!target.isDestroyed())
+                  target.webContents.send("notification:open-session", sessionId);
+              };
+              if (target.webContents.isLoadingMainFrame())
+                target.webContents.once("did-finish-load", open);
+              else open();
+            })().catch((error) =>
+              dlog("main", "desktop_notification.open_session.failed", {
+                sessionId,
+                error: String(error),
+              }),
+            );
+          },
+        }),
     },
   );
   await projectStore.warm();

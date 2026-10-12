@@ -66,7 +66,9 @@ export async function bashOutputTool(
 export const killShellToolDef: ToolDefinition = {
   name: "KillShell",
   description:
-    "Terminate a background shell (and its whole process group) started via Bash(run_in_background=true).",
+    "Terminate a background shell (and its whole process group) started via Bash(run_in_background=true). " +
+    "Prefer this over raw kill/pkill when stopping or restarting a managed background task; " +
+    "it records an intentional stop instead of reporting an unexpected process failure.",
   inputSchema: {
     type: "object",
     properties: {

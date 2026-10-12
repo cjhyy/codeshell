@@ -144,4 +144,19 @@ describe("toastFromOptions", () => {
     expect(toastFromOptions({ message: "failed", detail: "" }).detail).toBe("");
     expect(toastFromOptions({ message: "failed" })).not.toHaveProperty("detail");
   });
+
+  test("retains the originating session through history and dismissal", () => {
+    const toast = {
+      id: "background-failure",
+      ...toastFromOptions({
+        message: "后台命令失败",
+        sessionId: "engine-session",
+      }),
+    };
+    const state = dismissToast(addToast(initialToastState(), toast), toast.id);
+    expect(state.toasts).toEqual([]);
+    expect(state.history[0]!.sessionId).toBe("engine-session");
+    expect(toastFromOptions({ message: "no session" })).not.toHaveProperty("sessionId");
+    expect(toastFromOptions({ message: "empty", sessionId: "" })).not.toHaveProperty("sessionId");
+  });
 });

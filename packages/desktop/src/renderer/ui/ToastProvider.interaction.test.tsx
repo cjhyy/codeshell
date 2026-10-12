@@ -162,6 +162,7 @@ describe("ToastProvider notification lifetime", () => {
       toast({
         message: "保存失败",
         detail: "完整命令\n完整错误",
+        sessionId: "background-origin-session",
         variant: "error",
         durationMs: 1000,
       }),
@@ -176,6 +177,7 @@ describe("ToastProvider notification lifetime", () => {
       expect.objectContaining({
         message: "保存失败",
         detail: "完整命令\n完整错误",
+        sessionId: "background-origin-session",
         variant: "error",
         createdAt,
         read: false,
