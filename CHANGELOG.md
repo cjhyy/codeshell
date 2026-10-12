@@ -24,6 +24,8 @@ breaking.
 
 - Retain dismissed notifications in a persistent history with diagnostic details,
   and open the originating chat from actionable background notifications.
+- Honor an explicitly selected full-access mode for Host file tools, attachments,
+  and external runtimes while retaining tool deny rules and attachment custody checks.
 
 ## [0.9.34] - 2026-10-12
 
