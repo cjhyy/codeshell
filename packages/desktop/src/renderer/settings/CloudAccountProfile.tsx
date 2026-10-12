@@ -89,9 +89,9 @@ export function CloudAccountProfile({
   }, [identity.origin, identity.accountId, enabled]);
   const normalizedName = normalizeCloudDisplayName(displayName);
   const normalizedUsername = normalizeCloudUsername(username);
-  const dirty =
-    normalizedName !== (account.displayName ?? account.username) ||
-    normalizedUsername !== account.username;
+  const nameChanged = normalizedName !== (account.displayName ?? account.username);
+  const usernameChanged = normalizedUsername !== account.username;
+  const dirty = nameChanged || usernameChanged;
   const disabled = !enabled || pending || busy;
   return (
     <form
@@ -117,8 +117,8 @@ export function CloudAccountProfile({
           .profile({
             ...identity,
             action: "update",
-            displayName: normalizedName,
-            username: normalizedUsername,
+            ...(nameChanged ? { displayName: normalizedName } : {}),
+            ...(usernameChanged ? { username: normalizedUsername } : {}),
           })
           .then(
             () => {
