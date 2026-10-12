@@ -152,7 +152,8 @@ try {
     page.on("pageerror", (error) => errors.push(String(error)));
     const visible = async (label) =>
       page.getByRole("button", { name: label, exact: true }).waitFor();
-    const focus = () => page.evaluate(() => window.dispatchEvent(new Event("focus")));
+    const focus = () =>
+      page.evaluate(() => globalThis.window.dispatchEvent(new globalThis.Event("focus")));
     async function enter() {
       state.authenticated = true;
       state.statusCode = 0;
@@ -187,7 +188,7 @@ try {
       .fill("old scoped session draft");
     state.session.id = randomUUID();
     await focus();
-    await page.waitForFunction(() => document.querySelector("textarea")?.value === "");
+    await page.waitForFunction(() => globalThis.document.querySelector("textarea")?.value === "");
     if (width === 390) await page.getByRole("button", { name: "展开侧栏", exact: true }).click();
     await visible("退出此 Cloud 工作台");
     checks.push(`${width}:same-account-new-grant-remounts-old-draft`);
@@ -235,7 +236,9 @@ try {
     assert.deepEqual(unexpected, []);
     assert.deepEqual(errors, []);
     assert.equal(
-      await page.evaluate(() => document.documentElement.scrollWidth > window.innerWidth),
+      await page.evaluate(
+        () => globalThis.document.documentElement.scrollWidth > globalThis.window.innerWidth,
+      ),
       false,
     );
     checks.push(`${width}:no-horizontal-overflow-or-page-errors`);
