@@ -68,7 +68,7 @@ export function createCloudManagementTransport(
           ca,
           signal: input.signal,
           headers: {
-            Origin: input.origin,
+            ...(input.path === "/api/v1/cloud-management/session" ? {} : { Origin: input.origin }),
             Accept: "application/json",
             ...(input.token ? { Authorization: `Bearer ${input.token}` } : {}),
             ...(bytes
