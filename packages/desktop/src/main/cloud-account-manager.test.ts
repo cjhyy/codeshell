@@ -878,7 +878,9 @@ test("logout, session replacement and owner closure fence a late profile respons
         ? response.promise
         : request.path.endsWith("login")
           ? next
-          : {},
+          : request.path.endsWith("logout")
+            ? { ok: true }
+            : {},
     );
     const result = ctx.manager
       .profile({ origin, accountId: old.account.id, action: "read" }, () => authorized)
