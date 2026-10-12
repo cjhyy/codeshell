@@ -399,6 +399,25 @@ export function installDockerCandidateGuard(
       (role === "driver" ? driverChild?.(command, args, options) : undefined);
     if (!descriptor || (options.detached && !descriptor.allowDetached)) refuse();
     const expected = descriptor.environment ?? process.env;
+    const childHome = descriptor.environment?.HOME ?? home;
+    if (descriptor.environment?.HOME !== undefined) {
+      if (
+        typeof childHome !== "string" ||
+        !isAbsolute(childHome) ||
+        realpathSync(childHome) !== childHome
+      )
+        refuse();
+      const directory = lstatSync(childHome);
+      if (
+        !directory.isDirectory() ||
+        directory.isSymbolicLink() ||
+        (directory.mode & 0o777) !== 0o700 ||
+        !owned(directory) ||
+        expected.USERPROFILE !== childHome ||
+        expected.CODE_SHELL_HOME !== `${childHome}/.code-shell`
+      )
+        refuse();
+    }
     if (descriptor.reinject) {
       // The production Panel service intentionally strips Node options. Only
       // a reviewed, pinned child may receive this fixture's preload again.
@@ -419,8 +438,8 @@ export function installDockerCandidateGuard(
       };
     }
     if (
-      env.HOME !== home ||
-      env.USERPROFILE !== home ||
+      env.HOME !== childHome ||
+      env.USERPROFILE !== childHome ||
       env.CODE_SHELL_HOME !== expected.CODE_SHELL_HOME ||
       env.NODE_OPTIONS !== expected.NODE_OPTIONS ||
       env.CODESHELL_DOCKER_CANDIDATE_CONFIG !== expected.CODESHELL_DOCKER_CANDIDATE_CONFIG ||

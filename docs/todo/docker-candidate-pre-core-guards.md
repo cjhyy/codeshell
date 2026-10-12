@@ -31,6 +31,11 @@ remain refused. Unreviewed `worker_threads.Worker` constructors are refused
 through CommonJS and both ESM exports: isolates can otherwise discard preload
 options and receive fresh, unguarded builtins. Reviewed Core workers remain
 digest-pinned Node child processes, rather than Worker isolates.
+A separately registered `descriptor.environment.HOME` may select another
+canonical, owned, exactly 0700 directory. USERPROFILE and CODE_SHELL_HOME must
+match that registered home; the descriptor also fixes its preload, private
+policy path and policy hash. Its child preload verifies those bytes before the
+entry runs. Descriptors without that explicit HOME retain the parent HOME.
 Direct `ChildProcess.prototype.spawn` calls are refused. Reviewed spawn,
 execFile and the private Docker executor receive one synchronous, single-use
 grant for their exact executable, argv, environment, cwd and process options;
@@ -166,6 +171,15 @@ four DNS probes. The final affected nine-suite combination passes 105 tests and
 405 assertions with no failures or skips. No Core, Docker, Main, native browser,
 external network, UDP, WebSocket or inspector listener was started by these
 checks. ESLint, Prettier, native Node syntax and diff checks pass.
+
+The restore consumer's separate HOME regression first failed on the previous
+guard, then passed with the explicit descriptor contract. Actual Node checks
+confirm a different child HOME/policy hash and the same pinned preload, with
+the real parent PID recorded. Public directory permissions, a symlink HOME,
+inconsistent USERPROFILE and an unregistered HOME are refused before spawn.
+The existing parent-HOME spawn/execFile cases remain in the affected suite.
+The complete affected nine-suite combination passes 110 tests and 434 assertions,
+with zero failures or skips; lint, format, native Node syntax and diff checks pass.
 
 The final fixed-source Linux gate must still build/inspect the helper image,
 execute both-family rules/probes, and run the original complete business suite
