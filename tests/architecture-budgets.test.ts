@@ -84,13 +84,23 @@ describe("architecture growth budgets", () => {
     // coordinator. Its failure/retry gate reduces Main without raising this limit.
     // Seven composition lines register reviewed project-to-Profile memory copies;
     // review custody and storage validation remain in their extracted modules.
-    expect(lines("packages/desktop/src/main/index.ts")).toBeLessThanOrEqual(7_208);
+    // v0.9.35 adds nine composition lines for the lazy, account-owned GitHub
+    // Link preparer. PKCE, continuation validation and cancellation stay in
+    // account-github-link.ts and the existing account/Link managers.
+    // The integrated notification change adds 28 lines binding native clicks
+    // to main's live window ownership/createWindow and loading-frame lifecycle.
+    // Notification content, instance binding and session validation stay in
+    // extracted modules. Both additions keep the IPC route count unchanged.
+    expect(lines("packages/desktop/src/main/index.ts")).toBeLessThanOrEqual(7_245);
     expect(lines("packages/desktop/src/main/project-panel-ipc.ts")).toBeLessThanOrEqual(322);
     // The five generic Link authorization operations reuse the window/project
     // owner and live reauthorization guard here. Challenge state, provider
     // protocols and native browser handoff remain in server/links and
     // remote-link-{manager,window}; this registrar holds no provider tokens.
-    expect(lines("packages/desktop/src/main/remote-link-ipc.ts")).toBeLessThanOrEqual(173);
+    // Twelve composition lines construct and return the user-scoped account
+    // preparer through the same mutation/configuration seams. It adds no IPC
+    // route; its lifecycle and remote-connection reuse stay outside this registrar.
+    expect(lines("packages/desktop/src/main/remote-link-ipc.ts")).toBeLessThanOrEqual(185);
     // Count extracted registrations too: moving a route cannot hide API growth.
     // New explicit project-package, remote-Link and Cloud-window operations are
     // part of this feature's reviewed transport contract, total 295 routes.
@@ -217,7 +227,9 @@ describe("architecture growth budgets", () => {
     // over 2_748). Availability checks remain in useReviewAvailability.ts;
     // per-session approval policy remains in app/approvalPermission.ts.
     // +6 generation checks keep stale project refreshes out of live UI state.
-    expect(lines("packages/desktop/src/renderer/App.tsx")).toBeLessThanOrEqual(2_779);
+    // Nine composition lines connect the extracted notification navigation hook
+    // to the existing live/disk Session selectors and unavailable-session toast.
+    expect(lines("packages/desktop/src/renderer/App.tsx")).toBeLessThanOrEqual(2_788);
     // Goal-extension and pre-turn archive inputs now fail closed at protocol
     // ingress instead of trusting arbitrary numeric/object payloads. Manual
     // Mimi clears also validate their host-authored summary at this boundary.

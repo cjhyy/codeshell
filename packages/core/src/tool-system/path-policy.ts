@@ -987,12 +987,9 @@ export async function enforcePathPolicyWithApproval(
 ): Promise<string | null> {
   if (ctx?.signal?.aborted) return "Error: path approval cancelled — run stopped";
   if (ctx?.cwd === undefined) return null;
-  // bypassPermissions ("完全访问") skips the path-approval layer entirely,
-  // matching the tool-permission backend and CC (bypass skips ALL checks,
-  // including path validation). This is what makes "完全访问" actually mean
-  // full access — previously path policy ran regardless of mode, so a user
-  // who chose full access still got prompted for project-external reads.
-  if (ctx.permissionMode === "bypassPermissions") return null;
+  // Full access skips path approval. External tool hosts bind pathAccess
+  // separately so their classifier can still honor explicit tool deny rules.
+  if (ctx.permissionMode === "bypassPermissions" || ctx.pathAccess === "full") return null;
 
   const c = classifyPath(filePath, {
     workspaceRoot: ctx.cwd,

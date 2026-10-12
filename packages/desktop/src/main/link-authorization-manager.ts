@@ -17,6 +17,8 @@ interface Flow {
   cancelled: boolean;
   finished: boolean;
   completing: boolean;
+  opening: boolean;
+  context: LinkOperationContext;
   window?: NativeLinkAuthorizationWindow;
   timer?: ReturnType<typeof setTimeout>;
   abort: AbortController;
@@ -50,12 +52,74 @@ export function createNativeLinkAuthorizationManager(options: {
     if (flow.jobId) void service.cancelAuthorization(context, flow.jobId).catch(() => {});
     finish(flow);
   }
+  function guarded(flow: Flow): LinkOperationContext {
+    return {
+      ownerId: flow.ownerId,
+      authorize: () => !closed && !flow.finished && !flow.cancelled && flow.context.authorize(),
+    };
+  }
+  async function launch(
+    context: LinkOperationContext,
+    flow: Flow,
+    job: LinkAuthorization,
+    navigationUrl?: string,
+  ) {
+    if (job.step?.kind !== "redirect") throw new Error("找不到这个授权任务。");
+    if (flow.opening || flow.window) throw new Error("请先完成或取消当前授权。");
+    await service.assertAuthorized(guarded(flow));
+    if (flow.finished || flow.cancelled || closed) throw new Error("授权窗口已关闭。");
+    // Reserve dispatch before the external browser adapter can yield.
+    if (flow.opening || flow.window) throw new Error("请先完成或取消当前授权。");
+    flow.opening = true;
+    const authorization = new URL(job.step.authorizationUrl);
+    try {
+      flow.window = await options.open({
+        authorizationUrl: authorization.href,
+        ...(navigationUrl ? { navigationUrl } : {}),
+        redirectUri: authorization.searchParams.get("redirect_uri")!,
+        expiresAt: job.expiresAt ?? job.step.expiresAt,
+        signal: flow.abort.signal,
+        providerName: service
+          .snapshot()
+          .providers.find((provider) => provider.id === job.providerId)?.displayName,
+        onCancel: () => {
+          if (!flow.finished) cancelFlow(context, flow);
+        },
+        onCallback: async (url) => {
+          if (flow.finished || flow.completing) return false;
+          flow.completing = true;
+          try {
+            const result = await service.completeRemoteAuth(guarded(flow), job.id, url);
+            try {
+              if (
+                result.state === "connected" &&
+                !flow.finished &&
+                (await guarded(flow).authorize())
+              )
+                await options.onConnected?.();
+            } catch {
+              /* Focus failure cannot change an adopted connection. */
+            }
+            return result.state === "connected";
+          } catch {
+            return false;
+          } finally {
+            finish(flow);
+          }
+        },
+      });
+      if (flow.finished) flow.window.close();
+    } finally {
+      flow.opening = false;
+    }
+  }
   return {
     async start(
       context: LinkOperationContext,
       requestId: string,
       input: LinkConnectionInput,
       authModeId: string,
+      deferBrowser = false,
     ): Promise<LinkAuthorization> {
       if (!validId(requestId)) throw new Error("授权请求标识无效。");
       await service.assertAuthorized(context);
@@ -80,15 +144,13 @@ export function createNativeLinkAuthorizationManager(options: {
         cancelled: false,
         finished: false,
         completing: false,
+        opening: false,
+        context,
         abort: new AbortController(),
       };
       flows.set(requestId, flow);
-      const guarded = {
-        ownerId: context.ownerId,
-        authorize: () => !closed && !flow.cancelled && context.authorize(),
-      };
       try {
-        const job = await service.startAuthorization(guarded, input, authModeId);
+        const job = await service.startAuthorization(guarded(flow), input, authModeId);
         flow.jobId = job.id;
         if (flow.cancelled || flow.finished || closed) {
           await service.cancelAuthorization(context, job.id).catch(() => {});
@@ -112,40 +174,7 @@ export function createNativeLinkAuthorizationManager(options: {
           );
           flow.timer.unref?.();
         }
-        if (job.step?.kind === "redirect") {
-          const authorization = new URL(job.step.authorizationUrl);
-          flow.window = await options.open({
-            authorizationUrl: authorization.href,
-            redirectUri: authorization.searchParams.get("redirect_uri")!,
-            expiresAt: job.expiresAt ?? job.step.expiresAt,
-            signal: flow.abort.signal,
-            providerName: service
-              .snapshot()
-              .providers.find((provider) => provider.id === job.providerId)?.displayName,
-            onCancel: () => {
-              if (!flow.finished) cancelFlow(context, flow);
-            },
-            onCallback: async (url) => {
-              if (flow.finished || flow.completing) return false;
-              flow.completing = true;
-              try {
-                const result = await service.completeRemoteAuth(guarded, job.id, url);
-                try {
-                  if (result.state === "connected" && !flow.finished && (await guarded.authorize()))
-                    await options.onConnected?.();
-                } catch {
-                  /* Focus failure cannot change an adopted connection. */
-                }
-                return result.state === "connected";
-              } catch {
-                return false;
-              } finally {
-                finish(flow);
-              }
-            },
-          });
-          if (flow.finished) flow.window.close();
-        }
+        if (job.step?.kind === "redirect" && !deferBrowser) await launch(context, flow, job);
         return flow.finished ? await service.authorization(context, job.id) : job;
       } catch (error) {
         const interrupted = flow.finished || flow.cancelled || closed;
@@ -166,6 +195,47 @@ export function createNativeLinkAuthorizationManager(options: {
             state: "cancelled",
           };
         }
+        throw error;
+      }
+    },
+    async prepare(
+      context: LinkOperationContext,
+      requestId: string,
+      input: LinkConnectionInput,
+      authModeId: string,
+    ): Promise<LinkAuthorization> {
+      return this.start(context, requestId, input, authModeId, true);
+    },
+    async resume(context: LinkOperationContext, id: string, navigationUrl: string) {
+      await service.assertAuthorized(context);
+      const flow = find(id);
+      if (!flow || flow.ownerId !== context.ownerId || flow.finished)
+        throw new Error("找不到这个授权任务。");
+      const job = await service.authorization(guarded(flow), flow.jobId!);
+      if (job.state !== "pending" || job.step?.kind !== "redirect")
+        throw new Error("找不到这个授权任务。");
+      try {
+        let target: URL;
+        try {
+          target = new URL(navigationUrl);
+        } catch {
+          throw new Error("Link 授权地址无效。");
+        }
+        if (
+          navigationUrl.length > 2048 ||
+          target.origin !== new URL(job.step.authorizationUrl).origin ||
+          target.pathname !== "/oauth/account-link/claim" ||
+          target.username ||
+          target.password ||
+          target.hash ||
+          [...target.searchParams.keys()].length !== 1 ||
+          !/^[A-Za-z0-9_-]{43}$/.test(target.searchParams.get("ticket") ?? "")
+        )
+          throw new Error("Link 授权地址无效。");
+        await launch(context, flow, job, target.href);
+        return flow.finished ? await service.authorization(context, job.id) : job;
+      } catch (error) {
+        cancelFlow(context, flow);
         throw error;
       }
     },

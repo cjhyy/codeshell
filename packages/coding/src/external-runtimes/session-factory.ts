@@ -52,6 +52,8 @@ export interface ExternalRuntimeSessionOptions {
   /** Registry holding the tools that may be exposed. */
   registry: Parameters<typeof createSessionToolHost>[0]["registry"];
   permissionMode: Parameters<typeof createSessionToolHost>[0]["permissionMode"];
+  /** Host-selected file access, independent of tool rules and exposure. */
+  pathAccess?: Parameters<typeof createSessionToolHost>[0]["pathAccess"];
   presetRules: readonly PermissionRule[];
   /** Whether the user has trusted the project at `cwd`. No default — §12.2. */
   projectTrusted: boolean;
@@ -156,6 +158,7 @@ export async function startExternalRuntimeSession(
       cwd: options.cwd,
       registry: options.registry,
       permissionMode: options.permissionMode,
+      pathAccess: options.pathAccess,
       presetRules: options.presetRules,
       projectTrusted: options.projectTrusted,
       planMode: options.planMode,

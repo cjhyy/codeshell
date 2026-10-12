@@ -2,8 +2,13 @@ import { createHash } from "node:crypto";
 import type { CronJob, CronJobLifecycleEvent } from "@cjhyy/code-shell-core/internal";
 
 import { automationLifecycleNotification } from "./automation-notification.js";
+import { backgroundNotificationContent } from "./background-notification-content.js";
 import { dlog } from "./desktop-logger.js";
-import type { DesktopNotificationInput, DesktopNotificationOutcome } from "./desktop-notifier.js";
+import {
+  isValidDesktopNotificationSessionId,
+  type DesktopNotificationInput,
+  type DesktopNotificationOutcome,
+} from "./desktop-notifier.js";
 import type { GatewayControlEventInput } from "./im-gateway-control-server.js";
 
 export interface DesktopNotificationSink {
@@ -100,6 +105,11 @@ export function notifyBackgroundResult(
     status?: unknown;
     description?: unknown;
     finishedAt?: unknown;
+    name?: unknown;
+    command?: unknown;
+    error?: unknown;
+    exitCode?: unknown;
+    signal?: unknown;
   };
   if (
     (payload.status !== "completed" &&
@@ -110,13 +120,11 @@ export function notifyBackgroundResult(
     typeof payload.workKind !== "string" ||
     typeof payload.finishedAt !== "number" ||
     !Number.isFinite(payload.finishedAt) ||
-    typeof envelope.from?.sessionId !== "string" ||
-    typeof envelope.to?.sessionId !== "string"
+    !isValidDesktopNotificationSessionId(envelope.from?.sessionId) ||
+    !isValidDesktopNotificationSessionId(envelope.to?.sessionId)
   ) {
     return;
   }
-  const completed = payload.status === "completed";
-  const cancelled = payload.status === "cancelled";
   const deliveryKey = createHash("sha256")
     .update("background-result\0")
     .update(envelope.from.sessionId)
@@ -131,12 +139,32 @@ export function notifyBackgroundResult(
     .update("\0")
     .update(String(payload.finishedAt))
     .digest("hex");
+  const content = backgroundNotificationContent({
+    ...payload,
+    workId: payload.workId,
+    workKind: payload.workKind,
+    status: payload.status,
+  });
+  dlog("main", "background_work.finished", {
+    sessionId: envelope.to.sessionId,
+    sourceSessionId: envelope.from.sessionId,
+    workId: payload.workId,
+    workKind: payload.workKind,
+    status: payload.status,
+    finishedAt: payload.finishedAt,
+    ...(Number.isSafeInteger(payload.exitCode) ? { exitCode: payload.exitCode } : {}),
+    ...(typeof payload.signal === "string" && /^SIG[A-Z0-9]{1,29}$/u.test(payload.signal)
+      ? { signal: payload.signal }
+      : {}),
+    ...content,
+    deliveryKey,
+  });
   void deliver(
     notifier,
     {
       key: deliveryKey,
-      title: completed ? "自动化任务完成" : cancelled ? "自动化任务已取消" : "自动化任务失败",
-      body: payload.description,
+      ...content,
+      sessionId: envelope.to.sessionId,
     },
     "desktop_notification.background_result.failed",
     { envelopeId: envelope.id, deliveryKey },

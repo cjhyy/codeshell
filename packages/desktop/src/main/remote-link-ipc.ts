@@ -15,6 +15,7 @@ import {
 import { createNativeRemoteLinkManager } from "./remote-link-manager.js";
 import { openNativeLinkAuthorization } from "./remote-link-window.js";
 import { desktopRemoteLinkConfiguration } from "./desktop-remote-link-configuration.js";
+import { createAccountGitHubLinkPreparer } from "./account-github-link.js";
 
 /** Window-owned authorization managers retire on navigation and destruction. */
 export function registerRemoteLinkIpc(deps: {
@@ -25,6 +26,16 @@ export function registerRemoteLinkIpc(deps: {
   onChanged: () => void;
 }) {
   const { ipcMain, requireRendererProjectPath } = deps;
+  const prepareGitHubLink = createAccountGitHubLinkPreparer({
+    createService: () =>
+      createLinkService({
+        remoteLink: () => desktopRemoteLinkConfiguration(process.env, app.isPackaged),
+        reuseRemoteConnection: true,
+        withMutation: (write) => deps.withMutation("", write),
+        onChanged: deps.onChanged,
+      }),
+    open: openNativeLinkAuthorization,
+  });
   const nativeLinkOwners = new WeakMap<
     Electron.WebContents,
     {
@@ -165,4 +176,5 @@ export function registerRemoteLinkIpc(deps: {
       return manager.service.disconnect(context, id, revision);
     },
   );
+  return { prepareGitHubLink };
 }

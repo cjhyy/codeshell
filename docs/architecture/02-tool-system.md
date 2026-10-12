@@ -104,6 +104,17 @@ Sensitive directories are home-scoped `.ssh`, `.aws`, `.config/gcloud`, `.code-s
 
 `enforcePathPolicyWithApproval` is the executor-facing path (`path-policy.ts:563`). It does nothing when no `ToolContext.cwd` exists, and `permissionMode === "bypassPermissions"` skips the entire path approval layer (`path-policy.ts:568`). Otherwise it handles `allow`, `deny`, plan-mode write refusal, remembered grants, missing UI, and serialized interactive path prompts (`path-policy.ts:576`, `path-policy.ts:581`, `path-policy.ts:585`, `path-policy.ts:590`, `path-policy.ts:595`). Remembered grants are directory-prefix grants tagged by operation: read covers reads only; write covers reads and writes (`path-policy.ts:160`, `path-policy.ts:176`, `path-policy.ts:282`). Project grants persist as `{ path, op }` in `.code-shell/settings.local.json` with atomic rename (`path-policy.ts:308`, `path-policy.ts:343`).
 
+For external runtimes, Desktop also binds the user's full-access selection as
+`pathAccess: "full"` on `SessionToolHost`. This skips path approval while keeping
+the host tool classifier in `acceptEdits`, so explicit user tool deny rules still
+apply. The grant is a trusted factory option sealed after `contextOverrides`;
+runtime tool arguments cannot elevate it. Full-access tool approval requests are
+approved by Desktop Main, while ordinary user questions remain interactive.
+Exposure, visibility, plan mode, hooks, and explicitly configured shell sandboxes
+retain their own checks. Structured input attachments use the effective run
+permission mode for path access, while retaining canonicalization, session
+custody, image type, and byte limits even under full access.
+
 The executor resolves declared targets before classification:
 
 - Single string path args resolve relative to `ctx.cwd` (`executor.ts:586`).

@@ -24,6 +24,19 @@ export const settingsNs = {
         login: "登录",
         register: "注册",
         github: "使用 GitHub 登录",
+        connectGitHub: "同时连接 GitHub",
+        cancelGitHubConnection: "取消 GitHub 连接",
+        connectGitHubChecking: "正在检查此云服务是否支持同时连接 GitHub…",
+        connectGitHubDescription:
+          "选中后将申请公开和私有仓库读写权限（repo）。连接后，在「凭证 → Link」中选择要使用的仓库和 Actions 权限。",
+        connectGitHubUnavailable:
+          "此云服务暂不支持登录时连接 GitHub；仍可使用 GitHub 登录，稍后在「凭证 → Link」连接。",
+        githubConnection: "GitHub 连接",
+        githubConnection_pending: "云账号已登录，正在连接 GitHub，请完成浏览器授权及资源选择。",
+        githubConnection_connected: "GitHub 已连接。可在「凭证 → Link」中管理仓库和 Actions 权限。",
+        githubConnection_failed:
+          "云账号已登录，但 GitHub 连接未完成。可稍后在「凭证 → Link」中重试。",
+        githubConnection_skipped: "云账号已登录，尚未连接 GitHub。可稍后在「凭证 → Link」中连接。",
         githubCreatesAccount: "首次授权会自动创建 CodeShell 账号，无需先注册或设置密码。",
         githubExistingOnly: "此服务已关闭注册；仅已关联 GitHub 的 CodeShell 账号可继续登录。",
         passwordMethod: "账号密码登录方式",
@@ -33,10 +46,10 @@ export const settingsNs = {
         confirmPassword: "确认密码",
         passwordMismatch: "两次输入的密码不一致。",
         submitting: "正在提交账号信息…",
-        linkGitHub: "关联 GitHub",
+        linkGitHub: "绑定 GitHub 登录",
         linkDescription:
-          "关联 GitHub 后，可用 GitHub 登录当前 CodeShell 账号，不会创建另一个账号。",
-        linked: "GitHub 已关联到当前 CodeShell 账号。",
+          "绑定后，可用 GitHub 登录当前 CodeShell 账号；此操作只绑定登录身份，GitHub 数据连接请在「凭证 → Link」中管理。",
+        linked: "GitHub 登录身份已绑定到当前 CodeShell 账号。",
         logout: "退出云账号",
         cancel: "取消登录",
         failed: "云账号操作未完成。",
@@ -1043,6 +1056,23 @@ export const settingsNs = {
         login: "Sign in",
         register: "Register",
         github: "Sign in with GitHub",
+        connectGitHub: "Also connect GitHub",
+        cancelGitHubConnection: "Cancel GitHub connection",
+        connectGitHubChecking:
+          "Checking whether this service supports connecting GitHub during sign-in…",
+        connectGitHubDescription:
+          "When selected, this requests read and write access to public and private repositories (repo). After connecting, choose the repositories and Actions permissions to use in Credentials → Link.",
+        connectGitHubUnavailable:
+          "This service does not support connecting GitHub during sign-in yet. You can still sign in with GitHub and connect later in Credentials → Link.",
+        githubConnection: "GitHub connection",
+        githubConnection_pending:
+          "Your cloud account is signed in. Connecting GitHub; finish browser authorization and resource selection.",
+        githubConnection_connected:
+          "GitHub is connected. Manage repositories and Actions permissions in Credentials → Link.",
+        githubConnection_failed:
+          "Your cloud account is signed in, but the GitHub connection did not finish. Retry later in Credentials → Link.",
+        githubConnection_skipped:
+          "Your cloud account is signed in. GitHub is not connected; connect later in Credentials → Link.",
         githubCreatesAccount:
           "Your first authorization automatically creates a CodeShell account. No prior registration or password is needed.",
         githubExistingOnly:
@@ -1055,10 +1085,10 @@ export const settingsNs = {
         confirmPassword: "Confirm password",
         passwordMismatch: "The passwords do not match.",
         submitting: "Submitting account details…",
-        linkGitHub: "Link GitHub",
+        linkGitHub: "Bind GitHub sign-in",
         linkDescription:
-          "Link GitHub to sign in to this CodeShell account with GitHub, without creating another account.",
-        linked: "GitHub is linked to this CodeShell account.",
+          "Bind your GitHub sign-in identity to this CodeShell account. Manage GitHub data connections separately in Credentials → Link.",
+        linked: "GitHub sign-in is bound to this CodeShell account.",
         logout: "Sign out",
         cancel: "Cancel sign-in",
         failed: "Cloud account operation failed.",

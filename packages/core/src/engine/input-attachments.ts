@@ -2,7 +2,7 @@ import { createHash } from "node:crypto";
 import { readdir, readFile, realpath, stat } from "node:fs/promises";
 import { extname, isAbsolute, join, relative, resolve, sep } from "node:path";
 import { logger } from "../logging/logger.js";
-import type { InputAttachmentMeta } from "../types.js";
+import type { InputAttachmentMeta, PermissionMode } from "../types.js";
 import { classifyPath } from "../tool-system/path-policy.js";
 import { enforceImageBytePolicy } from "./image-policy.js";
 import type { ParsedImage } from "./parse-task.js";
@@ -29,6 +29,8 @@ export interface BuildInputAttachmentContextOptions {
   includeImageBytes?: boolean;
   expectedSessionId?: string;
   workspaceRoots?: readonly string[];
+  /** Trusted effective run mode; attachment metadata cannot grant path access. */
+  permissionMode?: PermissionMode;
 }
 
 interface PendingImageAttachment {
@@ -167,7 +169,10 @@ export async function buildInputAttachmentContext(
       workspaceRoots: options.workspaceRoots,
       operation: "read",
     });
-    if (policy.decision !== "allow") {
+    // Full access follows the same path-policy semantics as native tools.
+    // Still classify to canonicalize the path, then enforce attachment session
+    // custody below regardless of permission mode.
+    if (policy.decision !== "allow" && options.permissionMode !== "bypassPermissions") {
       errors.push(
         `attachment ${id === "(unknown)" ? displayPath : id} blocked by path policy: ${policy.reason}`,
       );
@@ -203,7 +208,7 @@ export async function buildInputAttachmentContext(
     }
 
     if (attachment.kind === "directory" || info.isDirectory()) {
-      const tree = await directoryTree(realPath, policy.matchedRoot ?? cwdReal).catch((err) => ({
+      const tree = await directoryTree(realPath, policy.matchedRoot ?? realPath).catch((err) => ({
         lines: [`(directory tree unavailable: ${(err as Error).message})`],
         truncated: true,
         entryCount: 0,
