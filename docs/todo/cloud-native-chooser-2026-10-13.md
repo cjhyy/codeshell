@@ -30,6 +30,29 @@ ProjectControlServer。Account HTTP/authority、Runtime provider 和远端 HTML 
   避免顶层等待 ready 阻塞初始化；顺序遵循锁定版
   [Electron ESM 合同](https://github.com/electron/electron/blob/v33.4.11/docs/tutorial/esm.md)。
 
+## Linux CI 实际失败与修复
+
+`1e5d5876` 的 run `38277641579` / job `114906922457` 未通过原生 chooser；
+日志保留在 `/tmp/codeshell-cloud-native-chooser-ci-38277641579.log`。定位到两处具体问题：
+
+- Electron 的 `session.defaultSession.fetch` 内部转发到已包装的 `net.fetch`，固定外部
+  负探针先被 Main 的 native wrapper 同步拒绝，未到 Chromium webRequest。生成入口
+  现在在包装前私有保存原始 native fetch，仅对固定的
+  `https://external.invalid/chooser-guard-probe` 使用一次；defaultSession 限制先安装，
+  仍要求请求被拒绝且 Chromium 拦截计数精确为 1。产品 `net.request/fetch` 的精确 Cloud
+  origin 限制保持不变，没有另开 probe 窗口或扩大请求范围。
+- Playwright 在 `app.close()` 后销毁内部对象，再取 `app.process()` 会抛出 `_object`
+  错误。两次实际 launch 返回后立即保存真实 ChildProcess 和 PID，关闭及退出核验只用
+  已保存句柄；关闭失败后的重试也不再重新查 Playwright 进程。退出未确认仍保留 HOME。
+
+本轮本地验证不启动 Electron：旧基线实际 `closeApp`/退出方法受控执行可复现 `_object`；
+修复后的实际函数用独占 Node 子进程完成盘点拒绝、盘点超时、关闭拒绝、正常关闭与首次
+退出核验失败后重试五条路径，所有 child 均 exit 0，关闭后没有 `process()` 查询。
+回执为 `/tmp/codeshell-cloud-chooser-close-{baseline,final}-20261013.json`。
+真实 Server-only 业务链、生成 Main/worker 的 Node 语法检查及受影响脚本 ESLint/Prettier
+均通过；没有重构建产品 dist，没有调用 macOS Keychain。这些结果不能代替新 head 的
+Linux 原生 CI 成功回执。
+
 ## Linux 原生 gate（CI 待执行）
 
 命令：`xvfb-run -a bun run --cwd packages/desktop test:e2e:cloud-workbench`。

@@ -20,7 +20,7 @@ if (process.platform !== "linux" && !process.argv.includes("--server-only"))
   );
 const isolated = await makeIsolatedElectronHome("codeshell-native-cloud-e2e-");
 const screenshotDir = process.env.CODESHELL_PROJECT_LOCATION_SCREENSHOT_DIR;
-let app, fixture;
+let app, electronChild, fixture;
 let passed = false,
   guardReceipt,
   nativeKeyring;
@@ -30,8 +30,9 @@ const ownedPids = new Set();
 async function closeApp() {
   if (!app) return;
   const closing = app;
+  const child = electronChild;
   const failures = [];
-  ownedPids.add(closing.process().pid);
+  if (child) ownedPids.add(child.pid);
   try {
     const metrics = await bounded(
       closing.evaluate(({ app }) => app.getAppMetrics().map((row) => row.pid)),
@@ -48,8 +49,9 @@ async function closeApp() {
     failures.push(error);
   }
   try {
-    exitedProcesses = await fixture.assertElectronExited(closing, ownedPids);
+    exitedProcesses = await fixture.assertElectronExited(child, ownedPids);
     app = undefined;
+    electronChild = undefined;
   } catch (error) {
     failures.push(error);
   }
@@ -164,6 +166,8 @@ try {
       mainEntry: fixture.mainEntry,
       env: fixture.electronEnv,
     });
+    electronChild = app.process();
+    ownedPids.add(electronChild.pid);
     await fixture.assertGuards(app);
     const win = await findCodeShellWindow(app),
       errors = captureRendererErrors(win);
@@ -436,6 +440,8 @@ try {
       mainEntry: fixture.mainEntry,
       env: fixture.electronEnv,
     });
+    electronChild = app.process();
+    ownedPids.add(electronChild.pid);
     await fixture.assertGuards(app);
     const cold = await findCodeShellWindow(app);
     const status = await cold.evaluate(() => window.codeshell.cloudAccount.status());
