@@ -1,0 +1,277 @@
+{
+  "base": "46667739",
+  "runtime": "v25.8.1",
+  "platform": "macOS arm64",
+  "oldCodeReproduced": "cursor_invalid at real durable append between view open and size capture",
+  "journalStorage": {
+    "tests": 41,
+    "assertions": 418
+  },
+  "manualRepair": {
+    "tests": 18,
+    "assertions": 1144
+  },
+  "stress": {
+    "independentRuns": 20,
+    "pages": 340,
+    "totalAppendsDuringPaging": 1358,
+    "receipts": [
+      {
+        "prefixBytes": 16722266,
+        "pages": 17,
+        "milliseconds": 2591,
+        "appendedDuringPaging": 73,
+        "actualWriterPid": 36935,
+        "actualWorkerReceipt": true,
+        "frozenCursorStable": true,
+        "rotationDuringPaging": true
+      },
+      {
+        "prefixBytes": 16722266,
+        "pages": 17,
+        "milliseconds": 2739,
+        "appendedDuringPaging": 69,
+        "actualWriterPid": 36951,
+        "actualWorkerReceipt": true,
+        "frozenCursorStable": true,
+        "rotationDuringPaging": true
+      },
+      {
+        "prefixBytes": 16722266,
+        "pages": 17,
+        "milliseconds": 2747,
+        "appendedDuringPaging": 68,
+        "actualWriterPid": 37033,
+        "actualWorkerReceipt": true,
+        "frozenCursorStable": true,
+        "rotationDuringPaging": true
+      },
+      {
+        "prefixBytes": 16722266,
+        "pages": 17,
+        "milliseconds": 2539,
+        "appendedDuringPaging": 72,
+        "actualWriterPid": 37131,
+        "actualWorkerReceipt": true,
+        "frozenCursorStable": true,
+        "rotationDuringPaging": true
+      },
+      {
+        "prefixBytes": 16722266,
+        "pages": 17,
+        "milliseconds": 2485,
+        "appendedDuringPaging": 63,
+        "actualWriterPid": 37177,
+        "actualWorkerReceipt": true,
+        "frozenCursorStable": true,
+        "rotationDuringPaging": true
+      },
+      {
+        "prefixBytes": 16722266,
+        "pages": 17,
+        "milliseconds": 2707,
+        "appendedDuringPaging": 68,
+        "actualWriterPid": 37261,
+        "actualWorkerReceipt": true,
+        "frozenCursorStable": true,
+        "rotationDuringPaging": true
+      },
+      {
+        "prefixBytes": 16722266,
+        "pages": 17,
+        "milliseconds": 2757,
+        "appendedDuringPaging": 70,
+        "actualWriterPid": 37343,
+        "actualWorkerReceipt": true,
+        "frozenCursorStable": true,
+        "rotationDuringPaging": true
+      },
+      {
+        "prefixBytes": 16722266,
+        "pages": 17,
+        "milliseconds": 2624,
+        "appendedDuringPaging": 62,
+        "actualWriterPid": 37391,
+        "actualWorkerReceipt": true,
+        "frozenCursorStable": true,
+        "rotationDuringPaging": true
+      },
+      {
+        "prefixBytes": 16722266,
+        "pages": 17,
+        "milliseconds": 2888,
+        "appendedDuringPaging": 73,
+        "actualWriterPid": 37445,
+        "actualWorkerReceipt": true,
+        "frozenCursorStable": true,
+        "rotationDuringPaging": true
+      },
+      {
+        "prefixBytes": 16722266,
+        "pages": 17,
+        "milliseconds": 2729,
+        "appendedDuringPaging": 66,
+        "actualWriterPid": 37473,
+        "actualWorkerReceipt": true,
+        "frozenCursorStable": true,
+        "rotationDuringPaging": true
+      },
+      {
+        "prefixBytes": 16722266,
+        "pages": 17,
+        "milliseconds": 2561,
+        "appendedDuringPaging": 73,
+        "actualWriterPid": 36936,
+        "actualWorkerReceipt": true,
+        "frozenCursorStable": true,
+        "rotationDuringPaging": true
+      },
+      {
+        "prefixBytes": 16722266,
+        "pages": 17,
+        "milliseconds": 2647,
+        "appendedDuringPaging": 67,
+        "actualWriterPid": 36950,
+        "actualWorkerReceipt": true,
+        "frozenCursorStable": true,
+        "rotationDuringPaging": true
+      },
+      {
+        "prefixBytes": 16722266,
+        "pages": 17,
+        "milliseconds": 2772,
+        "appendedDuringPaging": 68,
+        "actualWriterPid": 37032,
+        "actualWorkerReceipt": true,
+        "frozenCursorStable": true,
+        "rotationDuringPaging": true
+      },
+      {
+        "prefixBytes": 16722266,
+        "pages": 17,
+        "milliseconds": 2549,
+        "appendedDuringPaging": 75,
+        "actualWriterPid": 37121,
+        "actualWorkerReceipt": true,
+        "frozenCursorStable": true,
+        "rotationDuringPaging": true
+      },
+      {
+        "prefixBytes": 16722266,
+        "pages": 17,
+        "milliseconds": 2482,
+        "appendedDuringPaging": 63,
+        "actualWriterPid": 37176,
+        "actualWorkerReceipt": true,
+        "frozenCursorStable": true,
+        "rotationDuringPaging": true
+      },
+      {
+        "prefixBytes": 16722266,
+        "pages": 17,
+        "milliseconds": 2725,
+        "appendedDuringPaging": 67,
+        "actualWriterPid": 37260,
+        "actualWorkerReceipt": true,
+        "frozenCursorStable": true,
+        "rotationDuringPaging": true
+      },
+      {
+        "prefixBytes": 16722266,
+        "pages": 17,
+        "milliseconds": 2739,
+        "appendedDuringPaging": 68,
+        "actualWriterPid": 37342,
+        "actualWorkerReceipt": true,
+        "frozenCursorStable": true,
+        "rotationDuringPaging": true
+      },
+      {
+        "prefixBytes": 16722266,
+        "pages": 17,
+        "milliseconds": 2614,
+        "appendedDuringPaging": 61,
+        "actualWriterPid": 37390,
+        "actualWorkerReceipt": true,
+        "frozenCursorStable": true,
+        "rotationDuringPaging": true
+      },
+      {
+        "prefixBytes": 16722266,
+        "pages": 17,
+        "milliseconds": 2603,
+        "appendedDuringPaging": 63,
+        "actualWriterPid": 37444,
+        "actualWorkerReceipt": true,
+        "frozenCursorStable": true,
+        "rotationDuringPaging": true
+      },
+      {
+        "prefixBytes": 16722266,
+        "pages": 17,
+        "milliseconds": 2659,
+        "appendedDuringPaging": 69,
+        "actualWriterPid": 37472,
+        "actualWorkerReceipt": true,
+        "frozenCursorStable": true,
+        "rotationDuringPaging": true
+      }
+    ]
+  },
+  "fullNativeSmoke": [
+    {
+      "modelJournalTiming": {
+        "journalBytes": 33942910,
+        "coldFirstPageMs": 122,
+        "coldReadBytes": 35504103,
+        "allPagesMs": 1181,
+        "allPagesReadBytes": 111697594,
+        "pages": 35
+      },
+      "nearBudgetTiming": {
+        "journalBytes": 147352023,
+        "coldFirstPageMs": 279,
+        "coldReadBytes": 148506677,
+        "allPagesMs": 5743,
+        "allPagesReadBytes": 403781804,
+        "pages": 153
+      },
+      "concurrentAppendTiming": {
+        "prefixBytes": 16722266,
+        "pages": 17,
+        "milliseconds": 2722,
+        "appendedDuringPaging": 115,
+        "actualWriterPid": 36441,
+        "actualWorkerReceipt": true,
+        "frozenCursorStable": true,
+        "rotationDuringPaging": true
+      }
+    },
+    {
+      "hubRecovery": true,
+      "authenticatedHubNoRunRecovery": true,
+      "hubRestartCursorStable": true,
+      "hubTransportEpochChanged": true,
+      "recoveredBytes": 9060345
+    },
+    {
+      "sdkRequests": 2,
+      "liveFrames": 2213,
+      "modelRunMs": 5217,
+      "outputBytes": 9060345,
+      "recoveredHash": "8b43320c8ca500d14af6c51646c33f6f7397cd99ed2030be11d7ca324f0a9b71",
+      "compiledNoRunStdioAndMainRecovery": true,
+      "compiledSegmentedMainRecovery": true,
+      "compiledMainRetentionExpired": true,
+      "desktopRecovery": true,
+      "desktopRestartCursorStable": true,
+      "desktopTransportEpochChanged": true,
+      "stdioRestartCursorStable": true,
+      "actualWorkerReceipts": 2,
+      "compiledSdkFailure": true,
+      "noExternalNetwork": true
+    }
+  ],
+  "checks": ["build:server", "Core tsc --noEmit", "involved ESLint", "git diff --check"],
+  "remaining": "Exact release-branch CI Linux/Node gate; no release or production change."
+}
