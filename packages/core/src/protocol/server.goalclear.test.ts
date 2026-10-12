@@ -53,6 +53,9 @@ describe("AgentServer agent/goalClear", () => {
         clientMessageId: "cleared-client",
         goalId: "goal-1",
         revision: 2,
+        // This routing stub has no durable Session manager; it must not invent coverage.
+        outputCursor: undefined,
+        outputRecovery: "incomplete",
       });
     });
   }

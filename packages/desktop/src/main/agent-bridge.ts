@@ -25,6 +25,7 @@ import {
   type OwnedExternalStreamEntry,
 } from "./owned-external-stream.js";
 import { randomUUID } from "node:crypto";
+import { MainOutputPublisher, type MainOutputSource } from "./main-output-publisher.js";
 import { createRequire } from "node:module";
 import { homedir } from "node:os";
 import { join } from "node:path";
@@ -72,7 +73,10 @@ import {
   type SessionProjectBinding,
   type SessionWorkspace,
 } from "@cjhyy/code-shell-core";
-import { SessionOutputCoverageStore } from "@cjhyy/code-shell-core/internal";
+import {
+  SessionOutputCoverageStore,
+  needsIndependentOutput,
+} from "@cjhyy/code-shell-core/internal";
 import type {
   WorkspaceContext,
   ModelRequestSigner,
@@ -259,6 +263,20 @@ export class AgentBridge implements PetStateBridge {
    */
   private readonly snapshots = new SessionSnapshotStore({
     coverage: new SessionOutputCoverageStore(sessionsRoot),
+  });
+  private readonly mainOutput = new MainOutputPublisher({
+    root: () => sessionsRoot(),
+    latest: (sessionId) => this.snapshots.get(sessionId).outputCursor,
+    worker: (sessionId, event) => {
+      this.handleWorkerLine(
+        JSON.stringify({
+          jsonrpc: "2.0",
+          method: Methods.StreamEvent,
+          params: { sessionId, event },
+        }),
+      );
+      return this.snapshots.get(sessionId).outputCursor === event.outputCursor;
+    },
   });
   /** Sessions the CURRENT worker streamed events for (reset per spawn). */
   private workerSnapshotSessionIds = new Set<string>();
@@ -501,6 +519,22 @@ export class AgentBridge implements PetStateBridge {
     // Mirror stream events into the per-session snapshot so a remounted
     // renderer can replay what it missed. Non-streamEvent lines yield null.
     const rawAppend = parseSnapshotAppend(line);
+    if (rawAppend) {
+      try {
+        if (!this.mainOutput.observeWorker(rawAppend.sessionId, rawAppend.event)) return;
+      } catch (error) {
+        dlog("bridge", "stream.source_unavailable", {
+          sessionId: rawAppend.sessionId,
+          error: String(error),
+        });
+        if (!(error as { coverageIncomplete?: boolean }).coverageIncomplete) return;
+        rawAppend.event = {
+          ...(rawAppend.event as object),
+          outputCursor: undefined,
+          outputRecovery: "incomplete",
+        };
+      }
+    }
     const append = rawAppend
       ? {
           ...rawAppend,
@@ -1753,6 +1787,7 @@ export class AgentBridge implements PetStateBridge {
   /** Drop a session's snapshot (e.g. when the session is deleted). */
   forgetSession(sessionId: string): void {
     this.snapshots.forget(sessionId);
+    this.mainOutput.forget(sessionId);
     forgetHostSessionMaps(this.sessionCwd, this.hostReservations, sessionId);
     getSessionCwdIndex().forget(sessionId);
     this.panelHostWindowRoutes.forgetSession(sessionId);
@@ -2232,13 +2267,56 @@ export class AgentBridge implements PetStateBridge {
     event: unknown,
     options: { browserVisibility?: "hidden" | "milestones" | "full" } = {},
   ): void {
+    if (needsIndependentOutput(event)) {
+      try {
+        this.captureExternalOutputSource(sessionId, options).publish(event);
+      } catch (error) {
+        dlog("bridge", "stream.source_unavailable", { sessionId, error: String(error) });
+      }
+      return;
+    }
+    if ((event as { outputCursor?: unknown } | null)?.outputCursor) {
+      try {
+        if (!this.mainOutput.observeWorker(sessionId, event)) return;
+      } catch (error) {
+        dlog("bridge", "stream.source_unavailable", { sessionId, error: String(error) });
+        return;
+      }
+    }
+    this.publishExternalEvent(sessionId, event, options);
+  }
+
+  /** Capture the original Session before an asynchronous host producer starts. */
+  captureExternalOutputSource(
+    sessionId: string,
+    options: { browserVisibility?: "hidden" | "milestones" | "full" } = {},
+  ): MainOutputSource {
+    const source = this.mainOutput.capture(sessionId, (event) =>
+      this.publishExternalEvent(sessionId, event, options),
+    );
+    return {
+      publish: (event) => {
+        try {
+          source.publish(event);
+        } catch (error) {
+          dlog("bridge", "stream.source_unavailable", { sessionId, error: String(error) });
+        }
+      },
+    };
+  }
+
+  private publishExternalEvent(
+    sessionId: string,
+    event: unknown,
+    options: { browserVisibility?: "hidden" | "milestones" | "full" },
+  ): boolean {
     const projected = annotateBrowserRuntimeStreamEvent(event, options.browserVisibility ?? "full");
     let entry;
     try {
       entry = this.snapshots.append(sessionId, projected);
     } catch {
       dlog("bridge", "stream.coverage_unavailable", { sessionId });
-      return;
+      return false;
     }
     this.safeSend("agent:streamEvent", {
       sessionId,
@@ -2246,6 +2324,7 @@ export class AgentBridge implements PetStateBridge {
       seq: entry.seq,
       epoch: this.snapshots.epoch,
     });
+    return true;
   }
 
   /** External interactive streams retain their exact owning window. */

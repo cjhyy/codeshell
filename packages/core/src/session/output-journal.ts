@@ -6,7 +6,6 @@ import {
   fchmodSync,
   fstatSync,
   fsyncSync,
-  ftruncateSync,
   lstatSync,
   openSync,
   readSync,
@@ -22,6 +21,25 @@ import {
   acknowledgeOutputCoverageAnchor,
   outputCoverageIncarnation,
 } from "./output-coverage-state.js";
+import {
+  repairUncommittedOutputTail,
+  isOutputJournalRepairPending,
+} from "./output-journal-repair.js";
+import {
+  initializePublishedOutputHead,
+  readPublishedOutputHead,
+  updatePublishedOutputHead,
+  type OutputHeadPin,
+  type PublishedOutputHead,
+} from "./output-journal-head.js";
+import {
+  initializeOutputStorage,
+  isOutputStorageBarrier,
+  rotateOutputStorage,
+  SegmentedOutputFile,
+  shouldSegmentOutput,
+  type OutputStoragePin,
+} from "./output-journal-storage.js";
 
 const MAX_JOURNAL_BYTES = 128 * 1024 * 1024;
 const MAX_RECORD_BYTES = 256 * 1024;
@@ -40,6 +58,7 @@ interface Header {
   sessionId: string;
   startedAt: number;
   legacyBaseThroughEventId?: string;
+  durableHead?: 1;
 }
 interface Position {
   sequence: number;
@@ -53,12 +72,18 @@ interface VerifiedFile {
   stamp: string;
   head: Position;
   checkpoints: Checkpoint[];
+  requiresHead: boolean;
+  lastLegacySequence: number;
 }
 // Only verified positions/hashes are cached, never output bodies. Eviction
 // affects performance only; the journal is always sufficient to rebuild them.
 const verifiedFiles = new Map<string, VerifiedFile>();
 const MAX_VERIFIED_FILES = 16;
-function fileStamp(fd: number): string {
+type OutputFile = number | SegmentedOutputFile;
+const outputSize = (fd: OutputFile): number =>
+  typeof fd === "number" ? fstatSync(fd).size : fd.currentSize();
+function fileStamp(fd: OutputFile): string {
+  if (typeof fd !== "number") return fd.stamp();
   const stat = fstatSync(fd, { bigint: true });
   return `${stat.dev}:${stat.ino}:${stat.size}:${stat.mtimeNs}:${stat.ctimeNs}`;
 }
@@ -71,9 +96,17 @@ interface Fragment {
   total: number;
   data: string;
 }
+/** A real publisher identity, independent of model-run ownership. */
+export interface OutputJournalProducer {
+  kind: "protocol" | "host";
+  id: string;
+}
 interface RecordValue {
+  version?: 2;
   sequence: number;
-  runId: string;
+  runId?: string;
+  run?: { id: string };
+  producer?: OutputJournalProducer;
   event?: StreamEvent;
   fragment?: Fragment;
   previousHash: string;
@@ -81,7 +114,8 @@ interface RecordValue {
 export interface OutputJournalFrame {
   cursor: string;
   sequence: number;
-  runId: string;
+  runId?: string;
+  producer?: OutputJournalProducer;
   event?: StreamEvent;
   fragment?: Fragment;
 }
@@ -106,6 +140,8 @@ export interface OutputJournalPage {
   /** Pagination coverage only: never means a model run completed. */
   complete: boolean;
   uncommittedTail?: boolean;
+  /** A retained cursor range expired; the response is always incomplete. */
+  reason?: "retention_expired";
 }
 
 class JournalError extends Error {
@@ -181,6 +217,8 @@ function sessionLocation(root: string, sessionId: string) {
   const directory = join(canonicalRoot, sessionId);
   const stat = lstatSync(directory);
   if (!stat.isDirectory() || stat.isSymbolicLink()) invalid("Invalid Session directory");
+  if (isOutputJournalRepairPending(directory))
+    throw new JournalError("incomplete", "Output journal repair is pending");
   const statePath = join(directory, "state.json");
   const stateFd = openRegular(statePath, constants.O_RDONLY);
   let state: {
@@ -190,6 +228,8 @@ function sessionLocation(root: string, sessionId: string) {
     ephemeral?: boolean;
     outputRecoveryIncomplete?: boolean;
     outputJournalIdentity?: string;
+    outputJournalHead?: OutputHeadPin;
+    outputJournalStorage?: OutputStoragePin;
   };
   try {
     state = JSON.parse(readBounded(stateFd, 1024 * 1024));
@@ -204,7 +244,12 @@ function sessionLocation(root: string, sessionId: string) {
   )
     throw new JournalError("incomplete", "Invalid output journal identity pin");
   if (state.ephemeral || sessionId.startsWith("qchat-"))
-    throw new JournalError("unavailable", "Ephemeral Session output is process-local");
+    throw Object.assign(
+      new JournalError("unavailable", "Ephemeral Session output is process-local"),
+      {
+        code: "CODESHELL_EPHEMERAL_OUTPUT",
+      },
+    );
   return {
     root: canonicalRoot,
     directory,
@@ -217,7 +262,7 @@ function sessionLocation(root: string, sessionId: string) {
 
 /** Constant-memory, bounded-record reader. It never skips malformed committed records. */
 function* lines(
-  fd: number,
+  fd: OutputFile,
   start: number,
   end: number,
   maxRecordBytes = MAX_RECORD_BYTES,
@@ -226,7 +271,10 @@ function* lines(
   let pending = Buffer.alloc(0);
   while (offset < end) {
     const buffer = Buffer.alloc(Math.min(CHUNK_BYTES, end - offset));
-    const n = readSync(fd, buffer, 0, buffer.length, offset);
+    const n =
+      typeof fd === "number"
+        ? readSync(fd, buffer, 0, buffer.length, offset)
+        : fd.read(buffer, 0, buffer.length, offset);
     if (!n) invalid("Output journal was truncated");
     offset += n;
     pending = Buffer.concat([pending, buffer.subarray(0, n)]);
@@ -242,6 +290,58 @@ function* lines(
     }
     if (pending.length > maxRecordBytes)
       throw new JournalError("incomplete", "Output record exceeds its bound");
+  }
+}
+/** First independent producer uses an exact existing, bounded transcript cutover. */
+export function outputJournalCutover(
+  root: string,
+  sessionId: string,
+): {
+  startedAt: number;
+  incarnation: string;
+  root: string;
+  legacy?: string;
+} {
+  const location = sessionLocation(root, sessionId);
+  const incarnation = outputCoverageIncarnation(
+    location.root,
+    sessionId,
+    location.state.startedAt!,
+  );
+  if (location.state.outputJournalIdentity)
+    return { startedAt: location.state.startedAt!, incarnation, root: location.root };
+  const fd = openRegular(join(location.directory, "transcript.jsonl"), constants.O_RDONLY);
+  try {
+    const size = fstatSync(fd).size;
+    if (size > MAX_PAGE_BYTES)
+      throw new JournalError("incomplete", "Output cutover exceeds its bound");
+    let legacy: string | undefined;
+    let count = 0;
+    let offset = 0;
+    for (const line of lines(fd, 0, size, MAX_PAGE_BYTES)) {
+      const event = JSON.parse(line.text) as TranscriptEvent;
+      if (
+        ++count > 4096 ||
+        (count === 1 && event.type !== "session_meta") ||
+        typeof event.id !== "string" ||
+        !event.data
+      )
+        throw new JournalError("incomplete", "Output cutover is unavailable");
+      legacy = event.id;
+      offset = line.end;
+    }
+    if (!legacy || offset !== size)
+      throw new JournalError("incomplete", "Output cutover is incomplete");
+    const final = sessionLocation(root, sessionId);
+    if (
+      final.stat.dev !== location.stat.dev ||
+      final.stat.ino !== location.stat.ino ||
+      final.state.startedAt !== location.state.startedAt
+    )
+      invalid("Session changed during output cutover");
+    return { startedAt: location.state.startedAt!, incarnation, legacy, root: location.root };
+  } finally {
+    closeSync(fd);
   }
 }
 /** Exact bounded cutover base; reads the old prefix, never the current huge reply. */
@@ -291,7 +391,8 @@ function readHeader(fd: number, location: ReturnType<typeof sessionLocation>) {
     header.startedAt !== location.state.startedAt ||
     !/^[a-f0-9]{64}$/.test(header.storageScope) ||
     typeof header.sessionIncarnation !== "string" ||
-    typeof header.journalId !== "string"
+    typeof header.journalId !== "string" ||
+    (header.durableHead !== undefined && header.durableHead !== 1)
   )
     invalid("Output journal identity changed");
   const file = fstatSync(fd);
@@ -309,6 +410,15 @@ function readHeader(fd: number, location: ReturnType<typeof sessionLocation>) {
   );
   return { header, identity, start: { sequence: 0, offset: first.value.end, hash: seed } };
 }
+function validProducer(value: unknown): value is OutputJournalProducer {
+  const producer = value as OutputJournalProducer | undefined;
+  return (
+    !!producer &&
+    ["protocol", "host"].includes(producer.kind) &&
+    typeof producer.id === "string" &&
+    SAFE_ID.test(producer.id)
+  );
+}
 function parseRecord(
   line: { text: string; end: number },
   previous: Position,
@@ -318,7 +428,16 @@ function parseRecord(
   if (
     value.sequence !== previous.sequence + 1 ||
     value.previousHash !== previous.hash ||
-    typeof value.runId !== "string" ||
+    !(
+      (value.version === undefined &&
+        !value.run &&
+        ((typeof value.runId === "string" && !value.producer) ||
+          (value.runId === undefined && validProducer(value.producer)))) ||
+      (value.version === 2 &&
+        value.runId === undefined &&
+        ((typeof value.run?.id === "string" && !!value.run.id && !value.producer) ||
+          (!value.run && validProducer(value.producer))))
+    ) ||
     !!value.event === !!value.fragment ||
     hash !== digest(JSON.stringify(value))
   )
@@ -340,8 +459,14 @@ function parseRecord(
     throw new JournalError("incomplete", "Invalid output fragment");
   return { value, position: { sequence: value.sequence, offset: line.end, hash } };
 }
-function scan(fd: number, start: Position, size: number, checkpoints?: Checkpoint[]): Position {
-  if (size > MAX_JOURNAL_BYTES)
+function scan(
+  fd: OutputFile,
+  start: Position,
+  size: number,
+  checkpoints?: Checkpoint[],
+  format?: { requiresHead: boolean; lastLegacySequence: number },
+): Position {
+  if (typeof fd === "number" && size > MAX_JOURNAL_BYTES)
     throw new JournalError("incomplete", "Output journal exceeds its storage budget");
   let current = start;
   let committed = start;
@@ -350,6 +475,10 @@ function scan(fd: number, start: Position, size: number, checkpoints?: Checkpoin
   for (const line of lines(fd, start.offset, size)) {
     const parsed = parseRecord(line, current);
     current = parsed.position;
+    if (format) {
+      if (parsed.value.version === 2) format.requiresHead = true;
+      else format.lastLegacySequence = current.sequence;
+    }
     const part = parsed.value.fragment;
     if (part) {
       if (!fragment && part.index !== 0)
@@ -384,7 +513,7 @@ function scan(fd: number, start: Position, size: number, checkpoints?: Checkpoin
     checkpoints.pop();
   return committed;
 }
-function verifiedFile(fd: number, file: string, start: Position, size: number): VerifiedFile {
+function verifiedFile(fd: OutputFile, file: string, start: Position, size: number): VerifiedFile {
   const stamp = fileStamp(fd),
     cached = verifiedFiles.get(file);
   if (cached?.stamp === stamp) {
@@ -392,12 +521,14 @@ function verifiedFile(fd: number, file: string, start: Position, size: number): 
     verifiedFiles.set(file, cached);
     return cached;
   }
+  if (typeof fd !== "number") start = fd.floor;
   const checkpoints: Checkpoint[] = [{ ...start, committed: true }];
-  const head = scan(fd, start, size, checkpoints);
-  const result = { stamp, head, checkpoints };
+  const format = { requiresHead: false, lastLegacySequence: 0 };
+  const head = scan(fd, start, size, checkpoints, format);
+  const result = { stamp, head, checkpoints, ...format };
   // A concurrent append may leave the frozen scan valid, but its new stamp
   // cannot certify the unseen tail. Rebuild on the next request instead.
-  if (fileStamp(fd) === stamp && fstatSync(fd).size === size) {
+  if (fileStamp(fd) === stamp && outputSize(fd) === size) {
     // The caller captured `size` before reading the header. A worker may
     // finish an append before this function captures `stamp`; never certify
     // that older scan bound with the newer full-file cache identity.
@@ -408,7 +539,12 @@ function verifiedFile(fd: number, file: string, start: Position, size: number): 
   }
   return result;
 }
-function verifyPosition(fd: number, value: Position, verified: VerifiedFile, wholeEvent: boolean) {
+function verifyPosition(
+  fd: OutputFile,
+  value: Position,
+  verified: VerifiedFile,
+  wholeEvent: boolean,
+) {
   let checkpoint = verified.checkpoints[0]!;
   for (const item of verified.checkpoints) {
     if (item.sequence > value.sequence) break;
@@ -434,58 +570,141 @@ function verifyPosition(fd: number, value: Position, verified: VerifiedFile, who
     invalid("Output cursor no longer identifies a committed prefix");
 }
 
+function publishedHead(
+  fd: OutputFile,
+  location: ReturnType<typeof sessionLocation>,
+  loaded: ReturnType<typeof readHeader>,
+  verified: VerifiedFile,
+  capturedHead?: PublishedOutputHead,
+): Position {
+  const pin = location.state.outputJournalHead;
+  if (pin === undefined) {
+    if (loaded.header.durableHead === 1 || verified.requiresHead)
+      throw new JournalError("incomplete", "Published output watermark is missing");
+    return verified.head; // Historical v1 data remains readable, without repair authority.
+  }
+  const head = capturedHead ?? readPublishedOutputHead(location.directory, pin);
+  // The immutable admission floor is itself a committed prefix, never merely
+  // a hint for locating a newer sidecar watermark.
+  const floor = cursor(Buffer.from(JSON.stringify(pin)).toString("base64url"), loaded.identity);
+  if (floor.offset > verified.head.offset || floor.sequence > verified.head.sequence)
+    throw new JournalError("incomplete", "Published output admission prefix was lost");
+  if (typeof fd !== "number" && floor.sequence < fd.floor.sequence) {
+    if (
+      floor.sequence !== fd.pin.origin.sequence ||
+      floor.offset !== fd.pin.origin.offset ||
+      floor.hash !== fd.pin.origin.hash
+    )
+      throw new JournalError("incomplete", "Output admission no longer matches storage origin");
+  } else verifyPosition(fd, floor, verified, true);
+  const position = cursor(Buffer.from(JSON.stringify(head)).toString("base64url"), loaded.identity);
+  if (
+    position.offset > verified.head.offset ||
+    position.sequence > verified.head.sequence ||
+    verified.lastLegacySequence > position.sequence
+  )
+    throw new JournalError("incomplete", "Published output prefix was lost or has an old writer");
+  verifyPosition(fd, position, verified, true);
+  return { sequence: position.sequence, offset: position.offset, hash: position.hash };
+}
+
 /** Reads only this Session root. The returned cursor survives Main/Hub/worker restarts. */
 export function readOutputJournal(
   root: string,
   sessionId: string,
   options: OutputJournalOptions = {},
 ): OutputJournalPage {
+  return readOutputJournalAttempt(root, sessionId, options, 2);
+}
+function readOutputJournalAttempt(
+  root: string,
+  sessionId: string,
+  options: OutputJournalOptions,
+  admissionRetries: number,
+): OutputJournalPage {
   let fd: number | undefined;
+  let storage: SegmentedOutputFile | undefined;
+  let refreshedStorage: SegmentedOutputFile | undefined;
   let pinned = false;
+  let initialLocation: ReturnType<typeof sessionLocation> | undefined;
   try {
     if (!options || typeof options !== "object" || Array.isArray(options))
       invalid("Invalid output journal options");
     const maxBytes = boundedInt(options.maxBytes, MAX_PAGE_BYTES, MAX_PAGE_BYTES);
     const maxFrames = boundedInt(options.maxFrames, MAX_PAGE_FRAMES, MAX_PAGE_FRAMES);
     const location = sessionLocation(root, sessionId);
+    initialLocation = location;
     pinned = location.state.outputJournalIdentity !== undefined;
     if (location.state.outputRecoveryIncomplete)
       throw new JournalError("incomplete", "This Session recorded an output persistence failure");
+    // Capture publication before file length. A concurrent append may advance
+    // both; the earlier durable prefix is still a valid frozen recovery view.
+    const capturedHead = location.state.outputJournalHead
+      ? readPublishedOutputHead(location.directory, location.state.outputJournalHead)
+      : undefined;
     fd = openRegular(location.file, constants.O_RDONLY);
-    const size = fstatSync(fd).size;
-    const headerStamp = fileStamp(fd);
-    const { header, identity, start } = readHeader(fd, location);
+    const loaded = readHeader(fd, location);
+    if (location.state.outputJournalStorage)
+      storage = new SegmentedOutputFile(
+        fd,
+        location.directory,
+        location.file,
+        loaded.start.offset,
+        location.state.outputJournalStorage,
+        loaded.identity,
+      );
+    const output = storage ?? fd;
+    const physicalSize = outputSize(output);
+    // First migration fsyncs a rejecting physical marker before admitting its
+    // manifest. Only this exact marker beyond an independently fsynced old
+    // watermark can be excluded from that still-valid frozen prefix. General
+    // damage or complete unpublished records are never treated this way.
+    const preparing =
+      !storage && capturedHead && isOutputStorageBarrier(fd, capturedHead.offset, loaded.identity);
+    const size = preparing ? capturedHead.offset : physicalSize;
+    const headerStamp = fileStamp(output);
+    const { header, identity, start } = loaded;
     if (!pinned)
       throw new JournalError("incomplete", "Output journal identity was never committed");
-    const verified = verifiedFile(fd, location.file, start, size);
+    const verified = verifiedFile(output, location.file, start, size);
+    const published = publishedHead(output, location, loaded, verified, capturedHead);
     const after = options.after === undefined ? start : cursor(options.after, identity);
     // The first request freezes a verified prefix. Later pages retain that prefix
     // while independent appends may advance the current file beyond it.
-    const through =
-      options.through === undefined ? verified.head : cursor(options.through, identity);
+    const through = options.through === undefined ? published : cursor(options.through, identity);
+    if (
+      storage &&
+      (after.sequence < storage.floor.sequence || through.sequence < storage.floor.sequence)
+    )
+      throw Object.assign(new JournalError("incomplete", "Output cursor retention expired"), {
+        code: "CODESHELL_OUTPUT_RETENTION_EXPIRED",
+      });
     if (
       after.offset < start.offset ||
       after.sequence > through.sequence ||
       after.offset > through.offset ||
-      through.offset > verified.head.offset ||
-      through.sequence > verified.head.sequence
+      through.offset > published.offset ||
+      through.sequence > published.sequence
     )
       invalid("Output cursor is outside the committed prefix");
     // The entire prefix is verified under this exact file stamp. Sparse
     // positions bound seeks without allowing a cursor to skip damaged output.
-    verifyPosition(fd, after, verified, false);
-    verifyPosition(fd, through, verified, true);
+    verifyPosition(output, after, verified, false);
+    verifyPosition(output, through, verified, true);
     const frames: OutputJournalFrame[] = [];
     let bytes = 0;
     let next = after;
     let current = after;
-    for (const line of lines(fd, after.offset, through.offset)) {
+    for (const line of lines(output, after.offset, through.offset)) {
       const parsed = parseRecord(line, current);
       current = parsed.position;
       const frame = {
         cursor: token(identity, current),
         sequence: current.sequence,
-        runId: parsed.value.runId,
+        ...(parsed.value.runId !== undefined || parsed.value.run
+          ? { runId: parsed.value.runId ?? parsed.value.run!.id }
+          : {}),
+        ...(parsed.value.producer ? { producer: parsed.value.producer } : {}),
         ...(parsed.value.event
           ? { event: parsed.value.event }
           : { fragment: parsed.value.fragment }),
@@ -501,7 +720,25 @@ export function readOutputJournal(
       next = current;
       if (frames.length >= maxFrames) break;
     }
-    if (headerStamp !== verified.stamp || fileStamp(fd) !== verified.stamp) {
+    if (storage) {
+      refreshedStorage = new SegmentedOutputFile(
+        fd,
+        location.directory,
+        location.file,
+        loaded.start.offset,
+        storage.pin,
+        identity,
+      );
+      if (
+        after.sequence < refreshedStorage.floor.sequence ||
+        through.sequence < refreshedStorage.floor.sequence
+      )
+        throw Object.assign(new JournalError("incomplete", "Output cursor retention expired"), {
+          code: "CODESHELL_OUTPUT_RETENTION_EXPIRED",
+        });
+    }
+    const finalOutput = refreshedStorage ?? output;
+    if (headerStamp !== verified.stamp || fileStamp(finalOutput) !== verified.stamp) {
       // Appends do not invalidate a frozen page. A changed file must re-prove
       // its pinned header and complete old prefix, including before `after`.
       // A worker may keep appending beyond `through` throughout this bounded
@@ -509,7 +746,11 @@ export function readOutputJournal(
       // is the recovery boundary. Arbitrary writes bypassing owner locks have
       // the usual filesystem TOCTOU limit after this validation point.
       const changedHeader = readHeader(fd, location);
-      const frozen = scan(fd, changedHeader.start, through.offset);
+      const frozen = scan(
+        finalOutput,
+        refreshedStorage?.floor ?? changedHeader.start,
+        through.offset,
+      );
       if (
         changedHeader.identity !== identity ||
         changedHeader.start.hash !== start.hash ||
@@ -531,6 +772,12 @@ export function readOutputJournal(
       invalid("Output journal was replaced during recovery");
     const finalLocation = sessionLocation(root, sessionId);
     if (
+      JSON.stringify(finalLocation.state.outputJournalStorage) !==
+      JSON.stringify(location.state.outputJournalStorage)
+    )
+      throw new JournalError("incomplete", "Output storage admission changed during recovery");
+    refreshedStorage?.assertNamed();
+    if (
       finalLocation.stat.dev !== location.stat.dev ||
       finalLocation.stat.ino !== location.stat.ino ||
       finalLocation.state.startedAt !== location.state.startedAt ||
@@ -539,6 +786,26 @@ export function readOutputJournal(
       invalid("Session was replaced during recovery");
     if (finalLocation.state.outputRecoveryIncomplete)
       throw new JournalError("incomplete", "This Session recorded an output persistence failure");
+    if (location.state.outputJournalHead !== undefined) {
+      const currentPin = finalLocation.state.outputJournalHead;
+      if (
+        !currentPin ||
+        JSON.stringify(currentPin) !== JSON.stringify(location.state.outputJournalHead)
+      )
+        throw new JournalError("incomplete", "Published output watermark changed during recovery");
+      const currentHead = readPublishedOutputHead(finalLocation.directory, currentPin);
+      const currentPosition = cursor(
+        Buffer.from(JSON.stringify(currentHead)).toString("base64url"),
+        identity,
+      );
+      if (
+        currentPosition.sequence < published.sequence ||
+        currentPosition.offset < published.offset ||
+        currentPosition.offset > outputSize(finalOutput) ||
+        (currentPosition.sequence === published.sequence && currentPosition.hash !== published.hash)
+      )
+        throw new JournalError("incomplete", "Published output watermark changed during recovery");
+    }
     return {
       version: 1,
       status: "ok",
@@ -557,6 +824,25 @@ export function readOutputJournal(
       ...(size > through.offset && options.through === undefined ? { uncommittedTail: true } : {}),
     };
   } catch (error) {
+    // A first segment admission can occur between the initial metadata read
+    // and a cold prefix scan. Retry only that monotonic, same-Session format
+    // transition; ordinary corruption/gaps are never retried into success.
+    if (admissionRetries && initialLocation && !initialLocation.state.outputJournalStorage) {
+      try {
+        const current = sessionLocation(root, sessionId);
+        if (
+          current.state.outputJournalStorage &&
+          !current.state.outputRecoveryIncomplete &&
+          current.stat.dev === initialLocation.stat.dev &&
+          current.stat.ino === initialLocation.stat.ino &&
+          current.state.startedAt === initialLocation.state.startedAt &&
+          current.state.outputJournalIdentity === initialLocation.state.outputJournalIdentity
+        )
+          return readOutputJournalAttempt(root, sessionId, options, admissionRetries - 1);
+      } catch {
+        // Preserve the original failure if a Session or proof disappeared.
+      }
+    }
     const code = (error as NodeJS.ErrnoException).code;
     return {
       version: 1,
@@ -568,8 +854,13 @@ export function readOutputJournal(
             : "incomplete",
       frames: [],
       complete: false,
+      ...(code === "CODESHELL_OUTPUT_RETENTION_EXPIRED"
+        ? { reason: "retention_expired" as const }
+        : {}),
     };
   } finally {
+    refreshedStorage?.close();
+    storage?.close();
     if (fd !== undefined) closeSync(fd);
   }
 }
@@ -585,14 +876,24 @@ export class SessionOutputJournal {
   constructor(
     root: string,
     sessionId: string,
-    private readonly runId: string,
+    private readonly owner: string | OutputJournalProducer,
     legacyBaseThroughEventId?: string,
+    expectedIncarnation?: string,
   ) {
+    if (typeof owner !== "string" && !validProducer(owner)) invalid("Invalid output producer");
     this.location = sessionLocation(root, sessionId);
     const release = lockSync(this.location.statePath, { realpath: false, retries: 0 });
     let fd: number | undefined;
+    let storage: SegmentedOutputFile | undefined;
+    let created = false;
     try {
       this.location.state = this.assertOwner(true).state;
+      if (
+        expectedIncarnation !== undefined &&
+        outputCoverageIncarnation(this.location.root, sessionId, this.location.state.startedAt!) !==
+          expectedIncarnation
+      )
+        invalid("Output publisher Session was replaced before admission");
       try {
         fd = openRegular(
           this.location.file,
@@ -608,6 +909,7 @@ export class SessionOutputJournal {
           throw new JournalError("incomplete", "Pinned output journal was lost or truncated");
         const header: Header = {
           version: 1,
+          durableHead: 1,
           storageScope: digest(this.location.root),
           sessionIncarnation: randomUUID(),
           journalId: randomUUID(),
@@ -616,6 +918,7 @@ export class SessionOutputJournal {
           ...(legacyBaseThroughEventId ? { legacyBaseThroughEventId } : {}),
         };
         this.write(fd, JSON.stringify(header) + "\n", 0);
+        created = true;
         fsyncSync(fd);
         // Make first materialization durable along with its directory entry.
         if (process.platform !== "win32") {
@@ -628,12 +931,24 @@ export class SessionOutputJournal {
         }
       }
       if (process.platform !== "win32") fchmodSync(fd, 0o600);
-      const scannedStamp = fileStamp(fd);
       const loaded = readHeader(fd, this.location);
       this.identity = loaded.identity;
       this.identityPin = loaded.start.hash;
-      this.position = scan(fd, loaded.start, fstatSync(fd).size);
-      if (fileStamp(fd) !== scannedStamp)
+      if (this.location.state.outputJournalStorage)
+        storage = new SegmentedOutputFile(
+          fd,
+          this.location.directory,
+          this.location.file,
+          loaded.start.offset,
+          this.location.state.outputJournalStorage,
+          loaded.identity,
+        );
+      const output = storage ?? fd;
+      const scannedStamp = fileStamp(output);
+      const size = outputSize(output);
+      const verified = verifiedFile(output, this.location.file, loaded.start, size);
+      this.position = verified.head;
+      if (fileStamp(output) !== scannedStamp)
         invalid("Output journal changed during owner verification");
       if (!this.location.state.outputJournalIdentity) {
         if (this.position.sequence > 0)
@@ -643,15 +958,52 @@ export class SessionOutputJournal {
           );
         this.persistPin(this.identityPin);
       }
+      if (this.location.state.outputJournalHead === undefined) {
+        if (
+          !created &&
+          (loaded.header.durableHead === 1 ||
+            verified.requiresHead ||
+            this.position.offset !== size)
+        )
+          throw new JournalError("incomplete", "Output tail has no published watermark authority");
+        this.persistHead(this.position);
+      } else {
+        const published = publishedHead(output, this.location, loaded, verified);
+        if (published.offset !== this.position.offset || published.hash !== this.position.hash)
+          throw new JournalError("incomplete", "Unpublished complete output requires repair");
+        if (this.location.state.outputJournalHead.version === 1) this.persistHead(this.position);
+      }
       // Isolate only a non-newline tail or an unfinished final whole-event
       // fragment group, including complete lines. Never skip interior damage.
-      if (this.position.offset !== fstatSync(fd).size) {
-        ftruncateSync(fd, this.position.offset);
-        fsyncSync(fd);
+      if (this.position.offset !== outputSize(output)) {
+        if (storage) {
+          const active = storage.active();
+          try {
+            const name = storage.manifest.segments.at(-1)!.name;
+            repairUncommittedOutputTail(
+              active.fd,
+              join(this.location.directory, name),
+              this.location.directory,
+              {
+                identity: this.identity,
+                ...this.position,
+                offset: this.position.offset - active.start.offset,
+                logicalOffset: this.position.offset,
+              },
+            );
+          } finally {
+            closeSync(active.fd);
+          }
+        } else
+          repairUncommittedOutputTail(fd, this.location.file, this.location.directory, {
+            identity: this.identity,
+            ...this.position,
+          });
       }
       this.fileIdentity = fstatSync(fd);
-      this.verifiedStamp = fileStamp(fd);
+      this.verifiedStamp = fileStamp(output);
     } finally {
+      storage?.close();
       if (fd !== undefined) closeSync(fd);
       release();
     }
@@ -667,7 +1019,7 @@ export class SessionOutputJournal {
       current.stat.dev !== this.location.stat.dev ||
       current.stat.ino !== this.location.stat.ino ||
       current.state.startedAt !== this.location.state.startedAt ||
-      current.state.runId !== this.runId
+      (typeof this.owner === "string" && current.state.runId !== this.owner)
     )
       invalid("Output owner was superseded or deleted");
     if (
@@ -676,15 +1028,45 @@ export class SessionOutputJournal {
       !(allowUnpinned && current.state.outputJournalIdentity === undefined)
     )
       invalid("Output journal identity pin was removed or replaced");
+    if (!allowUnpinned && this.position !== undefined) {
+      const pin = current.state.outputJournalHead;
+      if (!pin)
+        throw new JournalError("incomplete", "Published output watermark was removed or replaced");
+      const head = readPublishedOutputHead(current.directory, pin);
+      const position = cursor(
+        Buffer.from(JSON.stringify(head)).toString("base64url"),
+        this.identity,
+      );
+      if (
+        position.sequence < this.position.sequence ||
+        position.offset < this.position.offset ||
+        (position.sequence === this.position.sequence && position.hash !== this.position.hash)
+      )
+        throw new JournalError("incomplete", "Published output watermark was removed or replaced");
+    }
     return current;
   }
   private persistPin(pin: string): void {
+    this.persistProof({ outputJournalIdentity: pin });
+  }
+  private persistHead(position: Position): void {
+    const current = this.assertOwner(true);
+    const head = { version: 1 as const, identity: this.identity, ...position };
+    const pin = current.state.outputJournalHead;
+    if (pin?.version === 2) updatePublishedOutputHead(current.directory, pin, head);
+    else {
+      const next = initializePublishedOutputHead(current.directory, head);
+      this.persistProof({ outputJournalHead: next });
+      this.location.state.outputJournalHead = next;
+    }
+  }
+  private persistProof(patch: Partial<ReturnType<typeof sessionLocation>["state"]>): void {
     const current = this.assertOwner(true);
     const temporary = join(this.location.directory, `.output-pin-${randomUUID()}.tmp`);
     let fd: number | undefined;
     try {
       fd = openRegular(temporary, constants.O_WRONLY | constants.O_CREAT | constants.O_EXCL);
-      this.write(fd, JSON.stringify({ ...current.state, outputJournalIdentity: pin }) + "\n", 0);
+      this.write(fd, JSON.stringify({ ...current.state, ...patch }) + "\n", 0);
       fsyncSync(fd);
       closeSync(fd);
       fd = undefined;
@@ -717,64 +1099,100 @@ export class SessionOutputJournal {
     }
   }
   append(event: StreamEvent): string {
-    const serialized = JSON.stringify({
-      ...event,
-      outputCursor: undefined,
-      outputRecovery: undefined,
-    });
-    const data = Buffer.from(serialized);
-    if (data.length > MAX_EVENT_BYTES)
-      throw new JournalError("incomplete", "Output event exceeds the 16 MiB recovery bound");
-    const values: Array<Pick<RecordValue, "event" | "fragment">> = [];
-    if (data.length <= CHUNK_BYTES) values.push({ event: JSON.parse(serialized) });
-    else {
-      const id = randomUUID();
-      const total = Math.ceil(data.length / CHUNK_BYTES);
-      for (let index = 0; index < total; index++)
-        values.push({
-          fragment: {
-            id,
-            index,
-            total,
-            data: data.subarray(index * CHUNK_BYTES, (index + 1) * CHUNK_BYTES).toString("base64"),
-          },
-        });
+    return this.appendBatch([event])[0];
+  }
+  /** All cursors become publishable only after the entire batch and head are durable. */
+  appendBatch(events: readonly StreamEvent[]): string[] {
+    if (!events.length || events.length > 64) throw new Error("Invalid output batch bound");
+    const values: Array<Pick<RecordValue, "event" | "fragment"> & { eventEnd: boolean }> = [];
+    let bytes = 0;
+    for (const event of events) {
+      const serialized = JSON.stringify({
+        ...event,
+        outputCursor: undefined,
+        outputRecovery: undefined,
+      });
+      const data = Buffer.from(serialized);
+      bytes += data.length;
+      if (data.length > MAX_EVENT_BYTES)
+        throw new JournalError("incomplete", "Output event exceeds the 16 MiB recovery bound");
+      if (events.length > 1 && bytes > 256 * 1024)
+        throw new JournalError("incomplete", "Output batch exceeds its 256 KiB recovery bound");
+      if (data.length <= CHUNK_BYTES)
+        values.push({ event: JSON.parse(serialized), eventEnd: true });
+      else {
+        const id = randomUUID();
+        const total = Math.ceil(data.length / CHUNK_BYTES);
+        for (let index = 0; index < total; index++)
+          values.push({
+            fragment: {
+              id,
+              index,
+              total,
+              data: data
+                .subarray(index * CHUNK_BYTES, (index + 1) * CHUNK_BYTES)
+                .toString("base64"),
+            },
+            eventEnd: index === total - 1,
+          });
+      }
     }
     const release = lockSync(this.location.statePath, { realpath: false, retries: 0 });
     let fd: number | undefined;
+    let storage: SegmentedOutputFile | undefined;
+    let activeFd: number | undefined;
     try {
-      this.assertOwner();
+      const current = this.assertOwner();
       fd = openRegular(this.location.file, constants.O_RDWR);
       const stat = fstatSync(fd);
       if (
         stat.dev !== this.fileIdentity.dev ||
         stat.ino !== this.fileIdentity.ino ||
-        stat.size !== this.position.offset
+        (!current.state.outputJournalStorage && stat.size < this.position.offset)
       )
         invalid("Output journal changed under its owner");
-      const stamp = fileStamp(fd);
-      if (stamp !== this.verifiedStamp) {
+      const loaded = readHeader(fd, current);
+      if (current.state.outputJournalStorage)
+        storage = new SegmentedOutputFile(
+          fd,
+          current.directory,
+          current.file,
+          loaded.start.offset,
+          current.state.outputJournalStorage,
+          loaded.identity,
+        );
+      const output = storage ?? fd;
+      const size = outputSize(output);
+      const stamp = fileStamp(output);
+      if (stamp !== this.verifiedStamp || size !== this.position.offset) {
         // A local tool may have changed committed bytes without changing inode
         // or length. Ordinary owned appends carry their own completed stamp
         // forward, so only an unexpected stamp change requires a prefix scan.
-        const loaded = readHeader(fd, this.location);
-        const verified = scan(fd, loaded.start, stat.size);
+        const verified = verifiedFile(output, this.location.file, loaded.start, size);
+        if (!storage || this.position.sequence >= storage.floor.sequence)
+          verifyPosition(output, this.position, verified, true);
+        const published = publishedHead(output, current, loaded, verified);
         if (
           loaded.identity !== this.identity ||
           loaded.start.hash !== this.identityPin ||
-          verified.sequence !== this.position.sequence ||
-          verified.offset !== this.position.offset ||
-          verified.hash !== this.position.hash ||
-          fileStamp(fd) !== stamp
+          verified.head.offset !== size ||
+          published.offset !== verified.head.offset ||
+          published.hash !== verified.head.hash ||
+          fileStamp(output) !== stamp
         )
           invalid("Output journal committed prefix changed under its owner");
+        this.position = verified.head;
       }
       let next = this.position;
       const linesToWrite: string[] = [];
-      for (const payload of values) {
+      const cursors: string[] = [];
+      for (const { eventEnd, ...payload } of values) {
         const value: RecordValue = {
+          version: 2,
           sequence: next.sequence + 1,
-          runId: this.runId,
+          ...(typeof this.owner === "string"
+            ? { run: { id: this.owner } }
+            : { producer: this.owner }),
           ...payload,
           previousHash: next.hash,
         };
@@ -782,35 +1200,87 @@ export class SessionOutputJournal {
         const line = JSON.stringify({ ...value, hash }) + "\n";
         next = { sequence: value.sequence, offset: next.offset + Buffer.byteLength(line), hash };
         linesToWrite.push(line);
+        if (eventEnd) cursors.push(token(this.identity, next));
       }
-      if (next.offset > MAX_JOURNAL_BYTES)
-        throw new JournalError("incomplete", "Output recovery storage budget exhausted");
-      this.write(fd, linesToWrite.join(""), this.position.offset);
+      const nextBytes = next.offset - this.position.offset;
+      if (!storage && shouldSegmentOutput(this.position.offset, nextBytes)) {
+        const headPin = current.state.outputJournalHead!;
+        const pin = initializeOutputStorage(
+          fd,
+          current.directory,
+          this.identity,
+          loaded.start,
+          this.position,
+          headPin,
+          (pin) => this.persistProof({ outputJournalStorage: pin }),
+        );
+        storage = new SegmentedOutputFile(
+          fd,
+          current.directory,
+          current.file,
+          loaded.start.offset,
+          pin,
+          this.identity,
+        );
+      } else if (
+        storage &&
+        rotateOutputStorage(
+          storage,
+          current.directory,
+          loaded.start.offset,
+          this.position,
+          nextBytes,
+        )
+      ) {
+        const pin = storage.pin;
+        storage.close();
+        storage = undefined;
+        storage = new SegmentedOutputFile(
+          fd,
+          current.directory,
+          current.file,
+          loaded.start.offset,
+          pin,
+          this.identity,
+        );
+      }
+      let target = fd,
+        offset = this.position.offset;
+      if (storage) {
+        const active = storage.active();
+        activeFd = target = active.fd;
+        offset -= active.start.offset;
+      }
+      this.write(target, linesToWrite.join(""), offset);
       // Every published cursor covers fsync-completed records; terminal events
       // receive the same guarantee, rather than relying on eventual close.
-      fsyncSync(fd);
+      fsyncSync(target);
       this.assertOwner();
-      if (
-        event.type === "session_user_message" &&
-        !event.injected &&
-        !(event as { agentId?: unknown }).agentId &&
-        !["agent", "system", "policy"].includes(String(event.authority))
-      )
-        try {
-          acknowledgeOutputCoverageAnchor(
-            this.location.root,
-            this.location.state.sessionId!,
-            this.identityPin,
-            event.clientMessageId,
-          );
-        } catch {
-          // A failed acknowledgement retains pending/invalid coverage. This
-          // observational proof must never revoke the next model run.
-        }
+      this.persistHead(next);
+      for (const event of events)
+        if (
+          event.type === "session_user_message" &&
+          !event.injected &&
+          !(event as { agentId?: unknown }).agentId &&
+          !["agent", "system", "policy"].includes(String(event.authority))
+        )
+          try {
+            acknowledgeOutputCoverageAnchor(
+              this.location.root,
+              this.location.state.sessionId!,
+              this.identityPin,
+              event.clientMessageId,
+            );
+          } catch {
+            // A failed acknowledgement retains pending/invalid coverage. This
+            // observational proof must never revoke the next model run.
+          }
       this.position = next;
-      this.verifiedStamp = fileStamp(fd);
-      return token(this.identity, next);
+      this.verifiedStamp = fileStamp(storage ?? fd);
+      return cursors;
     } finally {
+      if (activeFd !== undefined) closeSync(activeFd);
+      storage?.close();
       if (fd !== undefined) closeSync(fd);
       release();
     }

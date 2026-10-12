@@ -1706,6 +1706,7 @@ export class Engine {
       options?.signal,
     );
     this.activeRunScope = sessionLifetime.scope.child("run", runId);
+    this.activeRunScope.own(wrappedOnStream.finish);
     toolCtx.capabilityServices = Object.freeze({
       ...this.engineServices,
       ...sessionLifetime.services,
