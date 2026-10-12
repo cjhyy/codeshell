@@ -1,0 +1,23 @@
+bun test v1.3.11 (af24e281)
+
+docs/review-2026-10-12/reproductions/menu-recents-round23/menu-recents.test.ts:
+198 |     expect(menuBuilds).toHaveLength(4);
+199 |     expect(pickerCalls).toBe(1);
+200 |     expect(gitSettingsCalls).toBe(1);
+201 |     expect(mobileBroadcasts).toBe(3);
+202 |     expect(broadcasts).toHaveLength(3);
+203 |     expect(rootAdapterCalls.length).toBeGreaterThan(0);
+                                          ^
+error: expect(received).toBeGreaterThan(expected)
+
+Expected: > 0
+Received: 0
+
+      at <anonymous> (/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/docs/review-2026-10-12/reproductions/menu-recents-round23/menu-recents.test.ts:203:37)
+(fail) successful real project IPC updates private recents disk while a single installed menu keeps stale items; internal rebuild rereads [210.66ms]
+
+ 0 pass
+ 1 fail
+ 41 expect() calls
+Ran 1 test across 1 file. [762.00ms]
+Bun test process failed (1)

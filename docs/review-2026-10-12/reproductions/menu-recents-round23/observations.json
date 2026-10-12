@@ -1,0 +1,286 @@
+{
+  "repo": "/Users/admin/.codex/worktrees/server-desktop-review-20261012/codeshell",
+  "completed": true,
+  "nativeElectronStarted": false,
+  "guardScope": {
+    "maintainedPrivateHome": true,
+    "exactOriginInstalledBeforeProductImports": "http://127.0.0.1:9",
+    "dummyOriginAlsoDenied": true,
+    "networkAndChildAPIs": "fetch/http(s)/net/tls/dgram/WebSocket/Bun listeners and child_process/worker_threads/Worker/Bun spawn",
+    "limitation": "in-process guards, not an OS sandbox or universal direct-native-network confinement"
+  },
+  "networkOrChildAttempts": [],
+  "unusedLeafCalls": [],
+  "rootAdapterCalls": [
+    "/private/var/folders/1d/6__4f4y51g90nblfptt8s9v80000gn/T/codeshell-bun-completion-4grsIG/home/owned-menu-recents-ubNvIQ/owned-project"
+  ],
+  "sourceManifest": [
+    {
+      "path": "packages/desktop/src/main/menu.ts",
+      "sha256": "6f65230f21d3a1c9b567d97a2b53433ab313435c49b54f32721647df11e87475"
+    },
+    {
+      "path": "packages/desktop/src/main/project-store.ts",
+      "sha256": "7a8af164418c7884c55d081e47005ed1f73b018755a650e215e927eee9bbdddb"
+    },
+    {
+      "path": "packages/desktop/src/main/project-authority-ipc.ts",
+      "sha256": "6cf689cd6654e1b6bc4cbc65f29deb8137e6b276b24e5df50812cdf66348348e"
+    },
+    {
+      "path": "packages/desktop/src/main/recents-store.ts",
+      "sha256": "d859122658289fc4227c9a0a0b0e8f346e0df1d27b700195c43ae3ea0298afcd"
+    },
+    {
+      "path": "packages/desktop/src/main/mounted-project-root.ts",
+      "sha256": "3d4c4b36482fe360d48832a37b055bc10ca37172f2dd3b01f37963b446a2af73"
+    },
+    {
+      "path": "packages/desktop/src/main/session-cwd-index.ts",
+      "sha256": "d1c3b5c0966aeb763d6d48008d878c1c47f342cd3599b3fd231eeca319467d80"
+    },
+    {
+      "path": "packages/desktop/src/main/renderer-project-path.ts",
+      "sha256": "cf7d7fb3cbbc3ae472630a0f19293d53c9931c767c334438dc8ffe89bb062c8d"
+    },
+    {
+      "path": "packages/desktop/src/main/legacy-project-migration.ts",
+      "sha256": "fe1e416d21fb69c73263e10e43659adfe51d8538e5aac0b1739c7ff3acd0d28c"
+    },
+    {
+      "path": "packages/desktop/src/main/index.ts",
+      "sha256": "cf5ba2f931c816cb44b598d54ef173793e40f554335de75d103f7b0ee5a2c26a"
+    },
+    {
+      "path": "packages/desktop/src/renderer/App.tsx",
+      "sha256": "556e985d3c0898b5915c713a2a0a280f59bf504b4797e89278143bdcdfd265b8"
+    },
+    {
+      "path": "packages/desktop/src/renderer/app/useSessionNavigation.ts",
+      "sha256": "46ac89b4175e425f7b32e1e7aa24d16bb1bd6b0cf5e79817c0bd9a3a6c1b668f"
+    },
+    {
+      "path": "packages/core/src/utils/file-mutex.ts",
+      "sha256": "8f0ccabb45c19c7fd66c285a27f148cb0843d4f1018508b44de3de2a3e9ee9b3"
+    },
+    {
+      "path": "packages/core/src/session/session-manager.ts",
+      "sha256": "0ebe5458e6f5701e286c552e43e0dd707177fb97b1e8726a94ae5dbcfdedcb10"
+    },
+    {
+      "path": "packages/core/dist/index.js",
+      "sha256": "02eb31788cb46e030d8abf3ff42cfe5897aac716c95763fd1374af5d5d6fa698"
+    },
+    {
+      "path": "packages/core/dist/index.internal.js",
+      "sha256": "46415f56ac55a61a9f0e407264483212a1455f66dbacace7c3a3ee1aea943997"
+    },
+    {
+      "path": "tsconfig.json",
+      "sha256": "67b4cbcb4b3a35367465145185b13d20fb799b3d29c9574ff58809153dbfb762"
+    },
+    {
+      "path": "packages/core/src/index.ts",
+      "sha256": "b95839b4ad6c73b03a874d0288e2c4dbf2d9353eda536236ab643adc323d34b5"
+    },
+    {
+      "path": "packages/core/src/index.internal.ts",
+      "sha256": "300495afe8e4c822965070b526ede6e68c793baf5b79e7571979148208b9efcf"
+    },
+    {
+      "path": "packages/coding/package.json",
+      "sha256": "2f495b3e7fdbc3c04ab722edee8387723f8aa8219374f4c006a6ae600caf97c1"
+    },
+    {
+      "path": "packages/coding/src/index.git.ts",
+      "sha256": "b72970a79c39999fa0eb6602213599e93496011f28d4ed94c51af19adcc3c527"
+    },
+    {
+      "path": "packages/coding/dist/index.git.js",
+      "sha256": "b72970a79c39999fa0eb6602213599e93496011f28d4ed94c51af19adcc3c527"
+    }
+  ],
+  "productResolutions": [
+    {
+      "specifier": "@cjhyy/code-shell-capability-coding/git",
+      "importer": "packages/desktop/src/main/recents-store.ts",
+      "resolved": "packages/coding/dist/index.git.js"
+    },
+    {
+      "specifier": "@cjhyy/code-shell-core",
+      "importer": "packages/desktop/src/main/project-store.ts",
+      "resolved": "packages/core/dist/index.js"
+    },
+    {
+      "specifier": "@cjhyy/code-shell-core/internal",
+      "importer": "packages/desktop/src/main/project-store.ts",
+      "resolved": "packages/core/dist/index.internal.js"
+    }
+  ],
+  "codingGitMockTargets": [
+    "@cjhyy/code-shell-capability-coding/git",
+    "/Users/admin/.codex/worktrees/server-desktop-review-20261012/codeshell/packages/coding/src/index.git.ts",
+    "/Users/admin/.codex/worktrees/server-desktop-review-20261012/codeshell/packages/coding/dist/index.git.js"
+  ],
+  "scope": {
+    "actual": "ProjectStore with real Core public/internal filesystem transactions; explicit built-dist SessionManager; ProjectAuthority IPC registration/create/rename/remove/list; actual private recents.json/loadRecents; whole actual menu module",
+    "adapters": {
+      "electron": "owned single window and Menu template storage, not actual native API",
+      "picker": "owned plain directory only",
+      "codingGitExports": [
+        "resolveProjectRoot"
+      ],
+      "codingGitBehavior": "realpath identity only; no Git/worktree/alias behavior",
+      "unusedLeaves": [
+        "profiles-service.listProfiles",
+        "session-workspace-service.cleanupSessionWorktreeForUi",
+        "session-workspace-service.getSessionWorktreeDiffForUi",
+        "session-workspace-service.getSessionWorkspaceAuthorityForUi",
+        "session-workspace-service.getSessionWorkspaceForUi",
+        "session-workspace-service.listSessionWorktreesForUi",
+        "session-workspace-service.releaseManySessionWorkspacesForUi",
+        "session-workspace-service.releaseSessionWorkspaceForUi",
+        "session-workspace-service.requireUsableSessionRootAuthority",
+        "session-workspace-service.switchSessionWorkspaceForUi"
+      ]
+    },
+    "notExecuted": [
+      "Engine",
+      "worker",
+      "Main app entry",
+      "renderer App",
+      "Electron native",
+      "models",
+      "network",
+      "child processes"
+    ],
+    "imports": "ProjectStore Core public/internal package specifiers can resolve through repo tsconfig source aliases or package dist exports. productResolutions records guarded resolution-only addresses, not a module-cache probe; explicit injected SessionManager comes from core/dist/index.js. Core barrels include Engine/provider definitions; no Engine/LLM/Host construction or invocation. Product import scope is source-audited.",
+    "rebuild": "direct internal installAppMenu(A) control only; normal createWindow rebuild is source evidence, not a user recovery action performed here"
+  },
+  "observations": [
+    {
+      "phase": "create-success-disk-new-menu-empty",
+      "disk": {
+        "version": 2,
+        "projects": [
+          {
+            "id": "2e78d6c2-7db1-4c7f-82f8-4d83a7815127",
+            "name": "owned-project",
+            "roots": [
+              {
+                "id": "4095a218-339f-47a3-b8d7-8a7b6517686c",
+                "path": "/private/var/folders/1d/6__4f4y51g90nblfptt8s9v80000gn/T/codeshell-bun-completion-4grsIG/home/owned-menu-recents-ubNvIQ/owned-project",
+                "canonicalIdentity": "/private/var/folders/1d/6__4f4y51g90nblfptt8s9v80000gn/T/codeshell-bun-completion-4grsIG/home/owned-menu-recents-ubNvIQ/owned-project",
+                "name": "owned-project",
+                "addedAt": 1791763582645
+              }
+            ],
+            "primaryRootId": "4095a218-339f-47a3-b8d7-8a7b6517686c",
+            "createdAt": 1791763582645,
+            "updatedAt": 1791763582645,
+            "lastOpenedAt": 1791763582645,
+            "revision": 1
+          }
+        ]
+      },
+      "recentsDisk": [
+        {
+          "path": "/private/var/folders/1d/6__4f4y51g90nblfptt8s9v80000gn/T/codeshell-bun-completion-4grsIG/home/owned-menu-recents-ubNvIQ/owned-project",
+          "name": "owned-project",
+          "lastOpenedAt": 1791763582645
+        }
+      ],
+      "freshRecents": [
+        {
+          "path": "/private/var/folders/1d/6__4f4y51g90nblfptt8s9v80000gn/T/codeshell-bun-completion-4grsIG/home/owned-menu-recents-ubNvIQ/owned-project",
+          "name": "owned-project",
+          "lastOpenedAt": 1791763582645
+        }
+      ],
+      "labels": [
+        "(空)"
+      ],
+      "menuBuilds": 1
+    },
+    {
+      "phase": "rename-success-disk-new-menu-old-label",
+      "recentsDisk": [
+        {
+          "path": "/private/var/folders/1d/6__4f4y51g90nblfptt8s9v80000gn/T/codeshell-bun-completion-4grsIG/home/owned-menu-recents-ubNvIQ/owned-project",
+          "name": "Owned renamed title",
+          "lastOpenedAt": 1791763582665
+        }
+      ],
+      "freshRecents": [
+        {
+          "path": "/private/var/folders/1d/6__4f4y51g90nblfptt8s9v80000gn/T/codeshell-bun-completion-4grsIG/home/owned-menu-recents-ubNvIQ/owned-project",
+          "name": "Owned renamed title",
+          "lastOpenedAt": 1791763582665
+        }
+      ],
+      "labels": [
+        "owned-project"
+      ],
+      "menuBuilds": 2
+    },
+    {
+      "phase": "remove-success-live-registry-empty-menu-retained",
+      "disk": {
+        "version": 2,
+        "projects": [
+          {
+            "id": "2e78d6c2-7db1-4c7f-82f8-4d83a7815127",
+            "name": "Owned renamed title",
+            "displayName": "Owned renamed title",
+            "roots": [
+              {
+                "id": "4095a218-339f-47a3-b8d7-8a7b6517686c",
+                "path": "/private/var/folders/1d/6__4f4y51g90nblfptt8s9v80000gn/T/codeshell-bun-completion-4grsIG/home/owned-menu-recents-ubNvIQ/owned-project",
+                "canonicalIdentity": "/private/var/folders/1d/6__4f4y51g90nblfptt8s9v80000gn/T/codeshell-bun-completion-4grsIG/home/owned-menu-recents-ubNvIQ/owned-project",
+                "name": "owned-project",
+                "addedAt": 1791763582645
+              }
+            ],
+            "primaryRootId": "4095a218-339f-47a3-b8d7-8a7b6517686c",
+            "createdAt": 1791763582645,
+            "updatedAt": 1791763582673,
+            "lastOpenedAt": 1791763582673,
+            "revision": 3,
+            "deletedAt": 1791763582673
+          }
+        ]
+      },
+      "recentsDisk": [
+        {
+          "path": "/private/var/folders/1d/6__4f4y51g90nblfptt8s9v80000gn/T/codeshell-bun-completion-4grsIG/home/owned-menu-recents-ubNvIQ/owned-project",
+          "name": "Owned renamed title",
+          "lastOpenedAt": 1791763582673,
+          "deletedAt": 1791763582673
+        }
+      ],
+      "freshRecents": [],
+      "labels": [
+        "Owned renamed title"
+      ],
+      "staleClickMessage": {
+        "channel": "menu:open-recent",
+        "payload": {
+          "path": "/private/var/folders/1d/6__4f4y51g90nblfptt8s9v80000gn/T/codeshell-bun-completion-4grsIG/home/owned-menu-recents-ubNvIQ/owned-project",
+          "name": "Owned renamed title",
+          "lastOpenedAt": 1791763582665
+        }
+      },
+      "appCallbackNotExecuted": true,
+      "menuBuilds": 3
+    },
+    {
+      "phase": "internal-rebuild-control",
+      "labels": [
+        "(空)"
+      ],
+      "menuBuilds": 4,
+      "pickerCalls": 1,
+      "mobileBroadcasts": 3
+    }
+  ]
+}

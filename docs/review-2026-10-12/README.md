@@ -2,13 +2,13 @@
 
 本次审查覆盖服务端、Electron 桌面端、配对 Web 与移动端的日常流程，重点检查消息发送、审批、取消、切换会话、恢复和项目上下文。问题只在有代码证据或可复现结果后列入正式发现。
 
-审查进行中，截止时间为新加坡时间 2026 年 10 月 12 日 11:00。初始审查基线为 `84740d56e55517b004948a0a0e07649ad6fbf998`，对应启动审查时的 `origin/main`。01:30 拉取发现主分支已更新至 `a66f4ef291f304ee4df9da8095a90671d9a8f140`（0.9.33）；已另建隔离快照复查差异，原始复现和行号仍按初始基线保存。81 个便携 Bun 复现文件共 243 测试，以及实际 Electron 凭据 4 场景，已在新快照复查成立；详见[0.9.33 差异复查](latest-baseline.md)。产品代码保持原样，报告保存在独立分支 `codex/review/server-desktop-20261012`。
+审查进行中，截止时间为新加坡时间 2026 年 10 月 12 日 11:00。初始审查基线为 `84740d56e55517b004948a0a0e07649ad6fbf998`，对应启动审查时的 `origin/main`。01:30 拉取发现主分支已更新至 `a66f4ef291f304ee4df9da8095a90671d9a8f140`（0.9.33）；已另建隔离快照复查差异，原始复现和行号仍按初始基线保存。83 个便携 Bun 复现文件共 247 测试，以及实际 Electron 凭据 4 场景，已在新快照复查成立；详见[0.9.33 差异复查](latest-baseline.md)。产品代码保持原样，报告保存在独立分支 `codex/review/server-desktop-20261012`。
 
 用户流程、正常对照与修复顺序见[流程覆盖地图](flow-coverage.md)。
 
 ## 当前结论
 
-当前已收束 81 项问题：1 项 P1、52 项 P2、28 项 P3。优先处理审批状态、任务回执和会话身份；这些问题会让任务无法继续、重复执行，或把用户输入带到另一个会话。P1 表示有未提交文件丢失风险、应优先修复；P2 表示重要流程持续受阻、状态被错误持久化或有错误执行风险，应安排修复；P3 表示影响较小或触发范围较窄、可通过现有操作恢复的问题。分级同时考虑影响与触发条件，不能只按是否可重试判断。尚未证实的候选不计入数量。
+当前已收束 83 项问题：1 项 P1、52 项 P2、30 项 P3。优先处理审批状态、任务回执和会话身份；这些问题会让任务无法继续、重复执行，或把用户输入带到另一个会话。P1 表示有未提交文件丢失风险、应优先修复；P2 表示重要流程持续受阻、状态被错误持久化或有错误执行风险，应安排修复；P3 表示影响较小或触发范围较窄、可通过现有操作恢复的问题。分级同时考虑影响与触发条件，不能只按是否可重试判断。尚未证实的候选不计入数量。
 
 **最先修 R35：创建工作区时重复 Enter，失败请求的回滚可以删除另一个已成功请求的 worktree、分支和未提交文件。** 此项已由独立代理复查入口与真实 Git 时序，见 [独立质量复核](quality-audit.md)。第五轮九项也已[独立复核](quality-round5.md)，均保留，网关通知等条件已收窄。
 
@@ -97,6 +97,8 @@
 | R79 | P2 | worker活着但bound会话非resident时，Goal续接缺WorkspaceContext，模型前失败却未回滚或提示 | [Goal bound冷恢复 G20-2](goal-sleep-round20.md)，第二十轮；正常授权run可恢复 |
 | R80 | P3 | Chrome闲置断线后正常轮询仍显示正在使用，需先断开再重新授权；动作门禁正确拒绝 | [浏览器连接 B21-1](browser-lifecycle-round21.md)，第二十一轮 |
 | R81 | P2 | Core Stop已结束且尚无Input时，Main旧浏览器点击仍等待并在按钮启用后提交真实输入 | [Browser停止 B22-1](browser-stop-round22.md)，第二十二轮；提交后动作不回滚 |
+| R82 | P3 | macOS前台A显式菜单操作仍发往最后安装菜单的B，后台窗口被打开Search/Palette或切项目 | [菜单窗口 D23-1](menu-routing-round23.md)，第二十三轮；无真实OS菜单/快捷键实测 |
+| R83 | P3 | macOS项目成功创建、改名、移除后Recent菜单不刷新，新项目缺项、旧名和已删项残留 | [最近项目 D23-2](menu-recents-round23.md)，第二十三轮；权威磁盘与广播正常 |
 
 第一轮完整分析：[Desktop](desktop-round1.md)、[Server](server-round1.md)、[Web/配对端](web-round1.md)。后续专项分析会继续补充到本目录。已有结论还经[CLI 范围复核](cli-quality-round9.md)与[资源回收范围复核](resource-quality-round8.md)收窄恢复及平台条件。
 
@@ -298,6 +300,7 @@ R76实际Core async-answer enqueue产生续接turn，所有Core帧传给实际Ho
 | 第二十轮Goal冷恢复 | 新通用1文件4测试72个Bun expect，两基线分别通过；实际Core/Engine内存provider，无worker | [两个根因及正常控制](goal-sleep-round20.md) |
 | 第二十轮原生模型存储/优先级 | latest owned Electron storage作者/主审各31 Node assert分列，Bun0；15项只读抽样，R29降P3 | [原生边界](model-native-round20.md)、[优先级](priority-quality-round20.md) |
 | 第二十一轮Browser idle连接/恢复 | 新通用1文件3测试40个Bun expect，两基线分别通过；无真实Chrome/Electron/native relay | [触发、反馈及恢复](browser-lifecycle-round21.md) |
+| 第二十三轮macOS菜单 | 新通用2文件4测试82个Bun expect，两基线分别通过；owned Electron适配，无native OS菜单 | [窗口归属](menu-routing-round23.md)、[Recent刷新](menu-recents-round23.md) |
 | Desktop renderer 现有逐文件测试 | 282 文件、2397 测试、0 失败                                               | `validation/desktop-renderer-results.json`               |
 | Desktop main 现有逐文件测试     | 283 文件、2461 测试、0 失败                                               | `validation/desktop-main-results.json`                   |
 | native Hub smoke                | 未通过，不计成功；先遇到过期工具 fixture，再暴露 R21                      | `/tmp/codeshell-review-20261012/hub-smoke*.log`          |
@@ -322,3 +325,7 @@ R76实际Core async-answer enqueue产生续接turn，所有Core帧传给实际Ho
 第二十二轮经[最终独立质量复核](browser-stop-quality-round22.md)支持窄P2，并保留自然ready默认12秒期限、已提交输入不回滚、旧Core不续跑及所有替身边界。
 
 第二十二轮[最终整合语义核验](quality-round22.md)已完成，新增执行0；R81的三次native各66断言分账、正常恢复及范围限制一致。
+
+第二十三轮[macOS菜单窗口归属](menu-routing-round23.md)与[Recent快照刷新](menu-recents-round23.md)新增R82/R83各P3，两冻结基线分别guarded新增2文件4测试82个Bun expect，当前通用83文件247测试、正式83=1P1/52P2/30P3。Recent磁盘投影及删除保护正常；原版便携首轮两次支架失败已归档，修正版各1/43通过，没有实际产品子进程。[Relay重连预审](server-preflight-round23.md)与[HTTP错误门禁预审](http-error-preflight-round23.md)新增执行/发现均0。
+
+第二十三轮[最终独立整合核验](quality-round23.md)通过，新增执行0；纠正latest当前摘要为83/247，保留R82阶段历史及作者/root成功失败分账。

@@ -264,6 +264,22 @@
     "skipped": 0
   },
   {
+    "file": "docs/review-2026-10-12/reproductions/menu-recents-round23/menu-recents.test.ts",
+    "log": "docs/review-2026-10-12/reproductions/menu-recents-round23/menu-recents.test.ts.log",
+    "code": 0,
+    "signal": null,
+    "tests": 1,
+    "skipped": 0
+  },
+  {
+    "file": "docs/review-2026-10-12/reproductions/menu-routing-round23/menu-routing.test.ts",
+    "log": "docs/review-2026-10-12/reproductions/menu-routing-round23/menu-routing.test.ts.log",
+    "code": 0,
+    "signal": null,
+    "tests": 3,
+    "skipped": 0
+  },
+  {
     "file": "docs/review-2026-10-12/reproductions/model-switch-round18/model-preferences.test.tsx",
     "log": "docs/review-2026-10-12/reproductions/model-switch-round18/model-preferences.test.tsx.log",
     "code": 0,

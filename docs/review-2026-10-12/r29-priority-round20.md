@@ -48,3 +48,5 @@
 本轮仅提定级建议，不改任何主报告文字或数目。原始证据仍为desktop-round3 D12及quality-round10/project-recovery-control.test.tsx/.log；它们的既有执行与本轮0执行分账。
 
 Completed — R29建议P3、缺陷保留；新增finding0，新增测试/原生/模型执行0。
+
+第二十三轮[Recent菜单快照预审](menu-recents-preflight-round23.md)补清静态恢复条件：Open Recent必须已经包含目标项目的菜单项，或后续重装菜单使其出现；现代ProjectStore虽将新建项目投影到recents磁盘，但现有菜单没有随registry广播刷新的接线，不能承诺刚添加B立即可从旧快照菜单恢复。本项真实rename广播恢复仍已动态证明，R29/P3与原证据不变。

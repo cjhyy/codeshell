@@ -1,6 +1,6 @@
 # 用户流程覆盖与修复顺序
 
-这是截至第二十二轮的流程地图；正式编号、级别和触发条件以 [主报告](README.md) 与各附录为准。正常路径通过不代表相邻失败路径已正确处理。缺陷表征测试通过表示复现成立，没有实施产品修复。
+这是截至第二十三轮的流程地图；正式编号、级别和触发条件以 [主报告](README.md) 与各附录为准。正常路径通过不代表相邻失败路径已正确处理。缺陷表征测试通过表示复现成立，没有实施产品修复。
 
 | 用户要完成的事 | 已检查的正常路径及证据层级 | 仍有的问题与可见影响 |
 | --- | --- | --- |
@@ -23,6 +23,8 @@
 | 运行自动化、看进度和历史 | 实际ChatSession FIFO与调度/展示控制；[自动化审查](automation-round5.md) | R44非once续接超时提前结算仍可重复排队；R45拒绝运行却向网关/生命周期发布completed；R46历史归属错误；R47界面未订阅自动停用；R48缺disabledReason；R63普通通知等待占住串行队列，urgent停用通知也被延迟（实际notifier/route+注入时钟，无OS通知） |
 | 暂停目标后继续执行 | [实际Main/preload/Goal组件与Core/Engine/磁盘](goal-sleep-round20.md)，内存provider，合法Host权威正常对照 | R78无worker Resume只写状态并成功回执，不驱动任务；R79有worker但bound会话非resident时漏WorkspaceContext，模型前拒绝却无失败结算；普通authorized run服务恢复正常，完整Desktop发送未执行 |
 | 恢复归档、查询资料集、录音 | 历史恢复、真实Collection Engine本地client；真实录音组件模拟设备 | R76异步回答的Core续接仍运行而Host判空闲，允许归档隐藏当前历史行，实际API恢复正常；R39成功恢复后自busy误挡导航；R72设置取消归档漏权威Core writer，renderer live但Core仍归档，正式folders可移除仍绑定secondary后resolver拒绝root_removed，历史/物理目录保留；R49已知原件变更指引丢失；R50同document双pending启动录音，stop/unmount只释放最后一份 |
+| 使用macOS全局菜单 | [实际Menu模块/preload/App源码回调](menu-routing-round23.md)，owned Electron/Menu/双窗口IPC适配，无真实OS菜单/键盘 | R82/P3显式Find/Palette/Sidebar/Recent仍投最后完成菜单安装的后台窗；role菜单与已移除Inspector排除，dead target只为适配器/源码边界 |
+| 项目变更后打开Recent | [实际ProjectStore/IPC/recents磁盘/Menu](menu-recents-round23.md)，单A窗口；guarded无native/App | R83/P3成功create仍空、rename仍旧名、remove仍残留；真实磁盘/新读取/广播正确，internal rebuild恢复仅内部控制 |
 
 建议先修 R35 的创建/回滚所有权，同时处理会话与输入身份、审批待处理状态和不确定回执。之后处理关闭资源屏障、持久写入/更新原子性与配置冲突，再修搜索范围提示、状态同步和恢复时多余确认。这个顺序依据数据风险和用户能否继续任务，不依据发现时间或问题数量。
 
@@ -49,3 +51,5 @@
 第二十一轮[Browser生命周期](browser-lifecycle-round21.md)新增R80/P3，主审双基线各1文件3测试40expect，累计81/243、正式80=1/51/28；[取消/owner关闭盘点](browser-cancel-gates-round21.md)新增执行0/正式0。只将idle连接反馈收录，不把parent Stop静态边界或已正确阻断动作当缺陷。
 
 第二十二轮[Browser Stop输入边界](browser-stop-round22.md)新增R81/P2，作者与主审两基线各standalone native66 Node断言分账，Bun增量0、通用仍81/243；formal81=1P1/52P2/28P3。Core正确终结任务及拒绝旧reply，问题限Main未传播请求取消、尚无输入的ready窗口；不是已提交动作回滚、完整App/worker/Chrome或危险操作实测。[本地6034侧栏账号差异预审](sidebar-account-local-round22.md)新增0/执行0、仅local commit。
+
+第二十三轮菜单owner/Recent两P3分别确认，两基线各新增2文件4测试82个Bun expect，当前正式83=1/52/30、通用83/247；Recent作者原版first1/43、root两版first各0/1/41支架失败及修正版各1/43分账。Relay轮换/重连及HTTP错误门禁只读预审新增0/执行0。

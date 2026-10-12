@@ -80,3 +80,5 @@ No project was deleted from disk and transcript-copy logic specifically retains 
 ## 主代理收束
 
 四份专项源码已改为便携相对导入，保存在 [reproductions/quality-round10](reproductions/quality-round10/)，并在两基线各自重跑，均7测试51断言、0失败0跳过。上文 /tmp 命令和路径是原作者阶段证据，日后可用本目录通用 runner 重跑归档副本。R05 段的 native 错误关联已校正为 R06。
+
+第二十三轮补充：上述Open Recent仅为有目标菜单项时的静态恢复入口，旧菜单快照不保证包含刚添加B，详见[Recent菜单预审](menu-recents-preflight-round23.md)。实际A rename广播恢复控制未受影响，仍支持R29后续P3裁定；没有补称完整原生菜单已实测。

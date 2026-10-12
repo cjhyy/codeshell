@@ -10,10 +10,10 @@
 | --- | --- | --- |
 | frozen install、workspaces build、Desktop build、typecheck:workspaces | 全部通过 | `validation/latest-a66f4ef2/{install,build,desktop-build,typecheck}.log` |
 | 8 个新增或修改测试文件 | 156 项实际执行、0 失败、0 跳过 | `validation/latest-a66f4ef2/changed-test-results.json` |
-| 既有便携缺陷表征和正常契约 | 81 文件、243 测试、0 失败、0 跳过 | `validation/latest-a66f4ef2/reproduction-results.json` |
+| 既有便携缺陷表征和正常契约 | 83 文件、247 测试、0 失败、0 跳过 | `validation/latest-a66f4ef2/reproduction-results.json` |
 | 凭据实际 Electron/IPC/store | 4 场景通过 | `validation/latest-a66f4ef2/credentials__credentials-e2e.mjs.log` |
 
-复现“通过”表示当前仍观察到被测缺陷。81 个文件并非 81 项问题，一份文件可能覆盖多项发现，也包含正常对照。新快照结果没有加到原基线 6286 个现有测试的总数中，以免重复计数。
+复现“通过”表示当前仍观察到被测缺陷。83 个文件并非与问题项一一对应，一份文件可能覆盖多项发现，也包含正常对照。新快照结果没有加到原基线 6286 个现有测试的总数中，以免重复计数。
 
 ## 两处测试入口适配
 
@@ -61,3 +61,7 @@
 第二十一轮[Browser闲置失联反馈](browser-lifecycle-round21.md)R80/P3关键源码两基线相同，root同源分别guarded复跑1文件3测试40expect/Completed，累计81文件243测试。实际2秒轮询/显式重新配对/动作门禁正常控制，无真实Chrome/Electron/native relay/网络；见[双基线收据](validation/round21-browser-results.json)。
 
 第二十二轮[Browser Stop](browser-stop-round22.md)新增R81/P2，十二个关键产品source两基线及作者manifest同SHA；root同源分别maintained native通过66 Node断言/Completed，作者latest另66独立账本，不合并198 suite。三次已知Main/renderer共9PID均已退出、privateHOME清理；只读info重试作者0/root旧2/root新1，mutation未重试。Bun仍81文件243测试，详见[分账收据](validation/round22-browser-stop-results.json)。
+
+第二十三轮R82收束阶段（历史）：R82/P3菜单owner在两冻结基线各guarded1文件3测试39expect通过，当前通用82文件246测试；actualmenu/preload/App full SHA与提取SHA相同，owned Menu/window IPC/recents适配，不冒充native OS或完整App。当时Recent刷新仍待实验、不计数；其最终R83验证见下一段。
+
+第二十三轮[Recent刷新](menu-recents-round23.md)再增R83/P3及1文件1测试43个Bun expect，两冻结基线修正版分别guarded通过，通用83文件247测试；与owner合计本轮2/4/82。原作者first1/43和root两次原版便携失败0/1/41独立归档，修正版作者0次，未启动native或实际产品子进程。

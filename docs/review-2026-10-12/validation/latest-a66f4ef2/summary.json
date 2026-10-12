@@ -1,7 +1,7 @@
 {
   "baseline": "a66f4ef291f304ee4df9da8095a90671d9a8f140",
-  "reproductionFiles": 81,
-  "reproductionTests": 243,
+  "reproductionFiles": 83,
+  "reproductionTests": 247,
   "reproductionSkipped": 0,
   "changedTestFiles": 8,
   "changedExecutedTests": 156,
@@ -43,5 +43,9 @@
   "round22NativeStandaloneAssertionsPerRun": 66,
   "round22NativeRootRuns": 2,
   "round22NativeAuthorRunsSeparate": 1,
-  "round22Note": "R81/P2 parent Browser ready wait continues to submit old Input after actual Core Stop settled; real owned Electron Chromium, actual Core/Engine with deterministic memory provider, actual preload/native IPC and extracted Main; legacy unbound Session, owned Host factory/in-process stdio; no full App/worker/Chrome/provider; six harness failures preserved, read-only info retries author0/rootinitial2/rootlatest1, no mutation retries."
+  "round22Note": "R81/P2 parent Browser ready wait continues to submit old Input after actual Core Stop settled; real owned Electron Chromium, actual Core/Engine with deterministic memory provider, actual preload/native IPC and extracted Main; legacy unbound Session, owned Host factory/in-process stdio; no full App/worker/Chrome/provider; six harness failures preserved, read-only info retries author0/rootinitial2/rootlatest1, no mutation retries.",
+  "round23BunFilesAdded": 2,
+  "round23BunTestsAdded": 4,
+  "round23BunExpects": 82,
+  "round23Note": "R82/P3 macOS global custom-menu target captured at install; actual menu module and exact preload/App menu callback extraction with owned Electron/global Menu, window IPC, recents adapters; no actual Electron OS menu/keyboard, full App/Main/Core/worker/model; destroyed-send error belongs to owned adapter only. Each frozen baseline independently guarded 1 file/3 tests/39 Bun expects; author first3/36 and final3/39 separately retained, no failures and no duplicate suite counting. R83/P3 actual single-window ProjectStore/IPC and private recents filesystem remain healthy while installed Menu snapshot stale; corrected portable source guarded independently each baseline 1/43, author original first1/43 separate, root first portability failures each0/1/41 with blocked child attempt1/no actual child preserved. Explicit SessionManager dist constructor, other Core source/exports/resolution-only provenance is source-audited, not cache graph. No native or real App."
 }
