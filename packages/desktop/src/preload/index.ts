@@ -47,6 +47,9 @@ import type {
 } from "./types";
 import { forwardAgentSideEffectEvent } from "./agent-side-effect-events";
 
+const invokeRoomHistory = (roomId: string, request: unknown) =>
+  ipcRenderer.invoke("ccRoom:roomHistory", roomId, request);
+
 /** One background shell as surfaced to the dock panel (TODO 3.2). Mirrors core
  *  BgShell's public shape; renderer-local since the renderer can't import core. */
 export interface BackgroundShellInfo {
@@ -1793,12 +1796,11 @@ contextBridge.exposeInMainWorld("codeshell", {
     send: (roomId: string, text: string) => ipcRenderer.invoke("ccRoom:send", roomId, text),
     respondApproval: (roomId: string, requestId: string, decision: unknown) =>
       ipcRenderer.invoke("ccRoom:respondApproval", roomId, requestId, decision),
-    roomHistory: (roomId: string, sinceSeq?: number) =>
-      ipcRenderer.invoke("ccRoom:roomHistory", roomId, sinceSeq),
+    roomHistory: (roomId: string, sinceSeq?: number) => invokeRoomHistory(roomId, sinceSeq),
     roomHistoryPage: (
       roomId: string,
       request: { sinceSeq?: number; cursor?: string; limit?: number },
-    ) => ipcRenderer.invoke("ccRoom:roomHistoryPage", roomId, request),
+    ) => invokeRoomHistory(roomId, request),
     readHistory: (cwd: string, sessionId: string, limit: number) =>
       ipcRenderer.invoke("ccRoom:readHistory", cwd, sessionId, limit),
     readCodexHistory: (cwd: string, threadId: string, limit: number) =>

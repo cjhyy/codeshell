@@ -203,6 +203,7 @@ import { PetImDecisions, collectImDecisions } from "./pet/pet-im-decisions.js";
 import { selectSessionsToArchive } from "./pet/pet-auto-archive.js";
 import {
   openLinkedSessionFromIpc,
+  registerRoomHistoryIpc,
   takeOverLinkedSessionFromIpc,
 } from "./cc-room/linked-session-ipc.js";
 import { resolveLinkedSessionFromDisk } from "./cc-room/linked-session-resolver.js";
@@ -364,7 +365,7 @@ import {
 } from "./im-gateway-control-server.js";
 import { ImGatewayService, registerImGatewayIpc } from "./im-gateway-service.js";
 import { ApprovalBridge } from "./cc-room/approval-bridge.js";
-import { TranscriptSubscriptionManager } from "./cc-room/transcript-subscriptions.js";
+import { createRoomTranscriptSubscriptions } from "./cc-room/transcript-subscriptions.js";
 import { QuickChatOwnershipRegistry } from "./quick-chat-ownership.js";
 import { readDirectory, readFile as fsReadFile, fileExists as fsFileExists } from "./fs-service.js";
 import { registerLocalFilePreviewIpc } from "./local-file-preview-ipc.js";
@@ -1192,20 +1193,11 @@ const roomManager = new RoomManager({
     transcriptSubscriptions.endRoom(roomId);
   },
 });
-const transcriptSubscriptions = new TranscriptSubscriptionManager({
-  hasTranscriptHistory: (roomId) => roomManager.hasTranscriptHistory(roomId),
+const transcriptSubscriptions = createRoomTranscriptSubscriptions({
+  roomManager,
   checkpointDir: join(app.getPath("userData"), "mobile-remote", "transcript-checkpoints"),
-  onFailure: (roomId, message) => {
-    mobileRemote.broadcast({ type: "room.recovery", roomId, message });
-    for (const window of BrowserWindow.getAllWindows()) {
-      if (!window.isDestroyed())
-        window.webContents.send("ccRoom:transcriptRecovery", { roomId, message });
-    }
-  },
-  onStart: (roomId) => roomManager.beginTranscriptFollow(roomId),
-  onStop: (roomId) => roomManager.endTranscriptFollow(roomId),
-  roomCursor: (roomId) => roomManager.latestSeq(roomId),
-  onMessages: (roomId, messages) => roomManager.ingestTranscriptMessages(roomId, messages),
+  broadcast: (event) => mobileRemote.broadcast(event),
+  windows: () => BrowserWindow.getAllWindows(),
 });
 
 // Routes authenticated mobile events into the same run/permission path the
@@ -5765,14 +5757,7 @@ ipcMain.handle(
       | { behavior: "deny"; message: string },
   ) => approvalBridge.respond(roomId, requestId, decision),
 );
-ipcMain.handle("ccRoom:roomHistory", async (_e, roomId: string, sinceSeq?: number) =>
-  roomManager.getMessages(roomId, sinceSeq ?? 0),
-);
-ipcMain.handle(
-  "ccRoom:roomHistoryPage",
-  async (_e, roomId: string, request: { sinceSeq?: number; cursor?: string; limit?: number }) =>
-    roomManager.getHistoryPage(roomId, request),
-);
+registerRoomHistoryIpc(ipcMain, roomManager);
 ipcMain.handle("ccRoom:readHistory", async (_e, cwd: string, sessionId: string, limit: number) => {
   cwd = await requireRendererProjectPath(cwd);
   if (!Number.isSafeInteger(limit) || limit < 1 || limit > 500) throw new Error("invalid limit");

@@ -22,8 +22,43 @@ import {
   type HistoryMessage,
   type SessionTailEvent,
 } from "@cjhyy/code-shell-capability-coding/orchestration";
-import type { RoomKind, RoomMessage } from "@cjhyy/code-shell-server/mobile-remote";
+import type { RoomKind, RoomManager, RoomMessage } from "@cjhyy/code-shell-server/mobile-remote";
 import { TranscriptCheckpointStore, type TranscriptCheckpoint } from "./transcript-checkpoints.js";
+
+/** Host composition stays with the follower; Electron window custody stays in Main. */
+export function createRoomTranscriptSubscriptions(options: {
+  roomManager: Pick<
+    RoomManager,
+    | "hasTranscriptHistory"
+    | "beginTranscriptFollow"
+    | "endTranscriptFollow"
+    | "latestSeq"
+    | "ingestTranscriptMessages"
+  >;
+  checkpointDir: string;
+  broadcast(event: { type: "room.recovery"; roomId: string; message: string }): void;
+  windows(): Iterable<{
+    isDestroyed(): boolean;
+    webContents: { send(channel: string, payload: unknown): void };
+  }>;
+}): TranscriptSubscriptionManager {
+  const { roomManager, checkpointDir, broadcast, windows } = options;
+  return new TranscriptSubscriptionManager({
+    checkpointDir,
+    hasTranscriptHistory: (roomId) => roomManager.hasTranscriptHistory(roomId),
+    onStart: (roomId) => roomManager.beginTranscriptFollow(roomId),
+    onStop: (roomId) => roomManager.endTranscriptFollow(roomId),
+    roomCursor: (roomId) => roomManager.latestSeq(roomId),
+    onMessages: (roomId, messages) => roomManager.ingestTranscriptMessages(roomId, messages),
+    onFailure: (roomId, message) => {
+      broadcast({ type: "room.recovery", roomId, message });
+      for (const window of windows()) {
+        if (!window.isDestroyed())
+          window.webContents.send("ccRoom:transcriptRecovery", { roomId, message });
+      }
+    },
+  });
+}
 
 interface TranscriptTarget {
   roomId: string;
