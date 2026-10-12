@@ -14,3 +14,5 @@
 上表是基于当前证据的工程排序建议，并非实施方案或已通过的修复验收。现有表征测试通过只证明问题复现；修复时应把对应缺陷断言改为正确行为，并保留正常路径、去重和资源归属控制。平台只在报告已验证的范围内成立，各附录中未动态执行的完整 App、产品 worker、提供方等边界不能据此当成端到端验收完成。
 
 [独立排序复核](validation/original-repair-handoff-round28/independent-quality.raw.md)与[源快照收据](validation/original-repair-handoff-round28/independent-quality.receipts.json)新增发现/执行0。主审采用建议并收窄上述Host/上传文件措辞；原稿、建议diff原字节与质量稿均保存。其余P2应按主报告逐项安排：CLI实际权限模式R02/R66、录音资源R50、可选问答/首次恢复/配对R14/R21/R32等不应因未在本表展开而排到低频P3之后。
+
+用户追加的全报告复核已整理[全部86项优先队列与覆盖缺口](priority-and-coverage.md)，补齐本交接分组未逐项展开的P2/P3；本文件的六组验收建议及非已修复边界保持。

@@ -1,4 +1,4 @@
-# 历史阶段稿：R25静态预审、首败与支架修正
+# 历史阶段稿：第25轮静态预审、首败与支架修正
 
 本稿保留当时84/248及候选未验证的语境；本轮最终两基线执行、计数与范围以[专项报告](modern-desktop-image-round25.md)和[最终质量核验](quality-round25.md)为准。原字节见[归档](validation/original-modern-desktop-image-round25/independent-quality-history.raw.md)。
 

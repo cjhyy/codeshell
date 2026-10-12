@@ -19,7 +19,7 @@
 - 原有Server/Web141/1428、Desktop renderer282/2397、Desktop main283/2461合计706文件6286测试全过；实际Electron navigation/settings/workspace-pages/model-settings/digital-humans/panel-recovery-ui与native output-journal/mobile-output-journal记录保留，不随新轮重复执行计数。native Hub初始smoke未通过，另见下方限制。
 - 新脚本在reproductions/，元数据在validation/reproduction-results.json及validation/latest-a66f4ef2/reproduction-results.json。所有开发失败/替身边界归档，PASS为缺陷表征成立，并非产品修复。
 - 第十九轮native file-mutex/EACCES已收束为R77/P2，真实发生点在HubAuth认证锁，不是titlehandler；两冻结基线各38 Node assert/Completed，Bun增量0，四份早期失败诊断单列。最终整合语义检查已通过。
-- heartbeat07:32工具view及TOML确认ACTIVE/每小时整点半点。第十九轮checkpoint d271ae8f（docs-only）；第二十轮检查点177446cc已保存；第二十一轮检查点1f66b302已保存；第二十二轮Browser Stop检查点1d6e09fd已保存，双基线各native66；第二十三轮R82双基线各1/3/39、R83修正版各1/1/43已确认，原版root两次便携失败另列。持续至11:00，不发布、不联系他人、不调用真实付费模型/账号/CLI。
+- 历史checkpoint：07:32工具view及TOML曾确认heartbeat ACTIVE/每小时整点半点（最终已PAUSED）。第十九轮checkpoint d271ae8f（docs-only）；第二十轮检查点177446cc已保存；第二十一轮检查点1f66b302已保存；第二十二轮Browser Stop检查点1d6e09fd已保存，双基线各native66；第二十三轮R82双基线各1/3/39、R83修正版各1/1/43已确认，原版root两次便携失败另列。该阶段按授权持续至11:00，现已截止；不发布、不联系他人、不调用真实付费模型/账号/CLI。
 
 ## 关键证据与注意事项
 
@@ -194,3 +194,7 @@ R53优先级抽查已收束，保留P2的持续Update契约失效理由及审计
 11:03已到截止，停止新增审查。最终86=1/52/33、双common86/251、旧baseline706/6286及native/latest-only分账保持；R29 docs-only检查点cd873fd2及R28检查点0feef0cd已保存。当前只做最终状态、交付和调度停用，不再新建候选或测试。精确结束检查、goal与heartbeat结果写入最终交付收据。
 
 11:05最终报告与repair-handoff已链接交付，两个Codex文件panel返回queued（不冒称已前台展示）。目标工具确认complete；automation_update确认codeshell-10-12-11为PAUSED，TOML再次回读一致，原名称/提示词/周期/目标保留。最终机械QC1784本地链接/1033源码行号/0error，独立交付语义核对通过；原工作区6034df8a clean、双冻结产品未改。报告提交703b78e5，本次仅补最终交付收据，不新增review/test。
+
+## 截止后用户追加：全部报告优先排序与覆盖盘点
+
+2026-10-12T11:26:12.550028+08:00，按用户追加要求复核原140份顶层报告/汇总（136份正文分组三审、4份主汇总交叉对照），正式86=1/52/33、双common86/251及旧baseline706/6286不变。主表和新[完整优先队列](priority-and-coverage.md)按P1→P2→P3排序，P2内部给出不漏项的工程建议；[140份报告索引](report-inventory-postreview.md)和53个模块/子域证据映射已保存。澄清R29菜单恢复前提、Node22断言数和第25轮标题。未做新产品审查/测试/build/import/模型/修复，原goal仍complete、heartbeat仍PAUSED。当前本地main62a58ac8的13个Desktop差异路径未被冒称已动态复核，origin/main本轮fetch仍a66f；两冻结快照和其它任务保留。

@@ -17,63 +17,72 @@
 | 编号 | 级别 | 流程与实际影响                                                                        | 详细证据                                             |
 | ---- | ---- | ------------------------------------------------------------------------------------- | ---------------------------------------------------- |
 | R35  | P1   | 重复 Enter 并行创建同名 worktree，失败请求强制回滚成功请求的目录、分支及未提交文件    | [Desktop D13，第三轮](desktop-round3.md) |
-| R01  | P2   | 连续两个并行审批复用卡片，第二个显示“已批准”而无法操作                                | [Desktop D4](desktop-round1.md) |
-| R02  | P2   | CLI 房间实际免审批，界面却显示“逐次确认”；更改选择器也不改变 CLI                      | [Web W4](web-round1.md) |
-| R03  | P2   | 已执行任务丢失 ACK 后恢复可重发草稿，重试生成新意图 ID 并重复执行                     | [Web W1](web-round1.md) |
-| R04  | P2   | 在 A 执行斜杠命令后切到 B，迟到的展开结果覆盖 B 草稿                                  | [Desktop D5](desktop-round1.md) |
-| R05  | P2   | A 会话拖入的文件随切换残留到 B，发送因附件所属会话不符失败                            | [Desktop D2](desktop-round1.md) |
-| R06  | P2   | 原生运行回包错误被当作普通结果，发送失败无可见解释，草稿已清空                        | [Desktop D1](desktop-round1.md) |
-| R07  | P2   | Core worker 退出清掉仍在运行的外部 CLI busy 状态，停止按钮消失                        | [Desktop D7](desktop-round1.md) |
-| R08  | P2   | 配对浏览器 CLI 房间的停止按钮发送原生 run.stop，实际房间继续运行                      | [Web W3](web-round1.md) |
 | R09  | P2   | 第二个 Hub 启动失败前删除第一个实例仍在使用的上传文件                                 | [Server S1](server-round1.md) |
-| R10  | P2   | CC 房间切换或离线后无法恢复待审批卡片，服务端一直等待直到超时                         | [Server S6](server-round1.md) |
-| R11  | P3   | 连接失效但界面尚显示在线的短窗口，CC 审批发送失败仍删卡 | [Server S7；正常离线有禁用及 handler 保护](server-round1.md) |
-| R12  | P2   | CC 一次多题澄清仅能回答首题，后续题目随控制请求被消费                                 | [Server S2](server-round1.md) |
-| R13  | P2   | 切换澄清题后旧选择索引残留，选项数变少时提交抛异常                                    | [Desktop D6](desktop-round1.md) |
-| R14  | P2   | 可稍后回答的异步问题在任务完成后仍阻塞新的独立任务                                    | [Web W5](web-round1.md) |
-| R15  | P2   | 外部 CLI 后续消息只在当前会话推进，切到别处后队列停住                                 | [Desktop D3](desktop-round1.md) |
-| R16  | P2   | CC 打开回包广播到同设备全部页签，也会覆盖用户较新的会话选择                           | [Web W2](web-round1.md) |
-| R17  | P2   | 删除草稿附件不释放上传配额，空输入框仍被 16 个文件上限卡住                            | [Server S3](server-round1.md) |
-| R18  | P2   | CLI 启动失败留下“运行中”句柄，安装/修复后同模式重开仍不能恢复                           | [Server S4](server-round1.md) |
-| R19  | P3   | 同步审批未被处理且请求仍 pending 时交付失败，错误本身不恢复卡片 | [Web W6；下一次有效 resync 可恢复](web-round1.md) |
-| R20  | P3   | Hub 接受超过 10、至多 20 MiB 图片，发送阶段才因 10 MiB 限制失败                                 | [Server S5](server-round1.md) |
-| R21  | P2   | Hub Web 新会话首次运行中刷新，完整输出日志的 legacy anchor 被空基线裁掉，前端拒绝恢复 | [Root R21](README.md:136) |
-| R22  | P2   | 多根项目会话迁移到合法 secondary root 后，已绑定 Panel 被错误视为跨项目而打不开       | [Desktop D8，第二轮](desktop-round2.md) |
-| R23  | P2   | 一个无效的已追踪项目目录让全部健康项目的 Panel 消失；65 个健康项目也触发批量上限      | [Desktop D9，第二轮](desktop-round2.md) |
-| R24  | P2   | 移除项目先删除项目权威，再释放冷会话 worktree；重加项目后旧归档会话仍占用 worktree    | [Desktop D10，第二轮](desktop-round2.md) |
-| R25  | P2   | 两个已打开的默认模型表单先后保存，后一个未改过的旧字段回滚前一个更新                  | [Web W7，第二轮](web-round2.md) |
-| R26  | P3   | Skill 保存遇到 409 后按提示刷新，编辑器仍用旧 revision，无法继续保存                  | [Web W8，第二轮](web-round2.md) |
-| R27  | P3   | MCP 配置已更新，迟到的旧 probe 响应却给新配置显示旧的成功结果与工具列表               | [Web W9，第二轮](web-round2.md) |
-| R28  | P2   | 插件设置初次加载尚未完成时可切开关，写入空旧列表并重新启用之前禁用的插件/Skill        | [Desktop D11，第三轮](desktop-round3.md) |
-| R29  | P3   | 启动迁移旧会话时，旧项目初始快照覆盖已到达的新项目广播；新项目从界面消失              | [Desktop D12，第三轮](desktop-round3.md) |
-| R30  | P2   | 后台工具任务完成时终态写盘失败被吞掉，结果丢失并持续显示运行中、阻塞配置修改          | [Runtime T1，第三轮；存储恢复后可取消/重试](runtime-round3.md) |
-| R31  | P2   | Node Hub 关闭先返回并退出，忽略 SIGTERM 的 Panel 原生进程来不及强制终止而遗留         | [Runtime T2，第三轮；已验证 POSIX](runtime-round3.md) |
-| R32  | P2   | 新设备浏览器存储配额耗尽时，配对和认证生成不同 secret，配对流程必然失败               | [Web W10，第三轮](web-round3.md) |
-| R33  | P2   | 新会话 ACK 前收到后台原生输出，自动绑定错误会话并把新草稿迁走                         | [Web W11，第三轮](web-round3.md) |
-| R34  | P2   | 手机 PUT 已开始后无法随断线取消，重连在线仍被旧上传阻塞独立文本发送                   | [Web W12，第三轮；主机正常收到请求时有 5 分钟票据上限](web-round3.md) |
-| R36  | P2   | worker 退出与 JSON-RPC 写入交叉时，stdin 的异步 EPIPE 没有监听，Node Host 随之退出    | [Runtime T3，第三轮](runtime-round3.md) |
+| R42  | P2   | 新增 Cookie 账号用名称生成 ID，默认名或中文名碰撞会覆盖旧账号及权限                   | [Credentials C1，第五轮；实际 Electron/IPC/store](credentials-round5.md) |
+| R02  | P2   | CLI 房间实际免审批，界面却显示“逐次确认”；更改选择器也不改变 CLI                      | [Web W4](web-round1.md) |
+| R66 | P2 | 旧观察视图接管显示default，仍复用并发重开的bypass实例，同default重开不恢复 | [CLI接管 C15-1](cli-recovery-round15.md)，第十五轮 |
+| R81 | P2 | Core Stop已结束且尚无Input时，Main旧浏览器点击仍等待并在按钮启用后提交真实输入 | [Browser停止 B22-1](browser-stop-round22.md)，第二十二轮；提交后动作不回滚 |
 | R37  | P2   | 离线新建 B 项目请求丢失，重连首条任务可沿旧的未落盘 A 会话进入 A 项目                 | [Web W13，第三轮；限定 freshNative 场景](web-round3.md) |
-| R38  | P3   | 退出设备必须等 HTTP logout 请求结束，响应卡住时本地界面和连接也不退出                 | [Web W14，第三轮](web-round3.md) |
-| R39  | P3   | 恢复归档会话已成功，却被自身 busy 守卫误判为未保存修改，需额外确认才能打开            | [Files/History F1，第四轮](files-round4.md) |
+| R03  | P2   | 已执行任务丢失 ACK 后恢复可重发草稿，重试生成新意图 ID 并重复执行                     | [Web W1](web-round1.md) |
+| R33  | P2   | 新会话 ACK 前收到后台原生输出，自动绑定错误会话并把新草稿迁走                         | [Web W11，第三轮](web-round3.md) |
 | R40  | P2   | 发送明确被拒绝前已输入后续稿，原失败文本不在草稿、聊天或历史中，无法直接恢复          | [Web W15，第五轮；限定预入队拒绝](web-round5.md) |
 | R41  | P2   | Hub 未确认送达的意图不计入刷新保护，实际未接受时刷新会丢掉唯一内存副本                | [Web W16，第五轮；真实认证 Hub 补强](web-round5.md) |
-| R42  | P2   | 新增 Cookie 账号用名称生成 ID，默认名或中文名碰撞会覆盖旧账号及权限                   | [Credentials C1，第五轮；实际 Electron/IPC/store](credentials-round5.md) |
-| R43  | P3   | Token 保存遭遇真实存储拒写时没有可见错误，草稿保留但用户不知道失败原因                 | [Credentials C2，第五轮](credentials-round5.md) |
+| R52 | P2 | 市场相对路径源更新校验失败前删除旧插件，旧注册指向不存在目录 | [Agent Plugins W19，第七轮；有效新源可重新安装恢复](plugins-round7.md) |
+| R28  | P2   | 插件设置初次加载尚未完成时可切开关，写入空旧列表并重新启用之前禁用的插件/Skill        | [Desktop D11，第三轮](desktop-round3.md) |
+| R36  | P2   | worker 退出与 JSON-RPC 写入交叉时，stdin 的异步 EPIPE 没有监听，Node Host 随之退出    | [Runtime T3，第三轮](runtime-round3.md) |
+| R77 | P2 | Hub数据目录dataDir失去写权限，认证锁对EACCES同步重试约30秒，健康路由与Host定时器也被阻塞 | [原生文件锁 FM19-1](file-mutex-round19.md)，第十九轮；修权限后重试正常 |
+| R68 | P2 | 配对端慢连接的直播/设备发送绕过已有backlog门禁，实际队列增长仍保持在线 | [连接 W26](connection-recovery-round15.md)，第十五轮 |
+| R31  | P2   | Node Hub 关闭先返回并退出，忽略 SIGTERM 的 Panel 原生进程来不及强制终止而遗留         | [Runtime T2，第三轮；已验证 POSIX](runtime-round3.md) |
+| R57 | P2 | worker崩溃后恢复的后台下载被closeSession/killAll过滤，成功ACK后仍继续写盘 | [下载生命周期 C1](download-round11.md)，第十一轮；Core原生实证 |
+| R50  | P2   | 等待麦克风启动时双击创建两份录音，停止及组件卸载只释放最后一份                         | [Voice W17，第六轮；同一 renderer document 存活期间](voice-round6.md) |
+| R30  | P2   | 后台工具任务完成时终态写盘失败被吞掉，结果丢失并持续显示运行中、阻塞配置修改          | [Runtime T1，第三轮；存储恢复后可取消/重试](runtime-round3.md) |
+| R01  | P2   | 连续两个并行审批复用卡片，第二个显示“已批准”而无法操作                                | [Desktop D4](desktop-round1.md) |
+| R10  | P2   | CC 房间切换或离线后无法恢复待审批卡片，服务端一直等待直到超时                         | [Server S6](server-round1.md) |
+| R12  | P2   | CC 一次多题澄清仅能回答首题，后续题目随控制请求被消费                                 | [Server S2](server-round1.md) |
+| R13  | P2   | 切换澄清题后旧选择索引残留，选项数变少时提交抛异常                                    | [Desktop D6](desktop-round1.md) |
+| R73 | P2 | 配置保存窗口内回答idle异步问题，lease已提交却未派发，重试和重连无法恢复旧题 | [Hub路由 H17-1](server-routing-round17.md)，第十七轮；取消后重新提问可恢复 |
+| R78 | P2 | 无live worker恢复暂停Goal仅持久改为active并回成功，实际没有启动或派发续接 | [Goal冷启动 G20-1](goal-sleep-round20.md)，第二十轮；编辑/暂停/删除正常 |
+| R79 | P2 | worker活着但bound会话非resident时，Goal续接缺WorkspaceContext，模型前失败却未回滚或提示 | [Goal bound冷恢复 G20-2](goal-sleep-round20.md)，第二十轮；正常授权run可恢复 |
 | R44  | P2   | 续接自动化超过 120 秒后提前结算，worker 仍执行时保留的非once计划可以再次排入                   | [Automation A1，第五轮；实际 ChatSession FIFO](automation-round5.md) |
 | R45  | P2   | worker 明确拒绝续接运行，网关/生命周期仍宣告 completed                 | [Automation A2，第五轮](automation-round5.md) |
+| R07  | P2   | Core worker 退出清掉仍在运行的外部 CLI busy 状态，停止按钮消失                        | [Desktop D7](desktop-round1.md) |
+| R08  | P2   | 配对浏览器 CLI 房间的停止按钮发送原生 run.stop，实际房间继续运行                      | [Web W3](web-round1.md) |
+| R15  | P2   | 外部 CLI 后续消息只在当前会话推进，切到别处后队列停住                                 | [Desktop D3](desktop-round1.md) |
+| R18  | P2   | CLI 启动失败留下“运行中”句柄，安装/修复后同模式重开仍不能恢复                           | [Server S4](server-round1.md) |
+| R14  | P2   | 可稍后回答的异步问题在任务完成后仍阻塞新的独立任务                                    | [Web W5](web-round1.md) |
+| R04  | P2   | 在 A 执行斜杠命令后切到 B，迟到的展开结果覆盖 B 草稿                                  | [Desktop D5](desktop-round1.md) |
+| R05  | P2   | A 会话拖入的文件随切换残留到 B，发送因附件所属会话不符失败                            | [Desktop D2](desktop-round1.md) |
+| R16  | P2   | CC 打开回包广播到同设备全部页签，也会覆盖用户较新的会话选择                           | [Web W2](web-round1.md) |
+| R24  | P2   | 移除项目先删除项目权威，再释放冷会话 worktree；重加项目后旧归档会话仍占用 worktree    | [Desktop D10，第二轮](desktop-round2.md) |
+| R72 | P2 | 设置页取消归档只恢复桌面catalog，Core仍归档，随后可移除恢复行仍绑定的secondary root | [会话操作 SO17-2](session-operations-round17.md)，第十七轮；历史和物理目录保留 |
+| R69 | P2 | 原secondary目录缺失，正式修复到健康primary仍被旧source全roots校验阻断 | [项目目录 PR16-1](project-recovery-round16.md)，第十六轮 |
+| R58 | P2 | 合法 managed worktree 新开终端及普通图片预览被 Main 注册根门禁拒绝，文本读取正常 | [终端](terminal-review-round13.md)、[图片与恢复](file-navigation-round14.md) |
+| R22  | P2   | 多根项目会话迁移到合法 secondary root 后，已绑定 Panel 被错误视为跨项目而打不开       | [Desktop D8，第二轮](desktop-round2.md) |
+| R23  | P2   | 一个无效的已追踪项目目录让全部健康项目的 Panel 消失；65 个健康项目也触发批量上限      | [Desktop D9，第二轮](desktop-round2.md) |
+| R25  | P2   | 两个已打开的默认模型表单先后保存，后一个未改过的旧字段回滚前一个更新                  | [Web W7，第二轮](web-round2.md) |
+| R21  | P2   | Hub Web 新会话首次运行中刷新，完整输出日志的 legacy anchor 被空基线裁掉，前端拒绝恢复 | [Root R21](README.md:136) |
+| R06  | P2   | 原生运行回包错误被当作普通结果，发送失败无可见解释，草稿已清空                        | [Desktop D1](desktop-round1.md) |
+| R32  | P2   | 新设备浏览器存储配额耗尽时，配对和认证生成不同 secret，配对流程必然失败               | [Web W10，第三轮](web-round3.md) |
+| R34  | P2   | 手机 PUT 已开始后无法随断线取消，重连在线仍被旧上传阻塞独立文本发送                   | [Web W12，第三轮；主机正常收到请求时有 5 分钟票据上限](web-round3.md) |
+| R17  | P2   | 删除草稿附件不释放上传配额，空输入框仍被 16 个文件上限卡住                            | [Server S3](server-round1.md) |
+| R51 | P2 | 成功安装后卸载，旧 installed 任务仍禁用市场重装，实际目录和注册已不存在 | [Agent Plugins W18，第七轮；同一 Main 生命周期](plugins-round7.md) |
+| R53 | P2 | 从文件夹预览安装把临时快照记成更新源，快照已删，原文件夹仍在也无法更新 | [Agent Plugins W20，第七轮；旧安装内容保留](plugins-round7.md) |
 | R46  | P2   | 自动化执行历史按名称/时间认领，遗漏真实实时记录并混入同项目其他任务的结果               | [Automation A3，第五轮；合并身份关联根因](automation-round5.md) |
 | R47  | P2   | 任务异步自动停用后，当前自动化页面仍显示活跃和旧下次运行时间                           | [Automation A4，第五轮](automation-round5.md) |
+| R11  | P3   | 连接失效但界面尚显示在线的短窗口，CC 审批发送失败仍删卡 | [Server S7；正常离线有禁用及 handler 保护](server-round1.md) |
+| R19  | P3   | 同步审批未被处理且请求仍 pending 时交付失败，错误本身不恢复卡片 | [Web W6；下一次有效 resync 可恢复](web-round1.md) |
+| R20  | P3   | Hub 接受超过 10、至多 20 MiB 图片，发送阶段才因 10 MiB 限制失败                                 | [Server S5](server-round1.md) |
+| R26  | P3   | Skill 保存遇到 409 后按提示刷新，编辑器仍用旧 revision，无法继续保存                  | [Web W8，第二轮](web-round2.md) |
+| R27  | P3   | MCP 配置已更新，迟到的旧 probe 响应却给新配置显示旧的成功结果与工具列表               | [Web W9，第二轮](web-round2.md) |
+| R29  | P3   | 启动迁移旧会话时，旧项目初始快照覆盖已到达的新项目广播；新项目从界面消失              | [Desktop D12，第三轮](desktop-round3.md) |
+| R38  | P3   | 退出设备必须等 HTTP logout 请求结束，响应卡住时本地界面和连接也不退出                 | [Web W14，第三轮](web-round3.md) |
+| R39  | P3   | 恢复归档会话已成功，却被自身 busy 守卫误判为未保存修改，需额外确认才能打开            | [Files/History F1，第四轮](files-round4.md) |
+| R43  | P3   | Token 保存遭遇真实存储拒写时没有可见错误，草稿保留但用户不知道失败原因                 | [Credentials C2，第五轮](credentials-round5.md) |
 | R48  | P3   | 自动停用原因在 Desktop 摘要中丢失，重开详情只能看到普通暂停                            | [Automation A5，第五轮；底层原因仍持久保留](automation-round5.md) |
 | R49  | P3   | 共享资料集跨文件查询吞掉已知原件变更的恢复指引，用户无法确定需更新哪个文件              | [Collection，第六轮；0.9.33 新可达路径](collections-round6.md) |
-| R50  | P2   | 等待麦克风启动时双击创建两份录音，停止及组件卸载只释放最后一份                         | [Voice W17，第六轮；同一 renderer document 存活期间](voice-round6.md) |
-| R51 | P2 | 成功安装后卸载，旧 installed 任务仍禁用市场重装，实际目录和注册已不存在 | [Agent Plugins W18，第七轮；同一 Main 生命周期](plugins-round7.md) |
-| R52 | P2 | 市场相对路径源更新校验失败前删除旧插件，旧注册指向不存在目录 | [Agent Plugins W19，第七轮；有效新源可重新安装恢复](plugins-round7.md) |
-| R53 | P2 | 从文件夹预览安装把临时快照记成更新源，快照已删，原文件夹仍在也无法更新 | [Agent Plugins W20，第七轮；旧安装内容保留](plugins-round7.md) |
 | R54 | P3 | Quick Chat 收到文件面板 PNG 的内部拖放数据后静默丢弃，不产生图片或路径引用 | [Quick Chat Q1，第八轮；系统图片拖入可用](quickchat-round8.md) |
 | R55 | P3 | 较早的磁盘会话打开迟到完成，覆盖后来已成功的全局搜索导航；重选可恢复 | [搜索与导航 W21](search-routing-round11.md)，第十一轮 |
 | R56 | P3 | 全文搜索仅扫描最近500个候选，漏掉更早匹配却返回完整的空结果 | [搜索 W22](search-routing-round11.md)，第十一轮 |
-| R57 | P2 | worker崩溃后恢复的后台下载被closeSession/killAll过滤，成功ACK后仍继续写盘 | [下载生命周期 C1](download-round11.md)，第十一轮；Core原生实证 |
-| R58 | P2 | 合法 managed worktree 新开终端及普通图片预览被 Main 注册根门禁拒绝，文本读取正常 | [终端](terminal-review-round13.md)、[图片与恢复](file-navigation-round14.md) |
 | R59 | P3 | Review 选择首提交显示“no changes”，Git range 无父错误被吞为空结果 | [终端与 Review](terminal-review-round13.md)，第十三轮 |
 | R60 | P3 | 侧栏删除遭遇真实权限失败仍移除行并持久 tombstone，仅日志无提示；历史页可重试删除 | [会话操作 W23](session-actions-round13.md)，第十三轮 |
 | R61 | P3 | 同项目两个窗口普通选择互相覆盖当前会话，无法稳定各看 S1/S2 | [多窗口 M1](multiwindow-round13.md)，第十三轮 |
@@ -81,29 +90,20 @@
 | R63 | P3 | 普通通知等待频率窗口时占住串行队列，后来的 urgent 停用通知也被延迟 | [通知 N1](notification-round14.md)，第十四轮 |
 | R64 | P3 | Reload 恢复的终端先关闭再新建可复用旧壳；再次关闭重开可恢复 | [终端生命周期 TL1](terminal-lifecycle-round14.md)，第十四轮 |
 | R65 | P3 | 目录实际 EACCES 被显示为空树，无错误提示；修权限后刷新可恢复 | [文件导航 W25](file-navigation-round14.md)，第十四轮 |
-| R66 | P2 | 旧观察视图接管显示default，仍复用并发重开的bypass实例，同default重开不恢复 | [CLI接管 C15-1](cli-recovery-round15.md)，第十五轮 |
 | R67 | P3 | 另一窗口开启LAN后，已挂载远程设置仍显示关闭、禁用停止；重挂或再开启可恢复 | [远程设置 MR1](remote-settings-round15.md)，第十五轮 |
-| R68 | P2 | 配对端慢连接的直播/设备发送绕过已有backlog门禁，实际队列增长仍保持在线 | [连接 W26](connection-recovery-round15.md)，第十五轮 |
-| R69 | P2 | 原secondary目录缺失，正式修复到健康primary仍被旧source全roots校验阻断 | [项目目录 PR16-1](project-recovery-round16.md)，第十六轮 |
 | R70 | P3 | 自定义指令自动保存拒写后清掉pending，存储恢复也不重试，离开丢未保存稿 | [设置保存 S16-1](settings-recovery-round16.md)，第十六轮 |
 | R71 | P3 | 项目重命名拒写后仍显示新名称，无失败提示，普通同步后回旧名 | [会话操作 SO17-1](session-operations-round17.md)，第十七轮 |
-| R72 | P2 | 设置页取消归档只恢复桌面catalog，Core仍归档，随后可移除恢复行仍绑定的secondary root | [会话操作 SO17-2](session-operations-round17.md)，第十七轮；历史和物理目录保留 |
-| R73 | P2 | 配置保存窗口内回答idle异步问题，lease已提交却未派发，重试和重连无法恢复旧题 | [Hub路由 H17-1](server-routing-round17.md)，第十七轮；取消后重新提问可恢复 |
 | R74 | P3 | 上下文摘要期间没有可用取消按钮，30秒RPC超时恢复UI却未取消后台摘要 | [上下文取消 C18-1](context-cancel-round18.md)，第十八轮；Core取消正常 |
 | R75 | P3 | 另一已打开项目窗口保存自己的会话模型，旧整图抹掉先前窗口已存偏好，重开回默认 | [模型偏好 M18-1](model-switch-round18.md)，第十八轮；重新选择可恢复 |
 | R76 | P3 | 异步答案已接受并触发续接运行，Hub误判空闲而允许归档、隐藏当前历史行 | [Hub会话 HS18-1](hub-session-operations-round18.md)，第十八轮；实际恢复API正常 |
-| R77 | P2 | Hub数据目录dataDir失去写权限，认证锁对EACCES同步重试约30秒，健康路由与Host定时器也被阻塞 | [原生文件锁 FM19-1](file-mutex-round19.md)，第十九轮；修权限后重试正常 |
-| R78 | P2 | 无live worker恢复暂停Goal仅持久改为active并回成功，实际没有启动或派发续接 | [Goal冷启动 G20-1](goal-sleep-round20.md)，第二十轮；编辑/暂停/删除正常 |
-| R79 | P2 | worker活着但bound会话非resident时，Goal续接缺WorkspaceContext，模型前失败却未回滚或提示 | [Goal bound冷恢复 G20-2](goal-sleep-round20.md)，第二十轮；正常授权run可恢复 |
 | R80 | P3 | Chrome闲置断线后正常轮询仍显示正在使用，需先断开再重新授权；动作门禁正确拒绝 | [浏览器连接 B21-1](browser-lifecycle-round21.md)，第二十一轮 |
-| R81 | P2 | Core Stop已结束且尚无Input时，Main旧浏览器点击仍等待并在按钮启用后提交真实输入 | [Browser停止 B22-1](browser-stop-round22.md)，第二十二轮；提交后动作不回滚 |
 | R82 | P3 | macOS前台A显式菜单操作仍发往最后安装菜单的B，后台窗口被打开Search/Palette或切项目 | [菜单窗口 D23-1](menu-routing-round23.md)，第二十三轮；无真实OS菜单/快捷键实测 |
 | R83 | P3 | macOS项目成功创建、改名、移除后Recent菜单不刷新，新项目缺项、旧名和已删项残留 | [最近项目 D23-2](menu-recents-round23.md)，第二十三轮；权威磁盘与广播正常 |
 | R84 | P3 | 从未发布输出日志的旧配对原生图片会话恢复时，把内部路径和模型提示当正文，没有安全附件摘要 | [旧历史 F24-1](legacy-history-round24.md)，第二十四轮；正文和图片原件保留 |
 | R85 | P3 | 现代图片会话在普通Desktop冷恢复后缺附件提示，纯图片用户气泡不显示；正确metadata和原件均保留 | [现代图片 D25-1](modern-desktop-image-round25.md)，第二十五轮；Web及inline UI控制正常 |
 | R86 | P3 | 换项目primary后摘要分叉的Files把新根ID配旧workspace路径，新主目录文件无法显示；旧根及原件正常 | [Files映射 F27-1](file-root-round27.md)，第二十七轮；Main拒读正确 |
 
-第一轮完整分析：[Desktop](desktop-round1.md)、[Server](server-round1.md)、[Web/配对端](web-round1.md)。后续专项分析会继续补充到本目录。已有结论还经[CLI 范围复核](cli-quality-round9.md)与[资源回收范围复核](resource-quality-round8.md)收窄恢复及平台条件。
+第一轮完整分析：[Desktop](desktop-round1.md)、[Server](server-round1.md)、[Web/配对端](web-round1.md)。截至11:00已收束的专项分析均保存在本目录。已有结论还经[CLI 范围复核](cli-quality-round9.md)与[资源回收范围复核](resource-quality-round8.md)收窄恢复及平台条件。
 
 第二轮完整分析：[Desktop 项目/Panel](desktop-round2.md)、[Web 配置/Skills/MCP](web-round2.md)。所有已收束脚本和日志保存在 [reproductions](reproductions/README.md)，可在当前工作区或相同基线的其他 checkout 重跑。
 
@@ -354,3 +354,5 @@ R76实际Core async-answer enqueue产生续接turn，所有Core帧传给实际Ho
 第二十九轮[证据入口核对](evidence-navigation-round29.md)及[独立最终审计](quality-round29.md)为早期54项补齐可点击附录，全部86项均有有效证据入口；编号、分级、影响和标签范围不变。新增发现/产品或测试执行0，当前86=1/52/33、双common86/251保持。
 
 最终交付：86项（1P1/52P2/33P3）；双冻结快照各86文件251个专项表征测试，原有706文件6286测试、latest-only及native/Electron场景分别列账。所有正式项的源码位置、触发条件、实际影响、恢复/正常控制与证据在上表及附录中。优先修R35的并发worktree回滚归属；工程分组见[修复交接](repair-handoff.md)。产品代码未改，不发布、不触碰其它任务；没有启动真实付费模型或真实第三方账号请求。
+
+用户追加报告复核：全部86项现按P1→P2→P3排列，同级工程队列及尚未覆盖的模块见[优先队列与覆盖缺口](priority-and-coverage.md)，全部140份原报告/汇总的审查索引见[报告清单](report-inventory-postreview.md)。此轮只整理既有报告，不新增产品发现、测试执行或修复；冻结基线与11:00交付收据保留。

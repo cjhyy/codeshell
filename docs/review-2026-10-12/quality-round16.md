@@ -52,8 +52,8 @@ README 正式表只读计数为 **70 行、P1=1、P2=47、P3=22**，无重复编
 
 实际 HubAuth setup/login 两个真实本地 cookie、实际 MCP 配置 handler、相同生产 auth/admission callbacks 和 owned loopback HTTP MCP initialize/tools-list fixture 形成协议正常对照。完整 startHeadlessServer、worker、Web UI、真实 MCP 服务/工具或外部账户未运行，四份摘要均保留该边界。
 
-真实请求体未传完的 readJson 等待可达，body abort 不启动 probe；注册后 owner 取消、client 断线后重试、真实 logout owner 隔离均由最终 fixture 和 Node22日志支持。生产 auth owner 当前同步 store/microtask 路径不等于人工 macrotask gate；诊断因此明确剔除，不是“测试通过便认定”的新增缺陷。也未把已接受 run 在 tab 关闭后继续工作泛称泄漏。
+真实请求体未传完的 readJson 等待可达，body abort 不启动 probe；注册后 owner 取消、client 断线后重试、真实 logout owner 隔离均由最终 fixture 和 22个Node手工断言日志（Node v25.8.1）支持。生产 auth owner 当前同步 store/microtask 路径不等于人工 macrotask gate；诊断因此明确剔除，不是“测试通过便认定”的新增缺陷。也未把已接受 run 在 tab 关闭后继续工作泛称泄漏。
 
-guard 描述限于导入前 exact-origin HTTP/fetch、本轮自有资源和 maintained native isolator；不冒称 OS sandbox/direct-net 全面 confinement 或任意 hung 子进程强杀。两基线 Node22已包在一个 Bun wrapper test 内，计数正确。
+guard 描述限于导入前 exact-origin HTTP/fetch、本轮自有资源和 maintained native isolator；不冒称 OS sandbox/direct-net 全面 confinement 或任意 hung 子进程强杀。两基线各22个Node手工断言已包在一个 Bun wrapper test 内，计数正确。
 
 **Completed：最终语义通过；新增测试/实验执行 0，主报告及产品改动 0。**
