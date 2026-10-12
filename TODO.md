@@ -8,7 +8,7 @@
 
 ## 小 feature（体量 M 及以下）
 
-- **Pet 可靠性修复的运行时加载验收**（S，部署验证）。续办、插件初始化/故障反馈、预算终态、图片保留和提示约束已修复并做本地回归；9 月 21 日补齐微信纯图片路由、Mimi 长回合等待、断线保留消息与工具参数损坏反馈。后续在加载新构建的应用里验证真实插件、微信长回合与同 Session 续办，插件固定版本/预安装入口按发行配置落地。详见 [逐项 TODO 与证据](docs/todo/pet-work-reliability-audit-2026-09-20.md)、[技术方案](docs/todo/pet-work-reliability-design-2026-09-20.md) 和 [微信回合修复与回归](docs/todo/mimi-wechat-turn-lifecycle-2026-09-21.md)。不把源码验收当作已部署，不重放真实账号写操作。
+- **Pet 可靠性修复的真实环境验收**（S，部署验证）。续办、插件初始化/故障反馈、预算终态、图片保留和提示约束已修复并做本地回归；9 月 21 日补齐微信纯图片路由、Mimi 长回合等待、断线保留消息与工具参数损坏反馈。10 月 12 日已用新构建的真实 Electron／stdio worker 验证 Pet 同 Session 连续输入、普通 Work 同 Session 续办、冷启动聊天／记忆恢复、合成固定版本插件初始化和原生 safeStorage，见[运行时验收与回执](docs/todo/pet-built-runtime-acceptance-2026-10-12.md)。仍需真实插件与固定版本／预安装发行入口、真实微信长回合及该环境的自动 Pet Work 续办、正式安装包验收。详见 [逐项 TODO 与证据](docs/todo/pet-work-reliability-audit-2026-09-20.md)、[技术方案](docs/todo/pet-work-reliability-design-2026-09-20.md) 和 [微信回合修复与回归](docs/todo/mimi-wechat-turn-lifecycle-2026-09-21.md)。不把本机隔离验收当作已部署，不重放真实账号写操作。
 - **Link 真账号 / 真 token 验证**（S，验证任务）。按 2026-10-09 用户要求，新增第三方应用、OAuth 授权、token 配置与接入部署暂缓，继续保留未完成。各 provider 仍需授权账号验证 action 响应与错误形状；现有 stub、契约和本地 CLI 测试不能代替真实账号验收。执行时按 provider 单独记录，不写入用户真实数据来代替只读验证。
 
 ## 大功能升级（体量 L，分阶段落地）

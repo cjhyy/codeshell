@@ -29,6 +29,7 @@
     "test:e2e:link": "node scripts/e2e-link.mjs",
     "test:e2e:digital-humans": "node scripts/e2e-digital-humans.mjs",
     "test:e2e:profile-memory-promotion": "node ../../scripts/run-isolated-node-smoke.mjs scripts/e2e-profile-memory-promotion.mjs",
+    "test:e2e:pet-runtime": "node ../../scripts/run-isolated-node-smoke.mjs --private-keyring scripts/e2e-pet-runtime.mjs",
     "test:e2e:search": "node scripts/e2e-search.mjs",
     "test:e2e:navigation": "node scripts/e2e-navigation.mjs",
     "test:e2e:workspace-pages": "node scripts/e2e-workspace-pages.mjs",
