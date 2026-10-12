@@ -8,6 +8,17 @@ breaking.
 
 ## [Unreleased]
 
+## [0.9.36] - 2026-10-12
+
+### Added
+
+- Read exact Slack messages and one thread page through authorized Link actions,
+  retaining authors, timestamps, parent linkage, canonical permalinks, and
+  explicit pagination or text-truncation boundaries.
+- Read GitHub PR files, PR commits, and exact full-SHA commits with attribution,
+  actual patches, and separate missing/truncated patch flags. Token/OAuth, CLI,
+  and remote paths share validation without expanding saved resource grants.
+
 ## [0.9.35] - 2026-10-12
 
 ### Added
