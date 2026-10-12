@@ -3,7 +3,7 @@ import { isAbsolute, join } from "node:path";
 import { capabilitiesFor } from "../llm/capabilities/index.js";
 import type { ProviderKindName } from "../llm/provider-kinds.js";
 import { logger } from "../logging/logger.js";
-import type { InputAttachmentMeta } from "../types.js";
+import type { InputAttachmentMeta, PermissionMode } from "../types.js";
 import type { ContentBlock, LLMConfig } from "../types.js";
 import { tryCompressImages } from "./image-compression.js";
 import {
@@ -32,6 +32,7 @@ export async function prepareRunImageInput(args: {
   sessionId?: string;
   attachments?: readonly InputAttachmentMeta[];
   workspaceContext?: import("../workspace/workspace-context.js").WorkspaceContext;
+  permissionMode?: PermissionMode;
 }): Promise<PrepareRunImageInputResult> {
   const { task, cwd, llm, sessionId } = args;
 
@@ -66,6 +67,7 @@ export async function prepareRunImageInput(args: {
       includeImageBytes: cap.supportsVision,
       expectedSessionId: sessionId,
       workspaceRoots: args.workspaceContext?.roots.map((root) => root.path),
+      permissionMode: args.permissionMode,
     });
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);
