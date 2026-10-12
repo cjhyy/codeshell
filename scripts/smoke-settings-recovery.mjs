@@ -105,5 +105,10 @@ try {
   passed = true;
 } finally {
   if (passed) await rm(scratch, { recursive: true, force: true });
-  else console.error(`Recovery fixture failed; private evidence retained: ${scratch}`);
+  else {
+    // --rm/tmpfs containers lose their HOME. Export only already verified PID
+    // proofs so the owning parent can preserve them outside that container.
+    console.log("CANDIDATE_SETTINGS_RECOVERY_FAILURE " + JSON.stringify(guard.failureEvidence()));
+    console.error(`Recovery fixture failed; scratch location: ${scratch}`);
+  }
 }

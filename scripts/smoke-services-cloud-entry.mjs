@@ -63,7 +63,7 @@ let sourceFiles;
 let panelInventory;
 let completed = false;
 
-function run(command, args, cwd, env = process.env, capture = false, input) {
+function run(command, args, cwd, env = process.env, capture = false, input, onOutput) {
   return new Promise((done, fail) => {
     const child = spawn(command, args, {
       cwd,
@@ -91,15 +91,35 @@ function run(command, args, cwd, env = process.env, capture = false, input) {
       child.stderr.on("data", (part) => {
         errors += part;
       });
-    child.once("error", fail);
-    child.once("close", (code) =>
-      code === 0 && !inputError
-        ? done(output.trim())
-        : fail(
-            inputError ??
-              new Error(`${command} ${args[0]} failed (${code}): ${errors.slice(-8000)}`),
-          ),
-    );
+    let launchError;
+    child.once("error", (error) => {
+      launchError = error;
+    });
+    child.once("close", (code) => {
+      const failure =
+        launchError ??
+        (code === 0 && !inputError
+          ? undefined
+          : (inputError ??
+            new Error(`${command} ${args[0]} failed (${code}): ${errors.slice(-8000)}`)));
+      Promise.resolve()
+        .then(() => onOutput?.({ code, output }))
+        .then(
+          () => (failure ? fail(failure) : done(output.trim())),
+          (receiptError) =>
+            fail(
+              failure
+                ? new AggregateError(
+                    [failure, receiptError],
+                    "Command and evidence export failed",
+                    {
+                      cause: failure,
+                    },
+                  )
+                : receiptError,
+            ),
+        );
+    });
   });
 }
 
@@ -340,7 +360,8 @@ try {
     assert.match(imageId, /^sha256:[a-f0-9]{64}$/);
     const recoveryGuard = join(root, "settings-recovery-guard");
     await mkdir(recoveryGuard, { mode: 0o755 });
-    const { settingsRecoveryGuardFiles } = await import("./settings-recovery-fixture-guard.mjs");
+    const { settingsRecoveryGuardFiles, settingsRecoveryFixtureEvidence } =
+      await import("./settings-recovery-fixture-guard.mjs");
     for (const file of settingsRecoveryGuardFiles) {
       await cp(join(repo, "scripts", file), join(recoveryGuard, file));
       await chmod(join(recoveryGuard, file), 0o444);
@@ -378,8 +399,37 @@ try {
       ],
       installed,
       process.env,
-      false,
+      true,
       await readFile(join(repo, "scripts/smoke-settings-recovery.mjs"), "utf8"),
+      async ({ code, output }) => {
+        const passed = code === 0;
+        const entryHash = createHash("sha256")
+          .update(
+            await readFile(
+              join(
+                installed,
+                "node_modules/@cjhyy/code-shell-server/dist/bin/code-shell-settings-recovery.js",
+              ),
+            ),
+          )
+          .digest("hex");
+        const path = join(root, "settings-recovery-container-receipt.json");
+        let receipt;
+        try {
+          receipt = settingsRecoveryFixtureEvidence(output, passed, entryHash);
+        } catch (error) {
+          await writeFile(
+            path,
+            JSON.stringify({ passed: false, proofUnavailable: true, cliEntryHash: entryHash }) +
+              "\n",
+            { flag: "wx", mode: 0o600 },
+          );
+          throw error;
+        }
+        await writeFile(path, JSON.stringify(receipt) + "\n", { flag: "wx", mode: 0o600 });
+        if (passed) console.log("✓ Packaged recovery CLI and six pre-Core proofs verified.");
+        else console.error(`Recovery failure's verified PID proofs retained: ${path}`);
+      },
     );
     const tag = `codeshell-services-smoke:${basename(root).toLowerCase()}`;
     await run("docker", ["tag", imageId, tag], installed);

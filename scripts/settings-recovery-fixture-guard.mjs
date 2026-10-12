@@ -11,6 +11,48 @@ export const settingsRecoveryGuardFiles = [
   "docker-candidate-preload.mjs",
 ];
 
+export function settingsRecoveryFixtureEvidence(output, passed, entryHash) {
+  assert.ok(typeof output === "string" && Buffer.byteLength(output) <= 65536);
+  const prefix = passed
+    ? "CANDIDATE_SETTINGS_RECOVERY_GUARD "
+    : "CANDIDATE_SETTINGS_RECOVERY_FAILURE ";
+  const lines = output.split("\n").filter((line) => line.startsWith(prefix));
+  assert.equal(lines.length, 1, "Expected exactly one bounded recovery guard receipt");
+  const value = JSON.parse(lines[0].slice(prefix.length));
+  assert.deepEqual(Object.keys(value).sort(), [
+    "allowedChildren",
+    "cliEntryHash",
+    "listeners",
+    "network",
+    "nodePreloads",
+    "passed",
+    "policyHash",
+  ]);
+  assert.equal(value.passed, passed);
+  assert.equal(value.network, "deny-all");
+  assert.equal(value.listeners, 0);
+  assert.equal(value.allowedChildren, 0);
+  assert.equal(value.cliEntryHash, entryHash);
+  assert.match(value.policyHash, /^[a-f0-9]{64}$/);
+  assert.ok(Array.isArray(value.nodePreloads) && value.nodePreloads.length <= 6);
+  if (passed) assert.equal(value.nodePreloads.length, 6);
+  const pids = new Set();
+  for (const row of value.nodePreloads) {
+    assert.deepEqual(Object.keys(row).sort(), [
+      "dnsNegativeProbes",
+      "negativeProbes",
+      "pid",
+      "ppid",
+    ]);
+    assert.ok(Number.isSafeInteger(row.pid) && row.pid > 0 && !pids.has(row.pid));
+    assert.ok(Number.isSafeInteger(row.ppid) && row.ppid > 0);
+    assert.equal(row.negativeProbes, 6);
+    assert.equal(row.dnsNegativeProbes, 4);
+    pids.add(row.pid);
+  }
+  return value;
+}
+
 export function createSettingsRecoveryFixtureGuard({
   scratch,
   entry,
@@ -61,7 +103,7 @@ export function createSettingsRecoveryFixtureGuard({
     CODESHELL_DOCKER_CANDIDATE_CONFIG: configPath,
     CODESHELL_DOCKER_CANDIDATE_CONFIG_HASH: policyHash,
   };
-  const verified = new Set();
+  const verified = new Map();
   const rows = () => {
     const bytes = candidateFile(config.receipt, { privateFile: true, maximum: 65536 }).bytes;
     return bytes
@@ -70,6 +112,22 @@ export function createSettingsRecoveryFixtureGuard({
       .split("\n")
       .map((line) => JSON.parse(line));
   };
+  const evidence = (passed) => ({
+    passed,
+    network: "deny-all",
+    listeners: 0,
+    allowedChildren: 0,
+    cliEntryHash: entryHash,
+    policyHash,
+    nodePreloads: [...verified.values()].map(
+      ({ pid, ppid, negativeProbes, dnsNegativeProbes }) => ({
+        pid,
+        ppid,
+        negativeProbes,
+        dnsNegativeProbes,
+      }),
+    ),
+  });
   return {
     node,
     environment,
@@ -104,27 +162,15 @@ export function createSettingsRecoveryFixtureGuard({
         dnsNegativeProbes: 4,
         argvHash: candidateHash(JSON.stringify([entry, ...args])),
       });
-      verified.add(pid);
+      verified.set(pid, entries[0]);
     },
+    failureEvidence: () => evidence(false),
     finish(expected) {
       const entries = rows();
       assert.equal(verified.size, expected, "Incomplete recovery CLI fixture");
       assert.equal(entries.length, expected, "Unexpected recovery CLI activity");
       assert.ok(entries.every((row) => verified.has(row.pid) && row.event === "pre-core"));
-      return {
-        passed: true,
-        network: "deny-all",
-        listeners: 0,
-        allowedChildren: 0,
-        cliEntryHash: entryHash,
-        policyHash,
-        nodePreloads: entries.map(({ pid, ppid, negativeProbes, dnsNegativeProbes }) => ({
-          pid,
-          ppid,
-          negativeProbes,
-          dnsNegativeProbes,
-        })),
-      };
+      return evidence(true);
     },
   };
 }

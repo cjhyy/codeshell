@@ -88,6 +88,15 @@ temporary HOME and permits no network/listeners/native children. This inner
 recovery contract remains separate from the outer recovery fixture owned by the
 integration task.
 
+The outer packaged recovery fixture exports a bounded success/failure receipt
+containing only verified PID proofs and hashes. Its parent validates the exact
+CLI digest and receipt schema and saves failures outside the container before
+returning a failed command. An unavailable proof remains an explicit failure.
+The `--rm` container's tmpfs HOME is ephemeral; this export preserves sanitized
+proofs rather than claiming that HOME survives container removal. A builtin-only
+actual Node regression exercises a failed CLI fixture and receipt export; the
+packaged Docker invocation still requires Linux acceptance.
+
 ## Cleanup and evidence
 
 Actual captured children, sockets and owned resources close independently;
