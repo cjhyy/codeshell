@@ -8,7 +8,6 @@ import {
   mkdtempSync,
   readFileSync,
   readdirSync,
-  realpathSync,
   renameSync,
   rmSync,
   statSync,
@@ -350,12 +349,12 @@ describe("Session output journal", () => {
   test("an unpublished partial event repairs only after the complete original evidence is durable", () => {
     const f = fixture();
     const published = f.writer.append({ type: "text_delta", text: "published" });
-    const stateFile = join(f.root, f.id, "state.json");
-    const beforeAttempt = readFileSync(stateFile);
+    const headFile = join(f.root, f.id, "output-journal-head.json");
+    const beforeAttempt = readFileSync(headFile);
     const prefix = readFileSync(f.file);
     f.writer.append({ type: "text_delta", text: "汉🙂".repeat(40_000) });
     // Crash while writing fragments, before committing the publish watermark.
-    writeFileSync(stateFile, beforeAttempt);
+    writeFileSync(headFile, beforeAttempt);
     const lines = readFileSync(f.file, "utf8").trimEnd().split("\n");
     writeFileSync(f.file, lines.slice(0, -1).join("\n") + "\n");
     const original = readFileSync(f.file);
@@ -380,7 +379,8 @@ describe("Session output journal", () => {
       const f = fixture();
       const published = f.writer.append({ type: "text_delta", text: "durable" });
       const persisted = f.manager.readSessionState(f.id)!.outputJournalHead;
-      expect(persisted?.sequence).toBe(1);
+      expect(persisted?.version).toBe(2);
+      expect(persisted?.sequence).toBe(0); // Immutable admission floor, not a per-frame state rewrite.
       expect(f.manager.saveState(f.session.state)).toBe(true);
       expect(f.manager.readSessionState(f.id)!.outputJournalHead).toEqual(persisted);
       const stateFile = join(f.root, f.id, "state.json");
@@ -416,14 +416,67 @@ describe("Session output journal", () => {
       denied.mockRestore();
     }
   });
+  test("a lost, replaced, truncated or damaged head never falls back to the admission floor", () => {
+    for (const mode of ["missing", "replaced", "truncated", "checksum", "symlink"] as const) {
+      const f = fixture();
+      const published = f.writer.append({ type: "text_delta", text: "durable" });
+      const headFile = join(f.root, f.id, "output-journal-head.json");
+      const block = readFileSync(headFile);
+      if (mode === "missing") rmSync(headFile);
+      else if (mode === "replaced" || mode === "symlink") {
+        renameSync(headFile, headFile + ".old");
+        if (mode === "replaced") writeFileSync(headFile, block);
+        else fs.symlinkSync(headFile + ".old", headFile);
+      } else if (mode === "truncated") truncateSync(headFile, 100);
+      else {
+        block[30] = block[30] === 0x61 ? 0x62 : 0x61;
+        writeFileSync(headFile, block);
+      }
+      const original = readFileSync(f.file);
+      expect(readOutputJournal(f.root, f.id).complete).toBe(false);
+      expect(readOutputJournal(f.root, f.id, { through: published }).complete).toBe(false);
+      expect(() => f.writer.append({ type: "text_delta", text: "late" })).toThrow();
+      expect(() => new SessionOutputJournal(f.root, f.id, f.runId)).toThrow();
+      expect(readFileSync(f.file)).toEqual(original);
+    }
+  });
+  test("a torn head update retains the journal and blocks recovery instead of publishing", () => {
+    const f = fixture();
+    const published = f.writer.append({ type: "text_delta", text: "durable" });
+    const head = statSync(join(f.root, f.id, "output-journal-head.json"));
+    const real = fs.writeSync;
+    let attempted = false;
+    const torn = spyOn(fs, "writeSync").mockImplementation(((fd: number, ...args: any[]) => {
+      const at = fs.fstatSync(fd);
+      if (at.dev === head.dev && at.ino === head.ino) {
+        if (attempted) throw new Error("head write interrupted");
+        attempted = true;
+        return (real as any)(fd, args[0], args[1], 200, args[3]);
+      }
+      return (real as any)(fd, ...args);
+    }) as any);
+    try {
+      expect(() => f.writer.append({ type: "text_delta", text: "unpublished" })).toThrow(
+        "head write interrupted",
+      );
+    } finally {
+      torn.mockRestore();
+    }
+    const original = readFileSync(f.file);
+    expect(readOutputJournal(f.root, f.id).complete).toBe(false);
+    expect(readOutputJournal(f.root, f.id, { through: published }).complete).toBe(false);
+    expect(() => new SessionOutputJournal(f.root, f.id, f.runId)).toThrow();
+    expect(readFileSync(f.file)).toEqual(original);
+  });
   test("watermark commit failure never publishes or adopts a complete uncommitted event", () => {
     const f = fixture();
     const published = f.writer.append({ type: "text_delta", text: "durable" });
-    const stateFile = realpathSync(join(f.root, f.id, "state.json"));
-    const real = fs.renameSync;
-    const denied = spyOn(fs, "renameSync").mockImplementation(((from: any, to: any) => {
-      if (String(to) === stateFile) throw new Error("watermark commit denied");
-      return real(from, to);
+    const head = statSync(join(f.root, f.id, "output-journal-head.json"));
+    const real = fs.writeSync;
+    const denied = spyOn(fs, "writeSync").mockImplementation(((fd: number, ...args: any[]) => {
+      const at = fs.fstatSync(fd);
+      if (at.dev === head.dev && at.ino === head.ino) throw new Error("watermark commit denied");
+      return (real as any)(fd, ...args);
     }) as any);
     try {
       expect(() => f.writer.append({ type: "text_delta", text: "unpublished" })).toThrow(
@@ -439,6 +492,53 @@ describe("Session output journal", () => {
     expect(page.uncommittedTail).toBe(true);
     expect(() => new SessionOutputJournal(f.root, f.id, f.runId)).toThrow("requires repair");
     expect(() => f.writer.append({ type: "text_delta", text: "late" })).toThrow();
+    expect(readFileSync(f.file)).toEqual(original);
+  });
+  test("inline watermarks migrate without changing cursors and frame publication does not replace state", () => {
+    const f = fixture();
+    const published = f.writer.append({ type: "text_delta", text: "inline format" });
+    const directory = join(f.root, f.id);
+    const headFile = join(directory, "output-journal-head.json");
+    const stateFile = join(directory, "state.json");
+    const state = JSON.parse(readFileSync(stateFile, "utf8"));
+    state.outputJournalHead = JSON.parse(readFileSync(headFile, "utf8")).head;
+    writeFileSync(stateFile, JSON.stringify(state));
+    rmSync(headFile);
+    const migrated = new SessionOutputJournal(f.root, f.id, f.runId);
+    expect(readOutputJournal(f.root, f.id).through).toBe(published);
+    const saved = readFileSync(stateFile);
+    const savedIdentity = statSync(stateFile).ino;
+    const watermarkIdentity = statSync(headFile).ino;
+    migrated.append({ type: "text_delta", text: "same files" });
+    expect(readFileSync(stateFile)).toEqual(saved);
+    expect(statSync(stateFile).ino).toBe(savedIdentity);
+    expect(statSync(headFile).ino).toBe(watermarkIdentity);
+    expect(readOutputJournal(f.root, f.id, { after: published }).frames).toHaveLength(1);
+  });
+  test("a head fsync failure blocks publication and does not silently reuse the old watermark", () => {
+    const f = fixture();
+    f.writer.append({ type: "text_delta", text: "durable" });
+    const head = statSync(join(f.root, f.id, "output-journal-head.json"));
+    const real = fs.fsyncSync;
+    let failed = false;
+    const denied = spyOn(fs, "fsyncSync").mockImplementation((fd) => {
+      const at = fs.fstatSync(fd);
+      if (!failed && at.dev === head.dev && at.ino === head.ino) {
+        failed = true;
+        throw new Error("head fsync denied");
+      }
+      return real(fd);
+    });
+    try {
+      expect(() => f.writer.append({ type: "text_delta", text: "unpublished" })).toThrow(
+        "head fsync denied",
+      );
+    } finally {
+      denied.mockRestore();
+    }
+    const original = readFileSync(f.file);
+    expect(readOutputJournal(f.root, f.id).complete).toBe(false);
+    expect(() => new SessionOutputJournal(f.root, f.id, f.runId)).toThrow();
     expect(readFileSync(f.file)).toEqual(original);
   });
   test("complete historical v1 data keeps its cursor during watermark migration; unknown old tails stay intact", () => {
@@ -465,6 +565,7 @@ describe("Session output journal", () => {
       state.outputJournalIdentity = pin;
       delete state.outputJournalHead;
       writeFileSync(stateFile, JSON.stringify(state));
+      rmSync(join(f.root, f.id, "output-journal-head.json"));
       const previous = readOutputJournal(f.root, f.id);
       expect(previous.status).toBe("ok");
       expect(previous.frames[0].runId).toBe(f.runId);

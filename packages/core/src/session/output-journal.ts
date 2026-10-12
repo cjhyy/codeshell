@@ -22,6 +22,13 @@ import {
   outputCoverageIncarnation,
 } from "./output-coverage-state.js";
 import { repairUncommittedOutputTail } from "./output-journal-repair.js";
+import {
+  initializePublishedOutputHead,
+  readPublishedOutputHead,
+  updatePublishedOutputHead,
+  type OutputHeadPin,
+  type PublishedOutputHead,
+} from "./output-journal-head.js";
 
 const MAX_JOURNAL_BYTES = 128 * 1024 * 1024;
 const MAX_RECORD_BYTES = 256 * 1024;
@@ -202,7 +209,7 @@ function sessionLocation(root: string, sessionId: string) {
     ephemeral?: boolean;
     outputRecoveryIncomplete?: boolean;
     outputJournalIdentity?: string;
-    outputJournalHead?: { version: 1; identity: string } & Position;
+    outputJournalHead?: OutputHeadPin;
   };
   try {
     state = JSON.parse(readBounded(stateFd, 1024 * 1024));
@@ -538,15 +545,21 @@ function publishedHead(
   location: ReturnType<typeof sessionLocation>,
   loaded: ReturnType<typeof readHeader>,
   verified: VerifiedFile,
+  capturedHead?: PublishedOutputHead,
 ): Position {
-  const head = location.state.outputJournalHead;
-  if (head === undefined) {
+  const pin = location.state.outputJournalHead;
+  if (pin === undefined) {
     if (loaded.header.durableHead === 1 || verified.requiresHead)
       throw new JournalError("incomplete", "Published output watermark is missing");
     return verified.head; // Historical v1 data remains readable, without repair authority.
   }
-  if (head.version !== 1)
-    throw new JournalError("incomplete", "Invalid published output watermark");
+  const head = capturedHead ?? readPublishedOutputHead(location.directory, pin);
+  // The immutable admission floor is itself a committed prefix, never merely
+  // a hint for locating a newer sidecar watermark.
+  const floor = cursor(Buffer.from(JSON.stringify(pin)).toString("base64url"), loaded.identity);
+  if (floor.offset > verified.head.offset || floor.sequence > verified.head.sequence)
+    throw new JournalError("incomplete", "Published output admission prefix was lost");
+  verifyPosition(fd, floor, verified, true);
   const position = cursor(Buffer.from(JSON.stringify(head)).toString("base64url"), loaded.identity);
   if (
     position.offset > verified.head.offset ||
@@ -575,6 +588,11 @@ export function readOutputJournal(
     pinned = location.state.outputJournalIdentity !== undefined;
     if (location.state.outputRecoveryIncomplete)
       throw new JournalError("incomplete", "This Session recorded an output persistence failure");
+    // Capture publication before file length. A concurrent append may advance
+    // both; the earlier durable prefix is still a valid frozen recovery view.
+    const capturedHead = location.state.outputJournalHead
+      ? readPublishedOutputHead(location.directory, location.state.outputJournalHead)
+      : undefined;
     fd = openRegular(location.file, constants.O_RDONLY);
     const size = fstatSync(fd).size;
     const headerStamp = fileStamp(fd);
@@ -583,7 +601,7 @@ export function readOutputJournal(
     if (!pinned)
       throw new JournalError("incomplete", "Output journal identity was never committed");
     const verified = verifiedFile(fd, location.file, start, size);
-    const published = publishedHead(fd, location, loaded, verified);
+    const published = publishedHead(fd, location, loaded, verified, capturedHead);
     const after = options.after === undefined ? start : cursor(options.after, identity);
     // The first request freezes a verified prefix. Later pages retain that prefix
     // while independent appends may advance the current file beyond it.
@@ -668,9 +686,13 @@ export function readOutputJournal(
     if (finalLocation.state.outputRecoveryIncomplete)
       throw new JournalError("incomplete", "This Session recorded an output persistence failure");
     if (location.state.outputJournalHead !== undefined) {
-      const currentHead = finalLocation.state.outputJournalHead;
-      if (!currentHead || currentHead.version !== 1)
+      const currentPin = finalLocation.state.outputJournalHead;
+      if (
+        !currentPin ||
+        JSON.stringify(currentPin) !== JSON.stringify(location.state.outputJournalHead)
+      )
         throw new JournalError("incomplete", "Published output watermark changed during recovery");
+      const currentHead = readPublishedOutputHead(finalLocation.directory, currentPin);
       const currentPosition = cursor(
         Buffer.from(JSON.stringify(currentHead)).toString("base64url"),
         identity,
@@ -813,6 +835,7 @@ export class SessionOutputJournal {
         const published = publishedHead(fd, this.location, loaded, verified);
         if (published.offset !== this.position.offset || published.hash !== this.position.hash)
           throw new JournalError("incomplete", "Unpublished complete output requires repair");
+        if (this.location.state.outputJournalHead.version === 1) this.persistHead(this.position);
       }
       // Isolate only a non-newline tail or an unfinished final whole-event
       // fragment group, including complete lines. Never skip interior damage.
@@ -850,9 +873,10 @@ export class SessionOutputJournal {
     )
       invalid("Output journal identity pin was removed or replaced");
     if (!allowUnpinned && this.position !== undefined) {
-      const head = current.state.outputJournalHead;
-      if (!head || head.version !== 1)
+      const pin = current.state.outputJournalHead;
+      if (!pin)
         throw new JournalError("incomplete", "Published output watermark was removed or replaced");
+      const head = readPublishedOutputHead(current.directory, pin);
       const position = cursor(
         Buffer.from(JSON.stringify(head)).toString("base64url"),
         this.identity,
@@ -870,9 +894,15 @@ export class SessionOutputJournal {
     this.persistProof({ outputJournalIdentity: pin });
   }
   private persistHead(position: Position): void {
-    this.persistProof({
-      outputJournalHead: { version: 1, identity: this.identity, ...position },
-    });
+    const current = this.assertOwner(true);
+    const head = { version: 1 as const, identity: this.identity, ...position };
+    const pin = current.state.outputJournalHead;
+    if (pin?.version === 2) updatePublishedOutputHead(current.directory, pin, head);
+    else {
+      const next = initializePublishedOutputHead(current.directory, head);
+      this.persistProof({ outputJournalHead: next });
+      this.location.state.outputJournalHead = next;
+    }
   }
   private persistProof(patch: Partial<ReturnType<typeof sessionLocation>["state"]>): void {
     const current = this.assertOwner(true);

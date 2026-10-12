@@ -338,13 +338,15 @@ export interface SessionState {
   outputRecoveryIncomplete?: boolean;
   /** Immutable journal header pin, committed before any output cursor is published. */
   outputJournalIdentity?: string;
-  /** Last fsync-completed output prefix, committed before publishing its cursor. */
+  /** Durable publication proof: inline v1 head or immutable v2 sidecar admission floor. */
   outputJournalHead?: {
-    version: 1;
+    version: 1 | 2;
     identity: string;
     sequence: number;
     offset: number;
     hash: string;
+    /** V2 admission floor pins the durable, in-place publication watermark. */
+    file?: { dev: number; ino: number };
   };
   /** Host-only coverage proof; never authorizes a run or claims no-run output persistence. */
   outputCoverageIdentity?: string;

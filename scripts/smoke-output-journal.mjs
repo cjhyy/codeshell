@@ -631,6 +631,7 @@ if (process.argv[2] === "--append-worker") {
   engine.getHookRegistry().clear();
   let succeeded = false;
   try {
+    const modelRunBegan = performance.now();
     const result = await engine.run("Return the local fixture response", {
       sessionId: "long-output",
       clientMessageId: "local-submit",
@@ -640,6 +641,7 @@ if (process.argv[2] === "--append-worker") {
         snapshots.append("long-output", event);
       },
     });
+    const modelRunMs = Math.round(performance.now() - modelRunBegan);
     assert.equal(result.reason, "completed");
     assert.equal(hash(result.text), expectedHash);
     assert.ok(frames > 2000);
@@ -805,6 +807,7 @@ if (process.argv[2] === "--append-worker") {
       JSON.stringify({
         sdkRequests: requests,
         liveFrames: frames,
+        modelRunMs,
         outputBytes: Buffer.byteLength(expected),
         recoveredHash: expectedHash,
         compiledNoRunStdioAndMainRecovery: true,

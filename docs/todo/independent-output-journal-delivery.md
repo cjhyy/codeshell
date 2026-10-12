@@ -44,9 +44,16 @@ compatibility.
 
 ## Published watermark and automatic tail repair
 
-After output fsync, each writer atomically fsyncs its exact
-identity/sequence/offset/hash watermark into Session state before returning a
-publishable cursor. Whole-state saves preserve this proof. Recovery freezes a
+After output fsync, each writer fsyncs its exact identity/sequence/offset/hash
+watermark before returning a publishable cursor. Session state pins a fixed
+4 KiB checksummed sidecar by inode and its immutable admission prefix; whole-state
+saves preserve that pin. Per-frame writes update the same watermark inode and
+do not replace Session state or fsync the directory. Missing, replaced, truncated,
+checksum-invalid or torn sidecars fail closed and never fall back to the older
+admission prefix. Earlier inline watermarks migrate under the Session-state lock
+without changing existing cursors. Recovery captures publication before file
+length, so a concurrent append cannot falsely invalidate the frozen prefix.
+Recovery freezes a
 published watermark; bytes written after it cannot become output coverage just
 because a later reader finds a valid JSON event. New headers and record versions
 require the watermark, so losing it remains a failure. A complete historical v1
@@ -96,10 +103,15 @@ truncation, complete historical v1 migration, unknown legacy torn tails, absent
 or malformed watermarks, stale whole-state saves, failed watermark commit,
 evidence receipt failure, and exact original-byte preservation. Compiled SDK,
 Main and authenticated Hub recovery still pass with the new record format.
-Persisting the watermark by atomic Session-state replacement adds synchronous
-write and directory-fsync work on every frame; the compiled smoke took several
-minutes on this Host. This cost must be addressed as part of the subsequent
-storage/rotation work before release, without weakening publish durability.
+The next checkpoint replaces per-frame atomic Session-state replacement with
+the fixed watermark sidecar. All 66 guarded tests pass. The actual compiled SDK
+fixture publishes 2,213 live frames and reconstructs the exact 9,060,345-byte
+response in all existing consumers. Its instrumented model run takes 75,587 ms
+on this Host; cold first-page recovery takes 217 ms and all 35 pages take 1,279 ms.
+The near-128-MiB case takes 4,768 ms for 131 pages. Both real stdio workers and
+authenticated Hub restart recovery pass. This still performs two synchronous
+fsync operations per published event; batching/asynchronous storage remains
+unresolved performance work, not a claimed elimination of stream latency.
 
 Remaining work for the full P1 recovery requirement: in-Main producers outside
 Core's protocol, CC Room's separate transcript/room identity and historical
