@@ -37,3 +37,36 @@ Checkpoint loads use a bounded 16 KiB descriptor read with descriptor/path/root 
 Recovery/overflow failures latch on both clients; an in-flight final page cannot reopen the failed boundary. History errors carry the original request id so a stale failure cannot cancel a newer catchup. A guarded 58/58 affected client/handler shard covers these races. Claude and Codex recent-history regression cases start with 540 messages, exercise 500-message eviction, append interleaved user/assistant/tool/result records, and compare late-viewer limits 7/1 and a cold follower against the maintained full-history parser (5/5 follower tests).
 
 Final affected dependency builds (Core, Web, Server), the complete production Desktop build (Main/preload/renderer/mobile/Chrome extension), Desktop renderer/mobile typechecks, Web library/app typechecks and ESLint pass. Generated Chrome extension output is excluded from the source change. The final guarded combined shard passed 160/160 tests, 652 assertions across 10 files in 82.15 seconds, including the five new client/ring regression cases. Its independent writer completed normally at 65,056,485 bytes with first capture 730 ms, maximum changed drain 330 ms and cold subscription 476 ms. The local regression log is `/tmp/ccroom-final-regression-20261012.log`.
+
+
+## Architecture-budget and IPC review follow-up
+
+The CCRoom follower wiring now lives with `transcript-subscriptions.ts`; Main
+supplies its existing RoomManager, checkpoint directory, mobile broadcaster and
+live BrowserWindow enumeration. Destroyed windows are still skipped. Frozen
+Room history validators are re-exported through the existing browser-safe
+message mapper entry, keeping Desktop package imports unchanged.
+
+The typed `roomHistoryPage` preload method uses the existing
+`ccRoom:roomHistory` channel and shared invoker. Undefined/number arguments retain
+the legacy bounded-array contract. Only a validated plain object selects frozen
+pages: reject unknown keys, arrays/null/non-records, unsafe or negative sequences,
+limits outside 1–500, empty/non-string/over-2048 cursors and cursor+sinceSeq.
+The existing Main IPC authority and the RoomManager's Room-bound signed cursor
+remain in the path. Extracted history registrations are explicitly counted by
+the architecture guard rather than hidden by moving them.
+
+After normally merging reviewed project-chooser extraction `c2acd8d7` and
+Electron smoke helper updates `7a558f99`, budgets remain unchanged: Main **7244 ≤
+7245**, Web export statements **21 ≤ 21**, Main registrations **345 ≤ 345**, preload
+invokes **338 ≤ 338**. Guard plus actual Main history registrar tests pass **7/7**,
+including real disk RoomManager legacy reads, frozen multi-page continuation
+after a cold Host manager restart, a concurrent live suffix, cross-Room cursor
+rejection and malformed page inputs rejected before any storage read.
+
+The affected seven-file CCRoom/client/mapping regression passed **100/100**, 434
+assertions. Web build, combined complete Desktop build (Main/preload/renderer/
+mobile/extension), Desktop typecheck and affected ESLint passed. Generated Chrome
+extension output is excluded from source delivery. This supplements the earlier
+160-test regression; it does not claim new physical-device or GUI acceptance.
+Logs: `/tmp/ccroom-budget-{regression,combined,combined-desktop-build,combined-desktop-typecheck,lint}-20261012.log`.
