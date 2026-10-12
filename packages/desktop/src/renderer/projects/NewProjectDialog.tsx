@@ -1,4 +1,4 @@
-import React, { useEffect, useId, useRef, useState } from "react";
+import React, { useCallback, useEffect, useId, useRef, useState } from "react";
 import { ArrowLeft, Cloud, Loader2, Monitor } from "lucide-react";
 import {
   Dialog,
@@ -18,6 +18,23 @@ interface Props {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onCreateLocal: () => Promise<void>;
+}
+
+/** Own the chooser lifecycle shared by App's sidebar, composer and native menu. */
+export function useNewProjectDialog(onCreateLocal: () => Promise<void>) {
+  const [open, setOpen] = useState(false);
+  const openNewProject = useCallback(() => setOpen(true), []);
+  useEffect(
+    () =>
+      window.codeshell.onMenuEvent((event) => {
+        if (event === "add-project") openNewProject();
+      }),
+    [openNewProject],
+  );
+  return [
+    openNewProject,
+    <NewProjectDialog open={open} onOpenChange={setOpen} onCreateLocal={onCreateLocal} />,
+  ] as const;
 }
 
 /** One location chooser shared by the sidebar, composer and native File menu. */
