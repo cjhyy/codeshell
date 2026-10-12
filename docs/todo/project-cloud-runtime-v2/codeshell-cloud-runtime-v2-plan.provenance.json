@@ -1,0 +1,7 @@
+{
+  "source": "canonical Archify viewer SVG export",
+  "sourceSha256": "8bd0e48b5edfbd83f7048c1a65d6d3e66728f8b563392e6f72b1681be736020d",
+  "repositorySha256": "603660b6f4913578e2a0f658f4d67dc0055db3bc3e85694c64937ca65e8161fa",
+  "normalization": "Remove line-end spaces from generated CSS keyframe opening lines only; canonical export and trusted HTML remain unchanged.",
+  "canonicalExportPreserved": true
+}
