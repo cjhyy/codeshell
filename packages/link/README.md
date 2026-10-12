@@ -36,3 +36,7 @@ Core 也不反向依赖这个包。Desktop / Link Server 作为宿主，在加�
 新增 Provider 时，先在 `src/catalog.ts` 增加 manifest，再在可信执行宿主实现相同的 `actionIds`。
 `bun run test` 会校验每个 Provider 都有可用本地方法、独立服务端方法、完整授权引导，并锁定支持
 零复制会话的官方 CLI 清单。
+
+Slack 精确消息/线程与 GitHub PR 文件、提交和 exact commit 的只读契约，见
+[Link source reads](../../docs/link-source-reads.md)。本地、CLI 与远程执行宿主必须显式支持
+相同的 Action；已部署远程服务不会因客户端清单更新而自动新增能力。
