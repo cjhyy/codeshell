@@ -15,6 +15,8 @@ test.each([
   "late-status-after-event",
   "logout-confirmation-scope",
   "logout-unknown-retry",
+  "initial-connect-failure-logout",
+  "dialog-busy-before-effect",
   "ime-submit",
   "local-chooser",
 ])("Cloud project management interaction: %s", async (scenario) => {
