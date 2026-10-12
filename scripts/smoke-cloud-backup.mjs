@@ -2,20 +2,40 @@
 // No Host workspace dist modules or development image tags are consulted.
 import assert from "node:assert/strict";
 import { spawn } from "node:child_process";
-import { access, lstat, readFile } from "node:fs/promises";
+import { lstat, readFile, mkdtemp, mkdir, rm } from "node:fs/promises";
+import { realpathSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { candidateFile } from "./docker-candidate-guard.mjs";
 import { join, resolve } from "node:path";
 
-const [installation, runtimeImage, helperImage, helperSource, evidence, ...extra] =
-  process.argv.slice(2);
+const [
+  installation,
+  runtimeImage,
+  helperImage,
+  helperSource,
+  evidence,
+  flag,
+  guardPath,
+  guardHash,
+  ...extra
+] = process.argv.slice(2);
 assert.ok(
   installation &&
     evidence &&
     !extra.length &&
+    flag === "--guard" &&
+    guardPath &&
+    /^[a-f0-9]{64}$/.test(guardHash ?? "") &&
     [runtimeImage, helperImage].every((image) => /^sha256:[a-f0-9]{64}$/.test(image ?? "")),
-  "Usage: node scripts/smoke-cloud-backup.mjs services-installation runtime-sha256-id helper-sha256-id helper-registry-digest evidence.json",
+  "Usage: node scripts/smoke-cloud-backup.mjs services-installation runtime-sha256-id helper-sha256-id helper-registry-digest evidence.json --guard private-manifest.json sha256",
 );
 const entry = join(resolve(installation), "scripts/smoke-cloud-restore.mjs");
-await access(entry);
+const entryPin = candidateFile(realpathSync(entry));
+const manifestFile = candidateFile(resolve(guardPath), { privateFile: true });
+assert.equal(manifestFile.sha256, guardHash);
+const guardManifest = JSON.parse(manifestFile.bytes);
+assert.equal(guardManifest.version, 1);
+assert.equal(guardManifest.runtime.imageId, runtimeImage);
 const output = resolve(evidence);
 try {
   await lstat(output);
@@ -25,12 +45,36 @@ try {
 } catch (error) {
   if (error.code !== "ENOENT") throw error;
 }
+const custody = await mkdtemp(join(tmpdir(), "codeshell-restore-wrapper-"));
+const home = join(custody, "home");
+await mkdir(home, { mode: 0o700 });
+const environment = {};
+for (const key of ["PATH", "LANG", "LC_ALL"])
+  if (process.env[key]) environment[key] = process.env[key];
+Object.assign(environment, {
+  HOME: home,
+  USERPROFILE: home,
+  CODE_SHELL_HOME: join(home, ".code-shell"),
+  DOCKER_HOST: guardManifest.docker.endpoint,
+  NODE_ENV: "production",
+  DISABLE_AUTOUPDATER: "1",
+});
 await new Promise((done, fail) => {
   const child = spawn(
     process.execPath,
-    [entry, runtimeImage, helperImage, helperSource, resolve(evidence)],
+    [
+      entry,
+      runtimeImage,
+      helperImage,
+      helperSource,
+      resolve(evidence),
+      "--guard",
+      resolve(guardPath),
+      guardHash,
+    ],
     {
       cwd: resolve(installation),
+      env: environment,
       stdio: "inherit",
     },
   );
@@ -55,14 +99,24 @@ await new Promise((done, fail) => {
   };
   child.once("error", (error) => {
     finished();
-    fail(error);
+    fail(
+      new Error(`Installed Cloud backup/restore launch failed; custody retained at ${custody}`, {
+        cause: error,
+      }),
+    );
   });
-  child.once("close", (code) => {
+  child.once("close", (code, signal) => {
     finished();
-    if (code === 0 && !interrupted) done();
-    else fail(new Error(`Installed Cloud backup/restore acceptance failed (${code}).`));
+    if (code === 0 && signal === null && !interrupted) done();
+    else
+      fail(
+        new Error(
+          `Installed Cloud backup/restore acceptance failed (${code}); custody retained at ${custody}.`,
+        ),
+      );
   });
 });
+assert.equal(candidateFile(realpathSync(entry)).sha256, entryPin.sha256);
 const metadata = await lstat(output);
 assert.ok(
   metadata.isFile() && !metadata.isSymbolicLink() && metadata.size <= 1024 * 1024,
@@ -72,6 +126,15 @@ const receipt = JSON.parse(await readFile(output, "utf8"));
 assert.equal(receipt.candidateOnly, true);
 assert.equal(receipt.passed, true, "Cloud installation restore did not pass");
 assert.equal(receipt.cleanupPassed, true, "Cloud restore cleanup did not pass");
+assert.equal(receipt.guard?.version, 1);
+assert.equal(receipt.guard?.preCore, true);
+assert.equal(receipt.guard?.hostHead, guardManifest.hostHead);
+assert.equal(receipt.guard?.controllerProcesses, 3);
+assert.equal(receipt.guard?.cliProcesses, 7);
+assert.equal(receipt.guard?.nativeEgressAcks, 2);
+assert.equal(receipt.guard?.bootstrapReleases, 2);
+assert.equal(receipt.guard?.children, 0);
+assert.equal(receipt.guard?.helperRemoved, true);
 assert.equal(receipt.runtimeImage, runtimeImage);
 assert.equal(receipt.helperImage, helperImage);
 assert.equal(receipt.helperSource, helperSource);
@@ -88,4 +151,7 @@ assert.deepEqual(
   ].sort(),
   "Cloud restore evidence must cover the complete installation workflow",
 );
-console.log("PASS: installed Cloud backup/restore evidence verified before candidate export");
+await rm(custody, { recursive: true });
+console.log(
+  "PASS: installed guarded Cloud backup/restore evidence verified before candidate export",
+);

@@ -1,7 +1,16 @@
 import { afterEach, describe, expect, test } from "bun:test";
 import { execFileSync, spawn } from "node:child_process";
 import { once } from "node:events";
-import { mkdtempSync, mkdirSync, readFileSync, rmSync, writeFileSync, existsSync } from "node:fs";
+import { createHash } from "node:crypto";
+import {
+  mkdtempSync,
+  mkdirSync,
+  readFileSync,
+  rmSync,
+  writeFileSync,
+  existsSync,
+  realpathSync,
+} from "node:fs";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 
@@ -23,6 +32,17 @@ const proof = {
   helperIncludedInCandidate: false,
   passed: true,
   cleanupPassed: true,
+  guard: {
+    version: 1,
+    preCore: true,
+    hostHead: "d".repeat(40),
+    controllerProcesses: 3,
+    cliProcesses: 7,
+    nativeEgressAcks: 2,
+    bootstrapReleases: 2,
+    children: 0,
+    helperRemoved: true,
+  },
   checks: [
     "live-controller and busy-volume rejection",
     "new installation, both volume bytes, permissions and links, original preservation",
@@ -30,8 +50,19 @@ const proof = {
     "corruption rejection and incomplete restore remains unstartable",
   ],
 };
+function guardArguments(root: string) {
+  const file = join(root, "guard.json");
+  const bytes = JSON.stringify({
+    version: 1,
+    hostHead: "d".repeat(40),
+    runtime: { imageId: runtime },
+    docker: { endpoint: "unix:///fixture/docker.sock" },
+  });
+  writeFileSync(file, bytes, { mode: 0o600 });
+  return ["--guard", file, createHash("sha256").update(bytes).digest("hex")];
+}
 function fixture(receipt: unknown) {
-  const root = mkdtempSync(join(tmpdir(), "cloud-restore-wrapper-"));
+  const root = realpathSync(mkdtempSync(join(tmpdir(), "cloud-restore-wrapper-")));
   roots.push(root);
   mkdirSync(join(root, "scripts"));
   const launched = join(root, "launched"),
@@ -40,11 +71,12 @@ function fixture(receipt: unknown) {
     join(root, "scripts/smoke-cloud-restore.mjs"),
     `import {writeFileSync} from "node:fs";writeFileSync(${JSON.stringify(launched)},"yes");${receipt === undefined ? "" : `writeFileSync(process.argv[5],${JSON.stringify(JSON.stringify(receipt))},{flag:"wx"});`}`,
   );
+  const guard = guardArguments(root);
   return {
     output,
     launched,
     run: () =>
-      execFileSync("node", [wrapper, root, runtime, helper, source, output], {
+      execFileSync("node", [wrapper, root, runtime, helper, source, output, ...guard], {
         stdio: "pipe",
         timeout: 10000,
       }).toString(),
@@ -63,6 +95,9 @@ describe("installed Cloud backup/restore candidate gate", () => {
     ["other runtime", { ...proof, runtimeImage: helper }],
     ["other helper source", { ...proof, helperSource: "different" }],
     ["missing restore stage", { ...proof, checks: proof.checks.slice(1) }],
+    ["missing guard proof", { ...proof, guard: undefined }],
+    ["missing runtime ACK", { ...proof, guard: { ...proof.guard, nativeEgressAcks: 1 } }],
+    ["unclosed child", { ...proof, guard: { ...proof.guard, children: 1 } }],
   ] as const)
     test(`rejects ${name} even when the child exits zero`, () =>
       expect(fixture(receipt).run).toThrow());
@@ -75,7 +110,7 @@ describe("installed Cloud backup/restore candidate gate", () => {
     expect(readFileSync(test.output, "utf8")).toBe(original);
   });
   test("forwards termination, waits for child cleanup, and rejects interrupted success", async () => {
-    const root = mkdtempSync(join(tmpdir(), "cloud-restore-signal-"));
+    const root = realpathSync(mkdtempSync(join(tmpdir(), "cloud-restore-signal-")));
     roots.push(root);
     mkdirSync(join(root, "scripts"));
     const output = join(root, "evidence.json");
@@ -86,7 +121,8 @@ describe("installed Cloud backup/restore candidate gate", () => {
       process.on("SIGTERM",()=>setTimeout(()=>{writeFileSync(${JSON.stringify(cleaned)},"yes");writeFileSync(process.argv[5],${JSON.stringify(JSON.stringify(proof))});process.exit(0)},30));
       setInterval(()=>{},1000);console.log("ready");`,
     );
-    const child = spawn("node", [wrapper, root, runtime, helper, source, output], {
+    const guard = guardArguments(root);
+    const child = spawn("node", [wrapper, root, runtime, helper, source, output, ...guard], {
       stdio: ["ignore", "pipe", "pipe"],
     });
     let stderr = "";
