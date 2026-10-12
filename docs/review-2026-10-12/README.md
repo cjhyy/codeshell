@@ -16,60 +16,60 @@
 
 | 编号 | 级别 | 流程与实际影响                                                                        | 详细证据                                             |
 | ---- | ---- | ------------------------------------------------------------------------------------- | ---------------------------------------------------- |
-| R35  | P1   | 重复 Enter 并行创建同名 worktree，失败请求强制回滚成功请求的目录、分支及未提交文件    | Desktop D13，第三轮                                  |
-| R01  | P2   | 连续两个并行审批复用卡片，第二个显示“已批准”而无法操作                                | Desktop D4                                           |
-| R02  | P2   | CLI 房间实际免审批，界面却显示“逐次确认”；更改选择器也不改变 CLI                      | Web W4                                               |
-| R03  | P2   | 已执行任务丢失 ACK 后恢复可重发草稿，重试生成新意图 ID 并重复执行                     | Web W1                                               |
-| R04  | P2   | 在 A 执行斜杠命令后切到 B，迟到的展开结果覆盖 B 草稿                                  | Desktop D5                                           |
-| R05  | P2   | A 会话拖入的文件随切换残留到 B，发送因附件所属会话不符失败                            | Desktop D2                                           |
-| R06  | P2   | 原生运行回包错误被当作普通结果，发送失败无可见解释，草稿已清空                        | Desktop D1                                           |
-| R07  | P2   | Core worker 退出清掉仍在运行的外部 CLI busy 状态，停止按钮消失                        | Desktop D7                                           |
-| R08  | P2   | 配对浏览器 CLI 房间的停止按钮发送原生 run.stop，实际房间继续运行                      | Web W3                                               |
-| R09  | P2   | 第二个 Hub 启动失败前删除第一个实例仍在使用的上传文件                                 | Server S1                                            |
-| R10  | P2   | CC 房间切换或离线后无法恢复待审批卡片，服务端一直等待直到超时                         | Server S6                                            |
-| R11  | P3   | 连接失效但界面尚显示在线的短窗口，CC 审批发送失败仍删卡 | Server S7；正常离线有禁用及 handler 保护 |
-| R12  | P2   | CC 一次多题澄清仅能回答首题，后续题目随控制请求被消费                                 | Server S2                                            |
-| R13  | P2   | 切换澄清题后旧选择索引残留，选项数变少时提交抛异常                                    | Desktop D6                                           |
-| R14  | P2   | 可稍后回答的异步问题在任务完成后仍阻塞新的独立任务                                    | Web W5                                               |
-| R15  | P2   | 外部 CLI 后续消息只在当前会话推进，切到别处后队列停住                                 | Desktop D3                                           |
-| R16  | P2   | CC 打开回包广播到同设备全部页签，也会覆盖用户较新的会话选择                           | Web W2                                               |
-| R17  | P2   | 删除草稿附件不释放上传配额，空输入框仍被 16 个文件上限卡住                            | Server S3                                            |
-| R18  | P2   | CLI 启动失败留下“运行中”句柄，安装/修复后同模式重开仍不能恢复                           | Server S4                                            |
-| R19  | P3   | 同步审批未被处理且请求仍 pending 时交付失败，错误本身不恢复卡片 | Web W6；下一次有效 resync 可恢复 |
-| R20  | P3   | Hub 接受超过 10、至多 20 MiB 图片，发送阶段才因 10 MiB 限制失败                                 | Server S5                                            |
-| R21  | P2   | Hub Web 新会话首次运行中刷新，完整输出日志的 legacy anchor 被空基线裁掉，前端拒绝恢复 | Root R21                                             |
-| R22  | P2   | 多根项目会话迁移到合法 secondary root 后，已绑定 Panel 被错误视为跨项目而打不开       | Desktop D8，第二轮                                   |
-| R23  | P2   | 一个无效的已追踪项目目录让全部健康项目的 Panel 消失；65 个健康项目也触发批量上限      | Desktop D9，第二轮                                   |
-| R24  | P2   | 移除项目先删除项目权威，再释放冷会话 worktree；重加项目后旧归档会话仍占用 worktree    | Desktop D10，第二轮                                  |
-| R25  | P2   | 两个已打开的默认模型表单先后保存，后一个未改过的旧字段回滚前一个更新                  | Web W7，第二轮                                       |
-| R26  | P3   | Skill 保存遇到 409 后按提示刷新，编辑器仍用旧 revision，无法继续保存                  | Web W8，第二轮                                       |
-| R27  | P3   | MCP 配置已更新，迟到的旧 probe 响应却给新配置显示旧的成功结果与工具列表               | Web W9，第二轮                                       |
-| R28  | P2   | 插件设置初次加载尚未完成时可切开关，写入空旧列表并重新启用之前禁用的插件/Skill        | Desktop D11，第三轮                                  |
-| R29  | P3   | 启动迁移旧会话时，旧项目初始快照覆盖已到达的新项目广播；新项目从界面消失              | Desktop D12，第三轮                                  |
-| R30  | P2   | 后台工具任务完成时终态写盘失败被吞掉，结果丢失并持续显示运行中、阻塞配置修改          | Runtime T1，第三轮；存储恢复后可取消/重试            |
-| R31  | P2   | Node Hub 关闭先返回并退出，忽略 SIGTERM 的 Panel 原生进程来不及强制终止而遗留         | Runtime T2，第三轮；已验证 POSIX                     |
-| R32  | P2   | 新设备浏览器存储配额耗尽时，配对和认证生成不同 secret，配对流程必然失败               | Web W10，第三轮                                      |
-| R33  | P2   | 新会话 ACK 前收到后台原生输出，自动绑定错误会话并把新草稿迁走                         | Web W11，第三轮                                      |
-| R34  | P2   | 手机 PUT 已开始后无法随断线取消，重连在线仍被旧上传阻塞独立文本发送                   | Web W12，第三轮；主机正常收到请求时有 5 分钟票据上限 |
-| R36  | P2   | worker 退出与 JSON-RPC 写入交叉时，stdin 的异步 EPIPE 没有监听，Node Host 随之退出    | Runtime T3，第三轮                                   |
-| R37  | P2   | 离线新建 B 项目请求丢失，重连首条任务可沿旧的未落盘 A 会话进入 A 项目                 | Web W13，第三轮；限定 freshNative 场景               |
-| R38  | P3   | 退出设备必须等 HTTP logout 请求结束，响应卡住时本地界面和连接也不退出                 | Web W14，第三轮                                      |
-| R39  | P3   | 恢复归档会话已成功，却被自身 busy 守卫误判为未保存修改，需额外确认才能打开            | Files/History F1，第四轮                             |
-| R40  | P2   | 发送明确被拒绝前已输入后续稿，原失败文本不在草稿、聊天或历史中，无法直接恢复          | Web W15，第五轮；限定预入队拒绝                     |
-| R41  | P2   | Hub 未确认送达的意图不计入刷新保护，实际未接受时刷新会丢掉唯一内存副本                | Web W16，第五轮；真实认证 Hub 补强                  |
-| R42  | P2   | 新增 Cookie 账号用名称生成 ID，默认名或中文名碰撞会覆盖旧账号及权限                   | Credentials C1，第五轮；实际 Electron/IPC/store     |
-| R43  | P3   | Token 保存遭遇真实存储拒写时没有可见错误，草稿保留但用户不知道失败原因                 | Credentials C2，第五轮                             |
-| R44  | P2   | 续接自动化超过 120 秒后提前结算，worker 仍执行时保留的非once计划可以再次排入                   | Automation A1，第五轮；实际 ChatSession FIFO        |
-| R45  | P2   | worker 明确拒绝续接运行，网关/生命周期仍宣告 completed                 | Automation A2，第五轮                              |
-| R46  | P2   | 自动化执行历史按名称/时间认领，遗漏真实实时记录并混入同项目其他任务的结果               | Automation A3，第五轮；合并身份关联根因             |
-| R47  | P2   | 任务异步自动停用后，当前自动化页面仍显示活跃和旧下次运行时间                           | Automation A4，第五轮                              |
-| R48  | P3   | 自动停用原因在 Desktop 摘要中丢失，重开详情只能看到普通暂停                            | Automation A5，第五轮；底层原因仍持久保留           |
-| R49  | P3   | 共享资料集跨文件查询吞掉已知原件变更的恢复指引，用户无法确定需更新哪个文件              | Collection，第六轮；0.9.33 新可达路径               |
-| R50  | P2   | 等待麦克风启动时双击创建两份录音，停止及组件卸载只释放最后一份                         | Voice W17，第六轮；同一 renderer document 存活期间 |
-| R51 | P2 | 成功安装后卸载，旧 installed 任务仍禁用市场重装，实际目录和注册已不存在 | Agent Plugins W18，第七轮；同一 Main 生命周期 |
-| R52 | P2 | 市场相对路径源更新校验失败前删除旧插件，旧注册指向不存在目录 | Agent Plugins W19，第七轮；有效新源可重新安装恢复 |
-| R53 | P2 | 从文件夹预览安装把临时快照记成更新源，快照已删，原文件夹仍在也无法更新 | Agent Plugins W20，第七轮；旧安装内容保留 |
-| R54 | P3 | Quick Chat 收到文件面板 PNG 的内部拖放数据后静默丢弃，不产生图片或路径引用 | Quick Chat Q1，第八轮；系统图片拖入可用 |
+| R35  | P1   | 重复 Enter 并行创建同名 worktree，失败请求强制回滚成功请求的目录、分支及未提交文件    | [Desktop D13，第三轮](desktop-round3.md) |
+| R01  | P2   | 连续两个并行审批复用卡片，第二个显示“已批准”而无法操作                                | [Desktop D4](desktop-round1.md) |
+| R02  | P2   | CLI 房间实际免审批，界面却显示“逐次确认”；更改选择器也不改变 CLI                      | [Web W4](web-round1.md) |
+| R03  | P2   | 已执行任务丢失 ACK 后恢复可重发草稿，重试生成新意图 ID 并重复执行                     | [Web W1](web-round1.md) |
+| R04  | P2   | 在 A 执行斜杠命令后切到 B，迟到的展开结果覆盖 B 草稿                                  | [Desktop D5](desktop-round1.md) |
+| R05  | P2   | A 会话拖入的文件随切换残留到 B，发送因附件所属会话不符失败                            | [Desktop D2](desktop-round1.md) |
+| R06  | P2   | 原生运行回包错误被当作普通结果，发送失败无可见解释，草稿已清空                        | [Desktop D1](desktop-round1.md) |
+| R07  | P2   | Core worker 退出清掉仍在运行的外部 CLI busy 状态，停止按钮消失                        | [Desktop D7](desktop-round1.md) |
+| R08  | P2   | 配对浏览器 CLI 房间的停止按钮发送原生 run.stop，实际房间继续运行                      | [Web W3](web-round1.md) |
+| R09  | P2   | 第二个 Hub 启动失败前删除第一个实例仍在使用的上传文件                                 | [Server S1](server-round1.md) |
+| R10  | P2   | CC 房间切换或离线后无法恢复待审批卡片，服务端一直等待直到超时                         | [Server S6](server-round1.md) |
+| R11  | P3   | 连接失效但界面尚显示在线的短窗口，CC 审批发送失败仍删卡 | [Server S7；正常离线有禁用及 handler 保护](server-round1.md) |
+| R12  | P2   | CC 一次多题澄清仅能回答首题，后续题目随控制请求被消费                                 | [Server S2](server-round1.md) |
+| R13  | P2   | 切换澄清题后旧选择索引残留，选项数变少时提交抛异常                                    | [Desktop D6](desktop-round1.md) |
+| R14  | P2   | 可稍后回答的异步问题在任务完成后仍阻塞新的独立任务                                    | [Web W5](web-round1.md) |
+| R15  | P2   | 外部 CLI 后续消息只在当前会话推进，切到别处后队列停住                                 | [Desktop D3](desktop-round1.md) |
+| R16  | P2   | CC 打开回包广播到同设备全部页签，也会覆盖用户较新的会话选择                           | [Web W2](web-round1.md) |
+| R17  | P2   | 删除草稿附件不释放上传配额，空输入框仍被 16 个文件上限卡住                            | [Server S3](server-round1.md) |
+| R18  | P2   | CLI 启动失败留下“运行中”句柄，安装/修复后同模式重开仍不能恢复                           | [Server S4](server-round1.md) |
+| R19  | P3   | 同步审批未被处理且请求仍 pending 时交付失败，错误本身不恢复卡片 | [Web W6；下一次有效 resync 可恢复](web-round1.md) |
+| R20  | P3   | Hub 接受超过 10、至多 20 MiB 图片，发送阶段才因 10 MiB 限制失败                                 | [Server S5](server-round1.md) |
+| R21  | P2   | Hub Web 新会话首次运行中刷新，完整输出日志的 legacy anchor 被空基线裁掉，前端拒绝恢复 | [Root R21](README.md:136) |
+| R22  | P2   | 多根项目会话迁移到合法 secondary root 后，已绑定 Panel 被错误视为跨项目而打不开       | [Desktop D8，第二轮](desktop-round2.md) |
+| R23  | P2   | 一个无效的已追踪项目目录让全部健康项目的 Panel 消失；65 个健康项目也触发批量上限      | [Desktop D9，第二轮](desktop-round2.md) |
+| R24  | P2   | 移除项目先删除项目权威，再释放冷会话 worktree；重加项目后旧归档会话仍占用 worktree    | [Desktop D10，第二轮](desktop-round2.md) |
+| R25  | P2   | 两个已打开的默认模型表单先后保存，后一个未改过的旧字段回滚前一个更新                  | [Web W7，第二轮](web-round2.md) |
+| R26  | P3   | Skill 保存遇到 409 后按提示刷新，编辑器仍用旧 revision，无法继续保存                  | [Web W8，第二轮](web-round2.md) |
+| R27  | P3   | MCP 配置已更新，迟到的旧 probe 响应却给新配置显示旧的成功结果与工具列表               | [Web W9，第二轮](web-round2.md) |
+| R28  | P2   | 插件设置初次加载尚未完成时可切开关，写入空旧列表并重新启用之前禁用的插件/Skill        | [Desktop D11，第三轮](desktop-round3.md) |
+| R29  | P3   | 启动迁移旧会话时，旧项目初始快照覆盖已到达的新项目广播；新项目从界面消失              | [Desktop D12，第三轮](desktop-round3.md) |
+| R30  | P2   | 后台工具任务完成时终态写盘失败被吞掉，结果丢失并持续显示运行中、阻塞配置修改          | [Runtime T1，第三轮；存储恢复后可取消/重试](runtime-round3.md) |
+| R31  | P2   | Node Hub 关闭先返回并退出，忽略 SIGTERM 的 Panel 原生进程来不及强制终止而遗留         | [Runtime T2，第三轮；已验证 POSIX](runtime-round3.md) |
+| R32  | P2   | 新设备浏览器存储配额耗尽时，配对和认证生成不同 secret，配对流程必然失败               | [Web W10，第三轮](web-round3.md) |
+| R33  | P2   | 新会话 ACK 前收到后台原生输出，自动绑定错误会话并把新草稿迁走                         | [Web W11，第三轮](web-round3.md) |
+| R34  | P2   | 手机 PUT 已开始后无法随断线取消，重连在线仍被旧上传阻塞独立文本发送                   | [Web W12，第三轮；主机正常收到请求时有 5 分钟票据上限](web-round3.md) |
+| R36  | P2   | worker 退出与 JSON-RPC 写入交叉时，stdin 的异步 EPIPE 没有监听，Node Host 随之退出    | [Runtime T3，第三轮](runtime-round3.md) |
+| R37  | P2   | 离线新建 B 项目请求丢失，重连首条任务可沿旧的未落盘 A 会话进入 A 项目                 | [Web W13，第三轮；限定 freshNative 场景](web-round3.md) |
+| R38  | P3   | 退出设备必须等 HTTP logout 请求结束，响应卡住时本地界面和连接也不退出                 | [Web W14，第三轮](web-round3.md) |
+| R39  | P3   | 恢复归档会话已成功，却被自身 busy 守卫误判为未保存修改，需额外确认才能打开            | [Files/History F1，第四轮](files-round4.md) |
+| R40  | P2   | 发送明确被拒绝前已输入后续稿，原失败文本不在草稿、聊天或历史中，无法直接恢复          | [Web W15，第五轮；限定预入队拒绝](web-round5.md) |
+| R41  | P2   | Hub 未确认送达的意图不计入刷新保护，实际未接受时刷新会丢掉唯一内存副本                | [Web W16，第五轮；真实认证 Hub 补强](web-round5.md) |
+| R42  | P2   | 新增 Cookie 账号用名称生成 ID，默认名或中文名碰撞会覆盖旧账号及权限                   | [Credentials C1，第五轮；实际 Electron/IPC/store](credentials-round5.md) |
+| R43  | P3   | Token 保存遭遇真实存储拒写时没有可见错误，草稿保留但用户不知道失败原因                 | [Credentials C2，第五轮](credentials-round5.md) |
+| R44  | P2   | 续接自动化超过 120 秒后提前结算，worker 仍执行时保留的非once计划可以再次排入                   | [Automation A1，第五轮；实际 ChatSession FIFO](automation-round5.md) |
+| R45  | P2   | worker 明确拒绝续接运行，网关/生命周期仍宣告 completed                 | [Automation A2，第五轮](automation-round5.md) |
+| R46  | P2   | 自动化执行历史按名称/时间认领，遗漏真实实时记录并混入同项目其他任务的结果               | [Automation A3，第五轮；合并身份关联根因](automation-round5.md) |
+| R47  | P2   | 任务异步自动停用后，当前自动化页面仍显示活跃和旧下次运行时间                           | [Automation A4，第五轮](automation-round5.md) |
+| R48  | P3   | 自动停用原因在 Desktop 摘要中丢失，重开详情只能看到普通暂停                            | [Automation A5，第五轮；底层原因仍持久保留](automation-round5.md) |
+| R49  | P3   | 共享资料集跨文件查询吞掉已知原件变更的恢复指引，用户无法确定需更新哪个文件              | [Collection，第六轮；0.9.33 新可达路径](collections-round6.md) |
+| R50  | P2   | 等待麦克风启动时双击创建两份录音，停止及组件卸载只释放最后一份                         | [Voice W17，第六轮；同一 renderer document 存活期间](voice-round6.md) |
+| R51 | P2 | 成功安装后卸载，旧 installed 任务仍禁用市场重装，实际目录和注册已不存在 | [Agent Plugins W18，第七轮；同一 Main 生命周期](plugins-round7.md) |
+| R52 | P2 | 市场相对路径源更新校验失败前删除旧插件，旧注册指向不存在目录 | [Agent Plugins W19，第七轮；有效新源可重新安装恢复](plugins-round7.md) |
+| R53 | P2 | 从文件夹预览安装把临时快照记成更新源，快照已删，原文件夹仍在也无法更新 | [Agent Plugins W20，第七轮；旧安装内容保留](plugins-round7.md) |
+| R54 | P3 | Quick Chat 收到文件面板 PNG 的内部拖放数据后静默丢弃，不产生图片或路径引用 | [Quick Chat Q1，第八轮；系统图片拖入可用](quickchat-round8.md) |
 | R55 | P3 | 较早的磁盘会话打开迟到完成，覆盖后来已成功的全局搜索导航；重选可恢复 | [搜索与导航 W21](search-routing-round11.md)，第十一轮 |
 | R56 | P3 | 全文搜索仅扫描最近500个候选，漏掉更早匹配却返回完整的空结果 | [搜索 W22](search-routing-round11.md)，第十一轮 |
 | R57 | P2 | worker崩溃后恢复的后台下载被closeSession/killAll过滤，成功ACK后仍继续写盘 | [下载生命周期 C1](download-round11.md)，第十一轮；Core原生实证 |
@@ -350,3 +350,5 @@ R76实际Core async-answer enqueue产生续接turn，所有Core帧传给实际Ho
 第二十八轮[空白会话Files反证](blank-files-counterreview-round28.md)确认静态正常回退，新增发现/执行0：真实UI ID尚未落盘时panel workspace为null，但完整project独立传给Files，保留当前primary.id/path并走project API；不将中间unknown状态误报为不可读。正式86=1/52/33、通用86/251不变。[早期基线日志归档](baseline-evidence-round28.md)只保存706/6286已有raw收据，没有重跑或增加测试。
 
 第二十八轮[最终独立整合语义核验](quality-round28.md)通过，新增发现/执行0。blank正常回退、原字节归档分账、六组修复建议和当前86/251口径一致；10:35 origin/main仍a66f，两冻结产品快照与原工作区保持。
+
+第二十九轮[证据入口核对](evidence-navigation-round29.md)及[独立最终审计](quality-round29.md)为早期54项补齐可点击附录，全部86项均有有效证据入口；编号、分级、影响和标签范围不变。新增发现/产品或测试执行0，当前86=1/52/33、双common86/251保持。

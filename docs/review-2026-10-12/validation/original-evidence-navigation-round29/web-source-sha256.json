@@ -1,0 +1,51 @@
+{
+  "scope": "README formal R01–R54 Web / Voice / Agent Plugins evidence labels",
+  "method": "Existing files read as raw bytes; SHA-256 before decoding. Exact unique W-number appendix headings plus manually read section text. No tests, fixture or product execution. No repository writes.",
+  "basePath": "/Users/admin/.codex/worktrees/server-desktop-review-20261012/codeshell/docs/review-2026-10-12",
+  "mappingCount": 20,
+  "unresolvedCount": 0,
+  "sources": [
+    {
+      "file": "README.md",
+      "bytes": 71657,
+      "sha256": "71f08eb2d7b013b08e507c201f539446dbfde9baf683dd3d6657ae6a180dd99a",
+      "lineCount": 352
+    },
+    {
+      "file": "web-round1.md",
+      "bytes": 13895,
+      "sha256": "062fe7be52825010fefd6ea12a3e1167c6c5d2d50d14aa06932dc1f980b4107a",
+      "lineCount": 98
+    },
+    {
+      "file": "web-round2.md",
+      "bytes": 8318,
+      "sha256": "8b65c7d1e74d77bfbf4a6f5602917344b5aa12c2b805dc66ae95a201ace428de",
+      "lineCount": 57
+    },
+    {
+      "file": "web-round3.md",
+      "bytes": 15751,
+      "sha256": "c96980d8023f4d2556fead8c049a16903d9ebffccf8d496e46d0b6b9f72eaec0",
+      "lineCount": 74
+    },
+    {
+      "file": "web-round5.md",
+      "bytes": 9080,
+      "sha256": "c579cd8a99ca7a8f78c650eaa7e02d36a5d97861b5bb66d084148aa114dafd63",
+      "lineCount": 50
+    },
+    {
+      "file": "voice-round6.md",
+      "bytes": 7619,
+      "sha256": "94b7b9092aecaca35e1b8abf327bd9036fb2414a9b0a542eccc4a0b34fba95db",
+      "lineCount": 56
+    },
+    {
+      "file": "plugins-round7.md",
+      "bytes": 15439,
+      "sha256": "2d94322748f32d12ed7c55c48224000db209ec62a9fe90c927d85c9bb56d8970",
+      "lineCount": 100
+    }
+  ]
+}

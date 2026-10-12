@@ -9,7 +9,7 @@
 证据目录：`/tmp/codeshell-review-20261012`。
 持续调度：heartbeat `codeshell-10-12-11`，每小时整点与半点；截止后交付报告并停用。01:34 已将原 00:52 锚点改为整点/半点，覆盖 11:00 截止时刻。
 
-## 当前状态（新加坡 10:38）
+## 当前状态（新加坡 10:51）
 
 - 截止11:00前继续实质审查，不提前complete或停用heartbeat。07:30 get_goal仍返回blocked（主审未请求、实际工作无阻塞），工具不能设active；按用户授权继续，截止交付后才complete。
 - 初始产品84740d56与最新a66f4ef2分别冻结在本聊天两个独立工作区；只写本任务docs，不改产品、不build/clean、不触碰原工作区/其他任务。最新已冻结install、全workspace/Desktop build、typecheck:workspaces及变更文件测试通过。
@@ -188,3 +188,5 @@ R53优先级抽查已收束，保留P2的持续Update契约失效理由及审计
 10:38第二十八轮最终独立整合语义QC通过，新增finding/执行0，无实质矛盾。JSON层706份archive manifest对独立receipt逐file/path/bytes/hash/tests一致；846/219 span、blank静态正常链与R86非null区别、handoff六组可并行/非已修验收均核真。主审已独立打开709members逐字节验证，质量审不冒称再次执行该核。原件与/tmp→持久receipt链接分开保存。当前86=1/52/33、双common86/251保持；原工作区6034df8a clean、两个产品tracked diff均空。10:35origin仍a66f；11:00未到不complete/停用，准备保存docs-only检查点。
 
 10:41第28轮docs-only检查点0feef0cd已保存，当前工作区clean。已在/tmp/codeshell-review-deadline-finalize.py准备截止后状态脚本，内置SG>=2026-10-12 11:00断言，当前未执行；下一heartbeat先核clock，若已到截止，停止新增审查，执行最终状态/机械QC并交付README和repair-handoff，再complete目标、通过automation工具将codeshell-10-12-11改PAUSED。heartbeat仍ACTIVE整点半点，不能提前停用。当前没有未收束的审查候选、未清理的本轮实验或产品改动；不为增加数量重跑已过测试。
+
+10:51第二十九轮证据可读性核对完成，新增finding/产品import/fixture/test执行0。作者与独立审计逐54项核17实际文档heading/正文，Web20项另交叉核0冲突；主审只把R01–R54原完整标签加正确文件链接，前三cell编号/级别/影响字节不变，R55–R86原32links保持。R21唯一self为README.md:136，不杜撰root附录；R35D13、R42CredentialsC1、R36T3等易混编号均已查。当前86正式项都有有效入口，86=1/52/33、双common86/251不变。机械QC当时1779本地链接/1033行号/0error，独立补链后SHA3ceff228与mapping一致；后续只加footer/progress。R28检查点0feef0cd及截止准备c68980b0均保存，11:00未到不complete/停用；截止脚本路径仍/tmp/codeshell-review-deadline-finalize.py（有时间断言，未执行）。
