@@ -9,9 +9,14 @@ import { pathToFileURL } from "node:url";
 const config = JSON.parse(readFileSync(process.env.CODESHELL_DOCKER_CANDIDATE_CONFIG));
 const mode = process.argv[2];
 if (mode !== "preload") process.env.NODE_OPTIONS = `--import=${config.preload}`;
-const { loadCandidateStockWebSocket } = await import(
+const { loadCandidateStockWebSocket, pinCandidateStockWebSocket } = await import(
   new URL("./docker-candidate-stock-ws.mjs", pathToFileURL(config.preload))
 );
+if (config.hardlinkedSourceAnchor)
+  assert.throws(
+    () => pinCandidateStockWebSocket(config.hardlinkedSourceAnchor),
+    /Docker candidate refused/,
+  );
 let guard,
   loaderCalls = 0,
   nativeRequests = 0,

@@ -2,30 +2,34 @@ import { expect, test } from "bun:test";
 import { spawn } from "node:child_process";
 import { once } from "node:events";
 import {
-  chmodSync,
   copyFileSync,
   mkdirSync,
-  mkdtempSync,
+  linkSync,
+  lstatSync,
   readFileSync,
   realpathSync,
-  rmSync,
   writeFileSync,
 } from "node:fs";
 import { dirname, join, resolve } from "node:path";
-import { tmpdir } from "node:os";
 import { candidateHash } from "../scripts/docker-candidate-guard.mjs";
 import {
   pinCandidateStockWebSocket,
   loadCandidateStockWebSocket,
 } from "../scripts/docker-candidate-stock-ws.mjs";
 
+import { createTestStockWebSocketPackage } from "./fixtures/docker-candidate-stock-ws-package.mjs";
+
 const root = resolve(import.meta.dir, "..");
 const node = realpathSync(Bun.which("node")!);
-const pin = pinCandidateStockWebSocket(join(root, "packages/server/package.json"));
+const sourceAnchor = join(root, "packages/server/package.json");
 
-async function actual(mode: string, change: (config: any) => void = () => {}) {
-  const home = realpathSync(mkdtempSync(join(tmpdir(), "candidate-stock-ws-")));
-  chmodSync(home, 0o700);
+async function actual(
+  mode: string,
+  change: (config: any) => void = () => {},
+  anchor = sourceAnchor,
+) {
+  const ws = createTestStockWebSocketPackage(anchor);
+  const home = ws.root;
   const bundle = join(home, "bundle");
   mkdirSync(bundle, { mode: 0o700 });
   const names = [
@@ -56,7 +60,7 @@ async function actual(mode: string, change: (config: any) => void = () => {}) {
     listeners: [{ host: "127.0.0.1", port: 0 }],
     origins: [],
     children: [],
-    stockWebSocket: pin,
+    stockWebSocket: ws.pin,
     controller: {
       moduleHashes: hashes,
       helperImageId: `sha256:${"b".repeat(64)}`,
@@ -114,7 +118,7 @@ async function actual(mode: string, change: (config: any) => void = () => {}) {
       await once(child, "close");
       closed = true;
     }
-    if (!child || closed) rmSync(home, { recursive: true, force: true });
+    if (!child || closed) ws.dispose();
   }
 }
 
@@ -163,14 +167,20 @@ test("controller's actual preload and production ws ESM entry share the observed
   });
 });
 test("reviewed complete source pin rejects unknown patches, extra fields and changed digests", () => {
-  expect(pin.packageVersion).toBe("8.21.0");
-  for (const changed of [
-    { ...pin, packageVersion: "8.21.99" },
-    { ...pin, sourceHash: "a".repeat(64) },
-    { ...pin, constructor: () => {} },
-    { ...pin, packageVersion: "__proto__" },
-  ])
-    expect(() => loadCandidateStockWebSocket(changed)).toThrow("stock WebSocket source refused");
+  const ws = createTestStockWebSocketPackage(sourceAnchor);
+  const pin = ws.pin;
+  try {
+    expect(pin.packageVersion).toBe("8.21.0");
+    for (const changed of [
+      { ...pin, packageVersion: "8.21.99" },
+      { ...pin, sourceHash: "a".repeat(64) },
+      { ...pin, constructor: () => {} },
+      { ...pin, packageVersion: "__proto__" },
+    ])
+      expect(() => loadCandidateStockWebSocket(changed)).toThrow("stock WebSocket source refused");
+  } finally {
+    ws.dispose();
+  }
 });
 
 test("actual Node connector cuts reject revoke, reuse and target/hooks mutation before native TCP", async () => {
@@ -205,4 +215,35 @@ test("actual Node refuses cached fake constructor before first load without invo
     negativeProbes: 6,
     dnsNegativeProbes: 4,
   });
+});
+
+test("hardlinked cache source remains refused; private copy passes original pins and actual Node handshake", async () => {
+  const source = createTestStockWebSocketPackage(sourceAnchor);
+  try {
+    const manifest = join(source.pin.packageRoot, "package.json");
+    linkSync(manifest, join(source.root, "manifest-hardlink.json"));
+    expect(lstatSync(manifest).nlink).toBe(2);
+    expect(() => pinCandidateStockWebSocket(source.anchor)).toThrow("Docker candidate refused");
+    const value = await actual(
+      "manual",
+      (config) => {
+        config.hardlinkedSourceAnchor = source.anchor;
+        expect(config.stockWebSocket.sourceHash).toBe(source.pin.sourceHash);
+        expect(lstatSync(join(config.stockWebSocket.packageRoot, "package.json")).nlink).toBe(1);
+      },
+      source.anchor,
+    );
+    expect(value.stderr).toBe("");
+    expect(value.code).toBe(0);
+    expect(value.signal).toBeNull();
+    expect(JSON.parse(value.stdout.trim())).toMatchObject({
+      passed: true,
+      upgrades: 2,
+      customCalls: 0,
+      sockets: 0,
+      listenersClosed: true,
+    });
+  } finally {
+    source.dispose();
+  }
 });
