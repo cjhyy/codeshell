@@ -40,6 +40,12 @@ test("remote composition registers owner-scoped IPC without starting cloud or lo
       tunnel: { isRunning: () => false, isConnected: () => false } as any,
       binary: {} as any,
       passcode: { isSet: () => false } as any,
+      cloudWindows: {
+        open: async () => {
+          throw new Error("unexpected Cloud window");
+        },
+        close: async () => {},
+      },
     });
     expect(handlers.size).toBe(15);
     expect(handlers.has("cloudAccount:capabilities")).toBe(true);

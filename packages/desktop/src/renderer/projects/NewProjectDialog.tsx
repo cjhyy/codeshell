@@ -1,15 +1,14 @@
-import React, { useCallback, useEffect, useId, useRef, useState } from "react";
-import { ArrowLeft, Cloud, Loader2, Monitor } from "lucide-react";
+import React, { useCallback, useEffect, useRef, useState } from "react";
+import { Cloud, Loader2, Monitor } from "lucide-react";
 import {
   Dialog,
   DialogContent,
   DialogDescription,
-  DialogFooter,
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
+import { CloudProjectManager } from "./CloudProjectManager";
 import { useT } from "../i18n";
 
 const CLOUD_ADDRESS_KEY = "codeshell.cloud-workbench.v1";
@@ -46,10 +45,8 @@ export function NewProjectDialog({ open, onOpenChange, onCreateLocal }: Props) {
   const [error, setError] = useState<string | null>(null);
   const pendingRef = useRef(false);
   const composingRef = useRef(false);
-  const addressRef = useRef<HTMLInputElement>(null);
   const localRef = useRef<HTMLButtonElement>(null);
   const openerRef = useRef<HTMLElement | null>(null);
-  const addressId = useId();
 
   useEffect(() => {
     if (!open) return;
@@ -66,28 +63,23 @@ export function NewProjectDialog({ open, onOpenChange, onCreateLocal }: Props) {
   useEffect(() => {
     if (!open) return;
     const frame = window.requestAnimationFrame(() => {
-      if (location === "cloud") addressRef.current?.focus();
-      else localRef.current?.focus();
+      if (location === "choose") localRef.current?.focus();
     });
     return () => window.cancelAnimationFrame(frame);
   }, [open, location]);
 
-  const create = async (target: "local" | "cloud") => {
+  const cloudBusy = useCallback((next: boolean) => {
+    pendingRef.current = next;
+    setBusy(next);
+  }, []);
+
+  const create = async () => {
     if (pendingRef.current) return;
     pendingRef.current = true;
     setBusy(true);
     setError(null);
     try {
-      if (target === "local") {
-        await onCreateLocal();
-      } else {
-        const result = await window.codeshell.openCloudWorkbench(address.trim());
-        try {
-          window.localStorage.setItem(CLOUD_ADDRESS_KEY, result.address);
-        } catch {
-          // A bookmark is optional; opening the cloud project still succeeds.
-        }
-      }
+      await onCreateLocal();
       onOpenChange(false);
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : String(cause));
@@ -129,7 +121,7 @@ export function NewProjectDialog({ open, onOpenChange, onCreateLocal }: Props) {
               className="h-auto justify-start gap-3 whitespace-normal rounded-xl p-4 text-left"
               aria-label={t("sidebar.thisComputer")}
               disabled={busy}
-              onClick={() => void create("local")}
+              onClick={() => void create()}
             >
               {busy ? <Loader2 className="animate-spin" aria-hidden /> : <Monitor aria-hidden />}
               <span>
@@ -165,76 +157,22 @@ export function NewProjectDialog({ open, onOpenChange, onCreateLocal }: Props) {
             )}
           </div>
         ) : (
-          <form
-            className="grid gap-4"
-            onSubmit={(event) => {
-              event.preventDefault();
-              if (!composingRef.current && address.trim()) void create("cloud");
+          <CloudProjectManager
+            initialAddress={address}
+            onBusyChange={cloudBusy}
+            onBack={() => {
+              setError(null);
+              setLocation("choose");
             }}
-          >
-            <div className="grid gap-2">
-              <label htmlFor={addressId} className="text-sm font-medium">
-                {t("sidebar.cloudAddress")}
-              </label>
-              <Input
-                ref={addressRef}
-                id={addressId}
-                value={address}
-                inputMode="url"
-                placeholder="https://cloud.example.com"
-                autoCapitalize="none"
-                autoCorrect="off"
-                spellCheck={false}
-                disabled={busy}
-                onChange={(event) => {
-                  setAddress(event.target.value);
-                  setError(null);
-                }}
-                onCompositionStart={() => {
-                  composingRef.current = true;
-                }}
-                onCompositionEnd={() => {
-                  composingRef.current = false;
-                }}
-                onKeyDown={(event) => {
-                  if (
-                    event.key === "Enter" &&
-                    (composingRef.current || event.nativeEvent.isComposing || event.keyCode === 229)
-                  )
-                    event.preventDefault();
-                }}
-                aria-invalid={error ? true : undefined}
-                aria-describedby={error ? `${addressId}-error` : undefined}
-              />
-              {error && (
-                <p
-                  id={`${addressId}-error`}
-                  role="alert"
-                  className="break-words text-sm text-destructive"
-                >
-                  {error}
-                </p>
-              )}
-            </div>
-            <DialogFooter className="gap-2 sm:justify-between sm:space-x-0">
-              <Button
-                type="button"
-                variant="ghost"
-                disabled={busy}
-                onClick={() => {
-                  setError(null);
-                  setLocation("choose");
-                }}
-              >
-                <ArrowLeft aria-hidden />
-                {t("sidebar.projectBack")}
-              </Button>
-              <Button type="submit" disabled={busy || !address.trim()}>
-                {busy && <Loader2 className="animate-spin" aria-hidden />}
-                {t("sidebar.openCloud")}
-              </Button>
-            </DialogFooter>
-          </form>
+            onOpened={(origin) => {
+              try {
+                window.localStorage.setItem(CLOUD_ADDRESS_KEY, `${origin}/`);
+              } catch {
+                /* Optional bookmark. */
+              }
+              onOpenChange(false);
+            }}
+          />
         )}
       </DialogContent>
     </Dialog>

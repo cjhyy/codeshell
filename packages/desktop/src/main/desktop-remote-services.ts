@@ -13,6 +13,7 @@ import { MobileRemoteController } from "./mobile-remote-controller.js";
 import { registerCloudAccountIpc } from "./cloud-account-ipc.js";
 import { registerDeviceRelayIpc } from "./device-relay-ipc.js";
 import type { PrepareAccountGitHubLink } from "./account-github-link.js";
+import { CloudManagementManager, type ManagedCloudWindows } from "./cloud-management-manager.js";
 
 /** Compose optional cloud identity and its remote-access lifecycle without starting either. */
 export function createDesktopRemoteServices(options: {
@@ -30,6 +31,7 @@ export function createDesktopRemoteServices(options: {
   tunnel: TunnelManager;
   binary: CloudflaredBinary;
   passcode: AccessPasscode;
+  cloudWindows: ManagedCloudWindows;
 }) {
   const cipher: RelaySecretCipher = {
     available: () =>
@@ -46,11 +48,22 @@ export function createDesktopRemoteServices(options: {
     ),
     openExternal: options.openExternal,
     prepareGitHubLink: options.prepareGitHubLink,
-    retireRelay: (identity) => mobileRemoteController.retireAccountRelay(identity),
+    retireRelay: async (identity) => {
+      const results = await Promise.allSettled([
+        mobileRemoteController.retireAccountRelay(identity),
+        cloudManagementManager.retireAccount(identity),
+      ]);
+      const failed = results.find((result) => result.status === "rejected");
+      if (failed?.status === "rejected") throw failed.reason;
+    },
     changed: (status) => {
       for (const window of options.windows())
         if (!window.isDestroyed()) window.webContents.send("cloudAccount:statusChanged", status);
     },
+  });
+  const cloudManagementManager = new CloudManagementManager({
+    account: cloudAccountManager,
+    windows: options.cloudWindows,
   });
   const mobileRemoteController = new MobileRemoteController({
     account: cloudAccountManager,
@@ -77,5 +90,5 @@ export function createDesktopRemoteServices(options: {
     controller: mobileRemoteController,
     isMainWindow,
   });
-  return { cloudAccountManager, mobileRemoteController };
+  return { cloudAccountManager, mobileRemoteController, cloudManagementManager };
 }
