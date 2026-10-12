@@ -57,3 +57,5 @@ export {
 
 export { isEnvironmentDescriptor, projectReferenceKey } from "./lib/environment.js";
 export type { EnvironmentDescriptor, ProjectReference } from "./lib/environment.js";
+
+export * from "./lib/roomHistory.js";

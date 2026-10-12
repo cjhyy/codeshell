@@ -109,6 +109,22 @@ export async function handleRoomEvent(
       ctx.remote.broadcast({ type: "room.closed", roomId: event.roomId });
       return;
     }
+    if (event.type === "room.history" && event.page) {
+      const { messages, ...page } = ctx.roomManager.getHistoryPage(event.roomId, {
+        sinceSeq: event.sinceSeq,
+        cursor: event.cursor,
+        limit: event.limit,
+      });
+      reply({
+        type: "room.history.ok",
+        roomId: event.roomId,
+        messages,
+        latestSeq: page.throughSeq,
+        page,
+        requestId: event.requestId,
+      });
+      return;
+    }
     if (event.type === "room.history") {
       const messages = ctx.roomManager.getMessages(event.roomId, event.sinceSeq ?? 0);
       const latestSeq = messages.length
@@ -183,6 +199,7 @@ export async function handleRoomEvent(
   } catch (err) {
     reply({
       type: "room.error",
+      ...("roomId" in event ? { roomId: event.roomId } : {}),
       message: err instanceof Error ? err.message : String(err),
       ...("clientMessageId" in event && typeof event.clientMessageId === "string"
         ? { clientMessageId: event.clientMessageId }

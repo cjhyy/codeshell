@@ -1795,6 +1795,10 @@ contextBridge.exposeInMainWorld("codeshell", {
       ipcRenderer.invoke("ccRoom:respondApproval", roomId, requestId, decision),
     roomHistory: (roomId: string, sinceSeq?: number) =>
       ipcRenderer.invoke("ccRoom:roomHistory", roomId, sinceSeq),
+    roomHistoryPage: (
+      roomId: string,
+      request: { sinceSeq?: number; cursor?: string; limit?: number },
+    ) => ipcRenderer.invoke("ccRoom:roomHistoryPage", roomId, request),
     readHistory: (cwd: string, sessionId: string, limit: number) =>
       ipcRenderer.invoke("ccRoom:readHistory", cwd, sessionId, limit),
     readCodexHistory: (cwd: string, threadId: string, limit: number) =>

@@ -142,7 +142,16 @@ export function parseMobileClientEvent(value: unknown): MobileClientEvent | unde
       break;
     case "room.history":
       valid =
-        boundedString(event.roomId, MAX_ID_LENGTH) && optionalNonNegativeInteger(event.sinceSeq);
+        boundedString(event.roomId, MAX_ID_LENGTH) &&
+        optionalNonNegativeInteger(event.sinceSeq) &&
+        (event.page === undefined || typeof event.page === "boolean") &&
+        optionalBoundedString(event.cursor, 2048) &&
+        optionalBoundedString(event.requestId, MAX_ID_LENGTH) &&
+        (event.limit === undefined ||
+          (Number.isSafeInteger(event.limit) &&
+            (event.limit as number) >= 1 &&
+            (event.limit as number) <= 500)) &&
+        (event.cursor === undefined || (event.page === true && event.sinceSeq === undefined));
       break;
     case "ccRoom.probe":
       valid =

@@ -5759,6 +5759,11 @@ ipcMain.handle(
 ipcMain.handle("ccRoom:roomHistory", async (_e, roomId: string, sinceSeq?: number) =>
   roomManager.getMessages(roomId, sinceSeq ?? 0),
 );
+ipcMain.handle(
+  "ccRoom:roomHistoryPage",
+  async (_e, roomId: string, request: { sinceSeq?: number; cursor?: string; limit?: number }) =>
+    roomManager.getHistoryPage(roomId, request),
+);
 ipcMain.handle("ccRoom:readHistory", async (_e, cwd: string, sessionId: string, limit: number) => {
   cwd = await requireRendererProjectPath(cwd);
   if (!Number.isSafeInteger(limit) || limit < 1 || limit > 500) throw new Error("invalid limit");

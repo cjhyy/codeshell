@@ -16,6 +16,7 @@ import { Markdown } from "@/Markdown";
 import { useT } from "../i18n/I18nProvider";
 import { useToast } from "../ui/ToastProvider";
 import {
+  collectRoomHistory,
   reduceStream,
   initialChatState,
   type ChatItem,
@@ -188,10 +189,49 @@ export function CCConversationView({
     const pending = new Map<number, RoomMessageWire>();
 
     const applyLive = (messages: RoomMessageWire[]) => {
-      for (const msg of messages.slice().sort((a, b) => a.seq - b.seq)) {
-        if (!Number.isFinite(msg.seq) || msg.seq <= seenSeq) continue;
+      for (const msg of messages) pending.set(msg.seq, msg);
+      for (const msg of [...pending.values()].sort((a, b) => a.seq - b.seq)) {
+        if (!Number.isSafeInteger(msg.seq) || msg.seq <= seenSeq) {
+          pending.delete(msg.seq);
+          continue;
+        }
+        if (msg.seq !== seenSeq + 1) {
+          setHistoryError(
+            "Room history has a sequence gap; retry to recover the missing messages.",
+          );
+          ready = false;
+          pending.set(msg.seq, msg);
+          return;
+        }
+        pending.delete(msg.seq);
         seenSeq = msg.seq;
         dispatch({ kind: "raw", raw: roomMsgToEvent(msg) });
+      }
+    };
+
+    const readCatchup = async (sinceSeq: number): Promise<RoomMessageWire[]> => {
+      if (!window.codeshell.ccRoom.roomHistoryPage)
+        throw new Error("This Host does not support complete room history");
+      return (await collectRoomHistory(
+        (request) => window.codeshell.ccRoom.roomHistoryPage(roomId, request),
+        sinceSeq,
+      )) as RoomMessageWire[];
+    };
+
+    let recovering = false;
+    const recover = async () => {
+      if (recovering || cancelled) return;
+      recovering = true;
+      try {
+        const messages = await readCatchup(seenSeq);
+        if (cancelled) return;
+        applyLive(messages);
+        ready = pending.size === 0;
+        if (ready) setHistoryError(null);
+      } catch (error) {
+        if (!cancelled) setHistoryError(String(error));
+      } finally {
+        recovering = false;
       }
     };
 
@@ -203,6 +243,7 @@ export function CCConversationView({
         return;
       }
       applyLive([message]);
+      if (!ready) void recover();
     });
     // The backlog comes from EXACTLY ONE source, never both (the room's
     // messages.jsonl and the CC disk transcript overlap, so replaying both
@@ -226,50 +267,32 @@ export function CCConversationView({
         if (cancelled) return;
         dispatch({ kind: "replayHistory", messages: snapshot.messages as HistoryMessage[] });
         seenSeq = snapshot.roomCursor;
-        const catchup = (await window.codeshell.ccRoom.roomHistory(
-          roomId,
-          snapshot.roomCursor,
-        )) as RoomMessageWire[];
+        const catchup = await readCatchup(snapshot.roomCursor);
         if (cancelled) return;
         const merged = new Map<number, RoomMessageWire>();
         for (const msg of [...catchup, ...pending.values()]) merged.set(msg.seq, msg);
         applyLive([...merged.values()]);
-        pending.clear();
-        ready = true;
+        ready = pending.size === 0;
+        if (!ready) void recover();
       } else {
-        const live = (await window.codeshell.ccRoom.roomHistory(roomId)) as RoomMessageWire[];
+        const live = await readCatchup(0);
         if (cancelled) return;
         dispatch({ kind: "replayLive", messages: live });
         seenSeq = live.at(-1)?.seq ?? 0;
         applyLive([...pending.values()]);
-        pending.clear();
-        ready = true;
+        ready = pending.size === 0;
+        if (!ready) void recover();
       }
     };
-    void boot().catch(async (initialError) => {
-      // Preserve the pre-existing snapshot experience if the live subscription
-      // cannot be established (missing/rotated transcript, transient IPC error).
+    void boot().catch((error) => {
       if (cancelled) return;
-      try {
-        if (!sessionId || !cwd) throw initialError;
-        const fallback =
-          cliKind === "codex"
-            ? await window.codeshell.ccRoom.readCodexHistory(cwd, sessionId, 50)
-            : await window.codeshell.ccRoom.readHistory(cwd, sessionId, 50);
-        if (cancelled) return;
-        dispatch({ kind: "replayHistory", messages: fallback.messages });
-      } catch (error) {
-        if (cancelled) return;
-        setHistoryError(
-          feedbackRef.current.t("panels.room.historyFailed", {
-            error: error instanceof Error ? error.message : String(error),
-          }),
-        );
-      }
-      if (cancelled) return;
-      ready = true;
-      applyLive([...pending.values()]);
-      pending.clear();
+      setHistoryError(
+        feedbackRef.current.t("panels.room.historyFailed", {
+          error: error instanceof Error ? error.message : String(error),
+        }),
+      );
+      // Preserve the failed boundary. A partial transcript or tail window must
+      // not replace the missing range and make the conversation look current.
     });
     return () => {
       cancelled = true;

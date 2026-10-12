@@ -1244,6 +1244,9 @@ describe("useRemoteApp cc transcript streaming", () => {
       type: "room.history",
       roomId: "room-1",
       sinceSeq: 5,
+      page: true,
+      requestId: "room-history:1",
+      limit: 200,
     });
 
     await act(async () => {
@@ -1252,6 +1255,8 @@ describe("useRemoteApp cc transcript streaming", () => {
         roomId: "room-1",
         messages: [{ seq: 6, from: "agent", type: "text", text: "streamed on phone" }],
         latestSeq: 6,
+        requestId: "room-history:1",
+        page: { snapshotId: "snapshot", throughSeq: 6, complete: true },
       });
       await flushMicrotasks();
     });

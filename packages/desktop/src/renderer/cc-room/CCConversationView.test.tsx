@@ -57,6 +57,12 @@ describe("CCConversationView transcript ownership", () => {
           lifecycle.push(`unsubscribe:${roomId}`);
         },
         roomHistory: async () => [],
+        roomHistoryPage: async (_roomId: string, request: { sinceSeq?: number }) => ({
+          snapshotId: "snapshot",
+          throughSeq: request.sinceSeq ?? 0,
+          messages: [],
+          complete: true,
+        }),
         readHistory: async () => ({ messages: [] }),
         readCodexHistory: async () => ({ messages: [] }),
         send: async () => undefined,
@@ -122,6 +128,12 @@ describe("CCConversationView transcript ownership", () => {
         subscribeTranscript: async () => ({ messages: [], roomCursor: 0 }),
         unsubscribeTranscript: async () => undefined,
         roomHistory: async () => [],
+        roomHistoryPage: async (_roomId: string, request: { sinceSeq?: number }) => ({
+          snapshotId: "snapshot",
+          throughSeq: request.sinceSeq ?? 0,
+          messages: [],
+          complete: true,
+        }),
         readHistory: async () => ({ messages: [] }),
         readCodexHistory: async () => ({ messages: [] }),
         send: async () => {
@@ -172,6 +184,12 @@ describe("CCConversationView transcript ownership", () => {
         subscribeTranscript: async () => ({ messages: [], roomCursor: 0 }),
         unsubscribeTranscript: async () => undefined,
         roomHistory: async () => [],
+        roomHistoryPage: async (_roomId: string, request: { sinceSeq?: number }) => ({
+          snapshotId: "snapshot",
+          throughSeq: request.sinceSeq ?? 0,
+          messages: [],
+          complete: true,
+        }),
         readHistory: async () => ({ messages: [] }),
         readCodexHistory: async () => ({ messages: [] }),
         send: async () => {
@@ -231,6 +249,12 @@ describe("CCConversationView transcript ownership", () => {
         subscribeTranscript: async () => ({ messages: [], roomCursor: 0 }),
         unsubscribeTranscript: async () => undefined,
         roomHistory: async () => [],
+        roomHistoryPage: async (_roomId: string, request: { sinceSeq?: number }) => ({
+          snapshotId: "snapshot",
+          throughSeq: request.sinceSeq ?? 0,
+          messages: [],
+          complete: true,
+        }),
         readHistory: async () => ({ messages: [] }),
         readCodexHistory: async () => ({ messages: [] }),
         send: async (_roomId: string, text: string) => {
@@ -320,6 +344,12 @@ describe("CCConversationView existing external subtask records", () => {
         subscribeTranscript: async () => ({ messages, roomCursor: 0 }),
         unsubscribeTranscript: async () => undefined,
         roomHistory: async () => [],
+        roomHistoryPage: async (_roomId: string, request: { sinceSeq?: number }) => ({
+          snapshotId: "snapshot",
+          throughSeq: request.sinceSeq ?? 0,
+          messages: [],
+          complete: true,
+        }),
         send: async () => undefined,
         respondApproval: async () => undefined,
       },
@@ -439,6 +469,12 @@ describe("CCConversationView asynchronous recovery", () => {
           subscribeTranscript: async () => ({ messages: [], roomCursor: 0 }),
           unsubscribeTranscript: async () => undefined,
           roomHistory: async () => [],
+          roomHistoryPage: async (_roomId: string, request: { sinceSeq?: number }) => ({
+            snapshotId: "snapshot",
+            throughSeq: request.sinceSeq ?? 0,
+            messages: [],
+            complete: true,
+          }),
           readHistory: async () => ({ messages: [] }),
           readCodexHistory: async () => ({ messages: [] }),
           send: async () => true,
@@ -487,7 +523,12 @@ describe("CCConversationView asynchronous recovery", () => {
 
   test("re-entering a plain room replaces its full history instead of duplicating messages", async () => {
     installRoomApi({
-      roomHistory: async () => [{ seq: 1, from: "user", type: "text", text: "unique-backlog" }],
+      roomHistoryPage: async () => ({
+        snapshotId: "snapshot",
+        throughSeq: 1,
+        messages: [{ seq: 1, from: "user", type: "text", text: "unique-backlog" }],
+        complete: true,
+      }),
     });
     const container = await mount({ sessionId: "" });
     await render({ sessionId: "", active: false });
@@ -495,7 +536,7 @@ describe("CCConversationView asynchronous recovery", () => {
     expect(renderedText(container).match(/unique-backlog/g)).toHaveLength(1);
   });
 
-  test("a failed subscription and fallback expose retry while keeping live messages usable", async () => {
+  test("a failed subscription exposes retry without advancing live messages over the failed boundary", async () => {
     let recovered = false;
     const receive = installRoomApi({
       subscribeTranscript: async () => {
@@ -510,7 +551,7 @@ describe("CCConversationView asynchronous recovery", () => {
       },
     });
     const container = await mount();
-    expect(renderedText(container)).toContain("disk unavailable");
+    expect(renderedText(container)).toContain("subscription unavailable");
     await act(async () => {
       receive.message({
         roomId: "room",
@@ -518,7 +559,7 @@ describe("CCConversationView asynchronous recovery", () => {
       });
       await flushMicrotasks();
     });
-    expect(renderedText(container)).toContain("live-message");
+    expect(renderedText(container)).not.toContain("live-message");
     recovered = true;
     const retry = elements(container, "BUTTON").find((node) => renderedText(node) === "重新读取");
     expect(retry).toBeDefined();
