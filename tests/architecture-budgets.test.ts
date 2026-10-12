@@ -104,10 +104,12 @@ describe("architecture growth budgets", () => {
     // The reviewed additions are five Link challenge operations, four Lab
     // operations and one usage-history query. Count every registration, including
     // the extracted modules, with no allowance for future routes.
-    // Optional accounts add seven reviewed main-frame-owned operations: status,
-    // login, register, github, linkGitHub, cancelSignIn and logout. Their results
+    // Optional accounts add eight reviewed main-frame-owned operations: status,
+    // capabilities, login, register, github, linkGitHub, cancelSignIn and logout. Their results
     // expose only public account state; access/refresh tokens remain in Main.
-    // Include the extracted registrar and raise only this contract baseline by seven.
+    // Include the extracted registrar and raise only this contract baseline by eight.
+    // Capabilities is the v0.9.34 anonymous, origin-bounded service discovery route;
+    // it exposes only registration/GitHub availability, never account credentials.
     // Count all five explicit collection operations in the extracted registrar.
     expect(
       matches("packages/desktop/src/main/index.ts", /ipcMain\.handle\(/g) +
@@ -138,7 +140,7 @@ describe("architecture growth budgets", () => {
       // +2 metadata-only Profile preview and revision-checked adoption routes.
       // +3 preview/cancel/reviewed-save operations, without installation authority.
       // +2 project-memory copy preview/commit operations, bound to a main-frame review.
-    ).toBeLessThanOrEqual(344);
+    ).toBeLessThanOrEqual(345);
     // v0.8.17 added the reviewed Panel catalog/task bridge to both preload
     // surfaces. Mimi's bounded transcript pagination adds one typed invoke;
     // the validation and file-reading implementation remain extracted in main.
@@ -164,9 +166,9 @@ describe("architecture growth budgets", () => {
     // Include all nine extracted Lab invokes and the five generic Link
     // challenge invokes plus usage history. Main-only routes remain counted
     // above even when no renderer adapter exists; do not equate the totals.
-    // Count the same seven reviewed optional-account invokes: status, login,
-    // register, github, linkGitHub, cancelSignIn and logout. No token-read API
-    // exists; this increases the invoke contract by exactly seven, not line budgets.
+    // Count the same eight reviewed optional-account invokes: status, capabilities,
+    // login, register, github, linkGitHub, cancelSignIn and logout. No token-read API
+    // exists; this increases the invoke contract by exactly eight, not line budgets.
     expect(
       matches("packages/desktop/src/preload/device-relay-api.ts", /ipcRenderer\.invoke\(/g) +
         matches("packages/desktop/src/preload/cloud-account-api.ts", /ipcRenderer\.invoke\(/g) +
@@ -184,7 +186,7 @@ describe("architecture growth budgets", () => {
         matches("packages/desktop/src/preload/operation-resolution-api.ts", /ipc\.invoke\(/g),
       // Five reviewed collection invokes. Native file paths never arrive as renderer arguments.
       // +2 memory-copy invokes; commit carries only the reviewed token and project.
-    ).toBeLessThanOrEqual(337);
+    ).toBeLessThanOrEqual(338);
     // GitHub skill previews and Panel task hosting carry main-issued review and
     // ownership fields across the typed preload boundary. The optional Mimi
     // transcript-page method adds its bounded response shape without widening
