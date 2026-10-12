@@ -154,7 +154,7 @@ describe("RoomManager", () => {
     expect(readdirSync(join(dir!, room.id)).some((name) => name.endsWith(".tmp"))).toBe(false);
   });
 
-  test("a post-crash append survives a torn JSONL tail", () => {
+  test("a torn JSONL tail blocks an active writer instead of concealing corruption", () => {
     const { mgr } = makeManager();
     const room = mgr.createRoom({ cwd: "/repo" });
     appendFileSync(join(dir!, room.id, "messages.jsonl"), '{"seq":999');
@@ -165,9 +165,10 @@ describe("RoomManager", () => {
         append: (id: string, message: Omit<RoomMessage, "seq" | "ts">) => RoomMessage;
       }
     ).append.bind(mgr);
-    append(room.id, { from: "system", type: "recovered", text: "survives" });
-
-    expect(mgr.getMessages(room.id).at(-1)).toMatchObject({ type: "recovered", text: "survives" });
+    expect(() => append(room.id, { from: "system", type: "recovered", text: "survives" })).toThrow(
+      "changed outside",
+    );
+    expect(() => mgr.getHistoryPage(room.id)).toThrow();
   });
 
   test("send persists user msg + agent reply with monotonic seq", () => {
