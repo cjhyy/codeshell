@@ -17,6 +17,11 @@ import {
 import { join, resolve } from "node:path";
 import { acquireProjectControllerLock, type ProjectControllerLock } from "./lock.js";
 import type { ProjectRuntimeRecord } from "./types.js";
+import {
+  CLOUD_ADOPTION_PENDING,
+  isCloudAccountBinding,
+  type CloudAccountBinding,
+} from "./account-binding.js";
 
 export type ProjectStatus = "stopped" | "starting" | "running" | "stopping" | "error";
 export interface StoredProject extends ProjectRuntimeRecord {
@@ -36,10 +41,11 @@ export interface ProjectView {
   error?: string;
 }
 interface RegistryData {
-  version: 1;
+  version: 1 | 2;
   installationId: string;
   owners: Array<{ id: string; username: string }>;
   projects: StoredProject[];
+  accountBinding?: CloudAccountBinding;
 }
 const UUID = /^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$/;
 const TOKEN = /^[A-Za-z0-9_-]{43}$/;
@@ -100,11 +106,16 @@ export class ProjectRegistry {
   private readonly controllerLock: ProjectControllerLock;
   private diskDigest: string | undefined;
   private markerEstablished = false;
+  private storageFailed = false;
 
   constructor(
     dataDir: string,
     private readonly now = Date.now,
-    private readonly io: { rename?: typeof renameSync } = {},
+    private readonly io: {
+      rename?: typeof renameSync;
+      fsync?: typeof fsyncSync;
+      offlineAccountAdoption?: boolean;
+    } = {},
   ) {
     this.directory = resolve(dataDir, "project-control");
     const existed = existsSync(this.directory);
@@ -117,6 +128,16 @@ export class ProjectRegistry {
     this.marker = join(this.directory, "initialized");
     this.controllerLock = acquireProjectControllerLock(this.directory);
     try {
+      if (!this.io.offlineAccountAdoption) {
+        try {
+          lstatSync(join(this.directory, CLOUD_ADOPTION_PENDING));
+          throw new Error(
+            "Cloud account adoption is incomplete; retry its explicit offline transaction.",
+          );
+        } catch (error) {
+          if ((error as NodeJS.ErrnoException).code !== "ENOENT") throw error;
+        }
+      }
       if (existsSync(this.marker)) {
         if (privateFileBytes(this.marker, 16).toString() !== "1\n")
           throw new Error("Project initialization marker is corrupt.");
@@ -156,6 +177,7 @@ export class ProjectRegistry {
       throw new Error("Stop all projects before restoring an installation.");
     const next = structuredClone(this.data);
     next.installationId = randomUUID();
+    if (next.accountBinding) next.accountBinding.managementEpoch = randomUUID();
     for (const project of next.projects) {
       if (project.generation > 0) project.generation += 1;
       project.updatedAt = Math.max(project.updatedAt, this.now());
@@ -170,10 +192,36 @@ export class ProjectRegistry {
     return this.data.installationId;
   }
 
+  get accountBinding(): CloudAccountBinding | undefined {
+    this.assertStorage();
+    return this.data.accountBinding && { ...this.data.accountBinding };
+  }
+
+  /** Offline migration only; the caller must durably preserve source evidence first. */
+  bindAccount(binding: CloudAccountBinding): void {
+    this.assertStorage();
+    if (
+      this.data.version !== 1 ||
+      this.data.accountBinding !== undefined ||
+      !isCloudAccountBinding(binding) ||
+      this.data.owners.length !== 1 ||
+      this.data.owners[0]!.id !== binding.ownerId ||
+      this.data.projects.some((project) => project.status !== "stopped")
+    )
+      throw new Error("Cloud adoption requires one explicit legacy owner and stopped projects.");
+    const next = structuredClone(this.data);
+    // The real historical registry rejects version 2. Unknown metadata alone
+    // cannot prevent an old controller from continuing its username authority.
+    next.version = 2;
+    next.accountBinding = { ...binding };
+    this.write(next);
+    this.data = next;
+  }
+
   private validate(data = this.data): void {
     if (
       !data ||
-      data.version !== 1 ||
+      (data.version !== 1 && data.version !== 2) ||
       !UUID.test(data.installationId) ||
       !Array.isArray(data.owners) ||
       !Array.isArray(data.projects) ||
@@ -181,6 +229,14 @@ export class ProjectRegistry {
       data.projects.length > 128
     )
       throw new Error("Project registry is corrupt; restore its backup");
+    if (
+      (data.version === 1 && data.accountBinding !== undefined) ||
+      (data.version === 2 &&
+        (!isCloudAccountBinding(data.accountBinding) ||
+          data.owners.length !== 1 ||
+          data.owners[0]?.id !== data.accountBinding.ownerId))
+    )
+      throw new Error("Cloud account ownership is missing or corrupt; restore its backup.");
     const owners = new Set<string>();
     const names = new Set<string>();
     for (const owner of data.owners) {
@@ -229,6 +285,10 @@ export class ProjectRegistry {
   }
 
   private assertStorage(): void {
+    if (this.storageFailed)
+      throw new Error(
+        "Project registry durability failed; restart and diagnose before continuing.",
+      );
     this.controllerLock.assertHeld();
     if (this.markerEstablished && privateFileBytes(this.marker, 16).toString() !== "1\n")
       throw new Error("Project initialization marker changed.");
@@ -245,6 +305,7 @@ export class ProjectRegistry {
     if (bytes.length > MAX_STORE_BYTES) throw new Error("Project registry is too large.");
     const file = join(this.directory, `.registry-${randomUUID()}.tmp`);
     let fd: number | undefined;
+    let committed = false;
     try {
       fd = openSync(
         file,
@@ -252,12 +313,22 @@ export class ProjectRegistry {
         0o600,
       );
       writeFileSync(fd, bytes);
-      fsyncSync(fd);
+      (this.io.fsync ?? fsyncSync)(fd);
       closeSync(fd);
       fd = undefined;
       this.assertStorage();
       (this.io.rename ?? renameSync)(file, this.file);
+      committed = true;
       this.diskDigest = digest(bytes);
+      const directory = openSync(this.directory, constants.O_RDONLY);
+      try {
+        (this.io.fsync ?? fsyncSync)(directory);
+      } finally {
+        closeSync(directory);
+      }
+    } catch (error) {
+      if (committed) this.storageFailed = true;
+      throw error;
     } finally {
       if (fd !== undefined) closeSync(fd);
       rmSync(file, { force: true });
@@ -271,12 +342,14 @@ export class ProjectRegistry {
 
   list(username: string): ProjectView[] {
     this.assertStorage();
+    this.requireLegacy();
     const owner = this.data.owners.find((item) => item.username === username);
     return this.data.projects.filter((item) => item.ownerId === owner?.id).map(projectView);
   }
 
   get(username: string, id: string): StoredProject {
     this.assertStorage();
+    this.requireLegacy();
     const owner = this.data.owners.find((item) => item.username === username);
     const project = this.data.projects.find((item) => item.id === id && item.ownerId === owner?.id);
     if (!project) throw new ProjectRegistryError(404, "找不到这个项目。");
@@ -285,6 +358,40 @@ export class ProjectRegistry {
 
   create(username: string, name: unknown): StoredProject {
     this.assertStorage();
+    this.requireLegacy();
+    return this.createForOwner(username, name);
+  }
+
+  listAccount(ownerId: string): ProjectView[] {
+    this.requireAccountOwner(ownerId);
+    return this.data.projects.filter((item) => item.ownerId === ownerId).map(projectView);
+  }
+
+  getAccount(ownerId: string, id: string): StoredProject {
+    this.requireAccountOwner(ownerId);
+    const project = this.data.projects.find((item) => item.id === id && item.ownerId === ownerId);
+    if (!project) throw new ProjectRegistryError(404, "找不到这个项目。");
+    return { ...project };
+  }
+
+  createAccount(ownerId: string, name: unknown): StoredProject {
+    this.requireAccountOwner(ownerId);
+    // This username is internal legacy metadata, never the Account display name.
+    return this.createForOwner(this.data.owners[0]!.username, name);
+  }
+
+  private requireLegacy(): void {
+    if (this.data.version !== 1)
+      throw new ProjectRegistryError(403, "此 Cloud 已采用明确的账号归属，请通过云账号管理。");
+  }
+
+  private requireAccountOwner(ownerId: string): void {
+    this.assertStorage();
+    if (this.data.version !== 2 || this.data.accountBinding?.ownerId !== ownerId)
+      throw new ProjectRegistryError(403, "此账号没有 Cloud 管理权限。");
+  }
+
+  private createForOwner(username: string, name: unknown): StoredProject {
     if (
       typeof name !== "string" ||
       !name.trim() ||

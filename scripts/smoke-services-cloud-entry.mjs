@@ -239,6 +239,10 @@ try {
     }
   }
   await run(process.execPath, ["scripts/check-cloud-runtime.mjs"], installed);
+  // New Account-owned candidates need the ticket-v2 controller and its actual
+  // management + offline adoption consumers. The legacy gate alone also accepts
+  // older published runtimes and must not qualify this delivery.
+  await run(process.execPath, ["scripts/run-cloud-account-consumer.mjs"], installed);
   if (panelsArg) {
     panelInventory = JSON.parse(
       await run(
@@ -484,7 +488,7 @@ try {
     console.log(`Verified private candidate saved: ${resolve(outputArg)}`);
   }
   console.log(
-    `✓ Independent services installation: ${inventory.length} real tarballs, relocated npm ci, release capability gate, complete service tests and browser OAuth${imageId ? ", packaged runtime image and two real project containers" : ""}.`,
+    `✓ Independent services installation: ${inventory.length} real tarballs, relocated npm ci, legacy and Account-v2 capability gates, actual ticket management and native adoption CLI consumers, complete service tests and browser OAuth${imageId ? ", packaged runtime image and two real project containers" : ""}.`,
   );
   console.log(
     JSON.stringify({ candidateOnly: true, packages: inventory, runtimeImage: imageId ?? null }),

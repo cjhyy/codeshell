@@ -1,4 +1,5 @@
 import { createHash, randomBytes } from "node:crypto";
+import { cloudManagementTicket, cloudOrigin, cloudId } from "./cloud-management-contract.js";
 import { isRelayOrigin, isRelayToken } from "@cjhyy/code-shell-server/remote-relay";
 import type {
   CloudAccountCapabilities,
@@ -274,8 +275,18 @@ export class CloudAccountManager {
           return false;
         token = refreshed.accessToken;
       }
-      await this.request({ origin: saved.origin, path: "/api/v1/account/logout", token, body: {} });
-      return true;
+      const value = await this.request({
+        origin: saved.origin,
+        path: "/api/v1/account/logout",
+        token,
+        body: {},
+      });
+      return (
+        !!value &&
+        typeof value === "object" &&
+        !Array.isArray(value) &&
+        (value as { ok?: unknown }).ok === true
+      );
     } catch {
       return false;
     }
@@ -670,6 +681,55 @@ export class CloudAccountManager {
     if (this.state === "storage-error") throw new Error("无法移除账号登记，请检查文件权限后重试。");
     if (!confirmed)
       throw new Error("本机已退出；服务端未确认撤销，请联网后在账号会话管理中撤销此设备。");
+  }
+  /** Main-only root authority lease; refresh preserves it, logout/relogin invalidates it. */
+  captureRootAccount(origin: string, accountId: string, authorized: () => boolean) {
+    requireOrigin(origin);
+    this.load();
+    const saved = this.saved;
+    const generation = this.generation;
+    const signal = this.operation.signal;
+    const current = () => {
+      this.current(generation, authorized);
+      const actual = this.saved;
+      if (
+        !saved ||
+        !actual ||
+        this.state !== "signed-in" ||
+        actual.sessionId !== saved.sessionId ||
+        actual.origin !== origin ||
+        actual.account.id !== accountId ||
+        actual.kind === "device" ||
+        (actual.audience !== undefined && actual.audience !== origin)
+      )
+        throw new Error("请先登录此云服务的账号。");
+    };
+    current();
+    return {
+      signal,
+      current,
+      ticket: async (targetOrigin: string, installationId: string) => {
+        cloudOrigin(targetOrigin);
+        cloudId(installationId);
+        current();
+        const token = await this.getCredential(origin, accountId, signal);
+        current();
+        const value = await this.request({
+          origin,
+          path: "/api/v1/account/cloud-management/tickets",
+          method: "POST",
+          token,
+          body: { cloudOrigin: targetOrigin, installationId },
+          signal,
+        });
+        current();
+        return cloudManagementTicket(
+          value,
+          { cloudOrigin: targetOrigin, accountOrigin: origin, installationId },
+          this.now(),
+        );
+      },
+    };
   }
   /** Returns credentials only to main callers, for one exact service/account. */
   async getCredential(origin: string, accountId?: string, signal?: AbortSignal): Promise<string> {

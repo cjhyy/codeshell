@@ -74,6 +74,9 @@ export const bashToolDef: ToolDefinition = {
 
 const MAX_OUTPUT = 100_000;
 const MAX_BUFFER = 10 * 1024 * 1024;
+// Feature evidence from this running Host, rather than another installed CLI's
+// version. Protocol 1 shares workspace publication locks with package runtimes.
+const workspaceWriteShellEnv = { CODESHELL_WORKSPACE_WRITE_PROTOCOL: "1" };
 
 // The env allowlist / deny regex that hardens a sandboxed shell now lives in
 // runtime/spawn-common.ts so foreground (this tool) and background shells
@@ -108,7 +111,7 @@ export async function bashTool(
   // full passthrough (off) or the hardened allowlist (sandboxed) — see
   // mergeShellEnv. Background mode merges the same way inside the manager.
   const baseEnv = backend.name === "off" ? { ...process.env } : buildSandboxEnv();
-  const env = mergeShellEnv(baseEnv, ctx?.shellEnv);
+  const env = { ...mergeShellEnv(baseEnv, ctx?.shellEnv), ...workspaceWriteShellEnv };
 
   // Background mode: spawn a detached, long-lived process and return a
   // shell_id immediately (design §5.1). Fire-and-forget — the turn is never
@@ -205,7 +208,7 @@ function runInBackground(command: string, ctx?: ToolContext): string {
     cwd: ctx?.cwd ?? process.cwd(),
     sessionId,
     sandbox: ctx?.sandbox,
-    shellEnv: ctx?.shellEnv,
+    shellEnv: { ...ctx?.shellEnv, ...workspaceWriteShellEnv },
   });
   if (!r.ok) {
     return `Error: ${r.error}`;

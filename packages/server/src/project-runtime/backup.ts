@@ -1,6 +1,15 @@
 import { createHash, randomUUID } from "node:crypto";
 import { execFile, spawn } from "node:child_process";
-import { constants, createWriteStream } from "node:fs";
+import {
+  closeSync,
+  constants,
+  createWriteStream,
+  fsyncSync,
+  fstatSync,
+  lstatSync,
+  openSync,
+  writeFileSync,
+} from "node:fs";
 import { lstat, mkdir, open, readdir, realpath, rm, writeFile } from "node:fs/promises";
 import { dirname, join, relative, resolve, sep } from "node:path";
 import { pipeline } from "node:stream/promises";
@@ -35,6 +44,8 @@ export interface ProjectRestoreOptions {
   source: string;
   destination: string;
   helperImage: string;
+  /** Fault injection for offline restore durability tests. */
+  io?: { fsync?: typeof fsyncSync; removeMarker?: typeof rm };
 }
 const digest = (value: Buffer): Digest => ({
   sha256: createHash("sha256").update(value).digest("hex"),
@@ -413,6 +424,9 @@ function validateManifest(value: any): asserts value is Manifest {
       path.split("/").some((part) => !part || part === "." || part === "..") ||
       /[\0\r\n]/.test(path) ||
       path === "restore-in-progress" ||
+      ["project-runtime-secrets", "administrator-setup.txt", "environment.json"].some((obsolete) =>
+        path.startsWith(obsolete + "/"),
+      ) ||
       path.startsWith("project-control.lock/") ||
       path === "project-control.lock" ||
       !entry ||
@@ -462,21 +476,49 @@ export async function restoreProjectInstallation(options: ProjectRestoreOptions)
     same(digest(await controlBytes(join(source, "control"), path)), expected);
   await docker(["image", "inspect", options.helperImage]);
   const destination = await exclusiveDestination(source, resolve(options.destination));
+  const marker = join(destination, "restore-in-progress");
+  const directories = new Set([destination]);
+  const sync = (path: string) => {
+    const before = lstatSync(path);
+    if (before.isSymbolicLink() || (!before.isFile() && !before.isDirectory()))
+      throw new Error("Restore durability requires ordinary files and directories.");
+    const fd = openSync(path, constants.O_RDONLY | constants.O_NOFOLLOW);
+    try {
+      const current = fstatSync(fd);
+      if (current.dev !== before.dev || current.ino !== before.ino)
+        throw new Error("Restore storage changed while opening.");
+      (options.io?.fsync ?? fsyncSync)(fd);
+    } finally {
+      closeSync(fd);
+    }
+  };
+  const persistMarker = (rearm = false) => {
+    try {
+      writeFileSync(marker, "1\n", { mode: 0o600, flag: "wx" });
+    } catch (error) {
+      if (!rearm || (error as NodeJS.ErrnoException).code !== "EEXIST") throw error;
+    }
+    sync(marker);
+    sync(destination);
+    sync(dirname(destination));
+  };
   const created: Array<{ name: string; expected: Record<string, string> }> = [];
   let registry: ProjectRegistry | undefined;
   try {
-    await writeFile(join(destination, "restore-in-progress"), "1\n", {
-      mode: 0o600,
-      flag: "wx",
-      flush: true,
-    });
+    persistMarker();
     for (const [path, expected] of Object.entries(manifest.control)) {
       const bytes = await controlBytes(join(source, "control"), path);
       same(digest(bytes), expected);
       await mkdir(dirname(join(destination, path)), { recursive: true, mode: 0o700 });
+      for (
+        let parent = dirname(join(destination, path));
+        parent !== destination;
+        parent = dirname(parent)
+      )
+        directories.add(parent);
       await writeFile(join(destination, path), bytes, { mode: 0o600, flag: "wx", flush: true });
     }
-    registry = new ProjectRegistry(destination);
+    registry = new ProjectRegistry(destination, Date.now, { fsync: options.io?.fsync });
     const rows = registry.all();
     if (
       registry.installationId !== manifest.installationId ||
@@ -488,6 +530,10 @@ export async function restoreProjectInstallation(options: ProjectRestoreOptions)
     const auth = new HubAuthStore({ dataDir: destination });
     if (!auth.isInitialized()) throw new Error("Backup administrator is not initialized.");
     auth.revokeAllSessions();
+    // HubAuthStore publishes by rename. Persist the replacement and its directory
+    // before a new namespace or removal of the restore barrier can become visible.
+    sync(join(destination, "hub/auth.json"));
+    sync(join(destination, "hub"));
     registry.renewInstallationForRestore();
     const installationId = registry.installationId;
     for (const volume of manifest.volumes) {
@@ -510,7 +556,11 @@ export async function restoreProjectInstallation(options: ProjectRestoreOptions)
     for (const path of ["project-runtime-secrets", "administrator-setup.txt", "environment.json"])
       await rm(join(destination, path), { recursive: true, force: true });
     registry.all();
-    await rm(join(destination, "restore-in-progress"));
+    // Copied file bytes were flushed individually; their new directory entries
+    // must also survive a crash before the installation is advertised as usable.
+    for (const path of [...directories].sort((a, b) => b.length - a.length)) sync(path);
+    await (options.io?.removeMarker ?? rm)(marker);
+    sync(destination);
     return {
       destination,
       installationId,
@@ -519,6 +569,14 @@ export async function restoreProjectInstallation(options: ProjectRestoreOptions)
       volumes: created.length,
     };
   } catch (error) {
+    let barrierError: unknown;
+    try {
+      // In particular, unlink may have succeeded before its directory fsync
+      // failed. Re-establish and persist the barrier before any cleanup awaits.
+      persistMarker(true);
+    } catch (failure) {
+      barrierError = failure;
+    }
     // Only delete volumes created by this restore and still carrying its exact labels.
     for (const { name, expected } of created.reverse()) {
       try {
@@ -528,6 +586,12 @@ export async function restoreProjectInstallation(options: ProjectRestoreOptions)
         /* Preserve a busy/changed volume for operator inspection. */
       }
     }
+    if (barrierError)
+      throw new AggregateError(
+        [error, barrierError],
+        `Restore failed and its durable barrier could not be confirmed; keep ${destination} offline.`,
+        { cause: error },
+      );
     throw error; // Keep the marked offline directory as recovery evidence; never advertise success.
   } finally {
     registry?.close();

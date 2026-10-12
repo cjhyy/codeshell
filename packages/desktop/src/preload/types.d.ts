@@ -1,4 +1,5 @@
 import type { CloudAccountApi } from "../shared/cloud-account.js";
+import type { CloudWorkbenchApi } from "../shared/cloud-management.js";
 import type {
   ApprovalResolvedEnvelope,
   MobilePermissionModeEnvelope,
@@ -1541,7 +1542,7 @@ export interface CodeshellApi
 
   /** Open a cloud workbench in a browser-only native window, isolated from local projects. */
   cloudAccount: CloudAccountApi;
-  openCloudWorkbench(address: string): Promise<{ address: string }>;
+  openCloudWorkbench: CloudWorkbenchApi;
   openExternal(url: string): Promise<void>;
   revealInFinder(path: string, cwd?: string): Promise<void>;
   /**

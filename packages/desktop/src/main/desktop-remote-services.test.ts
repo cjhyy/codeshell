@@ -40,9 +40,19 @@ test("remote composition registers owner-scoped IPC without starting cloud or lo
       tunnel: { isRunning: () => false, isConnected: () => false } as any,
       binary: {} as any,
       passcode: { isSet: () => false } as any,
+      cloudWindows: {
+        open: async () => {
+          throw new Error("unexpected Cloud window");
+        },
+        close: async () => {},
+      },
+      openLegacyCloud: async () => {
+        throw new Error("unexpected legacy Cloud window");
+      },
     });
-    expect(handlers.size).toBe(15);
+    expect(handlers.size).toBe(17);
     expect(handlers.has("cloudAccount:capabilities")).toBe(true);
+    expect(handlers.has("cloudAccount:profile")).toBe(true);
     const event = { sender, senderFrame: sender.mainFrame };
     expect(handlers.get("cloudAccount:status")!(event)).toEqual({ state: "signed-out" });
     expect(handlers.get("mobileRemote:status")!(event)).toMatchObject({ running: false });

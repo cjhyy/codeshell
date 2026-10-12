@@ -1,4 +1,4 @@
-import type { HubSession } from "../hub/auth-store.js";
+import type { ProjectControlSession } from "./control-authority.js";
 import {
   ProjectRegistry,
   ProjectRegistryError,
@@ -16,8 +16,9 @@ export interface ProjectManagerOptions {
   registry: ProjectRegistry;
   provider: ProjectRuntimeProvider;
   publicOrigin(): string;
-  isSessionActive(session: HubSession): boolean;
+  isSessionActive(session: ProjectControlSession): boolean;
   revokeProject(id: string): Promise<void>;
+  revalidateSession?(session: ProjectControlSession): Promise<void>;
   maxRunning?: number;
   /** Clock seam for Docker observations; authorization is never cached. */
   now?: () => number;
@@ -28,6 +29,7 @@ export class ProjectManager {
   private readonly starts = new Map<string, Promise<ProjectView>>();
   private readonly stops = new Map<string, Promise<ProjectView>>();
   private readonly targets = new Map<string, ProjectRuntimeConnection>();
+  private readonly stopRevisions = new Map<string, number>();
   private readonly statusChecks = new Map<
     string,
     {
@@ -49,10 +51,22 @@ export class ProjectManager {
       throw new Error("Project running limit must be between 1 and 32.");
   }
 
-  private authorize(session: HubSession): void {
+  private authorize(session: ProjectControlSession): void {
     if (this.closed) throw new ProjectRegistryError(503, "项目服务正在关闭。");
     if (!this.options.isSessionActive(session))
       throw new ProjectRegistryError(401, "登录已过期，请重新登录。");
+  }
+
+  private ownedProject(session: ProjectControlSession, id: string): StoredProject {
+    return "kind" in session
+      ? this.options.registry.getAccount(session.ownerId, id)
+      : this.options.registry.get(session.username, id);
+  }
+
+  private async authorizeContinuous(session: ProjectControlSession): Promise<void> {
+    this.authorize(session);
+    await this.options.revalidateSession?.(session);
+    this.authorize(session);
   }
 
   async reconcile(): Promise<void> {
@@ -72,34 +86,50 @@ export class ProjectManager {
     }
   }
 
-  list(session: HubSession): ProjectView[] {
+  list(session: ProjectControlSession): ProjectView[] {
     this.authorize(session);
-    return this.options.registry.list(session.username);
+    return "kind" in session
+      ? this.options.registry.listAccount(session.ownerId)
+      : this.options.registry.list(session.username);
   }
 
-  get(session: HubSession, id: string): ProjectView {
+  get(session: ProjectControlSession, id: string): ProjectView {
     this.authorize(session);
-    return projectView(this.options.registry.get(session.username, id));
+    return projectView(this.ownedProject(session, id));
   }
 
-  create(session: HubSession, name: unknown): ProjectView {
+  create(session: ProjectControlSession, name: unknown): ProjectView {
     this.authorize(session);
-    return projectView(this.options.registry.create(session.username, name));
+    return projectView(
+      "kind" in session
+        ? this.options.registry.createAccount(session.ownerId, name)
+        : this.options.registry.create(session.username, name),
+    );
   }
 
-  async start(session: HubSession, id: string): Promise<ProjectView> {
+  async start(session: ProjectControlSession, id: string): Promise<ProjectView> {
     this.authorize(session);
-    this.options.registry.get(session.username, id);
+    this.ownedProject(session, id);
+    const revision = this.stopRevisions.get(id) ?? 0;
+    const authorizeStart = () => {
+      this.authorize(session);
+      if ((this.stopRevisions.get(id) ?? 0) !== revision)
+        throw new ProjectRegistryError(409, "项目启动已取消。");
+    };
+    if (this.options.revalidateSession) await this.authorizeContinuous(session);
+    authorizeStart();
     const stopping = this.stops.get(id);
     if (stopping) await stopping;
-    this.authorize(session);
+    if (this.options.revalidateSession) await this.authorizeContinuous(session);
+    authorizeStart();
     const existing = this.starts.get(id);
     if (existing) {
       const result = await existing;
-      this.authorize(session);
+      if (this.options.revalidateSession) await this.authorizeContinuous(session);
+      authorizeStart();
       return result;
     }
-    const project = this.options.registry.get(session.username, id);
+    const project = this.ownedProject(session, id);
     if (project.status === "running") {
       await this.resolveTarget(session, id);
       return this.get(session, id);
@@ -125,14 +155,16 @@ export class ProjectManager {
     const operation = (async () => {
       try {
         await this.options.revokeProject(id);
-        this.authorize(session);
-        if (this.options.registry.get(session.username, id).status !== "starting")
+        if (this.options.revalidateSession) await this.authorizeContinuous(session);
+        authorizeStart();
+        if (this.ownedProject(session, id).status !== "starting")
           throw new ProjectRegistryError(409, "项目启动已取消。");
         const target = await this.options.provider.ensure(record, {
           publicOrigin: this.options.publicOrigin(),
         });
-        this.authorize(session);
-        const current = this.options.registry.get(session.username, id);
+        if (this.options.revalidateSession) await this.authorizeContinuous(session);
+        authorizeStart();
+        const current = this.ownedProject(session, id);
         if (current.status !== "starting" || current.generation !== record.generation)
           throw new ProjectRegistryError(409, "项目启动已取消。");
         if (target.generation !== record.generation) throw new Error("Runtime generation mismatch");
@@ -147,7 +179,7 @@ export class ProjectManager {
         } catch {
           stopped = false;
         }
-        const current = this.options.registry.get(session.username, id);
+        const current = this.ownedProject(session, id);
         if (current.generation === record.generation && current.status === "starting") {
           this.options.registry.update(id, {
             status: stopped ? "stopped" : "error",
@@ -164,10 +196,13 @@ export class ProjectManager {
     return operation;
   }
 
-  async stop(session: HubSession, id: string): Promise<ProjectView> {
+  async stop(session: ProjectControlSession, id: string): Promise<ProjectView> {
     this.authorize(session);
-    this.options.registry.get(session.username, id);
+    this.ownedProject(session, id);
+    this.stopRevisions.set(id, (this.stopRevisions.get(id) ?? 0) + 1);
+    if (this.options.revalidateSession) await this.authorizeContinuous(session);
     const result = await this.beginStop(id);
+    if (this.options.revalidateSession) await this.authorizeContinuous(session);
     this.authorize(session);
     return result;
   }
@@ -206,16 +241,21 @@ export class ProjectManager {
     }
   }
 
-  async resolveTarget(session: HubSession, id: string): Promise<ProjectRuntimeConnection> {
+  async resolveTarget(
+    session: ProjectControlSession,
+    id: string,
+  ): Promise<ProjectRuntimeConnection> {
+    if (this.options.revalidateSession) await this.authorizeContinuous(session);
     this.authorize(session);
-    const record = this.options.registry.get(session.username, id);
+    const record = this.ownedProject(session, id);
     const target = this.targets.get(id);
     if (record.status !== "running" || !target || target.generation !== record.generation)
       throw new ProjectRegistryError(409, "项目尚未运行，请先启动项目。");
     // The provider checks labels and the loopback binding, not just a remembered port.
     const state = await this.observeRuntime(record, target);
+    if (this.options.revalidateSession) await this.authorizeContinuous(session);
     this.authorize(session);
-    const current = this.options.registry.get(session.username, id);
+    const current = this.ownedProject(session, id);
     if (current.status !== "running" || current.generation !== target.generation)
       throw new ProjectRegistryError(409, "项目已停止或重新启动，请重新进入。");
     if (state.state !== "running" || state.url !== target.url) {

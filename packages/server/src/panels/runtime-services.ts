@@ -14,7 +14,7 @@ import {
   type FileHandle,
 } from "node:fs/promises";
 import { basename, dirname, extname, isAbsolute, join, resolve, sep } from "node:path";
-import { acquireLockOnPath } from "@cjhyy/code-shell-core/internal";
+import { acquireLockOnPath, acquireWorkspaceWriteLock } from "@cjhyy/code-shell-core/internal";
 import {
   DEFAULT_PANEL_APP_STORAGE_QUOTA_BYTES,
   panelAppStorageSnapshot,
@@ -485,7 +485,15 @@ export class PanelRuntimeServices {
       const parent = await this.openPath(root, dirname(path), true);
       const stableTarget = join(parent.path, basename(path));
       const temporary = join(parent.path, `.${basename(path)}.${randomUUID()}.tmp`);
+      let releaseWorkspaceLock: (() => Promise<void>) | undefined;
+      let outcome: { ok: true; value: unknown } | { ok: false; error: unknown };
       try {
+        await parent.verify();
+        releaseWorkspaceLock = await acquireWorkspaceWriteLock(parent.path, basename(path));
+        await parent.verify();
+        await this.root(scope);
+        await authorized(scope);
+        await parent.verify();
         let modifiedAt: number | null = null,
           currentRevision: string | null = null,
           mode = 0o644;
@@ -550,16 +558,34 @@ export class PanelRuntimeServices {
         } else await rename(temporary, stableTarget);
         await chmod(stableTarget, mode).catch(() => {});
         const metadata = await lstat(stableTarget);
-        return {
-          path,
-          size: bytes.length,
-          modifiedAt: metadata.mtimeMs,
-          revision: revision(bytes),
+        outcome = {
+          ok: true,
+          value: {
+            path,
+            size: bytes.length,
+            modifiedAt: metadata.mtimeMs,
+            revision: revision(bytes),
+          },
         };
+      } catch (error) {
+        outcome = { ok: false, error };
+      }
+      await rm(temporary, { force: true }).catch(() => {});
+      try {
+        await releaseWorkspaceLock?.();
+      } catch (error) {
+        if (!outcome.ok)
+          throw new AggregateError(
+            [outcome.error, error],
+            `${String(outcome.error)}; ${String(error)}`,
+            { cause: error },
+          );
+        throw error;
       } finally {
-        await rm(temporary, { force: true }).catch(() => {});
         await parent.close();
       }
+      if (!outcome.ok) throw outcome.error;
+      return outcome.value;
     });
   }
 }

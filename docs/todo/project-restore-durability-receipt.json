@@ -1,0 +1,124 @@
+{
+  "baselineHostHead": "9c4f23c08528694d39d7c7bab4c17b348501fd72",
+  "nativeScenarios": [
+    {
+      "scenario": "durability",
+      "passed": true,
+      "fsyncCuts": 11,
+      "markerRemovalCuts": 2,
+      "rearmFsyncCuts": 3,
+      "successEvents": [
+        "marker",
+        "root",
+        "parent",
+        "auth",
+        "hub",
+        "registry-temp",
+        "control",
+        "control",
+        "hub",
+        "root",
+        "root"
+      ],
+      "oldSession401AfterColdStart": true,
+      "originalAndBackupUnchanged": true,
+      "legacyEnvironmentFileRemoved": true,
+      "runtime": "v22.19.0",
+      "ownedDockerChildrenExited": true,
+      "guardedDockerCommands": 22
+    },
+    {
+      "scenario": "barriers",
+      "passed": true,
+      "barrierCases": [
+        "file",
+        "directory",
+        "dangling",
+        "EIO",
+        "EACCES",
+        "ENOTDIR",
+        "real-parent-file-ENOTDIR"
+      ],
+      "noRegistryOrHubSideEffects": true,
+      "runtime": "v22.19.0",
+      "ownedDockerChildrenExited": true,
+      "guardedDockerCommands": 0
+    },
+    {
+      "scenario": "legacy",
+      "passed": true,
+      "historicalAuthFlushMissing": true,
+      "historicalHubDirectoryFlushMissing": true,
+      "historicalPublicationFlushMissing": true,
+      "historicalDanglingBarrierBypassed": true,
+      "samePublicationContractRejected": true,
+      "runtime": "v22.19.0",
+      "ownedDockerChildrenExited": true,
+      "guardedDockerCommands": 6
+    },
+    {
+      "scenario": "cleanup-failure",
+      "passed": true,
+      "actualPostRestoreFailure": true,
+      "runtime": "v22.19.0",
+      "ownedDockerChildrenExited": true,
+      "guardedDockerCommands": 6
+    }
+  ],
+  "nativeParentAssertions": 24,
+  "related": {
+    "tests": 20,
+    "assertions": 112
+  },
+  "serverTypecheck": true,
+  "targetedLint": true,
+  "sourceSha256": {
+    "packages/server/src/project-runtime/backup.ts": "968158b743a57a9cf5b14e1d7e42a0bec6f3b72cd0245ddff7629de5cb259cc6",
+    "packages/server/src/project-runtime/control-server.ts": "9ccd8cb959202fc7c77f52f5f4ee309afb4f6fdd0962d249dc6c9faccdddaeb1",
+    "packages/server/src/project-runtime/backup.test.ts": "da2e7eec3a11a3e8c7a71a6a9b8aa25acf317be00305967cfc41954bdd661306",
+    "packages/server/src/project-runtime/restore-durability.test.ts": "8dded5a39044e9ee75722edca7b3246c64b3ea3694850926fc688ed52393694d",
+    "packages/server/src/project-runtime/__fixtures__/restore-durability.ts": "ce7d77c23ec1f0806578e49c1b6313fbfaad057732c2e84e4bfff50cbcff0ad2",
+    "packages/server/src/project-runtime/__fixtures__/restore-durability-adapters.ts": "a6a6c4c6a76c1e16a61b19a7bb89a508a5d15192aa49aa542e73126d2ff15984",
+    "packages/server/src/project-runtime/__fixtures__/restore-durability-backup-v1.txt": "08d365f915468d7c2109fe7f484d214c8b88f280d1dfe5db0cad713faea65186",
+    "packages/server/src/project-runtime/__fixtures__/restore-durability-control-v1.txt": "55b36c2f03ad310eb7915924970824f7d8fe4fd70f84f6e107991f927bf70984"
+  },
+  "productionRestore": false,
+  "actualDocker": false,
+  "paidModels": false,
+  "serverBuild": true,
+  "independentReview": {
+    "review": "independent read-only native restore fault verification",
+    "runtime": "v25.8.1",
+    "guardedRunner": "node scripts/run-bun-test-shard.mjs --timeout 90000 packages/server/src/project-runtime/restore-durability.test.ts",
+    "exitCode": 0,
+    "tests": 4,
+    "assertions": 24,
+    "fsyncCuts": 11,
+    "markerRemovalCuts": 2,
+    "rearmFsyncCuts": 3,
+    "barriers": [
+      "file",
+      "directory",
+      "dangling",
+      "EIO",
+      "EACCES",
+      "ENOTDIR",
+      "real-parent-file-ENOTDIR"
+    ],
+    "legacySamePublicationContractRejected": true,
+    "postRestoreFailureExit": 1,
+    "ownedDockerChildrenExited": true,
+    "sourceBackupUnchanged": true,
+    "coldOldSessionStatus": 401,
+    "productSourceEdited": false,
+    "scope": "owned fake Docker inventories/unstarted project; not real Docker volume/archive or power loss",
+    "sourceSha256": {
+      "packages/server/src/project-runtime/backup.ts": "968158b743a57a9cf5b14e1d7e42a0bec6f3b72cd0245ddff7629de5cb259cc6",
+      "packages/server/src/project-runtime/control-server.ts": "9ccd8cb959202fc7c77f52f5f4ee309afb4f6fdd0962d249dc6c9faccdddaeb1",
+      "packages/server/src/project-runtime/restore-durability.test.ts": "8dded5a39044e9ee75722edca7b3246c64b3ea3694850926fc688ed52393694d",
+      "packages/server/src/project-runtime/__fixtures__/restore-durability.ts": "ce7d77c23ec1f0806578e49c1b6313fbfaad057732c2e84e4bfff50cbcff0ad2"
+    },
+    "finalEnoentOnlyReview": true,
+    "realParentFileEnotdirRejected": true
+  }
+}

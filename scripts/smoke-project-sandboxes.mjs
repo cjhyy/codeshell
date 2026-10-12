@@ -23,6 +23,12 @@ import {
 import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
+import {
+  summarizeContainerLogs,
+  summarizeFailure,
+  summarizeRpc,
+  waitForRunApproval,
+} from "./smoke-project-diagnostics.mjs";
 
 const root = resolve(
   process.env.CODESHELL_SMOKE_ROOT ?? dirname(fileURLToPath(import.meta.url)) + "/..",
@@ -102,7 +108,7 @@ let cookie;
 let logs = "";
 let success = false;
 let dockerEnv;
-let lastRpc;
+const rpcClients = new Map();
 
 const pause = (ms) => new Promise((done) => setTimeout(done, ms));
 async function waitUntil(check, description, timeout = 60_000) {
@@ -212,7 +218,7 @@ class RpcClient {
       .join("");
   }
 }
-async function connect(projectId) {
+async function connect(projectId, label) {
   const ws = new WebSocket(`${serverUrl.replace("http:", "ws:")}/p/${projectId}/ws`, {
     headers: { cookie, origin: serverUrl },
     handshakeTimeout: 20_000,
@@ -220,7 +226,7 @@ async function connect(projectId) {
   sockets.add(ws);
   const rpc = new RpcClient(ws);
   await once(ws, "open");
-  lastRpc = rpc;
+  rpcClients.set(label, rpc);
   return rpc;
 }
 
@@ -703,20 +709,13 @@ try {
   );
   console.log("PASS: approved reviewed panel task executes and persists inside project A");
 
-  const rpcA = await connect(a.id);
-  const rpcB = await connect(b.id);
+  const rpcA = await connect(a.id, "A");
+  const rpcB = await connect(b.id, "B");
   const main = rpcA.request("agent/run", {
     sessionId: "smoke-project-main",
     task: "SMOKE_MAIN_RW: read and update the shared proof file.",
   });
-  void main.catch(() => {});
-  const approval = await waitUntil(
-    () =>
-      rpcA.messages.find(
-        (m) => m.method === "agent/approvalRequest" && m.params.sessionId === "smoke-project-main",
-      ),
-    "real main-agent Write approval",
-  );
+  const approval = await waitForRunApproval(rpcA.messages, main, "smoke-project-main");
   assert.equal(await (await download()).text(), processProof, "Write must wait for approval");
   await rpcA.request("serve/approval.claim", { requestId: approval.params.requestId });
   await rpcA.request("agent/approve", {
@@ -994,7 +993,7 @@ try {
         .status,
     ),
   );
-  const restored = await connect(a.id);
+  const restored = await connect(a.id, "A-restarted");
   const sessions = await restored.request("agent/query", { type: "sessions" });
   assert.ok(sessions.data.some((session) => session.sessionId === "smoke-project-main"));
   assert.equal((await json(`/p/${b.id}/api/v1/files`)).path, "");
@@ -1012,8 +1011,12 @@ try {
     "Real Docker sandbox smoke passed. No external model service or real account key was used.",
   );
 } catch (error) {
-  console.error(`Docker sandbox smoke failed: ${error.stack ?? error}`);
-  console.error(JSON.stringify(lastRpc?.messages.slice(-8) ?? []).slice(-10_000));
+  console.error(`Docker sandbox smoke failed: ${JSON.stringify(summarizeFailure(error))}`);
+  console.log(
+    JSON.stringify({
+      rpcDiagnostics: [...rpcClients].map(([label, rpc]) => summarizeRpc(label, rpc)),
+    }),
+  );
   process.exitCode = 1;
 } finally {
   for (const socket of sockets) socket.terminate();
@@ -1033,7 +1036,8 @@ try {
     )
       .split(/\s+/)
       .filter(Boolean)) {
-      writeFileSync(join(scratch, `${id}-container.log`), await docker(["logs", id]).catch(String));
+      const containerLog = await docker(["logs", id]).catch(String);
+      writeFileSync(join(scratch, `${id}-container.log`), containerLog);
       const diagnostics = await docker([
         "exec",
         id,
@@ -1050,6 +1054,12 @@ try {
       `,
       ]).catch(String);
       writeFileSync(join(scratch, `${id}-fixture.log`), diagnostics);
+      console.log(
+        JSON.stringify({
+          containerId: /^[a-f0-9]{12,64}$/.test(id) ? id : "other",
+          containerDiagnostics: summarizeContainerLogs(containerLog, diagnostics),
+        }),
+      );
       if (speechFixture) {
         const evidenceDir = join(root, "..", "evidence");
         mkdirSync(evidenceDir, { recursive: true });
