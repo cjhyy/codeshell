@@ -256,7 +256,11 @@ export function readRoomHistoryPage<T extends { seq: number }>(
         }
         hashes.push(createHash("sha256").update(chunk).digest("hex"));
         let written = 0;
-        while (written < count) written += writeSync(output, chunk, written, count - written);
+        while (written < count) {
+          const progress = writeSync(output, chunk, written, count - written);
+          if (!progress) throw new Error("room history freeze write made no progress");
+          written += progress;
+        }
         offset += count;
       }
       fsyncSync(output);

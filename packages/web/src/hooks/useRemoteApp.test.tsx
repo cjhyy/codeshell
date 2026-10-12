@@ -1312,6 +1312,94 @@ describe("useRemoteApp cc transcript streaming", () => {
     await hook.unmount();
   });
 
+  for (const failure of ["recovery", "overflow"] as const)
+    test(`a ${failure} barrier cannot be bypassed by an in-flight final Room page`, async () => {
+      setupBrowser();
+      const hook = await renderHook(() => useRemoteApp());
+      const ws = FakeWebSocket.instances[0]!;
+      try {
+        await act(async () => {
+          ws.open();
+          ws.message({ type: "auth.ok", device: { id: "device-1", name: "Phone" } });
+          ws.message({ type: "room.projects.ok", projects: [{ path: "/repo", name: "repo" }] });
+          await flushMicrotasks();
+        });
+        await act(async () => {
+          hook.result.current.selectProject("/repo");
+          hook.result.current.openCcSession("thread-1", "/repo", "default");
+          await flushMicrotasks();
+        });
+        await act(async () => {
+          ws.message({
+            type: "ccRoom.opened",
+            roomId: "room-1",
+            sessionId: "thread-1",
+            status: "running",
+          });
+          ws.message({
+            type: "ccRoom.transcriptSubscribed",
+            roomId: "room-1",
+            sessionId: "thread-1",
+            active: true,
+            messages: [{ role: "user", text: "visible-before-barrier" }],
+            hasMore: false,
+            totalCount: 1,
+            roomCursor: 5,
+          });
+          await flushMicrotasks();
+        });
+        await act(async () => {
+          ws.message({
+            type: "room.error",
+            roomId: "room-1",
+            requestId: "stale",
+            message: "stale-error-must-not-apply",
+          });
+          ws.message({
+            type: "room.history.ok",
+            roomId: "room-1",
+            requestId: "room-history:1",
+            messages: [{ seq: 6, from: "agent", type: "text", text: "pending-first-page" }],
+            latestSeq: 7,
+            page: { snapshotId: "frozen", throughSeq: 7, complete: false, nextCursor: "next" },
+          });
+          if (failure === "recovery")
+            ws.message({
+              type: "room.recovery",
+              roomId: "room-1",
+              message: "prefix rewrite requires recovery",
+            });
+          else
+            for (let n = 0; n <= 10000; n++)
+              ws.message({
+                type: "room.message",
+                roomId: "room-1",
+                msg: { seq: n + 8, from: "agent", type: "text", text: "pending-live" },
+              });
+          ws.message({
+            type: "room.history.ok",
+            roomId: "room-1",
+            requestId: "room-history:1",
+            messages: [{ seq: 7, from: "agent", type: "text", text: "must-not-commit-final-page" }],
+            latestSeq: 7,
+            page: { snapshotId: "frozen", throughSeq: 7, complete: true },
+          });
+          await flushMicrotasks();
+        });
+        expect(hook.result.current.chat.items).toMatchObject([
+          { kind: "user", text: "visible-before-barrier" },
+        ]);
+        expect(hook.result.current.chat.items).toHaveLength(1);
+        expect(hook.result.current.loading.roomHistory).toBe(false);
+        expect(hook.result.current.notice).not.toContain("stale-error");
+        expect(hook.result.current.notice).toContain(
+          failure === "recovery" ? "requires recovery" : "exceeds its limit",
+        );
+      } finally {
+        await hook.unmount();
+      }
+    });
+
   test("opening a second CC room unsubscribes the previous transcript before replacing its ref", async () => {
     setupBrowser();
     const hook = await renderHook(() => useRemoteApp());

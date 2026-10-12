@@ -336,7 +336,13 @@ export type MobileServerEvent =
     }
   | { type: "room.closed"; roomId: string }
   | { type: "room.recovery"; roomId: string; message: string }
-  | { type: "room.error"; roomId?: string; message: string; clientMessageId?: string }
+  | {
+      type: "room.error";
+      roomId?: string;
+      message: string;
+      clientMessageId?: string;
+      requestId?: string;
+    }
   | {
       type: "ccRoom.approvalRequest";
       roomId: string;

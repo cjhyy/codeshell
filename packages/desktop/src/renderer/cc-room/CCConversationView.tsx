@@ -217,8 +217,10 @@ export function CCConversationView({
         throw new Error("This Host does not support complete room history");
       return (await collectRoomHistory(async (request) => {
         if (cancelled) throw new Error("Room history view was cancelled");
+        if (blocked) throw new Error("Room transcript recovery is required");
         const page = await window.codeshell.ccRoom.roomHistoryPage(roomId, request);
         if (cancelled) throw new Error("Room history view was cancelled");
+        if (blocked) throw new Error("Room transcript recovery is required");
         return page;
       }, sinceSeq)) as RoomMessageWire[];
     };
@@ -229,12 +231,12 @@ export function CCConversationView({
       recovering = true;
       try {
         const messages = await readCatchup(seenSeq);
-        if (cancelled) return;
+        if (cancelled || blocked) return;
         applyLive(messages);
         ready = pending.size === 0;
         if (ready) setHistoryError(null);
       } catch (error) {
-        if (!cancelled) {
+        if (!cancelled && !blocked) {
           blocked = true;
           setHistoryError(String(error));
         }
@@ -258,7 +260,7 @@ export function CCConversationView({
       setHistoryError(event.message);
     });
     const offMsg = window.codeshell.ccRoom.onRoomMessage(({ roomId: rid, msg }) => {
-      if (rid !== roomId) return;
+      if (rid !== roomId || blocked) return;
       const message = msg as RoomMessageWire;
       if (pending.size >= 10_000 && !pending.has(message.seq)) {
         blocked = true;
@@ -299,11 +301,12 @@ export function CCConversationView({
           50,
         );
         if (cancelled) return;
+        if (blocked) throw new Error("Room transcript recovery is required");
         if (!snapshot.active) throw new Error("External transcript is not being followed");
         dispatch({ kind: "replayHistory", messages: snapshot.messages as HistoryMessage[] });
         seenSeq = snapshot.roomCursor;
         const catchup = await readCatchup(snapshot.roomCursor);
-        if (cancelled) return;
+        if (cancelled || blocked) return;
         const merged = new Map<number, RoomMessageWire>();
         for (const msg of [...catchup, ...pending.values()]) merged.set(msg.seq, msg);
         applyLive([...merged.values()]);
@@ -312,7 +315,7 @@ export function CCConversationView({
         if (!ready) void recover();
       } else {
         const live = await readCatchup(0);
-        if (cancelled) return;
+        if (cancelled || blocked) return;
         dispatch({ kind: "replayLive", messages: live });
         seenSeq = live.at(-1)?.seq ?? 0;
         applyLive([...pending.values()]);
@@ -322,7 +325,7 @@ export function CCConversationView({
       }
     };
     void boot().catch((error) => {
-      if (cancelled) return;
+      if (cancelled || blocked) return;
       blocked = true;
       setHistoryError(
         feedbackRef.current.t("panels.room.historyFailed", {

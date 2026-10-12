@@ -462,6 +462,10 @@ describe("CCConversationView asynchronous recovery", () => {
             receive.resolved = cb;
             return off;
           },
+          onTranscriptRecovery: (cb: (...args: any[]) => void) => {
+            receive.recovery = cb;
+            return off;
+          },
           onRoomMessage: (cb: (...args: any[]) => void) => {
             receive.message = cb;
             return off;
@@ -650,6 +654,35 @@ describe("CCConversationView asynchronous recovery", () => {
       await flushMicrotasks();
     });
     expect(calls).toBe(1);
+  });
+
+  test("a transcript recovery barrier cancels an in-flight frozen page commit", async () => {
+    let resolvePage: ((page: unknown) => void) | undefined;
+    const receive = installRoomApi({
+      subscribeTranscript: async () => ({
+        active: true,
+        messages: [{ role: "user", text: "visible-before-barrier" }],
+        roomCursor: 0,
+      }),
+      roomHistoryPage: async () =>
+        await new Promise((resolve) => {
+          resolvePage = resolve;
+        }),
+    });
+    const container = await mount();
+    await act(async () => {
+      receive.recovery({ roomId: "room", message: "prefix rewrite requires recovery" });
+      resolvePage!({
+        snapshotId: "frozen",
+        throughSeq: 1,
+        messages: [{ seq: 1, from: "agent", type: "text", text: "must-not-commit-after-barrier" }],
+        complete: true,
+      });
+      await flushMicrotasks();
+    });
+    expect(renderedText(container)).toContain("visible-before-barrier");
+    expect(renderedText(container)).not.toContain("must-not-commit-after-barrier");
+    expect(renderedText(container)).toContain("recovery");
   });
 
   test("rapid sends share one request and its acknowledgement preserves the next draft", async () => {

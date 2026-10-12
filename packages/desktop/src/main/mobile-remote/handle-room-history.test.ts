@@ -77,7 +77,10 @@ test("room pages and failures reply only to the requesting viewer even on a shar
     deviceId: "shared-device",
     viewerId: "first",
   });
-  expect(viewers[2]).toMatchObject(["first", { type: "room.error", roomId: room.id }]);
+  expect(viewers[2]).toMatchObject([
+    "first",
+    { type: "room.error", roomId: room.id, requestId: "same-local-counter" },
+  ]);
   expect(devices).toEqual([]);
   expect(broadcast).toEqual([]);
 });

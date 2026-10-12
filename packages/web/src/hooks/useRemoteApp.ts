@@ -414,6 +414,7 @@ export function useRemoteApp(options: RemoteAppOptions = {}): RemoteApp {
         requestId: string;
         pager: RoomHistoryAccumulator;
         live: Map<number, unknown>;
+        failed?: boolean;
       }
     | undefined
   >(undefined);
@@ -905,7 +906,10 @@ export function useRemoteApp(options: RemoteAppOptions = {}): RemoteApp {
             }
             const catchup = roomCatchupRef.current;
             if (catchup?.roomId === event.roomId) {
-              if (catchup.live.size >= 10_000) {
+              if (catchup.failed) break;
+              if (catchup.live.size >= 10_000 && !catchup.live.has(seq)) {
+                catchup.failed = true;
+                setLoadingKey("roomHistory", false);
                 setNotice("Room catchup live buffer exceeds its limit; reconnect to recover");
                 break;
               }
@@ -930,7 +934,12 @@ export function useRemoteApp(options: RemoteAppOptions = {}): RemoteApp {
         case "room.history.ok": {
           if (event.roomId !== activeRoomIdRef.current) break;
           const catchup = roomCatchupRef.current;
-          if (!catchup || catchup.roomId !== event.roomId || event.requestId !== catchup.requestId)
+          if (
+            !catchup ||
+            catchup.failed ||
+            catchup.roomId !== event.roomId ||
+            event.requestId !== catchup.requestId
+          )
             break;
           try {
             if (!event.page) throw new Error("This Host does not support complete room history");
@@ -972,6 +981,7 @@ export function useRemoteApp(options: RemoteAppOptions = {}): RemoteApp {
           } catch (error) {
             // Keep the failed boundary and buffered live messages. Do not fold
             // a partial range or advance the durable catchup position.
+            catchup.failed = true;
             setNotice(String(error));
             setLoadingKey("roomHistory", false);
           }
@@ -993,16 +1003,21 @@ export function useRemoteApp(options: RemoteAppOptions = {}): RemoteApp {
         case "room.recovery":
           if (event.roomId === activeRoomIdRef.current) {
             ccBacklogLoadedRef.current = false;
+            if (roomCatchupRef.current?.roomId === event.roomId)
+              roomCatchupRef.current.failed = true;
             setLoadingKey("roomHistory", false);
             setNotice(event.message);
           }
           break;
         case "room.error":
+          if (event.requestId && event.requestId !== roomCatchupRef.current?.requestId) break;
           if (
             event.roomId === activeRoomIdRef.current &&
             roomCatchupRef.current?.roomId === event.roomId
-          )
+          ) {
+            roomCatchupRef.current!.failed = true;
             setLoadingKey("roomHistory", false);
+          }
           if (event.clientMessageId) {
             settleMessageAck(event.clientMessageId, new Error(event.message));
           }

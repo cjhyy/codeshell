@@ -201,6 +201,7 @@ export async function handleRoomEvent(
     reply({
       type: "room.error",
       ...("roomId" in event ? { roomId: event.roomId } : {}),
+      ...(event.type === "room.history" && event.requestId ? { requestId: event.requestId } : {}),
       message: err instanceof Error ? err.message : String(err),
       ...("clientMessageId" in event && typeof event.clientMessageId === "string"
         ? { clientMessageId: event.clientMessageId }
