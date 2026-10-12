@@ -69,6 +69,9 @@ const authenticate = async (action: string, input: CloudAccountLogin) => {
   return current;
 };
 const api: CloudAccountApi = {
+  manageLinks: async () => {
+    throw new Error("Sidebar fixture does not authorize Link management requests");
+  },
   capabilities: (origin) => {
     capabilityAttempts += 1;
     if (scenario === "capabilities-stale") {

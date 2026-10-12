@@ -3051,6 +3051,7 @@ export class PanelAppBridge {
     }
     const bridge = this.options.getAgentBridge();
     if (!bridge) throw new Error("agent worker is unavailable");
+    const output = bridge.captureExternalOutputSource(sessionId);
 
     const appLabel = binding.resource.descriptor.title.trim();
     const prefix = appLabel ? `【${appLabel}】 ` : "";
@@ -3159,7 +3160,7 @@ export class PanelAppBridge {
         // pushed by the renderer, so there is no gap to re-open.
         binding.agentSubmitInFlight = false;
         if (result.ok || result.failureStreamed) return;
-        bridge.ingestExternalEvent(sessionId, {
+        output.publish({
           type: "error",
           error: `Panel App request failed: ${result.message ?? "unknown error"}`,
         });
@@ -3168,7 +3169,7 @@ export class PanelAppBridge {
         // Must also release on failure, or one dropped request would wedge the
         // panel into a permanent "session is busy".
         binding.agentSubmitInFlight = false;
-        bridge.ingestExternalEvent(sessionId, {
+        output.publish({
           type: "error",
           error: `Panel App request failed: ${
             error instanceof Error ? error.message : String(error)

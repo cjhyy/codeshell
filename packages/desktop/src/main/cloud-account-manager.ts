@@ -5,7 +5,14 @@ import type {
   CloudAccountGitHubLogin,
   CloudAccountLogin,
   CloudAccountStatus,
+  CloudAccountLinksRequest,
+  CloudAccountLinksResult,
 } from "../shared/cloud-account.js";
+import {
+  accountLinksRequest,
+  accountLinkView,
+  accountLinkRevocation,
+} from "./cloud-account-links.js";
 import {
   CloudAccountStore,
   validCloudAccountGrant,
@@ -157,7 +164,9 @@ export class CloudAccountManager {
       Array.isArray(value) ||
       typeof value.registrationAllowed !== "boolean" ||
       typeof value.githubEnabled !== "boolean" ||
-      (value.githubLinkEnabled !== undefined && typeof value.githubLinkEnabled !== "boolean")
+      (value.githubLinkEnabled !== undefined && typeof value.githubLinkEnabled !== "boolean") ||
+      (value.linkManagementEnabled !== undefined &&
+        typeof value.linkManagementEnabled !== "boolean")
     )
       throw new Error("云服务返回了无效的账号能力信息。");
     return {
@@ -166,6 +175,9 @@ export class CloudAccountManager {
       ...(value.githubLinkEnabled === undefined
         ? {}
         : { githubLinkEnabled: value.githubLinkEnabled }),
+      ...(value.linkManagementEnabled === undefined
+        ? {}
+        : { linkManagementEnabled: value.linkManagementEnabled }),
     };
   }
   private publish(state: CloudAccountStatus["state"]) {
@@ -316,6 +328,49 @@ export class CloudAccountManager {
     if (!this.saved || this.saved.sessionId !== saved.sessionId || !authorized())
       throw new Error("云账号操作已取消。");
     return this.github({ origin: saved.origin }, authorized, { saved: this.saved, token });
+  }
+  /** Every read/revoke is bound to the reviewed identity and the current local account incarnation. */
+  async manageLinks(
+    raw: CloudAccountLinksRequest,
+    authorized: () => boolean = () => true,
+  ): Promise<CloudAccountLinksResult> {
+    const input = accountLinksRequest(raw);
+    this.load();
+    const saved = this.saved;
+    const generation = this.generation;
+    const signal = this.operation.signal;
+    const current = () => {
+      this.current(generation, authorized);
+      const actual = this.saved;
+      if (
+        !saved ||
+        !actual ||
+        this.state !== "signed-in" ||
+        actual.sessionId !== saved.sessionId ||
+        actual.origin !== input.origin ||
+        actual.account.id !== input.accountId ||
+        actual.kind === "device" ||
+        (actual.audience !== undefined && actual.audience !== input.origin)
+      )
+        throw new Error("请先登录此云服务的账号。");
+    };
+    current();
+    const token = await this.getCredential(input.origin, input.accountId, signal);
+    current();
+    const value = await this.request({
+      origin: input.origin,
+      path:
+        input.action === "list"
+          ? "/api/v1/account/links"
+          : `/api/v1/account/links/${input.kind}/${input.id}`,
+      method: input.action === "list" ? "GET" : "DELETE",
+      token,
+      signal,
+    });
+    current();
+    return input.action === "list"
+      ? { action: "list", view: accountLinkView(value) }
+      : accountLinkRevocation(value, input);
   }
   signInWithGitHub(input: CloudAccountGitHubLogin, authorized: () => boolean = () => true) {
     return this.github(input, authorized);

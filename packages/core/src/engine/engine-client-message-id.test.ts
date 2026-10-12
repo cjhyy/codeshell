@@ -1,5 +1,5 @@
 import { describe, expect, it } from "bun:test";
-import { cpSync, mkdtempSync, readFileSync, rmSync } from "node:fs";
+import { existsSync, mkdtempSync, readFileSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { Engine } from "./engine.js";
@@ -64,46 +64,44 @@ function countExactText(messages: Message[], text: string): number {
 describe("Engine clientMessageId submit idempotency", () => {
   it("reports an accepted input without a saved result as incomplete and permits a fresh intent", async () => {
     const { engine, dir, scenario, model } = makeEngine();
-    const controller = new AbortController();
-    let resolveEntered!: () => void;
-    const entered = new Promise<void>((resolve) => {
-      resolveEntered = resolve;
-    });
-    scenario.beforeReply = async (options) => {
-      resolveEntered();
-      await new Promise<void>((_resolve, reject) => {
-        const abort = () => reject(new DOMException("Stopped", "AbortError"));
-        if (options.signal?.aborted) abort();
-        else options.signal?.addEventListener("abort", abort, { once: true });
-      });
-    };
-    const running = engine.run("do recoverable work", {
-      sessionId: "s-incomplete",
-      cwd: dir,
-      clientMessageId: "accepted-input",
-      signal: controller.signal,
-    });
+    await engine.dispose();
+    const child = Bun.spawn(
+      [
+        process.execPath,
+        new URL("../../../../tests/fixtures/client-message-crash.ts", import.meta.url).pathname,
+        dir,
+        model,
+      ],
+      { env: process.env, stdout: "ignore", stderr: "pipe" },
+    );
+    let restarted: Engine | undefined;
     try {
-      await entered;
-      // Capture actual durable Engine state while the provider is running.
-      // This prefix is what a process crash leaves: an accepted input without
-      // the later result receipt. Stop the original only after copying it.
-      const recoveredRoot = join(dir, "recovered-sessions");
-      cpSync(join(dir, "sessions"), recoveredRoot, { recursive: true });
-      const transcriptPath = join(recoveredRoot, "s-incomplete", "transcript.jsonl");
+      const ready = join(dir, "crash-ready.json"),
+        deadline = Date.now() + 15000;
+      while (!existsSync(ready)) {
+        if (Date.now() > deadline || child.exitCode !== null) {
+          child.kill("SIGKILL");
+          await child.exited;
+          throw new Error(
+            "Crash fixture did not enter provider: " + (await new Response(child.stderr).text()),
+          );
+        }
+        await new Promise((done) => setTimeout(done, 5));
+      }
+      expect(JSON.parse(readFileSync(ready, "utf8")).pid).toBe(child.pid);
+      const transcriptPath = join(dir, "sessions", "s-incomplete", "transcript.jsonl");
       const interruptedTranscript = readFileSync(transcriptPath, "utf8");
       expect(interruptedTranscript).toContain("accepted-input");
       expect(interruptedTranscript).not.toContain('"type":"run_result"');
-      controller.abort();
-      await running;
-      scenario.beforeReply = undefined;
-      const restarted = new Engine({
+      child.kill("SIGKILL");
+      await child.exited;
+      restarted = new Engine({
         llm: { provider: fakeProvider, model, apiKey: "test" } as never,
         cwd: dir,
-        sessionStorageDir: recoveredRoot,
+        sessionStorageDir: join(dir, "sessions"),
         headless: true,
       });
-      (restarted as any).hooks.clear();
+      restarted.getHookRegistry().clear();
       const replayed = await restarted.run("do recoverable work", {
         sessionId: "s-incomplete",
         cwd: dir,
@@ -111,7 +109,7 @@ describe("Engine clientMessageId submit idempotency", () => {
       });
       expect(replayed.reason).toBe("replay_incomplete");
       expect(replayed.text).toContain("no final result was saved");
-      expect(scenario.calls).toHaveLength(1);
+      expect(scenario.calls).toHaveLength(0);
       expect(readFileSync(transcriptPath, "utf8")).toBe(interruptedTranscript);
       const recovered = await restarted.run("do recoverable work", {
         sessionId: "s-incomplete",
@@ -119,11 +117,12 @@ describe("Engine clientMessageId submit idempotency", () => {
         clientMessageId: "fresh-attempt",
       });
       expect(recovered.reason).toBe("completed");
-      expect(recovered.text).toBe("ok 2");
-      expect(scenario.calls).toHaveLength(2);
+      expect(recovered.text).toBe("ok 1");
+      expect(scenario.calls).toHaveLength(1);
     } finally {
-      controller.abort();
-      await running;
+      if (child.exitCode === null) child.kill("SIGKILL");
+      await child.exited;
+      await restarted?.dispose();
       scenarios.delete(model);
       rmSync(dir, { recursive: true, force: true });
     }

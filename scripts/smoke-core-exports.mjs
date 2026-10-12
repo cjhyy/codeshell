@@ -35,7 +35,12 @@ assert.equal(typeof publicApi.createServer, "function");
 // internal-only value (`BUILTIN_CATALOG`) even though the separation was
 // correct and the four source-level contract tests passed.
 const hostOnlySamples = [
+  "backupOutputJournal",
+  "restoreOutputJournalBackup",
+  "inspectOutputJournalRepair",
   "SessionOutputCoverageStore",
+  "SessionOutputPublisher",
+  "needsIndependentOutput",
   "collectionConfig",
   "captureCollectionLocalFile",
   "readCollectionLocalFile",
@@ -199,6 +204,7 @@ const expectedInternalTypeExports = [
   "OutputJournalFrame",
   "OutputJournalOptions",
   "OutputJournalPage",
+  "OutputJournalProducer",
   "ParsedCron",
   "ParsedSource",
   "PluginListRow",

@@ -485,6 +485,16 @@ function fakeGuest(
   };
 }
 
+// This protocol fixture stubs transport, while the separate Main durability
+// suite exercises the real captured producer. Keep its observation callback
+// bound to the submission Session before the asynchronous worker returns.
+function captureMockOutputSource(
+  this: { ingestExternalEvent(sessionId: string, event: unknown): unknown },
+  sessionId: string,
+) {
+  return { publish: this.ingestExternalEvent.bind(this, sessionId) };
+}
+
 function bridgeResource(
   permissions: string[] = [],
   agentTools: Array<{
@@ -2678,6 +2688,7 @@ describeIsolated("PanelAppBridge", () => {
           claimSessionPanelOwner: (sessionId: string, webContentsId: number) => {
             ownerClaim = { sessionId, webContentsId };
           },
+          captureExternalOutputSource: captureMockOutputSource,
           ingestExternalEvent: () => undefined,
         }) as any,
       limits: { callTimeoutMs: 50 },
@@ -2719,6 +2730,7 @@ describeIsolated("PanelAppBridge", () => {
             return { ok: true };
           },
           claimSessionPanelOwner: () => undefined,
+          captureExternalOutputSource: captureMockOutputSource,
           ingestExternalEvent: () => undefined,
         }) as any,
       getExternalRuntimeService: () =>
@@ -2797,6 +2809,7 @@ describeIsolated("PanelAppBridge", () => {
             return { ok: true };
           },
           claimSessionPanelOwner: () => undefined,
+          captureExternalOutputSource: captureMockOutputSource,
           ingestExternalEvent: (sessionId: string, event: unknown) =>
             ingested.push({ sessionId, event }),
         }) as any,
@@ -2848,6 +2861,7 @@ describeIsolated("PanelAppBridge", () => {
             return { ok: true };
           },
           claimSessionPanelOwner: () => undefined,
+          captureExternalOutputSource: captureMockOutputSource,
           ingestExternalEvent: (_sessionId: string, event: unknown) => ingested.push(event),
         }) as any,
       getExternalRuntimeService: () =>
@@ -2900,6 +2914,7 @@ describeIsolated("PanelAppBridge", () => {
         ({
           requestWorker: async () => ({ ok: true }),
           claimSessionPanelOwner: () => undefined,
+          captureExternalOutputSource: captureMockOutputSource,
           ingestExternalEvent: () => undefined,
         }) as any,
       getExternalRuntimeService: () =>
@@ -2955,6 +2970,7 @@ describeIsolated("PanelAppBridge", () => {
             return neverSettles;
           },
           claimSessionPanelOwner: () => undefined,
+          captureExternalOutputSource: captureMockOutputSource,
           ingestExternalEvent: () => undefined,
         }) as any,
     });
@@ -2993,6 +3009,7 @@ describeIsolated("PanelAppBridge", () => {
             return { ok: false, message: "worker exited" };
           },
           claimSessionPanelOwner: () => undefined,
+          captureExternalOutputSource: captureMockOutputSource,
           ingestExternalEvent: () => undefined,
         }) as any,
     });
@@ -3030,6 +3047,7 @@ describeIsolated("PanelAppBridge", () => {
         ({
           requestWorker: async () => ({ ok: false, message: "worker exited" }),
           claimSessionPanelOwner: () => undefined,
+          captureExternalOutputSource: captureMockOutputSource,
           ingestExternalEvent: (sessionId: string, event: unknown) =>
             ingested.push({ sessionId, event }),
         }) as any,

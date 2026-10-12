@@ -1,4 +1,5 @@
 import { afterEach, describe, expect, spyOn, test } from "bun:test";
+import { createHash } from "node:crypto";
 import {
   appendFileSync,
   chmodSync,
@@ -6,6 +7,7 @@ import {
   existsSync,
   mkdtempSync,
   readFileSync,
+  readdirSync,
   renameSync,
   rmSync,
   statSync,
@@ -43,6 +45,125 @@ function fixture(id = "journal-session") {
 }
 
 describe("Session output journal", () => {
+  test("a bounded batch keeps distinct cursors and shares only durable flushes", () => {
+    const f = fixture();
+    const old = f.writer.append({ type: "text_delta", text: "old" });
+    const real = fs.fsyncSync;
+    let flushes = 0;
+    const spy = spyOn(fs, "fsyncSync").mockImplementation((fd) => {
+      flushes++;
+      real(fd);
+    });
+    let cursors: string[];
+    try {
+      cursors = f.writer.appendBatch(
+        [1, 2, 3].map((index) => ({ type: "text_delta" as const, text: String(index) })),
+      );
+    } finally {
+      spy.mockRestore();
+    }
+    expect(flushes).toBe(2);
+    expect(new Set(cursors!).size).toBe(3);
+    expect(readOutputJournal(f.root, f.id, { through: old }).frames).toHaveLength(1);
+    expect(
+      readOutputJournal(f.root, f.id, { after: old }).frames.map((frame) => frame.cursor),
+    ).toEqual(cursors!);
+  });
+  for (const cut of [1, 2])
+    test(`batch flush failure ${cut} publishes no cursors and preserves the old proof barrier`, () => {
+      const f = fixture();
+      f.writer.append({ type: "text_delta", text: "published" });
+      const original = readFileSync(f.file),
+        real = fs.fsyncSync;
+      let flushes = 0;
+      const spy = spyOn(fs, "fsyncSync").mockImplementation((fd) => {
+        if (++flushes === cut) throw new Error("batch flush denied");
+        real(fd);
+      });
+      try {
+        expect(() =>
+          f.writer.appendBatch([
+            { type: "text_delta", text: "never published A" },
+            { type: "text_delta", text: "never published B" },
+          ]),
+        ).toThrow("denied");
+      } finally {
+        spy.mockRestore();
+      }
+      expect(readFileSync(f.file).subarray(0, original.length)).toEqual(original);
+      const page = readOutputJournal(f.root, f.id);
+      if (cut === 1) {
+        expect(page.status).toBe("ok");
+        expect(page.frames.map((frame) => frame.event)).toEqual([
+          { type: "text_delta", text: "published" },
+        ]);
+        expect(page.uncommittedTail).toBe(true);
+      } else expect(page.complete).toBe(false);
+    });
+  test("incremental batches flush before control/terminal events and at Run lifetime teardown", () => {
+    const f = fixture(),
+      events: StreamEvent[] = [];
+    const wrapped = buildWrappedOnStream({
+      getSession: () => f.session,
+      setLatestTodos() {},
+      outputJournal: {
+        root: f.root,
+        getRunId: () => f.runId,
+        onFailure() {
+          throw new Error("unexpected failure");
+        },
+      },
+      userOnStream: (event) => {
+        const proof = readOutputJournal(f.root, f.id, {
+          after: event.outputCursor,
+          through: event.outputCursor,
+        });
+        expect(proof.status).toBe("ok");
+        events.push(event);
+      },
+    });
+    wrapped({ type: "text_delta", text: "A" });
+    wrapped({ type: "thinking_delta", text: "B" });
+    expect(events).toHaveLength(0);
+    wrapped({ type: "error", error: "control" });
+    expect(events.map((event) => event.type)).toEqual(["text_delta", "thinking_delta", "error"]);
+    wrapped({ type: "text_delta", text: "C" });
+    wrapped.finish();
+    expect(events.at(-1)).toMatchObject({ text: "C" });
+    expect(() => wrapped({ type: "text_delta", text: "too late" })).toThrow("closed");
+  });
+  test("timer flush failure latches without unhandled errors and never publishes pending deltas or success", async () => {
+    const f = fixture(),
+      events: StreamEvent[] = [];
+    let failed = 0;
+    const wrapped = buildWrappedOnStream({
+      getSession: () => f.session,
+      setLatestTodos() {},
+      outputJournal: {
+        root: f.root,
+        getRunId: () => f.runId,
+        onFailure() {
+          failed++;
+        },
+      },
+      userOnStream: (event) => {
+        events.push(event);
+      },
+    });
+    wrapped({ type: "text_delta", text: "not yet durable" });
+    chmodSync(f.file, 0o400);
+    await new Promise((done) => setTimeout(done, 30));
+    expect(failed).toBeGreaterThan(0);
+    expect(events).toHaveLength(0);
+    expect(() => wrapped({ type: "turn_complete", reason: "completed" })).toThrow("incomplete");
+    wrapped({ type: "error", error: "failed" });
+    wrapped({ type: "turn_complete", reason: "model_error" });
+    expect(events).toHaveLength(2);
+    expect(
+      events.every((event) => event.outputRecovery === "incomplete" && !event.outputCursor),
+    ).toBe(true);
+    wrapped.finish();
+  });
   test("freezes contiguous bounded pages while subsequent appends advance another head", () => {
     const f = fixture();
     for (let index = 0; index < 12; index++)
@@ -81,11 +202,8 @@ describe("Session output journal", () => {
     copyFileSync(f.file, f.file + ".replacement");
     renameSync(f.file + ".replacement", f.file);
     expect(readOutputJournal(f.root, f.id, { after: cursor }).status).toBe("cursor_invalid");
-    expect(readOutputJournal(f.root, f.id).status).toBe("ok");
-    new SessionOutputJournal(f.root, f.id, "next-run").append({
-      type: "text_delta",
-      text: "restored owner",
-    });
+    expect(readOutputJournal(f.root, f.id).status).toBe("cursor_invalid");
+    expect(() => new SessionOutputJournal(f.root, f.id, "next-run")).toThrow();
     rmSync(join(f.root, f.id), { recursive: true });
     expect(readOutputJournal(f.root, f.id).status).toBe("unavailable");
     const newSession = f.manager.create(f.root, "fixture", "fixture", f.id);
@@ -99,12 +217,22 @@ describe("Session output journal", () => {
     const cursor = f.writer.append({ type: "text_delta", text: "完整🙂" });
     const committed = readFileSync(f.file);
     appendFileSync(f.file, Buffer.from([0x7b, 0xe4, 0xb8]));
+    const originalEvidence = readFileSync(f.file);
     const torn = readOutputJournal(f.root, f.id);
     expect(torn.status).toBe("ok");
     expect(torn.through).toBe(cursor);
     expect(torn.uncommittedTail).toBe(true);
     const recovered = new SessionOutputJournal(f.root, f.id, f.runId);
     expect(readFileSync(f.file)).toEqual(committed);
+    const directory = join(f.root, f.id);
+    const receiptName = readdirSync(directory).find((name) =>
+      /^\.output-repair-.*\.json$/.test(name),
+    )!;
+    const receipt = JSON.parse(readFileSync(join(directory, receiptName), "utf8"));
+    expect(readFileSync(join(directory, receipt.evidence))).toEqual(originalEvidence);
+    expect(receipt.sha256).toBe(createHash("sha256").update(originalEvidence).digest("hex"));
+    expect(receipt.published.offset).toBe(committed.length);
+    expect(readOutputJournal(f.root, f.id).through).toBe(cursor);
     recovered.append({ type: "text_delta", text: "after crash" });
     const raw = readFileSync(f.file, "utf8");
     writeFileSync(f.file, raw.replace("完整🙂", "changed"));
@@ -288,6 +416,7 @@ describe("Session output journal", () => {
       outputJournal: { root: parent.root, getRunId: () => parent.runId, onFailure: () => {} },
     });
     wrapped({ type: "text_delta", text: "child output", agentId: "child", outputCursor: origin });
+    wrapped.finish();
     expect(output[0].outputOriginCursor).toBe(origin);
     expect(output[0].outputCursor).not.toBe(origin);
     expect(readOutputJournal(parent.root, parent.id).through).toBe(output[0].outputCursor);
@@ -302,8 +431,8 @@ describe("Session output journal", () => {
       f.file,
       readFileSync(f.file, "utf8").lastIndexOf("\n", statSync(f.file).size - 2) + 1,
     );
-    expect(readOutputJournal(f.root, f.id, { through: second }).status).toBe("cursor_invalid");
-    expect(readOutputJournal(f.root, f.id, { through: first.through }).status).toBe("ok");
+    expect(readOutputJournal(f.root, f.id, { through: second }).status).toBe("incomplete");
+    expect(readOutputJournal(f.root, f.id, { through: first.through }).status).toBe("incomplete");
     appendFileSync(f.file, "{broken}\n");
     expect(readOutputJournal(f.root, f.id).status).toBe("incomplete");
   });
@@ -328,11 +457,254 @@ describe("Session output journal", () => {
     ).toBe(true);
     const values = readFileSync(f.file, "utf8").trimEnd().split("\n");
     writeFileSync(f.file, values.slice(0, -1).join("\n") + "\n");
+    const damaged = readFileSync(f.file);
     const incompleteGroup = readOutputJournal(f.root, f.id);
+    expect(incompleteGroup.status).toBe("incomplete");
     expect(incompleteGroup.frames).toEqual([]);
-    expect(incompleteGroup.uncommittedTail).toBe(true);
-    new SessionOutputJournal(f.root, f.id, f.runId);
-    expect(readFileSync(f.file, "utf8").trimEnd().split("\n").length).toBe(1);
+    expect(() => new SessionOutputJournal(f.root, f.id, f.runId)).toThrow(
+      "Published output prefix",
+    );
+    expect(readFileSync(f.file)).toEqual(damaged);
+  });
+  test("an unpublished partial event repairs only after the complete original evidence is durable", () => {
+    const f = fixture();
+    const published = f.writer.append({ type: "text_delta", text: "published" });
+    const headFile = join(f.root, f.id, "output-journal-head.json");
+    const beforeAttempt = readFileSync(headFile);
+    const prefix = readFileSync(f.file);
+    f.writer.append({ type: "text_delta", text: "汉🙂".repeat(40_000) });
+    // Crash while writing fragments, before committing the publish watermark.
+    writeFileSync(headFile, beforeAttempt);
+    const lines = readFileSync(f.file, "utf8").trimEnd().split("\n");
+    writeFileSync(f.file, lines.slice(0, -1).join("\n") + "\n");
+    const original = readFileSync(f.file);
+    expect(readOutputJournal(f.root, f.id).through).toBe(published);
+    expect(readOutputJournal(f.root, f.id).uncommittedTail).toBe(true);
+    const restarted = new SessionOutputJournal(f.root, f.id, f.runId);
+    expect(readFileSync(f.file)).toEqual(prefix);
+    expect(readOutputJournal(f.root, f.id).through).toBe(published);
+    const directory = join(f.root, f.id);
+    const receiptName = readdirSync(directory).find((name) =>
+      /^\.output-repair-.*\.json$/.test(name),
+    )!;
+    const receipt = JSON.parse(readFileSync(join(directory, receiptName), "utf8"));
+    expect(readFileSync(join(directory, receipt.evidence))).toEqual(original);
+    expect(receipt.bytes).toBe(original.length);
+    expect(receipt.published.offset).toBe(prefix.length);
+    restarted.append({ type: "text_delta", text: "resumed" });
+    expect(readOutputJournal(f.root, f.id).frames.at(-1)?.event?.type).toBe("text_delta");
+  });
+  test("lost or malformed published watermarks fail closed and whole-state saves preserve the watermark", () => {
+    for (const mode of ["missing", "identity", "hash", "position"] as const) {
+      const f = fixture();
+      const published = f.writer.append({ type: "text_delta", text: "durable" });
+      const persisted = f.manager.readSessionState(f.id)!.outputJournalHead;
+      expect(persisted?.version).toBe(2);
+      expect(persisted?.sequence).toBe(0); // Immutable admission floor, not a per-frame state rewrite.
+      expect(f.manager.saveState(f.session.state)).toBe(true);
+      expect(f.manager.readSessionState(f.id)!.outputJournalHead).toEqual(persisted);
+      const stateFile = join(f.root, f.id, "state.json");
+      const state = JSON.parse(readFileSync(stateFile, "utf8"));
+      if (mode === "missing") delete state.outputJournalHead;
+      else if (mode === "identity") state.outputJournalHead.identity = "a".repeat(64);
+      else if (mode === "hash") state.outputJournalHead.hash = "b".repeat(64);
+      else state.outputJournalHead.offset = 0;
+      writeFileSync(stateFile, JSON.stringify(state));
+      const original = readFileSync(f.file);
+      expect(readOutputJournal(f.root, f.id).complete).toBe(false);
+      expect(readOutputJournal(f.root, f.id, { through: published }).complete).toBe(false);
+      expect(() => new SessionOutputJournal(f.root, f.id, f.runId)).toThrow();
+      expect(() => f.writer.append({ type: "text_delta", text: "late" })).toThrow();
+      expect(readFileSync(f.file)).toEqual(original);
+    }
+  });
+  test("repair receipt failure retains the original source and never truncates unpublished bytes", () => {
+    const f = fixture();
+    f.writer.append({ type: "text_delta", text: "durable" });
+    appendFileSync(f.file, "{torn");
+    const original = readFileSync(f.file);
+    const real = fs.openSync;
+    const denied = spyOn(fs, "openSync").mockImplementation(((path: any, ...args: any[]) => {
+      if (/\.output-repair-.*\.json$/.test(String(path)))
+        throw Object.assign(new Error("repair receipt denied"), { code: "EACCES" });
+      return (real as any)(path, ...args);
+    }) as any);
+    try {
+      expect(() => new SessionOutputJournal(f.root, f.id, f.runId)).toThrow("receipt denied");
+      expect(readFileSync(f.file)).toEqual(original);
+    } finally {
+      denied.mockRestore();
+    }
+  });
+  test("a lost, replaced, truncated or damaged head never falls back to the admission floor", () => {
+    for (const mode of ["missing", "replaced", "truncated", "checksum", "symlink"] as const) {
+      const f = fixture();
+      const published = f.writer.append({ type: "text_delta", text: "durable" });
+      const headFile = join(f.root, f.id, "output-journal-head.json");
+      const block = readFileSync(headFile);
+      if (mode === "missing") rmSync(headFile);
+      else if (mode === "replaced" || mode === "symlink") {
+        renameSync(headFile, headFile + ".old");
+        if (mode === "replaced") writeFileSync(headFile, block);
+        else fs.symlinkSync(headFile + ".old", headFile);
+      } else if (mode === "truncated") truncateSync(headFile, 100);
+      else {
+        block[30] = block[30] === 0x61 ? 0x62 : 0x61;
+        writeFileSync(headFile, block);
+      }
+      const original = readFileSync(f.file);
+      expect(readOutputJournal(f.root, f.id).complete).toBe(false);
+      expect(readOutputJournal(f.root, f.id, { through: published }).complete).toBe(false);
+      expect(() => f.writer.append({ type: "text_delta", text: "late" })).toThrow();
+      expect(() => new SessionOutputJournal(f.root, f.id, f.runId)).toThrow();
+      expect(readFileSync(f.file)).toEqual(original);
+    }
+  });
+  test("a torn head update retains the journal and blocks recovery instead of publishing", () => {
+    const f = fixture();
+    const published = f.writer.append({ type: "text_delta", text: "durable" });
+    const head = statSync(join(f.root, f.id, "output-journal-head.json"));
+    const real = fs.writeSync;
+    let attempted = false;
+    const torn = spyOn(fs, "writeSync").mockImplementation(((fd: number, ...args: any[]) => {
+      const at = fs.fstatSync(fd);
+      if (at.dev === head.dev && at.ino === head.ino) {
+        if (attempted) throw new Error("head write interrupted");
+        attempted = true;
+        return (real as any)(fd, args[0], args[1], 200, args[3]);
+      }
+      return (real as any)(fd, ...args);
+    }) as any);
+    try {
+      expect(() => f.writer.append({ type: "text_delta", text: "unpublished" })).toThrow(
+        "head write interrupted",
+      );
+    } finally {
+      torn.mockRestore();
+    }
+    const original = readFileSync(f.file);
+    expect(readOutputJournal(f.root, f.id).complete).toBe(false);
+    expect(readOutputJournal(f.root, f.id, { through: published }).complete).toBe(false);
+    expect(() => new SessionOutputJournal(f.root, f.id, f.runId)).toThrow();
+    expect(readFileSync(f.file)).toEqual(original);
+  });
+  test("watermark commit failure never publishes or adopts a complete uncommitted event", () => {
+    const f = fixture();
+    const published = f.writer.append({ type: "text_delta", text: "durable" });
+    const head = statSync(join(f.root, f.id, "output-journal-head.json"));
+    const real = fs.writeSync;
+    const denied = spyOn(fs, "writeSync").mockImplementation(((fd: number, ...args: any[]) => {
+      const at = fs.fstatSync(fd);
+      if (at.dev === head.dev && at.ino === head.ino) throw new Error("watermark commit denied");
+      return (real as any)(fd, ...args);
+    }) as any);
+    try {
+      expect(() => f.writer.append({ type: "text_delta", text: "unpublished" })).toThrow(
+        "watermark commit denied",
+      );
+    } finally {
+      denied.mockRestore();
+    }
+    const original = readFileSync(f.file);
+    const page = readOutputJournal(f.root, f.id);
+    expect(page.through).toBe(published);
+    expect(page.frames).toHaveLength(1);
+    expect(page.uncommittedTail).toBe(true);
+    expect(() => new SessionOutputJournal(f.root, f.id, f.runId)).toThrow("requires repair");
+    expect(() => f.writer.append({ type: "text_delta", text: "late" })).toThrow();
+    expect(readFileSync(f.file)).toEqual(original);
+  });
+  test("inline watermarks migrate without changing cursors and frame publication does not replace state", () => {
+    const f = fixture();
+    const published = f.writer.append({ type: "text_delta", text: "inline format" });
+    const directory = join(f.root, f.id);
+    const headFile = join(directory, "output-journal-head.json");
+    const stateFile = join(directory, "state.json");
+    const state = JSON.parse(readFileSync(stateFile, "utf8"));
+    state.outputJournalHead = JSON.parse(readFileSync(headFile, "utf8")).head;
+    writeFileSync(stateFile, JSON.stringify(state));
+    rmSync(headFile);
+    const migrated = new SessionOutputJournal(f.root, f.id, f.runId);
+    expect(readOutputJournal(f.root, f.id).through).toBe(published);
+    const saved = readFileSync(stateFile);
+    const savedIdentity = statSync(stateFile).ino;
+    const watermarkIdentity = statSync(headFile).ino;
+    migrated.append({ type: "text_delta", text: "same files" });
+    expect(readFileSync(stateFile)).toEqual(saved);
+    expect(statSync(stateFile).ino).toBe(savedIdentity);
+    expect(statSync(headFile).ino).toBe(watermarkIdentity);
+    expect(readOutputJournal(f.root, f.id, { after: published }).frames).toHaveLength(1);
+  });
+  test("a head fsync failure blocks publication and does not silently reuse the old watermark", () => {
+    const f = fixture();
+    f.writer.append({ type: "text_delta", text: "durable" });
+    const head = statSync(join(f.root, f.id, "output-journal-head.json"));
+    const real = fs.fsyncSync;
+    let failed = false;
+    const denied = spyOn(fs, "fsyncSync").mockImplementation((fd) => {
+      const at = fs.fstatSync(fd);
+      if (!failed && at.dev === head.dev && at.ino === head.ino) {
+        failed = true;
+        throw new Error("head fsync denied");
+      }
+      return real(fd);
+    });
+    try {
+      expect(() => f.writer.append({ type: "text_delta", text: "unpublished" })).toThrow(
+        "head fsync denied",
+      );
+    } finally {
+      denied.mockRestore();
+    }
+    const original = readFileSync(f.file);
+    expect(readOutputJournal(f.root, f.id).complete).toBe(false);
+    expect(() => new SessionOutputJournal(f.root, f.id, f.runId)).toThrow();
+    expect(readFileSync(f.file)).toEqual(original);
+  });
+  test("complete historical v1 data keeps its cursor during watermark migration; unknown old tails stay intact", () => {
+    for (const torn of [false, true]) {
+      const f = fixture();
+      f.writer.append({ type: "text_delta", text: "historical" });
+      const stored = readFileSync(f.file, "utf8")
+        .trimEnd()
+        .split("\n")
+        .map((line) => JSON.parse(line));
+      delete stored[0].durableHead;
+      const header = JSON.stringify(stored[0]) + "\n";
+      const pin = createHash("sha256").update(header).digest("hex");
+      const record = stored[1];
+      delete record.version;
+      record.runId = record.run.id;
+      delete record.run;
+      record.previousHash = pin;
+      delete record.hash;
+      record.hash = createHash("sha256").update(JSON.stringify(record)).digest("hex");
+      writeFileSync(f.file, header + JSON.stringify(record) + "\n" + (torn ? "{old-torn" : ""));
+      const stateFile = join(f.root, f.id, "state.json");
+      const state = JSON.parse(readFileSync(stateFile, "utf8"));
+      state.outputJournalIdentity = pin;
+      delete state.outputJournalHead;
+      writeFileSync(stateFile, JSON.stringify(state));
+      rmSync(join(f.root, f.id, "output-journal-head.json"));
+      const previous = readOutputJournal(f.root, f.id);
+      expect(previous.status).toBe("ok");
+      expect(previous.frames[0].runId).toBe(f.runId);
+      const original = readFileSync(f.file);
+      if (torn) {
+        expect(() => new SessionOutputJournal(f.root, f.id, f.runId)).toThrow(
+          "no published watermark",
+        );
+        expect(readFileSync(f.file)).toEqual(original);
+      } else {
+        const migrated = new SessionOutputJournal(f.root, f.id, f.runId);
+        expect(readOutputJournal(f.root, f.id).through).toBe(previous.through);
+        migrated.append({ type: "text_delta", text: "current" });
+        const page = readOutputJournal(f.root, f.id, { after: previous.through });
+        expect(page.status).toBe("ok");
+        expect(page.frames).toHaveLength(1);
+        expect(page.frames[0].runId).toBe(f.runId);
+      }
+    }
   });
   test("legacy cutover requires the exact bounded prefix and never reads a huge later reply", () => {
     const f = fixture();
@@ -347,14 +719,21 @@ describe("Session output journal", () => {
     });
     expect(readOutputJournalLegacyBase(f.root, "../escape", anchor).complete).toBe(false);
   });
-  test("the journal storage budget fails closed without deleting an old prefix", () => {
+  test("whole-event rotation keeps previously published and frozen cursors in the same domain", () => {
     const f = fixture();
     const huge = { type: "text_delta" as const, text: "x".repeat(15 * 1024 * 1024) };
+    const originalInode = statSync(f.file).ino;
+    const first = f.writer.append(huge);
     for (let index = 0; index < 6; index++) f.writer.append(huge);
-    const size = statSync(f.file).size;
-    expect(size).toBeLessThan(128 * 1024 * 1024);
-    expect(() => f.writer.append(huge)).toThrow("storage budget");
-    expect(statSync(f.file).size).toBe(size);
+    expect(statSync(f.file).ino).toBe(originalInode);
+    expect(statSync(f.file).size).toBeLessThan(16 * 1024 * 1024);
+    const frozen = readOutputJournal(f.root, f.id, { after: first, through: first });
+    expect(frozen.status).toBe("ok");
+    expect(frozen.complete).toBe(true);
+    expect(frozen.through).toBe(first);
+    const restarted = new SessionOutputJournal(f.root, f.id, f.runId);
+    const latest = restarted.append({ type: "text_delta", text: "after rotation" });
+    expect(readOutputJournal(f.root, f.id, { after: latest, through: latest }).complete).toBe(true);
   });
   test("archive follows the existing read policy; ephemeral Sessions create no journal", () => {
     const f = fixture();
