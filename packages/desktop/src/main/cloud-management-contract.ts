@@ -86,6 +86,57 @@ export interface ManagedCloudGrant {
     expiresAt: number;
   };
 }
+export interface CloudManagementTarget {
+  version: 2;
+  mode: "cloud-account";
+  cloudOrigin: string;
+  accountOrigin: string;
+  installationId: string;
+}
+export interface CloudManagementTicket {
+  ticket: string;
+  expiresAt: number;
+  cloudOrigin: string;
+  accountOrigin: string;
+  installationId: string;
+}
+export function cloudManagementTarget(
+  value: unknown,
+  input: CloudManagementRequest,
+): CloudManagementTarget {
+  const row = cloudObject(value);
+  if (
+    row.version !== 2 ||
+    row.mode !== "cloud-account" ||
+    row.cloudOrigin !== input.cloudOrigin ||
+    row.accountOrigin !== input.accountOrigin
+  )
+    throw invalid();
+  return {
+    version: 2,
+    mode: "cloud-account",
+    cloudOrigin: input.cloudOrigin,
+    accountOrigin: input.accountOrigin,
+    installationId: cloudId(row.installationId),
+  };
+}
+export function cloudManagementTicket(
+  value: unknown,
+  target: Omit<CloudManagementTarget, "version" | "mode">,
+  now: number,
+): CloudManagementTicket {
+  const row = cloudObject(value);
+  if (
+    !cloudToken(row.ticket) ||
+    row.cloudOrigin !== target.cloudOrigin ||
+    row.accountOrigin !== target.accountOrigin ||
+    row.installationId !== target.installationId ||
+    time(row.expiresAt) <= now ||
+    (row.expiresAt as number) > now + 60_000
+  )
+    throw invalid();
+  return { ticket: row.ticket, expiresAt: row.expiresAt as number, ...target };
+}
 export function managedCloudGrant(
   value: unknown,
   input: CloudManagementRequest,

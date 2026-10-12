@@ -1054,6 +1054,7 @@ const { mobileRemoteController, cloudManagementManager } = createDesktopRemoteSe
   binary: cloudflaredBinary,
   passcode: accessPasscode,
   cloudWindows: { open: openManagedCloudWorkbench, close: closeManagedCloudWorkbench },
+  openLegacyCloud: openCloudWorkbench,
 });
 let gatewayControlServer: GatewayControlServer | undefined;
 let sessionBridge: SessionBridgeWiring | undefined;
@@ -6423,20 +6424,6 @@ async function sweepStaleWorktrees(reason: string): Promise<void> {
   }
 }
 
-ipcMain.handle("cloud:open-workbench", async (event, address: unknown) => {
-  const owner = BrowserWindow.fromWebContents(event.sender);
-  const allowed = () =>
-    !!owner &&
-    !owner.isDestroyed() &&
-    !event.sender.isDestroyed() &&
-    mainWindows.has(owner) &&
-    event.senderFrame === event.sender.mainFrame;
-  if (!allowed()) throw new Error("云端入口仅允许从主窗口打开。");
-  return typeof address === "string"
-    ? openCloudWorkbench(address)
-    : cloudManagementManager.manage(address as never, allowed);
-});
-
 ipcMain.handle("shell:openExternal", async (_e, url: string) => {
   if (typeof url !== "string" || !url || url.length > 16_384 || url.includes("\0")) {
     throw new Error("openExternal requires a bounded url");
@@ -7235,6 +7222,7 @@ app.on(
       await Promise.allSettled([
         imGatewayService.dispose(),
         mobileRemoteController.dispose(),
+        cloudManagementManager.dispose(),
         gatewayControlServer?.stop(),
         petWorkInboxFlush,
         petLongTaskFlush,

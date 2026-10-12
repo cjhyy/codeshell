@@ -1,4 +1,5 @@
 import { createHash, randomBytes } from "node:crypto";
+import { cloudManagementTicket, cloudOrigin, cloudId } from "./cloud-management-contract.js";
 import { isRelayOrigin, isRelayToken } from "@cjhyy/code-shell-server/remote-relay";
 import type {
   CloudAccountCapabilities,
@@ -622,11 +623,26 @@ export class CloudAccountManager {
     return {
       signal,
       current,
-      credential: async () => {
+      ticket: async (targetOrigin: string, installationId: string) => {
+        cloudOrigin(targetOrigin);
+        cloudId(installationId);
         current();
         const token = await this.getCredential(origin, accountId, signal);
         current();
-        return token;
+        const value = await this.request({
+          origin,
+          path: "/api/v1/account/cloud-management/tickets",
+          method: "POST",
+          token,
+          body: { cloudOrigin: targetOrigin, installationId },
+          signal,
+        });
+        current();
+        return cloudManagementTicket(
+          value,
+          { cloudOrigin: targetOrigin, accountOrigin: origin, installationId },
+          this.now(),
+        );
       },
     };
   }

@@ -4,6 +4,7 @@ import {
   cloudManagementRequest,
   cloudObject,
   cloudProject,
+  cloudManagementTarget,
   managedCloudGrant,
   managedCloudPartition,
   type ManagedCloudGrant,
@@ -32,6 +33,8 @@ interface Entry {
 }
 /** Explicit Main-only Cloud operations. Construction never connects or loads credentials. */
 export class CloudManagementManager {
+  private closed = false;
+  private readonly shutdown = new AbortController();
   private readonly entries = new Map<string, Entry>();
   private readonly queues = new Map<string, Promise<unknown>>();
   private readonly retired = new Set<Entry>();
@@ -52,6 +55,20 @@ export class CloudManagementManager {
   private key(input: CloudManagementRequest) {
     return JSON.stringify([input.cloudOrigin, input.accountOrigin, input.accountId]);
   }
+  private newEntry(key: string, grant: ManagedCloudGrant, signal: AbortSignal): Entry {
+    const created: Entry = {
+      key,
+      grant,
+      signal,
+      timer: undefined as never,
+      abort: () => {
+        void this.retire(key, created, true).catch(() => {});
+      },
+    };
+    created.timer = setTimeout(created.abort, Math.max(1, grant.session.expiresAt - this.now()));
+    created.timer.unref?.();
+    return created;
+  }
   private retire(key: string, entry: Entry, remote: boolean): Promise<boolean> {
     if (entry.retiring) return entry.retiring;
     if (this.entries.get(key) === entry) this.entries.delete(key);
@@ -60,7 +77,15 @@ export class CloudManagementManager {
     entry.signal.removeEventListener("abort", entry.abort);
     // close() destroys windows synchronously before its cookie cleanup awaits.
     const pending = (async () => {
-      const local = this.deps.windows.close(managedCloudPartition(entry.grant));
+      let local: Promise<{ ok: true } | { ok: false; error: unknown }>;
+      try {
+        local = this.deps.windows.close(managedCloudPartition(entry.grant)).then(
+          () => ({ ok: true as const }),
+          (error: unknown) => ({ ok: false as const, error }),
+        );
+      } catch (error) {
+        local = Promise.resolve({ ok: false, error });
+      }
       let confirmed = !remote || entry.grant.session.expiresAt <= this.now();
       if (remote && !confirmed) {
         try {
@@ -78,7 +103,8 @@ export class CloudManagementManager {
           confirmed = false;
         }
       }
-      await local;
+      const cleanup = await local;
+      if (!cleanup.ok) throw cleanup.error;
       if (confirmed) this.retired.delete(entry);
       return confirmed;
     })();
@@ -104,7 +130,8 @@ export class CloudManagementManager {
     if (results.some((r) => r.status === "rejected"))
       throw new Error("云端窗口清理未完成，请重试退出。");
   }
-  manage(raw: CloudManagementRequest, authorized: () => boolean): Promise<CloudManagementResult> {
+  manage(raw: unknown, authorized: () => boolean): Promise<CloudManagementResult> {
+    if (this.closed) throw new Error("云端管理正在关闭。");
     const input = cloudManagementRequest(raw);
     const lease = this.deps.account.captureRootAccount(
       input.accountOrigin,
@@ -128,62 +155,67 @@ export class CloudManagementManager {
     key: string,
     lease: ReturnType<CloudAccountManager["captureRootAccount"]>,
   ): Promise<CloudManagementResult> {
-    lease.current();
+    const alive = () => {
+      if (this.closed) throw new Error("云端管理正在关闭。");
+      lease.current();
+    };
+    const signal = AbortSignal.any([lease.signal, this.shutdown.signal]);
+    alive();
     let entry = this.entries.get(key);
     if (entry && (entry.signal !== lease.signal || entry.grant.session.expiresAt <= this.now())) {
       await this.retire(key, entry, true);
       entry = undefined;
-      lease.current();
+      alive();
     }
     if (input.action === "logout") {
       const owned = new Set([...this.retired].filter((e) => e.key === key));
       if (entry) owned.add(entry);
       const results = await Promise.all([...owned].map((e) => this.retire(key, e, true)));
-      lease.current();
+      alive();
       if (results.some((confirmed) => !confirmed))
         throw new Error("本机云端窗口已关闭；服务端未确认撤销，请联网后重试或在账号中撤销会话。");
       return { action: "logout", revoked: true };
     }
     if (!entry) {
-      const accountToken = await lease.credential();
-      lease.current();
+      const target = cloudManagementTarget(
+        await this.request({
+          origin: input.cloudOrigin,
+          path: "/api/v1/cloud-management/capabilities",
+          method: "GET",
+          signal,
+        }),
+        input,
+      );
+      alive();
+      const ticket = await lease.ticket(target.cloudOrigin, target.installationId);
+      alive();
       const value = await this.request({
         origin: input.cloudOrigin,
         path: "/api/v1/cloud-management/session",
         method: "POST",
-        body: { accountToken },
-        signal: lease.signal,
+        body: { ticket: ticket.ticket },
+        signal,
       });
       const grant = managedCloudGrant(value, input, this.now());
+      if (grant.session.installationId !== target.installationId) {
+        const orphan = this.newEntry(key, grant, lease.signal);
+        void this.retire(key, orphan, true).catch(() => {});
+        throw new Error("云端安装身份已变化，请重新连接。");
+      }
       try {
-        lease.current();
+        alive();
       } catch (error) {
-        void this.request({
-          origin: input.cloudOrigin,
-          path: "/api/v1/cloud-management/logout",
-          method: "POST",
-          token: grant.token,
-          body: {},
-        }).catch(() => {});
+        const orphan = this.newEntry(key, grant, lease.signal);
+        void this.retire(key, orphan, true).catch(() => {});
         throw error;
       }
-      const created: Entry = {
-        key,
-        grant,
-        signal: lease.signal,
-        timer: undefined as never,
-        abort: () => {
-          void this.retire(key, created, true).catch(() => {});
-        },
-      };
-      created.timer = setTimeout(created.abort, grant.session.expiresAt - this.now());
-      created.timer.unref?.();
+      const created = this.newEntry(key, grant, lease.signal);
       lease.signal.addEventListener("abort", created.abort, { once: true });
       this.entries.set(key, created);
       entry = created;
     }
     const current = () => {
-      lease.current();
+      alive();
       if (this.entries.get(key) !== entry || entry!.grant.session.expiresAt <= this.now())
         throw new Error("云端管理授权已失效，请重新连接。");
     };
@@ -202,7 +234,7 @@ export class CloudManagementManager {
           ...(input.action === "list"
             ? {}
             : { body: input.action === "create" ? { name: input.name } : {} }),
-          signal: lease.signal,
+          signal,
         }),
       );
       current();
@@ -252,9 +284,16 @@ export class CloudManagementManager {
       }
       return { action: input.action, project };
     } catch (error) {
+      if (input.action === "open") await this.retire(key, entry, true);
       if (error instanceof CloudManagementHttpError && [401, 403].includes(error.status))
-        await this.retire(key, entry, false);
+        await this.retire(key, entry, true);
       throw error;
     }
+  }
+  async dispose() {
+    this.closed = true;
+    this.shutdown.abort();
+    const owned = new Set([...this.entries.values(), ...this.retired]);
+    await Promise.allSettled([...owned].map((entry) => this.retire(entry.key, entry, true)));
   }
 }

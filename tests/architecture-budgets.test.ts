@@ -129,6 +129,7 @@ describe("architecture growth budgets", () => {
         matches("packages/desktop/src/main/remote-link-ipc.ts", /ipcMain\.handle\(/g) +
         matches("packages/desktop/src/main/device-relay-ipc.ts", /ipcMain\.handle\(/g) +
         matches("packages/desktop/src/main/cloud-account-ipc.ts", /ipcMain\.handle\(/g) +
+        matches("packages/desktop/src/main/cloud-workbench-ipc.ts", /ipcMain\.handle\(/g) +
         matches("packages/desktop/src/main/local-file-preview-ipc.ts", /ipcMain\.handle\(/g) +
         matches("packages/desktop/src/main/session-transcript-ipc.ts", /ipcMain\.handle\(/g) +
         matches("packages/desktop/src/main/profile-switch-ipc.ts", /ipcMain\.handle\(/g) +

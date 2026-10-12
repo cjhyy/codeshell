@@ -33,27 +33,29 @@ export function createCloudManagementTransport(
     const body = input.body === undefined ? undefined : cloudObject(input.body);
     const empty = body && Object.keys(body).length === 0;
     const valid =
-      input.path === "/api/v1/cloud-management/session"
-        ? input.method === "POST" &&
-          body &&
-          Object.keys(body).length === 1 &&
-          cloudToken(body.accountToken) &&
-          input.token === undefined
-        : cloudToken(input.token) &&
-          (input.path === "/api/v1/cloud-management/logout"
-            ? input.method === "POST" && empty
-            : input.path === "/api/v1/projects"
-              ? (input.method === "GET" && body === undefined) ||
-                (input.method === "POST" &&
-                  body &&
-                  Object.keys(body).length === 1 &&
-                  typeof body.name === "string" &&
-                  body.name.length > 0 &&
-                  body.name.length <= 80)
-              : /^\/api\/v1\/projects\/([0-9a-f-]{36})\/(start|stop|open)$/.test(input.path) &&
-                cloudId(input.path.split("/")[4]) &&
-                input.method === "POST" &&
-                empty);
+      input.path === "/api/v1/cloud-management/capabilities"
+        ? input.method === "GET" && body === undefined && input.token === undefined
+        : input.path === "/api/v1/cloud-management/session"
+          ? input.method === "POST" &&
+            body &&
+            Object.keys(body).length === 1 &&
+            cloudToken(body.ticket) &&
+            input.token === undefined
+          : cloudToken(input.token) &&
+            (input.path === "/api/v1/cloud-management/logout"
+              ? input.method === "POST" && empty
+              : input.path === "/api/v1/projects"
+                ? (input.method === "GET" && body === undefined) ||
+                  (input.method === "POST" &&
+                    body &&
+                    Object.keys(body).length === 1 &&
+                    typeof body.name === "string" &&
+                    body.name.length > 0 &&
+                    body.name.length <= 80)
+                : /^\/api\/v1\/projects\/([0-9a-f-]{36})\/(start|stop|open)$/.test(input.path) &&
+                  cloudId(input.path.split("/")[4]) &&
+                  input.method === "POST" &&
+                  empty);
     if (!valid) throw new Error("云端管理请求无效。");
     const bytes = body === undefined ? undefined : Buffer.from(JSON.stringify(body));
     if (bytes && bytes.length > 8192) throw new Error("云端管理请求过大。");

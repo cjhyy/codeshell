@@ -14,7 +14,8 @@ export type CloudManagementRequest = {
   accountId: string;
   cloudOrigin: string;
 } & (
-  | { action: "list" | "logout" }
+  | { action: "list" }
+  | { action: "logout" }
   | { action: "create"; name: string }
   | { action: "start" | "stop" | "open"; projectId: string }
 );

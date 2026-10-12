@@ -46,8 +46,11 @@ test("remote composition registers owner-scoped IPC without starting cloud or lo
         },
         close: async () => {},
       },
+      openLegacyCloud: async () => {
+        throw new Error("unexpected legacy Cloud window");
+      },
     });
-    expect(handlers.size).toBe(15);
+    expect(handlers.size).toBe(16);
     expect(handlers.has("cloudAccount:capabilities")).toBe(true);
     const event = { sender, senderFrame: sender.mainFrame };
     expect(handlers.get("cloudAccount:status")!(event)).toEqual({ state: "signed-out" });

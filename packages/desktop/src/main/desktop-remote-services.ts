@@ -12,6 +12,7 @@ import { DeviceRelayStore, type RelaySecretCipher } from "./device-relay-store.j
 import { MobileRemoteController } from "./mobile-remote-controller.js";
 import { registerCloudAccountIpc } from "./cloud-account-ipc.js";
 import { registerDeviceRelayIpc } from "./device-relay-ipc.js";
+import { registerCloudWorkbenchIpc } from "./cloud-workbench-ipc.js";
 import type { PrepareAccountGitHubLink } from "./account-github-link.js";
 import { CloudManagementManager, type ManagedCloudWindows } from "./cloud-management-manager.js";
 
@@ -32,6 +33,7 @@ export function createDesktopRemoteServices(options: {
   binary: CloudflaredBinary;
   passcode: AccessPasscode;
   cloudWindows: ManagedCloudWindows;
+  openLegacyCloud: (address: unknown) => Promise<{ address: string }>;
 }) {
   const cipher: RelaySecretCipher = {
     available: () =>
@@ -85,6 +87,12 @@ export function createDesktopRemoteServices(options: {
       (window) => !window.isDestroyed() && window.webContents === contents,
     );
   registerCloudAccountIpc({ ipcMain: options.ipcMain, manager: cloudAccountManager, isMainWindow });
+  registerCloudWorkbenchIpc({
+    ipcMain: options.ipcMain,
+    manager: cloudManagementManager,
+    isMainWindow,
+    openLegacy: options.openLegacyCloud,
+  });
   registerDeviceRelayIpc({
     ipcMain: options.ipcMain,
     controller: mobileRemoteController,
