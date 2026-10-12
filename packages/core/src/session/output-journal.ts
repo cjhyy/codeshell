@@ -29,6 +29,14 @@ import {
   type OutputHeadPin,
   type PublishedOutputHead,
 } from "./output-journal-head.js";
+import {
+  initializeOutputStorage,
+  isOutputStorageBarrier,
+  rotateOutputStorage,
+  SegmentedOutputFile,
+  shouldSegmentOutput,
+  type OutputStoragePin,
+} from "./output-journal-storage.js";
 
 const MAX_JOURNAL_BYTES = 128 * 1024 * 1024;
 const MAX_RECORD_BYTES = 256 * 1024;
@@ -68,7 +76,11 @@ interface VerifiedFile {
 // affects performance only; the journal is always sufficient to rebuild them.
 const verifiedFiles = new Map<string, VerifiedFile>();
 const MAX_VERIFIED_FILES = 16;
-function fileStamp(fd: number): string {
+type OutputFile = number | SegmentedOutputFile;
+const outputSize = (fd: OutputFile): number =>
+  typeof fd === "number" ? fstatSync(fd).size : fd.currentSize();
+function fileStamp(fd: OutputFile): string {
+  if (typeof fd !== "number") return fd.stamp();
   const stat = fstatSync(fd, { bigint: true });
   return `${stat.dev}:${stat.ino}:${stat.size}:${stat.mtimeNs}:${stat.ctimeNs}`;
 }
@@ -125,6 +137,8 @@ export interface OutputJournalPage {
   /** Pagination coverage only: never means a model run completed. */
   complete: boolean;
   uncommittedTail?: boolean;
+  /** A retained cursor range expired; the response is always incomplete. */
+  reason?: "retention_expired";
 }
 
 class JournalError extends Error {
@@ -210,6 +224,7 @@ function sessionLocation(root: string, sessionId: string) {
     outputRecoveryIncomplete?: boolean;
     outputJournalIdentity?: string;
     outputJournalHead?: OutputHeadPin;
+    outputJournalStorage?: OutputStoragePin;
   };
   try {
     state = JSON.parse(readBounded(stateFd, 1024 * 1024));
@@ -242,7 +257,7 @@ function sessionLocation(root: string, sessionId: string) {
 
 /** Constant-memory, bounded-record reader. It never skips malformed committed records. */
 function* lines(
-  fd: number,
+  fd: OutputFile,
   start: number,
   end: number,
   maxRecordBytes = MAX_RECORD_BYTES,
@@ -251,7 +266,10 @@ function* lines(
   let pending = Buffer.alloc(0);
   while (offset < end) {
     const buffer = Buffer.alloc(Math.min(CHUNK_BYTES, end - offset));
-    const n = readSync(fd, buffer, 0, buffer.length, offset);
+    const n =
+      typeof fd === "number"
+        ? readSync(fd, buffer, 0, buffer.length, offset)
+        : fd.read(buffer, 0, buffer.length, offset);
     if (!n) invalid("Output journal was truncated");
     offset += n;
     pending = Buffer.concat([pending, buffer.subarray(0, n)]);
@@ -436,13 +454,13 @@ function parseRecord(
   return { value, position: { sequence: value.sequence, offset: line.end, hash } };
 }
 function scan(
-  fd: number,
+  fd: OutputFile,
   start: Position,
   size: number,
   checkpoints?: Checkpoint[],
   format?: { requiresHead: boolean; lastLegacySequence: number },
 ): Position {
-  if (size > MAX_JOURNAL_BYTES)
+  if (typeof fd === "number" && size > MAX_JOURNAL_BYTES)
     throw new JournalError("incomplete", "Output journal exceeds its storage budget");
   let current = start;
   let committed = start;
@@ -489,7 +507,7 @@ function scan(
     checkpoints.pop();
   return committed;
 }
-function verifiedFile(fd: number, file: string, start: Position, size: number): VerifiedFile {
+function verifiedFile(fd: OutputFile, file: string, start: Position, size: number): VerifiedFile {
   const stamp = fileStamp(fd),
     cached = verifiedFiles.get(file);
   if (cached?.stamp === stamp) {
@@ -497,13 +515,14 @@ function verifiedFile(fd: number, file: string, start: Position, size: number): 
     verifiedFiles.set(file, cached);
     return cached;
   }
+  if (typeof fd !== "number") start = fd.floor;
   const checkpoints: Checkpoint[] = [{ ...start, committed: true }];
   const format = { requiresHead: false, lastLegacySequence: 0 };
   const head = scan(fd, start, size, checkpoints, format);
   const result = { stamp, head, checkpoints, ...format };
   // A concurrent append may leave the frozen scan valid, but its new stamp
   // cannot certify the unseen tail. Rebuild on the next request instead.
-  if (fileStamp(fd) === stamp && fstatSync(fd).size === size) {
+  if (fileStamp(fd) === stamp && outputSize(fd) === size) {
     // The caller captured `size` before reading the header. A worker may
     // finish an append before this function captures `stamp`; never certify
     // that older scan bound with the newer full-file cache identity.
@@ -514,7 +533,12 @@ function verifiedFile(fd: number, file: string, start: Position, size: number): 
   }
   return result;
 }
-function verifyPosition(fd: number, value: Position, verified: VerifiedFile, wholeEvent: boolean) {
+function verifyPosition(
+  fd: OutputFile,
+  value: Position,
+  verified: VerifiedFile,
+  wholeEvent: boolean,
+) {
   let checkpoint = verified.checkpoints[0]!;
   for (const item of verified.checkpoints) {
     if (item.sequence > value.sequence) break;
@@ -541,7 +565,7 @@ function verifyPosition(fd: number, value: Position, verified: VerifiedFile, who
 }
 
 function publishedHead(
-  fd: number,
+  fd: OutputFile,
   location: ReturnType<typeof sessionLocation>,
   loaded: ReturnType<typeof readHeader>,
   verified: VerifiedFile,
@@ -559,7 +583,14 @@ function publishedHead(
   const floor = cursor(Buffer.from(JSON.stringify(pin)).toString("base64url"), loaded.identity);
   if (floor.offset > verified.head.offset || floor.sequence > verified.head.sequence)
     throw new JournalError("incomplete", "Published output admission prefix was lost");
-  verifyPosition(fd, floor, verified, true);
+  if (typeof fd !== "number" && floor.sequence < fd.floor.sequence) {
+    if (
+      floor.sequence !== fd.pin.origin.sequence ||
+      floor.offset !== fd.pin.origin.offset ||
+      floor.hash !== fd.pin.origin.hash
+    )
+      throw new JournalError("incomplete", "Output admission no longer matches storage origin");
+  } else verifyPosition(fd, floor, verified, true);
   const position = cursor(Buffer.from(JSON.stringify(head)).toString("base64url"), loaded.identity);
   if (
     position.offset > verified.head.offset ||
@@ -577,14 +608,26 @@ export function readOutputJournal(
   sessionId: string,
   options: OutputJournalOptions = {},
 ): OutputJournalPage {
+  return readOutputJournalAttempt(root, sessionId, options, 2);
+}
+function readOutputJournalAttempt(
+  root: string,
+  sessionId: string,
+  options: OutputJournalOptions,
+  admissionRetries: number,
+): OutputJournalPage {
   let fd: number | undefined;
+  let storage: SegmentedOutputFile | undefined;
+  let refreshedStorage: SegmentedOutputFile | undefined;
   let pinned = false;
+  let initialLocation: ReturnType<typeof sessionLocation> | undefined;
   try {
     if (!options || typeof options !== "object" || Array.isArray(options))
       invalid("Invalid output journal options");
     const maxBytes = boundedInt(options.maxBytes, MAX_PAGE_BYTES, MAX_PAGE_BYTES);
     const maxFrames = boundedInt(options.maxFrames, MAX_PAGE_FRAMES, MAX_PAGE_FRAMES);
     const location = sessionLocation(root, sessionId);
+    initialLocation = location;
     pinned = location.state.outputJournalIdentity !== undefined;
     if (location.state.outputRecoveryIncomplete)
       throw new JournalError("incomplete", "This Session recorded an output persistence failure");
@@ -594,18 +637,42 @@ export function readOutputJournal(
       ? readPublishedOutputHead(location.directory, location.state.outputJournalHead)
       : undefined;
     fd = openRegular(location.file, constants.O_RDONLY);
-    const size = fstatSync(fd).size;
-    const headerStamp = fileStamp(fd);
     const loaded = readHeader(fd, location);
+    if (location.state.outputJournalStorage)
+      storage = new SegmentedOutputFile(
+        fd,
+        location.directory,
+        location.file,
+        loaded.start.offset,
+        location.state.outputJournalStorage,
+        loaded.identity,
+      );
+    const output = storage ?? fd;
+    const physicalSize = outputSize(output);
+    // First migration fsyncs a rejecting physical marker before admitting its
+    // manifest. Only this exact marker beyond an independently fsynced old
+    // watermark can be excluded from that still-valid frozen prefix. General
+    // damage or complete unpublished records are never treated this way.
+    const preparing =
+      !storage && capturedHead && isOutputStorageBarrier(fd, capturedHead.offset, loaded.identity);
+    const size = preparing ? capturedHead.offset : physicalSize;
+    const headerStamp = fileStamp(output);
     const { header, identity, start } = loaded;
     if (!pinned)
       throw new JournalError("incomplete", "Output journal identity was never committed");
-    const verified = verifiedFile(fd, location.file, start, size);
-    const published = publishedHead(fd, location, loaded, verified, capturedHead);
+    const verified = verifiedFile(output, location.file, start, size);
+    const published = publishedHead(output, location, loaded, verified, capturedHead);
     const after = options.after === undefined ? start : cursor(options.after, identity);
     // The first request freezes a verified prefix. Later pages retain that prefix
     // while independent appends may advance the current file beyond it.
     const through = options.through === undefined ? published : cursor(options.through, identity);
+    if (
+      storage &&
+      (after.sequence < storage.floor.sequence || through.sequence < storage.floor.sequence)
+    )
+      throw Object.assign(new JournalError("incomplete", "Output cursor retention expired"), {
+        code: "CODESHELL_OUTPUT_RETENTION_EXPIRED",
+      });
     if (
       after.offset < start.offset ||
       after.sequence > through.sequence ||
@@ -616,13 +683,13 @@ export function readOutputJournal(
       invalid("Output cursor is outside the committed prefix");
     // The entire prefix is verified under this exact file stamp. Sparse
     // positions bound seeks without allowing a cursor to skip damaged output.
-    verifyPosition(fd, after, verified, false);
-    verifyPosition(fd, through, verified, true);
+    verifyPosition(output, after, verified, false);
+    verifyPosition(output, through, verified, true);
     const frames: OutputJournalFrame[] = [];
     let bytes = 0;
     let next = after;
     let current = after;
-    for (const line of lines(fd, after.offset, through.offset)) {
+    for (const line of lines(output, after.offset, through.offset)) {
       const parsed = parseRecord(line, current);
       current = parsed.position;
       const frame = {
@@ -647,7 +714,25 @@ export function readOutputJournal(
       next = current;
       if (frames.length >= maxFrames) break;
     }
-    if (headerStamp !== verified.stamp || fileStamp(fd) !== verified.stamp) {
+    if (storage) {
+      refreshedStorage = new SegmentedOutputFile(
+        fd,
+        location.directory,
+        location.file,
+        loaded.start.offset,
+        storage.pin,
+        identity,
+      );
+      if (
+        after.sequence < refreshedStorage.floor.sequence ||
+        through.sequence < refreshedStorage.floor.sequence
+      )
+        throw Object.assign(new JournalError("incomplete", "Output cursor retention expired"), {
+          code: "CODESHELL_OUTPUT_RETENTION_EXPIRED",
+        });
+    }
+    const finalOutput = refreshedStorage ?? output;
+    if (headerStamp !== verified.stamp || fileStamp(finalOutput) !== verified.stamp) {
       // Appends do not invalidate a frozen page. A changed file must re-prove
       // its pinned header and complete old prefix, including before `after`.
       // A worker may keep appending beyond `through` throughout this bounded
@@ -655,7 +740,11 @@ export function readOutputJournal(
       // is the recovery boundary. Arbitrary writes bypassing owner locks have
       // the usual filesystem TOCTOU limit after this validation point.
       const changedHeader = readHeader(fd, location);
-      const frozen = scan(fd, changedHeader.start, through.offset);
+      const frozen = scan(
+        finalOutput,
+        refreshedStorage?.floor ?? changedHeader.start,
+        through.offset,
+      );
       if (
         changedHeader.identity !== identity ||
         changedHeader.start.hash !== start.hash ||
@@ -676,6 +765,12 @@ export function readOutputJournal(
     )
       invalid("Output journal was replaced during recovery");
     const finalLocation = sessionLocation(root, sessionId);
+    if (
+      JSON.stringify(finalLocation.state.outputJournalStorage) !==
+      JSON.stringify(location.state.outputJournalStorage)
+    )
+      throw new JournalError("incomplete", "Output storage admission changed during recovery");
+    refreshedStorage?.assertNamed();
     if (
       finalLocation.stat.dev !== location.stat.dev ||
       finalLocation.stat.ino !== location.stat.ino ||
@@ -700,7 +795,7 @@ export function readOutputJournal(
       if (
         currentPosition.sequence < published.sequence ||
         currentPosition.offset < published.offset ||
-        currentPosition.offset > fstatSync(fd).size ||
+        currentPosition.offset > outputSize(finalOutput) ||
         (currentPosition.sequence === published.sequence && currentPosition.hash !== published.hash)
       )
         throw new JournalError("incomplete", "Published output watermark changed during recovery");
@@ -723,6 +818,25 @@ export function readOutputJournal(
       ...(size > through.offset && options.through === undefined ? { uncommittedTail: true } : {}),
     };
   } catch (error) {
+    // A first segment admission can occur between the initial metadata read
+    // and a cold prefix scan. Retry only that monotonic, same-Session format
+    // transition; ordinary corruption/gaps are never retried into success.
+    if (admissionRetries && initialLocation && !initialLocation.state.outputJournalStorage) {
+      try {
+        const current = sessionLocation(root, sessionId);
+        if (
+          current.state.outputJournalStorage &&
+          !current.state.outputRecoveryIncomplete &&
+          current.stat.dev === initialLocation.stat.dev &&
+          current.stat.ino === initialLocation.stat.ino &&
+          current.state.startedAt === initialLocation.state.startedAt &&
+          current.state.outputJournalIdentity === initialLocation.state.outputJournalIdentity
+        )
+          return readOutputJournalAttempt(root, sessionId, options, admissionRetries - 1);
+      } catch {
+        // Preserve the original failure if a Session or proof disappeared.
+      }
+    }
     const code = (error as NodeJS.ErrnoException).code;
     return {
       version: 1,
@@ -734,8 +848,13 @@ export function readOutputJournal(
             : "incomplete",
       frames: [],
       complete: false,
+      ...(code === "CODESHELL_OUTPUT_RETENTION_EXPIRED"
+        ? { reason: "retention_expired" as const }
+        : {}),
     };
   } finally {
+    refreshedStorage?.close();
+    storage?.close();
     if (fd !== undefined) closeSync(fd);
   }
 }
@@ -759,6 +878,7 @@ export class SessionOutputJournal {
     this.location = sessionLocation(root, sessionId);
     const release = lockSync(this.location.statePath, { realpath: false, retries: 0 });
     let fd: number | undefined;
+    let storage: SegmentedOutputFile | undefined;
     let created = false;
     try {
       this.location.state = this.assertOwner(true).state;
@@ -805,14 +925,24 @@ export class SessionOutputJournal {
         }
       }
       if (process.platform !== "win32") fchmodSync(fd, 0o600);
-      const scannedStamp = fileStamp(fd);
       const loaded = readHeader(fd, this.location);
       this.identity = loaded.identity;
       this.identityPin = loaded.start.hash;
-      const size = fstatSync(fd).size;
-      const verified = verifiedFile(fd, this.location.file, loaded.start, size);
+      if (this.location.state.outputJournalStorage)
+        storage = new SegmentedOutputFile(
+          fd,
+          this.location.directory,
+          this.location.file,
+          loaded.start.offset,
+          this.location.state.outputJournalStorage,
+          loaded.identity,
+        );
+      const output = storage ?? fd;
+      const scannedStamp = fileStamp(output);
+      const size = outputSize(output);
+      const verified = verifiedFile(output, this.location.file, loaded.start, size);
       this.position = verified.head;
-      if (fileStamp(fd) !== scannedStamp)
+      if (fileStamp(output) !== scannedStamp)
         invalid("Output journal changed during owner verification");
       if (!this.location.state.outputJournalIdentity) {
         if (this.position.sequence > 0)
@@ -832,22 +962,42 @@ export class SessionOutputJournal {
           throw new JournalError("incomplete", "Output tail has no published watermark authority");
         this.persistHead(this.position);
       } else {
-        const published = publishedHead(fd, this.location, loaded, verified);
+        const published = publishedHead(output, this.location, loaded, verified);
         if (published.offset !== this.position.offset || published.hash !== this.position.hash)
           throw new JournalError("incomplete", "Unpublished complete output requires repair");
         if (this.location.state.outputJournalHead.version === 1) this.persistHead(this.position);
       }
       // Isolate only a non-newline tail or an unfinished final whole-event
       // fragment group, including complete lines. Never skip interior damage.
-      if (this.position.offset !== fstatSync(fd).size) {
-        repairUncommittedOutputTail(fd, this.location.file, this.location.directory, {
-          identity: this.identity,
-          ...this.position,
-        });
+      if (this.position.offset !== outputSize(output)) {
+        if (storage) {
+          const active = storage.active();
+          try {
+            const name = storage.manifest.segments.at(-1)!.name;
+            repairUncommittedOutputTail(
+              active.fd,
+              join(this.location.directory, name),
+              this.location.directory,
+              {
+                identity: this.identity,
+                ...this.position,
+                offset: this.position.offset - active.start.offset,
+                logicalOffset: this.position.offset,
+              },
+            );
+          } finally {
+            closeSync(active.fd);
+          }
+        } else
+          repairUncommittedOutputTail(fd, this.location.file, this.location.directory, {
+            identity: this.identity,
+            ...this.position,
+          });
       }
       this.fileIdentity = fstatSync(fd);
-      this.verifiedStamp = fileStamp(fd);
+      this.verifiedStamp = fileStamp(output);
     } finally {
+      storage?.close();
       if (fd !== undefined) closeSync(fd);
       release();
     }
@@ -968,6 +1118,8 @@ export class SessionOutputJournal {
     }
     const release = lockSync(this.location.statePath, { realpath: false, retries: 0 });
     let fd: number | undefined;
+    let storage: SegmentedOutputFile | undefined;
+    let activeFd: number | undefined;
     try {
       const current = this.assertOwner();
       fd = openRegular(this.location.file, constants.O_RDWR);
@@ -975,25 +1127,37 @@ export class SessionOutputJournal {
       if (
         stat.dev !== this.fileIdentity.dev ||
         stat.ino !== this.fileIdentity.ino ||
-        stat.size < this.position.offset
+        (!current.state.outputJournalStorage && stat.size < this.position.offset)
       )
         invalid("Output journal changed under its owner");
-      const stamp = fileStamp(fd);
-      if (stamp !== this.verifiedStamp || stat.size !== this.position.offset) {
+      const loaded = readHeader(fd, current);
+      if (current.state.outputJournalStorage)
+        storage = new SegmentedOutputFile(
+          fd,
+          current.directory,
+          current.file,
+          loaded.start.offset,
+          current.state.outputJournalStorage,
+          loaded.identity,
+        );
+      const output = storage ?? fd;
+      const size = outputSize(output);
+      const stamp = fileStamp(output);
+      if (stamp !== this.verifiedStamp || size !== this.position.offset) {
         // A local tool may have changed committed bytes without changing inode
         // or length. Ordinary owned appends carry their own completed stamp
         // forward, so only an unexpected stamp change requires a prefix scan.
-        const loaded = readHeader(fd, current);
-        const verified = verifiedFile(fd, this.location.file, loaded.start, stat.size);
-        verifyPosition(fd, this.position, verified, true);
-        const published = publishedHead(fd, current, loaded, verified);
+        const verified = verifiedFile(output, this.location.file, loaded.start, size);
+        if (!storage || this.position.sequence >= storage.floor.sequence)
+          verifyPosition(output, this.position, verified, true);
+        const published = publishedHead(output, current, loaded, verified);
         if (
           loaded.identity !== this.identity ||
           loaded.start.hash !== this.identityPin ||
-          verified.head.offset !== stat.size ||
+          verified.head.offset !== size ||
           published.offset !== verified.head.offset ||
           published.hash !== verified.head.hash ||
-          fileStamp(fd) !== stamp
+          fileStamp(output) !== stamp
         )
           invalid("Output journal committed prefix changed under its owner");
         this.position = verified.head;
@@ -1015,12 +1179,59 @@ export class SessionOutputJournal {
         next = { sequence: value.sequence, offset: next.offset + Buffer.byteLength(line), hash };
         linesToWrite.push(line);
       }
-      if (next.offset > MAX_JOURNAL_BYTES)
-        throw new JournalError("incomplete", "Output recovery storage budget exhausted");
-      this.write(fd, linesToWrite.join(""), this.position.offset);
+      const nextBytes = next.offset - this.position.offset;
+      if (!storage && shouldSegmentOutput(this.position.offset, nextBytes)) {
+        const headPin = current.state.outputJournalHead!;
+        const pin = initializeOutputStorage(
+          fd,
+          current.directory,
+          this.identity,
+          loaded.start,
+          this.position,
+          headPin,
+          (pin) => this.persistProof({ outputJournalStorage: pin }),
+        );
+        storage = new SegmentedOutputFile(
+          fd,
+          current.directory,
+          current.file,
+          loaded.start.offset,
+          pin,
+          this.identity,
+        );
+      } else if (
+        storage &&
+        rotateOutputStorage(
+          storage,
+          current.directory,
+          loaded.start.offset,
+          this.position,
+          nextBytes,
+        )
+      ) {
+        const pin = storage.pin;
+        storage.close();
+        storage = undefined;
+        storage = new SegmentedOutputFile(
+          fd,
+          current.directory,
+          current.file,
+          loaded.start.offset,
+          pin,
+          this.identity,
+        );
+      }
+      let target = fd,
+        offset = this.position.offset;
+      if (storage) {
+        const active = storage.active();
+        activeFd = target = active.fd;
+        offset -= active.start.offset;
+      }
+      this.write(target, linesToWrite.join(""), offset);
       // Every published cursor covers fsync-completed records; terminal events
       // receive the same guarantee, rather than relying on eventual close.
-      fsyncSync(fd);
+      fsyncSync(target);
       this.assertOwner();
       this.persistHead(next);
       if (
@@ -1041,9 +1252,11 @@ export class SessionOutputJournal {
           // observational proof must never revoke the next model run.
         }
       this.position = next;
-      this.verifiedStamp = fileStamp(fd);
+      this.verifiedStamp = fileStamp(storage ?? fd);
       return token(this.identity, next);
     } finally {
+      if (activeFd !== undefined) closeSync(activeFd);
+      storage?.close();
       if (fd !== undefined) closeSync(fd);
       release();
     }

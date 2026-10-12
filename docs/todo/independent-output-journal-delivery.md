@@ -119,3 +119,66 @@ imports, automatic retention/rotation, manual verified restoration entry points,
 and physical GUI/weak-network acceptance. The storage-spike prototype remains
 inactive. These are outstanding requirements, not certified by the native
 protocol increment.
+
+## Bounded rotation checkpoint
+
+Production append/read now use `output-journal-storage.ts` after a whole-event
+boundary reaches the 16 MiB soft segment threshold. A maximum-size event may
+exceed that soft threshold but cannot cross segments; physical segments remain
+below 32 MiB. The original `output-journal.jsonl` header and inode remain the
+cursor identity anchor. Segment records retain the original absolute logical
+offsets, sequence numbers and hash chain. A checksummed, inode-pinned 32 KiB
+manifest records sealed boundaries, the active segment and the real retention
+floor; state saves preserve its admission pin.
+
+The retained journal budget is 256 MiB, including reserved space for the bounded
+header/physical format marker, manifest and publication block, with at most 16
+segments. Only complete sealed segments expire. The floor is fsynced before any
+expired bytes are removed. The original anchor is retired by writing and
+fsyncing a rejecting marker immediately after its header, then truncating that
+same inode to header plus marker. A crash never exposes a header-only old-format
+anchor. Repair evidence has a separate cumulative 128 MiB budget; exhausting it
+refuses repair and preserves the source rather than deleting evidence.
+
+Actual 0.9.34 code would otherwise ignore new metadata and incorrectly accept
+header-only files. First migration therefore fsyncs a physical rejecting marker
+before admitting the manifest. Its line deliberately lacks the old parser's
+required record fields. The historical fixture is git blob
+`4e5b336b9efca1fe890e41b286fa03eb28372537` from `4083718c`, with only three
+relative import paths relocated; a test proves that exact blob identity. The
+real historical reader and writer reject both first migration and a retired
+anchor without changing source bytes.
+
+A reader racing the first migration retries only a newly admitted, same-Session
+storage format. In the prepare-marker window, it may freeze the exact older
+published prefix only when the identity marker is precisely at that already
+fsynced watermark and physical EOF is precisely after the marker. This does not
+adopt unpublished records; a writer still rejects an interrupted unadmitted
+migration. Other missing/damaged metadata, segments or identity pins fail closed.
+
+Queries whose `after`/`through` range expired return existing `status: incomplete`,
+`complete: false`, no frames and `reason: retention_expired`. A missing `after`
+cannot claim a complete history after expiry. Retained cursors still identify
+the same bytes and survive cold restart. This is bounded retention, not a claim
+to reconstruct data deliberately expired by policy.
+
+All 74 guarded tests pass, including nine first-migration flush fault points,
+six retention flush fault points, truncate failure, exact historical parser
+fencing, stale/missing/replaced segment authority, large native no-Run output
+through Desktop/Hub/Mobile, and known coverage barrier preservation. The actual
+compiled smoke passes after fixing the first-roll concurrency race: a separate
+writer performs 84 appends and first rotation during 17 frozen pages while the
+cursor and prefix hash remain unchanged. Compiled Main recovers a segmented
+147,352,023-byte journal and rejects full recovery after retention expiry.
+Authenticated Hub and two real stdio restart receipts still recover the exact
+9,060,345-byte response. Instrumented model time is 81,939 ms; this checkpoint
+does not solve synchronous per-event fsync latency or cold retained-prefix scan
+cost.
+
+Full P1 remains open: Main-produced asynchronous errors need source-incarnation
+binding and ordered joining with worker output; explicit verified-backup repair
+and diagnosis are not implemented; CC Room is a separate active branch; final
+combined GUI/weak-network acceptance, full build/typecheck/lint and release
+verification remain outstanding. Earlier text describing automatic rotation as
+outstanding is superseded by this production checkpoint, not by the inactive
+storage prototype.

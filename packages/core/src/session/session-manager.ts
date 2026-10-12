@@ -1981,6 +1981,9 @@ export class SessionManager {
       if (persisted?.outputJournalHead)
         state.outputJournalHead = structuredClone(persisted.outputJournalHead);
       else delete state.outputJournalHead;
+      if (persisted?.outputJournalStorage)
+        state.outputJournalStorage = structuredClone(persisted.outputJournalStorage);
+      else delete state.outputJournalStorage;
       if (persisted?.outputRecoveryIncomplete) state.outputRecoveryIncomplete = true;
       preserveOutputCoverage(state, persisted ?? {});
 

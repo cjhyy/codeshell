@@ -11,6 +11,7 @@ import {
   mkdirSync,
   mkdtempSync,
   readFileSync,
+  readdirSync,
   realpathSync,
   renameSync,
   rmSync,
@@ -31,6 +32,18 @@ const wait = (ms) => new Promise((done) => setTimeout(done, ms));
 const repo = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const entry = resolve(repo, "packages/core/dist/cli/agent-server-stdio.js");
 const preload = new URL("./runtime-cost-smoke-isolation.mjs", import.meta.url).href;
+function journalStorageBytes(root, sessionId) {
+  const directory = join(root, sessionId);
+  return readdirSync(directory)
+    .filter(
+      (name) =>
+        name === "output-journal.jsonl" ||
+        name === "output-journal-head.json" ||
+        name === "output-journal-segments.json" ||
+        name.startsWith("output-segment-"),
+    )
+    .reduce((sum, name) => sum + statSync(join(directory, name)).size, 0);
+}
 
 async function measureJournal(core, root, sessionId, expectedHash) {
   const fs = (await import("node:fs")).default;
@@ -64,7 +77,7 @@ async function measureJournal(core, root, sessionId, expectedHash) {
     }
     assert.equal(outputHash.digest("hex"), expectedHash);
     return {
-      journalBytes: statSync(join(root, sessionId, "output-journal.jsonl")).size,
+      journalBytes: journalStorageBytes(root, sessionId),
       coldFirstPageMs: Math.round(coldFirstPageMs),
       coldReadBytes,
       allPagesMs: Math.round(performance.now() - began),
@@ -112,7 +125,7 @@ async function concurrentFrozenPages(core, journalApi, root, origin, cwd) {
   const text = "prefix-汉🙂" + "x".repeat(60 * 1024),
     expected = createHash("sha256");
   let through;
-  for (let count = 0; count < 192; count++) {
+  for (let count = 0; count < 271; count++) {
     through = writer.append({ type: "text_delta", text });
     expected.update(text);
   }
@@ -155,6 +168,7 @@ async function concurrentFrozenPages(core, journalApi, root, origin, cwd) {
     const before = JSON.parse(readFileSync(progressFile, "utf8"));
     assert.equal(before.pid, child.pid);
     assert.ok(before.count > 0);
+    assert.equal(manager.readSessionState(sessionId).outputJournalStorage, undefined);
     const recovery = { incomplete: false },
       actual = createHash("sha256"),
       began = performance.now();
@@ -177,6 +191,7 @@ async function concurrentFrozenPages(core, journalApi, root, origin, cwd) {
       assert.ok(pages < 100);
     }
     const after = JSON.parse(readFileSync(progressFile, "utf8"));
+    assert.ok(manager.readSessionState(sessionId).outputJournalStorage);
     assert.equal(actual.digest("hex"), expected.digest("hex"));
     assert.ok(
       after.count > before.count,
@@ -192,6 +207,7 @@ async function concurrentFrozenPages(core, journalApi, root, origin, cwd) {
       actualWriterPid: child.pid,
       actualWorkerReceipt: true,
       frozenCursorStable: recovery.cursor === through,
+      rotationDuringPaging: true,
     };
     assert.equal(timing.frozenCursorStable, true);
     writeFileSync(stopFile, "stop", { mode: 0o600 });
@@ -542,6 +558,33 @@ if (process.argv[2] === "--append-worker") {
   await appendChild(process.argv.slice(3));
 } else if (process.argv[2] === "--hub") {
   await hubChild(process.argv.slice(3));
+} else if (process.argv[2] === "--concurrent-only") {
+  assert.equal(process.env.HOME, realpathSync(process.env.HOME));
+  assert.ok(process.env.CODE_SHELL_HOME && process.env.CODE_SHELL_TEST_HOME);
+  const root = mkdtempSync(join(tmpdir(), "codeshell-output-concurrent-"));
+  const local = createTcpServer();
+  await new Promise((done) => local.listen(0, "127.0.0.1", done));
+  const origin = `http://127.0.0.1:${local.address().port}`;
+  installLocalNetworkGuard(origin);
+  const core = await import("@cjhyy/code-shell-core");
+  const journal = await import("@cjhyy/code-shell-core/internal");
+  const web = await import(pathToFileURL(join(repo, "packages/web/dist/index.js")));
+  try {
+    console.log(
+      JSON.stringify(
+        await concurrentFrozenPages(
+          core,
+          { ...journal, applyOutputJournalPage: web.applyOutputJournalPage },
+          root,
+          origin,
+          root,
+        ),
+      ),
+    );
+    rmSync(root, { recursive: true, force: true });
+  } finally {
+    await new Promise((done) => local.close(done));
+  }
 } else {
   assert.equal(process.env.HOME, realpathSync(process.env.HOME));
   assert.ok(process.env.CODE_SHELL_HOME && process.env.CODE_SHELL_TEST_HOME);
@@ -655,7 +698,7 @@ if (process.argv[2] === "--append-worker") {
       "long-output",
       expectedHash,
     );
-    const budgetRoot = join(root, "budget-sessions"),
+    const budgetRoot = core.sessionsRoot(),
       manager = new core.SessionManager(budgetRoot);
     const budgetSession = manager.create(cwd, "fixture", "fixture", "near-budget");
     manager.startSessionRun(budgetSession.state, "budget-run");
@@ -667,18 +710,18 @@ if (process.argv[2] === "--append-worker") {
     );
     const budgetText = "x".repeat(15 * 1024 * 1024),
       budgetHash = createHash("sha256");
-    for (let index = 0; index < 6; index++) {
-      writer.append({ type: "text_delta", text: budgetText });
+    let budgetCursor;
+    for (let index = 0; index < 7; index++) {
+      budgetCursor = writer.append({ type: "text_delta", text: budgetText });
       budgetHash.update(budgetText);
     }
-    assert.throws(() => writer.append({ type: "text_delta", text: budgetText }), /storage budget/);
     const nearBudgetTiming = await measureJournal(
       journalApi,
       budgetRoot,
       "near-budget",
       budgetHash.digest("hex"),
     );
-    assert.ok(nearBudgetTiming.journalBytes > 120 * 1024 * 1024);
+    assert.ok(nearBudgetTiming.journalBytes > 128 * 1024 * 1024);
     // A static log must not reread its complete prefix on every page. Includes
     // Session metadata, header and both sparse seek checks, not only body bytes.
     assert.ok(nearBudgetTiming.allPagesReadBytes < nearBudgetTiming.journalBytes * 8);
@@ -695,6 +738,20 @@ if (process.argv[2] === "--append-worker") {
     console.log(JSON.stringify({ modelJournalTiming, nearBudgetTiming, concurrentAppendTiming }));
     const handlers = new Map();
     registerSessionTranscriptIpc({ handle: (name, listener) => handlers.set(name, listener) });
+    // The real compiled Main IPC consumes the segmented journal and preserves
+    // its original retained cursor, rather than relying on the anchor's EOF.
+    const segmentedMain = await handlers.get("sessions:outputJournal")({}, "near-budget", {
+      after: budgetCursor,
+      through: budgetCursor,
+    });
+    assert.equal(segmentedMain.status, "ok");
+    assert.equal(segmentedMain.complete, true);
+    assert.equal(segmentedMain.through, budgetCursor);
+    for (let index = 0; index < 8; index++) writer.append({ type: "text_delta", text: budgetText });
+    const expiredMain = await handlers.get("sessions:outputJournal")({}, "near-budget");
+    assert.equal(expiredMain.status, "incomplete");
+    assert.equal(expiredMain.reason, "retention_expired");
+    assert.equal(expiredMain.complete, false);
     const recover = (store) =>
       recoverDesktopOutputJournal({
         read: (options) => handlers.get("sessions:outputJournal")({}, "long-output", options),
@@ -811,6 +868,8 @@ if (process.argv[2] === "--append-worker") {
         outputBytes: Buffer.byteLength(expected),
         recoveredHash: expectedHash,
         compiledNoRunStdioAndMainRecovery: true,
+        compiledSegmentedMainRecovery: true,
+        compiledMainRetentionExpired: true,
         desktopRecovery: true,
         desktopRestartCursorStable: true,
         desktopTransportEpochChanged: true,

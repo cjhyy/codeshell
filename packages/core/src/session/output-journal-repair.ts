@@ -9,6 +9,7 @@ import {
   lstatSync,
   openSync,
   readSync,
+  readdirSync,
   writeSync,
 } from "node:fs";
 import { join } from "node:path";
@@ -40,12 +41,27 @@ export function repairUncommittedOutputTail(
   journal: number,
   file: string,
   directory: string,
-  published: { identity: string; sequence: number; offset: number; hash: string },
+  published: {
+    identity: string;
+    sequence: number;
+    offset: number;
+    hash: string;
+    logicalOffset?: number;
+  },
 ): void {
   const before = fstatSync(journal);
   const originalStamp = stamp(journal);
   if (before.size <= published.offset || before.size > 128 * 1024 * 1024)
     throw new Error("Invalid output repair boundary");
+  let evidenceBytes = before.size + 4096;
+  const existing = readdirSync(directory).filter((name) => /^\.output-repair-/.test(name));
+  if (existing.length > 1024) throw new Error("Output repair evidence budget exhausted");
+  for (const name of existing) {
+    const at = lstatSync(join(directory, name));
+    if (!at.isFile() || at.isSymbolicLink()) throw new Error("Invalid output repair evidence");
+    evidenceBytes += at.size;
+  }
+  if (evidenceBytes > 128 * 1024 * 1024) throw new Error("Output repair evidence budget exhausted");
   const id = randomUUID();
   const evidence = `.output-repair-${id}.evidence.jsonl`;
   const receipt = `.output-repair-${id}.json`;

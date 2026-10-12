@@ -599,14 +599,21 @@ describe("Session output journal", () => {
     });
     expect(readOutputJournalLegacyBase(f.root, "../escape", anchor).complete).toBe(false);
   });
-  test("the journal storage budget fails closed without deleting an old prefix", () => {
+  test("whole-event rotation keeps previously published and frozen cursors in the same domain", () => {
     const f = fixture();
     const huge = { type: "text_delta" as const, text: "x".repeat(15 * 1024 * 1024) };
+    const originalInode = statSync(f.file).ino;
+    const first = f.writer.append(huge);
     for (let index = 0; index < 6; index++) f.writer.append(huge);
-    const size = statSync(f.file).size;
-    expect(size).toBeLessThan(128 * 1024 * 1024);
-    expect(() => f.writer.append(huge)).toThrow("storage budget");
-    expect(statSync(f.file).size).toBe(size);
+    expect(statSync(f.file).ino).toBe(originalInode);
+    expect(statSync(f.file).size).toBeLessThan(16 * 1024 * 1024);
+    const frozen = readOutputJournal(f.root, f.id, { after: first, through: first });
+    expect(frozen.status).toBe("ok");
+    expect(frozen.complete).toBe(true);
+    expect(frozen.through).toBe(first);
+    const restarted = new SessionOutputJournal(f.root, f.id, f.runId);
+    const latest = restarted.append({ type: "text_delta", text: "after rotation" });
+    expect(readOutputJournal(f.root, f.id, { after: latest, through: latest }).complete).toBe(true);
   });
   test("archive follows the existing read policy; ephemeral Sessions create no journal", () => {
     const f = fixture();

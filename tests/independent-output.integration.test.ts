@@ -391,7 +391,7 @@ test("observing a genuine Run cursor binds the first later independent event to 
 
 test("a no-run background result larger than the Main RAM budget recovers exact UTF-8 after Host restart", async () => {
   const f = fixture();
-  const finalText = "后台🙂" + "x".repeat(8 * 1024 * 1024 + 1);
+  const finalText = "后台🙂" + "x".repeat(14 * 1024 * 1024 + 1);
   const queue = new NotificationQueue();
   queue.enqueue(
     {
@@ -407,6 +407,7 @@ test("a no-run background result larger than the Main RAM budget recovers exact 
     (message) => message.params?.event?.type === "background_agent_completed",
   )?.params.event;
   expect(notice.outputCursor).toBeDefined();
+  expect(f.manager.readSessionState(f.id)?.outputJournalStorage).toBeDefined();
   expect(f.snapshots().get(f.id).events).toHaveLength(0);
   expect(
     readOutputJournal(f.root, f.id).frames.every(
