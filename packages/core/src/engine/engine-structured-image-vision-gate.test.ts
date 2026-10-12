@@ -85,7 +85,7 @@ function makeEngine(cwd: string, model: string, providerKind?: "openai"): Engine
     cwd,
     sessionStorageDir: join(cwd, "sessions"),
     enabledBuiltinTools: [],
-    maxTurns: 2,
+    maxTurns: 4,
     headless: true,
     permissionMode: "bypassPermissions",
   });
@@ -100,6 +100,80 @@ function imageBlocks(messages: Message[]): ContentBlock[] {
 }
 
 describe("Engine structured image attachment vision gate", () => {
+  it.each(["default", "bypassPermissions"] as const)(
+    "uses the effective %s run mode for sensitive attachments",
+    async (permissionMode) => {
+      const cwd = mkdtempSync(join(tmpdir(), "engine-sensitive-attachment-"));
+      const model = `${fakeProvider}-permission-${Math.random()}`;
+      const scenario = { calls: [] as Message[][] };
+      scenarios.set(model, scenario);
+      const engine = makeEngine(cwd, model);
+      try {
+        const attachment = {
+          ...makeAttachment(cwd),
+          path: ".env.png",
+          relPath: ".env.png",
+          absPath: join(cwd, ".env.png"),
+        };
+        writeFileSync(attachment.absPath, Buffer.from(PNG_B64, "base64"));
+        const result = await engine.run("inspect this attachment", {
+          sessionId: "sid",
+          cwd,
+          permissionMode,
+          attachments: [attachment],
+        });
+        expect(result.reason).toBe(permissionMode === "default" ? "image_error" : "completed");
+        if (permissionMode === "default") {
+          expect(result.text).toContain("blocked by path policy");
+          expect(scenario.calls).toHaveLength(0);
+        } else {
+          expect(scenario.calls.length).toBeGreaterThan(0);
+        }
+      } finally {
+        await engine.dispose();
+        scenarios.delete(model);
+        rmSync(cwd, { recursive: true, force: true });
+      }
+    },
+  );
+
+  it("uses the active run's full access for steered attachments after a pending mode change", async () => {
+    const cwd = mkdtempSync(join(tmpdir(), "engine-steer-sensitive-attachment-"));
+    const model = `${fakeProvider}-steer-permission-${Math.random()}`;
+    const scenario = { calls: [] as Message[][] };
+    scenarios.set(model, scenario);
+    const engine = makeEngine(cwd, model);
+    let queued = false;
+    try {
+      const attachment = {
+        ...makeAttachment(cwd),
+        path: ".env.png",
+        relPath: ".env.png",
+        absPath: join(cwd, ".env.png"),
+      };
+      writeFileSync(attachment.absPath, Buffer.from(PNG_B64, "base64"));
+      const result = await engine.run("start", {
+        sessionId: "sid",
+        cwd,
+        onStream: (event) => {
+          if (event.type !== "assistant_message" || queued) return;
+          queued = true;
+          engine.setPermissionMode("default");
+          expect(
+            engine.enqueueSteer("sid", "inspect attached image", "steer", undefined, [attachment]),
+          ).toEqual({ accepted: true, id: "steer" });
+        },
+      });
+      expect(queued).toBe(true);
+      expect(result.reason).toBe("completed");
+      expect(JSON.stringify(scenario.calls)).toContain('<attached-file path=\\".env.png\\">');
+    } finally {
+      await engine.dispose();
+      scenarios.delete(model);
+      rmSync(cwd, { recursive: true, force: true });
+    }
+  });
+
   it("degrades structured image attachments to path metadata for non-vision models", async () => {
     const cwd = mkdtempSync(join(tmpdir(), "engine-structured-image-gate-"));
     const model = `${fakeProvider}-nonvision-${Date.now()}-${Math.random()}`;

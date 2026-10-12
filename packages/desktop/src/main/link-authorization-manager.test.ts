@@ -290,3 +290,111 @@ test("one native owner cannot start another pending flow", async () => {
     f.manager.start(f.context, randomUUID(), input, "remote-link"),
   ).rejects.toMatchObject({ code: "login_required" });
 });
+
+const claim = `https://link.example/oauth/account-link/claim?ticket=${"a".repeat(43)}`;
+test("prepared Link authorization retains one job and original callback binding until continuation", async () => {
+  const f = fixture();
+  const job = await f.manager.prepare(f.context, randomUUID(), input, "remote-link");
+  expect(job.state).toBe("pending");
+  expect(job.step?.kind).toBe("redirect");
+  expect(f.opened).toBeUndefined();
+  expect(await f.manager.open(f.context, job.id)).toBe(false);
+  await expect(f.manager.start(f.context, randomUUID(), input, "remote-link")).rejects.toThrow(
+    "完成或取消",
+  );
+  const resumed = await f.manager.resume(f.context, job.id, claim);
+  expect(resumed.id).toBe(job.id);
+  expect(f.opened.authorizationUrl).toBe(
+    job.step!.kind === "redirect" && job.step!.authorizationUrl,
+  );
+  expect(f.opened.navigationUrl).toBe(claim);
+  expect(f.opened.redirectUri).toBe(
+    new URL(f.opened.authorizationUrl).searchParams.get("redirect_uri")!,
+  );
+  expect(JSON.stringify(resumed)).not.toContain("ticket=");
+  let completedId = "";
+  f.service.completeRemoteAuth = async (_context, id) => {
+    completedId = id;
+    return { ...job, state: "connected", step: undefined };
+  };
+  expect(await f.opened.onCallback("synthetic callback")).toBe(true);
+  expect(completedId).toBe(job.id);
+  expect(f.closes).toBe(1);
+});
+test("prepared jobs cannot be continued by another or retired owner", async () => {
+  const f = fixture();
+  const job = await f.manager.prepare(f.context, randomUUID(), input, "remote-link");
+  await expect(
+    f.manager.resume({ ownerId: "other", authorize: () => true }, job.id, claim),
+  ).rejects.toThrow("找不到");
+  expect(f.opened).toBeUndefined();
+  f.revoke();
+  await expect(f.manager.resume(f.context, job.id, claim)).rejects.toMatchObject({
+    code: "login_required",
+  });
+  expect(f.opened).toBeUndefined();
+  expect(f.store.list()).toEqual([]);
+});
+test("prepared cancellation and expiry prevent late continuation from opening a browser", async () => {
+  const cancelled = fixture();
+  const job = await cancelled.manager.prepare(
+    cancelled.context,
+    randomUUID(),
+    input,
+    "remote-link",
+  );
+  await cancelled.manager.cancel(cancelled.context, job.id);
+  await expect(cancelled.manager.resume(cancelled.context, job.id, claim)).rejects.toThrow();
+  expect(cancelled.opened).toBeUndefined();
+  let now = Date.now();
+  const expired = fixture({ now: () => now });
+  const pending = await expired.manager.prepare(
+    expired.context,
+    randomUUID(),
+    input,
+    "remote-link",
+  );
+  now = Date.parse(pending.expiresAt!) + 1;
+  expect((await expired.manager.get(expired.context, pending.id)).state).toBe("failed");
+  await expect(expired.manager.resume(expired.context, pending.id, claim)).rejects.toThrow();
+  expect(expired.opened).toBeUndefined();
+  expect(expired.store.list()).toEqual([]);
+});
+test("continuation navigation is restricted to the original issuer and one opaque claim ticket", async () => {
+  for (const invalid of [
+    "not a URL",
+    claim.replace("link.example", "attacker.example"),
+    claim.replace("https:", "http:"),
+    claim.replace("/oauth/account-link/claim", "/oauth/authorize"),
+    claim.replace("link.example", "user:password@link.example"),
+    `${claim}#fragment`,
+    `${claim}&state=unexpected`,
+    `${claim}&ticket=${"b".repeat(43)}`,
+    claim.replace("a".repeat(43), "short"),
+  ]) {
+    const f = fixture();
+    const job = await f.manager.prepare(f.context, randomUUID(), input, "remote-link");
+    await expect(f.manager.resume(f.context, job.id, invalid)).rejects.toThrow("地址无效");
+    expect(f.opened).toBeUndefined();
+    expect((await f.manager.get(f.context, job.id)).state).toBe("cancelled");
+    expect(f.store.list()).toEqual([]);
+  }
+});
+test("cancelling during continuation dispatch closes the late handle without adopting a connection", async () => {
+  const release = deferred<void>();
+  const f = fixture({
+    open: async (_input, handle) => {
+      await release.promise;
+      return handle;
+    },
+  });
+  const job = await f.manager.prepare(f.context, randomUUID(), input, "remote-link");
+  const continuation = f.manager.resume(f.context, job.id, claim);
+  await waitForOpen(f);
+  await f.manager.cancel(f.context, job.id);
+  expect(f.opened.signal!.aborted).toBe(true);
+  release.resolve();
+  expect((await continuation).state).toBe("cancelled");
+  expect(f.closes).toBe(1);
+  expect(f.store.list()).toEqual([]);
+});

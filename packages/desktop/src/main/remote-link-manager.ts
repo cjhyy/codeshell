@@ -13,6 +13,8 @@ export interface NativeLinkAuthorizationWindow {
 export interface NativeLinkAuthorizationInput {
   providerName?: string;
   authorizationUrl: string;
+  /** Main-only browser entry; callback state stays bound to authorizationUrl. */
+  navigationUrl?: string;
   redirectUri: string;
   expiresAt?: string;
   signal?: AbortSignal;

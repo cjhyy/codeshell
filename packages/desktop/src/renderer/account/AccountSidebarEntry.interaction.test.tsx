@@ -28,6 +28,19 @@ const scenarios = {
     "keeps GitHub sign-in available when password registration is closed",
   "github-automatic-account":
     "signs in a first-time GitHub account without entering password credentials",
+  "github-connect-default":
+    "requests a GitHub connection by default and shows its result separately",
+  "github-connect-optout": "keeps GitHub login available when the connection choice is unchecked",
+  "github-connect-unavailable": "disables unsupported GitHub connections without blocking sign-in",
+  "github-connect-legacy": "treats missing connection support as unavailable for older services",
+  "github-connect-failed": "keeps the cloud account signed in when its GitHub connection fails",
+  "github-connect-skipped":
+    "keeps the cloud account signed in when its GitHub connection is cancelled",
+  "github-bind-only": "binds the GitHub sign-in identity without connecting GitHub data",
+  "github-connect-late-status":
+    "preserves completed GitHub connections when an older status snapshot arrives",
+  "github-connect-late-failure":
+    "preserves completed GitHub connections when an older status request fails",
 };
 
 for (const [scenario, description] of Object.entries(scenarios)) {

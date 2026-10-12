@@ -85,6 +85,8 @@ export interface LinkServiceOptions {
   now?: () => number;
   /** Trusted Host configuration; never accepted from a browser request. */
   remoteLink?: () => RemoteLinkConfiguration | undefined;
+  /** Trusted Host opt-in: reuse a uniquely identified user connection after remote OAuth. */
+  reuseRemoteConnection?: boolean;
   /** Test seams. Production delegates to Core's fixed provider and CLI executors. */
   validateToken?: typeof validateLocalLinkToken;
   cliStatus?: typeof getCliLinkStatus;
@@ -1402,8 +1404,31 @@ export function createLinkService(options: LinkServiceOptions = {}) {
       };
       await change(guarded, () => {
         assertPending();
-        swap(job.prepared, credential!, {
-          retireExpected: !!job.prepared.expected,
+        let prepared = job.prepared;
+        if (
+          options.reuseRemoteConnection &&
+          !prepared.expected &&
+          prepared.input.connectionId === undefined
+        ) {
+          // Identity comes from authenticated metadata, never a browser-supplied connection ID.
+          const current = records();
+          const matches = current.credentials.filter(
+            (entry) =>
+              !current.projectIds.has(entry.id) &&
+              isRemoteLinkCredential(entry) &&
+              entry.meta?.linkProvider === credential!.meta?.linkProvider &&
+              entry.meta?.linkRemoteIssuer === credential!.meta?.linkRemoteIssuer &&
+              entry.meta?.linkRemoteConnectionId === credential!.meta?.linkRemoteConnectionId,
+          );
+          if (matches.length > 1) throw new LinkServiceError(409, "conflict");
+          if (matches.length === 1) {
+            const expected = matches[0]!;
+            prepared = { ...prepared, id: expected.id, expected };
+            credential = { ...credential!, id: expected.id, label: expected.label };
+          }
+        }
+        swap(prepared, credential!, {
+          retireExpected: !!prepared.expected,
           adopt: staged,
           now: now(),
         });

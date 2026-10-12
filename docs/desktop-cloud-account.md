@@ -3,7 +3,7 @@
 CodeShell opens and runs local projects without an account or an account-server
 connection. The sidebar account entry and Settings → General open the same
 optional cloud account flow, with GitHub sign-in first, separate password login
-and account-creation modes, explicit GitHub linking, and logout.
+and account-creation modes, GitHub identity binding, and logout.
 The service address defaults to `https://115.159.45.55` and remains editable for
 self-hosted deployments. Prefilling it does not initiate an account connection;
 the selected server must expose the account API before sign-in is available.
@@ -59,6 +59,46 @@ registration is needed for the Desktop cloud-account flow. Email verification,
 password reset/change, and adding a password to a GitHub-only account are not
 implemented in the current account API.
 
+## GitHub login and data connection
+
+“Continue with GitHub” defaults to “Connect GitHub too” when the selected service
+supports the account-to-Link handoff. It can be unchecked to sign in only. Older
+services remain usable for sign-in; the unavailable connection option is explained
+inline. Binding a GitHub login identity to an existing password account remains a
+separate action and does not start a data connection.
+
+With the option enabled, Desktop prepares its existing Link PKCE job without opening
+a browser. The account service verifies that job with the configured Link service
+before requesting `repo read:user` in one GitHub authorization. It exchanges the
+upstream code once, creates or finds the CodeShell account by numeric GitHub ID, and
+issues the account session. A short-lived authenticated server handoff carries only
+the GitHub credential and verified identity to Link. Desktop saves the account first,
+then opens a one-use Link claim in the system browser. The usual repository and action
+consent is still required before Desktop receives a Link grant.
+
+Account identities/sessions remain in the account database; encrypted provider
+credentials, connections, repository/action grants, and owner-to-connection mappings
+remain in Link's database. CodeShell account bearer tokens never go to Link. Claim
+tickets remain in main memory, expire ten minutes after preparation, and are excluded
+from account persistence and renderer status. Repeated login reuses the same remote
+connection for the exact account origin, account UUID and GitHub ID. Desktop also
+reuses a uniquely matching user connection, preserving its local ID and label while
+retiring its previous grant; ambiguous matches fail safely.
+
+Login succeeds independently of Link. Connection progress appears after sign-in;
+canceling or failing that step keeps the signed-in account. Logging out preserves
+existing Link connections. Disconnecting Link preserves the account and GitHub login
+identity. Neither operation broadens or revives an earlier repository/action grant.
+
+Both services may use the same GitHub OAuth App, with both exact callback URLs
+registered. The bridge additionally requires `ACCOUNT_LINK_ORIGIN` and
+`ACCOUNT_LINK_HANDOFF_SECRET` on Account, and `LINK_ACCOUNT_ORIGIN` and
+`LINK_ACCOUNT_HANDOFF_SECRET` on Link. The origins must identify the paired services,
+the 32-byte hex secret must match, and both must use the same GitHub Client ID.
+These are server settings, never Desktop inputs. Public capability discovery reports
+`githubLinkEnabled`; it indicates configured support, while each actual preparation
+still validates the live bridge.
+
 ## Local credentials and remote access
 
 Signing in does not register this computer, start remote access, upload projects,
@@ -101,7 +141,8 @@ startup. No remote connection is started automatically after application restart
 
 Guarded tests cover anonymous/offline operation, token confidentiality, encrypted
 storage, singleflight refresh, account/origin isolation, logout and account-switch
-races, GitHub PKCE/cancellation/linking, native TLS/redirect/body limits, account
+races, GitHub PKCE/cancellation/identity binding, optional Link handoff and failure
+isolation, one-use claim navigation, remote connection reuse, native TLS/redirect/body limits, account
 enrollment without sharing, LAN preservation, and rotating relay credentials.
 These fixtures do not claim production deployment or a real GitHub OAuth account
 has passed acceptance.

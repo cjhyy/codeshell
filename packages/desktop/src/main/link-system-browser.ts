@@ -24,6 +24,25 @@ export function createSystemBrowserLinkAuthorization(options: {
       url.hash
     )
       throw new Error("Link 授权地址无效。");
+    let navigation = url;
+    if (input.navigationUrl !== undefined) {
+      try {
+        navigation = new URL(input.navigationUrl);
+      } catch {
+        throw new Error("Link 授权地址无效。");
+      }
+      if (
+        input.navigationUrl.length > 2048 ||
+        navigation.origin !== url.origin ||
+        navigation.pathname !== "/oauth/account-link/claim" ||
+        navigation.username ||
+        navigation.password ||
+        navigation.hash ||
+        [...navigation.searchParams.keys()].length !== 1 ||
+        !/^[A-Za-z0-9_-]{43}$/.test(navigation.searchParams.get("ticket") ?? "")
+      )
+        throw new Error("Link 授权地址无效。");
+    }
     const callback = await options.callbacks.register({
       redirectUri: input.redirectUri,
       state,
@@ -45,7 +64,7 @@ export function createSystemBrowserLinkAuthorization(options: {
         await launching;
         return;
       }
-      launching = options.openExternal(url.href);
+      launching = options.openExternal(navigation.href);
       try {
         await launching;
       } finally {

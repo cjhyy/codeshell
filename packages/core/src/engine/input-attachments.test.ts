@@ -98,6 +98,69 @@ describe("buildInputAttachmentContext", () => {
     }
   });
 
+  test("full access loads outside image attachments through their canonical path", async () => {
+    const outside = mkdtempSync(join(tmpdir(), "input-attachments-full-access-"));
+    try {
+      const image = join(outside, "shot.png");
+      const linkRel = "linked-shot.png";
+      const linkAbs = join(cwd, linkRel);
+      writeFileSync(image, Buffer.from(PNG_B64, "base64"));
+      symlinkSync(image, linkAbs);
+
+      const out = await buildInputAttachmentContext(
+        [meta({ path: linkRel, absPath: linkAbs, relPath: linkRel })],
+        cwd,
+        { expectedSessionId: "sid", permissionMode: "bypassPermissions" },
+      );
+
+      expect(out.errors).toEqual([]);
+      expect(out.images).toHaveLength(1);
+      expect(out.images[0]!.base64).toBe(PNG_B64);
+      expect(out.images[0]!.path).toBe(linkRel);
+    } finally {
+      rmSync(outside, { recursive: true, force: true });
+    }
+  });
+
+  test("full access lists outside directory children while hiding symlinks escaping that directory", async () => {
+    const outside = mkdtempSync(join(tmpdir(), "input-attachments-outside-directory-"));
+    try {
+      const selected = join(outside, "selected");
+      mkdirSync(join(selected, "nested"), { recursive: true });
+      writeFileSync(join(selected, "notes.txt"), "selected file");
+      writeFileSync(join(selected, "nested", "inside.txt"), "nested file");
+      const hidden = join(outside, "hidden.txt");
+      writeFileSync(hidden, "outside selected directory");
+      symlinkSync(hidden, join(selected, "escape.txt"));
+
+      const out = await buildInputAttachmentContext(
+        [
+          meta({
+            kind: "directory",
+            path: selected,
+            absPath: selected,
+            relPath: undefined,
+            mime: undefined,
+            origin: "mention",
+          }),
+        ],
+        cwd,
+        { expectedSessionId: "sid", permissionMode: "bypassPermissions" },
+      );
+
+      expect(out.errors).toEqual([]);
+      expect(out.images).toEqual([]);
+      expect(out.text).toContain('entries="3" truncated="false"');
+      expect(out.text).toContain("file notes.txt");
+      expect(out.text).toContain("dir nested");
+      expect(out.text).toContain("file nested/inside.txt");
+      expect(out.text).not.toContain("escape.txt");
+      expect(out.text).not.toContain("hidden.txt");
+    } finally {
+      rmSync(outside, { recursive: true, force: true });
+    }
+  });
+
   test("accepts attachments from a declared secondary workspace root", async () => {
     const secondary = mkdtempSync(join(tmpdir(), "input-attachments-secondary-"));
     try {
@@ -214,19 +277,38 @@ describe("buildInputAttachmentContext", () => {
     expect(out.errors.join("\n")).toContain("sensitive path");
   });
 
-  test("rejects oversized image attachments by stat size before readFile", async () => {
-    const abs = join(cwd, ".code-shell", "attachments", "sid", "huge.png");
-    mkdirSync(join(cwd, ".code-shell", "attachments", "sid"), { recursive: true });
-    writeFileSync(abs, "");
-    truncateSync(abs, IMAGE_LIMITS.maxBytesPerImage + 1);
+  test("full access loads sensitive image attachments", async () => {
+    const abs = join(cwd, ".env.png");
+    writeFileSync(abs, Buffer.from(PNG_B64, "base64"));
 
-    const out = await buildInputAttachmentContext([meta({ path: abs, absPath: abs })], cwd, {
-      expectedSessionId: "sid",
-    });
+    const out = await buildInputAttachmentContext(
+      [meta({ path: ".env.png", absPath: abs, relPath: ".env.png", mime: "image/png" })],
+      cwd,
+      { expectedSessionId: "sid", permissionMode: "bypassPermissions" },
+    );
 
-    expect(out.images).toEqual([]);
-    expect(out.errors.join("\n")).toContain("image attachment size policy failed");
+    expect(out.errors).toEqual([]);
+    expect(out.images).toHaveLength(1);
+    expect(out.images[0]!.base64).toBe(PNG_B64);
   });
+
+  test.each(["default", "bypassPermissions"] as const)(
+    "rejects oversized image attachments before readFile in %s mode",
+    async (permissionMode) => {
+      const abs = join(cwd, ".code-shell", "attachments", "sid", "huge.png");
+      mkdirSync(join(cwd, ".code-shell", "attachments", "sid"), { recursive: true });
+      writeFileSync(abs, "");
+      truncateSync(abs, IMAGE_LIMITS.maxBytesPerImage + 1);
+
+      const out = await buildInputAttachmentContext([meta({ path: abs, absPath: abs })], cwd, {
+        expectedSessionId: "sid",
+        permissionMode,
+      });
+
+      expect(out.images).toEqual([]);
+      expect(out.errors.join("\n")).toContain("image attachment size policy failed");
+    },
+  );
 
   test("image bytes disabled still exposes structured-image signal for engine gate", async () => {
     const abs = join(cwd, ".code-shell", "attachments", "sid", "huge.png");
@@ -246,76 +328,88 @@ describe("buildInputAttachmentContext", () => {
     expect(out.text).toContain(`size: ${IMAGE_LIMITS.maxBytesPerImage + 1}`);
   });
 
-  test("rejects cross-session attachment metadata before touching the path", async () => {
-    const out = await buildInputAttachmentContext(
-      [
-        meta({
-          sessionId: "other",
-          path: "missing.png",
-          absPath: join(cwd, "missing.png"),
-          relPath: "missing.png",
-        }),
-      ],
-      cwd,
-      { expectedSessionId: "sid" },
-    );
+  test.each(["default", "bypassPermissions"] as const)(
+    "rejects cross-session attachment metadata before touching the path in %s mode",
+    async (permissionMode) => {
+      const out = await buildInputAttachmentContext(
+        [
+          meta({
+            sessionId: "other",
+            path: "missing.png",
+            absPath: join(cwd, "missing.png"),
+            relPath: "missing.png",
+          }),
+        ],
+        cwd,
+        { expectedSessionId: "sid", permissionMode },
+      );
 
-    expect(out.images).toEqual([]);
-    expect(out.errors.join("\n")).toContain("session mismatch");
-    expect(out.errors.join("\n")).not.toContain("stat failed");
-  });
+      expect(out.images).toEqual([]);
+      expect(out.errors.join("\n")).toContain("session mismatch");
+      expect(out.errors.join("\n")).not.toContain("stat failed");
+    },
+  );
 
-  test("rejects staged attachments whose realpath is outside the expected session dir", async () => {
-    const otherAbs = join(cwd, ".code-shell", "attachments", "other", "shot.png");
-    mkdirSync(join(cwd, ".code-shell", "attachments", "other"), { recursive: true });
-    mkdirSync(join(cwd, ".code-shell", "attachments", "sid"), { recursive: true });
-    writeFileSync(otherAbs, Buffer.from(PNG_B64, "base64"));
-
-    const out = await buildInputAttachmentContext(
-      [
-        meta({
-          path: ".code-shell/attachments/other/shot.png",
-          absPath: otherAbs,
-          relPath: ".code-shell/attachments/other/shot.png",
-        }),
-      ],
-      cwd,
-      { expectedSessionId: "sid" },
-    );
-
-    expect(out.images).toEqual([]);
-    expect(out.errors.join("\n")).toContain("staged path is outside .code-shell/attachments/sid");
-  });
-
-  test("rejects staged symlinks whose realpath escapes the workspace before reading bytes", async () => {
-    const outside = mkdtempSync(join(tmpdir(), "input-attachments-symlink-outside-"));
-    try {
-      const secret = join(outside, "secret.png");
-      const linkRel = ".code-shell/attachments/sid/link.png";
-      const linkAbs = join(cwd, linkRel);
+  test.each(["default", "bypassPermissions"] as const)(
+    "rejects staged attachments outside the expected session dir in %s mode",
+    async (permissionMode) => {
+      const otherAbs = join(cwd, ".code-shell", "attachments", "other", "shot.png");
+      mkdirSync(join(cwd, ".code-shell", "attachments", "other"), { recursive: true });
       mkdirSync(join(cwd, ".code-shell", "attachments", "sid"), { recursive: true });
-      writeFileSync(secret, Buffer.from(PNG_B64, "base64"));
-      symlinkSync(secret, linkAbs);
+      writeFileSync(otherAbs, Buffer.from(PNG_B64, "base64"));
 
       const out = await buildInputAttachmentContext(
         [
           meta({
-            id: "link_1",
-            path: linkRel,
-            absPath: linkAbs,
-            relPath: linkRel,
+            path: ".code-shell/attachments/other/shot.png",
+            absPath: otherAbs,
+            relPath: ".code-shell/attachments/other/shot.png",
           }),
         ],
         cwd,
-        { expectedSessionId: "sid" },
+        { expectedSessionId: "sid", permissionMode },
       );
 
       expect(out.images).toEqual([]);
-      expect(out.text).toBe("");
-      expect(out.errors.join("\n")).toContain("blocked by path policy");
-      expect(out.errors.join("\n")).toContain("outside workspace");
-    } finally {
-      rmSync(outside, { recursive: true, force: true });
-    }
-  });
+      expect(out.errors.join("\n")).toContain("staged path is outside .code-shell/attachments/sid");
+    },
+  );
+
+  test.each(["default", "bypassPermissions"] as const)(
+    "rejects staged symlinks escaping session custody before reading bytes in %s mode",
+    async (permissionMode) => {
+      const outside = mkdtempSync(join(tmpdir(), "input-attachments-symlink-outside-"));
+      try {
+        const secret = join(outside, "secret.png");
+        const linkRel = ".code-shell/attachments/sid/link.png";
+        const linkAbs = join(cwd, linkRel);
+        mkdirSync(join(cwd, ".code-shell", "attachments", "sid"), { recursive: true });
+        writeFileSync(secret, Buffer.from(PNG_B64, "base64"));
+        symlinkSync(secret, linkAbs);
+
+        const out = await buildInputAttachmentContext(
+          [
+            meta({
+              id: "link_1",
+              path: linkRel,
+              absPath: linkAbs,
+              relPath: linkRel,
+            }),
+          ],
+          cwd,
+          { expectedSessionId: "sid", permissionMode },
+        );
+
+        expect(out.images).toEqual([]);
+        expect(out.text).toBe("");
+        expect(out.errors.join("\n")).toContain(
+          permissionMode === "bypassPermissions"
+            ? "staged path is outside .code-shell/attachments/sid"
+            : "blocked by path policy",
+        );
+      } finally {
+        rmSync(outside, { recursive: true, force: true });
+      }
+    },
+  );
 });

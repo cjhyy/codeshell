@@ -68,6 +68,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { SimpleSelect } from "@/components/ui/simple-select";
 import { cn } from "@/lib/utils";
+import { NotificationHistory } from "../ui/NotificationHistory";
 
 export type SettingsModuleId =
   | "project-overview"
@@ -612,6 +613,9 @@ export function SettingsPage({
               <span className="text-base font-semibold tracking-tight">
                 {t("settingsX.page.settings")}
               </span>
+              <span className="ml-auto">
+                <NotificationHistory />
+              </span>
             </div>
 
             <SettingsSearchField inputRef={searchRef} query={query} onChange={setQuery} />
@@ -643,6 +647,7 @@ export function SettingsPage({
               className="min-w-0 flex-1 rounded-lg bg-background"
               onChange={selectModule}
             />
+            <NotificationHistory />
           </div>
           <SettingsSearchField inputRef={narrowSearchRef} query={query} onChange={setQuery} />
           {query.trim() && (
