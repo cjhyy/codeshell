@@ -10,7 +10,7 @@ const tempRoots: string[] = [];
 function fixture(overrides: Partial<DesktopNotifierDependencies> = {}) {
   const root = mkdtempSync(join(tmpdir(), "codeshell-desktop-notifier-"));
   tempRoots.push(root);
-  const shown: Array<{ title: string; body: string }> = [];
+  const shown: Array<{ title: string; body: string; sessionId?: string }> = [];
   const dependencies: DesktopNotifierDependencies = {
     hasFocusedWindow: () => false,
     isSupported: () => true,
@@ -65,6 +65,24 @@ describe("DesktopNotifier", () => {
     await notifier.notify({ key: "body", title: "完成", body: `  ${"x".repeat(200)}\nnext  ` });
     expect(f.shown[0]!.body).toHaveLength(180);
     expect(f.shown[0]!.body).toBe("x".repeat(180));
+  });
+
+  it("forwards a validated conversation target to the native notification", async () => {
+    const f = fixture();
+    const notifier = new DesktopNotifier(f.path, f.dependencies);
+    await notifier.notify({ key: "target", title: "完成", body: "result", sessionId: "s-owner.1" });
+    expect(f.shown).toEqual([{ title: "完成", body: "result", sessionId: "s-owner.1" }]);
+  });
+
+  it("rejects unsafe conversation targets before showing a notification", async () => {
+    const f = fixture();
+    const notifier = new DesktopNotifier(f.path, f.dependencies);
+    for (const sessionId of ["", "../owner", "s/owner", "s\nowner", "x".repeat(257)]) {
+      await expect(
+        notifier.notify({ key: "bad-target", title: "完成", body: "result", sessionId }),
+      ).rejects.toThrow("desktop notification sessionId is invalid");
+    }
+    expect(f.shown).toEqual([]);
   });
 
   it("delays bursts instead of dropping them", async () => {

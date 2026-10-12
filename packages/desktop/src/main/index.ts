@@ -272,6 +272,10 @@ import {
 } from "./automation-host.js";
 import { automationLifecycleNotification } from "./automation-notification.js";
 import { DesktopNotifier } from "./desktop-notifier.js";
+import {
+  findNotificationWindow,
+  showNativeDesktopNotification,
+} from "./native-desktop-notification.js";
 import * as desktopNotifications from "./desktop-notification-routes.js";
 import type { CronRunResult } from "@cjhyy/code-shell-core/internal";
 import {
@@ -1026,6 +1030,9 @@ const tunnelManager = new TunnelManager({
 const accessPasscode = new AccessPasscode({
   filePath: resolve(app.getPath("userData"), "mobile-remote", "access.json"),
 });
+let prepareAccountGitHubLink:
+  | ReturnType<typeof registerRemoteLinkIpc>["prepareGitHubLink"]
+  | undefined;
 const { mobileRemoteController } = createDesktopRemoteServices({
   ipcMain,
   userDataDir: app.getPath("userData"),
@@ -1033,6 +1040,10 @@ const { mobileRemoteController } = createDesktopRemoteServices({
   safeStorage,
   windows: () => mainWindows,
   openExternal: (url) => shell.openExternal(url),
+  prepareGitHubLink: (signal, authorized) => {
+    if (!prepareAccountGitHubLink) throw new Error("GitHub Link 服务尚未就绪。");
+    return prepareAccountGitHubLink(signal, authorized);
+  },
   host: mobileRemote,
   tunnel: tunnelManager,
   binary: cloudflaredBinary,
@@ -3351,7 +3362,33 @@ app.whenReady().then(async () => {
     {
       hasFocusedWindow: () => BrowserWindow.getFocusedWindow() !== null,
       isSupported: () => Notification.isSupported(),
-      show: (input) => new Notification(input).show(),
+      show: (input) =>
+        showNativeDesktopNotification(input, {
+          create: (options) => new Notification(options),
+          openSession: (sessionId) => {
+            void (async () => {
+              const target =
+                findNotificationWindow(mainWindows, bridge?.panelOwnerWebContentsId(sessionId)) ??
+                (await createWindow());
+              if (target.isDestroyed()) return;
+              if (target.isMinimized()) target.restore();
+              target.show();
+              target.focus();
+              const open = () => {
+                if (!target.isDestroyed())
+                  target.webContents.send("notification:open-session", sessionId);
+              };
+              if (target.webContents.isLoadingMainFrame())
+                target.webContents.once("did-finish-load", open);
+              else open();
+            })().catch((error) =>
+              dlog("main", "desktop_notification.open_session.failed", {
+                sessionId,
+                error: String(error),
+              }),
+            );
+          },
+        }),
     },
   );
   await projectStore.warm();
@@ -4048,7 +4085,7 @@ ipcMain.handle(
 );
 ipcMain.handle("links:listLocalProviders", () => listDesktopLinkProviders());
 
-registerRemoteLinkIpc({
+prepareAccountGitHubLink = registerRemoteLinkIpc({
   ipcMain,
   requireRendererProjectPath,
   isMainWindow: (sender) =>
@@ -4056,7 +4093,7 @@ registerRemoteLinkIpc({
   withMutation: (cwd, write) =>
     bridge ? bridge.withWebConfigurationMutation(cwd, write) : write(),
   onChanged: () => bridge?.notifyWebConfigurationChanged(),
-});
+}).prepareGitHubLink;
 
 function assertGenericCredentialMutation(cwd: string, id: string) {
   const credential = new CredentialStore(cwd || undefined).resolve(id);

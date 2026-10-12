@@ -10,6 +10,8 @@ export interface CloudAccountStatus {
   state: "signed-out" | "signed-in" | "signing-in" | "storage-error";
   origin?: string;
   account?: CloudAccountIdentity;
+  /** Data connection progress; independent from the account session and never persisted here. */
+  githubConnection?: { state: "pending" | "connected" | "failed" | "skipped" };
 }
 
 export interface CloudAccountLogin {
@@ -22,6 +24,13 @@ export interface CloudAccountLogin {
 export interface CloudAccountCapabilities {
   registrationAllowed: boolean;
   githubEnabled: boolean;
+  githubLinkEnabled?: boolean;
+}
+
+export interface CloudAccountGitHubLogin {
+  origin: string;
+  deviceName?: string;
+  connectGitHub?: boolean;
 }
 
 export interface CloudAccountApi {
@@ -29,7 +38,7 @@ export interface CloudAccountApi {
   capabilities(origin: string): Promise<CloudAccountCapabilities>;
   login(input: CloudAccountLogin): Promise<CloudAccountStatus>;
   register(input: CloudAccountLogin): Promise<CloudAccountStatus>;
-  signInWithGitHub(input: { origin: string; deviceName?: string }): Promise<CloudAccountStatus>;
+  signInWithGitHub(input: CloudAccountGitHubLogin): Promise<CloudAccountStatus>;
   linkGitHub(): Promise<CloudAccountStatus>;
   cancelSignIn(): Promise<void>;
   logout(): Promise<void>;

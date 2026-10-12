@@ -102,6 +102,12 @@ export interface CreateSessionToolHostOptions {
   registry: ToolRegistry;
   permissionMode: ExternalSessionPermissionMode;
   /**
+   * Trusted host grant for file paths, independent of tool permission rules.
+   * Only pass "full" when the user selected full access for this session;
+   * runtime tool arguments and contextOverrides cannot elevate this grant.
+   */
+  pathAccess?: ToolContext["pathAccess"];
+  /**
    * The agent preset's permission rules (e.g.
    * `BUILTIN_AGENT_PRESETS.general.defaultPermissionRules`).
    *
@@ -260,6 +266,7 @@ export function createSessionToolHost(options: CreateSessionToolHostOptions): Se
     contextNotes: undefined,
     planMode: options.planMode,
     permissionMode: options.permissionMode,
+    pathAccess: options.pathAccess ?? "default",
     toolVisibility: buildToolVisibility({
       ...options.visibility,
       contextStrategy: undefined,

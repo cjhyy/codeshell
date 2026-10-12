@@ -61,7 +61,9 @@ export const bashToolDef: ToolDefinition = {
           "When the command FINISHES you are automatically notified and woken to continue — so do NOT " +
           "sleep, poll, or repeatedly BashOutput to wait for it. Just end your turn (or do other work); " +
           "the system wakes you on completion. Use BashOutput(shell_id) only to check on a still-running " +
-          "process on demand, KillShell(shell_id) to stop one, ListShells() to enumerate. The process is " +
+          "process on demand, KillShell(shell_id) to stop one before restarting it, ListShells() to enumerate. " +
+          "Prefer KillShell over raw kill/pkill for managed background tasks so intentional stops " +
+          "are tracked correctly and their whole process group is terminated. The process is " +
           "killed when the session/app exits. (A never-exiting service like a dev server simply never " +
           "fires that completion wakeup — that's expected.)",
       },

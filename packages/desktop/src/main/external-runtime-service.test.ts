@@ -6,11 +6,19 @@
  * here is what Desktop passes down — not whether a Codex binary is installed.
  */
 import { afterAll, afterEach, beforeEach, describe, expect, mock, test } from "bun:test";
-import { mkdirSync, mkdtempSync, readFileSync, renameSync, rmSync, symlinkSync } from "node:fs";
+import {
+  mkdirSync,
+  mkdtempSync,
+  readFileSync,
+  renameSync,
+  rmSync,
+  symlinkSync,
+  writeFileSync,
+} from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { SessionManager, type StreamEvent, type ToolRegistry } from "@cjhyy/code-shell-core";
-import { FIRST_PHASE_EXPOSURE } from "@cjhyy/code-shell-core/extension";
+import { createSessionToolHost, FIRST_PHASE_EXPOSURE } from "@cjhyy/code-shell-core/extension";
 import { ExternalRuntimeApprovals } from "./external-runtime-approvals.js";
 import { EXTERNAL_GOAL_TOOLS } from "./external-runtime-goals.js";
 import type { ExternalRuntimeServiceDeps } from "./external-runtime-service.js";
@@ -694,6 +702,150 @@ describe("ExternalRuntimeService", () => {
     const hooks = starts[0]!.hooks as Record<string, unknown>;
     expect(hooks.onNativeApproval).toBeUndefined();
     expect(hooks.onUserInput).toBeFunction();
+  });
+
+  test.each([
+    { permissionMode: "default", hostMode: "default", pathAccess: "default" },
+    { permissionMode: "acceptEdits", hostMode: "acceptEdits", pathAccess: "default" },
+    { permissionMode: "bypassPermissions", hostMode: "acceptEdits", pathAccess: "full" },
+    { permissionMode: "dontAsk", hostMode: "default", pathAccess: "default" },
+    { permissionMode: "auto", hostMode: "default", pathAccess: "default" },
+    { permissionMode: "plan", hostMode: "default", pathAccess: "default" },
+  ] as const)(
+    "binds $permissionMode to trusted host file access without bypassing the tool classifier",
+    async ({ permissionMode, hostMode, pathAccess }) => {
+      const svc = service({ external_agent_runtime: true, external_host_tools: true });
+      await svc.start({ ...request, permissionMode });
+
+      expect(starts[0]!.permissionMode).toBe(hostMode);
+      expect(starts[0]!.pathAccess).toBe(pathAccess);
+    },
+  );
+
+  test.each(["default", "acceptEdits", "bypassPermissions"] as const)(
+    "%s propagates the selected file access to host tool execution",
+    async (permissionMode) => {
+      const cwd = join(testHome, "workspace");
+      mkdirSync(cwd);
+      const outside = join(testHome, "shared.txt");
+      const sensitive = join(cwd, ".env");
+      writeFileSync(outside, "synthetic outside file");
+      writeFileSync(sensitive, "SYNTHETIC_TEST_VALUE=example");
+      const approvalRequests: string[] = [];
+      const svc = service(
+        { external_agent_runtime: true, external_host_tools: true },
+        async (_sessionId, approvalRequest) => {
+          approvalRequests.push(approvalRequest.toolName);
+          return { approved: false };
+        },
+      );
+      await svc.start({ ...request, cwd, permissionMode });
+      // Runtime lifecycle hooks and Core tool hooks are separate contracts.
+      const { hooks: _runtimeHooks, ...hostOptions } = starts[0]!;
+      const host = createSessionToolHost(
+        hostOptions as unknown as Parameters<typeof createSessionToolHost>[0],
+      );
+      try {
+        for (const filePath of [outside, sensitive]) {
+          const result = await host.execute({
+            id: filePath,
+            name: "Read",
+            input: { file_path: filePath },
+          });
+          if (permissionMode === "bypassPermissions") {
+            expect(result.isError).toBeFalsy();
+            expect(result.result).toContain(readFileSync(filePath, "utf8"));
+          } else {
+            expect(result.isError).toBe(true);
+            expect(result.error).toContain("path approval denied");
+          }
+        }
+        expect(approvalRequests).toEqual(
+          permissionMode === "bypassPermissions" ? [] : ["__ask_user__", "__ask_user__"],
+        );
+        expect(host.toolContext.permissionMode).toBe(
+          permissionMode === "default" ? "default" : "acceptEdits",
+        );
+      } finally {
+        await host.dispose();
+      }
+    },
+  );
+
+  test("full access preserves explicit host tool deny rules", async () => {
+    const cwd = join(testHome, "workspace");
+    mkdirSync(join(cwd, ".code-shell"), { recursive: true });
+    writeFileSync(
+      join(cwd, ".code-shell", "settings.json"),
+      JSON.stringify({ permissions: { rules: [{ tool: "Read", decision: "deny" }] } }),
+    );
+    const filePath = join(cwd, ".env");
+    writeFileSync(filePath, "SYNTHETIC_TEST_VALUE=example");
+    let asked = false;
+    const svc = service({ external_agent_runtime: true, external_host_tools: true }, async () => {
+      asked = true;
+      return { approved: true };
+    });
+    await svc.start({ ...request, cwd, permissionMode: "bypassPermissions" });
+    const { hooks: _runtimeHooks, ...hostOptions } = starts[0]!;
+    const host = createSessionToolHost(
+      hostOptions as unknown as Parameters<typeof createSessionToolHost>[0],
+    );
+    try {
+      const result = await host.execute({
+        id: "denied-read",
+        name: "Read",
+        input: { file_path: filePath },
+      });
+      expect(result.isError).toBe(true);
+      expect(result.error).toBe("Permission denied for tool: Read");
+      expect(asked).toBe(false);
+    } finally {
+      await host.dispose();
+    }
+  });
+
+  test("full access approves tool requests in main while preserving user questions", async () => {
+    const approvalRequests: string[] = [];
+    const svc = service(
+      { external_agent_runtime: true, external_host_tools: true },
+      async (_sessionId, approvalRequest) => {
+        approvalRequests.push(approvalRequest.toolName);
+        return { approved: true, answer: "user answer" };
+      },
+    );
+    await svc.start({ ...request, permissionMode: "bypassPermissions" });
+    const backend = starts[0]!.approvalBackend as {
+      requestApproval(request: { toolName: string }): Promise<{ approved: boolean }>;
+    };
+    await expect(backend.requestApproval({ toolName: "DriveAgent" })).resolves.toEqual({
+      approved: true,
+    });
+    const hooks = starts[0]!.hooks as {
+      onNativeApproval(request: { method: string; params: unknown }): Promise<string>;
+    };
+    await expect(
+      hooks.onNativeApproval({ method: "item/commandExecution/requestApproval", params: {} }),
+    ).resolves.toBe("accept");
+    expect(approvalRequests).toEqual([]);
+    const context = starts[0]!.contextOverrides as {
+      askUser(question: string): Promise<string>;
+    };
+    await expect(context.askUser("Which format should the report use?")).resolves.toBe(
+      "user answer",
+    );
+    expect(approvalRequests).toEqual(["__ask_user__"]);
+  });
+
+  test("full access can approve host tools without an attached approval UI", async () => {
+    const svc = service({ external_agent_runtime: true, external_host_tools: true });
+    await svc.start({ ...request, permissionMode: "bypassPermissions" });
+    const backend = starts[0]!.approvalBackend as {
+      requestApproval(request: { toolName: string }): Promise<{ approved: boolean }>;
+    };
+    await expect(backend.requestApproval({ toolName: "DriveAgent" })).resolves.toEqual({
+      approved: true,
+    });
   });
 
   test.each(["host free text", "host choices", "Codex input"])(

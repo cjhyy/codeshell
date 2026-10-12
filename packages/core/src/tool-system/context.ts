@@ -423,6 +423,14 @@ export interface ToolContext {
    * skips ALL checks including path validation. Undefined → treat as
    * "default" (always enforce). */
   permissionMode?: string;
+  /**
+   * File-path authority granted by the trusted host. External runtimes keep
+   * their tool classifier active to honor explicit deny rules, but the user's
+   * full-access selection must still authorize sensitive and external paths.
+   * Absent / "default" preserves path approval. This does not grant tools or
+   * disable plan mode, hooks, or an explicitly configured OS sandbox.
+   */
+  pathAccess?: "default" | "full";
   /** The Engine that built this context, as the narrow {@link ToolRuntimeHost}
    *  view. Lets tools call back into the engine (e.g. ctx.engine.setPlanMode)
    *  without a module-level singleton — and without tool-system depending on

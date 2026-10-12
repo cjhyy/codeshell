@@ -354,6 +354,9 @@ export class BackgroundShellManager {
         status: ok ? "completed" : "failed",
         workKind: "shell",
         command: sh.command,
+        cwd: sh.cwd,
+        ...(sh.exitCode !== null ? { exitCode: sh.exitCode } : {}),
+        ...(sh.signal !== null ? { signal: sh.signal } : {}),
         error: ok
           ? undefined
           : `Background shell ${sh.shellId} exited with ${exitDesc}. Use BashOutput("${sh.shellId}") to inspect.`,
