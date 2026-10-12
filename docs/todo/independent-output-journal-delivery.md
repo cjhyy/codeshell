@@ -253,3 +253,83 @@ and complete combined CI, physical UI/relaunch/weak-network acceptance and
 authorized release. The pending repair marker already blocks all new journal
 reader/writer admission. These items remain open until their actual production
 paths and final combined checks pass.
+
+## Final combined implementation and consumer verification
+
+The final production checkpoint is `c95d1b89`, combining manual repair
+`fa07796d`, its API/CLI integration `98c01eb4`, and `origin/main` `9fa1194e`
+(including the separate CC Room recovery and CI/UI fixes). The later
+`13454172` merge adds only the manual repair delivery receipt. Earlier sections
+describe historical checkpoints; their outstanding implementation statements
+are superseded by this final combined result.
+
+The host-only `backupOutputJournal`, `restoreOutputJournalBackup` and
+`inspectOutputJournalRepair` APIs and the native `code-shell-output-journal`
+CLI now use the real production journal. See [operator instructions](../output-journal-repair.md)
+and the [manual repair receipt](manual-output-journal-repair-delivery.md).
+Backup verifies the full retained single-file or segmented bundle and exact
+published head. Restore requires the original Session, anchor and head authority,
+preserves original bytes and a SHA receipt before mutation, and retains the same
+logical cursor, retention floor and sticky/unpaired barriers. Missing retained
+segments are recreated only with exclusive publication and durable creation
+receipts. Unknown replacement files are refused. New readers and writers obey
+the pending barrier; the original anchor is poisoned before mutation so the
+actual historical reader/writer reject it. Historical v1 readers can already
+misclassify a truncated prefix before evidence is secured and that barrier can
+be installed; operators must stop old clients for the whole maintenance/retry
+window. No stronger compatibility guarantee is claimed.
+
+On the combined source, the guarded 20-file joint shard passes **261 tests /
+3,153 assertions**, including all 18 manual repair cases / 1,144 assertions,
+real delayed worker/Main ordering, independent native output, Engine disposal,
+Core exports, Desktop/Server/Web CC Room recovery and architecture budgets.
+Manual repair exercises each real durable cut and retry: 20 single-file fsync,
+28 segmented fsync, 20 historical-v1 fsync, 29 writes, three truncations, six
+exclusive links and seven unlinks. The full clean root build/typecheck passes
+all workspace boundaries; lint reports zero errors and the existing 105-warning
+baseline. Built exports match 247 internal runtime / 113 internal type exports,
+with host repair APIs absent from the stable public entry. Earlier complete
+Core shards remain the 1,944-pass/three-live-model-skip Engine/tool-system and
+3,264-pass Core remainder checkpoints; they are not presented as fresh full
+reruns after the manual/CC Room merge.
+
+The prior PR CI at `5fea56d9` passed 11 of 12 jobs, including Electron E2E,
+but its Desktop shard exposed eight old Panel bridge doubles without the new
+captured-source method. Checkpoint `b1ac3b25` updates those doubles, preserving
+their original submission-Session observation callback. The guarded isolated
+Panel protocol process plus Main/Panel source regressions pass 23 tests /
+142 assertions, and the edited fixture passes ESLint. This fixes a real failed
+job; it is not treated as an unrelated baseline failure. The final push must
+still pass its own CI.
+
+Final compiled checks run sequentially against that same clean build:
+
+- `test:output-journal` recovers all 9,060,345 bytes through actual stdio,
+  Main/Desktop and authenticated Hub lifetimes, preserving SHA-256
+  `8b43320c8ca500d14af6c51646c33f6f7397cd99ed2030be11d7ca324f0a9b71`.
+  The 2,213-frame model fixture takes 5,382 ms. The 147,352,023-byte segmented
+  case takes 332 ms for its cold first page and 6,106 ms for 153 pages. A separate
+  actual writer appends 108 times and rotates during 17 frozen pages without
+  changing their cursor. Retention expiry and failed publication remain visible.
+- `test:mobile-output-journal` uses the actual Mobile hook and authenticated
+  reconnect against Core/Main: 2,224 frames, 9,059,235 recovered bytes, 177 pages.
+  Preliminary/follow-up input, idempotent retry, frozen append, changed Host
+  epoch, same-epoch gap, unfinished output, corruption and project/device
+  revocation checks all pass. This is a controlled consumer fixture, not a
+  physical-phone acceptance record.
+- `test:output-repair` invokes the built native Node CLI for a corrupt single
+  journal and missing retained segment. Both preserve the original cursor and
+  anchor inode, and their restored frames recover through the real reader.
+- `test:output-paced` uses an independent 50fps SSE process and compiled stdio
+  worker/Main: 150 frames, stream p50/p95/max 44/66/86 ms, 12 control requests
+  at p95 24 ms, durable cancellation in 189 ms. A real SIGTERM exit preserves
+  its published prefix and durable non-success terminal, with no late timer
+  publication. Both p95 gates remain below their 200 ms bound.
+
+All of these checks use isolated synthetic HOME/credentials and exact-origin
+guards before Core imports; no paid model is invoked. The structured combined
+receipt is [independent-output-journal-receipt.json](independent-output-journal-receipt.json).
+Final PR CI, independent release acceptance, physical GUI/relaunch/weak-network
+and phone checks, merge and authorized publication are still pending. Bounded
+Main catchup, retained-prefix scan costs and explicitly expired history remain
+the documented production limits.
