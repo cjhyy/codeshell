@@ -1,0 +1,258 @@
+{
+  "scope": "independent read-only artifact/hash/cleanup audit; no fixture or product import executed",
+  "executionsAdded": 0,
+  "runs": [
+    {
+      "label": "author-second",
+      "directory": "/tmp/codeshell-review-20261012-modern-desktop-image-round25/second-authorized",
+      "sourceSha256": "411b12bcb249b6eeb5465fe67f1f30555ecc5fb2232c219c602e0ce1df049ca9",
+      "guardSha256": "6e1f5f5045f9606086f1b01e6eb988b88c5670f78000b260fcb9e035f1c69b3d",
+      "logSha256": "09b0c9ce099711685e6b960710bf962d9f6b80a45c673bfc5c583d6fce2f7cc1",
+      "observedSha256": "4201df10228c2acb1abaf56e2e2fce0253f27fd6dc7586715b78a7b34f083f22",
+      "logged": {
+        "files": 1,
+        "tests": 2,
+        "bunExpectCalls": 32,
+        "completedMarker": true
+      },
+      "completed": true,
+      "phase": "completed",
+      "failure": null,
+      "attempts": [],
+      "sourceHashesChecked": 63,
+      "sourceHashesAllMatch": true,
+      "resolutionOnlyHashesChecked": 4,
+      "resolutionOnlyHashesAllMatch": true,
+      "privateHomeAbsent": true,
+      "runnerRootAbsent": true,
+      "cleanups": [
+        {
+          "sid": "f25-paired-image-text",
+          "ownedFilesRemoved": true,
+          "errors": []
+        },
+        {
+          "sid": "f25-paired-image-only",
+          "ownedFilesRemoved": true,
+          "errors": []
+        }
+      ],
+      "observations": [
+        {
+          "sid": "f25-paired-image-text",
+          "prompt": "Describe the modern image",
+          "correctUserText": true,
+          "userAttachment": {
+            "kind": "image",
+            "path": ".code-shell/attachments/f25-paired-image-text/431ced6916a2a21a-modern-shot.png",
+            "absPath": "/private/var/folders/1d/6__4f4y51g90nblfptt8s9v80000gn/T/codeshell-bun-completion-vdywGw/home/.code-shell/round25-owned-no-repo/f25-paired-image-text/.code-shell/attachments/f25-paired-image-text/431ced6916a2a21a-modern-shot.png",
+            "sessionId": "f25-paired-image-text",
+            "originalName": "modern-shot.png",
+            "size": 68,
+            "mime": "image/png"
+          },
+          "desktopFilenameAbsent": true,
+          "desktopImgAbsent": true,
+          "desktopUserBubbleAbsent": false,
+          "assistantPresent": true,
+          "webAttachmentNamePresent": true,
+          "optimisticInlineImagePresent": true,
+          "optimisticNamePresent": true,
+          "originalBytes": 68,
+          "originalSha256": "431ced6916a2a21a156e38701afe55bbd7f88969fbbfc56d7fe099d47f265460"
+        },
+        {
+          "sid": "f25-paired-image-only",
+          "prompt": "",
+          "correctUserText": true,
+          "userAttachment": {
+            "kind": "image",
+            "path": ".code-shell/attachments/f25-paired-image-only/431ced6916a2a21a-modern-shot.png",
+            "absPath": "/private/var/folders/1d/6__4f4y51g90nblfptt8s9v80000gn/T/codeshell-bun-completion-vdywGw/home/.code-shell/round25-owned-no-repo/f25-paired-image-only/.code-shell/attachments/f25-paired-image-only/431ced6916a2a21a-modern-shot.png",
+            "sessionId": "f25-paired-image-only",
+            "originalName": "modern-shot.png",
+            "size": 68,
+            "mime": "image/png"
+          },
+          "desktopFilenameAbsent": true,
+          "desktopImgAbsent": true,
+          "desktopUserBubbleAbsent": true,
+          "assistantPresent": true,
+          "webAttachmentNamePresent": true,
+          "optimisticInlineImagePresent": true,
+          "optimisticNamePresent": true,
+          "originalBytes": 68,
+          "originalSha256": "431ced6916a2a21a156e38701afe55bbd7f88969fbbfc56d7fe099d47f265460"
+        }
+      ]
+    },
+    {
+      "label": "root-initial",
+      "directory": "/Users/admin/.codex/worktrees/server-desktop-review-20261012/codeshell/docs/review-2026-10-12/reproductions/modern-desktop-image-round25",
+      "sourceSha256": "411b12bcb249b6eeb5465fe67f1f30555ecc5fb2232c219c602e0ce1df049ca9",
+      "guardSha256": "6e1f5f5045f9606086f1b01e6eb988b88c5670f78000b260fcb9e035f1c69b3d",
+      "logSha256": "63019f6daa2e52adbc9235240edf3e20f18f18135ff9f3c78e671a852fe841e6",
+      "observedSha256": "624b6d3322ab1ff8f43bcc21e66b484f15bb4fda55dc79ffae0a72c6074c4c67",
+      "logged": {
+        "files": 1,
+        "tests": 2,
+        "bunExpectCalls": 32,
+        "completedMarker": true
+      },
+      "completed": true,
+      "phase": "completed",
+      "failure": null,
+      "attempts": [],
+      "sourceHashesChecked": 63,
+      "sourceHashesAllMatch": true,
+      "resolutionOnlyHashesChecked": 4,
+      "resolutionOnlyHashesAllMatch": true,
+      "privateHomeAbsent": true,
+      "runnerRootAbsent": true,
+      "cleanups": [
+        {
+          "sid": "f25-paired-image-text",
+          "ownedFilesRemoved": true,
+          "errors": []
+        },
+        {
+          "sid": "f25-paired-image-only",
+          "ownedFilesRemoved": true,
+          "errors": []
+        }
+      ],
+      "observations": [
+        {
+          "sid": "f25-paired-image-text",
+          "prompt": "Describe the modern image",
+          "correctUserText": true,
+          "userAttachment": {
+            "kind": "image",
+            "path": ".code-shell/attachments/f25-paired-image-text/431ced6916a2a21a-modern-shot.png",
+            "absPath": "/private/var/folders/1d/6__4f4y51g90nblfptt8s9v80000gn/T/codeshell-bun-completion-fZr8OS/home/.code-shell/round25-owned-no-repo/f25-paired-image-text/.code-shell/attachments/f25-paired-image-text/431ced6916a2a21a-modern-shot.png",
+            "sessionId": "f25-paired-image-text",
+            "originalName": "modern-shot.png",
+            "size": 68,
+            "mime": "image/png"
+          },
+          "desktopFilenameAbsent": true,
+          "desktopImgAbsent": true,
+          "desktopUserBubbleAbsent": false,
+          "assistantPresent": true,
+          "webAttachmentNamePresent": true,
+          "optimisticInlineImagePresent": true,
+          "optimisticNamePresent": true,
+          "originalBytes": 68,
+          "originalSha256": "431ced6916a2a21a156e38701afe55bbd7f88969fbbfc56d7fe099d47f265460"
+        },
+        {
+          "sid": "f25-paired-image-only",
+          "prompt": "",
+          "correctUserText": true,
+          "userAttachment": {
+            "kind": "image",
+            "path": ".code-shell/attachments/f25-paired-image-only/431ced6916a2a21a-modern-shot.png",
+            "absPath": "/private/var/folders/1d/6__4f4y51g90nblfptt8s9v80000gn/T/codeshell-bun-completion-fZr8OS/home/.code-shell/round25-owned-no-repo/f25-paired-image-only/.code-shell/attachments/f25-paired-image-only/431ced6916a2a21a-modern-shot.png",
+            "sessionId": "f25-paired-image-only",
+            "originalName": "modern-shot.png",
+            "size": 68,
+            "mime": "image/png"
+          },
+          "desktopFilenameAbsent": true,
+          "desktopImgAbsent": true,
+          "desktopUserBubbleAbsent": true,
+          "assistantPresent": true,
+          "webAttachmentNamePresent": true,
+          "optimisticInlineImagePresent": true,
+          "optimisticNamePresent": true,
+          "originalBytes": 68,
+          "originalSha256": "431ced6916a2a21a156e38701afe55bbd7f88969fbbfc56d7fe099d47f265460"
+        }
+      ]
+    },
+    {
+      "label": "root-latest",
+      "directory": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/docs/review-2026-10-12/reproductions/modern-desktop-image-round25",
+      "sourceSha256": "411b12bcb249b6eeb5465fe67f1f30555ecc5fb2232c219c602e0ce1df049ca9",
+      "guardSha256": "6e1f5f5045f9606086f1b01e6eb988b88c5670f78000b260fcb9e035f1c69b3d",
+      "logSha256": "0214eb5413cc23d379ea1c680166fd20aebd351b84f36451af3dea1551c346c0",
+      "observedSha256": "1209743fa2fc78868d03bfb24126e220e39f173f8138a4bf9a7ab0315939f8b1",
+      "logged": {
+        "files": 1,
+        "tests": 2,
+        "bunExpectCalls": 32,
+        "completedMarker": true
+      },
+      "completed": true,
+      "phase": "completed",
+      "failure": null,
+      "attempts": [],
+      "sourceHashesChecked": 63,
+      "sourceHashesAllMatch": true,
+      "resolutionOnlyHashesChecked": 4,
+      "resolutionOnlyHashesAllMatch": true,
+      "privateHomeAbsent": true,
+      "runnerRootAbsent": true,
+      "cleanups": [
+        {
+          "sid": "f25-paired-image-text",
+          "ownedFilesRemoved": true,
+          "errors": []
+        },
+        {
+          "sid": "f25-paired-image-only",
+          "ownedFilesRemoved": true,
+          "errors": []
+        }
+      ],
+      "observations": [
+        {
+          "sid": "f25-paired-image-text",
+          "prompt": "Describe the modern image",
+          "correctUserText": true,
+          "userAttachment": {
+            "kind": "image",
+            "path": ".code-shell/attachments/f25-paired-image-text/431ced6916a2a21a-modern-shot.png",
+            "absPath": "/private/var/folders/1d/6__4f4y51g90nblfptt8s9v80000gn/T/codeshell-bun-completion-rcuHaQ/home/.code-shell/round25-owned-no-repo/f25-paired-image-text/.code-shell/attachments/f25-paired-image-text/431ced6916a2a21a-modern-shot.png",
+            "sessionId": "f25-paired-image-text",
+            "originalName": "modern-shot.png",
+            "size": 68,
+            "mime": "image/png"
+          },
+          "desktopFilenameAbsent": true,
+          "desktopImgAbsent": true,
+          "desktopUserBubbleAbsent": false,
+          "assistantPresent": true,
+          "webAttachmentNamePresent": true,
+          "optimisticInlineImagePresent": true,
+          "optimisticNamePresent": true,
+          "originalBytes": 68,
+          "originalSha256": "431ced6916a2a21a156e38701afe55bbd7f88969fbbfc56d7fe099d47f265460"
+        },
+        {
+          "sid": "f25-paired-image-only",
+          "prompt": "",
+          "correctUserText": true,
+          "userAttachment": {
+            "kind": "image",
+            "path": ".code-shell/attachments/f25-paired-image-only/431ced6916a2a21a-modern-shot.png",
+            "absPath": "/private/var/folders/1d/6__4f4y51g90nblfptt8s9v80000gn/T/codeshell-bun-completion-rcuHaQ/home/.code-shell/round25-owned-no-repo/f25-paired-image-only/.code-shell/attachments/f25-paired-image-only/431ced6916a2a21a-modern-shot.png",
+            "sessionId": "f25-paired-image-only",
+            "originalName": "modern-shot.png",
+            "size": 68,
+            "mime": "image/png"
+          },
+          "desktopFilenameAbsent": true,
+          "desktopImgAbsent": true,
+          "desktopUserBubbleAbsent": true,
+          "assistantPresent": true,
+          "webAttachmentNamePresent": true,
+          "optimisticInlineImagePresent": true,
+          "optimisticNamePresent": true,
+          "originalBytes": 68,
+          "originalSha256": "431ced6916a2a21a156e38701afe55bbd7f88969fbbfc56d7fe099d47f265460"
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,87 @@
+{
+  "checkedAtSingapore": "2026-10-12T08:55:21.063606+08:00",
+  "finding": "R85/D25-1/P3",
+  "commonBunFilesAdded": 1,
+  "commonBunTestsAdded": 2,
+  "bunExpectsPerFrozenRun": 32,
+  "nativeExecutionsAdded": 0,
+  "runs": [
+    {
+      "execution": "root-initial",
+      "baseline": "84740d56e55517b004948a0a0e07649ad6fbf998",
+      "archive": "reproductions/modern-desktop-image-round25",
+      "files": 1,
+      "tests": 2,
+      "bunExpects": 32,
+      "skipped": 0,
+      "code": 0,
+      "sourceSha256": {
+        "modern-desktop-image.test.ts": "411b12bcb249b6eeb5465fe67f1f30555ecc5fb2232c219c602e0ce1df049ca9",
+        "network-guard.ts": "6e1f5f5045f9606086f1b01e6eb988b88c5670f78000b260fcb9e035f1c69b3d"
+      },
+      "sourceManifestCount": 63,
+      "resolutionOnlyEntries": 4,
+      "isolatedHome": "/private/var/folders/1d/6__4f4y51g90nblfptt8s9v80000gn/T/codeshell-bun-completion-fZr8OS/home",
+      "isolatedHomeRemoved": true,
+      "runnerRootRemoved": true,
+      "guardAttempts": [],
+      "cleanupErrors": []
+    },
+    {
+      "execution": "root-latest",
+      "baseline": "a66f4ef291f304ee4df9da8095a90671d9a8f140",
+      "archive": "validation/latest-a66f4ef2/modern-desktop-image-round25",
+      "files": 1,
+      "tests": 2,
+      "bunExpects": 32,
+      "skipped": 0,
+      "code": 0,
+      "sourceSha256": {
+        "modern-desktop-image.test.ts": "411b12bcb249b6eeb5465fe67f1f30555ecc5fb2232c219c602e0ce1df049ca9",
+        "network-guard.ts": "6e1f5f5045f9606086f1b01e6eb988b88c5670f78000b260fcb9e035f1c69b3d"
+      },
+      "sourceManifestCount": 63,
+      "resolutionOnlyEntries": 4,
+      "isolatedHome": "/private/var/folders/1d/6__4f4y51g90nblfptt8s9v80000gn/T/codeshell-bun-completion-rcuHaQ/home",
+      "isolatedHomeRemoved": true,
+      "runnerRootRemoved": true,
+      "guardAttempts": [],
+      "cleanupErrors": []
+    }
+  ],
+  "authorFirstFailureSeparate": {
+    "archive": "validation/original-modern-desktop-image-round25/first-authorized",
+    "sourceSha256": "8a033c557babcc11bbf1b8b8fe33543324c7e2fea509f5931adf3d02187262c4",
+    "passed": 0,
+    "failed": 2,
+    "bunExpects": 22,
+    "completed": false,
+    "reason": "MiniDom lacked Workbench SSR window.matchMedia; business assertions reached before render but observations empty and normal controls incomplete. Not a passing candidate or product defect.",
+    "isolatedHomeRemoved": true
+  },
+  "authorFinalSeparate": {
+    "archive": "validation/original-modern-desktop-image-round25/second-authorized",
+    "sourceSha256": "411b12bcb249b6eeb5465fe67f1f30555ecc5fb2232c219c602e0ce1df049ca9",
+    "guardSha256": "6e1f5f5045f9606086f1b01e6eb988b88c5670f78000b260fcb9e035f1c69b3d",
+    "files": 1,
+    "tests": 2,
+    "bunExpects": 32,
+    "completed": true,
+    "isolatedHomeRemoved": true
+  },
+  "preparedExecutions": 0,
+  "nodeAsserts": "Not separately counted; no additional Bun/native totals.",
+  "scope": "Actual paired dispatch/staging/helpers/SessionManager/Transcript/Core dist journal publisher and writer/IPC registrar+preload facade/reader/modern recovery/tokened hydration reducer/MessageStream SSR; actual Web reducer+Workbench SSR and inline encoder+optimistic append SSR controls. Submit acceptance, run stream events, memory IPC transport, SSR viewport adapter controlled. No send hook/full App/useTranscriptBuckets mount/Engine.run/provider/worker/Electron/real authority/auth/HTTP/WS/phone. Five actual UI leaf exports forwarded by alias, no business behavior mock. Source/dist manifest63 and resolve-only4 are not actual module-cache graph probes. Cold paired Session with no Desktop optimistic cache; ordinary Desktop reopening remains static.",
+  "pngBytes": 68,
+  "pngSha256": "431ced6916a2a21a156e38701afe55bbd7f88969fbbfc56d7fe099d47f265460",
+  "formalCountsAfter": {
+    "findings": 85,
+    "P1": 1,
+    "P2": 52,
+    "P3": 32,
+    "commonBunFiles": 85,
+    "commonBunTests": 250
+  },
+  "latestFetchSingapore": "2026-10-12 08:52",
+  "originMain": "a66f4ef291f304ee4df9da8095a90671d9a8f140"
+}

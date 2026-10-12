@@ -296,6 +296,14 @@
     "skipped": 0
   },
   {
+    "file": "docs/review-2026-10-12/reproductions/modern-desktop-image-round25/modern-desktop-image.test.ts",
+    "log": "docs/review-2026-10-12/reproductions/modern-desktop-image-round25/modern-desktop-image.test.ts.log",
+    "code": 0,
+    "signal": null,
+    "tests": 2,
+    "skipped": 0
+  },
+  {
     "file": "docs/review-2026-10-12/reproductions/multiwindow-round13/catalog-protections.test.ts",
     "code": 0,
     "log": "docs/review-2026-10-12/reproductions/multiwindow-round13/catalog-protections.test.ts.log",

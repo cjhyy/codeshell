@@ -1,7 +1,7 @@
 {
   "baseline": "a66f4ef291f304ee4df9da8095a90671d9a8f140",
-  "reproductionFiles": 84,
-  "reproductionTests": 248,
+  "reproductionFiles": 85,
+  "reproductionTests": 250,
   "reproductionSkipped": 0,
   "changedTestFiles": 8,
   "changedExecutedTests": 156,
@@ -52,5 +52,10 @@
   "round24BunTestsAdded": 1,
   "round24BunExpects": 17,
   "round24NativeExecutionsAdded": 0,
-  "round24Note": "Actual stageImageBytes/prepareRunImageInput/buildRunUserMessageContent/SessionManager/Transcript, actual Web hook/dispatcher/recovery service/reader/server history and legacy Workbench SSR. Synthetic auth/device/viewer/authority/Bridge and in-memory WebSocket; real authority/Git static only; modern control measured hook projection with no second SSR. No Engine.run/provider/worker/Electron/real transport/account. Source manifest and resolve-only addresses are not module-cache graph probes. No journal ever published before first legacy read; modern control is first journal publication, not a user-facing repair workflow. Author initial invalid-PNG CRC failure preserved separately, no Bun expect count printed; final author latest and independent root two baselines each1/17/Completed, not cumulative suite counts."
+  "round24Note": "Actual stageImageBytes/prepareRunImageInput/buildRunUserMessageContent/SessionManager/Transcript, actual Web hook/dispatcher/recovery service/reader/server history and legacy Workbench SSR. Synthetic auth/device/viewer/authority/Bridge and in-memory WebSocket; real authority/Git static only; modern control measured hook projection with no second SSR. No Engine.run/provider/worker/Electron/real transport/account. Source manifest and resolve-only addresses are not module-cache graph probes. No journal ever published before first legacy read; modern control is first journal publication, not a user-facing repair workflow. Author initial invalid-PNG CRC failure preserved separately, no Bun expect count printed; final author latest and independent root two baselines each1/17/Completed, not cumulative suite counts.",
+  "round25BunFilesAdded": 1,
+  "round25BunTestsAdded": 2,
+  "round25BunExpects": 32,
+  "round25NativeExecutionsAdded": 0,
+  "round25Note": "Actual paired dispatch/staging/helpers/SessionManager/Transcript/Core dist journal publisher and writer/IPC registrar+preload facade/reader/modern recovery/tokened hydration reducer/MessageStream SSR; actual Web reducer+Workbench SSR and inline encoder+optimistic append SSR controls. Submit acceptance, run stream events, memory IPC transport, SSR viewport adapter controlled. No send hook/full App/useTranscriptBuckets mount/Engine.run/provider/worker/Electron/real authority/auth/HTTP/WS/phone. Five actual UI leaf exports forwarded by alias, no business behavior mock. Source/dist manifest63 and resolve-only4 are not actual module-cache graph probes. Cold paired Session with no Desktop optimistic cache; ordinary Desktop reopening remains static. Author first0/2/22/noCompleted separately preserved; final author and root two independent runs each2/32/Completed, not cumulative suite totals."
 }

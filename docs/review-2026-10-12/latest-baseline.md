@@ -10,10 +10,10 @@
 | --- | --- | --- |
 | frozen install、workspaces build、Desktop build、typecheck:workspaces | 全部通过 | `validation/latest-a66f4ef2/{install,build,desktop-build,typecheck}.log` |
 | 8 个新增或修改测试文件 | 156 项实际执行、0 失败、0 跳过 | `validation/latest-a66f4ef2/changed-test-results.json` |
-| 既有便携缺陷表征和正常契约 | 84 文件、248 测试、0 失败、0 跳过 | `validation/latest-a66f4ef2/reproduction-results.json` |
+| 既有便携缺陷表征和正常契约 | 85 文件、250 测试、0 失败、0 跳过 | `validation/latest-a66f4ef2/reproduction-results.json` |
 | 凭据实际 Electron/IPC/store | 4 场景通过 | `validation/latest-a66f4ef2/credentials__credentials-e2e.mjs.log` |
 
-复现“通过”表示当前仍观察到被测缺陷。84 个文件并非与问题项一一对应，一份文件可能覆盖多项发现，也包含正常对照。新快照结果没有加到原基线 6286 个现有测试的总数中，以免重复计数。
+复现“通过”表示当前仍观察到被测缺陷。85 个文件并非与问题项一一对应，一份文件可能覆盖多项发现，也包含正常对照。新快照结果没有加到原基线 6286 个现有测试的总数中，以免重复计数。
 
 ## 两处测试入口适配
 
@@ -67,3 +67,5 @@
 第二十三轮[Recent刷新](menu-recents-round23.md)再增R83/P3及1文件1测试43个Bun expect，两冻结基线修正版分别guarded通过，通用83文件247测试；与owner合计本轮2/4/82。原作者first1/43和root两次原版便携失败0/1/41独立归档，修正版作者0次，未启动native或实际产品子进程。
 
 第二十四轮[旧原生图片历史](legacy-history-round24.md)新增R84/P3，同一最终源码在两冻结基线各guarded1文件1测试17 Bun expect/Completed，31项source及5个resolve-only地址按各checkout核验，通用84文件248测试。旧状态真实Workbench SSR、现代仅实际hook投影；没有真实权限、Git、WS或Engine/worker/provider验收。作者首轮fixture无效PNG被正确CRC拒绝且无Completed/无打印expect总数，修正后作者latest1/17与root两个独立1/17分别保留；native增量0。
+
+第二十五轮[现代图片Desktop恢复](modern-desktop-image-round25.md)新增R85/P3，同源411b12在两冻结基线各guarded1文件2测试32Bun expect/Completed，63manifest/4resolve-only逐项核SHA，当前通用85/250。实际Desktop metadata/renderer缺提示或纯图bubble，Web摘要、inline UI及68-byte原件控制正常；sendhook/fullApp/authority/worker/provider不动态外推。作者first0/2/22/noCompleted是MiniDom缺matchMedia支架，second2/32与root各2/32分账，native增量0。08:52fetch origin仍a66f，产品快照保持。

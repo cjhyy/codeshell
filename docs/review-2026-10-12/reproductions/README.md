@@ -51,3 +51,5 @@ node scripts/run-isolated-node-smoke.mjs docs/review-2026-10-12/reproductions/cr
 第二十三轮[Recent刷新](../menu-recents-round23.md)再增R83/P3及1文件1测试43个Bun expect，两冻结基线修正版分别guarded通过，通用83文件247测试；与owner合计本轮2/4/82。原作者first1/43和root两次原版便携失败0/1/41独立归档，修正版作者0次，未启动native或实际产品子进程。
 
 第二十四轮[旧原生图片历史](../legacy-history-round24.md)新增1文件1测试17个Bun expect，两冻结基线同源分别guarded通过，当前通用84文件248测试。旧状态实际Workbench SSR，现代控制仅hook投影；auth/authority/MemoryWS/Bridge为明确替身，无Engine/worker/provider/Electron/真实Git或WS。Node assert未另计，native增量0；作者首轮fixture CRC失败无Completed/未打印expect总数、修正后latest1/17及root各1/17单列。
+
+第二十五轮[现代图片Desktop恢复](../modern-desktop-image-round25.md)新增1文件2测试32Bun expect，两冻结基线同源分别guarded通过，当前通用85文件250测试。真实paired producer/journal/reader/recovery/hydration/MessageStream SSR，Web SSR摘要和inlineencoder+append UI控制正常，sendhook/fullApp静态；63manifest/4resolve-only非cachegraph，无Engine/provider/worker/authority/Electron。首败0/2/22/noCompleted仅MiniDom缺matchMedia，唯一viewport修正分账；native增量0、Nodeassert未另计。

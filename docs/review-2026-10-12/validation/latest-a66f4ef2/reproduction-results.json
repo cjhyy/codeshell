@@ -335,6 +335,15 @@
     "archiveLog": "validation/latest-a66f4ef2/repro__model-switch-round18__model-preferences.test.tsx.log"
   },
   {
+    "file": "docs/review-2026-10-12/reproductions/modern-desktop-image-round25/modern-desktop-image.test.ts",
+    "log": "docs/review-2026-10-12/reproductions/modern-desktop-image-round25/modern-desktop-image.test.ts.log",
+    "code": 0,
+    "signal": null,
+    "tests": 2,
+    "skipped": 0,
+    "archiveLog": "validation/latest-a66f4ef2/modern-desktop-image-round25/modern-desktop-image.test.ts.log"
+  },
+  {
     "file": "docs/review-2026-10-12/reproductions/multiwindow-round13/catalog-protections.test.ts",
     "code": 0,
     "log": "docs/review-2026-10-12/reproductions/multiwindow-round13/catalog-protections.test.ts.log",
