@@ -270,13 +270,27 @@ export class SegmentedOutputFile {
       throw Object.assign(new Error("Output cursor retention expired"), {
         code: "CODESHELL_OUTPUT_RETENTION_EXPIRED",
       });
-    const region = this.regions.find((item) => position >= item.start && position < item.end);
+    let region = this.regions.find((item) => position >= item.start && position < item.end);
+    let end = region?.end;
+    if (!region) {
+      // currentSize() can observe a durable append after this view opened its
+      // descriptors. Closed regions keep their manifest bounds; only the last
+      // active descriptor can extend, and only by bytes really present there.
+      // Otherwise the newer scan bound would hit an artificial EOF at the
+      // constructor's older active size and invalidate an intact frozen cursor.
+      const active = this.regions.at(-1)!;
+      const currentEnd = this.currentSize();
+      if (position >= active.end && position < currentEnd) {
+        region = active;
+        end = currentEnd;
+      }
+    }
     if (!region) return 0;
     return readSync(
       region.fd,
       buffer,
       offset,
-      Math.min(length, region.end - position),
+      Math.min(length, end! - position),
       position - region.base,
     );
   }

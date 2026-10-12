@@ -181,7 +181,19 @@ async function concurrentFrozenPages(core, journalApi, root, origin, cwd) {
         ...(recovery.cursor ? { after: recovery.cursor } : {}),
         maxFrames: 16,
       });
-      assert.equal(page.status, "ok", JSON.stringify({ page, stderr }));
+      assert.equal(
+        page.status,
+        "ok",
+        JSON.stringify({
+          page,
+          pageIndex: pages,
+          after: recovery.cursor,
+          through,
+          storage: manager.readSessionState(sessionId).outputJournalStorage,
+          progress: JSON.parse(readFileSync(progressFile, "utf8")),
+          stderr,
+        }),
+      );
       pages++;
       const done = journalApi.applyOutputJournalPage(recovery, page, (event) => {
         if (event.type === "text_delta") actual.update(event.text);
