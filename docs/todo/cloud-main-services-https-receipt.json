@@ -1,0 +1,86 @@
+{
+  "normal": {
+    "status": "passed",
+    "runtime": "v22.19.0",
+    "isolation": {
+      "negativeProbes": 4,
+      "homeHash": "ecc0b55123bf32de872e8fdc41b9121fb350f4e8d4065fa6243f30ddb2ca2e7c"
+    },
+    "actualMainManagersAndHttpsTransports": true,
+    "twoPrivateCaOrigins": true,
+    "wrongCaRefusedBeforeCredentialDelivery": true,
+    "actualAccountServiceAndCloudComposition": true,
+    "listCreateStartOpenStop": true,
+    "rootCredentialsNeverAtCloud": true,
+    "ticketReplayWrongPinForeignRefused": true,
+    "actualRootLogoutRevokedIndependentGrant": true,
+    "lateMainOperationRejectedAndRuntimeStopped": true,
+    "nativeSessionHeadersAndFixedAccountTicketOrigin": true,
+    "requestCounts": {
+      "account": 31,
+      "cloud": 16
+    },
+    "controlledRuntimeProvider": true,
+    "nativeElectronWindow": false,
+    "docker": false,
+    "physicalMobile": false,
+    "ownedListenersAndSocketsClosed": true,
+    "ownedRuntimeAndWindowsClosed": true,
+    "hostHead": "0a48e3baaf054b8f6357558a9d44629237004c19",
+    "servicesHead": "535fa3862985edb1ae735d9b74309556e660d00c",
+    "packedConsumer": "/private/var/folders/1d/6__4f4y51g90nblfptt8s9v80000gn/T/codeshell-cloud-ticket-packed-2n_adyip/consumer",
+    "packedHostHead": "7ab0691ce97f33138deeefade18e182679eaab76",
+    "packedTarballSha256": {
+      "@cjhyy/code-shell-link": "2e194153b14e043d5b84a9c3196a0e1b9dfe917993a3ea984c4b0d20b6ad4fcb",
+      "@cjhyy/code-shell-core": "1c2e995f94dca5a47ef3ac5a96ac8dd06b392a7f00f61e542d5ae9000b208f2f",
+      "@cjhyy/code-shell-capability-coding": "673d86ac6134d2933f3447557c9410f2f3bb21b4780188b2d70a89f60b83120b",
+      "@cjhyy/code-shell-web": "6f9f32bd0822f500847362d7051ff93844437e47573cfd5537dbcd3313e8c1de",
+      "@cjhyy/code-shell-server": "dda8f8bda1bbd5b76060874509355c9749712ef19e283846917f06e7761fe818"
+    },
+    "packedBuildInventoryVerified": true,
+    "smokeSourceSha256": {
+      "scripts/smoke-cloud-main-services.mjs": "933d14dafa2b5649708f2e9d54f45c5646088473c7dc313002634ac6cff3816d",
+      "scripts/fixtures/cloud-main-services-adapters.ts": "448a53f16dc251406784e87e206780867dc3d726a4fd592d01f06a8946efe423",
+      "scripts/fixtures/cloud-main-services-child.mjs": "fc85043c1798d41b893cc767c7b2f14e640f29e3edbd81b777ea1c695e882de5",
+      "scripts/fixtures/cloud-main-services-guard.mjs": "6121ac443e227a4a75e4cd009e5a76601375fabd3c67a6805d2a9527bc4d9ba0"
+    },
+    "ownedChildExited": true,
+    "childExit": {
+      "code": 0,
+      "signal": null
+    },
+    "privateFixtureRemoved": true
+  },
+  "injected": {
+    "status": "passed",
+    "phase": "injected after actual Main start/open",
+    "runtime": "v22.19.0",
+    "ownedListenersAndSocketsClosed": true,
+    "ownedRuntimeAndWindowsClosed": true,
+    "injectedFailureCleanupVerified": true,
+    "hostHead": "0a48e3baaf054b8f6357558a9d44629237004c19",
+    "servicesHead": "535fa3862985edb1ae735d9b74309556e660d00c",
+    "packedConsumer": "/private/var/folders/1d/6__4f4y51g90nblfptt8s9v80000gn/T/codeshell-cloud-ticket-packed-2n_adyip/consumer",
+    "packedHostHead": "7ab0691ce97f33138deeefade18e182679eaab76",
+    "packedTarballSha256": {
+      "@cjhyy/code-shell-link": "2e194153b14e043d5b84a9c3196a0e1b9dfe917993a3ea984c4b0d20b6ad4fcb",
+      "@cjhyy/code-shell-core": "1c2e995f94dca5a47ef3ac5a96ac8dd06b392a7f00f61e542d5ae9000b208f2f",
+      "@cjhyy/code-shell-capability-coding": "673d86ac6134d2933f3447557c9410f2f3bb21b4780188b2d70a89f60b83120b",
+      "@cjhyy/code-shell-web": "6f9f32bd0822f500847362d7051ff93844437e47573cfd5537dbcd3313e8c1de",
+      "@cjhyy/code-shell-server": "dda8f8bda1bbd5b76060874509355c9749712ef19e283846917f06e7761fe818"
+    },
+    "packedBuildInventoryVerified": true,
+    "smokeSourceSha256": {
+      "scripts/smoke-cloud-main-services.mjs": "933d14dafa2b5649708f2e9d54f45c5646088473c7dc313002634ac6cff3816d",
+      "scripts/fixtures/cloud-main-services-adapters.ts": "448a53f16dc251406784e87e206780867dc3d726a4fd592d01f06a8946efe423",
+      "scripts/fixtures/cloud-main-services-child.mjs": "fc85043c1798d41b893cc767c7b2f14e640f29e3edbd81b777ea1c695e882de5",
+      "scripts/fixtures/cloud-main-services-guard.mjs": "6121ac443e227a4a75e4cd009e5a76601375fabd3c67a6805d2a9527bc4d9ba0"
+    },
+    "ownedChildExited": true,
+    "childExit": {
+      "code": 1,
+      "signal": null
+    },
+    "privateFixtureRemoved": true
+  }
+}
