@@ -104,7 +104,11 @@ function verifiedAuthority({ child, origin, policyPath, policyHash }) {
     row.homeHash === digest(policy.home) &&
     row.preloadHash === policy.preloadHash;
   const preCore = rows.findIndex(
-    (row) => owns(row) && row.event === "pre-core" && row.negativeProbes === 6,
+    (row) =>
+      owns(row) &&
+      row.event === "pre-core" &&
+      row.negativeProbes === 6 &&
+      row.dnsNegativeProbes === 4,
   );
   require(preCore >= 0);
   require(

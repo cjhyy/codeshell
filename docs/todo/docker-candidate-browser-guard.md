@@ -9,8 +9,9 @@ The driver wiring and Node/container isolation are a separate checkpoint.
 driver's captured live `ChildProcess`, never an environment-only URL. It verifies
 the canonical private policy and receipt paths inside the private `0700` HOME,
 `0600` single-link regular files, policy SHA256, pinned preload bytes, and matching
-controller PID/parent/policy/HOME/preload proofs. The six negative pre-Core probes
-must precede the exact `127.0.0.1` listener receipt. Reads pin the opened inode and
+controller PID/parent/policy/HOME/preload proofs. The pre-Core receipt must contain
+exactly `negativeProbes: 6` and `dnsNegativeProbes: 4` before the exact `127.0.0.1`
+listener receipt. Missing or different DNS proof counts are refused. Reads pin the opened inode and
 path; receipt reads permit append and ignore only an unfinished final line.
 Malformed complete receipt rows, replacement/symlink files, digest mismatch,
 foreign listeners and exited children fail closed. Authority is checked again
@@ -62,7 +63,7 @@ business assertions remain. Blob/data URLs cannot acquire HTTP/WS authority.
 ## Validation and remaining acceptance
 
 On the isolated task branch based on `5459addac`, the guarded pure shard
-`tests/docker-candidate-browser-guard.test.ts` passed **35 tests / 111 assertions**,
+`tests/docker-candidate-browser-guard.test.ts` passed **37 tests / 113 assertions**,
 with zero skipped tests. It creates private files, a synthetic ChildProcess
 subject, fake Playwright objects and fake WebSocket transports; it starts no
 process, browser, socket, Core/Main or Docker runtime. It covers the private
@@ -70,8 +71,8 @@ authority failures, route-before-page/default-context restrictions, redirect and
 protocol boundaries, finite media response preservation, scoped-cookie/frame
 forwarding, handshake/protocol failure and independent cleanup/error retention.
 Targeted ESLint, Prettier and syntax checks for all eight script modules passed.
-Final guarded shard log: `/tmp/codeshell-docker-candidate-browser-guard-20261013.log`,
-SHA256 `0d85fb139012207b606a1d4f3227537ffdd6cfbeeb002936d345364cacbdbeaf`.
+Final guarded shard log: `/tmp/codeshell-docker-candidate-browser-guard-dns-20261013.log`,
+SHA256 `302afef209e31a6e830130950e8f2e87dba7fd07ca0036b7cb293a23053fd629`.
 
 Real Playwright/HTTP/WS interoperability and every original Docker business
 scenario remain pending the combined Linux candidate run. The current final
