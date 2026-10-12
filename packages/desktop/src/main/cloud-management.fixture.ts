@@ -85,10 +85,13 @@ const calls: any[] = [],
   opened: any[] = [];
 let owned = true,
   failClose = false,
+  syncClose = false,
   failLogout = false,
   failList = false;
 let exchangeWait: ReturnType<typeof deferred> | undefined,
-  listWait: ReturnType<typeof deferred> | undefined;
+  listWait: ReturnType<typeof deferred> | undefined,
+  logoutWait: ReturnType<typeof deferred> | undefined,
+  openWait: ReturnType<typeof deferred> | undefined;
 function deferred() {
   let resolve!: (v: any) => void;
   const promise = new Promise((done) => {
@@ -143,11 +146,13 @@ const manager = new CloudManagementManager({
     open: async (input) => {
       assert.equal(input.authorized(), true);
       opened.push(input);
+      if (openWait) await openWait.promise;
       return { address: `${cloudOrigin}/?project=${input.projectId}` };
     },
-    close: async (partition) => {
+    close: (partition) => {
       closed.push(partition);
-      if (failClose) throw new Error("cookie cleanup failed");
+      if (syncClose) throw new Error("synchronous cookie cleanup failed");
+      return failClose ? Promise.reject(new Error("cookie cleanup failed")) : Promise.resolve();
     },
   },
   request: async (input) => {
@@ -178,6 +183,7 @@ const manager = new CloudManagementManager({
     assert.notEqual(input.token, rootToken);
     assert.ok(!(JSON.stringify(input.body) ?? "").includes(rootToken));
     if (input.path.endsWith("/logout")) {
+      if (logoutWait) await logoutWait.promise;
       if (failLogout) throw new Error("lost revoke acknowledgement");
       return { revoked: true };
     }
@@ -306,6 +312,58 @@ try {
     failClose = false;
     await send({ ...request, action: "logout" });
     assert.equal(closed.length, 2);
+  } else if (scenario === "cleanup-early-rejection") {
+    await send();
+    failClose = true;
+    logoutWait = deferred();
+    const pending = assert.rejects(send({ ...request, action: "logout" }), /cleanup/);
+    // Node's strict unhandled-rejection mode must survive an early local failure
+    // while the independent remote acknowledgement is still pending.
+    await tick();
+    await tick();
+    logoutWait.resolve(undefined);
+    await pending;
+    logoutWait = undefined;
+    failClose = false;
+    await send({ ...request, action: "logout" });
+    assert.equal(closed.length, 2);
+    assert.equal(calls.filter((c) => c.path.endsWith("/logout")).length, 2);
+  } else if (scenario === "cleanup-sync-throw") {
+    await send();
+    syncClose = true;
+    await assert.rejects(send({ ...request, action: "logout" }), /synchronous/);
+    assert.equal(calls.filter((c) => c.path.endsWith("/logout")).length, 1);
+    syncClose = false;
+    await send({ ...request, action: "logout" });
+    assert.equal(closed.length, 2);
+  } else if (scenario === "late-window-cleanup-debt") {
+    await send();
+    await send({ ...request, action: "start", projectId });
+    openWait = deferred();
+    const pending = assert.rejects(send({ ...request, action: "open", projectId }));
+    await tick();
+    assert.equal(opened.length, 1);
+    await account.logout();
+    // A delayed cookies.set/load may fail cleanup after Account retirement has
+    // already completed. Preserve that local debt for the same account to retry.
+    failClose = true;
+    openWait.resolve(undefined);
+    await pending;
+    const beforeRetry = closed.length;
+    failClose = false;
+    await manager.retireAccount({ origin: accountOrigin, accountId });
+    assert.equal(closed.length, beforeRetry + 1);
+  } else if (scenario === "dispose-late-exchange") {
+    exchangeWait = deferred();
+    const pending = assert.rejects(send());
+    await tick();
+    await manager.dispose();
+    exchangeWait.resolve(makeGrant());
+    await pending;
+    await tick();
+    assert.equal(opened.length, 0);
+    assert.equal(calls.filter((c) => c.path === "/api/v1/projects").length, 0);
+    assert.equal(calls.filter((c) => c.path.endsWith("/logout")).length, 1);
   } else if (scenario === "expiry-and-rejection") {
     await send();
     clock += 600_001;
@@ -328,6 +386,7 @@ try {
 } finally {
   failLogout = false;
   failClose = false;
+  syncClose = false;
   await manager.retireAccount({ origin: accountOrigin, accountId });
 }
 assert.equal(unexpectedRequests, 0);
