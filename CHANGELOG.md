@@ -8,6 +8,8 @@ breaking.
 
 ## [Unreleased]
 
+## [0.9.35] - 2026-10-12
+
 ### Added
 
 - Optionally connect GitHub alongside account sign-in using one upstream OAuth
@@ -17,6 +19,11 @@ breaking.
 - Show independent GitHub connection progress after login. Canceling or failing
   the connection preserves the signed-in account; repeated login reuses the same
   connection and retires the previous Desktop grant.
+
+### Fixed
+
+- Retain dismissed notifications in a persistent history with diagnostic details,
+  and open the originating chat from actionable background notifications.
 
 ## [0.9.34] - 2026-10-12
 
