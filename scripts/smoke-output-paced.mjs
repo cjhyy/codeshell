@@ -52,7 +52,7 @@ function apply(id, event) {
   if (!main.observeWorker(id, event)) return false;
   snapshots.append(id, event);
   events.push({ id, event, at: Date.now() });
-  if (event.type === "text_delta") {
+  if (id === "paced-output" && event.type === "text_delta") {
     for (const line of event.text.trim().split("\n"))
       delays.push(Date.now() - JSON.parse(line).sentAt);
   }
@@ -176,6 +176,33 @@ try {
     core.readOutputJournal(sessionsRoot(), "cancel-output").through,
     terminal.event.outputCursor,
   );
+  const shutdownRun = rpc("agent/run", {
+    sessionId: "shutdown-output",
+    task: "CANCEL_FIXTURE",
+    clientMessageId: "shutdown-main",
+    behaviorMode: "isolatedTask",
+  });
+  await waitFor(() =>
+    events.some((item) => item.id === "shutdown-output" && item.event.type === "text_delta"),
+  );
+  const publishedBeforeShutdown = snapshots.get("shutdown-output").outputCursor;
+  await worker.stopAndWait(); // Real SIGTERM, awaited through the actual child exit.
+  const shutdown = await shutdownRun;
+  assert.ok(
+    shutdown.status === "workerExit" ||
+      (shutdown.status === "result" && shutdown.result.reason !== "completed"),
+  );
+  const shutdownPage = core.readOutputJournal(sessionsRoot(), "shutdown-output");
+  assert.equal(shutdownPage.status, "ok");
+  assert.equal(shutdownPage.complete, true);
+  assert.equal(shutdownPage.frames.at(-1).event.type, "turn_complete");
+  assert.notEqual(shutdownPage.frames.at(-1).event.reason, "completed");
+  assert.equal(
+    core.readOutputJournal(sessionsRoot(), "shutdown-output", {
+      through: publishedBeforeShutdown,
+    }).complete,
+    true,
+  );
   const receipts = readFileSync(env.CODESHELL_COST_SMOKE_GUARD_LOG, "utf8")
     .trim()
     .split("\n")
@@ -199,6 +226,7 @@ try {
       cancelledMs: terminal.at - cancelAt,
       terminalCursorDurable: true,
       noPostTerminalTimer: true,
+      gracefulProcessExitDurable: true,
       mainCoverageComplete: true,
       noExternalNetwork: true,
     }),

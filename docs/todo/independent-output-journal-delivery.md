@@ -224,7 +224,10 @@ cursor while a separate actual worker appends 79 times and rotates storage.
 run measures source-to-Main p50 44 ms, p95 69 ms, maximum 86 ms; 12 concurrent
 control requests have p95 24 ms. A second run's cancellation produces a durable
 terminal in 103 ms with no later timer output. Both p95 checks are bounded at
-200 ms in the smoke. These are controlled fixture measurements, not a universal
+200 ms in the smoke. A second invocation measures stream/control p95 64/23 ms,
+cancellation 187 ms, and additionally stops an active real worker with SIGTERM:
+the original published prefix and durable non-success terminal recover after
+that exact process exits. These are controlled fixture measurements, not a universal
 latency promise. Network guards precede Core/worker imports, and credentials and
 HOME are synthetic and isolated.
 
@@ -233,6 +236,16 @@ terminals on provider throw, abort and close. A separate real process is killed
 at accepted input without a result, then restarted against the original Session
 inodes; a copied root is not substituted for crash recovery. Real Main methods
 exercise late Panel dispatch failure after rebind, close and Session reuse.
+
+The combined branch passes the complete guarded Core Engine/tool-system shard
+(1,944 pass, three explicit live-model skips) and Core remainder (3,264 pass),
+plus the 94 focused Main/journal cases, 32 source/coverage/consumer cases,
+Desktop main typecheck, exact built exports and lint baseline (zero errors,
+105 existing warnings). The full Core remainder initially found an unrelated
+permission fixture that deleted HOME after cases which never set it; every case
+now captures its original isolated HOME before cleanup. Its original ordered
+permission/Collection/OAuth/real-SSE regression passes 41/41, without weakening
+network confinement.
 
 Remaining full-P1 delivery: merge and verify explicit manual backup/diagnostic/
 restore and its fault matrix, integrate the separate CC Room and Services work,
