@@ -1,6 +1,6 @@
 {
   "name": "@cjhyy/code-shell-capability-optimization-lab",
-  "version": "0.9.33",
+  "version": "0.9.34",
   "private": true,
   "description": "Optimization Lab capability for CodeShell — budgeted, reviewable Skill optimization experiments.",
   "type": "module",
