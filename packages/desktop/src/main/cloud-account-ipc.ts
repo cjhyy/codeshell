@@ -18,6 +18,10 @@ export function registerCloudAccountIpc(options: {
     owner(event);
     return options.manager.status();
   });
+  options.ipcMain.handle("cloudAccount:capabilities", (event, origin: string) => {
+    owner(event);
+    return options.manager.capabilities(origin);
+  });
   options.ipcMain.handle("cloudAccount:login", (event, input: CloudAccountLogin) => {
     owner(event);
     return options.manager.signIn("login", input, () => allowed(event));

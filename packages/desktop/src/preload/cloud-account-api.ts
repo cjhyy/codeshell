@@ -3,6 +3,7 @@ import type { CloudAccountApi, CloudAccountStatus } from "../shared/cloud-accoun
 
 export const cloudAccountApi: CloudAccountApi = {
   status: () => ipcRenderer.invoke("cloudAccount:status"),
+  capabilities: (origin) => ipcRenderer.invoke("cloudAccount:capabilities", origin),
   login: (input) => ipcRenderer.invoke("cloudAccount:login", input),
   register: (input) => ipcRenderer.invoke("cloudAccount:register", input),
   signInWithGitHub: (input) => ipcRenderer.invoke("cloudAccount:github", input),

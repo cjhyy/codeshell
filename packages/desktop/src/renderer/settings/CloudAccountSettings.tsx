@@ -5,6 +5,7 @@ import { useT } from "../i18n/I18nProvider";
 import { useToast } from "../ui/ToastProvider";
 import {
   DEFAULT_CLOUD_ACCOUNT_ORIGIN,
+  type CloudAccountCapabilities,
   type CloudAccountStatus,
 } from "../../shared/cloud-account.js";
 
@@ -17,6 +18,14 @@ export function CloudAccountSettings({ embedded = false }: { embedded?: boolean 
   const [password, setPassword] = useState("");
   const [busy, setBusy] = useState(false);
   const [statusLoadFailed, setStatusLoadFailed] = useState(false);
+  const [operationError, setOperationError] = useState("");
+  const [checkVersion, setCheckVersion] = useState(0);
+  const [service, setService] = useState<{
+    origin: string;
+    capabilities?: CloudAccountCapabilities;
+    failed?: boolean;
+  } | null>(null);
+  const serviceOrigin = status.account ? (status.origin ?? "") : origin.trim().replace(/\/$/, "");
   useEffect(() => {
     let active = true;
     let receivedStatus = false;
@@ -39,15 +48,43 @@ export function CloudAccountSettings({ embedded = false }: { embedded?: boolean 
       off();
     };
   }, []);
+  // The account form is opened explicitly; the persistent sidebar and local
+  // sign-in snapshot never contact the service. Debounce edits and fence replies
+  // so capabilities from a previous address cannot enable this one's buttons.
+  useEffect(() => {
+    let active = true;
+    setService(null);
+    setOperationError("");
+    if (!serviceOrigin) return;
+    const timer = setTimeout(() => {
+      void window.codeshell.cloudAccount.capabilities(serviceOrigin).then(
+        (capabilities) => {
+          if (active) setService({ origin: serviceOrigin, capabilities });
+        },
+        () => {
+          if (active) setService({ origin: serviceOrigin, failed: true });
+        },
+      );
+    }, 250);
+    return () => {
+      active = false;
+      clearTimeout(timer);
+    };
+  }, [serviceOrigin, checkVersion]);
+  const capabilities = service?.origin === serviceOrigin ? service.capabilities : undefined;
+  const capabilityCheckFailed = service?.origin === serviceOrigin && service.failed;
   const act = async (work: () => Promise<unknown>) => {
     setBusy(true);
+    setOperationError("");
     try {
       await work();
       setStatus(await window.codeshell.cloudAccount.status());
       setStatusLoadFailed(false);
     } catch (error) {
+      const message = error instanceof Error ? error.message : t("settingsX.cloudAccount.failed");
+      setOperationError(message);
       toast({
-        message: error instanceof Error ? error.message : t("settingsX.cloudAccount.failed"),
+        message,
         variant: "error",
       });
     } finally {
@@ -76,6 +113,40 @@ export function CloudAccountSettings({ embedded = false }: { embedded?: boolean 
           ? t("settingsX.cloudAccount.unavailable")
           : t(`settingsX.cloudAccount.state_${status.state}`)}
       </p>
+      {operationError && (
+        <p role="alert" className="text-sm text-status-err">
+          {operationError}
+        </p>
+      )}
+      {!capabilities ? (
+        <div className="space-y-2 text-sm text-muted-foreground" role="status">
+          <p>
+            {t(
+              !serviceOrigin
+                ? "settingsX.cloudAccount.enterOrigin"
+                : capabilityCheckFailed
+                  ? "settingsX.cloudAccount.capabilitiesFailed"
+                  : "settingsX.cloudAccount.checking",
+            )}
+          </p>
+          {capabilityCheckFailed && (
+            <Button
+              variant="outline"
+              disabled={pending}
+              onClick={() => setCheckVersion((v) => v + 1)}
+            >
+              {t("settingsX.cloudAccount.checkAgain")}
+            </Button>
+          )}
+        </div>
+      ) : !capabilities.githubEnabled || (!status.account && !capabilities.registrationAllowed) ? (
+        <div className="space-y-1 text-sm text-muted-foreground" role="status">
+          {!capabilities.githubEnabled && <p>{t("settingsX.cloudAccount.githubUnavailable")}</p>}
+          {!status.account && !capabilities.registrationAllowed && (
+            <p>{t("settingsX.cloudAccount.registrationUnavailable")}</p>
+          )}
+        </div>
+      ) : null}
       {status.account ? (
         <div className="space-y-2 text-sm">
           <p className="break-all">
@@ -91,7 +162,7 @@ export function CloudAccountSettings({ embedded = false }: { embedded?: boolean 
             </Button>
             <Button
               variant="outline"
-              disabled={pending}
+              disabled={pending || !capabilities?.githubEnabled}
               onClick={() => void act(() => window.codeshell.cloudAccount.linkGitHub())}
             >
               {t("settingsX.cloudAccount.linkGitHub")}
@@ -141,14 +212,20 @@ export function CloudAccountSettings({ embedded = false }: { embedded?: boolean 
             </Button>
             <Button
               variant="outline"
-              disabled={pending || !origin.trim() || !username.trim() || password.length < 12}
+              disabled={
+                pending ||
+                !capabilities?.registrationAllowed ||
+                !origin.trim() ||
+                !username.trim() ||
+                password.length < 12
+              }
               onClick={() => signIn("register")}
             >
               {t("settingsX.cloudAccount.register")}
             </Button>
             <Button
               variant="outline"
-              disabled={pending || !origin.trim()}
+              disabled={pending || !origin.trim() || !capabilities?.githubEnabled}
               onClick={() =>
                 void act(() =>
                   window.codeshell.cloudAccount.signInWithGitHub({

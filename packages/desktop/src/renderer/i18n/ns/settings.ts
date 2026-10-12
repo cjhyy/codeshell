@@ -11,6 +11,12 @@ export const settingsNs = {
         signingIn: "正在登录…",
         storageError: "账号存储不可用",
         unavailable: "暂时无法读取账号状态",
+        checking: "正在检查可用登录方式…",
+        enterOrigin: "请输入完整的 HTTPS 云服务地址。",
+        githubUnavailable: "此云服务尚未配置 GitHub 登录，请使用账号密码。",
+        capabilitiesFailed: "无法检查云服务的登录方式，请检查地址和网络后重试。",
+        checkAgain: "重新检查",
+        registrationUnavailable: "此云服务暂未开放注册。",
         optional: "不登录也可使用本地项目、模型和 MCP。登录仅用于云服务，不会自动共享电脑或项目。",
         origin: "云服务地址",
         username: "账号名称",
@@ -1009,6 +1015,14 @@ export const settingsNs = {
         signingIn: "Signing in…",
         storageError: "Account storage unavailable",
         unavailable: "Account status is temporarily unavailable",
+        checking: "Checking available sign-in methods…",
+        enterOrigin: "Enter the complete HTTPS cloud service address.",
+        githubUnavailable:
+          "This cloud service has not enabled GitHub sign-in. Use your username and password.",
+        capabilitiesFailed:
+          "Unable to check sign-in methods. Check the service address and network, then retry.",
+        checkAgain: "Check again",
+        registrationUnavailable: "Registration is not available on this cloud service.",
         optional:
           "Local projects, models and MCP work without signing in. Signing in enables cloud services and does not share this computer or its projects.",
         origin: "Cloud service address",

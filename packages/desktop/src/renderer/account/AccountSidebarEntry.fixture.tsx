@@ -26,10 +26,11 @@ Object.defineProperty(globalThis, "cancelAnimationFrame", {
 
 const { AccountSidebarEntry } = await import("./AccountSidebarEntry");
 const scenario = process.argv[2];
-const deferred = () => {
-  let resolve!: (status: CloudAccountStatus) => void;
+type Capabilities = Awaited<ReturnType<CloudAccountApi["capabilities"]>>;
+const deferred = <T = CloudAccountStatus,>() => {
+  let resolve!: (value: T) => void;
   let reject!: (error: Error) => void;
-  const promise = new Promise<CloudAccountStatus>((yes, no) => {
+  const promise = new Promise<T>((yes, no) => {
     resolve = yes;
     reject = no;
   });
@@ -37,7 +38,12 @@ const deferred = () => {
 };
 const listeners = new Set<(status: CloudAccountStatus) => void>();
 const subscribed: Array<(status: CloudAccountStatus) => void> = [];
-const requests: ReturnType<typeof deferred>[] = [];
+const requests: ReturnType<typeof deferred<CloudAccountStatus>>[] = [];
+const capabilityRequests: Array<{
+  origin: string;
+  request: ReturnType<typeof deferred<Capabilities>>;
+}> = [];
+let capabilityAttempts = 0;
 const credentials: Array<{ action: string; input: CloudAccountLogin }> = [];
 let current: CloudAccountStatus = { state: "signed-out" };
 let subscriptions = 0;
@@ -59,6 +65,21 @@ const authenticate = async (action: string, input: CloudAccountLogin) => {
   return current;
 };
 const api: CloudAccountApi = {
+  capabilities: (origin) => {
+    capabilityAttempts += 1;
+    if (scenario === "capabilities-stale") {
+      const request = deferred<Capabilities>();
+      capabilityRequests.push({ origin, request });
+      return request.promise;
+    }
+    if (scenario === "capabilities-retry" && capabilityAttempts === 1) {
+      return Promise.reject(new Error("Discovery unavailable"));
+    }
+    return Promise.resolve({
+      registrationAllowed: scenario !== "registration-unavailable",
+      githubEnabled: !["github-unavailable", "link-unavailable"].includes(scenario),
+    });
+  },
   status: () => {
     if (["late-response", "late-failure", "cleanup"].includes(scenario)) {
       const request = deferred();
@@ -139,6 +160,12 @@ const settle = async (action: () => void) => {
     await flushMicrotasks();
   });
 };
+const settleCapabilities = async () => {
+  await act(async () => {
+    await new Promise((resolve) => setTimeout(resolve, 280));
+    await flushMicrotasks();
+  });
+};
 const click = (node: Element) =>
   settle(() => {
     assert.ok(!props(node).disabled, `Action must be enabled: ${text(node)}`);
@@ -186,8 +213,12 @@ try {
     assert.equal(listeners.size, 2, "The account form independently observes status");
     assert.equal(props(button("登录")).disabled, true, "Empty credentials cannot be submitted");
     assert.equal(props(button("注册")).disabled, true);
+    assert.equal(props(button("使用 GitHub 登录")).disabled, true);
+    assert.ok(text(dialog()!).includes("正在检查可用登录方式…"));
+    await settleCapabilities();
     assert.equal(props(button("使用 GitHub 登录")).disabled, false);
     await change(input("云服务地址"), " https://accounts.example.test/ ");
+    await settleCapabilities();
     await change(input("账号名称"), " alice ");
     await change(input("密码（至少 12 位）"), "twelve-or-more-characters");
     await click(button("登录"));
@@ -205,6 +236,7 @@ try {
     assert.equal(props(input("密码（至少 12 位）")).value, "", "Login clears the password");
     await change(input("账号名称"), "new-user");
     await change(input("密码（至少 12 位）"), "registration-password");
+    await settleCapabilities();
     await click(button("注册"));
     assertSignedIn("new-user");
     assert.equal(credentials[1]?.action, "register");
@@ -216,6 +248,7 @@ try {
   } else if (scenario === "github") {
     await open();
     await change(input("云服务地址"), " https://accounts.example.test/ ");
+    await settleCapabilities();
     await click(button("使用 GitHub 登录"));
     assert.equal(githubOrigin, "https://accounts.example.test");
     assert.ok(text(trigger()).includes("正在登录…"));
@@ -260,6 +293,7 @@ try {
     assert.ok(text(dialog()!).includes("暂时无法读取账号状态"));
     button("登录");
     button("注册");
+    await settleCapabilities();
     assert.equal(props(button("使用 GitHub 登录")).disabled, false);
     await settle(() => emit(signedIn("recovered-user")));
     assertSignedIn("recovered-user");
@@ -281,6 +315,84 @@ try {
     });
     assert.equal(container.childNodes.length, 0);
     assert.equal(dialog(), undefined);
+  } else if (scenario === "github-unavailable") {
+    await open();
+    assert.equal(props(button("使用 GitHub 登录")).disabled, true);
+    await settleCapabilities();
+    assert.equal(props(button("使用 GitHub 登录")).disabled, true);
+    assert.ok(text(dialog()!).includes("此云服务尚未配置 GitHub 登录，请使用账号密码。"));
+    assert.equal(githubOrigin, "", "Unsupported GitHub sign-in never starts authentication");
+  } else if (scenario === "link-unavailable") {
+    await settle(() => emit(signedIn("local-user")));
+    await open();
+    assert.equal(props(button("关联 GitHub")).disabled, true);
+    await settleCapabilities();
+    assert.equal(props(button("关联 GitHub")).disabled, true);
+    assert.ok(text(dialog()!).includes("此云服务尚未配置 GitHub 登录，请使用账号密码。"));
+  } else if (scenario === "capabilities-stale") {
+    await open();
+    await settleCapabilities();
+    assert.equal(capabilityRequests.length, 1);
+    await settle(() =>
+      capabilityRequests[0]!.request.resolve({ registrationAllowed: true, githubEnabled: true }),
+    );
+    assert.equal(props(button("使用 GitHub 登录")).disabled, false);
+    await change(input("云服务地址"), "https://old.example.test");
+    assert.equal(
+      props(button("使用 GitHub 登录")).disabled,
+      true,
+      "Editing the origin immediately invalidates the previous discovery",
+    );
+    await settleCapabilities();
+    await change(input("云服务地址"), "https://new.example.test");
+    await settleCapabilities();
+    assert.deepEqual(
+      capabilityRequests.slice(1).map(({ origin }) => origin),
+      ["https://old.example.test", "https://new.example.test"],
+    );
+    await settle(() =>
+      capabilityRequests[2]!.request.resolve({ registrationAllowed: false, githubEnabled: false }),
+    );
+    assert.equal(props(button("使用 GitHub 登录")).disabled, true);
+    await settle(() =>
+      capabilityRequests[1]!.request.resolve({ registrationAllowed: true, githubEnabled: true }),
+    );
+    assert.equal(
+      props(button("使用 GitHub 登录")).disabled,
+      true,
+      "A late response from the old origin cannot enable GitHub for the new origin",
+    );
+    assert.ok(text(dialog()!).includes("此云服务尚未配置 GitHub 登录，请使用账号密码。"));
+    assert.ok(text(dialog()!).includes("此云服务暂未开放注册。"));
+  } else if (scenario === "capabilities-retry") {
+    await open();
+    await settleCapabilities();
+    assert.equal(props(button("使用 GitHub 登录")).disabled, true);
+    assert.ok(text(dialog()!).includes("无法检查云服务的登录方式，请检查地址和网络后重试。"));
+    await change(input("账号名称"), "existing-user");
+    await change(input("密码（至少 12 位）"), "existing-user-password");
+    assert.equal(
+      props(button("登录")).disabled,
+      false,
+      "Discovery failures do not block password login",
+    );
+    await click(button("重新检查"));
+    await settleCapabilities();
+    assert.equal(capabilityAttempts, 2);
+    assert.equal(props(button("使用 GitHub 登录")).disabled, false);
+    assert.equal(props(button("注册")).disabled, false);
+    assert.ok(!text(dialog()!).includes("无法检查云服务的登录方式"));
+  } else if (scenario === "registration-unavailable") {
+    await open();
+    await settleCapabilities();
+    await change(input("账号名称"), "existing-user");
+    await change(input("密码（至少 12 位）"), "existing-user-password");
+    assert.equal(props(button("注册")).disabled, true);
+    assert.ok(text(dialog()!).includes("此云服务暂未开放注册。"));
+    assert.equal(props(button("登录")).disabled, false);
+    await click(button("登录"));
+    assertSignedIn("existing-user");
+    assert.equal(credentials[0]?.action, "login");
   } else {
     assert.fail(`Unknown fixture scenario: ${scenario}`);
   }

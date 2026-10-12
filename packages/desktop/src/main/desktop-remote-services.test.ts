@@ -41,7 +41,8 @@ test("remote composition registers owner-scoped IPC without starting cloud or lo
       binary: {} as any,
       passcode: { isSet: () => false } as any,
     });
-    expect(handlers.size).toBe(14);
+    expect(handlers.size).toBe(15);
+    expect(handlers.has("cloudAccount:capabilities")).toBe(true);
     const event = { sender, senderFrame: sender.mainFrame };
     expect(handlers.get("cloudAccount:status")!(event)).toEqual({ state: "signed-out" });
     expect(handlers.get("mobileRemote:status")!(event)).toMatchObject({ running: false });

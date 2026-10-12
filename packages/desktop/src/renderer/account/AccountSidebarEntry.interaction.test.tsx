@@ -9,6 +9,13 @@ const scenarios = {
   "late-failure": "keeps live account events when the initial status request fails late",
   unavailable: "keeps account management usable when account status cannot be read",
   cleanup: "unsubscribes on dialog close and unmount while status requests are still pending",
+  "github-unavailable":
+    "explains and disables GitHub sign-in when the server has not configured it",
+  "link-unavailable": "disables GitHub linking when the signed-in server has not configured it",
+  "capabilities-stale": "invalidates discovery immediately and ignores results from an old server",
+  "capabilities-retry": "retries discovery failures while keeping password login available",
+  "registration-unavailable":
+    "disables closed registration while allowing existing accounts to log in",
 };
 
 for (const [scenario, description] of Object.entries(scenarios)) {

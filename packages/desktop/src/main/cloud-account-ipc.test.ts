@@ -5,6 +5,7 @@ test("cloud account IPC rejects non-main frames and rechecks ownership after log
   const handlers = new Map<string, (...args: any[]) => any>();
   let destroyed = false;
   let authorized: (() => boolean) | undefined;
+  let capabilityOrigin: string | undefined;
   const sender = { mainFrame: {}, isDestroyed: () => destroyed };
   const event = { sender, senderFrame: sender.mainFrame };
   registerCloudAccountIpc({
@@ -16,6 +17,10 @@ test("cloud account IPC rejects non-main frames and rechecks ownership after log
     isMainWindow: (contents) => contents === (sender as any),
     manager: {
       status: () => ({ state: "signed-out" }),
+      capabilities: (origin) => {
+        capabilityOrigin = origin;
+        return { registrationAllowed: true, githubEnabled: false };
+      },
       signIn: (_kind, _input, allowed) => {
         authorized = allowed;
       },
@@ -30,7 +35,16 @@ test("cloud account IPC rejects non-main frames and rechecks ownership after log
     } as any,
   });
   expect([...handlers.keys()].sort()).toEqual(
-    ["status", "login", "register", "github", "linkGitHub", "cancelSignIn", "logout"]
+    [
+      "status",
+      "capabilities",
+      "login",
+      "register",
+      "github",
+      "linkGitHub",
+      "cancelSignIn",
+      "logout",
+    ]
       .map((name) => `cloudAccount:${name}`)
       .sort(),
   );
@@ -38,6 +52,11 @@ test("cloud account IPC rejects non-main frames and rechecks ownership after log
     expect(() => handler({ ...event, senderFrame: {} }, {})).toThrow();
     expect(() => handler({ ...event, sender: { ...sender } }, {})).toThrow();
   }
+  expect(handlers.get("cloudAccount:capabilities")!(event, "https://account.example")).toEqual({
+    registrationAllowed: true,
+    githubEnabled: false,
+  });
+  expect(capabilityOrigin).toBe("https://account.example");
   for (const name of ["login", "register", "github", "linkGitHub"]) {
     handlers.get(`cloudAccount:${name}`)!(event, {});
     expect(authorized!()).toBe(true);

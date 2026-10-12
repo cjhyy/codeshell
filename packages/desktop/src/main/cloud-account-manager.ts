@@ -1,6 +1,10 @@
 import { createHash, randomBytes } from "node:crypto";
 import { isRelayOrigin, isRelayToken } from "@cjhyy/code-shell-server/remote-relay";
-import type { CloudAccountLogin, CloudAccountStatus } from "../shared/cloud-account.js";
+import type {
+  CloudAccountCapabilities,
+  CloudAccountLogin,
+  CloudAccountStatus,
+} from "../shared/cloud-account.js";
 import {
   CloudAccountStore,
   validCloudAccountGrant,
@@ -74,6 +78,27 @@ export class CloudAccountManager {
     return {
       state: this.state,
       ...(this.saved ? { origin: this.saved.origin, account: { ...this.saved.account } } : {}),
+    };
+  }
+  /** Public service discovery never reads or changes this device's account authority. */
+  async capabilities(origin: string): Promise<CloudAccountCapabilities> {
+    requireOrigin(origin);
+    const value = (await this.request({
+      origin,
+      path: "/api/v1/account/status",
+      method: "GET",
+    })) as Partial<CloudAccountCapabilities> | undefined;
+    if (
+      !value ||
+      typeof value !== "object" ||
+      Array.isArray(value) ||
+      typeof value.registrationAllowed !== "boolean" ||
+      typeof value.githubEnabled !== "boolean"
+    )
+      throw new Error("云服务返回了无效的账号能力信息。");
+    return {
+      registrationAllowed: value.registrationAllowed,
+      githubEnabled: value.githubEnabled,
     };
   }
   private publish(state: CloudAccountStatus["state"]) {

@@ -19,8 +19,14 @@ export interface CloudAccountLogin {
   deviceName?: string;
 }
 
+export interface CloudAccountCapabilities {
+  registrationAllowed: boolean;
+  githubEnabled: boolean;
+}
+
 export interface CloudAccountApi {
   status(): Promise<CloudAccountStatus>;
+  capabilities(origin: string): Promise<CloudAccountCapabilities>;
   login(input: CloudAccountLogin): Promise<CloudAccountStatus>;
   register(input: CloudAccountLogin): Promise<CloudAccountStatus>;
   signInWithGitHub(input: { origin: string; deviceName?: string }): Promise<CloudAccountStatus>;

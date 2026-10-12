@@ -6,8 +6,21 @@ password registration/login, GitHub login, explicit GitHub linking, and logout.
 The service address defaults to `https://115.159.45.55` and remains editable for
 self-hosted deployments. Prefilling it does not initiate an account connection;
 the selected server must expose the account API before sign-in is available.
+Opening the account form checks the selected service's public sign-in capabilities.
+GitHub login/linking and registration stay disabled until their availability is
+confirmed; an unconfigured GitHub service is explained inline. Changing the address
+invalidates the previous result, and a failed check can be retried. Password login
+remains available independently of this check. The sidebar and local account status
+still perform no network requests.
+
 Registration availability and GitHub OAuth configuration belong to the selected
-Services deployment. Usernames use 3–64 letters, digits, periods, underscores or
+Services deployment. Enabling GitHub requires a GitHub OAuth App with callback
+`<service-origin>/api/v1/account/github/callback`, and both
+`ACCOUNT_GITHUB_CLIENT_ID` and `ACCOUNT_GITHUB_CLIENT_SECRET` configured on the
+account server. These values belong to the server; the client secret must never
+be entered in Desktop or sent to the renderer. The public
+`GET /api/v1/account/status` reports `githubEnabled: true` only after configuration.
+Usernames use 3–64 letters, digits, periods, underscores or
 hyphens; passwords require at least 12 characters.
 
 Signing in does not register this computer, start remote access, upload projects,

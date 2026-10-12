@@ -29,6 +29,8 @@ function deferred<T>() {
 function setup(initial?: SavedCloudAccount, transport?: CloudAccountTransport) {
   let stored = initial;
   let writes = 0;
+  let reads = 0;
+  let preflights = 0;
   const requests: CloudAccountRequest[] = [];
   const events: unknown[] = [];
   const retired: unknown[] = [];
@@ -37,13 +39,17 @@ function setup(initial?: SavedCloudAccount, transport?: CloudAccountTransport) {
   let retireFailure = false;
   let saveFailure = false;
   const store = {
-    load: () => stored,
+    load: () => {
+      reads++;
+      return stored;
+    },
     save: (value) => {
       writes++;
       if (saveFailure) throw new Error("account store cannot save");
       stored = value;
     },
     preflight: () => {
+      preflights++;
       if (unavailable) throw new Error("keyring unavailable");
     },
     forget: () => {
@@ -75,6 +81,8 @@ function setup(initial?: SavedCloudAccount, transport?: CloudAccountTransport) {
     store,
     saved: () => stored,
     writes: () => writes,
+    reads: () => reads,
+    preflights: () => preflights,
     unavailable: () => {
       unavailable = true;
     },
@@ -94,6 +102,82 @@ test("anonymous startup/status is entirely local, including unavailable keyring;
   await expect(ctx.manager.getCredential(origin)).rejects.toThrow("登录");
   expect(ctx.requests).toHaveLength(0);
   expect(ctx.writes()).toBe(0);
+});
+test("public service capabilities are anonymous, bounded to the selected origin, and ignore extra fields", async () => {
+  for (const enabled of [true, false]) {
+    const response = {
+      registrationAllowed: enabled,
+      githubEnabled: enabled,
+      accessToken: "must never cross the capabilities bridge",
+    };
+    const ctx = setup(undefined, async () => response);
+    ctx.unavailable();
+    const result = await ctx.manager.capabilities(origin);
+    expect(result).toEqual({ registrationAllowed: enabled, githubEnabled: enabled });
+    expect(result).not.toBe(response);
+    expect(ctx.requests).toEqual([{ origin, path: "/api/v1/account/status", method: "GET" }]);
+    expect(ctx.reads()).toBe(0);
+    expect(ctx.preflights()).toBe(0);
+    expect(ctx.writes()).toBe(0);
+    expect(ctx.events).toHaveLength(0);
+    expect(ctx.retired).toHaveLength(0);
+    expect(ctx.launched).toHaveLength(0);
+  }
+});
+test("capability discovery preserves an existing session without refreshing or retiring it", async () => {
+  const saved = grant({ accessTokenExpiresAt: Date.now() - 1000 });
+  const ctx = setup(saved, async () => ({ registrationAllowed: false, githubEnabled: true }));
+  const before = ctx.manager.status();
+  ctx.unavailable();
+  expect(await ctx.manager.capabilities("https://other.example")).toEqual({
+    registrationAllowed: false,
+    githubEnabled: true,
+  });
+  expect(ctx.manager.status()).toEqual(before);
+  expect(ctx.saved()).toBe(saved);
+  expect(ctx.requests).toEqual([
+    { origin: "https://other.example", path: "/api/v1/account/status", method: "GET" },
+  ]);
+  expect(ctx.preflights()).toBe(0);
+  expect(ctx.writes()).toBe(0);
+  expect(ctx.events).toHaveLength(0);
+  expect(ctx.retired).toHaveLength(0);
+});
+test("capability discovery rejects invalid origins before network or account storage access", async () => {
+  const ctx = setup();
+  for (const invalid of [
+    "",
+    "http://account.example",
+    "https://account.example/",
+    "https://account.example/path",
+    "https://account.example?query=true",
+    "https://user:password@account.example",
+  ])
+    await expect(ctx.manager.capabilities(invalid)).rejects.toThrow("HTTPS");
+  expect(ctx.requests).toHaveLength(0);
+  expect(ctx.reads()).toBe(0);
+  expect(ctx.preflights()).toBe(0);
+});
+test("capability discovery requires boolean registration and GitHub flags", async () => {
+  for (const response of [
+    undefined,
+    null,
+    [],
+    "enabled",
+    {},
+    { registrationAllowed: true },
+    { githubEnabled: true },
+    { registrationAllowed: "true", githubEnabled: true },
+    { registrationAllowed: true, githubEnabled: 1 },
+    { registrationAllowed: true, githubEnabled: null },
+  ]) {
+    const ctx = setup(undefined, async () => response);
+    await expect(ctx.manager.capabilities(origin)).rejects.toThrow("无效的账号能力信息");
+    expect(ctx.reads()).toBe(0);
+    expect(ctx.preflights()).toBe(0);
+    expect(ctx.writes()).toBe(0);
+    expect(ctx.events).toHaveLength(0);
+  }
 });
 test("password login keeps tokens in main and does not enroll, start or share a computer", async () => {
   const next = grant();
@@ -220,6 +304,15 @@ test("GitHub login opens only fixed provider URL with PKCE, keeps proof private,
   expect(start.token).toBe(next.accessToken);
   expect((start.body as { mode: string }).mode).toBe("link");
 });
+test("disabled GitHub login fails before starting OAuth, opening a browser, or storing a grant", async () => {
+  const ctx = setup(undefined, async () => ({ enabled: false }));
+  await expect(ctx.manager.signInWithGitHub({ origin })).rejects.toThrow("尚未配置 GitHub 登录");
+  expect(ctx.requests.map((request) => request.path)).toEqual(["/api/v1/account/github/status"]);
+  expect(ctx.launched).toHaveLength(0);
+  expect(ctx.writes()).toBe(0);
+  expect(ctx.saved()).toBeUndefined();
+  expect(ctx.manager.status()).toEqual({ state: "signed-out" });
+});
 test("malicious provider navigation is rejected before browser launch", async () => {
   const ctx = setup(undefined, async (req) =>
     req.path.endsWith("status")
@@ -320,8 +413,8 @@ test("refresh persistence and relay cleanup failures still revoke the rotated ro
   expect(ctx.manager.status().state).toBe("storage-error");
   expect(ctx.writes()).toBe(1);
   expect(ctx.retired).toEqual([{ origin, accountId: old.account.id }]);
-  expect(ctx.requests.filter((req) => req.path.endsWith("logout")).map((req) => req.token)).toEqual([
-    next.accessToken,
-  ]);
+  expect(ctx.requests.filter((req) => req.path.endsWith("logout")).map((req) => req.token)).toEqual(
+    [next.accessToken],
+  );
   await expect(ctx.manager.getCredential(origin)).rejects.toThrow("登录");
 });
