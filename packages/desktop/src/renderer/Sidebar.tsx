@@ -519,8 +519,8 @@ export function Sidebar({
       </div>
 
       <div className="border-t border-border/70 bg-card/40 px-3 py-2">
-        <AccountSidebarEntry />
         <div className="flex items-center gap-1.5">
+          <AccountSidebarEntry />
           <div className="min-w-0 flex-1">
             <SettingsMenu
               onOpenSettingsPage={onOpenSettingsPage}

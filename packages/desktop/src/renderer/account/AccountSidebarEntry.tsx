@@ -1,5 +1,5 @@
-import { useEffect, useState } from "react";
-import { ChevronUp, UserRound } from "lucide-react";
+import { useEffect, useId, useState } from "react";
+import { UserRound } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -18,6 +18,7 @@ export function AccountSidebarEntry() {
   const { t } = useT();
   const [status, setStatus] = useState<CloudAccountStatus>({ state: "signed-out" });
   const [unavailable, setUnavailable] = useState(false);
+  const detailId = useId();
 
   useEffect(() => {
     let active = true;
@@ -49,6 +50,7 @@ export function AccountSidebarEntry() {
 
   const username = status.account?.username;
   const label = username || t("settingsX.cloudAccount.signInAccount");
+  const accessibleLabel = username ? `${t("settingsX.cloudAccount.manage")}: ${username}` : label;
   const detail = unavailable
     ? t("settingsX.cloudAccount.unavailable")
     : status.state === "signed-in"
@@ -65,25 +67,23 @@ export function AccountSidebarEntry() {
         <Button
           type="button"
           variant="ghost"
-          className="h-auto min-h-14 w-full justify-start gap-2.5 rounded-lg px-2 py-2 text-left"
-          aria-label={username ? `${t("settingsX.cloudAccount.manage")}: ${username}` : label}
-          title={label}
+          size="icon"
+          className="shrink-0 rounded-lg text-muted-foreground"
+          aria-label={accessibleLabel}
+          aria-describedby={detailId}
+          title={`${accessibleLabel}\n${detail}`}
         >
           <span
-            className="flex size-8 shrink-0 items-center justify-center rounded-full border border-border/70 bg-muted text-sm font-semibold text-foreground"
+            className="flex size-6 items-center justify-center rounded-full border border-border/70 bg-muted text-xs font-semibold text-foreground"
             aria-hidden
           >
-            {username ? Array.from(username)[0]?.toUpperCase() : <UserRound size={16} />}
+            {username ? Array.from(username)[0]?.toUpperCase() : <UserRound size={14} />}
           </span>
-          <span className="min-w-0 flex-1">
-            <span className="block truncate text-sm font-medium text-foreground">{label}</span>
-            <span className="block truncate text-xs font-normal text-muted-foreground">
-              {detail}
-            </span>
-          </span>
-          <ChevronUp size={14} className="shrink-0 text-muted-foreground" aria-hidden />
         </Button>
       </DialogTrigger>
+      <span id={detailId} className="sr-only">
+        {detail}
+      </span>
       <DialogContent
         className="max-h-[calc(100dvh-2rem)] w-[calc(100vw-2rem)] max-w-lg overflow-y-auto"
         onEscapeKeyDown={(event) => {
