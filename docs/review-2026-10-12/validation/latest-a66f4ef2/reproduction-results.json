@@ -254,6 +254,15 @@
     "archiveLog": "validation/latest-a66f4ef2/repro__file-navigation-round14__hub-files-recovery.test.tsx.log"
   },
   {
+    "file": "docs/review-2026-10-12/reproductions/file-root-round27/file-root.test.ts",
+    "log": "docs/review-2026-10-12/reproductions/file-root-round27/file-root.test.ts.log",
+    "code": 0,
+    "signal": null,
+    "tests": 1,
+    "skipped": 0,
+    "archiveLog": "validation/latest-a66f4ef2/file-root-round27/file-root.test.ts.log"
+  },
+  {
     "file": "docs/review-2026-10-12/reproductions/files-round4/archived-open.test.ts",
     "log": "docs/review-2026-10-12/reproductions/files-round4/archived-open.test.ts.log",
     "code": 0,

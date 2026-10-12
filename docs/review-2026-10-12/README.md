@@ -2,13 +2,13 @@
 
 本次审查覆盖服务端、Electron 桌面端、配对 Web 与移动端的日常流程，重点检查消息发送、审批、取消、切换会话、恢复和项目上下文。问题只在有代码证据或可复现结果后列入正式发现。
 
-审查进行中，截止时间为新加坡时间 2026 年 10 月 12 日 11:00。初始审查基线为 `84740d56e55517b004948a0a0e07649ad6fbf998`，对应启动审查时的 `origin/main`。01:30 拉取发现主分支已更新至 `a66f4ef291f304ee4df9da8095a90671d9a8f140`（0.9.33）；已另建隔离快照复查差异，原始复现和行号仍按初始基线保存。85 个便携 Bun 复现文件共 250 测试，以及实际 Electron 凭据 4 场景，已在新快照复查成立；详见[0.9.33 差异复查](latest-baseline.md)。产品代码保持原样，报告保存在独立分支 `codex/review/server-desktop-20261012`。
+审查进行中，截止时间为新加坡时间 2026 年 10 月 12 日 11:00。初始审查基线为 `84740d56e55517b004948a0a0e07649ad6fbf998`，对应启动审查时的 `origin/main`。01:30 拉取发现主分支已更新至 `a66f4ef291f304ee4df9da8095a90671d9a8f140`（0.9.33）；已另建隔离快照复查差异，原始复现和行号仍按初始基线保存。86 个便携 Bun 复现文件共 251 测试，以及实际 Electron 凭据 4 场景，已在新快照复查成立；详见[0.9.33 差异复查](latest-baseline.md)。产品代码保持原样，报告保存在独立分支 `codex/review/server-desktop-20261012`。
 
 用户流程、正常对照与修复顺序见[流程覆盖地图](flow-coverage.md)。
 
 ## 当前结论
 
-当前已收束 85 项问题：1 项 P1、52 项 P2、32 项 P3。优先处理审批状态、任务回执和会话身份；这些问题会让任务无法继续、重复执行，或把用户输入带到另一个会话。P1 表示有未提交文件丢失风险、应优先修复；P2 表示重要流程持续受阻、状态被错误持久化或有错误执行风险，应安排修复；P3 表示影响较小或触发范围较窄、可通过现有操作恢复的问题。分级同时考虑影响与触发条件，不能只按是否可重试判断。尚未证实的候选不计入数量。
+当前已收束 86 项问题：1 项 P1、52 项 P2、33 项 P3。优先处理审批状态、任务回执和会话身份；这些问题会让任务无法继续、重复执行，或把用户输入带到另一个会话。P1 表示有未提交文件丢失风险、应优先修复；P2 表示重要流程持续受阻、状态被错误持久化或有错误执行风险，应安排修复；P3 表示影响较小或触发范围较窄、可通过现有操作恢复的问题。分级同时考虑影响与触发条件，不能只按是否可重试判断。尚未证实的候选不计入数量。
 
 **最先修 R35：创建工作区时重复 Enter，失败请求的回滚可以删除另一个已成功请求的 worktree、分支和未提交文件。** 此项已由独立代理复查入口与真实 Git 时序，见 [独立质量复核](quality-audit.md)。第五轮九项也已[独立复核](quality-round5.md)，均保留，网关通知等条件已收窄。
 
@@ -101,6 +101,7 @@
 | R83 | P3 | macOS项目成功创建、改名、移除后Recent菜单不刷新，新项目缺项、旧名和已删项残留 | [最近项目 D23-2](menu-recents-round23.md)，第二十三轮；权威磁盘与广播正常 |
 | R84 | P3 | 从未发布输出日志的旧配对原生图片会话恢复时，把内部路径和模型提示当正文，没有安全附件摘要 | [旧历史 F24-1](legacy-history-round24.md)，第二十四轮；正文和图片原件保留 |
 | R85 | P3 | 现代图片会话在普通Desktop冷恢复后缺附件提示，纯图片用户气泡不显示；正确metadata和原件均保留 | [现代图片 D25-1](modern-desktop-image-round25.md)，第二十五轮；Web及inline UI控制正常 |
+| R86 | P3 | 换项目primary后摘要分叉的Files把新根ID配旧workspace路径，新主目录文件无法显示；旧根及原件正常 | [Files映射 F27-1](file-root-round27.md)，第二十七轮；Main拒读正确 |
 
 第一轮完整分析：[Desktop](desktop-round1.md)、[Server](server-round1.md)、[Web/配对端](web-round1.md)。后续专项分析会继续补充到本目录。已有结论还经[CLI 范围复核](cli-quality-round9.md)与[资源回收范围复核](resource-quality-round8.md)收窄恢复及平台条件。
 
@@ -305,6 +306,7 @@ R76实际Core async-answer enqueue产生续接turn，所有Core帧传给实际Ho
 | 第二十三轮macOS菜单 | 新通用2文件4测试82个Bun expect，两基线分别通过；owned Electron适配，无native OS菜单 | [窗口归属](menu-routing-round23.md)、[Recent刷新](menu-recents-round23.md) |
 | 第二十四轮旧图片历史 | 新通用1文件1测试17个Bun expect，两基线分别通过；旧状态实际Workbench SSR，现代仅hook投影 | [历史显示](legacy-history-round24.md)、[分账收据](validation/round24-legacy-history-results.json) |
 | 第二十五轮现代图片恢复 | 新通用1文件2测试32个Bun expect，两基线分别通过；实际Desktop及Web SSR，sendhook仅静态 | [附件显示](modern-desktop-image-round25.md)、[分账收据](validation/round25-modern-desktop-image-results.json) |
+| 第二十七轮Files根映射 | 新通用1文件1测试29个Bun expect，两基线分别通过；实际producer/authority/hook/FS，upstream仅静态 | [根映射](file-root-round27.md)、[分账收据](validation/round27-file-root-results.json) |
 | Desktop renderer 现有逐文件测试 | 282 文件、2397 测试、0 失败                                               | `validation/desktop-renderer-results.json`               |
 | Desktop main 现有逐文件测试     | 283 文件、2461 测试、0 失败                                               | `validation/desktop-main-results.json`                   |
 | native Hub smoke                | 未通过，不计成功；先遇到过期工具 fixture，再暴露 R21                      | `/tmp/codeshell-review-20261012/hub-smoke*.log`          |
@@ -341,3 +343,5 @@ R76实际Core async-answer enqueue产生续接turn，所有Core帧传给实际Ho
 第二十五轮[现代图片Desktop恢复](modern-desktop-image-round25.md)新增R85/D25-1/P3：有效现代journal及正确附件metadata到普通MessageStream后被忽略，图文缺附件提示、纯图整条用户bubble不显示；原件/assistant完整。冷paired Session、实际producer/journal/reader/recovery/hydration/renderer及Web和inline UI正常控制，两冻结基线各guarded新1文件2测试32Bun expect/Completed。无sendhook/fullApp/Engine/provider/worker/Electron/真实authority动态验收。首败MiniDom缺matchMedia的0/2/22/noCompleted及唯一支架修正单列。当前正式85=1/52/32、通用85/250、native增量0。
 
 第二十六轮[会话续接静态审查](session-continuation-round26.md)新增正式0/动态执行0：summary fork首run前Review单根覆盖保留体验建议，经blank/legacy/首次run补绑合同反证不升项；Files普通fallback、history重试与Hub导出正常门禁及[云账号取消/退出](cloud-account-static-round26.md)仅读核对。未执行候选PLAN/guard，85=1/52/32与common85/250保持；源码测试不冒充动态通过。
+
+第二十七轮[Files根映射](file-root-round27.md)新增R86/F27-1/P3：合法source mainA/currentprimaryB的summary target首send前，actualFiles把B.id配A.path，Main正确拒读；选择A、directB、bound source、同primarysummary及原件正常，内部补绑/remount仅normalcontrol。两冻结基线各guarded新1文件1测试29Bunexpect/Completed，作者first单列，无失败/rerun，55d3从未执行。正式86=1/52/33、common86/251、native增量0。真实trust/Sidebar/summaryRPC/App/blank/首send静态；[标题双来源](sidebar-title-observation-round27.md)保体验建议，正式0/执行0。

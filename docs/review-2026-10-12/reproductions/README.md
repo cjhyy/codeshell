@@ -53,3 +53,5 @@ node scripts/run-isolated-node-smoke.mjs docs/review-2026-10-12/reproductions/cr
 第二十四轮[旧原生图片历史](../legacy-history-round24.md)新增1文件1测试17个Bun expect，两冻结基线同源分别guarded通过，当前通用84文件248测试。旧状态实际Workbench SSR，现代控制仅hook投影；auth/authority/MemoryWS/Bridge为明确替身，无Engine/worker/provider/Electron/真实Git或WS。Node assert未另计，native增量0；作者首轮fixture CRC失败无Completed/未打印expect总数、修正后latest1/17及root各1/17单列。
 
 第二十五轮[现代图片Desktop恢复](../modern-desktop-image-round25.md)新增1文件2测试32Bun expect，两冻结基线同源分别guarded通过，当前通用85文件250测试。真实paired producer/journal/reader/recovery/hydration/MessageStream SSR，Web SSR摘要和inlineencoder+append UI控制正常，sendhook/fullApp静态；63manifest/4resolve-only非cachegraph，无Engine/provider/worker/authority/Electron。首败0/2/22/noCompleted仅MiniDom缺matchMedia，唯一viewport修正分账；native增量0、Nodeassert未另计。
+
+第二十七轮[Files根映射](../file-root-round27.md)新增1文件1测试29Bunexpect，两冻结同源分别guarded通过，当前common86文件251测试。actualCorepublish/registry/authority/hook/Files/ASTMain/FS，sourcebinding及suppliedsummary、ownednonGit/transport/validatorDI/DOM明示；首send/blank/trust/完整App静态。作者first与root分别1/29，55d3未执行不算failure，native0、Nodeassert未另计；R65反馈不重复。

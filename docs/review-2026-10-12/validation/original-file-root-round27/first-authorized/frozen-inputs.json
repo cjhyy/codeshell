@@ -1,0 +1,15 @@
+{
+  "timestampUTC": "2026-10-12T01:35:12.661682+00:00",
+  "scope": "root explicitly authorized first latest guarded run, no rerun",
+  "cwd": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell",
+  "files": {
+    "static-prepared-receipt.json": "e2f00e3537968fbdf78754602131d293bdb56a12202e4ef3749b3882ccb5c61a",
+    "static-preflight.md": "8c4383d701707d260b0a8ff9111fbb0602cad6afc84b53b5762bc23cc05362ac",
+    "root-preflight.json": "834ad0b4eef68dc9f296c8bd709bc250eeff0b91ff7c77d8c4cbe742ca6b164c",
+    "PLAN.md.prepare-delta.diff": "8bb7ba5dd3b691955ef8410bc91f286c3eb8982528fdff8babf7f15f86c1b3ae",
+    "file-root.test.ts": "28f4202efc90bedbd67f39f60bd7e9370a3b8557872ae841edb856e3720a13d2",
+    "network-guard.ts": "6e1f5f5045f9606086f1b01e6eb988b88c5670f78000b260fcb9e035f1c69b3d",
+    "PLAN.md": "a1dd0c7b3b599fd19f23f957102f53b56053046584db911100a4758535803e2f",
+    "file-root.test.ts.prepare-delta.diff": "664d1e96d07270bbe827f33bd1657e5f1bc3327ed9a629ef07365e21488f53f4"
+  }
+}

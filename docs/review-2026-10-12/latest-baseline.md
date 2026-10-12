@@ -10,10 +10,10 @@
 | --- | --- | --- |
 | frozen install、workspaces build、Desktop build、typecheck:workspaces | 全部通过 | `validation/latest-a66f4ef2/{install,build,desktop-build,typecheck}.log` |
 | 8 个新增或修改测试文件 | 156 项实际执行、0 失败、0 跳过 | `validation/latest-a66f4ef2/changed-test-results.json` |
-| 既有便携缺陷表征和正常契约 | 85 文件、250 测试、0 失败、0 跳过 | `validation/latest-a66f4ef2/reproduction-results.json` |
+| 既有便携缺陷表征和正常契约 | 86 文件、251 测试、0 失败、0 跳过 | `validation/latest-a66f4ef2/reproduction-results.json` |
 | 凭据实际 Electron/IPC/store | 4 场景通过 | `validation/latest-a66f4ef2/credentials__credentials-e2e.mjs.log` |
 
-复现“通过”表示当前仍观察到被测缺陷。85 个文件并非与问题项一一对应，一份文件可能覆盖多项发现，也包含正常对照。新快照结果没有加到原基线 6286 个现有测试的总数中，以免重复计数。
+复现“通过”表示当前仍观察到被测缺陷。86 个文件并非与问题项一一对应，一份文件可能覆盖多项发现，也包含正常对照。新快照结果没有加到原基线 6286 个现有测试的总数中，以免重复计数。
 
 ## 两处测试入口适配
 
@@ -71,3 +71,5 @@
 第二十五轮[现代图片Desktop恢复](modern-desktop-image-round25.md)新增R85/P3，同源411b12在两冻结基线各guarded1文件2测试32Bun expect/Completed，63manifest/4resolve-only逐项核SHA，当前通用85/250。实际Desktop metadata/renderer缺提示或纯图bubble，Web摘要、inline UI及68-byte原件控制正常；sendhook/fullApp/authority/worker/provider不动态外推。作者first0/2/22/noCompleted是MiniDom缺matchMedia支架，second2/32与root各2/32分账，native增量0。08:52fetch origin仍a66f，产品快照保持。
 
 第二十六轮[会话续接](session-continuation-round26.md)及[云账号](cloud-account-static-round26.md)为双冻结静态来源复核，0新增finding/产品import/fixture/native，common85/250不变。主审29路径含Mainindex整体版本差异但review:status block相同；source测试未执行，不作为动态验收。
+
+第二十七轮[Files映射](file-root-round27.md)新增R86/P3，同源28f4202双冻结各guarded1文件1测试29Bunexpect/Completed，common86/251。实际Corepublish/ProjectStore/Mainauthority/hook/Files/ASTcallback/FS与正常控制成立，51source/4resolve-only非cachegraph；原件/HOME清理正常，无真实Git/Engine/model/Electron/firstsend。55d3只未执行准备，无firstfailure。09:39fetch origin仍a66f，冻结产品保持。

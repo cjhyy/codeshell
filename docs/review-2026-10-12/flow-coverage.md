@@ -1,6 +1,6 @@
 # 用户流程覆盖与修复顺序
 
-这是截至第二十六轮的流程地图；正式编号、级别和触发条件以 [主报告](README.md) 与各附录为准。正常路径通过不代表相邻失败路径已正确处理。缺陷表征测试通过表示复现成立，没有实施产品修复。
+这是截至第二十七轮的流程地图；正式编号、级别和触发条件以 [主报告](README.md) 与各附录为准。正常路径通过不代表相邻失败路径已正确处理。缺陷表征测试通过表示复现成立，没有实施产品修复。
 
 | 用户要完成的事 | 已检查的正常路径及证据层级 | 仍有的问题与可见影响 |
 | --- | --- | --- |
@@ -20,6 +20,7 @@
 | 连接已登录Chrome并恢复断线 | [实际BrowserPanel/preload/Main callbacks/Backend](browser-lifecycle-round21.md)，受控Native transport，无真实Chrome/Electron | R80/P3闲置断线时connected=false仍显示正在使用、仅提供断开；显式断开→新hello→重配恢复，动作正确NEEDS_HUMAN，新grant高层只读RPC正常 |
 | 在工作区开终端并审阅提交 | [真实Git+实际终端hook/Main门禁、ReviewService+viewer](terminal-review-round13.md)，native PTY边界替身 | R58合法managed worktree新终端被注册根门禁拒绝；R59最近20内首提交差异被错误显示为无变化；R64恢复后先关tab再新建可能接回旧壳，再次关闭重开恢复 |
 | 浏览目录和图片、修复读取失败 | [实际FilesPanel/HubFiles+真实文件服务](file-navigation-round14.md)，Desktop Main AST与Web自有HTTP服务 | R58合法managed worktree普通PNG预览被注册根门禁拒绝，文本正常；R65目录EACCES静默空树，修权限刷新恢复；Web移动/权限/重试与迟到结果控制正常 |
+| 换主目录后在摘要分叉查看Files | [实际Corepublish/ProjectStore/authority/hook/Files/FS](file-root-round27.md)，Git/transport明确适配 | R86/P3新primaryB.id配旧workspaceA.path，正确Main拒读；A、directB及原件正常，不重复R65反馈 |
 | 修改项目名称、模型、Skills、MCP、凭据 | 真实Electron模型/设置/凭据；真实store写盘与恢复 | R25旧完整表单回滚他端字段；R26冲突刷新没更新编辑revision；R27旧probe覆盖新配置；R28初始设置未到时开关写空列表；R29旧项目投影覆盖新广播；R75另一已打开窗口保存自身模型旧整图抹掉先前窗口持久偏好，重开回默认、重新选择恢复；R71项目rename真实拒写仍显示新名且无提示，普通广播回旧名、再次rename恢复；R42账号ID碰撞；R43拒写无反馈；R70自定义指令autosave失败清pending，存储修复后blur/离开不重试、未保存稿消失 |
 | 安装插件、更新和重装 | 真实Plugin服务、本地Git及review显式覆盖；[插件复核](plugin-quality-round9.md) | R51卸载后旧installed任务卡住重装；R52相对源校验失败前删旧cache；R53文件夹临时快照被持久保存为更新源 |
 | 运行自动化、看进度和历史 | 实际ChatSession FIFO与调度/展示控制；[自动化审查](automation-round5.md) | R44非once续接超时提前结算仍可重复排队；R45拒绝运行却向网关/生命周期发布completed；R46历史归属错误；R47界面未订阅自动停用；R48缺disabledReason；R63普通通知等待占住串行队列，urgent停用通知也被延迟（实际notifier/route+注入时钟，无OS通知） |
@@ -61,3 +62,5 @@
 第二十五轮R85/D25-1/P3为单一普通Desktop渲染根因，现代projection与68-byte原件完整；两冻结基线各guarded1/2/32，作者first0/2/22/noCompleted与修正后2/32分列。current85=1/52/32、common85/250，native增量0；普通sendhook及fullApp范围静态，不要求旧历史缩略图。
 
 第二十六轮[summary/full fork、retryHistory、Hub export](session-continuation-round26.md)及[Cloud账号](cloud-account-static-round26.md)纯静态新增正式0/执行0。summary首send前Review范围仅设计/体验建议，blank/legacy和明确lazy补绑规则阻止升级；Files source main≠currentprimary的条件另待核。当前正式85=1/52/32、common85/250不变。
+
+第二十七轮R86/F27-1/P3单root映射两冻结各guarded1/1/29，formal86=1/52/33、common86/251，native0。UI/trust/完整App/首send静态，内部binding控制不称用户恢复。[侧栏与历史命名](sidebar-title-observation-round27.md)只有设计观察0finding/0exec，全局titlepicker新名正常，不宣称全搜索失效。

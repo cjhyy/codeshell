@@ -1,7 +1,7 @@
 {
   "baseline": "a66f4ef291f304ee4df9da8095a90671d9a8f140",
-  "reproductionFiles": 85,
-  "reproductionTests": 250,
+  "reproductionFiles": 86,
+  "reproductionTests": 251,
   "reproductionSkipped": 0,
   "changedTestFiles": 8,
   "changedExecutedTests": 156,
@@ -62,5 +62,10 @@
   "round26BunFilesAdded": 0,
   "round26BunTestsAdded": 0,
   "round26NativeExecutionsAdded": 0,
-  "round26Note": "Read-only source/design/test-source/hash review. No fixture/product imports, runner, Engine/provider/worker/Electron/Git/network/account/model. Prior test source and static manifest are not dynamic pass/cachegraph proof. Files main!=currentprimary condition remains unverified separately."
+  "round26Note": "Read-only source/design/test-source/hash review. No fixture/product imports, runner, Engine/provider/worker/Electron/Git/network/account/model. Prior test source and static manifest are not dynamic pass/cachegraph proof. Files main!=currentprimary condition remains unverified separately.",
+  "round27BunFilesAdded": 1,
+  "round27BunTestsAdded": 1,
+  "round27BunExpects": 29,
+  "round27NativeExecutionsAdded": 0,
+  "round27Note": "Actual Core dist SessionManager/Transcript/selectContextPackage/createSummaryFork, actual ProjectStore/SessionCwdIndex/create/addRoot/setPrimary, actual workspace service/registered authority IPC/preload facade, actual consumer/hook/Files/DirNode, exact AST Main callbacks/validator/real FS and Session FS. Supplied summary output, source-binding writer setup, no-Git owned folding/probe, memory IPC, actual store.list validator DI, DOM/alias forwarding/panel wrapper explicit. Sidebar/trust/setPrimaryRPC, TopBar/summaryRPC/App insertion/fullElectron, full blank route, real first send and mounted auto-refresh remain static. Internal binding+remount is control only. No Engine/provider/model/worker/Gitprocess/network/Electron. Source51/resolve-only4/declared coding mocks3 not modulecache graph. R65 empty feedback not a separate finding. Author first and root two runs each1/29/Completed, not cumulative; no failures/reruns, initial55d3 only unexecuted prepare. Title only design observation."
 }

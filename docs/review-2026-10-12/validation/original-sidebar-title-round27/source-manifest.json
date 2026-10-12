@@ -1,0 +1,259 @@
+{
+  "scope": "static read_bytes/hash, not runtimeimports",
+  "productImports": 0,
+  "fixtureExecutions": 0,
+  "paths": [
+    {
+      "path": "packages/desktop/src/renderer/Sidebar.tsx",
+      "same": true,
+      "versions": [
+        {
+          "tree": "/Users/admin/.codex/worktrees/server-desktop-review-20261012/codeshell",
+          "sha256": "70fbf9da8fa31bcf6d5de1f3f1855623872255b3a944b15468f647541f84cf95"
+        },
+        {
+          "tree": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell",
+          "sha256": "70fbf9da8fa31bcf6d5de1f3f1855623872255b3a944b15468f647541f84cf95"
+        }
+      ]
+    },
+    {
+      "path": "packages/desktop/src/renderer/App.tsx",
+      "same": true,
+      "versions": [
+        {
+          "tree": "/Users/admin/.codex/worktrees/server-desktop-review-20261012/codeshell",
+          "sha256": "556e985d3c0898b5915c713a2a0a280f59bf504b4797e89278143bdcdfd265b8"
+        },
+        {
+          "tree": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell",
+          "sha256": "556e985d3c0898b5915c713a2a0a280f59bf504b4797e89278143bdcdfd265b8"
+        }
+      ]
+    },
+    {
+      "path": "packages/desktop/src/renderer/app/useSessionNavigation.ts",
+      "same": true,
+      "versions": [
+        {
+          "tree": "/Users/admin/.codex/worktrees/server-desktop-review-20261012/codeshell",
+          "sha256": "46ac89b4175e425f7b32e1e7aa24d16bb1bd6b0cf5e79817c0bd9a3a6c1b668f"
+        },
+        {
+          "tree": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell",
+          "sha256": "46ac89b4175e425f7b32e1e7aa24d16bb1bd6b0cf5e79817c0bd9a3a6c1b668f"
+        }
+      ]
+    },
+    {
+      "path": "packages/desktop/src/renderer/app/useSessionHistorySync.ts",
+      "same": true,
+      "versions": [
+        {
+          "tree": "/Users/admin/.codex/worktrees/server-desktop-review-20261012/codeshell",
+          "sha256": "46208d004433ecee2993c7db0a5ac60492f7d09f9ee1ce1aa3628f9016a65b31"
+        },
+        {
+          "tree": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell",
+          "sha256": "46208d004433ecee2993c7db0a5ac60492f7d09f9ee1ce1aa3628f9016a65b31"
+        }
+      ]
+    },
+    {
+      "path": "packages/desktop/src/renderer/transcripts.ts",
+      "same": true,
+      "versions": [
+        {
+          "tree": "/Users/admin/.codex/worktrees/server-desktop-review-20261012/codeshell",
+          "sha256": "fc74dcbf603c15d9bb27da517ff46b0a7805811e712a0e6a29d5cfb3a974c100"
+        },
+        {
+          "tree": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell",
+          "sha256": "fc74dcbf603c15d9bb27da517ff46b0a7805811e712a0e6a29d5cfb3a974c100"
+        }
+      ]
+    },
+    {
+      "path": "packages/desktop/src/renderer/sessionPersistence.ts",
+      "same": true,
+      "versions": [
+        {
+          "tree": "/Users/admin/.codex/worktrees/server-desktop-review-20261012/codeshell",
+          "sha256": "faaa9b7ca3e2b2140542aef7d839a230726a11c19c7f52c1103e68bd1f6f7197"
+        },
+        {
+          "tree": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell",
+          "sha256": "faaa9b7ca3e2b2140542aef7d839a230726a11c19c7f52c1103e68bd1f6f7197"
+        }
+      ]
+    },
+    {
+      "path": "packages/desktop/src/renderer/app/useSessionIndices.ts",
+      "same": true,
+      "versions": [
+        {
+          "tree": "/Users/admin/.codex/worktrees/server-desktop-review-20261012/codeshell",
+          "sha256": "ca988814f7db184eaa7cc604dedc462ca5ac7ef34d184c9f5517f18f3f041624"
+        },
+        {
+          "tree": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell",
+          "sha256": "ca988814f7db184eaa7cc604dedc462ca5ac7ef34d184c9f5517f18f3f041624"
+        }
+      ]
+    },
+    {
+      "path": "packages/desktop/src/renderer/app/useHostSubscriptions.ts",
+      "same": true,
+      "versions": [
+        {
+          "tree": "/Users/admin/.codex/worktrees/server-desktop-review-20261012/codeshell",
+          "sha256": "86d9d570eb165c07884ccdebcc70aefb8fe7e8b39f2627868528e887ccdb70e8"
+        },
+        {
+          "tree": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell",
+          "sha256": "86d9d570eb165c07884ccdebcc70aefb8fe7e8b39f2627868528e887ccdb70e8"
+        }
+      ]
+    },
+    {
+      "path": "packages/desktop/src/renderer/app/useAutomationSessionImport.ts",
+      "same": true,
+      "versions": [
+        {
+          "tree": "/Users/admin/.codex/worktrees/server-desktop-review-20261012/codeshell",
+          "sha256": "e3a2e55156ed8625f3539c7a3266a9e6488841a38c66560b42ed09e5702d7e36"
+        },
+        {
+          "tree": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell",
+          "sha256": "e3a2e55156ed8625f3539c7a3266a9e6488841a38c66560b42ed09e5702d7e36"
+        }
+      ]
+    },
+    {
+      "path": "packages/desktop/src/renderer/app/useRunController.ts",
+      "same": true,
+      "versions": [
+        {
+          "tree": "/Users/admin/.codex/worktrees/server-desktop-review-20261012/codeshell",
+          "sha256": "5bcf8b21e139ddd644175d0eedd528c7a32789f67771d056c3c71f52bd3cf5b2"
+        },
+        {
+          "tree": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell",
+          "sha256": "5bcf8b21e139ddd644175d0eedd528c7a32789f67771d056c3c71f52bd3cf5b2"
+        }
+      ]
+    },
+    {
+      "path": "packages/desktop/src/renderer/sessions/SessionsView.tsx",
+      "same": true,
+      "versions": [
+        {
+          "tree": "/Users/admin/.codex/worktrees/server-desktop-review-20261012/codeshell",
+          "sha256": "703caed4accc49ee7bbfe19830a63505c8300ed5472656e0f91095a764b417b1"
+        },
+        {
+          "tree": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell",
+          "sha256": "703caed4accc49ee7bbfe19830a63505c8300ed5472656e0f91095a764b417b1"
+        }
+      ]
+    },
+    {
+      "path": "packages/desktop/src/main/session-catalog-store.ts",
+      "same": true,
+      "versions": [
+        {
+          "tree": "/Users/admin/.codex/worktrees/server-desktop-review-20261012/codeshell",
+          "sha256": "ef65f3a16d50f79abb567a89b94e2e76f442ef2826fe434282fdfd56fe24b4d8"
+        },
+        {
+          "tree": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell",
+          "sha256": "ef65f3a16d50f79abb567a89b94e2e76f442ef2826fe434282fdfd56fe24b4d8"
+        }
+      ]
+    },
+    {
+      "path": "packages/desktop/src/main/session-catalog-ipc.ts",
+      "same": true,
+      "versions": [
+        {
+          "tree": "/Users/admin/.codex/worktrees/server-desktop-review-20261012/codeshell",
+          "sha256": "aad3c4b51359942e5d177d4da03963040fdd026dea2bbddf76515d00cbb0cfca"
+        },
+        {
+          "tree": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell",
+          "sha256": "aad3c4b51359942e5d177d4da03963040fdd026dea2bbddf76515d00cbb0cfca"
+        }
+      ]
+    },
+    {
+      "path": "packages/desktop/src/main/session-titles-store.ts",
+      "same": true,
+      "versions": [
+        {
+          "tree": "/Users/admin/.codex/worktrees/server-desktop-review-20261012/codeshell",
+          "sha256": "5c7ea7233f145105a79886d570d0735e8d66c1a90ab9495f9ed054d85bc374d7"
+        },
+        {
+          "tree": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell",
+          "sha256": "5c7ea7233f145105a79886d570d0735e8d66c1a90ab9495f9ed054d85bc374d7"
+        }
+      ]
+    },
+    {
+      "path": "packages/desktop/src/main/index.ts",
+      "same": false,
+      "versions": [
+        {
+          "tree": "/Users/admin/.codex/worktrees/server-desktop-review-20261012/codeshell",
+          "sha256": "cf5ba2f931c816cb44b598d54ef173793e40f554335de75d103f7b0ee5a2c26a"
+        },
+        {
+          "tree": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell",
+          "sha256": "426bfe5ccc8387db82f5bbe47ce1b83681995e7192f37bb03775f4eca37d0d80"
+        }
+      ]
+    },
+    {
+      "path": "packages/server/src/sessions-service.ts",
+      "same": true,
+      "versions": [
+        {
+          "tree": "/Users/admin/.codex/worktrees/server-desktop-review-20261012/codeshell",
+          "sha256": "8be914ac63c6f235474eb07b5220f18a66d4d645c938beb05574e8eacacb5720"
+        },
+        {
+          "tree": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell",
+          "sha256": "8be914ac63c6f235474eb07b5220f18a66d4d645c938beb05574e8eacacb5720"
+        }
+      ]
+    },
+    {
+      "path": "packages/server/src/session-titles-store.ts",
+      "same": true,
+      "versions": [
+        {
+          "tree": "/Users/admin/.codex/worktrees/server-desktop-review-20261012/codeshell",
+          "sha256": "3cb24ac45af55b69eac3bdb8e369d24ad647a7ae7b35fc89186535d786446ba0"
+        },
+        {
+          "tree": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell",
+          "sha256": "3cb24ac45af55b69eac3bdb8e369d24ad647a7ae7b35fc89186535d786446ba0"
+        }
+      ]
+    },
+    {
+      "path": "docs/superpowers/specs/2026-06-01-llm-session-title-design.md",
+      "same": true,
+      "versions": [
+        {
+          "tree": "/Users/admin/.codex/worktrees/server-desktop-review-20261012/codeshell",
+          "sha256": "3a76932b98d95a754e34ca5b8f2577c742d5408447982b8c7e9d4173963203e4"
+        },
+        {
+          "tree": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell",
+          "sha256": "3a76932b98d95a754e34ca5b8f2577c742d5408447982b8c7e9d4173963203e4"
+        }
+      ]
+    }
+  ]
+}

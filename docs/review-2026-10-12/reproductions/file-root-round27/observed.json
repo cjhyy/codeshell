@@ -1,0 +1,663 @@
+{
+  "repo": "/Users/admin/.codex/worktrees/server-desktop-review-20261012/codeshell",
+  "startedAt": "2026-10-12T01:36:24.208Z",
+  "finishedAt": "2026-10-12T01:36:26.481Z",
+  "completed": true,
+  "phase": "completed",
+  "failure": null,
+  "isolatedHome": "/private/var/folders/1d/6__4f4y51g90nblfptt8s9v80000gn/T/codeshell-bun-completion-vBeCip/home",
+  "ownedPaths": [
+    "/private/var/folders/1d/6__4f4y51g90nblfptt8s9v80000gn/T/codeshell-bun-completion-vBeCip/home/.code-shell/round27-owned-file-roots"
+  ],
+  "guardScope": {
+    "maintainedPrivateHome": true,
+    "exactOriginInstalledBeforeProductImports": "http://127.0.0.1:9",
+    "dummyOriginAlsoDenied": true,
+    "networkAndChildAPIs": "fetch/http(s)/net/tls/dgram/WebSocket/Bun listeners and child_process/worker_threads/Worker/Bun spawn",
+    "limitation": "in-process guards, not an OS sandbox or universal direct-native-network confinement"
+  },
+  "attempts": [],
+  "scope": {
+    "source": "actual Core dist SessionManager/Transcript, source counterparts audited; legitimate selected user/assistant range; no Engine/model/provider/Git process",
+    "registry": "actual ProjectStore createFromPath/addRoot/setPrimary; resolveProjectRoot constructor DI returns only owned direct directories (no Git discovery)",
+    "authority": "actual Main workspace service with actual owned SessionManager/ProjectStore test setters, actual registered workspace:authority callback and preload facade; no live Host grant",
+    "git": "only coding.findMainWorktreeRoot is replaced with an exact owned A/B adapter that throws a standard non-Git error for the real Main catch; bare/dist/source mock identities are recorded, not an import graph; other coding exports forwarded unchanged and child APIs guarded",
+    "rendering": "actual PanelWorkspaceRootConsumer/usePanelWorkspaceRoot and FilesPanel/DirNode; a small wrapper passes the same props as statically audited PanelArea/Registry, not a full App/Electron run",
+    "files": "exact fsRoot:readDir and fsSession:readDir arrow callbacks AST-extracted from actual Main index; actual root validator gets actual store.list via its documented options.projects seam; actual FS service and session FS service",
+    "aliases": "actual presentation leaf exports forwarded under bare alias and absolute identity; no Files rootOptions/read/effect logic mocked",
+    "controls": "bound source, pre-change same-primary summary, selecting A, direct project B read, internal explicit binding, original bytes; no full blank App route and no real first-send repair",
+    "provenance": "source/dist hashes, exact extracted block hashes, and separate resolution-only receipts; not a module graph probe"
+  },
+  "sourceManifest": [
+    {
+      "path": "CODESHELL.md",
+      "sha256": "98d56c3b134ef18a25a37293de42442e7d3ff40cde7841862aab9ad83cba7c2a"
+    },
+    {
+      "path": "packages/core/src/index.ts",
+      "sha256": "b95839b4ad6c73b03a874d0288e2c4dbf2d9353eda536236ab643adc323d34b5"
+    },
+    {
+      "path": "packages/core/src/index.internal.ts",
+      "sha256": "300495afe8e4c822965070b526ede6e68c793baf5b79e7571979148208b9efcf"
+    },
+    {
+      "path": "packages/core/dist/index.js",
+      "sha256": "02eb31788cb46e030d8abf3ff42cfe5897aac716c95763fd1374af5d5d6fa698"
+    },
+    {
+      "path": "packages/core/dist/index.internal.js",
+      "sha256": "46415f56ac55a61a9f0e407264483212a1455f66dbacace7c3a3ee1aea943997"
+    },
+    {
+      "path": "packages/core/src/session/session-manager.ts",
+      "sha256": "0ebe5458e6f5701e286c552e43e0dd707177fb97b1e8726a94ae5dbcfdedcb10"
+    },
+    {
+      "path": "packages/core/dist/session/session-manager.js",
+      "sha256": "eafeec383bf111dbe9fe300da37b82dc1b15359329be6f81992b92f89cb3d90f"
+    },
+    {
+      "path": "packages/core/src/session/transcript.ts",
+      "sha256": "0d2e32dd2e530200c626dd2f94f563d3268f9ae9ad2e37e3497d1a849669d829"
+    },
+    {
+      "path": "packages/core/dist/session/transcript.js",
+      "sha256": "61268d66937fa90a6ea5b63e99675d512c82b54610123a9d6c4312bae2402d10"
+    },
+    {
+      "path": "packages/core/src/engine/run-session-open.ts",
+      "sha256": "4ac92021afc249a3e33482691e867b689024db9fcf86aaab9f07ea344183a9ae"
+    },
+    {
+      "path": "packages/core/src/engine/engine.ts",
+      "sha256": "d8b3caf80bb3ef76b17e574ad46ed6f53ccb6210bedb29478cb66041fc089bf0"
+    },
+    {
+      "path": "packages/core/src/protocol/server.ts",
+      "sha256": "001212e386311d24bd7b19bf67012bfb8d9f42d58fbdbdf7f1258a04c89a159a"
+    },
+    {
+      "path": "packages/core/src/session/session-manager.context-transfer.test.ts",
+      "sha256": "09b7b700527f9e26b6c126ab296895852f3f5743493ea6bc12ee865302eefc6e"
+    },
+    {
+      "path": "packages/coding/src/index.git.ts",
+      "sha256": "b72970a79c39999fa0eb6602213599e93496011f28d4ed94c51af19adcc3c527"
+    },
+    {
+      "path": "packages/coding/dist/index.git.js",
+      "sha256": "b72970a79c39999fa0eb6602213599e93496011f28d4ed94c51af19adcc3c527"
+    },
+    {
+      "path": "packages/coding/src/git/worktree/query.ts",
+      "sha256": "50a9f03677270ea624638bb0e5a6eb8f0331f64d2572c5520d81bf857c5d1641"
+    },
+    {
+      "path": "packages/coding/dist/git/worktree/query.js",
+      "sha256": "c16e1d8609092768076e584b81cc80ce771ca9e542140b226fa288b84c8cb5ad"
+    },
+    {
+      "path": "packages/desktop/src/main/project-store.ts",
+      "sha256": "7a8af164418c7884c55d081e47005ed1f73b018755a650e215e927eee9bbdddb"
+    },
+    {
+      "path": "packages/desktop/src/main/session-cwd-index.ts",
+      "sha256": "d1c3b5c0966aeb763d6d48008d878c1c47f342cd3599b3fd231eeca319467d80"
+    },
+    {
+      "path": "packages/desktop/src/main/mounted-project-root.ts",
+      "sha256": "3d4c4b36482fe360d48832a37b055bc10ca37172f2dd3b01f37963b446a2af73"
+    },
+    {
+      "path": "packages/desktop/src/main/renderer-project-path.ts",
+      "sha256": "cf7d7fb3cbbc3ae472630a0f19293d53c9931c767c334438dc8ffe89bb062c8d"
+    },
+    {
+      "path": "packages/desktop/src/main/session-workspace-service.ts",
+      "sha256": "0a914d59780852a949e6d8349b51f5a8e40762c4e89911c56c601522af95e134"
+    },
+    {
+      "path": "packages/desktop/src/main/session-fs-service.ts",
+      "sha256": "3a18031a1d6b60518f4130c0ba0b153ca7670cd297e5a64c54e6aedc5fa6dd9f"
+    },
+    {
+      "path": "packages/desktop/src/main/fs-service.ts",
+      "sha256": "3857afa4c216971bb67ecb3bb0dadfc2264f316f497d8274b22eaef7cda7afc4"
+    },
+    {
+      "path": "packages/desktop/src/main/project-authority-ipc.ts",
+      "sha256": "6cf689cd6654e1b6bc4cbc65f29deb8137e6b276b24e5df50812cdf66348348e"
+    },
+    {
+      "path": "packages/desktop/src/main/session-validation.ts",
+      "sha256": "fee0d6493eb0c53fbd7e110ca10d08d5706fc0a6a2689e33ab8eaf8de82769f3"
+    },
+    {
+      "path": "packages/desktop/src/main/index.ts",
+      "sha256": "cf5ba2f931c816cb44b598d54ef173793e40f554335de75d103f7b0ee5a2c26a"
+    },
+    {
+      "path": "packages/desktop/src/preload/project-authority-api.ts",
+      "sha256": "4e2398a2b0e34999499989084bbd3c98654d9c46e465ccafe2a8ce8fce7da07c"
+    },
+    {
+      "path": "packages/desktop/src/preload/index.ts",
+      "sha256": "b85c80ec01b488890fcfad0e9afed4fb1e02575dcba8e30cce8a06805ed44327"
+    },
+    {
+      "path": "packages/desktop/src/renderer/Sidebar.tsx",
+      "sha256": "70fbf9da8fa31bcf6d5de1f3f1855623872255b3a944b15468f647541f84cf95"
+    },
+    {
+      "path": "packages/desktop/src/renderer/App.tsx",
+      "sha256": "556e985d3c0898b5915c713a2a0a280f59bf504b4797e89278143bdcdfd265b8"
+    },
+    {
+      "path": "packages/desktop/src/renderer/MessageStream.tsx",
+      "sha256": "b77d1f48611f798d17942030bc6e7d928e581c08216bf470ba9a3aaf7a8798d6"
+    },
+    {
+      "path": "packages/desktop/src/renderer/projects.ts",
+      "sha256": "993cfed34aca8dc1375e156c19cdf1342b200593c268f0c1a2cd05cf364c95ba"
+    },
+    {
+      "path": "packages/desktop/src/renderer/app/SessionPanelDock.tsx",
+      "sha256": "f518df5cbe17cb378b98add2db4b997c766e8092e50b34ada8be45f9b3e69972"
+    },
+    {
+      "path": "packages/desktop/src/renderer/app/useRunController.ts",
+      "sha256": "5bcf8b21e139ddd644175d0eedd528c7a32789f67771d056c3c71f52bd3cf5b2"
+    },
+    {
+      "path": "packages/desktop/src/renderer/panels/PanelArea.tsx",
+      "sha256": "b7b292627c1f54b0928983df20c3d85b159fce9729def903800dcef4338f9026"
+    },
+    {
+      "path": "packages/desktop/src/renderer/panels/PanelRegistry.ts",
+      "sha256": "c440f537f5918a16842dd32ca52761e5f54d6b2e2d6e951c48aa6022290fd3f1"
+    },
+    {
+      "path": "packages/desktop/src/renderer/panels/PanelWorkspaceRootConsumer.tsx",
+      "sha256": "f043db36541fa16368f0aa31b8ba9bfe7b31bf21370f1074258c76e7afbf22d4"
+    },
+    {
+      "path": "packages/desktop/src/renderer/panels/usePanelWorkspaceRoot.ts",
+      "sha256": "fe07534fed9fbdb9dcb53fc74ef7365a16d58d607449b9c49c5b5e0144c85fc7"
+    },
+    {
+      "path": "packages/desktop/src/renderer/panels/FilesPanel.tsx",
+      "sha256": "525f58f77436ab8e84f8df46942925feffbd5a118f91556884db924a3d90d0d3"
+    },
+    {
+      "path": "packages/desktop/src/renderer/panels/FilesPanel.workspace.test.tsx",
+      "sha256": "6012655279240e86128e662c0324789d2ed69601744a844c3e36984ae9943ea5"
+    },
+    {
+      "path": "packages/desktop/src/renderer/lib/utils.ts",
+      "sha256": "92b201294cb8320f7759e4a2769b7d593f357cbc5671c30f6091c8bc01670084"
+    },
+    {
+      "path": "packages/desktop/src/renderer/components/ui/input.tsx",
+      "sha256": "cdf74059418d587217b808c9bafe47cd8c830a8616f44b685766ba9e81f25394"
+    },
+    {
+      "path": "packages/desktop/src/renderer/components/ui/button.tsx",
+      "sha256": "c49a019df145d3a28aa938095cd3a83970e61dc473230336beaf75f2b60bbfff"
+    },
+    {
+      "path": "packages/desktop/src/renderer/components/ui/textarea.tsx",
+      "sha256": "15d9b0bf01690f53c2fa30a0ea8d5e5701859a4ba57bccfc24cbd508ff92cfb9"
+    },
+    {
+      "path": "packages/desktop/src/renderer/components/ui/dropdown-menu.tsx",
+      "sha256": "6183840d34bdaff2f06abb954c55eb39f6419d3077240b0c224a4b322211ad59"
+    },
+    {
+      "path": "packages/web/src/test-utils/renderHook.tsx",
+      "sha256": "be055d71e9d6176c30575c9da56c6b28e728c9a2fdee8ce247989a219a52247f"
+    },
+    {
+      "path": "node_modules/react/index.js",
+      "sha256": "60caffdecbdc5db3bc4ec4e83df9488345ccb271d07533b9210bf5750918d97e"
+    },
+    {
+      "path": "packages/desktop/node_modules/react-dom/client.js",
+      "sha256": "00e348ab3d6bc2eef908345d0bc4e008c95bcfecec060dfda5c4967953761396"
+    },
+    {
+      "path": "node_modules/typescript/lib/typescript.js",
+      "sha256": "3ae902c92cc44dace175c0e69e13a4b0899f6983c6121d76b9ab8dd5795e7675"
+    },
+    {
+      "path": "docs/todo/multi-folder-local-project-plan.md",
+      "sha256": "440edd29d618f7871f5e490ebf11afd4df7937bb8b834f64c66dee9c586d7961"
+    }
+  ],
+  "productResolutions": [
+    {
+      "specifier": "@cjhyy/code-shell-core",
+      "importer": "packages/desktop/src/main/session-workspace-service.ts",
+      "resolved": "packages/core/dist/index.js",
+      "sha256": "02eb31788cb46e030d8abf3ff42cfe5897aac716c95763fd1374af5d5d6fa698"
+    },
+    {
+      "specifier": "@cjhyy/code-shell-core/internal",
+      "importer": "packages/desktop/src/main/project-store.ts",
+      "resolved": "packages/core/dist/index.internal.js",
+      "sha256": "46415f56ac55a61a9f0e407264483212a1455f66dbacace7c3a3ee1aea943997"
+    },
+    {
+      "specifier": "@cjhyy/code-shell-capability-coding/git",
+      "importer": "packages/desktop/src/main/session-workspace-service.ts",
+      "resolved": "packages/coding/dist/index.git.js",
+      "sha256": "b72970a79c39999fa0eb6602213599e93496011f28d4ed94c51af19adcc3c527"
+    },
+    {
+      "specifier": "react-dom/client",
+      "importer": "packages/web/src/test-utils/renderHook.tsx",
+      "resolved": "node_modules/.bun/react-dom@19.2.6+d86b59289c1a13ae/node_modules/react-dom/client.js",
+      "sha256": "00e348ab3d6bc2eef908345d0bc4e008c95bcfecec060dfda5c4967953761396"
+    }
+  ],
+  "extractedCallbacks": [
+    {
+      "path": "packages/desktop/src/main/index.ts",
+      "channel": "fsRoot:readDir",
+      "line": 6486,
+      "sha256": "2820bebc653dec326e7a816ff53ad14969983f1f94c1fb0e4178db564d300f9a",
+      "block": "async (_e, projectId: string, rootId: string, dir?: string) => {\n  const root = await requireRendererProjectRoot(projectId, rootId);\n  return readDirectory(root.path, typeof dir === \"string\" && dir ? dir : root.path);\n}",
+      "capturedDependencies": [
+        "requireRendererProjectRoot",
+        "readDirectory"
+      ]
+    },
+    {
+      "path": "packages/desktop/src/main/index.ts",
+      "channel": "fsSession:readDir",
+      "line": 6500,
+      "sha256": "a94993aa3251ef2d8c1fb2d4ad1422737efe0e9124cf2aecc6743cf79e93338e",
+      "block": "async (_e, sessionId: string, rootId: string, dir?: string) => {\n  assertDesktopSessionId(sessionId);\n  return readSessionDirectoryForUi(sessionId, rootId, dir);\n}",
+      "capturedDependencies": [
+        "assertDesktopSessionId",
+        "readSessionDirectoryForUi"
+      ]
+    }
+  ],
+  "mockTargets": [
+    "@cjhyy/code-shell-capability-coding/git",
+    "/Users/admin/.codex/worktrees/server-desktop-review-20261012/codeshell/packages/coding/dist/index.git.js",
+    "/Users/admin/.codex/worktrees/server-desktop-review-20261012/codeshell/packages/coding/src/index.git.ts"
+  ],
+  "gitAdapters": [
+    {
+      "api": "findMainWorktreeRoot",
+      "cwd": "/private/var/folders/1d/6__4f4y51g90nblfptt8s9v80000gn/T/codeshell-bun-completion-vBeCip/home/.code-shell/round27-owned-file-roots/root-a",
+      "result": "standard non-Git error for real Main catch; no subprocess"
+    },
+    {
+      "api": "findMainWorktreeRoot",
+      "cwd": "/private/var/folders/1d/6__4f4y51g90nblfptt8s9v80000gn/T/codeshell-bun-completion-vBeCip/home/.code-shell/round27-owned-file-roots/root-a",
+      "result": "standard non-Git error for real Main catch; no subprocess"
+    },
+    {
+      "api": "findMainWorktreeRoot",
+      "cwd": "/private/var/folders/1d/6__4f4y51g90nblfptt8s9v80000gn/T/codeshell-bun-completion-vBeCip/home/.code-shell/round27-owned-file-roots/root-a",
+      "result": "standard non-Git error for real Main catch; no subprocess"
+    },
+    {
+      "api": "findMainWorktreeRoot",
+      "cwd": "/private/var/folders/1d/6__4f4y51g90nblfptt8s9v80000gn/T/codeshell-bun-completion-vBeCip/home/.code-shell/round27-owned-file-roots/root-a",
+      "result": "standard non-Git error for real Main catch; no subprocess"
+    },
+    {
+      "api": "findMainWorktreeRoot",
+      "cwd": "/private/var/folders/1d/6__4f4y51g90nblfptt8s9v80000gn/T/codeshell-bun-completion-vBeCip/home/.code-shell/round27-owned-file-roots/root-a",
+      "result": "standard non-Git error for real Main catch; no subprocess"
+    },
+    {
+      "api": "findMainWorktreeRoot",
+      "cwd": "/private/var/folders/1d/6__4f4y51g90nblfptt8s9v80000gn/T/codeshell-bun-completion-vBeCip/home/.code-shell/round27-owned-file-roots/root-a",
+      "result": "standard non-Git error for real Main catch; no subprocess"
+    },
+    {
+      "api": "findMainWorktreeRoot",
+      "cwd": "/private/var/folders/1d/6__4f4y51g90nblfptt8s9v80000gn/T/codeshell-bun-completion-vBeCip/home/.code-shell/round27-owned-file-roots/root-a",
+      "result": "standard non-Git error for real Main catch; no subprocess"
+    },
+    {
+      "api": "findMainWorktreeRoot",
+      "cwd": "/private/var/folders/1d/6__4f4y51g90nblfptt8s9v80000gn/T/codeshell-bun-completion-vBeCip/home/.code-shell/round27-owned-file-roots/root-a",
+      "result": "standard non-Git error for real Main catch; no subprocess"
+    },
+    {
+      "api": "findMainWorktreeRoot",
+      "cwd": "/private/var/folders/1d/6__4f4y51g90nblfptt8s9v80000gn/T/codeshell-bun-completion-vBeCip/home/.code-shell/round27-owned-file-roots/root-a",
+      "result": "standard non-Git error for real Main catch; no subprocess"
+    },
+    {
+      "api": "findMainWorktreeRoot",
+      "cwd": "/private/var/folders/1d/6__4f4y51g90nblfptt8s9v80000gn/T/codeshell-bun-completion-vBeCip/home/.code-shell/round27-owned-file-roots/root-a",
+      "result": "standard non-Git error for real Main catch; no subprocess"
+    }
+  ],
+  "calls": [
+    {
+      "channel": "workspace:authority",
+      "args": [
+        "r27-same-primary"
+      ],
+      "result": {
+        "workspace": {
+          "root": "/private/var/folders/1d/6__4f4y51g90nblfptt8s9v80000gn/T/codeshell-bun-completion-vBeCip/home/.code-shell/round27-owned-file-roots/root-a",
+          "kind": "main"
+        },
+        "projectId": null,
+        "mainRootId": null,
+        "mainRoot": "/private/var/folders/1d/6__4f4y51g90nblfptt8s9v80000gn/T/codeshell-bun-completion-vBeCip/home/.code-shell/round27-owned-file-roots/root-a",
+        "mainRootName": "root-a",
+        "rootStatus": "ok"
+      }
+    },
+    {
+      "channel": "fsRoot:readDir",
+      "args": [
+        "a8cf196e-eb34-4be5-b725-3ebff424ac5f",
+        "c2afdc17-5ebb-4cd0-8a0e-1cab1da3efc4",
+        "/private/var/folders/1d/6__4f4y51g90nblfptt8s9v80000gn/T/codeshell-bun-completion-vBeCip/home/.code-shell/round27-owned-file-roots/root-a"
+      ],
+      "result": [
+        {
+          "name": "unique-a.txt",
+          "path": "/private/var/folders/1d/6__4f4y51g90nblfptt8s9v80000gn/T/codeshell-bun-completion-vBeCip/home/.code-shell/round27-owned-file-roots/root-a/unique-a.txt",
+          "isDirectory": false
+        }
+      ]
+    },
+    {
+      "channel": "workspace:authority",
+      "args": [
+        "r27-bound-source"
+      ],
+      "result": {
+        "workspace": {
+          "root": "/private/var/folders/1d/6__4f4y51g90nblfptt8s9v80000gn/T/codeshell-bun-completion-vBeCip/home/.code-shell/round27-owned-file-roots/root-a",
+          "kind": "main"
+        },
+        "projectId": "a8cf196e-eb34-4be5-b725-3ebff424ac5f",
+        "mainRootId": "c2afdc17-5ebb-4cd0-8a0e-1cab1da3efc4",
+        "mainRoot": "/private/var/folders/1d/6__4f4y51g90nblfptt8s9v80000gn/T/codeshell-bun-completion-vBeCip/home/.code-shell/round27-owned-file-roots/root-a",
+        "mainRootName": "root-a",
+        "rootStatus": "ok"
+      }
+    },
+    {
+      "channel": "fsSession:readDir",
+      "args": [
+        "r27-bound-source",
+        "c2afdc17-5ebb-4cd0-8a0e-1cab1da3efc4",
+        "/private/var/folders/1d/6__4f4y51g90nblfptt8s9v80000gn/T/codeshell-bun-completion-vBeCip/home/.code-shell/round27-owned-file-roots/root-a"
+      ],
+      "result": [
+        {
+          "name": "unique-a.txt",
+          "path": "/private/var/folders/1d/6__4f4y51g90nblfptt8s9v80000gn/T/codeshell-bun-completion-vBeCip/home/.code-shell/round27-owned-file-roots/root-a/unique-a.txt",
+          "isDirectory": false
+        }
+      ]
+    },
+    {
+      "channel": "fsSession:readDir",
+      "args": [
+        "r27-bound-source",
+        "7966e37a-92b5-44ea-94ff-9beffa7e32dc",
+        "/private/var/folders/1d/6__4f4y51g90nblfptt8s9v80000gn/T/codeshell-bun-completion-vBeCip/home/.code-shell/round27-owned-file-roots/root-b"
+      ],
+      "result": [
+        {
+          "name": "unique-b.txt",
+          "path": "/private/var/folders/1d/6__4f4y51g90nblfptt8s9v80000gn/T/codeshell-bun-completion-vBeCip/home/.code-shell/round27-owned-file-roots/root-b/unique-b.txt",
+          "isDirectory": false
+        }
+      ]
+    },
+    {
+      "channel": "fsSession:readDir",
+      "args": [
+        "r27-bound-source",
+        "7966e37a-92b5-44ea-94ff-9beffa7e32dc",
+        "/private/var/folders/1d/6__4f4y51g90nblfptt8s9v80000gn/T/codeshell-bun-completion-vBeCip/home/.code-shell/round27-owned-file-roots/root-b"
+      ],
+      "result": [
+        {
+          "name": "unique-b.txt",
+          "path": "/private/var/folders/1d/6__4f4y51g90nblfptt8s9v80000gn/T/codeshell-bun-completion-vBeCip/home/.code-shell/round27-owned-file-roots/root-b/unique-b.txt",
+          "isDirectory": false
+        }
+      ]
+    },
+    {
+      "channel": "workspace:authority",
+      "args": [
+        "r27-switched-summary"
+      ],
+      "result": {
+        "workspace": {
+          "root": "/private/var/folders/1d/6__4f4y51g90nblfptt8s9v80000gn/T/codeshell-bun-completion-vBeCip/home/.code-shell/round27-owned-file-roots/root-a",
+          "kind": "main"
+        },
+        "projectId": null,
+        "mainRootId": null,
+        "mainRoot": "/private/var/folders/1d/6__4f4y51g90nblfptt8s9v80000gn/T/codeshell-bun-completion-vBeCip/home/.code-shell/round27-owned-file-roots/root-a",
+        "mainRootName": "root-a",
+        "rootStatus": "ok"
+      }
+    },
+    {
+      "channel": "fsRoot:readDir",
+      "args": [
+        "a8cf196e-eb34-4be5-b725-3ebff424ac5f",
+        "7966e37a-92b5-44ea-94ff-9beffa7e32dc",
+        "/private/var/folders/1d/6__4f4y51g90nblfptt8s9v80000gn/T/codeshell-bun-completion-vBeCip/home/.code-shell/round27-owned-file-roots/root-a"
+      ],
+      "error": "Error: path escapes workspace root"
+    },
+    {
+      "channel": "fsRoot:readDir",
+      "args": [
+        "a8cf196e-eb34-4be5-b725-3ebff424ac5f",
+        "c2afdc17-5ebb-4cd0-8a0e-1cab1da3efc4",
+        "/private/var/folders/1d/6__4f4y51g90nblfptt8s9v80000gn/T/codeshell-bun-completion-vBeCip/home/.code-shell/round27-owned-file-roots/root-a"
+      ],
+      "result": [
+        {
+          "name": "unique-a.txt",
+          "path": "/private/var/folders/1d/6__4f4y51g90nblfptt8s9v80000gn/T/codeshell-bun-completion-vBeCip/home/.code-shell/round27-owned-file-roots/root-a/unique-a.txt",
+          "isDirectory": false
+        }
+      ]
+    },
+    {
+      "channel": "fsRoot:readDir",
+      "args": [
+        "a8cf196e-eb34-4be5-b725-3ebff424ac5f",
+        "7966e37a-92b5-44ea-94ff-9beffa7e32dc",
+        "/private/var/folders/1d/6__4f4y51g90nblfptt8s9v80000gn/T/codeshell-bun-completion-vBeCip/home/.code-shell/round27-owned-file-roots/root-a"
+      ],
+      "error": "Error: path escapes workspace root"
+    },
+    {
+      "channel": "fsRoot:readDir",
+      "args": [
+        "a8cf196e-eb34-4be5-b725-3ebff424ac5f",
+        "7966e37a-92b5-44ea-94ff-9beffa7e32dc",
+        "/private/var/folders/1d/6__4f4y51g90nblfptt8s9v80000gn/T/codeshell-bun-completion-vBeCip/home/.code-shell/round27-owned-file-roots/root-b"
+      ],
+      "result": [
+        {
+          "name": "unique-b.txt",
+          "path": "/private/var/folders/1d/6__4f4y51g90nblfptt8s9v80000gn/T/codeshell-bun-completion-vBeCip/home/.code-shell/round27-owned-file-roots/root-b/unique-b.txt",
+          "isDirectory": false
+        }
+      ]
+    },
+    {
+      "channel": "workspace:authority",
+      "args": [
+        "r27-switched-summary"
+      ],
+      "result": {
+        "workspace": {
+          "root": "/private/var/folders/1d/6__4f4y51g90nblfptt8s9v80000gn/T/codeshell-bun-completion-vBeCip/home/.code-shell/round27-owned-file-roots/root-a",
+          "kind": "main"
+        },
+        "projectId": "a8cf196e-eb34-4be5-b725-3ebff424ac5f",
+        "mainRootId": "c2afdc17-5ebb-4cd0-8a0e-1cab1da3efc4",
+        "mainRoot": "/private/var/folders/1d/6__4f4y51g90nblfptt8s9v80000gn/T/codeshell-bun-completion-vBeCip/home/.code-shell/round27-owned-file-roots/root-a",
+        "mainRootName": "root-a",
+        "rootStatus": "ok"
+      }
+    },
+    {
+      "channel": "fsSession:readDir",
+      "args": [
+        "r27-switched-summary",
+        "c2afdc17-5ebb-4cd0-8a0e-1cab1da3efc4",
+        "/private/var/folders/1d/6__4f4y51g90nblfptt8s9v80000gn/T/codeshell-bun-completion-vBeCip/home/.code-shell/round27-owned-file-roots/root-a"
+      ],
+      "result": [
+        {
+          "name": "unique-a.txt",
+          "path": "/private/var/folders/1d/6__4f4y51g90nblfptt8s9v80000gn/T/codeshell-bun-completion-vBeCip/home/.code-shell/round27-owned-file-roots/root-a/unique-a.txt",
+          "isDirectory": false
+        }
+      ]
+    },
+    {
+      "channel": "fsSession:readDir",
+      "args": [
+        "r27-switched-summary",
+        "7966e37a-92b5-44ea-94ff-9beffa7e32dc",
+        "/private/var/folders/1d/6__4f4y51g90nblfptt8s9v80000gn/T/codeshell-bun-completion-vBeCip/home/.code-shell/round27-owned-file-roots/root-b"
+      ],
+      "result": [
+        {
+          "name": "unique-b.txt",
+          "path": "/private/var/folders/1d/6__4f4y51g90nblfptt8s9v80000gn/T/codeshell-bun-completion-vBeCip/home/.code-shell/round27-owned-file-roots/root-b/unique-b.txt",
+          "isDirectory": false
+        }
+      ]
+    },
+    {
+      "channel": "fsSession:readDir",
+      "args": [
+        "r27-switched-summary",
+        "7966e37a-92b5-44ea-94ff-9beffa7e32dc",
+        "/private/var/folders/1d/6__4f4y51g90nblfptt8s9v80000gn/T/codeshell-bun-completion-vBeCip/home/.code-shell/round27-owned-file-roots/root-b"
+      ],
+      "result": [
+        {
+          "name": "unique-b.txt",
+          "path": "/private/var/folders/1d/6__4f4y51g90nblfptt8s9v80000gn/T/codeshell-bun-completion-vBeCip/home/.code-shell/round27-owned-file-roots/root-b/unique-b.txt",
+          "isDirectory": false
+        }
+      ]
+    }
+  ],
+  "observations": [
+    {
+      "control": "same-primary summary before change",
+      "workspace": {
+        "root": "/private/var/folders/1d/6__4f4y51g90nblfptt8s9v80000gn/T/codeshell-bun-completion-vBeCip/home/.code-shell/round27-owned-file-roots/root-a",
+        "kind": "main",
+        "mainRoot": "/private/var/folders/1d/6__4f4y51g90nblfptt8s9v80000gn/T/codeshell-bun-completion-vBeCip/home/.code-shell/round27-owned-file-roots/root-a",
+        "mainRootId": null,
+        "projectId": null,
+        "ready": true
+      },
+      "text": "root-a (主目录)root-bunique-a.txt打开文件从工作区目录树中选择文件"
+    },
+    {
+      "control": "bound source remains usable at both roots",
+      "workspace": {
+        "root": "/private/var/folders/1d/6__4f4y51g90nblfptt8s9v80000gn/T/codeshell-bun-completion-vBeCip/home/.code-shell/round27-owned-file-roots/root-a",
+        "kind": "main",
+        "mainRoot": "/private/var/folders/1d/6__4f4y51g90nblfptt8s9v80000gn/T/codeshell-bun-completion-vBeCip/home/.code-shell/round27-owned-file-roots/root-a",
+        "mainRootId": "c2afdc17-5ebb-4cd0-8a0e-1cab1da3efc4",
+        "projectId": "a8cf196e-eb34-4be5-b725-3ebff424ac5f",
+        "ready": true
+      },
+      "text": "root-aroot-b (主目录)unique-b.txt打开文件从工作区目录树中选择文件"
+    },
+    {
+      "candidate": "unbound summary after primary changed",
+      "workspace": {
+        "root": "/private/var/folders/1d/6__4f4y51g90nblfptt8s9v80000gn/T/codeshell-bun-completion-vBeCip/home/.code-shell/round27-owned-file-roots/root-a",
+        "kind": "main",
+        "mainRoot": "/private/var/folders/1d/6__4f4y51g90nblfptt8s9v80000gn/T/codeshell-bun-completion-vBeCip/home/.code-shell/round27-owned-file-roots/root-a",
+        "mainRootId": null,
+        "projectId": null,
+        "ready": true
+      },
+      "project": {
+        "id": "a8cf196e-eb34-4be5-b725-3ebff424ac5f",
+        "name": "root-a",
+        "path": "/private/var/folders/1d/6__4f4y51g90nblfptt8s9v80000gn/T/codeshell-bun-completion-vBeCip/home/.code-shell/round27-owned-file-roots/root-b",
+        "roots": [
+          {
+            "id": "c2afdc17-5ebb-4cd0-8a0e-1cab1da3efc4",
+            "path": "/private/var/folders/1d/6__4f4y51g90nblfptt8s9v80000gn/T/codeshell-bun-completion-vBeCip/home/.code-shell/round27-owned-file-roots/root-a",
+            "canonicalIdentity": "/private/var/folders/1d/6__4f4y51g90nblfptt8s9v80000gn/T/codeshell-bun-completion-vBeCip/home/.code-shell/round27-owned-file-roots/root-a",
+            "name": "root-a",
+            "addedAt": 1791768986128
+          },
+          {
+            "id": "7966e37a-92b5-44ea-94ff-9beffa7e32dc",
+            "path": "/private/var/folders/1d/6__4f4y51g90nblfptt8s9v80000gn/T/codeshell-bun-completion-vBeCip/home/.code-shell/round27-owned-file-roots/root-b",
+            "canonicalIdentity": "/private/var/folders/1d/6__4f4y51g90nblfptt8s9v80000gn/T/codeshell-bun-completion-vBeCip/home/.code-shell/round27-owned-file-roots/root-b",
+            "name": "root-b",
+            "addedAt": 1791768986163
+          }
+        ],
+        "primaryRootId": "7966e37a-92b5-44ea-94ff-9beffa7e32dc",
+        "addedAt": 1791768986128
+      },
+      "defaultCall": {
+        "channel": "fsRoot:readDir",
+        "args": [
+          "a8cf196e-eb34-4be5-b725-3ebff424ac5f",
+          "7966e37a-92b5-44ea-94ff-9beffa7e32dc",
+          "/private/var/folders/1d/6__4f4y51g90nblfptt8s9v80000gn/T/codeshell-bun-completion-vBeCip/home/.code-shell/round27-owned-file-roots/root-a"
+        ],
+        "error": "Error: path escapes workspace root"
+      },
+      "text": "root-b (主目录)root-a打开文件从工作区目录树中选择文件"
+    },
+    {
+      "control": "selecting A uses its matching authority",
+      "text": "root-b (主目录)root-aunique-a.txt打开文件从工作区目录树中选择文件"
+    },
+    {
+      "control": "internal explicit binding only, not a real first send",
+      "workspace": {
+        "root": "/private/var/folders/1d/6__4f4y51g90nblfptt8s9v80000gn/T/codeshell-bun-completion-vBeCip/home/.code-shell/round27-owned-file-roots/root-a",
+        "kind": "main",
+        "mainRoot": "/private/var/folders/1d/6__4f4y51g90nblfptt8s9v80000gn/T/codeshell-bun-completion-vBeCip/home/.code-shell/round27-owned-file-roots/root-a",
+        "mainRootId": "c2afdc17-5ebb-4cd0-8a0e-1cab1da3efc4",
+        "projectId": "a8cf196e-eb34-4be5-b725-3ebff424ac5f",
+        "ready": true
+      },
+      "text": "root-aroot-b (主目录)unique-b.txt打开文件从工作区目录树中选择文件",
+      "originals": [
+        "A original\n",
+        "B original\n"
+      ]
+    }
+  ],
+  "cleanups": [
+    {
+      "ownedFilesRemoved": true,
+      "errors": []
+    }
+  ]
+}
