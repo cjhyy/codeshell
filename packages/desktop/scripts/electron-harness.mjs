@@ -1,15 +1,16 @@
 /* global document, window */
-import { _electron as electron } from "playwright";
-import { mkdtemp, rm, writeFile } from "node:fs/promises";
+import { mkdtemp, realpath, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { ensureElectronKeychainContext } from "./electron-keychain-preflight.mjs";
+import { watchElectronTestProcess } from "./electron-test-watchdog.mjs";
 
 export function assert(condition, message) {
   if (!condition) throw new Error(message);
 }
 
 export async function makeIsolatedElectronHome(prefix = "codeshell-electron-e2e-") {
-  const home = await mkdtemp(join(tmpdir(), prefix));
+  const home = await realpath(await mkdtemp(join(tmpdir(), prefix)));
   return {
     home,
     codeShellHome: join(home, ".code-shell"),
@@ -18,15 +19,55 @@ export async function makeIsolatedElectronHome(prefix = "codeshell-electron-e2e-
   };
 }
 
-export async function launchCodeShellElectron({
-  appDir,
-  home,
-  userDataDir,
-  env = {},
-  mainEntry,
-  mainBootstrap,
-  timeout,
-}) {
+export async function launchCodeShellElectron(
+  {
+    appDir,
+    home,
+    userDataDir,
+    env = {},
+    mainEntry,
+    mainBootstrap,
+    timeout = 30_000,
+    runtimeTimeoutMs = 180_000,
+  },
+  {
+    launch = async (options) => (await import("playwright"))._electron.launch(options),
+    preflight = ensureElectronKeychainContext,
+    watch = watchElectronTestProcess,
+  } = {},
+) {
+  if (
+    !Number.isSafeInteger(runtimeTimeoutMs) ||
+    runtimeTimeoutMs <= 0 ||
+    runtimeTimeoutMs > 2_147_483_647
+  )
+    throw new Error("Electron test runtimeTimeoutMs must be a positive safe integer");
+  if (!Number.isSafeInteger(timeout) || timeout <= 0 || timeout > 2_147_483_647)
+    throw new Error("Electron test launch timeout must be a positive safe integer");
+  const environment = {
+    ...process.env,
+    HOME: home,
+    USERPROFILE: home,
+    CODE_SHELL_HOME: join(home, ".code-shell"),
+    CODE_SHELL_NO_DEVTOOLS: "1",
+    CODE_SHELL_DISABLE_UPDATE_CHECK: "1",
+    DISABLE_AUTOUPDATER: "1",
+    ...env,
+  };
+  // Metadata checks happen before even loading Playwright. A missing default
+  // must fail here instead of entering macOS's create/reset-Keychain dialog.
+  preflight({
+    home,
+    environment: {
+      ...environment,
+      // Confined fixtures deliberately scrub this parent-only metadata path
+      // from the Electron environment. Keep it available to verify their
+      // already-bound acceptance HOME without exposing it to the child.
+      CODESHELL_MACOS_DEFAULT_KEYCHAIN_REFERENCE:
+        environment.CODESHELL_MACOS_DEFAULT_KEYCHAIN_REFERENCE ??
+        process.env.CODESHELL_MACOS_DEFAULT_KEYCHAIN_REFERENCE,
+    },
+  });
   // Playwright's Electron loader appends password-store=basic and
   // use-mock-keychain. Undo those test defaults after its loader, before
   // Electron initializes OS cryptography; a command-line argument alone loses
@@ -55,8 +96,8 @@ appendFileSync(${JSON.stringify(join(home, "real-keyring-bootstrap.jsonl"))}, JS
 `,
     { mode: 0o600 },
   );
-  return electron.launch({
-    ...(timeout === undefined ? {} : { timeout }),
+  const application = await launch({
+    timeout,
     args: [
       "--require",
       keyringBootstrap,
@@ -65,17 +106,15 @@ appendFileSync(${JSON.stringify(join(home, "real-keyring-bootstrap.jsonl"))}, JS
       mainEntry ?? appDir,
     ],
     cwd: appDir,
-    env: {
-      ...process.env,
-      HOME: home,
-      USERPROFILE: home,
-      CODE_SHELL_HOME: join(home, ".code-shell"),
-      CODE_SHELL_NO_DEVTOOLS: "1",
-      CODE_SHELL_DISABLE_UPDATE_CHECK: "1",
-      DISABLE_AUTOUPDATER: "1",
-      ...env,
-    },
+    env: environment,
   });
+  try {
+    watch(application.process(), { timeoutMs: runtimeTimeoutMs });
+  } catch (error) {
+    await application.close().catch(() => {});
+    throw error;
+  }
+  return application;
 }
 
 export async function findCodeShellWindow(app, options = {}) {
