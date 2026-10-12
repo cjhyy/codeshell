@@ -9,7 +9,7 @@
 证据目录：`/tmp/codeshell-review-20261012`。
 持续调度：heartbeat `codeshell-10-12-11`，每小时整点与半点；截止后交付报告并停用。01:34 已将原 00:52 锚点改为整点/半点，覆盖 11:00 截止时刻。
 
-## 当前状态（新加坡 09:46）
+## 当前状态（新加坡 10:38）
 
 - 截止11:00前继续实质审查，不提前complete或停用heartbeat。07:30 get_goal仍返回blocked（主审未请求、实际工作无阻塞），工具不能设active；按用户授权继续，截止交付后才complete。
 - 初始产品84740d56与最新a66f4ef2分别冻结在本聊天两个独立工作区；只写本任务docs，不改产品、不build/clean、不触碰原工作区/其他任务。最新已冻结install、全workspace/Desktop build、typecheck:workspaces及变更文件测试通过。
@@ -178,3 +178,11 @@ R53优先级抽查已收束，保留P2的持续Update契约失效理由及审计
 09:51第二十七轮机械核验86编号连续唯一、1/52/33、双common86/251、1650个顶层本地Markdown链接/1022源码行号、0error。三个已有执行均1/29/Completed、源28f4202、guard6e1f、51source/4resolve/2AST/15API及无网络子进程/owned清理一致；55d3未执行、作者失败/重跑0。独立整合QC正在收束；修正静态摘要链接与归档SHA指向，未改原字节/fixture/产品。空白Files新预审倾向projectfallback正常，尚未收项/执行。11:00前继续，不complete/停用。
 
 09:55第二十七轮最终独立整合语义QC通过，新增执行0；86=1/52/33、双common86/251、三final各1/29/Completed及55d3从未执行、作者失败/重跑0分账无实质矛盾。静态摘要/归档SHA与拟收录历史banner小修关闭，原字节保存；产品tracked diff均空，原工作区6034df8a仍clean。本轮get_goal仍历史blocked（未请求/实际review无阻塞），TOML ACTIVE整点半点，继续11:00、不提前complete/停用。第28轮blankFiles只读反证已完成新增0/执行0，材料仅/tmp；后续将归档正常链并审查修复交接顺序，不为增加数量新建fixture。09:39origin仍a66f，下次10:25–10:35。
+
+10:04第二十八轮纯静态blankFiles正常反证和独立child合同核对已归档：新增0finding/0exec，25paths24same；App真实materialize ID后unknown不封body，Files null??primary.path走正确P/B/B。不扩大R86、不重复R65；三fsRoot注册846bytes/f237与单arrow219bytes/2820的不同hash span已独立按rawbytes复算，初稿原件保留。另只读核706份既有baseline log（141/1428+282/2397+283/2461），全Completed0finalfail0skip，709成员原字节tar归档含3metadata；build阅读副本1byte行尾空格差已保留精确rawgzip，其余5原件相同。未重跑/build/改产品，正式86=1/52/33、common86/251不变；修复交接排序正在独立静态审，11:00未到继续、不complete/停用。09:39origin仍a66f，下次10:25–10:35。
+
+10:35第二十八轮修复交接排序独立静态审已采纳，六组明确可并行/非52P2逐项验收，补R09/R01/R06/R58/R68/R77并收窄R36生产WorkerBridgeCore/原生Node范围，所有proposal不称已修或新测试。706rawtar逐member与独立73ad receipt哈希/大小/count一致，六对构建/UI独立反证明确不从文本推断缺失外层exit。机械QC1711顶层本地Markdown链接/1032源码行号、0error，86=1/52/33、双common86/251及产品tracked diff保持。最终整合只读语义QC进行中；R27检查点7c61657b已保存。09:39origin仍a66f，下次10:25–10:35；11:00未到继续，不complete/停用。
+
+10:37再次实际fetch origin/main仍a66f4ef291f304ee4df9da8095a90671d9a8f140，两个冻结产品快照不动。第二十八轮机械核验更新1715顶层本地Markdown链接/1032源码行号/0error，26个staged路径全为任务docs，cached whitespace通过；现有706/6286归档只计保存证据，不增加执行。最后整合语义QC收束中；到11:00停止新增审查并交付，当前不complete/停用。
+
+10:38第二十八轮最终独立整合语义QC通过，新增finding/执行0，无实质矛盾。JSON层706份archive manifest对独立receipt逐file/path/bytes/hash/tests一致；846/219 span、blank静态正常链与R86非null区别、handoff六组可并行/非已修验收均核真。主审已独立打开709members逐字节验证，质量审不冒称再次执行该核。原件与/tmp→持久receipt链接分开保存。当前86=1/52/33、双common86/251保持；原工作区6034df8a clean、两个产品tracked diff均空。10:35origin仍a66f；11:00未到不complete/停用，准备保存docs-only检查点。

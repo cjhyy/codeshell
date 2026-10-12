@@ -1,0 +1,78 @@
+{
+  "checkedAtSingapore": "2026-10-12T10:03:18.165142+08:00",
+  "newFindings": 0,
+  "newCommonBunFiles": 0,
+  "newCommonBunTests": 0,
+  "newBunExpects": 0,
+  "newNativeExecutions": 0,
+  "productImports": 0,
+  "fixtureExecutions": 0,
+  "countsAfter": {
+    "findings": 86,
+    "P1": 1,
+    "P2": 52,
+    "P3": 33,
+    "commonBunFiles": 86,
+    "commonBunTests": 251
+  },
+  "staticSourcePaths": 25,
+  "wholeFilesSame": 24,
+  "archive": "validation/original-blank-files-round28",
+  "sourceManifestSha256": "87d26c2839ae7176dd19e3949c0a3c8563cd82932fe03baf66675927a391a4fd",
+  "rawFiles": [
+    {
+      "file": "author-static.raw.md",
+      "sha256": "02fd90e604aff470a560023f472d8a39954f0f2d0f1c676c33bdbf94a69cc947"
+    },
+    {
+      "file": "source-manifest.json",
+      "sha256": "87d26c2839ae7176dd19e3949c0a3c8563cd82932fe03baf66675927a391a4fd"
+    },
+    {
+      "file": "independent-contract.initial.raw.md",
+      "sha256": "20df4c8afa147c15894e27e47285a13f1e39528aced9c31f12eb55e281f4aa16"
+    },
+    {
+      "file": "independent-contract.final.raw.md",
+      "sha256": "6e269c44e86e3caaea68e5f8486bfaa04069fcb11eb987fe9e878765eec23e0a"
+    },
+    {
+      "file": "hash-span-audit.md",
+      "sha256": "2f9d83f887634dd51d1824ca9c38d983df8841a73bc674d485329c54483a8255"
+    },
+    {
+      "file": "hash-span-audit.json",
+      "sha256": "6c2a9f3b18faacaed47894996552a12756ccec53f615a478868b1aa61cd8662d"
+    }
+  ],
+  "rootIndependentByteSpanChecks": [
+    {
+      "tree": "/Users/admin/.codex/worktrees/server-desktop-review-20261012/codeshell",
+      "bundleBytes": 846,
+      "bundleByteStartEndExclusive": [
+        266701,
+        267547
+      ],
+      "arrowBytes": 219,
+      "arrowByteStartEndExclusive": [
+        266734,
+        266953
+      ]
+    },
+    {
+      "tree": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell",
+      "bundleBytes": 846,
+      "bundleByteStartEndExclusive": [
+        266990,
+        267836
+      ],
+      "arrowBytes": 219,
+      "arrowByteStartEndExclusive": [
+        267023,
+        267242
+      ]
+    }
+  ],
+  "conclusion": "Healthy registered-project blank Files retains current primary ID/path via project API despite a transient unknown Core session; source proof only, no full-App dynamic experiment. R86 non-null inherited workspace remains distinct.",
+  "scope": "Read source/design/existing tests and byte hashes only; tests read are not new passes. No product changes/build/install/model/provider/worker/Electron/network/Git run."
+}

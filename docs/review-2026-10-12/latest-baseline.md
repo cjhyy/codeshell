@@ -73,3 +73,7 @@
 第二十六轮[会话续接](session-continuation-round26.md)及[云账号](cloud-account-static-round26.md)为双冻结静态来源复核，0新增finding/产品import/fixture/native，common85/250不变。主审29路径含Mainindex整体版本差异但review:status block相同；source测试未执行，不作为动态验收。
 
 第二十七轮[Files映射](file-root-round27.md)新增R86/P3，同源28f4202双冻结各guarded1文件1测试29Bunexpect/Completed，common86/251。实际Corepublish/ProjectStore/Mainauthority/hook/Files/ASTcallback/FS与正常控制成立，51source/4resolve-only非cachegraph；原件/HOME清理正常，无真实Git/Engine/model/Electron/firstsend。55d3只未执行准备，无firstfailure。09:39fetch origin仍a66f，冻结产品保持。
+
+第二十八轮仅静态核对普通blankFiles生产回退与工程交接，新增产品/fixture执行0、finding0、通用86/251不变。[早期706/6286原字节证据归档](baseline-evidence-round28.md)对应初始基线旧验证，不将其当a66f全量重跑；当前最新适用范围仍按本页已有差异与专项结果。
+
+10:35再次fetch origin/main仍a66f4ef291f304ee4df9da8095a90671d9a8f140，两个冻结产品快照及其验证适用范围未变化；本轮原工作区6034df8a保持独立、不合入本次基线。

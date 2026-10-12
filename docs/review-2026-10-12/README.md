@@ -4,7 +4,7 @@
 
 审查进行中，截止时间为新加坡时间 2026 年 10 月 12 日 11:00。初始审查基线为 `84740d56e55517b004948a0a0e07649ad6fbf998`，对应启动审查时的 `origin/main`。01:30 拉取发现主分支已更新至 `a66f4ef291f304ee4df9da8095a90671d9a8f140`（0.9.33）；已另建隔离快照复查差异，原始复现和行号仍按初始基线保存。86 个便携 Bun 复现文件共 251 测试，以及实际 Electron 凭据 4 场景，已在新快照复查成立；详见[0.9.33 差异复查](latest-baseline.md)。产品代码保持原样，报告保存在独立分支 `codex/review/server-desktop-20261012`。
 
-用户流程、正常对照与修复顺序见[流程覆盖地图](flow-coverage.md)。
+用户流程、正常对照与修复顺序见[流程覆盖地图](flow-coverage.md)。 可直接用于安排工程工作的[修复交接建议](repair-handoff.md)列出六组交付结果和应保留的验收场景。
 
 ## 当前结论
 
@@ -257,13 +257,13 @@ R76实际Core async-answer enqueue产生续接turn，所有Core帧传给实际Ho
 | 验证                            | 结果                                                                      | 证据                                                     |
 | ------------------------------- | ------------------------------------------------------------------------- | -------------------------------------------------------- |
 | 冻结依赖安装                    | 通过                                                                      | `bun install --frozen-lockfile`                          |
-| 完整工作区构建                  | 通过                                                                      | `/tmp/codeshell-review-20261012/build.log`               |
-| 工作区类型检查                  | 通过，12 个包及 Web/桌面配置                                              | `/tmp/codeshell-review-20261012/typecheck.log`           |
-| Electron 桌面完整构建           | 通过                                                                      | `/tmp/codeshell-review-20261012/desktop-build.log`       |
-| Server/Web 现有逐文件测试       | 141 文件、1428 测试、0 失败                                               | `/tmp/codeshell-review-20261012/baseline/results.json`   |
-| Electron 导航                   | 通过，含窗口宽度、抽屉、焦点、重载及快捷键                                | `/tmp/codeshell-review-20261012/navigation.log`          |
-| Electron 设置                   | 通过，3 种宽度、2 种语言、主题                                            | `/tmp/codeshell-review-20261012/settings-e2e.log`        |
-| Electron 工作区页面             | 通过，扩展、凭据、自动化及键盘操作                                        | `/tmp/codeshell-review-20261012/workspace-pages-e2e.log` |
+| 完整工作区构建                  | 通过                                                                      | [日志或收据](validation/build.log)               |
+| 工作区类型检查                  | 通过，12 个包及 Web/桌面配置                                              | [日志或收据](validation/typecheck.log)           |
+| Electron 桌面完整构建           | 通过                                                                      | [日志或收据](validation/desktop-build.log)       |
+| Server/Web 现有逐文件测试       | 141 文件、1428 测试、0 失败                                               | [日志或收据](validation/server-web-results.json)   |
+| Electron 导航                   | 通过，含窗口宽度、抽屉、焦点、重载及快捷键                                | [日志或收据](validation/navigation.log)          |
+| Electron 设置                   | 通过，3 种宽度、2 种语言、主题                                            | [日志或收据](validation/settings-e2e.log)        |
+| Electron 工作区页面             | 通过，扩展、凭据、自动化及键盘操作                                        | [日志或收据](validation/workspace-pages-e2e.log) |
 | Electron 模型设置               | 通过，含读写失败、草稿、焦点、删除与重试；0 renderer errors               | `validation/model-settings-e2e.log`                      |
 | Electron 数字人与项目配置       | 通过，含列表、搜索、编辑、团队及 3 宽度/明暗主题                          | `validation/digital-humans-e2e.log`                      |
 | Electron Panel 安装与恢复       | 通过，两个项目窗口、更新/恢复/损坏修复及文件保留                          | `validation/panel-recovery-e2e.log`                      |
@@ -307,6 +307,7 @@ R76实际Core async-answer enqueue产生续接turn，所有Core帧传给实际Ho
 | 第二十四轮旧图片历史 | 新通用1文件1测试17个Bun expect，两基线分别通过；旧状态实际Workbench SSR，现代仅hook投影 | [历史显示](legacy-history-round24.md)、[分账收据](validation/round24-legacy-history-results.json) |
 | 第二十五轮现代图片恢复 | 新通用1文件2测试32个Bun expect，两基线分别通过；实际Desktop及Web SSR，sendhook仅静态 | [附件显示](modern-desktop-image-round25.md)、[分账收据](validation/round25-modern-desktop-image-results.json) |
 | 第二十七轮Files根映射 | 新通用1文件1测试29个Bun expect，两基线分别通过；实际producer/authority/hook/FS，upstream仅静态 | [根映射](file-root-round27.md)、[分账收据](validation/round27-file-root-results.json) |
+| 第二十八轮正常反证与交接 | 纯静态新增发现/执行0；blankFiles正常回退、既有706/6286原字节归档和六组修复排序 | [空白Files](blank-files-counterreview-round28.md)、[证据归档](baseline-evidence-round28.md)、[交接](repair-handoff.md) |
 | Desktop renderer 现有逐文件测试 | 282 文件、2397 测试、0 失败                                               | `validation/desktop-renderer-results.json`               |
 | Desktop main 现有逐文件测试     | 283 文件、2461 测试、0 失败                                               | `validation/desktop-main-results.json`                   |
 | native Hub smoke                | 未通过，不计成功；先遇到过期工具 fixture，再暴露 R21                      | `/tmp/codeshell-review-20261012/hub-smoke*.log`          |
@@ -316,7 +317,7 @@ R76实际Core async-answer enqueue产生续接turn，所有Core帧传给实际Ho
 
 所有测试使用隔离应用状态和项目规定的测试入口。模型流程使用本地模拟服务，不调用真实付费模型或第三方账号。
 
-现有 Server/Web/Desktop main/renderer 测试合计 **706 个文件、6286 个测试、0 失败、0 跳过**。上述 Electron 验证与专项复现另计，不把它们混入单元测试数量。
+现有 Server/Web/Desktop main/renderer 测试合计 **706 个文件、6286 个测试、0 失败、0 跳过**。上述 Electron 验证与专项复现另计，不把它们混入单元测试数量。 [原字节归档与逐日志核对](baseline-evidence-round28.md)不增加测试执行。
 
 ## 后续检查
 
@@ -345,3 +346,7 @@ R76实际Core async-answer enqueue产生续接turn，所有Core帧传给实际Ho
 第二十六轮[会话续接静态审查](session-continuation-round26.md)新增正式0/动态执行0：summary fork首run前Review单根覆盖保留体验建议，经blank/legacy/首次run补绑合同反证不升项；Files普通fallback、history重试与Hub导出正常门禁及[云账号取消/退出](cloud-account-static-round26.md)仅读核对。未执行候选PLAN/guard，85=1/52/32与common85/250保持；源码测试不冒充动态通过。
 
 第二十七轮[Files根映射](file-root-round27.md)新增R86/F27-1/P3：合法source mainA/currentprimaryB的summary target首send前，actualFiles把B.id配A.path，Main正确拒读；选择A、directB、bound source、同primarysummary及原件正常，内部补绑/remount仅normalcontrol。两冻结基线各guarded新1文件1测试29Bunexpect/Completed，作者first单列，无失败/rerun，55d3从未执行。正式86=1/52/33、common86/251、native增量0。真实trust/Sidebar/summaryRPC/App/blank/首send静态；[标题双来源](sidebar-title-observation-round27.md)保体验建议，正式0/执行0。
+
+第二十八轮[空白会话Files反证](blank-files-counterreview-round28.md)确认静态正常回退，新增发现/执行0：真实UI ID尚未落盘时panel workspace为null，但完整project独立传给Files，保留当前primary.id/path并走project API；不将中间unknown状态误报为不可读。正式86=1/52/33、通用86/251不变。[早期基线日志归档](baseline-evidence-round28.md)只保存706/6286已有raw收据，没有重跑或增加测试。
+
+第二十八轮[最终独立整合语义核验](quality-round28.md)通过，新增发现/执行0。blank正常回退、原字节归档分账、六组修复建议和当前86/251口径一致；10:35 origin/main仍a66f，两冻结产品快照与原工作区保持。

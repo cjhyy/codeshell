@@ -1,0 +1,115 @@
+{
+  "scope": "standard-library source byte reads and SHA-256 only; zero product imports, fixture/test execution, Git, models, network, build/install",
+  "preservedOriginalReportSHA256": "20df4c8afa147c15894e27e47285a13f1e39528aced9c31f12eb55e281f4aa16",
+  "algorithm": "Path.read_bytes; byte index exact ASCII start/end delimiters; SHA-256 of original byte slice; no newline/indent/trimming/encoding normalization",
+  "originalArrowProvenance": "R27 fixture mainCallback uses TypeScript AST node.arguments[1].getText(sourceFile) and createHash(sha256).update(block). Here that exact 219-byte text is independently rederived by byte delimiters without importing TypeScript or product code.",
+  "receipts": [
+    {
+      "tree": "primary",
+      "absoluteSourcePath": "/Users/admin/.codex/worktrees/server-desktop-review-20261012/codeshell/packages/desktop/src/main/index.ts",
+      "sourceSHA256": "cf5ba2f931c816cb44b598d54ef173793e40f554335de75d103f7b0ee5a2c26a",
+      "spans": [
+        {
+          "label": "three_fsRoot_ipc_registrations_with_final_LF",
+          "startByteOffset0": 266701,
+          "endByteOffset0Exclusive": 267547,
+          "start": {
+            "line": 6486,
+            "column": 1
+          },
+          "endExclusive": {
+            "line": 6500,
+            "column": 1
+          },
+          "lastIncludedByte": {
+            "line": 6499,
+            "column": 4
+          },
+          "byteLength": 846,
+          "LFCount": 14,
+          "hasFinalLF": true,
+          "sha256": "f237e505b949a33c5257a3052513eafc0e353cfdf5ff062af74f4d81ac545510",
+          "UTF8ExactText": "ipcMain.handle(\"fsRoot:readDir\", async (_e, projectId: string, rootId: string, dir?: string) => {\n  const root = await requireRendererProjectRoot(projectId, rootId);\n  return readDirectory(root.path, typeof dir === \"string\" && dir ? dir : root.path);\n});\nipcMain.handle(\"fsRoot:readFile\", async (_e, projectId: string, rootId: string, path: string) => {\n  const root = await requireRendererProjectRoot(projectId, rootId);\n  if (typeof path !== \"string\" || !path) throw new Error(\"fsRoot:readFile requires path\");\n  return fsReadFile(root.path, path);\n});\nipcMain.handle(\"fsRoot:exists\", async (_e, projectId: string, rootId: string, path: string) => {\n  const root = await requireRendererProjectRoot(projectId, rootId).catch(() => null);\n  if (!root || typeof path !== \"string\" || !path) return false;\n  return fsFileExists(root.path, path);\n});\n"
+        },
+        {
+          "label": "fsRoot_readDir_arrow_expression_without_final_LF",
+          "startByteOffset0": 266734,
+          "endByteOffset0Exclusive": 266953,
+          "start": {
+            "line": 6486,
+            "column": 34
+          },
+          "endExclusive": {
+            "line": 6489,
+            "column": 2
+          },
+          "lastIncludedByte": {
+            "line": 6489,
+            "column": 1
+          },
+          "byteLength": 219,
+          "LFCount": 3,
+          "hasFinalLF": false,
+          "sha256": "2820bebc653dec326e7a816ff53ad14969983f1f94c1fb0e4178db564d300f9a",
+          "UTF8ExactText": "async (_e, projectId: string, rootId: string, dir?: string) => {\n  const root = await requireRendererProjectRoot(projectId, rootId);\n  return readDirectory(root.path, typeof dir === \"string\" && dir ? dir : root.path);\n}"
+        }
+      ],
+      "sourceCRLFCount": 0
+    },
+    {
+      "tree": "latest",
+      "absoluteSourcePath": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/desktop/src/main/index.ts",
+      "sourceSHA256": "426bfe5ccc8387db82f5bbe47ce1b83681995e7192f37bb03775f4eca37d0d80",
+      "spans": [
+        {
+          "label": "three_fsRoot_ipc_registrations_with_final_LF",
+          "startByteOffset0": 266990,
+          "endByteOffset0Exclusive": 267836,
+          "start": {
+            "line": 6492,
+            "column": 1
+          },
+          "endExclusive": {
+            "line": 6506,
+            "column": 1
+          },
+          "lastIncludedByte": {
+            "line": 6505,
+            "column": 4
+          },
+          "byteLength": 846,
+          "LFCount": 14,
+          "hasFinalLF": true,
+          "sha256": "f237e505b949a33c5257a3052513eafc0e353cfdf5ff062af74f4d81ac545510",
+          "UTF8ExactText": "ipcMain.handle(\"fsRoot:readDir\", async (_e, projectId: string, rootId: string, dir?: string) => {\n  const root = await requireRendererProjectRoot(projectId, rootId);\n  return readDirectory(root.path, typeof dir === \"string\" && dir ? dir : root.path);\n});\nipcMain.handle(\"fsRoot:readFile\", async (_e, projectId: string, rootId: string, path: string) => {\n  const root = await requireRendererProjectRoot(projectId, rootId);\n  if (typeof path !== \"string\" || !path) throw new Error(\"fsRoot:readFile requires path\");\n  return fsReadFile(root.path, path);\n});\nipcMain.handle(\"fsRoot:exists\", async (_e, projectId: string, rootId: string, path: string) => {\n  const root = await requireRendererProjectRoot(projectId, rootId).catch(() => null);\n  if (!root || typeof path !== \"string\" || !path) return false;\n  return fsFileExists(root.path, path);\n});\n"
+        },
+        {
+          "label": "fsRoot_readDir_arrow_expression_without_final_LF",
+          "startByteOffset0": 267023,
+          "endByteOffset0Exclusive": 267242,
+          "start": {
+            "line": 6492,
+            "column": 34
+          },
+          "endExclusive": {
+            "line": 6495,
+            "column": 2
+          },
+          "lastIncludedByte": {
+            "line": 6495,
+            "column": 1
+          },
+          "byteLength": 219,
+          "LFCount": 3,
+          "hasFinalLF": false,
+          "sha256": "2820bebc653dec326e7a816ff53ad14969983f1f94c1fb0e4178db564d300f9a",
+          "UTF8ExactText": "async (_e, projectId: string, rootId: string, dir?: string) => {\n  const root = await requireRendererProjectRoot(projectId, rootId);\n  return readDirectory(root.path, typeof dir === \"string\" && dir ? dir : root.path);\n}"
+        }
+      ],
+      "sourceCRLFCount": 0
+    }
+  ],
+  "childOriginalBundleAlgorithm": "t = Path(index).read_text(); start = t.index('ipcMain.handle(\"fsRoot:readDir\"'); end = t.index('ipcMain.handle(\"fsSession:readDir\"', start); sha256(t[start:end].encode()).hexdigest()",
+  "childCanonicalBundleLabel": "main-index.fsRoot-readDir-readFile-exists.ipc-registration-block.utf8-lf",
+  "childOriginalAlgorithmEquivalence": "Independently confirmed read_text slice re-encoded as UTF-8 equals the raw-byte slice in each frozen source. Both whole source files have zero CRLF sequences; no newline conversion changes this bundle."
+}

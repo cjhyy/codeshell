@@ -1,6 +1,6 @@
 # 用户流程覆盖与修复顺序
 
-这是截至第二十七轮的流程地图；正式编号、级别和触发条件以 [主报告](README.md) 与各附录为准。正常路径通过不代表相邻失败路径已正确处理。缺陷表征测试通过表示复现成立，没有实施产品修复。
+这是截至第二十八轮的流程地图；正式编号、级别和触发条件以 [主报告](README.md) 与各附录为准。正常路径通过不代表相邻失败路径已正确处理。缺陷表征测试通过表示复现成立，没有实施产品修复。
 
 | 用户要完成的事 | 已检查的正常路径及证据层级 | 仍有的问题与可见影响 |
 | --- | --- | --- |
@@ -64,3 +64,5 @@
 第二十六轮[summary/full fork、retryHistory、Hub export](session-continuation-round26.md)及[Cloud账号](cloud-account-static-round26.md)纯静态新增正式0/执行0。summary首send前Review范围仅设计/体验建议，blank/legacy和明确lazy补绑规则阻止升级；Files source main≠currentprimary的条件另待核。当前正式85=1/52/32、common85/250不变。
 
 第二十七轮R86/F27-1/P3单root映射两冻结各guarded1/1/29，formal86=1/52/33、common86/251，native0。UI/trust/完整App/首send静态，内部binding控制不称用户恢复。[侧栏与历史命名](sidebar-title-observation-round27.md)只有设计观察0finding/0exec，全局titlepicker新名正常，不宣称全搜索失效。
+
+第二十八轮[新空白会话Files](blank-files-counterreview-round28.md)正常链为纯静态反证：App materialize UI ID→Main未知→panelready/null→完整project→Files主根一致tuple/projectAPI。未运行完整App，也不依赖无ID bare-props测试；新增finding/执行0，86/251保持。[早期706/6286日志归档](baseline-evidence-round28.md)同样不算新执行。
