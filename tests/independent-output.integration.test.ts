@@ -45,6 +45,7 @@ const { recoverDesktopOutputJournal } =
 const { MobileOutputRecovery } =
   await import("../packages/desktop/src/main/mobile-remote/output-recovery.js");
 const { recoverMobileOutput } = await import("../packages/web/src/lib/mobileOutputRecovery.js");
+const { applyOutputJournalPage } = await import("../packages/web/src/lib/outputJournalRecovery.js");
 const { HubRunReplay } = await import("../packages/server/src/hub/run-replay.js");
 const { chatFromOutputJournal } = await import("../packages/web/app/chat.js");
 const { NotificationQueue } =
@@ -103,10 +104,11 @@ function fixture() {
     send(message: any) {
       if (message.method === "agent/streamEvent") {
         const event = message.params.event;
+        const target = message.params.sessionId;
         if (event.outputCursor)
-          expect(readOutputJournal(root, id).through).toBe(event.outputCursor);
-        snapshots.append(id, event);
-        hub.append(id, event);
+          expect(readOutputJournal(root, target).through).toBe(event.outputCursor);
+        snapshots.append(target, event);
+        hub.append(target, event);
       }
       sent.push(message);
     },
@@ -361,4 +363,130 @@ test("pre-state user echoes stay pending and explicit persistence failures are n
   }
   expect(readOutputJournal(f.root, f.id).status).toBe("unavailable");
   expect(store.read(f.id).inputIds).toEqual(["pending"]);
+});
+
+test("observing a genuine Run cursor binds the first later independent event to the original Session", () => {
+  const f = fixture();
+  f.manager.startSessionRun(f.session.state, "run");
+  const writer = new SessionOutputJournal(
+    f.root,
+    f.id,
+    "run",
+    f.session.transcript.getEvents()[0].id,
+  );
+  const native = {
+    type: "text_delta",
+    text: "native",
+    outputCursor: writer.append({ type: "text_delta", text: "native" }),
+  };
+  const publisher = new SessionOutputPublisher(() => f.root, "protocol");
+  expect(publisher.project(f.id, native)).toBe(native);
+  rmSync(join(f.root, f.id), { recursive: true, force: true });
+  f.manager.create(f.root, "fixture", "fixture", f.id);
+  expect(() => publisher.project(f.id, { type: "error", error: "late old producer" })).toThrow(
+    "replaced",
+  );
+  expect(readOutputJournal(f.root, f.id).status).toBe("unavailable");
+});
+
+test("a no-run background result larger than the Main RAM budget recovers exact UTF-8 after Host restart", async () => {
+  const f = fixture();
+  const finalText = "后台🙂" + "x".repeat(8 * 1024 * 1024 + 1);
+  const queue = new NotificationQueue();
+  queue.enqueue(
+    {
+      agentId: "large-background",
+      description: "large durable result",
+      finalText,
+      status: "completed",
+      enqueuedAt: 555,
+    },
+    f.id,
+  );
+  const notice = f.sent.find(
+    (message) => message.params?.event?.type === "background_agent_completed",
+  )?.params.event;
+  expect(notice.outputCursor).toBeDefined();
+  expect(f.snapshots().get(f.id).events).toHaveLength(0);
+  expect(
+    readOutputJournal(f.root, f.id).frames.every(
+      (frame) => frame.runId === undefined && !!frame.producer,
+    ),
+  ).toBe(true);
+  f.restart();
+  // The journal preserves the whole result; UI reducers deliberately show a
+  // bounded completion preview. Exercise fragmentation independently of that
+  // presentation policy before comparing the existing consumers' previews.
+  const recovery: import("../packages/web/src/lib/outputJournalRecovery.js").OutputJournalRecovery =
+    {
+      incomplete: false,
+    };
+  const restored: any[] = [];
+  for (let pageCount = 0; pageCount < 256; pageCount++) {
+    const page = readOutputJournal(f.root, f.id, {
+      after: recovery.cursor,
+      through: recovery.through,
+      maxFrames: 2,
+    });
+    const complete = applyOutputJournalPage(recovery, page, (event) => restored.push(event));
+    expect(recovery.incomplete).toBe(false);
+    if (complete) break;
+  }
+  expect(recovery.cursor).toBe(notice.outputCursor);
+  expect(restored).toHaveLength(1);
+  expect(restored[0].finalText).toBe(finalText);
+  expect(restored[0].outputCursor).toBe(notice.outputCursor);
+  const desktop = await f.desktop();
+  const d = desktop?.state.messages.find(
+    (item) => item.kind === "system" && item.text.includes("后台🙂"),
+  );
+  expect(d?.kind === "system" && d.text.includes(finalText.slice(0, 160))).toBe(true);
+  const hub = await f.hubRecover();
+  const h = hub?.chat.items.find((item) => item.kind === "system" && item.text.includes("后台🙂"));
+  expect(h?.kind === "system" && h.text.includes(finalText.slice(0, 160))).toBe(true);
+  const mobile = await f.mobileRecover();
+  const m = mobile?.chat.items.find(
+    (item) => item.kind === "system" && item.text.includes("后台🙂"),
+  );
+  expect(m?.kind === "system" && m.text.includes(finalText.slice(0, 160))).toBe(true);
+  expect(f.manager.readSessionState(f.id)?.runId).toBeUndefined();
+});
+
+test("one actual background notification fans out to multiple native connections with one durable publication", () => {
+  const first = fixture();
+  const second = fixture();
+  const queue = new NotificationQueue();
+  queue.enqueue(
+    {
+      agentId: "shared-background",
+      description: "one completion",
+      status: "completed",
+      enqueuedAt: 777,
+    },
+    first.id,
+  );
+  const events = [first, second].map(
+    (f) =>
+      f.sent.find(
+        (message) =>
+          message.params?.sessionId === first.id &&
+          message.params?.event?.type === "background_agent_completed",
+      )?.params.event,
+  );
+  expect(events[0].outputCursor).toBeDefined();
+  expect(events[1].outputCursor).toBe(events[0].outputCursor);
+  const page = readOutputJournal(first.root, first.id);
+  expect(page.frames).toHaveLength(1);
+  expect(page.through).toBe(events[0].outputCursor);
+
+  const source = {};
+  const original = new SessionOutputPublisher(() => first.root, "protocol");
+  original.project(first.id, { type: "error", error: "original" }, source);
+  rmSync(join(first.root, first.id), { recursive: true, force: true });
+  first.manager.create(first.root, "fixture", "fixture", first.id);
+  const lateConnection = new SessionOutputPublisher(() => first.root, "protocol");
+  expect(() => lateConnection.project(first.id, { type: "error", error: "late" }, source)).toThrow(
+    "replaced",
+  );
+  expect(readOutputJournal(first.root, first.id).status).toBe("unavailable");
 });

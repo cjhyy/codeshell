@@ -211,7 +211,12 @@ function sessionLocation(root: string, sessionId: string) {
   )
     throw new JournalError("incomplete", "Invalid output journal identity pin");
   if (state.ephemeral || sessionId.startsWith("qchat-"))
-    throw new JournalError("unavailable", "Ephemeral Session output is process-local");
+    throw Object.assign(
+      new JournalError("unavailable", "Ephemeral Session output is process-local"),
+      {
+        code: "CODESHELL_EPHEMERAL_OUTPUT",
+      },
+    );
   return {
     root: canonicalRoot,
     directory,

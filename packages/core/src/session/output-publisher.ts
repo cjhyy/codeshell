@@ -4,6 +4,7 @@ import type { StreamEvent } from "../types.js";
 import {
   SessionOutputJournal,
   outputJournalCutover,
+  readOutputJournal,
   type OutputJournalProducer,
 } from "./output-journal.js";
 
@@ -35,6 +36,13 @@ const visible = new Set([
   "assistant_text",
   "session_title",
 ]);
+// One committed source notification can fan out through several AgentServers.
+// Scope the memo to that actual source object's lifetime and Session identity;
+// it is neither a transport sequence nor a durable source-id deduplication log.
+const publications = new WeakMap<
+  object,
+  Map<string, { incarnation: string; event: StreamEvent }>
+>();
 /** Preliminary user echoes remain pending until their canonical run anchor is committed. */
 export function needsIndependentOutput(event: unknown): event is StreamEvent {
   const value = event as StreamEvent | null;
@@ -62,14 +70,20 @@ export class SessionOutputPublisher {
     this.producer = { kind, id: randomUUID() };
   }
 
-  project(sessionId: string, raw: unknown): unknown {
-    if (!needsIndependentOutput(raw)) return raw;
+  project(sessionId: string, raw: unknown, source?: object): unknown {
+    const existingCursor = (raw as StreamEvent | null)?.outputCursor;
+    if (!needsIndependentOutput(raw) && typeof existingCursor !== "string") return raw;
     const root = this.root(sessionId);
     let at: ReturnType<typeof outputJournalCutover>;
     try {
       at = outputJournalCutover(root, sessionId);
     } catch (cause) {
-      if ((cause as NodeJS.ErrnoException).code === "ENOENT" && !this.bindings.has(sessionId))
+      if (
+        ["ENOENT", "CODESHELL_EPHEMERAL_OUTPUT"].includes(
+          (cause as NodeJS.ErrnoException).code ?? "",
+        ) &&
+        !this.bindings.has(sessionId)
+      )
         return raw;
       throw cause;
     }
@@ -79,6 +93,24 @@ export class SessionOutputPublisher {
       throw new Error("Output publisher Session was replaced");
     // Refuse admission rather than dropping identity evidence at capacity.
     if (!bound && this.bindings.size >= 8192) throw new Error("Output publisher binding capacity");
+    const sourceKey = `${root}:${sessionId}`;
+    const published = source && publications.get(source)?.get(sourceKey);
+    if (published) {
+      if (published.incarnation !== incarnation)
+        throw new Error("Output source notification Session was replaced");
+      this.bindings.set(sessionId, incarnation);
+      return published.event;
+    }
+    if (typeof existingCursor === "string") {
+      if (
+        !bound &&
+        readOutputJournal(root, sessionId, { after: existingCursor, through: existingCursor })
+          .status !== "ok"
+      )
+        throw new Error("Output publisher cannot bind an unverified native cursor");
+      this.bindings.set(sessionId, incarnation);
+      return raw;
+    }
     this.bindings.set(sessionId, incarnation);
     let writer = this.writers.get(sessionId);
     if (!writer) {
@@ -86,6 +118,12 @@ export class SessionOutputPublisher {
       this.writers.set(sessionId, writer);
       if (this.writers.size > 16) this.writers.delete(this.writers.keys().next().value!);
     }
-    return { ...raw, outputCursor: writer.append(raw) };
+    const event = { ...(raw as StreamEvent), outputCursor: writer.append(raw as StreamEvent) };
+    if (source) {
+      let results = publications.get(source);
+      if (!results) publications.set(source, (results = new Map()));
+      results.set(sourceKey, { incarnation, event });
+    }
+    return event;
   }
 }

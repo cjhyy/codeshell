@@ -324,7 +324,7 @@ async function workerGuard(child, env) {
   }
   throw new Error("Output smoke stopped before RPC: missing actual worker isolation receipt");
 }
-async function stdioQuery(root, storage, cwd, origin, sessionId) {
+async function stdioQuery(root, storage, cwd, origin, sessionId, editGoal = false) {
   const environmentRoot = mkdtempSync(join(root, "worker-"));
   const clean = createBunTestEnvironment(process.env, environmentRoot);
   const env = {
@@ -381,18 +381,34 @@ async function stdioQuery(root, storage, cwd, origin, sessionId) {
       else item.resolve(message.result);
     }
   });
-  const request = (params) =>
+  const request = (params, method = "agent/query") =>
     new Promise((resolveRequest, reject) => {
       const id = ++serial;
       const timer = setTimeout(() => reject(new Error("Output RPC timed out: " + stderr)), 60_000);
       pending.set(id, { resolve: resolveRequest, reject, timer });
-      child.stdin.write(
-        JSON.stringify({ jsonrpc: "2.0", id, method: "agent/query", params }) + "\n",
-      );
+      child.stdin.write(JSON.stringify({ jsonrpc: "2.0", id, method, params }) + "\n");
     });
   try {
     await workerGuard(child, env);
+    if (editGoal) {
+      const changed = await request(
+        {
+          sessionId,
+          objective: "durable independent Goal",
+          paused: true,
+          expectedGoalId: "independent-goal",
+          expectedRevision: 1,
+        },
+        "agent/goalUpdate",
+      );
+      assert.equal(changed.updated, true);
+    }
     const page = (await request({ type: "output_journal", sessionId, maxFrames: 1 })).data;
+    if (sessionId === "independent-output") {
+      assert.equal(page.frames[0].runId, undefined);
+      assert.equal(page.frames[0].producer.kind, "protocol");
+      assert.equal(page.frames[0].event.type, "goal_updated");
+    }
     assert.equal(page.status, "ok");
     assert.equal(page.frames.length, 1);
     return { through: page.through, pid: child.pid, homeHash: hash(env.HOME) };
@@ -455,6 +471,24 @@ async function hubChild(args) {
     const socket = await fixtureWebSocket(origin, cookie);
     const query = socket.query;
     try {
+      const independentDetail = (
+        await query({
+          type: "session_detail",
+          sessionId: "independent-output",
+          outputRecovery: true,
+        })
+      ).data;
+      const independentRecovered = await chatFromOutputJournal(
+        independentDetail,
+        async (options) =>
+          (await query({ type: "output_journal", sessionId: "independent-output", ...options }))
+            .data,
+        [],
+        () => undefined,
+        async () =>
+          (await query({ type: "output_coverage", sessionId: "independent-output" })).data,
+      );
+      assert.ok(independentRecovered.outputCursor);
       const detail = (
         await query({ type: "session_detail", sessionId: "long-output", outputRecovery: true })
       ).data;
@@ -493,6 +527,7 @@ async function hubChild(args) {
     console.log(
       JSON.stringify({
         hubRecovery: true,
+        authenticatedHubNoRunRecovery: true,
         hubRestartCursorStable: true,
         hubTransportEpochChanged: true,
         recoveredBytes: after.bytes,
@@ -678,6 +713,33 @@ if (process.argv[2] === "--append-worker") {
     );
     assert.equal(before.outputCursor, after.outputCursor);
     assert.notEqual(before.snapshot.epoch, after.snapshot.epoch);
+    const independentManager = new core.SessionManager(core.sessionsRoot());
+    const independent = independentManager.create(cwd, "fixture", "fixture", "independent-output");
+    assert.equal(
+      independentManager.saveActiveGoal(independent.state, {
+        objective: "initial independent Goal",
+        goalId: "independent-goal",
+        revision: 1,
+      }),
+      true,
+    );
+    const noRunOne = await stdioQuery(root, storage, cwd, origin, "independent-output", true);
+    const noRunTwo = await stdioQuery(root, storage, cwd, origin, "independent-output");
+    assert.equal(noRunOne.through, noRunTwo.through);
+    assert.equal(independentManager.readSessionState("independent-output").runId, undefined);
+    const noRunHandlers = new Map();
+    registerSessionTranscriptIpc({ handle: (name, listener) => noRunHandlers.set(name, listener) });
+    const noRunSnapshots = new SessionSnapshotStore({
+      coverage: new journalCore.SessionOutputCoverageStore(core.sessionsRoot),
+    });
+    const noRunRecovered = await recoverDesktopOutputJournal({
+      read: (options) =>
+        noRunHandlers.get("sessions:outputJournal")({}, "independent-output", options),
+      snapshot: async () => noRunSnapshots.get("independent-output"),
+      canContinue: () => true,
+      latestObservedCursor: () => undefined,
+    });
+    assert.equal(noRunRecovered.outputCursor, noRunOne.through);
     const workerOne = await stdioQuery(root, storage, cwd, origin, "long-output");
     const workerTwo = await stdioQuery(root, storage, cwd, origin, "long-output");
     assert.equal(workerOne.through, workerTwo.through);
@@ -745,6 +807,7 @@ if (process.argv[2] === "--append-worker") {
         liveFrames: frames,
         outputBytes: Buffer.byteLength(expected),
         recoveredHash: expectedHash,
+        compiledNoRunStdioAndMainRecovery: true,
         desktopRecovery: true,
         desktopRestartCursorStable: true,
         desktopTransportEpochChanged: true,

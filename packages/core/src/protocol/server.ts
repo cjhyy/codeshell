@@ -35,7 +35,6 @@ import {
   ErrorCodes,
   createResponse,
   createErrorResponse,
-  createNotification,
   isRequest,
 } from "./types.js";
 import type { Engine, EngineConfig, EngineResult } from "../engine/engine.js";
@@ -44,7 +43,11 @@ import { ISOLATED_TASK_BEHAVIOR_MODE } from "../engine/run-types.js";
 import type { ValidatedSettings } from "../settings/schema.js";
 import { isProtectedSettingKey, SettingsManager } from "../settings/manager.js";
 import { readOutputJournal } from "../session/output-journal.js";
-import { SessionOutputPublisher } from "../session/output-publisher.js";
+import {
+  SessionOutputPublisher,
+  publishProtocolNotification,
+  toCompactStreamStrategy,
+} from "./server-output.js";
 import { invalidateSkillCache } from "../skills/scanner.js";
 import type { ApprovalRequest, ApprovalResult, PermissionMode, StreamEvent } from "../types.js";
 import type {
@@ -134,8 +137,6 @@ function cancelRunStarts(manager: ChatSessionManager, id: string): boolean {
   for (const controller of [...starts]) controller.abort();
   return true;
 }
-
-type ContextCompactStreamEvent = Extract<StreamEvent, { type: "context_compact" }>;
 
 function isValidRunAttachment(value: unknown): value is InputAttachmentMeta {
   if (!value || typeof value !== "object") return false;
@@ -297,25 +298,6 @@ function goalExtensionInputError(params: Record<string, unknown>): string | null
     }
   }
   return supplied ? null : "at least one goal extension is required";
-}
-
-const COMPACT_STREAM_STRATEGIES = new Set<ContextCompactStreamEvent["strategy"]>([
-  "micro",
-  "summary",
-  "window",
-  "snip",
-  "emergency",
-  "compacted",
-  // Range archival (archive_range query) emits its boundary through this map;
-  // without "range" here it would be silently downgraded to "compacted".
-  "range",
-  "notes",
-]);
-
-function toCompactStreamStrategy(strategy: string): ContextCompactStreamEvent["strategy"] {
-  return COMPACT_STREAM_STRATEGIES.has(strategy as ContextCompactStreamEvent["strategy"])
-    ? (strategy as ContextCompactStreamEvent["strategy"])
-    : "compacted";
 }
 
 const INTERNAL_PENDING_TOOLS = new Set([
@@ -870,7 +852,7 @@ export class AgentServer {
       const sessionId = envelope.to.sessionId;
       try {
         const event = notificationEnvelopeToLegacyStreamEvent(envelope);
-        if (event) this.notify(Methods.StreamEvent, { sessionId, event });
+        if (event) this.notify(Methods.StreamEvent, { sessionId, event }, envelope);
       } finally {
         // Waking the model is the durable-consumption path; forwarding the
         // legacy UI event is only an observation path. A renderer transport
@@ -4833,18 +4815,8 @@ export class AgentServer {
     });
   }
 
-  private notify(method: string, params: Record<string, unknown>): void {
-    if (method === Methods.StreamEvent && typeof params.sessionId === "string") {
-      try {
-        params = { ...params, event: this.outputPublisher.project(params.sessionId, params.event) };
-      } catch {
-        params = {
-          ...params,
-          event: { ...(params.event as object), outputRecovery: "incomplete" },
-        };
-      }
-    }
-    this.transport.send(createNotification(method, params));
+  private notify(method: string, params: Record<string, unknown>, source?: object): void {
+    publishProtocolNotification(this.outputPublisher, this.transport, method, params, source);
   }
 
   /**
