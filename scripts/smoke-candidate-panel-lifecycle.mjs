@@ -94,6 +94,7 @@ async function controlledUpdate(corePath, original, marker) {
 }
 
 export async function verifyCandidatePanelLifecycle({
+  browserGuard,
   docker,
   json,
   request,
@@ -155,7 +156,16 @@ export async function verifyCandidatePanelLifecycle({
     return response.text();
   };
   const select = async (project, id, digest) => {
-    await selectCloudPanelVersion({ serverUrl, password, project, id, digest, json, evidenceDir });
+    await selectCloudPanelVersion({
+      browserGuard,
+      serverUrl,
+      password,
+      project,
+      id,
+      digest,
+      json,
+      evidenceDir,
+    });
     assert.equal((await panel(project, id)).packageDigest, digest);
   };
   const snapshots = new Map();

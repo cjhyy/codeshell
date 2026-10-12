@@ -1,6 +1,7 @@
 // Real cloud workbench and proxy: retained package selection must be reviewable
 // without changing the project until the owner explicitly confirms.
 import assert from "node:assert/strict";
+import { assertDockerBrowserGuard } from "./docker-candidate-browser-guard.mjs";
 import { mkdir, writeFile } from "node:fs/promises";
 import { createRequire } from "node:module";
 import { join } from "node:path";
@@ -10,6 +11,7 @@ const { chromium } = createRequire(new URL("../packages/desktop/package.json", i
 );
 
 export async function selectCloudPanelVersion({
+  browserGuard,
   serverUrl,
   password,
   project,
@@ -18,15 +20,19 @@ export async function selectCloudPanelVersion({
   json,
   evidenceDir,
 }) {
+  assertDockerBrowserGuard(browserGuard);
   await mkdir(evidenceDir, { recursive: true });
   const browser = await chromium.launch({ channel: "chromium", chromiumSandbox: true });
-  const context = await browser.newContext({ viewport: { width: 1440, height: 1000 } });
-  const page = await context.newPage();
-  page.setDefaultTimeout(20_000);
+  let page;
   const errors = [];
-  page.on("pageerror", (error) => errors.push(error.message));
   const snapshot = () => json(`/p/${project}/api/v1/panels`);
   try {
+    const context = await browserGuard.createContext(browser, {
+      viewport: { width: 1440, height: 1000 },
+    });
+    page = await context.newPage();
+    page.setDefaultTimeout(20_000);
+    page.on("pageerror", (error) => errors.push(error.message));
     const before = await snapshot();
     const beforePanel = before.panels.find((item) => item.id === id);
     assert.ok(beforePanel?.bound);
@@ -72,17 +78,17 @@ export async function selectCloudPanelVersion({
     assert.deepEqual(errors, [], "Cloud package management raised browser errors");
   } catch (error) {
     await page
-      .screenshot({
+      ?.screenshot({
         path: join(evidenceDir, `cloud-panel-version-error-${id}.png`),
         fullPage: true,
       })
       .catch(() => {});
     await writeFile(
       join(evidenceDir, `cloud-panel-version-error-${id}.txt`),
-      await page
-        .locator("body")
+      (await page
+        ?.locator("body")
         .innerText()
-        .catch(() => "Page unavailable"),
+        .catch(() => "Page unavailable")) ?? "Page unavailable",
     ).catch(() => {});
     throw error;
   } finally {
