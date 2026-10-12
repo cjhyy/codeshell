@@ -61,9 +61,12 @@ const { translate } = await import("../i18n/translate");
 const t = (key: any) => translate("zh", key);
 mock.module("../ui/ToastProvider", () => ({ useToast: () => () => {} }));
 const presentation = ({ children }: { children: React.ReactNode }) => <div>{children}</div>;
+let closeDialog: (open: boolean) => void = () => assert.fail("No active dialog");
 mock.module("@/components/ui/dialog", () => ({
-  Dialog: ({ open, children }: { open: boolean; children: React.ReactNode }) =>
-    open ? <div role="dialog">{children}</div> : null,
+  Dialog: ({ open, onOpenChange, children }: any) => {
+    closeDialog = onOpenChange;
+    return open ? <div role="dialog">{children}</div> : null;
+  },
   DialogContent: presentation,
   DialogHeader: presentation,
   DialogTitle: presentation,
@@ -143,6 +146,7 @@ window.codeshell = {
     assert.equal(request.accountId, alice.account?.id);
     assert.equal(request.cloudOrigin, origin);
     calls.push(structuredClone(request));
+    if (scenario === "dialog-busy-before-effect") closeDialog(false);
     if (fail === request.action) throw new Error(`fixture ${request.action} ACK unknown`);
     if (
       (scenario === "same-account-late-list" && calls.length === 1) ||
@@ -237,7 +241,12 @@ async function emit(status: CloudAccountStatus) {
     for (const listener of [...listeners]) listener(status);
   });
 }
-const chooser = ["anonymous-chooser", "explicit-workflow", "local-chooser"].includes(scenario);
+const chooser = [
+  "anonymous-chooser",
+  "explicit-workflow",
+  "local-chooser",
+  "dialog-busy-before-effect",
+].includes(scenario);
 function Chooser() {
   const [open, dialog] = useNewProjectDialog(async () => {
     localCreates++;
@@ -286,19 +295,33 @@ try {
       } else {
         await change(elements("INPUT")[0], origin);
         await submit(0);
-        await change(elements("INPUT")[1], "Created from chooser");
-        await submit(1);
-        await click(t("cloudManager.start"), 1);
-        await click(t("cloudManager.stop"), 1);
-        await click(t("cloudManager.start"), 1);
-        await click(t("sidebar.openCloud"), 1);
-        assert.deepEqual(
-          calls.map((request) => request.action),
-          ["list", "create", "start", "stop", "start", "open"],
-        );
-        assert.equal(localCreates, 0);
-        assert.equal(button(t("sidebar.cloud")), undefined, "Opened Cloud closes the chooser");
-        assert.equal(storage.get("codeshell.cloud-workbench.v1"), `${origin}/`);
+        if (scenario === "dialog-busy-before-effect") {
+          assert.ok(
+            button(t("cloudManager.reload")),
+            "Request must fence dialog close synchronously",
+          );
+          assert.ok(contents().includes(project.name));
+          await update(() => closeDialog(false));
+          assert.equal(
+            button(t("cloudManager.reload")),
+            undefined,
+            "Settled request releases close",
+          );
+        } else {
+          await change(elements("INPUT")[1], "Created from chooser");
+          await submit(1);
+          await click(t("cloudManager.start"), 1);
+          await click(t("cloudManager.stop"), 1);
+          await click(t("cloudManager.start"), 1);
+          await click(t("sidebar.openCloud"), 1);
+          assert.deepEqual(
+            calls.map((request) => request.action),
+            ["list", "create", "start", "stop", "start", "open"],
+          );
+          assert.equal(localCreates, 0);
+          assert.equal(button(t("sidebar.cloud")), undefined, "Opened Cloud closes the chooser");
+          assert.equal(storage.get("codeshell.cloud-workbench.v1"), `${origin}/`);
+        }
       }
     }
   } else if (scenario === "late-status-after-event") {
@@ -310,12 +333,31 @@ try {
     assert.equal(calls.length, 1);
   } else if (scenario === "ime-submit") {
     const addressInput = elements("INPUT")[0];
+    const composingEnter = async (node: Element, keyCode: number, isComposing: boolean) => {
+      let prevented = false;
+      assert.equal(typeof props(node).onKeyDown, "function", "Inputs must guard native IME Enter");
+      await update(() =>
+        props(node).onKeyDown({
+          key: "Enter",
+          keyCode,
+          nativeEvent: { isComposing },
+          preventDefault: () => {
+            prevented = true;
+          },
+        }),
+      );
+      assert.ok(prevented, "IME Enter must prevent the form's implicit submission");
+    };
+    await composingEnter(addressInput, 229, false);
+    await composingEnter(addressInput, 13, true);
     await update(() => props(addressInput).onCompositionStart());
     await submit(0);
     assert.equal(calls.length, 0);
     await update(() => props(addressInput).onCompositionEnd());
     await submit(0);
     await change(elements("INPUT")[1], "中文项目");
+    await composingEnter(elements("INPUT")[1], 229, false);
+    await composingEnter(elements("INPUT")[1], 13, true);
     await update(() => props(elements("INPUT")[1]).onCompositionStart());
     await submit(1);
     assert.equal(calls.length, 1);
@@ -339,11 +381,36 @@ try {
     });
     assert.ok(!contents().includes("STALE"));
     assert.ok(!contents().includes(project.name));
+    assert.equal(
+      button(t("cloudManager.logout")),
+      undefined,
+      "Relogin forgets the old attempted scope",
+    );
     assert.equal(opened.length, 0, "Late open must not close/adopt in the new login");
     projects = [{ ...project, name: "Fresh login project" }];
     await submit(0);
     assert.ok(contents().includes("Fresh login project"));
     assert.equal(busy.at(-1), false);
+  } else if (scenario === "initial-connect-failure-logout") {
+    fail = "list";
+    await submit(0);
+    assert.ok(contents().includes("fixture list ACK unknown"));
+    assert.ok(button(t("cloudManager.logout")), "Failed first connect must retain scoped logout");
+    await change(elements("INPUT")[0], "https://different-cloud.example");
+    await click(t("cloudManager.logout"));
+    assert.ok(contents().includes(origin), "Review must identify the attempted Cloud");
+    assert.equal(calls.length, 1, "Review must not revoke");
+    fail = "logout";
+    await click(t("cloudManager.confirmLogout"));
+    assert.ok(contents().includes("fixture logout ACK unknown"));
+    fail = undefined;
+    await click(t("cloudManager.confirmLogout"));
+    assert.deepEqual(
+      calls.map((request) => request.action),
+      ["list", "logout", "logout"],
+    );
+    assert.ok(calls.every((request) => request.cloudOrigin === origin));
+    assert.equal(button(t("cloudManager.logout")), undefined);
   } else {
     await submit(0);
     assert.ok(contents().includes(project.name));
