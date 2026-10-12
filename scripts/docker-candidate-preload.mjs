@@ -1,4 +1,4 @@
-// All dependencies are test-only builtins; this must finish before the product entry.
+// Test-only bootstrap: reviewed ws loads after guards/probes, before the product entry.
 import { candidateFile, installDockerCandidateGuard } from "./docker-candidate-guard.mjs";
 import { chmodSync, mkdirSync, realpathSync } from "node:fs";
 import { fileURLToPath } from "node:url";
@@ -57,6 +57,7 @@ if (process.env.CODESHELL_DOCKER_CANDIDATE_CONTAINER === "1") {
   );
 }
 let dockerCommand;
+let loadStockWebSocket;
 if (config.role === "controller") {
   for (const name of [
     "docker-candidate-controller.mjs",
@@ -71,11 +72,24 @@ if (config.role === "controller") {
   dockerCommand = (await import("./docker-candidate-controller.mjs")).createCandidateController(
     config,
   );
+  if (config.stockWebSocket) {
+    if (
+      candidateFile(fileURLToPath(new URL("docker-candidate-stock-ws.mjs", import.meta.url)))
+        .sha256 !== config.controller.moduleHashes?.["docker-candidate-stock-ws.mjs"]
+    )
+      throw new Error("Docker candidate stock WebSocket module digest changed");
+    const { loadCandidateStockWebSocket } = await import("./docker-candidate-stock-ws.mjs");
+    loadStockWebSocket = () => loadCandidateStockWebSocket(config.stockWebSocket);
+  }
 }
 const runtimeChild = config.runtime
   ? (await import("./docker-candidate-runtime-child.mjs")).candidateRuntimeChild
   : undefined;
-const installed = installDockerCandidateGuard(config, { runtimeChild, dockerCommand });
+const installed = installDockerCandidateGuard(config, {
+  runtimeChild,
+  dockerCommand,
+  loadStockWebSocket,
+});
 if (config.runtime?.offline === "none") {
   if (
     config.origins.length ||

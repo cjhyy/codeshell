@@ -6,14 +6,11 @@ import {
   chmodSync,
   linkSync,
   mkdirSync,
-  mkdtempSync,
   readFileSync,
-  realpathSync,
   rmSync,
   symlinkSync,
   writeFileSync,
 } from "node:fs";
-import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { runInNewContext } from "node:vm";
 import {
@@ -23,14 +20,18 @@ import {
   releaseDockerCandidateSockets,
 } from "../scripts/docker-candidate-browser-guard.mjs";
 
+import { createTestStockWebSocketPackage } from "./fixtures/docker-candidate-stock-ws-package.mjs";
+
 const hash = (value) => createHash("sha256").update(value).digest("hex");
 const origin = "http://127.0.0.1:32123";
 
 // No process, socket or browser is started. The ChildProcess instance is a
 // synthetic receipt subject; actual capture/driver integration belongs to CI.
 function fixture() {
-  const root = mkdtempSync(join(realpathSync(tmpdir()), "candidate-browser-pure-"));
-  chmodSync(root, 0o700);
+  const ws = createTestStockWebSocketPackage(
+    new URL("../packages/server/package.json", import.meta.url).pathname,
+  );
+  const root = ws.root;
   const home = join(root, "home");
   mkdirSync(home, { mode: 0o700 });
   const preload = join(root, "preload.mjs");
@@ -40,6 +41,7 @@ function fixture() {
   const policy = {
     version: 1,
     role: "controller",
+    stockWebSocket: ws.pin,
     home,
     preload,
     preloadHash: hash(readFileSync(preload)),
@@ -79,7 +81,7 @@ function fixture() {
     rows,
     saveRows,
     savePolicy,
-    dispose: () => rmSync(root, { recursive: true, force: true }),
+    dispose: ws.dispose,
   };
 }
 

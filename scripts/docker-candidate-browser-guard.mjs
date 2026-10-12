@@ -1,7 +1,6 @@
 // Test-only Playwright request boundary. This is not OS/process confinement.
 import { ChildProcess } from "node:child_process";
 import { createHash } from "node:crypto";
-import { createRequire } from "node:module";
 import {
   closeSync,
   constants,
@@ -13,10 +12,9 @@ import {
 } from "node:fs";
 import { isAbsolute, relative, resolve, sep } from "node:path";
 
+import { loadCandidateStockWebSocket } from "./docker-candidate-stock-ws.mjs";
+
 const digest = (bytes) => createHash("sha256").update(bytes).digest("hex");
-const { WebSocket } = createRequire(new URL("../packages/server/package.json", import.meta.url))(
-  "ws",
-);
 const guards = new WeakSet();
 const refused = () =>
   new Error("Docker candidate browser guard refused unowned authority or transport");
@@ -129,7 +127,12 @@ function verifiedAuthority({ child, origin, policyPath, policyHash }) {
         row.port === Number(url.port),
     ) > preCore,
   );
-  return { child, origin, wsOrigin: origin.replace(/^http:/, "ws:") };
+  return {
+    child,
+    origin,
+    wsOrigin: origin.replace(/^http:/, "ws:"),
+    stockWebSocket: policy.stockWebSocket,
+  };
 }
 
 function exactOrigin(value, origin) {
@@ -262,6 +265,7 @@ export async function createDockerBrowserGuard(input) {
     policyHash: input.policyHash,
   };
   const owned = verifiedAuthority(authority);
+  const WebSocket = loadCandidateStockWebSocket(owned.stockWebSocket);
   const browsers = new WeakMap();
   const live = () =>
     require(
