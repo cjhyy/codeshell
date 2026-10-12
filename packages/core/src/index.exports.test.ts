@@ -298,6 +298,7 @@ const expectedRuntimeExports = Object.values(expectedRuntimeExportsByPartition).
 // Host-only symbols that must NOT leak back onto the public root barrel.
 // (Representative sample across the removed @internal partitions.)
 const hostOnlySamples = [
+  "acquireWorkspaceWriteLock",
   "backupOutputJournal",
   "restoreOutputJournalBackup",
   "inspectOutputJournalRepair",
@@ -399,7 +400,6 @@ const extensionRuntimeContract = [
   "instructionHash",
   "runIsolatedInstruction",
   "acquireLockOnPath",
-  "acquireWorkspaceWriteLock",
   "mutateJsonFile",
   "resolveLLMConfigForTag",
 ] as const;
@@ -484,6 +484,7 @@ describe("core public/internal export contract", () => {
     // The extension entry stays narrow: no Engine, no host UI utilities.
     expect(extensionApi).not.toHaveProperty("Engine");
     expect(extensionApi).not.toHaveProperty("sliceAnsi");
+    expect(extensionApi).not.toHaveProperty("acquireWorkspaceWriteLock");
     for (const name of [
       "InstructionBindingStore",
       "InstructionSnapshotSchema",
