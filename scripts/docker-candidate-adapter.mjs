@@ -11,6 +11,22 @@ const refuse = () => {
 };
 const same = (a, b) => JSON.stringify(a) === JSON.stringify(b);
 
+export function candidateMissingContainer(error, name) {
+  if (
+    !/^[A-Za-z0-9-]{1,220}$/.test(name) ||
+    error?.code !== 1 ||
+    error.killed ||
+    error.timedOut ||
+    error.signal
+  )
+    return false;
+  return ["Error response from daemon: ", "Error: "].some((prefix) =>
+    ["container", "object"].some(
+      (kind) => error.stderr?.trim() === `${prefix}No such ${kind}: ${name}`,
+    ),
+  );
+}
+
 export function candidateProjectNames(installationId, project) {
   if (
     !UUID.test(installationId) ||
@@ -178,7 +194,10 @@ export function candidateInspection(policy, operation, stdout) {
     !HASH.test(value.Id) ||
     value.Name !== `/${operation.target}` ||
     value.Image !== policy.imageId ||
-    actual[`${label}.generation`] !== String(operation.project.generation) ||
+    !/^[1-9][0-9]*$/.test(actual[`${label}.generation`]) ||
+    +actual[`${label}.generation`] > operation.project.generation ||
+    (value.State?.Running &&
+      actual[`${label}.generation`] !== String(operation.project.generation)) ||
     !HASH.test(actual[`${label}.configuration`])
   )
     refuse();
@@ -226,7 +245,8 @@ export function createCandidateDockerAdapter(policy, { projects, afterStart, rew
           if (inspection.origin) allowOrigin(inspection.origin);
         }
         if (operation.kind === "start") {
-          const ack = await afterStart(operation);
+          const ack = await afterStart(operation, { original, record, signal: options.signal });
+          options.signal?.throwIfAborted();
           if (
             ack?.version !== 1 ||
             ack.projectId !== operation.project.id ||
@@ -235,8 +255,17 @@ export function createCandidateDockerAdapter(policy, { projects, afterStart, rew
             ack.preCore !== true
           )
             refuse();
-          record("native-egress-ack", { projectId: ack.projectId, containerId: ack.containerId });
+          record("native-egress-ack", {
+            projectId: ack.projectId,
+            containerId: ack.containerId,
+            bootNonce: ack.bootNonce,
+            policyHash: ack.policyHash,
+            netns: ack.netns,
+            receipts: ack.receipts,
+            nativeNegativeProbes: ack.nativeNegativeProbes,
+          });
         }
+        options.signal?.throwIfAborted();
         callback(null, stdout, stderr);
       })().catch((failure) => callback(failure, stdout, stderr));
     });

@@ -77,6 +77,8 @@ console.log('child guarded');`,
         entryHash: candidateHash(readFileSync(childEntry)),
         cwd: home,
         role: "worker",
+        reinject: true,
+        allowDetached: true,
       },
     ],
   };
@@ -138,11 +140,40 @@ test("real Node installs guard before entry and every permitted descendant, with
   expect(value.reached).toBe(true);
   expect(
     value.receipt.filter((event) => event.event === "pre-core").map((event) => event.role),
-  ).toEqual(["installer", "worker"]);
+  ).toEqual(["installer", "worker", "worker"]);
   const started = value.receipt.find((event) => event.event === "child-started");
   expect(
     value.receipt.some((event) => event.event === "pre-core" && event.pid === started.childPid),
   ).toBe(true);
+});
+
+test("actual Node maps only frozen renderer entry bytes from loopback zero to the exact firewall port", async () => {
+  const value = await actualNode((config) => {
+    config.listeners = [];
+    config.listenerAliases = [
+      {
+        host: "127.0.0.1",
+        requestedPort: 0,
+        port: 18794,
+        entryHash: candidateFile(join(root, "tests/fixtures/docker-candidate-guard-case.mjs"))
+          .sha256,
+      },
+    ];
+  });
+  expect(value.stderr).toBe("");
+  expect(value.code).toBe(0);
+  expect(value.receipt.find((row) => row.event === "listener")).toMatchObject({
+    port: 18794,
+    requestedPort: 0,
+  });
+  const refused = await actualNode((config) => {
+    config.listeners = [];
+    config.listenerAliases = [
+      { host: "127.0.0.1", requestedPort: 0, port: 18794, entryHash: "f".repeat(64) },
+    ];
+  });
+  expect(refused.code).not.toBe(0);
+  expect(refused.receipt.some((row) => row.event === "listener")).toBe(false);
 });
 
 for (const [name, change] of [

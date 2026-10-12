@@ -15,8 +15,8 @@ import {
   closeSync,
   fstatSync,
   lstatSync,
-  readFileSync,
   realpathSync,
+  readSync,
   writeSync,
 } from "node:fs";
 import { dirname, isAbsolute } from "node:path";
@@ -47,7 +47,15 @@ export function candidateFile(path, { maximum = 1024 * 1024, privateFile = false
   try {
     const opened = fstatSync(fd);
     if (opened.dev !== before.dev || opened.ino !== before.ino) refuse();
-    const bytes = readFileSync(fd),
+    if (!opened.isFile() || opened.nlink !== 1 || opened.size > maximum) refuse();
+    const buffer = Buffer.alloc(opened.size + 1);
+    let used = 0;
+    while (used < buffer.length) {
+      const count = readSync(fd, buffer, used, buffer.length - used, used);
+      if (!count) break;
+      used += count;
+    }
+    const bytes = buffer.subarray(0, used),
       after = fstatSync(fd),
       named = lstatSync(path);
     if (
@@ -56,6 +64,7 @@ export function candidateFile(path, { maximum = 1024 * 1024, privateFile = false
         (value) =>
           !value.isFile() ||
           value.nlink !== 1 ||
+          (privateFile && (value.mode & 0o077 || !owned(value))) ||
           value.dev !== opened.dev ||
           value.ino !== opened.ino ||
           value.size !== opened.size ||
@@ -70,7 +79,10 @@ export function candidateFile(path, { maximum = 1024 * 1024, privateFile = false
   }
 }
 
-export function installDockerCandidateGuard(config, { dockerCommand } = {}) {
+export function installDockerCandidateGuard(
+  config,
+  { dockerCommand, runtimeChild, driverChild, childStarted } = {},
+) {
   if (globalThis[marker]) refuse();
   if (
     !config ||
@@ -242,20 +254,43 @@ export function installDockerCandidateGuard(config, { dockerCommand } = {}) {
   const listen = net.Server.prototype.listen;
   net.Server.prototype.listen = function (...args) {
     const options = typeof args[0] === "object" ? args[0] : { port: args[0], host: args[1] };
+    // The frozen Video renderer normally asks the OS for a random frame-server
+    // port. This fixture maps only those exact entry bytes to one firewall port.
+    const alias =
+      options?.host === "127.0.0.1" && options.port === 0
+        ? config.listenerAliases?.find(
+            (value) =>
+              value.host === "127.0.0.1" &&
+              value.requestedPort === 0 &&
+              value.port === 18794 &&
+              /^[a-f0-9]{64}$/.test(value.entryHash) &&
+              process.argv[1] &&
+              candidateFile(realpathSync(process.argv[1])).sha256 === value.entryHash,
+          )
+        : undefined;
     if (
       !options ||
       options.path ||
-      !(config.listeners ?? []).some(
-        (value) => value.host === options.host && value.port === options.port,
-      )
+      (!alias &&
+        !(config.listeners ?? []).some(
+          (value) => value.host === options.host && value.port === options.port,
+        ))
     )
       refuse();
+    if (alias) {
+      if (typeof args[0] === "object") args[0] = { ...args[0], port: alias.port };
+      else args[0] = alias.port;
+    }
     this.once("listening", () => {
       if (options.host === "127.0.0.1")
         allowOrigin(
           `${this instanceof tls.Server ? "https" : "http"}://127.0.0.1:${this.address().port}`,
         );
-      record("listener", { host: options.host, port: this.address().port });
+      record("listener", {
+        host: options.host,
+        port: this.address().port,
+        ...(alias ? { requestedPort: 0, aliasEntryHash: alias.entryHash } : {}),
+      });
     });
     return listen.apply(this, args);
   };
@@ -274,29 +309,65 @@ export function installDockerCandidateGuard(config, { dockerCommand } = {}) {
     if (!literal(host)) refuse();
     return lookupPromise.call(this, host, ...args);
   };
-  for (const method of ["resolve", "resolve4", "resolve6", "reverse"])
-    dns[method] = dns.promises[method] = refuse;
+  // c-ares resolver methods bypass net/dgram JavaScript wrappers. Refuse the
+  // complete callback/promise API and captured Resolver prototypes too.
+  for (const surface of [
+    dns,
+    dns.promises,
+    dns.Resolver.prototype,
+    dns.promises.Resolver.prototype,
+  ])
+    for (const method of Object.getOwnPropertyNames(surface))
+      if (/^resolve/.test(method) || ["reverse", "lookupService"].includes(method))
+        surface[method] = refuse;
+  dns.Resolver = dns.promises.Resolver = function () {
+    refuse();
+  };
   dgram.createSocket = http2.connect = refuse;
   const originals = { spawn: children.spawn, execFile: children.execFile };
   const permitChild = (command, args, options = {}) => {
-    if (!Array.isArray(args) || options.shell || options.detached) refuse();
-    const env = options.env ?? process.env;
+    if (!Array.isArray(args) || options.shell) refuse();
+    let env = options.env ?? process.env;
+    const descriptor =
+      (config.children ?? []).find(
+        (value) => (command === value.path || command === value.command) && same(value.args, args),
+      ) ??
+      runtimeChild?.(config, command, args, options) ??
+      (role === "driver" ? driverChild?.(command, args, options) : undefined);
+    if (!descriptor || (options.detached && !descriptor.allowDetached)) refuse();
+    const expected = descriptor.environment ?? process.env;
+    if (descriptor.reinject) {
+      // The production Panel service intentionally strips Node options. Only
+      // a reviewed, pinned child may receive this fixture's preload again.
+      for (const key of [
+        "NODE_OPTIONS",
+        "CODE_SHELL_HOME",
+        "CODESHELL_DOCKER_CANDIDATE_CONFIG",
+        "CODESHELL_DOCKER_CANDIDATE_CONFIG_HASH",
+      ])
+        if (env[key] !== undefined && env[key] !== process.env[key]) refuse();
+      env = {
+        ...env,
+        NODE_OPTIONS: process.env.NODE_OPTIONS,
+        CODE_SHELL_HOME: process.env.CODE_SHELL_HOME,
+        CODESHELL_DOCKER_CANDIDATE_CONFIG: process.env.CODESHELL_DOCKER_CANDIDATE_CONFIG,
+        CODESHELL_DOCKER_CANDIDATE_CONFIG_HASH: process.env.CODESHELL_DOCKER_CANDIDATE_CONFIG_HASH,
+        CODESHELL_DOCKER_CANDIDATE_CONTAINER: process.env.CODESHELL_DOCKER_CANDIDATE_CONTAINER,
+      };
+    }
     if (
       env.HOME !== home ||
       env.USERPROFILE !== home ||
-      env.CODE_SHELL_HOME !== process.env.CODE_SHELL_HOME ||
-      env.NODE_OPTIONS !== process.env.NODE_OPTIONS ||
-      env.CODESHELL_DOCKER_CANDIDATE_CONFIG !== process.env.CODESHELL_DOCKER_CANDIDATE_CONFIG ||
-      env.CODESHELL_DOCKER_CANDIDATE_CONFIG_HASH !==
-        process.env.CODESHELL_DOCKER_CANDIDATE_CONFIG_HASH
+      env.CODE_SHELL_HOME !== expected.CODE_SHELL_HOME ||
+      env.NODE_OPTIONS !== expected.NODE_OPTIONS ||
+      env.CODESHELL_DOCKER_CANDIDATE_CONFIG !== expected.CODESHELL_DOCKER_CANDIDATE_CONFIG ||
+      env.CODESHELL_DOCKER_CANDIDATE_CONFIG_HASH !== expected.CODESHELL_DOCKER_CANDIDATE_CONFIG_HASH
     )
       refuse();
-    const descriptor = (config.children ?? []).find(
-      (value) => (command === value.path || command === value.command) && same(value.args, args),
-    );
     if (
       !descriptor ||
-      candidateFile(descriptor.path, { maximum: 128 * 1024 * 1024 }).sha256 !== descriptor.sha256 ||
+      candidateFile(descriptor.path, { maximum: descriptor.maximum ?? 128 * 1024 * 1024 })
+        .sha256 !== descriptor.sha256 ||
       (descriptor.entry && candidateFile(descriptor.entry).sha256 !== descriptor.entryHash) ||
       (descriptor.cwd && realpathSync(options.cwd ?? process.cwd()) !== descriptor.cwd)
     )
@@ -308,11 +379,17 @@ export function installDockerCandidateGuard(config, { dockerCommand } = {}) {
       refuse();
     record("allowed-child", {
       childRole: descriptor.role,
+      childPolicyHash: env.CODESHELL_DOCKER_CANDIDATE_CONFIG_HASH,
+      childArgvHash: candidateHash(JSON.stringify(args[0] === "-e" ? args.slice(2) : args)),
       argvHash: candidateHash(JSON.stringify(args)),
     });
     return {
       command: descriptor.path,
       args,
+      isNode: descriptor.path === realpathSync(process.execPath),
+      childRole: descriptor.role,
+      childPolicyHash: env.CODESHELL_DOCKER_CANDIDATE_CONFIG_HASH,
+      childArgvHash: candidateHash(JSON.stringify(args[0] === "-e" ? args.slice(2) : args)),
       options: {
         ...options,
         env: { ...env, CODESHELL_DOCKER_CANDIDATE_ROLE: descriptor.role ?? role },
@@ -337,7 +414,17 @@ export function installDockerCandidateGuard(config, { dockerCommand } = {}) {
         });
       const allowed = permitChild(command, args, options);
       const child = originals[method](allowed.command, allowed.args, allowed.options, callback);
-      record("child-started", { childPid: child.pid });
+      childStarted?.(child);
+      record("child-started", {
+        childPid: child.pid,
+        isNode: allowed.isNode,
+        childRole: allowed.childRole,
+        childPolicyHash: allowed.childPolicyHash,
+        argvHash: allowed.childArgvHash,
+      });
+      child.once("close", (code, signal) =>
+        record("child-closed", { childPid: child.pid, code, signal }),
+      );
       return child;
     };
   children.execFile[Symbol.for("nodejs.util.promisify.custom")] = (command, args, options) =>
@@ -358,7 +445,22 @@ export function installDockerCandidateGuard(config, { dockerCommand } = {}) {
     () => children.spawn("sh", ["-c", "exit 0"]),
   ];
   for (const probe of probes) assert.throws(probe, /Docker candidate refused/);
-  globalThis[marker] = Object.freeze({ role, negativeProbes: probes.length });
-  record("pre-core", { negativeProbes: probes.length });
+  const dnsProbes = [
+    () => dns.resolveTxt("external.invalid"),
+    () => dns.promises.resolveAny("external.invalid"),
+    () => new dns.Resolver(),
+    () => new dns.promises.Resolver(),
+  ];
+  for (const probe of dnsProbes) assert.throws(probe, /Docker candidate refused/);
+  globalThis[marker] = Object.freeze({
+    role,
+    negativeProbes: probes.length,
+    dnsNegativeProbes: dnsProbes.length,
+  });
+  record("pre-core", {
+    negativeProbes: probes.length,
+    dnsNegativeProbes: dnsProbes.length,
+    argvHash: candidateHash(JSON.stringify(process.argv.slice(1))),
+  });
   return { allowOrigin, record };
 }

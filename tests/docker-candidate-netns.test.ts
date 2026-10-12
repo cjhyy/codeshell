@@ -12,6 +12,7 @@ const policy = {
   projectId: "72b1462d-cb22-4f14-8ecd-d0cf2b2e966a",
   policyHash: "b".repeat(64),
   nonce: "c".repeat(32),
+  bootNonce: "e".repeat(32),
   netns: "net:[4026533039]",
 };
 const namespace = () => policy.netns;
@@ -31,7 +32,7 @@ function simulatedKernel(failure?: (command: string, args: string[]) => void) {
       };
     return { stdout: "" };
   };
-  return { calls, run };
+  return { calls, run, probe: async () => "deadline" };
 }
 
 test("helper argv joins only the immutable owned container network namespace with NET_ADMIN", () => {
@@ -58,17 +59,19 @@ test("helper argv joins only the immutable owned container network namespace wit
     { containerId: "mutable-name" },
     { imageId: "helper:latest" },
     { dataVolume: "operator-volume" },
+    { dataVolume: `codeshell-${installationId}-other-data` },
+    { dataVolume: `codeshell-${installationId}-${policy.projectId},target=/other-data` },
     { name: "--network=host" },
   ])
     expect(() => candidateFirewallHelperArguments({ ...options, ...change })).toThrow("refused");
 });
 
-test("both families default DROP with only established replies and four exact loopback TCP ports", () => {
+test("both families default DROP with only established replies and five exact loopback TCP ports", () => {
   for (const family of [4, 6]) {
     const rules = candidateFirewallRules(family);
     expect(rules).toContain(":OUTPUT DROP [0:0]");
     expect(rules).toContain(":FORWARD DROP [0:0]");
-    expect(rules.match(/^-A OUTPUT /gm)).toHaveLength(5);
+    expect(rules.match(/^-A OUTPUT /gm)).toHaveLength(6);
     expect(rules).not.toContain("--dport 53");
     expect(rules).not.toContain("0.0.0.0/0");
     expect(rules).toContain(family === 4 ? "127.0.0.1/32" : "::1/128");
@@ -82,7 +85,7 @@ test("publish occurs only after actual command contracts verify both rule famili
     ...kernel,
     namespace,
     publish(value) {
-      expect(kernel.calls).toHaveLength(14);
+      expect(kernel.calls).toHaveLength(16);
       expect(value.receipts.map((entry) => entry.family)).toEqual([4, 6]);
       published++;
     },
@@ -121,6 +124,7 @@ test("unexpected extra accept, wrong namespace and publication failure all remai
   await expect(
     applyCandidateFirewall(policy, {
       namespace,
+      probe: kernel.probe,
       publish() {
         published = true;
       },
@@ -146,4 +150,19 @@ test("unexpected extra accept, wrong namespace and publication failure all remai
       },
     }),
   ).rejects.toThrow("ACK write failed");
+});
+
+test("a successful native egress probe prevents ACK publication despite valid rule command responses", async () => {
+  let published = false;
+  await expect(
+    applyCandidateFirewall(policy, {
+      ...simulatedKernel(),
+      namespace,
+      probe: async () => "connected",
+      publish() {
+        published = true;
+      },
+    }),
+  ).rejects.toThrow("refused");
+  expect(published).toBe(false);
 });

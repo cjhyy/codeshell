@@ -1,20 +1,14 @@
 // Fixture-only Linux namespace firewall. Never used by a production image.
 import { createHash } from "node:crypto";
 import { execFile } from "node:child_process";
-import {
-  readlinkSync,
-  writeFileSync,
-  renameSync,
-  chmodSync,
-  chownSync,
-  readFileSync,
-} from "node:fs";
+import { readlinkSync, readFileSync } from "node:fs";
+import { Socket } from "node:net";
 
 const HASH = /^[a-f0-9]{64}$/;
 const refuse = () => {
   throw new Error("Docker candidate namespace policy refused");
 };
-export const fixturePorts = Object.freeze([8790, 18791, 18792, 18793]);
+export const fixturePorts = Object.freeze([8790, 18791, 18792, 18793, 18794]);
 
 export function candidateFirewallRules(family) {
   if (![4, 6].includes(family)) refuse();
@@ -45,10 +39,10 @@ export function candidateFirewallHelperArguments({
   if (
     !/^sha256:[a-f0-9]{64}$/.test(imageId) ||
     !HASH.test(containerId) ||
-    !/^[a-f0-9-]{36}$/.test(installationId) ||
+    !/^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$/.test(installationId) ||
+    !/^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$/.test(policy?.projectId) ||
     !/^[A-Za-z0-9-]{1,220}$/.test(name) ||
-    !dataVolume.startsWith(`codeshell-${installationId}-`) ||
-    !dataVolume.endsWith("-data")
+    dataVolume !== `codeshell-${installationId}-${policy.projectId}-data`
   )
     refuse();
   return [
@@ -73,8 +67,6 @@ export function candidateFirewallHelperArguments({
     "32",
     "--memory",
     "128m",
-    "--mount",
-    `type=volume,source=${dataVolume},target=/data`,
     "--entrypoint",
     "node",
     imageId,
@@ -89,6 +81,7 @@ export async function applyCandidateFirewall(
     run = firewallNativeCommand,
     namespace = () => readlinkSync("/proc/self/ns/net"),
     publish,
+    probe,
   } = {},
 ) {
   if (
@@ -96,6 +89,7 @@ export async function applyCandidateFirewall(
     !HASH.test(policy.containerId) ||
     !HASH.test(policy.policyHash) ||
     !/^[a-f0-9]{32}$/.test(policy.nonce) ||
+    !/^[a-f0-9]{32}$/.test(policy.bootNonce) ||
     !/^net:\[[0-9]+\]$/.test(policy.netns) ||
     namespace() !== policy.netns ||
     !/^[a-f0-9-]{36}$/.test(policy.projectId)
@@ -157,30 +151,60 @@ export async function applyCandidateFirewall(
     receipts.push({ family, rulesHash: createHash("sha256").update(rules).digest("hex") });
   }
   if (namespace() !== policy.netns) refuse();
+  if (typeof probe !== "function") refuse();
+  const nativeNegativeProbes = [];
+  for (const family of [4, 6]) {
+    const result = await probe(family);
+    if (!["deadline", "ENETUNREACH", "EHOSTUNREACH"].includes(result)) refuse();
+    nativeNegativeProbes.push({ family, result });
+  }
+  if (namespace() !== policy.netns) refuse();
   const receipt = {
     version: 1,
     projectId: policy.projectId,
     containerId: policy.containerId,
     policyHash: policy.policyHash,
     nonce: policy.nonce,
+    bootNonce: policy.bootNonce,
     netns: policy.netns,
     nativeEgress: "ipv4-ipv6-output-default-deny",
     preCore: true,
     receipts,
+    nativeNegativeProbes,
   };
   if (!publish) refuse();
   await publish(receipt);
   return receipt;
 }
 
-/** Only called by the helper entry after both firewall families were verified. */
-export function publishCandidateFirewall(receipt) {
-  const path = `/data/.candidate-egress-${receipt.nonce}.json`;
-  const temporary = `${path}.tmp`;
-  writeFileSync(temporary, JSON.stringify(receipt) + "\n", { flag: "wx", mode: 0o600 });
-  chownSync(temporary, 1000, 1000);
-  chmodSync(temporary, 0o600);
-  renameSync(temporary, path);
+// Only documentation addresses, after both exact DROP policies are verified.
+// Route-unreachable is reported separately from a deadline; neither is a
+// successful connection or evidence of a remote service/provider call.
+export function firewallNegativeProbe(family) {
+  if (![4, 6].includes(family)) refuse();
+  return new Promise((resolve, reject) => {
+    const socket = new Socket();
+    let result, failure;
+    const timer = setTimeout(() => {
+      result = "deadline";
+      socket.destroy();
+    }, 250);
+    socket.once("connect", () => {
+      failure = new Error("Native negative egress probe unexpectedly connected");
+      socket.destroy();
+    });
+    socket.once("error", (error) => {
+      if (["ENETUNREACH", "EHOSTUNREACH"].includes(error.code)) result = error.code;
+      else failure = error;
+    });
+    socket.once("close", () => {
+      clearTimeout(timer);
+      if (failure || !result)
+        reject(failure ?? new Error("Native probe closed without a denial result"));
+      else resolve(result);
+    });
+    socket.connect({ host: family === 4 ? "192.0.2.1" : "2001:db8::1", port: 443, family });
+  });
 }
 
 // execFile does not support an input option. Keep stdin and its close custody
