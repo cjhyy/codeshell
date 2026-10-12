@@ -16,9 +16,23 @@ export interface AuthSession {
 
 export interface AuthStatus {
   host?: "hub" | "desktop";
+  mode?: "cloud-account";
   initialized: boolean;
   authenticated: boolean;
   session?: AuthSession;
+  cloudSession?: CloudManagementSession;
+}
+
+/** Public scoped identity only; it is never a Hub login or a bearer credential. */
+export interface CloudManagementSession {
+  id: string;
+  kind: "cloud-management";
+  audience: string;
+  installationId: string;
+  accountOrigin: string;
+  accountId: string;
+  managementEpoch: string;
+  expiresAt: number;
 }
 
 export interface DeviceSession {
@@ -46,6 +60,12 @@ export class ApiError extends Error {
     readonly retryAfterMs?: number,
   ) {
     super(message);
+  }
+}
+
+export class InvalidAuthStatusError extends Error {
+  constructor() {
+    super("服务端返回了无效的登录状态，请稍后重试。");
   }
 }
 
@@ -110,11 +130,76 @@ export function post<T>(path: string, body: Record<string, unknown> = {}): Promi
 /** A 404 explicitly identifies the legacy passcode-only host. Other failures stay gated. */
 export async function readAuthStatus(): Promise<AuthStatus | null> {
   try {
-    const status = await api<AuthStatus>("/api/v1/auth/status");
-    if (typeof status.initialized !== "boolean" || typeof status.authenticated !== "boolean") {
-      throw new Error("服务端返回了无效的登录状态，请稍后重试。");
+    const status = await api<Record<string, unknown>>("/api/v1/auth/status");
+    const invalid = () => new InvalidAuthStatusError();
+    if (
+      !status ||
+      typeof status.initialized !== "boolean" ||
+      typeof status.authenticated !== "boolean" ||
+      (status.mode !== undefined && status.mode !== "cloud-account")
+    )
+      throw invalid();
+    if (status.mode === "cloud-account") {
+      if (!status.initialized || (!status.authenticated && status.session !== undefined))
+        throw invalid();
+      let cloudSession: CloudManagementSession | undefined;
+      if (status.authenticated) {
+        const value = status.session as Record<string, unknown> | undefined;
+        const uuid = /^[a-f0-9]{8}(?:-[a-f0-9]{4}){3}-[a-f0-9]{12}$/;
+        const origin = (value: unknown) => {
+          if (typeof value !== "string") return false;
+          try {
+            const url = new URL(value);
+            return (
+              url.origin === value &&
+              !url.username &&
+              !url.password &&
+              (url.protocol === "https:" ||
+                (url.protocol === "http:" &&
+                  ["localhost", "127.0.0.1", "[::1]"].includes(url.hostname)))
+            );
+          } catch {
+            return false;
+          }
+        };
+        if (
+          !value ||
+          Array.isArray(value) ||
+          value.kind !== "cloud-management" ||
+          ![value.id, value.installationId, value.accountId, value.managementEpoch].every(
+            (id) => typeof id === "string" && uuid.test(id),
+          ) ||
+          !origin(value.audience) ||
+          !origin(value.accountOrigin) ||
+          (typeof window !== "undefined" && value.audience !== window.location.origin) ||
+          !Number.isSafeInteger(value.expiresAt) ||
+          (value.expiresAt as number) <= Date.now()
+        )
+          throw invalid();
+        cloudSession = {
+          id: value.id as string,
+          kind: "cloud-management",
+          audience: value.audience as string,
+          installationId: value.installationId as string,
+          accountOrigin: value.accountOrigin as string,
+          accountId: value.accountId as string,
+          managementEpoch: value.managementEpoch as string,
+          expiresAt: value.expiresAt as number,
+        };
+      }
+      return {
+        initialized: true,
+        authenticated: status.authenticated,
+        mode: "cloud-account",
+        ...(cloudSession ? { cloudSession } : {}),
+      };
     }
-    return status;
+    return {
+      initialized: status.initialized,
+      authenticated: status.authenticated,
+      ...(status.host === "hub" || status.host === "desktop" ? { host: status.host } : {}),
+      ...(status.session ? { session: status.session as AuthSession } : {}),
+    };
   } catch (error) {
     if (error instanceof ApiError && error.status === 404) return null;
     throw error;

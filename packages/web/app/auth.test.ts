@@ -130,3 +130,90 @@ test("an explicit API scope cannot inherit a later project prefix or workspace h
   expect(path).toBe("/api/v1/links/authorizations/attempt");
   expect(headers!.get("X-CodeShell-Workspace")).toBeNull();
 });
+
+function cloudSession() {
+  return {
+    id: "11111111-1111-4111-8111-111111111111",
+    kind: "cloud-management",
+    audience:
+      typeof window === "undefined" ? "https://cloud.fixture.invalid" : window.location.origin,
+    installationId: "22222222-2222-4222-8222-222222222222",
+    accountOrigin: "https://accounts.fixture.invalid",
+    accountId: "33333333-3333-4333-8333-333333333333",
+    managementEpoch: "44444444-4444-4444-8444-444444444444",
+    expiresAt: Date.now() + 60_000,
+  };
+}
+
+test("Cloud status is projected as a scoped identity without inventing a Hub session", async () => {
+  const session = cloudSession();
+  globalThis.fetch = (async () =>
+    Response.json({
+      initialized: true,
+      mode: "cloud-account",
+      authenticated: true,
+      token: "must-not-survive",
+      session: {
+        ...session,
+        username: "not-a-hub-user",
+        ownerId: "private",
+        rootSessionId: "private",
+      },
+    })) as typeof fetch;
+  const result = await readAuthStatus();
+  expect(result).toEqual({
+    initialized: true,
+    mode: "cloud-account",
+    authenticated: true,
+    cloudSession: session,
+  });
+  expect(result?.session).toBeUndefined();
+  expect(JSON.stringify(result)).not.toContain("must-not-survive");
+  expect(JSON.stringify(result)).not.toContain("private");
+  expect(JSON.stringify(result)).not.toContain("username");
+});
+
+test("Cloud signed-out status remains explicit and cannot expose a stale session", async () => {
+  globalThis.fetch = (async () =>
+    Response.json({
+      initialized: true,
+      mode: "cloud-account",
+      authenticated: false,
+    })) as typeof fetch;
+  await expect(readAuthStatus()).resolves.toEqual({
+    initialized: true,
+    mode: "cloud-account",
+    authenticated: false,
+  });
+  globalThis.fetch = (async () =>
+    Response.json({
+      initialized: true,
+      mode: "cloud-account",
+      authenticated: false,
+      session: cloudSession(),
+    })) as typeof fetch;
+  await expect(readAuthStatus()).rejects.toThrow("无效的登录状态");
+});
+
+test("unknown auth modes and malformed Cloud principals remain gated", async () => {
+  for (const patch of [
+    { mode: "unknown" },
+    { initialized: false },
+    { session: undefined },
+    { session: { ...cloudSession(), username: "legacy", kind: "hub" } },
+    { session: { ...cloudSession(), accountId: "guessed" } },
+    { session: { ...cloudSession(), accountOrigin: "https://account.invalid/path" } },
+    { session: { ...cloudSession(), audience: "https://cloud.invalid/path" } },
+    { session: { ...cloudSession(), expiresAt: Date.now() - 1 } },
+  ]) {
+    globalThis.fetch = (async () =>
+      Response.json({
+        initialized: true,
+        mode: "cloud-account",
+        authenticated: true,
+        session: cloudSession(),
+        ...patch,
+      })) as typeof fetch;
+    await expect(readAuthStatus()).rejects.toThrow("无效的登录状态");
+  }
+});
