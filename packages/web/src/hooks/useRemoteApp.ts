@@ -990,6 +990,13 @@ export function useRemoteApp(options: RemoteAppOptions = {}): RemoteApp {
           // Keep the internal room snapshot in sync (resolves activeRoom metadata).
           setRooms((prev) => prev.map((r) => (r.id === event.roomId ? { ...r, open: false } : r)));
           break;
+        case "room.recovery":
+          if (event.roomId === activeRoomIdRef.current) {
+            ccBacklogLoadedRef.current = false;
+            setLoadingKey("roomHistory", false);
+            setNotice(event.message);
+          }
+          break;
         case "room.error":
           if (event.clientMessageId) {
             settleMessageAck(event.clientMessageId, new Error(event.message));
@@ -1118,6 +1125,11 @@ export function useRemoteApp(options: RemoteAppOptions = {}): RemoteApp {
             event.roomId === activeRoomIdRef.current &&
             event.sessionId === ccHistorySessionRef.current
           ) {
+            if (!event.active) {
+              setNotice("External transcript is not being followed");
+              setLoadingKey("roomHistory", false);
+              break;
+            }
             dispatchChat({ kind: "replay", events: ccHistoryToEvents(event.messages) });
             setLoadingKey("roomHistory", false);
             ccBacklogLoadedRef.current = true;

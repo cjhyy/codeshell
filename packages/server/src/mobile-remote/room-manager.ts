@@ -145,7 +145,14 @@ function parseRoomMessage(value: unknown): RoomMessage | undefined {
   ) {
     return undefined;
   }
-  for (const field of ["text", "tool", "summary", "reason", "toolId"] as const) {
+  for (const field of [
+    "text",
+    "tool",
+    "summary",
+    "reason",
+    "toolId",
+    "transcriptSource",
+  ] as const) {
     const item = raw[field];
     if (item !== undefined && (typeof item !== "string" || item.includes("\0"))) return undefined;
   }
@@ -284,6 +291,8 @@ export interface RoomMessage {
    *  card expands to so the real parameters are visible. Absent on legacy
    *  messages that predate args persistence. */
   args?: Record<string, unknown>;
+  /** Durable external transcript provenance, scoped to its actual file incarnation. */
+  transcriptSource?: string;
   attachments?: Array<{ name: string; mime?: string; size: number; path: string }>;
 }
 
@@ -401,6 +410,7 @@ export class RoomManager {
   /** User turns are echoed immediately for responsive room UX. When a
    * transcript follower later sees the same CLI-written user line, this queue
    * suppresses that duplicate. */
+  private readonly transcriptSources = new Map<string, Set<string>>();
   private pendingTranscriptUserEchoes = new Map<string, Array<{ text: string; ts: number }>>();
   /**
    * Rooms whose agent events must be buffered instead of handled immediately.
@@ -804,6 +814,16 @@ export class RoomManager {
     return existsSync(path) ? scanRoomHistory(path, parseRoomMessage) : 0;
   }
 
+  hasTranscriptHistory(id: string): boolean {
+    let found = false;
+    const file = this.msgPath(id);
+    if (existsSync(file))
+      scanRoomHistory(file, parseRoomMessage, (message) => {
+        if (message.transcriptSource) found = true;
+      });
+    return found;
+  }
+
   beginTranscriptFollow(id: string): void {
     if (this.getRoom(id)) this.transcriptFollowedRooms.add(id);
   }
@@ -815,8 +835,29 @@ export class RoomManager {
   /** Persist normalized transcript-tail messages through the same seq/history/
    * broadcast path as resident-agent output. */
   ingestTranscriptMessages(id: string, messages: Omit<RoomMessage, "seq" | "ts">[]): void {
-    if (!this.transcriptFollowedRooms.has(id) || !this.getRoom(id)) return;
+    if (!messages.length) return;
+    if (!this.transcriptFollowedRooms.has(id) || !this.getRoom(id))
+      throw new Error("transcript room is not active");
+    let sources = this.transcriptSources.get(id);
+    if (!sources) {
+      sources = new Set<string>();
+      const path = this.msgPath(id);
+      if (existsSync(path))
+        scanRoomHistory(path, parseRoomMessage, (message) => {
+          if (message.transcriptSource) sources!.add(message.transcriptSource);
+        });
+      this.transcriptSources.set(id, sources);
+    }
     for (const message of messages) {
+      const source = message.transcriptSource;
+      if (
+        source !== undefined &&
+        (typeof source !== "string" ||
+          source.length > 200 ||
+          !/^[0-9a-f-]{36}:[0-9]+:[0-9]+$/.test(source))
+      )
+        throw new Error("invalid transcript source coordinate");
+      if (source && sources.has(source)) continue;
       if (message.from === "user" && typeof message.text === "string") {
         const text = stripRoomAttachmentBlock(message.text);
         const pending = this.pendingTranscriptUserEchoes.get(id);
@@ -825,13 +866,13 @@ export class RoomManager {
         const matched = pending?.[0]?.text === text;
         if (matched) pending!.shift();
         if (pending?.length === 0) this.pendingTranscriptUserEchoes.delete(id);
-        // `send` already persisted and broadcast this exact user turn. The
-        // transcript remains authoritative for agent/tool output, but must not
-        // render a second copy of the prompt.
         if (!matched) this.append(id, { ...message, text });
+        else if (source)
+          this.append(id, { from: "system", type: "transcript_echo", transcriptSource: source });
       } else {
         this.append(id, message);
       }
+      if (source) sources.add(source);
     }
   }
 

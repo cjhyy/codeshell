@@ -335,6 +335,7 @@ export type MobileServerEvent =
       requestId?: string;
     }
   | { type: "room.closed"; roomId: string }
+  | { type: "room.recovery"; roomId: string; message: string }
   | { type: "room.error"; roomId?: string; message: string; clientMessageId?: string }
   | {
       type: "ccRoom.approvalRequest";

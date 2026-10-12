@@ -2460,6 +2460,7 @@ export interface CodeshellApi
     }>;
     unsubscribeTranscript(roomId: string): Promise<void>;
     closeSession(roomId: string): Promise<void>;
+    onTranscriptRecovery(cb: (event: { roomId: string; message: string }) => void): () => void;
     onRoomMessage(cb: (env: { roomId: string; msg: unknown }) => void): () => void;
     onApprovalRequest(
       cb: (req: {

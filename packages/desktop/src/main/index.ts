@@ -1193,6 +1193,15 @@ const roomManager = new RoomManager({
   },
 });
 const transcriptSubscriptions = new TranscriptSubscriptionManager({
+  hasTranscriptHistory: (roomId) => roomManager.hasTranscriptHistory(roomId),
+  checkpointDir: join(app.getPath("userData"), "mobile-remote", "transcript-checkpoints"),
+  onFailure: (roomId, message) => {
+    mobileRemote.broadcast({ type: "room.recovery", roomId, message });
+    for (const window of BrowserWindow.getAllWindows()) {
+      if (!window.isDestroyed())
+        window.webContents.send("ccRoom:transcriptRecovery", { roomId, message });
+    }
+  },
   onStart: (roomId) => roomManager.beginTranscriptFollow(roomId),
   onStop: (roomId) => roomManager.endTranscriptFollow(roomId),
   roomCursor: (roomId) => roomManager.latestSeq(roomId),

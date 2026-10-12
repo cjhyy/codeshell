@@ -83,7 +83,7 @@ describe("TranscriptSubscriptionManager", () => {
       limit: 50,
     });
     expect(starts).toHaveLength(1);
-    expect(pushed.flat()).toEqual([
+    expect(pushed.flat()).toMatchObject([
       { from: "agent", type: "text", text: "streamed" },
       { from: "agent", type: "turn_end", reason: "completed" },
     ]);
@@ -143,7 +143,7 @@ describe("TranscriptSubscriptionManager", () => {
       kind: "claude-code",
       limit: 50,
     });
-    expect(pushed.flat()).toEqual([{ from: "agent", type: "text", text: "split write" }]);
+    expect(pushed.flat()).toMatchObject([{ from: "agent", type: "text", text: "split write" }]);
     manager.closeAll();
   });
 
@@ -178,6 +178,6 @@ describe("TranscriptSubscriptionManager", () => {
     );
 
     manager.endRoom("room-1");
-    expect(pushed.flat()).toEqual([{ from: "agent", type: "text", text: "final output" }]);
+    expect(pushed.flat()).toMatchObject([{ from: "agent", type: "text", text: "final output" }]);
   });
 });

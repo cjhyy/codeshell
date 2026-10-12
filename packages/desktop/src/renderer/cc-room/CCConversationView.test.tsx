@@ -51,7 +51,7 @@ describe("CCConversationView transcript ownership", () => {
         onRoomMessage: () => off,
         subscribeTranscript: async (roomId: string) => {
           lifecycle.push(`subscribe:${roomId}`);
-          return { messages: [], roomCursor: 0 };
+          return { active: true, messages: [], roomCursor: 0 };
         },
         unsubscribeTranscript: async (roomId: string) => {
           lifecycle.push(`unsubscribe:${roomId}`);
@@ -125,7 +125,7 @@ describe("CCConversationView transcript ownership", () => {
         onApprovalRequest: () => off,
         onApprovalResolved: () => off,
         onRoomMessage: () => off,
-        subscribeTranscript: async () => ({ messages: [], roomCursor: 0 }),
+        subscribeTranscript: async () => ({ active: true, messages: [], roomCursor: 0 }),
         unsubscribeTranscript: async () => undefined,
         roomHistory: async () => [],
         roomHistoryPage: async (_roomId: string, request: { sinceSeq?: number }) => ({
@@ -181,7 +181,7 @@ describe("CCConversationView transcript ownership", () => {
         onApprovalRequest: () => off,
         onApprovalResolved: () => off,
         onRoomMessage: () => off,
-        subscribeTranscript: async () => ({ messages: [], roomCursor: 0 }),
+        subscribeTranscript: async () => ({ active: true, messages: [], roomCursor: 0 }),
         unsubscribeTranscript: async () => undefined,
         roomHistory: async () => [],
         roomHistoryPage: async (_roomId: string, request: { sinceSeq?: number }) => ({
@@ -246,7 +246,7 @@ describe("CCConversationView transcript ownership", () => {
         onApprovalRequest: () => off,
         onApprovalResolved: () => off,
         onRoomMessage: () => off,
-        subscribeTranscript: async () => ({ messages: [], roomCursor: 0 }),
+        subscribeTranscript: async () => ({ active: true, messages: [], roomCursor: 0 }),
         unsubscribeTranscript: async () => undefined,
         roomHistory: async () => [],
         roomHistoryPage: async (_roomId: string, request: { sinceSeq?: number }) => ({
@@ -341,7 +341,7 @@ describe("CCConversationView existing external subtask records", () => {
           receive = listener;
           return off;
         },
-        subscribeTranscript: async () => ({ messages, roomCursor: 0 }),
+        subscribeTranscript: async () => ({ active: true, messages, roomCursor: 0 }),
         unsubscribeTranscript: async () => undefined,
         roomHistory: async () => [],
         roomHistoryPage: async (_roomId: string, request: { sinceSeq?: number }) => ({
@@ -466,7 +466,7 @@ describe("CCConversationView asynchronous recovery", () => {
             receive.message = cb;
             return off;
           },
-          subscribeTranscript: async () => ({ messages: [], roomCursor: 0 }),
+          subscribeTranscript: async () => ({ active: true, messages: [], roomCursor: 0 }),
           unsubscribeTranscript: async () => undefined,
           roomHistory: async () => [],
           roomHistoryPage: async (_roomId: string, request: { sinceSeq?: number }) => ({
@@ -541,7 +541,11 @@ describe("CCConversationView asynchronous recovery", () => {
     const receive = installRoomApi({
       subscribeTranscript: async () => {
         if (!recovered) throw new Error("subscription unavailable");
-        return { messages: [{ role: "user", text: "recovered-history" }], roomCursor: 1 };
+        return {
+          active: true,
+          messages: [{ role: "user", text: "recovered-history" }],
+          roomCursor: 1,
+        };
       },
       readHistory: async () => {
         throw new Error("disk unavailable");
@@ -570,6 +574,82 @@ describe("CCConversationView asynchronous recovery", () => {
     });
     expect(renderedText(container)).toContain("recovered-history");
     expect(renderedText(container)).not.toContain("disk unavailable");
+  });
+
+  test("a late missing live message resumes a gap left after a frozen recovery finishes", async () => {
+    let resolvePage: ((page: unknown) => void) | undefined;
+    let calls = 0;
+    const receive = installRoomApi({
+      roomHistoryPage: async (_roomId: string, request: { sinceSeq?: number }) => {
+        calls++;
+        if (calls === 1)
+          return { snapshotId: "initial", throughSeq: 0, messages: [], complete: true };
+        if (calls === 2)
+          return await new Promise((resolve) => {
+            resolvePage = resolve;
+          });
+        return {
+          snapshotId: "retry",
+          throughSeq: request.sinceSeq ?? 0,
+          messages: [],
+          complete: true,
+        };
+      },
+    });
+    const container = await mount();
+    await act(async () => {
+      receive.message({
+        roomId: "room",
+        msg: { seq: 3, from: "agent", type: "text", text: "third-live" },
+      });
+      await flushMicrotasks();
+    });
+    expect(resolvePage).toBeDefined();
+    await act(async () => {
+      resolvePage!({
+        snapshotId: "frozen",
+        throughSeq: 1,
+        messages: [{ seq: 1, from: "user", type: "text", text: "first-frozen" }],
+        complete: true,
+      });
+      await flushMicrotasks();
+    });
+    expect(renderedText(container)).not.toContain("third-live");
+    await act(async () => {
+      receive.message({
+        roomId: "room",
+        msg: { seq: 2, from: "agent", type: "text", text: "second-late" },
+      });
+      await flushMicrotasks();
+    });
+    expect(renderedText(container)).toContain("second-late");
+    expect(renderedText(container)).toContain("third-live");
+  });
+
+  test("leaving a view during a page response stops continuation requests", async () => {
+    let resolvePage: ((page: unknown) => void) | undefined;
+    let calls = 0;
+    installRoomApi({
+      roomHistoryPage: async () => {
+        calls++;
+        return await new Promise((resolve) => {
+          resolvePage = resolve;
+        });
+      },
+    });
+    await mount();
+    await render({ active: false });
+    await act(async () => {
+      resolvePage!({
+        snapshotId: "frozen",
+        throughSeq: 2,
+        messages: [{ seq: 1 }],
+        complete: false,
+        nextCursor: "next",
+      });
+      await flushMicrotasks();
+    });
+    expect(calls).toBe(1);
   });
 
   test("rapid sends share one request and its acknowledgement preserves the next draft", async () => {

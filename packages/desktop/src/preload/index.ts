@@ -1813,6 +1813,14 @@ contextBridge.exposeInMainWorld("codeshell", {
     unsubscribeTranscript: (roomId: string) =>
       ipcRenderer.invoke("ccRoom:unsubscribeTranscript", roomId),
     closeSession: (roomId: string) => ipcRenderer.invoke("ccRoom:closeSession", roomId),
+    onTranscriptRecovery: (cb: (event: { roomId: string; message: string }) => void) => {
+      const listener = (
+        _event: Electron.IpcRendererEvent,
+        value: { roomId: string; message: string },
+      ) => cb(value);
+      ipcRenderer.on("ccRoom:transcriptRecovery", listener);
+      return () => ipcRenderer.removeListener("ccRoom:transcriptRecovery", listener);
+    },
     onRoomMessage: (cb: (env: { roomId: string; msg: unknown }) => void): (() => void) => {
       const h = (_e: IpcRendererEvent, env: { roomId: string; msg: unknown }) => cb(env);
       ipcRenderer.on("room:message", h);

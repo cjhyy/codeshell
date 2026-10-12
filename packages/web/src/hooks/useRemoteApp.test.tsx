@@ -1256,13 +1256,48 @@ describe("useRemoteApp cc transcript streaming", () => {
         messages: [{ seq: 6, from: "agent", type: "text", text: "streamed on phone" }],
         latestSeq: 6,
         requestId: "room-history:1",
-        page: { snapshotId: "snapshot", throughSeq: 6, complete: true },
+        page: { snapshotId: "snapshot", throughSeq: 7, complete: false, nextCursor: "next-page" },
+      });
+      await flushMicrotasks();
+    });
+    expect(hook.result.current.chat.items).not.toMatchObject([{ text: "streamed on phone" }]);
+    expect(ws.sent.map((payload) => JSON.parse(payload))).toContainEqual({
+      type: "room.history",
+      roomId: "room-1",
+      page: true,
+      cursor: "next-page",
+      limit: 200,
+      requestId: "room-history:1",
+    });
+    await act(async () => {
+      ws.message({
+        type: "room.message",
+        roomId: "room-1",
+        msg: { seq: 8, from: "agent", type: "text", text: "buffered live" },
+      });
+      ws.message({
+        type: "room.history.ok",
+        roomId: "room-1",
+        requestId: "stale-request",
+        messages: [{ seq: 7, from: "agent", type: "text", text: "stale must not apply" }],
+        latestSeq: 7,
+        page: { snapshotId: "snapshot", throughSeq: 7, complete: true },
+      });
+      ws.message({
+        type: "room.history.ok",
+        roomId: "room-1",
+        requestId: "room-history:1",
+        messages: [{ seq: 7, from: "agent", type: "text", text: "second page" }],
+        latestSeq: 7,
+        page: { snapshotId: "snapshot", throughSeq: 7, complete: true },
       });
       await flushMicrotasks();
     });
     expect(hook.result.current.chat.items).toMatchObject([
       { kind: "user", text: "initial" },
       { kind: "assistant", text: "streamed on phone", done: true },
+      { kind: "assistant", text: "second page", done: true },
+      { kind: "assistant", text: "buffered live", done: true },
     ]);
 
     await act(async () => {
