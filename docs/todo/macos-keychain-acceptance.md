@@ -113,6 +113,38 @@ identity checks all passed.
 
 ## Transport and process scope
 
+### Shared Electron test startup
+
+The shared `launchCodeShellElectron` entry now checks macOS Keychain metadata
+before loading Playwright or spawning Electron. It obtains only the existing OS
+account's default path and file identity, including when a parent runner has
+already isolated HOME. An explicit acceptance reference remains authoritative.
+The fixture HOME must be private, owned, and distinct from the account HOME;
+HOME and USERPROFILE overrides must still identify that fixture.
+
+Fresh fixtures get only the bounded default-Keychain preference and private
+metadata reference/receipt. Every cold launch rechecks the pinned path, device,
+inode and owner against the original and private defaults. Existing canonical
+acceptance preferences are verified without rewriting them or their receipts.
+Missing, changed, foreign, or unsafe metadata fails before Electron can enter
+the system create/reset-Keychain dialog. Native SafeStorage and the production
+cipher remain unchanged.
+
+Shared macOS launches also have a parent-side 180-second lifetime limit
+(`runtimeTimeoutMs` may override it). The watchdog tracks only observed child
+processes by PID and birth identity, then uses bounded TERM/KILL cleanup after
+timeout or for observed descendants left after normal exit. It never dismisses
+OS dialogs or signals unrelated applications by name. These fixture checks do
+not extend the historical acceptance receipts above or constitute a new signed
+installer acceptance.
+
+The metadata, launch-boundary and watchdog regressions run without Electron or
+any password/item lookup:
+
+```bash
+node scripts/run-isolated-node-smoke.mjs --test packages/desktop/scripts/electron-keychain-preflight.test.mjs packages/desktop/scripts/electron-harness.test.mjs packages/desktop/scripts/electron-test-watchdog.test.mjs packages/desktop/scripts/macos-keychain-context.test.mjs packages/desktop/scripts/process-custody.test.mjs packages/desktop/scripts/operation-read-watchdog.test.mjs
+```
+
 Before Core imports, parent, Main and each actual worker run seven negative
 probes against the exact-origin fetch/http/https guard. Worker protocol input
 remains corked until its receipt has been checked. This is JavaScript transport
