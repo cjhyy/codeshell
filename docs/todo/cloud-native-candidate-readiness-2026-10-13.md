@@ -55,6 +55,15 @@ installation. Both Main HTTPS paths also passed against the newly integrated
 Account apps. The 502-test full-suite receipt above remains specifically tied to
 `ef0f2b0`; it is not retroactively attributed to the later profile/recovery merge.
 
+The integrated Services checkout then passed **527/527** full-suite tests, zero
+failed/cancelled/skipped, at `f3b2b9df81366bd350a284b949b9e49caac13815` (including
+main's later documentation checkpoint `6f7979b`). It used native Node 24.19.0,
+fresh private HOME/config/data/cache/temp directories and an explicit environment
+without operator/provider credentials. That checkout uses committed public
+Server 0.9.28. The new five-package candidate's full suite remains the earlier
+502-test receipt; actual new-package management and HTTPS consumers were
+independently repeated after the Services product merge.
+
 A private-copy wrapper awaited the actual backend close and then rejected its
 Promise: current code exited 1 without `passed`, skipped the CLI phase and
 preserved both reported evidence directories. The same fault on real historical

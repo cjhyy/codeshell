@@ -426,5 +426,24 @@
       "signal": null
     },
     "privateFixtureRemoved": true
+  },
+  "latestServicesFullSuite": {
+    "servicesHead": "f3b2b9df81366bd350a284b949b9e49caac13815",
+    "includedMain": "6f7979b",
+    "runtime": "v24.19.0",
+    "command": "npm test",
+    "freshPrivateHome": true,
+    "explicitCredentialFreeEnvironment": true,
+    "committedServerDependency": "0.9.28",
+    "tests": 527,
+    "pass": 527,
+    "fail": 0,
+    "cancelled": 0,
+    "skipped": 0,
+    "exitCode": 0,
+    "durationMs": 60843.736041,
+    "log": "/tmp/codeshell-final-candidate-latest-services-full.log",
+    "logSha256": "4b8feaf0c516e9e1d10dbcdce1d612b511372ffeb2dabbf7d875fffd0e9d10cc",
+    "scope": "Integrated Services checkout with committed public dependency; candidate five-package full suite remains separately bound to ef0f2b0."
   }
 }
