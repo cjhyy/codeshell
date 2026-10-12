@@ -290,6 +290,15 @@
     "archiveLog": "validation/latest-a66f4ef2/repro__hub-session-operations-round18__session-followup.test.tsx.log"
   },
   {
+    "file": "docs/review-2026-10-12/reproductions/legacy-history-round24/legacy-native-history.test.ts",
+    "log": "docs/review-2026-10-12/reproductions/legacy-history-round24/legacy-native-history.test.ts.log",
+    "code": 0,
+    "signal": null,
+    "tests": 1,
+    "skipped": 0,
+    "archiveLog": "validation/latest-a66f4ef2/legacy-history-round24/legacy-native-history.test.ts.log"
+  },
+  {
     "file": "docs/review-2026-10-12/reproductions/link-recovery-round16/link-recovery.test.tsx",
     "log": "docs/review-2026-10-12/reproductions/link-recovery-round16/link-recovery.test.tsx.log",
     "code": 0,

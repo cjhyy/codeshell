@@ -1,6 +1,6 @@
 # 用户流程覆盖与修复顺序
 
-这是截至第二十三轮的流程地图；正式编号、级别和触发条件以 [主报告](README.md) 与各附录为准。正常路径通过不代表相邻失败路径已正确处理。缺陷表征测试通过表示复现成立，没有实施产品修复。
+这是截至第二十四轮的流程地图；正式编号、级别和触发条件以 [主报告](README.md) 与各附录为准。正常路径通过不代表相邻失败路径已正确处理。缺陷表征测试通过表示复现成立，没有实施产品修复。
 
 | 用户要完成的事 | 已检查的正常路径及证据层级 | 仍有的问题与可见影响 |
 | --- | --- | --- |
@@ -10,6 +10,7 @@
 | 同意审批、回答澄清并继续任务 | 真实 Core 审批与并行卡片；[审批独立复核](approval-quality-round10.md) | R02受信任cwd的CLI实际bypass与“逐次确认”显示不一致；R66旧观察视图接管把metadata改default却复用既存显式bypass实例；R01/R10 连续或重连待审批卡片不可用；R12/R13 多题/旧索引问题；R14 可选问题阻塞新任务；R73合法配置保存窗口内回答idle异步问题，lease已提交却未派发，重试/重连不能交付旧题，取消后重新提问可恢复；R11/R19仅保留已明确的窄窗口P3；R62已有普通审批离开CLI后仍阻塞新稿，重选可恢复 |
 | 在多个项目/会话之间切换 | 真实 Electron导航E2E；真实组件和Core完整磁盘session的[搜索导航复现](search-routing-round11.md) | R04 展开回写覆盖新会话草稿；R05 附件未按会话隔离；R16 配对页签广播和迟到打开；R55 当前renderer索引缺目标会话时，磁盘打开迟到抢回新选择；R61同项目双窗口共享选择，彼此抢当前会话 |
 | 搜索旧对话并打开结果 | 真实 Electron搜索：焦点、IME、滚动、选择、重试、快捷键、三种宽度；内容IPC为本地可控回复 | R56 实际内容搜索超过500候选未标覆盖不足，空结果可误导；有界扫描本身是既有设计 |
+| 重新打开旧图片会话 | [兼容history与现代journal控制](legacy-history-round24.md)：真实producer/reader/hook及旧状态Workbench SSR，auth/authority/WS替身 | R84/P3从未发布journal的旧paired-native消息显示内部路径和模型提示、缺安全附件摘要；文字/原件保留，现代hook投影正常 |
 | 拖入文件、上传并发送 | 真实组件输入引用、Core拒绝错误会话附件；[Quick Chat](quickchat-round8.md)、[上传审查](server-round1.md) | R17 删除chip不释放配额；R20 接收/发送图片大小限制不一致；R34 断线旧上传继续阻塞；R54 内部PNG payload已送达Quick Chat后静默丢弃，原生跨窗口拖动未实测 |
 | 停止任务或切到别处让其继续 | 原生Hub smoke剩余流程、Core关闭屏障正常控制；[运行时复核](resource-quality-round8.md) | R07 外部CLI仍忙却失去busy；R08 Web CLI停止协议错误；R15 外部队列依赖前台选择；R18 启动失败句柄阻止同模式重试；R36 Node Host EPIPE退出；R81 Core Stop已完成但Main自然ready中的旧点击继续发出Input，真实owned Chromium复现 |
 | 关闭/删除会话，回收后台资源 | Core正常close barrier现有28测试；[下载原生实验](download-round11.md)包含普通任务与专用kill对照 | R30 终态拒写令任务持续running；R31 Node Hub未等Panel强制终止；R57新worker已恢复的orphaned下载被close/killAll跳过，完整Desktop删除仅静态接线；R60侧栏fs删除失败先tombstone，历史页可修复权限后重试 |
@@ -53,3 +54,5 @@
 第二十二轮[Browser Stop输入边界](browser-stop-round22.md)新增R81/P2，作者与主审两基线各standalone native66 Node断言分账，Bun增量0、通用仍81/243；formal81=1P1/52P2/28P3。Core正确终结任务及拒绝旧reply，问题限Main未传播请求取消、尚无输入的ready窗口；不是已提交动作回滚、完整App/worker/Chrome或危险操作实测。[本地6034侧栏账号差异预审](sidebar-account-local-round22.md)新增0/执行0、仅local commit。
 
 第二十三轮菜单owner/Recent两P3分别确认，两基线各新增2文件4测试82个Bun expect，当前正式83=1/52/30、通用83/247；Recent作者原版first1/43、root两版first各0/1/41支架失败及修正版各1/43分账。Relay轮换/重连及HTTP错误门禁只读预审新增0/执行0。
+
+第二十四轮R84/F24-1/P3经主审双基线分别guarded1/1/17确认，当前正式84=1/52/31、通用84/248。旧producer无displayText及never-published journal兼容入口有来源证据；原件和普通正文正常，与上传/权限/拖放已有项去重。作者首轮CRC支架失败和成功、root两个成功独立分账，native增量0，不把modern首次日志对照称为用户修复流程。

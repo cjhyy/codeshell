@@ -1,0 +1,11 @@
+{
+  "rawCompressed": "first-authorized.raw.log.gz",
+  "rawDecompressedSha256": "283ab744756e23fa6c4a9f02c8535cc0d4193436804780e930c5e535282ffe35",
+  "readableLog": "first-authorized.log",
+  "readableSha256": "11932108ce1f17bc1a7cb453e3c3d74098980903c88bafafaf3d4991a18f7ddb",
+  "changedLines": [
+    7
+  ],
+  "change": "Removed trailing space on Bun diagnostic source-context blank line only; exact original bytes retained compressed.",
+  "fixtureGuardOrExecutionChanged": false
+}

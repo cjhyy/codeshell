@@ -1,7 +1,7 @@
 {
   "baseline": "a66f4ef291f304ee4df9da8095a90671d9a8f140",
-  "reproductionFiles": 83,
-  "reproductionTests": 247,
+  "reproductionFiles": 84,
+  "reproductionTests": 248,
   "reproductionSkipped": 0,
   "changedTestFiles": 8,
   "changedExecutedTests": 156,
@@ -47,5 +47,10 @@
   "round23BunFilesAdded": 2,
   "round23BunTestsAdded": 4,
   "round23BunExpects": 82,
-  "round23Note": "R82/P3 macOS global custom-menu target captured at install; actual menu module and exact preload/App menu callback extraction with owned Electron/global Menu, window IPC, recents adapters; no actual Electron OS menu/keyboard, full App/Main/Core/worker/model; destroyed-send error belongs to owned adapter only. Each frozen baseline independently guarded 1 file/3 tests/39 Bun expects; author first3/36 and final3/39 separately retained, no failures and no duplicate suite counting. R83/P3 actual single-window ProjectStore/IPC and private recents filesystem remain healthy while installed Menu snapshot stale; corrected portable source guarded independently each baseline 1/43, author original first1/43 separate, root first portability failures each0/1/41 with blocked child attempt1/no actual child preserved. Explicit SessionManager dist constructor, other Core source/exports/resolution-only provenance is source-audited, not cache graph. No native or real App."
+  "round23Note": "R82/P3 macOS global custom-menu target captured at install; actual menu module and exact preload/App menu callback extraction with owned Electron/global Menu, window IPC, recents adapters; no actual Electron OS menu/keyboard, full App/Main/Core/worker/model; destroyed-send error belongs to owned adapter only. Each frozen baseline independently guarded 1 file/3 tests/39 Bun expects; author first3/36 and final3/39 separately retained, no failures and no duplicate suite counting. R83/P3 actual single-window ProjectStore/IPC and private recents filesystem remain healthy while installed Menu snapshot stale; corrected portable source guarded independently each baseline 1/43, author original first1/43 separate, root first portability failures each0/1/41 with blocked child attempt1/no actual child preserved. Explicit SessionManager dist constructor, other Core source/exports/resolution-only provenance is source-audited, not cache graph. No native or real App.",
+  "round24BunFilesAdded": 1,
+  "round24BunTestsAdded": 1,
+  "round24BunExpects": 17,
+  "round24NativeExecutionsAdded": 0,
+  "round24Note": "Actual stageImageBytes/prepareRunImageInput/buildRunUserMessageContent/SessionManager/Transcript, actual Web hook/dispatcher/recovery service/reader/server history and legacy Workbench SSR. Synthetic auth/device/viewer/authority/Bridge and in-memory WebSocket; real authority/Git static only; modern control measured hook projection with no second SSR. No Engine.run/provider/worker/Electron/real transport/account. Source manifest and resolve-only addresses are not module-cache graph probes. No journal ever published before first legacy read; modern control is first journal publication, not a user-facing repair workflow. Author initial invalid-PNG CRC failure preserved separately, no Bun expect count printed; final author latest and independent root two baselines each1/17/Completed, not cumulative suite counts."
 }

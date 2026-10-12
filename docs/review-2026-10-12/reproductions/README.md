@@ -49,3 +49,5 @@ node scripts/run-isolated-node-smoke.mjs docs/review-2026-10-12/reproductions/cr
 第二十三轮R82收束阶段（历史）：菜单窗口归属新增1文件3测试39个Bun expect，两基线分别guarded通过，当前通用82文件246测试。actualMenu/preload/App回调与owned Electron/recents目录适配，未运行native OS菜单；作者first3/36与final3/39不重复累计，闭窗错误仅适配器。
 
 第二十三轮[Recent刷新](../menu-recents-round23.md)再增R83/P3及1文件1测试43个Bun expect，两冻结基线修正版分别guarded通过，通用83文件247测试；与owner合计本轮2/4/82。原作者first1/43和root两次原版便携失败0/1/41独立归档，修正版作者0次，未启动native或实际产品子进程。
+
+第二十四轮[旧原生图片历史](../legacy-history-round24.md)新增1文件1测试17个Bun expect，两冻结基线同源分别guarded通过，当前通用84文件248测试。旧状态实际Workbench SSR，现代控制仅hook投影；auth/authority/MemoryWS/Bridge为明确替身，无Engine/worker/provider/Electron/真实Git或WS。Node assert未另计，native增量0；作者首轮fixture CRC失败无Completed/未打印expect总数、修正后latest1/17及root各1/17单列。
