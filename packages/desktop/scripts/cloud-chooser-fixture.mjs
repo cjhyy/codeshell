@@ -125,6 +125,7 @@ export async function prepareCloudChooserFixture(
       throw new Error("Injected fixture preparation failure after actual Server ready");
     const guardUrl = new URL("./cloud-chooser-guard.mjs", import.meta.url).href;
     const diagnosticsUrl = new URL("./cloud-chooser-diagnostics.mjs", import.meta.url).href;
+    const tlsUrl = new URL("./cloud-chooser-tls.mjs", import.meta.url).href;
     const workerPreload = join(home, "chooser-worker.mjs"),
       mainEntry = join(home, "chooser-main.mjs");
     const origins = [ready.accountOrigin, ready.cloudOrigin];
@@ -133,9 +134,7 @@ export async function prepareCloudChooserFixture(
       `import { installChooserGuard } from ${JSON.stringify(guardUrl)};\ninstallChooserGuard({ origins: ${JSON.stringify(origins)}, role: "worker" });\n`,
       { mode: 0o600 },
     );
-    const fingerprint = new X509Certificate(await readFile(join(home, "cloud.pem"))).fingerprint256
-      .replaceAll(":", "")
-      .toLowerCase();
+    const fingerprint = new X509Certificate(await readFile(join(home, "cloud.pem"))).fingerprint256;
     const workerEntry = createRequire(join(appDir, "package.json")).resolve(
       "@cjhyy/code-shell-core/bin/agent-server-stdio",
     );
@@ -146,6 +145,7 @@ import assert from "node:assert/strict";
 import { appendFileSync } from "node:fs";
 import { installChooserGuard } from ${JSON.stringify(guardUrl)};
 import { installCloudChooserDiagnostics } from ${JSON.stringify(diagnosticsUrl)};
+import { verifyChooserCertificate } from ${JSON.stringify(tlsUrl)};
 installChooserGuard({ origins: ${JSON.stringify(origins)}, workerPreload: ${JSON.stringify(pathToFileURL(workerPreload).href)}, workerEntry: ${JSON.stringify(workerEntry)}, role: "main" });
 globalThis.chooserOpenDiagnostics = installCloudChooserDiagnostics({ app, ipcMain, cloudOrigin: ${JSON.stringify(ready.cloudOrigin)} });
 app.commandLine.removeSwitch("no-sandbox");
@@ -156,8 +156,7 @@ const sessions = new Set();
 const configure = (session) => {
   if (sessions.has(session)) return;
   sessions.add(session);
-  session.setCertificateVerifyProc((request, callback) => callback(
-    request.hostname === "127.0.0.1" && (request.certificate.fingerprint256 ?? request.certificate.fingerprint).replaceAll(":", "").toLowerCase() === ${JSON.stringify(fingerprint)} ? 0 : -3));
+  session.setCertificateVerifyProc((request, callback) => callback(verifyChooserCertificate(request, ${JSON.stringify(fingerprint)})));
   session.webRequest.onBeforeRequest((details, callback) => {
     const url = new URL(details.url);
     const local = ["file:", "data:", "blob:", "about:", "devtools:", "codeshell-resource:", "codeshell-attachment:"].includes(url.protocol);
@@ -166,6 +165,7 @@ const configure = (session) => {
     callback({ cancel: !allowed });
   });
 };
+app.on("session-created", configure);
 app.on("web-contents-created", (_event, contents) => configure(contents.session));
 // Electron 33 fetch dynamically reads net.request; capture the request factory
 // itself privately, solely for this fixed Chromium interception probe.

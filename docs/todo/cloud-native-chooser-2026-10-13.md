@@ -125,3 +125,28 @@ Guarded focused shard 为 26/26、142 assertions（观察器返回/throw 保全�
 本轮没有启动本机 Electron、Keychain、Core/Main 或构建 dist。
 下一准确 head 的 Linux CI 仍需区分 loadURL/IPC 结果与 renderer 关闭回调，不能将这些
 纯观察器/React 测试记为原生成功或根因修复。
+
+## 证书指纹绑定修复
+
+组合 `5459addacd3f847117fda8d4e720dbe4649504f2` 的 CI
+[38284736457](https://github.com/cjhyy/codeshell/actions/runs/38284736457) 已终态：十一项
+成功，Electron chooser 失败。stdout 诊断证实 open IPC 以 `window-load-failed` 拒绝，
+Cloud 主 frame `did-fail-load` 数值码为 `-202`，随后窗口关闭；chooser 的错误提示与
+保留打开状态符合真实失败结果。此轮不是单纯的 renderer 关闭回调丢失。
+
+旧夹具把 Electron certificate 的 `fingerprint` 字符串按 Node `fingerprint256` 的
+十六进制形式比较；Electron 33 的
+[converter](https://github.com/electron/electron/blob/v33.4.11/shell/common/gin_converters/net_converter.cc#L87)
+使用 `net::HashValue::ToString()`，Chromium 的
+[实现](https://chromium.googlesource.com/chromium/src/+/main/net/base/hash_value.cc)
+输出 `sha256/` 加 base64，两者不会相等。新 test-only verifier 与先前已通过的真实
+managed-window smoke 一致：解析 `certificate.data`，对叶证书重算 SHA-256，只接受
+准确 `127.0.0.1` 和本次生成的 Cloud 叶证书。未知/缺失/损坏/其他证书全部返回 `-2`
+明确拒绝；不依赖 metadata fingerprint，也不使用关闭 TLS 校验或全域信任开关。
+`session-created` 在任何 cookie/导航之前绑定，原 web-contents hook 保留为幂等保障。
+
+Guarded 17/17、71 assertions 覆盖两张实际新生成且同 CN 的不同叶证书、Chromium
+格式旧源反例、替换 metadata、错误 hostname、缺失/损坏 data、既有诊断和十三项 React
+交互。受影响 ESLint、Prettier、两个脚本语法及 diff check 通过。没有启动本机
+Electron/Keychain；完整原生成功仍等待此修复准确新 head 的 Linux CI，所有原 hidden /
+heading、冷重启、logout 和进程退出验收保持。
