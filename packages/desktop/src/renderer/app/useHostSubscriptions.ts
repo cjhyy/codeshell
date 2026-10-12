@@ -256,6 +256,9 @@ export function useHostSubscriptions({
       if (event.type === "background_agent_completed") {
         toast({
           message: bgCompletionText(event),
+          detail: [event.description, event.command, event.cwd, event.error, event.finalText]
+            .filter(Boolean)
+            .join("\n\n"),
           variant:
             event.status === "completed"
               ? "success"
