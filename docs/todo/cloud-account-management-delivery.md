@@ -34,20 +34,35 @@ and project credentials.
 ## Main and Web contract
 
 The trusted Services composition supplies `accountAuthority` with fixed
-`accountOrigin`, `exchange(token, installationId)` and
+`accountOrigin`, `redeem(ticket, installationId)` and
 `validate(principal, installationId)`. Server requires an explicit binding with
 the matching Account origin, UUID and external Cloud origin. Missing or unexpected
-Account configuration fails startup. `CLOUD_MANAGEMENT_AUTHORITY_VERSION = 1`
+Account configuration fails startup. `CLOUD_MANAGEMENT_AUTHORITY_VERSION = 2`
 lets the composition reject older packages that silently ignore unknown options.
 
-Main sends only JSON `{accountToken}` to the exact configured Cloud HTTPS origin's
+Main first requests `GET /api/v1/cloud-management/capabilities` from the exact
+Cloud origin. Its response contains exactly `{version:2, mode:"cloud-account",
+cloudOrigin, installationId, accountOrigin}`. Main validates the fixed origins and
+UUID, then sends its Account bearer only to the configured Account origin's
+`POST /api/v1/account/cloud-management/tickets` with `{cloudOrigin, installationId}`.
+Account explicitly pins both target values in operator configuration; discovery
+alone cannot authorize a target. The response contains exactly `{ticket, expiresAt,
+cloudOrigin, installationId, accountOrigin}`. The opaque 43-character base64url
+ticket expires within 60 seconds and the root session deadline, is single use,
+and remains bound to the live Account root, process epoch and target installation.
+A restored installation UUID requires explicit operator reconfiguration.
+
+Main sends only JSON `{ticket}` to the exact Cloud HTTPS origin's
 `POST /api/v1/cloud-management/session`, without Cookie/Authorization/Origin.
+The trusted private version 2 HMAC protocol redeems that ticket against the
+controller's own installation and Cloud origin. Raw `{accountToken}` requests,
+the old private exchange action and version 1 packages are refused.
 The 201 response is `{token, session}`. Session contains exactly `id`,
 `kind: "cloud-management"`, `audience`, `installationId`, `accountOrigin`,
 `accountId`, `managementEpoch`, `expiresAt`. It omits the internal owner id and
 Account root/session ids. The Cloud grant expires within ten minutes and no later
 than the Account principal deadline. Account access/refresh credentials never
-enter worker configuration, renderer responses, URLs or error messages.
+enter Cloud requests, worker configuration, renderer responses, URLs or error messages.
 
 Native management calls use Cloud bearer only and omit cookies. Main installs only
 the Cloud grant as `cs_cloud_management` with HttpOnly, Secure on HTTPS,
@@ -79,7 +94,8 @@ runtime if logout cannot be acknowledged. No completed authority result is cache
 ## Evidence and remaining acceptance
 
 Guarded source tests cover real HTTP list/create/start/open/stop, cookie status,
-foreign Account/legacy/browser-exchange refusal, readiness/availability revocation,
+foreign Account/legacy/browser-ticket refusal, exact public capability DTO, raw
+Account credential rejection and ticket replay refusal, readiness/availability revocation,
 continuous live SSE retirement and idempotent logout. The network fixture installs
 exact-origin/process refusal before importing Core and uses private synthetic HOME,
 credentials and listeners. Legacy lifecycle, registry and backup regressions pass.

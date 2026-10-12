@@ -41,7 +41,7 @@ export interface ProjectControlAuthority {
 
 export interface CloudAccountAuthority {
   accountOrigin: string;
-  exchange(token: string, installationId: string): Promise<CloudAccountPrincipal>;
+  redeem(ticket: string, installationId: string): Promise<CloudAccountPrincipal>;
   validate(
     principal: CloudAccountPrincipal,
     installationId: string,

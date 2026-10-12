@@ -47,7 +47,7 @@ async function fixture() {
   });
   registry.close();
   let active = true,
-    exchangeAccountId = accountId,
+    redeemAccountId = accountId,
     pauseEnsure: Promise<void> | undefined,
     pauseAvailability: Promise<void> | undefined;
   let ensured = 0,
@@ -86,6 +86,8 @@ async function fixture() {
   const innerUrl = `http://127.0.0.1:${(inner.address() as { port: number }).port}`;
   allowOwnedOrigin(innerUrl);
   const running = new Set<string>();
+  const issuedTicket = randomBytes(32).toString("base64url");
+  let redeemed = false;
   const principal: CloudAccountPrincipal = {
     accountOrigin,
     accountId,
@@ -102,9 +104,12 @@ async function fixture() {
     publicOrigin,
     accountAuthority: {
       accountOrigin,
-      async exchange(_token, installation) {
+      async redeem(ticket, installation) {
         expect(installation).toBe(installationId);
-        return { ...principal, accountId: exchangeAccountId };
+        expect(ticket).toBe(issuedTicket);
+        if (redeemed) throw new Error("single-use ticket was already consumed");
+        redeemed = true;
+        return { ...principal, accountId: redeemAccountId };
       },
       async validate(value, installation) {
         expect(installation).toBe(installationId);
@@ -164,10 +169,9 @@ async function fixture() {
       },
       ...(body === undefined ? {} : { body: JSON.stringify(body) }),
     });
-  const token = randomBytes(32).toString("base64url");
   const login = async () => {
     const response = await request("/api/v1/cloud-management/session", "POST", {
-      accountToken: token,
+      ticket: issuedTicket,
     });
     return {
       response,
@@ -183,7 +187,8 @@ async function fixture() {
     request,
     login,
     existing,
-    token,
+    ticket: issuedTicket,
+    installationId,
     innerRequests,
     running,
     principal,
@@ -200,7 +205,7 @@ async function fixture() {
       active = false;
     },
     otherAccount() {
-      exchangeAccountId = randomUUID();
+      redeemAccountId = randomUUID();
     },
     pauseEnsure(value: Promise<void>) {
       pauseEnsure = value;
@@ -218,7 +223,7 @@ test("bound Account grant lists, creates, starts, opens and stops projects witho
   expect(response.headers.get("set-cookie")).toBeNull();
   expect(body.session.expiresAt).toBeLessThanOrEqual(Date.now() + 600000);
   expect(JSON.stringify(body)).not.toContain("ownerId");
-  expect(JSON.stringify(body)).not.toContain(f.token);
+  expect(JSON.stringify(body)).not.toContain(f.ticket);
   const listed = await f.request("/api/v1/projects", "GET", undefined, body.token);
   expect(((await listed.json()) as any).projects[0].id).toBe(f.existing.id);
   const created = await f.request(
@@ -267,7 +272,7 @@ test("bound Account grant lists, creates, starts, opens and stops projects witho
   for (const request of f.innerRequests) {
     expect(request.auth).toBeUndefined();
     expect(request.cookie ?? "").not.toContain(body.token);
-    expect(request.body).not.toContain(f.token);
+    expect(request.body).not.toContain(f.ticket);
     expect(request.body).not.toContain(body.token);
   }
   expect(
@@ -283,7 +288,7 @@ test("bound Account grant lists, creates, starts, opens and stops projects witho
   expect(f.validations).toBeGreaterThan(10);
 });
 
-test("foreign Accounts, legacy login, browser credential exchange and wrong Host/origin fail closed", async () => {
+test("foreign Accounts, legacy login, browser ticket redemption and wrong Host/origin fail closed", async () => {
   const f = await fixture();
   f.otherAccount();
   expect((await f.login()).response.status).toBe(403);
@@ -293,9 +298,9 @@ test("foreign Accounts, legacy login, browser credential exchange and wrong Host
     ["/api/v1/cloud-management/session", { Host: "wrong.invalid" }],
     ["/api/v1/cloud-management/session", { Origin: "https://other.invalid" }],
   ] as const)
-    expect(
-      (await f.request(path, "POST", { accountToken: f.token }, undefined, extra)).status,
-    ).toBe(403);
+    expect((await f.request(path, "POST", { ticket: f.ticket }, undefined, extra)).status).toBe(
+      403,
+    );
   expect((await f.request("/api/v1/projects")).status).toBe(401);
   expect(f.ensured).toBe(0);
 });
@@ -357,3 +362,42 @@ test("continuous proxy sweep closes a live stream and explicit Cloud logout rema
   );
   expect((await f.request("/api/v1/projects", "GET", undefined, body.token)).status).toBe(401);
 }, 10000);
+
+test("public capabilities identify only the trusted target and raw Account credentials are refused", async () => {
+  const f = await fixture();
+  const capability = await f.request("/api/v1/cloud-management/capabilities");
+  expect(capability.status).toBe(200);
+  expect(await capability.json()).toEqual({
+    version: 2,
+    mode: "cloud-account",
+    cloudOrigin: publicOrigin,
+    installationId: f.installationId,
+    accountOrigin,
+  });
+  expect((await f.request("/api/v1/cloud-management/capabilities?install=other")).status).toBe(400);
+  expect(
+    (
+      await f.request("/api/v1/cloud-management/capabilities", "GET", undefined, undefined, {
+        Host: "other.invalid",
+      })
+    ).status,
+  ).toBe(403);
+  expect(
+    (await f.request("/api/v1/cloud-management/session", "POST", { accountToken: f.ticket }))
+      .status,
+  ).toBe(400);
+  expect(
+    (
+      await f.request("/api/v1/cloud-management/session", "POST", {
+        ticket: f.ticket,
+        accountToken: f.ticket,
+      })
+    ).status,
+  ).toBe(400);
+  expect((await f.login()).response.status).toBe(201);
+  expect((await f.login()).response.status).toBe(401);
+  const unknown = randomBytes(32).toString("base64url");
+  expect((await f.request("/api/v1/cloud-management/logout", "POST", {}, unknown)).status).toBe(
+    401,
+  );
+});

@@ -10,7 +10,7 @@ import type {
 } from "./control-authority.js";
 import { ProjectRegistryError } from "./registry.js";
 
-export const CLOUD_MANAGEMENT_AUTHORITY_VERSION = 1;
+export const CLOUD_MANAGEMENT_AUTHORITY_VERSION = 2;
 export const CLOUD_MANAGEMENT_COOKIE = "cs_cloud_management";
 const TOKEN = /^[A-Za-z0-9_-]{43}$/;
 const UUID = /^[a-f0-9]{8}(?:-[a-f0-9]{4}){3}-[a-f0-9]{12}$/;
@@ -182,8 +182,18 @@ export function createCloudAccountAuth(options: {
     if (!isOriginAllowed(req)) throw new ProjectRegistryError(403, "请求来源无效。");
     if (closed) throw new ProjectRegistryError(503, "Cloud 管理服务正在关闭。");
     if (req.url !== path) throw new ProjectRegistryError(400, "请求参数无效。");
+    if (path === "/api/v1/cloud-management/capabilities" && req.method === "GET") {
+      json(res, 200, {
+        version: CLOUD_MANAGEMENT_AUTHORITY_VERSION,
+        mode: "cloud-account",
+        cloudOrigin: options.publicOrigin,
+        installationId: options.installationId,
+        accountOrigin: options.binding.accountOrigin,
+      });
+      return true;
+    }
     if (path === "/api/v1/cloud-management/session" && req.method === "POST") {
-      // This credential exchange is a native Main request. Browsers use only the derived grant.
+      // Main sends an Account-issued target-bound single-use ticket, never its root credential.
       if (
         req.headers.origin !== undefined ||
         req.headers.cookie !== undefined ||
@@ -198,14 +208,14 @@ export function createCloudAccountAuth(options: {
       try {
         const body = await readBody(req);
         if (
-          Object.keys(body).join() !== "accountToken" ||
-          typeof body.accountToken !== "string" ||
-          !TOKEN.test(body.accountToken)
+          Object.keys(body).join() !== "ticket" ||
+          typeof body.ticket !== "string" ||
+          !TOKEN.test(body.ticket)
         )
-          throw new ProjectRegistryError(400, "账号凭据格式无效。");
+          throw new ProjectRegistryError(400, "Cloud 管理票据格式无效。");
         let principal: CloudAccountPrincipal;
         try {
-          principal = await options.authority.exchange(body.accountToken, options.installationId);
+          principal = await options.authority.redeem(body.ticket, options.installationId);
         } catch {
           throw new ProjectRegistryError(401, "云账号验证失败。");
         }
