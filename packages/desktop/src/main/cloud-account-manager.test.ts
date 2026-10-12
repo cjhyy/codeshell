@@ -139,6 +139,106 @@ function githubTransport(
 }
 const settleConnection = () => new Promise((done) => setTimeout(done, 0));
 
+const emptyLinkView = { linkOrigin, connections: [], grants: [] };
+test("Link management sends only current root credential to exact account origin and projects public metadata", async () => {
+  const saved = grant();
+  const id = randomUUID();
+  const ctx = setup(saved, async (req) =>
+    req.method === "DELETE"
+      ? { revoked: true, kind: "connections", id, token: "private" }
+      : { ...emptyLinkView, token: "private", clients: ["private"] },
+  );
+  const identity = { origin, accountId: saved.account.id };
+  expect(await ctx.manager.manageLinks({ ...identity, action: "list" })).toEqual({
+    action: "list",
+    view: emptyLinkView,
+  });
+  expect(ctx.requests[0]).toMatchObject({
+    origin,
+    path: "/api/v1/account/links",
+    method: "GET",
+    token: saved.accessToken,
+  });
+  expect(
+    await ctx.manager.manageLinks({ ...identity, action: "revoke", kind: "connections", id }),
+  ).toEqual({ action: "revoke", revoked: true, kind: "connections", id });
+  expect(ctx.requests[1]).toMatchObject({
+    origin,
+    path: `/api/v1/account/links/connections/${id}`,
+    method: "DELETE",
+  });
+  expect(ctx.requests[1].body).toBeUndefined();
+  expect(ctx.writes()).toBe(0);
+  expect(ctx.launched).toHaveLength(0);
+});
+
+test("Link management rejects other service, account and device authority before any request", async () => {
+  for (const saved of [grant(), grant({ kind: "device", hostId: randomUUID() })]) {
+    const ctx = setup(saved);
+    for (const identity of [
+      { origin: "https://other.example", accountId: saved.account.id },
+      { origin, accountId: randomUUID() },
+      ...(saved.kind === "device" ? [{ origin, accountId: saved.account.id }] : []),
+    ])
+      await expect(ctx.manager.manageLinks({ ...identity, action: "list" })).rejects.toThrow();
+    expect(ctx.requests).toHaveLength(0);
+  }
+});
+
+test("Link management fences credential refresh before revocation when owner closes", async () => {
+  const saved = grant({ accessTokenExpiresAt: Date.now() - 1 });
+  const response = deferred<unknown>();
+  const ctx = setup(saved, async (req) => (req.path.endsWith("refresh") ? response.promise : {}));
+  let owned = true;
+  const action = ctx.manager.manageLinks(
+    { origin, accountId: saved.account.id, action: "revoke", kind: "grants", id: randomUUID() },
+    () => owned,
+  );
+  owned = false;
+  response.resolve(grant({ account: saved.account, sessionId: saved.sessionId }));
+  await expect(action).rejects.toThrow("取消");
+  expect(ctx.requests.map((req) => req.path)).toEqual(["/api/v1/account/refresh"]);
+});
+
+test("late Link view and acknowledgements are fenced by owner and account incarnation even on same-account relogin", async () => {
+  for (const action of ["list", "revoke"] as const) {
+    for (const invalidate of ["owner", "relogin"] as const) {
+      const saved = grant();
+      const response = deferred<unknown>();
+      const next = grant({ account: saved.account });
+      const id = randomUUID();
+      const ctx = setup(saved, async (req) =>
+        req.path.startsWith("/api/v1/account/links")
+          ? response.promise
+          : req.path.endsWith("login")
+            ? next
+            : {},
+      );
+      let owned = true;
+      const request = {
+        origin,
+        accountId: saved.account.id,
+        action,
+        ...(action === "revoke" ? { kind: "grants" as const, id } : {}),
+      } as Parameters<CloudAccountManager["manageLinks"]>[0];
+      const operation = ctx.manager.manageLinks(request, () => owned);
+      await settleConnection();
+      if (invalidate === "owner") owned = false;
+      else {
+        await ctx.manager.logout();
+        await ctx.manager.signIn("login", {
+          origin,
+          username: "alice",
+          password: "test-only-password",
+        });
+      }
+      response.resolve(action === "list" ? emptyLinkView : { revoked: true, kind: "grants", id });
+      await expect(operation).rejects.toThrow("取消");
+      if (invalidate === "relogin") expect(ctx.manager.status().account).toEqual(saved.account);
+    }
+  }
+});
+
 test("combined GitHub login saves only the account grant before opening independent Link consent", async () => {
   const next = grant();
   const claim = `${linkOrigin}/oauth/account-link/claim?ticket=${token()}`;
