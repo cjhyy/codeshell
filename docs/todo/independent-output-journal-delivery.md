@@ -182,3 +182,61 @@ combined GUI/weak-network acceptance, full build/typecheck/lint and release
 verification remain outstanding. Earlier text describing automatic rotation as
 outstanding is superseded by this production checkpoint, not by the inactive
 storage prototype.
+
+## Main publication and bounded stream flush checkpoint
+
+Main now captures an independent producer against the original Session before
+Panel asynchronous dispatch. Before publishing a host event, it freezes recovery
+through that event's real cursor and joins any committed worker events after
+the last cursor actually applied to Main. An RPC response is not a notification
+application fence. Only exact late notifications already applied from disk are
+suppressed, using their actual cursor and canonical payload hash. Changed
+replayed payloads and unknown backwards notifications retain coverage barriers.
+Host events keep the external UI route; replayed worker events keep their
+existing worker/outbound route. Rebinding or closing a Panel cannot redirect a
+late failure; deleting and reusing its Session rejects that original producer.
+Headless automation binds its first real Engine cursor and durably publishes
+its later cleanup errors through the same producer lifetime.
+
+Main stages at most 8,192 reconstructed events / 32 MiB per join, and admits at
+most 8,192 pending replay identities. Overflow reports incomplete output rather
+than discarding deduplication evidence or claiming complete coverage. This is an
+explicit recovery bound; an expired initial range retains `retention_expired`.
+
+The Run stream wrapper batches only text/thinking deltas for at most 8 ms,
+64 events or 256 KiB. Every original event retains a distinct genuine cursor.
+The writer fsyncs the complete batch and publication head before emitting any
+of those events. Tool, approval, control and terminal events flush prior deltas
+first. Run disposal flushes and releases its timer on completion, provider throw,
+abort and Engine close. A timer write failure latches the durable failure fence;
+pending deltas and later successful terminals are never published after it.
+
+The compiled Core SDK/Main/Hub smoke after batching reconstructs the same
+9,060,345 UTF-8 bytes with SHA-256
+`8b43320c8ca500d14af6c51646c33f6f7397cd99ed2030be11d7ca324f0a9b71`.
+On this Host, 2,213 frames take 6,120 ms (the rotation checkpoint took 81,939 ms).
+Cold first-page/all-page times are 131/1,338 ms for the model journal and
+296/7,250 ms for a 147,352,023-byte segmented journal. Frozen paging retains its
+cursor while a separate actual worker appends 79 times and rotates storage.
+
+`bun run test:output-paced` adds an independent loopback SSE process paced at
+50 frames/second and a genuine compiled stdio worker/Main consumer. A 150-frame
+run measures source-to-Main p50 44 ms, p95 69 ms, maximum 86 ms; 12 concurrent
+control requests have p95 24 ms. A second run's cancellation produces a durable
+terminal in 103 ms with no later timer output. Both p95 checks are bounded at
+200 ms in the smoke. These are controlled fixture measurements, not a universal
+latency promise. Network guards precede Core/worker imports, and credentials and
+HOME are synthetic and isolated.
+
+Actual Engine regressions prove pending-delta durability before non-success
+terminals on provider throw, abort and close. A separate real process is killed
+at accepted input without a result, then restarted against the original Session
+inodes; a copied root is not substituted for crash recovery. Real Main methods
+exercise late Panel dispatch failure after rebind, close and Session reuse.
+
+Remaining full-P1 delivery: merge and verify explicit manual backup/diagnostic/
+restore and its fault matrix, integrate the separate CC Room and Services work,
+and complete combined CI, physical UI/relaunch/weak-network acceptance and
+authorized release. The pending repair marker already blocks all new journal
+reader/writer admission. These items remain open until their actual production
+paths and final combined checks pass.

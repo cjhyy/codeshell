@@ -45,6 +45,125 @@ function fixture(id = "journal-session") {
 }
 
 describe("Session output journal", () => {
+  test("a bounded batch keeps distinct cursors and shares only durable flushes", () => {
+    const f = fixture();
+    const old = f.writer.append({ type: "text_delta", text: "old" });
+    const real = fs.fsyncSync;
+    let flushes = 0;
+    const spy = spyOn(fs, "fsyncSync").mockImplementation((fd) => {
+      flushes++;
+      real(fd);
+    });
+    let cursors: string[];
+    try {
+      cursors = f.writer.appendBatch(
+        [1, 2, 3].map((index) => ({ type: "text_delta" as const, text: String(index) })),
+      );
+    } finally {
+      spy.mockRestore();
+    }
+    expect(flushes).toBe(2);
+    expect(new Set(cursors!).size).toBe(3);
+    expect(readOutputJournal(f.root, f.id, { through: old }).frames).toHaveLength(1);
+    expect(
+      readOutputJournal(f.root, f.id, { after: old }).frames.map((frame) => frame.cursor),
+    ).toEqual(cursors!);
+  });
+  for (const cut of [1, 2])
+    test(`batch flush failure ${cut} publishes no cursors and preserves the old proof barrier`, () => {
+      const f = fixture();
+      f.writer.append({ type: "text_delta", text: "published" });
+      const original = readFileSync(f.file),
+        real = fs.fsyncSync;
+      let flushes = 0;
+      const spy = spyOn(fs, "fsyncSync").mockImplementation((fd) => {
+        if (++flushes === cut) throw new Error("batch flush denied");
+        real(fd);
+      });
+      try {
+        expect(() =>
+          f.writer.appendBatch([
+            { type: "text_delta", text: "never published A" },
+            { type: "text_delta", text: "never published B" },
+          ]),
+        ).toThrow("denied");
+      } finally {
+        spy.mockRestore();
+      }
+      expect(readFileSync(f.file).subarray(0, original.length)).toEqual(original);
+      const page = readOutputJournal(f.root, f.id);
+      if (cut === 1) {
+        expect(page.status).toBe("ok");
+        expect(page.frames.map((frame) => frame.event)).toEqual([
+          { type: "text_delta", text: "published" },
+        ]);
+        expect(page.uncommittedTail).toBe(true);
+      } else expect(page.complete).toBe(false);
+    });
+  test("incremental batches flush before control/terminal events and at Run lifetime teardown", () => {
+    const f = fixture(),
+      events: StreamEvent[] = [];
+    const wrapped = buildWrappedOnStream({
+      getSession: () => f.session,
+      setLatestTodos() {},
+      outputJournal: {
+        root: f.root,
+        getRunId: () => f.runId,
+        onFailure() {
+          throw new Error("unexpected failure");
+        },
+      },
+      userOnStream: (event) => {
+        const proof = readOutputJournal(f.root, f.id, {
+          after: event.outputCursor,
+          through: event.outputCursor,
+        });
+        expect(proof.status).toBe("ok");
+        events.push(event);
+      },
+    });
+    wrapped({ type: "text_delta", text: "A" });
+    wrapped({ type: "thinking_delta", text: "B" });
+    expect(events).toHaveLength(0);
+    wrapped({ type: "error", error: "control" });
+    expect(events.map((event) => event.type)).toEqual(["text_delta", "thinking_delta", "error"]);
+    wrapped({ type: "text_delta", text: "C" });
+    wrapped.finish();
+    expect(events.at(-1)).toMatchObject({ text: "C" });
+    expect(() => wrapped({ type: "text_delta", text: "too late" })).toThrow("closed");
+  });
+  test("timer flush failure latches without unhandled errors and never publishes pending deltas or success", async () => {
+    const f = fixture(),
+      events: StreamEvent[] = [];
+    let failed = 0;
+    const wrapped = buildWrappedOnStream({
+      getSession: () => f.session,
+      setLatestTodos() {},
+      outputJournal: {
+        root: f.root,
+        getRunId: () => f.runId,
+        onFailure() {
+          failed++;
+        },
+      },
+      userOnStream: (event) => {
+        events.push(event);
+      },
+    });
+    wrapped({ type: "text_delta", text: "not yet durable" });
+    chmodSync(f.file, 0o400);
+    await new Promise((done) => setTimeout(done, 30));
+    expect(failed).toBeGreaterThan(0);
+    expect(events).toHaveLength(0);
+    expect(() => wrapped({ type: "turn_complete", reason: "completed" })).toThrow("incomplete");
+    wrapped({ type: "error", error: "failed" });
+    wrapped({ type: "turn_complete", reason: "model_error" });
+    expect(events).toHaveLength(2);
+    expect(
+      events.every((event) => event.outputRecovery === "incomplete" && !event.outputCursor),
+    ).toBe(true);
+    wrapped.finish();
+  });
   test("freezes contiguous bounded pages while subsequent appends advance another head", () => {
     const f = fixture();
     for (let index = 0; index < 12; index++)
@@ -297,6 +416,7 @@ describe("Session output journal", () => {
       outputJournal: { root: parent.root, getRunId: () => parent.runId, onFailure: () => {} },
     });
     wrapped({ type: "text_delta", text: "child output", agentId: "child", outputCursor: origin });
+    wrapped.finish();
     expect(output[0].outputOriginCursor).toBe(origin);
     expect(output[0].outputCursor).not.toBe(origin);
     expect(readOutputJournal(parent.root, parent.id).through).toBe(output[0].outputCursor);

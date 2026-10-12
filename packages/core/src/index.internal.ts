@@ -19,11 +19,13 @@ export {
   readOutputJournal,
   readOutputJournalLegacyBase,
   SessionOutputJournal,
+  SessionOutputPublisher,
+  needsIndependentOutput,
   type OutputJournalPage,
   type OutputJournalOptions,
   type OutputJournalFrame,
   type OutputJournalProducer,
-} from "./session/output-journal.js";
+} from "./session/output-publisher.js";
 
 export {
   getGraphemeSegmenter,

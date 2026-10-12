@@ -34,6 +34,9 @@ const {
 } = await import("../../../server/src/panels/storage-store.js");
 const { createDesktopPanelAutomationHost } = await import("./panel-automation-host.js");
 const { CronScheduler } = await import("@cjhyy/code-shell-core/internal");
+const { SessionManager } = await import("@cjhyy/code-shell-core");
+const { readOutputJournal } = await import("@cjhyy/code-shell-core/internal");
+const { MainOutputPublisher } = await import("./main-output-publisher.js");
 
 // Execute actual Main methods without Electron startup or replacing their bind logic.
 const source = readFileSync(new URL("./panel-app-bridge.ts", import.meta.url), "utf8");
@@ -407,6 +410,9 @@ function sensitiveFixture() {
       return { ok: true };
     },
     ingestExternalEvent() {},
+    captureExternalOutputSource() {
+      return { publish() {} };
+    },
   });
   f.binding.resource.descriptor.title = "Scope";
   f.bridge.options.automations = {
@@ -563,6 +569,88 @@ test("external runtime context await rechecks the session before ensure or send"
   await Promise.resolve();
   expect(dispatched).toBe(0);
   expect(f.effects()).toBe(0);
+});
+
+test("actual Panel asynchronous dispatch failure persists against its captured Session after rebind or close and rejects reuse", async () => {
+  for (const change of ["rebind", "close", "reuse"]) {
+    const f = sensitiveFixture();
+    const root = mkdtempSync(join(tmpdir(), "panel-output-lifetime-"));
+    const manager = new SessionManager(root);
+    const sid = f.input.sessionId;
+    manager.create(root, "fixture", "fixture", sid);
+    const applied: any[] = [],
+      errors: unknown[] = [];
+    const main = new MainOutputPublisher({
+      root: () => root,
+      latest: () => applied.at(-1)?.outputCursor,
+      worker: () => {
+        throw new Error("unexpected worker output");
+      },
+    });
+    let reject!: (error: Error) => void;
+    let captured = false;
+    f.bridge.options.getAgentBridge = () => ({
+      captureExternalOutputSource(sessionId: string) {
+        expect(sessionId).toBe(sid);
+        const source = main.capture(sessionId, (event) => {
+          applied.push(event);
+          return true;
+        });
+        captured = true;
+        return {
+          publish(event: unknown) {
+            try {
+              source.publish(event);
+            } catch (error) {
+              errors.push(error);
+            }
+          },
+        };
+      },
+      requestWorker: () => {
+        expect(captured).toBe(true);
+        return new Promise((_resolve, fail) => {
+          reject = fail;
+        });
+      },
+    });
+    try {
+      await f.bridge.bindGuest(f.sender, f.input);
+      expect(await f.bridge.call(f.guest, "agent.submitPrompt", { prompt: "held" })).toMatchObject({
+        accepted: true,
+      });
+      if (change === "rebind")
+        await f.bridge.bindGuest(f.sender, { ...f.input, sessionId: "session-b" });
+      if (change === "close") {
+        f.guest.closed = true;
+        f.bridge.revokeGuest(f.guest.id);
+      }
+      if (change === "reuse") {
+        rmSync(join(root, sid), { recursive: true });
+        manager.create(root, "replacement", "fixture", sid);
+        main.forget(sid);
+      }
+      reject(new Error("dispatch cancelled"));
+      // submitPrompt intentionally returns before dispatch; drain its real then/catch.
+      await new Promise((resolve) => setTimeout(resolve, 10));
+      if (change === "reuse") {
+        expect(applied).toHaveLength(0);
+        expect(errors).toHaveLength(1);
+        expect(String(errors[0])).toContain("replaced");
+      } else {
+        expect(errors).toHaveLength(0);
+        expect(applied).toHaveLength(1);
+        expect(applied[0].error).toContain("dispatch cancelled");
+        const page = readOutputJournal(root, sid, { through: applied[0].outputCursor });
+        expect(page.status).toBe("ok");
+        expect(page.complete).toBe(true);
+        expect(page.frames[0].producer?.kind).toBe("host");
+      }
+      expect(f.binding.agentSubmitInFlight).toBe(false);
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  }
 });
 
 test("real production automation Host rechecks native session after durable authority lookup", async () => {

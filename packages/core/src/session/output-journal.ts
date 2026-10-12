@@ -299,6 +299,7 @@ export function outputJournalCutover(
 ): {
   startedAt: number;
   incarnation: string;
+  root: string;
   legacy?: string;
 } {
   const location = sessionLocation(root, sessionId);
@@ -308,7 +309,7 @@ export function outputJournalCutover(
     location.state.startedAt!,
   );
   if (location.state.outputJournalIdentity)
-    return { startedAt: location.state.startedAt!, incarnation };
+    return { startedAt: location.state.startedAt!, incarnation, root: location.root };
   const fd = openRegular(join(location.directory, "transcript.jsonl"), constants.O_RDONLY);
   try {
     const size = fstatSync(fd).size;
@@ -338,7 +339,7 @@ export function outputJournalCutover(
       final.state.startedAt !== location.state.startedAt
     )
       invalid("Session changed during output cutover");
-    return { startedAt: location.state.startedAt!, incarnation, legacy };
+    return { startedAt: location.state.startedAt!, incarnation, legacy, root: location.root };
   } finally {
     closeSync(fd);
   }
@@ -1098,28 +1099,43 @@ export class SessionOutputJournal {
     }
   }
   append(event: StreamEvent): string {
-    const serialized = JSON.stringify({
-      ...event,
-      outputCursor: undefined,
-      outputRecovery: undefined,
-    });
-    const data = Buffer.from(serialized);
-    if (data.length > MAX_EVENT_BYTES)
-      throw new JournalError("incomplete", "Output event exceeds the 16 MiB recovery bound");
-    const values: Array<Pick<RecordValue, "event" | "fragment">> = [];
-    if (data.length <= CHUNK_BYTES) values.push({ event: JSON.parse(serialized) });
-    else {
-      const id = randomUUID();
-      const total = Math.ceil(data.length / CHUNK_BYTES);
-      for (let index = 0; index < total; index++)
-        values.push({
-          fragment: {
-            id,
-            index,
-            total,
-            data: data.subarray(index * CHUNK_BYTES, (index + 1) * CHUNK_BYTES).toString("base64"),
-          },
-        });
+    return this.appendBatch([event])[0];
+  }
+  /** All cursors become publishable only after the entire batch and head are durable. */
+  appendBatch(events: readonly StreamEvent[]): string[] {
+    if (!events.length || events.length > 64) throw new Error("Invalid output batch bound");
+    const values: Array<Pick<RecordValue, "event" | "fragment"> & { eventEnd: boolean }> = [];
+    let bytes = 0;
+    for (const event of events) {
+      const serialized = JSON.stringify({
+        ...event,
+        outputCursor: undefined,
+        outputRecovery: undefined,
+      });
+      const data = Buffer.from(serialized);
+      bytes += data.length;
+      if (data.length > MAX_EVENT_BYTES)
+        throw new JournalError("incomplete", "Output event exceeds the 16 MiB recovery bound");
+      if (events.length > 1 && bytes > 256 * 1024)
+        throw new JournalError("incomplete", "Output batch exceeds its 256 KiB recovery bound");
+      if (data.length <= CHUNK_BYTES)
+        values.push({ event: JSON.parse(serialized), eventEnd: true });
+      else {
+        const id = randomUUID();
+        const total = Math.ceil(data.length / CHUNK_BYTES);
+        for (let index = 0; index < total; index++)
+          values.push({
+            fragment: {
+              id,
+              index,
+              total,
+              data: data
+                .subarray(index * CHUNK_BYTES, (index + 1) * CHUNK_BYTES)
+                .toString("base64"),
+            },
+            eventEnd: index === total - 1,
+          });
+      }
     }
     const release = lockSync(this.location.statePath, { realpath: false, retries: 0 });
     let fd: number | undefined;
@@ -1169,7 +1185,8 @@ export class SessionOutputJournal {
       }
       let next = this.position;
       const linesToWrite: string[] = [];
-      for (const payload of values) {
+      const cursors: string[] = [];
+      for (const { eventEnd, ...payload } of values) {
         const value: RecordValue = {
           version: 2,
           sequence: next.sequence + 1,
@@ -1183,6 +1200,7 @@ export class SessionOutputJournal {
         const line = JSON.stringify({ ...value, hash }) + "\n";
         next = { sequence: value.sequence, offset: next.offset + Buffer.byteLength(line), hash };
         linesToWrite.push(line);
+        if (eventEnd) cursors.push(token(this.identity, next));
       }
       const nextBytes = next.offset - this.position.offset;
       if (!storage && shouldSegmentOutput(this.position.offset, nextBytes)) {
@@ -1239,26 +1257,27 @@ export class SessionOutputJournal {
       fsyncSync(target);
       this.assertOwner();
       this.persistHead(next);
-      if (
-        event.type === "session_user_message" &&
-        !event.injected &&
-        !(event as { agentId?: unknown }).agentId &&
-        !["agent", "system", "policy"].includes(String(event.authority))
-      )
-        try {
-          acknowledgeOutputCoverageAnchor(
-            this.location.root,
-            this.location.state.sessionId!,
-            this.identityPin,
-            event.clientMessageId,
-          );
-        } catch {
-          // A failed acknowledgement retains pending/invalid coverage. This
-          // observational proof must never revoke the next model run.
-        }
+      for (const event of events)
+        if (
+          event.type === "session_user_message" &&
+          !event.injected &&
+          !(event as { agentId?: unknown }).agentId &&
+          !["agent", "system", "policy"].includes(String(event.authority))
+        )
+          try {
+            acknowledgeOutputCoverageAnchor(
+              this.location.root,
+              this.location.state.sessionId!,
+              this.identityPin,
+              event.clientMessageId,
+            );
+          } catch {
+            // A failed acknowledgement retains pending/invalid coverage. This
+            // observational proof must never revoke the next model run.
+          }
       this.position = next;
       this.verifiedStamp = fileStamp(storage ?? fd);
-      return token(this.identity, next);
+      return cursors;
     } finally {
       if (activeFd !== undefined) closeSync(activeFd);
       storage?.close();
