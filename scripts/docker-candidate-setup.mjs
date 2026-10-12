@@ -100,7 +100,9 @@ export function candidatePanelEntryHashes(directory) {
       if (entry.isSymbolicLink()) deny();
       if (entry.isDirectory()) visit(child, depth + 1);
       else if (entry.isFile() && /\.(?:mjs|cjs|js)$/.test(entry.name))
-        hashes.push(candidateFile(realpathSync(child), { maximum: 8 * 1024 * 1024 }).sha256);
+        // Static browser bundles can exceed native entry limits. This only
+        // inventories their bytes; child entry and default file caps stay fixed.
+        hashes.push(candidateFile(realpathSync(child), { maximum: 16 * 1024 * 1024 }).sha256);
       if (hashes.length > 512) deny();
     }
   };

@@ -26,6 +26,7 @@ import {
   summarizeContainerLogs,
   summarizeFailure,
   summarizeRpc,
+  summarizeSmokeProgress,
   waitForRunApproval,
 } from "./smoke-project-diagnostics.mjs";
 import { nextProjectFixtureResponse } from "./smoke-project-model-fixture.mjs";
@@ -115,6 +116,7 @@ let failed = false;
 const cleanupFailures = [];
 let guardedFixture;
 let browserGuard;
+let smokeStage = "initializing";
 const rpcClients = new Map();
 
 const pause = (ms) => new Promise((done) => setTimeout(done, ms));
@@ -476,6 +478,7 @@ try {
     "--data-dir",
     dataDir,
   ];
+  smokeStage = "create-fixture";
   guardedFixture = await createDockerCandidateFixture({
     scratch,
     home: isolatedHome,
@@ -498,10 +501,12 @@ try {
     browserRequired: !!(candidatePanels || downloadPanel),
     videoRequired: !!candidatePanels && ["all", "video"].includes(candidateBusiness),
   });
+  smokeStage = "spawn-controller";
   child = guardedFixture.spawnController();
   child.on("error", (error) => (logs += String(error)));
   for (const stream of [child.stdout, child.stderr])
     stream.on("data", (data) => (logs = (logs + data).slice(-60_000)));
+  smokeStage = "wait-controller";
   await waitUntil(
     () => {
       if (child.exitCode !== null)
@@ -512,16 +517,20 @@ try {
     "Docker control CLI startup",
     25_000,
   );
+  smokeStage = "verify-browser-authority";
   browserGuard = await createDockerBrowserGuard({
     child,
     origin: serverUrl,
     policyPath: guardedFixture.policyPath,
     policyHash: guardedFixture.policyHash,
   });
+  smokeStage = "authorize-controller-origin";
   guardedFixture.allowControllerOrigin(serverUrl);
+  smokeStage = "read-installation";
   installationId = JSON.parse(
     readFileSync(join(dataDir, "project-control/registry.json"), "utf8"),
   ).installationId;
+  smokeStage = "setup-admin";
   const login = await request("/api/v1/auth/setup", {
     method: "POST",
     anonymous: true,
@@ -530,6 +539,7 @@ try {
   assert.equal(login.status, 200, await login.text());
   cookie = login.headers.get("set-cookie")?.split(";", 1)[0];
   assert.ok(cookie?.startsWith("cs_hub_session="));
+  smokeStage = "verify-health";
   assert.deepEqual(await json("/health"), {
     status: "ok",
     mode: "project-sandbox",
@@ -537,15 +547,20 @@ try {
   });
   const create = async (name) =>
     (await json("/api/v1/projects", { method: "POST", body: { name } }, 201)).project;
+  smokeStage = "create-project-a";
   const a = await create("Sandbox smoke A");
+  smokeStage = "create-project-b";
   const b = await create("Sandbox smoke B");
   const start = async (id) =>
     (await json(`/api/v1/projects/${id}/start`, { method: "POST", body: {} })).project;
+  smokeStage = "start-project-a";
   const runningA = await start(a.id);
+  smokeStage = "start-project-b";
   await start(b.id);
   const containerA = `codeshell-${installationId}-${a.id}`;
   const containerB = `codeshell-${installationId}-${b.id}`;
   if (seccompProfile) {
+    smokeStage = "verify-seccomp";
     const configured = JSON.parse(readFileSync(seccompProfile, "utf8"));
     for (const container of [containerA, containerB]) {
       const [inspection] = JSON.parse(await docker(["container", "inspect", container]));
@@ -564,11 +579,13 @@ try {
       "PASS: explicit seccomp bytes applied to both non-root, read-only, capability-dropped project runtimes",
     );
   }
+  smokeStage = "install-fixture";
   for (const container of [containerA, containerB]) await installFixture(container);
   console.log(
     "PASS: native control CLI, administrator setup, two real Docker runtimes, isolated loopback models",
   );
 
+  smokeStage = "verify-panel-binding";
   const prefixA = `/p/${a.id}`;
   const snapshot = await json(prefixA + "/api/v1/panels");
   const panel = snapshot.panels.find((item) => item.id === "project-smoke-panel");
@@ -597,6 +614,7 @@ try {
   assert.equal(executable.available, true);
   const directory = await host.call("filesystem.getKnownDirectory", { name: "downloads" });
   assert.equal(directory.path, "/workspace/downloads");
+  smokeStage = "verify-panel-process";
   const processTask = await host.finish(
     host.call("process.spawn", {
       executableHandle: executable.handle,
@@ -629,6 +647,7 @@ try {
     "PASS: opaque panel asset capability and approved panel process write the project volume",
   );
 
+  smokeStage = "verify-native-task";
   const nativeJob = await host.finish(
     host.call("tasks.start", {
       entry: "sample",
@@ -658,8 +677,11 @@ try {
   );
   console.log("PASS: approved reviewed panel task executes and persists inside project A");
 
+  smokeStage = "connect-project-a";
   const rpcA = await connect(a.id, "A");
+  smokeStage = "connect-project-b";
   const rpcB = await connect(b.id, "B");
+  smokeStage = "main-agent-approval";
   const main = rpcA.request("agent/run", {
     sessionId: "smoke-project-main",
     task: "SMOKE_MAIN_RW: read and update the shared proof file.",
@@ -679,6 +701,7 @@ try {
     "PASS: proxied WebSocket runs the real Core Read and approved Write in the same container volume",
   );
 
+  smokeStage = "panel-agent-task";
   const models = await host.call("agent.task.models");
   assert.ok(models.models.some((model) => model.id === "project-fixture"));
   const approvalsBeforeTask = host.approved.size;
@@ -720,6 +743,7 @@ try {
     "PASS: independently approved panel Core task reads the main Agent's file, writes it, and downloads through HTTP",
   );
 
+  smokeStage = "project-isolation";
   assert.equal(
     (await request(`/p/${b.id}/api/v1/files/content?path=downloads%2Fshared-proof.txt`)).status,
     404,
@@ -756,6 +780,7 @@ try {
   let verifyVideoRestart;
   let verifyQuantRestart;
   if (candidatePanels) {
+    smokeStage = "panel-lifecycle";
     const { verifyCandidatePanelLifecycle } = await import("./smoke-candidate-panel-lifecycle.mjs");
     verifyCandidateRestart = await verifyCandidatePanelLifecycle({
       browserGuard,
@@ -775,6 +800,7 @@ try {
     });
   }
   if (candidatePanels && ["all", "job-hunt"].includes(candidateBusiness)) {
+    smokeStage = "job-hunt";
     const { verifyCloudJobHuntRecovery } = await import("./smoke-cloud-job-hunt-recovery.mjs");
     verifyJobHuntRestart = await verifyCloudJobHuntRecovery({
       browserGuard,
@@ -792,6 +818,7 @@ try {
     });
   }
   if (candidatePanels && ["all", "design"].includes(candidateBusiness)) {
+    smokeStage = "design";
     const { verifyCloudDesignRecovery } = await import("./smoke-cloud-design-recovery.mjs");
     verifyDesignRestart = await verifyCloudDesignRecovery({
       browserGuard,
@@ -809,6 +836,7 @@ try {
     });
   }
   if (candidatePanels && ["all", "video"].includes(candidateBusiness)) {
+    smokeStage = "video";
     const { verifyCloudVideoRecovery } = await import("./smoke-cloud-video-recovery.mjs");
     verifyVideoRestart = await verifyCloudVideoRecovery({
       browserGuard,
@@ -824,6 +852,7 @@ try {
     });
   }
   if (candidatePanels && ["all", "quant"].includes(candidateBusiness)) {
+    smokeStage = "quant";
     const { verifyCloudQuantBacktest } = await import("./smoke-cloud-quant-backtest.mjs");
     verifyQuantRestart = await verifyCloudQuantBacktest({
       browserGuard,
@@ -841,6 +870,7 @@ try {
   }
   let verifyDownloadRestart;
   if (downloadPanel || (downloadFixture && candidateBusiness === "all")) {
+    smokeStage = "download";
     const { verifyCloudDownload } = await import("./smoke-cloud-download.mjs");
     verifyDownloadRestart = await verifyCloudDownload({
       browserGuard,
@@ -860,6 +890,7 @@ try {
       password,
     });
   }
+  smokeStage = "stop-project";
   const [beforeRecovery] = JSON.parse(await docker(["container", "inspect", containerA]));
   assert.equal(beforeRecovery.Config.Labels[label], installationId);
   const workspaceMount = beforeRecovery.Mounts.find((mount) => mount.Destination === "/workspace");
@@ -878,6 +909,7 @@ try {
   const recoveryEntry = installation
     ? "/opt/codeshell/node_modules/@cjhyy/code-shell-server/dist/bin/code-shell-settings-recovery.js"
     : "/opt/codeshell/packages/server/dist/bin/code-shell-settings-recovery.js";
+  smokeStage = "offline-recovery";
   await docker(guardedFixture.offlineRecoveryArguments(workspaceMount.Name, recoveryEntry), {
     input: `
     import assert from "node:assert/strict";
@@ -915,6 +947,7 @@ try {
     }
   `,
   });
+  smokeStage = "restart-project";
   const restarted = await start(a.id);
   assert.equal(restarted.generation, runningA.generation + 1);
   assert.equal(
@@ -940,14 +973,17 @@ try {
   console.log(
     "PASS: stop/restart preserves project files and conversations, changes generation, and rejects old panel grants",
   );
+  smokeStage = "restart-verification";
   await verifyDownloadRestart?.();
   await verifyCandidateRestart?.();
   await verifyJobHuntRestart?.();
   await verifyDesignRestart?.();
   await verifyVideoRestart?.();
   await verifyQuantRestart?.();
+  smokeStage = "capture-runtime";
   await guardedFixture.captureRuntime(containerA);
   await guardedFixture.captureRuntime(containerB);
+  smokeStage = "complete";
   success = true;
 } catch (error) {
   failed = true;
@@ -955,6 +991,7 @@ try {
   console.error(`Docker sandbox smoke failed: ${JSON.stringify(summarizeFailure(error))}`);
   console.log(
     JSON.stringify({
+      smokeProgress: summarizeSmokeProgress(smokeStage, child),
       rpcDiagnostics: [...rpcClients].map(([label, rpc]) => summarizeRpc(label, rpc)),
     }),
   );

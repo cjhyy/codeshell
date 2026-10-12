@@ -18,6 +18,7 @@ import {
   fstatSync,
   lstatSync,
   realpathSync,
+  readFileSync,
   readSync,
   writeSync,
 } from "node:fs";
@@ -27,11 +28,50 @@ import { fileURLToPath } from "node:url";
 
 export const candidateHash = (bytes) => createHash("sha256").update(bytes).digest("hex");
 const refuse = () => {
-  throw new Error("Docker candidate refused an unowned transport/process/policy");
+  const error = new Error("Docker candidate refused an unowned transport/process/policy");
+  Error.captureStackTrace(error, refuse);
+  // Inspect the stack privately. Only an integer location in these exact source
+  // bytes leaves the fixture; no raw frame, path or caller argument is exported.
+  const prefix = `${import.meta.url}:`;
+  let line = 0,
+    column = 0;
+  for (const frame of String(error.stack).split("\n").slice(1)) {
+    const index = frame.indexOf(prefix);
+    if (index < 0 || !/^\s*at /.test(frame)) continue;
+    const match = /^(\d+):(\d+)\)?$/.exec(frame.slice(index + prefix.length));
+    if (!match) continue;
+    const row = Number(match[1]),
+      position = Number(match[2]);
+    if (
+      row > 0 &&
+      row <= diagnosticLines.length &&
+      position > 0 &&
+      position <= diagnosticLines[row - 1].length + 1
+    ) {
+      line = row;
+      column = position;
+      break;
+    }
+  }
+  Object.defineProperty(error, "candidateGuardRefusal", {
+    value: Object.freeze({
+      version: 1,
+      source: "docker-candidate-guard.mjs",
+      sha256: diagnosticHash,
+      line,
+      column,
+    }),
+  });
+  throw error;
 };
 const same = (left, right) => JSON.stringify(left) === JSON.stringify(right);
 const marker = Symbol.for("codeshell.docker-candidate.pre-core");
 const modulePath = fileURLToPath(import.meta.url);
+// This digest identifies diagnostic coordinates only. candidateFile() still
+// independently enforces every existing pathname/inode/hash authority check.
+const diagnosticBytes = readFileSync(modulePath);
+const diagnosticHash = candidateHash(diagnosticBytes);
+const diagnosticLines = diagnosticBytes.toString("utf8").split("\n");
 const owned = (stat) => !process.getuid || stat.uid === process.getuid();
 
 /** Pin both bytes and pathname; do not follow a replaced or hard-linked policy. */

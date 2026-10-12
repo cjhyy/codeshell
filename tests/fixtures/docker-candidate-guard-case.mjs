@@ -7,13 +7,38 @@ import dns from "node:dns";
 import { spawn, execFile } from "node:child_process";
 import { appendFileSync, readFileSync, writeFileSync } from "node:fs";
 import { once } from "node:events";
+import { pathToFileURL } from "node:url";
+import { summarizeFailure } from "../../scripts/smoke-project-diagnostics.mjs";
 
 assert.equal(globalThis[Symbol.for("codeshell.docker-candidate.pre-core")]?.negativeProbes, 6);
 assert.equal(globalThis[Symbol.for("codeshell.docker-candidate.pre-core")]?.dnsNegativeProbes, 4);
 const config = JSON.parse(readFileSync(process.env.CODESHELL_DOCKER_CANDIDATE_CONFIG));
 writeFileSync(`${config.home}/entry-reached`, "guard already installed\n", { mode: 0o600 });
 const blocked = /Docker candidate refused/;
-assert.throws(() => fetch("https://external.invalid/"), blocked);
+assert.throws(
+  () => fetch("https://external.invalid/"),
+  (error) => {
+    assert.equal(error.message, "Docker candidate refused an unowned transport/process/policy");
+    const diagnostic = summarizeFailure(error);
+    assert.equal(
+      diagnostic.sha256,
+      "e1bcd3fb891860e5d2f6c4b00b2320a6476d95acd85dd93bf515b1083b013fb0",
+    );
+    assert.equal(diagnostic.guardRefusal.sha256, config.guardHash);
+    assert(diagnostic.guardRefusal.line > 0);
+    assert(diagnostic.guardRefusal.column > 0);
+    const source = readFileSync(
+      new URL("./docker-candidate-guard.mjs", pathToFileURL(config.preload)),
+      "utf8",
+    );
+    assert.match(source.split("\n")[diagnostic.guardRefusal.line - 1], /refuse\(\)/);
+    assert(!JSON.stringify(diagnostic).includes(config.home));
+    assert(!JSON.stringify(diagnostic).includes("external.invalid"));
+    assert(!JSON.stringify(diagnostic).includes("at "));
+    console.log("GUARD_REFUSAL_DIAGNOSTIC " + JSON.stringify(diagnostic));
+    return true;
+  },
+);
 assert.throws(() => fetch("http://localhost:1/"), blocked);
 assert.throws(() => http.get("http://127.0.0.1:1/"), blocked);
 assert.throws(() => net.connect({ path: "/tmp/unowned.sock" }), blocked);

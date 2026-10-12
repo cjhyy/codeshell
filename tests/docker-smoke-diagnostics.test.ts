@@ -4,6 +4,7 @@ import {
   summarizeContainerLogs,
   summarizeFailure,
   summarizeRpc,
+  summarizeSmokeProgress,
   waitForRunApproval,
 } from "../scripts/smoke-project-diagnostics.mjs";
 
@@ -11,6 +12,74 @@ const sessionId = "smoke-project-main";
 const approval = () => ({ method: "agent/approvalRequest", params: { sessionId } });
 const pending = () => new Promise(() => {});
 const secret = "root-cookie-and-full-model-prompt-never-print";
+
+test("smoke progress only exports fixed stages and bounded controller state", () => {
+  const child = { pid: 123, exitCode: null, signalCode: null, spawnargs: [secret], path: secret };
+  expect(summarizeSmokeProgress("spawn-controller", child)).toEqual({
+    stage: "spawn-controller",
+    controller: {
+      captured: true,
+      started: true,
+      live: true,
+      exitCode: undefined,
+      signal: undefined,
+    },
+  });
+  const invalid = summarizeSmokeProgress(secret, {
+    ...child,
+    pid: secret,
+    exitCode: secret,
+    signalCode: secret,
+  });
+  expect(invalid.stage).toBe("unknown");
+  expect(invalid.controller.started).toBe(false);
+  expect(invalid.controller.live).toBe(false);
+  expect(JSON.stringify(invalid)).not.toContain(secret);
+  expect(summarizeSmokeProgress("create-fixture").controller.captured).toBe(false);
+  expect(
+    summarizeSmokeProgress("wait-controller", { pid: 123, exitCode: 1, signalCode: null })
+      .controller.exitCode,
+  ).toBe(1);
+});
+
+test("guard refusal metadata has a strict schema and never exports arbitrary paths, frames or fields", () => {
+  const valid = {
+    version: 1,
+    source: "docker-candidate-guard.mjs",
+    sha256: "a".repeat(64),
+    line: 123,
+    column: 5,
+  };
+  const error = (metadata) =>
+    Object.defineProperty(new Error(secret), "candidateGuardRefusal", { value: metadata });
+  expect(summarizeFailure(error(valid)).guardRefusal).toEqual(valid);
+  for (const metadata of [
+    { ...valid, source: secret },
+    { ...valid, sha256: secret },
+    { ...valid, line: secret },
+    { ...valid, line: -1 },
+    { ...valid, column: 10_001 },
+    { ...valid, line: 0 },
+    { ...valid, path: secret },
+    { ...valid, stack: secret },
+    Object.defineProperty({ ...valid }, "line", {
+      get() {
+        throw new Error("getter must not run");
+      },
+    }),
+  ]) {
+    const result = summarizeFailure(error(metadata));
+    expect(result.guardRefusal).toBeUndefined();
+    expect(JSON.stringify(result)).not.toContain(secret);
+  }
+  expect(summarizeFailure(error({ ...valid, line: 0, column: 0 })).guardRefusal.line).toBe(0);
+  const getter = Object.defineProperty(new Error(secret), "candidateGuardRefusal", {
+    get() {
+      throw new Error("getter must not run");
+    },
+  });
+  expect(summarizeFailure(getter).guardRefusal).toBeUndefined();
+});
 
 test("actual Run rejection wins before the approval deadline without revealing its raw message", async () => {
   const start = Date.now();

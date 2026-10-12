@@ -4,6 +4,8 @@
 > 分区规则：**小 feature = 体量 M 及以下（M/S/XS），可单会话直接着手**；**大功能升级 = 体量 L**，需先方案设计再分阶段落地。
 > 最近一次核对：2026-10-13。[v0.9.36 已正式发布](https://github.com/cjhyy/codeshell/releases/tag/v0.9.36)，但 tag 解析源码早于后续 Cloud 合入，也不包含最终候选 guard，不能代表本轮全部交付。前版 0.9.33 已包含资料集跨文件查询、Profile 删除解绑、MCP 配置重载与恢复覆盖修复；运行时加载和完整目标部署验收仍单独保留。真实 GitHub 登录与原生连接已有生产记录，其读取、钥匙串及生命周期限制和 P0/P1 真实进展见[交付检查点](docs/todo/p0-p1-release-2026-10-12.md)。历史来源、源码标记、设计文档和未勾验收判定见 [夜间 TODO 核查](docs/todo/2026-09-11-overnight-todo-audit.md)。源码实现不代表已经发布或部署。
 
+> 最新完整 Linux 候选 `38306130332` 仍为失败：已安装 Device Relay 原十五阶段与真实 Docker 的六项 recovery CLI／6+4 pre-Core proof 已通过，主 Docker smoke 的 transport／generic fixture guard 拒绝已隔离复现为 Video 0.7.3 静态 inventory 文件超过 8 MiB 扫描上限；修复后的准确 CI 与新完整 Linux 候选仍待，原日志无调用点，不能据局部复现宣称唯一原因或后续业务已通过。未缩减业务范围、未完成后续真实 speech／Panel 业务／restore／archive，也未新增正式发行；其余五个 Panel 仍仅有私有 ZIP 与发布说明准备。详见下方交付检查点。
+
 > Panel runtime 专项核对：2026-09-13。API 14 通用资源、包内工具、进程回执与 Desktop 后台任务已实现，视频处理业务已迁到面板；本次发布与最终 CI 仍见 [验收矩阵](docs/todo/panel-plugin-runtime-implementation.md)。旧 Host TTS 测试随业务迁至面板，不再作为 Host 功能待办。
 
 ## 小 feature（体量 M 及以下）

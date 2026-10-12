@@ -143,6 +143,7 @@ test("real Node installs guard before entry and every permitted descendant, with
   expect(value.stderr).toBe("");
   expect(value.code).toBe(0);
   expect(value.reached).toBe(true);
+  expect(value.stdout).toContain("GUARD_REFUSAL_DIAGNOSTIC ");
   expect(
     value.receipt.filter((event) => event.event === "pre-core").map((event) => event.role),
   ).toEqual(["installer", "worker", "worker", "worker"]);

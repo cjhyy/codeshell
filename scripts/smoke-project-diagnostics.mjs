@@ -2,6 +2,100 @@ import { createHash } from "node:crypto";
 
 const digest = (value) => createHash("sha256").update(String(value)).digest("hex");
 const finite = (value) => (typeof value === "number" && Number.isFinite(value) ? value : undefined);
+const smokeStages = new Set([
+  "initializing",
+  "create-fixture",
+  "spawn-controller",
+  "wait-controller",
+  "verify-browser-authority",
+  "authorize-controller-origin",
+  "read-installation",
+  "setup-admin",
+  "verify-health",
+  "create-project-a",
+  "create-project-b",
+  "start-project-a",
+  "start-project-b",
+  "verify-seccomp",
+  "install-fixture",
+  "verify-panel-binding",
+  "verify-panel-process",
+  "verify-native-task",
+  "connect-project-a",
+  "connect-project-b",
+  "main-agent-approval",
+  "panel-agent-task",
+  "project-isolation",
+  "panel-lifecycle",
+  "job-hunt",
+  "design",
+  "video",
+  "quant",
+  "download",
+  "stop-project",
+  "offline-recovery",
+  "restart-project",
+  "restart-verification",
+  "capture-runtime",
+  "complete",
+]);
+
+export function summarizeSmokeProgress(stage, controller) {
+  return {
+    stage: smokeStages.has(stage) ? stage : "unknown",
+    controller: {
+      captured: !!controller,
+      started: Number.isSafeInteger(controller?.pid) && controller.pid > 0,
+      live: !!controller && controller.exitCode === null && controller.signalCode === null,
+      exitCode:
+        Number.isSafeInteger(controller?.exitCode) &&
+        controller.exitCode >= 0 &&
+        controller.exitCode <= 255
+          ? controller.exitCode
+          : undefined,
+      signal: ["SIGTERM", "SIGKILL", "SIGINT"].includes(controller?.signalCode)
+        ? controller.signalCode
+        : undefined,
+    },
+  };
+}
+
+function guardRefusal(error) {
+  const value = error && Object.getOwnPropertyDescriptor(error, "candidateGuardRefusal")?.value;
+  if (
+    !value ||
+    typeof value !== "object" ||
+    Object.getOwnPropertyNames(value).sort().join(",") !== "column,line,sha256,source,version"
+  )
+    return undefined;
+  if (
+    Object.values(Object.getOwnPropertyDescriptors(value)).some(
+      (field) => !Object.hasOwn(field, "value"),
+    )
+  )
+    return undefined;
+  if (
+    value.version !== 1 ||
+    value.source !== "docker-candidate-guard.mjs" ||
+    typeof value.sha256 !== "string" ||
+    !/^[a-f0-9]{64}$/.test(value.sha256)
+  )
+    return undefined;
+  if (
+    ![value.line, value.column].every(
+      (number) => Number.isSafeInteger(number) && number >= 0 && number <= 10_000,
+    ) ||
+    (value.line === 0) !== (value.column === 0)
+  )
+    return undefined;
+  return {
+    version: 1,
+    source: "docker-candidate-guard.mjs",
+    sha256: value.sha256,
+    line: value.line,
+    column: value.column,
+  };
+}
 const reasons = new Set([
   "completed",
   "stop_hook_prevented",
@@ -61,6 +155,7 @@ export function summarizeFailure(error) {
     errorCodes: errorCodes.filter((value) => new RegExp(`\\b${value}\\b`).test(text)),
     categories: categories.filter(([, pattern]) => pattern.test(text)).map(([name]) => name),
     sha256: digest(text),
+    guardRefusal: guardRefusal(error),
   };
 }
 
