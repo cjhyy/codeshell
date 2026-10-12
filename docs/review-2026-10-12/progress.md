@@ -9,7 +9,7 @@
 证据目录：`/tmp/codeshell-review-20261012`。
 持续调度：heartbeat `codeshell-10-12-11`，每小时整点与半点；截止后交付报告并停用。01:34 已将原 00:52 锚点改为整点/半点，覆盖 11:00 截止时刻。
 
-## 当前状态（新加坡 08:57）
+## 当前状态（新加坡 09:19）
 
 - 截止11:00前继续实质审查，不提前complete或停用heartbeat。07:30 get_goal仍返回blocked（主审未请求、实际工作无阻塞），工具不能设active；按用户授权继续，截止交付后才complete。
 - 初始产品84740d56与最新a66f4ef2分别冻结在本聊天两个独立工作区；只写本任务docs，不改产品、不build/clean、不触碰原工作区/其他任务。最新已冻结install、全workspace/Desktop build、typecheck:workspaces及变更文件测试通过。
@@ -168,3 +168,7 @@ R53优先级抽查已收束，保留P2的持续Update契约失效理由及审计
 09:01第二十五轮最终独立整合语义QC通过，新增执行0；85=1/52/32、双common85/250、三final各2/32/Completed与首败0/2/22/noCompleted分账一致，scope、63manifest/4resolve-only及原件/cleanup/HOME无实质矛盾。修当前关键证据摘要残留83/247→85/250；历史阶段保留。分页追加实际键为目录mtime、无自然精度/备份生产证明，仍0exec/未收项。第26轮Desktop/Hub fork/export/retry静态预审已委派，仅/tmp无执行/未确认新项。09:00goal仍历史blocked但实际review无阻塞，TOML ACTIVE整点半点；继续11:00，不complete/停用。08:52origin仍a66f，下次09:40–09:50核。
 
 09:01第二十五轮最终机械QC通过：1520个顶层Markdown本地链接/964源码行号、formal85=1/52/32、双common85/250、产品tracked diff均空。56个staged路径全为本任务docs，cached whitespace通过；准备保存docs-only检查点。第26轮只/tmp静态继续，11:00未到，不complete/停用。
+
+09:19第二十六轮实质纯静态审查完成：summary/fullQuickChat/historyRetry/Hubexport与Cloud账号取消/refresh/logout，新增正式0/产品import0/fixture/native0。fork首send前Review范围保设计/体验观察，blank draft同门禁、Mainlegacy合同与ordinaryfork首次run懒绑定是更强反证；停止PLAN准备，仅复制未执行guard、无fixture源码。Files source main=currentprimary正常fallback，main≠currentprimary的rootId/path条件另交第27轮纯静态核，尚未计项/执行；title Sidebar与history双来源也正在独立设计反证。正式85=1/52/32、通用双85/250不变；R25检查点2c230019已保存。所有归档仅本任务docs，08:52origin仍a66f，下次09:40–09:50；11:00未到继续，不complete/停用。
+
+09:22第二十六轮机械核验1571顶层本地Markdown链接/987源码行号、0error，85=1/52/32及双common85/250保持；静态29路径/Cloud10项hash、未执行PLAN与guard原件分账均核真。25个staged路径仅本任务docs，cached whitespace通过。第27轮Files source main≠currentprimary的selector映射已获独立静态支持，尚无fixture/动态执行/正式项；标题双来源暂仅设计观察。11:00前继续，heartbeat不提前停用。

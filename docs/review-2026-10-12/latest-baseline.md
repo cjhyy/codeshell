@@ -69,3 +69,5 @@
 第二十四轮[旧原生图片历史](legacy-history-round24.md)新增R84/P3，同一最终源码在两冻结基线各guarded1文件1测试17 Bun expect/Completed，31项source及5个resolve-only地址按各checkout核验，通用84文件248测试。旧状态真实Workbench SSR、现代仅实际hook投影；没有真实权限、Git、WS或Engine/worker/provider验收。作者首轮fixture无效PNG被正确CRC拒绝且无Completed/无打印expect总数，修正后作者latest1/17与root两个独立1/17分别保留；native增量0。
 
 第二十五轮[现代图片Desktop恢复](modern-desktop-image-round25.md)新增R85/P3，同源411b12在两冻结基线各guarded1文件2测试32Bun expect/Completed，63manifest/4resolve-only逐项核SHA，当前通用85/250。实际Desktop metadata/renderer缺提示或纯图bubble，Web摘要、inline UI及68-byte原件控制正常；sendhook/fullApp/authority/worker/provider不动态外推。作者first0/2/22/noCompleted是MiniDom缺matchMedia支架，second2/32与root各2/32分账，native增量0。08:52fetch origin仍a66f，产品快照保持。
+
+第二十六轮[会话续接](session-continuation-round26.md)及[云账号](cloud-account-static-round26.md)为双冻结静态来源复核，0新增finding/产品import/fixture/native，common85/250不变。主审29路径含Mainindex整体版本差异但review:status block相同；source测试未执行，不作为动态验收。

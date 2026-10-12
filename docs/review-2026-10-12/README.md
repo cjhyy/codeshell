@@ -339,3 +339,5 @@ R76实际Core async-answer enqueue产生续接turn，所有Core帧传给实际Ho
 第二十四轮[最终独立整合核验](quality-round24.md)通过，新增执行0；84=1/52/31、双基线84/248、first CRC与作者/root成功分账、来源/清理及能力边界一致。历史静态反证稿保留当时阶段，当前权威结算以最终稿为准。
 
 第二十五轮[现代图片Desktop恢复](modern-desktop-image-round25.md)新增R85/D25-1/P3：有效现代journal及正确附件metadata到普通MessageStream后被忽略，图文缺附件提示、纯图整条用户bubble不显示；原件/assistant完整。冷paired Session、实际producer/journal/reader/recovery/hydration/renderer及Web和inline UI正常控制，两冻结基线各guarded新1文件2测试32Bun expect/Completed。无sendhook/fullApp/Engine/provider/worker/Electron/真实authority动态验收。首败MiniDom缺matchMedia的0/2/22/noCompleted及唯一支架修正单列。当前正式85=1/52/32、通用85/250、native增量0。
+
+第二十六轮[会话续接静态审查](session-continuation-round26.md)新增正式0/动态执行0：summary fork首run前Review单根覆盖保留体验建议，经blank/legacy/首次run补绑合同反证不升项；Files普通fallback、history重试与Hub导出正常门禁及[云账号取消/退出](cloud-account-static-round26.md)仅读核对。未执行候选PLAN/guard，85=1/52/32与common85/250保持；源码测试不冒充动态通过。

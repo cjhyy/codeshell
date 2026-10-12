@@ -1,6 +1,6 @@
 # 用户流程覆盖与修复顺序
 
-这是截至第二十五轮的流程地图；正式编号、级别和触发条件以 [主报告](README.md) 与各附录为准。正常路径通过不代表相邻失败路径已正确处理。缺陷表征测试通过表示复现成立，没有实施产品修复。
+这是截至第二十六轮的流程地图；正式编号、级别和触发条件以 [主报告](README.md) 与各附录为准。正常路径通过不代表相邻失败路径已正确处理。缺陷表征测试通过表示复现成立，没有实施产品修复。
 
 | 用户要完成的事 | 已检查的正常路径及证据层级 | 仍有的问题与可见影响 |
 | --- | --- | --- |
@@ -59,3 +59,5 @@
 第二十四轮R84/F24-1/P3经主审双基线分别guarded1/1/17确认，当前正式84=1/52/31、通用84/248。旧producer无displayText及never-published journal兼容入口有来源证据；原件和普通正文正常，与上传/权限/拖放已有项去重。作者首轮CRC支架失败和成功、root两个成功独立分账，native增量0，不把modern首次日志对照称为用户修复流程。
 
 第二十五轮R85/D25-1/P3为单一普通Desktop渲染根因，现代projection与68-byte原件完整；两冻结基线各guarded1/2/32，作者first0/2/22/noCompleted与修正后2/32分列。current85=1/52/32、common85/250，native增量0；普通sendhook及fullApp范围静态，不要求旧历史缩略图。
+
+第二十六轮[summary/full fork、retryHistory、Hub export](session-continuation-round26.md)及[Cloud账号](cloud-account-static-round26.md)纯静态新增正式0/执行0。summary首send前Review范围仅设计/体验建议，blank/legacy和明确lazy补绑规则阻止升级；Files source main≠currentprimary的条件另待核。当前正式85=1/52/32、common85/250不变。
