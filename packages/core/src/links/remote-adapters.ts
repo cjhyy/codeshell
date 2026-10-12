@@ -1,3 +1,10 @@
+import {
+  GITHUB_SOURCE_ACTIONS,
+  githubSourceParams,
+  normalizeGithubSourceResult,
+  slackSourceParams,
+  normalizeSlackSourceResult,
+} from "./source-reads.js";
 import { githubIssueStateParameters } from "./github-issue-state.js";
 import { asRecord, intParam, pathParam, pathSegmentParam, pick, stringParam } from "./http.js";
 
@@ -15,6 +22,7 @@ export const REMOTE_LINK_PROVIDER_ADAPTERS = [
       "get_issue",
       "list_pull_requests",
       "get_pull_request",
+      ...GITHUB_SOURCE_ACTIONS,
       "create_issue",
       "update_issue",
       "get_repository",
@@ -39,7 +47,7 @@ export const REMOTE_LINK_PROVIDER_ADAPTERS = [
     id: "slack",
     name: "Slack",
     group: "channels",
-    actions: ["list_channels", "get_channel_history"],
+    actions: ["list_channels", "get_channel_history", "get_message", "get_thread"],
   },
   { id: "notion", name: "Notion", group: "pages", actions: ["search", "get_page"] },
   { id: "linear", name: "Linear", group: "teams", actions: ["list_issues", "list_teams"] },
@@ -261,6 +269,8 @@ export function prepareRemoteLinkAction(
         ...(params.limit === undefined ? {} : { limit: intParam(params, "limit", 30, 100) }),
       };
     }
+    if ((GITHUB_SOURCE_ACTIONS as readonly string[]).includes(action))
+      return githubSourceParams(action, params);
     const output: Record<string, unknown> = { owner, repo };
     if (action === "get_file") {
       assertKeys(params, ["owner", "repo", "path", "ref"]);
@@ -290,6 +300,19 @@ export function prepareRemoteLinkAction(
       if (ref) output.ref = ref;
     }
     return output;
+  }
+  if (providerId === "slack" && ["get_message", "get_thread"].includes(action)) {
+    const p = slackSourceParams(action, params);
+    requireResource(p.channel);
+    return action === "get_message"
+      ? { permalink: params.permalink }
+      : {
+          channel: p.channel,
+          ts: p.ts,
+          limit: p.limit,
+          ...(p.cursor ? { cursor: p.cursor } : {}),
+          ...(params.permalink ? { permalink: params.permalink } : {}),
+        };
   }
   const output: Record<string, unknown> = {};
   const resourceParam =
@@ -398,6 +421,10 @@ export function normalizeRemoteLinkActionResult(
   };
   const record = asRecord(raw);
   if (providerId === "github") {
+    if ((GITHUB_SOURCE_ACTIONS as readonly string[]).includes(action)) {
+      if (!permitted(`${params.owner}/${params.repo}`)) throw new Error("Unauthorized repository");
+      return normalizeGithubSourceResult(action, params, raw);
+    }
     if (["list_repositories", "list_issues", "list_pull_requests"].includes(action)) {
       if (!Array.isArray(raw)) throw new Error("Invalid remote Link result");
       const values = raw.filter((item) =>
@@ -475,6 +502,11 @@ export function normalizeRemoteLinkActionResult(
           ? ["number", "title", "state", "html_url", "created_at"]
           : issueFields,
     );
+  }
+  if (providerId === "slack" && ["get_message", "get_thread"].includes(action)) {
+    if (!permitted(slackSourceParams(action, params).channel))
+      throw new Error("Unauthorized channel");
+    return normalizeSlackSourceResult(action, params, raw);
   }
   if (!record) throw new Error("Invalid remote Link result");
   if (providerId === "figma") {

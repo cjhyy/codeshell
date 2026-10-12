@@ -1,3 +1,8 @@
+import {
+  GITHUB_SOURCE_ACTIONS,
+  githubSourceEndpoint,
+  normalizeGithubSourceResult,
+} from "./source-reads.js";
 import { githubRepositoryParameters } from "./github-star.js";
 import { execFile } from "node:child_process";
 import { existsSync } from "node:fs";
@@ -479,6 +484,14 @@ async function executeGithubCliAction(
   options: { cwd?: string; signal?: AbortSignal },
   run: CliLinkCommandRunner,
 ): Promise<unknown> {
+  if ((GITHUB_SOURCE_ACTIONS as readonly string[]).includes(actionId)) {
+    const endpoint = githubSourceEndpoint(actionId, params);
+    return normalizeGithubSourceResult(
+      actionId,
+      params,
+      await api("github", endpoint, options, run),
+    );
+  }
   if (actionId === "list_repositories") {
     const limit = intParam(params, "limit", 30, 100);
     const data = await api("github", `user/repos?per_page=${limit}&sort=updated`, options, run);
