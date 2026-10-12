@@ -1030,9 +1030,9 @@ const tunnelManager = new TunnelManager({
 const accessPasscode = new AccessPasscode({
   filePath: resolve(app.getPath("userData"), "mobile-remote", "access.json"),
 });
-let prepareAccountGitHubLink:
-  | ReturnType<typeof registerRemoteLinkIpc>["prepareGitHubLink"]
-  | undefined;
+const accountGitHubLinkBinding: {
+  prepare?: ReturnType<typeof registerRemoteLinkIpc>["prepareGitHubLink"];
+} = {};
 const { mobileRemoteController } = createDesktopRemoteServices({
   ipcMain,
   userDataDir: app.getPath("userData"),
@@ -1041,8 +1041,9 @@ const { mobileRemoteController } = createDesktopRemoteServices({
   windows: () => mainWindows,
   openExternal: (url) => shell.openExternal(url),
   prepareGitHubLink: (signal, authorized) => {
-    if (!prepareAccountGitHubLink) throw new Error("GitHub Link 服务尚未就绪。");
-    return prepareAccountGitHubLink(signal, authorized);
+    const prepare = accountGitHubLinkBinding.prepare;
+    if (!prepare) throw new Error("GitHub Link 服务尚未就绪。");
+    return prepare(signal, authorized);
   },
   host: mobileRemote,
   tunnel: tunnelManager,
@@ -4085,7 +4086,7 @@ ipcMain.handle(
 );
 ipcMain.handle("links:listLocalProviders", () => listDesktopLinkProviders());
 
-prepareAccountGitHubLink = registerRemoteLinkIpc({
+accountGitHubLinkBinding.prepare = registerRemoteLinkIpc({
   ipcMain,
   requireRendererProjectPath,
   isMainWindow: (sender) =>
