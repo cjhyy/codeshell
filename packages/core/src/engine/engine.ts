@@ -1594,6 +1594,7 @@ export class Engine {
       sessionId: options?.sessionId,
       attachments: options?.attachments,
       workspaceContext,
+      permissionMode: runPermissionMode,
     });
     if (!imageInput.ok) return imageInput.result;
     const { parsedTask, taskText } = imageInput;
@@ -3353,6 +3354,8 @@ export class Engine {
             sessionId: sid,
             attachments: item.attachments,
             workspaceContext: toolCtx.workspace,
+            permissionMode:
+              toolCtx.permissionMode === "bypassPermissions" ? "bypassPermissions" : undefined,
           });
           if (!steerImageInput.ok) {
             throw new Error(steerImageInput.result.text);
