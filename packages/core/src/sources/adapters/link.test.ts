@@ -141,7 +141,7 @@ test("ReadSource's bound LinkAction remains permission-gated without loading its
   expect(reads).toBe(1);
 });
 
-test("all 10 providers/27 read actions reuse exact saved grant and caller credential scope, metadata does no IO", async () => {
+test("all 10 providers/32 read actions reuse exact saved grant and caller credential scope, metadata does no IO", async () => {
   let calls = 0;
   for (const provider of LOCAL_LINK_PROVIDERS)
     for (const action of provider.actions.filter((item) => item.risk !== "write")) {
@@ -179,7 +179,7 @@ test("all 10 providers/27 read actions reuse exact saved grant and caller creden
       expect(output).toContain(`fixture ${provider.id}/${action.id}`);
       expect(output).toContain("untrusted");
     }
-  expect(calls).toBe(27);
+  expect(calls).toBe(32);
 }, 30_000);
 
 test.each(["http-token", "cli"] as const)(
