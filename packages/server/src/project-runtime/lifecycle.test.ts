@@ -1,13 +1,17 @@
-import { afterEach, expect, test } from "bun:test";
+import { afterAll, afterEach, expect, test } from "bun:test";
 import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { createServer } from "node:http";
 import type { HubSession } from "../hub/auth-store.js";
-import { ProjectManager } from "./manager.js";
-import { ProjectRegistry } from "./registry.js";
 import type { ProjectRuntimeProvider } from "./types.js";
-import { startProjectControlServer } from "./control-server.js";
+import { installCloudControlConfinement } from "./__fixtures__/cloud-control-confinement.js";
+
+const confinement = installCloudControlConfinement();
+afterAll(() => confinement.restore());
+const { ProjectManager } = await import("./manager.js");
+const { ProjectRegistry } = await import("./registry.js");
+const { startProjectControlServer } = await import("./control-server.js");
 
 const session: HubSession = {
   id: "browser-one",
@@ -206,6 +210,7 @@ test("control startup failure closes provider and releases registry ownership fo
       provider,
     });
     try {
+      confinement.allow(retry.url);
       expect((await fetch(retry.url + "/health")).status).toBe(200);
     } finally {
       await retry.close();
