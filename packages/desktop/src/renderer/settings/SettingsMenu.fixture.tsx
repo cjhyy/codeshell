@@ -101,7 +101,6 @@ const render = (taskInboxEnabled = true, optimizationLabEnabled = false) =>
         petWidgetVisible={false}
         onTogglePetWidget={() => {}}
         onNavigate={record}
-        onOpenCloudWorkbench={() => record("cloud")}
         onOpenSettingsPage={() => record("settings")}
         taskInboxEnabled={taskInboxEnabled}
         optimizationLabEnabled={optimizationLabEnabled}
@@ -141,9 +140,8 @@ try {
   );
   assert.equal(actions.length, 2, "Reopening does not repeat a previous action");
   assert.equal(item("优化实验室"), undefined, "Optimization Lab stays hidden by default");
+  assert.equal(item("云端工作台"), undefined, "Cloud projects are chosen from New project");
   await select("凭证");
-  await open();
-  await select("云端工作台");
   await open();
   await openActivity();
   await select("任务中心");
@@ -156,7 +154,7 @@ try {
   assert.ok(item("日志"), "Other activity pages remain available");
   assert.deepEqual(
     actions.map(({ page }) => page),
-    ["settings", "logs", "credentials", "cloud", "task_inbox", "optimization_lab"],
+    ["settings", "logs", "credentials", "task_inbox", "optimization_lab"],
   );
   for (const action of actions) {
     assert.equal(action.focus, trigger(), `${action.page} restores menu trigger focus`);

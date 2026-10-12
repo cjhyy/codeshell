@@ -181,34 +181,6 @@ export function Sidebar({
   const prompt = usePrompt();
   const toast = useToast();
 
-  const openCloud = async (): Promise<void> => {
-    let previous = "";
-    try {
-      previous = window.localStorage.getItem("codeshell.cloud-workbench.v1") ?? "";
-    } catch {
-      /* Optional address bookmark. */
-    }
-    const address = await prompt({
-      title: t("sidebar.cloudWorkbench"),
-      message: t("sidebar.cloudAddress"),
-      detail: t("sidebar.cloudHint"),
-      placeholder: "https://cloud.example.com",
-      defaultValue: previous,
-      confirmLabel: t("sidebar.openCloud"),
-    });
-    if (!address) return;
-    try {
-      const result = await window.codeshell.openCloudWorkbench(address);
-      try {
-        window.localStorage.setItem("codeshell.cloud-workbench.v1", result.address);
-      } catch {
-        /* Opening still succeeds without local storage. */
-      }
-    } catch (error) {
-      toast({ message: String(error), variant: "error" });
-    }
-  };
-
   // Re-render when pages register/unregister (same idiom as panels/PanelArea.tsx:158).
   useSyncExternalStore(PAGE_REGISTRY.subscribe, PAGE_REGISTRY.snapshot, PAGE_REGISTRY.snapshot);
   const navPages = PAGE_REGISTRY.navEntries();
@@ -525,7 +497,6 @@ export function Sidebar({
             <SettingsMenu
               onOpenSettingsPage={onOpenSettingsPage}
               onNavigate={onNavigate}
-              onOpenCloudWorkbench={() => void openCloud()}
               taskInboxEnabled={taskInboxEnabled}
               optimizationLabEnabled={optimizationLabEnabled}
               sidebarCollapsed={sidebarCollapsed}

@@ -26,7 +26,7 @@ const source = `
     root.render(<div style={{position:'fixed',left:12,bottom:12,width:240}}>
       <SettingsMenu key={lang} petWidgetVisible={false} onTogglePetWidget={()=>window.actions.push('pet')}
         onNavigate={page=>window.actions.push(page)} onOpenSettingsPage={()=>window.actions.push('settings')}
-        onOpenCloudWorkbench={()=>window.actions.push('cloud')} {...features}/>
+        {...features}/>
     </div>);
   };
 `;
@@ -99,6 +99,11 @@ try {
       const languageMenu = page.getByRole("menu", { name: labels.language, exact: true });
       const pet = menu.getByRole("menuitem", { name: labels.pet, exact: true });
       await opener.click();
+      assert.equal(
+        await menu.getByRole("menuitem", { name: labels.cloud, exact: true }).count(),
+        0,
+        "Cloud projects are chosen from New project instead of Settings",
+      );
       await activity.hover();
       await page.waitForTimeout(150); // Beyond Radix's hover-open delay.
       assert.equal(await activityMenu.isVisible(), false, "Hover alone does not open a submenu");
@@ -155,10 +160,7 @@ try {
       await menu.waitFor({ state: "hidden" });
       await activityMenu.waitFor({ state: "hidden" });
       assert.deepEqual(await page.evaluate(() => window.actions), ["logs"]);
-      for (const [label, target] of [
-        [labels.credentials, "credentials"],
-        [labels.cloud, "cloud"],
-      ]) {
+      for (const [label, target] of [[labels.credentials, "credentials"]]) {
         await opener.click();
         assert.equal(
           await menu.getByRole("menuitem", { name: labels.lab, exact: true }).count(),

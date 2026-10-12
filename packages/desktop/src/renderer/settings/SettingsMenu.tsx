@@ -11,7 +11,6 @@ import {
   ScrollText,
   ListTodo,
   KeyRound,
-  Cloud,
   FlaskConical,
 } from "lucide-react";
 import { saveUILanguage, languageLabel, type UILanguage } from "../uiLanguage";
@@ -38,7 +37,6 @@ interface Props {
   onOpenSettingsPage: () => void;
   /** Task and history pages also stay available from the global command palette. */
   onNavigate?: (page: ActivityPage | "credentials" | "optimization_lab") => void;
-  onOpenCloudWorkbench?: () => void;
   taskInboxEnabled?: boolean;
   optimizationLabEnabled?: boolean;
   /** When sidebar is collapsed the trigger goes straight to settings. */
@@ -53,7 +51,6 @@ const LANGUAGES: UILanguage[] = ["zh", "en"];
 export function SettingsMenu({
   onOpenSettingsPage,
   onNavigate,
-  onOpenCloudWorkbench,
   taskInboxEnabled = true,
   optimizationLabEnabled = false,
   sidebarCollapsed,
@@ -190,15 +187,6 @@ export function SettingsMenu({
           >
             <KeyRound size={14} aria-hidden />
             {t("sidebar.credentials")}
-          </DropdownMenuItem>
-        )}
-        {onOpenCloudWorkbench && (
-          <DropdownMenuItem
-            className="rounded-lg py-2"
-            onSelect={() => closeThenNavigate(onOpenCloudWorkbench)}
-          >
-            <Cloud size={14} aria-hidden />
-            {t("sidebar.cloudWorkbench")}
           </DropdownMenuItem>
         )}
         {onNavigate && optimizationLabEnabled && (
