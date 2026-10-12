@@ -234,6 +234,11 @@ export const extraCommands: SlashCommand[] = [
           const lines = plugin.map((s) => `  ${s.name} — ${s.description || "(no description)"}`);
           groups.push(`Plugin skills (${plugin.length}):\n${lines.join("\n")}`);
         }
+        const panel = skills.filter((s) => s.source === "panel-app");
+        if (panel.length > 0) {
+          const lines = panel.map((s) => `  ${s.name} — ${s.description || "(no description)"}`);
+          groups.push(`Panel App skills (${panel.length}):\n${lines.join("\n")}`);
+        }
         ctx.addStatus(groups.join("\n\n"));
       } catch (err) {
         ctx.addStatus(`Failed to scan skills: ${(err as Error).message}`);

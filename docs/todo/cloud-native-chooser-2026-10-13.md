@@ -97,3 +97,31 @@ Main 的进程盘点、关闭与已知 PID 退出核验独立执行；盘点失�
 
 Linux gate 未出成功回执前，原生 chooser 仍为未完成。最终合入/发版必须核对准确
 组合 head 和 CI，不能沿用早期单独候选的绿色状态。
+
+## 开窗后等待关闭 chooser 的诊断
+
+`9d281fbf4144fc5a919425c02ca2e98df680b62f` 的 run `38281749497` 已越过
+Chromium 负探针、真实私有 SecretService 登录/加密、连接/创建/启动和新窗口事件，
+随后在 `prompt.waitFor({ state: "hidden" })` 30 秒超时。日志为
+`/tmp/codeshell-cloud-native-chooser-ci-38281749497.log`。窗口创建早于生产
+`loadURL()` 完成，因此该事件不能证明 Main 的 open IPC 已返回成功。
+
+本轮只读沿真实 `onOpened`、Main IPC、managed window、TLS/front/static 路由核对，
+尚未发现确定性合同不匹配，也未据此改变产品。测试专用观察器现记录：
+
+- 原固定 open IPC 的开始、等待/成功/拒绝与白名单结果分类；保留真实 handler
+  的接收者、返回值和原始 throw，不替代生产操作。
+- 最多四个窗口、每个最多十二条导航/加载/关闭事件；URL 仅投影为是否精确 Cloud
+  origin、根路径、单一合法 project 参数、是否包含 fragment/user info，错误仅为数值码。
+- 原 hidden/heading 断言失败后，最多额外两个 2 秒观察期限打印 chooser alert 分类、
+  disabled 按钮数量、窗口状态和 renderer error 数量到 stdout。原 30 秒断言不变；
+  不打印错误原文、完整 URL/query、项目/会话身份、token、cookie 或 Account 数据。
+
+Guarded focused shard 为 26/26、142 assertions（观察器返回/throw 保全、凭据与 URL
+负例脱敏和有界事件，既有 13 个真实 React 交互场景及导航策略）；三个脚本 Node
+语法检查、受影响四文件 ESLint/Prettier 及 diff check 通过。日志为
+`/tmp/codeshell-cloud-chooser-open-diagnostics-20261013.log`，SHA-256
+`5bd1676ffe2c52693eda29c02fe0107660541919123ea4279aacaff4e46633b8`。
+本轮没有启动本机 Electron、Keychain、Core/Main 或构建 dist。
+下一准确 head 的 Linux CI 仍需区分 loadURL/IPC 结果与 renderer 关闭回调，不能将这些
+纯观察器/React 测试记为原生成功或根因修复。

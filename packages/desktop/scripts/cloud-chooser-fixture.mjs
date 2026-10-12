@@ -124,6 +124,7 @@ export async function prepareCloudChooserFixture(
     if (failAfterReady)
       throw new Error("Injected fixture preparation failure after actual Server ready");
     const guardUrl = new URL("./cloud-chooser-guard.mjs", import.meta.url).href;
+    const diagnosticsUrl = new URL("./cloud-chooser-diagnostics.mjs", import.meta.url).href;
     const workerPreload = join(home, "chooser-worker.mjs"),
       mainEntry = join(home, "chooser-main.mjs");
     const origins = [ready.accountOrigin, ready.cloudOrigin];
@@ -140,11 +141,13 @@ export async function prepareCloudChooserFixture(
     );
     await writeFile(
       mainEntry,
-      `import { app, net, session } from "electron";
+      `import { app, ipcMain, net, session } from "electron";
 import assert from "node:assert/strict";
 import { appendFileSync } from "node:fs";
 import { installChooserGuard } from ${JSON.stringify(guardUrl)};
+import { installCloudChooserDiagnostics } from ${JSON.stringify(diagnosticsUrl)};
 installChooserGuard({ origins: ${JSON.stringify(origins)}, workerPreload: ${JSON.stringify(pathToFileURL(workerPreload).href)}, workerEntry: ${JSON.stringify(workerEntry)}, role: "main" });
+globalThis.chooserOpenDiagnostics = installCloudChooserDiagnostics({ app, ipcMain, cloudOrigin: ${JSON.stringify(ready.cloudOrigin)} });
 app.commandLine.removeSwitch("no-sandbox");
 app.enableSandbox();
 app.setAppPath(${JSON.stringify(appDir)});

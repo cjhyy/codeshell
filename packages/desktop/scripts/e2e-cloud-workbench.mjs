@@ -4,6 +4,10 @@ import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { bounded, prepareCloudChooserFixture } from "./cloud-chooser-fixture.mjs";
 import {
+  describeCloudChooserAlerts,
+  describeCloudChooserLocation,
+} from "./cloud-chooser-diagnostics.mjs";
+import {
   assert,
   captureRendererErrors,
   expandSidebar,
@@ -281,8 +285,55 @@ try {
     const opened = app.waitForEvent("window");
     await row.getByRole("button", { name: "打开云端项目", exact: true }).click();
     const cloud = await opened;
-    await prompt.waitFor({ state: "hidden" });
-    await cloud.getByRole("heading", { name: "Cloud project window", exact: true }).waitFor();
+    try {
+      await prompt.waitFor({ state: "hidden" });
+      await cloud.getByRole("heading", { name: "Cloud project window", exact: true }).waitFor();
+    } catch (error) {
+      // The window event precedes loadURL resolution. Keep both real assertions,
+      // and print only bounded classifications when artifact storage is full.
+      const diagnostics = {
+        chooser: { available: false },
+        main: { available: false },
+        page: { available: false },
+        rendererErrorCount: Math.min(errors.length, 100),
+      };
+      try {
+        diagnostics.page = {
+          closed: cloud.isClosed(),
+          location: describeCloudChooserLocation(cloud.url(), fixture.cloudOrigin),
+        };
+      } catch {
+        // A disposed Playwright page must not replace the original failure.
+      }
+      try {
+        const state = await bounded(
+          prompt.evaluate((node) => ({
+            visible: node.getClientRects().length > 0,
+            buttons: node.querySelectorAll("button").length,
+            disabledButtons: node.querySelectorAll("button:disabled").length,
+            alerts: [...node.querySelectorAll('[role="alert"]')]
+              .slice(0, 4)
+              .map((node) => node.textContent ?? ""),
+          })),
+          "Chooser failure observation",
+          2000,
+        );
+        diagnostics.chooser = { ...state, alerts: describeCloudChooserAlerts(state.alerts) };
+      } catch {
+        // A closing renderer must not replace the original assertion failure.
+      }
+      try {
+        diagnostics.main = await bounded(
+          app.evaluate(() => globalThis.chooserOpenDiagnostics.snapshot()),
+          "Main open failure observation",
+          2000,
+        );
+      } catch {
+        // Main may have exited; preserve the original assertion and exit audit.
+      }
+      console.log(`Cloud chooser open diagnostic: ${JSON.stringify(diagnostics)}`);
+      throw error;
+    }
     assert(
       new URL(cloud.url()).origin === fixture.cloudOrigin &&
         /^[0-9a-f-]{36}$/.test(new URL(cloud.url()).searchParams.get("project")),
