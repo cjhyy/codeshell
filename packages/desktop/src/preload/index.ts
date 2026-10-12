@@ -47,6 +47,9 @@ import type {
 } from "./types";
 import { forwardAgentSideEffectEvent } from "./agent-side-effect-events";
 
+const invokeRoomHistory = (roomId: string, request: unknown) =>
+  ipcRenderer.invoke("ccRoom:roomHistory", roomId, request);
+
 /** One background shell as surfaced to the dock panel (TODO 3.2). Mirrors core
  *  BgShell's public shape; renderer-local since the renderer can't import core. */
 export interface BackgroundShellInfo {
@@ -1793,8 +1796,11 @@ contextBridge.exposeInMainWorld("codeshell", {
     send: (roomId: string, text: string) => ipcRenderer.invoke("ccRoom:send", roomId, text),
     respondApproval: (roomId: string, requestId: string, decision: unknown) =>
       ipcRenderer.invoke("ccRoom:respondApproval", roomId, requestId, decision),
-    roomHistory: (roomId: string, sinceSeq?: number) =>
-      ipcRenderer.invoke("ccRoom:roomHistory", roomId, sinceSeq),
+    roomHistory: (roomId: string, sinceSeq?: number) => invokeRoomHistory(roomId, sinceSeq),
+    roomHistoryPage: (
+      roomId: string,
+      request: { sinceSeq?: number; cursor?: string; limit?: number },
+    ) => invokeRoomHistory(roomId, request),
     readHistory: (cwd: string, sessionId: string, limit: number) =>
       ipcRenderer.invoke("ccRoom:readHistory", cwd, sessionId, limit),
     readCodexHistory: (cwd: string, threadId: string, limit: number) =>
@@ -1809,6 +1815,14 @@ contextBridge.exposeInMainWorld("codeshell", {
     unsubscribeTranscript: (roomId: string) =>
       ipcRenderer.invoke("ccRoom:unsubscribeTranscript", roomId),
     closeSession: (roomId: string) => ipcRenderer.invoke("ccRoom:closeSession", roomId),
+    onTranscriptRecovery: (cb: (event: { roomId: string; message: string }) => void) => {
+      const listener = (
+        _event: Electron.IpcRendererEvent,
+        value: { roomId: string; message: string },
+      ) => cb(value);
+      ipcRenderer.on("ccRoom:transcriptRecovery", listener);
+      return () => ipcRenderer.removeListener("ccRoom:transcriptRecovery", listener);
+    },
     onRoomMessage: (cb: (env: { roomId: string; msg: unknown }) => void): (() => void) => {
       const h = (_e: IpcRendererEvent, env: { roomId: string; msg: unknown }) => cb(env);
       ipcRenderer.on("room:message", h);

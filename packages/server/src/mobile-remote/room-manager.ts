@@ -4,6 +4,7 @@ import {
   existsSync,
   fchmodSync,
   fstatSync,
+  fsyncSync,
   lstatSync,
   mkdirSync,
   openSync,
@@ -15,6 +16,13 @@ import {
   appendFileSync,
   rmSync,
 } from "node:fs";
+import {
+  readRoomHistoryPage,
+  scanRoomHistory,
+  type RoomHistoryRequest,
+  type RoomHistoryPage,
+} from "./room-history.js";
+export type { RoomHistoryPage, RoomHistoryRequest } from "./room-history.js";
 import { randomUUID } from "node:crypto";
 import { isAbsolute, join, relative, resolve, sep } from "node:path";
 import type { ResidentAgentEvent } from "./resident-agent.js";
@@ -44,6 +52,16 @@ const MAX_ROOM_HISTORY_MESSAGES = 10_000;
 function isContained(root: string, target: string): boolean {
   const rel = relative(root, target);
   return rel !== ".." && !rel.startsWith(`..${sep}`) && !isAbsolute(rel);
+}
+
+function syncRoomDirectory(path: string): void {
+  if (process.platform === "win32") return;
+  const fd = openSync(path, "r");
+  try {
+    fsyncSync(fd);
+  } finally {
+    closeSync(fd);
+  }
 }
 
 function readBoundedUtf8File(path: string, maxBytes: number): string {
@@ -127,7 +145,14 @@ function parseRoomMessage(value: unknown): RoomMessage | undefined {
   ) {
     return undefined;
   }
-  for (const field of ["text", "tool", "summary", "reason", "toolId"] as const) {
+  for (const field of [
+    "text",
+    "tool",
+    "summary",
+    "reason",
+    "toolId",
+    "transcriptSource",
+  ] as const) {
     const item = raw[field];
     if (item !== undefined && (typeof item !== "string" || item.includes("\0"))) return undefined;
   }
@@ -266,6 +291,8 @@ export interface RoomMessage {
    *  card expands to so the real parameters are visible. Absent on legacy
    *  messages that predate args persistence. */
   args?: Record<string, unknown>;
+  /** Durable external transcript provenance, scoped to its actual file incarnation. */
+  transcriptSource?: string;
   attachments?: Array<{ name: string; mime?: string; size: number; path: string }>;
 }
 
@@ -383,6 +410,7 @@ export class RoomManager {
   /** User turns are echoed immediately for responsive room UX. When a
    * transcript follower later sees the same CLI-written user line, this queue
    * suppresses that duplicate. */
+  private readonly transcriptSources = new Map<string, Set<string>>();
   private pendingTranscriptUserEchoes = new Map<string, Array<{ text: string; ts: number }>>();
   /**
    * Rooms whose agent events must be buffered instead of handled immediately.
@@ -399,12 +427,19 @@ export class RoomManager {
    * JSONL. Seeded lazily from disk on the first append after startup; dropped
    * when the room's messages are deleted so the next append re-derives it.
    */
+  private readonly messageStampByRoom = new Map<string, string>();
+  private messageStamp(id: string): string {
+    const stat = lstatSync(this.msgPath(id));
+    return [stat.dev, stat.ino, stat.size, stat.mtimeMs, stat.ctimeMs].join(":");
+  }
   private lastSeqByRoom = new Map<string, number>();
   /** Throttled lastActiveAt bookkeeping — see touchLastActive. */
   private pendingLastActive = new Map<string, number>();
   private lastActiveWrittenAt = new Map<string, number>();
   private now: () => number;
   private readonly rootRealPath: string;
+  private readonly rootIdentity: string;
+  private readonly failedWrites = new Set<string>();
 
   /** Drop all pending AskUser entries for a room. Called when its agent goes
    *  away (exit/close) so a request that can no longer be answered doesn't leak
@@ -428,6 +463,7 @@ export class RoomManager {
       throw new Error(`invalid room storage root: ${opts.rootDir}`);
     }
     this.rootRealPath = realpathSync(opts.rootDir);
+    this.rootIdentity = `${rootInfo.dev}:${rootInfo.ino}`;
     if (process.platform !== "win32") chmodSync(opts.rootDir, 0o700);
   }
 
@@ -436,7 +472,8 @@ export class RoomManager {
     if (
       info.isSymbolicLink() ||
       !info.isDirectory() ||
-      realpathSync(this.opts.rootDir) !== this.rootRealPath
+      realpathSync(this.opts.rootDir) !== this.rootRealPath ||
+      `${info.dev}:${info.ino}` !== this.rootIdentity
     ) {
       throw new Error(`invalid room storage root: ${this.opts.rootDir}`);
     }
@@ -470,7 +507,8 @@ export class RoomManager {
     const path = join(this.roomDir(id), name);
     if (existsSync(path)) {
       const info = lstatSync(path);
-      if (info.isSymbolicLink() || !info.isFile()) throw new Error(`invalid room file: ${path}`);
+      if (info.isSymbolicLink() || !info.isFile() || info.nlink !== 1)
+        throw new Error(`invalid room file: ${path}`);
     }
     return path;
   }
@@ -489,7 +527,14 @@ export class RoomManager {
         encoding: "utf-8",
         mode: 0o600,
       });
+      const fd = openSync(temporary, "r");
+      try {
+        fsyncSync(fd);
+      } finally {
+        closeSync(fd);
+      }
       renameSync(temporary, target);
+      syncRoomDirectory(this.roomDir(id));
     } finally {
       try {
         rmSync(temporary, { force: true });
@@ -505,6 +550,7 @@ export class RoomManager {
     if (Buffer.byteLength(serialized, "utf8") > MAX_ROOM_MESSAGE_BYTES) {
       throw new Error("room message exceeds the size limit");
     }
+    const created = !existsSync(target);
     const fd = openSync(target, "a+", 0o600);
     try {
       if (process.platform !== "win32") fchmodSync(fd, 0o600);
@@ -516,6 +562,11 @@ export class RoomManager {
         if (lastByte[0] !== 0x0a) prefix = "\n";
       }
       appendFileSync(fd, `${prefix}${serialized}\n`, "utf-8");
+      fsyncSync(fd);
+      if (created) syncRoomDirectory(this.roomDir(id));
+    } catch (error) {
+      this.failedWrites.add(id);
+      throw error;
     } finally {
       closeSync(fd);
     }
@@ -566,6 +617,7 @@ export class RoomManager {
       linkedSessionMode: input.linkedSessionMode,
     };
     mkdirSync(this.roomDir(id), { recursive: true, mode: 0o700 });
+    syncRoomDirectory(this.opts.rootDir);
     this.writeRoomMeta(id, meta);
     // Audit anchor: the first line records how the room was opened (cwd +
     // permission mode), so messages.jsonl is self-describing for "what could
@@ -619,14 +671,20 @@ export class RoomManager {
     // host's event loop: a long-lived room progressively slowed down new
     // messages, heartbeats and every other WebSocket client. (Measured: ~32s to
     // write 2,000 short messages.)
+    if (this.failedWrites.has(id))
+      throw new Error("room persistence failed; reopen after inspecting its history");
     const cached = this.lastSeqByRoom.get(id);
     if (cached !== undefined) {
+      if (this.messageStampByRoom.get(id) !== this.messageStamp(id)) {
+        this.failedWrites.add(id);
+        throw new Error("room history changed outside this writer; inspect it before reopening");
+      }
       const next = cached + 1;
       this.lastSeqByRoom.set(id, next);
       return next;
     }
-    const msgs = this.getMessages(id, 0);
-    const next = msgs.length === 0 ? 1 : msgs[msgs.length - 1]!.seq + 1;
+    const path = this.msgPath(id);
+    const next = existsSync(path) ? scanRoomHistory(path, parseRoomMessage) + 1 : 1;
     this.lastSeqByRoom.set(id, next);
     return next;
   }
@@ -638,6 +696,7 @@ export class RoomManager {
     const msg: RoomMessage = { seq, ts, ...partial };
     try {
       this.appendRoomMessage(id, msg);
+      this.messageStampByRoom.set(id, this.messageStamp(id));
     } catch (error) {
       // Sequence assignment is a commit effect, not an attempt counter. A
       // failed serialization/write must not leave a phantom gap in memory.
@@ -742,8 +801,27 @@ export class RoomManager {
     }
   }
 
+  getHistoryPage(id: string, request: RoomHistoryRequest = {}): RoomHistoryPage<RoomMessage> {
+    if (!this.getRoom(id)) throw new Error("room is missing or its metadata is corrupt");
+    return readRoomHistoryPage(this.roomDir(id), id, request, parseRoomMessage);
+  }
+
   latestSeq(id: string): number {
-    return this.getMessages(id).at(-1)?.seq ?? 0;
+    if (this.failedWrites.has(id)) throw new Error("room persistence failed");
+    const cached = this.lastSeqByRoom.get(id);
+    if (cached !== undefined) return cached;
+    const path = this.msgPath(id);
+    return existsSync(path) ? scanRoomHistory(path, parseRoomMessage) : 0;
+  }
+
+  hasTranscriptHistory(id: string): boolean {
+    let found = false;
+    const file = this.msgPath(id);
+    if (existsSync(file))
+      scanRoomHistory(file, parseRoomMessage, (message) => {
+        if (message.transcriptSource) found = true;
+      });
+    return found;
   }
 
   beginTranscriptFollow(id: string): void {
@@ -757,8 +835,29 @@ export class RoomManager {
   /** Persist normalized transcript-tail messages through the same seq/history/
    * broadcast path as resident-agent output. */
   ingestTranscriptMessages(id: string, messages: Omit<RoomMessage, "seq" | "ts">[]): void {
-    if (!this.transcriptFollowedRooms.has(id) || !this.getRoom(id)) return;
+    if (!messages.length) return;
+    if (!this.transcriptFollowedRooms.has(id) || !this.getRoom(id))
+      throw new Error("transcript room is not active");
+    let sources = this.transcriptSources.get(id);
+    if (!sources) {
+      sources = new Set<string>();
+      const path = this.msgPath(id);
+      if (existsSync(path))
+        scanRoomHistory(path, parseRoomMessage, (message) => {
+          if (message.transcriptSource) sources!.add(message.transcriptSource);
+        });
+      this.transcriptSources.set(id, sources);
+    }
     for (const message of messages) {
+      const source = message.transcriptSource;
+      if (
+        source !== undefined &&
+        (typeof source !== "string" ||
+          source.length > 200 ||
+          !/^[0-9a-f-]{36}:[0-9]+:[0-9]+$/.test(source))
+      )
+        throw new Error("invalid transcript source coordinate");
+      if (source && sources.has(source)) continue;
       if (message.from === "user" && typeof message.text === "string") {
         const text = stripRoomAttachmentBlock(message.text);
         const pending = this.pendingTranscriptUserEchoes.get(id);
@@ -767,13 +866,13 @@ export class RoomManager {
         const matched = pending?.[0]?.text === text;
         if (matched) pending!.shift();
         if (pending?.length === 0) this.pendingTranscriptUserEchoes.delete(id);
-        // `send` already persisted and broadcast this exact user turn. The
-        // transcript remains authoritative for agent/tool output, but must not
-        // render a second copy of the prompt.
         if (!matched) this.append(id, { ...message, text });
+        else if (source)
+          this.append(id, { from: "system", type: "transcript_echo", transcriptSource: source });
       } else {
         this.append(id, message);
       }
+      if (source) sources.add(source);
     }
   }
 
