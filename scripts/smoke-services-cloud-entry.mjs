@@ -6,6 +6,7 @@ import { spawn } from "node:child_process";
 import { createHash } from "node:crypto";
 import { existsSync } from "node:fs";
 import {
+  chmod,
   cp,
   lstat,
   mkdir,
@@ -60,6 +61,7 @@ const images = [];
 let provenance;
 let sourceFiles;
 let panelInventory;
+let completed = false;
 
 function run(command, args, cwd, env = process.env, capture = false, input) {
   return new Promise((done, fail) => {
@@ -336,6 +338,13 @@ try {
     );
     imageId = (await readFile(idFile, "utf8")).trim();
     assert.match(imageId, /^sha256:[a-f0-9]{64}$/);
+    const recoveryGuard = join(root, "settings-recovery-guard");
+    await mkdir(recoveryGuard, { mode: 0o755 });
+    const { settingsRecoveryGuardFiles } = await import("./settings-recovery-fixture-guard.mjs");
+    for (const file of settingsRecoveryGuardFiles) {
+      await cp(join(repo, "scripts", file), join(recoveryGuard, file));
+      await chmod(join(recoveryGuard, file), 0o444);
+    }
     // The command must exist in the production image, without TUI, a network,
     // a running project or a writable root. Only this temporary fixture is written.
     await run(
@@ -345,10 +354,18 @@ try {
         "--rm",
         "--network",
         "none",
+        "--user",
+        "1000:1000",
         "--read-only",
+        "--cap-drop",
+        "ALL",
+        "--security-opt",
+        "no-new-privileges:true",
         "--no-healthcheck",
         "--tmpfs",
         "/tmp:rw,nosuid,nodev,size=32m,mode=1777",
+        "--mount",
+        `type=bind,source=${recoveryGuard},target=/run/codeshell-recovery-guard,readonly`,
         "-i",
         "--entrypoint",
         "node",
@@ -356,6 +373,8 @@ try {
         "--input-type=module",
         "-",
         "/opt/codeshell/node_modules/@cjhyy/code-shell-server",
+        "--guard-root",
+        "/run/codeshell-recovery-guard",
       ],
       installed,
       process.env,
@@ -496,6 +515,8 @@ try {
   console.log(
     "Candidate verification only; no registry release, provider acceptance or production deployment occurred.",
   );
+  completed = true;
 } finally {
-  await rm(root, { recursive: true, force: true });
+  if (completed) await rm(root, { recursive: true, force: true });
+  else console.error(`Candidate failed; private installation and evidence retained: ${root}`);
 }
