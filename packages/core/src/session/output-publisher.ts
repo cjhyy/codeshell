@@ -8,6 +8,11 @@ import {
   type OutputJournalProducer,
 } from "./output-journal.js";
 export {
+  backupOutputJournal,
+  restoreOutputJournalBackup,
+  inspectOutputJournalRepair,
+} from "./output-journal-manual-repair.js";
+export {
   readOutputJournal,
   readOutputJournalLegacyBase,
   SessionOutputJournal,

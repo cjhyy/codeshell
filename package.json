@@ -57,6 +57,7 @@
     "test:mobile-output-journal": "node scripts/run-isolated-node-smoke.mjs scripts/smoke-mobile-output-journal.mjs",
     "test:output-journal": "node scripts/run-isolated-node-smoke.mjs scripts/smoke-output-journal.mjs",
     "test:output-paced": "node scripts/run-isolated-node-smoke.mjs scripts/smoke-output-paced.mjs",
+    "test:output-repair": "node scripts/run-isolated-node-smoke.mjs scripts/smoke-output-journal-repair.mjs",
     "test:deferred-tools": "node scripts/run-isolated-node-smoke.mjs scripts/smoke-deferred-tools.mjs",
     "test:task-routing": "node scripts/run-isolated-node-smoke.mjs scripts/smoke-task-capability-routing.mjs"
   },
