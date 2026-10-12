@@ -51,7 +51,7 @@ if (!sourceArg || (outputArg && !docker))
   );
 assert.ok(!speechBundle || (docker && panelsArg), "--speech-bundle requires --docker and --panels");
 const source = resolve(sourceArg);
-const root = await mkdtemp(join(tmpdir(), "codeshell-services-packaged-"));
+const root = await realpath(await mkdtemp(join(tmpdir(), "codeshell-services-packaged-")));
 const stage = join(root, "stage");
 const installed = join(root, "relocated");
 const repo = resolve(dirname(fileURLToPath(import.meta.url)), "..");
@@ -414,19 +414,35 @@ try {
           )
           .digest("hex");
         const path = join(root, "settings-recovery-container-receipt.json");
+        const persistReceipt = async (receipt) => {
+          const bytes = JSON.stringify(receipt);
+          // Only the bounded, sanitized PID/hash proof is emitted. A failed CI
+          // runner is disposable; preserve this proof even if local storage fails.
+          console.log(`CANDIDATE_SETTINGS_RECOVERY_EVIDENCE ${bytes}`);
+          await writeFile(path, bytes + "\n", { flag: "wx", mode: 0o600 });
+        };
         let receipt;
         try {
           receipt = settingsRecoveryFixtureEvidence(output, passed, entryHash);
         } catch (error) {
-          await writeFile(
-            path,
-            JSON.stringify({ passed: false, proofUnavailable: true, cliEntryHash: entryHash }) +
-              "\n",
-            { flag: "wx", mode: 0o600 },
-          );
+          try {
+            await persistReceipt({
+              passed: false,
+              proofUnavailable: true,
+              cliEntryHash: entryHash,
+            });
+          } catch (receiptError) {
+            throw new AggregateError(
+              [error, receiptError],
+              "Recovery proof and persistence failed",
+              {
+                cause: error,
+              },
+            );
+          }
           throw error;
         }
-        await writeFile(path, JSON.stringify(receipt) + "\n", { flag: "wx", mode: 0o600 });
+        await persistReceipt(receipt);
         if (passed) console.log("✓ Packaged recovery CLI and six pre-Core proofs verified.");
         else console.error(`Recovery failure's verified PID proofs retained: ${path}`);
       },
@@ -471,6 +487,16 @@ try {
         true,
       );
       assert.match(helperId, /^sha256:[a-f0-9]{64}$/);
+      const { writeCloudRestoreGuardManifest } = await import("./cloud-restore-guard-manifest.mjs");
+      const { candidateDockerExecutable } = await import("./docker-candidate-setup.mjs");
+      const restoreGuard = writeCloudRestoreGuardManifest(join(root, "cloud-restore-guard.json"), {
+        hostScripts: join(repo, "scripts"),
+        hostHead:
+          provenance?.host ?? (await run("git", ["rev-parse", "HEAD"], repo, process.env, true)),
+        dockerPath: candidateDockerExecutable(),
+        dockerEndpoint: process.env.DOCKER_HOST ?? "unix:///var/run/docker.sock",
+        runtimeImage: imageId,
+      });
       await run(
         process.execPath,
         [
@@ -480,6 +506,9 @@ try {
           helperId,
           helperSource,
           join(repo, "..", "evidence", "cloud-backup-restore.json"),
+          "--guard",
+          restoreGuard.path,
+          restoreGuard.sha256,
         ],
         repo,
       );
