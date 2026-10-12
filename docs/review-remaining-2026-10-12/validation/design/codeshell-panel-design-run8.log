@@ -1,0 +1,38 @@
+{"case":"network_guard","homeIsolated":true,"nodeNetworkDenied":true,"browserOrigin":"https://panel.test","browserRoute":"all other origins aborted"}
+{"case":"undo_baseline","indexed":false,"initial":"saved","state":"saved","contentExactlyRestored":true,"errors":[]}
+✔ undo restored content indexed=false (366.506875ms)
+{"case":"undo_baseline","indexed":true,"initial":"saved","state":"dirty","contentExactlyRestored":true,"errors":[]}
+✔ undo restored content indexed=true (371.212542ms)
+{"case":"open_edit","delayedPart":false,"retained":true,"path":"designs/polish.codesign.json","errors":[]}
+✔ open while editing delayedPart=false (351.008ms)
+{"case":"open_edit","delayedPart":true,"retained":false,"path":"designs/other.codesign.json","errors":[]}
+{"case":"text_layout","source":"ABCDEFGHIJKLMNO","rendered":"ABCDEFGHIJKLMNO","height":19.2,"width":50}
+{"case":"text_layout","source":"x ABCDEFGHIJKLMNO","rendered":"x\nABCDE\nFGHIJK\nLMNO","height":76.8,"width":50}
+{"case":"text_layout","source":"one\ntwo","rendered":"one two","height":19.2,"width":100}
+{"case":"text_layout","source":"这是没有空格的中文长段落","rendered":"这是没有空格的中文长段落","height":19.2,"width":50}
+{"case":"frontend_text","fullSourcePresent":false,"displayTextPresent":true,"textOverflowCss":false}
+✔ open while editing delayedPart=true (407.481625ms)
+✔ layout first long token and explicit line breaks (1.604292ms)
+✔ frontend source text export (0.862417ms)
+{"case":"failed_transaction","indexed":false,"error":"页面不存在：page-missing","beforePages":2,"afterPages":2,"deletedPageRetained":true,"originalPagePayloadPresent":true,"payloadRetained":true,"dirtyAfterFailure":false,"persistedPageRetainedAfterSave":true,"errors":[]}
+✔ failed page transaction indexed=false (301.774333ms)
+{"case":"failed_transaction","indexed":true,"error":"页面不存在：page-missing","beforePages":12,"afterPages":11,"deletedPageRetained":false,"originalPagePayloadPresent":true,"payloadRetained":false,"dirtyAfterFailure":false,"persistedPageRetainedAfterSave":false,"errors":[]}
+✔ failed page transaction indexed=true (279.051666ms)
+{"case":"frontend_font","htmlEmbedsFont":false,"svgControlEmbedsSmallFont":true,"validLocalFontLoaded":true,"before":202.6875,"after":202.59375,"fontCountBefore":0,"fontCountAfter":1}
+✔ frontend packaged font export (328.942917ms)
+{"case":"ui_chinese_wrap","frameWidth":50,"textWidth":50,"rendered":"这是没有空格的中文长段落","height":19.2,"lines":1,"errors":[]}
+{"case":"prd_section","heading":"非目标","goals":["不支持支付"],"requirements":["不支持支付"],"constraints":[],"promptContainsStatement":true}
+{"case":"prd_section","heading":"Non-goals","goals":["不支持支付"],"requirements":["不支持支付"],"constraints":[],"promptContainsStatement":true}
+{"case":"prd_section","heading":"Out of scope","goals":[],"requirements":["不支持支付"],"constraints":[],"promptContainsStatement":true}
+{"case":"prd_section","heading":"约束","goals":[],"requirements":["不支持支付"],"constraints":["不支持支付"],"promptContainsStatement":true}
+✔ actual inspector narrows wrapped Chinese paragraph (339.393792ms)
+✔ product brief non-goals stay out of goals (2.162375ms)
+ℹ tests 11
+ℹ suites 0
+ℹ pass 11
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 2752.770417
+{"case":"cleanup","ownedChromePids":[86663,86667,86672,86687,86691,86695,86699,86704],"liveChromePids":[]}

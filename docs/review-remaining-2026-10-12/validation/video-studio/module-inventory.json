@@ -1,0 +1,2051 @@
+{
+  "root": "/Users/admin/.codex/worktrees/panel-remaining-review-20261012/codeshell-panel-apps",
+  "head": "aabba34ca94f7081fd7de4e20c52443f08f36d5e",
+  "definitions": {
+    "full": "Full source read over one or several tool outputs",
+    "focused": "Only recorded sections/anchors read; not full-file review",
+    "graph": "Included in source dependency graph of executed suites; does not establish branch coverage or function execution"
+  },
+  "rows": [
+    {
+      "path": "apps/video-studio/native/audio-separation.ts",
+      "lines": 92,
+      "manualRead": "not manually read",
+      "manualNotes": "",
+      "defaultSuiteGraph": false,
+      "nativeSuiteGraph": false,
+      "testFile": false,
+      "executedTestFile": false
+    },
+    {
+      "path": "apps/video-studio/native/contracts.ts",
+      "lines": 36,
+      "manualRead": "not manually read",
+      "manualNotes": "",
+      "defaultSuiteGraph": false,
+      "nativeSuiteGraph": false,
+      "testFile": false,
+      "executedTestFile": false
+    },
+    {
+      "path": "apps/video-studio/native/editor-runtime.ts",
+      "lines": 4,
+      "manualRead": "not manually read",
+      "manualNotes": "",
+      "defaultSuiteGraph": false,
+      "nativeSuiteGraph": true,
+      "testFile": false,
+      "executedTestFile": false
+    },
+    {
+      "path": "apps/video-studio/native/editor-runtime/bundle-tasks.ts",
+      "lines": 284,
+      "manualRead": "not manually read",
+      "manualNotes": "",
+      "defaultSuiteGraph": false,
+      "nativeSuiteGraph": true,
+      "testFile": false,
+      "executedTestFile": false
+    },
+    {
+      "path": "apps/video-studio/native/editor-runtime/bundle.ts",
+      "lines": 609,
+      "manualRead": "not manually read",
+      "manualNotes": "",
+      "defaultSuiteGraph": false,
+      "nativeSuiteGraph": true,
+      "testFile": false,
+      "executedTestFile": false
+    },
+    {
+      "path": "apps/video-studio/native/editor-runtime/cli.ts",
+      "lines": 139,
+      "manualRead": "not manually read",
+      "manualNotes": "",
+      "defaultSuiteGraph": false,
+      "nativeSuiteGraph": true,
+      "testFile": false,
+      "executedTestFile": false
+    },
+    {
+      "path": "apps/video-studio/native/editor-runtime/files.ts",
+      "lines": 161,
+      "manualRead": "full",
+      "manualNotes": "",
+      "defaultSuiteGraph": true,
+      "nativeSuiteGraph": true,
+      "testFile": false,
+      "executedTestFile": false
+    },
+    {
+      "path": "apps/video-studio/native/editor-runtime/inspect.ts",
+      "lines": 407,
+      "manualRead": "not manually read",
+      "manualNotes": "",
+      "defaultSuiteGraph": false,
+      "nativeSuiteGraph": true,
+      "testFile": false,
+      "executedTestFile": false
+    },
+    {
+      "path": "apps/video-studio/native/editor-runtime/multicam.ts",
+      "lines": 268,
+      "manualRead": "not manually read",
+      "manualNotes": "",
+      "defaultSuiteGraph": false,
+      "nativeSuiteGraph": true,
+      "testFile": false,
+      "executedTestFile": false
+    },
+    {
+      "path": "apps/video-studio/native/editor-runtime/protocol.ts",
+      "lines": 337,
+      "manualRead": "full",
+      "manualNotes": "",
+      "defaultSuiteGraph": true,
+      "nativeSuiteGraph": true,
+      "testFile": false,
+      "executedTestFile": false
+    },
+    {
+      "path": "apps/video-studio/native/editor-runtime/proxy.ts",
+      "lines": 393,
+      "manualRead": "not manually read",
+      "manualNotes": "",
+      "defaultSuiteGraph": false,
+      "nativeSuiteGraph": true,
+      "testFile": false,
+      "executedTestFile": false
+    },
+    {
+      "path": "apps/video-studio/native/editor-runtime/runtime.ts",
+      "lines": 1050,
+      "manualRead": "full",
+      "manualNotes": "",
+      "defaultSuiteGraph": false,
+      "nativeSuiteGraph": true,
+      "testFile": false,
+      "executedTestFile": false
+    },
+    {
+      "path": "apps/video-studio/native/editor-runtime/waveform.ts",
+      "lines": 236,
+      "manualRead": "not manually read",
+      "manualNotes": "",
+      "defaultSuiteGraph": false,
+      "nativeSuiteGraph": true,
+      "testFile": false,
+      "executedTestFile": false
+    },
+    {
+      "path": "apps/video-studio/native/editor-sync.ts",
+      "lines": 45,
+      "manualRead": "not manually read",
+      "manualNotes": "",
+      "defaultSuiteGraph": false,
+      "nativeSuiteGraph": true,
+      "testFile": false,
+      "executedTestFile": false
+    },
+    {
+      "path": "apps/video-studio/native/editor-sync/directory.ts",
+      "lines": 107,
+      "manualRead": "not manually read",
+      "manualNotes": "",
+      "defaultSuiteGraph": false,
+      "nativeSuiteGraph": true,
+      "testFile": false,
+      "executedTestFile": false
+    },
+    {
+      "path": "apps/video-studio/native/editor-sync/provider.ts",
+      "lines": 474,
+      "manualRead": "not manually read",
+      "manualNotes": "",
+      "defaultSuiteGraph": false,
+      "nativeSuiteGraph": true,
+      "testFile": false,
+      "executedTestFile": false
+    },
+    {
+      "path": "apps/video-studio/native/folder-scan.ts",
+      "lines": 259,
+      "manualRead": "not manually read",
+      "manualNotes": "",
+      "defaultSuiteGraph": false,
+      "nativeSuiteGraph": false,
+      "testFile": false,
+      "executedTestFile": false
+    },
+    {
+      "path": "apps/video-studio/native/media/cli.ts",
+      "lines": 2,
+      "manualRead": "not manually read",
+      "manualNotes": "",
+      "defaultSuiteGraph": false,
+      "nativeSuiteGraph": false,
+      "testFile": false,
+      "executedTestFile": false
+    },
+    {
+      "path": "apps/video-studio/native/media/editor-audio-renderer.ts",
+      "lines": 640,
+      "manualRead": "full",
+      "manualNotes": "",
+      "defaultSuiteGraph": false,
+      "nativeSuiteGraph": true,
+      "testFile": false,
+      "executedTestFile": false
+    },
+    {
+      "path": "apps/video-studio/native/media/editor-export.ts",
+      "lines": 232,
+      "manualRead": "full",
+      "manualNotes": "",
+      "defaultSuiteGraph": false,
+      "nativeSuiteGraph": true,
+      "testFile": false,
+      "executedTestFile": false
+    },
+    {
+      "path": "apps/video-studio/native/media/editor-frame-renderer.ts",
+      "lines": 340,
+      "manualRead": "full",
+      "manualNotes": "",
+      "defaultSuiteGraph": false,
+      "nativeSuiteGraph": true,
+      "testFile": false,
+      "executedTestFile": false
+    },
+    {
+      "path": "apps/video-studio/native/media/hyperframes-adapter.ts",
+      "lines": 908,
+      "manualRead": "not manually read",
+      "manualNotes": "",
+      "defaultSuiteGraph": false,
+      "nativeSuiteGraph": false,
+      "testFile": false,
+      "executedTestFile": false
+    },
+    {
+      "path": "apps/video-studio/native/media/media-audio-enhance.ts",
+      "lines": 250,
+      "manualRead": "not manually read",
+      "manualNotes": "",
+      "defaultSuiteGraph": false,
+      "nativeSuiteGraph": false,
+      "testFile": false,
+      "executedTestFile": false
+    },
+    {
+      "path": "apps/video-studio/native/media/media-audio-extract.ts",
+      "lines": 189,
+      "manualRead": "not manually read",
+      "manualNotes": "",
+      "defaultSuiteGraph": false,
+      "nativeSuiteGraph": false,
+      "testFile": false,
+      "executedTestFile": false
+    },
+    {
+      "path": "apps/video-studio/native/media/media-caption-renderer.ts",
+      "lines": 411,
+      "manualRead": "full",
+      "manualNotes": "",
+      "defaultSuiteGraph": false,
+      "nativeSuiteGraph": true,
+      "testFile": false,
+      "executedTestFile": false
+    },
+    {
+      "path": "apps/video-studio/native/media/media-cli.ts",
+      "lines": 149,
+      "manualRead": "not manually read",
+      "manualNotes": "",
+      "defaultSuiteGraph": false,
+      "nativeSuiteGraph": false,
+      "testFile": false,
+      "executedTestFile": false
+    },
+    {
+      "path": "apps/video-studio/native/media/media-connections.ts",
+      "lines": 128,
+      "manualRead": "not manually read",
+      "manualNotes": "",
+      "defaultSuiteGraph": false,
+      "nativeSuiteGraph": false,
+      "testFile": false,
+      "executedTestFile": false
+    },
+    {
+      "path": "apps/video-studio/native/media/media-executables.ts",
+      "lines": 54,
+      "manualRead": "not manually read",
+      "manualNotes": "",
+      "defaultSuiteGraph": false,
+      "nativeSuiteGraph": true,
+      "testFile": false,
+      "executedTestFile": false
+    },
+    {
+      "path": "apps/video-studio/native/media/media-process-runner.ts",
+      "lines": 1,
+      "manualRead": "not manually read",
+      "manualNotes": "",
+      "defaultSuiteGraph": false,
+      "nativeSuiteGraph": true,
+      "testFile": false,
+      "executedTestFile": false
+    },
+    {
+      "path": "apps/video-studio/native/media/media-processors.ts",
+      "lines": 1248,
+      "manualRead": "not manually read",
+      "manualNotes": "",
+      "defaultSuiteGraph": false,
+      "nativeSuiteGraph": false,
+      "testFile": false,
+      "executedTestFile": false
+    },
+    {
+      "path": "apps/video-studio/native/media/media-runtime.ts",
+      "lines": 825,
+      "manualRead": "not manually read",
+      "manualNotes": "",
+      "defaultSuiteGraph": false,
+      "nativeSuiteGraph": false,
+      "testFile": false,
+      "executedTestFile": false
+    },
+    {
+      "path": "apps/video-studio/native/media/media-tts-openai.ts",
+      "lines": 329,
+      "manualRead": "not manually read",
+      "manualNotes": "",
+      "defaultSuiteGraph": false,
+      "nativeSuiteGraph": false,
+      "testFile": false,
+      "executedTestFile": false
+    },
+    {
+      "path": "apps/video-studio/native/media/media-tts-provider-script.ts",
+      "lines": 96,
+      "manualRead": "not manually read",
+      "manualNotes": "",
+      "defaultSuiteGraph": false,
+      "nativeSuiteGraph": false,
+      "testFile": false,
+      "executedTestFile": false
+    },
+    {
+      "path": "apps/video-studio/native/media/media-tts-providers.ts",
+      "lines": 832,
+      "manualRead": "not manually read",
+      "manualNotes": "",
+      "defaultSuiteGraph": false,
+      "nativeSuiteGraph": false,
+      "testFile": false,
+      "executedTestFile": false
+    },
+    {
+      "path": "apps/video-studio/native/media/media-tts-setup-cleanup.ts",
+      "lines": 34,
+      "manualRead": "not manually read",
+      "manualNotes": "",
+      "defaultSuiteGraph": false,
+      "nativeSuiteGraph": false,
+      "testFile": false,
+      "executedTestFile": false
+    },
+    {
+      "path": "apps/video-studio/native/media/media-tts.ts",
+      "lines": 340,
+      "manualRead": "not manually read",
+      "manualNotes": "",
+      "defaultSuiteGraph": false,
+      "nativeSuiteGraph": false,
+      "testFile": false,
+      "executedTestFile": false
+    },
+    {
+      "path": "apps/video-studio/native/media/media-types.ts",
+      "lines": 58,
+      "manualRead": "not manually read",
+      "manualNotes": "",
+      "defaultSuiteGraph": false,
+      "nativeSuiteGraph": false,
+      "testFile": false,
+      "executedTestFile": false
+    },
+    {
+      "path": "apps/video-studio/native/media/tests/media-runtime.test.mjs",
+      "lines": 697,
+      "manualRead": "not manually read",
+      "manualNotes": "",
+      "defaultSuiteGraph": false,
+      "nativeSuiteGraph": false,
+      "testFile": true,
+      "executedTestFile": false
+    },
+    {
+      "path": "apps/video-studio/native/process-runner.ts",
+      "lines": 230,
+      "manualRead": "full",
+      "manualNotes": "",
+      "defaultSuiteGraph": true,
+      "nativeSuiteGraph": true,
+      "testFile": false,
+      "executedTestFile": false
+    },
+    {
+      "path": "apps/video-studio/native/providers/audio-probe.ts",
+      "lines": 111,
+      "manualRead": "not manually read",
+      "manualNotes": "",
+      "defaultSuiteGraph": true,
+      "nativeSuiteGraph": false,
+      "testFile": false,
+      "executedTestFile": false
+    },
+    {
+      "path": "apps/video-studio/native/providers/audio8-resources.ts",
+      "lines": 124,
+      "manualRead": "not manually read",
+      "manualNotes": "",
+      "defaultSuiteGraph": true,
+      "nativeSuiteGraph": false,
+      "testFile": false,
+      "executedTestFile": false
+    },
+    {
+      "path": "apps/video-studio/native/providers/audio8-script.ts",
+      "lines": 113,
+      "manualRead": "not manually read",
+      "manualNotes": "",
+      "defaultSuiteGraph": true,
+      "nativeSuiteGraph": false,
+      "testFile": false,
+      "executedTestFile": false
+    },
+    {
+      "path": "apps/video-studio/native/providers/audio8.ts",
+      "lines": 910,
+      "manualRead": "not manually read",
+      "manualNotes": "",
+      "defaultSuiteGraph": true,
+      "nativeSuiteGraph": false,
+      "testFile": false,
+      "executedTestFile": false
+    },
+    {
+      "path": "apps/video-studio/native/providers/qwen.ts",
+      "lines": 843,
+      "manualRead": "not manually read",
+      "manualNotes": "",
+      "defaultSuiteGraph": true,
+      "nativeSuiteGraph": false,
+      "testFile": false,
+      "executedTestFile": false
+    },
+    {
+      "path": "apps/video-studio/native/queue.ts",
+      "lines": 111,
+      "manualRead": "full",
+      "manualNotes": "",
+      "defaultSuiteGraph": true,
+      "nativeSuiteGraph": false,
+      "testFile": false,
+      "executedTestFile": false
+    },
+    {
+      "path": "apps/video-studio/native/separation/python.ts",
+      "lines": 69,
+      "manualRead": "not manually read",
+      "manualNotes": "",
+      "defaultSuiteGraph": true,
+      "nativeSuiteGraph": false,
+      "testFile": false,
+      "executedTestFile": false
+    },
+    {
+      "path": "apps/video-studio/native/separation/runtime.ts",
+      "lines": 370,
+      "manualRead": "not manually read",
+      "manualNotes": "",
+      "defaultSuiteGraph": true,
+      "nativeSuiteGraph": false,
+      "testFile": false,
+      "executedTestFile": false
+    },
+    {
+      "path": "apps/video-studio/native/signals.ts",
+      "lines": 17,
+      "manualRead": "full",
+      "manualNotes": "",
+      "defaultSuiteGraph": true,
+      "nativeSuiteGraph": true,
+      "testFile": false,
+      "executedTestFile": false
+    },
+    {
+      "path": "apps/video-studio/native/tests/audio-probe.test.ts",
+      "lines": 97,
+      "manualRead": "not manually read",
+      "manualNotes": "",
+      "defaultSuiteGraph": true,
+      "nativeSuiteGraph": false,
+      "testFile": true,
+      "executedTestFile": true
+    },
+    {
+      "path": "apps/video-studio/native/tests/audio8.test.ts",
+      "lines": 556,
+      "manualRead": "not manually read",
+      "manualNotes": "",
+      "defaultSuiteGraph": true,
+      "nativeSuiteGraph": false,
+      "testFile": true,
+      "executedTestFile": true
+    },
+    {
+      "path": "apps/video-studio/native/tests/qwen.test.ts",
+      "lines": 336,
+      "manualRead": "not manually read",
+      "manualNotes": "",
+      "defaultSuiteGraph": true,
+      "nativeSuiteGraph": false,
+      "testFile": true,
+      "executedTestFile": true
+    },
+    {
+      "path": "apps/video-studio/native/tests/voice-runtime.test.mjs",
+      "lines": 307,
+      "manualRead": "not manually read",
+      "manualNotes": "",
+      "defaultSuiteGraph": false,
+      "nativeSuiteGraph": false,
+      "testFile": true,
+      "executedTestFile": true
+    },
+    {
+      "path": "apps/video-studio/native/validation.ts",
+      "lines": 31,
+      "manualRead": "not manually read",
+      "manualNotes": "",
+      "defaultSuiteGraph": true,
+      "nativeSuiteGraph": false,
+      "testFile": false,
+      "executedTestFile": false
+    },
+    {
+      "path": "apps/video-studio/native/voice-cli.ts",
+      "lines": 9,
+      "manualRead": "not manually read",
+      "manualNotes": "",
+      "defaultSuiteGraph": true,
+      "nativeSuiteGraph": false,
+      "testFile": false,
+      "executedTestFile": false
+    },
+    {
+      "path": "apps/video-studio/native/voice-library.ts",
+      "lines": 296,
+      "manualRead": "not manually read",
+      "manualNotes": "",
+      "defaultSuiteGraph": true,
+      "nativeSuiteGraph": false,
+      "testFile": false,
+      "executedTestFile": false
+    },
+    {
+      "path": "apps/video-studio/native/voice-runtime.ts",
+      "lines": 246,
+      "manualRead": "not manually read",
+      "manualNotes": "",
+      "defaultSuiteGraph": true,
+      "nativeSuiteGraph": false,
+      "testFile": false,
+      "executedTestFile": false
+    },
+    {
+      "path": "apps/video-studio/src/automatic.ts",
+      "lines": 575,
+      "manualRead": "focused",
+      "manualNotes": "export/function index only",
+      "defaultSuiteGraph": true,
+      "nativeSuiteGraph": false,
+      "testFile": false,
+      "executedTestFile": false
+    },
+    {
+      "path": "apps/video-studio/src/demo-drawing.ts",
+      "lines": 102,
+      "manualRead": "not manually read",
+      "manualNotes": "",
+      "defaultSuiteGraph": true,
+      "nativeSuiteGraph": true,
+      "testFile": false,
+      "executedTestFile": false
+    },
+    {
+      "path": "apps/video-studio/src/demo.ts",
+      "lines": 54,
+      "manualRead": "not manually read",
+      "manualNotes": "",
+      "defaultSuiteGraph": true,
+      "nativeSuiteGraph": false,
+      "testFile": false,
+      "executedTestFile": false
+    },
+    {
+      "path": "apps/video-studio/src/disabled-reason.ts",
+      "lines": 47,
+      "manualRead": "not manually read",
+      "manualNotes": "",
+      "defaultSuiteGraph": true,
+      "nativeSuiteGraph": false,
+      "testFile": false,
+      "executedTestFile": false
+    },
+    {
+      "path": "apps/video-studio/src/editor/agent-tools.ts",
+      "lines": 1388,
+      "manualRead": "focused",
+      "manualNotes": "1290-1388 render/task publication and tool indexes",
+      "defaultSuiteGraph": true,
+      "nativeSuiteGraph": false,
+      "testFile": false,
+      "executedTestFile": false
+    },
+    {
+      "path": "apps/video-studio/src/editor/animation.ts",
+      "lines": 282,
+      "manualRead": "not manually read",
+      "manualNotes": "",
+      "defaultSuiteGraph": true,
+      "nativeSuiteGraph": true,
+      "testFile": false,
+      "executedTestFile": false
+    },
+    {
+      "path": "apps/video-studio/src/editor/asset-removal.ts",
+      "lines": 240,
+      "manualRead": "not manually read",
+      "manualNotes": "",
+      "defaultSuiteGraph": true,
+      "nativeSuiteGraph": false,
+      "testFile": false,
+      "executedTestFile": false
+    },
+    {
+      "path": "apps/video-studio/src/editor/audio-correlation.ts",
+      "lines": 149,
+      "manualRead": "not manually read",
+      "manualNotes": "",
+      "defaultSuiteGraph": true,
+      "nativeSuiteGraph": true,
+      "testFile": false,
+      "executedTestFile": false
+    },
+    {
+      "path": "apps/video-studio/src/editor/audio-enhancement-bridge.ts",
+      "lines": 211,
+      "manualRead": "not manually read",
+      "manualNotes": "",
+      "defaultSuiteGraph": true,
+      "nativeSuiteGraph": false,
+      "testFile": false,
+      "executedTestFile": false
+    },
+    {
+      "path": "apps/video-studio/src/editor/audio-enhancement-controller.ts",
+      "lines": 265,
+      "manualRead": "full",
+      "manualNotes": "",
+      "defaultSuiteGraph": true,
+      "nativeSuiteGraph": false,
+      "testFile": false,
+      "executedTestFile": false
+    },
+    {
+      "path": "apps/video-studio/src/editor/audio-enhancement-ui.ts",
+      "lines": 229,
+      "manualRead": "not manually read",
+      "manualNotes": "",
+      "defaultSuiteGraph": false,
+      "nativeSuiteGraph": false,
+      "testFile": false,
+      "executedTestFile": false
+    },
+    {
+      "path": "apps/video-studio/src/editor/audio-enhancement.ts",
+      "lines": 250,
+      "manualRead": "not manually read",
+      "manualNotes": "",
+      "defaultSuiteGraph": true,
+      "nativeSuiteGraph": false,
+      "testFile": false,
+      "executedTestFile": false
+    },
+    {
+      "path": "apps/video-studio/src/editor/audio-fade-edits.ts",
+      "lines": 41,
+      "manualRead": "not manually read",
+      "manualNotes": "",
+      "defaultSuiteGraph": true,
+      "nativeSuiteGraph": true,
+      "testFile": false,
+      "executedTestFile": false
+    },
+    {
+      "path": "apps/video-studio/src/editor/audio-gain-edits.ts",
+      "lines": 29,
+      "manualRead": "not manually read",
+      "manualNotes": "",
+      "defaultSuiteGraph": true,
+      "nativeSuiteGraph": true,
+      "testFile": false,
+      "executedTestFile": false
+    },
+    {
+      "path": "apps/video-studio/src/editor/audio-mix-report.ts",
+      "lines": 58,
+      "manualRead": "not manually read",
+      "manualNotes": "",
+      "defaultSuiteGraph": true,
+      "nativeSuiteGraph": true,
+      "testFile": false,
+      "executedTestFile": false
+    },
+    {
+      "path": "apps/video-studio/src/editor/audio-plan.ts",
+      "lines": 351,
+      "manualRead": "full",
+      "manualNotes": "",
+      "defaultSuiteGraph": true,
+      "nativeSuiteGraph": true,
+      "testFile": false,
+      "executedTestFile": false
+    },
+    {
+      "path": "apps/video-studio/src/editor/browser-export.ts",
+      "lines": 528,
+      "manualRead": "full",
+      "manualNotes": "",
+      "defaultSuiteGraph": true,
+      "nativeSuiteGraph": false,
+      "testFile": false,
+      "executedTestFile": false
+    },
+    {
+      "path": "apps/video-studio/src/editor/canvas-alignment.ts",
+      "lines": 113,
+      "manualRead": "not manually read",
+      "manualNotes": "",
+      "defaultSuiteGraph": true,
+      "nativeSuiteGraph": false,
+      "testFile": false,
+      "executedTestFile": false
+    },
+    {
+      "path": "apps/video-studio/src/editor/canvas-edits.ts",
+      "lines": 262,
+      "manualRead": "not manually read",
+      "manualNotes": "",
+      "defaultSuiteGraph": true,
+      "nativeSuiteGraph": false,
+      "testFile": false,
+      "executedTestFile": false
+    },
+    {
+      "path": "apps/video-studio/src/editor/canvas-ui.ts",
+      "lines": 709,
+      "manualRead": "not manually read",
+      "manualNotes": "",
+      "defaultSuiteGraph": false,
+      "nativeSuiteGraph": false,
+      "testFile": false,
+      "executedTestFile": false
+    },
+    {
+      "path": "apps/video-studio/src/editor/caption-bindings.ts",
+      "lines": 309,
+      "manualRead": "not manually read",
+      "manualNotes": "",
+      "defaultSuiteGraph": true,
+      "nativeSuiteGraph": true,
+      "testFile": false,
+      "executedTestFile": false
+    },
+    {
+      "path": "apps/video-studio/src/editor/caption-controller.ts",
+      "lines": 639,
+      "manualRead": "not manually read",
+      "manualNotes": "",
+      "defaultSuiteGraph": true,
+      "nativeSuiteGraph": false,
+      "testFile": false,
+      "executedTestFile": false
+    },
+    {
+      "path": "apps/video-studio/src/editor/caption-find-ui.ts",
+      "lines": 138,
+      "manualRead": "not manually read",
+      "manualNotes": "",
+      "defaultSuiteGraph": false,
+      "nativeSuiteGraph": false,
+      "testFile": false,
+      "executedTestFile": false
+    },
+    {
+      "path": "apps/video-studio/src/editor/caption-presets.ts",
+      "lines": 106,
+      "manualRead": "not manually read",
+      "manualNotes": "",
+      "defaultSuiteGraph": true,
+      "nativeSuiteGraph": false,
+      "testFile": false,
+      "executedTestFile": false
+    },
+    {
+      "path": "apps/video-studio/src/editor/caption-sentence-edits.ts",
+      "lines": 189,
+      "manualRead": "not manually read",
+      "manualNotes": "",
+      "defaultSuiteGraph": true,
+      "nativeSuiteGraph": false,
+      "testFile": false,
+      "executedTestFile": false
+    },
+    {
+      "path": "apps/video-studio/src/editor/caption-services.ts",
+      "lines": 299,
+      "manualRead": "not manually read",
+      "manualNotes": "",
+      "defaultSuiteGraph": true,
+      "nativeSuiteGraph": false,
+      "testFile": false,
+      "executedTestFile": false
+    },
+    {
+      "path": "apps/video-studio/src/editor/captions-ui.ts",
+      "lines": 974,
+      "manualRead": "not manually read",
+      "manualNotes": "",
+      "defaultSuiteGraph": false,
+      "nativeSuiteGraph": false,
+      "testFile": false,
+      "executedTestFile": false
+    },
+    {
+      "path": "apps/video-studio/src/editor/captions.ts",
+      "lines": 1167,
+      "manualRead": "not manually read",
+      "manualNotes": "",
+      "defaultSuiteGraph": true,
+      "nativeSuiteGraph": false,
+      "testFile": false,
+      "executedTestFile": false
+    },
+    {
+      "path": "apps/video-studio/src/editor/clip-edits.ts",
+      "lines": 1224,
+      "manualRead": "focused",
+      "manualNotes": "860-1224 retime/reverse/freeze/speed curves; other APIs indexed",
+      "defaultSuiteGraph": true,
+      "nativeSuiteGraph": true,
+      "testFile": false,
+      "executedTestFile": false
+    },
+    {
+      "path": "apps/video-studio/src/editor/clipboard-edits.ts",
+      "lines": 86,
+      "manualRead": "not manually read",
+      "manualNotes": "",
+      "defaultSuiteGraph": true,
+      "nativeSuiteGraph": false,
+      "testFile": false,
+      "executedTestFile": false
+    },
+    {
+      "path": "apps/video-studio/src/editor/color-edits.ts",
+      "lines": 106,
+      "manualRead": "not manually read",
+      "manualNotes": "",
+      "defaultSuiteGraph": true,
+      "nativeSuiteGraph": false,
+      "testFile": false,
+      "executedTestFile": false
+    },
+    {
+      "path": "apps/video-studio/src/editor/color.ts",
+      "lines": 170,
+      "manualRead": "not manually read",
+      "manualNotes": "",
+      "defaultSuiteGraph": true,
+      "nativeSuiteGraph": true,
+      "testFile": false,
+      "executedTestFile": false
+    },
+    {
+      "path": "apps/video-studio/src/editor/compositor.ts",
+      "lines": 803,
+      "manualRead": "not manually read",
+      "manualNotes": "",
+      "defaultSuiteGraph": true,
+      "nativeSuiteGraph": true,
+      "testFile": false,
+      "executedTestFile": false
+    },
+    {
+      "path": "apps/video-studio/src/editor/defaults.ts",
+      "lines": 72,
+      "manualRead": "full",
+      "manualNotes": "",
+      "defaultSuiteGraph": true,
+      "nativeSuiteGraph": true,
+      "testFile": false,
+      "executedTestFile": false
+    },
+    {
+      "path": "apps/video-studio/src/editor/evaluate.ts",
+      "lines": 735,
+      "manualRead": "full",
+      "manualNotes": "",
+      "defaultSuiteGraph": true,
+      "nativeSuiteGraph": true,
+      "testFile": false,
+      "executedTestFile": false
+    },
+    {
+      "path": "apps/video-studio/src/editor/export-batch.ts",
+      "lines": 100,
+      "manualRead": "full",
+      "manualNotes": "",
+      "defaultSuiteGraph": true,
+      "nativeSuiteGraph": false,
+      "testFile": false,
+      "executedTestFile": false
+    },
+    {
+      "path": "apps/video-studio/src/editor/export-range.ts",
+      "lines": 44,
+      "manualRead": "full",
+      "manualNotes": "",
+      "defaultSuiteGraph": true,
+      "nativeSuiteGraph": true,
+      "testFile": false,
+      "executedTestFile": false
+    },
+    {
+      "path": "apps/video-studio/src/editor/export-settings.ts",
+      "lines": 285,
+      "manualRead": "not manually read",
+      "manualNotes": "",
+      "defaultSuiteGraph": true,
+      "nativeSuiteGraph": true,
+      "testFile": false,
+      "executedTestFile": false
+    },
+    {
+      "path": "apps/video-studio/src/editor/export-submissions.ts",
+      "lines": 126,
+      "manualRead": "full",
+      "manualNotes": "",
+      "defaultSuiteGraph": true,
+      "nativeSuiteGraph": false,
+      "testFile": false,
+      "executedTestFile": false
+    },
+    {
+      "path": "apps/video-studio/src/editor/font-availability.ts",
+      "lines": 117,
+      "manualRead": "not manually read",
+      "manualNotes": "",
+      "defaultSuiteGraph": false,
+      "nativeSuiteGraph": false,
+      "testFile": false,
+      "executedTestFile": false
+    },
+    {
+      "path": "apps/video-studio/src/editor/history.ts",
+      "lines": 116,
+      "manualRead": "full",
+      "manualNotes": "",
+      "defaultSuiteGraph": true,
+      "nativeSuiteGraph": false,
+      "testFile": false,
+      "executedTestFile": false
+    },
+    {
+      "path": "apps/video-studio/src/editor/host-storage.ts",
+      "lines": 815,
+      "manualRead": "full",
+      "manualNotes": "",
+      "defaultSuiteGraph": false,
+      "nativeSuiteGraph": false,
+      "testFile": false,
+      "executedTestFile": false
+    },
+    {
+      "path": "apps/video-studio/src/editor/import-media.ts",
+      "lines": 333,
+      "manualRead": "full",
+      "manualNotes": "",
+      "defaultSuiteGraph": true,
+      "nativeSuiteGraph": false,
+      "testFile": false,
+      "executedTestFile": false
+    },
+    {
+      "path": "apps/video-studio/src/editor/import-ui.ts",
+      "lines": 186,
+      "manualRead": "full",
+      "manualNotes": "",
+      "defaultSuiteGraph": false,
+      "nativeSuiteGraph": false,
+      "testFile": false,
+      "executedTestFile": false
+    },
+    {
+      "path": "apps/video-studio/src/editor/inspector-ui.ts",
+      "lines": 2291,
+      "manualRead": "not manually read",
+      "manualNotes": "",
+      "defaultSuiteGraph": false,
+      "nativeSuiteGraph": false,
+      "testFile": false,
+      "executedTestFile": false
+    },
+    {
+      "path": "apps/video-studio/src/editor/jobs-ui.ts",
+      "lines": 446,
+      "manualRead": "not manually read",
+      "manualNotes": "",
+      "defaultSuiteGraph": false,
+      "nativeSuiteGraph": false,
+      "testFile": false,
+      "executedTestFile": false
+    },
+    {
+      "path": "apps/video-studio/src/editor/legacy-adapter.ts",
+      "lines": 1099,
+      "manualRead": "not manually read",
+      "manualNotes": "",
+      "defaultSuiteGraph": true,
+      "nativeSuiteGraph": false,
+      "testFile": false,
+      "executedTestFile": false
+    },
+    {
+      "path": "apps/video-studio/src/editor/legacy-aliases.ts",
+      "lines": 86,
+      "manualRead": "not manually read",
+      "manualNotes": "",
+      "defaultSuiteGraph": true,
+      "nativeSuiteGraph": false,
+      "testFile": false,
+      "executedTestFile": false
+    },
+    {
+      "path": "apps/video-studio/src/editor/legacy-multitrack-migration.ts",
+      "lines": 248,
+      "manualRead": "not manually read",
+      "manualNotes": "",
+      "defaultSuiteGraph": true,
+      "nativeSuiteGraph": false,
+      "testFile": false,
+      "executedTestFile": false
+    },
+    {
+      "path": "apps/video-studio/src/editor/legacy-plan.ts",
+      "lines": 775,
+      "manualRead": "not manually read",
+      "manualNotes": "",
+      "defaultSuiteGraph": true,
+      "nativeSuiteGraph": false,
+      "testFile": false,
+      "executedTestFile": false
+    },
+    {
+      "path": "apps/video-studio/src/editor/legacy-reasons.ts",
+      "lines": 115,
+      "manualRead": "not manually read",
+      "manualNotes": "",
+      "defaultSuiteGraph": true,
+      "nativeSuiteGraph": false,
+      "testFile": false,
+      "executedTestFile": false
+    },
+    {
+      "path": "apps/video-studio/src/editor/legacy-time.ts",
+      "lines": 4,
+      "manualRead": "not manually read",
+      "manualNotes": "",
+      "defaultSuiteGraph": true,
+      "nativeSuiteGraph": false,
+      "testFile": false,
+      "executedTestFile": false
+    },
+    {
+      "path": "apps/video-studio/src/editor/lookup.ts",
+      "lines": 16,
+      "manualRead": "not manually read",
+      "manualNotes": "",
+      "defaultSuiteGraph": true,
+      "nativeSuiteGraph": false,
+      "testFile": false,
+      "executedTestFile": false
+    },
+    {
+      "path": "apps/video-studio/src/editor/marker-edits.ts",
+      "lines": 69,
+      "manualRead": "not manually read",
+      "manualNotes": "",
+      "defaultSuiteGraph": true,
+      "nativeSuiteGraph": false,
+      "testFile": false,
+      "executedTestFile": false
+    },
+    {
+      "path": "apps/video-studio/src/editor/marker-ui.ts",
+      "lines": 572,
+      "manualRead": "not manually read",
+      "manualNotes": "",
+      "defaultSuiteGraph": false,
+      "nativeSuiteGraph": false,
+      "testFile": false,
+      "executedTestFile": false
+    },
+    {
+      "path": "apps/video-studio/src/editor/media-pool.ts",
+      "lines": 622,
+      "manualRead": "not manually read",
+      "manualNotes": "",
+      "defaultSuiteGraph": true,
+      "nativeSuiteGraph": true,
+      "testFile": false,
+      "executedTestFile": false
+    },
+    {
+      "path": "apps/video-studio/src/editor/migration.ts",
+      "lines": 253,
+      "manualRead": "not manually read",
+      "manualNotes": "",
+      "defaultSuiteGraph": true,
+      "nativeSuiteGraph": false,
+      "testFile": false,
+      "executedTestFile": false
+    },
+    {
+      "path": "apps/video-studio/src/editor/multicam-edits.ts",
+      "lines": 257,
+      "manualRead": "not manually read",
+      "manualNotes": "",
+      "defaultSuiteGraph": true,
+      "nativeSuiteGraph": true,
+      "testFile": false,
+      "executedTestFile": false
+    },
+    {
+      "path": "apps/video-studio/src/editor/multicam-ui.ts",
+      "lines": 989,
+      "manualRead": "not manually read",
+      "manualNotes": "",
+      "defaultSuiteGraph": false,
+      "nativeSuiteGraph": false,
+      "testFile": false,
+      "executedTestFile": false
+    },
+    {
+      "path": "apps/video-studio/src/editor/narration-edits.ts",
+      "lines": 661,
+      "manualRead": "not manually read",
+      "manualNotes": "",
+      "defaultSuiteGraph": true,
+      "nativeSuiteGraph": false,
+      "testFile": false,
+      "executedTestFile": false
+    },
+    {
+      "path": "apps/video-studio/src/editor/operations.ts",
+      "lines": 551,
+      "manualRead": "full",
+      "manualNotes": "",
+      "defaultSuiteGraph": true,
+      "nativeSuiteGraph": true,
+      "testFile": false,
+      "executedTestFile": false
+    },
+    {
+      "path": "apps/video-studio/src/editor/original-audio.ts",
+      "lines": 98,
+      "manualRead": "not manually read",
+      "manualNotes": "",
+      "defaultSuiteGraph": true,
+      "nativeSuiteGraph": true,
+      "testFile": false,
+      "executedTestFile": false
+    },
+    {
+      "path": "apps/video-studio/src/editor/placement.ts",
+      "lines": 126,
+      "manualRead": "full",
+      "manualNotes": "",
+      "defaultSuiteGraph": true,
+      "nativeSuiteGraph": false,
+      "testFile": false,
+      "executedTestFile": false
+    },
+    {
+      "path": "apps/video-studio/src/editor/playhead-position.ts",
+      "lines": 22,
+      "manualRead": "not manually read",
+      "manualNotes": "",
+      "defaultSuiteGraph": true,
+      "nativeSuiteGraph": false,
+      "testFile": false,
+      "executedTestFile": false
+    },
+    {
+      "path": "apps/video-studio/src/editor/portable-project.ts",
+      "lines": 153,
+      "manualRead": "full",
+      "manualNotes": "",
+      "defaultSuiteGraph": true,
+      "nativeSuiteGraph": true,
+      "testFile": false,
+      "executedTestFile": false
+    },
+    {
+      "path": "apps/video-studio/src/editor/portable-ui.ts",
+      "lines": 641,
+      "manualRead": "not manually read",
+      "manualNotes": "",
+      "defaultSuiteGraph": false,
+      "nativeSuiteGraph": false,
+      "testFile": false,
+      "executedTestFile": false
+    },
+    {
+      "path": "apps/video-studio/src/editor/preview.ts",
+      "lines": 377,
+      "manualRead": "full",
+      "manualNotes": "",
+      "defaultSuiteGraph": false,
+      "nativeSuiteGraph": false,
+      "testFile": false,
+      "executedTestFile": false
+    },
+    {
+      "path": "apps/video-studio/src/editor/production-guard.ts",
+      "lines": 157,
+      "manualRead": "not manually read",
+      "manualNotes": "",
+      "defaultSuiteGraph": true,
+      "nativeSuiteGraph": false,
+      "testFile": false,
+      "executedTestFile": false
+    },
+    {
+      "path": "apps/video-studio/src/editor/proposal.ts",
+      "lines": 421,
+      "manualRead": "not manually read",
+      "manualNotes": "",
+      "defaultSuiteGraph": true,
+      "nativeSuiteGraph": false,
+      "testFile": false,
+      "executedTestFile": false
+    },
+    {
+      "path": "apps/video-studio/src/editor/render-entry.ts",
+      "lines": 118,
+      "manualRead": "full",
+      "manualNotes": "",
+      "defaultSuiteGraph": false,
+      "nativeSuiteGraph": true,
+      "testFile": false,
+      "executedTestFile": false
+    },
+    {
+      "path": "apps/video-studio/src/editor/render-media-job.ts",
+      "lines": 60,
+      "manualRead": "full",
+      "manualNotes": "",
+      "defaultSuiteGraph": true,
+      "nativeSuiteGraph": false,
+      "testFile": false,
+      "executedTestFile": false
+    },
+    {
+      "path": "apps/video-studio/src/editor/resource-audio.ts",
+      "lines": 263,
+      "manualRead": "not manually read",
+      "manualNotes": "",
+      "defaultSuiteGraph": true,
+      "nativeSuiteGraph": false,
+      "testFile": false,
+      "executedTestFile": false
+    },
+    {
+      "path": "apps/video-studio/src/editor/resource-upload.ts",
+      "lines": 123,
+      "manualRead": "full",
+      "manualNotes": "",
+      "defaultSuiteGraph": false,
+      "nativeSuiteGraph": false,
+      "testFile": false,
+      "executedTestFile": false
+    },
+    {
+      "path": "apps/video-studio/src/editor/rough-cut-placement.ts",
+      "lines": 255,
+      "manualRead": "full",
+      "manualNotes": "",
+      "defaultSuiteGraph": true,
+      "nativeSuiteGraph": false,
+      "testFile": false,
+      "executedTestFile": false
+    },
+    {
+      "path": "apps/video-studio/src/editor/separation-bridge.ts",
+      "lines": 207,
+      "manualRead": "not manually read",
+      "manualNotes": "",
+      "defaultSuiteGraph": true,
+      "nativeSuiteGraph": false,
+      "testFile": false,
+      "executedTestFile": false
+    },
+    {
+      "path": "apps/video-studio/src/editor/separation-controller.ts",
+      "lines": 270,
+      "manualRead": "full",
+      "manualNotes": "",
+      "defaultSuiteGraph": true,
+      "nativeSuiteGraph": false,
+      "testFile": false,
+      "executedTestFile": false
+    },
+    {
+      "path": "apps/video-studio/src/editor/separation-ui.ts",
+      "lines": 218,
+      "manualRead": "not manually read",
+      "manualNotes": "",
+      "defaultSuiteGraph": false,
+      "nativeSuiteGraph": false,
+      "testFile": false,
+      "executedTestFile": false
+    },
+    {
+      "path": "apps/video-studio/src/editor/separation.ts",
+      "lines": 211,
+      "manualRead": "not manually read",
+      "manualNotes": "",
+      "defaultSuiteGraph": true,
+      "nativeSuiteGraph": false,
+      "testFile": false,
+      "executedTestFile": false
+    },
+    {
+      "path": "apps/video-studio/src/editor/sequence-edits.ts",
+      "lines": 701,
+      "manualRead": "focused",
+      "manualNotes": "export/function index only",
+      "defaultSuiteGraph": true,
+      "nativeSuiteGraph": false,
+      "testFile": false,
+      "executedTestFile": false
+    },
+    {
+      "path": "apps/video-studio/src/editor/sequences-ui.ts",
+      "lines": 586,
+      "manualRead": "not manually read",
+      "manualNotes": "",
+      "defaultSuiteGraph": false,
+      "nativeSuiteGraph": false,
+      "testFile": false,
+      "executedTestFile": false
+    },
+    {
+      "path": "apps/video-studio/src/editor/session.ts",
+      "lines": 575,
+      "manualRead": "full",
+      "manualNotes": "",
+      "defaultSuiteGraph": true,
+      "nativeSuiteGraph": false,
+      "testFile": false,
+      "executedTestFile": false
+    },
+    {
+      "path": "apps/video-studio/src/editor/snapshot-sync.ts",
+      "lines": 473,
+      "manualRead": "full",
+      "manualNotes": "",
+      "defaultSuiteGraph": true,
+      "nativeSuiteGraph": true,
+      "testFile": false,
+      "executedTestFile": false
+    },
+    {
+      "path": "apps/video-studio/src/editor/source-previews.ts",
+      "lines": 130,
+      "manualRead": "not manually read",
+      "manualNotes": "",
+      "defaultSuiteGraph": true,
+      "nativeSuiteGraph": false,
+      "testFile": false,
+      "executedTestFile": false
+    },
+    {
+      "path": "apps/video-studio/src/editor/spoken-edits.ts",
+      "lines": 882,
+      "manualRead": "not manually read",
+      "manualNotes": "",
+      "defaultSuiteGraph": true,
+      "nativeSuiteGraph": false,
+      "testFile": false,
+      "executedTestFile": false
+    },
+    {
+      "path": "apps/video-studio/src/editor/stream-audio.ts",
+      "lines": 172,
+      "manualRead": "not manually read",
+      "manualNotes": "",
+      "defaultSuiteGraph": true,
+      "nativeSuiteGraph": false,
+      "testFile": false,
+      "executedTestFile": false
+    },
+    {
+      "path": "apps/video-studio/src/editor/sync-bridge.ts",
+      "lines": 622,
+      "manualRead": "not manually read",
+      "manualNotes": "",
+      "defaultSuiteGraph": true,
+      "nativeSuiteGraph": true,
+      "testFile": false,
+      "executedTestFile": false
+    },
+    {
+      "path": "apps/video-studio/src/editor/sync-storage.ts",
+      "lines": 329,
+      "manualRead": "not manually read",
+      "manualNotes": "",
+      "defaultSuiteGraph": true,
+      "nativeSuiteGraph": false,
+      "testFile": false,
+      "executedTestFile": false
+    },
+    {
+      "path": "apps/video-studio/src/editor/sync-ui.css",
+      "lines": 96,
+      "manualRead": "not manually read",
+      "manualNotes": "",
+      "defaultSuiteGraph": false,
+      "nativeSuiteGraph": false,
+      "testFile": false,
+      "executedTestFile": false
+    },
+    {
+      "path": "apps/video-studio/src/editor/sync-ui.ts",
+      "lines": 1351,
+      "manualRead": "not manually read",
+      "manualNotes": "",
+      "defaultSuiteGraph": false,
+      "nativeSuiteGraph": false,
+      "testFile": false,
+      "executedTestFile": false
+    },
+    {
+      "path": "apps/video-studio/src/editor/task-bridge.ts",
+      "lines": 1429,
+      "manualRead": "focused",
+      "manualNotes": "1-620 and result/discard anchors; remaining contracts via existing tests",
+      "defaultSuiteGraph": true,
+      "nativeSuiteGraph": true,
+      "testFile": false,
+      "executedTestFile": false
+    },
+    {
+      "path": "apps/video-studio/src/editor/time.ts",
+      "lines": 271,
+      "manualRead": "full",
+      "manualNotes": "",
+      "defaultSuiteGraph": true,
+      "nativeSuiteGraph": true,
+      "testFile": false,
+      "executedTestFile": false
+    },
+    {
+      "path": "apps/video-studio/src/editor/timeline-drag-readout.ts",
+      "lines": 26,
+      "manualRead": "not manually read",
+      "manualNotes": "",
+      "defaultSuiteGraph": true,
+      "nativeSuiteGraph": false,
+      "testFile": false,
+      "executedTestFile": false
+    },
+    {
+      "path": "apps/video-studio/src/editor/timeline-media.ts",
+      "lines": 654,
+      "manualRead": "not manually read",
+      "manualNotes": "",
+      "defaultSuiteGraph": false,
+      "nativeSuiteGraph": false,
+      "testFile": false,
+      "executedTestFile": false
+    },
+    {
+      "path": "apps/video-studio/src/editor/timeline-paste.ts",
+      "lines": 41,
+      "manualRead": "not manually read",
+      "manualNotes": "",
+      "defaultSuiteGraph": true,
+      "nativeSuiteGraph": false,
+      "testFile": false,
+      "executedTestFile": false
+    },
+    {
+      "path": "apps/video-studio/src/editor/timeline-ui.ts",
+      "lines": 3599,
+      "manualRead": "not manually read",
+      "manualNotes": "",
+      "defaultSuiteGraph": false,
+      "nativeSuiteGraph": false,
+      "testFile": false,
+      "executedTestFile": false
+    },
+    {
+      "path": "apps/video-studio/src/editor/timing-edits.ts",
+      "lines": 653,
+      "manualRead": "focused",
+      "manualNotes": "reverse planner, dispatch action, grouped mapping guards",
+      "defaultSuiteGraph": true,
+      "nativeSuiteGraph": false,
+      "testFile": false,
+      "executedTestFile": false
+    },
+    {
+      "path": "apps/video-studio/src/editor/timing-ui.ts",
+      "lines": 922,
+      "manualRead": "focused",
+      "manualNotes": "reverse button and shared edit callback",
+      "defaultSuiteGraph": false,
+      "nativeSuiteGraph": false,
+      "testFile": false,
+      "executedTestFile": false
+    },
+    {
+      "path": "apps/video-studio/src/editor/types.ts",
+      "lines": 236,
+      "manualRead": "full",
+      "manualNotes": "",
+      "defaultSuiteGraph": false,
+      "nativeSuiteGraph": false,
+      "testFile": false,
+      "executedTestFile": false
+    },
+    {
+      "path": "apps/video-studio/src/editor/validation.ts",
+      "lines": 976,
+      "manualRead": "focused",
+      "manualNotes": "asset/time constraints and map/normalization anchors; schema tests executed",
+      "defaultSuiteGraph": true,
+      "nativeSuiteGraph": true,
+      "testFile": false,
+      "executedTestFile": false
+    },
+    {
+      "path": "apps/video-studio/src/editor/visual-layout.ts",
+      "lines": 107,
+      "manualRead": "not manually read",
+      "manualNotes": "",
+      "defaultSuiteGraph": true,
+      "nativeSuiteGraph": true,
+      "testFile": false,
+      "executedTestFile": false
+    },
+    {
+      "path": "apps/video-studio/src/editor/voiceover-publication.ts",
+      "lines": 389,
+      "manualRead": "full",
+      "manualNotes": "",
+      "defaultSuiteGraph": true,
+      "nativeSuiteGraph": false,
+      "testFile": false,
+      "executedTestFile": false
+    },
+    {
+      "path": "apps/video-studio/src/editor/waveform.ts",
+      "lines": 103,
+      "manualRead": "not manually read",
+      "manualNotes": "",
+      "defaultSuiteGraph": true,
+      "nativeSuiteGraph": true,
+      "testFile": false,
+      "executedTestFile": false
+    },
+    {
+      "path": "apps/video-studio/src/editor/workspace-storage.ts",
+      "lines": 207,
+      "manualRead": "full",
+      "manualNotes": "",
+      "defaultSuiteGraph": true,
+      "nativeSuiteGraph": false,
+      "testFile": false,
+      "executedTestFile": false
+    },
+    {
+      "path": "apps/video-studio/src/editor/workspace-ui.ts",
+      "lines": 2035,
+      "manualRead": "focused",
+      "manualNotes": "875-1120 preview cancellation, addAsset/addClip; caller anchors",
+      "defaultSuiteGraph": false,
+      "nativeSuiteGraph": false,
+      "testFile": false,
+      "executedTestFile": false
+    },
+    {
+      "path": "apps/video-studio/src/external-media.ts",
+      "lines": 115,
+      "manualRead": "full",
+      "manualNotes": "",
+      "defaultSuiteGraph": true,
+      "nativeSuiteGraph": true,
+      "testFile": false,
+      "executedTestFile": false
+    },
+    {
+      "path": "apps/video-studio/src/folder-files.ts",
+      "lines": 93,
+      "manualRead": "not manually read",
+      "manualNotes": "",
+      "defaultSuiteGraph": true,
+      "nativeSuiteGraph": false,
+      "testFile": false,
+      "executedTestFile": false
+    },
+    {
+      "path": "apps/video-studio/src/folder-import.ts",
+      "lines": 484,
+      "manualRead": "not manually read",
+      "manualNotes": "",
+      "defaultSuiteGraph": true,
+      "nativeSuiteGraph": false,
+      "testFile": false,
+      "executedTestFile": false
+    },
+    {
+      "path": "apps/video-studio/src/folder-source.ts",
+      "lines": 558,
+      "manualRead": "not manually read",
+      "manualNotes": "",
+      "defaultSuiteGraph": true,
+      "nativeSuiteGraph": false,
+      "testFile": false,
+      "executedTestFile": false
+    },
+    {
+      "path": "apps/video-studio/src/host-audio-recording.ts",
+      "lines": 380,
+      "manualRead": "not manually read",
+      "manualNotes": "",
+      "defaultSuiteGraph": true,
+      "nativeSuiteGraph": false,
+      "testFile": false,
+      "executedTestFile": false
+    },
+    {
+      "path": "apps/video-studio/src/host.ts",
+      "lines": 395,
+      "manualRead": "not manually read",
+      "manualNotes": "",
+      "defaultSuiteGraph": true,
+      "nativeSuiteGraph": false,
+      "testFile": false,
+      "executedTestFile": false
+    },
+    {
+      "path": "apps/video-studio/src/icons.ts",
+      "lines": 59,
+      "manualRead": "not manually read",
+      "manualNotes": "",
+      "defaultSuiteGraph": true,
+      "nativeSuiteGraph": false,
+      "testFile": false,
+      "executedTestFile": false
+    },
+    {
+      "path": "apps/video-studio/src/ids.ts",
+      "lines": 13,
+      "manualRead": "not manually read",
+      "manualNotes": "",
+      "defaultSuiteGraph": true,
+      "nativeSuiteGraph": true,
+      "testFile": false,
+      "executedTestFile": false
+    },
+    {
+      "path": "apps/video-studio/src/local-voice-process.ts",
+      "lines": 229,
+      "manualRead": "full",
+      "manualNotes": "",
+      "defaultSuiteGraph": true,
+      "nativeSuiteGraph": false,
+      "testFile": false,
+      "executedTestFile": false
+    },
+    {
+      "path": "apps/video-studio/src/main.ts",
+      "lines": 6579,
+      "manualRead": "focused",
+      "manualNotes": "1965-2096 resource replacement; 5120-5160 unload; 6355-6579 boot/dispose; selected addMedia",
+      "defaultSuiteGraph": false,
+      "nativeSuiteGraph": false,
+      "testFile": false,
+      "executedTestFile": false
+    },
+    {
+      "path": "apps/video-studio/src/media-file-storage.ts",
+      "lines": 154,
+      "manualRead": "full",
+      "manualNotes": "",
+      "defaultSuiteGraph": true,
+      "nativeSuiteGraph": false,
+      "testFile": false,
+      "executedTestFile": false
+    },
+    {
+      "path": "apps/video-studio/src/media-library-menu.ts",
+      "lines": 111,
+      "manualRead": "not manually read",
+      "manualNotes": "",
+      "defaultSuiteGraph": false,
+      "nativeSuiteGraph": false,
+      "testFile": false,
+      "executedTestFile": false
+    },
+    {
+      "path": "apps/video-studio/src/media-library-ui.ts",
+      "lines": 49,
+      "manualRead": "not manually read",
+      "manualNotes": "",
+      "defaultSuiteGraph": true,
+      "nativeSuiteGraph": false,
+      "testFile": false,
+      "executedTestFile": false
+    },
+    {
+      "path": "apps/video-studio/src/media-task-bridge.ts",
+      "lines": 681,
+      "manualRead": "full",
+      "manualNotes": "",
+      "defaultSuiteGraph": true,
+      "nativeSuiteGraph": false,
+      "testFile": false,
+      "executedTestFile": false
+    },
+    {
+      "path": "apps/video-studio/src/media.ts",
+      "lines": 1229,
+      "manualRead": "focused",
+      "manualNotes": "export/function index only",
+      "defaultSuiteGraph": false,
+      "nativeSuiteGraph": false,
+      "testFile": false,
+      "executedTestFile": false
+    },
+    {
+      "path": "apps/video-studio/src/model.ts",
+      "lines": 993,
+      "manualRead": "focused",
+      "manualNotes": "export/function index only",
+      "defaultSuiteGraph": true,
+      "nativeSuiteGraph": false,
+      "testFile": false,
+      "executedTestFile": false
+    },
+    {
+      "path": "apps/video-studio/src/narration-ui.ts",
+      "lines": 233,
+      "manualRead": "not manually read",
+      "manualNotes": "",
+      "defaultSuiteGraph": true,
+      "nativeSuiteGraph": false,
+      "testFile": false,
+      "executedTestFile": false
+    },
+    {
+      "path": "apps/video-studio/src/narration.ts",
+      "lines": 207,
+      "manualRead": "not manually read",
+      "manualNotes": "",
+      "defaultSuiteGraph": true,
+      "nativeSuiteGraph": false,
+      "testFile": false,
+      "executedTestFile": false
+    },
+    {
+      "path": "apps/video-studio/src/production-tools.ts",
+      "lines": 247,
+      "manualRead": "not manually read",
+      "manualNotes": "",
+      "defaultSuiteGraph": true,
+      "nativeSuiteGraph": false,
+      "testFile": false,
+      "executedTestFile": false
+    },
+    {
+      "path": "apps/video-studio/src/production-ui.ts",
+      "lines": 234,
+      "manualRead": "not manually read",
+      "manualNotes": "",
+      "defaultSuiteGraph": false,
+      "nativeSuiteGraph": false,
+      "testFile": false,
+      "executedTestFile": false
+    },
+    {
+      "path": "apps/video-studio/src/production-views.ts",
+      "lines": 113,
+      "manualRead": "not manually read",
+      "manualNotes": "",
+      "defaultSuiteGraph": true,
+      "nativeSuiteGraph": false,
+      "testFile": false,
+      "executedTestFile": false
+    },
+    {
+      "path": "apps/video-studio/src/production.ts",
+      "lines": 2030,
+      "manualRead": "focused",
+      "manualNotes": "export/function index only",
+      "defaultSuiteGraph": true,
+      "nativeSuiteGraph": false,
+      "testFile": false,
+      "executedTestFile": false
+    },
+    {
+      "path": "apps/video-studio/src/recording-cache.ts",
+      "lines": 99,
+      "manualRead": "full",
+      "manualNotes": "",
+      "defaultSuiteGraph": true,
+      "nativeSuiteGraph": false,
+      "testFile": false,
+      "executedTestFile": false
+    },
+    {
+      "path": "apps/video-studio/src/recording-ui.ts",
+      "lines": 508,
+      "manualRead": "not manually read",
+      "manualNotes": "",
+      "defaultSuiteGraph": false,
+      "nativeSuiteGraph": false,
+      "testFile": false,
+      "executedTestFile": false
+    },
+    {
+      "path": "apps/video-studio/src/recording.ts",
+      "lines": 473,
+      "manualRead": "not manually read",
+      "manualNotes": "",
+      "defaultSuiteGraph": false,
+      "nativeSuiteGraph": false,
+      "testFile": false,
+      "executedTestFile": false
+    },
+    {
+      "path": "apps/video-studio/src/rough-cut-ai.ts",
+      "lines": 724,
+      "manualRead": "not manually read",
+      "manualNotes": "",
+      "defaultSuiteGraph": true,
+      "nativeSuiteGraph": false,
+      "testFile": false,
+      "executedTestFile": false
+    },
+    {
+      "path": "apps/video-studio/src/rough-cut-ui.ts",
+      "lines": 1412,
+      "manualRead": "not manually read",
+      "manualNotes": "",
+      "defaultSuiteGraph": true,
+      "nativeSuiteGraph": false,
+      "testFile": false,
+      "executedTestFile": false
+    },
+    {
+      "path": "apps/video-studio/src/rough-cut.ts",
+      "lines": 240,
+      "manualRead": "not manually read",
+      "manualNotes": "",
+      "defaultSuiteGraph": true,
+      "nativeSuiteGraph": false,
+      "testFile": false,
+      "executedTestFile": false
+    },
+    {
+      "path": "apps/video-studio/src/sdk/bridge-traffic.ts",
+      "lines": 154,
+      "manualRead": "not manually read",
+      "manualNotes": "",
+      "defaultSuiteGraph": true,
+      "nativeSuiteGraph": false,
+      "testFile": false,
+      "executedTestFile": false
+    },
+    {
+      "path": "apps/video-studio/src/sdk/panel-runtime.ts",
+      "lines": 269,
+      "manualRead": "full",
+      "manualNotes": "",
+      "defaultSuiteGraph": true,
+      "nativeSuiteGraph": true,
+      "testFile": false,
+      "executedTestFile": false
+    },
+    {
+      "path": "apps/video-studio/src/sdk/resource-preview.ts",
+      "lines": 41,
+      "manualRead": "not manually read",
+      "manualNotes": "",
+      "defaultSuiteGraph": true,
+      "nativeSuiteGraph": false,
+      "testFile": false,
+      "executedTestFile": false
+    },
+    {
+      "path": "apps/video-studio/src/spoken-ui.ts",
+      "lines": 612,
+      "manualRead": "not manually read",
+      "manualNotes": "",
+      "defaultSuiteGraph": false,
+      "nativeSuiteGraph": false,
+      "testFile": false,
+      "executedTestFile": false
+    },
+    {
+      "path": "apps/video-studio/src/timeline-context-menu.ts",
+      "lines": 179,
+      "manualRead": "not manually read",
+      "manualNotes": "",
+      "defaultSuiteGraph": true,
+      "nativeSuiteGraph": false,
+      "testFile": false,
+      "executedTestFile": false
+    },
+    {
+      "path": "apps/video-studio/src/timeline-controls.ts",
+      "lines": 125,
+      "manualRead": "not manually read",
+      "manualNotes": "",
+      "defaultSuiteGraph": true,
+      "nativeSuiteGraph": false,
+      "testFile": false,
+      "executedTestFile": false
+    },
+    {
+      "path": "apps/video-studio/src/timeline-gestures.ts",
+      "lines": 328,
+      "manualRead": "not manually read",
+      "manualNotes": "",
+      "defaultSuiteGraph": false,
+      "nativeSuiteGraph": false,
+      "testFile": false,
+      "executedTestFile": false
+    },
+    {
+      "path": "apps/video-studio/src/views.ts",
+      "lines": 994,
+      "manualRead": "not manually read",
+      "manualNotes": "",
+      "defaultSuiteGraph": true,
+      "nativeSuiteGraph": false,
+      "testFile": false,
+      "executedTestFile": false
+    },
+    {
+      "path": "apps/video-studio/src/voice-library-bridge.ts",
+      "lines": 362,
+      "manualRead": "not manually read",
+      "manualNotes": "",
+      "defaultSuiteGraph": true,
+      "nativeSuiteGraph": false,
+      "testFile": false,
+      "executedTestFile": false
+    },
+    {
+      "path": "apps/video-studio/src/voice-library.ts",
+      "lines": 125,
+      "manualRead": "not manually read",
+      "manualNotes": "",
+      "defaultSuiteGraph": true,
+      "nativeSuiteGraph": false,
+      "testFile": false,
+      "executedTestFile": false
+    },
+    {
+      "path": "apps/video-studio/src/voice-preparation-ui.ts",
+      "lines": 1200,
+      "manualRead": "not manually read",
+      "manualNotes": "",
+      "defaultSuiteGraph": true,
+      "nativeSuiteGraph": false,
+      "testFile": false,
+      "executedTestFile": false
+    },
+    {
+      "path": "apps/video-studio/src/voiceover-ui.ts",
+      "lines": 820,
+      "manualRead": "not manually read",
+      "manualNotes": "",
+      "defaultSuiteGraph": false,
+      "nativeSuiteGraph": false,
+      "testFile": false,
+      "executedTestFile": false
+    },
+    {
+      "path": "apps/video-studio/src/voiceover.ts",
+      "lines": 93,
+      "manualRead": "not manually read",
+      "manualNotes": "",
+      "defaultSuiteGraph": true,
+      "nativeSuiteGraph": false,
+      "testFile": false,
+      "executedTestFile": false
+    },
+    {
+      "path": "apps/video-studio/src/workflow.ts",
+      "lines": 218,
+      "manualRead": "focused",
+      "manualNotes": "export/function index only",
+      "defaultSuiteGraph": true,
+      "nativeSuiteGraph": false,
+      "testFile": false,
+      "executedTestFile": false
+    },
+    {
+      "path": "apps/video-studio/src/workspace-document-bridge.ts",
+      "lines": 225,
+      "manualRead": "full",
+      "manualNotes": "",
+      "defaultSuiteGraph": true,
+      "nativeSuiteGraph": false,
+      "testFile": false,
+      "executedTestFile": false
+    },
+    {
+      "path": "apps/video-studio/src/workspace-layout.ts",
+      "lines": 182,
+      "manualRead": "full",
+      "manualNotes": "",
+      "defaultSuiteGraph": false,
+      "nativeSuiteGraph": false,
+      "testFile": false,
+      "executedTestFile": false
+    }
+  ]
+}

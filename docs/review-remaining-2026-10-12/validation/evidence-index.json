@@ -1,0 +1,593 @@
+{
+  "evidenceFiles": 98,
+  "records": [
+    {
+      "source": "/tmp/codeshell-remaining-core-review/core-inventory.json",
+      "path": "validation/core/core-inventory.json",
+      "bytes": 24715,
+      "sha256": "e633c7a607420e27750c2d2f2bba294a405728d93ddf6310c2aefa6e62634bb9"
+    },
+    {
+      "source": "/tmp/codeshell-remaining-core-review/providers-post-gate.log",
+      "path": "validation/core/providers-post-gate.log",
+      "bytes": 1394,
+      "sha256": "c76ba09b7d232399691b2ceaa4f04d57311ef07ad9216fbea1d4c4145093ae95"
+    },
+    {
+      "source": "/tmp/codeshell-remaining-core-review/providers-accounting.test.ts",
+      "path": "validation/core/providers-accounting.test.ts",
+      "bytes": 7653,
+      "sha256": "8d096f0a6dc04cddc120c58d927977a48fd58ab2948ba7cc4eae932cccc066c1"
+    },
+    {
+      "source": "/tmp/codeshell-remaining-core-review/candidates.log",
+      "path": "validation/core/candidates.log",
+      "bytes": 2497,
+      "sha256": "192293e9fd6581887bd6fa0618d94a1c7b5ba522ff05884629997b8e41eed8c4"
+    },
+    {
+      "source": "/tmp/codeshell-remaining-core-review/candidates.test.ts",
+      "path": "validation/core/candidates.test.ts",
+      "bytes": 12417,
+      "sha256": "ded7dbb4869608a1b189326319aa6f1dbc5a03c01818c0eaab0798f475fc08cc"
+    },
+    {
+      "source": "/tmp/codeshell-remaining-core-review/providers-accounting.log",
+      "path": "validation/core/providers-accounting.log",
+      "bytes": 2290,
+      "sha256": "083257e1fd98157339dfa8e401d871455ed34487627286f1854dadf77ffa3097"
+    },
+    {
+      "source": "/tmp/codeshell-remaining-cli-chat-tui-ctrlc-run2.log",
+      "path": "validation/coding-tui-chat/codeshell-remaining-cli-chat-tui-ctrlc-run2.log",
+      "bytes": 692,
+      "sha256": "4794dd0a9d41ecde6cad73f0473e6355522e648f96400f77baf600cf954c99a1"
+    },
+    {
+      "source": "/tmp/codeshell-remaining-cli-chat-tui.mjs",
+      "path": "validation/coding-tui-chat/codeshell-remaining-cli-chat-tui.mjs",
+      "bytes": 3034,
+      "sha256": "8103b66d3eb1223e116dbadd91fec91fd22e3bc0baa4585e7235ebb588e889aa"
+    },
+    {
+      "source": "/tmp/codeshell-remaining-cli-chat-inventory.txt",
+      "path": "validation/coding-tui-chat/codeshell-remaining-cli-chat-inventory.txt",
+      "bytes": 20431,
+      "sha256": "c66e4a3857acff48179cc4a6311747bab925d1c8ff7015784382e5cc92437999"
+    },
+    {
+      "source": "/tmp/codeshell-remaining-cli-chat-core-run1.log",
+      "path": "validation/coding-tui-chat/codeshell-remaining-cli-chat-core-run1.log",
+      "bytes": 1491,
+      "sha256": "cdc2ce7d0d0168d5f3d21af8a64b72a7e1daeae028855c9eac500b6084980590"
+    },
+    {
+      "source": "/tmp/codeshell-remaining-cli-chat-core-run3.log",
+      "path": "validation/coding-tui-chat/codeshell-remaining-cli-chat-core-run3.log",
+      "bytes": 2056,
+      "sha256": "b3eaf5ff1af264f82e0c4a46a62485bf334bcfe3651abdeebbece06a4014a7f2"
+    },
+    {
+      "source": "/tmp/codeshell-remaining-cli-chat-core-run2.log",
+      "path": "validation/coding-tui-chat/codeshell-remaining-cli-chat-core-run2.log",
+      "bytes": 1906,
+      "sha256": "6c7b1bb5f53d1a56328f274f91db465cec800d010fb537d3a79405199899d4b1"
+    },
+    {
+      "source": "/tmp/codeshell-remaining-cli-chat-tui-input-run3.log",
+      "path": "validation/coding-tui-chat/codeshell-remaining-cli-chat-tui-input-run3.log",
+      "bytes": 420,
+      "sha256": "3f6b6e5bb2372cf7164989b45c32c339a82faef0cee3ec09d2e2d4e0b2ad75d5"
+    },
+    {
+      "source": "/tmp/codeshell-remaining-cli-chat-tui-input-run2.log",
+      "path": "validation/coding-tui-chat/codeshell-remaining-cli-chat-tui-input-run2.log",
+      "bytes": 321,
+      "sha256": "89c6d801739388360e1485173011f8894cda4a7e89bc62f733f409f95fb55fa4"
+    },
+    {
+      "source": "/tmp/codeshell-remaining-cli-chat-tui-escape-run2.log",
+      "path": "validation/coding-tui-chat/codeshell-remaining-cli-chat-tui-escape-run2.log",
+      "bytes": 696,
+      "sha256": "463903044fdc933b3cdea6792abc3f3001608307af651a4b76c848c85ab18b80"
+    },
+    {
+      "source": "/tmp/codeshell-remaining-cli-chat-native.mjs",
+      "path": "validation/coding-tui-chat/codeshell-remaining-cli-chat-native.mjs",
+      "bytes": 10321,
+      "sha256": "a5aa64ae39a57ab3d2e090e746eb614406aad12c98b2f3e718744b5e8ec57c61"
+    },
+    {
+      "source": "/tmp/codeshell-remaining-cli-chat-core.test.ts",
+      "path": "validation/coding-tui-chat/codeshell-remaining-cli-chat-core.test.ts",
+      "bytes": 11333,
+      "sha256": "038bb316b27d974f4c3d042e323c97423ff1929deb12d2dee7784d21515536c9"
+    },
+    {
+      "source": "/tmp/codeshell-remaining-cli-chat-native-run1.log",
+      "path": "validation/coding-tui-chat/codeshell-remaining-cli-chat-native-run1.log",
+      "bytes": 1733,
+      "sha256": "e04d56ac00c81d725a3f467d541793f3e9881c7a681ce16b541140bedee7da52"
+    },
+    {
+      "source": "/tmp/codeshell-remaining-cli-chat-native-run3.log",
+      "path": "validation/coding-tui-chat/codeshell-remaining-cli-chat-native-run3.log",
+      "bytes": 1280,
+      "sha256": "9ed8b0fe1f4d50b77b5ee88c2d0ff0ae76b3165757ca12a66eef7983e9ba4e5b"
+    },
+    {
+      "source": "/tmp/codeshell-remaining-cli-chat-native-run2.log",
+      "path": "validation/coding-tui-chat/codeshell-remaining-cli-chat-native-run2.log",
+      "bytes": 1217,
+      "sha256": "9240a044947641796ef07bf3729887ac1e6a193c5a084feee670cb9246e9a046"
+    },
+    {
+      "source": "/tmp/codeshell-remaining-hosts-native-stop.log",
+      "path": "validation/hosts/codeshell-remaining-hosts-native-stop.log",
+      "bytes": 753,
+      "sha256": "1dd9cbcc573f48390928f998bdf50bee46efdaf38eb417866d88bc7a5cf0a54c"
+    },
+    {
+      "source": "/tmp/codeshell-remaining-hosts-native-stop.mjs",
+      "path": "validation/hosts/codeshell-remaining-hosts-native-stop.mjs",
+      "bytes": 6575,
+      "sha256": "3dc0806cb1b7b4b5b1efa258a37965c53ba9091d43b962d5fa2401810c76e9ce"
+    },
+    {
+      "source": "/tmp/codeshell-quant-job-review.test.mjs",
+      "path": "validation/quant-job/codeshell-quant-job-review.test.mjs",
+      "bytes": 15208,
+      "sha256": "e151623ace5776af58c67f71291d5dc998bfa7403bab5fc1bd5aca677b661597"
+    },
+    {
+      "source": "/tmp/codeshell-quant-job-review.log",
+      "path": "validation/quant-job/codeshell-quant-job-review.log",
+      "bytes": 2659,
+      "sha256": "27bc58bc97072d91e36dbb72e8ca3d70a96232d25dc7dcab11bc35cb5a6679e4"
+    },
+    {
+      "source": "/tmp/codeshell-quant-job-baseline.log",
+      "path": "validation/quant-job/codeshell-quant-job-baseline.log",
+      "bytes": 34003,
+      "sha256": "948509211e81439e65c1718ebc29a819821e0bb9f7f862fc04253761da800103"
+    },
+    {
+      "source": "/tmp/codeshell-quant-job-baseline-runner.mjs",
+      "path": "validation/quant-job/codeshell-quant-job-baseline-runner.mjs",
+      "bytes": 1624,
+      "sha256": "1e0cc4bf6821b5674b0a54e5659465fdfcbfdd072d734449e4d36411f3ada28b"
+    },
+    {
+      "source": "/tmp/codeshell-quant-job-deny-network.mjs",
+      "path": "validation/quant-job/codeshell-quant-job-deny-network.mjs",
+      "bytes": 581,
+      "sha256": "4f2cb6fe06a94a3478fd88216ef04d029cc6faff8965d8f480e9c799dd26532c"
+    },
+    {
+      "source": "/tmp/codeshell-panel-video-review-20261012/native-suite.log",
+      "path": "validation/video-studio/native-suite.log",
+      "bytes": 13953,
+      "sha256": "66ecdda203e01a0cdfae6ebd4db8bffb9110965f96630262dcceba1b29e8146e"
+    },
+    {
+      "source": "/tmp/codeshell-panel-video-review-20261012/reverse-boundary.log",
+      "path": "validation/video-studio/reverse-boundary.log",
+      "bytes": 591,
+      "sha256": "a8507dc79aefed778c44947b2d1efefa39eea92d3d821e920845a4f540d1ef5c"
+    },
+    {
+      "source": "/tmp/codeshell-panel-video-review-20261012/deny-network.mjs",
+      "path": "validation/video-studio/deny-network.mjs",
+      "bytes": 558,
+      "sha256": "62bd38c3dfb3d075161a0e925993df0b8d3dd7cbe14fe121e4950d62f28741ba"
+    },
+    {
+      "source": "/tmp/codeshell-panel-video-review-20261012/mix-concurrency.mjs",
+      "path": "validation/video-studio/mix-concurrency.mjs",
+      "bytes": 4300,
+      "sha256": "6d2d65bd26a5359d4ba52b63c17bb0b44e1f9900230cb80f049a7b4f886a7fcc"
+    },
+    {
+      "source": "/tmp/codeshell-panel-video-review-20261012/module-inventory.json",
+      "path": "validation/video-studio/module-inventory.json",
+      "bytes": 58313,
+      "sha256": "b25913f199b9d688e3c98cf8df824a21d25cc83c0aed45c18b33b124c7359f71"
+    },
+    {
+      "source": "/tmp/codeshell-panel-video-review-20261012/reverse-boundary.mjs",
+      "path": "validation/video-studio/reverse-boundary.mjs",
+      "bytes": 3450,
+      "sha256": "1f4cf2d189e26110a6c4f2fc535175764dbb0dd41fbd32e6c9894f5171174967"
+    },
+    {
+      "source": "/tmp/codeshell-panel-video-review-20261012/mix-concurrency.log",
+      "path": "validation/video-studio/mix-concurrency.log",
+      "bytes": 725,
+      "sha256": "ea416c28630ce1dd45f72147dfb7208dd25c56a033e870f32331d182573616f8"
+    },
+    {
+      "source": "/tmp/codeshell-panel-video-review-20261012/exact-local-network.mjs",
+      "path": "validation/video-studio/exact-local-network.mjs",
+      "bytes": 1740,
+      "sha256": "26770518a0845142afda2749a58abe3efa85bdc7d102998330b286bc25e94c48"
+    },
+    {
+      "source": "/tmp/codeshell-panel-video-review-20261012/owned-origins.txt",
+      "path": "validation/video-studio/owned-origins.txt",
+      "bytes": 138,
+      "sha256": "e09137ca7b014463afb9ff207d374a4b4a3f31316fe6d3df6fd5dd9ead8c4f87"
+    },
+    {
+      "source": "/tmp/codeshell-panel-video-review-20261012/offline-suite.log",
+      "path": "validation/video-studio/offline-suite.log",
+      "bytes": 121252,
+      "sha256": "16707c8bea18c82e46f591a7801e0b1084c3cd15d44d922853c601606dc3c94b"
+    },
+    {
+      "source": "/tmp/codeshell-panel-video-review-20261012/run-suite.mjs",
+      "path": "validation/video-studio/run-suite.mjs",
+      "bytes": 406,
+      "sha256": "db9ebf57753da9ae8db806c03830fd0181ffcff30d8464f61ea7d933e6367d14"
+    },
+    {
+      "source": "/tmp/codeshell-panel-video-review-20261012/module-inventory.csv",
+      "path": "validation/video-studio/module-inventory.csv",
+      "bytes": 21838,
+      "sha256": "c9415e68fa0910cb02c332e1a1562ca51944c465fc3eb9d0c4e970a0098afde4"
+    },
+    {
+      "source": "/tmp/codeshell-panel-video-review-20261012/inventory.mjs",
+      "path": "validation/video-studio/inventory.mjs",
+      "bytes": 7477,
+      "sha256": "05e69e5d5fa63db4e0b6cff5442e4abe14411b33713245da2038ce2869e804a4"
+    },
+    {
+      "source": "/tmp/codeshell-panel-video-review-20261012/inventory-summary.json",
+      "path": "validation/video-studio/inventory-summary.json",
+      "bytes": 211,
+      "sha256": "d60480477b8d69f8871a20a9e3f1c50e8ae9a67f8ce1a8c1283c39da95973991"
+    },
+    {
+      "source": "/tmp/codeshell-panel-video-review-20261012/run-native.mjs",
+      "path": "validation/video-studio/run-native.mjs",
+      "bytes": 622,
+      "sha256": "0ed12e9c547d058aaadaed5ebf75845429c597e4dc4845a78227dd19412a295d"
+    },
+    {
+      "source": "/tmp/codeshell-panel-video-review-20261012/default-suite-dependency-graph.json",
+      "path": "validation/video-studio/default-suite-dependency-graph.json",
+      "bytes": 10965,
+      "sha256": "ba92c18e33eae5cd5cc442f31e73e3b020ca25b08e76b274e2706a31155658d8"
+    },
+    {
+      "source": "/tmp/codeshell-panel-video-review-20261012/native-suite-dependency-graph.json",
+      "path": "validation/video-studio/native-suite-dependency-graph.json",
+      "bytes": 4215,
+      "sha256": "d8d4f97d26f9ba44eb427bc42e3f515fb7057572aa2b6c83c7cd094a12e9210c"
+    },
+    {
+      "source": "/tmp/codeshell-remaining-20261012/root/root-candidates.test.ts",
+      "path": "validation/root/root-candidates.test.ts",
+      "bytes": 7118,
+      "sha256": "a0bc9cdc4b4babe23cbb8bddf1fdc3c8b53b87463a107de293c9e0974251e480"
+    },
+    {
+      "source": "/tmp/codeshell-remaining-20261012/root/video-search-receipt.log",
+      "path": "validation/root/video-search-receipt.log",
+      "bytes": 4511,
+      "sha256": "86007f6f6ae63c10dd47c1f5675636ee65a90e84a1358b273545b1fa1b6c0c82"
+    },
+    {
+      "source": "/tmp/codeshell-remaining-20261012/root/panel-select-controls.log",
+      "path": "validation/root/panel-select-controls.log",
+      "bytes": 560,
+      "sha256": "1368cf2f5f7e34695b19ed883eb270c1380c5ed0526ee47a3eff63fd95b9a274"
+    },
+    {
+      "source": "/tmp/codeshell-remaining-20261012/root/deny-network.mjs",
+      "path": "validation/root/deny-network.mjs",
+      "bytes": 1733,
+      "sha256": "f72bddcfdae5cc2a8c6f619a005da08fe5e8e81d43532609bff3354c131d7002"
+    },
+    {
+      "source": "/tmp/codeshell-remaining-20261012/root/root-candidates.log",
+      "path": "validation/root/root-candidates.log",
+      "bytes": 778,
+      "sha256": "5fc8545db4daf61534f62c0f9ee622304c7236e04a3a15827406042147595c5d"
+    },
+    {
+      "source": "/tmp/codeshell-remaining-20261012/root/pet-full-controls.log",
+      "path": "validation/root/pet-full-controls.log",
+      "bytes": 38839,
+      "sha256": "0f97b640f2751e72be523c893de271ba8dba162436efadc56e958cf1f51e59e8"
+    },
+    {
+      "source": "/tmp/codeshell-remaining-20261012/root/control-shard.log",
+      "path": "validation/root/control-shard.log",
+      "bytes": 36177,
+      "sha256": "0137cc5bce4b3a0651fe2ffe8287666b5b3926e849f08e4a83663ac60b423e52"
+    },
+    {
+      "source": "/tmp/codeshell-remaining-20261012/root/video-search-receipt.mjs",
+      "path": "validation/root/video-search-receipt.mjs",
+      "bytes": 3562,
+      "sha256": "8dcbbaf7d37211dbcee13d33269dc428349b5b9c6f44d6549a20080c8781bd42"
+    },
+    {
+      "source": "/tmp/codeshell-remaining-20261012/root/video-download-controls.log",
+      "path": "validation/root/video-download-controls.log",
+      "bytes": 15472,
+      "sha256": "5469baea17e09ed12dd75407362da014c3c0aa1cb7f6e88235519564aa6f8a8f"
+    },
+    {
+      "source": "/tmp/codeshell-remaining-20261012/root/video-search-receipt-first-environment-failure.log",
+      "path": "validation/root/video-search-receipt-first-environment-failure.log",
+      "bytes": 1310,
+      "sha256": "38a64ed27ab80749b78ae3b2eb3d0f576397f5f51035341bed2b901b9e9117ee"
+    },
+    {
+      "source": "/tmp/codeshell-remaining-20261012/root/panel-browser-guard.mjs",
+      "path": "validation/root/panel-browser-guard.mjs",
+      "bytes": 699,
+      "sha256": "170177f31cc677b6692941c9de024865bb845f57ad0889990eb18d72e06ea7a6"
+    },
+    {
+      "source": "/tmp/codeshell-remaining-20261012/root/panel-build-controls.log",
+      "path": "validation/root/panel-build-controls.log",
+      "bytes": 3614,
+      "sha256": "b37761a73c8f6a3309c241301f553ce68cd04c453a5d69c08a9ad9beccae932c"
+    },
+    {
+      "source": "/tmp/codeshell-remaining-20261012/packaging/deny-network.mjs",
+      "path": "validation/packaging/deny-network.mjs",
+      "bytes": 1733,
+      "sha256": "f72bddcfdae5cc2a8c6f619a005da08fe5e8e81d43532609bff3354c131d7002"
+    },
+    {
+      "source": "/tmp/codeshell-remaining-20261012/packaging/receipt-first-harness-failure.json",
+      "path": "validation/packaging/receipt-first-harness-failure.json",
+      "bytes": 253,
+      "sha256": "f173e890fb4cb0aa7872d93dfd42ff8e9199b0edb7055a8ef0071398c1ac44f2"
+    },
+    {
+      "source": "/tmp/codeshell-remaining-20261012/packaging/package-release-auth.ts",
+      "path": "validation/packaging/package-release-auth.ts",
+      "bytes": 6470,
+      "sha256": "48edf284be9a567a3191785498c01a4a097cf268594f130613b858b088d5d1d6"
+    },
+    {
+      "source": "/tmp/codeshell-remaining-20261012/packaging/owner-network.mjs",
+      "path": "validation/packaging/owner-network.mjs",
+      "bytes": 2105,
+      "sha256": "369c9d8077600197cff463deb90225e659c5b0a7748a0b27a888cb42f05c4388"
+    },
+    {
+      "source": "/tmp/codeshell-remaining-20261012/packaging/package-release.log",
+      "path": "validation/packaging/package-release.log",
+      "bytes": 4049,
+      "sha256": "0ec087803775a3ccc23f7f77a14262455504b62a98e51d54b8bbf94fa0ee57b4"
+    },
+    {
+      "source": "/tmp/codeshell-remaining-20261012/packaging/package-release-first-harness-failure.log",
+      "path": "validation/packaging/package-release-first-harness-failure.log",
+      "bytes": 5446,
+      "sha256": "0ffa6ecec0547233eb87f571ceb946a4bd3baafc41634eb4cb07b2b603705908"
+    },
+    {
+      "source": "/tmp/codeshell-remaining-20261012/packaging/package-release-smoke.ts",
+      "path": "validation/packaging/package-release-smoke.ts",
+      "bytes": 19071,
+      "sha256": "41ed9260fbf4467c3d47a7ce01f8d24a887fa4225fc003a5d21dc0164397339b"
+    },
+    {
+      "source": "/tmp/codeshell-remaining-20261012/packaging/receipt.json",
+      "path": "validation/packaging/receipt.json",
+      "bytes": 251,
+      "sha256": "0f0d7d45a25d16b301ba594a8e5c6dea756ffa9ef02eb5666ff6d1fed07cae0f"
+    },
+    {
+      "source": "/tmp/codeshell-remaining-20261012/setup/install.log",
+      "path": "validation/setup/install.log",
+      "bytes": 500,
+      "sha256": "378c11835879fe417219a72c981ebc19911eadc2895d2df0425b528cb0f86250"
+    },
+    {
+      "source": "/tmp/codeshell-remaining-20261012/setup/install.json",
+      "path": "validation/setup/install.json",
+      "bytes": 406,
+      "sha256": "e6261cc4f384b9a654bab3eedcd3af9b439db9a44148a7e90fd218db59c1b2b8"
+    },
+    {
+      "source": "/tmp/codeshell-remaining-20261012/panel-setup/install.log",
+      "path": "validation/panel-setup/install.log",
+      "bytes": 608,
+      "sha256": "52d199e2934e6d852c7e6442b67abd9bc08d185d9727f936350e5f0a38e449c4"
+    },
+    {
+      "source": "/tmp/codeshell-remaining-20261012/panel-setup/install.json",
+      "path": "validation/panel-setup/install.json",
+      "bytes": 240,
+      "sha256": "a5386fa1375063c653db4060fef3126c427723f9d1af7c772c4b5cfcece94915"
+    },
+    {
+      "source": "/tmp/codeshell-panel-design-fixture.mjs",
+      "path": "validation/design/codeshell-panel-design-fixture.mjs",
+      "bytes": 20830,
+      "sha256": "a66bec540defb3dfa18c94165c21e171e42ad95dfa6274f97b76f2827dec5004"
+    },
+    {
+      "source": "/tmp/codeshell-panel-design-existing.mjs",
+      "path": "validation/design/codeshell-panel-design-existing.mjs",
+      "bytes": 1425,
+      "sha256": "16545b66d508073f0dafa27feaf67d74208b60e12774cb6eb437933f4cb6ec7f"
+    },
+    {
+      "source": "/tmp/codeshell-panel-design-run8.log",
+      "path": "validation/design/codeshell-panel-design-run8.log",
+      "bytes": 3489,
+      "sha256": "c231bd233ecfafd83e418779e081fe95b8e834acf34f1b29a0078ca3601eba76"
+    },
+    {
+      "source": "/tmp/codeshell-panel-design-run9.log",
+      "path": "validation/design/codeshell-panel-design-run9.log",
+      "bytes": 3629,
+      "sha256": "6fffa41aceb2a1b598f0499d0dbd1714cb8993bb3bef07428ed57c7dffffd2cc"
+    },
+    {
+      "source": "/tmp/codeshell-panel-design-run7.log",
+      "path": "validation/design/codeshell-panel-design-run7.log",
+      "bytes": 2824,
+      "sha256": "16813f65cdd10a9f6c613a80b43513984f6d859412b6f66f8e162a9b7de7f68b"
+    },
+    {
+      "source": "/tmp/codeshell-panel-design-run6.log",
+      "path": "validation/design/codeshell-panel-design-run6.log",
+      "bytes": 3201,
+      "sha256": "05c4d64a847e776fef62e5d57160c00cae43ca7b751dcd5f1997b2b9f8c2f84b"
+    },
+    {
+      "source": "/tmp/codeshell-panel-design-run4.log",
+      "path": "validation/design/codeshell-panel-design-run4.log",
+      "bytes": 2450,
+      "sha256": "a362da8438302e25faa2cfcf688a71b1840509e59bd1573be4718548b29b4e68"
+    },
+    {
+      "source": "/tmp/codeshell-panel-design-run5.log",
+      "path": "validation/design/codeshell-panel-design-run5.log",
+      "bytes": 2661,
+      "sha256": "d479dddba6d752307e8238247ee3599975ed3979d5de4fdd6483af15b5346069"
+    },
+    {
+      "source": "/tmp/codeshell-panel-design-run1.log",
+      "path": "validation/design/codeshell-panel-design-run1.log",
+      "bytes": 7444,
+      "sha256": "0390c97474e05b0d10300b17633023c9664703a200800073305425f05d082636"
+    },
+    {
+      "source": "/tmp/codeshell-panel-design-run2.log",
+      "path": "validation/design/codeshell-panel-design-run2.log",
+      "bytes": 2091,
+      "sha256": "3b768bab0a0c50f2eb1c7f7386e58bccdc42ebdddb0eb51c53742912e77ae440"
+    },
+    {
+      "source": "/tmp/codeshell-panel-design-cleanup.log",
+      "path": "validation/design/codeshell-panel-design-cleanup.log",
+      "bytes": 358,
+      "sha256": "1ee82ddc72ef8e1a60223637ce9c91cce634a04603d8d4f4ecd0129a5defcd8c"
+    },
+    {
+      "source": "/tmp/codeshell-panel-design-run3.log",
+      "path": "validation/design/codeshell-panel-design-run3.log",
+      "bytes": 2066,
+      "sha256": "0735bdb307d3f60753ef36652fdd20eb108fff9aebb130ba1cdd1bbc8412369c"
+    },
+    {
+      "source": "/tmp/codeshell-panel-design-existing-run1.log",
+      "path": "validation/design/codeshell-panel-design-existing-run1.log",
+      "bytes": 2075,
+      "sha256": "897176c2aff750492c2aea458cf05da48e21b4cd9f41ac8cb661fb5f492ae1b0"
+    },
+    {
+      "source": "/tmp/codeshell-panel-design-inventory.txt",
+      "path": "validation/design/codeshell-panel-design-inventory.txt",
+      "bytes": 2112,
+      "sha256": "1deaa4a6e8ef81183198cfcbcd0e06688660f30cb5c1a5e1b7532c2d18069b67"
+    },
+    {
+      "source": "/tmp/codeshell-remaining-core-lifecycle/deny-network.mjs",
+      "path": "validation/core-lifecycle/deny-network.mjs",
+      "bytes": 878,
+      "sha256": "8f866c61a8d6168ff34b1d0554f534e34f39a2c4ef104b4187924cd9d63547e8"
+    },
+    {
+      "source": "/tmp/codeshell-remaining-core-lifecycle/lifecycle.log",
+      "path": "validation/core-lifecycle/lifecycle.log",
+      "bytes": 1796,
+      "sha256": "724c4411b9e60ccf0c04c2512bca9d9d322451e25677be126de8093bdc1ffc6e"
+    },
+    {
+      "source": "/tmp/codeshell-remaining-core-lifecycle/INDEX.md",
+      "path": "validation/core-lifecycle/INDEX.md",
+      "bytes": 967,
+      "sha256": "50dd287cebd866577fcd69cf4263f6de4270c2b1320781926e9a0aab7052c450"
+    },
+    {
+      "source": "/tmp/codeshell-remaining-core-lifecycle/lifecycle-final.log",
+      "path": "validation/core-lifecycle/lifecycle-final.log",
+      "bytes": 2156,
+      "sha256": "79ee7a91cefc90855b320d2c880777ddd08b2788072543a9f1ebcc018c5f45ea"
+    },
+    {
+      "source": "/tmp/codeshell-remaining-core-lifecycle/normal-controls.log",
+      "path": "validation/core-lifecycle/normal-controls.log",
+      "bytes": 8914,
+      "sha256": "f691090a4e4ffd943a37f1a53cced7f45aaf59f2e2eaf992036b8f22979f7f47"
+    },
+    {
+      "source": "/tmp/codeshell-remaining-core-lifecycle/normal-controls-final.log",
+      "path": "validation/core-lifecycle/normal-controls-final.log",
+      "bytes": 8980,
+      "sha256": "b34b5ea63e168056562207cc292a1d61e619fdfb391a21fda3eff5b8a8f414ee"
+    },
+    {
+      "source": "/tmp/codeshell-remaining-core-lifecycle/lifecycle.test.ts",
+      "path": "validation/core-lifecycle/lifecycle.test.ts",
+      "bytes": 15820,
+      "sha256": "0a8987354ff268c2d092f85d0e45da40e077e8748b54f2cc96f5ebc064aeba4c"
+    },
+    {
+      "source": "/tmp/codeshell-remaining-core-lifecycle/assert-guard-preload.ts",
+      "path": "validation/core-lifecycle/assert-guard-preload.ts",
+      "bytes": 253,
+      "sha256": "69b99b491dc7af60d05888f26a135115a9edd47239b82bbfc7062bd9bbf636ee"
+    },
+    {
+      "source": "/tmp/codeshell-remaining-core-report.md",
+      "path": "validation/source-reports/codeshell-remaining-core-report.md",
+      "bytes": 21371,
+      "sha256": "9607ac4c76e63f13099c5579347546d7cfc61008e96808d8335fd4f63e27a82f"
+    },
+    {
+      "source": "/tmp/codeshell-remaining-cli-chat-report.md",
+      "path": "validation/source-reports/codeshell-remaining-cli-chat-report.md",
+      "bytes": 29988,
+      "sha256": "a4a54aad6a044d4caaff4a9fa0027cb76b943b3704264bcf396fadcaae606da5"
+    },
+    {
+      "source": "/tmp/codeshell-remaining-hosts-report.md",
+      "path": "validation/source-reports/codeshell-remaining-hosts-report.md",
+      "bytes": 15692,
+      "sha256": "978ee8e2c95fe68f2b7c45463b0e51d122df884ad590bdb95d2e70d90f594b32"
+    },
+    {
+      "source": "/tmp/codeshell-panel-quant-job-report.md",
+      "path": "validation/source-reports/codeshell-panel-quant-job-report.md",
+      "bytes": 16817,
+      "sha256": "34a4304e596922b1727e05d3ad49ca4483469f73e719c38db1e8c5543c818862"
+    },
+    {
+      "source": "/tmp/codeshell-panel-video-review-20261012/REPORT.md",
+      "path": "validation/source-reports/REPORT.md",
+      "bytes": 10173,
+      "sha256": "add4aaa1d09de1c1758e0e9dadb16805f18597b41419fffd7a0cdd209996505d"
+    },
+    {
+      "source": "/tmp/codeshell-panel-design-report.md",
+      "path": "validation/source-reports/codeshell-panel-design-report.md",
+      "bytes": 19585,
+      "sha256": "b9f9f7ce4d6ab853d0e68b5822635081c0d1c7557461ea4b801aee3e9423f414"
+    },
+    {
+      "source": "/tmp/codeshell-remaining-core-lifecycle-report.md",
+      "path": "validation/source-reports/codeshell-remaining-core-lifecycle-report.md",
+      "bytes": 15613,
+      "sha256": "1e816bcd90685fa55323e10ffec1725cf98de6276dc3f02cc97802f584f393d8"
+    },
+    {
+      "source": "/tmp/codeshell-remaining-evidence-audit.md",
+      "path": "validation/source-reports/codeshell-remaining-evidence-audit.md",
+      "bytes": 18584,
+      "sha256": "5a3486738074800b97c1e5525b94d8c8187a4e57443cbaa67aaacce414ad418d"
+    }
+  ]
+}

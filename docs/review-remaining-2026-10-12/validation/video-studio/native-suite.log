@@ -1,0 +1,175 @@
+✔ ordinary video audio detachment retains actual PCM through track mix, ducking and nested retiming (5390.251709ms)
+▶ editor audio renders real local PCM for preview and export
+  ✔ unity PCM, exact output sample count, stereo center and amplitude survive (295.698792ms)
+  ✔ volume and pan keyframes, cubic easing and fades affect actual samples (303.100875ms)
+  ✔ reverse reads actual source samples in descending order; freeze is explicitly silent (494.053667ms)
+  ✔ 2x speed preserves pitch when requested and changes it when disabled (796.048417ms)
+  ✔ independent octave pitch shifts preserve duration and reuse processed PCM (997.524542ms)
+  ✔ piecewise speed and reverse spans produce their own correct pitch and sample durations (562.31575ms)
+  ✔ real RMS sidechain lowers the bed and releases; muting that source removes the duck (1531.79125ms)
+  ✔ nested source time and parent gain affect actual audio (306.442417ms)
+  ✔ multicam visual switches never interrupt the chosen master audio (303.096458ms)
+  ✔ actual no-audio video is reported, a false audio asset fails, and silence is never fabricated on failure (334.044958ms)
+  ✔ cancellation releases temporary files and never publishes an incomplete WAV (195.391ms)
+  ✔ empty timelines and a one-sample retimed clip keep their exact output bounds (365.110417ms)
+  ✔ a fixed clip gain edit scales real PCM and preserves pan, fades, pitch and ducking (704.822333ms)
+  ✔ float WAV preserves chosen gain and reports overload instead of normalizing it (280.535791ms)
+  ✔ muted and zero-gain tracks stay silent at 400 percent clip gain and restore the saved fades (805.02075ms)
+  ✔ two real sine tracks warn about overload and clear after lowering gain (680.638667ms)
+  ✔ container audio start timestamps retain real silence before a delayed sound stream (305.603708ms)
+  ✔ audio outside a nested sequence trim never requests unused source files (108.679833ms)
+  ✔ missing FFmpeg filters fail with a clear capability error (955.070917ms)
+✔ editor audio renders real local PCM for preview and export (10725.462792ms)
+✔ actual stereo sound correlation finds signed 375 ms delay despite gain and antiphase, caches verified feature data (1071.151542ms)
+✔ silent and repetitive real audio yield explicit uncertain results, never a successful automatic offset (297.428ms)
+✔ alignment reuses complete existing export PCM without decoding either source again (205.159084ms)
+✔ native task materializes only selected sources and validates hashes, cancellation and strict alignment fields (607.128041ms)
+✔ background bridge reuses one real native task for the same request identity and exposes its exact project origin (343.874916ms)
+✖ recorded angle cuts export the actual red-blue-red picture while preserving every master PCM sample (30721.491708ms)
+✔ two actual native clients concurrently publish siblings in one selected directory without clobber (638.42275ms)
+✔ retry the same publication receipt after native cleanup does not duplicate media or lose history (278.627916ms)
+✔ explicit reviewed merge publishes a two-parent child while retaining both originals (454.214041ms)
+✔ external clients may propagate child JSON before parents and bundles; restoring missing bytes completes recovery (754.28675ms)
+✔ missing parent cannot publish an orphan from local UI; malformed ZIP cannot create a snapshot (389.150084ms)
+✔ bad hashes, symlinks, poisoned immutable destinations and arbitrary JSON paths are rejected (784.287083ms)
+✔ history reports damaged records and refuses a changing pagination inventory rather than skipping records (768.155791ms)
+✔ abort before work and discard affect only a named incoming transfer, never immutable history (323.341667ms)
+✔ SDK bridge selects transient handle, publishes through actual native CLI, and captures a verified receiving resource (2508.394834ms)
+✔ durable receipt must finish saving before any materialization; failed save can resume an absent incoming file (733.143375ms)
+✔ partial incoming recovery uses a fresh token and exact original resource without overwriting mismatched bytes (1453.50925ms)
+✔ cancel during materialization retains a resumable receipt and rejects concurrent operations (1445.436958ms)
+✔ late spawn after disposal is stopped, foreign grants and a changed workspace are rejected (80.993167ms)
+✔ lost process output and forged resume identity fail instead of displaying an incomplete history (27.596625ms)
+✖ installed CLI stages, mixes 48k audio, renders verified video and reuses the exact prepared mix (31558.033875ms)
+✖ native export exposes real two-track overload throughout progress and in its bound result (31357.288458ms)
+✖ native range export preserves settled ducking from the full mix and binds the range in receipts (31374.355958ms)
+✖ range overload warnings measure only the selected PCM rather than the whole sequence (31084.433541ms)
+✔ installed built-in narration is hash checked and genuinely audible without Host materialization (662.374541ms)
+✖ fast SDR preview retains NTSC timestamps and is frame-seekable in the shared Chromium renderer (30889.831ms)
+✔ a new snapshot of an edited project reuses verified originals instead of another Host copy (1387.186875ms)
+✔ saved originals are reused only when verified, Host-confirmed and in the same scope (1727.190417ms)
+✔ committing a snapshot prunes saved originals unused for two weeks (809.296041ms)
+✔ fast preview preparation reports progress while it scans, encodes and verifies a video (397.699542ms)
+✔ staging rejects changed material, invalid directories, unsupported JSON fields and corrupt documents (947.523584ms)
+✔ native staging rejects symbolic material paths (9.247708ms)
+✔ compatible proxies retain VFR frames, display rotation and non-square pixel geometry (1545.126875ms)
+✔ HDR and alpha video fail explicitly instead of silently changing picture meaning (208.830625ms)
+✔ SIGTERM cancels the real renderer, removes unpublished files and retains resumable staging (833.726584ms)
+✔ inspect-source publishes exact source ticks for NTSC ProRes, short WAV and static images (733.466125ms)
+✔ inspect-source finds ffprobe outside the app PATH through the shared tool search (554.775ms)
+✔ inspect-source accepts MKV and preserves real VFR and rotated display geometry (624.508458ms)
+✔ inspect-source retains unsupported HDR and alpha as readable compatibility limitations (498.868667ms)
+✔ source inspection cannot alter a staged snapshot and rejects undecodable bytes (757.846875ms)
+✔ inspection respects AAC container padding and the installed MP3 gapless endpoint (473.207583ms)
+✔ standard ZIP roundtrip preserves complex full document and deduplicates identical original bytes (326.474542ms)
+✔ ZIP64 and independent deflated ZIP input are supported (144.332ms)
+✔ preflight lists all unavailable originals, refuses empty files, and publishes no incomplete ZIP (5.223875ms)
+✔ forged SHA, source fingerprint, missing ZIP media, unknown versions and unlisted blobs reject (111.212416ms)
+✔ duplicate entries, symlinks, traversal, absolute names and local-header tricks are rejected without extraction (161.30075ms)
+✔ CRC damage, inflated sizes, decompression ratio and entry/disk budgets fail clearly (116.125541ms)
+✔ declared decompressed size and malformed archives cannot bypass actual byte validation (56.870708ms)
+✔ output byte limits fail while streaming and leave no partial ZIP (9.862375ms)
+✔ Host path allowlists, symlinks, output confinement and exclusive publication protect unrelated files (35.740625ms)
+✔ cancellation and source changes during packing remove every partial output (35.151333ms)
+✔ cancelled unpack removes already-verified files and returns no partial document (33.491209ms)
+ℹ tests 73
+ℹ suites 0
+ℹ pass 67
+ℹ fail 6
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 230368.806167
+
+✖ failing tests:
+
+test at tests/video-studio-editor-multicam-native.test.mjs:418:1
+✖ recorded angle cuts export the actual red-blue-red picture while preserving every master PCM sample (30721.491708ms)
+  Error: 画面渲染超时
+      at Timeout.<anonymous> (file:///private/var/folders/1d/6__4f4y51g90nblfptt8s9v80000gn/T/multicam-native-5HVGeY/api.mjs:7067:20)
+      at listOnTimeout (node:internal/timers:605:17)
+      at process.processTimers (node:internal/timers:541:7)
+
+test at tests/video-studio-editor-task-runtime.test.mjs:266:1
+✖ installed CLI stages, mixes 48k audio, renders verified video and reuses the exact prepared mix (31558.033875ms)
+  AssertionError [ERR_ASSERTION]: [{"type":"progress","progress":{"fraction":0.325,"stage":"prepare-video"}},{"type":"progress","progress":{"fraction":0.4,"stage":"render-video"}},{"type":"error","code":"EDITOR_TASK_FAILED","message":"画面渲染超时","retryable":true}]
+  
+  1 !== 0
+  
+      at call (file:///Users/admin/.codex/worktrees/panel-remaining-review-20261012/codeshell-panel-apps/tests/video-studio-editor-task-runtime.test.mjs:215:27)
+      at process.processTicksAndRejections (node:internal/process/task_queues:104:5)
+      at async TestContext.<anonymous> (file:///Users/admin/.codex/worktrees/panel-remaining-review-20261012/codeshell-panel-apps/tests/video-studio-editor-task-runtime.test.mjs:292:22)
+      at async Test.run (node:internal/test_runner/test:1208:7)
+      at async startSubtestAfterBootstrap (node:internal/test_runner/harness:385:3) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: 1,
+    expected: 0,
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+
+test at tests/video-studio-editor-task-runtime.test.mjs:339:1
+✖ native export exposes real two-track overload throughout progress and in its bound result (31357.288458ms)
+  AssertionError [ERR_ASSERTION]: [{"type":"progress","progress":{"fraction":0.325,"stage":"prepare-video","message":"混音峰值 +1.1 dBFS，声音叠加或音量过高可能导致失真。请降低音轨或片段音量后重新播放或导出。"}},{"type":"progress","progress":{"fraction":0.4,"stage":"render-video","message":"混音峰值 +1.1 dBFS，声音叠加或音量过高可能导致失真。请降低音轨或片段音量后重新播放或导出。"}},{"type":"error","code":"EDITOR_TASK_FAILED","message":"画面渲染超时","retryable":true}]
+  
+  1 !== 0
+  
+      at call (file:///Users/admin/.codex/worktrees/panel-remaining-review-20261012/codeshell-panel-apps/tests/video-studio-editor-task-runtime.test.mjs:215:27)
+      at process.processTicksAndRejections (node:internal/process/task_queues:104:5)
+      at async TestContext.<anonymous> (file:///Users/admin/.codex/worktrees/panel-remaining-review-20261012/codeshell-panel-apps/tests/video-studio-editor-task-runtime.test.mjs:357:22)
+      at async Test.run (node:internal/test_runner/test:1208:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:831:7) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: 1,
+    expected: 0,
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+
+test at tests/video-studio-editor-task-runtime.test.mjs:379:1
+✖ native range export preserves settled ducking from the full mix and binds the range in receipts (31374.355958ms)
+  AssertionError [ERR_ASSERTION]: [{"type":"progress","progress":{"fraction":0.325,"stage":"prepare-video"}},{"type":"progress","progress":{"fraction":0.4,"stage":"render-video"}},{"type":"error","code":"EDITOR_TASK_FAILED","message":"画面渲染超时","retryable":true}]
+  
+  1 !== 0
+  
+      at call (file:///Users/admin/.codex/worktrees/panel-remaining-review-20261012/codeshell-panel-apps/tests/video-studio-editor-task-runtime.test.mjs:215:27)
+      at process.processTicksAndRejections (node:internal/process/task_queues:104:5)
+      at async TestContext.<anonymous> (file:///Users/admin/.codex/worktrees/panel-remaining-review-20261012/codeshell-panel-apps/tests/video-studio-editor-task-runtime.test.mjs:394:16)
+      at async Test.run (node:internal/test_runner/test:1208:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:831:7) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: 1,
+    expected: 0,
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+
+test at tests/video-studio-editor-task-runtime.test.mjs:418:1
+✖ range overload warnings measure only the selected PCM rather than the whole sequence (31084.433541ms)
+  AssertionError [ERR_ASSERTION]: [{"type":"progress","progress":{"fraction":0.325,"stage":"prepare-video"}},{"type":"progress","progress":{"fraction":0.4,"stage":"render-video"}},{"type":"error","code":"EDITOR_TASK_FAILED","message":"画面渲染超时","retryable":true}]
+  
+  1 !== 0
+  
+      at call (file:///Users/admin/.codex/worktrees/panel-remaining-review-20261012/codeshell-panel-apps/tests/video-studio-editor-task-runtime.test.mjs:215:27)
+      at process.processTicksAndRejections (node:internal/process/task_queues:104:5)
+      at async TestContext.<anonymous> (file:///Users/admin/.codex/worktrees/panel-remaining-review-20261012/codeshell-panel-apps/tests/video-studio-editor-task-runtime.test.mjs:433:22)
+      at async Test.run (node:internal/test_runner/test:1208:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:831:7) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: 1,
+    expected: 0,
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+
+test at tests/video-studio-editor-task-runtime.test.mjs:462:1
+✖ fast SDR preview retains NTSC timestamps and is frame-seekable in the shared Chromium renderer (30889.831ms)
+  Error: 画面渲染超时
+      at Timeout.<anonymous> (file:///private/var/folders/1d/6__4f4y51g90nblfptt8s9v80000gn/T/editor-task-runtime-4rdSna/api.mjs:6330:20)
+      at listOnTimeout (node:internal/timers:605:17)
+      at process.processTimers (node:internal/timers:541:7)
+Native smoke failed (1)

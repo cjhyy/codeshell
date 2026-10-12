@@ -1,0 +1,23 @@
+{"case":"lsp_control","initialized":true,"alive":false}
+{"case":"lsp_init_failure","returnedUndefined":true,"aliveAfterShutdown":true}
+{"case":"lsp_concurrent_cold","secondUndefined":true,"firstReady":true}
+{"case":"lsp_exited","isAlive":true,"reused":true,"exitCode":3}
+{"case":"lsp_spawn_error","exitCode":1,"unhandled":true,"error":"node:events:486\n      throw er; // Unhandled 'error' event\n      ^\n\nError: spawn /opt/homebrew/Cellar/node/25.8.1_1/bin/node ENOENT\n    at ChildProcess._handle.onexit (node:internal/child_process:286:19)\n    at onErrorNT (node:internal/child_process:507:16)\n    at process.processTicksAndRejections (node:internal/process/task_queues:90:21)\nEmitted 'error' event on ChildProcess instance at:\n    at ChildProcess._handle.onexit (node:internal/child_process:292:12)\n    at onErrorNT (node:internal/chil"}
+{"case":"codex_crash","crash":false,"outcome":"done","clientClosed":false,"events":["session_started","stream_request_start","turn_complete"]}
+{"case":"codex_crash","crash":true,"outcome":"pending","clientClosed":true,"events":["session_started","stream_request_start"]}
+{"case":"cleanup","livePids":[]}
+node:fs:436
+    return binding.readFileUtf8(path, stringToFlags(options.flag));
+                   ^
+
+Error: ENOENT: no such file or directory, open '/var/folders/1d/6__4f4y51g90nblfptt8s9v80000gn/T/codeshell-remaining-cli-chat-native-rohoKU/claude.pid'
+    at Object.readFileSync (node:fs:436:20)
+    at file:///private/tmp/codeshell-remaining-cli-chat-native.mjs:71:278 {
+  errno: -2,
+  code: 'ENOENT',
+  syscall: 'open',
+  path: '/var/folders/1d/6__4f4y51g90nblfptt8s9v80000gn/T/codeshell-remaining-cli-chat-native-rohoKU/claude.pid'
+}
+
+Node.js v25.8.1
+Native smoke failed (1)

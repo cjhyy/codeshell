@@ -1,0 +1,23 @@
+QJ-01_EVIDENCE {"ids":["tx-mv0snr40-1","tx-mv0snr40-2"],"quantities":["100","100"],"resultingQuantity":"200","messages":["","ack lost after commit","","交易已保存并刷新持仓。"]}
+✔ Quant control: acknowledged save commits exactly one buy and clears form (10.985292ms)
+✔ Quant control: failure before acceptance can be retried without a duplicate (0.925541ms)
+✔ QJ-01: lost ledger write acknowledgement keeps form enabled and retry duplicates the trade (1.703584ms)
+QJ-02_PUBLIC_EVIDENCE {"writes":[{"project":"B","path":"job-hunt-resume-base-a-category.md","content":"B public resume","expectedModifiedAt":null},{"project":"B","path":"job-hunt-resume-base-a-category.evidence.json","content":"{\n  \"resumeVersionId\": \"resume-B\",\n  \"resumeKind\": \"base\",\n  \"category\": \"B-category\",\n  \"jobId\": null,\n  \"style\": {\n    \"template\": \"minimal\"\n  },\n  \"updatedAt\": \"2026-10-09T10:00:00Z\",\n  \"claimEvidence\": [\n    {\n      \"claim\": \"B evidence\"\n    }\n  ],\n  \"candidateQuestions\": []\n}\n","expectedModifiedAt":null}],"notices":[["简历与证据账本已保存到 job-hunt-resume-base-a-category.md / job-hunt-resume-base-a-category.evidence.json"]]}
+QJ-03_EVIDENCE {"sameBatch":[{"id":"one","url":"https://example.invalid/one"},{"id":"two","url":"https://example.invalid/one"}],"sequentialIds":["one"]}
+QJ-04_EVIDENCE {"result":{"inboxAdded":1,"jobsUpdated":0,"leadsAdded":0,"leadsUpdated":0,"promoted":0,"unchanged":0,"selectedJobId":"job-new","totalJobs":80,"totalLeads":0,"savedJobs":[{"id":"job-new","company":"New Company","title":"Engineer","jdPath":"career-data/jd/job-new.md"}],"savedLeads":[],"projectSaved":true},"lostApplicationId":"old-79","retainedLinkedResumeJobId":"old-79"}
+✔ Quant control: exact screenshot import retry recognizes already committed identity after acknowledgement loss (2.614334ms)
+✔ Job control: same-project missing public file creates matching Markdown and evidence (0.823916ms)
+✔ QJ-02: switching projects during public file read causes writes in new project under old filename (0.535708ms)
+✔ QJ-02: switching during evidence read saves B evidence beside already written A resume filename (0.449666ms)
+✔ QJ-03: duplicate opportunities in one batch persist twice; sequential batches deduplicate (0.694ms)
+✔ QJ-04: adding the 81st formal opportunity silently removes saved application progress from snapshot (1.582041ms)
+✔ Job capacity controls: 79 plus new and 80 plus update preserve original application (2.214667ms)
+ℹ tests 10
+ℹ suites 0
+ℹ pass 10
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 27.581041
+CUSTOM_ASSERTIONS 48

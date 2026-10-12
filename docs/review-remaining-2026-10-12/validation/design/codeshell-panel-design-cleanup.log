@@ -1,0 +1,20 @@
+{
+  "isolatedHomeRemoved": true,
+  "isolatorDirectoryRemoved": true,
+  "ownedChromePids": [
+    86827,
+    86831,
+    86853,
+    86857,
+    86861,
+    86865,
+    86869,
+    86874
+  ],
+  "liveChromePids": [],
+  "exactOwnedPidPsExit": 1,
+  "exactOwnedPidPsOutput": "",
+  "head": "aabba34ca94f7081fd7de4e20c52443f08f36d5e",
+  "gitStatus": "",
+  "gitDiff": ""
+}

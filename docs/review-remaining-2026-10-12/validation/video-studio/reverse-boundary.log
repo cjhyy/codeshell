@@ -1,0 +1,44 @@
+{
+  "forward": {
+    "layers": 1,
+    "audio": 1,
+    "source": 0
+  },
+  "reversed": {
+    "layers": 0,
+    "audio": 0,
+    "map": {
+      "points": [
+        {
+          "time": 0,
+          "source": 8000
+        },
+        {
+          "time": 8000,
+          "source": 0
+        }
+      ]
+    }
+  },
+  "reversedTick1": 1,
+  "restored": {
+    "layers": 1
+  },
+  "trimmedReversed": {
+    "layers": 1
+  },
+  "threeFrameExportTicks": [
+    {
+      "time": 0,
+      "layers": 0
+    },
+    {
+      "time": 8000,
+      "layers": 1
+    },
+    {
+      "time": 16000,
+      "layers": 1
+    }
+  ]
+}
