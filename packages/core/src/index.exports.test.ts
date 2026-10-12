@@ -51,6 +51,7 @@ const expectedRuntimeExportsByPartition = {
     "check",
     "acquireFileLock",
     "acquireLockOnPath",
+    "acquireWorkspaceWriteLock",
     "mutateJsonFile",
     "logForDebugging",
     "isEnvTruthy",
@@ -398,6 +399,7 @@ const extensionRuntimeContract = [
   "instructionHash",
   "runIsolatedInstruction",
   "acquireLockOnPath",
+  "acquireWorkspaceWriteLock",
   "mutateJsonFile",
   "resolveLLMConfigForTag",
 ] as const;
