@@ -668,6 +668,84 @@ test("a replaced pending marker and a competing state lease both refuse before p
   expect(() => restoreOutputJournalBackup(f.root, f.id, f.backup)).toThrow();
 });
 
+function historicalFixture() {
+  const f = fixture(),
+    current = state(f);
+  fs.unlinkSync(f.file);
+  fs.unlinkSync(join(f.directory, "output-journal-head.json"));
+  delete current.outputJournalIdentity;
+  delete current.outputJournalHead;
+  fs.writeFileSync(f.statePath, JSON.stringify(current));
+  const historical = new OldWriter(f.root, f.id, "fixture-run");
+  const first = historical.append({ type: "text_delta", text: "historical first" }),
+    through = historical.append({ type: "text_delta", text: "historical second" });
+  expect(oldRead(f.root, f.id).through).toBe(through);
+  // The actual current constructor migrates the head on its original inode
+  // without inserting a v2 record or modifying any historical journal byte.
+  const before = fs.readFileSync(f.file),
+    writer = new SessionOutputJournal(f.root, f.id, "fixture-run");
+  expect(fs.readFileSync(f.file)).toEqual(before);
+  expect(state(f).outputJournalHead.version).toBe(2);
+  expect(readOutputJournal(f.root, f.id).through).toBe(through);
+  backupOutputJournal(f.root, f.id, f.backup);
+  fs.truncateSync(f.file, JSON.parse(Buffer.from(first, "base64url").toString()).offset);
+  expect(readOutputJournal(f.root, f.id).complete).toBe(false);
+  expect(oldRead(f.root, f.id).complete).toBe(true); // Pre-existing old-algorithm limitation.
+  return { ...f, first, through, writer };
+}
+
+test("real historical v1 with an admitted durable head restores its published tail and fences old parsers after poison", () => {
+  const counting = historicalFixture();
+  let count = 0;
+  const real = fs.fsyncSync,
+    counter = spyOn(fs, "fsyncSync").mockImplementation((fd) => {
+      count++;
+      return real(fd);
+    });
+  try {
+    restoreOutputJournalBackup(counting.root, counting.id, counting.backup);
+  } finally {
+    counter.mockRestore();
+  }
+  cutCounts["historical-v1-fsync"] = count;
+  expect(oldRead(counting.root, counting.id).through).toBe(counting.through);
+  for (let step = 1; step <= count; step++) {
+    const f = historicalFixture(),
+      truncated = fs.readFileSync(f.file);
+    let calls = 0;
+    const fault = spyOn(fs, "fsyncSync").mockImplementation((fd) => {
+      if (++calls === step) throw new Error(`historical flush ${step}`);
+      return real(fd);
+    });
+    try {
+      expect(() => restoreOutputJournalBackup(f.root, f.id, f.backup)).toThrow(
+        `historical flush ${step}`,
+      );
+    } finally {
+      fault.mockRestore();
+    }
+    const bytes = fs.readFileSync(f.file),
+      old = oldRead(f.root, f.id);
+    if (bytes[0] === 33) {
+      expect(old.complete).toBe(false);
+      expect(() => new OldWriter(f.root, f.id, "fixture-run")).toThrow();
+    } else if (bytes.equals(truncated)) {
+      // Evidence must be durable before poisoning. An early refusal leaves the
+      // exact source and its pre-existing old-reader limitation untouched.
+      expect(old.through).toBe(f.first);
+      expect(readOutputJournal(f.root, f.id).complete).toBe(false);
+    } else {
+      // A clear historical header is allowed only for the fully restored bytes.
+      expect(bytes).toEqual(fs.readFileSync(join(f.backup, "output-journal.jsonl")));
+      expect(old.through).toBe(f.through);
+    }
+    const repaired = restoreOutputJournalBackup(f.root, f.id, f.backup);
+    expect(repaired.through).toBe(f.through);
+    expect(fold(f).map((event) => event.text)).toEqual(["historical first", "historical second"]);
+    expect(oldRead(f.root, f.id).through).toBe(f.through);
+  }
+});
+
 test("real CLI backup, diagnose and restore use only the explicit isolated root", () => {
   const f = fixture(),
     cli = join(import.meta.dir, "../packages/core/src/cli/output-journal-repair.ts");
