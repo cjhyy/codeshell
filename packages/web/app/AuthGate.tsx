@@ -188,7 +188,12 @@ export function AuthGate({ setupToken }: { setupToken: string }) {
 
   if (state === "authenticated") {
     const controls = cloudMode
-      ? { pending: busy, error: logoutError, onLogout: () => void logoutCloud() }
+      ? {
+          pending: busy,
+          error: logoutError,
+          onLogout: () => void logoutCloud(),
+          accountOrigin: cloudSession?.accountOrigin,
+        }
       : undefined;
     return (
       <ProjectsGate

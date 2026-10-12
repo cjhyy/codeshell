@@ -183,6 +183,15 @@ test("Cloud project route renders the real workbench without Hub device manageme
   const f = await fixture({ active: true, strict: true });
   expect(text(f.container)).toContain("Isolated project");
   expect(text(f.container)).toContain("退出此 Cloud 工作台");
+  const profileLink = nodes(f.container).find(
+    (node) => node.tagName === "A" && text(node) === "账号资料",
+  );
+  expect(profileLink).toBeDefined();
+  const profileProps =
+    profileLink[Object.keys(profileLink).find((name) => name.startsWith("__reactProps"))!];
+  expect(profileProps.href).toBe("https://accounts.fixture.invalid/api/v1/account/manage");
+  expect(profileProps.target).toBe("_blank");
+  expect(profileProps.rel).toBe("noopener noreferrer");
   expect(text(f.container)).not.toContain("设备与退出");
   expect(text(f.container)).not.toContain("账号与设备");
   expect(f.requests.some(({ path }) => path === "/api/v1/auth/sessions")).toBe(false);

@@ -4,6 +4,8 @@ export const DEFAULT_CLOUD_ACCOUNT_ORIGIN = "https://115.159.45.55";
 export interface CloudAccountIdentity {
   id: string;
   username: string;
+  /** Optional for grants saved before profile support. */
+  displayName?: string;
 }
 
 export interface CloudAccountStatus {
@@ -26,7 +28,13 @@ export interface CloudAccountCapabilities {
   githubEnabled: boolean;
   githubLinkEnabled?: boolean;
   linkManagementEnabled?: boolean;
+  profileEnabled?: boolean;
 }
+
+export type CloudAccountProfileRequest = { origin: string; accountId: string } & (
+  | { action: "read" }
+  | { action: "update"; displayName?: string; username?: string }
+);
 
 /** Account-owned metadata only. Provider credentials and global clients are never exposed. */
 export interface CloudAccountLinkView {
@@ -73,6 +81,7 @@ export interface CloudAccountApi {
   signInWithGitHub(input: CloudAccountGitHubLogin): Promise<CloudAccountStatus>;
   linkGitHub(): Promise<CloudAccountStatus>;
   manageLinks(input: CloudAccountLinksRequest): Promise<CloudAccountLinksResult>;
+  profile(input: CloudAccountProfileRequest): Promise<CloudAccountStatus>;
   cancelSignIn(): Promise<void>;
   logout(): Promise<void>;
   onStatus(callback: (status: CloudAccountStatus) => void): () => void;

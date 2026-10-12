@@ -14,6 +14,7 @@ import { dirname } from "node:path";
 import { randomUUID } from "node:crypto";
 import { isRelayHostId, isRelayOrigin, isRelayToken } from "@cjhyy/code-shell-server/remote-relay";
 import type { CloudAccountIdentity } from "../shared/cloud-account.js";
+import { normalizeCloudDisplayName } from "../shared/cloud-account-profile.js";
 import type { RelaySecretCipher } from "./device-relay-store.js";
 
 /** Main-process-only grants. Never return this type from an IPC handler. */
@@ -48,6 +49,9 @@ export function validCloudAccountGrant(value: unknown): value is CloudAccountGra
     typeof grant.account.username === "string" &&
     grant.account.username.length > 0 &&
     grant.account.username.length <= 128 &&
+    (grant.account.displayName === undefined ||
+      (typeof grant.account.displayName === "string" &&
+        normalizeCloudDisplayName(grant.account.displayName) === grant.account.displayName)) &&
     (grant.kind === undefined || grant.kind === "account" || grant.kind === "device") &&
     (grant.audience === undefined || isRelayOrigin(grant.audience)) &&
     (grant.hostId === undefined || isRelayHostId(grant.hostId))
