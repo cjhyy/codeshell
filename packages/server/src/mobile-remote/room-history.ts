@@ -67,15 +67,30 @@ function syncDirectory(path: string): void {
 }
 
 /** Bounded memory, strict complete records, exact physical offsets. */
-function* lines(fd: number, start: number, end: number): Generator<{ text: string; end: number }> {
+function* lines(
+  fd: number,
+  start: number,
+  end: number,
+  hashes?: string[],
+): Generator<{ text: string; end: number }> {
   let offset = start;
   let carry = Buffer.alloc(0);
   while (offset < end) {
-    const data = Buffer.allocUnsafe(Math.min(64 * 1024, end - offset));
-    const count = readSync(fd, data, 0, data.length, offset);
-    if (!count) throw new Error("room history was truncated while reading");
+    const blockStart = hashes ? Math.floor(offset / 65536) * 65536 : offset;
+    const data = Buffer.allocUnsafe(Math.min(65536, end - blockStart));
+    let total = 0;
+    while (total < data.length) {
+      const count = readSync(fd, data, total, data.length - total, blockStart + total);
+      if (!count) throw new Error("room history was truncated while reading");
+      total += count;
+    }
+    if (hashes && createHash("sha256").update(data).digest("hex") !== hashes[blockStart / 65536]) {
+      throw new Error("room history snapshot checksum mismatch");
+    }
+    const available = data.subarray(offset - blockStart);
+    const count = available.length;
     offset += count;
-    const chunk = Buffer.concat([carry, data.subarray(0, count)]);
+    const chunk = Buffer.concat([carry, available]);
     let from = 0;
     for (;;) {
       const newline = chunk.indexOf(0x0a, from);
@@ -96,6 +111,7 @@ function* lines(fd: number, start: number, end: number): Generator<{ text: strin
 export function scanRoomHistory<T extends { seq: number }>(
   file: string,
   parse: (value: unknown) => T | undefined,
+  visit?: (message: T) => void,
 ): number {
   const fd = openRegular(file);
   try {
@@ -108,6 +124,7 @@ export function scanRoomHistory<T extends { seq: number }>(
       if (!msg || msg.seq !== seq + 1)
         throw new Error(`room history is corrupt at sequence ${seq + 1}`);
       seq = msg.seq;
+      visit?.(msg);
     }
     if (stamp(before) !== stamp(fstatSync(fd)) || stamp(before) !== stamp(regular(file))) {
       throw new Error("room history changed while scanning");
@@ -127,8 +144,33 @@ interface Manifest {
   sinceSeq: number;
   key: string;
   stamp: string;
-  digest: string;
+  hashes: string[];
 }
+function validateManifest(value: Manifest, roomId: string, snapshotId: string): void {
+  if (
+    !value ||
+    value.version !== 1 ||
+    value.roomId !== roomId ||
+    value.snapshotId !== snapshotId ||
+    !Number.isSafeInteger(value.bytes) ||
+    value.bytes < 0 ||
+    value.bytes > MAX_BYTES ||
+    !Number.isSafeInteger(value.throughSeq) ||
+    value.throughSeq < 0 ||
+    !Number.isSafeInteger(value.sinceSeq) ||
+    value.sinceSeq < 0 ||
+    value.sinceSeq > value.throughSeq ||
+    typeof value.key !== "string" ||
+    !/^[0-9a-f]{64}$/.test(value.key) ||
+    typeof value.stamp !== "string" ||
+    !/^[0-9:.]+$/.test(value.stamp) ||
+    !Array.isArray(value.hashes) ||
+    value.hashes.length !== Math.ceil(value.bytes / 65536) ||
+    value.hashes.some((hash) => typeof hash !== "string" || !/^[0-9a-f]{64}$/.test(hash))
+  )
+    throw new Error("invalid history manifest");
+}
+
 interface Cursor {
   snapshotId: string;
   offset: number;
@@ -156,6 +198,16 @@ export function readRoomHistoryPage<T extends { seq: number }>(
   const directoryStat = lstatSync(directory);
   if (!directoryStat.isDirectory() || directoryStat.isSymbolicLink())
     throw new Error("invalid history snapshot directory");
+  const assertDirectory = () => {
+    const current = lstatSync(directory);
+    if (
+      !current.isDirectory() ||
+      current.isSymbolicLink() ||
+      current.dev !== directoryStat.dev ||
+      current.ino !== directoryStat.ino
+    )
+      throw new Error("room history snapshot directory changed");
+  };
   let manifest: Manifest;
   let cursor: Cursor;
   if (request.cursor !== undefined) {
@@ -166,8 +218,17 @@ export function readRoomHistoryPage<T extends { seq: number }>(
     cursor = JSON.parse(Buffer.from(body, "base64url").toString("utf8"));
     if (!UUID.test(cursor.snapshotId)) throw new Error("invalid history snapshot id");
     const path = join(directory, `${cursor.snapshotId}.json`);
-    if (regular(path).size > 4096) throw new Error("invalid history manifest");
-    manifest = JSON.parse(readFileSync(path, "utf8"));
+    const metaFd = openRegular(path);
+    try {
+      const before = fstatSync(metaFd);
+      if (before.size > 512 * 1024) throw new Error("invalid history manifest");
+      manifest = JSON.parse(readFileSync(metaFd, "utf8"));
+      if (stamp(before) !== stamp(fstatSync(metaFd)) || stamp(before) !== stamp(regular(path)))
+        throw new Error("room history manifest changed while reading");
+    } finally {
+      closeSync(metaFd);
+    }
+    validateManifest(manifest, roomId, cursor.snapshotId);
     const expected = createHmac("sha256", manifest.key).update(body).digest();
     const received = Buffer.from(signature, "base64url");
     if (received.length !== expected.length || !timingSafeEqual(expected, received))
@@ -177,18 +238,23 @@ export function readRoomHistoryPage<T extends { seq: number }>(
     const source = join(roomDir, "messages.jsonl");
     const file = join(directory, `${snapshotId}.jsonl`);
     const input = openRegular(source);
-    const output = openSync(file, "wx", 0o600);
+    let output: number | undefined;
     try {
+      output = openSync(file, "wx", 0o600);
       const before = fstatSync(input);
       if (before.size > MAX_BYTES)
         throw new Error("room history exceeds 256 MiB; archive it before continuing");
-      const hash = createHash("sha256");
+      const hashes: string[] = [];
       let offset = 0;
       while (offset < before.size) {
         const chunk = Buffer.allocUnsafe(Math.min(64 * 1024, before.size - offset));
-        const count = readSync(input, chunk, 0, chunk.length, offset);
-        if (!count) throw new Error("room history was truncated while freezing");
-        hash.update(chunk.subarray(0, count));
+        let count = 0;
+        while (count < chunk.length) {
+          const read = readSync(input, chunk, count, chunk.length - count, offset + count);
+          if (!read) throw new Error("room history was truncated while freezing");
+          count += read;
+        }
+        hashes.push(createHash("sha256").update(chunk).digest("hex"));
         let written = 0;
         while (written < count) written += writeSync(output, chunk, written, count - written);
         offset += count;
@@ -207,7 +273,7 @@ export function readRoomHistoryPage<T extends { seq: number }>(
         sinceSeq: request.sinceSeq ?? 0,
         key: randomBytes(32).toString("hex"),
         stamp: stamp(fstatSync(output)),
-        digest: hash.digest("hex"),
+        hashes,
       };
       const temporary = join(directory, `${snapshotId}.tmp`);
       writeFileSync(temporary, JSON.stringify(manifest), { flag: "wx", mode: 0o600 });
@@ -217,27 +283,36 @@ export function readRoomHistoryPage<T extends { seq: number }>(
       } finally {
         closeSync(metaFd);
       }
+      assertDirectory();
       renameSync(temporary, join(directory, `${snapshotId}.json`));
       syncDirectory(directory);
       cursor = { snapshotId, offset: 0, afterSeq: 0 };
       // Old cursors fail explicitly when their retained copy expires. Never
       // remove another in-progress copy or an unknown directory entry.
-      const old = readdirSync(directory)
-        .filter((name) => UUID.test(name.replace(/\.json$/, "")) && name.endsWith(".json"))
-        .map((name) => ({ name, time: regular(join(directory, name)).mtimeMs }))
-        .sort((a, b) => b.time - a.time)
-        .slice(8);
-      for (const item of old) {
-        if (item.name === `${snapshotId}.json`) continue;
-        rmSync(join(directory, item.name));
-        rmSync(join(directory, item.name.replace(/\.json$/, ".jsonl")), { force: true });
+      try {
+        const old = readdirSync(directory)
+          .filter((name) => UUID.test(name.replace(/\.json$/, "")) && name.endsWith(".json"))
+          .map((name) => ({ name, time: regular(join(directory, name)).mtimeMs }))
+          .sort((a, b) => b.time - a.time)
+          .slice(8);
+        for (const item of old) {
+          if (item.name === `${snapshotId}.json`) continue;
+          rmSync(join(directory, item.name));
+          rmSync(join(directory, item.name.replace(/\.json$/, ".jsonl")), { force: true });
+        }
+      } catch {
+        /* Retention failure must not invalidate the successfully published snapshot. */
       }
     } catch (error) {
+      // Remove the publication marker before its data on an unpublished/failed
+      // freeze. Retention failures are isolated after successful publication.
+      rmSync(join(directory, `${snapshotId}.json`), { force: true });
+      rmSync(join(directory, `${snapshotId}.tmp`), { force: true });
       rmSync(file, { force: true });
       throw error;
     } finally {
       closeSync(input);
-      closeSync(output);
+      if (output !== undefined) closeSync(output);
     }
   }
   if (
@@ -258,13 +333,15 @@ export function readRoomHistoryPage<T extends { seq: number }>(
   ) {
     throw new Error("invalid room history snapshot");
   }
+  assertDirectory();
+  validateManifest(manifest, roomId, cursor.snapshotId);
   const file = join(directory, `${cursor.snapshotId}.jsonl`);
   const fd = openRegular(file);
   const messages: T[] = [];
   try {
     if (stamp(fstatSync(fd)) !== manifest.stamp)
       throw new Error("room history snapshot was modified");
-    for (const line of lines(fd, cursor.offset, manifest.bytes)) {
+    for (const line of lines(fd, cursor.offset, manifest.bytes, manifest.hashes)) {
       const msg = parse(JSON.parse(line.text));
       if (!msg || msg.seq !== cursor.afterSeq + 1)
         throw new Error("room history snapshot is corrupt");
@@ -278,6 +355,7 @@ export function readRoomHistoryPage<T extends { seq: number }>(
   } finally {
     closeSync(fd);
   }
+  assertDirectory();
   const complete = cursor.offset === manifest.bytes;
   if (complete && cursor.afterSeq !== manifest.throughSeq)
     throw new Error("incomplete room history snapshot");

@@ -7,6 +7,7 @@ import {
   renameSync,
   rmSync,
   symlinkSync,
+  statSync,
   writeFileSync,
 } from "node:fs";
 import { tmpdir } from "node:os";
@@ -125,4 +126,57 @@ test("expired snapshot cursors fail instead of silently restarting from the live
       .length,
   ).toBe(8);
   expect(() => f.manager.getHistoryPage(f.room.id, { cursor: first.nextCursor })).toThrow();
+});
+
+test("manifest schema fields and block checksums are enforced before resuming", () => {
+  const f = fixture();
+  f.append("one");
+  const page = f.manager.getHistoryPage(f.room.id, { limit: 1 });
+  const directory = join(f.root, f.room.id, "history-snapshots");
+  const meta = join(directory, `${page.snapshotId}.json`);
+  const original = JSON.parse(readFileSync(meta, "utf8"));
+  for (const patch of [
+    { sinceSeq: -1 },
+    { sinceSeq: 1.5 },
+    { key: "bad" },
+    { hashes: [] },
+    { stamp: "bad" },
+  ]) {
+    writeFileSync(meta, JSON.stringify({ ...original, ...patch }));
+    expect(() => f.manager.getHistoryPage(f.room.id, { cursor: page.nextCursor })).toThrow(
+      "manifest",
+    );
+  }
+  const file = join(directory, `${page.snapshotId}.jsonl`);
+  writeFileSync(file, readFileSync(file).toString().replace("one", "two"));
+  const stat = statSync(file);
+  original.stamp = [stat.dev, stat.ino, stat.size, stat.mtimeMs, stat.ctimeMs].join(":");
+  writeFileSync(meta, JSON.stringify(original));
+  expect(() => f.manager.getHistoryPage(f.room.id, { cursor: page.nextCursor })).toThrow(
+    "checksum",
+  );
+});
+
+test("multi-megabyte snapshot manifests remain bounded and page block boundaries correctly", () => {
+  const f = fixture();
+  const messages = Array.from({ length: 81 }, (_, n) => ({
+    seq: n + 1,
+    ts: 1,
+    from: "agent",
+    type: "text",
+    text: `${n}:` + "x".repeat(128 * 1024),
+  }));
+  writeFileSync(f.file, messages.map((message) => JSON.stringify(message) + "\n").join(""));
+  const first = f.make().getHistoryPage(f.room.id, { limit: 7 });
+  const manifest = join(f.root, f.room.id, "history-snapshots", `${first.snapshotId}.json`);
+  expect(statSync(manifest).size).toBeGreaterThan(4096);
+  expect(statSync(manifest).size).toBeLessThan(512 * 1024);
+  const seen = [...first.messages];
+  let page = first;
+  while (page.nextCursor) {
+    page = f.make().getHistoryPage(f.room.id, { cursor: page.nextCursor, limit: 7 });
+    seen.push(...page.messages);
+  }
+  expect(seen.map((message) => message.seq)).toEqual(messages.map((message) => message.seq));
+  expect(page.complete).toBe(true);
 });
