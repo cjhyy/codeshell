@@ -307,6 +307,35 @@ Electron 签名，或者 dev 模式下由一个签名的辅助 App 启动 driver
 EMBEDDING.md 里的 CLI 契约（`serve --embedded` + `mcp --embedded --socket`）自己启动。
 原因是 SDK 依赖还没加进仓库；替换只影响 `cua-driver-host.ts`。
 
+### 骨架回归验证（2026-10-13）
+
+manager 的工具成功结果统一为 `ToolSuccess`。内联图片的 `contentBlocks` 同时包含经过
+不可信内容标记包装的文字，避免 turn loop 优先使用图片块时丢掉 AX 状态和落盘图片引用。
+5 MB 上限按 base64 解码后的字节数判断，包含恰好到达上限的带 padding 图片。
+
+宿主在等待 socket 就绪时收到 `stop()` 会保持 `stopped`，后续 `start()` 不能重新启动。
+SIGKILL 后等待退出事件，额外等待最多 1 秒；未确认退出时记录 `lastError`。
+
+在 worktree 根目录运行受隔离保护的 Bun shard，并显式使用根 tsconfig 的源码别名：
+
+```bash
+node scripts/run-bun-test-shard.mjs --tsconfig-override ./tsconfig.json --timeout 30000 \
+  packages/core/src/tool-system/mcp-manager.test.ts \
+  packages/desktop/src/main/computer-use/cua-driver-host.test.ts \
+  packages/desktop/src/main/computer-use/service.test.ts
+```
+
+根 tsconfig 已将 `@cjhyy/code-shell-core/extension` 映射到当前 worktree 的
+`packages/core/src/index.extension.ts`，避免 Desktop 测试读到共享 node_modules 指向的
+主 checkout 构建产物。runner 会创建独立 HOME、移除继承的凭据并验证完整 JUnit 报告。
+
+本轮实际使用 Bun 1.3.11：manager 71 项、宿主 12 项通过；加上 MCP workspace、连接配置、
+宿主声明、stdio 环境、兼容层、插件合并、feature flags、turn loop 图片结果和图片落盘，
+共 13 个文件、153 项通过，0 失败。Core 源码 `tsc --noEmit` 通过；Desktop 的
+computer-use 源码及测试在 Node-only 类型配置下通过，并将 core 别名指向 worktree 源码。
+修改的 TypeScript 文件 ESLint 通过。未运行会构建共享依赖产物的根 `typecheck` 脚本。
+这些是模拟进程和本地 MCP fixture 测试，计算器及真实 macOS TCC 验收仍待执行。
+
 ### 试用步骤（macOS）
 
 1. 安装 cua-driver，确认 `cua-driver --version` 可用；或设置 `CODESHELL_CUA_DRIVER_PATH=/path/to/cua-driver`。

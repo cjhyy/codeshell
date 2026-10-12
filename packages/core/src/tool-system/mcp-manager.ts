@@ -26,6 +26,7 @@ import { randomUUID } from "node:crypto";
 import { join } from "node:path";
 import { diagnoseMcpStdioMissingCommand, previewPath } from "./mcp-stdio-diagnostics.js";
 import type { ToolContext } from "./context.js";
+import type { ToolSuccess } from "./builtin/index.js";
 import {
   DEFAULT_MCP_CONNECT_RETRIES,
   DEFAULT_MCP_CONNECT_TIMEOUT_MS,
@@ -428,7 +429,8 @@ type InlineImageBlock = ContentBlock & {
 export function inlineMcpImageBlock(base64: string, mimeType: string): InlineImageBlock | null {
   const mediaType = mimeType.toLowerCase().split(";")[0]!.trim();
   if (!INLINE_IMAGE_MEDIA_TYPES.has(mediaType)) return null;
-  if (Math.floor((base64.length * 3) / 4) > MAX_MCP_INLINE_IMAGE_BYTES) return null;
+  const decodedBytes = Buffer.byteLength(base64, "base64");
+  if (decodedBytes === 0 || decodedBytes > MAX_MCP_INLINE_IMAGE_BYTES) return null;
   return { type: "image", source: { type: "base64", media_type: mediaType, data: base64 } };
 }
 
@@ -1386,7 +1388,7 @@ export class MCPManager {
     toolName: string,
     args: Record<string, unknown>,
     ctx?: ToolContext,
-  ): Promise<string | { result: string; contentBlocks: ContentBlock[] }> {
+  ): Promise<ToolSuccess> {
     return this.runOperation(ctx, ctx?.signal, async (signal) => {
       const connection = await this.connectionForScope(serverName, ctx);
       const tool = connection.tools?.get(toolName);
@@ -1404,18 +1406,12 @@ export class MCPManager {
         undefined,
         signal ? { signal } : undefined,
       );
-      // Extract text + image content from the result. Image blobs
-      // are spilled to ~/.code-shell/mcp_images/ so they don't bloat
-      // the LLM message tree — same pattern as the GenerateImage
-      // tool — and the model sees a textual reference it can Read
-      // on a later turn if it needs the pixels. This sidesteps the
-      // "MCP returned a 5MB screenshot → token budget exploded"
-      // failure mode that bit Codex (issue #11845); we never put
-      // raw base64 image data in the result text. See
-      // TODO-week.md #9c + docs/research-cc-vs-codex-image-handling.md §B.
+      // Images normally spill to disk. An opted-in server can attach bounded
+      // vision blocks; base64 never enters the textual result.
       const parts: string[] = [];
       const imageBlocks: ContentBlock[] = [];
-      const inlineImages = connection.config?.inlineImages === true && mcpContextSupportsVision(ctx);
+      const inlineImages =
+        connection.config?.inlineImages === true && mcpContextSupportsVision(ctx);
       if (Array.isArray(callResult.content)) {
         for (const item of callResult.content) {
           if (typeof item === "string") {
@@ -1460,7 +1456,15 @@ export class MCPManager {
       // strings can't fake their way out.
       const wrapped = wrapMcpOutput(serverName, toolName, body);
       if (callResult.isError) throw new Error(wrapped);
-      return imageBlocks.length > 0 ? { result: wrapped, contentBlocks: imageBlocks } : wrapped;
+      return {
+        ok: true,
+        result: wrapped,
+        // The turn loop uses contentBlocks instead of result when present.
+        // Preserve the text and its trust marker alongside every inline image.
+        ...(imageBlocks.length > 0
+          ? { contentBlocks: [{ type: "text" as const, text: wrapped }, ...imageBlocks] }
+          : {}),
+      };
     });
   }
 

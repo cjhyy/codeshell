@@ -1,4 +1,4 @@
-import { describe, expect, test } from "bun:test";
+import { describe, expect, spyOn, test } from "bun:test";
 import { EventEmitter } from "node:events";
 import type { ChildProcess, SpawnOptions } from "node:child_process";
 import { CuaDriverHost, resolveCuaDriverPath } from "./cua-driver-host.js";
@@ -7,13 +7,17 @@ class FakeChild extends EventEmitter {
   exitCode: number | null = null;
   signalCode: NodeJS.Signals | null = null;
   readonly kills: string[] = [];
+  autoExit = true;
   stdout = new EventEmitter();
   stderr = new EventEmitter();
   kill(signal: NodeJS.Signals = "SIGTERM"): boolean {
     this.kills.push(signal);
-    this.signalCode = signal;
-    queueMicrotask(() => this.emit("exit", null, signal));
+    if (this.autoExit) queueMicrotask(() => this.exit(signal));
     return true;
+  }
+  exit(signal: NodeJS.Signals): void {
+    this.signalCode = signal;
+    this.emit("exit", null, signal);
   }
   crash(code = 1): void {
     this.exitCode = code;
@@ -21,8 +25,36 @@ class FakeChild extends EventEmitter {
   }
 }
 
-function harness(opts: { ready?: () => boolean; maxRestarts?: number } = {}) {
-  const spawns: Array<{ command: string; args: string[]; options: SpawnOptions; child: FakeChild }> = [];
+function controlledSleep() {
+  const pending = new Map<number, Array<() => void>>();
+  return {
+    sleep: (ms: number) =>
+      new Promise<void>((resolve) => {
+        const waits = pending.get(ms) ?? [];
+        waits.push(resolve);
+        pending.set(ms, waits);
+      }),
+    resolve: (ms: number) => {
+      const resolve = pending.get(ms)?.shift();
+      expect(resolve).toBeDefined();
+      resolve!();
+    },
+  };
+}
+
+function harness(
+  opts: {
+    ready?: () => boolean;
+    maxRestarts?: number;
+    sleep?: (ms: number) => Promise<void>;
+  } = {},
+) {
+  const spawns: Array<{
+    command: string;
+    args: string[];
+    options: SpawnOptions;
+    child: FakeChild;
+  }> = [];
   const sleeps: number[] = [];
   const host = new CuaDriverHost({
     driverPath: "/opt/cua/cua-driver",
@@ -39,6 +71,7 @@ function harness(opts: { ready?: () => boolean; maxRestarts?: number } = {}) {
     maxRestarts: opts.maxRestarts,
     sleep: async (ms) => {
       sleeps.push(ms);
+      if (opts.sleep) return opts.sleep(ms);
       await new Promise((resolve) => setTimeout(resolve, 0));
     },
   });
@@ -113,6 +146,65 @@ describe("CuaDriverHost", () => {
     let error: unknown;
     await host.start().catch((e) => (error = e));
     expect(String(error)).toContain("stopped");
+  });
+
+  for (const expired of [false, true]) {
+    test(`stop cancels pending startup${expired ? " after the readiness deadline" : ""}`, async () => {
+      let now = 0;
+      const clock = spyOn(Date, "now").mockImplementation(() => now);
+      const sleeper = controlledSleep();
+      const { host, spawns } = harness({ ready: () => false, sleep: sleeper.sleep });
+      try {
+        const startup = host.start().catch((error) => error);
+        expect(host.status().state).toBe("starting");
+        await host.stop();
+        if (expired) now = 201;
+        sleeper.resolve(50);
+        expect(String(await startup)).toContain("stopped");
+        expect(host.status().state).toBe("stopped");
+        await expect(host.start()).rejects.toThrow("stopped");
+        expect(spawns).toHaveLength(1);
+      } finally {
+        clock.mockRestore();
+      }
+    });
+  }
+
+  test("stop waits for the exit event after escalating to SIGKILL", async () => {
+    const sleeper = controlledSleep();
+    const { host, spawns } = harness({ sleep: sleeper.sleep });
+    await host.start();
+    const child = spawns[0]!.child;
+    child.autoExit = false;
+    let stopped = false;
+    const shutdown = host.stop().then(() => {
+      stopped = true;
+    });
+    expect(child.kills).toEqual(["SIGTERM"]);
+    sleeper.resolve(3_000);
+    await new Promise<void>((resolve) => setImmediate(resolve));
+    expect(child.kills).toEqual(["SIGTERM", "SIGKILL"]);
+    expect(stopped).toBe(false);
+    child.exit("SIGKILL");
+    await shutdown;
+    expect(stopped).toBe(true);
+    expect(host.status().state).toBe("stopped");
+  });
+
+  test("stop remains bounded when forced termination never reports an exit", async () => {
+    const sleeper = controlledSleep();
+    const { host, spawns } = harness({ sleep: sleeper.sleep });
+    await host.start();
+    const child = spawns[0]!.child;
+    child.autoExit = false;
+    const shutdown = host.stop();
+    sleeper.resolve(3_000);
+    await new Promise<void>((resolve) => setImmediate(resolve));
+    sleeper.resolve(1_000);
+    await shutdown;
+    expect(child.kills).toEqual(["SIGTERM", "SIGKILL"]);
+    expect(host.status().state).toBe("stopped");
+    expect(host.status().lastError).toContain("did not exit after SIGKILL");
   });
 });
 

@@ -24,7 +24,13 @@ import { join } from "node:path";
 
 export const CUA_HOST_MCP_SERVER_NAME = "host:cua-driver";
 
-export type CuaDriverHostState = "idle" | "starting" | "running" | "restarting" | "failed" | "stopped";
+export type CuaDriverHostState =
+  | "idle"
+  | "starting"
+  | "running"
+  | "restarting"
+  | "failed"
+  | "stopped";
 
 export interface CuaDriverHostStatus {
   readonly state: CuaDriverHostState;
@@ -62,6 +68,7 @@ const PARENT_ENV_ALLOWLIST = ["PATH", "HOME", "USER", "LOGNAME", "LANG", "LC_ALL
 const DEFAULT_READY_TIMEOUT_MS = 10_000;
 const DEFAULT_MAX_RESTARTS = 3;
 const STOP_GRACE_MS = 3_000;
+const KILL_GRACE_MS = 1_000;
 
 /**
  * macOS limits AF_UNIX paths to 104 bytes, which `~/Library/Application
@@ -170,7 +177,20 @@ export class CuaDriverHost {
         exited.then(() => false),
         this.sleep(STOP_GRACE_MS).then(() => true),
       ]);
-      if (timedOut) child.kill("SIGKILL");
+      if (timedOut) {
+        child.kill("SIGKILL");
+        const forcedExit = await Promise.race([
+          exited.then(() => true),
+          this.sleep(KILL_GRACE_MS).then(() => false),
+        ]);
+        if (!forcedExit) {
+          this.lastError = "daemon did not exit after SIGKILL";
+          this.log("cua_driver_stop_failed", {
+            generation: this.generation,
+            error: this.lastError,
+          });
+        }
+      }
     }
     this.removeStaleSocket();
     this.log("cua_driver_stopped", { generation: this.generation });
@@ -198,6 +218,10 @@ export class CuaDriverHost {
     } catch {
       // Best effort; the next daemon rebinds or reports the conflict.
     }
+  }
+
+  private throwIfStopped(): void {
+    if (this.state === "stopped") throw new Error("cua-driver host is stopped");
   }
 
   private async launch(): Promise<void> {
@@ -231,6 +255,9 @@ export class CuaDriverHost {
     const timeout = this.options.readyTimeoutMs ?? DEFAULT_READY_TIMEOUT_MS;
     const deadline = Date.now() + timeout;
     while (Date.now() < deadline) {
+      // stop() can run while readiness polling is asleep. Cancellation must
+      // remain terminal instead of being reported as a retryable startup error.
+      this.throwIfStopped();
       if (spawnError) break;
       if (this.child !== child) {
         this.state = "failed";
@@ -245,6 +272,7 @@ export class CuaDriverHost {
       }
       await this.sleep(50);
     }
+    this.throwIfStopped();
     this.lastError = spawnError
       ? `spawn failed: ${spawnError.message}`
       : `socket not ready after ${timeout}ms`;
@@ -274,7 +302,9 @@ export class CuaDriverHost {
     this.state = "restarting";
     void this.sleep(delay).then(() => {
       if (this.state !== "restarting") return;
-      this.start().catch((error) => this.log("cua_driver_restart_failed", { error: String(error) }));
+      this.start().catch((error) =>
+        this.log("cua_driver_restart_failed", { error: String(error) }),
+      );
     });
   }
 }
