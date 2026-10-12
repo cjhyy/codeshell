@@ -5,6 +5,7 @@ import { join } from "node:path";
 
 import {
   NotificationQueue,
+  notificationItemToStreamEvent,
   type NotificationQueuePersistence,
   type ResultEnvelopeDraft,
 } from "./agent-notifications.js";
@@ -49,6 +50,73 @@ afterEach(() => {
 });
 
 describe("NotificationQueue persistence", () => {
+  it.each([{ signal: "SIGTERM" }, { signal: "SIGKILL" }, { exitCode: 1 }])(
+    "preserves failed shell metadata through restart and stream conversion: %j",
+    (exit) => {
+      const root = tempRoot();
+      const first = new NotificationQueue();
+      first.attachPersistence(persistence(root));
+      first.enqueue(
+        {
+          agentId: "shell-result",
+          description: "Background shell exited",
+          status: "failed",
+          workKind: "shell",
+          command: "python3 server.py",
+          cwd: "/workspace/project",
+          error: "process exited",
+          enqueuedAt: 100,
+          ...exit,
+        },
+        "parent",
+      );
+
+      const restarted = new NotificationQueue();
+      restarted.attachPersistence(persistence(root));
+      const [restored] = restarted.getSnapshot("parent");
+      if (restored?.kind !== "result") throw new Error("missing restored shell result");
+      expect(restored.payload).toMatchObject({
+        status: "failed",
+        cwd: "/workspace/project",
+        ...exit,
+      });
+      expect(restored.signal).toBe(exit.signal);
+      expect(restored.exitCode).toBe(exit.exitCode);
+      expect(notificationItemToStreamEvent(restored)).toMatchObject({
+        type: "background_agent_completed",
+        status: "failed",
+        workKind: "shell",
+        command: "python3 server.py",
+        cwd: "/workspace/project",
+        ...exit,
+      });
+    },
+  );
+
+  it.each([{ signal: 15 }, { exitCode: "1" }, { exitCode: -1 }, { exitCode: 0.5 }])(
+    "quarantines invalid shell exit metadata: %j",
+    (invalidExit) => {
+      const root = tempRoot();
+      const queue = new NotificationQueue();
+      queue.attachPersistence(persistence(root));
+      const original = queue.enqueue(result())!;
+      const directory = join(root, "parent");
+      const file = join(directory, "pending-notifications.json");
+      writeFileSync(
+        file,
+        JSON.stringify({
+          schemaVersion: 1,
+          results: [{ ...original, payload: { ...original.payload, ...invalidExit } }],
+        }),
+      );
+
+      const restarted = new NotificationQueue();
+      restarted.attachPersistence(persistence(root));
+      expect(restarted.getSnapshot("parent")).toEqual([]);
+      expect(readdirSync(directory).some((name) => name.endsWith(".corrupt"))).toBe(true);
+    },
+  );
+
   it("restores terminal results after restart with aliases and sequence state", () => {
     const root = tempRoot();
     const first = new NotificationQueue();

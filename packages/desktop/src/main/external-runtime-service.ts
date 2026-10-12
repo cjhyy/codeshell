@@ -635,21 +635,26 @@ export class ExternalRuntimeService {
     // Built from the policy so the two cannot drift — a name added to the
     // allowlist is registered by that same edit.
     const registry = new ToolRegistry({ toolCatalog: [...BUILTIN_TOOLS, ...CODING_TOOLS] });
+    const fullAccess = request.permissionMode === "bypassPermissions";
+    // Keep host tool deny rules and exposure checks while honoring the user's
+    // full-access selection for file paths and tool approval requests.
     const hostPermissionMode =
-      request.permissionMode === "acceptEdits" || request.permissionMode === "bypassPermissions"
-        ? "acceptEdits"
-        : "default";
+      request.permissionMode === "acceptEdits" || fullAccess ? "acceptEdits" : "default";
     const sandbox = request.planMode
       ? "read-only"
-      : request.permissionMode === "bypassPermissions"
+      : fullAccess
         ? "danger-full-access"
         : "workspace-write";
     const approvalPolicy =
-      request.permissionMode === "bypassPermissions" || request.permissionMode === "dontAsk"
-        ? "never"
-        : "on-request";
-    const mayRequestToolApproval =
-      request.permissionMode !== "dontAsk" && this.deps.requestApproval !== undefined;
+      fullAccess || request.permissionMode === "dontAsk" ? "never" : "on-request";
+    const toolApprovalBackend = fullAccess
+      ? { requestApproval: async () => ({ approved: true }) }
+      : request.permissionMode !== "dontAsk" && this.deps.requestApproval
+        ? {
+            requestApproval: (approvalRequest: { toolName: string; [key: string]: unknown }) =>
+              this.deps.requestApproval!(request.sessionId, approvalRequest),
+          }
+        : undefined;
     const developerInstructions = [
       "You are running as an Agent Runtime inside CodeShell. Prefer the " +
         "mcp__codeshell_tools__* host tools for CodeShell panels, browser state, " +
@@ -858,6 +863,7 @@ export class ExternalRuntimeService {
         businessSessionId: request.sessionId,
         registry,
         permissionMode: hostPermissionMode,
+        pathAccess: fullAccess ? "full" : "default",
         presetRules: [
           ...BUILTIN_AGENT_PRESETS.general.defaultPermissionRules,
           ...EXTERNAL_GOAL_TOOLS.map((tool) => ({ tool, decision: "allow" as const })),
@@ -878,21 +884,21 @@ export class ExternalRuntimeService {
         developerInstructions,
         sandbox,
         approvalPolicy,
-        ...(mayRequestToolApproval
+        ...(toolApprovalBackend
           ? {
               approvalBackend: {
-                requestApproval: (approvalRequest: { toolName: string }) =>
-                  this.deps.requestApproval!(request.sessionId, approvalRequest),
-              } as never,
+                requestApproval: (approvalRequest) =>
+                  toolApprovalBackend.requestApproval({ ...approvalRequest }),
+              },
             }
           : {}),
         contextOverrides: contextOverrides as never,
         hooks: {
           onEvent: forwardEvent,
-          ...(mayRequestToolApproval
+          ...(toolApprovalBackend
             ? {
                 onNativeApproval: async (nativeRequest) => {
-                  const decision = await this.deps.requestApproval!(request.sessionId, {
+                  const decision = await toolApprovalBackend.requestApproval({
                     toolName: "Codex native tool",
                     method: nativeRequest.method,
                     params: nativeRequest.params,

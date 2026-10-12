@@ -579,6 +579,8 @@ export function bgCompletionText(event: {
   command?: string;
   finalText?: string;
   error?: string;
+  exitCode?: number;
+  signal?: string;
 }): string {
   const lang = loadUILanguage();
   // For background shells, `description` is English wakeup text meant for the
@@ -591,8 +593,15 @@ export function bgCompletionText(event: {
   const completedPreview = isShell
     ? previewLine(event.command ?? event.description)
     : previewLine(event.finalText ?? event.description);
+  const shellExitReason = event.signal
+    ? translate(lang, "misc.bgTask.signal", { signal: event.signal })
+    : Number.isInteger(event.exitCode) && event.exitCode !== 0
+      ? translate(lang, "misc.bgTask.exitCode", { code: event.exitCode! })
+      : event.error;
   const failedPreview = isShell
-    ? previewLine(event.command ?? event.description)
+    ? [previewLine(event.command ?? event.description, 100), previewLine(shellExitReason ?? "", 80)]
+        .filter(Boolean)
+        .join(" · ")
     : previewLine(event.error ?? event.description);
   if (event.status === "completed") {
     return translate(lang, "misc.bgTask.completed", {
@@ -606,10 +615,14 @@ export function bgCompletionText(event: {
       preview: failedPreview,
     });
   }
-  return translate(lang, "misc.bgTask.failed", {
-    name: who,
-    preview: failedPreview,
-  });
+  return translate(
+    lang,
+    isShell && event.signal ? "misc.bgTask.terminated" : "misc.bgTask.failed",
+    {
+      name: who,
+      preview: failedPreview,
+    },
+  );
 }
 
 type GoalFenceEvent = { goalId?: string; revision?: number };

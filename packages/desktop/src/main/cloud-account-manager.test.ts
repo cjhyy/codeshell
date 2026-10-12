@@ -1,6 +1,6 @@
 import { expect, test } from "bun:test";
 import { randomBytes, randomUUID, createHash } from "node:crypto";
-import { CloudAccountManager } from "./cloud-account-manager.js";
+import { CloudAccountManager, type PreparedGitHubLink } from "./cloud-account-manager.js";
 import type { CloudAccountStore, SavedCloudAccount } from "./cloud-account-store.js";
 import type { CloudAccountRequest, CloudAccountTransport } from "./cloud-account-http.js";
 import { CloudAccountHttpError } from "./cloud-account-http.js";
@@ -26,7 +26,14 @@ function deferred<T>() {
   });
   return { promise, resolve };
 }
-function setup(initial?: SavedCloudAccount, transport?: CloudAccountTransport) {
+function setup(
+  initial?: SavedCloudAccount,
+  transport?: CloudAccountTransport,
+  prepareGitHubLink?: (
+    signal: AbortSignal,
+    authorized: () => boolean,
+  ) => Promise<PreparedGitHubLink>,
+) {
   let stored = initial;
   let writes = 0;
   let reads = 0;
@@ -58,6 +65,7 @@ function setup(initial?: SavedCloudAccount, transport?: CloudAccountTransport) {
   } as unknown as CloudAccountStore;
   const manager = new CloudAccountManager({
     store,
+    prepareGitHubLink,
     request: async (input) => {
       requests.push(input);
       return transport ? transport(input) : {};
@@ -102,6 +110,211 @@ test("anonymous startup/status is entirely local, including unavailable keyring;
   await expect(ctx.manager.getCredential(origin)).rejects.toThrow("登录");
   expect(ctx.requests).toHaveLength(0);
   expect(ctx.writes()).toBe(0);
+});
+
+const linkOrigin = "https://link.example";
+const linkAuthorization = `${linkOrigin}/oauth/authorize?state=test-only&code_challenge=${token()}&code_challenge_method=S256`;
+function githubTransport(
+  next: SavedCloudAccount,
+  githubLink?: unknown,
+  options: { linkEnabled?: boolean; scope?: string } = {},
+): CloudAccountTransport {
+  return async (req) => {
+    if (req.path.endsWith("status"))
+      return { enabled: true, linkEnabled: options.linkEnabled ?? true };
+    if (req.path.endsWith("start"))
+      return {
+        authorizationUrl: `https://github.com/login/oauth/authorize?${new URLSearchParams({
+          code_challenge: (req.body as { codeChallenge: string }).codeChallenge,
+          code_challenge_method: "S256",
+          scope: options.scope ?? "read:user",
+        })}`,
+        receipt: token(),
+        expiresAt: Date.now() + 60_000,
+        pollIntervalMs: 1000,
+      };
+    if (req.path.endsWith("poll")) return { ...next, githubLink };
+    return {};
+  };
+}
+const settleConnection = () => new Promise((done) => setTimeout(done, 0));
+
+test("combined GitHub login saves only the account grant before opening independent Link consent", async () => {
+  const next = grant();
+  const claim = `${linkOrigin}/oauth/account-link/claim?ticket=${token()}`;
+  const connected = deferred<"connected" | "cancelled">();
+  let cancelled = 0;
+  let opened = "";
+  const ctx = setup(
+    undefined,
+    githubTransport(next, { state: "ready", authorizationUrl: claim }, { scope: "repo read:user" }),
+    async () => ({
+      authorizationUrl: linkAuthorization,
+      continue: async (url) => {
+        expect(ctx.saved()?.account.id).toBe(next.account.id);
+        opened = url;
+        return connected.promise;
+      },
+      cancel: () => {
+        cancelled++;
+      },
+    }),
+  );
+  const result = await ctx.manager.signInWithGitHub({ origin, connectGitHub: true });
+  expect(result.state).toBe("signed-in");
+  expect(result.githubConnection?.state).toBe("pending");
+  expect(opened).toBe(claim);
+  expect(ctx.saved()).toEqual(next);
+  expect(JSON.stringify(ctx.saved())).not.toContain("githubLink");
+  expect(JSON.stringify(ctx.events)).not.toContain(claim);
+  const start = ctx.requests.find((req) => req.path.endsWith("start"))!;
+  expect((start.body as { linkAuthorization: string }).linkAuthorization).toBe(linkAuthorization);
+  expect(start.token).toBeUndefined();
+  connected.resolve("connected");
+  await settleConnection();
+  expect(ctx.manager.status().githubConnection?.state).toBe("connected");
+  expect(cancelled).toBe(1);
+});
+
+test("cancelling pending Link consent keeps the saved account and fences late adoption status", async () => {
+  const next = grant();
+  const connected = deferred<"connected" | "cancelled">();
+  let cancelled = 0;
+  const ctx = setup(
+    undefined,
+    githubTransport(next, {
+      state: "ready",
+      authorizationUrl: `${linkOrigin}/oauth/account-link/claim?ticket=${token()}`,
+    }),
+    async () => ({
+      authorizationUrl: linkAuthorization,
+      continue: () => connected.promise,
+      cancel: () => {
+        cancelled++;
+      },
+    }),
+  );
+  await ctx.manager.signInWithGitHub({ origin, connectGitHub: true });
+  ctx.manager.cancelSignIn();
+  expect(cancelled).toBe(1);
+  expect(ctx.manager.status().state).toBe("signed-in");
+  expect(ctx.manager.status().githubConnection?.state).toBe("skipped");
+  expect(ctx.saved()).toEqual(next);
+  connected.resolve("connected");
+  await settleConnection();
+  expect(ctx.manager.status().githubConnection?.state).toBe("skipped");
+});
+
+test("Link preparation, handoff and continuation failures never roll back a successful account login", async () => {
+  for (const failure of ["prepare", "handoff", "continue", "cleanup", "unsupported"]) {
+    const next = grant();
+    const ctx = setup(
+      undefined,
+      githubTransport(
+        next,
+        failure === "handoff"
+          ? { state: "failed" }
+          : {
+              state: "ready",
+              authorizationUrl: `${linkOrigin}/oauth/account-link/claim?ticket=${token()}`,
+            },
+        { linkEnabled: failure !== "unsupported" },
+      ),
+      async () => {
+        if (failure === "prepare") throw new Error("synthetic preparation failure");
+        return {
+          authorizationUrl: linkAuthorization,
+          continue: async () => {
+            if (failure === "continue") throw new Error("synthetic continuation failure");
+            return "connected" as const;
+          },
+          cancel: () => {
+            if (failure === "cleanup") throw new Error("synthetic cleanup failure");
+          },
+        };
+      },
+    );
+    await ctx.manager.signInWithGitHub({ origin, connectGitHub: true });
+    await settleConnection();
+    expect(ctx.manager.status().state).toBe("signed-in");
+    expect(ctx.saved()).toEqual(next);
+    expect(ctx.manager.status().githubConnection?.state).toBe(
+      failure === "cleanup" ? "connected" : "failed",
+    );
+  }
+});
+
+test("claim URLs cannot navigate off the prepared issuer or carry anything except a one-time ticket", async () => {
+  const proof = token();
+  for (const url of [
+    `https://evil.example/oauth/account-link/claim?ticket=${proof}`,
+    `http://link.example/oauth/account-link/claim?ticket=${proof}`,
+    `${linkOrigin}/oauth/authorize?ticket=${proof}`,
+    `${linkOrigin}/oauth/account-link/claim?ticket=${proof}&token=secret`,
+    `${linkOrigin}/oauth/account-link/claim?ticket=${proof}&ticket=${proof}`,
+    `${linkOrigin}/oauth/account-link/claim?ticket=${proof}#fragment`,
+    `https://user:secret@link.example/oauth/account-link/claim?ticket=${proof}`,
+    `${linkOrigin}/oauth/account-link/claim?ticket=short`,
+  ]) {
+    const next = grant();
+    let opened = 0;
+    const ctx = setup(
+      undefined,
+      githubTransport(next, { state: "ready", authorizationUrl: url }),
+      async () => ({
+        authorizationUrl: linkAuthorization,
+        continue: async () => {
+          opened++;
+          return "connected";
+        },
+        cancel: () => {},
+      }),
+    );
+    await ctx.manager.signInWithGitHub({ origin, connectGitHub: true });
+    expect(opened).toBe(0);
+    expect(ctx.manager.status().githubConnection?.state).toBe("failed");
+    expect(ctx.saved()).toEqual(next);
+  }
+});
+
+test("opt-out and identity binding never prepare a data connection or request repository permission", async () => {
+  const next = grant();
+  let prepared = 0;
+  const ctx = setup(undefined, githubTransport(next), async () => {
+    prepared++;
+    throw new Error("must not prepare");
+  });
+  await ctx.manager.signInWithGitHub({ origin, connectGitHub: false });
+  expect(prepared).toBe(0);
+  expect(ctx.manager.status().githubConnection?.state).toBe("skipped");
+  expect(
+    (ctx.requests.find((req) => req.path.endsWith("start"))!.body as any).linkAuthorization,
+  ).toBeUndefined();
+  const denied = setup(undefined, githubTransport(next, undefined, { scope: "repo read:user" }));
+  await expect(denied.manager.signInWithGitHub({ origin, connectGitHub: false })).rejects.toThrow(
+    "地址无效",
+  );
+  expect(denied.launched).toHaveLength(0);
+  expect(denied.saved()).toBeUndefined();
+});
+
+test("optional Link capability is validated without altering legacy capability responses", async () => {
+  const ctx = setup(undefined, async () => ({
+    registrationAllowed: true,
+    githubEnabled: true,
+    githubLinkEnabled: true,
+  }));
+  expect(await ctx.manager.capabilities(origin)).toEqual({
+    registrationAllowed: true,
+    githubEnabled: true,
+    githubLinkEnabled: true,
+  });
+  const invalid = setup(undefined, async () => ({
+    registrationAllowed: true,
+    githubEnabled: true,
+    githubLinkEnabled: "yes",
+  }));
+  await expect(invalid.manager.capabilities(origin)).rejects.toThrow("能力信息");
 });
 test("public service capabilities are anonymous, bounded to the selected origin, and ignore extra fields", async () => {
   for (const enabled of [true, false]) {
