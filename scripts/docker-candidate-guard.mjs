@@ -8,6 +8,7 @@ import dns from "node:dns";
 import dgram from "node:dgram";
 import http2 from "node:http2";
 import children from "node:child_process";
+import workers from "node:worker_threads";
 import { createHash } from "node:crypto";
 import {
   constants,
@@ -435,6 +436,12 @@ export function installDockerCandidateGuard(
     );
   for (const method of ["spawnSync", "exec", "execSync", "execFileSync", "fork"])
     children[method] = refuse;
+  // Worker isolates have fresh builtins and can discard NODE_OPTIONS through
+  // their own execArgv/env. All reviewed Core workers are pinned Node children;
+  // no Worker constructor is part of this fixture's process authority.
+  workers.Worker = function () {
+    refuse();
+  };
   syncBuiltinESMExports();
   const probes = [
     () => fetch("https://external.invalid/"),

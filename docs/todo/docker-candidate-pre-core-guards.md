@@ -27,7 +27,10 @@ literal-address listeners. Each actual preload records six transport/process
 and four DNS negative probes, PID, parent PID, role, argv and policy hashes.
 An allowed child must preserve or receive the exact private HOME/preload/policy
 environment. Sync process APIs, shells and unreviewed executable/entry bytes
-remain refused.
+remain refused. Unreviewed `worker_threads.Worker` constructors are refused
+through CommonJS and both ESM exports: isolates can otherwise discard preload
+options and receive fresh, unguarded builtins. Reviewed Core workers remain
+digest-pinned Node child processes, rather than Worker isolates.
 
 The unmodified production provider's Docker verbs/argv are intercepted by a
 test-only controller adapter. Fresh registry installation/project/owner,
@@ -117,6 +120,16 @@ or skips across the nine Docker/browser/model fixture suites; ESLint and
 Prettier pass; native Node syntax checks pass for all 15 fixture modules. The
 last setup-only close refinement also receives its affected controlled Node
 shard before commit. These are local fixture results, not kernel acceptance.
+
+A follow-up builtin-only actual Node regression first failed on the original
+guard: an eval Worker with empty `execArgv` and `NODE_OPTIONS` executed and
+reported no installed pre-Core guard. The captured Worker was terminated before
+reporting that failure. The minimal constructor refusal keeps the existing six
+transport/process and four DNS receipt counts; it does not claim that the six
+recorded probes include an additional Worker probe. No Core, network or native
+program is used by this regression. The affected guard, setup and browser
+authority shards pass 51 tests with 185 assertions and no failures or skips;
+ESLint, Prettier, native Node syntax and diff checks pass.
 
 The final fixed-source Linux gate must still build/inspect the helper image,
 execute both-family rules/probes, and run the original complete business suite

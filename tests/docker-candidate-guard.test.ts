@@ -38,7 +38,10 @@ const policy = {
   imageId: `sha256:${"a".repeat(64)}`,
 };
 
-async function actualNode(change: (config: any, env: Record<string, string>) => void = () => {}) {
+async function actualNode(
+  change: (config: any, env: Record<string, string>) => void = () => {},
+  fixture = "docker-candidate-guard-case.mjs",
+) {
   const home = realpathSync(mkdtempSync(join(tmpdir(), "docker-candidate-guard-")));
   chmodSync(home, 0o700);
   const bundle = join(home, "bundle");
@@ -97,7 +100,7 @@ console.log('child guarded');`,
   let child;
   let closed = false;
   try {
-    child = spawn(node, [join(root, "tests/fixtures/docker-candidate-guard-case.mjs")], {
+    child = spawn(node, [join(root, "tests/fixtures", fixture)], {
       cwd: home,
       env,
       stdio: ["ignore", "pipe", "pipe"],
@@ -145,6 +148,20 @@ test("real Node installs guard before entry and every permitted descendant, with
   expect(
     value.receipt.some((event) => event.event === "pre-core" && event.pid === started.childPid),
   ).toBe(true);
+});
+
+test("actual Node refuses unreviewed Workers through ESM and CommonJS before their entry runs", async () => {
+  const value = await actualNode(() => {}, "docker-candidate-worker-case.mjs");
+  expect(value.stderr).toBe("");
+  expect(value.code).toBe(0);
+  expect(value.signal).toBe(null);
+  expect(value.stdout).toContain("PASS refused unreviewed Worker constructors");
+  expect(value.receipt).toHaveLength(1);
+  expect(value.receipt[0]).toMatchObject({
+    event: "pre-core",
+    negativeProbes: 6,
+    dnsNegativeProbes: 4,
+  });
 });
 
 test("actual Node maps only frozen renderer entry bytes from loopback zero to the exact firewall port", async () => {
