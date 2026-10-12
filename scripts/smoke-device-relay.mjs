@@ -2,7 +2,7 @@
 import assert from "node:assert/strict";
 import { spawn } from "node:child_process";
 import { createHash } from "node:crypto";
-import { lstat, mkdir, mkdtemp, readFile, realpath, rm } from "node:fs/promises";
+import { chmod, lstat, mkdir, mkdtemp, readFile, realpath, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -45,7 +45,19 @@ export async function verifyInstalledDeviceRelay(installation, manifestPath, evi
   }
   await mkdir(dirname(evidence), { recursive: true });
   // All child test credentials/certificates live here, even if the child must be killed.
-  const scratch = await mkdtemp(join(tmpdir(), "codeshell-relay-installed-"));
+  const scratch = await realpath(await mkdtemp(join(tmpdir(), "codeshell-relay-installed-")));
+  await chmod(scratch, 0o700);
+  const home = join(scratch, "home");
+  const temporary = join(home, "tmp");
+  for (const directory of [
+    home,
+    temporary,
+    ...["config", "cache", "data", "state"].map((name) => join(home, name)),
+  ])
+    await mkdir(directory, { mode: 0o700 });
+  const homeHash = hash(home);
+  let receipt,
+    validated = false;
   try {
     await new Promise((done, fail) => {
       const child = spawn(
@@ -61,7 +73,23 @@ export async function verifyInstalledDeviceRelay(installation, manifestPath, evi
         {
           cwd: installed,
           stdio: "inherit",
-          env: { ...process.env, TMPDIR: scratch, TMP: scratch, TEMP: scratch },
+          env: {
+            HOME: home,
+            USERPROFILE: home,
+            TMPDIR: temporary,
+            TMP: temporary,
+            TEMP: temporary,
+            XDG_CONFIG_HOME: join(home, "config"),
+            XDG_CACHE_HOME: join(home, "cache"),
+            XDG_DATA_HOME: join(home, "data"),
+            XDG_STATE_HOME: join(home, "state"),
+            APPDATA: join(home, "config"),
+            LOCALAPPDATA: join(home, "data"),
+            CODESHELL_DEVICE_RELAY_HOME_HASH: homeHash,
+            PATH: "/usr/bin:/bin",
+            LANG: "C",
+            LC_ALL: "C",
+          },
         },
       );
       let interrupted = false;
@@ -81,23 +109,40 @@ export async function verifyInstalledDeviceRelay(installation, manifestPath, evi
         process.off("SIGTERM", interrupt);
         process.off("SIGINT", interrupt);
       };
+      let launchError;
       child.once("error", (error) => {
-        finished();
-        fail(error);
+        launchError = error;
       });
-      child.once("close", (code) => {
+      child.once("close", (code, signal) => {
         finished();
-        if (code === 0 && !interrupted) done();
-        else fail(new Error(`Installed device relay acceptance failed (${code})`));
+        if (launchError) fail(launchError);
+        else if (code === 0 && signal === null && !interrupted) done();
+        else fail(new Error(`Installed device relay acceptance failed (${code}, ${signal})`));
       });
     });
     assert.equal(hash(await boundedFile(manifestFile)), hash(manifestBytes), "Candidate changed");
-    const receipt = JSON.parse((await boundedFile(evidence)).toString("utf8"));
+    receipt = JSON.parse((await boundedFile(evidence)).toString("utf8"));
     assert.equal(receipt.candidateOnly, true);
     assert.equal(receipt.protocolVersion, 1);
     assert.equal(receipt.passed, true, "Device relay workflow did not pass");
     assert.equal(receipt.cleanupPassed, true, "Device relay cleanup did not pass");
     assert.equal(receipt.runtime, process.version);
+    assert.deepEqual(
+      receipt.details?.preCoreGuard,
+      {
+        version: 1,
+        installedBeforeCore: true,
+        homeHash,
+        negativeProbes: 12,
+        dnsNegativeProbes: 10,
+        listenersOpened: 7,
+        activeListeners: 0,
+        activeConnections: 0,
+        allListenersClosed: true,
+        allConnectionsClosed: true,
+      },
+      "Missing exact pre-Core protection and owned transport closure proof",
+    );
     assert.equal(receipt.manifestSha256, hash(manifestBytes));
     assert.equal(receipt.hostHead, manifest.hostHead);
     assert.equal(receipt.servicesHead, manifest.servicesHead);
@@ -133,11 +178,16 @@ export async function verifyInstalledDeviceRelay(installation, manifestPath, evi
       ),
       "Relay evidence must cover every required network and revocation check",
     );
-    console.log("PASS: installed device relay evidence verified before candidate export");
-    return receipt;
+    validated = true;
   } finally {
-    await rm(scratch, { recursive: true, force: true });
+    if (validated) await rm(scratch, { recursive: true, force: true });
+    else
+      console.error(
+        `Preserved device relay acceptance private root without complete success/closure proof: ${scratch}`,
+      );
   }
+  console.log("PASS: installed device relay evidence verified before candidate export");
+  return receipt;
 }
 
 // macOS /var aliases must not silently turn a CLI invocation into a no-op.
