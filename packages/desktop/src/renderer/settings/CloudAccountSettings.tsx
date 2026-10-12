@@ -3,6 +3,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { useT } from "../i18n/I18nProvider";
 import { useToast } from "../ui/ToastProvider";
+import { CloudAccountLinks } from "./CloudAccountLinks";
 import {
   DEFAULT_CLOUD_ACCOUNT_ORIGIN,
   type CloudAccountCapabilities,
@@ -22,6 +23,19 @@ export function CloudAccountSettings({ embedded = false }: { embedded?: boolean 
   const [busy, setBusy] = useState(false);
   const busyRef = useRef(false);
   const statusRevisionRef = useRef(0);
+  const accountIdentityRef = useRef("");
+  const authorityGenerationRef = useRef(0);
+  const [authorityGeneration, setAuthorityGeneration] = useState(0);
+  const applyStatus = (next: CloudAccountStatus) => {
+    const identity =
+      next.state === "signed-in" && next.account ? `${next.origin}\n${next.account.id}` : "";
+    if (accountIdentityRef.current !== identity) {
+      accountIdentityRef.current = identity;
+      authorityGenerationRef.current += 1;
+      setAuthorityGeneration(authorityGenerationRef.current);
+    }
+    setStatus(next);
+  };
   const [passwordOperation, setPasswordOperation] = useState(false);
   const helpId = useId();
   const [statusLoadFailed, setStatusLoadFailed] = useState(false);
@@ -41,11 +55,11 @@ export function CloudAccountSettings({ embedded = false }: { embedded?: boolean 
       receivedStatus = true;
       statusRevisionRef.current += 1;
       setStatusLoadFailed(false);
-      setStatus(next);
+      applyStatus(next);
     });
     void window.codeshell.cloudAccount.status().then(
       (next) => {
-        if (active && !receivedStatus) setStatus(next);
+        if (active && !receivedStatus) applyStatus(next);
       },
       () => {
         if (active && !receivedStatus) setStatusLoadFailed(true);
@@ -102,7 +116,7 @@ export function CloudAccountSettings({ embedded = false }: { embedded?: boolean 
       });
       // A background GitHub connection can finish while this snapshot is in
       // transit. Preserve any newer status event instead of restoring pending.
-      if (next && revision === statusRevisionRef.current) setStatus(next);
+      if (next && revision === statusRevisionRef.current) applyStatus(next);
       setStatusLoadFailed(false);
       if (options.success) toast({ message: options.success, variant: "success" });
     } catch (error) {
@@ -229,6 +243,15 @@ export function CloudAccountSettings({ embedded = false }: { embedded?: boolean 
               {t("settingsX.cloudAccount.linkGitHub")}
             </Button>
           </div>
+          {status.state === "signed-in" && status.origin && (
+            <CloudAccountLinks
+              key={authorityGeneration}
+              identity={{ origin: status.origin, accountId: status.account.id }}
+              enabled={capabilities?.linkManagementEnabled === true}
+              pending={pending}
+              current={() => authorityGenerationRef.current === authorityGeneration}
+            />
+          )}
         </div>
       ) : (
         <div className="max-w-lg space-y-3">

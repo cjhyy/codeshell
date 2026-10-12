@@ -5,6 +5,7 @@ import { join } from "node:path";
 import { tmpdir } from "node:os";
 import { SessionManager } from "./session-manager.js";
 import { readOutputJournal, SessionOutputJournal } from "./output-journal.js";
+import { SegmentedOutputFile } from "./output-journal-storage.js";
 import {
   readOutputJournal as oldRead,
   SessionOutputJournal as OldWriter,
@@ -237,4 +238,38 @@ test("retention truncate failure keeps a durable rejecting marker and a valid re
   expect(readOutputJournal(f.root, f.id, { after: retained, through: retained }).complete).toBe(
     true,
   );
+});
+
+test("active segment growth after opening a view preserves an older frozen prefix", () => {
+  const f = fixture();
+  f.writer.append(huge);
+  const frozen = f.writer.append({ type: "text_delta", text: "frozen boundary" });
+  const original = SegmentedOutputFile.prototype.currentSize;
+  let appended = false;
+  let latest = "";
+  // The reader has opened the manifest/segment descriptors, but has not yet
+  // captured its scan size. Perform a real durable append at that exact cut.
+  const hook = spyOn(SegmentedOutputFile.prototype, "currentSize").mockImplementation(function () {
+    if (!appended) {
+      appended = true;
+      latest = f.writer.append({ type: "text_delta", text: "independent late append" });
+    }
+    return original.call(this);
+  });
+  try {
+    const page = readOutputJournal(f.root, f.id, { after: frozen, through: frozen });
+    expect(appended).toBe(true);
+    expect(page.status).toBe("ok");
+    expect(page.complete).toBe(true);
+    expect(page.next).toBe(frozen);
+    expect(page.through).toBe(frozen);
+  } finally {
+    hook.mockRestore();
+  }
+  const current = readOutputJournal(f.root, f.id, { after: frozen });
+  expect(current.status).toBe("ok");
+  expect(current.through).toBe(latest);
+  expect(current.frames.map((frame) => frame.event)).toEqual([
+    { type: "text_delta", text: "independent late append" },
+  ]);
 });
