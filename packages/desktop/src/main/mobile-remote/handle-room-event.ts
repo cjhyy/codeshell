@@ -60,7 +60,8 @@ export async function handleRoomEvent(
   event: AuthenticatedMobileClientEvent,
 ): Promise<void> {
   const reply = (serverEvent: MobileServerEvent): void => {
-    if (event.deviceId) ctx.remote.sendToDevice(event.deviceId, serverEvent);
+    if (event.viewerId) ctx.remote.sendToViewer(event.viewerId, serverEvent);
+    else if (event.deviceId) ctx.remote.sendToDevice(event.deviceId, serverEvent);
     else ctx.remote.broadcast(serverEvent);
   };
   try {
@@ -107,6 +108,22 @@ export async function handleRoomEvent(
     if (event.type === "room.close") {
       ctx.roomManager.close(event.roomId);
       ctx.remote.broadcast({ type: "room.closed", roomId: event.roomId });
+      return;
+    }
+    if (event.type === "room.history" && event.page) {
+      const { messages, ...page } = ctx.roomManager.getHistoryPage(event.roomId, {
+        sinceSeq: event.sinceSeq,
+        cursor: event.cursor,
+        limit: event.limit,
+      });
+      reply({
+        type: "room.history.ok",
+        roomId: event.roomId,
+        messages,
+        latestSeq: page.throughSeq,
+        page,
+        requestId: event.requestId,
+      });
       return;
     }
     if (event.type === "room.history") {
@@ -183,6 +200,8 @@ export async function handleRoomEvent(
   } catch (err) {
     reply({
       type: "room.error",
+      ...("roomId" in event ? { roomId: event.roomId } : {}),
+      ...(event.type === "room.history" && event.requestId ? { requestId: event.requestId } : {}),
       message: err instanceof Error ? err.message : String(err),
       ...("clientMessageId" in event && typeof event.clientMessageId === "string"
         ? { clientMessageId: event.clientMessageId }

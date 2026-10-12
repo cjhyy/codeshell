@@ -123,6 +123,7 @@ describe("architecture growth budgets", () => {
     // Count all five explicit collection operations in the extracted registrar.
     expect(
       matches("packages/desktop/src/main/index.ts", /ipcMain\.handle\(/g) +
+        matches("packages/desktop/src/main/cc-room/linked-session-ipc.ts", /ipcMain\.handle\(/g) +
         matches("packages/desktop/src/main/project-panel-ipc.ts", /ipcMain\.handle\(/g) +
         matches("packages/desktop/src/main/project-panel-version-ipc.ts", /ipcMain\.handle\(/g) +
         matches("packages/desktop/src/main/remote-link-ipc.ts", /ipcMain\.handle\(/g) +

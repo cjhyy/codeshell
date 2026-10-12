@@ -28,7 +28,8 @@ export async function handleCcRoomEvent(
 ): Promise<void> {
   const deviceId = event.deviceId;
   const reply = (e: MobileServerEvent): void => {
-    if (deviceId) ctx.remote.sendToDevice(deviceId, e);
+    if (event.viewerId) ctx.remote.sendToViewer(event.viewerId, e);
+    else if (deviceId) ctx.remote.sendToDevice(deviceId, e);
     else ctx.remote.broadcast(e);
   };
   try {
