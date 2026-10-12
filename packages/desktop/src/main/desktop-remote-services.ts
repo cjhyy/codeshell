@@ -12,6 +12,7 @@ import { DeviceRelayStore, type RelaySecretCipher } from "./device-relay-store.j
 import { MobileRemoteController } from "./mobile-remote-controller.js";
 import { registerCloudAccountIpc } from "./cloud-account-ipc.js";
 import { registerDeviceRelayIpc } from "./device-relay-ipc.js";
+import type { PrepareAccountGitHubLink } from "./account-github-link.js";
 
 /** Compose optional cloud identity and its remote-access lifecycle without starting either. */
 export function createDesktopRemoteServices(options: {
@@ -24,6 +25,7 @@ export function createDesktopRemoteServices(options: {
   >;
   windows: () => Iterable<BrowserWindow>;
   openExternal: (url: string) => Promise<void>;
+  prepareGitHubLink?: PrepareAccountGitHubLink;
   host: RemoteHostManager;
   tunnel: TunnelManager;
   binary: CloudflaredBinary;
@@ -43,6 +45,7 @@ export function createDesktopRemoteServices(options: {
       cipher,
     ),
     openExternal: options.openExternal,
+    prepareGitHubLink: options.prepareGitHubLink,
     retireRelay: (identity) => mobileRemoteController.retireAccountRelay(identity),
     changed: (status) => {
       for (const window of options.windows())

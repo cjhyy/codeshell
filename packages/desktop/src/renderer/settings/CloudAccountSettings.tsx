@@ -18,8 +18,10 @@ export function CloudAccountSettings({ embedded = false }: { embedded?: boolean 
   const [password, setPassword] = useState("");
   const [confirmation, setConfirmation] = useState("");
   const [mode, setMode] = useState<"login" | "register">("login");
+  const [connectGitHub, setConnectGitHub] = useState(true);
   const [busy, setBusy] = useState(false);
   const busyRef = useRef(false);
+  const statusRevisionRef = useRef(0);
   const [passwordOperation, setPasswordOperation] = useState(false);
   const helpId = useId();
   const [statusLoadFailed, setStatusLoadFailed] = useState(false);
@@ -37,6 +39,7 @@ export function CloudAccountSettings({ embedded = false }: { embedded?: boolean 
     const off = window.codeshell.cloudAccount.onStatus((next) => {
       if (!active) return;
       receivedStatus = true;
+      statusRevisionRef.current += 1;
       setStatusLoadFailed(false);
       setStatus(next);
     });
@@ -78,18 +81,28 @@ export function CloudAccountSettings({ embedded = false }: { embedded?: boolean 
   }, [serviceOrigin, checkVersion]);
   const capabilities = service?.origin === serviceOrigin ? service.capabilities : undefined;
   const capabilityCheckFailed = service?.origin === serviceOrigin && service.failed;
+  const githubLinkAvailable =
+    capabilities?.githubEnabled === true && capabilities.githubLinkEnabled === true;
+  const githubConnectionPending = status.githubConnection?.state === "pending";
   const act = async (
     work: () => Promise<unknown>,
     options: { password?: boolean; success?: string } = {},
   ) => {
-    if (busyRef.current || status.state === "signing-in") return;
+    if (busyRef.current || status.state === "signing-in" || githubConnectionPending) return;
     busyRef.current = true;
     setPasswordOperation(!!options.password);
     setBusy(true);
     setOperationError("");
     try {
       await work();
-      setStatus(await window.codeshell.cloudAccount.status());
+      const revision = statusRevisionRef.current;
+      const next = await window.codeshell.cloudAccount.status().catch((error) => {
+        if (revision !== statusRevisionRef.current) return undefined;
+        throw error;
+      });
+      // A background GitHub connection can finish while this snapshot is in
+      // transit. Preserve any newer status event instead of restoring pending.
+      if (next && revision === statusRevisionRef.current) setStatus(next);
       setStatusLoadFailed(false);
       if (options.success) toast({ message: options.success, variant: "success" });
     } catch (error) {
@@ -105,7 +118,7 @@ export function CloudAccountSettings({ embedded = false }: { embedded?: boolean 
       setPasswordOperation(false);
     }
   };
-  const pending = busy || status.state === "signing-in";
+  const pending = busy || status.state === "signing-in" || githubConnectionPending;
   const validUsername = /^[a-z0-9][a-z0-9._-]{2,63}$/i.test(username.trim());
   const canSubmit =
     !!origin.trim() &&
@@ -138,6 +151,24 @@ export function CloudAccountSettings({ embedded = false }: { embedded?: boolean 
             ? t("settingsX.cloudAccount.submitting")
             : t(`settingsX.cloudAccount.state_${status.state}`)}
       </p>
+      {status.githubConnection && (
+        <div
+          role="status"
+          aria-label={t("settingsX.cloudAccount.githubConnection")}
+          className="space-y-1 text-sm"
+        >
+          <p className="font-medium">{t("settingsX.cloudAccount.githubConnection")}</p>
+          <p
+            className={
+              status.githubConnection.state === "failed"
+                ? "text-status-err"
+                : "text-muted-foreground"
+            }
+          >
+            {t(`settingsX.cloudAccount.githubConnection_${status.githubConnection.state}`)}
+          </p>
+        </div>
+      )}
       {operationError && (
         <p role="alert" className="text-sm text-status-err">
           {operationError}
@@ -221,12 +252,35 @@ export function CloudAccountSettings({ embedded = false }: { embedded?: boolean 
                 void act(() =>
                   window.codeshell.cloudAccount.signInWithGitHub({
                     origin: origin.trim().replace(/\/$/, ""),
+                    connectGitHub: githubLinkAvailable && connectGitHub,
                   }),
                 )
               }
             >
               {t("settingsX.cloudAccount.github")}
             </Button>
+            <label className="flex items-start gap-2 text-sm">
+              <input
+                type="checkbox"
+                className="mt-0.5 h-4 w-4 shrink-0 accent-primary"
+                checked={githubLinkAvailable && connectGitHub}
+                disabled={pending || !githubLinkAvailable}
+                onChange={(event) => setConnectGitHub(event.target.checked)}
+                aria-describedby={`${helpId}-github-connection`}
+              />
+              {t("settingsX.cloudAccount.connectGitHub")}
+            </label>
+            <p id={`${helpId}-github-connection`} className="text-xs text-muted-foreground">
+              {t(
+                !capabilities
+                  ? "settingsX.cloudAccount.connectGitHubChecking"
+                  : !capabilities.githubEnabled
+                    ? "settingsX.cloudAccount.githubUnavailable"
+                    : githubLinkAvailable
+                      ? "settingsX.cloudAccount.connectGitHubDescription"
+                      : "settingsX.cloudAccount.connectGitHubUnavailable",
+              )}
+            </p>
             {capabilities?.githubEnabled && (
               <p className="text-xs text-muted-foreground">
                 {t(
@@ -362,7 +416,11 @@ export function CloudAccountSettings({ embedded = false }: { embedded?: boolean 
           variant="outline"
           onClick={() => void window.codeshell.cloudAccount.cancelSignIn()}
         >
-          {t("settingsX.cloudAccount.cancel")}
+          {t(
+            githubConnectionPending
+              ? "settingsX.cloudAccount.cancelGitHubConnection"
+              : "settingsX.cloudAccount.cancel",
+          )}
         </Button>
       ) : null}
       {status.state === "storage-error" ? (

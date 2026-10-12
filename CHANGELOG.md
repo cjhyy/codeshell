@@ -8,6 +8,16 @@ breaking.
 
 ## [Unreleased]
 
+### Added
+
+- Optionally connect GitHub alongside account sign-in using one upstream OAuth
+  authorization. First-time GitHub users receive a CodeShell account automatically;
+  the default connection option can be unchecked. Repository and action consent
+  remains explicit, with account sessions and Link credentials stored independently.
+- Show independent GitHub connection progress after login. Canceling or failing
+  the connection preserves the signed-in account; repeated login reuses the same
+  connection and retires the previous Desktop grant.
+
 ## [0.9.34] - 2026-10-12
 
 ### Added

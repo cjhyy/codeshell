@@ -1026,6 +1026,9 @@ const tunnelManager = new TunnelManager({
 const accessPasscode = new AccessPasscode({
   filePath: resolve(app.getPath("userData"), "mobile-remote", "access.json"),
 });
+let prepareAccountGitHubLink:
+  | ReturnType<typeof registerRemoteLinkIpc>["prepareGitHubLink"]
+  | undefined;
 const { mobileRemoteController } = createDesktopRemoteServices({
   ipcMain,
   userDataDir: app.getPath("userData"),
@@ -1033,6 +1036,10 @@ const { mobileRemoteController } = createDesktopRemoteServices({
   safeStorage,
   windows: () => mainWindows,
   openExternal: (url) => shell.openExternal(url),
+  prepareGitHubLink: (signal, authorized) => {
+    if (!prepareAccountGitHubLink) throw new Error("GitHub Link 服务尚未就绪。");
+    return prepareAccountGitHubLink(signal, authorized);
+  },
   host: mobileRemote,
   tunnel: tunnelManager,
   binary: cloudflaredBinary,
@@ -4048,7 +4055,7 @@ ipcMain.handle(
 );
 ipcMain.handle("links:listLocalProviders", () => listDesktopLinkProviders());
 
-registerRemoteLinkIpc({
+prepareAccountGitHubLink = registerRemoteLinkIpc({
   ipcMain,
   requireRendererProjectPath,
   isMainWindow: (sender) =>
@@ -4056,7 +4063,7 @@ registerRemoteLinkIpc({
   withMutation: (cwd, write) =>
     bridge ? bridge.withWebConfigurationMutation(cwd, write) : write(),
   onChanged: () => bridge?.notifyWebConfigurationChanged(),
-});
+}).prepareGitHubLink;
 
 function assertGenericCredentialMutation(cwd: string, id: string) {
   const credential = new CredentialStore(cwd || undefined).resolve(id);

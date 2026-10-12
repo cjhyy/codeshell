@@ -1,5 +1,5 @@
 import type { IpcMain, IpcMainInvokeEvent, WebContents } from "electron";
-import type { CloudAccountLogin } from "../shared/cloud-account.js";
+import type { CloudAccountGitHubLogin, CloudAccountLogin } from "../shared/cloud-account.js";
 import type { CloudAccountManager } from "./cloud-account-manager.js";
 
 export function registerCloudAccountIpc(options: {
@@ -30,13 +30,10 @@ export function registerCloudAccountIpc(options: {
     owner(event);
     return options.manager.signIn("register", input, () => allowed(event));
   });
-  options.ipcMain.handle(
-    "cloudAccount:github",
-    (event, input: { origin: string; deviceName?: string }) => {
-      owner(event);
-      return options.manager.signInWithGitHub(input, () => allowed(event));
-    },
-  );
+  options.ipcMain.handle("cloudAccount:github", (event, input: CloudAccountGitHubLogin) => {
+    owner(event);
+    return options.manager.signInWithGitHub(input, () => allowed(event));
+  });
   options.ipcMain.handle("cloudAccount:linkGitHub", (event) => {
     owner(event);
     return options.manager.linkGitHub(() => allowed(event));

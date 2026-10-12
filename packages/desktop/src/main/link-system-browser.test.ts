@@ -290,6 +290,49 @@ test("external launch failure cleans callback custody and plain HTTP is restrict
   handle.close();
 });
 
+test("account Link claim navigation keeps the original OAuth state and callback listener", async () => {
+  const f = await fixture();
+  const claim = `https://link.example/oauth/account-link/claim?ticket=${"a".repeat(43)}`;
+  const launched: string[] = [];
+  const open = createSystemBrowserLinkAuthorization({
+    callbacks: f.callbacks,
+    openExternal: async (url) => {
+      launched.push(url);
+      expect((await f.request("/not-a-callback")).status).toBe(404);
+    },
+  });
+  const handle = await open({ ...browserInput(f), navigationUrl: claim });
+  expect(launched).toEqual([claim]);
+  expect((await f.request(`/link/callback?state=wrong&code=synthetic`)).status).toBe(400);
+  expect((await f.request(`/link/callback?state=${f.state}&code=synthetic`)).text).toContain(
+    "连接已完成",
+  );
+  handle.close();
+});
+test("untrusted account claim navigation cannot bind callbacks or dispatch a browser", async () => {
+  const f = await fixture();
+  let opened = 0;
+  const open = createSystemBrowserLinkAuthorization({
+    callbacks: f.callbacks,
+    openExternal: async () => {
+      opened++;
+    },
+  });
+  const claim = `https://link.example/oauth/account-link/claim?ticket=${"a".repeat(43)}`;
+  for (const navigationUrl of [
+    "not a URL",
+    claim.replace("link.example", "other.example"),
+    claim.replace("/oauth/account-link/claim", "/oauth/authorize"),
+    claim.replace("link.example", "user:password@link.example"),
+    `${claim}#unexpected`,
+    `${claim}&other=true`,
+    `${claim}&ticket=${"b".repeat(43)}`,
+    claim.replace("a".repeat(43), "short"),
+  ])
+    await expect(open({ ...browserInput(f), navigationUrl })).rejects.toThrow("地址无效");
+  expect(opened).toBe(0);
+});
+
 test("pure Node HTTP shutdown and listener races pass", async () => {
   const { execFile } = await import("node:child_process");
   const { promisify } = await import("node:util");
