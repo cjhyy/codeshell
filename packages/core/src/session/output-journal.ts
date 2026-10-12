@@ -21,7 +21,10 @@ import {
   acknowledgeOutputCoverageAnchor,
   outputCoverageIncarnation,
 } from "./output-coverage-state.js";
-import { repairUncommittedOutputTail } from "./output-journal-repair.js";
+import {
+  repairUncommittedOutputTail,
+  isOutputJournalRepairPending,
+} from "./output-journal-repair.js";
 import {
   initializePublishedOutputHead,
   readPublishedOutputHead,
@@ -214,6 +217,8 @@ function sessionLocation(root: string, sessionId: string) {
   const directory = join(canonicalRoot, sessionId);
   const stat = lstatSync(directory);
   if (!stat.isDirectory() || stat.isSymbolicLink()) invalid("Invalid Session directory");
+  if (isOutputJournalRepairPending(directory))
+    throw new JournalError("incomplete", "Output journal repair is pending");
   const statePath = join(directory, "state.json");
   const stateFd = openRegular(statePath, constants.O_RDONLY);
   let state: {

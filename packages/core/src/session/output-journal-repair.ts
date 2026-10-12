@@ -14,6 +14,17 @@ import {
 } from "node:fs";
 import { join } from "node:path";
 
+/** Any pending receipt is a barrier, including malformed files and symlinks. */
+export function isOutputJournalRepairPending(directory: string): boolean {
+  try {
+    lstatSync(join(directory, "output-journal-repair-pending.json"));
+    return true;
+  } catch (cause) {
+    if ((cause as NodeJS.ErrnoException).code === "ENOENT") return false;
+    throw cause;
+  }
+}
+
 function stamp(fd: number): string {
   const at = fstatSync(fd, { bigint: true });
   return `${at.dev}:${at.ino}:${at.size}:${at.mtimeNs}:${at.ctimeNs}`;
