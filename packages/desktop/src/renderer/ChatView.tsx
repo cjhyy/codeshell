@@ -8,7 +8,6 @@ import {
   ArrowUp,
   FileText,
   Square,
-  Monitor,
   Plug,
   Trash2,
   X,
@@ -22,6 +21,7 @@ import { ModelPill, type ModelOption } from "./chat/ModelPill";
 import { Lightbox, type LightboxItem } from "./chat/Lightbox";
 import { ContextRing } from "./chat/ContextRing";
 import { ProjectPicker } from "./chat/ProjectPicker";
+import { ProjectRunLocation } from "./chat/ProjectRunLocation";
 import { WelcomeSuggestions } from "./chat/WelcomeSuggestions";
 import { BranchPicker } from "./chat/BranchPicker";
 import { AskUserMessageView } from "./messages/AskUserMessageView";
@@ -1338,6 +1338,7 @@ export function ChatView({
   // placeholder below instead.
   const isNewChat =
     messages.length === 0 && !awaitingHydration && !historyFailed && !historyHasMore;
+  const activeProject = projects.find((project) => project.id === activeProjectId) ?? null;
 
   // Codex-style inline approvals: when an approval is pending, drop
   // the full ApprovalCard at the tail of the chat stream so it scrolls
@@ -2215,28 +2216,30 @@ export function ChatView({
             would be confusing (cwd / context / engine sessionId are
             already tied to the existing project). Use the sidebar to
             jump projects after a session has started. */}
-          {isNewChat && variant === "main" && !engineSessionId && (
+          {variant === "main" && (activeProjectId !== null || (isNewChat && !engineSessionId)) && (
             <div className="mt-3 flex min-w-0 flex-wrap items-center gap-2">
-              <ProjectPicker
-                projects={projects}
-                activeProjectId={activeProjectId}
-                onSelect={onSelectProject}
-                onAddProject={onAddProject}
+              {isNewChat && !engineSessionId && (
+                <ProjectPicker
+                  projects={projects}
+                  activeProjectId={activeProjectId}
+                  onSelect={onSelectProject}
+                  onAddProject={onAddProject}
+                  disabled={controlsDisabled}
+                />
+              )}
+              <ProjectRunLocation
+                key={activeProject?.id ?? "no-project"}
+                project={activeProject}
                 disabled={controlsDisabled}
               />
-              <span
-                className="inline-flex items-center gap-1.5 rounded-md border border-border px-2 py-1 text-xs text-muted-foreground"
-                title={t("chat.localModeTitle")}
-              >
-                <Monitor size={12} />
-                <span>{t("chat.localMode")}</span>
-              </span>
-              <BranchPicker
-                projectId={activeProjectId}
-                cwd={conversationRoot}
-                clean={repoClean}
-                disabled={controlsDisabled}
-              />
+              {isNewChat && !engineSessionId && (
+                <BranchPicker
+                  projectId={activeProjectId}
+                  cwd={conversationRoot}
+                  clean={repoClean}
+                  disabled={controlsDisabled}
+                />
+              )}
             </div>
           )}
           {isNewChat && variant === "main" && !engineSessionId && (

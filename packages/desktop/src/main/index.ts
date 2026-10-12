@@ -29,7 +29,7 @@ import {
   type SaveDialogOptions,
   type IpcMainInvokeEvent,
 } from "electron";
-import { openCloudWorkbench } from "./cloud-workbench-window.js";
+import { openCloudProject, openCloudWorkbench } from "./cloud-workbench-window.js";
 import {
   createDesktopManagedRuntimeProvider,
   createManagedRuntimeHandlers,
@@ -6424,6 +6424,13 @@ ipcMain.handle("cloud:open-workbench", async (event, address: unknown) => {
   if (!owner || !mainWindows.has(owner) || event.senderFrame !== event.sender.mainFrame)
     throw new Error("云端入口仅允许从主窗口打开。");
   return openCloudWorkbench(address);
+});
+
+ipcMain.handle("cloud:open-project", async (event, address: unknown) => {
+  const owner = BrowserWindow.fromWebContents(event.sender);
+  if (!owner || !mainWindows.has(owner) || event.senderFrame !== event.sender.mainFrame)
+    throw new Error("云端入口仅允许从主窗口打开。");
+  return openCloudProject(address);
 });
 
 ipcMain.handle("shell:openExternal", async (_e, url: string) => {

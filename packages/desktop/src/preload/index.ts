@@ -893,6 +893,7 @@ contextBridge.exposeInMainWorld("codeshell", {
   }) => ipcRenderer.invoke("git:setPrefs", prefs),
   cloudAccount: cloudAccountApi,
   openCloudWorkbench: (address: string) => ipcRenderer.invoke("cloud:open-workbench", address),
+  openCloudProject: (address: string) => ipcRenderer.invoke("cloud:open-project", address),
   openExternal: (url: string) => ipcRenderer.invoke("shell:openExternal", url),
   revealInFinder: (path: string, cwd?: string) =>
     ipcRenderer.invoke("shell:revealInFinder", path, cwd),

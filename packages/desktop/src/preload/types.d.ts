@@ -1542,6 +1542,8 @@ export interface CodeshellApi
   /** Open a cloud workbench in a browser-only native window, isolated from local projects. */
   cloudAccount: CloudAccountApi;
   openCloudWorkbench(address: string): Promise<{ address: string }>;
+  /** Open only an existing cloud project link in an isolated browser-only window. */
+  openCloudProject(address: string): Promise<{ address: string }>;
   openExternal(url: string): Promise<void>;
   revealInFinder(path: string, cwd?: string): Promise<void>;
   /**

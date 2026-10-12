@@ -82,6 +82,18 @@ describe("desktop IPC contract", () => {
     }
   });
 
+  test("exposes the existing cloud project entry separately from the cloud homepage", () => {
+    const mainHandles = registeredMainHandleChannels(sourceFiles("src/main"));
+    const preloadInvokes = literalChannels(
+      sourceFiles("src/preload"),
+      /ipcRenderer\.invoke\(\s*["']([^"']+)["']/g,
+    );
+    for (const channel of ["cloud:open-workbench", "cloud:open-project"]) {
+      expect(preloadInvokes).toContain(channel);
+      expect(mainHandles).toContain(channel);
+    }
+  });
+
   test("retires legacy project and cwd project IPC while keeping V2 authorities", () => {
     const mainHandles = registeredMainHandleChannels(sourceFiles("src/main"));
     const preloadInvokes = literalChannels(

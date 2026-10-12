@@ -6,6 +6,7 @@ import {
   session,
   shell,
   systemPreferences,
+  webContents,
 } from "electron";
 import { createCloudWorkbenchDisplayCapture } from "./cloud-workbench-capture.js";
 import { basename, join } from "node:path";
@@ -14,14 +15,58 @@ import {
   cloudWorkbenchBrowserHandoffUrl,
   createCloudWorkbenchNavigation,
   isCloudWorkbenchOrigin,
+  normalizeCloudProjectAddress,
   normalizeCloudWorkbenchAddress,
 } from "./cloud-workbench-policy.js";
 
+// Entry targets keep separate windows; reopening focuses their current navigation state.
 const windows = new Map<string, BrowserWindow>();
+type PermissionCheck = NonNullable<Parameters<Electron.Session["setPermissionCheckHandler"]>[0]>;
+type PermissionRequest = NonNullable<
+  Parameters<Electron.Session["setPermissionRequestHandler"]>[0]
+>;
+type DisplayMediaRequest = NonNullable<
+  Parameters<Electron.Session["setDisplayMediaRequestHandler"]>[0]
+>;
+const permissionHandlers = new Map<
+  Electron.WebContents,
+  { check: PermissionCheck; request: PermissionRequest; display: DisplayMediaRequest }
+>();
+const configuredSessions = new WeakSet<Electron.Session>();
+
+/** Several project windows share origin cookies, but each keeps its own permission decisions. */
+function configureCloudSession(browserSession: Electron.Session): void {
+  if (configuredSessions.has(browserSession)) return;
+  configuredSessions.add(browserSession);
+  browserSession.setPermissionCheckHandler((contents, ...args) =>
+    contents ? (permissionHandlers.get(contents)?.check(contents, ...args) ?? false) : false,
+  );
+  browserSession.setPermissionRequestHandler((contents, permission, callback, details) => {
+    const handler = permissionHandlers.get(contents);
+    if (handler) handler.request(contents, permission, callback, details);
+    else callback(false);
+  });
+  browserSession.setDisplayMediaRequestHandler(
+    (request, callback) => {
+      const contents = request.frame ? webContents.fromFrame(request.frame) : undefined;
+      const handler = contents ? permissionHandlers.get(contents) : undefined;
+      if (handler) handler.display(request, callback);
+      else callback({});
+    },
+    { useSystemPicker: false },
+  );
+}
 
 /** Remote workbenches get browser privileges only, with no Desktop preload or worker bridge. */
 export async function openCloudWorkbench(rawAddress: unknown): Promise<{ address: string }> {
-  const address = normalizeCloudWorkbenchAddress(rawAddress);
+  return openCloudWindow(normalizeCloudWorkbenchAddress(rawAddress));
+}
+
+export async function openCloudProject(rawAddress: unknown): Promise<{ address: string }> {
+  return openCloudWindow(normalizeCloudProjectAddress(rawAddress));
+}
+
+async function openCloudWindow(address: string): Promise<{ address: string }> {
   const existing = windows.get(address);
   if (existing && !existing.isDestroyed()) {
     existing.show();
@@ -49,6 +94,7 @@ export async function openCloudWorkbench(rawAddress: unknown): Promise<{ address
     },
   });
   windows.set(address, win);
+  const cloudContents = win.webContents;
   const allowed = new Set<string>();
   let captureRevision = 0;
   const trustedRequest = (contents: Electron.WebContents | null, url: string): boolean =>
@@ -56,15 +102,15 @@ export async function openCloudWorkbench(rawAddress: unknown): Promise<{ address
     contents === win.webContents &&
     isCloudWorkbenchOrigin(address, url) &&
     isCloudWorkbenchOrigin(address, contents.getURL());
-  browserSession.setPermissionCheckHandler((contents, permission, requestingOrigin, details) => {
+  const check: PermissionCheck = (contents, permission, requestingOrigin, details) => {
     if (!trustedRequest(contents, details.securityOrigin ?? requestingOrigin)) return false;
     if (String(permission) === "display-capture") return details.isMainFrame === true;
     if (permission === "clipboard-sanitized-write" || permission === "fullscreen") return true;
     return permission === "media"
       ? allowed.has(`media:${details.mediaType}`)
       : allowed.has(permission);
-  });
-  browserSession.setPermissionRequestHandler((contents, permission, callback, details) => {
+  };
+  const requestPermission: PermissionRequest = (contents, permission, callback, details) => {
     if (!trustedRequest(contents, details.requestingUrl)) return callback(false);
     if (String(permission) === "display-capture") return callback(details.isMainFrame === true);
     if (permission === "clipboard-sanitized-write" || permission === "fullscreen")
@@ -103,7 +149,7 @@ export async function openCloudWorkbench(rawAddress: unknown): Promise<{ address
       else allowed.add(permission);
       return true;
     })().then(callback, () => callback(false));
-  });
+  };
   const displayCapture = createCloudWorkbenchDisplayCapture({
     revision: () => captureRevision,
     isTrusted: (frame, origin) =>
@@ -134,12 +180,14 @@ export async function openCloudWorkbench(rawAddress: unknown): Promise<{ address
       ).response,
     systemAudio: process.platform === "win32",
   });
-  browserSession.setDisplayMediaRequestHandler(
-    (request, callback) => {
+  permissionHandlers.set(cloudContents, {
+    check,
+    request: requestPermission,
+    display: (request, callback) => {
       void displayCapture(request, callback);
     },
-    { useSystemPicker: false },
-  );
+  });
+  configureCloudSession(browserSession);
   win.webContents.on("did-start-navigation", (_event, _url, _inPlace, mainFrame) => {
     if (mainFrame) captureRevision++;
   });
@@ -194,6 +242,7 @@ export async function openCloudWorkbench(rawAddress: unknown): Promise<{ address
   win.once("closed", () => {
     captureRevision++;
     windows.delete(address);
+    permissionHandlers.delete(cloudContents);
     allowed.clear();
     navigation.reset();
     browserSession.removeListener("will-download", download);

@@ -4,6 +4,7 @@ import {
   cloudWorkbenchBrowserHandoffUrl,
   createCloudWorkbenchNavigation,
   isCloudWorkbenchOrigin,
+  normalizeCloudProjectAddress,
   normalizeCloudWorkbenchAddress,
 } from "./cloud-workbench-policy.js";
 
@@ -64,6 +65,74 @@ describe("cloud workbench boundary", () => {
       "https://cloud.example:8443/",
     ])
       expect(isCloudWorkbenchOrigin("https://cloud.example/", target)).toBe(false);
+  });
+});
+
+describe("existing cloud project entry", () => {
+  const projectId = "12345678-abcd-1234-abcd-123456789abc";
+  const project = `https://cloud.example/?project=${projectId}`;
+
+  test("accepts only existing project links and canonicalizes their origin and identifier", () => {
+    expect(
+      normalizeCloudProjectAddress(
+        ` https://CLOUD.example:443/?project=${projectId.toUpperCase()} `,
+      ),
+    ).toBe(project);
+    expect(normalizeCloudProjectAddress(`https://cloud.example?project=${projectId}`)).toBe(
+      project,
+    );
+    for (const origin of ["http://localhost:8790", "http://127.0.0.1:8790", "http://[::1]:8790"])
+      expect(normalizeCloudProjectAddress(`${origin}/?project=${projectId}`)).toBe(
+        `${origin}/?project=${projectId}`,
+      );
+    expect(() => normalizeCloudWorkbenchAddress(project)).toThrow();
+  });
+
+  test("rejects credentials, arbitrary routes, duplicate or extra parameters and unsafe transports", () => {
+    for (const value of [
+      "https://cloud.example/",
+      "https://cloud.example/?project=",
+      "https://cloud.example/?project=not-a-uuid",
+      `https://cloud.example/?project=${projectId.replaceAll("-", "")}`,
+      project + "#fragment",
+      project + "#",
+      project + "&project=" + projectId,
+      project + "&%70roject=" + projectId,
+      project + "&token=secret",
+      project + "&",
+      project.replace("?project=", "?%70roject="),
+      project.replace("?project=", "?PROJECT="),
+      project.replace("/?", "/projects/?"),
+      project.replace("/?", "/projects/../?"),
+      project.replace("https://", "https://user:secret@"),
+      project.replace("https://", "https://@"),
+      project.replace("https:", "http:"),
+      project.replace("https:", "file:"),
+      project.replace("https://", "https://cloud.example\\@"),
+      project + "\nnext",
+      "https://" + "a".repeat(2_048) + "/?project=" + projectId,
+      "javascript:alert(1)",
+      null,
+      {},
+    ])
+      expect(() => normalizeCloudProjectAddress(value)).toThrow();
+  });
+
+  test("project targets retain origin-based cookie partitions and navigation confinement", () => {
+    const otherProject = normalizeCloudProjectAddress(
+      project.replace(projectId, "87654321-abcd-1234-abcd-123456789abc"),
+    );
+    expect(otherProject).not.toBe(project);
+    expect(cloudWorkbenchPartition(otherProject)).toBe(cloudWorkbenchPartition(project));
+    expect(cloudWorkbenchPartition(project)).not.toBe(
+      cloudWorkbenchPartition(project.replace("cloud.example", "other.example")),
+    );
+    const policy = createCloudWorkbenchNavigation(project);
+    expect(policy.allows(project, otherProject)).toBe(true);
+    expect(policy.allows(project, "https://cloud.example/p/" + projectId)).toBe(true);
+    expect(policy.allows(project, project.replace("cloud.example", "evil.example"))).toBe(false);
+    expect(policy.allows(project, project.replace("https:", "http:"))).toBe(false);
+    expect(policy.allows(project, "file:///tmp/project")).toBe(false);
   });
 });
 
