@@ -1244,6 +1244,9 @@ describe("useRemoteApp cc transcript streaming", () => {
       type: "room.history",
       roomId: "room-1",
       sinceSeq: 5,
+      page: true,
+      requestId: "room-history:1",
+      limit: 200,
     });
 
     await act(async () => {
@@ -1252,12 +1255,49 @@ describe("useRemoteApp cc transcript streaming", () => {
         roomId: "room-1",
         messages: [{ seq: 6, from: "agent", type: "text", text: "streamed on phone" }],
         latestSeq: 6,
+        requestId: "room-history:1",
+        page: { snapshotId: "snapshot", throughSeq: 7, complete: false, nextCursor: "next-page" },
+      });
+      await flushMicrotasks();
+    });
+    expect(hook.result.current.chat.items).not.toMatchObject([{ text: "streamed on phone" }]);
+    expect(ws.sent.map((payload) => JSON.parse(payload))).toContainEqual({
+      type: "room.history",
+      roomId: "room-1",
+      page: true,
+      cursor: "next-page",
+      limit: 200,
+      requestId: "room-history:1",
+    });
+    await act(async () => {
+      ws.message({
+        type: "room.message",
+        roomId: "room-1",
+        msg: { seq: 8, from: "agent", type: "text", text: "buffered live" },
+      });
+      ws.message({
+        type: "room.history.ok",
+        roomId: "room-1",
+        requestId: "stale-request",
+        messages: [{ seq: 7, from: "agent", type: "text", text: "stale must not apply" }],
+        latestSeq: 7,
+        page: { snapshotId: "snapshot", throughSeq: 7, complete: true },
+      });
+      ws.message({
+        type: "room.history.ok",
+        roomId: "room-1",
+        requestId: "room-history:1",
+        messages: [{ seq: 7, from: "agent", type: "text", text: "second page" }],
+        latestSeq: 7,
+        page: { snapshotId: "snapshot", throughSeq: 7, complete: true },
       });
       await flushMicrotasks();
     });
     expect(hook.result.current.chat.items).toMatchObject([
       { kind: "user", text: "initial" },
       { kind: "assistant", text: "streamed on phone", done: true },
+      { kind: "assistant", text: "second page", done: true },
+      { kind: "assistant", text: "buffered live", done: true },
     ]);
 
     await act(async () => {
@@ -1271,6 +1311,94 @@ describe("useRemoteApp cc transcript streaming", () => {
 
     await hook.unmount();
   });
+
+  for (const failure of ["recovery", "overflow"] as const)
+    test(`a ${failure} barrier cannot be bypassed by an in-flight final Room page`, async () => {
+      setupBrowser();
+      const hook = await renderHook(() => useRemoteApp());
+      const ws = FakeWebSocket.instances[0]!;
+      try {
+        await act(async () => {
+          ws.open();
+          ws.message({ type: "auth.ok", device: { id: "device-1", name: "Phone" } });
+          ws.message({ type: "room.projects.ok", projects: [{ path: "/repo", name: "repo" }] });
+          await flushMicrotasks();
+        });
+        await act(async () => {
+          hook.result.current.selectProject("/repo");
+          hook.result.current.openCcSession("thread-1", "/repo", "default");
+          await flushMicrotasks();
+        });
+        await act(async () => {
+          ws.message({
+            type: "ccRoom.opened",
+            roomId: "room-1",
+            sessionId: "thread-1",
+            status: "running",
+          });
+          ws.message({
+            type: "ccRoom.transcriptSubscribed",
+            roomId: "room-1",
+            sessionId: "thread-1",
+            active: true,
+            messages: [{ role: "user", text: "visible-before-barrier" }],
+            hasMore: false,
+            totalCount: 1,
+            roomCursor: 5,
+          });
+          await flushMicrotasks();
+        });
+        await act(async () => {
+          ws.message({
+            type: "room.error",
+            roomId: "room-1",
+            requestId: "stale",
+            message: "stale-error-must-not-apply",
+          });
+          ws.message({
+            type: "room.history.ok",
+            roomId: "room-1",
+            requestId: "room-history:1",
+            messages: [{ seq: 6, from: "agent", type: "text", text: "pending-first-page" }],
+            latestSeq: 7,
+            page: { snapshotId: "frozen", throughSeq: 7, complete: false, nextCursor: "next" },
+          });
+          if (failure === "recovery")
+            ws.message({
+              type: "room.recovery",
+              roomId: "room-1",
+              message: "prefix rewrite requires recovery",
+            });
+          else
+            for (let n = 0; n <= 10000; n++)
+              ws.message({
+                type: "room.message",
+                roomId: "room-1",
+                msg: { seq: n + 8, from: "agent", type: "text", text: "pending-live" },
+              });
+          ws.message({
+            type: "room.history.ok",
+            roomId: "room-1",
+            requestId: "room-history:1",
+            messages: [{ seq: 7, from: "agent", type: "text", text: "must-not-commit-final-page" }],
+            latestSeq: 7,
+            page: { snapshotId: "frozen", throughSeq: 7, complete: true },
+          });
+          await flushMicrotasks();
+        });
+        expect(hook.result.current.chat.items).toMatchObject([
+          { kind: "user", text: "visible-before-barrier" },
+        ]);
+        expect(hook.result.current.chat.items).toHaveLength(1);
+        expect(hook.result.current.loading.roomHistory).toBe(false);
+        expect(hook.result.current.notice).not.toContain("stale-error");
+        expect(hook.result.current.notice).toContain(
+          failure === "recovery" ? "requires recovery" : "exceeds its limit",
+        );
+      } finally {
+        await hook.unmount();
+      }
+    });
 
   test("opening a second CC room unsubscribes the previous transcript before replacing its ref", async () => {
     setupBrowser();

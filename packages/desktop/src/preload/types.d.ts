@@ -2403,6 +2403,16 @@ export interface CodeshellApi
     send(roomId: string, text: string): Promise<boolean>;
     respondApproval(roomId: string, requestId: string, decision: unknown): Promise<boolean>;
     roomHistory(roomId: string, sinceSeq?: number): Promise<unknown[]>;
+    roomHistoryPage(
+      roomId: string,
+      request: { sinceSeq?: number; cursor?: string; limit?: number },
+    ): Promise<{
+      snapshotId: string;
+      throughSeq: number;
+      messages: unknown[];
+      nextCursor?: string;
+      complete: boolean;
+    }>;
     readHistory(
       cwd: string,
       sessionId: string,
@@ -2450,6 +2460,7 @@ export interface CodeshellApi
     }>;
     unsubscribeTranscript(roomId: string): Promise<void>;
     closeSession(roomId: string): Promise<void>;
+    onTranscriptRecovery(cb: (event: { roomId: string; message: string }) => void): () => void;
     onRoomMessage(cb: (env: { roomId: string; msg: unknown }) => void): () => void;
     onApprovalRequest(
       cb: (req: {

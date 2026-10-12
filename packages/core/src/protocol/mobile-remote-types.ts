@@ -187,7 +187,15 @@ export type MobileClientEvent =
       clientMessageId?: string;
       attachments?: MobileImageAttachment[];
     }
-  | { type: "room.history"; roomId: string; sinceSeq?: number }
+  | {
+      type: "room.history";
+      roomId: string;
+      sinceSeq?: number;
+      page?: boolean;
+      cursor?: string;
+      limit?: number;
+      requestId?: string;
+    }
   // ── CC Room (external claude CLI / codex sessions, per-project) ───────
   //   `kind` selects which CLI to probe/list/open/read (defaults to
   //   "claude-code" when absent, so older phone clients keep working).
@@ -318,9 +326,23 @@ export type MobileServerEvent =
   | { type: "room.projects.ok"; projects: MobileProjectMeta[] }
   | { type: "room.opened"; roomId: string; status: "running" | "missing" | "observing" }
   | { type: "room.message"; roomId: string; msg: unknown }
-  | { type: "room.history.ok"; roomId: string; messages: unknown[]; latestSeq: number }
+  | {
+      type: "room.history.ok";
+      roomId: string;
+      messages: unknown[];
+      latestSeq: number;
+      page?: { snapshotId: string; throughSeq: number; nextCursor?: string; complete: boolean };
+      requestId?: string;
+    }
   | { type: "room.closed"; roomId: string }
-  | { type: "room.error"; roomId?: string; message: string; clientMessageId?: string }
+  | { type: "room.recovery"; roomId: string; message: string }
+  | {
+      type: "room.error";
+      roomId?: string;
+      message: string;
+      clientMessageId?: string;
+      requestId?: string;
+    }
   | {
       type: "ccRoom.approvalRequest";
       roomId: string;

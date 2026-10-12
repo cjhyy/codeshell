@@ -2,6 +2,10 @@ import { afterEach, describe, expect, test } from "bun:test";
 import { appendFileSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import {
+  parseCodexRecentHistory,
+  parseRecentHistory,
+} from "@cjhyy/code-shell-capability-coding/orchestration";
 import { TranscriptSubscriptionManager } from "./transcript-subscriptions.js";
 
 const roots: string[] = [];
@@ -15,6 +19,142 @@ function line(value: unknown): string {
 }
 
 describe("TranscriptSubscriptionManager", () => {
+  for (const kind of ["claude-code", "codex"] as const)
+    test(`${kind} late viewers retain parser grouping after recent-ring eviction`, () => {
+      const root = mkdtempSync(join(tmpdir(), "cc-tail-recent-"));
+      roots.push(root);
+      const file = join(root, "transcript.jsonl");
+      const tool = (id: number) =>
+        kind === "codex"
+          ? line({
+              type: "response_item",
+              payload: {
+                type: "function_call",
+                call_id: `call-${id}`,
+                name: "exec_command",
+                arguments: JSON.stringify({ command: `inspect-${id}` }),
+              },
+            })
+          : line({
+              type: "assistant",
+              message: {
+                content: [
+                  {
+                    type: "tool_use",
+                    id: `call-${id}`,
+                    name: "Bash",
+                    input: { command: `inspect-${id}` },
+                  },
+                ],
+              },
+            });
+      const turn = (id: number) =>
+        kind === "codex"
+          ? line({
+              type: "response_item",
+              payload: {
+                type: "message",
+                role: "user",
+                content: [{ type: "input_text", text: `user-${id}` }],
+              },
+            }) +
+            line({
+              type: "response_item",
+              payload: {
+                type: "message",
+                role: "assistant",
+                content: [{ type: "output_text", text: `assistant-${id}` }],
+              },
+            }) +
+            tool(id) +
+            line({
+              type: "response_item",
+              payload: {
+                type: "function_call_output",
+                call_id: `call-${id}`,
+                output: `result-${id}`,
+              },
+            })
+          : line({ type: "user", message: { content: `user-${id}` } }) +
+            line({
+              type: "assistant",
+              message: {
+                content: [
+                  { type: "text", text: `assistant-${id}` },
+                  {
+                    type: "tool_use",
+                    id: `call-${id}`,
+                    name: "Bash",
+                    input: { command: `inspect-${id}` },
+                  },
+                ],
+              },
+            }) +
+            line({
+              type: "user",
+              message: {
+                content: [
+                  { type: "tool_result", tool_use_id: `call-${id}`, content: `result-${id}` },
+                ],
+              },
+            });
+      let raw = Array.from({ length: 270 }, (_, id) => turn(id)).join("");
+      writeFileSync(file, raw);
+      const parse = kind === "codex" ? parseCodexRecentHistory : parseRecentHistory;
+      const open = () =>
+        new TranscriptSubscriptionManager({
+          resolveFile: () => file,
+          onStart() {},
+          onStop() {},
+          roomCursor: () => 0,
+          onMessages() {},
+          pollIntervalMs: 60_000,
+        });
+      const target = {
+        roomId: "room",
+        cwd: "/repo",
+        sessionId: "session",
+        kind,
+        subscriberId: "first",
+        limit: 500,
+      };
+      const manager = open();
+      const cold = open();
+      try {
+        const initial = manager.subscribe(target);
+        expect(initial.messages).toEqual(parse(raw, 500).messages);
+        expect(initial.messages).toHaveLength(500);
+        expect(initial.totalCount).toBe(540);
+        expect(initial.hasMore).toBe(true);
+        // The first incremental tool must join the preceding Codex assistant,
+        // including when that assistant was parsed by the earlier capture.
+        const suffix = tool(999) + Array.from({ length: 20 }, (_, id) => turn(id + 270)).join("");
+        appendFileSync(file, suffix);
+        raw += suffix;
+        const late = manager.subscribe({ ...target, subscriberId: "late", limit: 7 });
+        expect({
+          messages: late.messages,
+          totalCount: late.totalCount,
+          hasMore: late.hasMore,
+        }).toEqual(parse(raw, 7));
+        expect(late.messages.some((message) => message.tools?.length)).toBe(true);
+        const fullRing = manager.subscribe({ ...target, subscriberId: "full", limit: 500 });
+        const restarted = cold.subscribe(target);
+        expect(fullRing.messages).toEqual(parse(raw, 500).messages);
+        expect(restarted.messages).toEqual(fullRing.messages);
+        expect(restarted.totalCount).toBe(fullRing.totalCount);
+        const smallest = manager.subscribe({ ...target, subscriberId: "small", limit: 1 });
+        expect({
+          messages: smallest.messages,
+          totalCount: smallest.totalCount,
+          hasMore: smallest.hasMore,
+        }).toEqual(parse(raw, 1));
+      } finally {
+        manager.closeAll();
+        cold.closeAll();
+      }
+    });
+
   test("takes an atomic snapshot, tails appended Codex lines, and ref-counts viewers", () => {
     const root = mkdtempSync(join(tmpdir(), "cc-tail-"));
     roots.push(root);
@@ -83,7 +223,7 @@ describe("TranscriptSubscriptionManager", () => {
       limit: 50,
     });
     expect(starts).toHaveLength(1);
-    expect(pushed.flat()).toEqual([
+    expect(pushed.flat()).toMatchObject([
       { from: "agent", type: "text", text: "streamed" },
       { from: "agent", type: "turn_end", reason: "completed" },
     ]);
@@ -143,7 +283,7 @@ describe("TranscriptSubscriptionManager", () => {
       kind: "claude-code",
       limit: 50,
     });
-    expect(pushed.flat()).toEqual([{ from: "agent", type: "text", text: "split write" }]);
+    expect(pushed.flat()).toMatchObject([{ from: "agent", type: "text", text: "split write" }]);
     manager.closeAll();
   });
 
@@ -178,6 +318,6 @@ describe("TranscriptSubscriptionManager", () => {
     );
 
     manager.endRoom("room-1");
-    expect(pushed.flat()).toEqual([{ from: "agent", type: "text", text: "final output" }]);
+    expect(pushed.flat()).toMatchObject([{ from: "agent", type: "text", text: "final output" }]);
   });
 });
