@@ -261,8 +261,18 @@ export class CloudAccountManager {
           return false;
         token = refreshed.accessToken;
       }
-      await this.request({ origin: saved.origin, path: "/api/v1/account/logout", token, body: {} });
-      return true;
+      const value = await this.request({
+        origin: saved.origin,
+        path: "/api/v1/account/logout",
+        token,
+        body: {},
+      });
+      return (
+        !!value &&
+        typeof value === "object" &&
+        !Array.isArray(value) &&
+        (value as { ok?: unknown }).ok === true
+      );
     } catch {
       return false;
     }
