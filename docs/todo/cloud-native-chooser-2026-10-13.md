@@ -35,12 +35,21 @@ ProjectControlServer。Account HTTP/authority、Runtime provider 和远端 HTML 
 `1e5d5876` 的 run `38277641579` / job `114906922457` 未通过原生 chooser；
 日志保留在 `/tmp/codeshell-cloud-native-chooser-ci-38277641579.log`。定位到两处具体问题：
 
-- Electron 的 `session.defaultSession.fetch` 内部转发到已包装的 `net.fetch`，固定外部
-  负探针先被 Main 的 native wrapper 同步拒绝，未到 Chromium webRequest。生成入口
-  现在在包装前私有保存原始 native fetch，仅对固定的
-  `https://external.invalid/chooser-guard-probe` 使用一次；defaultSession 限制先安装，
-  仍要求请求被拒绝且 Chromium 拦截计数精确为 1。产品 `net.request/fetch` 的精确 Cloud
-  origin 限制保持不变，没有另开 probe 窗口或扩大请求范围。
+- Electron 的 `net.fetch` 转发到 defaultSession，后者在调用时读取当前 `net.request`；
+  因此固定外部负探针先被 native wrapper 拒绝，未到 Chromium webRequest。
+  首次修复私有保存原始 fetch 仍不足：run `38279860879` 实际栈确认它仍进入已包装的
+  request，日志为 `/tmp/codeshell-cloud-native-chooser-ci-38279860879.log`。
+  生成入口现改为包装前私有捕获原始 `net.request` 工厂，只请求一次固定的
+  `https://external.invalid/chooser-guard-probe`，指定 defaultSession、omit credentials
+  和拒绝重定向。该工厂直接构造 ClientRequest，不再经过 fetch 的动态查找；依据锁定版
+  [net 实现](https://github.com/electron/electron/blob/v33.4.11/lib/browser/api/net.ts) 和
+  [Session 实现](https://github.com/electron/electron/blob/v33.4.11/lib/browser/api/session.ts)。
+  defaultSession 限制先安装，必须得到 `net::ERR_BLOCKED_BY_CLIENT` 且拦截计数精确为 1；
+  任意响应、其他错误或 5 秒无结果都失败，finally 清 timer 并 abort。产品
+  `net.request/fetch` 的精确 Cloud origin 限制保持不变，没有另开 probe 窗口、暂时替换
+  wrapper 或扩大产品请求范围。
+  [ClientRequest 实现](https://github.com/electron/electron/blob/v33.4.11/lib/common/api/net-client-request.ts)
+  在启动 URLLoader 后完成 Writable；其 close 可能早于网络错误，所以 close 不充当探针结果。
 - Playwright 在 `app.close()` 后销毁内部对象，再取 `app.process()` 会抛出 `_object`
   错误。两次实际 launch 返回后立即保存真实 ChildProcess 和 PID，关闭及退出核验只用
   已保存句柄；关闭失败后的重试也不再重新查 Playwright 进程。退出未确认仍保留 HOME。
@@ -49,6 +58,12 @@ ProjectControlServer。Account HTTP/authority、Runtime provider 和远端 HTML 
 修复后的实际函数用独占 Node 子进程完成盘点拒绝、盘点超时、关闭拒绝、正常关闭与首次
 退出核验失败后重试五条路径，所有 child 均 exit 0，关闭后没有 `process()` 查询。
 回执为 `/tmp/codeshell-cloud-chooser-close-{baseline,final}-20261013.json`。
+第二次修复另以实际生成模板代码、真实 Node Writable/Readable 和受控 URLLoader 结果
+验证九条路径：6346 基线动态查找拒绝、close 后才到拦截错误通过、错误种类不符、收到
+响应、仅 close、无结果、拦截计数为 0/2、工厂同步抛错。拒绝路径均不通过，已创建请求
+均执行 abort，产品外部/相邻端口请求仍被 wrapper 拒绝；测试将 5 秒 timer 加速到 30ms，
+同时核验模板传入的期限仍为 5000ms。回执为
+`/tmp/codeshell-cloud-chooser-probe-receipt-20261013.json`。这不是 Chromium/native 成功回执。
 真实 Server-only 业务链、生成 Main/worker 的 Node 语法检查及受影响脚本 ESLint/Prettier
 均通过；没有重构建产品 dist，没有调用 macOS Keychain。这些结果不能代替新 head 的
 Linux 原生 CI 成功回执。
