@@ -1,4 +1,4 @@
-import { createHash } from "node:crypto";
+import { createHash, randomUUID } from "node:crypto";
 import {
   closeSync,
   constants,
@@ -8,7 +8,7 @@ import {
   lstatSync,
   mkdirSync,
   openSync,
-  readFileSync,
+  readSync,
   realpathSync,
   renameSync,
   rmSync,
@@ -86,7 +86,34 @@ export class TranscriptCheckpointStore {
       const opened = fstatSync(fd);
       if (opened.dev !== stat.dev || opened.ino !== stat.ino)
         throw new Error("transcript checkpoint changed while opening");
-      value = JSON.parse(readFileSync(fd, "utf8"));
+      if (!opened.isFile() || opened.nlink !== 1 || opened.size > 16384)
+        throw new Error("invalid transcript checkpoint file");
+      const buffer = Buffer.allocUnsafe(16385);
+      let total = 0;
+      while (total < buffer.length) {
+        const count = readSync(fd, buffer, total, buffer.length - total, total);
+        if (!count) break;
+        total += count;
+      }
+      const after = fstatSync(fd);
+      const pathStat = lstatSync(path);
+      if (
+        total > 16384 ||
+        after.size !== opened.size ||
+        after.mtimeMs !== opened.mtimeMs ||
+        after.ctimeMs !== opened.ctimeMs ||
+        !pathStat.isFile() ||
+        pathStat.isSymbolicLink() ||
+        pathStat.nlink !== 1 ||
+        pathStat.dev !== opened.dev ||
+        pathStat.ino !== opened.ino ||
+        pathStat.size !== opened.size ||
+        pathStat.mtimeMs !== opened.mtimeMs ||
+        pathStat.ctimeMs !== opened.ctimeMs
+      )
+        throw new Error("transcript checkpoint changed while reading");
+      this.path(roomId);
+      value = JSON.parse(buffer.subarray(0, total).toString("utf8"));
     } finally {
       closeSync(fd);
     }
@@ -116,14 +143,20 @@ export class TranscriptCheckpointStore {
       if (!stat.isFile() || stat.isSymbolicLink() || stat.nlink !== 1)
         throw new Error("invalid transcript checkpoint target");
     }
-    const temp = `${target}.${process.pid}.tmp`;
+    const temp = `${target}.${randomUUID()}.tmp`;
+    let created = false;
     let fd: number | undefined;
     try {
       fd = openSync(temp, "wx", 0o600);
+      created = true;
       const data = Buffer.from(JSON.stringify(value));
       if (data.length > 16384) throw new Error("transcript checkpoint exceeds limit");
       let written = 0;
-      while (written < data.length) written += writeSync(fd, data, written, data.length - written);
+      while (written < data.length) {
+        const count = writeSync(fd, data, written, data.length - written);
+        if (!count) throw new Error("transcript checkpoint write made no progress");
+        written += count;
+      }
       fsyncSync(fd);
       closeSync(fd);
       fd = undefined;
@@ -132,7 +165,7 @@ export class TranscriptCheckpointStore {
       this.syncDirectory();
     } finally {
       if (fd !== undefined) closeSync(fd);
-      rmSync(temp, { force: true });
+      if (created) rmSync(temp, { force: true });
     }
   }
 }

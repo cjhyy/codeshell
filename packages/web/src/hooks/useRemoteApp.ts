@@ -998,6 +998,11 @@ export function useRemoteApp(options: RemoteAppOptions = {}): RemoteApp {
           }
           break;
         case "room.error":
+          if (
+            event.roomId === activeRoomIdRef.current &&
+            roomCatchupRef.current?.roomId === event.roomId
+          )
+            setLoadingKey("roomHistory", false);
           if (event.clientMessageId) {
             settleMessageAck(event.clientMessageId, new Error(event.message));
           }

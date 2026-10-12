@@ -60,7 +60,8 @@ export async function handleRoomEvent(
   event: AuthenticatedMobileClientEvent,
 ): Promise<void> {
   const reply = (serverEvent: MobileServerEvent): void => {
-    if (event.deviceId) ctx.remote.sendToDevice(event.deviceId, serverEvent);
+    if (event.viewerId) ctx.remote.sendToViewer(event.viewerId, serverEvent);
+    else if (event.deviceId) ctx.remote.sendToDevice(event.deviceId, serverEvent);
     else ctx.remote.broadcast(serverEvent);
   };
   try {

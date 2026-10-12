@@ -61,12 +61,14 @@ interface FollowRecord extends TranscriptTarget {
   checkpoint: TranscriptCheckpoint;
   subscribers: Set<string>;
   listener: (curr: Stats, prev: Stats) => void;
+  observedStamp?: string;
+  history: { messages: HistoryMessage[]; totalCount: number };
 }
 const MAX_TRANSCRIPT_BYTES = 64 * 1024 * 1024;
 const MAX_LINE_BYTES = 4 * 1024 * 1024;
 const decoder = new TextDecoder("utf-8", { fatal: true });
 const digest = (bytes: Buffer) => createHash("sha256").update(bytes).digest("hex");
-const identity = (stat: Stats) => `${stat.dev}:${stat.ino}`;
+const identity = (stat: Stats) => `${stat.dev}:${stat.ino}:${stat.birthtimeMs}`;
 const stamp = (stat: Stats) => `${identity(stat)}:${stat.size}:${stat.mtimeMs}:${stat.ctimeMs}`;
 
 /** Shared observer of actual external CLI files, with crash-retry provenance. */
@@ -97,12 +99,7 @@ export class TranscriptSubscriptionManager {
     let record = this.follows.get(request.roomId);
     if (record) {
       this.drain(record);
-      const snapshot = snapshotAt(
-        readTranscript(record.file),
-        record.checkpoint,
-        request.kind,
-        request.limit,
-      );
+      const snapshot = recentSnapshot(record.history, request.limit);
       record.subscribers.add(request.subscriberId);
       this.roomBySubscriber.set(request.subscriberId, request.roomId);
       return { active: true, ...snapshot, roomCursor: this.opts.roomCursor(request.roomId) };
@@ -114,7 +111,7 @@ export class TranscriptSubscriptionManager {
     if (checkpoint && (!sameTarget(checkpoint, request) || checkpoint.file !== file))
       throw new Error("transcript checkpoint identity mismatch");
     try {
-      current = readTranscript(file);
+      current = readTranscript(file, checkpoint?.offset ?? 0);
       if (checkpoint) verifyPrefix(current, checkpoint);
     } catch (error) {
       if (checkpoint) {
@@ -171,6 +168,13 @@ export class TranscriptSubscriptionManager {
       checkpoint,
       subscribers: new Set([request.subscriberId]),
       listener,
+      history: appendHistory(
+        { messages: [], totalCount: 0 },
+        current.bytes,
+        0,
+        checkpoint.offset,
+        request.kind,
+      ),
     };
     this.opts.onStart(request.roomId);
     this.follows.set(request.roomId, record);
@@ -178,13 +182,8 @@ export class TranscriptSubscriptionManager {
     try {
       // A pending checkpoint replays from its previous committed newline. Room
       // persistence deduplicates the actual incarnation/line/event coordinates.
-      this.drain(record);
-      const snapshot = snapshotAt(
-        readTranscript(file),
-        record.checkpoint,
-        request.kind,
-        request.limit,
-      );
+      this.drain(record, current);
+      const snapshot = recentSnapshot(record.history, request.limit);
       const roomCursor = this.opts.roomCursor(request.roomId);
       watchFile(file, { interval: this.pollIntervalMs, persistent: false }, listener);
       this.drain(record);
@@ -237,17 +236,21 @@ export class TranscriptSubscriptionManager {
       this.stopRecord(record);
     }
   }
-  private drain(record: FollowRecord): void {
+  private drain(record: FollowRecord, captured?: ReturnType<typeof readTranscript>): void {
     let current: ReturnType<typeof readTranscript>;
     try {
-      current = readTranscript(record.file);
+      if (!captured && record.observedStamp === stamp(lstatSync(record.file))) return;
+      current = captured ?? readTranscript(record.file, record.checkpoint.offset);
       verifyPrefix(current, record.checkpoint);
     } catch (error) {
       this.fail(record, error, true);
       throw error;
     }
     const before = record.checkpoint;
-    if (current.complete === before.offset && before.status !== "pending") return;
+    if (current.complete === before.offset && before.status !== "pending") {
+      record.observedStamp = current.stamp;
+      return;
+    }
     const messages: RoomMessageInput[] = [];
     try {
       let offset = before.offset;
@@ -282,8 +285,17 @@ export class TranscriptSubscriptionManager {
         digest: digest(current.bytes.subarray(0, current.complete)),
         roomCursor: this.opts.roomCursor(record.roomId),
       };
+      const history = appendHistory(
+        record.history,
+        current.bytes,
+        before.offset,
+        current.complete,
+        record.kind,
+      );
       this.checkpoints?.save(committed);
       record.checkpoint = committed;
+      record.history = history;
+      record.observedStamp = current.stamp;
     } catch (error) {
       // Keep the last committed offset in the durable pending checkpoint. A
       // fresh Host retries it against idempotent Room provenance, never EOF.
@@ -335,19 +347,20 @@ function resolveTranscriptFile(target: TranscriptTarget): string | undefined {
     );
   return findCodexRolloutFile(join(homedir(), ".codex"), target.cwd, target.sessionId);
 }
-function readTranscript(file: string): { bytes: Buffer; complete: number; identity: string } {
+function readTranscript(
+  file: string,
+  validateFrom = 0,
+): { bytes: Buffer; complete: number; identity: string; stamp: string } {
   const info = lstatSync(file);
-  if (
-    !info.isFile() ||
-    info.isSymbolicLink() ||
-    info.nlink !== 1 ||
-    info.size > MAX_TRANSCRIPT_BYTES
-  )
-    throw new Error("external transcript is unsafe or exceeds 64 MiB");
+  if (!info.isFile() || info.isSymbolicLink() || info.nlink !== 1)
+    throw new Error("external transcript is unsafe");
   const fd = openSync(file, constants.O_RDONLY | (constants.O_NOFOLLOW ?? 0));
   try {
     const before = fstatSync(fd);
-    if (stamp(before) !== stamp(info)) throw new Error("external transcript changed while opening");
+    // Appends between lstat and open are expected. Pin incarnation, not size.
+    if (!before.isFile() || before.nlink !== 1 || identity(before) !== identity(info))
+      throw new Error("external transcript incarnation changed while opening");
+    if (before.size > MAX_TRANSCRIPT_BYTES) throw new Error("external transcript exceeds 64 MiB");
     const bytes = Buffer.allocUnsafe(before.size);
     let offset = 0;
     while (offset < bytes.length) {
@@ -355,10 +368,34 @@ function readTranscript(file: string): { bytes: Buffer; complete: number; identi
       if (!count) throw new Error("external transcript was truncated while reading");
       offset += count;
     }
-    if (stamp(before) !== stamp(fstatSync(fd)) || stamp(before) !== stamp(lstatSync(file)))
-      throw new Error("external transcript changed while reading; retry subscription");
     const complete = bytes.lastIndexOf(0x0a) + 1;
-    let start = 0;
+    // Re-read the captured complete prefix in bounded chunks. Growth after the
+    // captured size is harmless; changing any captured complete byte is not.
+    const verified = createHash("sha256");
+    const chunk = Buffer.allocUnsafe(64 * 1024);
+    offset = 0;
+    while (offset < complete) {
+      const count = readSync(fd, chunk, 0, Math.min(chunk.length, complete - offset), offset);
+      if (!count) throw new Error("external transcript was truncated during prefix verification");
+      verified.update(chunk.subarray(0, count));
+      offset += count;
+    }
+    const after = fstatSync(fd);
+    const path = lstatSync(file);
+    if (
+      !path.isFile() ||
+      path.isSymbolicLink() ||
+      after.nlink !== 1 ||
+      path.nlink !== 1 ||
+      identity(after) !== identity(before) ||
+      identity(path) !== identity(before) ||
+      after.size < before.size ||
+      path.size < before.size
+    )
+      throw new Error("external transcript incarnation changed or shrank while reading");
+    if (verified.digest("hex") !== digest(bytes.subarray(0, complete)))
+      throw new Error("external transcript captured prefix was rewritten while reading");
+    let start = validateFrom;
     while (start < complete) {
       const end = bytes.indexOf(0x0a, start);
       if (end - start > MAX_LINE_BYTES) throw new Error("external transcript line exceeds 4 MiB");
@@ -393,7 +430,7 @@ function readTranscript(file: string): { bytes: Buffer; complete: number; identi
     }
     if (bytes.length - complete > MAX_LINE_BYTES)
       throw new Error("external transcript partial line exceeds 4 MiB");
-    return { bytes, complete, identity: identity(before) };
+    return { bytes, complete, identity: identity(before), stamp: stamp(before) };
   } finally {
     closeSync(fd);
   }
@@ -409,17 +446,56 @@ function verifyPrefix(
   if (digest(current.bytes.subarray(0, checkpoint.offset)) !== checkpoint.digest)
     throw new Error("external transcript prefix was rewritten; recovery is required");
 }
-function snapshotAt(
-  current: ReturnType<typeof readTranscript>,
-  checkpoint: TranscriptCheckpoint,
+function appendHistory(
+  previous: { messages: HistoryMessage[]; totalCount: number },
+  bytes: Buffer,
+  start: number,
+  end: number,
   kind: RoomKind,
+): { messages: HistoryMessage[]; totalCount: number } {
+  const messages = previous.messages.slice();
+  let totalCount = previous.totalCount;
+  while (start < end) {
+    const newline = bytes.indexOf(0x0a, start);
+    const line = decoder.decode(bytes.subarray(start, newline));
+    start = newline + 1;
+    if (!line.trim()) continue;
+    const parsed =
+      kind === "codex" ? parseCodexRecentHistory(line, 1) : parseRecentHistory(line, 1);
+    for (const message of parsed.messages) {
+      const last = messages.at(-1);
+      // The maintained Codex parser emits a tool-only assistant for a single
+      // function line; preserve its cross-line grouping in this bounded ring.
+      if (
+        kind === "codex" &&
+        message.role === "assistant" &&
+        !message.text &&
+        message.tools?.length &&
+        last?.role === "assistant"
+      ) {
+        const tools = [...(last.tools ?? []), ...message.tools];
+        if (tools.length > 10_000)
+          throw new Error("external transcript snapshot tool count exceeds limit");
+        messages[messages.length - 1] = { ...last, tools };
+      } else {
+        messages.push(message);
+        totalCount++;
+        if (messages.length > 500) messages.shift();
+      }
+    }
+  }
+  return { messages, totalCount };
+}
+function recentSnapshot(
+  history: { messages: HistoryMessage[]; totalCount: number },
   limit: number,
 ) {
-  verifyPrefix(current, checkpoint);
-  const offset = checkpoint.offset;
-  if (offset > current.complete) throw new Error("external transcript snapshot is incomplete");
-  const text = decoder.decode(current.bytes.subarray(0, offset));
-  return kind === "codex" ? parseCodexRecentHistory(text, limit) : parseRecentHistory(text, limit);
+  const messages = history.messages.slice(-limit);
+  return {
+    messages,
+    totalCount: history.totalCount,
+    hasMore: history.totalCount > messages.length,
+  };
 }
 
 function tailEventToRoomMessage(event: SessionTailEvent): RoomMessageInput {

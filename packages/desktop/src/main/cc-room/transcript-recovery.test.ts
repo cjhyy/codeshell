@@ -194,3 +194,101 @@ test("missing checkpoint with persisted transcript provenance cannot silently re
   appendFileSync(f.file, line("missed"));
   expect(() => f.open().manager.subscribe(f.target)).toThrow("checkpoint is missing");
 });
+
+test("independent Node writer can keep appending during long-file capture, paging and cold recovery", async () => {
+  const { spawn } = await import("node:child_process");
+  const f = fixture();
+  // 62 MiB of valid non-rendered CLI metadata exercises consumed-prefix checks
+  // without making a synthetic giant assistant bubble dominate the UI test.
+  const metadata = JSON.stringify({ type: "progress", detail: "m".repeat(128 * 1024) }) + "\n";
+  writeFileSync(f.file, metadata.repeat(496));
+  const writerSource = `
+    import { appendFileSync } from 'node:fs';
+    const file = process.argv[1];
+    console.log('ready');
+    for (let n = 0; n < 120; n++) {
+      const metadata = JSON.stringify({type:'progress', detail:'x'.repeat(128)})+'\\n';
+      const message = JSON.stringify({type:'assistant',message:{content:[{type:'text',text:'writer-'+n}]}})+'\\n';
+      const bytes = Buffer.from(metadata + message);
+      appendFileSync(file, bytes.subarray(0, 100));
+      await new Promise(resolve => setTimeout(resolve, 2));
+      appendFileSync(file, bytes.subarray(100));
+      await new Promise(resolve => setTimeout(resolve, 50));
+    }
+  `;
+  const child = spawn("node", ["--input-type=module", "-e", writerSource, f.file], {
+    stdio: ["ignore", "pipe", "pipe"],
+  });
+  const closed = new Promise<number | null>((resolve, reject) => {
+    child.once("error", reject);
+    child.once("close", resolve);
+  });
+  try {
+    await new Promise<void>((resolve, reject) => {
+      child.stdout.once("data", () => resolve());
+      child.once("error", reject);
+    });
+    const first = f.open();
+    const started = performance.now();
+    first.manager.subscribe(f.target);
+    const initialMs = performance.now() - started;
+    const drains: number[] = [];
+    for (let n = 0; n < 6; n++) {
+      await new Promise((resolve) => setTimeout(resolve, 15));
+      const start = performance.now();
+      first.manager.subscribe({ ...f.target, subscriberId: "mobile" });
+      drains.push(performance.now() - start);
+    }
+    console.log("CCRoom ongoing writer capture", JSON.stringify({ initialMs, drains }));
+    expect(child.exitCode).toBeNull();
+    first.manager.subscribe(f.target);
+    expect(f.failures).toEqual([]);
+    expect(f.checkpoint().status).toBe("committed");
+    const history = first.roomManager.getHistoryPage(f.target.roomId, { limit: 7 });
+    let page = history;
+    let count = page.messages.length;
+    while (page.nextCursor) {
+      page = first.roomManager.getHistoryPage(f.target.roomId, {
+        cursor: page.nextCursor,
+        limit: 7,
+      });
+      count += page.messages.length;
+    }
+    expect(count).toBe(history.throughSeq);
+    expect(child.exitCode).toBeNull();
+    first.manager.closeAll();
+    const cold = f.open();
+    const coldStart = performance.now();
+    cold.manager.subscribe(f.target);
+    const coldMs = performance.now() - coldStart;
+    console.log("CCRoom ongoing writer cold", JSON.stringify({ coldMs }));
+    expect(await closed).toBe(0);
+    const snapshot = cold.manager.subscribe(f.target);
+    expect(snapshot.messages.map((message) => message.text)).toEqual(
+      Array.from({ length: 50 }, (_, n) => `writer-${n + 70}`),
+    );
+    appendFileSync(f.file, line("offline-after-writer"));
+    cold.manager.subscribe({ ...f.target, subscriberId: "mobile" });
+    expect(
+      cold.roomManager
+        .getHistoryPage(f.target.roomId)
+        .messages.filter((message) => message.text === "offline-after-writer"),
+    ).toHaveLength(1);
+    expect(f.failures).toEqual([]);
+    // A measured regression bound prevents restoring full JSON parsing on each
+    // poll. It allows slower shared CI hosts; the receipt records actual costs.
+    expect(Math.max(initialMs, coldMs, ...drains)).toBeLessThan(2000);
+    console.log(
+      "CCRoom independent writer timing",
+      JSON.stringify({
+        bytes: readFileSync(f.file).length,
+        initialMs: Math.round(initialMs),
+        maxDrainMs: Math.round(Math.max(...drains)),
+        coldMs: Math.round(coldMs),
+      }),
+    );
+  } finally {
+    if (child.exitCode === null) child.kill("SIGTERM");
+    await closed;
+  }
+}, 90000);
