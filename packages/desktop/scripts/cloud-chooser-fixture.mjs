@@ -164,8 +164,34 @@ const configure = (session) => {
   });
 };
 app.on("web-contents-created", (_event, contents) => configure(contents.session));
-// Keep this private native fetch only for the fixed Chromium interception probe.
-const chromiumProbeFetch = net.fetch.bind(net);
+// Electron 33 fetch dynamically reads net.request; capture the request factory
+// itself privately, solely for this fixed Chromium interception probe.
+const chromiumProbeRequest = net.request.bind(net);
+const probeChromiumGuard = async () => {
+  let request, timer;
+  try {
+    await new Promise((_resolve, reject) => {
+      request = chromiumProbeRequest({
+        url: "https://external.invalid/chooser-guard-probe",
+        session: session.defaultSession,
+        credentials: "omit",
+        redirect: "error",
+      });
+      timer = setTimeout(() => reject(new Error("Chromium guard probe deadline")), 5000);
+      request.on("error", reject);
+      request.once("response", (response) => {
+        response.on("error", reject);
+        response.resume();
+        reject(new Error("Chromium guard probe unexpectedly received a response"));
+      });
+      // Writable close can precede the URLLoader error; the deadline bounds silence.
+      request.end();
+    });
+  } finally {
+    clearTimeout(timer);
+    request?.abort();
+  }
+};
 for (const method of ["request", "fetch"]) {
   const original = net[method].bind(net);
   net[method] = (input, ...args) => {
@@ -177,7 +203,7 @@ for (const method of ["request", "fetch"]) {
 }
 globalThis.chooserChromiumGuardReady = app.whenReady().then(async () => {
 configure(session.defaultSession);
-await assert.rejects(chromiumProbeFetch("https://external.invalid/chooser-guard-probe"));
+await assert.rejects(probeChromiumGuard, /net::ERR_BLOCKED_BY_CLIENT/);
 assert.equal(globalThis.chooserBlockedRequests, 1);
 appendFileSync(${JSON.stringify(join(home, "chooser-native-guards.jsonl"))}, JSON.stringify({ pid: process.pid, nativeNegativeProbes: 2, chromiumNegativeProbes: 1 }) + "\\n", { mode: 0o600 });
 });
