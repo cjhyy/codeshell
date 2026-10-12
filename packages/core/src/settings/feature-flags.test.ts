@@ -35,6 +35,7 @@ describe("feature flags", () => {
 
   test("featureFlagNames lists every known flag", () => {
     expect([...featureFlagNames()].sort()).toEqual([
+      "computer_use_cua",
       "external_agent_runtime",
       "external_host_tools",
       "fast_mode",
@@ -51,6 +52,11 @@ describe("feature flags", () => {
     expect(isFeatureEnabled({}, "optimization_lab")).toBe(false);
     expect(isFeatureEnabled({ optimization_lab: true }, "optimization_lab")).toBe(true);
     expect(isFeatureEnabled({ optimization_lab: false }, "optimization_lab")).toBe(false);
+  });
+
+  test("computer_use_cua defaults OFF and can be switched on", () => {
+    expect(isFeatureEnabled(undefined, "computer_use_cua")).toBe(false);
+    expect(isFeatureEnabled({ computer_use_cua: true }, "computer_use_cua")).toBe(true);
   });
 
   test("both external-runtime flags default ON, and stay switchable off", () => {

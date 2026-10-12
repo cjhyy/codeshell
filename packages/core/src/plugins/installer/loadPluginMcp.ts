@@ -2,6 +2,7 @@ import { lstatSync, readFileSync, realpathSync, statSync } from "node:fs";
 import { isAbsolute, join, relative, sep } from "node:path";
 import { readInstalledPlugins } from "../installedPlugins.js";
 import { pluginMcpApprovalState } from "../pluginMcpIntegrity.js";
+import { withHostMcpServers } from "../../tool-system/host-mcp-servers.js";
 import type { MCPServerConfig, MCPServerOverride } from "../../types.js";
 import {
   validMcpConnectRetries,
@@ -361,5 +362,9 @@ export function mergePluginMcpServers(
       }
     }
   }
-  return merged;
+  // Host-owned servers (Desktop main supervises their lifecycle) come last so
+  // user and plugin declarations keep precedence. Every caller that rebuilds
+  // the server map — worker startup, TCP server, settings hot-reload — passes
+  // through here, so the host entry cannot silently disappear on reload.
+  return withHostMcpServers(merged);
 }

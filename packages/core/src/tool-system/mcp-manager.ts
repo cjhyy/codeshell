@@ -8,7 +8,9 @@ import type { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { ManagedMcpStdioTransport } from "./mcp-stdio-transport.js";
 import { StreamableHTTPClientTransport } from "@modelcontextprotocol/sdk/client/streamableHttp.js";
 import type { Tool as McpTool } from "@modelcontextprotocol/sdk/types.js";
-import type { MCPServerConfig, RegisteredTool } from "../types.js";
+import type { ContentBlock, MCPServerConfig, RegisteredTool } from "../types.js";
+import { capabilitiesFor } from "../llm/capabilities/index.js";
+import type { ProviderKindName } from "../llm/provider-kinds.js";
 import type { CredentialType } from "../credentials/types.js";
 import { ToolRegistry } from "./registry.js";
 import { logger } from "../logging/logger.js";
@@ -408,6 +410,34 @@ export function inferTransportType(
  */
 const MAX_MCP_IMAGE_SPILLS_PER_TOOL = 50;
 const MAX_MCP_IMAGE_BYTES = 8 * 1024 * 1024;
+
+/** Inline images share view_image's 5 MB cap; larger ones are spilled instead. */
+export const MAX_MCP_INLINE_IMAGE_BYTES = 5 * 1024 * 1024;
+const INLINE_IMAGE_MEDIA_TYPES = new Set(["image/png", "image/jpeg", "image/gif", "image/webp"]);
+
+type InlineImageBlock = ContentBlock & {
+  type: "image";
+  source: { type: "base64"; media_type: string; data: string };
+};
+
+/**
+ * Build a vision image block from MCP image content, or null when the media
+ * type is not one providers accept or the decoded size exceeds the cap (the
+ * caller then falls back to spilling).
+ */
+export function inlineMcpImageBlock(base64: string, mimeType: string): InlineImageBlock | null {
+  const mediaType = mimeType.toLowerCase().split(";")[0]!.trim();
+  if (!INLINE_IMAGE_MEDIA_TYPES.has(mediaType)) return null;
+  if (Math.floor((base64.length * 3) / 4) > MAX_MCP_INLINE_IMAGE_BYTES) return null;
+  return { type: "image", source: { type: "base64", media_type: mediaType, data: base64 } };
+}
+
+/** Fail closed like view_image: no llmConfig means no vision. */
+function mcpContextSupportsVision(ctx?: ToolContext): boolean {
+  if (!ctx?.llmConfig) return false;
+  const kind = (ctx.llmConfig.providerKind ?? ctx.llmConfig.provider) as ProviderKindName;
+  return capabilitiesFor(kind, ctx.llmConfig.model).supportsVision;
+}
 
 function spillTimestamp(filename: string, prefix: string): number {
   const suffix = filename.slice(prefix.length);
@@ -1356,7 +1386,7 @@ export class MCPManager {
     toolName: string,
     args: Record<string, unknown>,
     ctx?: ToolContext,
-  ): Promise<string> {
+  ): Promise<string | { result: string; contentBlocks: ContentBlock[] }> {
     return this.runOperation(ctx, ctx?.signal, async (signal) => {
       const connection = await this.connectionForScope(serverName, ctx);
       const tool = connection.tools?.get(toolName);
@@ -1384,6 +1414,8 @@ export class MCPManager {
       // raw base64 image data in the result text. See
       // TODO-week.md #9c + docs/research-cc-vs-codex-image-handling.md §B.
       const parts: string[] = [];
+      const imageBlocks: ContentBlock[] = [];
+      const inlineImages = connection.config?.inlineImages === true && mcpContextSupportsVision(ctx);
       if (Array.isArray(callResult.content)) {
         for (const item of callResult.content) {
           if (typeof item === "string") {
@@ -1398,6 +1430,16 @@ export class MCPManager {
           if ((item as { type?: string }).type === "image") {
             const block = item as { data?: string; mimeType?: string };
             if (typeof block.data === "string" && block.data.length > 0) {
+              const inline = inlineImages
+                ? inlineMcpImageBlock(block.data, block.mimeType ?? "image/png")
+                : null;
+              if (inline) {
+                imageBlocks.push(inline);
+                parts.push(
+                  `[mcp-image] server=${serverName} tool=${toolName} attached inline (${inline.source.media_type})`,
+                );
+                continue;
+              }
               const note = await spillMcpImage(
                 serverName,
                 toolName,
@@ -1418,7 +1460,7 @@ export class MCPManager {
       // strings can't fake their way out.
       const wrapped = wrapMcpOutput(serverName, toolName, body);
       if (callResult.isError) throw new Error(wrapped);
-      return wrapped;
+      return imageBlocks.length > 0 ? { result: wrapped, contentBlocks: imageBlocks } : wrapped;
     });
   }
 

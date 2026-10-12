@@ -74,6 +74,11 @@ export {
   FIRST_PHASE_EXPOSURE_RATIONALE,
 } from "./tool-system/external-tool-exposure.js";
 export type { ExposureRationale } from "./tool-system/external-tool-exposure.js";
+export {
+  HOST_MCP_SERVERS_ENV,
+  encodeHostMcpServers,
+  type HostMcpServerDeclaration,
+} from "./tool-system/host-mcp-servers.js";
 export { webSearchTool } from "./tool-system/builtin/web-search.js";
 export { webFetchTool } from "./tool-system/builtin/web-fetch.js";
 export { extractJSON, extractJSONArray } from "./utils/json.js";

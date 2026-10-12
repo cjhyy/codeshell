@@ -78,6 +78,16 @@ export const FEATURE_FLAGS = {
     default: false,
     description: "Load the experimental Optimization Lab module in Desktop",
   },
+  /**
+   * Experimental Computer Use spike (docs/todo/computer-runtime-cua-design.md).
+   * Desktop main spawns an embedded Cua Driver daemon on macOS and exposes it
+   * to sessions as the host-owned `host:cua-driver` MCP server. Default OFF;
+   * read from user settings at app start, so toggling needs a restart.
+   */
+  computer_use_cua: {
+    default: false,
+    description: "Experimental: drive native macOS apps through an embedded Cua Driver (restart required)",
+  },
 } as const;
 
 export type FeatureFlagName = keyof typeof FEATURE_FLAGS;

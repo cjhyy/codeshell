@@ -1084,6 +1084,14 @@ export interface MCPServerConfig {
   connectTimeoutMs?: number;
   /** Additional attempts after initialization timeouts only; defaults to 1 (maximum 2). */
   connectRetries?: number;
+  /**
+   * Return MCP `image` content to a vision-capable model as image blocks
+   * instead of spilling it to ~/.code-shell/mcp_images. Opt-in per server
+   * because screenshots cost tokens; meant for computer-use servers whose
+   * observations are only useful when the model sees the pixels. Non-vision
+   * models and oversized images still fall back to the spill path.
+   */
+  inlineImages?: boolean;
 }
 
 /**

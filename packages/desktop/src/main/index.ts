@@ -124,6 +124,8 @@ import {
 } from "@cjhyy/code-shell-capability-coding/orchestration";
 import { normalizeWorktreeBranchPrefix } from "@cjhyy/code-shell-capability-coding/git";
 import { AgentBridge, resolveNoRepoCwd } from "./agent-bridge.js";
+import { initCuaComputerUse, getCuaDriverHost } from "./computer-use/service.js";
+import { readUserFeatureFlags } from "./capability-modules-env.js";
 import { externalRuntimeBrowserBucket } from "./external-runtime-browser-bucket.js";
 import { ExternalRuntimeService } from "./external-runtime-service.js";
 import {
@@ -3411,6 +3413,24 @@ app.whenReady().then(async () => {
   await chromeExtensionRuntimeService.start().catch((error) => {
     dlog("browser", "chrome_extension_bridge_start_failed", { error: String(error) });
   });
+  // Computer Use spike (flag computer_use_cua, macOS only). Started before the
+  // first worker spawn so the worker env carries the host:cua-driver server.
+  // Failure only disables the spike; it never blocks app startup.
+  {
+    const decision = initCuaComputerUse({
+      flags: readUserFeatureFlags(resolveNoRepoCwd()),
+      platform: process.platform,
+      isPackaged: app.isPackaged,
+      resourcesPath: process.resourcesPath,
+      log: (event, data) => dlog("computer-use", event, data),
+    });
+    dlog("computer-use", "cua_driver_decision", decision.enabled ? { enabled: true } : decision);
+    if (decision.enabled) {
+      void decision.host.start().catch((error) => {
+        dlog("computer-use", "cua_driver_start_failed", { error: String(error) });
+      });
+    }
+  }
   chromeNativeRegistration = await installChromeNativeMessagingHost({
     executablePath: process.execPath,
     appPath: app.getAppPath(),
@@ -7229,6 +7249,9 @@ app.on(
       // block so a later reassignment cannot make this a no-op.
       const externalRuntimeShutdown = externalRuntimeService?.stopAll();
       externalRuntimeService = null;
+      // The embedded Cua daemon is a direct child; stop it explicitly rather
+      // than relying on the parent-liveness pipe.
+      const cuaDriverShutdown = getCuaDriverHost()?.stop();
       await Promise.allSettled([
         imGatewayService.dispose(),
         mobileRemoteController.dispose(),
@@ -7240,6 +7263,7 @@ app.on(
         sessionCatalogIpc.flush(),
         panelAppBridge.shutdownMedia(),
         chromeExtensionRuntimeService.stop(),
+        cuaDriverShutdown,
       ]);
       gatewayControlServer = undefined;
       await mobileUploads.dispose();

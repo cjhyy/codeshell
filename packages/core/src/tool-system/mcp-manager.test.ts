@@ -13,6 +13,8 @@ import {
   createMcpAuthenticatedFetch,
   inferTransportType,
   spillMcpImage,
+  inlineMcpImageBlock,
+  MAX_MCP_INLINE_IMAGE_BYTES,
 } from "./mcp-manager.js";
 import { ToolRegistry } from "./registry.js";
 import { ToolExecutor } from "./executor.js";
@@ -323,6 +325,74 @@ describe("MCPManager discovered tool executors", () => {
 
     expect(result.result).toContain("ok");
     expect(callOptions?.signal).toBeInstanceOf(AbortSignal);
+  });
+});
+
+describe("MCPManager inline image results", () => {
+  const PNG = Buffer.from("png-bytes").toString("base64");
+
+  async function runImageTool(config: Partial<MCPServerConfig>, llm?: { provider: string; model: string }) {
+    const registry = new ToolRegistry({ builtinTools: [] });
+    const manager = new MCPManager(registry);
+    const client = {
+      listTools: async () => ({
+        tools: [{ name: "shot", inputSchema: { type: "object", properties: {} } }],
+      }),
+      callTool: async () => ({
+        content: [
+          { type: "text", text: "window state" },
+          { type: "image", data: PNG, mimeType: "image/png" },
+        ],
+      }),
+    };
+    const { mcpConnectionKey, mcpConnectionScope } = await import("./mcp-workspace.js");
+    const scope = mcpConnectionScope({ cwd: "/tmp" });
+    const key = mcpConnectionKey("cua", scope);
+    (manager as any).connections.set(key, {
+      client,
+      serverName: "cua",
+      scope,
+      config: { name: "cua", command: "cua-driver", ...config },
+    });
+    (manager as any).registerDiscoveredTools("cua", client, key, (await client.listTools()).tools);
+    const ctx = {
+      cwd: "/tmp",
+      ...(llm ? { llmConfig: { provider: llm.provider, providerKind: llm.provider, model: llm.model } } : {}),
+    };
+    return registry.executeTool("mcp_cua_shot", {}, { ctx: ctx as any });
+  }
+
+  test("attaches image blocks for an opted-in server under a vision model", async () => {
+    const result = await runImageTool(
+      { inlineImages: true },
+      { provider: "anthropic", model: "claude-sonnet-4-6" },
+    );
+    expect(result.result).toContain("window state");
+    expect(result.result).toContain("attached inline");
+    expect(result.contentBlocks).toHaveLength(1);
+    expect(result.contentBlocks?.[0]?.source?.data).toBe(PNG);
+    expect(result.contentBlocks?.[0]?.source?.media_type).toBe("image/png");
+  });
+
+  test("keeps the spill path when the server did not opt in", async () => {
+    const result = await runImageTool({}, { provider: "anthropic", model: "claude-sonnet-4-6" });
+    expect(result.contentBlocks).toBeUndefined();
+    expect(result.result).toContain("[mcp-image]");
+    expect(result.result).not.toContain("attached inline");
+  });
+
+  test("fails closed without a vision-capable model", async () => {
+    const noVision = await runImageTool({ inlineImages: true }, { provider: "deepseek", model: "deepseek-chat" });
+    expect(noVision.contentBlocks).toBeUndefined();
+    const noConfig = await runImageTool({ inlineImages: true });
+    expect(noConfig.contentBlocks).toBeUndefined();
+  });
+
+  test("inlineMcpImageBlock rejects unsupported types and oversized payloads", () => {
+    expect(inlineMcpImageBlock(PNG, "image/svg+xml")).toBeNull();
+    const oversized = "A".repeat(Math.ceil((MAX_MCP_INLINE_IMAGE_BYTES * 4) / 3) + 8);
+    expect(inlineMcpImageBlock(oversized, "image/png")).toBeNull();
+    expect(inlineMcpImageBlock(PNG, "IMAGE/JPEG; q=1")?.source.media_type).toBe("image/jpeg");
   });
 });
 
