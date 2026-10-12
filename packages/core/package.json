@@ -102,5 +102,8 @@
   },
   "optionalDependencies": {
     "pdfjs-dist": "6.4.299"
+  },
+  "bin": {
+    "code-shell-output-journal": "./dist/cli/output-journal-repair.js"
   }
 }

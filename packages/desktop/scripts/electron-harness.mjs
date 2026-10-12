@@ -153,10 +153,8 @@ export function captureRendererErrors(win) {
   return errors;
 }
 
-/** Open the production settings menu, including the narrow-window drawer. */
-export async function openSettingsMenu(win) {
-  const menu = win.getByRole("menu", { name: /^(设置|Settings)$/ });
-  if (await menu.isVisible()) return menu;
+/** Wait for resize and expand the current sidebar surface through its real toggle. */
+export async function expandSidebar(win) {
   const toggle = win.locator('[data-sidebar-action="toggle"]');
   await toggle.waitFor({ state: "visible" });
   // Resize dispatch can lag setViewportSize. Wait for useResponsiveSidebar's
@@ -167,8 +165,18 @@ export async function openSettingsMenu(win) {
       toggle && (toggle.getAttribute("aria-haspopup") === "dialog") === window.innerWidth < 640
     );
   });
+  // An expanded sidebar can still be mounting after resize. Inspect its
+  // authoritative toggle state instead of collapsing it when a child is absent.
+  if ((await toggle.getAttribute("aria-expanded")) === "false") await toggle.click();
+  await win.locator("#codeshell-sidebar-navigation").waitFor({ state: "visible" });
+}
+
+/** Open the production settings menu, including the narrow-window drawer. */
+export async function openSettingsMenu(win) {
+  const menu = win.getByRole("menu", { name: /^(设置|Settings)$/ });
+  if (await menu.isVisible()) return menu;
+  await expandSidebar(win);
   const trigger = win.getByRole("button", { name: /^(设置|Settings)$/ });
-  if (!(await trigger.isVisible())) await toggle.click();
   await trigger.click();
   await menu.waitFor({ state: "visible" });
   return menu;

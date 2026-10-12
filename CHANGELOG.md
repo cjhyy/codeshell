@@ -8,6 +8,11 @@ breaking.
 
 ## [Unreleased]
 
+### Fixed
+
+- Compact the sidebar account entry into an avatar icon beside Settings, with
+  account details on hover and in accessible descriptions.
+
 ## [0.9.36] - 2026-10-12
 
 ### Added

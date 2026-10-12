@@ -1,0 +1,122 @@
+{
+  "format": "codeshell-output-journal-combined-delivery",
+  "version": 1,
+  "date": "2026-10-12",
+  "productionCheckpoint": "c95d1b89",
+  "receiptMerge": "13454172",
+  "mainBase": "9fa1194ed5d07012f5137451e80317cb60415580",
+  "manualCheckpoint": "fa07796d7aa40874e14b8d06a488a08cb7cfee1f",
+  "apiIntegration": "98c01eb4",
+  "pullRequest": "https://github.com/cjhyy/codeshell/pull/139",
+  "environment": {
+    "isolatedHome": true,
+    "syntheticCredentials": true,
+    "exactOriginGuardBeforeCoreImport": true,
+    "paidModelRequests": 0,
+    "physicalPhone": false,
+    "released": false
+  },
+  "finalJointSource": {
+    "files": 20,
+    "tests": 261,
+    "assertions": 3153,
+    "skipped": 0,
+    "failures": 0,
+    "milliseconds": 156500,
+    "manualRepairTestsIncluded": 18,
+    "manualRepairAssertionsIncluded": 1144,
+    "ccRoomRecoveryIncluded": true,
+    "architectureBudgetsIncluded": true
+  },
+  "finalCleanBuildTypecheck": "all workspace boundaries passed",
+  "desktopCiRegression": {
+    "checkpoint": "b1ac3b25",
+    "priorCiHead": "5fea56d9",
+    "reason": "eight legacy Panel bridge doubles lacked captureExternalOutputSource",
+    "realIsolatedPanelProcessIncluded": true,
+    "guardedRegressionTests": 23,
+    "assertions": 142,
+    "failures": 0,
+    "editedFixtureLint": "passed",
+    "productionChanges": false
+  },
+  "finalLint": { "errors": 0, "warnings": 105, "atExistingBaseline": true },
+  "builtInternalExports": { "runtime": 247, "types": 113, "publicRootRepairApis": 0 },
+  "earlierCompleteCoreShards": {
+    "engineToolSystem": { "passed": 1944, "explicitLiveModelSkipped": 3 },
+    "remainder": { "passed": 3264 },
+    "freshRerunAfterFinalManualCcRoomMerge": false
+  },
+  "finalCompiledConsumers": {
+    "outputJournal": {
+      "passed": true,
+      "frames": 2213,
+      "bytes": 9060345,
+      "modelRunMs": 5382,
+      "sha256": "8b43320c8ca500d14af6c51646c33f6f7397cd99ed2030be11d7ca324f0a9b71",
+      "actualStdioRestartReceipts": 2,
+      "mainDesktopRecovered": true,
+      "authenticatedHubRecovered": true,
+      "segmentedJournalBytes": 147352023,
+      "segmentedColdFirstPageMs": 332,
+      "segmentedAllPagesMs": 6106,
+      "segmentedPages": 153,
+      "frozenPages": 17,
+      "independentWriterAppendsDuringPaging": 108,
+      "rotationDuringPaging": true,
+      "retentionExpiredExplicit": true
+    },
+    "mobileOutputJournal": {
+      "passed": true,
+      "actualConsumerHook": true,
+      "frames": 2224,
+      "recoveredBytes": 9059235,
+      "pages": 177,
+      "elapsedMs": 22630,
+      "preliminaryAndFollowUpInput": true,
+      "idempotentRetry": true,
+      "authenticatedReconnect": true,
+      "frozenAppendJoined": true,
+      "hostEpochAndSameEpochGap": true,
+      "unfinishedNotCompleted": true,
+      "corruptionBarrier": true,
+      "projectAndDeviceRevocation": true
+    },
+    "nativeRepairCli": {
+      "passed": true,
+      "node": "v25.8.1",
+      "cases": ["single-corrupt", "segmented-missing"],
+      "cursorPreserved": true,
+      "anchorInodePreserved": true
+    },
+    "pacedOutput": {
+      "passed": true,
+      "independentSseProcess": true,
+      "actualStdioWorkerMain": true,
+      "fps": 50,
+      "frames": 150,
+      "streamP50Ms": 44,
+      "streamP95Ms": 66,
+      "streamMaxMs": 86,
+      "controlRequests": 12,
+      "controlP95Ms": 24,
+      "cancelledMs": 189,
+      "p95GateMs": 200,
+      "terminalCursorDurable": true,
+      "noPostTerminalTimer": true,
+      "actualSigtermExitDurable": true
+    }
+  },
+  "remaining": [
+    "Final pushed PR139 CI and independent release acceptance",
+    "Physical GUI/relaunch/weak-network and phone acceptance",
+    "Authorized merge, publication and installed-version verification"
+  ],
+  "preservedLimits": [
+    "Real Session/anchor/head authority is mandatory; unknown replacement files are refused",
+    "Sticky failure, unpaired coverage and input gaps remain incomplete",
+    "Retention floor stays unchanged; expired history stays expired",
+    "Historical v1 clients must be stopped throughout maintenance, including the evidence-before-poison window",
+    "Main catchup and journal retention remain bounded; retained-prefix scanning has measured costs"
+  ]
+}

@@ -1,0 +1,108 @@
+{
+  "format": "codeshell-output-journal-manual-repair-delivery",
+  "version": 1,
+  "date": "2026-10-12",
+  "sourceCheckpoint": "fa07796d7aa40874e14b8d06a488a08cb7cfee1f",
+  "implementationCheckpoint": "424daf73",
+  "combinedBase": "dfe8d28b",
+  "ownMerge": "a4fa57ff",
+  "integrationPullRequest": "https://github.com/cjhyy/codeshell/pull/139",
+  "environment": {
+    "platform": "macOS",
+    "node": "v25.8.1",
+    "bun": "1.3.11",
+    "privateHome": true,
+    "networkDeniedBeforeCoreImports": true,
+    "realProviderRequests": 0,
+    "physicalPhone": false,
+    "published": false
+  },
+  "checks": [
+    {
+      "command": "node scripts/run-bun-test-shard.mjs --timeout 120000 tests/output-journal-manual-repair.test.ts",
+      "exitCode": 0,
+      "tests": 18,
+      "assertions": 1144,
+      "skipped": 0,
+      "failures": 0
+    },
+    {
+      "command": "node scripts/run-bun-test-shard.mjs --timeout 120000 packages/core/src/session/output-journal.test.ts packages/core/src/session/output-journal-storage.test.ts packages/web/src/lib/outputJournalRecovery.test.ts",
+      "exitCode": 0,
+      "tests": 42,
+      "assertions": 429,
+      "skipped": 0,
+      "failures": 0
+    },
+    {
+      "command": "tsc -p packages/core/tsconfig.json --noEmit --pretty false",
+      "exitCode": 0
+    },
+    {
+      "command": "eslint owned manual repair source, CLI, integration test and native smoke",
+      "exitCode": 0
+    },
+    {
+      "command": "bun install --frozen-lockfile (fresh private HOME)",
+      "exitCode": 0,
+      "lockChanged": false
+    },
+    {
+      "command": "bun run --cwd packages/core build (own worktree, private HOME)",
+      "exitCode": 0
+    },
+    {
+      "command": "node scripts/run-isolated-node-smoke.mjs scripts/smoke-output-journal-repair.mjs",
+      "exitCode": 0,
+      "cases": ["single-corrupt", "segmented-missing"],
+      "cursorPreserved": true,
+      "anchorInodePreserved": true
+    },
+    {
+      "command": "bun pm pack + tar inventory/mode inspection",
+      "exitCode": 0,
+      "executableBin": true
+    }
+  ],
+  "realFaultCuts": {
+    "singleFsync": 20,
+    "segmentedFsync": 28,
+    "segmentedWrite": 29,
+    "segmentedTruncate": 3,
+    "exclusiveLink": 6,
+    "unlink": 7,
+    "historicalV1Fsync": 20
+  },
+  "package": {
+    "name": "@cjhyy/code-shell-core",
+    "version": "0.9.35",
+    "archive": "cjhyy-code-shell-core-0.9.35.tgz",
+    "sha256": "4c0a220f33e0a66ce105c22bd77cbad368754ca5827dc7a2c12d2760ecfdbb73",
+    "bin": "code-shell-output-journal",
+    "files": [
+      "dist/cli/output-journal-repair.js",
+      "dist/session/output-journal-manual-repair.js",
+      "dist/session/output-journal-backup-format.js"
+    ],
+    "provenance": "manual checkpoint build before separate Main barrel/API integration; controlled local tarball, not a release"
+  },
+  "unacceptedAttempt": {
+    "scope": "own Main/independent/Engine combined shard",
+    "exitCode": 1,
+    "reason": "missing Server dist and earlier Core dist export prerequisites",
+    "engineCasesPassed": 11,
+    "engineAssertions": 91,
+    "acceptedAsPassingShard": false,
+    "followupOwner": "Main output durability agent builds final dependency graph and reruns integrated consumer gates"
+  },
+  "boundaries": [
+    "Historical v1 readers ignore head/pending and may already misclassify a pre-existing truncated source before durable evidence permits poisoning; stop old clients/writers for the entire maintenance/retry window.",
+    "After poison, the actual historical reader/writer refuse; the header is cleared only with fully restored bundle bytes.",
+    "Original Session/anchor/head/manifest authority required; no replacement authority guessing or arbitrary historical imports.",
+    "Existing unknown inode replacement and concurrent paths preserved/refused; known missing retained segments may be exclusively recreated with receipts.",
+    "Retention floor and logical cursor/sequence/hash remain unchanged; expired cursors stay expired.",
+    "Sticky persistence failure, unpaired coverage and input gaps remain incomplete.",
+    "Windows path semantics tested via node:path.win32; no physical Windows, phone, production cloud, or power-loss hardware acceptance claimed.",
+    "Final combined Main/Hub/Mobile gates, CI and authorized merged release audit remain the integration owner's responsibility."
+  ]
+}

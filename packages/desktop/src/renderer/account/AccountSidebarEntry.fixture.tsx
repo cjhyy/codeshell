@@ -69,6 +69,9 @@ const authenticate = async (action: string, input: CloudAccountLogin) => {
   return current;
 };
 const api: CloudAccountApi = {
+  manageLinks: async () => {
+    throw new Error("Sidebar fixture does not authorize Link management requests");
+  },
   capabilities: (origin) => {
     capabilityAttempts += 1;
     if (scenario === "capabilities-stale") {
@@ -240,15 +243,28 @@ const close = async () => {
   assert.equal(dialog(), undefined, "Closing removes account management");
   assert.equal(props(trigger())["aria-expanded"], false);
 };
+const assertTriggerDetails = (detail: string) => {
+  const describedBy = props(trigger())["aria-describedby"];
+  assert.equal(typeof describedBy, "string", "The account icon describes its current state");
+  assert.ok(describedBy.trim(), "The account icon references a status description");
+  const descriptions = describedBy
+    .trim()
+    .split(/\s+/)
+    .map((id: string) => {
+      const description = nodes(document.body).find((node) => props(node).id === id);
+      assert.ok(description, `The account status description exists: ${id}`);
+      return text(description);
+    });
+  assert.equal(descriptions.join(" "), detail);
+  assert.equal(props(trigger()).title, `${props(trigger())["aria-label"]}\n${detail}`);
+};
 const assertSignedOut = () => {
   assert.equal(props(trigger())["aria-label"], "登录账号");
-  assert.ok(text(trigger()).includes("本地模式 · 未登录"));
+  assertTriggerDetails("本地模式 · 未登录");
 };
 const assertSignedIn = (username: string) => {
   assert.equal(props(trigger())["aria-label"], `账号管理: ${username}`);
-  assert.ok(text(trigger()).includes(username));
-  assert.ok(text(trigger()).includes("CodeShell 云账号"));
-  assert.ok(!text(trigger()).includes("暂时无法读取账号状态"));
+  assertTriggerDetails("CodeShell 云账号");
   if (dialog()) {
     assert.ok(text(dialog()!).includes(username));
     assert.ok(text(dialog()!).includes("云账号已登录"));
@@ -317,7 +333,7 @@ try {
     assert.equal(props(input("密码（至少 12 位）")).value, "");
     await click(button("使用 GitHub 登录"));
     assert.equal(githubOrigin, "https://accounts.example.test");
-    assert.ok(text(trigger()).includes("正在登录…"));
+    assertTriggerDetails("正在登录…");
     assert.equal(props(button("使用 GitHub 登录")).disabled, true);
     assert.equal(credentials.length, 0, "GitHub authentication never submits a password draft");
     assert.equal(props(input("同时连接 GitHub")).disabled, true);
@@ -356,7 +372,7 @@ try {
     assertSignedIn("event-user");
   } else if (scenario === "unavailable") {
     assert.equal(props(trigger())["aria-label"], "登录账号");
-    assert.ok(text(trigger()).includes("暂时无法读取账号状态"));
+    assertTriggerDetails("暂时无法读取账号状态");
     await open();
     assert.ok(text(dialog()!).includes("暂时无法读取账号状态"));
     button("登录");
