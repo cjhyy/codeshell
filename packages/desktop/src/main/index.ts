@@ -1031,8 +1031,8 @@ const accessPasscode = new AccessPasscode({
   filePath: resolve(app.getPath("userData"), "mobile-remote", "access.json"),
 });
 const accountGitHubLinkBinding: {
-  prepare?: ReturnType<typeof registerRemoteLinkIpc>["prepareGitHubLink"];
-} = {};
+  prepare: ReturnType<typeof registerRemoteLinkIpc>["prepareGitHubLink"] | undefined;
+} = { prepare: undefined };
 const { mobileRemoteController } = createDesktopRemoteServices({
   ipcMain,
   userDataDir: app.getPath("userData"),
