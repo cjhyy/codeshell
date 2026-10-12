@@ -1,4 +1,4 @@
-import { useEffect, useId, useRef, useState } from "react";
+import { useEffect, useId, useRef, useState, type KeyboardEvent } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import type { CloudAccountStatus } from "../../shared/cloud-account.js";
@@ -25,6 +25,10 @@ export function CloudProjectManager({
   const [status, setStatus] = useState<CloudAccountStatus>({ state: "signed-out" });
   const [address, setAddress] = useState(initialAddress);
   const [connected, setConnected] = useState("");
+  const [attempted, setAttempted] = useState<Pick<
+    CloudManagementRequest,
+    "accountOrigin" | "accountId" | "cloudOrigin"
+  > | null>(null);
   const [view, setView] = useState<Extract<CloudManagementResult, { action: "list" }> | null>(null);
   const [name, setName] = useState("");
   const [busy, setBusy] = useState(false);
@@ -38,9 +42,6 @@ export function CloudProjectManager({
   const operation = useRef(0);
   const authority = useRef({ identity: "", generation: 0, status });
   useEffect(() => {
-    onBusyChange(busy);
-  }, [busy, onBusyChange]);
-  useEffect(() => {
     live.current = true;
     let received = false;
     const apply = (next: CloudAccountStatus) => {
@@ -51,8 +52,10 @@ export function CloudProjectManager({
         operation.current++;
         pending.current = false;
         setBusy(false);
+        onBusyChange(false);
         setView(null);
         setConnected("");
+        setAttempted(null);
         setError("");
         setUncertain(false);
         setConfirmLogout(false);
@@ -82,15 +85,29 @@ export function CloudProjectManager({
       onBusyChange(false);
     };
   }, [onBusyChange, t]);
+  const guardComposingEnter = (event: KeyboardEvent<HTMLInputElement>) => {
+    if (
+      event.key === "Enter" &&
+      (composing.current || event.nativeEvent.isComposing || event.keyCode === 229)
+    )
+      event.preventDefault();
+  };
   const act = async (action: CloudManagementRequest["action"], projectId?: string) => {
     if (pending.current) return;
     const captured = authority.current;
     const currentStatus = captured.status;
     if (currentStatus.state !== "signed-in" || !currentStatus.origin || !currentStatus.account)
       return;
+    if (
+      action === "logout" &&
+      (!attempted ||
+        attempted.accountOrigin !== currentStatus.origin ||
+        attempted.accountId !== currentStatus.account.id)
+    )
+      return;
     let cloudOrigin: string;
     try {
-      const url = new URL(address.trim());
+      const url = new URL(action === "logout" ? attempted!.cloudOrigin : address.trim());
       if (
         url.protocol !== "https:" ||
         url.username ||
@@ -111,6 +128,8 @@ export function CloudProjectManager({
       live.current && attempt === operation.current && generation === authority.current.generation;
     pending.current = true;
     setBusy(true);
+    // The chooser's close guard must be set before IPC can dispatch another event.
+    onBusyChange(true);
     setError("");
     try {
       const identity = {
@@ -118,6 +137,7 @@ export function CloudProjectManager({
         accountId: currentStatus.account.id,
         cloudOrigin,
       };
+      if (action === "list") setAttempted(identity);
       const request: CloudManagementRequest =
         action === "create"
           ? { ...identity, action, name: name.trim() }
@@ -135,6 +155,7 @@ export function CloudProjectManager({
       } else if (result.action === "logout") {
         setView(null);
         setConnected("");
+        setAttempted(null);
         setUncertain(false);
         setConfirmLogout(false);
       } else {
@@ -159,6 +180,7 @@ export function CloudProjectManager({
       if (current()) {
         pending.current = false;
         setBusy(false);
+        onBusyChange(false);
       }
     }
   };
@@ -196,6 +218,7 @@ export function CloudProjectManager({
               autoCapitalize="none"
               autoCorrect="off"
               spellCheck={false}
+              onKeyDown={guardComposingEnter}
               disabled={busy}
               placeholder="https://cloud.example.com"
               onChange={(event) => {
@@ -233,6 +256,7 @@ export function CloudProjectManager({
                     composing.current = false;
                   }}
                   aria-label={t("cloudManager.projectName")}
+                  onKeyDown={guardComposingEnter}
                   maxLength={80}
                   value={name}
                   disabled={busy}
@@ -292,8 +316,9 @@ export function CloudProjectManager({
               </ul>
             </>
           )}
-          {connected && (
+          {attempted && (
             <div className="grid gap-2">
+              <p className="break-all text-xs text-muted-foreground">{attempted.cloudOrigin}</p>
               {confirmLogout && <p className="text-sm">{t("cloudManager.logoutReview")}</p>}
               <Button
                 type="button"
