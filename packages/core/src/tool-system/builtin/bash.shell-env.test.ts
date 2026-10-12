@@ -19,6 +19,36 @@ function text(out: Awaited<ReturnType<typeof bashTool>>): string {
 }
 
 describe("Bash honors ctx.shellEnv (localEnvironment.env)", () => {
+  test("the actual foreground Host advertises its workspace write protocol", async () => {
+    const out = await bashTool(
+      { command: "echo protocol=$CODESHELL_WORKSPACE_WRITE_PROTOCOL" },
+      ctx({
+        sandbox: createOffBackend(),
+        shellEnv: { CODESHELL_WORKSPACE_WRITE_PROTOCOL: "unsupported" },
+      }),
+    );
+    expect(text(out)).toContain("protocol=1");
+  });
+
+  test("background Bash passes the same Host protocol to its process manager", async () => {
+    let received: Record<string, string> | undefined;
+    const out = await bashTool(
+      { command: "echo protocol", run_in_background: true },
+      ctx({
+        sessionId: "workspace-protocol-test",
+        shellEnv: { CODESHELL_WORKSPACE_WRITE_PROTOCOL: "unsupported" },
+        backgroundShells: {
+          spawnBackground(input: { shellEnv?: Record<string, string> }) {
+            received = input.shellEnv;
+            return { ok: true, shellId: "protocol-fixture" };
+          },
+        } as unknown as NonNullable<ToolContext["backgroundShells"]>,
+      }),
+    );
+    expect(text(out)).toContain("shell_id: protocol-fixture");
+    expect(received?.CODESHELL_WORKSPACE_WRITE_PROTOCOL).toBe("1");
+  });
+
   test("off backend: project env var is visible to the command", async () => {
     const out = await bashTool(
       { command: "echo env=$CODESHELL_TEST_VAR" },

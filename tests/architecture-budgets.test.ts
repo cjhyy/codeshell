@@ -400,7 +400,8 @@ describe("architecture growth budgets", () => {
       // public/extension contracts remain unchanged; allow no future exports.
       // +3 Host-only collection validation, selected-file capture/read and public-HTTPS transport.
       // +1 Host-only Session coverage proof/store; the stable SDK does not export it.
-      "packages/core/src/index.internal.ts": 105,
+      // +1 generic cross-process workspace write lock, shared by Desktop and Server.
+      "packages/core/src/index.internal.ts": 106,
       "packages/coding/src/index.ts": 12,
       "packages/arena/src/index.ts": 19,
       // +1 for conversation-session.ts, which re-exports the four modules
