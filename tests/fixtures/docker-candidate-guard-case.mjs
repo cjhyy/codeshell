@@ -4,7 +4,7 @@ import http from "node:http";
 import net from "node:net";
 import tls from "node:tls";
 import dns from "node:dns";
-import { spawn } from "node:child_process";
+import { spawn, execFile } from "node:child_process";
 import { appendFileSync, readFileSync, writeFileSync } from "node:fs";
 import { once } from "node:events";
 
@@ -79,6 +79,22 @@ try {
   const [strippedCode, strippedSignal] = await once(stripped, "close");
   assert.equal(strippedCode, 0, strippedError);
   assert.equal(strippedSignal, null);
+  let fileError, fileOutput, fileStderr;
+  const fileChild = execFile(
+    config.children[0].path,
+    config.children[0].args,
+    { cwd: config.home },
+    (error, stdout, stderr) => {
+      fileError = error;
+      fileOutput = stdout;
+      fileStderr = stderr;
+    },
+  );
+  const [fileCode, fileSignal] = await once(fileChild, "close");
+  assert.ifError(fileError);
+  assert.equal(fileCode, 0, fileStderr);
+  assert.equal(fileSignal, null);
+  assert.equal(fileOutput.trim(), "child guarded");
   appendFileSync(config.preload, "\n// changed after parent installed\n");
   assert.throws(
     () => spawn(config.children[0].path, config.children[0].args, { cwd: config.home }),

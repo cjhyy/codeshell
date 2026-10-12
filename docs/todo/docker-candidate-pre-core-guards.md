@@ -31,6 +31,19 @@ remain refused. Unreviewed `worker_threads.Worker` constructors are refused
 through CommonJS and both ESM exports: isolates can otherwise discard preload
 options and receive fresh, unguarded builtins. Reviewed Core workers remain
 digest-pinned Node child processes, rather than Worker isolates.
+Direct `ChildProcess.prototype.spawn` calls are refused. Reviewed spawn,
+execFile and the private Docker executor receive one synchronous, single-use
+grant for their exact executable, argv, environment, cwd and process options;
+no asynchronous or globally reusable native-spawn permission is exposed.
+UDP constructors and bind/connect/send methods, global WebSocket and
+`inspector.open` are also refused before they can create a transport.
+
+The returned `revokeOrigin(origin)` uses the same exact loopback-origin parser
+as `allowOrigin`: no path, query, alias, credentials or zero port is accepted.
+It returns whether an existing origin was removed. Consumers revoke the origin
+after confirming their captured controller child has closed, before allowing
+another child to reuse that port. This removes future request admission; it is
+not a claim to cancel an already dispatched request.
 
 The unmodified production provider's Docker verbs/argv are intercepted by a
 test-only controller adapter. Fresh registry installation/project/owner,
@@ -139,6 +152,20 @@ recorded probes include an additional Worker probe. No Core, network or native
 program is used by this regression. The affected guard, setup and browser
 authority shards pass 51 tests with 185 assertions and no failures or skips;
 ESLint, Prettier, native Node syntax and diff checks pass.
+
+A second builtin-only actual Node negative control proved the direct native
+spawn bypass: the original guard ran a fixed harmless Node child with empty
+`NODE_OPTIONS`, which reported no guard. The test confirmed that exact child's
+close before reporting failure. With the scoped grant, the direct call is
+refused and approved spawn, execFile and the private Docker executor still run
+their digest-pinned Node child with preload/PID proofs. Additional actual Node
+checks install protection before testing UDP/WS/inspector refusal and exercise
+revocation against an owned loopback HTTP listener. These are separate regression
+checks; each pre-Core receipt still honestly records six transport/process and
+four DNS probes. The final affected nine-suite combination passes 105 tests and
+405 assertions with no failures or skips. No Core, Docker, Main, native browser,
+external network, UDP, WebSocket or inspector listener was started by these
+checks. ESLint, Prettier, native Node syntax and diff checks pass.
 
 The final fixed-source Linux gate must still build/inspect the helper image,
 execute both-family rules/probes, and run the original complete business suite

@@ -9,6 +9,7 @@ import dgram from "node:dgram";
 import http2 from "node:http2";
 import children from "node:child_process";
 import workers from "node:worker_threads";
+import inspector from "node:inspector";
 import { createHash } from "node:crypto";
 import {
   constants,
@@ -130,17 +131,20 @@ export function installDockerCandidateGuard(
   const role = process.env.CODESHELL_DOCKER_CANDIDATE_ROLE ?? config.role;
   if (!["driver", "controller", "runtime", "worker", "installer", "model"].includes(role)) refuse();
   const origins = new Set();
-  const allowOrigin = (origin) => {
+  const exactOrigin = (origin) => {
     const url = new URL(origin);
     if (
       url.origin !== origin ||
       url.hostname !== "127.0.0.1" ||
       !url.port ||
+      Number(url.port) < 1 ||
       !["http:", "https:"].includes(url.protocol)
     )
       refuse();
-    origins.add(origin);
+    return origin;
   };
+  const allowOrigin = (origin) => origins.add(exactOrigin(origin));
+  const revokeOrigin = (origin) => origins.delete(exactOrigin(origin));
   for (const origin of config.origins ?? []) allowOrigin(origin);
   const check = (input) => {
     if (!origins.has(new URL(input).origin)) refuse();
@@ -324,8 +328,66 @@ export function installDockerCandidateGuard(
   dns.Resolver = dns.promises.Resolver = function () {
     refuse();
   };
-  dgram.createSocket = http2.connect = refuse;
-  const originals = { spawn: children.spawn, execFile: children.execFile };
+  for (const method of ["bind", "connect", "send"]) dgram.Socket.prototype[method] = refuse;
+  dgram.Socket = function () {
+    refuse();
+  };
+  globalThis.WebSocket = function () {
+    refuse();
+  };
+  dgram.createSocket = http2.connect = inspector.open = refuse;
+  const originals = {
+    spawn: children.spawn,
+    execFile: children.execFile,
+    nativeSpawn: children.ChildProcess.prototype.spawn,
+  };
+  let nativeSpawnAuthority;
+  // Both Node exports eventually invoke the public ChildProcess prototype.
+  // Give that one synchronous invocation an exact, single-use grant. Options
+  // and environment getters are evaluated before the grant becomes available.
+  const invokeNative = (method, command, args, options = {}, callback) => {
+    if (nativeSpawnAuthority || !Array.isArray(args)) refuse();
+    const actualArgs = [...args];
+    const actualOptions = { ...options, env: { ...(options.env ?? process.env) } };
+    if (actualOptions.shell) refuse();
+    const grant = {
+      file: command,
+      args: [method === "spawn" ? (actualOptions.argv0 ?? command) : command, ...actualArgs],
+      cwd: actualOptions.cwd ?? null,
+      uid: actualOptions.uid ?? null,
+      gid: actualOptions.gid ?? null,
+      detached: method === "spawn" && !!actualOptions.detached,
+      envPairs: Object.entries(actualOptions.env)
+        .filter(([, value]) => value !== undefined)
+        .map(([key, value]) => `${key}=${value}`)
+        .sort(),
+    };
+    nativeSpawnAuthority = grant;
+    try {
+      return originals[method](command, actualArgs, actualOptions, callback);
+    } finally {
+      nativeSpawnAuthority = undefined;
+    }
+  };
+  children.ChildProcess.prototype.spawn = function (options) {
+    const grant = nativeSpawnAuthority;
+    if (
+      !grant ||
+      !options ||
+      options.file !== grant.file ||
+      !same(options.args, grant.args) ||
+      !same(options.cwd ?? null, grant.cwd) ||
+      (options.uid ?? null) !== grant.uid ||
+      (options.gid ?? null) !== grant.gid ||
+      !!options.detached !== grant.detached ||
+      !Array.isArray(options.envPairs) ||
+      !same([...options.envPairs].sort(), grant.envPairs)
+    )
+      refuse();
+    // Consume before native callbacks/diagnostics can reenter the prototype.
+    nativeSpawnAuthority = undefined;
+    return originals.nativeSpawn.call(this, options);
+  };
   const permitChild = (command, args, options = {}) => {
     if (!Array.isArray(args) || options.shell) refuse();
     let env = options.env ?? process.env;
@@ -409,12 +471,13 @@ export function installDockerCandidateGuard(
           args,
           options,
           callback,
-          original: originals.execFile,
+          original: (command, args, options, callback) =>
+            invokeNative("execFile", command, args, options, callback),
           allowOrigin,
           record,
         });
       const allowed = permitChild(command, args, options);
-      const child = originals[method](allowed.command, allowed.args, allowed.options, callback);
+      const child = invokeNative(method, allowed.command, allowed.args, allowed.options, callback);
       childStarted?.(child);
       record("child-started", {
         childPid: child.pid,
@@ -469,5 +532,5 @@ export function installDockerCandidateGuard(
     dnsNegativeProbes: dnsProbes.length,
     argvHash: candidateHash(JSON.stringify(process.argv.slice(1))),
   });
-  return { allowOrigin, record };
+  return { allowOrigin, revokeOrigin, record };
 }

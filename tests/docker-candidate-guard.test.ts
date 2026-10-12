@@ -41,6 +41,7 @@ const policy = {
 async function actualNode(
   change: (config: any, env: Record<string, string>) => void = () => {},
   fixture = "docker-candidate-guard-case.mjs",
+  manual = false,
 ) {
   const home = realpathSync(mkdtempSync(join(tmpdir(), "docker-candidate-guard-")));
   chmodSync(home, 0o700);
@@ -102,7 +103,7 @@ console.log('child guarded');`,
   try {
     child = spawn(node, [join(root, "tests/fixtures", fixture)], {
       cwd: home,
-      env,
+      env: manual ? { ...env, NODE_OPTIONS: "" } : env,
       stdio: ["ignore", "pipe", "pipe"],
     });
     let stdout = "",
@@ -143,7 +144,7 @@ test("real Node installs guard before entry and every permitted descendant, with
   expect(value.reached).toBe(true);
   expect(
     value.receipt.filter((event) => event.event === "pre-core").map((event) => event.role),
-  ).toEqual(["installer", "worker", "worker"]);
+  ).toEqual(["installer", "worker", "worker", "worker"]);
   const started = value.receipt.find((event) => event.event === "child-started");
   expect(
     value.receipt.some((event) => event.event === "pre-core" && event.pid === started.childPid),
@@ -162,6 +163,35 @@ test("actual Node refuses unreviewed Workers through ESM and CommonJS before the
     negativeProbes: 6,
     dnsNegativeProbes: 4,
   });
+});
+
+test("actual Node refuses direct ChildProcess.prototype.spawn before an unguarded child runs", async () => {
+  const value = await actualNode(() => {}, "docker-candidate-direct-spawn-case.mjs");
+  expect(value.stderr).toBe("");
+  expect(value.code).toBe(0);
+  expect(value.signal).toBe(null);
+  expect(value.stdout).toContain("PASS refused direct native spawn");
+  expect(value.receipt).toHaveLength(1);
+});
+
+test("actual Node fences public native APIs and revokes only exact owned loopback origins", async () => {
+  const value = await actualNode(() => {}, "docker-candidate-public-api-case.mjs", true);
+  expect(value.stderr).toBe("");
+  expect(value.code).toBe(0);
+  expect(value.signal).toBe(null);
+  expect(value.stdout).toContain(
+    "PASS public native refusals, reviewed executor and origin revocation",
+  );
+  expect(value.receipt.filter((row) => row.event === "pre-core").map((row) => row.role)).toEqual([
+    "installer",
+    "worker",
+  ]);
+  expect(value.receipt.every((row) => row.event !== "pre-core" || row.negativeProbes === 6)).toBe(
+    true,
+  );
+  expect(
+    value.receipt.every((row) => row.event !== "pre-core" || row.dnsNegativeProbes === 4),
+  ).toBe(true);
 });
 
 test("actual Node maps only frozen renderer entry bytes from loopback zero to the exact firewall port", async () => {
