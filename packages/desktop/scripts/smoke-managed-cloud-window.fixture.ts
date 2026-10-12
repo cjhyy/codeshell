@@ -110,7 +110,12 @@ async function main() {
       ),
       { bridge: "undefined", require: "undefined", process: "undefined", cookie: "" },
     );
-    const prefs = win.webContents.getLastWebPreferences();
+    // Electron 33 exposes this native inspection method without a declaration.
+    const prefs = (
+      win.webContents as Electron.WebContents & {
+        getLastWebPreferences(): Electron.WebPreferences;
+      }
+    ).getLastWebPreferences();
     assert.equal(prefs.sandbox, true);
     assert.equal(prefs.contextIsolation, true);
     assert.equal(prefs.nodeIntegration, false);

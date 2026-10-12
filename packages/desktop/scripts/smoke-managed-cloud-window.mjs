@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import { spawn, execFileSync } from "node:child_process";
 import { mkdtemp, readFile, realpath, rm, symlink, writeFile } from "node:fs/promises";
+import { readFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, dirname, resolve } from "node:path";
 import { createRequire } from "node:module";
@@ -22,9 +23,13 @@ let server,
 const alive = (pid) => {
   try {
     process.kill(pid, 0);
+    if (process.platform === "linux") {
+      const stat = readFileSync(`/proc/${pid}/stat`, "utf8");
+      if (stat.slice(stat.lastIndexOf(")") + 2).startsWith("Z ")) return false;
+    }
     return true;
   } catch (error) {
-    if (error.code === "ESRCH") return false;
+    if (error.code === "ESRCH" || error.code === "ENOENT") return false;
     throw error;
   }
 };
