@@ -10,6 +10,7 @@ import {
   readFileSync,
   realpathSync,
   rmSync,
+  symlinkSync,
   writeFileSync,
 } from "node:fs";
 import { tmpdir } from "node:os";
@@ -193,6 +194,53 @@ test("actual Node fences public native APIs and revokes only exact owned loopbac
     value.receipt.every((row) => row.event !== "pre-core" || row.dnsNegativeProbes === 4),
   ).toBe(true);
 });
+
+for (const failure of [undefined, "public", "symlink", "profile", "unregistered"])
+  test(`actual Node distinct child HOME ${failure ?? "preserves its own policy and preload"}`, async () => {
+    const value = await actualNode((config, env) => {
+      const childHome = join(config.home, "independent-child");
+      mkdirSync(childHome, { mode: 0o700 });
+      const childPolicy = join(childHome, "policy.json");
+      writeFileSync(
+        childPolicy,
+        JSON.stringify({ ...config, home: childHome, dataRoot: childHome, children: [] }),
+        { mode: 0o600 },
+      );
+      const environment = {
+        ...env,
+        HOME: childHome,
+        USERPROFILE: childHome,
+        CODE_SHELL_HOME: join(childHome, ".code-shell"),
+        CODESHELL_DOCKER_CANDIDATE_CONFIG: childPolicy,
+        CODESHELL_DOCKER_CANDIDATE_CONFIG_HASH: candidateHash(readFileSync(childPolicy)),
+      };
+      if (failure === "public") chmodSync(childHome, 0o755);
+      if (failure === "symlink") {
+        const alias = join(config.home, "child-alias");
+        symlinkSync(childHome, alias);
+        environment.HOME = environment.USERPROFILE = alias;
+        environment.CODE_SHELL_HOME = join(alias, ".code-shell");
+      }
+      if (failure === "profile") environment.USERPROFILE = config.home;
+      config.children[0] = { ...config.children[0], reinject: false, environment };
+      config.testChildExpectedRefusal = !!failure;
+      config.testChildUnregisteredHome = failure === "unregistered";
+    }, "docker-candidate-child-home-case.mjs");
+    expect(value.stderr).toBe("");
+    expect(value.code).toBe(0);
+    expect(value.signal).toBe(null);
+    const proofs = value.receipt.filter((row) => row.event === "pre-core");
+    expect(proofs).toHaveLength(failure ? 1 : 2);
+    if (!failure) {
+      expect(proofs[1].homeHash).not.toBe(proofs[0].homeHash);
+      expect(proofs[1].policyHash).not.toBe(proofs[0].policyHash);
+      expect(proofs[1].preloadHash).toBe(proofs[0].preloadHash);
+      expect(proofs[1].ppid).toBe(proofs[0].pid);
+    }
+    expect(value.stdout).toContain(
+      failure ? "PASS refused child HOME" : "PASS independent child HOME",
+    );
+  });
 
 test("actual Node maps only frozen renderer entry bytes from loopback zero to the exact firewall port", async () => {
   const value = await actualNode((config) => {
