@@ -136,7 +136,7 @@ const account = new CloudAccountManager({
       ? makeAccount()
       : input.path.endsWith("/refresh")
         ? { ...saved, accessToken: token(), accessTokenExpiresAt: clock + 600_000 }
-        : { revoked: true };
+        : { ok: true };
   },
 });
 const manager = new CloudManagementManager({
