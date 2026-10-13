@@ -99,6 +99,7 @@ export function useHubController({
   const runPending = React.useRef(new Set<string>());
   const liveRuns = React.useRef(new Set<string>());
   const decisionPending = React.useRef(new Set<string>());
+  const approvalRevision = React.useRef(0);
   const mounted = React.useRef(false);
   const uploadController = React.useRef<AbortController | null>(null);
   const loadingTranscript = React.useRef<{
@@ -325,26 +326,79 @@ export function useHubController({
     const client = new ProtocolClient(defaultWsUrl());
     clientRef.current = client;
     const offAuth = client.onAuthLost(onAuthLost);
+    let approvalRefresh: Promise<void> | undefined;
+    const refreshApprovals = () => {
+      if (!hub || approvalRefresh) return;
+      const generation = client.connectionGeneration;
+      const revision = approvalRevision.current;
+      const current = () =>
+        mounted.current &&
+        clientRef.current === client &&
+        client.connectionGeneration === generation;
+      const pending = client
+        .approvalSnapshot()
+        .then((snapshot) => {
+          if (!current() || approvalRevision.current !== revision) return;
+          if (
+            !snapshot ||
+            !Array.isArray(snapshot.approvals) ||
+            snapshot.approvals.length > 256 ||
+            !Array.isArray(snapshot.leases) ||
+            snapshot.leases.length > 256
+          )
+            throw new Error("审批恢复快照无效，请重试。");
+          approvalRevision.current++;
+          dispatchApprovals({
+            method: "serve/approvalSnapshot",
+            params: { approvals: snapshot.approvals },
+          });
+          for (const lease of snapshot.leases)
+            dispatchApprovals({ method: "serve/approvalLease", params: { ...lease } });
+        })
+        .catch((cause) => {
+          if (!current()) return;
+          // Old serve rejects this exact namespace with JSON-RPC MethodNotFound.
+          // Only that explicit unsupported response may fall back to the existing
+          // authenticated upgrade snapshot; permission/transport failures cannot.
+          if (
+            cause instanceof ProtocolRequestError &&
+            cause.kind === "response" &&
+            cause.code === -32601
+          )
+            client.reconnect();
+          else reportError(cause);
+        })
+        .finally(() => {
+          if (approvalRefresh === pending) approvalRefresh = undefined;
+        });
+      approvalRefresh = pending;
+    };
+    const recoverConnection = () => {
+      setWorkerNote(null);
+      setError("");
+      void refreshSessions().then(() => {
+        const id = activeIdRef.current;
+        if (
+          mounted.current &&
+          clientRef.current === client &&
+          (sessionsRef.current.some((item) => item.sessionId === id) ||
+            liveRuns.current.has(id) ||
+            runPending.current.has(id) ||
+            uncertainSubmissions.current.has(id))
+        )
+          void loadTranscript(id);
+      });
+      void refreshConfiguration();
+      void recoverUncertainSubmissions();
+    };
+    const offResync = client.onResync(() => {
+      recoverConnection();
+      refreshApprovals();
+    });
     const offState = client.onStateChange((state) => {
       setConnection(state);
-      if (state === "open") {
-        setWorkerNote(null);
-        setError("");
-        void refreshSessions().then(() => {
-          const id = activeIdRef.current;
-          if (
-            mounted.current &&
-            clientRef.current === client &&
-            (sessionsRef.current.some((item) => item.sessionId === id) ||
-              liveRuns.current.has(id) ||
-              runPending.current.has(id) ||
-              uncertainSubmissions.current.has(id))
-          )
-            void loadTranscript(id);
-        });
-        void refreshConfiguration();
-        void recoverUncertainSubmissions();
-      } else if (state === "closed") {
+      if (state === "open") recoverConnection();
+      else if (state === "closed") {
         if (hub) void onCheckAuth();
         setChat((prev) => ({ ...prev, run: "idle" }));
       }
@@ -437,6 +491,7 @@ export function useHubController({
         method === "serve/approvalSnapshot" ||
         method === "serve/approvalLease"
       ) {
+        approvalRevision.current++;
         dispatchApprovals({ method, params });
         return;
       }
@@ -454,6 +509,7 @@ export function useHubController({
       mounted.current = false;
       uploadController.current?.abort();
       offState();
+      offResync();
       offNotify();
       offAuth();
       client.close();
@@ -467,6 +523,7 @@ export function useHubController({
     onAuthLost,
     onCheckAuth,
     hub,
+    reportError,
   ]);
 
   const hasLease = Object.values(approvalState).some(
@@ -599,6 +656,7 @@ export function useHubController({
   const decide = (payload: ApprovalRequestPayload, approved: boolean, answer?: string): void => {
     const client = clientRef.current;
     if (!client || connection !== "open" || decisionPending.current.has(payload.requestId)) return;
+    approvalRevision.current++;
     decisionPending.current.add(payload.requestId);
     setPendingDecisions((prev) => ({ ...prev, [payload.requestId]: true }));
     setError("");
