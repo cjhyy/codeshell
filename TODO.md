@@ -2,13 +2,13 @@
 
 > 本文件只保留**未完成**的待办；已完成实现与历史验收见 Git 历史和 [能力盘点](docs/architecture/11-feature-inventory.md)。
 > 分区规则：**小 feature = 体量 M 及以下（M/S/XS），可单会话直接着手**；**大功能升级 = 体量 L**，需先方案设计再分阶段落地。
-> 最近一次核对：2026-10-13。[v0.9.36 已正式发布](https://github.com/cjhyy/codeshell/releases/tag/v0.9.36)，但 tag 解析源码早于后续 Cloud 合入，也不包含最终候选 guard，不能代表本轮全部交付。前版 0.9.33 已包含资料集跨文件查询、Profile 删除解绑、MCP 配置重载与恢复覆盖修复；运行时加载和完整目标部署验收仍单独保留。真实 GitHub 登录与原生连接已有生产记录，其读取、钥匙串及生命周期限制和 P0/P1 真实进展见[交付检查点](docs/todo/p0-p1-release-2026-10-12.md)。历史来源、源码标记、设计文档和未勾验收判定见 [夜间 TODO 核查](docs/todo/2026-09-11-overnight-todo-audit.md)。源码实现不代表已经发布或部署。
+> 最近一次核对：2026-10-14。最新正式版为 [v0.9.40](https://github.com/cjhyy/codeshell/releases/tag/v0.9.40)，tag 解析到 `c86f003d`，不包含后续 PR #170/#171/#172/#174 或独立候选中的 SVG 补丁。当前远端 main 为 `3a752aea`，其首轮自然 [CI 38443116313](https://github.com/cjhyy/codeshell/actions/runs/38443116313) 十二项成功；源码合入、受控验收、正式发行和目标部署仍分别记证。完整十项门槛、准确输入及不可变回执见[交付检查点](docs/todo/p0-p1-release-2026-10-12.md)；旧版本与失败记录在该文档中保留为历史。
 
-> 最新交付检查点：PR #161/#162 已正常合入，当前 main `d90f2ed4` 的自然 CI `38345049356` 首轮十二项全通过；PDF/Video/guard 共 32 项零失败、零跳过，paced 原 150 帧／50fps／200ms 门槛通过（stream P95=11ms、control P95=1ms、cancel=11ms）。旧 paced 289/357/378ms 与旧 Electron 30 秒失败仍未解释，新增诊断不称产品修复。
+> **P0：先完成真实插件与 SVG UI、完整候选和正式发行。** Superpowers 6.1.1 的真实 API 安装、14 Skills 与来源隔离冷启动通过，但该输入无 Hook；真实 v5.0.0 完整源码、API 安装及审阅批准通过，所引回执中的自动 Hook 尚未执行。SVG 的真实 Main/原 guard 探针、32 次原生 ps 和两次进程 metrics 已通过，随后 Settings 按钮等待超时，DTO/IMG/第二 phase 未到达；新增失败诊断仍在准备，不计通过。
 >
-> 新完整 Linux 候选 `38345372098` 固定 Host `d90f2ed4`／Services `46ee99d3`／Panels `75431542`、真实 speech／默认 all／无 exclusion，已首轮终态失败：六包版本 UI、Job 迁移恢复、真实 PDF、CPU speech 和音频流程通过，随后 Job Hunt 阶段出现新未知失败；其余领域业务／重启／完整恢复未到达，archive／候选上传 skipped，证据上传 quota 失败。严格 TLS 三 GET 已全部 200，连通性阻断解除；目标版本、迁移恢复及 Cloud/Link 管理上线仍未验收。
+> 完整 Linux [38384214542](https://github.com/cjhyy/codeshell-services/actions/runs/38384214542) 固定 Host `676d3a14`／Services `a5958f0b`／Panels `75431542`、真实 speech／默认 all／无 exclusion，首轮终态失败：六包受控更新、Job 迁移恢复、真实 PDF、CPU speech 和音频局部流程通过，随后 Job 最终 `page-errors` 断言失败，具体错误仍未知；其余完整业务／重启／备份恢复／Link／归档未到达，候选上传 skipped，证据上传 quota 失败。这轮没有覆盖当前 main `3a752aea` 或 SVG 候选。
 >
-> 正式五 Panel 资产／生产更新链、正式安装包 Pet/Keychain、真实插件和微信、二十四项完整业务、目标部署／回滚、实体手机及配额删除授权继续保留。P0/P1 全十项标准、准确源码与历史证据见[交付检查点](docs/todo/p0-p1-release-2026-10-12.md)。
+> **P1：完成真实环境闭环。** 五 Panel 正式资产／生产更新链、正式安装包 Pet/Keychain 和真实微信、二十四项完整业务、真实旧数据迁移、账号/设备 authority、目标部署／备份恢复／回滚、实体手机及最终输出恢复验收继续保留。目标 SSH 入口仍待确认；严格 HTTPS 200 不关闭部署验收。P2/P3、新第三方 Link 接入及未获授权的配额删除不在本轮推进范围，不缩减原 3 P0 + 7 P1。
 
 > Panel runtime 专项核对：2026-09-13。API 14 通用资源、包内工具、进程回执与 Desktop 后台任务已实现，视频处理业务已迁到面板；本次发布与最终 CI 仍见 [验收矩阵](docs/todo/panel-plugin-runtime-implementation.md)。旧 Host TTS 测试随业务迁至面板，不再作为 Host 功能待办。
 
