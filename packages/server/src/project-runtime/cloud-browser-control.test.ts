@@ -316,7 +316,8 @@ test("multi-account capability is explicit and bootstrap rejects CSRF before con
 test("browser-specific environment and status aliases retain their exact authority gates", async () => {
   const f = await fixture();
   expect((await f.request("/api/v1/cloud-browser/environment")).status).toBe(401);
-  const a = await f.login(f.identity());
+  const principal = f.identity();
+  const a = await f.login(principal);
   const response = await f.request("/api/v1/cloud-browser/environment", "GET", undefined, a.cookie);
   expect(response.status).toBe(200);
   expect(await response.json()).toEqual({
@@ -337,7 +338,7 @@ test("browser-specific environment and status aliases retain their exact authori
   expect((await f.request("/api/v1/cloud-browser/environment", "POST", {}, a.cookie)).status).toBe(
     405,
   );
-  f.active.delete(a.session.rootSessionId);
+  f.active.delete(principal.rootSessionId);
   expect(
     (await f.request("/api/v1/cloud-browser/environment", "GET", undefined, a.cookie)).status,
   ).toBe(401);
