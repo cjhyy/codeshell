@@ -243,6 +243,51 @@ async function chooseMode(mode) {
   );
 }
 
+async function recordThemeAudio() {
+  await win.evaluate(() => {
+    if (window.__codeshellThemeAudio) return;
+    const NativeAudio = window.Audio;
+    window.__codeshellThemeAudio = [];
+    window.Audio = function (...args) {
+      const audio = new NativeAudio(...args);
+      window.__codeshellThemeAudio.push(audio);
+      return audio;
+    };
+    window.Audio.prototype = NativeAudio.prototype;
+  });
+}
+
+async function assertThemeMusicPlayback(label) {
+  await recordThemeAudio();
+  assert(
+    await win.evaluate(() => window.__codeshellThemeAudio.every((audio) => audio.paused)),
+    `${label} does not autoplay on selection`,
+  );
+  assert(
+    (await win.locator("[data-theme-sound-preview]").count()) === 4,
+    `${label} exposes four sound previews`,
+  );
+  assert(
+    (await win.locator("[data-theme-music-select] option").count()) === 4,
+    `${label} offers an offline original and three official music links`,
+  );
+  await win.locator("[data-theme-music-play]").click();
+  await win.waitForFunction(() =>
+    window.__codeshellThemeAudio.some((audio) => !audio.paused && audio.currentTime > 0),
+  );
+  await backToChat();
+  await win.locator("[data-theme-music-dock]").waitFor({ state: "visible" });
+  assert(
+    await win.evaluate(() =>
+      window.__codeshellThemeAudio.some((audio) => !audio.paused && audio.currentTime > 0),
+    ),
+    `${label} keeps playing after returning to chat`,
+  );
+  await win.locator("[data-theme-music-dock-stop]").click();
+  await win.waitForFunction(() => window.__codeshellThemeAudio.every((audio) => audio.paused));
+  await appearance();
+}
+
 async function surfaceMetrics() {
   return win.evaluate(
     (names) =>
@@ -346,6 +391,9 @@ try {
     appDir,
     home: isolated.home,
     userDataDir: isolated.userDataDir,
+    // Three bundled skins, background playback and source-pack imports extend
+    // this smoke beyond the harness's default three-minute runtime budget.
+    runtimeTimeoutMs: 300_000,
     // The outer guarded runner owns a different fixture HOME. Keep the Core
     // test-runner fallback attached to this Electron profile as well.
     env: { CODE_SHELL_TEST_HOME: isolated.codeShellHome },
@@ -354,6 +402,7 @@ try {
     processLog = (processLog + chunk).slice(-20_000);
   });
   win = await findCodeShellWindow(app);
+  win.setDefaultTimeout(20_000);
   const errors = captureRendererErrors(win);
   await win.setViewportSize({ width: 1440, height: 960 });
   await dismissTrust();
@@ -426,6 +475,24 @@ try {
     await win.locator('[data-panel-action="toggle"]').click();
     await appearance();
   }
+  for (const id of ["miku", "muse"]) {
+    await chooseMode("light");
+    await win.locator(`[data-theme-pack="${id}"] button[aria-pressed]`).click();
+    await assertThemeMusicPlayback(`Bundled ${id}`);
+    for (const mode of ["light", "dark"]) {
+      await chooseMode(mode);
+      await screenshot(`builtin-${id}-appearance-${mode}.png`);
+      await backToChat();
+      const metrics = await surfaceMetrics();
+      report[`builtin-${id}-${mode}`] = metrics;
+      assert(metrics.chat.image.includes("stage-"), `${id} uses its bundled artwork`);
+      assert(metrics.window.frameWidth === "2px", `${id} provides its window frame`);
+      await decodeImages(metrics);
+      await screenshot(`builtin-${id}-chat-${mode}.png`);
+      await appearance();
+    }
+  }
+  await maki.click();
   // A saved builtin selection must survive startup without installed theme data.
   await backToChat();
   await win.reload();
@@ -534,6 +601,9 @@ try {
     await win.locator('[data-theme-pack="visual-surfaces"]').waitFor({ state: "hidden" });
     const manifest = JSON.parse(await readFile(join(sourceDir, ".cs-theme.json"), "utf8"));
     await importPack(resolve(sourceDir), manifest.id);
+    if (manifest.sounds && manifest.music) {
+      await assertThemeMusicPlayback(`Installed ${manifest.id}`);
+    }
     for (const mode of ["light", "dark"]) {
       await chooseMode(mode);
       await screenshot(`example-appearance-${mode}.png`);
@@ -614,7 +684,7 @@ try {
   if (screenshotDir)
     await writeFile(join(screenshotDir, "report.json"), JSON.stringify(report, null, 2));
   console.log(
-    "Theme visual smoke passed: root/wrapped ZIP and folder imports, review cancellation, bundled Maki offline artwork and persistence, legacy wallpaper, six surfaces, modes, reset, narrow layout and transparent pet.",
+    "Theme smoke passed: ZIP/folder review and imports, Maki/Miku/μ’s offline artwork, local theme music in settings and chat, installed audio playback, six surfaces, modes, reset, narrow layout and transparent pet.",
   );
   if (screenshotDir) console.log(`Theme evidence: ${screenshotDir}`);
 } catch (error) {

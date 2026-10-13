@@ -8,6 +8,8 @@ import type { ContextPackageCreatedOptions } from "./MessageStream";
 import { Sidebar } from "./app/AppSidebar";
 import { ResponsiveSidebar, SIDEBAR_NAVIGATION_ID } from "./app/ResponsiveSidebar";
 import { useResponsiveSidebar } from "./app/useResponsiveSidebar";
+import { useThemeAudio } from "./app/useThemeAudio";
+import { ThemeMusicMiniPlayer } from "./app/ThemeMusicMiniPlayer";
 import { PetPage } from "./pet/PetPage";
 import { useOptionalPetState } from "./pet/PetStateProvider";
 import { PetWorldPane } from "./pet/PetWorldPane";
@@ -177,6 +179,7 @@ function PageLoading({ label }: { label: string }) {
 }
 
 function App() {
+  useThemeAudio();
   const toast = useToast();
   const confirm = useOptionalConfirm();
   const { t, lang } = useT();
@@ -2272,6 +2275,7 @@ function App() {
           />
         </div>
 
+        <ThemeMusicMiniPlayer />
         <div className="flex min-h-0 flex-1">
           <ResponsiveSidebar
             narrow={isNarrowWindow}

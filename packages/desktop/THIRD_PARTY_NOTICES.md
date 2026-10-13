@@ -16,6 +16,17 @@ unofficial theme and does not imply affiliation or endorsement.
 - School illustration: https://lovelive-as.bushimo.jp/wp-content/uploads/2019/09/chara_06_school-2.png
 - Stage illustration: https://lovelive-as.bushimo.jp/wp-content/uploads/2019/09/chara_06_cheer-1.png
 
+## Hatsune Miku and Love Live! μ’s theme media
+
+The optional Digital Encore and Nine Colors themes contain AI-generated
+unofficial fan illustrations, rather than official character artwork. Character
+rights belong to their respective rights holders; no affiliation or endorsement
+is implied. Generation prompts are recorded in `examples/themes/artwork-prompts.json`.
+
+Their notification sounds and instrumental loops are original synthesized audio
+created for CodeShell. The song lists link to official artist or series videos;
+those recordings are not bundled with the application.
+
 ## Puppeteer
 
 The desktop browser execution layer and bundled Chrome extension include
