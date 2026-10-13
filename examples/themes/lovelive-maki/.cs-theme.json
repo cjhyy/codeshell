@@ -1,0 +1,106 @@
+{
+  "schemaVersion": 1,
+  "id": "lovelive-maki",
+  "name": "西木野真姬 · Scarlet Stage",
+  "version": "1.0.0",
+  "colors": {
+    "light": {
+      "--cs-background": "350 42% 97%",
+      "--cs-foreground": "340 24% 19%",
+      "--cs-card": "350 45% 99%",
+      "--cs-card-foreground": "340 24% 19%",
+      "--cs-popover": "350 42% 99%",
+      "--cs-popover-foreground": "340 24% 19%",
+      "--cs-primary": "349 72% 43%",
+      "--cs-primary-foreground": "0 0% 100%",
+      "--cs-secondary": "348 40% 93%",
+      "--cs-secondary-foreground": "340 30% 28%",
+      "--cs-muted": "350 30% 94%",
+      "--cs-muted-foreground": "340 15% 42%",
+      "--cs-accent": "348 55% 91%",
+      "--cs-accent-foreground": "349 65% 31%",
+      "--cs-border": "348 30% 83%",
+      "--cs-input": "348 30% 80%",
+      "--cs-ring": "349 72% 43%"
+    },
+    "dark": {
+      "--cs-background": "335 23% 9%",
+      "--cs-foreground": "350 30% 93%",
+      "--cs-card": "335 22% 12%",
+      "--cs-card-foreground": "350 30% 93%",
+      "--cs-popover": "335 22% 13%",
+      "--cs-popover-foreground": "350 30% 93%",
+      "--cs-primary": "349 80% 71%",
+      "--cs-primary-foreground": "340 40% 13%",
+      "--cs-secondary": "335 24% 17%",
+      "--cs-secondary-foreground": "350 25% 90%",
+      "--cs-muted": "335 20% 15%",
+      "--cs-muted-foreground": "345 19% 71%",
+      "--cs-accent": "339 32% 21%",
+      "--cs-accent-foreground": "350 50% 89%",
+      "--cs-border": "340 25% 26%",
+      "--cs-input": "340 25% 29%",
+      "--cs-ring": "349 80% 71%"
+    }
+  },
+  "wallpaper": {
+    "light": "assets/maki-stage.png",
+    "dark": "assets/maki-stage.png",
+    "opacity": 0.2
+  },
+  "surfaces": {
+    "window": {
+      "background": {
+        "light": "350 42% 97%",
+        "dark": "335 23% 9%"
+      }
+    },
+    "titlebar": {
+      "background": {
+        "light": "349 54% 94%",
+        "dark": "337 30% 12%"
+      }
+    },
+    "sidebar": {
+      "background": {
+        "light": "348 44% 94%",
+        "dark": "335 26% 11%"
+      },
+      "light": "assets/maki-school.png",
+      "dark": "assets/maki-school.png",
+      "opacity": 0.19,
+      "fit": "cover",
+      "position": "bottom"
+    },
+    "chat": {
+      "background": {
+        "light": "350 42% 98%",
+        "dark": "335 23% 9%"
+      },
+      "light": "assets/maki-stage.png",
+      "dark": "assets/maki-stage.png",
+      "opacity": 0.28,
+      "fit": "contain",
+      "position": "right"
+    },
+    "composer": {
+      "background": {
+        "light": "350 60% 99%",
+        "dark": "335 25% 13%"
+      },
+      "backgroundOpacity": 0.94
+    },
+    "panel": {
+      "background": {
+        "light": "350 35% 97%",
+        "dark": "335 22% 11%"
+      }
+    }
+  },
+  "frame": {
+    "light": "349 67% 53%",
+    "dark": "349 64% 47%",
+    "width": 2,
+    "radius": 12
+  }
+}

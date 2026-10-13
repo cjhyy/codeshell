@@ -337,7 +337,10 @@ export function Sidebar({
   ];
 
   return (
-    <aside className="flex h-full w-60 max-w-full shrink-0 flex-col border-r border-border/70 bg-muted/25">
+    <aside
+      className="flex h-full w-60 max-w-full shrink-0 flex-col border-r border-border/70"
+      data-theme-surface="sidebar"
+    >
       <nav className="flex flex-col gap-1 px-3 pb-3 pt-2">
         <PetSidebarEntry
           active={

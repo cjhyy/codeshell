@@ -90,6 +90,96 @@
  * Writing the rules by hand, scoped to a class, is deterministic and correct.
  */
 @layer components {
+  /* Each host surface owns its image above its base color and below content.
+     Isolation keeps a negative image layer inside that surface rather than
+     behind the opaque app shell (the old body wallpaper was hidden there). */
+  [data-theme-surface] {
+    position: relative;
+    isolation: isolate;
+    background-color: hsl(var(--cs-surface-background) / var(--cs-surface-background-opacity));
+  }
+
+  [data-theme-surface]::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    z-index: -1;
+    border-radius: inherit;
+    pointer-events: none;
+    background-image: var(--cs-surface-image, none);
+    background-repeat: no-repeat;
+    background-size: var(--cs-surface-fit, cover);
+    background-position: var(--cs-surface-position, center);
+    opacity: var(--cs-surface-opacity, 0);
+  }
+
+  [data-theme-surface="window"] {
+    --cs-surface-image: var(--cs-surface-window-image);
+    --cs-surface-opacity: var(--cs-surface-window-opacity);
+    --cs-surface-fit: var(--cs-surface-window-fit);
+    --cs-surface-position: var(--cs-surface-window-position);
+    --cs-surface-background: var(--cs-surface-window-background, var(--cs-background));
+    --cs-surface-background-opacity: var(--cs-surface-window-background-opacity, 1);
+    border-radius: var(--cs-frame-radius, 0px);
+  }
+
+  /* The frame is decorative: an inset overlay leaves all layout, resize and
+     drag targets in place. Only AppShell has the window hook, not pet popouts. */
+  [data-theme-surface="window"]::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    z-index: 70;
+    border: var(--cs-frame-width, 0px) solid hsl(var(--cs-frame-color, var(--cs-border)));
+    border-radius: inherit;
+    pointer-events: none;
+  }
+
+  [data-theme-surface="sidebar"] {
+    --cs-surface-image: var(--cs-surface-sidebar-image);
+    --cs-surface-opacity: var(--cs-surface-sidebar-opacity);
+    --cs-surface-fit: var(--cs-surface-sidebar-fit);
+    --cs-surface-position: var(--cs-surface-sidebar-position);
+    --cs-surface-background: var(--cs-surface-sidebar-background, var(--cs-muted));
+    --cs-surface-background-opacity: var(--cs-surface-sidebar-background-opacity, 0.25);
+  }
+
+  [data-theme-surface="titlebar"] {
+    --cs-surface-image: var(--cs-surface-titlebar-image);
+    --cs-surface-opacity: var(--cs-surface-titlebar-opacity);
+    --cs-surface-fit: var(--cs-surface-titlebar-fit);
+    --cs-surface-position: var(--cs-surface-titlebar-position);
+    --cs-surface-background: var(--cs-surface-titlebar-background, var(--cs-background));
+    --cs-surface-background-opacity: var(--cs-surface-titlebar-background-opacity, 0.9);
+  }
+
+  [data-theme-surface="chat"] {
+    --cs-surface-image: var(--cs-surface-chat-image);
+    --cs-surface-opacity: var(--cs-surface-chat-opacity);
+    --cs-surface-fit: var(--cs-surface-chat-fit);
+    --cs-surface-position: var(--cs-surface-chat-position);
+    --cs-surface-background: var(--cs-surface-chat-background, var(--cs-background));
+    --cs-surface-background-opacity: var(--cs-surface-chat-background-opacity, 0);
+  }
+
+  [data-theme-surface="composer"] {
+    --cs-surface-image: var(--cs-surface-composer-image);
+    --cs-surface-opacity: var(--cs-surface-composer-opacity);
+    --cs-surface-fit: var(--cs-surface-composer-fit);
+    --cs-surface-position: var(--cs-surface-composer-position);
+    --cs-surface-background: var(--cs-surface-composer-background, var(--cs-card));
+    --cs-surface-background-opacity: var(--cs-surface-composer-background-opacity, 1);
+  }
+
+  [data-theme-surface="panel"] {
+    --cs-surface-image: var(--cs-surface-panel-image);
+    --cs-surface-opacity: var(--cs-surface-panel-opacity);
+    --cs-surface-fit: var(--cs-surface-panel-fit);
+    --cs-surface-position: var(--cs-surface-panel-position);
+    --cs-surface-background: var(--cs-surface-panel-background, var(--cs-background));
+    --cs-surface-background-opacity: var(--cs-surface-panel-background-opacity, 1);
+  }
+
   [data-chat-variant="main"] .cs-chat-transcript {
     max-width: 48rem;
     margin-inline: auto;
@@ -592,32 +682,11 @@
     text-rendering: optimizeLegibility;
   }
 
-  /* Theme-pack wallpaper: a fixed image layer under all content, blended over
-     the base color via --cs-wallpaper(-opacity) set by applyThemePack. The
-     default pack sets `none`/0 so this paints nothing. */
-  body::before {
-    content: "";
-    position: fixed;
-    inset: 0;
-    z-index: -1;
-    pointer-events: none;
-    background-image: var(--cs-wallpaper, none);
-    background-size: cover;
-    background-position: center;
-    opacity: var(--cs-wallpaper-opacity, 0);
-  }
-
   html.pet-widget-window,
   html.pet-widget-window body,
   html.pet-widget-window #root {
     overflow: hidden;
     background: transparent;
-  }
-
-  /* The pet widget is a transparent floating window — never tint it with a
-     wallpaper, which would break its cutout shape. */
-  html.pet-widget-window body::before {
-    display: none;
   }
 
   pre {

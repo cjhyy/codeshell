@@ -1504,6 +1504,7 @@ export function ChatView({
       }
       data-mode={isNewChat ? "new" : "active"}
       data-chat-variant={variant}
+      data-theme-surface={variant === "main" ? "chat" : undefined}
       onDragEnter={onChatDragEnter}
       onDragOver={onChatDragOver}
       onDragLeave={onChatDragLeave}
@@ -1742,10 +1743,12 @@ export function ChatView({
               // overflow. Keep this card out of the container-query tree: putting
               // container-type on the textarea's ancestor has collapsed the
               // composer during session/dock reflow.
-              "cs-chat-composer min-w-0 max-w-full border bg-card sm:min-w-[300px]" +
+              "cs-chat-composer min-w-0 max-w-full border sm:min-w-[300px]" +
+              (variant === "main" ? "" : " bg-card") +
               (variant === "main" ? "" : " rounded-xl p-2 shadow-sm") +
               (dragOver ? " ring-2 ring-primary/40" : "")
             }
+            data-theme-surface={variant === "main" ? "composer" : undefined}
           >
             {anchors.length > 0 && (
               <div className="mb-2 flex flex-wrap gap-1.5">

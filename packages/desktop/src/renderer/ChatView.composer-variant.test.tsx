@@ -64,6 +64,8 @@ describe("ChatView composer variants", () => {
     expect(html).toContain('data-composer-control="context-usage"');
     expect(html).toContain("当前模型：Main Model");
     expect(html).toContain('aria-label="语音输入"');
+    expect(html).toContain('data-theme-surface="chat"');
+    expect(html).toContain('data-theme-surface="composer"');
   });
 
   test("keeps model, voice, attachment, and permission controls in quick chat", () => {
@@ -75,6 +77,7 @@ describe("ChatView composer variants", () => {
     expect(html).toContain("当前对话权限：计划模式");
     expect(html).not.toContain(">Goal<");
     expect(html).not.toContain('data-composer-control="context-usage"');
+    expect(html).not.toContain("data-theme-surface");
   });
 
   test("reflects an elevated quick-chat permission without adding durable controls", () => {

@@ -35,6 +35,8 @@ function toThemePack(pack: InstalledThemePack): ThemePack {
     colors: pack.colors,
     ...(pack.pet ? { pet: pack.pet } : {}),
     ...(pack.wallpaper ? { wallpaper: pack.wallpaper } : {}),
+    ...(pack.surfaces ? { surfaces: pack.surfaces } : {}),
+    ...(pack.frame ? { frame: pack.frame } : {}),
     source: "installed",
   };
 }

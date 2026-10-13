@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
 import { ensureMiniDom } from "./test-utils/renderHook";
 import { applyThemePack, loadThemePackId, saveThemePackId } from "./theme";
+import { THEME_SURFACE_NAMES, type ThemePack } from "./theme-packs";
 
 function packStyleText(): string {
   return document.getElementById("cs-theme-pack")?.textContent ?? "";
@@ -56,7 +57,7 @@ describe("theme packs (theme.ts)", () => {
     const text = packStyleText();
     // No color overrides…
     expect(text).not.toContain("--cs-primary");
-    expect(text).not.toContain("--cs-background");
+    expect(text).not.toContain("--cs-background:");
     // …and wallpaper is explicitly cleared so switching away from a wallpaper
     // pack removes the image rather than leaving it painted.
     expect(text).toContain("--cs-wallpaper: none;");
@@ -86,6 +87,93 @@ describe("theme packs (theme.ts)", () => {
     expect(text).toContain('--cs-wallpaper: url("cstheme://acme/bg\\"x.jpg");');
     expect(text).toContain('--cs-wallpaper: url("cstheme://acme/dark.jpg");');
     expect(text.match(/--cs-wallpaper-opacity: 0\.2;/g)?.length).toBe(2);
+    expect(text).toContain('--cs-surface-window-image: url("cstheme://acme/bg\\"x.jpg");');
+    expect(text).toContain('--cs-surface-window-image: url("cstheme://acme/dark.jpg");');
+    expect(text.match(/--cs-surface-window-opacity: 0\.2;/g)?.length).toBe(2);
+    expect(text.match(/--cs-surface-chat-background-opacity: 0;/g)?.length).toBe(2);
+  });
+
+  test("surface images and backgrounds fall back to light while dark overrides stay independent", () => {
+    const pack: ThemePack = {
+      id: "surfaces",
+      name: "Surfaces",
+      swatch: "350 80% 50%",
+      colors: { light: {}, dark: {} },
+      wallpaper: { light: "cstheme://surfaces/legacy.png" },
+      surfaces: {
+        window: { light: 'cstheme://surfaces/frame".png', opacity: 0.3 },
+        chat: {
+          light: "cstheme://surfaces/chat.png",
+          fit: "contain",
+          position: "top-right",
+          background: { light: "350 60% 97%", dark: "350 40% 10%" },
+          backgroundOpacity: 0.8,
+        },
+        composer: {
+          dark: "cstheme://surfaces/composer-dark.png",
+          background: { light: "350 80% 99%" },
+        },
+      },
+      frame: { light: "350 70% 55%", dark: "350 80% 75%", width: 3, radius: 16 },
+    };
+    applyThemePack(pack.id, () => pack);
+    const text = packStyleText();
+    expect(
+      text.match(/--cs-surface-window-image: url\("cstheme:\/\/surfaces\/frame\\"\.png"\);/g)
+        ?.length,
+    ).toBe(2);
+    expect(
+      text.match(/--cs-surface-chat-image: url\("cstheme:\/\/surfaces\/chat\.png"\);/g)?.length,
+    ).toBe(2);
+    expect(text.match(/--cs-surface-chat-fit: contain;/g)?.length).toBe(2);
+    expect(text.match(/--cs-surface-chat-position: top right;/g)?.length).toBe(2);
+    expect(text).toContain("--cs-surface-chat-background: 350 60% 97%;");
+    expect(text).toContain("--cs-surface-chat-background: 350 40% 10%;");
+    expect(text.match(/--cs-surface-chat-background-opacity: 0\.8;/g)?.length).toBe(2);
+    expect(text).toContain("--cs-surface-composer-image: none;");
+    expect(text).toContain(
+      '--cs-surface-composer-image: url("cstheme://surfaces/composer-dark.png");',
+    );
+    expect(text.match(/--cs-surface-composer-background: 350 80% 99%;/g)?.length).toBe(2);
+    expect(text).toContain("--cs-frame-color: 350 80% 75%;");
+    expect(text).toContain("--cs-frame-width: 3px;");
+    expect(text).toContain("--cs-frame-radius: 16px;");
+  });
+
+  test("switching to the default pack clears every image, placement, tint and frame", () => {
+    applyThemePack("decorated", () => ({
+      id: "decorated",
+      name: "Decorated",
+      swatch: "350 80% 50%",
+      colors: { light: {}, dark: {} },
+      surfaces: Object.fromEntries(
+        THEME_SURFACE_NAMES.map((name) => [
+          name,
+          {
+            light: `cstheme://decorated/${name}.png`,
+            opacity: 0.6,
+            fit: "contain",
+            position: "bottom-right",
+            background: { light: "350 50% 50%" },
+            backgroundOpacity: 0.7,
+          },
+        ]),
+      ),
+      frame: { light: "350 70% 50%", width: 4, radius: 18 },
+    }));
+    applyThemePack("default");
+    const text = packStyleText();
+    for (const name of THEME_SURFACE_NAMES) {
+      expect(text.match(new RegExp(`--cs-surface-${name}-image: none;`, "g"))?.length).toBe(2);
+      expect(text.match(new RegExp(`--cs-surface-${name}-opacity: 0;`, "g"))?.length).toBe(2);
+      expect(text).toContain(`--cs-surface-${name}-fit: cover;`);
+      expect(text).toContain(`--cs-surface-${name}-position: center;`);
+    }
+    expect(text).not.toContain("decorated");
+    expect(text).not.toContain("350 50% 50%");
+    expect(text).toContain("--cs-surface-composer-background: var(--cs-card);");
+    expect(text).toContain("--cs-frame-width: 0px;");
+    expect(text).toContain("--cs-frame-radius: 0px;");
   });
 
   test("applyThemePack reuses one managed node and the latest apply wins", () => {

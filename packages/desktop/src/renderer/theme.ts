@@ -1,5 +1,6 @@
-import { DEFAULT_PACK_ID, THEME_PACKS, type ThemePack } from "./theme-packs";
+import { DEFAULT_PACK_ID, THEME_PACKS, THEME_SURFACE_NAMES, type ThemePack } from "./theme-packs";
 import { refreshInstalledThemes, resolveThemePack } from "./installedThemes";
+import { resolveThemeSurface } from "./theme-appearance";
 
 export type Theme = "light" | "dark" | "system";
 
@@ -58,7 +59,7 @@ function renderVars(vars: Record<string, string>): string {
  * `--cs-*` variables for both modes. The rules mirror the base sheet's
  * :root / .dark selectors and are appended after it, so equal-specificity
  * overrides win while the `.dark` class keeps deciding the active mode. The
- * default pack overrides nothing, writing empty rules (= the base palette).
+ * default pack restores the base palette and clears all optional decoration.
  */
 export function applyThemePack(
   id: string,
@@ -71,8 +72,8 @@ export function applyThemePack(
     style.setAttribute("id", PACK_STYLE_ID);
     document.head.appendChild(style);
   }
-  const light = renderVars({ ...pack.colors.light, ...wallpaperVars(pack, "light") });
-  const dark = renderVars({ ...pack.colors.dark, ...wallpaperVars(pack, "dark") });
+  const light = renderVars({ ...pack.colors.light, ...decorationVars(pack, "light") });
+  const dark = renderVars({ ...pack.colors.dark, ...decorationVars(pack, "dark") });
   const next = `:root {\n${light}\n}\n.dark {\n${dark}\n}\n`;
   // No-op when nothing changed. A cross-window `storage` event re-applies the
   // same pack in every window; rewriting identical CSS would still trigger a
@@ -83,8 +84,8 @@ export function applyThemePack(
 
 /**
  * Wallpaper CSS variables for a mode. `--cs-wallpaper` is a CSS `image` value
- * (`url("…")` or `none`) consumed by the body's fixed `::before` layer (see
- * tailwind.css); `--cs-wallpaper-opacity` blends it over the base color. Absent
+ * (`url("…")` or `none`) retained for legacy packs; the window surface now
+ * paints that image above its base color. Absent
  * wallpaper writes `none`/`0` so the default pack cleanly clears any prior image.
  */
 function wallpaperVars(pack: ThemePack, mode: "light" | "dark"): Record<string, string> {
@@ -95,6 +96,25 @@ function wallpaperVars(pack: ThemePack, mode: "light" | "dark"): Record<string, 
     "--cs-wallpaper": `url("${cssUrlEscape(url)}")`,
     "--cs-wallpaper-opacity": String(typeof opacity === "number" ? opacity : 1),
   };
+}
+
+/** Emit every slot on every apply so switching packs cannot retain decoration. */
+function decorationVars(pack: ThemePack, mode: "light" | "dark"): Record<string, string> {
+  const vars = wallpaperVars(pack, mode);
+  for (const name of THEME_SURFACE_NAMES) {
+    const surface = resolveThemeSurface(pack, name, mode);
+    const prefix = `--cs-surface-${name}`;
+    vars[`${prefix}-image`] = surface.image ? `url("${cssUrlEscape(surface.image)}")` : "none";
+    vars[`${prefix}-opacity`] = String(surface.opacity);
+    vars[`${prefix}-fit`] = surface.fit;
+    vars[`${prefix}-position`] = surface.position;
+    vars[`${prefix}-background`] = surface.background;
+    vars[`${prefix}-background-opacity`] = String(surface.backgroundOpacity);
+  }
+  vars["--cs-frame-color"] = pack.frame?.[mode] ?? pack.frame?.light ?? "var(--cs-border)";
+  vars["--cs-frame-width"] = `${pack.frame?.width ?? 0}px`;
+  vars["--cs-frame-radius"] = `${pack.frame?.radius ?? 0}px`;
+  return vars;
 }
 
 /** Escape a url for safe embedding inside a CSS url("…") token. */

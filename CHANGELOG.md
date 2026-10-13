@@ -8,6 +8,24 @@ breaking.
 
 ## [Unreleased]
 
+## [0.9.39] - 2026-10-13
+
+### Added
+
+- Bundle the Maki Scarlet Stage desktop theme with local character artwork,
+  rose-white and burgundy palettes, and a scarlet window frame. Select it directly
+  in Appearance without importing a theme pack.
+- Let theme packs style the window, title bar, sidebar, chat, composer and panel
+  backgrounds independently, with image placement, opacity and frame controls.
+- Preview theme backgrounds and window styling in the Appearance picker.
+
+### Fixed
+
+- Display installed theme images through the desktop content security policy and
+  keep legacy wallpaper visible behind chat content.
+- Clear every surface decoration and frame when switching back to the default
+  theme, while preserving transparent Mimi popout windows.
+
 ## [0.9.38] - 2026-10-13
 
 ### Added

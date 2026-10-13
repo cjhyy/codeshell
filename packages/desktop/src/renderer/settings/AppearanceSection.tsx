@@ -17,6 +17,7 @@ import type { TranslationKey } from "../i18n";
 import { Button } from "@/components/ui/button";
 import { useConfirm } from "../ui/DialogProvider";
 import { useToast } from "../ui/ToastProvider";
+import { ThemePackPreview } from "./ThemePackPreview";
 
 /**
  * Builtin packs carry an i18n key in `name`; installed packs carry a plain
@@ -95,6 +96,8 @@ export function AppearanceSection() {
         preview.hasColors ? t("settingsX.appearance.pack.importColors") : null,
         preview.petStates.length ? t("settingsX.appearance.pack.importPet") : null,
         preview.wallpaperModes.length ? t("settingsX.appearance.pack.importWallpaper") : null,
+        preview.surfaceNames?.length ? t("settingsX.appearance.pack.importSurfaces") : null,
+        preview.hasFrame ? t("settingsX.appearance.pack.importFrame") : null,
       ].filter(Boolean);
       const approved = await confirm({
         title: t("settingsX.appearance.pack.importConfirmTitle", { name: preview.name }),
@@ -185,7 +188,7 @@ export function AppearanceSection() {
       </div>
       <p className="m-0 text-xs text-muted-foreground">{t("settingsX.appearance.packDesc")}</p>
       <div
-        className="grid grid-cols-[repeat(auto-fill,minmax(140px,1fr))] gap-2"
+        className="grid grid-cols-[repeat(auto-fill,minmax(190px,1fr))] gap-3"
         data-appearance-packs
       >
         {allPacks.map((pack) => (
@@ -193,27 +196,42 @@ export function AppearanceSection() {
             key={pack.id}
             data-theme-pack={pack.id}
             className={cn(
-              "group relative flex items-center gap-2.5 rounded-md border p-3 text-left",
+              "group relative overflow-hidden rounded-xl border text-left",
               packId === pack.id
                 ? "border-primary bg-primary/10 ring-1 ring-primary/30"
                 : "border-border",
             )}
           >
-            <button
+            <Button
               type="button"
+              variant="ghost"
               aria-pressed={packId === pack.id}
-              className="flex min-w-0 flex-1 items-center gap-2.5 bg-transparent text-left outline-none"
+              className="h-auto w-full flex-col items-stretch gap-3 rounded-xl p-2.5 text-left"
               onClick={() => choosePack(pack.id)}
             >
-              <span
-                aria-hidden="true"
-                className="h-6 w-6 shrink-0 rounded-full border border-border/60"
-                style={{ backgroundColor: `hsl(${pack.swatch})` }}
-              />
-              <span className="truncate text-sm font-medium text-foreground">
-                {packDisplayName(pack, t)}
+              <ThemePackPreview pack={pack} />
+              <span className="flex min-w-0 items-center gap-2 px-1 pb-1 pr-6">
+                <span
+                  aria-hidden="true"
+                  className="size-3 shrink-0 rounded-full border border-border/60"
+                  style={{ backgroundColor: `hsl(${pack.swatch})` }}
+                />
+                <span className="min-w-0 flex-1">
+                  <span className="block truncate text-sm font-medium text-foreground">
+                    {packDisplayName(pack, t)}
+                  </span>
+                  <span className="block text-[11px] font-normal text-muted-foreground">
+                    {t(
+                      pack.surfaces || pack.frame
+                        ? "settingsX.appearance.pack.fullSkin"
+                        : pack.wallpaper
+                          ? "settingsX.appearance.pack.importWallpaper"
+                          : "settingsX.appearance.pack.importColors",
+                    )}
+                  </span>
+                </span>
               </span>
-            </button>
+            </Button>
             {pack.source === "installed" && (
               <Button
                 type="button"
@@ -221,7 +239,7 @@ export function AppearanceSection() {
                 size="icon"
                 data-theme-uninstall={pack.id}
                 aria-label={t("settingsX.appearance.pack.removeAction")}
-                className="h-7 w-7 shrink-0 rounded-lg text-muted-foreground hover:bg-status-err/10 hover:text-status-err"
+                className="absolute bottom-4 right-2 h-7 w-7 rounded-lg text-muted-foreground hover:bg-status-err/10 hover:text-status-err"
                 onClick={() => void removePack(pack)}
               >
                 <Trash2 size={13} aria-hidden="true" />

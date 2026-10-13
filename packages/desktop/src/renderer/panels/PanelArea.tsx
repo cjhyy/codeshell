@@ -344,13 +344,14 @@ function ResolvedPanelArea({
   return (
     <div
       className={cn(
-        "relative flex min-h-0 min-w-0 flex-col bg-background",
+        "relative flex min-h-0 min-w-0 flex-col",
         maximized ? "absolute inset-0 z-30 shrink" : "shrink-0 border-l border-border",
       )}
       // Closed docks use display:none so BrowserPanel may idle-evict. Temporary
       // full-page views keep the dock invisible but laid out enough for webview
       // guests to stay alive instead of returning blank after display:none.
       style={panelStyle}
+      data-theme-surface="panel"
       aria-hidden={hidden || undefined}
       inert={hidden || undefined}
     >

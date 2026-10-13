@@ -113,7 +113,8 @@ function TopBarImpl({
     // children (the sidebar toggle, the status badge) must opt back out
     // with `no-drag`, otherwise the drag region swallows their clicks.
     <header
-      className="flex h-11 shrink-0 items-center justify-between gap-2 border-b border-border/70 bg-background/90 px-3 text-[13px]"
+      className="flex h-11 shrink-0 items-center justify-between gap-2 border-b border-border/70 px-3 text-[13px]"
+      data-theme-surface="titlebar"
       style={{ WebkitAppRegion: "drag" } as React.CSSProperties}
     >
       <div className="flex min-w-0 flex-1 items-center gap-2">

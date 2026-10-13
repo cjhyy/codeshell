@@ -1,8 +1,10 @@
 import { describe, expect, test } from "bun:test";
+import makiManifest from "../../../../examples/themes/lovelive-maki/.cs-theme.json";
 import {
   DEFAULT_PACK_ID,
   THEME_PACKS,
   THEME_VAR_NAMES,
+  THEME_SURFACE_NAMES,
   getThemePack,
   petVisualState,
 } from "./theme-packs";
@@ -42,6 +44,42 @@ describe("theme-packs", () => {
 
   test("builtin packs are tagged as builtin", () => {
     for (const pack of THEME_PACKS) expect(pack.source).toBe("builtin");
+  });
+
+  test("bundled Maki preserves the source palette, six surfaces and frame with local artwork", async () => {
+    const maki = getThemePack("maki");
+    expect(maki.id).not.toBe(makiManifest.id);
+    expect(maki.name).toBe("settingsX.appearance.pack.maki");
+    expect(maki.colors).toEqual(makiManifest.colors);
+    expect(maki.frame).toEqual(makiManifest.frame);
+    expect(Object.keys(maki.surfaces ?? {}).sort()).toEqual([...THEME_SURFACE_NAMES].sort());
+    const images = new Set<string>();
+    for (const name of THEME_SURFACE_NAMES) {
+      const surface = maki.surfaces?.[name];
+      const { light, dark, ...decoration } = surface!;
+      const {
+        light: sourceLight,
+        dark: sourceDark,
+        ...sourceDecoration
+      } = makiManifest.surfaces[name] as { light?: string; dark?: string };
+      expect(decoration).toEqual(sourceDecoration);
+      for (const [url, source] of [
+        [light, sourceLight],
+        [dark, sourceDark],
+      ]) {
+        expect(Boolean(url)).toBe(Boolean(source));
+        if (url) images.add(url);
+      }
+    }
+    expect(maki.wallpaper?.opacity).toBe(makiManifest.wallpaper.opacity);
+    images.add(maki.wallpaper!.light!);
+    images.add(maki.wallpaper!.dark!);
+    expect(images.size).toBe(2);
+    for (const url of images) {
+      expect(url).not.toMatch(/^(?:https?:|cstheme:)/i);
+      const bytes = await Bun.file(url).bytes();
+      expect([...bytes.slice(0, 8)]).toEqual([137, 80, 78, 71, 13, 10, 26, 10]);
+    }
   });
 
   test("petVisualState prefers running, then alert, else idle", () => {
