@@ -18,12 +18,13 @@ const privateValue = "synthetic-upstream-private-value";
 const generic = "云服务请求未完成，请检查服务地址和网络。";
 const expired = "云账号授权已失效，请重新登录。";
 const conflict = "账号或关联已存在冲突，请检查当前账号。";
-let reply, origin, requests = 0, redirects = 0, hanging = false;
+let reply, origin, requests = 0, redirects = 0, hanging = false, lastRequest;
 const server = createServer({ cert, key }, async (req, res) => {
   req.on("error", () => {});
   res.on("error", () => {});
   for await (const _chunk of req) {}
   requests++;
+  lastRequest = { method: req.method, url: req.url, token: req.headers.authorization };
   assert.equal(req.headers.origin, origin);
   if (req.url === "/api/v1/account/leak") redirects++;
   if (hanging) return;
@@ -56,6 +57,10 @@ async function rejected(send, status, message) {
 }
 try {
   const cases = [
+    ["profile", 400, "invalid_display_name", "昵称需为 1–64 个字符，不能包含控制字符。"],
+    ["profile", 400, "invalid_username", "用户名需为 3–64 位字母、数字、点、下划线或连字符，并以字母或数字开头。"],
+    ["profile", 409, "username_unavailable", "此用户名已被使用，请换一个用户名。"],
+    ["profile", 404, "account_endpoint_not_found", "此云服务尚未启用账号资料编辑。"],
     ["register", 409, "username_unavailable", "此用户名已被使用，请换一个用户名。"],
     ["login", 401, "invalid_credentials", "用户名或密码错误，请重新输入。"],
     ["register", 403, "registration_disabled", "此云服务暂未开放注册，请登录已有账号。"],
@@ -78,6 +83,10 @@ try {
     ["register", 409, privateValue, conflict],
     ["login", 401, { message: privateValue }, expired],
     ["unknown", 400, "invalid_username", generic],
+    ["links", 503, "link_management_disabled", "此云服务尚未启用连接管理。"],
+    ["links", 503, "link_management_view_too_large", "连接管理列表超过服务上限，请联系服务管理员。"],
+    ["links/grants/10000000-0000-0000-0000-000000000001", 404, "link_item_not_found", "此连接或授权不可用，请重新加载列表。"],
+    ["links", 502, "link_management_unavailable", "连接服务暂时不可用，请稍后重新加载。"],
   ];
   for (const [path, status, code, message] of cases) {
     reply = { status, body: { error: code, message: privateValue, accessToken: privateValue } };
@@ -106,6 +115,30 @@ try {
     await rejected(() => transport({ origin, path: "/api/v1/account/register", body: {} }), 0, generic);
   }
   const cancelled = new AbortController();
+  const revokePath = "/api/v1/account/links/grants/10000000-0000-0000-0000-000000000001";
+  reply = { status: 200, body: { revoked: true } };
+  await transport({ origin, path: revokePath, method: "DELETE", token: "fixture-root-token" });
+  assert.deepEqual(lastRequest, { method: "DELETE", url: revokePath, token: "Bearer fixture-root-token" });
+  const beforeInvalidDelete = requests;
+  for (const input of [
+    { path: "/api/v1/account/logout" }, { path: revokePath + "?all=true" },
+    { path: revokePath, body: { id: "other" } }, { path: "/api/v1/account/links/clients/10000000-0000-0000-0000-000000000001" },
+  ]) await assert.rejects(() => transport({ origin, method: "DELETE", ...input }));
+  assert.equal(requests, beforeInvalidDelete);
+  const profilePath = "/api/v1/account/profile";
+  reply = { status: 200, body: { account: { displayName: "Fixture nickname" } } };
+  await transport({ origin, path: profilePath, method: "PATCH", token: "fixture-root-token", body: { displayName: "Fixture nickname" } });
+  assert.deepEqual(lastRequest, { method: "PATCH", url: profilePath, token: "Bearer fixture-root-token" });
+  const beforeInvalidPatch = requests;
+  for (const path of ["/api/v1/account/logout", profilePath + "?all=true", profilePath + "/other"]) {
+    await assert.rejects(() => transport({ origin, method: "PATCH", path, body: {} }));
+  }
+  assert.equal(requests, beforeInvalidPatch);
+  reply = { status: 200, body: { data: "x".repeat(20_000) } };
+  assert.equal((await transport({ origin, path: "/api/v1/account/links", method: "GET" })).data.length, 20_000);
+  await rejected(() => transport({ origin, path: "/api/v1/account/links", method: "POST" }), 0, generic);
+  reply = { status: 200, body: { data: "x".repeat(1_048_576) } };
+  await rejected(() => transport({ origin, path: "/api/v1/account/links", method: "GET" }), 0, generic);
   cancelled.abort(new Error(privateValue));
   await rejected(() => transport({
     origin, path: "/api/v1/account/register", signal: cancelled.signal, body: {}

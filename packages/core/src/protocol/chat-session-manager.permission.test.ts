@@ -53,6 +53,11 @@ beforeEach(() => {
   previousHome = process.env.HOME;
 });
 
+beforeEach(() => {
+  // Every case shares the cleanup below, including cases that never change HOME.
+  previousHome = process.env.HOME;
+});
+
 function tempDir(prefix: string): string {
   const dir = mkdtempSync(join(tmpdir(), prefix));
   tempDirs.push(dir);

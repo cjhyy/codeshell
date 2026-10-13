@@ -64,6 +64,10 @@ jobs:
         run: node scripts/run-isolated-node-smoke.mjs scripts/smoke-model-request-boundaries.mjs
       - name: Durable long output through real SDK, Desktop recovery and Hub restart
         run: bun run test:output-journal
+      - name: Paced independent SSE, actual worker control latency and durable cancellation
+        run: bun run test:output-paced
+      - name: Native output backup, missing segment restoration and exact cursor repair
+        run: bun run test:output-repair
       - name: Owned external CLI output, disk failure fence and cold Main recovery
         run: node scripts/run-external-output-journal-smoke.mjs
       - name: Compiled SDK progressive tool discovery and bound source consumer
@@ -274,17 +278,29 @@ jobs:
         run: |
           bun run build
           bun run --cwd packages/desktop build
+      # The managed Cloud window exercises the production Chromium sandbox.
+      # Configure only the locked Electron package's SUID helper on this runner.
+      - name: Configure Electron sandbox helper
+        working-directory: packages/desktop
+        run: |
+          electron_sandbox=$(node -e 'const {dirname,join}=require("node:path"); const {realpathSync}=require("node:fs"); process.stdout.write(join(dirname(realpathSync(require("electron"))),"chrome-sandbox"));')
+          test -f "$electron_sandbox"
+          sudo chown root:root "$electron_sandbox"
+          sudo chmod 4755 "$electron_sandbox"
+          test "$(stat -c '%u %a' "$electron_sandbox")" = '0 4755'
       - name: real Electron isolated PDF with verified managed Node
         run: |
           bun run --cwd packages/desktop runtime:prepare
           ELECTRON_RUN_AS_NODE=1 packages/desktop/node_modules/electron/dist/electron scripts/run-isolated-node-smoke.mjs scripts/smoke-upload-documents.mjs --managed-runtime-root packages/desktop/out/managed-runtimes
           bun run --cwd packages/desktop predist
           bun run --cwd packages/desktop test:upload-asar
-      - name: real Electron E2E
+      - name: Native Account Cloud project chooser with private SecretService
         run: |
           sudo apt-get update
           sudo apt-get install -y dbus-x11 gnome-keyring libsecret-tools
-          bash scripts/run-electron-e2e-keyring.sh
+          xvfb-run -a bun run --cwd packages/desktop test:e2e:cloud-workbench
+      - name: real Electron E2E
+        run: bash scripts/run-electron-e2e-keyring.sh
       - name: Preserve Profile memory copy Electron evidence
         if: always()
         uses: actions/upload-artifact@v4

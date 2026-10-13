@@ -56,8 +56,10 @@ const { HOST_MCP_SERVERS_ENV } =
   await import("../../packages/core/src/tool-system/host-mcp-servers.js");
 const { CuaDriverHost } =
   await import("../../packages/desktop/src/main/computer-use/cua-driver-host.js");
-const { initCuaComputerUse, hostMcpServersEnv, resetCuaComputerUse } =
+const { getCuaDriverHost, initCuaComputerUse, hostMcpServersEnv, resetCuaComputerUse } =
   await import("../../packages/desktop/src/main/computer-use/service.js");
+const { registerComputerUseSettingsIpc } =
+  await import("../../packages/desktop/src/main/computer-use/settings-ipc.js");
 
 function nodeExecutable(): string {
   for (const part of (process.env.PATH ?? "").split(delimiter)) {
@@ -94,6 +96,8 @@ const calls: Array<{ messages: Message[]; tools: string[] }> = [];
 let script: Array<{ tool: string; args?: Record<string, unknown> }> = [];
 let finalText = "15";
 let operationCount = 0;
+let expectCuaTools = scenario !== "disabled";
+let disabledDuringRun = false;
 
 function resultBlocks(messages: Message[]): ContentBlock[] {
   return messages
@@ -114,7 +118,7 @@ class CalculatorClient extends LLMClientBase {
       (tool) => `${toolPrefix}${tool}`,
     );
     if (scenario === "generic") requiredTools.push("MCPTool");
-    if (scenario !== "disabled" && !requiredTools.every((tool) => snapshot.tools.includes(tool))) {
+    if (expectCuaTools && !requiredTools.every((tool) => snapshot.tools.includes(tool))) {
       assert.ok(snapshot.tools.includes("ToolSearch"));
       const response: LLMResponse = {
         text: "",
@@ -130,6 +134,16 @@ class CalculatorClient extends LLMClientBase {
       };
       this.recordUsage(response.usage!, options);
       return response;
+    }
+    if (scenario === "disable-active" && operationCount === 1 && !disabledDuringRun) {
+      const observation = resultBlocks(snapshot.messages).find(
+        (block) => block.tool_use_id === "cua-1",
+      )!;
+      assert.ok(!observation.is_error, String(observation.content));
+      assert.ok(Array.isArray(observation.content));
+      assert.ok(observation.content.some((block) => block.type === "image"));
+      await disableFromSettings();
+      disabledDuringRun = true;
     }
     if (scenario === "restart" && operationCount === 3) {
       const failure = resultBlocks(snapshot.messages).find(
@@ -148,7 +162,7 @@ class CalculatorClient extends LLMClientBase {
       );
     }
     const step = script.shift();
-    if (scenario !== "disabled") {
+    if (expectCuaTools) {
       assert.ok(
         snapshot.tools.includes(`${toolPrefix}check_permissions`),
         JSON.stringify(snapshot.tools),
@@ -183,7 +197,7 @@ let host: InstanceType<typeof CuaDriverHost> | undefined;
 
 function createEngine() {
   const merged = mergePluginMcpServers({});
-  if (scenario === "disabled") assert.deepEqual(merged, {});
+  if (!expectCuaTools) assert.deepEqual(merged, {});
   else {
     assert.equal(merged["host:cua-driver"].inlineImages, true);
     assert.equal(merged["host:cua-driver"].command, driverPath);
@@ -248,6 +262,64 @@ function alive(pid: number): boolean {
   }
 }
 
+async function disableFromSettings() {
+  const handlers = new Map<string, (event: any, value?: unknown) => any>();
+  let enabled = true;
+  const writes: boolean[] = [];
+  const sender = { isDestroyed: () => false, mainFrame: {} };
+  const event = { sender, senderFrame: sender.mainFrame };
+  const originalProxy = events().find(
+    (entry) => entry.phase === "started" && entry.mode === "mcp",
+  )!;
+  registerComputerUseSettingsIpc({
+    ipcMain: { handle: (channel, handler) => void handlers.set(channel, handler) },
+    isMainWindow: (value) => value === (sender as any),
+    getEnabled: () => enabled,
+    saveEnabled: (value) => {
+      writes.push(value);
+      enabled = value;
+    },
+    isActive: () => getCuaDriverHost()?.status().state === "running",
+    driverAvailable: () => true,
+    packaged: true,
+    permissions: {
+      status: async () => ({
+        supported: true,
+        accessibility: "granted",
+        screenRecording: "granted",
+        screenRequestAvailable: true,
+        restartRequired: false,
+      }),
+      request: async () => {
+        throw new Error("Disabling must not request OS permissions");
+      },
+      openSettings: async () => {
+        throw new Error("Disabling must not open OS settings");
+      },
+    },
+    stop: resetCuaComputerUse,
+    restart: () => {
+      throw new Error("Disabling must not restart the app");
+    },
+  });
+  const status = await handlers.get("computerUse:setEnabled")!(event, false);
+  assert.equal(status.enabled, false);
+  assert.equal(status.active, false);
+  assert.deepEqual(writes, [false]);
+  assert.equal(getCuaDriverHost(), undefined);
+  assert.equal(hostMcpServersEnv(), undefined);
+  assert.equal(host!.status().state, "stopped");
+  assert.equal(existsSync(socketPath), false);
+  await waitFor(() => !alive(originalProxy.pid), "the existing MCP proxy to lose its daemon");
+  assert.ok(
+    events().some(
+      (entry) => entry.pid === originalProxy.pid && entry.phase === "control-disconnected",
+    ),
+  );
+  // Match the worker spawn seam: absent host declarations delete inherited env.
+  delete process.env[HOST_MCP_SERVERS_ENV];
+}
+
 async function cleanup() {
   try {
     await Promise.all(engines.splice(0).map((engine) => engine.dispose()));
@@ -305,7 +377,45 @@ try {
     await startup;
     process.env[HOST_MCP_SERVERS_ENV] = hostMcpServersEnv(host)!;
     const engine = createEngine();
-    if (scenario === "cancel") {
+    if (scenario === "disable-active") {
+      script = [{ tool: "observe" }, { tool: "click", args: { key: "7" } }];
+      finalText = "Computer use disabled";
+      const result = await engine.run("Observe once, then attempt a click after disabling", {
+        behaviorMode: "cua-fixture",
+      });
+      assert.equal(result.reason, "completed", result.text);
+      assert.equal(result.text, finalText);
+      assert.equal(disabledDuringRun, true);
+      const failure = resultBlocks(calls.at(-1)!.messages).find(
+        (block) => block.tool_use_id === "cua-2",
+      )!;
+      assert.equal(failure.is_error, true, "The existing session must receive a tool failure");
+      assert.match(String(failure.content), /connect|closed|not available|ENOENT/i);
+      assert.deepEqual(
+        events()
+          .filter((entry) => entry.phase === "tool")
+          .map((entry) => entry.tool),
+        ["observe"],
+        "No action reaches the stopped daemon",
+      );
+      // A later worker/session gets no Cua declaration even while the old
+      // Engine still exists with its retained tool catalog.
+      expectCuaTools = false;
+      script = [{ tool: "click", args: { key: "7" } }];
+      const freshResult = await createEngine().run("Attempt a Cua click in a new session", {
+        behaviorMode: "cua-fixture",
+      });
+      assert.equal(freshResult.reason, "completed", freshResult.text);
+      const freshFailure = resultBlocks(calls.at(-1)!.messages).at(-1)!;
+      assert.equal(freshFailure.is_error, true);
+      assert.match(String(freshFailure.content), /not found|not available|unknown tool/i);
+      assert.equal(hostMcpServersEnv(), undefined);
+      assert.equal(
+        events().filter((entry) => entry.phase === "started" && entry.mode === "serve").length,
+        1,
+      );
+      assert.ok(events().every((entry) => entry.phase !== "clicked"));
+    } else if (scenario === "cancel") {
       script = [{ tool: "observe" }];
       const abort = new AbortController();
       const running = engine.run("Wait for the simulated screenshot", {

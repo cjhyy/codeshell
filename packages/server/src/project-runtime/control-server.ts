@@ -2,10 +2,12 @@ import { remoteLinkHostConfiguration } from "../links/remote-configuration.js";
 import type { RemoteLinkConfiguration } from "@cjhyy/code-shell-core";
 import { describeEnvironment } from "../environment-identity.js";
 import { createServer, type IncomingMessage, type ServerResponse } from "node:http";
-import { existsSync, readFileSync } from "node:fs";
+import { lstatSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { extname } from "node:path";
 import { createHubAuth } from "../hub/auth-http.js";
+import { createCloudAccountAuth } from "./cloud-account-auth.js";
+import { legacyProjectAuthority, type CloudAccountAuthority } from "./control-authority.js";
 import { resolveSafe } from "../mobile-remote/mobile-static.js";
 import { contentTypeFor } from "../static-files.js";
 import { createDockerProjectProvider } from "./docker-provider.js";
@@ -26,6 +28,8 @@ export interface ProjectControlServerOptions {
   runtimeSeccompProfile?: string;
   /** Dependency injection for lifecycle/transport integration tests. */
   provider?: ProjectRuntimeProvider;
+  /** Trusted fixed Account-origin verifier. Requires explicit offline ownership adoption. */
+  accountAuthority?: CloudAccountAuthority;
 }
 
 function json(response: ServerResponse, status: number, value: unknown): void {
@@ -84,8 +88,14 @@ async function readBody(request: IncomingMessage): Promise<Record<string, unknow
 /** A small account/project gateway. It never creates a worker, executes tools or mounts cwd. */
 export async function startProjectControlServer(options: ProjectControlServerOptions) {
   const remoteLink = remoteLinkHostConfiguration(options.remoteLink, options.publicOrigin);
-  if (existsSync(join(options.dataDir, "restore-in-progress")))
+  // Any entry is a barrier, including dangling symlinks. Only ENOENT means absent;
+  // permission/I/O failures must abort before registry or Hub initialization.
+  try {
+    lstatSync(join(options.dataDir, "restore-in-progress"));
     throw new Error("Cloud installation restore is incomplete; do not start this directory.");
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code !== "ENOENT") throw error;
+  }
   const registry = new ProjectRegistry(options.dataDir);
   let proxy: ReturnType<typeof createProjectRuntimeProxy> | undefined;
   let manager: ProjectManager | undefined;
@@ -93,25 +103,41 @@ export async function startProjectControlServer(options: ProjectControlServerOpt
   let server: ReturnType<typeof createServer> | undefined;
   let shuttingDown = false;
   try {
-    const auth = await createHubAuth({
-      dataDir: options.dataDir,
-      publicOrigin: options.publicOrigin,
-      onRevoke: (sessionId) => {
+    const onRevoke = (sessionId: string) => {
+      if (shuttingDown) return;
+      void proxy?.revokeOwner(sessionId).catch(async () => {
         if (shuttingDown) return;
-        void proxy?.revokeOwner(sessionId).catch(async () => {
-          if (shuttingDown) return;
-          // The revoked browser's transports are already closed. If its inner
-          // session cannot be revoked, stop the single administrator's runtimes.
-          try {
-            await manager?.stopAll();
-          } catch {
-            console.error(
-              "[project-control] could not confirm project termination after session revocation.",
-            );
-          }
-        });
-      },
-    });
+        // The revoked browser's transports are already closed. If its inner
+        // session cannot be revoked, stop the single administrator's runtimes.
+        try {
+          await manager?.stopAll();
+        } catch {
+          console.error(
+            "[project-control] could not confirm project termination after session revocation.",
+          );
+        }
+      });
+    };
+    const binding = registry.accountBinding;
+    if (!!binding !== !!options.accountAuthority || (binding && !options.publicOrigin))
+      throw new Error(
+        "Cloud account authority requires explicit matching ownership and public origin.",
+      );
+    const auth = binding
+      ? createCloudAccountAuth({
+          binding,
+          installationId: registry.installationId,
+          publicOrigin: options.publicOrigin!,
+          authority: options.accountAuthority!,
+          onRevoke,
+        })
+      : legacyProjectAuthority(
+          await createHubAuth({
+            dataDir: options.dataDir,
+            publicOrigin: options.publicOrigin,
+            onRevoke,
+          }),
+        );
     let listeningOrigin = "";
     const publicOrigin = () => options.publicOrigin ?? listeningOrigin;
     provider =
@@ -127,10 +153,13 @@ export async function startProjectControlServer(options: ProjectControlServerOpt
       registry,
       provider,
       publicOrigin,
-      isSessionActive: (session) =>
-        auth.store
-          .listSessions()
-          .some((item) => item.id === session.id && item.username === session.username),
+      isSessionActive: (session) => auth.isActive(session),
+      ...(binding
+        ? {
+            revalidateSession: (session: import("./control-authority.js").ProjectControlSession) =>
+              auth.revalidate(session),
+          }
+        : {}),
       revokeProject: async (id) => {
         await proxy?.revokeProject(id);
       },
@@ -180,6 +209,7 @@ export async function startProjectControlServer(options: ProjectControlServerOpt
         if (url.search) throw new ProjectRegistryError(400, "项目请求参数无效。");
         if (pathname === "/api/v1/projects" && request.method === "GET") {
           const availability = await provider!.availability();
+          await auth.revalidate(session);
           json(response, 200, {
             runtime: "docker",
             ...availability,
@@ -191,10 +221,13 @@ export async function startProjectControlServer(options: ProjectControlServerOpt
           const body = await readBody(request);
           if (Object.keys(body).some((key) => key !== "name"))
             throw new ProjectRegistryError(400, "仅支持设置项目名称。");
+          await auth.revalidate(session);
           json(response, 201, { project: projects.create(session, body.name) });
           return;
         }
-        const match = /^\/api\/v1\/projects\/([a-f0-9-]{36})(?:\/(start|stop))?$/.exec(pathname);
+        const match = /^\/api\/v1\/projects\/([a-f0-9-]{36})(?:\/(start|stop|open))?$/.exec(
+          pathname,
+        );
         if (match && request.method === "GET" && !match[2]) {
           json(response, 200, { project: projects.get(session, match[1]!) });
           return;
@@ -203,6 +236,14 @@ export async function startProjectControlServer(options: ProjectControlServerOpt
           const body = await readBody(request);
           if (Object.keys(body).length)
             throw new ProjectRegistryError(400, "启动和停止不接受额外参数。");
+          if (match[2] === "open") {
+            await projects.resolveTarget(session, match[1]!);
+            json(response, 200, {
+              project: projects.get(session, match[1]!),
+              url: `${publicOrigin()}/?project=${match[1]!}`,
+            });
+            return;
+          }
           const project =
             match[2] === "start"
               ? await projects.start(session, match[1]!)
@@ -292,6 +333,7 @@ export async function startProjectControlServer(options: ProjectControlServerOpt
             // Revoke streams and inner sessions before stopping their servers.
             // If logout is unreachable, confirmed runtime termination is the
             // fallback; a real stop failure must still reject close().
+            auth.close?.();
             await transport.close().catch(() => {});
             await projects.close();
           } finally {

@@ -3,6 +3,23 @@ import type { ConnectionOptions } from "node:tls";
 import { isRelayOrigin } from "@cjhyy/code-shell-server/remote-relay";
 
 function accountErrorMessage(status: number, path?: string, code?: unknown): string {
+  if (path === "/api/v1/account/profile") {
+    if (status === 400 && code === "invalid_display_name")
+      return "昵称需为 1–64 个字符，不能包含控制字符。";
+    if (status === 400 && code === "invalid_username")
+      return "用户名需为 3–64 位字母、数字、点、下划线或连字符，并以字母或数字开头。";
+    if (status === 409 && code === "username_unavailable")
+      return "此用户名已被使用，请换一个用户名。";
+    if (status === 404) return "此云服务尚未启用账号资料编辑。";
+  }
+  if (path === "/api/v1/account/links" || path?.startsWith("/api/v1/account/links/")) {
+    if (status === 503 && code === "link_management_disabled") return "此云服务尚未启用连接管理。";
+    if (status === 503 && code === "link_management_view_too_large")
+      return "连接管理列表超过服务上限，请联系服务管理员。";
+    if (status === 404 && code === "link_item_not_found")
+      return "此连接或授权不可用，请重新加载列表。";
+    if (status === 502) return "连接服务暂时不可用，请稍后重新加载。";
+  }
   const register = path === "/api/v1/account/register";
   const login = path === "/api/v1/account/login";
   if ((register || login) && status === 400) {
@@ -59,7 +76,7 @@ export class CloudAccountHttpError extends Error {
 export interface CloudAccountRequest {
   origin: string;
   path: string;
-  method?: "GET" | "POST";
+  method?: "GET" | "POST" | "DELETE" | "PATCH";
   body?: unknown;
   token?: string;
   signal?: AbortSignal;
@@ -71,6 +88,18 @@ export function createCloudAccountTransport(ca?: ConnectionOptions["ca"]): Cloud
   return (input) => {
     if (!isRelayOrigin(input.origin) || !/^\/api\/v1\/(?:account|remote-hosts)\//.test(input.path))
       return Promise.reject(new Error("无效的云服务地址。"));
+    if (input.method === "PATCH" && input.path !== "/api/v1/account/profile")
+      return Promise.reject(new Error("云账号资料请求无效。"));
+    if (
+      input.method === "DELETE" &&
+      (!/^\/api\/v1\/account\/links\/(?:connections|grants)\/[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12}$/.test(
+        input.path,
+      ) ||
+        input.body !== undefined)
+    )
+      return Promise.reject(new Error("无效的云账号撤销请求。"));
+    const maxResponseBytes =
+      input.method === "GET" && input.path === "/api/v1/account/links" ? 1_048_576 : 16_384;
     return new Promise((resolve, reject) => {
       const bytes = input.body === undefined ? undefined : Buffer.from(JSON.stringify(input.body));
       const req = request(
@@ -93,7 +122,7 @@ export function createCloudAccountTransport(ca?: ConnectionOptions["ca"]): Cloud
           let size = 0;
           res.on("data", (chunk: Buffer) => {
             size += chunk.length;
-            if (size > 16_384) req.destroy(new Error("response too large"));
+            if (size > maxResponseBytes) req.destroy(new Error("response too large"));
             else chunks.push(chunk);
           });
           res.on("error", () => reject(new CloudAccountHttpError(0)));

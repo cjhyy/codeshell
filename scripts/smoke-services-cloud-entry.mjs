@@ -6,6 +6,7 @@ import { spawn } from "node:child_process";
 import { createHash } from "node:crypto";
 import { existsSync } from "node:fs";
 import {
+  chmod,
   cp,
   lstat,
   mkdir,
@@ -50,7 +51,7 @@ if (!sourceArg || (outputArg && !docker))
   );
 assert.ok(!speechBundle || (docker && panelsArg), "--speech-bundle requires --docker and --panels");
 const source = resolve(sourceArg);
-const root = await mkdtemp(join(tmpdir(), "codeshell-services-packaged-"));
+const root = await realpath(await mkdtemp(join(tmpdir(), "codeshell-services-packaged-")));
 const stage = join(root, "stage");
 const installed = join(root, "relocated");
 const repo = resolve(dirname(fileURLToPath(import.meta.url)), "..");
@@ -60,8 +61,9 @@ const images = [];
 let provenance;
 let sourceFiles;
 let panelInventory;
+let completed = false;
 
-function run(command, args, cwd, env = process.env, capture = false, input) {
+function run(command, args, cwd, env = process.env, capture = false, input, onOutput) {
   return new Promise((done, fail) => {
     const child = spawn(command, args, {
       cwd,
@@ -89,15 +91,35 @@ function run(command, args, cwd, env = process.env, capture = false, input) {
       child.stderr.on("data", (part) => {
         errors += part;
       });
-    child.once("error", fail);
-    child.once("close", (code) =>
-      code === 0 && !inputError
-        ? done(output.trim())
-        : fail(
-            inputError ??
-              new Error(`${command} ${args[0]} failed (${code}): ${errors.slice(-8000)}`),
-          ),
-    );
+    let launchError;
+    child.once("error", (error) => {
+      launchError = error;
+    });
+    child.once("close", (code) => {
+      const failure =
+        launchError ??
+        (code === 0 && !inputError
+          ? undefined
+          : (inputError ??
+            new Error(`${command} ${args[0]} failed (${code}): ${errors.slice(-8000)}`)));
+      Promise.resolve()
+        .then(() => onOutput?.({ code, output }))
+        .then(
+          () => (failure ? fail(failure) : done(output.trim())),
+          (receiptError) =>
+            fail(
+              failure
+                ? new AggregateError(
+                    [failure, receiptError],
+                    "Command and evidence export failed",
+                    {
+                      cause: failure,
+                    },
+                  )
+                : receiptError,
+            ),
+        );
+    });
   });
 }
 
@@ -239,6 +261,10 @@ try {
     }
   }
   await run(process.execPath, ["scripts/check-cloud-runtime.mjs"], installed);
+  // New Account-owned candidates need the ticket-v2 controller and its actual
+  // management + offline adoption consumers. The legacy gate alone also accepts
+  // older published runtimes and must not qualify this delivery.
+  await run(process.execPath, ["scripts/run-cloud-account-consumer.mjs"], installed);
   if (panelsArg) {
     panelInventory = JSON.parse(
       await run(
@@ -332,6 +358,14 @@ try {
     );
     imageId = (await readFile(idFile, "utf8")).trim();
     assert.match(imageId, /^sha256:[a-f0-9]{64}$/);
+    const recoveryGuard = join(root, "settings-recovery-guard");
+    await mkdir(recoveryGuard, { mode: 0o755 });
+    const { settingsRecoveryGuardFiles, settingsRecoveryFixtureEvidence } =
+      await import("./settings-recovery-fixture-guard.mjs");
+    for (const file of settingsRecoveryGuardFiles) {
+      await cp(join(repo, "scripts", file), join(recoveryGuard, file));
+      await chmod(join(recoveryGuard, file), 0o444);
+    }
     // The command must exist in the production image, without TUI, a network,
     // a running project or a writable root. Only this temporary fixture is written.
     await run(
@@ -341,10 +375,18 @@ try {
         "--rm",
         "--network",
         "none",
+        "--user",
+        "1000:1000",
         "--read-only",
+        "--cap-drop",
+        "ALL",
+        "--security-opt",
+        "no-new-privileges:true",
         "--no-healthcheck",
         "--tmpfs",
         "/tmp:rw,nosuid,nodev,size=32m,mode=1777",
+        "--mount",
+        `type=bind,source=${recoveryGuard},target=/run/codeshell-recovery-guard,readonly`,
         "-i",
         "--entrypoint",
         "node",
@@ -352,11 +394,57 @@ try {
         "--input-type=module",
         "-",
         "/opt/codeshell/node_modules/@cjhyy/code-shell-server",
+        "--guard-root",
+        "/run/codeshell-recovery-guard",
       ],
       installed,
       process.env,
-      false,
+      true,
       await readFile(join(repo, "scripts/smoke-settings-recovery.mjs"), "utf8"),
+      async ({ code, output }) => {
+        const passed = code === 0;
+        const entryHash = createHash("sha256")
+          .update(
+            await readFile(
+              join(
+                installed,
+                "node_modules/@cjhyy/code-shell-server/dist/bin/code-shell-settings-recovery.js",
+              ),
+            ),
+          )
+          .digest("hex");
+        const path = join(root, "settings-recovery-container-receipt.json");
+        const persistReceipt = async (receipt) => {
+          const bytes = JSON.stringify(receipt);
+          // Only the bounded, sanitized PID/hash proof is emitted. A failed CI
+          // runner is disposable; preserve this proof even if local storage fails.
+          console.log(`CANDIDATE_SETTINGS_RECOVERY_EVIDENCE ${bytes}`);
+          await writeFile(path, bytes + "\n", { flag: "wx", mode: 0o600 });
+        };
+        let receipt;
+        try {
+          receipt = settingsRecoveryFixtureEvidence(output, passed, entryHash);
+        } catch (error) {
+          const failures = [error];
+          try {
+            await persistReceipt({
+              passed: false,
+              proofUnavailable: true,
+              cliEntryHash: entryHash,
+            });
+          } catch (receiptError) {
+            failures.push(receiptError);
+          }
+          if (failures.length > 1)
+            throw new AggregateError(failures, "Recovery proof and persistence failed", {
+              cause: error,
+            });
+          throw error;
+        }
+        await persistReceipt(receipt);
+        if (passed) console.log("✓ Packaged recovery CLI and six pre-Core proofs verified.");
+        else console.error(`Recovery failure's verified PID proofs retained: ${path}`);
+      },
     );
     const tag = `codeshell-services-smoke:${basename(root).toLowerCase()}`;
     await run("docker", ["tag", imageId, tag], installed);
@@ -398,6 +486,16 @@ try {
         true,
       );
       assert.match(helperId, /^sha256:[a-f0-9]{64}$/);
+      const { writeCloudRestoreGuardManifest } = await import("./cloud-restore-guard-manifest.mjs");
+      const { candidateDockerExecutable } = await import("./docker-candidate-setup.mjs");
+      const restoreGuard = writeCloudRestoreGuardManifest(join(root, "cloud-restore-guard.json"), {
+        hostScripts: join(repo, "scripts"),
+        hostHead:
+          provenance?.host ?? (await run("git", ["rev-parse", "HEAD"], repo, process.env, true)),
+        dockerPath: candidateDockerExecutable(),
+        dockerEndpoint: process.env.DOCKER_HOST ?? "unix:///var/run/docker.sock",
+        runtimeImage: imageId,
+      });
       await run(
         process.execPath,
         [
@@ -407,6 +505,9 @@ try {
           helperId,
           helperSource,
           join(repo, "..", "evidence", "cloud-backup-restore.json"),
+          "--guard",
+          restoreGuard.path,
+          restoreGuard.sha256,
         ],
         repo,
       );
@@ -484,7 +585,7 @@ try {
     console.log(`Verified private candidate saved: ${resolve(outputArg)}`);
   }
   console.log(
-    `✓ Independent services installation: ${inventory.length} real tarballs, relocated npm ci, release capability gate, complete service tests and browser OAuth${imageId ? ", packaged runtime image and two real project containers" : ""}.`,
+    `✓ Independent services installation: ${inventory.length} real tarballs, relocated npm ci, legacy and Account-v2 capability gates, actual ticket management and native adoption CLI consumers, complete service tests and browser OAuth${imageId ? ", packaged runtime image and two real project containers" : ""}.`,
   );
   console.log(
     JSON.stringify({ candidateOnly: true, packages: inventory, runtimeImage: imageId ?? null }),
@@ -492,6 +593,8 @@ try {
   console.log(
     "Candidate verification only; no registry release, provider acceptance or production deployment occurred.",
   );
+  completed = true;
 } finally {
-  await rm(root, { recursive: true, force: true });
+  if (completed) await rm(root, { recursive: true, force: true });
+  else console.error(`Candidate failed; private installation and evidence retained: ${root}`);
 }

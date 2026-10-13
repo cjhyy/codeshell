@@ -1,5 +1,6 @@
 import type { CloudAccountApi } from "../shared/cloud-account.js";
 import type { CloudEnvironmentApi } from "../shared/cloud-environment.js";
+import type { CloudWorkbenchApi } from "../shared/cloud-management.js";
 import type {
   ApprovalResolvedEnvelope,
   MobilePermissionModeEnvelope,
@@ -1545,7 +1546,7 @@ export interface CodeshellApi
   /** Open a cloud workbench in a browser-only native window, isolated from local projects. */
   cloudAccount: CloudAccountApi;
   cloudEnvironment: CloudEnvironmentApi;
-  openCloudWorkbench(address: string): Promise<{ address: string }>;
+  openCloudWorkbench: CloudWorkbenchApi;
   openExternal(url: string): Promise<void>;
   revealInFinder(path: string, cwd?: string): Promise<void>;
   /**
@@ -2123,7 +2124,13 @@ export interface CodeshellApi
     input: PanelAppSourceInput,
     cwd: string,
   ): Promise<
-    { ok: true; preview: PanelAppPreview; installedVersion?: string } | { ok: false; error: string }
+    | {
+        ok: true;
+        preview: PanelAppPreview;
+        installedVersion?: string;
+        installedPermissions?: PanelAppPreview["permissions"];
+      }
+    | { ok: false; error: string }
   >;
   /** Discover every installable Panel App in a public GitHub repository. */
   discoverGitPanelApps(
@@ -2141,7 +2148,13 @@ export interface CodeshellApi
     cwd: string,
     expectedRevision: string,
   ): Promise<
-    { ok: true; preview: PanelAppPreview; installedVersion?: string } | { ok: false; error: string }
+    | {
+        ok: true;
+        preview: PanelAppPreview;
+        installedVersion?: string;
+        installedPermissions?: PanelAppPreview["permissions"];
+      }
+    | { ok: false; error: string }
   >;
   /** Install a reviewed Panel App into the independent Panel App registry. */
   installLocalPanelApp(input: {
@@ -2407,6 +2420,16 @@ export interface CodeshellApi
     send(roomId: string, text: string): Promise<boolean>;
     respondApproval(roomId: string, requestId: string, decision: unknown): Promise<boolean>;
     roomHistory(roomId: string, sinceSeq?: number): Promise<unknown[]>;
+    roomHistoryPage(
+      roomId: string,
+      request: { sinceSeq?: number; cursor?: string; limit?: number },
+    ): Promise<{
+      snapshotId: string;
+      throughSeq: number;
+      messages: unknown[];
+      nextCursor?: string;
+      complete: boolean;
+    }>;
     readHistory(
       cwd: string,
       sessionId: string,
@@ -2454,6 +2477,7 @@ export interface CodeshellApi
     }>;
     unsubscribeTranscript(roomId: string): Promise<void>;
     closeSession(roomId: string): Promise<void>;
+    onTranscriptRecovery(cb: (event: { roomId: string; message: string }) => void): () => void;
     onRoomMessage(cb: (env: { roomId: string; msg: unknown }) => void): () => void;
     onApprovalRequest(
       cb: (req: {

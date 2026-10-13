@@ -5,7 +5,7 @@ import {
   resolvePanelAppBindingProjectPath,
   validateToolArgsStrict,
 } from "@cjhyy/code-shell-core";
-import { acquireLockOnPath } from "@cjhyy/code-shell-core/internal";
+import { acquireLockOnPath, acquireWorkspaceWriteLock } from "@cjhyy/code-shell-core/internal";
 import { isDeepStrictEqual } from "node:util";
 import { createHash, randomUUID } from "node:crypto";
 import {
@@ -3051,6 +3051,7 @@ export class PanelAppBridge {
     }
     const bridge = this.options.getAgentBridge();
     if (!bridge) throw new Error("agent worker is unavailable");
+    const output = bridge.captureExternalOutputSource(sessionId);
 
     const appLabel = binding.resource.descriptor.title.trim();
     const prefix = appLabel ? `【${appLabel}】 ` : "";
@@ -3159,7 +3160,7 @@ export class PanelAppBridge {
         // pushed by the renderer, so there is no gap to re-open.
         binding.agentSubmitInFlight = false;
         if (result.ok || result.failureStreamed) return;
-        bridge.ingestExternalEvent(sessionId, {
+        output.publish({
           type: "error",
           error: `Panel App request failed: ${result.message ?? "unknown error"}`,
         });
@@ -3168,7 +3169,7 @@ export class PanelAppBridge {
         // Must also release on failure, or one dropped request would wedge the
         // panel into a permanent "session is busy".
         binding.agentSubmitInFlight = false;
-        bridge.ingestExternalEvent(sessionId, {
+        output.publish({
           type: "error",
           error: `Panel App request failed: ${
             error instanceof Error ? error.message : String(error)
@@ -3611,85 +3612,108 @@ export class PanelAppBridge {
         assertParent();
       };
       const canonicalTarget = join(parent, basename(relativePath));
-      let currentModifiedAt: number | null = null;
-      let currentRevision: string | null = null;
-      let targetMode = 0o644;
+      const releaseWorkspaceLock = await acquireWorkspaceWriteLock(parent, basename(relativePath));
+      let outcome: { ok: true; value: unknown } | { ok: false; error: unknown };
       try {
-        const metadata = await lstat(canonicalTarget);
         assertCommit();
-        if (metadata.isSymbolicLink() || !metadata.isFile()) {
-          throw new Error("workspace target is not a regular file");
-        }
-        currentModifiedAt = metadata.mtimeMs;
-        targetMode = metadata.mode & 0o777;
-        if (expectedRevision !== undefined) {
-          const handle = await open(canonicalTarget, constants.O_RDONLY | constants.O_NOFOLLOW);
-          try {
-            assertCommit();
-            currentRevision = workspaceRevision(
-              (await this.readBoundedWorkspaceFile(handle, maxExistingBytes)).buffer,
-            );
-          } finally {
-            await handle.close();
+        let currentModifiedAt: number | null = null;
+        let currentRevision: string | null = null;
+        let targetMode = 0o644;
+        try {
+          const metadata = await lstat(canonicalTarget);
+          assertCommit();
+          if (metadata.isSymbolicLink() || !metadata.isFile()) {
+            throw new Error("workspace target is not a regular file");
           }
-        }
-      } catch (error) {
-        if ((error as NodeJS.ErrnoException).code !== "ENOENT") throw error;
-      }
-      assertCommit();
-      const hasExpectation = expectedModifiedAt !== undefined;
-      const conflicts =
-        expectedRevision !== undefined
-          ? currentRevision !== expectedRevision
-          : hasExpectation &&
-            ((expectedModifiedAt === null && currentModifiedAt !== null) ||
-              (typeof expectedModifiedAt === "number" &&
-                (currentModifiedAt === null ||
-                  Math.abs(currentModifiedAt - expectedModifiedAt) > 0.001)));
-      if (conflicts) throw new Error("workspace file changed since it was opened");
-
-      const temporary = join(parent, `.${basename(relativePath)}.${randomUUID()}.tmp`);
-      try {
-        await writeFile(temporary, content, { mode: 0o600, flag: "wx" });
-        assertCommit();
-        const createOnly = expectedRevision === undefined && expectedModifiedAt === null;
-        if (createOnly) {
-          try {
-            linkSync(temporary, canonicalTarget);
-          } catch (error) {
-            if ((error as NodeJS.ErrnoException).code === "EEXIST") {
-              throw new Error("workspace file changed since it was opened", { cause: error });
+          currentModifiedAt = metadata.mtimeMs;
+          targetMode = metadata.mode & 0o777;
+          if (expectedRevision !== undefined) {
+            const handle = await open(canonicalTarget, constants.O_RDONLY | constants.O_NOFOLLOW);
+            try {
+              assertCommit();
+              currentRevision = workspaceRevision(
+                (await this.readBoundedWorkspaceFile(handle, maxExistingBytes)).buffer,
+              );
+            } finally {
+              await handle.close();
             }
-            throw error;
           }
-        } else {
-          renameSync(temporary, canonicalTarget);
+        } catch (error) {
+          if ((error as NodeJS.ErrnoException).code !== "ENOENT") throw error;
         }
+        assertCommit();
+        const hasExpectation = expectedModifiedAt !== undefined;
+        const conflicts =
+          expectedRevision !== undefined
+            ? currentRevision !== expectedRevision
+            : hasExpectation &&
+              ((expectedModifiedAt === null && currentModifiedAt !== null) ||
+                (typeof expectedModifiedAt === "number" &&
+                  (currentModifiedAt === null ||
+                    Math.abs(currentModifiedAt - expectedModifiedAt) > 0.001)));
+        if (conflicts) throw new Error("workspace file changed since it was opened");
+
+        const temporary = join(parent, `.${basename(relativePath)}.${randomUUID()}.tmp`);
         try {
-          chmodSync(canonicalTarget, targetMode);
-        } catch {
-          /* Preserve best-effort mode behavior. */
+          await writeFile(temporary, content, { mode: 0o600, flag: "wx" });
+          assertCommit();
+          const createOnly = expectedRevision === undefined && expectedModifiedAt === null;
+          if (createOnly) {
+            try {
+              linkSync(temporary, canonicalTarget);
+            } catch (error) {
+              if ((error as NodeJS.ErrnoException).code === "EEXIST") {
+                throw new Error("workspace file changed since it was opened", { cause: error });
+              }
+              throw error;
+            }
+          } else {
+            renameSync(temporary, canonicalTarget);
+          }
+          try {
+            chmodSync(canonicalTarget, targetMode);
+          } catch {
+            /* Preserve best-effort mode behavior. */
+          }
+        } catch (error) {
+          try {
+            assertRoot();
+            assertParent();
+            await rm(temporary, { force: true });
+          } catch {
+            /* Never clean up inside a replaced directory. */
+          }
+          throw error;
         }
+        assertCommit();
+        await rm(temporary, { force: true }).catch(() => undefined);
+        assertCommit();
+        const metadata = await stat(canonicalTarget);
+        outcome = {
+          ok: true,
+          value: {
+            path: relativePath,
+            size: metadata.size,
+            modifiedAt: metadata.mtimeMs,
+            revision: workspaceRevision(content),
+          },
+        };
       } catch (error) {
-        try {
-          assertRoot();
-          assertParent();
-          await rm(temporary, { force: true });
-        } catch {
-          /* Never clean up inside a replaced directory. */
-        }
+        outcome = { ok: false, error };
+      }
+      try {
+        await releaseWorkspaceLock();
+      } catch (error) {
+        if (!outcome.ok)
+          throw new AggregateError(
+            [outcome.error, error],
+            `${String(outcome.error)}; ${String(error)}`,
+            { cause: error },
+          );
         throw error;
       }
-      assertCommit();
-      await rm(temporary, { force: true }).catch(() => undefined);
-      assertCommit();
-      const metadata = await stat(canonicalTarget);
-      return {
-        path: relativePath,
-        size: metadata.size,
-        modifiedAt: metadata.mtimeMs,
-        revision: workspaceRevision(content),
-      };
+      if (!outcome.ok) throw outcome.error;
+      return outcome.value;
     });
   }
 

@@ -1,3 +1,4 @@
+import { RoomHistoryAccumulator } from "../lib/roomHistory.js";
 import { useCallback, useEffect, useMemo, useReducer, useRef, useState } from "react";
 import type {
   MobileServerEvent,
@@ -305,10 +306,24 @@ export function useRemoteApp(options: RemoteAppOptions = {}): RemoteApp {
   /** Transient banner message (errors, room-missing, …). Auto-clears. */
   const [notice, setNoticeState] = useState<string | undefined>();
   const noticeTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
+  const noticeMounted = useRef(true);
+  useEffect(() => {
+    noticeMounted.current = true;
+    return () => {
+      noticeMounted.current = false;
+      if (noticeTimer.current !== undefined) clearTimeout(noticeTimer.current);
+      noticeTimer.current = undefined;
+    };
+  }, []);
   const setNotice = useCallback((msg: string) => {
+    if (!noticeMounted.current) return;
     setNoticeState(msg);
-    if (noticeTimer.current) clearTimeout(noticeTimer.current);
-    noticeTimer.current = setTimeout(() => setNoticeState(undefined), 5000);
+    if (noticeTimer.current !== undefined) clearTimeout(noticeTimer.current);
+    noticeTimer.current = setTimeout(() => {
+      if (!noticeMounted.current) return;
+      noticeTimer.current = undefined;
+      setNoticeState(undefined);
+    }, 5000);
   }, []);
   const beginMobileUpload = useCallback(
     (metadata: MobileImageBase, expectedGeneration: number): Promise<MobileUploadTicket> => {
@@ -407,6 +422,17 @@ export function useRemoteApp(options: RemoteAppOptions = {}): RemoteApp {
   /** Highest room message seq seen per active room. Used as room.history cursor. */
   const lastRoomSeqRef = useRef<Map<string, number>>(new Map());
   /** Recent room seqs already folded into the reducer, for idempotent history/live merge. */
+  const roomCatchupRef = useRef<
+    | {
+        roomId: string;
+        requestId: string;
+        pager: RoomHistoryAccumulator;
+        live: Map<number, unknown>;
+        failed?: boolean;
+      }
+    | undefined
+  >(undefined);
+  const roomRequestCounterRef = useRef(0);
   const appliedRoomSeqsRef = useRef<Map<string, Set<number>>>(new Map());
   /** The cc (external claude CLI) session id whose on-disk transcript is the
    *  backlog for the current room view. Set on ccRoom.opened, cleared whenever we
@@ -455,6 +481,28 @@ export function useRemoteApp(options: RemoteAppOptions = {}): RemoteApp {
       }
     },
     [],
+  );
+
+  const requestRoomCatchup = useCallback(
+    (roomId: string, sinceSeq: number) => {
+      const requestId = `room-history:${++roomRequestCounterRef.current}`;
+      roomCatchupRef.current = {
+        roomId,
+        requestId,
+        pager: new RoomHistoryAccumulator(sinceSeq),
+        live: new Map(),
+      };
+      setLoadingKey("roomHistory", true);
+      sendRef.current?.({
+        type: "room.history",
+        roomId,
+        sinceSeq,
+        page: true,
+        requestId,
+        limit: 200,
+      });
+    },
+    [setLoadingKey],
   );
 
   const wrapSessionEvents = useCallback(
@@ -865,6 +913,28 @@ export function useRemoteApp(options: RemoteAppOptions = {}): RemoteApp {
             // wipe them while also advancing sinceSeq, so let room.history pull
             // them after the backlog has landed.
             if (ccHistorySessionRef.current && !ccBacklogLoadedRef.current) break;
+            const seq = roomMessageSeq(event.msg);
+            if (seq === undefined) {
+              setNotice("Room message has an invalid sequence");
+              break;
+            }
+            const catchup = roomCatchupRef.current;
+            if (catchup?.roomId === event.roomId) {
+              if (catchup.failed) break;
+              if (catchup.live.size >= 10_000 && !catchup.live.has(seq)) {
+                catchup.failed = true;
+                setLoadingKey("roomHistory", false);
+                setNotice("Room catchup live buffer exceeds its limit; reconnect to recover");
+                break;
+              }
+              catchup.live.set(seq, event.msg);
+              break;
+            }
+            if (seq > (lastRoomSeqRef.current.get(event.roomId) ?? 0) + 1) {
+              requestRoomCatchup(event.roomId, lastRoomSeqRef.current.get(event.roomId) ?? 0);
+              roomCatchupRef.current!.live.set(seq, event.msg);
+              break;
+            }
             const freshMessages = filterNewRoomMessages(
               event.roomId,
               [event.msg],
@@ -875,19 +945,62 @@ export function useRemoteApp(options: RemoteAppOptions = {}): RemoteApp {
             dispatchChat({ kind: "raw", raw: roomMsgToEvent(freshMessages[0]) });
           }
           break;
-        case "room.history.ok":
-          if (event.roomId === activeRoomIdRef.current) {
-            const messages = Array.isArray(event.messages) ? event.messages : [];
-            const freshMessages = filterNewRoomMessages(
+        case "room.history.ok": {
+          if (event.roomId !== activeRoomIdRef.current) break;
+          const catchup = roomCatchupRef.current;
+          if (
+            !catchup ||
+            catchup.failed ||
+            catchup.roomId !== event.roomId ||
+            event.requestId !== catchup.requestId
+          )
+            break;
+          try {
+            if (!event.page) throw new Error("This Host does not support complete room history");
+            const cursor = catchup.pager.accept({ ...event.page, messages: event.messages });
+            if (cursor) {
+              sendRef.current?.({
+                type: "room.history",
+                roomId: event.roomId,
+                page: true,
+                cursor,
+                limit: 200,
+                requestId: catchup.requestId,
+              });
+              break;
+            }
+            const fresh = filterNewRoomMessages(
               event.roomId,
-              messages,
+              catchup.pager.messages,
               appliedRoomSeqsRef.current,
             );
-            rememberRoomMessages(event.roomId, freshMessages, event.latestSeq);
-            dispatchChat({ kind: "append", events: roomHistoryToEvents(freshMessages) });
+            rememberRoomMessages(event.roomId, fresh, event.page.throughSeq);
+            dispatchChat({ kind: "append", events: roomHistoryToEvents(fresh) });
+            roomCatchupRef.current = undefined;
+            const live = [...catchup.live.entries()].sort(([a], [b]) => a - b);
+            for (const [seq, msg] of live) {
+              const applied = lastRoomSeqRef.current.get(event.roomId) ?? 0;
+              if (seq <= applied) continue;
+              if (seq !== applied + 1) {
+                requestRoomCatchup(event.roomId, applied);
+                for (const [pendingSeq, pendingMsg] of live)
+                  if (pendingSeq > applied)
+                    roomCatchupRef.current!.live.set(pendingSeq, pendingMsg);
+                break;
+              }
+              rememberRoomMessages(event.roomId, [msg]);
+              dispatchChat({ kind: "raw", raw: roomMsgToEvent(msg) });
+            }
+            if (!roomCatchupRef.current) setLoadingKey("roomHistory", false);
+          } catch (error) {
+            // Keep the failed boundary and buffered live messages. Do not fold
+            // a partial range or advance the durable catchup position.
+            catchup.failed = true;
+            setNotice(String(error));
             setLoadingKey("roomHistory", false);
           }
           break;
+        }
         case "room.opened":
           // The room is internal CC-session transport; surface it as a 会话 to the
           // user (no room concept in the UI).
@@ -901,7 +1014,24 @@ export function useRemoteApp(options: RemoteAppOptions = {}): RemoteApp {
           // Keep the internal room snapshot in sync (resolves activeRoom metadata).
           setRooms((prev) => prev.map((r) => (r.id === event.roomId ? { ...r, open: false } : r)));
           break;
+        case "room.recovery":
+          if (event.roomId === activeRoomIdRef.current) {
+            ccBacklogLoadedRef.current = false;
+            if (roomCatchupRef.current?.roomId === event.roomId)
+              roomCatchupRef.current.failed = true;
+            setLoadingKey("roomHistory", false);
+            setNotice(event.message);
+          }
+          break;
         case "room.error":
+          if (event.requestId && event.requestId !== roomCatchupRef.current?.requestId) break;
+          if (
+            event.roomId === activeRoomIdRef.current &&
+            roomCatchupRef.current?.roomId === event.roomId
+          ) {
+            roomCatchupRef.current!.failed = true;
+            setLoadingKey("roomHistory", false);
+          }
           if (event.clientMessageId) {
             settleMessageAck(event.clientMessageId, new Error(event.message));
           }
@@ -1017,7 +1147,7 @@ export function useRemoteApp(options: RemoteAppOptions = {}): RemoteApp {
             });
           } else {
             ccBacklogLoadedRef.current = true;
-            sendRef.current?.({ type: "room.history", roomId: event.roomId, sinceSeq: 0 });
+            requestRoomCatchup(event.roomId, 0);
           }
           break;
         case "ccRoom.transcriptSubscribed":
@@ -1029,17 +1159,18 @@ export function useRemoteApp(options: RemoteAppOptions = {}): RemoteApp {
             event.roomId === activeRoomIdRef.current &&
             event.sessionId === ccHistorySessionRef.current
           ) {
+            if (!event.active) {
+              setNotice("External transcript is not being followed");
+              setLoadingKey("roomHistory", false);
+              break;
+            }
             dispatchChat({ kind: "replay", events: ccHistoryToEvents(event.messages) });
             setLoadingKey("roomHistory", false);
             ccBacklogLoadedRef.current = true;
             lastRoomSeqRef.current.set(event.roomId, event.roomCursor);
             appliedRoomSeqsRef.current.delete(event.roomId);
             setLoadingKey("roomHistory", true);
-            sendRef.current?.({
-              type: "room.history",
-              roomId: event.roomId,
-              sinceSeq: event.roomCursor,
-            });
+            requestRoomCatchup(event.roomId, event.roomCursor);
           }
           break;
         case "ccRoom.readHistory.ok":
@@ -1053,11 +1184,7 @@ export function useRemoteApp(options: RemoteAppOptions = {}): RemoteApp {
             const roomId = activeRoomIdRef.current;
             if (roomId) {
               setLoadingKey("roomHistory", true);
-              sendRef.current?.({
-                type: "room.history",
-                roomId,
-                sinceSeq: lastRoomSeqRef.current.get(roomId) ?? 0,
-              });
+              requestRoomCatchup(roomId, lastRoomSeqRef.current.get(roomId) ?? 0);
             }
           }
           break;
@@ -1108,6 +1235,7 @@ export function useRemoteApp(options: RemoteAppOptions = {}): RemoteApp {
       clearApproval,
       clearSessionUnread,
       rememberRoomMessages,
+      requestRoomCatchup,
       sessionCwdById,
       setLoadingKey,
       settleMessageAck,
@@ -1211,11 +1339,7 @@ export function useRemoteApp(options: RemoteAppOptions = {}): RemoteApp {
       }
       if (ccHistorySessionRef.current && !ccBacklogLoadedRef.current) return;
       setLoadingKey("roomHistory", true);
-      sendRef.current?.({
-        type: "room.history",
-        roomId,
-        sinceSeq: lastRoomSeqRef.current.get(roomId) ?? 0,
-      });
+      requestRoomCatchup(roomId, lastRoomSeqRef.current.get(roomId) ?? 0);
       return;
     }
     const sessionId = boundSessionRef.current;
@@ -1238,7 +1362,7 @@ export function useRemoteApp(options: RemoteAppOptions = {}): RemoteApp {
       sinceSeq: cursor.awaitingSnapshot ? 0 : cursor.appliedSeq,
       ...(cursor.epoch ? { epoch: cursor.epoch } : {}),
     });
-  }, [setLoadingKey, sessionCursor]);
+  }, [setLoadingKey, sessionCursor, requestRoomCatchup]);
 
   const socket = useRemoteSocket({
     onServerEvent,

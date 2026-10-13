@@ -1,13 +1,22 @@
 import { ipcRenderer, type IpcRendererEvent } from "electron";
-import type { CloudAccountApi, CloudAccountStatus } from "../shared/cloud-account.js";
+import type {
+  CloudAccountApi,
+  CloudAccountStatus,
+  CloudAccountGitHubRequest,
+} from "../shared/cloud-account.js";
+
+const github = (input: CloudAccountGitHubRequest): Promise<CloudAccountStatus> =>
+  ipcRenderer.invoke("cloudAccount:github", input);
 
 export const cloudAccountApi: CloudAccountApi = {
   status: () => ipcRenderer.invoke("cloudAccount:status"),
   capabilities: (origin) => ipcRenderer.invoke("cloudAccount:capabilities", origin),
   login: (input) => ipcRenderer.invoke("cloudAccount:login", input),
   register: (input) => ipcRenderer.invoke("cloudAccount:register", input),
-  signInWithGitHub: (input) => ipcRenderer.invoke("cloudAccount:github", input),
-  linkGitHub: () => ipcRenderer.invoke("cloudAccount:linkGitHub"),
+  signInWithGitHub: (input) => github({ mode: "login", input }),
+  linkGitHub: () => github({ mode: "link" }),
+  manageLinks: (input) => ipcRenderer.invoke("cloudAccount:links", input),
+  profile: (input) => ipcRenderer.invoke("cloudAccount:profile", input),
   cancelSignIn: () => ipcRenderer.invoke("cloudAccount:cancelSignIn"),
   logout: () => ipcRenderer.invoke("cloudAccount:logout"),
   onStatus(callback) {

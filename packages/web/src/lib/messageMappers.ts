@@ -139,3 +139,6 @@ export function extractAskUserOptions(
   }
   return undefined;
 }
+
+// Room history validation and mapping share one browser-safe entry contract.
+export { collectRoomHistory, RoomHistoryAccumulator, type FrozenRoomPage } from "./roomHistory.js";

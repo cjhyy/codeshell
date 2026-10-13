@@ -24,7 +24,7 @@ function deferred<T>() {
 }
 let current: ComputerUseSettingsStatus = {
   enabled: !["disabled", "enable-retry", "stale-read", "read-retry"].includes(scenario),
-  active: false,
+  active: scenario === "disable-active",
   driverAvailable: true,
   packaged: true,
   restartRequired: false,
@@ -60,7 +60,7 @@ Object.assign(window, {
       setEnabled: async (enabled: boolean) => {
         writes.push(enabled);
         if (writesFail) throw new Error("synthetic write failure");
-        current = { ...current, enabled, restartRequired: true };
+        current = { ...current, enabled, active: enabled && current.active, restartRequired: true };
         return structuredClone(current);
       },
       requestPermission: async (kind: "accessibility" | "screenRecording") => {
@@ -135,6 +135,19 @@ try {
     assert.equal(props(button("申请辅助功能权限")).disabled, true);
     assert.equal(props(button("申请屏幕录制权限")).disabled, true);
     assert.ok(textOf(container).includes("打开此页面不会自动弹出授权申请"));
+  } else if (scenario === "disable-active") {
+    assert.equal(props(toggle())["aria-checked"], true);
+    assert.ok(textOf(container).includes("电脑操作服务正在运行。"));
+    await setEnabled();
+    assert.deepEqual(writes, [false], "The running switch sends an explicit disable request");
+    assert.equal(props(toggle())["aria-checked"], false);
+    assert.ok(textOf(container).includes("电脑操作服务尚未运行。"));
+    assert.ok(!textOf(container).includes("电脑操作服务正在运行。"));
+    assert.equal(props(button("申请辅助功能权限")).disabled, true);
+    assert.equal(props(button("申请屏幕录制权限")).disabled, true);
+    assert.deepEqual(requests, []);
+    assert.deepEqual(settings, []);
+    assert.equal(restarts, 0, "Disabling takes effect without automatically restarting");
   } else if (scenario.startsWith("request-") || scenario === "busy-focus") {
     const kind = scenario === "request-screen" ? "screenRecording" : "accessibility";
     const label = kind === "accessibility" ? "申请辅助功能权限" : "申请屏幕录制权限";

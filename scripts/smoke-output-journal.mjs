@@ -11,6 +11,7 @@ import {
   mkdirSync,
   mkdtempSync,
   readFileSync,
+  readdirSync,
   realpathSync,
   renameSync,
   rmSync,
@@ -31,6 +32,18 @@ const wait = (ms) => new Promise((done) => setTimeout(done, ms));
 const repo = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const entry = resolve(repo, "packages/core/dist/cli/agent-server-stdio.js");
 const preload = new URL("./runtime-cost-smoke-isolation.mjs", import.meta.url).href;
+function journalStorageBytes(root, sessionId) {
+  const directory = join(root, sessionId);
+  return readdirSync(directory)
+    .filter(
+      (name) =>
+        name === "output-journal.jsonl" ||
+        name === "output-journal-head.json" ||
+        name === "output-journal-segments.json" ||
+        name.startsWith("output-segment-"),
+    )
+    .reduce((sum, name) => sum + statSync(join(directory, name)).size, 0);
+}
 
 async function measureJournal(core, root, sessionId, expectedHash) {
   const fs = (await import("node:fs")).default;
@@ -64,7 +77,7 @@ async function measureJournal(core, root, sessionId, expectedHash) {
     }
     assert.equal(outputHash.digest("hex"), expectedHash);
     return {
-      journalBytes: statSync(join(root, sessionId, "output-journal.jsonl")).size,
+      journalBytes: journalStorageBytes(root, sessionId),
       coldFirstPageMs: Math.round(coldFirstPageMs),
       coldReadBytes,
       allPagesMs: Math.round(performance.now() - began),
@@ -112,7 +125,7 @@ async function concurrentFrozenPages(core, journalApi, root, origin, cwd) {
   const text = "prefix-汉🙂" + "x".repeat(60 * 1024),
     expected = createHash("sha256");
   let through;
-  for (let count = 0; count < 192; count++) {
+  for (let count = 0; count < 271; count++) {
     through = writer.append({ type: "text_delta", text });
     expected.update(text);
   }
@@ -155,6 +168,7 @@ async function concurrentFrozenPages(core, journalApi, root, origin, cwd) {
     const before = JSON.parse(readFileSync(progressFile, "utf8"));
     assert.equal(before.pid, child.pid);
     assert.ok(before.count > 0);
+    assert.equal(manager.readSessionState(sessionId).outputJournalStorage, undefined);
     const recovery = { incomplete: false },
       actual = createHash("sha256"),
       began = performance.now();
@@ -167,7 +181,19 @@ async function concurrentFrozenPages(core, journalApi, root, origin, cwd) {
         ...(recovery.cursor ? { after: recovery.cursor } : {}),
         maxFrames: 16,
       });
-      assert.equal(page.status, "ok", JSON.stringify({ page, stderr }));
+      assert.equal(
+        page.status,
+        "ok",
+        JSON.stringify({
+          page,
+          pageIndex: pages,
+          after: recovery.cursor,
+          through,
+          storage: manager.readSessionState(sessionId).outputJournalStorage,
+          progress: JSON.parse(readFileSync(progressFile, "utf8")),
+          stderr,
+        }),
+      );
       pages++;
       const done = journalApi.applyOutputJournalPage(recovery, page, (event) => {
         if (event.type === "text_delta") actual.update(event.text);
@@ -177,6 +203,7 @@ async function concurrentFrozenPages(core, journalApi, root, origin, cwd) {
       assert.ok(pages < 100);
     }
     const after = JSON.parse(readFileSync(progressFile, "utf8"));
+    assert.ok(manager.readSessionState(sessionId).outputJournalStorage);
     assert.equal(actual.digest("hex"), expected.digest("hex"));
     assert.ok(
       after.count > before.count,
@@ -192,6 +219,7 @@ async function concurrentFrozenPages(core, journalApi, root, origin, cwd) {
       actualWriterPid: child.pid,
       actualWorkerReceipt: true,
       frozenCursorStable: recovery.cursor === through,
+      rotationDuringPaging: true,
     };
     assert.equal(timing.frozenCursorStable, true);
     writeFileSync(stopFile, "stop", { mode: 0o600 });
@@ -324,7 +352,7 @@ async function workerGuard(child, env) {
   }
   throw new Error("Output smoke stopped before RPC: missing actual worker isolation receipt");
 }
-async function stdioQuery(root, storage, cwd, origin, sessionId) {
+async function stdioQuery(root, storage, cwd, origin, sessionId, editGoal = false) {
   const environmentRoot = mkdtempSync(join(root, "worker-"));
   const clean = createBunTestEnvironment(process.env, environmentRoot);
   const env = {
@@ -381,18 +409,34 @@ async function stdioQuery(root, storage, cwd, origin, sessionId) {
       else item.resolve(message.result);
     }
   });
-  const request = (params) =>
+  const request = (params, method = "agent/query") =>
     new Promise((resolveRequest, reject) => {
       const id = ++serial;
       const timer = setTimeout(() => reject(new Error("Output RPC timed out: " + stderr)), 60_000);
       pending.set(id, { resolve: resolveRequest, reject, timer });
-      child.stdin.write(
-        JSON.stringify({ jsonrpc: "2.0", id, method: "agent/query", params }) + "\n",
-      );
+      child.stdin.write(JSON.stringify({ jsonrpc: "2.0", id, method, params }) + "\n");
     });
   try {
     await workerGuard(child, env);
+    if (editGoal) {
+      const changed = await request(
+        {
+          sessionId,
+          objective: "durable independent Goal",
+          paused: true,
+          expectedGoalId: "independent-goal",
+          expectedRevision: 1,
+        },
+        "agent/goalUpdate",
+      );
+      assert.equal(changed.updated, true);
+    }
     const page = (await request({ type: "output_journal", sessionId, maxFrames: 1 })).data;
+    if (sessionId === "independent-output") {
+      assert.equal(page.frames[0].runId, undefined);
+      assert.equal(page.frames[0].producer.kind, "protocol");
+      assert.equal(page.frames[0].event.type, "goal_updated");
+    }
     assert.equal(page.status, "ok");
     assert.equal(page.frames.length, 1);
     return { through: page.through, pid: child.pid, homeHash: hash(env.HOME) };
@@ -455,6 +499,24 @@ async function hubChild(args) {
     const socket = await fixtureWebSocket(origin, cookie);
     const query = socket.query;
     try {
+      const independentDetail = (
+        await query({
+          type: "session_detail",
+          sessionId: "independent-output",
+          outputRecovery: true,
+        })
+      ).data;
+      const independentRecovered = await chatFromOutputJournal(
+        independentDetail,
+        async (options) =>
+          (await query({ type: "output_journal", sessionId: "independent-output", ...options }))
+            .data,
+        [],
+        () => undefined,
+        async () =>
+          (await query({ type: "output_coverage", sessionId: "independent-output" })).data,
+      );
+      assert.ok(independentRecovered.outputCursor);
       const detail = (
         await query({ type: "session_detail", sessionId: "long-output", outputRecovery: true })
       ).data;
@@ -493,6 +555,7 @@ async function hubChild(args) {
     console.log(
       JSON.stringify({
         hubRecovery: true,
+        authenticatedHubNoRunRecovery: true,
         hubRestartCursorStable: true,
         hubTransportEpochChanged: true,
         recoveredBytes: after.bytes,
@@ -507,6 +570,33 @@ if (process.argv[2] === "--append-worker") {
   await appendChild(process.argv.slice(3));
 } else if (process.argv[2] === "--hub") {
   await hubChild(process.argv.slice(3));
+} else if (process.argv[2] === "--concurrent-only") {
+  assert.equal(process.env.HOME, realpathSync(process.env.HOME));
+  assert.ok(process.env.CODE_SHELL_HOME && process.env.CODE_SHELL_TEST_HOME);
+  const root = mkdtempSync(join(tmpdir(), "codeshell-output-concurrent-"));
+  const local = createTcpServer();
+  await new Promise((done) => local.listen(0, "127.0.0.1", done));
+  const origin = `http://127.0.0.1:${local.address().port}`;
+  installLocalNetworkGuard(origin);
+  const core = await import("@cjhyy/code-shell-core");
+  const journal = await import("@cjhyy/code-shell-core/internal");
+  const web = await import(pathToFileURL(join(repo, "packages/web/dist/index.js")));
+  try {
+    console.log(
+      JSON.stringify(
+        await concurrentFrozenPages(
+          core,
+          { ...journal, applyOutputJournalPage: web.applyOutputJournalPage },
+          root,
+          origin,
+          root,
+        ),
+      ),
+    );
+    rmSync(root, { recursive: true, force: true });
+  } finally {
+    await new Promise((done) => local.close(done));
+  }
 } else {
   assert.equal(process.env.HOME, realpathSync(process.env.HOME));
   assert.ok(process.env.CODE_SHELL_HOME && process.env.CODE_SHELL_TEST_HOME);
@@ -596,6 +686,7 @@ if (process.argv[2] === "--append-worker") {
   engine.getHookRegistry().clear();
   let succeeded = false;
   try {
+    const modelRunBegan = performance.now();
     const result = await engine.run("Return the local fixture response", {
       sessionId: "long-output",
       clientMessageId: "local-submit",
@@ -605,6 +696,7 @@ if (process.argv[2] === "--append-worker") {
         snapshots.append("long-output", event);
       },
     });
+    const modelRunMs = Math.round(performance.now() - modelRunBegan);
     assert.equal(result.reason, "completed");
     assert.equal(hash(result.text), expectedHash);
     assert.ok(frames > 2000);
@@ -618,7 +710,7 @@ if (process.argv[2] === "--append-worker") {
       "long-output",
       expectedHash,
     );
-    const budgetRoot = join(root, "budget-sessions"),
+    const budgetRoot = core.sessionsRoot(),
       manager = new core.SessionManager(budgetRoot);
     const budgetSession = manager.create(cwd, "fixture", "fixture", "near-budget");
     manager.startSessionRun(budgetSession.state, "budget-run");
@@ -630,18 +722,18 @@ if (process.argv[2] === "--append-worker") {
     );
     const budgetText = "x".repeat(15 * 1024 * 1024),
       budgetHash = createHash("sha256");
-    for (let index = 0; index < 6; index++) {
-      writer.append({ type: "text_delta", text: budgetText });
+    let budgetCursor;
+    for (let index = 0; index < 7; index++) {
+      budgetCursor = writer.append({ type: "text_delta", text: budgetText });
       budgetHash.update(budgetText);
     }
-    assert.throws(() => writer.append({ type: "text_delta", text: budgetText }), /storage budget/);
     const nearBudgetTiming = await measureJournal(
       journalApi,
       budgetRoot,
       "near-budget",
       budgetHash.digest("hex"),
     );
-    assert.ok(nearBudgetTiming.journalBytes > 120 * 1024 * 1024);
+    assert.ok(nearBudgetTiming.journalBytes > 128 * 1024 * 1024);
     // A static log must not reread its complete prefix on every page. Includes
     // Session metadata, header and both sparse seek checks, not only body bytes.
     assert.ok(nearBudgetTiming.allPagesReadBytes < nearBudgetTiming.journalBytes * 8);
@@ -658,6 +750,20 @@ if (process.argv[2] === "--append-worker") {
     console.log(JSON.stringify({ modelJournalTiming, nearBudgetTiming, concurrentAppendTiming }));
     const handlers = new Map();
     registerSessionTranscriptIpc({ handle: (name, listener) => handlers.set(name, listener) });
+    // The real compiled Main IPC consumes the segmented journal and preserves
+    // its original retained cursor, rather than relying on the anchor's EOF.
+    const segmentedMain = await handlers.get("sessions:outputJournal")({}, "near-budget", {
+      after: budgetCursor,
+      through: budgetCursor,
+    });
+    assert.equal(segmentedMain.status, "ok");
+    assert.equal(segmentedMain.complete, true);
+    assert.equal(segmentedMain.through, budgetCursor);
+    for (let index = 0; index < 8; index++) writer.append({ type: "text_delta", text: budgetText });
+    const expiredMain = await handlers.get("sessions:outputJournal")({}, "near-budget");
+    assert.equal(expiredMain.status, "incomplete");
+    assert.equal(expiredMain.reason, "retention_expired");
+    assert.equal(expiredMain.complete, false);
     const recover = (store) =>
       recoverDesktopOutputJournal({
         read: (options) => handlers.get("sessions:outputJournal")({}, "long-output", options),
@@ -678,6 +784,33 @@ if (process.argv[2] === "--append-worker") {
     );
     assert.equal(before.outputCursor, after.outputCursor);
     assert.notEqual(before.snapshot.epoch, after.snapshot.epoch);
+    const independentManager = new core.SessionManager(core.sessionsRoot());
+    const independent = independentManager.create(cwd, "fixture", "fixture", "independent-output");
+    assert.equal(
+      independentManager.saveActiveGoal(independent.state, {
+        objective: "initial independent Goal",
+        goalId: "independent-goal",
+        revision: 1,
+      }),
+      true,
+    );
+    const noRunOne = await stdioQuery(root, storage, cwd, origin, "independent-output", true);
+    const noRunTwo = await stdioQuery(root, storage, cwd, origin, "independent-output");
+    assert.equal(noRunOne.through, noRunTwo.through);
+    assert.equal(independentManager.readSessionState("independent-output").runId, undefined);
+    const noRunHandlers = new Map();
+    registerSessionTranscriptIpc({ handle: (name, listener) => noRunHandlers.set(name, listener) });
+    const noRunSnapshots = new SessionSnapshotStore({
+      coverage: new journalCore.SessionOutputCoverageStore(core.sessionsRoot),
+    });
+    const noRunRecovered = await recoverDesktopOutputJournal({
+      read: (options) =>
+        noRunHandlers.get("sessions:outputJournal")({}, "independent-output", options),
+      snapshot: async () => noRunSnapshots.get("independent-output"),
+      canContinue: () => true,
+      latestObservedCursor: () => undefined,
+    });
+    assert.equal(noRunRecovered.outputCursor, noRunOne.through);
     const workerOne = await stdioQuery(root, storage, cwd, origin, "long-output");
     const workerTwo = await stdioQuery(root, storage, cwd, origin, "long-output");
     assert.equal(workerOne.through, workerTwo.through);
@@ -743,8 +876,12 @@ if (process.argv[2] === "--append-worker") {
       JSON.stringify({
         sdkRequests: requests,
         liveFrames: frames,
+        modelRunMs,
         outputBytes: Buffer.byteLength(expected),
         recoveredHash: expectedHash,
+        compiledNoRunStdioAndMainRecovery: true,
+        compiledSegmentedMainRecovery: true,
+        compiledMainRetentionExpired: true,
         desktopRecovery: true,
         desktopRestartCursorStable: true,
         desktopTransportEpochChanged: true,

@@ -29,7 +29,11 @@ import {
   type SaveDialogOptions,
   type IpcMainInvokeEvent,
 } from "electron";
-import { openCloudWorkbench } from "./cloud-workbench-window.js";
+import {
+  openCloudWorkbench,
+  openManagedCloudWorkbench,
+  closeManagedCloudWorkbench,
+} from "./cloud-workbench-window.js";
 import { registerCloudEnvironmentIpc } from "./cloud-environment-ipc.js";
 import {
   createDesktopManagedRuntimeProvider,
@@ -124,15 +128,8 @@ import {
 } from "@cjhyy/code-shell-capability-coding/orchestration";
 import { normalizeWorktreeBranchPrefix } from "@cjhyy/code-shell-capability-coding/git";
 import { AgentBridge, resolveNoRepoCwd } from "./agent-bridge.js";
-import {
-  initCuaComputerUse,
-  getCuaDriverHost,
-  resetCuaComputerUse,
-} from "./computer-use/service.js";
-import { resolveCuaDriverPath } from "./computer-use/cua-driver-host.js";
-import { createComputerUsePermissionsController } from "./computer-use/permissions.js";
-import { registerComputerUseSettingsIpc } from "./computer-use/settings-ipc.js";
-import { readUserFeatureFlags } from "./capability-modules-env.js";
+import { getCuaDriverHost } from "./computer-use/service.js";
+import { initializeDesktopComputerUse } from "./computer-use/desktop-setup.js";
 import { externalRuntimeBrowserBucket } from "./external-runtime-browser-bucket.js";
 import { ExternalRuntimeService } from "./external-runtime-service.js";
 import {
@@ -213,6 +210,7 @@ import { PetImDecisions, collectImDecisions } from "./pet/pet-im-decisions.js";
 import { selectSessionsToArchive } from "./pet/pet-auto-archive.js";
 import {
   openLinkedSessionFromIpc,
+  registerRoomHistoryIpc,
   takeOverLinkedSessionFromIpc,
 } from "./cc-room/linked-session-ipc.js";
 import { resolveLinkedSessionFromDisk } from "./cc-room/linked-session-resolver.js";
@@ -374,7 +372,7 @@ import {
 } from "./im-gateway-control-server.js";
 import { ImGatewayService, registerImGatewayIpc } from "./im-gateway-service.js";
 import { ApprovalBridge } from "./cc-room/approval-bridge.js";
-import { TranscriptSubscriptionManager } from "./cc-room/transcript-subscriptions.js";
+import { createRoomTranscriptSubscriptions } from "./cc-room/transcript-subscriptions.js";
 import { QuickChatOwnershipRegistry } from "./quick-chat-ownership.js";
 import { readDirectory, readFile as fsReadFile, fileExists as fsFileExists } from "./fs-service.js";
 import { registerLocalFilePreviewIpc } from "./local-file-preview-ipc.js";
@@ -1043,7 +1041,7 @@ const accessPasscode = new AccessPasscode({
 let prepareAccountGitHubLink:
   | ReturnType<typeof registerRemoteLinkIpc>["prepareGitHubLink"]
   | undefined = undefined;
-const { mobileRemoteController } = createDesktopRemoteServices({
+const { mobileRemoteController, cloudManagementManager } = createDesktopRemoteServices({
   ipcMain,
   userDataDir: app.getPath("userData"),
   environmentDir: join(codeShellHome(), "desktop"),
@@ -1058,6 +1056,8 @@ const { mobileRemoteController } = createDesktopRemoteServices({
   tunnel: tunnelManager,
   binary: cloudflaredBinary,
   passcode: accessPasscode,
+  cloudWindows: { open: openManagedCloudWorkbench, close: closeManagedCloudWorkbench },
+  openLegacyCloud: openCloudWorkbench,
 });
 let gatewayControlServer: GatewayControlServer | undefined;
 let sessionBridge: SessionBridgeWiring | undefined;
@@ -1202,11 +1202,11 @@ const roomManager = new RoomManager({
     transcriptSubscriptions.endRoom(roomId);
   },
 });
-const transcriptSubscriptions = new TranscriptSubscriptionManager({
-  onStart: (roomId) => roomManager.beginTranscriptFollow(roomId),
-  onStop: (roomId) => roomManager.endTranscriptFollow(roomId),
-  roomCursor: (roomId) => roomManager.latestSeq(roomId),
-  onMessages: (roomId, messages) => roomManager.ingestTranscriptMessages(roomId, messages),
+const transcriptSubscriptions = createRoomTranscriptSubscriptions({
+  roomManager,
+  checkpointDir: join(app.getPath("userData"), "mobile-remote", "transcript-checkpoints"),
+  broadcast: (event) => mobileRemote.broadcast(event),
+  windows: () => BrowserWindow.getAllWindows(),
 });
 
 // Routes authenticated mobile events into the same run/permission path the
@@ -3420,62 +3420,20 @@ app.whenReady().then(async () => {
   await chromeExtensionRuntimeService.start().catch((error) => {
     dlog("browser", "chrome_extension_bridge_start_failed", { error: String(error) });
   });
-  // Computer Use spike (flag computer_use_cua, macOS only). Started before the
-  // first worker spawn so the worker env carries the host:cua-driver server.
-  // Failure only disables the spike; it never blocks app startup.
-  {
-    const decision = initCuaComputerUse({
-      flags: readUserFeatureFlags(resolveNoRepoCwd()),
-      platform: process.platform,
-      isPackaged: app.isPackaged,
-      resourcesPath: process.resourcesPath,
-      log: (event, data) => dlog("computer-use", event, data),
-    });
-    dlog("computer-use", "cua_driver_decision", decision.enabled ? { enabled: true } : decision);
-    if (decision.enabled) {
-      await decision.host.start().catch((error) => {
-        dlog("computer-use", "cua_driver_start_failed", { error: String(error) });
-      });
-    }
-    const permissions = createComputerUsePermissionsController({
-      platform: process.platform,
-      systemPreferences,
-      openExternal: (url) => shell.openExternal(url),
-      helperPath: app.isPackaged
-        ? join(process.resourcesPath, "computer-use", "codeshell-permissions")
-        : join(app.getAppPath(), "out", "native", "codeshell-permissions"),
-    });
-    registerComputerUseSettingsIpc({
-      ipcMain,
-      isMainWindow: (sender) =>
-        [...mainWindows].some((window) => !window.isDestroyed() && window.webContents === sender),
-      getEnabled: () => readUserFeatureFlags(resolveNoRepoCwd()).computer_use_cua === true,
-      saveEnabled: (enabled) => {
-        const cwd = resolveNoRepoCwd();
-        new SettingsManager(cwd, "full").mutateSettingsForScope("user", cwd, (current) => {
-          const flags = current.featureFlags;
-          current.featureFlags = {
-            ...(flags && typeof flags === "object" && !Array.isArray(flags) ? flags : {}),
-            computer_use_cua: enabled,
-          };
-        });
-      },
-      isActive: () => getCuaDriverHost()?.status().state === "running",
-      driverAvailable: () =>
-        !!resolveCuaDriverPath({
-          env: process.env,
-          isPackaged: app.isPackaged,
-          resourcesPath: process.resourcesPath,
-        }),
-      packaged: app.isPackaged,
-      permissions,
-      stop: resetCuaComputerUse,
-      restart: () => {
-        app.relaunch();
-        app.quit();
-      },
-    });
-  }
+  // Register the opt-in host before the first worker receives its MCP environment.
+  await initializeDesktopComputerUse({
+    app,
+    ipcMain,
+    systemPreferences,
+    openExternal: (url) => shell.openExternal(url),
+    isMainWindow: (sender) =>
+      [...mainWindows].some((window) => !window.isDestroyed() && window.webContents === sender),
+    cwd: resolveNoRepoCwd,
+    platform: process.platform,
+    resourcesPath: process.resourcesPath,
+    env: process.env,
+    log: (event, data) => dlog("computer-use", event, data),
+  });
   chromeNativeRegistration = await installChromeNativeMessagingHost({
     executablePath: process.execPath,
     appPath: app.getAppPath(),
@@ -5828,9 +5786,7 @@ ipcMain.handle(
       | { behavior: "deny"; message: string },
   ) => approvalBridge.respond(roomId, requestId, decision),
 );
-ipcMain.handle("ccRoom:roomHistory", async (_e, roomId: string, sinceSeq?: number) =>
-  roomManager.getMessages(roomId, sinceSeq ?? 0),
-);
+registerRoomHistoryIpc(ipcMain, roomManager);
 ipcMain.handle("ccRoom:readHistory", async (_e, cwd: string, sessionId: string, limit: number) => {
   cwd = await requireRendererProjectPath(cwd);
   if (!Number.isSafeInteger(limit) || limit < 1 || limit > 500) throw new Error("invalid limit");
@@ -6490,13 +6446,6 @@ async function sweepStaleWorktrees(reason: string): Promise<void> {
     }
   }
 }
-
-ipcMain.handle("cloud:open-workbench", async (event, address: unknown) => {
-  const owner = BrowserWindow.fromWebContents(event.sender);
-  if (!owner || !mainWindows.has(owner) || event.senderFrame !== event.sender.mainFrame)
-    throw new Error("云端入口仅允许从主窗口打开。");
-  return openCloudWorkbench(address);
-});
 
 ipcMain.handle("shell:openExternal", async (_e, url: string) => {
   if (typeof url !== "string" || !url || url.length > 16_384 || url.includes("\0")) {
@@ -7300,6 +7249,7 @@ app.on(
       await Promise.allSettled([
         imGatewayService.dispose(),
         mobileRemoteController.dispose(),
+        cloudManagementManager.dispose(),
         gatewayControlServer?.stop(),
         petWorkInboxFlush,
         petLongTaskFlush,

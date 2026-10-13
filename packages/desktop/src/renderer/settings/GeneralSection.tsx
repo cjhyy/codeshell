@@ -12,7 +12,6 @@
  * as no-op switches.
  */
 import React, { useState } from "react";
-import { CloudAccountSettings } from "./CloudAccountSettings";
 import { ComputerUseSettings } from "./ComputerUseSettings";
 import { PermissionSection } from "./PermissionSection";
 import { UpdaterSettingsRow } from "../updater/UpdaterBanner";
@@ -80,7 +79,6 @@ export function GeneralSection({ scope, activeProjectPath }: Props) {
       {scope === "user" && (
         <>
           <ComputerUseSettings />
-          <CloudAccountSettings />
           <LanguageBlock />
           <UpdaterSettingsRow />
         </>

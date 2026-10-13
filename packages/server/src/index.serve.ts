@@ -4,6 +4,17 @@ export {
   startProjectControlServer,
   type ProjectControlServerOptions,
 } from "./project-runtime/control-server.js";
+export { CLOUD_MANAGEMENT_AUTHORITY_VERSION } from "./project-runtime/cloud-account-auth.js";
+export {
+  adoptCloudAccount,
+  inspectCloudAccountAdoption,
+  type CloudAccountAdoptionOptions,
+} from "./project-runtime/account-adoption.js";
+export type {
+  CloudAccountAuthority,
+  CloudAccountPrincipal,
+  CloudManagementSession,
+} from "./project-runtime/control-authority.js";
 export {
   parseServeArgs,
   resolveWebAppRoot,

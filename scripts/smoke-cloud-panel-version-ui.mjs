@@ -1,15 +1,18 @@
 // Real cloud workbench and proxy: retained package selection must be reviewable
 // without changing the project until the owner explicitly confirms.
 import assert from "node:assert/strict";
+import { assertDockerBrowserGuard } from "./docker-candidate-browser-guard.mjs";
 import { mkdir, writeFile } from "node:fs/promises";
 import { createRequire } from "node:module";
 import { join } from "node:path";
+import { panelVersionUiFailure } from "./smoke-project-diagnostics.mjs";
 
 const { chromium } = createRequire(new URL("../packages/desktop/package.json", import.meta.url))(
   "playwright",
 );
 
 export async function selectCloudPanelVersion({
+  browserGuard,
   serverUrl,
   password,
   project,
@@ -18,23 +21,35 @@ export async function selectCloudPanelVersion({
   json,
   evidenceDir,
 }) {
+  assertDockerBrowserGuard(browserGuard);
   await mkdir(evidenceDir, { recursive: true });
-  const browser = await chromium.launch({ channel: "chromium", chromiumSandbox: true });
-  const context = await browser.newContext({ viewport: { width: 1440, height: 1000 } });
-  const page = await context.newPage();
-  page.setDefaultTimeout(20_000);
+  let browser, page, failure, cleanupFailure;
+  let failed = false;
+  let cleanupFailed = false;
+  let step = "launch";
   const errors = [];
-  page.on("pageerror", (error) => errors.push(error.message));
   const snapshot = () => json(`/p/${project}/api/v1/panels`);
   try {
+    browser = await chromium.launch({ channel: "chromium", chromiumSandbox: true });
+    step = "context";
+    const context = await browserGuard.createContext(browser, {
+      viewport: { width: 1440, height: 1000 },
+    });
+    page = await context.newPage();
+    page.setDefaultTimeout(20_000);
+    page.on("pageerror", (error) => errors.push(error.message));
+    step = "snapshot";
     const before = await snapshot();
     const beforePanel = before.panels.find((item) => item.id === id);
     assert.ok(beforePanel?.bound);
     assert.notEqual(beforePanel.packageDigest, digest);
+    step = "navigate";
     await page.goto(`${serverUrl}/?project=${project}`);
+    step = "login";
     await page.getByLabel("用户名", { exact: true }).fill("smoke-admin");
     await page.getByLabel("密码", { exact: true }).fill(password);
     await page.getByRole("button", { name: "登录", exact: true }).click();
+    step = "open-panels";
     await page.getByRole("button", { name: "面板", exact: true }).click();
     const card = page
       .locator('section[aria-labelledby="installed-panels-heading"] .panels-card')
@@ -57,35 +72,58 @@ export async function selectCloudPanelVersion({
       assert.deepEqual(await snapshot(), before, "Opening a version review changed the project");
       return confirmation;
     }
+    step = "review-first";
     await review();
+    step = "cancel-first";
     await page.getByRole("button", { name: "关闭版本记录", exact: true }).click();
     assert.deepEqual(await snapshot(), before, "Canceling a version review changed the project");
+    step = "review-second";
     const confirmation = await review();
+    step = "evidence";
     await page.screenshot({
       path: join(evidenceDir, `cloud-panel-version-${id}-${digest.slice(0, 12)}.png`),
       fullPage: true,
     });
+    step = "confirm";
     await confirmation.getByRole("button", { name: "确认权限并恢复项目版本", exact: true }).click();
     await page.locator(".panels-notice").filter({ hasText: "的项目版本已恢复为" }).waitFor();
+    step = "verify-selection";
     const after = await snapshot();
     assert.equal(after.panels.find((item) => item.id === id)?.packageDigest, digest);
+    step = "verify-browser-errors";
     assert.deepEqual(errors, [], "Cloud package management raised browser errors");
   } catch (error) {
+    failed = true;
+    failure = panelVersionUiFailure(error, id, step);
     await page
-      .screenshot({
+      ?.screenshot({
         path: join(evidenceDir, `cloud-panel-version-error-${id}.png`),
         fullPage: true,
       })
       .catch(() => {});
     await writeFile(
       join(evidenceDir, `cloud-panel-version-error-${id}.txt`),
-      await page
-        .locator("body")
+      (await page
+        ?.locator("body")
         .innerText()
-        .catch(() => "Page unavailable"),
+        .catch(() => "Page unavailable")) ?? "Page unavailable",
     ).catch(() => {});
-    throw error;
   } finally {
-    await browser.close();
+    try {
+      await browser?.close();
+    } catch (error) {
+      cleanupFailed = true;
+      cleanupFailure = panelVersionUiFailure(error, id, "close");
+    }
   }
+  if (cleanupFailed) {
+    if (failed)
+      throw new AggregateError(
+        [failure, cleanupFailure],
+        "Panel selection and browser cleanup failed",
+        { cause: failure },
+      );
+    throw cleanupFailure;
+  }
+  if (failed) throw failure;
 }

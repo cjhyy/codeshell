@@ -1008,3 +1008,20 @@ button.ghost:hover:not(:disabled) {
     transition: none;
   }
 }
+.cloud-account-controls {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.6rem;
+  max-width: 100%;
+}
+
+.rail-footer .cloud-account-controls {
+  flex-direction: column;
+  align-items: stretch;
+}
+
+.cloud-account-controls .form-error {
+  flex-basis: 100%;
+  overflow-wrap: anywhere;
+}

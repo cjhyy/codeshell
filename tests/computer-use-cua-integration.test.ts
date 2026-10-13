@@ -13,6 +13,8 @@ const scenarios = {
   calculator: "Engine receives permissions and screenshots while clicking 7 + 8 = 15",
   generic: "the generic MCPTool route preserves Cua screenshots through the Engine",
   disabled: "the default-off flag prevents daemon startup and Cua tool execution",
+  "disable-active":
+    "turning off a running service blocks existing Cua tools and omits them from new sessions",
   delayed: "a delayed daemon is published to the Engine only after its socket is ready",
   cancel: "aborting the Engine cancels a pending Cua observation and releases its proxy",
   restart:

@@ -1,0 +1,449 @@
+{
+  "format": "codeshell-cloud-native-candidate-readiness",
+  "version": 1,
+  "candidateOnly": true,
+  "productCheckpoint": "3a99c376facd8dd7130482515135b825211fade3",
+  "host": "e01c4d7e2e63c9825d736ead0867081a217c91e0",
+  "services": "ef0f2b0c384f0392bb180c5b90bf1e4b68451268",
+  "runtime": "v24.19.0",
+  "platform": "darwin/arm64",
+  "packages": [
+    {
+      "name": "@cjhyy/code-shell-link",
+      "version": "0.9.35",
+      "file": "cjhyy-code-shell-link-0.9.35.tgz",
+      "tarball": "/private/tmp/codeshell-final-candidate-gate-20261012/candidate-final/vendor/cjhyy-code-shell-link-0.9.35.tgz",
+      "sha256": "2e194153b14e043d5b84a9c3196a0e1b9dfe917993a3ea984c4b0d20b6ad4fcb"
+    },
+    {
+      "name": "@cjhyy/code-shell-core",
+      "version": "0.9.35",
+      "file": "cjhyy-code-shell-core-0.9.35.tgz",
+      "tarball": "/private/tmp/codeshell-final-candidate-gate-20261012/candidate-final/vendor/cjhyy-code-shell-core-0.9.35.tgz",
+      "sha256": "f472b9e200affebfc86d65dd9d805f3046c936e85f2c7da05da48d48560dc3cd"
+    },
+    {
+      "name": "@cjhyy/code-shell-capability-coding",
+      "version": "0.9.35",
+      "file": "cjhyy-code-shell-capability-coding-0.9.35.tgz",
+      "tarball": "/private/tmp/codeshell-final-candidate-gate-20261012/candidate-final/vendor/cjhyy-code-shell-capability-coding-0.9.35.tgz",
+      "sha256": "673d86ac6134d2933f3447557c9410f2f3bb21b4780188b2d70a89f60b83120b"
+    },
+    {
+      "name": "@cjhyy/code-shell-web",
+      "version": "0.9.35",
+      "file": "cjhyy-code-shell-web-0.9.35.tgz",
+      "tarball": "/private/tmp/codeshell-final-candidate-gate-20261012/candidate-final/vendor/cjhyy-code-shell-web-0.9.35.tgz",
+      "sha256": "6f9f32bd0822f500847362d7051ff93844437e47573cfd5537dbcd3313e8c1de"
+    },
+    {
+      "name": "@cjhyy/code-shell-server",
+      "version": "0.9.35",
+      "file": "cjhyy-code-shell-server-0.9.35.tgz",
+      "tarball": "/private/tmp/codeshell-final-candidate-gate-20261012/candidate-final/vendor/cjhyy-code-shell-server-0.9.35.tgz",
+      "sha256": "ede796019c644e833e18a04bc897856da485c51f4e083fc2aff1824fb0ef4e74"
+    }
+  ],
+  "lockSha256": "bb6ac9903667da5ad0dc0b416d63ef280415fff9ae78f3d3a6d2cf99198e8ac4",
+  "fullNativeEntry": {
+    "exitCode": 0,
+    "servicesTests": 502,
+    "servicesPass": 502,
+    "servicesFail": 0,
+    "servicesSkip": 0,
+    "controlledBrowserCases": 23,
+    "settingsRecovery": true,
+    "deviceRelayHttpWss": true,
+    "runtimeImage": null
+  },
+  "public028": {
+    "legacyGate": true,
+    "accountV2Refused": true
+  },
+  "public035": {
+    "legacyGate": true,
+    "accountV2Refused": true,
+    "versionEqualityDoesNotEstablishByteEquality": true
+  },
+  "missingCliRefusedBeforeManagement": true,
+  "panels": {
+    "revision": "41bb3638a2d8402debaa1a0d239078a55a0b25eb",
+    "panels": [
+      {
+        "id": "design-studio",
+        "version": "0.18.2",
+        "path": "panels/design-studio",
+        "sha256": "5b572123681ec5d8b731e85039ea51d6f98b65deb21805cf2f770f619762f727"
+      },
+      {
+        "id": "job-hunt-hq",
+        "version": "4.1.2",
+        "path": "panels/job-hunt-hq",
+        "sha256": "179ca942296bdc97792a97bdad0503e20a23f25a16e3d6104663a508d8378f6e"
+      },
+      {
+        "id": "quant-lab",
+        "version": "0.46.2",
+        "path": "panels/quant-lab",
+        "sha256": "87e20ec61016795ea775369d9a72cf38b2bb6f94b928577354fa768511d23fc6"
+      },
+      {
+        "id": "starter-panel",
+        "version": "0.1.1",
+        "path": "panels/starter-panel",
+        "sha256": "5f33bf08dc04ecd4009361912e147e72c200dd13f85715279ab1d1892a45cc29"
+      },
+      {
+        "id": "video-download",
+        "version": "0.22.7",
+        "path": "panels/video-download",
+        "sha256": "5c29ae79af5bc3c519b6bf5b1de4695698764df0900630c8adc444fb18942b45"
+      },
+      {
+        "id": "video-studio",
+        "version": "0.7.3",
+        "path": "panels/video-studio",
+        "sha256": "0463e096d509c2158efca7661ed5443a80170f6d4560953407c7b2df73a73f43"
+      }
+    ],
+    "runtime": "v24.19.0",
+    "guard": {
+      "negativeProbes": 4,
+      "allowedGitCalls": 268
+    },
+    "readOnlyInstallationPreflight": true,
+    "businessAcceptance": false
+  },
+  "mainHttps": {
+    "status": "passed",
+    "runtime": "v24.19.0",
+    "isolation": {
+      "negativeProbes": 4,
+      "homeHash": "ce24a2b774d908f1f979893cc612bebd7c2dcda9fc49d8d2b9766e7abdf7ecbf"
+    },
+    "actualMainManagersAndHttpsTransports": true,
+    "twoPrivateCaOrigins": true,
+    "wrongCaRefusedBeforeCredentialDelivery": true,
+    "actualAccountServiceAndCloudComposition": true,
+    "listCreateStartOpenStop": true,
+    "rootCredentialsNeverAtCloud": true,
+    "ticketReplayWrongPinForeignRefused": true,
+    "actualRootLogoutRevokedIndependentGrant": true,
+    "lateMainOperationRejectedAndRuntimeStopped": true,
+    "nativeSessionHeadersAndFixedAccountTicketOrigin": true,
+    "requestCounts": {
+      "account": 31,
+      "cloud": 16
+    },
+    "controlledRuntimeProvider": true,
+    "nativeElectronWindow": false,
+    "docker": false,
+    "physicalMobile": false,
+    "ownedListenersAndSocketsClosed": true,
+    "ownedRuntimeAndWindowsClosed": true,
+    "hostHead": "e01c4d7e2e63c9825d736ead0867081a217c91e0",
+    "servicesHead": "ef0f2b0c384f0392bb180c5b90bf1e4b68451268",
+    "packedConsumer": "/private/tmp/codeshell-final-candidate-gate-20261012/candidate-final",
+    "packedTarballSha256": {
+      "@cjhyy/code-shell-link": "2e194153b14e043d5b84a9c3196a0e1b9dfe917993a3ea984c4b0d20b6ad4fcb",
+      "@cjhyy/code-shell-core": "f472b9e200affebfc86d65dd9d805f3046c936e85f2c7da05da48d48560dc3cd",
+      "@cjhyy/code-shell-capability-coding": "673d86ac6134d2933f3447557c9410f2f3bb21b4780188b2d70a89f60b83120b",
+      "@cjhyy/code-shell-web": "6f9f32bd0822f500847362d7051ff93844437e47573cfd5537dbcd3313e8c1de",
+      "@cjhyy/code-shell-server": "ede796019c644e833e18a04bc897856da485c51f4e083fc2aff1824fb0ef4e74"
+    },
+    "packedBuildInventoryVerified": true,
+    "smokeSourceSha256": {
+      "scripts/smoke-cloud-main-services.mjs": "933d14dafa2b5649708f2e9d54f45c5646088473c7dc313002634ac6cff3816d",
+      "scripts/fixtures/cloud-main-services-adapters.ts": "448a53f16dc251406784e87e206780867dc3d726a4fd592d01f06a8946efe423",
+      "scripts/fixtures/cloud-main-services-child.mjs": "fc85043c1798d41b893cc767c7b2f14e640f29e3edbd81b777ea1c695e882de5",
+      "scripts/fixtures/cloud-main-services-guard.mjs": "6121ac443e227a4a75e4cd009e5a76601375fabd3c67a6805d2a9527bc4d9ba0"
+    },
+    "ownedChildExited": true,
+    "childExit": {
+      "code": 0,
+      "signal": null
+    },
+    "privateFixtureRemoved": true
+  },
+  "mainInjectedFailureCleanup": {
+    "status": "passed",
+    "phase": "injected after actual Main start/open",
+    "runtime": "v24.19.0",
+    "ownedListenersAndSocketsClosed": true,
+    "ownedRuntimeAndWindowsClosed": true,
+    "injectedFailureCleanupVerified": true,
+    "hostHead": "e01c4d7e2e63c9825d736ead0867081a217c91e0",
+    "servicesHead": "ef0f2b0c384f0392bb180c5b90bf1e4b68451268",
+    "packedConsumer": "/private/tmp/codeshell-final-candidate-gate-20261012/candidate-final",
+    "packedTarballSha256": {
+      "@cjhyy/code-shell-link": "2e194153b14e043d5b84a9c3196a0e1b9dfe917993a3ea984c4b0d20b6ad4fcb",
+      "@cjhyy/code-shell-core": "f472b9e200affebfc86d65dd9d805f3046c936e85f2c7da05da48d48560dc3cd",
+      "@cjhyy/code-shell-capability-coding": "673d86ac6134d2933f3447557c9410f2f3bb21b4780188b2d70a89f60b83120b",
+      "@cjhyy/code-shell-web": "6f9f32bd0822f500847362d7051ff93844437e47573cfd5537dbcd3313e8c1de",
+      "@cjhyy/code-shell-server": "ede796019c644e833e18a04bc897856da485c51f4e083fc2aff1824fb0ef4e74"
+    },
+    "packedBuildInventoryVerified": true,
+    "smokeSourceSha256": {
+      "scripts/smoke-cloud-main-services.mjs": "933d14dafa2b5649708f2e9d54f45c5646088473c7dc313002634ac6cff3816d",
+      "scripts/fixtures/cloud-main-services-adapters.ts": "448a53f16dc251406784e87e206780867dc3d726a4fd592d01f06a8946efe423",
+      "scripts/fixtures/cloud-main-services-child.mjs": "fc85043c1798d41b893cc767c7b2f14e640f29e3edbd81b777ea1c695e882de5",
+      "scripts/fixtures/cloud-main-services-guard.mjs": "6121ac443e227a4a75e4cd009e5a76601375fabd3c67a6805d2a9527bc4d9ba0"
+    },
+    "ownedChildExited": true,
+    "childExit": {
+      "code": 1,
+      "signal": null
+    },
+    "privateFixtureRemoved": true
+  },
+  "targetReadOnly": {
+    "checkedAt": "2026-10-12T16:12:11Z",
+    "strictTls": true,
+    "interface": "en0",
+    "hub": {
+      "status": 200,
+      "mode": "hub"
+    },
+    "account": {
+      "status": 200,
+      "registrationAllowed": true,
+      "githubEnabled": true,
+      "githubLinkEnabled": true
+    },
+    "link": {
+      "status": 200,
+      "service": "link",
+      "schema": 3
+    },
+    "cloudCapabilities": {
+      "status": 401,
+      "publicV2DtoObserved": false
+    },
+    "ssh": "strict host trust refused; no trust change; no refresh of private unit/package metadata",
+    "noProductionSecretRead": true,
+    "productionMutation": false
+  },
+  "evidence": [
+    {
+      "path": "/tmp/codeshell-final-candidate-host-final-build.log",
+      "sha256": "db0680a35a2d0462938cc2e1740989b46ee95bca201735e0f69375a03b9d7011"
+    },
+    {
+      "path": "/tmp/codeshell-final-candidate-final-staging.log",
+      "sha256": "0b9b56996a89134eeb47f9ae68bbf07c91e76c9f25af75f3e19000a2392a6bd8"
+    },
+    {
+      "path": "/tmp/codeshell-final-candidate-native-entry.log",
+      "sha256": "048b5e3b55236e808e4c97d8f173bcb3d7878f6da959d52349df92a072ca63d0"
+    },
+    {
+      "path": "/tmp/codeshell-final-candidate-final-consumer.log",
+      "sha256": "269eaff91bce53ccfb6b8e9e40ed4750554abe832c8b4de9c338f54e2a294bf2"
+    },
+    {
+      "path": "/tmp/codeshell-final-candidate-main-https.log",
+      "sha256": "0462f8c99ea1e96fce6e9eadee96c34539e43c1d602f6902fa3afbdeda217d7d"
+    },
+    {
+      "path": "/tmp/codeshell-final-candidate-main-failure.log",
+      "sha256": "36985eab96da6b46c239c2d7d62f052c8e9d9fb35e9c94681a2b77d3d4658f30"
+    },
+    {
+      "path": "/tmp/codeshell-final-candidate-public035-gate.log",
+      "sha256": "5af881c07c953dd8459cab164ae1319f495603736b73a8c062de90e542eab28c"
+    },
+    {
+      "path": "/tmp/codeshell-final-candidate-legacy-gate.log",
+      "sha256": "a1aae809754dc7414380aeb1ceff3bf49221001d52c080c59d252fb84999c884"
+    },
+    {
+      "path": "/tmp/codeshell-final-candidate-cli-negative.log",
+      "sha256": "c40538c435ecc597552a1ade0ee9372160c5b91c27c3fddafca27bbc6a4dc133"
+    },
+    {
+      "path": "/tmp/codeshell-final-candidate-final-panel-preflight.log",
+      "sha256": "9f5eec0ecfba3f50ac299eabd41b13e22f7809eaafc503ccc30cab9c15d17439"
+    },
+    {
+      "path": "/tmp/codeshell-final-candidate-cleanup-normal.log",
+      "sha256": "1c27b2b43cae433a7a1dfc0ac4bf1ee953953635eabd702688bdce45115467e9"
+    },
+    {
+      "path": "/tmp/codeshell-final-candidate-cleanup-rejection.log",
+      "sha256": "1075b062151e02e693c4d3938d996ea832feaa1e1f4ed63a2417ed9ddfc26722"
+    },
+    {
+      "path": "/tmp/codeshell-final-candidate-main-https-latest-services.log",
+      "sha256": "45736a9396e76cc9f3d2b01a36c5c5d35ff32ee1df8b0ee143b342007af63128"
+    },
+    {
+      "path": "/tmp/codeshell-final-candidate-main-failure-latest-services.log",
+      "sha256": "fad11d275e7fc2ac5dfdb9b23c2c44a52f2da220e199e188270d381262a24199"
+    },
+    {
+      "path": "/private/tmp/codeshell-final-candidate-gate-20261012/verify-cleanup-rejection-final.mjs",
+      "sha256": "57c97556bc576449e5490d508e33c19aa01b3eea0c4adac13fa20ae675825ab9"
+    }
+  ],
+  "notCovered": [
+    "new final release/version/assets",
+    "Docker images/volumes and target architecture",
+    "production deployment/configuration/adoption/backup/rollback",
+    "physical phone/weak network/24 complete Panel business combinations",
+    "native Electron chooser or Keychain/Pet",
+    "real provider/model acceptance"
+  ],
+  "initialInvalidPreparation": [
+    "First temporary staging attempt joined an absolute bun pack output twice; preserved source and retried with basename.",
+    "First separate temporary Panel wrapper omitted execFile custom promisify result shape; fixed wrapper before counting preflight. No product/gate change or acceptance claim used those failures."
+  ],
+  "consumerCleanupFollowUp": {
+    "servicesCheckpoint": "1a03de2",
+    "servicesMainIntegrated": "068c124",
+    "normalConsumerPassed": true,
+    "ownedConsumersClosedBeforeFixtureRemoval": true,
+    "originalCandidateVendorAndTarballsUnmodified": true,
+    "privateCopiedInstallation": "/private/tmp/codeshell-final-candidate-gate-20261012/candidate-launcher-final",
+    "fault": {
+      "runtime": "v24.19.0",
+      "records": [
+        {
+          "name": "current",
+          "source": "1a03de2177908a8be7f830c4e73f9a9f2a48eb5d",
+          "sourceSha256": "832fae1d0c71a916e8f8e2ea4d295dfc681ae47a7007957b94af2633508cc68c",
+          "faultSourceSha256": "9e3e75314b2f727ceabc878f30afe5e42e04bfd437a7580c1a57c0e6854c8dc5",
+          "actualBackendCloseThenRejected": true,
+          "code": 1,
+          "signal": null,
+          "printedPassed": false,
+          "preservedPaths": [
+            "/private/tmp/codeshell-final-candidate-gate-20261012/tmp/codeshell-cloud-isolated-consumer-s7Aasc/codeshell-cloud-management-consumer-MrHuZJ",
+            "/private/tmp/codeshell-final-candidate-gate-20261012/tmp/codeshell-cloud-isolated-consumer-s7Aasc"
+          ],
+          "allDirectChildrenClosed": true,
+          "cliPhaseReached": false,
+          "grandchildTimeoutExitProven": false
+        },
+        {
+          "name": "historical",
+          "source": "ef0f2b0",
+          "sourceSha256": "2de4a46dc4f7524e6520df70b12674b1873f02f03c8c9b08c052be73e1170210",
+          "faultSourceSha256": "8c368b6ba91f2b7370dc201fdf5e66ced5e95ab4961b84e2ef1dcf6dc64541c6",
+          "actualBackendCloseThenRejected": true,
+          "code": 0,
+          "signal": null,
+          "printedPassed": true,
+          "preservedPaths": [],
+          "allDirectChildrenClosed": true,
+          "cliPhaseReached": true,
+          "grandchildTimeoutExitProven": false
+        }
+      ]
+    },
+    "timeoutGrandchildExitProven": false,
+    "timeoutFailurePolicy": "preserve private root and report unknown custody; do not remove HOME",
+    "partialShutdownFailuresExhaustivelyVerified": false,
+    "full502SuiteStillTiedToOriginalServicesCheckpoint": "ef0f2b0c384f0392bb180c5b90bf1e4b68451268"
+  },
+  "mainHttpsAfterServicesMainMerge": {
+    "status": "passed",
+    "runtime": "v24.19.0",
+    "isolation": {
+      "negativeProbes": 4,
+      "homeHash": "fffd22862b44fc5d8af59b48ff125b12a1878df803b99f861079488368cbfba2"
+    },
+    "actualMainManagersAndHttpsTransports": true,
+    "twoPrivateCaOrigins": true,
+    "wrongCaRefusedBeforeCredentialDelivery": true,
+    "actualAccountServiceAndCloudComposition": true,
+    "listCreateStartOpenStop": true,
+    "rootCredentialsNeverAtCloud": true,
+    "ticketReplayWrongPinForeignRefused": true,
+    "actualRootLogoutRevokedIndependentGrant": true,
+    "lateMainOperationRejectedAndRuntimeStopped": true,
+    "nativeSessionHeadersAndFixedAccountTicketOrigin": true,
+    "requestCounts": {
+      "account": 31,
+      "cloud": 16
+    },
+    "controlledRuntimeProvider": true,
+    "nativeElectronWindow": false,
+    "docker": false,
+    "physicalMobile": false,
+    "ownedListenersAndSocketsClosed": true,
+    "ownedRuntimeAndWindowsClosed": true,
+    "hostHead": "f2b7cb1cee3dac39a6a806c1022d44e59dd7c648",
+    "servicesHead": "831a5d54baad86c2dc6236fd8b7ae3e9e3aa9aad",
+    "packedConsumer": "/private/tmp/codeshell-final-candidate-gate-20261012/candidate-final",
+    "packedTarballSha256": {
+      "@cjhyy/code-shell-link": "2e194153b14e043d5b84a9c3196a0e1b9dfe917993a3ea984c4b0d20b6ad4fcb",
+      "@cjhyy/code-shell-core": "f472b9e200affebfc86d65dd9d805f3046c936e85f2c7da05da48d48560dc3cd",
+      "@cjhyy/code-shell-capability-coding": "673d86ac6134d2933f3447557c9410f2f3bb21b4780188b2d70a89f60b83120b",
+      "@cjhyy/code-shell-web": "6f9f32bd0822f500847362d7051ff93844437e47573cfd5537dbcd3313e8c1de",
+      "@cjhyy/code-shell-server": "ede796019c644e833e18a04bc897856da485c51f4e083fc2aff1824fb0ef4e74"
+    },
+    "packedBuildInventoryVerified": true,
+    "smokeSourceSha256": {
+      "scripts/smoke-cloud-main-services.mjs": "933d14dafa2b5649708f2e9d54f45c5646088473c7dc313002634ac6cff3816d",
+      "scripts/fixtures/cloud-main-services-adapters.ts": "448a53f16dc251406784e87e206780867dc3d726a4fd592d01f06a8946efe423",
+      "scripts/fixtures/cloud-main-services-child.mjs": "fc85043c1798d41b893cc767c7b2f14e640f29e3edbd81b777ea1c695e882de5",
+      "scripts/fixtures/cloud-main-services-guard.mjs": "6121ac443e227a4a75e4cd009e5a76601375fabd3c67a6805d2a9527bc4d9ba0"
+    },
+    "ownedChildExited": true,
+    "childExit": {
+      "code": 0,
+      "signal": null
+    },
+    "privateFixtureRemoved": true
+  },
+  "mainInjectedFailureAfterServicesMainMerge": {
+    "status": "passed",
+    "phase": "injected after actual Main start/open",
+    "runtime": "v24.19.0",
+    "ownedListenersAndSocketsClosed": true,
+    "ownedRuntimeAndWindowsClosed": true,
+    "injectedFailureCleanupVerified": true,
+    "hostHead": "f2b7cb1cee3dac39a6a806c1022d44e59dd7c648",
+    "servicesHead": "831a5d54baad86c2dc6236fd8b7ae3e9e3aa9aad",
+    "packedConsumer": "/private/tmp/codeshell-final-candidate-gate-20261012/candidate-final",
+    "packedTarballSha256": {
+      "@cjhyy/code-shell-link": "2e194153b14e043d5b84a9c3196a0e1b9dfe917993a3ea984c4b0d20b6ad4fcb",
+      "@cjhyy/code-shell-core": "f472b9e200affebfc86d65dd9d805f3046c936e85f2c7da05da48d48560dc3cd",
+      "@cjhyy/code-shell-capability-coding": "673d86ac6134d2933f3447557c9410f2f3bb21b4780188b2d70a89f60b83120b",
+      "@cjhyy/code-shell-web": "6f9f32bd0822f500847362d7051ff93844437e47573cfd5537dbcd3313e8c1de",
+      "@cjhyy/code-shell-server": "ede796019c644e833e18a04bc897856da485c51f4e083fc2aff1824fb0ef4e74"
+    },
+    "packedBuildInventoryVerified": true,
+    "smokeSourceSha256": {
+      "scripts/smoke-cloud-main-services.mjs": "933d14dafa2b5649708f2e9d54f45c5646088473c7dc313002634ac6cff3816d",
+      "scripts/fixtures/cloud-main-services-adapters.ts": "448a53f16dc251406784e87e206780867dc3d726a4fd592d01f06a8946efe423",
+      "scripts/fixtures/cloud-main-services-child.mjs": "fc85043c1798d41b893cc767c7b2f14e640f29e3edbd81b777ea1c695e882de5",
+      "scripts/fixtures/cloud-main-services-guard.mjs": "6121ac443e227a4a75e4cd009e5a76601375fabd3c67a6805d2a9527bc4d9ba0"
+    },
+    "ownedChildExited": true,
+    "childExit": {
+      "code": 1,
+      "signal": null
+    },
+    "privateFixtureRemoved": true
+  },
+  "latestServicesFullSuite": {
+    "servicesHead": "f3b2b9df81366bd350a284b949b9e49caac13815",
+    "includedMain": "6f7979b",
+    "runtime": "v24.19.0",
+    "command": "npm test",
+    "freshPrivateHome": true,
+    "explicitCredentialFreeEnvironment": true,
+    "committedServerDependency": "0.9.28",
+    "tests": 527,
+    "pass": 527,
+    "fail": 0,
+    "cancelled": 0,
+    "skipped": 0,
+    "exitCode": 0,
+    "durationMs": 60843.736041,
+    "log": "/tmp/codeshell-final-candidate-latest-services-full.log",
+    "logSha256": "4b8feaf0c516e9e1d10dbcdce1d612b511372ffeb2dabbf7d875fffd0e9d10cc",
+    "scope": "Integrated Services checkout with committed public dependency; candidate five-package full suite remains separately bound to ef0f2b0."
+  }
+}

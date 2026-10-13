@@ -1,6 +1,6 @@
 {
   "name": "@cjhyy/code-shell",
-  "version": "0.9.35",
+  "version": "0.9.37",
   "description": "Code Shell — meta package. Installs @cjhyy/code-shell-core and @cjhyy/code-shell-tui.",
   "type": "module",
   "packageManager": "bun@1.3.11",
@@ -56,6 +56,8 @@
     "test:mobile-external-output-journal": "node scripts/run-mobile-external-output-smoke.mjs",
     "test:mobile-output-journal": "node scripts/run-isolated-node-smoke.mjs scripts/smoke-mobile-output-journal.mjs",
     "test:output-journal": "node scripts/run-isolated-node-smoke.mjs scripts/smoke-output-journal.mjs",
+    "test:output-paced": "node scripts/run-isolated-node-smoke.mjs scripts/smoke-output-paced.mjs",
+    "test:output-repair": "node scripts/run-isolated-node-smoke.mjs scripts/smoke-output-journal-repair.mjs",
     "test:deferred-tools": "node scripts/run-isolated-node-smoke.mjs scripts/smoke-deferred-tools.mjs",
     "test:task-routing": "node scripts/run-isolated-node-smoke.mjs scripts/smoke-task-capability-routing.mjs"
   },

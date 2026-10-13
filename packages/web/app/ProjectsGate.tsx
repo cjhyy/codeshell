@@ -75,9 +75,13 @@ const labels: Record<RuntimeProject["status"], string> = {
 export function ProjectsGate({
   children,
   onAuthLost,
+  accountControl,
+  allowLegacy = true,
 }: {
   children: (project: RuntimeProject | null, onBack?: () => void) => React.ReactNode;
   onAuthLost: () => void;
+  accountControl?: React.ReactNode;
+  allowLegacy?: boolean;
 }) {
   const [snapshot, setSnapshot] = React.useState<ProjectSnapshot | null>(null);
   const [legacy, setLegacy] = React.useState(false);
@@ -165,7 +169,12 @@ export function ProjectsGate({
           return;
         setChecking(false);
         // Only an explicit 404 on the initial capability check enables legacy Hub.
-        if (cause instanceof ApiError && cause.status === 404 && !snapshotRef.current) {
+        if (
+          allowLegacy &&
+          cause instanceof ApiError &&
+          cause.status === 404 &&
+          !snapshotRef.current
+        ) {
           setApiProject(null);
           setApiWorkspace(undefined);
           legacyRef.current = true;
@@ -177,7 +186,7 @@ export function ProjectsGate({
         }
       }
     },
-    [back, enter],
+    [back, enter, allowLegacy],
   );
 
   React.useEffect(() => {
@@ -300,9 +309,10 @@ export function ProjectsGate({
     <main className="projects-page">
       <header className="projects-header">
         <div className="auth-brand">
-          CodeShell <span>Hub</span>
+          CodeShell <span>{accountControl ? "Cloud" : "Hub"}</span>
         </div>
         <EnvironmentMenu />
+        {accountControl}
         <h1>你的项目</h1>
         <p>每个项目有独立的运行环境、文件、会话和配置。启动后进入同一个工作台。</p>
       </header>

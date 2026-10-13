@@ -1,6 +1,7 @@
 /* Actual candidate Job Hunt UI, authenticated Cloud proxy and Docker project volumes. */
 /* global window, document */
 import assert from "node:assert/strict";
+import { assertDockerBrowserGuard } from "./docker-candidate-browser-guard.mjs";
 import { createHash } from "node:crypto";
 import { createRequire } from "node:module";
 import { mkdir, readFile, writeFile } from "node:fs/promises";
@@ -12,11 +13,16 @@ const { chromium } = createRequire(new URL("../packages/desktop/package.json", i
   "playwright",
 );
 import { verifyCloudInterviewAudio } from "./smoke-cloud-interview-audio.mjs";
+import { jobPdfFailure, withJobHuntBrowserDiagnostics } from "./smoke-project-diagnostics.mjs";
 const ROOT = "job-hunt-panel.json";
 const publicBody = "\n\nfixture@example.com\n\n## 项目经验\n\n- 完成公开恢复验证项目";
 const originalResume = "# Cloud recovery original" + publicBody;
 const editedResume = "# Cloud recovery edited" + publicBody;
 const freshResume = "# Cloud recovery after restore" + publicBody;
+const ownDataValue = (value, key) =>
+  value && (typeof value === "object" || typeof value === "function")
+    ? Object.getOwnPropertyDescriptor(value, key)?.value
+    : undefined;
 
 async function until(read, description, timeout = 150_000) {
   const deadline = Date.now() + timeout;
@@ -29,6 +35,7 @@ async function until(read, description, timeout = 150_000) {
 }
 
 export async function verifyCloudJobHuntRecovery({
+  browserGuard,
   speechFixture,
   docker,
   request,
@@ -40,6 +47,7 @@ export async function verifyCloudJobHuntRecovery({
   projectB,
   evidenceDir,
 }) {
+  assertDockerBrowserGuard(browserGuard);
   await mkdir(evidenceDir, { recursive: true });
   const source = (schemaVersion, markdown) => ({
     schemaVersion,
@@ -128,73 +136,82 @@ export async function verifyCloudJobHuntRecovery({
     });
     const pages = [],
       errors = [];
-    try {
-      const open = async (project) => {
-        const context = await browser.newContext({
-          viewport: { width: 1440, height: 1000 },
-          acceptDownloads: true,
-          permissions: ["microphone"],
-        });
-        const page = await context.newPage();
-        pages.push(page);
-        page.on("pageerror", (error) => errors.push(error.message));
-        await page.goto(`${serverUrl}/?project=${project}`);
-        await page.getByLabel("用户名", { exact: true }).fill("smoke-admin");
-        await page.getByLabel("密码", { exact: true }).fill(password);
-        await page.getByRole("button", { name: "登录", exact: true }).click();
-        await page.getByRole("button", { name: "面板", exact: true }).click();
-        await page
-          .locator(".panels-card")
-          .filter({ has: page.locator("small", { hasText: /^job-hunt-hq$/ }) })
-          .getByRole("button", { name: "打开面板", exact: true })
-          .click();
-        const iframe = page.locator("iframe.panel-host-frame");
-        await iframe.waitFor();
-        const frame = await (await iframe.elementHandle()).contentFrame();
-        await frame.waitForFunction(
-          () => {
-            const status = document.querySelector("#draft-storage-status")?.textContent || "";
-            if (status.startsWith("读取失败")) throw new Error(status);
-            return (
-              !document.querySelector(".app-shell")?.inert &&
-              /草稿按项目保存|草稿已保存到项目|项目已恢复/.test(status)
-            );
-          },
-          null,
-          { timeout: 150_000 },
-        );
-        const call = (method, params) =>
-          frame.evaluate(({ method, params }) => window.codeshellPanel.call(method, params), {
-            method,
-            params,
+    return withJobHuntBrowserDiagnostics(
+      async () => {
+        const open = async (project) => {
+          const context = await browserGuard.createContext(browser, {
+            viewport: { width: 1440, height: 1000 },
+            acceptDownloads: true,
+            permissions: ["microphone"],
           });
-        return { page, frame, call };
-      };
-      await action(open);
-      assert.deepEqual(errors, [], "Installed Job Hunt must not raise page errors");
-    } catch (error) {
-      for (const [index, page] of pages.entries()) {
-        await page
-          .screenshot({
-            path: join(evidenceDir, `cloud-job-hunt-error-${index}.png`),
-            fullPage: true,
-          })
-          .catch(() => {});
-        for (const [frameIndex, frame] of page.frames().entries()) {
-          const text = await frame
-            .locator("body")
-            .innerText()
-            .catch(() => "unavailable");
-          await writeFile(
-            join(evidenceDir, `cloud-job-hunt-error-${index}-${frameIndex}.txt`),
-            text,
+          const page = await context.newPage();
+          pages.push(page);
+          page.on("pageerror", (error) => errors.push(error.message));
+          await page.goto(`${serverUrl}/?project=${project}`);
+          await page.getByLabel("用户名", { exact: true }).fill("smoke-admin");
+          await page.getByLabel("密码", { exact: true }).fill(password);
+          await page.getByRole("button", { name: "登录", exact: true }).click();
+          await page.getByRole("button", { name: "面板", exact: true }).click();
+          await page
+            .locator(".panels-card")
+            .filter({ has: page.locator("small", { hasText: /^job-hunt-hq$/ }) })
+            .getByRole("button", { name: "打开面板", exact: true })
+            .click();
+          const iframe = page.locator("iframe.panel-host-frame");
+          await iframe.waitFor();
+          const frame = await (await iframe.elementHandle()).contentFrame();
+          await frame.waitForFunction(
+            () => {
+              const status = document.querySelector("#draft-storage-status")?.textContent || "";
+              if (status.startsWith("读取失败")) throw new Error(status);
+              return (
+                !document.querySelector(".app-shell")?.inert &&
+                /草稿按项目保存|草稿已保存到项目|项目已恢复/.test(status)
+              );
+            },
+            null,
+            { timeout: 150_000 },
           );
+          const call = (method, params) =>
+            frame.evaluate(({ method, params }) => window.codeshellPanel.call(method, params), {
+              method,
+              params,
+            });
+          return { page, frame, call };
+        };
+        await action(open);
+        assert.deepEqual(errors, [], "Installed Job Hunt must not raise page errors");
+      },
+      async () => {
+        const failures = [];
+        for (const [index, page] of pages.entries()) {
+          await page
+            .screenshot({
+              path: join(evidenceDir, `cloud-job-hunt-error-${index}.png`),
+              fullPage: true,
+            })
+            .catch((error) => failures.push(error));
+          for (const [frameIndex, frame] of page.frames().entries()) {
+            const text = await frame
+              .locator("body")
+              .innerText()
+              .catch((error) => {
+                failures.push(error);
+                return "unavailable";
+              });
+            await writeFile(
+              join(evidenceDir, `cloud-job-hunt-error-${index}-${frameIndex}.txt`),
+              text,
+            ).catch((error) => failures.push(error));
+          }
         }
-      }
-      throw error;
-    } finally {
-      await browser.close();
-    }
+        if (failures.length)
+          throw new AggregateError(failures, "Job Hunt browser evidence failed", {
+            cause: failures[0],
+          });
+      },
+      () => browser.close(),
+    );
   }
   const edit = async (frame, markdown) => {
     await frame.locator('.side-nav [data-view-target="resumes"]').click();
@@ -354,51 +371,94 @@ export async function verifyCloudJobHuntRecovery({
     console.log(
       "PASS: actual installed Job Hunt in two Docker projects migrates a large v1 root, exports exact old bytes, restores through the production UI, rejects a stale future draft and saves fresh work without changing the other project",
     );
-    await a.frame.locator('[data-resume-mode="preview"]').click();
-    await a.frame.locator("#print-resume").click();
-    // Exercise the owner confirmation in the real Host UI. The fixture only
-    // authorizes this PDF entry, never arbitrary background confirmations.
-    const consent = a.page.locator(".panel-host-confirm");
-    await consent.waitFor({ state: "visible", timeout: 30_000 });
-    assert.match(await consent.locator("h2").innerText(), /^启动 .+ 的后台工具？$/);
-    assert.match(await consent.locator("pre").innerText(), /resume-pdf/);
-    await consent.getByRole("button", { name: "确认执行", exact: true }).click();
-    const pdfJob = await until(async () => {
-      for (const summary of await a.call("tasks.list", { limit: 50 })) {
-        if (summary.entry?.name !== "resume-pdf") continue;
-        const job = await a.call("tasks.get", { id: summary.id });
-        if (["failed", "cancelled", "interrupted"].includes(job.status))
-          throw new Error(`Cloud PDF failed: ${JSON.stringify(job.error)}`);
-        if (job.status === "succeeded") return job;
-      }
-      return false;
-    }, "installed Job Hunt generates a real cloud PDF");
-    assert.doesNotMatch(
-      pdfJob.input.request.html,
-      /PRIVATE PDF EVIDENCE|PRIVATE PDF INTERVIEW QUESTION/,
-    );
-    pdfReceipt = await until(
-      async () =>
-        JSON.parse(await readRoot(projectA)).resume.pdfExports?.find(
-          (item) => item.taskId === pdfJob.id,
-        ),
-      "cloud PDF receipt persists",
-    );
-    pdfBytes = await pdfResource(a.call, pdfReceipt);
-    await assert.rejects(b.call("resources.get", { id: pdfReceipt.assetId }));
-    const pdfPath = join(evidenceDir, "cloud-job-hunt-resume.pdf");
-    await writeFile(pdfPath, pdfBytes);
-    const { stdout: pdfText } = await exec("pdftotext", [pdfPath, "-"]);
-    assert.match(pdfText, /Cloud recovery after restore/);
-    assert.match(pdfText, /项目经验/);
-    assert.doesNotMatch(pdfText, /PRIVATE PDF/);
-    await writeFile(join(evidenceDir, "cloud-job-hunt-resume.txt"), pdfText);
-    await downloadPdf(a);
-    await a.page.screenshot({ path: join(evidenceDir, "cloud-job-hunt-pdf.png"), fullPage: true });
-    assert.equal(await readRoot(projectB), other);
-    console.log(
-      "PASS: installed cloud Job Hunt produces selectable Chinese PDF text using its reviewed task, captures project-isolated bytes, persists the source receipt and downloads the exact PDF through the real UI",
-    );
+    let pdfStep = "preview";
+    let pdfTaskStatus;
+    let pdfTaskError;
+    try {
+      await a.frame.locator('[data-resume-mode="preview"]').click();
+      pdfStep = "request";
+      await a.frame.locator("#print-resume").click();
+      // Exercise the owner confirmation in the real Host UI. The fixture only
+      // authorizes this PDF entry, never arbitrary background confirmations.
+      pdfStep = "consent";
+      const consent = a.page.locator(".panel-host-confirm");
+      await consent.waitFor({ state: "visible", timeout: 30_000 });
+      assert.match(await consent.locator("h2").innerText(), /^启动 .+ 的后台工具？$/);
+      assert.match(await consent.locator("pre").innerText(), /resume-pdf/);
+      await consent.getByRole("button", { name: "确认执行", exact: true }).click();
+      pdfStep = "task";
+      const pdfJob = await until(async () => {
+        for (const summary of await a.call("tasks.list", { limit: 50 })) {
+          if (summary.entry?.name !== "resume-pdf") continue;
+          const job = await a.call("tasks.get", { id: summary.id });
+          const status = ownDataValue(job, "status");
+          pdfTaskStatus = [
+            "queued",
+            "running",
+            "cancelling",
+            "succeeded",
+            "failed",
+            "cancelled",
+            "interrupted",
+          ].includes(status)
+            ? status
+            : undefined;
+          if (["failed", "cancelled", "interrupted"].includes(job.status)) {
+            pdfTaskError = ownDataValue(job, "error");
+            throw new Error(`Cloud PDF failed: ${JSON.stringify(job.error)}`);
+          }
+          if (job.status === "succeeded") return job;
+        }
+        return false;
+      }, "installed Job Hunt generates a real cloud PDF");
+      pdfStep = "task-input";
+      assert.doesNotMatch(
+        pdfJob.input.request.html,
+        /PRIVATE PDF EVIDENCE|PRIVATE PDF INTERVIEW QUESTION/,
+      );
+      pdfStep = "receipt";
+      pdfReceipt = await until(
+        async () =>
+          JSON.parse(await readRoot(projectA)).resume.pdfExports?.find(
+            (item) => item.taskId === pdfJob.id,
+          ),
+        "cloud PDF receipt persists",
+      );
+      pdfStep = "resource";
+      pdfBytes = await pdfResource(a.call, pdfReceipt);
+      pdfStep = "cross-project-denial";
+      await assert.rejects(b.call("resources.get", { id: pdfReceipt.assetId }));
+      pdfStep = "local-write";
+      const pdfPath = join(evidenceDir, "cloud-job-hunt-resume.pdf");
+      await writeFile(pdfPath, pdfBytes);
+      pdfStep = "text-extract";
+      const { stdout: pdfText } = await exec("pdftotext", [pdfPath, "-"]);
+      pdfStep = "text-english";
+      assert.match(pdfText, /Cloud recovery after restore/);
+      pdfStep = "text-chinese";
+      assert.match(pdfText, /项目经验/);
+      pdfStep = "text-private-exclusion";
+      assert.doesNotMatch(pdfText, /PRIVATE PDF/);
+      pdfStep = "text-evidence";
+      await writeFile(join(evidenceDir, "cloud-job-hunt-resume.txt"), pdfText);
+      pdfStep = "download";
+      await downloadPdf(a);
+      pdfStep = "evidence";
+      await a.page.screenshot({
+        path: join(evidenceDir, "cloud-job-hunt-pdf.png"),
+        fullPage: true,
+      });
+      pdfStep = "other-project";
+      assert.equal(await readRoot(projectB), other);
+      console.log(
+        "PASS: installed cloud Job Hunt produces selectable Chinese PDF text using its reviewed task, captures project-isolated bytes, persists the source receipt and downloads the exact PDF through the real UI",
+      );
+    } catch (error) {
+      throw jobPdfFailure(error, pdfStep, {
+        ...(pdfTaskStatus === undefined ? {} : { taskStatus: pdfTaskStatus }),
+        ...(pdfTaskError === undefined ? {} : { taskError: pdfTaskError }),
+      });
+    }
     verifyAudioRestart = await verifyCloudInterviewAudio({
       realSpeech: !!speechFixture,
       a,

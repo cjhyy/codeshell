@@ -35,6 +35,23 @@ export const settingsNs = {
       cloudAccount: {
         title: "CodeShell 云账号（可选）",
         manage: "账号管理",
+        profileTitle: "账号资料",
+        displayName: "昵称",
+        displayNameHelp: "昵称用于显示，可包含中文和 emoji；1–64 个字符。不会改变登录用户名。",
+        displayNameInvalid: "昵称需为 1–64 个字符，不能包含控制字符。",
+        loginUsername: "登录用户名",
+        profileUsernameHelp:
+          "用户名用于密码登录，需为 3–64 位字母、数字、点、下划线或连字符。修改后使用新用户名；GitHub 登录不受影响。",
+        profileUsernameInvalid:
+          "用户名需为 3–64 位，以字母或数字开头，可包含字母、数字、点、下划线和连字符。",
+        profileUsernameUnavailable: "此用户名已被使用，请换一个用户名。",
+        profileSave: "保存资料",
+        profileSaving: "正在同步资料…",
+        profileSaved: "账号资料已保存。",
+        profileUnavailable: "此云服务尚未启用资料编辑，或能力检查尚未完成。",
+        profileStorageFailed: "云端资料已同步，但本机保存失败，请重试同步。",
+        profileAuthFailed: "账号登录已失效，请重新登录后编辑资料。",
+        profileFailed: "无法同步账号资料，请检查网络后重试。",
         signInAccount: "登录账号",
         localMode: "本地模式 · 未登录",
         signedIn: "CodeShell 云账号",
@@ -80,6 +97,27 @@ export const settingsNs = {
         linkDescription:
           "绑定后，可用 GitHub 登录当前 CodeShell 账号；此操作只绑定登录身份，GitHub 数据连接请在「凭证 → Link」中管理。",
         linked: "GitHub 登录身份已绑定到当前 CodeShell 账号。",
+        linksTitle: "账号的数据连接与授权",
+        linksDescription: "查看当前账号的连接、使用方及授权范围。退出云账号不会断开这些连接。",
+        linksLoad: "加载／刷新连接",
+        linksLoading: "正在加载…",
+        linksUnavailable: "此云服务尚未启用账号连接管理，或能力检查尚未完成。",
+        linksEmpty: "当前账号没有数据连接。",
+        linksActive: "有效",
+        linksRevoked: "已撤销或失效",
+        linksScopes: "操作范围",
+        linksResources: "资源",
+        linksDisconnect: "审阅并断开连接",
+        linksRevoke: "审阅并撤销授权",
+        linksReview: "确认撤销范围",
+        linksDisconnectEffect:
+          "断开此数据连接，同时撤销使用此连接的全部授权。以后使用需重新连接并授权。",
+        linksRevokeEffect: "仅撤销此使用方的这项授权，保留数据连接和其他使用方的授权。",
+        linksConfirm: "确认撤销",
+        linksCancel: "取消",
+        linksInvalid: "云服务返回了无效的连接管理信息。",
+        linksRevokeUnconfirmed: "尚未确认撤销结果，请重新加载核实；相同撤销可重试。",
+        linksConfirmedReloadFailed: "撤销已确认，但无法刷新列表；请稍后重新加载。",
         logout: "退出云账号",
         cancel: "取消登录",
         failed: "云账号操作未完成。",
@@ -1099,6 +1137,26 @@ export const settingsNs = {
       cloudAccount: {
         title: "CodeShell cloud account (optional)",
         manage: "Manage account",
+        profileTitle: "Account profile",
+        displayName: "Nickname",
+        displayNameHelp:
+          "Shown as your name; Chinese characters and emoji are supported. Use 1–64 characters. Your sign-in username stays separate.",
+        displayNameInvalid: "Use 1–64 characters without control characters for your nickname.",
+        loginUsername: "Sign-in username",
+        profileUsernameHelp:
+          "Used for password sign-in. Use 3–64 letters, numbers, dots, underscores or hyphens. After changing it, sign in with the new username. GitHub sign-in is unaffected.",
+        profileUsernameInvalid:
+          "Use 3–64 letters, numbers, dots, underscores or hyphens, starting with a letter or number.",
+        profileUsernameUnavailable: "This username is already taken. Choose another one.",
+        profileSave: "Save profile",
+        profileSaving: "Syncing profile…",
+        profileSaved: "Account profile saved.",
+        profileUnavailable:
+          "Profile editing is unavailable on this service, or its capability check is still pending.",
+        profileStorageFailed:
+          "Your cloud profile was synced, but saving it on this device failed. Retry syncing.",
+        profileAuthFailed: "Your account session has expired. Sign in again to edit your profile.",
+        profileFailed: "Unable to sync your account profile. Check your connection and retry.",
         signInAccount: "Sign in to CodeShell",
         localMode: "Local mode · Not signed in",
         signedIn: "CodeShell cloud account",
@@ -1154,6 +1212,32 @@ export const settingsNs = {
         linkDescription:
           "Bind your GitHub sign-in identity to this CodeShell account. Manage GitHub data connections separately in Credentials → Link.",
         linked: "GitHub sign-in is bound to this CodeShell account.",
+        linksTitle: "Account data connections and grants",
+        linksDescription:
+          "View this account’s connections, clients and permissions. Signing out does not disconnect them.",
+        linksLoad: "Load / refresh connections",
+        linksLoading: "Loading…",
+        linksUnavailable:
+          "Account connection management is unavailable or its capability check is still pending.",
+        linksEmpty: "This account has no data connections.",
+        linksActive: "Active",
+        linksRevoked: "Revoked or expired",
+        linksScopes: "Actions",
+        linksResources: "Resources",
+        linksDisconnect: "Review and disconnect",
+        linksRevoke: "Review and revoke grant",
+        linksReview: "Confirm revocation scope",
+        linksDisconnectEffect:
+          "Disconnect this data connection and revoke every grant using it. Future use requires connecting and authorizing again.",
+        linksRevokeEffect:
+          "Revoke only this client’s selected grant. Keep the connection and other clients’ grants.",
+        linksConfirm: "Confirm revocation",
+        linksCancel: "Cancel",
+        linksInvalid: "The cloud service returned invalid connection management data.",
+        linksRevokeUnconfirmed:
+          "Revocation is unconfirmed. Reload to verify; retrying the same revocation is safe.",
+        linksConfirmedReloadFailed:
+          "Revocation was confirmed, but the list could not be refreshed. Reload later.",
         logout: "Sign out",
         cancel: "Cancel sign-in",
         failed: "Cloud account operation failed.",

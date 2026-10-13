@@ -1,6 +1,8 @@
 import type { IpcMain, IpcMainInvokeEvent, WebContents } from "electron";
-import type { CloudAccountGitHubLogin, CloudAccountLogin } from "../shared/cloud-account.js";
+import type { CloudAccountLogin } from "../shared/cloud-account.js";
+import { accountGitHubRequest, accountLinksRequest } from "./cloud-account-links.js";
 import type { CloudAccountManager } from "./cloud-account-manager.js";
+import { accountProfileRequest } from "./cloud-account-profile.js";
 
 export function registerCloudAccountIpc(options: {
   ipcMain: Pick<IpcMain, "handle">;
@@ -30,13 +32,20 @@ export function registerCloudAccountIpc(options: {
     owner(event);
     return options.manager.signIn("register", input, () => allowed(event));
   });
-  options.ipcMain.handle("cloudAccount:github", (event, input: CloudAccountGitHubLogin) => {
+  options.ipcMain.handle("cloudAccount:github", (event, raw: unknown) => {
     owner(event);
-    return options.manager.signInWithGitHub(input, () => allowed(event));
+    const input = accountGitHubRequest(raw);
+    return input.mode === "link"
+      ? options.manager.linkGitHub(() => allowed(event))
+      : options.manager.signInWithGitHub(input.input, () => allowed(event));
   });
-  options.ipcMain.handle("cloudAccount:linkGitHub", (event) => {
+  options.ipcMain.handle("cloudAccount:links", (event, raw: unknown) => {
     owner(event);
-    return options.manager.linkGitHub(() => allowed(event));
+    return options.manager.manageLinks(accountLinksRequest(raw), () => allowed(event));
+  });
+  options.ipcMain.handle("cloudAccount:profile", (event, raw: unknown) => {
+    owner(event);
+    return options.manager.profile(accountProfileRequest(raw), () => allowed(event));
   });
   options.ipcMain.handle("cloudAccount:cancelSignIn", (event) => {
     owner(event);

@@ -1,472 +1,558 @@
-/* Native existing-project runtime selection, using an authenticated protocol fixture. */
 /* global document, window */
-import { createServer } from "node:http";
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
-import { WebSocketServer } from "ws";
+import { bounded, prepareCloudChooserFixture } from "./cloud-chooser-fixture.mjs";
+import {
+  describeCloudChooserAlerts,
+  describeCloudChooserLocation,
+} from "./cloud-chooser-diagnostics.mjs";
 import {
   assert,
   captureRendererErrors,
+  expandSidebar,
   findCodeShellWindow,
   launchCodeShellElectron,
   makeIsolatedElectronHome,
-  seedSessionCatalog,
+  openSettingsMenu,
 } from "./electron-harness.mjs";
 
 const appDir = resolve(dirname(fileURLToPath(import.meta.url)), "..");
+if (process.platform !== "linux" && !process.argv.includes("--server-only"))
+  throw new Error(
+    "Native chooser acceptance runs only with the owned Linux SecretService; macOS Keychain remains an independent gate.",
+  );
 const isolated = await makeIsolatedElectronHome("codeshell-native-cloud-e2e-");
 const screenshotDir = process.env.CODESHELL_PROJECT_LOCATION_SCREENSHOT_DIR;
-const localPath = join(isolated.home, "Existing project");
-const sessionId = "shared-local-and-cloud-session";
-const localTitle = "已有本地会话";
-const cloudTitle = "已有云端会话";
-const localText = "仅保存在此计算机的历史消息。";
-const cloudText = "仅保存在云端的历史消息。";
-const environmentId = "11111111-1111-4111-8111-111111111111";
-const projectId = "22222222-2222-4222-8222-222222222222";
-const cookie = `cs_hub_session=${"a".repeat(43)}`;
-const password = "native-test-password";
-const rpcCalls = [];
-const sockets = new Set();
-const wss = new WebSocketServer({ noServer: true });
-const remote = new Map([[sessionId, { title: cloudTitle, records: [], running: false }]]);
-let app, win, origin;
-let processLog = "";
-let sequence = 0;
-let authenticated = true;
-function history(id, user, assistant, clientMessageId) {
-  const now = Date.now();
-  return [
-    { id: `${id}-meta`, type: "session_meta", timestamp: now, data: { sessionId: id } },
-    {
-      id: `${id}-user`,
-      type: "message",
-      timestamp: now,
-      data: { role: "user", content: user, ...(clientMessageId ? { clientMessageId } : {}) },
-    },
-    { id: `${id}-turn`, type: "turn_boundary", timestamp: now, data: {} },
-    {
-      id: `${id}-assistant`,
-      type: "message",
-      timestamp: now,
-      data: { role: "assistant", content: assistant },
-    },
-  ];
-}
-remote.get(sessionId).records = history(sessionId, "云端已有问题", cloudText);
-const server = createServer(async (req, res) => {
-  const reply = (status, value) => {
-    res.writeHead(status, { "content-type": "application/json" });
-    res.end(JSON.stringify(value));
-  };
-  if (req.url === "/api/v1/auth/status")
-    return reply(200, {
-      initialized: true,
-      authenticated: authenticated && req.headers.cookie === cookie,
-    });
-  if (req.url === "/api/v1/auth/login" && req.method === "POST") {
-    let body = "";
-    for await (const chunk of req) body += chunk;
-    const input = JSON.parse(body);
-    if (input.username !== "owner" || input.password !== password)
-      return reply(401, { error: "Invalid login" });
-    authenticated = true;
-    res.setHeader("set-cookie", `${cookie}; HttpOnly; SameSite=Strict; Path=/`);
-    return reply(200, { ok: true });
+let app, electronChild, fixture;
+let passed = false,
+  guardReceipt,
+  nativeKeyring;
+let exitedProcesses = 0;
+let primaryError;
+const ownedPids = new Set();
+async function closeApp() {
+  if (!app) return;
+  const closing = app;
+  const child = electronChild;
+  const failures = [];
+  if (child) ownedPids.add(child.pid);
+  try {
+    const metrics = await bounded(
+      closing.evaluate(({ app }) => app.getAppMetrics().map((row) => row.pid)),
+      "Electron process inventory",
+      5000,
+    );
+    for (const pid of metrics) ownedPids.add(pid);
+  } catch (error) {
+    failures.push(error);
   }
-  if (!authenticated || req.headers.cookie !== cookie)
-    return reply(401, { error: "Authentication required" });
-  if (req.url === "/api/v1/environment")
-    return reply(200, {
-      version: 1,
-      id: environmentId,
-      name: "Cloud fixture",
-      kind: "project-host",
-      entryPath: "/",
+  try {
+    await bounded(closing.close(), "Electron application close");
+  } catch (error) {
+    failures.push(error);
+  }
+  try {
+    exitedProcesses = await fixture.assertElectronExited(child, ownedPids);
+    app = undefined;
+    electronChild = undefined;
+  } catch (error) {
+    failures.push(error);
+  }
+  if (failures.length)
+    throw new AggregateError(failures, "Electron cleanup was not fully acknowledged", {
+      cause: failures[0],
     });
-  if (req.url === "/api/v1/projects")
-    return reply(200, {
-      projects: [
-        {
-          id: projectId,
-          name: "Existing remote project",
-          status: "running",
-          generation: 1,
-          createdAt: 123,
-          updatedAt: 123,
-        },
-      ],
-    });
-  if (req.url === `/p/${projectId}/api/v1/sessions`)
-    return reply(200, {
-      sessions: [...remote].map(([sessionId, row]) => ({
-        sessionId,
-        title: row.title,
-        startedAt: 123,
-        lastActiveAt: 123,
-        running: row.running,
-      })),
-    });
-  if (req.url === `/p/${projectId}/api/v1/configuration`)
-    return reply(200, {
-      workspace: { path: "/remote/workspace", settingsScope: "local", skillDirectories: [] },
-      defaults: {},
-      connections: [],
-      catalog: [],
-      skills: [],
-      mcpServers: [],
-      restartRequired: false,
-    });
-  return reply(404, { error: "Unknown fixture route" });
-});
-server.on("upgrade", (req, socket, head) => {
-  if (
-    !authenticated ||
-    req.url !== `/p/${projectId}/ws` ||
-    req.headers.cookie !== cookie ||
-    req.headers.origin !== origin
-  )
-    return socket.destroy();
-  wss.handleUpgrade(req, socket, head, (ws) => wss.emit("connection", ws));
-});
-wss.on("connection", (ws) => {
-  sockets.add(ws);
-  ws.on("close", () => sockets.delete(ws));
-  const notify = (method, params) => ws.send(JSON.stringify({ jsonrpc: "2.0", method, params }));
-  const stream = (id, event) =>
-    notify("agent/streamEvent", {
-      sessionId: id,
-      event,
-      hubEpoch: "fixture",
-      hubSequence: ++sequence,
-    });
-  const pendingRuns = new Map();
-  const finish = (id) => {
-    const run = pendingRuns.get(id);
-    if (!run) return;
-    pendingRuns.delete(id);
-    const item = remote.get(id);
-    item.running = false;
-    item.records = history(id, run.params.task, "云端原生流式回复", run.params.clientMessageId);
-    notify("agent/approvalResolved", { sessionId: id, requestId: `approval-${id}` });
-    stream(id, { type: "turn_complete" });
-    notify("serve/sessionStatus", { sessionId: id, running: false });
-    ws.send(JSON.stringify({ jsonrpc: "2.0", id: run.id, result: { ok: true } }));
-  };
-  ws.on("message", (data) => {
-    const message = JSON.parse(data.toString());
-    rpcCalls.push(message);
-    const { method, params = {}, id } = message;
-    const response = (value) => ws.send(JSON.stringify({ jsonrpc: "2.0", id, result: value }));
-    if (method === "agent/query") {
-      if (params.type === "sessions")
-        return response({
-          data: [...remote].map(([sessionId, row]) => ({
-            sessionId,
-            title: row.title,
-            startedAt: 123,
-            lastActiveAt: 123,
-            running: row.running,
-          })),
-        });
-      if (params.type === "session_detail") {
-        const item = remote.get(params.sessionId);
-        return response({
-          data: {
-            transcript: item?.records ?? [],
-            running: item?.running ?? false,
-            outputJournal: { status: "unavailable" },
-            outputCoverage: { unpaired: false, inputIds: [] },
-            streamCursor: { epoch: "fixture", sequence },
-            liveStream: { events: [], truncated: false },
-          },
-        });
-      }
-      if (params.type === "output_journal") return response({ data: { status: "unavailable" } });
-      if (params.type === "output_coverage")
-        return response({ data: { unpaired: false, inputIds: [] } });
-    }
-    if (method === "agent/run") {
-      assert(
-        !("cwd" in params) && !("projectId" in params),
-        "Native local authority cannot cross the cloud transport",
-      );
-      pendingRuns.set(params.sessionId, message);
-      remote.set(params.sessionId, {
-        title: params.task,
-        records: history(params.sessionId, params.task, "", params.clientMessageId),
-        running: true,
-      });
-      notify("agent/runAccepted", {
-        sessionId: params.sessionId,
-        clientMessageId: params.clientMessageId,
-      });
-      stream(params.sessionId, { type: "stream_request_start" });
-      stream(params.sessionId, { type: "text_delta", text: "云端原生流式回复" });
-      notify("agent/approvalRequest", {
-        sessionId: params.sessionId,
-        requestId: `approval-${params.sessionId}`,
-        request: {
-          toolName: "Shell",
-          args: { command: "echo remote" },
-          description: "云端审批测试",
-        },
-      });
-      return;
-    }
-    if (method === "agent/approve" || method === "agent/cancel") {
-      response({ ok: true });
-      finish(params.sessionId);
-      return;
-    }
-    response({});
+}
+
+async function captureDialog(win, chooser, step) {
+  const layout = await chooser.evaluate((node) => {
+    const rect = node.getBoundingClientRect();
+    return {
+      left: rect.left,
+      right: rect.right,
+      width: node.clientWidth,
+      content: node.scrollWidth,
+      viewport: window.innerWidth,
+      language: window.localStorage.getItem("codeshell.uiLanguage") ?? "zh",
+    };
   });
-});
-const locationTrigger = () => win.getByRole("button", { name: /^运行位置：/ });
-const sidebar = () => win.locator("aside");
-async function dismissTrust() {
-  const viewOnly = win.getByRole("button", { name: /仅查看|View only/i });
-  if (
-    await viewOnly.waitFor({ state: "visible", timeout: 1500 }).then(
-      () => true,
-      () => false,
-    )
-  )
-    await viewOnly.click();
-}
-async function locationMenu() {
-  await locationTrigger().click();
-  return win.getByRole("menu");
-}
-async function screenshot(step) {
+  assert(
+    layout.left >= -1 && layout.right <= layout.viewport + 1 && layout.content <= layout.width + 1,
+    `${step} fits the ${layout.viewport}px ${layout.language} viewport`,
+  );
   if (screenshotDir)
     await win.screenshot({
-      path: join(screenshotDir, `native-cloud-${step}.png`),
-      animations: "disabled",
+      path: join(screenshotDir, `new-project-${step}-${layout.viewport}-${layout.language}.png`),
       scale: "css",
+      animations: "disabled",
     });
 }
+
+async function openNewProject(win) {
+  await expandSidebar(win);
+  const opener = win
+    .locator("aside")
+    .getByRole("button", { name: /^(新项目|New project)$/ })
+    .first();
+  await opener.click();
+  const chooser = win.getByRole("dialog", { name: /^(新项目|New project)$/ });
+  await chooser.waitFor({ state: "visible" });
+  await captureDialog(win, chooser, "location");
+  return { chooser, opener };
+}
+
+async function openCloudProjects(win) {
+  const opened = await openNewProject(win);
+  await opened.chooser.getByRole("button", { name: /^(云端|Cloud)/ }).click();
+  await opened.chooser.getByRole("button", { name: /^(返回|Back)$/ }).waitFor();
+  await captureDialog(win, opened.chooser, "cloud");
+  return opened;
+}
+
 try {
   if (screenshotDir) await mkdir(screenshotDir, { recursive: true });
-  await mkdir(localPath, { recursive: true });
   await mkdir(isolated.codeShellHome, { recursive: true });
-  await writeFile(join(localPath, "README.md"), "# Existing local project\n");
   await writeFile(
     join(isolated.codeShellHome, "settings.json"),
     JSON.stringify({ autoUpdates: false }),
   );
-  await new Promise((resolve) => server.listen(0, "127.0.0.1", resolve));
-  origin = `http://127.0.0.1:${server.address().port}`;
-  app = await launchCodeShellElectron({
-    appDir,
-    home: isolated.home,
-    userDataDir: isolated.userDataDir,
-    env: { CODE_SHELL_TEST_HOME: isolated.codeShellHome },
+  fixture = await prepareCloudChooserFixture(appDir, isolated, {
+    failAfterReady: process.argv.includes("--fail-after-ready"),
   });
-  app.process().stderr?.on("data", (chunk) => {
-    processLog = (processLog + chunk.toString()).slice(-12000);
-  });
-  win = await findCodeShellWindow(app);
-  const errors = captureRendererErrors(win);
-  await dismissTrust();
-  await app.evaluate(({ dialog }, path) => {
-    dialog.showOpenDialog = async () => ({ canceled: false, filePaths: [path] });
-  }, localPath);
-  await sidebar()
-    .getByRole("button", { name: /^(添加项目|Add project)$/ })
-    .first()
-    .click();
-  await win.waitForFunction(
-    async () => (await window.codeshell.projectRegistry.list()).length === 1,
-  );
-  await dismissTrust();
-  const project = (await win.evaluate(() => window.codeshell.projectRegistry.list()))[0];
-  const directory = join(isolated.codeShellHome, "sessions", sessionId);
-  await mkdir(directory, { recursive: true });
-  await writeFile(
-    join(directory, "state.json"),
-    JSON.stringify({
-      sessionId,
-      title: localTitle,
-      cwd: localPath,
-      origin: "desktop",
-      kind: "work",
-      parentSessionId: null,
-      status: "completed",
-      startedAt: 123,
-    }),
-  );
-  await writeFile(
-    join(directory, "transcript.jsonl"),
-    history(sessionId, "本地已有问题", localText).map(JSON.stringify).join("\n") + "\n",
-  );
-  await seedSessionCatalog(win, {
-    [project.id]: {
-      sessions: [
-        {
-          id: sessionId,
-          engineSessionId: sessionId,
-          title: localTitle,
-          createdAt: 123,
-          updatedAt: 123,
-        },
-      ],
-      activeSessionId: sessionId,
-    },
-  });
-  await win.reload();
-  await dismissTrust();
-  await win.getByText(localText, { exact: true }).waitFor();
-  const registryBefore = await win.evaluate(() => window.codeshell.projectRegistry.list());
-  const catalogBefore = await win.evaluate(() => window.codeshell.sessionCatalog.load());
-  await (await locationMenu())
-    .getByRole("menuitem", { name: "关联云端项目…", exact: true })
-    .click();
-  const dialog = win.getByRole("dialog", { name: "关联已有云端项目" });
-  await dialog.getByLabel("云端服务地址", { exact: true }).fill(origin);
-  await dialog.getByRole("button", { name: "连接", exact: true }).click();
-  await dialog.getByLabel("用户名", { exact: true }).fill("owner");
-  await dialog.getByLabel("密码", { exact: true }).fill(password);
-  await dialog.getByRole("button", { name: "登录", exact: true }).click();
-  await dialog.getByLabel("已有云端项目", { exact: true }).selectOption(projectId);
-  await screenshot("bind");
-  await dialog.getByRole("button", { name: "使用云端", exact: true }).click();
-  await win.locator('[data-runtime="cloud"]').waitFor();
-  await sidebar().getByRole("button", { name: cloudTitle, exact: true }).click();
-  await win.getByText(cloudText, { exact: true }).waitFor();
-  assert(
-    app.windows().length === 1 && !win.url().startsWith(origin),
-    "Cloud stays in the existing native window",
-  );
-  assert(
-    (await win.getByText(localText, { exact: true }).count()) === 0,
-    "Equal local/cloud engine IDs cannot mix transcripts",
-  );
-  await screenshot("history");
-  await (await locationMenu()).getByRole("menuitem", { name: "此计算机", exact: true }).click();
-  await win.getByText(localText, { exact: true }).waitFor();
-  await (await locationMenu())
-    .getByRole("menuitem")
-    .filter({ hasText: "Existing remote project" })
-    .click();
-  await win.getByText(cloudText, { exact: true }).waitFor();
-  await sidebar().getByRole("button", { name: "在 Existing project 中开始新对话" }).click();
-  const composer = win.locator("textarea").last();
-  await composer.fill("请在云端执行");
-  await composer.press("Enter");
-  await win.getByText("云端原生流式回复", { exact: true }).waitFor();
-  await win.getByText("云端审批测试", { exact: true }).waitFor();
-  await screenshot("stream-approval");
-  await win.getByRole("button", { name: /允许一次|仅本次|Allow once/ }).click();
-  await win.waitForFunction(
-    () => !document.querySelector('[data-runtime="cloud"] button[title="停止"]'),
-  );
-  assert(
-    rpcCalls.filter((row) => row.method === "agent/run").length === 1,
-    "One native send produces one cloud run",
-  );
-  assert(
-    rpcCalls.some((row) => row.method === "agent/approve"),
-    "Native approval reaches the cloud",
-  );
-  await win.getByRole("button", { name: "停止", exact: true }).waitFor({ state: "hidden" });
-  await sidebar().getByRole("button", { name: "在 Existing project 中开始新对话" }).click();
-  await composer.fill("请在云端取消");
-  await composer.press("Enter");
-  await win.getByText("云端审批测试", { exact: true }).waitFor();
-  await win.getByRole("button", { name: "停止", exact: true }).click();
-  await win.getByRole("button", { name: "停止", exact: true }).waitFor({ state: "hidden" });
-  const cancel = rpcCalls.find((row) => row.method === "agent/cancel");
-  assert(
-    cancel && cancel.params.sessionId !== sessionId,
-    "Native stop uses the captured cloud session",
-  );
-  const firstRunCount = rpcCalls.filter((row) => row.method === "agent/run").length;
-  for (const socket of sockets) socket.terminate();
-  await win.getByRole("button", { name: "重新连接", exact: true }).waitFor();
-  await win.getByRole("button", { name: "重新连接", exact: true }).click();
-  await win.getByText("云端原生流式回复", { exact: true }).waitFor();
-  assert(
-    rpcCalls.filter((row) => row.method === "agent/run").length === firstRunCount,
-    "Reconnect never resends an executed command",
-  );
-  authenticated = false;
-  for (const socket of sockets) socket.terminate();
-  await win.getByText("请从运行位置菜单重新登录云端。", { exact: true }).waitFor();
-  await (await locationMenu())
-    .getByRole("menuitem", { name: "关联云端项目…", exact: true })
-    .click();
-  const signIn = win.getByRole("dialog", { name: "关联已有云端项目" });
-  await signIn.getByRole("button", { name: "连接", exact: true }).click();
-  await signIn.getByLabel("用户名", { exact: true }).fill("owner");
-  await signIn.getByLabel("密码", { exact: true }).fill(password);
-  await signIn.getByRole("button", { name: "登录", exact: true }).click();
-  await signIn.getByRole("button", { name: "使用云端", exact: true }).click();
-  await win
-    .getByText("请从运行位置菜单重新登录云端。", { exact: true })
-    .waitFor({ state: "hidden" });
-  await win.waitForFunction(
-    () => !document.querySelector('[data-runtime="cloud"] textarea')?.disabled,
-  );
-  assert(
-    rpcCalls.filter((row) => row.method === "agent/run").length === firstRunCount,
-    "Reauthentication never replays a task",
-  );
-  assert(
-    JSON.stringify(await win.evaluate(() => window.codeshell.projectRegistry.list())) ===
-      JSON.stringify(registryBefore),
-    "Remote runtime leaves local roots intact",
-  );
-  assert(
-    JSON.stringify(await win.evaluate(() => window.codeshell.sessionCatalog.load())) ===
-      JSON.stringify(catalogBefore),
-    "Cloud history never writes local session catalog",
-  );
-  await win.reload();
-  await win.locator('[data-runtime="cloud"]').waitFor();
-  assert(
-    (await locationTrigger().getAttribute("aria-label")) === "运行位置：云端",
-    "Runtime selection persists across reload",
-  );
-  await sidebar().getByRole("button", { name: cloudTitle, exact: true }).click();
-  await win.getByText(cloudText, { exact: true }).waitFor();
-  await win.setViewportSize({ width: 390, height: 844 });
-  await screenshot("390-zh");
-  assert(
-    await win.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth + 1),
-    "Native cloud fits a narrow window",
-  );
+  if (process.argv.includes("--server-only")) {
+    const login = await fixture.request(fixture.accountOrigin, "/api/v1/account/login", {
+      method: "POST",
+      body: { username: "chooser-owner", password: "chooser-synthetic-password" },
+    });
+    assert(login.status === 200, "Synthetic Account login contract");
+    const ticket = await fixture.request(
+      fixture.accountOrigin,
+      "/api/v1/account/cloud-management/tickets",
+      {
+        method: "POST",
+        body: { cloudOrigin: fixture.cloudOrigin, installationId: fixture.installationId },
+        token: login.body.accessToken,
+      },
+    );
+    assert(
+      ticket.status === 201 && ticket.body.accountOrigin === fixture.accountOrigin,
+      "Exact Account ticket contract",
+    );
+    const grant = await fixture.request(fixture.cloudOrigin, "/api/v1/cloud-management/session", {
+      method: "POST",
+      body: { ticket: ticket.body.ticket },
+    });
+    assert(grant.status === 201, "Actual Cloud ticket redemption");
+    const created = await fixture.request(fixture.cloudOrigin, "/api/v1/projects", {
+      method: "POST",
+      body: { name: "Cloud-only project" },
+      token: grant.body.token,
+    });
+    assert(created.status === 201, "Actual Cloud project creation");
+    const id = created.body.project.id;
+    for (const action of ["start", "stop"]) {
+      const response = await fixture.request(
+        fixture.cloudOrigin,
+        `/api/v1/projects/${id}/${action}`,
+        { method: "POST", body: {}, token: grant.body.token },
+      );
+      assert(response.status === 200, `Actual Cloud ${action}`);
+    }
+    guardReceipt = await fixture.assertGuards();
+    passed = true;
+  } else {
+    nativeKeyring = await fixture.keyring();
+    app = await launchCodeShellElectron({
+      appDir,
+      home: isolated.home,
+      userDataDir: isolated.userDataDir,
+      mainEntry: fixture.mainEntry,
+      env: fixture.electronEnv,
+    });
+    electronChild = app.process();
+    ownedPids.add(electronChild.pid);
+    await fixture.assertGuards(app);
+    const win = await findCodeShellWindow(app),
+      errors = captureRendererErrors(win);
+    const viewOnly = win.getByRole("button", { name: /仅查看|View only/i });
+    if (
+      await viewOnly.waitFor({ state: "visible", timeout: 2500 }).then(
+        () => true,
+        () => false,
+      )
+    )
+      await viewOnly.click();
 
-  await (await locationMenu()).getByRole("menuitem", { name: "此计算机", exact: true }).click();
-  await win.getByText(localText, { exact: true }).waitFor();
-  assert(
-    (await readFile(join(directory, "transcript.jsonl"), "utf8")).includes(localText),
-    "Local durable transcript survives cloud work",
-  );
-  await win.setViewportSize({ width: 1280, height: 800 });
-  await win.evaluate(() => window.localStorage.setItem("codeshell.uiLanguage", "en"));
-  await win.reload();
-  await win.getByRole("button", { name: "Work in: This computer", exact: true }).waitFor();
-  await win.getByRole("button", { name: "Work in: This computer", exact: true }).click();
-  await win.getByRole("menuitem").filter({ hasText: "Existing remote project" }).click();
-  await win.locator('[data-runtime="cloud"]').waitFor();
-  await win.getByRole("button", { name: "Work in: Cloud", exact: true }).waitFor();
-  await screenshot("1280-en");
-  assert(errors.length === 0, `Renderer errors: ${errors.join("\n")}`);
-  console.log(
-    "PASS native cloud: existing project binding, one window, scoped history, streaming, approval, reconnect, persistence",
-  );
+    const initialProjects = await win.evaluate(() => window.codeshell.projectRegistry.list());
+    // A controlled cancellation exercises the renderer's real local-project
+    // bridge without opening an OS picker against the operator's filesystem.
+    await app.evaluate(({ ipcMain }) => {
+      globalThis.projectLocationPicker = { calls: 0, resolve: null };
+      ipcMain.removeHandler("projectRegistry:createFromPicker");
+      ipcMain.handle("projectRegistry:createFromPicker", () => {
+        globalThis.projectLocationPicker.calls += 1;
+        return new Promise((resolve) => {
+          globalThis.projectLocationPicker.resolve = resolve;
+        });
+      });
+    });
+    const local = await openNewProject(win);
+    const computer = local.chooser.getByRole("button", { name: /^(此计算机|This computer)/ });
+    await computer.dblclick();
+    assert(
+      await local.chooser.isVisible(),
+      "The chooser remains open while the local picker waits",
+    );
+    assert(
+      await computer.isDisabled(),
+      "The local choice cannot open another picker while pending",
+    );
+    assert(
+      (await app.evaluate(() => globalThis.projectLocationPicker.calls)) === 1,
+      "A double click starts only one native picker",
+    );
+    await app.evaluate(() => globalThis.projectLocationPicker.resolve(null));
+    await local.chooser.waitFor({ state: "hidden" });
+    assert(
+      JSON.stringify(await win.evaluate(() => window.codeshell.projectRegistry.list())) ===
+        JSON.stringify(initialProjects),
+      "Canceling the local picker preserves the project registry",
+    );
+
+    await app.evaluate(({ BrowserWindow }) => {
+      BrowserWindow.getAllWindows()[0].webContents.send("menu:add-project");
+    });
+    const menuChooser = win.getByRole("dialog", { name: /^(新项目|New project)$/ });
+    await menuChooser.waitFor({ state: "visible" });
+    assert(
+      await menuChooser.getByRole("button", { name: /^(云端|Cloud)/ }).isVisible(),
+      "The application Add project menu opens the same location chooser",
+    );
+    await win.keyboard.press("Escape");
+    await menuChooser.waitFor({ state: "hidden" });
+
+    await win.getByRole("button", { name: /^(不使用项目|No project)$/ }).click();
+    await win.getByRole("button", { name: /^(添加新项目|Add new project)$/ }).click();
+    await menuChooser.waitFor({ state: "visible" });
+    assert(
+      await menuChooser.getByRole("button", { name: /^(此计算机|This computer)/ }).isVisible(),
+      "The composer Add new project action opens the same location chooser",
+    );
+    await win.keyboard.press("Escape");
+    await menuChooser.waitFor({ state: "hidden" });
+
+    const firstCloud = await openCloudProjects(win);
+    const prompt = firstCloud.chooser;
+    await prompt.getByLabel("云服务地址", { exact: true }).fill(fixture.accountOrigin);
+    await prompt.getByLabel("账号名称", { exact: true }).fill("chooser-owner");
+    await prompt
+      .getByLabel("密码（至少 12 位）", { exact: true })
+      .fill("chooser-synthetic-password");
+    await prompt.getByRole("button", { name: "登录", exact: true }).click();
+    const address = prompt.getByPlaceholder("https://cloud.example.com");
+    await address.waitFor({ state: "visible" });
+    const crypto = await app.evaluate(({ app, safeStorage }) => ({
+      available: safeStorage.isEncryptionAvailable(),
+      backend: safeStorage.getSelectedStorageBackend(),
+      mock: app.commandLine.hasSwitch("use-mock-keychain"),
+    }));
+    assert(
+      crypto.available && crypto.backend === "gnome_libsecret" && !crypto.mock,
+      "Account login used native SecretService encryption",
+    );
+    const encrypted = await readFile(join(isolated.userDataDir, "cloud-account/session.enc"));
+    assert(
+      !encrypted.includes(Buffer.from("chooser-owner")) &&
+        !encrypted.includes(Buffer.from("chooser-synthetic-password")),
+      "Account registration is encrypted on disk",
+    );
+    await address.fill(`${fixture.cloudOrigin}/?token=secret`);
+    await prompt.getByRole("button", { name: "连接并加载项目", exact: true }).click();
+    await prompt.getByRole("alert").filter({ hasText: "HTTPS" }).waitFor();
+    assert(app.windows().length === 1, "Invalid Cloud address opens no remote window");
+    await prompt.getByRole("button", { name: /^(返回|Back)$/ }).click();
+    await prompt.getByRole("button", { name: /^(云端|Cloud)/ }).click();
+    await prompt.getByPlaceholder("https://cloud.example.com").fill(fixture.cloudOrigin);
+    await prompt.getByRole("button", { name: "连接并加载项目", exact: true }).click();
+    await prompt.getByText("Existing Cloud project", { exact: true }).waitFor();
+    await prompt.getByRole("textbox", { name: "项目名称", exact: true }).fill("Cloud-only project");
+    await prompt.getByRole("button", { name: "创建项目", exact: true }).click();
+    let row = prompt.getByRole("listitem").filter({ hasText: "Cloud-only project" });
+    await row.getByText("已停止", { exact: true }).waitFor();
+    await row.getByRole("button", { name: "启动", exact: true }).click();
+    await row.getByText("运行中", { exact: true }).waitFor();
+    const opened = app.waitForEvent("window");
+    await row.getByRole("button", { name: "打开云端项目", exact: true }).click();
+    const cloud = await opened;
+    try {
+      await prompt.waitFor({ state: "hidden" });
+      await cloud.getByRole("heading", { name: "Cloud project window", exact: true }).waitFor();
+    } catch (error) {
+      // The window event precedes loadURL resolution. Keep both real assertions,
+      // and print only bounded classifications when artifact storage is full.
+      const diagnostics = {
+        chooser: { available: false },
+        main: { available: false },
+        page: { available: false },
+        rendererErrorCount: Math.min(errors.length, 100),
+      };
+      try {
+        diagnostics.page = {
+          closed: cloud.isClosed(),
+          location: describeCloudChooserLocation(cloud.url(), fixture.cloudOrigin),
+        };
+      } catch {
+        // A disposed Playwright page must not replace the original failure.
+      }
+      try {
+        const state = await bounded(
+          prompt.evaluate((node) => ({
+            visible: node.getClientRects().length > 0,
+            buttons: node.querySelectorAll("button").length,
+            disabledButtons: node.querySelectorAll("button:disabled").length,
+            alerts: [...node.querySelectorAll('[role="alert"]')]
+              .slice(0, 4)
+              .map((node) => node.textContent ?? ""),
+          })),
+          "Chooser failure observation",
+          2000,
+        );
+        diagnostics.chooser = { ...state, alerts: describeCloudChooserAlerts(state.alerts) };
+      } catch {
+        // A closing renderer must not replace the original assertion failure.
+      }
+      try {
+        diagnostics.main = await bounded(
+          app.evaluate(() => globalThis.chooserOpenDiagnostics.snapshot()),
+          "Main open failure observation",
+          2000,
+        );
+      } catch {
+        // Main may have exited; preserve the original assertion and exit audit.
+      }
+      console.log(`Cloud chooser open diagnostic: ${JSON.stringify(diagnostics)}`);
+      throw error;
+    }
+    assert(
+      new URL(cloud.url()).origin === fixture.cloudOrigin &&
+        /^[0-9a-f-]{36}$/.test(new URL(cloud.url()).searchParams.get("project")),
+      "Native window opens the selected exact project",
+    );
+    const cloudErrors = captureRendererErrors(cloud);
+    assert(
+      await cloud.evaluate(
+        () =>
+          typeof window.codeshell === "undefined" &&
+          typeof window.require === "undefined" &&
+          document.cookie === "",
+      ),
+      "Cloud page has no local bridge, Node or script-readable grant",
+    );
+    const remote = await app.evaluate(async ({ BrowserWindow }, origin) => {
+      const win = BrowserWindow.getAllWindows().find((win) =>
+        win.webContents.getURL().startsWith(origin),
+      );
+      const prefs = win.webContents.getLastWebPreferences();
+      const cookies = await win.webContents.session.cookies.get({ url: origin });
+      return {
+        id: win.id,
+        sandbox: prefs.sandbox,
+        contextIsolation: prefs.contextIsolation,
+        nodeIntegration: prefs.nodeIntegration,
+        preload: prefs.preload,
+        cookies: cookies.map(({ name, secure, httpOnly, sameSite }) => ({
+          name,
+          secure,
+          httpOnly,
+          sameSite,
+        })),
+      };
+    }, fixture.cloudOrigin);
+    assert(
+      remote.sandbox && remote.contextIsolation && !remote.nodeIntegration && !remote.preload,
+      "Managed native window keeps production browser isolation",
+    );
+    assert(
+      remote.cookies.length === 1 &&
+        remote.cookies[0].name === "cs_cloud_management" &&
+        remote.cookies[0].secure &&
+        remote.cookies[0].httpOnly &&
+        remote.cookies[0].sameSite === "strict",
+      "Native scoped cookie has exact secure attributes",
+    );
+    assert(
+      JSON.stringify(await win.evaluate(() => window.codeshell.projectRegistry.list())) ===
+        JSON.stringify(initialProjects),
+      "Cloud creation does not change the local project registry",
+    );
+    assert(
+      (await win.evaluate(() => window.localStorage.getItem("codeshell.cloud-workbench.v1"))) ===
+        `${fixture.cloudOrigin}/`,
+      "Clean Cloud address is saved",
+    );
+    await openCloudProjects(win);
+    await prompt.getByRole("button", { name: "连接并加载项目", exact: true }).click();
+    row = prompt.getByRole("listitem").filter({ hasText: "Cloud-only project" });
+    await row.getByRole("button", { name: "停止", exact: true }).click();
+    await row.getByText("已停止", { exact: true }).waitFor();
+    await prompt.getByRole("button", { name: "退出此云端", exact: true }).click();
+    const cloudClosed = cloud.waitForEvent("close");
+    await prompt.getByRole("button", { name: "确认退出此云端", exact: true }).click();
+    await prompt.getByRole("button", { name: "连接并加载项目", exact: true }).waitFor();
+    await bounded(cloudClosed, "Scoped Cloud window close");
+    assert(
+      app.windows().length === 1 &&
+        (await win.evaluate(() => window.codeshell.cloudAccount.status())).state === "signed-in",
+      "Scoped Cloud logout closes its window and retains Account login",
+    );
+    await prompt.getByRole("button", { name: "连接并加载项目", exact: true }).click();
+    await prompt.getByText("Cloud-only project", { exact: true }).waitFor();
+    await win.keyboard.press("Escape");
+    await prompt.waitFor({ state: "hidden" });
+    await win.setViewportSize({ width: 390, height: 760 });
+    const narrowCloud = await openCloudProjects(win);
+    await address.waitFor({ state: "visible" });
+    await address.focus();
+    await win.waitForFunction(
+      (node) => node === document.activeElement,
+      await address.elementHandle(),
+    );
+    for (let index = 0; index < 6; index += 1) {
+      await win.keyboard.press("Tab");
+      assert(
+        await prompt.evaluate((node) => node.contains(document.activeElement)),
+        `Cloud address prompt retains keyboard focus after Tab ${index + 1}`,
+      );
+    }
+    await win.keyboard.press("Escape");
+    await prompt.waitFor({ state: "hidden" });
+    const drawer = win.getByRole("dialog", { name: /^(导航|Navigation)$/ });
+    await drawer.waitFor({ state: "visible" });
+    await win.waitForFunction(
+      (node) => node === document.activeElement,
+      await narrowCloud.opener.elementHandle(),
+    );
+    assert(
+      (await win.locator('[data-sidebar-action="toggle"]').getAttribute("aria-expanded")) ===
+        "true",
+      "Escape closes only the Cloud prompt and keeps the narrow sidebar open",
+    );
+    assert(app.windows().length === 1, "Cancelling the Cloud prompt opens no remote window");
+    await win.keyboard.press("Escape");
+    await drawer.waitFor({ state: "hidden" });
+    await win.setViewportSize({ width: 1280, height: 820 });
+
+    await openCloudProjects(win);
+    await prompt.getByPlaceholder("https://cloud.example.com").waitFor();
+    assert(
+      (await prompt.getByPlaceholder("https://cloud.example.com").inputValue()) ===
+        `${fixture.cloudOrigin}/`,
+      "Last cloud address not restored",
+    );
+    await win.keyboard.press("Escape");
+    await prompt.waitFor({ state: "hidden" });
+
+    const settings = await openSettingsMenu(win);
+    await settings.getByRole("menuitem", { name: /^(切换语言|Switch language)$/ }).click();
+    await win
+      .getByRole("menu", { name: /^(切换语言|Switch language)$/ })
+      .getByRole("menuitemradio", { name: "English", exact: true })
+      .click();
+    await settings.waitFor({ state: "hidden" });
+    for (const width of [1280, 390]) {
+      await win.setViewportSize({ width, height: 760 });
+      const english = await openNewProject(win);
+      assert(
+        await english.chooser
+          .getByRole("button", { name: "This computer", exact: true })
+          .isVisible(),
+        "The local project choice follows the English UI language",
+      );
+      await english.chooser.getByRole("button", { name: "Cloud", exact: true }).click();
+      await english.chooser.getByLabel("Cloud service address", { exact: true }).waitFor();
+      assert(
+        await english.chooser
+          .getByRole("button", { name: "Connect and load projects", exact: true })
+          .isVisible(),
+        "The cloud form follows the English UI language",
+      );
+      await captureDialog(win, english.chooser, "cloud");
+      await win.keyboard.press("Escape");
+      await english.chooser.waitFor({ state: "hidden" });
+    }
+    assert(errors.length === 0 && cloudErrors.length === 0, "Renderer errors occurred");
+    guardReceipt = await fixture.assertGuards(app);
+    await closeApp();
+    app = await launchCodeShellElectron({
+      appDir,
+      home: isolated.home,
+      userDataDir: isolated.userDataDir,
+      mainEntry: fixture.mainEntry,
+      env: fixture.electronEnv,
+    });
+    electronChild = app.process();
+    ownedPids.add(electronChild.pid);
+    await fixture.assertGuards(app);
+    const cold = await findCodeShellWindow(app);
+    const status = await cold.evaluate(() => window.codeshell.cloudAccount.status());
+    assert(
+      status.state === "signed-in" && status.account.id === fixture.accountId,
+      "Cold native Main decrypts the same Account identity",
+    );
+    const coldCloud = (await openCloudProjects(cold)).chooser;
+    await coldCloud.getByRole("button", { name: "Connect and load projects", exact: true }).click();
+    await coldCloud.getByText("Cloud-only project", { exact: true }).waitFor();
+    await cold.evaluate(() => window.codeshell.cloudAccount.logout());
+    await coldCloud.getByRole("button", { name: "Sign in", exact: true }).waitFor();
+    assert(
+      (await cold.evaluate(() => window.codeshell.cloudAccount.status())).state === "signed-out",
+      "Root Account logout is acknowledged by the real Main IPC",
+    );
+    await fixture.assertGuards(app);
+    passed = true;
+  }
 } catch (error) {
-  console.error(error);
-  if (screenshotDir && win) await screenshot("failure").catch(() => {});
-  if (processLog) console.error(processLog);
-  process.exitCode = 1;
+  primaryError = error;
 } finally {
-  await app?.close().catch(() => {});
-  for (const socket of sockets) socket.terminate();
-  wss.close();
-  server.closeAllConnections();
-  await new Promise((resolve) => server.close(resolve));
-  await isolated.cleanup();
+  const failures = [];
+  try {
+    await closeApp();
+  } catch (error) {
+    failures.push(error);
+  }
+  let serverReceipt;
+  try {
+    serverReceipt = await fixture?.close();
+  } catch (error) {
+    failures.push(error);
+  }
+  if (passed && failures.length === 0 && serverReceipt) {
+    await isolated.cleanup();
+    console.log(
+      JSON.stringify({
+        passed: true,
+        nativeMain: !process.argv.includes("--server-only"),
+        nativeKeyring,
+        guardReceipt,
+        exitedProcesses,
+        started: serverReceipt.started,
+        stopped: serverReceipt.stopped,
+        redeemed: serverReceipt.redeemed,
+        sockets: serverReceipt.sockets,
+        listeners: serverReceipt.listeners,
+        runtime: "controlled",
+        account: "synthetic",
+        remotePage: "synthetic",
+      }),
+    );
+  } else console.error(`Cloud chooser state preserved for evidence/exit audit: ${isolated.home}`);
+  if (failures.length)
+    primaryError = new AggregateError(
+      [...(primaryError ? [primaryError] : []), ...failures],
+      "Cloud chooser cleanup was not fully acknowledged",
+      { cause: primaryError ?? failures[0] },
+    );
 }
+
+if (primaryError) throw primaryError;

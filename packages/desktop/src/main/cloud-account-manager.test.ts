@@ -26,6 +26,13 @@ function deferred<T>() {
   });
   return { promise, resolve };
 }
+async function waitForRequest(requests: CloudAccountRequest[], path?: string) {
+  const deadline = Date.now() + 1000;
+  while (!requests.some((request) => !path || request.path.endsWith(path))) {
+    if (Date.now() >= deadline) throw new Error("Expected fixture request did not start");
+    await new Promise((done) => setTimeout(done, 0));
+  }
+}
 function setup(
   initial?: SavedCloudAccount,
   transport?: CloudAccountTransport,
@@ -68,7 +75,7 @@ function setup(
     prepareGitHubLink,
     request: async (input) => {
       requests.push(input);
-      return transport ? transport(input) : {};
+      return transport ? transport(input) : input.path.endsWith("/logout") ? { ok: true } : {};
     },
     changed: (value) => events.push(value),
     retireRelay: async (identity) => {
@@ -138,6 +145,106 @@ function githubTransport(
   };
 }
 const settleConnection = () => new Promise((done) => setTimeout(done, 0));
+
+const emptyLinkView = { linkOrigin, connections: [], grants: [] };
+test("Link management sends only current root credential to exact account origin and projects public metadata", async () => {
+  const saved = grant();
+  const id = randomUUID();
+  const ctx = setup(saved, async (req) =>
+    req.method === "DELETE"
+      ? { revoked: true, kind: "connections", id, token: "private" }
+      : { ...emptyLinkView, token: "private", clients: ["private"] },
+  );
+  const identity = { origin, accountId: saved.account.id };
+  expect(await ctx.manager.manageLinks({ ...identity, action: "list" })).toEqual({
+    action: "list",
+    view: emptyLinkView,
+  });
+  expect(ctx.requests[0]).toMatchObject({
+    origin,
+    path: "/api/v1/account/links",
+    method: "GET",
+    token: saved.accessToken,
+  });
+  expect(
+    await ctx.manager.manageLinks({ ...identity, action: "revoke", kind: "connections", id }),
+  ).toEqual({ action: "revoke", revoked: true, kind: "connections", id });
+  expect(ctx.requests[1]).toMatchObject({
+    origin,
+    path: `/api/v1/account/links/connections/${id}`,
+    method: "DELETE",
+  });
+  expect(ctx.requests[1].body).toBeUndefined();
+  expect(ctx.writes()).toBe(0);
+  expect(ctx.launched).toHaveLength(0);
+});
+
+test("Link management rejects other service, account and device authority before any request", async () => {
+  for (const saved of [grant(), grant({ kind: "device", hostId: randomUUID() })]) {
+    const ctx = setup(saved);
+    for (const identity of [
+      { origin: "https://other.example", accountId: saved.account.id },
+      { origin, accountId: randomUUID() },
+      ...(saved.kind === "device" ? [{ origin, accountId: saved.account.id }] : []),
+    ])
+      await expect(ctx.manager.manageLinks({ ...identity, action: "list" })).rejects.toThrow();
+    expect(ctx.requests).toHaveLength(0);
+  }
+});
+
+test("Link management fences credential refresh before revocation when owner closes", async () => {
+  const saved = grant({ accessTokenExpiresAt: Date.now() - 1 });
+  const response = deferred<unknown>();
+  const ctx = setup(saved, async (req) => (req.path.endsWith("refresh") ? response.promise : {}));
+  let owned = true;
+  const action = ctx.manager.manageLinks(
+    { origin, accountId: saved.account.id, action: "revoke", kind: "grants", id: randomUUID() },
+    () => owned,
+  );
+  owned = false;
+  response.resolve(grant({ account: saved.account, sessionId: saved.sessionId }));
+  await expect(action).rejects.toThrow("取消");
+  expect(ctx.requests.map((req) => req.path)).toEqual(["/api/v1/account/refresh"]);
+});
+
+test("late Link view and acknowledgements are fenced by owner and account incarnation even on same-account relogin", async () => {
+  for (const action of ["list", "revoke"] as const) {
+    for (const invalidate of ["owner", "relogin"] as const) {
+      const saved = grant();
+      const response = deferred<unknown>();
+      const next = grant({ account: saved.account });
+      const id = randomUUID();
+      const ctx = setup(saved, async (req) =>
+        req.path.startsWith("/api/v1/account/links")
+          ? response.promise
+          : req.path.endsWith("login")
+            ? next
+            : { ok: true },
+      );
+      let owned = true;
+      const request = {
+        origin,
+        accountId: saved.account.id,
+        action,
+        ...(action === "revoke" ? { kind: "grants" as const, id } : {}),
+      } as Parameters<CloudAccountManager["manageLinks"]>[0];
+      const operation = ctx.manager.manageLinks(request, () => owned);
+      await settleConnection();
+      if (invalidate === "owner") owned = false;
+      else {
+        await ctx.manager.logout();
+        await ctx.manager.signIn("login", {
+          origin,
+          username: "alice",
+          password: "test-only-password",
+        });
+      }
+      response.resolve(action === "list" ? emptyLinkView : { revoked: true, kind: "grants", id });
+      await expect(operation).rejects.toThrow("取消");
+      if (invalidate === "relogin") expect(ctx.manager.status().account).toEqual(saved.account);
+    }
+  }
+});
 
 test("combined GitHub login saves only the account grant before opening independent Link consent", async () => {
   const next = grant();
@@ -383,6 +490,7 @@ test("capability discovery requires boolean registration and GitHub flags", asyn
     { registrationAllowed: "true", githubEnabled: true },
     { registrationAllowed: true, githubEnabled: 1 },
     { registrationAllowed: true, githubEnabled: null },
+    { registrationAllowed: true, githubEnabled: true, profileEnabled: "true" },
   ]) {
     const ctx = setup(undefined, async () => response);
     await expect(ctx.manager.capabilities(origin)).rejects.toThrow("无效的账号能力信息");
@@ -438,7 +546,9 @@ test("rotating refresh is singleflight, persisted before use and scoped to the s
 test("logout fences late refresh and login results, retiring only account-scoped relay identity", async () => {
   const old = grant({ accessTokenExpiresAt: Date.now() + 1000 });
   const response = deferred<unknown>();
-  const ctx = setup(old, async (input) => (input.path.endsWith("refresh") ? response.promise : {}));
+  const ctx = setup(old, async (input) =>
+    input.path.endsWith("refresh") ? response.promise : { ok: true },
+  );
   const pending = ctx.manager.getCredential(origin).catch(() => "cancelled");
   const logout = ctx.manager.logout();
   expect(ctx.manager.status().state).toBe("signed-out");
@@ -572,6 +682,28 @@ test("failed server revocation reports uncertainty after local logout; local cre
   expect(ctx.retired).toHaveLength(1);
 });
 
+test.each([{}, { ok: false }, { revoked: false }, { revoked: true }, { ok: "true" }, null, []])(
+  "Account logout does not confirm an invalid revocation acknowledgement: %j",
+  async (ack) => {
+    const old = grant();
+    const ctx = setup(old, async () => ack);
+    await expect(ctx.manager.logout()).rejects.toThrow("服务端未确认撤销");
+    expect(ctx.saved()).toBeUndefined();
+    expect(ctx.manager.status().state).toBe("signed-out");
+    expect(ctx.retired).toEqual([{ origin, accountId: old.account.id }]);
+    expect(ctx.requests).toMatchObject([
+      { origin, path: "/api/v1/account/logout", token: old.accessToken, body: {} },
+    ]);
+  },
+);
+
+test("Account logout accepts the real service revocation acknowledgement", async () => {
+  const ctx = setup(grant(), async () => ({ ok: true }));
+  await ctx.manager.logout();
+  expect(ctx.saved()).toBeUndefined();
+  expect(ctx.manager.status().state).toBe("signed-out");
+});
+
 test("cancelling GitHub login aborts the private polling proof and cannot accept a late grant", async () => {
   const receipt = token();
   const response = deferred<unknown>();
@@ -630,4 +762,220 @@ test("refresh persistence and relay cleanup failures still revoke the rotated ro
     [next.accessToken],
   );
   await expect(ctx.manager.getCredential(origin)).rejects.toThrow("登录");
+});
+
+test("profile edits keep the same session, persist the normalized nickname, and expose no server fields", async () => {
+  const old = grant();
+  const ctx = setup(old, async () => ({
+    account: {
+      ...old.account,
+      username: "alice-new",
+      displayName: "é 👩‍💻",
+      accessToken: "private-response-value",
+    },
+  }));
+  const result = await ctx.manager.profile({
+    origin,
+    accountId: old.account.id,
+    action: "update",
+    username: " Alice-New ",
+    displayName: " e\u0301 👩‍💻 ",
+  });
+  const request = ctx.requests[0];
+  expect(request.method).toBe("PATCH");
+  expect(request.path).toBe("/api/v1/account/profile");
+  expect(request.token).toBe(old.accessToken);
+  expect(request.body).toEqual({ username: "alice-new", displayName: "é 👩‍💻" });
+  expect(result.account).toEqual({
+    id: old.account.id,
+    username: "alice-new",
+    displayName: "é 👩‍💻",
+  });
+  expect(ctx.saved()).toEqual({ ...old, account: result.account });
+  expect(ctx.retired).toHaveLength(0);
+  expect(JSON.stringify(ctx.events)).not.toContain("private-response-value");
+  expect(JSON.stringify(ctx.events)).not.toContain(old.accessToken);
+});
+
+test("profile calls reject cross-account authority and invalid names before any request", async () => {
+  const old = grant();
+  const ctx = setup(old);
+  for (const identity of [
+    { origin: "https://other.example", accountId: old.account.id },
+    { origin, accountId: randomUUID() },
+  ]) {
+    await expect(ctx.manager.profile({ ...identity, action: "read" })).rejects.toThrow();
+  }
+  for (const displayName of [
+    "",
+    " ",
+    "a\u0000b",
+    "a\u202eb",
+    "a\u061cb",
+    "\nAlice",
+    "\ufeffAlice",
+    "a\u200bb",
+    "\ud800",
+    "界".repeat(65),
+  ]) {
+    await expect(
+      ctx.manager.profile({ origin, accountId: old.account.id, action: "update", displayName }),
+    ).rejects.toThrow();
+  }
+  for (const username of ["ab", "中文名", "a b", "a".repeat(65)]) {
+    await expect(
+      ctx.manager.profile({ origin, accountId: old.account.id, action: "update", username }),
+    ).rejects.toThrow();
+  }
+  expect(ctx.requests).toHaveLength(0);
+  expect(ctx.writes()).toBe(0);
+});
+
+test("profile read validates the returned account and saving failure never publishes success", async () => {
+  const old = grant();
+  for (const account of [
+    { ...old.account, id: randomUUID(), displayName: "Alice" },
+    { ...old.account, displayName: "bad\u2066name" },
+    { ...old.account, displayName: "" },
+  ]) {
+    const ctx = setup(old, async () => ({ account }));
+    await expect(
+      ctx.manager.profile({ origin, accountId: old.account.id, action: "read" }),
+    ).rejects.toThrow();
+    expect(ctx.saved()).toEqual(old);
+    expect(ctx.writes()).toBe(0);
+  }
+  const ctx = setup(old, async () => ({
+    account: { ...old.account, displayName: "New nickname" },
+  }));
+  ctx.failSave();
+  await expect(
+    ctx.manager.profile({
+      origin,
+      accountId: old.account.id,
+      action: "update",
+      displayName: "New nickname",
+    }),
+  ).rejects.toThrow("无法保存到本机");
+  expect(ctx.saved()).toEqual(old);
+  expect(ctx.events).toHaveLength(0);
+});
+
+test("logout, session replacement and owner closure fence a late profile response", async () => {
+  for (const action of ["logout", "replace", "same-account", "owner"] as const) {
+    const old = grant();
+    const next = grant({
+      account: {
+        id: action === "same-account" ? old.account.id : randomUUID(),
+        username: "bob",
+        displayName: "Bob",
+      },
+    });
+    let authorized = true;
+    const response = deferred<unknown>();
+    const ctx = setup(old, async (request) =>
+      request.path.endsWith("profile")
+        ? response.promise
+        : request.path.endsWith("login")
+          ? next
+          : request.path.endsWith("logout")
+            ? { ok: true }
+            : {},
+    );
+    const result = ctx.manager
+      .profile({ origin, accountId: old.account.id, action: "read" }, () => authorized)
+      .catch((error) => error);
+    await waitForRequest(ctx.requests, "profile");
+    if (action === "logout") await ctx.manager.logout();
+    else if (action === "owner") authorized = false;
+    else
+      await ctx.manager.signIn("login", {
+        origin,
+        username: "bob",
+        password: "another fixture password",
+      });
+    response.resolve({ account: { ...old.account, displayName: "Late nickname" } });
+    expect((await result).message).toContain("取消");
+    expect(ctx.saved()?.account).toEqual(
+      action === "logout" ? undefined : action === "owner" ? old.account : next.account,
+    );
+  }
+});
+
+test("a profile read started before an edit cannot restore its older label", async () => {
+  const old = grant();
+  const response = deferred<unknown>();
+  const ctx = setup(old, async (request) =>
+    request.method === "GET"
+      ? response.promise
+      : { account: { ...old.account, displayName: "New nickname" } },
+  );
+  const reading = ctx.manager
+    .profile({ origin, accountId: old.account.id, action: "read" })
+    .catch((error) => error);
+  await waitForRequest(ctx.requests);
+  await ctx.manager.profile({
+    origin,
+    accountId: old.account.id,
+    action: "update",
+    displayName: "New nickname",
+  });
+  response.resolve({ account: { ...old.account, displayName: "Old nickname" } });
+  expect((await reading).message).toContain("取消");
+  expect(ctx.saved()?.account.displayName).toBe("New nickname");
+});
+
+test("a refresh already in flight preserves a nickname saved after it started", async () => {
+  const old = grant();
+  const profile = deferred<unknown>();
+  const refresh = deferred<unknown>();
+  const ctx = setup(old, async (request) =>
+    request.path.endsWith("profile") ? profile.promise : refresh.promise,
+  );
+  const editing = ctx.manager.profile({
+    origin,
+    accountId: old.account.id,
+    action: "update",
+    displayName: "New nickname",
+  });
+  await waitForRequest(ctx.requests);
+  old.accessTokenExpiresAt = Date.now() + 1000;
+  const refreshing = ctx.manager.getCredential(origin);
+  const rotated = grant({
+    account: { ...old.account, displayName: "Old nickname" },
+    sessionId: old.sessionId,
+  });
+  profile.resolve({ account: { ...old.account, displayName: "New nickname" } });
+  await editing;
+  refresh.resolve(rotated);
+  expect(await refreshing).toBe(rotated.accessToken);
+  expect(ctx.saved()?.account.displayName).toBe("New nickname");
+  expect(ctx.saved()?.refreshToken).toBe(rotated.refreshToken);
+});
+
+test("another window cannot overlap or cancel an active profile edit", async () => {
+  const old = grant();
+  const response = deferred<unknown>();
+  const ctx = setup(old, async () => response.promise);
+  const editing = ctx.manager.profile({
+    origin,
+    accountId: old.account.id,
+    action: "update",
+    displayName: "First nickname",
+  });
+  await waitForRequest(ctx.requests);
+  for (const action of ["read", "update"] as const) {
+    await expect(
+      ctx.manager.profile({
+        origin,
+        accountId: old.account.id,
+        action,
+        ...(action === "update" ? { displayName: "Second nickname" } : {}),
+      }),
+    ).rejects.toThrow("正在保存");
+  }
+  expect(ctx.requests).toHaveLength(1);
+  response.resolve({ account: { ...old.account, displayName: "First nickname" } });
+  await editing;
+  expect(ctx.saved()?.account.displayName).toBe("First nickname");
 });

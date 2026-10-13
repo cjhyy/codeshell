@@ -103,6 +103,178 @@ afterEach(() => {
   visibilityState = "visible";
 });
 
+describe("useRemoteApp notice lifetime", () => {
+  function trackNoticeTimers() {
+    const originalSet = globalThis.setTimeout;
+    const originalClear = globalThis.clearTimeout;
+    const records: Array<{
+      handle: ReturnType<typeof setTimeout>;
+      callback: () => void;
+      cancelled: boolean;
+      fired: number;
+    }> = [];
+    const restoreSet = defineTestProperty(globalThis, "setTimeout", {
+      value: (callback: (...args: unknown[]) => void, delay?: number, ...args: unknown[]) => {
+        const handle = originalSet(callback, delay, ...args);
+        if (delay === 5000)
+          records.push({ handle, callback: () => callback(...args), cancelled: false, fired: 0 });
+        return handle;
+      },
+      writable: true,
+    });
+    const restoreClear = defineTestProperty(globalThis, "clearTimeout", {
+      value: (handle: ReturnType<typeof setTimeout>) => {
+        const record = records.find((entry) => entry.handle === handle);
+        if (record) record.cancelled = true;
+        return originalClear(handle);
+      },
+      writable: true,
+    });
+    return {
+      records,
+      expire(record: (typeof records)[number], alreadyQueued = false) {
+        originalClear(record.handle);
+        if (!record.cancelled || alreadyQueued) {
+          record.fired++;
+          record.callback();
+        }
+      },
+      restore() {
+        for (const record of records) originalClear(record.handle);
+        restoreClear();
+        restoreSet();
+      },
+    };
+  }
+
+  async function connectNoticeFixture() {
+    setupBrowser();
+    let fetches = 0;
+    const restoreFetch = defineTestProperty(window, "fetch", {
+      value: async () => {
+        fetches++;
+        throw new Error("Notice lifetime tests must not make an HTTP request");
+      },
+      writable: true,
+    });
+    let hook: Awaited<ReturnType<typeof renderHook<ReturnType<typeof useRemoteApp>>>> | undefined;
+    try {
+      hook = await renderHook(() => useRemoteApp());
+      const ws = FakeWebSocket.instances[0]!;
+      await act(async () => {
+        ws.open();
+        ws.message({ type: "auth.ok", device: { id: "device-1", name: "Phone" } });
+        await flushMicrotasks();
+      });
+      return { hook, ws, restoreFetch, fetches: () => fetches };
+    } catch (error) {
+      try {
+        await hook?.unmount();
+      } finally {
+        restoreFetch();
+      }
+      throw error;
+    }
+  }
+
+  for (const mode of ["cancel", "queued", "mounted"] as const) {
+    test(`a real notice ${mode === "mounted" ? "expires while mounted" : mode === "queued" ? "queued expiry is inert after unmount" : "timer is cancelled on unmount"}`, async () => {
+      const timers = trackNoticeTimers();
+      let fixture: Awaited<ReturnType<typeof connectNoticeFixture>> | undefined;
+      try {
+        fixture = await connectNoticeFixture();
+        const { hook, ws } = fixture;
+        await act(async () => {
+          ws.message({ type: "error", message: "fixture notice" });
+          await flushMicrotasks();
+        });
+        expect(hook.result.current.notice).toBe("fixture notice");
+        expect(timers.records).toHaveLength(1);
+        const timer = timers.records[0]!;
+        if (mode === "mounted") {
+          await act(async () => {
+            timers.expire(timer);
+            await flushMicrotasks();
+          });
+          expect(timer.fired).toBe(1);
+          expect(hook.result.current.notice).toBeUndefined();
+        } else {
+          await hook.unmount();
+          if (mode === "cancel") {
+            expect(timer.cancelled).toBe(true);
+            timers.expire(timer);
+            expect(timer.fired).toBe(0);
+          } else {
+            // A callback already queued before clearTimeout must remain inert
+            // under the same native-host boundary used by model-probe.test.ts.
+            const descriptor = Object.getOwnPropertyDescriptor(globalThis, "window")!;
+            try {
+              Reflect.deleteProperty(globalThis, "window");
+              expect(() => timers.expire(timer, true)).not.toThrow();
+            } finally {
+              Object.defineProperty(globalThis, "window", descriptor);
+            }
+            expect(timer.fired).toBe(1);
+          }
+        }
+        expect(fixture.fetches()).toBe(0);
+      } finally {
+        try {
+          await fixture?.hook.unmount();
+        } finally {
+          fixture?.restoreFetch();
+          timers.restore();
+        }
+      }
+    });
+  }
+
+  for (const pending of ["ack", "upload"] as const) {
+    test(`unmount rejection of a real ${pending} waiter cannot create another notice timer`, async () => {
+      const timers = trackNoticeTimers();
+      let fixture: Awaited<ReturnType<typeof connectNoticeFixture>> | undefined;
+      let sent: Promise<boolean> | undefined;
+      try {
+        fixture = await connectNoticeFixture();
+        const { hook, ws } = fixture;
+        await act(async () => {
+          sent = hook.result.current.sendChat({
+            text: pending === "ack" ? "pending message" : "",
+            attachments:
+              pending === "upload"
+                ? [
+                    {
+                      clientId: "pending-image",
+                      file: new File([new Uint8Array(256 * 1024 + 1)], "pending.png", {
+                        type: "image/png",
+                      }),
+                    },
+                  ]
+                : [],
+          });
+          await flushMicrotasks();
+        });
+        expect(ws.sent.map((line) => JSON.parse(line)).map((event) => event.type)).toContain(
+          pending === "ack" ? "chat.send" : "attachment.upload.begin",
+        );
+        expect(timers.records).toHaveLength(0);
+        await hook.unmount();
+        expect(await sent).toBe(false);
+        expect(timers.records).toHaveLength(0);
+        expect(fixture.fetches()).toBe(0);
+      } finally {
+        try {
+          await fixture?.hook.unmount();
+          await sent;
+        } finally {
+          fixture?.restoreFetch();
+          timers.restore();
+        }
+      }
+    });
+  }
+});
+
 describe("useRemoteApp Main process epochs", () => {
   async function connectedSession(oldEpoch?: string, seedTool = false) {
     setupBrowser();
@@ -1244,6 +1416,9 @@ describe("useRemoteApp cc transcript streaming", () => {
       type: "room.history",
       roomId: "room-1",
       sinceSeq: 5,
+      page: true,
+      requestId: "room-history:1",
+      limit: 200,
     });
 
     await act(async () => {
@@ -1252,12 +1427,49 @@ describe("useRemoteApp cc transcript streaming", () => {
         roomId: "room-1",
         messages: [{ seq: 6, from: "agent", type: "text", text: "streamed on phone" }],
         latestSeq: 6,
+        requestId: "room-history:1",
+        page: { snapshotId: "snapshot", throughSeq: 7, complete: false, nextCursor: "next-page" },
+      });
+      await flushMicrotasks();
+    });
+    expect(hook.result.current.chat.items).not.toMatchObject([{ text: "streamed on phone" }]);
+    expect(ws.sent.map((payload) => JSON.parse(payload))).toContainEqual({
+      type: "room.history",
+      roomId: "room-1",
+      page: true,
+      cursor: "next-page",
+      limit: 200,
+      requestId: "room-history:1",
+    });
+    await act(async () => {
+      ws.message({
+        type: "room.message",
+        roomId: "room-1",
+        msg: { seq: 8, from: "agent", type: "text", text: "buffered live" },
+      });
+      ws.message({
+        type: "room.history.ok",
+        roomId: "room-1",
+        requestId: "stale-request",
+        messages: [{ seq: 7, from: "agent", type: "text", text: "stale must not apply" }],
+        latestSeq: 7,
+        page: { snapshotId: "snapshot", throughSeq: 7, complete: true },
+      });
+      ws.message({
+        type: "room.history.ok",
+        roomId: "room-1",
+        requestId: "room-history:1",
+        messages: [{ seq: 7, from: "agent", type: "text", text: "second page" }],
+        latestSeq: 7,
+        page: { snapshotId: "snapshot", throughSeq: 7, complete: true },
       });
       await flushMicrotasks();
     });
     expect(hook.result.current.chat.items).toMatchObject([
       { kind: "user", text: "initial" },
       { kind: "assistant", text: "streamed on phone", done: true },
+      { kind: "assistant", text: "second page", done: true },
+      { kind: "assistant", text: "buffered live", done: true },
     ]);
 
     await act(async () => {
@@ -1271,6 +1483,94 @@ describe("useRemoteApp cc transcript streaming", () => {
 
     await hook.unmount();
   });
+
+  for (const failure of ["recovery", "overflow"] as const)
+    test(`a ${failure} barrier cannot be bypassed by an in-flight final Room page`, async () => {
+      setupBrowser();
+      const hook = await renderHook(() => useRemoteApp());
+      const ws = FakeWebSocket.instances[0]!;
+      try {
+        await act(async () => {
+          ws.open();
+          ws.message({ type: "auth.ok", device: { id: "device-1", name: "Phone" } });
+          ws.message({ type: "room.projects.ok", projects: [{ path: "/repo", name: "repo" }] });
+          await flushMicrotasks();
+        });
+        await act(async () => {
+          hook.result.current.selectProject("/repo");
+          hook.result.current.openCcSession("thread-1", "/repo", "default");
+          await flushMicrotasks();
+        });
+        await act(async () => {
+          ws.message({
+            type: "ccRoom.opened",
+            roomId: "room-1",
+            sessionId: "thread-1",
+            status: "running",
+          });
+          ws.message({
+            type: "ccRoom.transcriptSubscribed",
+            roomId: "room-1",
+            sessionId: "thread-1",
+            active: true,
+            messages: [{ role: "user", text: "visible-before-barrier" }],
+            hasMore: false,
+            totalCount: 1,
+            roomCursor: 5,
+          });
+          await flushMicrotasks();
+        });
+        await act(async () => {
+          ws.message({
+            type: "room.error",
+            roomId: "room-1",
+            requestId: "stale",
+            message: "stale-error-must-not-apply",
+          });
+          ws.message({
+            type: "room.history.ok",
+            roomId: "room-1",
+            requestId: "room-history:1",
+            messages: [{ seq: 6, from: "agent", type: "text", text: "pending-first-page" }],
+            latestSeq: 7,
+            page: { snapshotId: "frozen", throughSeq: 7, complete: false, nextCursor: "next" },
+          });
+          if (failure === "recovery")
+            ws.message({
+              type: "room.recovery",
+              roomId: "room-1",
+              message: "prefix rewrite requires recovery",
+            });
+          else
+            for (let n = 0; n <= 10000; n++)
+              ws.message({
+                type: "room.message",
+                roomId: "room-1",
+                msg: { seq: n + 8, from: "agent", type: "text", text: "pending-live" },
+              });
+          ws.message({
+            type: "room.history.ok",
+            roomId: "room-1",
+            requestId: "room-history:1",
+            messages: [{ seq: 7, from: "agent", type: "text", text: "must-not-commit-final-page" }],
+            latestSeq: 7,
+            page: { snapshotId: "frozen", throughSeq: 7, complete: true },
+          });
+          await flushMicrotasks();
+        });
+        expect(hook.result.current.chat.items).toMatchObject([
+          { kind: "user", text: "visible-before-barrier" },
+        ]);
+        expect(hook.result.current.chat.items).toHaveLength(1);
+        expect(hook.result.current.loading.roomHistory).toBe(false);
+        expect(hook.result.current.notice).not.toContain("stale-error");
+        expect(hook.result.current.notice).toContain(
+          failure === "recovery" ? "requires recovery" : "exceeds its limit",
+        );
+      } finally {
+        await hook.unmount();
+      }
+    });
 
   test("opening a second CC room unsubscribes the previous transcript before replacing its ref", async () => {
     setupBrowser();

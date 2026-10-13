@@ -7,10 +7,8 @@
  * user model settings are loaded. Cleanup only touches this installation's labels.
  */
 import assert from "node:assert/strict";
-import { spawn } from "node:child_process";
 import { createHash } from "node:crypto";
 import { once } from "node:events";
-import { createRequire } from "node:module";
 import {
   existsSync,
   mkdirSync,
@@ -23,6 +21,17 @@ import {
 import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
+import {
+  summarizeContainerLogs,
+  summarizeFailure,
+  summarizeRpc,
+  summarizeSmokeProgress,
+  waitForRunApproval,
+} from "./smoke-project-diagnostics.mjs";
+import { nextProjectFixtureResponse } from "./smoke-project-model-fixture.mjs";
+import { createDockerCandidateFixture } from "./docker-candidate-setup.mjs";
+import { createDockerBrowserGuard } from "./docker-candidate-browser-guard.mjs";
+import { downloadFixtureServerSource } from "./smoke-cloud-download.mjs";
 
 const root = resolve(
   process.env.CODESHELL_SMOKE_ROOT ?? dirname(fileURLToPath(import.meta.url)) + "/..",
@@ -74,7 +83,7 @@ if (downloadFixtureIndex >= 0 && (!downloadFixture || (!candidatePanels && !down
   throw new Error("--download-fixture requires a fixture path and a Download package");
 assert.ok(existsSync(entry), "Build the server first: bun run build:server");
 assert.ok(/^[A-Za-z0-9][A-Za-z0-9._/:@-]{0,255}$/.test(image), "Invalid image name");
-const { WebSocket } = createRequire(join(serverRoot, "package.json"))("ws");
+let WebSocket;
 const scratch = realpathSync(mkdtempSync(join(tmpdir(), "codeshell-project-smoke-")));
 const dataDir = join(scratch, "data");
 const isolatedHome = join(scratch, "home");
@@ -101,8 +110,13 @@ let serverUrl;
 let cookie;
 let logs = "";
 let success = false;
-let dockerEnv;
-let lastRpc;
+let primaryFailure;
+let failed = false;
+const cleanupFailures = [];
+let guardedFixture;
+let browserGuard;
+let smokeStage = "initializing";
+const rpcClients = new Map();
 
 const pause = (ms) => new Promise((done) => setTimeout(done, ms));
 async function waitUntil(check, description, timeout = 60_000) {
@@ -115,28 +129,10 @@ async function waitUntil(check, description, timeout = 60_000) {
   throw new Error(`Timed out: ${description}`);
 }
 
-function run(command, args, { input, env = dockerEnv, timeout = 30_000 } = {}) {
-  return new Promise((done, fail) => {
-    const proc = spawn(command, args, { env, stdio: ["pipe", "pipe", "pipe"] });
-    let stdout = "";
-    let stderr = "";
-    const timer = setTimeout(() => proc.kill("SIGKILL"), timeout);
-    proc.stdout.on("data", (data) => (stdout = (stdout + data).slice(-2_000_000)));
-    proc.stderr.on("data", (data) => (stderr = (stderr + data).slice(-20_000)));
-    proc.once("error", (error) => {
-      clearTimeout(timer);
-      fail(error);
-    });
-    proc.once("close", (code) => {
-      clearTimeout(timer);
-      if (code === 0) done(stdout.trim());
-      else fail(new Error(`${command} ${args.slice(0, 2).join(" ")} failed (${code}): ${stderr}`));
-    });
-    proc.stdin.on("error", () => {});
-    proc.stdin.end(input);
-  });
-}
-const docker = (args, options) => run("docker", args, options);
+const docker = (args, options) => {
+  if (!guardedFixture) throw new Error("Docker candidate guards are not initialized");
+  return guardedFixture.docker(args, options);
+};
 
 async function request(path, { method = "GET", body, anonymous = false, origin = serverUrl } = {}) {
   return fetch(serverUrl + path, {
@@ -212,7 +208,7 @@ class RpcClient {
       .join("");
   }
 }
-async function connect(projectId) {
+async function connect(projectId, label) {
   const ws = new WebSocket(`${serverUrl.replace("http:", "ws:")}/p/${projectId}/ws`, {
     headers: { cookie, origin: serverUrl },
     handshakeTimeout: 20_000,
@@ -220,12 +216,12 @@ async function connect(projectId) {
   sockets.add(ws);
   const rpc = new RpcClient(ws);
   await once(ws, "open");
-  lastRpc = rpc;
+  rpcClients.set(label, rpc);
   return rpc;
 }
 
 // Serialized into the container. Its only credential and endpoint are synthetic.
-async function fixtureModel(realSpeech) {
+async function fixtureModel(realSpeech, nextProjectFixtureResponse) {
   const { createServer } = await import("node:http");
   const { appendFileSync, writeFileSync } = await import("node:fs");
   const assert = (await import("node:assert/strict")).default;
@@ -286,12 +282,6 @@ async function fixtureModel(realSpeech) {
       for await (const chunk of req) chunks.push(chunk);
       const body = JSON.parse(Buffer.concat(chunks).toString());
       appendFileSync("/workspace/model-requests.jsonl", JSON.stringify(body) + "\n");
-      const messages = body.messages ?? [];
-      const userIndex = messages.findLastIndex(
-        (m) => m.role === "user" && JSON.stringify(m.content).includes("SMOKE_"),
-      );
-      const task = JSON.stringify(messages[userIndex]?.content ?? "");
-      const toolResults = messages.slice(userIndex).filter((m) => m.role === "tool");
       res.writeHead(200, { "content-type": "text/event-stream" });
       const frame = (delta, finish_reason = null) =>
         res.write(
@@ -303,52 +293,9 @@ async function fixtureModel(realSpeech) {
             choices: [{ index: 0, delta, finish_reason }],
           })}\n\n`,
         );
-      const independent = task.includes("SMOKE_PANEL_RW");
-      const readWrite = independent || task.includes("SMOKE_MAIN_RW");
-      if (readWrite && body.tools?.length && toolResults.length < 2) {
-        const reading = toolResults.length === 0;
-        if (!reading)
-          assert.ok(
-            JSON.stringify(toolResults).includes(
-              independent ? "written by main agent after Read" : "written by panel process",
-            ),
-            "The real Read must contain the previous writer's proof",
-          );
-        const name = reading ? "Read" : "Write";
-        assert.ok(body.tools.some((tool) => tool.function.name === name));
-        frame({
-          role: "assistant",
-          tool_calls: [
-            {
-              index: 0,
-              id: `smoke-${independent ? "panel" : "main"}-${name}`,
-              type: "function",
-              function: {
-                name,
-                arguments: JSON.stringify({
-                  file_path: "/workspace/downloads/shared-proof.txt",
-                  ...(!reading
-                    ? {
-                        content: independent
-                          ? "written by independent panel task after Read\n"
-                          : "written by main agent after Read\n",
-                      }
-                    : {}),
-                }),
-              },
-            },
-          ],
-        });
-        frame({}, "tool_calls");
-      } else {
-        frame({
-          role: "assistant",
-          content: readWrite
-            ? "Shared file Read and Write completed."
-            : "Isolated project model replied.",
-        });
-        frame({}, "stop");
-      }
+      const step = nextProjectFixtureResponse(body);
+      frame(step.delta);
+      frame({}, step.finishReason);
       res.end("data: [DONE]\n\n");
     })().catch((error) => {
       appendFileSync("/workspace/model-errors.log", String(error.stack ?? error) + "\n");
@@ -360,7 +307,7 @@ async function fixtureModel(realSpeech) {
 
 async function installFixture(container) {
   if (speechFixture) await installSpeechFixture(docker, container, speechFixture);
-  const modelSource = `(${fixtureModel.toString()})(${!!speechFixture}).catch(error => { console.error(error); process.exit(1); });`;
+  const modelSource = fixtureModelSource();
   await docker(["exec", "-i", container, "node", "--input-type=module"], {
     input: `
     import { mkdirSync, writeFileSync, openSync } from "node:fs";
@@ -413,6 +360,9 @@ async function installFixture(container) {
     "container model fixture",
   );
 }
+function fixtureModelSource() {
+  return `(${fixtureModel.toString()})(${!!speechFixture},(${nextProjectFixtureResponse.toString()})).catch(error => { console.error(error); process.exit(1); });`;
+}
 
 function panelHarness(projectId, grant) {
   const base = `/p/${projectId}/api/v1/panels/runtime/${grant.instanceId}`;
@@ -451,7 +401,12 @@ function panelHarness(projectId, grant) {
 }
 
 async function stopControl() {
-  if (!child || child.exitCode !== null || child.signalCode !== null) return;
+  if (!child) return;
+  if (child.exitCode !== null || child.signalCode !== null) {
+    assert.equal(child.exitCode, 0, "Exited Control must have confirmed successful shutdown");
+    assert.equal(child.signalCode, null);
+    return;
+  }
   const exited = once(child, "exit");
   const timer = setTimeout(() => child.kill("SIGKILL"), 25_000);
   child.kill("SIGTERM");
@@ -467,93 +422,92 @@ async function stopControl() {
 async function cleanupDocker() {
   if (!installationId) return;
   assert.match(installationId, /^[a-f0-9-]{36}$/);
+  const failures = [];
   for (const kind of ["container", "network", "volume"]) {
-    const ids = (
-      await docker([
-        kind,
-        "ls",
-        "-q",
-        ...(kind === "container" ? ["-a"] : []),
-        "--filter",
-        `label=${label}=${installationId}`,
-      ])
-    )
-      .split(/\s+/)
-      .filter(Boolean);
+    let ids;
+    try {
+      ids = (
+        await docker([
+          kind,
+          "ls",
+          "-q",
+          ...(kind === "container" ? ["-a"] : []),
+          "--filter",
+          `label=${label}=${installationId}`,
+        ])
+      )
+        .split(/\s+/)
+        .filter(Boolean);
+    } catch (error) {
+      failures.push(error);
+      continue;
+    }
     for (const id of ids) {
-      const [resource] = JSON.parse(await docker([kind, "inspect", id]));
-      assert.equal(
-        (resource.Config?.Labels ?? resource.Labels)?.[label],
-        installationId,
-        "Cleanup requires the exact fresh installation label",
-      );
-      await docker([kind, "rm", ...(kind === "container" ? ["-f"] : []), id]);
+      try {
+        const [resource] = JSON.parse(await docker([kind, "inspect", id]));
+        assert.equal(
+          (resource.Config?.Labels ?? resource.Labels)?.[label],
+          installationId,
+          "Cleanup requires the exact fresh installation label",
+        );
+        await docker([kind, "rm", ...(kind === "container" ? ["-f"] : []), id]);
+      } catch (error) {
+        failures.push(error);
+      }
     }
   }
+  if (failures.length)
+    throw new AggregateError(failures, "Owned Docker resources did not all confirm cleanup");
 }
 
 try {
-  mkdirSync(isolatedHome, { recursive: true });
-  // Resolve only the Docker transport. No Docker registry or model credentials
-  // are copied into the isolated control process or project containers.
-  const endpoint =
-    process.env.DOCKER_HOST ||
-    (await run("docker", ["context", "inspect", "--format", "{{.Endpoints.docker.Host}}"], {
-      env: process.env,
-    }));
-  assert.ok(
-    endpoint.startsWith("unix://") || endpoint.startsWith("npipe://"),
-    "This smoke requires a local Docker daemon",
-  );
-  const env = {};
-  for (const key of [
-    "PATH",
-    "Path",
-    "SystemRoot",
-    "COMSPEC",
-    "PATHEXT",
-    "LANG",
-    "LC_ALL",
-    "TMPDIR",
-    "TMP",
-    "TEMP",
-  ])
-    if (process.env[key]) env[key] = process.env[key];
-  Object.assign(env, {
-    HOME: isolatedHome,
-    USERPROFILE: isolatedHome,
-    CODE_SHELL_HOME: join(isolatedHome, ".code-shell"),
-    XDG_CONFIG_HOME: join(isolatedHome, ".config"),
-    XDG_DATA_HOME: join(isolatedHome, ".local/share"),
-    NODE_ENV: "production",
-    DISABLE_AUTOUPDATER: "1",
-    DOCKER_HOST: endpoint,
-  });
-  dockerEnv = env;
-  await docker(["image", "inspect", image]);
-  child = spawn(
-    process.execPath,
-    [
-      entry,
-      "--auth",
-      "hub",
-      "--runtime",
-      "docker",
-      "--runtime-image",
-      image,
-      ...(seccompProfile ? ["--runtime-seccomp-profile", resolve(seccompProfile)] : []),
-      "--host",
-      "127.0.0.1",
-      "--port",
-      "0",
-      "--data-dir",
-      dataDir,
+  const controllerArgs = [
+    entry,
+    "--auth",
+    "hub",
+    "--runtime",
+    "docker",
+    "--runtime-image",
+    image,
+    ...(seccompProfile ? ["--runtime-seccomp-profile", resolve(seccompProfile)] : []),
+    "--host",
+    "127.0.0.1",
+    "--port",
+    "0",
+    "--data-dir",
+    dataDir,
+  ];
+  smokeStage = "create-fixture";
+  guardedFixture = await createDockerCandidateFixture({
+    scratch,
+    home: isolatedHome,
+    dataDir,
+    root,
+    entry,
+    controllerArgs,
+    image,
+    containerCore,
+    stockWebSocketAnchor: join(serverRoot, "package.json"),
+    seccompPath: seccompProfile ? resolve(seccompProfile) : undefined,
+    panelRoot: candidatePanels ?? downloadPanel,
+    fixtureHashes: [nativeToolSource, fixtureModelSource(), downloadFixtureServerSource].map(
+      (source) => createHash("sha256").update(source).digest("hex"),
+    ),
+    inlinePrograms: [
+      `require("node:fs").writeFileSync("shared-proof.txt", ${JSON.stringify(processProof)}); process.stdout.write("panel process finished")`,
     ],
-    { cwd: scratch, env, stdio: ["ignore", "pipe", "pipe"] },
-  );
+    speechFixture,
+    downloadFixture,
+    browserRequired: !!(candidatePanels || downloadPanel),
+    videoRequired: !!candidatePanels && ["all", "video"].includes(candidateBusiness),
+  });
+  WebSocket = guardedFixture.WebSocket;
+  smokeStage = "spawn-controller";
+  child = guardedFixture.spawnController();
   child.on("error", (error) => (logs += String(error)));
   for (const stream of [child.stdout, child.stderr])
     stream.on("data", (data) => (logs = (logs + data).slice(-60_000)));
+  smokeStage = "wait-controller";
   await waitUntil(
     () => {
       if (child.exitCode !== null)
@@ -564,9 +518,20 @@ try {
     "Docker control CLI startup",
     25_000,
   );
+  smokeStage = "verify-browser-authority";
+  browserGuard = await createDockerBrowserGuard({
+    child,
+    origin: serverUrl,
+    policyPath: guardedFixture.policyPath,
+    policyHash: guardedFixture.policyHash,
+  });
+  smokeStage = "authorize-controller-origin";
+  guardedFixture.allowControllerOrigin(serverUrl);
+  smokeStage = "read-installation";
   installationId = JSON.parse(
     readFileSync(join(dataDir, "project-control/registry.json"), "utf8"),
   ).installationId;
+  smokeStage = "setup-admin";
   const login = await request("/api/v1/auth/setup", {
     method: "POST",
     anonymous: true,
@@ -575,6 +540,7 @@ try {
   assert.equal(login.status, 200, await login.text());
   cookie = login.headers.get("set-cookie")?.split(";", 1)[0];
   assert.ok(cookie?.startsWith("cs_hub_session="));
+  smokeStage = "verify-health";
   assert.deepEqual(await json("/health"), {
     status: "ok",
     mode: "project-sandbox",
@@ -582,15 +548,20 @@ try {
   });
   const create = async (name) =>
     (await json("/api/v1/projects", { method: "POST", body: { name } }, 201)).project;
+  smokeStage = "create-project-a";
   const a = await create("Sandbox smoke A");
+  smokeStage = "create-project-b";
   const b = await create("Sandbox smoke B");
   const start = async (id) =>
     (await json(`/api/v1/projects/${id}/start`, { method: "POST", body: {} })).project;
+  smokeStage = "start-project-a";
   const runningA = await start(a.id);
+  smokeStage = "start-project-b";
   await start(b.id);
   const containerA = `codeshell-${installationId}-${a.id}`;
   const containerB = `codeshell-${installationId}-${b.id}`;
   if (seccompProfile) {
+    smokeStage = "verify-seccomp";
     const configured = JSON.parse(readFileSync(seccompProfile, "utf8"));
     for (const container of [containerA, containerB]) {
       const [inspection] = JSON.parse(await docker(["container", "inspect", container]));
@@ -609,11 +580,13 @@ try {
       "PASS: explicit seccomp bytes applied to both non-root, read-only, capability-dropped project runtimes",
     );
   }
+  smokeStage = "install-fixture";
   for (const container of [containerA, containerB]) await installFixture(container);
   console.log(
     "PASS: native control CLI, administrator setup, two real Docker runtimes, isolated loopback models",
   );
 
+  smokeStage = "verify-panel-binding";
   const prefixA = `/p/${a.id}`;
   const snapshot = await json(prefixA + "/api/v1/panels");
   const panel = snapshot.panels.find((item) => item.id === "project-smoke-panel");
@@ -642,6 +615,7 @@ try {
   assert.equal(executable.available, true);
   const directory = await host.call("filesystem.getKnownDirectory", { name: "downloads" });
   assert.equal(directory.path, "/workspace/downloads");
+  smokeStage = "verify-panel-process";
   const processTask = await host.finish(
     host.call("process.spawn", {
       executableHandle: executable.handle,
@@ -674,6 +648,7 @@ try {
     "PASS: opaque panel asset capability and approved panel process write the project volume",
   );
 
+  smokeStage = "verify-native-task";
   const nativeJob = await host.finish(
     host.call("tasks.start", {
       entry: "sample",
@@ -703,20 +678,16 @@ try {
   );
   console.log("PASS: approved reviewed panel task executes and persists inside project A");
 
-  const rpcA = await connect(a.id);
-  const rpcB = await connect(b.id);
+  smokeStage = "connect-project-a";
+  const rpcA = await connect(a.id, "A");
+  smokeStage = "connect-project-b";
+  const rpcB = await connect(b.id, "B");
+  smokeStage = "main-agent-approval";
   const main = rpcA.request("agent/run", {
     sessionId: "smoke-project-main",
     task: "SMOKE_MAIN_RW: read and update the shared proof file.",
   });
-  void main.catch(() => {});
-  const approval = await waitUntil(
-    () =>
-      rpcA.messages.find(
-        (m) => m.method === "agent/approvalRequest" && m.params.sessionId === "smoke-project-main",
-      ),
-    "real main-agent Write approval",
-  );
+  const approval = await waitForRunApproval(rpcA.messages, main, "smoke-project-main");
   assert.equal(await (await download()).text(), processProof, "Write must wait for approval");
   await rpcA.request("serve/approval.claim", { requestId: approval.params.requestId });
   await rpcA.request("agent/approve", {
@@ -731,6 +702,7 @@ try {
     "PASS: proxied WebSocket runs the real Core Read and approved Write in the same container volume",
   );
 
+  smokeStage = "panel-agent-task";
   const models = await host.call("agent.task.models");
   assert.ok(models.models.some((model) => model.id === "project-fixture"));
   const approvalsBeforeTask = host.approved.size;
@@ -772,6 +744,7 @@ try {
     "PASS: independently approved panel Core task reads the main Agent's file, writes it, and downloads through HTTP",
   );
 
+  smokeStage = "project-isolation";
   assert.equal(
     (await request(`/p/${b.id}/api/v1/files/content?path=downloads%2Fshared-proof.txt`)).status,
     404,
@@ -808,8 +781,10 @@ try {
   let verifyVideoRestart;
   let verifyQuantRestart;
   if (candidatePanels) {
+    smokeStage = "panel-lifecycle";
     const { verifyCandidatePanelLifecycle } = await import("./smoke-candidate-panel-lifecycle.mjs");
     verifyCandidateRestart = await verifyCandidatePanelLifecycle({
+      browserGuard,
       docker,
       json,
       request,
@@ -826,8 +801,10 @@ try {
     });
   }
   if (candidatePanels && ["all", "job-hunt"].includes(candidateBusiness)) {
+    smokeStage = "job-hunt";
     const { verifyCloudJobHuntRecovery } = await import("./smoke-cloud-job-hunt-recovery.mjs");
     verifyJobHuntRestart = await verifyCloudJobHuntRecovery({
+      browserGuard,
       speechFixture,
       docker,
       request,
@@ -842,8 +819,10 @@ try {
     });
   }
   if (candidatePanels && ["all", "design"].includes(candidateBusiness)) {
+    smokeStage = "design";
     const { verifyCloudDesignRecovery } = await import("./smoke-cloud-design-recovery.mjs");
     verifyDesignRestart = await verifyCloudDesignRecovery({
+      browserGuard,
       docker,
       request,
       serverUrl,
@@ -858,8 +837,10 @@ try {
     });
   }
   if (candidatePanels && ["all", "video"].includes(candidateBusiness)) {
+    smokeStage = "video";
     const { verifyCloudVideoRecovery } = await import("./smoke-cloud-video-recovery.mjs");
     verifyVideoRestart = await verifyCloudVideoRecovery({
+      browserGuard,
       json,
       request,
       panelHarness,
@@ -872,8 +853,10 @@ try {
     });
   }
   if (candidatePanels && ["all", "quant"].includes(candidateBusiness)) {
+    smokeStage = "quant";
     const { verifyCloudQuantBacktest } = await import("./smoke-cloud-quant-backtest.mjs");
     verifyQuantRestart = await verifyCloudQuantBacktest({
+      browserGuard,
       docker,
       request,
       serverUrl,
@@ -888,8 +871,10 @@ try {
   }
   let verifyDownloadRestart;
   if (downloadPanel || (downloadFixture && candidateBusiness === "all")) {
+    smokeStage = "download";
     const { verifyCloudDownload } = await import("./smoke-cloud-download.mjs");
     verifyDownloadRestart = await verifyCloudDownload({
+      browserGuard,
       docker,
       json,
       request,
@@ -906,12 +891,14 @@ try {
       password,
     });
   }
+  smokeStage = "stop-project";
   const [beforeRecovery] = JSON.parse(await docker(["container", "inspect", containerA]));
   assert.equal(beforeRecovery.Config.Labels[label], installationId);
   const workspaceMount = beforeRecovery.Mounts.find((mount) => mount.Destination === "/workspace");
   assert.equal(workspaceMount?.Type, "volume");
   const [workspaceVolume] = JSON.parse(await docker(["volume", "inspect", workspaceMount.Name]));
   assert.equal(workspaceVolume.Labels[label], installationId);
+  await guardedFixture.captureRuntime(containerA);
   await json(`/api/v1/projects/${a.id}/stop`, { method: "POST", body: {} });
   await waitUntil(() => rpcA.ws.readyState === WebSocket.CLOSED, "project stop closes its socket");
   assert.equal(
@@ -923,59 +910,45 @@ try {
   const recoveryEntry = installation
     ? "/opt/codeshell/node_modules/@cjhyy/code-shell-server/dist/bin/code-shell-settings-recovery.js"
     : "/opt/codeshell/packages/server/dist/bin/code-shell-settings-recovery.js";
-  await docker(
-    [
-      "run",
-      "--rm",
-      "-i",
-      "--network",
-      "none",
-      "--read-only",
-      "--no-healthcheck",
-      "--label",
-      `${label}=${installationId}`,
-      "--tmpfs",
-      "/tmp:rw,nosuid,nodev,size=32m,mode=1777",
-      "--mount",
-      `type=volume,source=${workspaceMount.Name},target=/workspace`,
-      "--entrypoint",
-      "node",
-      image,
-      "--input-type=module",
-    ],
-    {
-      input: `
+  smokeStage = "offline-recovery";
+  await docker(guardedFixture.offlineRecoveryArguments(workspaceMount.Name, recoveryEntry), {
+    input: `
     import assert from "node:assert/strict";
-    import { execFileSync } from "node:child_process";
+    import { execFile } from "node:child_process";
+    import { promisify } from "node:util";
     import { existsSync, readFileSync, writeFileSync, mkdtempSync, rmSync } from "node:fs";
     const file = "/workspace/.code-shell/settings.json";
     const original = existsSync(file) ? readFileSync(file) : null;
     const temporary = mkdtempSync("/tmp/settings-recovery-");
     const candidate = temporary + "/reviewed.json";
-    const call = (args) => JSON.parse(execFileSync(process.execPath,
+    const execute = promisify(execFile);
+    const call = async (args) => JSON.parse((await execute(process.execPath,
       [${JSON.stringify(recoveryEntry)}, ...args, "--project", "/workspace"],
-      { encoding: "utf8", timeout: 10000, stdio: ["ignore", "pipe", "pipe"] }));
+      { encoding: "utf8", timeout: 10000, stdio: ["ignore", "pipe", "pipe"] })).stdout);
     try {
       const reviewed = { ...(original ? JSON.parse(original.toString("utf8")) : {}),
         recoveryIntegrationProbe: true };
       writeFileSync(candidate, JSON.stringify(reviewed), { mode: 0o600 });
-      const inspection = call(["inspect", "--from", candidate]);
+      const inspection = await call(["inspect", "--from", candidate]);
       assert.ok(["valid", "missing"].includes(inspection.status));
-      const repaired = call(["repair", "--from", candidate,
+      const repaired = await call(["repair", "--from", candidate,
         "--expected-revision", inspection.revision,
         "--candidate-sha256", inspection.candidate.sha256]);
       assert.equal(repaired.status, "valid");
       assert.equal(JSON.parse(readFileSync(file, "utf8")).recoveryIntegrationProbe, true);
-      const restored = call(["restore", "--backup-id", repaired.backupId,
+      const restored = await call(["restore", "--backup-id", repaired.backupId,
         "--expected-revision", repaired.revision]);
       assert.equal(restored.status, inspection.status);
       if (original === null) assert.equal(existsSync(file), false);
       else assert.equal(readFileSync(file).equals(original), true);
       console.log("PASS: offline recovery repaired and exactly restored the stopped project volume");
-    } finally { rmSync(temporary, { recursive: true, force: true }); }
+    } finally {
+      rmSync(temporary, { recursive: true, force: true });
+      console.log("CANDIDATE_OFFLINE_GUARD " + readFileSync("/tmp/candidate-home/.candidate/guard.jsonl", "utf8"));
+    }
   `,
-    },
-  );
+  });
+  smokeStage = "restart-project";
   const restarted = await start(a.id);
   assert.equal(restarted.generation, runningA.generation + 1);
   assert.equal(
@@ -994,52 +967,88 @@ try {
         .status,
     ),
   );
-  const restored = await connect(a.id);
+  const restored = await connect(a.id, "A-restarted");
   const sessions = await restored.request("agent/query", { type: "sessions" });
   assert.ok(sessions.data.some((session) => session.sessionId === "smoke-project-main"));
   assert.equal((await json(`/p/${b.id}/api/v1/files`)).path, "");
   console.log(
     "PASS: stop/restart preserves project files and conversations, changes generation, and rejects old panel grants",
   );
+  smokeStage = "restart-verification";
   await verifyDownloadRestart?.();
   await verifyCandidateRestart?.();
   await verifyJobHuntRestart?.();
   await verifyDesignRestart?.();
   await verifyVideoRestart?.();
   await verifyQuantRestart?.();
+  smokeStage = "capture-runtime";
+  await guardedFixture.captureRuntime(containerA);
+  await guardedFixture.captureRuntime(containerB);
+  smokeStage = "complete";
   success = true;
-  console.log(
-    "Real Docker sandbox smoke passed. No external model service or real account key was used.",
-  );
 } catch (error) {
-  console.error(`Docker sandbox smoke failed: ${error.stack ?? error}`);
-  console.error(JSON.stringify(lastRpc?.messages.slice(-8) ?? []).slice(-10_000));
+  failed = true;
+  primaryFailure = error;
+  console.error(`Docker sandbox smoke failed: ${JSON.stringify(summarizeFailure(error))}`);
+  console.log(
+    JSON.stringify({
+      smokeProgress: summarizeSmokeProgress(smokeStage, child),
+      rpcDiagnostics: [...rpcClients].map(([label, rpc]) => summarizeRpc(label, rpc)),
+    }),
+  );
   process.exitCode = 1;
 } finally {
-  for (const socket of sockets) socket.terminate();
+  for (const socket of sockets) {
+    if (socket.readyState === WebSocket.CLOSED) continue;
+    let timer;
+    try {
+      const closed = once(socket, "close");
+      socket.terminate();
+      await Promise.race([
+        closed,
+        new Promise((_, reject) => {
+          timer = setTimeout(() => reject(new Error("Owned RPC socket close unknown")), 5000);
+        }),
+      ]);
+    } catch (error) {
+      cleanupFailures.push(error);
+      success = false;
+      process.exitCode = 1;
+    } finally {
+      clearTimeout(timer);
+    }
+  }
   // Recover only this scratch registry's random identity if startup failed early.
   const registryPath = join(dataDir, "project-control/registry.json");
-  if (!installationId && existsSync(registryPath))
-    installationId = JSON.parse(readFileSync(registryPath, "utf8")).installationId;
-  if (!success && installationId) {
-    for (const id of (
-      await docker([
-        "container",
-        "ls",
-        "-aq",
-        "--filter",
-        `label=${label}=${installationId}`,
-      ]).catch(() => "")
-    )
-      .split(/\s+/)
-      .filter(Boolean)) {
-      writeFileSync(join(scratch, `${id}-container.log`), await docker(["logs", id]).catch(String));
-      const diagnostics = await docker([
-        "exec",
-        id,
-        "node",
-        "-e",
-        `
+  try {
+    if (!installationId && existsSync(registryPath))
+      installationId = JSON.parse(readFileSync(registryPath, "utf8")).installationId;
+  } catch (error) {
+    cleanupFailures.push(error);
+    success = false;
+    process.exitCode = 1;
+  }
+  try {
+    if (!success && installationId) {
+      for (const id of (
+        await docker([
+          "container",
+          "ls",
+          "-aq",
+          "--filter",
+          `label=${label}=${installationId}`,
+        ]).catch(() => "")
+      )
+        .split(/\s+/)
+        .filter(Boolean)) {
+        const containerLog = await docker(["logs", id]).catch(String);
+        writeFileSync(join(scratch, `${id}-container.log`), containerLog);
+        const diagnostics = await docker([
+          "exec",
+          id,
+          "node",
+          "-e",
+          `
         const fs = require("node:fs");
         const result = {};
         for (const name of ["model-errors.log", "model-output.log", "model-requests.jsonl"]) {
@@ -1048,32 +1057,76 @@ try {
         }
         process.stdout.write(JSON.stringify(result));
       `,
-      ]).catch(String);
-      writeFileSync(join(scratch, `${id}-fixture.log`), diagnostics);
-      if (speechFixture) {
-        const evidenceDir = join(root, "..", "evidence");
-        mkdirSync(evidenceDir, { recursive: true });
-        writeFileSync(
-          join(evidenceDir, `cloud-job-hunt-speech-error-${id}.log`),
-          await docker(["exec", id, "cat", "/tmp/codeshell-real-speech/provider.log"]).catch(
-            String,
-          ),
+        ]).catch(String);
+        writeFileSync(join(scratch, `${id}-fixture.log`), diagnostics);
+        console.log(
+          JSON.stringify({
+            containerId: /^[a-f0-9]{12,64}$/.test(id) ? id : "other",
+            containerDiagnostics: summarizeContainerLogs(containerLog, diagnostics),
+          }),
         );
+        if (speechFixture) {
+          const evidenceDir = join(root, "..", "evidence");
+          mkdirSync(evidenceDir, { recursive: true });
+          writeFileSync(
+            join(evidenceDir, `cloud-job-hunt-speech-error-${id}.log`),
+            await docker(["exec", id, "cat", "/tmp/codeshell-real-speech/provider.log"]).catch(
+              String,
+            ),
+          );
+        }
       }
     }
+  } catch (error) {
+    cleanupFailures.push(error);
+    success = false;
+    process.exitCode = 1;
   }
   await stopControl().catch((error) => {
+    cleanupFailures.push(error);
     success = false;
     process.exitCode = 1;
     console.error(String(error));
   });
   await cleanupDocker().catch((error) => {
+    cleanupFailures.push(error);
     success = false;
     process.exitCode = 1;
     console.error(`Cleanup failed: ${error}`);
   });
-  if (success) rmSync(scratch, { recursive: true, force: true });
-  else {
+  await guardedFixture?.close().catch((error) => {
+    cleanupFailures.push(error);
+    success = false;
+    process.exitCode = 1;
+    console.error(`Guard custody cleanup failed: ${error}`);
+  });
+  if (success) {
+    try {
+      guardedFixture.writeSuccessReceipt(join(root, "..", "evidence"));
+    } catch (error) {
+      cleanupFailures.push(error);
+      success = false;
+      process.exitCode = 1;
+    }
+  }
+  if (success) {
+    rmSync(scratch, { recursive: true, force: true });
+    console.log(
+      "Real Docker sandbox smoke and owned cleanup passed. No external model service or real account key was used.",
+    );
+  } else {
+    if (cleanupFailures.length)
+      console.error(
+        JSON.stringify(
+          summarizeFailure(
+            new AggregateError(
+              [...(failed ? [primaryFailure] : []), ...cleanupFailures],
+              "Docker candidate failed with cleanup/receipt errors",
+              failed ? { cause: primaryFailure } : undefined,
+            ),
+          ),
+        ),
+      );
     writeFileSync(
       join(scratch, "control.log"),
       logs.replace(/#setup=[A-Za-z0-9_-]+/g, "#setup=[redacted]"),

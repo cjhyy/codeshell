@@ -210,3 +210,27 @@ test("journal negotiation and pages bound opaque selection/request/cursor fields
     sessionId: "native",
   });
 });
+
+test("Room pages bound view correlation, filter and opaque continuation fields", () => {
+  const first = {
+    type: "room.history",
+    roomId: "room_abc_def",
+    sinceSeq: 0,
+    page: true,
+    limit: 200,
+    requestId: "viewer:1",
+  };
+  expect(parseMobileClientEvent(first)).toEqual(first);
+  expect(parseMobileClientEvent({ ...first, sinceSeq: undefined, cursor: "opaque" })).toBeDefined();
+  for (const patch of [
+    { limit: 0 },
+    { limit: 501 },
+    { limit: 1.5 },
+    { page: "yes" },
+    { cursor: "x".repeat(2049), sinceSeq: undefined },
+    { cursor: "opaque" },
+    { cursor: "opaque", page: false, sinceSeq: undefined },
+    { requestId: "x".repeat(513) },
+  ])
+    expect(parseMobileClientEvent({ ...first, ...patch })).toBeUndefined();
+});

@@ -93,7 +93,8 @@ describe("architecture growth budgets", () => {
     // extracted modules. Both additions keep the IPC route count unchanged.
     // Pin the current composition plus 24 Cua startup/shutdown wiring lines.
     // Socket ownership, readiness, restart policy and environment filtering
-    // stay in computer-use/{service,cua-driver-host}; no IPC route is added.
+    // stay in computer-use/{desktop-setup,service,cua-driver-host}. The five
+    // desktop-only setup routes are counted separately below.
     expect(lines("packages/desktop/src/main/index.ts")).toBeLessThanOrEqual(7_277);
     expect(lines("packages/desktop/src/main/project-panel-ipc.ts")).toBeLessThanOrEqual(322);
     // The five generic Link authorization operations reuse the window/project
@@ -126,11 +127,14 @@ describe("architecture growth budgets", () => {
     // Count all five explicit collection operations in the extracted registrar.
     expect(
       matches("packages/desktop/src/main/index.ts", /ipcMain\.handle\(/g) +
+        matches("packages/desktop/src/main/cc-room/linked-session-ipc.ts", /ipcMain\.handle\(/g) +
         matches("packages/desktop/src/main/project-panel-ipc.ts", /ipcMain\.handle\(/g) +
         matches("packages/desktop/src/main/project-panel-version-ipc.ts", /ipcMain\.handle\(/g) +
         matches("packages/desktop/src/main/remote-link-ipc.ts", /ipcMain\.handle\(/g) +
         matches("packages/desktop/src/main/device-relay-ipc.ts", /ipcMain\.handle\(/g) +
         matches("packages/desktop/src/main/cloud-account-ipc.ts", /ipcMain\.handle\(/g) +
+        matches("packages/desktop/src/main/cloud-workbench-ipc.ts", /ipcMain\.handle\(/g) +
+        matches("packages/desktop/src/main/computer-use/settings-ipc.ts", /ipcMain\.handle\(/g) +
         matches("packages/desktop/src/main/local-file-preview-ipc.ts", /ipcMain\.handle\(/g) +
         matches("packages/desktop/src/main/session-transcript-ipc.ts", /ipcMain\.handle\(/g) +
         matches("packages/desktop/src/main/profile-switch-ipc.ts", /ipcMain\.handle\(/g) +
@@ -153,7 +157,11 @@ describe("architecture growth budgets", () => {
       // +2 metadata-only Profile preview and revision-checked adoption routes.
       // +3 preview/cancel/reviewed-save operations, without installation authority.
       // +2 project-memory copy preview/commit operations, bound to a main-frame review.
-    ).toBeLessThanOrEqual(345);
+      // +1 main-frame-owned Account profile read/update operation, bound to the
+      // signed-in origin/UUID. Only public names cross IPC; credentials stay in Main.
+      // +5 main-frame-owned Computer Use setup operations: status, enable,
+      // permission request, fixed System Settings links, and restart.
+    ).toBeLessThanOrEqual(351);
     // v0.8.17 added the reviewed Panel catalog/task bridge to both preload
     // surfaces. Mimi's bounded transcript pagination adds one typed invoke;
     // the validation and file-reading implementation remain extracted in main.
@@ -196,10 +204,14 @@ describe("architecture growth budgets", () => {
         matches("packages/desktop/src/preload/profile-plugin-export-api.ts", /ipc\.invoke\(/g) +
         matches("packages/desktop/src/preload/profile-memory-promotion-api.ts", /ipc\.invoke\(/g) +
         matches("packages/desktop/src/preload/optimization-lab-api.ts", /ipc\.invoke\(/g) +
+        matches("packages/desktop/src/preload/computer-use-api.ts", /ipc\.invoke\(/g) +
         matches("packages/desktop/src/preload/operation-resolution-api.ts", /ipc\.invoke\(/g),
       // Five reviewed collection invokes. Native file paths never arrive as renderer arguments.
       // +2 memory-copy invokes; commit carries only the reviewed token and project.
-    ).toBeLessThanOrEqual(338);
+      // +1 typed cloudAccount:profile invoke mirrors the single reviewed Main
+      // read/update route above; no credential-read or additional route is added.
+      // +5 typed Computer Use setup invokes; no raw native command surface.
+    ).toBeLessThanOrEqual(344);
     // GitHub skill previews and Panel task hosting carry main-issued review and
     // ownership fields across the typed preload boundary. The optional Mimi
     // transcript-page method adds its bounded response shape without widening
@@ -402,7 +414,8 @@ describe("architecture growth budgets", () => {
       // public/extension contracts remain unchanged; allow no future exports.
       // +3 Host-only collection validation, selected-file capture/read and public-HTTPS transport.
       // +1 Host-only Session coverage proof/store; the stable SDK does not export it.
-      "packages/core/src/index.internal.ts": 105,
+      // +1 generic cross-process workspace write lock, shared by Desktop and Server.
+      "packages/core/src/index.internal.ts": 106,
       "packages/coding/src/index.ts": 12,
       "packages/arena/src/index.ts": 19,
       // +1 for conversation-session.ts, which re-exports the four modules

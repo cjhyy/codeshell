@@ -8,10 +8,44 @@ breaking.
 
 ## [Unreleased]
 
+## [0.9.37] - 2026-10-13
+
+### Added
+
+- Explain all 19 Panel Host permissions in Chinese and English, with expandable
+  capability details in Extensions and project Settings. Show bundled Agent tools
+  with their descriptions and read/write declarations, Skills, and native entries.
+- Mark added and removed permissions in installation/update reviews using the
+  project's selected package as the baseline. Clearly identify unavailable prior
+  permissions rather than inferring them from the global package catalog.
+
 ### Fixed
 
+- Show the selected Panel version in project Settings and clear previous-project
+  capability details while the next project's configuration loads.
+- Reuse the same permission explanations in project version restoration reviews.
+
+## [0.9.36] - 2026-10-13
+
+### Added
+
+- Edit the display nickname and password login username independently in the
+  sidebar account dialog, preserving the account's GitHub, device and Link ownership.
+- Open the browser account profile portal from the cloud account menu without
+  passing credentials in its URL.
+
+### Fixed
+
+- Serialize conditional workspace writes across Desktop, Server and cooperating
+  package CLIs using a shared file lock, preventing simultaneous saves from
+  silently overwriting one another. Bash advertises the running Host's protocol
+  for package Skills to check before writing.
+- Include bound Panel package Skills in the TUI `/skills` list, respecting the
+  project's selected package version and disabled Panels without opening a page.
 - Compact the sidebar account entry into an avatar icon beside Settings, with
   account details on hover and in accessible descriptions.
+- Remove the duplicate cloud account form from General settings; manage the
+  account through the sidebar avatar.
 
 ## [0.9.35] - 2026-10-12
 

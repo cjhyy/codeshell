@@ -42,6 +42,89 @@ class JournalFailureClient extends LLMClientBase {
 }
 registerProvider("output-journal-fault-fixture", JournalFailureClient);
 
+const batchScenarios = new Map<
+  string,
+  { mode: "throw" | "abort" | "close"; controller: AbortController; entered(): void }
+>();
+class BatchLifecycleClient extends LLMClientBase {
+  protected initClient(): void {}
+  async createMessage(options: CreateMessageOptions) {
+    const scenario = batchScenarios.get(this.model)!;
+    options.onChunk?.({ type: "text", text: "queued A" });
+    options.onChunk?.({ type: "text", text: "queued B" });
+    scenario.entered();
+    if (scenario.mode === "throw")
+      throw Object.assign(new Error("fixture provider failed"), { status: 400 });
+    if (scenario.mode === "abort") scenario.controller.abort();
+    else
+      await new Promise((_done, reject) =>
+        options.signal?.addEventListener(
+          "abort",
+          () => reject(new DOMException("Closed", "AbortError")),
+          { once: true },
+        ),
+      );
+    return {
+      text: "queued Aqueued B",
+      toolCalls: [],
+      stopReason: "stop",
+      usage: { promptTokens: 1, completionTokens: 2, totalTokens: 3 },
+    };
+  }
+}
+registerProvider("output-batch-lifetime-fixture", BatchLifecycleClient);
+for (const mode of ["throw", "abort", "close"] as const)
+  test(`actual Engine ${mode} flushes pending deltas before its durable non-success terminal and releases the timer`, async () => {
+    const directory = mkdtempSync(join(tmpdir(), "codeshell-output-batch-lifetime-")),
+      model = `${mode}-${Math.random()}`;
+    const controller = new AbortController();
+    let entered!: () => void;
+    const ready = new Promise<void>((done) => {
+      entered = done;
+    });
+    batchScenarios.set(model, { mode, controller, entered });
+    const engine = new Engine({
+      llm: { provider: "output-batch-lifetime-fixture", model, apiKey: "synthetic" } as never,
+      cwd: directory,
+      sessionStorageDir: join(directory, "sessions"),
+      headless: true,
+      settingsScope: "isolated",
+      enabledBuiltinTools: [],
+      maxTurns: 1,
+    });
+    engine.getHookRegistry().clear();
+    const events: StreamEvent[] = [];
+    try {
+      const running = engine.run("lifetime fixture", {
+        behaviorMode: "isolatedTask",
+        signal: controller.signal,
+        onStream: (event) => {
+          events.push(event);
+        },
+      });
+      await ready;
+      const closing = mode === "close" ? engine.dispose() : Promise.resolve();
+      const result = await running;
+      await closing;
+      expect(result.reason).not.toBe("completed");
+      expect(
+        events.filter((event) => event.type === "text_delta").map((event) => event.text),
+      ).toEqual(["queued A", "queued B"]);
+      const terminal = events.at(-1)!;
+      expect(terminal.type).toBe("turn_complete");
+      const page = readOutputJournal(join(directory, "sessions"), result.sessionId);
+      expect(page.status).toBe("ok");
+      expect(page.through).toBe(terminal.outputCursor);
+      const count = events.length;
+      await new Promise((done) => setTimeout(done, 20));
+      expect(events).toHaveLength(count);
+    } finally {
+      batchScenarios.delete(model);
+      await engine.dispose();
+      rmSync(directory, { recursive: true, force: true });
+    }
+  });
+
 for (const fault of ["none", "truncate", "record-rewrite", "header-rewrite"] as const) {
   test(`actual Engine.run without options ${fault === "none" ? "persists complete output" : `fences swallowed ${fault}`}`, async () => {
     const root = mkdtempSync(join(tmpdir(), "codeshell-output-no-options-"));

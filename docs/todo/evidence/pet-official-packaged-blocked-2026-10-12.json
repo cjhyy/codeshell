@@ -1,0 +1,216 @@
+{
+  "schemaVersion": 1,
+  "fixture": "pet-official-packaged-runtime",
+  "status": "blocked",
+  "accepted": false,
+  "date": "2026-10-12",
+  "sourceBaseHead": "a55f85de5ffbadb3a7b780a70a605a2c9e17b85d",
+  "fixtureSourceState": "Uncommitted fixture during attempt 12. Failure-receipt persistence, inventory and shutdown fault handling were subsequently refined and passed non-native tests; no additional native run.",
+  "artifact": {
+    "version": "0.9.35",
+    "platform": "darwin",
+    "arch": "arm64",
+    "archiveSHA256": "c492b4de7b45d8977b81414701d7e5d8b900038df9be8166cda6e3c71daf579e",
+    "originalArchiveReference": {
+      "inventoryVersion": 1,
+      "appTreeSHA256": "a44a509c03fbe09c296813b24da6da1b6430e0561636926bb8e99fb1c912bd8f",
+      "entries": {
+        "directory": 227,
+        "file": 729,
+        "link": 14
+      },
+      "codesignDeepStrict": true,
+      "asarSHA256": "e85ba327b918f513cb9cc227109fbf3456fcff1a3329706ad9443dcbf8d8256b",
+      "executableSHA256": "357a49a1750e428c8a110215e990a9c63ff5d5f93443d81bc75a9e25fa9e9d45",
+      "managedNode": {
+        "schemaVersion": 1,
+        "id": "node",
+        "version": "24.21.0",
+        "platform": "darwin",
+        "arch": "arm64",
+        "executable": "/private/tmp/codeshell-official-0.9.35-20261012/reference-unpacked/code-shell.app/Contents/Resources/runtimes/node/bin/node",
+        "sha256": "f2dc64c64e9b5bec2c633e79406ab16f8a8eb864b23c64c61091ad28e28d3288",
+        "source": {
+          "url": "https://nodejs.org/dist/v24.21.0/node-v24.21.0-darwin-arm64.tar.gz",
+          "archiveSha256": "bed7eea5325e1108f32ce5228ddd6a5f0f08a499ee42aa7442aea583702f6057"
+        }
+      }
+    },
+    "afterFailedRuntime": {
+      "inventoryVersion": 1,
+      "appTreeSHA256": "a44a509c03fbe09c296813b24da6da1b6430e0561636926bb8e99fb1c912bd8f",
+      "entries": {
+        "directory": 227,
+        "file": 729,
+        "link": 14
+      },
+      "codesignDeepStrict": true,
+      "asarSHA256": "e85ba327b918f513cb9cc227109fbf3456fcff1a3329706ad9443dcbf8d8256b",
+      "executableSHA256": "357a49a1750e428c8a110215e990a9c63ff5d5f93443d81bc75a9e25fa9e9d45",
+      "managedNode": {
+        "schemaVersion": 1,
+        "id": "node",
+        "version": "24.21.0",
+        "platform": "darwin",
+        "arch": "arm64",
+        "executable": "/private/tmp/codeshell-official-0.9.35-20261012/unpacked/code-shell.app/Contents/Resources/runtimes/node/bin/node",
+        "sha256": "f2dc64c64e9b5bec2c633e79406ab16f8a8eb864b23c64c61091ad28e28d3288",
+        "source": {
+          "url": "https://nodejs.org/dist/v24.21.0/node-v24.21.0-darwin-arm64.tar.gz",
+          "archiveSha256": "bed7eea5325e1108f32ce5228ddd6a5f0f08a499ee42aa7442aea583702f6057"
+        }
+      }
+    },
+    "exactOriginalArchiveTreeMatch": true,
+    "baselineProvenance": "Independent fresh extraction of unchanged official SHA256-matched ZIP after failed run; the earlier in-memory prelaunch inventory was not persisted."
+  },
+  "actualRuntime": {
+    "mainPid": 9987,
+    "workerPids": [10003],
+    "guardReceipts": [
+      {
+        "schemaVersion": 1,
+        "role": "Main",
+        "pid": 9987,
+        "ppid": 9977,
+        "homeId": "807b665a1131ec5e40d01eb04cc391049db12a840ed093a90a51d5b225abbf0b",
+        "origin": "http://127.0.0.1:57677",
+        "negativeProbes": 7,
+        "node": "20.18.3",
+        "electron": "33.4.11",
+        "executable": "/private/tmp/codeshell-official-0.9.35-20261012/unpacked/code-shell.app/Contents/MacOS/code-shell",
+        "guardScope": "synchronous preimport fetch/http/https and HOME checks"
+      },
+      {
+        "schemaVersion": 1,
+        "role": "worker",
+        "pid": 10003,
+        "ppid": 9987,
+        "homeId": "807b665a1131ec5e40d01eb04cc391049db12a840ed093a90a51d5b225abbf0b",
+        "origin": "http://127.0.0.1:57677",
+        "negativeProbes": 7,
+        "node": "20.18.3",
+        "electron": "33.4.11",
+        "executable": "/private/tmp/codeshell-official-0.9.35-20261012/unpacked/code-shell.app/Contents/MacOS/code-shell",
+        "guardScope": "synchronous preimport fetch/http/https and HOME checks"
+      }
+    ],
+    "startupPause": {
+      "pid": 9987,
+      "method": "inspect-brk first-JavaScript pause, synchronous CJS require, then resume",
+      "pauseURL": "file:///private/tmp/codeshell-official-0.9.35-20261012/unpacked/code-shell.app/Contents/Resources/app.asar/out/main/chunks/chunk-OGUDXDJW.mjs",
+      "reason": "Break on start",
+      "hostScriptsParsedBeforeGuard": 3,
+      "pausedLocation": {
+        "scriptId": "197",
+        "lineNumber": 0,
+        "columnNumber": 0
+      },
+      "firstUserInstruction": true,
+      "sourcePrefix": "import { createRequire as __ccr } from 'node:module'; import { dirname as __ccd } from 'node:path'; import { fileURLToPath as __ccf } from 'node:url'; var require = __ccr(import.meta.url); var __filename = __ccf(import.meta.url); var __dirname = __cc"
+    },
+    "workerCommand": {
+      "pid": 10003,
+      "command": "/private/tmp/codeshell-official-0.9.35-20261012/unpacked/code-shell.app/Contents/MacOS/code-shell",
+      "args": [
+        "/private/tmp/codeshell-official-0.9.35-20261012/unpacked/code-shell.app/Contents/Resources/app.asar/node_modules/@cjhyy/code-shell-core/dist/cli/agent-server-stdio.js"
+      ]
+    },
+    "packagedMainOwnEntry": true,
+    "packagedMainPreloadRendererChecked": true,
+    "identityEvidence": "The launch identity assertions passed before the logged guarded-official-main-started line; the full identity object was not separately persisted by this attempt. Future fixture runs persist it.",
+    "managedStandaloneNodeExecuted": false,
+    "managedStandaloneNodeAssetHashVerified": true,
+    "compiledBootstrapSHA256": "025ab5ef9c7c02787a035bf62210adc0adbbf55cfa132375ce130bba817f15ec"
+  },
+  "observed": {
+    "localModelRequests": 0,
+    "petToolCatalog": [
+      "SaveContextNote",
+      "NewContext",
+      "SearchHistory",
+      "DelegateWork",
+      "Memory",
+      "Sessions",
+      "FollowUps",
+      "ManageFollowUp",
+      "ManageSessions",
+      "CurrentTime"
+    ],
+    "nativeCalls": [
+      {
+        "pid": 9987,
+        "name": "isEncryptionAvailable",
+        "phase": "enter"
+      }
+    ],
+    "nativeCallReturned": false,
+    "nativeSample": {
+      "pid": 9987,
+      "sampleCount": 90,
+      "frames": [
+        "SecKeychainFindGenericPassword",
+        "Security::KeychainCore::ItemImpl::getData",
+        "Security::CssmClient::SSDbUniqueRecordImpl::get",
+        "Security::SecurityServer::ClientSession::decrypt",
+        "mach_msg"
+      ],
+      "sourceLines": [94, 103, 104],
+      "interpretation": "Native Keychain/Security server decryption wait. The sample does not establish whether a permission dialog or a locked keychain caused the wait."
+    }
+  },
+  "unverified": {
+    "petResponse": true,
+    "samePetSessionContinuation": true,
+    "sameWorkSessionContinuation": true,
+    "coldSessionAndMemoryRecovery": true,
+    "syntheticInstalledPluginInitialization": true,
+    "managedStandaloneNodePluginProcess": true,
+    "nativeEncryptionDecryption": true,
+    "realWechatDelivery": true,
+    "operatorPlugins": true,
+    "automaticPetDelegationContinuation": true
+  },
+  "shutdown": {
+    "mainCloseTimedOut": true,
+    "petTimeoutMs": 20000,
+    "mainCloseTimeoutMs": 5000,
+    "scope": "Only captured owned Main signals and existing identity-tracked Electron descendants watchdog; no global kill.",
+    "applicationWorkerExitReceiptComplete": false,
+    "privateHomeRemoved": false,
+    "privateHomeRetained": true,
+    "privateHomeId": "807b665a1131ec5e40d01eb04cc391049db12a840ed093a90a51d5b225abbf0b",
+    "noOwnedProcessesByReadOnlyPS": true,
+    "processCheckUTC": "2026-10-12T09:17:05.209Z",
+    "note": "Independent process absence is recorded after shutdown. Missing worker exit acknowledgements still prevent automatic HOME deletion."
+  },
+  "keychainContext": {
+    "homeHash": "807b665a1131ec5e40d01eb04cc391049db12a840ed093a90a51d5b225abbf0b",
+    "defaultPathHash": "bf5b7026c780c552ffd8ea51bbbcd50625c87d3f32112c15d86ef5649abdc636",
+    "privateDefaultMatches": true,
+    "operatorDefaultUnchangedAtBind": true,
+    "operatorDefaultUnchangedAfterRuntime": "not asserted"
+  },
+  "guardScope": "Main and actual Electron Node-mode worker synchronous fetch/http/https exact-loopback guard with seven negative probes each, private HOME, Chromium session request filtering. No raw net/tls or OS sandbox claim.",
+  "failures": [
+    "Local Pet runtime fixture timed out",
+    "owned packaged Electron close timed out",
+    "Packaged Main/worker exit was not confirmed; private HOME retained"
+  ],
+  "diagnostics": {
+    "log": {
+      "path": "/tmp/pet-official-0.9.35-20261012-12.log",
+      "sha256": "ea7d5fdfaac147d2bf4becf514a1e3f615cfc671159b855379cb312b07c6b678"
+    },
+    "nativeSample": {
+      "path": "/tmp/pet-official-native-stack-20261012-12.txt",
+      "sha256": "3783116b0c47d52202c34735ab15b344de7a0230a8803d1d7afd07d639e39094"
+    },
+    "integrity": {
+      "path": "/tmp/pet-official-integrity-after-failure-20261012.json"
+    },
+    "fixtureHome": "/private/var/folders/1d/6__4f4y51g90nblfptt8s9v80000gn/T/codeshell-pet-runtime-t7h9A9/home"
+  },
+  "nativeFixtureOwnershipReleased": true,
+  "finalFixtureNativeRerun": false
+}

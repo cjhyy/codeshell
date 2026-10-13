@@ -40,6 +40,14 @@ test("account store persists ciphertext with owner-only permissions; corruption,
     store.preflight();
     store.save(saved);
     expect(store.load()).toEqual(saved);
+    const named = { ...saved, account: { ...saved.account, displayName: "中文 👩‍💻" } };
+    for (const displayName of ["😀".repeat(64), named.account.displayName]) {
+      store.save({ ...saved, account: { ...saved.account, displayName } });
+      expect(store.load()?.account.displayName).toBe(displayName);
+    }
+    for (const displayName of ["", "bad\u202ename", "\ud800", "界".repeat(65)])
+      expect(() => store.save({ ...saved, account: { ...saved.account, displayName } })).toThrow();
+    expect(store.load()).toEqual(named);
     expect(statSync(file).mode & 0o777).toBe(0o600);
     expect(readFileSync(file).includes(Buffer.from(saved.accessToken))).toBe(false);
     expect(readFileSync(file).includes(Buffer.from(saved.refreshToken))).toBe(false);

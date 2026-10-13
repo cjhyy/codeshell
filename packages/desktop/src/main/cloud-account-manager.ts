@@ -1,11 +1,21 @@
 import { createHash, randomBytes } from "node:crypto";
+import { cloudManagementTicket, cloudOrigin, cloudId } from "./cloud-management-contract.js";
 import { isRelayOrigin, isRelayToken } from "@cjhyy/code-shell-server/remote-relay";
 import type {
   CloudAccountCapabilities,
   CloudAccountGitHubLogin,
   CloudAccountLogin,
   CloudAccountStatus,
+  CloudAccountLinksRequest,
+  CloudAccountLinksResult,
+  CloudAccountProfileRequest,
 } from "../shared/cloud-account.js";
+import {
+  accountLinksRequest,
+  accountLinkView,
+  accountLinkRevocation,
+} from "./cloud-account-links.js";
+import { accountProfile, accountProfileRequest } from "./cloud-account-profile.js";
 import {
   CloudAccountStore,
   validCloudAccountGrant,
@@ -40,7 +50,13 @@ function savedGrant(value: SavedCloudAccount, origin: string): SavedCloudAccount
     accessTokenExpiresAt: value.accessTokenExpiresAt,
     refreshTokenExpiresAt: value.refreshTokenExpiresAt,
     sessionId: value.sessionId,
-    account: { id: value.account.id, username: value.account.username },
+    account: {
+      id: value.account.id,
+      username: value.account.username,
+      ...(value.account.displayName === undefined
+        ? {}
+        : { displayName: value.account.displayName }),
+    },
     ...(value.kind === undefined ? {} : { kind: value.kind }),
     ...(value.audience === undefined ? {} : { audience: value.audience }),
     ...(value.hostId === undefined ? {} : { hostId: value.hostId }),
@@ -104,6 +120,9 @@ export class CloudAccountManager {
   private readonly request: CloudAccountTransport;
   private githubConnection?: CloudAccountStatus["githubConnection"];
   private pendingGitHubLink?: PreparedGitHubLink;
+  private profileRevision = 0;
+  private profileRequestRevision = 0;
+  private profileUpdate?: object;
   constructor(
     private readonly deps: {
       store: CloudAccountStore;
@@ -157,7 +176,10 @@ export class CloudAccountManager {
       Array.isArray(value) ||
       typeof value.registrationAllowed !== "boolean" ||
       typeof value.githubEnabled !== "boolean" ||
-      (value.githubLinkEnabled !== undefined && typeof value.githubLinkEnabled !== "boolean")
+      (value.githubLinkEnabled !== undefined && typeof value.githubLinkEnabled !== "boolean") ||
+      (value.linkManagementEnabled !== undefined &&
+        typeof value.linkManagementEnabled !== "boolean") ||
+      (value.profileEnabled !== undefined && typeof value.profileEnabled !== "boolean")
     )
       throw new Error("云服务返回了无效的账号能力信息。");
     return {
@@ -166,6 +188,10 @@ export class CloudAccountManager {
       ...(value.githubLinkEnabled === undefined
         ? {}
         : { githubLinkEnabled: value.githubLinkEnabled }),
+      ...(value.linkManagementEnabled === undefined
+        ? {}
+        : { linkManagementEnabled: value.linkManagementEnabled }),
+      ...(value.profileEnabled === undefined ? {} : { profileEnabled: value.profileEnabled }),
     };
   }
   private publish(state: CloudAccountStatus["state"]) {
@@ -185,6 +211,7 @@ export class CloudAccountManager {
     this.operation = new AbortController();
     this.refresh = undefined;
     this.refreshResponse = undefined;
+    this.profileUpdate = undefined;
   }
   private current(generation: number, authorized: () => boolean) {
     if (generation !== this.generation || this.operation.signal.aborted || !authorized())
@@ -248,8 +275,18 @@ export class CloudAccountManager {
           return false;
         token = refreshed.accessToken;
       }
-      await this.request({ origin: saved.origin, path: "/api/v1/account/logout", token, body: {} });
-      return true;
+      const value = await this.request({
+        origin: saved.origin,
+        path: "/api/v1/account/logout",
+        token,
+        body: {},
+      });
+      return (
+        !!value &&
+        typeof value === "object" &&
+        !Array.isArray(value) &&
+        (value as { ok?: unknown }).ok === true
+      );
     } catch {
       return false;
     }
@@ -316,6 +353,110 @@ export class CloudAccountManager {
     if (!this.saved || this.saved.sessionId !== saved.sessionId || !authorized())
       throw new Error("云账号操作已取消。");
     return this.github({ origin: saved.origin }, authorized, { saved: this.saved, token });
+  }
+  /** Every read/revoke is bound to the reviewed identity and the current local account incarnation. */
+  async manageLinks(
+    raw: CloudAccountLinksRequest,
+    authorized: () => boolean = () => true,
+  ): Promise<CloudAccountLinksResult> {
+    const input = accountLinksRequest(raw);
+    this.load();
+    const saved = this.saved;
+    const generation = this.generation;
+    const signal = this.operation.signal;
+    const current = () => {
+      this.current(generation, authorized);
+      const actual = this.saved;
+      if (
+        !saved ||
+        !actual ||
+        this.state !== "signed-in" ||
+        actual.sessionId !== saved.sessionId ||
+        actual.origin !== input.origin ||
+        actual.account.id !== input.accountId ||
+        actual.kind === "device" ||
+        (actual.audience !== undefined && actual.audience !== input.origin)
+      )
+        throw new Error("请先登录此云服务的账号。");
+    };
+    current();
+    const token = await this.getCredential(input.origin, input.accountId, signal);
+    current();
+    const value = await this.request({
+      origin: input.origin,
+      path:
+        input.action === "list"
+          ? "/api/v1/account/links"
+          : `/api/v1/account/links/${input.kind}/${input.id}`,
+      method: input.action === "list" ? "GET" : "DELETE",
+      token,
+      signal,
+    });
+    current();
+    return input.action === "list"
+      ? { action: "list", view: accountLinkView(value) }
+      : accountLinkRevocation(value, input);
+  }
+  async profile(
+    raw: CloudAccountProfileRequest,
+    authorized: () => boolean = () => true,
+  ): Promise<CloudAccountStatus> {
+    const input = accountProfileRequest(raw);
+    this.load();
+    if (this.profileUpdate) throw new Error("账号资料正在保存，请稍后重试。");
+    const saved = this.saved;
+    const generation = this.generation;
+    const signal = this.operation.signal;
+    const revision = ++this.profileRequestRevision;
+    const current = () => {
+      this.current(generation, authorized);
+      if (
+        !saved ||
+        !this.saved ||
+        this.state !== "signed-in" ||
+        this.saved.sessionId !== saved.sessionId ||
+        this.saved.origin !== input.origin ||
+        this.saved.account.id !== input.accountId ||
+        revision !== this.profileRequestRevision
+      )
+        throw new Error("云账号操作已取消。");
+    };
+    current();
+    const update = input.action === "update" ? {} : undefined;
+    if (update) this.profileUpdate = update;
+    try {
+      const token = await this.getCredential(input.origin, input.accountId, signal);
+      current();
+      const value = await this.request({
+        origin: input.origin,
+        path: "/api/v1/account/profile",
+        method: input.action === "read" ? "GET" : "PATCH",
+        token,
+        signal,
+        ...(input.action === "read"
+          ? {}
+          : {
+              body: {
+                ...(input.displayName === undefined ? {} : { displayName: input.displayName }),
+                ...(input.username === undefined ? {} : { username: input.username }),
+              },
+            }),
+      });
+      current();
+      const account = accountProfile(value, input.accountId);
+      const next = { ...this.saved!, account };
+      try {
+        this.deps.store.save(next);
+      } catch {
+        throw new Error("账号资料同步后无法保存到本机，请重试。");
+      }
+      this.profileRevision++;
+      this.saved = next;
+      this.publish("signed-in");
+      return this.status();
+    } finally {
+      if (update && this.profileUpdate === update) this.profileUpdate = undefined;
+    }
   }
   signInWithGitHub(input: CloudAccountGitHubLogin, authorized: () => boolean = () => true) {
     return this.github(input, authorized);
@@ -541,6 +682,55 @@ export class CloudAccountManager {
     if (!confirmed)
       throw new Error("本机已退出；服务端未确认撤销，请联网后在账号会话管理中撤销此设备。");
   }
+  /** Main-only root authority lease; refresh preserves it, logout/relogin invalidates it. */
+  captureRootAccount(origin: string, accountId: string, authorized: () => boolean) {
+    requireOrigin(origin);
+    this.load();
+    const saved = this.saved;
+    const generation = this.generation;
+    const signal = this.operation.signal;
+    const current = () => {
+      this.current(generation, authorized);
+      const actual = this.saved;
+      if (
+        !saved ||
+        !actual ||
+        this.state !== "signed-in" ||
+        actual.sessionId !== saved.sessionId ||
+        actual.origin !== origin ||
+        actual.account.id !== accountId ||
+        actual.kind === "device" ||
+        (actual.audience !== undefined && actual.audience !== origin)
+      )
+        throw new Error("请先登录此云服务的账号。");
+    };
+    current();
+    return {
+      signal,
+      current,
+      ticket: async (targetOrigin: string, installationId: string) => {
+        cloudOrigin(targetOrigin);
+        cloudId(installationId);
+        current();
+        const token = await this.getCredential(origin, accountId, signal);
+        current();
+        const value = await this.request({
+          origin,
+          path: "/api/v1/account/cloud-management/tickets",
+          method: "POST",
+          token,
+          body: { cloudOrigin: targetOrigin, installationId },
+          signal,
+        });
+        current();
+        return cloudManagementTicket(
+          value,
+          { cloudOrigin: targetOrigin, accountOrigin: origin, installationId },
+          this.now(),
+        );
+      },
+    };
+  }
   /** Returns credentials only to main callers, for one exact service/account. */
   async getCredential(origin: string, accountId?: string, signal?: AbortSignal): Promise<string> {
     requireOrigin(origin);
@@ -561,6 +751,7 @@ export class CloudAccountManager {
     if (saved.accessTokenExpiresAt > this.now() + 30_000) return saved.accessToken;
     if (!this.refresh) {
       const generation = this.generation;
+      const profileRevision = this.profileRevision;
       const operationSignal = this.operation.signal;
       // A logout can await this one response to revoke the rotated token without
       // persisting it. Client cancellation fences use, not the bounded request.
@@ -575,7 +766,13 @@ export class CloudAccountManager {
           const grant = await response;
           this.validGrant(grant, origin);
           try {
-            this.current(generation, () => this.saved === saved && !operationSignal.aborted);
+            this.current(
+              generation,
+              () =>
+                this.saved?.sessionId === saved.sessionId &&
+                this.saved?.account.id === saved.account.id &&
+                !operationSignal.aborted,
+            );
           } catch (error) {
             if (!this.revocationResponses.has(response)) void this.revoke({ ...grant, origin });
             throw error;
@@ -583,6 +780,9 @@ export class CloudAccountManager {
           if (grant.account.id !== saved.account.id || grant.sessionId !== saved.sessionId)
             throw new Error("云账号授权发生变化，请重新登录。");
           const next = savedGrant(grant, origin);
+          // A refresh issued before a profile update may carry its older label.
+          if (profileRevision !== this.profileRevision && this.saved?.sessionId === saved.sessionId)
+            next.account = { ...this.saved.account };
           try {
             this.deps.store.save(next);
           } catch (error) {

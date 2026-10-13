@@ -11,6 +11,13 @@ import {
 import { createCloudWorkbenchDisplayCapture } from "./cloud-workbench-capture.js";
 import { basename, join } from "node:path";
 import {
+  cloudId,
+  cloudOrigin,
+  cloudToken,
+  managedCloudPartition,
+  type ManagedCloudGrant,
+} from "./cloud-management-contract.js";
+import {
   cloudWorkbenchPartition,
   cloudWorkbenchBrowserHandoffUrl,
   createCloudWorkbenchNavigation,
@@ -56,19 +63,79 @@ function configureCloudSession(browserSession: Electron.Session): void {
   );
 }
 
-/** Remote workbenches get browser privileges only, with no Desktop preload or worker bridge. */
-export async function openCloudWorkbench(rawAddress: unknown): Promise<{ address: string }> {
-  return openCloudWindow(normalizeCloudWorkbenchAddress(rawAddress));
+const managedWindows = new Map<string, Set<BrowserWindow>>();
+
+export async function closeManagedCloudWorkbench(partition: string): Promise<void> {
+  const owned = managedWindows.get(partition);
+  if (owned) for (const win of owned) if (!win.isDestroyed()) win.destroy();
+  await session.fromPartition(partition).clearStorageData();
+  managedWindows.delete(partition);
 }
 
-async function openCloudWindow(address: string): Promise<{ address: string }> {
-  const existing = windows.get(address);
+export async function openManagedCloudWorkbench(input: {
+  grant: ManagedCloudGrant;
+  projectId: string;
+  authorized: () => boolean;
+}): Promise<{ address: string }> {
+  const { grant } = input;
+  const origin = cloudOrigin(grant.session.audience);
+  const projectId = cloudId(input.projectId);
+  const partition = managedCloudPartition(grant);
+  const current = () => {
+    if (!cloudToken(grant.token) || grant.session.expiresAt <= Date.now() || !input.authorized())
+      throw new Error("云端管理授权已失效，请重新连接。");
+  };
+  current();
+  try {
+    await session.fromPartition(partition).cookies.set({
+      url: `${origin}/`,
+      name: "cs_cloud_management",
+      value: grant.token,
+      path: "/",
+      httpOnly: true,
+      secure: true,
+      sameSite: "strict",
+      expirationDate: grant.session.expiresAt / 1000,
+    });
+    current();
+    const result = await openWorkbench(`${origin}/`, {
+      partition,
+      address: `${origin}/?project=${projectId}`,
+      current,
+    });
+    current();
+    return result;
+  } catch (error) {
+    await closeManagedCloudWorkbench(partition);
+    throw error;
+  }
+}
+
+/** Remote workbenches get browser privileges only, with no Desktop preload or worker bridge. */
+export async function openCloudWorkbench(rawAddress: unknown): Promise<{ address: string }> {
+  return openWorkbench(rawAddress);
+}
+async function openWorkbench(
+  rawAddress: unknown,
+  managed?: { partition: string; address: string; current: () => void },
+): Promise<{ address: string }> {
+  const address = normalizeCloudWorkbenchAddress(rawAddress);
+  managed?.current();
+  const target = managed?.address ?? address;
+  const key = managed?.partition ?? address;
+  const existing = windows.get(key);
   if (existing && !existing.isDestroyed()) {
+    if (managed && existing.webContents.getURL() !== target) {
+      await existing.loadURL(target);
+      managed.current();
+    }
     existing.show();
     existing.focus();
-    return { address };
+    return { address: target };
   }
-  const browserSession = session.fromPartition(cloudWorkbenchPartition(address));
+  const browserSession = session.fromPartition(
+    managed?.partition ?? cloudWorkbenchPartition(address),
+  );
   const title = `云端项目 · ${new URL(address).host}`;
   const win = new BrowserWindow({
     width: 1280,
@@ -88,7 +155,12 @@ async function openCloudWindow(address: string): Promise<{ address: string }> {
       allowRunningInsecureContent: false,
     },
   });
-  windows.set(address, win);
+  windows.set(key, win);
+  if (managed) {
+    const owned = managedWindows.get(managed.partition) ?? new Set<BrowserWindow>();
+    owned.add(win);
+    managedWindows.set(managed.partition, owned);
+  }
   const cloudContents = win.webContents;
   const allowed = new Set<string>();
   let captureRevision = 0;
@@ -236,14 +308,16 @@ async function openCloudWindow(address: string): Promise<{ address: string }> {
   browserSession.on("will-download", download);
   win.once("closed", () => {
     captureRevision++;
-    windows.delete(address);
+    windows.delete(key);
     permissionHandlers.delete(cloudContents);
+    if (managed) managedWindows.get(managed.partition)?.delete(win);
     allowed.clear();
     navigation.reset();
     browserSession.removeListener("will-download", download);
   });
   try {
-    await win.loadURL(address);
+    await win.loadURL(target);
+    managed?.current();
     if (!win.isDestroyed()) {
       win.setTitle(title);
       win.show();
@@ -252,5 +326,5 @@ async function openCloudWindow(address: string): Promise<{ address: string }> {
     if (!win.isDestroyed()) win.destroy();
     throw new Error("无法打开云端项目，请检查地址和网络连接。");
   }
-  return { address };
+  return { address: target };
 }
