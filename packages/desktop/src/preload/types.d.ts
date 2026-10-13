@@ -1,4 +1,5 @@
 import type { CloudAccountApi } from "../shared/cloud-account.js";
+import type { CloudEnvironmentApi } from "../shared/cloud-environment.js";
 import type { CloudWorkbenchApi } from "../shared/cloud-management.js";
 import type {
   ApprovalResolvedEnvelope,
@@ -52,6 +53,7 @@ import type { TaskInboxApi } from "./task-inbox-api";
 import type { ProfilePluginExportApi } from "../shared/profile-plugin-export";
 import type { ProfileMemoryPromotionApi } from "../shared/profile-memory-promotion";
 import type { OptimizationLabApi } from "./optimization-lab-api";
+import type { ComputerUseSettingsApi } from "../shared/computer-use";
 import type { PetApi } from "./pet-api";
 import type {
   StreamEventEnvelope,
@@ -1044,6 +1046,7 @@ export interface CodeshellApi
     typeof import("./operation-resolution-api").createOperationResolutionApi
   >;
   optimizationLab: OptimizationLabApi;
+  computerUse: ComputerUseSettingsApi;
   /** Main-process platform (`process.platform`), used for window chrome layout. */
   platform: string;
   /** Absolute local path for a File explicitly selected or dropped by the user. */
@@ -1542,6 +1545,7 @@ export interface CodeshellApi
 
   /** Open a cloud workbench in a browser-only native window, isolated from local projects. */
   cloudAccount: CloudAccountApi;
+  cloudEnvironment: CloudEnvironmentApi;
   openCloudWorkbench: CloudWorkbenchApi;
   openExternal(url: string): Promise<void>;
   revealInFinder(path: string, cwd?: string): Promise<void>;

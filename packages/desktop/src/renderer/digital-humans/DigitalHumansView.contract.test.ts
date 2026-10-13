@@ -324,11 +324,13 @@ describe("DigitalHumansView contract", () => {
     expect(main).toContain('if (typeof profileName !== "string") {');
     expect(main).not.toContain('typeof profileName !== "string" || !profileName');
     expect(app).toContain("const sessionChromeVisible = !isPetSurface && isChatView;");
-    expect(app).toContain(
-      "workspaceProfiles={sessionChromeVisible ? sessionWorkspaceProfiles : []}",
+    expect(app).toMatch(
+      /workspaceProfiles={\s*sessionChromeVisible && !cloudSelected \? sessionWorkspaceProfiles : \[\]\s*}/,
     );
-    expect(app).toContain("statusAvailable={sessionChromeVisible}");
-    expect(app).toContain("sessionTitle={sessionChromeVisible ? sessionTitleForTop : null}");
+    expect(app).toContain("statusAvailable={sessionChromeVisible && !cloudSelected}");
+    expect(app).toMatch(
+      /sessionTitle={\s*sessionChromeVisible\s*\? cloudSelected[\s\S]*?: sessionTitleForTop\s*: null\s*}/,
+    );
   });
 
   test("the editor round-trips requires and guards unsaved edits", () => {

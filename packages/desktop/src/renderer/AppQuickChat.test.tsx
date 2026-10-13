@@ -449,6 +449,11 @@ function installCodeshellStub(
   (window as unknown as { innerWidth: number }).innerWidth = 1200;
   (window as unknown as { codeshell: Record<string, any> }).codeshell = {
     platform: "linux",
+    cloudEnvironment: {
+      listBindings: async () => [],
+      getSelection: async (localProjectId: string) => ({ localProjectId, bindingId: null }),
+      select: async () => undefined,
+    },
     log: () => undefined,
     isWindowFullscreen: async () => false,
     onWindowFullscreenChange: () => unsubscribe,
@@ -1053,7 +1058,7 @@ describe("App quick-chat integration", () => {
     },
   );
 
-  test("routes a same-tick send from a draft callback to the selected existing session", async () => {
+  test("routes a stale draft callback to the existing session after local runtime selection", async () => {
     await mountApp({
       withNormalSession: true,
       startInDraft: true,
@@ -1066,6 +1071,9 @@ describe("App quick-chat integration", () => {
 
     await act(async () => {
       sidebarProps?.onSelectSession("repoA", "session-a");
+      // Main must authorize local runtime selection before navigation completes.
+      // A callback captured from the draft still follows the newly active bucket.
+      await flushMicrotasks();
       void previousChat.onSend("selected send", { bucket: previousChat.sendBucket });
       await flushMicrotasks();
     });

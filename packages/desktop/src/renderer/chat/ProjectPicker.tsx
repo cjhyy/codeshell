@@ -21,7 +21,7 @@ interface Props {
  * click opens a small popover with:
  *   - search field
  *   - existing projects (active one marked with ✓)
- *   - 添加新项目
+ *   - 添加已有项目目录
  *   - 不使用项目
  *
  * Mirrors the project-switcher reference screenshot.

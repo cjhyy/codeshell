@@ -70,8 +70,10 @@ describe("App Pet lifecycle boundaries", () => {
     );
     expect(appSource).toContain("{isPetView ? (");
     expect(appSource).toContain("const sessionChromeVisible = !isPetSurface && isChatView");
-    expect(appSource).toContain("sessionTitle={sessionChromeVisible ? sessionTitleForTop : null}");
-    expect(appSource).toContain("statusAvailable={sessionChromeVisible}");
+    expect(appSource).toMatch(
+      /sessionTitle={\s*sessionChromeVisible\s*\? cloudSelected[\s\S]*?: sessionTitleForTop\s*: null\s*}/,
+    );
+    expect(appSource).toContain("statusAvailable={sessionChromeVisible && !cloudSelected}");
     expect(appSource).not.toContain("overviewOpen");
     expect(appSource).not.toContain("aria-hidden={petState.overviewOpen}");
   });

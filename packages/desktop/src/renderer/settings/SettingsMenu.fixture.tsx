@@ -140,7 +140,7 @@ try {
   );
   assert.equal(actions.length, 2, "Reopening does not repeat a previous action");
   assert.equal(item("优化实验室"), undefined, "Optimization Lab stays hidden by default");
-  assert.equal(item("云端工作台"), undefined, "Cloud projects are chosen from New project");
+  assert.equal(item("云端工作台"), undefined, "Cloud location belongs to an existing project");
   await select("凭证");
   await open();
   await openActivity();

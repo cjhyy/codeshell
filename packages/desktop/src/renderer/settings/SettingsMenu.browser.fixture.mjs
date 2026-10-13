@@ -102,7 +102,7 @@ try {
       assert.equal(
         await menu.getByRole("menuitem", { name: labels.cloud, exact: true }).count(),
         0,
-        "Cloud projects are chosen from New project instead of Settings",
+        "Cloud location belongs to an existing project instead of Settings",
       );
       await activity.hover();
       await page.waitForTimeout(150); // Beyond Radix's hover-open delay.

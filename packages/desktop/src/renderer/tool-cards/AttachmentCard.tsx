@@ -7,6 +7,7 @@ import { OpenWithMenu } from "../chat/OpenWithMenu";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { useT } from "../i18n/I18nProvider";
+import { useLocalRuntimeActions } from "../runtime/RuntimeCapabilities";
 
 interface Props extends AttachmentContext {
   attachment: Attachment;
@@ -21,11 +22,12 @@ interface Props extends AttachmentContext {
  */
 function AttachmentCardImpl({ attachment, cwd, sessionId, sessionMainRootId, rootStatus }: Props) {
   const { t } = useT();
+  const localActions = useLocalRuntimeActions();
   const { path, kind } = attachment;
   const filename = path.split("/").pop() ?? path;
   const ext = (filename.split(".").pop() ?? "").toLowerCase();
 
-  if (kind === "audio" || kind === "video") {
+  if (localActions && (kind === "audio" || kind === "video")) {
     return (
       <InlineMedia
         path={path}
@@ -50,8 +52,9 @@ function AttachmentCardImpl({ attachment, cwd, sessionId, sessionMainRootId, roo
           kind === "image" && "min-h-12",
         )}
         onClick={() => {
-          void window.codeshell.openPath(path, cwd ?? undefined);
+          if (localActions) void window.codeshell.openPath(path, cwd ?? undefined);
         }}
+        disabled={!localActions}
         title={path}
       >
         {kind === "image" ? (
@@ -105,6 +108,7 @@ function iconFor(kind: Attachment["kind"]) {
  * fall back to the icon variant.
  */
 function ImageThumb({ path, cwd }: { path: string; cwd?: string | null }) {
+  const localActions = useLocalRuntimeActions();
   const [src, setSrc] = useState<string | null>(null);
   const [failed, setFailed] = useState(false);
 
@@ -112,6 +116,7 @@ function ImageThumb({ path, cwd }: { path: string; cwd?: string | null }) {
     let cancelled = false;
     setFailed(false);
     setSrc(null);
+    if (!localActions) return;
     const isAbs = path.startsWith("/");
     if (!isAbs && !cwd) {
       setFailed(true);
@@ -131,9 +136,9 @@ function ImageThumb({ path, cwd }: { path: string; cwd?: string | null }) {
     return () => {
       cancelled = true;
     };
-  }, [path, cwd]);
+  }, [path, cwd, localActions]);
 
-  if (failed || !src) {
+  if (!localActions || failed || !src) {
     return (
       <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded bg-muted text-muted-foreground">
         <ImageIcon size={14} />

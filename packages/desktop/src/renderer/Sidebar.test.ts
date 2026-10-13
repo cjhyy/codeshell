@@ -402,3 +402,78 @@ describe("Sidebar project session visibility", () => {
     expect(calls).toEqual([["engine-missing-dir", "root-primary"]]);
   });
 });
+
+test("cloud rows never probe local roots or reuse a colliding local repair action", async () => {
+  ensureMiniDom();
+  const calls: string[] = [];
+  Object.assign(window, {
+    codeshell: {
+      getProjectGitStatus: async () => {
+        calls.push("project-git");
+        return {};
+      },
+      getSessionWorkspaceAuthority: async () => {
+        calls.push("local-authority");
+        return {
+          workspace: { root: "/removed", kind: "main" },
+          mainRootId: "removed",
+          rootStatus: "root_removed",
+          rootStatusMessage: "Local root removed",
+        };
+      },
+      getSessionGitStatus: async () => {
+        calls.push("session-git");
+        return {};
+      },
+    },
+  });
+  const container = document.createElement("div");
+  root = createRoot(container);
+  const common = {
+    project,
+    index: {
+      sessions: [
+        { id: "ui", engineSessionId: "collision", title: "History", createdAt: 1, updatedAt: 1 },
+      ],
+      activeSessionId: null,
+    },
+    collapsed: false,
+    isActiveProject: true,
+    activeSessionId: null,
+    statusFor: () => undefined,
+    onToggle: () => {},
+    onSelectProject: () => {},
+    onSelectSession: () => {},
+    onMenuClick: () => {},
+    onNewChat: () => {},
+    onProjectContextMenu: () => {},
+    onSessionContextMenu: () => {},
+    onPinSession: () => {},
+    onArchiveSession: () => {},
+    workspaceChange: null,
+  };
+  await act(async () => {
+    root?.render(React.createElement(ProjectGroup, common));
+    await flushMicrotasks();
+  });
+  expect(calls).toContain("local-authority");
+  calls.length = 0;
+  await act(async () => {
+    root?.render(
+      React.createElement(ProjectGroup, {
+        ...common,
+        localRuntime: false,
+        index: {
+          ...common.index,
+          sessions: [{ ...common.index.sessions[0]!, id: "cloud:binding:collision" }],
+        },
+      }),
+    );
+    await flushMicrotasks();
+  });
+  expect(calls).toEqual([]);
+  expect(buttonWithText(container, "修复")).toBeUndefined();
+  expect(
+    findElements(container, "SPAN").some((span) => reactPropsOf(span)["data-session-root-status"]),
+  ).toBe(false);
+});

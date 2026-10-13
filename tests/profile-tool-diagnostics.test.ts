@@ -1,5 +1,5 @@
 import { expect, test } from "bun:test";
-import { spawn } from "node:child_process";
+import { spawn, spawnSync } from "node:child_process";
 import { createHash } from "node:crypto";
 import {
   accessSync,
@@ -86,18 +86,29 @@ test.skipIf(process.platform === "win32")(
       // through workspace paths; Node resolves the external package in this tree.
       expect(statSync(join(root, "packages/core/dist/index.js")).size).toBeGreaterThan(0);
       expect(statSync(join(root, "packages/core/dist/index.internal.js")).size).toBeGreaterThan(0);
-      const built = await Bun.build({
-        entrypoints: [join(root, "packages/desktop/src/main/profiles-service.ts")],
-        outdir: join(directory, "build"),
-        naming: "profiles-service.mjs",
-        target: "node",
-        format: "esm",
-        packages: "external",
-        external: ["@cjhyy/code-shell-core", "@cjhyy/code-shell-core/internal"],
-        sourcemap: "external",
-        tsconfig,
-      });
-      expect(built.success).toBe(true);
+      // Bun.build mutates the test process's package resolver cache. Compile in
+      // a separate process so later Desktop imports retain their own resolution.
+      const built = spawnSync(
+        process.execPath,
+        [
+          "build",
+          join(root, "packages/desktop/src/main/profiles-service.ts"),
+          "--outdir=" + join(directory, "build"),
+          "--entry-naming=profiles-service.mjs",
+          "--target=node",
+          "--format=esm",
+          "--packages=external",
+          "--external=@cjhyy/code-shell-core",
+          "--external=@cjhyy/code-shell-core/internal",
+          "--sourcemap=external",
+          "--tsconfig-override",
+          tsconfig,
+        ],
+        { cwd: root, env: environment, encoding: "utf8", timeout: 15_000 },
+      );
+      if (built.error) throw built.error;
+      if (built.status !== 0 || built.signal)
+        throw new Error(`Profile fixture build failed: ${built.stderr}`);
       const bundle = readFileSync(environment.CODESHELL_PROFILE_TOOL_BUNDLE);
       expect(bundle.length).toBeGreaterThan(0);
       bundleSha256 = createHash("sha256").update(bundle).digest("hex");

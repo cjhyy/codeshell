@@ -392,6 +392,8 @@ export const SettingsSchema = z
             disabledTools: McpToolNameListSchema.optional(),
             connectTimeoutMs: z.number().int().min(1).max(MAX_MCP_CONNECT_TIMEOUT_MS).optional(),
             connectRetries: z.number().int().min(0).max(MAX_MCP_CONNECT_RETRIES).optional(),
+            // Opt-in: deliver MCP image content to vision models inline.
+            inlineImages: z.boolean().optional(),
           }),
         ),
       )

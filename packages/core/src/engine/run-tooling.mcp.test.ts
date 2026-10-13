@@ -163,7 +163,7 @@ describe("shared MCP pool supplies each run's local registry", () => {
       try {
         expect(
           await mcpToolExecute({ server: "fixture", tool: "echo_a" }, { ...run.context }),
-        ).toContain('"tool":"echo_a"');
+        ).toMatchObject({ ok: true, result: expect.stringContaining('"tool":"echo_a"') });
       } finally {
         await unrelated.disconnectAll();
       }

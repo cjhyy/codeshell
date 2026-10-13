@@ -34,6 +34,7 @@ import {
   openManagedCloudWorkbench,
   closeManagedCloudWorkbench,
 } from "./cloud-workbench-window.js";
+import { registerCloudEnvironmentIpc } from "./cloud-environment-ipc.js";
 import {
   createDesktopManagedRuntimeProvider,
   createManagedRuntimeHandlers,
@@ -127,6 +128,8 @@ import {
 } from "@cjhyy/code-shell-capability-coding/orchestration";
 import { normalizeWorktreeBranchPrefix } from "@cjhyy/code-shell-capability-coding/git";
 import { AgentBridge, resolveNoRepoCwd } from "./agent-bridge.js";
+import { getCuaDriverHost } from "./computer-use/service.js";
+import { initializeDesktopComputerUse } from "./computer-use/desktop-setup.js";
 import { externalRuntimeBrowserBucket } from "./external-runtime-browser-bucket.js";
 import { ExternalRuntimeService } from "./external-runtime-service.js";
 import {
@@ -1210,6 +1213,12 @@ const transcriptSubscriptions = createRoomTranscriptSubscriptions({
 // renderer uses (chat/approvals/sessions/rooms/cc-rooms). Extracted glue —
 // see mobile-remote-orchestrator.ts.
 const projectStore = getProjectStore();
+const cloudEnvironment = registerCloudEnvironmentIpc({
+  ipcMain,
+  windows: () => mainWindows,
+  userDataDir: app.getPath("userData"),
+  assertLocalProject: (id) => projectStore.requireLive(id),
+});
 const mobileOrchestrator = new MobileRemoteOrchestrator({
   remote: mobileRemote,
   uploads: mobileUploads,
@@ -3410,6 +3419,20 @@ app.whenReady().then(async () => {
 
   await chromeExtensionRuntimeService.start().catch((error) => {
     dlog("browser", "chrome_extension_bridge_start_failed", { error: String(error) });
+  });
+  // Register the opt-in host before the first worker receives its MCP environment.
+  await initializeDesktopComputerUse({
+    app,
+    ipcMain,
+    systemPreferences,
+    openExternal: (url) => shell.openExternal(url),
+    isMainWindow: (sender) =>
+      [...mainWindows].some((window) => !window.isDestroyed() && window.webContents === sender),
+    cwd: resolveNoRepoCwd,
+    platform: process.platform,
+    resourcesPath: process.resourcesPath,
+    env: process.env,
+    log: (event, data) => dlog("computer-use", event, data),
   });
   chromeNativeRegistration = await installChromeNativeMessagingHost({
     executablePath: process.execPath,
@@ -7178,6 +7201,7 @@ app.on(
     disposeOperationResolution: disposeOperationResolutionHost,
     onError: (phase, error) => dlog("main", phase, { error: String(error) }),
     cleanup: async () => {
+      cloudEnvironment.dispose();
       taskInboxService?.dispose();
       for (const dispose of taskInboxDisposers.splice(0)) dispose();
       const cookieRefreshShutdown = cookieCredentialAutoRefresh.shutdown();
@@ -7219,6 +7243,9 @@ app.on(
       // block so a later reassignment cannot make this a no-op.
       const externalRuntimeShutdown = externalRuntimeService?.stopAll();
       externalRuntimeService = null;
+      // The embedded Cua daemon is a direct child; stop it explicitly rather
+      // than relying on the parent-liveness pipe.
+      const cuaDriverShutdown = getCuaDriverHost()?.stop();
       await Promise.allSettled([
         imGatewayService.dispose(),
         mobileRemoteController.dispose(),
@@ -7231,6 +7258,7 @@ app.on(
         sessionCatalogIpc.flush(),
         panelAppBridge.shutdownMedia(),
         chromeExtensionRuntimeService.stop(),
+        cuaDriverShutdown,
       ]);
       gatewayControlServer = undefined;
       await mobileUploads.dispose();

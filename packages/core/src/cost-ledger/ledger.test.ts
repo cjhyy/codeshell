@@ -2,6 +2,7 @@ import { afterEach, expect, test } from "bun:test";
 import { mkdtempSync, rmSync, writeFileSync, readdirSync, readFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { fileURLToPath } from "node:url";
 import { UsageLedger } from "./store.js";
 import { withUsageOwner } from "./context.js";
 import { createLLMClient } from "../llm/client-factory.js";
@@ -311,7 +312,7 @@ test("direct SDK construction accounts real localhost retry attempts and explici
 test("two processes cannot overwrite an external receipt after both observe it absent", async () => {
   const storageDir = directory();
   const gate = join(storageDir, "gate");
-  const modulePath = new URL("./store.ts", import.meta.url).pathname;
+  const modulePath = fileURLToPath(new URL("./store.ts", import.meta.url));
   const code = `import { UsageLedger } from ${JSON.stringify(modulePath)};
     import { existsSync, writeFileSync } from 'node:fs';
     const [root, ready, gate] = process.argv.slice(-3);

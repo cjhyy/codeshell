@@ -1,0 +1,257 @@
+{
+  "schema_version": 1,
+  "diagram_type": "architecture",
+  "meta": {
+    "title": "CodeShell 云端运行 · 技术方案／拟议架构",
+    "locale": "zh-CN",
+    "quality_profile": "showcase",
+    "viewBox": [
+      1240,
+      650
+    ]
+  },
+  "components": [
+    {
+      "id": "project",
+      "type": "frontend",
+      "label": "已有 Project",
+      "sublabel": "稳定仓库身份 · 项目配置",
+      "tag": "默认位置仅用于新会话",
+      "pos": [
+        40,
+        70
+      ],
+      "size": [
+        235,
+        90
+      ]
+    },
+    {
+      "id": "conversation",
+      "type": "backend",
+      "label": "Conversation",
+      "sublabel": "首次启动固定 ExecutionTarget",
+      "tag": "后续 turn 复用同一工作区",
+      "pos": [
+        345,
+        70
+      ],
+      "size": [
+        255,
+        90
+      ]
+    },
+    {
+      "id": "runtime-gateway",
+      "type": "backend",
+      "label": "Runtime Gateway",
+      "sublabel": "统一身份 · 能力 · 事件协议",
+      "pos": [
+        680,
+        70
+      ],
+      "size": [
+        235,
+        90
+      ]
+    },
+    {
+      "id": "local-adapter",
+      "type": "backend",
+      "label": "Local Adapter",
+      "sublabel": "复用当前本地 worker",
+      "pos": [
+        1000,
+        70
+      ],
+      "size": [
+        200,
+        90
+      ]
+    },
+    {
+      "id": "template",
+      "type": "database",
+      "label": "EnvironmentRevision",
+      "sublabel": "可发布、不可变的环境模板",
+      "tag": "CloudHostId 单独标识服务",
+      "pos": [
+        345,
+        270
+      ],
+      "size": [
+        255,
+        90
+      ]
+    },
+    {
+      "id": "cloud-gateway",
+      "type": "cloud",
+      "label": "Cloud Gateway",
+      "sublabel": "鉴权 · 幂等控制 · 断点续读",
+      "pos": [
+        680,
+        270
+      ],
+      "size": [
+        235,
+        90
+      ]
+    },
+    {
+      "id": "workspace-manager",
+      "type": "backend",
+      "label": "WorkspaceManager",
+      "sublabel": "持久工作区 · 可重建租约",
+      "tag": "RuntimeLease + generation",
+      "pos": [
+        1000,
+        270
+      ],
+      "size": [
+        200,
+        90
+      ]
+    },
+    {
+      "id": "durable-state",
+      "type": "database",
+      "label": "持久状态与事件",
+      "sublabel": "会话 · 审批 · 产物 · journal",
+      "tag": "tenant/project/conversation/workspace",
+      "pos": [
+        345,
+        470
+      ],
+      "size": [
+        255,
+        90
+      ]
+    },
+    {
+      "id": "task-runtime",
+      "type": "cloud",
+      "label": "独立 worker + 工作区",
+      "sublabel": "TaskWorkspace 保存代码与数据",
+      "tag": "多 turn 复用 · 独立仓库副本",
+      "pos": [
+        680,
+        470
+      ],
+      "size": [
+        235,
+        90
+      ]
+    },
+    {
+      "id": "docker-provider",
+      "type": "backend",
+      "label": "DockerProvider",
+      "sublabel": "创建／恢复执行容器",
+      "tag": "RunAttempt 可重建",
+      "pos": [
+        1000,
+        470
+      ],
+      "size": [
+        200,
+        90
+      ]
+    }
+  ],
+  "connections": [
+    {
+      "id": "create-conversation",
+      "from": "project",
+      "to": "conversation",
+      "label": "新会话",
+      "variant": "emphasis"
+    },
+    {
+      "id": "target-protocol",
+      "from": "conversation",
+      "to": "runtime-gateway",
+      "label": "固定目标",
+      "variant": "emphasis"
+    },
+    {
+      "id": "local-route",
+      "from": "runtime-gateway",
+      "to": "local-adapter",
+      "label": "本机 IPC"
+    },
+    {
+      "id": "cloud-route",
+      "from": "runtime-gateway",
+      "to": "cloud-gateway",
+      "label": "云端 RPC",
+      "variant": "emphasis",
+      "fromSide": "bottom",
+      "toSide": "top",
+      "labelDy": 65
+    },
+    {
+      "id": "ensure-workspace",
+      "from": "cloud-gateway",
+      "to": "workspace-manager",
+      "label": "确保工作区",
+      "variant": "emphasis"
+    },
+    {
+      "id": "publish-template",
+      "from": "template",
+      "to": "cloud-gateway",
+      "label": "模板 revision"
+    },
+    {
+      "id": "runtime-lease",
+      "from": "workspace-manager",
+      "to": "docker-provider",
+      "label": "租约与 fence",
+      "variant": "emphasis",
+      "fromSide": "bottom",
+      "toSide": "top",
+      "labelDy": 65
+    },
+    {
+      "id": "start-runtime",
+      "from": "docker-provider",
+      "to": "task-runtime",
+      "label": "启动／恢复",
+      "variant": "emphasis"
+    },
+    {
+      "id": "durable-events",
+      "from": "task-runtime",
+      "to": "durable-state",
+      "label": "追加事件",
+      "variant": "dashed"
+    }
+  ],
+  "cards": [
+    {
+      "dot": "cyan",
+      "title": "项目默认值 ≠ 会话执行位置",
+      "items": [
+        "ProjectDefaultTarget 只决定新会话偏好。",
+        "切换新会话 ≠ 迁移旧会话。"
+      ]
+    },
+    {
+      "dot": "violet",
+      "title": "模板 ≠ 任务工作区",
+      "items": [
+        "EnvironmentRevision 描述可复用环境。",
+        "TaskWorkspace 属于会话并持久保存数据。"
+      ]
+    },
+    {
+      "dot": "emerald",
+      "title": "任务与连接分离",
+      "items": [
+        "客户端断线不取消任务；控制面重启不杀任务。",
+        "Credential 仅在可信侧受控交付。"
+      ]
+    }
+  ]
+}

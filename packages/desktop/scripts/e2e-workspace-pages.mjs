@@ -357,7 +357,7 @@ try {
     (await settingsMenu
       .getByRole("menuitem", { name: /^(云端工作台|Cloud workbench)$/ })
       .count()) === 0,
-    "Cloud projects are chosen from New project instead of Settings",
+    "Cloud projects are chosen within existing projects instead of Settings",
   );
   assert(
     (await settingsMenu.getByRole("menuitem", { name: "优化实验室", exact: true }).count()) === 0,

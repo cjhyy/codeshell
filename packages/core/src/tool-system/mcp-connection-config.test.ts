@@ -183,4 +183,9 @@ describe("MCP connection configuration snapshots", () => {
       ]);
     }
   });
+
+  test("inlineImages separates identities only when enabled", () => {
+    expect(identity(stdio({ inlineImages: false }))).toBe(identity(stdio()));
+    expect(identity(stdio({ inlineImages: true }))).not.toBe(identity(stdio()));
+  });
 });

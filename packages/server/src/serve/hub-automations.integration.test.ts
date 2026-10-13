@@ -1,11 +1,11 @@
 import { expect, test } from "bun:test";
 import { createServer } from "node:http";
 import { once } from "node:events";
-import { createRequire } from "node:module";
 import { mkdtempSync, mkdirSync, readFileSync, writeFileSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { WebSocket } from "ws";
+import { nativeNodeWorkerFixture } from "../../test-utils/native-node-worker.js";
 import {
   SessionManager,
   installReviewedLocalPanelApp,
@@ -97,6 +97,7 @@ test("automation list polling only waits for the exact changing-storage read rej
 });
 
 test("Hub HTTP automation owns a real shared Worker Session across logout, competing runs and restart", async () => {
+  const { workerEntryPath, codingCapabilityModule } = nativeNodeWorkerFixture();
   const root = mkdtempSync(join(tmpdir(), "hub-automation-real-"));
   const priorHome = process.env.HOME;
   const cwd = join(root, "project"),
@@ -217,13 +218,11 @@ test("Hub HTTP automation owns a real shared Worker Session across logout, compe
     const options = {
       cwd,
       dataDir,
-      workerEntryPath: createRequire(import.meta.url).resolve(
-        "@cjhyy/code-shell-core/bin/agent-server-stdio",
-      ),
+      workerEntryPath,
       execPath: "node",
       authMode: "hub" as const,
       port: 0,
-      workerCapabilityModules: `${import.meta.resolve("@cjhyy/code-shell-capability-coding")}#createCodingModule`,
+      workerCapabilityModules: codingCapabilityModule,
     };
     const sessionManager = new SessionManager(join(dataDir, "worker/sessions"));
     const sessionId = sessionManager.create(cwd, "gpt-4o-mini", "openai").state.sessionId;

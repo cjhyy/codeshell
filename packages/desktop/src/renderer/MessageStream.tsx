@@ -76,6 +76,7 @@ interface Props {
   leading?: React.ReactNode;
   /** Transcript detail views do not expose file undo/redo. */
   readOnly?: boolean;
+  localRuntime?: boolean;
   onAskUserAnswer?: (requestId: string, answer: string) => void | Promise<void>;
   /** Extend the running goal (TODO 3.1). opts target the nearest ceiling. */
   onExtendGoal?: (opts: {
@@ -139,6 +140,7 @@ export function MessageStream({
   messages,
   leading,
   readOnly = false,
+  localRuntime = true,
   onAskUserAnswer,
   onExtendGoal,
   trailing,
@@ -175,11 +177,11 @@ export function MessageStream({
   const subagents = subagentSummariesRef.current;
   const subagentNavigation = useMemo(
     () => ({
-      sessionId: engineSessionId,
+      sessionId: localRuntime ? engineSessionId : undefined,
       agents: subagents,
-      onView: setSelectedSubagent,
+      onView: localRuntime ? setSelectedSubagent : () => undefined,
     }),
-    [engineSessionId, subagents],
+    [engineSessionId, subagents, localRuntime],
   );
   useEffect(() => setSelectedSubagent(null), [engineSessionId]);
   // The LAST files_changed message = the most recent turn's file edits. Only
@@ -254,7 +256,14 @@ export function MessageStream({
   };
 
   const openContextSelection = useCallback(async () => {
-    if (!engineSessionId || !onContextPackageCreated || liveTurnActive || selectionOpen) return;
+    if (
+      !localRuntime ||
+      !engineSessionId ||
+      !onContextPackageCreated ||
+      liveTurnActive ||
+      selectionOpen
+    )
+      return;
     const loadEpoch = ++selectionLoadEpochRef.current;
     setSelectionOpen(true);
     setSelectionStatus("loading");
@@ -271,7 +280,7 @@ export function MessageStream({
     } finally {
       if (loadEpoch === selectionLoadEpochRef.current) setSelectionStatus("idle");
     }
-  }, [engineSessionId, liveTurnActive, onContextPackageCreated, selectionOpen]);
+  }, [engineSessionId, liveTurnActive, onContextPackageCreated, selectionOpen, localRuntime]);
 
   useEffect(() => {
     if (
@@ -320,7 +329,8 @@ export function MessageStream({
   };
 
   const createContextPackage = async () => {
-    if (!engineSessionId || selectionAnchor === null || selectionEnd === null) return;
+    if (!localRuntime || !engineSessionId || selectionAnchor === null || selectionEnd === null)
+      return;
     const operationEpoch = selectionLoadEpochRef.current;
     const sourceSessionId = engineSessionId;
     const operationIsCurrent = () =>
@@ -399,7 +409,7 @@ export function MessageStream({
           group={m}
           turnEpoch={turnEpoch}
           cwd={cwd}
-          sessionId={engineSessionId}
+          sessionId={localRuntime ? engineSessionId : undefined}
           sessionMainRootId={rootId}
           rootStatus={rootStatus}
         />
@@ -412,7 +422,7 @@ export function MessageStream({
           group={m}
           turnEpoch={turnEpoch}
           cwd={cwd}
-          sessionId={engineSessionId}
+          sessionId={localRuntime ? engineSessionId : undefined}
           sessionMainRootId={rootId}
           rootStatus={rootStatus}
         />
@@ -429,7 +439,7 @@ export function MessageStream({
             message={m}
             turnEpoch={turnEpoch}
             cwd={cwd}
-            sessionId={engineSessionId}
+            sessionId={localRuntime ? engineSessionId : undefined}
             sessionMainRootId={rootId}
             rootStatus={rootStatus}
           />
@@ -442,7 +452,9 @@ export function MessageStream({
         const images = decoded.images;
         const { block: annotations, text } = extractAnnotations(decoded.text);
         const askedAt = formatMessageTime(m.createdAt);
-        if (!text && !annotations && images.length === 0) return null;
+        const remoteAttachments = localRuntime ? [] : (m.attachments ?? []);
+        if (!text && !annotations && images.length === 0 && remoteAttachments.length === 0)
+          return null;
         return (
           <div key={m.id} className="group flex min-w-0 max-w-full flex-col items-end px-4 py-1.5">
             {m.isGoal && (
@@ -463,6 +475,18 @@ export function MessageStream({
                 <CollapsibleContent>
                   <div className="whitespace-pre-wrap break-words">{text}</div>
                 </CollapsibleContent>
+              )}
+              {remoteAttachments.length > 0 && (
+                <div className="mt-2 flex flex-wrap gap-2" data-remote-message-attachments>
+                  {remoteAttachments.map((attachment, index) => (
+                    <span
+                      key={index}
+                      className="max-w-full break-words rounded-md border px-2 py-1 text-xs"
+                    >
+                      {attachment.originalName}
+                    </span>
+                  ))}
+                </div>
               )}
               {images.length > 0 && (
                 <div className="mt-2 flex flex-wrap gap-2">
@@ -510,7 +534,7 @@ export function MessageStream({
             key={m.id}
             message={m}
             cwd={cwd ?? null}
-            sessionId={engineSessionId}
+            sessionId={localRuntime ? engineSessionId : undefined}
             sessionMainRootId={rootId}
             rootStatus={rootStatus}
           />
@@ -542,8 +566,8 @@ export function MessageStream({
             key={m.id}
             message={m}
             cwd={cwd ?? null}
-            sessionId={engineSessionId ?? null}
-            isLatest={!readOnly && m.id === lastFilesChangedId}
+            sessionId={localRuntime ? (engineSessionId ?? null) : null}
+            isLatest={localRuntime && !readOnly && m.id === lastFilesChangedId}
           />
         );
       case "turn_end":
@@ -553,12 +577,15 @@ export function MessageStream({
     }
   };
 
-  if (selectedSubagent) {
+  if (localRuntime && selectedSubagent) {
     return <SubagentSessionDetail {...selectedSubagent} onBack={() => setSelectedSubagent(null)} />;
   }
 
   const stream = (
-    <DriveAgentJobsLoader sessionId={engineSessionId} messages={messages}>
+    <DriveAgentJobsLoader
+      sessionId={localRuntime ? engineSessionId : undefined}
+      messages={messages}
+    >
       <div className="relative flex min-w-0 max-w-full flex-1 flex-col overflow-hidden">
         {selectionOpen && (
           <div className="flex shrink-0 items-center gap-3 border-b border-border bg-background px-4 py-2.5">

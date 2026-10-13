@@ -3,6 +3,7 @@ import { isolatedBackendTest } from "../test-utils/backend-test.js";
 import { mkdtempSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
+import { fileURLToPath } from "node:url";
 import { OptimizationLabController } from "./controller.js";
 import type { LabSettings } from "./providers/connection.js";
 import { readFrozenDataset } from "./contracts/dataset.js";
@@ -541,7 +542,7 @@ test("default Desktop controller reads user connections through full settings sc
       defaults: { text: "user-only" },
     }),
   );
-  const modulePath = new URL("./controller.ts", import.meta.url).pathname;
+  const modulePath = fileURLToPath(new URL("./controller.ts", import.meta.url));
   const result = Bun.spawnSync(
     [
       process.execPath,

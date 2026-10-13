@@ -43,6 +43,10 @@ export function snapshotMcpConnectionConfig(config: MCPServerConfig): McpConnect
     credentialRef: snapshot.credentialRef,
     connectTimeoutMs: snapshot.connectTimeoutMs ?? DEFAULT_MCP_CONNECT_TIMEOUT_MS,
     connectRetries: snapshot.connectRetries ?? DEFAULT_MCP_CONNECT_RETRIES,
+    // Result delivery is read from the connection's config, so two
+    // declarations that differ only here must not share a transport. Added
+    // only when set so existing identities stay unchanged.
+    ...(snapshot.inlineImages === true ? { inlineImages: true } : {}),
   };
   const identity = createHash("sha256").update(JSON.stringify(declaration)).digest("hex");
   return { identity, config: snapshot };

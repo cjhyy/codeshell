@@ -187,6 +187,11 @@ function installCodeshellStub(): void {
   (window as unknown as { codeshell: Record<string, any>; innerWidth: number }).innerWidth = 1200;
   (window as unknown as { codeshell: Record<string, any> }).codeshell = {
     platform: "linux",
+    cloudEnvironment: {
+      listBindings: async () => [],
+      getSelection: async (localProjectId: string) => ({ localProjectId, bindingId: null }),
+      select: async () => undefined,
+    },
     log: () => undefined,
     isWindowFullscreen: async () => false,
     onWindowFullscreenChange: () => unsubscribe,

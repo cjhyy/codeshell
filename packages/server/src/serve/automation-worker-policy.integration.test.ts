@@ -1,15 +1,16 @@
 import { expect, test } from "bun:test";
 import { createServer } from "node:http";
 import { once } from "node:events";
-import { createRequire } from "node:module";
 import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
+import { nativeNodeWorkerFixture } from "../../test-utils/native-node-worker.js";
 import { SessionManager } from "@cjhyy/code-shell-core";
 import { resolveWritePolicy } from "@cjhyy/code-shell-core/internal";
 import { WorkerBridgeCore } from "../worker-bridge-core.js";
 
 test("shared Node Worker resumes a durable Session with automation policy then accepts an ordinary turn", async () => {
+  const { workerEntryPath, codingCapabilityModule } = nativeNodeWorkerFixture();
   const root = await mkdtemp(join(tmpdir(), "cloud-worker-policy-"));
   const cwd = join(root, "project"),
     home = join(root, "home"),
@@ -83,9 +84,7 @@ test("shared Node Worker resumes a durable Session with automation policy then a
   });
   let exited = false;
   const bridge = new WorkerBridgeCore({
-    entryPath: createRequire(import.meta.url).resolve(
-      "@cjhyy/code-shell-core/bin/agent-server-stdio",
-    ),
+    entryPath: workerEntryPath,
     execPath: "node",
     fallbackCwd: () => cwd,
     buildEnv: () => ({
@@ -94,7 +93,7 @@ test("shared Node Worker resumes a durable Session with automation policy then a
       CODE_SHELL_HOME: join(home, ".code-shell"),
       CODE_SHELL_DATA_ROOT: data,
       CODE_SHELL_CREDENTIAL_ACCESS: "local",
-      CODE_SHELL_CAPABILITY_MODULES: `${import.meta.resolve("@cjhyy/code-shell-capability-coding")}#createCodingModule`,
+      CODE_SHELL_CAPABILITY_MODULES: codingCapabilityModule,
     }),
     onExit: () => {
       exited = true;

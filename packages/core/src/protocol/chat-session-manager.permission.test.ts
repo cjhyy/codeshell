@@ -49,6 +49,9 @@ function makeManager(initial: PermissionMode) {
 
 const tempDirs: string[] = [];
 let previousHome: string | undefined;
+beforeEach(() => {
+  previousHome = process.env.HOME;
+});
 
 beforeEach(() => {
   // Every case shares the cleanup below, including cases that never change HOME.
@@ -280,7 +283,6 @@ describe("ChatSessionManager.close approval cleanup", () => {
   );
 
   it("clears session credential approvals for the closed session", async () => {
-    previousHome = process.env.HOME;
     process.env.HOME = tempDir("cs-credential-cleanup-home-");
     const cwd = tempDir("cs-credential-cleanup-cwd-");
     __resetCredentialSessionAllowForTests();

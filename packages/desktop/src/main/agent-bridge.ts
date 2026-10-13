@@ -33,6 +33,7 @@ import { mkdirSync } from "node:fs";
 import { app, BrowserWindow, ipcMain } from "electron";
 import { desktopManagedRuntimeRoot } from "./managed-runtime-service.js";
 import { dlog } from "./desktop-logger.js";
+import { hostMcpServersEnv } from "./computer-use/service.js";
 import { composeCapabilityModulesEnv, readUserFeatureFlags } from "./capability-modules-env.js";
 import { ChildBrowserWorkerLifetime } from "./browser-runtime/child-browser-lifetime.js";
 import { WebConfigurationGate } from "./web-configuration-gate.js";
@@ -381,6 +382,9 @@ export class AgentBridge implements PetStateBridge {
           readUserFeatureFlags(resolveNoRepoCwd()),
           () => import.meta.resolve("@cjhyy/code-shell-capability-optimization-lab/capability"),
         ),
+        // Host-owned MCP servers (Computer Use spike). Always set, so an
+        // inherited shell value is cleared when the spike is off.
+        CODE_SHELL_HOST_MCP_SERVERS: hostMcpServersEnv(),
       }),
       fallbackCwd: resolveNoRepoCwd,
       log: (event, data) => dlog("bridge", event, data),

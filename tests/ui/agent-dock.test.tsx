@@ -6,6 +6,8 @@ import {
   formatElapsed,
   getVisibleAgents,
 } from "../../packages/tui/src/ui/components/AgentDock.js";
+// AgentDock resolves Core through TUI's package-local compiled entry. The root
+// test's source alias would create a different registry singleton.
 import { asyncAgentRegistry } from "../../packages/tui/node_modules/@cjhyy/code-shell-core/dist/index.internal.js";
 
 function reset() {

@@ -91,7 +91,11 @@ describe("architecture growth budgets", () => {
     // to main's live window ownership/createWindow and loading-frame lifecycle.
     // Notification content, instance binding and session validation stay in
     // extracted modules. Both additions keep the IPC route count unchanged.
-    expect(lines("packages/desktop/src/main/index.ts")).toBeLessThanOrEqual(7_245);
+    // Pin the current composition plus 24 Cua startup/shutdown wiring lines.
+    // Socket ownership, readiness, restart policy and environment filtering
+    // stay in computer-use/{desktop-setup,service,cua-driver-host}. The five
+    // desktop-only setup routes are counted separately below.
+    expect(lines("packages/desktop/src/main/index.ts")).toBeLessThanOrEqual(7_277);
     expect(lines("packages/desktop/src/main/project-panel-ipc.ts")).toBeLessThanOrEqual(322);
     // The five generic Link authorization operations reuse the window/project
     // owner and live reauthorization guard here. Challenge state, provider
@@ -130,6 +134,7 @@ describe("architecture growth budgets", () => {
         matches("packages/desktop/src/main/device-relay-ipc.ts", /ipcMain\.handle\(/g) +
         matches("packages/desktop/src/main/cloud-account-ipc.ts", /ipcMain\.handle\(/g) +
         matches("packages/desktop/src/main/cloud-workbench-ipc.ts", /ipcMain\.handle\(/g) +
+        matches("packages/desktop/src/main/computer-use/settings-ipc.ts", /ipcMain\.handle\(/g) +
         matches("packages/desktop/src/main/local-file-preview-ipc.ts", /ipcMain\.handle\(/g) +
         matches("packages/desktop/src/main/session-transcript-ipc.ts", /ipcMain\.handle\(/g) +
         matches("packages/desktop/src/main/profile-switch-ipc.ts", /ipcMain\.handle\(/g) +
@@ -154,7 +159,9 @@ describe("architecture growth budgets", () => {
       // +2 project-memory copy preview/commit operations, bound to a main-frame review.
       // +1 main-frame-owned Account profile read/update operation, bound to the
       // signed-in origin/UUID. Only public names cross IPC; credentials stay in Main.
-    ).toBeLessThanOrEqual(346);
+      // +5 main-frame-owned Computer Use setup operations: status, enable,
+      // permission request, fixed System Settings links, and restart.
+    ).toBeLessThanOrEqual(351);
     // v0.8.17 added the reviewed Panel catalog/task bridge to both preload
     // surfaces. Mimi's bounded transcript pagination adds one typed invoke;
     // the validation and file-reading implementation remain extracted in main.
@@ -197,12 +204,14 @@ describe("architecture growth budgets", () => {
         matches("packages/desktop/src/preload/profile-plugin-export-api.ts", /ipc\.invoke\(/g) +
         matches("packages/desktop/src/preload/profile-memory-promotion-api.ts", /ipc\.invoke\(/g) +
         matches("packages/desktop/src/preload/optimization-lab-api.ts", /ipc\.invoke\(/g) +
+        matches("packages/desktop/src/preload/computer-use-api.ts", /ipc\.invoke\(/g) +
         matches("packages/desktop/src/preload/operation-resolution-api.ts", /ipc\.invoke\(/g),
       // Five reviewed collection invokes. Native file paths never arrive as renderer arguments.
       // +2 memory-copy invokes; commit carries only the reviewed token and project.
       // +1 typed cloudAccount:profile invoke mirrors the single reviewed Main
       // read/update route above; no credential-read or additional route is added.
-    ).toBeLessThanOrEqual(339);
+      // +5 typed Computer Use setup invokes; no raw native command surface.
+    ).toBeLessThanOrEqual(344);
     // GitHub skill previews and Panel task hosting carry main-issued review and
     // ownership fields across the typed preload boundary. The optional Mimi
     // transcript-page method adds its bounded response shape without widening
@@ -235,7 +244,10 @@ describe("architecture growth budgets", () => {
     // +6 generation checks keep stale project refreshes out of live UI state.
     // Nine composition lines connect the extracted notification navigation hook
     // to the existing live/disk Session selectors and unavailable-session toast.
-    expect(lines("packages/desktop/src/renderer/App.tsx")).toBeLessThanOrEqual(2_788);
+    // Existing project-runtime selection composes local/cloud session views
+    // and gates navigation until selection is ready (+144). Binding selection
+    // and connection lifecycle stay in the extracted project runtime hooks.
+    expect(lines("packages/desktop/src/renderer/App.tsx")).toBeLessThanOrEqual(2_932);
     // Goal-extension and pre-turn archive inputs now fail closed at protocol
     // ingress instead of trusting arbitrary numeric/object payloads. Manual
     // Mimi clears also validate their host-authored summary at this boundary.
@@ -365,7 +377,9 @@ describe("architecture growth budgets", () => {
       // read-only current logical/physical attempt identities, and signer type.
       // Isolated capability Hosts own the ephemeral signer's disposal.
       // +1 the same type-only routing declarations for capability-owned presets.
-      "packages/core/src/index.extension.ts": 58,
+      // +1 reviewed host MCP declaration encoder/type, consumed by Desktop's
+      // process host without persisting servers or exposing credentials.
+      "packages/core/src/index.extension.ts": 59,
       // Shared crash-safe persistence primitives and the Desktop-owned
       // background job registry are host-only API.
       // Speech model resolution adds one reviewed host-only module, shared by

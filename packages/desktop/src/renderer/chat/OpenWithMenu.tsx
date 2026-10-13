@@ -10,12 +10,8 @@ import {
 import { Button } from "@/components/ui/button";
 import { useToast } from "../ui/ToastProvider";
 import { useT } from "../i18n/I18nProvider";
-import {
-  openDefault,
-  revealInFolder,
-  openInEditor,
-  type OpenTarget,
-} from "./openWith";
+import { useLocalRuntimeActions } from "../runtime/RuntimeCapabilities";
+import { openDefault, revealInFolder, openInEditor, type OpenTarget } from "./openWith";
 
 interface Props extends OpenTarget {
   /**
@@ -35,10 +31,12 @@ export function OpenWithMenu({ path, cwd, children, align = "start" }: Props) {
   const target: OpenTarget = { path, cwd };
   const toast = useToast();
   const { t } = useT();
+  const localActions = useLocalRuntimeActions();
   // These file actions can fail in main (e.g. the path was deleted/renamed
   // since the message referenced it). Surface a toast so the action never
   // silently no-ops.
   const run = (label: string, action: () => Promise<unknown>): void => {
+    if (!localActions) return;
     void action().catch((e) =>
       toast({
         message: t("chat.openWith.actionFailed", {
@@ -49,24 +47,36 @@ export function OpenWithMenu({ path, cwd, children, align = "start" }: Props) {
       }),
     );
   };
+  if (!localActions) return null;
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
         {children ?? (
-          <Button size="icon" variant="ghost" title={t("chat.openWith.trigger")} aria-label={t("chat.openWith.trigger")}>
+          <Button
+            size="icon"
+            variant="ghost"
+            title={t("chat.openWith.trigger")}
+            aria-label={t("chat.openWith.trigger")}
+          >
             <MoreHorizontal className="h-4 w-4" />
           </Button>
         )}
       </DropdownMenuTrigger>
       <DropdownMenuContent align={align}>
-        <DropdownMenuItem onSelect={() => run(t("chat.openWith.actionOpen"), () => openDefault(target))}>
+        <DropdownMenuItem
+          onSelect={() => run(t("chat.openWith.actionOpen"), () => openDefault(target))}
+        >
           <ExternalLink className="mr-2 h-3.5 w-3.5" /> {t("chat.openWith.openDefault")}
         </DropdownMenuItem>
-        <DropdownMenuItem onSelect={() => run(t("chat.openWith.actionEditor"), () => openInEditor(target))}>
+        <DropdownMenuItem
+          onSelect={() => run(t("chat.openWith.actionEditor"), () => openInEditor(target))}
+        >
           <Code2 className="mr-2 h-3.5 w-3.5" /> {t("chat.openWith.openInEditor")}
         </DropdownMenuItem>
         <DropdownMenuSeparator />
-        <DropdownMenuItem onSelect={() => run(t("chat.openWith.actionReveal"), () => revealInFolder(target))}>
+        <DropdownMenuItem
+          onSelect={() => run(t("chat.openWith.actionReveal"), () => revealInFolder(target))}
+        >
           <FolderOpen className="mr-2 h-3.5 w-3.5" /> {t("chat.openWith.revealInFolder")}
         </DropdownMenuItem>
       </DropdownMenuContent>

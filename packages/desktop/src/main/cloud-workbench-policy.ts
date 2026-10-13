@@ -13,7 +13,7 @@ export function normalizeCloudWorkbenchAddress(value: unknown): string {
     throw new Error("请输入完整的 HTTPS 地址。");
   }
   if (url.username || url.password || url.search || url.hash || url.pathname !== "/")
-    throw new Error("请填写工作台首页地址，不要包含初始化链接、登录令牌或项目路径。");
+    throw new Error("请填写云端服务首页地址，不要包含初始化链接、登录令牌或项目路径。");
   if (
     url.protocol !== "https:" &&
     !(url.protocol === "http:" && ["localhost", "127.0.0.1", "[::1]"].includes(url.hostname))

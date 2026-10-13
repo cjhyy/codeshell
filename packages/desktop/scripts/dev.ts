@@ -28,6 +28,7 @@ import { watch } from "node:fs";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { buildChromeExtension } from "./build-chrome-extension.js";
+import { buildComputerUsePermissions } from "./build-computer-use-permissions.js";
 
 const cwd = dirname(fileURLToPath(import.meta.url));
 const root = resolve(cwd, "..");
@@ -405,6 +406,7 @@ async function main(): Promise<void> {
   ensureNativeArch();
   startCoreWatch();
   await buildChromeExtension();
+  await buildComputerUsePermissions();
   await startVite();
   await startMobileVite();
   await buildAndWatch();

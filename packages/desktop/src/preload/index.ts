@@ -1,4 +1,5 @@
 import { cloudAccountApi } from "./cloud-account-api.js";
+import { cloudEnvironmentApi } from "./cloud-environment-api.js";
 import type { CloudWorkbenchApi } from "../shared/cloud-management.js";
 import { mobileRemoteApi } from "./mobile-remote-api.js";
 /**
@@ -25,6 +26,7 @@ import { createTaskInboxApi } from "./task-inbox-api";
 import { createNotificationNavigationApi } from "./notification-navigation-api";
 import { createOperationResolutionApi } from "./operation-resolution-api";
 import { createOptimizationLabApi } from "./optimization-lab-api";
+import { createComputerUseSettingsApi } from "./computer-use-api";
 import { createSessionTranscriptApi } from "./session-transcript-api";
 import { createProfilePluginExportApi } from "./profile-plugin-export-api";
 import { createProfileMemoryPromotionApi } from "./profile-memory-promotion-api";
@@ -521,6 +523,7 @@ contextBridge.exposeInMainWorld("codeshell", {
   taskInbox: createTaskInboxApi(ipcRenderer),
   operationResolution: createOperationResolutionApi(ipcRenderer),
   optimizationLab: createOptimizationLabApi(ipcRenderer),
+  computerUse: createComputerUseSettingsApi(ipcRenderer),
   /** Forward a renderer-side log line into ~/.code-shell/logs/desktop-*.log. */
   log: (msg: string, data?: Record<string, unknown>) =>
     ipcRenderer.send("desktop:log", { msg, data }),
@@ -896,6 +899,7 @@ contextBridge.exposeInMainWorld("codeshell", {
     autoDeleteWorktreesGraceMins: number;
   }) => ipcRenderer.invoke("git:setPrefs", prefs),
   cloudAccount: cloudAccountApi,
+  cloudEnvironment: cloudEnvironmentApi,
   openCloudWorkbench: ((input: unknown) =>
     ipcRenderer.invoke("cloud:open-workbench", input)) as CloudWorkbenchApi,
   openExternal: (url: string) => ipcRenderer.invoke("shell:openExternal", url),

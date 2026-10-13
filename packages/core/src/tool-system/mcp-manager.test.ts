@@ -13,13 +13,17 @@ import {
   createMcpAuthenticatedFetch,
   inferTransportType,
   spillMcpImage,
+  inlineMcpImageBlock,
+  MAX_MCP_INLINE_IMAGE_BYTES,
+  type McpWorkspaceScope,
 } from "./mcp-manager.js";
 import { ToolRegistry } from "./registry.js";
 import { ToolExecutor } from "./executor.js";
 import { PermissionClassifier } from "./permission.js";
 import { HookRegistry } from "../hooks/registry.js";
-import type { MCPServerConfig } from "../types.js";
+import type { MCPServerConfig, ToolResult } from "../types.js";
 import { listMcpResourcesTool } from "./builtin/mcp-tools.js";
+import { toolResultToBlock } from "../engine/turn-loop.js";
 
 /**
  * connectAll's enabled-toggle filter. We don't spin up a real transport;
@@ -323,6 +327,272 @@ describe("MCPManager discovered tool executors", () => {
 
     expect(result.result).toContain("ok");
     expect(callOptions?.signal).toBeInstanceOf(AbortSignal);
+  });
+});
+
+describe("MCPManager inline image results", () => {
+  const PNG = Buffer.from("png-bytes").toString("base64");
+
+  async function runImageTool(
+    config: Partial<MCPServerConfig>,
+    llm?: { provider: string; providerKind?: string; model: string },
+    response = {
+      content: [
+        { type: "text", text: "window state" },
+        { type: "image", data: PNG, mimeType: "image/png" },
+      ] as unknown[],
+      isError: false,
+    },
+    invocation: "registered" | "generic" | "legacy" = "registered",
+  ): Promise<ToolResult> {
+    const registry = new ToolRegistry({ builtinTools: ["MCPTool"] });
+    const client = {
+      listTools: async () => ({
+        tools: [{ name: "shot", inputSchema: { type: "object", properties: {} } }],
+      }),
+      callTool: async () => response,
+      close: async () => {},
+    };
+    const { mcpConnectionScope } = await import("./mcp-workspace.js");
+    const { snapshotMcpConnectionConfig } = await import("./mcp-connection-config.js");
+    const manager = new (class extends MCPManager {
+      protected override async performConnect(
+        name: string,
+        config: MCPServerConfig,
+        workspace?: McpWorkspaceScope,
+      ): Promise<void> {
+        const scope = mcpConnectionScope(workspace);
+        const snapshot = snapshotMcpConnectionConfig(config);
+        const key = (this as any).connectionKey(name, scope, snapshot);
+        (this as any).connections.set(key, {
+          client,
+          serverName: name,
+          scope,
+          config: snapshot.config,
+          identity: snapshot.identity,
+        });
+        (this as any).registerDiscoveredTools(name, client, key, (await client.listTools()).tools);
+      }
+    })(registry);
+    const ctx = {
+      cwd: "/tmp",
+      ...(llm ? { llmConfig: llm } : {}),
+    };
+    try {
+      await manager.connectAll(
+        { cua: { name: "cua", command: "cua-driver", ...config } },
+        {},
+        undefined,
+        ctx as any,
+      );
+      if (invocation === "legacy") {
+        return {
+          id: "legacy",
+          toolName: "shot",
+          result: String(await manager.callTool("cua", "shot", {}, undefined, ctx as any)),
+        };
+      }
+      return await registry.executeTool(
+        invocation === "generic" ? "MCPTool" : "mcp_cua_shot",
+        invocation === "generic" ? { server: "cua", tool: "shot" } : {},
+        { ctx: ctx as any },
+      );
+    } finally {
+      await manager.disconnectAll();
+    }
+  }
+
+  test("generic MCPTool preserves the same wrapped text and inline screenshot", async () => {
+    const result = await runImageTool(
+      { inlineImages: true },
+      { provider: "anthropic", model: "claude-sonnet-4-6" },
+      undefined,
+      "generic",
+    );
+    expect(result.isError).toBe(false);
+    expect(result.contentBlocks?.[0]).toEqual({ type: "text", text: result.result });
+    expect(result.contentBlocks?.[1]?.source?.data).toBe(PNG);
+    expect(result.result).toContain('trust="untrusted"');
+    expect(result.result).not.toContain(PNG);
+  });
+
+  test("generic MCPTool retains image file references when inline delivery is unavailable", async () => {
+    for (const config of [{}, { inlineImages: true }]) {
+      const result = await runImageTool(
+        config,
+        { provider: "deepseek", model: "deepseek-chat" },
+        undefined,
+        "generic",
+      );
+      expect(result.isError).toBe(false);
+      expect(result.contentBlocks).toBeUndefined();
+      expect(result.result).toContain("saved=");
+      expect(result.result).toContain("window state");
+    }
+  });
+
+  test("generic MCPTool keeps an image-producing MCP error failed", async () => {
+    const result = await runImageTool(
+      { inlineImages: true },
+      { provider: "anthropic", model: "claude-sonnet-4-6" },
+      {
+        content: [
+          { type: "text", text: "screenshot failed" },
+          { type: "image", data: PNG, mimeType: "image/png" },
+        ],
+        isError: true,
+      },
+      "generic",
+    );
+    expect(result.isError).toBe(true);
+    expect(result.error).toContain("screenshot failed");
+    expect(result.contentBlocks).toBeUndefined();
+  });
+
+  test("legacy text SDK calls retain image file references even with a vision context", async () => {
+    const result = await runImageTool(
+      { inlineImages: true },
+      { provider: "anthropic", model: "claude-sonnet-4-6" },
+      undefined,
+      "legacy",
+    );
+    expect(result.result).toContain("saved=");
+    expect(result.result).toContain("window state");
+    expect(result.result).not.toContain("attached inline");
+  });
+
+  test("attaches image blocks for an opted-in server under a vision model", async () => {
+    const result = await runImageTool(
+      { inlineImages: true },
+      { provider: "anthropic", model: "claude-sonnet-4-6" },
+    );
+    expect(result.result).toContain("window state");
+    expect(result.result).toContain("attached inline");
+    expect(result.contentBlocks).toEqual([
+      { type: "text", text: result.result },
+      { type: "image", source: { type: "base64", media_type: "image/png", data: PNG } },
+    ]);
+    // The turn loop prefers contentBlocks over result. The model must still
+    // receive the text and the MCP trust boundary beside the screenshot.
+    const modelContent = toolResultToBlock(result).content;
+    expect(modelContent).toBe(result.contentBlocks);
+    expect(result.contentBlocks?.[0]?.text).toContain("window state");
+    expect(result.contentBlocks?.[0]?.text).toContain('trust="untrusted"');
+    expect(result.result).not.toContain(PNG);
+  });
+
+  test("keeps the spill path when the server did not opt in", async () => {
+    const result = await runImageTool({}, { provider: "anthropic", model: "claude-sonnet-4-6" });
+    expect(result.contentBlocks).toBeUndefined();
+    expect(result.result).toContain("[mcp-image]");
+    expect(result.result).not.toContain("attached inline");
+  });
+
+  test("fails closed without a vision-capable model", async () => {
+    const noVision = await runImageTool(
+      { inlineImages: true },
+      { provider: "deepseek", model: "deepseek-chat" },
+    );
+    expect(noVision.contentBlocks).toBeUndefined();
+    const noConfig = await runImageTool({ inlineImages: true });
+    expect(noConfig.contentBlocks).toBeUndefined();
+  });
+
+  test("uses providerKind for a custom provider's vision capability", async () => {
+    const result = await runImageTool(
+      { inlineImages: true },
+      { provider: "custom-endpoint", providerKind: "anthropic", model: "claude-sonnet-4-6" },
+    );
+    expect(result.contentBlocks?.[1]?.source?.data).toBe(PNG);
+  });
+
+  test("explicit opt-out keeps the file reference", async () => {
+    const result = await runImageTool(
+      { inlineImages: false },
+      { provider: "anthropic", model: "claude-sonnet-4-6" },
+    );
+    expect(result.contentBlocks).toBeUndefined();
+    expect(result.result).toContain("saved=");
+  });
+
+  test("keeps fallback image references beside inline images in the model content", async () => {
+    const result = await runImageTool(
+      { inlineImages: true },
+      { provider: "anthropic", model: "claude-sonnet-4-6" },
+      {
+        content: [
+          { type: "image", data: PNG, mimeType: "image/png" },
+          { type: "image", data: PNG, mimeType: "image/svg+xml" },
+          { type: "text", text: "after the screenshot" },
+          { type: "image", data: PNG, mimeType: "image/webp" },
+        ],
+        isError: false,
+      },
+    );
+    expect(result.contentBlocks).toHaveLength(3);
+    expect(result.contentBlocks?.[0]?.text).toContain("saved=");
+    expect(result.contentBlocks?.[0]?.text).toContain("after the screenshot");
+    expect(result.contentBlocks?.slice(1).map((block) => block.source?.media_type)).toEqual([
+      "image/png",
+      "image/webp",
+    ]);
+  });
+
+  test("oversized inline payloads fall back to a saved image", async () => {
+    const data = Buffer.alloc(MAX_MCP_INLINE_IMAGE_BYTES + 1).toString("base64");
+    const result = await runImageTool(
+      { inlineImages: true },
+      { provider: "anthropic", model: "claude-sonnet-4-6" },
+      { content: [{ type: "image", data, mimeType: "image/png" }], isError: false },
+    );
+    expect(result.contentBlocks).toBeUndefined();
+    expect(result.result).toContain("saved=");
+    expect(result.result).not.toContain(data);
+  });
+
+  test("text-only and empty responses retain the wrapped text contract", async () => {
+    for (const content of [[{ type: "text", text: "window state" }], []]) {
+      const result = await runImageTool(
+        { inlineImages: true },
+        { provider: "anthropic", model: "claude-sonnet-4-6" },
+        { content, isError: false },
+      );
+      expect(result.isError).toBe(false);
+      expect(result.contentBlocks).toBeUndefined();
+      expect(result.result).toContain('trust="untrusted"');
+      expect(result.result).toContain(content.length ? "window state" : "(no output)");
+    }
+  });
+
+  test("an MCP error with an image remains an error for the model", async () => {
+    const result = await runImageTool(
+      { inlineImages: true },
+      { provider: "anthropic", model: "claude-sonnet-4-6" },
+      {
+        content: [
+          { type: "text", text: "screenshot failed" },
+          { type: "image", data: PNG, mimeType: "image/png" },
+        ],
+        isError: true,
+      },
+    );
+    expect(result.isError).toBe(true);
+    expect(result.error).toContain("screenshot failed");
+    expect(result.contentBlocks).toBeUndefined();
+    expect(toolResultToBlock(result).is_error).toBe(true);
+  });
+
+  test("inlineMcpImageBlock rejects unsupported types and oversized payloads", () => {
+    expect(inlineMcpImageBlock(PNG, "image/svg+xml")).toBeNull();
+    const oversized = "A".repeat(Math.ceil((MAX_MCP_INLINE_IMAGE_BYTES * 4) / 3) + 8);
+    expect(inlineMcpImageBlock(oversized, "image/png")).toBeNull();
+    expect(inlineMcpImageBlock(PNG, "IMAGE/JPEG; q=1")?.source.media_type).toBe("image/jpeg");
+  });
+
+  test("the inline byte cap includes an exactly-sized padded base64 payload", () => {
+    const data = Buffer.alloc(MAX_MCP_INLINE_IMAGE_BYTES).toString("base64");
+    expect(inlineMcpImageBlock(data, "image/png")?.source.data === data).toBe(true);
+    expect(inlineMcpImageBlock("", "image/png")).toBeNull();
   });
 });
 
