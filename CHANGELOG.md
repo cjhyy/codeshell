@@ -8,6 +8,23 @@ breaking.
 
 ## [Unreleased]
 
+## [0.9.37] - 2026-10-13
+
+### Added
+
+- Explain all 19 Panel Host permissions in Chinese and English, with expandable
+  capability details in Extensions and project Settings. Show bundled Agent tools
+  with their descriptions and read/write declarations, Skills, and native entries.
+- Mark added and removed permissions in installation/update reviews using the
+  project's selected package as the baseline. Clearly identify unavailable prior
+  permissions rather than inferring them from the global package catalog.
+
+### Fixed
+
+- Show the selected Panel version in project Settings and clear previous-project
+  capability details while the next project's configuration loads.
+- Reuse the same permission explanations in project version restoration reviews.
+
 ## [0.9.36] - 2026-10-13
 
 ### Added
