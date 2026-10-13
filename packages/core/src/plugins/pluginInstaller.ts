@@ -164,7 +164,8 @@ async function materializePath(
   const src = contained.path;
   await mkdir(dirname(cacheTarget), { recursive: true });
   if (existsSync(cacheTarget)) await rm(cacheTarget, { recursive: true, force: true });
-  await cp(src, cacheTarget, { recursive: true });
+  // Keep package-relative aliases independent of the source/staging directory.
+  await cp(src, cacheTarget, { recursive: true, verbatimSymlinks: true });
   return { ok: true, sha: undefined };
 }
 
@@ -204,7 +205,7 @@ async function materializeGitSubdir(
     const src = contained.path;
     await mkdir(dirname(cacheTarget), { recursive: true });
     if (existsSync(cacheTarget)) await rm(cacheTarget, { recursive: true, force: true });
-    await cp(src, cacheTarget, { recursive: true });
+    await cp(src, cacheTarget, { recursive: true, verbatimSymlinks: true });
     return { ok: true, sha: head.stdout };
   } finally {
     await rm(tmp, { recursive: true, force: true });
@@ -266,7 +267,7 @@ async function materialize(
     const finalDir = pluginCacheDir(marketplace, plugin, "local");
     if (existsSync(finalDir)) await rm(finalDir, { recursive: true, force: true });
     await mkdir(dirname(finalDir), { recursive: true });
-    await cp(placeholder, finalDir, { recursive: true });
+    await cp(placeholder, finalDir, { recursive: true, verbatimSymlinks: true });
     await rm(placeholder, { recursive: true, force: true });
     return { ok: true, cacheDir: finalDir, version: "local", sha: undefined };
   }
@@ -292,7 +293,7 @@ async function materialize(
     const finalDir = pluginCacheDir(marketplace, plugin, version);
     if (existsSync(finalDir)) await rm(finalDir, { recursive: true, force: true });
     await mkdir(dirname(finalDir), { recursive: true });
-    await cp(placeholder, finalDir, { recursive: true });
+    await cp(placeholder, finalDir, { recursive: true, verbatimSymlinks: true });
     await rm(placeholder, { recursive: true, force: true });
     return { ok: true, cacheDir: finalDir, version, sha: r.sha };
   }
@@ -314,7 +315,7 @@ async function materialize(
     const finalDir = pluginCacheDir(marketplace, plugin, version);
     if (existsSync(finalDir)) await rm(finalDir, { recursive: true, force: true });
     await mkdir(dirname(finalDir), { recursive: true });
-    await cp(placeholder, finalDir, { recursive: true });
+    await cp(placeholder, finalDir, { recursive: true, verbatimSymlinks: true });
     await rm(placeholder, { recursive: true, force: true });
     return { ok: true, cacheDir: finalDir, version, sha: r.sha };
   }
