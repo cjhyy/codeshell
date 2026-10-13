@@ -115,6 +115,7 @@ import {
   discoverRecentClaudeSessions,
   discoverRecentCodexSessions,
   discoverRelatedSessions,
+  listRelatedCodexSessions,
   parseClaudeTranscriptLine,
   parseCodexTranscriptLine,
   probeClaudeCli,
@@ -5664,9 +5665,7 @@ ipcMain.handle("ccRoom:listSessions", async (_e, cwd: string, all?: boolean) => 
 ipcMain.handle("ccRoom:listCodexSessions", async (_e, cwd: string, all?: boolean) => {
   cwd = await requireRendererProjectPath(cwd);
   const opts = all ? {} : { limit: DEFAULT_DISCOVER_LIMIT, sinceMs: DEFAULT_DISCOVER_SINCE_MS };
-  const sessions = discoverRelatedSessions("codex", cwd, opts);
-  const total = all ? sessions.length : countRelatedSessions("codex", cwd);
-  return { sessions, total };
+  return listRelatedCodexSessions(cwd, opts);
 });
 ipcMain.handle(
   "ccRoom:openSession",

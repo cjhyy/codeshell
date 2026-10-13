@@ -76,7 +76,14 @@ export function CCRoomView({
   const cwdRef = useRef(cwd);
   cliKindRef.current = cliKind;
   cwdRef.current = cwd;
-  const [avail, setAvail] = useState<Availability | null>(null);
+  const [probeResult, setProbeResult] = useState<{
+    cliKind: CliKind;
+    availability: Availability;
+  } | null>(null);
+  // A CLI switch renders before its probe effect clears the previous result.
+  // Keep the result tied to its CLI so that render cannot list the new CLI's
+  // sessions using the previous CLI's availability.
+  const avail = probeResult?.cliKind === cliKind ? probeResult.availability : null;
   const [sessions, setSessions] = useState<DiscoveredSession[]>([]);
   // Total session count (unbounded) vs the bounded default we show. Expansion
   // is committed only after the full list arrives, so a failed read is retryable.
@@ -143,7 +150,7 @@ export function CCRoomView({
       consumeRef.current?.(openRequest.nonce);
       dismissPicker();
       if (cliKind !== openRequest.cliKind) {
-        setAvail(null);
+        setProbeResult(null);
         setCliKind(openRequest.cliKind);
         return;
       }
@@ -154,7 +161,7 @@ export function CCRoomView({
     const sequence = probeSequenceRef.current + 1;
     probeSequenceRef.current = sequence;
     let cancelled = false;
-    setAvail(null);
+    setProbeResult(null);
     setSessions([]);
     setTotal(0);
     setExpanded(false);
@@ -197,7 +204,7 @@ export function CCRoomView({
           if (pendingOpenRequestRef.current?.nonce === linkedRequest.nonce) {
             pendingOpenRequestRef.current = null;
           }
-          setAvail({ available: false });
+          setProbeResult({ cliKind, availability: { available: false } });
           toastRef.current({
             message: tRef.current("panels.room.openLinkedFailed", {
               error: error instanceof Error ? error.message : String(error),
@@ -217,11 +224,13 @@ export function CCRoomView({
       .then((availability) => {
         if (cancelled || probeSequenceRef.current !== sequence) return;
         probeResolved = true;
-        setAvail(availability);
+        setProbeResult({ cliKind, availability });
       })
       .catch((error) => {
         if (cancelled || probeSequenceRef.current !== sequence) return;
-        if (!probeResolved) setAvail({ available: false });
+        if (!probeResolved) {
+          setProbeResult({ cliKind, availability: { available: false } });
+        }
         toastRef.current({
           message: tRef.current("panels.room.openLinkedFailed", {
             error: error instanceof Error ? error.message : String(error),
@@ -329,8 +338,8 @@ export function CCRoomView({
   );
 
   useEffect(() => {
-    if (avail?.available) refresh();
-  }, [avail?.available, refresh]);
+    if (active && avail?.available) refresh();
+  }, [active, avail?.available, refresh]);
 
   useEffect(() => {
     if (!active || !avail?.available || conv || refreshing) return;

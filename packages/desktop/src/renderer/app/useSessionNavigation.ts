@@ -146,6 +146,9 @@ export function useSessionNavigation({
     window.codeshell.log("sidebar.add_clicked", {});
     const created = await window.codeshell.projectRegistry.createFromPicker();
     if (!created) return;
+    // Reopening a registered folder reuses its project ID, which may still
+    // select a legacy cloud binding. The explicit local picker owns this choice.
+    if (beforeSelectLocalSession && !(await beforeSelectLocalSession(created.id))) return;
     const next = trackedProjectFromRegistry(created);
     unmarkProjectPathRemoved(next.path);
     // Main broadcasts the registry before the picker call returns. Check the
