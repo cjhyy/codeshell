@@ -3,6 +3,16 @@ import { translate } from "./translate";
 import { messages } from "./dict";
 
 describe("translate", () => {
+  test("names the Onodera and Misaka theme cards in both languages", () => {
+    expect(translate("zh", "settingsX.appearance.pack.onodera")).toBe("小野寺小咲 · Sweet Promise");
+    expect(translate("en", "settingsX.appearance.pack.onodera")).toBe(
+      "Kosaki Onodera · Sweet Promise",
+    );
+    expect(translate("zh", "settingsX.appearance.pack.misaka")).toBe("御坂美琴 · Electric Promise");
+    expect(translate("en", "settingsX.appearance.pack.misaka")).toBe(
+      "Mikoto Misaka · Electric Promise",
+    );
+  });
   test("hits the requested language", () => {
     expect(translate("en", "common.cancel")).toBe("Cancel");
     expect(translate("zh", "common.cancel")).toBe("取消");

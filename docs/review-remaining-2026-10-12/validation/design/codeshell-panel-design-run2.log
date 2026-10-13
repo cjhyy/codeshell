@@ -1,0 +1,44 @@
+{"case":"network_guard","homeIsolated":true,"nodeNetworkDenied":true,"browserOrigin":"https://panel.test","browserRoute":"all other origins aborted"}
+{"case":"undo_baseline","indexed":false,"initial":"saved","state":"saved","contentExactlyRestored":true,"errors":[]}
+✔ undo restored content indexed=false (1205.269666ms)
+{"case":"undo_baseline","indexed":true,"initial":"saved","state":"dirty","contentExactlyRestored":true,"errors":[]}
+✔ undo restored content indexed=true (348.544542ms)
+✖ open while editing delayedPart=false (4355.2735ms)
+{"case":"text_layout","source":"ABCDEFGHIJKLMNO","rendered":"ABCDEFGHIJKLMNO","height":19.2,"width":50}
+{"case":"text_layout","source":"x ABCDEFGHIJKLMNO","rendered":"x\nABCDE\nFGHIJK\nLMNO","height":76.8,"width":50}
+{"case":"text_layout","source":"one\ntwo","rendered":"one two","height":19.2,"width":100}
+{"case":"frontend_text","fullSourcePresent":false,"displayTextPresent":true,"textOverflowCss":false}
+✖ open while editing delayedPart=true (4376.720583ms)
+✔ layout first long token and explicit line breaks (2.029917ms)
+✔ frontend source text export (0.935667ms)
+ℹ tests 6
+ℹ suites 0
+ℹ pass 4
+ℹ fail 2
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 10571.620625
+
+✖ failing tests:
+
+test at ../../../../../../private/tmp/codeshell-panel-design-fixture.mjs:156:41
+✖ open while editing delayedPart=false (4355.2735ms)
+  locator.click: Timeout 4000ms exceeded.
+  Call log:
+  [2m  - waiting for locator('#files-list .file-row').filter({ hasText: 'other' })[22m
+  
+      at TestContext.<anonymous> (/private/tmp/codeshell-panel-design-fixture.mjs:162:74) {
+    name: 'TimeoutError'
+  }
+
+test at ../../../../../../private/tmp/codeshell-panel-design-fixture.mjs:156:41
+✖ open while editing delayedPart=true (4376.720583ms)
+  locator.click: Timeout 4000ms exceeded.
+  Call log:
+  [2m  - waiting for locator('#files-list .file-row').filter({ hasText: 'other' })[22m
+  
+      at TestContext.<anonymous> (/private/tmp/codeshell-panel-design-fixture.mjs:162:74) {
+    name: 'TimeoutError'
+  }
+Native smoke failed (1)

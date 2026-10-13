@@ -461,3 +461,17 @@ export {
   type SettingsRecoveryInspection,
   type SettingsRecoveryResult,
 } from "./settings/recovery.js";
+
+export {
+  createGithubIssueBatch,
+  normalizeGithubIssueBatch,
+  githubIssueBatchPolicy,
+} from "./links/github-issue-batch.js";
+export { readOperationSessionOwner } from "./operations/session-owner.js";
+export { allowsLinkAction, linkAuthoritySnapshot } from "./links/authority.js";
+export {
+  isOperationBatchAuthorityFrame,
+  DESKTOP_OPERATION_BATCH_METHOD,
+  type DesktopOperationBatchAuthorityInput,
+  type DesktopOperationBatchAuthorityResult,
+} from "./operations/desktop-batch-authority-client.js";

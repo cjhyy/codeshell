@@ -1,0 +1,6 @@
+/tmp/codeshell-review-20261012-desktop/worker-external.test.tsx.log:Completed Bun shard: 1 tests, 0 skipped; 0 failures.
+/tmp/codeshell-review-20261012-desktop/run-controller.test.tsx.log:Completed Bun shard: 5 tests, 0 skipped; 0 failures.
+/tmp/codeshell-review-20261012-desktop/preload-envelope.test.ts.log:Completed Bun shard: 2 tests, 0 skipped; 0 failures.
+/tmp/codeshell-review-20261012-desktop/concurrent-approvals.test.ts.log:Completed Bun shard: 1 tests, 0 skipped; 0 failures.
+/tmp/codeshell-review-20261012-desktop/approval-queue.test.tsx.log:Completed Bun shard: 2 tests, 0 skipped; 0 failures.
+/tmp/codeshell-review-20261012-desktop/composer-session.test.tsx.log:Completed Bun shard: 2 tests, 0 skipped; 0 failures.

@@ -1,0 +1,22 @@
+bun install v1.3.11 (af24e281)
+Resolving dependencies
+Resolved, downloaded and extracted [151]
+
+$ node scripts/check-node.cjs
+
++ @eslint/js@10.0.1
++ @types/lodash@4.17.24
++ @types/lodash-es@4.17.12
++ @types/node@22.19.19
++ @types/react@19.2.16 (v19.3.0 available)
++ @types/semver@7.7.1
++ bun-types@1.3.14
++ chalk@5.6.2
++ eslint@9.39.4
++ prettier@3.8.3
++ react@19.2.6 (v19.3.0 available)
++ tsup@8.5.1
++ typescript@5.9.3 (v7.0.2 available)
++ typescript-eslint@8.60.1
+
+2133 packages installed [334.78s]

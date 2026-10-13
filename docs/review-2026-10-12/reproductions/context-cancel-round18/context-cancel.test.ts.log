@@ -1,0 +1,12 @@
+bun test v1.3.11 (af24e281)
+
+docs/review-2026-10-12/reproductions/context-cancel-round18/context-cancel.test.ts:
+(pass) actual ChatView allows exiting selection before submission, but hides Stop and disables exit during actual Core summary; completion restores composer [131.81ms]
+(pass) service-only cancellation through actual preload aborts summary and re-enables the real selection exit; ordinary busy Stop is reachable [49.71ms]
+(pass) actual preload 30s fork timeout restores selection controls but does not abort Core; leaving and returning exposes no Stop and late success has no created callback [74.55ms]
+
+ 3 pass
+ 0 fail
+ 82 expect() calls
+Ran 3 tests across 1 file. [1.55s]
+Completed Bun shard: 3 tests, 0 skipped; 0 failures.

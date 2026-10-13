@@ -1,0 +1,16 @@
+bun test v1.3.11 (af24e281)
+
+docs/review-2026-10-12/latest-reproductions/panels-round6/native-lifecycle.test.tsx:
+fatal: not a git repository (or any of the parent directories): .git
+(pass) legacy UI session changes its bound Panel engine id through the actual model selector [154.59ms]
+fatal: not a git repository (or any of the parent directories): .git
+fatal: not a git repository (or any of the parent directories): .git
+(pass) R22 remains before scope capture although secondary root has the same registered project id [90.57ms]
+fatal: not a git repository (or any of the parent directories): .git
+(pass) modern UI equals engine identity keeps Panel automation usable across model selection [65.35ms]
+
+ 3 pass
+ 0 fail
+ 26 expect() calls
+Ran 3 tests across 1 file. [1409.00ms]
+Completed Bun shard: 3 tests, 0 skipped; 0 failures.

@@ -1,0 +1,1580 @@
+{
+  "scope": {
+    "workspace": "/Users/admin/.codex/worktrees/server-desktop-review-20261012/codeshell",
+    "task": "报告元审查，不调查产品新bug/不执行tests/build/models/不改docs",
+    "assigned_rule": "顶层*.md排除README/progress/flow-coverage/repair-handoff后排序index%3==0",
+    "assigned_documents": 46,
+    "all_assigned_full_read": true,
+    "additional_coverage_sources": "其它顶层报告仅定向读取相关段落，未假称全部完整阅读",
+    "test_execution": 0,
+    "product_imports": 0,
+    "product_mutations": 0,
+    "automation_mutations": 0,
+    "final_priority_authority": "README当前86=1P1/52P2/33P3；保持双冻结84740/a66f common86/251，不重新开启goal/heartbeat"
+  },
+  "document_classification_counts": {
+    "质量复核": 20,
+    "正式专项": 15,
+    "准备或预审": 5,
+    "正常反证": 4,
+    "历史交付": 2
+  },
+  "documents": [
+    {
+      "filename": "approval-quality-round10.md",
+      "sha256": "f525ea372cfcc72d9b78fb365d10e9b0d91713f7735bae848cd48eb6a6ac76f0",
+      "lines": 99,
+      "classification": "质量复核",
+      "full_body_read": true,
+      "read_ranges": "1-99",
+      "summary": "R10/R11/R12/R14/R19；实际local stdio/React审批及Core pending正常对照；R11/R19最终已降P3。",
+      "evidence_lines": "9-14,21-25,39-45,59-81,99",
+      "coverage_boundary": "无真实CLI/model/Electron/browser；R19延迟seam压缩预算；outputJournal恢复分支仅静态。",
+      "substantive_conflict_found": false,
+      "priority_authority": "README.md最终R编号/分级，阶段建议不覆盖最终索引"
+    },
+    {
+      "filename": "automation-round5.md",
+      "sha256": "4a6aab0fb197862e288a17d1f6f37b804c665639d31344a24a8413ffe54cd755",
+      "lines": 156,
+      "classification": "正式专项",
+      "full_body_read": true,
+      "read_ranges": "1-156",
+      "summary": "R44-R48；Desktop续接120s/FIFO、错误完成、历史job身份、enabled刷新、disabledReason。",
+      "evidence_lines": "13-37,43-61,67-88,94-132,134-154,156",
+      "coverage_boundary": "fake Engine+实际ChatSession，20ms时间缩放；Hub保护多数源码/已有测试，未真实外发网关通知。",
+      "substantive_conflict_found": false,
+      "priority_authority": "README.md最终R编号/分级，阶段建议不覆盖最终索引"
+    },
+    {
+      "filename": "browser-cancel-gates-round21.md",
+      "sha256": "5b77277c82542dff9de9fa92b50ebaa6125dab1e74466580c1f0ca1a38d67d98",
+      "lines": 78,
+      "classification": "准备或预审",
+      "full_body_read": true,
+      "read_ranges": "1-78",
+      "summary": "Browser child/builtin revoke/owner close/Chrome门禁静态盘点；parent Stop当时未验证。",
+      "evidence_lines": "3-5,27-35,45,55,61,70-78",
+      "coverage_boundary": "0执行；既有测试只读定义；parent Stop后由round22正式R81动态补证，不是当前尚未cover。",
+      "substantive_conflict_found": false,
+      "priority_authority": "README.md最终R编号/分级，阶段建议不覆盖最终索引"
+    },
+    {
+      "filename": "browser-quality-round21.md",
+      "sha256": "a9bf1fd3ecd3274cbd2d081a1b818289dc76fa4eb4d7551a6880dedc8490a0ad",
+      "lines": 61,
+      "classification": "质量复核",
+      "full_body_read": true,
+      "read_ranges": "1-61",
+      "summary": "R80 P3：BrowserPanel idle disconnected反馈与重新配对。",
+      "evidence_lines": "9-11,17-23,37-47,53-61",
+      "coverage_boundary": "0新增执行；原作者MiniDOM+实际preload/Main closures/backend，Native transport为替身，无真实Chrome/relay。",
+      "substantive_conflict_found": false,
+      "priority_authority": "README.md最终R编号/分级，阶段建议不覆盖最终索引"
+    },
+    {
+      "filename": "browser-stop-discovery-round22.md",
+      "sha256": "893acdd06b6fb50268ff17b78aa7fce08f8362bf871d2da297b826200dfa4926",
+      "lines": 58,
+      "classification": "准备或预审",
+      "full_body_read": true,
+      "read_ranges": "1-58",
+      "summary": "历史provider/schema discovery支架失败诊断；不计产品finding。",
+      "evidence_lines": "3-5,9-26,30-48,52-58",
+      "coverage_boundary": "0执行，历史maxTurns=4建议已被末尾实际8预算补记取代。",
+      "substantive_conflict_found": false,
+      "priority_authority": "README.md最终R编号/分级，阶段建议不覆盖最终索引"
+    },
+    {
+      "filename": "browser-stop-quality-round22.md",
+      "sha256": "36c08de7086fa7554e1a784e71ea2cd8de92ac42fffe581fa051655981747ef3",
+      "lines": 73,
+      "classification": "质量复核",
+      "full_body_read": true,
+      "read_ranges": "1-73",
+      "summary": "R81 P2：Core已Stop，尚未提交输入的Main readiness等待旧click随后发Input。",
+      "evidence_lines": "7-11,24-30,36-43,47-51,57-71",
+      "coverage_boundary": "0新增执行；actual Core/preload/native IPC/Puppeteer/owned Chromium；完整Main/App/stdio worker/Chrome/model未运行，界面按钮仅静态。",
+      "substantive_conflict_found": false,
+      "priority_authority": "README.md最终R编号/分级，阶段建议不覆盖最终索引"
+    },
+    {
+      "filename": "cli-recovery-quality-round15.md",
+      "sha256": "42d10348491dc6340a7c616e8fd36ccf702435fa9f6b0b3702757e6045d2801f",
+      "lines": 47,
+      "classification": "质量复核",
+      "full_body_read": true,
+      "read_ranges": "1-47",
+      "summary": "R66 P2：合法bypass实例被旧观察页接管后metadata错报default。",
+      "evidence_lines": "7,11-25,29-35,39-47",
+      "coverage_boundary": "0新增执行；真实组件+AST Main+actual RoomManager，agent为固定opts内存替身，Codex仅配置机制静态。",
+      "substantive_conflict_found": false,
+      "priority_authority": "README.md最终R编号/分级，阶段建议不覆盖最终索引"
+    },
+    {
+      "filename": "cloud-account-static-round26.md",
+      "sha256": "373a6b07183c85950d4942fbd4f49aba2c689c2e720ae15bde6408b19bb58ecc",
+      "lines": 17,
+      "classification": "正常反证",
+      "full_body_read": true,
+      "read_ranges": "1-17",
+      "summary": "Desktop Cloud账号login/cancel/logout/refresh静态专项，0 finding。",
+      "evidence_lines": "3-15",
+      "coverage_boundary": "0执行；既有manager测试只读，未OAuth/GitHub/HTTP/真实账号/全native时序。",
+      "substantive_conflict_found": false,
+      "priority_authority": "README.md最终R编号/分级，阶段建议不覆盖最终索引"
+    },
+    {
+      "filename": "connection-recovery-quality-round15.md",
+      "sha256": "69c10ccc744d6624e126bf3d766df6d5b554c45169cebfdfab911c60cd06c265",
+      "lines": 47,
+      "classification": "质量复核",
+      "full_body_read": true,
+      "read_ranges": "1-47",
+      "summary": "R68 P2：Desktop RemoteHost live/device bypass背压；实际Node/ws慢读。",
+      "evidence_lines": "9-14,18-24,28-33,39-45",
+      "coverage_boundary": "0新增执行；原实验上限24MiB，Main接线静态；未OOM/真实手机/实际Main，不能称indefinitely。",
+      "substantive_conflict_found": false,
+      "priority_authority": "README.md最终R编号/分级，阶段建议不覆盖最终索引"
+    },
+    {
+      "filename": "context-cancel-round18.md",
+      "sha256": "9911524de544761e0cc106170b2bef7a078c71274a43fb7585c689102aa6bb66",
+      "lines": 88,
+      "classification": "正式专项",
+      "full_body_read": true,
+      "read_ranges": "1-88",
+      "summary": "R74 P3：Desktop summary packaging无可见取消，RPC timeout不abort Core。",
+      "evidence_lines": "3-12,16-29,33-49,55-64,84-88",
+      "coverage_boundary": "actual ChatView/MessageStream/preload/Core/Engine+memory provider；30s timer捕获callback主动触发；App/Main/worker及target索引发现静态。",
+      "substantive_conflict_found": false,
+      "priority_authority": "README.md最终R编号/分级，阶段建议不覆盖最终索引"
+    },
+    {
+      "filename": "credentials-round5.md",
+      "sha256": "27bdf3ed6903cdfaa47837d32d08e3af7a0ae71c7e147d8ee50a52c4f58230bf",
+      "lines": 36,
+      "classification": "正式专项",
+      "full_body_read": true,
+      "read_ranges": "1-36",
+      "summary": "R42 P2 Cookie ID collision overwrite，R43 P3 Token存储拒写无反馈。",
+      "evidence_lines": "7-14,18-22,32-36",
+      "coverage_boundary": "actual built Electron/IPC/store；capture/login与cipher为替身，未native keychain/真实网站login。",
+      "substantive_conflict_found": false,
+      "priority_authority": "README.md最终R编号/分级，阶段建议不覆盖最终索引"
+    },
+    {
+      "filename": "desktop-quality-round10.md",
+      "sha256": "cf1787e7670bc910890e01f75da20fb4470b7f115a7ab206a9b1130cc786a90e",
+      "lines": 84,
+      "classification": "质量复核",
+      "full_body_read": true,
+      "read_ranges": "1-84",
+      "summary": "R04/R05/R07/R13/R28/R29影响/恢复；R29后续P3。",
+      "evidence_lines": "5-7,15-22,28-40,46-50,56-58,64-78,84",
+      "coverage_boundary": "MiniDOM/hook/store正常对照，原CLI进程存活只源码归属；Open Recent最终有菜单已含path前提。",
+      "substantive_conflict_found": false,
+      "priority_authority": "README.md最终R编号/分级，阶段建议不覆盖最终索引"
+    },
+    {
+      "filename": "desktop-round3.md",
+      "sha256": "16e1dbe84a3e8e6f36eec39447918a72339682b530471052723de46bc4aec7b4",
+      "lines": 40,
+      "classification": "正式专项",
+      "full_body_read": true,
+      "read_ranges": "1-40",
+      "summary": "R28 P2 settings init；R29 P3 stale migration projection；R35 P1 duplicate worktree destructive rollback。",
+      "evidence_lines": "7-14,16-25,29-36,40",
+      "coverage_boundary": "R35真实Git+deterministic process schedule，UI Enter和Main race分开；自然频率未测。旧Open Recent恢复一句需以后续限定阅读。",
+      "substantive_conflict_found": false,
+      "priority_authority": "README.md最终R编号/分级，阶段建议不覆盖最终索引"
+    },
+    {
+      "filename": "evidence-navigation-round29.md",
+      "sha256": "69fcf6c1e1b303f9c3cf2953b007d4c42fc029bfa96f1cad8efaf844bd64a100",
+      "lines": 7,
+      "classification": "历史交付",
+      "full_body_read": true,
+      "read_ranges": "1-7",
+      "summary": "R01-R54证据链接54项/17正文标题映射元核对。",
+      "evidence_lines": "3-7",
+      "coverage_boundary": "0产品/fixture执行；不是额外测试或覆盖域。",
+      "substantive_conflict_found": false,
+      "priority_authority": "README.md最终R编号/分级，阶段建议不覆盖最终索引"
+    },
+    {
+      "filename": "file-navigation-quality-round14.md",
+      "sha256": "8006ef1842929f77b2452cdbd3701e1569d9e44cb460d8e8f7f7b4b18d4040a9",
+      "lines": 51,
+      "classification": "质量复核",
+      "full_body_read": true,
+      "read_ranges": "1-51",
+      "summary": "R65 P3 actual EACCES目录空树；R58图片同类权限适配；Hub files正常恢复。",
+      "evidence_lines": "9-20,24-36,40-51",
+      "coverage_boundary": "0新增执行；Desktop project-root动态/Session模式源码；Hub auth为fixture回调，图片非完整Electron。",
+      "substantive_conflict_found": false,
+      "priority_authority": "README.md最终R编号/分级，阶段建议不覆盖最终索引"
+    },
+    {
+      "filename": "file-root-quality-preflight-round27.md",
+      "sha256": "826e2f76992e0d2cc07afb13840e594095eefb06ff28ba7b09e98c0c51533c29",
+      "lines": 5,
+      "classification": "准备或预审",
+      "full_body_read": true,
+      "read_ranges": "1-5",
+      "summary": "R86之前历史静态反证，rootId/path候选。",
+      "evidence_lines": "3-5",
+      "coverage_boundary": "0exec历史，final quality/专项承接实际三run；blank App与首send未动态。",
+      "substantive_conflict_found": false,
+      "priority_authority": "README.md最终R编号/分级，阶段建议不覆盖最终索引"
+    },
+    {
+      "filename": "fork-authority-quality-round26.md",
+      "sha256": "5aa3206e3a14c7b624f424ab9d9c7cd32286e3da1708a914b9d948da923da7fd",
+      "lines": 11,
+      "classification": "正常反证",
+      "full_body_read": true,
+      "read_ranges": "1-11",
+      "summary": "summary fork首次run前Review legacy单根为设计/体验观察；非正式项。",
+      "evidence_lines": "3-11",
+      "coverage_boundary": "0exec；Files相同primary正常仅静态，source主根异primary边界后由R86专项处理。",
+      "substantive_conflict_found": false,
+      "priority_authority": "README.md最终R编号/分级，阶段建议不覆盖最终索引"
+    },
+    {
+      "filename": "goal-cold-quality-round20.md",
+      "sha256": "e93786f20385e23887b5c998631c57c2b4406ebe002662ef5306bc17672ae2c1",
+      "lines": 60,
+      "classification": "质量复核",
+      "full_body_read": true,
+      "read_ranges": "1-60",
+      "summary": "R78 P2 no-live-worker Resume只写Goal CAS不drive。",
+      "evidence_lines": "9-23,29-33,37-46,52-60",
+      "coverage_boundary": "0新增执行；dynamic legacy/unbound、actual Main callback/App closures/preload组件，worker recorder seam；bound/no-child及actual restart只静态。",
+      "substantive_conflict_found": false,
+      "priority_authority": "README.md最终R编号/分级，阶段建议不覆盖最终索引"
+    },
+    {
+      "filename": "http-error-preflight-round23.md",
+      "sha256": "366fe95280c5cee9eaa82e13a6b0a39a848751243a828adae2294e3f4bac1233",
+      "lines": 14,
+      "classification": "准备或预审",
+      "full_body_read": true,
+      "read_ranges": "1-14",
+      "summary": "Auth/config/session body readers/headless rejection/files截断清理静态正常反证。",
+      "evidence_lines": "3,7-14",
+      "coverage_boundary": "0exec；不支持所有stream errors均安全或native HTTP取消E2E。",
+      "substantive_conflict_found": false,
+      "priority_authority": "README.md最终R编号/分级，阶段建议不覆盖最终索引"
+    },
+    {
+      "filename": "latest-baseline.md",
+      "sha256": "2674e305de313d25ea68c04d2b2b55833718a7ec3dd1e32de57ad5b1953f8c7a",
+      "lines": 79,
+      "classification": "历史交付",
+      "full_body_read": true,
+      "read_ranges": "1-79",
+      "summary": "双冻结适用性/构建/专项统计账本，最终86/251。",
+      "evidence_lines": "3-27,33-79",
+      "coverage_boundary": "原706/6286仅初始；latest8 changed files156 tests；special/natives分账，source identical不替代execution。",
+      "substantive_conflict_found": false,
+      "priority_authority": "README.md最终R编号/分级，阶段建议不覆盖最终索引"
+    },
+    {
+      "filename": "link-recovery-round16.md",
+      "sha256": "94c4307afacd8ddffd9b37988ecc0b7de2285cd634d99e1198c4228c72a4dfaf",
+      "lines": 67,
+      "classification": "正常反证",
+      "full_body_read": true,
+      "read_ranges": "1-67",
+      "summary": "Link授权cancel/重试/不确定回包只读恢复/项目切换/owner隔离正常。",
+      "evidence_lines": "5,11-21,25-40,44-48,56-67",
+      "coverage_boundary": "actual UI/controller/native manager/server service/store；provider/catalog/OAuth window为替身；legacy MCP OAuth/CLI install未动态。",
+      "substantive_conflict_found": false,
+      "priority_authority": "README.md最终R编号/分级，阶段建议不覆盖最终索引"
+    },
+    {
+      "filename": "menu-recents-preflight-round23.md",
+      "sha256": "533e92893e56d68b3a94eda9460ab0d624969e08351c6cfc54b118cf33e49df2",
+      "lines": 55,
+      "classification": "准备或预审",
+      "full_body_read": true,
+      "read_ranges": "1-55",
+      "summary": "Recent快照历史P3候选，后来R83；排除recents未投影。",
+      "evidence_lines": "3-7,11-27,31-41,45-55",
+      "coverage_boundary": "0exec静态；OpenRecent作为R29恢复需已有path/menu重装；no actual OS菜单。",
+      "substantive_conflict_found": false,
+      "priority_authority": "README.md最终R编号/分级，阶段建议不覆盖最终索引"
+    },
+    {
+      "filename": "menu-routing-round23.md",
+      "sha256": "f493ff08565819c2a3c95a99754f6739c932730ccb0de6628bb301028d035edc",
+      "lines": 81,
+      "classification": "正式专项",
+      "full_body_read": true,
+      "read_ranges": "1-81",
+      "summary": "R82 P3 macOS custom menu投最后完成安装窗口。",
+      "evidence_lines": "5-15,19-24,28-42,63-75",
+      "coverage_boundary": "actual menu/preload/App AST+owned双window IPC adapter；无OS菜单、完整App，dead target error是adapter定义。",
+      "substantive_conflict_found": false,
+      "priority_authority": "README.md最终R编号/分级，阶段建议不覆盖最终索引"
+    },
+    {
+      "filename": "model-switch-quality-round18.md",
+      "sha256": "4de6c3ecdf5442672cfe69503046ddf20192894741a97007265e77a4bafd8f08",
+      "lines": 19,
+      "classification": "质量复核",
+      "full_body_read": true,
+      "read_ranges": "1-19",
+      "summary": "R75 P3 renderer bucket model overrides旧整图跨窗口覆盖。",
+      "evidence_lines": "3-13,15-19",
+      "coverage_boundary": "0新增执行；两React roots共享MemoryStorage，原生真实存储后来round20补证但非产品App E2E；permission/goal同类仅风险静态。",
+      "substantive_conflict_found": false,
+      "priority_authority": "README.md最终R编号/分级，阶段建议不覆盖最终索引"
+    },
+    {
+      "filename": "modern-desktop-image-round25.md",
+      "sha256": "d11e6de36e65130b75c6d6b83e915336bd02da4f4ef51592bf5200277274fbb1",
+      "lines": 41,
+      "classification": "正式专项",
+      "full_body_read": true,
+      "read_ranges": "1-41",
+      "summary": "R85 P3 canonical现代附件已恢复但普通Desktop MessageStream隐藏摘要/纯图bubble。",
+      "evidence_lines": "5-22,28-41",
+      "coverage_boundary": "actual producer/staging/journal/preload/recovery/hydration/SSR；acceptance/run events/IPC seam；无send hook/fullApp/auth/worker/model，Web SSR正常。",
+      "substantive_conflict_found": false,
+      "priority_authority": "README.md最终R编号/分级，阶段建议不覆盖最终索引"
+    },
+    {
+      "filename": "notification-round14.md",
+      "sha256": "678802c7c7845c7c4f83afbcb4a335736ce0c53ca15b0af332027db43cdb0bdd",
+      "lines": 30,
+      "classification": "正式专项",
+      "full_body_read": true,
+      "read_ranges": "1-30",
+      "summary": "R63 P3 urgent在已sleep普通通知之后队列等待。",
+      "evidence_lines": "3,7-19,23-30",
+      "coverage_boundary": "actual bus/routes/notifier/durable receipt，clock/sleep/show替身；无OS Notification/完整Scheduler/模型。",
+      "substantive_conflict_found": false,
+      "priority_authority": "README.md最终R编号/分级，阶段建议不覆盖最终索引"
+    },
+    {
+      "filename": "plugins-round7.md",
+      "sha256": "2d94322748f32d12ed7c55c48224000db209ec62a9fe90c927d85c9bb56d8970",
+      "lines": 100,
+      "classification": "正式专项",
+      "full_body_read": true,
+      "read_ranges": "1-100",
+      "summary": "R51-R53 P2 installer job重装阻塞/path source update删旧包/reviewed目录snapshot坏provenance。",
+      "evidence_lines": "3-15,19-40,44-64,68-96,100",
+      "coverage_boundary": "actual React callbacks/Main/Core installers/local Git；confirmation/chooser和IPC seam，inert插件；未live hooks/MCP、ZIP/npm全类型。",
+      "substantive_conflict_found": false,
+      "priority_authority": "README.md最终R编号/分级，阶段建议不覆盖最终索引"
+    },
+    {
+      "filename": "project-recovery-round16.md",
+      "sha256": "1f32eed0705ce29ddbf804653927f496903d2f48761fe5bbad47655d020754bb",
+      "lines": 55,
+      "classification": "正式专项",
+      "full_body_read": true,
+      "read_ranges": "1-55",
+      "summary": "R69 P2 缺失secondary到healthy primary修复被全roots校验挡。",
+      "evidence_lines": "7-15,19-34,38-40,50-55",
+      "coverage_boundary": "actual Sidebar/Main registration/Store/session FS ENOENT；cold动态，resident/TrustGate/网络卷/fullUI组合workaround未动态。",
+      "substantive_conflict_found": false,
+      "priority_authority": "README.md最终R编号/分级，阶段建议不覆盖最终索引"
+    },
+    {
+      "filename": "quality-round14.md",
+      "sha256": "7757158ff7ff848293dbcda6f430548149df9436d32525e3690db968251e7368",
+      "lines": 32,
+      "classification": "质量复核",
+      "full_body_read": true,
+      "read_ranges": "1-32",
+      "summary": "第14轮整合R63-R65与R58扩展，计数与恢复边界核验。",
+      "evidence_lines": "3-12,16-24,28-32",
+      "coverage_boundary": "0exec；nativePTY/OS通知/provider仍未完整动态；发现文案修正均已关闭。",
+      "substantive_conflict_found": false,
+      "priority_authority": "README.md最终R编号/分级，阶段建议不覆盖最终索引"
+    },
+    {
+      "filename": "quality-round17.md",
+      "sha256": "18845726d62d07f974d6e5a9a2446205d63cd1b841690cbe0b3ff8fc3a4c172e",
+      "lines": 46,
+      "classification": "质量复核",
+      "full_body_read": true,
+      "read_ranges": "1-46",
+      "summary": "R71-R73整合，4 files7 tests77expect/helper91分账。",
+      "evidence_lines": "3-17,21-27,33-46",
+      "coverage_boundary": "0exec；worker桥或Engine seam及fullUI未跑；原act warnings/harness失败分账。",
+      "substantive_conflict_found": false,
+      "priority_authority": "README.md最终R编号/分级，阶段建议不覆盖最终索引"
+    },
+    {
+      "filename": "quality-round20.md",
+      "sha256": "c498506965ba3fdbbf9b1fa0fbb89155809f5c505492c87d8ce71d81801d55c3",
+      "lines": 59,
+      "classification": "质量复核",
+      "full_body_read": true,
+      "read_ranges": "1-59",
+      "summary": "R78/R79及R75补证，R29降P3/R53保P2取舍整合。",
+      "evidence_lines": "9-24,28-42,46-59",
+      "coverage_boundary": "0exec；Electron localStorage contract和React产品逻辑是组合证据，非两个完整产品App；历史stage total不替当前86。",
+      "substantive_conflict_found": false,
+      "priority_authority": "README.md最终R编号/分级，阶段建议不覆盖最终索引"
+    },
+    {
+      "filename": "quality-round23.md",
+      "sha256": "2fae5540e009a535ccdf5ae75ef4700b4f9b20111fea1f3d953bc1601d3aca19",
+      "lines": 59,
+      "classification": "质量复核",
+      "full_body_read": true,
+      "read_ranges": "1-59",
+      "summary": "R82/R83整合与失败/修正版/两基线分账。",
+      "evidence_lines": "3-20,24-40,46-59",
+      "coverage_boundary": "0exec；Recent作者新版0次、root双baseline成功；Bun.resolve仅resolve非module-cache图。",
+      "substantive_conflict_found": false,
+      "priority_authority": "README.md最终R编号/分级，阶段建议不覆盖最终索引"
+    },
+    {
+      "filename": "quality-round27.md",
+      "sha256": "041c852033471f583a6ceb7de9fc0749d228bb0102dd680d75407101c149d21d",
+      "lines": 78,
+      "classification": "质量复核",
+      "full_body_read": true,
+      "read_ranges": "1-78",
+      "summary": "R86 P3 tuple错配独立root cause，三run1/29分账和R65去重。",
+      "evidence_lines": "3-7,13-21,25-33,37-66,70-78",
+      "coverage_boundary": "0exec；actual Core publish/Store/authority/Files/FS，Git/IPC适配；setPrimary UI/trust/firstsend/fullApp仅静态。",
+      "substantive_conflict_found": false,
+      "priority_authority": "README.md最终R编号/分级，阶段建议不覆盖最终索引"
+    },
+    {
+      "filename": "quality-round5.md",
+      "sha256": "bc5defe7fc1355527e11f0d96ba3ed267bb772bc5a8190ae19877bf8cf566d32",
+      "lines": 79,
+      "classification": "质量复核",
+      "full_body_read": true,
+      "read_ranges": "1-79",
+      "summary": "R40-R48九项等级/因果/恢复审计。",
+      "evidence_lines": "9-21,25-39,43-65,69-79",
+      "coverage_boundary": "0exec；网关delivery仅源码未外发；凭据native keychain未测，FIFO20ms不是真实120s。",
+      "substantive_conflict_found": false,
+      "priority_authority": "README.md最终R编号/分级，阶段建议不覆盖最终索引"
+    },
+    {
+      "filename": "r29-priority-round20.md",
+      "sha256": "fccee7e527bfb3d8edd5b5b118c078a7813eba76da184f1382b8f6dac61daf40",
+      "lines": 52,
+      "classification": "质量复核",
+      "full_body_read": true,
+      "read_ranges": "1-52",
+      "summary": "R29旧迁移窄窗口+real rename广播恢复支持P3。",
+      "evidence_lines": "3-15,21-28,32-40,52",
+      "coverage_boundary": "0exec；配置功能影响部分源码，没有actual错误任务；OpenRecent恢复最终加菜单已有目标条件。",
+      "substantive_conflict_found": false,
+      "priority_authority": "README.md最终R编号/分级，阶段建议不覆盖最终索引"
+    },
+    {
+      "filename": "resource-quality-round8.md",
+      "sha256": "144f503bca6049c11ef1eca2faa108998d2d0ef5a4eafaaca3ea0946e9913975",
+      "lines": 71,
+      "classification": "质量复核",
+      "full_body_read": true,
+      "read_ranges": "1-71",
+      "summary": "R09/R17/R20/R30/R31/R36保留；quota/native process平台影响收窄。",
+      "evidence_lines": "9-31,35-49,53-59,63-71",
+      "coverage_boundary": "0exec；R31 POSIX local CLI，R36 Node25/macOS真实EPIPE而Electron退出未验证；不称无限泄漏。",
+      "substantive_conflict_found": false,
+      "priority_authority": "README.md最终R编号/分级，阶段建议不覆盖最终索引"
+    },
+    {
+      "filename": "search-routing-round11.md",
+      "sha256": "20d0d67f8e47b7706dca55f9bf2e51de5793b757fee31b3ee578e63d140dbc0c",
+      "lines": 70,
+      "classification": "正式专项",
+      "full_body_read": true,
+      "read_ranges": "1-70",
+      "summary": "R55 P3 delayed disk open抢新选择；R56 P3 500候选band缺truncation。",
+      "evidence_lines": "11-23,27-38,42-51,55-70",
+      "coverage_boundary": "actual MiniDOM/hooks/Core disk/Store；native search UI独立且content IPC deterministic，不证明R55自然timing/fullApp或R56实际IPC全文band。",
+      "substantive_conflict_found": false,
+      "priority_authority": "README.md最终R编号/分级，阶段建议不覆盖最终索引"
+    },
+    {
+      "filename": "server-routing-quality-round17.md",
+      "sha256": "5773d0834f94b56230913b0dc5599664ad95375e0a906326321fe55aa31e57cf",
+      "lines": 53,
+      "classification": "质量复核",
+      "full_body_read": true,
+      "read_ranges": "1-53",
+      "summary": "R73 P2 authenticated Hub配置ACK窗口回答idle async question，lease submit后早退。",
+      "evidence_lines": "5-21,25-41,45-53",
+      "coverage_boundary": "0exec；actual HTTP/WS/auth/controller/card，worker MemoryBridge；Core实际AgentServer+fake Engine，真实Engine refresh仅静态。",
+      "substantive_conflict_found": false,
+      "priority_authority": "README.md最终R编号/分级，阶段建议不覆盖最终索引"
+    },
+    {
+      "filename": "session-actions-round13.md",
+      "sha256": "e93516afdcc2eef11850eaa1d2e7a2859b0524af030d3a8e07317176cb3b4e37",
+      "lines": 66,
+      "classification": "正式专项",
+      "full_body_read": true,
+      "read_ranges": "1-66",
+      "summary": "R60 P3 Sidebar delete真实EACCES仍catalog tombstone；SessionsView重试和title/archive正常。",
+      "evidence_lines": "3,12-39,43-47,53-66",
+      "coverage_boundary": "MiniDOM+actual store/fs；Main close/IPC原生lifetime静态，无active run/worker；历史保留非文件丢失。",
+      "substantive_conflict_found": false,
+      "priority_authority": "README.md最终R编号/分级，阶段建议不覆盖最终索引"
+    },
+    {
+      "filename": "session-operations-quality-round17.md",
+      "sha256": "0010d542f2ab2210dfeb4a6733bef909eb8d2931970173929674be65ea56f39b",
+      "lines": 57,
+      "classification": "质量复核",
+      "full_body_read": true,
+      "read_ranges": "1-57",
+      "summary": "R72 P2 restore漏Core marker导致root usage失配；R71 P3 rename拒写乐观成功。",
+      "evidence_lines": "9-27,38-44,48-57",
+      "coverage_boundary": "0exec；actual AST Settings callback/Main store/persist，Git/IPC seam；未后续send/run，完整visible restore workaround未闭环。",
+      "substantive_conflict_found": false,
+      "priority_authority": "README.md最终R编号/分级，阶段建议不覆盖最终索引"
+    },
+    {
+      "filename": "settings-recovery-round16.md",
+      "sha256": "b5f501f9b6a20e6067db547d8a504ff27ba4b8d0ebdbd8b0971fd0e613d77bf8",
+      "lines": 66,
+      "classification": "正式专项",
+      "full_body_read": true,
+      "read_ranges": "1-66",
+      "summary": "R70 P3 targeted autosave失去pending后离开失稿；Main write/retry和target capture正常。",
+      "evidence_lines": "5-31,35-49,57-66",
+      "coverage_boundary": "actual Settings/Personalization/hook/Main writer+EISDIR；preload/fullApp/Electron未运行；其它hook consumers只静态复用。",
+      "substantive_conflict_found": false,
+      "priority_authority": "README.md最终R编号/分级，阶段建议不覆盖最终索引"
+    },
+    {
+      "filename": "terminal-lifecycle-round14.md",
+      "sha256": "9d1cc570aa45198dff160f02313f8a33b933b789a448424ea36b2ccb18130697",
+      "lines": 71,
+      "classification": "正式专项",
+      "full_body_read": true,
+      "read_ranges": "1-71",
+      "summary": "R64 P3 reload后恢复tab ID重复接旧PTY；正常owner/late event/start retry。",
+      "evidence_lines": "3-23,27-45,49-53,61-71",
+      "coverage_boundary": "actual TerminalPanel/PanelArea/preload/Main closures/pty-service，nativePTY替身；另真实Electron reload身份仅a66f/macOS，无真实shell。",
+      "substantive_conflict_found": false,
+      "priority_authority": "README.md最终R编号/分级，阶段建议不覆盖最终索引"
+    },
+    {
+      "filename": "transfer-round12.md",
+      "sha256": "0c16bb785db7e51ad820fab3094df950df8bce0040dba3b747ea7744d009ced1",
+      "lines": 87,
+      "classification": "正常反证",
+      "full_body_read": true,
+      "read_ranges": "1-87",
+      "summary": "Hub file interrupt cleanup/export error recovery；Lightbox save cancel/late payload；disk history import retry。",
+      "evidence_lines": "5-27,31-50,54-70,74-87",
+      "coverage_boundary": "actual handlers+controlled Writable；Bun HTTP cancel诊断inconclusive，不能当native socket成功；image save native dialog仅静态。",
+      "substantive_conflict_found": false,
+      "priority_authority": "README.md最终R编号/分级，阶段建议不覆盖最终索引"
+    },
+    {
+      "filename": "web-lifecycle-round13.md",
+      "sha256": "8ddec54fe8563e0fd2b8583247821e7cca81f250e70c2b4d5f53ae317ee22b57",
+      "lines": 50,
+      "classification": "正式专项",
+      "full_body_read": true,
+      "read_ranges": "1-50",
+      "summary": "R62 P3 leave CLI后已有approval全局阻塞；socket/listener/history/viewer/Hub4401正常控制。",
+      "evidence_lines": "3-8,12-26,30-36,46-50",
+      "coverage_boundary": "actual hook/controller/button+mockWS；无完整Workbench/resident/model，Hub list response race/half-open无production timing未收录。",
+      "substantive_conflict_found": false,
+      "priority_authority": "README.md最终R编号/分级，阶段建议不覆盖最终索引"
+    },
+    {
+      "filename": "web-round2.md",
+      "sha256": "8b65c7d1e74d77bfbf4a6f5602917344b5aa12c2b805dc66ae95a201ace428de",
+      "lines": 57,
+      "classification": "正式专项",
+      "full_body_read": true,
+      "read_ranges": "1-57",
+      "summary": "R25 P2 two-model defaults lost update；R26 P3 Skills409刷新revision；R27 P3 stale MCP probe。",
+      "evidence_lines": "7-17,21-28,32-48,52-57",
+      "coverage_boundary": "actual components/authenticated Hub+HTTP handlers；MCP请求fixture无actual命令，实体触屏/软键盘未验。",
+      "substantive_conflict_found": false,
+      "priority_authority": "README.md最终R编号/分级，阶段建议不覆盖最终索引"
+    },
+    {
+      "filename": "workspace-quality-round11.md",
+      "sha256": "910177703a4d36a30222682689bc6314650ce917b2c96fee2ff7b1156a732230",
+      "lines": 96,
+      "classification": "质量复核",
+      "full_body_read": true,
+      "read_ranges": "1-96",
+      "summary": "R22/R23/R24 P2/R35 P1保留，Panel register清空及cold release恢复。",
+      "evidence_lines": "5-21,25-35,39-51,55-73,77-85,96",
+      "coverage_boundary": "actual Store/Git/Main/hook scopes；R35仅读旧日志；newscope latest-only1/9，common4/41不能合为双baseline5/50。",
+      "substantive_conflict_found": false,
+      "priority_authority": "README.md最终R编号/分级，阶段建议不覆盖最终索引"
+    }
+  ],
+  "module_inventory": {
+    "84740d56": {
+      "production_source_files": 187,
+      "paths": [
+        "packages/server/src/attachment-service.ts",
+        "packages/server/src/bin/code-shell-project-runtime.ts",
+        "packages/server/src/bin/code-shell-serve.ts",
+        "packages/server/src/bin/code-shell-settings-recovery.ts",
+        "packages/server/src/client-message-id.ts",
+        "packages/server/src/desktop-web/http-api.ts",
+        "packages/server/src/environment-identity.ts",
+        "packages/server/src/hub/approval-lease.ts",
+        "packages/server/src/hub/auth-http.ts",
+        "packages/server/src/hub/auth-store.ts",
+        "packages/server/src/hub/configuration.ts",
+        "packages/server/src/hub/files.ts",
+        "packages/server/src/hub/mcp-configuration.ts",
+        "packages/server/src/hub/mcp-probe.ts",
+        "packages/server/src/hub/model-probe.ts",
+        "packages/server/src/hub/outbound-transport.ts",
+        "packages/server/src/hub/run-replay.ts",
+        "packages/server/src/hub/session-management.ts",
+        "packages/server/src/hub/skills-management.ts",
+        "packages/server/src/hub/uploads.ts",
+        "packages/server/src/image-byte-probe.ts",
+        "packages/server/src/index.auth.ts",
+        "packages/server/src/index.desktop-web.ts",
+        "packages/server/src/index.links.ts",
+        "packages/server/src/index.mobile-remote.ts",
+        "packages/server/src/index.panels.ts",
+        "packages/server/src/index.remote-relay.ts",
+        "packages/server/src/index.serve.ts",
+        "packages/server/src/index.storage.ts",
+        "packages/server/src/index.ts",
+        "packages/server/src/index.worker.ts",
+        "packages/server/src/links/browser-handoff.ts",
+        "packages/server/src/links/catalog.ts",
+        "packages/server/src/links/device-oauth.ts",
+        "packages/server/src/links/http.ts",
+        "packages/server/src/links/remote-catalog.ts",
+        "packages/server/src/links/remote-configuration.ts",
+        "packages/server/src/links/service.ts",
+        "packages/server/src/links/types.ts",
+        "packages/server/src/mobile-remote/access-passcode.ts",
+        "packages/server/src/mobile-remote/cloudflared-binary.ts",
+        "packages/server/src/mobile-remote/codex-parse.ts",
+        "packages/server/src/mobile-remote/codex-room-agent.ts",
+        "packages/server/src/mobile-remote/mobile-attachments.ts",
+        "packages/server/src/mobile-remote/mobile-chat-turn.ts",
+        "packages/server/src/mobile-remote/mobile-client-event-validator.ts",
+        "packages/server/src/mobile-remote/mobile-history.ts",
+        "packages/server/src/mobile-remote/mobile-limits.ts",
+        "packages/server/src/mobile-remote/mobile-run-dispatch.ts",
+        "packages/server/src/mobile-remote/mobile-static.ts",
+        "packages/server/src/mobile-remote/mobile-upload-service.ts",
+        "packages/server/src/mobile-remote/pairing.ts",
+        "packages/server/src/mobile-remote/path-bins.ts",
+        "packages/server/src/mobile-remote/pending-approvals.ts",
+        "packages/server/src/mobile-remote/remote-host-manager.ts",
+        "packages/server/src/mobile-remote/resident-agent.ts",
+        "packages/server/src/mobile-remote/room-manager.ts",
+        "packages/server/src/mobile-remote/trusted-device-store.ts",
+        "packages/server/src/mobile-remote/tunnel-manager.ts",
+        "packages/server/src/mobile-remote/types.ts",
+        "packages/server/src/mobile-remote/viewer-identity.ts",
+        "packages/server/src/panels/agent-task-host.ts",
+        "packages/server/src/panels/agent-task-models.ts",
+        "packages/server/src/panels/agent-task-service.ts",
+        "packages/server/src/panels/automations.ts",
+        "packages/server/src/panels/bridge-contract.ts",
+        "packages/server/src/panels/browser-capture.ts",
+        "packages/server/src/panels/connections.ts",
+        "packages/server/src/panels/directory-bookmarks.ts",
+        "packages/server/src/panels/execution-gate.ts",
+        "packages/server/src/panels/http.ts",
+        "packages/server/src/panels/hub-automations.ts",
+        "packages/server/src/panels/hub-binding.ts",
+        "packages/server/src/panels/management-http.ts",
+        "packages/server/src/panels/management.ts",
+        "packages/server/src/panels/package-mutation.ts",
+        "packages/server/src/panels/process-entry.ts",
+        "packages/server/src/panels/process-files.ts",
+        "packages/server/src/panels/process-service.ts",
+        "packages/server/src/panels/process-state.ts",
+        "packages/server/src/panels/resources/clone.ts",
+        "packages/server/src/panels/resources/directories.ts",
+        "packages/server/src/panels/resources/http.ts",
+        "packages/server/src/panels/resources/library.ts",
+        "packages/server/src/panels/resources/references.ts",
+        "packages/server/src/panels/resources/service.ts",
+        "packages/server/src/panels/resources/storage.ts",
+        "packages/server/src/panels/resources/types.ts",
+        "packages/server/src/panels/resources/uploads.ts",
+        "packages/server/src/panels/runtime-services.ts",
+        "packages/server/src/panels/runtime.ts",
+        "packages/server/src/panels/shared-tool-jobs.ts",
+        "packages/server/src/panels/storage-store.ts",
+        "packages/server/src/panels/task-cookie-host.ts",
+        "packages/server/src/panels/task-cookies.ts",
+        "packages/server/src/panels/tool-executor.ts",
+        "packages/server/src/panels/tool-jobs-storage.ts",
+        "packages/server/src/panels/tool-jobs.ts",
+        "packages/server/src/panels/types.ts",
+        "packages/server/src/project-runtime/backup.ts",
+        "packages/server/src/project-runtime/control-server.ts",
+        "packages/server/src/project-runtime/docker-provider.ts",
+        "packages/server/src/project-runtime/lock.ts",
+        "packages/server/src/project-runtime/managed-entry.ts",
+        "packages/server/src/project-runtime/manager.ts",
+        "packages/server/src/project-runtime/proxy.ts",
+        "packages/server/src/project-runtime/registry.ts",
+        "packages/server/src/project-runtime/seccomp.ts",
+        "packages/server/src/project-runtime/types.ts",
+        "packages/server/src/remote-relay/byte-stream.ts",
+        "packages/server/src/remote-relay/connector.ts",
+        "packages/server/src/remote-relay/local-stream.ts",
+        "packages/server/src/remote-relay/protocol.ts",
+        "packages/server/src/serve/automation-worker.ts",
+        "packages/server/src/serve/cli.ts",
+        "packages/server/src/serve/headless-server.ts",
+        "packages/server/src/serve/settings-recovery-cli.ts",
+        "packages/server/src/session-http-responses.ts",
+        "packages/server/src/session-titles-store.ts",
+        "packages/server/src/sessions-service.ts",
+        "packages/server/src/static-files.ts",
+        "packages/server/src/worker-bridge-core.ts",
+        "packages/web/app/App.tsx",
+        "packages/web/app/AuthGate.tsx",
+        "packages/web/app/DesktopApp.tsx",
+        "packages/web/app/DesktopControls.tsx",
+        "packages/web/app/Devices.tsx",
+        "packages/web/app/EnvironmentMenu.tsx",
+        "packages/web/app/HubApprovalCard.tsx",
+        "packages/web/app/HubFiles.tsx",
+        "packages/web/app/HubLinks.tsx",
+        "packages/web/app/HubMcp.tsx",
+        "packages/web/app/HubPanels.tsx",
+        "packages/web/app/HubSessions.tsx",
+        "packages/web/app/HubSettings.tsx",
+        "packages/web/app/HubSkills.tsx",
+        "packages/web/app/LinkCallback.tsx",
+        "packages/web/app/MessageContent.tsx",
+        "packages/web/app/PanelAudioDialog.tsx",
+        "packages/web/app/PanelHost.tsx",
+        "packages/web/app/PanelVideoDialog.tsx",
+        "packages/web/app/ProjectsGate.tsx",
+        "packages/web/app/Workbench.tsx",
+        "packages/web/app/api-context.ts",
+        "packages/web/app/approvals.ts",
+        "packages/web/app/auth.ts",
+        "packages/web/app/chat.ts",
+        "packages/web/app/configuration.ts",
+        "packages/web/app/drafts.ts",
+        "packages/web/app/environments.ts",
+        "packages/web/app/main.tsx",
+        "packages/web/app/mcp-configuration.ts",
+        "packages/web/app/panel-audio-capture.ts",
+        "packages/web/app/panel-audio-upload.ts",
+        "packages/web/app/panel-resource-upload.ts",
+        "packages/web/app/panel-runtime-connection.ts",
+        "packages/web/app/panel-video-capture.ts",
+        "packages/web/app/protocol.ts",
+        "packages/web/app/register-service-worker.ts",
+        "packages/web/app/remote-link-authorization.ts",
+        "packages/web/app/skills-management.ts",
+        "packages/web/app/useHubController.tsx",
+        "packages/web/app/workbench-types.ts",
+        "packages/web/src/hooks/mobileOutputClient.ts",
+        "packages/web/src/hooks/remoteAppSync.ts",
+        "packages/web/src/hooks/useRemoteApp.ts",
+        "packages/web/src/hooks/useRemoteSocket.ts",
+        "packages/web/src/i18n/mobile.ts",
+        "packages/web/src/i18n/translate.ts",
+        "packages/web/src/index.ts",
+        "packages/web/src/lib/deviceCredential.ts",
+        "packages/web/src/lib/environment.ts",
+        "packages/web/src/lib/format.ts",
+        "packages/web/src/lib/messageMappers.ts",
+        "packages/web/src/lib/mobileAttachments.ts",
+        "packages/web/src/lib/mobileOutputRecovery.ts",
+        "packages/web/src/lib/outputCoverage.ts",
+        "packages/web/src/lib/outputJournalRecovery.ts",
+        "packages/web/src/lib/pairing.ts",
+        "packages/web/src/lib/riskClassify.ts",
+        "packages/web/src/lib/storage.ts",
+        "packages/web/src/lib/streamReducer.ts",
+        "packages/web/src/lib/transcriptReplay.ts",
+        "packages/web/src/lib/uiLanguage.ts",
+        "packages/web/src/lib/userMessageDisplay.ts",
+        "packages/web/src/link-authorization-view.tsx",
+        "packages/web/src/link-authorization.ts"
+      ],
+      "group_counts": {
+        "packages/server/src": 19,
+        "packages/server/src/bin": 3,
+        "packages/server/src/desktop-web": 1,
+        "packages/server/src/hub": 13,
+        "packages/server/src/links": 8,
+        "packages/server/src/mobile-remote": 22,
+        "packages/server/src/panels": 38,
+        "packages/server/src/project-runtime": 10,
+        "packages/server/src/remote-relay": 4,
+        "packages/server/src/serve": 4,
+        "packages/web/app": 41,
+        "packages/web/src/hooks": 4,
+        "packages/web/src/i18n": 2,
+        "packages/web/src": 3,
+        "packages/web/src/lib": 15
+      }
+    },
+    "a66f4ef2": {
+      "production_source_files": 188,
+      "paths": [
+        "packages/server/src/attachment-service.ts",
+        "packages/server/src/bin/code-shell-project-runtime.ts",
+        "packages/server/src/bin/code-shell-serve.ts",
+        "packages/server/src/bin/code-shell-settings-recovery.ts",
+        "packages/server/src/client-message-id.ts",
+        "packages/server/src/desktop-web/http-api.ts",
+        "packages/server/src/environment-identity.ts",
+        "packages/server/src/hub/approval-lease.ts",
+        "packages/server/src/hub/auth-http.ts",
+        "packages/server/src/hub/auth-store.ts",
+        "packages/server/src/hub/configuration.ts",
+        "packages/server/src/hub/files.ts",
+        "packages/server/src/hub/mcp-configuration.ts",
+        "packages/server/src/hub/mcp-probe.ts",
+        "packages/server/src/hub/model-probe.ts",
+        "packages/server/src/hub/outbound-transport.ts",
+        "packages/server/src/hub/run-replay.ts",
+        "packages/server/src/hub/session-management.ts",
+        "packages/server/src/hub/skills-management.ts",
+        "packages/server/src/hub/uploads.ts",
+        "packages/server/src/image-byte-probe.ts",
+        "packages/server/src/index.auth.ts",
+        "packages/server/src/index.desktop-web.ts",
+        "packages/server/src/index.links.ts",
+        "packages/server/src/index.mobile-remote.ts",
+        "packages/server/src/index.panels.ts",
+        "packages/server/src/index.remote-relay.ts",
+        "packages/server/src/index.serve.ts",
+        "packages/server/src/index.storage.ts",
+        "packages/server/src/index.ts",
+        "packages/server/src/index.worker.ts",
+        "packages/server/src/links/browser-handoff.ts",
+        "packages/server/src/links/catalog.ts",
+        "packages/server/src/links/device-oauth.ts",
+        "packages/server/src/links/http.ts",
+        "packages/server/src/links/remote-catalog.ts",
+        "packages/server/src/links/remote-configuration.ts",
+        "packages/server/src/links/service.ts",
+        "packages/server/src/links/types.ts",
+        "packages/server/src/mobile-remote/access-passcode.ts",
+        "packages/server/src/mobile-remote/cloudflared-binary.ts",
+        "packages/server/src/mobile-remote/codex-parse.ts",
+        "packages/server/src/mobile-remote/codex-room-agent.ts",
+        "packages/server/src/mobile-remote/mobile-attachments.ts",
+        "packages/server/src/mobile-remote/mobile-chat-turn.ts",
+        "packages/server/src/mobile-remote/mobile-client-event-validator.ts",
+        "packages/server/src/mobile-remote/mobile-history.ts",
+        "packages/server/src/mobile-remote/mobile-limits.ts",
+        "packages/server/src/mobile-remote/mobile-run-dispatch.ts",
+        "packages/server/src/mobile-remote/mobile-static.ts",
+        "packages/server/src/mobile-remote/mobile-upload-service.ts",
+        "packages/server/src/mobile-remote/pairing.ts",
+        "packages/server/src/mobile-remote/path-bins.ts",
+        "packages/server/src/mobile-remote/pending-approvals.ts",
+        "packages/server/src/mobile-remote/remote-host-manager.ts",
+        "packages/server/src/mobile-remote/resident-agent.ts",
+        "packages/server/src/mobile-remote/room-manager.ts",
+        "packages/server/src/mobile-remote/trusted-device-store.ts",
+        "packages/server/src/mobile-remote/tunnel-manager.ts",
+        "packages/server/src/mobile-remote/types.ts",
+        "packages/server/src/mobile-remote/viewer-identity.ts",
+        "packages/server/src/panels/agent-task-host.ts",
+        "packages/server/src/panels/agent-task-models.ts",
+        "packages/server/src/panels/agent-task-service.ts",
+        "packages/server/src/panels/automations.ts",
+        "packages/server/src/panels/bridge-contract.ts",
+        "packages/server/src/panels/browser-capture.ts",
+        "packages/server/src/panels/connections.ts",
+        "packages/server/src/panels/directory-bookmarks.ts",
+        "packages/server/src/panels/execution-gate.ts",
+        "packages/server/src/panels/http.ts",
+        "packages/server/src/panels/hub-automations.ts",
+        "packages/server/src/panels/hub-binding.ts",
+        "packages/server/src/panels/management-http.ts",
+        "packages/server/src/panels/management.ts",
+        "packages/server/src/panels/package-mutation.ts",
+        "packages/server/src/panels/process-entry.ts",
+        "packages/server/src/panels/process-files.ts",
+        "packages/server/src/panels/process-service.ts",
+        "packages/server/src/panels/process-state.ts",
+        "packages/server/src/panels/project-scope.ts",
+        "packages/server/src/panels/resources/clone.ts",
+        "packages/server/src/panels/resources/directories.ts",
+        "packages/server/src/panels/resources/http.ts",
+        "packages/server/src/panels/resources/library.ts",
+        "packages/server/src/panels/resources/references.ts",
+        "packages/server/src/panels/resources/service.ts",
+        "packages/server/src/panels/resources/storage.ts",
+        "packages/server/src/panels/resources/types.ts",
+        "packages/server/src/panels/resources/uploads.ts",
+        "packages/server/src/panels/runtime-services.ts",
+        "packages/server/src/panels/runtime.ts",
+        "packages/server/src/panels/shared-tool-jobs.ts",
+        "packages/server/src/panels/storage-store.ts",
+        "packages/server/src/panels/task-cookie-host.ts",
+        "packages/server/src/panels/task-cookies.ts",
+        "packages/server/src/panels/tool-executor.ts",
+        "packages/server/src/panels/tool-jobs-storage.ts",
+        "packages/server/src/panels/tool-jobs.ts",
+        "packages/server/src/panels/types.ts",
+        "packages/server/src/project-runtime/backup.ts",
+        "packages/server/src/project-runtime/control-server.ts",
+        "packages/server/src/project-runtime/docker-provider.ts",
+        "packages/server/src/project-runtime/lock.ts",
+        "packages/server/src/project-runtime/managed-entry.ts",
+        "packages/server/src/project-runtime/manager.ts",
+        "packages/server/src/project-runtime/proxy.ts",
+        "packages/server/src/project-runtime/registry.ts",
+        "packages/server/src/project-runtime/seccomp.ts",
+        "packages/server/src/project-runtime/types.ts",
+        "packages/server/src/remote-relay/byte-stream.ts",
+        "packages/server/src/remote-relay/connector.ts",
+        "packages/server/src/remote-relay/local-stream.ts",
+        "packages/server/src/remote-relay/protocol.ts",
+        "packages/server/src/serve/automation-worker.ts",
+        "packages/server/src/serve/cli.ts",
+        "packages/server/src/serve/headless-server.ts",
+        "packages/server/src/serve/settings-recovery-cli.ts",
+        "packages/server/src/session-http-responses.ts",
+        "packages/server/src/session-titles-store.ts",
+        "packages/server/src/sessions-service.ts",
+        "packages/server/src/static-files.ts",
+        "packages/server/src/worker-bridge-core.ts",
+        "packages/web/app/App.tsx",
+        "packages/web/app/AuthGate.tsx",
+        "packages/web/app/DesktopApp.tsx",
+        "packages/web/app/DesktopControls.tsx",
+        "packages/web/app/Devices.tsx",
+        "packages/web/app/EnvironmentMenu.tsx",
+        "packages/web/app/HubApprovalCard.tsx",
+        "packages/web/app/HubFiles.tsx",
+        "packages/web/app/HubLinks.tsx",
+        "packages/web/app/HubMcp.tsx",
+        "packages/web/app/HubPanels.tsx",
+        "packages/web/app/HubSessions.tsx",
+        "packages/web/app/HubSettings.tsx",
+        "packages/web/app/HubSkills.tsx",
+        "packages/web/app/LinkCallback.tsx",
+        "packages/web/app/MessageContent.tsx",
+        "packages/web/app/PanelAudioDialog.tsx",
+        "packages/web/app/PanelHost.tsx",
+        "packages/web/app/PanelVideoDialog.tsx",
+        "packages/web/app/ProjectsGate.tsx",
+        "packages/web/app/Workbench.tsx",
+        "packages/web/app/api-context.ts",
+        "packages/web/app/approvals.ts",
+        "packages/web/app/auth.ts",
+        "packages/web/app/chat.ts",
+        "packages/web/app/configuration.ts",
+        "packages/web/app/drafts.ts",
+        "packages/web/app/environments.ts",
+        "packages/web/app/main.tsx",
+        "packages/web/app/mcp-configuration.ts",
+        "packages/web/app/panel-audio-capture.ts",
+        "packages/web/app/panel-audio-upload.ts",
+        "packages/web/app/panel-resource-upload.ts",
+        "packages/web/app/panel-runtime-connection.ts",
+        "packages/web/app/panel-video-capture.ts",
+        "packages/web/app/protocol.ts",
+        "packages/web/app/register-service-worker.ts",
+        "packages/web/app/remote-link-authorization.ts",
+        "packages/web/app/skills-management.ts",
+        "packages/web/app/useHubController.tsx",
+        "packages/web/app/workbench-types.ts",
+        "packages/web/src/hooks/mobileOutputClient.ts",
+        "packages/web/src/hooks/remoteAppSync.ts",
+        "packages/web/src/hooks/useRemoteApp.ts",
+        "packages/web/src/hooks/useRemoteSocket.ts",
+        "packages/web/src/i18n/mobile.ts",
+        "packages/web/src/i18n/translate.ts",
+        "packages/web/src/index.ts",
+        "packages/web/src/lib/deviceCredential.ts",
+        "packages/web/src/lib/environment.ts",
+        "packages/web/src/lib/format.ts",
+        "packages/web/src/lib/messageMappers.ts",
+        "packages/web/src/lib/mobileAttachments.ts",
+        "packages/web/src/lib/mobileOutputRecovery.ts",
+        "packages/web/src/lib/outputCoverage.ts",
+        "packages/web/src/lib/outputJournalRecovery.ts",
+        "packages/web/src/lib/pairing.ts",
+        "packages/web/src/lib/riskClassify.ts",
+        "packages/web/src/lib/storage.ts",
+        "packages/web/src/lib/streamReducer.ts",
+        "packages/web/src/lib/transcriptReplay.ts",
+        "packages/web/src/lib/uiLanguage.ts",
+        "packages/web/src/lib/userMessageDisplay.ts",
+        "packages/web/src/link-authorization-view.tsx",
+        "packages/web/src/link-authorization.ts"
+      ],
+      "group_counts": {
+        "packages/server/src": 19,
+        "packages/server/src/bin": 3,
+        "packages/server/src/desktop-web": 1,
+        "packages/server/src/hub": 13,
+        "packages/server/src/links": 8,
+        "packages/server/src/mobile-remote": 22,
+        "packages/server/src/panels": 39,
+        "packages/server/src/project-runtime": 10,
+        "packages/server/src/remote-relay": 4,
+        "packages/server/src/serve": 4,
+        "packages/web/app": 41,
+        "packages/web/src/hooks": 4,
+        "packages/web/src/i18n": 2,
+        "packages/web/src": 3,
+        "packages/web/src/lib": 15
+      }
+    }
+  },
+  "baseline_metadata_read_only": {
+    "source": "validation/server-web-results.json",
+    "entries": 141,
+    "all_code_zero": true,
+    "project_runtime_test_files": [
+      "packages/server/src/project-runtime/backup.test.ts",
+      "packages/server/src/project-runtime/control-server.test.ts",
+      "packages/server/src/project-runtime/control-shutdown.integration.test.ts",
+      "packages/server/src/project-runtime/docker-provider.test.ts",
+      "packages/server/src/project-runtime/lifecycle.test.ts",
+      "packages/server/src/project-runtime/managed-entry.test.ts",
+      "packages/server/src/project-runtime/manager.test.ts",
+      "packages/server/src/project-runtime/proxy.integration.test.ts",
+      "packages/server/src/project-runtime/proxy.test.ts",
+      "packages/server/src/project-runtime/registry.test.ts"
+    ],
+    "web_app_test_files": [
+      "packages/web/app/DesktopApp.test.tsx",
+      "packages/web/app/HubLinks.test.tsx",
+      "packages/web/app/HubPanels.test.tsx",
+      "packages/web/app/LinkCallback.test.tsx",
+      "packages/web/app/MessageContent.test.tsx",
+      "packages/web/app/PanelHost.test.tsx",
+      "packages/web/app/ProjectsGate.test.tsx",
+      "packages/web/app/Workbench.panels.test.ts",
+      "packages/web/app/api-context.test.ts",
+      "packages/web/app/approvals.test.ts",
+      "packages/web/app/auth.test.ts",
+      "packages/web/app/chat.test.ts",
+      "packages/web/app/configuration.test.ts",
+      "packages/web/app/drafts.test.ts",
+      "packages/web/app/environments.test.ts",
+      "packages/web/app/mcp-configuration.test.ts",
+      "packages/web/app/panel-audio-capture.test.ts",
+      "packages/web/app/panel-audio-upload.test.ts",
+      "packages/web/app/panel-resource-upload.test.ts",
+      "packages/web/app/panel-runtime-connection.test.ts",
+      "packages/web/app/panel-video-capture.test.ts",
+      "packages/web/app/protocol.test.ts",
+      "packages/web/app/remote-link-authorization.test.ts",
+      "packages/web/app/service-worker.test.ts",
+      "packages/web/app/skills-management.test.ts",
+      "packages/web/app/useHubController.test.tsx"
+    ],
+    "boundary": "仅读元数据与baseline-evidence-round28已有独立核验说明，未重新读取全部rawlogs/运行任何套件；原84740证据不是latest全量重跑"
+  },
+  "module_coverage": [
+    {
+      "module": "server/mobile-remote: remote-host-manager/pairing/trusted-device/access-passcode",
+      "coverage_level": "专项动态（服务/真实Node/ws）+静态+既有套件",
+      "evidence": [
+        {
+          "report": "connection-recovery-quality-round15.md",
+          "lines": "9-33",
+          "evidence": "实际慢读Node/ws直播队列，selected reply/revoke恢复"
+        },
+        {
+          "report": "auth-round7.md",
+          "lines": "10,24-31,49-61",
+          "evidence": "真实Hub/paired auth store/cookie/HTTP/WS及设备registry正常"
+        },
+        {
+          "report": "web-round3.md",
+          "lines": "18-20",
+          "evidence": "真实RemoteHost pairing quota secret不一致"
+        }
+      ],
+      "boundary": "实际服务与owned账号/设备；Main和设备删除UI主要静态。",
+      "remaining_gap": "真实手机/公网链路；各passcode算法、pairing expiry细节只靠既有suite，不能由transport专项泛化全部22文件。",
+      "existing_baseline_evidence": ""
+    },
+    {
+      "module": "server/mobile-remote: room-manager/resident-agent/codex-room-agent/codex-parse",
+      "coverage_level": "专项动态（本地stdio脚本或内存agent）+静态",
+      "evidence": [
+        {
+          "report": "approval-quality-round10.md",
+          "lines": "12,21-31,49-55",
+          "evidence": "real resident stdio approval和multi-question截断"
+        },
+        {
+          "report": "cli-recovery-quality-round15.md",
+          "lines": "11-15,29-35",
+          "evidence": "actual RoomManager配置复用；Codex固定opts静态"
+        }
+      ],
+      "boundary": "没有真实Claude/Codex CLI/model；Codex配置同因并非独立动态复现。",
+      "remaining_gap": "真实CLI版本兼容、账号/PTY/工具全过程没有端到端验收；不能视为room和parse全实现穷尽覆盖。",
+      "existing_baseline_evidence": ""
+    },
+    {
+      "module": "server/mobile-remote uploads/mobile-attachments/mobile-chat-turn + attachment-service/image-byte-probe",
+      "coverage_level": "专项动态（owned HTTP/FS/staging）",
+      "evidence": [
+        {
+          "report": "resource-quality-round8.md",
+          "lines": "17-31",
+          "evidence": "quota和size admission/staging正常/缺陷控制"
+        },
+        {
+          "report": "modern-desktop-image-round25.md",
+          "lines": "13-18,37",
+          "evidence": "真实staging/现代journal publisher和原件"
+        },
+        {
+          "report": "web-round3.md",
+          "lines": "38-42",
+          "evidence": "旧PUT与WS恢复，有限TTL"
+        }
+      ],
+      "boundary": "断线上传时序为controlled request；没有真实手机物理网络。",
+      "remaining_gap": "实际浏览器后台挂起/移动网络与全部图片格式矩阵未专项。",
+      "existing_baseline_evidence": ""
+    },
+    {
+      "module": "server/hub auth-http/auth-store/approval-lease/configuration",
+      "coverage_level": "专项动态（真实owned HTTP/WS+store）+静态",
+      "evidence": [
+        {
+          "report": "web-round2.md",
+          "lines": "17-28",
+          "evidence": "完整认证Hub默认模型配置顺序冲突"
+        },
+        {
+          "report": "server-routing-quality-round17.md",
+          "lines": "9-21,25-31,45-49",
+          "evidence": "真实HTTP/WS和controller/card；worker桥替身"
+        },
+        {
+          "report": "http-error-preflight-round23.md",
+          "lines": "7-9",
+          "evidence": "body error/limits仅静态"
+        }
+      ],
+      "boundary": "worker非真实进程或fake Engine；body reader部分只读。",
+      "remaining_gap": "真实长驻worker自然ACK竞态频率及真实浏览器多tab/E2E未专项；不可声称所有HTTP错误均无崩溃。",
+      "existing_baseline_evidence": ""
+    },
+    {
+      "module": "server/hub files/session-management/run-replay + sessions-service/session-titles-store",
+      "coverage_level": "专项动态（handler/owned HTTP/FS）+部分真实auth",
+      "evidence": [
+        {
+          "report": "transfer-round12.md",
+          "lines": "31-50,66-70",
+          "evidence": "文件中断/导出错误/归档恢复/真实磁盘导入"
+        },
+        {
+          "report": "file-navigation-quality-round14.md",
+          "lines": "42-51",
+          "evidence": "actual HubFiles/服务EACCES/auth撤销/late reply"
+        },
+        {
+          "report": "session-actions-round13.md",
+          "lines": "23-35,44-45",
+          "evidence": "actual sessions fs删除/rename/archive"
+        }
+      ],
+      "boundary": "controlled Writable中断不等同native socket取消；部分鉴权为fixture callbacks。",
+      "remaining_gap": "自然浏览器分页/取消/网络断线及大历史边界非全量；history目录mtime同值候选只静态保留。",
+      "existing_baseline_evidence": ""
+    },
+    {
+      "module": "server/hub mcp-configuration/mcp-probe/model-probe/skills-management",
+      "coverage_level": "专项动态+静态+既有套件",
+      "evidence": [
+        {
+          "report": "web-round2.md",
+          "lines": "32-48",
+          "evidence": "Skills真实revision存储；MCP旧probe仅客户端controlled response"
+        },
+        {
+          "report": "command-recovery-round16.md",
+          "lines": "7-22",
+          "evidence": "MCP真实认证及owned HTTP initialize/tools/list/cancel"
+        }
+      ],
+      "boundary": "MCP upstream是owned protocol fixture，无stdio或真实MCP；模型provider未调用。",
+      "remaining_gap": "model-probe真实provider、MCP stdio进程/插件真实协议、所有provider错误矩阵无专项E2E。",
+      "existing_baseline_evidence": ""
+    },
+    {
+      "module": "server/serve local headless/worker-bridge-core/automation-worker/settings-recovery-cli",
+      "coverage_level": "专项动态（owned Node/process/服务）+静态",
+      "evidence": [
+        {
+          "report": "resource-quality-round8.md",
+          "lines": "9-13,45-59",
+          "evidence": "double-start上传破坏、POSIX close、Node EPIPE"
+        },
+        {
+          "report": "automation-round5.md",
+          "lines": "36,60,136-140",
+          "evidence": "Hub自动化worker保护主要源码/既有测试"
+        },
+        {
+          "report": "high-risk-quality-round17.md",
+          "lines": "30",
+          "evidence": "local stdio worker正式接线静态"
+        }
+      ],
+      "boundary": "R36 Node25/macOS，R31 POSIX；不是所有OS/完整产品进程退出；Hub自动化真实model未运行。",
+      "remaining_gap": "Windows、Docker Host生命周期、真实模型长期运行/通知送达、settings-recovery CLI完整交互缺专项动态。",
+      "existing_baseline_evidence": ""
+    },
+    {
+      "module": "server/panels runtime/resources/process/tool-jobs/management/automations/project-scope",
+      "coverage_level": "部分专项动态+latest changed-suite+初始既有套件",
+      "evidence": [
+        {
+          "report": "resource-quality-round8.md",
+          "lines": "35-49",
+          "evidence": "actual job终态真实EACCES，Panel原生process close"
+        },
+        {
+          "report": "panels-round6.md",
+          "lines": "9-15,70",
+          "evidence": "latest scope既有套件专项复跑、actual Web HTTP fixture/native lifecycle"
+        },
+        {
+          "report": "workspace-quality-round11.md",
+          "lines": "19,25-51,96",
+          "evidence": "Desktop Panel边界及scope最新特性分账"
+        }
+      ],
+      "boundary": "38个初始生产文件+latest project-scope；相关动态并非每个Panel能力/UI已端到端。",
+      "remaining_gap": "agent-task execution/task-cookie/browser-capture/resources clone/library/package mutation等大部分只有已有suite，未见逐能力独立专项；具体第三方Panel应用在另repo。",
+      "existing_baseline_evidence": "initial metadata中panels相关35个测试文件code0（包括部分serve/Web）；latest project-scope按changed-tests另账。"
+    },
+    {
+      "module": "server/project-runtime: backup/control-server/docker-provider/lifecycle/manager/proxy/registry/lock/seccomp/managed-entry",
+      "coverage_level": "仅初始既有套件；未见专项审查",
+      "evidence": [
+        {
+          "report": "high-risk-quality-round17.md",
+          "lines": "30",
+          "evidence": "明确Docker/control-server另一Host边界，不扩张local影响"
+        },
+        {
+          "report": "baseline-evidence-round28.md",
+          "lines": "3,9",
+          "evidence": "Server/Web141/1428只属原84740基线"
+        }
+      ],
+      "boundary": "真实源码inventory10生产文件；metadata有10个该目录测试code0，未新增执行。",
+      "remaining_gap": "Docker build/start/restart/proxy/backup/security/seccomp/lock的用户流程专项与容器/远端部署E2E未cover。",
+      "existing_baseline_evidence": "validation/server-web-results.json中project-runtime10文件code0；非a66f全量重跑。"
+    },
+    {
+      "module": "server/remote-relay connector/local-stream/byte-stream/protocol",
+      "coverage_level": "实际专项静态+初始既有native套件",
+      "evidence": [
+        {
+          "report": "server-preflight-round23.md",
+          "lines": "5-25,32,41",
+          "evidence": "credential rotation/reconnect/owner streams/stop fence静态；native fixture只读定义"
+        }
+      ],
+      "boundary": "不是完全未cover；本轮0exec，relay.native初始baseline已有成功元数据。",
+      "remaining_gap": "真实公网TLS relay/账号credential/native自然交叉时序没有此专项动态；baseline实际native结果不替代最新生产部署E2E。",
+      "existing_baseline_evidence": "validation/server-web-results.json relay.native.test.ts code0。"
+    },
+    {
+      "module": "server/links service/http/catalog/remote-catalog/remote-configuration/device-oauth/browser-handoff",
+      "coverage_level": "部分专项动态+静态+既有套件",
+      "evidence": [
+        {
+          "report": "link-recovery-round16.md",
+          "lines": "11-40,47-48",
+          "evidence": "actual授权UI/controller/service/store与cancel/reconcile；provider/OAuth窗口替身"
+        },
+        {
+          "report": "links-round8.md",
+          "lines": "3-10",
+          "evidence": "CAS/owner/generation静态和既有browser-handoff等日志核对"
+        }
+      ],
+      "boundary": "远端catalog/token validation是DI，legacy OAuth/CLI install不动态。",
+      "remaining_gap": "真实第三方OAuth/device flow/browser handoff与token refresh、CLI安装未专项E2E；不能说所有Link provider正常。",
+      "existing_baseline_evidence": ""
+    },
+    {
+      "module": "server/static-files/mobile-static/environment-identity/client-message-id/index export/bin packaging",
+      "coverage_level": "仅既有套件/构建或路径被动引用；未见独立用户流程专项",
+      "evidence": [
+        {
+          "report": "latest-baseline.md",
+          "lines": "11-16,25",
+          "evidence": "构建/typecheck及changed tests；初始与latest范围分账"
+        }
+      ],
+      "boundary": "client-message-id/output身份在chat专项间接涉及；不是每个utility未经阅读。",
+      "remaining_gap": "SPA fallback/cache/MIME/CSP/服务静态资源部署、跨环境身份与完整packaged入口未专项；已有构建/exports test不能称部署覆盖。",
+      "existing_baseline_evidence": "mobile-static/environment-identity/index.exports等初始meta code0。"
+    },
+    {
+      "module": "web/src/hooks useRemoteApp/useRemoteSocket/mobileOutputClient/remoteAppSync + stream/replay/output libs",
+      "coverage_level": "密集专项动态（actual hooks+controlledWS）+部分owned服务",
+      "evidence": [
+        {
+          "report": "web-lifecycle-round13.md",
+          "lines": "12-36",
+          "evidence": "leave审批、socket generation/cleanup、viewer refcounts/history归属"
+        },
+        {
+          "report": "approval-quality-round10.md",
+          "lines": "24,39-45,61-81",
+          "evidence": "审批UI gating及恢复"
+        },
+        {
+          "report": "modern-desktop-image-round25.md",
+          "lines": "17",
+          "evidence": "Web真实reducer/Workbench SSR现代附件正常"
+        }
+      ],
+      "boundary": "mock WebSocket/owned transport；无真实手机浏览器socket自然半开/后台时序。",
+      "remaining_gap": "半开OPEN、旧CONNECTING实际event timing、物理手机前后台与实体触屏/软键盘未专项。",
+      "existing_baseline_evidence": ""
+    },
+    {
+      "module": "web/app Workbench/DesktopApp/useHubController/chat/drafts/approvals/HubApprovalCard/DesktopControls",
+      "coverage_level": "密集专项动态（actual组件/controller/SSR+owned HTTPWS）",
+      "evidence": [
+        {
+          "report": "quality-round5.md",
+          "lines": "25-39",
+          "evidence": "原稿恢复冲突/uncertain intent离页保护"
+        },
+        {
+          "report": "web-lifecycle-round13.md",
+          "lines": "12-26",
+          "evidence": "actual leave button/controller running"
+        },
+        {
+          "report": "server-routing-quality-round17.md",
+          "lines": "14,25-27",
+          "evidence": "实际answer card；Stop UI完整可见仅静态"
+        }
+      ],
+      "boundary": "miniDOM或SSR不是完整浏览器布局/输入；actual服务可达性不等于worker/model E2E。",
+      "remaining_gap": "responsive/软键盘/无障碍/完整browser全流程没有系统视觉验收；新版全部send/stop组合不是穷尽。",
+      "existing_baseline_evidence": ""
+    },
+    {
+      "module": "web/app auth/AuthGate/LinkCallback/protocol/api-context",
+      "coverage_level": "专项动态服务/部分client+静态+既有套件",
+      "evidence": [
+        {
+          "report": "auth-round7.md",
+          "lines": "10,24-41,49-61,89",
+          "evidence": "owned真实Hub auth/paired、AuthGate状态恢复静态或组件契约"
+        },
+        {
+          "report": "web-lifecycle-round13.md",
+          "lines": "32",
+          "evidence": "ProtocolClient4401/显式恢复actual client mockclose"
+        }
+      ],
+      "boundary": "AuthGate正常状态不泛化全部入口；账号都是owned，真实browser Cookie时序为adapter。",
+      "remaining_gap": "真实系统浏览器cookie/SameSite/外部OAuth回调和LinkCallback全部署origin路径没有专项E2E。",
+      "existing_baseline_evidence": ""
+    },
+    {
+      "module": "web/app HubSettings/configuration/HubSkills/skills-management/HubMcp/mcp-configuration",
+      "coverage_level": "专项动态actual组件+owned真实handler",
+      "evidence": [
+        {
+          "report": "web-round2.md",
+          "lines": "7-17,21-57",
+          "evidence": "两个真实Settings、Skills revision、MCP stale probe与正常反证"
+        }
+      ],
+      "boundary": "MCP commands为fixture，model probe无真实provider。",
+      "remaining_gap": "真实模型/MCP连接与跨设备自然频率、mobile layout未专项。",
+      "existing_baseline_evidence": ""
+    },
+    {
+      "module": "web/app HubFiles/HubSessions",
+      "coverage_level": "专项动态actual组件/handlers/owned FS HTTP",
+      "evidence": [
+        {
+          "report": "file-navigation-quality-round14.md",
+          "lines": "42-51",
+          "evidence": "HubFiles迟到A/权限/移动/拒绝与恢复"
+        },
+        {
+          "report": "transfer-round12.md",
+          "lines": "31-50",
+          "evidence": "HubSessions export/archive/restore handler"
+        },
+        {
+          "report": "http-error-preflight-round23.md",
+          "lines": "10",
+          "evidence": "truncated提示和reader cleanup静态"
+        }
+      ],
+      "boundary": "部分auth fixture，部分HubSessions UI仅静态。",
+      "remaining_gap": "完整browser download cancel/export下载/自然HTTP pagination order全链未专项；未证明Hub list异步旧快照产品可达。",
+      "existing_baseline_evidence": ""
+    },
+    {
+      "module": "web/app HubLinks/remote-link-authorization + src/link-authorization/controller/view",
+      "coverage_level": "实际专项动态共享controller/view+静态+现有suite",
+      "evidence": [
+        {
+          "report": "link-recovery-round16.md",
+          "lines": "11,25-31,47-48",
+          "evidence": "实际共享controller/StepView通过Desktop dialog组合；远端snapshot边界"
+        },
+        {
+          "report": "links-round8.md",
+          "lines": "3-10",
+          "evidence": "link controller/owner/CAS正常源码与套件"
+        }
+      ],
+      "boundary": "同一Web共享代码动态，但不是完整HubLinks browser页面+真实OAuth。",
+      "remaining_gap": "所有HubLinks UI/LinkCallback/外部provider端到端未专项。",
+      "existing_baseline_evidence": ""
+    },
+    {
+      "module": "web/app PanelHost/HubPanels/panel-runtime-connection/panel-resource-upload",
+      "coverage_level": "局部专项动态+既有套件/HTTP scope复跑",
+      "evidence": [
+        {
+          "report": "voice-round6.md",
+          "lines": "37-43",
+          "evidence": "PanelHost resources.recordAudio取消/授权signal和真实PanelAudioDialog恢复"
+        },
+        {
+          "report": "panels-round6.md",
+          "lines": "9-15",
+          "evidence": "实际Web runtime HTTP scope现有fixture"
+        }
+      ],
+      "boundary": "音频入口实际动态不等于全部PanelHost bridge/resources/package flows。",
+      "remaining_gap": "PanelHost其它bridge方法与HubPanels管理UI逐功能没有专审；仅相关旧suite，不可全域宣告正常。",
+      "existing_baseline_evidence": ""
+    },
+    {
+      "module": "web/app PanelAudioDialog/panel-audio-capture/panel-audio-upload",
+      "coverage_level": "实际专项正常动态（media API替身）",
+      "evidence": [
+        {
+          "report": "voice-round6.md",
+          "lines": "37-43",
+          "evidence": "真实请求权限/late stream abort、试听下载、保存不确定恢复、取消"
+        }
+      ],
+      "boundary": "没有实际麦克风/MediaRecorder设备；通过正常控制也算覆盖。",
+      "remaining_gap": "实体设备权限prompt/编码器及浏览器差异未专项。",
+      "existing_baseline_evidence": ""
+    },
+    {
+      "module": "web/app PanelVideoDialog/panel-video-capture",
+      "coverage_level": "仅初始既有套件；未见专项审查",
+      "evidence": [
+        {
+          "report": "baseline-evidence-round28.md",
+          "lines": "3,9",
+          "evidence": "初始Server/Web existing tests，非最新全套"
+        }
+      ],
+      "boundary": "panel-video-capture.test code0只表示旧suite覆盖；audio不能外推video。",
+      "remaining_gap": "摄像头/屏幕采集/permission/abort/保存回执完整用户流程专项未cover。",
+      "existing_baseline_evidence": "validation/server-web-results.json panel-video-capture.test.ts code0。"
+    },
+    {
+      "module": "web/app environments/EnvironmentMenu; ProjectsGate; Devices",
+      "coverage_level": "environment仅已有suite；project/device服务链局部覆盖，独立UI未见专项",
+      "evidence": [
+        {
+          "report": "auth-round7.md",
+          "lines": "41,56-61",
+          "evidence": "ProjectsGate只是auth恢复目标，设备删除是Desktop设置/服务路由"
+        },
+        {
+          "report": "web-round3.md",
+          "lines": "50-56",
+          "evidence": "paired项目新建身份流程actual hook/server路由"
+        }
+      ],
+      "boundary": "没有报告具体EnvironmentMenu/Devices组件专项证据；不能因ProjectsGate被提到即判其项目管理UI已审。",
+      "remaining_gap": "多环境切换、Docker环境识别、ProjectsGate project picker及Devices管理UI完整流程未专项。",
+      "existing_baseline_evidence": "environments.test.ts/ProjectsGate.test.tsx/auth.test.ts等原141结果code0；Devices无同名专项测试入口。"
+    },
+    {
+      "module": "web/app register-service-worker/PWA deployment/cache; src/i18n and lib utility funcs",
+      "coverage_level": "service worker仅初始既有suite；i18n/utility局部被动使用",
+      "evidence": [
+        {
+          "report": "web-round2.md",
+          "lines": "57",
+          "evidence": "仅静态CSS不提升布局结论"
+        }
+      ],
+      "boundary": "i18n渲染被真实UI调用但无系统语言/翻译fallback专项；format/riskClassify等有旧test。",
+      "remaining_gap": "offline cache更新/版本切换/安装生命周期、生产部署缓存、全量i18n与accessibility未专项。",
+      "existing_baseline_evidence": "service-worker.test.ts及format/riskClassify/pairing/deviceCredential等初始metadata code0。"
+    }
+  ],
+  "issues_and_suggestions": [
+    {
+      "severity": "报告阅读P3",
+      "file": "desktop-round3.md",
+      "lines": "23",
+      "observation": "仍直接写Open Recent可协调registry，没有本地列出菜单必须本来含目标path或已重装。后续两份审计已收窄，属旧附录单独阅读时的过宽恢复语句，不推翻R29。",
+      "superseding_evidence": [
+        {
+          "report": "desktop-quality-round10.md",
+          "lines": "84",
+          "evidence": "明确补Open Recent条件"
+        },
+        {
+          "report": "r29-priority-round20.md",
+          "lines": "52",
+          "evidence": "菜单可能没有刚加B，真实rename广播恢复仍成立"
+        }
+      ],
+      "suggestion": "最终排序/恢复摘要引用R29最新裁定；若以后编辑旧附录，直接补该前提链接，保持原历史证据。"
+    },
+    {
+      "severity": "阅读组织",
+      "file": "quality-round20.md / quality-round23.md / 多份历史候选附录",
+      "lines": "各轮统计段",
+      "observation": "大量当时current总数与待收录语气保留；通常已有banner或回合标题。读者逐文档平铺易混淆，但不是最终计数实质冲突。",
+      "suggestion": "交付索引显式标正式专项/质量复核/预审诊断/正常反证/历史交付；最终等级只取README，不把历史候选等级再次计数。"
+    },
+    {
+      "severity": "覆盖边界",
+      "file": "packages/server/src/project-runtime 与 Web ancillary UI",
+      "lines": "见coverage数组",
+      "observation": "没有专审≠没有任何证据：Docker/project-runtime、PWA、environment、video等已有原基线测试元数据；remote-relay有实际静态专项；audio有实际正常动态。",
+      "suggestion": "未cover清单分别标“仅旧suite”“仅静态”“未完整E2E”，不要统一称完全未审或无测试。"
+    }
+  ],
+  "priority_conclusion": "分配46份无实质证据冲突或新增撤销/重分级建议；R35唯一P1仍须以数据损失/rollback ownership优先；R29/R11/R19应依README最终P3，早期P2不覆盖。R81在round22已动态确认，早期parent Stop未验证不再作为当前缺口。",
+  "summary": "全部46份逐文档完整读完。正式、质量、正常反证、历史准备/交付分层清楚；no finding亦构成实际覆盖。server/web重点未专项域为project-runtime/Docker、Web environment/PWA/video与部分Panel细能力，均与初始现有套件区别；relay/cloud账号属于静态覆盖。"
+}

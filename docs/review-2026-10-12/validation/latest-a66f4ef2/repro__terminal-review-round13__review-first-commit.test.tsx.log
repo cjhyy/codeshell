@@ -1,0 +1,11 @@
+bun test v1.3.11 (af24e281)
+
+docs/review-2026-10-12/reproductions/terminal-review-round13/review-first-commit.test.tsx:
+{"rootCommitListed":"Root fixture commit","rootCommitActualDiffHasContent":true,"rootReply":{"repositories":[{"rootId":"fixture-root","rootIds":["fixture-root"],"repoRoot":"/private/var/folders/1d/6__4f4y51g90nblfptt8s9v80000gn/T/codeshell-review-first-commit-round13-4JgaLU/project","diff":""}],"errors":[]},"rootViewer":"no changes","laterCommitVisible":true,"explicitSnapshotVisible":true,"actualFullMainStarted":false}
+(pass) CONFIRMED selected root commit with real additions returns no changes; a later commit and historical snapshot remain visible [945.76ms]
+
+ 1 pass
+ 0 fail
+ 15 expect() calls
+Ran 1 test across 1 file. [1.91s]
+Completed Bun shard: 1 tests, 0 skipped; 0 failures.

@@ -1,0 +1,10 @@
+{
+  "artifacts": {
+    "modern-desktop-image.test.ts": "411b12bcb249b6eeb5465fe67f1f30555ecc5fb2232c219c602e0ce1df049ca9",
+    "network-guard.ts": "6e1f5f5045f9606086f1b01e6eb988b88c5670f78000b260fcb9e035f1c69b3d",
+    "PLAN.md": "b581724fe4cc2654f521bb44ad00e6a03380c57f150e2daeafb3aacef0a4043f",
+    "root-match-media-correction.json": "d7eff6e45f94290cda26335a9726afa552d07a4c5619d5305efa7cd26c263e26"
+  },
+  "uniqueDeltaVerified": "only two lines after ensureMiniDom; business/guard/assertions unchanged",
+  "run": "second authorized latest only"
+}

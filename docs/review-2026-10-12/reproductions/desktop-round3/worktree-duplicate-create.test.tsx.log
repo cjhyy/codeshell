@@ -1,0 +1,13 @@
+bun test v1.3.11 (af24e281)
+
+docs/review-2026-10-12/reproductions/desktop-round3/worktree-duplicate-create.test.tsx:
+{"createDisabled":true,"requests":[["fixture-session","/fixture/repo","duplicate"],["fixture-session","/fixture/repo","duplicate"]]}
+(pass) CONFIRMED new-worktree Enter submits again while Create is already disabled [38.44ms]
+{"beforeFailure":{"pathExists":true,"fileExists":true,"branches":"+ worktree/duplicate-fixture-"},"results":[{"status":"rejected","error":"Error: Command failed: git worktree add -b worktree/duplicate-fixture- /private/var/folders/1d/6__4f4y51g90nblfptt8s9v80000gn/T/codeshell-review-duplicate-PqV4qe/.worktrees/duplicate-fixture- 755e1befc7548eb6e0c03b0736197d6b43bf41f0\nPreparing worktree (new branch 'worktree/duplicate-fixture-')\nfatal: a branch named 'worktree/duplicate-fixture-' already exists\n"},{"status":"fulfilled","workspace":{"root":"/private/var/folders/1d/6__4f4y51g90nblfptt8s9v80000gn/T/codeshell-review-duplicate-PqV4qe/.worktrees/duplicate-fixture-","kind":"worktree","worktree":{"path":"/private/var/folders/1d/6__4f4y51g90nblfptt8s9v80000gn/T/codeshell-review-duplicate-PqV4qe/.worktrees/duplicate-fixture-","branch":"worktree/duplicate-fixture-","baseRef":"main","createdBy":"codeshell"}}}],"successfulPath":"/private/var/folders/1d/6__4f4y51g90nblfptt8s9v80000gn/T/codeshell-review-duplicate-PqV4qe/.worktrees/duplicate-fixture-","pathExists":false,"uncommittedFileExists":false,"sessionWorkspace":{"root":"/private/var/folders/1d/6__4f4y51g90nblfptt8s9v80000gn/T/codeshell-review-duplicate-PqV4qe/.worktrees/duplicate-fixture-","kind":"worktree","worktree":{"path":"/private/var/folders/1d/6__4f4y51g90nblfptt8s9v80000gn/T/codeshell-review-duplicate-PqV4qe/.worktrees/duplicate-fixture-","branch":"worktree/duplicate-fixture-","baseRef":"main","createdBy":"codeshell"}},"events":[{"channel":"workspace:changed","payload":{"sessionId":"fixture-session","workspace":{"root":"/private/var/folders/1d/6__4f4y51g90nblfptt8s9v80000gn/T/codeshell-review-duplicate-PqV4qe/.worktrees/duplicate-fixture-","kind":"worktree","worktree":{"path":"/private/var/folders/1d/6__4f4y51g90nblfptt8s9v80000gn/T/codeshell-review-duplicate-PqV4qe/.worktrees/duplicate-fixture-","branch":"worktree/duplicate-fixture-","baseRef":"main","createdBy":"codeshell"}},"mainRoot":"/private/var/folders/1d/6__4f4y51g90nblfptt8s9v80000gn/T/codeshell-review-duplicate-PqV4qe/repo"}}]}
+(pass) CONFIRMED failed duplicate rolls back the successful request's worktree and uncommitted file [3009.38ms]
+
+ 2 pass
+ 0 fail
+ 15 expect() calls
+Ran 2 tests across 1 file. [4.18s]
+Completed Bun shard: 2 tests, 0 skipped; 0 failures.

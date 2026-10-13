@@ -1,0 +1,27 @@
+bun test v1.3.11 (af24e281)
+
+../../../../../../private/tmp/codeshell-remaining-core-lifecycle/lifecycle.test.ts:
+cold input receipt {"sent":[{"prompt":"Original objective: prepare the report","options":{"cwd":"/var/folders/1d/6__4f4y51g90nblfptt8s9v80000gn/T/cs-lifecycle-review-s5kDtK","sessionId":"restored-session"}}],"resumed":[{"eventId":"fMC-ZAK-P55o","runId":"cold-input-run","type":"run_resumed","timestamp":1791778661328,"data":{"userInput":"Use region EU and currency EUR"}}]}
+(pass) cold waiting_input resume persists answer as event but actual EngineRunner resends original objective [60.37ms]
+(pass) warm waiting_input resume delivers exact answer to the suspended handle [30.97ms]
+evaluator receipt {"verdict":"passed","status":"completed","error":null}
+(pass) RunManager evaluator passed maps to completed [22.36ms]
+evaluator receipt {"verdict":"warning","status":"failed","error":"Evaluator failed: [advisory] warning finding"}
+(pass) RunManager evaluator warning maps to failed [22.33ms]
+evaluator receipt {"verdict":"failed","status":"failed","error":"Evaluator failed: [advisory] failed finding"}
+(pass) RunManager evaluator failed maps to failed [22.67ms]
+overlap dream receipt {"captured":[6,7],"afterFirst":2,"afterSecond":0,"unconsumedMidflightSessions":1}
+(pass) overlapping auto-dream runs consume the same cadence twice and lose a session finishing mid-dream [34.98ms]
+(pass) single auto-dream run preserves a session finishing mid-dream [22.64ms]
+(pass) operation verified replay and lost-response cold replay do not send twice [22.72ms]
+(pass) private service cancellation disposes both acquired and late resources exactly once [2.12ms]
+production auxiliary receipt {"summaryCalls":2,"captured":[6,7],"afterBoth":0,"inMemoryLLM":true}
+(pass) production AuxiliaryPipeline concurrently schedules two dreams against one cadence root [40.45ms]
+(pass) pure document parsing/search and collection version refresh preserve ordinary content [18.67ms]
+network guard receipt {"denied":0,"allowedOrigins":[]}
+
+ 11 pass
+ 0 fail
+ 49 expect() calls
+Ran 11 tests across 1 file. [594.00ms]
+Completed Bun shard: 11 tests, 0 skipped; 0 failures.

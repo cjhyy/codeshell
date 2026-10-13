@@ -1,0 +1,53 @@
+{
+  "origin": "http://127.0.0.1:52692",
+  "observations": [
+    {
+      "test": "hub multi-tab revoke",
+      "closures": [
+        {
+          "code": 4401,
+          "reason": "session revoked"
+        },
+        {
+          "code": 4401,
+          "reason": "session revoked"
+        }
+      ],
+      "otherUnaffected": true,
+      "workerGeneration": 0
+    },
+    {
+      "test": "hub cookie rotation and expiry",
+      "expired": {
+        "code": 4401,
+        "reason": "session expired"
+      },
+      "recovered": true,
+      "workerGeneration": 0
+    },
+    {
+      "test": "hub HTTP logout",
+      "otherUnaffected": true
+    },
+    {
+      "test": "desktop cookie TTL",
+      "reusedOwnerBeforeExpiry": true,
+      "expiredOwnerRevoked": true,
+      "pairedWsRemainAuthenticated": true,
+      "newOwnerRecovered": true
+    },
+    {
+      "test": "desktop device deletion and same-browser re-pair",
+      "oldWsClosed": 2,
+      "otherUnaffected": true,
+      "sameSecretRepaired": true
+    },
+    {
+      "test": "desktop logout contract",
+      "httpOwnerRevoked": true,
+      "pairingRetained": true,
+      "pairedSocketsRetainedAtHttpLayer": true,
+      "explicitReExchangeWorks": true
+    }
+  ]
+}

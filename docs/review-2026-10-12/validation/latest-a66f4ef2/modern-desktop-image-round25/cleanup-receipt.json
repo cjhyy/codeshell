@@ -1,0 +1,37 @@
+{
+  "checkedAtSingapore": "2026-10-12T08:55:21.063606+08:00",
+  "isolatedHome": "/private/var/folders/1d/6__4f4y51g90nblfptt8s9v80000gn/T/codeshell-bun-completion-rcuHaQ/home",
+  "isolatedHomeRemoved": true,
+  "runnerRootRemoved": true,
+  "ownedPaths": [
+    {
+      "path": "/private/var/folders/1d/6__4f4y51g90nblfptt8s9v80000gn/T/codeshell-bun-completion-rcuHaQ/home",
+      "exists": false
+    },
+    {
+      "path": "/private/var/folders/1d/6__4f4y51g90nblfptt8s9v80000gn/T/codeshell-bun-completion-rcuHaQ",
+      "exists": false
+    },
+    {
+      "path": "/private/var/folders/1d/6__4f4y51g90nblfptt8s9v80000gn/T/codeshell-bun-completion-rcuHaQ/home/.code-shell/round25-owned-no-repo/f25-paired-image-text",
+      "exists": false
+    },
+    {
+      "path": "/private/var/folders/1d/6__4f4y51g90nblfptt8s9v80000gn/T/codeshell-bun-completion-rcuHaQ/home/.code-shell/sessions/f25-paired-image-text",
+      "exists": false
+    },
+    {
+      "path": "/private/var/folders/1d/6__4f4y51g90nblfptt8s9v80000gn/T/codeshell-bun-completion-rcuHaQ/home/.code-shell/round25-owned-no-repo/f25-paired-image-only",
+      "exists": false
+    },
+    {
+      "path": "/private/var/folders/1d/6__4f4y51g90nblfptt8s9v80000gn/T/codeshell-bun-completion-rcuHaQ/home/.code-shell/sessions/f25-paired-image-only",
+      "exists": false
+    }
+  ],
+  "sourceSha256": {
+    "modern-desktop-image.test.ts": "411b12bcb249b6eeb5465fe67f1f30555ecc5fb2232c219c602e0ce1df049ca9",
+    "network-guard.ts": "6e1f5f5045f9606086f1b01e6eb988b88c5670f78000b260fcb9e035f1c69b3d"
+  },
+  "executionsAdded": 0
+}

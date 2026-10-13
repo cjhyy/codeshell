@@ -1,0 +1,92 @@
+{
+  "baseline": "a66f4ef291f304ee4df9da8095a90671d9a8f140",
+  "guard": {
+    "negativeProbes": 2,
+    "origin": "http://127.0.0.1:64981",
+    "unexpectedRequests": 0
+  },
+  "ownsOnlyFixtureProcesses": true,
+  "orphan": {
+    "sessionId": "round11-orphan-owner",
+    "shellId": "bg_125xe7",
+    "pgid": 32293,
+    "osIdentityBeforeCrash": "Mon Oct 12 02:42:06 2026     /opt/homebrew/Cellar/node/25.8.1_1/bin/node /private/tmp/codeshell-review-20261012-download-round11/quiet-download.mjs http://127.0.0.1:64981 /var/folders/1d/6__4f4y51g90nblfptt8s9v80000gn/T/codeshell-download-round11-NQ3sGQ/owned-orphan-download.bin /Users/admin/.codex/worktrees/review-latest-20261012/codeshell",
+    "osIdentityAfterRecovery": "Mon Oct 12 02:42:06 2026     /opt/homebrew/Cellar/node/25.8.1_1/bin/node /private/tmp/codeshell-review-20261012-download-round11/quiet-download.mjs http://127.0.0.1:64981 /var/folders/1d/6__4f4y51g90nblfptt8s9v80000gn/T/codeshell-download-round11-NQ3sGQ/owned-orphan-download.bin /Users/admin/.codex/worktrees/review-latest-20261012/codeshell",
+    "pidfile": {
+      "shellId": "bg_125xe7",
+      "pgid": 32293,
+      "command": "exec '/opt/homebrew/Cellar/node/25.8.1_1/bin/node' '/private/tmp/codeshell-review-20261012-download-round11/quiet-download.mjs' 'http://127.0.0.1:64981' '/var/folders/1d/6__4f4y51g90nblfptt8s9v80000gn/T/codeshell-download-round11-NQ3sGQ/owned-orphan-download.bin' '/Users/admin/.codex/worktrees/review-latest-20261012/codeshell'",
+      "startedAt": 1791744126477,
+      "sessionId": "round11-orphan-owner"
+    },
+    "items": [
+      {
+        "kind": "shell",
+        "shell": {
+          "shellId": "bg_125xe7",
+          "sessionId": "round11-orphan-owner",
+          "command": "exec '/opt/homebrew/Cellar/node/25.8.1_1/bin/node' '/private/tmp/codeshell-review-20261012-download-round11/quiet-download.mjs' 'http://127.0.0.1:64981' '/var/folders/1d/6__4f4y51g90nblfptt8s9v80000gn/T/codeshell-download-round11-NQ3sGQ/owned-orphan-download.bin' '/Users/admin/.codex/worktrees/review-latest-20261012/codeshell'",
+          "cwd": "",
+          "pgid": 32293,
+          "status": "orphaned",
+          "startedAt": 1791744126477,
+          "exitCode": null,
+          "signal": null,
+          "agentReadOffset": 0,
+          "totalBytes": 0,
+          "didWrap": false,
+          "diskAvailable": false
+        },
+        "canCancel": false,
+        "sourceSession": {
+          "sessionId": "round11-orphan-owner",
+          "shortId": "round11-or",
+          "current": true
+        }
+      }
+    ],
+    "closeResult": {
+      "ok": true
+    },
+    "cancelled": {
+      "cancelled": false
+    },
+    "bytesAtClose": 49152,
+    "bytesAfterClose": 73728,
+    "bytesAfterKillAll": 98304,
+    "bytesAfterExplicitKill": 98304,
+    "explicitKillRecovered": true
+  },
+  "normal": {
+    "items": [
+      {
+        "kind": "shell",
+        "shell": {
+          "shellId": "bg_125xe7",
+          "sessionId": "round11-normal-owner",
+          "command": "exec '/opt/homebrew/Cellar/node/25.8.1_1/bin/node' '/private/tmp/codeshell-review-20261012-download-round11/quiet-download.mjs' 'http://127.0.0.1:64981' '/var/folders/1d/6__4f4y51g90nblfptt8s9v80000gn/T/codeshell-download-round11-NQ3sGQ/owned-normal-download.bin' '/Users/admin/.codex/worktrees/review-latest-20261012/codeshell'",
+          "cwd": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell",
+          "pgid": 32318,
+          "status": "running",
+          "startedAt": 1791744126947,
+          "exitCode": null,
+          "signal": null,
+          "agentReadOffset": 0,
+          "totalBytes": 0,
+          "didWrap": false,
+          "diskAvailable": true
+        },
+        "canCancel": true,
+        "sourceSession": {
+          "sessionId": "round11-normal-owner",
+          "shortId": "round11-no",
+          "current": true
+        }
+      }
+    ],
+    "statusAfterClose": "killed",
+    "processStopped": true,
+    "bytes": 16384
+  },
+  "noEngineOrProviderStarted": true
+}

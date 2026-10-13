@@ -1,0 +1,5 @@
+{"case":"authenticated-control","stopSettled":true,"stateRemoved":true,"elapsedMs":1}
+{"case":"unauthenticated-idle-before-peer-close","waitedMs":1252,"stopSettled":false,"cleanupSettled":false,"quitCount":0,"preventCount":1,"stateStillPresent":true,"bridgeStatus":{"listening":false,"connected":false,"statePath":"/var/folders/1d/6__4f4y51g90nblfptt8s9v80000gn/T/codeshell-remaining-hosts-native-state-GvVYGN/unauthenticated-idle.json"},"errors":[]}
+{"case":"unauthenticated-idle-after-owned-peer-close","stopSettled":true,"cleanupSettled":true,"quitCount":1,"stateRemoved":true,"errors":[]}
+{"case":"invalid-auth-control","stopSettled":true,"stateRemoved":true}
+{"cleanup":"owned sockets destroyed; source listeners stopped; temporary state removed"}

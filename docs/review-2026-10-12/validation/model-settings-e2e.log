@@ -1,0 +1,16 @@
+PASS catalog read: explicit read/origins failures, retry focus and atomic recovery
+PASS model-catalog-editor: 820/390 layout and primary action reachability
+PASS catalog save: typed punctuation, retained refresh/save draft, locked portals and normalized retry IPC
+PASS catalog deletion: rejected write retains entry/draft/focus and retry removes only the synthetic target
+PASS connection reads: atomic catalog/settings recovery, explicit error and keyboard retry
+PASS model-connection-editor: 820/390 layout and primary action reachability
+PASS connection: first-character binding retains the input and keyboard focus
+PASS connection refresh: last complete cards and editable key draft survive read failure
+PASS connection save: visible failure, retained draft and retry through another card ends key editing
+PASS shared credential: both connections reuse one saved key without retaining an editable key input
+PASS connection delete: visible failure, preserved card/default and successful retry
+PASS connection addition: locked pending UI, retained collection on failure and menu retry
+PASS current model: write lock, failure keeps previous selection and retry changes only default
+PASS background model: failed selection reverts, focus returns and retry preserves other settings
+PASS shared credential deletion: cancel does not write, rejected write keeps bindings, retry clears only references
+CodeShell Electron model settings E2E: passed (zero renderer errors)

@@ -1,0 +1,13 @@
+bun test v1.3.11 (af24e281)
+
+docs/review-2026-10-12/reproductions/remote-settings-round15/remote-settings.test.tsx:
+{"actualHost":true,"loopbackBindOnly":true,"actualControllerAndIpc":true,"actualSettingsComponent":true,"twoUiInstancesInOneMiniDom":true,"actualTwoElectronWindows":false,"observerStaleAfterLanStart":true,"remountRestoresState":true}
+(pass) CANDIDATE LAN opened from another settings instance does not refresh the already-mounted observer; remount recovers [43.10ms]
+(pass) CONTROL ordinary local LAN start and stop update their initiating UI and stop broadcast updates a mounted observer [21.41ms]
+(pass) CONTROL stale observer can click start to refresh idempotently; owner/frame guards still reject unrelated callers [19.09ms]
+
+ 3 pass
+ 0 fail
+ 23 expect() calls
+Ran 3 tests across 1 file. [862.00ms]
+Completed Bun shard: 3 tests, 0 skipped; 0 failures.

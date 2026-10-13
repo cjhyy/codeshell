@@ -1,0 +1,7 @@
+(node:61961) Warning: `--localstorage-file` was provided without a valid path
+(Use `node --trace-warnings ...` to show where the warning was created)
+{"modelJournalTiming":{"journalBytes":33863570,"coldFirstPageMs":199,"coldReadBytes":35097839,"allPagesMs":1157,"allPagesReadBytes":98737495,"pages":35},"nearBudgetTiming":{"journalBytes":126245314,"coldFirstPageMs":165,"coldReadBytes":127426419,"allPagesMs":4293,"allPagesReadBytes":344333575,"pages":131},"concurrentAppendTiming":{"prefixBytes":11844291,"pages":12,"milliseconds":1436,"appendedDuringPaging":48,"actualWriterPid":63350,"actualWorkerReceipt":true,"frozenCursorStable":true}}
+(node:63948) Warning: `--localstorage-file` was provided without a valid path
+(Use `node --trace-warnings ...` to show where the warning was created)
+{"hubRecovery":true,"hubRestartCursorStable":true,"hubTransportEpochChanged":true,"recoveredBytes":9060345}
+{"sdkRequests":2,"liveFrames":2213,"outputBytes":9060345,"recoveredHash":"8b43320c8ca500d14af6c51646c33f6f7397cd99ed2030be11d7ca324f0a9b71","desktopRecovery":true,"desktopRestartCursorStable":true,"desktopTransportEpochChanged":true,"stdioRestartCursorStable":true,"actualWorkerReceipts":2,"compiledSdkFailure":true,"noExternalNetwork":true}

@@ -1,0 +1,19 @@
+{
+  "compilerOptions": {
+    "baseUrl": "../..",
+    "paths": {
+      "@cjhyy/code-shell-core/internal": ["./packages/core/src/index.internal.ts"],
+      "@cjhyy/code-shell-core": ["./packages/core/src/index.ts"],
+      "@cjhyy/code-shell-core/extension": ["./packages/core/src/index.extension.ts"],
+      "@cjhyy/code-shell-core/bin/agent-server-stdio": [
+        "./packages/core/src/cli/agent-server-stdio.ts"
+      ],
+      "@cjhyy/code-shell-server/worker": ["./packages/server/src/index.worker.ts"],
+      "@cjhyy/code-shell-capability-coding": ["./packages/coding/src/index.ts"],
+      "@cjhyy/code-shell-pet": ["./packages/pet/src/index.ts"],
+      "@cjhyy/code-shell-pet/capability": ["./packages/pet/src/index.capability.ts"],
+      "@cjhyy/code-shell-web": ["./packages/web/src/index.ts"],
+      "@cjhyy/code-shell-web/*": ["./packages/web/src/*"]
+    }
+  }
+}

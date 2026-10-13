@@ -1,0 +1,90 @@
+{
+  "scope": "Only duplicate archive top-level copies removed; all six original failed-version folders and final-author receipts retained, /tmp originals untouched",
+  "copies": [
+    {
+      "redundantTopCopy": "prepare-only.log",
+      "retainedExactBytesAt": "before-first-native/prepare-only.log",
+      "sha256": "bb51aacf5fbd3ff021c4ca0cdcd6cce525b7bc033dcd3daa3919ab95731ffc12"
+    },
+    {
+      "redundantTopCopy": "fifth-native.log",
+      "retainedExactBytesAt": "fifth-native-failed/fifth-native.log",
+      "sha256": "c8474f8f3840b3ae5c2e9c4144c3c561d1bfc29b7795b9108a037e2ab0de7a22"
+    },
+    {
+      "redundantTopCopy": "source-manifest.json",
+      "retainedExactBytesAt": "final-author/source-manifest.json",
+      "sha256": "04d62a7de557f8f01c29d925227ddafddf3b51da34939d483a26ee16c663656e"
+    },
+    {
+      "redundantTopCopy": "owned-native-stderr.log",
+      "retainedExactBytesAt": "final-author/owned-native-stderr.log",
+      "sha256": "c161643321734d1deff928610a3b617f5078cdc1491b470c6799f2b5e1a5eb86"
+    },
+    {
+      "redundantTopCopy": "seventh-native.log",
+      "retainedExactBytesAt": "final-author/seventh-native.log",
+      "sha256": "57486d556c1458301d7c4926b227b05271e3e774f7cf7d1f8a1ff9cb93abf01b"
+    },
+    {
+      "redundantTopCopy": "fourth-native.log",
+      "retainedExactBytesAt": "fourth-native-failed/fourth-native.log",
+      "sha256": "b269b96fa34035819a9de6df3ff350dc6d87163ede3831528c45656f212c43dc"
+    },
+    {
+      "redundantTopCopy": "second-native.log",
+      "retainedExactBytesAt": "second-native-failed/second-native.log",
+      "sha256": "666b7061760f380b672a5e4b67a44e63d1a2f10ce8de956be50fd375037eac91"
+    },
+    {
+      "redundantTopCopy": "native-observations.json",
+      "retainedExactBytesAt": "final-author/native-observations.json",
+      "sha256": "992a5fc7d6ae5465085740763a2ab7126bb724cff975aa79c92219e064238636"
+    },
+    {
+      "redundantTopCopy": "third-native.log",
+      "retainedExactBytesAt": "third-native-failed/third-native.log",
+      "sha256": "2819aad4b1b305049794cffb0a838564e2109ee0902bdfe7ebb89c94f76ad9bd"
+    },
+    {
+      "redundantTopCopy": "cleanup.json",
+      "retainedExactBytesAt": "final-author/cleanup.json",
+      "sha256": "b351e452474359a3a7168159766a23f248dbb7f17ddb05ce221bfe2e246fb894"
+    },
+    {
+      "redundantTopCopy": "owned-native-stdout.log",
+      "retainedExactBytesAt": "fifth-native-failed/owned-native-stdout.log",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "redundantTopCopy": "prepare-receipt.json",
+      "retainedExactBytesAt": "before-first-native/prepare-receipt.json",
+      "sha256": "c910addce7ee2a974f7fd1c3cf726d67ae5f07adceff25ee36d17e4ccd65b62e"
+    },
+    {
+      "redundantTopCopy": "browser-stop-native.mjs",
+      "retainedExactBytesAt": "sixth-native-failed/browser-stop-native.mjs",
+      "sha256": "11bc7a9cf31d53a69c55191b89fe08d621e4857621175841bb13a446d97c320d"
+    },
+    {
+      "redundantTopCopy": "native-failure-observations.json",
+      "retainedExactBytesAt": "sixth-native-failed/native-failure-observations.json",
+      "sha256": "a97f0c990b569c5032a5fa7122fef3033da18c55fac2ef99cf0446153653ed90"
+    },
+    {
+      "redundantTopCopy": "owned-main-template.mjs",
+      "retainedExactBytesAt": "final-author/owned-main-template.mjs",
+      "sha256": "1f9213c591383ae16b4ac41adaabcce8be298fcf143503909eb067cc7dbaf26b"
+    },
+    {
+      "redundantTopCopy": "sixth-native.log",
+      "retainedExactBytesAt": "sixth-native-failed/sixth-native.log",
+      "sha256": "f8318ad08d99ef84d9457e519075cbc545a96411837df5a3f08b577e489c0a11"
+    },
+    {
+      "redundantTopCopy": "first-native.log",
+      "retainedExactBytesAt": "first-native-failed/first-native.log",
+      "sha256": "8e6baec5398f5b1c4f7bcb19c301a6aa6014c436b8776aba994a47bf13a79383"
+    }
+  ]
+}

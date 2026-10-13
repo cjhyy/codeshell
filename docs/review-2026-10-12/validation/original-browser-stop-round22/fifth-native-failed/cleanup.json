@@ -1,0 +1,21 @@
+{
+  "completed": false,
+  "prepareOnly": false,
+  "failure": {
+    "name": "AssertionError",
+    "message": "actual preload/native IPC/Main callback/Core Cancel succeeded\n+ actual - expected\n\n  {\n+   id: 'desktop-rpc-b7d79425-2515-4b5f-baec-fe053e6f4883-1',\n+   jsonrpc: '2.0',\n+   result: {\n+     ok: true\n+   }\n-   ok: true\n  }\n",
+    "stack": "AssertionError [ERR_ASSERTION]: actual preload/native IPC/Main callback/Core Cancel succeeded\n+ actual - expected\n\n  {\n+   id: 'desktop-rpc-b7d79425-2515-4b5f-baec-fe053e6f4883-1',\n+   jsonrpc: '2.0',\n+   result: {\n+     ok: true\n+   }\n-   ok: true\n  }\n\n    at equal (file:///private/tmp/codeshell-review-20261012-browser-stop-round22/browser-stop-native.mjs:69:69)\n    at file:///private/tmp/codeshell-review-20261012-browser-stop-round22/browser-stop-native.mjs:113:5"
+  },
+  "assertions": 21,
+  "appPid": 16476,
+  "harnessContextRetries": [],
+  "closeReceipt": {
+    "code": 0,
+    "signal": null
+  },
+  "cleanupErrors": [],
+  "isolatedHome": "/private/var/folders/1d/6__4f4y51g90nblfptt8s9v80000gn/T/codeshell-browser-stop-round22-I1Snge",
+  "isolatedHomeRemoved": true,
+  "productMainLoaded": false,
+  "actualWorkerModelCliStarted": false
+}

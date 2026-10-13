@@ -1,0 +1,13 @@
+bun test v1.3.11 (af24e281)
+
+docs/review-2026-10-12/reproductions/quality-round10/plugin-settings-durable-controls.test.tsx:
+{"ipcOrder":["plugins:list","skills:list","settings:get"],"persistedAfterDisablingBeta":{"disabledPlugins":["beta"],"disabledSkills":[]},"painted":{"alpha":false,"beta":true},"writes":[{"disabledSkills":[],"disabledPlugins":["beta"]}]}
+(pass) CONFIRMED toggling before the skill scan completes re-enables an unrelated disabled plugin [57.73ms]
+{"persistedAfterDisablingBeta":{"disabledPlugins":["alpha","beta"],"disabledSkills":["alpha:skill"]},"painted":{"alpha":false,"beta":false},"writes":[{"disabledSkills":["alpha:skill"],"disabledPlugins":["alpha","beta"]}]}
+(pass) CONTROL after initial authoritative load toggling beta preserves disabled alpha and its skill [21.05ms]
+
+ 2 pass
+ 0 fail
+ 17 expect() calls
+Ran 2 tests across 1 file. [2.81s]
+Completed Bun shard: 2 tests, 0 skipped; 0 failures.

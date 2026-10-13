@@ -1,0 +1,19 @@
+{
+  "checkedAt": "2026-10-12T04:28:35.714489+00:00",
+  "kind": "documentation-and-evidence-validation; no product execution",
+  "findings": 33,
+  "priorityCounts": {
+    "P1": 1,
+    "P2": 26,
+    "P3": 6
+  },
+  "sourceLocatorsChecked": 33,
+  "localMarkdownLinksChecked": 112,
+  "archivedEvidenceFilesChecked": 98,
+  "archivedEvidenceBytes": 819801,
+  "archiveMatchesOriginalBytes": true,
+  "codeShellProductBaseline": "62a58ac8702835f848108e152234a6bdd6c3eb3f",
+  "panelProductBaseline": "aabba34ca94f7081fd7de4e20c52443f08f36d5e",
+  "trackedProductChanges": [],
+  "errors": []
+}

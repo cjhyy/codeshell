@@ -86,7 +86,17 @@ describe("AppearanceSection theme packs", () => {
 
     const packCards = findByAttr(container, "data-theme-pack");
     const ids = packCards.map((card) => card.getAttribute("data-theme-pack"));
-    expect(ids).toEqual(["default", "ocean", "forest", "grape", "maki"]);
+    expect(ids).toEqual([
+      "default",
+      "ocean",
+      "forest",
+      "grape",
+      "maki",
+      "miku",
+      "muse",
+      "onodera",
+      "misaka",
+    ]);
     expect(findByAttr(container, "data-theme-preview")).toHaveLength(ids.length);
 
     // The bundled artwork theme is available without an installed-theme cache.
@@ -135,7 +145,18 @@ describe("AppearanceSection theme packs", () => {
     const ids = findByAttr(container, "data-theme-pack").map((c) =>
       c.getAttribute("data-theme-pack"),
     );
-    expect(ids).toEqual(["default", "ocean", "forest", "grape", "maki", "acme-neon"]);
+    expect(ids).toEqual([
+      "default",
+      "ocean",
+      "forest",
+      "grape",
+      "maki",
+      "miku",
+      "muse",
+      "onodera",
+      "misaka",
+      "acme-neon",
+    ]);
     // Only the installed pack exposes an uninstall control.
     const uninstall = findByAttr(container, "data-theme-uninstall");
     expect(uninstall.map((b) => b.getAttribute("data-theme-uninstall"))).toEqual(["acme-neon"]);

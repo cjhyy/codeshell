@@ -1,0 +1,5 @@
+[?2004h[?1004h[?25l[?2026hOwned[1CPTY[1Cfixture:[1Ctype[1Cx,[1Cbackspace,[1Cthen[1Cq
+[?2026l[>0q[c
+REVIEW {"case":"tui_ready","mode":"input","pid":78466,"isRaw":true}
+[>4m[<u[?1004l[?2004l[?2026h[?25h[?2026l[?25h
+REVIEW {"case":"tui_input_exit","input":[{"s":"x","backspace":false,"return":false},{"s":"","backspace":true,"return":false},{"s":"q","backspace":false,"return":false}],"isRaw":false}

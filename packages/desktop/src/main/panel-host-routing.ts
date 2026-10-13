@@ -35,18 +35,27 @@ export function claimPanelHostOwnerForRun(
  */
 export class PanelHostWindowRoutes {
   private readonly ownerBySession = new Map<string, number>();
+  private readonly revisionBySession = new Map<string, number>();
+  private nextRevision = 0;
+
+  revision(sessionId: string): number {
+    return this.revisionBySession.get(sessionId) ?? 0;
+  }
 
   claim(sessionId: string, webContentsId: number): void {
+    if (this.ownerBySession.get(sessionId) === webContentsId) return;
     this.ownerBySession.set(sessionId, webContentsId);
+    this.revisionBySession.set(sessionId, ++this.nextRevision);
   }
 
   forgetSession(sessionId: string): void {
     this.ownerBySession.delete(sessionId);
+    this.revisionBySession.delete(sessionId);
   }
 
   releaseWindow(webContentsId: number): void {
     for (const [sessionId, ownerId] of this.ownerBySession) {
-      if (ownerId === webContentsId) this.ownerBySession.delete(sessionId);
+      if (ownerId === webContentsId) this.forgetSession(sessionId);
     }
   }
 
@@ -82,6 +91,7 @@ export class PanelHostWindowRoutes {
     // A renderer can disappear between agent/run and a later Panel tool. Do
     // not retain a dead owner: the caller may use its compatibility fallback.
     this.ownerBySession.delete(sessionId);
+    this.revisionBySession.delete(sessionId);
     return { ownerWebContentsId: null, window: null };
   }
 }

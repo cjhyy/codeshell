@@ -21,18 +21,76 @@ export function pathWithCommonBins(env: NodeJS.ProcessEnv = process.env): string
 
 export type ProbeRunner = (command: string) => Promise<{ ok: boolean; stdout: string }>;
 
-/** Default runner: `<command> --version` with PATH fix. */
-const defaultRunner: ProbeRunner = (command) =>
-  new Promise((resolve, reject) => {
-    const child = spawn(command, ["--version"], {
-      env: { ...process.env, PATH: pathWithCommonBins() },
-      stdio: ["ignore", "pipe", "pipe"],
+const PROBE_TIMEOUT_MS = 3_000;
+const MAX_PROBE_STDOUT_BYTES = 16 * 1024;
+
+/** Bounded `<command> --version` runner. Process injection keeps tests isolated
+ *  from installed user CLIs; concurrent probes share only the current attempt. */
+export function createProbeRunner(
+  options: { timeoutMs?: number; spawn?: typeof spawn } = {},
+): ProbeRunner {
+  const spawnProcess = options.spawn ?? spawn;
+  const inFlight = new Map<string, ReturnType<ProbeRunner>>();
+  return (command) => {
+    const existing = inFlight.get(command);
+    if (existing) return existing;
+    const pending = new Promise<{ ok: boolean; stdout: string }>((resolve, reject) => {
+      const child = spawnProcess(command, ["--version"], {
+        env: { ...process.env, PATH: pathWithCommonBins() },
+        stdio: ["ignore", "pipe", "pipe"],
+      });
+      const chunks: Buffer[] = [];
+      let stdoutBytes = 0;
+      let settled = false;
+      const onData = (chunk: Buffer | string) => {
+        const remaining = MAX_PROBE_STDOUT_BYTES - stdoutBytes;
+        if (remaining <= 0) return;
+        const bytes = Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk);
+        // Copy the retained prefix so a large chunk cannot stay alive via a view.
+        const retained = Buffer.from(bytes.subarray(0, remaining));
+        chunks.push(retained);
+        stdoutBytes += retained.length;
+      };
+      const finish = (ok: boolean, error?: Error, terminate = false) => {
+        if (settled) return;
+        settled = true;
+        clearTimeout(timeout);
+        child.stdout?.removeListener("data", onData);
+        if (terminate) {
+          // A hung version check must not hold the availability request or host
+          // open, even if the process never emits exit/close after termination.
+          try {
+            child.kill("SIGKILL");
+          } catch {
+            // The process may already have exited between the timer and kill.
+          }
+          child.stdout?.destroy();
+          child.stderr?.destroy();
+          child.unref();
+        }
+        if (error) reject(error);
+        else resolve({ ok, stdout: Buffer.concat(chunks).toString("utf8") });
+      };
+      const timeout = setTimeout(
+        () => finish(false, undefined, true),
+        options.timeoutMs ?? PROBE_TIMEOUT_MS,
+      );
+      child.stdout?.on("data", onData);
+      // Version checks can write diagnostics before returning. Always consume
+      // stderr so a full pipe cannot prevent an otherwise healthy CLI exiting.
+      child.stderr?.resume();
+      // Keep the error listener after timeout to consume late process errors.
+      child.on("error", (error) => finish(false, error, true));
+      child.on("close", (code) => finish(code === 0));
+    }).finally(() => {
+      inFlight.delete(command);
     });
-    let stdout = "";
-    child.stdout?.on("data", (c) => (stdout += String(c)));
-    child.on("error", reject);
-    child.on("exit", (code) => resolve({ ok: code === 0, stdout }));
-  });
+    inFlight.set(command, pending);
+    return pending;
+  };
+}
+
+const defaultRunner = createProbeRunner();
 
 /** Probe a CLI's availability. Injectable runner for tests. */
 export async function probeCli(

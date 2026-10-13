@@ -1,0 +1,949 @@
+{
+  "scope": "read-only Markdown/JSON/heading provenance audit; no product/fixture/test/import/Git/model/network execution",
+  "newFindings": 0,
+  "newExecutions": 0,
+  "mappingSha256": "c9d6de4f77d838b5db7a6610abd9ff5773a26f0860f430149fafd9a518469f15",
+  "mappedRows": 54,
+  "mappedSourceFiles": 17,
+  "earlyHeadingsChecked": [
+    {
+      "id": "R01",
+      "file": "desktop-round1.md",
+      "line": 44,
+      "heading": "## D4 [P2] Approving one of multiple pending tools makes the next card look approved and removes its controls"
+    },
+    {
+      "id": "R02",
+      "file": "web-round1.md",
+      "line": 50,
+      "heading": "## W4 [P2] CLI permission UI can display “逐次确认” while its process still bypasses permissions"
+    },
+    {
+      "id": "R03",
+      "file": "web-round1.md",
+      "line": 8,
+      "heading": "## W1 [P2] ACK uncertainty is converted into a fresh submit, repeating completed work"
+    },
+    {
+      "id": "R04",
+      "file": "desktop-round1.md",
+      "line": 58,
+      "heading": "## D5 [P2] A delayed plugin command overwrites the next conversation's unsent draft"
+    },
+    {
+      "id": "R05",
+      "file": "desktop-round1.md",
+      "line": 18,
+      "heading": "## D2 [P2] Switching sessions carries local file references into the next conversation"
+    },
+    {
+      "id": "R06",
+      "file": "desktop-round1.md",
+      "line": 6,
+      "heading": "## D1 [P2] Native run errors disappear because the controller reads the wrong reply shape"
+    },
+    {
+      "id": "R07",
+      "file": "desktop-round1.md",
+      "line": 82,
+      "heading": "## D7 [P2] A Core worker exit hides controls for a still-running external runtime"
+    },
+    {
+      "id": "R08",
+      "file": "web-round1.md",
+      "line": 36,
+      "heading": "## W3 [P2] Stop in a running CLI room never stops that room"
+    },
+    {
+      "id": "R09",
+      "file": "server-round1.md",
+      "line": 6,
+      "heading": "## S1 [P2] Failed duplicate Hub startup deletes live instance uploads"
+    },
+    {
+      "id": "R10",
+      "file": "server-round1.md",
+      "line": 63,
+      "heading": "## S6 [P2] CC room pending approvals cannot recover after switching or reconnecting"
+    },
+    {
+      "id": "R11",
+      "file": "server-round1.md",
+      "line": 74,
+      "heading": "## S7 [P3] CC approval is dropped if transport fails before the UI leaves its online state"
+    },
+    {
+      "id": "R12",
+      "file": "server-round1.md",
+      "line": 18,
+      "heading": "## S2 [P2] CC AskUserQuestion permanently consumes multi-question prompt after one answer"
+    },
+    {
+      "id": "R13",
+      "file": "desktop-round1.md",
+      "line": 70,
+      "heading": "## D6 [P2] Sticky AskUser state crosses request boundaries and breaks the next question submit"
+    },
+    {
+      "id": "R14",
+      "file": "web-round1.md",
+      "line": 64,
+      "heading": "## W5 [P2] Optional asynchronous questions block all independent followup tasks after completion"
+    },
+    {
+      "id": "R15",
+      "file": "desktop-round1.md",
+      "line": 30,
+      "heading": "## D3 [P2] Queued follow-ups stop progressing when the conversation is in the background"
+    },
+    {
+      "id": "R16",
+      "file": "web-round1.md",
+      "line": 22,
+      "heading": "## W2 [P2] CC-open replies navigate tabs that never requested them and override later navigation"
+    },
+    {
+      "id": "R17",
+      "file": "server-round1.md",
+      "line": 29,
+      "heading": "## S3 [P2] Removed Hub draft attachments retain quota and leave an empty composer blocked"
+    },
+    {
+      "id": "R18",
+      "file": "server-round1.md",
+      "line": 40,
+      "heading": "## S4 [P2] Claude room spawn failure leaves a stale “running” handle that blocks same-mode retry"
+    },
+    {
+      "id": "R19",
+      "file": "web-round1.md",
+      "line": 76,
+      "heading": "## W6 [P3] A failed synchronous approval delivery has no immediate card recovery while the same request is still pending"
+    },
+    {
+      "id": "R20",
+      "file": "server-round1.md",
+      "line": 52,
+      "heading": "## S5 [P3] Hub accepts images above its staging limit and fails only on Send"
+    },
+    {
+      "id": "R21",
+      "file": "README.md",
+      "line": 136,
+      "heading": "### 新会话首次运行中的恢复不能裁掉日志基点"
+    },
+    {
+      "id": "R22",
+      "file": "desktop-round2.md",
+      "line": 6,
+      "heading": "## D8 [P2] A valid secondary-root Session cannot open its project's installed Panel Apps"
+    },
+    {
+      "id": "R23",
+      "file": "desktop-round2.md",
+      "line": 16,
+      "heading": "## D9 [P2] One unavailable tracked project clears installed Panels in every healthy project"
+    },
+    {
+      "id": "R24",
+      "file": "desktop-round2.md",
+      "line": 26,
+      "heading": "## D10 [P2] Removing a project tombstones its authority before idle worktree conversations detach"
+    },
+    {
+      "id": "R25",
+      "file": "web-round2.md",
+      "line": 19,
+      "heading": "## W7 — [P2] 两个已打开的默认模型表单先后保存，会静默回滚未修改的另一项"
+    },
+    {
+      "id": "R26",
+      "file": "web-round2.md",
+      "line": 30,
+      "heading": "## W8 — [P3] Skill 保存冲突后，“刷新”不能恢复保存能力"
+    },
+    {
+      "id": "R27",
+      "file": "web-round2.md",
+      "line": 40,
+      "heading": "## W9 — [P3] MCP 旧测试响应晚于配置刷新时，会为新配置显示旧的测试成功"
+    },
+    {
+      "id": "R28",
+      "file": "desktop-round3.md",
+      "line": 5,
+      "heading": "## D11 [P2] Plugin switches erase unrelated disable entries before authoritative settings initialization finishes"
+    },
+    {
+      "id": "R29",
+      "file": "desktop-round3.md",
+      "line": 16,
+      "heading": "## D12 [P3，第二十轮降级] Completing startup project-bucket migration removes a subsequently added project from the live UI"
+    },
+    {
+      "id": "R30",
+      "file": "runtime-round3.md",
+      "line": 6,
+      "heading": "## Confirmed: P2 — A failed final job-record write silently leaves a completed native task running"
+    },
+    {
+      "id": "R31",
+      "file": "runtime-round3.md",
+      "line": 28,
+      "heading": "## Confirmed: P2 — CLI shutdown can leave an ordinary native Panel process alive"
+    },
+    {
+      "id": "R32",
+      "file": "web-round3.md",
+      "line": 15,
+      "heading": "## W10 — [P2] localStorage 配额耗尽时，新设备配对成功后立即认证失败"
+    },
+    {
+      "id": "R33",
+      "file": "web-round3.md",
+      "line": 26,
+      "heading": "## W11 — [P2] 新会话创建确认前，后台原生会话输出会把新草稿搬到错误会话"
+    },
+    {
+      "id": "R34",
+      "file": "web-round3.md",
+      "line": 37,
+      "heading": "## W12 — [P2] 已开始的手机 HTTP 图片上传无法随断线取消，重连后继续阻塞后续发送"
+    },
+    {
+      "id": "R35",
+      "file": "desktop-round3.md",
+      "line": 27,
+      "heading": "## D13 [P1] Repeated Enter while creating a worktree can delete the successful request's workspace and uncommitted files"
+    },
+    {
+      "id": "R36",
+      "file": "runtime-round3.md",
+      "line": 40,
+      "heading": "## T3 [P2] A worker pipe error can terminate the Node Host instead of settling the failed run"
+    },
+    {
+      "id": "R37",
+      "file": "web-round3.md",
+      "line": 48,
+      "heading": "## W13 — [P2] 手机离线新建另一个项目的任务后，首条文本可在上一个尚未落盘的项目会话执行"
+    },
+    {
+      "id": "R38",
+      "file": "web-round3.md",
+      "line": 60,
+      "heading": "## W14 — [P3] “退出此设备”必须等待 HTTP 响应，网络慢请求会阻止本地退出"
+    },
+    {
+      "id": "R39",
+      "file": "files-round4.md",
+      "line": 9,
+      "heading": "### [P3] Successful archive restoration is blocked by its own unsaved-change guard"
+    },
+    {
+      "id": "R40",
+      "file": "web-round5.md",
+      "line": 15,
+      "heading": "## W15 — [P2] 发送明确失败前输入后续草稿，会丢掉原失败内容"
+    },
+    {
+      "id": "R41",
+      "file": "web-round5.md",
+      "line": 26,
+      "heading": "## W16 — [P2] Hub 未确认送达的意图没有刷新保护，刷新后唯一恢复副本丢失"
+    },
+    {
+      "id": "R42",
+      "file": "credentials-round5.md",
+      "line": 5,
+      "heading": "## C1 [P2] Adding another Cookie account silently replaces an existing account"
+    },
+    {
+      "id": "R43",
+      "file": "credentials-round5.md",
+      "line": 16,
+      "heading": "## C2 [P3] A failed Token save has no visible explanation"
+    },
+    {
+      "id": "R44",
+      "file": "automation-round5.md",
+      "line": 9,
+      "heading": "## A1 — P2：非once续接自动化超过 120 秒后退出运行保护，前一轮仍运行时可再入队同一个任务"
+    },
+    {
+      "id": "R45",
+      "file": "automation-round5.md",
+      "line": 39,
+      "heading": "## A2 — P2：worker 已拒绝续接任务，自动化生命周期仍报告 completed"
+    },
+    {
+      "id": "R46",
+      "file": "automation-round5.md",
+      "line": 63,
+      "heading": "## A3 — P2：执行历史不用任务身份关联，真实实时记录缺失，重开后混入其他任务结果"
+    },
+    {
+      "id": "R47",
+      "file": "automation-round5.md",
+      "line": 90,
+      "heading": "## A4 — P2：执行后自动停用，仍打开的自动化页面长期显示“活跃”"
+    },
+    {
+      "id": "R48",
+      "file": "automation-round5.md",
+      "line": 113,
+      "heading": "## A5 — P3：自动停用原因在 Desktop 摘要丢失，重开后只能看到普通暂停"
+    },
+    {
+      "id": "R49",
+      "file": "collections-round6.md",
+      "line": 5,
+      "heading": "## 已验证的 P3：新接入的共享资料集跨文件查询丢失可恢复的子错误"
+    },
+    {
+      "id": "R50",
+      "file": "voice-round6.md",
+      "line": 7,
+      "heading": "## W17 / P2：录音启动等待期间可再次点击，停止和组件卸载只回收最后一份录音"
+    },
+    {
+      "id": "R51",
+      "file": "plugins-round7.md",
+      "line": 17,
+      "heading": "## W18 — P2: successful install job blocks reinstall after a successful uninstall"
+    },
+    {
+      "id": "R52",
+      "file": "plugins-round7.md",
+      "line": 42,
+      "heading": "## W19 — P2: failed marketplace path-source update removes the previous working plugin"
+    },
+    {
+      "id": "R53",
+      "file": "plugins-round7.md",
+      "line": 66,
+      "heading": "## W20 — P2: Desktop reviewed directory install records a deleted snapshot as its update source"
+    },
+    {
+      "id": "R54",
+      "file": "quickchat-round8.md",
+      "line": 5,
+      "heading": "## Q1 — P3: an internal Files Panel image drop is silently discarded by Quick Chat"
+    }
+  ],
+  "mappingErrors": [],
+  "currentReadmeSha256": "71f08eb2d7b013b08e507c201f539446dbfde9baf683dd3d6657ae6a180dd99a",
+  "formalRows": 86,
+  "currentTableLinkedRows": 32,
+  "missingCurrentTableLinkFiles": [],
+  "lateRows55To86Linked": true,
+  "specialUnnumberedHeadings": [
+    "R21 README self-section",
+    "R30/T1 runtime first confirmed section",
+    "R31/T2 runtime second confirmed section",
+    "R39/F1 files archive restoration",
+    "R49 collection cross-file failure recovery"
+  ],
+  "finalLinkedReadmeSha256": "3ceff228111efad03cbae59fe35c980ee0b845f9db434d5a2016ebe1025a4146",
+  "earlyLinkChecks": [
+    {
+      "id": "R01",
+      "expectedFile": "desktop-round1.md",
+      "actualLinks": [
+        [
+          "Desktop D4",
+          "desktop-round1.md"
+        ]
+      ],
+      "headingLine": 44
+    },
+    {
+      "id": "R02",
+      "expectedFile": "web-round1.md",
+      "actualLinks": [
+        [
+          "Web W4",
+          "web-round1.md"
+        ]
+      ],
+      "headingLine": 50
+    },
+    {
+      "id": "R03",
+      "expectedFile": "web-round1.md",
+      "actualLinks": [
+        [
+          "Web W1",
+          "web-round1.md"
+        ]
+      ],
+      "headingLine": 8
+    },
+    {
+      "id": "R04",
+      "expectedFile": "desktop-round1.md",
+      "actualLinks": [
+        [
+          "Desktop D5",
+          "desktop-round1.md"
+        ]
+      ],
+      "headingLine": 58
+    },
+    {
+      "id": "R05",
+      "expectedFile": "desktop-round1.md",
+      "actualLinks": [
+        [
+          "Desktop D2",
+          "desktop-round1.md"
+        ]
+      ],
+      "headingLine": 18
+    },
+    {
+      "id": "R06",
+      "expectedFile": "desktop-round1.md",
+      "actualLinks": [
+        [
+          "Desktop D1",
+          "desktop-round1.md"
+        ]
+      ],
+      "headingLine": 6
+    },
+    {
+      "id": "R07",
+      "expectedFile": "desktop-round1.md",
+      "actualLinks": [
+        [
+          "Desktop D7",
+          "desktop-round1.md"
+        ]
+      ],
+      "headingLine": 82
+    },
+    {
+      "id": "R08",
+      "expectedFile": "web-round1.md",
+      "actualLinks": [
+        [
+          "Web W3",
+          "web-round1.md"
+        ]
+      ],
+      "headingLine": 36
+    },
+    {
+      "id": "R09",
+      "expectedFile": "server-round1.md",
+      "actualLinks": [
+        [
+          "Server S1",
+          "server-round1.md"
+        ]
+      ],
+      "headingLine": 6
+    },
+    {
+      "id": "R10",
+      "expectedFile": "server-round1.md",
+      "actualLinks": [
+        [
+          "Server S6",
+          "server-round1.md"
+        ]
+      ],
+      "headingLine": 63
+    },
+    {
+      "id": "R11",
+      "expectedFile": "server-round1.md",
+      "actualLinks": [
+        [
+          "Server S7；正常离线有禁用及 handler 保护",
+          "server-round1.md"
+        ]
+      ],
+      "headingLine": 74
+    },
+    {
+      "id": "R12",
+      "expectedFile": "server-round1.md",
+      "actualLinks": [
+        [
+          "Server S2",
+          "server-round1.md"
+        ]
+      ],
+      "headingLine": 18
+    },
+    {
+      "id": "R13",
+      "expectedFile": "desktop-round1.md",
+      "actualLinks": [
+        [
+          "Desktop D6",
+          "desktop-round1.md"
+        ]
+      ],
+      "headingLine": 70
+    },
+    {
+      "id": "R14",
+      "expectedFile": "web-round1.md",
+      "actualLinks": [
+        [
+          "Web W5",
+          "web-round1.md"
+        ]
+      ],
+      "headingLine": 64
+    },
+    {
+      "id": "R15",
+      "expectedFile": "desktop-round1.md",
+      "actualLinks": [
+        [
+          "Desktop D3",
+          "desktop-round1.md"
+        ]
+      ],
+      "headingLine": 30
+    },
+    {
+      "id": "R16",
+      "expectedFile": "web-round1.md",
+      "actualLinks": [
+        [
+          "Web W2",
+          "web-round1.md"
+        ]
+      ],
+      "headingLine": 22
+    },
+    {
+      "id": "R17",
+      "expectedFile": "server-round1.md",
+      "actualLinks": [
+        [
+          "Server S3",
+          "server-round1.md"
+        ]
+      ],
+      "headingLine": 29
+    },
+    {
+      "id": "R18",
+      "expectedFile": "server-round1.md",
+      "actualLinks": [
+        [
+          "Server S4",
+          "server-round1.md"
+        ]
+      ],
+      "headingLine": 40
+    },
+    {
+      "id": "R19",
+      "expectedFile": "web-round1.md",
+      "actualLinks": [
+        [
+          "Web W6；下一次有效 resync 可恢复",
+          "web-round1.md"
+        ]
+      ],
+      "headingLine": 76
+    },
+    {
+      "id": "R20",
+      "expectedFile": "server-round1.md",
+      "actualLinks": [
+        [
+          "Server S5",
+          "server-round1.md"
+        ]
+      ],
+      "headingLine": 52
+    },
+    {
+      "id": "R21",
+      "expectedFile": "README.md",
+      "actualLinks": [
+        [
+          "Root R21",
+          "README.md:136"
+        ]
+      ],
+      "headingLine": 136
+    },
+    {
+      "id": "R22",
+      "expectedFile": "desktop-round2.md",
+      "actualLinks": [
+        [
+          "Desktop D8，第二轮",
+          "desktop-round2.md"
+        ]
+      ],
+      "headingLine": 6
+    },
+    {
+      "id": "R23",
+      "expectedFile": "desktop-round2.md",
+      "actualLinks": [
+        [
+          "Desktop D9，第二轮",
+          "desktop-round2.md"
+        ]
+      ],
+      "headingLine": 16
+    },
+    {
+      "id": "R24",
+      "expectedFile": "desktop-round2.md",
+      "actualLinks": [
+        [
+          "Desktop D10，第二轮",
+          "desktop-round2.md"
+        ]
+      ],
+      "headingLine": 26
+    },
+    {
+      "id": "R25",
+      "expectedFile": "web-round2.md",
+      "actualLinks": [
+        [
+          "Web W7，第二轮",
+          "web-round2.md"
+        ]
+      ],
+      "headingLine": 19
+    },
+    {
+      "id": "R26",
+      "expectedFile": "web-round2.md",
+      "actualLinks": [
+        [
+          "Web W8，第二轮",
+          "web-round2.md"
+        ]
+      ],
+      "headingLine": 30
+    },
+    {
+      "id": "R27",
+      "expectedFile": "web-round2.md",
+      "actualLinks": [
+        [
+          "Web W9，第二轮",
+          "web-round2.md"
+        ]
+      ],
+      "headingLine": 40
+    },
+    {
+      "id": "R28",
+      "expectedFile": "desktop-round3.md",
+      "actualLinks": [
+        [
+          "Desktop D11，第三轮",
+          "desktop-round3.md"
+        ]
+      ],
+      "headingLine": 5
+    },
+    {
+      "id": "R29",
+      "expectedFile": "desktop-round3.md",
+      "actualLinks": [
+        [
+          "Desktop D12，第三轮",
+          "desktop-round3.md"
+        ]
+      ],
+      "headingLine": 16
+    },
+    {
+      "id": "R30",
+      "expectedFile": "runtime-round3.md",
+      "actualLinks": [
+        [
+          "Runtime T1，第三轮；存储恢复后可取消/重试",
+          "runtime-round3.md"
+        ]
+      ],
+      "headingLine": 6
+    },
+    {
+      "id": "R31",
+      "expectedFile": "runtime-round3.md",
+      "actualLinks": [
+        [
+          "Runtime T2，第三轮；已验证 POSIX",
+          "runtime-round3.md"
+        ]
+      ],
+      "headingLine": 28
+    },
+    {
+      "id": "R32",
+      "expectedFile": "web-round3.md",
+      "actualLinks": [
+        [
+          "Web W10，第三轮",
+          "web-round3.md"
+        ]
+      ],
+      "headingLine": 15
+    },
+    {
+      "id": "R33",
+      "expectedFile": "web-round3.md",
+      "actualLinks": [
+        [
+          "Web W11，第三轮",
+          "web-round3.md"
+        ]
+      ],
+      "headingLine": 26
+    },
+    {
+      "id": "R34",
+      "expectedFile": "web-round3.md",
+      "actualLinks": [
+        [
+          "Web W12，第三轮；主机正常收到请求时有 5 分钟票据上限",
+          "web-round3.md"
+        ]
+      ],
+      "headingLine": 37
+    },
+    {
+      "id": "R35",
+      "expectedFile": "desktop-round3.md",
+      "actualLinks": [
+        [
+          "Desktop D13，第三轮",
+          "desktop-round3.md"
+        ]
+      ],
+      "headingLine": 27
+    },
+    {
+      "id": "R36",
+      "expectedFile": "runtime-round3.md",
+      "actualLinks": [
+        [
+          "Runtime T3，第三轮",
+          "runtime-round3.md"
+        ]
+      ],
+      "headingLine": 40
+    },
+    {
+      "id": "R37",
+      "expectedFile": "web-round3.md",
+      "actualLinks": [
+        [
+          "Web W13，第三轮；限定 freshNative 场景",
+          "web-round3.md"
+        ]
+      ],
+      "headingLine": 48
+    },
+    {
+      "id": "R38",
+      "expectedFile": "web-round3.md",
+      "actualLinks": [
+        [
+          "Web W14，第三轮",
+          "web-round3.md"
+        ]
+      ],
+      "headingLine": 60
+    },
+    {
+      "id": "R39",
+      "expectedFile": "files-round4.md",
+      "actualLinks": [
+        [
+          "Files/History F1，第四轮",
+          "files-round4.md"
+        ]
+      ],
+      "headingLine": 9
+    },
+    {
+      "id": "R40",
+      "expectedFile": "web-round5.md",
+      "actualLinks": [
+        [
+          "Web W15，第五轮；限定预入队拒绝",
+          "web-round5.md"
+        ]
+      ],
+      "headingLine": 15
+    },
+    {
+      "id": "R41",
+      "expectedFile": "web-round5.md",
+      "actualLinks": [
+        [
+          "Web W16，第五轮；真实认证 Hub 补强",
+          "web-round5.md"
+        ]
+      ],
+      "headingLine": 26
+    },
+    {
+      "id": "R42",
+      "expectedFile": "credentials-round5.md",
+      "actualLinks": [
+        [
+          "Credentials C1，第五轮；实际 Electron/IPC/store",
+          "credentials-round5.md"
+        ]
+      ],
+      "headingLine": 5
+    },
+    {
+      "id": "R43",
+      "expectedFile": "credentials-round5.md",
+      "actualLinks": [
+        [
+          "Credentials C2，第五轮",
+          "credentials-round5.md"
+        ]
+      ],
+      "headingLine": 16
+    },
+    {
+      "id": "R44",
+      "expectedFile": "automation-round5.md",
+      "actualLinks": [
+        [
+          "Automation A1，第五轮；实际 ChatSession FIFO",
+          "automation-round5.md"
+        ]
+      ],
+      "headingLine": 9
+    },
+    {
+      "id": "R45",
+      "expectedFile": "automation-round5.md",
+      "actualLinks": [
+        [
+          "Automation A2，第五轮",
+          "automation-round5.md"
+        ]
+      ],
+      "headingLine": 39
+    },
+    {
+      "id": "R46",
+      "expectedFile": "automation-round5.md",
+      "actualLinks": [
+        [
+          "Automation A3，第五轮；合并身份关联根因",
+          "automation-round5.md"
+        ]
+      ],
+      "headingLine": 63
+    },
+    {
+      "id": "R47",
+      "expectedFile": "automation-round5.md",
+      "actualLinks": [
+        [
+          "Automation A4，第五轮",
+          "automation-round5.md"
+        ]
+      ],
+      "headingLine": 90
+    },
+    {
+      "id": "R48",
+      "expectedFile": "automation-round5.md",
+      "actualLinks": [
+        [
+          "Automation A5，第五轮；底层原因仍持久保留",
+          "automation-round5.md"
+        ]
+      ],
+      "headingLine": 113
+    },
+    {
+      "id": "R49",
+      "expectedFile": "collections-round6.md",
+      "actualLinks": [
+        [
+          "Collection，第六轮；0.9.33 新可达路径",
+          "collections-round6.md"
+        ]
+      ],
+      "headingLine": 5
+    },
+    {
+      "id": "R50",
+      "expectedFile": "voice-round6.md",
+      "actualLinks": [
+        [
+          "Voice W17，第六轮；同一 renderer document 存活期间",
+          "voice-round6.md"
+        ]
+      ],
+      "headingLine": 7
+    },
+    {
+      "id": "R51",
+      "expectedFile": "plugins-round7.md",
+      "actualLinks": [
+        [
+          "Agent Plugins W18，第七轮；同一 Main 生命周期",
+          "plugins-round7.md"
+        ]
+      ],
+      "headingLine": 17
+    },
+    {
+      "id": "R52",
+      "expectedFile": "plugins-round7.md",
+      "actualLinks": [
+        [
+          "Agent Plugins W19，第七轮；有效新源可重新安装恢复",
+          "plugins-round7.md"
+        ]
+      ],
+      "headingLine": 42
+    },
+    {
+      "id": "R53",
+      "expectedFile": "plugins-round7.md",
+      "actualLinks": [
+        [
+          "Agent Plugins W20，第七轮；旧安装内容保留",
+          "plugins-round7.md"
+        ]
+      ],
+      "headingLine": 66
+    },
+    {
+      "id": "R54",
+      "expectedFile": "quickchat-round8.md",
+      "actualLinks": [
+        [
+          "Quick Chat Q1，第八轮；系统图片拖入可用",
+          "quickchat-round8.md"
+        ]
+      ],
+      "headingLine": 5
+    }
+  ],
+  "earlyLinkMappingConflicts": [],
+  "finalTableLinkedRows": 86,
+  "lateMissingFilesAfterPatch": [],
+  "finalLinkedState": "54 early rows now linked; R21 self section, other53 file-level; no product execution",
+  "finalClockSingapore": "2026-10-12 10:47:38 +08:00"
+}

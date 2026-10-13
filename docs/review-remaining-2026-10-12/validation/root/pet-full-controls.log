@@ -1,0 +1,411 @@
+bun test v1.3.11 (af24e281)
+
+packages/pet/src/server.pet-projection.test.ts:
+(pass) Pet projection protocol > projects an automatic background wake with its fresh run identity [11.12ms]
+(pass) Pet projection protocol > returns a bounded snapshot and monotonic session-isolated deltas [4.72ms]
+(pass) Pet projection protocol > snapshot cursor handshake applies only later deltas without duplication [1.08ms]
+(pass) Pet projection protocol > stdio-equivalent managers expose their real process-local generation and metadata shape [1.44ms]
+(pass) Pet projection protocol > disconnect delta makes live state unknown and removes pending [1.97ms]
+(pass) Pet projection protocol > real AskUser registration never exposes multiline question text in the Pet snapshot [0.73ms]
+(pass) Pet projection protocol > real AskUser lifecycle pushes matching waiting phase and count transitions [1.02ms]
+(pass) Pet projection protocol > never exposes the durable pet session as a work session or work pending [0.61ms]
+
+packages/pet/src/engine.pet-behavior.test.ts:
+(pass) Engine pet behavior > persists manager identity and exposes only structured work delegation [240.99ms]
+(pass) Engine pet behavior > restored pet identity keeps the safe profile and rejects kind rewrites [625.87ms]
+(pass) Engine pet behavior > explicit summary settings override Mimi's notes default without widening its tools [215.45ms]
+(pass) Engine pet behavior > exposes Gateway discovery before the per-route GatewayReply execution tool [176.59ms]
+(pass) Engine pet behavior > stops after the first accepted GatewayReply even when the model would continue [331.86ms]
+(pass) Engine pet behavior > replaces a pending GatewayReply when a steer joins the same turn [506.72ms]
+(pass) Engine pet behavior > skips duplicate GatewayReply calls left in the same model batch [434.63ms]
+
+packages/pet/src/host-actions.test.ts:
+(pass) ControlLongTask tool > records a structured control request with a validated action [0.37ms]
+(pass) ControlLongTask tool > rejects unknown actions and missing task ids without recording [0.15ms]
+(pass) ControlLongTask tool > fails closed outside a Mimi manager turn [0.05ms]
+(pass) WatchSession tool > records one exact Session subscription request [0.05ms]
+(pass) WatchSession tool > rejects malformed or undeclared Session inputs [0.04ms]
+(pass) Memory tool > records remember/update/forget with bounded validated payloads [0.22ms]
+(pass) Memory tool > rejects invalid combinations without recording [0.06ms]
+(pass) GatewayReply tool > records one complete text, button, and attachment reply [0.13ms]
+(pass) GatewayReply tool > requests termination only after the host accepts the reply
+(pass) GatewayReply tool > rejects invalid inputs and attachments outside the declared route capability
+(pass) GatewayReply tool > rewrites the visible schema to the exact Gateway route
+(pass) host-action availability > each tool is visible only when the host declared its kind [0.43ms]
+(pass) host-action envelope validation > accepts a valid session binding request: {"action":"enter","sessionSelector":"session-f3fc3368e78c43ee5a8c"} [0.16ms]
+(pass) host-action envelope validation > accepts a valid session binding request: {"action":"leave"}
+(pass) host-action envelope validation > rejects a malformed or unrelated session binding payload: {}
+(pass) host-action envelope validation > rejects a malformed or unrelated session binding payload: {"action":"enter"} [0.06ms]
+(pass) host-action envelope validation > rejects a malformed or unrelated session binding payload: {"action":"enter","sessionSelector":"s-mu29ikau-091fd2b6"} [0.01ms]
+(pass) host-action envelope validation > rejects a malformed or unrelated session binding payload: {"action":"enter","sessionSelector":"session-f3fc3368e78c43ee5a8"}
+(pass) host-action envelope validation > rejects a malformed or unrelated session binding payload: {"action":"enter","sessionSelector":"session-f3fc3368e78c43ee5a8c0"}
+(pass) host-action envelope validation > rejects a malformed or unrelated session binding payload: {"action":"enter","sessionSelector":"session-F3FC3368E78C43EE5A8C"}
+(pass) host-action envelope validation > rejects a malformed or unrelated session binding payload: {"action":"enter","sessionSelector":"session-g3fc3368e78c43ee5a8c"} [0.08ms]
+(pass) host-action envelope validation > rejects a malformed or unrelated session binding payload: {"action":"enter","sessionSelector":" session-f3fc3368e78c43ee5a8c"}
+(pass) host-action envelope validation > rejects a malformed or unrelated session binding payload: {"action":"enter","sessionSelector":"session-f3fc3368e78c43ee5a8c\n"} [0.02ms]
+(pass) host-action envelope validation > rejects a malformed or unrelated session binding payload: {"action":"enter","sessionSelector":null}
+(pass) host-action envelope validation > rejects a malformed or unrelated session binding payload: {"action":"enter","session_selector":"session-f3fc3368e78c43ee5a8c"}
+(pass) host-action envelope validation > rejects a malformed or unrelated session binding payload: {"action":"enter","sessionSelector":"session-f3fc3368e78c43ee5a8c","target":"other-chat"} [0.02ms]
+(pass) host-action envelope validation > rejects a malformed or unrelated session binding payload: {"action":"leave","sessionSelector":"session-f3fc3368e78c43ee5a8c"}
+(pass) host-action envelope validation > rejects a malformed or unrelated session binding payload: {"action":"leave"} [0.02ms]
+(pass) host-action envelope validation > rejects a malformed or unrelated session binding payload: {"action":"leave","target":"other-chat"}
+(pass) host-action envelope validation > rejects a malformed or unrelated session binding payload: {"action":"resume","sessionSelector":"session-f3fc3368e78c43ee5a8c"}
+(pass) host-action envelope validation > rejects a malformed or unrelated session binding payload: {"action":"remember","text":"not a binding request"}
+(pass) host-action envelope validation > rejects a malformed or unrelated session binding payload: {"action":"update","memoryId":"mem-1","text":"not a binding request"}
+(pass) host-action envelope validation > rejects a malformed or unrelated session binding payload: {"action":"forget","memoryId":"mem-1"}
+(pass) host-action envelope validation > accepts only exact, bounded payloads for each host side effect [0.38ms]
+(pass) pet profile host-action integration > new input invalidates only an unsent GatewayReply while preserving accepted actions [0.29ms]
+(pass) pet profile host-action integration > requires Mimi to decide semantically between Session reuse and creation [0.13ms]
+(pass) pet profile host-action integration > tells Mimi that host-mediated attachment replies are real channel sends [0.11ms]
+(pass) pet profile host-action integration > allowlists the tools and reports one bounded request per kind per turn [0.08ms]
+(pass) pet profile host-action integration > exposes declared host-action kinds through visibility meta [0.10ms]
+(pass) pet profile host-action integration > exposes WatchSession only when the host declares the session-watch action [0.02ms]
+(pass) pet profile host-action integration > mobile-remote tool rides the same host-action service [0.08ms]
+(pass) GatewayReply repeat rejection ends the turn > forces termination once the host has already accepted a reply [0.08ms]
+(pass) GatewayReply repeat rejection ends the turn > a genuine host rejection still does not fake a committed reply [0.07ms]
+
+packages/pet/src/bound-session-commands.test.ts:
+(pass) leaving > recognizes the documented ways out
+(pass) leaving > tolerates surrounding whitespace and case
+(pass) leaving > never swallows a real message that merely mentions leaving
+(pass) status > recognizes the status commands
+(pass) which replies reach the chat > forwards the final answer, decisions and the terminal notice
+(pass) which replies reach the chat > never forwards the intermediate stream [0.44ms]
+(pass) which replies reach the chat > drops an empty final rather than sending a blank message
+(pass) approvals > plain text is never an approval
+(pass) stale prompt > names the Session and how to get out
+
+packages/pet/src/conversation-session-route.test.ts:
+(pass) createConversationSessionRoute > a notify route carries no expiry, a bound route does [0.25ms]
+(pass) createConversationSessionRoute > falls back to the session id when the title is blank [0.02ms]
+(pass) createConversationSessionRoute > rejects an unaddressable route rather than guessing a conversation [0.07ms]
+(pass) createConversationSessionRoute > rejects control characters in a session title [0.02ms]
+(pass) mode transitions > entering upgrades to bound and stamps a fresh expiry [0.07ms]
+(pass) mode transitions > leaving downgrades to notify instead of deleting the route [0.05ms]
+(pass) mode transitions > entering clears a previous suspension [0.05ms]
+(pass) mode transitions > suspending stops delivery and records why [0.03ms]
+(pass) expiry > a bound route expires only once the window has fully elapsed [0.04ms]
+(pass) expiry > a notify route never expires [0.02ms]
+(pass) expiry > inbound traffic extends the window [0.05ms]
+(pass) expiry > an expired bound route never captures the next message [0.13ms]
+(pass) expiry > a suspended or notify route is never treated as bound [0.04ms]
+(pass) expiry > one conversation's route never leaks into another [0.02ms]
+(pass) stale prompt > a quiet bound route warns once before delivering [0.07ms]
+(pass) stale prompt > a new quiet period earns a new warning [0.02ms]
+(pass) parseConversationSessionRoute > round-trips a well-formed route [0.13ms]
+(pass) parseConversationSessionRoute > drops a row rather than repairing a partly-understood route [0.08ms]
+
+packages/pet/src/delegate-work.mismatch.test.ts:
+(pass) a session_id paired with the wrong workspace_id > is refused without starting any work [0.11ms]
+(pass) a session_id paired with the wrong workspace_id > names both Workspaces so the model can tell them apart [0.08ms]
+(pass) a session_id paired with the wrong workspace_id > requires correcting the route without treating rejection as permission for a new Session
+(pass) a session_id paired with the wrong workspace_id > an independent new-work request can still omit session_id after a rejected continuation [0.20ms]
+(pass) a session_id paired with the wrong workspace_id > the other correction also succeeds: switching to the owning Workspace [0.14ms]
+(pass) an unknown session_id > requires identifying the intended Session instead of replacing a continuation [0.03ms]
+(pass) the prompt rule behind the loop > states that a Session belongs to one Workspace and repeats are wrong [0.07ms]
+
+packages/pet/src/context-recall.test.ts:
+(pass) goal-relevant Mimi memory selection > recalls an old relevant fact beyond the recent window and retains recent fallback [1.30ms]
+(pass) goal-relevant Mimi memory selection > uses grounded Chinese objectives for short follow-ups without hiding other-source facts [0.10ms]
+(pass) goal-relevant Mimi memory selection > task associations add recall relevance without treating near-identical facts as equivalent
+(pass) goal-relevant Mimi memory selection > enforces serialized character and item budgets, skips oversized facts without shortening them [0.36ms]
+(pass) goal-relevant Mimi memory selection > ties are stable regardless of input iteration order [0.05ms]
+
+packages/pet/src/session-control.bind.test.ts:
+(pass) BindConversationSession wiring > is a declared host action kind and an allowed Mimi tool
+(pass) BindConversationSession wiring > is visible only when the host declared it for this turn
+(pass) BindConversationSession wiring > the schema accepts no argument beyond action and session_selector
+(pass) BindConversationSession wiring > the prompt tells Mimi entering is routing, not completion or delegation
+(pass) enter > records the request without claiming the conversation entered [0.21ms]
+(pass) enter > rejects a title, path, or raw session id in place of a selector [0.28ms]
+(pass) enter > requires a selector to enter [0.09ms]
+(pass) enter > relays the host's refusal instead of inventing success [0.02ms]
+(pass) leave > records a leave with no selector
+(pass) leave > refuses a leave that also names a Session [0.15ms]
+(pass) fail closed > is unusable outside a turn with the host action service [0.02ms]
+(pass) fail closed > rejects an unknown action and undeclared arguments [0.06ms]
+
+packages/pet/src/session-visit-receipt.test.ts:
+(pass) opening a visit > starts with nothing counted and no outcome claimed [0.04ms]
+(pass) counting during a visit > tracks what the user sent and what the Session finished [0.04ms]
+(pass) closing a visit > captures where the Session was left [0.09ms]
+(pass) closing a visit > bounds the text so one visit cannot flood Mimi's context [0.13ms]
+(pass) closing a visit > collapses whitespace and drops empty steps [0.02ms]
+(pass) closing a visit > records why the visit ended, including an unwanted ending [0.07ms]
+(pass) closing a visit > a pending approval survives into the receipt
+(pass) building Mimi's context > labels the receipts untrusted
+(pass) building Mimi's context > shows the most recent visits first and bounds how many [0.10ms]
+(pass) building Mimi's context > no visits means no context rather than an empty block [0.01ms]
+
+packages/pet/src/server.pet-projection-first-run.test.ts:
+(pass) real first Mimi run removes its pre-persistence projection from the live work list [493.21ms]
+
+packages/pet/src/run-params.test.ts:
+(pass) validatePetRunParams > does not claim behavior modes or session kinds owned by other extensions [0.21ms]
+(pass) validatePetRunParams > validates canonical profile params using Engine's override precedence [0.16ms]
+(pass) validatePetRunParams > rejects malformed canonical workspaces [0.02ms]
+(pass) validatePetRunParams > rejects malformed canonical reusable Sessions [0.02ms]
+(pass) validatePetRunParams > accepts a reusable Session lastActiveAt timestamp and rejects malformed ones [0.08ms]
+(pass) validatePetRunParams > rejects reusable Sessions outside the closed Workspace set [0.04ms]
+(pass) validatePetRunParams > rejects contradictory Pet identity and leading/trailing opaque ids [0.02ms]
+(pass) validatePetRunParams > rejects malformed or duplicate host-action capability declarations [0.04ms]
+(pass) validatePetRunParams > accepts only a bounded GatewayReply route paired with its host action [0.05ms]
+(pass) validatePetRunParams > accepts only a bounded Gateway discovery catalog containing the current channel [0.33ms]
+(pass) validatePetRunParams > validates Needs follow-up snapshots and opaque proactive destinations [0.41ms]
+(pass) Pet behavior profile inputs > normalizes and freezes valid direct Engine-hosted profile params [0.09ms]
+(pass) Pet behavior profile inputs > accepts a non-empty string sessionsRootDir [0.03ms]
+(pass) Pet behavior profile inputs > ignores a missing or non-string sessionsRootDir [0.03ms]
+(pass) Pet behavior profile inputs > trims reusable Sessions inactive for more than 180 days [0.06ms]
+(pass) Pet behavior profile inputs > fails closed on a malformed reusable Session lastActiveAt [0.02ms]
+(pass) Pet behavior profile inputs > publishes the immutable GatewayReply route to tool visibility and run services [0.12ms]
+(pass) Pet behavior profile inputs > fails closed before exposing malformed direct Engine-hosted profile params [0.03ms]
+
+packages/pet/src/tool-arguments.test.ts:
+(pass) Pet tool argument boundary > accepts the ToolRegistry execution signal without relaxing public arguments [0.41ms]
+
+packages/pet/src/topic-segment.test.ts:
+(pass) topic segment boundaries > starts a new segment after the idle threshold
+(pass) topic segment boundaries > treats exactly the idle threshold as a boundary
+(pass) topic segment boundaries > carryover brief includes unfinished tasks and latest conclusions [0.12ms]
+(pass) topic segment boundaries > carryover brief is empty when there is nothing to carry [0.02ms]
+(pass) topic segment boundaries > carryover brief omits the workspace suffix when absent [0.03ms]
+(pass) topic segment boundaries > work memory entry captures task, outcome and refs [0.03ms]
+(pass) topic segment boundaries > work memory entry is a defensive copy
+
+packages/pet/src/server.pet-pending.test.ts:
+(pass) AgentServer Pet pending projection > stores resolver separately from safe tool metadata and resolves once [2.54ms]
+(pass) AgentServer Pet pending projection > classifies AskUser explicitly and excludes internal browser waits [2.39ms]
+(pass) AgentServer Pet pending projection > records timeout, explicit close, server close and owner disconnect terminal states [4.25ms]
+
+packages/pet/src/segment-closure.test.ts:
+(pass) locateClosureWindow > slices between the closing boundary and the next boundary [0.10ms]
+(pass) locateClosureWindow > runs a closing boundary to the end of the transcript [0.06ms]
+(pass) locateClosureWindow > treats an absent closing boundary as starting at index 0 [0.04ms]
+(pass) locateClosureWindow > returns null when a boundary id is not in the transcript or window is empty [0.11ms]
+(pass) buildClosureInput > labels speakers and skips empty turns [0.11ms]
+(pass) parseClosureResponse > parses a bare JSON object [0.21ms]
+(pass) parseClosureResponse > recovers JSON wrapped in a code fence with prose around it [0.04ms]
+(pass) parseClosureResponse > clamps memories to two and drops non-strings and blanks [0.04ms]
+(pass) parseClosureResponse > returns null without a usable title and summary [0.01ms]
+
+packages/pet/src/session-manager.pet.test.ts:
+(pass) SessionManager pet kind > persists and resumes a durable pet session with its transcript [14.42ms]
+(pass) SessionManager pet kind > normalizes legacy sessions to work and never rewrites an existing kind [22.36ms]
+
+packages/pet/src/index.exports.test.ts:
+(pass) Pet package public entry contracts > keeps focused runtime surfaces with root-entry identity [0.06ms]
+(pass) Pet package public entry contracts > does not expose implementation state machines through focused entries
+(pass) Pet package public entry contracts > declares exact package exports and source aliases without a deep-import wildcard [1.34ms]
+
+packages/pet/src/projection-extension.test.ts:
+(pass) Pet projection observer > withdraws a newly hidden session first exposed by a snapshot without a delta [0.39ms]
+(pass) Pet projection observer > withdraws an initial default-kind projection once the session becomes Pet (stream) [0.16ms]
+(pass) Pet projection observer > withdraws an initial default-kind projection once the session becomes Pet (boundary) [0.06ms]
+(pass) Pet projection observer > drops closed session state before the same id is attached again [0.23ms]
+(pass) Pet projection observer > declares only the durable Pet session kind as hidden [0.01ms]
+(pass) Pet projection observer > keeps ephemeral quick chats out of Mimi's live projection [0.10ms]
+(pass) Pet projection observer > preserves the indexed terminal when the host becomes idle at turn completion [0.39ms]
+
+packages/pet/src/registered-follow-ups.test.ts:
+(pass) registered follow-up capability boundary > preserves a session-free registered row through protocol and Engine profile parsing [12.02ms]
+(pass) registered follow-up capability boundary > records a native reminder without trusting model-authored routes or operation identity [0.65ms]
+(pass) registered follow-up capability boundary > resume needs an exact source and ordinary reminders cannot smuggle execution targets [0.52ms]
+(pass) registered follow-up capability boundary > mutations use version fences and preserve explicit catch-up expiry [0.60ms]
+
+packages/pet/src/report-to-mimi.test.ts:
+(pass) ReportToMimi tool > is visible in every valid Session, including sub-sessions and Pet work [0.06ms]
+(pass) ReportToMimi tool > emits bounded content without accepting a channel, recipient, or hidden Mimi id [0.53ms]
+(pass) ReportToMimi tool > rejects malformed or unauthorized reports before notifying the host [0.12ms]
+(pass) ReportToMimi tool > routes the catalog tool through the protocol observer notification [0.50ms]
+(pass) RequestMimiDelivery tool > is permission-gated and visible to a top-level Work Session, not Mimi or sub-agents [0.04ms]
+(pass) RequestMimiDelivery tool > emits a semantic WeChat delivery request without exposing a target id [0.23ms]
+(pass) RequestMimiDelivery tool > rejects unsupported channels and routing fields [0.05ms]
+
+packages/pet/src/delegation.test.ts:
+(pass) Pet work continuation gate > a valid selector alone cannot resume unrelated work [0.05ms]
+(pass) Pet work continuation gate > accepts explicit continuation grounded in the chosen prior work [0.06ms]
+(pass) Pet work continuation gate > rejects invented prior work and requires a full candidate quote [0.06ms]
+(pass) Pet work continuation gate > evidence without a selector cannot turn new work into reuse [0.03ms]
+(pass) Pet work continuation gate > rejects malformed continuity evidence at the service boundary: null [0.10ms]
+(pass) Pet work continuation gate > rejects malformed continuity evidence at the service boundary: {}
+(pass) Pet work continuation gate > rejects malformed continuity evidence at the service boundary: {"priorThread":"梳理项目目录结构"}
+(pass) Pet work continuation gate > rejects malformed continuity evidence at the service boundary: {"priorThread":"梳理项目目录结构","reason":" "}
+(pass) Pet work continuation gate > rejects malformed continuity evidence at the service boundary: {"priorThread":"梳理项目目录结构","reason":"xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"}
+(pass) Pet work continuation gate > run services enforce the gate even when the tool is bypassed
+(pass) Pet work continuation gate > run services preserve grounded continuation and reject wrong selectors before fallback [0.18ms]
+
+packages/pet/src/long-task.test.ts:
+(pass) Pet long-task state machine > rejects an old queued start after a new launch was prepared without a run id [1.30ms]
+(pass) Pet long-task state machine > retains historical rows without allowing an unidentified result correction [0.42ms]
+(pass) Pet long-task state machine > fences persisted run identities and queued corrections at the mutation boundary [0.18ms]
+(pass) Pet long-task state machine > persists a closure decision before its idempotent continuation launch [0.23ms]
+(pass) Pet long-task state machine > tracks real lifecycle instead of treating launch acceptance as completion [0.11ms]
+(pass) Pet long-task state machine > fences late worker completion after an explicit cancel [0.03ms]
+(pass) Pet long-task state machine > keeps the final assistant result when a newer projection reports model processing [0.04ms]
+(pass) Pet long-task state machine > records generated artifacts independently from progress
+(pass) Pet long-task state machine > retry reopens a failed task and preserves durable history [0.07ms]
+(pass) Pet long-task state machine > ignores a late closure watermark from an older attempt [0.10ms]
+(pass) Pet long-task state machine > fences a terminal event older than current progress or retry attempt [0.09ms]
+(pass) Pet long-task state machine > builds bounded manager context and resume prompt [0.20ms]
+(pass) Pet long-task state machine > drops invalid durable rows without throwing [0.07ms]
+(pass) Pet long-task state machine > preserves forced-Goal semantics for rows written before verificationMode [0.04ms]
+
+packages/pet/src/gateway.test.ts:
+(pass) Gateway discovery tool > searches granted channels before exposing one exact capability contract [0.41ms]
+(pass) Gateway discovery tool > filters compact search results by directional capabilities [0.23ms]
+(pass) Gateway discovery tool > describes another enabled channel without granting a cross-channel send [0.09ms]
+(pass) Gateway discovery tool > fails closed for unknown channels, malformed calls, and missing context [0.14ms]
+(pass) Gateway discovery tool > validates and freezes the bounded adapter-owned catalog [0.12ms]
+(pass) Gateway discovery tool > is visible only when a validated catalog reaches profile metadata [0.04ms]
+(pass) outbound proactive and direct capabilities > is accepted and carried through, not dropped [0.05ms]
+(pass) outbound proactive and direct capabilities > stays optional for hosts that do not report it [0.01ms]
+(pass) outbound proactive and direct capabilities > a non-boolean value is rejected
+(pass) outbound proactive and direct capabilities > direct is carried through and available to capability search [0.12ms]
+
+packages/pet/src/migration-summary.test.ts:
+(pass) buildMigrationSummary > joins journal entries oldest-first with title + summary [0.11ms]
+(pass) buildMigrationSummary > returns empty string for no entries [0.01ms]
+
+packages/pet/src/pending-decision-index.test.ts:
+(pass) PendingDecisionIndex > indexes tool approvals and AskUser by session without sensitive payloads [0.17ms]
+(pass) PendingDecisionIndex > never projects any line of raw AskUser text, including middle and trailing secrets
+(pass) PendingDecisionIndex > does not surface internal bridge waits
+(pass) PendingDecisionIndex > terminal transitions are session-scoped, generation-fenced and idempotent [0.22ms]
+(pass) PendingDecisionIndex > reconcile cancels old generation pending entries [0.03ms]
+(pass) PendingDecisionIndex > sanitizes tool names even when an alternate host skips core normalization [0.07ms]
+(pass) PendingDecisionIndex > keeps every pending decision but bounds terminal history for long-lived workers [5.37ms]
+
+packages/pet/src/team.test.ts:
+(pass) digital-human team > accepts a bounded team with unique members
+(pass) digital-human team > rejects a one-person team, duplicate members and invalid modes
+(pass) digital-human team > rejects member ids that cannot name a digital-human profile [0.32ms]
+
+packages/pet/src/session-index.test.ts:
+(pass) SessionIndex > budget exhaustion is visibly incomplete even when final text claims completion [0.10ms]
+(pass) SessionIndex > does not replace the current projection with an older run start [0.09ms]
+(pass) SessionIndex > isolates child terminals while retaining child progress [0.18ms]
+(pass) SessionIndex > rejects a previous run terminal even with a newer timestamp and cursor [0.10ms]
+(pass) SessionIndex > projects disk-only work sessions without creating a live session [0.07ms]
+(pass) SessionIndex > maps live idle, queued, running and pending decision state [0.21ms]
+(pass) SessionIndex > waiting is a display phase and does not turn a dormant session into running [0.02ms]
+(pass) SessionIndex > reduces ordered stream events and rejects stale versions [0.15ms]
+(pass) SessionIndex > keeps background-wait boundaries non-terminal across live and disk projection [0.04ms]
+(pass) SessionIndex > builds safe bounded summaries without copying event payloads [0.07ms]
+(pass) SessionIndex > distinguishes abnormal disconnect from normal worker reclaim [0.06ms]
+(pass) SessionIndex > filters non-local, pet, ephemeral and sub-agent catalog entries [0.09ms]
+(pass) SessionIndex > does not retain live state after catalog removal and same-id recreation [0.09ms]
+(pass) crash-orphaned active sessions > does not present a long-idle active session as resumable [0.05ms]
+(pass) crash-orphaned active sessions > keeps a recently-active session dormant so a live resume still works [0.02ms]
+
+packages/pet/src/atomic-manager-tools.test.ts:
+(pass) Mimi atomic manager tools > reads the same Needs follow-up rows exposed by the desktop [0.17ms]
+(pass) Mimi atomic manager tools > records follow-up and session mutations as separate host capabilities
+(pass) Mimi atomic manager tools > exposes proactive messaging only for exact host-authorized targets [0.35ms]
+(pass) Mimi atomic manager tools > hides and rejects attachments for text-only proactive targets [0.05ms]
+(pass) Mimi atomic manager tools > returns trusted current local time without host side effects [0.75ms]
+
+packages/pet/src/delegate-work.test.ts:
+(pass) DelegateWork > builds a closed Workspace enum and records an exact structured selection [0.24ms]
+(pass) DelegateWork > defaults to CodeShell and rejects unsupported Codex without substitution [0.11ms]
+(pass) DelegateWork > rejects invented Workspace ids and a second delegation [0.06ms]
+(pass) DelegateWork > accepts only a reusable Session from the selected Workspace [0.10ms]
+(pass) DelegateWork > does not turn a malformed continuation selector (null) into new work [0.07ms]
+(pass) DelegateWork > does not turn a malformed continuation selector (42) into new work
+(pass) DelegateWork > does not turn a malformed continuation selector (false) into new work [0.02ms]
+(pass) DelegateWork > does not turn a malformed continuation selector ("") into new work
+(pass) DelegateWork > does not turn a malformed continuation selector (" ") into new work [0.03ms]
+(pass) DelegateWork > does not turn a malformed continuation selector (" session-alpha-login") into new work [0.02ms]
+(pass) DelegateWork > does not turn a malformed continuation selector ("session-alpha-login ") into new work [0.01ms]
+(pass) DelegateWork > rejects explicit continuation with missing or ungrounded evidence  [0.06ms]
+(pass) DelegateWork > rejects explicit continuation with missing or ungrounded evidence {"prior_thread":"Feishu document review","reason":"Continue the previous review."} [0.01ms]
+(pass) DelegateWork > rejects explicit continuation with missing or ungrounded evidence {"prior_thread":"Login work","reason":" "} [0.02ms]
+(pass) DelegateWork > rejects explicit continuation with missing or ungrounded evidence {"prior_thread":"Login work","reason":"Resume","bypass":true}
+(pass) DelegateWork > rejects explicit continuation with missing or ungrounded evidence "continue"
+(pass) DelegateWork > rejects undeclared routing controls instead of silently discarding them
+(pass) DelegateWork > fails closed for malformed run-scoped services instead of throwing [0.20ms]
+(pass) DelegateWork > renders host labels as bounded single-line data [0.02ms]
+(pass) delegateWorkAvailability > visible only for a Pet turn with host-provided Workspaces
+
+packages/pet/src/sessions-tool.test.ts:
+(pass) sessionsToolDef > exposes list/describe/search enum and name Sessions [0.03ms]
+(pass) sessionsTool > describe keeps a new Session's user request before an assistant result exists [8.48ms]
+(pass) sessionsTool > list returns L1 rows with selector and untrusted note [3.93ms]
+(pass) sessionsTool > describe returns latestResult, open work steps, and selector [5.63ms]
+(pass) sessionsTool > a closure turn can read work without being told to use an unavailable continuation id [7.57ms]
+(pass) sessionsTool > advertised continuation fields are accepted by DelegateWork for the same existing Session [5.92ms]
+(pass) sessionsTool > search finds sessionId by query [5.43ms]
+(pass) sessionsTool > describe without session_id errors [1.65ms]
+(pass) sessionsTool > unknown extra arg on list errors [1.35ms]
+(pass) sessionsTool > describe on nonexistent id errors [1.42ms]
+(pass) sessionsTool > describe rejects a path-traversal session_id [1.61ms]
+(pass) sessionsTool > describe cannot bypass list policy to read Mimi's own session [4.46ms]
+(pass) sessionsTool > errors when no host-provided sessions root is injected [0.14ms]
+
+packages/pet/src/im-session-list.test.ts:
+(pass) display status > a completed run reads completed, any other terminal reads interrupted [0.11ms]
+(pass) display status > a pending decision outranks running [0.02ms]
+(pass) display status > queued counts as running to the user
+(pass) display status > a crashed session that still claims active is not shown as running [0.01ms]
+(pass) building the list > numbers rows from one and never emits a raw session id
+(pass) building the list > archived sessions are dropped, not offered then refused
+(pass) building the list > caps the list so a phone message stays scannable
+(pass) resolving an ordinal > picks the row the user actually saw
+(pass) resolving an ordinal > an out-of-range or nonsense ordinal resolves to nothing [0.18ms]
+(pass) ambiguity > duplicate titles are reported so the host keeps asking [0.06ms]
+(pass) ambiguity > distinct titles are unambiguous [0.02ms]
+
+packages/pet/src/engine.chat-replay.test.ts:
+(pass) Mimi mocked multi-turn chat replay > recovers the historical wrong-workspace continuation without starting replacement work [609.50ms]
+(pass) Mimi mocked multi-turn chat replay > corrects Sessions list arguments and preserves the listed choice across a terse follow-up [1354.07ms]
+(pass) Mimi mocked multi-turn chat replay > routes a disclosed follow-up using the actual returned field names and leaves it open [769.89ms]
+(pass) Mimi mocked multi-turn chat replay > wires the desktop time-to-WeChat request through CurrentTime and an authorized SendMessage target [872.59ms]
+(pass) Mimi mocked multi-turn chat replay > records the explicit interview-question preference without adding an unfinished tail or unrelated remote action [711.98ms]
+(pass) Mimi mocked multi-turn chat replay > records open-remote intent without a fabricated tunnel address or delegated work [456.64ms]
+(pass) Mimi mocked multi-turn chat replay > records a completion watch with the exact runtime Session id and keeps acceptance distinct from activation [595.64ms]
+(pass) Mimi mocked multi-turn chat replay > refreshes non-durable status without losing earlier user constraints or re-delegating a complaint [853.17ms]
+(pass) Mimi mocked multi-turn chat replay > saves a corrected working note, refreshes context, and checks history before one Gateway reply [566.48ms]
+(pass) Mimi mocked multi-turn chat replay > bounds an uncooperative model that repeatedly attempts wrong workspace without dispatching work [1474.32ms]
+(pass) Mimi mocked multi-turn chat replay > bounds an uncooperative model that repeatedly attempts invalid follow-up lookup without dispatching work [1658.24ms]
+
+packages/pet/src/mobile-remote.test.ts:
+(pass) MobileRemote tool > records a structured open request exactly once per turn [0.91ms]
+(pass) MobileRemote tool > records a close request and rejects unknown actions [0.16ms]
+(pass) MobileRemote tool > fails closed outside a Mimi manager turn [0.13ms]
+(pass) MobileRemote tool > declares a closed action enum [0.06ms]
+
+packages/pet/src/disclosure/catalog.test.ts:
+(pass) listWorkSessionsOnDisk > filters pet/subagent/child/ephemeral sessions, keeps a work session with title/cwd [35.77ms]
+(pass) listWorkSessionsOnDisk > sorts by updatedAt desc and honours limit [22.76ms]
+(pass) listWorkSessionsOnDisk > missing root directory returns empty array [0.35ms]
+(pass) listWorkSessionsOnDisk > a session with non-string title/summary/status does not break adjacent sessions [19.85ms]
+(pass) listWorkSessionsOnDisk > single-session reads enforce the same ordinary-work policy as the list [24.03ms]
+(pass) listWorkSessionsOnDisk > resolves an opaque selector independently of the visible catalog limit [23.51ms]
+(pass) sessionSelectorId > matches the desktop pet-dispatch-service reusableSessionId convention
+
+packages/pet/src/disclosure/search.test.ts:
+(pass) searchSessionTranscripts > finds a keyword across sessions case-insensitively with multiple snippets [31.91ms]
+(pass) searchSessionTranscripts > excludes pet/subagent sessions and respects maxSessions [47.41ms]
+(pass) searchSessionTranscripts > truncated is true when the deadline is exceeded before all candidates are scanned [23.94ms]
+(pass) searchSessionTranscripts > blank query returns empty matches [6.09ms]
+(pass) searchSessionTranscripts > truncated is false when all candidates are processed and matches exactly fill maxSessions [25.18ms]
+(pass) searchSessionTranscripts > scannedSessions does not count a candidate missing transcript.jsonl [33.99ms]
+
+packages/pet/src/disclosure/latest-result.test.ts:
+(pass) readLatestAssistantText > recent work context excludes injected reminders and system/agent authored user-role inputs [40.96ms]
+(pass) readLatestAssistantText > returns the newest assistant text, skipping a trailing user message [4.92ms]
+(pass) readLatestAssistantText > truncates to maxChars and sets truncated: true [6.18ms]
+(pass) readLatestAssistantText > returns null when there is no assistant message [3.69ms]
+(pass) readLatestAssistantText > returns null for a nonexistent directory [0.15ms]
+(pass) readLatestAssistantText > skips malformed lines and supports plain-string content [4.54ms]
+(pass) readLatestAssistantText > does not split a surrogate pair when truncating at the boundary [4.58ms]
+
+packages/pet/src/disclosure/todo-snapshot.test.ts:
+(pass) readSessionTodos > newest snapshot wins, returns items in order with statuses [3.38ms]
+(pass) readSessionTodos > all-completed snapshot returns an empty array [3.57ms]
+(pass) readSessionTodos > no TodoWrite event returns null [5.13ms]
+
+ 330 pass
+ 0 fail
+ 1093 expect() calls
+Ran 330 tests across 37 files. [14.08s]
+Completed Bun shard: 330 tests, 0 skipped; 0 failures.

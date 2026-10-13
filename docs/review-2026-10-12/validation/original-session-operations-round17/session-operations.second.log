@@ -1,0 +1,43 @@
+bun test v1.3.11 (af24e281)
+
+../../../../../../private/tmp/codeshell-review-20261012-session-operations-round17/session-operations.test.ts:
+ 6 |   const child = Bun.spawn([process.execPath, join(import.meta.dir, "session-operations.fixture.tsx")], { cwd: process.cwd(), stdout: "pipe", stderr: "pipe" });
+ 7 |   const timer = setTimeout(() => child.kill(), 16000);
+ 8 |   const [stdout, stderr, code] = await Promise.all([new Response(child.stdout).text(), new Response(child.stderr).text(), child.exited]);
+ 9 |   clearTimeout(timer);
+10 |   writeFileSync(join(import.meta.dir, "session-operations.fixture.log"), stdout + stderr);
+11 |   expect(code, stdout + stderr).toBe(0);
+                                     ^
+error: 55 | const text = (node: any): string => node.nodeType === 3 ? node.nodeValue ?? node.textContent ?? "" : Array.from(node.childNodes ?? []).map(text).join("") || node.textContent || (typeof props(node).children === "string" ? props(node).children : "");
+56 | const settle = async () => { await flushMicrotasks(); await new Promise(resolve => setTimeout(resolve, 5)); await flushMicrotasks(); };
+57 | async function until(predicate: () => boolean, label = "condition") { const deadline = Date.now() + 3000; while (!predicate()) { if (Date.now() > deadline) throw Error(`timeout: ${label}; ${text(document.body)}`); await act(settle); } }
+58 | let assertions = 0;
+59 | const equal = (actual: any, expected: any) => { assertions++; assert.deepEqual(actual, expected); };
+60 | const check = (value: any, label = "assertion") => { assertions++; assert.ok(value, label); };
+                                                                               ^
+AssertionError: production button exists
+ generatedMessage: false,
+     actual: undefined,
+   expected: true,
+   operator: "==",
+       code: "ERR_ASSERTION"
+
+      at check (/private/tmp/codeshell-review-20261012-session-operations-round17/session-operations.fixture.tsx:60:75)
+      at /private/tmp/codeshell-review-20261012-session-operations-round17/session-operations.fixture.tsx:68:51
+      at projectRenamePrompt (/private/tmp/codeshell-review-20261012-session-operations-round17/session-operations.fixture.tsx:76:168)
+      at processTicksAndRejections (native:7:39)
+
+Bun v1.3.11 (macOS arm64)
+
+
+Expected: 0
+Received: 1
+
+      at <anonymous> (/private/tmp/codeshell-review-20261012-session-operations-round17/session-operations.test.ts:11:33)
+(fail) actual session/project operation components, Main callbacks and durable stores: failures, restores and safe retry [1422.62ms]
+
+ 0 pass
+ 1 fail
+ 1 expect() calls
+Ran 1 test across 1 file. [1.51s]
+Bun test process failed (1)

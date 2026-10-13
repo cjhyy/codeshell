@@ -1,0 +1,132 @@
+{
+  "checkedAtSingapore": "2026-10-12T09:44:33.941623+08:00",
+  "finding": "R86/F27-1/P3",
+  "commonBunFilesAdded": 1,
+  "commonBunTestsAdded": 1,
+  "bunExpectsPerFrozenRun": 29,
+  "nativeExecutionsAdded": 0,
+  "runs": [
+    {
+      "execution": "root-initial",
+      "baseline": "84740d56e55517b004948a0a0e07649ad6fbf998",
+      "archive": "reproductions/file-root-round27",
+      "files": 1,
+      "tests": 1,
+      "bunExpects": 29,
+      "skipped": 0,
+      "code": 0,
+      "sourceSha256": {
+        "file-root.test.ts": "28f4202efc90bedbd67f39f60bd7e9370a3b8557872ae841edb856e3720a13d2",
+        "network-guard.ts": "6e1f5f5045f9606086f1b01e6eb988b88c5670f78000b260fcb9e035f1c69b3d"
+      },
+      "sourceManifestCount": 51,
+      "resolutionOnlyEntries": 4,
+      "extractedCallbacks": [
+        {
+          "channel": "fsRoot:readDir",
+          "line": 6486,
+          "sha256": "2820bebc653dec326e7a816ff53ad14969983f1f94c1fb0e4178db564d300f9a",
+          "capturedDependencies": [
+            "requireRendererProjectRoot",
+            "readDirectory"
+          ]
+        },
+        {
+          "channel": "fsSession:readDir",
+          "line": 6500,
+          "sha256": "a94993aa3251ef2d8c1fb2d4ad1422737efe0e9124cf2aecc6743cf79e93338e",
+          "capturedDependencies": [
+            "assertDesktopSessionId",
+            "readSessionDirectoryForUi"
+          ]
+        }
+      ],
+      "declaredCodingMockTargets": 3,
+      "ownedNotGitAdapterCalls": 10,
+      "apiCalls": 15,
+      "groupedObservations": 5,
+      "isolatedHome": "/private/var/folders/1d/6__4f4y51g90nblfptt8s9v80000gn/T/codeshell-bun-completion-vBeCip/home",
+      "isolatedHomeRemoved": true,
+      "runnerRootRemoved": true,
+      "guardAttempts": [],
+      "cleanupErrors": []
+    },
+    {
+      "execution": "root-latest",
+      "baseline": "a66f4ef291f304ee4df9da8095a90671d9a8f140",
+      "archive": "validation/latest-a66f4ef2/file-root-round27",
+      "files": 1,
+      "tests": 1,
+      "bunExpects": 29,
+      "skipped": 0,
+      "code": 0,
+      "sourceSha256": {
+        "file-root.test.ts": "28f4202efc90bedbd67f39f60bd7e9370a3b8557872ae841edb856e3720a13d2",
+        "network-guard.ts": "6e1f5f5045f9606086f1b01e6eb988b88c5670f78000b260fcb9e035f1c69b3d"
+      },
+      "sourceManifestCount": 51,
+      "resolutionOnlyEntries": 4,
+      "extractedCallbacks": [
+        {
+          "channel": "fsRoot:readDir",
+          "line": 6492,
+          "sha256": "2820bebc653dec326e7a816ff53ad14969983f1f94c1fb0e4178db564d300f9a",
+          "capturedDependencies": [
+            "requireRendererProjectRoot",
+            "readDirectory"
+          ]
+        },
+        {
+          "channel": "fsSession:readDir",
+          "line": 6506,
+          "sha256": "a94993aa3251ef2d8c1fb2d4ad1422737efe0e9124cf2aecc6743cf79e93338e",
+          "capturedDependencies": [
+            "assertDesktopSessionId",
+            "readSessionDirectoryForUi"
+          ]
+        }
+      ],
+      "declaredCodingMockTargets": 3,
+      "ownedNotGitAdapterCalls": 10,
+      "apiCalls": 15,
+      "groupedObservations": 5,
+      "isolatedHome": "/private/var/folders/1d/6__4f4y51g90nblfptt8s9v80000gn/T/codeshell-bun-completion-zqgihA/home",
+      "isolatedHomeRemoved": true,
+      "runnerRootRemoved": true,
+      "guardAttempts": [],
+      "cleanupErrors": []
+    }
+  ],
+  "authorFirstSeparate": {
+    "archive": "validation/original-file-root-round27/first-authorized",
+    "sourceSha256": "28f4202efc90bedbd67f39f60bd7e9370a3b8557872ae841edb856e3720a13d2",
+    "guardSha256": "6e1f5f5045f9606086f1b01e6eb988b88c5670f78000b260fcb9e035f1c69b3d",
+    "files": 1,
+    "tests": 1,
+    "bunExpects": 29,
+    "completed": true,
+    "code": 0,
+    "isolatedHomeRemoved": true,
+    "runnerRootRemoved": true
+  },
+  "authorFailures": 0,
+  "authorReruns": 0,
+  "preparedInitialExecutions": 0,
+  "preparedInitialSha256": "55d3f4ddd71c838b98b186988f7d40ee3a2ebfed1e50fb03d797abcf33054c68",
+  "nodeAsserts": "Not separately counted; no additional Bun/native totals.",
+  "rootNormalizedTraceSha256": "5ff66ceb7fb34ef87b6b594dfc477c5319b67da9c22f4cd28f45b69fd7eddac9",
+  "rootTraceNormalization": "JSON calls only; replace exact privateHOME/projectUUID/AUUID/BUUID with <HOME>/<P>/<A>/<B>; read-only comparison, original observed bytes unchanged.",
+  "scope": "Actual Core dist SessionManager/Transcript/selectContextPackage/createSummaryFork, actual ProjectStore/SessionCwdIndex/create/addRoot/setPrimary, actual workspace service/registered authority IPC/preload facade, actual consumer/hook/Files/DirNode, exact AST Main callbacks/validator/real FS and Session FS. Supplied summary output, source-binding writer setup, no-Git owned folding/probe, memory IPC, actual store.list validator DI, DOM/alias forwarding/panel wrapper explicit. Sidebar/trust/setPrimaryRPC, TopBar/summaryRPC/App insertion/fullElectron, full blank route, real first send and mounted auto-refresh remain static. Internal binding+remount is control only. No Engine/provider/model/worker/Gitprocess/network/Electron. Source51/resolve-only4/declared coding mocks3 not modulecache graph. R65 empty feedback not a separate finding.",
+  "formalCountsAfter": {
+    "findings": 86,
+    "P1": 1,
+    "P2": 52,
+    "P3": 33,
+    "commonBunFiles": 86,
+    "commonBunTests": 251
+  },
+  "titleSubtopicNewFindings": 0,
+  "titleSubtopicExecutions": 0,
+  "latestFetchSingapore": "2026-10-12 09:39",
+  "originMain": "a66f4ef291f304ee4df9da8095a90671d9a8f140"
+}

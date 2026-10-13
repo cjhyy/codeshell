@@ -1,0 +1,25 @@
+{
+  "cancelSettledBeforeWorkerResult": false,
+  "frames": [
+    {
+      "jsonrpc": "2.0",
+      "id": "mobile-agent-run-1791740328502-3",
+      "method": "agent/run",
+      "params": {
+        "task": "本地 fixture，无真实模型",
+        "sessionId": "s-fixture",
+        "requireExisting": true,
+        "projectId": "p",
+        "rootId": "r"
+      }
+    }
+  ],
+  "events": [
+    {
+      "type": "job_start"
+    },
+    {
+      "type": "job_cancelled"
+    }
+  ]
+}

@@ -1,0 +1,7 @@
+{
+  "originalName": "prepared-revision.diff",
+  "exactRawDecompressedSha256": "e945ee8e64542c372c1f94cf3fa2f03ed7fbebcb8dfea6a1a93c5c8bb65fc674",
+  "rawCompressed": "prepared-revision.diff.gz",
+  "fixtureAndGuardModified": false,
+  "reason": "Exact original unified diff retained compressed; no whitespace normalization to source/test bytes."
+}

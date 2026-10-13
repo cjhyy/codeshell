@@ -1,0 +1,22 @@
+bun test v1.3.11 (af24e281)
+
+../../../../../../private/tmp/codeshell-review-20261012-goal-sleep-round20/goal-resume.test.tsx:
+51 | const emitReply = (value: any) => { for (const fn of ipcListeners.get("agent:msg") ?? []) fn({}, typeof value === "string" ? value : JSON.stringify(value)); };
+52 | const nodes = (n: any): any[] => [n, ...Array.from(n?.childNodes ?? []).flatMap(nodes)];
+53 | const props = (n: any): any => { const k = Object.keys(n ?? {}).find(x => x.startsWith("__reactProps$")); return k ? n[k] : {}; };
+54 | const textOf = (n: any): string => n?.nodeType === 3 ? n.nodeValue ?? "" : Array.from(n?.childNodes ?? []).map(textOf).join("") || n?.textContent || "";
+55 | const tick = async () => { await flushMicrotasks(); await new Promise(r => setTimeout(r, 0)); await flushMicrotasks(); };
+56 | async function until(check: () => boolean, label = "owned goal wait") { const end = Date.now() + 4000; while (!check()) { if (Date.now() > end) throw Error(label); await act(tick); } }
+                                                                                                                                                           ^
+error: Main missing: {"messages":[],"logs":[["goal.update.failed",{"operation":"resume","sessionId":"no-worker-fad89dcd-f932-4951-bd3a-59f45242dd53","error":"exports is not defined"}],["goal.reconcile.failed",{"sessionId":"no-worker-fad89dcd-f932-4951-bd3a-59f45242dd53","error":"exports is not defined"}]],"ipcSent":[{"jsonrpc":"2.0","id":"desktop-rpc-e272f6a0-5740-4053-a9ac-c0c75dce6874-1","method":"agent/goalUpdate","params":{"sessionId":"no-worker-fad89dcd-f932-4951-bd3a-59f45242dd53","paused":false,"expectedGoalId":"goal-no-worker-fad89dcd-f932-4951-bd3a-59f45242dd53","expectedRevision":1}},{"jsonrpc":"2.0","id":"desktop-rpc-e272f6a0-5740-4053-a9ac-c0c75dce6874-2","method":"agent/goalGet","params":{"sessionId":"no-worker-fad89dcd-f932-4951-bd3a-59f45242dd53"}}],"goal":{"objective":"finish owned local task","goalId":"goal-no-worker-fad89dcd-f932-4951-bd3a-59f45242dd53","revision":1,"paused":true,"round":0}}
+      at until (/private/tmp/codeshell-review-20261012-goal-sleep-round20/goal-resume.test.tsx:56:151)
+      at async <anonymous> (/private/tmp/codeshell-review-20261012-goal-sleep-round20/goal-resume.test.tsx:207:9)
+(fail) no-worker Desktop Resume returns success and flips actual UI to active, while no continuation is dispatched; pause/edit/delete retain disk behavior [4047.00ms]
+(pass) CONTROL actual Core cold resume of an unbound legacy Session runs exactly once and persists completion [298.93ms]
+(pass) a cold bound Session Resume never obtains Host WorkspaceContext, accepts but resolves turnCount0; ordinary authorized send recovers [247.23ms]
+
+ 2 pass
+ 1 fail
+ 35 expect() calls
+Ran 3 tests across 1 file. [5.20s]
+Bun test process failed (1)

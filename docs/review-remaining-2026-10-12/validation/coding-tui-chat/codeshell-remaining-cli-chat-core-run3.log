@@ -1,0 +1,28 @@
+bun test v1.3.11 (af24e281)
+
+../../../../../../private/tmp/codeshell-remaining-cli-chat-core.test.ts:
+{"case":"fifo","fails":false,"calls":["a","b"]}
+{"case":"fifo","fails":true,"calls":["a","b","a"]}
+(pass) same-target retry overtaken by later message; normal control remains FIFO [114.93ms]
+{"case":"telegram_allowlist","senderId":"stranger","admitted":0,"calls":["/botfixture/getUpdates","/botfixture/getFile","/file/botfixture/doc.bin","/botfixture/getUpdates"]}
+{"case":"telegram_allowlist","senderId":"owner","admitted":1,"calls":["/botfixture/getUpdates","/botfixture/getFile","/file/botfixture/doc.bin","/botfixture/getUpdates"]}
+(pass) real Telegram adapter downloads denied sender attachment before gateway allowlist [98.86ms]
+{"case":"slack_ack","full":false,"attempt":1,"ack":1,"persisted":["incoming"]}
+[chat] slack 消息处理失败：Chat Gateway inbox 已满（上限 1）
+{"case":"slack_ack","full":true,"attempt":1,"ack":1,"persisted":["seed"]}
+(pass) Slack ACKs when the real durable inbox rejects the message; accepted control persists [273.06ms]
+(pass) NotebookEdit accepts array source but cannot read serialized string source [14.08ms]
+{"case":"dingtalk_ack","full":false,"attempt":1,"acks":[["incoming-id",{"status":"SUCCESS"}]],"persisted":["incoming"]}
+[chat] dingtalk 消息处理失败：Chat Gateway inbox 已满（上限 1）
+{"case":"dingtalk_ack","full":true,"attempt":1,"acks":[["incoming-id",{"status":"SUCCESS"}]],"persisted":["seed"]}
+(pass) DingTalk sends SUCCESS when the real durable inbox rejects; accepted control persists [74.87ms]
+{"case":"notebook_replace","cell":{"cell_type":"code","source":["a=2"],"metadata":{},"outputs":[],"execution_count":null}}
+(pass) NotebookEdit replace discards the cell id and unrelated metadata [8.70ms]
+{"case":"link_contract","providers":10,"actions":30}
+(pass) Link manifest local provider/action catalog agrees with production core registry [9.30ms]
+
+ 7 pass
+ 0 fail
+ 37 expect() calls
+Ran 7 tests across 1 file. [658.00ms]
+Completed Bun shard: 7 tests, 0 skipped; 0 failures.

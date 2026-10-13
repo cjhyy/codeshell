@@ -1,0 +1,26 @@
+{
+  "origin": "http://127.0.0.1:51724",
+  "assertions": 33,
+  "observations": [
+    {
+      "name": "real-native-backlog",
+      "node": "v25.8.1",
+      "platform": "darwin",
+      "payloadBytes": 25165824,
+      "streamFrames": 384,
+      "afterBroadcast": 14647243,
+      "afterDevice": 23054667,
+      "beforeViewerCap": 23054709,
+      "healthyFrames": 384,
+      "healthyBacklog": 0,
+      "slowOpen": true
+    },
+    {
+      "name": "normal-recovery",
+      "selectedCapRetiresOnlySlowPeer": true,
+      "reauthenticatedViewer": true,
+      "deviceRemoveClosesRemainingPeers": true,
+      "removedCredentialRejected": true
+    }
+  ]
+}

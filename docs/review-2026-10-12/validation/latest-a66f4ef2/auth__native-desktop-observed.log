@@ -1,0 +1,3 @@
+{"mode":"desktop","action":"revoke","bytes":1310720,"complete":false,"postRevokeTail":false,"timedOut":false}
+{"mode":"desktop","action":"logout","bytes":3530128,"complete":false,"postRevokeTail":false,"timedOut":false}
+PASS desktop file revocation; logout, descriptor cleanup, other session and accepted task isolation

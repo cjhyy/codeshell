@@ -1,0 +1,195 @@
+{
+  "type": "session_detail",
+  "data": {
+    "state": {
+      "sessionId": "hub-smoke-cancel",
+      "kind": "work",
+      "stateRevision": 4,
+      "cwd": "/private/var/folders/1d/6__4f4y51g90nblfptt8s9v80000gn/T/codeshell-hub-smoke-2vQtOJ/workspace",
+      "workspace": {
+        "root": "/private/var/folders/1d/6__4f4y51g90nblfptt8s9v80000gn/T/codeshell-hub-smoke-2vQtOJ/workspace",
+        "kind": "main"
+      },
+      "startedAt": 1791737720193,
+      "model": "gpt-4o",
+      "provider": "openai",
+      "tokenUsage": {
+        "promptTokens": 0,
+        "completionTokens": 0,
+        "totalTokens": 0
+      },
+      "cumulativePromptTokens": 0,
+      "cumulativeCacheReadTokens": 0,
+      "cumulativeCacheCreationTokens": 0,
+      "turnCount": 0,
+      "invokedSkills": [],
+      "status": "active",
+      "parentSessionId": null,
+      "origin": "desktop",
+      "summary": "SMOKE_CANCEL: stream until stopped.",
+      "runId": "8ZnWf3quhJxt",
+      "clientMessageId": "smoke-cancel-client-message",
+      "turnSeq": 1,
+      "instructionSnapshots": [],
+      "instructionContextRevisions": [],
+      "costState": {
+        "version": 1,
+        "kind": "usage-ledger",
+        "namespace": "default",
+        "sessionId": "hub-smoke-cancel",
+        "accountingSessionId": "b0eb26bd-b8cf-4b58-80c5-d90a1b813783",
+        "sessionScopeId": "6c8315efeb7ef3a3ee1499b375a5b833d2e4626e8605e46ef326120ca45823bb",
+        "historicalCoverageIncomplete": false,
+        "summary": {
+          "requests": 0,
+          "promptTokens": 0,
+          "completionTokens": 0,
+          "totalTokens": 0,
+          "cacheReadTokens": 0,
+          "cacheCreationTokens": 0,
+          "knownEstimatedCostUsd": 0,
+          "unknownCostRequests": 0,
+          "unknownUsageRequests": 0,
+          "version": 1,
+          "scope": "session",
+          "sessionId": "hub-smoke-cancel",
+          "includesChildren": false,
+          "partial": false,
+          "persistenceErrors": 0,
+          "invalidReceipts": 0,
+          "scannedReceipts": 10,
+          "byModel": [],
+          "bySession": [],
+          "byPurpose": []
+        }
+      },
+      "outputJournalIdentity": "3c275af13672e593b7b97d7fde467f808dadd07789b6e50c037155e7c599fdcc",
+      "outputCoverageIdentity": "4720a0a4257f6bd2d4ee1b348c21b145dffabe8c9eb1427e119bd7cba4269e7a",
+      "outputCoverage": {
+        "version": 1,
+        "incarnation": "4720a0a4257f6bd2d4ee1b348c21b145dffabe8c9eb1427e119bd7cba4269e7a",
+        "journalIdentity": "3c275af13672e593b7b97d7fde467f808dadd07789b6e50c037155e7c599fdcc",
+        "unpaired": false,
+        "inputIds": [],
+        "lastInputId": "smoke-cancel-client-message"
+      }
+    },
+    "outputJournal": {
+      "version": 1,
+      "status": "ok",
+      "coverageIdentity": "4720a0a4257f6bd2d4ee1b348c21b145dffabe8c9eb1427e119bd7cba4269e7a",
+      "from": "eyJpZGVudGl0eSI6IjY1YTExNjEwMmU2NWVmMDQ5YTY0MTI5YjcwOTU1MGI1N2ZhZmFmMmE0ZjZlZTgxMzJkYzk3MmM5YWYyMTRkNzUiLCJzZXF1ZW5jZSI6MCwib2Zmc2V0IjozMDYsImhhc2giOiIzYzI3NWFmMTM2NzJlNTkzYjdiOTdkN2ZkZTQ2N2Y4MDhkYWRkMDc3ODliNmU1MGMwMzcxNTVlN2M1OTlmZGNjIn0",
+      "through": "eyJpZGVudGl0eSI6IjY1YTExNjEwMmU2NWVmMDQ5YTY0MTI5YjcwOTU1MGI1N2ZhZmFmMmE0ZjZlZTgxMzJkYzk3MmM5YWYyMTRkNzUiLCJzZXF1ZW5jZSI6NCwib2Zmc2V0IjoxNjY3LCJoYXNoIjoiNGJiODlmZDcyNGI0MDU3ZGEzY2Q0OTVhYTJhZjQ1MjM3OWRlOTc2ZTYwMjFlYmRmMjRiZmUwNzBmMWM3ODc4MCJ9",
+      "next": "eyJpZGVudGl0eSI6IjY1YTExNjEwMmU2NWVmMDQ5YTY0MTI5YjcwOTU1MGI1N2ZhZmFmMmE0ZjZlZTgxMzJkYzk3MmM5YWYyMTRkNzUiLCJzZXF1ZW5jZSI6NCwib2Zmc2V0IjoxNjY3LCJoYXNoIjoiNGJiODlmZDcyNGI0MDU3ZGEzY2Q0OTVhYTJhZjQ1MjM3OWRlOTc2ZTYwMjFlYmRmMjRiZmUwNzBmMWM3ODc4MCJ9",
+      "coverageStart": "eyJpZGVudGl0eSI6IjY1YTExNjEwMmU2NWVmMDQ5YTY0MTI5YjcwOTU1MGI1N2ZhZmFmMmE0ZjZlZTgxMzJkYzk3MmM5YWYyMTRkNzUiLCJzZXF1ZW5jZSI6MCwib2Zmc2V0IjozMDYsImhhc2giOiIzYzI3NWFmMTM2NzJlNTkzYjdiOTdkN2ZkZTQ2N2Y4MDhkYWRkMDc3ODliNmU1MGMwMzcxNTVlN2M1OTlmZGNjIn0",
+      "legacyBaseThroughEventId": "pDVK8gCpPyMA",
+      "frames": [
+        {
+          "cursor": "eyJpZGVudGl0eSI6IjY1YTExNjEwMmU2NWVmMDQ5YTY0MTI5YjcwOTU1MGI1N2ZhZmFmMmE0ZjZlZTgxMzJkYzk3MmM5YWYyMTRkNzUiLCJzZXF1ZW5jZSI6MSwib2Zmc2V0Ijo2ODcsImhhc2giOiIyOTU4OWIxM2EzNTNlMWE4ZWIxMDAwYTRjMTIwNzMyMzJkNDA2MDhiMGY5NGUzMGU3M2ZkZGE1MzAzMjZiODg0In0",
+          "sequence": 1,
+          "runId": "8ZnWf3quhJxt",
+          "event": {
+            "type": "session_user_message",
+            "sessionId": "hub-smoke-cancel",
+            "text": "SMOKE_CANCEL: stream until stopped.",
+            "clientMessageId": "smoke-cancel-client-message",
+            "runId": "8ZnWf3quhJxt"
+          }
+        },
+        {
+          "cursor": "eyJpZGVudGl0eSI6IjY1YTExNjEwMmU2NWVmMDQ5YTY0MTI5YjcwOTU1MGI1N2ZhZmFmMmE0ZjZlZTgxMzJkYzk3MmM5YWYyMTRkNzUiLCJzZXF1ZW5jZSI6Miwib2Zmc2V0IjoxMTA5LCJoYXNoIjoiOWMwNTFiODQzM2I0N2ZlYjA1ZWUxMDY5MzA3NWM0OWIwNDE1ZTk5OTM4YWZhMGM1ZTc3MTI0YzlhZDU3YzkyYyJ9",
+          "sequence": 2,
+          "runId": "8ZnWf3quhJxt",
+          "event": {
+            "type": "session_started",
+            "sessionId": "hub-smoke-cancel",
+            "promptTokens": 18,
+            "promptTokensSource": "heuristic_estimate",
+            "promptTokensConfidence": "low",
+            "runId": "8ZnWf3quhJxt",
+            "clientMessageId": "smoke-cancel-client-message"
+          }
+        },
+        {
+          "cursor": "eyJpZGVudGl0eSI6IjY1YTExNjEwMmU2NWVmMDQ5YTY0MTI5YjcwOTU1MGI1N2ZhZmFmMmE0ZjZlZTgxMzJkYzk3MmM5YWYyMTRkNzUiLCJzZXF1ZW5jZSI6Mywib2Zmc2V0IjoxMzk3LCJoYXNoIjoiZjQ5NjBmMjMyYTNjZDcyODgyN2QxYWEzZjdiNzliMTA4OWYwZDhiYjVlMWZjMmY1NjMzMTA5MDE5OTZhMjM3MyJ9",
+          "sequence": 3,
+          "runId": "8ZnWf3quhJxt",
+          "event": {
+            "type": "stream_request_start",
+            "turnNumber": 1,
+            "messageId": "assistant_tmv42dl1y-0y2h"
+          }
+        },
+        {
+          "cursor": "eyJpZGVudGl0eSI6IjY1YTExNjEwMmU2NWVmMDQ5YTY0MTI5YjcwOTU1MGI1N2ZhZmFmMmE0ZjZlZTgxMzJkYzk3MmM5YWYyMTRkNzUiLCJzZXF1ZW5jZSI6NCwib2Zmc2V0IjoxNjY3LCJoYXNoIjoiNGJiODlmZDcyNGI0MDU3ZGEzY2Q0OTVhYTJhZjQ1MjM3OWRlOTc2ZTYwMjFlYmRmMjRiZmUwNzBmMWM3ODc4MCJ9",
+          "sequence": 4,
+          "runId": "8ZnWf3quhJxt",
+          "event": {
+            "type": "text_delta",
+            "text": "Waiting for cancellation.",
+            "tokens": 4
+          }
+        }
+      ],
+      "complete": true
+    },
+    "legacyBaseComplete": true,
+    "transcript": [],
+    "streamCursor": {
+      "epoch": "8885d34d-e48b-417a-a9d4-0589f2f4e30d",
+      "sequence": 48
+    },
+    "outputCoverage": {
+      "unpaired": false,
+      "inputIds": [],
+      "incarnation": "4720a0a4257f6bd2d4ee1b348c21b145dffabe8c9eb1427e119bd7cba4269e7a",
+      "journalIdentity": "3c275af13672e593b7b97d7fde467f808dadd07789b6e50c037155e7c599fdcc",
+      "outputCursor": "eyJpZGVudGl0eSI6IjY1YTExNjEwMmU2NWVmMDQ5YTY0MTI5YjcwOTU1MGI1N2ZhZmFmMmE0ZjZlZTgxMzJkYzk3MmM5YWYyMTRkNzUiLCJzZXF1ZW5jZSI6NCwib2Zmc2V0IjoxNjY3LCJoYXNoIjoiNGJiODlmZDcyNGI0MDU3ZGEzY2Q0OTVhYTJhZjQ1MjM3OWRlOTc2ZTYwMjFlYmRmMjRiZmUwNzBmMWM3ODc4MCJ9",
+      "streamCursor": {
+        "epoch": "8885d34d-e48b-417a-a9d4-0589f2f4e30d",
+        "sequence": 48
+      }
+    },
+    "liveStream": {
+      "events": [
+        {
+          "sequence": 46,
+          "event": {
+            "type": "session_started",
+            "sessionId": "hub-smoke-cancel",
+            "promptTokens": 18,
+            "promptTokensSource": "heuristic_estimate",
+            "promptTokensConfidence": "low",
+            "runId": "8ZnWf3quhJxt",
+            "clientMessageId": "smoke-cancel-client-message",
+            "outputCursor": "eyJpZGVudGl0eSI6IjY1YTExNjEwMmU2NWVmMDQ5YTY0MTI5YjcwOTU1MGI1N2ZhZmFmMmE0ZjZlZTgxMzJkYzk3MmM5YWYyMTRkNzUiLCJzZXF1ZW5jZSI6Miwib2Zmc2V0IjoxMTA5LCJoYXNoIjoiOWMwNTFiODQzM2I0N2ZlYjA1ZWUxMDY5MzA3NWM0OWIwNDE1ZTk5OTM4YWZhMGM1ZTc3MTI0YzlhZDU3YzkyYyJ9"
+          }
+        },
+        {
+          "sequence": 47,
+          "event": {
+            "type": "stream_request_start",
+            "turnNumber": 1,
+            "messageId": "assistant_tmv42dl1y-0y2h",
+            "outputCursor": "eyJpZGVudGl0eSI6IjY1YTExNjEwMmU2NWVmMDQ5YTY0MTI5YjcwOTU1MGI1N2ZhZmFmMmE0ZjZlZTgxMzJkYzk3MmM5YWYyMTRkNzUiLCJzZXF1ZW5jZSI6Mywib2Zmc2V0IjoxMzk3LCJoYXNoIjoiZjQ5NjBmMjMyYTNjZDcyODgyN2QxYWEzZjdiNzliMTA4OWYwZDhiYjVlMWZjMmY1NjMzMTA5MDE5OTZhMjM3MyJ9",
+            "runId": "8ZnWf3quhJxt",
+            "clientMessageId": "smoke-cancel-client-message"
+          }
+        },
+        {
+          "sequence": 48,
+          "event": {
+            "type": "text_delta",
+            "text": "Waiting for cancellation.",
+            "tokens": 4,
+            "outputCursor": "eyJpZGVudGl0eSI6IjY1YTExNjEwMmU2NWVmMDQ5YTY0MTI5YjcwOTU1MGI1N2ZhZmFmMmE0ZjZlZTgxMzJkYzk3MmM5YWYyMTRkNzUiLCJzZXF1ZW5jZSI6NCwib2Zmc2V0IjoxNjY3LCJoYXNoIjoiNGJiODlmZDcyNGI0MDU3ZGEzY2Q0OTVhYTJhZjQ1MjM3OWRlOTc2ZTYwMjFlYmRmMjRiZmUwNzBmMWM3ODc4MCJ9",
+            "runId": "8ZnWf3quhJxt",
+            "clientMessageId": "smoke-cancel-client-message"
+          }
+        }
+      ],
+      "truncated": false
+    },
+    "running": true
+  }
+}

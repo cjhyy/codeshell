@@ -1,0 +1,11 @@
+bun test v1.3.11 (af24e281)
+
+docs/review-2026-10-12/reproductions/runtime-round3/worker-pipe-close.test.ts:
+{"hostExitCode":1,"stdout":"{\"sent\":true}\n","stderr":"node:events:486\n      throw er; // Unhandled 'error' event\n      ^\n\nError: write EPIPE\n    at WriteWrap.onWriteComplete [as oncomplete] (node:internal/stream_base_commons:87:19)\nEmitted 'error' event on Socket instance at:\n    at emitErrorNT (node:internal/streams/destroy:170:8)\n    at emitErrorCloseNT (node:internal/streams/destroy:129:3)\n    at process.processTicksAndRejections (node:internal/process/task_queues:90:21) {\n  errno: -32,\n  code: 'EPIPE',\n  syscall: 'write'\n}\n\nNode.js v25.8.1\n"}
+(pass) Node worker bridge asynchronous pipe failure is unhandled during exit [222.93ms]
+
+ 1 pass
+ 0 fail
+ 3 expect() calls
+Ran 1 test across 1 file. [348.00ms]
+Completed Bun shard: 1 tests, 0 skipped; 0 failures.

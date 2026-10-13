@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef } from "react";
+import { playThemeSound } from "../theme-audio";
 import type { Dispatch, MutableRefObject, SetStateAction } from "react";
 import type { StreamEvent } from "@cjhyy/code-shell-core";
 
@@ -432,6 +433,7 @@ export function useRunController({
       if (pendingLaunch.cancelled || !ownsCurrentLaunch()) return null;
       pendingLaunchesRef.current.delete(bucket);
       directorySaved = true;
+      playThemeSound("send");
       return externalRuntime
         ? runExternalRuntimeTurn({
             sessionId: engineSessionId,
@@ -499,10 +501,12 @@ export function useRunController({
           const detail = result?.text?.replace(/^ERROR:\s*/, "") || t("misc.app.requestRejected");
           dispatch({ type: "turn_end", bucket, reason: "error", detail });
           toast({ message: detail, variant: "error" });
+          playThemeSound("error");
         }
       })
       .catch((err) => {
         if (pendingLaunch.cancelled || !ownsCurrentLaunch()) return;
+        playThemeSound("error");
         if (pendingLaunchesRef.current.get(bucket) === pendingLaunch) {
           pendingLaunchesRef.current.delete(bucket);
         }
@@ -618,6 +622,7 @@ export function useRunController({
           liveSession.creationNonce === session.creationNonce,
       );
 
+    playThemeSound("send");
     void runAfterModelSwitch({
       sessionId: engineSessionId,
       model: sendModelKey,
@@ -639,6 +644,7 @@ export function useRunController({
         const result = r as { reason?: string; text?: string } | null;
         const reason = result?.reason;
         if (reason === "image_error" || reason === "model_error" || reason === "prompt_too_long") {
+          playThemeSound("error");
           const detail = result?.text?.replace(/^ERROR:\s*/, "") || t("misc.app.requestRejected");
           dispatch({ type: "turn_end", bucket, reason: "error", detail });
           toast({ message: detail, variant: "error" });
@@ -646,6 +652,7 @@ export function useRunController({
       })
       .catch((err) => {
         if (!isLiveGeneration()) return;
+        playThemeSound("error");
         setBusyForKey(bucket, false);
         if (runningBucketRef.current === bucket) {
           runningBucketRef.current = null;

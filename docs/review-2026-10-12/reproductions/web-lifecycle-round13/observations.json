@@ -1,0 +1,44 @@
+{
+  "denied": 0,
+  "nativeChildrenCreated": 0,
+  "observations": [
+    {
+      "case": "socket",
+      "transports": 3,
+      "staleGenerationRejected": true,
+      "staleMessageIgnored": true,
+      "wakeListenersRemoved": true
+    },
+    {
+      "case": "room-to-native",
+      "duplicateSeqAppliedOnce": true,
+      "lateOldRoomHistoryAndApprovalIgnored": true
+    },
+    {
+      "case": "Hub-auth-loss",
+      "rejectedPending": true,
+      "noAutomaticReconnect": true,
+      "explicitReconnectUsesNewRequestId": true
+    },
+    {
+      "case": "viewer-subscriptions",
+      "sharedRefCount": true,
+      "lateOldRoomUnsubscribeDoesNotReleaseCurrentRoom": true,
+      "allWatchersReleased": true
+    },
+    {
+      "case": "leave-CLI-normal",
+      "noPriorApprovalDoesNotBlock": true,
+      "lateOldRoomApprovalIgnored": true
+    },
+    {
+      "case": "leave-CLI-approval",
+      "actualButtonCallback": true,
+      "roomAfterLeave": null,
+      "retainedApprovalRoom": "room-A",
+      "independentSendBlocked": true,
+      "reselectNativeClearsApproval": true,
+      "noRealResidentOrModel": true
+    }
+  ]
+}

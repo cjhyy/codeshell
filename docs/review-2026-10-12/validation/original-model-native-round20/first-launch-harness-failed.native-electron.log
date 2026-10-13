@@ -1,0 +1,14 @@
+Owned Electron storage fixture failure: electron.launch: Timeout 20000ms exceeded.
+Call log:
+[2m  - <launching> /Users/admin/.codex/worktrees/review-latest-20261012/codeshell/node_modules/.bun/electron@33.4.11/node_modules/electron/dist/Electron.app/Contents/MacOS/Electron -r /Users/admin/.codex/worktrees/review-latest-20261012/codeshell/node_modules/.bun/playwright-core@1.60.0/node_modules/playwright-core/lib/server/electron/loader.js --inspect=0 --remote-debugging-port=0 --require /private/var/folders/1d/6__4f4y51g90nblfptt8s9v80000gn/T/codeshell-model-storage-round20-AUk3YG/real-keyring.cjs --user-data-dir=/private/var/folders/1d/6__4f4y51g90nblfptt8s9v80000gn/T/codeshell-model-storage-round20-AUk3YG/electron-user-data /private/var/folders/1d/6__4f4y51g90nblfptt8s9v80000gn/T/codeshell-model-storage-round20-AUk3YG/owned-storage-main.mjs[22m
+[2m  - <launched> pid=60204[22m
+[2m  - [pid=60204][err] Debugger listening on ws://127.0.0.1:62125/6077db9b-bd6e-4c31-8223-0d08a7aca9bb[22m
+[2m  - [pid=60204][err] For help, see: https://nodejs.org/en/docs/inspector[22m
+[2m  - <ws connecting> ws://127.0.0.1:62125/6077db9b-bd6e-4c31-8223-0d08a7aca9bb[22m
+[2m  - [pid=60204][err] Debugger attached.[22m
+[2m  - <ws connected> ws://127.0.0.1:62125/6077db9b-bd6e-4c31-8223-0d08a7aca9bb[22m
+
+    at async file:///private/tmp/codeshell-review-20261012-model-native-round20/model-storage-native.mjs:132:9 {
+  name: 'TimeoutError'
+}
+Native smoke failed (1)

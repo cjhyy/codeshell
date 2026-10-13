@@ -1,0 +1,35 @@
+{
+  "commit": "a66f4ef291f304ee4df9da8095a90671d9a8f140",
+  "formalNewFindings": 0,
+  "tests": 13,
+  "bunExpectCalls": 87,
+  "failures": 0,
+  "skipped": 0,
+  "guardedRunner": true,
+  "exactOriginGuardBeforeHostImports": true,
+  "usesExistingDistOnly": true,
+  "productEdits": false,
+  "workerOrModelCalls": false,
+  "verified": [
+    "Hub all-tab session revocation and another-login isolation",
+    "Hub cookie rotation and expired-session fresh login",
+    "Hub logout ownership",
+    "Desktop stable cookie owner across same-device tabs",
+    "Desktop expired cookie re-exchange",
+    "Desktop Settings hard-delete old WS and cookie revocation",
+    "Same browser secret re-pair with new real QR token",
+    "Native Hub and Desktop active download cancellation and FileHandle closure",
+    "Other login full concurrent download survives",
+    "Paired focus reconnect and stale generation/frame guards",
+    "Hub auth-close vs transport-close retry distinction",
+    "Desktop handshake error UI actionable retry",
+    "Desktop automatic HTTP cookie renewal preserves draft",
+    "Hub auth UI logout instruction, shared-cookie focus recovery, temporary failure active-view retention"
+  ],
+  "limitations": [
+    "No native Electron UI or real browser visual rendering",
+    "Hub expiry simulated only by owned fixture timestamps",
+    "Natural-expiry cancellation of every preexisting long HTTP operation was not asserted",
+    "No external account, tunnel, proxy, paid model, or security attack"
+  ]
+}

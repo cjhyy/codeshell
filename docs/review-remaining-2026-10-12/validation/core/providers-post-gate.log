@@ -1,0 +1,17 @@
+bun test v1.3.11 (af24e281)
+
+../../../../../../private/tmp/codeshell-remaining-core-review/candidates.test.ts:
+Bun provider resolution after root package-release gate {"openai":"/Users/admin/.codex/worktrees/remaining-modules-review-20261012/codeshell/node_modules/.bun/openai@4.104.0+8b4daec44fbddaf3/node_modules/openai/index.mjs","anthropic":"/Users/admin/.codex/worktrees/remaining-modules-review-20261012/codeshell/node_modules/.bun/@anthropic-ai+sdk@0.39.0+d56b95ac411b1cdd/node_modules/@anthropic-ai/sdk/index.mjs"}
+Anthropic retry evidence {"sends":2,"responseText":"SUCCESS","streamEvents":[{"type":"text_delta","text":"FAILED PREFIX","tokens":4},{"type":"text_delta","text":"SUCCESS","tokens":1}]}
+(pass) candidate: Anthropic SDK fetch streaming retry concatenates failed and successful text without tombstone [1034.55ms]
+(pass) normal: Anthropic successful stream emits only successful text [11.15ms]
+auth refresh evidence {"sameClient":["Bearer token-first","Bearer token-first"],"freshClient":"Bearer token-fresh","processesSpawned":0}
+(pass) candidate: refreshing authCommand cache leaves same SDK client's Authorization frozen [15.11ms]
+review cleanup: 0 socket/fetch network attempts; registries reset; only isolated runner HOME used
+
+ 3 pass
+ 7 filtered out
+ 0 fail
+ 9 expect() calls
+Ran 3 tests across 1 file. [1376.00ms]
+Completed Bun shard: 10 tests, 7 skipped; 0 failures.

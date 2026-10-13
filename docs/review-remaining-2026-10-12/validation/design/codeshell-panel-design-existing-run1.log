@@ -1,0 +1,28 @@
+{"case":"network_guard","homeIsolated":true,"nodeNetworkDenied":true,"browserOrigin":"https://panel.test","browserRoute":"all other origins aborted"}
+✔ complete backup restores every page, image and font into an independent project (4.171125ms)
+✔ invalid, missing, duplicate and altered resources are rejected before restoration (0.690959ms)
+✔ failed part writes never commit a primary document; retry reuses only identical parts (0.759917ms)
+✔ a lost write receipt is checked without sending a duplicate write (0.318833ms)
+✔ switching project after a write prevents subsequent reads and writes; invalid targets never write (0.27375ms)
+✔ large complete backups restore indexed page parts with verified content (30.893625ms)
+✔ legacy backup selection preserves malformed candidates and can recover a selected embedded baseline without file writes (0.875125ms)
+✔ external and indexed baselines require the exact recorded content revision (0.955667ms)
+✔ split recovery logs are verified before replay; modified parts are rejected (0.468541ms)
+✔ unknown, unsafe and mismatched operations cannot silently change the reconstructed document (0.298959ms)
+✔ generated add, remove and reorder page journals keep every intended change (0.958209ms)
+✔ save-as v2 logs read the original baseline and never use the destination as a baseline (0.189084ms)
+✔ two windows cannot overwrite or delete each other's recovery; explicit reload establishes the new basis (0.434666ms)
+✔ failed or malformed reads cannot authorize save or deletion (0.349833ms)
+✔ lost write receipt is queried once and never resent (0.216291ms)
+✔ uncertain writes and invalid acknowledgements block later edits (0.202833ms)
+✔ queued writes detach inputs and cannot issue any call after project changes (0.147167ms)
+✔ capability changes cannot silently downgrade conditional saves (0.063666ms)
+✔ legacy mode is explicit and still requires a successful read (0.088ms)
+ℹ tests 19
+ℹ suites 0
+ℹ pass 19
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 48.328625

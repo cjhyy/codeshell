@@ -1,0 +1,38 @@
+{
+  "timestampSingapore": "2026-10-12 05:52",
+  "findings": 76,
+  "priorities": {
+    "P1": 1,
+    "P2": 49,
+    "P3": 26
+  },
+  "topMarkdownLocalLinks": 852,
+  "sourceLineLinks": 563,
+  "completedCommonRuns": [
+    {
+      "tree": "/Users/admin/.codex/worktrees/server-desktop-review-20261012/codeshell",
+      "files": 79,
+      "tests": 236,
+      "round18BunExpects": 165,
+      "round17BunHelperManualAssertions": 91,
+      "productTrackedDiff": []
+    },
+    {
+      "tree": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell",
+      "files": 79,
+      "tests": 236,
+      "round18BunExpects": 165,
+      "round17BunHelperManualAssertions": 91,
+      "productTrackedDiff": []
+    }
+  ],
+  "latestOnlyFiles": 3,
+  "latestOnlyTests": 8,
+  "round18NewFiles": 3,
+  "round18NewTests": 8,
+  "round18BunExpects": 165,
+  "round18Scope": "No new native/helper assertions; context actual Engine/owned in-memory provider and mocked Electron IPC; model actual components/shared MemoryStorage with run params adapter only; Hub actual authenticated HTTP/WS+actual Core/ChatManager with fake Engine/memory worker; no actual worker/Electron/provider",
+  "latestFetchSingapore": "2026-10-12 05:50",
+  "originMain": "a66f4ef291f304ee4df9da8095a90671d9a8f140",
+  "errors": []
+}

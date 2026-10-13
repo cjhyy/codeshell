@@ -1,0 +1,32 @@
+[
+  {
+    "file": "docs/review-2026-10-12/reproductions/terminal-review-round13/review-first-commit.test.tsx",
+    "code": 0,
+    "log": "docs/review-2026-10-12/reproductions/terminal-review-round13/review-first-commit.test.tsx.log"
+  },
+  {
+    "file": "docs/review-2026-10-12/reproductions/terminal-review-round13/terminal-worktree.test.tsx",
+    "code": 0,
+    "log": "docs/review-2026-10-12/reproductions/terminal-review-round13/terminal-worktree.test.tsx.log"
+  },
+  {
+    "file": "docs/review-2026-10-12/reproductions/session-actions-round13/session-delete-recovery.test.tsx",
+    "code": 0,
+    "log": "docs/review-2026-10-12/reproductions/session-actions-round13/session-delete-recovery.test.tsx.log"
+  },
+  {
+    "file": "docs/review-2026-10-12/reproductions/multiwindow-round13/catalog-protections.test.ts",
+    "code": 0,
+    "log": "docs/review-2026-10-12/reproductions/multiwindow-round13/catalog-protections.test.ts.log"
+  },
+  {
+    "file": "docs/review-2026-10-12/reproductions/multiwindow-round13/catalog-window-selection.test.tsx",
+    "code": 0,
+    "log": "docs/review-2026-10-12/reproductions/multiwindow-round13/catalog-window-selection.test.tsx.log"
+  },
+  {
+    "file": "docs/review-2026-10-12/reproductions/web-lifecycle-round13/lifecycle.test.tsx",
+    "code": 0,
+    "log": "docs/review-2026-10-12/reproductions/web-lifecycle-round13/lifecycle.test.tsx.log"
+  }
+]

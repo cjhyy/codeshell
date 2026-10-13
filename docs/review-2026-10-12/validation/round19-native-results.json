@@ -1,0 +1,128 @@
+[
+  {
+    "baseline": "84740d56e55517b004948a0a0e07649ad6fbf998",
+    "node": "v25.8.1",
+    "platform": "darwin",
+    "arch": "arm64",
+    "assertions": 38,
+    "sha256": "9e2c0f526ef405086269ef303a6af4ce16026042a8b4e1ab73d3d89ab2040583",
+    "failure": null,
+    "closedNormally": true,
+    "childReceipts": [
+      {
+        "kind": "host",
+        "pid": 53422,
+        "exitCode": 0,
+        "signal": null
+      },
+      {
+        "kind": "holder",
+        "pid": 53637,
+        "exitCode": 0,
+        "signal": null
+      }
+    ],
+    "observations": [
+      {
+        "scenario": "real-EACCES-authenticate-on-title-request",
+        "failedStatus": 500,
+        "failedMs": 30026.836417000002,
+        "healthStatus": 200,
+        "healthMs": 30021.919334,
+        "actualFailureStage": "HubAuthStore.authenticate/acquireFileLock(data/hub/auth.json)",
+        "parentTimerTicks": 296,
+        "hostMaxTimerGapMs": 30034.154792,
+        "retries": 838,
+        "firstError": {
+          "code": "EACCES",
+          "path": "/private/var/folders/1d/6__4f4y51g90nblfptt8s9v80000gn/T/codeshell-native-smoke-zGPXJZ/home/owned-file-mutex-IjzH2W/data/hub.lock",
+          "at": 1791756241973
+        },
+        "generatedTitleRetained": true,
+        "workerCreated": false
+      },
+      {
+        "scenario": "permission-repaired",
+        "status": 200,
+        "elapsedMs": 9.507499999999709,
+        "environmentStatus": 200,
+        "environmentMs": 3.274874999999156,
+        "sameDraftAccepted": true
+      },
+      {
+        "scenario": "normal-cross-process-contention",
+        "status": 200,
+        "elapsedMs": 403.8050830000029,
+        "existingLockAttempts": 13,
+        "holderExited": true,
+        "workerCreated": false
+      }
+    ],
+    "nativeStandalone": true,
+    "bunFilesAdded": 0,
+    "bunTestsAdded": 0
+  },
+  {
+    "baseline": "a66f4ef291f304ee4df9da8095a90671d9a8f140",
+    "node": "v25.8.1",
+    "platform": "darwin",
+    "arch": "arm64",
+    "assertions": 38,
+    "sha256": "9e2c0f526ef405086269ef303a6af4ce16026042a8b4e1ab73d3d89ab2040583",
+    "failure": null,
+    "closedNormally": true,
+    "childReceipts": [
+      {
+        "kind": "host",
+        "pid": 53421,
+        "exitCode": 0,
+        "signal": null
+      },
+      {
+        "kind": "holder",
+        "pid": 53636,
+        "exitCode": 0,
+        "signal": null
+      }
+    ],
+    "observations": [
+      {
+        "scenario": "real-EACCES-authenticate-on-title-request",
+        "failedStatus": 500,
+        "failedMs": 30035.693708,
+        "healthStatus": 200,
+        "healthMs": 30028.48975,
+        "actualFailureStage": "HubAuthStore.authenticate/acquireFileLock(data/hub/auth.json)",
+        "parentTimerTicks": 296,
+        "hostMaxTimerGapMs": 30044.583375,
+        "retries": 856,
+        "firstError": {
+          "code": "EACCES",
+          "path": "/private/var/folders/1d/6__4f4y51g90nblfptt8s9v80000gn/T/codeshell-native-smoke-we0Y7A/home/owned-file-mutex-Nu57Nz/data/hub.lock",
+          "at": 1791756241815
+        },
+        "generatedTitleRetained": true,
+        "workerCreated": false
+      },
+      {
+        "scenario": "permission-repaired",
+        "status": 200,
+        "elapsedMs": 9.869124999997439,
+        "environmentStatus": 200,
+        "environmentMs": 3.907583000000159,
+        "sameDraftAccepted": true
+      },
+      {
+        "scenario": "normal-cross-process-contention",
+        "status": 200,
+        "elapsedMs": 389.6140000000014,
+        "existingLockAttempts": 12,
+        "holderExited": true,
+        "workerCreated": false
+      }
+    ],
+    "nativeStandalone": true,
+    "bunFilesAdded": 0,
+    "bunTestsAdded": 0
+  }
+]

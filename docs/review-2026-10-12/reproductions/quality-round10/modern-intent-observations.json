@@ -1,0 +1,21 @@
+{
+  "guard": {
+    "negativeProbes": 3,
+    "denied": 3,
+    "unexpected": 0
+  },
+  "observations": [
+    {
+      "case": "ACK before disconnect",
+      "restoredDraft": false
+    },
+    {
+      "case": "disconnect before ACK, completion while offline, modern journal recovery",
+      "matchingInputRecovered": true,
+      "completedOutputRecovered": true,
+      "restoredDraft": true,
+      "uncertain": false,
+      "retryUsesDifferentId": true
+    }
+  ]
+}

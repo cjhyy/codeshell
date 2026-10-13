@@ -1,0 +1,18 @@
+{
+  "timestampSingapore": "2026-10-12T08:18:55.548109+08:00",
+  "kind": "read-only preflight provenance; no fixture execution",
+  "oldCommit": "c9b1d95979a0ca12faedeba9fadf81e8ddda680f",
+  "baseline": "84740d56e55517b004948a0a0e07649ad6fbf998",
+  "blobs": [
+    {
+      "path": "packages/core/src/engine/run-image-input.ts",
+      "oldBlob": "4a28a57c65b7748820c207b3ece2c7031687865f",
+      "baselineBlob": "4a28a57c65b7748820c207b3ece2c7031687865f"
+    },
+    {
+      "path": "packages/core/src/engine/input-attachments.ts",
+      "oldBlob": "c49f0dd6e9db2876111bd0473b9812af9af4478b",
+      "baselineBlob": "c49f0dd6e9db2876111bd0473b9812af9af4478b"
+    }
+  ]
+}

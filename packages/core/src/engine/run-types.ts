@@ -159,6 +159,8 @@ export interface EngineRunOptions {
   disableGoal?: boolean;
   injected?: boolean;
   clientMessageId?: string;
+  /** Private Main-issued Run nonce; Desktop rejects this field on all ordinary inbound paths. */
+  operationBatchToken?: string;
   /**
    * Host-requested history boundary to archive after this run's user message
    * has been appended, but before the first model call. The current

@@ -1,0 +1,24 @@
+bun test v1.3.11 (af24e281)
+
+../../../../../../private/tmp/codeshell-review-20261012-project-recovery-round16/root-repair.test.tsx:
+93 |   await act(async () => { props(repair).onClick({ stopPropagation() {} }); await settle(); });
+94 |   await until(() => f.migrations.length === 1);
+95 |   expect(f.migrations[0]).toMatchObject({ id: f.sid, rootId: f.project.primaryRootId, ok: false });
+96 |   expect(f.migrations[0].error).toContain("dir_missing");
+97 |   expect(f.migrations[0].error).toContain(f.secondary);
+98 |   expect(text(container)).toContain("dir_missing");
+                               ^
+error: expect(received).toContain(expected)
+
+Expected to contain: "dir_missing"
+Received: "修复"
+
+      at <anonymous> (/private/tmp/codeshell-review-20261012-project-recovery-round16/root-repair.test.tsx:98:27)
+(fail) CANDIDATE dir_missing repair to a healthy registered primary fails because migration context validates the missing source; restoration permits actual button retry [293.06ms]
+(pass) CONTROL healthy migration and invalid target guards preserve durable state; replaced source is rejected until exact directory is restored [219.20ms]
+
+ 1 pass
+ 1 fail
+ 12 expect() calls
+Ran 2 tests across 1 file. [1252.00ms]
+Bun test process failed (1)

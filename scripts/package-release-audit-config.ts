@@ -108,6 +108,11 @@ export const RELEASE_PACKAGES: readonly ReleasePackageDefinition[] = [
     publish: false,
   },
   {
+    directory: "packages/browser-devtools",
+    name: "@cjhyy/code-shell-browser-devtools",
+    publish: false,
+  },
+  {
     directory: "packages/desktop",
     name: "@cjhyy/code-shell-desktop",
     publish: false,

@@ -1,0 +1,29 @@
+{
+  "sourceSha256": "ef376b426f71dc862ec7ce2f6ac0861997fcd1f21a7883d49d7e015c6e20c8f0",
+  "completedPerBaseline": {
+    "files": 1,
+    "tests": 3,
+    "bunExpects": 40,
+    "fail": 0,
+    "skip": 0
+  },
+  "rootExecutedBaselines": [
+    "84740d56",
+    "a66f4ef2"
+  ],
+  "authorRepeatedRunsAddedToCounts": false,
+  "realChrome": false,
+  "realElectron": false,
+  "realNativeRelay": false,
+  "realWorker": false,
+  "realModel": false,
+  "networkCalls": 0,
+  "subprocessCalls": 0,
+  "normalControls": [
+    "known-session and window owner checks",
+    "actual UI revoke/new hello/fresh pairing",
+    "new grant secureBridge.listTabs through owned tab.get",
+    "action on disconnected old grant fails closed and clears active UI"
+  ],
+  "sourceHashBothPortableCopies": true
+}

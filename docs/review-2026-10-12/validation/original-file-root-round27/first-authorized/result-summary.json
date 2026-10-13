@@ -1,0 +1,28 @@
+{
+  "timestampUTC": "2026-10-12T01:35:32.994799+00:00",
+  "runnerExit": 0,
+  "completed": true,
+  "phase": "completed",
+  "failure": null,
+  "sourceCount": 51,
+  "resolutionOnlyCount": 4,
+  "callbackCount": 2,
+  "observationCount": 5,
+  "attempts": [],
+  "isolatedHome": "/private/var/folders/1d/6__4f4y51g90nblfptt8s9v80000gn/T/codeshell-bun-completion-89z9nz/home",
+  "isolatedHomeRemoved": true,
+  "ownedPaths": [
+    "/private/var/folders/1d/6__4f4y51g90nblfptt8s9v80000gn/T/codeshell-bun-completion-89z9nz/home/.code-shell/round27-owned-file-roots"
+  ],
+  "ownedPathsRemoved": true,
+  "cleanups": [
+    {
+      "ownedFilesRemoved": true,
+      "errors": []
+    }
+  ],
+  "sourceSHA": "28f4202efc90bedbd67f39f60bd7e9370a3b8557872ae841edb856e3720a13d2",
+  "guardSHA": "6e1f5f5045f9606086f1b01e6eb988b88c5670f78000b260fcb9e035f1c69b3d",
+  "logSHA": "a5bb66ba7634aa31fa36724bb0b501425cde266b84cc36f50ba8c53e50fee1c0",
+  "observedSHA": "fabc9a899929143c0433630e1252d867005295a45b8c00da5f770ff14964c273"
+}

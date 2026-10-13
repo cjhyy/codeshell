@@ -1,0 +1,11 @@
+ 96 |   act(() => { hook.result.current.schedule("cancelled B"); hook.result.current.cancel(); });
+ 97 |   await hook.unmount(); await settle();
+ 98 |   equal(await readSettings("project", projectB), null);
+ 99 |   console.log(JSON.stringify({ normalLeavePersistsAndReopens: true, actualSettingsPage: true, mainCallbacksAST: true, actualFilesystemRejection: true, failedUnmountDraftRecoveredOnReopen: false, retypingAfterStorageRepairWorks: true, originalTargetFlushAndCancelWork: true, unhandledRejections: rejections.length, assertions, nativeCLI: false, model: false }));
+100 |   console.log(`PASS settings lifecycle; ${assertions} assertions`);
+101 | } finally { await unmount(); container.remove(); }
+                                             ^
+TypeError: container.remove is not a function. (In 'container.remove()', 'container.remove' is undefined)
+      at /private/tmp/codeshell-review-20261012-settings-round16/settings-lifecycle.fixture.tsx:101:40
+
+Bun v1.3.11 (macOS arm64)

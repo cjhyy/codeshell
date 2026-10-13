@@ -1,0 +1,52 @@
+bun test v1.3.11 (af24e281)
+
+../../../../../../private/tmp/codeshell-review-20261012-remote-settings-round15/remote-settings.test.tsx:
+30 | afterEach(async () => { if (active) await active.cleanup(); active = undefined; });
+31 | function nodes(node: any): any[] { return [node, ...Array.from(node?.childNodes ?? []).flatMap(nodes)]; }
+32 | function props(node: any) { const key = Object.keys(node).find(k => k.startsWith("__reactProps$")); return key ? node[key] : {}; }
+33 | function text(node: any): string { return node.nodeType === 3 ? node.textContent : Array.from(node?.childNodes ?? []).map(text).join(""); }
+34 | const settle = async () => { await flushMicrotasks(); await new Promise(r => setTimeout(r, 0)); await flushMicrotasks(); };
+35 | async function until(check: () => boolean) { const end = Date.now() + 4000; while (!check()) { if (Date.now() > end) throw Error("remote settings did not settle"); await act(settle); } }
+                                                                                                                                ^
+error: remote settings did not settle
+      at until (/private/tmp/codeshell-review-20261012-remote-settings-round15/remote-settings.test.tsx:35:124)
+      at async <anonymous> (/private/tmp/codeshell-review-20261012-remote-settings-round15/remote-settings.test.tsx:78:11)
+      at async <anonymous> (/private/tmp/codeshell-review-20261012-remote-settings-round15/remote-settings.test.tsx:97:55)
+85 |     await act(async () => { await props(button).onClick({}); await settle(); });
+86 |   };
+87 |   const cleanup = async () => {
+88 |     for (const v of views) await act(async () => { v.root.unmount(); await settle(); });
+89 |     for (const v of views) if (v.container.parentNode) v.container.parentNode.removeChild(v.container);
+90 |     await services.mobileRemoteController.dispose(); await services.cloudAccountManager.dispose();
+                                                                                             ^
+TypeError: services.cloudAccountManager.dispose is not a function. (In 'services.cloudAccountManager.dispose()', 'services.cloudAccountManager.dispose' is undefined)
+      at <anonymous> (/private/tmp/codeshell-review-20261012-remote-settings-round15/remote-settings.test.tsx:90:89)
+      at async <anonymous> (/private/tmp/codeshell-review-20261012-remote-settings-round15/remote-settings.test.tsx:30:50)
+(fail) CANDIDATE LAN opened from another settings instance does not refresh the already-mounted observer; remount recovers [4031.00ms]
+30 | afterEach(async () => { if (active) await active.cleanup(); active = undefined; });
+31 | function nodes(node: any): any[] { return [node, ...Array.from(node?.childNodes ?? []).flatMap(nodes)]; }
+32 | function props(node: any) { const key = Object.keys(node).find(k => k.startsWith("__reactProps$")); return key ? node[key] : {}; }
+33 | function text(node: any): string { return node.nodeType === 3 ? node.textContent : Array.from(node?.childNodes ?? []).map(text).join(""); }
+34 | const settle = async () => { await flushMicrotasks(); await new Promise(r => setTimeout(r, 0)); await flushMicrotasks(); };
+35 | async function until(check: () => boolean) { const end = Date.now() + 4000; while (!check()) { if (Date.now() > end) throw Error("remote settings did not settle"); await act(settle); } }
+                                                                                                                                ^
+error: remote settings did not settle
+      at until (/private/tmp/codeshell-review-20261012-remote-settings-round15/remote-settings.test.tsx:35:124)
+      at async <anonymous> (/private/tmp/codeshell-review-20261012-remote-settings-round15/remote-settings.test.tsx:78:11)
+      at async <anonymous> (/private/tmp/codeshell-review-20261012-remote-settings-round15/remote-settings.test.tsx:120:55)
+85 |     await act(async () => { await props(button).onClick({}); await settle(); });
+86 |   };
+87 |   const cleanup = async () => {
+88 |     for (const v of views) await act(async () => { v.root.unmount(); await settle(); });
+89 |     for (const v of views) if (v.container.parentNode) v.container.parentNode.removeChild(v.container);
+90 |     await services.mobileRemoteController.dispose(); await services.cloudAccountManager.dispose();
+                                                                                             ^
+TypeError: services.cloudAccountManager.dispose is not a function. (In 'services.cloudAccountManager.dispose()', 'services.cloudAccountManager.dispose' is undefined)
+      at <anonymous> (/private/tmp/codeshell-review-20261012-remote-settings-round15/remote-settings.test.tsx:90:89)
+      at async <anonymous> (/private/tmp/codeshell-review-20261012-remote-settings-round15/remote-settings.test.tsx:30:50)
+(fail) CONTROL ordinary local LAN start and stop update their initiating UI and stop broadcast updates a mounted observer [4014.30ms]
+
+ 0 pass
+ 2 fail
+Ran 2 tests across 1 file. [8.80s]
+Bun test process failed (1)

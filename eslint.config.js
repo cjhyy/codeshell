@@ -24,6 +24,7 @@ const workspacePackageRoots = [
   "tui",
   "chat",
   "cdp",
+  "browser-devtools",
   "desktop",
 ].map((name) => packageRoot("packages", name));
 const capabilityPackageRoots = ["coding", "arena", "pet", "optimization-lab"].map((name) => ({

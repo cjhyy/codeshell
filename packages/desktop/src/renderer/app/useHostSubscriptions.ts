@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { playThemeSound } from "../theme-audio";
 import type { Dispatch, MutableRefObject, SetStateAction } from "react";
 import { flushSync } from "react-dom";
 
@@ -396,6 +397,20 @@ export function useHostSubscriptions({
         ownsCurrentTurn
       ) {
         setBusyForKey(target, false);
+        const sound =
+          event.type === "error" ||
+          event.reason?.endsWith("error") ||
+          event.reason === "prompt_too_long"
+            ? "error"
+            : event.reason === "completed"
+              ? "complete"
+              : null;
+        if (sound) {
+          playThemeSound(
+            sound,
+            env.seq === undefined ? undefined : `${env.epoch ?? ""}:${env.sessionId}:${env.seq}`,
+          );
+        }
         // A turn just finished → its file edits have landed on disk. Nudge the
         // Files panel to re-read the file it's previewing (and refresh its
         // tree): the panel reads a file once on select and otherwise never sees
@@ -759,6 +774,7 @@ export function useHostSubscriptions({
         }
         const bucket = resolved ?? activeBucketRef.current;
         pendingQuestionBuckets.set(env.requestId, bucket);
+        if (!fromSnapshot) playThemeSound("approval", env.requestId);
         dispatch({
           type: "ask_user",
           bucket,
@@ -807,6 +823,7 @@ export function useHostSubscriptions({
       };
       const showApproval = () => {
         if (!isCurrent()) return;
+        if (!fromSnapshot) playThemeSound("approval", env.requestId);
         pendingApprovalDecisions.delete(env.requestId);
         approvalBucketsRef.current.set(env.requestId, currentRoute() ?? displayBucket);
         setApprovalQueue((q) =>

@@ -1,0 +1,815 @@
+{
+  "timestampSingapore": "2026-10-12 09:20",
+  "findings": 85,
+  "priorities": {
+    "P1": 1,
+    "P2": 52,
+    "P3": 32
+  },
+  "topMarkdownLocalLinks": 1571,
+  "sourceLineLinks": 987,
+  "completedCommonRuns": [
+    {
+      "tree": "/Users/admin/.codex/worktrees/server-desktop-review-20261012/codeshell",
+      "files": 85,
+      "tests": 250,
+      "round18BunExpects": 165,
+      "round17BunHelperManualAssertions": 91,
+      "productTrackedDiff": []
+    },
+    {
+      "tree": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell",
+      "files": 85,
+      "tests": 250,
+      "round18BunExpects": 165,
+      "round17BunHelperManualAssertions": 91,
+      "productTrackedDiff": []
+    }
+  ],
+  "latestOnlyFiles": 3,
+  "latestOnlyTests": 8,
+  "round18NewFiles": 3,
+  "round18NewTests": 8,
+  "round18BunExpects": 165,
+  "round18Scope": "No new native/helper assertions; context actual Engine/owned in-memory provider and mocked Electron IPC; model actual components/shared MemoryStorage with run params adapter only; Hub actual authenticated HTTP/WS+actual Core/ChatManager with fake Engine/memory worker; no actual worker/Electron/provider",
+  "latestFetchSingapore": "2026-10-12 08:52",
+  "originMain": "a66f4ef291f304ee4df9da8095a90671d9a8f140",
+  "errors": [],
+  "round19NewBunFiles": 0,
+  "round19NewBunTests": 0,
+  "round19NativeStandalone": [
+    {
+      "tree": "/Users/admin/.codex/worktrees/server-desktop-review-20261012/codeshell",
+      "assertions": 38,
+      "sourceSha256": "9e2c0f526ef405086269ef303a6af4ce16026042a8b4e1ab73d3d89ab2040583",
+      "closedNormally": true,
+      "actualFault": "HubAuthStore.authenticate -> data/hub.lock EACCES",
+      "healthMs": 30021.919334,
+      "hostTimerGapMs": 30034.154792
+    },
+    {
+      "tree": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell",
+      "assertions": 38,
+      "sourceSha256": "9e2c0f526ef405086269ef303a6af4ce16026042a8b4e1ab73d3d89ab2040583",
+      "closedNormally": true,
+      "actualFault": "HubAuthStore.authenticate -> data/hub.lock EACCES",
+      "healthMs": 30028.48975,
+      "hostTimerGapMs": 30044.583375
+    }
+  ],
+  "round19Scope": "Actual Node25.8.1/darwin arm64 Host, HubAuth setup/Cookie/HTTP + real EACCES before title handler; fresh Connection:close caller; actual 30 seconds; no worker/model/CLI; title editor UI static only; native assertions separate from Bun",
+  "round20GoalRuns": [
+    {
+      "tree": "/Users/admin/.codex/worktrees/server-desktop-review-20261012/codeshell",
+      "files": 1,
+      "tests": 4,
+      "bunExpects": 72,
+      "sourceSha256": "b9af1cb777b5fb030839600ced33d4ea369306ee7272127c9f57744d59f490b6",
+      "networkCalls": 0,
+      "subprocessCalls": 0
+    },
+    {
+      "tree": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell",
+      "files": 1,
+      "tests": 4,
+      "bunExpects": 72,
+      "sourceSha256": "b9af1cb777b5fb030839600ced33d4ea369306ee7272127c9f57744d59f490b6",
+      "networkCalls": 0,
+      "subprocessCalls": 0
+    }
+  ],
+  "round20BunFilesAdded": 1,
+  "round20BunTestsAdded": 4,
+  "round20BunExpects": 72,
+  "round20ModelStorageNative": {
+    "latestOnly": true,
+    "rootAssertions": 31,
+    "authorAssertionsSeparate": 31,
+    "scope": "owned Electron33 pure HTML/defaultSession/same exact file/reload; no product App/hook/worker/model",
+    "sourceSha256": "8cb93bb7c8f304501980dcf040036e3369a310888d1e82880d62144c10811f51",
+    "closedNormally": true
+  },
+  "round20ReclassifiedFindings": [
+    {
+      "id": "R29",
+      "from": "P2",
+      "to": "P3"
+    }
+  ],
+  "round20NewFindings": [
+    "R78/P2",
+    "R79/P2"
+  ],
+  "round21BrowserRuns": [
+    {
+      "tree": "/Users/admin/.codex/worktrees/server-desktop-review-20261012/codeshell",
+      "files": 1,
+      "tests": 3,
+      "bunExpects": 40,
+      "sourceSha256": "ef376b426f71dc862ec7ce2f6ac0861997fcd1f21a7883d49d7e015c6e20c8f0",
+      "networkCalls": 0,
+      "subprocessCalls": 0,
+      "actualStatusPollsAfterDisconnect": 2
+    },
+    {
+      "tree": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell",
+      "files": 1,
+      "tests": 3,
+      "bunExpects": 40,
+      "sourceSha256": "ef376b426f71dc862ec7ce2f6ac0861997fcd1f21a7883d49d7e015c6e20c8f0",
+      "networkCalls": 0,
+      "subprocessCalls": 0,
+      "actualStatusPollsAfterDisconnect": 2
+    }
+  ],
+  "round21BunFilesAdded": 1,
+  "round21BunTestsAdded": 3,
+  "round21BunExpects": 40,
+  "round21NewFindings": [
+    "R80/P3"
+  ],
+  "round21Scope": "Actual BrowserPanel/React/preload/Main source callbacks/ChromeBackend, memory Native transport and live Session/owner directory; actual 2s polls and new grant secureBridge.listTabs through owned tab.get; no actual Chrome/Electron/native relay/worker/model/network/subprocess; independent audits add no execution",
+  "round22NewFindings": [
+    "R81/P2"
+  ],
+  "round22BunFilesAdded": 0,
+  "round22BunTestsAdded": 0,
+  "round22StandaloneNativeExecutions": [
+    {
+      "execution": "author-latest",
+      "baseline": "a66f4ef291f304ee4df9da8095a90671d9a8f140",
+      "assertions": 66,
+      "completed": true,
+      "sourceSha256": {
+        "browser-stop-native.mjs": "11bc7a9cf31d53a69c55191b89fe08d621e4857621175841bb13a446d97c320d",
+        "owned-main-template.mjs": "1f9213c591383ae16b4ac41adaabcce8be298fcf143503909eb067cc7dbaf26b"
+      },
+      "coreSettledSequence": 2,
+      "enabledSequence": 3,
+      "inputSequences": [
+        5,
+        6,
+        7
+      ],
+      "hitsAfterEnable": 1,
+      "lateApproveError": {
+        "code": -32602,
+        "message": "No pending approval for session owned-browser-stop-round22-session: ddiLRUeLi37_"
+      },
+      "readOnlyInfoRetries": 0,
+      "mutationRetries": 0,
+      "ownedMainAndRendererPids": [
+        {
+          "pid": 17522,
+          "absent": true
+        },
+        {
+          "pid": 17587,
+          "absent": true
+        },
+        {
+          "pid": 17588,
+          "absent": true
+        }
+      ],
+      "isolatedHomeRemoved": true,
+      "closeReceipt": {
+        "code": 0,
+        "signal": null
+      },
+      "archive": "validation/original-browser-stop-round22/final-author"
+    },
+    {
+      "execution": "root-initial",
+      "baseline": "84740d56e55517b004948a0a0e07649ad6fbf998",
+      "assertions": 66,
+      "completed": true,
+      "sourceSha256": {
+        "browser-stop-native.mjs": "11bc7a9cf31d53a69c55191b89fe08d621e4857621175841bb13a446d97c320d",
+        "owned-main-template.mjs": "1f9213c591383ae16b4ac41adaabcce8be298fcf143503909eb067cc7dbaf26b"
+      },
+      "coreSettledSequence": 2,
+      "enabledSequence": 3,
+      "inputSequences": [
+        5,
+        6,
+        7
+      ],
+      "hitsAfterEnable": 1,
+      "lateApproveError": {
+        "code": -32602,
+        "message": "No pending approval for session owned-browser-stop-round22-session: NPhVx7rK_Ij3"
+      },
+      "readOnlyInfoRetries": 2,
+      "mutationRetries": 0,
+      "ownedMainAndRendererPids": [
+        {
+          "pid": 18509,
+          "absent": true
+        },
+        {
+          "pid": 18620,
+          "absent": true
+        },
+        {
+          "pid": 18622,
+          "absent": true
+        }
+      ],
+      "isolatedHomeRemoved": true,
+      "closeReceipt": {
+        "code": 0,
+        "signal": null
+      },
+      "archive": "validation/browser-stop-round22"
+    },
+    {
+      "execution": "root-latest",
+      "baseline": "a66f4ef291f304ee4df9da8095a90671d9a8f140",
+      "assertions": 66,
+      "completed": true,
+      "sourceSha256": {
+        "browser-stop-native.mjs": "11bc7a9cf31d53a69c55191b89fe08d621e4857621175841bb13a446d97c320d",
+        "owned-main-template.mjs": "1f9213c591383ae16b4ac41adaabcce8be298fcf143503909eb067cc7dbaf26b"
+      },
+      "coreSettledSequence": 2,
+      "enabledSequence": 3,
+      "inputSequences": [
+        5,
+        6,
+        7
+      ],
+      "hitsAfterEnable": 1,
+      "lateApproveError": {
+        "code": -32602,
+        "message": "No pending approval for session owned-browser-stop-round22-session: Q623tNDaYz_7"
+      },
+      "readOnlyInfoRetries": 1,
+      "mutationRetries": 0,
+      "ownedMainAndRendererPids": [
+        {
+          "pid": 18950,
+          "absent": true
+        },
+        {
+          "pid": 19106,
+          "absent": true
+        },
+        {
+          "pid": 19108,
+          "absent": true
+        }
+      ],
+      "isolatedHomeRemoved": true,
+      "closeReceipt": {
+        "code": 0,
+        "signal": null
+      },
+      "archive": "validation/latest-a66f4ef2/browser-stop-round22"
+    }
+  ],
+  "round22AuthorPriorHarnessFailures": 6,
+  "round22Scope": "Actual Core/Engine with deterministic memory provider, actual preload/native IPC and extracted unmodified Main callbacks, actual runtime/adapter/Puppeteer/owned Chromium DOM; legal legacy unbound Session; in-process stdio and owned BrowserHost factory; no full App, actual worker, real provider, Chrome extension, external account/site; guards are application-level, not OS-wide proof",
+  "round22Local6034ReadOnlyFindingsAdded": 0,
+  "round22Local6034Executions": 0,
+  "round23Stage": "owner and Recent snapshot independently confirmed",
+  "round23NewFindings": [
+    "R82/P3",
+    "R83/P3"
+  ],
+  "round23BunFilesAdded": 2,
+  "round23BunTestsAdded": 4,
+  "round23BunExpects": 82,
+  "round23MenuRuns": [
+    {
+      "baseline": "84740d56e55517b004948a0a0e07649ad6fbf998",
+      "archive": "reproductions/menu-routing-round23",
+      "tests": 3,
+      "bunExpects": 39,
+      "completed": true,
+      "networkOrChildAttempts": [],
+      "recentsLoadCalls": 7,
+      "sourceSha256": {
+        "network-guard.ts": "181e297543df9f562eff2b49eaa0e0a92b63c6ea5c685c7b2071dcd88f1097c2",
+        "menu-routing.test.ts": "4b5b75074d57ba4f34c5300b2490bd0d0557aea75cee5c4780b501c524d460c8"
+      },
+      "productSources": [
+        {
+          "path": "packages/desktop/src/main/menu.ts",
+          "sha256": "6f65230f21d3a1c9b567d97a2b53433ab313435c49b54f32721647df11e87475"
+        },
+        {
+          "path": "packages/desktop/src/preload/index.ts",
+          "sha256": "b85c80ec01b488890fcfad0e9afed4fb1e02575dcba8e30cce8a06805ed44327"
+        },
+        {
+          "path": "packages/desktop/src/renderer/App.tsx",
+          "sha256": "556e985d3c0898b5915c713a2a0a280f59bf504b4797e89278143bdcdfd265b8"
+        }
+      ],
+      "extractionSha256": {
+        "onMenuEvent": "9bbae30bbb078fd726e4c30361ddad2758c4b3ad24cf5fea05969e3c3f899a6a",
+        "newWindow": "98395d7db82f8f6757c324f084a482c8ed8e4a57594ba682fc4c1ca29fb480bc",
+        "onMenuEvent callback": "6bb1f5d0045b0d5214870572f4f3160d4ded0a516b73909cc6d8890cae28bb0a"
+      },
+      "isolatedHome": "/private/var/folders/1d/6__4f4y51g90nblfptt8s9v80000gn/T/codeshell-bun-completion-767knb/home",
+      "isolatedHomeRemoved": true
+    },
+    {
+      "baseline": "a66f4ef291f304ee4df9da8095a90671d9a8f140",
+      "archive": "validation/latest-a66f4ef2/menu-routing-round23",
+      "tests": 3,
+      "bunExpects": 39,
+      "completed": true,
+      "networkOrChildAttempts": [],
+      "recentsLoadCalls": 7,
+      "sourceSha256": {
+        "network-guard.ts": "181e297543df9f562eff2b49eaa0e0a92b63c6ea5c685c7b2071dcd88f1097c2",
+        "menu-routing.test.ts": "4b5b75074d57ba4f34c5300b2490bd0d0557aea75cee5c4780b501c524d460c8"
+      },
+      "productSources": [
+        {
+          "path": "packages/desktop/src/main/menu.ts",
+          "sha256": "6f65230f21d3a1c9b567d97a2b53433ab313435c49b54f32721647df11e87475"
+        },
+        {
+          "path": "packages/desktop/src/preload/index.ts",
+          "sha256": "b85c80ec01b488890fcfad0e9afed4fb1e02575dcba8e30cce8a06805ed44327"
+        },
+        {
+          "path": "packages/desktop/src/renderer/App.tsx",
+          "sha256": "556e985d3c0898b5915c713a2a0a280f59bf504b4797e89278143bdcdfd265b8"
+        }
+      ],
+      "extractionSha256": {
+        "onMenuEvent": "9bbae30bbb078fd726e4c30361ddad2758c4b3ad24cf5fea05969e3c3f899a6a",
+        "newWindow": "98395d7db82f8f6757c324f084a482c8ed8e4a57594ba682fc4c1ca29fb480bc",
+        "onMenuEvent callback": "6bb1f5d0045b0d5214870572f4f3160d4ded0a516b73909cc6d8890cae28bb0a"
+      },
+      "isolatedHome": "/private/var/folders/1d/6__4f4y51g90nblfptt8s9v80000gn/T/codeshell-bun-completion-YiOYdF/home",
+      "isolatedHomeRemoved": true
+    }
+  ],
+  "round23AuthorFirstTestsSeparate": 3,
+  "round23AuthorFirstExpectsSeparate": 36,
+  "round23AuthorFinalTestsSeparate": 3,
+  "round23AuthorFinalExpectsSeparate": 39,
+  "round23NativeExecutionsAdded": 0,
+  "round23Scope": "Actual menu.ts module; exact extracted actual preload/App callbacks with independent lexical window/IPC/state; owned Electron Menu, recents directory and destroyed-send adapter; no actual OS/Electron/keyboard/full App/Main/Core/worker/provider. Scope flag source-audited, not module-cache probe. AddProject/NewWindow are callback adapters only, not complete actual createWindow/picker.",
+  "round23RecentRuns": [
+    {
+      "baseline": "84740d56e55517b004948a0a0e07649ad6fbf998",
+      "archive": "reproductions/menu-recents-round23",
+      "tests": 1,
+      "bunExpects": 43,
+      "completed": true,
+      "sourceSha256": {
+        "network-guard.ts": "6e1f5f5045f9606086f1b01e6eb988b88c5670f78000b260fcb9e035f1c69b3d",
+        "menu-recents.test.ts": "9983cb4dc9ec1d89ea58ddca6c785cfe0f7344f3f404f5f8e331a2b2766f9430"
+      },
+      "rootAdapterCalls": 1,
+      "networkOrChildAttempts": [],
+      "unusedLeafCalls": [],
+      "isolatedHome": "/private/var/folders/1d/6__4f4y51g90nblfptt8s9v80000gn/T/codeshell-bun-completion-4grsIG/home",
+      "isolatedHomeRemoved": true,
+      "productResolutions": [
+        {
+          "specifier": "@cjhyy/code-shell-capability-coding/git",
+          "importer": "packages/desktop/src/main/recents-store.ts",
+          "resolved": "packages/coding/dist/index.git.js"
+        },
+        {
+          "specifier": "@cjhyy/code-shell-core",
+          "importer": "packages/desktop/src/main/project-store.ts",
+          "resolved": "packages/core/dist/index.js"
+        },
+        {
+          "specifier": "@cjhyy/code-shell-core/internal",
+          "importer": "packages/desktop/src/main/project-store.ts",
+          "resolved": "packages/core/dist/index.internal.js"
+        }
+      ],
+      "sourceManifest": [
+        {
+          "path": "packages/desktop/src/main/menu.ts",
+          "sha256": "6f65230f21d3a1c9b567d97a2b53433ab313435c49b54f32721647df11e87475"
+        },
+        {
+          "path": "packages/desktop/src/main/project-store.ts",
+          "sha256": "7a8af164418c7884c55d081e47005ed1f73b018755a650e215e927eee9bbdddb"
+        },
+        {
+          "path": "packages/desktop/src/main/project-authority-ipc.ts",
+          "sha256": "6cf689cd6654e1b6bc4cbc65f29deb8137e6b276b24e5df50812cdf66348348e"
+        },
+        {
+          "path": "packages/desktop/src/main/recents-store.ts",
+          "sha256": "d859122658289fc4227c9a0a0b0e8f346e0df1d27b700195c43ae3ea0298afcd"
+        },
+        {
+          "path": "packages/desktop/src/main/mounted-project-root.ts",
+          "sha256": "3d4c4b36482fe360d48832a37b055bc10ca37172f2dd3b01f37963b446a2af73"
+        },
+        {
+          "path": "packages/desktop/src/main/session-cwd-index.ts",
+          "sha256": "d1c3b5c0966aeb763d6d48008d878c1c47f342cd3599b3fd231eeca319467d80"
+        },
+        {
+          "path": "packages/desktop/src/main/renderer-project-path.ts",
+          "sha256": "cf7d7fb3cbbc3ae472630a0f19293d53c9931c767c334438dc8ffe89bb062c8d"
+        },
+        {
+          "path": "packages/desktop/src/main/legacy-project-migration.ts",
+          "sha256": "fe1e416d21fb69c73263e10e43659adfe51d8538e5aac0b1739c7ff3acd0d28c"
+        },
+        {
+          "path": "packages/desktop/src/main/index.ts",
+          "sha256": "cf5ba2f931c816cb44b598d54ef173793e40f554335de75d103f7b0ee5a2c26a"
+        },
+        {
+          "path": "packages/desktop/src/renderer/App.tsx",
+          "sha256": "556e985d3c0898b5915c713a2a0a280f59bf504b4797e89278143bdcdfd265b8"
+        },
+        {
+          "path": "packages/desktop/src/renderer/app/useSessionNavigation.ts",
+          "sha256": "46ac89b4175e425f7b32e1e7aa24d16bb1bd6b0cf5e79817c0bd9a3a6c1b668f"
+        },
+        {
+          "path": "packages/core/src/utils/file-mutex.ts",
+          "sha256": "8f0ccabb45c19c7fd66c285a27f148cb0843d4f1018508b44de3de2a3e9ee9b3"
+        },
+        {
+          "path": "packages/core/src/session/session-manager.ts",
+          "sha256": "0ebe5458e6f5701e286c552e43e0dd707177fb97b1e8726a94ae5dbcfdedcb10"
+        },
+        {
+          "path": "packages/core/dist/index.js",
+          "sha256": "02eb31788cb46e030d8abf3ff42cfe5897aac716c95763fd1374af5d5d6fa698"
+        },
+        {
+          "path": "packages/core/dist/index.internal.js",
+          "sha256": "46415f56ac55a61a9f0e407264483212a1455f66dbacace7c3a3ee1aea943997"
+        },
+        {
+          "path": "tsconfig.json",
+          "sha256": "67b4cbcb4b3a35367465145185b13d20fb799b3d29c9574ff58809153dbfb762"
+        },
+        {
+          "path": "packages/core/src/index.ts",
+          "sha256": "b95839b4ad6c73b03a874d0288e2c4dbf2d9353eda536236ab643adc323d34b5"
+        },
+        {
+          "path": "packages/core/src/index.internal.ts",
+          "sha256": "300495afe8e4c822965070b526ede6e68c793baf5b79e7571979148208b9efcf"
+        },
+        {
+          "path": "packages/coding/package.json",
+          "sha256": "2f495b3e7fdbc3c04ab722edee8387723f8aa8219374f4c006a6ae600caf97c1"
+        },
+        {
+          "path": "packages/coding/src/index.git.ts",
+          "sha256": "b72970a79c39999fa0eb6602213599e93496011f28d4ed94c51af19adcc3c527"
+        },
+        {
+          "path": "packages/coding/dist/index.git.js",
+          "sha256": "b72970a79c39999fa0eb6602213599e93496011f28d4ed94c51af19adcc3c527"
+        }
+      ]
+    },
+    {
+      "baseline": "a66f4ef291f304ee4df9da8095a90671d9a8f140",
+      "archive": "validation/latest-a66f4ef2/menu-recents-round23",
+      "tests": 1,
+      "bunExpects": 43,
+      "completed": true,
+      "sourceSha256": {
+        "network-guard.ts": "6e1f5f5045f9606086f1b01e6eb988b88c5670f78000b260fcb9e035f1c69b3d",
+        "menu-recents.test.ts": "9983cb4dc9ec1d89ea58ddca6c785cfe0f7344f3f404f5f8e331a2b2766f9430"
+      },
+      "rootAdapterCalls": 1,
+      "networkOrChildAttempts": [],
+      "unusedLeafCalls": [],
+      "isolatedHome": "/private/var/folders/1d/6__4f4y51g90nblfptt8s9v80000gn/T/codeshell-bun-completion-AuqrC1/home",
+      "isolatedHomeRemoved": true,
+      "productResolutions": [
+        {
+          "specifier": "@cjhyy/code-shell-capability-coding/git",
+          "importer": "packages/desktop/src/main/recents-store.ts",
+          "resolved": "packages/coding/dist/index.git.js"
+        },
+        {
+          "specifier": "@cjhyy/code-shell-core",
+          "importer": "packages/desktop/src/main/project-store.ts",
+          "resolved": "packages/core/dist/index.js"
+        },
+        {
+          "specifier": "@cjhyy/code-shell-core/internal",
+          "importer": "packages/desktop/src/main/project-store.ts",
+          "resolved": "packages/core/dist/index.internal.js"
+        }
+      ],
+      "sourceManifest": [
+        {
+          "path": "packages/desktop/src/main/menu.ts",
+          "sha256": "6f65230f21d3a1c9b567d97a2b53433ab313435c49b54f32721647df11e87475"
+        },
+        {
+          "path": "packages/desktop/src/main/project-store.ts",
+          "sha256": "7a8af164418c7884c55d081e47005ed1f73b018755a650e215e927eee9bbdddb"
+        },
+        {
+          "path": "packages/desktop/src/main/project-authority-ipc.ts",
+          "sha256": "6cf689cd6654e1b6bc4cbc65f29deb8137e6b276b24e5df50812cdf66348348e"
+        },
+        {
+          "path": "packages/desktop/src/main/recents-store.ts",
+          "sha256": "d859122658289fc4227c9a0a0b0e8f346e0df1d27b700195c43ae3ea0298afcd"
+        },
+        {
+          "path": "packages/desktop/src/main/mounted-project-root.ts",
+          "sha256": "3d4c4b36482fe360d48832a37b055bc10ca37172f2dd3b01f37963b446a2af73"
+        },
+        {
+          "path": "packages/desktop/src/main/session-cwd-index.ts",
+          "sha256": "d1c3b5c0966aeb763d6d48008d878c1c47f342cd3599b3fd231eeca319467d80"
+        },
+        {
+          "path": "packages/desktop/src/main/renderer-project-path.ts",
+          "sha256": "cf7d7fb3cbbc3ae472630a0f19293d53c9931c767c334438dc8ffe89bb062c8d"
+        },
+        {
+          "path": "packages/desktop/src/main/legacy-project-migration.ts",
+          "sha256": "fe1e416d21fb69c73263e10e43659adfe51d8538e5aac0b1739c7ff3acd0d28c"
+        },
+        {
+          "path": "packages/desktop/src/main/index.ts",
+          "sha256": "426bfe5ccc8387db82f5bbe47ce1b83681995e7192f37bb03775f4eca37d0d80"
+        },
+        {
+          "path": "packages/desktop/src/renderer/App.tsx",
+          "sha256": "556e985d3c0898b5915c713a2a0a280f59bf504b4797e89278143bdcdfd265b8"
+        },
+        {
+          "path": "packages/desktop/src/renderer/app/useSessionNavigation.ts",
+          "sha256": "46ac89b4175e425f7b32e1e7aa24d16bb1bd6b0cf5e79817c0bd9a3a6c1b668f"
+        },
+        {
+          "path": "packages/core/src/utils/file-mutex.ts",
+          "sha256": "8f0ccabb45c19c7fd66c285a27f148cb0843d4f1018508b44de3de2a3e9ee9b3"
+        },
+        {
+          "path": "packages/core/src/session/session-manager.ts",
+          "sha256": "0ebe5458e6f5701e286c552e43e0dd707177fb97b1e8726a94ae5dbcfdedcb10"
+        },
+        {
+          "path": "packages/core/dist/index.js",
+          "sha256": "a84c1b1a20ae29520ce9d7464933b693199f4dd2c2427fd398dcc6f73e219c84"
+        },
+        {
+          "path": "packages/core/dist/index.internal.js",
+          "sha256": "46415f56ac55a61a9f0e407264483212a1455f66dbacace7c3a3ee1aea943997"
+        },
+        {
+          "path": "tsconfig.json",
+          "sha256": "67b4cbcb4b3a35367465145185b13d20fb799b3d29c9574ff58809153dbfb762"
+        },
+        {
+          "path": "packages/core/src/index.ts",
+          "sha256": "45759e3301dc1a2ad6717abd4817c685fd6876ed8a432f098c1796c0f9d67c18"
+        },
+        {
+          "path": "packages/core/src/index.internal.ts",
+          "sha256": "300495afe8e4c822965070b526ede6e68c793baf5b79e7571979148208b9efcf"
+        },
+        {
+          "path": "packages/coding/package.json",
+          "sha256": "57b6d9970332c409ac7410948162abaecad55ae8e5169b5917c6647d6aa8867e"
+        },
+        {
+          "path": "packages/coding/src/index.git.ts",
+          "sha256": "b72970a79c39999fa0eb6602213599e93496011f28d4ed94c51af19adcc3c527"
+        },
+        {
+          "path": "packages/coding/dist/index.git.js",
+          "sha256": "b72970a79c39999fa0eb6602213599e93496011f28d4ed94c51af19adcc3c527"
+        }
+      ]
+    }
+  ],
+  "round23RecentAuthorFirstSeparate": {
+    "tests": 1,
+    "expects": 43,
+    "completed": true,
+    "sourceSha256": "e7be6ae20e849cfb6423b1e2d6da23d13f3ba8a05927fef3da39137d1f2afe34",
+    "archive": "validation/original-menu-recents-round23/author-first"
+  },
+  "round23RecentCorrectedAuthorExecutions": 0,
+  "round23RecentFirstPortabilityFailuresSeparate": [
+    {
+      "baseline": "84740d56e55517b004948a0a0e07649ad6fbf998",
+      "archive": "validation/original-menu-recents-round23/root-first-portability-failure-initial",
+      "passed": 0,
+      "failed": 1,
+      "expects": 41,
+      "completed": false,
+      "adapterCalls": 0,
+      "blockedChildAttempts": 1,
+      "actualChildStarted": false,
+      "isolatedHomeRemoved": true
+    },
+    {
+      "baseline": "a66f4ef291f304ee4df9da8095a90671d9a8f140",
+      "archive": "validation/original-menu-recents-round23/root-first-portability-failure-latest",
+      "passed": 0,
+      "failed": 1,
+      "expects": 41,
+      "completed": false,
+      "adapterCalls": 0,
+      "blockedChildAttempts": 1,
+      "actualChildStarted": false,
+      "isolatedHomeRemoved": true
+    }
+  ],
+  "round23RecentResolutionScope": "Bun.resolveSync returns reviewed dist entry addresses in both corrected root runs; this resolution-only API receipt is not module-cache or actual loaded graph proof. Owned realpath adapter is registered at bare specifier plus both source/dist barrel addresses; adapter hit independently asserted.",
+  "round23IndependentFinalQuality": "quality-round23.md",
+  "round23IndependentQualityExecutions": 0,
+  "round23DiffNormalization": {
+    "rawOriginalDiff": "portability-correction.diff.gz",
+    "rawDecompressedSha256": "6c91e0763c1f1738f9508e4b145a4ee249857c609c82406621d9379f372ea8de",
+    "readableDiff": "portability-correction.diff",
+    "readableSha256": "71383923b365a45c9ed8521193b618f27e0df5d403e8d7f9ccddfe6359147aab",
+    "normalization": "three whitespace-only unified-diff context lines stripped for git diff --check; original exact bytes recoverable by gzip; fixture and guard source bytes unchanged"
+  },
+  "round24NewFindings": [
+    "R84/P3"
+  ],
+  "round24BunFilesAdded": 1,
+  "round24BunTestsAdded": 1,
+  "round24BunExpects": 17,
+  "round24NativeExecutionsAdded": 0,
+  "round24Runs": [
+    {
+      "execution": "root-initial",
+      "baseline": "84740d56e55517b004948a0a0e07649ad6fbf998",
+      "archive": "reproductions/legacy-history-round24",
+      "files": 1,
+      "tests": 1,
+      "bunExpects": 17,
+      "skipped": 0,
+      "code": 0,
+      "sourceSha256": {
+        "legacy-native-history.test.ts": "dfe9749f86552d7529af7ea9d323d43ce95904ee82d5654201b17c3f62d221e3",
+        "network-guard.ts": "6e1f5f5045f9606086f1b01e6eb988b88c5670f78000b260fcb9e035f1c69b3d"
+      },
+      "sourceManifestCount": 31,
+      "resolutionOnlyEntries": 5,
+      "isolatedHome": "/private/var/folders/1d/6__4f4y51g90nblfptt8s9v80000gn/T/codeshell-bun-completion-dnbRYv/home",
+      "isolatedHomeRemoved": true,
+      "pngBytes": 68,
+      "pngSha256": "431ced6916a2a21a156e38701afe55bbd7f88969fbbfc56d7fe099d47f265460",
+      "guardAttempts": [],
+      "cleanupErrors": []
+    },
+    {
+      "execution": "root-latest",
+      "baseline": "a66f4ef291f304ee4df9da8095a90671d9a8f140",
+      "archive": "validation/latest-a66f4ef2/legacy-history-round24",
+      "files": 1,
+      "tests": 1,
+      "bunExpects": 17,
+      "skipped": 0,
+      "code": 0,
+      "sourceSha256": {
+        "legacy-native-history.test.ts": "dfe9749f86552d7529af7ea9d323d43ce95904ee82d5654201b17c3f62d221e3",
+        "network-guard.ts": "6e1f5f5045f9606086f1b01e6eb988b88c5670f78000b260fcb9e035f1c69b3d"
+      },
+      "sourceManifestCount": 31,
+      "resolutionOnlyEntries": 5,
+      "isolatedHome": "/private/var/folders/1d/6__4f4y51g90nblfptt8s9v80000gn/T/codeshell-bun-completion-I83WWy/home",
+      "isolatedHomeRemoved": true,
+      "pngBytes": 68,
+      "pngSha256": "431ced6916a2a21a156e38701afe55bbd7f88969fbbfc56d7fe099d47f265460",
+      "guardAttempts": [],
+      "cleanupErrors": []
+    }
+  ],
+  "round24AuthorFirstFailureSeparate": {
+    "archive": "validation/original-legacy-history-round24",
+    "sourceSha256": "338c90fd5af72029731105eb5f26bcc8372f862373475b90d9c7da4960ff3ccc",
+    "passed": 0,
+    "failed": 1,
+    "bunExpectsPrinted": null,
+    "completed": false,
+    "reason": "Invalid fixture PNG IDAT CRC correctly rejected before hook/fallback and before first Bun expect.",
+    "isolatedHomeRemoved": true
+  },
+  "round24AuthorFinalSeparate": {
+    "archive": "validation/original-legacy-history-round24",
+    "sourceSha256": "dfe9749f86552d7529af7ea9d323d43ce95904ee82d5654201b17c3f62d221e3",
+    "guardSha256": "6e1f5f5045f9606086f1b01e6eb988b88c5670f78000b260fcb9e035f1c69b3d",
+    "files": 1,
+    "tests": 1,
+    "bunExpects": 17,
+    "completed": true,
+    "code": 0,
+    "isolatedHomeRemoved": true
+  },
+  "round24Scope": "Actual stageImageBytes/prepareRunImageInput/buildRunUserMessageContent/SessionManager/Transcript, actual Web hook/dispatcher/recovery service/reader/server history and legacy Workbench SSR. Synthetic auth/device/viewer/authority/Bridge and in-memory WebSocket; real authority/Git static only; modern control measured hook projection with no second SSR. No Engine.run/provider/worker/Electron/real transport/account. Source manifest and resolve-only addresses are not module-cache graph probes. No journal ever published before first legacy read; modern control is first journal publication, not a user-facing repair workflow.",
+  "round24IndependentFinalQuality": "quality-round24.md",
+  "round24IndependentQualityExecutions": 0,
+  "round24RawLogNormalization": {
+    "rawCompressed": "first-authorized.raw.log.gz",
+    "rawDecompressedSha256": "283ab744756e23fa6c4a9f02c8535cc0d4193436804780e930c5e535282ffe35",
+    "readableLog": "first-authorized.log",
+    "readableSha256": "11932108ce1f17bc1a7cb453e3c3d74098980903c88bafafaf3d4991a18f7ddb",
+    "changedLines": [
+      7
+    ],
+    "change": "Removed trailing space on Bun diagnostic source-context blank line only; exact original bytes retained compressed.",
+    "fixtureGuardOrExecutionChanged": false
+  },
+  "round25NewFindings": [
+    "R85/P3"
+  ],
+  "round25BunFilesAdded": 1,
+  "round25BunTestsAdded": 2,
+  "round25BunExpects": 32,
+  "round25NativeExecutionsAdded": 0,
+  "round25Runs": [
+    {
+      "execution": "root-initial",
+      "baseline": "84740d56e55517b004948a0a0e07649ad6fbf998",
+      "archive": "reproductions/modern-desktop-image-round25",
+      "files": 1,
+      "tests": 2,
+      "bunExpects": 32,
+      "skipped": 0,
+      "code": 0,
+      "sourceSha256": {
+        "modern-desktop-image.test.ts": "411b12bcb249b6eeb5465fe67f1f30555ecc5fb2232c219c602e0ce1df049ca9",
+        "network-guard.ts": "6e1f5f5045f9606086f1b01e6eb988b88c5670f78000b260fcb9e035f1c69b3d"
+      },
+      "sourceManifestCount": 63,
+      "resolutionOnlyEntries": 4,
+      "isolatedHome": "/private/var/folders/1d/6__4f4y51g90nblfptt8s9v80000gn/T/codeshell-bun-completion-fZr8OS/home",
+      "isolatedHomeRemoved": true,
+      "runnerRootRemoved": true,
+      "guardAttempts": [],
+      "cleanupErrors": []
+    },
+    {
+      "execution": "root-latest",
+      "baseline": "a66f4ef291f304ee4df9da8095a90671d9a8f140",
+      "archive": "validation/latest-a66f4ef2/modern-desktop-image-round25",
+      "files": 1,
+      "tests": 2,
+      "bunExpects": 32,
+      "skipped": 0,
+      "code": 0,
+      "sourceSha256": {
+        "modern-desktop-image.test.ts": "411b12bcb249b6eeb5465fe67f1f30555ecc5fb2232c219c602e0ce1df049ca9",
+        "network-guard.ts": "6e1f5f5045f9606086f1b01e6eb988b88c5670f78000b260fcb9e035f1c69b3d"
+      },
+      "sourceManifestCount": 63,
+      "resolutionOnlyEntries": 4,
+      "isolatedHome": "/private/var/folders/1d/6__4f4y51g90nblfptt8s9v80000gn/T/codeshell-bun-completion-rcuHaQ/home",
+      "isolatedHomeRemoved": true,
+      "runnerRootRemoved": true,
+      "guardAttempts": [],
+      "cleanupErrors": []
+    }
+  ],
+  "round25AuthorFirstFailureSeparate": {
+    "archive": "validation/original-modern-desktop-image-round25/first-authorized",
+    "sourceSha256": "8a033c557babcc11bbf1b8b8fe33543324c7e2fea509f5931adf3d02187262c4",
+    "passed": 0,
+    "failed": 2,
+    "bunExpects": 22,
+    "completed": false,
+    "reason": "MiniDom lacked Workbench SSR window.matchMedia; business assertions reached before render but observations empty and normal controls incomplete. Not a passing candidate or product defect.",
+    "isolatedHomeRemoved": true
+  },
+  "round25AuthorFinalSeparate": {
+    "archive": "validation/original-modern-desktop-image-round25/second-authorized",
+    "sourceSha256": "411b12bcb249b6eeb5465fe67f1f30555ecc5fb2232c219c602e0ce1df049ca9",
+    "guardSha256": "6e1f5f5045f9606086f1b01e6eb988b88c5670f78000b260fcb9e035f1c69b3d",
+    "files": 1,
+    "tests": 2,
+    "bunExpects": 32,
+    "completed": true,
+    "isolatedHomeRemoved": true
+  },
+  "round25Scope": "Actual paired dispatch/staging/helpers/SessionManager/Transcript/Core dist journal publisher and writer/IPC registrar+preload facade/reader/modern recovery/tokened hydration reducer/MessageStream SSR; actual Web reducer+Workbench SSR and inline encoder+optimistic append SSR controls. Submit acceptance, run stream events, memory IPC transport, SSR viewport adapter controlled. No send hook/full App/useTranscriptBuckets mount/Engine.run/provider/worker/Electron/real authority/auth/HTTP/WS/phone. Five actual UI leaf exports forwarded by alias, no business behavior mock. Source/dist manifest63 and resolve-only4 are not actual module-cache graph probes. Cold paired Session with no Desktop optimistic cache; ordinary Desktop reopening remains static.",
+  "round25IndependentFinalQuality": "quality-round25.md",
+  "round25IndependentQualityExecutions": 0,
+  "round26NewFindings": 0,
+  "round26BunFilesAdded": 0,
+  "round26BunTestsAdded": 0,
+  "round26NativeExecutionsAdded": 0,
+  "round26ProductImports": 0,
+  "round26Scope": "Read-only source/design/test-source/hash review. No fixture/product imports, runner, Engine/provider/worker/Electron/Git/network/account/model. Prior test source and static manifest are not dynamic pass/cachegraph proof. Files main!=currentprimary condition remains unverified separately.",
+  "round26StaticSourceFiles": 29,
+  "round26CloudSources": 10,
+  "round26IndependentQuality": "fork-authority-quality-round26.md",
+  "round26PlanUnexecuted": true
+}

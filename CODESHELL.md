@@ -7,7 +7,7 @@ Guidance for AI assistants (Code Shell, Claude Code, Codex) working in this repo
 
 **CodeShell** — a general-purpose AI Agent orchestration framework. The engine is domain-agnostic; "coding" is expressed as a preset, not hardcoded. Design principles: (1) Core First (engine decoupled from domain), (2) Presets over Hardcoding, (3) Secure by Default (permission-gated tools), (4) Long-running Ready (Task/Cron/Sleep/Sub-Agent are first-class).
 
-## Monorepo layout (12 packages)
+## Monorepo layout (13 packages)
 
 ```
 packages/
@@ -28,6 +28,7 @@ packages/
   tui/      @cjhyy/code-shell-tui      — Ink-based terminal REPL on top of core.
   desktop/  @cjhyy/code-shell-desktop  — Electron client (private, not published).
   cdp/      @cjhyy/code-shell-cdp      — env-agnostic browser helpers and legacy CDP compatibility.
+  browser-devtools/ @cjhyy/code-shell-browser-devtools — private host-neutral browser diagnostics collectors.
   chat/     @cjhyy/code-shell-chat     — standalone multi-channel chat gateway + optional CodeShell integration.
 ```
 
@@ -118,7 +119,7 @@ Root package `@cjhyy/code-shell` is the meta package that installs core + tui an
 
 ```bash
 bun install            # bun workspaces (NOT npm/yarn/pnpm)
-bun run build          # filter order: link → core → pet → optimization-lab → coding → cdp → web → server → tui → chat → build-meta.ts (desktop separate)
+bun run build          # filter order: link → core → pet → optimization-lab → coding → cdp → browser-devtools → web → server → tui → chat → build-meta.ts (desktop separate)
 bun run dev            # = dev:desktop (launches the Electron app)
 bun run dev:tui        # CODE_SHELL_DEV=1 CODESHELL_UI_PERF=1 packages/tui/src/cli/main.ts
 bun run test           # guarded Bun test runner (NOT vitest/jest)
@@ -154,12 +155,13 @@ evaluations use their separate, explicitly authorized workflow.
 
 - **Package manager is `bun`**, not npm/yarn/pnpm. `preinstall` enforces Node >= 20.10 via `scripts/check-node.cjs`.
 - **Browser actions reuse maintained libraries**: Desktop's `src/browser-library/` provides the shared Puppeteer driver for Electron and the Chrome extension; the independent Playwright backend remains available. The legacy `packages/cdp` driver is a compatibility export, not a production fallback. Keep task grants, revocation, and exact element identity above the transport layer.
+- **Browser diagnostics are host-neutral**: `packages/browser-devtools` owns bounded Console/Network collection and DOM/Performance summaries through an injected page adapter, with no runtime dependencies. Core retains the `BrowserInspect` contracts; Desktop owns target selection, permissions, debugger attachment, revocation, and Puppeteer/Playwright adapters. Debugging UI and domain workflows belong in a Panel package.
 - **React is pinned to 19.2.6** via root `overrides` — do not upgrade casually.
 - **Terminal UI is Ink** (React for CLI). `packages/tui/src/ui/**.tsx` are Ink React components, NOT browser DOM.
 - **Core is `packages/core/`** (package name `@cjhyy/code-shell-core`). Coding policy lives in
   `packages/coding/`; hosts compose that package explicitly. There is no `src/core` directory.
 - **Root typecheck is a clean-checkout gate**: `bun run typecheck` first builds package declaration
-  boundaries, then checks all 12 workspace packages, including Desktop's main/preload/renderer/mobile
+  boundaries, then checks all 13 workspace packages, including Desktop's main/preload/renderer/mobile
   configs and the standalone Web SPA. `bun run typecheck:workspaces` is the faster no-emit-only pass
   when dependency packages are already built.
 - **Two hard ESLint guardrails** (in `eslint.config.js`):

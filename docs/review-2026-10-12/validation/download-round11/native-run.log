@@ -1,0 +1,13 @@
+Captured from the completed tool invocation; this is a saved transcript, not a second run.
+
+Working directory:
+/Users/admin/.codex/worktrees/review-latest-20261012/codeshell
+
+Command:
+node scripts/run-isolated-node-smoke.mjs /tmp/codeshell-review-20261012-download-round11/orphan-download.mjs
+
+Final stdout:
+PASS native owned orphan download, close/delete barrier, killAll, scoped kill recovery and normal control
+
+Final exit_code: 0
+Runs: 1 isolated native smoke. No Bun shard/JUnit suite was run in this round.

@@ -1,0 +1,36 @@
+{
+  "completed": false,
+  "phase": "failed:normal-controls:f25-paired-image-only",
+  "failure": "TypeError: window.matchMedia is not a function. (In 'window.matchMedia(\"(max-width: 760px)\")', 'window.matchMedia' is undefined)",
+  "isolatedHome": "/private/var/folders/1d/6__4f4y51g90nblfptt8s9v80000gn/T/codeshell-bun-completion-H0Ww0l/home",
+  "guardScope": {
+    "maintainedPrivateHome": true,
+    "exactOriginInstalledBeforeProductImports": "http://127.0.0.1:9",
+    "dummyOriginAlsoDenied": true,
+    "networkAndChildAPIs": "fetch/http(s)/net/tls/dgram/WebSocket/Bun listeners and child_process/worker_threads/Worker/Bun spawn",
+    "limitation": "in-process guards, not an OS sandbox or universal direct-native-network confinement"
+  },
+  "attempts": [],
+  "ownedPaths": [
+    "/private/var/folders/1d/6__4f4y51g90nblfptt8s9v80000gn/T/codeshell-bun-completion-H0Ww0l/home/.code-shell/round25-owned-no-repo/f25-paired-image-text",
+    "/private/var/folders/1d/6__4f4y51g90nblfptt8s9v80000gn/T/codeshell-bun-completion-H0Ww0l/home/.code-shell/sessions/f25-paired-image-text",
+    "/private/var/folders/1d/6__4f4y51g90nblfptt8s9v80000gn/T/codeshell-bun-completion-H0Ww0l/home/.code-shell/round25-owned-no-repo/f25-paired-image-only",
+    "/private/var/folders/1d/6__4f4y51g90nblfptt8s9v80000gn/T/codeshell-bun-completion-H0Ww0l/home/.code-shell/sessions/f25-paired-image-only"
+  ],
+  "cleanups": [
+    {
+      "sid": "f25-paired-image-text",
+      "ownedFilesRemoved": true,
+      "errors": []
+    },
+    {
+      "sid": "f25-paired-image-only",
+      "ownedFilesRemoved": true,
+      "errors": []
+    }
+  ],
+  "runnerHomeRemoved": true,
+  "sourceSha256": "8a033c557babcc11bbf1b8b8fe33543324c7e2fea509f5931adf3d02187262c4",
+  "result": "first authorized latest only: 0 pass, 2 fail, 22 Bun expect; no Completed; harness Workbench matchMedia unavailable",
+  "observationsCount": 0
+}

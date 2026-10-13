@@ -1,0 +1,12 @@
+bun test v1.3.11 (af24e281)
+
+docs/review-2026-10-12/reproductions/runtime-round3/panel-process-close.test.ts:
+{"nativePid":67900,"closeReturned":true,"closeElapsedMs":1,"hostRuntime":"v25.8.1","hostExecutable":"/opt/homebrew/Cellar/node/25.8.1_1/bin/node","path":"real authenticated Hub Panel process.spawn -> server.close","hostExitCode":0,"aliveAfterGraceMs":3300,"alive":true}
+{"fixtureCleanup":{"nativePid":67900,"gone":true}}
+(pass) Host exit after Panel process close prevents its delayed SIGKILL [5124.17ms]
+
+ 1 pass
+ 0 fail
+ 8 expect() calls
+Ran 1 test across 1 file. [5.19s]
+Completed Bun shard: 1 tests, 0 skipped; 0 failures.

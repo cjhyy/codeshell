@@ -1,0 +1,18 @@
+[?2004h[?1004h[?25l[?2026h[1C✦[1C添加[1Cprovider[1C+[1C模型[2C(Esc[1C取消)
+
+[1C选择[1CAPI[1C提供商:
+[1C❯[1COpenRouter[1C(推荐[1C—[1C支持所有模型)
+[3CAnthropic[1C(直连[1CClaude[1CAPI)
+[3COpenAI
+[3CDeepSeek[1C(官方直连)
+[3CZ.AI[1C(GLM[1C官方)
+[3CxAI[1C(Grok)
+[3CGoogle[1CGemini
+[3CMistral
+[3CGroq
+[3COllama[1C(本地,无需[1Ckey)
+[3C自定义[1C(OpenAI-兼容)
+[?2026l[>0q[c
+REVIEW {"case":"tui_ready","mode":"escape","pid":77531,"isRaw":true}
+[?2026h[?25h[?2026l[?25h[>4m[<u[?1004l[?2004l
+REVIEW {"case":"tui_onboarding","mode":"escape","outcome":"cancelled","isRaw":false,"hostStillRunning":true}

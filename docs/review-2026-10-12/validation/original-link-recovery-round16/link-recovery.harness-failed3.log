@@ -1,0 +1,26 @@
+bun test v1.3.11 (af24e281)
+
+../../../../../../private/tmp/codeshell-review-20261012-link-recovery-round16/link-recovery.test.tsx:
+(pass) real dialog close during pending startup cancels request and late job, then a fresh dialog can connect [201.17ms]
+92 |       modes={[{ id: "token", methodId: "fine-grained-pat", kind: "credential-input", available: true, preferred: true, label: "Token" }] as any}
+93 |       onClose={() => { closeCalls++; root.render(null); }} onConnected={(c: any) => successes.push(c)} /> : null); await settle(); });
+94 |   };
+95 |   const until = async (check: () => boolean) => { const deadline = Date.now() + 7000; while (!check()) { if (Date.now() > deadline) throw Error("fixture wait: " + textOf(container)); await act(settle); } };
+96 |   const button = (label: string) => nodes(container).find(n => n.tagName === "BUTTON" && textOf(n).includes(label));
+97 |   const click = async (n: any) => { expect(n).toBeDefined(); await act(async () => { props(n).onClick(); await settle(); }); };
+                                                   ^
+error: expect(received).toBeDefined()
+
+Received: undefined
+
+      at <anonymous> (/private/tmp/codeshell-review-20261012-link-recovery-round16/link-recovery.test.tsx:97:47)
+      at <anonymous> (/private/tmp/codeshell-review-20261012-link-recovery-round16/link-recovery.test.tsx:127:11)
+(fail) real dialog reports a failed begin and explicit retry connects once without duplicate submit [8.56ms]
+(pass) lost response after real credential commit is reconciled by status without replaying secret [4044.28ms]
+(pass) formal cwd key remount retires pending validation and clears the old secret before new project authorization [90.76ms]
+
+ 3 pass
+ 1 fail
+ 48 expect() calls
+Ran 4 tests across 1 file. [4.80s]
+Bun test process failed (1)

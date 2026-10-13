@@ -1,0 +1,202 @@
+[
+  {
+    "id": "R02",
+    "evidenceLabel": "Web W4",
+    "targetFile": "web-round1.md",
+    "headingLine": 50,
+    "headingText": "## W4 [P2] CLI permission UI can display “逐次确认” while its process still bypasses permissions",
+    "headingMarker": "##",
+    "sourceSha256": "062fe7be52825010fefd6ea12a3e1167c6c5d2d50d14aa06932dc1f980b4107a",
+    "readmeLine": 21
+  },
+  {
+    "id": "R03",
+    "evidenceLabel": "Web W1",
+    "targetFile": "web-round1.md",
+    "headingLine": 8,
+    "headingText": "## W1 [P2] ACK uncertainty is converted into a fresh submit, repeating completed work",
+    "headingMarker": "##",
+    "sourceSha256": "062fe7be52825010fefd6ea12a3e1167c6c5d2d50d14aa06932dc1f980b4107a",
+    "readmeLine": 22
+  },
+  {
+    "id": "R08",
+    "evidenceLabel": "Web W3",
+    "targetFile": "web-round1.md",
+    "headingLine": 36,
+    "headingText": "## W3 [P2] Stop in a running CLI room never stops that room",
+    "headingMarker": "##",
+    "sourceSha256": "062fe7be52825010fefd6ea12a3e1167c6c5d2d50d14aa06932dc1f980b4107a",
+    "readmeLine": 27
+  },
+  {
+    "id": "R14",
+    "evidenceLabel": "Web W5",
+    "targetFile": "web-round1.md",
+    "headingLine": 64,
+    "headingText": "## W5 [P2] Optional asynchronous questions block all independent followup tasks after completion",
+    "headingMarker": "##",
+    "sourceSha256": "062fe7be52825010fefd6ea12a3e1167c6c5d2d50d14aa06932dc1f980b4107a",
+    "readmeLine": 33
+  },
+  {
+    "id": "R16",
+    "evidenceLabel": "Web W2",
+    "targetFile": "web-round1.md",
+    "headingLine": 22,
+    "headingText": "## W2 [P2] CC-open replies navigate tabs that never requested them and override later navigation",
+    "headingMarker": "##",
+    "sourceSha256": "062fe7be52825010fefd6ea12a3e1167c6c5d2d50d14aa06932dc1f980b4107a",
+    "readmeLine": 35
+  },
+  {
+    "id": "R19",
+    "evidenceLabel": "Web W6；下一次有效 resync 可恢复",
+    "targetFile": "web-round1.md",
+    "headingLine": 76,
+    "headingText": "## W6 [P3] A failed synchronous approval delivery has no immediate card recovery while the same request is still pending",
+    "headingMarker": "##",
+    "sourceSha256": "062fe7be52825010fefd6ea12a3e1167c6c5d2d50d14aa06932dc1f980b4107a",
+    "readmeLine": 38
+  },
+  {
+    "id": "R25",
+    "evidenceLabel": "Web W7，第二轮",
+    "targetFile": "web-round2.md",
+    "headingLine": 19,
+    "headingText": "## W7 — [P2] 两个已打开的默认模型表单先后保存，会静默回滚未修改的另一项",
+    "headingMarker": "##",
+    "sourceSha256": "8b65c7d1e74d77bfbf4a6f5602917344b5aa12c2b805dc66ae95a201ace428de",
+    "readmeLine": 44
+  },
+  {
+    "id": "R26",
+    "evidenceLabel": "Web W8，第二轮",
+    "targetFile": "web-round2.md",
+    "headingLine": 30,
+    "headingText": "## W8 — [P3] Skill 保存冲突后，“刷新”不能恢复保存能力",
+    "headingMarker": "##",
+    "sourceSha256": "8b65c7d1e74d77bfbf4a6f5602917344b5aa12c2b805dc66ae95a201ace428de",
+    "readmeLine": 45
+  },
+  {
+    "id": "R27",
+    "evidenceLabel": "Web W9，第二轮",
+    "targetFile": "web-round2.md",
+    "headingLine": 40,
+    "headingText": "## W9 — [P3] MCP 旧测试响应晚于配置刷新时，会为新配置显示旧的测试成功",
+    "headingMarker": "##",
+    "sourceSha256": "8b65c7d1e74d77bfbf4a6f5602917344b5aa12c2b805dc66ae95a201ace428de",
+    "readmeLine": 46
+  },
+  {
+    "id": "R32",
+    "evidenceLabel": "Web W10，第三轮",
+    "targetFile": "web-round3.md",
+    "headingLine": 15,
+    "headingText": "## W10 — [P2] localStorage 配额耗尽时，新设备配对成功后立即认证失败",
+    "headingMarker": "##",
+    "sourceSha256": "c96980d8023f4d2556fead8c049a16903d9ebffccf8d496e46d0b6b9f72eaec0",
+    "readmeLine": 51
+  },
+  {
+    "id": "R33",
+    "evidenceLabel": "Web W11，第三轮",
+    "targetFile": "web-round3.md",
+    "headingLine": 26,
+    "headingText": "## W11 — [P2] 新会话创建确认前，后台原生会话输出会把新草稿搬到错误会话",
+    "headingMarker": "##",
+    "sourceSha256": "c96980d8023f4d2556fead8c049a16903d9ebffccf8d496e46d0b6b9f72eaec0",
+    "readmeLine": 52
+  },
+  {
+    "id": "R34",
+    "evidenceLabel": "Web W12，第三轮；主机正常收到请求时有 5 分钟票据上限",
+    "targetFile": "web-round3.md",
+    "headingLine": 37,
+    "headingText": "## W12 — [P2] 已开始的手机 HTTP 图片上传无法随断线取消，重连后继续阻塞后续发送",
+    "headingMarker": "##",
+    "sourceSha256": "c96980d8023f4d2556fead8c049a16903d9ebffccf8d496e46d0b6b9f72eaec0",
+    "readmeLine": 53
+  },
+  {
+    "id": "R37",
+    "evidenceLabel": "Web W13，第三轮；限定 freshNative 场景",
+    "targetFile": "web-round3.md",
+    "headingLine": 48,
+    "headingText": "## W13 — [P2] 手机离线新建另一个项目的任务后，首条文本可在上一个尚未落盘的项目会话执行",
+    "headingMarker": "##",
+    "sourceSha256": "c96980d8023f4d2556fead8c049a16903d9ebffccf8d496e46d0b6b9f72eaec0",
+    "readmeLine": 55
+  },
+  {
+    "id": "R38",
+    "evidenceLabel": "Web W14，第三轮",
+    "targetFile": "web-round3.md",
+    "headingLine": 60,
+    "headingText": "## W14 — [P3] “退出此设备”必须等待 HTTP 响应，网络慢请求会阻止本地退出",
+    "headingMarker": "##",
+    "sourceSha256": "c96980d8023f4d2556fead8c049a16903d9ebffccf8d496e46d0b6b9f72eaec0",
+    "readmeLine": 56
+  },
+  {
+    "id": "R40",
+    "evidenceLabel": "Web W15，第五轮；限定预入队拒绝",
+    "targetFile": "web-round5.md",
+    "headingLine": 15,
+    "headingText": "## W15 — [P2] 发送明确失败前输入后续草稿，会丢掉原失败内容",
+    "headingMarker": "##",
+    "sourceSha256": "c579cd8a99ca7a8f78c650eaa7e02d36a5d97861b5bb66d084148aa114dafd63",
+    "readmeLine": 58
+  },
+  {
+    "id": "R41",
+    "evidenceLabel": "Web W16，第五轮；真实认证 Hub 补强",
+    "targetFile": "web-round5.md",
+    "headingLine": 26,
+    "headingText": "## W16 — [P2] Hub 未确认送达的意图没有刷新保护，刷新后唯一恢复副本丢失",
+    "headingMarker": "##",
+    "sourceSha256": "c579cd8a99ca7a8f78c650eaa7e02d36a5d97861b5bb66d084148aa114dafd63",
+    "readmeLine": 59
+  },
+  {
+    "id": "R50",
+    "evidenceLabel": "Voice W17，第六轮；同一 renderer document 存活期间",
+    "targetFile": "voice-round6.md",
+    "headingLine": 7,
+    "headingText": "## W17 / P2：录音启动等待期间可再次点击，停止和组件卸载只回收最后一份录音",
+    "headingMarker": "##",
+    "sourceSha256": "94b7b9092aecaca35e1b8abf327bd9036fb2414a9b0a542eccc4a0b34fba95db",
+    "readmeLine": 68
+  },
+  {
+    "id": "R51",
+    "evidenceLabel": "Agent Plugins W18，第七轮；同一 Main 生命周期",
+    "targetFile": "plugins-round7.md",
+    "headingLine": 17,
+    "headingText": "## W18 — P2: successful install job blocks reinstall after a successful uninstall",
+    "headingMarker": "##",
+    "sourceSha256": "2d94322748f32d12ed7c55c48224000db209ec62a9fe90c927d85c9bb56d8970",
+    "readmeLine": 69
+  },
+  {
+    "id": "R52",
+    "evidenceLabel": "Agent Plugins W19，第七轮；有效新源可重新安装恢复",
+    "targetFile": "plugins-round7.md",
+    "headingLine": 42,
+    "headingText": "## W19 — P2: failed marketplace path-source update removes the previous working plugin",
+    "headingMarker": "##",
+    "sourceSha256": "2d94322748f32d12ed7c55c48224000db209ec62a9fe90c927d85c9bb56d8970",
+    "readmeLine": 70
+  },
+  {
+    "id": "R53",
+    "evidenceLabel": "Agent Plugins W20，第七轮；旧安装内容保留",
+    "targetFile": "plugins-round7.md",
+    "headingLine": 66,
+    "headingText": "## W20 — P2: Desktop reviewed directory install records a deleted snapshot as its update source",
+    "headingMarker": "##",
+    "sourceSha256": "2d94322748f32d12ed7c55c48224000db209ec62a9fe90c927d85c9bb56d8970",
+    "readmeLine": 71
+  }
+]

@@ -1,0 +1,14 @@
+✔ each independently installed app carries the shared control (602.817042ms)
+✔ pointer menu keeps native select value and event contract (906.332459ms)
+✔ keyboard and changed options use the same menu (269.791917ms)
+✔ label activation and a second click toggle without opening a native popup (278.642208ms)
+✔ menu stays inside a modal dialog's top layer (253.175041ms)
+{"reviewNetworkGuard":true,"accepted":0,"denied":0,"origins":[]}
+ℹ tests 5
+ℹ suites 0
+ℹ pass 5
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 2697.040084

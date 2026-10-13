@@ -1,0 +1,17 @@
+{
+  "kind": "harness-portability-failure",
+  "testsPassed": 0,
+  "testsFailed": 1,
+  "expects": 41,
+  "guardBlockedChildAttempt": [
+    {
+      "kind": "child",
+      "api": "Bun.spawnSync",
+      "target": "[object Object]"
+    }
+  ],
+  "actualChildStarted": false,
+  "isolatedHome": "/private/var/folders/1d/6__4f4y51g90nblfptt8s9v80000gn/T/codeshell-bun-completion-RurLcp/home",
+  "existsAfterRunner": false,
+  "sourceUnchanged": true
+}

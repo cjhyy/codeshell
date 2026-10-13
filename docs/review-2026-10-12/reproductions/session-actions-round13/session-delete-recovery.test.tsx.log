@@ -1,0 +1,21 @@
+bun test v1.3.11 (af24e281)
+
+docs/review-2026-10-12/reproductions/session-actions-round13/session-delete-recovery.test.tsx:
+{"finding":"sidebar-delete-failure","entry":"actual Sidebar context menu -> actual DialogProvider confirm -> actual useSessionNavigation","actualFilesystemFailure":"Error: EACCES: permission denied, rm '/private/var/folders/1d/6__4f4y51g90nblfptt8s9v80000gn/T/codeshell-session-actions-l8iNgI/sessions/delete-A'","coreMessagesPreserved":2,"catalogRowsAfterFailure":0,"durableTombstone":true,"ordinaryReimportRestores":false,"recovery":"SessionsView still lists actual Core history; after correcting owned directory permissions, actual delete retry succeeds","scope":"React MiniDOM + actual catalog/cache/server deletion; Main IPC wiring statically traced, not native Electron"}
+(pass) CONFIRMED real Sidebar delete hides/tombstones A before actual filesystem deletion rejects; history view can retry [289.43ms]
+{"control":"SessionsView-delete-recovery","actualFilesystemRefusalVisible":true,"failedRowRetained":true,"catalogUnchangedUntilSuccess":true,"rendererSnapshotRetainedUntilSuccess":true,"sameIdRetried":true,"deleted":["delete-A"]}
+(pass) CONTROL actual SessionsView keeps A and shows filesystem refusal, then retries same id successfully [41.84ms]
+{"control":"late-history-rename","renames":[{"id":"delete-A","title":"Renamed A"}],"activeSession":"keep-B","newerDraft":"B unsent draft","targetTitle":"Renamed A","lateCompletionAfterUnmount":true,"actualTitleStore":true}
+(pass) CONTROL actual SessionsView late rename after leaving keeps newer active B and its draft, while synchronizing A [85.93ms]
+workspace release skipped missing session before archive {
+  sessionId: undefined,
+  reason: undefined,
+}
+{"control":"late-archive-target","releaseCalls":["delete-A"],"archiveCalls":[{"id":"delete-A","archived":true},{"id":"delete-A","archived":false}],"newerActive":"keep-B","newerTitle":"New B","actualCoreArchiveWriter":true,"restoredWithoutSelectionOverride":true}
+(pass) CONTROL delayed archive A freezes target and preserves later B selection and rename; restore retains B [86.05ms]
+
+ 4 pass
+ 0 fail
+ 71 expect() calls
+Ran 4 tests across 1 file. [1195.00ms]
+Completed Bun shard: 4 tests, 0 skipped; 0 failures.

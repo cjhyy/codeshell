@@ -21,6 +21,11 @@ export const DESKTOP_WORKSPACE_BUILD_ORDER = [
     relativeDir: "packages/coding",
   },
   { label: "cdp", packageName: "@cjhyy/code-shell-cdp", relativeDir: "packages/cdp" },
+  {
+    label: "browser-devtools",
+    packageName: "@cjhyy/code-shell-browser-devtools",
+    relativeDir: "packages/browser-devtools",
+  },
   { label: "web", packageName: "@cjhyy/code-shell-web", relativeDir: "packages/web" },
   {
     label: "server",

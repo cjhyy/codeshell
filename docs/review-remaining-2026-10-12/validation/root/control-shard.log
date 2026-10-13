@@ -1,0 +1,391 @@
+bun test v1.3.11 (af24e281)
+
+packages/cdp/src/keymap.test.ts:
+(pass) keyInfo > named keys [0.12ms]
+(pass) keyInfo > single chars derive Key*/Digit* [0.06ms]
+(pass) normalizeKey > aliases map to canonical
+(pass) planKeySequence > ControlOrMeta follows the target platform and supports mac editing commands [0.34ms]
+(pass) planKeySequence > literal Control keeps its semantics on macOS; Meta shortcuts edit normally [0.05ms]
+(pass) planKeySequence > single key → keyDown + keyUp [0.01ms]
+(pass) planKeySequence > combination → modifier down, main down/up with bitmask, modifier up reversed [0.05ms]
+(pass) planKeySequence > multi-modifier bitmask OR (Meta+Shift+z)
+
+packages/cdp/src/driver.test.ts:
+(pass) pressKey sends platform-aware editing commands through CDP [0.25ms]
+(pass) CdpActionsDriver.snapshot > enables domains once and returns RAW nodes (no flattening) [0.32ms]
+(pass) CdpActionsDriver.clickNode > scrolls into view, resolves box center, dispatches real 3-event click [0.34ms]
+(pass) CdpActionsDriver.clickNode > fails when the node has no layout box instead of using JS .click() [0.07ms]
+(pass) CdpActionsDriver.clickNode > clicks inside the visible viewport intersection [0.07ms]
+(pass) CdpActionsDriver.clickNode > keeps DOM click coordinates after Retina page scroll at zoom %s [0.07ms]
+(pass) CdpActionsDriver.clickNode > keeps DOM click coordinates after Retina page scroll at zoom %s
+(pass) CdpActionsDriver.clickNode > fails when the node has no visible viewport intersection
+(pass) CdpActionsDriver.typeNode > focuses and replaces text without dispatching an accidental mouse click [0.23ms]
+(pass) CdpActionsDriver.typeNode > rejects a disabled/read-only/non-text control before inserting [0.07ms]
+(pass) CdpActionsDriver.typeNode > marks an unresolvable text node stale [0.04ms]
+(pass) CdpActionsDriver.focusNode > uses DOM.focus without activating the element [0.09ms]
+(pass) CdpActionsDriver.scroll > waits for delayed progress without dispatching a second wheel [232.67ms]
+(pass) CdpActionsDriver.scroll > dispatches mouseWheel with signed deltaY [155.75ms]
+(pass) CdpActionsDriver.scroll > clamps huge deltas to one viewport and returns the resulting position [77.34ms]
+(pass) CdpActionsDriver.scroll > reports NO_PROGRESS instead of succeeding at the page end [1000.92ms]
+(pass) CdpActionsDriver.hoverNode > moves mouse to center without pressing [0.31ms]
+(pass) CdpActionsDriver.pressKey > sends text payloads for printable keys and Enter's native action
+(pass) CdpActionsDriver.pressKey > dispatches the planned sequence for a combination [0.38ms]
+(pass) CdpActionsDriver.selectOptionNode > calls JS setter on the select node and reports the match [0.25ms]
+(pass) CdpActionsDriver.selectOptionNode > returns available options on no match
+(pass) buildExtractScript > includes link, image, and video collection + ref tagging
+(pass) CdpActionsDriver.fetchImageData > runs in-page fetch+canvas and returns parsed base64 [0.38ms]
+(pass) CdpActionsDriver.fetchImageData > passes a finite timeout into the in-page image fetch [0.11ms]
+(pass) CdpActionsDriver.fetchImageData > sanitizes maxDim before interpolating it into page JavaScript [0.09ms]
+(pass) CdpActionsDriver.fetchImageData > reports missing ref [0.05ms]
+(pass) CdpActionsDriver.screenshot > uses a native viewport capture without requiring any CDP geometry [0.28ms]
+(pass) CdpActionsDriver.screenshot > passes only the visible viewport CSS intersection to native region capture after scrolling [0.12ms]
+(pass) CdpActionsDriver.screenshot > does not call native capture for an element outside the visible viewport
+(pass) CdpActionsDriver.screenshot > captures the whole Retina viewport at zoom %s within the pixel cap [0.19ms]
+(pass) CdpActionsDriver.screenshot > captures the whole Retina viewport at zoom %s within the pixel cap [0.03ms]
+(pass) CdpActionsDriver.screenshot > intersects Retina element boxes with the CSS viewport before applying zoom [0.08ms]
+(pass) CdpActionsDriver.screenshot > viewport: scales natively via clip.scale, no page round-trip [0.11ms]
+(pass) CdpActionsDriver.screenshot > element box: clips to the box and scale 1 when within maxDim [0.10ms]
+(pass) CdpActionsDriver.screenshot > element box: scrolls then clamps the clip to the visible viewport [0.07ms]
+(pass) CdpActionsDriver.screenshot > element with no box → stale error
+(pass) CdpActionsDriver.navigate > normalizes and navigates allowed http(s) URLs [0.26ms]
+(pass) CdpActionsDriver.navigate > blocks unsafe schemes before Page.navigate
+(pass) CdpActionsDriver.navigate > honors an optional host policy callback
+(pass) validateNavigationUrl > allows about:blank but not other about URLs
+(pass) validateNavigationUrl > rejects relative URLs
+(pass) CdpActionsDriver.readContent cursor paging > returns deterministic chunks and completes with nextCursor [1.00ms]
+(pass) CdpActionsDriver.readContent cursor paging > rejects a cursor after the main document loader changes [0.22ms]
+(pass) cleanPageText > collapses whitespace and caps with truncation marker [0.02ms]
+(pass) waitForLoad NaN/negative timeout guard > a NaN timeout uses the default deadline, not an infinite loop [303.78ms]
+(pass) waitForLoad NaN/negative timeout guard > a completed page still returns immediately [0.36ms]
+(pass) waitForLoad NaN/negative timeout guard > a never-completing page with NaN timeout terminates at the default deadline [0.69ms]
+(pass) scroll NaN amount guard > a NaN amount does not send NaN deltaY to CDP [1069.79ms]
+(pass) scroll NaN amount guard > a normal amount scrolls by that amount [1071.12ms]
+
+packages/pet/src/host-actions.test.ts:
+(pass) ControlLongTask tool > records a structured control request with a validated action [0.40ms]
+(pass) ControlLongTask tool > rejects unknown actions and missing task ids without recording [0.46ms]
+(pass) ControlLongTask tool > fails closed outside a Mimi manager turn [0.21ms]
+(pass) WatchSession tool > records one exact Session subscription request [0.32ms]
+(pass) WatchSession tool > rejects malformed or undeclared Session inputs [0.11ms]
+(pass) Memory tool > records remember/update/forget with bounded validated payloads [0.22ms]
+(pass) Memory tool > rejects invalid combinations without recording [0.19ms]
+(pass) GatewayReply tool > records one complete text, button, and attachment reply [0.50ms]
+(pass) GatewayReply tool > requests termination only after the host accepts the reply [0.09ms]
+(pass) GatewayReply tool > rejects invalid inputs and attachments outside the declared route capability [0.16ms]
+(pass) GatewayReply tool > rewrites the visible schema to the exact Gateway route [0.16ms]
+(pass) host-action availability > each tool is visible only when the host declared its kind [0.07ms]
+(pass) host-action envelope validation > accepts a valid session binding request: {"action":"enter","sessionSelector":"session-f3fc3368e78c43ee5a8c"}
+(pass) host-action envelope validation > accepts a valid session binding request: {"action":"leave"}
+(pass) host-action envelope validation > rejects a malformed or unrelated session binding payload: {}
+(pass) host-action envelope validation > rejects a malformed or unrelated session binding payload: {"action":"enter"}
+(pass) host-action envelope validation > rejects a malformed or unrelated session binding payload: {"action":"enter","sessionSelector":"s-mu29ikau-091fd2b6"}
+(pass) host-action envelope validation > rejects a malformed or unrelated session binding payload: {"action":"enter","sessionSelector":"session-f3fc3368e78c43ee5a8"}
+(pass) host-action envelope validation > rejects a malformed or unrelated session binding payload: {"action":"enter","sessionSelector":"session-f3fc3368e78c43ee5a8c0"}
+(pass) host-action envelope validation > rejects a malformed or unrelated session binding payload: {"action":"enter","sessionSelector":"session-F3FC3368E78C43EE5A8C"} [0.29ms]
+(pass) host-action envelope validation > rejects a malformed or unrelated session binding payload: {"action":"enter","sessionSelector":"session-g3fc3368e78c43ee5a8c"} [0.02ms]
+(pass) host-action envelope validation > rejects a malformed or unrelated session binding payload: {"action":"enter","sessionSelector":" session-f3fc3368e78c43ee5a8c"}
+(pass) host-action envelope validation > rejects a malformed or unrelated session binding payload: {"action":"enter","sessionSelector":"session-f3fc3368e78c43ee5a8c\n"}
+(pass) host-action envelope validation > rejects a malformed or unrelated session binding payload: {"action":"enter","sessionSelector":null}
+(pass) host-action envelope validation > rejects a malformed or unrelated session binding payload: {"action":"enter","session_selector":"session-f3fc3368e78c43ee5a8c"}
+(pass) host-action envelope validation > rejects a malformed or unrelated session binding payload: {"action":"enter","sessionSelector":"session-f3fc3368e78c43ee5a8c","target":"other-chat"}
+(pass) host-action envelope validation > rejects a malformed or unrelated session binding payload: {"action":"leave","sessionSelector":"session-f3fc3368e78c43ee5a8c"}
+(pass) host-action envelope validation > rejects a malformed or unrelated session binding payload: {"action":"leave"}
+(pass) host-action envelope validation > rejects a malformed or unrelated session binding payload: {"action":"leave","target":"other-chat"}
+(pass) host-action envelope validation > rejects a malformed or unrelated session binding payload: {"action":"resume","sessionSelector":"session-f3fc3368e78c43ee5a8c"}
+(pass) host-action envelope validation > rejects a malformed or unrelated session binding payload: {"action":"remember","text":"not a binding request"}
+(pass) host-action envelope validation > rejects a malformed or unrelated session binding payload: {"action":"update","memoryId":"mem-1","text":"not a binding request"}
+(pass) host-action envelope validation > rejects a malformed or unrelated session binding payload: {"action":"forget","memoryId":"mem-1"} [0.14ms]
+(pass) host-action envelope validation > accepts only exact, bounded payloads for each host side effect [0.37ms]
+(pass) pet profile host-action integration > new input invalidates only an unsent GatewayReply while preserving accepted actions [1.40ms]
+(pass) pet profile host-action integration > requires Mimi to decide semantically between Session reuse and creation [0.12ms]
+(pass) pet profile host-action integration > tells Mimi that host-mediated attachment replies are real channel sends [0.11ms]
+(pass) pet profile host-action integration > allowlists the tools and reports one bounded request per kind per turn [0.18ms]
+(pass) pet profile host-action integration > exposes declared host-action kinds through visibility meta [0.11ms]
+(pass) pet profile host-action integration > exposes WatchSession only when the host declares the session-watch action [0.04ms]
+(pass) pet profile host-action integration > mobile-remote tool rides the same host-action service [0.10ms]
+(pass) GatewayReply repeat rejection ends the turn > forces termination once the host has already accepted a reply [0.09ms]
+(pass) GatewayReply repeat rejection ends the turn > a genuine host rejection still does not fake a committed reply [0.06ms]
+
+packages/pet/src/bound-session-commands.test.ts:
+(pass) leaving > recognizes the documented ways out [0.44ms]
+(pass) leaving > tolerates surrounding whitespace and case [0.03ms]
+(pass) leaving > never swallows a real message that merely mentions leaving
+(pass) status > recognizes the status commands
+(pass) which replies reach the chat > forwards the final answer, decisions and the terminal notice [0.05ms]
+(pass) which replies reach the chat > never forwards the intermediate stream [0.05ms]
+(pass) which replies reach the chat > drops an empty final rather than sending a blank message
+(pass) approvals > plain text is never an approval
+(pass) stale prompt > names the Session and how to get out
+
+packages/pet/src/delegate-work.mismatch.test.ts:
+(pass) a session_id paired with the wrong workspace_id > is refused without starting any work [0.51ms]
+(pass) a session_id paired with the wrong workspace_id > names both Workspaces so the model can tell them apart
+(pass) a session_id paired with the wrong workspace_id > requires correcting the route without treating rejection as permission for a new Session
+(pass) a session_id paired with the wrong workspace_id > an independent new-work request can still omit session_id after a rejected continuation [0.36ms]
+(pass) a session_id paired with the wrong workspace_id > the other correction also succeeds: switching to the owning Workspace [0.25ms]
+(pass) an unknown session_id > requires identifying the intended Session instead of replacing a continuation [0.06ms]
+(pass) the prompt rule behind the loop > states that a Session belongs to one Workspace and repeats are wrong [0.06ms]
+
+packages/pet/src/run-params.test.ts:
+(pass) validatePetRunParams > does not claim behavior modes or session kinds owned by other extensions [1.58ms]
+(pass) validatePetRunParams > validates canonical profile params using Engine's override precedence [0.23ms]
+(pass) validatePetRunParams > rejects malformed canonical workspaces
+(pass) validatePetRunParams > rejects malformed canonical reusable Sessions
+(pass) validatePetRunParams > accepts a reusable Session lastActiveAt timestamp and rejects malformed ones [0.10ms]
+(pass) validatePetRunParams > rejects reusable Sessions outside the closed Workspace set [0.10ms]
+(pass) validatePetRunParams > rejects contradictory Pet identity and leading/trailing opaque ids
+(pass) validatePetRunParams > rejects malformed or duplicate host-action capability declarations [0.08ms]
+(pass) validatePetRunParams > accepts only a bounded GatewayReply route paired with its host action [0.11ms]
+(pass) validatePetRunParams > accepts only a bounded Gateway discovery catalog containing the current channel [0.46ms]
+(pass) validatePetRunParams > validates Needs follow-up snapshots and opaque proactive destinations [0.23ms]
+(pass) Pet behavior profile inputs > normalizes and freezes valid direct Engine-hosted profile params [0.06ms]
+(pass) Pet behavior profile inputs > accepts a non-empty string sessionsRootDir [0.01ms]
+(pass) Pet behavior profile inputs > ignores a missing or non-string sessionsRootDir
+(pass) Pet behavior profile inputs > trims reusable Sessions inactive for more than 180 days [0.14ms]
+(pass) Pet behavior profile inputs > fails closed on a malformed reusable Session lastActiveAt [0.05ms]
+(pass) Pet behavior profile inputs > publishes the immutable GatewayReply route to tool visibility and run services [0.11ms]
+(pass) Pet behavior profile inputs > fails closed before exposing malformed direct Engine-hosted profile params [0.18ms]
+
+packages/pet/src/projection-extension.test.ts:
+(pass) Pet projection observer > withdraws a newly hidden session first exposed by a snapshot without a delta [1.88ms]
+(pass) Pet projection observer > withdraws an initial default-kind projection once the session becomes Pet (stream) [0.34ms]
+(pass) Pet projection observer > withdraws an initial default-kind projection once the session becomes Pet (boundary) [0.07ms]
+(pass) Pet projection observer > drops closed session state before the same id is attached again [1.54ms]
+(pass) Pet projection observer > declares only the durable Pet session kind as hidden [0.01ms]
+(pass) Pet projection observer > keeps ephemeral quick chats out of Mimi's live projection [0.19ms]
+(pass) Pet projection observer > preserves the indexed terminal when the host becomes idle at turn completion [0.26ms]
+
+packages/pet/src/registered-follow-ups.test.ts:
+(pass) registered follow-up capability boundary > preserves a session-free registered row through protocol and Engine profile parsing [14.88ms]
+(pass) registered follow-up capability boundary > records a native reminder without trusting model-authored routes or operation identity [0.61ms]
+(pass) registered follow-up capability boundary > resume needs an exact source and ordinary reminders cannot smuggle execution targets [0.15ms]
+(pass) registered follow-up capability boundary > mutations use version fences and preserve explicit catch-up expiry
+
+packages/pet/src/delegation.test.ts:
+(pass) Pet work continuation gate > a valid selector alone cannot resume unrelated work
+(pass) Pet work continuation gate > accepts explicit continuation grounded in the chosen prior work
+(pass) Pet work continuation gate > rejects invented prior work and requires a full candidate quote
+(pass) Pet work continuation gate > evidence without a selector cannot turn new work into reuse
+(pass) Pet work continuation gate > rejects malformed continuity evidence at the service boundary: null [0.36ms]
+(pass) Pet work continuation gate > rejects malformed continuity evidence at the service boundary: {} [0.06ms]
+(pass) Pet work continuation gate > rejects malformed continuity evidence at the service boundary: {"priorThread":"梳理项目目录结构"} [0.02ms]
+(pass) Pet work continuation gate > rejects malformed continuity evidence at the service boundary: {"priorThread":"梳理项目目录结构","reason":" "}
+(pass) Pet work continuation gate > rejects malformed continuity evidence at the service boundary: {"priorThread":"梳理项目目录结构","reason":"xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"}
+(pass) Pet work continuation gate > run services enforce the gate even when the tool is bypassed [0.10ms]
+(pass) Pet work continuation gate > run services preserve grounded continuation and reject wrong selectors before fallback
+
+packages/pet/src/long-task.test.ts:
+(pass) Pet long-task state machine > rejects an old queued start after a new launch was prepared without a run id [0.68ms]
+(pass) Pet long-task state machine > retains historical rows without allowing an unidentified result correction [0.30ms]
+(pass) Pet long-task state machine > fences persisted run identities and queued corrections at the mutation boundary [0.29ms]
+(pass) Pet long-task state machine > persists a closure decision before its idempotent continuation launch [0.19ms]
+(pass) Pet long-task state machine > tracks real lifecycle instead of treating launch acceptance as completion [0.24ms]
+(pass) Pet long-task state machine > fences late worker completion after an explicit cancel
+(pass) Pet long-task state machine > keeps the final assistant result when a newer projection reports model processing [0.08ms]
+(pass) Pet long-task state machine > records generated artifacts independently from progress [0.08ms]
+(pass) Pet long-task state machine > retry reopens a failed task and preserves durable history [0.07ms]
+(pass) Pet long-task state machine > ignores a late closure watermark from an older attempt [0.04ms]
+(pass) Pet long-task state machine > fences a terminal event older than current progress or retry attempt [0.10ms]
+(pass) Pet long-task state machine > builds bounded manager context and resume prompt [0.20ms]
+(pass) Pet long-task state machine > drops invalid durable rows without throwing [0.07ms]
+(pass) Pet long-task state machine > preserves forced-Goal semantics for rows written before verificationMode [0.04ms]
+
+packages/pet/src/pending-decision-index.test.ts:
+(pass) PendingDecisionIndex > indexes tool approvals and AskUser by session without sensitive payloads [0.27ms]
+(pass) PendingDecisionIndex > never projects any line of raw AskUser text, including middle and trailing secrets [0.07ms]
+(pass) PendingDecisionIndex > does not surface internal bridge waits
+(pass) PendingDecisionIndex > terminal transitions are session-scoped, generation-fenced and idempotent [0.10ms]
+(pass) PendingDecisionIndex > reconcile cancels old generation pending entries [0.13ms]
+(pass) PendingDecisionIndex > sanitizes tool names even when an alternate host skips core normalization [0.01ms]
+(pass) PendingDecisionIndex > keeps every pending decision but bounds terminal history for long-lived workers [5.90ms]
+
+packages/pet/src/session-index.test.ts:
+(pass) SessionIndex > budget exhaustion is visibly incomplete even when final text claims completion [0.06ms]
+(pass) SessionIndex > does not replace the current projection with an older run start [0.08ms]
+(pass) SessionIndex > isolates child terminals while retaining child progress [0.17ms]
+(pass) SessionIndex > rejects a previous run terminal even with a newer timestamp and cursor
+(pass) SessionIndex > projects disk-only work sessions without creating a live session
+(pass) SessionIndex > maps live idle, queued, running and pending decision state [0.28ms]
+(pass) SessionIndex > waiting is a display phase and does not turn a dormant session into running
+(pass) SessionIndex > reduces ordered stream events and rejects stale versions [0.19ms]
+(pass) SessionIndex > keeps background-wait boundaries non-terminal across live and disk projection [0.08ms]
+(pass) SessionIndex > builds safe bounded summaries without copying event payloads [0.03ms]
+(pass) SessionIndex > distinguishes abnormal disconnect from normal worker reclaim [0.12ms]
+(pass) SessionIndex > filters non-local, pet, ephemeral and sub-agent catalog entries
+(pass) SessionIndex > does not retain live state after catalog removal and same-id recreation [0.07ms]
+(pass) crash-orphaned active sessions > does not present a long-idle active session as resumable
+(pass) crash-orphaned active sessions > keeps a recently-active session dormant so a live resume still works
+
+packages/pet/src/delegate-work.test.ts:
+(pass) DelegateWork > builds a closed Workspace enum and records an exact structured selection [0.17ms]
+(pass) DelegateWork > defaults to CodeShell and rejects unsupported Codex without substitution [0.18ms]
+(pass) DelegateWork > rejects invented Workspace ids and a second delegation
+(pass) DelegateWork > accepts only a reusable Session from the selected Workspace
+(pass) DelegateWork > does not turn a malformed continuation selector (null) into new work [0.22ms]
+(pass) DelegateWork > does not turn a malformed continuation selector (42) into new work [0.01ms]
+(pass) DelegateWork > does not turn a malformed continuation selector (false) into new work [0.03ms]
+(pass) DelegateWork > does not turn a malformed continuation selector ("") into new work [0.01ms]
+(pass) DelegateWork > does not turn a malformed continuation selector (" ") into new work
+(pass) DelegateWork > does not turn a malformed continuation selector (" session-alpha-login") into new work
+(pass) DelegateWork > does not turn a malformed continuation selector ("session-alpha-login ") into new work [0.04ms]
+(pass) DelegateWork > rejects explicit continuation with missing or ungrounded evidence  [0.06ms]
+(pass) DelegateWork > rejects explicit continuation with missing or ungrounded evidence {"prior_thread":"Feishu document review","reason":"Continue the previous review."} [0.03ms]
+(pass) DelegateWork > rejects explicit continuation with missing or ungrounded evidence {"prior_thread":"Login work","reason":" "} [0.02ms]
+(pass) DelegateWork > rejects explicit continuation with missing or ungrounded evidence {"prior_thread":"Login work","reason":"Resume","bypass":true}
+(pass) DelegateWork > rejects explicit continuation with missing or ungrounded evidence "continue"
+(pass) DelegateWork > rejects undeclared routing controls instead of silently discarding them
+(pass) DelegateWork > fails closed for malformed run-scoped services instead of throwing [0.12ms]
+(pass) DelegateWork > renders host labels as bounded single-line data
+(pass) delegateWorkAvailability > visible only for a Pet turn with host-provided Workspaces [0.06ms]
+
+packages/arena/src/transitions.test.ts:
+(pass) claim transitions — unresolved sweep > markUnresolved succeeds from under_review
+(pass) claim transitions — unresolved sweep > markUnresolved succeeds from proposed
+(pass) claim transitions — unresolved sweep > markUnresolved still succeeds from contested
+(pass) claim transitions — unresolved sweep > terminal states cannot transition to unresolved
+(pass) claim transitions — unresolved sweep > the normal happy path is unaffected
+
+packages/arena/src/arena-usage.test.ts:
+(pass) Arena usage accounting > returns usage aggregated across its multi-phase provider calls [3293.71ms]
+
+packages/optimization-lab/src/store.test.ts:
+(pass) bounded experiment storage > rejects external IDs and stale state revisions [171.07ms]
+(pass) bounded experiment storage > active writers require fence and started/stop control cannot be rewritten [155.91ms]
+(pass) bounded experiment storage > stores immutable artifacts and detects corruption and symlinks [126.84ms]
+(pass) bounded experiment storage > staging crash leftovers never appear runnable and no temp files remain [90.76ms]
+(pass) bounded experiment storage > non-owner host writes stop intent without requiring execution lease [119.97ms]
+(pass) bounded experiment storage > durable newer revocation wins crash before mutable head update [109.50ms]
+(pass) bounded experiment storage > grant renewal appends immutable history and preserves start identity [115.94ms]
+(pass) bounded experiment storage > grant history gap and corrupted state fail closed [67.61ms]
+(pass) bounded experiment storage > private state permissions [43.30ms]
+
+packages/optimization-lab/src/assertions.test.ts:
+(pass) hard assertions never inherit properties or accept unsafe paths [0.42ms]
+(pass) contains and exclusions are independent hard conditions
+
+packages/optimization-lab/src/candidate.test.ts:
+(pass) candidate preserves original metadata and never changes sources [0.70ms]
+(pass) overfit hints are deterministic and advisory [0.68ms]
+
+packages/optimization-lab/src/grading.test.ts:
+(pass) blind templates omit private identities and reject conflicts [1.16ms]
+(pass) all not-applicable grades never create a semantic pass [0.10ms]
+(pass) explicit corrections append evidence and inconclusive scores do not unlock a phase
+
+packages/optimization-lab/src/store-paths.test.ts:
+(pass) store paths > keeps lab data under the isolated CodeShell home [1.73ms]
+(pass) store paths > gives a symlinked project the same key as its real path [2.39ms]
+
+packages/optimization-lab/src/report.test.ts:
+(pass) immutable experiment reports > reports real paired effects, source evidence, costs and individual cases in Markdown [18.78ms]
+(pass) immutable experiment reports > isolated adoption requires complete qualified effects and loading receipts [16.62ms]
+(pass) immutable experiment reports > content hash is independent of caller order or current clock [15.54ms]
+(pass) immutable experiment reports > known frozen development regressions veto holdout improvement [12.27ms]
+(pass) immutable experiment reports > hard failure cannot be overridden by semantic passing grades [12.90ms]
+(pass) immutable experiment reports > explicit correction heads are order independent and competing grades stay unknown [9.50ms]
+(pass) immutable experiment reports > missing human grades and analysis-only cases remain in the denominator [20.06ms]
+(pass) immutable experiment reports > claimed completed trial without actual model or usage is inconclusive [10.87ms]
+(pass) immutable experiment reports > changed cache conditions cannot establish cost savings [13.43ms]
+(pass) immutable experiment reports > partial lifecycle never becomes improved from local late grading [13.90ms]
+(pass) immutable experiment reports > hard token bounds require input proof and final grant revisions are numeric [8.92ms]
+(pass) immutable experiment reports > duplicate trials and artifact/hash mismatches are rejected [9.32ms]
+
+packages/arena/src/context/read-file-limit.test.ts:
+(pass) read_file limit guard > reads from offset for `limit` lines [19.51ms]
+(pass) read_file limit guard > negative limit does not silently drop the file's tail [14.47ms]
+(pass) read_file limit guard > NaN limit falls back to default (not a crash / not empty) [14.42ms]
+
+packages/arena/src/context/within-root.test.ts:
+(pass) isWithinRoot > the root itself is within root [0.02ms]
+(pass) isWithinRoot > a child path is within root [0.03ms]
+(pass) isWithinRoot > a sibling with the root as a string prefix is NOT within root
+(pass) isWithinRoot > an unrelated path is not within root
+(pass) isWithinRoot > uses the platform separator, not a hardcoded slash
+
+packages/optimization-lab/src/contracts/experiment.test.ts:
+(pass) immutable experiment plans > key order cannot change plan hash, and inputs are copied [0.81ms]
+(pass) immutable experiment plans > rejects extra root field
+(pass) immutable experiment plans > rejects missing field [0.69ms]
+(pass) immutable experiment plans > rejects non-finite [0.07ms]
+(pass) immutable experiment plans > rejects non-positive limit [0.18ms]
+(pass) immutable experiment plans > rejects concurrency [0.18ms]
+(pass) immutable experiment plans > rejects candidate count [0.13ms]
+(pass) immutable experiment plans > rejects model judge [0.16ms]
+(pass) immutable experiment plans > rejects secret endpoint [0.16ms]
+(pass) immutable experiment plans > rejects query endpoint [0.08ms]
+(pass) immutable experiment plans > rejects header projection [0.19ms]
+(pass) immutable experiment plans > rejects markdown only revision [0.12ms]
+(pass) immutable experiment plans > rejects extra files [0.19ms]
+(pass) immutable experiment plans > rejects body hash [0.12ms]
+(pass) immutable experiment plans > rejects arbitrary body with valid hash [0.05ms]
+(pass) immutable experiment plans > rejects arbitrary frontmatter prefix
+(pass) immutable experiment plans > rejects bundle revision [0.32ms]
+(pass) immutable experiment plans > rejects unscoped criterion alias [0.05ms]
+(pass) immutable experiment plans > rejects duplicated criterion [0.26ms]
+(pass) immutable experiment plans > rejects plan tampering even with valid component hashes [0.38ms]
+(pass) immutable experiment plans > worst-case bound is conditional, conservative and safe [1.72ms]
+(pass) budget grants > structural historical verification does not renew an expired grant [0.38ms]
+(pass) budget grants > rejects malformed, mismatched, zero, non-finite and revoked authorization [0.46ms]
+
+packages/optimization-lab/src/contracts/verdict-policy.test.ts:
+(pass) verdict policy > matches the eval harness contract it was copied from [8.97ms]
+
+packages/optimization-lab/src/contracts/dataset.test.ts:
+(pass) validateDataset > accepts a healthy dataset and summarizes it [0.57ms]
+(pass) validateDataset > reports schema errors with their path [0.24ms]
+(pass) validateDataset > dataset-level schema issues remain visible without a case identity [0.23ms]
+(pass) validateDataset > rejects duplicate ids and duplicate inputs [0.27ms]
+(pass) validateDataset > rejects a source group that appears in both splits [0.15ms]
+(pass) validateDataset > rejects runnable cases without criteria or with missing evidence [0.15ms]
+(pass) validateDataset > requires at least one runnable case per split [0.05ms]
+(pass) validateDataset > warns, without failing, when evidence can only be exploratory [0.19ms]
+(pass) dataset boundaries > keeps unfrozen fixture references out of runnable cases [0.42ms]
+(pass) dataset boundaries > rejects duplicate criterion ids: hard [0.18ms]
+(pass) dataset boundaries > rejects duplicate criterion ids: rubric [0.19ms]
+(pass) dataset boundaries > rejects duplicate criterion ids: cross
+(pass) dataset boundaries > bounds text in UTF-8 bytes and supports the exact boundary [1.15ms]
+(pass) dataset boundaries > rejects non-JSON assertion values without throwing [0.41ms]
+(pass) dataset boundaries > rejects unknown fields and more than 200 cases [2.93ms]
+(pass) dataset boundaries > normalizes defaults without mutating the caller's data [0.23ms]
+(pass) rejects datasets beyond the total JSON byte budget [33.90ms]
+
+packages/optimization-lab/src/contracts/dataset-loader.test.ts:
+(pass) verified loader recomputes frozen content, summary and case hashes [49.94ms]
+(pass) verified loader refuses traversal, missing content, symlink file or directory [24.07ms]
+
+packages/optimization-lab/src/contracts/canonical-json.test.ts:
+(pass) canonicalJson > sorts every object's keys independently of insertion order [0.05ms]
+(pass) canonicalJson > preserves arrays, JSON scalars and special property names
+(pass) canonicalJson > rejects non-JSON data: undefined
+(pass) canonicalJson > rejects non-JSON data: NaN
+(pass) canonicalJson > rejects non-JSON data: Infinity
+(pass) canonicalJson > rejects non-JSON data: -Infinity
+(pass) canonicalJson > rejects non-JSON data: 1n
+(pass) canonicalJson > rejects non-JSON data: Symbol(x)
+(pass) canonicalJson > rejects non-JSON data: [Function]
+(pass) canonicalJson > rejects non-JSON data: 2026-10-12T03:55:30.350Z
+(pass) canonicalJson > rejects non-JSON data: Map {}
+(pass) canonicalJson > rejects non-JSON data: Set {}
+(pass) canonicalJson > rejects sparse arrays, additional array keys, symbols and getters [0.52ms]
+(pass) canonicalJson > rejects cycles but accepts a shared JSON object
+(pass) canonicalJson > hashes equal values to the same sha256 [0.10ms]
+
+packages/optimization-lab/src/providers/transport.test.ts:
+(pass) openai actual client stays tool-free and records authoritative usage [335.18ms]
+(pass) anthropic actual client stays tool-free and records authoritative usage [272.48ms]
+(pass) strict selected connection never falls back to a usable default [237.20ms]
+(pass) actual compatibility/SDK retries each need a fresh admission and cannot change parameters [238.30ms]
+(pass) target request cannot receive expected, rubric, sibling or holdout data [259.40ms]
+(pass) connection identity pins effective temperature and redacts unsafe endpoints [244.27ms]
+(pass) Anthropic cache counters are included in normalized input exactly once [260.00ms]
+(pass) wire gate rejects images, tools and request-model changes before upstream [234.22ms]
+(pass) missing response model invalidates pairing while retaining known token usage [253.76ms]
+(pass) Anthropic unsupported top_p fails local preflight [256.95ms]
+(pass) real OpenAI SDK internal retry has a distinct durable admission for every HTTP [268.09ms]
+(pass) isolated Engine SSE requires terminal authoritative usage and keeps partial streams unknown [240.24ms]
+
+ 326 pass
+ 0 fail
+ 923 expect() calls
+Ran 326 tests across 29 files. [12.21s]
+Completed Bun shard: 326 tests, 0 skipped; 0 failures.

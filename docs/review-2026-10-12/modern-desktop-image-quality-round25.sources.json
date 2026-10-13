@@ -1,0 +1,125 @@
+{
+  "scope": "read-only direct source hash comparison, not loaded module graph or product execution",
+  "sources": [
+    {
+      "path": "packages/server/src/mobile-remote/mobile-chat-turn.ts",
+      "latestSha256": "8b2529743a7a591578e56c41722e293f82f0bc37c105484daa28fb1e74ed8978",
+      "initialSha256": "8b2529743a7a591578e56c41722e293f82f0bc37c105484daa28fb1e74ed8978"
+    },
+    {
+      "path": "packages/desktop/src/main/mobile-remote/handle-client-event.ts",
+      "latestSha256": "5fd90faedba3f35989345e63570619758f6b5e47c0d6e87a1db8a12af5d6552f",
+      "initialSha256": "5fd90faedba3f35989345e63570619758f6b5e47c0d6e87a1db8a12af5d6552f"
+    },
+    {
+      "path": "packages/desktop/src/main/mobile-remote-orchestrator.ts",
+      "latestSha256": "40b62b4c9b912fd472d65d7077971e638a64109927a574ae8337cbc0f837e099",
+      "initialSha256": "40b62b4c9b912fd472d65d7077971e638a64109927a574ae8337cbc0f837e099"
+    },
+    {
+      "path": "packages/desktop/src/main/session-transcript-ipc.ts",
+      "latestSha256": "61edf03fe6f7804842f60b0d8dba12cd1d4f55872fdd3c660f0cafb4c17fb686",
+      "initialSha256": "61edf03fe6f7804842f60b0d8dba12cd1d4f55872fdd3c660f0cafb4c17fb686"
+    },
+    {
+      "path": "packages/desktop/src/preload/index.ts",
+      "latestSha256": "b85c80ec01b488890fcfad0e9afed4fb1e02575dcba8e30cce8a06805ed44327",
+      "initialSha256": "b85c80ec01b488890fcfad0e9afed4fb1e02575dcba8e30cce8a06805ed44327"
+    },
+    {
+      "path": "packages/desktop/src/renderer/app/useHostSubscriptions.ts",
+      "latestSha256": "86d9d570eb165c07884ccdebcc70aefb8fe7e8b39f2627868528e887ccdb70e8",
+      "initialSha256": "86d9d570eb165c07884ccdebcc70aefb8fe7e8b39f2627868528e887ccdb70e8"
+    },
+    {
+      "path": "packages/desktop/src/renderer/app/useTranscriptBuckets.ts",
+      "latestSha256": "201a41e547bc89b10bcb7c45ec9afde9a0f5a5dd706fd7aeb43d95bca02a62cf",
+      "initialSha256": "201a41e547bc89b10bcb7c45ec9afde9a0f5a5dd706fd7aeb43d95bca02a62cf"
+    },
+    {
+      "path": "packages/desktop/src/renderer/app/outputJournalRecovery.ts",
+      "latestSha256": "a68bbbdbdf4b061e354a29a033b2d51dfd37ff63dc067366208d1e4061ca2397",
+      "initialSha256": "a68bbbdbdf4b061e354a29a033b2d51dfd37ff63dc067366208d1e4061ca2397"
+    },
+    {
+      "path": "packages/desktop/src/renderer/transcriptHydration.ts",
+      "latestSha256": "9932f3bff47382030c153c164237740af269f1163cf973b7139fe89ba7c47dff",
+      "initialSha256": "9932f3bff47382030c153c164237740af269f1163cf973b7139fe89ba7c47dff"
+    },
+    {
+      "path": "packages/desktop/src/renderer/types.ts",
+      "latestSha256": "28225a963c4f6b93bd0f604e612b72737d251f2b9818fe75679e4903830113fe",
+      "initialSha256": "28225a963c4f6b93bd0f604e612b72737d251f2b9818fe75679e4903830113fe"
+    },
+    {
+      "path": "packages/desktop/src/renderer/MessageStream.tsx",
+      "latestSha256": "b77d1f48611f798d17942030bc6e7d928e581c08216bf470ba9a3aaf7a8798d6",
+      "initialSha256": "b77d1f48611f798d17942030bc6e7d928e581c08216bf470ba9a3aaf7a8798d6"
+    },
+    {
+      "path": "packages/desktop/src/renderer/chat/attachments.ts",
+      "latestSha256": "a16e8fa7250c3265e7fcb7d9c18a371f301acc265e4ee6d7c7a765f23d590621",
+      "initialSha256": "a16e8fa7250c3265e7fcb7d9c18a371f301acc265e4ee6d7c7a765f23d590621"
+    },
+    {
+      "path": "packages/desktop/src/renderer/app/useRunController.ts",
+      "latestSha256": "5bcf8b21e139ddd644175d0eedd528c7a32789f67771d056c3c71f52bd3cf5b2",
+      "initialSha256": "5bcf8b21e139ddd644175d0eedd528c7a32789f67771d056c3c71f52bd3cf5b2"
+    },
+    {
+      "path": "packages/desktop/src/renderer/modelSwitchRun.ts",
+      "latestSha256": "3c3a0fb720c02697049e27417b3e5ce987afb993849ec942da7b06de4b8b8a0c",
+      "initialSha256": "3c3a0fb720c02697049e27417b3e5ce987afb993849ec942da7b06de4b8b8a0c"
+    },
+    {
+      "path": "packages/desktop/src/renderer/App.tsx",
+      "latestSha256": "556e985d3c0898b5915c713a2a0a280f59bf504b4797e89278143bdcdfd265b8",
+      "initialSha256": "556e985d3c0898b5915c713a2a0a280f59bf504b4797e89278143bdcdfd265b8"
+    },
+    {
+      "path": "packages/desktop/src/renderer/ChatView.tsx",
+      "latestSha256": "63611e699f58eb8837e0adbe460d622ecf3bd6c16593ba310035069a0d4f433c",
+      "initialSha256": "63611e699f58eb8837e0adbe460d622ecf3bd6c16593ba310035069a0d4f433c"
+    },
+    {
+      "path": "packages/desktop/src/renderer/pet/PetChatHost.tsx",
+      "latestSha256": "78b8c70ba78d892394b4df98fde2e3b91815fe3b9c7a24f2824bc883eab49a0a",
+      "initialSha256": "78b8c70ba78d892394b4df98fde2e3b91815fe3b9c7a24f2824bc883eab49a0a"
+    },
+    {
+      "path": "packages/desktop/src/renderer/app/useTranscriptBuckets.test.tsx",
+      "latestSha256": "ef8eea4df5d54d3c79370151106608b9236899142b0754e8ad2742e4389dd2d3",
+      "initialSha256": "ef8eea4df5d54d3c79370151106608b9236899142b0754e8ad2742e4389dd2d3"
+    },
+    {
+      "path": "packages/core/src/engine/run-stream.ts",
+      "latestSha256": "52758120ead4944488930c2b9a567e68d688cafeea11f722bde2a05e9e6c855a",
+      "initialSha256": "52758120ead4944488930c2b9a567e68d688cafeea11f722bde2a05e9e6c855a"
+    },
+    {
+      "path": "packages/core/src/engine/run-output-user-message.ts",
+      "latestSha256": "4b670627e7a3b4229955670b74eee4c1c52d473fcfaed2cefcd34b866f757c01",
+      "initialSha256": "4b670627e7a3b4229955670b74eee4c1c52d473fcfaed2cefcd34b866f757c01"
+    },
+    {
+      "path": "packages/web/src/lib/userMessageDisplay.ts",
+      "latestSha256": "628fb9130fccc1022c1448ccba8ed21fe145cfeb072167ab57f76411473a0391",
+      "initialSha256": "628fb9130fccc1022c1448ccba8ed21fe145cfeb072167ab57f76411473a0391"
+    },
+    {
+      "path": "packages/web/app/Workbench.tsx",
+      "latestSha256": "7a3334a3b8474d1cc7ba973e8fcbda8658da94692d7c779fc5c9af5a603e3343",
+      "initialSha256": "7a3334a3b8474d1cc7ba973e8fcbda8658da94692d7c779fc5c9af5a603e3343"
+    },
+    {
+      "path": "docs/archive/electron-image-input-design.md",
+      "latestSha256": "50fccb2284a54312ec640586b2781f76a1ea8e6d5ae78c48efa850607f2850db",
+      "initialSha256": "50fccb2284a54312ec640586b2781f76a1ea8e6d5ae78c48efa850607f2850db"
+    },
+    {
+      "path": "docs/todo/durable-output-journal-delivery.md",
+      "latestSha256": "2adca92728572362a97a8bb697114f812d0f5e9c2291c44a957b495830c8fe77",
+      "initialSha256": "2adca92728572362a97a8bb697114f812d0f5e9c2291c44a957b495830c8fe77"
+    }
+  ]
+}

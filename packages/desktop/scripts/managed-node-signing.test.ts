@@ -24,6 +24,8 @@ function fixture(platform = "darwin") {
   );
   const executable = platform === "win32" ? "bin/node.exe" : "bin/node";
   const nodePath = join(runtimeDir, executable);
+  const driverPath = join(appPath, "Contents/Resources/cua-driver/cua-driver");
+  const permissionsPath = join(appPath, "Contents/Resources/computer-use/codeshell-permissions");
   const target = { platform, arch: "arm64" };
   const context = {
     electronPlatformName: platform,
@@ -67,12 +69,18 @@ function fixture(platform = "darwin") {
   const run = async (command: string, args: string[]) => {
     expect(command.endsWith("codesign")).toBe(true);
     const file = args.at(-1);
+    const native = file === driverPath ? "driver" : file === permissionsPath ? "permissions" : null;
     if (args.includes("--verify")) {
-      events.push({ kind: file === nodePath ? "verify-node" : "verify-app", args });
+      events.push({
+        kind: native ? `verify-${native}` : file === nodePath ? "verify-node" : "verify-app",
+        args,
+      });
     } else if (args.includes("--sign") || args.includes("-s")) {
       if (file === nodePath) {
         events.push({ kind: "sign-node", args });
         bytes = `Node after explicit signature: ${args.join(" ")}`;
+      } else if (native) {
+        events.push({ kind: `sign-${native}`, args });
       } else if (args.includes("--deep")) {
         events.push({ kind: "sign-deep", args });
         bytes = "Node changed by recursive bundle signing";
@@ -90,6 +98,8 @@ function fixture(platform = "darwin") {
   return {
     appPath,
     nodePath,
+    driverPath,
+    permissionsPath,
     runtimeDir,
     target,
     context,
@@ -121,7 +131,7 @@ function signingIdentity(args: string[]) {
 }
 
 describe("managed Node packaging signature ordering", () => {
-  test("ad-hoc packaging records the final Node signature before sealing only the outer app", async () => {
+  test("ad-hoc packaging signs computer use helpers and records Node before sealing the outer app", async () => {
     const f = fixture();
     await f.hooks().afterPack(f.context);
 
@@ -130,6 +140,8 @@ describe("managed Node packaging signature ordering", () => {
     ordered(f.events, [
       "stage",
       "sign-deep",
+      "sign-driver",
+      "sign-permissions",
       "sign-node",
       "refresh",
       "sign-outer",
@@ -150,6 +162,18 @@ describe("managed Node packaging signature ordering", () => {
     expect(nodeSignature).toContain("--entitlements");
     expect(nodeSignature).toContain("--options");
     expect(nodeSignature[nodeSignature.indexOf("--options") + 1].split(",")).toContain("runtime");
+    for (const native of ["driver", "permissions"]) {
+      const nativeSignature = f.events.find(({ kind }) => kind === `sign-${native}`)!.args!;
+      expect(signingIdentity(nativeSignature)).toBe("-");
+      expect(nativeSignature[nativeSignature.indexOf("--options") + 1]).toBe("runtime");
+      expect(nativeSignature).not.toContain("--entitlements");
+      expect(nativeSignature).not.toContain("--timestamp");
+      expect(f.events.find(({ kind }) => kind === `verify-${native}`)?.args).toEqual([
+        "--verify",
+        "--strict",
+        native === "driver" ? f.driverPath : f.permissionsPath,
+      ]);
+    }
     expect(f.events.some(({ kind }) => kind === "verify-node")).toBe(true);
     expect(f.events.some(({ kind }) => kind === "verify-app")).toBe(true);
   });
@@ -165,12 +189,32 @@ describe("managed Node packaging signature ordering", () => {
     };
     await f.hooks().macSign(options, f.context.packager);
 
-    ordered(f.events, ["sign-node", "refresh", "builder-sign", "verify-runtime"]);
+    ordered(f.events, [
+      "sign-driver",
+      "sign-permissions",
+      "sign-node",
+      "refresh",
+      "builder-sign",
+      "verify-runtime",
+    ]);
     const nodeSignature = f.events.find(({ kind }) => kind === "sign-node")!.args!;
     expect(signingIdentity(nodeSignature)).toBe(options.identity);
     expect(nodeSignature[nodeSignature.indexOf("--keychain") + 1]).toBe(options.keychain);
     expect(nodeSignature).toContain("--entitlements");
     expect(nodeSignature).toContain("--options");
+    for (const native of ["driver", "permissions"]) {
+      const nativeSignature = f.events.find(({ kind }) => kind === `sign-${native}`)!.args!;
+      expect(signingIdentity(nativeSignature)).toBe(options.identity);
+      expect(nativeSignature[nativeSignature.indexOf("--keychain") + 1]).toBe(options.keychain);
+      expect(nativeSignature[nativeSignature.indexOf("--options") + 1]).toBe("runtime");
+      expect(nativeSignature).toContain("--timestamp");
+      expect(nativeSignature).not.toContain("--entitlements");
+      expect(f.events.find(({ kind }) => kind === `verify-${native}`)?.args).toEqual([
+        "--verify",
+        "--strict",
+        native === "driver" ? f.driverPath : f.permissionsPath,
+      ]);
+    }
     const delegated = f.events.find(({ kind }) => kind === "builder-sign")!
       .options as SigningOptions;
     expect(delegated.ignore).toBe(ignore);
@@ -207,6 +251,38 @@ describe("managed Node packaging signature ordering", () => {
     await expect(hooks.afterPack(f.context)).rejects.toThrow("codesign failed");
     expect(f.events.some(({ kind }) => kind === "refresh" || kind === "sign-outer")).toBe(false);
   });
+
+  for (const native of ["driverPath", "permissionsPath"] as const) {
+    for (const mode of ["ad-hoc", "Developer ID"]) {
+      test(`${mode} refuses a missing or unsignable ${native} before Node or outer signing`, async () => {
+        const f = fixture();
+        const hooks = f.hooks({
+          run: async (command: string, args: string[]) => {
+            if (args.at(-1) === f[native] && !args.includes("--verify"))
+              throw new Error("native executable cannot be signed");
+            return f.run(command, args);
+          },
+        });
+        const signing =
+          mode === "ad-hoc"
+            ? hooks.afterPack(f.context)
+            : hooks.macSign(
+                {
+                  app: f.appPath,
+                  identity: "certificate",
+                  ignore: (file: string) => file === f.nodePath,
+                },
+                f.context.packager,
+              );
+        await expect(signing).rejects.toThrow("native executable cannot be signed");
+        expect(
+          f.events.some(({ kind }) =>
+            ["sign-node", "refresh", "sign-outer", "builder-sign"].includes(kind),
+          ),
+        ).toBe(false);
+      });
+    }
+  }
 
   test("a manifest refresh failure prevents Developer ID bundle signing", async () => {
     const f = fixture();
@@ -269,6 +345,8 @@ describe("managed Node packaging signature ordering", () => {
     await f.hooks().afterSign(f.context);
     expect(f.events.some(({ kind }) => kind === "verify-runtime")).toBe(true);
     expect(f.events.some(({ kind }) => kind === "verify-node")).toBe(true);
+    expect(f.events.some(({ kind }) => kind === "verify-driver")).toBe(true);
+    expect(f.events.some(({ kind }) => kind === "verify-permissions")).toBe(true);
     expect(f.events.some(({ kind }) => kind === "verify-app")).toBe(true);
     expect(
       f.events.every(({ kind }) => kind.startsWith("verify-") || kind === "inspect-signature"),

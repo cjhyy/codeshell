@@ -1,0 +1,17 @@
+bun test v1.3.11 (af24e281)
+
+../../../../../../private/tmp/codeshell-remaining-core-review/providers-accounting.test.ts:
+Goal retry accounting evidence {"budget":6,"sends":3,"knownBeforeThird":14,"returnedUsage":[{"promptTokens":2,"completionTokens":2,"totalTokens":4},{"promptTokens":2,"completionTokens":2,"totalTokens":4}],"ledger":{"requests":3,"promptTokens":14,"completionTokens":4,"totalTokens":18,"cacheReadTokens":0,"cacheCreationTokens":0,"knownEstimatedCostUsd":0.000102,"unknownCostRequests":0,"unknownUsageRequests":0,"version":1,"scope":"runtime","includesChildren":false,"partial":false,"persistenceErrors":0,"invalidReceipts":0,"scannedReceipts":3,"byModel":[{"requests":3,"promptTokens":14,"completionTokens":4,"totalTokens":18,"cacheReadTokens":0,"cacheCreationTokens":0,"knownEstimatedCostUsd":0.000102,"unknownCostRequests":0,"unknownUsageRequests":0,"provider":"anthropic","model":"claude-sonnet-4-6"}],"bySession":[{"requests":3,"promptTokens":14,"completionTokens":4,"totalTokens":18,"cacheReadTokens":0,"cacheCreationTokens":0,"knownEstimatedCostUsd":0.000102,"unknownCostRequests":0,"unknownUsageRequests":0,"sessionId":"budget-review","accountingSessionId":"46c91c9a-0c0d-417b-a65f-91f114a32a10"}],"byPurpose":[{"requests":3,"promptTokens":14,"completionTokens":4,"totalTokens":18,"cacheReadTokens":0,"cacheCreationTokens":0,"knownEstimatedCostUsd":0.000102,"unknownCostRequests":0,"unknownUsageRequests":0,"purpose":"main"}]},"resultReason":"goal_budget_exhausted"}
+(pass) candidate: Goal launches another turn after failed-stream input tokens already exceed its budget [1035.24ms]
+(pass) normal: the same Goal stops before another request when over-budget usage is returned by the successful stream [7.46ms]
+Anthropic auth rotation evidence ["token-first","token-first","token-fresh"]
+(pass) candidate: Anthropic client also keeps stale authCommand API key after cache rotation [7.33ms]
+(pass) normal: openai pre-aborted request never reaches SDK fetch [0.17ms]
+(pass) normal: anthropic pre-aborted request never reaches SDK fetch [0.10ms]
+accounting fixture cleanup: memory ledgers only, 0 network attempts, 0 tool/program execution
+
+ 5 pass
+ 0 fail
+ 18 expect() calls
+Ran 5 tests across 1 file. [1130.00ms]
+Completed Bun shard: 5 tests, 0 skipped; 0 failures.

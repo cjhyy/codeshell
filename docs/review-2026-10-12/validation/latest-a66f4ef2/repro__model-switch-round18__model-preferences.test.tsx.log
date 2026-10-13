@@ -1,0 +1,13 @@
+bun test v1.3.11 (af24e281)
+
+docs/review-2026-10-12/reproductions/model-switch-round18/model-preferences.test.tsx:
+(pass) two already-open native composers overwrite an unrelated persisted model; reload falls back and reselection recovers [26.42ms]
+(pass) one window and a later-opened window preserve independent bucket selections [4.93ms]
+(pass) late rejected configure stays attached to the old session; chosen intent pins the subsequent run independently of ACK [1.39ms]
+Completed model switch round18: 3 scenarios; actual selector/persistence controls; no Electron/model/worker/CLI/network
+
+ 3 pass
+ 0 fail
+ 46 expect() calls
+Ran 3 tests across 1 file. [337.00ms]
+Completed Bun shard: 3 tests, 0 skipped; 0 failures.

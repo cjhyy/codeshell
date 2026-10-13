@@ -1,0 +1,153 @@
+{
+  "review": "independent static, no product imports or fixture execution",
+  "initial": "84740d56e55517b004948a0a0e07649ad6fbf998",
+  "latest": "a66f4ef291f304ee4df9da8095a90671d9a8f140",
+  "count": 24,
+  "same": 23,
+  "items": [
+    {
+      "path": "packages/core/src/session/session-manager.ts",
+      "initialSHA256": "0ebe5458e6f5701e286c552e43e0dd707177fb97b1e8726a94ae5dbcfdedcb10",
+      "latestSHA256": "0ebe5458e6f5701e286c552e43e0dd707177fb97b1e8726a94ae5dbcfdedcb10",
+      "same": true
+    },
+    {
+      "path": "packages/core/src/protocol/server.ts",
+      "initialSHA256": "001212e386311d24bd7b19bf67012bfb8d9f42d58fbdbdf7f1258a04c89a159a",
+      "latestSHA256": "001212e386311d24bd7b19bf67012bfb8d9f42d58fbdbdf7f1258a04c89a159a",
+      "same": true
+    },
+    {
+      "path": "packages/core/src/engine/run-session-open.ts",
+      "initialSHA256": "4ac92021afc249a3e33482691e867b689024db9fcf86aaab9f07ea344183a9ae",
+      "latestSHA256": "4ac92021afc249a3e33482691e867b689024db9fcf86aaab9f07ea344183a9ae",
+      "same": true
+    },
+    {
+      "path": "packages/desktop/src/renderer/MessageStream.tsx",
+      "initialSHA256": "b77d1f48611f798d17942030bc6e7d928e581c08216bf470ba9a3aaf7a8798d6",
+      "latestSHA256": "b77d1f48611f798d17942030bc6e7d928e581c08216bf470ba9a3aaf7a8798d6",
+      "same": true
+    },
+    {
+      "path": "packages/desktop/src/renderer/App.tsx",
+      "initialSHA256": "556e985d3c0898b5915c713a2a0a280f59bf504b4797e89278143bdcdfd265b8",
+      "latestSHA256": "556e985d3c0898b5915c713a2a0a280f59bf504b4797e89278143bdcdfd265b8",
+      "same": true
+    },
+    {
+      "path": "packages/desktop/src/renderer/Sidebar.tsx",
+      "initialSHA256": "70fbf9da8fa31bcf6d5de1f3f1855623872255b3a944b15468f647541f84cf95",
+      "latestSHA256": "70fbf9da8fa31bcf6d5de1f3f1855623872255b3a944b15468f647541f84cf95",
+      "same": true
+    },
+    {
+      "path": "packages/desktop/src/renderer/app/SessionPanelDock.tsx",
+      "initialSHA256": "f518df5cbe17cb378b98add2db4b997c766e8092e50b34ada8be45f9b3e69972",
+      "latestSHA256": "f518df5cbe17cb378b98add2db4b997c766e8092e50b34ada8be45f9b3e69972",
+      "same": true
+    },
+    {
+      "path": "packages/desktop/src/renderer/app/useRunController.ts",
+      "initialSHA256": "5bcf8b21e139ddd644175d0eedd528c7a32789f67771d056c3c71f52bd3cf5b2",
+      "latestSHA256": "5bcf8b21e139ddd644175d0eedd528c7a32789f67771d056c3c71f52bd3cf5b2",
+      "same": true
+    },
+    {
+      "path": "packages/desktop/src/renderer/panels/PanelWorkspaceRootConsumer.tsx",
+      "initialSHA256": "f043db36541fa16368f0aa31b8ba9bfe7b31bf21370f1074258c76e7afbf22d4",
+      "latestSHA256": "f043db36541fa16368f0aa31b8ba9bfe7b31bf21370f1074258c76e7afbf22d4",
+      "same": true
+    },
+    {
+      "path": "packages/desktop/src/renderer/panels/usePanelWorkspaceRoot.ts",
+      "initialSHA256": "fe07534fed9fbdb9dcb53fc74ef7365a16d58d607449b9c49c5b5e0144c85fc7",
+      "latestSHA256": "fe07534fed9fbdb9dcb53fc74ef7365a16d58d607449b9c49c5b5e0144c85fc7",
+      "same": true
+    },
+    {
+      "path": "packages/desktop/src/renderer/panels/PanelArea.tsx",
+      "initialSHA256": "b7b292627c1f54b0928983df20c3d85b159fce9729def903800dcef4338f9026",
+      "latestSHA256": "b7b292627c1f54b0928983df20c3d85b159fce9729def903800dcef4338f9026",
+      "same": true
+    },
+    {
+      "path": "packages/desktop/src/renderer/panels/PanelRegistry.ts",
+      "initialSHA256": "c440f537f5918a16842dd32ca52761e5f54d6b2e2d6e951c48aa6022290fd3f1",
+      "latestSHA256": "c440f537f5918a16842dd32ca52761e5f54d6b2e2d6e951c48aa6022290fd3f1",
+      "same": true
+    },
+    {
+      "path": "packages/desktop/src/renderer/panels/FilesPanel.tsx",
+      "initialSHA256": "525f58f77436ab8e84f8df46942925feffbd5a118f91556884db924a3d90d0d3",
+      "latestSHA256": "525f58f77436ab8e84f8df46942925feffbd5a118f91556884db924a3d90d0d3",
+      "same": true
+    },
+    {
+      "path": "packages/desktop/src/renderer/panels/FilesPanel.workspace.test.tsx",
+      "initialSHA256": "6012655279240e86128e662c0324789d2ed69601744a844c3e36984ae9943ea5",
+      "latestSHA256": "6012655279240e86128e662c0324789d2ed69601744a844c3e36984ae9943ea5",
+      "same": true
+    },
+    {
+      "path": "packages/desktop/src/preload/project-authority-api.ts",
+      "initialSHA256": "4e2398a2b0e34999499989084bbd3c98654d9c46e465ccafe2a8ce8fce7da07c",
+      "latestSHA256": "4e2398a2b0e34999499989084bbd3c98654d9c46e465ccafe2a8ce8fce7da07c",
+      "same": true
+    },
+    {
+      "path": "packages/desktop/src/main/project-authority-ipc.ts",
+      "initialSHA256": "6cf689cd6654e1b6bc4cbc65f29deb8137e6b276b24e5df50812cdf66348348e",
+      "latestSHA256": "6cf689cd6654e1b6bc4cbc65f29deb8137e6b276b24e5df50812cdf66348348e",
+      "same": true
+    },
+    {
+      "path": "packages/desktop/src/main/project-store.ts",
+      "initialSHA256": "7a8af164418c7884c55d081e47005ed1f73b018755a650e215e927eee9bbdddb",
+      "latestSHA256": "7a8af164418c7884c55d081e47005ed1f73b018755a650e215e927eee9bbdddb",
+      "same": true
+    },
+    {
+      "path": "packages/desktop/src/main/session-workspace-service.ts",
+      "initialSHA256": "0a914d59780852a949e6d8349b51f5a8e40762c4e89911c56c601522af95e134",
+      "latestSHA256": "0a914d59780852a949e6d8349b51f5a8e40762c4e89911c56c601522af95e134",
+      "same": true
+    },
+    {
+      "path": "packages/desktop/src/main/session-workspace-service.test.ts",
+      "initialSHA256": "3d72ec5f52033278831c40bf2eb25a2c24c3262142f7b0d61bb0b97de9e722a1",
+      "latestSHA256": "3d72ec5f52033278831c40bf2eb25a2c24c3262142f7b0d61bb0b97de9e722a1",
+      "same": true
+    },
+    {
+      "path": "packages/desktop/src/main/renderer-project-path.ts",
+      "initialSHA256": "cf7d7fb3cbbc3ae472630a0f19293d53c9931c767c334438dc8ffe89bb062c8d",
+      "latestSHA256": "cf7d7fb3cbbc3ae472630a0f19293d53c9931c767c334438dc8ffe89bb062c8d",
+      "same": true
+    },
+    {
+      "path": "packages/desktop/src/main/fs-service.ts",
+      "initialSHA256": "3857afa4c216971bb67ecb3bb0dadfc2264f316f497d8274b22eaef7cda7afc4",
+      "latestSHA256": "3857afa4c216971bb67ecb3bb0dadfc2264f316f497d8274b22eaef7cda7afc4",
+      "same": true
+    },
+    {
+      "path": "packages/desktop/src/main/agent-run-metadata.ts",
+      "initialSHA256": "1ab3344d5df117d4f064ede2fd344936cbe1e7b4256c09fd7c886e6052e68102",
+      "latestSHA256": "1ab3344d5df117d4f064ede2fd344936cbe1e7b4256c09fd7c886e6052e68102",
+      "same": true
+    },
+    {
+      "path": "packages/desktop/src/main/index.ts",
+      "initialSHA256": "cf5ba2f931c816cb44b598d54ef173793e40f554335de75d103f7b0ee5a2c26a",
+      "latestSHA256": "426bfe5ccc8387db82f5bbe47ce1b83681995e7192f37bb03775f4eca37d0d80",
+      "same": false
+    },
+    {
+      "path": "docs/todo/multi-folder-local-project-plan.md",
+      "initialSHA256": "440edd29d618f7871f5e490ebf11afd4df7937bb8b834f64c66dee9c586d7961",
+      "latestSHA256": "440edd29d618f7871f5e490ebf11afd4df7937bb8b834f64c66dee9c586d7961",
+      "same": true
+    }
+  ]
+}

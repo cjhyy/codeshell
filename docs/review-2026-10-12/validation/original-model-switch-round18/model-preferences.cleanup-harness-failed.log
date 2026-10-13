@@ -1,0 +1,34 @@
+bun test v1.3.11 (af24e281)
+
+../../../../../../private/tmp/codeshell-review-20261012-model-switch-round18/model-preferences.test.tsx:
+`NaN` is an invalid value for the `top` css style property.
+104 |     container,
+105 |     render,
+106 |     async unmount() {
+107 |       await act(async () => { root.unmount(); await settle(); });
+108 |       ownedRoots.delete(root);
+109 |       container.remove();
+                      ^
+TypeError: container.remove is not a function. (In 'container.remove()', 'container.remove' is undefined)
+      at unmount (/private/tmp/codeshell-review-20261012-model-switch-round18/model-preferences.test.tsx:109:17)
+      at async <anonymous> (/private/tmp/codeshell-review-20261012-model-switch-round18/model-preferences.test.tsx:154:11)
+(fail) two already-open native composers overwrite an unrelated persisted model; reload falls back and reselection recovers [26.45ms]
+104 |     container,
+105 |     render,
+106 |     async unmount() {
+107 |       await act(async () => { root.unmount(); await settle(); });
+108 |       ownedRoots.delete(root);
+109 |       container.remove();
+                      ^
+TypeError: container.remove is not a function. (In 'container.remove()', 'container.remove' is undefined)
+      at unmount (/private/tmp/codeshell-review-20261012-model-switch-round18/model-preferences.test.tsx:109:17)
+      at async <anonymous> (/private/tmp/codeshell-review-20261012-model-switch-round18/model-preferences.test.tsx:181:15)
+(fail) one window and a later-opened window preserve independent bucket selections [3.84ms]
+Completed model switch round18: actual selector/persistence controls; no Electron/model/worker/CLI/network
+(pass) late rejected configure stays attached to the old session; chosen intent pins the subsequent run independently of ACK [2.82ms]
+
+ 1 pass
+ 2 fail
+ 31 expect() calls
+Ran 3 tests across 1 file. [196.00ms]
+Bun test process failed (1)

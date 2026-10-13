@@ -1,0 +1,9 @@
+PASS native MCP early cancel/closed-owner gap and normal controls; 20 assertions
+owned fixture route error SyntaxError: Unexpected end of JSON input
+    at JSON.parse (<anonymous>)
+    at Server.<anonymous> (file:///private/tmp/codeshell-review-20261012-command-recovery-round16/mcp-early-cancel.mjs:49:28)
+    at process.processTicksAndRejections (node:internal/process/task_queues:104:5)
+owned fixture route error SyntaxError: Unexpected end of JSON input
+    at JSON.parse (<anonymous>)
+    at Server.<anonymous> (file:///private/tmp/codeshell-review-20261012-command-recovery-round16/mcp-early-cancel.mjs:49:28)
+    at process.processTicksAndRejections (node:internal/process/task_queues:104:5)

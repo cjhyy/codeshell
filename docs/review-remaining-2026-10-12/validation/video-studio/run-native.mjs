@@ -1,0 +1,3 @@
+import {spawn} from 'node:child_process';
+process.env.NODE_OPTIONS='--import=/tmp/codeshell-panel-video-review-20261012/exact-local-network.mjs';
+const p=spawn(process.execPath,['--test','--test-concurrency=1','tests/video-studio-editor-audio-pcm.test.mjs','tests/video-studio-portable-bundle.test.mjs','tests/video-studio-editor-sync-runtime.test.mjs','tests/video-studio-editor-task-runtime.test.mjs','tests/video-studio-editor-multicam-native.test.mjs'],{stdio:'inherit',env:process.env,cwd:'/Users/admin/.codex/worktrees/panel-remaining-review-20261012/codeshell-panel-apps'});p.once('exit',c=>process.exitCode=c??1);

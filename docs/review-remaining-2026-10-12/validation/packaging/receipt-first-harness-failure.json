@@ -1,0 +1,9 @@
+{
+  "command": "task-owned guarded package-release-smoke copy",
+  "baseline": "62a58ac8",
+  "code": 1,
+  "signal": null,
+  "elapsedSeconds": 65.961,
+  "homeRemoved": true,
+  "logPath": "/tmp/codeshell-remaining-20261012/packaging/package-release.log"
+}

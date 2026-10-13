@@ -16,6 +16,7 @@ import { useHostSubscriptions } from "./useHostSubscriptions";
 import { INITIAL_STATE, type ApprovalState, type AskUserMessage } from "../types";
 import type { ApprovalRequestEnvelope } from "../../preload/types";
 import type { PermissionMode } from "../chat/PermissionPill";
+import { bindThemeSoundPlayer, ThemeAudioPlayback, ThemeSoundPlayer } from "../theme-audio";
 
 function cell<T>(value: T) {
   const state = {
@@ -240,6 +241,69 @@ describe("host subscriptions and recovery", () => {
     expect(notices[0]?.variant).toBe("error");
     expect(notices[0]?.detail).toContain("workId: bg-server");
     expect(notices[0]?.detail).toContain("sessionId: shell-session");
+  });
+
+  test("theme sounds follow top-level completion and live approvals without replaying restored requests", async () => {
+    const sounds: string[] = [];
+    class Recorder extends ThemeAudioPlayback {
+      override async play(src: string): Promise<boolean> {
+        sounds.push(src);
+        return true;
+      }
+    }
+    let now = 0;
+    const player = new ThemeSoundPlayer(
+      new Recorder(),
+      () => ({ enabled: true, soundVolume: 0.3, musicVolume: 0.5 }),
+      () => true,
+      () => (now += 1_000),
+    );
+    player.setPack({
+      id: "test",
+      name: "Test",
+      swatch: "180 50% 50%",
+      colors: { light: {}, dark: {} },
+      sounds: { complete: "done.wav", approval: "ask.wav", error: "error.wav" },
+    });
+    const unbind = bindThemeSoundPlayer(player);
+    try {
+      readApprovals = async () => [approval("restored")];
+      params.routing.engineToBucketRef.current.set("pinned-1", "project::pinned-1");
+      hook = await renderHook(() => useHostSubscriptions(params));
+      await act(async () => {
+        await flushMicrotasks();
+      });
+      expect(sounds).toEqual([]);
+      await act(async () => {
+        const stream = listeners.get("onStreamEvent")!;
+        stream({
+          sessionId: "pinned-1",
+          seq: 1,
+          event: { type: "turn_complete", reason: "completed", agentId: "child" },
+        });
+        stream({
+          sessionId: "pinned-1",
+          seq: 2,
+          event: { type: "turn_complete", reason: "aborted_streaming" },
+        });
+        stream({
+          sessionId: "pinned-1",
+          seq: 3,
+          event: { type: "turn_complete", reason: "completed" },
+        });
+        stream({
+          sessionId: "pinned-1",
+          seq: 3,
+          event: { type: "turn_complete", reason: "completed" },
+        });
+        stream({ sessionId: "pinned-1", seq: 4, event: { type: "error", error: "failure" } });
+        listeners.get("onApprovalRequest")!(approval("live"));
+        await flushMicrotasks();
+      });
+      expect(sounds).toEqual(["done.wav", "error.wav", "ask.wav"]);
+    } finally {
+      unbind();
+    }
   });
 
   afterEach(async () => {

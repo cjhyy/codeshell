@@ -1,0 +1,102 @@
+bun test v1.3.11 (af24e281)
+
+packages/core/src/composition/compiler.test.ts:
+(pass) compileComposition module validation > core is order 0, host modules follow input order [4.21ms]
+(pass) compileComposition module validation > duplicate module id fails loud [0.50ms]
+(pass) compileComposition module validation > invalid module id format fails loud
+(pass) compileComposition module validation > missing expected module fails loud
+(pass) compileComposition module validation > empty host module produces an empty_module diagnostic [0.71ms]
+(pass) compileComposition contributions > tool order is preset-tags (module order) then always (module order) [0.86ms]
+(pass) compileComposition contributions > duplicate tool name across modules fails with both owners [0.29ms]
+(pass) compileComposition contributions > duplicate tool against core builtin fails [0.05ms]
+(pass) compileComposition contributions > conflicting default presets fail; single wins; none falls back to harness-min [0.96ms]
+(pass) compileComposition contributions > default preset must exist among resolved presets [0.02ms]
+(pass) compileComposition contributions > preset builtinTools must reference known preset-tags tools [0.03ms]
+(pass) compileComposition contributions > duplicate preset / prompt section / behavior profile / query / hidden kind fail [0.21ms]
+(pass) compileComposition contributions > host module may shadow a core preset with a diagnostic [0.37ms]
+(pass) compileComposition contributions > hooks get capability-prefixed deterministic names and priority 20 default [0.47ms]
+
+packages/core/src/composition/activation.test.ts:
+(pass) composition activation ownership > failed observer rolls back its queries; other modules remain available [1.29ms]
+(pass) composition activation ownership > observer cannot register an undeclared query or replace another module's query [0.49ms]
+(pass) composition activation ownership > async host activation failure rolls back observers, queries and already acquired resources [0.43ms]
+(pass) composition activation ownership > engine activation failure unwinds pre-existing declarations and module resources [0.69ms]
+(pass) composition activation ownership > an async private service resolving after close is released instead of being installed [0.19ms]
+(pass) composition activation ownership > compiled declaration topology is a frozen copy, including Sets [0.61ms]
+(pass) composition activation ownership > compiler rejects an invalid private service lifetime before invoking a factory [0.06ms]
+(pass) composition activation ownership > a failed private service immediately rolls back acquired resources while another factory is pending [0.54ms]
+(pass) composition activation ownership > already-cancelled private service initialization does not start factories [0.26ms]
+(pass) composition activation ownership > cancellation retains simultaneous factory and cleanup failures without starting later services
+(pass) composition activation ownership > an observer's captured query callback cannot leave a registration after its owner closes [0.74ms]
+
+packages/core/src/composition/lifetime.test.ts:
+(pass) LifetimeScope > children precede parent resources; acquisition order reverses, including async cleanup [0.15ms]
+(pass) LifetimeScope > all resources release before AggregateError is reported
+(pass) LifetimeScope > a disposed child detaches from its long-lived owner [0.16ms]
+(pass) identity-bound registration disposers > hook disposer removes exactly one registration of the same function [0.27ms]
+(pass) identity-bound registration disposers > old tool disposal cannot remove a replacement, even if the definition object is reused [0.64ms]
+(pass) identity-bound registration disposers > query disposer is identity-bound even when the handler function is reused
+
+packages/core/src/operations/resolver.test.ts:
+(pass) trusted discovery follows link, MCP, CLI, browser order, then pins the exact account/binding [1.60ms]
+(pass) concurrent resolution shares one discovery and never selects two accounts
+(pass) invalidating an awaited discovery prevents a late binding from resurrecting revoked authority [0.21ms]
+(pass) mismatched accounts fail authentication rather than silently falling through to browser
+(pass) ordinary errors and strategy changes are bounded; declared polling does not exhaust their budget
+
+packages/core/src/profile/store.test.ts:
+(pass) workspace profile store > save then read round-trips and paths derive from CODE_SHELL_HOME [8.14ms]
+(pass) workspace profile store > read returns undefined for a missing profile [0.77ms]
+(pass) workspace profile store > read throws a wrapped error for invalid JSON content [4.48ms]
+(pass) workspace profile store > rejects an oversized profile before parsing it [2.16ms]
+(pass) workspace profile store > read rejects names failing the name regex without touching disk [0.30ms]
+(pass) workspace profile store > list returns valid profiles sorted by name and skips broken ones [14.31ms]
+(pass) workspace profile store > list returns [] when the library directory does not exist [0.31ms]
+(pass) workspace profile store > overwrites atomically without leaving temporary files [6.35ms]
+(pass) workspace profile store > rejects a symlinked profiles root before listing its target [2.06ms]
+(pass) workspace profile store > does not follow a symlinked profile directory [4.16ms]
+(pass) workspace profile store > does not follow a symlinked profile file [5.44ms]
+(pass) workspace profile store > isolates symlink entries while listing valid profiles [10.38ms]
+
+packages/core/src/profile/activation.test.ts:
+(pass) workspace profile activation transaction > expands declared capabilities into an 'on' override snapshot [4.42ms]
+(pass) workspace profile activation transaction > activate writes the whole profile subtree into project settings [27.47ms]
+(pass) workspace profile activation transaction > activation always uses CodeShell's digital-human runtime base [15.37ms]
+(pass) workspace profile activation transaction > switching replaces the subtree wholesale (old capabilities gone) [20.53ms]
+(pass) workspace profile activation transaction > deactivate removes the subtree and never touches user capabilityOverrides [21.44ms]
+(pass) workspace profile activation transaction > activating an unknown profile throws and leaves settings untouched [4.09ms]
+(pass) exclusiveCapabilities > default (union) never turns anything off [4.84ms]
+(pass) exclusiveCapabilities > exclusive turns off installed capabilities it does not declare [3.75ms]
+(pass) exclusiveCapabilities > exclusive without an installed list falls back to union [4.15ms]
+(pass) exclusiveCapabilities > exclusive only touches buckets the profile could claim [4.40ms]
+
+packages/core/src/profile/catalog.test.ts:
+(pass) sourceToRepoKey > derives a stable, path-safe directory name [0.09ms]
+(pass) sourceToRepoKey > rejects anything that is not owner/repo [0.01ms]
+(pass) parseHumansManifest > keeps only entries that name a human
+(pass) parseHumansManifest > tolerates a missing humans array rather than throwing
+(pass) parseHumansManifest > throws on malformed JSON so the caller can report a bad repo [0.26ms]
+(pass) readCatalogFromDir > reads each manifest entry's profile.json and validates it [9.66ms]
+(pass) readCatalogFromDir > reports a broken entry instead of failing the whole repo [9.90ms]
+(pass) readCatalogFromDir > refuses a manifest entry whose name would escape the repo directory [4.38ms]
+(pass) readCatalogFromDir > a repo with no manifest yields an error, not a crash [0.33ms]
+(pass) readCatalogFromDir > rejects linked and oversized files from an untrusted cloned repo [8.19ms]
+(pass) human repo registry > round-trips repos and reads their entries, flagging duplicates [26.16ms]
+(pass) addHumanRepo error messages > a missing repo yields a name hint, not a git command line [1207.47ms]
+(pass) teams in a digital-human repo > reads teams alongside humans [26.52ms]
+(pass) teams in a digital-human repo > drops a team whose members are not all in the repo [15.41ms]
+(pass) teams in a digital-human repo > drops a team with a lead outside its own members [18.31ms]
+(pass) teams in a digital-human repo > a repo with no teams key is fine [11.85ms]
+
+packages/core/src/profile/resolve.test.ts:
+(pass) resolveActiveWorkspaceProfile > resolves the workspace default from project settings [27.10ms]
+(pass) resolveActiveWorkspaceProfile > returns undefined when nothing is active [9.85ms]
+(pass) resolveActiveWorkspaceProfile > sessionProfile (future per-session binding) wins over workspace default [44.06ms]
+(pass) resolveActiveWorkspaceProfile > active name pointing at a deleted library entry degrades to undefined [33.22ms]
+(pass) resolveActiveWorkspaceProfile > workspaceProfilePresetFor returns the snapshot preset [39.25ms]
+
+ 79 pass
+ 0 fail
+ 188 expect() calls
+Ran 79 tests across 8 files. [1.97s]
+Completed Bun shard: 79 tests, 0 skipped; 0 failures.

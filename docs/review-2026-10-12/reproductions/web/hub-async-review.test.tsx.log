@@ -1,0 +1,10 @@
+bun test v1.3.11 (af24e281)
+
+docs/review-2026-10-12/reproductions/web/hub-async-review.test.tsx:
+(pass) confirmed: standalone Hub blocks independent sends for an optional asynchronous question on an idle session [17.09ms]
+
+ 1 pass
+ 0 fail
+ 5 expect() calls
+Ran 1 test across 1 file. [82.00ms]
+Completed Bun shard: 1 tests, 0 skipped; 0 failures.

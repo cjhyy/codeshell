@@ -1,3 +1,4 @@
+import { registerOperationBatchHost } from "./operation-batch-host.js";
 import { createDesktopRemoteServices } from "./desktop-remote-services.js";
 import { createDesktopShutdownHandler } from "./desktop-shutdown.js";
 import { registerProjectPanelIpc } from "./project-panel-ipc.js";
@@ -115,6 +116,7 @@ import {
   discoverRecentClaudeSessions,
   discoverRecentCodexSessions,
   discoverRelatedSessions,
+  listRelatedCodexSessions,
   parseClaudeTranscriptLine,
   parseCodexTranscriptLine,
   probeClaudeCli,
@@ -1438,7 +1440,7 @@ async function createWindow(): Promise<BrowserWindow> {
             "worker-src 'self' blob:; " +
             "style-src 'self' 'unsafe-inline'; " +
             `img-src 'self' data: blob: ${THEME_ASSET_SCHEME}:; ` +
-            `media-src ${MEDIA_PREVIEW_SCHEME}:; ` +
+            `media-src 'self' blob: ${THEME_ASSET_SCHEME}: ${MEDIA_PREVIEW_SCHEME}:; ` +
             "font-src 'self' data:; " +
             "connect-src 'self' ws: wss: http://localhost:* http://127.0.0.1:*; " +
             "object-src 'none'; " +
@@ -1451,7 +1453,7 @@ async function createWindow(): Promise<BrowserWindow> {
             "worker-src 'self'; " +
             "style-src 'self' 'unsafe-inline'; " +
             `img-src 'self' data: ${THEME_ASSET_SCHEME}:; ` +
-            `media-src ${MEDIA_PREVIEW_SCHEME}:; ` +
+            `media-src 'self' blob: ${THEME_ASSET_SCHEME}: ${MEDIA_PREVIEW_SCHEME}:; ` +
             "font-src 'self' data:; " +
             // localhost connect is needed by the browser panel's dev-server
             // probe; without it the prod build can never detect local servers.
@@ -5664,9 +5666,7 @@ ipcMain.handle("ccRoom:listSessions", async (_e, cwd: string, all?: boolean) => 
 ipcMain.handle("ccRoom:listCodexSessions", async (_e, cwd: string, all?: boolean) => {
   cwd = await requireRendererProjectPath(cwd);
   const opts = all ? {} : { limit: DEFAULT_DISCOVER_LIMIT, sinceMs: DEFAULT_DISCOVER_SINCE_MS };
-  const sessions = discoverRelatedSessions("codex", cwd, opts);
-  const total = all ? sessions.length : countRelatedSessions("codex", cwd);
-  return { sessions, total };
+  return listRelatedCodexSessions(cwd, opts);
 });
 ipcMain.handle(
   "ccRoom:openSession",
@@ -6993,6 +6993,15 @@ taskInboxDisposers.push(
   registerTaskInboxIpc(ipcMain, () => [...mainWindows], taskInboxService, taskInboxEnabled),
   sessionCatalogStore.onChanged(() => taskInboxService?.scheduleRefresh()),
 );
+const disposeOperationBatchHost = registerOperationBatchHost({
+  windows: () => [...mainWindows],
+  enabled: taskInboxEnabled,
+  bridge: () => bridge ?? undefined,
+  isSessionRunning: (id) =>
+    taskInboxAutomationSessions.has(id) ||
+    bridge?.isSessionRunning(id) === true ||
+    externalRuntimeService?.isSessionRunning(id) === true,
+});
 const disposeOperationResolutionHost = registerOperationResolutionHost({
   windows: () => [...mainWindows],
   enabled: taskInboxEnabled,
@@ -7168,7 +7177,10 @@ app.on(
   createDesktopShutdownHandler({
     ownsInstance: () => ownsDesktopInstance,
     flushRenderers: () => sessionCatalogIpc.flushRenderers(),
-    disposeOperationResolution: disposeOperationResolutionHost,
+    disposeOperationResolution: async () => {
+      await disposeOperationBatchHost();
+      await disposeOperationResolutionHost();
+    },
     onError: (phase, error) => dlog("main", phase, { error: String(error) }),
     cleanup: async () => {
       cloudEnvironment.dispose();

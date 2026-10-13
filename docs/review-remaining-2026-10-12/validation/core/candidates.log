@@ -1,0 +1,26 @@
+bun test v1.3.11 (af24e281)
+
+../../../../../../private/tmp/codeshell-remaining-core-review/candidates.test.ts:
+(pass) plan normal controls block direct write and permit direct read [5.31ms]
+plan rewrite evidence {"result":{"id":"rewrite","toolName":"Bash","result":"ran","isError":false},"handlerArgs":[{"command":"echo x > result.txt"}]}
+(pass) candidate: pre_tool_use rewrite passes a write into read-only plan handler [2.04ms]
+(pass) MCP policy normal control rejects forbidden target before handler [0.12ms]
+MCP rewrite evidence {"result":{"id":"rewritten","toolName":"MCPTool","result":"ran","isError":false},"target":[{"server":"fixture","tool":"delete_all"}]}
+(pass) candidate: rewritten MCPTool target bypasses disabledTools [2.39ms]
+cross-session cancel evidence {"caller":"session-a","owner":"session-b","result":{"id":"cancel-other","toolName":"AgentCancel","result":"Agent b-child cancelled.","isError":false},"aborts":1}
+(pass) candidate: session A can cancel B's child through production executor/builtin [1.63ms]
+(pass) normal: session B can cancel its own child [1.86ms]
+cold continuation evidence [{"agentId":"Mqv3MnXW","agentType":"reviewer","toolAllowlist":["Read"],"skillAllowlist":[],"mcpAllowlist":[],"sandboxMode":"seatbelt","model":"safe-model"},{"agentId":"Mqv3MnXW","resumeSessionId":"Mqv3MnXW","agentType":"reviewer","toolAllowlist":["Read"],"skillAllowlist":[],"mcpAllowlist":[],"sandboxMode":"seatbelt","model":"safe-model"},{"agentId":"Mqv3MnXW","resumeSessionId":"Mqv3MnXW","agentType":"general-purpose"}]
+(pass) candidate: cold child continuation replaces restricted role with default unrestricted role [1.31ms]
+Anthropic retry evidence {"sends":2,"responseText":"SUCCESS","streamEvents":[{"type":"text_delta","text":"FAILED PREFIX","tokens":4},{"type":"text_delta","text":"SUCCESS","tokens":1}]}
+(pass) candidate: Anthropic SDK fetch streaming retry concatenates failed and successful text without tombstone [1027.74ms]
+(pass) normal: Anthropic successful stream emits only successful text [8.13ms]
+auth refresh evidence {"sameClient":["Bearer token-first","Bearer token-first"],"freshClient":"Bearer token-fresh","processesSpawned":0}
+(pass) candidate: refreshing authCommand cache leaves same SDK client's Authorization frozen [12.16ms]
+review cleanup: 0 socket/fetch network attempts; registries reset; only isolated runner HOME used
+
+ 10 pass
+ 0 fail
+ 33 expect() calls
+Ran 10 tests across 1 file. [2.13s]
+Completed Bun shard: 10 tests, 0 skipped; 0 failures.

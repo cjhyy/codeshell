@@ -1,0 +1,23 @@
+{
+  "formal": 86,
+  "priorities": {
+    "P1": 1,
+    "P2": 52,
+    "P3": 33
+  },
+  "manifestLogs": 706,
+  "independentLogRows": 706,
+  "manifestIndependentMismatches": [],
+  "independentReceiptSha256": "73ad4e09fdb09e15673e0c5e7a585f46d48e7756438c63635f853b7b289be9af",
+  "archiveContainerSha256": "e83019de96329b329694e4780c25c7037b2d4244458a055582a97fdf45d1a84d",
+  "archiveContainerShaMatchesManifest": true,
+  "tarMembersDeclared": 709,
+  "tarMembersReopenedThisAudit": false,
+  "rawLogFilesReopenedThisAudit": 0,
+  "buildRawShaMatches": true,
+  "buildReadableShaMatches": true,
+  "buildSingleSpaceDelta": true,
+  "handoffSha256": "67f276e1eb1fc92f0998b0a36429dec8e82e6dadd4fde11c5436ea5a589df6e8",
+  "newProductFixtureNativeImportsGitModelNetworkExecutions": 0,
+  "newFindings": 0
+}

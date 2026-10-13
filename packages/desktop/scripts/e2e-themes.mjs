@@ -5,6 +5,8 @@
  *   node ../../scripts/run-isolated-node-smoke.mjs scripts/e2e-themes.mjs
  * Add --screenshots <directory> to retain PNGs and a computed-style report.
  * Add --theme-source <directory> to include screenshots of a real source pack.
+ * Add --builtin-packs <comma-separated ids> to limit the audio/artwork theme loop.
+ * Default ids: miku,muse,onodera,misaka; the Maki baseline always runs.
  * Only the native file/folder picker is scripted; review/install/selection use the UI.
  */
 /* global document, getComputedStyle, Image, localStorage, window */
@@ -32,17 +34,32 @@ for (let index = 2; index < process.argv.length; index += 2) {
   const flag = process.argv[index];
   const value = process.argv[index + 1];
   assert(
-    value && ["--screenshots", "--theme-source"].includes(flag) && !options.has(flag),
-    "Expected --screenshots <directory> or --theme-source <directory>",
+    value &&
+      ["--screenshots", "--theme-source", "--builtin-packs"].includes(flag) &&
+      !options.has(flag),
+    "Expected --screenshots <directory>, --theme-source <directory> or --builtin-packs <ids>",
   );
-  options.set(flag, resolve(value));
+  options.set(flag, flag === "--builtin-packs" ? value : resolve(value));
 }
 const screenshotDir = options.get("--screenshots") ?? process.env.CODESHELL_THEME_SCREENSHOT_DIR;
 const sourceDir = options.get("--theme-source") ?? process.env.CODESHELL_THEME_SOURCE_DIR;
+const knownBuiltinPacks = ["miku", "muse", "onodera", "misaka"];
+const builtinPacks = options.has("--builtin-packs")
+  ? options
+      .get("--builtin-packs")
+      .split(",")
+      .map((id) => id.trim())
+  : knownBuiltinPacks;
+assert(
+  builtinPacks.length > 0 &&
+    new Set(builtinPacks).size === builtinPacks.length &&
+    builtinPacks.every((id) => knownBuiltinPacks.includes(id)),
+  `Expected unique --builtin-packs ids from: ${knownBuiltinPacks.join(",")}`,
+);
 const surfaces = ["window", "sidebar", "titlebar", "chat", "composer", "panel"];
 const sessionId = "theme-visual-fixture";
-const sessionTitle = "真姬主题 · 桌面预览";
-const workspace = join(isolated.home, "Scarlet Stage");
+const sessionTitle = "角色主题 · 桌面预览";
+const workspace = join(isolated.home, "Character Theme Preview");
 const report = {};
 let app;
 let win;
@@ -135,7 +152,7 @@ async function seedTranscript() {
       type: "message",
       data: {
         role: "user",
-        content: "帮我做一个西木野真姬的 CodeShell 主题，聊天背景、侧栏和边框都要。",
+        content: "帮我预览角色主题，聊天背景、侧栏、边框、音效和配乐都要。",
         clientMessageId: `${sessionId}-input`,
       },
     },
@@ -145,7 +162,7 @@ async function seedTranscript() {
       data: {
         role: "assistant",
         content:
-          '## Scarlet Stage\n\n已将真姬的绯红色调融入桌面。聊天背景、侧栏、输入框、标题栏和外边框均可由主题包独立配置。\n\n- 浅色：柔和的樱粉与清晰的深色文字\n- 深色：酒红舞台与温暖的高光\n- 装饰层保留输入、拖动与侧栏导航\n\n```ts\nconst theme = "lovelive-maki";\n```',
+          '## Character Theme Preview\n\n当前角色主题已应用到桌面。聊天背景、侧栏、输入框、标题栏和外边框均可由主题包独立配置。\n\n- 浅色与深色模式都保持文字清晰\n- 主题音效可在外观页试听，配乐可在聊天时继续播放\n- 装饰层保留输入、拖动与侧栏导航\n\n```ts\nconst theme = "character-theme";\n```',
       },
     },
   ].map((event, index) => ({
@@ -241,6 +258,77 @@ async function chooseMode(mode) {
     (dark) => document.documentElement.classList.contains("dark") === dark,
     mode === "dark",
   );
+}
+
+async function recordThemeAudio() {
+  await win.evaluate(() => {
+    if (window.__codeshellThemeAudio) return;
+    const NativeAudio = window.Audio;
+    window.__codeshellThemeAudio = [];
+    window.__codeshellThemeAudioPlayed = [];
+    window.Audio = function (...args) {
+      const audio = new NativeAudio(...args);
+      window.__codeshellThemeAudio.push(audio);
+      audio.addEventListener("playing", () =>
+        window.__codeshellThemeAudioPlayed.push({
+          src: audio.currentSrc,
+          duration: audio.duration,
+        }),
+      );
+      return audio;
+    };
+    window.Audio.prototype = NativeAudio.prototype;
+  });
+}
+
+async function assertThemeMusicPlayback(label) {
+  await recordThemeAudio();
+  assert(
+    await win.evaluate(() => window.__codeshellThemeAudio.every((audio) => audio.paused)),
+    `${label} does not autoplay on selection`,
+  );
+  assert(
+    (await win.locator("[data-theme-sound-preview]").count()) === 4,
+    `${label} exposes four sound previews`,
+  );
+  assert(
+    (await win.locator("[data-theme-music-select] option").count()) === 4,
+    `${label} offers an offline original and three official music links`,
+  );
+  const cueSources = [];
+  for (const cue of await win.locator("[data-theme-sound-preview]").all()) {
+    const previous = await win.evaluate(() => window.__codeshellThemeAudioPlayed.length);
+    await cue.click();
+    await win.waitForFunction(
+      (count) => window.__codeshellThemeAudioPlayed.length > count,
+      previous,
+    );
+    const played = await win.evaluate(() => window.__codeshellThemeAudioPlayed.at(-1));
+    assert(
+      ["file:", "cstheme:"].includes(new URL(played.src).protocol) &&
+        played.duration > 0 &&
+        played.duration <= 10,
+      `${label} decodes and plays its local ${await cue.getAttribute("data-theme-sound-preview")} cue`,
+    );
+    cueSources.push(played.src);
+  }
+  assert(new Set(cueSources).size === 4, `${label} plays four distinct notification files`);
+  await win.waitForFunction(() => window.__codeshellThemeAudio.every((audio) => audio.paused));
+  await win.locator("[data-theme-music-play]").click();
+  await win.waitForFunction(() =>
+    window.__codeshellThemeAudio.some((audio) => !audio.paused && audio.currentTime > 0),
+  );
+  await backToChat();
+  await win.locator("[data-theme-music-dock]").waitFor({ state: "visible" });
+  assert(
+    await win.evaluate(() =>
+      window.__codeshellThemeAudio.some((audio) => !audio.paused && audio.currentTime > 0),
+    ),
+    `${label} keeps playing after returning to chat`,
+  );
+  await win.locator("[data-theme-music-dock-stop]").click();
+  await win.waitForFunction(() => window.__codeshellThemeAudio.every((audio) => audio.paused));
+  await appearance();
 }
 
 async function surfaceMetrics() {
@@ -346,6 +434,9 @@ try {
     appDir,
     home: isolated.home,
     userDataDir: isolated.userDataDir,
+    // Bundled skins, background playback and source-pack imports extend
+    // this smoke beyond the harness's default three-minute runtime budget.
+    runtimeTimeoutMs: 300_000,
     // The outer guarded runner owns a different fixture HOME. Keep the Core
     // test-runner fallback attached to this Electron profile as well.
     env: { CODE_SHELL_TEST_HOME: isolated.codeShellHome },
@@ -354,6 +445,7 @@ try {
     processLog = (processLog + chunk).slice(-20_000);
   });
   win = await findCodeShellWindow(app);
+  win.setDefaultTimeout(20_000);
   const errors = captureRendererErrors(win);
   await win.setViewportSize({ width: 1440, height: 960 });
   await dismissTrust();
@@ -378,7 +470,7 @@ try {
   await win.reload();
   await win.getByRole("button", { name: sessionTitle, exact: true }).click();
   await dismissTrust();
-  await win.getByRole("heading", { name: "Scarlet Stage" }).waitFor();
+  await win.getByRole("heading", { name: "Character Theme Preview" }).waitFor();
   await appearance();
   await chooseMode("light");
   await backToChat();
@@ -426,6 +518,25 @@ try {
     await win.locator('[data-panel-action="toggle"]').click();
     await appearance();
   }
+  report.builtinPacks = builtinPacks;
+  for (const id of builtinPacks) {
+    await chooseMode("light");
+    await win.locator(`[data-theme-pack="${id}"] button[aria-pressed]`).click();
+    await assertThemeMusicPlayback(`Bundled ${id}`);
+    for (const mode of ["light", "dark"]) {
+      await chooseMode(mode);
+      await screenshot(`builtin-${id}-appearance-${mode}.png`);
+      await backToChat();
+      const metrics = await surfaceMetrics();
+      report[`builtin-${id}-${mode}`] = metrics;
+      assert(metrics.chat.image.includes("stage-"), `${id} uses its bundled artwork`);
+      assert(metrics.window.frameWidth === "2px", `${id} provides its window frame`);
+      await decodeImages(metrics);
+      await screenshot(`builtin-${id}-chat-${mode}.png`);
+      await appearance();
+    }
+  }
+  await maki.click();
   // A saved builtin selection must survive startup without installed theme data.
   await backToChat();
   await win.reload();
@@ -534,6 +645,9 @@ try {
     await win.locator('[data-theme-pack="visual-surfaces"]').waitFor({ state: "hidden" });
     const manifest = JSON.parse(await readFile(join(sourceDir, ".cs-theme.json"), "utf8"));
     await importPack(resolve(sourceDir), manifest.id);
+    if (manifest.sounds && manifest.music) {
+      await assertThemeMusicPlayback(`Installed ${manifest.id}`);
+    }
     for (const mode of ["light", "dark"]) {
       await chooseMode(mode);
       await screenshot(`example-appearance-${mode}.png`);
@@ -614,7 +728,7 @@ try {
   if (screenshotDir)
     await writeFile(join(screenshotDir, "report.json"), JSON.stringify(report, null, 2));
   console.log(
-    "Theme visual smoke passed: root/wrapped ZIP and folder imports, review cancellation, bundled Maki offline artwork and persistence, legacy wallpaper, six surfaces, modes, reset, narrow layout and transparent pet.",
+    `Theme smoke passed: ZIP/folder review and imports, Maki/${builtinPacks.join("/")} offline artwork, four distinct notification cues, local theme music in settings and chat, installed audio playback, six surfaces, modes, reset, narrow layout and transparent pet.`,
   );
   if (screenshotDir) console.log(`Theme evidence: ${screenshotDir}`);
 } catch (error) {

@@ -1,0 +1,41 @@
+bun test v1.3.11 (af24e281)
+
+packages/desktop/src/renderer/ChatView.ephemeral-lifecycle.test.tsx:
+(pass) ChatView ephemeral async lifecycle > clears the file-drop overlay when a drag leaves from a child element [19.07ms]
+(pass) ChatView ephemeral async lifecycle > clears the file-drop overlay when the window loses focus [3.14ms]
+(pass) ChatView ephemeral async lifecycle > sends a dropped PDF as an exact path-only turn [3.94ms]
+(pass) ChatView ephemeral async lifecycle > does not persist a quick-chat prompt in main composer history [2.48ms]
+(pass) ChatView ephemeral async lifecycle > does not offer /compact when the embedded composer has no compact handler [1.88ms]
+(pass) ChatView ephemeral async lifecycle > stops the recorder, tracks, and timer when quick chat unmounts [2.75ms]
+(pass) ChatView ephemeral async lifecycle > drops a transcription result that resolves after quick chat unmounts [3.76ms]
+(pass) ChatView ephemeral async lifecycle > drops a staged attachment that resolves after quick chat unmounts [3.50ms]
+
+packages/desktop/src/main/quick-chat-startup-cleanup.test.ts:
+(pass) quick-chat startup cleanup ownership > a second desktop instance that cannot acquire the lock leaves the live owner's qchat intact [1.90ms]
+(pass) quick-chat startup cleanup ownership > the owning desktop instance keeps the normal startup cleanup path [4.56ms]
+(pass) quick-chat startup cleanup ownership > a second launch restores, shows, and focuses the existing main window [0.17ms]
+
+packages/desktop/src/main/quick-chat-ownership.test.ts:
+(pass) QuickChatOwnershipRegistry > bounds deleted-session tombstones and evicts the oldest id [5.16ms]
+(pass) QuickChatOwnershipRegistry > a cleanup requester cannot delete a quick chat owned by another window [0.10ms]
+(pass) QuickChatOwnershipRegistry > owned cleanup removes the child state and transcript from disk [3.41ms]
+(pass) QuickChatOwnershipRegistry > releasing a destroyed window deletes all materialized quick-chat sessions [0.14ms]
+(pass) QuickChatOwnershipRegistry > tab cleanup tombstones a deferred fork and settled success deletes exactly once [0.21ms]
+(pass) QuickChatOwnershipRegistry > owner destruction tombstones a deferred fork and late settle deletes exactly once [0.07ms]
+(pass) QuickChatOwnershipRegistry > defers cleanup until staged and mark-sent operations settle, then removes late disk output [1.49ms]
+
+packages/desktop/src/main/quick-chat-fork-router.test.ts:
+(pass) QuickChatForkRouter > isolates two windows whose preload RPC counters both start at id=1 [0.40ms]
+(pass) QuickChatForkRouter > a tombstoned fork is cleaned if the worker exits before replying [0.23ms]
+(pass) QuickChatForkRouter > reports a successful fork so Main can index the new session cwd [0.06ms]
+
+packages/desktop/src/renderer/panels/QuickChatPanel.test.tsx:
+(pass) QuickChatPanel real composer integration > wires the quickChat variant through the real wrapper [10.31ms]
+(pass) QuickChatPanel real composer integration > shows the ordinary real permission labels [1.20ms]
+(pass) QuickChatPanel real composer integration > does not claim source context was inherited when no completed events were copied [0.47ms]
+
+ 24 pass
+ 0 fail
+ 88 expect() calls
+Ran 24 tests across 5 files. [1153.00ms]
+Completed Bun shard: 24 tests, 0 skipped; 0 failures.

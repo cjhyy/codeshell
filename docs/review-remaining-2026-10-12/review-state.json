@@ -1,0 +1,45 @@
+{
+  "baseline": "62a58ac8702835f848108e152234a6bdd6c3eb3f",
+  "branch": "codex/review/remaining-modules-20261012",
+  "scope": "remaining-module substantive review; no product changes; old 86 findings remain frozen",
+  "startedAt": "2026-10-12T03:32:08Z",
+  "panelBaseline": "aabba34ca94f7081fd7de4e20c52443f08f36d5e",
+  "owners": {
+    "core-provider-hooks-agents": "remaining_core_review",
+    "core-run-memory-profile-sources-composition": "core_remaining_lifecycle_review",
+    "coding-tui-chat-link": "remaining_cli_chat_review",
+    "desktop-server-web": "remaining_hosts_review",
+    "pet-optimization-arena-cdp-packaging-video-download-shared": "root",
+    "video-studio": "panel_video_correctness_review",
+    "quant-job-evidence-audit": "panel_quant_job_correctness_review",
+    "design-studio": "remaining_cli_chat_review"
+  },
+  "state": "review_completed",
+  "completedAt": "2026-10-12T04:29:11.857930+00:00",
+  "findingCounts": {
+    "total": 33,
+    "P1": 1,
+    "P2": 26,
+    "P3": 6
+  },
+  "productCodeChanges": 0,
+  "oldReview": {
+    "findings": 86,
+    "P1": 1,
+    "P2": 52,
+    "P3": 33,
+    "frozen": true,
+    "notFullyRevalidatedOnThisBaseline": true
+  },
+  "deliveryValidation": "validation/delivery-check.json",
+  "evidenceIndex": "validation/evidence-index.json",
+  "observedPrimaryCodeShellHeadAtDelivery": "3b3e7ba1073dd2e2e6e8a3b42ab76ba2b8d50720",
+  "subsequentMainCommitsNotReviewed": true,
+  "unverified": [
+    "six Video Studio native picture render timeouts",
+    "real paid models/accounts/external messaging",
+    "full OS/device/deployment lifecycle",
+    "command/permission dynamic directions stopped after platform content checks"
+  ],
+  "automation": "previous overnight heartbeat remains paused; not resumed for this follow-up request"
+}

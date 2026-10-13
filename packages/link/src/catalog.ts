@@ -137,6 +137,9 @@ export const LINK_PROVIDER_MANIFESTS: LinkProviderManifest[] = [
       "get_issue",
       "list_pull_requests",
       "get_pull_request",
+      "list_pull_request_files",
+      "list_pull_request_commits",
+      "get_commit",
       "create_issue",
       "update_issue",
     ],
@@ -321,7 +324,10 @@ export const LINK_PROVIDER_MANIFESTS: LinkProviderManifest[] = [
     id: "slack",
     displayName: "Slack",
     category: "communication",
-    description: text("列出频道并读取最近消息。", "List channels and read recent messages."),
+    description: text(
+      "列出频道、读取精确消息及分页线程。",
+      "List channels, read exact messages and paged threads.",
+    ),
     brandText: "S",
     icon: "conversation",
     accent: "fuchsia",
@@ -372,6 +378,10 @@ export const LINK_PROVIDER_MANIFESTS: LinkProviderManifest[] = [
               "Install the app, then invite it to channels whose history it should read.",
             ),
             text(
+              "公开或私有频道的完整线程读取可能需要 User OAuth Token（xoxp-）与相应 history 权限；Bot Token 不一定能读取频道线程。",
+              "Public/private channel threads may require a User OAuth Token (xoxp-) with the corresponding history scope; bot tokens may not read those threads.",
+            ),
+            text(
               "复制 Bot User OAuth Token（xoxb-）并回到这里验证。",
               "Copy the Bot User OAuth Token (xoxb-) and verify it here.",
             ),
@@ -380,7 +390,7 @@ export const LINK_PROVIDER_MANIFESTS: LinkProviderManifest[] = [
       ),
       managedOAuth("Slack"),
     ],
-    actionIds: ["list_channels", "get_channel_history"],
+    actionIds: ["list_channels", "get_channel_history", "get_message", "get_thread"],
   },
   {
     id: "notion",

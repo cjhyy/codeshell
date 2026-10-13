@@ -1,0 +1,27 @@
+bun test v1.3.11 (af24e281)
+
+docs/review-2026-10-12/reproductions/workspace-quality-round11/panel-registry-recovery.test.ts:
+(pass) CONTROL healthy tracked projects expose current project's bound Panel [97.19ms]
+{"case":"one unrelated missing root","visible":false,"discovered":0,"failure":"Error: project path must be an existing absolute directory"}
+(pass) CONFIRMED one unrelated missing tracked project removes every healthy project's Panels [112.14ms]
+123 |   if (failure) {
+124 |     if (missing) mkdirSync(paths.at(-1)!);
+125 |     else { projects.pop(); paths.pop(); }
+126 |     notify();
+127 |     for (let i = 0; i < 40; i++) await new Promise((resolve) => setTimeout(resolve, 1));
+128 |     expect(getEnabledPanelEntries({ projectPath: current, cwd: current, engineSessionId: null }).some((entry) => entry.key === descriptor.id)).toBe(true);
+                                                                                                                                                     ^
+error: expect(received).toBe(expected)
+
+Expected: true
+Received: false
+
+      at runCase (/Users/admin/.codex/worktrees/server-desktop-review-20261012/codeshell/docs/review-2026-10-12/reproductions/workspace-quality-round11/panel-registry-recovery.test.ts:128:144)
+      at async <anonymous> (/Users/admin/.codex/worktrees/server-desktop-review-20261012/codeshell/docs/review-2026-10-12/reproductions/workspace-quality-round11/panel-registry-recovery.test.ts:145:24)
+(fail) CONFIRMED 65 supported tracked projects also remove all Panels before discovery [132.79ms]
+
+ 2 pass
+ 1 fail
+ 16 expect() calls
+Ran 3 tests across 1 file. [1.68s]
+Bun test process failed (1)

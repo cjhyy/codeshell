@@ -1,0 +1,26 @@
+bun test v1.3.11 (af24e281)
+
+packages/desktop/src/main/panel-project-binding.test.ts:
+(pass) native context takes all stable identity fields only from the Host and survives Session rebinding [2.46ms]
+(pass) without context.workspace the resolver is never called and identity is never exposed [0.44ms]
+(pass) older asynchronous binds cannot replace a newer Session, bucket or identity [0.42ms]
+(pass) guest revocation cancels a pending bind without waiting for its resolver [0.36ms]
+(pass) owner and authorization are rechecked after scope resolution [7.19ms]
+(pass) changed identity or revoked mount permanently rejects bind, context.get and Host calls [2.05ms]
+(pass) frozen authority guard runs on context.get, every Host call and repeated bind [0.74ms]
+(pass) actual Main call rechecks the frozen scope and guest before returning an awaited result [1.60ms]
+(pass) actual Main bridge rejects session-sensitive IPC after precheck and rebind before guest event delivery [1.25ms]
+(pass) first real session is frozen and losing it permanently revokes sensitive actions [0.59ms]
+(pass) automation lookup await cannot authorize a mutation after Main rebinds the guest [2.18ms]
+(pass) external runtime context await rechecks the session before ensure or send [0.56ms]
+(pass) real production automation Host rechecks native session after durable authority lookup [1.42ms]
+(pass) queued/staged workspace writes never commit into a replaced root or parent [18.43ms]
+(pass) guarded workspace writes retain ordinary create and replace behavior [151.63ms]
+(pass) legacy storage writes use the real before-commit authorization hook [10.89ms]
+(pass) real final storage prepare cannot publish after guest or registry revocation [81.58ms]
+
+ 17 pass
+ 0 fail
+ 87 expect() calls
+Ran 17 tests across 1 file. [1121.00ms]
+Completed Bun shard: 17 tests, 0 skipped; 0 failures.

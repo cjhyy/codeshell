@@ -1,0 +1,10 @@
+bun test v1.3.11 (af24e281)
+
+packages/server/src/panels/project-scope-http.test.ts:
+(pass) real Web runtime discloses only authorized scope and revalidates the frozen mount [815.35ms]
+
+ 1 pass
+ 0 fail
+ 1 expect() calls
+Ran 1 test across 1 file. [876.00ms]
+Completed Bun shard: 1 tests, 0 skipped; 0 failures.

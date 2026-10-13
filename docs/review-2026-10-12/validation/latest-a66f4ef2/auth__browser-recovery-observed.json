@@ -1,0 +1,32 @@
+[
+  {
+    "test": "paired focus reconnect",
+    "retainedCredentials": true,
+    "generationFence": true,
+    "lateFrameIgnored": true,
+    "logoutStopsReconnect": true
+  },
+  {
+    "test": "hub protocol close",
+    "authCloseStopsRetry": true,
+    "transportCloseRetries": true
+  },
+  {
+    "test": "desktop handshake retry UI",
+    "errorVisible": true,
+    "retryWorks": true,
+    "noQrRequired": true
+  },
+  {
+    "test": "desktop cookie expiry UI",
+    "handshakeRetried": true,
+    "draftRetained": true,
+    "wsRePairNotNeeded": true
+  },
+  {
+    "test": "hub auth UI",
+    "revokeGuidance": true,
+    "newSharedCookieFocusRecovery": true,
+    "temporaryFailurePreservesActiveView": true
+  }
+]

@@ -1,0 +1,24 @@
+bun test v1.3.11 (af24e281)
+
+../../../../../../private/tmp/codeshell-review-20261012-connection-recovery-round15/outbound-recovery.test.ts:
+113 |       for (let index = 0; index < 16; index++) host.broadcast(frame());
+114 |       await delay(5);
+115 |     }
+116 |     await until(() => healthy.messages.filter((message: any) => message.type === "session.stream").length === seq, "healthy broadcast consumption");
+117 |     const afterBroadcast = slow.serverSocket.bufferedAmount;
+118 |     expect(afterBroadcast).toBeGreaterThan(4 * 1024 * 1024);
+                                 ^
+error: expect(received).toBeGreaterThan(expected)
+
+Expected: > 4194304
+Received: 0
+
+      at <anonymous> (/private/tmp/codeshell-review-20261012-connection-recovery-round15/outbound-recovery.test.ts:118:28)
+(fail) actual authenticated paused reader retains broadcasts/device replies; viewer cap/revocation/reconnect are normal controls [141.37ms]
+(pass) normal Hub outbound uses its own cap, releases only the lagging peer and does not send to a retired peer
+
+ 1 pass
+ 1 fail
+ 19 expect() calls
+Ran 2 tests across 1 file. [422.00ms]
+Bun test process failed (1)

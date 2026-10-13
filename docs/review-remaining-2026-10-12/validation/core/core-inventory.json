@@ -1,0 +1,809 @@
+{
+  "commit": "62a58ac8702835f848108e152234a6bdd6c3eb3f",
+  "modules": [
+    {
+      "module": "agent",
+      "productionCount": 2,
+      "testCount": 4,
+      "productionFiles": [
+        "agent/agent-definition-registry.ts",
+        "agent/agent-definition.ts"
+      ]
+    },
+    {
+      "module": "automation",
+      "productionCount": 8,
+      "testCount": 29,
+      "productionFiles": [
+        "automation/cron-expr.ts",
+        "automation/desktop-authority-client.ts",
+        "automation/index.ts",
+        "automation/runner.ts",
+        "automation/scheduler.ts",
+        "automation/store.ts",
+        "automation/write-policy.ts",
+        "automation/write-run.ts"
+      ]
+    },
+    {
+      "module": "capabilities",
+      "productionCount": 1,
+      "testCount": 0,
+      "productionFiles": [
+        "capabilities/index.ts"
+      ]
+    },
+    {
+      "module": "capability-control",
+      "productionCount": 6,
+      "testCount": 5,
+      "productionFiles": [
+        "capability-control/disabled-lists.ts",
+        "capability-control/index.ts",
+        "capability-control/overlay.ts",
+        "capability-control/project.ts",
+        "capability-control/service.ts",
+        "capability-control/types.ts"
+      ]
+    },
+    {
+      "module": "cli",
+      "productionCount": 4,
+      "testCount": 3,
+      "productionFiles": [
+        "cli/agent-server-stdio.ts",
+        "cli/agent-server-tcp.ts",
+        "cli/graceful-shutdown.ts",
+        "cli/stdio-session-config.ts"
+      ]
+    },
+    {
+      "module": "composition",
+      "productionCount": 10,
+      "testCount": 5,
+      "productionFiles": [
+        "composition/activation.ts",
+        "composition/compiler.ts",
+        "composition/core-module.ts",
+        "composition/freeze.ts",
+        "composition/index.ts",
+        "composition/lifetime.ts",
+        "composition/protocol-attach.ts",
+        "composition/resolve-preset.ts",
+        "composition/snapshot.ts",
+        "composition/types.ts"
+      ]
+    },
+    {
+      "module": "context",
+      "productionCount": 7,
+      "testCount": 17,
+      "productionFiles": [
+        "context/compaction.ts",
+        "context/image-history-window.ts",
+        "context/manager.ts",
+        "context/notes.ts",
+        "context/token-counter.ts",
+        "context/tool-output-budget.ts",
+        "context/tool-result-storage.ts"
+      ]
+    },
+    {
+      "module": "cost-ledger",
+      "productionCount": 6,
+      "testCount": 1,
+      "productionFiles": [
+        "cost-ledger/context.ts",
+        "cost-ledger/index.ts",
+        "cost-ledger/pricing.ts",
+        "cost-ledger/store.ts",
+        "cost-ledger/summary.ts",
+        "cost-ledger/types.ts"
+      ]
+    },
+    {
+      "module": "credentials",
+      "productionCount": 12,
+      "testCount": 13,
+      "productionFiles": [
+        "credentials/access.ts",
+        "credentials/change-subscription.ts",
+        "credentials/cipher.ts",
+        "credentials/cookie-jar.ts",
+        "credentials/index.ts",
+        "credentials/inject-credential-tool.ts",
+        "credentials/oauth.ts",
+        "credentials/remote-link-retirement.ts",
+        "credentials/store.ts",
+        "credentials/types.ts",
+        "credentials/use-credential-tool.ts",
+        "credentials/use-gate.ts"
+      ]
+    },
+    {
+      "module": "data",
+      "productionCount": 4,
+      "testCount": 2,
+      "productionFiles": [
+        "data/model-metadata.ts",
+        "data/openrouter-models.ts",
+        "data/openrouter-sync.ts",
+        "data/static-catalogs.ts"
+      ]
+    },
+    {
+      "module": "engine",
+      "productionCount": 51,
+      "testCount": 112,
+      "productionFiles": [
+        "engine/aux-key.ts",
+        "engine/auxiliary-pipeline.ts",
+        "engine/cost-store.ts",
+        "engine/disk-defaults.ts",
+        "engine/dynamic-tool-defs.ts",
+        "engine/engine-instruction-context.ts",
+        "engine/engine-workspace-authority.ts",
+        "engine/engine.ts",
+        "engine/file-history-hook.ts",
+        "engine/friendly-error.ts",
+        "engine/goal-judge-context.ts",
+        "engine/image-compression.ts",
+        "engine/image-policy.ts",
+        "engine/initial-tools-preset.fixture.ts",
+        "engine/injected-context-cache.ts",
+        "engine/input-attachments.ts",
+        "engine/model-connections-pool.ts",
+        "engine/model-facade.ts",
+        "engine/parse-task.ts",
+        "engine/patch-orphaned-tools.ts",
+        "engine/permission-controller.ts",
+        "engine/prompt-cache-diagnostics.ts",
+        "engine/query.ts",
+        "engine/reactive-threshold.ts",
+        "engine/resolve-llm-config.ts",
+        "engine/run-accounting.ts",
+        "engine/run-context.ts",
+        "engine/run-environment.ts",
+        "engine/run-finalize.ts",
+        "engine/run-goal.ts",
+        "engine/run-image-input.ts",
+        "engine/run-output-user-message.ts",
+        "engine/run-session-open.ts",
+        "engine/run-setup.ts",
+        "engine/run-state-persistence.ts",
+        "engine/run-stream.ts",
+        "engine/run-tooling.ts",
+        "engine/run-types.ts",
+        "engine/run-workspace.ts",
+        "engine/runtime.ts",
+        "engine/sandbox-cache-key.ts",
+        "engine/sandbox-config.ts",
+        "engine/session-title.ts",
+        "engine/steer-queue.ts",
+        "engine/streaming-tool-queue.ts",
+        "engine/subagent-spawner.ts",
+        "engine/token-budget.ts",
+        "engine/tool-summary.ts",
+        "engine/turn-loop.ts",
+        "engine/turn-state.ts",
+        "engine/types.ts"
+      ]
+    },
+    {
+      "module": "goal",
+      "productionCount": 1,
+      "testCount": 1,
+      "productionFiles": [
+        "goal/lifecycle.ts"
+      ]
+    },
+    {
+      "module": "hooks",
+      "productionCount": 7,
+      "testCount": 4,
+      "productionFiles": [
+        "hooks/configured-tool-hooks.ts",
+        "hooks/events.ts",
+        "hooks/goal-stop-hook.ts",
+        "hooks/hook-output.ts",
+        "hooks/inject.ts",
+        "hooks/registry.ts",
+        "hooks/shell-runner.ts"
+      ]
+    },
+    {
+      "module": "links",
+      "productionCount": 26,
+      "testCount": 13,
+      "productionFiles": [
+        "links/authority.ts",
+        "links/cli.ts",
+        "links/github-issue-state.ts",
+        "links/github-star.ts",
+        "links/http.ts",
+        "links/index.ts",
+        "links/link-action-tool.ts",
+        "links/local-oauth.ts",
+        "links/operation-hook-credentials.ts",
+        "links/operation-hook-custody.ts",
+        "links/operation-hook-host.ts",
+        "links/operation-hook-plans.ts",
+        "links/operation-hooks.ts",
+        "links/operation-reader.ts",
+        "links/operation-reconcile.ts",
+        "links/operation-recovery.ts",
+        "links/operation-review.ts",
+        "links/providers.ts",
+        "links/remote-adapters.ts",
+        "links/remote.ts",
+        "links/request-once.ts",
+        "links/status.ts",
+        "links/types.ts",
+        "links/verified-issue-state.ts",
+        "links/verified-star.ts",
+        "links/verified-write.ts"
+      ]
+    },
+    {
+      "module": "llm",
+      "productionCount": 25,
+      "testCount": 32,
+      "productionFiles": [
+        "llm/api-key-sanitize.ts",
+        "llm/capabilities/index.ts",
+        "llm/capabilities/param-specs.ts",
+        "llm/capabilities/reasoning-control.ts",
+        "llm/capabilities/rules.ts",
+        "llm/capabilities/types.ts",
+        "llm/clamp-max-tokens.ts",
+        "llm/client-base.ts",
+        "llm/client-factory.ts",
+        "llm/model-cache.ts",
+        "llm/model-fetcher.ts",
+        "llm/model-pool.ts",
+        "llm/prompt-cache.ts",
+        "llm/provider-auth.ts",
+        "llm/provider-catalog.ts",
+        "llm/provider-kinds.ts",
+        "llm/providers/anthropic.ts",
+        "llm/providers/openai.ts",
+        "llm/reasoning-setting.ts",
+        "llm/retry.ts",
+        "llm/stop-reason.ts",
+        "llm/stream-watchdog.ts",
+        "llm/strip-vision.ts",
+        "llm/token-counter.ts",
+        "llm/types.ts"
+      ]
+    },
+    {
+      "module": "logging",
+      "productionCount": 3,
+      "testCount": 2,
+      "productionFiles": [
+        "logging/logger.ts",
+        "logging/sanitize-messages.ts",
+        "logging/session-recorder.ts"
+      ]
+    },
+    {
+      "module": "model-catalog",
+      "productionCount": 8,
+      "testCount": 9,
+      "productionFiles": [
+        "model-catalog/builtin.ts",
+        "model-catalog/gen-connections.ts",
+        "model-catalog/index.ts",
+        "model-catalog/params.ts",
+        "model-catalog/resolve.ts",
+        "model-catalog/save-entry.ts",
+        "model-catalog/types.ts",
+        "model-catalog/upsert.ts"
+      ]
+    },
+    {
+      "module": "model-request-boundary",
+      "productionCount": 7,
+      "testCount": 5,
+      "productionFiles": [
+        "model-request-boundary/access.ts",
+        "model-request-boundary/canonical.ts",
+        "model-request-boundary/context.ts",
+        "model-request-boundary/custody.ts",
+        "model-request-boundary/durability.ts",
+        "model-request-boundary/session-owner.ts",
+        "model-request-boundary/types.ts"
+      ]
+    },
+    {
+      "module": "operations",
+      "productionCount": 9,
+      "testCount": 6,
+      "productionFiles": [
+        "operations/archive.ts",
+        "operations/controller.ts",
+        "operations/files.ts",
+        "operations/ledger.ts",
+        "operations/recovery.ts",
+        "operations/resolver.ts",
+        "operations/review-store.ts",
+        "operations/schema.ts",
+        "operations/session-owner.ts"
+      ]
+    },
+    {
+      "module": "panel-apps",
+      "productionCount": 17,
+      "testCount": 11,
+      "productionFiles": [
+        "panel-apps/bindings.ts",
+        "panel-apps/discovery.ts",
+        "panel-apps/github-archive.ts",
+        "panel-apps/github-manifest.ts",
+        "panel-apps/github-ref.ts",
+        "panel-apps/github-request.ts",
+        "panel-apps/index.ts",
+        "panel-apps/installer.ts",
+        "panel-apps/legacy-packages.ts",
+        "panel-apps/manifest.ts",
+        "panel-apps/package-content.ts",
+        "panel-apps/paths.ts",
+        "panel-apps/project-packages.ts",
+        "panel-apps/registry.ts",
+        "panel-apps/runtime.ts",
+        "panel-apps/source.ts",
+        "panel-apps/update-check.ts"
+      ]
+    },
+    {
+      "module": "plugins",
+      "productionCount": 46,
+      "testCount": 46,
+      "productionFiles": [
+        "plugins/gitOps.ts",
+        "plugins/installedPluginSnapshot.ts",
+        "plugins/installedPlugins.ts",
+        "plugins/installer/checkUpdate.ts",
+        "plugins/installer/codex/convertAgents.ts",
+        "plugins/installer/codex/convertCommands.ts",
+        "plugins/installer/codex/convertHooks.ts",
+        "plugins/installer/codex/convertMcp.ts",
+        "plugins/installer/codex/convertSkills.ts",
+        "plugins/installer/detectFormat.ts",
+        "plugins/installer/install.ts",
+        "plugins/installer/installFromArchive.ts",
+        "plugins/installer/installFromNpm.ts",
+        "plugins/installer/installFromSource.ts",
+        "plugins/installer/list.ts",
+        "plugins/installer/loadPluginAgents.ts",
+        "plugins/installer/loadPluginMcp.ts",
+        "plugins/installer/normalizeManifest.ts",
+        "plugins/installer/npmTar.ts",
+        "plugins/installer/parseSource.ts",
+        "plugins/installer/paths.ts",
+        "plugins/installer/preview.ts",
+        "plugins/installer/projectPluginSource.ts",
+        "plugins/installer/pruneDisabled.ts",
+        "plugins/installer/sourcePath.ts",
+        "plugins/installer/types.ts",
+        "plugins/installer/uninstall.ts",
+        "plugins/installer/unzip.ts",
+        "plugins/installer/update.ts",
+        "plugins/knownMarketplaces.ts",
+        "plugins/loadPluginHooks.ts",
+        "plugins/marketplaceManager.ts",
+        "plugins/parseMarketplaceInput.ts",
+        "plugins/pluginAutomationTemplates.ts",
+        "plugins/pluginCatalog.ts",
+        "plugins/pluginCommandHook.ts",
+        "plugins/pluginCommandsLoader.ts",
+        "plugins/pluginContent.ts",
+        "plugins/pluginHookApproval.ts",
+        "plugins/pluginHookIntegrity.ts",
+        "plugins/pluginInstaller.ts",
+        "plugins/pluginMcpApproval.ts",
+        "plugins/pluginMcpIntegrity.ts",
+        "plugins/schemas.ts",
+        "plugins/types.ts",
+        "plugins/varRewrite.ts"
+      ]
+    },
+    {
+      "module": "preset",
+      "productionCount": 2,
+      "testCount": 6,
+      "productionFiles": [
+        "preset/index.ts",
+        "preset/task-tool-routing.ts"
+      ]
+    },
+    {
+      "module": "product",
+      "productionCount": 3,
+      "testCount": 0,
+      "productionFiles": [
+        "product/define.ts",
+        "product/index.ts",
+        "product/types.ts"
+      ]
+    },
+    {
+      "module": "profile",
+      "productionCount": 13,
+      "testCount": 8,
+      "productionFiles": [
+        "profile/activation.ts",
+        "profile/catalog-store.ts",
+        "profile/catalog.ts",
+        "profile/index.ts",
+        "profile/plugin-export-files.ts",
+        "profile/plugin-export-sources.ts",
+        "profile/plugin-export-types.ts",
+        "profile/plugin-export.ts",
+        "profile/requirements.ts",
+        "profile/resolve.ts",
+        "profile/store.ts",
+        "profile/switch-plan.ts",
+        "profile/types.ts"
+      ]
+    },
+    {
+      "module": "prompt",
+      "productionCount": 5,
+      "testCount": 9,
+      "productionFiles": [
+        "prompt/composer.ts",
+        "prompt/instruction-scanner.ts",
+        "prompt/section-cache.ts",
+        "prompt/section-loader.ts",
+        "prompt/sections/md.d.ts"
+      ]
+    },
+    {
+      "module": "protocol",
+      "productionCount": 19,
+      "testCount": 61,
+      "productionFiles": [
+        "protocol/async-user-answer.ts",
+        "protocol/background-result-wakeup.ts",
+        "protocol/background-work-rpc.ts",
+        "protocol/chat-session-manager.ts",
+        "protocol/chat-session.ts",
+        "protocol/client.ts",
+        "protocol/factories.ts",
+        "protocol/helpers.ts",
+        "protocol/index.ts",
+        "protocol/mobile-remote-types.ts",
+        "protocol/redact.ts",
+        "protocol/server-run-controls.ts",
+        "protocol/server.ts",
+        "protocol/session-message-result.ts",
+        "protocol/session-message-workspace.ts",
+        "protocol/session-workspace-rpc.ts",
+        "protocol/tcp-transport.ts",
+        "protocol/transport.ts",
+        "protocol/types.ts"
+      ]
+    },
+    {
+      "module": "remote",
+      "productionCount": 1,
+      "testCount": 1,
+      "productionFiles": [
+        "remote/bridge.ts"
+      ]
+    },
+    {
+      "module": "run",
+      "productionCount": 16,
+      "testCount": 15,
+      "productionFiles": [
+        "run/ArtifactTracker.ts",
+        "run/CheckpointWriter.ts",
+        "run/EngineRunner.ts",
+        "run/Evaluator.ts",
+        "run/FileRunStore.ts",
+        "run/Heartbeat.ts",
+        "run/RunApprovalBackend.ts",
+        "run/RunLock.ts",
+        "run/RunManager.ts",
+        "run/RunQueue.ts",
+        "run/RunStore.ts",
+        "run/factory.ts",
+        "run/ids.ts",
+        "run/index.ts",
+        "run/redirect-target.ts",
+        "run/types.ts"
+      ]
+    },
+    {
+      "module": "runtime",
+      "productionCount": 12,
+      "testCount": 12,
+      "productionFiles": [
+        "runtime/background-shell.ts",
+        "runtime/constrained-process/docker.ts",
+        "runtime/constrained-process/layout.ts",
+        "runtime/constrained-process/resources.ts",
+        "runtime/constrained-process/types.ts",
+        "runtime/managed-runtime.ts",
+        "runtime/output-clean.ts",
+        "runtime/ring-file.ts",
+        "runtime/safe-spawn.ts",
+        "runtime/spawn-common.ts",
+        "runtime/truncate-output.ts",
+        "runtime/utf8-cut.ts"
+      ]
+    },
+    {
+      "module": "services",
+      "productionCount": 12,
+      "testCount": 16,
+      "productionFiles": [
+        "services/analytics.ts",
+        "services/auto-dream.ts",
+        "services/browser-open.ts",
+        "services/diagnostics.ts",
+        "services/dream-consolidation.ts",
+        "services/extract-memories.ts",
+        "services/global-dream-promotion.ts",
+        "services/index.ts",
+        "services/memory-orchestrator.ts",
+        "services/oauth.ts",
+        "services/session-memory-sort.ts",
+        "services/session-memory.ts"
+      ]
+    },
+    {
+      "module": "session",
+      "productionCount": 11,
+      "testCount": 33,
+      "productionFiles": [
+        "session/file-history.ts",
+        "session/memory.ts",
+        "session/output-coverage-state.ts",
+        "session/output-journal.ts",
+        "session/profile-references.ts",
+        "session/session-manager.ts",
+        "session/session-message.ts",
+        "session/simple-diff.ts",
+        "session/transcript.ts",
+        "session/undo-target.ts",
+        "session/usage.ts"
+      ]
+    },
+    {
+      "module": "settings",
+      "productionCount": 8,
+      "testCount": 17,
+      "productionFiles": [
+        "settings/feature-flags.ts",
+        "settings/hook-provenance.ts",
+        "settings/manager.ts",
+        "settings/migrate-config.ts",
+        "settings/personalization.ts",
+        "settings/recovery.ts",
+        "settings/schema-export.ts",
+        "settings/schema.ts"
+      ]
+    },
+    {
+      "module": "skills",
+      "productionCount": 8,
+      "testCount": 5,
+      "productionFiles": [
+        "skills/frontmatter.ts",
+        "skills/github.ts",
+        "skills/index.ts",
+        "skills/instruction-bindings.ts",
+        "skills/isolated-instruction-run.ts",
+        "skills/management.ts",
+        "skills/scanner.ts",
+        "skills/snapshot.ts"
+      ]
+    },
+    {
+      "module": "sources",
+      "productionCount": 24,
+      "testCount": 18,
+      "productionFiles": [
+        "sources/adapter.ts",
+        "sources/adapters/collection.ts",
+        "sources/adapters/link.ts",
+        "sources/adapters/local-files.ts",
+        "sources/adapters/mcp-resource.ts",
+        "sources/adapters/mock.ts",
+        "sources/binding.ts",
+        "sources/catalog.ts",
+        "sources/collection-local.ts",
+        "sources/collection-url.ts",
+        "sources/collection.ts",
+        "sources/context-summary.ts",
+        "sources/credential-status.ts",
+        "sources/documents/index-store.ts",
+        "sources/documents/parse.ts",
+        "sources/documents/parser-entry.ts",
+        "sources/documents/runtime.ts",
+        "sources/documents/types.ts",
+        "sources/documents/worker.ts",
+        "sources/index.ts",
+        "sources/link-view.ts",
+        "sources/resolve.ts",
+        "sources/truncate-utf8.ts",
+        "sources/types.ts"
+      ]
+    },
+    {
+      "module": "speech",
+      "productionCount": 1,
+      "testCount": 1,
+      "productionFiles": [
+        "speech/resolve-speech.ts"
+      ]
+    },
+    {
+      "module": "stt",
+      "productionCount": 2,
+      "testCount": 2,
+      "productionFiles": [
+        "stt/resolve-transcribe.ts",
+        "stt/transcribe.ts"
+      ]
+    },
+    {
+      "module": "testing",
+      "productionCount": 1,
+      "testCount": 0,
+      "productionFiles": [
+        "testing/fetch-stub.ts"
+      ]
+    },
+    {
+      "module": "themes",
+      "productionCount": 5,
+      "testCount": 1,
+      "productionFiles": [
+        "themes/image.ts",
+        "themes/index.ts",
+        "themes/installer.ts",
+        "themes/manifest.ts",
+        "themes/paths.ts"
+      ]
+    },
+    {
+      "module": "tool-system",
+      "productionCount": 92,
+      "testCount": 132,
+      "productionFiles": [
+        "tool-system/bound-tool-result.ts",
+        "tool-system/browser-bridge.ts",
+        "tool-system/browser-discovery.ts",
+        "tool-system/builtin/add-marketplace.ts",
+        "tool-system/builtin/agent-heartbeat.ts",
+        "tool-system/builtin/agent-notifications.ts",
+        "tool-system/builtin/agent-output-file.ts",
+        "tool-system/builtin/agent-progress.ts",
+        "tool-system/builtin/agent-registry.ts",
+        "tool-system/builtin/agent-transcript-translator.ts",
+        "tool-system/builtin/agent.ts",
+        "tool-system/builtin/ask-user.ts",
+        "tool-system/builtin/background-jobs.ts",
+        "tool-system/builtin/background-shell-tools.ts",
+        "tool-system/builtin/background-work.ts",
+        "tool-system/builtin/bash-output-style.ts",
+        "tool-system/builtin/bash.ts",
+        "tool-system/builtin/browser-inspect.ts",
+        "tool-system/builtin/browser-tools.ts",
+        "tool-system/builtin/cancel-goal.ts",
+        "tool-system/builtin/complete-goal.ts",
+        "tool-system/builtin/config.ts",
+        "tool-system/builtin/configure-model-connection.ts",
+        "tool-system/builtin/context-notes.ts",
+        "tool-system/builtin/cron-list.definition.ts",
+        "tool-system/builtin/cron.ts",
+        "tool-system/builtin/edit-model-catalog.ts",
+        "tool-system/builtin/edit.ts",
+        "tool-system/builtin/eol.ts",
+        "tool-system/builtin/file-cache.ts",
+        "tool-system/builtin/generate-image.ts",
+        "tool-system/builtin/generate-video.ts",
+        "tool-system/builtin/glob.ts",
+        "tool-system/builtin/grep.ts",
+        "tool-system/builtin/image-providers.ts",
+        "tool-system/builtin/image-uploader.ts",
+        "tool-system/builtin/index.ts",
+        "tool-system/builtin/install-capability.ts",
+        "tool-system/builtin/mcp-tools.ts",
+        "tool-system/builtin/memory.ts",
+        "tool-system/builtin/panel.ts",
+        "tool-system/builtin/plan.ts",
+        "tool-system/builtin/powershell.ts",
+        "tool-system/builtin/read.ts",
+        "tool-system/builtin/repl.ts",
+        "tool-system/builtin/send-message-to-session.ts",
+        "tool-system/builtin/settings-changed.ts",
+        "tool-system/builtin/skill-prompt.ts",
+        "tool-system/builtin/skill.ts",
+        "tool-system/builtin/sleep.definition.ts",
+        "tool-system/builtin/sleep.ts",
+        "tool-system/builtin/sources.ts",
+        "tool-system/builtin/task.ts",
+        "tool-system/builtin/tool-search.ts",
+        "tool-system/builtin/update-automation-memory.ts",
+        "tool-system/builtin/video-providers.ts",
+        "tool-system/builtin/view-image.ts",
+        "tool-system/builtin/web-fetch.ts",
+        "tool-system/builtin/web-search.ts",
+        "tool-system/builtin/write.ts",
+        "tool-system/capability-module.ts",
+        "tool-system/context.ts",
+        "tool-system/executor.ts",
+        "tool-system/external-tool-exposure.ts",
+        "tool-system/investigation-guard.ts",
+        "tool-system/mcp-compat.ts",
+        "tool-system/mcp-connection-config.ts",
+        "tool-system/mcp-connection-policy.ts",
+        "tool-system/mcp-health.ts",
+        "tool-system/mcp-manager.ts",
+        "tool-system/mcp-stdio-diagnostics.ts",
+        "tool-system/mcp-stdio-transport.ts",
+        "tool-system/mcp-tool-policy.ts",
+        "tool-system/mcp-workspace.ts",
+        "tool-system/panel-bridge.ts",
+        "tool-system/path-policy.ts",
+        "tool-system/permission.ts",
+        "tool-system/plan-mode-allowlist.ts",
+        "tool-system/registry.ts",
+        "tool-system/run-tool-surface.ts",
+        "tool-system/sandbox/bwrap.ts",
+        "tool-system/sandbox/index.ts",
+        "tool-system/sandbox/off.ts",
+        "tool-system/sandbox/seatbelt.ts",
+        "tool-system/sandbox/skill-resources.ts",
+        "tool-system/session-tool-host.ts",
+        "tool-system/task-guard.ts",
+        "tool-system/testing/tool-registry-harness.ts",
+        "tool-system/tool-result-redaction.ts",
+        "tool-system/validate-tool-metadata.ts",
+        "tool-system/validation.ts",
+        "tool-system/workspace-bridge.ts"
+      ]
+    },
+    {
+      "module": "utils",
+      "productionCount": 20,
+      "testCount": 7,
+      "productionFiles": [
+        "utils/cwd-normalize.ts",
+        "utils/debug.ts",
+        "utils/earlyInput.ts",
+        "utils/env.ts",
+        "utils/envUtils.ts",
+        "utils/exec.ts",
+        "utils/execFileNoThrow.ts",
+        "utils/file-mutex.ts",
+        "utils/format.ts",
+        "utils/intl.ts",
+        "utils/json.ts",
+        "utils/lockfile.ts",
+        "utils/memoize.ts",
+        "utils/secret-scrubber.ts",
+        "utils/semver.ts",
+        "utils/sliceAnsi.ts",
+        "utils/systemTheme.ts",
+        "utils/task-sanitizer.ts",
+        "utils/theme.ts",
+        "utils/toolDisplay.ts"
+      ]
+    },
+    {
+      "module": "workspace",
+      "productionCount": 2,
+      "testCount": 2,
+      "productionFiles": [
+        "workspace/canonical-key.ts",
+        "workspace/workspace-context.ts"
+      ]
+    }
+  ]
+}

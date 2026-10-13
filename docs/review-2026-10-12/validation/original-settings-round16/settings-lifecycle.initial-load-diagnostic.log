@@ -1,0 +1,22 @@
+35 | let changeEvents = 0;
+36 | window.addEventListener("codeshell:settings-changed", () => changeEvents++);
+37 | Object.defineProperty(window, "codeshell", { configurable: true, value: { getSettings: (scope: string) => get({}, scope), updateSettings: (scope: string, patch: any) => { attempts.push(structuredClone(patch)); return set({}, scope, patch); } } });
+38 | let assertions = 0;
+39 | const check = (value: unknown, label?: string) => { assertions++; assert.ok(value, label); };
+40 | const equal = (value: unknown, expected: unknown) => { assertions++; assert.deepEqual(value, expected); };
+                                                                                 ^
+AssertionError: Expected values to be strictly deep-equal:
++ actual - expected
+
++ 'latest on leave'
+- 'unique failed leave draft'
+
+ generatedMessage: true,
+     actual: "latest on leave",
+   expected: "unique failed leave draft",
+   operator: "deepStrictEqual",
+       code: "ERR_ASSERTION"
+
+      at equal (/private/tmp/codeshell-review-20261012-settings-round16/settings-lifecycle.fixture.tsx:40:77)
+
+Bun v1.3.11 (macOS arm64)
