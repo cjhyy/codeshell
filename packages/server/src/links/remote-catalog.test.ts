@@ -101,7 +101,7 @@ function allProviders() {
 
 test("all ten reviewed providers retain their own declared action/scope intersection", async () => {
   const providers = allProviders();
-  expect(providers.flatMap((provider) => provider.actions)).toHaveLength(30);
+  expect(providers.flatMap((provider) => provider.actions)).toHaveLength(35);
   expect(await catalog({ version: 1, providers }, 200, true)).toEqual(
     REMOTE_LINK_ADAPTERS.map(({ id, actions, scopes }) => ({ id, actions: [...actions], scopes })),
   );
@@ -111,6 +111,47 @@ test("all ten reviewed providers retain their own declared action/scope intersec
   expect(await catalog({ version: 1, providers: [selected] }, 200, true)).toEqual([
     { id: "gitlab", actions: ["list_projects"], scopes: ["gitlab:list_projects"] },
   ]);
+});
+
+test("source evidence capabilities require each provider's exact reviewed action scopes", async () => {
+  for (const [id, actions] of [
+    ["github", ["list_pull_request_files", "list_pull_request_commits", "get_commit"]],
+    ["slack", ["get_message", "get_thread"]],
+  ] as const) {
+    const scopes = actions.map((action) => `${id}:${action}`);
+    const provider = { ...github(), id, actions: [...actions], scopes };
+    expect(await catalog({ version: 1, providers: [provider] }, 200, true)).toEqual([
+      { id, actions: [...actions], scopes },
+    ]);
+    for (const omitted of scopes) {
+      const unrelatedScope = `${id}:${id === "github" ? "list_repositories" : "list_channels"}`;
+      for (const invalidScopes of [
+        scopes.filter((scope) => scope !== omitted),
+        scopes.map((scope) => (scope === omitted ? unrelatedScope : scope)),
+      ]) {
+        expect(
+          await catalog(
+            { version: 1, providers: [{ ...provider, scopes: invalidScopes }] },
+            200,
+            true,
+          ),
+        ).toEqual([]);
+      }
+    }
+    const otherProvider = id === "github" ? "slack" : "github";
+    expect(
+      await catalog(
+        {
+          version: 1,
+          providers: [
+            { ...provider, scopes: actions.map((action) => `${otherProvider}:${action}`) },
+          ],
+        },
+        200,
+        true,
+      ),
+    ).toEqual([]);
+  }
 });
 
 test("issue state capabilities require their matching explicit catalog scopes", async () => {

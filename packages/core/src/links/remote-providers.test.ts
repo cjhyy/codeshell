@@ -121,20 +121,28 @@ function params(provider: RemoteLinkProviderId, action: string): Record<string, 
           repo: "Repo",
           ...(action === "get_issue"
             ? { issue_number: 7 }
-            : action === "get_pull_request"
+            : ["get_pull_request", "list_pull_request_files", "list_pull_request_commits"].includes(
+                  action,
+                )
               ? { pull_number: 8 }
-              : action === "get_file"
-                ? { path: "docs/guide.md", ref: "main" }
-                : action === "update_issue"
-                  ? { issue_number: 7, state: "closed" }
-                  : action === "create_issue"
-                    ? { title: "Explicitly approved fixture", body: "Synthetic data" }
-                    : action === "set_starred"
-                      ? { starred: true }
-                      : {}),
+              : action === "get_commit"
+                ? { sha: "a".repeat(40) }
+                : action === "get_file"
+                  ? { path: "docs/guide.md", ref: "main" }
+                  : action === "update_issue"
+                    ? { issue_number: 7, state: "closed" }
+                    : action === "create_issue"
+                      ? { title: "Explicitly approved fixture", body: "Synthetic data" }
+                      : action === "set_starred"
+                        ? { starred: true }
+                        : {}),
         };
   if (provider === "sentry" && action === "list_projects")
     return { organization: resources.sentry };
+  if (provider === "slack" && action === "get_message")
+    return { permalink: "https://fixture.slack.com/archives/C12345/p1760000000000001" };
+  if (provider === "slack" && action === "get_thread")
+    return { channel: resources.slack, ts: "1760000000.000001" };
   if (provider === "slack" && action === "get_channel_history")
     return { channel: resources.slack, limit: 15 };
   if (provider === "notion")
@@ -149,6 +157,20 @@ function params(provider: RemoteLinkProviderId, action: string): Record<string, 
 }
 function result(provider: RemoteLinkProviderId, action: string, body: any): unknown {
   if (provider === "github") {
+    if (action === "list_pull_request_files")
+      return [{ filename: "src/example.ts", patch: "@@ -1 +1 @@\n-old\n+new" }];
+    if (["list_pull_request_commits", "get_commit"].includes(action)) {
+      const commit = {
+        sha: "a".repeat(40),
+        author: { login: "fixture", id: 42 },
+        commit: {
+          author: { name: "Fixture", email: "fixture@example.test", date: "2026-10-12T00:00:00Z" },
+        },
+        parents: [{ sha: "b".repeat(40) }],
+        files: [{ filename: "src/example.ts", patch: "@@ -1 +1 @@\n-old\n+new" }],
+      };
+      return action === "get_commit" ? commit : [commit];
+    }
     if (action === "get_repository") return { id: 123, full_name: "owner/repo" };
     if (action === "get_starred") return { starred: false };
     if (action === "set_starred" || action === "update_issue") return { acknowledged: true };
@@ -213,6 +235,12 @@ function result(provider: RemoteLinkProviderId, action: string, body: any): unkn
           ],
           pagination: { next: 123 },
         };
+  if (provider === "slack" && ["get_message", "get_thread"].includes(action))
+    return {
+      messages: [{ user: "U12345", ts: "1760000000.000001", text: "Decision context" }],
+      permalink: "https://fixture.slack.com/archives/C12345/p1760000000000001",
+      has_more: false,
+    };
   if (provider === "slack")
     return action === "list_channels"
       ? { channels: [{ id: "C12345" }, { id: "COTHER" }], next_cursor: "next" }
@@ -624,6 +652,14 @@ test("resource-specific actions reject a different grant resource before sending
     ["github", "get_file", { owner: "other", repo: "private", path: "secret" }],
     ["sentry", "list_projects", { organization: "other" }],
     ["slack", "get_channel_history", { channel: "COTHER" }],
+    [
+      "slack",
+      "get_message",
+      { permalink: "https://fixture.slack.com/archives/COTHER/p1760000000000001" },
+    ],
+    ["slack", "get_thread", { channel: "COTHER", ts: "1760000000.000001" }],
+    ["github", "get_commit", { owner: "other", repo: "private", sha: "a".repeat(40) }],
+    ["github", "list_pull_request_files", { owner: "other", repo: "private", pull_number: 8 }],
     ["notion", "get_page", { page_id: "ffffffffffffffffffffffffffffffff" }],
     ["airtable", "list_tables", { base_id: "appOther" }],
     ["figma", "get_comments", { file_key: "OtherFile" }],

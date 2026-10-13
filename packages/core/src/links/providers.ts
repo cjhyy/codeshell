@@ -1,3 +1,10 @@
+import {
+  GITHUB_SOURCE_ACTIONS,
+  githubSourceEndpoint,
+  normalizeGithubSourceResult,
+  slackSourceParams,
+  normalizeSlackSourceResult,
+} from "./source-reads.js";
 import { githubIssueStateParameters } from "./github-issue-state.js";
 import { githubRepositoryParameters, githubSetStarredParameters } from "./github-star.js";
 import {
@@ -112,6 +119,21 @@ const github: LocalLinkProviderSpec = {
     };
   },
   actions: [
+    ...GITHUB_SOURCE_ACTIONS.map((id) =>
+      action(
+        id,
+        id,
+        "Read GitHub contribution evidence; params: owner, repo, pull_number (or full sha for get_commit), optional page/limit. Returns bounded patches and authors, never inferred responsibility.",
+        async (ctx) =>
+          normalizeGithubSourceResult(
+            id,
+            ctx.params,
+            await request(ctx, `https://api.github.com/${githubSourceEndpoint(id, ctx.params)}`, {
+              headers: githubHeaders(ctx.token),
+            }),
+          ),
+      ),
+    ),
     action(
       "list_repositories",
       "列出仓库",
@@ -741,6 +763,41 @@ const slack: LocalLinkProviderSpec = {
     };
   },
   actions: [
+    ...["get_message", "get_thread"].map((id) =>
+      action(
+        id,
+        id,
+        id === "get_message"
+          ? "Read exact Slack message; params: permalink (a reply URL must include thread_ts)."
+          : "Read one Slack thread page; params: channel, ts (parent), optional permalink/cursor/limit (max 15). Channel threads may require a user token.",
+        async (ctx) => {
+          const p = slackSourceParams(id, ctx.params);
+          const isReply = id === "get_message" && p.thread_ts && p.thread_ts !== p.ts;
+          const data = await slackRequest(
+            ctx,
+            id === "get_thread" || isReply ? "conversations.replies" : "conversations.history",
+            {
+              channel: p.channel,
+              limit: String(p.limit),
+              ...(id === "get_thread"
+                ? { ts: p.ts, ...(p.cursor ? { cursor: p.cursor } : {}) }
+                : {
+                    oldest: p.ts,
+                    latest: p.ts,
+                    inclusive: "true",
+                    ...(isReply ? { ts: p.thread_ts! } : {}),
+                  }),
+            },
+          );
+          // Resolve through the selected account; a supplied URL never controls the API origin.
+          const link = await slackRequest(ctx, "chat.getPermalink", {
+            channel: p.channel,
+            message_ts: p.ts,
+          });
+          return normalizeSlackSourceResult(id, ctx.params, { ...data, permalink: link.permalink });
+        },
+      ),
+    ),
     action("list_channels", "列出频道", "列出 Token 可访问的 Slack 频道。", async (ctx) => {
       const data = await slackRequest(ctx, "conversations.list", {
         limit: String(intParam(ctx.params, "limit", 50, 200)),
