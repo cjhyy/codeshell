@@ -3,13 +3,14 @@
 import { createServer } from "node:http";
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { dirname, join, resolve } from "node:path";
-import { fileURLToPath } from "node:url";
+import { fileURLToPath, pathToFileURL } from "node:url";
 import { WebSocketServer } from "ws";
 import { bounded } from "./cloud-chooser-fixture.mjs";
 import { prepareConfinedElectronFixture } from "./confined-electron-fixture.mjs";
 import {
   assert,
   captureRendererErrors,
+  expandSidebar,
   findCodeShellWindow,
   launchCodeShellElectron,
   makeIsolatedElectronHome,
@@ -230,6 +231,11 @@ wss.on("connection", (ws) => {
 });
 const locationTrigger = () => win.getByRole("button", { name: /^运行位置：/ });
 const sidebar = () => win.locator("aside");
+async function expandExistingProject() {
+  await expandSidebar(win);
+  const project = sidebar().getByRole("button", { name: "Existing project", exact: true });
+  if ((await project.getAttribute("aria-expanded")) === "false") await project.click();
+}
 async function dismissTrust() {
   const viewOnly = win.getByRole("button", { name: /仅查看|View only/i });
   if (
@@ -263,7 +269,46 @@ try {
   );
   await new Promise((resolve) => server.listen(0, "127.0.0.1", resolve));
   origin = `http://127.0.0.1:${server.address().port}`;
-  confinement = await prepareConfinedElectronFixture({ appDir, isolated, origin });
+  const nodeGuard = join(isolated.home, "existing-cloud-node-guard.mjs");
+  await writeFile(
+    nodeGuard,
+    `import assert from "node:assert/strict";
+import http from "node:http";
+import { appendFileSync } from "node:fs";
+import { createHash } from "node:crypto";
+import { syncBuiltinESMExports } from "node:module";
+await import(${JSON.stringify(new URL("../../../scripts/runtime-cost-smoke-isolation.mjs", import.meta.url).href)});
+const guardedRequest = http.request;
+http.request = function (input, ...args) {
+  // ws supplies its ordinary TCP connector even when the application did not
+  // request one. Use Node's default connector for this exact fixture upgrade;
+  // the existing HTTP guard still checks origin and all transport options.
+  if (input && typeof input === "object" && !(input instanceof URL) &&
+      input.host === "127.0.0.1" && String(input.port) === ${JSON.stringify(new URL(origin).port)} &&
+      input.path === ${JSON.stringify(`/p/${projectId}/ws`)} && input.method === "GET" &&
+      input.headers?.Connection === "Upgrade" && input.headers?.Upgrade === "websocket" &&
+      input.headers?.Origin === ${JSON.stringify(origin)} && input.headers?.Cookie === ${JSON.stringify(cookie)})
+    return guardedRequest.call(this, { ...input, createConnection: undefined }, ...args);
+  return guardedRequest.call(this, input, ...args);
+};
+syncBuiltinESMExports();
+assert.throws(() => http.request({ host: "127.0.0.1", port: ${JSON.stringify(new URL(origin).port)}, path: "/other", createConnection() {} }), /custom HTTP transport/);
+assert.throws(() => fetch("https://external.invalid/"), /non-fixture request/);
+appendFileSync(process.env.CODESHELL_COST_SMOKE_GUARD_LOG, JSON.stringify({
+  pid: process.pid, ppid: process.ppid, origin: process.env.CODESHELL_COST_SMOKE_ORIGIN,
+  homeId: createHash("sha256").update(process.env.HOME).digest("hex"),
+  existingCloudWebSocketGuard: true, negativeProbes: 2,
+}) + "\\n", { mode: 0o600 });
+`,
+    { mode: 0o600 },
+  );
+  confinement = await prepareConfinedElectronFixture({
+    appDir,
+    isolated,
+    origin,
+    guardModule: pathToFileURL(nodeGuard).href,
+    guardReceiptReady: (receipt) => receipt.existingCloudWebSocketGuard === true,
+  });
   const mainBootstrap = join(isolated.home, "existing-cloud-browser-guard.cjs");
   await writeFile(
     mainBootstrap,
@@ -309,10 +354,14 @@ app.on("web-contents-created", (_event, contents) => configure(contents.session)
   await app.evaluate(({ dialog }, path) => {
     dialog.showOpenDialog = async () => ({ canceled: false, filePaths: [path] });
   }, localPath);
+  await expandSidebar(win);
   await sidebar()
-    .getByRole("button", { name: /^(添加项目|Add project)$/ })
+    .getByRole("button", { name: /^(新项目|New project)$/ })
     .first()
     .click();
+  const localChooser = win.getByRole("dialog", { name: /^(新项目|New project)$/ });
+  await localChooser.getByRole("button", { name: /^(此计算机|This computer)$/ }).click();
+  await localChooser.waitFor({ state: "hidden" });
   await win.waitForFunction(
     async () => (await window.codeshell.projectRegistry.list()).length === 1,
   );
@@ -369,6 +418,7 @@ app.on("web-contents-created", (_event, contents) => configure(contents.session)
   await screenshot("bind");
   await dialog.getByRole("button", { name: "使用云端", exact: true }).click();
   await win.locator('[data-runtime="cloud"]').waitFor();
+  await expandExistingProject();
   await sidebar().getByRole("button", { name: cloudTitle, exact: true }).click();
   await win.getByText(cloudText, { exact: true }).waitFor();
   assert(
@@ -498,6 +548,23 @@ app.on("web-contents-created", (_event, contents) => configure(contents.session)
   passed = true;
 } catch (error) {
   failures.push(error);
+  if (win)
+    console.error(
+      "Native existing-project diagnostic:",
+      JSON.stringify(
+        await win
+          .evaluate(() => ({
+            sidebar: document.querySelector("aside")?.textContent?.slice(0, 4000),
+            runtime: document.querySelector('[data-runtime="cloud"]')?.textContent?.slice(0, 4000),
+            buttons: [...document.querySelectorAll("aside button")].map((button) => ({
+              text: button.textContent,
+              label: button.getAttribute("aria-label"),
+              expanded: button.getAttribute("aria-expanded"),
+            })),
+          }))
+          .catch(() => ({ unavailable: true })),
+      ),
+    );
   if (screenshotDir && win) await screenshot("failure").catch(() => {});
   if (processLog) console.error(processLog);
 } finally {
