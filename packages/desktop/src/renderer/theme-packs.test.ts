@@ -2,6 +2,8 @@ import { describe, expect, test } from "bun:test";
 import makiManifest from "../../../../examples/themes/lovelive-maki/.cs-theme.json";
 import mikuManifest from "../../../../examples/themes/hatsune-miku/.cs-theme.json";
 import museManifest from "../../../../examples/themes/lovelive-muse/.cs-theme.json";
+import onoderaManifest from "../../../../examples/themes/nisekoi-onodera/.cs-theme.json";
+import misakaManifest from "../../../../examples/themes/misaka-mikoto/.cs-theme.json";
 import {
   DEFAULT_PACK_ID,
   THEME_PACKS,
@@ -87,11 +89,14 @@ describe("theme-packs", () => {
   for (const [id, manifest] of [
     ["miku", mikuManifest],
     ["muse", museManifest],
+    ["onodera", onoderaManifest],
+    ["misaka", misakaManifest],
   ] as const) {
     test(`bundled ${id} ships the complete downloadable skin, distinct cues and music offline`, async () => {
       const pack = getThemePack(id);
       expect(pack.id).toBe(id);
       expect(pack.id).not.toBe(manifest.id);
+      expect(pack.name).toBe(`settingsX.appearance.pack.${id}`);
       expect(pack.colors).toEqual(manifest.colors);
       expect(pack.frame).toEqual(manifest.frame);
       expect(Object.keys(pack.surfaces ?? {}).sort()).toEqual([...THEME_SURFACE_NAMES].sort());

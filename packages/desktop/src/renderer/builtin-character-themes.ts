@@ -12,6 +12,20 @@ import museComplete from "../../../../examples/themes/lovelive-muse/assets/sound
 import museApproval from "../../../../examples/themes/lovelive-muse/assets/sound-approval.wav";
 import museError from "../../../../examples/themes/lovelive-muse/assets/sound-error.wav";
 import museLoop from "../../../../examples/themes/lovelive-muse/assets/encore-loop.wav";
+import onoderaManifest from "../../../../examples/themes/nisekoi-onodera/.cs-theme.json";
+import onoderaStage from "../../../../examples/themes/nisekoi-onodera/assets/stage.png";
+import onoderaSend from "../../../../examples/themes/nisekoi-onodera/assets/sound-send.wav";
+import onoderaComplete from "../../../../examples/themes/nisekoi-onodera/assets/sound-complete.wav";
+import onoderaApproval from "../../../../examples/themes/nisekoi-onodera/assets/sound-approval.wav";
+import onoderaError from "../../../../examples/themes/nisekoi-onodera/assets/sound-error.wav";
+import onoderaLoop from "../../../../examples/themes/nisekoi-onodera/assets/encore-loop.wav";
+import misakaManifest from "../../../../examples/themes/misaka-mikoto/.cs-theme.json";
+import misakaStage from "../../../../examples/themes/misaka-mikoto/assets/stage.png";
+import misakaSend from "../../../../examples/themes/misaka-mikoto/assets/sound-send.wav";
+import misakaComplete from "../../../../examples/themes/misaka-mikoto/assets/sound-complete.wav";
+import misakaApproval from "../../../../examples/themes/misaka-mikoto/assets/sound-approval.wav";
+import misakaError from "../../../../examples/themes/misaka-mikoto/assets/sound-error.wav";
+import misakaLoop from "../../../../examples/themes/misaka-mikoto/assets/encore-loop.wav";
 import type { ThemePack } from "./theme-packs";
 
 /** Keep the bundled and downloadable themes on exactly the same palette and media. */
@@ -86,5 +100,33 @@ export const MUSE_THEME_PACK = bundledTheme(
     "assets/sound-approval.wav": museApproval,
     "assets/sound-error.wav": museError,
     "assets/encore-loop.wav": museLoop,
+  },
+);
+
+export const ONODERA_THEME_PACK = bundledTheme(
+  "onodera",
+  "settingsX.appearance.pack.onodera",
+  onoderaManifest as unknown as ThemePack,
+  {
+    "assets/stage.png": onoderaStage,
+    "assets/sound-send.wav": onoderaSend,
+    "assets/sound-complete.wav": onoderaComplete,
+    "assets/sound-approval.wav": onoderaApproval,
+    "assets/sound-error.wav": onoderaError,
+    "assets/encore-loop.wav": onoderaLoop,
+  },
+);
+
+export const MISAKA_THEME_PACK = bundledTheme(
+  "misaka",
+  "settingsX.appearance.pack.misaka",
+  misakaManifest as unknown as ThemePack,
+  {
+    "assets/stage.png": misakaStage,
+    "assets/sound-send.wav": misakaSend,
+    "assets/sound-complete.wav": misakaComplete,
+    "assets/sound-approval.wav": misakaApproval,
+    "assets/sound-error.wav": misakaError,
+    "assets/encore-loop.wav": misakaLoop,
   },
 );
