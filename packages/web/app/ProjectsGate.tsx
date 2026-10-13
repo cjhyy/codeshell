@@ -77,11 +77,17 @@ export function ProjectsGate({
   onAuthLost,
   accountControl,
   allowLegacy = true,
+  autoEnterSingle = false,
+  startCreatedProject = false,
+  canRequest,
 }: {
   children: (project: RuntimeProject | null, onBack?: () => void) => React.ReactNode;
   onAuthLost: () => void;
   accountControl?: React.ReactNode;
   allowLegacy?: boolean;
+  autoEnterSingle?: boolean;
+  startCreatedProject?: boolean;
+  canRequest?: () => boolean;
 }) {
   const [snapshot, setSnapshot] = React.useState<ProjectSnapshot | null>(null);
   const [legacy, setLegacy] = React.useState(false);
@@ -100,6 +106,9 @@ export function ProjectsGate({
   const mutation = React.useRef<AbortController | null>(null);
   const authLost = React.useRef(onAuthLost);
   const legacyRef = React.useRef(false);
+  const autoSelection = React.useRef(true);
+  const requestAllowed = React.useRef(canRequest);
+  requestAllowed.current = canRequest;
   authLost.current = onAuthLost;
   activeRef.current = active;
   snapshotRef.current = snapshot;
@@ -111,6 +120,7 @@ export function ProjectsGate({
     setApiProject(item.id);
     selectionUrl(item.id, keepSession);
     desired.current = null;
+    autoSelection.current = false;
     activeRef.current = item;
     setActive(item);
     setError("");
@@ -128,6 +138,7 @@ export function ProjectsGate({
   const refresh = React.useCallback(
     async (signal?: AbortSignal) => {
       if (legacyRef.current) return;
+      if (requestAllowed.current && !requestAllowed.current()) return;
       const revision = ++refreshRevision.current;
       const currentLifecycle = lifecycle.current;
       try {
@@ -151,9 +162,20 @@ export function ProjectsGate({
           }
           return;
         }
-        if (!desired.current) return;
+        if (!desired.current) {
+          if (
+            autoEnterSingle &&
+            autoSelection.current &&
+            next.available &&
+            next.projects.length === 1 &&
+            next.projects[0]!.status === "running"
+          )
+            enter(next.projects[0]!);
+          return;
+        }
         const candidate = next.projects.find((item) => item.id === desired.current);
         if (!candidate) {
+          autoSelection.current = false;
           desired.current = null;
           selectionUrl(null);
           setError("链接中的项目不存在或当前账号无权访问，请选择一个项目。");
@@ -186,7 +208,7 @@ export function ProjectsGate({
         }
       }
     },
-    [back, enter, allowLegacy],
+    [back, enter, allowLegacy, autoEnterSingle],
   );
 
   React.useEffect(() => {
@@ -238,6 +260,7 @@ export function ProjectsGate({
   }, [stopTarget]);
 
   const change = async (operation: "create" | "start" | "stop", item?: RuntimeProject) => {
+    if (requestAllowed.current && !requestAllowed.current()) return;
     if (mutation.current || (operation === "create" && !name.trim())) return;
     const controller = new AbortController();
     mutation.current = controller;
@@ -257,7 +280,25 @@ export function ProjectsGate({
       if (controller.signal.aborted) return;
       if (!validProject(value.project) || (item && item.id !== value.project.id))
         throw new Error("服务端返回了无效的项目状态，请刷新列表。");
-      const next = value.project;
+      let next = value.project;
+      if (operation === "create" && startCreatedProject) {
+        const started = await api<{ project: RuntimeProject }>(
+          `/api/v1/projects/${next.id}/start`,
+          {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: "{}",
+            signal: controller.signal,
+          },
+        );
+        if (controller.signal.aborted) return;
+        if (!validProject(started.project) || started.project.id !== next.id)
+          throw new Error("服务端返回了无效的项目状态，请刷新列表。");
+        next = started.project;
+        desired.current = next.id;
+        selectionUrl(next.id);
+        if (next.status === "running") enter(next);
+      }
       setSnapshot((previous) =>
         previous
           ? {
@@ -329,7 +370,11 @@ export function ProjectsGate({
         <>
           {!snapshot.available ? (
             <p className="form-error" role="alert">
-              项目运行环境暂不可用。{snapshot.error || "请检查服务端 Docker 是否已启动。"}
+              {startCreatedProject ? (
+                "云端执行环境暂时不可用，请稍后重试或联系管理员。"
+              ) : (
+                <>项目运行环境暂不可用。{snapshot.error || "请检查服务端 Docker 是否已启动。"}</>
+              )}
             </p>
           ) : null}
           <form
@@ -354,7 +399,7 @@ export function ProjectsGate({
               disabled={!!busy || !name.trim()}
               type="submit"
             >
-              {busy === "create" ? "正在创建…" : "创建项目"}
+              {busy === "create" ? "正在创建…" : startCreatedProject ? "创建并打开" : "创建项目"}
             </button>
           </form>
           <section className="projects-grid" aria-label="项目列表">

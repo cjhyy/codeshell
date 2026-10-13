@@ -11,7 +11,8 @@ import { PanelHost } from "./PanelHost.js";
 import type { ManagedPanel } from "../../server/src/panels/types.js";
 import { MessageContent, ToolMessage, subagentStatusLabel } from "./MessageContent.js";
 import { sessionTitle } from "./chat.js";
-import type { WorkbenchController } from "./workbench-types.js";
+import type { WorkbenchController, WorkbenchNavigation } from "./workbench-types.js";
+import { parseWorkbenchLocation } from "./website-routes.js";
 import "./app.css";
 import "./workbench-desktop.css";
 
@@ -55,11 +56,13 @@ export function Workbench({
   onBackToProjects,
   projectName,
   cloudAccount,
+  renderAccountControl,
 }: {
   controller: WorkbenchController;
   onBackToProjects?: () => void;
   projectName?: string;
   cloudAccount?: CloudAccountControlsProps;
+  renderAccountControl?: (navigation: WorkbenchNavigation) => React.ReactNode;
 }) {
   const {
     connection,
@@ -93,9 +96,7 @@ export function Workbench({
   const cameraInput = React.useRef<HTMLInputElement>(null);
   const [view, setView] = React.useState<
     "chat" | "settings" | "files" | "history" | "links" | "panels" | "panel"
-  >(() =>
-    new URLSearchParams(window.location?.search ?? "").get("view") === "links" ? "links" : "chat",
-  );
+  >(() => parseWorkbenchLocation(new URL(window.location.href)).view);
   const [openedPanel, setOpenedPanel] = React.useState<{
     panel: ManagedPanel;
     workspaceKey: string;
@@ -104,7 +105,27 @@ export function Workbench({
   const [fileOpenVersion, setFileOpenVersion] = React.useState(0);
   const [navigationDirty, setNavigationDirty] = React.useState(false);
   const [pendingNavigation, setPendingNavigation] = React.useState<(() => void) | null>(null);
-  const [settingsSection, setSettingsSection] = React.useState<HubSettingsSection>("overview");
+  const [settingsSection, setSettingsSection] = React.useState<HubSettingsSection>(
+    () => parseWorkbenchLocation(new URL(window.location.href)).section,
+  );
+  React.useEffect(() => {
+    const url = new URL(window.location.href);
+    if (view === "chat") url.searchParams.delete("view");
+    else url.searchParams.set("view", view === "panel" ? "panels" : view);
+    if (view === "settings" && settingsSection !== "overview")
+      url.searchParams.set("section", settingsSection);
+    else url.searchParams.delete("section");
+    window.history.replaceState(window.history.state, "", url.pathname + url.search + url.hash);
+  }, [view, settingsSection]);
+  React.useEffect(() => {
+    const pop = () => {
+      const next = parseWorkbenchLocation(new URL(window.location.href));
+      setView(next.view);
+      setSettingsSection(next.section);
+    };
+    window.addEventListener("popstate", pop);
+    return () => window.removeEventListener("popstate", pop);
+  }, []);
   const [narrow, setNarrow] = React.useState(() => window.matchMedia("(max-width: 760px)").matches);
   const [sidebarOpen, setSidebarOpen] = React.useState(
     () => !window.matchMedia("(max-width: 760px)").matches,
@@ -506,7 +527,11 @@ export function Workbench({
               {connectionLabel}
             </span>
           </div>
-          {cloudAccount ? <CloudAccountControls {...cloudAccount} /> : null}
+          {renderAccountControl ? (
+            renderAccountControl({ guard: requestNavigation, conversation: openConversation })
+          ) : cloudAccount ? (
+            <CloudAccountControls {...cloudAccount} />
+          ) : null}
           {controller.host === "hub" && !cloudAccount ? (
             <button
               className="account-button"

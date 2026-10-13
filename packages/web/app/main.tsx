@@ -2,7 +2,7 @@ import { LinkCallbackPage } from "./LinkCallback.js";
 import { readBrowserLinkCallback } from "./remote-link-authorization.js";
 import React from "react";
 import { createRoot } from "react-dom/client";
-import { AuthGate } from "./AuthGate.js";
+import { WebsiteEntry } from "./WebsiteShell.js";
 import { takeSetupToken } from "./auth.js";
 import { registerServiceWorker } from "./register-service-worker.js";
 import "./app.css";
@@ -15,7 +15,7 @@ createRoot(document.getElementById("root")!).render(
     {linkCallback ? (
       <LinkCallbackPage callback={linkCallback} />
     ) : (
-      <AuthGate setupToken={setupToken} />
+      <WebsiteEntry setupToken={setupToken} />
     )}
   </React.StrictMode>,
 );
