@@ -1,7 +1,6 @@
 import { describe, expect, test } from "bun:test";
 import { EventEmitter } from "node:events";
-import { createPlaywrightInspector } from "./browser-inspector.js";
-import type { Page } from "playwright-core";
+import { createBrowserInspector } from "./index.js";
 
 class FakePage extends EventEmitter {
   url() {
@@ -18,7 +17,7 @@ class FakePage extends EventEmitter {
 describe("bounded developer inspector", () => {
   test("bounds URLs and never returns data URL bodies", async () => {
     const page = new FakePage();
-    const inspector = createPlaywrightInspector(page as unknown as Page);
+    const inspector = createBrowserInspector(page);
     await inspector.inspect({ mode: "network" });
     for (const url of ["https://example.com/" + "x".repeat(100000), "data:text/html,secret-body"]) {
       page.emit("response", {
@@ -36,7 +35,7 @@ describe("bounded developer inspector", () => {
   });
   test("records only after requested; caps entries, removes queries, stops listeners", async () => {
     const page = new FakePage();
-    const inspector = createPlaywrightInspector(page as unknown as Page);
+    const inspector = createBrowserInspector(page);
     expect(page.listenerCount("response")).toBe(0);
     await inspector.inspect({ mode: "network" });
     for (let i = 0; i < 120; i++)
@@ -67,8 +66,8 @@ describe("bounded developer inspector", () => {
   test("different targets cannot share logs", async () => {
     const first = new FakePage();
     const second = new FakePage();
-    const a = createPlaywrightInspector(first as unknown as Page);
-    const b = createPlaywrightInspector(second as unknown as Page);
+    const a = createBrowserInspector(first);
+    const b = createBrowserInspector(second);
     await a.inspect({ mode: "console" });
     await b.inspect({ mode: "console" });
     first.emit("console", { type: () => "log", text: () => "first target" });
@@ -76,5 +75,63 @@ describe("bounded developer inspector", () => {
     a.dispose();
     expect(second.listenerCount("console")).toBe(1);
     b.dispose();
+  });
+
+  test("only main-document navigation clears recordings when frame identity is available", async () => {
+    class FramedPage extends FakePage {
+      readonly frame = {};
+      mainFrame() {
+        return this.frame;
+      }
+    }
+
+    const page = new FramedPage();
+    const inspector = createBrowserInspector(page);
+    await inspector.inspect({ mode: "console" });
+    await inspector.inspect({ mode: "network" });
+    page.emit("console", { type: () => "log", text: () => "current document" });
+    page.emit("response", {
+      url: () => "https://example.com/resource?token=secret",
+      status: () => 200,
+      request: () => ({ method: () => "GET", resourceType: () => "fetch" }),
+    });
+
+    page.emit("framenavigated", {});
+    const unchanged = await inspector.inspect({ mode: "console" });
+    expect((unchanged.data as any).entries[0].text).toBe("current document");
+    expect(page.listenerCount("response")).toBe(1);
+
+    page.emit("framenavigated", page.frame);
+    expect(page.listenerCount("console")).toBe(0);
+    expect(page.listenerCount("response")).toBe(0);
+    expect((await inspector.inspect({ mode: "console" })).data).toEqual({
+      recording: true,
+      entries: [],
+    });
+    expect((await inspector.inspect({ mode: "network" })).data).toEqual({
+      recording: true,
+      entries: [],
+    });
+    inspector.dispose();
+  });
+
+  test("page closure disposes all listeners and cannot restart recording", async () => {
+    const page = new FakePage();
+    const inspector = createBrowserInspector(page);
+    await inspector.inspect({ mode: "console" });
+    await inspector.inspect({ mode: "network" });
+    page.emit("close");
+
+    expect(page.eventNames()).toEqual([]);
+    expect(await inspector.inspect({ mode: "console" })).toMatchObject({
+      ok: false,
+      code: "TARGET_CLOSED",
+    });
+    expect(await inspector.inspect({ mode: "network" })).toMatchObject({
+      ok: false,
+      code: "TARGET_CLOSED",
+    });
+    inspector.dispose();
+    expect(page.eventNames()).toEqual([]);
   });
 });
