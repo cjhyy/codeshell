@@ -84,7 +84,7 @@ export async function logoutWebsiteCloudSession(
       cache: "no-store" as const,
       redirect: "error" as const,
     };
-    const response = await fetcher("/api/v1/auth/status", {
+    const response = await fetcher("/api/v1/cloud-browser/status", {
       ...options,
       signal: AbortSignal.timeout(10000),
     });
@@ -99,7 +99,7 @@ export async function logoutWebsiteCloudSession(
       value.session?.audience !== expected.audience
     )
       return;
-    await fetcher("/api/v1/auth/logout", {
+    await fetcher("/api/v1/cloud-browser/logout", {
       ...options,
       method: "POST",
       signal: AbortSignal.timeout(10000),

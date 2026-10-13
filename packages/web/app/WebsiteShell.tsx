@@ -2,6 +2,7 @@ import React from "react";
 import { AuthGate } from "./AuthGate.js";
 import { App } from "./App.js";
 import { ProjectsGate } from "./ProjectsGate.js";
+import { EnvironmentApiContext } from "./EnvironmentMenu.js";
 import { AccountSessionProvider, useAccountSession } from "./AccountSessionProvider.js";
 import { AccountSettings } from "./AccountSettings.js";
 import { WebsiteLogin } from "./WebsiteLogin.js";
@@ -196,7 +197,7 @@ function WebsiteShell({ capability }: { capability: WebsiteCloudCapability }) {
           if (!response.ok) throw new Error("云端工作区登录未完成，请重试连接。");
           const result = parseWebsiteCloudSession(await response.json(), target, accountId);
           if (controller.signal.aborted || epoch !== revision.current) {
-            await fetch("/api/v1/auth/logout", {
+            await fetch("/api/v1/cloud-browser/logout", {
               method: "POST",
               credentials: "include",
               cache: "no-store",
@@ -256,7 +257,7 @@ function WebsiteShell({ capability }: { capability: WebsiteCloudCapability }) {
   const settings = route.kind !== "workbench";
   const administrator = account.session.account?.role === "admin";
   return (
-    <>
+    <EnvironmentApiContext.Provider value="/api/v1/cloud-browser/environment">
       {cloudSession ? (
         <div hidden={settings} className="website-workbench-root">
           <ProjectsGate
@@ -377,6 +378,6 @@ function WebsiteShell({ capability }: { capability: WebsiteCloudCapability }) {
           </main>
         </div>
       ) : null}
-    </>
+    </EnvironmentApiContext.Provider>
   );
 }

@@ -180,6 +180,7 @@ async function fixture() {
         });
       return response;
     }
+    if (path === "/api/v1/cloud-browser/logout") return Response.json({ ok: true });
     if (path === "/api/v1/projects")
       return Response.json({
         runtime: "docker",
@@ -188,7 +189,7 @@ async function fixture() {
           { id: project, name: "真实私有项目", status: "running", generation: 1, createdAt: 1 },
         ],
       });
-    if (path === "/api/v1/environment") return Response.json({});
+    if (path === "/api/v1/cloud-browser/environment") return Response.json({});
     if (path === `/p/${project}/api/v1/configuration`)
       return Response.json({
         workspace: { path: "/private", settingsScope: "local", skillDirectories: [] },
@@ -203,9 +204,15 @@ async function fixture() {
   }) as typeof fetch;
   const container = document.createElement("div"),
     root = createRoot(container);
+  let live = true;
+  const unmount = async () => {
+    if (!live) return;
+    live = false;
+    await action(() => root.unmount());
+  };
   cleanup.push(async () => {
     hold?.(Response.json({}, { status: 401 }));
-    await action(() => root.unmount());
+    await unmount();
   });
   await action(() =>
     root.render(
@@ -218,6 +225,18 @@ async function fixture() {
   return {
     container,
     calls,
+    unmount,
+    async finishCloudExchange() {
+      await action(() =>
+        hold?.(
+          Response.json({
+            authenticated: true,
+            mode: "cloud-account",
+            session: cloudSession(currentAccount, currentRoot),
+          }),
+        ),
+      );
+    },
     get url() {
       return url;
     },
@@ -236,6 +255,7 @@ test("the website opens the actual CodeShell composer after cookie authority and
   expect(text(view.container)).toContain("新对话");
   expect(text(view.container)).toContain("历史对话");
   expect(text(view.container)).not.toContain("活跃登录会话");
+  expect(text(view.container)).not.toContain("设备与退出");
   expect(view.calls.some((call) => /auth\/(login|setup|sessions)/.test(call.path))).toBe(false);
   expect(view.calls.find((call) => call.path === "/api/v1/cloud-browser/session")?.init?.body).toBe(
     JSON.stringify({ ticket: "T".repeat(43) }),
@@ -276,10 +296,12 @@ test("account settings share the website session and retain a real unsent conver
 test("a stale tab never revokes a newer Cloud cookie when signing out", async () => {
   await fixture();
   const writes: string[] = [];
+  const reads: string[] = [];
   await logoutWebsiteCloudSession(
     cloudSession() as any,
     (async (url, init) => {
       if (init?.method === "POST") writes.push(String(url));
+      else reads.push(String(url));
       return Response.json({
         authenticated: true,
         mode: "cloud-account",
@@ -292,8 +314,39 @@ test("a stale tab never revokes a newer Cloud cookie when signing out", async ()
     cloudSession() as any,
     (async (url, init) => {
       if (init?.method === "POST") writes.push(String(url));
+      else reads.push(String(url));
       return Response.json({ authenticated: true, mode: "cloud-account", session: cloudSession() });
     }) as typeof fetch,
   );
-  expect(writes).toEqual(["/api/v1/auth/logout"]);
+  expect(writes).toEqual(["/api/v1/cloud-browser/logout"]);
+  expect(reads).toEqual(["/api/v1/cloud-browser/status", "/api/v1/cloud-browser/status"]);
+});
+
+test("the website project chooser and active workbench discover only their dedicated Cloud environment", async () => {
+  const view = await fixture();
+  expect(
+    view.calls.filter((call) => call.path === "/api/v1/cloud-browser/environment").length,
+  ).toBeGreaterThan(0);
+  const back = nodes(view.container).find(
+    (node) => node.tagName === "BUTTON" && text(node) === "返回项目列表",
+  );
+  expect(back).toBeDefined();
+  await action(() => props(back).onClick());
+  expect(
+    view.calls.filter((call) => call.path === "/api/v1/cloud-browser/environment").length,
+  ).toBeGreaterThan(1);
+  expect(
+    view.calls.some((call) => /^\/api\/v1\/(?:auth|environment)(?:\/|$)/.test(call.path)),
+  ).toBe(false);
+});
+
+test("a cancelled late Cloud exchange cleans only the dedicated Cloud authority", async () => {
+  const view = await fixture();
+  await view.switchAccount(false);
+  await view.unmount();
+  await view.finishCloudExchange();
+  await until(() => view.calls.some((call) => call.path === "/api/v1/cloud-browser/logout"));
+  expect(
+    view.calls.some((call) => /^\/api\/v1\/(?:auth|environment)(?:\/|$)/.test(call.path)),
+  ).toBe(false);
 });

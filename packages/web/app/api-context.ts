@@ -42,6 +42,7 @@ export function apiWorkspaceHeaders(cwd = workspace): Record<string, string> {
 export function isControlPlaneUrl(path: string): boolean {
   return (
     /^\/api\/v1\/(?:auth|projects|environment)(?:\/|\?|$)/.test(path) ||
+    /^\/api\/v1\/cloud-browser\/environment(?:\?|$)/.test(path) ||
     /^\/api\/v1\/desktop\/session(?:\?|$)/.test(path)
   );
 }

@@ -13,6 +13,14 @@ private projects and mount `App`/`Workbench`. A single running project opens
 automatically; creating and opening a project performs the real create/start
 requests. Empty or unavailable environments show their actual state.
 
+The website uses only `/api/v1/cloud-browser/status`, `/logout`, and
+`/environment` for its Cloud control authority. Both the project chooser and
+the active workbench inherit the dedicated environment discovery path; it stays
+at the control plane after a project is selected. The original Hub keeps its
+own `/api/v1/auth/*` and `/api/v1/environment` routes, so a deployment may retain
+that independently authenticated workspace at `/workbench`. The website hides
+the old Hub devices dialog and uses Account session settings instead.
+
 ## Navigation
 
 - `/`: project selection or the active conversation workbench.
