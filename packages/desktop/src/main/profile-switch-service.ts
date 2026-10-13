@@ -103,7 +103,16 @@ function switchPlan(target: SwitchTarget, name: string | null, project: Record<s
           currentProfile,
           nextProfile,
           directOverrides,
-          snapshot,
+          snapshot: {
+            ...snapshot,
+            // Discovery order is not configuration authority. Preserve the
+            // plan/UI sequence while hashing this descriptor multiset stably.
+            capabilities: [...snapshot.capabilities].sort((left, right) => {
+              const a = JSON.stringify(canonical(left));
+              const b = JSON.stringify(canonical(right));
+              return a < b ? -1 : a > b ? 1 : 0;
+            }),
+          },
           directLayers: [scoped.capabilityOverrides, localSettings.capabilityOverrides],
           sources,
           // Metadata authority changes must stale a review; never return credential material.

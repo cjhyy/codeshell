@@ -1,6 +1,8 @@
 import { expect, test } from "bun:test";
-import { AssertionError } from "node:assert";
+import assert, { AssertionError } from "node:assert";
 import { createHash } from "node:crypto";
+import { readFileSync } from "node:fs";
+import { runInNewContext } from "node:vm";
 import {
   jobPdfFailure,
   summarizeFailure,
@@ -119,7 +121,7 @@ test("primary-only failure keeps its exact identity and trusted PDF summary rema
     async () => {},
   );
   expect(failure).toBe(primary);
-  expect(summarizeFailure(failure).jobBrowser).toBeUndefined();
+  expect(summarizeFailure(failure).jobBrowser.primaryStep).toBe("action");
   const aggregate = await caught(
     async () => {
       throw primary;
@@ -281,4 +283,445 @@ test("large messages and non-native Error lookalikes remain unavailable, with fi
   expect(summary.jobBrowser.cleanup).toHaveLength(2);
   expect(JSON.stringify(summary).length).toBeLessThan(4096);
   expect(JSON.stringify(summary)).not.toContain(secret);
+});
+
+test("wrapper-owned steps freeze at primary catch and ignore unknown, forged and late marks", async () => {
+  let marker;
+  let traps = 0;
+  const forged = new Proxy(
+    {},
+    {
+      get() {
+        traps++;
+        throw new Error(secret);
+      },
+      getPrototypeOf() {
+        traps++;
+        throw new Error(secret);
+      },
+      getOwnPropertyDescriptor() {
+        traps++;
+        throw new Error(secret);
+      },
+    },
+  );
+  const revoked = Proxy.revocable({}, {});
+  revoked.revoke();
+  const primary = new Error(secret);
+  const failure = await caught(
+    async (mark) => {
+      marker = mark;
+      expect(mark("audio-download-read-assert")).toBe(true);
+      for (const value of [secret, {}, forged, revoked.proxy, () => secret, null, 1])
+        expect(mark(value)).toBe(false);
+      throw primary;
+    },
+    async () => {
+      expect(marker("page-errors")).toBe(false);
+    },
+    async () => {
+      expect(marker("speech-provider-log-read")).toBe(false);
+    },
+  );
+  expect(failure).toBe(primary);
+  expect(marker("audio-close-interview")).toBe(false);
+  const summary = summarizeFailure(failure);
+  expect(summary.sha256).toBe(digest(secret));
+  expect(summary.jobBrowser.primaryStep).toBe("audio-download-read-assert");
+  expect(summary.jobBrowser.primaryPresent).toBe(true);
+  expect(summary.jobBrowser.cleanup).toEqual([]);
+  expect(traps).toBe(0);
+  expect(JSON.stringify(summary)).not.toContain(secret);
+});
+
+test("primary-only safe snapshots never evaluate unknown Error fields or prototype traps", async () => {
+  let traps = 0;
+  const accessor = Object.defineProperty(new Error(secret), "message", {
+    get() {
+      traps++;
+      throw new Error(secret);
+    },
+  });
+  const object = {
+    toString() {
+      traps++;
+      throw new Error(secret);
+    },
+  };
+  const proxy = new Proxy(new Error(secret), {
+    get() {
+      traps++;
+      throw new Error(secret);
+    },
+    getPrototypeOf() {
+      traps++;
+      throw new Error(secret);
+    },
+    getOwnPropertyDescriptor() {
+      traps++;
+      throw new Error(secret);
+    },
+  });
+  const revoked = Proxy.revocable(new Error(secret), {});
+  revoked.revoke();
+  const deeperPrototype = Object.setPrototypeOf(new Error(secret), Object.create(proxy));
+  const metadata = Object.defineProperty(new Error(secret), "candidateGuardRefusal", {
+    value: proxy,
+  });
+  for (const primary of [accessor, object, proxy, revoked.proxy, deeperPrototype, metadata]) {
+    let failure,
+      rejected = false;
+    try {
+      await withJobHuntBrowserDiagnostics(
+        async (mark) => {
+          mark("speech-provider-log-read");
+          throw primary;
+        },
+        async () => {},
+        async () => {},
+      );
+    } catch (error) {
+      failure = error;
+      rejected = true;
+    }
+    // Returning a Proxy from an async test helper would itself read .then.
+    expect(rejected).toBe(true);
+    expect(failure === primary).toBe(true);
+    const summary = summarizeFailure(failure);
+    expect(summary.jobBrowser.primaryStep).toBe("speech-provider-log-read");
+    expect(summary.guardRefusal).toBeUndefined();
+    expect(JSON.stringify(summary)).not.toContain(secret);
+  }
+  expect(traps).toBe(0);
+});
+
+test("primary-only preserves safe guard DTO and snapshots before capture can mutate the error", async () => {
+  const metadata = {
+    version: 1,
+    source: "docker-candidate-guard.mjs",
+    sha256: "a".repeat(64),
+    line: 20,
+    column: 3,
+  };
+  const primary = Object.defineProperty(new Error(secret), "candidateGuardRefusal", {
+    value: metadata,
+  });
+  let reads = 0;
+  const failure = await caught(
+    async (mark) => {
+      mark("speech-provider-receipt-write");
+      throw primary;
+    },
+    async () => {
+      Object.defineProperty(primary, "message", {
+        get() {
+          reads++;
+          throw new Error(secret);
+        },
+      });
+      Object.defineProperty(metadata, "line", {
+        get() {
+          reads++;
+          throw new Error(secret);
+        },
+      });
+    },
+    async () => {},
+  );
+  expect(failure).toBe(primary);
+  const summary = summarizeFailure(failure);
+  expect(summary.sha256).toBe(digest(secret));
+  expect(summary.guardRefusal).toEqual({
+    version: 1,
+    source: "docker-candidate-guard.mjs",
+    sha256: "a".repeat(64),
+    line: 20,
+    column: 3,
+  });
+  expect(summary.jobBrowser.primaryStep).toBe("speech-provider-receipt-write");
+  expect(summary.jobBrowser.primary.sha256).toBe(digest(secret));
+  expect(reads).toBe(0);
+});
+
+test("primary-only keeps existing trusted PDF summaries for bounded and unavailable leaves", async () => {
+  let reads = 0;
+  const accessor = Object.defineProperty(new Error(secret), "message", {
+    get() {
+      reads++;
+      throw new Error(secret);
+    },
+  });
+  const object = {
+    toString() {
+      reads++;
+      throw new Error(secret);
+    },
+  };
+  const large = new AssertionError({ actual: false, expected: true, message: secret.repeat(1000) });
+  for (const original of [new Error(secret), accessor, object, large, undefined, null, false, 0]) {
+    const primary = jobPdfFailure(original, "resource", { taskStatus: "succeeded" });
+    const expected = summarizeFailure(primary);
+    const failure = await caught(
+      async () => {
+        throw primary;
+      },
+      async () => {},
+      async () => {},
+    );
+    expect(failure).toBe(primary);
+    const { jobBrowser, ...summary } = summarizeFailure(failure);
+    expect(summary).toEqual(expected);
+    expect(jobBrowser.primaryStep).toBe("action");
+    expect(jobBrowser.primaryPresent).toBe(true);
+    expect(JSON.stringify({ summary, jobBrowser })).not.toContain(secret);
+  }
+  expect(reads).toBe(0);
+});
+
+test("primary-only primitive failures keep exact thrown values without boxing or minting context", async () => {
+  for (const primary of [undefined, null, false, 0]) {
+    let captured = false;
+    let marker;
+    try {
+      await withJobHuntBrowserDiagnostics(
+        async (mark) => {
+          marker = mark;
+          mark("page-errors");
+          throw primary;
+        },
+        async () => {
+          captured = true;
+        },
+        async () => {},
+      );
+      throw new Error("Expected original primitive rejection");
+    } catch (error) {
+      expect(error).toBe(primary);
+    }
+    expect(captured).toBe(true);
+    expect(marker("action")).toBe(false);
+    expect(summarizeFailure(primary).jobBrowser).toBeUndefined();
+  }
+});
+
+// Execute the actual owned capture body with controlled page/file doubles.
+// This is neither Chromium nor a physical UI acceptance result.
+function captureFixture(pages, writeFile) {
+  const source = readFileSync(
+    new URL("../scripts/smoke-cloud-job-hunt-recovery.mjs", import.meta.url),
+    "utf8",
+  );
+  const start = source.lastIndexOf("async () => {", source.indexOf("const failures = [];"));
+  const end = source.indexOf("\n      () => browser.close(),", start);
+  const callback = source.slice(start, end).trim().replace(/,$/, "");
+  return runInNewContext(`(${callback})`, {
+    pages,
+    evidenceDir: "owned-fixture",
+    join: (...parts) => parts.join("/"),
+    writeFile,
+    AggregateError,
+  });
+}
+
+test("actual capture skips deliberately closed pages while primary-only diagnostics remain visible", async () => {
+  let screenshots = 0,
+    frames = 0,
+    writes = 0;
+  const capture = captureFixture(
+    [
+      {
+        isClosed: () => true,
+        screenshot() {
+          screenshots++;
+        },
+        frames() {
+          frames++;
+        },
+      },
+    ],
+    async () => {
+      writes++;
+    },
+  );
+  const primary = new Error(secret);
+  const failure = await caught(
+    async (mark) => {
+      mark("audio-download-save");
+      throw primary;
+    },
+    capture,
+    async () => {},
+  );
+  expect(failure).toBe(primary);
+  expect(summarizeFailure(failure).jobBrowser.primaryStep).toBe("audio-download-save");
+  expect(summarizeFailure(failure).jobBrowser.cleanup).toEqual([]);
+  expect([screenshots, frames, writes]).toEqual([0, 0, 0]);
+});
+
+test("actual capture still aggregates every live-page evidence failure with the unchanged primary", async () => {
+  const primary = new Error(secret),
+    screenshot = new Error(secret),
+    frame = new Error(secret),
+    write = new Error(secret);
+  let screenshots = 0,
+    frames = 0,
+    writes = 0,
+    closedAttempts = 0;
+  const capture = captureFixture(
+    [
+      {
+        isClosed: () => true,
+        screenshot() {
+          closedAttempts++;
+        },
+        frames() {
+          closedAttempts++;
+        },
+      },
+      {
+        isClosed: () => false,
+        async screenshot() {
+          screenshots++;
+          throw screenshot;
+        },
+        frames() {
+          frames++;
+          return [
+            {
+              locator() {
+                return {
+                  async innerText() {
+                    throw frame;
+                  },
+                };
+              },
+            },
+          ];
+        },
+      },
+    ],
+    async () => {
+      writes++;
+      throw write;
+    },
+  );
+  const failure = await caught(
+    async (mark) => {
+      mark("audio-download-save");
+      throw primary;
+    },
+    capture,
+    async () => {},
+  );
+  expect(failure.cause).toBe(primary);
+  expect(failure.errors[0]).toBe(primary);
+  expect(failure.errors[1].errors).toEqual([screenshot, frame, write]);
+  expect(failure.errors[1].cause).toBe(screenshot);
+  expect(summarizeFailure(failure).jobBrowser.primaryStep).toBe("audio-download-save");
+  expect(summarizeFailure(failure).jobBrowser.cleanup.map((leaf) => leaf.phase)).toEqual([
+    "capture",
+  ]);
+  expect([closedAttempts, screenshots, frames, writes]).toEqual([0, 1, 1, 1]);
+});
+
+test("actual audio download and returned restart closure explicitly use the new run marker", async () => {
+  const source = readFileSync(
+    new URL("../scripts/smoke-cloud-interview-audio.mjs", import.meta.url),
+    "utf8",
+  );
+  const start = source.indexOf("const download = async (client, marker) => {");
+  const end = source.indexOf('\n  markStep?.("audio-close-interview");', start);
+  const downloadBody = source
+    .slice(start, end)
+    .replace(/^const download = /, "")
+    .trim()
+    .replace(/;$/, "");
+  const restartStart = source.indexOf("return async (client, restartMarker) => {");
+  const restartBody = source
+    .slice(restartStart, source.lastIndexOf("\n}"))
+    .replace(/^return /, "")
+    .trim()
+    .replace(/;$/, "");
+  const bytes = Buffer.from("owned-audio");
+  const primary = new Error(secret);
+  let failRead = false,
+    oldMarker;
+  const actions = [];
+  const click = async () => {
+    actions.push("click");
+  };
+  const preview = {
+    async waitFor() {
+      actions.push("preview");
+    },
+    getByRole() {
+      return { click };
+    },
+  };
+  const client = {
+    page: {
+      getByRole(role) {
+        return role === "region" ? preview : { click };
+      },
+      waitForEvent() {
+        actions.push("save");
+        return Promise.resolve({
+          async path() {
+            return "owned-audio";
+          },
+        });
+      },
+    },
+    async call(method, params) {
+      if (method === "storage.getSnapshot")
+        return { value: { interviewDraft: { answer: "原始回答\nfixture" } } };
+      return params.id === "done"
+        ? { status: "succeeded", result: { text: "fixture" } }
+        : { status: "cancelled" };
+    },
+  };
+  const download = runInNewContext(`(${downloadBody})`, {
+    practice: async () => ({ locator: () => ({ getByRole: () => ({ click }) }) }),
+    refresh: async () => {
+      actions.push("refresh");
+    },
+    succeeded: { id: "done" },
+    bytes,
+    assert,
+    readFile: async () => {
+      if (failRead) throw primary;
+      return bytes;
+    },
+  });
+  await withJobHuntBrowserDiagnostics(
+    async (mark) => {
+      oldMarker = mark;
+      await download(client, mark);
+    },
+    async () => {},
+    async () => {},
+  );
+  expect(oldMarker("audio-close-interview")).toBe(false);
+  const restart = runInNewContext(`(${restartBody})`, {
+    download,
+    succeeded: { id: "done" },
+    running: { id: "cancel" },
+    transcript: "fixture",
+    readRequests: async () => [1, 2],
+    assert,
+    console: { log() {} },
+    markStep: oldMarker,
+  });
+  failRead = true;
+  const failure = await caught(
+    async (mark) => {
+      await restart(client, mark);
+    },
+    async () => {},
+    async () => {},
+  );
+  expect(failure).toBe(primary);
+  expect(summarizeFailure(failure).jobBrowser.primaryStep).toBe("audio-download-read-assert");
+  expect(oldMarker("page-errors")).toBe(false);
+  expect(actions.filter((action) => action === "save")).toHaveLength(2);
 });

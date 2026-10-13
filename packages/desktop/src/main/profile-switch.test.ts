@@ -1,5 +1,7 @@
 import { afterAll, afterEach, beforeEach, describe, expect, spyOn, test } from "bun:test";
 import { mkdirSync, mkdtempSync, readFileSync, readdirSync, rmSync, writeFileSync } from "node:fs";
+import * as fs from "node:fs";
+import { syncBuiltinESMExports } from "node:module";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
 import * as childProcess from "node:child_process";
@@ -210,6 +212,80 @@ describe("reviewed Desktop Profile switch", () => {
     expect(sm.getForScope("project", target.cwd).profile).toBeUndefined();
     expect(sm.getForScope("project", target.cwd).responseLanguage).toBe("en");
   });
+
+  test("owned Skill discovery permutations preserve a corrupt-default review and adopt once through the configuration gate", async () => {
+    for (let index = 1; index <= 10; index++) seedSkill(`project-helper-${index}`);
+    const userSkill = join(process.env.HOME!, ".code-shell", "skills", "web-research");
+    mkdirSync(userSkill, { recursive: true });
+    writeFileSync(join(userSkill, "SKILL.md"), "---\nname: web-research\n---\nFixture only.");
+    writeFileSync(
+      join(process.env.CODE_SHELL_HOME!, "profiles", "old", "profile.json"),
+      "{ corrupt-definition",
+    );
+    const handlers = new Map<string, (...args: any[]) => any>();
+    const gate = new WebConfigurationGate();
+    let admissions = 0;
+    let reloads = 0;
+    registerProfileSwitchIpc({
+      ipcMain: { handle: (channel, listener) => handlers.set(channel, listener) },
+      resolveTarget: async () => target,
+      withMutation: (_cwd, write) => {
+        admissions++;
+        return gate.mutate(write, async () => {
+          reloads++;
+        });
+      },
+    });
+    const requested = { projectId: target.projectId };
+    const review = await handlers.get("profiles:previewSwitch")!({}, requested, null);
+    const settingsPath = join(target.cwd, ".code-shell", "settings.json");
+    const before = readFileSync(settingsPath, "utf8");
+    const ownedDirectory = join(target.cwd, ".agents", "skills");
+    const original = fs.readdirSync;
+    let permutations = 0;
+    const enumeration = spyOn(fs, "readdirSync").mockImplementation((...args: any[]) => {
+      const entries = Reflect.apply(original, fs, args);
+      if (args[0] === ownedDirectory && args[1]?.withFileTypes === true) {
+        permutations++;
+        return [...entries].reverse();
+      }
+      return entries;
+    });
+    syncBuiltinESMExports();
+    let permuted;
+    let result;
+    try {
+      permuted = await handlers.get("profiles:previewSwitch")!({}, requested, null);
+      expect(readFileSync(settingsPath, "utf8")).toBe(before);
+      result = await handlers.get("profiles:adoptSwitch")!({}, requested, null, review.revision);
+    } finally {
+      enumeration.mockRestore();
+      syncBuiltinESMExports();
+    }
+    expect(permutations).toBeGreaterThan(0);
+    expect(result).toEqual({ status: "adopted" });
+    expect(permuted.revision).toBe(review.revision);
+    expect(admissions).toBe(1);
+    expect(reloads).toBe(1);
+    expect(new SettingsManager(target.cwd, "full").getForScope("project", target.cwd).profile).toBe(
+      undefined,
+    );
+  });
+
+  test.each(["removed", "disabled"])(
+    "a genuinely %s Skill still stales the reviewed switch without a project write",
+    (change) => {
+      const review = previewProfileSwitch(target, null);
+      if (change === "removed")
+        rmSync(join(target.cwd, ".agents", "skills", "next-skill"), { recursive: true });
+      else
+        new SettingsManager(target.cwd, "full").saveUserSetting("disabledSkills", ["next-skill"]);
+      const settingsPath = join(target.cwd, ".code-shell", "settings.json");
+      const before = readFileSync(settingsPath, "utf8");
+      expect(adoptProfileSwitch(target, null, review.revision)).toEqual({ status: "stale" });
+      expect(readFileSync(settingsPath, "utf8")).toBe(before);
+    },
+  );
 
   test.each(["definition", "default", "inventory", "direct", "local", "root"])(
     "%s changes stale the review without a settings write",
