@@ -406,8 +406,15 @@ snapshot / element token，最终从计算器显示区的 `AXStaticText` 读回 
 - 设置 IPC 只接受主窗口主 frame，拒绝任意权限名、重复并发申请及授权期间重启。
   关闭功能立即停止 daemon；开关变更或权限更新后提示完整重启。
 - 相关隔离回归共 187 项通过，无跳过或失败；Desktop 主程序/renderer/mobile 类型检查通过。
-  本地 arm64 App 已完成打包及深度严格签名验证。真实系统弹窗和截图验收需要以该 App 的
-  实际 TCC 结果为准，不能以单元测试或先前的 AX 计算器结果替代。
+  本地 arm64 App 已完成打包及深度严格签名验证。
+- 打包 App 已通过 LaunchServices 真实启动，父进程为 launchd。系统 TCC 日志确认
+  CodeShell 和它直接启动的 daemon 均归属 `com.cjhyy.codeshell`，两项权限已有授权，
+  `health_report.bundle_identity` 通过。全程未申请或修改 OS 授权。
+- 打包版原生计算器实测通过：每步先取新 snapshot，再以后台 AXPress 点击 AC、7、+、8、=，
+  AXStaticText 读回 `7+8` 与 `15`，并通过 MCP 返回真实 396×700 PNG（58,791 字节）。
+  截图视觉复核为 `15`，正常退出后 daemon、proxy、socket、临时 HOME 全部清理。
+  由于本机 CodeShell 已有授权，首次授权弹窗仍只由接口与隔离测试验证，未重置用户授权。
+  测试使用本地工具与模型替身，未发送真实模型请求。
 
 ## 11. 开放问题
 
