@@ -519,10 +519,14 @@ export {
   ThemeReviewChangedError,
   THEME_ASSET_DIR,
   THEME_VAR_NAMES,
+  THEME_SURFACE_NAMES,
   detectThemeImage,
   type ThemePreview,
   type InstalledTheme,
   type ThemeManifest,
+  type ThemeSurfaceName,
+  type ThemeSurface,
+  type ThemeFrame,
 } from "./themes/index.js";
 export { resolveSafePluginPath } from "./plugins/pluginInstaller.js";
 export { listPluginHooks, pluginHookKey, type PluginHookEntry } from "./plugins/loadPluginHooks.js";

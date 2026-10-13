@@ -11,7 +11,8 @@ export function AppShell({
 }) {
   return (
     <div
-      className={`relative flex h-screen flex-col overflow-hidden bg-background text-foreground ${platformClass}`.trim()}
+      className={`relative flex h-screen flex-col overflow-hidden text-foreground ${platformClass}`.trim()}
+      data-theme-surface="window"
       data-sidebar={sidebarCollapsed ? "collapsed" : "open"}
       data-inspector="hidden"
     >

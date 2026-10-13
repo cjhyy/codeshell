@@ -39,6 +39,7 @@
     "test:e2e:media-playback": "node scripts/e2e-media-playback.mjs",
     "test:e2e:model-settings": "node scripts/e2e-model-settings.mjs",
     "test:e2e:settings": "node scripts/e2e-settings.mjs",
+    "test:e2e:themes": "node ../../scripts/run-isolated-node-smoke.mjs scripts/e2e-themes.mjs",
     "test:e2e:panel-recovery": "node scripts/e2e-panel-recovery-ui.mjs",
     "test:e2e:panel-app": "node scripts/e2e-panel-app.mjs",
     "smoke:background-browser": "esbuild scripts/smoke-background-browser.ts --bundle --platform=node --format=esm --outfile=out/smoke-background-browser.mjs --external:electron --external:@cjhyy/code-shell-core && electron out/smoke-background-browser.mjs",

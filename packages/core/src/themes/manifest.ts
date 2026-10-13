@@ -4,8 +4,8 @@ import { z } from "zod";
  * Theme-pack manifest (`.cs-theme.json`) schema and validation.
  *
  * A pack may override app colors (a whitelisted subset of `--cs-*`, unitless
- * HSL), supply per-state pet sprites, and a light/dark wallpaper. All three are
- * optional — a pack can recolor only, reskin the pet only, etc. Image fields
+ * HSL), supply per-state pet sprites, light/dark wallpapers, and per-surface
+ * backgrounds with an optional window frame. All of these are optional. Image fields
  * declare author-relative paths that the installer validates and renames to a
  * canonical layout; the manifest here only checks shape, not the image bytes.
  */
@@ -67,6 +67,46 @@ const RELATIVE_ASSET = z
 
 export const THEME_ID = /^[a-z0-9][a-z0-9-]{1,63}$/;
 
+/** Host UI surfaces with independently configurable backgrounds. */
+export const THEME_SURFACE_NAMES = [
+  "window",
+  "sidebar",
+  "titlebar",
+  "chat",
+  "composer",
+  "panel",
+] as const;
+
+const ThemeModeColorsSchema = z
+  .object({
+    light: z.string().regex(HSL).optional(),
+    dark: z.string().regex(HSL).optional(),
+  })
+  .strict();
+
+const ThemeSurfaceSchema = z
+  .object({
+    light: RELATIVE_ASSET.optional(),
+    dark: RELATIVE_ASSET.optional(),
+    opacity: z.number().min(0).max(1).optional(),
+    fit: z.enum(["cover", "contain"]).optional(),
+    position: z
+      .enum(["center", "top", "bottom", "left", "right", "top-right", "bottom-right"])
+      .optional(),
+    background: ThemeModeColorsSchema.optional(),
+    backgroundOpacity: z.number().min(0).max(1).optional(),
+  })
+  .strict();
+
+const ThemeFrameSchema = ThemeModeColorsSchema.extend({
+  width: z.number().min(0).max(8).optional(),
+  radius: z.number().min(0).max(24).optional(),
+});
+
+export type ThemeSurfaceName = (typeof THEME_SURFACE_NAMES)[number];
+export type ThemeSurface = z.infer<typeof ThemeSurfaceSchema>;
+export type ThemeFrame = z.infer<typeof ThemeFrameSchema>;
+
 export const ThemeManifestSchema = z.object({
   schemaVersion: z.literal(1),
   id: z.string().regex(THEME_ID, "id must match ^[a-z0-9][a-z0-9-]{1,63}$"),
@@ -91,6 +131,18 @@ export const ThemeManifestSchema = z.object({
       opacity: z.number().min(0).max(1).optional(),
     })
     .optional(),
+  surfaces: z
+    .object({
+      window: ThemeSurfaceSchema.optional(),
+      sidebar: ThemeSurfaceSchema.optional(),
+      titlebar: ThemeSurfaceSchema.optional(),
+      chat: ThemeSurfaceSchema.optional(),
+      composer: ThemeSurfaceSchema.optional(),
+      panel: ThemeSurfaceSchema.optional(),
+    })
+    .strict()
+    .optional(),
+  frame: ThemeFrameSchema.optional(),
 });
 
 export type ThemeManifest = z.infer<typeof ThemeManifestSchema>;

@@ -136,7 +136,8 @@ export const settingsNs = {
         dark: "深色",
         darkDesc: "始终使用深色界面",
         packTitle: "主题包",
-        packDesc: "选择或导入一套主题包,可同时替换配色、mimi 形象和背景图。",
+        packDesc:
+          "选择或导入主题包，替换聊天背景、侧栏、标题栏、输入框、面板和窗口边框，也可搭配 mimi 形象。",
         pack: {
           default: "默认橙",
           ocean: "海洋蓝",
@@ -146,6 +147,9 @@ export const settingsNs = {
           importColors: "配色",
           importPet: "mimi 形象",
           importWallpaper: "背景图",
+          importSurfaces: "界面皮肤",
+          importFrame: "窗口边框",
+          fullSkin: "全界面主题",
           importNothing: "无内容",
           importConfirmTitle: "安装主题包「{name}」?",
           importConfirmBody: "版本 {version}，包含:{contents}。",
@@ -1258,7 +1262,7 @@ export const settingsNs = {
         darkDesc: "Always use the dark interface",
         packTitle: "Theme pack",
         packDesc:
-          "Pick or import a theme pack — it can swap colors, Mimi's look, and the background.",
+          "Choose or import a theme for chat, sidebar, title bar, composer, panels and window frame, with optional Mimi sprites.",
         pack: {
           default: "Classic orange",
           ocean: "Ocean blue",
@@ -1268,6 +1272,9 @@ export const settingsNs = {
           importColors: "colors",
           importPet: "Mimi sprites",
           importWallpaper: "wallpaper",
+          importSurfaces: "interface surfaces",
+          importFrame: "window frame",
+          fullSkin: "Full interface theme",
           importNothing: "nothing",
           importConfirmTitle: "Install theme pack “{name}”?",
           importConfirmBody: "Version {version}, includes: {contents}.",

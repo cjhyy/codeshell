@@ -75,7 +75,6 @@ import {
   installReviewedLocalTheme,
   listInstalledThemes,
   uninstallTheme,
-  type InstalledTheme,
   type ThemePreview,
 } from "@cjhyy/code-shell-core";
 import {
@@ -230,7 +229,7 @@ import {
   petMemoryAutoExtractSettingsPatch,
   petPersonalizationFromSettings,
 } from "../shared/pet-settings.js";
-import type { InstalledThemePack } from "../shared/theme-packs.js";
+import { installedThemeToPack } from "./theme-pack-conversion.js";
 import { SafeStorageCipher } from "./credential-cipher.js";
 import { createDesktopModelRequestSigner } from "./model-request-signing-service.js";
 import { McpOAuthService, type McpOAuthLoginInput } from "./mcp-oauth-service.js";
@@ -449,7 +448,7 @@ import {
   registerPanelAppSchemePrivileges,
   validatePanelAppEntryUrl,
 } from "./panel-app-protocol.js";
-import { installThemeAssetProtocol, themeAssetUrl } from "./theme-asset-protocol.js";
+import { installThemeAssetProtocol, THEME_ASSET_SCHEME } from "./theme-asset-protocol.js";
 import { PanelAppBridge } from "./panel-app-bridge.js";
 import { buildPanelAgentTaskModelCatalog } from "./panel-app-agent-task-models.js";
 import {
@@ -1437,7 +1436,7 @@ async function createWindow(): Promise<BrowserWindow> {
             "script-src 'self' 'unsafe-inline' 'unsafe-eval' blob:; " +
             "worker-src 'self' blob:; " +
             "style-src 'self' 'unsafe-inline'; " +
-            "img-src 'self' data: blob:; " +
+            `img-src 'self' data: blob: ${THEME_ASSET_SCHEME}:; ` +
             `media-src ${MEDIA_PREVIEW_SCHEME}:; ` +
             "font-src 'self' data:; " +
             "connect-src 'self' ws: wss: http://localhost:* http://127.0.0.1:*; " +
@@ -1450,7 +1449,7 @@ async function createWindow(): Promise<BrowserWindow> {
             "script-src 'self'; " +
             "worker-src 'self'; " +
             "style-src 'self' 'unsafe-inline'; " +
-            "img-src 'self' data:; " +
+            `img-src 'self' data: ${THEME_ASSET_SCHEME}:; ` +
             `media-src ${MEDIA_PREVIEW_SCHEME}:; ` +
             "font-src 'self' data:; " +
             // localhost connect is needed by the browser panel's dev-server
@@ -4859,35 +4858,6 @@ ipcMain.handle(
     return result;
   },
 );
-/** Convert an installed theme to the renderer ThemePack shape with cstheme:// urls. */
-function installedThemeToPack(theme: InstalledTheme): InstalledThemePack {
-  const asset = (rel?: string): string | undefined =>
-    rel ? themeAssetUrl(theme.id, rel) : undefined;
-  const pet: NonNullable<InstalledThemePack["pet"]> = {};
-  if (theme.pet.idle) pet.idle = asset(theme.pet.idle)!;
-  if (theme.pet.running) pet.running = asset(theme.pet.running)!;
-  if (theme.pet.alert) pet.alert = asset(theme.pet.alert)!;
-  if (theme.pet.walk?.length) pet.walk = theme.pet.walk.map((rel) => asset(rel)!);
-  const wp = theme.wallpaper;
-  return {
-    id: theme.id,
-    name: theme.name,
-    swatch: theme.colors.light["--cs-primary"] ?? theme.colors.dark["--cs-primary"] ?? "0 0% 50%",
-    colors: theme.colors,
-    ...(Object.keys(pet).length ? { pet } : {}),
-    ...(wp
-      ? {
-          wallpaper: {
-            ...(asset(wp.light) ? { light: asset(wp.light) } : {}),
-            ...(asset(wp.dark) ? { dark: asset(wp.dark) } : {}),
-            ...(wp.opacity !== undefined ? { opacity: wp.opacity } : {}),
-          },
-        }
-      : {}),
-    source: "installed",
-  };
-}
-
 ipcMain.handle("themes:list", async () => {
   const themes = await listInstalledThemes();
   return themes.map(installedThemeToPack);

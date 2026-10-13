@@ -3,6 +3,8 @@
  * the renderer. Asset urls are cstheme:// links the main process resolves.
  */
 
+import type { ThemeFrame, ThemeSurface, ThemeSurfaceName } from "@cjhyy/code-shell-core";
+
 export interface InstalledThemePack {
   id: string;
   name: string;
@@ -10,6 +12,8 @@ export interface InstalledThemePack {
   colors: { light: Record<string, string>; dark: Record<string, string> };
   pet?: { idle?: string; running?: string; alert?: string; walk?: string[] };
   wallpaper?: { light?: string; dark?: string; opacity?: number };
+  surfaces?: Partial<Record<ThemeSurfaceName, ThemeSurface>>;
+  frame?: ThemeFrame;
   source: "installed";
 }
 
@@ -26,6 +30,8 @@ export type ThemePickPreview =
         hasColors: boolean;
         petStates: Array<"idle" | "running" | "alert">;
         wallpaperModes: Array<"light" | "dark">;
+        surfaceNames?: ThemeSurfaceName[];
+        hasFrame?: boolean;
         swatch?: string;
         reviewToken: string;
         warnings: string[];

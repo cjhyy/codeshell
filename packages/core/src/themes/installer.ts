@@ -25,7 +25,12 @@ import {
 } from "node:fs/promises";
 import { dirname, join, resolve } from "node:path";
 import { detectThemeImage } from "./image.js";
-import { parseThemeManifest, type ThemeManifest } from "./manifest.js";
+import {
+  THEME_SURFACE_NAMES,
+  parseThemeManifest,
+  type ThemeManifest,
+  type ThemeSurfaceName,
+} from "./manifest.js";
 import {
   THEME_ASSET_DIR,
   ThemeInstallError,
@@ -58,6 +63,8 @@ export interface ThemePreview {
   hasColors: boolean;
   petStates: PetState[];
   wallpaperModes: WallpaperMode[];
+  surfaceNames?: ThemeSurfaceName[];
+  hasFrame?: boolean;
   /** The pack's primary color (for the picker swatch), if it overrides one. */
   swatch?: string;
   /** Content digest bound to a subsequent install to detect mid-review changes. */
@@ -73,6 +80,8 @@ export interface InstalledTheme {
   colors: { light: Record<string, string>; dark: Record<string, string> };
   pet: Partial<Record<PetState, string>> & { walk?: string[] }; // canonical relative asset paths
   wallpaper?: { light?: string; dark?: string; opacity?: number };
+  surfaces?: ThemeManifest["surfaces"];
+  frame?: ThemeManifest["frame"];
 }
 
 interface RegistryEntry {
@@ -145,6 +154,10 @@ async function resolveAssets(
   }
   await add(manifest.wallpaper?.light, "wallpaper-light");
   await add(manifest.wallpaper?.dark, "wallpaper-dark");
+  for (const name of THEME_SURFACE_NAMES) {
+    await add(manifest.surfaces?.[name]?.light, `surface-${name}-light`);
+    await add(manifest.surfaces?.[name]?.dark, `surface-${name}-dark`);
+  }
   return { assets, bytesByName };
 }
 
@@ -209,6 +222,10 @@ function previewOf(
     ),
     petStates: [...petStates],
     wallpaperModes: [...wallpaperModes],
+    ...(manifest.surfaces
+      ? { surfaceNames: THEME_SURFACE_NAMES.filter((name) => manifest.surfaces?.[name]) }
+      : {}),
+    ...(manifest.frame && Object.keys(manifest.frame).length ? { hasFrame: true } : {}),
     ...((manifest.colors?.light?.["--cs-primary"] ?? manifest.colors?.dark?.["--cs-primary"])
       ? {
           swatch: (manifest.colors?.light?.["--cs-primary"] ??
@@ -229,8 +246,14 @@ export async function previewLocalTheme(sourceDir: string): Promise<ThemePreview
   const manifest = await loadManifest(sourceDir);
   assertSafeThemeName(manifest.id);
   const warnings: string[] = [];
-  if (!manifest.colors && !manifest.pet && !manifest.wallpaper) {
-    warnings.push("theme declares no colors, pet sprites, or wallpaper");
+  if (
+    !manifest.colors &&
+    !manifest.pet &&
+    !manifest.wallpaper &&
+    !manifest.surfaces &&
+    !manifest.frame
+  ) {
+    warnings.push("theme declares no colors, pet sprites, wallpaper, surfaces, or frame");
   }
   const { bytesByName } = await resolveAssets(sourceDir, manifest);
   return previewOf(manifest, bytesByName, warnings);
@@ -357,6 +380,21 @@ function canonicalManifestFor(manifest: ThemeManifest, assets: ResolvedAsset[]):
           : {}),
       }
     : undefined;
+  const surfaces = manifest.surfaces
+    ? Object.fromEntries(
+        THEME_SURFACE_NAMES.flatMap((name) => {
+          const surface = manifest.surfaces?.[name];
+          if (!surface) return [];
+          // Preserve scalar appearance controls; only asset paths are rewritten.
+          const { light: _light, dark: _dark, ...appearance } = surface;
+          const light = rel(`surface-${name}-light`);
+          const dark = rel(`surface-${name}-dark`);
+          return [
+            [name, { ...appearance, ...(light ? { light } : {}), ...(dark ? { dark } : {}) }],
+          ];
+        }),
+      )
+    : undefined;
   return {
     schemaVersion: 1,
     id: manifest.id,
@@ -365,6 +403,8 @@ function canonicalManifestFor(manifest: ThemeManifest, assets: ResolvedAsset[]):
     ...(manifest.colors ? { colors: manifest.colors } : {}),
     ...(pet && Object.keys(pet).length ? { pet } : {}),
     ...(wallpaper && Object.keys(wallpaper).length ? { wallpaper } : {}),
+    ...(surfaces && Object.keys(surfaces).length ? { surfaces } : {}),
+    ...(manifest.frame ? { frame: manifest.frame } : {}),
   };
 }
 
@@ -381,6 +421,8 @@ function toInstalledTheme(manifest: ThemeManifest): InstalledTheme {
       ...(manifest.pet?.walk?.length ? { walk: manifest.pet.walk } : {}),
     },
     ...(manifest.wallpaper ? { wallpaper: manifest.wallpaper } : {}),
+    ...(manifest.surfaces ? { surfaces: manifest.surfaces } : {}),
+    ...(manifest.frame ? { frame: manifest.frame } : {}),
   };
 }
 

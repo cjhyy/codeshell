@@ -3,7 +3,7 @@ import { mkdtemp, mkdir, readFile, rm, symlink, writeFile } from "node:fs/promis
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { detectThemeImage } from "./image.js";
-import { parseThemeManifest } from "./manifest.js";
+import { THEME_SURFACE_NAMES, parseThemeManifest } from "./manifest.js";
 import {
   installReviewedLocalTheme,
   listInstalledThemes,
@@ -90,9 +90,210 @@ describe("parseThemeManifest", () => {
   test("rejects traversal in asset paths", () => {
     expect(() => parseThemeManifest({ ...FULL_MANIFEST, pet: { idle: "../x.png" } })).toThrow();
   });
+
+  test.each([
+    "../x.png",
+    "/tmp/x.png",
+    "a/../../x.png",
+    "a\\x.png",
+    "x\0.png",
+    "https://example.com/x.png",
+  ])("rejects unsafe surface image path %s", (path) => {
+    expect(() =>
+      parseThemeManifest({ ...FULL_MANIFEST, surfaces: { chat: { light: path } } }),
+    ).toThrow();
+  });
+
+  test.each([
+    { opacity: -0.1 },
+    { opacity: 1.1 },
+    { backgroundOpacity: -1 },
+    { backgroundOpacity: 2 },
+    { fit: "repeat" },
+    { position: "calc(1px + 1%)" },
+    { background: { light: "red" } },
+    { background: { dark: "0 0% 0%; background: url(https://example.com)" } },
+    { background: { contrast: "0 0% 0%" } },
+    { css: "position: fixed" },
+  ])("rejects invalid surface appearance %j", (surface) => {
+    expect(() => parseThemeManifest({ ...FULL_MANIFEST, surfaces: { chat: surface } })).toThrow();
+  });
+
+  test.each([
+    { width: -1 },
+    { width: 9 },
+    { radius: -1 },
+    { radius: 25 },
+    { light: "url(https://example.com)" },
+    { style: "border-image: url(https://example.com)" },
+  ])("rejects invalid frame appearance %j", (frame) => {
+    expect(() => parseThemeManifest({ ...FULL_MANIFEST, frame })).toThrow();
+  });
+
+  test("rejects unknown surface names", () => {
+    expect(() => parseThemeManifest({ ...FULL_MANIFEST, surfaces: { unknown: {} } })).toThrow();
+  });
 });
 
 describe("theme installer", () => {
+  test("roundtrips every surface image and preserves appearance controls and frame", async () => {
+    const surfaces = Object.fromEntries(
+      THEME_SURFACE_NAMES.map((name) => [
+        name,
+        {
+          light: `images/${name}.png`,
+          dark: `images/${name}.gif`,
+          opacity: 0,
+          fit: "contain",
+          position: "bottom-right",
+          background: { light: "350 60% 98%", dark: "350 25% 12%" },
+          backgroundOpacity: 0.75,
+        },
+      ]),
+    );
+    const frame = { light: "350 70% 50%", dark: "350 60% 65%", width: 2.5, radius: 18 };
+    const src = await writePack({
+      ".cs-theme.json": JSON.stringify({
+        schemaVersion: 1,
+        id: "all-surfaces",
+        name: "All Surfaces",
+        version: "1",
+        surfaces,
+        frame,
+      }),
+      ...Object.fromEntries(
+        THEME_SURFACE_NAMES.flatMap((name) => [
+          [`images/${name}.png`, PNG_1x1],
+          [`images/${name}.gif`, GIF_1x1],
+        ]),
+      ),
+    });
+    const preview = await previewLocalTheme(src);
+    expect(preview.surfaceNames).toEqual([...THEME_SURFACE_NAMES]);
+    expect(preview.warnings).toEqual([]);
+    const installed = await installReviewedLocalTheme(src, preview.reviewToken);
+    expect(installed.frame).toEqual(frame);
+    for (const name of THEME_SURFACE_NAMES) {
+      const light = `${THEME_ASSET_DIR}/surface-${name}-light.png`;
+      const dark = `${THEME_ASSET_DIR}/surface-${name}-dark.gif`;
+      expect(installed.surfaces?.[name]).toEqual({ ...surfaces[name], light, dark });
+      expect(await readFile(join(themeInstallDir(installed.id), light))).toEqual(PNG_1x1);
+      expect(await readFile(join(themeInstallDir(installed.id), dark))).toEqual(GIF_1x1);
+    }
+    const onDisk = parseThemeManifest(
+      JSON.parse(await readFile(join(themeInstallDir(installed.id), ".cs-theme.json"), "utf8")),
+    );
+    expect(onDisk.surfaces).toEqual(installed.surfaces);
+    expect(onDisk.frame).toEqual(frame);
+    expect(await listInstalledThemes()).toEqual([installed]);
+  });
+
+  test("retains image-free surface controls and zero-valued frame settings", async () => {
+    const surfaces = { chat: { background: { light: "0 0% 100%" }, backgroundOpacity: 0 } };
+    const frame = { width: 0, radius: 0 };
+    const src = await writePack({
+      ".cs-theme.json": JSON.stringify({
+        schemaVersion: 1,
+        id: "surfaces-only",
+        name: "Surfaces Only",
+        version: "1",
+        surfaces,
+        frame,
+      }),
+    });
+    const preview = await previewLocalTheme(src);
+    expect(preview.surfaceNames).toEqual(["chat"]);
+    expect(preview.hasFrame).toBe(true);
+    expect(preview.warnings).toEqual([]);
+    const installed = await installReviewedLocalTheme(src, preview.reviewToken);
+    expect(installed.surfaces).toEqual(surfaces);
+    expect(installed.frame).toEqual(frame);
+    expect(await listInstalledThemes()).toEqual([installed]);
+  });
+
+  test("identifies frame-only contents without reporting an empty frame", async () => {
+    const manifest = {
+      schemaVersion: 1,
+      id: "frame-only",
+      name: "Frame Only",
+      version: "1",
+      frame: { width: 0, radius: 0 },
+    };
+    const src = await writePack({ ".cs-theme.json": JSON.stringify(manifest) });
+    const preview = await previewLocalTheme(src);
+    expect(preview.hasFrame).toBe(true);
+    expect(preview.surfaceNames).toBeUndefined();
+    expect(preview.warnings).toEqual([]);
+    await writeFile(join(src, ".cs-theme.json"), JSON.stringify({ ...manifest, frame: {} }));
+    expect((await previewLocalTheme(src)).hasFrame).toBeUndefined();
+  });
+
+  test("surface image content is bound to the review token", async () => {
+    const src = await writePack({
+      ".cs-theme.json": JSON.stringify({
+        schemaVersion: 1,
+        id: "surface-review",
+        name: "Surface Review",
+        version: "1",
+        surfaces: { chat: { dark: "chat.png", opacity: 0.25 } },
+      }),
+      "chat.png": PNG_1x1,
+    });
+    const preview = await previewLocalTheme(src);
+    // A valid replacement image still requires a new review.
+    await writeFile(join(src, "chat.png"), GIF_1x1);
+    await expect(installReviewedLocalTheme(src, preview.reviewToken)).rejects.toBeInstanceOf(
+      ThemeReviewChangedError,
+    );
+    expect(await listInstalledThemes()).toEqual([]);
+  });
+
+  test("surface and frame appearance changes require a new review", async () => {
+    const manifest = {
+      schemaVersion: 1,
+      id: "appearance-review",
+      name: "Appearance Review",
+      version: "1",
+      surfaces: { chat: { backgroundOpacity: 0.9 } },
+      frame: { width: 2 },
+    };
+    const src = await writePack({ ".cs-theme.json": JSON.stringify(manifest) });
+    const preview = await previewLocalTheme(src);
+    await writeFile(
+      join(src, ".cs-theme.json"),
+      JSON.stringify({ ...manifest, surfaces: { chat: { backgroundOpacity: 0.5 } } }),
+    );
+    await expect(installReviewedLocalTheme(src, preview.reviewToken)).rejects.toBeInstanceOf(
+      ThemeReviewChangedError,
+    );
+    await writeFile(
+      join(src, ".cs-theme.json"),
+      JSON.stringify({ ...manifest, frame: { width: 3 } }),
+    );
+    await expect(installReviewedLocalTheme(src, preview.reviewToken)).rejects.toBeInstanceOf(
+      ThemeReviewChangedError,
+    );
+  });
+
+  test("surface assets use the existing image and symlink safeguards", async () => {
+    const src = await writePack({
+      ".cs-theme.json": JSON.stringify({
+        schemaVersion: 1,
+        id: "unsafe-surface",
+        name: "Unsafe Surface",
+        version: "1",
+        surfaces: { window: { light: "window.png" } },
+      }),
+      "window.png": "<svg onload='alert(1)'/>",
+    });
+    await expect(previewLocalTheme(src)).rejects.toThrow(/not a supported image/);
+    const outside = join(home, "outside.png");
+    await writeFile(outside, PNG_1x1);
+    await rm(join(src, "window.png"));
+    await symlink(outside, join(src, "window.png"));
+    await expect(previewLocalTheme(src)).rejects.toThrow(/escapes theme root/);
+  });
+
   test("previews, installs, lists, and uninstalls a full pack", async () => {
     const src = await writePack({
       ".cs-theme.json": JSON.stringify(FULL_MANIFEST),

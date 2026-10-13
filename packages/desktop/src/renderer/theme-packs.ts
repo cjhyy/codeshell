@@ -7,10 +7,9 @@
  * active (see theme.ts applyThemePack). Values are unitless HSL triples
  * ("H S% L%"), consumed via hsl(var(--cs-*)) exactly like the base sheet.
  *
- * Phase 2 adds the reserved slots: `pet` (per-state sprite urls) and `wallpaper`
- * (a background image layered over the base color), plus `source` to tell a
- * builtin pack from an externally installed one. Colors stay as in phase 1.
- * See docs/superpowers/specs/2026-07-27-theme-packs-phase2-design.md.
+ * Packs may also provide pet sprites, a legacy window wallpaper, independent
+ * static images/colors for host surfaces, and an inset window frame. `source`
+ * distinguishes bundled packs from externally installed ones.
  */
 
 /** Whitelist of overridable variables — must match names in tailwind.css. */
@@ -80,6 +79,34 @@ export interface WallpaperSpec {
   opacity?: number;
 }
 
+/** Static image surfaces supported by the Desktop host. */
+export const THEME_SURFACE_NAMES = [
+  "window",
+  "sidebar",
+  "titlebar",
+  "chat",
+  "composer",
+  "panel",
+] as const;
+
+export type ThemeSurfaceName = (typeof THEME_SURFACE_NAMES)[number];
+
+export interface ThemeSurfaceSpec extends WallpaperSpec {
+  fit?: "cover" | "contain";
+  position?: "center" | "top" | "bottom" | "left" | "right" | "top-right" | "bottom-right";
+  /** Unitless HSL triples, independent of the image's opacity. */
+  background?: { light?: string; dark?: string };
+  backgroundOpacity?: number;
+}
+
+export interface ThemeFrameSpec {
+  light?: string;
+  dark?: string;
+  /** Inset decorative border in CSS pixels; never changes the layout. */
+  width?: number;
+  radius?: number;
+}
+
 export interface ThemePack {
   /** Stable id persisted to localStorage. */
   id: string;
@@ -95,6 +122,10 @@ export interface ThemePack {
   pet?: PetSprites;
   /** Optional background image; absent means the plain color background. */
   wallpaper?: WallpaperSpec;
+  /** Per-area decoration; the legacy wallpaper is the window fallback. */
+  surfaces?: Partial<Record<ThemeSurfaceName, ThemeSurfaceSpec>>;
+  /** Decorative outer frame for the main app window only. */
+  frame?: ThemeFrameSpec;
   /** builtin ships with the app; installed comes from ~/.code-shell/themes/. */
   source?: "builtin" | "installed";
 }

@@ -87,6 +87,7 @@ describe("AppearanceSection theme packs", () => {
     const packCards = findByAttr(container, "data-theme-pack");
     const ids = packCards.map((card) => card.getAttribute("data-theme-pack"));
     expect(ids).toEqual(["default", "ocean", "forest", "grape"]);
+    expect(findByAttr(container, "data-theme-preview")).toHaveLength(ids.length);
 
     // The selectable control is the inner button of each card.
     const oceanCard = packCards.find((card) => card.getAttribute("data-theme-pack") === "ocean");
@@ -111,6 +112,16 @@ describe("AppearanceSection theme packs", () => {
         swatch: "310 80% 50%",
         colors: { light: { "--cs-primary": "310 80% 50%" }, dark: {} },
         pet: { idle: "cstheme://acme-neon/.cs-theme-assets/pet-idle.png" },
+        surfaces: {
+          chat: {
+            light: "cstheme://acme-neon/.cs-theme-assets/surface-chat-light.png",
+            dark: "cstheme://acme-neon/.cs-theme-assets/surface-chat-dark.png",
+            fit: "contain",
+            position: "right",
+            opacity: 0.3,
+          },
+        },
+        frame: { width: 2, light: "310 80% 50%" },
         source: "installed",
       },
     ]);
@@ -128,5 +139,12 @@ describe("AppearanceSection theme packs", () => {
     // Only the installed pack exposes an uninstall control.
     const uninstall = findByAttr(container, "data-theme-uninstall");
     expect(uninstall.map((b) => b.getAttribute("data-theme-uninstall"))).toEqual(["acme-neon"]);
+    const preview = findByAttr(container, "data-theme-preview").find(
+      (node) => node.getAttribute("data-theme-preview") === "acme-neon",
+    );
+    expect(findElements(preview, "IMG").map((node) => reactPropsOf(node).src)).toEqual([
+      "cstheme://acme-neon/.cs-theme-assets/surface-chat-light.png",
+      "cstheme://acme-neon/.cs-theme-assets/surface-chat-dark.png",
+    ]);
   });
 });
