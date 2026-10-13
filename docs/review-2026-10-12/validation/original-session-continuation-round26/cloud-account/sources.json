@@ -1,0 +1,66 @@
+{
+  "checkedAtSingapore": "2026-10-12T09:06:45.259907+08:00",
+  "productExecutions": 0,
+  "files": [
+    {
+      "path": "packages/desktop/src/renderer/settings/CloudAccountSettings.tsx",
+      "initialSha256": "bb838c10314d94cdbb4bf9390675b3ef41e2b7ad318326e2acbd4008751b32eb",
+      "latestSha256": "bb838c10314d94cdbb4bf9390675b3ef41e2b7ad318326e2acbd4008751b32eb",
+      "same": true
+    },
+    {
+      "path": "packages/desktop/src/main/cloud-account-manager.ts",
+      "initialSha256": "2c7661871bdf741ffdb5c68d0f9f449f37ea172ed8e75d6633a24ff9c37609fd",
+      "latestSha256": "2c7661871bdf741ffdb5c68d0f9f449f37ea172ed8e75d6633a24ff9c37609fd",
+      "same": true
+    },
+    {
+      "path": "packages/desktop/src/main/cloud-account-http.ts",
+      "initialSha256": "21020fa90427154ae92d30e7328569f168179abfb42f546a2ffd985ac8e9d67a",
+      "latestSha256": "21020fa90427154ae92d30e7328569f168179abfb42f546a2ffd985ac8e9d67a",
+      "same": true
+    },
+    {
+      "path": "packages/desktop/src/main/cloud-account-store.ts",
+      "initialSha256": "fda5122fd24e1bd2e383633a9087614b459889291bbbcce1858c24eb4e474cb0",
+      "latestSha256": "fda5122fd24e1bd2e383633a9087614b459889291bbbcce1858c24eb4e474cb0",
+      "same": true
+    },
+    {
+      "path": "packages/desktop/src/main/cloud-account-ipc.ts",
+      "initialSha256": "629f010a93f5e9b4bf2c43d499c5f41d1cccdc8d367eee63f9fc78a096cb871c",
+      "latestSha256": "629f010a93f5e9b4bf2c43d499c5f41d1cccdc8d367eee63f9fc78a096cb871c",
+      "same": true
+    },
+    {
+      "path": "packages/desktop/src/main/desktop-remote-services.ts",
+      "initialSha256": "5ebbdbea44c49083820863384b265ddc95bac82e033658973019204009e0333b",
+      "latestSha256": "5ebbdbea44c49083820863384b265ddc95bac82e033658973019204009e0333b",
+      "same": true
+    },
+    {
+      "path": "packages/desktop/src/main/mobile-remote-controller.ts",
+      "initialSha256": "bcdfcb9b051ed77117e073982ee55fdfc79c0ee7acd644120890de6585816093",
+      "latestSha256": "bcdfcb9b051ed77117e073982ee55fdfc79c0ee7acd644120890de6585816093",
+      "same": true
+    },
+    {
+      "path": "packages/desktop/src/preload/cloud-account-api.ts",
+      "initialSha256": "b35ad37854886ce27c39e821f618435c0be5039878eef0303755fce18f79f0ce",
+      "latestSha256": "b35ad37854886ce27c39e821f618435c0be5039878eef0303755fce18f79f0ce",
+      "same": true
+    },
+    {
+      "path": "packages/desktop/src/main/cloud-account-manager.test.ts",
+      "initialSha256": "a7f21f23b16cd50d80c980aef95ff1b1701435b78959c21341034fd000fbbc57",
+      "latestSha256": "a7f21f23b16cd50d80c980aef95ff1b1701435b78959c21341034fd000fbbc57",
+      "same": true
+    },
+    {
+      "path": "packages/desktop/src/main/cloud-account-ipc.test.ts",
+      "initialSha256": "c8a83921d38b7657bed0fc5801252c63ec6dcd4e0b7ef2ec2fc84676a7a50d5b",
+      "latestSha256": "c8a83921d38b7657bed0fc5801252c63ec6dcd4e0b7ef2ec2fc84676a7a50d5b",
+      "same": true
+    }
+  ]
+}

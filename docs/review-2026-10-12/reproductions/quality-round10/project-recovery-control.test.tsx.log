@@ -1,0 +1,13 @@
+bun test v1.3.11 (af24e281)
+
+docs/review-2026-10-12/reproductions/quality-round10/project-recovery-control.test.tsx:
+fatal: not a git repository (or any of the parent directories): .git
+fatal: not a git repository (or any of the parent directories): .git
+{"mainProjectIds":["ebc228f8-2ea6-4c64-a65d-d7e5dc8095c7","2750344f-73cf-44e4-bc6d-a25d9c33a313"],"rendererProjectIds":["ebc228f8-2ea6-4c64-a65d-d7e5dc8095c7","2750344f-73cf-44e4-bc6d-a25d9c33a313"],"activeProjectId":"2750344f-73cf-44e4-bc6d-a25d9c33a313"}
+(pass) CONTROL newer registry event restores project lost from the startup projection [572.37ms]
+
+ 1 pass
+ 0 fail
+ 9 expect() calls
+Ran 1 test across 1 file. [1.70s]
+Completed Bun shard: 1 tests, 0 skipped; 0 failures.

@@ -1,0 +1,47 @@
+bun test v1.3.11 (af24e281)
+
+../../../../../../private/tmp/codeshell-review-20261012-modern-desktop-image-round25/modern-desktop-image.test.ts:
+100 |   const [selectedFile, setSelectedFile] = React.useState<string | undefined>();
+101 |   const [fileOpenVersion, setFileOpenVersion] = React.useState(0);
+102 |   const [navigationDirty, setNavigationDirty] = React.useState(false);
+103 |   const [pendingNavigation, setPendingNavigation] = React.useState<(() => void) | null>(null);
+104 |   const [settingsSection, setSettingsSection] = React.useState<HubSettingsSection>("overview");
+105 |   const [narrow, setNarrow] = React.useState(() => window.matchMedia("(max-width: 760px)").matches);
+                                                                ^
+TypeError: window.matchMedia is not a function. (In 'window.matchMedia("(max-width: 760px)")', 'window.matchMedia' is undefined)
+      at <anonymous> (/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/web/app/Workbench.tsx:105:59)
+      at useReducer (/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/node_modules/.bun/react-dom@19.2.6+d86b59289c1a13ae/node_modules/react-dom/cjs/react-dom-server-legacy.node.development.js:3912:15)
+      at Workbench (/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/web/app/Workbench.tsx:105:37)
+      at renderWithHooks (/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/node_modules/.bun/react-dom@19.2.6+d86b59289c1a13ae/node_modules/react-dom/cjs/react-dom-server-legacy.node.development.js:5062:19)
+      at renderElement (/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/node_modules/.bun/react-dom@19.2.6+d86b59289c1a13ae/node_modules/react-dom/cjs/react-dom-server-legacy.node.development.js:5497:23)
+      at retryNode (/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/node_modules/.bun/react-dom@19.2.6+d86b59289c1a13ae/node_modules/react-dom/cjs/react-dom-server-legacy.node.development.js:6428:21)
+      at performWork (/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/node_modules/.bun/react-dom@19.2.6+d86b59289c1a13ae/node_modules/react-dom/cjs/react-dom-server-legacy.node.development.js:7435:17)
+      at startWork (/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/node_modules/.bun/react-dom@19.2.6+d86b59289c1a13ae/node_modules/react-dom/cjs/react-dom-server-legacy.node.development.js:8270:7)
+      at renderToStringImpl (/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/node_modules/.bun/react-dom@19.2.6+d86b59289c1a13ae/node_modules/react-dom/cjs/react-dom-server-legacy.node.development.js:8380:7)
+      at <anonymous> (/private/tmp/codeshell-review-20261012-modern-desktop-image-round25/modern-desktop-image.test.ts:220:23)
+(fail) modern paired image with prose recovers metadata but Desktop omits its display [126.68ms]
+100 |   const [selectedFile, setSelectedFile] = React.useState<string | undefined>();
+101 |   const [fileOpenVersion, setFileOpenVersion] = React.useState(0);
+102 |   const [navigationDirty, setNavigationDirty] = React.useState(false);
+103 |   const [pendingNavigation, setPendingNavigation] = React.useState<(() => void) | null>(null);
+104 |   const [settingsSection, setSettingsSection] = React.useState<HubSettingsSection>("overview");
+105 |   const [narrow, setNarrow] = React.useState(() => window.matchMedia("(max-width: 760px)").matches);
+                                                                ^
+TypeError: window.matchMedia is not a function. (In 'window.matchMedia("(max-width: 760px)")', 'window.matchMedia' is undefined)
+      at <anonymous> (/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/web/app/Workbench.tsx:105:59)
+      at useReducer (/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/node_modules/.bun/react-dom@19.2.6+d86b59289c1a13ae/node_modules/react-dom/cjs/react-dom-server-legacy.node.development.js:3912:15)
+      at Workbench (/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/web/app/Workbench.tsx:105:37)
+      at renderWithHooks (/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/node_modules/.bun/react-dom@19.2.6+d86b59289c1a13ae/node_modules/react-dom/cjs/react-dom-server-legacy.node.development.js:5062:19)
+      at renderElement (/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/node_modules/.bun/react-dom@19.2.6+d86b59289c1a13ae/node_modules/react-dom/cjs/react-dom-server-legacy.node.development.js:5497:23)
+      at retryNode (/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/node_modules/.bun/react-dom@19.2.6+d86b59289c1a13ae/node_modules/react-dom/cjs/react-dom-server-legacy.node.development.js:6428:21)
+      at performWork (/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/node_modules/.bun/react-dom@19.2.6+d86b59289c1a13ae/node_modules/react-dom/cjs/react-dom-server-legacy.node.development.js:7435:17)
+      at startWork (/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/node_modules/.bun/react-dom@19.2.6+d86b59289c1a13ae/node_modules/react-dom/cjs/react-dom-server-legacy.node.development.js:8270:7)
+      at renderToStringImpl (/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/node_modules/.bun/react-dom@19.2.6+d86b59289c1a13ae/node_modules/react-dom/cjs/react-dom-server-legacy.node.development.js:8380:7)
+      at <anonymous> (/private/tmp/codeshell-review-20261012-modern-desktop-image-round25/modern-desktop-image.test.ts:220:23)
+(fail) modern paired image only recovers metadata but Desktop omits its display [83.90ms]
+
+ 0 pass
+ 2 fail
+ 22 expect() calls
+Ran 2 tests across 1 file. [2.68s]
+Bun test process failed (1)

@@ -1,0 +1,14 @@
+bun test v1.3.11 (af24e281)
+
+docs/review-2026-10-12/reproductions/transfer-round12/transfer-recovery.test.ts:
+{"control":"aborted-writable-consumer","abortedConsumers":17,"sourceHashPreserved":true,"nextActualHttpDownloadStatus":200,"scope":"production file handler and pipeline, controlled writable destination; not native browser cancellation"}
+(pass) CONTROL aborted writable consumer releases file-service reader slots and preserves source [200.15ms]
+{"control":"export-history-failure-recovery","badFormatStatuses":[400,400,400],"runningExportStatus":409,"runningArchiveStatus":409,"corruptInteriorStatus":422,"nextExportStatus":200,"sourcePreserved":true,"archiveRestoreResumable":true}
+(pass) CONTROL export errors and active-run refusal preserve history and release export admission [64.91ms]
+(pass) CONTROL closing the file service fences new downloads while retaining original files [2.69ms]
+
+ 3 pass
+ 0 fail
+ 112 expect() calls
+Ran 3 tests across 1 file. [835.00ms]
+Completed Bun shard: 3 tests, 0 skipped; 0 failures.

@@ -1,0 +1,14 @@
+bun test v1.3.11 (af24e281)
+
+docs/review-2026-10-12/reproductions/project-recovery-round16/root-repair.test.tsx:
+{"candidate":"missing-source-blocks-root-repair","actualProjectGroup":true,"actualMainRegistration":true,"actualStoreAndSessionDisk":true,"targetHealthy":true,"blockedByMissingSource":true,"removeWhileLiveRejected":true,"restorationAndButtonRetryRecovers":true,"realWorkerOrCli":false}
+(pass) CANDIDATE dir_missing repair to a healthy registered primary fails because migration context validates the missing source; restoration permits actual button retry [293.37ms]
+(pass) CONTROL healthy migration and invalid target guards preserve durable state; replaced source is rejected until exact directory is restored [277.35ms]
+{"control":"archive-remove-restore-migrate-service-workaround","actualCoreArchiveAndMainRemoveMigrate":true,"completeArchiveRestoreUiExecuted":false,"sourceDirectoryStillMissing":true}
+(pass) CONTROL service workaround archives the owner, removes the missing secondary mount, restores the owner and then migrates to the healthy primary [270.03ms]
+
+ 3 pass
+ 0 fail
+ 27 expect() calls
+Ran 3 tests across 1 file. [1.91s]
+Completed Bun shard: 3 tests, 0 skipped; 0 failures.

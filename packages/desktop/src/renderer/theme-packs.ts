@@ -41,7 +41,14 @@ export const THEME_VAR_NAMES = [
 ] as const;
 
 import type { TranslationKey } from "./i18n";
+import type { ThemeMusicTrack, ThemeSounds } from "../shared/theme-packs";
 import { MAKI_THEME_PACK } from "./builtin-maki-theme";
+import {
+  MIKU_THEME_PACK,
+  MUSE_THEME_PACK,
+  ONODERA_THEME_PACK,
+  MISAKA_THEME_PACK,
+} from "./builtin-character-themes";
 
 export type CssVarName = (typeof THEME_VAR_NAMES)[number];
 export type ThemeVars = Partial<Record<CssVarName, string>>;
@@ -127,6 +134,10 @@ export interface ThemePack {
   surfaces?: Partial<Record<ThemeSurfaceName, ThemeSurfaceSpec>>;
   /** Decorative outer frame for the main app window only. */
   frame?: ThemeFrameSpec;
+  /** Optional short UI cues, played only after the user enables theme sounds. */
+  sounds?: ThemeSounds;
+  /** Local audio assets or explicit external listening links. Never auto-played. */
+  music?: ThemeMusicTrack[];
   /** builtin ships with the app; installed comes from ~/.code-shell/themes/. */
   source?: "builtin" | "installed";
 }
@@ -223,6 +234,10 @@ export const THEME_PACKS: ThemePack[] = [
     },
   },
   MAKI_THEME_PACK,
+  MIKU_THEME_PACK,
+  MUSE_THEME_PACK,
+  ONODERA_THEME_PACK,
+  MISAKA_THEME_PACK,
 ];
 
 export function getThemePack(id: string): ThemePack {

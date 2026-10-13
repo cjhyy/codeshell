@@ -1,0 +1,40 @@
+{
+  "timestampSingapore": "2026-10-12 04:49",
+  "findings": 70,
+  "priorities": {
+    "P1": 1,
+    "P2": 47,
+    "P3": 22
+  },
+  "topMarkdownLocalLinks": 595,
+  "sourceLineLinks": 381,
+  "completedCommonRuns": [
+    {
+      "tree": "/Users/admin/.codex/worktrees/server-desktop-review-20261012/codeshell",
+      "files": 72,
+      "tests": 221,
+      "round16BunExpects": 104,
+      "round16NodeAssertions": 22,
+      "round16BunHelperManualAssertions": 27,
+      "productTrackedDiff": []
+    },
+    {
+      "tree": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell",
+      "files": 72,
+      "tests": 221,
+      "round16BunExpects": 104,
+      "round16NodeAssertions": 22,
+      "round16BunHelperManualAssertions": 27,
+      "productTrackedDiff": []
+    }
+  ],
+  "latestOnlyFiles": 3,
+  "latestOnlyTests": 8,
+  "round16NewFiles": 4,
+  "round16NewTests": 10,
+  "round16BunExpects": 104,
+  "round16HelperScope": "27 manual assertions in owned Bun Settings helper +22 Node MCP assertions, inside corresponding wrappers, no additional tests; actual cold project repair; controlled Link validation/transport/OAuth handle; no full Electron/HeadlessServer/provider",
+  "latestFetchSingapore": "2026-10-12 04:23",
+  "originMain": "a66f4ef291f304ee4df9da8095a90671d9a8f140",
+  "errors": []
+}

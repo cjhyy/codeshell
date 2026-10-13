@@ -1,0 +1,21 @@
+bun test v1.3.11 (af24e281)
+
+../../../../../../private/tmp/codeshell-review-20261012-hub-session-operations-round18/session-followup.test.tsx:
+owned protocol diagnostic [{"jsonrpc":"2.0","method":"serve/hello","params":{"tabId":"1"}},{"jsonrpc":"2.0","method":"serve/approvalSnapshot","params":{"approvals":[]}},{"jsonrpc":"2.0","id":"first-run","error":{"code":-32001,"message":"对话记录包含损坏内容，请从服务器备份检查完整记录。"}}] []
+77 |
+78 | const nodes = (node: any): any[] => [node, ...Array.from(node.childNodes ?? []).flatMap(nodes)];
+79 | const props = (node: any): any => { const key = Object.keys(node).find(k => k.startsWith("__reactProps$")); return key ? node[key] : {}; };
+80 | async function until(check: () => boolean, label: string) {
+81 |   const end = performance.now() + 3000;
+82 |   while (!check()) { if (performance.now() > end) throw Error("timeout " + label + "; frames=" + JSON.stringify(bridge?.emitted)); await act(async () => { await new Promise(r => setTimeout(r, 5)); await flushMicrotasks(); }); }
+                                                             ^
+error: timeout first run active with async question; frames=[]
+      at until (/private/tmp/codeshell-review-20261012-hub-session-operations-round18/session-followup.test.tsx:82:57)
+      at async <anonymous> (/private/tmp/codeshell-review-20261012-hub-session-operations-round18/session-followup.test.tsx:128:17)
+(fail) real authenticated Hub history fails to recognize a real Core admitted asynchronous-answer follow-up as running [3135.68ms]
+
+ 0 pass
+ 1 fail
+ 1 expect() calls
+Ran 1 test across 1 file. [3.79s]
+Bun test process failed (1)

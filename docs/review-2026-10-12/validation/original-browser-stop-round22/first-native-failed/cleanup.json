@@ -1,0 +1,25 @@
+{
+  "completed": false,
+  "prepareOnly": false,
+  "failure": {
+    "name": "Error",
+    "message": "electronApplication.evaluate: Execution context was destroyed, most likely because of a navigation.",
+    "stack": "electronApplication.evaluate: Execution context was destroyed, most likely because of a navigation.\n    at /private/tmp/codeshell-review-20261012-browser-stop-round22/browser-stop-native.mjs:82:27\n    at until (/private/tmp/codeshell-review-20261012-browser-stop-round22/browser-stop-native.mjs:72:145)\n    at async file:///private/tmp/codeshell-review-20261012-browser-stop-round22/browser-stop-native.mjs:82:5"
+  },
+  "assertions": 0,
+  "appPid": 12017,
+  "closeReceipt": {
+    "code": 0,
+    "signal": null
+  },
+  "cleanupErrors": [
+    {
+      "stage": "shutdown",
+      "message": "Error: electronApplication.evaluate: TypeError: Cannot read properties of undefined (reading 'shutdown')\n    at eval (eval at evaluate (:302:30), <anonymous>:1:69)\n    at UtilityScript.evaluate (<anonymous>:304:16)\n    at UtilityScript.<anonymous> (<anonymous>:1:44)\n    at getOptionValue (node:internal/options:44:24)\n    at Module._compile (node:internal/modules/cjs/loader:1441:7)\n    at Module._extensions..js (node:internal/modules/cjs/loader:1564:10)\n    at Module.load (node:internal/modules/cjs/loader:1295:32)\n    at Module._load (node:internal/modules/cjs/loader:1111:12)\n    at c._load (node:electron/js2c/node_init:2:16955)\n    at Module.require (node:internal/modules/cjs/loader:1318:19)"
+    }
+  ],
+  "isolatedHome": "/private/var/folders/1d/6__4f4y51g90nblfptt8s9v80000gn/T/codeshell-browser-stop-round22-SYCoT1",
+  "isolatedHomeRemoved": true,
+  "productMainLoaded": false,
+  "actualWorkerModelCliStarted": false
+}

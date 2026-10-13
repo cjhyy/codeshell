@@ -16,6 +16,7 @@ export function useProjectRuntimeSelection(localProjectId: string | null) {
 
   const refresh = useCallback(async () => {
     const projectId = localProjectId;
+    if (activeProject.current !== projectId) return;
     const request = ++version.current;
     if (!projectId) {
       setSnapshot({ projectId, bindings: [], bindingId: null, ready: true, error: null });

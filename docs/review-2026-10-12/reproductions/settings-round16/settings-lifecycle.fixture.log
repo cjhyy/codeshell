@@ -1,0 +1,2 @@
+{"normalLeavePersistsAndReopens":true,"actualSettingsPage":true,"mainCallbacksAST":true,"actualFilesystemRejection":true,"failedUnmountDraftRecoveredOnReopen":false,"retypingAfterStorageRepairWorks":true,"originalTargetFlushAndCancelWork":true,"unhandledRejections":1,"assertions":27,"nativeCLI":false,"model":false}
+PASS settings lifecycle; 27 assertions

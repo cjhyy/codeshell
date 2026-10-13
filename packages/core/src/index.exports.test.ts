@@ -107,6 +107,17 @@ const expectedRuntimeExportsByPartition = {
     "outputUserMessage",
   ],
   logging: ["rotateLogs", "recordUIEvent"],
+  // Native approval and private worker RPC stay on the Host-only entry.
+  nativeOperationBatches: [
+    "DESKTOP_OPERATION_BATCH_METHOD",
+    "allowsLinkAction",
+    "createGithubIssueBatch",
+    "githubIssueBatchPolicy",
+    "isOperationBatchAuthorityFrame",
+    "linkAuthoritySnapshot",
+    "normalizeGithubIssueBatch",
+    "readOperationSessionOwner",
+  ],
   managedRuntimes: [
     "createConstrainedDockerProcessHost",
     "createManagedRuntimeProvider",

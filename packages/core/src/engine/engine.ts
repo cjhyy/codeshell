@@ -16,6 +16,7 @@ import { resolveModelRequestSigner } from "../model-request-boundary/access.js";
 import { assertDurableRequestOwner } from "../model-request-boundary/session-owner.js";
 import type { ModelRequestSigner, ModelRequestSubject } from "../model-request-boundary/types.js";
 import { createLLMClient } from "../llm/client-factory.js";
+import { createRunBatchAuthority } from "../operations/run-batch-authority.js";
 import { createSessionOperationController } from "../operations/controller.js";
 import { CapabilityResolver } from "../operations/resolver.js";
 import { buildWrappedOnStream, createRunOutputJournalPolicy } from "./run-stream.js";
@@ -1553,6 +1554,21 @@ export class Engine {
         profileMemoryDir,
       },
     } = workspaceResolved.resolution;
+    if (
+      options?.operationBatchToken &&
+      (!this.config.operationBatchAuthority ||
+        runPlanMode ||
+        ["dontAsk", "bypassPermissions"].includes(runPermissionMode))
+    ) {
+      return {
+        reason: "batch_incomplete",
+        text: "批量操作需要支持逐项审批的会话模式，尚未开始写入。",
+        sessionId: options.sessionId ?? "",
+        turnCount: 0,
+        usage: { promptTokens: 0, completionTokens: 0, totalTokens: 0 },
+      };
+    }
+
     if (options?.sessionId) {
       this.workspaceAuthorities.remember(options.sessionId, workspaceContext);
     }
@@ -1711,6 +1727,17 @@ export class Engine {
       ...this.engineServices,
       ...sessionLifetime.services,
     });
+    const batchAuthority =
+      options?.operationBatchToken && this.config.operationBatchAuthority
+        ? createRunBatchAuthority({
+            request: this.config.operationBatchAuthority,
+            token: options.operationBatchToken,
+            sessionId: session.state.sessionId,
+            runId,
+            originIntent: () => toolCtx.originClientMessageId ?? runId,
+            signal: toolCtx.signal,
+          })
+        : undefined;
     toolCtx.operations = {
       controller: createSessionOperationController(
         this.sessionManager.getStorageDir(),
@@ -1720,6 +1747,12 @@ export class Engine {
       resolver: new CapabilityResolver(),
       sessionId: session.state.sessionId,
       runId,
+      ...(batchAuthority
+        ? {
+            batchAuthority: batchAuthority.batchAuthority,
+            onToolFailure: batchAuthority.onToolFailure,
+          }
+        : {}),
     };
     let messages = openedMessages;
     const instructionProviders = this.composition.engine.instructionBindings;
@@ -2022,6 +2055,7 @@ export class Engine {
           getProfileReportedResults: () => profileReportedResults,
           hasUnverifiedWrites: () =>
             toolCtx.operations!.controller.ledger.sealForFinalization(session.state.sessionId),
+          hasIncompleteBatch: batchAuthority?.hasIncompleteBatch,
         });
         finalized.runId = runId;
         if (options?.clientMessageId) {
@@ -2094,6 +2128,7 @@ export class Engine {
     profile: RunBehaviorProfile | undefined;
     getProfileReportedResults: () => Record<string, unknown> | undefined;
     hasUnverifiedWrites: () => boolean;
+    hasIncompleteBatch?: () => Promise<boolean>;
   }): Promise<EngineResult> {
     const {
       session,
@@ -2113,6 +2148,7 @@ export class Engine {
       profile,
       getProfileReportedResults,
       hasUnverifiedWrites,
+      hasIncompleteBatch,
     } = args;
     const sourceRunId = this.runIds.get(session.state);
     return finalizeRunSuccess({
@@ -2144,6 +2180,7 @@ export class Engine {
       profile,
       getProfileReportedResults,
       hasUnverifiedWrites,
+      hasIncompleteBatch,
     });
   }
 

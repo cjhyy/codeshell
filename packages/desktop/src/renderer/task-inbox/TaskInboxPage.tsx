@@ -1,3 +1,4 @@
+import { OperationBatchForm } from "./OperationBatchForm";
 import React, { useCallback, useEffect, useId, useMemo, useRef, useState } from "react";
 import { Inbox, Loader2, RefreshCw } from "lucide-react";
 import type {
@@ -442,6 +443,12 @@ export function TaskInboxPage({ onOpenTaskInboxRecord }: TaskInboxPageProps = {}
                               ["session", "legacy-run", "subagent"].includes(record.source) && (
                                 <OperationResolutionReview sessionId={record.sessionId} />
                               )}
+                            {record.sessionId && record.source === "session" && (
+                              <OperationBatchForm
+                                key={record.sessionId}
+                                sessionId={record.sessionId}
+                              />
+                            )}
                             <div className="mt-auto flex flex-wrap items-center gap-2">
                               {record.capabilities.map((action) => (
                                 <Button

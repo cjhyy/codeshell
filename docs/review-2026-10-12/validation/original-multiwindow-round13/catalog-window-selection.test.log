@@ -1,0 +1,12 @@
+bun test v1.3.11 (af24e281)
+
+../../../../../../private/tmp/codeshell-review-20261012-multiwindow-round13/catalog-window-selection.test.tsx:
+(pass) CANDIDATE: another live window's normal same-project selection replaces the first window's active App session [124.01ms]
+(pass) CONTROL: a window showing another project keeps its own selected session [38.69ms]
+(pass) CONTROL: independent fields merge durably; deleted rows stay deleted despite an old window save [33.62ms]
+
+ 3 pass
+ 0 fail
+ 24 expect() calls
+Ran 3 tests across 1 file. [1209.00ms]
+Completed Bun shard: 3 tests, 0 skipped; 0 failures.

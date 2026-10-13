@@ -1,0 +1,10 @@
+bun test v1.3.11 (af24e281)
+
+../../../../../../private/tmp/codeshell-review-20261012-file-root-round27/file-root.test.ts:
+(pass) summary fork after Make primary maps B identity to A path in the actual Files fallback [394.30ms]
+
+ 1 pass
+ 0 fail
+ 29 expect() calls
+Ran 1 test across 1 file. [2.15s]
+Completed Bun shard: 1 tests, 0 skipped; 0 failures.

@@ -1,0 +1,8 @@
+{
+  "timestampSingapore": "2026-10-12T08:21:34.174373+08:00",
+  "beforeFixtureSha256": "338c90fd5af72029731105eb5f26bcc8372f862373475b90d9c7da4960ff3ccc",
+  "afterFixtureSha256": "dfe9749f86552d7529af7ea9d323d43ce95904ee82d5654201b17c3f62d221e3",
+  "change": "only replace invalid test PNG with maintained attachment-service.test.ts:28-33 PNG and add provenance comment; no product/guard/authority/metadata/control changes",
+  "firstFailure": "first-authorized.log; legitimate stageImageBytes CRC rejection before recovery flow; no Completed",
+  "guardSha256": "6e1f5f5045f9606086f1b01e6eb988b88c5670f78000b260fcb9e035f1c69b3d"
+}

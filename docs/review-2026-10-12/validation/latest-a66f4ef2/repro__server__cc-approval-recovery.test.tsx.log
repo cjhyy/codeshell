@@ -1,0 +1,13 @@
+bun test v1.3.11 (af24e281)
+
+docs/review-2026-10-12/reproductions/server/cc-approval-recovery.test.tsx:
+Confirmed: returned to same room with history replayed, but pending approval is missing and server is still waiting.
+(pass) review reproduction: switching away and returning loses a still-pending CC approval [9.63ms]
+Confirmed: offline approval click sends nothing, removes card, and reconnect history does not restore it.
+(pass) review reproduction: an offline CC approval response removes the only card without sending [2.41ms]
+
+ 2 pass
+ 0 fail
+ 14 expect() calls
+Ran 2 tests across 1 file. [85.00ms]
+Completed Bun shard: 2 tests, 0 skipped; 0 failures.

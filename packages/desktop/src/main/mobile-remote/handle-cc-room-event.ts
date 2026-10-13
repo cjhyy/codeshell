@@ -2,6 +2,7 @@ import {
   DEFAULT_DISCOVER_LIMIT,
   DEFAULT_DISCOVER_SINCE_MS,
   discoverRelatedSessions,
+  listRelatedCodexSessions,
   probeClaudeCli,
   probeCodexCli,
   readCodexRecentHistory,
@@ -51,11 +52,10 @@ export async function handleCcRoomEvent(
       // Bound the mobile list too (recent 2 weeks AND ≤20) — phones especially
       // shouldn't pull + deep-read an entire project's session history.
       const opts = { limit: DEFAULT_DISCOVER_LIMIT, sinceMs: DEFAULT_DISCOVER_SINCE_MS };
-      const sessions = discoverRelatedSessions(
-        kind === "codex" ? "codex" : "claude",
-        event.cwd,
-        opts,
-      );
+      const sessions =
+        kind === "codex"
+          ? (await listRelatedCodexSessions(event.cwd, opts)).sessions
+          : discoverRelatedSessions("claude", event.cwd, opts);
       reply({ type: "ccRoom.listSessions.ok", cwd: event.cwd, sessions, kind });
       return;
     }

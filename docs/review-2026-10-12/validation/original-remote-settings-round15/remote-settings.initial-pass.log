@@ -1,0 +1,12 @@
+bun test v1.3.11 (af24e281)
+
+../../../../../../private/tmp/codeshell-review-20261012-remote-settings-round15/remote-settings.test.tsx:
+{"actualHost":true,"loopbackBindOnly":true,"actualControllerAndIpc":true,"actualSettingsComponent":true,"twoUiInstancesInOneMiniDom":true,"actualTwoElectronWindows":false,"observerStaleAfterLanStart":true,"remountRestoresState":true}
+(pass) CANDIDATE LAN opened from another settings instance does not refresh the already-mounted observer; remount recovers [42.63ms]
+(pass) CONTROL ordinary local LAN start and stop update their initiating UI and stop broadcast updates a mounted observer [14.77ms]
+
+ 2 pass
+ 0 fail
+ 15 expect() calls
+Ran 2 tests across 1 file. [627.00ms]
+Completed Bun shard: 2 tests, 0 skipped; 0 failures.

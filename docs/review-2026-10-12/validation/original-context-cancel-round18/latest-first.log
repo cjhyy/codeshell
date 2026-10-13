@@ -1,0 +1,38 @@
+bun test v1.3.11 (af24e281)
+
+../../../../../../private/tmp/codeshell-review-20261012-context-cancel-round18/context-cancel.test.ts:
+163 |   await f.draw("owned-source", 2); await f.click(nodes(f.container).find(n => props(n)["data-context-turn-index"] === 0));
+164 |   await f.click(f.merge()); await f.until(() => Boolean(f.control.release));
+165 |   expect(f.manager.get("owned-source")!.isBusy()).toBe(true);
+166 |   expect(f.control.signal instanceof AbortSignal).toBe(true); expect(f.control.signal.aborted).toBe(false);
+167 |   expect(props(f.exit()).disabled).toBe(true); expect(hidden(f.composer())).toBe(true); expect(f.stop()).toBeUndefined();
+168 |   expect(f.responses.some((x: any) => x.method === "agent/status")).toBe(false);
+                                                                          ^
+error: expect(received).toBe(expected)
+
+Expected: false
+Received: true
+
+      at <anonymous> (/private/tmp/codeshell-review-20261012-context-cancel-round18/context-cancel.test.ts:168:69)
+(fail) actual ChatView allows exiting selection before submission, but hides Stop and disables exit during actual Core summary; completion restores composer [137.43ms]
+132 |   const until = async (check: () => boolean) => { const end = Date.now() + 5000; while (!check()) { if (Date.now() > end) throw Error("owned wait timed out: " + textOf(container)); await act(tick); } };
+133 |   const merge = () => nodes(container).find(n => props(n)["data-context-action"] === "merge");
+134 |   const exit = () => nodes(container).find(n => props(n)["aria-label"] === "退出上下文选择");
+135 |   const stop = () => nodes(container).find(n => props(n)["aria-label"] === "停止生成");
+136 |   const composer = () => nodes(container).find(n => n.tagName === "TEXTAREA");
+137 |   const click = async (node: any) => { expect(node).toBeDefined(); expect(Boolean(props(node).disabled)).toBe(false); expect(hidden(node)).toBe(false); await act(async () => { props(node).onClick(); await tick(); }); };
+                                                          ^
+error: expect(received).toBeDefined()
+
+Received: undefined
+
+      at <anonymous> (/private/tmp/codeshell-review-20261012-context-cancel-round18/context-cancel.test.ts:137:53)
+      at <anonymous> (/private/tmp/codeshell-review-20261012-context-cancel-round18/context-cancel.test.ts:186:50)
+(fail) service-only cancellation through actual preload aborts summary and re-enables the real selection exit; ordinary busy Stop is reachable [52.23ms]
+(pass) actual preload 30s fork timeout restores selection controls but does not abort Core; leaving and returning exposes no Stop and late success has no created callback [94.61ms]
+
+ 1 pass
+ 2 fail
+ 68 expect() calls
+Ran 3 tests across 1 file. [1404.00ms]
+Bun test process failed (1)

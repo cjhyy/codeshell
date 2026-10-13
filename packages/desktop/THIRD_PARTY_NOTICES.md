@@ -16,6 +16,20 @@ unofficial theme and does not imply affiliation or endorsement.
 - School illustration: https://lovelive-as.bushimo.jp/wp-content/uploads/2019/09/chara_06_school-2.png
 - Stage illustration: https://lovelive-as.bushimo.jp/wp-content/uploads/2019/09/chara_06_cheer-1.png
 
+## Generated character theme media
+
+The optional Digital Encore (Hatsune Miku), Nine Colors (Love Live! μ’s),
+Sweet Promise (Kosaki Onodera from Nisekoi) and Electric Promise (Mikoto Misaka
+from A Certain Scientific Railgun) themes contain AI-generated unofficial fan
+illustrations. Character rights belong to their respective rights holders; no
+affiliation or endorsement is implied. Generation prompts are recorded in
+`examples/themes/artwork-prompts.json`.
+
+Their notification sounds and instrumental loops are original synthesized audio
+created for CodeShell, without character voice clips or recordings from the
+original works. The song lists link to official artist or series music pages;
+those recordings are not bundled with the application.
+
 ## Puppeteer
 
 The desktop browser execution layer and bundled Chrome extension include

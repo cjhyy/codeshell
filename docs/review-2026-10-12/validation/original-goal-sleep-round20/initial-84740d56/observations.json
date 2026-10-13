@@ -1,0 +1,125 @@
+{
+  "completed": 4,
+  "receipts": [
+    {
+      "case": "no-worker",
+      "resumeResult": {
+        "ok": true,
+        "updated": true,
+        "goal": "finish owned local task",
+        "goalId": "goal-no-worker-24e15d1b-462a-43d3-8f81-8651ebc74c6e",
+        "revision": 2,
+        "paused": false
+      },
+      "uiActiveWithoutDispatch": true,
+      "ensureCalls": 0,
+      "workerSends": 0,
+      "modelCalls": 0,
+      "actualAppMount": false,
+      "actualAppClosures": true,
+      "actualMainCallback": true
+    },
+    {
+      "case": "legacy-cold-control",
+      "result": {
+        "text": "",
+        "reason": "completed",
+        "sessionId": "legacy-cold-59fc553b-a30c-486e-8da4-8e2dc80bba1f",
+        "turnCount": 1,
+        "usage": {
+          "promptTokens": 2,
+          "completionTokens": 1,
+          "totalTokens": 3,
+          "cacheReadTokens": 0,
+          "cacheCreationTokens": 0
+        },
+        "runId": "C_mWhbemNIHj"
+      },
+      "modelCalls": 1,
+      "calls": 1,
+      "hostWorkspaceRequests": 0
+    },
+    {
+      "case": "bound-cold",
+      "resumeResult": {
+        "ok": true,
+        "updated": true,
+        "goal": "finish owned local task",
+        "goalId": "goal-bound-cold-fe831740-efd7-4d24-89f6-60accec83db9",
+        "revision": 2,
+        "paused": false
+      },
+      "engineFailure": {
+        "text": "ERROR: bound Session requires an authoritative WorkspaceContext",
+        "reason": "model_error",
+        "sessionId": "bound-cold-fe831740-efd7-4d24-89f6-60accec83db9",
+        "turnCount": 0,
+        "usage": {
+          "promptTokens": 0,
+          "completionTokens": 0,
+          "totalTokens": 0
+        }
+      },
+      "modelCallsBeforeRecovery": 0,
+      "hostWorkspaceRequests": 0,
+      "normalRecovery": {
+        "text": "",
+        "reason": "completed",
+        "sessionId": "bound-cold-fe831740-efd7-4d24-89f6-60accec83db9",
+        "turnCount": 1,
+        "usage": {
+          "promptTokens": 3,
+          "completionTokens": 2,
+          "totalTokens": 5,
+          "cacheReadTokens": 0,
+          "cacheCreationTokens": 0
+        },
+        "runId": "CLJGx6dV6SQa"
+      },
+      "actualMainSend": false
+    },
+    {
+      "case": "resident-bound-control",
+      "result": {
+        "text": "",
+        "reason": "completed",
+        "sessionId": "resident-bound-21ee22b2-ac14-42b2-ac28-20f424151c3c",
+        "turnCount": 1,
+        "usage": {
+          "promptTokens": 3,
+          "completionTokens": 2,
+          "totalTokens": 5,
+          "cacheReadTokens": 0,
+          "cacheCreationTokens": 0
+        },
+        "runId": "NXq6KjsIowr6"
+      },
+      "modelCalls": 1,
+      "actualHostAuthority": {
+        "cwd": "/private/var/folders/1d/6__4f4y51g90nblfptt8s9v80000gn/T/codeshell-goal-round20-xcjNfd",
+        "workspaceContext": {
+          "version": 1,
+          "projectId": "8d08d617-5188-4364-8a03-51527fcac319",
+          "projectRevision": 1,
+          "sessionMainRootId": "1afbc794-aaca-45f5-8be6-66c9ae8f1d8b",
+          "roots": [
+            {
+              "id": "1afbc794-aaca-45f5-8be6-66c9ae8f1d8b",
+              "path": "/private/var/folders/1d/6__4f4y51g90nblfptt8s9v80000gn/T/codeshell-goal-round20-xcjNfd",
+              "role": "primary"
+            }
+          ],
+          "rootsDigest": "2936f941ec42bab5b3a0782734903c43d587364c42f98fe96779d79c5adfb730"
+        },
+        "projectTrusted": false
+      },
+      "actualCoreRuns": 1
+    }
+  ],
+  "networkCalls": 0,
+  "subprocessCalls": 0,
+  "auxiliaryCalls": 3,
+  "actualElectron": false,
+  "actualWorker": false,
+  "realProvider": false
+}

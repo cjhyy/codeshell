@@ -1,0 +1,73 @@
+bun test v1.3.11 (af24e281)
+
+../../../../../../private/tmp/codeshell-review-20261012-hub-session-operations-round18/session-followup.test.tsx:
+An update to HubSessions inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://react.dev/link/wrap-tests-with-act
+An update to HubSessions inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://react.dev/link/wrap-tests-with-act
+An update to HubSessions inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://react.dev/link/wrap-tests-with-act
+{"actualHeadlessAuthHttpWs":true,"actualCoreAgentServerAndChatSessionManager":true,"actualHubSessionsArchiveHandler":true,"bridge":"in-memory all Core frames forwarded","engine":"fake controlled run; no model or native worker","normalRunArchiveAndExport":409,"asyncAnswerFollowupCoreBusy":true,"hostHistoryRunning":false,"archiveSucceedsWhileFollowupActive":true,"durableSessionRetained":true,"restoreAndCompletionControl":true}
+(pass) real authenticated Hub history fails to recognize a real Core admitted asynchronous-answer follow-up as running [268.91ms]
+An update to HubSessions inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://react.dev/link/wrap-tests-with-act
+An update to HubSessions inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://react.dev/link/wrap-tests-with-act
+An update to HubSessions inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://react.dev/link/wrap-tests-with-act
+(fail) actual Hub history title editor preserves drafts through conflict, failed storage and vanished session; explicit review and same-draft retry recover [30116.54ms]
+  ^ this test timed out after 15000ms.
+
+ 1 pass
+ 1 fail
+ 27 expect() calls
+Ran 2 tests across 1 file. [30.97s]
+Bun test process failed (1)

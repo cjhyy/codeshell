@@ -1,0 +1,41 @@
+bun test v1.3.11 (af24e281)
+
+../../../../../../private/tmp/codeshell-review-20261012-server-routing-round17/hub-routing.test.ts:
+An update to UI inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://react.dev/link/wrap-tests-with-act
+An update to UI inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://react.dev/link/wrap-tests-with-act
+An update to UI inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://react.dev/link/wrap-tests-with-act
+{"detachedErrorAckReopensAndOtherTabRetries":true,"idleQuestionStrandedByConfigurationGate":true,"reloadCompletedButRetryRejected":true,"reconnectedSnapshotMissingPendingQuestion":true,"realControllerAndAnswerButton":true,"leaseExpiryClockInjectedNotWallClock":true,"explicitStopAndFreshQuestionRecovery":"actual UI/protocol; controlled worker resolution plus separate actual-Core cancel control","realHeadlessHttpWsAuth":true,"workerBoundary":"memory-only; no spawn/Core engine","model":false}
+(pass) actual Hub routing: detached approval error recovers; config reload can strand an idle async question submitted before its gate [1421.36ms]
+
+ 1 pass
+ 0 fail
+ 20 expect() calls
+Ran 1 test across 1 file. [1.95s]
+Completed Bun shard: 1 tests, 0 skipped; 0 failures.

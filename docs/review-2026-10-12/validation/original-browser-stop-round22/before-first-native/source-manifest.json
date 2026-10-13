@@ -1,0 +1,82 @@
+{
+  "repo": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell",
+  "manifest": [
+    {
+      "source": "packages/core/src/protocol/server.ts",
+      "sha256": "001212e386311d24bd7b19bf67012bfb8d9f42d58fbdbdf7f1258a04c89a159a"
+    },
+    {
+      "source": "packages/core/src/protocol/server-run-controls.ts",
+      "sha256": "0bf91b1526404cd5c6475271ad2d16ed3247af5f35f4f4984890e7f42f436344"
+    },
+    {
+      "source": "packages/core/src/protocol/chat-session.ts",
+      "sha256": "309e77d68d241a30126b5ac62506becff4e809631855ae795840568f2bf93c62"
+    },
+    {
+      "source": "packages/core/src/engine/engine.ts",
+      "sha256": "d8b3caf80bb3ef76b17e574ad46ed6f53ccb6210bedb29478cb66041fc089bf0"
+    },
+    {
+      "source": "packages/core/src/tool-system/builtin/browser-tools.ts",
+      "sha256": "d3eec71abcac9afe441cb402339b914d049b28e3864ddb14fd7dbfcd065618c8"
+    },
+    {
+      "source": "packages/desktop/src/main/agent-bridge.ts",
+      "sha256": "33c0a745ec8011b3be9d2a798cc9dfcf2c808a204f581d00a7e6a9f73ea2d329"
+    },
+    {
+      "source": "packages/desktop/src/preload/index.ts",
+      "sha256": "b85c80ec01b488890fcfad0e9afed4fb1e02575dcba8e30cce8a06805ed44327"
+    },
+    {
+      "source": "packages/desktop/src/main/browser-runtime/dispatch.ts",
+      "sha256": "5c8f0444c705445ea5e16316a52f4dc524f9cc5988b722e89dd92a1e76231aab"
+    },
+    {
+      "source": "packages/desktop/src/main/browser-runtime/runtime.ts",
+      "sha256": "1b77bfed8dad07c84bcf85425f81c15ab5fd6354717d342c53679c64618a3147"
+    },
+    {
+      "source": "packages/desktop/src/main/browser-driver/background-runtime.ts",
+      "sha256": "5daee16c15730cee384214e27f72daa5d0143c9072f4785954131e15c025646c"
+    },
+    {
+      "source": "packages/desktop/src/main/browser-driver/electron-puppeteer.ts",
+      "sha256": "a7a7eed64998a044baee305e0a8df11cb583b1fa7900929589b91cf7a8c2456b"
+    },
+    {
+      "source": "packages/desktop/src/browser-library/puppeteer-browser-driver.ts",
+      "sha256": "d275aaba9b2eb29a306bfb91d1ccd32499a288bf79c0f0fc08b8d90723bc080f"
+    }
+  ],
+  "config": {
+    "repo": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell",
+    "home": "/private/var/folders/1d/6__4f4y51g90nblfptt8s9v80000gn/T/codeshell-browser-stop-round22-dSiWKH",
+    "userData": "/private/var/folders/1d/6__4f4y51g90nblfptt8s9v80000gn/T/codeshell-browser-stop-round22-dSiWKH/electron-user-data",
+    "sessionData": "/private/var/folders/1d/6__4f4y51g90nblfptt8s9v80000gn/T/codeshell-browser-stop-round22-dSiWKH/session-data",
+    "project": "/private/var/folders/1d/6__4f4y51g90nblfptt8s9v80000gn/T/codeshell-browser-stop-round22-dSiWKH/owned-project",
+    "temp": "/private/var/folders/1d/6__4f4y51g90nblfptt8s9v80000gn/T/codeshell-browser-stop-round22-dSiWKH/tmp",
+    "targetUrl": "file:///private/var/folders/1d/6__4f4y51g90nblfptt8s9v80000gn/T/codeshell-browser-stop-round22-dSiWKH/owned-target.html",
+    "controlUrl": "file:///private/var/folders/1d/6__4f4y51g90nblfptt8s9v80000gn/T/codeshell-browser-stop-round22-dSiWKH/owned-control.html",
+    "preload": "/private/var/folders/1d/6__4f4y51g90nblfptt8s9v80000gn/T/codeshell-browser-stop-round22-dSiWKH/actual-preload.cjs",
+    "desktopEntry": "/private/var/folders/1d/6__4f4y51g90nblfptt8s9v80000gn/T/codeshell-browser-stop-round22-dSiWKH/desktop-fixture-entry.ts",
+    "callbacks": "/private/var/folders/1d/6__4f4y51g90nblfptt8s9v80000gn/T/codeshell-browser-stop-round22-dSiWKH/actual-main-callbacks.mjs",
+    "jitiEntry": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/node_modules/.bun/jiti@2.7.0/node_modules/jiti/lib/jiti.mjs"
+  },
+  "esbuildPath": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/node_modules/.bun/esbuild@0.27.7/node_modules/esbuild/lib/main.js",
+  "compilation": {
+    "bundle": true,
+    "platform": "node",
+    "target": "node20",
+    "logLevel": "warning",
+    "absWorkingDir": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell",
+    "external": [
+      "electron",
+      "playwright",
+      "puppeteer-core",
+      "puppeteer-core/*"
+    ]
+  },
+  "productOutputsWritten": false
+}

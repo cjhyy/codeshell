@@ -1,0 +1,31 @@
+{
+  "uiSession": "legacy-ui",
+  "bucket": "7410a12a-0338-4e63-85fe-124a88e40272::legacy-ui",
+  "firstPanelSession": "legacy-engine",
+  "afterSelection": {
+    "appId": "panel",
+    "visible": true,
+    "theme": "light",
+    "locale": "zh",
+    "apiVersion": 14,
+    "host": "desktop",
+    "sessionId": "legacy-ui",
+    "busy": false,
+    "cwd": "/private/var/folders/1d/6__4f4y51g90nblfptt8s9v80000gn/T/scope-review-round6-frfD2Q/main",
+    "trusted": true,
+    "projectScope": {
+      "version": 1,
+      "environmentId": "84744053-e129-4a06-9fae-0e20f17428ae",
+      "projectId": "7410a12a-0338-4e63-85fe-124a88e40272",
+      "rootId": "295bd4733b1a81569843cb632bf768bcd721a03f01dc3c626353c1c38915e2e8"
+    }
+  },
+  "stickyRevoked": true,
+  "prepareCalls": 1,
+  "guestReused": true,
+  "hostError": "",
+  "automationCalls": 1,
+  "runCalls": 0,
+  "projectStorageUsable": true,
+  "reopenRecovered": true
+}

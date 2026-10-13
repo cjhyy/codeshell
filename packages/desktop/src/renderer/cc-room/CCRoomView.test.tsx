@@ -336,7 +336,7 @@ describe("CCRoomView DriveAgent deep links", () => {
     expect(codexCalls).toBe(0);
   });
 
-  test("opens a linked room without invoking a rejecting CLI probe", async () => {
+  test("opens an inactive linked room without invoking a rejecting CLI probe", async () => {
     ensureMiniDom();
     let openCalls = 0;
     let probeCalls = 0;
@@ -363,6 +363,7 @@ describe("CCRoomView DriveAgent deep links", () => {
       root?.render(
         <CCRoomView
           cwd="/repo"
+          active={false}
           openRequest={{
             nonce: 11,
             externalSessionId: "claude-thread",
@@ -409,16 +410,16 @@ describe("CCRoomView session list recovery", () => {
     });
   }
 
-  async function mount(cwd: string | null = "/repo") {
+  async function mount(cwd: string | null = "/repo", active = true) {
     const container = document.createElement("div");
     root = createRoot(container);
-    await render(cwd);
+    await render(cwd, active);
     return container;
   }
 
-  async function render(cwd: string | null) {
+  async function render(cwd: string | null, active = true) {
     await act(async () => {
-      root?.render(<CCRoomView cwd={cwd} />);
+      root?.render(<CCRoomView cwd={cwd} active={active} />);
       await flushMicrotasks();
       await flushMicrotasks();
     });
@@ -438,6 +439,74 @@ describe("CCRoomView session list recovery", () => {
       await flushMicrotasks();
     });
   }
+
+  test("switching CLIs waits for that CLI's probe and requests its list only once", async () => {
+    let resolveCodexProbe!: (value: { available: boolean }) => void;
+    const codexProbe = new Promise<{ available: boolean }>((resolve) => {
+      resolveCodexProbe = resolve;
+    });
+    let claudeListCalls = 0;
+    let codexProbeCalls = 0;
+    let codexListCalls = 0;
+    installRoomApi({
+      codexProbe: () => {
+        codexProbeCalls += 1;
+        return codexProbe;
+      },
+      listSessions: async () => {
+        claudeListCalls += 1;
+        return { sessions: [session("claude")], total: 1 };
+      },
+      listCodexSessions: async () => {
+        codexListCalls += 1;
+        return { sessions: [session("codex")], total: 1 };
+      },
+    });
+    const container = await mount();
+    expect(claudeListCalls).toBe(1);
+
+    await click(button(container, "Codex"));
+    expect(codexProbeCalls).toBe(1);
+    expect(codexListCalls).toBe(0);
+    expect(
+      findElements(container, "DIV").some(
+        (node) => childText(reactPropsOf(node).children) === "正在检测 Codex CLI…",
+      ),
+    ).toBe(true);
+
+    await act(async () => {
+      resolveCodexProbe({ available: true });
+      await flushMicrotasks();
+      await flushMicrotasks();
+    });
+    expect(codexListCalls).toBe(1);
+  });
+
+  test("inactive tabs defer session discovery until visible and ignore focus refreshes", async () => {
+    let listCalls = 0;
+    installRoomApi({
+      listSessions: async () => {
+        listCalls += 1;
+        return { sessions: [session("visible")], total: 1 };
+      },
+    });
+    await mount("/repo", false);
+    await act(async () => {
+      window.dispatchEvent(new Event("focus"));
+      await flushMicrotasks();
+    });
+    expect(listCalls).toBe(0);
+
+    await render("/repo", true);
+    expect(listCalls).toBe(1);
+
+    await render("/repo", false);
+    await act(async () => {
+      window.dispatchEvent(new Event("focus"));
+      await flushMicrotasks();
+    });
+    expect(listCalls).toBe(1);
+  });
 
   test("a failed load-more stays retryable and full-list refresh follows a successful retry", async () => {
     const listCalls: boolean[] = [];

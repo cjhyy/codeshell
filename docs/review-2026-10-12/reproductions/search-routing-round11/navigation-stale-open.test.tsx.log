@@ -1,0 +1,17 @@
+bun test v1.3.11 (af24e281)
+
+docs/review-2026-10-12/reproductions/search-routing-round11/navigation-stale-open.test.tsx:
+fatal: not a git repository (or any of the parent directories): .git
+fatal: not a git repository (or any of the parent directories): .git
+{"delayResolution":true,"coreResumed":{"sessionId":"disk-B","kind":"work","origin":"desktop","title":"Real disk B","transcriptMessages":2},"backgroundImport":{"request":{"limit":50},"finished":true},"nativeTarget":{"status":"ok","target":{"uiSessionId":"disk-B","engineSessionId":"disk-B","projectPath":"/private/var/folders/1d/6__4f4y51g90nblfptt8s9v80000gn/T/codeshell-navigation-9urUoM/project-p","title":"Real disk B","updatedAt":1791744548081.8088,"origin":"desktop","status":"completed"}},"resolution":{"cwds":["/private/var/folders/1d/6__4f4y51g90nblfptt8s9v80000gn/T/codeshell-navigation-9urUoM/project-p"],"source":"disk-rebuild","result":[{"projectId":"783bf374-1b3a-4ce9-b996-74dc6238f8d8","rootId":"064f8c9b-879a-407f-b72d-19ea859b70d7","created":false}]},"newerSelection":"e67a2242-9162-42ec-89a5-80df9d357c22::indexed-C","lateSelection":"783bf374-1b3a-4ce9-b996-74dc6238f8d8::disk-B","recovered":"e67a2242-9162-42ec-89a5-80df9d357c22::indexed-C"}
+(pass) CONFIRMED delayed real disk-session open replaces a later global-search selection [348.89ms]
+fatal: not a git repository (or any of the parent directories): .git
+fatal: not a git repository (or any of the parent directories): .git
+{"delayResolution":false,"coreResumed":{"sessionId":"disk-B","kind":"work","origin":"desktop","title":"Real disk B","transcriptMessages":2},"backgroundImport":{"request":{"limit":50},"finished":true},"nativeTarget":{"status":"ok","target":{"uiSessionId":"disk-B","engineSessionId":"disk-B","projectPath":"/private/var/folders/1d/6__4f4y51g90nblfptt8s9v80000gn/T/codeshell-navigation-L3cJFi/project-p","title":"Real disk B","updatedAt":1791744548405.5327,"origin":"desktop","status":"completed"}},"resolution":{"cwds":["/private/var/folders/1d/6__4f4y51g90nblfptt8s9v80000gn/T/codeshell-navigation-L3cJFi/project-p"],"source":"disk-rebuild","result":[{"projectId":"9d0a322e-311c-401b-b196-9d2ce4d49341","rootId":"762852cb-b080-4e1a-bbc8-733c3a9af78a","created":false}]},"newerSelection":"7410c955-438f-4c07-bb31-f2a9e68a8dd5::indexed-C","lateSelection":"7410c955-438f-4c07-bb31-f2a9e68a8dd5::indexed-C","recovered":"7410c955-438f-4c07-bb31-f2a9e68a8dd5::indexed-C"}
+(pass) CONTROL completed disk-session open followed by global search keeps the later selection [159.85ms]
+
+ 2 pass
+ 0 fail
+ 53 expect() calls
+Ran 2 tests across 1 file. [1491.00ms]
+Completed Bun shard: 2 tests, 0 skipped; 0 failures.

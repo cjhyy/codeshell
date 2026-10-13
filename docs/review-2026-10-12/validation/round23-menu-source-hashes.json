@@ -1,0 +1,18 @@
+{
+  "timestampSingapore": "2026-10-12T07:48:21.647145+08:00",
+  "scope": "read-only source hashes; not execution proof",
+  "sources": {
+    "/Users/admin/.codex/worktrees/server-desktop-review-20261012/codeshell": {
+      "packages/desktop/src/main/menu.ts": "6f65230f21d3a1c9b567d97a2b53433ab313435c49b54f32721647df11e87475",
+      "packages/desktop/src/preload/index.ts": "b85c80ec01b488890fcfad0e9afed4fb1e02575dcba8e30cce8a06805ed44327",
+      "packages/desktop/src/renderer/App.tsx": "556e985d3c0898b5915c713a2a0a280f59bf504b4797e89278143bdcdfd265b8",
+      "packages/desktop/src/main/index.ts": "cf5ba2f931c816cb44b598d54ef173793e40f554335de75d103f7b0ee5a2c26a"
+    },
+    "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell": {
+      "packages/desktop/src/main/menu.ts": "6f65230f21d3a1c9b567d97a2b53433ab313435c49b54f32721647df11e87475",
+      "packages/desktop/src/preload/index.ts": "b85c80ec01b488890fcfad0e9afed4fb1e02575dcba8e30cce8a06805ed44327",
+      "packages/desktop/src/renderer/App.tsx": "556e985d3c0898b5915c713a2a0a280f59bf504b4797e89278143bdcdfd265b8",
+      "packages/desktop/src/main/index.ts": "426bfe5ccc8387db82f5bbe47ce1b83681995e7192f37bb03775f4eca37d0d80"
+    }
+  }
+}

@@ -1,0 +1,28 @@
+bun test v1.3.11 (af24e281)
+
+../../../../../../private/tmp/codeshell-review-20261012-hub-session-operations-round18/session-followup.test.tsx:
+150 |     expect(props(button("归档")).disabled).toBe(false);
+151 |     await act(async () => { props(button("归档")).onClick(); await flushMicrotasks(); });
+152 |     await until(() => disk.readSessionArchivedAt(id) !== undefined, "actual history archive committed");
+153 |     await until(() => !button("归档"), "active follow-up hidden from current history");
+154 |     expect(coreManager.get(id).isBusy()).toBe(true);
+155 |     expect(changed).toEqual(["changed"]);
+                          ^
+error: expect(received).toEqual(expected)
+
+- [
+-   "changed",
+- ]
++ []
+
+- Expected  - 3
++ Received  + 1
+
+      at <anonymous> (/private/tmp/codeshell-review-20261012-hub-session-operations-round18/session-followup.test.tsx:155:21)
+(fail) real authenticated Hub history fails to recognize a real Core admitted asynchronous-answer follow-up as running [242.61ms]
+
+ 0 pass
+ 1 fail
+ 12 expect() calls
+Ran 1 test across 1 file. [871.00ms]
+Bun test process failed (1)

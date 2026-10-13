@@ -1,0 +1,15 @@
+bun test v1.3.11 (af24e281)
+
+docs/review-2026-10-12/reproductions/terminal-lifecycle-round14/terminal-lifecycle.test.tsx:
+(pass) CONFIRMED WITH SEPARATE ELECTRON IDENTITY: restored tab close/reopen reuses surviving PTY; another close/reopen recovers [273.61ms]
+(pass) same tab remount reattaches only its owner and replays scrollback without another spawn [102.91ms]
+(pass) late first start after tab closure cannot resize disposed xterm or replace the new tab [95.62ms]
+(pass) structured spawn refusal is visible; closing and reopening retries with a new tab successfully [129.79ms]
+(pass) Main path rejection is visible and removes no owner; a fresh valid tab can recover [84.62ms]
+(pass) natural exit is visible and new tab recovers; reaping a destroyed owner does not double-kill it on quit [89.73ms]
+
+ 6 pass
+ 0 fail
+ 41 expect() calls
+Ran 6 tests across 1 file. [2.60s]
+Completed Bun shard: 6 tests, 0 skipped; 0 failures.

@@ -1,0 +1,123 @@
+{
+  "clockReadUtc": "2026-10-12 02:02:00 UTC",
+  "clockReadSg": "2026-10-12 10:02:00 +08:00",
+  "scope": "read-only document/source audit; Python standard-library read/hash/diff/write only",
+  "newFindings": 0,
+  "newProductFixtureImportNativeGitModelNetworkExecutions": 0,
+  "draft": {
+    "path": "/tmp/codeshell-review-20261012-repair-handoff-draft.md",
+    "sha256": "25121bfb04fb42b3c7371365a937f897303841f531dcf2bc75275fbb7e791e54",
+    "unchanged": true
+  },
+  "formal": {
+    "findings": 86,
+    "levels": {
+      "P1": 1,
+      "P2": 52,
+      "P3": 33
+    },
+    "commonFiles": 86,
+    "commonTests": 251,
+    "basis": "existing canonical README, not current test execution"
+  },
+  "sourceHashes": [
+    {
+      "path": "/Users/admin/.codex/worktrees/server-desktop-review-20261012/codeshell/docs/review-2026-10-12/README.md",
+      "sha256": "717fb56b4e12a5d6bab12a678675ad7c14635b1e0e58e20b7eef3a761058d0e6",
+      "hashNotProofOfFullContentRead": true
+    },
+    {
+      "path": "/Users/admin/.codex/worktrees/server-desktop-review-20261012/codeshell/docs/review-2026-10-12/flow-coverage.md",
+      "sha256": "6bf8657e6254b7feb220fd79a1b00d7f7c26cffbb832e02b16182e18ab0660cb",
+      "hashNotProofOfFullContentRead": true
+    },
+    {
+      "path": "/Users/admin/.codex/worktrees/server-desktop-review-20261012/codeshell/docs/review-2026-10-12/runtime-round3.md",
+      "sha256": "d3873d2f368812e049bda27862bca1b6a7a026a2c6d451e2b12765888a5230d7",
+      "hashNotProofOfFullContentRead": true
+    },
+    {
+      "path": "/Users/admin/.codex/worktrees/server-desktop-review-20261012/codeshell/docs/review-2026-10-12/high-risk-quality-round17.md",
+      "sha256": "3254a130e251de5cadc4cca01f54d00846a7b439ab21dc175cb37f3d4c7ef177",
+      "hashNotProofOfFullContentRead": true
+    },
+    {
+      "path": "/Users/admin/.codex/worktrees/server-desktop-review-20261012/codeshell/docs/review-2026-10-12/server-round1.md",
+      "sha256": "dc6a7308826b0a483310966e17b04ec7ca6cb56a37ebad9edbc7cfe2d42ff5e8",
+      "hashNotProofOfFullContentRead": true
+    },
+    {
+      "path": "/Users/admin/.codex/worktrees/server-desktop-review-20261012/codeshell/docs/review-2026-10-12/desktop-round1.md",
+      "sha256": "b216b26c4273d04dbae0597115b63ef8b686fe7eda0996868bf4c387e93977d4",
+      "hashNotProofOfFullContentRead": true
+    },
+    {
+      "path": "/Users/admin/.codex/worktrees/server-desktop-review-20261012/codeshell/docs/review-2026-10-12/web-round1.md",
+      "sha256": "062fe7be52825010fefd6ea12a3e1167c6c5d2d50d14aa06932dc1f980b4107a",
+      "hashNotProofOfFullContentRead": true
+    },
+    {
+      "path": "/Users/admin/.codex/worktrees/server-desktop-review-20261012/codeshell/docs/review-2026-10-12/automation-round5.md",
+      "sha256": "4a6aab0fb197862e288a17d1f6f37b804c665639d31344a24a8413ffe54cd755",
+      "hashNotProofOfFullContentRead": true
+    },
+    {
+      "path": "/Users/admin/.codex/worktrees/server-desktop-review-20261012/codeshell/docs/review-2026-10-12/terminal-review-round13.md",
+      "sha256": "66a12b0debbd243648ef214fa4b7b09204d87cc7111951bc00f0d91a35d5e33e",
+      "hashNotProofOfFullContentRead": true
+    },
+    {
+      "path": "/Users/admin/.codex/worktrees/server-desktop-review-20261012/codeshell/docs/review-2026-10-12/file-navigation-round14.md",
+      "sha256": "8442a15342d04c69183b5ad42397431da3d10aef595cb2de8ef6ef3acf647f5f",
+      "hashNotProofOfFullContentRead": true
+    },
+    {
+      "path": "/Users/admin/.codex/worktrees/server-desktop-review-20261012/codeshell/docs/review-2026-10-12/connection-recovery-round15.md",
+      "sha256": "24bac410591d223abc62497a81c005d3b5d18f4390d61c8d4c9390f131afec3f",
+      "hashNotProofOfFullContentRead": true
+    },
+    {
+      "path": "/Users/admin/.codex/worktrees/server-desktop-review-20261012/codeshell/docs/review-2026-10-12/file-mutex-round19.md",
+      "sha256": "40a33225154448ecf505dade3a27b7c6abefaac3e936a999704cf19b8a072886",
+      "hashNotProofOfFullContentRead": true
+    },
+    {
+      "path": "/Users/admin/.codex/worktrees/server-desktop-review-20261012/codeshell/docs/review-2026-10-12/voice-round6.md",
+      "sha256": "94b7b9092aecaca35e1b8abf327bd9036fb2414a9b0a542eccc4a0b34fba95db",
+      "hashNotProofOfFullContentRead": true
+    },
+    {
+      "path": "/Users/admin/.codex/worktrees/server-desktop-review-20261012/codeshell/docs/review-2026-10-12/cli-recovery-round15.md",
+      "sha256": "3afdb57700ac89646c89afe3837401bda5d6e97656d4e8e8d4704612fceeb81f",
+      "hashNotProofOfFullContentRead": true
+    },
+    {
+      "path": "/Users/admin/.codex/worktrees/server-desktop-review-20261012/codeshell/docs/review-2026-10-12/file-root-round27.md",
+      "sha256": "a032a7897961f673d11b0529b3cb25b6713c64f3e3d301ff88c625872b9b6be8",
+      "hashNotProofOfFullContentRead": true
+    },
+    {
+      "path": "/Users/admin/.codex/worktrees/server-desktop-review-20261012/codeshell/docs/review-2026-10-12/goal-sleep-round20.md",
+      "sha256": "a790f5f6330fc21f95d83d0c39efecf4ab33950e48d24ea0902d0bfda85ccc55",
+      "hashNotProofOfFullContentRead": true
+    },
+    {
+      "path": "/Users/admin/.codex/worktrees/server-desktop-review-20261012/codeshell/docs/review-2026-10-12/browser-stop-round22.md",
+      "sha256": "c33003919a92272ccc54efd648ec0ce841d933dd110a4b3b4a39805c93213918",
+      "hashNotProofOfFullContentRead": true
+    }
+  ],
+  "outputs": [
+    {
+      "path": "/tmp/codeshell-review-20261012-repair-handoff-quality.md",
+      "sha256": "af63674e37081ed9420636a2c6697e71459ede281bd6c595013b0ed41154b759",
+      "bytes": 7934
+    },
+    {
+      "path": "/tmp/codeshell-review-20261012-repair-handoff-suggested.patch",
+      "sha256": "bbb4cb0b251ef338377dd5a0c45d69137291ee5af1601a351d08aec170061474",
+      "bytes": 8041
+    }
+  ],
+  "patchApplied": false
+}

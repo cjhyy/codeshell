@@ -1,0 +1,17 @@
+import http from 'node:http';
+import https from 'node:https';
+import net from 'node:net';
+import tls from 'node:tls';
+import dgram from 'node:dgram';
+let denied = 0;
+const restores = [];
+const deny = () => { denied++; throw new Error('lifecycle review blocked all network'); };
+const patch = (object, key) => { const original = object[key]; object[key] = deny; restores.push(() => { object[key] = original; }); };
+patch(globalThis, 'fetch');
+for (const api of [http, https]) for (const key of ['request', 'get']) patch(api, key);
+for (const key of ['connect', 'createConnection']) patch(net, key);
+patch(net.Socket.prototype, 'connect');
+patch(tls, 'connect'); patch(tls.TLSSocket.prototype, 'connect');
+patch(dgram, 'createSocket');
+export const stats = () => ({ denied, allowedOrigins: [] });
+export const restore = () => { for (const apply of restores.reverse()) apply(); };

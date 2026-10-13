@@ -1,0 +1,13 @@
+bun test v1.3.11 (af24e281)
+
+docs/review-2026-10-12/reproductions/cli-recovery-round15/web-room-recovery.test.tsx:
+{"control":"cli-room-reconnect","openedCwdAndKindRetained":true,"staleSocketIgnored":true,"duplicateCatchupIgnored":true,"actualHookWithFakeSocket":true}
+(pass) CONTROL reconnect retains opened room cwd/kind despite sidebar changes and deduplicates snapshot catchup [32.65ms]
+{"control":"leave-and-reopen","unsubscribeOnly":true,"oldTranscriptCannotNavigate":true,"noClosedRoomResubscribeOnFocus":true,"freshReopenSubscription":true,"approvalCaseExcludedAsR62":true}
+(pass) CONTROL leave unsubscribes without closing CLI, ignores old transcript reply, and reopening establishes a fresh subscription [14.13ms]
+
+ 2 pass
+ 0 fail
+ 15 expect() calls
+Ran 2 tests across 1 file. [182.00ms]
+Completed Bun shard: 2 tests, 0 skipped; 0 failures.

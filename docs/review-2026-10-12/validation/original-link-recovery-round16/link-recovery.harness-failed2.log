@@ -1,0 +1,15 @@
+bun test v1.3.11 (af24e281)
+
+../../../../../../private/tmp/codeshell-review-20261012-link-recovery-round16/link-recovery.test.tsx:
+
+# Unhandled error between tests
+-------------------------------
+error: Cannot find module '@cjhyy/code-shell-web' from '/private/tmp/codeshell-review-20261012-link-recovery-round16/link-recovery.test.tsx'
+-------------------------------
+
+
+ 0 pass
+ 1 fail
+ 1 error
+Ran 1 test across 1 file. [248.00ms]
+Bun test process failed (1)

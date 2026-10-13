@@ -1,0 +1,14 @@
+bun test v1.3.11 (af24e281)
+
+../../../../../../private/tmp/codeshell-remaining-20261012/root/root-candidates.test.ts:
+{"case":"arena-git-show","direct":"owned arena fixture content","actual":"Could not resolve: HEAD:example.txt","read":"1\towned arena fixture content\n2\t"}
+(pass) Arena git_show treats object selector as a path while direct git and read_file work [53.31ms]
+{"case":"lab-cold-stop","stoppedStatus":"baselining","recoveredStatus":"interrupted","stopRequested":true,"requests":0}
+(pass) Lab cold stop records stop but get recovers active snapshot as interrupted; ordinary stopped idle is cancelled [224.56ms]
+{"ownedRootsRemoved":true}
+
+ 2 pass
+ 0 fail
+ 7 expect() calls
+Ran 2 tests across 1 file. [877.00ms]
+Completed Bun shard: 2 tests, 0 skipped; 0 failures.

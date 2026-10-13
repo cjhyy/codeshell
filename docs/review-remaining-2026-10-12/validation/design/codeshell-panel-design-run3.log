@@ -1,0 +1,29 @@
+{"case":"network_guard","homeIsolated":true,"nodeNetworkDenied":true,"browserOrigin":"https://panel.test","browserRoute":"all other origins aborted"}
+{"case":"undo_baseline","indexed":false,"initial":"saved","state":"saved","contentExactlyRestored":true,"errors":[]}
+✔ undo restored content indexed=false (363.519375ms)
+{"case":"undo_baseline","indexed":true,"initial":"saved","state":"dirty","contentExactlyRestored":true,"errors":[]}
+✔ undo restored content indexed=true (376.904625ms)
+{"case":"open_edit","delayedPart":false,"retained":true,"path":"designs/polish.codesign.json","errors":[]}
+✔ open while editing delayedPart=false (408.833167ms)
+{"case":"open_edit","delayedPart":true,"retained":false,"path":"designs/other.codesign.json","errors":[]}
+{"case":"text_layout","source":"ABCDEFGHIJKLMNO","rendered":"ABCDEFGHIJKLMNO","height":19.2,"width":50}
+{"case":"text_layout","source":"x ABCDEFGHIJKLMNO","rendered":"x\nABCDE\nFGHIJK\nLMNO","height":76.8,"width":50}
+{"case":"text_layout","source":"one\ntwo","rendered":"one two","height":19.2,"width":100}
+{"case":"frontend_text","fullSourcePresent":false,"displayTextPresent":true,"textOverflowCss":false}
+✔ open while editing delayedPart=true (404.336834ms)
+✔ layout first long token and explicit line breaks (1.377917ms)
+✔ frontend source text export (0.6845ms)
+{"case":"failed_transaction","indexed":false,"error":"页面不存在：page-missing","beforePages":2,"afterPages":2,"deletedPageRetained":true,"errors":[]}
+✔ failed page transaction indexed=false (263.170959ms)
+{"case":"failed_transaction","indexed":true,"error":"页面不存在：page-missing","beforePages":12,"afterPages":11,"deletedPageRetained":false,"errors":[]}
+{"case":"frontend_font","htmlEmbedsFont":false,"svgEmbedsFont":true,"fontData":"synthetic four bytes; only serialization contract verified"}
+✔ failed page transaction indexed=true (279.054458ms)
+✔ frontend packaged font export (1.003834ms)
+ℹ tests 9
+ℹ suites 0
+ℹ pass 9
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 2101.632583

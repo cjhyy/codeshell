@@ -1,0 +1,30 @@
+{"case":"network_guard","homeIsolated":true,"nodeNetworkDenied":true,"browserOrigin":"https://panel.test","browserRoute":"all other origins aborted"}
+{"case":"undo_baseline","indexed":false,"initial":"saved","state":"saved","contentExactlyRestored":true,"errors":[]}
+✔ undo restored content indexed=false (387.59425ms)
+{"case":"undo_baseline","indexed":true,"initial":"saved","state":"dirty","contentExactlyRestored":true,"errors":[]}
+✔ undo restored content indexed=true (358.900208ms)
+{"case":"open_edit","delayedPart":false,"retained":true,"path":"designs/polish.codesign.json","errors":[]}
+✔ open while editing delayedPart=false (343.11075ms)
+{"case":"open_edit","delayedPart":true,"retained":false,"path":"designs/other.codesign.json","errors":[]}
+{"case":"text_layout","source":"ABCDEFGHIJKLMNO","rendered":"ABCDEFGHIJKLMNO","height":19.2,"width":50}
+{"case":"text_layout","source":"x ABCDEFGHIJKLMNO","rendered":"x\nABCDE\nFGHIJK\nLMNO","height":76.8,"width":50}
+{"case":"text_layout","source":"one\ntwo","rendered":"one two","height":19.2,"width":100}
+{"case":"text_layout","source":"这是没有空格的中文长段落","rendered":"这是没有空格的中文长段落","height":19.2,"width":50}
+{"case":"frontend_text","fullSourcePresent":false,"displayTextPresent":true,"textOverflowCss":false}
+✔ open while editing delayedPart=true (402.502208ms)
+✔ layout first long token and explicit line breaks (1.644ms)
+✔ frontend source text export (0.831292ms)
+{"case":"failed_transaction","indexed":false,"error":"页面不存在：page-missing","beforePages":2,"afterPages":2,"deletedPageRetained":true,"originalPagePayloadPresent":true,"payloadRetained":true,"dirtyAfterFailure":false,"persistedPageRetainedAfterSave":true,"errors":[]}
+✔ failed page transaction indexed=false (273.777ms)
+{"case":"failed_transaction","indexed":true,"error":"页面不存在：page-missing","beforePages":12,"afterPages":11,"deletedPageRetained":false,"originalPagePayloadPresent":true,"payloadRetained":false,"dirtyAfterFailure":false,"persistedPageRetainedAfterSave":false,"errors":[]}
+{"case":"frontend_font","htmlEmbedsFont":false,"svgEmbedsFont":true,"fontData":"synthetic four bytes; only serialization contract verified"}
+✔ failed page transaction indexed=true (257.953667ms)
+✔ frontend packaged font export (1.063667ms)
+ℹ tests 9
+ℹ suites 0
+ℹ pass 9
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 2030.170042

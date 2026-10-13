@@ -1,0 +1,374 @@
+REVIEW_COMMAND ["scripts/quant-lab-panel-host-calls.mjs"]
+✓ Quant Lab Panel Host call scheduling, recovery and bounded research restore
+REVIEW_EXIT 0
+REVIEW_COMMAND ["scripts/quant-lab-portfolio.mjs"]
+✓ Quant Lab portfolio G1 and N1–N5 golden
+✓ Quant Lab strict ledger replay, decimal, XIRR, HHI and attribution
+✓ Quant Lab market availability and raw-data boundary
+✓ Quant Lab create-only and conflict-safe portfolio storage
+✓ Quant Lab Round 9 missing-data degradation, valuation and cache-drift contract
+✓ Quant Lab screenshot import preview, atomic commit, duplicate/revision/epoch protection and panel verification
+REVIEW_EXIT 0
+REVIEW_COMMAND ["scripts/quant-lab-portfolio-rules.mjs"]
+✓ Quant Lab portfolio P0-P3 pure-rule contract
+REVIEW_EXIT 0
+REVIEW_COMMAND ["scripts/quant-lab-portfolio-data.mjs"]
+✓ Quant Lab portfolio raw CLI offline source fixtures
+✓ Quant Lab raw cache isolation, conflict and stale semantics
+✓ Quant Lab Yahoo Retry-After and London source-date contract
+✓ Quant Lab raw cache merge, bounded Retry-After and Yahoo window contract
+REVIEW_EXIT 0
+REVIEW_COMMAND ["scripts/quant-lab-today.mjs"]
+Quant Lab today model tests passed
+REVIEW_EXIT 0
+REVIEW_COMMAND ["scripts/quant-lab-news.mjs"]
+✓ Quant Lab news schema, source parsing, stale, clustering, association and notification contract
+REVIEW_EXIT 0
+REVIEW_COMMAND ["scripts/quant-lab-notes.mjs"]
+✓ Quant Lab M5 notes schema / links / timeline / store conflict tests
+REVIEW_EXIT 0
+REVIEW_COMMAND ["scripts/quant-lab-history-data.mjs"]
+✓ Quant Lab historical data catalog, direct sync and metadata contract
+REVIEW_EXIT 0
+REVIEW_COMMAND ["scripts/quant-lab-market-data-sources.mjs"]
+✓ Quant Lab pluggable market-data adapters, credentials and fallback contract
+REVIEW_EXIT 0
+REVIEW_COMMAND ["scripts/quant-lab-market-insights.mjs"]
+✓ Quant Lab persistent market insight prompt and report contract
+✓ Company report weekend/holiday reference dates and future-date guards
+REVIEW_EXIT 0
+REVIEW_COMMAND ["scripts/quant-lab-stock-screener.mjs"]
+✓ Quant Lab deterministic A-share universe, evidence gates, ranking and report contract
+REVIEW_EXIT 0
+REVIEW_COMMAND ["scripts/quant-lab-market-pulse.mjs"]
+✓ Quant Lab deterministic market breadth, sectors, long trend, news linkage and daily pulse automation
+REVIEW_EXIT 0
+REVIEW_COMMAND ["scripts/quant-lab-a-share-selection.mjs"]
+✓ Quant Lab A-share theme selection, stock timing, announcements/news and watch contract
+REVIEW_EXIT 0
+REVIEW_COMMAND ["scripts/quant-lab-a-share-stock-detail.mjs"]
+✓ Quant Lab A-share name search, stock data, timing and local snapshot contract
+REVIEW_EXIT 0
+REVIEW_COMMAND ["scripts/quant-lab-us-stock-detail.mjs"]
+✓ Quant Lab US name search, adjusted history, timing and local snapshot contract
+REVIEW_EXIT 0
+REVIEW_COMMAND ["scripts/quant-lab-a-share-history.mjs"]
+✓ Quant Lab resumable A-share history initialization and incremental cache contract
+REVIEW_EXIT 0
+REVIEW_COMMAND ["--test","tests/apps/quant-lab/alerts-project-scope.test.mjs","tests/apps/quant-lab/alerts-unique.test.mjs","tests/apps/quant-lab/automation-mutation.test.mjs","tests/apps/quant-lab/data-sources.test.mjs","tests/apps/quant-lab/history-state-recovery.test.mjs","tests/apps/quant-lab/holding-quotes.test.mjs","tests/apps/quant-lab/market-pulse-project-scope.test.mjs","tests/apps/quant-lab/model.test.mjs","tests/apps/quant-lab/news-project-scope.test.mjs","tests/apps/quant-lab/news-pulse-unique.test.mjs","tests/apps/quant-lab/package-contract.test.mjs","tests/apps/quant-lab/portfolio-performance.test.mjs","tests/apps/quant-lab/project-setting.test.mjs","tests/apps/quant-lab/selection-all-sectors-model.test.mjs","tests/apps/quant-lab/selection-all-sectors-ui.test.mjs","tests/apps/quant-lab/selection-announcement-scan.test.mjs","tests/apps/quant-lab/selection-evidence.test.mjs","tests/apps/quant-lab/selection-history-progress.test.mjs","tests/apps/quant-lab/selection-research-bridge.test.mjs","tests/apps/quant-lab/selection-scan-integration.test.mjs","tests/apps/quant-lab/selection-sector-scan.test.mjs","tests/apps/quant-lab/selection-signal-storage.test.mjs","tests/apps/quant-lab/selection-source-cache.test.mjs","tests/apps/quant-lab/selection-watch-document.test.mjs"]
+✔ failed saved-record verification blocks automation changes, including programmatic legacy removal (1.643083ms)
+✔ switching projects while checking saved records prevents even the first automation request (0.131125ms)
+✔ a list response from the previous project cannot create tasks or populate the new project (0.701291ms)
+✔ already dispatched creation is not followed by verification or mutations in the next project (0.220083ms)
+✔ a late load cannot overwrite the next project's successful state (0.146584ms)
+✔ saved records are checked again after the asynchronous task lookup, before mutation (0.219833ms)
+✔ a conditional conflict never falls back and retry only reads the other device's task (0.368209ms)
+✔ two pages dispatch the same market identity when both initially see no task (2.309709ms)
+✔ lost creation response is reconciled by reads, and manual retry neither deletes nor recreates (0.353958ms)
+✔ unique creation rejection never falls back to ordinary creation (0.163917ms)
+✔ legacy hosts receive the original request without an ignored identity and show the limitation (0.186042ms)
+✔ both mutation paths send the observed revision and treat conflict without a legacy retry (1.299417ms)
+✔ advertised support with a missing revision refuses dispatch, and uncertain writes are never repeated (0.158958ms)
+✔ a legacy Host retains its explicit old contract (0.245083ms)
+✔ market pulse preserves a conflicting task and requires a read before a new decision (4.6735ms)
+✔ configuration rejects credentials, private literals and unsupported capabilities (1.626792ms)
+✔ custom endpoint DNS, HTTP failure and JSON are checked before use (1.2575ms)
+✔ Eastmoney pagination validates completeness and keeps its own taxonomy IDs (0.367458ms)
+✔ source failure switches complete taxonomy, caches independently, and retains failure evidence (1.218792ms)
+✔ standard JSON rejects stale or malformed members, and cache returns the same identities (0.649416ms)
+✔ a healthy directory cannot hide a blocked constituent source (0.193375ms)
+✔ real disk snapshot contract supports standard and built-in membership caches (100.520333ms)
+✔ a shrinking listed universe does not invalidate a larger historical audit event (4.413833ms)
+✔ checking local snapshots cannot mark missing actual daily bars current or suppress network fill (8.956083ms)
+✔ mixed history dates and failed checks trigger one full network verification (0.656334ms)
+✔ unreadable local status is diagnosed explicitly and recovery preserves existing files (5.319666ms)
+✔ request only held symbols, deduplicate accounts, isolate individual provider failures (4.300209ms)
+✔ portfolio totals use decimal arithmetic, preserve zero and withhold partial currency totals (0.345625ms)
+✔ poll by exchange hours including US DST, pause when hidden, retry without losing prices (10.81575ms)
+✔ reject foreign, invalid, future and older quotes; stale workspace responses cannot publish (0.200459ms)
+✔ native process events before spawn returns are collected, and listeners are removed (0.527708ms)
+✔ market pulse create: every pending Host result is scoped to its starting project (2.240875ms)
+✔ market pulse update: every pending Host result is scoped to its starting project (0.481208ms)
+✔ market pulse delete: every pending Host result is scoped to its starting project (0.33925ms)
+✔ market pulse: old load settlement cannot erase a new in-flight load or populate its state (0.203459ms)
+✓ Quant Lab engine smoke test
+✓ Quant Lab sizer, signal-mode and risk-free-rate contract
+✓ Quant Lab walk-forward and parameter sweep
+✓ Quant Lab research evidence
+✓ Quant Lab watchlist alert rules
+✔ tests/apps/quant-lab/model.test.mjs (215.950375ms)
+✔ news load: switching at every Host boundary stops subsequent calls and preserves the next project (17.133625ms)
+✔ news enable: switching at every Host boundary stops subsequent calls and preserves the next project (2.219041ms)
+✔ news update: switching at every Host boundary stops subsequent calls and preserves the next project (1.099833ms)
+✔ news create: switching at every Host boundary stops subsequent calls and preserves the next project (0.512209ms)
+✔ news delete: switching at every Host boundary stops subsequent calls and preserves the next project (0.647417ms)
+✔ news repair: switching at every Host boundary stops subsequent calls and preserves the next project (0.7165ms)
+✔ news: stale explicit load makes no calls (0.068042ms)
+✔ news: a late task failure cannot clear the next project's refresh state (2.139625ms)
+✔ news: a detached article cannot open an old link or create a note in the new project (0.79175ms)
+✔ news: a late old load cannot replace a successfully loaded new project (0.395792ms)
+✔ news: switching while an external link confirmation is pending keeps the new status (0.603541ms)
+✔ news-cn: two simultaneous pages use the same unique identity and retain one task (6.291458ms)
+✔ news-cn: response-lost only permits a read on the first retry, preserving another device's edit (0.381583ms)
+✔ news-cn: verification-lost only permits a read on the first retry, preserving another device's edit (0.169167ms)
+✔ news-cn: definition-conflict only permits a read on the first retry, preserving another device's edit (0.179792ms)
+✔ news-cn: a successful create with a mismatched verification cannot trigger an automatic update (0.192917ms)
+✔ news-cn: absent tasks after an uncertain creation are read before an explicit new attempt (0.254875ms)
+✔ news-cn: legacy creation retains the old contract and displays its concurrency limit (0.185333ms)
+✔ news-us: two simultaneous pages use the same unique identity and retain one task (1.348542ms)
+✔ news-us: response-lost only permits a read on the first retry, preserving another device's edit (0.144792ms)
+✔ news-us: verification-lost only permits a read on the first retry, preserving another device's edit (0.173125ms)
+✔ news-us: definition-conflict only permits a read on the first retry, preserving another device's edit (0.116625ms)
+✔ news-us: a successful create with a mismatched verification cannot trigger an automatic update (0.137666ms)
+✔ news-us: absent tasks after an uncertain creation are read before an explicit new attempt (0.147667ms)
+✔ news-us: legacy creation retains the old contract and displays its concurrency limit (0.079708ms)
+✔ pulse: two simultaneous pages use the same unique identity and retain one task (1.719417ms)
+✔ pulse: response-lost only permits a read on the first retry, preserving another device's edit (0.114875ms)
+✔ pulse: verification-lost only permits a read on the first retry, preserving another device's edit (0.06725ms)
+✔ pulse: definition-conflict only permits a read on the first retry, preserving another device's edit (0.062208ms)
+✔ pulse: a successful create with a mismatched verification cannot trigger an automatic update (0.071292ms)
+✔ pulse: absent tasks after an uncertain creation are read before an explicit new attempt (0.103458ms)
+✔ pulse: legacy creation retains the old contract and displays its concurrency limit (0.054666ms)
+✓ quant-lab package contract
+✔ tests/apps/quant-lab/package-contract.test.mjs (930.720083ms)
+✔ daily net profit excludes deposits, withdrawals and transferred positions (3.226292ms)
+✔ snapshot import starts a baseline, not invented pre-import daily gains (0.124ms)
+✔ missing valuations break the curve and recovery cannot invent the missing daily return (0.103459ms)
+✔ complete live valuation updates only today's provisional point and cannot erase cash or FX problems (0.12475ms)
+✔ money subtraction keeps cents exact; zero is a valid day and ranges use calendar dates (3.876458ms)
+✔ two devices preserve the first save and block stale queued writes until an explicit load (2.926875ms)
+✔ missing records also compete by revision and writes require a successful read (0.257625ms)
+✔ a lost successful response is reconciled by exact content, without a second write (0.145958ms)
+✔ ambiguous writes and malformed success cannot authorize a later overwrite (0.306625ms)
+✔ failed reads protect existing configuration and a failed reload invalidates previous permission to save (0.151959ms)
+✔ queued snapshots detach from caller mutations and a project switch cancels writes before dispatch (0.111958ms)
+✔ legacy hosts preserve existing keys and JSON without claiming conflict protection (0.102ms)
+✔ scheduler rejects stale queued mutations, partitions discovery cache and rejects stale results (53.702375ms)
+✔ rate-limit retries cannot execute after switching projects (0.276ms)
+✔ capability changes cannot silently fall back to unconditional writes (0.208875ms)
+✔ verifying current data before a dependent operation rejects changes without adopting their revision (0.302917ms)
+✔ every industry is visible and complete ranks include a quiet industry beyond twelve (46.772041ms)
+✔ unprocessed name-only directory entries retain missing metadata and remain pending (21.790625ms)
+✔ directory bounds fail explicitly while the normal full directory is never truncated (9.856958ms)
+✔ legacy input retains recommendations and the separate twelve watched-sector limit (21.601042ms)
+✔ independent diagnostics use at most 120 complete histories in stable symbol order (414.752125ms)
+✔ scan count conflicts are rejected instead of publishing invented completeness (8.11375ms)
+✔ rotation retains ranks beyond twelve and leaves partial historical industries unranked (19.309708ms)
+✔ a limit-up tier larger than twelve retains complete unique stock evidence (13.183958ms)
+✔ completed industries can continue announcement or watch history batches (113.557958ms)
+✔ scan progress preserves retry timing with completed sectors and no announcement backlog (46.354833ms)
+✔ batch evidence counts new requests separately from cumulative cached history (194.343833ms)
+✔ announcement requests cover ready stocks hidden below the presentation cutoffs (31.843458ms)
+✔ missing industry data is distinct from a weak-market block with visible observations (9.373166ms)
+✔ provider without a directory member total uses verified scan identities (17.885791ms)
+✔ all industries over twelve survive parsing and presentation pagination (13.37775ms)
+✔ progress rejects conflicting arithmetic, fabricated completeness and duplicate ranks (2.885042ms)
+✔ announcement continuation may run after every industry has completed (1.107875ms)
+✔ old snapshots without full-scan fields remain readable (0.251833ms)
+✔ watch-only history batches continue after industries finish, without claiming completion (0.415208ms)
+✔ continuation modes are separate from manual retry modes (0.457209ms)
+✔ valid high ICIR from a broad low-noise sample does not reject the snapshot (1.311834ms)
+✔ rotation history preserves valid ranks beyond the old twelve-industry limit (2.472958ms)
+✔ a full one-hundred-stock watchlist rejects additions explicitly (34.975709ms)
+✔ actual controller displays non-priority pending rows and preserves selection through batches (8.099208ms)
+✔ automatic continuation stops on pause, inactive page and hidden document (7.698959ms)
+✔ pausing cancels a running continuation and retains the last validated snapshot (3.698333ms)
+✔ a legacy host without persistent data cannot enter an infinite continuation loop (5.638084ms)
+✔ close snapshots probe the next session and an unfinished close at bounded deadlines (0.429625ms)
+✔ legacy empty source failures recover on weekends without resetting current retry budgets (0.335375ms)
+✔ frequent visible-context events do not postpone the absolute intraday refresh deadline (3.166459ms)
+✔ source cooldown metadata schedules the specified retry instead of a five-second loop (2.241792ms)
+✔ pending member-source failures remain visible even when the cached industry directory is available (4.241042ms)
+✔ source interruption is explained before zero-result or market-filter claims (1.181416ms)
+✔ empty research results keep an explicit route to the observed industries (1.713708ms)
+✔ full-pool gate counts can overlap and are not confused with truncated display cards (0.754584ms)
+✔ watch additions during a running batch are refreshed after that batch rather than discarded (4.62525ms)
+✔ visible background watch maintenance updates an old close without continuing full-market batches (7.879292ms)
+✔ automatic freshness preserves retry budgets while explicit manual refresh resets them (9.178125ms)
+✔ per-batch diagnostics keep real attempts separate from added data and reject impossible counts (2.347167ms)
+✔ continuations preserve cards, disclosure state and the ready page while showing local progress (2.97375ms)
+✔ two empty automatic batches pause with a reason instead of looping every five seconds (3.210625ms)
+✔ real attempted batches do not trigger the idle-loop guard and report added data separately (4.202625ms)
+✔ newly completed histories show the batch increment without resetting the selection (2.859125ms)
+✔ partial coverage shows real observations and the exact cooldown without starting another request (4.443584ms)
+✔ limit ladders retain full sealed counts beyond display limits and reject duplicates or fabricated totals (9.003875ms)
+✔ leaving the selection page lets its running batch finish before suspending continuation (3.15125ms)
+✔ hiding the window preserves a running batch and resumes scheduling when visible (2.628667ms)
+✔ long-term watch preserves a conflicting draft and blocks scans until explicit reload (6.093ms)
+✔ long-term watch reload failure keeps the draft and a lost committed reply is reconciled without another write (5.259791ms)
+✔ a pending long-term watch save cannot publish success or start scans in the next project (4.050333ms)
+✔ portfolio synchronization cannot silently claim success after a conflicting save (2.524459ms)
+✔ unsupported long-term watch records cannot be replaced by an empty default (0.572417ms)
+✔ pausing scans leaves project watch storage writable without restarting scans (4.287875ms)
+✔ announcement quotas are batches, and resuming checks the remaining stocks (1214.328792ms)
+✔ failed sources wait for bounded automatic retries, while manual refresh can recover (214.996334ms)
+✔ an exhausted deadline keeps unattempted announcements pending (0.244166ms)
+✔ continuation refreshes expired announcements and prioritizes never-checked names (217.588875ms)
+✔ a delayed older failure cannot replace a newer successful announcement snapshot (55.493042ms)
+✔ simultaneous publication serializes per symbol and preserves the newer timestamp (68.693458ms)
+✔ market date and closing phase take precedence over request start timestamps (134.630542ms)
+✔ legacy failures migrate to bounded retries and announcement HTTP throttling waits fifteen minutes (109.429125ms)
+✔ focus stocks enter the first announcement batch without repeating a fresh check (589.78625ms)
+✔ old or invalid optional evidence cannot hide the base selection snapshot (6.458166ms)
+✔ parse and preserve valid evidence without adding financial or signal claims (11.431709ms)
+✔ missing or malformed indicators stay null and only downgrade technical evidence (1.097ms)
+✔ stale and future technical dates cannot support complete-close evidence (0.219459ms)
+✔ current financial snapshots never acquire fabricated disclosure dates (0.178792ms)
+✔ unsupported packages and unavailable payloads retain per-stock explanations (0.105875ms)
+✔ deduplicate canonical stock identities and reject mismatched exchanges (0.098083ms)
+✔ quotes retain their observation time without asserting matching prices (0.125791ms)
+✔ both full candidate and compact waiting rows expose all evidence gaps (0.348042ms)
+✔ initial checkpoints do not claim a finished network pass (513.34175ms)
+✔ a paused refresh preserves the last completed date and resumes cached progress (1216.418875ms)
+✔ an exhausted scope with a retryable failure is still eligible for another network pass (949.013417ms)
+✔ a completed availability check may advance without inventing fresh bars (533.214083ms)
+✔ selection request is bounded, unique, uses adjusted bars and excludes incomplete/future days (1.326708ms)
+✔ provider failure or foreign symbols cannot erase or alter the selected stocks (0.217708ms)
+✔ a slow base scan publishes without starting optional providers (0.101375ms)
+✔ intraday closed indicators survive a financial provider outage (3.793208ms)
+✔ fixed executable arguments and stdin JSON keep stock data out of shell code (2.563125ms)
+✔ deadline and invalid JSON terminate the optional process (16.331125ms)
+✔ real producer and UI contract resume all industries beyond the former twelve-sector gate (3967.276875ms)
+✔ intraday latest-history benchmarks stay aligned with the last closed stock session (4.136708ms)
+✔ all-sector batches continue beyond twelve industries and preserve completed history (693.378083ms)
+✔ all members including thirteenth and 101st use local history before the network allowance (27.748084ms)
+✔ missing histories are interleaved across sectors and shared stocks only load once (7.335ms)
+✔ persisted round-robin cursor reaches sectors beyond a 24-history batch (673.895041ms)
+✔ transient failures retry after persisted delays, stop at three attempts, and allow manual recovery (277.4825ms)
+✔ trading date and phase isolate caches and intraday data contains only closed bars (138.082084ms)
+✔ stale formal cache is replaced and invalid fresh history cannot complete a sector (0.810084ms)
+✔ missing current quotes are disclosed, zero eligible members is complete without a candidate (0.1405ms)
+✔ safety bounds fail explicitly instead of truncating sectors or constituents (0.475791ms)
+✔ deadline stops new tasks while retaining unattempted history for continuation (0.603625ms)
+✔ same-root overlapping processes are excluded and cache symlinks are rejected (43.9735ms)
+✔ a crashed owner or an abandoned empty lock can be recovered (61.657584ms)
+✔ full industry fetch reads beyond page 100, preserves halted identities, and uses symbol sort (0.619416ms)
+✔ membership page failures, early empty pages and repeated pages never report completion (0.3385ms)
+✔ partial membership pages persist across invocations and continue from the next page (194.586208ms)
+✔ provider throttling pauses all member jobs across processes without blocking available history (427.423583ms)
+✔ legacy failed caches resume with one recorded attempt rather than remaining permanently missing (64.932416ms)
+✔ short or wrong-basis history remains unavailable and is not retried automatically (56.062417ms)
+✔ watched histories have a bounded head start within the shared 24-request batch (5.112375ms)
+✔ shared retry helper recognizes HTTP status, delays stale dates, and caps old records (0.082625ms)
+✔ three source-wide throttle rounds stop new sectors and remain stopped until a manual retry (245.262ms)
+✔ legacy source cooldown is retained and migrates to the second bounded retry round (55.8235ms)
+✔ latest-history request migration restores an exhausted stale-date budget exactly once (119.422667ms)
+✔ latest-history migration preserves other failures and reads valid formal cache first (56.238ms)
+✔ Sina provider upgrade reuses verified legacy members without sharing them with other providers (87.036584ms)
+✔ cached members remain visible while missing industry metrics prevent complete ranking (0.486167ms)
+✔ another device's signal is preserved, local draft remains and reload is explicit (3.965125ms)
+✔ failed or malformed reads cannot become an empty record that is automatically overwritten (1.526375ms)
+✔ lost successful acknowledgement is read back once without repeating the signal write (0.379625ms)
+✔ a delayed old-project read cannot populate the new project's controls (1.046041ms)
+✔ switching projects stops queued old writes and suppresses the late saved message (0.859709ms)
+✔ an earlier save cannot report a later blank threshold as saved (0.843875ms)
+✔ legacy Host keeps its existing storage path with a visible concurrency limitation (0.387375ms)
+✔ a delayed export never reads the old path through the newly selected project (2.583833ms)
+✔ a throttled directory preserves all known identities and resumes after cooldown (2.816666ms)
+✔ watch arguments preserve up to one hundred stocks (0.352167ms)
+✔ an empty first directory is retryable and prior-day metrics are never revived (0.282ms)
+✔ a partial nonempty response cannot silently replace the full industry directory (0.161917ms)
+✔ fresh quote evidence avoids refetching fifty pages and preserves its actual timestamp (2.391292ms)
+✔ selection downloads use the same minimum history as its cache and preserve focus (0.434125ms)
+✔ latest daily histories include the target close while excluding future rows and excess bars (0.606667ms)
+✔ supported watch records normalize legacy symbols without losing compatible extension fields (2.152084ms)
+✔ invalid, future, duplicate and over-capacity documents cannot silently shed records (0.213875ms)
+ℹ tests 211
+ℹ suites 0
+ℹ pass 211
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 4434.407084
+REVIEW_EXIT 0
+REVIEW_COMMAND ["--test","tests/apps/job-hunt-hq/browser-draft-storage.test.mjs","tests/apps/job-hunt-hq/discovery-automation.test.mjs","tests/apps/job-hunt-hq/draft-backup.test.mjs","tests/apps/job-hunt-hq/draft-storage.test.mjs","tests/apps/job-hunt-hq/host-capabilities.test.mjs","tests/apps/job-hunt-hq/interview-audio-tasks.test.mjs","tests/apps/job-hunt-hq/resume-pdf-tasks.test.mjs","tests/apps/job-hunt-hq/snapshot-backup.test.mjs","tests/apps/job-hunt-hq/snapshot-generations.test.mjs","tests/apps/job-hunt-hq/snapshot-recovery-model.test.mjs","tests/apps/job-hunt-hq/snapshot-restore.test.mjs"]
+✔ security denial uses a page-local buffer with an explicit non-persistent flag (0.679833ms)
+✔ available storage is passed through untouched and unrelated read errors are not hidden (0.722708ms)
+✔ unreadable, malformed and duplicate lists never become an empty schedule (1.408125ms)
+✔ simultaneous pages create only one task with the stable discovery key (0.713583ms)
+✔ a unique-create race does not claim the losing page's different form was saved (0.14475ms)
+✔ a unique create returning an existing different definition requires review without updating it (0.175958ms)
+✔ pre-key legacy discovery tasks are reused rather than duplicated after upgrade (0.18125ms)
+✔ conditional edit and delete reject another page's changed definition (0.240917ms)
+✔ missing modern revisions block mutation instead of silently downgrading (0.07775ms)
+✔ malformed successful edit receipts stay uncertain and never fall back (0.121458ms)
+✔ lost create, edit and delete responses never retry or fall back (0.216208ms)
+✔ legacy operations preflight stale pages and still support explicit fresh operations (0.36975ms)
+✔ an uncertain manual run is only read back and is never automatically run again (0.096917ms)
+✔ explicit permissions also gate modern conditional methods (0.076792ms)
+✔ backup parses each selectable source without importing unrelated state (0.905917ms)
+✔ unknown formats, oversized text and malformed field types cannot be normalized into an import (1.734ms)
+✔ legacy content remains unassigned, and text-only restoration policy survives Host cache compaction (0.159208ms)
+✔ same-path projects have separate stable browser drafts; legacy bytes are never adopted or removed (1.767417ms)
+✔ competing startup converges on one owner while writer backups remain separate (1.209083ms)
+✔ lost successful acknowledgement is read back, never resent (0.225958ms)
+✔ a failed read cannot become an empty writable state; corrupt browser records survive (0.250834ms)
+✔ old project queues and late read responses cannot dispatch or unlock writes (1.8885ms)
+✔ unsupported Host uses its scoped cache without global browser fallback (0.119708ms)
+✔ an uncertain unsuccessful save and malformed acknowledgement block subsequent writes (0.615583ms)
+✔ explicit reread archives corrupt browser bytes without deleting them or ignoring later changes (0.420208ms)
+✔ replacement archive must succeed before cache CAS and observes the last successful value (0.473042ms)
+✔ another cache writer during archival is preserved by the subsequent CAS (0.238042ms)
+✔ explicit method discovery overrides old and new API versions (0.641416ms)
+✔ a modern bridge and web host never guess desktop-only methods (0.066791ms)
+✔ explicit permission denial takes precedence over advertised methods (0.067916ms)
+✔ legacy desktop methods retain their historical minimum versions (0.048666ms)
+✔ file actions use desktop open or browser download and directory listing (0.714417ms)
+✔ durable request binds the original answer, recording and selected connection without source text or secrets (6.612584ms)
+✔ lost start reply, repeated clicks and reopening use the same accepted task (2.138625ms)
+✔ uncertain start with no known receipt and project switch never automatically resubmit (1.763833ms)
+✔ completed text can only join the unchanged question/session/answer; repeated application and forged receipts fail (1.331875ms)
+✔ connection choices expose only compatible configured audio metadata (0.15675ms)
+✔ source snapshots produce stable keys and changed content gets a distinct key (4.125292ms)
+✔ concurrent clicks and a lost response converge on one accepted task (0.787959ms)
+✔ an uncertain start with no accepted record is not automatically replayed (0.533583ms)
+✔ switching project during lookup cannot start work in the new project (0.27675ms)
+✔ history reload, explicit cancel and retry use the original task (0.481042ms)
+✔ only captured PDF artifacts can be opened and keep the source version (1.690042ms)
+✔ a matching key with a different saved source is rejected (0.384791ms)
+✔ feature availability uses advertised methods rather than the API number (0.074834ms)
+✔ saved cloud receipts survive normalization and an edited source stays stale (0.454875ms)
+✔ oversized v1 migration backs up exact UTF-8 bytes and unknown fields before replacing the root (99.77025ms)
+✔ sharded backups reconstruct from disk after the original root and shards are removed (74.266667ms)
+✔ failure writing a part or the completion manifest never commits a migrated root (99.795333ms)
+✔ corrupt, missing, oversized and unsafe backup inputs cannot be reconstructed (57.292834ms)
+✔ missing legacy shards prevent both backup publication and migration (36.722334ms)
+✔ switching projects during backup stops before publishing it or replacing the root (41.645458ms)
+✔ a competing edit after the backup commits wins the root revision check (14.176083ms)
+✔ a requested storage migration archives a v2 direct root as well (13.808958ms)
+✔ a writer losing root CAS cannot alter the winning snapshot's data (89.808583ms)
+✔ a reader holding an older root survives three later saves (104.377125ms)
+✔ actual persistence rejects the stale root after writing independent shards (89.293541ms)
+✔ failed midway through shards leaves the committed root and old readers intact (62.641917ms)
+✔ even a generation collision cannot overwrite an existing shard (58.463958ms)
+✔ legacy a remains readable and backed up on sharded save (72.242875ms)
+✔ legacy a remains readable and backed up on direct save (39.444875ms)
+✔ legacy b remains readable and backed up on sharded save (63.756792ms)
+✔ legacy b remains readable and backed up on direct save (33.864708ms)
+✔ legacy backup failure prevents committing or writing shards (46.708083ms)
+✔ legacy generation writes are forbidden; future, mismatched and unsafe generations are rejected (46.730667ms)
+✔ switching projects between shard writes prevents further files and root commit (47.962958ms)
+✔ a committed restore root rejects old Host and browser drafts, irrespective of timestamps (0.685042ms)
+✔ new drafts remain recoverable even when a stale browser record has a later clock (0.1385ms)
+✔ legacy roots still recover legacy drafts and markers survive cache compaction (0.176917ms)
+✔ invalid root markers fail closed, while malformed cache markers cannot authorize replay (0.175583ms)
+✔ restore preserves exact current bytes, drafts and unsaved business changes before publishing a new restore marker (44.358875ms)
+✔ damaged and missing roots can recover; malformed original text is retained verbatim (70.594916ms)
+✔ sharded restore reconstructs independent fresh generations after original source files disappear (105.357667ms)
+✔ changed target is rejected before archiving; a race during archive cannot overwrite the winner (34.786584ms)
+✔ partial backup or root write failures preserve the current document (46.609625ms)
+✔ lost acknowledgement is verified once; an unavailable readback leaves an uncertain result without retry (45.188291ms)
+✔ switching projects during preservation stops before committing the replacement root (15.263375ms)
+✔ unreadable target and missing revision fail closed, rather than treating errors as a missing root (32.717625ms)
+✔ portable exports verify exact bundle digest; altered content or incomplete raw files cannot restore (31.302917ms)
+ℹ tests 79
+ℹ suites 0
+ℹ pass 79
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 962.111084
+REVIEW_EXIT 0
+REVIEW_SUMMARY {"commands":18,"quantScripts":16,"quantTestFiles":24,"jobTestFiles":11,"failed":0}

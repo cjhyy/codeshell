@@ -1,0 +1,55 @@
+bun test v1.3.11 (af24e281)
+
+../../../../../../private/tmp/codeshell-review-20261012-multiwindow-round13/catalog-window-selection.test.tsx:
+You seem to have overlapping act() calls, this is not supported. Be sure to await previous act() calls before making a new one.
+You seem to have overlapping act() calls, this is not supported. Be sure to await previous act() calls before making a new one.
+124 |
+125 | test("CANDIDATE: another live window's normal same-project selection replaces the first window's active App session", async () => {
+126 |   const f = await setup();
+127 |   const a = f.view(f.persistences[0]);
+128 |   const b = f.view(f.persistences[1]);
+129 |   expect(a.result.current.activeSessionId).toBe("project-S1");
+                 ^
+TypeError: undefined is not an object (evaluating 'a.result.current')
+      at <anonymous> (/private/tmp/codeshell-review-20261012-multiwindow-round13/catalog-window-selection.test.tsx:129:12)
+18 | const { createSessionCatalogApi } = await import(repo + "/packages/desktop/src/preload/session-catalog-api.ts");
+19 | const { SessionPersistence } = await import(repo + "/packages/desktop/src/renderer/sessionPersistence.ts");
+20 |
+21 | const cleanups: Array<() => void> = [];
+22 | const observations: any[] = [];
+23 | afterEach(() => { for (const cleanup of cleanups.splice(0).reverse()) cleanup(); });
+                                                                           ^
+TypeError: hook.unmount is not a function. (In 'hook.unmount()', 'hook.unmount' is undefined)
+      at <anonymous> (/private/tmp/codeshell-review-20261012-multiwindow-round13/catalog-window-selection.test.tsx:23:71)
+(fail) CANDIDATE: another live window's normal same-project selection replaces the first window's active App session [70.44ms]
+You seem to have overlapping act() calls, this is not supported. Be sure to await previous act() calls before making a new one.
+You seem to have overlapping act() calls, this is not supported. Be sure to await previous act() calls before making a new one.
+112 |       setActiveSession,
+113 |       bucketKey: (project: string | null, id: string | null) => `${project ?? "__no_repo__"}::${id ?? "_none_"}`,
+114 |       projectBucketSegment: (project: string | null) => project ?? "__no_repo__",
+115 |       setUnreadBuckets() {}, setActiveProjectId() {}, setCollapsedProjects() {}, revealSidebarProject() {}, setView() {},
+116 |       activeBucketRef: { current: "unused" },
+117 |       setSessionIndices: hook.result.current.setSessionIndices,
+                                    ^
+TypeError: undefined is not an object (evaluating 'hook.result.current')
+      at select (/private/tmp/codeshell-review-20261012-multiwindow-round13/catalog-window-selection.test.tsx:117:31)
+      at <anonymous> (/private/tmp/codeshell-review-20261012-multiwindow-round13/catalog-window-selection.test.tsx:145:29)
+      at <anonymous> (/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/node_modules/.bun/react@19.2.6/node_modules/react/cjs/react.development.js:814:22)
+      at <anonymous> (/private/tmp/codeshell-review-20261012-multiwindow-round13/catalog-window-selection.test.tsx:145:9)
+18 | const { createSessionCatalogApi } = await import(repo + "/packages/desktop/src/preload/session-catalog-api.ts");
+19 | const { SessionPersistence } = await import(repo + "/packages/desktop/src/renderer/sessionPersistence.ts");
+20 |
+21 | const cleanups: Array<() => void> = [];
+22 | const observations: any[] = [];
+23 | afterEach(() => { for (const cleanup of cleanups.splice(0).reverse()) cleanup(); });
+                                                                           ^
+TypeError: hook.unmount is not a function. (In 'hook.unmount()', 'hook.unmount' is undefined)
+      at <anonymous> (/private/tmp/codeshell-review-20261012-multiwindow-round13/catalog-window-selection.test.tsx:23:71)
+(fail) CONTROL: a window showing another project keeps its own selected session [48.14ms]
+(pass) CONTROL: independent fields merge durably; deleted rows stay deleted despite an old window save [42.02ms]
+
+ 1 pass
+ 2 fail
+ 11 expect() calls
+Ran 3 tests across 1 file. [986.00ms]
+Bun test process failed (1)

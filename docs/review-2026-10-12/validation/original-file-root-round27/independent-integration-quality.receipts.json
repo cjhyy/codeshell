@@ -1,0 +1,96 @@
+{
+  "audit": "static metadata/link/hash reads only; no product/fixture execution",
+  "formalCounts": {
+    "P1": 1,
+    "P2": 52,
+    "P3": 33
+  },
+  "formalRows": 86,
+  "portableMetadata": [
+    {
+      "path": "validation/reproduction-results.json",
+      "rows": 86,
+      "tests": 251,
+      "fileRootRow": {
+        "file": "docs/review-2026-10-12/reproductions/file-root-round27/file-root.test.ts",
+        "log": "docs/review-2026-10-12/reproductions/file-root-round27/file-root.test.ts.log",
+        "code": 0,
+        "signal": null,
+        "tests": 1,
+        "skipped": 0
+      }
+    },
+    {
+      "path": "validation/latest-a66f4ef2/reproduction-results.json",
+      "rows": 86,
+      "tests": 251,
+      "fileRootRow": {
+        "file": "docs/review-2026-10-12/reproductions/file-root-round27/file-root.test.ts",
+        "log": "docs/review-2026-10-12/reproductions/file-root-round27/file-root.test.ts.log",
+        "code": 0,
+        "signal": null,
+        "tests": 1,
+        "skipped": 0,
+        "archiveLog": "validation/latest-a66f4ef2/file-root-round27/file-root.test.ts.log"
+      }
+    }
+  ],
+  "documents": [
+    {
+      "path": "README.md",
+      "sha256": "7ccb197e01a333456bfef2966bae5fae5dc6d34f319d75d1a3bc7456c85647da",
+      "localLinkChecks": 160
+    },
+    {
+      "path": "progress.md",
+      "sha256": "83255b4f2631e154ac9eab00bbff42e16aa60b78e76871644eb67c19faa7570d",
+      "localLinkChecks": 0
+    },
+    {
+      "path": "file-root-round27.md",
+      "sha256": "a032a7897961f673d11b0529b3cb25b6713c64f3e3d301ff88c625872b9b6be8",
+      "localLinkChecks": 40
+    },
+    {
+      "path": "quality-round27.md",
+      "sha256": "16ab57b8c0df530bc10b234dd5edc54698fe64794a5017ddb0c1250f85152eee",
+      "localLinkChecks": 8
+    },
+    {
+      "path": "latest-baseline.md",
+      "sha256": "d72343e24c2511a6a999d38927584f60edef75a97921a8077bd4c70203428c4c",
+      "localLinkChecks": 13
+    },
+    {
+      "path": "flow-coverage.md",
+      "sha256": "911dacacb892a12937e57d2cf6362ba6c80106e18c9f72d1f52475a6681f4e94",
+      "localLinkChecks": 46
+    },
+    {
+      "path": "reproductions/README.md",
+      "sha256": "c258a5c8057c0f6dce5b8dd284232f60b9af9d451ef23ba39a79d74965afdcb5",
+      "localLinkChecks": 4
+    },
+    {
+      "path": "sidebar-title-observation-round27.md",
+      "sha256": "a8066e62f720eb5f74ec3a776fdb98652ad2fb686302efb259b059a76315bb74",
+      "localLinkChecks": 14
+    },
+    {
+      "path": "file-root-quality-preflight-round27.md",
+      "sha256": "826e2f76992e0d2cc07afb13840e594095eefb06ff28ba7b09e98c0c51533c29",
+      "localLinkChecks": 5
+    },
+    {
+      "path": "file-root-fixture-preflight-round27.md",
+      "sha256": "3f3f6e6fbf03715637d5ac314e9fe81172058fce38952a699ba494eb3ae6b3f0",
+      "localLinkChecks": 6
+    }
+  ],
+  "newCanonicalLocalLinksMissing": [],
+  "round27ReceiptMatched": true,
+  "independentFixtureExecutions": 0,
+  "canonicalStaticSourceLabelCorrected": true,
+  "historicalProposalBannerPresent": true,
+  "canonicalArchiveDescriptionMatchesAnnotations": true
+}

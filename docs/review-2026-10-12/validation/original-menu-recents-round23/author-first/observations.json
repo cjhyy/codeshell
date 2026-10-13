@@ -1,0 +1,240 @@
+{
+  "repo": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell",
+  "completed": true,
+  "nativeElectronStarted": false,
+  "guardScope": {
+    "maintainedPrivateHome": true,
+    "exactOriginInstalledBeforeProductImports": "http://127.0.0.1:9",
+    "dummyOriginAlsoDenied": true,
+    "networkAndChildAPIs": "fetch/http(s)/net/tls/dgram/WebSocket/Bun listeners and child_process/worker_threads/Worker/Bun spawn",
+    "limitation": "in-process guards, not an OS sandbox or universal direct-native-network confinement"
+  },
+  "networkOrChildAttempts": [],
+  "unusedLeafCalls": [],
+  "rootAdapterCalls": [
+    "/private/var/folders/1d/6__4f4y51g90nblfptt8s9v80000gn/T/codeshell-bun-completion-VP5WZY/home/owned-menu-recents-PURbUZ/owned-project"
+  ],
+  "sourceManifest": [
+    {
+      "path": "packages/desktop/src/main/menu.ts",
+      "sha256": "6f65230f21d3a1c9b567d97a2b53433ab313435c49b54f32721647df11e87475"
+    },
+    {
+      "path": "packages/desktop/src/main/project-store.ts",
+      "sha256": "7a8af164418c7884c55d081e47005ed1f73b018755a650e215e927eee9bbdddb"
+    },
+    {
+      "path": "packages/desktop/src/main/project-authority-ipc.ts",
+      "sha256": "6cf689cd6654e1b6bc4cbc65f29deb8137e6b276b24e5df50812cdf66348348e"
+    },
+    {
+      "path": "packages/desktop/src/main/recents-store.ts",
+      "sha256": "d859122658289fc4227c9a0a0b0e8f346e0df1d27b700195c43ae3ea0298afcd"
+    },
+    {
+      "path": "packages/desktop/src/main/mounted-project-root.ts",
+      "sha256": "3d4c4b36482fe360d48832a37b055bc10ca37172f2dd3b01f37963b446a2af73"
+    },
+    {
+      "path": "packages/desktop/src/main/session-cwd-index.ts",
+      "sha256": "d1c3b5c0966aeb763d6d48008d878c1c47f342cd3599b3fd231eeca319467d80"
+    },
+    {
+      "path": "packages/desktop/src/main/renderer-project-path.ts",
+      "sha256": "cf7d7fb3cbbc3ae472630a0f19293d53c9931c767c334438dc8ffe89bb062c8d"
+    },
+    {
+      "path": "packages/desktop/src/main/legacy-project-migration.ts",
+      "sha256": "fe1e416d21fb69c73263e10e43659adfe51d8538e5aac0b1739c7ff3acd0d28c"
+    },
+    {
+      "path": "packages/desktop/src/main/index.ts",
+      "sha256": "426bfe5ccc8387db82f5bbe47ce1b83681995e7192f37bb03775f4eca37d0d80"
+    },
+    {
+      "path": "packages/desktop/src/renderer/App.tsx",
+      "sha256": "556e985d3c0898b5915c713a2a0a280f59bf504b4797e89278143bdcdfd265b8"
+    },
+    {
+      "path": "packages/desktop/src/renderer/app/useSessionNavigation.ts",
+      "sha256": "46ac89b4175e425f7b32e1e7aa24d16bb1bd6b0cf5e79817c0bd9a3a6c1b668f"
+    },
+    {
+      "path": "packages/core/src/utils/file-mutex.ts",
+      "sha256": "8f0ccabb45c19c7fd66c285a27f148cb0843d4f1018508b44de3de2a3e9ee9b3"
+    },
+    {
+      "path": "packages/core/src/session/session-manager.ts",
+      "sha256": "0ebe5458e6f5701e286c552e43e0dd707177fb97b1e8726a94ae5dbcfdedcb10"
+    },
+    {
+      "path": "packages/core/dist/index.js",
+      "sha256": "a84c1b1a20ae29520ce9d7464933b693199f4dd2c2427fd398dcc6f73e219c84"
+    },
+    {
+      "path": "packages/core/dist/index.internal.js",
+      "sha256": "46415f56ac55a61a9f0e407264483212a1455f66dbacace7c3a3ee1aea943997"
+    }
+  ],
+  "scope": {
+    "actual": "ProjectStore with real Core public/internal filesystem transactions and SessionManager; ProjectAuthority IPC registration/create/rename/remove/list; actual private recents.json/loadRecents; whole actual menu module",
+    "adapters": {
+      "electron": "owned single window and Menu template storage, not actual native API",
+      "picker": "owned plain directory only",
+      "codingGitExports": [
+        "resolveProjectRoot"
+      ],
+      "codingGitBehavior": "realpath identity only; no Git/worktree/alias behavior",
+      "unusedLeaves": [
+        "profiles-service.listProfiles",
+        "session-workspace-service.cleanupSessionWorktreeForUi",
+        "session-workspace-service.getSessionWorktreeDiffForUi",
+        "session-workspace-service.getSessionWorkspaceAuthorityForUi",
+        "session-workspace-service.getSessionWorkspaceForUi",
+        "session-workspace-service.listSessionWorktreesForUi",
+        "session-workspace-service.releaseManySessionWorkspacesForUi",
+        "session-workspace-service.releaseSessionWorkspaceForUi",
+        "session-workspace-service.requireUsableSessionRootAuthority",
+        "session-workspace-service.switchSessionWorkspaceForUi"
+      ]
+    },
+    "notExecuted": [
+      "Engine",
+      "worker",
+      "Main app entry",
+      "renderer App",
+      "Electron native",
+      "models",
+      "network",
+      "child processes"
+    ],
+    "imports": "Core barrel includes Engine/provider definitions; no Engine/LLM/Host construction or invocation. Product import scope is source-audited, not a module-cache probe.",
+    "rebuild": "direct internal installAppMenu(A) control only; normal createWindow rebuild is source evidence, not a user recovery action performed here"
+  },
+  "observations": [
+    {
+      "phase": "create-success-disk-new-menu-empty",
+      "disk": {
+        "version": 2,
+        "projects": [
+          {
+            "id": "989416ea-1247-4c65-8c1c-55d88829903e",
+            "name": "owned-project",
+            "roots": [
+              {
+                "id": "cc61dca3-cead-483e-af51-0c855f3d5a43",
+                "path": "/private/var/folders/1d/6__4f4y51g90nblfptt8s9v80000gn/T/codeshell-bun-completion-VP5WZY/home/owned-menu-recents-PURbUZ/owned-project",
+                "canonicalIdentity": "/private/var/folders/1d/6__4f4y51g90nblfptt8s9v80000gn/T/codeshell-bun-completion-VP5WZY/home/owned-menu-recents-PURbUZ/owned-project",
+                "name": "owned-project",
+                "addedAt": 1791763121814
+              }
+            ],
+            "primaryRootId": "cc61dca3-cead-483e-af51-0c855f3d5a43",
+            "createdAt": 1791763121814,
+            "updatedAt": 1791763121814,
+            "lastOpenedAt": 1791763121814,
+            "revision": 1
+          }
+        ]
+      },
+      "recentsDisk": [
+        {
+          "path": "/private/var/folders/1d/6__4f4y51g90nblfptt8s9v80000gn/T/codeshell-bun-completion-VP5WZY/home/owned-menu-recents-PURbUZ/owned-project",
+          "name": "owned-project",
+          "lastOpenedAt": 1791763121814
+        }
+      ],
+      "freshRecents": [
+        {
+          "path": "/private/var/folders/1d/6__4f4y51g90nblfptt8s9v80000gn/T/codeshell-bun-completion-VP5WZY/home/owned-menu-recents-PURbUZ/owned-project",
+          "name": "owned-project",
+          "lastOpenedAt": 1791763121814
+        }
+      ],
+      "labels": [
+        "(空)"
+      ],
+      "menuBuilds": 1
+    },
+    {
+      "phase": "rename-success-disk-new-menu-old-label",
+      "recentsDisk": [
+        {
+          "path": "/private/var/folders/1d/6__4f4y51g90nblfptt8s9v80000gn/T/codeshell-bun-completion-VP5WZY/home/owned-menu-recents-PURbUZ/owned-project",
+          "name": "Owned renamed title",
+          "lastOpenedAt": 1791763121829
+        }
+      ],
+      "freshRecents": [
+        {
+          "path": "/private/var/folders/1d/6__4f4y51g90nblfptt8s9v80000gn/T/codeshell-bun-completion-VP5WZY/home/owned-menu-recents-PURbUZ/owned-project",
+          "name": "Owned renamed title",
+          "lastOpenedAt": 1791763121829
+        }
+      ],
+      "labels": [
+        "owned-project"
+      ],
+      "menuBuilds": 2
+    },
+    {
+      "phase": "remove-success-live-registry-empty-menu-retained",
+      "disk": {
+        "version": 2,
+        "projects": [
+          {
+            "id": "989416ea-1247-4c65-8c1c-55d88829903e",
+            "name": "Owned renamed title",
+            "displayName": "Owned renamed title",
+            "roots": [
+              {
+                "id": "cc61dca3-cead-483e-af51-0c855f3d5a43",
+                "path": "/private/var/folders/1d/6__4f4y51g90nblfptt8s9v80000gn/T/codeshell-bun-completion-VP5WZY/home/owned-menu-recents-PURbUZ/owned-project",
+                "canonicalIdentity": "/private/var/folders/1d/6__4f4y51g90nblfptt8s9v80000gn/T/codeshell-bun-completion-VP5WZY/home/owned-menu-recents-PURbUZ/owned-project",
+                "name": "owned-project",
+                "addedAt": 1791763121814
+              }
+            ],
+            "primaryRootId": "cc61dca3-cead-483e-af51-0c855f3d5a43",
+            "createdAt": 1791763121814,
+            "updatedAt": 1791763121843,
+            "lastOpenedAt": 1791763121843,
+            "revision": 3,
+            "deletedAt": 1791763121843
+          }
+        ]
+      },
+      "recentsDisk": [
+        {
+          "path": "/private/var/folders/1d/6__4f4y51g90nblfptt8s9v80000gn/T/codeshell-bun-completion-VP5WZY/home/owned-menu-recents-PURbUZ/owned-project",
+          "name": "Owned renamed title",
+          "lastOpenedAt": 1791763121843,
+          "deletedAt": 1791763121843
+        }
+      ],
+      "freshRecents": [],
+      "labels": [
+        "Owned renamed title"
+      ],
+      "staleClickMessage": {
+        "channel": "menu:open-recent",
+        "payload": {
+          "path": "/private/var/folders/1d/6__4f4y51g90nblfptt8s9v80000gn/T/codeshell-bun-completion-VP5WZY/home/owned-menu-recents-PURbUZ/owned-project",
+          "name": "Owned renamed title",
+          "lastOpenedAt": 1791763121829
+        }
+      },
+      "appCallbackNotExecuted": true,
+      "menuBuilds": 3
+    },
+    {
+      "phase": "internal-rebuild-control",
+      "labels": [
+        "(空)"
+      ],
+      "menuBuilds": 4,
+      "pickerCalls": 1,
+      "mobileBroadcasts": 3
+    }
+  ]
+}

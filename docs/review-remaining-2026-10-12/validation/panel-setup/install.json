@@ -1,0 +1,8 @@
+{
+  "command": "npm ci --no-audit --no-fund",
+  "cwd": "/Users/admin/.codex/worktrees/panel-remaining-review-20261012/codeshell-panel-apps",
+  "exitCode": 0,
+  "elapsedSeconds": 60.97,
+  "isolatedEnvironment": true,
+  "homeRemoved": true
+}

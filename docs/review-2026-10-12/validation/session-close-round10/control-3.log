@@ -1,0 +1,16 @@
+bun test v1.3.11 (af24e281)
+
+packages/core/src/protocol/chat-session-manager.access.test.ts:
+(pass) ChatSessionManager internal Session access > does not reopen a target closed while dispatch was waiting for migration [0.36ms]
+(pass) ChatSessionManager internal Session access > cancels migration waits immediately and removes their abort listener [0.22ms]
+(pass) ChatSessionManager internal Session access > checks cancellation again when a migration releases before the waiter resumes [0.05ms]
+(pass) ChatSessionManager internal Session access > rejects an already aborted caller before constructing an Engine [0.04ms]
+(pass) ChatSessionManager internal Session access > removes the abort listener after migration completes successfully [0.31ms]
+(pass) ChatSessionManager internal Session access > keeps explicit user reopening enabled by default [0.06ms]
+(pass) ChatSessionManager internal Session access > publishes a close requested during resident migration before any waiting sender can acquire it [0.91ms]
+
+ 7 pass
+ 0 fail
+ 33 expect() calls
+Ran 7 tests across 1 file. [147.00ms]
+Completed Bun shard: 7 tests, 0 skipped; 0 failures.

@@ -1,0 +1,264 @@
+import { attempts, guardScope } from "./network-guard.ts";
+// PREPARED ONLY: parent review/authorization required before any fixture execution.
+import { afterAll, test, expect } from "bun:test";
+import assert from "node:assert/strict";
+import { existsSync, mkdirSync, readFileSync, realpathSync, rmSync, writeFileSync } from "node:fs";
+import { dirname, join, relative, resolve } from "node:path";
+import { createHash } from "node:crypto";
+
+// No Core/Host import above this point. The standard runner owns the private HOME.
+assert.ok(process.env.CODE_SHELL_TEST_HOME, "must use run-bun-test-shard.mjs");
+const isolatedHome = realpathSync(process.env.HOME!);
+assert.ok(realpathSync(process.env.CODE_SHELL_TEST_HOME!).startsWith(isolatedHome + "/"));
+assert.notEqual(isolatedHome, "/Users/admin");
+const repo = resolve(process.cwd());
+const evidence = import.meta.dir;
+const startedAt = new Date().toISOString();
+let phase = "guard-installed";
+let completed = false;
+let failure: string | null = null;
+let observations: Record<string, unknown> = {};
+let cleanup: Record<string, unknown> = { hookUnmounted: false, pendingSettled: false, ownedFilesRemoved: false };
+const ownedPaths: string[] = [];
+const sourcePaths = [
+  "packages/core/src/index.ts", "packages/core/src/index.internal.ts",
+  "packages/core/dist/index.js", "packages/core/dist/index.internal.js",
+  "packages/core/src/session/session-manager.ts", "packages/core/src/session/transcript.ts",
+  "packages/core/src/protocol/server.ts", "packages/core/src/protocol/chat-session.ts",
+  "packages/core/src/engine/run-image-input.ts", "packages/core/src/engine/input-attachments.ts",
+  "packages/core/src/engine/run-session-open.ts", "packages/core/src/session/output-journal.ts",
+  "packages/server/src/attachment-service.ts", "packages/server/src/index.mobile-remote.ts",
+  "packages/server/src/index.storage.ts", "packages/server/src/mobile-remote/mobile-history.ts",
+  "packages/server/src/mobile-remote/mobile-chat-turn.ts", "packages/server/src/mobile-remote/mobile-run-dispatch.ts",
+  "packages/desktop/src/main/mobile-remote/handle-client-event.ts",
+  "packages/desktop/src/main/mobile-remote/output-recovery.ts",
+  "packages/desktop/src/main/mobile-remote/output-recovery-authority.ts",
+  "packages/desktop/src/main/SessionSnapshotStore.ts", "packages/desktop/src/main/transcript-reader.ts",
+  "packages/web/src/hooks/useRemoteApp.ts", "packages/web/src/hooks/useRemoteSocket.ts",
+  "packages/web/src/hooks/mobileOutputClient.ts", "packages/web/src/lib/mobileOutputRecovery.ts",
+  "packages/web/src/lib/transcriptReplay.ts", "packages/web/src/lib/userMessageDisplay.ts",
+  "packages/web/src/lib/streamReducer.ts", "packages/web/app/Workbench.tsx",
+];
+const sourceManifest = sourcePaths.map((path) => ({ path, sha256: createHash("sha256").update(readFileSync(join(repo, path))).digest("hex") }));
+const importChecks = [
+  ["@cjhyy/code-shell-core", "packages/desktop/src/main/transcript-reader.ts"],
+  ["@cjhyy/code-shell-core/internal", "packages/desktop/src/main/mobile-remote/output-recovery.ts"],
+  ["@cjhyy/code-shell-server/mobile-remote", "packages/desktop/src/main/mobile-remote/handle-client-event.ts"],
+  ["@cjhyy/code-shell-server/storage", "packages/desktop/src/main/mobile-remote/handle-client-event.ts"],
+  ["@cjhyy/code-shell-web", "packages/desktop/src/main/mobile-remote/output-recovery.ts"],
+];
+const productResolutions = importChecks.map(([specifier, importer]) => {
+  const resolved = realpathSync(Bun.resolveSync(specifier!, dirname(join(repo, importer!))));
+  assert.ok(resolved.startsWith(realpathSync(repo) + "/"), "product entry belongs to selected frozen checkout");
+  return { specifier, importer, resolved: relative(repo, resolved), sha256: createHash("sha256").update(readFileSync(resolved)).digest("hex") };
+});
+const scope = {
+  productImports: "source-audited direct Core dist entries and source modules; resolution-only addresses are not module-cache/import-graph probes",
+  actualProducer: "stageImageBytes + prepareRunImageInput/buildRunUserMessageContent + real SessionManager/Transcript.appendMessage; no Engine.run or provider",
+  explicitSessionManagerEntry: "packages/core/dist/index.js",
+  authority: "controlled fixture stamp/device/viewer seam; real mobileOutputRecoveryAuthority statically reviewed only; no Git probe",
+  transport: "in-memory WebSocket seam; actual hook, dispatcher, recovery service, reader and Workbench render",
+  modernControl: "first real journal publication after legacy read; no published journal loss or deletion",
+};
+function writeReceipt() {
+  mkdirSync(evidence, { recursive: true });
+  writeFileSync(join(evidence, "observed.json"), JSON.stringify({ repo, startedAt, finishedAt: new Date().toISOString(), completed, phase, failure, isolatedHome, ownedPaths, cleanup, guardScope, attempts, sourceManifest, productResolutions, scope, observations }, null, 2));
+}
+afterAll(writeReceipt);
+async function productImport(path: string): Promise<any> {
+  phase = `import:${path}`;
+  try { return await import(join(repo, path)); }
+  catch (error) { failure = String(error); writeReceipt(); throw error; }
+}
+
+const React = await import(join(repo, "node_modules/react/index.js"));
+const { act } = React;
+const { renderToStaticMarkup } = await import(join(repo, "packages/web/node_modules/react-dom/server.js"));
+const { SessionManager, sessionsRoot, codeShellHome } = await productImport("packages/core/dist/index.js");
+const { readOutputJournal, SessionOutputJournal, SessionOutputCoverageStore } = await productImport("packages/core/dist/index.internal.js");
+const { stageImageBytes, markAttachmentsSent } = await productImport("packages/server/src/attachment-service.ts");
+const { prepareRunImageInput, buildRunUserMessageContent } = await productImport("packages/core/src/engine/run-image-input.ts");
+const { handleClientEvent } = await productImport("packages/desktop/src/main/mobile-remote/handle-client-event.ts");
+const { MobileOutputRecovery } = await productImport("packages/desktop/src/main/mobile-remote/output-recovery.ts");
+const { SessionSnapshotStore } = await productImport("packages/desktop/src/main/SessionSnapshotStore.ts");
+const { ensureMiniDom, flushMicrotasks, renderHook } = await productImport("packages/web/src/test-utils/renderHook.tsx");
+const { useRemoteApp } = await productImport("packages/web/src/hooks/useRemoteApp.ts");
+const { Workbench } = await productImport("packages/web/app/Workbench.tsx");
+
+class MemoryStorage {
+  values = new Map<string, string>([
+    ["cs.deviceId", "fixture-device"],
+    ["cs.deviceSecret", "fixture-secret"],
+    ["cs.deviceName", "Synthetic phone"],
+  ]);
+  getItem(key: string) { return this.values.get(key) ?? null; }
+  setItem(key: string, value: string) { this.values.set(key, value); }
+  removeItem(key: string) { this.values.delete(key); }
+}
+let route: (event: any) => Promise<void>;
+const pending = new Set<Promise<void>>();
+const errors: string[] = [];
+const routed: any[] = [];
+const replies: any[] = [];
+class MemoryWebSocket {
+  static CONNECTING = 0; static OPEN = 1; static CLOSED = 3;
+  static instances: MemoryWebSocket[] = [];
+  readyState = MemoryWebSocket.CONNECTING;
+  onopen: (() => void) | null = null;
+  onmessage: ((event: { data: string }) => void) | null = null;
+  onclose: (() => void) | null = null;
+  onerror: (() => void) | null = null;
+  constructor(readonly url: string) {
+    assert.equal(url, "ws://127.0.0.1:9/ws");
+    MemoryWebSocket.instances.push(this);
+  }
+  open() { this.readyState = MemoryWebSocket.OPEN; this.onopen?.(); }
+  close() { this.readyState = MemoryWebSocket.CLOSED; this.onclose?.(); }
+  message(event: any) {
+    replies.push(event);
+    this.onmessage?.({ data: JSON.stringify(event) });
+  }
+  send(raw: string) {
+    const event = JSON.parse(raw);
+    routed.push(event);
+    if (event.type === "auth.device") {
+      queueMicrotask(() => this.message({ type: "auth.ok", deviceId: "fixture-device", deviceName: "Synthetic phone", capabilities: { outputJournal: 1 } }));
+      return;
+    }
+    if (!["session.list", "session.select", "session.outputJournal", "session.recovery.cancel", "session.history", "session.sync"].includes(event.type)) return;
+    const operation = Promise.resolve().then(() => route({ ...event, deviceId: "fixture-device", viewerId: "fixture-viewer" }));
+    pending.add(operation);
+    void operation.catch((error) => errors.push(String(error))).finally(() => pending.delete(operation));
+  }
+}
+const pause = () => new Promise<void>((done) => setTimeout(done, 20));
+async function until(predicate: () => boolean, label: string) {
+  for (let count = 0; count < 100 && !predicate(); count++)
+    await act(async () => { await pause(); await flushMicrotasks(); });
+  assert.ok(predicate(), label);
+}
+
+test("characterizes current native legacy image-history projection and modern cutover control", async () => {
+  phase = "producer-preparation";
+  const cwd = join(codeShellHome(), "no-repo");
+  const sid = "legacy-image-round24";
+  const sessionDirectory = join(sessionsRoot(), sid);
+  const attachmentDirectory = join(cwd, ".code-shell", "attachments", sid);
+  ownedPaths.push(cwd, sessionDirectory, attachmentDirectory);
+  assert.ok(ownedPaths.every((path) => path.startsWith(isolatedHome + "/")), "all owned data stays under private HOME");
+  let hook: any;
+  let recovery: any;
+  try {
+  mkdirSync(cwd, { recursive: true });
+  const manager = new SessionManager();
+  const session = manager.create(cwd, "gpt-4o", "openai", sid, undefined, "desktop");
+  // Validated PNG bytes from packages/server/src/attachment-service.test.ts:28-33.
+  const image = Buffer.from("iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=", "base64");
+  const meta = await stageImageBytes({ cwd, sessionId: sid, name: "historical-shot.png", mime: "image/png", bytes: image, origin: "mobile" });
+  const originalBytes = readFileSync(meta.absPath!);
+  // Actual producer helpers, identical before durable journal introduction.
+  // No hand-authored attachment wrapper, Engine run, model, or modern journal deletion.
+  const input = await prepareRunImageInput({ task: "Describe the saved image", cwd, llm: { provider: "openai", model: "gpt-4o" }, sessionId: sid, attachments: [meta] });
+  assert.equal(input.ok, true);
+  if (!input.ok) throw new Error("producer rejected canonical fixture image");
+  const content = buildRunUserMessageContent(input.parsedTask, cwd, input.taskText);
+  // Exact metadata from pre-journal paired native chat.send: the mobile producer
+  // omits displayText/injected, AgentServer normalizes them to undefined/false,
+  // and ChatSession/openRunSession pass these through to Transcript.appendMessage.
+  session.transcript.appendMessage("user", content, { injected: false, clientMessageId: "prejournal-image-input", displayText: undefined });
+  session.transcript.appendMessage("assistant", "Stored historical answer");
+  manager.updateSessionState(sid, { status: "completed", turnCount: 1 });
+  await markAttachmentsSent(cwd, sid, [meta]);
+  expect(readOutputJournal(sessionsRoot(), sid).status).toBe("unavailable");
+  expect(manager.readSessionState(sid)?.outputJournalIdentity).toBeUndefined();
+  observations.producer = { metadata: { injected: false, clientMessageId: "prejournal-image-input", displayText: "undefined (omitted by actual paired-native producer)" }, inputPngBytes: image.length, inputPngSha256: createHash("sha256").update(image).digest("hex"), stagedPngBytes: originalBytes.length, stagedPngSha256: createHash("sha256").update(originalBytes).digest("hex"), stagedPath: meta.absPath, outputJournalNeverPublished: true };
+
+  phase = "mount-hook";
+  ensureMiniDom();
+  Object.defineProperty(globalThis, "localStorage", { configurable: true, value: new MemoryStorage() });
+  Object.defineProperty(globalThis, "WebSocket", { configurable: true, value: MemoryWebSocket });
+  Object.assign(window, { location: { origin: "http://127.0.0.1:9", search: "", pathname: "/mobile" }, history: { replaceState() {} }, matchMedia: () => ({ matches: false, addEventListener() {}, removeEventListener() {} }) });
+  const snapshots = new SessionSnapshotStore({ coverage: new SessionOutputCoverageStore(sessionsRoot) });
+  const state: any = {};
+  let authorityCalls = 0;
+  const deliver = (event: any) => MemoryWebSocket.instances.at(-1)!.message(event);
+  recovery = new MobileOutputRecovery({
+    root: sessionsRoot,
+    // Explicit controlled authority/authentication seam: this is NOT the real
+    // mobileOutputRecoveryAuthority, which probes Git and is reviewed statically.
+    // We retain the actual service's selection/viewer/session identity checks.
+    authority: async (id: string) => { assert.equal(id, sid); authorityCalls++; return "controlled-fixture-owned-session"; },
+    authenticated: (viewer: string, device: string) => viewer === "fixture-viewer" && device === "fixture-device",
+    journalRequired: () => false,
+    snapshot: (id: string, since = 0) => snapshots.get(id, since),
+    reply: (_viewer: string, event: any) => deliver(event),
+  });
+  const ctx: any = {
+    outputRecovery: recovery,
+    remote: { sendToDevice: (_device: string, event: any) => deliver(event), sendToViewer: (_viewer: string, event: any) => deliver(event), broadcast: deliver },
+    getBridge: () => ({ getLastRunContext: () => ({}), getSnapshot: (id: string, since = 0) => snapshots.get(id, since) }),
+    mobileSessionCwds: new Map(), mobilePermissionModes: new Map(), deviceState: () => state,
+    lookupDiskSessionCwd: async () => cwd, sendMobilePermissionMode() {}, replayPendingMobileApprovals() {},
+  };
+  route = (event) => handleClientEvent(ctx, event);
+  hook = await renderHook(() => useRemoteApp());
+  const userItems = () => hook.result.current.chat.items.filter((item: any) => item.kind === "user");
+  let oldObserved: any;
+    phase = "legacy-fallback";
+    await act(async () => { MemoryWebSocket.instances.at(-1)!.open(); await flushMicrotasks(); });
+    await until(() => hook.result.current.status === "online", "authenticated fixture socket");
+    await act(async () => { hook.result.current.selectSession(sid); await flushMicrotasks(); });
+    await until(() => !hook.result.current.loading.sessionHistory && userItems().length === 1, "real unavailable-to-history fallback completes");
+    expect(replies.some((event) => event.type === "session.outputJournal" && event.page.status === "unavailable")).toBe(true);
+    expect(routed.some((event) => event.type === "session.history" && event.sessionId === sid)).toBe(true);
+    expect(userItems()[0].text).toContain("<attached-image-paths>");
+    expect(userItems()[0].attachments).toBeUndefined();
+    expect(JSON.stringify(hook.result.current.chat.items)).not.toContain(image.toString("base64"));
+    expect(readFileSync(meta.absPath!)).toEqual(originalBytes);
+    const noop = () => {};
+    const controller: any = { host: "desktop", workspaceApi: false, connection: "open", activeId: sid, chat: hook.result.current.chat, sessions: [], workspaceCwd: cwd, workspaceName: "Fixture", workspaceKey: "fixture", title: "Historical image", configuration: null, configurationVersion: 0, sessionsVersion: 0, draft: "", files: [], uploading: false, uploadBusy: false, hasUnsent: false, uncertain: false, running: false, localDrafts: [], approvals: [], approvalCount: () => 0, approvalContent: null, error: "", clearError: noop, setDraft: noop, removeFile: noop, selectSession: noop, newSession: noop, send: () => false, stop: noop, addFiles: noop, refreshSessions: noop, refreshConfiguration: noop, onAuthLost: noop };
+    const oldMarkup = renderToStaticMarkup(React.createElement(Workbench, { controller }));
+    expect(oldMarkup).toContain("&lt;attached-image-paths&gt;");
+    expect(oldMarkup).toContain("Describe the saved image");
+    expect(oldMarkup).toContain("Stored historical answer");
+    oldObserved = { user: userItems()[0], wrapperRenderedAsProse: true, originalBytes: originalBytes.length };
+    observations.legacy = oldObserved;
+
+    phase = "modern-cutover";
+    // Natural cutover control: first publish a real journal AFTER the legacy read.
+    // Never unlink/truncate/rewrite an existing journal or its identity pin.
+    const base = session.transcript.getEvents().at(-1)!.id;
+    manager.startSessionRun(manager.readSessionState(sid)!, "modern-cutover");
+    const writer = new SessionOutputJournal(sessionsRoot(), sid, "modern-cutover", base);
+    for (const event of [{ type: "session_started", sessionId: sid, runId: "modern-cutover" }, { type: "turn_complete", reason: "completed" }])
+      snapshots.append(sid, { ...event, outputCursor: writer.append(event) });
+    await act(async () => { hook.result.current.selectSession(sid); await flushMicrotasks(); });
+    await until(() => !hook.result.current.loading.sessionHistory && !!userItems()[0]?.attachments?.length, "modern journal display cutover completes");
+    expect(userItems()[0].text).toBe("Describe the saved image");
+    expect(userItems()[0].attachments).toMatchObject([{ name: "historical-shot.png", mime: "image/png" }]);
+    expect(JSON.stringify(userItems())).not.toContain("<attached-image-paths>");
+    expect(readFileSync(meta.absPath!)).toEqual(originalBytes);
+    expect(errors).toEqual([]);
+    expect(attempts).toEqual([]);
+    observations = { ...observations, modern: userItems()[0], authorityCalls, routedTypes: routed.map((event) => event.type), originalBytesStillPresent: existsSync(meta.absPath!), stagedPngBytesAfterRecovery: readFileSync(meta.absPath!).length, stagedPngSha256AfterRecovery: createHash("sha256").update(readFileSync(meta.absPath!)).digest("hex"), errors };
+    completed = true;
+    phase = "completed";
+  } catch (error) {
+    failure = String(error);
+    phase = `failed:${phase}`;
+    throw error;
+  } finally {
+    cleanup = { recoveryRevoked: !recovery, hookUnmounted: !hook, pendingSettled: false, ownedFilesRemoved: false, businessPhase: phase };
+    const cleanupErrors: string[] = [];
+    try { recovery?.revoke("fixture-viewer"); cleanup.recoveryRevoked = true; } catch (error) { cleanupErrors.push(String(error)); }
+    try { await hook?.unmount(); cleanup.hookUnmounted = true; } catch (error) { cleanupErrors.push(String(error)); }
+    try { await Promise.allSettled([...pending]); cleanup.pendingSettled = true; } catch (error) { cleanupErrors.push(String(error)); }
+    for (const directory of [sessionDirectory, attachmentDirectory]) {
+      try { rmSync(directory, { recursive: true, force: true }); } catch (error) { cleanupErrors.push(String(error)); }
+    }
+    cleanup.ownedFilesRemoved = !existsSync(sessionDirectory) && !existsSync(attachmentDirectory);
+    cleanup.errors = cleanupErrors;
+    observations.failureSnapshot = { routedTypes: routed.map((event) => event.type), replyTypes: replies.map((event) => event.type), transportErrors: errors };
+    if (cleanupErrors.length && !failure) { completed = false; failure = cleanupErrors.join("; "); phase = "failed:cleanup"; throw new Error(failure); }
+  }
+});

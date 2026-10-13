@@ -1,0 +1,11 @@
+bun test v1.3.11 (af24e281)
+
+docs/review-2026-10-12/reproductions/desktop/preload-envelope.test.ts:
+(pass) real preload returns full JSON RPC envelope {"result":{"reason":"image_error","text":"ERROR: input attachment could not be read"}} [0.24ms]
+(pass) real preload returns full JSON RPC envelope {"error":{"code":-32000,"message":"配置正在更新，请稍后重试。"}} [0.01ms]
+
+ 2 pass
+ 0 fail
+ 8 expect() calls
+Ran 2 tests across 1 file. [28.00ms]
+Completed Bun shard: 2 tests, 0 skipped; 0 failures.

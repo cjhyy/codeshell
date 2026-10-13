@@ -1,0 +1,148 @@
+{
+  "schemaVersion": 1,
+  "id": "nisekoi-onodera",
+  "name": "小野寺小咲 · Sweet Promise",
+  "version": "1.0.0",
+  "colors": {
+    "light": {
+      "--cs-background": "38 52% 97%",
+      "--cs-foreground": "279 24% 19%",
+      "--cs-card": "38 57% 99%",
+      "--cs-card-foreground": "279 24% 19%",
+      "--cs-popover": "283 40% 99%",
+      "--cs-popover-foreground": "279 24% 19%",
+      "--cs-primary": "276 43% 40%",
+      "--cs-primary-foreground": "0 0% 100%",
+      "--cs-secondary": "282 35% 93%",
+      "--cs-secondary-foreground": "278 30% 27%",
+      "--cs-muted": "36 27% 93%",
+      "--cs-muted-foreground": "278 15% 39%",
+      "--cs-accent": "282 48% 90%",
+      "--cs-accent-foreground": "279 43% 31%",
+      "--cs-destructive": "348 64% 42%",
+      "--cs-destructive-foreground": "0 0% 100%",
+      "--cs-border": "280 25% 82%",
+      "--cs-input": "280 25% 78%",
+      "--cs-ring": "276 43% 40%",
+      "--cs-status-running": "214 67% 36%",
+      "--cs-status-ok": "146 45% 31%",
+      "--cs-status-warn": "33 82% 32%",
+      "--cs-status-err": "348 64% 42%",
+      "--cs-status-idle": "278 19% 43%"
+    },
+    "dark": {
+      "--cs-background": "278 25% 9%",
+      "--cs-foreground": "38 40% 94%",
+      "--cs-card": "278 25% 12%",
+      "--cs-card-foreground": "38 40% 94%",
+      "--cs-popover": "279 27% 13%",
+      "--cs-popover-foreground": "38 40% 94%",
+      "--cs-primary": "279 67% 80%",
+      "--cs-primary-foreground": "279 39% 14%",
+      "--cs-secondary": "278 25% 19%",
+      "--cs-secondary-foreground": "282 35% 92%",
+      "--cs-muted": "276 20% 16%",
+      "--cs-muted-foreground": "282 20% 73%",
+      "--cs-accent": "281 33% 24%",
+      "--cs-accent-foreground": "283 55% 89%",
+      "--cs-destructive": "350 76% 74%",
+      "--cs-destructive-foreground": "350 42% 13%",
+      "--cs-border": "280 24% 29%",
+      "--cs-input": "280 25% 33%",
+      "--cs-ring": "279 67% 80%",
+      "--cs-status-running": "213 77% 75%",
+      "--cs-status-ok": "146 47% 72%",
+      "--cs-status-warn": "39 78% 73%",
+      "--cs-status-err": "350 76% 74%",
+      "--cs-status-idle": "280 29% 73%"
+    }
+  },
+  "wallpaper": {
+    "light": "assets/stage.png",
+    "dark": "assets/stage.png",
+    "opacity": 0.16
+  },
+  "surfaces": {
+    "window": {
+      "background": {
+        "light": "38 52% 97%",
+        "dark": "278 25% 9%"
+      }
+    },
+    "titlebar": {
+      "background": {
+        "light": "282 43% 94%",
+        "dark": "279 30% 12%"
+      }
+    },
+    "sidebar": {
+      "background": {
+        "light": "282 37% 95%",
+        "dark": "278 26% 11%"
+      },
+      "light": "assets/stage.png",
+      "dark": "assets/stage.png",
+      "opacity": 0.15,
+      "fit": "cover",
+      "position": "right"
+    },
+    "chat": {
+      "background": {
+        "light": "38 52% 98%",
+        "dark": "278 25% 9%"
+      },
+      "light": "assets/stage.png",
+      "dark": "assets/stage.png",
+      "opacity": 0.22,
+      "fit": "cover",
+      "position": "right"
+    },
+    "composer": {
+      "background": {
+        "light": "38 60% 99%",
+        "dark": "280 27% 14%"
+      },
+      "backgroundOpacity": 0.97
+    },
+    "panel": {
+      "background": {
+        "light": "38 32% 97%",
+        "dark": "277 23% 11%"
+      }
+    }
+  },
+  "frame": {
+    "light": "279 40% 56%",
+    "dark": "279 49% 59%",
+    "width": 2,
+    "radius": 16
+  },
+  "sounds": {
+    "send": "assets/sound-send.wav",
+    "complete": "assets/sound-complete.wav",
+    "approval": "assets/sound-approval.wav",
+    "error": "assets/sound-error.wav"
+  },
+  "music": [
+    {
+      "title": "Sakura Sugar（原创器乐）",
+      "artist": "CodeShell",
+      "file": "assets/encore-loop.wav"
+    },
+    {
+      "title": "CLICK",
+      "artist": "ClariS",
+      "url": "https://music.apple.com/us/music-video/click/1538636026"
+    },
+    {
+      "title": "STEP",
+      "artist": "ClariS",
+      "url": "https://music.apple.com/us/music-video/step/1538637041"
+    },
+    {
+      "title": "Rally Go Round",
+      "artist": "LiSA",
+      "url": "https://www.youtube.com/watch?v=0Dv2swwcSSk"
+    }
+  ]
+}

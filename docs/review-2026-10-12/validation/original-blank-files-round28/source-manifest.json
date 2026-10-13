@@ -1,0 +1,173 @@
+{
+  "timestampUTC": "2026-10-12T01:52:25.439634+00:00",
+  "scope": "standard-library source file reads and hashes only; zero fixture/product imports/tests/network/Git/model/build/install",
+  "newExecutions": 0,
+  "productImports": 0,
+  "findingsAdded": 0,
+  "paths": [
+    {
+      "path": "CODESHELL.md",
+      "primary": "98d56c3b134ef18a25a37293de42442e7d3ff40cde7841862aab9ad83cba7c2a",
+      "latest": "98d56c3b134ef18a25a37293de42442e7d3ff40cde7841862aab9ad83cba7c2a",
+      "identical": true
+    },
+    {
+      "path": "packages/desktop/src/renderer/App.tsx",
+      "primary": "556e985d3c0898b5915c713a2a0a280f59bf504b4797e89278143bdcdfd265b8",
+      "latest": "556e985d3c0898b5915c713a2a0a280f59bf504b4797e89278143bdcdfd265b8",
+      "identical": true
+    },
+    {
+      "path": "packages/desktop/src/renderer/app/useRunController.ts",
+      "primary": "5bcf8b21e139ddd644175d0eedd528c7a32789f67771d056c3c71f52bd3cf5b2",
+      "latest": "5bcf8b21e139ddd644175d0eedd528c7a32789f67771d056c3c71f52bd3cf5b2",
+      "identical": true
+    },
+    {
+      "path": "packages/desktop/src/renderer/app/usePanelBuckets.ts",
+      "primary": "3fd2e6d8b7f37f09e23614278bc1f0f5ee9673f954bacf9b9d0313dd4762887b",
+      "latest": "3fd2e6d8b7f37f09e23614278bc1f0f5ee9673f954bacf9b9d0313dd4762887b",
+      "identical": true
+    },
+    {
+      "path": "packages/desktop/src/renderer/app/SessionPanelDock.tsx",
+      "primary": "f518df5cbe17cb378b98add2db4b997c766e8092e50b34ada8be45f9b3e69972",
+      "latest": "f518df5cbe17cb378b98add2db4b997c766e8092e50b34ada8be45f9b3e69972",
+      "identical": true
+    },
+    {
+      "path": "packages/desktop/src/renderer/transcripts.ts",
+      "primary": "fc74dcbf603c15d9bb27da517ff46b0a7805811e712a0e6a29d5cfb3a974c100",
+      "latest": "fc74dcbf603c15d9bb27da517ff46b0a7805811e712a0e6a29d5cfb3a974c100",
+      "identical": true
+    },
+    {
+      "path": "packages/desktop/src/renderer/sessionPersistence.ts",
+      "primary": "faaa9b7ca3e2b2140542aef7d839a230726a11c19c7f52c1103e68bd1f6f7197",
+      "latest": "faaa9b7ca3e2b2140542aef7d839a230726a11c19c7f52c1103e68bd1f6f7197",
+      "identical": true
+    },
+    {
+      "path": "packages/desktop/src/main/session-catalog-store.ts",
+      "primary": "ef65f3a16d50f79abb567a89b94e2e76f442ef2826fe434282fdfd56fe24b4d8",
+      "latest": "ef65f3a16d50f79abb567a89b94e2e76f442ef2826fe434282fdfd56fe24b4d8",
+      "identical": true
+    },
+    {
+      "path": "packages/desktop/src/renderer/sessionUiAuthority.ts",
+      "primary": "3c9f357c7e7cc9a52dfab14ca5fcdddcfc3d53712674ff8b969f50351ecf7850",
+      "latest": "3c9f357c7e7cc9a52dfab14ca5fcdddcfc3d53712674ff8b969f50351ecf7850",
+      "identical": true
+    },
+    {
+      "path": "packages/desktop/src/renderer/sessionUiAuthority.test.tsx",
+      "primary": "5bdd700f8c62e09f697a145ba7fb7458f93ba329c5d61608396891e9a5f11ee9",
+      "latest": "5bdd700f8c62e09f697a145ba7fb7458f93ba329c5d61608396891e9a5f11ee9",
+      "identical": true
+    },
+    {
+      "path": "packages/desktop/src/renderer/panels/PanelArea.tsx",
+      "primary": "b7b292627c1f54b0928983df20c3d85b159fce9729def903800dcef4338f9026",
+      "latest": "b7b292627c1f54b0928983df20c3d85b159fce9729def903800dcef4338f9026",
+      "identical": true
+    },
+    {
+      "path": "packages/desktop/src/renderer/panels/PanelRegistry.ts",
+      "primary": "c440f537f5918a16842dd32ca52761e5f54d6b2e2d6e951c48aa6022290fd3f1",
+      "latest": "c440f537f5918a16842dd32ca52761e5f54d6b2e2d6e951c48aa6022290fd3f1",
+      "identical": true
+    },
+    {
+      "path": "packages/desktop/src/renderer/panels/DesktopBuiltinPanelApp.tsx",
+      "primary": "8957b98efb1a10f069308a73598171a45e72809f7214c9b44c55f9414f0ff9f4",
+      "latest": "8957b98efb1a10f069308a73598171a45e72809f7214c9b44c55f9414f0ff9f4",
+      "identical": true
+    },
+    {
+      "path": "packages/desktop/src/renderer/panels/PanelWorkspaceRootConsumer.tsx",
+      "primary": "f043db36541fa16368f0aa31b8ba9bfe7b31bf21370f1074258c76e7afbf22d4",
+      "latest": "f043db36541fa16368f0aa31b8ba9bfe7b31bf21370f1074258c76e7afbf22d4",
+      "identical": true
+    },
+    {
+      "path": "packages/desktop/src/renderer/panels/usePanelWorkspaceRoot.ts",
+      "primary": "fe07534fed9fbdb9dcb53fc74ef7365a16d58d607449b9c49c5b5e0144c85fc7",
+      "latest": "fe07534fed9fbdb9dcb53fc74ef7365a16d58d607449b9c49c5b5e0144c85fc7",
+      "identical": true
+    },
+    {
+      "path": "packages/desktop/src/renderer/panels/usePanelWorkspaceRoot.test.tsx",
+      "primary": "98d94ec017568bb61681be494ec38ba538d44e807639d14720bb2e2884e3023c",
+      "latest": "98d94ec017568bb61681be494ec38ba538d44e807639d14720bb2e2884e3023c",
+      "identical": true
+    },
+    {
+      "path": "packages/desktop/src/renderer/panels/FilesPanel.tsx",
+      "primary": "525f58f77436ab8e84f8df46942925feffbd5a118f91556884db924a3d90d0d3",
+      "latest": "525f58f77436ab8e84f8df46942925feffbd5a118f91556884db924a3d90d0d3",
+      "identical": true
+    },
+    {
+      "path": "packages/desktop/src/renderer/panels/FilesPanel.workspace.test.tsx",
+      "primary": "6012655279240e86128e662c0324789d2ed69601744a844c3e36984ae9943ea5",
+      "latest": "6012655279240e86128e662c0324789d2ed69601744a844c3e36984ae9943ea5",
+      "identical": true
+    },
+    {
+      "path": "packages/desktop/src/main/project-authority-ipc.ts",
+      "primary": "6cf689cd6654e1b6bc4cbc65f29deb8137e6b276b24e5df50812cdf66348348e",
+      "latest": "6cf689cd6654e1b6bc4cbc65f29deb8137e6b276b24e5df50812cdf66348348e",
+      "identical": true
+    },
+    {
+      "path": "packages/desktop/src/preload/project-authority-api.ts",
+      "primary": "4e2398a2b0e34999499989084bbd3c98654d9c46e465ccafe2a8ce8fce7da07c",
+      "latest": "4e2398a2b0e34999499989084bbd3c98654d9c46e465ccafe2a8ce8fce7da07c",
+      "identical": true
+    },
+    {
+      "path": "packages/desktop/src/main/session-workspace-service.ts",
+      "primary": "0a914d59780852a949e6d8349b51f5a8e40762c4e89911c56c601522af95e134",
+      "latest": "0a914d59780852a949e6d8349b51f5a8e40762c4e89911c56c601522af95e134",
+      "identical": true
+    },
+    {
+      "path": "packages/desktop/src/main/renderer-project-path.ts",
+      "primary": "cf7d7fb3cbbc3ae472630a0f19293d53c9931c767c334438dc8ffe89bb062c8d",
+      "latest": "cf7d7fb3cbbc3ae472630a0f19293d53c9931c767c334438dc8ffe89bb062c8d",
+      "identical": true
+    },
+    {
+      "path": "packages/desktop/src/main/fs-service.ts",
+      "primary": "3857afa4c216971bb67ecb3bb0dadfc2264f316f497d8274b22eaef7cda7afc4",
+      "latest": "3857afa4c216971bb67ecb3bb0dadfc2264f316f497d8274b22eaef7cda7afc4",
+      "identical": true
+    },
+    {
+      "path": "packages/desktop/src/main/index.ts",
+      "primary": "cf5ba2f931c816cb44b598d54ef173793e40f554335de75d103f7b0ee5a2c26a",
+      "latest": "426bfe5ccc8387db82f5bbe47ce1b83681995e7192f37bb03775f4eca37d0d80",
+      "identical": false
+    },
+    {
+      "path": "docs/todo/multi-folder-local-project-plan.md",
+      "primary": "440edd29d618f7871f5e490ebf11afd4df7937bb8b834f64c66dee9c586d7961",
+      "latest": "440edd29d618f7871f5e490ebf11afd4df7937bb8b834f64c66dee9c586d7961",
+      "identical": true
+    }
+  ],
+  "staticMainReadDirBlocks": [
+    {
+      "tree": "primary",
+      "line": 6486,
+      "sha256": "2820bebc653dec326e7a816ff53ad14969983f1f94c1fb0e4178db564d300f9a",
+      "block": "async (_e, projectId: string, rootId: string, dir?: string) => {\n  const root = await requireRendererProjectRoot(projectId, rootId);\n  return readDirectory(root.path, typeof dir === \"string\" && dir ? dir : root.path);\n}"
+    },
+    {
+      "tree": "latest",
+      "line": 6492,
+      "sha256": "2820bebc653dec326e7a816ff53ad14969983f1f94c1fb0e4178db564d300f9a",
+      "block": "async (_e, projectId: string, rootId: string, dir?: string) => {\n  const root = await requireRendererProjectRoot(projectId, rootId);\n  return readDirectory(root.path, typeof dir === \"string\" && dir ? dir : root.path);\n}"
+    }
+  ]
+}

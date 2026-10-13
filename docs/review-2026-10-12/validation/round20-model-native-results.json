@@ -1,0 +1,38 @@
+{
+  "scope": "latest owned Electron33 storage contract only; no product Main/preload/hook/worker/model",
+  "authorNativeAssertions": 31,
+  "rootNativeAssertions": 31,
+  "newBunFiles": 0,
+  "newBunTests": 0,
+  "newFindings": 0,
+  "rootSourceSha256": "8cb93bb7c8f304501980dcf040036e3369a310888d1e82880d62144c10811f51",
+  "authorSourceSha256": "8cb93bb7c8f304501980dcf040036e3369a310888d1e82880d62144c10811f51",
+  "rootCloseReceipt": {
+    "code": 0,
+    "signal": null
+  },
+  "rootPrivateHomeRemoved": true,
+  "rootPostRunOwnedPids": [
+    {
+      "pid": 62446,
+      "absent": true
+    },
+    {
+      "pid": 62451,
+      "absent": true
+    },
+    {
+      "pid": 62452,
+      "absent": true
+    },
+    {
+      "pid": 62454,
+      "absent": true
+    },
+    {
+      "pid": 62456,
+      "absent": true
+    }
+  ],
+  "postRunChecksAddedToAssertions": false
+}

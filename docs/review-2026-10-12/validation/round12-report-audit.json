@@ -1,0 +1,18 @@
+{
+  "checkedAt": "2026-10-12T02:58:25.299599+08:00",
+  "scope": "round11–12 docs/evidence checkpoint",
+  "formalFindings": 57,
+  "priorities": {
+    "P1": 1,
+    "P2": 43,
+    "P3": 13
+  },
+  "topLevelMarkdownLinks": 183,
+  "sourceLineLinks": 92,
+  "commonFiles": 52,
+  "commonTestsPerBaseline": 138,
+  "latestOnlyFiles": 3,
+  "latestOnlyTests": 8,
+  "productDiffEmpty": true,
+  "errors": 0
+}

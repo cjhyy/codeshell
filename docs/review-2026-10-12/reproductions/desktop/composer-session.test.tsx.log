@@ -1,0 +1,11 @@
+bun test v1.3.11 (af24e281)
+
+docs/review-2026-10-12/reproductions/desktop/composer-session.test.tsx:
+(pass) CONFIRMED selected file in A migrates to B and core rejects stale session metadata [26.52ms]
+(pass) CONFIRMED slow plugin expansion in A overwrites B's existing unsent draft [5.66ms]
+
+ 2 pass
+ 0 fail
+ 10 expect() calls
+Ran 2 tests across 1 file. [681.00ms]
+Completed Bun shard: 2 tests, 0 skipped; 0 failures.

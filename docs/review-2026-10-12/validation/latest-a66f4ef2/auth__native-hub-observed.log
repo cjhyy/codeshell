@@ -1,0 +1,3 @@
+{"mode":"hub","action":"revoke","bytes":1900544,"complete":false,"postRevokeTail":false,"timedOut":false}
+{"mode":"hub","action":"logout","bytes":1376256,"complete":false,"postRevokeTail":false,"timedOut":false}
+PASS hub file revocation; logout, descriptor cleanup, other session and accepted task isolation

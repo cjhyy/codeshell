@@ -1,0 +1,38 @@
+{
+  "timestampSingapore": "2026-10-12 05:25",
+  "findings": 73,
+  "priorities": {
+    "P1": 1,
+    "P2": 49,
+    "P3": 23
+  },
+  "topMarkdownLocalLinks": 674,
+  "sourceLineLinks": 428,
+  "completedCommonRuns": [
+    {
+      "tree": "/Users/admin/.codex/worktrees/server-desktop-review-20261012/codeshell",
+      "files": 76,
+      "tests": 228,
+      "round17BunExpects": 77,
+      "round17BunHelperManualAssertions": 91,
+      "productTrackedDiff": []
+    },
+    {
+      "tree": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell",
+      "files": 76,
+      "tests": 228,
+      "round17BunExpects": 77,
+      "round17BunHelperManualAssertions": 91,
+      "productTrackedDiff": []
+    }
+  ],
+  "latestOnlyFiles": 3,
+  "latestOnlyTests": 8,
+  "round17NewFiles": 4,
+  "round17NewTests": 7,
+  "round17BunExpects": 77,
+  "round17HelperScope": "91 manual assertions in owned Bun Desktop helper, inside one wrapper, no additional tests/native; context actual Engine/owned in-memory provider; Hub authenticated HTTP/WS+memory worker; Core configure fake engine/runtime; no full worker/Electron/provider",
+  "latestFetchSingapore": "2026-10-12 05:07",
+  "originMain": "a66f4ef291f304ee4df9da8095a90671d9a8f140",
+  "errors": []
+}

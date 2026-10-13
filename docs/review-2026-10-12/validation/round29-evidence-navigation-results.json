@@ -1,0 +1,350 @@
+{
+  "checkedAtSingapore": "2026-10-12T10:47:01.646067+08:00",
+  "newFindings": 0,
+  "newProductImports": 0,
+  "newFixtureExecutions": 0,
+  "newBunFiles": 0,
+  "newBunTests": 0,
+  "earlyLinksAdded": 54,
+  "existingLinksUnchanged": 32,
+  "formalRows": 86,
+  "priorities": {
+    "P1": 1,
+    "P2": 52,
+    "P3": 33
+  },
+  "readmeBeforeSha256": "71f08eb2d7b013b08e507c201f539446dbfde9baf683dd3d6657ae6a180dd99a",
+  "readmeAfterLinkOnlySha256": "3ceff228111efad03cbae59fe35c980ee0b845f9db434d5a2016ebe1025a4146",
+  "rowIdentityPriorityDescriptionUnchanged": true,
+  "evidenceLabelsUnchanged": true,
+  "allActualHeadingLinesMatchedBeforeMutation": true,
+  "r21SelfLink": "README.md:136",
+  "slugAssumptions": false,
+  "archive": "validation/original-evidence-navigation-round29",
+  "changes": [
+    {
+      "id": "R35",
+      "target": "desktop-round3.md",
+      "headingLine": 27,
+      "evidenceLabel": "Desktop D13，第三轮"
+    },
+    {
+      "id": "R01",
+      "target": "desktop-round1.md",
+      "headingLine": 44,
+      "evidenceLabel": "Desktop D4"
+    },
+    {
+      "id": "R02",
+      "target": "web-round1.md",
+      "headingLine": 50,
+      "evidenceLabel": "Web W4"
+    },
+    {
+      "id": "R03",
+      "target": "web-round1.md",
+      "headingLine": 8,
+      "evidenceLabel": "Web W1"
+    },
+    {
+      "id": "R04",
+      "target": "desktop-round1.md",
+      "headingLine": 58,
+      "evidenceLabel": "Desktop D5"
+    },
+    {
+      "id": "R05",
+      "target": "desktop-round1.md",
+      "headingLine": 18,
+      "evidenceLabel": "Desktop D2"
+    },
+    {
+      "id": "R06",
+      "target": "desktop-round1.md",
+      "headingLine": 6,
+      "evidenceLabel": "Desktop D1"
+    },
+    {
+      "id": "R07",
+      "target": "desktop-round1.md",
+      "headingLine": 82,
+      "evidenceLabel": "Desktop D7"
+    },
+    {
+      "id": "R08",
+      "target": "web-round1.md",
+      "headingLine": 36,
+      "evidenceLabel": "Web W3"
+    },
+    {
+      "id": "R09",
+      "target": "server-round1.md",
+      "headingLine": 6,
+      "evidenceLabel": "Server S1"
+    },
+    {
+      "id": "R10",
+      "target": "server-round1.md",
+      "headingLine": 63,
+      "evidenceLabel": "Server S6"
+    },
+    {
+      "id": "R11",
+      "target": "server-round1.md",
+      "headingLine": 74,
+      "evidenceLabel": "Server S7；正常离线有禁用及 handler 保护"
+    },
+    {
+      "id": "R12",
+      "target": "server-round1.md",
+      "headingLine": 18,
+      "evidenceLabel": "Server S2"
+    },
+    {
+      "id": "R13",
+      "target": "desktop-round1.md",
+      "headingLine": 70,
+      "evidenceLabel": "Desktop D6"
+    },
+    {
+      "id": "R14",
+      "target": "web-round1.md",
+      "headingLine": 64,
+      "evidenceLabel": "Web W5"
+    },
+    {
+      "id": "R15",
+      "target": "desktop-round1.md",
+      "headingLine": 30,
+      "evidenceLabel": "Desktop D3"
+    },
+    {
+      "id": "R16",
+      "target": "web-round1.md",
+      "headingLine": 22,
+      "evidenceLabel": "Web W2"
+    },
+    {
+      "id": "R17",
+      "target": "server-round1.md",
+      "headingLine": 29,
+      "evidenceLabel": "Server S3"
+    },
+    {
+      "id": "R18",
+      "target": "server-round1.md",
+      "headingLine": 40,
+      "evidenceLabel": "Server S4"
+    },
+    {
+      "id": "R19",
+      "target": "web-round1.md",
+      "headingLine": 76,
+      "evidenceLabel": "Web W6；下一次有效 resync 可恢复"
+    },
+    {
+      "id": "R20",
+      "target": "server-round1.md",
+      "headingLine": 52,
+      "evidenceLabel": "Server S5"
+    },
+    {
+      "id": "R21",
+      "target": "README.md:136",
+      "headingLine": 136,
+      "evidenceLabel": "Root R21"
+    },
+    {
+      "id": "R22",
+      "target": "desktop-round2.md",
+      "headingLine": 6,
+      "evidenceLabel": "Desktop D8，第二轮"
+    },
+    {
+      "id": "R23",
+      "target": "desktop-round2.md",
+      "headingLine": 16,
+      "evidenceLabel": "Desktop D9，第二轮"
+    },
+    {
+      "id": "R24",
+      "target": "desktop-round2.md",
+      "headingLine": 26,
+      "evidenceLabel": "Desktop D10，第二轮"
+    },
+    {
+      "id": "R25",
+      "target": "web-round2.md",
+      "headingLine": 19,
+      "evidenceLabel": "Web W7，第二轮"
+    },
+    {
+      "id": "R26",
+      "target": "web-round2.md",
+      "headingLine": 30,
+      "evidenceLabel": "Web W8，第二轮"
+    },
+    {
+      "id": "R27",
+      "target": "web-round2.md",
+      "headingLine": 40,
+      "evidenceLabel": "Web W9，第二轮"
+    },
+    {
+      "id": "R28",
+      "target": "desktop-round3.md",
+      "headingLine": 5,
+      "evidenceLabel": "Desktop D11，第三轮"
+    },
+    {
+      "id": "R29",
+      "target": "desktop-round3.md",
+      "headingLine": 16,
+      "evidenceLabel": "Desktop D12，第三轮"
+    },
+    {
+      "id": "R30",
+      "target": "runtime-round3.md",
+      "headingLine": 6,
+      "evidenceLabel": "Runtime T1，第三轮；存储恢复后可取消/重试"
+    },
+    {
+      "id": "R31",
+      "target": "runtime-round3.md",
+      "headingLine": 28,
+      "evidenceLabel": "Runtime T2，第三轮；已验证 POSIX"
+    },
+    {
+      "id": "R32",
+      "target": "web-round3.md",
+      "headingLine": 15,
+      "evidenceLabel": "Web W10，第三轮"
+    },
+    {
+      "id": "R33",
+      "target": "web-round3.md",
+      "headingLine": 26,
+      "evidenceLabel": "Web W11，第三轮"
+    },
+    {
+      "id": "R34",
+      "target": "web-round3.md",
+      "headingLine": 37,
+      "evidenceLabel": "Web W12，第三轮；主机正常收到请求时有 5 分钟票据上限"
+    },
+    {
+      "id": "R36",
+      "target": "runtime-round3.md",
+      "headingLine": 40,
+      "evidenceLabel": "Runtime T3，第三轮"
+    },
+    {
+      "id": "R37",
+      "target": "web-round3.md",
+      "headingLine": 48,
+      "evidenceLabel": "Web W13，第三轮；限定 freshNative 场景"
+    },
+    {
+      "id": "R38",
+      "target": "web-round3.md",
+      "headingLine": 60,
+      "evidenceLabel": "Web W14，第三轮"
+    },
+    {
+      "id": "R39",
+      "target": "files-round4.md",
+      "headingLine": 9,
+      "evidenceLabel": "Files/History F1，第四轮"
+    },
+    {
+      "id": "R40",
+      "target": "web-round5.md",
+      "headingLine": 15,
+      "evidenceLabel": "Web W15，第五轮；限定预入队拒绝"
+    },
+    {
+      "id": "R41",
+      "target": "web-round5.md",
+      "headingLine": 26,
+      "evidenceLabel": "Web W16，第五轮；真实认证 Hub 补强"
+    },
+    {
+      "id": "R42",
+      "target": "credentials-round5.md",
+      "headingLine": 5,
+      "evidenceLabel": "Credentials C1，第五轮；实际 Electron/IPC/store"
+    },
+    {
+      "id": "R43",
+      "target": "credentials-round5.md",
+      "headingLine": 16,
+      "evidenceLabel": "Credentials C2，第五轮"
+    },
+    {
+      "id": "R44",
+      "target": "automation-round5.md",
+      "headingLine": 9,
+      "evidenceLabel": "Automation A1，第五轮；实际 ChatSession FIFO"
+    },
+    {
+      "id": "R45",
+      "target": "automation-round5.md",
+      "headingLine": 39,
+      "evidenceLabel": "Automation A2，第五轮"
+    },
+    {
+      "id": "R46",
+      "target": "automation-round5.md",
+      "headingLine": 63,
+      "evidenceLabel": "Automation A3，第五轮；合并身份关联根因"
+    },
+    {
+      "id": "R47",
+      "target": "automation-round5.md",
+      "headingLine": 90,
+      "evidenceLabel": "Automation A4，第五轮"
+    },
+    {
+      "id": "R48",
+      "target": "automation-round5.md",
+      "headingLine": 113,
+      "evidenceLabel": "Automation A5，第五轮；底层原因仍持久保留"
+    },
+    {
+      "id": "R49",
+      "target": "collections-round6.md",
+      "headingLine": 5,
+      "evidenceLabel": "Collection，第六轮；0.9.33 新可达路径"
+    },
+    {
+      "id": "R50",
+      "target": "voice-round6.md",
+      "headingLine": 7,
+      "evidenceLabel": "Voice W17，第六轮；同一 renderer document 存活期间"
+    },
+    {
+      "id": "R51",
+      "target": "plugins-round7.md",
+      "headingLine": 17,
+      "evidenceLabel": "Agent Plugins W18，第七轮；同一 Main 生命周期"
+    },
+    {
+      "id": "R52",
+      "target": "plugins-round7.md",
+      "headingLine": 42,
+      "evidenceLabel": "Agent Plugins W19，第七轮；有效新源可重新安装恢复"
+    },
+    {
+      "id": "R53",
+      "target": "plugins-round7.md",
+      "headingLine": 66,
+      "evidenceLabel": "Agent Plugins W20，第七轮；旧安装内容保留"
+    },
+    {
+      "id": "R54",
+      "target": "quickchat-round8.md",
+      "headingLine": 5,
+      "evidenceLabel": "Quick Chat Q1，第八轮；系统图片拖入可用"
+    }
+  ]
+}

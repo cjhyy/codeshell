@@ -1,0 +1,31 @@
+{
+  "baseline": "a66f4ef291f304ee4df9da8095a90671d9a8f140",
+  "workspace": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell",
+  "newFormalFindings": 0,
+  "newValidation": {
+    "files": 3,
+    "tests": 5,
+    "assertions": 50,
+    "failures": 0,
+    "skips": 0,
+    "shards": [
+      { "file": "panel-registry-recovery.test.ts", "tests": 3, "assertions": 20 },
+      { "file": "project-remove-recovery.test.ts", "tests": 1, "assertions": 21 },
+      { "file": "project-scope-restore.test.ts", "tests": 1, "assertions": 9 }
+    ]
+  },
+  "reviewedOriginalEvidence": {
+    "R22": "Round 6 actual bindGuest AST + ProjectStore fixture, resolver calls 0; copied observation/log, not rerun in round 11",
+    "R23": "Latest portable batch registry fixture/log, extended here with seeded entries/builtins/recovery",
+    "R24": "Latest portable actual Git removal fixture/log, extended here with resident helper and user recovery",
+    "R35": "Latest actual Git barrier fixture 2 tests/15 assertions and independent quality audit; not rerun in round 11"
+  },
+  "limits": [
+    "No builds or product/main report/goal changes",
+    "Guarded runner isolation and exact-origin network guard before Core/Host imports",
+    "R23 executes actual AST IPC/effect callbacks with discovery descriptors adapted locally; no installed production Panel package",
+    "R24 uses actual Git and actual resident Core helper but does not start an Engine/worker/model",
+    "R22 new test validates resolver boundary; actual bindGuest/UI evidence reused from prior latest fixtures",
+    "No Electron or live browser process"
+  ]
+}

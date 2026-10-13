@@ -1,0 +1,4 @@
+Native fixture failure: Error: Timed out: actual mkdir EACCES receipt
+    at until (file:///private/tmp/codeshell-review-20261012-file-mutex-round19/file-mutex-host.mjs:138:61)
+    at async file:///private/tmp/codeshell-review-20261012-file-mutex-round19/file-mutex-host.mjs:192:5
+Native smoke failed (1)

@@ -1,0 +1,42 @@
+{
+  "snapshots": [
+    {
+      "token": "71825",
+      "webContentsId": 1,
+      "rendererPid": 71825,
+      "sameOwnerObject": true
+    },
+    {
+      "token": "71825",
+      "webContentsId": 1,
+      "rendererPid": 71825,
+      "sameOwnerObject": true
+    },
+    {
+      "token": "71825",
+      "webContentsId": 1,
+      "rendererPid": 71825,
+      "sameOwnerObject": true
+    }
+  ],
+  "sameTokenAcrossTwoReloads": true,
+  "sameOwnerAcrossTwoReloads": true,
+  "workerCreated": false,
+  "terminalOpened": false,
+  "actualPtyStarted": false,
+  "rendererErrors": [],
+  "guard": {
+    "mainPid": 71807,
+    "homeId": "3091fb829fbff1cf3545f11365684320621cf885e87ac79fe5aa6fec2f82aaf4",
+    "receipts": [
+      {
+        "pid": 71807,
+        "ppid": 71801,
+        "origin": "http://127.0.0.1:9",
+        "homeId": "3091fb829fbff1cf3545f11365684320621cf885e87ac79fe5aa6fec2f82aaf4"
+      }
+    ],
+    "spawned": [],
+    "workerCreated": false
+  }
+}

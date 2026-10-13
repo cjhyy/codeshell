@@ -1,0 +1,17 @@
+{
+  "beforeReload": {
+    "project-b::session-b": "fixture-beta"
+  },
+  "afterReloadModel": "fixture-default",
+  "runAdapterReceived": {
+    "sessionId": "session-a",
+    "model": "fixture-default"
+  },
+  "recovered": {
+    "project-b::session-b": "fixture-beta",
+    "project-a::session-a": "fixture-alpha"
+  },
+  "nativeElectron": false,
+  "actualModelRun": false,
+  "boundary": "actual ModelPill + useBucketOverrides + switchActiveModel; two React roots with shared MemoryStorage; run adapter records params only"
+}

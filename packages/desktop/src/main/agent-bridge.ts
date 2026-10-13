@@ -24,6 +24,11 @@ import {
   publishOwnedExternalStream,
   type OwnedExternalStreamEntry,
 } from "./owned-external-stream.js";
+import {
+  DESKTOP_OPERATION_BATCH_METHOD,
+  type DesktopOperationBatchAuthorityInput,
+  type DesktopOperationBatchAuthorityResult,
+} from "@cjhyy/code-shell-core/internal";
 import { randomUUID } from "node:crypto";
 import { MainOutputPublisher, type MainOutputSource } from "./main-output-publisher.js";
 import { createRequire } from "node:module";
@@ -377,6 +382,7 @@ export class AgentBridge implements PetStateBridge {
         ELECTRON_RUN_AS_NODE: "1",
         CODESHELL_AGENT_STDIO: "1",
         CODE_SHELL_MODEL_REQUEST_SIGNING: "host",
+        CODE_SHELL_OPERATION_BATCH_ACCESS: "host",
         CODE_SHELL_CAPABILITY_MODULES: composeCapabilityModulesEnv(
           { coding: codingModule, pet: petCapabilityModule },
           readUserFeatureFlags(resolveNoRepoCwd()),
@@ -486,6 +492,7 @@ export class AgentBridge implements PetStateBridge {
     this.updateTentativeRunLifecycle(line);
     // Internal credential access: worker asks main to resolve/materialize
     // secrets. Consumed here; never forwarded to renderer/transcript.
+    if (this.maybeHandleOperationBatch(line)) return;
     if (this.maybeHandleCredentialAccessMessage(line)) return;
     // Browser automation: intercept __browser_action__ requests here (drive the
     // independent Browser Runtime in main, reply to the worker) and DON'T
@@ -729,6 +736,8 @@ export class AgentBridge implements PetStateBridge {
           : undefined;
       },
       hostReservation: (sessionId) => this.hostReservations.get(sessionId),
+      isTrustedOperationBatchRequest: (id) =>
+        typeof id === "string" && this.trustedBatchRunIds.has(id),
     };
   }
 
@@ -738,6 +747,113 @@ export class AgentBridge implements PetStateBridge {
    * the worker on demand and gets trust/session metadata injected; everything
    * else passes through verbatim).
    */
+  private readonly trustedBatchRunIds = new Set<string>();
+  private batchReadyGeneration?: number;
+  private readonly batchReadyWaiters = new Set<() => void>();
+  private operationBatchResolver?: (
+    input: DesktopOperationBatchAuthorityInput,
+    generation: number,
+  ) => Promise<DesktopOperationBatchAuthorityResult>;
+
+  setOperationBatchResolver(resolver: typeof this.operationBatchResolver): void {
+    this.operationBatchResolver = resolver;
+  }
+
+  /** Only Native batch IPC can mint this private admission; never an ordinary agent:msg. */
+  async requestOperationBatchRun(
+    params: Record<string, unknown>,
+    token: string,
+    assertCurrent: () => void,
+  ) {
+    this.core.ensureWorker(String(params.cwd));
+    const generation = this.workerGeneration();
+    if (this.batchReadyGeneration !== generation)
+      await new Promise<void>((resolve, reject) => {
+        const ready = () => {
+          if (this.batchReadyGeneration === generation && this.workerGeneration() === generation) {
+            clearTimeout(timer);
+            this.batchReadyWaiters.delete(ready);
+            resolve();
+          }
+        };
+        const timer = setTimeout(() => {
+          this.batchReadyWaiters.delete(ready);
+          reject(new Error("Worker lacks the Native batch v1 protocol"));
+        }, 10_000);
+        this.batchReadyWaiters.add(ready);
+        ready();
+      });
+    assertCurrent();
+    if (!this.hasLiveWorker() || this.workerGeneration() !== generation)
+      throw new Error("Batch worker changed before admission");
+    const id = `operation-batch-run-${randomUUID()}`;
+    this.trustedBatchRunIds.add(id);
+    try {
+      return await this.core.request(
+        "agent/run",
+        { ...params, operationBatchToken: token },
+        {
+          id,
+          timeoutMs: 30_000,
+          meta: { origin: "host", producer: "operation-batch" },
+          settleOnExit: true,
+          failFast: true,
+          waitForRunCompletion: true,
+          ensureWorker: true,
+          ensureWorkerCwd: String(params.cwd),
+        },
+      );
+    } finally {
+      this.trustedBatchRunIds.delete(id);
+    }
+  }
+
+  private maybeHandleOperationBatch(line: string): boolean {
+    let message: {
+      method?: string;
+      id?: string | number;
+      params?: DesktopOperationBatchAuthorityInput;
+    };
+    try {
+      message = JSON.parse(line);
+    } catch {
+      return false;
+    }
+    if (message?.method !== DESKTOP_OPERATION_BATCH_METHOD) return false;
+    const generation = this.workerGeneration();
+    if (
+      message.id === undefined &&
+      (message.params as unknown as { phase?: string; version?: number })?.phase === "ready" &&
+      (message.params as unknown as { version?: number }).version === 1
+    ) {
+      this.batchReadyGeneration = generation;
+      for (const notify of this.batchReadyWaiters) notify();
+      return true;
+    }
+    if (message.id !== undefined)
+      void (async () => {
+        let reply: unknown;
+        try {
+          if (!this.operationBatchResolver || !message.params)
+            throw new Error("Native batch authority unavailable");
+          reply = {
+            jsonrpc: "2.0",
+            id: message.id,
+            result: await this.operationBatchResolver(message.params, generation),
+          };
+        } catch {
+          reply = {
+            jsonrpc: "2.0",
+            id: message.id,
+            error: { code: -32603, message: "Native batch authority rejected or ended" },
+          };
+        }
+        if (this.workerGeneration() === generation && this.hasLiveWorker())
+          this.core.sendLine(JSON.stringify(reply));
+      })();
+    return true;
+  }
+
   private prepareInboundLine(
     line: string,
     meta: WorkerFrameMeta,
@@ -1865,6 +1981,10 @@ export class AgentBridge implements PetStateBridge {
    * to tell "no owner yet" apart from "the tool failed", since the two produce
    * very different remediation.
    */
+  sessionPanelOwnerRevision(sessionId: string): number {
+    return this.panelHostWindowRoutes.revision(sessionId);
+  }
+
   hasSessionPanelOwner(sessionId: string): boolean {
     return this.panelHostWindowRoutes.hasLiveOwner(sessionId, this.windows);
   }
@@ -2028,6 +2148,7 @@ export class AgentBridge implements PetStateBridge {
     let parsed: { id?: string | number; method?: string; params?: { sessionId?: string } };
     try {
       parsed = JSON.parse(line) as typeof parsed;
+      if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) parsed = {};
     } catch {
       parsed = {};
     }

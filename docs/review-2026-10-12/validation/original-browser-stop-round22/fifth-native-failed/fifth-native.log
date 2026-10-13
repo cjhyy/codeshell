@@ -1,0 +1,23 @@
+Electron fixture: Main network/home guard verified; no worker was created
+AssertionError [ERR_ASSERTION]: actual preload/native IPC/Main callback/Core Cancel succeeded
++ actual - expected
+
+  {
++   id: 'desktop-rpc-b7d79425-2515-4b5f-baec-fe053e6f4883-1',
++   jsonrpc: '2.0',
++   result: {
++     ok: true
++   }
+-   ok: true
+  }
+
+    at equal (file:///private/tmp/codeshell-review-20261012-browser-stop-round22/browser-stop-native.mjs:69:69)
+    at file:///private/tmp/codeshell-review-20261012-browser-stop-round22/browser-stop-native.mjs:113:5 {
+  generatedMessage: false,
+  code: 'ERR_ASSERTION',
+  actual: [Object],
+  expected: [Object],
+  operator: 'deepStrictEqual',
+  diff: 'simple'
+}
+Native smoke failed (1)

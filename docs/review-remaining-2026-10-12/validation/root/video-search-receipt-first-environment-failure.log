@@ -1,0 +1,20 @@
+{"reviewNetworkGuard":true,"accepted":0,"denied":0,"origins":[]}
+node:internal/modules/run_main:107
+    triggerUncaughtException(
+    ^
+
+browserType.launch: Executable doesn't exist at /private/var/folders/1d/6__4f4y51g90nblfptt8s9v80000gn/T/codeshell-native-smoke-6yl1Xd/home/Library/Caches/ms-playwright/chromium_headless_shell-1223/chrome-headless-shell-mac-arm64/chrome-headless-shell
+╔════════════════════════════════════════════════════════════╗
+║ Looks like Playwright was just installed or updated.       ║
+║ Please run the following command to download new browsers: ║
+║                                                            ║
+║     npx playwright install                                 ║
+║                                                            ║
+║ <3 Playwright Team                                         ║
+╚════════════════════════════════════════════════════════════╝
+    at /private/tmp/codeshell-remaining-20261012/root/video-search-receipt.mjs:9:32 {
+  name: 'Error'
+}
+
+Node.js v25.8.1
+Native smoke failed (1)

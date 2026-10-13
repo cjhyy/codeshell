@@ -1,0 +1,13 @@
+Desktop round 3 confirmed evidence, snapshot 84740d56
+Product source read-only; no real model or external network calls.
+All tests executed via node scripts/run-bun-test-shard.mjs --timeout 30000.
+
+plugin-settings-race.test.tsx: 1 pass, 0 skipped, 0 fail, 8 assertions (D11)
+project-initial-snapshot.test.tsx: 1 pass, 0 skipped, 0 fail, 6 assertions (D12)
+worktree-duplicate-create.test.tsx: 2 pass, 0 skipped, 0 fail, 15 assertions (D13)
+TOTAL: 3 final guarded shards, 4 tests passed, 0 skipped, 0 failed, 29 assertions.
+
+Individual full outputs: <test filename>.log in this directory.
+The worktree concurrent exploratory probe is not part of these final counts;
+its original stronger expectation failed because both racing creates failed,
+instead of one returning success before its workspace was removed.

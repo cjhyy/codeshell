@@ -1,0 +1,11 @@
+bun test v1.3.11 (af24e281)
+
+docs/review-2026-10-12/reproductions/auth-round7/native-download.test.ts:
+(pass) native Node desktop pending download logout/revocation [2867.24ms]
+(pass) native Node hub pending download logout/revocation [2004.41ms]
+
+ 2 pass
+ 0 fail
+ 4 expect() calls
+Ran 2 tests across 1 file. [4.99s]
+Completed Bun shard: 2 tests, 0 skipped; 0 failures.

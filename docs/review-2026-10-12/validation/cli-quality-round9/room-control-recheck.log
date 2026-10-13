@@ -1,0 +1,11 @@
+bun test v1.3.11 (af24e281)
+
+../../../../../../private/tmp/codeshell-review-20261012-cli-quality-round9/room-control-recheck.test.tsx:
+(pass) confirmed: active CLI-room Stop routes to native cancel instead of the room [291.02ms]
+(pass) confirmed: active CLI-room permission selector reports default while CLI remains bypass [3.50ms]
+
+ 2 pass
+ 0 fail
+ 11 expect() calls
+Ran 2 tests across 1 file. [657.00ms]
+Completed Bun shard: 2 tests, 0 skipped; 0 failures.

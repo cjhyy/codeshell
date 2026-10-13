@@ -1,0 +1,14 @@
+import assert from "node:assert/strict";
+import { test } from "node:test";
+import { readFile } from "node:fs/promises";
+import { createHash } from "node:crypto";
+import { resolve, extname, sep } from "node:path";
+import net from "node:net"; import http from "node:http"; import https from "node:https"; import tls from "node:tls";
+import {syncBuiltinESMExports} from "node:module";
+assert.notEqual(process.env.HOME,"/Users/admin"); assert.equal(process.env.CODE_SHELL_TEST_HOME,resolve(process.env.HOME,".code-shell"));
+const deny=()=>{throw Error("design review denies every Node network origin")};
+globalThis.fetch=deny;net.Socket.prototype.connect=deny;http.request=http.get=https.request=https.get=tls.connect=deny;syncBuiltinESMExports();
+assert.throws(()=>fetch("https://example.invalid"),/denies/); console.log(JSON.stringify({case:"network_guard",homeIsolated:true,nodeNetworkDenied:true,browserOrigin:"https://panel.test",browserRoute:"all other origins aborted"}));
+await import('/Users/admin/.codex/worktrees/panel-remaining-review-20261012/codeshell-panel-apps/tests/apps/design-studio/portable-backup.test.mjs');
+await import('/Users/admin/.codex/worktrees/panel-remaining-review-20261012/codeshell-panel-apps/tests/apps/design-studio/legacy-backup.test.mjs');
+await import('/Users/admin/.codex/worktrees/panel-remaining-review-20261012/codeshell-panel-apps/tests/apps/design-studio/recovery-session.test.mjs');

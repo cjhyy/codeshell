@@ -1,0 +1,14 @@
+bun test v1.3.11 (af24e281)
+
+docs/review-2026-10-12/reproductions/link-recovery-round16/link-recovery.test.tsx:
+(pass) real dialog close during pending startup cancels request and late job, then a fresh dialog can connect [247.91ms]
+(pass) real dialog reports a failed begin and explicit retry connects once without duplicate submit [23.05ms]
+(pass) lost response after real credential commit is reconciled by status without replaying secret [4016.46ms]
+(pass) formal cwd key remount retires pending validation and clears the old secret before new project authorization [46.17ms]
+(pass) real native manager cancels delayed OAuth window dispatch, rejects another owner, and permits a fresh attempt [3.31ms]
+
+ 5 pass
+ 0 fail
+ 73 expect() calls
+Ran 5 tests across 1 file. [4.83s]
+Completed Bun shard: 5 tests, 0 skipped; 0 failures.

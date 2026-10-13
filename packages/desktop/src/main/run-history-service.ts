@@ -141,6 +141,7 @@ function statusForReason(reason: string): string {
       "hook_stopped",
       "stop_hook_prevented",
       "unverified_write",
+      "batch_incomplete",
     ].includes(reason)
   ) {
     return "blocked";

@@ -1,0 +1,1820 @@
+{
+  "auditor": "report_meta_audit_b",
+  "scope": {
+    "kind": "report_meta_review_only",
+    "repository": "/Users/admin/.codex/worktrees/server-desktop-review-20261012/codeshell",
+    "selection": "top-level *.md excluding README.md/progress.md/flow-coverage.md/repair-handoff.md; lexically sorted zero-based index % 3 == 1",
+    "files_read": 45,
+    "new_product_investigation": false,
+    "new_test_or_build_execution": false,
+    "product_or_task_docs_mutations": false
+  },
+  "authority": {
+    "frozen_bases": [
+      "84740d56",
+      "a66f4ef2"
+    ],
+    "final_findings": 86,
+    "final_priority_counts": {
+      "P1": 1,
+      "P2": 52,
+      "P3": 33
+    },
+    "special_test_files_per_base": 86,
+    "special_tests_per_base": 251,
+    "final_priority_source": "README.md final formal-finding table",
+    "heartbeat": "already completed and paused; no action taken"
+  },
+  "files": [
+    {
+      "filename": "auth-round7.md",
+      "absolute_path": "/Users/admin/.codex/worktrees/server-desktop-review-20261012/codeshell/docs/review-2026-10-12/auth-round7.md",
+      "sha256": "5867acdd224c61e8b0a953e003a7574b2919271bcaa19bfe412b3903997de914",
+      "line_count": 102,
+      "classification": "normal_counterevidence",
+      "fully_read": true,
+      "evidence": [
+        {
+          "line": 3,
+          "note": "鉴权正常反证；不能按无正式问题认定无审查。"
+        }
+      ]
+    },
+    {
+      "filename": "baseline-evidence-round28.md",
+      "absolute_path": "/Users/admin/.codex/worktrees/server-desktop-review-20261012/codeshell/docs/review-2026-10-12/baseline-evidence-round28.md",
+      "sha256": "5df61f1d20e14104fed2fff5273c11ca23e929c0467b12050d48389bb3a6f35d",
+      "line_count": 11,
+      "classification": "historical_delivery",
+      "fully_read": true,
+      "evidence": [
+        {
+          "line": 1,
+          "note": "最终阶段基线证据；元审查只读取既有账目，没有重跑。"
+        }
+      ]
+    },
+    {
+      "filename": "browser-cancel-quality-round21.md",
+      "absolute_path": "/Users/admin/.codex/worktrees/server-desktop-review-20261012/codeshell/docs/review-2026-10-12/browser-cancel-quality-round21.md",
+      "sha256": "c19e680aa1f89c80ffd56b1c96a7deaabc9b7f4375c34bcad9958708433deee2",
+      "line_count": 55,
+      "classification": "quality_review",
+      "fully_read": true,
+      "evidence": [
+        {
+          "line": 7,
+          "note": "R80限定为UI空闲后断连；动作门禁仍fail closed。"
+        },
+        {
+          "line": 11,
+          "note": "实际Panel/preload及Main抽取回调/Backend；Native为fixture。"
+        },
+        {
+          "line": 14,
+          "note": "未安装或驱动真实Chrome扩展。"
+        },
+        {
+          "line": 45,
+          "note": "新grant后的listTabs经真实secureBridge与owned tab.get，但不是实际Chrome导航。"
+        }
+      ]
+    },
+    {
+      "filename": "browser-stop-contract-round22.md",
+      "absolute_path": "/Users/admin/.codex/worktrees/server-desktop-review-20261012/codeshell/docs/review-2026-10-12/browser-stop-contract-round22.md",
+      "sha256": "7c4fb2573283b2aadc6d056037e2a17d07337b888a5e344b1fa83a87e0685866",
+      "line_count": 91,
+      "classification": "historical_preparation",
+      "fully_read": true,
+      "evidence": [
+        {
+          "line": 3,
+          "note": "明确标为历史契约；不能当最终发现。"
+        },
+        {
+          "line": 5,
+          "note": "零执行预审。"
+        },
+        {
+          "line": 9,
+          "note": "仅静态候选。"
+        }
+      ]
+    },
+    {
+      "filename": "browser-stop-plan-round22.md",
+      "absolute_path": "/Users/admin/.codex/worktrees/server-desktop-review-20261012/codeshell/docs/review-2026-10-12/browser-stop-plan-round22.md",
+      "sha256": "6cc879ccceba986004466b741c1c2330ec80f233a86326e67cd4f3d4801d9329",
+      "line_count": 69,
+      "classification": "historical_preparation",
+      "fully_read": true,
+      "evidence": [
+        {
+          "line": 3,
+          "note": "历史准备稿。"
+        },
+        {
+          "line": 5,
+          "note": "启动前范围；最终实验证据在browser-stop-round22。"
+        },
+        {
+          "line": 67,
+          "note": "后续native作者66断言及先前6次harness失败有明示。"
+        }
+      ]
+    },
+    {
+      "filename": "browser-stop-round22.md",
+      "absolute_path": "/Users/admin/.codex/worktrees/server-desktop-review-20261012/codeshell/docs/review-2026-10-12/browser-stop-round22.md",
+      "sha256": "c33003919a92272ccc54efd648ec0ce841d933dd110a4b3b4a39805c93213918",
+      "line_count": 133,
+      "classification": "formal_special_review",
+      "fully_read": true,
+      "evidence": [
+        {
+          "line": 3,
+          "note": "R81/P2最终范围是Core settled/Input0之后的lateInput。"
+        },
+        {
+          "line": 32,
+          "note": "React Stop接线静态。"
+        },
+        {
+          "line": 40,
+          "note": "动态legacy/unbound授权路径；modern bound共有路径静态。"
+        },
+        {
+          "line": 87,
+          "note": "真实Core/preload/Electron IPC，抽取Main回调与内存stdio/owned BrowserHost；不等于整套生产App/真实worker E2E。"
+        },
+        {
+          "line": 111,
+          "note": "作者/root各66断言不应合为198。"
+        }
+      ]
+    },
+    {
+      "filename": "cli-recovery-round15.md",
+      "absolute_path": "/Users/admin/.codex/worktrees/server-desktop-review-20261012/codeshell/docs/review-2026-10-12/cli-recovery-round15.md",
+      "sha256": "3afdb57700ac89646c89afe3837401bda5d6e97656d4e8e8d4704612fceeb81f",
+      "line_count": 86,
+      "classification": "formal_special_review",
+      "fully_read": true,
+      "evidence": [
+        {
+          "line": 20,
+          "note": "A/B陈旧观察者；B显式选了bypass，不能扩张成任意外部权限绕过。"
+        },
+        {
+          "line": 26,
+          "note": "真实组件/Main回调/RoomManager，RoomAgent内存替身；无实际CLI/tool。"
+        },
+        {
+          "line": 33,
+          "note": "默认重开不修复；closeSession无UI操作路径。"
+        },
+        {
+          "line": 86,
+          "note": "双基线7测试/108断言。"
+        }
+      ]
+    },
+    {
+      "filename": "collections-round6.md",
+      "absolute_path": "/Users/admin/.codex/worktrees/server-desktop-review-20261012/codeshell/docs/review-2026-10-12/collections-round6.md",
+      "sha256": "6f9b3f7b7837caf1a02f8f7a1c1e6a08915a2213468afe7ea235552788b834c9",
+      "line_count": 64,
+      "classification": "formal_special_review",
+      "fully_read": true,
+      "evidence": [
+        {
+          "line": 32,
+          "note": "R49/P3限定newCollection可达性；通用分支是旧代码。"
+        },
+        {
+          "line": 45,
+          "note": "65为既有套件，不能算新增专项。"
+        },
+        {
+          "line": 53,
+          "note": "native picker为fixture；服务/Core/Engine实际调用但无Electron。"
+        }
+      ]
+    },
+    {
+      "filename": "connection-recovery-round15.md",
+      "absolute_path": "/Users/admin/.codex/worktrees/server-desktop-review-20261012/codeshell/docs/review-2026-10-12/connection-recovery-round15.md",
+      "sha256": "24bac410591d223abc62497a81c005d3b5d18f4390d61c8d4c9390f131afec3f",
+      "line_count": 76,
+      "classification": "formal_special_review",
+      "fully_read": true,
+      "evidence": [
+        {
+          "line": 23,
+          "note": "实际Node WS，24MiB有界队列增长；没有执行OOM或RSS。"
+        },
+        {
+          "line": 25,
+          "note": "Main镜像静态；无Main worker/mobile整链。"
+        },
+        {
+          "line": 29,
+          "note": "mock Hub cap与实际Node流分别列明。"
+        },
+        {
+          "line": 76,
+          "note": "owned external selectedstream存在cap。"
+        }
+      ]
+    },
+    {
+      "filename": "context-recovery-quality-round17.md",
+      "absolute_path": "/Users/admin/.codex/worktrees/server-desktop-review-20261012/codeshell/docs/review-2026-10-12/context-recovery-quality-round17.md",
+      "sha256": "616542a2a0c3f2ccec9a1df8a92ec35b8c18fed96d4505c81c684e60473800da",
+      "line_count": 43,
+      "classification": "quality_review",
+      "fully_read": true,
+      "evidence": [
+        {
+          "line": 3,
+          "note": "四项正常恢复对照。"
+        },
+        {
+          "line": 13,
+          "note": "真实MessageStream/Core/Engine/磁盘链。"
+        },
+        {
+          "line": 30,
+          "note": "服务cancel不等于Desktop Stop按钮实操。"
+        },
+        {
+          "line": 43,
+          "note": "Sidebar回调不等于Sidebar动态挂载全链。"
+        }
+      ]
+    },
+    {
+      "filename": "delivery-audit.md",
+      "absolute_path": "/Users/admin/.codex/worktrees/server-desktop-review-20261012/codeshell/docs/review-2026-10-12/delivery-audit.md",
+      "sha256": "1174ecfba1bc2ed9bbc938d2198e1418a0912bcf729938a0b2267ae10b6bdd6d",
+      "line_count": 15,
+      "classification": "historical_delivery",
+      "fully_read": true,
+      "evidence": [
+        {
+          "line": 1,
+          "note": "R01–R50阶段性交付。"
+        },
+        {
+          "line": 7,
+          "note": "1/41/8是历史统计，不能覆盖最终86项1/52/33。"
+        }
+      ]
+    },
+    {
+      "filename": "desktop-round1.md",
+      "absolute_path": "/Users/admin/.codex/worktrees/server-desktop-review-20261012/codeshell/docs/review-2026-10-12/desktop-round1.md",
+      "sha256": "b216b26c4273d04dbae0597115b63ef8b686fe7eda0996868bf4c387e93977d4",
+      "line_count": 111,
+      "classification": "formal_special_review",
+      "fully_read": true,
+      "evidence": [
+        {
+          "line": 24,
+          "note": "陈旧附件引用，不包含已读出文件内容证据。"
+        },
+        {
+          "line": 64,
+          "note": "D5真实draft丢失。"
+        },
+        {
+          "line": 76,
+          "note": "D6为submit抛错，不等于renderer崩溃。"
+        },
+        {
+          "line": 88,
+          "note": "D7 busy投影错误，不包含Main并发外部执行证据。"
+        },
+        {
+          "line": 111,
+          "note": "质量复核保留六项P2，不是最终分级冲突；D3=R15 P2，D4=R01 P2。"
+        }
+      ]
+    },
+    {
+      "filename": "download-quality-round12.md",
+      "absolute_path": "/Users/admin/.codex/worktrees/server-desktop-review-20261012/codeshell/docs/review-2026-10-12/download-quality-round12.md",
+      "sha256": "0085952e9e020b36bb5604e902d65f52ac1b19254565a192d6a4ba32409e6d3d",
+      "line_count": 78,
+      "classification": "quality_review",
+      "fully_read": true,
+      "evidence": [
+        {
+          "line": 22,
+          "note": "实际Core close/manager orphan，不是完整Desktop删除或常驻Engine。"
+        },
+        {
+          "line": 28,
+          "note": "获准交互式Bash下载，不泛化automation/Panel下载。"
+        },
+        {
+          "line": 34,
+          "note": "worker重启后扫描才可接管。"
+        },
+        {
+          "line": 50,
+          "note": "没有UI孤儿任务停止入口。"
+        },
+        {
+          "line": 60,
+          "note": "POSIX证据。"
+        },
+        {
+          "line": 62,
+          "note": "P2，未证实P1。"
+        }
+      ]
+    },
+    {
+      "filename": "file-mutex-quality-round19.md",
+      "absolute_path": "/Users/admin/.codex/worktrees/server-desktop-review-20261012/codeshell/docs/review-2026-10-12/file-mutex-quality-round19.md",
+      "sha256": "6940a2c615572bc0e0955b3f962337a44393fc1715ec5a3f7b37f387390a6dde",
+      "line_count": 57,
+      "classification": "quality_review",
+      "fully_read": true,
+      "evidence": [
+        {
+          "line": 5,
+          "note": "R77是首个auth文件锁获取，不是title store。"
+        },
+        {
+          "line": 19,
+          "note": "所有错误同步重试30秒。"
+        },
+        {
+          "line": 25,
+          "note": "单次health与timer间隙，不是所有API压测。"
+        },
+        {
+          "line": 35,
+          "note": "UI重试仅静态。"
+        },
+        {
+          "line": 41,
+          "note": "Node25/mac，不代表Electron/Linux/Windows。"
+        },
+        {
+          "line": 49,
+          "note": "实测30秒及修复/短争用对照。"
+        }
+      ]
+    },
+    {
+      "filename": "file-navigation-round14.md",
+      "absolute_path": "/Users/admin/.codex/worktrees/server-desktop-review-20261012/codeshell/docs/review-2026-10-12/file-navigation-round14.md",
+      "sha256": "8442a15342d04c69183b5ad42397431da3d10aef595cb2de8ef6ef3acf647f5f",
+      "line_count": 81,
+      "classification": "formal_special_review",
+      "fully_read": true,
+      "evidence": [
+        {
+          "line": 19,
+          "note": "R65/P3真实EACCES显示空目录，refresh可恢复。"
+        },
+        {
+          "line": 29,
+          "note": "R58扩充为真实managed worktree PNG。"
+        },
+        {
+          "line": 36,
+          "note": "Markdown/AttachmentCard等消费者仅静态。"
+        },
+        {
+          "line": 38,
+          "note": "无真实Electron/PTY。"
+        },
+        {
+          "line": 46,
+          "note": "实际HubFiles+owned HTTP及正常对照。"
+        },
+        {
+          "line": 79,
+          "note": "双基线4测试/70断言。"
+        }
+      ]
+    },
+    {
+      "filename": "file-root-round27.md",
+      "absolute_path": "/Users/admin/.codex/worktrees/server-desktop-review-20261012/codeshell/docs/review-2026-10-12/file-root-round27.md",
+      "sha256": "a032a7897961f673d11b0529b3cb25b6713c64f3e3d301ff88c625872b9b6be8",
+      "line_count": 42,
+      "classification": "formal_special_review",
+      "fully_read": true,
+      "evidence": [
+        {
+          "line": 3,
+          "note": "R86/P3 summary fork目标旧A/当前primary B元组错配。"
+        },
+        {
+          "line": 13,
+          "note": "Sidebar/trust静态配真实store。"
+        },
+        {
+          "line": 15,
+          "note": "App导航静态。"
+        },
+        {
+          "line": 25,
+          "note": "内部binding正常对照不等于用户workaround或first send验证。"
+        },
+        {
+          "line": 38,
+          "note": "真实Core writer/Main authority/preload/component/files；IPC/DOM/root为fixture；无Engine/provider/Git/Electron/App整链。"
+        },
+        {
+          "line": 40,
+          "note": "冻结86项/251测试。"
+        }
+      ]
+    },
+    {
+      "filename": "fresh-project-quality-round18.md",
+      "absolute_path": "/Users/admin/.codex/worktrees/server-desktop-review-20261012/codeshell/docs/review-2026-10-12/fresh-project-quality-round18.md",
+      "sha256": "6a9b2edf998f07299fe9f47d91b8bedbb1d336e6e833509613e94529a5f9c70a",
+      "line_count": 31,
+      "classification": "quality_review",
+      "fully_read": true,
+      "evidence": [
+        {
+          "line": 7,
+          "note": "真实action但不是完整Desktop Controls点击。"
+        },
+        {
+          "line": 17,
+          "note": "真实Main metadata；WS/registry/worker为fake，无Engine。"
+        },
+        {
+          "line": 21,
+          "note": "R37/P2限定fresh A未持久化的metadata错配，无文件副作用。"
+        }
+      ]
+    },
+    {
+      "filename": "goal-sleep-round20.md",
+      "absolute_path": "/Users/admin/.codex/worktrees/server-desktop-review-20261012/codeshell/docs/review-2026-10-12/goal-sleep-round20.md",
+      "sha256": "a790f5f6330fc21f95d83d0c39efecf4ab33950e48d24ea0902d0bfda85ccc55",
+      "line_count": 105,
+      "classification": "formal_special_review",
+      "fully_read": true,
+      "evidence": [
+        {
+          "line": 3,
+          "note": "R78/R79 P2。"
+        },
+        {
+          "line": 22,
+          "note": "真实Main回调/fallback/preload/App闭包/StatusPopover；legacy bound seed仅静态。"
+        },
+        {
+          "line": 28,
+          "note": "服务ordinary run不是完整Desktop send。"
+        },
+        {
+          "line": 34,
+          "note": "实际Engine workspace错误turn0；无provider错误。"
+        },
+        {
+          "line": 47,
+          "note": "实际Host resolver/ProjectStore等。"
+        },
+        {
+          "line": 61,
+          "note": "Sleep仅静态/旧套件，未新增deadline/math验证。"
+        },
+        {
+          "line": 99,
+          "note": "本报告列明边界。"
+        }
+      ]
+    },
+    {
+      "filename": "hub-session-operations-quality-round18.md",
+      "absolute_path": "/Users/admin/.codex/worktrees/server-desktop-review-20261012/codeshell/docs/review-2026-10-12/hub-session-operations-quality-round18.md",
+      "sha256": "bbb52f96c5f5494cbee370d59f362a9e621d8efc2c77aeb83ca89a7e5f07be03",
+      "line_count": 59,
+      "classification": "quality_review",
+      "fully_read": true,
+      "evidence": [
+        {
+          "line": 29,
+          "note": "R76/P3运行中投影/archive，不是回答丢失。"
+        },
+        {
+          "line": 39,
+          "note": "真实Auth/HTTPWS/Core/followup；fake Engine、内存worker。"
+        },
+        {
+          "line": 45,
+          "note": "title正常对照有效。"
+        }
+      ]
+    },
+    {
+      "filename": "legacy-history-quality-round24.md",
+      "absolute_path": "/Users/admin/.codex/worktrees/server-desktop-review-20261012/codeshell/docs/review-2026-10-12/legacy-history-quality-round24.md",
+      "sha256": "5b8e893648235dd1c7caec7bf5810946b8216afe4b921ad9baab9210e988685e",
+      "line_count": 87,
+      "classification": "quality_review",
+      "fully_read": true,
+      "evidence": [
+        {
+          "line": 1,
+          "note": "历史83项/247测试阶段，最终问题R84 P3。"
+        },
+        {
+          "line": 22,
+          "note": "旧paired producer源代码证据。"
+        },
+        {
+          "line": 39,
+          "note": "authority只是静态受控stamp。"
+        },
+        {
+          "line": 79,
+          "note": "最终1测试/17断言。"
+        },
+        {
+          "line": 81,
+          "note": "旧Workbench SSR动态；现代hook无第二次SSR。"
+        },
+        {
+          "line": 83,
+          "note": "未执行Engine/provider/真实WS。"
+        }
+      ]
+    },
+    {
+      "filename": "links-round8.md",
+      "absolute_path": "/Users/admin/.codex/worktrees/server-desktop-review-20261012/codeshell/docs/review-2026-10-12/links-round8.md",
+      "sha256": "a1364539fc211b930e122d7ed064503ea352c6d9c4351ddbc46e81729a51d55d",
+      "line_count": 12,
+      "classification": "normal_counterevidence",
+      "fully_read": true,
+      "evidence": [
+        {
+          "line": 3,
+          "note": "静态加既有706套件证据。"
+        },
+        {
+          "line": 10,
+          "note": "link能力正常反证。"
+        },
+        {
+          "line": 12,
+          "note": "reload顺序只属未成立候选。"
+        }
+      ]
+    },
+    {
+      "filename": "menu-recents-quality-round23.md",
+      "absolute_path": "/Users/admin/.codex/worktrees/server-desktop-review-20261012/codeshell/docs/review-2026-10-12/menu-recents-quality-round23.md",
+      "sha256": "f71416129225c187708bdc003172a8651892baf2d4f4bb05ad9460d9dc51ee83",
+      "line_count": 78,
+      "classification": "quality_review",
+      "fully_read": true,
+      "evidence": [
+        {
+          "line": 3,
+          "note": "历史阶段文档。"
+        },
+        {
+          "line": 5,
+          "note": "82项/246是当时统计。"
+        },
+        {
+          "line": 55,
+          "note": "portable失败发生在guard前提后，无child执行，不是产品失败。"
+        },
+        {
+          "line": 63,
+          "note": "修正后双基线43断言。"
+        },
+        {
+          "line": 72,
+          "note": "resolve-only测试不等于module-cache验证。"
+        },
+        {
+          "line": 74,
+          "note": "真实store/menu adapter，无OS菜单/完整App。"
+        }
+      ]
+    },
+    {
+      "filename": "model-native-quality-round20.md",
+      "absolute_path": "/Users/admin/.codex/worktrees/server-desktop-review-20261012/codeshell/docs/review-2026-10-12/model-native-quality-round20.md",
+      "sha256": "6bfb9ede9391ce3f060f08d3983bb58f8eef1ef839b068bc6e8f2e7c108b5da2",
+      "line_count": 15,
+      "classification": "quality_review",
+      "fully_read": true,
+      "evidence": [
+        {
+          "line": 3,
+          "note": "真实Electron localStorage局部契约。"
+        },
+        {
+          "line": 7,
+          "note": "owned Main+HTML，无产品Main/preload/React。"
+        },
+        {
+          "line": 9,
+          "note": "hook来自另一fixture，两层不能称整体E2E。"
+        },
+        {
+          "line": 15,
+          "note": "仅latest执行，非双基线App。"
+        }
+      ]
+    },
+    {
+      "filename": "model-switch-round18.md",
+      "absolute_path": "/Users/admin/.codex/worktrees/server-desktop-review-20261012/codeshell/docs/review-2026-10-12/model-switch-round18.md",
+      "sha256": "e70836526062a86067744225ab94f99f16aba9f25b62aaf8d2d5371559d968f5",
+      "line_count": 84,
+      "classification": "formal_special_review",
+      "fully_read": true,
+      "evidence": [
+        {
+          "line": 3,
+          "note": "R75/P3。"
+        },
+        {
+          "line": 22,
+          "note": "真实ModelPill/hooks，两个React roots与MemoryStorage。"
+        },
+        {
+          "line": 30,
+          "note": "future fallback参数，不是Engine运行。"
+        },
+        {
+          "line": 37,
+          "note": "没有实际模型/费用。"
+        },
+        {
+          "line": 58,
+          "note": "未实际挂载composer preset picker，catalog templates是另一层。"
+        },
+        {
+          "line": 76,
+          "note": "双基线3测试/46断言。"
+        },
+        {
+          "line": 84,
+          "note": "后来native实验分层补证。"
+        }
+      ]
+    },
+    {
+      "filename": "multiwindow-round13.md",
+      "absolute_path": "/Users/admin/.codex/worktrees/server-desktop-review-20261012/codeshell/docs/review-2026-10-12/multiwindow-round13.md",
+      "sha256": "7e201005ad70b003026478912746736a5c7aadba8f76751f86890971ce291244",
+      "line_count": 70,
+      "classification": "formal_special_review",
+      "fully_read": true,
+      "evidence": [
+        {
+          "line": 3,
+          "note": "R61/P3。"
+        },
+        {
+          "line": 23,
+          "note": "真实catalog/IPC/preload/persistence加AST选择器，不是真实Electron多窗。"
+        },
+        {
+          "line": 25,
+          "note": "不涉及messages/drafts/run损失。"
+        },
+        {
+          "line": 45,
+          "note": "33既有+3新增=36。"
+        },
+        {
+          "line": 60,
+          "note": "R58 terminal服务静态挑战，无真实PTY。"
+        }
+      ]
+    },
+    {
+      "filename": "panels-round6.md",
+      "absolute_path": "/Users/admin/.codex/worktrees/server-desktop-review-20261012/codeshell/docs/review-2026-10-12/panels-round6.md",
+      "sha256": "c2edc10152417249f841168110b9aad9cf7cf42f25ada6263d2f5e7c3b7a997f",
+      "line_count": 90,
+      "classification": "normal_counterevidence",
+      "fully_read": true,
+      "evidence": [
+        {
+          "line": 5,
+          "note": "无新增正式问题，但有Host专项审查。"
+        },
+        {
+          "line": 11,
+          "note": "既有套件/HTTP/新增5测试33断言。"
+        },
+        {
+          "line": 25,
+          "note": "真实Host方法/UI，fake Electron/guest；没有安装独立Panel业务包。"
+        },
+        {
+          "line": 40,
+          "note": "R22 latest secondary仍先于Scope。"
+        },
+        {
+          "line": 44,
+          "note": "legacy SessionID切换边界。"
+        },
+        {
+          "line": 60,
+          "note": "不证明guest错误UI。"
+        },
+        {
+          "line": 66,
+          "note": "Host scope/storage/agent/automation安全边界。"
+        },
+        {
+          "line": 90,
+          "note": "没有实际Panel业务/UI验证。"
+        }
+      ]
+    },
+    {
+      "filename": "priority-quality-round20.md",
+      "absolute_path": "/Users/admin/.codex/worktrees/server-desktop-review-20261012/codeshell/docs/review-2026-10-12/priority-quality-round20.md",
+      "sha256": "1d9989e420bef47437f614d12252c2127fa97818b3fa4214a309f103d09ff1e2",
+      "line_count": 68,
+      "classification": "quality_review",
+      "fully_read": true,
+      "evidence": [
+        {
+          "line": 11,
+          "note": "R29降为P3，R53最终维持P2。"
+        },
+        {
+          "line": 23,
+          "note": "逐项优先级依据。"
+        },
+        {
+          "line": 49,
+          "note": "阶段性建议风险顺序；最终README为准。"
+        }
+      ]
+    },
+    {
+      "filename": "quality-audit.md",
+      "absolute_path": "/Users/admin/.codex/worktrees/server-desktop-review-20261012/codeshell/docs/review-2026-10-12/quality-audit.md",
+      "sha256": "c2a286f5026778105341baa47927449137e5149fcc86c31d21f037abf8c639ea",
+      "line_count": 55,
+      "classification": "quality_review",
+      "fully_read": true,
+      "evidence": [
+        {
+          "line": 17,
+          "note": "D13/R35 P1依赖实际Git+获准schedule条件，频率未量化；UI和Git分别验证，非完整E2E。"
+        },
+        {
+          "line": 31,
+          "note": "D1限定transport。"
+        },
+        {
+          "line": 41,
+          "note": "R21限定native HubWeb，不是所有client。"
+        },
+        {
+          "line": 55,
+          "note": "同步中属历史状态，不应解释成当前未完成。"
+        }
+      ]
+    },
+    {
+      "filename": "quality-round15.md",
+      "absolute_path": "/Users/admin/.codex/worktrees/server-desktop-review-20261012/codeshell/docs/review-2026-10-12/quality-round15.md",
+      "sha256": "006e31f48c1d43819e2adfc0db685e5dbc9bd1315187ea9922619b6173a817db",
+      "line_count": 81,
+      "classification": "quality_review",
+      "fully_read": true,
+      "evidence": [
+        {
+          "line": 1,
+          "note": "阶段整合质控，零新增执行；本轮历史统计不覆盖最终README。"
+        }
+      ]
+    },
+    {
+      "filename": "quality-round18.md",
+      "absolute_path": "/Users/admin/.codex/worktrees/server-desktop-review-20261012/codeshell/docs/review-2026-10-12/quality-round18.md",
+      "sha256": "bdbfb8256dc0213c632f9f8e9b47052a8f86b11639542853a350a5a39ef90963",
+      "line_count": 49,
+      "classification": "quality_review",
+      "fully_read": true,
+      "evidence": [
+        {
+          "line": 1,
+          "note": "阶段整合质控，零新增执行；本轮历史统计不覆盖最终README。"
+        }
+      ]
+    },
+    {
+      "filename": "quality-round21.md",
+      "absolute_path": "/Users/admin/.codex/worktrees/server-desktop-review-20261012/codeshell/docs/review-2026-10-12/quality-round21.md",
+      "sha256": "ddf5623049b1dbadcad3da0ecb98b8016357e5a5f2153e982ec537f373691bc1",
+      "line_count": 54,
+      "classification": "quality_review",
+      "fully_read": true,
+      "evidence": [
+        {
+          "line": 1,
+          "note": "阶段整合质控，零新增执行。"
+        },
+        {
+          "line": 11,
+          "note": "证据归属错误在当时已修正，不能保留成未决冲突。"
+        }
+      ]
+    },
+    {
+      "filename": "quality-round24.md",
+      "absolute_path": "/Users/admin/.codex/worktrees/server-desktop-review-20261012/codeshell/docs/review-2026-10-12/quality-round24.md",
+      "sha256": "8be9e1623e6870055505ad5c7c1f23e3d07a11c60408d058833967402cc5e1ff",
+      "line_count": 48,
+      "classification": "quality_review",
+      "fully_read": true,
+      "evidence": [
+        {
+          "line": 1,
+          "note": "阶段整合质控，零新增执行；本轮历史统计不覆盖最终README。"
+        }
+      ]
+    },
+    {
+      "filename": "quality-round28.md",
+      "absolute_path": "/Users/admin/.codex/worktrees/server-desktop-review-20261012/codeshell/docs/review-2026-10-12/quality-round28.md",
+      "sha256": "a70053171ff2f44290830a16f2261b729a21990c93aee6f124b370123027774d",
+      "line_count": 35,
+      "classification": "quality_review",
+      "fully_read": true,
+      "evidence": [
+        {
+          "line": 7,
+          "note": "最终86项。"
+        },
+        {
+          "line": 25,
+          "note": "repair handoff范围有限。"
+        },
+        {
+          "line": 31,
+          "note": "当时目标ongoing的历史状态，不能等同当前重启授权。"
+        }
+      ]
+    },
+    {
+      "filename": "quality-round6.md",
+      "absolute_path": "/Users/admin/.codex/worktrees/server-desktop-review-20261012/codeshell/docs/review-2026-10-12/quality-round6.md",
+      "sha256": "601a974c41e18a3aa5292547ef54948d360599c252b65573e990c8815582c278",
+      "line_count": 78,
+      "classification": "quality_review",
+      "fully_read": true,
+      "evidence": [
+        {
+          "line": 7,
+          "note": "R49/P3。"
+        },
+        {
+          "line": 45,
+          "note": "R50/P2真实组件+fake硬件。"
+        },
+        {
+          "line": 64,
+          "note": "unload后停止，不能说退出App后仍录制。"
+        },
+        {
+          "line": 78,
+          "note": "fetch guard，不等于所有网络隔离。"
+        }
+      ]
+    },
+    {
+      "filename": "remote-settings-quality-round15.md",
+      "absolute_path": "/Users/admin/.codex/worktrees/server-desktop-review-20261012/codeshell/docs/review-2026-10-12/remote-settings-quality-round15.md",
+      "sha256": "1504edcf5ef1b98c4e71002cde575d0e3f9028ee05bc054e9cfa0eb2ab2860c5",
+      "line_count": 65,
+      "classification": "quality_review",
+      "fully_read": true,
+      "evidence": [
+        {
+          "line": 3,
+          "note": "R67/P3限定LAN，无relay。"
+        },
+        {
+          "line": 13,
+          "note": "两个MiniDOM roots共用注册sender，不是真实两个WebContents。"
+        },
+        {
+          "line": 47,
+          "note": "真实controller/loopback Host及恢复。"
+        },
+        {
+          "line": 53,
+          "note": "真正双WebContents投影静态。"
+        },
+        {
+          "line": 59,
+          "note": "无Host永久无法关闭证据。"
+        }
+      ]
+    },
+    {
+      "filename": "runtime-round3.md",
+      "absolute_path": "/Users/admin/.codex/worktrees/server-desktop-review-20261012/codeshell/docs/review-2026-10-12/runtime-round3.md",
+      "sha256": "d3873d2f368812e049bda27862bca1b6a7a026a2c6d451e2b12765888a5230d7",
+      "line_count": 47,
+      "classification": "formal_special_review",
+      "fully_read": true,
+      "evidence": [
+        {
+          "line": 6,
+          "note": "R30/P2是最终job state/result，不能等同所有文件丢失。"
+        },
+        {
+          "line": 28,
+          "note": "R31/P2实际Node Hub+native Panel process，TERM-ignore限POSIX。"
+        },
+        {
+          "line": 40,
+          "note": "R36/P2真实WorkerBridge/Core EPIPE/NodeHost；Electron未验证。"
+        }
+      ]
+    },
+    {
+      "filename": "server-preflight-round23.md",
+      "absolute_path": "/Users/admin/.codex/worktrees/server-desktop-review-20261012/codeshell/docs/review-2026-10-12/server-preflight-round23.md",
+      "sha256": "80ee715fa408a2ed8fcb9a1490301b933d40db9386988e9cc5d6e9dc7dcd2112",
+      "line_count": 45,
+      "classification": "preparation_static_review",
+      "fully_read": true,
+      "evidence": [
+        {
+          "line": 5,
+          "note": "Relay refresh取消为静态审查。"
+        },
+        {
+          "line": 29,
+          "note": "既有native验收仅源代码。"
+        },
+        {
+          "line": 32,
+          "note": "无真实云端/TTL/rotation验证。"
+        },
+        {
+          "line": 45,
+          "note": "零执行预审边界。"
+        }
+      ]
+    },
+    {
+      "filename": "server-routing-round17.md",
+      "absolute_path": "/Users/admin/.codex/worktrees/server-desktop-review-20261012/codeshell/docs/review-2026-10-12/server-routing-round17.md",
+      "sha256": "72976cb51679714421d8e411c6920189ac6c662bfbac63f0e3d86a7d5463bfd6",
+      "line_count": 87,
+      "classification": "formal_special_review",
+      "fully_read": true,
+      "evidence": [
+        {
+          "line": 3,
+          "note": "R73/P2。"
+        },
+        {
+          "line": 25,
+          "note": "31秒为注入时钟，不是实际等待。"
+        },
+        {
+          "line": 35,
+          "note": "controller Stop动态；Workbench按钮静态。"
+        },
+        {
+          "line": 59,
+          "note": "真实Hub/card+内存worker，Core fake Engine分层，非真实全链E2E。"
+        },
+        {
+          "line": 83,
+          "note": "harness修正后双基线2测试/35断言。"
+        }
+      ]
+    },
+    {
+      "filename": "session-close-round10.md",
+      "absolute_path": "/Users/admin/.codex/worktrees/server-desktop-review-20261012/codeshell/docs/review-2026-10-12/session-close-round10.md",
+      "sha256": "979781b84893ec9989bc02ae4a1b84896268e50b29236ed9220f83f062d014c6",
+      "line_count": 31,
+      "classification": "normal_counterevidence",
+      "fully_read": true,
+      "evidence": [
+        {
+          "line": 11,
+          "note": "28个既有Core generation/close/access测试。"
+        },
+        {
+          "line": 19,
+          "note": "latest重跑，无新问题。"
+        },
+        {
+          "line": 31,
+          "note": "Engine受控，无完整UI/非协作工具/Windows。"
+        }
+      ]
+    },
+    {
+      "filename": "session-operations-round17.md",
+      "absolute_path": "/Users/admin/.codex/worktrees/server-desktop-review-20261012/codeshell/docs/review-2026-10-12/session-operations-round17.md",
+      "sha256": "f70e6e23b7fb293b7510edc8af69470a4d01cdeb1f43b1b1453e4b684f9c9fd9",
+      "line_count": 112,
+      "classification": "formal_special_review",
+      "fully_read": true,
+      "evidence": [
+        {
+          "line": 3,
+          "note": "R71/P3、R72/P2。"
+        },
+        {
+          "line": 24,
+          "note": "unhandled promise observer，不等于Electron崩溃。"
+        },
+        {
+          "line": 42,
+          "note": "真实archive/Settings restore/catalog/Main/root removal。"
+        },
+        {
+          "line": 47,
+          "note": "无files/messages丢失或实际run证据。"
+        },
+        {
+          "line": 55,
+          "note": "正确primitive正常对照，不是纯Desktop UI workaround。"
+        },
+        {
+          "line": 92,
+          "note": "真实components/Main AST/preload fake bridge；非Electron。"
+        },
+        {
+          "line": 108,
+          "note": "wrapper 1测试/2 Bun expect，与91 helper断言单列。"
+        }
+      ]
+    },
+    {
+      "filename": "sidebar-account-local-round22.md",
+      "absolute_path": "/Users/admin/.codex/worktrees/server-desktop-review-20261012/codeshell/docs/review-2026-10-12/sidebar-account-local-round22.md",
+      "sha256": "bbadd7c470fff08c13d5c7c5e538419dbe3c7f15aa2bf39a492c9aedad29d483",
+      "line_count": 47,
+      "classification": "local_static_review",
+      "fully_read": true,
+      "evidence": [
+        {
+          "line": 7,
+          "note": "仅6034本地六路径diff，不是冻结双基线。"
+        },
+        {
+          "line": 9,
+          "note": "Sidebar account局部静态审查。"
+        },
+        {
+          "line": 43,
+          "note": "引用既有7测试。"
+        },
+        {
+          "line": 45,
+          "note": "本轮未执行这些测试。"
+        },
+        {
+          "line": 47,
+          "note": "零新增问题。"
+        }
+      ]
+    },
+    {
+      "filename": "terminal-review-quality-round13.md",
+      "absolute_path": "/Users/admin/.codex/worktrees/server-desktop-review-20261012/codeshell/docs/review-2026-10-12/terminal-review-quality-round13.md",
+      "sha256": "1cbd5595335bd61f74f844924f57abb75bea03f6cc6e22e868f8f7c59e98a34d",
+      "line_count": 41,
+      "classification": "quality_review",
+      "fully_read": true,
+      "evidence": [
+        {
+          "line": 13,
+          "note": "root commit仅最近20。"
+        },
+        {
+          "line": 33,
+          "note": "真实ReviewService/Git/viewer，无完整Main/menu UI。"
+        },
+        {
+          "line": 37,
+          "note": "P3，文件完整。"
+        },
+        {
+          "line": 39,
+          "note": "外部git show/fixture注入不等于用户已存在workaround。"
+        }
+      ]
+    },
+    {
+      "filename": "updater-candidate-audit.md",
+      "absolute_path": "/Users/admin/.codex/worktrees/server-desktop-review-20261012/codeshell/docs/review-2026-10-12/updater-candidate-audit.md",
+      "sha256": "bd941db5e6caed66a4e4839d82c126367351d886fb8886a4f977a0491f4830a1",
+      "line_count": 30,
+      "classification": "excluded_candidate_counterevidence",
+      "fully_read": true,
+      "evidence": [
+        {
+          "line": 3,
+          "note": "mock app.quit候选排除；3/18不证明macOS真实退出。"
+        },
+        {
+          "line": 15,
+          "note": "真实mac lifecycle反证原推断。"
+        },
+        {
+          "line": 25,
+          "note": "Windows/Linux安装器退出前执行路径未覆盖。"
+        },
+        {
+          "line": 30,
+          "note": "未来须受控packaged installer，不能作为新增正式bug。"
+        }
+      ]
+    },
+    {
+      "filename": "web-quality-round10.md",
+      "absolute_path": "/Users/admin/.codex/worktrees/server-desktop-review-20261012/codeshell/docs/review-2026-10-12/web-quality-round10.md",
+      "sha256": "25fd8f7f3c444f587f674a9ffb8a7cb8816725d1d85a7f35c1bfee6bd94d3ef0",
+      "line_count": 113,
+      "classification": "quality_review",
+      "fully_read": true,
+      "evidence": [
+        {
+          "line": 5,
+          "note": "10项保持8P2/2P3。"
+        },
+        {
+          "line": 12,
+          "note": "新增2测试/23断言，后续root113单列。"
+        },
+        {
+          "line": 21,
+          "note": "真实hooks/journals/recovery，fake WS。"
+        },
+        {
+          "line": 25,
+          "note": "ACK后断连对照有意义。"
+        },
+        {
+          "line": 59,
+          "note": "R32 quota mock+真实Host auth。"
+        },
+        {
+          "line": 71,
+          "note": "frontend stalled PUT，不是Host无限制。"
+        },
+        {
+          "line": 79,
+          "note": "R37仅metadata。"
+        },
+        {
+          "line": 85,
+          "note": "R40无已确认accepted history损失。"
+        },
+        {
+          "line": 93,
+          "note": "R41 preaccept丢弃，不是已接受history。"
+        }
+      ]
+    },
+    {
+      "filename": "web-round3.md",
+      "absolute_path": "/Users/admin/.codex/worktrees/server-desktop-review-20261012/codeshell/docs/review-2026-10-12/web-round3.md",
+      "sha256": "c96980d8023f4d2556fead8c049a16903d9ebffccf8d496e46d0b6b9f72eaec0",
+      "line_count": 74,
+      "classification": "formal_special_review",
+      "fully_read": true,
+      "evidence": [
+        {
+          "line": 5,
+          "note": "真实mobile main消费共享Web DesktopApp，不是旧mobile/App。"
+        },
+        {
+          "line": 13,
+          "note": "5测试/43断言。"
+        },
+        {
+          "line": 55,
+          "note": "错queued target无文件/模型副作用证据。"
+        },
+        {
+          "line": 65,
+          "note": "logout本地阻断HTTP，不是revocation绕过。"
+        }
+      ]
+    }
+  ],
+  "auditor_correction": {
+    "prior_inference_withdrawn": "desktop-round1 D3/R01后续降级",
+    "correct_mapping": "desktop-round1 D3=R15 P2；D4=R01 P2；quality round审六项不构成分级冲突。",
+    "final_rule": "R01/R15均P2；已知实际降级为R11/R19/R29。",
+    "report_conflict": false
+  },
+  "material_unresolved_report_conflicts": [],
+  "desktop_inventory": {
+    "base": "frozen primary audit worktree",
+    "top_level_src_directories": [
+      "browser-library",
+      "chrome-extension",
+      "main",
+      "mobile",
+      "preload",
+      "renderer",
+      "shared"
+    ],
+    "main_subdirectories": [
+      "browser-driver",
+      "browser-host",
+      "browser-runtime",
+      "cc-room",
+      "credentials-login",
+      "media",
+      "mobile-remote",
+      "pet",
+      "task-inbox"
+    ],
+    "renderer_subdirectories": [
+      "app",
+      "approvals",
+      "assets",
+      "automation",
+      "browser",
+      "cc-room",
+      "chat",
+      "components",
+      "credentials",
+      "diff",
+      "digital-humans",
+      "extensions",
+      "i18n",
+      "lib",
+      "logs",
+      "markdown",
+      "mcp",
+      "messages",
+      "optimization-lab",
+      "pages",
+      "panels",
+      "pet",
+      "project-config",
+      "runs",
+      "sessions",
+      "settings",
+      "shell",
+      "styles",
+      "subagents",
+      "task-inbox",
+      "test-utils",
+      "tool-cards",
+      "topbar",
+      "ui",
+      "updater",
+      "workspace-trust"
+    ],
+    "inventory_method": "read-only directory/file inventory; no module imports or product execution"
+  },
+  "existing_suite_accounting": {
+    "total_test_files": 706,
+    "server_test_files": 100,
+    "web_test_files": 41,
+    "desktop_test_files": 565,
+    "desktop_main_test_files": 283,
+    "desktop_renderer_test_files": 282,
+    "metadata": [
+      "validation/desktop-main-results.json",
+      "validation/desktop-renderer-results.json",
+      "validation/server-web-results.json"
+    ],
+    "other_desktop_roots": [
+      "shared",
+      "preload",
+      "browser-library",
+      "chrome-extension",
+      "mobile"
+    ],
+    "other_desktop_root_direct_test_entries_in_706_metadata": 0,
+    "interpretation": "706是Server100/Web41/Desktop main283+renderer282三个清单，不代表其余包或其余Desktop根目录自有套件均已独立执行；被专项导入/间接触达不应误称没有覆盖。",
+    "existing_desktop_feature_test_file_counts": {
+      "main/browser-driver": 11,
+      "main/browser-host": 1,
+      "main/browser-runtime": 13,
+      "main/cc-room": 5,
+      "main/credentials-login": 2,
+      "main/media": 6,
+      "main/mobile-remote": 3,
+      "main/pet": 58,
+      "main/task-inbox": 8,
+      "renderer/app": 12,
+      "renderer/approvals": 5,
+      "renderer/automation": 17,
+      "renderer/browser": 6,
+      "renderer/chat": 16,
+      "renderer/credentials": 7,
+      "renderer/diff": 2,
+      "renderer/digital-humans": 8,
+      "renderer/extensions": 12,
+      "renderer/logs": 1,
+      "renderer/markdown": 2,
+      "renderer/mcp": 0,
+      "renderer/messages": 16,
+      "renderer/optimization-lab": 4,
+      "renderer/pages": 4,
+      "renderer/panels": 19,
+      "renderer/pet": 30,
+      "renderer/project-config": 3,
+      "renderer/runs": 1,
+      "renderer/settings": 31,
+      "renderer/shell": 4,
+      "renderer/subagents": 1,
+      "renderer/task-inbox": 3,
+      "renderer/tool-cards": 8,
+      "renderer/topbar": 3,
+      "renderer/ui": 6,
+      "renderer/updater": 0,
+      "renderer/workspace-trust": 0
+    }
+  },
+  "desktop_coverage_matrix": [
+    {
+      "module": "main / renderer 会话、运行、草稿、权限",
+      "coverage_status": "动态专项+静态接线+既有套件",
+      "evidence": [
+        {
+          "file": "desktop-round1.md",
+          "line": 24,
+          "note": "draft/attachment陈旧状态专项"
+        },
+        {
+          "file": "session-operations-round17.md",
+          "line": 42,
+          "note": "archive/restore/catalog/Main/root removal真实组件链"
+        },
+        {
+          "file": "cli-recovery-round15.md",
+          "line": 26,
+          "note": "实际RoomManager与Main回调"
+        },
+        {
+          "file": "goal-sleep-round20.md",
+          "line": 22,
+          "note": "Main/preload/App closures/StatusPopover"
+        }
+      ],
+      "boundary": "主要按实际服务、抽取Main回调、React DOM fixture分层验证；不等于生产Electron整套端到端。",
+      "not_special_reviewed_scope": "非协作真实工具进程、真实provider与完整Desktop生产启动链未由这些专项证明"
+    },
+    {
+      "module": "renderer 文件导航/Markdown/附件 / main 文件authority",
+      "coverage_status": "动态专项+部分静态消费者",
+      "evidence": [
+        {
+          "file": "file-navigation-round14.md",
+          "line": 19,
+          "note": "真实EACCES目录错误与refresh恢复"
+        },
+        {
+          "file": "file-navigation-round14.md",
+          "line": 29,
+          "note": "managed worktree PNG"
+        },
+        {
+          "file": "file-navigation-round14.md",
+          "line": 36,
+          "note": "Markdown/AttachmentCard其他消费者静态"
+        },
+        {
+          "file": "file-root-round27.md",
+          "line": 38,
+          "note": "Core/Main/preload/component/files真实部分"
+        }
+      ],
+      "boundary": "没有实际Electron/PTY/full App；文件root专项没有Engine/provider/Git。"
+    },
+    {
+      "module": "renderer/panels + Host Panel bridge/storage/process",
+      "coverage_status": "Host专项正常反证及跨链动态",
+      "evidence": [
+        {
+          "file": "panels-round6.md",
+          "line": 25,
+          "note": "真实Host方法/UI，fake Electron/guest"
+        },
+        {
+          "file": "panels-round6.md",
+          "line": 66,
+          "note": "scope/storage/agent/automation边界"
+        },
+        {
+          "file": "panels-round6.md",
+          "line": 90,
+          "note": "不覆盖真实Panel业务/UI"
+        },
+        {
+          "file": "runtime-round3.md",
+          "line": 28,
+          "note": "真实Node Hub+native Panel process POSIX退出"
+        }
+      ],
+      "boundary": "独立Panel业务归codeshell-panel-apps；不能把Host覆盖等同Video Studio/Quant Lab/其他Panel业务覆盖。",
+      "not_special_reviewed_scope": "独立Panel包模型/业务/文档/编辑/安装后端到端未专项审查"
+    },
+    {
+      "module": "main/browser-runtime/browser-host/browser-driver + renderer browser Stop",
+      "coverage_status": "动态专项+静态UI接线",
+      "evidence": [
+        {
+          "file": "browser-stop-round22.md",
+          "line": 32,
+          "note": "React Stop静态"
+        },
+        {
+          "file": "browser-stop-round22.md",
+          "line": 40,
+          "note": "legacy/unbound动态，modern bound共有路径静态"
+        },
+        {
+          "file": "browser-stop-round22.md",
+          "line": 87,
+          "note": "真实Core/preload/ElectronIPC，Main回调抽取/内存stdio/owned BrowserHost"
+        }
+      ],
+      "boundary": "真实Electron局部IPC和owned browser DOM不等于完整产品Main/worker/App生产端到端。"
+    },
+    {
+      "module": "chrome-extension",
+      "coverage_status": "部分Backend/bridge动态，实际Chrome扩展环境未专项",
+      "evidence": [
+        {
+          "file": "browser-cancel-quality-round21.md",
+          "line": 11,
+          "note": "Panel/preload/Main callback/Backend实际部分"
+        },
+        {
+          "file": "browser-cancel-quality-round21.md",
+          "line": 14,
+          "note": "Native fixture，无Chrome安装"
+        },
+        {
+          "file": "browser-cancel-quality-round21.md",
+          "line": 45,
+          "note": "真实secureBridge listTabs到owned tab.get"
+        }
+      ],
+      "boundary": "静态源审查和替身Native覆盖取消契约；没有真实Chrome扩展安装/认证/连接生命周期验证。",
+      "not_special_reviewed_scope": "扩展安装、Native framing、Chrome debugger attach/reattach、权限和真实页面动作"
+    },
+    {
+      "module": "browser-library",
+      "coverage_status": "Puppeteer owned Electron DOM局部动态；Playwright backend未专项",
+      "evidence": [
+        {
+          "file": "browser-stop-round22.md",
+          "line": 87,
+          "note": "owned BrowserHost/Electron局部实验"
+        },
+        {
+          "file": "browser-cancel-quality-round21.md",
+          "line": 45,
+          "note": "owned tab.get恢复动作"
+        }
+      ],
+      "boundary": "作为测试控制器使用Playwright CDP不等于验证独立生产Playwright backend。",
+      "not_special_reviewed_scope": "独立Playwright生产后端及真实Chrome共享库整链"
+    },
+    {
+      "module": "preload",
+      "coverage_status": "选定API动态与实际ElectronIPC局部验证",
+      "evidence": [
+        {
+          "file": "browser-stop-round22.md",
+          "line": 87,
+          "note": "真实preload+ElectronIPC"
+        },
+        {
+          "file": "file-root-round27.md",
+          "line": 38,
+          "note": "preload/component/files选定路径"
+        },
+        {
+          "file": "remote-settings-quality-round15.md",
+          "line": 13,
+          "note": "两个MiniDOM roots共享sender"
+        }
+      ],
+      "boundary": "选定方法有覆盖；并非preload全部API/隔离世界/真实双WebContents系统验证。"
+    },
+    {
+      "module": "shared",
+      "coverage_status": "类型/schema/协议由选定专项间接使用；自有套件未独立列账",
+      "evidence": [
+        {
+          "file": "browser-stop-round22.md",
+          "line": 87,
+          "note": "协议链选定路径"
+        },
+        {
+          "file": "file-root-round27.md",
+          "line": 38,
+          "note": "共享文件authority元组选定路径"
+        }
+      ],
+      "boundary": "shared存在11个直接测试文件但706元数据没有这些根路径独立条目；不应据此声称未被任何测试覆盖。",
+      "not_special_reviewed_scope": "共享schema和迁移契约完整专项未见"
+    },
+    {
+      "module": "mobile + packages/web共享DesktopApp",
+      "coverage_status": "共享Web链动态专项+入口静态确认",
+      "evidence": [
+        {
+          "file": "web-round3.md",
+          "line": 5,
+          "note": "mobile main消费共享Web DesktopApp"
+        },
+        {
+          "file": "web-quality-round10.md",
+          "line": 21,
+          "note": "真实hooks/journals/recovery，fake WS"
+        },
+        {
+          "file": "web-round3.md",
+          "line": 65,
+          "note": "logout本地阻断HTTP"
+        }
+      ],
+      "boundary": "旧mobile/App.tsx不是生产main入口；不能按旧组件测试情况判断实际Web覆盖。",
+      "not_special_reviewed_scope": "真实移动设备、触摸键盘、ServiceWorker离线/更新、真实Relay跨网与账号链未专项验证"
+    },
+    {
+      "module": "renderer/pet + main/pet",
+      "coverage_status": "部分动态专项+广泛既有单测；不能列全未覆盖",
+      "evidence": [
+        {
+          "file": "search-routing-round11.md",
+          "line": 23,
+          "note": "实际PetLongTaskCard/PetStateProvider/PetWorldPane/navigation"
+        },
+        {
+          "file": "search-routing-round11.md",
+          "line": 27,
+          "note": "实际PetStateAggregator/registerPetIpc"
+        },
+        {
+          "file": "search-quality-round12.md",
+          "line": 16,
+          "note": "搜索/路由正常反证"
+        },
+        {
+          "file": "modern-desktop-image-round25.md",
+          "line": 18,
+          "note": "PetChatHost附件消费只是静态对照"
+        },
+        {
+          "file": "settings-recovery-round16.md",
+          "line": 29,
+          "note": "PetPersonalization hook复用仅静态"
+        }
+      ],
+      "boundary": "已覆盖Pet卡片/聚合/导航部分；main58、renderer30既有测试文件不能替代完整专项。",
+      "not_special_reviewed_scope": "Pet委派、projection observer及任务关闭/接管完整生命周期"
+    },
+    {
+      "module": "renderer/digital-humans + project-config",
+      "coverage_status": "真实Electron局部业务验收+既有套件",
+      "evidence": [
+        {
+          "file": "README.md",
+          "line": 268,
+          "note": "既有真实Electron list/search/editor/team三宽度主题验收"
+        },
+        {
+          "file": "validation/digital-humans-e2e.log",
+          "line": 1,
+          "note": "project config overview layouts"
+        },
+        {
+          "file": "validation/digital-humans-e2e.log",
+          "line": 3,
+          "note": "config groups/scoped file retry/keyboard"
+        },
+        {
+          "file": "validation/digital-humans-e2e.log",
+          "line": 4,
+          "note": "digital humans mine/teams/market布局"
+        },
+        {
+          "file": "validation/digital-humans-e2e.log",
+          "line": 7,
+          "note": "search clearing"
+        }
+      ],
+      "boundary": "按报告引用只读检查既有e2e脚本：包含创建/保存/删除、编辑、记忆、团队和绑定局部流程；不可误说只有布局，也不可扩张成实际模型调用/生产全链。"
+    },
+    {
+      "module": "renderer/extensions / credentials / automation pages",
+      "coverage_status": "真实Electron布局/键盘部分+各自报告专项",
+      "evidence": [
+        {
+          "file": "validation/workspace-pages-e2e.log",
+          "line": 1,
+          "note": "extensions/credentials/automation布局和键盘局部验收"
+        },
+        {
+          "file": "goal-sleep-round20.md",
+          "line": 61,
+          "note": "Sleep尚为静态/旧套件"
+        }
+      ],
+      "boundary": "局部页面验收不等于所有插件安装、真实credential OAuth、automation provider执行已验证。"
+    },
+    {
+      "module": "renderer/optimization-lab + main optimization-lab相关服务",
+      "coverage_status": "仅既有套件，未找到专项feature报告",
+      "evidence": [],
+      "boundary": "全部顶层md对Optimization-lab/OptimizationLab扫描无命中；renderer4个既有测试文件及main相关测试存在。",
+      "not_special_reviewed_scope": "feature flag默认off下的准入、实验配置、证据/导出工作流"
+    },
+    {
+      "module": "renderer/task-inbox + main/task-inbox",
+      "coverage_status": "静态mention+既有套件；无完整Inbox专项",
+      "evidence": [
+        {
+          "file": "automation-round5.md",
+          "line": 119,
+          "note": "task-inbox-sources仅disabledReason映射"
+        },
+        {
+          "file": "download-quality-round12.md",
+          "line": 47,
+          "note": "任务源取消能力静态mention"
+        }
+      ],
+      "boundary": "main8、renderer3个既有测试文件；source映射不能当Inbox UI/全部源操作验证。",
+      "not_special_reviewed_scope": "统一Inbox列表、过滤/状态投影、各任务源动作及恢复"
+    },
+    {
+      "module": "renderer/logs / runs / subagents / browser独立业务",
+      "coverage_status": "仅既有套件；未找到独立业务专项",
+      "evidence": [],
+      "boundary": "既有测试文件分别1/1/1/6；browser runtime/Panel专项存在，应与renderer/browser独立业务区分。",
+      "not_special_reviewed_scope": "日志viewer、run history/usage、subagent UI及浏览器管理页独立业务链"
+    },
+    {
+      "module": "main/media legacy custody/document/history",
+      "coverage_status": "静态Host导出authority mention+既有套件",
+      "evidence": [
+        {
+          "file": "transfer-round12.md",
+          "line": 62,
+          "note": "panel-media-service导出authority静态引用"
+        }
+      ],
+      "boundary": "main/media既有6测试文件；CODESHELL.md将其定义为legacy custody/document/history adapter，不能据此要求Host验证Panel业务处理器。",
+      "not_special_reviewed_scope": "legacy资源/文档/历史兼容流程完整专项；媒体处理模型/FFmpeg/Whisper等业务属于独立Panel范围"
+    },
+    {
+      "module": "main/mobile-remote / renderer remote settings / relay",
+      "coverage_status": "LAN动态局部+Relay静态",
+      "evidence": [
+        {
+          "file": "remote-settings-quality-round15.md",
+          "line": 3,
+          "note": "R67限定LAN"
+        },
+        {
+          "file": "remote-settings-quality-round15.md",
+          "line": 47,
+          "note": "真实controller+loopback Host"
+        },
+        {
+          "file": "remote-settings-quality-round15.md",
+          "line": 53,
+          "note": "双WebContents投影静态"
+        },
+        {
+          "file": "server-preflight-round23.md",
+          "line": 32,
+          "note": "无真实云端/TTL/rotation"
+        }
+      ],
+      "boundary": "两个MiniDOM root不是实际两窗；LAN loopback不等于真实Relay跨网。",
+      "not_special_reviewed_scope": "真实Relay会话、云账号刷新、TTL/轮转、跨网/多设备恢复"
+    },
+    {
+      "module": "cloud account / credentials-login",
+      "coverage_status": "静态审查+既有套件；真实账号链未执行",
+      "evidence": [
+        {
+          "file": "server-preflight-round23.md",
+          "line": 5,
+          "note": "Relay refresh取消静态"
+        },
+        {
+          "file": "sidebar-account-local-round22.md",
+          "line": 7,
+          "note": "6034本地diff局部静态"
+        },
+        {
+          "file": "sidebar-account-local-round22.md",
+          "line": 45,
+          "note": "既有7测试本轮未重跑"
+        }
+      ],
+      "boundary": "云服务/OAuth/真实provider未执行；62a58ac8新增availability在冻结报告后。",
+      "not_special_reviewed_scope": "62a58ac8 cloud-login availability；冻结双基线未覆盖，本次只记录没有新增产品审查"
+    },
+    {
+      "module": "updater / installer / OS lifecycle",
+      "coverage_status": "候选被实际mac反证排除；Windows/Linux安装器未专项",
+      "evidence": [
+        {
+          "file": "updater-candidate-audit.md",
+          "line": 15,
+          "note": "真实mac lifecycle否定mock quit推断"
+        },
+        {
+          "file": "updater-candidate-audit.md",
+          "line": 25,
+          "note": "Win/Linux installer-before-quit未覆盖"
+        },
+        {
+          "file": "updater-candidate-audit.md",
+          "line": 30,
+          "note": "受控packaged installer未来范围"
+        }
+      ],
+      "boundary": "不得把已排除mock候选转成86正式问题，也不得从mac反证推定所有OS updater正常。",
+      "not_special_reviewed_scope": "packaged Windows/Linux installer及真实升级回滚流程"
+    },
+    {
+      "module": "跨平台原生交互",
+      "coverage_status": "macOS/POSIX局部证据，其他平台未专项",
+      "evidence": [
+        {
+          "file": "runtime-round3.md",
+          "line": 28,
+          "note": "POSIX native process"
+        },
+        {
+          "file": "download-quality-round12.md",
+          "line": 60,
+          "note": "POSIX限制"
+        },
+        {
+          "file": "file-mutex-quality-round19.md",
+          "line": 41,
+          "note": "Node25/mac非其他平台"
+        },
+        {
+          "file": "file-navigation-round14.md",
+          "line": 38,
+          "note": "无真实PTY"
+        }
+      ],
+      "boundary": "已经有Electron布局/键盘/部分IME/focus验收；不要笼统称全部UI未覆盖。",
+      "not_special_reviewed_scope": "Windows/Linux打包、真实PTY、真实mic、触摸键盘、屏幕阅读器/无障碍完整矩阵"
+    }
+  ],
+  "recommendations": [
+    {
+      "kind": "priority_authority",
+      "text": "86个正式项的分级仅以最终README为准。将旧报告/准备稿/质量复核/正常反证单列，历史计数和当时P级不得覆盖最终分级。"
+    },
+    {
+      "kind": "impact_wording",
+      "text": "摘要优先沿用各报告限定：陈旧metadata不自动等于文件泄漏；unhandled promise不自动等于Electron崩溃；部分状态丢失不自动等于已接受回答/所有文件丢失；有界实验不自动等于真实OOM。"
+    },
+    {
+      "kind": "coverage_wording",
+      "text": "Coverage至少区分动态专项、静态、既有套件、mention、未专项。无bug不等于未覆盖；既有套件通过不等于完整业务验收。"
+    },
+    {
+      "kind": "next_scope_only",
+      "text": "缺口只供后续排期：Optimization-lab、完整Inbox、Pet完整生命周期、独立业务日志/runs/subagents/browser、Chrome真实扩展、Playwright生产backend、真实Relay/账号、跨平台安装器/PTY、独立Panel业务。此次没有启动调查或执行。"
+    },
+    {
+      "kind": "freeze_boundary",
+      "text": "冻结bases84740d56/a66f4ef2不覆盖原main的62a58ac8 cloud-login availability。6034局部静态报告也不能替代62a新逻辑审查。"
+    }
+  ]
+}

@@ -1,0 +1,33 @@
+{
+  "origin": "http://127.0.0.1:58915",
+  "node": "v25.8.1",
+  "assertions": 22,
+  "observations": [
+    {
+      "phase": "early-body-abort",
+      "actualAuth": true,
+      "cancelFoundNoProbe": true,
+      "originalSocketDestroyed": true,
+      "upstreamInitializeRequests": 0
+    },
+    {
+      "phase": "cancel-owner",
+      "sameOwnerCapacity429": true,
+      "otherOwnerCannotCancel": true,
+      "cancelled": true,
+      "upstreamClosed": true
+    },
+    {
+      "phase": "disconnect-retry",
+      "upstreamClosed": true,
+      "nextProbe": "ok"
+    },
+    {
+      "phase": "logout-isolation",
+      "revokedOwner": true,
+      "upstreamClosed": true,
+      "oldCookie401": true,
+      "otherCookieProbe": "ok"
+    }
+  ]
+}

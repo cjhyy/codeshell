@@ -1,0 +1,29 @@
+bun test v1.3.11 (af24e281)
+
+docs/review-2026-10-12/reproductions/file-navigation-round14/desktop-files.test.tsx:
+fatal: not a git repository (or any of the parent directories): .git
+{"extensionOf":"R58","actualFilesPanelEntry":true,"managedRootStatus":"ok","sessionTextReadSucceeded":true,"pngFailedAtMainProjectGate":true,"refreshStillFails":true,"explicitSessionIdDoesNotBypassCwdGate":true,"primaryAndSecondaryPreviewSucceeded":true,"arbitraryRootRejected":true,"primaryCwdCannotAuthorizeSiblingWorktreeImage":true,"explicitSingleFilePreviewAfterSwitchingToMainSucceeded":true,"localPreviewSubframeDenied":true,"nativeElectronStarted":false}
+(pass) R58 EXTENSION actual FilesPanel managed-worktree PNG fails Main root gate while Session text works; primary/secondary and explicit local recovery succeed [2500.41ms]
+fatal: not a git repository (or any of the parent directories): .git
+An update to DirNode inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://react.dev/link/wrap-tests-with-act
+{"candidate":"directory-read-error","error":"EACCES","failedAndEmptyFolderBothHaveNoChildrenOrError":true,"fileRetained":true,"permissionRepairThenRefreshRecovers":true,"actualMainHandlerAndFsService":true,"uid":501}
+(pass) CANDIDATE directory EACCES is silently rendered as empty; same permission repair and refresh restore real entries [98.27ms]
+fatal: not a git repository (or any of the parent directories): .git
+fatal: not a git repository (or any of the parent directories): .git
+{"boundary":"pending-root-tree","secondarySelectedWhilePrimaryRowsVisible":true,"noLoadingStateOnSubsequentRead":true,"supersededSecondaryResponseIgnored":true,"actualHandlerResultDelayedAtIpcBoundary":true,"noWrongFileReadOrLossClaimed":true}
+(pass) BOUNDARY secondary-root pending directory read retains previous-root rows; superseded late response cannot overwrite final root [125.45ms]
+
+ 3 pass
+ 0 fail
+ 48 expect() calls
+Ran 3 tests across 1 file. [4.07s]
+Completed Bun shard: 3 tests, 0 skipped; 0 failures.

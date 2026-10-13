@@ -1,0 +1,14 @@
+bun test v1.3.11 (af24e281)
+
+docs/review-2026-10-12/reproductions/workspace-quality-round11/panel-registry-recovery.test.ts:
+(pass) CONTROL healthy tracked projects expose current project's bound Panel [58.08ms]
+{"case":"one unrelated missing root","visible":false,"discovered":0,"failure":"Error: project path must be an existing absolute directory"}
+(pass) CONFIRMED one unrelated missing tracked project removes every healthy project's Panels [20.30ms]
+{"case":"65 healthy roots","visible":false,"discovered":0,"failure":"Error: panel-apps:listForProjects requires projectPaths"}
+(pass) CONFIRMED 65 supported tracked projects also remove all Panels before discovery [92.05ms]
+
+ 3 pass
+ 0 fail
+ 20 expect() calls
+Ran 3 tests across 1 file. [1.71s]
+Completed Bun shard: 3 tests, 0 skipped; 0 failures.

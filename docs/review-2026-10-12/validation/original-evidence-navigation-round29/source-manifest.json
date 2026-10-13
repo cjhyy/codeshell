@@ -1,0 +1,422 @@
+{
+  "scope": "Existing README/table/appendix source reads and heading matching only; no product/fixture/test execution, no documentation/product modifications. Mapping targetFile is relative to README; headingText preserves the complete actual Markdown heading line. No GitHub slug or anchor is proposed.",
+  "newFindings": 0,
+  "newExecutions": 0,
+  "READMErowCount": 54,
+  "resolved": 54,
+  "unresolved": [],
+  "sourceFiles": [
+    {
+      "file": "README.md",
+      "bytes": 71657,
+      "sha256": "71f08eb2d7b013b08e507c201f539446dbfde9baf683dd3d6657ae6a180dd99a"
+    },
+    {
+      "file": "automation-round5.md",
+      "bytes": 15259,
+      "sha256": "4a6aab0fb197862e288a17d1f6f37b804c665639d31344a24a8413ffe54cd755"
+    },
+    {
+      "file": "collections-round6.md",
+      "bytes": 6596,
+      "sha256": "6f9b3f7b7837caf1a02f8f7a1c1e6a08915a2213468afe7ea235552788b834c9"
+    },
+    {
+      "file": "credentials-round5.md",
+      "bytes": 7645,
+      "sha256": "27bdf3ed6903cdfaa47837d32d08e3af7a0ae71c7e147d8ee50a52c4f58230bf"
+    },
+    {
+      "file": "desktop-round1.md",
+      "bytes": 13844,
+      "sha256": "b216b26c4273d04dbae0597115b63ef8b686fe7eda0996868bf4c387e93977d4"
+    },
+    {
+      "file": "desktop-round2.md",
+      "bytes": 7340,
+      "sha256": "6cd1aa8e8a492e67d26e9f6ff5384b132dbfa90a533b0cddb86adb5465365001"
+    },
+    {
+      "file": "desktop-round3.md",
+      "bytes": 9791,
+      "sha256": "16e1dbe84a3e8e6f36eec39447918a72339682b530471052723de46bc4aec7b4"
+    },
+    {
+      "file": "files-round4.md",
+      "bytes": 4844,
+      "sha256": "4788d986505c6227cc46a534479781143221d285cca5b5cb1d26354c77e4677b"
+    },
+    {
+      "file": "plugins-round7.md",
+      "bytes": 15439,
+      "sha256": "2d94322748f32d12ed7c55c48224000db209ec62a9fe90c927d85c9bb56d8970"
+    },
+    {
+      "file": "quickchat-round8.md",
+      "bytes": 9648,
+      "sha256": "82529356a7906739a2065f64f679d2290fadcdf36bc2d1998d65e812860285fe"
+    },
+    {
+      "file": "runtime-round3.md",
+      "bytes": 8292,
+      "sha256": "d3873d2f368812e049bda27862bca1b6a7a026a2c6d451e2b12765888a5230d7"
+    },
+    {
+      "file": "server-round1.md",
+      "bytes": 11399,
+      "sha256": "dc6a7308826b0a483310966e17b04ec7ca6cb56a37ebad9edbc7cfe2d42ff5e8"
+    },
+    {
+      "file": "voice-round6.md",
+      "bytes": 7619,
+      "sha256": "94b7b9092aecaca35e1b8abf327bd9036fb2414a9b0a542eccc4a0b34fba95db"
+    },
+    {
+      "file": "web-round1.md",
+      "bytes": 13895,
+      "sha256": "062fe7be52825010fefd6ea12a3e1167c6c5d2d50d14aa06932dc1f980b4107a"
+    },
+    {
+      "file": "web-round2.md",
+      "bytes": 8318,
+      "sha256": "8b65c7d1e74d77bfbf4a6f5602917344b5aa12c2b805dc66ae95a201ace428de"
+    },
+    {
+      "file": "web-round3.md",
+      "bytes": 15751,
+      "sha256": "c96980d8023f4d2556fead8c049a16903d9ebffccf8d496e46d0b6b9f72eaec0"
+    },
+    {
+      "file": "web-round5.md",
+      "bytes": 9080,
+      "sha256": "c579cd8a99ca7a8f78c650eaa7e02d36a5d97861b5bb66d084148aa114dafd63"
+    }
+  ],
+  "rows": [
+    {
+      "id": "R35",
+      "READMErowLine": 19,
+      "evidenceLabel": "Desktop D13，第三轮",
+      "impact": "重复 Enter 并行创建同名 worktree，失败请求强制回滚成功请求的目录、分支及未提交文件"
+    },
+    {
+      "id": "R01",
+      "READMErowLine": 20,
+      "evidenceLabel": "Desktop D4",
+      "impact": "连续两个并行审批复用卡片，第二个显示“已批准”而无法操作"
+    },
+    {
+      "id": "R02",
+      "READMErowLine": 21,
+      "evidenceLabel": "Web W4",
+      "impact": "CLI 房间实际免审批，界面却显示“逐次确认”；更改选择器也不改变 CLI"
+    },
+    {
+      "id": "R03",
+      "READMErowLine": 22,
+      "evidenceLabel": "Web W1",
+      "impact": "已执行任务丢失 ACK 后恢复可重发草稿，重试生成新意图 ID 并重复执行"
+    },
+    {
+      "id": "R04",
+      "READMErowLine": 23,
+      "evidenceLabel": "Desktop D5",
+      "impact": "在 A 执行斜杠命令后切到 B，迟到的展开结果覆盖 B 草稿"
+    },
+    {
+      "id": "R05",
+      "READMErowLine": 24,
+      "evidenceLabel": "Desktop D2",
+      "impact": "A 会话拖入的文件随切换残留到 B，发送因附件所属会话不符失败"
+    },
+    {
+      "id": "R06",
+      "READMErowLine": 25,
+      "evidenceLabel": "Desktop D1",
+      "impact": "原生运行回包错误被当作普通结果，发送失败无可见解释，草稿已清空"
+    },
+    {
+      "id": "R07",
+      "READMErowLine": 26,
+      "evidenceLabel": "Desktop D7",
+      "impact": "Core worker 退出清掉仍在运行的外部 CLI busy 状态，停止按钮消失"
+    },
+    {
+      "id": "R08",
+      "READMErowLine": 27,
+      "evidenceLabel": "Web W3",
+      "impact": "配对浏览器 CLI 房间的停止按钮发送原生 run.stop，实际房间继续运行"
+    },
+    {
+      "id": "R09",
+      "READMErowLine": 28,
+      "evidenceLabel": "Server S1",
+      "impact": "第二个 Hub 启动失败前删除第一个实例仍在使用的上传文件"
+    },
+    {
+      "id": "R10",
+      "READMErowLine": 29,
+      "evidenceLabel": "Server S6",
+      "impact": "CC 房间切换或离线后无法恢复待审批卡片，服务端一直等待直到超时"
+    },
+    {
+      "id": "R11",
+      "READMErowLine": 30,
+      "evidenceLabel": "Server S7；正常离线有禁用及 handler 保护",
+      "impact": "连接失效但界面尚显示在线的短窗口，CC 审批发送失败仍删卡"
+    },
+    {
+      "id": "R12",
+      "READMErowLine": 31,
+      "evidenceLabel": "Server S2",
+      "impact": "CC 一次多题澄清仅能回答首题，后续题目随控制请求被消费"
+    },
+    {
+      "id": "R13",
+      "READMErowLine": 32,
+      "evidenceLabel": "Desktop D6",
+      "impact": "切换澄清题后旧选择索引残留，选项数变少时提交抛异常"
+    },
+    {
+      "id": "R14",
+      "READMErowLine": 33,
+      "evidenceLabel": "Web W5",
+      "impact": "可稍后回答的异步问题在任务完成后仍阻塞新的独立任务"
+    },
+    {
+      "id": "R15",
+      "READMErowLine": 34,
+      "evidenceLabel": "Desktop D3",
+      "impact": "外部 CLI 后续消息只在当前会话推进，切到别处后队列停住"
+    },
+    {
+      "id": "R16",
+      "READMErowLine": 35,
+      "evidenceLabel": "Web W2",
+      "impact": "CC 打开回包广播到同设备全部页签，也会覆盖用户较新的会话选择"
+    },
+    {
+      "id": "R17",
+      "READMErowLine": 36,
+      "evidenceLabel": "Server S3",
+      "impact": "删除草稿附件不释放上传配额，空输入框仍被 16 个文件上限卡住"
+    },
+    {
+      "id": "R18",
+      "READMErowLine": 37,
+      "evidenceLabel": "Server S4",
+      "impact": "CLI 启动失败留下“运行中”句柄，安装/修复后同模式重开仍不能恢复"
+    },
+    {
+      "id": "R19",
+      "READMErowLine": 38,
+      "evidenceLabel": "Web W6；下一次有效 resync 可恢复",
+      "impact": "同步审批未被处理且请求仍 pending 时交付失败，错误本身不恢复卡片"
+    },
+    {
+      "id": "R20",
+      "READMErowLine": 39,
+      "evidenceLabel": "Server S5",
+      "impact": "Hub 接受超过 10、至多 20 MiB 图片，发送阶段才因 10 MiB 限制失败"
+    },
+    {
+      "id": "R21",
+      "READMErowLine": 40,
+      "evidenceLabel": "Root R21",
+      "impact": "Hub Web 新会话首次运行中刷新，完整输出日志的 legacy anchor 被空基线裁掉，前端拒绝恢复"
+    },
+    {
+      "id": "R22",
+      "READMErowLine": 41,
+      "evidenceLabel": "Desktop D8，第二轮",
+      "impact": "多根项目会话迁移到合法 secondary root 后，已绑定 Panel 被错误视为跨项目而打不开"
+    },
+    {
+      "id": "R23",
+      "READMErowLine": 42,
+      "evidenceLabel": "Desktop D9，第二轮",
+      "impact": "一个无效的已追踪项目目录让全部健康项目的 Panel 消失；65 个健康项目也触发批量上限"
+    },
+    {
+      "id": "R24",
+      "READMErowLine": 43,
+      "evidenceLabel": "Desktop D10，第二轮",
+      "impact": "移除项目先删除项目权威，再释放冷会话 worktree；重加项目后旧归档会话仍占用 worktree"
+    },
+    {
+      "id": "R25",
+      "READMErowLine": 44,
+      "evidenceLabel": "Web W7，第二轮",
+      "impact": "两个已打开的默认模型表单先后保存，后一个未改过的旧字段回滚前一个更新"
+    },
+    {
+      "id": "R26",
+      "READMErowLine": 45,
+      "evidenceLabel": "Web W8，第二轮",
+      "impact": "Skill 保存遇到 409 后按提示刷新，编辑器仍用旧 revision，无法继续保存"
+    },
+    {
+      "id": "R27",
+      "READMErowLine": 46,
+      "evidenceLabel": "Web W9，第二轮",
+      "impact": "MCP 配置已更新，迟到的旧 probe 响应却给新配置显示旧的成功结果与工具列表"
+    },
+    {
+      "id": "R28",
+      "READMErowLine": 47,
+      "evidenceLabel": "Desktop D11，第三轮",
+      "impact": "插件设置初次加载尚未完成时可切开关，写入空旧列表并重新启用之前禁用的插件/Skill"
+    },
+    {
+      "id": "R29",
+      "READMErowLine": 48,
+      "evidenceLabel": "Desktop D12，第三轮",
+      "impact": "启动迁移旧会话时，旧项目初始快照覆盖已到达的新项目广播；新项目从界面消失"
+    },
+    {
+      "id": "R30",
+      "READMErowLine": 49,
+      "evidenceLabel": "Runtime T1，第三轮；存储恢复后可取消/重试",
+      "impact": "后台工具任务完成时终态写盘失败被吞掉，结果丢失并持续显示运行中、阻塞配置修改"
+    },
+    {
+      "id": "R31",
+      "READMErowLine": 50,
+      "evidenceLabel": "Runtime T2，第三轮；已验证 POSIX",
+      "impact": "Node Hub 关闭先返回并退出，忽略 SIGTERM 的 Panel 原生进程来不及强制终止而遗留"
+    },
+    {
+      "id": "R32",
+      "READMErowLine": 51,
+      "evidenceLabel": "Web W10，第三轮",
+      "impact": "新设备浏览器存储配额耗尽时，配对和认证生成不同 secret，配对流程必然失败"
+    },
+    {
+      "id": "R33",
+      "READMErowLine": 52,
+      "evidenceLabel": "Web W11，第三轮",
+      "impact": "新会话 ACK 前收到后台原生输出，自动绑定错误会话并把新草稿迁走"
+    },
+    {
+      "id": "R34",
+      "READMErowLine": 53,
+      "evidenceLabel": "Web W12，第三轮；主机正常收到请求时有 5 分钟票据上限",
+      "impact": "手机 PUT 已开始后无法随断线取消，重连在线仍被旧上传阻塞独立文本发送"
+    },
+    {
+      "id": "R36",
+      "READMErowLine": 54,
+      "evidenceLabel": "Runtime T3，第三轮",
+      "impact": "worker 退出与 JSON-RPC 写入交叉时，stdin 的异步 EPIPE 没有监听，Node Host 随之退出"
+    },
+    {
+      "id": "R37",
+      "READMErowLine": 55,
+      "evidenceLabel": "Web W13，第三轮；限定 freshNative 场景",
+      "impact": "离线新建 B 项目请求丢失，重连首条任务可沿旧的未落盘 A 会话进入 A 项目"
+    },
+    {
+      "id": "R38",
+      "READMErowLine": 56,
+      "evidenceLabel": "Web W14，第三轮",
+      "impact": "退出设备必须等 HTTP logout 请求结束，响应卡住时本地界面和连接也不退出"
+    },
+    {
+      "id": "R39",
+      "READMErowLine": 57,
+      "evidenceLabel": "Files/History F1，第四轮",
+      "impact": "恢复归档会话已成功，却被自身 busy 守卫误判为未保存修改，需额外确认才能打开"
+    },
+    {
+      "id": "R40",
+      "READMErowLine": 58,
+      "evidenceLabel": "Web W15，第五轮；限定预入队拒绝",
+      "impact": "发送明确被拒绝前已输入后续稿，原失败文本不在草稿、聊天或历史中，无法直接恢复"
+    },
+    {
+      "id": "R41",
+      "READMErowLine": 59,
+      "evidenceLabel": "Web W16，第五轮；真实认证 Hub 补强",
+      "impact": "Hub 未确认送达的意图不计入刷新保护，实际未接受时刷新会丢掉唯一内存副本"
+    },
+    {
+      "id": "R42",
+      "READMErowLine": 60,
+      "evidenceLabel": "Credentials C1，第五轮；实际 Electron/IPC/store",
+      "impact": "新增 Cookie 账号用名称生成 ID，默认名或中文名碰撞会覆盖旧账号及权限"
+    },
+    {
+      "id": "R43",
+      "READMErowLine": 61,
+      "evidenceLabel": "Credentials C2，第五轮",
+      "impact": "Token 保存遭遇真实存储拒写时没有可见错误，草稿保留但用户不知道失败原因"
+    },
+    {
+      "id": "R44",
+      "READMErowLine": 62,
+      "evidenceLabel": "Automation A1，第五轮；实际 ChatSession FIFO",
+      "impact": "续接自动化超过 120 秒后提前结算，worker 仍执行时保留的非once计划可以再次排入"
+    },
+    {
+      "id": "R45",
+      "READMErowLine": 63,
+      "evidenceLabel": "Automation A2，第五轮",
+      "impact": "worker 明确拒绝续接运行，网关/生命周期仍宣告 completed"
+    },
+    {
+      "id": "R46",
+      "READMErowLine": 64,
+      "evidenceLabel": "Automation A3，第五轮；合并身份关联根因",
+      "impact": "自动化执行历史按名称/时间认领，遗漏真实实时记录并混入同项目其他任务的结果"
+    },
+    {
+      "id": "R47",
+      "READMErowLine": 65,
+      "evidenceLabel": "Automation A4，第五轮",
+      "impact": "任务异步自动停用后，当前自动化页面仍显示活跃和旧下次运行时间"
+    },
+    {
+      "id": "R48",
+      "READMErowLine": 66,
+      "evidenceLabel": "Automation A5，第五轮；底层原因仍持久保留",
+      "impact": "自动停用原因在 Desktop 摘要中丢失，重开详情只能看到普通暂停"
+    },
+    {
+      "id": "R49",
+      "READMErowLine": 67,
+      "evidenceLabel": "Collection，第六轮；0.9.33 新可达路径",
+      "impact": "共享资料集跨文件查询吞掉已知原件变更的恢复指引，用户无法确定需更新哪个文件"
+    },
+    {
+      "id": "R50",
+      "READMErowLine": 68,
+      "evidenceLabel": "Voice W17，第六轮；同一 renderer document 存活期间",
+      "impact": "等待麦克风启动时双击创建两份录音，停止及组件卸载只释放最后一份"
+    },
+    {
+      "id": "R51",
+      "READMErowLine": 69,
+      "evidenceLabel": "Agent Plugins W18，第七轮；同一 Main 生命周期",
+      "impact": "成功安装后卸载，旧 installed 任务仍禁用市场重装，实际目录和注册已不存在"
+    },
+    {
+      "id": "R52",
+      "READMErowLine": 70,
+      "evidenceLabel": "Agent Plugins W19，第七轮；有效新源可重新安装恢复",
+      "impact": "市场相对路径源更新校验失败前删除旧插件，旧注册指向不存在目录"
+    },
+    {
+      "id": "R53",
+      "READMErowLine": 71,
+      "evidenceLabel": "Agent Plugins W20，第七轮；旧安装内容保留",
+      "impact": "从文件夹预览安装把临时快照记成更新源，快照已删，原文件夹仍在也无法更新"
+    },
+    {
+      "id": "R54",
+      "READMErowLine": 72,
+      "evidenceLabel": "Quick Chat Q1，第八轮；系统图片拖入可用",
+      "impact": "Quick Chat 收到文件面板 PNG 的内部拖放数据后静默丢弃，不产生图片或路径引用"
+    }
+  ],
+  "mappingSHA256": "c9d6de4f77d838b5db7a6610abd9ff5773a26f0860f430149fafd9a518469f15"
+}

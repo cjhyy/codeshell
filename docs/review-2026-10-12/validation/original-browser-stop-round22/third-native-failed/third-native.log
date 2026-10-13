@@ -1,0 +1,9 @@
+Electron fixture: Main network/home guard verified; no worker was created
+electronApplication.evaluate: Execution context was destroyed, most likely because of a navigation.
+    at info (/private/tmp/codeshell-review-20261012-browser-stop-round22/browser-stop-native.mjs:71:24)
+    at /private/tmp/codeshell-review-20261012-browser-stop-round22/browser-stop-native.mjs:99:51
+    at until (/private/tmp/codeshell-review-20261012-browser-stop-round22/browser-stop-native.mjs:73:145)
+    at async file:///private/tmp/codeshell-review-20261012-browser-stop-round22/browser-stop-native.mjs:99:5 {
+  name: 'Error'
+}
+Native smoke failed (1)

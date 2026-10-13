@@ -1,0 +1,13 @@
+bun test v1.3.11 (af24e281)
+
+docs/review-2026-10-12/reproductions/desktop-round3/project-initial-snapshot.test.tsx:
+fatal: not a git repository (or any of the parent directories): .git
+fatal: not a git repository (or any of the parent directories): .git
+{"mainProjectIds":["0af2088a-34a1-4a45-a17c-46c225195425","37ec24fd-1232-478f-8320-fe20d13e4583"],"rendererProjectIds":["0af2088a-34a1-4a45-a17c-46c225195425"],"activeProjectId":"37ec24fd-1232-478f-8320-fe20d13e4583"}
+(pass) CONFIRMED finishing startup bucket migration overwrites a project added after the initial snapshot [257.56ms]
+
+ 1 pass
+ 0 fail
+ 6 expect() calls
+Ran 1 test across 1 file. [684.00ms]
+Completed Bun shard: 1 tests, 0 skipped; 0 failures.

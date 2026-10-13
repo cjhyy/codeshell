@@ -1,5 +1,9 @@
 import { describe, expect, test } from "bun:test";
 import makiManifest from "../../../../examples/themes/lovelive-maki/.cs-theme.json";
+import mikuManifest from "../../../../examples/themes/hatsune-miku/.cs-theme.json";
+import museManifest from "../../../../examples/themes/lovelive-muse/.cs-theme.json";
+import onoderaManifest from "../../../../examples/themes/nisekoi-onodera/.cs-theme.json";
+import misakaManifest from "../../../../examples/themes/misaka-mikoto/.cs-theme.json";
 import {
   DEFAULT_PACK_ID,
   THEME_PACKS,
@@ -81,6 +85,44 @@ describe("theme-packs", () => {
       expect([...bytes.slice(0, 8)]).toEqual([137, 80, 78, 71, 13, 10, 26, 10]);
     }
   });
+
+  for (const [id, manifest] of [
+    ["miku", mikuManifest],
+    ["muse", museManifest],
+    ["onodera", onoderaManifest],
+    ["misaka", misakaManifest],
+  ] as const) {
+    test(`bundled ${id} ships the complete downloadable skin, distinct cues and music offline`, async () => {
+      const pack = getThemePack(id);
+      expect(pack.id).toBe(id);
+      expect(pack.id).not.toBe(manifest.id);
+      expect(pack.name).toBe(`settingsX.appearance.pack.${id}`);
+      expect(pack.colors).toEqual(manifest.colors);
+      expect(pack.frame).toEqual(manifest.frame);
+      expect(Object.keys(pack.surfaces ?? {}).sort()).toEqual([...THEME_SURFACE_NAMES].sort());
+      const image = pack.surfaces?.chat?.light;
+      expect(image).toBeTruthy();
+      expect(image).not.toMatch(/^(?:https?:|cstheme:)/i);
+      expect([...(await Bun.file(image!).bytes()).slice(0, 8)]).toEqual([
+        137, 80, 78, 71, 13, 10, 26, 10,
+      ]);
+      const sounds = Object.values(pack.sounds ?? {});
+      expect(sounds).toHaveLength(4);
+      expect(new Set(sounds).size).toBe(4);
+      const localMusic = pack.music?.filter((track) => track.file) ?? [];
+      expect(localMusic).toHaveLength(1);
+      for (const path of [...sounds, localMusic[0]!.file!]) {
+        expect(path).not.toMatch(/^(?:https?:|cstheme:)/i);
+        const bytes = await Bun.file(path).bytes();
+        expect(new TextDecoder().decode(bytes.slice(0, 4))).toBe("RIFF");
+        expect(new TextDecoder().decode(bytes.slice(8, 12))).toBe("WAVE");
+      }
+      expect(pack.music?.filter((track) => track.url)).toEqual(
+        manifest.music.filter((track) => "url" in track),
+      );
+      expect(pack.music?.filter((track) => track.url)).toHaveLength(3);
+    });
+  }
 
   test("petVisualState prefers running, then alert, else idle", () => {
     expect(petVisualState({})).toBe("idle");

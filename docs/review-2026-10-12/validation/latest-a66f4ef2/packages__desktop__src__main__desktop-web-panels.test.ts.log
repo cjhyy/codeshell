@@ -1,0 +1,10 @@
+bun test v1.3.11 (af24e281)
+
+packages/desktop/src/main/desktop-web-panels.test.ts:
+(pass) Desktop Web panels use paired authority and Electron's existing storage [4368.32ms]
+
+ 1 pass
+ 0 fail
+ 1 expect() calls
+Ran 1 test across 1 file. [4.41s]
+Completed Bun shard: 1 tests, 0 skipped; 0 failures.

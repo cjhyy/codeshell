@@ -1,0 +1,19 @@
+bun test v1.3.11 (af24e281)
+
+docs/review-2026-10-12/reproductions/web-round3/mobile-lifecycle-review.test.tsx:
+QUOTA_PAIRING {"pairResult":"pair.ok","credentialChanged":true,"authResult":"auth.failed","finalStatus":"unpaired","unusedDeviceRows":1}
+(pass) confirmed: quota-exhausted localStorage changes the credential between pair.complete and auth.device [52.60ms]
+NEW_SESSION_DRAFT_STOLEN {"initialDraftId":"desktop-new-8d0ca48a-91fe-4bd8-884f-235c8c367d61","intermediateBinding":"unrelated-background","createdBinding":"actually-created","draftRecoveredOnlyIn":"unrelated-background"}
+(pass) confirmed: an unrelated native session stream steals a new conversation draft before create acknowledgement [20.90ms]
+STALLED_UPLOAD {"uploadBytes":307200,"hasAbortSignal":false,"statusAfterReconnect":"online","sendingStillBlockedUntilPutSettles":true,"serverTicketTtlMs":300000}
+(pass) confirmed: disconnect does not abort a ticketed HTTP upload and blocks later sends after reconnect [24.65ms]
+OFFLINE_CREATE_WRONG_PROJECT {"initialSession":"mobile-mv43z7er-2rbz7x8w","requestedProject":"b","uiWorkspaceBeforeSend":"/var/folders/1d/6__4f4y51g90nblfptt8s9v80000gn/T/codeshell-review-20261012-web-round3-offline-create-wcOWL0/project-b","creationFramesAfterReconnect":0,"workerAcceptedProject":"a","workerAcceptedCwd":"/var/folders/1d/6__4f4y51g90nblfptt8s9v80000gn/T/codeshell-review-20261012-web-round3-offline-create-wcOWL0/project-a","existingPersistedSession":false,"realMetadataValidation":true}
+(pass) confirmed: offline project creation is never replayed and the first task is accepted in the prior fresh project [20.76ms]
+STALLED_LOGOUT {"localLogoutBeforeHttpResponse":false,"socketBeforeHttpResponse":"OPEN","localLogoutAfterHttpResponse":true}
+(pass) confirmed: local logout waits for a stalled HTTP logout request while the paired socket stays online [23.22ms]
+
+ 5 pass
+ 0 fail
+ 43 expect() calls
+Ran 5 tests across 1 file. [969.00ms]
+Completed Bun shard: 5 tests, 0 skipped; 0 failures.

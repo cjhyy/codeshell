@@ -1,0 +1,42 @@
+{"case":"network_guard","homeIsolated":true,"nodeNetworkDenied":true,"browserOrigin":"https://panel.test","browserRoute":"all other origins aborted"}
+{"case":"undo_baseline","indexed":false,"initial":"saved","state":"saved","contentExactlyRestored":true,"errors":[]}
+✔ undo restored content indexed=false (390.833042ms)
+{"case":"undo_baseline","indexed":true,"initial":"saved","state":"dirty","contentExactlyRestored":true,"errors":[]}
+✔ undo restored content indexed=true (387.035625ms)
+{"case":"open_edit","delayedPart":false,"retained":true,"path":"designs/polish.codesign.json","errors":[]}
+✔ open while editing delayedPart=false (359.491083ms)
+{"case":"open_edit","delayedPart":true,"retained":false,"path":"designs/other.codesign.json","errors":[]}
+{"case":"text_layout","source":"ABCDEFGHIJKLMNO","rendered":"ABCDEFGHIJKLMNO","height":19.2,"width":50}
+{"case":"text_layout","source":"x ABCDEFGHIJKLMNO","rendered":"x\nABCDE\nFGHIJK\nLMNO","height":76.8,"width":50}
+{"case":"text_layout","source":"one\ntwo","rendered":"one two","height":19.2,"width":100}
+{"case":"text_layout","source":"这是没有空格的中文长段落","rendered":"这是没有空格的中文长段落","height":19.2,"width":50}
+{"case":"frontend_text","fullSourcePresent":false,"displayTextPresent":true,"textOverflowCss":false}
+✔ open while editing delayedPart=true (385.472125ms)
+✔ layout first long token and explicit line breaks (1.4915ms)
+✔ frontend source text export (0.773ms)
+{"case":"failed_transaction","indexed":false,"error":"页面不存在：page-missing","beforePages":2,"afterPages":2,"deletedPageRetained":true,"originalPagePayloadPresent":true,"payloadRetained":true,"dirtyAfterFailure":false,"persistedPageRetainedAfterSave":true,"errors":[]}
+✔ failed page transaction indexed=false (277.687958ms)
+{"case":"failed_transaction","indexed":true,"error":"页面不存在：page-missing","beforePages":12,"afterPages":11,"deletedPageRetained":false,"originalPagePayloadPresent":true,"payloadRetained":false,"dirtyAfterFailure":false,"persistedPageRetainedAfterSave":false,"errors":[]}
+✔ failed page transaction indexed=true (259.183625ms)
+✖ frontend packaged font export (268.785167ms)
+{"case":"ui_chinese_wrap","frameWidth":50,"textWidth":50,"rendered":"这是没有空格的中文长段落","height":19.2,"lines":1,"errors":[]}
+✔ actual inspector narrows wrapped Chinese paragraph (328.067791ms)
+ℹ tests 10
+ℹ suites 0
+ℹ pass 9
+ℹ fail 1
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 2661.560875
+
+✖ failing tests:
+
+test at ../../../../../../private/tmp/codeshell-panel-design-fixture.mjs:189:1
+✖ frontend packaged font export (268.785167ms)
+  Error: SVG 为 1008.0 KiB，超过 384 KiB 导出上限；请减少长文本或图层数量
+      at exportDesignSvg (file:///Users/admin/.codex/worktrees/panel-remaining-review-20261012/codeshell-panel-apps/apps/design-studio/app/document.mjs:1577:11)
+      at TestContext.<anonymous> (file:///private/tmp/codeshell-panel-design-fixture.mjs:191:175)
+      at async Test.run (node:internal/test_runner/test:1208:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:831:7)
+Native smoke failed (1)

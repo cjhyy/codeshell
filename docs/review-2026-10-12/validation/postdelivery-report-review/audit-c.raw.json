@@ -1,0 +1,1545 @@
+{
+  "auditor": "report_meta_audit_c",
+  "workspace": "/Users/admin/.codex/worktrees/server-desktop-review-20261012/codeshell",
+  "scope": "报告元审查；顶层markdown排除README/progress/flow-coverage/repair-handoff按文件名排序index%3==2；另只读真实模块inventory与报告coverage映射",
+  "summary": {
+    "total_assigned_documents": 45,
+    "all_read_completely": true,
+    "classification_counts": {
+      "质量复核": 13,
+      "正常反证": 5,
+      "正式专项": 16,
+      "准备或预审": 6,
+      "历史交付": 5
+    },
+    "substantive_conflicts_requiring_withdrawal_or_regrading": 0,
+    "new_product_findings": 0,
+    "new_test_build_model_native_executions": 0,
+    "product_or_report_edits": 0,
+    "formal_priority_policy": "86=1P1/52P2/33P3，以README最终表为准。R35/P1优先；本文未改变其余分级。",
+    "baseline_test_paths_read_from_manifest": {
+      "packages/server": 100,
+      "packages/web": 41,
+      "packages/desktop": 565
+    },
+    "important_scope_result": "Core/Coding/Pet有实质局部专项；TUI/Chat/Link纯包/CDP/optimization-lab/Arena及发布链无系统专项，不能用无bug推无覆盖或用build推全功能通过。",
+    "frozen_baselines": [
+      "84740d56e55517b004948a0a0e07649ad6fbf998",
+      "a66f4ef291f304ee4df9da8095a90671d9a8f140"
+    ],
+    "current_main_excluded": "父审提供62a58ac8仅当前main变化，未作为此覆盖依据。",
+    "next_review_priority_if_separately_authorized": [
+      "Core权限/hooks/provider/cost资源与计费边界；pack/install/export/bin与发行合同",
+      "TUI正式Ink REPL流程、Coding LSP/工具/真实外部runtime、Chat各adapter授权交付",
+      "Pet行为/委托/长期任务、Link manifest完整性、CDP兼容层",
+      "默认关闭私有optimization-lab和非宿主/非发布Arena"
+    ]
+  },
+  "documents": [
+    {
+      "index": 2,
+      "filename": "automation-quality-round18.md",
+      "sha256": "867da87c7383b3aa7e5dd2deeb7e1773c9af7740412d2d9e2396deafecdc88d4",
+      "lines": 76,
+      "bytes": 14218,
+      "path": "/Users/admin/.codex/worktrees/server-desktop-review-20261012/codeshell/docs/review-2026-10-12/automation-quality-round18.md",
+      "read_complete": true,
+      "read_method": "正文逐行分批完整阅读；输出被截断的browser_lifecycle/core_gates、desktop_round2/download、model_native/modern_quality部分已单独补读",
+      "classification": "质量复核",
+      "formal_ids_discussed": [
+        "R44",
+        "R45",
+        "R46"
+      ],
+      "modules": [
+        "core",
+        "chat"
+      ],
+      "coverage_and_scope": "0新增执行；纠正非once/错误帧/强身份措辞。Chat通知链只有静态接线，未外发。",
+      "priority_authority": "README.md最终分级；文档历史候选/建议/当轮计数不覆盖最终索引"
+    },
+    {
+      "index": 5,
+      "filename": "blank-files-counterreview-round28.md",
+      "sha256": "d0e8bf53cc32e1e780e693bf1b0133f365075f2a0f41953f71342e68ebc3ed63",
+      "lines": 13,
+      "bytes": 3067,
+      "path": "/Users/admin/.codex/worktrees/server-desktop-review-20261012/codeshell/docs/review-2026-10-12/blank-files-counterreview-round28.md",
+      "read_complete": true,
+      "read_method": "正文逐行分批完整阅读；输出被截断的browser_lifecycle/core_gates、desktop_round2/download、model_native/modern_quality部分已单独补读",
+      "classification": "正常反证",
+      "formal_ids_discussed": [],
+      "modules": [
+        "desktop"
+      ],
+      "coverage_and_scope": "静态完整消费者接线；未知UI session有project API正常回退；没有完整App动态。",
+      "priority_authority": "README.md最终分级；文档历史候选/建议/当轮计数不覆盖最终索引"
+    },
+    {
+      "index": 8,
+      "filename": "browser-lifecycle-round21.md",
+      "sha256": "615f03174c517de0b02b517f363641484cd9e706ca2979782467218622fdf102",
+      "lines": 86,
+      "bytes": 14332,
+      "path": "/Users/admin/.codex/worktrees/server-desktop-review-20261012/codeshell/docs/review-2026-10-12/browser-lifecycle-round21.md",
+      "read_complete": true,
+      "read_method": "正文逐行分批完整阅读；输出被截断的browser_lifecycle/core_gates、desktop_round2/download、model_native/modern_quality部分已单独补读",
+      "classification": "正式专项",
+      "formal_ids_discussed": [
+        "R80"
+      ],
+      "modules": [
+        "desktop"
+      ],
+      "coverage_and_scope": "1文件3测试40expect双冻结；actual Panel/preload/Main callbacks/Backend，Native/owner为替身。",
+      "priority_authority": "README.md最终分级；文档历史候选/建议/当轮计数不覆盖最终索引"
+    },
+    {
+      "index": 11,
+      "filename": "browser-stop-core-gates-round22.md",
+      "sha256": "c158ac1046c85861c1c30c1860b25a205b72270d727efeb96a235d89b2fe02a5",
+      "lines": 73,
+      "bytes": 11787,
+      "path": "/Users/admin/.codex/worktrees/server-desktop-review-20261012/codeshell/docs/review-2026-10-12/browser-stop-core-gates-round22.md",
+      "read_complete": true,
+      "read_method": "正文逐行分批完整阅读；输出被截断的browser_lifecycle/core_gates、desktop_round2/download、model_native/modern_quality部分已单独补读",
+      "classification": "准备或预审",
+      "formal_ids_discussed": [],
+      "modules": [
+        "core",
+        "pet"
+      ],
+      "coverage_and_scope": "历史launch前0执行；Core取消/迟到门禁静态盘点；后由R81专项接替。Pet observer仅静态提及。",
+      "priority_authority": "README.md最终分级；文档历史候选/建议/当轮计数不覆盖最终索引"
+    },
+    {
+      "index": 14,
+      "filename": "browser-stop-preflight-round22.md",
+      "sha256": "77f8f1b9949191df9704578875b4f2f310b6662e1ef78f4f972b7a7f2f76703d",
+      "lines": 99,
+      "bytes": 19058,
+      "path": "/Users/admin/.codex/worktrees/server-desktop-review-20261012/codeshell/docs/review-2026-10-12/browser-stop-preflight-round22.md",
+      "read_complete": true,
+      "read_method": "正文逐行分批完整阅读；输出被截断的browser_lifecycle/core_gates、desktop_round2/download、model_native/modern_quality部分已单独补读",
+      "classification": "准备或预审",
+      "formal_ids_discussed": [],
+      "modules": [
+        "core",
+        "cdp",
+        "link",
+        "desktop"
+      ],
+      "coverage_and_scope": "历史native方案与失败支架修订只读预审；CDP/link alias不构成包专项覆盖。",
+      "priority_authority": "README.md最终分级；文档历史候选/建议/当轮计数不覆盖最终索引"
+    },
+    {
+      "index": 17,
+      "filename": "cli-quality-round9.md",
+      "sha256": "1eafab70578f13bc42d4eb2fdd5f9e2ea9ae51d5a2207afc10a4cda4984e5af3",
+      "lines": 78,
+      "bytes": 13182,
+      "path": "/Users/admin/.codex/worktrees/server-desktop-review-20261012/codeshell/docs/review-2026-10-12/cli-quality-round9.md",
+      "read_complete": true,
+      "read_method": "正文逐行分批完整阅读；输出被截断的browser_lifecycle/core_gates、desktop_round2/download、model_native/modern_quality部分已单独补读",
+      "classification": "质量复核",
+      "formal_ids_discussed": [
+        "R02",
+        "R08",
+        "R15",
+        "R16",
+        "R18"
+      ],
+      "modules": [
+        "server",
+        "web",
+        "desktop"
+      ],
+      "coverage_and_scope": "CLI room控制复核及正常恢复动态；不是Ink TUI审查；信任降级/房间模式重开保护明确。",
+      "priority_authority": "README.md最终分级；文档历史候选/建议/当轮计数不覆盖最终索引"
+    },
+    {
+      "index": 20,
+      "filename": "cloud-account-quality-round26.md",
+      "sha256": "6fc20ba1da77fd47709d83553aebb791369b996a7ff821bd06a7c154f6b35d01",
+      "lines": 16,
+      "bytes": 1780,
+      "path": "/Users/admin/.codex/worktrees/server-desktop-review-20261012/codeshell/docs/review-2026-10-12/cloud-account-quality-round26.md",
+      "read_complete": true,
+      "read_method": "正文逐行分批完整阅读；输出被截断的browser_lifecycle/core_gates、desktop_round2/download、model_native/modern_quality部分已单独补读",
+      "classification": "质量复核",
+      "formal_ids_discussed": [],
+      "modules": [
+        "desktop"
+      ],
+      "coverage_and_scope": "0执行静态反证；HTTP15秒为逐请求deadline，非logout总上限；没有真实OAuth。",
+      "priority_authority": "README.md最终分级；文档历史候选/建议/当轮计数不覆盖最终索引"
+    },
+    {
+      "index": 23,
+      "filename": "command-recovery-round16.md",
+      "sha256": "83a0718ad204293590009edf3cce17ea6cd8cdadd2573663054ffe253786fed1",
+      "lines": 65,
+      "bytes": 9073,
+      "path": "/Users/admin/.codex/worktrees/server-desktop-review-20261012/codeshell/docs/review-2026-10-12/command-recovery-round16.md",
+      "read_complete": true,
+      "read_method": "正文逐行分批完整阅读；输出被截断的browser_lifecycle/core_gates、desktop_round2/download、model_native/modern_quality部分已单独补读",
+      "classification": "正常反证",
+      "formal_ids_discussed": [],
+      "modules": [
+        "server",
+        "web"
+      ],
+      "coverage_and_scope": "actual HubAuth/MCP HTTP，1wrapper内22 native断言；人为owner-delay候选明确剔除。",
+      "priority_authority": "README.md最终分级；文档历史候选/建议/当轮计数不覆盖最终索引"
+    },
+    {
+      "index": 26,
+      "filename": "context-cancel-quality-round18.md",
+      "sha256": "bfc971305bf88848f6e611dadb567e3973760ed8d42c70740e65f9fd1060344e",
+      "lines": 31,
+      "bytes": 4903,
+      "path": "/Users/admin/.codex/worktrees/server-desktop-review-20261012/codeshell/docs/review-2026-10-12/context-cancel-quality-round18.md",
+      "read_complete": true,
+      "read_method": "正文逐行分批完整阅读；输出被截断的browser_lifecycle/core_gates、desktop_round2/download、model_native/modern_quality部分已单独补读",
+      "classification": "质量复核",
+      "formal_ids_discussed": [
+        "R74"
+      ],
+      "modules": [
+        "core",
+        "desktop"
+      ],
+      "coverage_and_scope": "0新增执行；Core取消正常，Desktop summary用户入口缺取消；timer手动触发，非自然30秒。",
+      "priority_authority": "README.md最终分级；文档历史候选/建议/当轮计数不覆盖最终索引"
+    },
+    {
+      "index": 29,
+      "filename": "context-recovery-round17.md",
+      "sha256": "74ba376b3eca7aa1ac537e05bf114926152b7008ec7fa74b2ce8ee79aa796b0a",
+      "lines": 36,
+      "bytes": 7058,
+      "path": "/Users/admin/.codex/worktrees/server-desktop-review-20261012/codeshell/docs/review-2026-10-12/context-recovery-round17.md",
+      "read_complete": true,
+      "read_method": "正文逐行分批完整阅读；输出被截断的browser_lifecycle/core_gates、desktop_round2/download、model_native/modern_quality部分已单独补读",
+      "classification": "正常反证",
+      "formal_ids_discussed": [],
+      "modules": [
+        "core",
+        "desktop"
+      ],
+      "coverage_and_scope": "actual Engine/Session/ChatSession exclusive + owned LLMClientBase，双基线4测试40expect；完整App/Main/IPC未运行。",
+      "priority_authority": "README.md最终分级；文档历史候选/建议/当轮计数不覆盖最终索引"
+    },
+    {
+      "index": 32,
+      "filename": "desktop-preflight-round23.md",
+      "sha256": "78a1c06816062ccadcdcc18b632360ea3905ca97840812694af7ca774968caf3",
+      "lines": 76,
+      "bytes": 13661,
+      "path": "/Users/admin/.codex/worktrees/server-desktop-review-20261012/codeshell/docs/review-2026-10-12/desktop-preflight-round23.md",
+      "read_complete": true,
+      "read_method": "正文逐行分批完整阅读；输出被截断的browser_lifecycle/core_gates、desktop_round2/download、model_native/modern_quality部分已单独补读",
+      "classification": "准备或预审",
+      "formal_ids_discussed": [
+        "R82"
+      ],
+      "modules": [
+        "desktop"
+      ],
+      "coverage_and_scope": "历史菜单候选与作者3/39，后由menu-routing正式收录；原生菜单/完整App始终未执行。",
+      "priority_authority": "README.md最终分级；文档历史候选/建议/当轮计数不覆盖最终索引"
+    },
+    {
+      "index": 35,
+      "filename": "desktop-round2.md",
+      "sha256": "6cd1aa8e8a492e67d26e9f6ff5384b132dbfa90a533b0cddb86adb5465365001",
+      "lines": 37,
+      "bytes": 7340,
+      "path": "/Users/admin/.codex/worktrees/server-desktop-review-20261012/codeshell/docs/review-2026-10-12/desktop-round2.md",
+      "read_complete": true,
+      "read_method": "正文逐行分批完整阅读；输出被截断的browser_lifecycle/core_gates、desktop_round2/download、model_native/modern_quality部分已单独补读",
+      "classification": "正式专项",
+      "formal_ids_discussed": [
+        "R22",
+        "R23",
+        "R24"
+      ],
+      "modules": [
+        "core",
+        "coding",
+        "desktop"
+      ],
+      "coverage_and_scope": "实际ProjectStore/SessionManager/工作树局部；R24冷owner限定与后来服务级恢复附录。",
+      "priority_authority": "README.md最终分级；文档历史候选/建议/当轮计数不覆盖最终索引"
+    },
+    {
+      "index": 38,
+      "filename": "download-round11.md",
+      "sha256": "97196d787ffaf8129e30a674e9ac6514c33e9d9b499b8a2dea13eff6ecf574b2",
+      "lines": 66,
+      "bytes": 10233,
+      "path": "/Users/admin/.codex/worktrees/server-desktop-review-20261012/codeshell/docs/review-2026-10-12/download-round11.md",
+      "read_complete": true,
+      "read_method": "正文逐行分批完整阅读；输出被截断的browser_lifecycle/core_gates、desktop_round2/download、model_native/modern_quality部分已单独补读",
+      "classification": "正式专项",
+      "formal_ids_discussed": [
+        "R57"
+      ],
+      "modules": [
+        "core",
+        "desktop"
+      ],
+      "coverage_and_scope": "latest-only standalone原生Core/RPC后台shell恢复；完整Desktop删除/退出为静态，不能外推TUI。",
+      "priority_authority": "README.md最终分级；文档历史候选/建议/当轮计数不覆盖最终索引"
+    },
+    {
+      "index": 41,
+      "filename": "file-mutex-round19.md",
+      "sha256": "40a33225154448ecf505dade3a27b7c6abefaac3e936a999704cf19b8a072886",
+      "lines": 96,
+      "bytes": 13952,
+      "path": "/Users/admin/.codex/worktrees/server-desktop-review-20261012/codeshell/docs/review-2026-10-12/file-mutex-round19.md",
+      "read_complete": true,
+      "read_method": "正文逐行分批完整阅读；输出被截断的browser_lifecycle/core_gates、desktop_round2/download、model_native/modern_quality部分已单独补读",
+      "classification": "正式专项",
+      "formal_ids_discussed": [
+        "R77"
+      ],
+      "modules": [
+        "core",
+        "server"
+      ],
+      "coverage_and_scope": "两冻结各standalone38 Nodeassert；真实EACCES认证锁阻塞，Node25/macOS；不是title handler已执行。",
+      "priority_authority": "README.md最终分级；文档历史候选/建议/当轮计数不覆盖最终索引"
+    },
+    {
+      "index": 44,
+      "filename": "file-root-fixture-preflight-round27.md",
+      "sha256": "3f3f6e6fbf03715637d5ac314e9fe81172058fce38952a699ba494eb3ae6b3f0",
+      "lines": 7,
+      "bytes": 1248,
+      "path": "/Users/admin/.codex/worktrees/server-desktop-review-20261012/codeshell/docs/review-2026-10-12/file-root-fixture-preflight-round27.md",
+      "read_complete": true,
+      "read_method": "正文逐行分批完整阅读；输出被截断的browser_lifecycle/core_gates、desktop_round2/download、model_native/modern_quality部分已单独补读",
+      "classification": "准备或预审",
+      "formal_ids_discussed": [],
+      "modules": [
+        "core",
+        "desktop"
+      ],
+      "coverage_and_scope": "0执行；准备源与Gitprobe适配差异已归档；后续实际scope见R86专项。",
+      "priority_authority": "README.md最终分级；文档历史候选/建议/当轮计数不覆盖最终索引"
+    },
+    {
+      "index": 47,
+      "filename": "files-round4.md",
+      "sha256": "4788d986505c6227cc46a534479781143221d285cca5b5cb1d26354c77e4677b",
+      "lines": 44,
+      "bytes": 4844,
+      "path": "/Users/admin/.codex/worktrees/server-desktop-review-20261012/codeshell/docs/review-2026-10-12/files-round4.md",
+      "read_complete": true,
+      "read_method": "正文逐行分批完整阅读；输出被截断的browser_lifecycle/core_gates、desktop_round2/download、model_native/modern_quality部分已单独补读",
+      "classification": "正式专项",
+      "formal_ids_discussed": [
+        "R39"
+      ],
+      "modules": [
+        "server",
+        "web"
+      ],
+      "coverage_and_scope": "真实Hub files/history services+MiniDOM，正常契约有动态覆盖，不能以无新增bug判无覆盖。",
+      "priority_authority": "README.md最终分级；文档历史候选/建议/当轮计数不覆盖最终索引"
+    },
+    {
+      "index": 50,
+      "filename": "goal-bound-quality-round20.md",
+      "sha256": "d7cbc718181911e1a24793e23b89d3c92b1c74b2e88f04d2279779d80c820dc1",
+      "lines": 58,
+      "bytes": 13244,
+      "path": "/Users/admin/.codex/worktrees/server-desktop-review-20261012/codeshell/docs/review-2026-10-12/goal-bound-quality-round20.md",
+      "read_complete": true,
+      "read_method": "正文逐行分批完整阅读；输出被截断的browser_lifecycle/core_gates、desktop_round2/download、model_native/modern_quality部分已单独补读",
+      "classification": "质量复核",
+      "formal_ids_discussed": [
+        "R79"
+      ],
+      "modules": [
+        "core",
+        "desktop"
+      ],
+      "coverage_and_scope": "0执行；actual Core/Engine失败与恢复，bound cold；UI/Main/stdio整链静态，非provider错误。",
+      "priority_authority": "README.md最终分级；文档历史候选/建议/当轮计数不覆盖最终索引"
+    },
+    {
+      "index": 53,
+      "filename": "high-risk-quality-round17.md",
+      "sha256": "3254a130e251de5cadc4cca01f54d00846a7b439ab21dc175cb37f3d4c7ef177",
+      "lines": 50,
+      "bytes": 13669,
+      "path": "/Users/admin/.codex/worktrees/server-desktop-review-20261012/codeshell/docs/review-2026-10-12/high-risk-quality-round17.md",
+      "read_complete": true,
+      "read_method": "正文逐行分批完整阅读；输出被截断的browser_lifecycle/core_gates、desktop_round2/download、model_native/modern_quality部分已单独补读",
+      "classification": "质量复核",
+      "formal_ids_discussed": [
+        "R35",
+        "R36"
+      ],
+      "modules": [
+        "coding",
+        "server",
+        "core",
+        "desktop"
+      ],
+      "coverage_and_scope": "0执行；保留P1/P2；R35真实Git归属回滚局部，R36NodeCore pipe退出，Electron未证。",
+      "priority_authority": "README.md最终分级；文档历史候选/建议/当轮计数不覆盖最终索引"
+    },
+    {
+      "index": 56,
+      "filename": "hub-session-operations-round18.md",
+      "sha256": "565000b79719c562c38b981dd0e1466bc4cc50f223aafe89d4ab0559facbe1a9",
+      "lines": 93,
+      "bytes": 15021,
+      "path": "/Users/admin/.codex/worktrees/server-desktop-review-20261012/codeshell/docs/review-2026-10-12/hub-session-operations-round18.md",
+      "read_complete": true,
+      "read_method": "正文逐行分批完整阅读；输出被截断的browser_lifecycle/core_gates、desktop_round2/download、model_native/modern_quality部分已单独补读",
+      "classification": "正式专项",
+      "formal_ids_discussed": [
+        "R76"
+      ],
+      "modules": [
+        "core",
+        "server",
+        "web"
+      ],
+      "coverage_and_scope": "actual HubAuth/HTTP/WS/Core manager，Engine/worker替身；标题正常控制另用Cookie predicate。",
+      "priority_authority": "README.md最终分级；文档历史候选/建议/当轮计数不覆盖最终索引"
+    },
+    {
+      "index": 59,
+      "filename": "legacy-history-round24.md",
+      "sha256": "f6d718b8ffbc74b33c86c69f4091171bd4d8659ff709af57fb200a65ad0384b0",
+      "lines": 42,
+      "bytes": 8850,
+      "path": "/Users/admin/.codex/worktrees/server-desktop-review-20261012/codeshell/docs/review-2026-10-12/legacy-history-round24.md",
+      "read_complete": true,
+      "read_method": "正文逐行分批完整阅读；输出被截断的browser_lifecycle/core_gates、desktop_round2/download、model_native/modern_quality部分已单独补读",
+      "classification": "正式专项",
+      "formal_ids_discussed": [
+        "R84"
+      ],
+      "modules": [
+        "core",
+        "server",
+        "web",
+        "desktop"
+      ],
+      "coverage_and_scope": "旧never-published journal正常fallback；真实producer/reader/hook/SSR，现代仅hook control；原图保留。",
+      "priority_authority": "README.md最终分级；文档历史候选/建议/当轮计数不覆盖最终索引"
+    },
+    {
+      "index": 62,
+      "filename": "menu-quality-preflight-round23.md",
+      "sha256": "9090e8a6414a6aad7df06ee2decff1d97247ab66c9752d89a1f32fdc0ce51826",
+      "lines": 55,
+      "bytes": 10640,
+      "path": "/Users/admin/.codex/worktrees/server-desktop-review-20261012/codeshell/docs/review-2026-10-12/menu-quality-preflight-round23.md",
+      "read_complete": true,
+      "read_method": "正文逐行分批完整阅读；输出被截断的browser_lifecycle/core_gates、desktop_round2/download、model_native/modern_quality部分已单独补读",
+      "classification": "准备或预审",
+      "formal_ids_discussed": [
+        "R82"
+      ],
+      "modules": [
+        "desktop"
+      ],
+      "coverage_and_scope": "历史0执行静态预审与Electron类型契约；不构成原生OS菜单结果。",
+      "priority_authority": "README.md最终分级；文档历史候选/建议/当轮计数不覆盖最终索引"
+    },
+    {
+      "index": 65,
+      "filename": "menu-recents-round23.md",
+      "sha256": "c55475ba78ec9804689d44e97f5930707517c7a03661fc7e445e14667f195b6b",
+      "lines": 104,
+      "bytes": 16855,
+      "path": "/Users/admin/.codex/worktrees/server-desktop-review-20261012/codeshell/docs/review-2026-10-12/menu-recents-round23.md",
+      "read_complete": true,
+      "read_method": "正文逐行分批完整阅读；输出被截断的browser_lifecycle/core_gates、desktop_round2/download、model_native/modern_quality部分已单独补读",
+      "classification": "正式专项",
+      "formal_ids_discussed": [
+        "R83"
+      ],
+      "modules": [
+        "core",
+        "desktop",
+        "coding"
+      ],
+      "coverage_and_scope": "真实ProjectStore/IPC/recents/menu；coding resolveProjectRoot明示替身，非Coding Git动态验收。",
+      "priority_authority": "README.md最终分级；文档历史候选/建议/当轮计数不覆盖最终索引"
+    },
+    {
+      "index": 68,
+      "filename": "model-native-round20.md",
+      "sha256": "eaf2f941ec5ae7b3299dce55afd082779d21566571a53032edcc9c3642f71815",
+      "lines": 89,
+      "bytes": 11594,
+      "path": "/Users/admin/.codex/worktrees/server-desktop-review-20261012/codeshell/docs/review-2026-10-12/model-native-round20.md",
+      "read_complete": true,
+      "read_method": "正文逐行分批完整阅读；输出被截断的browser_lifecycle/core_gates、desktop_round2/download、model_native/modern_quality部分已单独补读",
+      "classification": "正式专项",
+      "formal_ids_discussed": [
+        "R75"
+      ],
+      "modules": [
+        "desktop"
+      ],
+      "coverage_and_scope": "R75补证，latest纯HTML Electron storage probe31assert；产品ModelPill/hook依据既有组件fixture。",
+      "priority_authority": "README.md最终分级；文档历史候选/建议/当轮计数不覆盖最终索引"
+    },
+    {
+      "index": 71,
+      "filename": "modern-desktop-image-quality-round25.md",
+      "sha256": "bcbf00394da57cb3ecd4d43e3d994141264c50ed4863b50b63c34c621adccb2b",
+      "lines": 74,
+      "bytes": 22168,
+      "path": "/Users/admin/.codex/worktrees/server-desktop-review-20261012/codeshell/docs/review-2026-10-12/modern-desktop-image-quality-round25.md",
+      "read_complete": true,
+      "read_method": "正文逐行分批完整阅读；输出被截断的browser_lifecycle/core_gates、desktop_round2/download、model_native/modern_quality部分已单独补读",
+      "classification": "准备或预审",
+      "formal_ids_discussed": [],
+      "modules": [
+        "core",
+        "web",
+        "desktop",
+        "pet"
+      ],
+      "coverage_and_scope": "历史静态预审/首败/支架修正，0独立执行；当前结果转最终R85专项；Pet renderer为静态反证。",
+      "priority_authority": "README.md最终分级；文档历史候选/建议/当轮计数不覆盖最终索引"
+    },
+    {
+      "index": 74,
+      "filename": "notification-quality-round14.md",
+      "sha256": "6fccdc4940862197c5719272a4b6ff358997624d1124db6822747a6022706b82",
+      "lines": 51,
+      "bytes": 9069,
+      "path": "/Users/admin/.codex/worktrees/server-desktop-review-20261012/codeshell/docs/review-2026-10-12/notification-quality-round14.md",
+      "read_complete": true,
+      "read_method": "正文逐行分批完整阅读；输出被截断的browser_lifecycle/core_gates、desktop_round2/download、model_native/modern_quality部分已单独补读",
+      "classification": "质量复核",
+      "formal_ids_discussed": [
+        "R63"
+      ],
+      "modules": [
+        "core",
+        "desktop",
+        "pet"
+      ],
+      "coverage_and_scope": "0执行；notifier/route动态+注入时钟，来源Agent/Pet只有静态生产可达性；无OS送达。",
+      "priority_authority": "README.md最终分级；文档历史候选/建议/当轮计数不覆盖最终索引"
+    },
+    {
+      "index": 77,
+      "filename": "plugin-quality-round9.md",
+      "sha256": "d95a7591feb90602afbd339fc10c896e4fb7e119c545c625cf64e7e804e4598b",
+      "lines": 63,
+      "bytes": 10249,
+      "path": "/Users/admin/.codex/worktrees/server-desktop-review-20261012/codeshell/docs/review-2026-10-12/plugin-quality-round9.md",
+      "read_complete": true,
+      "read_method": "正文逐行分批完整阅读；输出被截断的browser_lifecycle/core_gates、desktop_round2/download、model_native/modern_quality部分已单独补读",
+      "classification": "质量复核",
+      "formal_ids_discussed": [
+        "R51",
+        "R52",
+        "R53"
+      ],
+      "modules": [
+        "core",
+        "desktop",
+        "tui"
+      ],
+      "coverage_and_scope": "真实Main/Core installer增加reviewed-overwrite正常恢复；CLI updater同源为静态引用，未跑TUI。",
+      "priority_authority": "README.md最终分级；文档历史候选/建议/当轮计数不覆盖最终索引"
+    },
+    {
+      "index": 80,
+      "filename": "project-recovery-quality-round16.md",
+      "sha256": "b3673530d4ff3dfa7a09f2dada7af7dad3f2bf256b9f8c64ae0e93b44a1020f8",
+      "lines": 53,
+      "bytes": 9176,
+      "path": "/Users/admin/.codex/worktrees/server-desktop-review-20261012/codeshell/docs/review-2026-10-12/project-recovery-quality-round16.md",
+      "read_complete": true,
+      "read_method": "正文逐行分批完整阅读；输出被截断的browser_lifecycle/core_gates、desktop_round2/download、model_native/modern_quality部分已单独补读",
+      "classification": "质量复核",
+      "formal_ids_discussed": [
+        "R69"
+      ],
+      "modules": [
+        "core",
+        "coding",
+        "desktop"
+      ],
+      "coverage_and_scope": "0执行；cold durable修复缺源root死循环；resident owner和整套多步UI恢复未动态。",
+      "priority_authority": "README.md最终分级；文档历史候选/建议/当轮计数不覆盖最终索引"
+    },
+    {
+      "index": 83,
+      "filename": "quality-round13.md",
+      "sha256": "ff3b9fff437939220add9cbeb2de54fa4408423c8e59908f676249ebcdaf87ab",
+      "lines": 19,
+      "bytes": 4049,
+      "path": "/Users/admin/.codex/worktrees/server-desktop-review-20261012/codeshell/docs/review-2026-10-12/quality-round13.md",
+      "read_complete": true,
+      "read_method": "正文逐行分批完整阅读；输出被截断的browser_lifecycle/core_gates、desktop_round2/download、model_native/modern_quality部分已单独补读",
+      "classification": "历史交付",
+      "formal_ids_discussed": [
+        "R58",
+        "R59",
+        "R60",
+        "R61",
+        "R62"
+      ],
+      "modules": [
+        "core",
+        "server",
+        "web",
+        "desktop"
+      ],
+      "coverage_and_scope": "该轮集成审计；历史62项/58文件186测试口径，不能覆盖最终86项。",
+      "priority_authority": "README.md最终分级；文档历史候选/建议/当轮计数不覆盖最终索引"
+    },
+    {
+      "index": 86,
+      "filename": "quality-round16.md",
+      "sha256": "ab92b289f8efed6264cf2e645d5b140e05c67f12775fd128d8445afaaf9f62f4",
+      "lines": 59,
+      "bytes": 7675,
+      "path": "/Users/admin/.codex/worktrees/server-desktop-review-20261012/codeshell/docs/review-2026-10-12/quality-round16.md",
+      "read_complete": true,
+      "read_method": "正文逐行分批完整阅读；输出被截断的browser_lifecycle/core_gates、desktop_round2/download、model_native/modern_quality部分已单独补读",
+      "classification": "历史交付",
+      "formal_ids_discussed": [
+        "R69",
+        "R70"
+      ],
+      "modules": [
+        "core",
+        "server",
+        "web",
+        "desktop"
+      ],
+      "coverage_and_scope": "0新增执行集成核验；历史70项/72文件221测试；Node22用语有歧义，见建议。",
+      "priority_authority": "README.md最终分级；文档历史候选/建议/当轮计数不覆盖最终索引"
+    },
+    {
+      "index": 89,
+      "filename": "quality-round19.md",
+      "sha256": "178d8ec7637db0dc54003ba96a1f4e4ab85bec92b747a78f4ee8f3f556c99661",
+      "lines": 46,
+      "bytes": 8015,
+      "path": "/Users/admin/.codex/worktrees/server-desktop-review-20261012/codeshell/docs/review-2026-10-12/quality-round19.md",
+      "read_complete": true,
+      "read_method": "正文逐行分批完整阅读；输出被截断的browser_lifecycle/core_gates、desktop_round2/download、model_native/modern_quality部分已单独补读",
+      "classification": "历史交付",
+      "formal_ids_discussed": [
+        "R77"
+      ],
+      "modules": [
+        "core",
+        "server"
+      ],
+      "coverage_and_scope": "0执行集成审计；历史77项/79文件236测试；首因认证锁、standalone统计明确。",
+      "priority_authority": "README.md最终分级；文档历史候选/建议/当轮计数不覆盖最终索引"
+    },
+    {
+      "index": 92,
+      "filename": "quality-round22.md",
+      "sha256": "05c849c718ff57c4b838b536cf3b9ee52219ac49b1ff7ae7d28db506424a42a6",
+      "lines": 65,
+      "bytes": 9512,
+      "path": "/Users/admin/.codex/worktrees/server-desktop-review-20261012/codeshell/docs/review-2026-10-12/quality-round22.md",
+      "read_complete": true,
+      "read_method": "正文逐行分批完整阅读；输出被截断的browser_lifecycle/core_gates、desktop_round2/download、model_native/modern_quality部分已单独补读",
+      "classification": "历史交付",
+      "formal_ids_discussed": [
+        "R81"
+      ],
+      "modules": [
+        "core",
+        "desktop"
+      ],
+      "coverage_and_scope": "0执行集成审计；final native66各分账，历史banner已处理，不将预审0finding当撤回R81。",
+      "priority_authority": "README.md最终分级；文档历史候选/建议/当轮计数不覆盖最终索引"
+    },
+    {
+      "index": 95,
+      "filename": "quality-round25.md",
+      "sha256": "62c91f923fdabd5c2df7452db13fca944c02c52d0bfa53e9a0b190693bc42b98",
+      "lines": 52,
+      "bytes": 10761,
+      "path": "/Users/admin/.codex/worktrees/server-desktop-review-20261012/codeshell/docs/review-2026-10-12/quality-round25.md",
+      "read_complete": true,
+      "read_method": "正文逐行分批完整阅读；输出被截断的browser_lifecycle/core_gates、desktop_round2/download、model_native/modern_quality部分已单独补读",
+      "classification": "质量复核",
+      "formal_ids_discussed": [
+        "R85"
+      ],
+      "modules": [
+        "core",
+        "web",
+        "desktop",
+        "pet"
+      ],
+      "coverage_and_scope": "0独立执行最终证据及集成核验；2/32各基线，原图与canonical metadata完整；Pet仅消费者对照静态。",
+      "priority_authority": "README.md最终分级；文档历史候选/建议/当轮计数不覆盖最终索引"
+    },
+    {
+      "index": 98,
+      "filename": "quality-round29.md",
+      "sha256": "752e47a24b17798a902b89e596cbee44ce3811dc10af43a9a33f442fbf0845c2",
+      "lines": 20,
+      "bytes": 2838,
+      "path": "/Users/admin/.codex/worktrees/server-desktop-review-20261012/codeshell/docs/review-2026-10-12/quality-round29.md",
+      "read_complete": true,
+      "read_method": "正文逐行分批完整阅读；输出被截断的browser_lifecycle/core_gates、desktop_round2/download、model_native/modern_quality部分已单独补读",
+      "classification": "历史交付",
+      "formal_ids_discussed": [],
+      "modules": [
+        "documentation"
+      ],
+      "coverage_and_scope": "86编号证据映射/heading/链接只读核对，不是新增执行或全rawlogs复核。",
+      "priority_authority": "README.md最终分级；文档历史候选/建议/当轮计数不覆盖最终索引"
+    },
+    {
+      "index": 101,
+      "filename": "quickchat-round8.md",
+      "sha256": "82529356a7906739a2065f64f679d2290fadcdf36bc2d1998d65e812860285fe",
+      "lines": 54,
+      "bytes": 9648,
+      "path": "/Users/admin/.codex/worktrees/server-desktop-review-20261012/codeshell/docs/review-2026-10-12/quickchat-round8.md",
+      "read_complete": true,
+      "read_method": "正文逐行分批完整阅读；输出被截断的browser_lifecycle/core_gates、desktop_round2/download、model_native/modern_quality部分已单独补读",
+      "classification": "正式专项",
+      "formal_ids_discussed": [
+        "R54"
+      ],
+      "modules": [
+        "core",
+        "desktop"
+      ],
+      "coverage_and_scope": "实际组件内部MIME drag；native跨窗drag未运行；76既有正常测试只单列复查，不再累计。",
+      "priority_authority": "README.md最终分级；文档历史候选/建议/当轮计数不覆盖最终索引"
+    },
+    {
+      "index": 104,
+      "filename": "remote-settings-round15.md",
+      "sha256": "c0a135e71f7606b3fb54b6b3124c6375613838d45a27ba935906797908b714bd",
+      "lines": 43,
+      "bytes": 7710,
+      "path": "/Users/admin/.codex/worktrees/server-desktop-review-20261012/codeshell/docs/review-2026-10-12/remote-settings-round15.md",
+      "read_complete": true,
+      "read_method": "正文逐行分批完整阅读；输出被截断的browser_lifecycle/core_gates、desktop_round2/download、model_native/modern_quality部分已单独补读",
+      "classification": "正式专项",
+      "formal_ids_discussed": [
+        "R67"
+      ],
+      "modules": [
+        "server",
+        "desktop"
+      ],
+      "coverage_and_scope": "实际MobileRemoteSection/controller/Host listener；两MiniDOM roots同IPC sender，不等于真实双renderer或LAN手机。",
+      "priority_authority": "README.md最终分级；文档历史候选/建议/当轮计数不覆盖最终索引"
+    },
+    {
+      "index": 107,
+      "filename": "search-quality-round12.md",
+      "sha256": "9ce018cfa43d39516d6d9962afcd32b6bf162cd99d907c3280f8b688d242dc14",
+      "lines": 55,
+      "bytes": 11481,
+      "path": "/Users/admin/.codex/worktrees/server-desktop-review-20261012/codeshell/docs/review-2026-10-12/search-quality-round12.md",
+      "read_complete": true,
+      "read_method": "正文逐行分批完整阅读；输出被截断的browser_lifecycle/core_gates、desktop_round2/download、model_native/modern_quality部分已单独补读",
+      "classification": "质量复核",
+      "formal_ids_discussed": [
+        "R55",
+        "R56"
+      ],
+      "modules": [
+        "core",
+        "desktop",
+        "pet"
+      ],
+      "coverage_and_scope": "0执行；Pet disclosure实际search局部动态；500 bounded设计正常，缺overflow信号；DelegateWork仅可达性源码。",
+      "priority_authority": "README.md最终分级；文档历史候选/建议/当轮计数不覆盖最终索引"
+    },
+    {
+      "index": 110,
+      "filename": "server-round1.md",
+      "sha256": "dc6a7308826b0a483310966e17b04ec7ca6cb56a37ebad9edbc7cfe2d42ff5e8",
+      "lines": 82,
+      "bytes": 11399,
+      "path": "/Users/admin/.codex/worktrees/server-desktop-review-20261012/codeshell/docs/review-2026-10-12/server-round1.md",
+      "read_complete": true,
+      "read_method": "正文逐行分批完整阅读；输出被截断的browser_lifecycle/core_gates、desktop_round2/download、model_native/modern_quality部分已单独补读",
+      "classification": "正式专项",
+      "formal_ids_discussed": [
+        "R09",
+        "R10",
+        "R11",
+        "R12",
+        "R17",
+        "R18",
+        "R20"
+      ],
+      "modules": [
+        "server",
+        "web",
+        "desktop"
+      ],
+      "coverage_and_scope": "Hub/CC房间和uploads；不是packages/tui或packages/chat渠道gateway，R11已明确窄P3。",
+      "priority_authority": "README.md最终分级；文档历史候选/建议/当轮计数不覆盖最终索引"
+    },
+    {
+      "index": 113,
+      "filename": "session-actions-quality-round13.md",
+      "sha256": "5541c2ee2706164324739296a5b22089acee63d0aba61b50ac60667db38ba166",
+      "lines": 49,
+      "bytes": 10250,
+      "path": "/Users/admin/.codex/worktrees/server-desktop-review-20261012/codeshell/docs/review-2026-10-12/session-actions-quality-round13.md",
+      "read_complete": true,
+      "read_method": "正文逐行分批完整阅读；输出被截断的browser_lifecycle/core_gates、desktop_round2/download、model_native/modern_quality部分已单独补读",
+      "classification": "质量复核",
+      "formal_ids_discussed": [
+        "R60"
+      ],
+      "modules": [
+        "core",
+        "server",
+        "desktop"
+      ],
+      "coverage_and_scope": "0执行；墓碑限同project/local-row，Core canonical仍在，SessionsView可继续删除非恢复侧栏。",
+      "priority_authority": "README.md最终分级；文档历史候选/建议/当轮计数不覆盖最终索引"
+    },
+    {
+      "index": 116,
+      "filename": "session-continuation-round26.md",
+      "sha256": "0a62a74ebef8c320ab8ed6697d533a464f3faac7519b33bfc984b66d63f8e44b",
+      "lines": 27,
+      "bytes": 5386,
+      "path": "/Users/admin/.codex/worktrees/server-desktop-review-20261012/codeshell/docs/review-2026-10-12/session-continuation-round26.md",
+      "read_complete": true,
+      "read_method": "正文逐行分批完整阅读；输出被截断的browser_lifecycle/core_gates、desktop_round2/download、model_native/modern_quality部分已单独补读",
+      "classification": "正常反证",
+      "formal_ids_discussed": [],
+      "modules": [
+        "core",
+        "desktop",
+        "server"
+      ],
+      "coverage_and_scope": "0执行静态审查fork/Review/retry/export/cloud；未验证Files边界后由round27R86收录，非冲突。",
+      "priority_authority": "README.md最终分级；文档历史候选/建议/当轮计数不覆盖最终索引"
+    },
+    {
+      "index": 119,
+      "filename": "settings-recovery-quality-round16.md",
+      "sha256": "4c2d905de81c6637dbbc5fb7dfc588490c16b57fe4ceca4bcd2abdab4562ca80",
+      "lines": 35,
+      "bytes": 5505,
+      "path": "/Users/admin/.codex/worktrees/server-desktop-review-20261012/codeshell/docs/review-2026-10-12/settings-recovery-quality-round16.md",
+      "read_complete": true,
+      "read_method": "正文逐行分批完整阅读；输出被截断的browser_lifecycle/core_gates、desktop_round2/download、model_native/modern_quality部分已单独补读",
+      "classification": "质量复核",
+      "formal_ids_discussed": [
+        "R70"
+      ],
+      "modules": [
+        "core",
+        "desktop"
+      ],
+      "coverage_and_scope": "0执行；仅未保存自定义指令EISDIR失败稿，27helper断言非Bun测试；未运行Electron。",
+      "priority_authority": "README.md最终分级；文档历史候选/建议/当轮计数不覆盖最终索引"
+    },
+    {
+      "index": 122,
+      "filename": "sidebar-title-observation-round27.md",
+      "sha256": "a8066e62f720eb5f74ec3a776fdb98652ad2fb686302efb259b059a76315bb74",
+      "lines": 15,
+      "bytes": 3184,
+      "path": "/Users/admin/.codex/worktrees/server-desktop-review-20261012/codeshell/docs/review-2026-10-12/sidebar-title-observation-round27.md",
+      "read_complete": true,
+      "read_method": "正文逐行分批完整阅读；输出被截断的browser_lifecycle/core_gates、desktop_round2/download、model_native/modern_quality部分已单独补读",
+      "classification": "正常反证",
+      "formal_ids_discussed": [],
+      "modules": [
+        "desktop"
+      ],
+      "coverage_and_scope": "0执行设计观察，未找到统一命名合同，不列finding；不是新名写盘失败。",
+      "priority_authority": "README.md最终分级；文档历史候选/建议/当轮计数不覆盖最终索引"
+    },
+    {
+      "index": 125,
+      "filename": "terminal-review-round13.md",
+      "sha256": "66a12b0debbd243648ef214fa4b7b09204d87cc7111951bc00f0d91a35d5e33e",
+      "lines": 43,
+      "bytes": 8432,
+      "path": "/Users/admin/.codex/worktrees/server-desktop-review-20261012/codeshell/docs/review-2026-10-12/terminal-review-round13.md",
+      "read_complete": true,
+      "read_method": "正文逐行分批完整阅读；输出被截断的browser_lifecycle/core_gates、desktop_round2/download、model_native/modern_quality部分已单独补读",
+      "classification": "正式专项",
+      "formal_ids_discussed": [
+        "R58",
+        "R59"
+      ],
+      "modules": [
+        "core",
+        "coding",
+        "desktop"
+      ],
+      "coverage_and_scope": "真实Git/service/viewer与PTY拒绝前门禁；native ptyStart替身，非TUI覆盖。",
+      "priority_authority": "README.md最终分级；文档历史候选/建议/当轮计数不覆盖最终索引"
+    },
+    {
+      "index": 128,
+      "filename": "voice-round6.md",
+      "sha256": "94b7b9092aecaca35e1b8abf327bd9036fb2414a9b0a542eccc4a0b34fba95db",
+      "lines": 56,
+      "bytes": 7619,
+      "path": "/Users/admin/.codex/worktrees/server-desktop-review-20261012/codeshell/docs/review-2026-10-12/voice-round6.md",
+      "read_complete": true,
+      "read_method": "正文逐行分批完整阅读；输出被截断的browser_lifecycle/core_gates、desktop_round2/download、model_native/modern_quality部分已单独补读",
+      "classification": "正式专项",
+      "formal_ids_discussed": [
+        "R50"
+      ],
+      "modules": [
+        "desktop",
+        "web"
+      ],
+      "coverage_and_scope": "actual ChatView/PanelAudioDialog+模拟MediaStream/Recorder，双基线9/87；未用真实麦克风/provider。",
+      "priority_authority": "README.md最终分级；文档历史候选/建议/当轮计数不覆盖最终索引"
+    },
+    {
+      "index": 131,
+      "filename": "web-round1.md",
+      "sha256": "062fe7be52825010fefd6ea12a3e1167c6c5d2d50d14aa06932dc1f980b4107a",
+      "lines": 98,
+      "bytes": 13895,
+      "path": "/Users/admin/.codex/worktrees/server-desktop-review-20261012/codeshell/docs/review-2026-10-12/web-round1.md",
+      "read_complete": true,
+      "read_method": "正文逐行分批完整阅读；输出被截断的browser_lifecycle/core_gates、desktop_round2/download、model_native/modern_quality部分已单独补读",
+      "classification": "正式专项",
+      "formal_ids_discussed": [
+        "R02",
+        "R03",
+        "R08",
+        "R14",
+        "R16",
+        "R19"
+      ],
+      "modules": [
+        "core",
+        "server",
+        "web",
+        "desktop"
+      ],
+      "coverage_and_scope": "实际controllers/hooks，部分Engine内存provider；后附现代journal恢复与R19降级；旧可升P1意见非最终。",
+      "priority_authority": "README.md最终分级；文档历史候选/建议/当轮计数不覆盖最终索引"
+    },
+    {
+      "index": 134,
+      "filename": "web-round5.md",
+      "sha256": "c579cd8a99ca7a8f78c650eaa7e02d36a5d97861b5bb66d084148aa114dafd63",
+      "lines": 50,
+      "bytes": 9080,
+      "path": "/Users/admin/.codex/worktrees/server-desktop-review-20261012/codeshell/docs/review-2026-10-12/web-round5.md",
+      "read_complete": true,
+      "read_method": "正文逐行分批完整阅读；输出被截断的browser_lifecycle/core_gates、desktop_round2/download、model_native/modern_quality部分已单独补读",
+      "classification": "正式专项",
+      "formal_ids_discussed": [
+        "R40",
+        "R41"
+      ],
+      "modules": [
+        "core",
+        "server",
+        "web"
+      ],
+      "coverage_and_scope": "actual controller/Workbench；R41完整认证Headless+实际HTTP/WS、inertworker；未接受intent丢失限定。",
+      "priority_authority": "README.md最终分级；文档历史候选/建议/当轮计数不覆盖最终索引"
+    }
+  ],
+  "module_coverage": [
+    {
+      "module": "packages/core",
+      "actual_module_evidence": [
+        "CODESHELL.md:15",
+        "packages/core/package.json:8"
+      ],
+      "status": "局部专项动态+部分既有Core套件复跑；不是整包审查",
+      "covered": [
+        {
+          "file": "context-recovery-round17.md",
+          "lines": [
+            7,
+            15,
+            16,
+            17,
+            18,
+            20
+          ],
+          "claim": "实际Engine/SessionManager/ChatSession exclusive/summary fork、内存LLMClientBase",
+          "mode": "dynamic"
+        },
+        {
+          "file": "goal-bound-quality-round20.md",
+          "lines": [
+            18,
+            24,
+            25,
+            31,
+            40,
+            44,
+            46,
+            56
+          ],
+          "claim": "Goal bound冷恢复与正常run，Host整链静态、内存provider/hooks清空",
+          "mode": "mixed"
+        },
+        {
+          "file": "download-round11.md",
+          "lines": [
+            7,
+            27,
+            29,
+            31,
+            42,
+            44,
+            64
+          ],
+          "claim": "后台shell恢复、Core close/killAll原生；Desktop UI/stdio启动静态",
+          "mode": "mixed"
+        },
+        {
+          "file": "file-mutex-round19.md",
+          "lines": [
+            10,
+            16,
+            18,
+            22,
+            81,
+            94
+          ],
+          "claim": "共享file mutex真实认证HTTP原生阻塞",
+          "mode": "dynamic"
+        },
+        {
+          "file": "plugin-quality-round9.md",
+          "lines": [
+            9,
+            23,
+            37,
+            43,
+            51,
+            53
+          ],
+          "claim": "插件installer/catalog更新与reviewed provenance",
+          "mode": "dynamic"
+        },
+        {
+          "file": "credentials-round5.md",
+          "lines": [
+            12,
+            32,
+            34
+          ],
+          "claim": "CredentialStore真实Electron保存；plain fallback，keychain未验",
+          "mode": "dynamic"
+        },
+        {
+          "file": "session-close-round10.md",
+          "lines": [
+            11,
+            15,
+            16,
+            17,
+            19,
+            31
+          ],
+          "claim": "3个既有Core generation/lifecycle/access套件28测试单列复跑，Engine替身",
+          "mode": "existing_suite"
+        }
+      ],
+      "not_covered_as_systematic_review": [
+        "llm各真实provider/SDK超时重试/stream/认证/取消",
+        "hooks资源限制、隔离与并发cleanup",
+        "cost-ledger/model-request-boundary计费/资源账本",
+        "完整permission policy/security/工具授权矩阵",
+        "完整tool-system全部builtin/subagent/capability组合",
+        "skills/sources/context/profile/prompt/operations等剩余模块"
+      ],
+      "boundary": "memory provider类参与不等于各provider实现通过；Host认证/Panel权限局部不能代替Core全安全审查。"
+    },
+    {
+      "module": "packages/coding",
+      "actual_module_evidence": [
+        "CODESHELL.md:16",
+        "packages/coding/package.json:8"
+      ],
+      "status": "Git/worktree局部专项动态；余模块未专项审查",
+      "covered": [
+        {
+          "file": "high-risk-quality-round17.md",
+          "lines": [
+            18,
+            19,
+            20,
+            21,
+            22,
+            23,
+            24,
+            26
+          ],
+          "claim": "worktree并发预检/真实Git失败回滚/资源归属",
+          "mode": "mixed"
+        },
+        {
+          "file": "desktop-round2.md",
+          "lines": [
+            28,
+            29,
+            30,
+            31,
+            32,
+            37
+          ],
+          "claim": "真实工作树冷owner移除/释放与恢复",
+          "mode": "dynamic"
+        },
+        {
+          "file": "terminal-review-round13.md",
+          "lines": [
+            13,
+            15,
+            27,
+            29
+          ],
+          "claim": "真实Git工作区和首提交Review service/viewer；nativePTY替身",
+          "mode": "dynamic"
+        }
+      ],
+      "not_covered_as_systematic_review": [
+        "LSP client/manager/server生命周期",
+        "apply-patch/notebook-edit/drive-agent/brief等Coding工具",
+        "cc-orchestrator/relevance/session-discovery",
+        "external-runtimes真实Claude/Codex协议适配完整生命周期",
+        "quota凭据和coding review prompt"
+      ],
+      "boundary": "menu-recents-round23.md:39将resolveProjectRoot替换为realpath adapter，不能作为新增Git覆盖。CC房间主要是Server resident-agent，不能等同整个Coding外部runtime。"
+    },
+    {
+      "module": "packages/tui",
+      "actual_module_evidence": [
+        "CODESHELL.md:28",
+        "CODESHELL.md:158",
+        "packages/tui/package.json:25"
+      ],
+      "status": "未专项审查；仅CLI plugin源码引用与build/typecheck",
+      "covered": [
+        {
+          "file": "plugins-round7.md",
+          "lines": [
+            80,
+            88
+          ],
+          "claim": "CLI plugin update/direct install复用Core updater的静态接线",
+          "mode": "static_reference"
+        },
+        {
+          "file": "download-quality-round12.md",
+          "lines": [
+            36
+          ],
+          "claim": "明确排除由Core manager推断TUI自动orphan扫描",
+          "mode": "boundary_only"
+        }
+      ],
+      "not_covered_as_systematic_review": [
+        "Ink REPL UI输入/审批/会话/快捷键/vim",
+        "stream Markdown/render/layout/selection/scroll",
+        "cli startup/bootstrap/commands/input compiler",
+        "TUI voice与native-ts Yoga"
+      ],
+      "boundary": "Web/配对端CLI房间、Desktop终端PTY均不是TUI。706基线不含TUI自有测试。"
+    },
+    {
+      "module": "packages/chat",
+      "actual_module_evidence": [
+        "CODESHELL.md:31",
+        "packages/chat/package.json:8",
+        "packages/chat/package.json:70"
+      ],
+      "status": "通知relay静态消费链；整包/各渠道未专项审查",
+      "covered": [
+        {
+          "file": "automation-quality-round18.md",
+          "lines": [
+            45,
+            46,
+            47,
+            48
+          ],
+          "claim": "notification-relay消费配置授权目标，未向渠道外发",
+          "mode": "static"
+        },
+        {
+          "file": "quality-round5.md",
+          "lines": [
+            55
+          ],
+          "claim": "relay/gateway正常生产消费者只读确认",
+          "mode": "static"
+        }
+      ],
+      "not_covered_as_systematic_review": [
+        "telegram/discord/slack/lark/dingtalk/wecom/wechat/matrix/mattermost/line/whatsapp/teams各adapter",
+        "ingress/media/attachments/webhook/delivery-queue",
+        "bound-session-chat/instance-lock/config/service-manager/CLI启动",
+        "账号连接、重连、撤销与实际消息送达"
+      ],
+      "boundary": "这里Chat不是Desktop ChatView/Quick Chat或Web聊天；有静态覆盖，不能称完全没提及，也不能称多渠道动态已通过。"
+    },
+    {
+      "module": "packages/link",
+      "actual_module_evidence": [
+        "CODESHELL.md:14",
+        "packages/link/src/index.ts:1",
+        "packages/link/src/index.ts:2",
+        "packages/link/src/index.ts:19"
+      ],
+      "status": "纯manifest/catalog包无独立专项；上层Links功能已局部动态覆盖",
+      "covered": [
+        {
+          "file": "links-round8.md",
+          "lines": [
+            3,
+            5,
+            6,
+            7,
+            8,
+            10,
+            12
+          ],
+          "claim": "Server/Web/Desktop授权正常接线与既有套件，不是Link catalog自有测试",
+          "mode": "mixed"
+        },
+        {
+          "file": "link-recovery-round16.md",
+          "lines": [
+            11,
+            15,
+            16,
+            17,
+            18,
+            19,
+            28,
+            37,
+            48,
+            67
+          ],
+          "claim": "上层授权组件/controller/native manager/LinkService/CredentialStore5正常测试；provider validation/OAuth transport替身",
+          "mode": "dynamic_upper_layer"
+        }
+      ],
+      "not_covered_as_systematic_review": [
+        "packages/link/catalog.ts manifest完整性/权限guide/本地化",
+        "所有provider/method schema合同及catalog.test.ts"
+      ],
+      "boundary": "不能以Links0finding推断无覆盖；也不能把上层LinkService与纯manifest包混为同一模块，真实OAuth/账号/provider均未运行。"
+    },
+    {
+      "module": "packages/pet",
+      "actual_module_evidence": [
+        "CODESHELL.md:18",
+        "packages/pet/package.json:8"
+      ],
+      "status": "disclosure/catalog/search专项动态；Pet桌面导航局部；行为/委托其余未专项",
+      "covered": [
+        {
+          "file": "search-routing-round11.md",
+          "lines": [
+            42,
+            43,
+            45,
+            49,
+            50,
+            64
+          ],
+          "claim": "actual Pet disclosure catalog/search500候选动态双基线",
+          "mode": "dynamic"
+        },
+        {
+          "file": "search-quality-round12.md",
+          "lines": [
+            16,
+            20,
+            22,
+            28,
+            38,
+            42,
+            44
+          ],
+          "claim": "Pet card/Main aggregator与普通Session导航动态局部；DelegateWork来源仅源码",
+          "mode": "mixed"
+        },
+        {
+          "file": "browser-stop-core-gates-round22.md",
+          "lines": [
+            32
+          ],
+          "claim": "projection observer是静态反证，非执行",
+          "mode": "static_reference"
+        },
+        {
+          "file": "notification-quality-round14.md",
+          "lines": [
+            25
+          ],
+          "claim": "Pet长期任务终态通知来源静态",
+          "mode": "static_reference"
+        }
+      ],
+      "not_covered_as_systematic_review": [
+        "Mimi profile与engine行为",
+        "DelegateWork/team/delegation/long-task状态机",
+        "conversation-session/bound-session control/registered followups",
+        "projection-extension/pending-decision/segment/topic/visit receipts",
+        "Pet gateway/outbound-message与多渠道交互"
+      ],
+      "boundary": "PetChatHost图片渲染静态反证不代表packages/pet行为包整体验收；565个Desktop既有测试可能含Pet host局部，非Pet自有全套。"
+    },
+    {
+      "module": "packages/optimization-lab",
+      "actual_module_evidence": [
+        "CODESHELL.md:20",
+        "CODESHELL.md:21",
+        "packages/optimization-lab/package.json:4",
+        "packages/optimization-lab/src/index.ts:1"
+      ],
+      "status": "无专项报告；只有工作区build/typecheck基础门禁",
+      "covered": [],
+      "not_covered_as_systematic_review": [
+        "experiment/dataset/freeze/verdict contracts",
+        "provider metered-fetch/connection",
+        "lease/runner/controller/store/ledger/evidence/grading/report"
+      ],
+      "boundary": "私有、Desktop-only且默认feature flag off，用户常用面审查优先可低；不能写成不存在模块。根build包含此包，故不是完全无编译覆盖。"
+    },
+    {
+      "module": "packages/cdp",
+      "actual_module_evidence": [
+        "CODESHELL.md:30",
+        "packages/cdp/src/index.ts:1",
+        "packages/cdp/src/index.ts:10",
+        "packages/cdp/src/index.ts:23"
+      ],
+      "status": "legacy兼容包无专项；别把真实CDP协议/Puppeteer实验算其driver测试",
+      "covered": [
+        {
+          "file": "browser-stop-preflight-round22.md",
+          "lines": [
+            40
+          ],
+          "claim": "只说明CDP alias源码映射",
+          "mode": "static_reference"
+        },
+        {
+          "file": "quality-round22.md",
+          "lines": [
+            39,
+            41
+          ],
+          "claim": "actual desktop maintainedPuppeteer runtime，不等于legacy CdpActionsDriver",
+          "mode": "boundary_only"
+        }
+      ],
+      "not_covered_as_systematic_review": [
+        "CdpActionsDriver/extract/read cursor/scroll-state",
+        "keymap/planKeySequence/sender compatibility",
+        "driver.test.ts/keymap.test.ts自有测试专项"
+      ],
+      "boundary": "维护中的Desktop browser-library + Puppeteer与packages/cdp历史driver不同；CDP术语出现不构成该包动态覆盖。"
+    },
+    {
+      "module": "packages/arena",
+      "actual_module_evidence": [
+        "CODESHELL.md:17",
+        "CODESHELL.md:194",
+        "packages/arena/package.json:4",
+        "packages/arena/src/index.ts:7"
+      ],
+      "status": "无专项报告；类型门禁可能覆盖，根build不含Arena",
+      "covered": [],
+      "not_covered_as_systematic_review": [
+        "review/discussion/planning策略与planner",
+        "participant/cross-review/debate/adjudication/consensus phases",
+        "IterativeArena/iterate convergence/ledger/transitions",
+        "providers/context/lenses/tools/render"
+      ],
+      "boundary": "保留私有源码、宿主不加载且不发布；既有706与专项251不能代表其自有测试，风险排序可后于活跃用户模块。"
+    },
+    {
+      "module": "root scripts / packaging / release",
+      "actual_module_evidence": [
+        "package.json:19",
+        "package.json:20",
+        "package.json:41",
+        "package.json:44",
+        "scripts/package-release-smoke.ts",
+        "scripts/publish-release-packages.ts",
+        "scripts/release.ts",
+        "scripts/verify-release-versions.ts",
+        ".github/workflows/release.yml",
+        ".github/workflows/release-recovery.yml"
+      ],
+      "status": "install/build/typecheck/Desktop build已执行；发布链和pack验收未专项",
+      "covered": [
+        {
+          "file": "README.md",
+          "lines": [
+            260,
+            261,
+            262
+          ],
+          "claim": "完整workspace build/typecheck/Desktop build通过",
+          "mode": "existing_build_gate"
+        },
+        {
+          "file": "latest-baseline.md",
+          "lines": [
+            11
+          ],
+          "claim": "latest冻结install/build/Desktop build/typecheck通过",
+          "mode": "existing_build_gate"
+        },
+        {
+          "file": "baseline-evidence-round28.md",
+          "lines": [
+            7,
+            9,
+            11
+          ],
+          "claim": "保留旧build/UI原字节，未重新运行；不冒充pack/release验收",
+          "mode": "static_archive"
+        },
+        {
+          "file": "file-mutex-round19.md",
+          "lines": [
+            11,
+            63
+          ],
+          "claim": "maintained测试/原生隔离runner被用于各fixture；不是所有scripts语义审查",
+          "mode": "support_execution"
+        }
+      ],
+      "not_covered_as_systematic_review": [
+        "test:package-release/package-release-audit-config/package-release-smoke",
+        "build-meta导出的可安装包/export/bin/assets合同",
+        "publish-release-packages/release/verify-release-versions及release-recovery工作流",
+        "check-node支持版本矩阵、copy-assets发行正确性",
+        "sync-models/migrate-legacy-models以及其他smoke脚本各自产品合同"
+      ],
+      "boundary": "build-meta/copy-assets可随build执行，但成功编译不等于安装后消费/发布回滚/跨平台发行验证；没有任何实际发布授权/执行。"
+    }
+  ],
+  "issues_and_recommendations": [
+    {
+      "id": "DOC-C-01",
+      "kind": "措辞歧义",
+      "severity": "minor_documentation",
+      "evidence": [
+        {
+          "file": "quality-round16.md",
+          "lines": [
+            55,
+            57
+          ],
+          "claim": "Node22日志/两基线Node22可能被误读为Node22版本",
+          "mode": "wording"
+        },
+        {
+          "file": "command-recovery-round16.md",
+          "lines": [
+            12
+          ],
+          "claim": "实际Node v25.8.1，22 native断言",
+          "mode": "source_of_truth"
+        }
+      ],
+      "recommendation": "写成“每基线22个Node手工断言（Node v25.8.1）”，不改执行/统计或产品优先级。"
+    },
+    {
+      "id": "DOC-C-02",
+      "kind": "标题编号歧义",
+      "severity": "minor_documentation",
+      "evidence": [
+        {
+          "file": "modern-desktop-image-quality-round25.md",
+          "lines": [
+            1,
+            3,
+            7
+          ],
+          "claim": "R25静态预审实际指第25轮，正文当前R85/阶段84",
+          "mode": "wording"
+        }
+      ],
+      "recommendation": "标题R25改为“第25轮”，避免与正式R25模型表单问题混同；仍保留历史阶段及最终专项指向。"
+    },
+    {
+      "id": "DOC-C-03",
+      "kind": "阶段意见与最终裁定分层",
+      "severity": "minor_documentation",
+      "evidence": [
+        {
+          "file": "web-round1.md",
+          "lines": [
+            62
+          ],
+          "claim": "旧作者附条件root may elevate P1意见",
+          "mode": "historical_opinion"
+        }
+      ],
+      "recommendation": "最终R02遵从README P2；报告元摘要不复用该旧升级假设。可在旧句补“历史作者意见，最终P2”以减少误读。"
+    },
+    {
+      "id": "COV-C-01",
+      "kind": "覆盖表述风险",
+      "severity": "material_scope_boundary",
+      "evidence": [
+        {
+          "file": "baseline-evidence-round28.md",
+          "lines": [
+            3,
+            9
+          ],
+          "claim": "706/6286只对应初始Server/Web/Desktop",
+          "mode": "source_of_truth"
+        }
+      ],
+      "recommendation": "在最终未cover列表明确其路径组成Server100/Web41/Desktop565；不把编译12包或总测试数外推为Core/TUI/Chat/Link/Pet/Coding/optimization/Arena/CDP全套测试。"
+    }
+  ],
+  "supporting_reads": [
+    "CODESHELL.md",
+    "README.md:18-108,260-320",
+    "baseline-evidence-round28.md",
+    "latest-baseline.md相关行",
+    "links-round8.md",
+    "link-recovery-round16.md",
+    "search-routing-round11.md",
+    "session-close-round10.md",
+    "runtime-round3.md",
+    "credentials-round5.md",
+    "validation/original-baseline-evidence-round28/manifest.json元数据（未打开全rawlog）",
+    "各包package.json/source入口与文件目录inventory"
+  ],
+  "read_only_guards": "本轮只执行cat/rg/python标准库读取、哈希与/tmp JSON写入；未测试/构建/产品import/模型/调度/目标工具；未写docs或产品。"
+}

@@ -1,0 +1,34 @@
+{
+  "liveSummary": {
+    "id": "live-inventory",
+    "title": "每日盘点 2026/10/12",
+    "createdAt": 1791740341388,
+    "updatedAt": 1791740341388,
+    "engineSessionId": "live-inventory",
+    "source": "automation",
+    "runStatus": "running",
+    "cronJobId": "1"
+  },
+  "job": {
+    "id": "1",
+    "revision": "f62db0b5235d83b01b7f60aaaf88ebdb765b78116fe6941e1355843c4b0ebc38",
+    "name": "每日盘点",
+    "schedule": "1h",
+    "prompt": "inventory fixture",
+    "enabled": true,
+    "cwd": "/fixture",
+    "projectId": "p",
+    "rootId": "r",
+    "timezone": null,
+    "permissionLevel": null,
+    "lastRun": null,
+    "nextRun": 1791743941388,
+    "runCount": 0,
+    "createdAt": 1791740341388,
+    "lastRunId": null,
+    "once": false,
+    "resumeSessionId": null,
+    "templateSource": null
+  },
+  "detail": "每日盘点每小时 · UTC活跃立即运行下次运行约 1 小时后10/11/2026, 6:39:01 PM上次运行—运行次数0任务指令编辑inventory fixture执行方式每次新建对话适合独立任务，每次单独记录结果。续接已有对话沿用之前的讨论，持续积累进展。配置频率时区全部时区UTC权限项目运行 session暂无历史 session这个任务还没有可跳转的历史 session。"
+}

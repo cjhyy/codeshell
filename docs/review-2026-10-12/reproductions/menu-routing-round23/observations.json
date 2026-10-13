@@ -1,0 +1,266 @@
+{
+  "repo": "/Users/admin/.codex/worktrees/server-desktop-review-20261012/codeshell",
+  "macPlatformActual": "darwin",
+  "nativeElectronStarted": false,
+  "productMainAppWorkerCoreImported": false,
+  "productImportScopeBasis": "source-audited import list, not a dynamic module-cache probe",
+  "recentsLoadCalls": 7,
+  "networkOrChildAttempts": [],
+  "sourceManifest": [
+    {
+      "path": "packages/desktop/src/main/menu.ts",
+      "sha256": "6f65230f21d3a1c9b567d97a2b53433ab313435c49b54f32721647df11e87475"
+    },
+    {
+      "path": "packages/desktop/src/preload/index.ts",
+      "sha256": "b85c80ec01b488890fcfad0e9afed4fb1e02575dcba8e30cce8a06805ed44327"
+    },
+    {
+      "path": "packages/desktop/src/renderer/App.tsx",
+      "sha256": "556e985d3c0898b5915c713a2a0a280f59bf504b4797e89278143bdcdfd265b8"
+    }
+  ],
+  "observations": [
+    {
+      "scenario": "single-and-final-installed-window-normal",
+      "windows": [
+        {
+          "id": "A",
+          "destroyed": false,
+          "messages": [
+            {
+              "channel": "menu:find",
+              "focusedAtSend": "A",
+              "destroyedAtSend": false
+            },
+            {
+              "channel": "menu:palette",
+              "focusedAtSend": "A",
+              "destroyedAtSend": false
+            },
+            {
+              "channel": "menu:toggle-sidebar",
+              "focusedAtSend": "A",
+              "destroyedAtSend": false
+            },
+            {
+              "channel": "menu:open-recent",
+              "payload": {
+                "id": "owned-project-x",
+                "path": "/private/var/folders/1d/6__4f4y51g90nblfptt8s9v80000gn/T/codeshell-bun-completion-767knb/home/owned-project-x",
+                "name": "Owned X",
+                "lastOpenedAt": 1
+              },
+              "focusedAtSend": "A",
+              "destroyedAtSend": false
+            },
+            {
+              "channel": "menu:add-project",
+              "focusedAtSend": "A",
+              "destroyedAtSend": false
+            },
+            {
+              "channel": "menu:new-window",
+              "focusedAtSend": "A",
+              "destroyedAtSend": false
+            }
+          ],
+          "ipcCalls": [
+            "window:new"
+          ],
+          "activeProjectId": "owned-project-x",
+          "searchOpen": true,
+          "paletteOpen": true,
+          "sidebarToggles": 1,
+          "addProjectCalls": 1,
+          "newWindowCalls": 1
+        },
+        {
+          "id": "B",
+          "destroyed": false,
+          "messages": [
+            {
+              "channel": "menu:find",
+              "focusedAtSend": "B",
+              "destroyedAtSend": false
+            },
+            {
+              "channel": "menu:open-recent",
+              "payload": {
+                "id": "owned-project-x",
+                "path": "/private/var/folders/1d/6__4f4y51g90nblfptt8s9v80000gn/T/codeshell-bun-completion-767knb/home/owned-project-x",
+                "name": "Owned X",
+                "lastOpenedAt": 1
+              },
+              "focusedAtSend": "B",
+              "destroyedAtSend": false
+            }
+          ],
+          "ipcCalls": [],
+          "activeProjectId": "owned-project-x",
+          "searchOpen": true,
+          "paletteOpen": false,
+          "sidebarToggles": 0,
+          "addProjectCalls": 0,
+          "newWindowCalls": 0
+        }
+      ]
+    },
+    {
+      "scenario": "focused-A-explicit-menu-delivers-B",
+      "windows": [
+        {
+          "id": "A",
+          "destroyed": false,
+          "messages": [],
+          "ipcCalls": [],
+          "activeProjectId": "A-initial-project",
+          "searchOpen": false,
+          "paletteOpen": false,
+          "sidebarToggles": 0,
+          "addProjectCalls": 0,
+          "newWindowCalls": 0
+        },
+        {
+          "id": "B",
+          "destroyed": false,
+          "messages": [
+            {
+              "channel": "menu:find",
+              "focusedAtSend": "A",
+              "destroyedAtSend": false
+            },
+            {
+              "channel": "menu:palette",
+              "focusedAtSend": "A",
+              "destroyedAtSend": false
+            },
+            {
+              "channel": "menu:toggle-sidebar",
+              "focusedAtSend": "A",
+              "destroyedAtSend": false
+            },
+            {
+              "channel": "menu:open-recent",
+              "payload": {
+                "id": "owned-project-x",
+                "path": "/private/var/folders/1d/6__4f4y51g90nblfptt8s9v80000gn/T/codeshell-bun-completion-767knb/home/owned-project-x",
+                "name": "Owned X",
+                "lastOpenedAt": 1
+              },
+              "focusedAtSend": "A",
+              "destroyedAtSend": false
+            },
+            {
+              "channel": "menu:add-project",
+              "focusedAtSend": "A",
+              "destroyedAtSend": false
+            },
+            {
+              "channel": "menu:new-window",
+              "focusedAtSend": "A",
+              "destroyedAtSend": false
+            }
+          ],
+          "ipcCalls": [
+            "window:new"
+          ],
+          "activeProjectId": "owned-project-x",
+          "searchOpen": true,
+          "paletteOpen": true,
+          "sidebarToggles": 1,
+          "addProjectCalls": 1,
+          "newWindowCalls": 1
+        }
+      ]
+    },
+    {
+      "scenario": "dead-target-adapter-only-and-internal-rebuild-control",
+      "adapterFailureNotNativeElectron": {
+        "name": "Error",
+        "message": "OWNED_DESTROYED_WEBCONTENTS_ADAPTER"
+      },
+      "beforeRebuild": [
+        {
+          "id": "A",
+          "destroyed": false,
+          "messages": [],
+          "ipcCalls": [],
+          "activeProjectId": "A-initial-project",
+          "searchOpen": false,
+          "paletteOpen": false,
+          "sidebarToggles": 0,
+          "addProjectCalls": 0,
+          "newWindowCalls": 0
+        },
+        {
+          "id": "B",
+          "destroyed": true,
+          "messages": [
+            {
+              "channel": "menu:find",
+              "focusedAtSend": "A",
+              "destroyedAtSend": true
+            }
+          ],
+          "ipcCalls": [],
+          "activeProjectId": "B-initial-project",
+          "searchOpen": false,
+          "paletteOpen": false,
+          "sidebarToggles": 0,
+          "addProjectCalls": 0,
+          "newWindowCalls": 0
+        }
+      ],
+      "afterRebuild": [
+        {
+          "id": "A",
+          "destroyed": false,
+          "messages": [
+            {
+              "channel": "menu:find",
+              "focusedAtSend": "A",
+              "destroyedAtSend": false
+            },
+            {
+              "channel": "menu:open-recent",
+              "payload": {
+                "id": "owned-project-x",
+                "path": "/private/var/folders/1d/6__4f4y51g90nblfptt8s9v80000gn/T/codeshell-bun-completion-767knb/home/owned-project-x",
+                "name": "Owned X",
+                "lastOpenedAt": 1
+              },
+              "focusedAtSend": "A",
+              "destroyedAtSend": false
+            }
+          ],
+          "ipcCalls": [],
+          "activeProjectId": "owned-project-x",
+          "searchOpen": true,
+          "paletteOpen": false,
+          "sidebarToggles": 0,
+          "addProjectCalls": 0,
+          "newWindowCalls": 0
+        },
+        {
+          "id": "B",
+          "destroyed": true,
+          "messages": [
+            {
+              "channel": "menu:find",
+              "focusedAtSend": "A",
+              "destroyedAtSend": true
+            }
+          ],
+          "ipcCalls": [],
+          "activeProjectId": "B-initial-project",
+          "searchOpen": false,
+          "paletteOpen": false,
+          "sidebarToggles": 0,
+          "addProjectCalls": 0,
+          "newWindowCalls": 0
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,11 @@
+bun test v1.3.11 (af24e281)
+
+docs/review-2026-10-12/reproductions/quality-round10/question-recovery-control.test.tsx:
+R13 invalid index survives visible option click; no-question remount recovers and submits once
+(pass) CONTROL shorter sticky question needs an intervening no-question remount to recover [39.71ms]
+
+ 1 pass
+ 0 fail
+ 9 expect() calls
+Ran 1 test across 1 file. [2.42s]
+Completed Bun shard: 1 tests, 0 skipped; 0 failures.

@@ -1,0 +1,219 @@
+{
+  "audit": "standard-library static reads/hash/metadata assertions only; no fixture or product import/test execution",
+  "clockUTC": "2026-10-12 01:39 audit window, exact report clock retained separately",
+  "independentNewFixtureExecutions": 0,
+  "runs": [
+    {
+      "label": "author-latest",
+      "directory": "/tmp/codeshell-review-20261012-file-root-round27/first-authorized",
+      "sourceSha256": "28f4202efc90bedbd67f39f60bd7e9370a3b8557872ae841edb856e3720a13d2",
+      "guardSha256": "6e1f5f5045f9606086f1b01e6eb988b88c5670f78000b260fcb9e035f1c69b3d",
+      "log": "/tmp/codeshell-review-20261012-file-root-round27/first-authorized/first-authorized.log",
+      "logSha256": "a5bb66ba7634aa31fa36724bb0b501425cde266b84cc36f50ba8c53e50fee1c0",
+      "observedSha256": "fabc9a899929143c0433630e1252d867005295a45b8c00da5f770ff14964c273",
+      "completed": true,
+      "stdout": {
+        "files": 1,
+        "pass": 1,
+        "fail": 0,
+        "skip": 0,
+        "expect": 29
+      },
+      "runnerExit": 0,
+      "runnerExitProvenance": "author result-summary.json",
+      "sourceManifestCount": 51,
+      "resolutionOnlyCount": 4,
+      "callbacks": [
+        {
+          "channel": "fsRoot:readDir",
+          "line": 6492,
+          "sha256": "2820bebc653dec326e7a816ff53ad14969983f1f94c1fb0e4178db564d300f9a",
+          "capturedDependencies": [
+            "requireRendererProjectRoot",
+            "readDirectory"
+          ]
+        },
+        {
+          "channel": "fsSession:readDir",
+          "line": 6506,
+          "sha256": "a94993aa3251ef2d8c1fb2d4ad1422737efe0e9124cf2aecc6743cf79e93338e",
+          "capturedDependencies": [
+            "assertDesktopSessionId",
+            "readSessionDirectoryForUi"
+          ]
+        }
+      ],
+      "mockTargetsCount": 3,
+      "gitAdapterCalls": 10,
+      "apiCalls": 15,
+      "observations": 5,
+      "attempts": [],
+      "cleanupErrors": [],
+      "privateHOME": "/private/var/folders/1d/6__4f4y51g90nblfptt8s9v80000gn/T/codeshell-bun-completion-89z9nz/home",
+      "privateHOMEAbsentAtAudit": true,
+      "ownedPaths": [
+        "/private/var/folders/1d/6__4f4y51g90nblfptt8s9v80000gn/T/codeshell-bun-completion-89z9nz/home/.code-shell/round27-owned-file-roots"
+      ],
+      "ownedPathsAbsentAtAudit": true,
+      "candidateWrongTuple": [
+        "4820a1af-cc13-414f-b1d1-984269110c0f",
+        "7646240c-a728-4db7-87c7-7d18596b0213",
+        "/private/var/folders/1d/6__4f4y51g90nblfptt8s9v80000gn/T/codeshell-bun-completion-89z9nz/home/.code-shell/round27-owned-file-roots/root-a"
+      ],
+      "candidateWrongTupleCalls": 2,
+      "directBSuccess": true,
+      "normalAndInternalControlsVerified": true,
+      "normalizedAPICallsSha256": "974c1fd82827117ec87865edffe63cfa6e7b9ba3ca3bb677229da9ee4d7096a0"
+    },
+    {
+      "label": "root-initial",
+      "directory": "/Users/admin/.codex/worktrees/server-desktop-review-20261012/codeshell/docs/review-2026-10-12/reproductions/file-root-round27",
+      "sourceSha256": "28f4202efc90bedbd67f39f60bd7e9370a3b8557872ae841edb856e3720a13d2",
+      "guardSha256": "6e1f5f5045f9606086f1b01e6eb988b88c5670f78000b260fcb9e035f1c69b3d",
+      "log": "/Users/admin/.codex/worktrees/server-desktop-review-20261012/codeshell/docs/review-2026-10-12/reproductions/file-root-round27/file-root.test.ts.log",
+      "logSha256": "b5ac6be51f4388b7f70e3d82464dc09d79ce16d829f655d02cabeb1d658f1222",
+      "observedSha256": "3527ec63d6b6e8a0adc64b34ce832dc79ccf2e25bb91a3d542c718b0a460f2a1",
+      "completed": true,
+      "stdout": {
+        "files": 1,
+        "pass": 1,
+        "fail": 0,
+        "skip": 0,
+        "expect": 29
+      },
+      "runnerExit": 0,
+      "runnerExitProvenance": "parent read exec result reported exit0; stdout Completed independently read",
+      "sourceManifestCount": 51,
+      "resolutionOnlyCount": 4,
+      "callbacks": [
+        {
+          "channel": "fsRoot:readDir",
+          "line": 6486,
+          "sha256": "2820bebc653dec326e7a816ff53ad14969983f1f94c1fb0e4178db564d300f9a",
+          "capturedDependencies": [
+            "requireRendererProjectRoot",
+            "readDirectory"
+          ]
+        },
+        {
+          "channel": "fsSession:readDir",
+          "line": 6500,
+          "sha256": "a94993aa3251ef2d8c1fb2d4ad1422737efe0e9124cf2aecc6743cf79e93338e",
+          "capturedDependencies": [
+            "assertDesktopSessionId",
+            "readSessionDirectoryForUi"
+          ]
+        }
+      ],
+      "mockTargetsCount": 3,
+      "gitAdapterCalls": 10,
+      "apiCalls": 15,
+      "observations": 5,
+      "attempts": [],
+      "cleanupErrors": [],
+      "privateHOME": "/private/var/folders/1d/6__4f4y51g90nblfptt8s9v80000gn/T/codeshell-bun-completion-vBeCip/home",
+      "privateHOMEAbsentAtAudit": true,
+      "ownedPaths": [
+        "/private/var/folders/1d/6__4f4y51g90nblfptt8s9v80000gn/T/codeshell-bun-completion-vBeCip/home/.code-shell/round27-owned-file-roots"
+      ],
+      "ownedPathsAbsentAtAudit": true,
+      "candidateWrongTuple": [
+        "a8cf196e-eb34-4be5-b725-3ebff424ac5f",
+        "7966e37a-92b5-44ea-94ff-9beffa7e32dc",
+        "/private/var/folders/1d/6__4f4y51g90nblfptt8s9v80000gn/T/codeshell-bun-completion-vBeCip/home/.code-shell/round27-owned-file-roots/root-a"
+      ],
+      "candidateWrongTupleCalls": 2,
+      "directBSuccess": true,
+      "normalAndInternalControlsVerified": true,
+      "normalizedAPICallsSha256": "974c1fd82827117ec87865edffe63cfa6e7b9ba3ca3bb677229da9ee4d7096a0"
+    },
+    {
+      "label": "root-latest",
+      "directory": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/docs/review-2026-10-12/reproductions/file-root-round27",
+      "sourceSha256": "28f4202efc90bedbd67f39f60bd7e9370a3b8557872ae841edb856e3720a13d2",
+      "guardSha256": "6e1f5f5045f9606086f1b01e6eb988b88c5670f78000b260fcb9e035f1c69b3d",
+      "log": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/docs/review-2026-10-12/reproductions/file-root-round27/file-root.test.ts.log",
+      "logSha256": "3367cea3ea1d26e07587c540206ba0680b3997a60c6bb29edce4b8c84d0b8f22",
+      "observedSha256": "cd2df39e24c2b67702d6ff18d2952083f71bb71e8d3924f6f357eba1827fdc32",
+      "completed": true,
+      "stdout": {
+        "files": 1,
+        "pass": 1,
+        "fail": 0,
+        "skip": 0,
+        "expect": 29
+      },
+      "runnerExit": 0,
+      "runnerExitProvenance": "parent read exec result reported exit0; stdout Completed independently read",
+      "sourceManifestCount": 51,
+      "resolutionOnlyCount": 4,
+      "callbacks": [
+        {
+          "channel": "fsRoot:readDir",
+          "line": 6492,
+          "sha256": "2820bebc653dec326e7a816ff53ad14969983f1f94c1fb0e4178db564d300f9a",
+          "capturedDependencies": [
+            "requireRendererProjectRoot",
+            "readDirectory"
+          ]
+        },
+        {
+          "channel": "fsSession:readDir",
+          "line": 6506,
+          "sha256": "a94993aa3251ef2d8c1fb2d4ad1422737efe0e9124cf2aecc6743cf79e93338e",
+          "capturedDependencies": [
+            "assertDesktopSessionId",
+            "readSessionDirectoryForUi"
+          ]
+        }
+      ],
+      "mockTargetsCount": 3,
+      "gitAdapterCalls": 10,
+      "apiCalls": 15,
+      "observations": 5,
+      "attempts": [],
+      "cleanupErrors": [],
+      "privateHOME": "/private/var/folders/1d/6__4f4y51g90nblfptt8s9v80000gn/T/codeshell-bun-completion-zqgihA/home",
+      "privateHOMEAbsentAtAudit": true,
+      "ownedPaths": [
+        "/private/var/folders/1d/6__4f4y51g90nblfptt8s9v80000gn/T/codeshell-bun-completion-zqgihA/home/.code-shell/round27-owned-file-roots"
+      ],
+      "ownedPathsAbsentAtAudit": true,
+      "candidateWrongTuple": [
+        "123f19bd-df3a-47eb-9aab-3a9750e33991",
+        "012967f5-7305-45b8-9b3f-08833fc5a494",
+        "/private/var/folders/1d/6__4f4y51g90nblfptt8s9v80000gn/T/codeshell-bun-completion-zqgihA/home/.code-shell/round27-owned-file-roots/root-a"
+      ],
+      "candidateWrongTupleCalls": 2,
+      "directBSuccess": true,
+      "normalAndInternalControlsVerified": true,
+      "normalizedAPICallsSha256": "974c1fd82827117ec87865edffe63cfa6e7b9ba3ca3bb677229da9ee4d7096a0"
+    }
+  ],
+  "normalizedAll15APICallsEqualAcrossThreeRuns": true,
+  "manifestWholeFileDifferencesAcrossFrozenTrees": [
+    "packages/core/src/index.ts",
+    "packages/core/dist/index.js",
+    "packages/desktop/src/main/index.ts"
+  ],
+  "authorFrozenInputsAllMatch": true,
+  "authorSummaryHashesAndExitMatch": true,
+  "accounting": {
+    "uniqueNewPortableFiles": 1,
+    "uniqueNewPortableTests": 1,
+    "perRunBunExpects": 29,
+    "prepared55d3Executions": 0,
+    "failedFixtureRuns": 0,
+    "newIndependentAuditFixtureExecutions": 0,
+    "proposedFormalAfterRootAdoption": {
+      "total": 86,
+      "P1": 1,
+      "P2": 52,
+      "P3": 33
+    },
+    "proposedPortableAfterRootAdoption": {
+      "files": 86,
+      "tests": 251
+    }
+  }
+}

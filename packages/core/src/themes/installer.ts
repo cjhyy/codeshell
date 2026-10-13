@@ -4,7 +4,7 @@
  *
  * Mirrors the plugin installer's discipline (safe names, canonical asset paths,
  * review-token double-check, temp-dir + rename atomicity) but is deliberately
- * self-contained and static-only: a theme pack is a manifest + images, never
+ * self-contained and static-only: a theme pack is a manifest + media, never
  * executable content, so there are no hooks/mcp/skills to approve.
  */
 import { createHash, randomUUID } from "node:crypto";
@@ -15,21 +15,22 @@ import {
   mkdir,
   mkdtemp,
   open,
-  readFile,
   readdir,
   realpath,
   rename,
   rm,
-  stat,
   writeFile,
 } from "node:fs/promises";
 import { dirname, join, resolve } from "node:path";
 import { detectThemeImage } from "./image.js";
+import { detectThemeWav, MAX_THEME_MUSIC_BYTES, MAX_THEME_SOUND_BYTES } from "./audio.js";
 import {
+  THEME_SOUND_EVENTS,
   THEME_SURFACE_NAMES,
   parseThemeManifest,
   type ThemeManifest,
   type ThemeSurfaceName,
+  type ThemeSoundEvent,
 } from "./manifest.js";
 import {
   THEME_ASSET_DIR,
@@ -66,6 +67,8 @@ export interface ThemePreview {
   wallpaperModes: WallpaperMode[];
   surfaceNames?: ThemeSurfaceName[];
   hasFrame?: boolean;
+  soundEvents?: ThemeSoundEvent[];
+  musicCount?: number;
   /** The pack's primary color (for the picker swatch), if it overrides one. */
   swatch?: string;
   /** Content digest bound to a subsequent install to detect mid-review changes. */
@@ -83,6 +86,8 @@ export interface InstalledTheme {
   wallpaper?: { light?: string; dark?: string; opacity?: number };
   surfaces?: ThemeManifest["surfaces"];
   frame?: ThemeManifest["frame"];
+  sounds?: ThemeManifest["sounds"];
+  music?: ThemeManifest["music"];
 }
 
 interface RegistryEntry {
@@ -96,10 +101,7 @@ interface Registry {
   themes: RegistryEntry[];
 }
 
-async function readImageAsset(
-  sourceDir: string,
-  rel: string,
-): Promise<{ bytes: Buffer; ext: string }> {
+async function readAssetBytes(sourceDir: string, rel: string, maxBytes: number): Promise<Buffer> {
   const abs = resolve(sourceDir, rel);
   if (!isThemePathWithinRoot(resolve(sourceDir), abs)) {
     throw new ThemeInstallError(`asset escapes theme root: ${rel}`);
@@ -107,7 +109,7 @@ async function readImageAsset(
   // The relative-path check above stops traversal, but not a symlink INSIDE
   // the pack pointing at an arbitrary file outside it. Resolve real paths and
   // require the asset to physically live under the pack root, or a malicious
-  // pack could exfiltrate any readable file that happens to be a valid image.
+  // pack could exfiltrate any readable file that happens to be valid media.
   let realRoot: string;
   let realAbs: string;
   try {
@@ -119,15 +121,40 @@ async function readImageAsset(
   if (!isThemePathWithinRoot(realRoot, realAbs)) {
     throw new ThemeInstallError(`asset escapes theme root via symlink: ${rel}`);
   }
-  let info: Awaited<ReturnType<typeof stat>>;
+  let handle: Awaited<ReturnType<typeof open>>;
   try {
-    info = await stat(realAbs);
+    handle = await open(
+      realAbs,
+      constants.O_RDONLY | (constants.O_NOFOLLOW ?? 0) | (constants.O_NONBLOCK ?? 0),
+    );
   } catch {
     throw new ThemeInstallError(`asset not found: ${rel}`);
   }
-  if (!info.isFile()) throw new ThemeInstallError(`asset is not a file: ${rel}`);
-  if (info.size > MAX_ASSET_BYTES) throw new ThemeInstallError(`asset too large: ${rel}`);
-  const bytes = await readFile(realAbs);
+  try {
+    const info = await handle.stat();
+    if (!info.isFile()) throw new ThemeInstallError(`asset is not a file: ${rel}`);
+    if (info.size > maxBytes) throw new ThemeInstallError(`asset too large: ${rel}`);
+    // Read at most the reviewed size plus one byte, even if a source file is
+    // concurrently enlarged after its metadata was checked.
+    const buffer = Buffer.alloc(info.size + 1);
+    let total = 0;
+    while (total < buffer.length) {
+      const { bytesRead } = await handle.read(buffer, total, buffer.length - total, null);
+      if (!bytesRead) break;
+      total += bytesRead;
+    }
+    if (total !== info.size) throw new ThemeInstallError(`asset changed while reading: ${rel}`);
+    return buffer.subarray(0, total);
+  } finally {
+    await handle.close();
+  }
+}
+
+async function readImageAsset(
+  sourceDir: string,
+  rel: string,
+): Promise<{ bytes: Buffer; ext: string }> {
+  const bytes = await readAssetBytes(sourceDir, rel, MAX_ASSET_BYTES);
   const detected = detectThemeImage(bytes);
   if (!detected) throw new ThemeInstallError(`asset is not a supported image: ${rel}`);
   return { bytes, ext: detected.ext };
@@ -158,6 +185,28 @@ async function resolveAssets(
   for (const name of THEME_SURFACE_NAMES) {
     await add(manifest.surfaces?.[name]?.light, `surface-${name}-light`);
     await add(manifest.surfaces?.[name]?.dark, `surface-${name}-dark`);
+  }
+  const addAudio = async (rel: string | undefined, base: string, music: boolean): Promise<void> => {
+    if (!rel) return;
+    const bytes = await readAssetBytes(
+      sourceDir,
+      rel,
+      music ? MAX_THEME_MUSIC_BYTES : MAX_THEME_SOUND_BYTES,
+    );
+    const audio = detectThemeWav(bytes);
+    if (!audio) throw new ThemeInstallError(`asset is not a supported PCM16 WAV: ${rel}`);
+    if (audio.durationSeconds > (music ? 600 : 10)) {
+      throw new ThemeInstallError(`audio duration exceeds ${music ? 600 : 10} seconds: ${rel}`);
+    }
+    const canonicalName = `${base}.wav`;
+    assets.push({ sourceRel: rel, canonicalName });
+    bytesByName.set(canonicalName, bytes);
+  };
+  for (const event of THEME_SOUND_EVENTS) {
+    await addAudio(manifest.sounds?.[event], `sound-${event}`, false);
+  }
+  for (let index = 0; index < (manifest.music?.length ?? 0); index += 1) {
+    await addAudio(manifest.music![index].file, `music-${index + 1}`, true);
   }
   return { assets, bytesByName };
 }
@@ -227,6 +276,10 @@ function previewOf(
       ? { surfaceNames: THEME_SURFACE_NAMES.filter((name) => manifest.surfaces?.[name]) }
       : {}),
     ...(manifest.frame && Object.keys(manifest.frame).length ? { hasFrame: true } : {}),
+    ...(manifest.sounds
+      ? { soundEvents: THEME_SOUND_EVENTS.filter((event) => manifest.sounds?.[event]) }
+      : {}),
+    ...(manifest.music ? { musicCount: manifest.music.length } : {}),
     ...((manifest.colors?.light?.["--cs-primary"] ?? manifest.colors?.dark?.["--cs-primary"])
       ? {
           swatch: (manifest.colors?.light?.["--cs-primary"] ??
@@ -255,9 +308,13 @@ async function previewThemeDirectory(sourceDir: string): Promise<ThemePreview> {
     !manifest.pet &&
     !manifest.wallpaper &&
     !manifest.surfaces &&
-    !manifest.frame
+    !manifest.frame &&
+    !manifest.sounds &&
+    !manifest.music?.length
   ) {
-    warnings.push("theme declares no colors, pet sprites, wallpaper, surfaces, or frame");
+    warnings.push(
+      "theme declares no colors, pet sprites, wallpaper, surfaces, frame, sounds, or music",
+    );
   }
   const { bytesByName } = await resolveAssets(sourceDir, manifest);
   return previewOf(manifest, bytesByName, warnings);
@@ -409,6 +466,19 @@ function canonicalManifestFor(manifest: ThemeManifest, assets: ResolvedAsset[]):
         }),
       )
     : undefined;
+  const sounds = manifest.sounds
+    ? Object.fromEntries(
+        THEME_SOUND_EVENTS.flatMap((event) => {
+          const file = rel(`sound-${event}`);
+          return file ? [[event, file]] : [];
+        }),
+      )
+    : undefined;
+  const music = manifest.music?.map((track, index) => ({
+    title: track.title,
+    ...(track.artist ? { artist: track.artist } : {}),
+    ...(track.url ? { url: track.url } : { file: rel(`music-${index + 1}`)! }),
+  }));
   return {
     schemaVersion: 1,
     id: manifest.id,
@@ -419,6 +489,8 @@ function canonicalManifestFor(manifest: ThemeManifest, assets: ResolvedAsset[]):
     ...(wallpaper && Object.keys(wallpaper).length ? { wallpaper } : {}),
     ...(surfaces && Object.keys(surfaces).length ? { surfaces } : {}),
     ...(manifest.frame ? { frame: manifest.frame } : {}),
+    ...(sounds && Object.keys(sounds).length ? { sounds } : {}),
+    ...(music?.length ? { music } : {}),
   };
 }
 
@@ -437,6 +509,8 @@ function toInstalledTheme(manifest: ThemeManifest): InstalledTheme {
     ...(manifest.wallpaper ? { wallpaper: manifest.wallpaper } : {}),
     ...(manifest.surfaces ? { surfaces: manifest.surfaces } : {}),
     ...(manifest.frame ? { frame: manifest.frame } : {}),
+    ...(manifest.sounds ? { sounds: manifest.sounds } : {}),
+    ...(manifest.music ? { music: manifest.music } : {}),
   };
 }
 

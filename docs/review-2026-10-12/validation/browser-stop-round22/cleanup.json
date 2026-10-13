@@ -1,0 +1,30 @@
+{
+  "completed": true,
+  "prepareOnly": false,
+  "failure": null,
+  "assertions": 66,
+  "appPid": 18509,
+  "harnessContextRetries": [
+    {
+      "at": 1791761185752,
+      "attempt": 1,
+      "operation": "read-only-info",
+      "message": "electronApplication.evaluate: Execution context was destroyed, most likely because of a navigation."
+    },
+    {
+      "at": 1791761185956,
+      "attempt": 1,
+      "operation": "read-only-info",
+      "message": "electronApplication.evaluate: Execution context was destroyed, most likely because of a navigation."
+    }
+  ],
+  "closeReceipt": {
+    "code": 0,
+    "signal": null
+  },
+  "cleanupErrors": [],
+  "isolatedHome": "/private/var/folders/1d/6__4f4y51g90nblfptt8s9v80000gn/T/codeshell-browser-stop-round22-VTslDW",
+  "isolatedHomeRemoved": true,
+  "productMainLoaded": false,
+  "actualWorkerModelCliStarted": false
+}

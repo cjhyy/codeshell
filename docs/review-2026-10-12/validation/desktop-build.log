@@ -1,0 +1,103 @@
+$ bun run scripts/build.ts
+vite v7.3.5 building client environment for production...
+
+  out/preload/index.cjs          77.1kb
+  out/preload/panel-app.cjs       4.6kb
+  out/preload/browser-guest.cjs   1.6kb
+
+⚡ Done in 21ms
+vite v7.3.5 building client environment for production...
+transforming...
+transforming...
+
+  out/main/index.mjs                       4.9mb ⚠️
+  out/main/chunks/lark-DMACJGGH.mjs        4.8mb ⚠️
+  out/main/chunks/teams-62NMDEEO.mjs       4.4mb ⚠️
+  out/main/chunks/discord-LCQZPMNC.mjs     2.9mb ⚠️
+  out/main/chunks/bidi-2PHLGHOI.mjs      588.2kb
+  out/main/chunks/chunk-TT2WPRHE.mjs     394.4kb
+  out/main/chunks/chunk-Z7SSJQGI.mjs     289.2kb
+  out/main/chunks/slack-ATVGRZRX.mjs     244.3kb
+  out/main/chunks/dingtalk-7LD7M5IO.mjs  178.2kb
+  out/main/chunks/chunk-JIDWJQOO.mjs     168.8kb
+  out/main/chunks/chunk-OEJNJAIG.mjs     144.4kb
+  out/main/chunks/chunk-S7GKX7S7.mjs     124.2kb
+  out/main/chunks/wecom-D7RMHW36.mjs      57.0kb
+  out/main/chunks/chunk-DBYRVWVX.mjs      42.5kb
+  out/main/chunks/chunk-LGQ2LFWN.mjs      29.8kb
+  out/main/chunks/chunk-VADWG277.mjs      22.8kb
+  out/main/chunks/open-BQ7WTZZT.mjs       20.8kb
+  out/main/chunks/chunk-UBYPZKY3.mjs      18.8kb
+  out/main/chunks/chunk-3YBTJZ75.mjs      16.2kb
+  out/main/chunks/chunk-WL35KENX.mjs      11.6kb
+  ...and 25 more output files...
+
+⚡ Done in 2313ms
+✓ 2681 modules transformed.
+rendering chunks...
+✓ 397 modules transformed.
+computing gzip size...
+../../out/renderer/index.html                                  1.42 kB │ gzip:   0.64 kB
+../../out/renderer/assets/run-left-1-BhVL_A4u.png             47.97 kB
+../../out/renderer/assets/run-right-3-CJEHj2LC.png            48.26 kB
+../../out/renderer/assets/run-right-6-LnQQSwjJ.png            52.20 kB
+../../out/renderer/assets/run-left-5-Dz1DVa-9.png             52.83 kB
+../../out/renderer/assets/run-left-7-B31IFrfE.png             53.01 kB
+../../out/renderer/assets/run-left-8-BsxHZDxn.png             53.17 kB
+../../out/renderer/assets/run-right-1-BgSNc1XV.png            53.28 kB
+../../out/renderer/assets/run-right-8-D8Cbk01A.png            53.30 kB
+../../out/renderer/assets/run-left-4-CAfYSrxW.png             53.80 kB
+../../out/renderer/assets/run-left-3-CtVyWFhu.png             54.20 kB
+../../out/renderer/assets/run-right-5-CXV8ymwp.png            54.26 kB
+../../out/renderer/assets/run-right-7-BEHlSxMY.png            54.47 kB
+../../out/renderer/assets/run-right-2-Be48AhAR.png            54.94 kB
+../../out/renderer/assets/run-left-2-D5Szs9eR.png             55.51 kB
+../../out/renderer/assets/run-right-4-BgEK-W4l.png            56.12 kB
+../../out/renderer/assets/run-left-6-mZW3tmW0.png             58.46 kB
+../../out/renderer/assets/anim-jumping-BxvV81DA.webp         254.46 kB
+../../out/renderer/assets/codeshell-dog-icon-BAhsSVnH.png    292.79 kB
+../../out/renderer/assets/syntax-vendor-CDab0zVI.css           1.06 kB │ gzip:   0.45 kB
+../../out/renderer/assets/terminal-vendor-DDGTF8rc.css         3.62 kB │ gzip:   0.99 kB
+../../out/renderer/assets/index-B8Z4dDJI.css                 149.82 kB │ gzip:  22.46 kB
+../../out/renderer/assets/checkbox-BWwDUfHs.js                 0.68 kB │ gzip:   0.42 kB
+../../out/renderer/assets/badge-DAW5mguy.js                    0.93 kB │ gzip:   0.45 kB
+../../out/renderer/assets/TerminalPanel-CGIbQ7ok.js            3.76 kB │ gzip:   1.81 kB
+../../out/renderer/assets/ApprovalsView-B5L2HI80.js            4.78 kB │ gzip:   1.54 kB
+../../out/renderer/assets/LogsView-CiNf0jyo.js                 5.79 kB │ gzip:   2.01 kB
+../../out/renderer/assets/SessionsView-IOWPOGkD.js            10.03 kB │ gzip:   3.15 kB
+../../out/renderer/assets/TaskInboxPage-C70PqwXa.js           15.68 kB │ gzip:   5.74 kB
+../../out/renderer/assets/RunsView-DTwKjaPc.js                18.20 kB │ gzip:   5.06 kB
+../../out/renderer/assets/SessionPanelDock-DVhIm834.js        20.73 kB │ gzip:   6.89 kB
+../../out/renderer/assets/AutomationView-Z4TBFwLg.js          34.97 kB │ gzip:   9.99 kB
+../../out/renderer/assets/icons-vendor-Bs5IkJAL.js            41.46 kB │ gzip:  12.64 kB
+../../out/renderer/assets/OptimizationLabPage-Be6hAcnz.js     42.31 kB │ gzip:  10.29 kB
+../../out/renderer/assets/DigitalHumansView-Eb2VTXA6.js       59.91 kB │ gzip:  14.09 kB
+../../out/renderer/assets/codeshell-web-De9C55XA.js           66.87 kB │ gzip:  24.87 kB
+../../out/renderer/assets/MemorySection-B14TMdEC.js           72.86 kB │ gzip:  17.37 kB
+../../out/renderer/assets/CredentialsPage-BwLK4ejt.js         90.39 kB │ gzip:  20.91 kB
+../../out/renderer/assets/ExtensionsPage-HIC3fRar.js         143.99 kB │ gzip:  34.47 kB
+../../out/renderer/assets/ui-vendor--OmhORyb.js              161.53 kB │ gzip:  52.24 kB
+../../out/renderer/assets/syntax-vendor-DayHUaia.js          169.95 kB │ gzip:  51.52 kB
+../../out/renderer/assets/react-vendor-BQjjVZiU.js           192.93 kB │ gzip:  60.54 kB
+../../out/renderer/assets/SettingsPage-BtvT8ORE.js           200.19 kB │ gzip:  47.08 kB
+../../out/renderer/assets/terminal-vendor-I0OV3op2.js        330.51 kB │ gzip:  83.39 kB
+../../out/renderer/assets/markdown-vendor-COJl1xi7.js        342.62 kB │ gzip: 105.91 kB
+../../out/renderer/assets/index-DioCWvv4.js                1,175.89 kB │ gzip: 362.98 kB
+
+(!) Some chunks are larger than 1000 kB after minification. Consider:
+- Using dynamic import() to code-split the application
+- Use build.rollupOptions.output.manualChunks to improve chunking: https://rollupjs.org/configuration-options/#output-manualchunks
+- Adjust chunk size limit for this warning via build.chunkSizeWarningLimit.
+✓ built in 15.96s
+rendering chunks...
+computing gzip size...
+../../out/mobile/index.html                   0.55 kB │ gzip:   0.33 kB
+../../out/mobile/assets/index-Dfj49lOn.css   62.43 kB │ gzip:  11.58 kB
+../../out/mobile/assets/index-D5WIxv5q.js   672.52 kB │ gzip: 209.10 kB
+
+(!) Some chunks are larger than 500 kB after minification. Consider:
+- Using dynamic import() to code-split the application
+- Use build.rollupOptions.output.manualChunks to improve chunking: https://rollupjs.org/configuration-options/#output-manualchunks
+- Adjust chunk size limit for this warning via build.chunkSizeWarningLimit.
+✓ built in 17.24s
+[build] main, preload, renderer, mobile, and Chrome extension OK

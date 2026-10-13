@@ -1,0 +1,8 @@
+Baseline 84740d56; read-only snapshot /Users/admin/.codex/worktrees/server-desktop-review-20261012/codeshell
+All runs used node scripts/run-bun-test-shard.mjs --timeout 30000 <absolute temp test>
+panel-multiroot.test.tsx: 1 pass, 0 fail, 8 assertions (D8)
+panel-registry-batch.test.ts: 3 pass, 0 fail, 7 assertions (D9 incl. healthy control + missing-root + 65-root manifestations)
+remove-project-workspace.test.ts: 1 pass, 0 fail, 10 assertions (D10 incl. actual blocked cleanup)
+Total: 5 tests passing, 0 skipped, 0 final failures, 25 assertions across 3 guarded shards.
+No actual model requests, network requests or user service calls. Real filesystem/Git operations restricted to temporary fixture directories; runner isolated HOME and application state.
+No product edits or commits. The only git status entry, docs/review-2026-10-12/, belongs to parent agent.

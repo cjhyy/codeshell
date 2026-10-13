@@ -1,0 +1,12 @@
+bun test v1.3.11 (af24e281)
+
+docs/review-2026-10-12/reproductions/automation-round5/resume-outcome.test.ts:
+(pass) a rejected production resume injection is reported as completed [6.32ms]
+(pass) accepted but long resume run times out, reports completed and admits another dispatch [177.83ms]
+(pass) scheduler abort does not send a cancel frame for the production resume injector [6.22ms]
+
+ 3 pass
+ 0 fail
+ 20 expect() calls
+Ran 3 tests across 1 file. [931.00ms]
+Completed Bun shard: 3 tests, 0 skipped; 0 failures.

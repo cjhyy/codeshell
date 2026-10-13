@@ -1,0 +1,35 @@
+{
+  "timestampSingapore": "2026-10-12 03:54",
+  "findings": 65,
+  "priorities": {
+    "P1": 1,
+    "P2": 44,
+    "P3": 20
+  },
+  "topMarkdownLocalLinks": 408,
+  "sourceLineLinks": 254,
+  "completedCommonRuns": [
+    {
+      "metadata": "validation/reproduction-results.json",
+      "files": 62,
+      "tests": 199,
+      "skip": 0,
+      "finalFailures": 0
+    },
+    {
+      "metadata": "validation/latest-a66f4ef2/reproduction-results.json",
+      "files": 62,
+      "tests": 199,
+      "skip": 0,
+      "finalFailures": 0
+    }
+  ],
+  "latestOnlyFiles": 3,
+  "latestOnlyTests": 8,
+  "nativeReloadIdentityScenarios": 1,
+  "nativeReloadIdentityReloads": 2,
+  "nativeReloadIdentityScope": "a66f/macOS; identity only; no real PTY/worker",
+  "productTrackedDiff": [],
+  "latestProductTrackedDiff": [],
+  "errors": []
+}

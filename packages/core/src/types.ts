@@ -591,6 +591,8 @@ export type TerminalReason =
   | "replay_incomplete"
   /** A claimed external write is pending, uncertain, or failed independent verification. */
   | "unverified_write"
+  /** A Native-approved batch ended before every fixed item was independently verified. */
+  | "batch_incomplete"
   | "aborted_streaming"
   | "aborted_tools"
   | "max_turns"

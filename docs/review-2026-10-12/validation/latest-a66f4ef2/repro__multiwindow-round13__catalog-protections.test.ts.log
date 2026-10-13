@@ -1,0 +1,42 @@
+bun test v1.3.11 (af24e281)
+
+docs/review-2026-10-12/reproductions/multiwindow-round13/catalog-protections.test.ts:
+(pass) SessionCatalogStore > preserves an explicit first-run marker across reload and removes it on engine binding [27.25ms]
+(pass) SessionCatalogStore > migrates every legacy project once, backs it up, and preserves canonical choices [22.68ms]
+(pass) SessionCatalogStore > merges concurrent windows field by field, reloads other writers, and persists drafts [23.71ms]
+(pass) SessionCatalogStore > tombstones fence late patches and pre-migration stale rows [11.89ms]
+(pass) SessionCatalogStore > failed writes never publish success and leave the queue usable [15.80ms]
+(pass) SessionCatalogStore > isolates subscriber/returned objects and does not report no-op changes [9.05ms]
+(pass) SessionCatalogStore > rejects unsafe ids, payloads, corrupt files and symbolic links without overwriting [6.40ms]
+(pass) catalog IPC rejects embedded frames and unregistered windows before reading private data [9.37ms]
+(pass) a new row is durable before IPC resolves and broadcasts reach other views [13.21ms]
+(pass) normal quit waits for the owning renderer to acknowledge queued edits [0.95ms]
+(pass) a renderer save failure rejects normal quit so pending edits remain available [0.83ms]
+(pass) imports all legacy indices before removing them and transfers each exact transcript key after ACK [1.06ms]
+(pass) failed migration preserves source data and retries remaining transcripts after index ACK [0.34ms]
+(pass) emits only changed row fields and retains local edits while another window adds and pins rows [0.44ms]
+(pass) failed writes remain visible, notify errors, reject flush and retry without losing queued edits [0.45ms]
+(pass) ignores stale catalog snapshots and explicitly deletes rows without replacing another row [0.23ms]
+(pass) keeps new transcript content when an older background snapshot read resolves [0.57ms]
+(pass) a fresh narrow read refreshes a previously expanded snapshot [0.26ms]
+(pass) an older read cannot overwrite a newer read that completed first [0.12ms]
+(pass) serializes transcript updates and deletion, preserving the failed head until retry [0.18ms]
+(pass) project migration copies a complete snapshot while retaining source data until catalog ACK [0.11ms]
+(pass) isolates a malformed legacy snapshot while migrating valid records and preserving the bad key [0.12ms]
+(pass) an empty installation acknowledges legacy migration once instead of leaving stale import open [0.06ms]
+(pass) a remote deletion does not resurrect an incomplete row from a pending local field edit [0.11ms]
+(pass) bounds acknowledged snapshot memory while protecting pending and streaming conversations [0.46ms]
+(pass) a failed project snapshot copy leaves the source available and rejects flush [0.14ms]
+(pass) flush drains events before snapshot readers and waits for their durable writes [2.23ms]
+(pass) project migration commits catalog only after snapshot copy and deletes source last [0.69ms]
+(pass) project migration keeps the old catalog when snapshot copying fails [0.07ms]
+(pass) PanelHostWindowRoutes > routes a session only to the window that most recently claimed it [0.07ms]
+(pass) PanelHostWindowRoutes > drops closed and explicitly forgotten owners [0.05ms]
+(pass) PanelHostWindowRoutes > accepts only the bound window response unless routing uses a fallback [0.02ms]
+(pass) PanelHostWindowRoutes > never broadcasts a potentially mutating invocation to multiple windows [0.02ms]
+
+ 33 pass
+ 0 fail
+ 129 expect() calls
+Ran 33 tests across 1 file. [704.00ms]
+Completed Bun shard: 33 tests, 0 skipped; 0 failures.

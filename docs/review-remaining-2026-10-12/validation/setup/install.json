@@ -1,0 +1,9 @@
+{
+  "command": "bun install --frozen-lockfile",
+  "cwd": "/Users/admin/.codex/worktrees/remaining-modules-review-20261012/codeshell",
+  "home": "/var/folders/1d/6__4f4y51g90nblfptt8s9v80000gn/T/codeshell-remaining-install-home-hne5249l",
+  "elapsedSeconds": 334.81,
+  "exitCode": 0,
+  "environment": "clean explicit PATH/HOME/TMPDIR/LANG/SHELL; provider credentials not inherited",
+  "homeRemoved": true
+}

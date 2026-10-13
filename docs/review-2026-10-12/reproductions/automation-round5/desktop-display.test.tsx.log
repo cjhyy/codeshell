@@ -1,0 +1,13 @@
+bun test v1.3.11 (af24e281)
+
+docs/review-2026-10-12/reproductions/automation-round5/desktop-display.test.tsx:
+(pass) disabled reason exists in scheduler but is lost across desktop summary and reopening UI [128.40ms]
+(pass) live production announcement is not linked by its exact cronJobId [86.97ms]
+(pass) reopened automation A lists unrelated job B's disk session from same 24h window [95.35ms]
+(pass) run-now refresh finishes before asynchronous auto-disable, leaving open UI active indefinitely [173.00ms]
+
+ 4 pass
+ 0 fail
+ 18 expect() calls
+Ran 4 tests across 1 file. [1.80s]
+Completed Bun shard: 4 tests, 0 skipped; 0 failures.
