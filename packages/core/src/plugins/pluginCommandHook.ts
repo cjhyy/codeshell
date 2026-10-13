@@ -43,11 +43,12 @@ import type { HookContext, HookResult } from "../hooks/events.js";
 import { MAX_HOOK_OUTPUT_BYTES } from "../hooks/hook-output.js";
 import { closeHookStdin, MAX_HOOK_STDIN_BYTES, writeHookStdin } from "../hooks/shell-runner.js";
 import { killChildTree } from "../runtime/spawn-common.js";
+import { preparePluginHookInvocation } from "./pluginHookCommand.js";
 
 const DEFAULT_TIMEOUT_MS = 60_000;
 
 export interface PluginCommandHookSpec {
-  /** Shell command line, with ${CODESHELL_PLUGIN_ROOT} placeholder allowed. */
+  /** Approved command; root/data path templates are compiled without changing its stored bytes. */
   command: string;
   /** Plugin install path; exported as CODESHELL_PLUGIN_ROOT for the child. */
   installPath: string;
@@ -162,10 +163,16 @@ export async function runPluginCommandHook(
         CLAUDE_PLUGIN_DATA: _strippedData,
         ...parentEnv
       } = process.env;
-      child = spawn(spec.command, [], {
-        shell: true,
+      const invocation = preparePluginHookInvocation(spec.command, {
+        root: spec.installPath,
+        data: pluginDataPath,
+      });
+      child = spawn(invocation.file, invocation.args, {
+        shell: invocation.shell,
+        ...(invocation.windowsVerbatimArguments ? { windowsVerbatimArguments: true } : {}),
         env: {
           ...parentEnv,
+          ...invocation.environment,
           CODESHELL_PLUGIN_ROOT: spec.installPath,
           PLUGIN_ROOT: spec.installPath,
           CODESHELL_PLUGIN_DATA: pluginDataPath,

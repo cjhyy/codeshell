@@ -38,13 +38,13 @@ every manifest field has an identically named implementation.
 | Plugin hooks                          | **Strong**                      | Default, path-based, mixed-array, and inline Codex declarations are projected into `hooks/hooks.json`; root/data aliases are exposed. New executable hook digests start pending, require explicit approval, fail closed after changes, and require re-approval when an update changes the digest. The last approved bounded command snapshot survives updates, so Desktop and TUI show per-hook added/removed/changed/unchanged review before the next approval.                                                                                                                                                                                                   |
 | Plugin MCP servers                    | **Strong**                      | Inline/file declarations, STDIO/HTTP configuration, env-secret field normalization, OAuth-capable host MCP, probing, and an explicit plugin-digest approval/revocation gate exist. After plugin approval, each server can be enabled/disabled independently and can carry exact-name tool allow/deny policy in Desktop or TUI through a global override that cannot replace connection identity.                                                                                                                                                                                                                                                                   |
 | Apps / hosted connectors              | **Missing**                     | CodeShell has no `.app.json`/ChatGPT connector installation or hosted plugin service. External tools use MCP or CodeShell credentials/browser bridges instead.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     |
-| Plugin UI                             | **Separate system**             | Agent Plugins cannot declare Desktop UI. CodeShell Panel Apps are independently installed sandboxed right-dock applications; Codex/ChatGPT apps use MCP-backed Apps SDK UI across hosted surfaces.                                                                                                                                                                                                                                                                                                                                                                                                                                                               |
+| Plugin UI                             | **Separate system**             | Agent Plugins cannot declare Desktop UI. CodeShell Panel Apps are independently installed sandboxed right-dock applications; Codex/ChatGPT apps use MCP-backed Apps SDK UI across hosted surfaces.                                                                                                                                                                                                                                                                                                                                                                                                                                                                 |
 | Browser extension contribution        | **Missing as manifest surface** | CodeShell has browser/CDP capabilities, but an installed plugin cannot declare a browser extension contribution.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   |
 | Scheduled task templates              | **Strong**                      | A CodeShell overlay can package bounded reusable templates. Install/update never creates a job. Desktop shows the exact prompt and requires confirmation; TUI requires the reviewed SHA-256 revision plus `--confirm`. Main/TUI re-read the canonical manifest, reject disabled plugins and stale revisions, cap jobs at 256, and copy immutable provenance into a standalone cron job that survives plugin removal.                                                                                                                                                                                                                                               |
 | Marketplace install                   | **Strong partial**              | Git/GitHub/git-subdir/local marketplace entries, local directories, ZIP archives, public npm exact versions/dist-tags, update, uninstall, and recommended catalogs exist. Local directory/ZIP installs have a no-mutation review step, authoritative contribution summary, source-bound token, private snapshot install, and overwrite confirmation. Public npm materialization is CLI-only, fixed to `registry.npmjs.org`, SHA-512 verified, exact-version pinned, self-contained, and lifecycle-free. Desktop remote-source review, private registries, ranges/dependencies, npm auto-update, and Codex personal/repo marketplace auto-discovery remain missing. |
 | Install metadata/assets               | **Full for local UI metadata**  | Codex display text, developer/category/capabilities, HTTPS website/privacy/terms links, brand color, up to three 128-character starter prompts, composer icon, light/dark logos, and up to three screenshots survive normalization. Starter prompts can be appended to the current composer draft but never auto-send or discard unsent text. Raster assets are containment-, format-, dimension-, and size-checked before bounded data-URL serving to Desktop.                                                                                                                                                                                                    |
 | Sharing and publication               | **Missing**                     | No workspace sharing links, public directory submission, review pipeline, or organization-managed install policy.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  |
-| Plugin lifecycle / data               | **Strong partial**              | Agent Plugins provide hooks/MCP/skills and receive stable per-plugin writable storage through `CODESHELL_PLUGIN_DATA` and Codex-compatible `PLUGIN_DATA`. Panel App lifecycle and storage are independent.                                                                                                                                                                                                                                                                                                                                                                                                                                                       |
+| Plugin lifecycle / data               | **Strong partial**              | Agent Plugins provide hooks/MCP/skills and receive stable per-plugin writable storage through `CODESHELL_PLUGIN_DATA` and Codex-compatible `PLUGIN_DATA`. Panel App lifecycle and storage are independent.                                                                                                                                                                                                                                                                                                                                                                                                                                                         |
 | Permissions and trust                 | **Strong partial**              | Agent tools use normal permission gates. Plugin shell hooks and plugin MCP servers have separate install-digest approval/revocation gates in Desktop and TUI; pending and changed executable definitions fail closed while other contributions remain usable. Local Plugin review exposes commands/matchers, server transports, links, and media. Panel App review separately exposes Host permissions. Organization-managed policy is still missing.                                                                                                                                                                                                              |
 
 ## 3. Compatibility fixes in this iteration
@@ -153,6 +153,52 @@ The installer now:
     dependencies are rejected, and no npm/Bun process or lifecycle script is
     ever run. Phase A deliberately excludes private registries, ranges,
     dependency installation, auto-update, and a Desktop remote-install UI.
+
+Approved hook commands accept complete rooted path words using
+`$CODESHELL_PLUGIN_ROOT`, `$CODESHELL_PLUGIN_DATA`, `$PLUGIN_ROOT`, and
+`$PLUGIN_DATA`, including their `${NAME}` forms. Runtime compilation preserves
+the installed command and approval digest. On POSIX, bare, double-quoted and
+single-quoted path words become quoted references to the injected environment;
+actual path bytes never become shell source. Spaces, Unicode, apostrophes,
+quotes, and command-substitution-looking characters in a filesystem path stay
+data. Escaped dollars, comments and unrelated parameter expansions retain their
+shell meaning. Commands without target macros are returned byte-for-byte.
+
+This compiler deliberately refuses target templates in ambiguous contexts:
+heredocs/here-strings, backticks, arithmetic, nested target parameter expansions,
+command substitutions inside unknown parameters, ANSI-C quoting, mixed
+path-word quotes, shell control-flow/functions, and dynamic source interpreters.
+It tracks independent quotes in ordinary `$()` command substitutions. Put complex
+logic in an approved plugin script and invoke its rooted path word instead of
+embedding a program in the command string.
+Source-interpreter checks use quote/escape-decoded literal words, so quoting or
+splitting `-c` does not bypass them. Known interpreters also refuse dynamic
+arguments and flags before a template script path, including combined short
+flags such as `sh -ec` and `node -pe`; this bounded grammar does not infer each
+interpreter's option language. An escaped/comment-only macro retains the legacy
+command bytes. This establishes host compilation into path data; subsequent
+interpretation inside an approved executable remains that executable's behavior.
+
+On Windows, a simple invocation beginning with a complete rooted path token
+uses private per-invocation environment slots and a system `cmd.exe` invocation
+with `/d /v:off /s /c`. POSIX single quotes are template delimiters in this
+specific form, rather than native cmd quoting. Original native `%VAR%` text is
+preserved, while path slots expand once inside double quotes; path values are
+not recursively scanned for percent variables. The compiler refuses occupied
+slot names (including case variants and references already in the command),
+duplicate/non-system `ComSpec`, shell operators/re-parsing commands, invalid
+Win32 paths, trailing-backslash path arguments, and over-limit command lines.
+For a compiled invocation, retained native percent references must be simple
+names present in the captured environment so their one-pass length can be
+bounded; substring/substitution operators and dynamic/unknown cmd variables
+are refused rather than guessed.
+Commands without target macros retain their previous shell/`ComSpec` behavior.
+The host's single parse does not make a plugin's own `CALL`, interpreter or
+enabled delayed expansion safe; those remain part of the approved script's
+behavior. See the [cmd reference](https://learn.microsoft.com/en-us/windows-server/administration/windows-commands/cmd)
+for `/d`, `/v:off`, quoting and non-recursive percent substitution. Pure Windows
+planner tests are separate from the Windows-only native fixture; a POSIX run
+does not establish native Windows behavior.
 
 This closes the difference between "the marketplace says installed" and "the
 runtime contributions are actually discoverable."

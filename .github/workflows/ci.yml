@@ -360,6 +360,7 @@ jobs:
         run: |
           node scripts/run-bun-test-shard.mjs --timeout 30000 `
             packages/core/src/runtime/shell-invocation.test.ts `
+            packages/core/src/plugins/pluginHookCommand.test.ts `
             packages/core/src/runtime/kill-win32.test.ts `
             packages/core/src/tool-system/path-policy-win32.test.ts `
             packages/core/src/tool-system/builtin/crlf.test.ts `
