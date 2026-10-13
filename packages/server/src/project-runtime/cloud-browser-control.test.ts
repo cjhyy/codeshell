@@ -1,5 +1,6 @@
 import { afterAll, afterEach, expect, test } from "bun:test";
-import { createServer } from "node:http";
+import { createServer, request as httpRequest } from "node:http";
+import { Readable } from "node:stream";
 import { randomBytes, randomUUID } from "node:crypto";
 import { once } from "node:events";
 import { mkdtempSync, realpathSync, rmSync, readFileSync, writeFileSync } from "node:fs";
@@ -13,6 +14,7 @@ const confinement = installCloudControlConfinement();
 afterAll(() => confinement.restore());
 const { ProjectRegistry } = await import("./registry.js");
 const { startProjectControlServer } = await import("./control-server.js");
+const { createCloudBrowserAuth } = await import("./cloud-browser-auth.js");
 const closes: Array<() => Promise<void>> = [];
 afterEach(async () => {
   for (const close of closes.splice(0).reverse()) await close();
@@ -103,7 +105,9 @@ async function fixture() {
         expect(installationId).toMatch(/^[a-f0-9-]{36}$/);
         const principal = tickets.get(ticket);
         tickets.delete(ticket);
-        await holdRedeem;
+        const pending = holdRedeem;
+        holdRedeem = undefined;
+        await pending;
         if (!principal || !active.has(principal.rootSessionId))
           throw Error("private provider detail");
         return { ...principal };
@@ -508,6 +512,166 @@ test("close fences a late ticket redemption before any owner or browser grant is
   await closing;
   const registry = JSON.parse(readFileSync(join(f.root, "project-control/registry.json"), "utf8"));
   expect(registry.owners).toHaveLength(0);
+});
+
+test("logout fences a pending renewal so its late response cannot restore a browser cookie", async () => {
+  const f = await fixture(),
+    identity = f.identity(),
+    first = await f.login(identity),
+    gate = pause();
+  f.holdRedeem(gate.promise);
+  const pending = f.request(
+    "/api/v1/cloud-browser/session",
+    "POST",
+    { ticket: f.issue(identity) },
+    first.cookie,
+  );
+  await new Promise((resolve) => setTimeout(resolve, 10));
+  expect((await f.request("/api/v1/auth/logout", "POST", {}, first.cookie)).status).toBe(200);
+  gate.release();
+  const late = await pending;
+  expect(late.status).toBe(401);
+  expect(late.headers.get("set-cookie")).toBeNull();
+  expect((await f.request("/api/v1/projects", "GET", undefined, first.cookie)).status).toBe(401);
+});
+
+test("an account switch fences the prior account's pending browser renewal", async () => {
+  const f = await fixture(),
+    identity = f.identity(),
+    a = await f.login(identity),
+    gate = pause();
+  f.holdRedeem(gate.promise);
+  const pending = f.request(
+    "/api/v1/cloud-browser/session",
+    "POST",
+    { ticket: f.issue(identity) },
+    a.cookie,
+  );
+  await new Promise((resolve) => setTimeout(resolve, 10));
+  const b = await f.login(f.identity(), a.cookie);
+  gate.release();
+  const late = await pending;
+  expect(late.status).toBe(401);
+  expect(late.headers.get("set-cookie")).toBeNull();
+  const status = await (await f.request("/api/v1/auth/status", "GET", undefined, b.cookie)).json();
+  expect(status.session.accountId).toBe(b.session.accountId);
+  expect((await f.request("/api/v1/projects", "GET", undefined, a.cookie)).status).toBe(401);
+});
+
+test("a delayed logout body cannot clear a different root's newly issued cookie", async () => {
+  const f = await fixture(),
+    a = await f.login(f.identity());
+  let finish!: () => void;
+  const pending = new Promise<{ status: number; cookie?: string[] }>((resolve, reject) => {
+    const request = httpRequest(
+      f.server.url + "/api/v1/auth/logout",
+      {
+        method: "POST",
+        headers: {
+          Host: new URL(publicOrigin).host,
+          Origin: publicOrigin,
+          "Sec-Fetch-Site": "same-origin",
+          "Content-Type": "application/json",
+          "Content-Length": "2",
+          Cookie: a.cookie,
+        },
+      },
+      (response) => {
+        response.resume();
+        response.on("end", () =>
+          resolve({ status: response.statusCode!, cookie: response.headers["set-cookie"] }),
+        );
+      },
+    );
+    request.on("error", reject);
+    request.write("{");
+    finish = () => request.end("}");
+  });
+  await new Promise((resolve) => setTimeout(resolve, 10));
+  const b = await f.login(f.identity(), a.cookie);
+  finish();
+  const late = await pending;
+  expect(late.status).toBe(401);
+  expect(late.cookie).toBeUndefined();
+  expect((await f.request("/api/v1/projects", "GET", undefined, b.cookie)).status).toBe(200);
+});
+
+test("repeated authorized login and logout cannot exhaust other users' session capacity", async () => {
+  let now = Date.now();
+  const root = randomUUID(),
+    accountId = randomUUID(),
+    ownerId = randomUUID();
+  const principal: CloudAccountPrincipal = {
+    accountOrigin,
+    accountId,
+    sessionId: root,
+    rootSessionId: root,
+    authorityEpoch: randomUUID(),
+    expiresAt: now + 3_600_000,
+  };
+  const auth = createCloudBrowserAuth({
+    accountOrigin,
+    publicOrigin,
+    installationId: randomUUID(),
+    managementEpoch: randomUUID(),
+    now: () => now,
+    ownerForAccount: () => ownerId,
+    onRevoke() {},
+    authority: {
+      accountOrigin,
+      redeem: async () => ({ ...principal }),
+      validate: async (value) => ({ ...value }),
+    },
+  });
+  const call = async (path: string, body: unknown, cookie?: string) => {
+    const headers: Record<string, string> = {
+      host: new URL(publicOrigin).host,
+      origin: publicOrigin,
+      "sec-fetch-site": "same-origin",
+      "content-type": "application/json",
+      ...(cookie ? { cookie } : {}),
+    };
+    const request = Object.assign(Readable.from([Buffer.from(JSON.stringify(body))]), {
+      method: "POST",
+      url: path,
+      headers,
+      rawHeaders: Object.entries(headers).flat(),
+    });
+    const result = { status: 0, cookie: "" };
+    const response = {
+      destroyed: false,
+      writableEnded: false,
+      setHeader(name: string, value: string) {
+        if (name === "Set-Cookie") result.cookie = value;
+      },
+      writeHead(status: number) {
+        result.status = status;
+      },
+      end() {
+        this.writableEnded = true;
+      },
+    };
+    await auth.handle(
+      request as unknown as import("node:http").IncomingMessage,
+      response as unknown as import("node:http").ServerResponse,
+    );
+    return result;
+  };
+  try {
+    for (let n = 0; n < 270; n++) {
+      if (n && n % 59 === 0) now += 60_001;
+      const login = await call("/api/v1/cloud-browser/session", {
+        ticket: randomBytes(32).toString("base64url"),
+      });
+      expect(login.status).toBe(201);
+      expect((await call("/api/v1/auth/logout", {}, login.cookie.split(";", 1)[0])).status).toBe(
+        200,
+      );
+    }
+    expect(auth.store.listSessions()).toHaveLength(0);
+  } finally {
+    auth.close?.();
+  }
 });
 
 test("multi-account startup refuses legacy state unchanged and does not mint a Hub administrator", async () => {

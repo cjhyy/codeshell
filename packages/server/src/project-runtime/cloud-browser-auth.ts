@@ -70,6 +70,7 @@ export function createCloudBrowserAuth(options: {
   function revoke(entry: Entry) {
     if (entry.revoked) return;
     entry.revoked = true;
+    if (entries.get(entry.session.id) === entry) entries.delete(entry.session.id);
     options.onRevoke(entry.session.id, entry.session.ownerId);
   }
   function entryFor(session: ProjectControlSession): Entry | undefined {
@@ -254,6 +255,10 @@ export function createCloudBrowserAuth(options: {
       if (now() >= attempts.until) attempts = { until: now() + 60_000, count: 0 };
       if (++attempts.count > 60 || exchanging >= 4)
         throw new ProjectRegistryError(429, "Cloud 登录请求过多。");
+      // Capture before either request-body or private redemption awaits. A
+      // logout/account switch must fence the old request's eventual Set-Cookie.
+      const previous = entryFromRequest(req);
+      const wasRevoked = previous?.revoked;
       exchanging++;
       try {
         const body = await readBody(req);
@@ -278,12 +283,16 @@ export function createCloudBrowserAuth(options: {
           principal.expiresAt <= now()
         )
           throw new ProjectRegistryError(401, "云账号验证失败。");
+        if (
+          previous &&
+          (entries.get(previous.session.id) !== previous || previous.revoked !== wasRevoked)
+        )
+          throw new ProjectRegistryError(401, "Cloud 登录状态已改变，请重新进入工作台。");
         for (const [id, entry] of entries)
           if (entry.session.expiresAt <= now()) {
             revoke(entry);
             entries.delete(id);
           }
-        const previous = entryFromRequest(req);
         const renewal =
           previous &&
           entryFor(previous.session) &&
@@ -347,11 +356,12 @@ export function createCloudBrowserAuth(options: {
       ["/api/v1/cloud-browser/logout", "/api/v1/auth/logout"].includes(path) &&
       req.method === "POST"
     ) {
+      const entry = entryFromRequest(req);
       const body = await readBody(req);
       if (Object.keys(body).length) throw new ProjectRegistryError(400, "退出不接受额外参数。");
       if (closed) throw new ProjectRegistryError(503, "Cloud 工作台正在关闭。");
-      const entry = entryFromRequest(req);
-      if (!entry) throw new ProjectRegistryError(401, "Cloud 工作台登录已失效。");
+      if (!entry || entry.revoked || entries.get(entry.session.id) !== entry)
+        throw new ProjectRegistryError(401, "Cloud 工作台登录已失效。");
       revoke(entry);
       setCookie(res, "", now());
       json(res, 200, { revoked: true });
