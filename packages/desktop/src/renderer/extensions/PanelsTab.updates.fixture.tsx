@@ -31,7 +31,11 @@ function textOf(node: any): string {
 }
 
 function button(label: string, scope: any = document.body): any {
-  const found = nodes(scope).find((node) => node.tagName === "BUTTON" && textOf(node) === label);
+  const found = nodes(scope).find(
+    (node) =>
+      node.tagName === "BUTTON" &&
+      (textOf(node) === label || (props(node)["aria-controls"] && textOf(node).startsWith(label))),
+  );
   expect(found).toBeDefined();
   return found;
 }
@@ -161,7 +165,11 @@ describe("Panel App update controls", () => {
         },
         previewPanelAppUpdate: async (id: string) => {
           previews.push(id);
-          return { ok: true, preview };
+          return {
+            ok: true,
+            preview,
+            installedPermissions: [...apps.find((app) => app.appId === id)!.permissions],
+          };
         },
         installPanelAppUpdate: async (input: unknown) => {
           installs.push(input);
@@ -378,6 +386,188 @@ describe("Panel App update controls", () => {
     expect(textOf(container)).toContain("v0.6.3");
     expect(textOf(container)).toContain("已是来源中的最新版本");
     expect(button("从源码更新", container)).toBeDefined();
+  });
+
+  test("update review explains added and removed Host capabilities before submitting the reviewed token", async () => {
+    // A stale row is not the review baseline. The preview response identifies
+    // the selected old package whose revision the Host actually reviewed.
+    apps = [{ ...panel(), permissions: ["storage", "audio.transcribe"] }];
+    Object.assign(window.codeshell, {
+      previewPanelAppUpdate: async (id: string) => {
+        previews.push(id);
+        return {
+          ok: true,
+          installedPermissions: ["storage", "workspace.read"],
+          preview: {
+            ...preview,
+            permissions: ["storage", "process", "resources", "credentials.connections"],
+            agent: {
+              tools: [
+                {
+                  name: "save_fixture_document",
+                  description: "将用户确认的草稿保存到已授权项目。",
+                  inputSchema: { type: "object" },
+                  readOnly: false,
+                },
+              ],
+              skills: ["skills/document-workflow/SKILL.md"],
+            },
+          },
+        };
+      },
+    });
+
+    await render();
+    await click("更新到 v0.6.3");
+    const review = nodes(document.body).find((node) => props(node).role === "dialog");
+    expect(review).toBeDefined();
+    const reviewText = textOf(review);
+    expect(
+      nodes(review).some(
+        (node) => node.tagName === "UL" && props(node)["aria-label"] === "声明的 Host 能力",
+      ),
+    ).toBe(true);
+    expect(reviewText).toContain("本机程序执行");
+    expect(reviewText).toContain("启动和管理本机工具进程");
+    expect(reviewText).toContain("服务连接授权");
+    expect(reviewText).toContain("面板网页不会收到密钥原文");
+    for (const permission of [
+      "storage",
+      "process",
+      "resources",
+      "credentials.connections",
+      "workspace.read",
+    ]) {
+      expect(reviewText).toContain(permission);
+    }
+    expect(
+      nodes(review).filter((node) => node.tagName === "DIV" && textOf(node) === "新增"),
+    ).toHaveLength(3);
+    expect(
+      nodes(review).filter((node) => node.tagName === "DIV" && textOf(node) === "移除"),
+    ).toHaveLength(1);
+    expect(reviewText).not.toContain("Host 权限没有变化");
+    expect(reviewText).not.toContain("audio.transcribe");
+    expect(reviewText).toContain("save_fixture_document");
+    expect(reviewText).toContain("将用户确认的草稿保存到已授权项目。");
+    expect(reviewText).toContain("可写");
+    expect(reviewText).toContain("skills/document-workflow/SKILL.md");
+    expect(installs).toEqual([]);
+
+    await click("确认并更新");
+    expect(installs).toEqual([
+      { cwd: "/tmp/project", id: "video-studio", reviewToken: preview.reviewToken },
+    ]);
+  });
+
+  test("review reports unchanged permissions when the selected version has the same set", async () => {
+    await render();
+    await click("更新到 v0.6.3");
+    const review = nodes(document.body).find((node) => props(node).role === "dialog");
+    expect(textOf(review)).toContain("Host 权限没有变化");
+    expect(
+      nodes(review).filter(
+        (node) => node.tagName === "DIV" && ["新增", "移除"].includes(textOf(node)),
+      ),
+    ).toHaveLength(0);
+    expect(installs).toEqual([]);
+  });
+
+  test("an unavailable review baseline does not infer added permissions from the displayed catalog", async () => {
+    Object.assign(window.codeshell, {
+      previewPanelAppUpdate: async () => ({
+        ok: true,
+        preview: { ...preview, permissions: ["storage", "process"] },
+      }),
+    });
+    await render();
+    await click("更新到 v0.6.3");
+    const review = nodes(document.body).find((node) => props(node).role === "dialog");
+    expect(textOf(review)).toContain("无法比较原版本权限，请审阅全部能力。");
+    expect(textOf(review)).toContain("process");
+    expect(
+      nodes(review).filter(
+        (node) => node.tagName === "DIV" && ["新增", "移除"].includes(textOf(node)),
+      ),
+    ).toHaveLength(0);
+    expect(textOf(review)).not.toContain("Host 权限没有变化");
+    expect(installs).toEqual([]);
+  });
+
+  test("reimporting an installed panel warns when the previous project package cannot be compared", async () => {
+    Object.assign(window.codeshell, {
+      pickPanelAppSource: async () => ({ kind: "dir", path: "/fixture-reimport" }),
+      // The Host recognizes the app ID, but an unreadable retained package
+      // yields neither installedVersion nor installedPermissions.
+      previewLocalPanelApp: async () => ({ ok: true, preview }),
+    });
+    await render();
+    await click("选择源码文件夹");
+    const review = nodes(document.body).find((node) => props(node).role === "dialog");
+    expect(textOf(review)).toContain("安装前审查 Panel App");
+    expect(textOf(review)).toContain("无法比较原版本权限，请审阅全部能力。");
+    expect(
+      nodes(review).filter(
+        (node) => node.tagName === "DIV" && ["新增", "移除"].includes(textOf(node)),
+      ),
+    ).toHaveLength(0);
+    expect(textOf(review)).not.toContain("Host 权限没有变化");
+    expect(installs).toEqual([]);
+  });
+
+  test("installed panel capability details disclose Host authority and bundled Agent tools and Skills", async () => {
+    apps = [
+      {
+        ...panel(),
+        permissions: ["storage", "workspace.write", "process"],
+        agent: {
+          tools: [
+            {
+              name: "read_fixture_document",
+              description: "读取此面板已授权的文档内容。",
+              inputSchema: { type: "object" },
+              readOnly: true,
+            },
+            {
+              name: "save_fixture_document",
+              description: "将用户确认的草稿保存到已授权项目。",
+              inputSchema: { type: "object" },
+              readOnly: false,
+            },
+          ],
+          skills: ["skills/document-workflow/SKILL.md"],
+        },
+      },
+    ];
+
+    await render();
+    const disclosure = button("能力详情", panelCard());
+    expect(props(disclosure)["aria-expanded"]).toBe(false);
+    expect(textOf(panelCard())).not.toContain("read_fixture_document");
+    await click("能力详情");
+    expect(props(disclosure)["aria-expanded"]).toBe(true);
+    const details = textOf(panelCard());
+    expect(details).toContain("声明的 Host 能力");
+    expect(details).toContain("workspace.write");
+    expect(details).toContain("写入项目文件");
+    expect(details).toContain("带文件版本冲突检查");
+    expect(details).toContain("process");
+    expect(details).toContain("Agent 工具");
+    expect(details).toContain("read_fixture_document");
+    expect(details).toContain("读取此面板已授权的文档内容。");
+    expect(details).toContain("save_fixture_document");
+    expect(details).toContain("将用户确认的草稿保存到已授权项目。");
+    expect(details).toContain("只读");
+    expect(details).toContain("可写");
+    expect(details).toContain("document-workflow");
+    expect(details).toContain("skills/document-workflow/SKILL.md");
+    expect(installs).toEqual([]);
+    await act(async () => {
+      props(disclosure).onClick();
+      await flushMicrotasks();
+    });
+    expect(props(disclosure)["aria-expanded"]).toBe(false);
+    expect(textOf(panelCard())).not.toContain("read_fixture_document");
   });
 
   for (const failure of ["returned", "thrown"] as const) {
@@ -599,7 +789,10 @@ describe("Panel App update controls", () => {
     await click("项目版本");
     expect(textOf(document.body)).toContain("不会恢复旧数据");
     await click("审阅 v0.6.1");
-    expect(textOf(document.body)).toContain("新增权限");
+    expect(textOf(document.body)).toContain("workspace.write");
+    expect(
+      nodes(document.body).some((node) => node.tagName === "DIV" && textOf(node) === "新增"),
+    ).toBe(true);
     expect(calls).toHaveLength(2);
     await click("确认权限并恢复项目版本");
     expect(calls).toEqual([

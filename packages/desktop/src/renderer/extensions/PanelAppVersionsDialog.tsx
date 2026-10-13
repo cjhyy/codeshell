@@ -11,27 +11,7 @@ import {
   DialogTitle,
   DialogDescription,
 } from "@/components/ui/dialog";
-
-const permissionLabels: Record<string, string> = {
-  "context.session": "读取当前对话信息",
-  "context.workspace": "读取当前工作区信息",
-  storage: "保存面板自己的数据",
-  "external.open": "打开外部网页",
-  "agent.submitPrompt": "向当前对话提交任务",
-  "agent.task": "创建和管理 Agent 任务",
-  "workspace.info": "查看工作区信息",
-  "workspace.read": "读取工作区文件",
-  "workspace.write": "修改工作区文件",
-  "notifications.send": "发送通知",
-  "audio.transcribe": "将音频转成文字",
-  "credentials.cookies": "使用已授权的网站登录",
-  "credentials.connections": "使用选定的服务连接",
-  "automations.manage": "管理自动化任务",
-  process: "运行已审核工具与后台任务",
-  resources: "存取已授权文件与工具结果",
-  media: "处理音视频文件",
-  "media.capture": "使用麦克风、摄像头或屏幕录制",
-};
+import { PanelAppPermissionList } from "./PanelAppCapabilities";
 
 type RestoreLease = { projectPath: string; reviewToken: string };
 
@@ -208,16 +188,11 @@ export function PanelAppVersionsDialog({
               v{review.current.version} → v{review.version}
             </h3>
             <p>此版本请求的权限：</p>
-            {!review.permissions.length && <p>未申请宿主权限。</p>}
-            <ul className="space-y-1 text-sm">
-              {review.permissions.map((permission) => (
-                <li key={permission}>
-                  {permissionLabels[permission] ?? permission}
-                  {review.addedPermissions.includes(permission) &&
-                    (review.current.unavailable ? " · 需重新确认" : " · 新增权限")}
-                </li>
-              ))}
-            </ul>
+            <PanelAppPermissionList
+              permissions={review.permissions}
+              addedPermissions={review.addedPermissions}
+              reconfirmAdded={review.current.unavailable}
+            />
             <Button
               disabled={busy || !review.compatibility.supported}
               onClick={() => {
