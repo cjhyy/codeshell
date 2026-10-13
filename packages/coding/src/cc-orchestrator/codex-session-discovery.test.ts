@@ -1,8 +1,8 @@
 import { describe, it, expect } from "bun:test";
-import { mkdtempSync, mkdirSync, writeFileSync, utimesSync } from "node:fs";
+import { mkdtempSync, mkdirSync, writeFileSync, utimesSync, symlinkSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { discoverCodexSessions } from "./codex-session-discovery.js";
+import { discoverCodexSessions, listCodexSessionsForCwds } from "./codex-session-discovery.js";
 
 /** Build one codex rollout JSONL file under <home>/sessions/YYYY/MM/DD/. */
 function writeRollout(
@@ -142,6 +142,75 @@ describe("discoverCodexSessions", () => {
 });
 
 import { discoverRecentCodexSessions } from "./codex-session-discovery.js";
+
+describe("listCodexSessionsForCwds", () => {
+  it("returns a bounded recent list and counts unique matching threads across all dates", async () => {
+    const home = mkdtempSync(join(tmpdir(), "codex-list-"));
+    const cwd = "/tmp/project";
+    const now = Date.now();
+    for (const [file, id, modified] of [
+      ["old", "thread-old", now - 10_000],
+      ["new", "thread-new", now - 100],
+      ["resume", "thread-new", now],
+      ["middle", "thread-middle", now - 200],
+    ] as const) {
+      writeRollout(home, "2026/06/24", `rollout-${file}.jsonl`, [
+        metaLine(id, cwd, "2026-06-24T00:00:00Z"),
+        userItem(file),
+      ]);
+      const path = join(home, "sessions/2026/06/24", `rollout-${file}.jsonl`);
+      utimesSync(path, new Date(modified), new Date(modified));
+    }
+    writeRollout(home, "2026/06/24", "rollout-other.jsonl", [
+      metaLine("other", "/tmp/other", "2026-06-24T00:00:00Z"),
+    ]);
+    const limited = await listCodexSessionsForCwds([cwd], home, { limit: 1, sinceMs: 1_000, now });
+    expect(limited.total).toBe(3);
+    expect(limited.sessions.map((s) => [s.sessionId, s.firstMessage])).toEqual([
+      ["thread-new", "resume"],
+    ]);
+    const all = await listCodexSessionsForCwds([cwd], home);
+    expect(all.total).toBe(3);
+    expect(all.sessions.map((s) => s.sessionId)).toEqual([
+      "thread-new",
+      "thread-middle",
+      "thread-old",
+    ]);
+  });
+
+  it("yields to host events while reading identities, and tolerates broken files and directory cycles", async () => {
+    const home = mkdtempSync(join(tmpdir(), "codex-list-"));
+    const cwd = "/tmp/project";
+    writeRollout(home, "2026/06/24", "rollout-valid.jsonl", [
+      // Exercise the incremental metadata reader beyond its first 4 KiB chunk.
+      { ...metaLine("valid", cwd, "2026-06-24T00:00:00Z"), padding: "字".repeat(5_000) },
+      userItem("<environment_context>hidden</environment_context>"),
+      userItem("real title"),
+    ]);
+    writeRollout(home, "2026/06/24", "rollout-broken.jsonl", ["broken"]);
+    const root = join(home, "sessions");
+    symlinkSync(root, join(root, "cycle"), process.platform === "win32" ? "junction" : "dir");
+    let hostEventRan = false;
+    const hostEvent = new Promise<void>((resolve) => {
+      setImmediate(() => {
+        hostEventRan = true;
+        resolve();
+      });
+    });
+    const listing = listCodexSessionsForCwds([cwd], home);
+    const result = await listing;
+    expect(hostEventRan).toBe(true);
+    await hostEvent;
+    expect(result.total).toBe(1);
+    expect(result.sessions[0]?.firstMessage).toBe("real title");
+  });
+
+  it("handles absent history and an empty project scope", async () => {
+    const home = mkdtempSync(join(tmpdir(), "codex-list-"));
+    expect(await listCodexSessionsForCwds(["/missing"], home)).toEqual({ sessions: [], total: 0 });
+    expect(await listCodexSessionsForCwds([], home)).toEqual({ sessions: [], total: 0 });
+  });
+});
 
 describe("discoverRecentCodexSessions", () => {
   it("returns recent sessions across all cwds with file path, newest first", () => {
