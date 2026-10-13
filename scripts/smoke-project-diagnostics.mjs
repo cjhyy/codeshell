@@ -47,6 +47,161 @@ const ownValue = (value, key) => {
   if (!value || (typeof value !== "object" && typeof value !== "function")) return undefined;
   return Object.getOwnPropertyDescriptor(value, key)?.value;
 };
+const jobPdfSteps = new Set([
+  "preview",
+  "request",
+  "consent",
+  "task",
+  "task-input",
+  "receipt",
+  "resource",
+  "cross-project-denial",
+  "local-write",
+  "text-extract",
+  "text-english",
+  "text-chinese",
+  "text-private-exclusion",
+  "text-evidence",
+  "download",
+  "evidence",
+  "other-project",
+]);
+const jobPdfStatuses = new Set([
+  "queued",
+  "running",
+  "cancelling",
+  "succeeded",
+  "failed",
+  "cancelled",
+  "interrupted",
+]);
+const jobPdfFailures = new WeakMap();
+const jobPdfErrorCodes = new Set([
+  "TOOL_FAILED",
+  "HOST_INTERRUPTED",
+  "CANCELLED",
+  "APP_REVOKED",
+  "PACKAGE_UNAVAILABLE",
+  "PACKAGE_UNKNOWN",
+  "PACKAGE_CHANGED",
+  "INPUT_MISSING",
+  "INPUT_CHANGED",
+]);
+
+function jobPdfTaskError(value) {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return undefined;
+  const fields = Object.getOwnPropertyDescriptors(value);
+  const keys = Reflect.ownKeys(fields);
+  if (
+    keys.some((key) => typeof key !== "string") ||
+    keys.sort().join(",") !== "code,message,retryable" ||
+    Object.values(fields).some((field) => !("value" in field))
+  )
+    return undefined;
+  const { code, message, retryable } = Object.fromEntries(
+    Object.entries(fields).map(([key, field]) => [key, field.value]),
+  );
+  if (
+    typeof code !== "string" ||
+    code.length > 100 ||
+    typeof message !== "string" ||
+    message.length > 2000 ||
+    typeof retryable !== "boolean"
+  )
+    return undefined;
+  return Object.freeze({
+    code: jobPdfErrorCodes.has(code) ? code : "other",
+    retryable,
+    categories: Object.freeze(
+      categories.filter(([, pattern]) => pattern.test(message)).map(([name]) => name),
+    ),
+    sha256: digest(message),
+  });
+}
+
+export function jobPdfFailure(error, step, details = {}) {
+  if (
+    !jobPdfSteps.has(step) ||
+    !details ||
+    typeof details !== "object" ||
+    Reflect.ownKeys(details).some((key) => !["taskStatus", "taskError"].includes(key)) ||
+    Object.values(Object.getOwnPropertyDescriptors(details)).some((field) => !("value" in field)) ||
+    (Object.hasOwn(details, "taskStatus") && !jobPdfStatuses.has(ownValue(details, "taskStatus")))
+  )
+    throw new TypeError("Invalid candidate Job PDF diagnostic context");
+  // A malformed Host DTO provides no extra diagnosis; it must never replace the
+  // original business failure or invoke an error/message getter.
+  const taskError = jobPdfTaskError(ownValue(details, "taskError"));
+  const failure = new Error("Candidate Job PDF acceptance step failed", { cause: error });
+  jobPdfFailures.set(
+    failure,
+    Object.freeze({
+      source: "candidate-job-hunt-pdf",
+      step,
+      error,
+      ...(Object.hasOwn(details, "taskStatus")
+        ? { taskStatus: ownValue(details, "taskStatus") }
+        : {}),
+      ...(taskError ? { taskError } : {}),
+    }),
+  );
+  return failure;
+}
+
+function jobPdfContext(error) {
+  const record = jobPdfFailures.get(error);
+  if (!record) return undefined;
+  if (
+    ![
+      "error,source,step",
+      "error,source,step,taskError",
+      "error,source,step,taskStatus",
+      "error,source,step,taskError,taskStatus",
+    ].includes(Object.keys(record).sort().join(","))
+  )
+    return undefined;
+  if (Object.values(Object.getOwnPropertyDescriptors(record)).some((field) => !("value" in field)))
+    return undefined;
+  if (
+    record.source !== "candidate-job-hunt-pdf" ||
+    !jobPdfSteps.has(record.step) ||
+    (Object.hasOwn(record, "taskStatus") && !jobPdfStatuses.has(record.taskStatus))
+  )
+    return undefined;
+  return record;
+}
+
+// Keep the real browser action's failure even when evidence or close also fails.
+export async function withJobHuntBrowserDiagnostics(run, capture, close) {
+  let result, primary;
+  let failed = false;
+  const cleanup = [];
+  try {
+    result = await run();
+  } catch (error) {
+    failed = true;
+    primary = error;
+    try {
+      await capture();
+    } catch (error) {
+      cleanup.push(error);
+    }
+  } finally {
+    try {
+      await close();
+    } catch (error) {
+      cleanup.push(error);
+    }
+  }
+  if (cleanup.length)
+    throw new AggregateError(
+      [...(failed ? [primary] : []), ...cleanup],
+      "Job Hunt browser acceptance and cleanup failed",
+      failed ? { cause: primary } : undefined,
+    );
+  if (failed) throw primary;
+  return result;
+}
 
 function panelFailure(error, panelId, kind, step) {
   if (!panelIds.has(panelId) || !(kind === "step" ? panelSteps : panelUiSteps).has(step))
@@ -240,6 +395,19 @@ export function summarizeFailure(error) {
 }
 
 function summarizeFailureAt(error, depth, trustedPanel) {
+  const job = depth < 8 ? jobPdfContext(error) : undefined;
+  if (job) {
+    const summary = summarizeFailureAt(job.error, depth + 1, true);
+    return {
+      ...summary,
+      jobPdf: {
+        source: job.source,
+        step: job.step,
+        ...(Object.hasOwn(job, "taskStatus") ? { taskStatus: job.taskStatus } : {}),
+        ...(Object.hasOwn(job, "taskError") ? { taskError: job.taskError } : {}),
+      },
+    };
+  }
   const context = depth < 8 ? panelContext(error) : undefined;
   if (context) {
     const summary = summarizeFailureAt(context.error, depth + 1, true);
@@ -256,7 +424,7 @@ function summarizeFailureAt(error, depth, trustedPanel) {
   // Only our own wrapped primary failure authorizes this aggregate's cause.
   // The thrown AggregateError still retains both primary and cleanup errors.
   const cause = ownValue(error, "cause");
-  if (depth < 8 && error instanceof AggregateError && panelContext(cause))
+  if (depth < 8 && error instanceof AggregateError && (panelContext(cause) || jobPdfContext(cause)))
     return summarizeFailureAt(cause, depth + 1, true);
   if (error instanceof ApprovalRunError) return error.diagnostic;
   const text = trustedPanel
