@@ -1,5 +1,5 @@
 // electron-builder's afterPack precedes automatic signing. The custom mac.sign
-// hook seals Node first, records its final bytes, then signs the surrounding app.
+// hook signs the native helpers, records Node's final bytes, then seals the app.
 /* global require, module */
 /* eslint-disable @typescript-eslint/no-require-imports -- electron-builder resolves these build hooks as CommonJS. */
 const { execFile } = require("node:child_process");
@@ -32,6 +32,23 @@ function createSigningHooks(overrides = {}) {
         windowsHide: true,
       }));
   const signAsync = overrides.signAsync ?? builderSign;
+  function computerUseExecutables(app) {
+    return [
+      join(app, "Contents/Resources/cua-driver/cua-driver"),
+      join(app, "Contents/Resources/computer-use/codeshell-permissions"),
+    ];
+  }
+  async function signComputerUse(app, identity, keychain) {
+    // These plain Mach-O files under Resources are not reliably discovered by
+    // recursive bundle signing. Missing payloads must fail the macOS build.
+    for (const executable of computerUseExecutables(app)) {
+      const args = ["--force", "--sign", identity, "--options", "runtime"];
+      if (identity !== "-") args.push("--timestamp");
+      if (keychain) args.push("--keychain", keychain);
+      args.push(executable);
+      await run("codesign", args);
+    }
+  }
   async function signNode(runtimeDir, identity, keychain) {
     const args = [
       "--force",
@@ -49,6 +66,8 @@ function createSigningHooks(overrides = {}) {
     await supply.refreshManifest(runtimeDir);
   }
   async function verifySignedApp(app, runtimeDir) {
+    for (const executable of computerUseExecutables(app))
+      await run("codesign", ["--verify", "--strict", executable]);
     await run("codesign", ["--verify", "--strict", join(runtimeDir, "bin/node")]);
     await run("codesign", ["--verify", "--deep", "--strict", app]);
     await supply.verifyRuntime(runtimeDir);
@@ -70,6 +89,7 @@ function createSigningHooks(overrides = {}) {
     // Preserve the existing unsigned-build fallback and stable Squirrel update
     // requirement. Node's entitlements and digest must follow the deep pass.
     await run("codesign", ["--deep", "--force", "-s", "-", app]);
+    await signComputerUse(app, "-");
     await signNode(runtimeDir, "-");
     await run("codesign", ["--force", "-s", "-", `-r=designated => identifier "${APP_ID}"`, app]);
     await verifySignedApp(app, runtimeDir);
@@ -88,6 +108,7 @@ function createSigningHooks(overrides = {}) {
     const executable = join(runtimeDir, "bin/node");
     if (typeof options.ignore !== "function" || !options.ignore(executable))
       throw new Error("mac.signIgnore must exclude the already signed managed Node executable");
+    await signComputerUse(options.app, options.identity, options.keychain);
     await signNode(runtimeDir, options.identity, options.keychain);
     await signAsync(options);
     await verifySignedApp(options.app, runtimeDir);

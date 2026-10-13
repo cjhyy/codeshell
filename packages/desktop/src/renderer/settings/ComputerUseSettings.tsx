@@ -118,7 +118,7 @@ export function ComputerUseSettings() {
               type="button"
               variant="outline"
               size="sm"
-              disabled={!!busy || !status?.enabled}
+              disabled={!!busy}
               onClick={() =>
                 void perform(`settings-${kind}`, () =>
                   window.codeshell.computerUse.openSettings(kind),
@@ -171,7 +171,7 @@ export function ComputerUseSettings() {
             {t("settingsX.computerUse.enable")}
             <Switch
               checked={status.enabled}
-              disabled={!!busy}
+              disabled={!!busy || (!status.enabled && !status.driverAvailable)}
               onCheckedChange={(enabled) =>
                 void perform("enable", () => window.codeshell.computerUse.setEnabled(enabled))
               }

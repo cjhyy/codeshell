@@ -1,4 +1,4 @@
-/* Native existing-project runtime selection, using an authenticated protocol fixture. */
+/* Persisted native cloud projects remain usable without a chat runtime switcher. */
 /* global document, window */
 import { createServer } from "node:http";
 import { mkdir, readFile, writeFile } from "node:fs/promises";
@@ -229,8 +229,32 @@ wss.on("connection", (ws) => {
     response({});
   });
 });
-const locationTrigger = () => win.getByRole("button", { name: /^运行位置：/ });
 const sidebar = () => win.locator("aside");
+async function assertNoRuntimeSwitcher() {
+  assert(
+    (await win.getByRole("button", { name: /^(运行位置：|Work in:)/ }).count()) === 0,
+    "Chat cannot switch the project's execution location",
+  );
+}
+// Keep exercising persisted native cloud bindings from earlier versions. New
+// cloud projects are opened through the project chooser in e2e-cloud-workbench.
+async function seedLegacyRuntimeSelection(localProjectId, bindingId) {
+  await win.evaluate((input) => window.codeshell.cloudEnvironment.select(input), {
+    localProjectId,
+    bindingId,
+  });
+  await win.reload();
+  await dismissTrust();
+  await assertNoRuntimeSwitcher();
+}
+async function newProjectChooser() {
+  await expandSidebar(win);
+  await sidebar()
+    .getByRole("button", { name: /^(新项目|New project)$/ })
+    .first()
+    .click();
+  return win.getByRole("dialog", { name: /^(新项目|New project)$/ });
+}
 async function expandExistingProject() {
   await expandSidebar(win);
   const project = sidebar().getByRole("button", { name: "Existing project", exact: true });
@@ -245,10 +269,6 @@ async function dismissTrust() {
     )
   )
     await viewOnly.click();
-}
-async function locationMenu() {
-  await locationTrigger().click();
-  return win.getByRole("menu");
 }
 async function screenshot(step) {
   if (screenshotDir)
@@ -403,20 +423,18 @@ app.on("web-contents-created", (_event, contents) => configure(contents.session)
   await win.reload();
   await dismissTrust();
   await win.getByText(localText, { exact: true }).waitFor();
+  await assertNoRuntimeSwitcher();
   const registryBefore = await win.evaluate(() => window.codeshell.projectRegistry.list());
   const catalogBefore = await win.evaluate(() => window.codeshell.sessionCatalog.load());
-  await (await locationMenu())
-    .getByRole("menuitem", { name: "关联云端项目…", exact: true })
-    .click();
-  const dialog = win.getByRole("dialog", { name: "关联已有云端项目" });
-  await dialog.getByLabel("云端服务地址", { exact: true }).fill(origin);
-  await dialog.getByRole("button", { name: "连接", exact: true }).click();
-  await dialog.getByLabel("用户名", { exact: true }).fill("owner");
-  await dialog.getByLabel("密码", { exact: true }).fill(password);
-  await dialog.getByRole("button", { name: "登录", exact: true }).click();
-  await dialog.getByLabel("已有云端项目", { exact: true }).selectOption(projectId);
-  await screenshot("bind");
-  await dialog.getByRole("button", { name: "使用云端", exact: true }).click();
+  const binding = await win.evaluate(
+    async ({ origin, password, localProjectId, environmentId, remoteProjectId }) => {
+      const api = window.codeshell.cloudEnvironment;
+      await api.login({ origin, username: "owner", password });
+      return api.bind({ localProjectId, origin, environmentId, remoteProjectId });
+    },
+    { origin, password, localProjectId: project.id, environmentId, remoteProjectId: projectId },
+  );
+  await seedLegacyRuntimeSelection(project.id, binding.id);
   await win.locator('[data-runtime="cloud"]').waitFor();
   await expandExistingProject();
   await sidebar().getByRole("button", { name: cloudTitle, exact: true }).click();
@@ -430,12 +448,35 @@ app.on("web-contents-created", (_event, contents) => configure(contents.session)
     "Equal local/cloud engine IDs cannot mix transcripts",
   );
   await screenshot("history");
-  await (await locationMenu()).getByRole("menuitem", { name: "此计算机", exact: true }).click();
+  await app.evaluate(({ dialog }) => {
+    dialog.showOpenDialog = async () => ({ canceled: true, filePaths: [] });
+  });
+  let chooser = await newProjectChooser();
+  await chooser.getByRole("button", { name: /^(此计算机|This computer)$/ }).click();
+  await chooser.waitFor({ state: "hidden" });
+  assert(
+    (await win.evaluate((id) => window.codeshell.cloudEnvironment.getSelection(id), project.id))
+      .bindingId === binding.id,
+    "Canceling the local folder picker preserves the legacy cloud selection",
+  );
+  await win.getByText(cloudText, { exact: true }).waitFor();
+  await app.evaluate(({ dialog }, path) => {
+    dialog.showOpenDialog = async () => ({ canceled: false, filePaths: [path] });
+  }, localPath);
+  chooser = await newProjectChooser();
+  await chooser.getByRole("button", { name: /^(此计算机|This computer)$/ }).click();
+  await chooser.waitFor({ state: "hidden" });
   await win.getByText(localText, { exact: true }).waitFor();
-  await (await locationMenu())
-    .getByRole("menuitem")
-    .filter({ hasText: "Existing remote project" })
+  await assertNoRuntimeSwitcher();
+  chooser = await newProjectChooser();
+  await chooser.getByRole("button", { name: /^(云端|Cloud)$/ }).click();
+  await chooser
+    .getByRole("button", { name: "打开云端项目：Existing remote project", exact: true })
     .click();
+  await chooser.waitFor({ state: "hidden" });
+  await win.locator('[data-runtime="cloud"]').waitFor();
+  await expandExistingProject();
+  await sidebar().getByRole("button", { name: cloudTitle, exact: true }).click();
   await win.getByText(cloudText, { exact: true }).waitFor();
   await sidebar().getByRole("button", { name: "在 Existing project 中开始新对话" }).click();
   const composer = win.locator("textarea").last();
@@ -479,19 +520,26 @@ app.on("web-contents-created", (_event, contents) => configure(contents.session)
   );
   authenticated = false;
   for (const socket of sockets) socket.terminate();
-  await win.getByText("请从运行位置菜单重新登录云端。", { exact: true }).waitFor();
-  await (await locationMenu())
-    .getByRole("menuitem", { name: "关联云端项目…", exact: true })
-    .click();
-  const signIn = win.getByRole("dialog", { name: "关联已有云端项目" });
-  await signIn.getByRole("button", { name: "连接", exact: true }).click();
+  await win.getByRole("button", { name: "重新登录", exact: true }).click();
+  const signIn = win.getByRole("dialog", { name: "重新登录云端", exact: true });
+  assert(
+    (await signIn.getByLabel("云端服务地址", { exact: true }).inputValue()) === origin &&
+      (await signIn.getByLabel("云端服务地址", { exact: true }).getAttribute("readonly")) !== null,
+    "Reauthentication is bound to the current cloud origin",
+  );
+  await assertNoRuntimeSwitcher();
   await signIn.getByLabel("用户名", { exact: true }).fill("owner");
-  await signIn.getByLabel("密码", { exact: true }).fill(password);
+  await signIn.getByLabel("密码", { exact: true }).fill("incorrect-password");
   await signIn.getByRole("button", { name: "登录", exact: true }).click();
-  await signIn.getByRole("button", { name: "使用云端", exact: true }).click();
-  await win
-    .getByText("请从运行位置菜单重新登录云端。", { exact: true })
-    .waitFor({ state: "hidden" });
+  await signIn.getByRole("alert").waitFor();
+  assert(
+    (await signIn.getByLabel("密码", { exact: true }).inputValue()) === "",
+    "A failed sign-in clears the password and permits retry",
+  );
+  await signIn.getByLabel("密码", { exact: true }).fill(password);
+  await screenshot("sign-in");
+  await signIn.getByRole("button", { name: "登录", exact: true }).click();
+  await signIn.waitFor({ state: "hidden" });
   await win.waitForFunction(
     () => !document.querySelector('[data-runtime="cloud"] textarea')?.disabled,
   );
@@ -512,9 +560,11 @@ app.on("web-contents-created", (_event, contents) => configure(contents.session)
   await win.reload();
   await win.locator('[data-runtime="cloud"]').waitFor();
   assert(
-    (await locationTrigger().getAttribute("aria-label")) === "运行位置：云端",
-    "Runtime selection persists across reload",
+    (await win.evaluate((id) => window.codeshell.cloudEnvironment.getSelection(id), project.id))
+      .bindingId === binding.id,
+    "Legacy cloud selection persists across reload",
   );
+  await assertNoRuntimeSwitcher();
   await sidebar().getByRole("button", { name: cloudTitle, exact: true }).click();
   await win.getByText(cloudText, { exact: true }).waitFor();
   await win.setViewportSize({ width: 390, height: 844 });
@@ -524,7 +574,7 @@ app.on("web-contents-created", (_event, contents) => configure(contents.session)
     "Native cloud fits a narrow window",
   );
 
-  await (await locationMenu()).getByRole("menuitem", { name: "此计算机", exact: true }).click();
+  await seedLegacyRuntimeSelection(project.id, null);
   await win.getByText(localText, { exact: true }).waitFor();
   assert(
     (await readFile(join(directory, "transcript.jsonl"), "utf8")).includes(localText),
@@ -533,11 +583,11 @@ app.on("web-contents-created", (_event, contents) => configure(contents.session)
   await win.setViewportSize({ width: 1280, height: 800 });
   await win.evaluate(() => window.localStorage.setItem("codeshell.uiLanguage", "en"));
   await win.reload();
-  await win.getByRole("button", { name: "Work in: This computer", exact: true }).waitFor();
-  await win.getByRole("button", { name: "Work in: This computer", exact: true }).click();
-  await win.getByRole("menuitem").filter({ hasText: "Existing remote project" }).click();
+  await win.getByText(localText, { exact: true }).waitFor();
+  await assertNoRuntimeSwitcher();
+  await seedLegacyRuntimeSelection(project.id, binding.id);
   await win.locator('[data-runtime="cloud"]').waitFor();
-  await win.getByRole("button", { name: "Work in: Cloud", exact: true }).waitFor();
+  await assertNoRuntimeSwitcher();
   await screenshot("1280-en");
   assert(errors.length === 0, `Renderer errors: ${errors.join("\n")}`);
   guardReceipt = await confinement.assertWorker(app, { requireWorker: false });

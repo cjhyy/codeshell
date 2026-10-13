@@ -7,14 +7,14 @@ export const settingsNs = {
         description:
           "允许模型查看屏幕并操作本机应用。试用版开放较广的操作能力，尚未限制到指定窗口；请仅在你自己的测试环境中启用。",
         enable: "启用电脑操作",
-        enableFirst: "启用后可申请系统权限；打开此页面不会自动弹出授权申请。",
+        enableFirst: "启用后可申请系统权限；也可直接打开系统设置。打开此页面不会自动弹出授权申请。",
         refresh: "重新检查",
         loading: "正在检查电脑操作状态…",
         failed: "操作未完成，请重新检查后重试。",
         unsupported: "电脑操作试用版目前仅支持 macOS。",
         active: "电脑操作服务正在运行。",
         inactive: "电脑操作服务尚未运行。",
-        driverUnavailable: "电脑操作组件尚未就绪，请使用包含此组件的试用版后重新检查。",
+        driverUnavailable: "电脑操作组件缺失或不可用，请更新或重新安装 CodeShell 后重新检查。",
         development:
           "开发模式下，系统权限可能归启动它的应用。建议使用打包后的 CodeShell 验证授权。",
         accessibility: "辅助功能",
@@ -1145,7 +1145,7 @@ export const settingsNs = {
           "Let the model view your screen and control local apps. This preview exposes broad controls without restricting them to a selected window; enable it only in your own test environment.",
         enable: "Enable computer use",
         enableFirst:
-          "Enable computer use to request system permissions. Opening this page never requests permission automatically.",
+          "Enable computer use to request permissions, or open System Settings directly. Opening this page never requests permission automatically.",
         refresh: "Check again",
         loading: "Checking computer use status…",
         failed: "The action did not finish. Check again and retry.",
@@ -1153,7 +1153,7 @@ export const settingsNs = {
         active: "The computer use service is running.",
         inactive: "The computer use service is not running.",
         driverUnavailable:
-          "The computer use component is not ready. Use a preview that includes it, then check again.",
+          "The computer use component is missing or unavailable. Update or reinstall CodeShell, then check again.",
         development:
           "In development mode, system permissions may belong to the app that launched CodeShell. Test authorization with a packaged CodeShell app.",
         accessibility: "Accessibility",

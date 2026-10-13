@@ -1,7 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useReducer, useRef, useState } from "react";
 import type { StreamEvent } from "@cjhyy/code-shell-core";
 import { ChatView } from "./ChatView";
-import { ProjectRunLocation } from "./chat/ProjectRunLocation";
 import { useProjectRuntimeSelection } from "./projects/useProjectRuntimeSelection";
 import { useCloudProjectRuntime } from "./runtime/useCloudProjectRuntime";
 import { CloudProjectWorkspace } from "./runtime/CloudProjectWorkspace";
@@ -305,8 +304,6 @@ function App() {
   const activeProjectBucketSegment = projectBucketSegmentFor(activeProjectId);
   const activeSessionId = sessionIndices[activeProjectBucketSegment]?.activeSessionId ?? null;
   const activeProject = projects.find((project) => project.id === activeProjectId) ?? null;
-  const runtimeProjectIdRef = useRef(activeProjectId);
-  runtimeProjectIdRef.current = activeProjectId;
   const projectRuntime = useProjectRuntimeSelection(activeProjectId);
   const cloudRuntime = useCloudProjectRuntime(projectRuntime.selectedBinding);
   const cloudSelected = projectRuntime.bindingId !== null;
@@ -1361,7 +1358,13 @@ function App() {
     setRunsInitialRunId,
   });
 
-  const [handleAddProject, newProjectDialog] = useNewProjectDialog(handleAddLocalProject);
+  const [handleAddProject, newProjectDialog] = useNewProjectDialog(handleAddLocalProject, {
+    cloudBindings: projectRuntime.bindings,
+    onOpenCloudProject: async (binding) => {
+      await projectRuntime.select(binding.id);
+      setViewMode("chat");
+    },
+  });
 
   useNotificationSessionNavigation({
     sessionIndicesRef,
@@ -2178,27 +2181,6 @@ function App() {
   const petRunningCount =
     petState.projection?.sessions.filter((session) => session.runState === "running").length ?? 0;
 
-  const runtimeControl = (
-    <ProjectRunLocation
-      key={activeProjectId ?? "no-project"}
-      project={activeProject}
-      bindings={projectRuntime.bindings}
-      selectedBinding={projectRuntime.selectedBinding}
-      loading={!projectRuntime.ready && !projectRuntime.error}
-      disabled={cloudSelected ? cloudRuntime?.status === "connected" && cloudRuntime.busy : busy}
-      onSelect={async (bindingId) => {
-        const projectId = activeProjectId;
-        await projectRuntime.select(bindingId);
-        if (
-          runtimeProjectIdRef.current === projectId &&
-          bindingId === cloudRuntime?.binding.id &&
-          cloudRuntime.status !== "connected"
-        ) {
-          await cloudRuntime.reconnect();
-        }
-      }}
-    />
-  );
   function selectVisibleSession(projectId: string | null, sessionId: string) {
     if (sessionId.startsWith("cloud:")) {
       if (projectId === activeProjectId && cloudSelected) {
@@ -2574,17 +2556,15 @@ function App() {
                   >
                     {projectRuntime.error ?? t("ext.common.loading")}
                   </p>
-                  {runtimeControl}
                   {projectRuntime.error && (
                     <button type="button" onClick={() => void projectRuntime.refresh()}>
-                      {t("chat.runLocation.retry")}
+                      {t("ext.common.retry")}
                     </button>
                   )}
                 </div>
               ) : cloudSelected && cloudRuntime ? (
                 <CloudProjectWorkspace
                   runtime={cloudRuntime}
-                  runLocationControl={runtimeControl}
                   projects={projects}
                   activeProjectId={activeProjectId}
                   onSelectProject={setActiveProjectId}
@@ -2593,7 +2573,6 @@ function App() {
               ) : (
                 <>
                   <ChatView
-                    runLocationControl={runtimeControl}
                     messages={state.messages}
                     awaitingHydration={awaitingHydration}
                     historyHasMore={historyHasMore}

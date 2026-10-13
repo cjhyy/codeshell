@@ -238,6 +238,13 @@ jobs:
         working-directory: packages/desktop
         run: bunx electron-builder --publish never
 
+      - name: verify packaged computer use components
+        if: matrix.artifact == 'mac'
+        working-directory: packages/desktop
+        run: >-
+          bun run scripts/verify-computer-use-package.ts
+          dist/mac/code-shell.app dist/mac-arm64/code-shell.app
+
       # Exercise the packaged executable on its native runner after signing.
       # The other macOS architecture is integrity-checked by the packaging hooks.
       - name: verify packaged Node with an empty PATH
