@@ -299,6 +299,8 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y dbus-x11 gnome-keyring libsecret-tools
           xvfb-run -a bun run --cwd packages/desktop test:e2e:cloud-workbench
+      - name: Native built-in theme and surface backgrounds with private SecretService
+        run: xvfb-run -a bun run --cwd packages/desktop test:e2e:themes
       - name: real Electron E2E
         run: bash scripts/run-electron-e2e-keyring.sh
       - name: Preserve Profile memory copy Electron evidence

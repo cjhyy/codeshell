@@ -41,6 +41,7 @@ export const THEME_VAR_NAMES = [
 ] as const;
 
 import type { TranslationKey } from "./i18n";
+import { MAKI_THEME_PACK } from "./builtin-maki-theme";
 
 export type CssVarName = (typeof THEME_VAR_NAMES)[number];
 export type ThemeVars = Partial<Record<CssVarName, string>>;
@@ -156,7 +157,8 @@ export const DEFAULT_PACK_ID = "default";
  * Built-in packs. `default` overrides nothing (falls through to the base sheet,
  * i.e. the current brand orange). Accent packs recolor the primary + focus ring
  * (and its foreground for contrast) in both modes; everything else inherits the
- * neutral base so density/contrast tuning is preserved.
+ * neutral base so density/contrast tuning is preserved. Character themes also
+ * provide their full palette, bundled surface artwork and window frame.
  */
 export const THEME_PACKS: ThemePack[] = [
   {
@@ -220,6 +222,7 @@ export const THEME_PACKS: ThemePack[] = [
       },
     },
   },
+  MAKI_THEME_PACK,
 ];
 
 export function getThemePack(id: string): ThemePack {

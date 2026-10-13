@@ -233,7 +233,7 @@ try {
     await menuChooser.waitFor({ state: "hidden" });
 
     await win.getByRole("button", { name: /^(不使用项目|No project)$/ }).click();
-    await win.getByRole("button", { name: /^(添加新项目|Add new project)$/ }).click();
+    await win.getByRole("button", { name: /^(添加项目…|Add project…)$/ }).click();
     await menuChooser.waitFor({ state: "visible" });
     assert(
       await menuChooser.getByRole("button", { name: /^(此计算机|This computer)/ }).isVisible(),

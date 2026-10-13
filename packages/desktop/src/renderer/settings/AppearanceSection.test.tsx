@@ -86,21 +86,21 @@ describe("AppearanceSection theme packs", () => {
 
     const packCards = findByAttr(container, "data-theme-pack");
     const ids = packCards.map((card) => card.getAttribute("data-theme-pack"));
-    expect(ids).toEqual(["default", "ocean", "forest", "grape"]);
+    expect(ids).toEqual(["default", "ocean", "forest", "grape", "maki"]);
     expect(findByAttr(container, "data-theme-preview")).toHaveLength(ids.length);
 
-    // The selectable control is the inner button of each card.
-    const oceanCard = packCards.find((card) => card.getAttribute("data-theme-pack") === "ocean");
-    const oceanButton = findElements(oceanCard, "BUTTON")[0];
+    // The bundled artwork theme is available without an installed-theme cache.
+    const makiCard = packCards.find((card) => card.getAttribute("data-theme-pack") === "maki");
+    const makiButton = findElements(makiCard, "BUTTON")[0];
     await act(async () => {
-      reactPropsOf(oceanButton).onClick();
+      reactPropsOf(makiButton).onClick();
       await flushMicrotasks();
     });
 
     // Persisted to localStorage and reflected in the managed override style.
-    expect(loadThemePackId()).toBe("ocean");
+    expect(loadThemePackId()).toBe("maki");
     expect(document.getElementById("cs-theme-pack")?.textContent).toContain(
-      "--cs-primary: 210 80% 45%;",
+      "--cs-primary: 349 72% 43%;",
     );
   });
 
@@ -135,7 +135,7 @@ describe("AppearanceSection theme packs", () => {
     const ids = findByAttr(container, "data-theme-pack").map((c) =>
       c.getAttribute("data-theme-pack"),
     );
-    expect(ids).toEqual(["default", "ocean", "forest", "grape", "acme-neon"]);
+    expect(ids).toEqual(["default", "ocean", "forest", "grape", "maki", "acme-neon"]);
     // Only the installed pack exposes an uninstall control.
     const uninstall = findByAttr(container, "data-theme-uninstall");
     expect(uninstall.map((b) => b.getAttribute("data-theme-uninstall"))).toEqual(["acme-neon"]);

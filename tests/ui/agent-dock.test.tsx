@@ -1,4 +1,5 @@
 import { test, expect } from "bun:test";
+import { fileURLToPath } from "node:url";
 import React from "react";
 import { mount, plainText, flush } from "../render-fixtures";
 import {
@@ -6,7 +7,14 @@ import {
   formatElapsed,
   getVisibleAgents,
 } from "../../packages/tui/src/ui/components/AgentDock.js";
-import { asyncAgentRegistry } from "@cjhyy/code-shell-core/internal";
+// Resolve from TUI's package boundary, matching AgentDock's Core import rather
+// than the root tsconfig's source alias, so both share one registry singleton.
+const { asyncAgentRegistry } = (await import(
+  import.meta.resolve(
+    "@cjhyy/code-shell-core/internal",
+    fileURLToPath(new URL("../../packages/tui/package.json", import.meta.url)),
+  )
+)) as typeof import("@cjhyy/code-shell-core/internal");
 
 function reset() {
   asyncAgentRegistry.reset();

@@ -2,7 +2,19 @@
 
 The CodeShell desktop application includes code derived from third-party open
 source projects through the bundled core, TUI rendering code, and CDP browser
-action layer.
+action layer, and character artwork credited below.
+
+## Love Live! character artwork
+
+The optional Maki Scarlet Stage theme includes two unmodified Nishikino Maki
+illustrations from the official Love Live! School Idol Festival ALL STARS site.
+Character and illustration rights belong to their respective rights holders;
+these illustrations are not covered by CodeShell's MIT code license. This is an
+unofficial theme and does not imply affiliation or endorsement.
+
+- Character page: https://lovelive-as.bushimo.jp/member/maki/
+- School illustration: https://lovelive-as.bushimo.jp/wp-content/uploads/2019/09/chara_06_school-2.png
+- Stage illustration: https://lovelive-as.bushimo.jp/wp-content/uploads/2019/09/chara_06_cheer-1.png
 
 ## Puppeteer
 

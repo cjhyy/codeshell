@@ -347,6 +347,64 @@ try {
   await backToChat();
   report.defaultPixel = await sampleChatPixel(await screenshot("default-light.png"));
   await appearance();
+  assert(
+    (await win.evaluate(() => window.codeshell.listInstalledThemes())).length === 0,
+    "Fresh HOME has no imported theme packs",
+  );
+  const maki = win.locator('[data-theme-pack="maki"] button[aria-pressed]');
+  await maki.click();
+  await win.waitForFunction(() => localStorage.getItem("codeshell.theme-pack") === "maki");
+  assert(
+    (await win.locator('[data-theme-uninstall="maki"]').count()) === 0,
+    "Bundled Maki is available without installation",
+  );
+  for (const mode of ["light", "dark"]) {
+    await chooseMode(mode);
+    await screenshot(`builtin-maki-appearance-${mode}.png`);
+    await backToChat();
+    await win.locator('[data-panel-action="toggle"]').click();
+    await win.locator('[data-theme-surface="panel"]').waitFor({ state: "visible" });
+    const metrics = await surfaceMetrics();
+    report[`builtin-maki-${mode}`] = metrics;
+    for (const name of surfaces) {
+      assert(metrics[name], `Bundled Maki decorates the ${name} surface in ${mode} mode`);
+      assert(metrics[name].isolation === "isolate", `${name} contains its decoration`);
+    }
+    assert(metrics.chat.image.includes("maki-stage-"), "Bundled chat uses the stage artwork");
+    assert(
+      metrics.sidebar.image.includes("maki-school-"),
+      "Bundled sidebar uses the school artwork",
+    );
+    for (const name of ["chat", "sidebar"]) {
+      const url = metrics[name].image.match(/^url\("?(.*?)"?\)$/)?.[1];
+      assert(url && new URL(url).protocol === "file:", `${name} artwork ships in the app`);
+      assert(metrics[name].pointerEvents === "none", `${name} artwork permits input`);
+    }
+    assert(metrics.chat.opacity === "0.28", "Bundled chat preserves its artwork opacity");
+    assert(metrics.sidebar.opacity === "0.19", "Bundled sidebar preserves its artwork opacity");
+    assert(metrics.window.frameWidth === "2px", "Bundled Maki preserves the outer frame");
+    assert(metrics.window.framePointerEvents === "none", "Bundled frame permits window input");
+    await decodeImages(metrics);
+    await screenshot(`builtin-maki-chat-${mode}.png`);
+    await win.locator('[data-panel-action="toggle"]').click();
+    await appearance();
+  }
+  // A saved builtin selection must survive startup without installed theme data.
+  await backToChat();
+  await win.reload();
+  await win.waitForFunction(
+    () =>
+      getComputedStyle(document.documentElement).getPropertyValue("--cs-frame-width").trim() ===
+      "2px",
+  );
+  await decodeImages(await surfaceMetrics());
+  await appearance();
+  await win.locator('[data-theme-pack="maki"] button[aria-pressed="true"]').waitFor();
+  assert(
+    (await win.evaluate(() => window.codeshell.listInstalledThemes())).length === 0,
+    "Bundled Maki persists independently of installed packs",
+  );
+  await chooseMode("light");
   await importPack(legacy, "visual-legacy");
   await backToChat();
   report.legacy = await surfaceMetrics();
@@ -501,7 +559,7 @@ try {
   if (screenshotDir)
     await writeFile(join(screenshotDir, "report.json"), JSON.stringify(report, null, 2));
   console.log(
-    "Theme visual smoke passed: legacy wallpaper, six surfaces, modes, reset, narrow layout and transparent pet.",
+    "Theme visual smoke passed: bundled Maki offline artwork and persistence, legacy wallpaper, six surfaces, modes, reset, narrow layout and transparent pet.",
   );
   if (screenshotDir) console.log(`Theme evidence: ${screenshotDir}`);
 } catch (error) {
