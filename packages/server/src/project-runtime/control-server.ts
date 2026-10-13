@@ -11,7 +11,7 @@ import { createCloudBrowserAuth } from "./cloud-browser-auth.js";
 import { legacyProjectAuthority, type CloudAccountAuthority } from "./control-authority.js";
 import { resolveSafe } from "../mobile-remote/mobile-static.js";
 import { contentTypeFor } from "../static-files.js";
-import { createDockerProjectProvider } from "./docker-provider.js";
+import { createDockerProjectProvider, resolveProjectRuntimeLimits } from "./docker-provider.js";
 import { ProjectManager } from "./manager.js";
 import { createProjectRuntimeProxy } from "./proxy.js";
 import { ProjectRegistry, ProjectRegistryError } from "./registry.js";
@@ -27,6 +27,14 @@ export interface ProjectControlServerOptions {
   runtimeImage?: string;
   /** Trusted operator configuration, never accepted from project requests. */
   runtimeSeccompProfile?: string;
+  /** Administrator-owned runtime resources; project requests cannot override these. */
+  runtimeLimits?: { memoryMb?: number; cpus?: number; pids?: number };
+  /** Installation and per-account project quotas from trusted server configuration. */
+  projectLimits?: {
+    maxRunning?: number;
+    maxRunningPerOwner?: number;
+    maxProjectsPerOwner?: number;
+  };
   /** Dependency injection for lifecycle/transport integration tests. */
   provider?: ProjectRuntimeProvider;
   /** Trusted fixed Account-origin verifier. Requires explicit offline ownership adoption. */
@@ -90,6 +98,7 @@ async function readBody(request: IncomingMessage): Promise<Record<string, unknow
 
 /** A small account/project gateway. It never creates a worker, executes tools or mounts cwd. */
 export async function startProjectControlServer(options: ProjectControlServerOptions) {
+  const runtimeLimits = resolveProjectRuntimeLimits(options.runtimeLimits);
   if (
     (options.accountMode !== undefined && options.accountMode !== "multi-account") ||
     (options.accountMode === "multi-account" &&
@@ -175,10 +184,14 @@ export async function startProjectControlServer(options: ProjectControlServerOpt
         installationId: registry.installationId,
         dataDir: options.dataDir,
         image: options.runtimeImage,
+        limits: runtimeLimits,
         seccompProfile: options.runtimeSeccompProfile,
         remoteLink,
       });
     manager = new ProjectManager({
+      maxRunning: options.projectLimits?.maxRunning,
+      maxRunningPerOwner: options.projectLimits?.maxRunningPerOwner,
+      maxProjectsPerOwner: options.projectLimits?.maxProjectsPerOwner,
       registry,
       provider,
       publicOrigin,
@@ -224,7 +237,12 @@ export async function startProjectControlServer(options: ProjectControlServerOpt
       }
       if (await auth.handle(request, response)) return;
       if (await transport.handle(request, response)) return;
-      if (pathname === "/api/v1/environment") {
+      if (
+        pathname === "/api/v1/environment" ||
+        (multiAccount && pathname === "/api/v1/cloud-browser/environment")
+      ) {
+        if (pathname === "/api/v1/cloud-browser/environment" && url.search)
+          throw new ProjectRegistryError(400, "环境请求参数无效。");
         if (!auth.isOriginAllowed(request)) throw new ProjectRegistryError(403, "请求来源无效。");
         if (!(await auth.authenticate(request))) throw new ProjectRegistryError(401, "请先登录。");
         if (request.method !== "GET") throw new ProjectRegistryError(405, "请求方法无效。");
