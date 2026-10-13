@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Reproduce the two theme packs' original UI cues and instrumental loops.
+"""Reproduce the theme packs' original UI cues and instrumental loops.
 
 Python standard library only. No samples, existing melodies, or vocal models are
 used. Files are mono 44.1 kHz PCM16 WAV, with conservative peaks and zero-crossing
@@ -8,6 +8,7 @@ envelopes. Notes in instrumental loops wrap their tails across the loop boundary
 
 from array import array
 from pathlib import Path
+import argparse
 import math
 import struct
 import wave
@@ -52,6 +53,16 @@ def note(buffer, start, duration, midi, gain, voice="glass", wrap=False):
             envelope = attack * release * (0.65 + 0.35 * math.exp(-3 * progress))
             value = math.sin(TAU * fundamental * time)
             value += 0.08 * math.sin(TAU * 2 * fundamental * time)
+        elif voice == "bell":
+            envelope = attack * release * math.exp(-3.2 * progress)
+            value = math.sin(TAU * fundamental * time)
+            value += 0.16 * math.sin(TAU * 2 * fundamental * time) * math.exp(-6 * progress)
+            value += 0.035 * math.sin(TAU * 4 * fundamental * time) * math.exp(-9 * progress)
+        elif voice == "pulse":
+            envelope = attack * release * math.exp(-2.8 * progress)
+            value = math.sin(TAU * fundamental * time)
+            value += 0.18 * math.sin(TAU * 2 * fundamental * time) * math.exp(-3 * progress)
+            value += 0.055 * math.sin(TAU * 4 * fundamental * time) * math.exp(-6 * progress)
         else:
             envelope = attack * release * math.exp(-4 * progress)
             # A tiny, quickly fading FM component gives the teal pack its glassy ping.
@@ -142,8 +153,86 @@ def nine_colors():
     write_wav(ROOT / "lovelive-muse" / "assets" / "encore-loop.wav", buffer, 0.25)
 
 
+def character_sounds(theme, voice, cues):
+    """Distinct original gestures for the romance and electric character packs."""
+    for event, (duration, tones) in cues.items():
+        buffer = silence(duration)
+        for start, length, pitch in tones:
+            note(buffer, start, length, pitch, 0.12, voice)
+        write_wav(ROOT / theme / "assets" / f"sound-{event}.wav", buffer, 0.18)
+
+
+def sweet_promise():
+    """32 seconds / 8 bars at 60 BPM: soft piano, bells and a warm pad."""
+    character_sounds("nisekoi-onodera", "bell", {
+        "send": (0.34, [(0, 0.25, 76), (0.10, 0.23, 81)]),
+        "complete": (0.92, [(0, 0.48, 69), (0.17, 0.52, 73), (0.37, 0.51, 80)]),
+        "approval": (0.82, [(0, 0.33, 76), (0.42, 0.34, 76)]),
+        "error": (0.65, [(0, 0.36, 64), (0.25, 0.36, 62)]),
+    })
+    buffer = silence(32)
+    chords = [(45, 52, 56, 61), (42, 49, 52, 57), (50, 57, 61, 64), (47, 52, 57, 59)]
+    patterns = [(2, 0, 3, 1), (1, 3, 0, 2), (3, 1, 2, 0), (0, 2, 1, 3)]
+    positions = (0.5, 1.5, 2.25, 3.25)
+    for bar in range(8):
+        start = bar * 4
+        chord = chords[bar % 4]
+        for pitch in chord:
+            note(buffer, start, 4.35, pitch + 12, 0.018, "pad", True)
+            note(buffer, start + 0.04, 2.2, pitch + 12, 0.024, "warm", True)
+        note(buffer, start, 3.4, chord[0] - 12, 0.042, "bass", True)
+        for slot, chord_index in zip(positions, patterns[bar % 4]):
+            note(buffer, start + slot, 1.1, chord[chord_index] + 24, 0.052, "warm", True)
+        if bar % 2 == 1:
+            note(buffer, start + 2.75, 1.0, chord[2] + 24, 0.018, "bell", True)
+    write_wav(ROOT / "nisekoi-onodera" / "assets" / "encore-loop.wav", buffer, 0.23)
+
+
+def electric_promise():
+    """32 seconds / 16 bars at 120 BPM: smooth synth pulses with soft bass."""
+    character_sounds("misaka-mikoto", "pulse", {
+        "send": (0.26, [(0, 0.16, 71), (0.065, 0.18, 78)]),
+        "complete": (0.68, [(0, 0.31, 66), (0.12, 0.34, 73), (0.28, 0.36, 78)]),
+        "approval": (0.64, [(0, 0.25, 73), (0.32, 0.28, 78)]),
+        "error": (0.49, [(0, 0.26, 59), (0.18, 0.27, 54)]),
+    })
+    buffer = silence(32)
+    beat = 0.5
+    chords = [(47, 54, 57, 62), (50, 57, 61, 66), (45, 52, 59, 61), (52, 59, 62, 66)]
+    positions = (0.0, 0.75, 1.5, 2.0, 2.75, 3.5)
+    patterns = [(2, 0, 3, 1, 2, 3), (0, 2, 1, 3, 0, 2), (3, 1, 0, 2, 3, 1), (1, 3, 2, 0, 1, 2)]
+    for bar in range(16):
+        start = bar * 4 * beat
+        chord = chords[bar % 4]
+        for pitch in chord:
+            note(buffer, start, 2.35, pitch + 12, 0.020, "pad", True)
+        for slot in (0, 1.5, 2.5, 3.25):
+            note(buffer, start + slot * beat, 0.34, chord[0] - 12, 0.062, "bass", True)
+        for slot, chord_index in zip(positions, patterns[bar % 4]):
+            note(buffer, start + slot * beat, 0.46, chord[chord_index] + 24, 0.058, "pulse", True)
+        if bar % 4 == 3:
+            note(buffer, start + 1.625, 0.55, chord[1] + 36, 0.016, "glass", True)
+    write_wav(ROOT / "misaka-mikoto" / "assets" / "encore-loop.wav", buffer, 0.24)
+
+
 if __name__ == "__main__":
-    ui_sounds("hatsune-miku", "glass", 0)
-    ui_sounds("lovelive-muse", "warm", -2)
-    digital_encore()
-    nine_colors()
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument(
+        "--theme", action="append",
+        choices=("hatsune-miku", "lovelive-muse", "nisekoi-onodera", "misaka-mikoto"),
+        help="Only generate this theme; may be repeated. Omit to generate all themes.",
+    )
+    selected = parser.parse_args().theme or [
+        "hatsune-miku", "lovelive-muse", "nisekoi-onodera", "misaka-mikoto",
+    ]
+    for theme in dict.fromkeys(selected):
+        if theme == "hatsune-miku":
+            ui_sounds(theme, "glass", 0)
+            digital_encore()
+        elif theme == "lovelive-muse":
+            ui_sounds(theme, "warm", -2)
+            nine_colors()
+        elif theme == "nisekoi-onodera":
+            sweet_promise()
+        elif theme == "misaka-mikoto":
+            electric_promise()

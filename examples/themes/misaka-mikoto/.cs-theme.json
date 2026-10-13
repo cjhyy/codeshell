@@ -1,0 +1,148 @@
+{
+  "schemaVersion": 1,
+  "id": "misaka-mikoto",
+  "name": "御坂美琴 · Electric Promise",
+  "version": "1.0.0",
+  "colors": {
+    "light": {
+      "--cs-background": "37 43% 97%",
+      "--cs-foreground": "28 23% 17%",
+      "--cs-card": "38 48% 99%",
+      "--cs-card-foreground": "28 23% 17%",
+      "--cs-popover": "36 43% 99%",
+      "--cs-popover-foreground": "28 23% 17%",
+      "--cs-primary": "26 79% 32%",
+      "--cs-primary-foreground": "0 0% 100%",
+      "--cs-secondary": "35 40% 92%",
+      "--cs-secondary-foreground": "27 34% 24%",
+      "--cs-muted": "35 25% 93%",
+      "--cs-muted-foreground": "28 15% 38%",
+      "--cs-accent": "202 54% 91%",
+      "--cs-accent-foreground": "204 58% 29%",
+      "--cs-destructive": "354 65% 42%",
+      "--cs-destructive-foreground": "0 0% 100%",
+      "--cs-border": "33 27% 80%",
+      "--cs-input": "32 27% 76%",
+      "--cs-ring": "26 79% 32%",
+      "--cs-status-running": "203 74% 35%",
+      "--cs-status-ok": "153 56% 30%",
+      "--cs-status-warn": "32 87% 31%",
+      "--cs-status-err": "354 65% 42%",
+      "--cs-status-idle": "212 17% 42%"
+    },
+    "dark": {
+      "--cs-background": "215 22% 8%",
+      "--cs-foreground": "36 40% 94%",
+      "--cs-card": "215 21% 11%",
+      "--cs-card-foreground": "36 40% 94%",
+      "--cs-popover": "215 23% 12%",
+      "--cs-popover-foreground": "36 40% 94%",
+      "--cs-primary": "35 89% 69%",
+      "--cs-primary-foreground": "26 45% 11%",
+      "--cs-secondary": "215 24% 18%",
+      "--cs-secondary-foreground": "37 30% 92%",
+      "--cs-muted": "215 18% 15%",
+      "--cs-muted-foreground": "211 20% 73%",
+      "--cs-accent": "203 39% 22%",
+      "--cs-accent-foreground": "201 82% 85%",
+      "--cs-destructive": "354 78% 74%",
+      "--cs-destructive-foreground": "350 43% 13%",
+      "--cs-border": "211 27% 28%",
+      "--cs-input": "208 28% 32%",
+      "--cs-ring": "35 89% 69%",
+      "--cs-status-running": "198 88% 73%",
+      "--cs-status-ok": "153 58% 68%",
+      "--cs-status-warn": "39 88% 71%",
+      "--cs-status-err": "354 78% 74%",
+      "--cs-status-idle": "212 20% 69%"
+    }
+  },
+  "wallpaper": {
+    "light": "assets/stage.png",
+    "dark": "assets/stage.png",
+    "opacity": 0.18
+  },
+  "surfaces": {
+    "window": {
+      "background": {
+        "light": "37 43% 97%",
+        "dark": "215 22% 8%"
+      }
+    },
+    "titlebar": {
+      "background": {
+        "light": "35 52% 93%",
+        "dark": "213 28% 11%"
+      }
+    },
+    "sidebar": {
+      "background": {
+        "light": "35 41% 94%",
+        "dark": "214 26% 10%"
+      },
+      "light": "assets/stage.png",
+      "dark": "assets/stage.png",
+      "opacity": 0.16,
+      "fit": "cover",
+      "position": "right"
+    },
+    "chat": {
+      "background": {
+        "light": "38 45% 98%",
+        "dark": "215 22% 8%"
+      },
+      "light": "assets/stage.png",
+      "dark": "assets/stage.png",
+      "opacity": 0.23,
+      "fit": "cover",
+      "position": "right"
+    },
+    "composer": {
+      "background": {
+        "light": "38 54% 99%",
+        "dark": "212 27% 13%"
+      },
+      "backgroundOpacity": 0.97
+    },
+    "panel": {
+      "background": {
+        "light": "37 29% 97%",
+        "dark": "215 21% 10%"
+      }
+    }
+  },
+  "frame": {
+    "light": "29 79% 42%",
+    "dark": "200 77% 57%",
+    "width": 2,
+    "radius": 12
+  },
+  "sounds": {
+    "send": "assets/sound-send.wav",
+    "complete": "assets/sound-complete.wav",
+    "approval": "assets/sound-approval.wav",
+    "error": "assets/sound-error.wav"
+  },
+  "music": [
+    {
+      "title": "Amber Circuit（原创器乐）",
+      "artist": "CodeShell",
+      "file": "assets/encore-loop.wav"
+    },
+    {
+      "title": "only my railgun",
+      "artist": "fripSide",
+      "url": "https://www.youtube.com/watch?v=cFqaN3vgxLc"
+    },
+    {
+      "title": "LEVEL5 -judgelight-",
+      "artist": "fripSide",
+      "url": "https://www.youtube.com/watch?v=a4deMm8soGA"
+    },
+    {
+      "title": "sister's noise（官方短版 MV）",
+      "artist": "fripSide",
+      "url": "https://www.youtube.com/watch?v=Ca_-7DLQpO4"
+    }
+  ]
+}
