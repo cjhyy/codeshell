@@ -89,6 +89,18 @@ const project: CloudProject = {
   createdAt: 1,
   updatedAt: 1,
 };
+const linkedProject = {
+  id: "legacy-binding",
+  localProjectId: "local-project",
+  origin,
+  environmentId: "legacy-environment",
+  environmentName: "Existing cloud",
+  remoteProjectId: project.id,
+  remoteProjectName: "Existing remote project",
+  createdAt: 1,
+  updatedAt: 1,
+};
+let linkedOpens = 0;
 let projects = [project];
 const list = (): CloudManagementResult => ({
   action: "list",
@@ -103,6 +115,7 @@ function deferred<T>() {
   return { promise, resolve };
 }
 const lateStatus = deferred<CloudAccountStatus>();
+const lateLinkedOpen = deferred<void>();
 const lateManagement = deferred<CloudManagementResult>();
 const listeners = new Set<(status: CloudAccountStatus) => void>();
 let snapshot: CloudAccountStatus =
@@ -125,7 +138,10 @@ window.codeshell = {
     return () => menuDetached++;
   },
   cloudAccount: {
-    status: async () => (scenario === "late-status-after-event" ? lateStatus.promise : snapshot),
+    status: async () =>
+      ["late-status-after-event", "linked-cloud-pending"].includes(scenario)
+        ? lateStatus.promise
+        : snapshot,
     onStatus: (callback: (status: CloudAccountStatus) => void) => {
       listeners.add(callback);
       return () => listeners.delete(callback);
@@ -246,11 +262,26 @@ const chooser = [
   "explicit-workflow",
   "local-chooser",
   "dialog-busy-before-effect",
+  "linked-cloud-entry",
+  "linked-cloud-retry",
+  "linked-cloud-pending",
 ].includes(scenario);
 function Chooser() {
-  const [open, dialog] = useNewProjectDialog(async () => {
-    localCreates++;
-  });
+  const [open, dialog] = useNewProjectDialog(
+    async () => {
+      localCreates++;
+    },
+    {
+      cloudBindings: scenario.startsWith("linked-cloud") ? [linkedProject] : [],
+      onOpenCloudProject: async (binding) => {
+        assert.deepEqual(binding, linkedProject);
+        linkedOpens++;
+        if (scenario === "linked-cloud-pending") await lateLinkedOpen.promise;
+        if (scenario === "linked-cloud-retry" && linkedOpens === 1)
+          throw new Error("Existing cloud could not be opened");
+      },
+    },
+  );
   return (
     <>
       <button onClick={open}>fixture chooser opener</button>
@@ -288,7 +319,37 @@ try {
       await click(t("sidebar.cloud"));
       await update(() => new Promise<void>((done) => setTimeout(done, 300)));
       assert.equal(calls.length, 0, "Selecting Cloud must not exchange credentials");
-      if (scenario === "anonymous-chooser") {
+      if (scenario.startsWith("linked-cloud")) {
+        const label = "打开云端项目：Existing remote project";
+        assert.ok(contents().includes(t("sidebar.linkedCloudProjects")));
+        assert.ok(contents().includes(linkedProject.origin));
+        await click(label);
+        if (scenario === "linked-cloud-pending") {
+          await update(() => lateStatus.resolve(alice));
+          assert.ok(
+            props(button(label)).disabled,
+            "Late Account status must not release a pending project open",
+          );
+          await update(() => closeDialog(false));
+          assert.ok(button(label), "Pending project selection keeps the chooser open");
+          await update(() => props(button(label)).onClick());
+          assert.equal(linkedOpens, 1, "A late status update must not permit a second open");
+          await update(() => lateLinkedOpen.resolve());
+        }
+        if (scenario === "linked-cloud-retry") {
+          assert.ok(contents().includes("Existing cloud could not be opened"));
+          assert.ok(button(label), "Failed open keeps its exact binding available for retry");
+          await click(label);
+        }
+        assert.equal(linkedOpens, scenario === "linked-cloud-retry" ? 2 : 1);
+        assert.equal(localCreates, 0);
+        assert.equal(
+          calls.length,
+          0,
+          "Opening an existing binding does not exchange a managed grant",
+        );
+        assert.equal(button(label), undefined, "Opened legacy project closes its chooser");
+      } else if (scenario === "anonymous-chooser") {
         assert.ok(contents().includes(t("cloudManager.signIn")));
         assert.equal(button(t("cloudManager.connect")), undefined);
         assert.equal(localCreates, 0);

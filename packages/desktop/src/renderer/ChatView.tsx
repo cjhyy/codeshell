@@ -80,7 +80,6 @@ interface Props {
   variant?: "main" | "quickChat" | "pet";
   /** Remote runtimes use the same chat while local-only capabilities fail closed. */
   localRuntime?: boolean;
-  runLocationControl?: React.ReactNode;
   composerDisabled?: boolean;
   remoteFiles?: Array<{ id: string; name: string; size: number }>;
   onSelectRemoteFiles?: (files: File[]) => Promise<void>;
@@ -359,7 +358,6 @@ function appendReference(
 export function ChatView({
   variant = "main",
   localRuntime = true,
-  runLocationControl,
   composerDisabled = false,
   remoteFiles = [],
   onSelectRemoteFiles,
@@ -2283,26 +2281,21 @@ export function ChatView({
             would be confusing (cwd / context / engine sessionId are
             already tied to the existing project). Use the sidebar to
             jump projects after a session has started. */}
-          {variant === "main" && (activeProjectId !== null || (isNewChat && !engineSessionId)) && (
+          {variant === "main" && localRuntime && isNewChat && !engineSessionId && (
             <div className="mt-3 flex min-w-0 flex-wrap items-center gap-2">
-              {localRuntime && isNewChat && !engineSessionId && (
-                <ProjectPicker
-                  projects={projects}
-                  activeProjectId={activeProjectId}
-                  onSelect={onSelectProject}
-                  onAddProject={onAddProject}
-                  disabled={controlsDisabled}
-                />
-              )}
-              {runLocationControl}
-              {localRuntime && isNewChat && !engineSessionId && (
-                <BranchPicker
-                  projectId={activeProjectId}
-                  cwd={conversationRoot}
-                  clean={repoClean}
-                  disabled={controlsDisabled}
-                />
-              )}
+              <ProjectPicker
+                projects={projects}
+                activeProjectId={activeProjectId}
+                onSelect={onSelectProject}
+                onAddProject={onAddProject}
+                disabled={controlsDisabled}
+              />
+              <BranchPicker
+                projectId={activeProjectId}
+                cwd={conversationRoot}
+                clean={repoClean}
+                disabled={controlsDisabled}
+              />
             </div>
           )}
           {isNewChat && variant === "main" && !engineSessionId && (
