@@ -127,7 +127,8 @@ export async function installOperationBatchNativeFixture(core, { home, projectRo
   assert.equal(process.env.CODE_SHELL_DATA_ROOT, undefined);
   const deadline = Date.now() + 15_000;
   while (core.getDefaultCredentialCipher().constructor.name !== "SafeStorageCipher") {
-    if (Date.now() >= deadline) throw new Error("Production Main did not install SafeStorageCipher");
+    if (Date.now() >= deadline)
+      throw new Error("Production Main did not install SafeStorageCipher");
     await new Promise((done) => setTimeout(done, 50));
   }
   const credential = {

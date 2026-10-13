@@ -11,10 +11,7 @@ import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { createBunTestEnvironment } from "../../../scripts/bun-test-completion.mjs";
-import {
-  bindPrivateKeychainContext,
-  readKeychainReference,
-} from "./macos-keychain-context.mjs";
+import { bindPrivateKeychainContext, readKeychainReference } from "./macos-keychain-context.mjs";
 import {
   makeNativeBatchManifest,
   nativeBatchIds,
@@ -275,7 +272,8 @@ try {
       const matches = BrowserWindow.getAllWindows().filter(
         (candidate) => !candidate.isDestroyed() && candidate.webContents.getURL() === url,
       );
-      if (matches.length !== 1) throw new Error("Native fixture requires one exact renderer window");
+      if (matches.length !== 1)
+        throw new Error("Native fixture requires one exact renderer window");
       matches[0].setTitle(title);
       return {
         id: matches[0].id,
@@ -285,7 +283,9 @@ try {
     },
     { title: fixtureTitle, url: win.url() },
   );
-  console.log(`Actual Electron PID=${child.pid}, window=${nativeWindow.title}; seeding synthetic storage.`);
+  console.log(
+    `Actual Electron PID=${child.pid}, window=${nativeWindow.title}; seeding synthetic storage.`,
+  );
   // Call only after actual renderer readiness: createWindow has installed the
   // actual AgentBridge, and production startup installed the Main cipher.
   await app.evaluate(() => globalThis.__seedNativeBatchFixture());
@@ -303,12 +303,20 @@ try {
   assert.equal(seed.pid, child.pid);
   assert.equal(seed.cipherType, "SafeStorageCipher");
   const guardReceipts = (await readFile(join(isolated.home, "operation-read-guard.jsonl"), "utf8"))
-    .trim().split("\n").map(JSON.parse);
+    .trim()
+    .split("\n")
+    .map(JSON.parse);
   const mainGuard = guardReceipts.find((receipt) => receipt.pid === child.pid);
   assert.ok(mainGuard && mainGuard.origin === origin && mainGuard.negativeProbes === 8);
   assert.equal(mainGuard.childNegativeProbes, 3);
   assert.equal(mainGuard.homeId, hash(isolated.home));
-  processes = { mainPid: child.pid, parentPid: process.pid, mainGuard, parentGuard, workerPids: [] };
+  processes = {
+    mainPid: child.pid,
+    parentPid: process.pid,
+    mainGuard,
+    parentGuard,
+    workerPids: [],
+  };
   const beforeLedger = await optionalBytes(ledgerPath);
   if (beforeLedger) assert.deepEqual(JSON.parse(beforeLedger).records, {});
   const beforeState = await readFile(join(sessionPath, "state.json"));
@@ -356,9 +364,12 @@ try {
         ? "Inspect actual OS display/scroll and all item markers, then choose Cancel."
         : `Use the ${cancelMode === "enter" ? "Enter" : "Escape"} key in the actual OS dialog.`,
     readabilityAccepted: false,
-    limitation: "Invocation/whole detail/AX content cannot establish visible reachability or default focus. Root must retain separate actual CUA observations.",
+    limitation:
+      "Invocation/whole detail/AX content cannot establish visible reachability or default focus. Root must retain separate actual CUA observations.",
   });
-  console.log(`Actual Electron PID=${child.pid}, window=${nativeWindow.title}; Native prompt requested, mode=${cancelMode}. Inspect with CUA and cancel. Never approve this UI-only fixture.`);
+  console.log(
+    `Actual Electron PID=${child.pid}, window=${nativeWindow.title}; Native prompt requested, mode=${cancelMode}. Inspect with CUA and cancel. Never approve this UI-only fixture.`,
+  );
   let returned;
   while (!timedOut) {
     returned = await win.evaluate(() => window.__nativeBatchUiResult);
@@ -448,7 +459,10 @@ try {
     cleanupForced,
     manifestSha256: manifest.manifestSha256,
     requests,
-    limitation: "Real Main/preload/native dialog only. No worker batch RPC/version handshake, item approval or write verification accepted. JS fetch/http/https and child-launch guards are not an OS/Chromium/raw-net sandbox. Private HOME shares the existing OS Keychain through metadata-only context.",
+    limitation:
+      "Real Main/preload/native dialog only. No worker batch RPC/version handshake, item approval or write verification accepted. JS fetch/http/https and child-launch guards are not an OS/Chromium/raw-net sandbox. Private HOME shares the existing OS Keychain through metadata-only context.",
   });
-  console.log(`Native UI cancellation/closure ${process.exitCode ? "failed" : "recorded"}; evidence retained: ${evidence}`);
+  console.log(
+    `Native UI cancellation/closure ${process.exitCode ? "failed" : "recorded"}; evidence retained: ${evidence}`,
+  );
 }
