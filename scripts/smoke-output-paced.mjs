@@ -1,7 +1,17 @@
 import assert from "node:assert/strict";
 import { fork, spawnSync } from "node:child_process";
 import { once } from "node:events";
-import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import {
+  closeSync,
+  constants,
+  fstatSync,
+  lstatSync,
+  mkdirSync,
+  openSync,
+  readFileSync,
+  readSync,
+  writeFileSync,
+} from "node:fs";
 import { join, resolve } from "node:path";
 import { performance } from "node:perf_hooks";
 import { pathToFileURL } from "node:url";
@@ -110,13 +120,20 @@ const env = {
   CODE_SHELL_CREDENTIAL_ACCESS: "local",
   CODESHELL_SELF_UPDATE_CHECK: "0",
   CODESHELL_COST_SMOKE_GUARD_LOG: join(root, "paced-worker-guard.jsonl"),
+  CODESHELL_PACED_TIMING_PARENT_PID: String(process.pid),
 };
+// The unchanged network/HOME guard remains the first preload.
+env.NODE_OPTIONS += ` --import ${new URL("./fixtures/output-paced-worker-observer.mjs", import.meta.url).href}`;
+let observedWorkerPid;
 const worker = new WorkerBridgeCore({
   execPath: process.execPath,
   entryPath: resolve("packages/core/dist/cli/agent-server-stdio.js"),
   buildEnv: () => env,
   onStderr: (line) => {
     if (!line.includes("Warning:")) process.stderr.write(line);
+  },
+  onWorkerStarted: ({ pid }) => {
+    observedWorkerPid = pid;
   },
 });
 worker.subscribeLines((line) => {
@@ -182,6 +199,94 @@ function sourceDiagnostics() {
       row[5],
     ]),
   };
+}
+function workerDiagnostics() {
+  let fd,
+    result = { available: 0 };
+  try {
+    const file = join(process.env.HOME, "paced-worker-timing.json");
+    fd = openSync(file, constants.O_RDONLY | constants.O_NOFOLLOW);
+    const before = fstatSync(fd);
+    if (
+      !before.isFile() ||
+      before.nlink !== 1 ||
+      before.uid !== process.getuid?.() ||
+      (before.mode & 0o777) !== 0o600 ||
+      before.size < 1 ||
+      before.size > 512 * 1024
+    )
+      return result;
+    const bytes = Buffer.alloc(before.size + 1);
+    let length = 0;
+    while (length < bytes.length) {
+      const count = readSync(fd, bytes, length, bytes.length - length, length);
+      if (!count) break;
+      length += count;
+    }
+    const after = fstatSync(fd),
+      path = lstatSync(file);
+    if (
+      length !== before.size ||
+      ["dev", "ino", "size", "mtimeMs", "ctimeMs", "mode", "uid", "nlink"].some(
+        (key) => before[key] !== after[key] || after[key] !== path[key],
+      ) ||
+      !path.isFile() ||
+      path.isSymbolicLink()
+    )
+      return result;
+    const data = JSON.parse(bytes.subarray(0, length).toString("utf8"));
+    const count = (value) => Number.isSafeInteger(value) && value >= 0;
+    const ms = (value) =>
+      typeof value === "number" && Number.isFinite(value) && Math.abs(value) <= 3_600_000;
+    if (
+      !data ||
+      Object.keys(data).sort().join() !==
+        "fsyncOverflow,fsyncRows,pid,ppid,stdoutOverflow,stdoutRows,version" ||
+      data.version !== 1 ||
+      data.pid !== observedWorkerPid ||
+      data.ppid !== process.pid ||
+      !count(data.fsyncOverflow) ||
+      !count(data.stdoutOverflow) ||
+      !Array.isArray(data.fsyncRows) ||
+      data.fsyncRows.length > 4096 ||
+      data.fsyncRows.some(
+        (row) =>
+          !Array.isArray(row) ||
+          row.length !== 3 ||
+          !row.every(ms) ||
+          row[0] < 0 ||
+          row[1] < 0 ||
+          ![0, 1].includes(row[2]),
+      ) ||
+      !Array.isArray(data.stdoutRows) ||
+      data.stdoutRows.length > 150 ||
+      data.stdoutRows.some(
+        (row) =>
+          !Array.isArray(row) ||
+          row.length !== 7 ||
+          !row.slice(0, 6).every(ms) ||
+          !count(row[0]) ||
+          row[0] >= 150 ||
+          row[2] < 0 ||
+          row[4] < 0 ||
+          ![0, 1].includes(row[5]) ||
+          !count(row[6]) ||
+          row[6] > 64 * 1024 * 1024,
+      )
+    )
+      return result;
+    result = { available: 1, ...data };
+  } catch {
+    /* One bounded read only; missing or invalid diagnostics stay unavailable. */
+  } finally {
+    if (fd !== undefined)
+      try {
+        closeSync(fd);
+      } catch {
+        result = { available: 0 };
+      }
+  }
+  return result;
 }
 async function waitFor(predicate) {
   const deadline = Date.now() + 10000;
@@ -317,4 +422,9 @@ try {
   await worker.stopAndWait();
   server.disconnect();
   await once(server, "exit");
+  try {
+    console.log(JSON.stringify({ pacedWorkerTimingDiagnostics: workerDiagnostics() }));
+  } catch {
+    /* Diagnostic output cannot mask the original stream/control assertion. */
+  }
 }
