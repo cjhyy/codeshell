@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from "react";
-import { Trash2, Upload } from "lucide-react";
+import { FolderOpen, Trash2, Upload } from "lucide-react";
+import type { ThemeImportKind } from "../../shared/theme-packs";
 import {
   applyTheme,
   applyThemePack,
@@ -85,11 +86,11 @@ export function AppearanceSection() {
     window.dispatchEvent(new Event("codeshell:theme-pack-changed"));
   };
 
-  const importPack = async (): Promise<void> => {
+  const importPack = async (kind: ThemeImportKind): Promise<void> => {
     if (!api) return;
     setImporting(true);
     try {
-      const picked = await api.pickAndPreviewTheme();
+      const picked = await api.pickAndPreviewTheme(kind);
       if (picked.cancelled) return;
       const { preview } = picked;
       const parts = [
@@ -168,22 +169,35 @@ export function AppearanceSection() {
         ))}
       </div>
 
-      <div className="mt-3 flex items-center justify-between gap-2">
+      <div className="mt-3 flex flex-wrap items-center justify-between gap-2">
         <h3 className="m-0 text-[0.95rem] font-semibold text-foreground">
           {t("settingsX.appearance.packTitle")}
         </h3>
         {api && (
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            disabled={importing}
-            data-theme-import
-            onClick={() => void importPack()}
-          >
-            <Upload size={13} aria-hidden="true" />
-            {t("settingsX.appearance.pack.import")}
-          </Button>
+          <div className="flex flex-wrap gap-2">
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              disabled={importing}
+              data-theme-import
+              onClick={() => void importPack("zip")}
+            >
+              <Upload size={13} aria-hidden="true" />
+              {t("settingsX.appearance.pack.import")}
+            </Button>
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              disabled={importing}
+              data-theme-import-directory
+              onClick={() => void importPack("directory")}
+            >
+              <FolderOpen size={13} aria-hidden="true" />
+              {t("settingsX.appearance.pack.importDirectory")}
+            </Button>
+          </div>
         )}
       </div>
       <p className="m-0 text-xs text-muted-foreground">{t("settingsX.appearance.packDesc")}</p>

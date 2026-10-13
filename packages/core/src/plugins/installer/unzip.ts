@@ -52,9 +52,8 @@ export function safeJoin(destDir: string, entryName: string): string {
 /**
  * Extract a .zip into destDir (must already exist). Streams each entry to disk
  * so a large archive doesn't buffer in memory. Directory entries (trailing
- * "/") just create the dir; symlinks and other special entries are skipped —
- * we only materialize regular files and directories, which is all a plugin
- * needs and keeps the surface safe.
+ * "/") just create the dir. All other entries are written as regular files:
+ * archive permission/type metadata never creates symlinks or special files.
  */
 export async function extractZip(zipPath: string, destDir: string): Promise<void> {
   const archive = await stat(zipPath);
@@ -170,14 +169,19 @@ function drainEntries(
     });
     zip.on("entry", (entry: Entry) => {
       let entryName: string | null;
+      let outPath: string;
       try {
         entryName = mapEntryName(entry.fileName);
+        if (entryName === null) {
+          zip.readEntry();
+          return;
+        }
+        // Path validation can throw independently of yauzl (for example on a
+        // NUL filename). Reject the extraction rather than escaping this event
+        // callback as an uncaught main-process exception.
+        outPath = safeJoin(destDir, entryName);
       } catch (error) {
         fail(error);
-        return;
-      }
-      if (entryName === null) {
-        zip.readEntry();
         return;
       }
       entryCount += 1;
@@ -208,12 +212,11 @@ function drainEntries(
       const onErr = (e: unknown): void => fail(e);
       // Directory entry — yauzl signals these with a trailing slash.
       if (/\/$/.test(entryName)) {
-        mkdir(safeJoin(destDir, entryName), { recursive: true })
+        mkdir(outPath, { recursive: true })
           .then(() => zip.readEntry())
           .catch(onErr);
         return;
       }
-      const outPath = safeJoin(destDir, entryName);
       zip.openReadStream(entry, (err, stream) => {
         if (err || !stream) {
           onErr(

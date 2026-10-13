@@ -5,7 +5,7 @@
  *   node ../../scripts/run-isolated-node-smoke.mjs scripts/e2e-themes.mjs
  * Add --screenshots <directory> to retain PNGs and a computed-style report.
  * Add --theme-source <directory> to include screenshots of a real source pack.
- * Only the native folder picker is scripted; review/install/selection use the UI.
+ * Only the native file/folder picker is scripted; review/install/selection use the UI.
  */
 /* global document, getComputedStyle, Image, localStorage, window */
 import { mkdir, readFile, writeFile } from "node:fs/promises";
@@ -13,6 +13,7 @@ import { execFileSync } from "node:child_process";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { deflateSync } from "node:zlib";
+import { officeZip as createZip } from "../../../tests/fixtures/upload-documents.mjs";
 import {
   assert,
   captureRendererErrors,
@@ -95,6 +96,18 @@ async function fixture(id, decorations) {
     JSON.stringify({ schemaVersion: 1, id, name: id, version: "1.0.0", ...decorations }),
   );
   return path;
+}
+
+async function zipFixture(source, name, wrapper = "") {
+  const entries = {};
+  for (const file of [".cs-theme.json", "light.png", "dark.png"]) {
+    entries[`${wrapper}${file}`] = await readFile(join(source, file));
+  }
+  // Finder adds this sibling directory to many ordinary theme archives.
+  if (wrapper) entries["__MACOSX/._theme"] = Buffer.from("Finder metadata");
+  const archive = join(isolated.home, name);
+  await writeFile(archive, createZip(entries));
+  return archive;
 }
 
 async function seedTranscript() {
@@ -183,13 +196,35 @@ async function backToChat() {
   await win.locator('[data-theme-surface="chat"]').waitFor({ state: "visible" });
 }
 
-async function importPack(path, id) {
+async function pickPack(path, kind = "directory") {
   await app.evaluate(({ dialog }, source) => {
-    dialog.showOpenDialog = async () => ({ canceled: false, filePaths: [source] });
+    dialog.showOpenDialog = async (...args) => {
+      globalThis.__codeshellThemePickerOptions = args.at(-1);
+      return { canceled: false, filePaths: [source] };
+    };
   }, path);
-  await win.locator("[data-theme-import]").click();
+  await win
+    .locator(kind === "zip" ? "[data-theme-import]" : "[data-theme-import-directory]")
+    .click();
   const review = win.getByRole("dialog");
   await review.waitFor({ state: "visible" });
+  const dialogOptions = await app.evaluate(() => globalThis.__codeshellThemePickerOptions);
+  assert(
+    JSON.stringify(dialogOptions.properties) ===
+      JSON.stringify([kind === "zip" ? "openFile" : "openDirectory"]),
+    `${kind} import opens the matching native picker`,
+  );
+  if (kind === "zip") {
+    assert(
+      dialogOptions.filters.some((filter) => filter.extensions.includes("zip")),
+      "ZIP import permits ZIP files in the native picker",
+    );
+  }
+  return review;
+}
+
+async function importPack(path, id, kind = "directory") {
+  const review = await pickPack(path, kind);
   await review.getByRole("button", { name: /^(安装|Install)$/ }).click();
   await review.waitFor({ state: "hidden" });
   await win.locator(`[data-theme-pack="${id}"] button[aria-pressed="true"]`).waitFor();
@@ -305,6 +340,8 @@ try {
     ),
     frame: { light: "350 80% 45%", dark: "350 80% 70%", width: 4, radius: 14 },
   });
+  const rootZip = await zipFixture(legacy, "legacy-root.zip");
+  const wrappedZip = await zipFixture(rich, "surface-theme.zip", "surface-theme/");
   app = await launchCodeShellElectron({
     appDir,
     home: isolated.home,
@@ -405,6 +442,24 @@ try {
     "Bundled Maki persists independently of installed packs",
   );
   await chooseMode("light");
+  const cancelledReview = await pickPack(rootZip, "zip");
+  await cancelledReview.getByRole("button", { name: /^(取消|Cancel)$/ }).click();
+  await cancelledReview.waitFor({ state: "hidden" });
+  assert(
+    (await win.evaluate(() => window.codeshell.listInstalledThemes())).length === 0,
+    "Cancelling ZIP review does not install a theme",
+  );
+  await importPack(rootZip, "visual-legacy", "zip");
+  await backToChat();
+  const rootZipMetrics = await surfaceMetrics();
+  await decodeImages(rootZipMetrics);
+  assert(
+    rootZipMetrics.window.image.includes("cstheme://visual-legacy/"),
+    "A ZIP with its manifest at the archive root installs and paints",
+  );
+  report.zipRoot = rootZipMetrics;
+  await appearance();
+  // Re-import the same theme through the independent folder action too.
   await importPack(legacy, "visual-legacy");
   await backToChat();
   report.legacy = await surfaceMetrics();
@@ -434,7 +489,7 @@ try {
   );
 
   await appearance();
-  await importPack(rich, "visual-surfaces");
+  await importPack(wrappedZip, "visual-surfaces", "zip");
   for (const mode of ["light", "dark"]) {
     await chooseMode(mode);
     await backToChat();
@@ -559,7 +614,7 @@ try {
   if (screenshotDir)
     await writeFile(join(screenshotDir, "report.json"), JSON.stringify(report, null, 2));
   console.log(
-    "Theme visual smoke passed: bundled Maki offline artwork and persistence, legacy wallpaper, six surfaces, modes, reset, narrow layout and transparent pet.",
+    "Theme visual smoke passed: root/wrapped ZIP and folder imports, review cancellation, bundled Maki offline artwork and persistence, legacy wallpaper, six surfaces, modes, reset, narrow layout and transparent pet.",
   );
   if (screenshotDir) console.log(`Theme evidence: ${screenshotDir}`);
 } catch (error) {

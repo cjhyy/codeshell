@@ -5,6 +5,8 @@
 
 import type { ThemeFrame, ThemeSurface, ThemeSurfaceName } from "@cjhyy/code-shell-core";
 
+export type ThemeImportKind = "zip" | "directory";
+
 export interface InstalledThemePack {
   id: string;
   name: string;

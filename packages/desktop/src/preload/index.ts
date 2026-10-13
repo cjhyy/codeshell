@@ -39,7 +39,7 @@ import type { AgentPanelHostRequest, AgentPanelHostResponse } from "../shared/ag
 import type { ExpandedPluginCommand, PluginCommandDescriptor } from "../shared/plugin-commands";
 import type { PluginMediaDto } from "../shared/plugin-media";
 import type { MediaPreviewRequest, MediaPreviewResult } from "../shared/media-preview";
-import type { InstalledThemePack, ThemePickPreview } from "../shared/theme-packs";
+import type { InstalledThemePack, ThemeImportKind, ThemePickPreview } from "../shared/theme-packs";
 import type { RendererConfigurationTarget } from "../shared/renderer-configuration";
 import type { ExternalRuntimeModelEntry } from "../shared/external-runtime-models";
 import type { GoalConfig } from "@cjhyy/code-shell-core";
@@ -1202,8 +1202,8 @@ contextBridge.exposeInMainWorld("codeshell", {
   checkPluginUpdate: (name: string) => ipcRenderer.invoke("plugins:checkUpdate", name),
   // Theme packs (installable pet/color/wallpaper packs).
   listInstalledThemes: () => ipcRenderer.invoke("themes:list") as Promise<InstalledThemePack[]>,
-  pickAndPreviewTheme: () =>
-    ipcRenderer.invoke("themes:pickAndPreview") as Promise<ThemePickPreview>,
+  pickAndPreviewTheme: (kind?: ThemeImportKind) =>
+    ipcRenderer.invoke("themes:pickAndPreview", kind) as Promise<ThemePickPreview>,
   installTheme: (input: { path: string; reviewToken: string }) =>
     ipcRenderer.invoke("themes:install", input) as Promise<InstalledThemePack>,
   uninstallTheme: (id: string) =>

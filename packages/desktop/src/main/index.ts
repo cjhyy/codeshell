@@ -230,6 +230,7 @@ import {
   petPersonalizationFromSettings,
 } from "../shared/pet-settings.js";
 import { installedThemeToPack } from "./theme-pack-conversion.js";
+import { themeImportDialogOptions } from "./theme-import-dialog.js";
 import { SafeStorageCipher } from "./credential-cipher.js";
 import { createDesktopModelRequestSigner } from "./model-request-signing-service.js";
 import { McpOAuthService, type McpOAuthLoginInput } from "./mcp-oauth-service.js";
@@ -4864,16 +4865,15 @@ ipcMain.handle("themes:list", async () => {
 });
 ipcMain.handle(
   "themes:pickAndPreview",
-  async (): Promise<
-    { cancelled: true } | { cancelled: false; path: string; preview: ThemePreview }
-  > => {
+  async (
+    _e,
+    kind?: unknown,
+  ): Promise<{ cancelled: true } | { cancelled: false; path: string; preview: ThemePreview }> => {
+    const options = themeImportDialogOptions(kind);
     const win = BrowserWindow.getFocusedWindow();
     const picked = win
-      ? await dialog.showOpenDialog(win, {
-          title: "选择主题包目录",
-          properties: ["openDirectory"],
-        })
-      : await dialog.showOpenDialog({ title: "选择主题包目录", properties: ["openDirectory"] });
+      ? await dialog.showOpenDialog(win, options)
+      : await dialog.showOpenDialog(options);
     const path = picked.filePaths[0];
     if (picked.canceled || !path) return { cancelled: true };
     const preview = await previewLocalTheme(path);

@@ -8,6 +8,16 @@ breaking.
 
 ## [Unreleased]
 
+## [0.9.40] - 2026-10-13
+
+### Fixed
+
+- Import theme ZIP files directly from Appearance, including packs inside a
+  single wrapping folder. Keep a separate action for extracted theme folders.
+- Validate and clean up extracted theme files before installation, and require
+  another review if the pack changes after its preview.
+- Resolve theme image paths correctly on Windows.
+
 ## [0.9.39] - 2026-10-13
 
 ### Added

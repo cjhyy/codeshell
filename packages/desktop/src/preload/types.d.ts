@@ -80,7 +80,7 @@ import type { AgentPanelHostRequest, AgentPanelHostResponse } from "../shared/ag
 import type { ExpandedPluginCommand, PluginCommandDescriptor } from "../shared/plugin-commands";
 import type { PluginMediaAvailability, PluginMediaDto } from "../shared/plugin-media";
 import type { MediaPreviewRequest, MediaPreviewResult } from "../shared/media-preview";
-import type { InstalledThemePack, ThemePickPreview } from "../shared/theme-packs";
+import type { InstalledThemePack, ThemeImportKind, ThemePickPreview } from "../shared/theme-packs";
 import type { RendererConfigurationTarget } from "../shared/renderer-configuration";
 import type { ExternalRuntimeModelEntry } from "../shared/external-runtime-models";
 import type { ProjectAuthorityApi } from "./project-authority-types";
@@ -2003,8 +2003,8 @@ export interface CodeshellApi
   }>;
   /** Installed theme packs (pet sprites + colors + wallpaper) as renderer packs. */
   listInstalledThemes(): Promise<InstalledThemePack[]>;
-  /** Open a directory picker and validate the chosen theme pack (no install yet). */
-  pickAndPreviewTheme(): Promise<ThemePickPreview>;
+  /** Pick a ZIP (default) or extracted directory and validate it before installation. */
+  pickAndPreviewTheme(kind?: ThemeImportKind): Promise<ThemePickPreview>;
   /** Install a previewed theme pack, keyed by its review token. */
   installTheme(input: { path: string; reviewToken: string }): Promise<InstalledThemePack>;
   /** Remove an installed theme pack by id. */

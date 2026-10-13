@@ -41,6 +41,7 @@ import {
   themesRoot,
 } from "./paths.js";
 import { lock } from "../utils/lockfile.js";
+import { isThemePathWithinRoot, withLocalThemeSourceRoot } from "./source.js";
 
 const MANIFEST_FILE = ".cs-theme.json";
 const MAX_ASSET_BYTES = 8 * 1024 * 1024;
@@ -100,10 +101,10 @@ async function readImageAsset(
   rel: string,
 ): Promise<{ bytes: Buffer; ext: string }> {
   const abs = resolve(sourceDir, rel);
-  if (!abs.startsWith(resolve(sourceDir) + "/") && abs !== resolve(sourceDir)) {
+  if (!isThemePathWithinRoot(resolve(sourceDir), abs)) {
     throw new ThemeInstallError(`asset escapes theme root: ${rel}`);
   }
-  // The string check above stops literal traversal, but not a symlink INSIDE
+  // The relative-path check above stops traversal, but not a symlink INSIDE
   // the pack pointing at an arbitrary file outside it. Resolve real paths and
   // require the asset to physically live under the pack root, or a malicious
   // pack could exfiltrate any readable file that happens to be a valid image.
@@ -115,7 +116,7 @@ async function readImageAsset(
   } catch {
     throw new ThemeInstallError(`asset not found: ${rel}`);
   }
-  if (realAbs !== realRoot && !realAbs.startsWith(realRoot + "/")) {
+  if (!isThemePathWithinRoot(realRoot, realAbs)) {
     throw new ThemeInstallError(`asset escapes theme root via symlink: ${rel}`);
   }
   let info: Awaited<ReturnType<typeof stat>>;
@@ -238,11 +239,14 @@ function previewOf(
 }
 
 /**
- * Validate a theme pack directory and return a preview + review-token. Does not
- * write anything. `sourceDir` is a directory (a zip is extracted to a temp dir
- * by the caller before calling this).
+ * Validate a theme pack directory or ZIP and return a preview + review-token.
+ * Does not change installed themes; temporary ZIP extraction is always removed.
  */
-export async function previewLocalTheme(sourceDir: string): Promise<ThemePreview> {
+export async function previewLocalTheme(sourcePath: string): Promise<ThemePreview> {
+  return withLocalThemeSourceRoot(sourcePath, previewThemeDirectory);
+}
+
+async function previewThemeDirectory(sourceDir: string): Promise<ThemePreview> {
   const manifest = await loadManifest(sourceDir);
   assertSafeThemeName(manifest.id);
   const warnings: string[] = [];
@@ -262,9 +266,19 @@ export async function previewLocalTheme(sourceDir: string): Promise<ThemePreview
 /**
  * Install a previously previewed theme. Re-validates and re-checks the token
  * (rejecting mid-review changes), then atomically writes the theme to
- * ~/.code-shell/themes/<id>/ and records it in the registry.
+ * ~/.code-shell/themes/<id>/ and records it in the registry. ZIP sources are
+ * re-extracted privately so changed declared content requires a new review.
  */
 export async function installReviewedLocalTheme(
+  sourcePath: string,
+  reviewToken: string,
+): Promise<InstalledTheme> {
+  return withLocalThemeSourceRoot(sourcePath, (root) =>
+    installReviewedThemeDirectory(root, reviewToken),
+  );
+}
+
+async function installReviewedThemeDirectory(
   sourceDir: string,
   reviewToken: string,
 ): Promise<InstalledTheme> {
