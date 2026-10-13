@@ -1,0 +1,16 @@
+bun test v1.3.11 (af24e281)
+
+packages/server/src/panels/project-scope.test.ts:
+(pass) scope is stable across fresh Host captures and ordinary root contents change [16.53ms]
+(pass) execution roots, registry root IDs, projects and environments remain distinct [21.30ms]
+(pass) same-path root replacement invalidates an old binding and gives fresh scope a new root ID [13.16ms]
+(pass) project directory replacement and authority revocation are sticky [8.94ms]
+(pass) environment deletion, replacement and descriptor mismatch cannot silently change identity [8.93ms]
+(pass) nonregular environment metadata is refused without blocking [11.86ms]
+(pass) network guard denies both probes before Host imports [0.01ms]
+
+ 7 pass
+ 0 fail
+ 22 expect() calls
+Ran 7 tests across 1 file. [148.00ms]
+Completed Bun shard: 7 tests, 0 skipped; 0 failures.

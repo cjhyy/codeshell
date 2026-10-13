@@ -1,0 +1,23 @@
+{
+  "sourceSha256": [
+    "b9af1cb777b5fb030839600ced33d4ea369306ee7272127c9f57744d59f490b6",
+    "b9af1cb777b5fb030839600ced33d4ea369306ee7272127c9f57744d59f490b6"
+  ],
+  "completedPerBaseline": {
+    "files": 1,
+    "tests": 4,
+    "bunExpects": 72,
+    "fail": 0,
+    "skip": 0
+  },
+  "rootExecutedBaselines": [
+    "84740d56",
+    "a66f4ef2"
+  ],
+  "authorRepeatedRunsAddedToCounts": false,
+  "actualWorker": false,
+  "actualElectron": false,
+  "realProvider": false,
+  "networkCalls": 0,
+  "subprocessCalls": 0
+}

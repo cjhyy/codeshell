@@ -1,0 +1,165 @@
+{
+  "node": "v25.8.1",
+  "platform": "darwin",
+  "arch": "arm64",
+  "uid": 501,
+  "assertions": 38,
+  "exactOrigin": "http://127.0.0.1:57225",
+  "ownedIsolatedHome": true,
+  "nativeHeadlessHost": true,
+  "actualHubAuth": true,
+  "workerCreated": false,
+  "closedNormally": true,
+  "failure": null,
+  "childReceipts": [
+    {
+      "kind": "host",
+      "pid": 53422,
+      "exitCode": 0,
+      "signal": null
+    },
+    {
+      "kind": "holder",
+      "pid": 53637,
+      "exitCode": 0,
+      "signal": null
+    }
+  ],
+  "observations": [
+    {
+      "scenario": "real-EACCES-authenticate-on-title-request",
+      "failedStatus": 500,
+      "failedMs": 30026.836417000002,
+      "healthStatus": 200,
+      "healthMs": 30021.919334,
+      "actualFailureStage": "HubAuthStore.authenticate/acquireFileLock(data/hub/auth.json)",
+      "parentTimerTicks": 296,
+      "hostMaxTimerGapMs": 30034.154792,
+      "retries": 838,
+      "firstError": {
+        "code": "EACCES",
+        "path": "/private/var/folders/1d/6__4f4y51g90nblfptt8s9v80000gn/T/codeshell-native-smoke-zGPXJZ/home/owned-file-mutex-IjzH2W/data/hub.lock",
+        "at": 1791756241973
+      },
+      "generatedTitleRetained": true,
+      "workerCreated": false
+    },
+    {
+      "scenario": "permission-repaired",
+      "status": 200,
+      "elapsedMs": 9.507499999999709,
+      "environmentStatus": 200,
+      "environmentMs": 3.274874999999156,
+      "sameDraftAccepted": true
+    },
+    {
+      "scenario": "normal-cross-process-contention",
+      "status": 200,
+      "elapsedMs": 403.8050830000029,
+      "existingLockAttempts": 13,
+      "holderExited": true,
+      "workerCreated": false
+    }
+  ],
+  "events": [
+    {
+      "child": "host",
+      "receivedAt": 1791756241875,
+      "event": "ready",
+      "url": "http://127.0.0.1:57225",
+      "sessionId": "owned-title-session"
+    },
+    {
+      "child": "host",
+      "receivedAt": 1791756241967,
+      "event": "stats",
+      "id": 1,
+      "ticks": 4,
+      "maxGapMs": 25.00608299999999,
+      "lockErrors": {},
+      "firstErrors": {},
+      "workerCreated": false,
+      "workerGeneration": 0
+    },
+    {
+      "child": "host",
+      "receivedAt": 1791756241974,
+      "event": "lock-error",
+      "code": "EACCES",
+      "path": "/private/var/folders/1d/6__4f4y51g90nblfptt8s9v80000gn/T/codeshell-native-smoke-zGPXJZ/home/owned-file-mutex-IjzH2W/data/hub.lock",
+      "at": 1791756241973
+    },
+    {
+      "child": "host",
+      "receivedAt": 1791756272047,
+      "event": "stats",
+      "id": 2,
+      "ticks": 7,
+      "maxGapMs": 30034.154792,
+      "lockErrors": {
+        "EACCES": 838
+      },
+      "firstErrors": {
+        "EACCES": {
+          "code": "EACCES",
+          "path": "/private/var/folders/1d/6__4f4y51g90nblfptt8s9v80000gn/T/codeshell-native-smoke-zGPXJZ/home/owned-file-mutex-IjzH2W/data/hub.lock",
+          "at": 1791756241973
+        }
+      },
+      "workerCreated": false,
+      "workerGeneration": 0
+    },
+    {
+      "child": "holder",
+      "receivedAt": 1791756272208,
+      "event": "held",
+      "at": 1791756272208
+    },
+    {
+      "child": "host",
+      "receivedAt": 1791756272213,
+      "event": "lock-error",
+      "code": "EEXIST",
+      "path": "/private/var/folders/1d/6__4f4y51g90nblfptt8s9v80000gn/T/codeshell-native-smoke-zGPXJZ/home/owned-file-mutex-IjzH2W/data/hub.lock",
+      "at": 1791756272213
+    },
+    {
+      "child": "holder",
+      "receivedAt": 1791756272561,
+      "event": "released",
+      "at": 1791756272561
+    },
+    {
+      "child": "host",
+      "receivedAt": 1791756272618,
+      "event": "stats",
+      "id": 3,
+      "ticks": 15,
+      "maxGapMs": 30034.154792,
+      "lockErrors": {
+        "EACCES": 838,
+        "EEXIST": 13
+      },
+      "firstErrors": {
+        "EACCES": {
+          "code": "EACCES",
+          "path": "/private/var/folders/1d/6__4f4y51g90nblfptt8s9v80000gn/T/codeshell-native-smoke-zGPXJZ/home/owned-file-mutex-IjzH2W/data/hub.lock",
+          "at": 1791756241973
+        },
+        "EEXIST": {
+          "code": "EEXIST",
+          "path": "/private/var/folders/1d/6__4f4y51g90nblfptt8s9v80000gn/T/codeshell-native-smoke-zGPXJZ/home/owned-file-mutex-IjzH2W/data/hub.lock",
+          "at": 1791756272213
+        }
+      },
+      "workerCreated": false,
+      "workerGeneration": 0
+    },
+    {
+      "child": "host",
+      "receivedAt": 1791756272624,
+      "event": "stopped",
+      "workerCreated": false
+    }
+  ]
+}

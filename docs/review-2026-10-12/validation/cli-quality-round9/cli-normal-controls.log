@@ -1,0 +1,15 @@
+bun test v1.3.11 (af24e281)
+
+../../../../../../private/tmp/codeshell-review-20261012-cli-quality-round9/cli-normal-controls.test.tsx:
+R02_TRUST_BOUNDARY {"untrustedExplicitBypass":"default","trustedExplicitBypass":"bypassPermissions","trustedExplicitDefault":"default"}
+(pass) R02 boundary: real server downgrades untrusted bypass; trusted explicit bypass is admitted and explicit default is honored [31.64ms]
+R18_RECOVERY_BOUNDARY {"sameModeCreated":1,"sameModeSend":false,"afterModeChangeCreated":2,"afterModeChangeSend":true,"afterExplicitCloseCreated":3,"afterExplicitCloseSend":true}
+(pass) R18 narrow recovery: failed async spawn blocks same-mode reopen, but mode change and explicit close each respawn after repair [103.07ms]
+R15_FOREGROUND_BOUNDARY {"firstForegroundSend":"queued while foreground","whileBackgroundSendCount":1,"afterReselectSendCount":2,"runtimeStarts":1}
+(pass) R15 boundary: foreground queue drains on completion; background queue waits until A is selected again; no backend submission exists meanwhile [58.41ms]
+
+ 3 pass
+ 0 fail
+ 31 expect() calls
+Ran 3 tests across 1 file. [929.00ms]
+Completed Bun shard: 3 tests, 0 skipped; 0 failures.

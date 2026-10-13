@@ -1,0 +1,12 @@
+bun test v1.3.11 (af24e281)
+
+docs/review-2026-10-12/reproductions/web/room-controls-review.test.tsx:
+(pass) confirmed: active CLI-room Stop routes to native cancel instead of the room [398.06ms]
+(pass) confirmed: active CLI-room permission selector reports default while CLI remains bypass [3.86ms]
+(pass) confirmed: an optional asynchronous question blocks unrelated followup messages after work completes [14.75ms]
+
+ 3 pass
+ 0 fail
+ 16 expect() calls
+Ran 3 tests across 1 file. [1284.00ms]
+Completed Bun shard: 3 tests, 0 skipped; 0 failures.

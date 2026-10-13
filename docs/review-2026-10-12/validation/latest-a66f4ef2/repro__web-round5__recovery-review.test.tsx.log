@@ -1,0 +1,22 @@
+bun test v1.3.11 (af24e281)
+
+docs/review-2026-10-12/reproductions/web-round5/recovery-review.test.tsx:
+(pass) normal: Hub rejected pre-admission request restores the original draft and allows retry [10.66ms]
+HUB_FAILED_SUBMISSION_LOST {"newerDraftPreserved":true,"originalInDrafts":false,"originalInChat":false,"accepted":false}
+(pass) confirmed: a newer draft makes the rejected Hub submission disappear from both draft and message history [1.07ms]
+PAIRED_FAILED_SUBMISSION_LOST {"newerDraftPreserved":true,"originalInDrafts":false,"originalInChat":false,"claimedPreserved":true,"accepted":false}
+(pass) normal: paired send rejection restores unchanged text, but a newly typed follow-up loses the rejected text [19.98ms]
+UNCERTAIN_RELOAD_LOSS {"normalDraftGuard":true,"uncertain":true,"uncertainUnloadGuard":false,"afterReloadDraft":"","afterReloadLocalDraftCount":0,"serverAccepted":false}
+(pass) confirmed: an uncertain unsent Hub submission has no beforeunload protection and is lost on reload [20.58ms]
+(pass) normal: stopping an accepted Hub run releases the send guard and preserves an independently typed next draft [20.99ms]
+(pass) normal: a model error after acceptance retains the user turn and allows a new task once the real run ends [24.10ms]
+(pass) normal: opening another history session ignores an earlier delayed detail and preserves both drafts [20.96ms]
+(pass) normal: paired native Stop targets the bound session, clears a terminal synchronous approval and permits the retained next draft [21.40ms]
+REAL_HUB_UNCERTAIN_RELOAD_LOSS {"authenticated":true,"submissionFramesDroppedBeforeHost":1,"durableSessionsBeforeReload":0,"durableSessionsAfterReload":0,"unloadGuardWhileUncertain":false,"reloadedIntentCopies":0,"modelRequests":0}
+(pass) confirmed with a real authenticated Hub: a dropped pre-host submission loses its only intent copy on unguarded reload [560.16ms]
+
+ 9 pass
+ 0 fail
+ 56 expect() calls
+Ran 9 tests across 1 file. [962.00ms]
+Completed Bun shard: 9 tests, 0 skipped; 0 failures.

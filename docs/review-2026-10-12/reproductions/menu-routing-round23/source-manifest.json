@@ -1,0 +1,41 @@
+{
+  "repo": "/Users/admin/.codex/worktrees/server-desktop-review-20261012/codeshell",
+  "sourceManifest": [
+    {
+      "path": "packages/desktop/src/main/menu.ts",
+      "sha256": "6f65230f21d3a1c9b567d97a2b53433ab313435c49b54f32721647df11e87475"
+    },
+    {
+      "path": "packages/desktop/src/preload/index.ts",
+      "sha256": "b85c80ec01b488890fcfad0e9afed4fb1e02575dcba8e30cce8a06805ed44327"
+    },
+    {
+      "path": "packages/desktop/src/renderer/App.tsx",
+      "sha256": "556e985d3c0898b5915c713a2a0a280f59bf504b4797e89278143bdcdfd265b8"
+    }
+  ],
+  "extraction": [
+    {
+      "source": "packages/desktop/src/preload/index.ts",
+      "name": "onMenuEvent",
+      "line": 1423,
+      "text": "(cb: (event: string, payload?: unknown) => void): (() => void) => {\n    const wrap = (channel: string) => (_e: IpcRendererEvent, payload?: unknown) =>\n      cb(channel.replace(/^menu:/, \"\"), payload);\n    const channels = [\n      \"menu:add-project\",\n      \"menu:open-recent\",\n      \"menu:find\",\n      \"menu:palette\",\n      \"menu:toggle-sidebar\",\n      \"menu:toggle-inspector\",\n      \"menu:new-window\",\n    ];\n    const handlers = channels.map((c) => {\n      const h = wrap(c);\n      ipcRenderer.on(c, h);\n      return { c, h };\n    });\n    return () => {\n      handlers.forEach(({ c, h }) => ipcRenderer.removeListener(c, h));\n    };\n  }",
+      "sha256": "9bbae30bbb078fd726e4c30361ddad2758c4b3ad24cf5fea05969e3c3f899a6a"
+    },
+    {
+      "source": "packages/desktop/src/preload/index.ts",
+      "name": "newWindow",
+      "line": 1408,
+      "text": "() => ipcRenderer.invoke(\"window:new\")",
+      "sha256": "98395d7db82f8f6757c324f084a482c8ed8e4a57594ba682fc4c1ca29fb480bc"
+    },
+    {
+      "source": "packages/desktop/src/renderer/App.tsx",
+      "name": "onMenuEvent callback",
+      "line": 1424,
+      "text": "(evt, payload) => {\n      switch (evt) {\n        case \"add-project\":\n          void handleAddProject();\n          break;\n        case \"open-recent\": {\n          const p = payload as { path: string; name: string } | undefined;\n          if (!p) return;\n          unmarkProjectPathRemoved(p.path);\n          const existing = projects.find((project) => project.path === p.path);\n          if (existing) setActiveProjectId(existing.id);\n          else {\n            void window.codeshell.projectRegistry.list().then((registry) => {\n              const target = registry\n                .map(trackedProjectFromRegistry)\n                .find((project) => project.path === p.path);\n              if (!target) return;\n              setProjects((prev) => reconcileProjectsFromDiskWithRemap(registry, prev).projects);\n              setActiveProjectId(target.id);\n              setSessionIndices((prev) =>\n                prev[target.id] ? prev : { ...prev, [target.id]: loadSessionIndex(target.id) },\n              );\n            });\n          }\n          break;\n        }\n        case \"find\":\n          navigateFromSidebar(() => setSearchOpen(true));\n          break;\n        case \"palette\":\n          navigateFromSidebar(() => setPaletteOpen(true));\n          break;\n        case \"toggle-sidebar\":\n          toggleSidebar();\n          break;\n        case \"toggle-inspector\":\n          // no-op: inspector panel removed\n          break;\n        case \"new-window\":\n          void window.codeshell.newWindow();\n          break;\n      }\n    }",
+      "sha256": "6bb1f5d0045b0d5214870572f4f3160d4ded0a516b73909cc6d8890cae28bb0a"
+    }
+  ],
+  "scope": "actual menu module with owned Electron/recents; exact actual preload/App callback extraction, not full App/Electron/OS"
+}

@@ -1,0 +1,193 @@
+import { expect, test } from "bun:test";
+import { createServer } from "node:http";
+import net from "node:net";
+import { createHash, randomBytes } from "node:crypto";
+import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+
+const repo = process.cwd();
+if (!process.env.CODE_SHELL_TEST_HOME || !process.env.HOME?.includes("codeshell-bun-completion-"))
+  throw new Error("Use the repository guarded test runner with its isolated HOME");
+const reservation = createServer();
+await new Promise<void>((resolve) => reservation.listen(0, "127.0.0.1", resolve));
+const port = (reservation.address() as { port: number }).port;
+await new Promise<void>((resolve, reject) => reservation.close((error) => error ? reject(error) : resolve()));
+const origin = `http://127.0.0.1:${port}`;
+const { installLocalNetworkGuard } = await import(`${repo}/scripts/runtime-cost-smoke-isolation.mjs`);
+installLocalNetworkGuard(origin);
+// All Core/Host dependencies are imported only after the exact-origin HTTP/fetch guard.
+const { RemoteHostManager } = await import(`${repo}/packages/server/src/mobile-remote/remote-host-manager.ts`);
+const { TrustedDeviceStore } = await import(`${repo}/packages/server/src/mobile-remote/trusted-device-store.ts`);
+const { HubOutboundTransport } = await import(`${repo}/packages/server/src/hub/outbound-transport.ts`);
+const { WebSocket: WS } = await import(`${repo}/packages/server/node_modules/ws/index.js`);
+// Bun's node:http compatibility layer does not expose a client Upgrade event.
+// Perform only this fixture's loopback handshake with an owned TCP socket, then
+// attach the unchanged ws Receiver/Sender implementation in client mode.
+async function fixtureSocket(url: string) {
+  const parsed = new URL(url);
+  if (parsed.protocol !== "ws:" || parsed.hostname !== "127.0.0.1" || parsed.port !== String(port) || parsed.pathname !== "/ws")
+    throw new Error("Non-fixture WS transport");
+  const socket = net.connect({ host: "127.0.0.1", port });
+  const key = randomBytes(16).toString("base64");
+  const expected = createHash("sha1").update(key + "258EAFA5-E914-47DA-95CA-C5AB0DC85B11").digest("base64");
+  const head = await new Promise<Buffer>((resolve, reject) => {
+    let buffer = Buffer.alloc(0);
+    const error = (error: Error) => { socket.destroy(); reject(error); };
+    const data = (chunk: Buffer) => {
+      buffer = Buffer.concat([buffer, chunk]);
+      const end = buffer.indexOf("\r\n\r\n");
+      if (end < 0) return;
+      socket.pause(); socket.off("data", data); socket.off("error", error);
+      const headers = buffer.subarray(0, end).toString();
+      if (!headers.startsWith("HTTP/1.1 101") || !headers.includes(expected)) {
+        error(new Error("Owned fixture upgrade rejected")); return;
+      }
+      resolve(buffer.subarray(end + 4));
+    };
+    socket.on("error", error); socket.on("data", data);
+    socket.on("connect", () => socket.write(`GET /ws HTTP/1.1\r\nHost: 127.0.0.1:${port}\r\nUpgrade: websocket\r\nConnection: Upgrade\r\nSec-WebSocket-Version: 13\r\nSec-WebSocket-Key: ${key}\r\n\r\n`));
+  });
+  const client = new WS(null, undefined, { autoPong: true });
+  client._isServer = false;
+  client.setSocket(socket, head, { allowSynchronousEvents: true, maxBufferedChunks: 1024 * 1024, maxFragments: 131072, maxPayload: 32 * 1024 * 1024, skipUTF8Validation: false });
+  socket.resume();
+  return client;
+}
+const delay = (ms = 5) => new Promise((resolve) => setTimeout(resolve, ms));
+async function until(predicate: () => boolean, label: string, timeout = 2000) {
+  const started = Date.now();
+  while (!predicate()) {
+    if (Date.now() - started > timeout) throw new Error(`Timed out: ${label}`);
+    await delay();
+  }
+}
+const observed: Record<string, unknown>[] = [];
+
+test("actual authenticated paused reader retains broadcasts/device replies; viewer cap/revocation/reconnect are normal controls", async () => {
+  const dir = mkdtempSync(join(tmpdir(), "connection-recovery-"));
+  const store = new TrustedDeviceStore(join(dir, "devices.json"));
+  const device = store.addDevice({ name: "owned test device", secretHash: "owned-secret" });
+  const eventIdentities: any[] = [];
+  const offline: any[] = [];
+  const host = new RemoteHostManager({ devices: store, outputJournal: true, onClientEvent: (event: any) => { eventIdentities.push(event); } });
+  host.on("viewer-offline", (identity: any) => offline.push(identity));
+  const clients: any[] = [];
+  const started = await host.start({ host: "127.0.0.1", port });
+  expect(started.url).toBe(origin);
+  const received = new Map<any, any[]>();
+  async function connect() {
+    const url = `${origin.replace(/^http/, "ws")}/ws`;
+    if (new URL(url).host !== new URL(origin).host) throw new Error("Non-fixture WS");
+    const client = await fixtureSocket(url);
+    clients.push(client);
+    const messages: any[] = [];
+    received.set(client, messages);
+    client.on("error", (error: Error) => { console.error("owned fixture socket error", error.message); });
+    client.on("message", (raw: any) => messages.push(JSON.parse(String(raw))));
+    await until(() => client.readyState === WS.OPEN, "owned socket open");
+    client.send(JSON.stringify({ type: "auth.device", deviceId: device.id, secretHash: "owned-secret" }));
+    await until(() => messages.some((message) => message.type === "auth.ok"), "real store auth");
+    const n = eventIdentities.length;
+    client.send(JSON.stringify({ type: "session.list" }));
+    await until(() => eventIdentities.length === n + 1, "authenticated dispatcher identity");
+    const identity = eventIdentities.at(-1);
+    expect(identity.deviceId).toBe(device.id);
+    expect(typeof identity.viewerId).toBe("string");
+    const serverSocket = [...(host as any).wss.clients].find((socket: any) => (host as any).viewers.get(socket) === identity.viewerId);
+    expect(serverSocket).toBeDefined();
+    return { client, serverSocket, viewerId: identity.viewerId, messages };
+  }
+  try {
+    const slow = await connect();
+    const healthy = await connect();
+    expect(slow.viewerId).not.toBe(healthy.viewerId);
+    expect(host.onlineDeviceIds()).toEqual([device.id]);
+    // Real TCP reader pause, without replacing ws.bufferedAmount/send or Host logic.
+    slow.client.pause();
+    const chunk = "x".repeat(64 * 1024);
+    let seq = 0;
+    const frame = () => ({ type: "session.stream", sessionId: "owned-session", epoch: "owned-epoch", seq: ++seq,
+      event: { type: "text_delta", text: chunk } });
+    for (let batch = 0; batch < 12; batch++) {
+      for (let index = 0; index < 16; index++) host.broadcast(frame());
+      await delay(5);
+    }
+    await until(() => healthy.messages.filter((message: any) => message.type === "session.stream").length === seq, "healthy broadcast consumption");
+    const afterBroadcast = slow.serverSocket.bufferedAmount;
+    expect(afterBroadcast).toBeGreaterThan(4 * 1024 * 1024);
+    expect(slow.serverSocket.readyState).toBe(WS.OPEN);
+    expect(offline).toHaveLength(0);
+    for (let batch = 0; batch < 8; batch++) {
+      for (let index = 0; index < 16; index++) host.sendRawToDevice(device.id, JSON.stringify(frame()));
+      await delay(5);
+    }
+    await until(() => healthy.messages.filter((message: any) => message.type === "session.stream").length === seq, "healthy device output consumption");
+    const afterDevice = slow.serverSocket.bufferedAmount;
+    expect(afterDevice).toBeGreaterThan(afterBroadcast + 4 * 1024 * 1024);
+    expect(slow.serverSocket.readyState).toBe(WS.OPEN);
+    host.sendToDevice(device.id, { type: "session.list.ok", sessions: [] });
+    await until(() => healthy.messages.some((message: any) => message.type === "session.list.ok"), "healthy device reply");
+    expect(slow.serverSocket.bufferedAmount).toBeGreaterThan(afterDevice);
+    expect(host.hasAuthenticatedViewer(slow.viewerId, device.id)).toBe(true);
+    observed.push({ transport: "paired-remote", sentStreamFrames: seq, payloadBytes: chunk.length, afterBroadcast, afterDevice,
+      beforeViewerCap: slow.serverSocket.bufferedAmount, healthyStreamFrames: healthy.messages.filter((message: any) => message.type === "session.stream").length,
+      healthyBacklog: healthy.serverSocket.bufferedAmount, slowOpen: slow.serverSocket.readyState === WS.OPEN });
+
+    // The already-existing bounded selected-viewer API retires that same real socket.
+    host.sendToViewer(slow.viewerId, { type: "session.recovery.ready", sessionId: "owned-session", recoveryId: "owned-selection", ok: true });
+    expect(host.hasAuthenticatedViewer(slow.viewerId, device.id)).toBe(false);
+    expect(offline).toEqual([{ deviceId: device.id, viewerId: slow.viewerId }]);
+    expect(host.hasAuthenticatedViewer(healthy.viewerId, device.id)).toBe(true);
+    expect(host.onlineDeviceIds()).toEqual([device.id]);
+    slow.client.resume();
+    await until(() => slow.serverSocket.readyState === WS.CLOSED, "capped socket destroyed");
+    const repaired = await connect();
+    expect(repaired.viewerId).not.toBe(slow.viewerId);
+    host.sendToViewer(repaired.viewerId, { type: "session.recovery.ready", sessionId: "owned-session", recoveryId: "reconnected-selection", ok: true });
+    await until(() => repaired.messages.some((message: any) => message.recoveryId === "reconnected-selection"), "reconnected selected reply");
+    expect(host.hasAuthenticatedViewer(repaired.viewerId, device.id)).toBe(true);
+
+    // Production remove-device chain: durable row hard delete then active host revoke.
+    expect(store.remove(device.id)).toBe(true);
+    host.revokeDevice(device.id);
+    expect(host.onlineDeviceIds()).toEqual([]);
+    expect(host.hasAuthenticatedViewer(healthy.viewerId, device.id)).toBe(false);
+    expect(host.hasAuthenticatedViewer(repaired.viewerId, device.id)).toBe(false);
+    await until(() => healthy.client.readyState === WS.CLOSED && repaired.client.readyState === WS.CLOSED, "revoke all same-device sockets");
+    expect(offline).toHaveLength(3);
+    const retryUrl = `${origin.replace(/^http/, "ws")}/ws`;
+    const rejected = await fixtureSocket(retryUrl);
+    clients.push(rejected);
+    const rejectedMessages: any[] = [];
+    rejected.on("error", () => {});
+    rejected.on("message", (raw: any) => rejectedMessages.push(JSON.parse(String(raw))));
+    await until(() => rejected.readyState === WS.OPEN, "revoked socket opens transport");
+    rejected.send(JSON.stringify({ type: "auth.device", deviceId: device.id, secretHash: "owned-secret" }));
+    await until(() => rejectedMessages.some((message) => message.type === "auth.failed"), "revoked device auth rejected");
+    expect(host.onlineDeviceIds()).toEqual([]);
+    expect(rejectedMessages.some((message) => message.type === "auth.ok")).toBe(false);
+  } finally {
+    for (const client of clients) { client.resume(); client.terminate(); }
+    await host.stop();
+    rmSync(dir, { recursive: true, force: true });
+    writeFileSync(join(import.meta.dir, "outbound-observed.json"), JSON.stringify(observed, null, 2));
+  }
+});
+
+test("normal Hub outbound uses its own cap, releases only the lagging peer and does not send to a retired peer", () => {
+  const slow = { OPEN: 1, readyState: 1, bufferedAmount: 8 * 1024 * 1024 + 1, sent: [] as string[], terminated: 0,
+    send(line: string, cb?: (error?: Error) => void) { this.sent.push(line); cb?.(); }, terminate() { this.terminated++; this.readyState = 3; this.bufferedAmount = 0; } };
+  const healthy = { ...slow, bufferedAmount: 0, sent: [] as string[], terminated: 0 };
+  const drops: any[] = [];
+  const outbound = new HubOutboundTransport({ tabs: () => [slow, healthy], onDrop: (drop: any) => drops.push(drop) });
+  expect(outbound.send(slow, "{}" )).toBe(false);
+  expect(slow.terminated).toBe(1);
+  expect(slow.sent).toEqual([]);
+  expect(drops.map((drop) => drop.reason)).toEqual(["socket-backlog"]);
+  expect(outbound.send(healthy, "{}" )).toBe(true);
+  expect(healthy.sent).toEqual(["{}"]);
+  expect(healthy.terminated).toBe(0);
+  expect(outbound.send(slow, "{}" )).toBe(false);
+  expect(slow.terminated).toBe(1);
+});

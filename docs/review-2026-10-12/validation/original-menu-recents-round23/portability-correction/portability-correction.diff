@@ -1,0 +1,84 @@
+--- /tmp/codeshell-review-20261012-menu-recents-round23/menu-recents.before-portability.test.ts	2026-10-12 08:05:50
++++ /tmp/codeshell-review-20261012-menu-recents-round23/menu-recents.test.ts	2026-10-12 08:05:50
+@@ -2,7 +2,7 @@
+ import { afterAll, expect, mock, test } from "bun:test";
+ import { createHash } from "node:crypto";
+ import { mkdirSync, mkdtempSync, readFileSync, realpathSync, rmSync, writeFileSync } from "node:fs";
+-import { basename, join, relative } from "node:path";
++import { basename, dirname, join, relative } from "node:path";
+
+ if (process.platform !== "darwin") throw Error("actual macOS menu source branch required; do not fake platform");
+ const repo = process.cwd();
+@@ -19,9 +19,31 @@
+   unusedLeafCalls.push(name);
+   throw Error("UNUSED_PRODUCT_LEAF_CALLED:" + name);
+ };
++// Resolve addresses without evaluating product modules. Repo-local Bun tests
++// can use tsconfig source aliases; an external /tmp test can use package dist
++// exports. Register the same owned adapter at both reviewed barrel addresses.
++const recentsImporter = join(repo, "packages/desktop/src/main/recents-store.ts");
++const projectStoreImporter = join(repo, "packages/desktop/src/main/project-store.ts");
++function resolveOwnedEntry(specifier: string, importer: string, entries: string[]) {
++  const allowed = entries.map(entry => realpathSync(join(repo, entry)));
++  const resolved = realpathSync(Bun.resolveSync(specifier, dirname(importer)));
++  if (!allowed.includes(resolved)) throw Error("unexpected product entry: " + specifier + " -> " + resolved);
++  return { specifier, importer: relative(repo, importer), resolved: relative(repo, resolved) };
++}
++const codingGitEntries = ["packages/coding/src/index.git.ts", "packages/coding/dist/index.git.js"];
++const productResolutions = [
++  resolveOwnedEntry("@cjhyy/code-shell-capability-coding/git", recentsImporter, codingGitEntries),
++  resolveOwnedEntry("@cjhyy/code-shell-core", projectStoreImporter, ["packages/core/src/index.ts", "packages/core/dist/index.js"]),
++  resolveOwnedEntry("@cjhyy/code-shell-core/internal", projectStoreImporter, ["packages/core/src/index.internal.ts", "packages/core/dist/index.internal.js"]),
++];
++const codingGitMockTargets = [...new Set([
++  "@cjhyy/code-shell-capability-coding/git",
++  ...codingGitEntries.map(entry => realpathSync(join(repo, entry))),
++  join(repo, productResolutions[0].resolved),
++])];
+ // Only the non-Git owned-directory folding seam is replaced. The actual
+ // recents parser, filesystem read, live filtering, sorting and menu builder run.
+-mock.module("@cjhyy/code-shell-capability-coding/git", () => ({
++const codingGitFactory = () => ({
+   resolveProjectRoot(input: string) {
+     const result = realpathSync(input);
+     const inside = ownedRoot ? relative(ownedRoot, result) : "..";
+@@ -29,7 +51,8 @@
+     rootAdapterCalls.push(result);
+     return result;
+   },
+-}));
++});
++for (const target of codingGitMockTargets) mock.module(target, codingGitFactory);
+ // These unrelated IPC branches must never run. Mocking their leaf modules
+ // avoids loading profile installers or worktree operations for a menu test.
+ mock.module(repo + "/packages/desktop/src/main/profiles-service.ts", () => ({ listProfiles: unused("listProfiles") }));
+@@ -67,16 +90,18 @@
+   "packages/desktop/src/main/index.ts", "packages/desktop/src/renderer/App.tsx",
+   "packages/desktop/src/renderer/app/useSessionNavigation.ts", "packages/core/src/utils/file-mutex.ts",
+   "packages/core/src/session/session-manager.ts", "packages/core/dist/index.js", "packages/core/dist/index.internal.js",
++  "tsconfig.json", "packages/core/src/index.ts", "packages/core/src/index.internal.ts",
++  "packages/coding/package.json", "packages/coding/src/index.git.ts", "packages/coding/dist/index.git.js",
+ ];
+ const sourceManifest = sourcePaths.map(path => ({ path, sha256: createHash("sha256").update(readFileSync(join(repo, path))).digest("hex") }));
+ const scope = {
+-  actual: "ProjectStore with real Core public/internal filesystem transactions and SessionManager; ProjectAuthority IPC registration/create/rename/remove/list; actual private recents.json/loadRecents; whole actual menu module",
++  actual: "ProjectStore with real Core public/internal filesystem transactions; explicit built-dist SessionManager; ProjectAuthority IPC registration/create/rename/remove/list; actual private recents.json/loadRecents; whole actual menu module",
+   adapters: { electron: "owned single window and Menu template storage, not actual native API", picker: "owned plain directory only", codingGitExports: ["resolveProjectRoot"], codingGitBehavior: "realpath identity only; no Git/worktree/alias behavior", unusedLeaves: ["profiles-service.listProfiles", ...workspaceNames.map(name => "session-workspace-service." + name)] },
+   notExecuted: ["Engine", "worker", "Main app entry", "renderer App", "Electron native", "models", "network", "child processes"],
+-  imports: "Core barrel includes Engine/provider definitions; no Engine/LLM/Host construction or invocation. Product import scope is source-audited, not a module-cache probe.",
++  imports: "ProjectStore Core public/internal package specifiers can resolve through repo tsconfig source aliases or package dist exports. productResolutions records guarded resolution-only addresses, not a module-cache probe; explicit injected SessionManager comes from core/dist/index.js. Core barrels include Engine/provider definitions; no Engine/LLM/Host construction or invocation. Product import scope is source-audited.",
+   rebuild: "direct internal installAppMenu(A) control only; normal createWindow rebuild is source evidence, not a user recovery action performed here",
+ };
+-writeFileSync(join(evidence, "source-manifest.json"), JSON.stringify({ repo, sourceManifest, scope }, null, 2));
++writeFileSync(join(evidence, "source-manifest.json"), JSON.stringify({ repo, sourceManifest, productResolutions, codingGitMockTargets, scope }, null, 2));
+
+ function recentItems(): any[] {
+   const fileMenu = applicationMenu.items.find((item: any) => item.label === "文件");
+@@ -89,7 +114,7 @@
+ afterAll(() => {
+   writeFileSync(join(evidence, "observations.json"), JSON.stringify({
+     repo, completed, nativeElectronStarted: false, guardScope, networkOrChildAttempts: attempts,
+-    unusedLeafCalls, rootAdapterCalls, sourceManifest, scope, observations,
++    unusedLeafCalls, rootAdapterCalls, sourceManifest, productResolutions, codingGitMockTargets, scope, observations,
+   }, null, 2));
+ });

@@ -1,0 +1,41 @@
+bun test v1.3.11 (af24e281)
+
+../../../../../../private/tmp/codeshell-review-20261012-auth-round7/auth-lifecycle.test.ts:
+(pass) Hub revocation closes both tabs sharing the revoked cookie and preserves another login [237.57ms]
+(pass) Hub re-login rotates only the supplied old cookie and fresh credentials recover an expired session [166.29ms]
+166 | test("Hub logout aborts a pending download owned by its login and leaves another login usable", async () => {
+167 |   const f = await hub(); const other = await f.login();
+168 |   const download = await pausedDownload(f.cwd, f.first.cookie);
+169 |   expect((await call("/api/v1/auth/logout", f.first.cookie, "POST", {})).status).toBe(200);
+170 |   const result = await download.resume();
+171 |   expect(result.timedOut).toBe(false); expect(result.complete).toBe(false); expect(result.bytes).toBeLessThan(download.size);
+                                                                     ^
+error: expect(received).toBe(expected)
+
+Expected: false
+Received: true
+
+      at <anonymous> (/private/tmp/codeshell-review-20261012-auth-round7/auth-lifecycle.test.ts:171:64)
+(fail) Hub logout aborts a pending download owned by its login and leaves another login usable [137.22ms]
+(pass) Desktop cookie handshake is stable across tabs, renews before expiry, and can recover after expiry [114.39ms]
+195 |   const a = await f.authSocket(), b = await f.authSocket(), c = await f.authSocket(f.other);
+196 |   const download = await pausedDownload(f.cwd, first.cookie);
+197 |   expect(f.devices.remove(f.device.id)).toBe(true); f.host.revokeDevice(f.device.id);
+198 |   await Promise.all([a.closed, b.closed]);
+199 |   const result = await download.resume();
+200 |   expect(result.complete).toBe(false); expect(result.timedOut).toBe(false);
+                                ^
+error: expect(received).toBe(expected)
+
+Expected: false
+Received: true
+
+      at <anonymous> (/private/tmp/codeshell-review-20261012-auth-round7/auth-lifecycle.test.ts:200:27)
+(fail) Desktop Settings removeDevice flow terminates all old sockets and HTTP then permits same-secret QR pairing [122.29ms]
+(pass) Desktop browser logout revokes its HTTP owner while preserving pairing for an explicit re-exchange [113.83ms]
+
+ 4 pass
+ 2 fail
+ 54 expect() calls
+Ran 6 tests across 1 file. [1297.00ms]
+Bun test process failed (1)

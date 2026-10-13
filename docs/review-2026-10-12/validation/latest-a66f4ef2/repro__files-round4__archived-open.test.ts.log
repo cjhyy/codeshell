@@ -1,0 +1,10 @@
+bun test v1.3.11 (af24e281)
+
+docs/review-2026-10-12/reproductions/files-round4/archived-open.test.ts:
+(pass) characterizes spurious unsaved-change prompt after successful archive restore [216.27ms]
+
+ 1 pass
+ 0 fail
+ 8 expect() calls
+Ran 1 test across 1 file. [933.00ms]
+Completed Bun shard: 1 tests, 0 skipped; 0 failures.

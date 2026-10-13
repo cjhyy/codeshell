@@ -1,0 +1,5 @@
+Electron fixture: Main network/home guard verified; no worker was created
+Error: actual driver readiness wait not reached
+    at until (file:///private/tmp/codeshell-review-20261012-browser-stop-round22/browser-stop-native.mjs:73:241)
+    at async file:///private/tmp/codeshell-review-20261012-browser-stop-round22/browser-stop-native.mjs:99:5
+Native smoke failed (1)

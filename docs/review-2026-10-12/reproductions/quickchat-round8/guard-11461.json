@@ -1,0 +1,7 @@
+{
+  "pid": 11461,
+  "guardScope": "JavaScript transports only",
+  "homeSha256": "dc218ae404f8e82d1f7d128900d384eb8ae7602fefa0ec3a2518ff65b3974c50",
+  "negativeProbes": 5,
+  "unexpectedTransports": 0
+}

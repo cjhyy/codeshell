@@ -1,0 +1,16 @@
+bun test v1.3.11 (af24e281)
+
+docs/review-2026-10-12/reproductions/quickchat-round8/quickchat-lifecycle.test.tsx:
+(pass) separate Enter events submit once; busy retains a follow-up; stopped composer submits it [21.49ms]
+(pass) IME and shifted Enter preserve the draft; empty Enter is inert [3.06ms]
+(pass) same mounted Panel hidden/revealed retains draft and a dropped PDF in the same child session [6.46ms]
+(pass) close unmounts local path state; explicit reopen starts a new child identity [4.48ms]
+(pass) fork creation/error gates the composer and offers retry or blank recovery [5.38ms]
+(pass) Main ownership tombstones an in-flight image stage and removes late bytes; closed ChatView ignores its result [9.82ms]
+(pass) real FilesPanel image drag is silently discarded by real QuickChatPanel; PDF drag and OS image drop work [7.57ms]
+
+ 7 pass
+ 0 fail
+ 53 expect() calls
+Ran 7 tests across 1 file. [638.00ms]
+Completed Bun shard: 7 tests, 0 skipped; 0 failures.

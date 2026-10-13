@@ -1,0 +1,10 @@
+bun test v1.3.11 (af24e281)
+
+docs/review-2026-10-12/reproductions/session-operations-round17/session-operations.test.ts:
+(pass) actual session/project operation components, Main callbacks and durable stores: failures, restores and safe retry [2382.52ms]
+
+ 1 pass
+ 0 fail
+ 2 expect() calls
+Ran 1 test across 1 file. [2.51s]
+Completed Bun shard: 1 tests, 0 skipped; 0 failures.

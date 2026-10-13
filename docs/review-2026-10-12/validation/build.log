@@ -1,0 +1,37 @@
+$ bun run --filter '@cjhyy/code-shell-link' build && bun run --filter '@cjhyy/code-shell-core' build && bun run --filter '@cjhyy/code-shell-pet' build && bun run --filter '@cjhyy/code-shell-capability-optimization-lab' build && bun run --filter '@cjhyy/code-shell-capability-coding' build && bun run --filter '@cjhyy/code-shell-cdp' build && bun run --filter '@cjhyy/code-shell-web' build && bun run --filter '@cjhyy/code-shell-server' build && bun run --filter '@cjhyy/code-shell-tui' build && bun run --filter '@cjhyy/code-shell-chat' build && bun run scripts/build-meta.ts
+@cjhyy/code-shell-link build: $ node -e "require('node:fs').rmSync('dist',{recursive:true,force:true})"
+@cjhyy/code-shell-link build: Exited with code 0
+@cjhyy/code-shell-core build: $ node -e "require('node:fs').rmSync('dist',{recursive:true,force:true})"
+@cjhyy/code-shell-core build: $ node ../../scripts/copy-assets.mjs dist/prompt/sections src/prompt/sections/*.md && node ../../scripts/copy-assets.mjs dist/data src/data/*.json src/data/*.txt
+@cjhyy/code-shell-core build: Exited with code 0
+@cjhyy/code-shell-pet build: $ node -e "require('node:fs').rmSync('dist',{recursive:true,force:true})"
+@cjhyy/code-shell-pet build: Exited with code 0
+@cjhyy/code-shell-capability-optimization-lab build: $ node -e "require('node:fs').rmSync('dist',{recursive:true,force:true})"
+@cjhyy/code-shell-capability-optimization-lab build: Exited with code 0
+@cjhyy/code-shell-capability-coding build: $ node -e "require('node:fs').rmSync('dist',{recursive:true,force:true})"
+@cjhyy/code-shell-capability-coding build: $ node ../../scripts/copy-assets.mjs dist/prompt src/prompt/*.md && node ../../scripts/copy-assets.mjs dist/tools/apply-patch src/tools/apply-patch/NOTICE.md src/tools/apply-patch/LICENSE-codex
+@cjhyy/code-shell-capability-coding build: Exited with code 0
+@cjhyy/code-shell-cdp build: $ node -e "require('node:fs').rmSync('dist',{recursive:true,force:true})"
+@cjhyy/code-shell-cdp build: Exited with code 0
+@cjhyy/code-shell-web build: $ node -e "require('node:fs').rmSync('dist',{recursive:true,force:true});require('node:fs').rmSync('dist-app',{recursive:true,force:true})"
+@cjhyy/code-shell-web build: vite v7.3.5 building client environment for production...
+@cjhyy/code-shell-web build: transforming...
+@cjhyy/code-shell-web build: ✓ 403 modules transformed.
+@cjhyy/code-shell-web build: rendering chunks...
+@cjhyy/code-shell-web build: computing gzip size...
+@cjhyy/code-shell-web build: ../dist-app/index.html                   0.57 kB │ gzip:   0.33 kB
+@cjhyy/code-shell-web build: ../dist-app/assets/index-kPe-x_IE.css   64.49 kB │ gzip:  12.02 kB
+@cjhyy/code-shell-web build: ../dist-app/assets/index-hVyQ_FRP.js   650.28 kB │ gzip: 202.67 kB
+@cjhyy/code-shell-web build:
+@cjhyy/code-shell-web build: (!) Some chunks are larger than 500 kB after minification. Consider:
+@cjhyy/code-shell-web build: - Using dynamic import() to code-split the application
+@cjhyy/code-shell-web build: - Use build.rollupOptions.output.manualChunks to improve chunking: https://rollupjs.org/configuration-options/#output-manualchunks
+@cjhyy/code-shell-web build: - Adjust chunk size limit for this warning via build.chunkSizeWarningLimit.
+@cjhyy/code-shell-web build: ✓ built in 1.41s
+@cjhyy/code-shell-web build: Exited with code 0
+@cjhyy/code-shell-server build: $ node -e "require('node:fs').rmSync('dist',{recursive:true,force:true})"
+@cjhyy/code-shell-server build: Exited with code 0
+@cjhyy/code-shell-tui build: $ node -e "require('node:fs').rmSync('dist',{recursive:true,force:true})"
+@cjhyy/code-shell-tui build: Exited with code 0
+@cjhyy/code-shell-chat build: $ node -e "require('node:fs').rmSync('dist',{recursive:true,force:true})"
+@cjhyy/code-shell-chat build: Exited with code 0

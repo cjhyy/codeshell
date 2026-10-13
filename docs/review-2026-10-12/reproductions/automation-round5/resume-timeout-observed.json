@@ -1,0 +1,49 @@
+{
+  "timerCompression": "120000ms → 20ms; accepted run never receives a terminal result",
+  "frames": [
+    {
+      "jsonrpc": "2.0",
+      "id": "mobile-agent-run-1791740328324-1",
+      "method": "agent/run",
+      "params": {
+        "task": "本地 fixture，无真实模型",
+        "sessionId": "s-fixture",
+        "requireExisting": true,
+        "projectId": "p",
+        "rootId": "r"
+      }
+    },
+    {
+      "jsonrpc": "2.0",
+      "id": "mobile-agent-run-1791740328459-2",
+      "method": "agent/run",
+      "params": {
+        "task": "本地 fixture，无真实模型",
+        "sessionId": "s-fixture",
+        "requireExisting": true,
+        "projectId": "p",
+        "rootId": "r"
+      }
+    }
+  ],
+  "events": [
+    {
+      "type": "job_start"
+    },
+    {
+      "type": "job_end"
+    },
+    {
+      "type": "job_start"
+    },
+    {
+      "type": "job_end"
+    }
+  ],
+  "runCount": 2,
+  "queuedBeforeFirstCompletes": 1,
+  "executedAfterRelease": [
+    "本地 fixture，无真实模型",
+    "本地 fixture，无真实模型"
+  ]
+}

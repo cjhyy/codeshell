@@ -1,0 +1,26 @@
+{
+  "checkedAtSingapore": "2026-10-12T09:44:33.941623+08:00",
+  "isolatedHome": "/private/var/folders/1d/6__4f4y51g90nblfptt8s9v80000gn/T/codeshell-bun-completion-zqgihA/home",
+  "isolatedHomeRemoved": true,
+  "runnerRootRemoved": true,
+  "ownedPaths": [
+    {
+      "path": "/private/var/folders/1d/6__4f4y51g90nblfptt8s9v80000gn/T/codeshell-bun-completion-zqgihA/home",
+      "exists": false
+    },
+    {
+      "path": "/private/var/folders/1d/6__4f4y51g90nblfptt8s9v80000gn/T/codeshell-bun-completion-zqgihA",
+      "exists": false
+    },
+    {
+      "path": "/private/var/folders/1d/6__4f4y51g90nblfptt8s9v80000gn/T/codeshell-bun-completion-zqgihA/home/.code-shell/round27-owned-file-roots",
+      "exists": false
+    }
+  ],
+  "sourceSha256": {
+    "file-root.test.ts": "28f4202efc90bedbd67f39f60bd7e9370a3b8557872ae841edb856e3720a13d2",
+    "network-guard.ts": "6e1f5f5045f9606086f1b01e6eb988b88c5670f78000b260fcb9e035f1c69b3d"
+  },
+  "executionsAdded": 0,
+  "cleanupErrors": []
+}

@@ -1,0 +1,13 @@
+$ bun run --filter '@cjhyy/code-shell-*' typecheck
+@cjhyy/code-shell-cdp typecheck: Exited with code 0
+@cjhyy/code-shell-link typecheck: Exited with code 0
+@cjhyy/code-shell-chat typecheck: Exited with code 0
+@cjhyy/code-shell-core typecheck: Exited with code 0
+@cjhyy/code-shell-pet typecheck: Exited with code 0
+@cjhyy/code-shell-capability-coding typecheck: Exited with code 0
+@cjhyy/code-shell-capability-optimization-lab typecheck: Exited with code 0
+@cjhyy/code-shell-arena typecheck: Exited with code 0
+@cjhyy/code-shell-tui typecheck: Exited with code 0
+@cjhyy/code-shell-web typecheck: Exited with code 0
+@cjhyy/code-shell-server typecheck: Exited with code 0
+@cjhyy/code-shell-desktop typecheck: Exited with code 0

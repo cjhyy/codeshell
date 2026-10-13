@@ -1,0 +1,23 @@
+{
+  "scope": "post-run read-only owned-path existence checks; excluded from native 38 assertion count",
+  "ownedRoot": "/private/var/folders/1d/6__4f4y51g90nblfptt8s9v80000gn/T/codeshell-native-smoke-jZic47/home/owned-file-mutex-uKEmk0",
+  "ownedRootRemoved": true,
+  "maintainedIsolatedRoot": "/private/var/folders/1d/6__4f4y51g90nblfptt8s9v80000gn/T/codeshell-native-smoke-jZic47",
+  "maintainedIsolatedRootRemoved": true,
+  "nativeChildReceipts": [
+    {
+      "kind": "host",
+      "pid": 52519,
+      "exitCode": 0,
+      "signal": null
+    },
+    {
+      "kind": "holder",
+      "pid": 52617,
+      "exitCode": 0,
+      "signal": null
+    }
+  ],
+  "scopedProcessCheck": "ps -axo pid,ppid,command | rg exact fixture path plus host/holder: no matches",
+  "finalNativeExitCode": 0
+}

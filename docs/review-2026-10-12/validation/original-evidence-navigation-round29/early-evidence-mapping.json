@@ -1,0 +1,380 @@
+[
+  {
+    "id": "R01",
+    "evidenceLabel": "Desktop D4",
+    "targetFile": "desktop-round1.md",
+    "headingLine": 44,
+    "headingText": "## D4 [P2] Approving one of multiple pending tools makes the next card look approved and removes its controls"
+  },
+  {
+    "id": "R02",
+    "evidenceLabel": "Web W4",
+    "targetFile": "web-round1.md",
+    "headingLine": 50,
+    "headingText": "## W4 [P2] CLI permission UI can display “逐次确认” while its process still bypasses permissions"
+  },
+  {
+    "id": "R03",
+    "evidenceLabel": "Web W1",
+    "targetFile": "web-round1.md",
+    "headingLine": 8,
+    "headingText": "## W1 [P2] ACK uncertainty is converted into a fresh submit, repeating completed work"
+  },
+  {
+    "id": "R04",
+    "evidenceLabel": "Desktop D5",
+    "targetFile": "desktop-round1.md",
+    "headingLine": 58,
+    "headingText": "## D5 [P2] A delayed plugin command overwrites the next conversation's unsent draft"
+  },
+  {
+    "id": "R05",
+    "evidenceLabel": "Desktop D2",
+    "targetFile": "desktop-round1.md",
+    "headingLine": 18,
+    "headingText": "## D2 [P2] Switching sessions carries local file references into the next conversation"
+  },
+  {
+    "id": "R06",
+    "evidenceLabel": "Desktop D1",
+    "targetFile": "desktop-round1.md",
+    "headingLine": 6,
+    "headingText": "## D1 [P2] Native run errors disappear because the controller reads the wrong reply shape"
+  },
+  {
+    "id": "R07",
+    "evidenceLabel": "Desktop D7",
+    "targetFile": "desktop-round1.md",
+    "headingLine": 82,
+    "headingText": "## D7 [P2] A Core worker exit hides controls for a still-running external runtime"
+  },
+  {
+    "id": "R08",
+    "evidenceLabel": "Web W3",
+    "targetFile": "web-round1.md",
+    "headingLine": 36,
+    "headingText": "## W3 [P2] Stop in a running CLI room never stops that room"
+  },
+  {
+    "id": "R09",
+    "evidenceLabel": "Server S1",
+    "targetFile": "server-round1.md",
+    "headingLine": 6,
+    "headingText": "## S1 [P2] Failed duplicate Hub startup deletes live instance uploads"
+  },
+  {
+    "id": "R10",
+    "evidenceLabel": "Server S6",
+    "targetFile": "server-round1.md",
+    "headingLine": 63,
+    "headingText": "## S6 [P2] CC room pending approvals cannot recover after switching or reconnecting"
+  },
+  {
+    "id": "R11",
+    "evidenceLabel": "Server S7；正常离线有禁用及 handler 保护",
+    "targetFile": "server-round1.md",
+    "headingLine": 74,
+    "headingText": "## S7 [P3] CC approval is dropped if transport fails before the UI leaves its online state"
+  },
+  {
+    "id": "R12",
+    "evidenceLabel": "Server S2",
+    "targetFile": "server-round1.md",
+    "headingLine": 18,
+    "headingText": "## S2 [P2] CC AskUserQuestion permanently consumes multi-question prompt after one answer"
+  },
+  {
+    "id": "R13",
+    "evidenceLabel": "Desktop D6",
+    "targetFile": "desktop-round1.md",
+    "headingLine": 70,
+    "headingText": "## D6 [P2] Sticky AskUser state crosses request boundaries and breaks the next question submit"
+  },
+  {
+    "id": "R14",
+    "evidenceLabel": "Web W5",
+    "targetFile": "web-round1.md",
+    "headingLine": 64,
+    "headingText": "## W5 [P2] Optional asynchronous questions block all independent followup tasks after completion"
+  },
+  {
+    "id": "R15",
+    "evidenceLabel": "Desktop D3",
+    "targetFile": "desktop-round1.md",
+    "headingLine": 30,
+    "headingText": "## D3 [P2] Queued follow-ups stop progressing when the conversation is in the background"
+  },
+  {
+    "id": "R16",
+    "evidenceLabel": "Web W2",
+    "targetFile": "web-round1.md",
+    "headingLine": 22,
+    "headingText": "## W2 [P2] CC-open replies navigate tabs that never requested them and override later navigation"
+  },
+  {
+    "id": "R17",
+    "evidenceLabel": "Server S3",
+    "targetFile": "server-round1.md",
+    "headingLine": 29,
+    "headingText": "## S3 [P2] Removed Hub draft attachments retain quota and leave an empty composer blocked"
+  },
+  {
+    "id": "R18",
+    "evidenceLabel": "Server S4",
+    "targetFile": "server-round1.md",
+    "headingLine": 40,
+    "headingText": "## S4 [P2] Claude room spawn failure leaves a stale “running” handle that blocks same-mode retry"
+  },
+  {
+    "id": "R19",
+    "evidenceLabel": "Web W6；下一次有效 resync 可恢复",
+    "targetFile": "web-round1.md",
+    "headingLine": 76,
+    "headingText": "## W6 [P3] A failed synchronous approval delivery has no immediate card recovery while the same request is still pending"
+  },
+  {
+    "id": "R20",
+    "evidenceLabel": "Server S5",
+    "targetFile": "server-round1.md",
+    "headingLine": 52,
+    "headingText": "## S5 [P3] Hub accepts images above its staging limit and fails only on Send"
+  },
+  {
+    "id": "R21",
+    "evidenceLabel": "Root R21",
+    "targetFile": "README.md",
+    "headingLine": 136,
+    "headingText": "### 新会话首次运行中的恢复不能裁掉日志基点"
+  },
+  {
+    "id": "R22",
+    "evidenceLabel": "Desktop D8，第二轮",
+    "targetFile": "desktop-round2.md",
+    "headingLine": 6,
+    "headingText": "## D8 [P2] A valid secondary-root Session cannot open its project's installed Panel Apps"
+  },
+  {
+    "id": "R23",
+    "evidenceLabel": "Desktop D9，第二轮",
+    "targetFile": "desktop-round2.md",
+    "headingLine": 16,
+    "headingText": "## D9 [P2] One unavailable tracked project clears installed Panels in every healthy project"
+  },
+  {
+    "id": "R24",
+    "evidenceLabel": "Desktop D10，第二轮",
+    "targetFile": "desktop-round2.md",
+    "headingLine": 26,
+    "headingText": "## D10 [P2] Removing a project tombstones its authority before idle worktree conversations detach"
+  },
+  {
+    "id": "R25",
+    "evidenceLabel": "Web W7，第二轮",
+    "targetFile": "web-round2.md",
+    "headingLine": 19,
+    "headingText": "## W7 — [P2] 两个已打开的默认模型表单先后保存，会静默回滚未修改的另一项"
+  },
+  {
+    "id": "R26",
+    "evidenceLabel": "Web W8，第二轮",
+    "targetFile": "web-round2.md",
+    "headingLine": 30,
+    "headingText": "## W8 — [P3] Skill 保存冲突后，“刷新”不能恢复保存能力"
+  },
+  {
+    "id": "R27",
+    "evidenceLabel": "Web W9，第二轮",
+    "targetFile": "web-round2.md",
+    "headingLine": 40,
+    "headingText": "## W9 — [P3] MCP 旧测试响应晚于配置刷新时，会为新配置显示旧的测试成功"
+  },
+  {
+    "id": "R28",
+    "evidenceLabel": "Desktop D11，第三轮",
+    "targetFile": "desktop-round3.md",
+    "headingLine": 5,
+    "headingText": "## D11 [P2] Plugin switches erase unrelated disable entries before authoritative settings initialization finishes"
+  },
+  {
+    "id": "R29",
+    "evidenceLabel": "Desktop D12，第三轮",
+    "targetFile": "desktop-round3.md",
+    "headingLine": 16,
+    "headingText": "## D12 [P3，第二十轮降级] Completing startup project-bucket migration removes a subsequently added project from the live UI"
+  },
+  {
+    "id": "R30",
+    "evidenceLabel": "Runtime T1，第三轮；存储恢复后可取消/重试",
+    "targetFile": "runtime-round3.md",
+    "headingLine": 6,
+    "headingText": "## Confirmed: P2 — A failed final job-record write silently leaves a completed native task running"
+  },
+  {
+    "id": "R31",
+    "evidenceLabel": "Runtime T2，第三轮；已验证 POSIX",
+    "targetFile": "runtime-round3.md",
+    "headingLine": 28,
+    "headingText": "## Confirmed: P2 — CLI shutdown can leave an ordinary native Panel process alive"
+  },
+  {
+    "id": "R32",
+    "evidenceLabel": "Web W10，第三轮",
+    "targetFile": "web-round3.md",
+    "headingLine": 15,
+    "headingText": "## W10 — [P2] localStorage 配额耗尽时，新设备配对成功后立即认证失败"
+  },
+  {
+    "id": "R33",
+    "evidenceLabel": "Web W11，第三轮",
+    "targetFile": "web-round3.md",
+    "headingLine": 26,
+    "headingText": "## W11 — [P2] 新会话创建确认前，后台原生会话输出会把新草稿搬到错误会话"
+  },
+  {
+    "id": "R34",
+    "evidenceLabel": "Web W12，第三轮；主机正常收到请求时有 5 分钟票据上限",
+    "targetFile": "web-round3.md",
+    "headingLine": 37,
+    "headingText": "## W12 — [P2] 已开始的手机 HTTP 图片上传无法随断线取消，重连后继续阻塞后续发送"
+  },
+  {
+    "id": "R35",
+    "evidenceLabel": "Desktop D13，第三轮",
+    "targetFile": "desktop-round3.md",
+    "headingLine": 27,
+    "headingText": "## D13 [P1] Repeated Enter while creating a worktree can delete the successful request's workspace and uncommitted files"
+  },
+  {
+    "id": "R36",
+    "evidenceLabel": "Runtime T3，第三轮",
+    "targetFile": "runtime-round3.md",
+    "headingLine": 40,
+    "headingText": "## T3 [P2] A worker pipe error can terminate the Node Host instead of settling the failed run"
+  },
+  {
+    "id": "R37",
+    "evidenceLabel": "Web W13，第三轮；限定 freshNative 场景",
+    "targetFile": "web-round3.md",
+    "headingLine": 48,
+    "headingText": "## W13 — [P2] 手机离线新建另一个项目的任务后，首条文本可在上一个尚未落盘的项目会话执行"
+  },
+  {
+    "id": "R38",
+    "evidenceLabel": "Web W14，第三轮",
+    "targetFile": "web-round3.md",
+    "headingLine": 60,
+    "headingText": "## W14 — [P3] “退出此设备”必须等待 HTTP 响应，网络慢请求会阻止本地退出"
+  },
+  {
+    "id": "R39",
+    "evidenceLabel": "Files/History F1，第四轮",
+    "targetFile": "files-round4.md",
+    "headingLine": 9,
+    "headingText": "### [P3] Successful archive restoration is blocked by its own unsaved-change guard"
+  },
+  {
+    "id": "R40",
+    "evidenceLabel": "Web W15，第五轮；限定预入队拒绝",
+    "targetFile": "web-round5.md",
+    "headingLine": 15,
+    "headingText": "## W15 — [P2] 发送明确失败前输入后续草稿，会丢掉原失败内容"
+  },
+  {
+    "id": "R41",
+    "evidenceLabel": "Web W16，第五轮；真实认证 Hub 补强",
+    "targetFile": "web-round5.md",
+    "headingLine": 26,
+    "headingText": "## W16 — [P2] Hub 未确认送达的意图没有刷新保护，刷新后唯一恢复副本丢失"
+  },
+  {
+    "id": "R42",
+    "evidenceLabel": "Credentials C1，第五轮；实际 Electron/IPC/store",
+    "targetFile": "credentials-round5.md",
+    "headingLine": 5,
+    "headingText": "## C1 [P2] Adding another Cookie account silently replaces an existing account"
+  },
+  {
+    "id": "R43",
+    "evidenceLabel": "Credentials C2，第五轮",
+    "targetFile": "credentials-round5.md",
+    "headingLine": 16,
+    "headingText": "## C2 [P3] A failed Token save has no visible explanation"
+  },
+  {
+    "id": "R44",
+    "evidenceLabel": "Automation A1，第五轮；实际 ChatSession FIFO",
+    "targetFile": "automation-round5.md",
+    "headingLine": 9,
+    "headingText": "## A1 — P2：非once续接自动化超过 120 秒后退出运行保护，前一轮仍运行时可再入队同一个任务"
+  },
+  {
+    "id": "R45",
+    "evidenceLabel": "Automation A2，第五轮",
+    "targetFile": "automation-round5.md",
+    "headingLine": 39,
+    "headingText": "## A2 — P2：worker 已拒绝续接任务，自动化生命周期仍报告 completed"
+  },
+  {
+    "id": "R46",
+    "evidenceLabel": "Automation A3，第五轮；合并身份关联根因",
+    "targetFile": "automation-round5.md",
+    "headingLine": 63,
+    "headingText": "## A3 — P2：执行历史不用任务身份关联，真实实时记录缺失，重开后混入其他任务结果"
+  },
+  {
+    "id": "R47",
+    "evidenceLabel": "Automation A4，第五轮",
+    "targetFile": "automation-round5.md",
+    "headingLine": 90,
+    "headingText": "## A4 — P2：执行后自动停用，仍打开的自动化页面长期显示“活跃”"
+  },
+  {
+    "id": "R48",
+    "evidenceLabel": "Automation A5，第五轮；底层原因仍持久保留",
+    "targetFile": "automation-round5.md",
+    "headingLine": 113,
+    "headingText": "## A5 — P3：自动停用原因在 Desktop 摘要丢失，重开后只能看到普通暂停"
+  },
+  {
+    "id": "R49",
+    "evidenceLabel": "Collection，第六轮；0.9.33 新可达路径",
+    "targetFile": "collections-round6.md",
+    "headingLine": 5,
+    "headingText": "## 已验证的 P3：新接入的共享资料集跨文件查询丢失可恢复的子错误"
+  },
+  {
+    "id": "R50",
+    "evidenceLabel": "Voice W17，第六轮；同一 renderer document 存活期间",
+    "targetFile": "voice-round6.md",
+    "headingLine": 7,
+    "headingText": "## W17 / P2：录音启动等待期间可再次点击，停止和组件卸载只回收最后一份录音"
+  },
+  {
+    "id": "R51",
+    "evidenceLabel": "Agent Plugins W18，第七轮；同一 Main 生命周期",
+    "targetFile": "plugins-round7.md",
+    "headingLine": 17,
+    "headingText": "## W18 — P2: successful install job blocks reinstall after a successful uninstall"
+  },
+  {
+    "id": "R52",
+    "evidenceLabel": "Agent Plugins W19，第七轮；有效新源可重新安装恢复",
+    "targetFile": "plugins-round7.md",
+    "headingLine": 42,
+    "headingText": "## W19 — P2: failed marketplace path-source update removes the previous working plugin"
+  },
+  {
+    "id": "R53",
+    "evidenceLabel": "Agent Plugins W20，第七轮；旧安装内容保留",
+    "targetFile": "plugins-round7.md",
+    "headingLine": 66,
+    "headingText": "## W20 — P2: Desktop reviewed directory install records a deleted snapshot as its update source"
+  },
+  {
+    "id": "R54",
+    "evidenceLabel": "Quick Chat Q1，第八轮；系统图片拖入可用",
+    "targetFile": "quickchat-round8.md",
+    "headingLine": 5,
+    "headingText": "## Q1 — P3: an internal Files Panel image drop is silently discarded by Quick Chat"
+  }
+]

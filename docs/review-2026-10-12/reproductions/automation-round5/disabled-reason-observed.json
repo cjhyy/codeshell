@@ -1,0 +1,39 @@
+{
+  "schedulerJob": {
+    "id": "1",
+    "name": "missing-root-job",
+    "schedule": "1h",
+    "prompt": "fixture",
+    "enabled": false,
+    "runCount": 0,
+    "createdAt": 1791740341260,
+    "cwd": "/fixture",
+    "projectId": "p",
+    "rootId": "r",
+    "resumeSessionId": "deleted-s",
+    "nextRun": 1791743941260,
+    "disabledReason": "resume Session root is unavailable: fixture project directory is missing"
+  },
+  "summary": {
+    "id": "1",
+    "revision": "b464deda729219ba9cef44e49c6686d20e1e2f4bf7e6c6cb04101f7515ee03d2",
+    "name": "missing-root-job",
+    "schedule": "1h",
+    "prompt": "fixture",
+    "enabled": false,
+    "cwd": "/fixture",
+    "projectId": "p",
+    "rootId": "r",
+    "timezone": null,
+    "permissionLevel": null,
+    "lastRun": null,
+    "nextRun": 1791743941260,
+    "runCount": 0,
+    "createdAt": 1791740341260,
+    "lastRunId": null,
+    "once": false,
+    "resumeSessionId": "deleted-s",
+    "templateSource": null
+  },
+  "reopenedDetail": "missing-root-job每小时 · UTC已暂停续接对话立即运行下次运行约 1 小时后10/11/2026, 6:39:01 PM上次运行—运行次数0任务指令编辑fixture执行方式每次新建对话适合独立任务，每次单独记录结果。续接已有对话沿用之前的讨论，持续积累进展。绑定的对话绑定的对话暂不可用暂时找不到绑定的对话。可刷新列表、更换对话，或切换为每次新建对话。任务会定时发送到所选对话，沿用它的上下文、项目、权限和工具，结果也会留在该对话中。刷新列表配置频率时区全部时区UTC权限沿用绑定对话的权限和工具设置项目fixture跟随绑定的对话"
+}

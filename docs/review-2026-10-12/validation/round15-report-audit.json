@@ -1,0 +1,36 @@
+{
+  "timestampSingapore": "2026-10-12 04:23",
+  "findings": 68,
+  "priorities": {
+    "P1": 1,
+    "P2": 46,
+    "P3": 21
+  },
+  "topMarkdownLocalLinks": 523,
+  "sourceLineLinks": 335,
+  "completedCommonRuns": [
+    {
+      "tree": "/Users/admin/.codex/worktrees/server-desktop-review-20261012/codeshell",
+      "files": 68,
+      "tests": 211,
+      "nativeWrappedAssertions": 33,
+      "productTrackedDiff": []
+    },
+    {
+      "tree": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell",
+      "files": 68,
+      "tests": 211,
+      "nativeWrappedAssertions": 33,
+      "productTrackedDiff": []
+    }
+  ],
+  "latestOnlyFiles": 3,
+  "latestOnlyTests": 8,
+  "round15NewFiles": 6,
+  "round15NewTests": 12,
+  "round15BunExpects": 142,
+  "nativeOutboundScope": "33 assertions inside one Bun wrapper per baseline; 24 MiB max, Node/darwin; no actual Main/worker/model/OOM",
+  "errors": [],
+  "latestFetchSingapore": "2026-10-12 04:23",
+  "originMain": "a66f4ef291f304ee4df9da8095a90671d9a8f140"
+}

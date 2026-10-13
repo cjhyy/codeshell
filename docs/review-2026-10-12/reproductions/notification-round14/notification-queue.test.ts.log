@@ -1,0 +1,13 @@
+bun test v1.3.11 (af24e281)
+
+docs/review-2026-10-12/reproductions/notification-round14/notification-queue.test.ts:
+{"productionRateWindowMs":10000,"productionOrdinaryLimit":5,"urgentEnteredDuringOrdinaryWait":true,"urgentShownBeforeRelease":false,"releaseAdvancesOnlyInjectedClockMs":10000,"actualNativeNotification":false}
+(pass) CONFIRMED production urgent missing-target route waits behind an ordinary rate-slot sleep [15.44ms]
+(pass) normal urgent route bypasses a saturated budget when no ordinary delivery already owns the queue [9.15ms]
+(pass) normal focus, unsupported and show failure do not earn a receipt; a later valid retry can display [3.36ms]
+
+ 3 pass
+ 0 fail
+ 19 expect() calls
+Ran 3 tests across 1 file. [135.00ms]
+Completed Bun shard: 3 tests, 0 skipped; 0 failures.

@@ -1,0 +1,15 @@
+bun test v1.3.11 (af24e281)
+
+docs/review-2026-10-12/reproductions/web-round2/settings-review.test.tsx:
+DEFAULT_CONFLICT {"requests":[{"text":"two","auxText":"one"},{"text":"one","auxText":"three"}],"final":{"text":"one","auxText":"three"},"bothShownSaved":true}
+(pass) confirmed: two edited default-model forms overwrite an untouched setting after the production mutation gate releases [203.43ms]
+SKILL_CONFLICT {"saveAttempts":2,"attemptedRevisions":["fbaa410bdda1489f165cfc05e5af2db55962ec99182939aa06c226cb4a226ce8","fbaa410bdda1489f165cfc05e5af2db55962ec99182939aa06c226cb4a226ce8"],"currentRevision":"d6f522b9a67b1cc5a44c1e0724f54f9618d6a436c59574a2459881f8b13d68a2","draftStillPresent":true}
+(pass) confirmed: Skills refresh after a concurrent edit retains the stale revision and cannot recover Save [87.00ms]
+MCP_STALE_PROBE {"displayedCommand":"new-command","testedCommand":"old-command","displayedSuccess":true,"displayedTool":"old_command_tool"}
+(pass) confirmed: late MCP probe response restores success for configuration replaced during the probe [15.21ms]
+
+ 3 pass
+ 0 fail
+ 23 expect() calls
+Ran 3 tests across 1 file. [982.00ms]
+Completed Bun shard: 3 tests, 0 skipped; 0 failures.

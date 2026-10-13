@@ -1,0 +1,41 @@
+[
+  {
+    "scenario": "Enter-busy-stop-resubmit",
+    "sent": 2,
+    "busyDraftPreserved": true
+  },
+  {
+    "scenario": "IME-Shift-Enter",
+    "nonSubmitEvents": 3
+  },
+  {
+    "scenario": "hidden-reveal-PDF",
+    "identity": "qchat-round8-one",
+    "pathSent": true,
+    "composerCleared": true
+  },
+  {
+    "scenario": "close-reopen",
+    "oldPathAbsent": true,
+    "newIdentity": "qchat-round8-two"
+  },
+  {
+    "scenario": "fork-recovery",
+    "readyComposerMounted": true
+  },
+  {
+    "scenario": "close-during-image-stage",
+    "mainCleanupDeferred": true,
+    "lateBytesDeleted": true,
+    "reopenedAttachments": 0,
+    "oldRunClaimActive": false
+  },
+  {
+    "scenario": "FilesPanel-image-DnD",
+    "realSourceCustomMime": true,
+    "internalPngAttachments": 0,
+    "internalPngStageCalls": 0,
+    "internalPdfAccepted": true,
+    "osPngAttachments": 1
+  }
+]

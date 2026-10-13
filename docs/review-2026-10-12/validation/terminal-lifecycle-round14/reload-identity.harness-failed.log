@@ -1,0 +1,14 @@
+/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/node_modules/.bun/playwright-core@1.60.0/node_modules/playwright-core/lib/coreBundle.js:42440
+  const failError = new Error("Process failed to launch!");
+                    ^
+
+Error: Process failed to launch!
+    at waitForLine (/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/node_modules/.bun/playwright-core@1.60.0/node_modules/playwright-core/lib/coreBundle.js:42440:21)
+    at Electron.launch (/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/node_modules/.bun/playwright-core@1.60.0/node_modules/playwright-core/lib/coreBundle.js:42633:36)
+    at async ElectronDispatcher.launch (/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/node_modules/.bun/playwright-core@1.60.0/node_modules/playwright-core/lib/coreBundle.js:50945:37)
+    at async _ProgressController.run (/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/node_modules/.bun/playwright-core@1.60.0/node_modules/playwright-core/lib/coreBundle.js:12974:27)
+    at async ElectronDispatcher._runCommand (/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/node_modules/.bun/playwright-core@1.60.0/node_modules/playwright-core/lib/coreBundle.js:24019:18)
+    at async DispatcherConnection.dispatch (/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/node_modules/.bun/playwright-core@1.60.0/node_modules/playwright-core/lib/coreBundle.js:24253:27)
+
+Node.js v25.8.1
+Native smoke failed (1)

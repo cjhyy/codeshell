@@ -1,0 +1,272 @@
+{
+  "cleanup": {
+    "completed": true,
+    "prepareOnly": false,
+    "failure": null,
+    "assertions": 66,
+    "appPid": 17522,
+    "harnessContextRetries": [],
+    "closeReceipt": {
+      "code": 0,
+      "signal": null
+    },
+    "cleanupErrors": [],
+    "isolatedHome": "/private/var/folders/1d/6__4f4y51g90nblfptt8s9v80000gn/T/codeshell-browser-stop-round22-vOXf4z",
+    "isolatedHomeRemoved": true,
+    "productMainLoaded": false,
+    "actualWorkerModelCliStarted": false
+  },
+  "sourceSha256": {
+    "browser-stop-native.mjs": "11bc7a9cf31d53a69c55191b89fe08d621e4857621175841bb13a446d97c320d",
+    "owned-main-template.mjs": "1f9213c591383ae16b4ac41adaabcce8be298fcf143503909eb067cc7dbaf26b",
+    "source-manifest.json": "04d62a7de557f8f01c29d925227ddafddf3b51da34939d483a26ee16c663656e"
+  },
+  "electron": "33.4.11",
+  "node": "v20.18.3",
+  "loadedWorkspaceModules": 520,
+  "modelCalls": 7,
+  "auxiliaryCalls": 8,
+  "chromiumRequests": [
+    {
+      "url": "file:///private/var/folders/1d/6__4f4y51g90nblfptt8s9v80000gn/T/codeshell-browser-stop-round22-vOXf4z/owned-target.html",
+      "allowed": true
+    },
+    {
+      "url": "file:///private/var/folders/1d/6__4f4y51g90nblfptt8s9v80000gn/T/codeshell-browser-stop-round22-vOXf4z/owned-control.html",
+      "allowed": true
+    }
+  ],
+  "windows": [
+    {
+      "id": 1,
+      "webContentsId": 1,
+      "rendererPid": 17587,
+      "url": "file:///private/var/folders/1d/6__4f4y51g90nblfptt8s9v80000gn/T/codeshell-browser-stop-round22-vOXf4z/owned-target.html",
+      "visible": false
+    },
+    {
+      "id": 2,
+      "webContentsId": 2,
+      "rendererPid": 17588,
+      "url": "file:///private/var/folders/1d/6__4f4y51g90nblfptt8s9v80000gn/T/codeshell-browser-stop-round22-vOXf4z/owned-control.html",
+      "visible": false
+    }
+  ],
+  "guards": {
+    "networkAttempts": [],
+    "highLevelNetworkAttempts": [],
+    "childAttempts": [],
+    "rendererErrors": []
+  },
+  "preStop": {
+    "disabled": true,
+    "hits": 0,
+    "inputCount": 0,
+    "busy": true,
+    "pendingCount": 1
+  },
+  "postStop": {
+    "stopResult": {
+      "jsonrpc": "2.0",
+      "id": "desktop-rpc-9a9d3131-b821-4659-a1ac-0e9709c88629-1",
+      "result": {
+        "ok": true
+      }
+    },
+    "disabled": true,
+    "hits": 0,
+    "inputCount": 0,
+    "busy": false,
+    "pendingCount": 0,
+    "run": {
+      "task": "Owned browser action: cancel-before-disabled-button-ready",
+      "startedAt": 1791761099619,
+      "signalAbortedAtStart": false,
+      "signalAbortedAt": 1791761100143,
+      "settled": true,
+      "result": {
+        "text": "",
+        "reason": "aborted_streaming",
+        "sessionId": "owned-browser-stop-round22-session",
+        "turnCount": 4,
+        "usage": {
+          "promptTokens": 12,
+          "completionTokens": 6,
+          "totalTokens": 18,
+          "cacheReadTokens": 0,
+          "cacheCreationTokens": 0
+        },
+        "runId": "2SCo-2DlnenN"
+      },
+      "settledAt": 1791761100249,
+      "settledSequence": 2
+    },
+    "waits": [
+      {
+        "label": "actual-adapter",
+        "sequence": 1,
+        "at": 1791761100114,
+        "readiness": true,
+        "signalAbortedAtStart": false,
+        "settled": false,
+        "abortedAt": null
+      }
+    ]
+  },
+  "enabled": {
+    "sequence": 3,
+    "at": 1791761100262,
+    "domAt": 1791761100262
+  },
+  "afterEnable": {
+    "target": {
+      "disabled": false,
+      "hits": 1,
+      "events": [
+        {
+          "at": 1791761100293,
+          "hits": 1
+        }
+      ],
+      "url": "file:///private/var/folders/1d/6__4f4y51g90nblfptt8s9v80000gn/T/codeshell-browser-stop-round22-vOXf4z/owned-target.html"
+    },
+    "inputCommands": [
+      {
+        "method": "Input.dispatchMouseEvent",
+        "params": {
+          "type": "mouseMoved",
+          "modifiers": 0,
+          "buttons": 0,
+          "button": "none",
+          "x": 98,
+          "y": 33
+        },
+        "at": 1791761100290,
+        "sequence": 5
+      },
+      {
+        "method": "Input.dispatchMouseEvent",
+        "params": {
+          "type": "mousePressed",
+          "modifiers": 0,
+          "clickCount": 1,
+          "buttons": 1,
+          "button": "left",
+          "x": 98,
+          "y": 33
+        },
+        "at": 1791761100291,
+        "sequence": 6
+      },
+      {
+        "method": "Input.dispatchMouseEvent",
+        "params": {
+          "type": "mouseReleased",
+          "modifiers": 0,
+          "clickCount": 1,
+          "buttons": 0,
+          "button": "left",
+          "x": 98,
+          "y": 33
+        },
+        "at": 1791761100291,
+        "sequence": 7
+      }
+    ],
+    "modelCalls": 3,
+    "browserReplies": [
+      {
+        "at": 1791761099938,
+        "parsed": {
+          "connectionId": "legacy-agent-server",
+          "generation": 1,
+          "sessionId": "owned-browser-stop-round22-session",
+          "requestId": "5OQUm-rI6-m2",
+          "request": {
+            "action": "snapshot"
+          }
+        },
+        "message": {
+          "jsonrpc": "2.0",
+          "id": 900000001,
+          "method": "agent/approve",
+          "params": {
+            "connectionId": "legacy-agent-server",
+            "generation": 1,
+            "sessionId": "owned-browser-stop-round22-session",
+            "requestId": "5OQUm-rI6-m2",
+            "decision": {
+              "approved": true,
+              "answer": "{\"url\":\"file:///private/var/folders/1d/6__4f4y51g90nblfptt8s9v80000gn/T/codeshell-browser-stop-round22-vOXf4z/owned-target.html\",\"title\":\"Owned disabled action\",\"documentId\":\"electron:618166a7-9baf-4ab2-bce4-432c61440c3f:p1:document:1\",\"snapshotId\":\"electron:618166a7-9baf-4ab2-bce4-432c61440c3f:p1:s2\",\"elements\":[{\"ref\":\"electron:618166a7-9baf-4ab2-bce4-432c61440c3f:p1:s2:e1\",\"role\":\"button\",\"name\":\"Owned action\"}],\"identity\":{\"profileId\":\"persist:browser:p:__no_repo__\",\"sourceKind\":\"builtin-panel\"}}"
+            }
+          }
+        }
+      },
+      {
+        "at": 1791761100293,
+        "parsed": {
+          "connectionId": "legacy-agent-server",
+          "generation": 1,
+          "sessionId": "owned-browser-stop-round22-session",
+          "requestId": "ddiLRUeLi37_",
+          "request": {
+            "action": "click",
+            "ref": "electron:618166a7-9baf-4ab2-bce4-432c61440c3f:p1:s2:e1"
+          }
+        },
+        "message": {
+          "jsonrpc": "2.0",
+          "id": 900000002,
+          "method": "agent/approve",
+          "params": {
+            "connectionId": "legacy-agent-server",
+            "generation": 1,
+            "sessionId": "owned-browser-stop-round22-session",
+            "requestId": "ddiLRUeLi37_",
+            "decision": {
+              "approved": true,
+              "answer": "{\"ok\":true,\"code\":\"OK\",\"documentId\":\"electron:618166a7-9baf-4ab2-bce4-432c61440c3f:p1:document:1\",\"documentChanged\":false}"
+            }
+          }
+        }
+      }
+    ]
+  },
+  "controls": [
+    {
+      "scenario": "normal-real-driver-AbortSignal-cancels-ready-with-page-alive",
+      "target": {
+        "disabled": false,
+        "hits": 1,
+        "events": [
+          {
+            "at": 1791761100293,
+            "hits": 1
+          }
+        ],
+        "url": "file:///private/var/folders/1d/6__4f4y51g90nblfptt8s9v80000gn/T/codeshell-browser-stop-round22-vOXf4z/owned-target.html"
+      }
+    },
+    {
+      "scenario": "normal-new-turn-and-already-committed-action-boundary",
+      "normalReply": {
+        "jsonrpc": "2.0",
+        "id": 102,
+        "result": {
+          "text": "owned completion",
+          "reason": "completed",
+          "sessionId": "owned-browser-stop-round22-session",
+          "turnCount": 4,
+          "usage": {
+            "promptTokens": 14,
+            "completionTokens": 7,
+            "totalTokens": 21,
+            "cacheReadTokens": 0,
+            "cacheCreationTokens": 0
+          },
+          "runId": "Hvl-QI2j5nEP"
+        }
+      }
+    }
+  ]
+}

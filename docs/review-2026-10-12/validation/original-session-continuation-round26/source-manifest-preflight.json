@@ -1,0 +1,359 @@
+{
+  "kind": "static read_bytes/hash only, not runtime import graph",
+  "productImports": 0,
+  "fixtureExecutions": 0,
+  "paths": [
+    {
+      "path": "CODESHELL.md",
+      "same": true,
+      "versions": [
+        {
+          "tree": "/Users/admin/.codex/worktrees/server-desktop-review-20261012/codeshell",
+          "exists": true,
+          "sha256": "98d56c3b134ef18a25a37293de42442e7d3ff40cde7841862aab9ad83cba7c2a"
+        },
+        {
+          "tree": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell",
+          "exists": true,
+          "sha256": "98d56c3b134ef18a25a37293de42442e7d3ff40cde7841862aab9ad83cba7c2a"
+        }
+      ]
+    },
+    {
+      "path": "packages/core/src/session/session-manager.ts",
+      "same": true,
+      "versions": [
+        {
+          "tree": "/Users/admin/.codex/worktrees/server-desktop-review-20261012/codeshell",
+          "exists": true,
+          "sha256": "0ebe5458e6f5701e286c552e43e0dd707177fb97b1e8726a94ae5dbcfdedcb10"
+        },
+        {
+          "tree": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell",
+          "exists": true,
+          "sha256": "0ebe5458e6f5701e286c552e43e0dd707177fb97b1e8726a94ae5dbcfdedcb10"
+        }
+      ]
+    },
+    {
+      "path": "packages/core/src/session/transcript.ts",
+      "same": true,
+      "versions": [
+        {
+          "tree": "/Users/admin/.codex/worktrees/server-desktop-review-20261012/codeshell",
+          "exists": true,
+          "sha256": "0d2e32dd2e530200c626dd2f94f563d3268f9ae9ad2e37e3497d1a849669d829"
+        },
+        {
+          "tree": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell",
+          "exists": true,
+          "sha256": "0d2e32dd2e530200c626dd2f94f563d3268f9ae9ad2e37e3497d1a849669d829"
+        }
+      ]
+    },
+    {
+      "path": "packages/core/src/engine/run-session-open.ts",
+      "same": true,
+      "versions": [
+        {
+          "tree": "/Users/admin/.codex/worktrees/server-desktop-review-20261012/codeshell",
+          "exists": true,
+          "sha256": "4ac92021afc249a3e33482691e867b689024db9fcf86aaab9f07ea344183a9ae"
+        },
+        {
+          "tree": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell",
+          "exists": true,
+          "sha256": "4ac92021afc249a3e33482691e867b689024db9fcf86aaab9f07ea344183a9ae"
+        }
+      ]
+    },
+    {
+      "path": "packages/core/src/protocol/server.ts",
+      "same": true,
+      "versions": [
+        {
+          "tree": "/Users/admin/.codex/worktrees/server-desktop-review-20261012/codeshell",
+          "exists": true,
+          "sha256": "001212e386311d24bd7b19bf67012bfb8d9f42d58fbdbdf7f1258a04c89a159a"
+        },
+        {
+          "tree": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell",
+          "exists": true,
+          "sha256": "001212e386311d24bd7b19bf67012bfb8d9f42d58fbdbdf7f1258a04c89a159a"
+        }
+      ]
+    },
+    {
+      "path": "packages/desktop/src/main/session-workspace-service.ts",
+      "same": true,
+      "versions": [
+        {
+          "tree": "/Users/admin/.codex/worktrees/server-desktop-review-20261012/codeshell",
+          "exists": true,
+          "sha256": "0a914d59780852a949e6d8349b51f5a8e40762c4e89911c56c601522af95e134"
+        },
+        {
+          "tree": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell",
+          "exists": true,
+          "sha256": "0a914d59780852a949e6d8349b51f5a8e40762c4e89911c56c601522af95e134"
+        }
+      ]
+    },
+    {
+      "path": "packages/desktop/src/main/review-service.ts",
+      "same": true,
+      "versions": [
+        {
+          "tree": "/Users/admin/.codex/worktrees/server-desktop-review-20261012/codeshell",
+          "exists": true,
+          "sha256": "bb370d6dba86126fd5ac3c662c0ed99b82a71fae1d5a7c57a17cd5bcefdc71d1"
+        },
+        {
+          "tree": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell",
+          "exists": true,
+          "sha256": "bb370d6dba86126fd5ac3c662c0ed99b82a71fae1d5a7c57a17cd5bcefdc71d1"
+        }
+      ]
+    },
+    {
+      "path": "packages/desktop/src/main/project-store.ts",
+      "same": true,
+      "versions": [
+        {
+          "tree": "/Users/admin/.codex/worktrees/server-desktop-review-20261012/codeshell",
+          "exists": true,
+          "sha256": "7a8af164418c7884c55d081e47005ed1f73b018755a650e215e927eee9bbdddb"
+        },
+        {
+          "tree": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell",
+          "exists": true,
+          "sha256": "7a8af164418c7884c55d081e47005ed1f73b018755a650e215e927eee9bbdddb"
+        }
+      ]
+    },
+    {
+      "path": "packages/desktop/src/main/session-cwd-index.ts",
+      "same": true,
+      "versions": [
+        {
+          "tree": "/Users/admin/.codex/worktrees/server-desktop-review-20261012/codeshell",
+          "exists": true,
+          "sha256": "d1c3b5c0966aeb763d6d48008d878c1c47f342cd3599b3fd231eeca319467d80"
+        },
+        {
+          "tree": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell",
+          "exists": true,
+          "sha256": "d1c3b5c0966aeb763d6d48008d878c1c47f342cd3599b3fd231eeca319467d80"
+        }
+      ]
+    },
+    {
+      "path": "packages/desktop/src/main/mounted-project-root.ts",
+      "same": true,
+      "versions": [
+        {
+          "tree": "/Users/admin/.codex/worktrees/server-desktop-review-20261012/codeshell",
+          "exists": true,
+          "sha256": "3d4c4b36482fe360d48832a37b055bc10ca37172f2dd3b01f37963b446a2af73"
+        },
+        {
+          "tree": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell",
+          "exists": true,
+          "sha256": "3d4c4b36482fe360d48832a37b055bc10ca37172f2dd3b01f37963b446a2af73"
+        }
+      ]
+    },
+    {
+      "path": "packages/desktop/src/main/agent-run-metadata.ts",
+      "same": true,
+      "versions": [
+        {
+          "tree": "/Users/admin/.codex/worktrees/server-desktop-review-20261012/codeshell",
+          "exists": true,
+          "sha256": "1ab3344d5df117d4f064ede2fd344936cbe1e7b4256c09fd7c886e6052e68102"
+        },
+        {
+          "tree": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell",
+          "exists": true,
+          "sha256": "1ab3344d5df117d4f064ede2fd344936cbe1e7b4256c09fd7c886e6052e68102"
+        }
+      ]
+    },
+    {
+      "path": "packages/desktop/src/main/index.ts",
+      "same": false,
+      "versions": [
+        {
+          "tree": "/Users/admin/.codex/worktrees/server-desktop-review-20261012/codeshell",
+          "exists": true,
+          "sha256": "cf5ba2f931c816cb44b598d54ef173793e40f554335de75d103f7b0ee5a2c26a"
+        },
+        {
+          "tree": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell",
+          "exists": true,
+          "sha256": "426bfe5ccc8387db82f5bbe47ce1b83681995e7192f37bb03775f4eca37d0d80"
+        }
+      ]
+    },
+    {
+      "path": "packages/desktop/src/preload/project-authority-api.ts",
+      "same": true,
+      "versions": [
+        {
+          "tree": "/Users/admin/.codex/worktrees/server-desktop-review-20261012/codeshell",
+          "exists": true,
+          "sha256": "4e2398a2b0e34999499989084bbd3c98654d9c46e465ccafe2a8ce8fce7da07c"
+        },
+        {
+          "tree": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell",
+          "exists": true,
+          "sha256": "4e2398a2b0e34999499989084bbd3c98654d9c46e465ccafe2a8ce8fce7da07c"
+        }
+      ]
+    },
+    {
+      "path": "packages/desktop/src/renderer/MessageStream.tsx",
+      "same": true,
+      "versions": [
+        {
+          "tree": "/Users/admin/.codex/worktrees/server-desktop-review-20261012/codeshell",
+          "exists": true,
+          "sha256": "b77d1f48611f798d17942030bc6e7d928e581c08216bf470ba9a3aaf7a8798d6"
+        },
+        {
+          "tree": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell",
+          "exists": true,
+          "sha256": "b77d1f48611f798d17942030bc6e7d928e581c08216bf470ba9a3aaf7a8798d6"
+        }
+      ]
+    },
+    {
+      "path": "packages/desktop/src/renderer/ChatView.tsx",
+      "same": true,
+      "versions": [
+        {
+          "tree": "/Users/admin/.codex/worktrees/server-desktop-review-20261012/codeshell",
+          "exists": true,
+          "sha256": "63611e699f58eb8837e0adbe460d622ecf3bd6c16593ba310035069a0d4f433c"
+        },
+        {
+          "tree": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell",
+          "exists": true,
+          "sha256": "63611e699f58eb8837e0adbe460d622ecf3bd6c16593ba310035069a0d4f433c"
+        }
+      ]
+    },
+    {
+      "path": "packages/desktop/src/renderer/App.tsx",
+      "same": true,
+      "versions": [
+        {
+          "tree": "/Users/admin/.codex/worktrees/server-desktop-review-20261012/codeshell",
+          "exists": true,
+          "sha256": "556e985d3c0898b5915c713a2a0a280f59bf504b4797e89278143bdcdfd265b8"
+        },
+        {
+          "tree": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell",
+          "exists": true,
+          "sha256": "556e985d3c0898b5915c713a2a0a280f59bf504b4797e89278143bdcdfd265b8"
+        }
+      ]
+    },
+    {
+      "path": "packages/desktop/src/renderer/app/useRunController.ts",
+      "same": true,
+      "versions": [
+        {
+          "tree": "/Users/admin/.codex/worktrees/server-desktop-review-20261012/codeshell",
+          "exists": true,
+          "sha256": "5bcf8b21e139ddd644175d0eedd528c7a32789f67771d056c3c71f52bd3cf5b2"
+        },
+        {
+          "tree": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell",
+          "exists": true,
+          "sha256": "5bcf8b21e139ddd644175d0eedd528c7a32789f67771d056c3c71f52bd3cf5b2"
+        }
+      ]
+    },
+    {
+      "path": "packages/desktop/src/renderer/panels/useReviewAvailability.ts",
+      "same": true,
+      "versions": [
+        {
+          "tree": "/Users/admin/.codex/worktrees/server-desktop-review-20261012/codeshell",
+          "exists": true,
+          "sha256": "c25b41aa6099aee42f6786432222fcc0d2cfe7dca94c82d117b9d3e7ba827862"
+        },
+        {
+          "tree": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell",
+          "exists": true,
+          "sha256": "c25b41aa6099aee42f6786432222fcc0d2cfe7dca94c82d117b9d3e7ba827862"
+        }
+      ]
+    },
+    {
+      "path": "packages/desktop/src/renderer/panels/PanelArea.tsx",
+      "same": true,
+      "versions": [
+        {
+          "tree": "/Users/admin/.codex/worktrees/server-desktop-review-20261012/codeshell",
+          "exists": true,
+          "sha256": "b7b292627c1f54b0928983df20c3d85b159fce9729def903800dcef4338f9026"
+        },
+        {
+          "tree": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell",
+          "exists": true,
+          "sha256": "b7b292627c1f54b0928983df20c3d85b159fce9729def903800dcef4338f9026"
+        }
+      ]
+    },
+    {
+      "path": "packages/desktop/src/renderer/panels/PanelRegistry.ts",
+      "same": true,
+      "versions": [
+        {
+          "tree": "/Users/admin/.codex/worktrees/server-desktop-review-20261012/codeshell",
+          "exists": true,
+          "sha256": "c440f537f5918a16842dd32ca52761e5f54d6b2e2d6e951c48aa6022290fd3f1"
+        },
+        {
+          "tree": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell",
+          "exists": true,
+          "sha256": "c440f537f5918a16842dd32ca52761e5f54d6b2e2d6e951c48aa6022290fd3f1"
+        }
+      ]
+    },
+    {
+      "path": "docs/todo/multi-folder-local-project-plan.md",
+      "same": true,
+      "versions": [
+        {
+          "tree": "/Users/admin/.codex/worktrees/server-desktop-review-20261012/codeshell",
+          "exists": true,
+          "sha256": "440edd29d618f7871f5e490ebf11afd4df7937bb8b834f64c66dee9c586d7961"
+        },
+        {
+          "tree": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell",
+          "exists": true,
+          "sha256": "440edd29d618f7871f5e490ebf11afd4df7937bb8b834f64c66dee9c586d7961"
+        }
+      ]
+    },
+    {
+      "path": "docs/todo/small-features-2026-07-10/session-fork.md",
+      "same": true,
+      "versions": [
+        {
+          "tree": "/Users/admin/.codex/worktrees/server-desktop-review-20261012/codeshell",
+          "exists": true,
+          "sha256": "36c4759dd9ddc87a07091cddee060936813db24bea274189e5df1a2f5fbac123"
+        },
+        {
+          "tree": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell",
+          "exists": true,
+          "sha256": "36c4759dd9ddc87a07091cddee060936813db24bea274189e5df1a2f5fbac123"
+        }
+      ]
+    }
+  ]
+}

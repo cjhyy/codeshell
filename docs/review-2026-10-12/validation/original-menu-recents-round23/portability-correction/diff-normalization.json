@@ -1,0 +1,7 @@
+{
+  "rawOriginalDiff": "portability-correction.diff.gz",
+  "rawDecompressedSha256": "6c91e0763c1f1738f9508e4b145a4ee249857c609c82406621d9379f372ea8de",
+  "readableDiff": "portability-correction.diff",
+  "readableSha256": "71383923b365a45c9ed8521193b618f27e0df5d403e8d7f9ccddfe6359147aab",
+  "normalization": "three whitespace-only unified-diff context lines stripped for git diff --check; original exact bytes recoverable by gzip; fixture and guard source bytes unchanged"
+}

@@ -1,0 +1,276 @@
+{
+  "scope": "real Electron defaultSession + same owned file storage; independent JS projection; NOT product App/React/ModelPill E2E",
+  "assertions": 31,
+  "appPid": 62446,
+  "nativeElectron": true,
+  "productMainLoaded": false,
+  "productPreloadLoaded": false,
+  "coreHostImported": false,
+  "workerCreated": false,
+  "actualModelRun": false,
+  "guard": {
+    "mainPid": 62446,
+    "homeId": "efd9510e488f08e5f2bddbbe9c33a119a79a9159cea85ffa19a88bc44632d845",
+    "receipts": [
+      {
+        "pid": 62446,
+        "ppid": 62444,
+        "origin": "http://127.0.0.1:9",
+        "homeId": "efd9510e488f08e5f2bddbbe9c33a119a79a9159cea85ffa19a88bc44632d845"
+      }
+    ],
+    "spawned": [],
+    "workerCreated": false
+  },
+  "firstInfo": {
+    "electron": "33.4.11",
+    "node": "v20.18.3",
+    "userData": "/private/var/folders/1d/6__4f4y51g90nblfptt8s9v80000gn/T/codeshell-model-storage-round20-kTD9wF/electron-user-data",
+    "sessionData": "/private/var/folders/1d/6__4f4y51g90nblfptt8s9v80000gn/T/codeshell-model-storage-round20-kTD9wF/electron-session-data",
+    "home": "/private/var/folders/1d/6__4f4y51g90nblfptt8s9v80000gn/T/codeshell-model-storage-round20-kTD9wF",
+    "codeShellHome": "/private/var/folders/1d/6__4f4y51g90nblfptt8s9v80000gn/T/codeshell-model-storage-round20-kTD9wF/.code-shell",
+    "appName": "codeshell-owned-model-storage-round20",
+    "childAttempts": [],
+    "networkAttempts": [],
+    "pathsSetBeforeReady": true,
+    "requests": [
+      {
+        "url": "file:///private/var/folders/1d/6__4f4y51g90nblfptt8s9v80000gn/T/codeshell-model-storage-round20-kTD9wF/owned-storage.html",
+        "allowed": true
+      },
+      {
+        "url": "file:///private/var/folders/1d/6__4f4y51g90nblfptt8s9v80000gn/T/codeshell-model-storage-round20-kTD9wF/owned-storage.html",
+        "allowed": true
+      }
+    ],
+    "rendererErrors": [],
+    "windows": [
+      {
+        "id": 1,
+        "webContentsId": 1,
+        "rendererPid": 62451,
+        "usesDefaultSession": true,
+        "url": "file:///private/var/folders/1d/6__4f4y51g90nblfptt8s9v80000gn/T/codeshell-model-storage-round20-kTD9wF/owned-storage.html"
+      },
+      {
+        "id": 2,
+        "webContentsId": 2,
+        "rendererPid": 62452,
+        "usesDefaultSession": true,
+        "url": "file:///private/var/folders/1d/6__4f4y51g90nblfptt8s9v80000gn/T/codeshell-model-storage-round20-kTD9wF/owned-storage.html"
+      }
+    ]
+  },
+  "finalInfo": {
+    "electron": "33.4.11",
+    "node": "v20.18.3",
+    "userData": "/private/var/folders/1d/6__4f4y51g90nblfptt8s9v80000gn/T/codeshell-model-storage-round20-kTD9wF/electron-user-data",
+    "sessionData": "/private/var/folders/1d/6__4f4y51g90nblfptt8s9v80000gn/T/codeshell-model-storage-round20-kTD9wF/electron-session-data",
+    "home": "/private/var/folders/1d/6__4f4y51g90nblfptt8s9v80000gn/T/codeshell-model-storage-round20-kTD9wF",
+    "codeShellHome": "/private/var/folders/1d/6__4f4y51g90nblfptt8s9v80000gn/T/codeshell-model-storage-round20-kTD9wF/.code-shell",
+    "appName": "codeshell-owned-model-storage-round20",
+    "childAttempts": [],
+    "networkAttempts": [],
+    "pathsSetBeforeReady": true,
+    "requests": [
+      {
+        "url": "file:///private/var/folders/1d/6__4f4y51g90nblfptt8s9v80000gn/T/codeshell-model-storage-round20-kTD9wF/owned-storage.html",
+        "allowed": true
+      },
+      {
+        "url": "file:///private/var/folders/1d/6__4f4y51g90nblfptt8s9v80000gn/T/codeshell-model-storage-round20-kTD9wF/owned-storage.html",
+        "allowed": true
+      },
+      {
+        "url": "file:///private/var/folders/1d/6__4f4y51g90nblfptt8s9v80000gn/T/codeshell-model-storage-round20-kTD9wF/owned-storage.html",
+        "allowed": true
+      },
+      {
+        "url": "file:///private/var/folders/1d/6__4f4y51g90nblfptt8s9v80000gn/T/codeshell-model-storage-round20-kTD9wF/owned-storage.html",
+        "allowed": true
+      },
+      {
+        "url": "file:///private/var/folders/1d/6__4f4y51g90nblfptt8s9v80000gn/T/codeshell-model-storage-round20-kTD9wF/owned-storage.html",
+        "allowed": true
+      },
+      {
+        "url": "file:///private/var/folders/1d/6__4f4y51g90nblfptt8s9v80000gn/T/codeshell-model-storage-round20-kTD9wF/owned-storage.html",
+        "allowed": true
+      },
+      {
+        "url": "file:///private/var/folders/1d/6__4f4y51g90nblfptt8s9v80000gn/T/codeshell-model-storage-round20-kTD9wF/owned-storage.html",
+        "allowed": true
+      }
+    ],
+    "rendererErrors": [],
+    "windows": [
+      {
+        "id": 1,
+        "webContentsId": 1,
+        "rendererPid": 62451,
+        "usesDefaultSession": true,
+        "url": "file:///private/var/folders/1d/6__4f4y51g90nblfptt8s9v80000gn/T/codeshell-model-storage-round20-kTD9wF/owned-storage.html"
+      },
+      {
+        "id": 2,
+        "webContentsId": 2,
+        "rendererPid": 62452,
+        "usesDefaultSession": true,
+        "url": "file:///private/var/folders/1d/6__4f4y51g90nblfptt8s9v80000gn/T/codeshell-model-storage-round20-kTD9wF/owned-storage.html"
+      },
+      {
+        "id": 3,
+        "webContentsId": 3,
+        "rendererPid": 62454,
+        "usesDefaultSession": true,
+        "url": "file:///private/var/folders/1d/6__4f4y51g90nblfptt8s9v80000gn/T/codeshell-model-storage-round20-kTD9wF/owned-storage.html"
+      },
+      {
+        "id": 4,
+        "webContentsId": 4,
+        "rendererPid": 62456,
+        "usesDefaultSession": false,
+        "url": "file:///private/var/folders/1d/6__4f4y51g90nblfptt8s9v80000gn/T/codeshell-model-storage-round20-kTD9wF/owned-storage.html"
+      }
+    ]
+  },
+  "observations": [
+    {
+      "scenario": "two-existing-default-session-windows",
+      "aSaved": {
+        "map": {
+          "project-a::session-a": "fixture-alpha"
+        },
+        "initialMap": {},
+        "stored": {
+          "project-a::session-a": "fixture-alpha"
+        },
+        "storageEvents": [],
+        "url": "file:///private/var/folders/1d/6__4f4y51g90nblfptt8s9v80000gn/T/codeshell-model-storage-round20-kTD9wF/owned-storage.html",
+        "origin": "file://"
+      },
+      "bStale": {
+        "map": {},
+        "initialMap": {},
+        "stored": {
+          "project-a::session-a": "fixture-alpha"
+        },
+        "storageEvents": [
+          {
+            "key": "codeshell.overrides.model",
+            "newValue": "{\"project-a::session-a\":\"fixture-alpha\"}"
+          }
+        ],
+        "url": "file:///private/var/folders/1d/6__4f4y51g90nblfptt8s9v80000gn/T/codeshell-model-storage-round20-kTD9wF/owned-storage.html",
+        "origin": "file://"
+      },
+      "aAfterB": {
+        "map": {
+          "project-a::session-a": "fixture-alpha"
+        },
+        "initialMap": {},
+        "stored": {
+          "project-b::session-b": "fixture-beta"
+        },
+        "storageEvents": [
+          {
+            "key": "codeshell.overrides.model",
+            "newValue": "{\"project-b::session-b\":\"fixture-beta\"}"
+          }
+        ],
+        "url": "file:///private/var/folders/1d/6__4f4y51g90nblfptt8s9v80000gn/T/codeshell-model-storage-round20-kTD9wF/owned-storage.html",
+        "origin": "file://"
+      },
+      "bAfterB": {
+        "map": {
+          "project-b::session-b": "fixture-beta"
+        },
+        "initialMap": {},
+        "stored": {
+          "project-b::session-b": "fixture-beta"
+        },
+        "storageEvents": [
+          {
+            "key": "codeshell.overrides.model",
+            "newValue": "{\"project-a::session-a\":\"fixture-alpha\"}"
+          }
+        ],
+        "url": "file:///private/var/folders/1d/6__4f4y51g90nblfptt8s9v80000gn/T/codeshell-model-storage-round20-kTD9wF/owned-storage.html",
+        "origin": "file://"
+      },
+      "aReloaded": {
+        "map": {
+          "project-b::session-b": "fixture-beta"
+        },
+        "initialMap": {
+          "project-b::session-b": "fixture-beta"
+        },
+        "stored": {
+          "project-b::session-b": "fixture-beta"
+        },
+        "storageEvents": [],
+        "url": "file:///private/var/folders/1d/6__4f4y51g90nblfptt8s9v80000gn/T/codeshell-model-storage-round20-kTD9wF/owned-storage.html",
+        "origin": "file://"
+      },
+      "fallback": "fixture-default"
+    },
+    {
+      "scenario": "normal-late-open-window",
+      "lateOpened": {
+        "map": {
+          "project-a::session-a": "fixture-alpha"
+        },
+        "initialMap": {
+          "project-a::session-a": "fixture-alpha"
+        },
+        "stored": {
+          "project-a::session-a": "fixture-alpha"
+        },
+        "storageEvents": [],
+        "url": "file:///private/var/folders/1d/6__4f4y51g90nblfptt8s9v80000gn/T/codeshell-model-storage-round20-kTD9wF/owned-storage.html",
+        "origin": "file://"
+      },
+      "afterLateSave": {
+        "map": {
+          "project-a::session-a": "fixture-alpha",
+          "project-b::session-b": "fixture-beta"
+        },
+        "initialMap": {
+          "project-a::session-a": "fixture-alpha"
+        },
+        "stored": {
+          "project-a::session-a": "fixture-alpha",
+          "project-b::session-b": "fixture-beta"
+        },
+        "storageEvents": [],
+        "url": "file:///private/var/folders/1d/6__4f4y51g90nblfptt8s9v80000gn/T/codeshell-model-storage-round20-kTD9wF/owned-storage.html",
+        "origin": "file://"
+      },
+      "aReloaded": {
+        "map": {
+          "project-a::session-a": "fixture-alpha",
+          "project-b::session-b": "fixture-beta"
+        },
+        "initialMap": {
+          "project-a::session-a": "fixture-alpha",
+          "project-b::session-b": "fixture-beta"
+        },
+        "stored": {
+          "project-a::session-a": "fixture-alpha",
+          "project-b::session-b": "fixture-beta"
+        },
+        "storageEvents": [],
+        "url": "file:///private/var/folders/1d/6__4f4y51g90nblfptt8s9v80000gn/T/codeshell-model-storage-round20-kTD9wF/owned-storage.html",
+        "origin": "file://"
+      }
+    },
+    {
+      "scenario": "explicit-partition-boundary",
+      "distinctSession": true,
+      "preservedDefaultMap": {
+        "project-a::session-a": "fixture-alpha",
+        "project-b::session-b": "fixture-beta"
+      }
+    }
+  ]
+}

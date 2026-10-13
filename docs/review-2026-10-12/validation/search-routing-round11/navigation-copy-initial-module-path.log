@@ -1,0 +1,51 @@
+bun test v1.3.11 (af24e281)
+
+docs/review-2026-10-12/reproductions/search-routing-round11/navigation-stale-open.test.tsx:
+fatal: not a git repository (or any of the parent directories): .git
+fatal: not a git repository (or any of the parent directories): .git
+134 |   );
+135 | }
+136 |
+137 | function useDialogApi(): DialogApi {
+138 |   const ctx = useContext(DialogContextRef);
+139 |   if (!ctx) throw new Error("dialog hooks must be used inside <DialogProvider>");
+                            ^
+error: dialog hooks must be used inside <DialogProvider>
+      at useDialogApi (/Users/admin/.codex/worktrees/server-desktop-review-20261012/codeshell/packages/desktop/src/renderer/ui/DialogProvider.tsx:139:23)
+      at useConfirm (/Users/admin/.codex/worktrees/server-desktop-review-20261012/codeshell/packages/desktop/src/renderer/ui/DialogProvider.tsx:144:10)
+      at PetLongTaskCard (/Users/admin/.codex/worktrees/server-desktop-review-20261012/codeshell//packages/desktop/src/renderer/pet/PetLongTaskSection.tsx:83:19)
+      at react_stack_bottom_frame (/Users/admin/.codex/worktrees/server-desktop-review-20261012/codeshell/node_modules/.bun/react-dom@19.2.6+d86b59289c1a13ae/node_modules/react-dom/cjs/react-dom-client.development.js:25904:20)
+      at renderWithHooks (/Users/admin/.codex/worktrees/server-desktop-review-20261012/codeshell/node_modules/.bun/react-dom@19.2.6+d86b59289c1a13ae/node_modules/react-dom/cjs/react-dom-client.development.js:7662:22)
+      at updateFunctionComponent (/Users/admin/.codex/worktrees/server-desktop-review-20261012/codeshell/node_modules/.bun/react-dom@19.2.6+d86b59289c1a13ae/node_modules/react-dom/cjs/react-dom-client.development.js:10166:19)
+      at runWithFiberInDEV (/Users/admin/.codex/worktrees/server-desktop-review-20261012/codeshell/node_modules/.bun/react-dom@19.2.6+d86b59289c1a13ae/node_modules/react-dom/cjs/react-dom-client.development.js:874:13)
+      at performUnitOfWork (/Users/admin/.codex/worktrees/server-desktop-review-20261012/codeshell/node_modules/.bun/react-dom@19.2.6+d86b59289c1a13ae/node_modules/react-dom/cjs/react-dom-client.development.js:17641:22)
+      at workLoopSync (/Users/admin/.codex/worktrees/server-desktop-review-20261012/codeshell/node_modules/.bun/react-dom@19.2.6+d86b59289c1a13ae/node_modules/react-dom/cjs/react-dom-client.development.js:17469:41)
+      at renderRootSync (/Users/admin/.codex/worktrees/server-desktop-review-20261012/codeshell/node_modules/.bun/react-dom@19.2.6+d86b59289c1a13ae/node_modules/react-dom/cjs/react-dom-client.development.js:17450:11)
+(fail) CONFIRMED delayed real disk-session open replaces a later global-search selection [294.41ms]
+fatal: not a git repository (or any of the parent directories): .git
+fatal: not a git repository (or any of the parent directories): .git
+134 |   );
+135 | }
+136 |
+137 | function useDialogApi(): DialogApi {
+138 |   const ctx = useContext(DialogContextRef);
+139 |   if (!ctx) throw new Error("dialog hooks must be used inside <DialogProvider>");
+                            ^
+error: dialog hooks must be used inside <DialogProvider>
+      at useDialogApi (/Users/admin/.codex/worktrees/server-desktop-review-20261012/codeshell/packages/desktop/src/renderer/ui/DialogProvider.tsx:139:23)
+      at useConfirm (/Users/admin/.codex/worktrees/server-desktop-review-20261012/codeshell/packages/desktop/src/renderer/ui/DialogProvider.tsx:144:10)
+      at PetLongTaskCard (/Users/admin/.codex/worktrees/server-desktop-review-20261012/codeshell//packages/desktop/src/renderer/pet/PetLongTaskSection.tsx:83:19)
+      at react_stack_bottom_frame (/Users/admin/.codex/worktrees/server-desktop-review-20261012/codeshell/node_modules/.bun/react-dom@19.2.6+d86b59289c1a13ae/node_modules/react-dom/cjs/react-dom-client.development.js:25904:20)
+      at renderWithHooks (/Users/admin/.codex/worktrees/server-desktop-review-20261012/codeshell/node_modules/.bun/react-dom@19.2.6+d86b59289c1a13ae/node_modules/react-dom/cjs/react-dom-client.development.js:7662:22)
+      at updateFunctionComponent (/Users/admin/.codex/worktrees/server-desktop-review-20261012/codeshell/node_modules/.bun/react-dom@19.2.6+d86b59289c1a13ae/node_modules/react-dom/cjs/react-dom-client.development.js:10166:19)
+      at runWithFiberInDEV (/Users/admin/.codex/worktrees/server-desktop-review-20261012/codeshell/node_modules/.bun/react-dom@19.2.6+d86b59289c1a13ae/node_modules/react-dom/cjs/react-dom-client.development.js:874:13)
+      at performUnitOfWork (/Users/admin/.codex/worktrees/server-desktop-review-20261012/codeshell/node_modules/.bun/react-dom@19.2.6+d86b59289c1a13ae/node_modules/react-dom/cjs/react-dom-client.development.js:17641:22)
+      at workLoopSync (/Users/admin/.codex/worktrees/server-desktop-review-20261012/codeshell/node_modules/.bun/react-dom@19.2.6+d86b59289c1a13ae/node_modules/react-dom/cjs/react-dom-client.development.js:17469:41)
+      at renderRootSync (/Users/admin/.codex/worktrees/server-desktop-review-20261012/codeshell/node_modules/.bun/react-dom@19.2.6+d86b59289c1a13ae/node_modules/react-dom/cjs/react-dom-client.development.js:17450:11)
+(fail) CONTROL completed disk-session open followed by global search keeps the later selection [138.83ms]
+
+ 0 pass
+ 2 fail
+ 18 expect() calls
+Ran 2 tests across 1 file. [1.55s]
+Bun test process failed (1)

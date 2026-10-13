@@ -1,0 +1,15 @@
+bun test v1.3.11 (af24e281)
+
+docs/review-2026-10-12/reproductions/cli-recovery-round15/takeover-mode.test.tsx:
+fatal: not a git repository (or any of the parent directories): .git
+{"candidate":"concurrent-linked-takeover-mode","actualRoomViewAndConversation":true,"actualMainCallbacks":true,"actualProjectAndDiskIdentity":true,"explicitlyTrustedCwd":true,"headerAndStoredModeAfterTakeover":"default","currentAgentModeAfterTakeover":"bypassPermissions","replacementAfterTakeover":false,"reopenDefaultDoesNotRestart":true,"acceptEditsThenDefaultRestartsAndRecovers":true,"nativeCliStarted":false}
+(pass) CANDIDATE stale observer takeover resets metadata/header to default but retains the concurrently reopened bypass agent [372.00ms]
+fatal: not a git repository (or any of the parent directories): .git
+{"control":"linked-takeover-default-and-identity","noProbeOnObserve":true,"coldDefaultAgent":true,"activeDefaultNoRestart":true,"staleIdentityRejected":true}
+(pass) CONTROL cold takeover uses default, active default takeover is idempotent, and mismatched cwd cannot take control [173.64ms]
+
+ 2 pass
+ 0 fail
+ 53 expect() calls
+Ran 2 tests across 1 file. [2.29s]
+Completed Bun shard: 2 tests, 0 skipped; 0 failures.

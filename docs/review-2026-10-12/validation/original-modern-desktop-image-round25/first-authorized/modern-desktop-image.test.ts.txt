@@ -1,0 +1,247 @@
+import { attempts, guardScope } from "./network-guard.ts";
+// PREPARED ONLY. Parent must review this exact source before any execution.
+import { afterAll, expect, mock, test } from "bun:test";
+import assert from "node:assert/strict";
+import { existsSync, mkdirSync, readFileSync, realpathSync, rmSync, writeFileSync } from "node:fs";
+import { dirname, join, relative, resolve } from "node:path";
+import { createHash } from "node:crypto";
+
+const repo = resolve(process.cwd());
+const evidence = import.meta.dir;
+const isolatedHome = realpathSync(process.env.HOME!);
+assert.ok(process.env.CODE_SHELL_TEST_HOME?.startsWith(isolatedHome + "/"));
+assert.notEqual(isolatedHome, "/Users/admin");
+const startedAt = new Date().toISOString();
+const ownedPaths: string[] = [];
+const observations: any[] = [];
+const cleanups: any[] = [];
+let phase = "guard-installed";
+let completed = false;
+let failure: string | null = null;
+const sourcePaths = [
+  "packages/core/src/index.ts", "packages/core/src/index.internal.ts",
+  "packages/core/dist/index.js", "packages/core/dist/index.internal.js",
+  "packages/core/src/session/session-manager.ts", "packages/core/dist/session/session-manager.js",
+  "packages/core/src/session/transcript.ts", "packages/core/dist/session/transcript.js",
+  "packages/core/src/engine/run-image-input.ts", "packages/core/src/engine/input-attachments.ts",
+  "packages/core/src/engine/run-session-open.ts", "packages/core/src/engine/run-stream.ts",
+  "packages/core/src/engine/turn-loop.ts", "packages/core/src/engine/parse-task.ts",
+  "packages/core/dist/engine/run-stream.js", "packages/core/src/engine/run-output-user-message.ts",
+  "packages/core/dist/engine/run-output-user-message.js", "packages/core/src/session/output-journal.ts",
+  "packages/core/src/protocol/server.ts", "packages/core/src/protocol/chat-session.ts",
+  "packages/server/src/mobile-remote/mobile-chat-turn.ts", "packages/server/src/mobile-remote/mobile-attachments.ts",
+  "packages/server/src/mobile-remote/mobile-run-dispatch.ts", "packages/server/src/attachment-service.ts",
+  "packages/server/src/attachment-service.test.ts", "packages/desktop/src/main/mobile-remote/handle-client-event.ts",
+  "packages/desktop/src/main/agent-bridge.ts", "packages/desktop/src/main/session-transcript-ipc.ts",
+  "packages/desktop/src/main/mobile-remote-orchestrator.ts",
+  "packages/desktop/src/main/transcript-reader.ts", "packages/desktop/src/main/SessionSnapshotStore.ts",
+  "packages/desktop/src/preload/session-transcript-api.ts", "packages/desktop/src/preload/index.ts",
+  "packages/desktop/src/renderer/App.tsx", "packages/desktop/src/renderer/ChatView.tsx",
+  "packages/desktop/src/renderer/MessageStream.tsx", "packages/desktop/src/renderer/types.ts",
+  "packages/desktop/src/renderer/transcripts.ts", "packages/desktop/src/renderer/transcriptHydration.ts",
+  "packages/desktop/src/renderer/transcriptsReducer.ts", "packages/desktop/src/renderer/sessionPersistence.ts",
+  "packages/desktop/src/renderer/app/useTranscriptBuckets.ts", "packages/desktop/src/renderer/app/outputJournalRecovery.ts",
+  "packages/desktop/src/renderer/app/useRunController.ts", "packages/desktop/src/renderer/app/useHostSubscriptions.ts",
+  "packages/desktop/src/renderer/app/useTranscriptBuckets.test.tsx", "packages/desktop/src/renderer/modelSwitchRun.ts",
+  "packages/desktop/src/renderer/chat/attachments.ts", "packages/desktop/src/renderer/pet/PetChatHost.tsx",
+  "packages/web/src/lib/userMessageDisplay.ts", "packages/web/src/lib/streamReducer.ts",
+  "packages/web/src/lib/outputJournalRecovery.ts", "packages/web/app/Workbench.tsx",
+  "packages/web/src/test-utils/renderHook.tsx", "node_modules/react/index.js",
+  "packages/web/node_modules/react-dom/server.js",
+  "packages/desktop/src/renderer/lib/utils.ts", "packages/desktop/src/renderer/components/ui/button.tsx",
+  "packages/desktop/src/renderer/components/ui/input.tsx", "packages/desktop/src/renderer/components/ui/textarea.tsx",
+  "packages/desktop/src/renderer/components/ui/dropdown-menu.tsx",
+  "docs/archive/electron-image-input-design.md", "docs/todo/durable-output-journal-delivery.md",
+];
+const sourceManifest: any[] = [];
+const productResolutions: any[] = [];
+const scope = {
+  producer: "real paired dispatch/materialization + canonical input helpers + SessionManager/Transcript; submit/acceptance is controlled, no Engine.run/provider/worker",
+  journal: "actual Core dist run-stream publisher and journal writer; source counterparts audited; no handwritten user display event",
+  desktop: "actual IPC handlers/preload facade, modern recovery, hydrate reducer and MessageStream SSR; useTranscriptBuckets/App wiring statically reviewed, no hook/Electron/full App",
+  cache: "empty Desktop reducer/local replay base for a paired Session with no Desktop optimistic copy",
+  web: "same actual journal events through Web reducer and Workbench SSR; no socket/auth/authority service",
+  control: "actual inline encoder and Desktop optimistic append/MessageStream render only; no assertion that native run persists displayText",
+  manifests: "source/dist SHA receipts plus resolution-only addresses, not module-cache/import-graph probes",
+  aliases: "five actual presentation leaf modules forwarded under both bare @ alias and absolute path; same actual exports, no user/image/recovery logic mocked",
+};
+function receipt() {
+  writeFileSync(join(evidence, "observed.json"), JSON.stringify({ repo, startedAt, finishedAt: new Date().toISOString(), completed, phase, failure, isolatedHome, ownedPaths, guardScope, attempts, sourceManifest, productResolutions, scope, cleanups, observations }, null, 2));
+}
+afterAll(receipt);
+try {
+  phase = "source-manifest-and-resolution";
+  sourceManifest.push(...sourcePaths.map((path) => ({ path, sha256: createHash("sha256").update(readFileSync(join(repo, path))).digest("hex") })));
+  productResolutions.push(...[
+    ["@cjhyy/code-shell-core", "packages/desktop/src/main/session-transcript-ipc.ts"],
+    ["@cjhyy/code-shell-core/internal", "packages/desktop/src/main/session-transcript-ipc.ts"],
+    ["@cjhyy/code-shell-server/storage", "packages/desktop/src/main/session-transcript-ipc.ts"],
+    ["@cjhyy/code-shell-web", "packages/desktop/src/renderer/types.ts"],
+  ].map(([specifier, importer]) => {
+    const resolved = realpathSync(Bun.resolveSync(specifier!, dirname(join(repo, importer!))));
+    assert.ok(resolved.startsWith(realpathSync(repo) + "/"));
+    return { specifier, importer, resolved: relative(repo, resolved), sha256: createHash("sha256").update(readFileSync(resolved)).digest("hex") };
+  }));
+} catch (error) { failure = String(error); phase = `failed:${phase}`; receipt(); throw error; }
+async function productImport(path: string): Promise<any> {
+  phase = `import:${path}`;
+  try { return await import(join(repo, path)); }
+  catch (error) { failure = String(error); receipt(); throw error; }
+}
+const React = await productImport("node_modules/react/index.js");
+const { renderToStaticMarkup } = await productImport("packages/web/node_modules/react-dom/server.js");
+// /tmp and copied root/docs fixtures have different nearest tsconfig mappings.
+// Forward exact real UI-leaf exports under both identities; retain the actual
+// MessageStream user branch, inline decoder, metadata, recovery and reducers.
+for (const [alias, path] of [
+  ["@/lib/utils", "packages/desktop/src/renderer/lib/utils.ts"],
+  ["@/components/ui/button", "packages/desktop/src/renderer/components/ui/button.tsx"],
+  ["@/components/ui/input", "packages/desktop/src/renderer/components/ui/input.tsx"],
+  ["@/components/ui/textarea", "packages/desktop/src/renderer/components/ui/textarea.tsx"],
+  ["@/components/ui/dropdown-menu", "packages/desktop/src/renderer/components/ui/dropdown-menu.tsx"],
+]) {
+  const actual = await productImport(path!);
+  const factory = () => actual;
+  mock.module(alias!, factory);
+  mock.module(join(repo, path!), factory);
+}
+const { SessionManager, sessionsRoot, codeShellHome } = await productImport("packages/core/dist/index.js");
+const { SessionOutputCoverageStore } = await productImport("packages/core/dist/index.internal.js");
+const { buildWrappedOnStream, createRunOutputJournalPolicy } = await productImport("packages/core/dist/engine/run-stream.js");
+const { prepareRunImageInput, buildRunUserMessageContent } = await productImport("packages/core/src/engine/run-image-input.ts");
+const { dispatchMobileChatTurn } = await productImport("packages/server/src/mobile-remote/mobile-chat-turn.ts");
+const { registerSessionTranscriptIpc } = await productImport("packages/desktop/src/main/session-transcript-ipc.ts");
+const { createSessionTranscriptApi } = await productImport("packages/desktop/src/preload/session-transcript-api.ts");
+const { SessionSnapshotStore } = await productImport("packages/desktop/src/main/SessionSnapshotStore.ts");
+const { recoverDesktopOutputJournal } = await productImport("packages/desktop/src/renderer/app/outputJournalRecovery.ts");
+const { transcriptsReducer } = await productImport("packages/desktop/src/renderer/transcriptsReducer.ts");
+const { bucketKey } = await productImport("packages/desktop/src/renderer/transcripts.ts");
+const { INITIAL_STATE, appendUserMessage } = await productImport("packages/desktop/src/renderer/types.ts");
+const { MessageStream } = await productImport("packages/desktop/src/renderer/MessageStream.tsx");
+const { encodeAttachmentsForWire } = await productImport("packages/desktop/src/renderer/chat/attachments.ts");
+const { applyOutputJournalPage } = await productImport("packages/web/src/lib/outputJournalRecovery.ts");
+const { initialChatState, reduceStream } = await productImport("packages/web/src/lib/streamReducer.ts");
+const { Workbench } = await productImport("packages/web/app/Workbench.tsx");
+const { ensureMiniDom } = await productImport("packages/web/src/test-utils/renderHook.tsx");
+ensureMiniDom();
+const handlers = new Map<string, (...args: any[]) => any>();
+registerSessionTranscriptIpc({ handle: (name: string, callback: any) => handlers.set(name, callback) });
+const api = createSessionTranscriptApi({ invoke: (name: string, ...args: any[]) => {
+  assert.ok(handlers.has(name), "only actual registered transcript handlers");
+  return Promise.resolve(handlers.get(name)!(undefined, ...args));
+} });
+const noop = () => {};
+function webMarkup(chat: any, sid: string, cwd: string) {
+  const controller: any = { host: "desktop", workspaceApi: false, connection: "open", activeId: sid, chat, sessions: [], workspaceCwd: cwd, workspaceName: "Fixture", workspaceKey: "fixture", title: "Modern image", configuration: null, configurationVersion: 0, sessionsVersion: 0, draft: "", files: [], uploading: false, uploadBusy: false, hasUnsent: false, uncertain: false, running: false, localDrafts: [], approvals: [], approvalCount: () => 0, approvalContent: null, error: "", clearError: noop, setDraft: noop, removeFile: noop, selectSession: noop, newSession: noop, send: () => false, stop: noop, addFiles: noop, refreshSessions: noop, refreshConfiguration: noop, onAuthLost: noop };
+  return renderToStaticMarkup(React.createElement(Workbench, { controller }));
+}
+// The valid PNG is copied from packages/server/src/attachment-service.test.ts:28–33.
+const png = Buffer.from("iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=", "base64");
+const dataUrl = `data:image/png;base64,${png.toString("base64")}`;
+
+for (const prompt of ["Describe the modern image", ""]) {
+test(`modern paired image ${prompt ? "with prose" : "only"} recovers metadata but Desktop omits its display`, async () => {
+  const sid = prompt ? "f25-paired-image-text" : "f25-paired-image-only";
+  const cwd = join(codeShellHome(), "round25-owned-no-repo", sid);
+  const sessionDirectory = join(sessionsRoot(), sid);
+  ownedPaths.push(cwd, sessionDirectory);
+  assert.ok(ownedPaths.every((path) => path.startsWith(isolatedHome + "/")));
+  const cleanup: any = { sid, ownedFilesRemoved: false, errors: [] };
+  cleanups.push(cleanup);
+  try {
+    phase = `producer:${sid}`;
+    mkdirSync(cwd, { recursive: true });
+    let request: any;
+    const accepted = await dispatchMobileChatTurn({
+      deviceId: "owned-synthetic-device", sessionId: sid, fallbackCwd: cwd,
+      text: prompt, runId: `request-${sid}`, clientMessageId: `submit-${sid}`,
+      attachments: [{ transport: "inline", clientId: "image-one", name: "modern-shot.png", mime: "image/png", size: png.length, dataUrl }],
+      resolveWorkspace: async (id: string, fallback: string) => { assert.equal(id, sid); assert.equal(fallback, cwd); return cwd; },
+      uploads: { claim() { throw Error("inline fixture must not claim uploads"); }, release() { throw Error("inline fixture has no release"); }, finalize() { throw Error("inline fixture has no finalization"); } },
+      bridge: {}, meta: { origin: "mobile", producer: "round25-owned-fixture" },
+      submit: async (value: any) => { request = value; return { ok: true }; },
+    });
+    assert.equal(accepted.ok, true);
+    expect(Object.hasOwn(request.params, "displayText")).toBe(false);
+    const manager = new SessionManager();
+    const session = manager.create(cwd, "gpt-4o", "openai", sid, undefined, "desktop");
+    const input = await prepareRunImageInput({ ...request.params, llm: { provider: "openai", model: "gpt-4o" } });
+    assert.equal(input.ok, true);
+    const content = buildRunUserMessageContent(input.parsedTask, cwd, input.taskText);
+    const runId = session.transcript.appendMessage("user", content, { injected: false, clientMessageId: request.params.clientMessageId, displayText: undefined }).id;
+    manager.startSessionRun(session.state, runId, request.params.clientMessageId);
+    const snapshots = new SessionSnapshotStore({ coverage: new SessionOutputCoverageStore(sessionsRoot) });
+    const emit = buildWrappedOnStream({ getSession: () => session, setLatestTodos: noop,
+      outputJournal: createRunOutputJournalPolicy(manager, () => session, () => runId),
+      userOnStream: (event: any) => snapshots.append(sid, event),
+    });
+    emit({ type: "session_started", sessionId: sid, runId, clientMessageId: request.params.clientMessageId });
+    emit({ type: "stream_request_start", turnNumber: 1, messageId: `answer-${sid}` });
+    emit({ type: "text_delta", text: "The saved answer remains visible." });
+    emit({ type: "turn_complete", reason: "completed" });
+    phase = `cold-desktop-hydration:${sid}`;
+    const durable = await recoverDesktopOutputJournal({
+      read: (options: any) => api.getSessionOutputJournal(sid, options),
+      snapshot: async () => snapshots.get(sid), canContinue: () => true,
+      latestObservedCursor: () => undefined,
+    });
+    assert.ok(durable, "actual modern recovery returns a complete prefix");
+    const bucket = bucketKey(null, sid);
+    // Same modern hydrate envelope emitted by useTranscriptBuckets, with a
+    // cold Desktop state and no local optimistic copy. The hook itself is static.
+    const begin = transcriptsReducer({}, { type: "hydrate_begin", bucket, token: 1, sessionId: sid });
+    const hydrated = transcriptsReducer(begin, { type: "hydrate_history", bucket,
+      state: durable.state, history: durable.state, replayBase: INITIAL_STATE,
+      goalAtStart: null, token: 1, snapshot: [], epoch: durable.snapshot.epoch,
+      sessionId: sid, outputCursor: durable.outputCursor,
+    });
+    const state = hydrated[bucket];
+    assert.ok(state, "actual hydration reducer commits the complete modern prefix");
+    const users = state.messages.filter((item: any) => item.kind === "user");
+    expect(users).toHaveLength(1);
+    expect(users[0].text).toBe(prompt);
+    expect(users[0].attachments).toMatchObject([{ originalName: "modern-shot.png", mime: "image/png", size: png.length }]);
+    expect(state.outputCursor).toBe(snapshots.get(sid).outputCursor);
+    const desktop = renderToStaticMarkup(React.createElement(MessageStream, { messages: state.messages, engineSessionId: sid, cwd }));
+    expect(desktop).toContain("The saved answer remains visible.");
+    expect(desktop).not.toContain("modern-shot.png");
+    expect(desktop).not.toContain("<img");
+    if (prompt) expect(desktop).toContain(prompt);
+    else expect(desktop).not.toContain("items-end px-4 py-1.5");
+
+    phase = `normal-controls:${sid}`;
+    const page = await api.getSessionOutputJournal(sid);
+    const recorded: any[] = [];
+    assert.equal(applyOutputJournalPage({ incomplete: false }, page, (event: any) => recorded.push(event)), true);
+    const chat = recorded.reduce(reduceStream, initialChatState());
+    const webUsers = chat.items.filter((item: any) => item.kind === "user");
+    expect(webUsers).toHaveLength(1);
+    expect(webUsers[0].attachments).toMatchObject([{ name: "modern-shot.png", mime: "image/png", size: png.length }]);
+    const pairedWeb = webMarkup(chat, sid, cwd);
+    expect(pairedWeb).toContain("modern-shot.png");
+    // This is the actual ordinary Desktop initial optimistic display, not persisted displayText.
+    const meta = request.params.attachments[0];
+    const wire = encodeAttachmentsForWire(prompt, [{ ...meta, name: "modern-shot.png", dataUrl }]);
+    const optimistic = appendUserMessage(INITIAL_STATE, wire, 1, undefined, undefined, undefined, undefined, request.params.clientMessageId);
+    const optimisticMarkup = renderToStaticMarkup(React.createElement(MessageStream, { messages: optimistic.messages, cwd }));
+    expect(optimisticMarkup).toContain(dataUrl);
+    expect(optimisticMarkup).toContain("modern-shot.png");
+    expect(readFileSync(meta.absPath)).toEqual(png);
+    observations.push({ sid, prompt, producerParamsKeys: Object.keys(request.params), user: users[0], desktopMarkup: desktop, webUser: webUsers[0], pairedWebMarkup: pairedWeb, optimisticMarkup, originalBytes: png.length, originalSha256: createHash("sha256").update(readFileSync(meta.absPath)).digest("hex"), outputCursor: state.outputCursor, cache: "empty Desktop reducer/local replay base; no optimistic input seeded before recovery" });
+    expect(attempts).toEqual([]);
+  } catch (error) {
+    failure = String(error); phase = `failed:${phase}`; throw error;
+  } finally {
+    for (const path of [sessionDirectory, cwd]) {
+      try { rmSync(path, { recursive: true, force: true }); } catch (error) { cleanup.errors.push(String(error)); }
+    }
+    cleanup.ownedFilesRemoved = !existsSync(sessionDirectory) && !existsSync(cwd);
+    if (!cleanup.ownedFilesRemoved) cleanup.errors.push("owned paths remain after cleanup");
+    if (cleanup.errors.length && !failure) {
+      failure = `cleanup failed: ${cleanup.errors.join("; ")}`; phase = "failed:cleanup"; receipt(); throw Error(failure);
+    }
+    receipt();
+  }
+  if (observations.length === 2) { completed = true; phase = "completed"; }
+});
+}

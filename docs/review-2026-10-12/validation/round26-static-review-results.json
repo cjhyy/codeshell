@@ -1,0 +1,34 @@
+{
+  "checkedAtSingapore": "2026-10-12T09:19:04.298805+08:00",
+  "newFindings": 0,
+  "newCommonBunFiles": 0,
+  "newCommonBunTests": 0,
+  "newBunExpects": 0,
+  "newNativeExecutions": 0,
+  "productImports": 0,
+  "fixtureExecutions": 0,
+  "preparedPlanSha256": "12d1119c631705b46337b5ad5098f4605608ffc3165b1439a6ef001472da0661",
+  "guardCopiedButNeverExecutedSha256": "6e1f5f5045f9606086f1b01e6eb988b88c5670f78000b260fcb9e035f1c69b3d",
+  "noExecutableFixturePrepared": true,
+  "staticSourceFiles": 29,
+  "staticSameFullFiles": 28,
+  "reviewStatusBlockSame": true,
+  "cloudSourceFiles": 10,
+  "forkIndependentSources": 28,
+  "countsAfter": {
+    "findings": 85,
+    "P1": 1,
+    "P2": 52,
+    "P3": 32,
+    "commonBunFiles": 85,
+    "commonBunTests": 250
+  },
+  "designObservations": [
+    "Ordinary summary target pre-first-run Review legacy single-root transition; no clear contract ruling it a defect."
+  ],
+  "forkFinalRawSha256": "5ab007ef246452c1a3e798c2c689a325eb08a55a332313a78e0448dd22a7586e",
+  "forkInitialRawSha256": "000de533d7bfe77920ed2b3450ba95a1ca8c6fe652c3b62c2152a15b8b749a13",
+  "cloudIndependentQualitySha256": "147c77d0aaafcc8a3bf92877b31b247659f45cb2c7e6d816152d27e9854616b2",
+  "scope": "Read-only source/design/test-source/hash review. No fixture/product imports, runner, Engine/provider/worker/Electron/Git/network/account/model. Prior test source and static manifest are not dynamic pass/cachegraph proof. Files main!=currentprimary condition remains unverified separately.",
+  "archives": "validation/original-session-continuation-round26"
+}

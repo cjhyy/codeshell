@@ -1,0 +1,15 @@
+bun test v1.3.11 (af24e281)
+
+../../../../../../private/tmp/codeshell-review-20261012-server-routing-round17/hub-routing.test.ts:
+
+# Unhandled error between tests
+-------------------------------
+error: Cannot find package 'react' from '/private/tmp/codeshell-review-20261012-server-routing-round17/hub-routing.test.ts'
+-------------------------------
+
+
+ 0 pass
+ 1 fail
+ 1 error
+Ran 1 test across 1 file. [347.00ms]
+Bun test process failed (1)

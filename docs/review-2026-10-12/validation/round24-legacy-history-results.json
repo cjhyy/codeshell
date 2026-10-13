@@ -1,0 +1,88 @@
+{
+  "checkedAtSingapore": "2026-10-12T08:28:26.818850+08:00",
+  "finding": "R84/F24-1/P3",
+  "commonBunFilesAdded": 1,
+  "commonBunTestsAdded": 1,
+  "bunExpectsPerFrozenRun": 17,
+  "nodeAssertCount": "Not separately counted; guard/control Node assertions do not add Bun expect calls.",
+  "nativeExecutionsAdded": 0,
+  "runs": [
+    {
+      "execution": "root-initial",
+      "baseline": "84740d56e55517b004948a0a0e07649ad6fbf998",
+      "archive": "reproductions/legacy-history-round24",
+      "files": 1,
+      "tests": 1,
+      "bunExpects": 17,
+      "skipped": 0,
+      "code": 0,
+      "sourceSha256": {
+        "legacy-native-history.test.ts": "dfe9749f86552d7529af7ea9d323d43ce95904ee82d5654201b17c3f62d221e3",
+        "network-guard.ts": "6e1f5f5045f9606086f1b01e6eb988b88c5670f78000b260fcb9e035f1c69b3d"
+      },
+      "sourceManifestCount": 31,
+      "resolutionOnlyEntries": 5,
+      "isolatedHome": "/private/var/folders/1d/6__4f4y51g90nblfptt8s9v80000gn/T/codeshell-bun-completion-dnbRYv/home",
+      "isolatedHomeRemoved": true,
+      "pngBytes": 68,
+      "pngSha256": "431ced6916a2a21a156e38701afe55bbd7f88969fbbfc56d7fe099d47f265460",
+      "guardAttempts": [],
+      "cleanupErrors": []
+    },
+    {
+      "execution": "root-latest",
+      "baseline": "a66f4ef291f304ee4df9da8095a90671d9a8f140",
+      "archive": "validation/latest-a66f4ef2/legacy-history-round24",
+      "files": 1,
+      "tests": 1,
+      "bunExpects": 17,
+      "skipped": 0,
+      "code": 0,
+      "sourceSha256": {
+        "legacy-native-history.test.ts": "dfe9749f86552d7529af7ea9d323d43ce95904ee82d5654201b17c3f62d221e3",
+        "network-guard.ts": "6e1f5f5045f9606086f1b01e6eb988b88c5670f78000b260fcb9e035f1c69b3d"
+      },
+      "sourceManifestCount": 31,
+      "resolutionOnlyEntries": 5,
+      "isolatedHome": "/private/var/folders/1d/6__4f4y51g90nblfptt8s9v80000gn/T/codeshell-bun-completion-I83WWy/home",
+      "isolatedHomeRemoved": true,
+      "pngBytes": 68,
+      "pngSha256": "431ced6916a2a21a156e38701afe55bbd7f88969fbbfc56d7fe099d47f265460",
+      "guardAttempts": [],
+      "cleanupErrors": []
+    }
+  ],
+  "authorFirstFailureSeparate": {
+    "archive": "validation/original-legacy-history-round24",
+    "sourceSha256": "338c90fd5af72029731105eb5f26bcc8372f862373475b90d9c7da4960ff3ccc",
+    "passed": 0,
+    "failed": 1,
+    "bunExpectsPrinted": null,
+    "completed": false,
+    "reason": "Invalid fixture PNG IDAT CRC correctly rejected before hook/fallback and before first Bun expect.",
+    "isolatedHomeRemoved": true
+  },
+  "authorFinalSeparate": {
+    "archive": "validation/original-legacy-history-round24",
+    "sourceSha256": "dfe9749f86552d7529af7ea9d323d43ce95904ee82d5654201b17c3f62d221e3",
+    "guardSha256": "6e1f5f5045f9606086f1b01e6eb988b88c5670f78000b260fcb9e035f1c69b3d",
+    "files": 1,
+    "tests": 1,
+    "bunExpects": 17,
+    "completed": true,
+    "code": 0,
+    "isolatedHomeRemoved": true
+  },
+  "preparedInitialExecutions": 0,
+  "scope": "Actual stageImageBytes/prepareRunImageInput/buildRunUserMessageContent/SessionManager/Transcript, actual Web hook/dispatcher/recovery service/reader/server history and legacy Workbench SSR. Synthetic auth/device/viewer/authority/Bridge and in-memory WebSocket; real authority/Git static only; modern control measured hook projection with no second SSR. No Engine.run/provider/worker/Electron/real transport/account. Source manifest and resolve-only addresses are not module-cache graph probes. No journal ever published before first legacy read; modern control is first journal publication, not a user-facing repair workflow.",
+  "pngBytes": 68,
+  "pngSha256": "431ced6916a2a21a156e38701afe55bbd7f88969fbbfc56d7fe099d47f265460",
+  "formalCountsAfter": {
+    "findings": 84,
+    "P1": 1,
+    "P2": 52,
+    "P3": 31,
+    "commonBunFiles": 84,
+    "commonBunTests": 248
+  }
+}

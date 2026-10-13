@@ -1,0 +1,276 @@
+{
+  "repo": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell",
+  "startedAt": "2026-10-12T00:22:58.860Z",
+  "finishedAt": "2026-10-12T00:23:00.402Z",
+  "completed": true,
+  "phase": "completed",
+  "failure": null,
+  "isolatedHome": "/private/var/folders/1d/6__4f4y51g90nblfptt8s9v80000gn/T/codeshell-bun-completion-I83WWy/home",
+  "ownedPaths": [
+    "/private/var/folders/1d/6__4f4y51g90nblfptt8s9v80000gn/T/codeshell-bun-completion-I83WWy/home/.code-shell/no-repo",
+    "/private/var/folders/1d/6__4f4y51g90nblfptt8s9v80000gn/T/codeshell-bun-completion-I83WWy/home/.code-shell/sessions/legacy-image-round24",
+    "/private/var/folders/1d/6__4f4y51g90nblfptt8s9v80000gn/T/codeshell-bun-completion-I83WWy/home/.code-shell/no-repo/.code-shell/attachments/legacy-image-round24"
+  ],
+  "cleanup": {
+    "recoveryRevoked": true,
+    "hookUnmounted": true,
+    "pendingSettled": true,
+    "ownedFilesRemoved": true,
+    "businessPhase": "completed",
+    "errors": []
+  },
+  "guardScope": {
+    "maintainedPrivateHome": true,
+    "exactOriginInstalledBeforeProductImports": "http://127.0.0.1:9",
+    "dummyOriginAlsoDenied": true,
+    "networkAndChildAPIs": "fetch/http(s)/net/tls/dgram/WebSocket/Bun listeners and child_process/worker_threads/Worker/Bun spawn",
+    "limitation": "in-process guards, not an OS sandbox or universal direct-native-network confinement"
+  },
+  "attempts": [],
+  "sourceManifest": [
+    {
+      "path": "packages/core/src/index.ts",
+      "sha256": "45759e3301dc1a2ad6717abd4817c685fd6876ed8a432f098c1796c0f9d67c18"
+    },
+    {
+      "path": "packages/core/src/index.internal.ts",
+      "sha256": "300495afe8e4c822965070b526ede6e68c793baf5b79e7571979148208b9efcf"
+    },
+    {
+      "path": "packages/core/dist/index.js",
+      "sha256": "a84c1b1a20ae29520ce9d7464933b693199f4dd2c2427fd398dcc6f73e219c84"
+    },
+    {
+      "path": "packages/core/dist/index.internal.js",
+      "sha256": "46415f56ac55a61a9f0e407264483212a1455f66dbacace7c3a3ee1aea943997"
+    },
+    {
+      "path": "packages/core/src/session/session-manager.ts",
+      "sha256": "0ebe5458e6f5701e286c552e43e0dd707177fb97b1e8726a94ae5dbcfdedcb10"
+    },
+    {
+      "path": "packages/core/src/session/transcript.ts",
+      "sha256": "0d2e32dd2e530200c626dd2f94f563d3268f9ae9ad2e37e3497d1a849669d829"
+    },
+    {
+      "path": "packages/core/src/protocol/server.ts",
+      "sha256": "001212e386311d24bd7b19bf67012bfb8d9f42d58fbdbdf7f1258a04c89a159a"
+    },
+    {
+      "path": "packages/core/src/protocol/chat-session.ts",
+      "sha256": "309e77d68d241a30126b5ac62506becff4e809631855ae795840568f2bf93c62"
+    },
+    {
+      "path": "packages/core/src/engine/run-image-input.ts",
+      "sha256": "93dc40304d49af5db6e22892ff8ee07bbef45a002aed52a38b048d096426521a"
+    },
+    {
+      "path": "packages/core/src/engine/input-attachments.ts",
+      "sha256": "58bedb68c063f1930df16f286fd60d516fb3966bb41f5d508b5c3cc7e924ab4b"
+    },
+    {
+      "path": "packages/core/src/engine/run-session-open.ts",
+      "sha256": "4ac92021afc249a3e33482691e867b689024db9fcf86aaab9f07ea344183a9ae"
+    },
+    {
+      "path": "packages/core/src/session/output-journal.ts",
+      "sha256": "2d20044def26bd7e8f84a454331c1d7097d5f630916881abb42cd0908ffc1fb7"
+    },
+    {
+      "path": "packages/server/src/attachment-service.ts",
+      "sha256": "8f6e0f70bf8f0fe3fa33d836a396af8ca49c9daf118c4d093e90ee51639a4d23"
+    },
+    {
+      "path": "packages/server/src/index.mobile-remote.ts",
+      "sha256": "b42559287a842f6d61cf0a864384af021255847722b0d27b84b7d6c30fd7014a"
+    },
+    {
+      "path": "packages/server/src/index.storage.ts",
+      "sha256": "99ac1004fcd981d79a262fbbd4b8e85d44d348fdfb79f281807c72fab6664167"
+    },
+    {
+      "path": "packages/server/src/mobile-remote/mobile-history.ts",
+      "sha256": "258e0810ddb54c9fb4d39f6d8bcd4140bd874b8795229047b69f1b54c6ed9b04"
+    },
+    {
+      "path": "packages/server/src/mobile-remote/mobile-chat-turn.ts",
+      "sha256": "8b2529743a7a591578e56c41722e293f82f0bc37c105484daa28fb1e74ed8978"
+    },
+    {
+      "path": "packages/server/src/mobile-remote/mobile-run-dispatch.ts",
+      "sha256": "fd70f81c0f6177f8e216576b7af85b6a018e2a789bbe449c781d78a887764ebc"
+    },
+    {
+      "path": "packages/desktop/src/main/mobile-remote/handle-client-event.ts",
+      "sha256": "5fd90faedba3f35989345e63570619758f6b5e47c0d6e87a1db8a12af5d6552f"
+    },
+    {
+      "path": "packages/desktop/src/main/mobile-remote/output-recovery.ts",
+      "sha256": "1f8fafdb6d3a1fb0de0d9a5908e38c50ba1deb0e635622503739ab0c54ab35f9"
+    },
+    {
+      "path": "packages/desktop/src/main/mobile-remote/output-recovery-authority.ts",
+      "sha256": "9e0af19016596a3a43390aa07a16e77daca1b301fb7e6c8892e60ee3d2fb86ce"
+    },
+    {
+      "path": "packages/desktop/src/main/SessionSnapshotStore.ts",
+      "sha256": "29bff2c0c95c78ebccc30b1657ce9fa463a70dd531f00f51084401aaa919fa5c"
+    },
+    {
+      "path": "packages/desktop/src/main/transcript-reader.ts",
+      "sha256": "b47a3f44bb73290969ba68a381f57060f2cc4f7561ae1bb1e4acad7f2728f541"
+    },
+    {
+      "path": "packages/web/src/hooks/useRemoteApp.ts",
+      "sha256": "de5abf9e0c5c2a5ee58dda1fee80f68baa7938211043c7e3a2165e2dd9f66e57"
+    },
+    {
+      "path": "packages/web/src/hooks/useRemoteSocket.ts",
+      "sha256": "5112eb9bffe28a069d67e906a51ae527fbd186da339e2f4ab4374e2eb33cb9f3"
+    },
+    {
+      "path": "packages/web/src/hooks/mobileOutputClient.ts",
+      "sha256": "e4213070c19b9212727b8d97c0718e86fb65ca421642dd004b07c61d4c961289"
+    },
+    {
+      "path": "packages/web/src/lib/mobileOutputRecovery.ts",
+      "sha256": "9a4218f0f6b2d869a8fbf801c6ba66f570b6fd65346ad02cd0a6287736af3f62"
+    },
+    {
+      "path": "packages/web/src/lib/transcriptReplay.ts",
+      "sha256": "621ff5259b69a14b2a63987a5aab45fdce360517b74420b16b4af7f1bb27cf4e"
+    },
+    {
+      "path": "packages/web/src/lib/userMessageDisplay.ts",
+      "sha256": "628fb9130fccc1022c1448ccba8ed21fe145cfeb072167ab57f76411473a0391"
+    },
+    {
+      "path": "packages/web/src/lib/streamReducer.ts",
+      "sha256": "3be768724b21589414271e6dfa77bcbf67cd2851900ab6bda6132e73094dcb46"
+    },
+    {
+      "path": "packages/web/app/Workbench.tsx",
+      "sha256": "7a3334a3b8474d1cc7ba973e8fcbda8658da94692d7c779fc5c9af5a603e3343"
+    }
+  ],
+  "productResolutions": [
+    {
+      "specifier": "@cjhyy/code-shell-core",
+      "importer": "packages/desktop/src/main/transcript-reader.ts",
+      "resolved": "packages/core/dist/index.js",
+      "sha256": "a84c1b1a20ae29520ce9d7464933b693199f4dd2c2427fd398dcc6f73e219c84"
+    },
+    {
+      "specifier": "@cjhyy/code-shell-core/internal",
+      "importer": "packages/desktop/src/main/mobile-remote/output-recovery.ts",
+      "resolved": "packages/core/dist/index.internal.js",
+      "sha256": "46415f56ac55a61a9f0e407264483212a1455f66dbacace7c3a3ee1aea943997"
+    },
+    {
+      "specifier": "@cjhyy/code-shell-server/mobile-remote",
+      "importer": "packages/desktop/src/main/mobile-remote/handle-client-event.ts",
+      "resolved": "packages/server/dist/index.mobile-remote.js",
+      "sha256": "b42559287a842f6d61cf0a864384af021255847722b0d27b84b7d6c30fd7014a"
+    },
+    {
+      "specifier": "@cjhyy/code-shell-server/storage",
+      "importer": "packages/desktop/src/main/mobile-remote/handle-client-event.ts",
+      "resolved": "packages/server/dist/index.storage.js",
+      "sha256": "99ac1004fcd981d79a262fbbd4b8e85d44d348fdfb79f281807c72fab6664167"
+    },
+    {
+      "specifier": "@cjhyy/code-shell-web",
+      "importer": "packages/desktop/src/main/mobile-remote/output-recovery.ts",
+      "resolved": "packages/web/src/index.ts",
+      "sha256": "d7639605eb73fc1ec2aa772ab2a687f46138ab873eb620778288be69871a3c73"
+    }
+  ],
+  "scope": {
+    "productImports": "source-audited direct Core dist entries and source modules; resolution-only addresses are not module-cache/import-graph probes",
+    "actualProducer": "stageImageBytes + prepareRunImageInput/buildRunUserMessageContent + real SessionManager/Transcript.appendMessage; no Engine.run or provider",
+    "explicitSessionManagerEntry": "packages/core/dist/index.js",
+    "authority": "controlled fixture stamp/device/viewer seam; real mobileOutputRecoveryAuthority statically reviewed only; no Git probe",
+    "transport": "in-memory WebSocket seam; actual hook, dispatcher, recovery service, reader and Workbench render",
+    "modernControl": "first real journal publication after legacy read; no published journal loss or deletion"
+  },
+  "observations": {
+    "producer": {
+      "metadata": {
+        "injected": false,
+        "clientMessageId": "prejournal-image-input",
+        "displayText": "undefined (omitted by actual paired-native producer)"
+      },
+      "inputPngBytes": 68,
+      "inputPngSha256": "431ced6916a2a21a156e38701afe55bbd7f88969fbbfc56d7fe099d47f265460",
+      "stagedPngBytes": 68,
+      "stagedPngSha256": "431ced6916a2a21a156e38701afe55bbd7f88969fbbfc56d7fe099d47f265460",
+      "stagedPath": "/private/var/folders/1d/6__4f4y51g90nblfptt8s9v80000gn/T/codeshell-bun-completion-I83WWy/home/.code-shell/no-repo/.code-shell/attachments/legacy-image-round24/431ced6916a2a21a-historical-shot.png",
+      "outputJournalNeverPublished": true
+    },
+    "legacy": {
+      "user": {
+        "kind": "user",
+        "id": "u-1",
+        "text": "Describe the saved image\n\n<attached-image-paths>\n.code-shell/attachments/legacy-image-round24/431ced6916a2a21a-historical-shot.png\n</attached-image-paths>\n(上面附带的图片在工作区的真实路径，如需把它们作为工具输入（例如 GenerateImage 的 referenceImages、图生图参考图），直接使用这些路径。)"
+      },
+      "wrapperRenderedAsProse": true,
+      "originalBytes": 68
+    },
+    "modern": {
+      "kind": "user",
+      "id": "u-1",
+      "text": "Describe the saved image",
+      "attachments": [
+        {
+          "name": "historical-shot.png",
+          "size": 68,
+          "mime": "image/png",
+          "path": ".code-shell/attachments/legacy-image-round24/431ced6916a2a21a-historical-shot.png"
+        }
+      ],
+      "clientMessageId": "prejournal-image-input"
+    },
+    "authorityCalls": 6,
+    "routedTypes": [
+      "auth.device",
+      "room.list",
+      "room.projects",
+      "session.select",
+      "session.outputJournal",
+      "room.list",
+      "room.projects",
+      "session.recovery.cancel",
+      "session.history",
+      "session.select",
+      "session.outputJournal"
+    ],
+    "originalBytesStillPresent": true,
+    "stagedPngBytesAfterRecovery": 68,
+    "stagedPngSha256AfterRecovery": "431ced6916a2a21a156e38701afe55bbd7f88969fbbfc56d7fe099d47f265460",
+    "errors": [],
+    "failureSnapshot": {
+      "routedTypes": [
+        "auth.device",
+        "room.list",
+        "room.projects",
+        "session.select",
+        "session.outputJournal",
+        "room.list",
+        "room.projects",
+        "session.recovery.cancel",
+        "session.history",
+        "session.select",
+        "session.outputJournal"
+      ],
+      "replyTypes": [
+        "auth.ok",
+        "session.recovery.ready",
+        "session.outputJournal",
+        "session.history.ok",
+        "session.recovery.ready",
+        "session.outputJournal"
+      ],
+      "transportErrors": []
+    }
+  }
+}

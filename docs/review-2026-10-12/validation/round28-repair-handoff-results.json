@@ -1,0 +1,20 @@
+{
+  "checkedAtSingapore": "2026-10-12T10:07:05.670048+08:00",
+  "newFindings": 0,
+  "newExecutions": 0,
+  "formalFindings": 86,
+  "priorities": {
+    "P1": 1,
+    "P2": 52,
+    "P3": 33
+  },
+  "commonBunFiles": 86,
+  "commonBunTests": 251,
+  "draftSha256": "25121bfb04fb42b3c7371365a937f897303841f531dcf2bc75275fbb7e791e54",
+  "independentQualitySha256": "af63674e37081ed9420636a2c6697e71459ede281bd6c595013b0ed41154b759",
+  "suggestedPatchRawSha256": "bbb4cb0b251ef338377dd5a0c45d69137291ee5af1601a351d08aec170061474",
+  "suggestedPatchAppliedToOwnedTmpOnly": true,
+  "canonical": "repair-handoff.md",
+  "canonicalSha256": "67f276e1eb1fc92f0998b0a36429dec8e82e6dadd4fde11c5436ea5a589df6e8",
+  "scope": "Engineering delivery ordering and proposed acceptance scenarios from existing review; no product fix or new acceptance run. Groups can proceed in parallel and do not assert a shared root cause."
+}

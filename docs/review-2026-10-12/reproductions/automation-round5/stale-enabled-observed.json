@@ -1,0 +1,19 @@
+{
+  "schedulerJob": {
+    "id": "1",
+    "name": "automatic-stop",
+    "schedule": "1h",
+    "prompt": "fixture",
+    "enabled": false,
+    "runCount": 1,
+    "createdAt": 1791740341571,
+    "cwd": "/fixture",
+    "projectId": "p",
+    "rootId": "r",
+    "nextRun": 1791743941571,
+    "lastRun": 1791740341656,
+    "disabledReason": "fixture root unavailable"
+  },
+  "listCallsAfterRunNow": 1,
+  "mountedDetailAfterStop": "automatic-stop每小时 · UTC活跃立即运行下次运行约 1 小时后10/11/2026, 6:39:01 PM上次运行刚刚10/11/2026, 5:39:01 PM运行次数1任务指令编辑fixture执行方式每次新建对话适合独立任务，每次单独记录结果。续接已有对话沿用之前的讨论，持续积累进展。配置频率时区全部时区UTC权限项目运行 session暂无历史 session这个任务还没有可跳转的历史 session。"
+}

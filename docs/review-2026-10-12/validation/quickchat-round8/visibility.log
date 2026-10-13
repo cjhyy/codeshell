@@ -1,0 +1,18 @@
+bun test v1.3.11 (af24e281)
+
+packages/desktop/src/renderer/panels/PanelArea.workspace.test.tsx:
+(pass) PanelArea workspace consumers > covers a retained panel body while a changed workspace is resolving [10.61ms]
+(pass) PanelArea workspace consumers > gates bodies until resolution and updates quick chat from the matching workspace event [16.21ms]
+
+packages/desktop/src/renderer/panels/panelVisibility.test.ts:
+(pass) resolvePanelVisibility > session switches keep hidden panel lifecycles live without foreground ownership [0.05ms]
+
+packages/desktop/src/renderer/panels/PanelArea.keyboard.test.tsx:
+(pass) PanelArea keyboard boundaries > makes inactive and hidden panels inert while retaining their bodies and live visibility [15.61ms]
+(pass) PanelArea keyboard boundaries > closing the focused last tab returns focus to the real TopBar panel toggle [9.33ms]
+
+ 5 pass
+ 0 fail
+ 39 expect() calls
+Ran 5 tests across 3 files. [879.00ms]
+Completed Bun shard: 5 tests, 0 skipped; 0 failures.

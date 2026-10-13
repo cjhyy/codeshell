@@ -1,0 +1,82 @@
+{
+  "baseline": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell",
+  "realChrome": false,
+  "realElectron": false,
+  "realNativeRelay": false,
+  "realModel": false,
+  "realWorker": false,
+  "networkCalls": 0,
+  "subprocessCalls": 0,
+  "receipts": [
+    {
+      "case": "idle-disconnected",
+      "status": {
+        "sessionId": "owned-browser-round21",
+        "connected": false,
+        "granted": {
+          "grantId": "owned-grant-round21-0001",
+          "tabId": 23,
+          "url": "http://127.0.0.1:9/owned-unloaded-page",
+          "title": "Owned memory tab",
+          "grantedAt": 1791758679941,
+          "expiresAt": 1791760479941
+        }
+      },
+      "actualStatusPollsAfterDisconnect": 2,
+      "activeBanner": true,
+      "connectButton": false,
+      "nativeActionCount": 0
+    },
+    {
+      "case": "explicit-revoke-repair",
+      "status": {
+        "sessionId": "owned-browser-round21",
+        "connected": true,
+        "granted": {
+          "grantId": "owned-grant-round21-0003",
+          "tabId": 23,
+          "url": "http://127.0.0.1:9/owned-unloaded-page",
+          "title": "Owned memory tab",
+          "grantedAt": 1791758687971,
+          "expiresAt": 1791760487971
+        }
+      },
+      "rejectedOldAction": {
+        "ok": false,
+        "code": "NEEDS_HUMAN",
+        "retryable": false,
+        "detail": "Chrome tab authorization was revoked. Reauthorize the original tab or explicitly choose another browser source.",
+        "tabId": "23"
+      },
+      "freshListTabs": [
+        {
+          "tabId": "23",
+          "url": "http://127.0.0.1:9/owned-unloaded-page",
+          "title": "Owned memory tab",
+          "active": true
+        }
+      ],
+      "chromeProtocol": "owned authenticated-transport adapter",
+      "fullDesktop": false
+    },
+    {
+      "case": "action-fails-closed",
+      "first": {
+        "ok": false,
+        "code": "NEEDS_HUMAN",
+        "retryable": false,
+        "detail": "Chrome connection ended. Reauthorize the original tab or explicitly choose another browser source.",
+        "tabId": "23"
+      },
+      "subsequent": {
+        "ok": false,
+        "code": "NEEDS_HUMAN",
+        "retryable": false,
+        "detail": "Chrome connection ended. Reauthorize the original tab or explicitly choose another browser source.",
+        "tabId": "23"
+      },
+      "activeBannerAfterPoll": false,
+      "nativeActionCount": 0
+    }
+  ]
+}

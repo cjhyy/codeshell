@@ -1,0 +1,32 @@
+bun test v1.3.11 (af24e281)
+
+docs/review-2026-10-12/reproductions/web-round5/recovery-review.test.tsx:
+(pass) normal: Hub rejected pre-admission request restores the original draft and allows retry [14.67ms]
+HUB_FAILED_SUBMISSION_LOST {"newerDraftPreserved":true,"originalInDrafts":false,"originalInChat":false,"accepted":false}
+(pass) confirmed: a newer draft makes the rejected Hub submission disappear from both draft and message history [1.70ms]
+PAIRED_FAILED_SUBMISSION_LOST {"newerDraftPreserved":true,"originalInDrafts":false,"originalInChat":false,"claimedPreserved":true,"accepted":false}
+(pass) normal: paired send rejection restores unchanged text, but a newly typed follow-up loses the rejected text [20.57ms]
+UNCERTAIN_RELOAD_LOSS {"normalDraftGuard":true,"uncertain":true,"uncertainUnloadGuard":false,"afterReloadDraft":"","afterReloadLocalDraftCount":0,"serverAccepted":false}
+(pass) confirmed: an uncertain unsent Hub submission has no beforeunload protection and is lost on reload [21.91ms]
+(pass) normal: stopping an accepted Hub run releases the send guard and preserves an independently typed next draft [20.40ms]
+(pass) normal: a model error after acceptance retains the user turn and allows a new task once the real run ends [23.11ms]
+(pass) normal: opening another history session ignores an earlier delayed detail and preserves both drafts [21.86ms]
+(pass) normal: paired native Stop targets the bound session, clears a terminal synchronous approval and permits the retained next draft [21.19ms]
+An update to Host inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://react.dev/link/wrap-tests-with-act
+REAL_HUB_UNCERTAIN_RELOAD_LOSS {"authenticated":true,"submissionFramesDroppedBeforeHost":1,"durableSessionsBeforeReload":0,"durableSessionsAfterReload":0,"unloadGuardWhileUncertain":false,"reloadedIntentCopies":0,"modelRequests":0}
+(pass) confirmed with a real authenticated Hub: a dropped pre-host submission loses its only intent copy on unguarded reload [577.97ms]
+
+ 9 pass
+ 0 fail
+ 56 expect() calls
+Ran 9 tests across 1 file. [1204.00ms]
+Completed Bun shard: 9 tests, 0 skipped; 0 failures.

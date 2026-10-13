@@ -1,0 +1,31 @@
+{
+  "origin": "http://127.0.0.1:58001",
+  "node": "v25.8.1",
+  "assertions": 20,
+  "observations": [
+    {
+      "phase": "early-cancel",
+      "actualOriginalHttpClosedBeforeOwnerResolved": true,
+      "cancelResult": false,
+      "initializesAfterOriginalClose": 1,
+      "nextProbeStatus": 429,
+      "otherOwnerCannotCancel": true,
+      "sameOwnerSecondCancel": true
+    },
+    {
+      "phase": "normal-retry",
+      "result": "ok",
+      "toolCount": 1
+    },
+    {
+      "phase": "normal-cancel",
+      "cancelled": true,
+      "upstreamClosed": true
+    },
+    {
+      "phase": "normal-disconnect",
+      "upstreamClosed": true,
+      "nextProbe": "ok"
+    }
+  ]
+}

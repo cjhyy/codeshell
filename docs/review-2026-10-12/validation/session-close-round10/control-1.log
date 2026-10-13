@@ -1,0 +1,21 @@
+bun test v1.3.11 (af24e281)
+
+packages/core/src/session/session-manager.generation.test.ts:
+(pass) SessionManager close generation fencing > uses state revision CAS between Engines in the same close epoch [30.82ms]
+(pass) SessionManager close generation fencing > recovers a stale orphaned state lock left by a crashed process [14.24ms]
+(pass) SessionManager close generation fencing > treats a live lock as contention, then saves the same revision after release [96.99ms]
+(pass) closing run finalization lease > commits only run fields once without restoring the revoked writer's authority [33.00ms]
+(pass) closing run finalization lease > rejects a later close epoch without changing the current state [17.56ms]
+(pass) closing run finalization lease > rejects a durable successor run even when the close epoch is unchanged [23.93ms]
+(pass) closing run finalization lease > retries a revision conflict and preserves the domain writer that won [29.58ms]
+(pass) closing run finalization lease > rechecks run identity after a revision conflict before publishing anything [26.27ms]
+(pass) closing run finalization lease > binds the actual run identity and authorizes only one lease per close epoch [18.97ms]
+(pass) closing run finalization lease > preserves independent auxiliary counters and anchor written before close capture [30.30ms]
+(pass) closing run finalization lease > preserves independent auxiliary counters and anchor written after close capture [29.16ms]
+(pass) closing run finalization lease > preserves independent auxiliary counters and anchor written both close capture [44.72ms]
+
+ 12 pass
+ 0 fail
+ 77 expect() calls
+Ran 12 tests across 1 file. [493.00ms]
+Completed Bun shard: 12 tests, 0 skipped; 0 failures.

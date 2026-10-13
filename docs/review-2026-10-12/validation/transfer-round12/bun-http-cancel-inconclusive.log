@@ -1,0 +1,23 @@
+bun test v1.3.11 (af24e281)
+
+../../../../../../private/tmp/codeshell-review-20261012-transfer-round12/transfer-recovery.test.ts:
+37 | const changed:string[]=[];
+38 | files=createHubFiles({cwd,isAuthorized:async()=>true});
+39 | history=createHubSessions({cwd,sessionRootDir:sessionsRoot,dataDir:join(temporary,"data"),isAuthorized:async()=>true,isRunning:(id:string)=>running.has(id),onChanged:(id:string)=>changed.push(id)});
+40 | const hash=(path:string)=>createHash("sha256").update(readFileSync(path)).digest("hex");
+41 | const pause=()=>new Promise(r=>setTimeout(r,5));
+42 | async function until(fn:()=>boolean){const deadline=Date.now()+2000;while(!fn()){if(Date.now()>deadline)throw Error("fixture completion timeout");await pause();}}
+                                                                                                                   ^
+error: fixture completion timeout
+      at until (/private/tmp/codeshell-review-20261012-transfer-round12/transfer-recovery.test.ts:42:111)
+      at async <anonymous> (/private/tmp/codeshell-review-20261012-transfer-round12/transfer-recovery.test.ts:62:11)
+(fail) CONTROL repeated client download cancellation releases reader slots and preserves source [2028.07ms]
+{"control":"export-history-failure-recovery","badFormatStatuses":[400,400,400],"runningExportStatus":409,"runningArchiveStatus":409,"corruptInteriorStatus":422,"nextExportStatus":200,"sourcePreserved":true,"archiveRestoreResumable":true}
+(pass) CONTROL export errors and active-run refusal preserve history and release export admission [112.81ms]
+(pass) CONTROL closing the file service fences new downloads while retaining original files [7.39ms]
+
+ 2 pass
+ 1 fail
+ 26 expect() calls
+Ran 3 tests across 1 file. [2.53s]
+Bun test process failed (1)

@@ -1,0 +1,25 @@
+bun test v1.3.11 (af24e281)
+
+../../../../../../private/tmp/codeshell-review-20261012-cli-recovery-round15/web-room-recovery.test.tsx:
+{"control":"cli-room-reconnect","openedCwdAndKindRetained":true,"staleSocketIgnored":true,"duplicateCatchupIgnored":true,"actualHookWithFakeSocket":true}
+(pass) CONTROL reconnect retains opened room cwd/kind despite sidebar changes and deduplicates snapshot catchup [23.94ms]
+84 |   const subscriptionCount = ws.frames().filter(e => e.type === "ccRoom.subscribeTranscript").length;
+85 |   await run(() => window.dispatchEvent(new Event("focus")));
+86 |   expect(ws.frames().filter(e => e.type === "ccRoom.subscribeTranscript")).toHaveLength(subscriptionCount);
+87 |   await run(() => hook.result.current.openCcSession("owned-thread", "/owned-A", "default"));
+88 |   await run(() => ws.message({ type: "ccRoom.opened", roomId: "owned-room", sessionId: "owned-thread", status: "running" }));
+89 |   expect(hook.result.current.activeRoomId).toBe("owned-room");
+                                                ^
+error: expect(received).toBe(expected)
+
+Expected: "owned-room"
+Received: undefined
+
+      at <anonymous> (/private/tmp/codeshell-review-20261012-cli-recovery-round15/web-room-recovery.test.tsx:89:44)
+(fail) CONTROL leave unsubscribes without closing CLI, ignores old transcript reply, and reopening establishes a fresh subscription [13.68ms]
+
+ 1 pass
+ 1 fail
+ 14 expect() calls
+Ran 2 tests across 1 file. [129.00ms]
+Bun test process failed (1)

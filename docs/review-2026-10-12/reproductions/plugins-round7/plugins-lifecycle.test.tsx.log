@@ -1,0 +1,19 @@
+bun test v1.3.11 (af24e281)
+
+docs/review-2026-10-12/reproductions/plugins-round7/plugins-lifecycle.test.tsx:
+PLUGIN_UNINSTALL_REINSTALL_BLOCKED {"registryPresent":false,"diskPresent":false,"jobStatus":"installed","reinstallButtonDisabled":true}
+(pass) confirmed: install then uninstall leaves an installed job that disables real MarketDetail reinstall and bypasses service reinstallation [1706.21ms]
+MARKET_UPDATE_OLD_PLUGIN_LOST {"oldDiskPresent":false,"runtimeCatalogPresent":false,"registryEntryPresent":true,"failedAlert":true,"unchangedListStillHasRow":true}
+(pass) confirmed: actual PluginsTab update action loses previous marketplace path-source install when new plugin manifest is invalid [1466.29ms]
+(pass) normal: a marketplace install job that failed before installation can retry successfully after source correction [1145.41ms]
+(pass) normal: valid marketplace update changes installed content and stays in runtime catalog [833.28ms]
+LOCAL_REVIEW_TEMP_SOURCE_UPDATE_BROKEN {"originalSourcePresent":true,"storedSourceIsPrivateSnapshot":true,"storedSourcePresent":false,"installedVersion":"1.0.0","requestedSourceVersion":"2.0.0"}
+(pass) confirmed: Desktop reviewed local install records a deleted snapshot as source and cannot update from still-present original directory [69.19ms]
+(pass) normal: directly installed local plugin update uses durable source and atomically restores old files/registration on invalid source [74.15ms]
+(pass) normal: source changed after local preview is rejected before installation [39.84ms]
+
+ 7 pass
+ 0 fail
+ 61 expect() calls
+Ran 7 tests across 1 file. [6.97s]
+Completed Bun shard: 7 tests, 0 skipped; 0 failures.

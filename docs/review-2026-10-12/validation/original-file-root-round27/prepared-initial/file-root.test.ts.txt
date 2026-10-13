@@ -1,0 +1,260 @@
+import { attempts, guardScope } from "./network-guard.ts";
+// PREPARED ONLY: no execution until root reviews this exact source and authorizes it.
+import { afterAll, expect, mock, test } from "bun:test";
+import assert from "node:assert/strict";
+import { createHash } from "node:crypto";
+import { existsSync, mkdirSync, readFileSync, realpathSync, rmSync, writeFileSync } from "node:fs";
+import { dirname, join, relative, resolve } from "node:path";
+
+const repo = realpathSync(resolve(process.cwd()));
+const evidence = import.meta.dir;
+const startedAt = new Date().toISOString();
+const isolatedHome = realpathSync(process.env.HOME!);
+const sourceManifest: any[] = [], productResolutions: any[] = [], extractedCallbacks: any[] = [];
+const observations: any[] = [], calls: any[] = [], gitAdapters: any[] = [], cleanups: any[] = [];
+const ownedPaths: string[] = [];
+let phase = "guard-installed", completed = false, failure: string | null = null;
+const scope = {
+  source: "actual Core dist SessionManager/Transcript, source counterparts audited; legitimate selected user/assistant range; no Engine/model/provider/Git process",
+  registry: "actual ProjectStore createFromPath/addRoot/setPrimary; resolveProjectRoot constructor DI returns only owned direct directories (no Git discovery)",
+  authority: "actual Main workspace service with actual owned SessionManager/ProjectStore test setters, actual registered workspace:authority callback and preload facade; no live Host grant",
+  git: "only coding.findMainWorktreeRoot is replaced with an owned-directory non-Git adapter; all other coding exports forwarded unchanged and forbidden child APIs remain guarded",
+  rendering: "actual PanelWorkspaceRootConsumer/usePanelWorkspaceRoot and FilesPanel/DirNode; a small wrapper passes the same props as statically audited PanelArea/Registry, not a full App/Electron run",
+  files: "exact fsRoot:readDir and fsSession:readDir arrow callbacks AST-extracted from actual Main index; actual root validator gets actual store.list via its documented options.projects seam; actual FS service and session FS service",
+  aliases: "actual presentation leaf exports forwarded under bare alias and absolute identity; no Files rootOptions/read/effect logic mocked",
+  controls: "bound source, pre-change same-primary summary, selecting A, direct project B read, internal explicit binding, original bytes; no full blank App route and no real first-send repair",
+  provenance: "source/dist hashes, exact extracted block hashes, and separate resolution-only receipts; not a module graph probe",
+};
+function receipt() {
+  writeFileSync(join(evidence, "observed.json"), JSON.stringify({ repo, startedAt, finishedAt: new Date().toISOString(), completed, phase, failure, isolatedHome, ownedPaths, guardScope, attempts, scope, sourceManifest, productResolutions, extractedCallbacks, gitAdapters, calls, observations, cleanups }, null, 2));
+}
+afterAll(receipt);
+assert.ok(process.env.CODE_SHELL_TEST_HOME?.startsWith(isolatedHome + "/"));
+assert.notEqual(isolatedHome, "/Users/admin");
+const paths = [
+  "CODESHELL.md", "packages/core/src/index.ts", "packages/core/src/index.internal.ts",
+  "packages/core/dist/index.js", "packages/core/dist/index.internal.js",
+  "packages/core/src/session/session-manager.ts", "packages/core/dist/session/session-manager.js",
+  "packages/core/src/session/transcript.ts", "packages/core/dist/session/transcript.js",
+  "packages/core/src/engine/run-session-open.ts", "packages/core/src/engine/engine.ts",
+  "packages/core/src/protocol/server.ts", "packages/core/src/session/session-manager.context-transfer.test.ts",
+  "packages/coding/src/index.git.ts", "packages/coding/dist/index.git.js",
+  "packages/coding/src/git/worktree/query.ts", "packages/coding/dist/git/worktree/query.js",
+  "packages/desktop/src/main/project-store.ts", "packages/desktop/src/main/session-cwd-index.ts",
+  "packages/desktop/src/main/mounted-project-root.ts", "packages/desktop/src/main/renderer-project-path.ts",
+  "packages/desktop/src/main/session-workspace-service.ts", "packages/desktop/src/main/session-fs-service.ts",
+  "packages/desktop/src/main/fs-service.ts", "packages/desktop/src/main/project-authority-ipc.ts",
+  "packages/desktop/src/main/session-validation.ts", "packages/desktop/src/main/index.ts",
+  "packages/desktop/src/preload/project-authority-api.ts", "packages/desktop/src/preload/index.ts",
+  "packages/desktop/src/renderer/Sidebar.tsx", "packages/desktop/src/renderer/App.tsx",
+  "packages/desktop/src/renderer/MessageStream.tsx", "packages/desktop/src/renderer/projects.ts",
+  "packages/desktop/src/renderer/app/SessionPanelDock.tsx", "packages/desktop/src/renderer/app/useRunController.ts",
+  "packages/desktop/src/renderer/panels/PanelArea.tsx", "packages/desktop/src/renderer/panels/PanelRegistry.ts",
+  "packages/desktop/src/renderer/panels/PanelWorkspaceRootConsumer.tsx",
+  "packages/desktop/src/renderer/panels/usePanelWorkspaceRoot.ts", "packages/desktop/src/renderer/panels/FilesPanel.tsx",
+  "packages/desktop/src/renderer/panels/FilesPanel.workspace.test.tsx",
+  "packages/desktop/src/renderer/lib/utils.ts", "packages/desktop/src/renderer/components/ui/input.tsx",
+  "packages/desktop/src/renderer/components/ui/button.tsx", "packages/desktop/src/renderer/components/ui/textarea.tsx",
+  "packages/desktop/src/renderer/components/ui/dropdown-menu.tsx", "packages/web/src/test-utils/renderHook.tsx",
+  "node_modules/react/index.js", "packages/desktop/node_modules/react-dom/client.js",
+  "node_modules/typescript/lib/typescript.js", "docs/todo/multi-folder-local-project-plan.md",
+];
+try {
+  phase = "source-manifest-and-resolution";
+  sourceManifest.push(...paths.map((path) => ({ path, sha256: createHash("sha256").update(readFileSync(join(repo, path))).digest("hex") })));
+  for (const [specifier, importer] of [
+    ["@cjhyy/code-shell-core", "packages/desktop/src/main/session-workspace-service.ts"],
+    ["@cjhyy/code-shell-core/internal", "packages/desktop/src/main/project-store.ts"],
+    ["@cjhyy/code-shell-capability-coding/git", "packages/desktop/src/main/session-workspace-service.ts"],
+    ["react-dom/client", "packages/web/src/test-utils/renderHook.tsx"],
+  ]) {
+    const resolved = realpathSync(Bun.resolveSync(specifier!, dirname(join(repo, importer!))));
+    assert.ok(resolved.startsWith(repo + "/"));
+    productResolutions.push({ specifier, importer, resolved: relative(repo, resolved), sha256: createHash("sha256").update(readFileSync(resolved)).digest("hex") });
+  }
+} catch (error) { failure = String(error); phase = `failed:${phase}`; receipt(); throw error; }
+async function productImport(path: string): Promise<any> {
+  phase = `import:${path}`;
+  try { return await import(join(repo, path)); }
+  catch (error) { failure = String(error); receipt(); throw error; }
+}
+const React = await productImport("node_modules/react/index.js");
+const { act } = React;
+const { createRoot } = await productImport("packages/desktop/node_modules/react-dom/client.js");
+for (const [alias, path] of [
+  ["@/lib/utils", "packages/desktop/src/renderer/lib/utils.ts"],
+  ["@/components/ui/button", "packages/desktop/src/renderer/components/ui/button.tsx"],
+  ["@/components/ui/input", "packages/desktop/src/renderer/components/ui/input.tsx"],
+  ["@/components/ui/textarea", "packages/desktop/src/renderer/components/ui/textarea.tsx"],
+  ["@/components/ui/dropdown-menu", "packages/desktop/src/renderer/components/ui/dropdown-menu.tsx"],
+]) {
+  const actual = await productImport(path!);
+  const factory = () => actual;
+  mock.module(alias!, factory); mock.module(join(repo, path!), factory);
+}
+const { SessionManager } = await productImport("packages/core/dist/index.js");
+const ownedRoot = join(process.env.CODE_SHELL_TEST_HOME!, "round27-owned-file-roots");
+assert.ok(ownedRoot.startsWith(isolatedHome + "/"));
+const actualGit = await productImport("packages/coding/dist/index.git.js");
+const gitFactory = () => ({ ...actualGit, findMainWorktreeRoot: async (cwd: string) => {
+  assert.ok(cwd.startsWith(ownedRoot + "/"), "Git adapter accepts only owned fixture directories");
+  gitAdapters.push({ api: "findMainWorktreeRoot", cwd, result: "undefined non-Git adapter; no subprocess" });
+  return undefined;
+} });
+mock.module("@cjhyy/code-shell-capability-coding/git", gitFactory);
+mock.module(join(repo, "packages/coding/dist/index.git.js"), gitFactory);
+const { ProjectStore } = await productImport("packages/desktop/src/main/project-store.ts");
+const { SessionCwdIndex } = await productImport("packages/desktop/src/main/session-cwd-index.ts");
+const authority = await productImport("packages/desktop/src/main/session-workspace-service.ts");
+const { registerProjectAuthorityIpc } = await productImport("packages/desktop/src/main/project-authority-ipc.ts");
+const { createProjectAuthorityApi } = await productImport("packages/desktop/src/preload/project-authority-api.ts");
+const { requireRendererProjectRoot } = await productImport("packages/desktop/src/main/renderer-project-path.ts");
+const { readDirectory } = await productImport("packages/desktop/src/main/fs-service.ts");
+const { readSessionDirectoryForUi } = await productImport("packages/desktop/src/main/session-fs-service.ts");
+const { assertDesktopSessionId } = await productImport("packages/desktop/src/main/session-validation.ts");
+const { reconcileProjectsFromDiskWithRemap } = await productImport("packages/desktop/src/renderer/projects.ts");
+const { PanelWorkspaceRootConsumer, panelWorkspaceBodyReady } = await productImport("packages/desktop/src/renderer/panels/PanelWorkspaceRootConsumer.tsx");
+const { FilesPanel } = await productImport("packages/desktop/src/renderer/panels/FilesPanel.tsx");
+const { ensureMiniDom, flushMicrotasks } = await productImport("packages/web/src/test-utils/renderHook.tsx");
+const ts = await productImport("node_modules/typescript/lib/typescript.js");
+ensureMiniDom();
+Object.defineProperty(globalThis, "localStorage", { configurable: true, value: { getItem: () => null, setItem() {}, removeItem() {} } });
+Object.assign(window, { matchMedia: () => ({ matches: false, addEventListener() {}, removeEventListener() {} }) });
+function mainCallback(channel: string, deps: Record<string, any>) {
+  const path = "packages/desktop/src/main/index.ts";
+  const text = readFileSync(join(repo, path), "utf8");
+  const file = ts.createSourceFile(path, text, ts.ScriptTarget.Latest, true, ts.ScriptKind.TS);
+  const matches: any[] = [];
+  const visit = (node: any) => {
+    if (ts.isCallExpression(node) && node.expression.getText(file) === "ipcMain.handle" && node.arguments[0]?.text === channel) matches.push(node.arguments[1]);
+    ts.forEachChild(node, visit);
+  };
+  visit(file); assert.equal(matches.length, 1, `one real Main callback for ${channel}`);
+  const block = matches[0].getText(file);
+  extractedCallbacks.push({ path, channel, line: file.getLineAndCharacterOfPosition(matches[0].getStart(file)).line + 1, sha256: createHash("sha256").update(block).digest("hex"), block, capturedDependencies: Object.keys(deps) });
+  const output = ts.transpileModule(`const callback = ${block};`, { compilerOptions: { target: ts.ScriptTarget.ES2022, module: ts.ModuleKind.None } }).outputText;
+  return new Function(...Object.keys(deps), `${output}\nreturn callback;`)(...Object.values(deps));
+}
+function elements(node: any, tag: string): any[] {
+  return [...(node.tagName === tag ? [node] : []), ...(node.childNodes ?? []).flatMap((child: any) => elements(child, tag))];
+}
+function textOf(node: any): string { return node.nodeType === 3 ? (node.nodeValue ?? node.textContent ?? "") : node.childNodes?.length ? node.childNodes.map(textOf).join("") : (node.textContent ?? ""); }
+function propsOf(node: any) { const key = Object.keys(node).find((name) => name.startsWith("__reactProps$")); return key ? node[key] : {}; }
+
+test("summary fork after Make primary maps B identity to A path in the actual Files fallback", async () => {
+  ownedPaths.push(ownedRoot);
+  const cleanup: any = { ownedFilesRemoved: false, errors: [] }; cleanups.push(cleanup);
+  let root: any, container: any, pending = 0;
+  const a = join(ownedRoot, "root-a"), b = join(ownedRoot, "root-b"), sessions = join(ownedRoot, "sessions");
+  const sourceId = "r27-bound-source", sameId = "r27-same-primary", targetId = "r27-switched-summary";
+  let currentWorkspace: any;
+  const rejectUnused = () => { throw Error("unused fixture transport/service branch"); };
+  try {
+    phase = "owned-registry-and-source";
+    mkdirSync(a, { recursive: true }); mkdirSync(b, { recursive: true }); mkdirSync(sessions);
+    writeFileSync(join(a, "unique-a.txt"), "A original\n"); writeFileSync(join(b, "unique-b.txt"), "B original\n");
+    const manager = new SessionManager(sessions);
+    const index = new SessionCwdIndex({ sessionsRoot: sessions });
+    await index.ensureLoaded();
+    const store = new ProjectStore({ file: join(ownedRoot, "desktop", "projects.json"), recentsFile: join(ownedRoot, "desktop", "recents.json"), migrationMarkerFile: join(ownedRoot, "desktop", "migration.json"), noRepoPath: join(ownedRoot, "no-repo"), sessionIndex: index, sessionManager: manager, resolveProjectRoot: (cwd: string) => { assert.ok(cwd === a || cwd === b); return cwd; } });
+    let project = await store.createFromPath(a);
+    project = (await store.addRoot(project.id, b)).project;
+    const aId = project.roots.find((entry: any) => entry.path === a)!.id, bId = project.roots.find((entry: any) => entry.path === b)!.id;
+    const source = manager.create(a, "fixture-model", "fixture-provider", sourceId);
+    assert.equal(manager.saveStateOrUpdateFields(source.state, { project: { projectId: project.id, mainRootId: aId } }), true);
+    const from = source.transcript.appendMessage("user", "selected source text");
+    const to = source.transcript.appendMessage("assistant", "selected completed answer");
+    const selected = manager.selectContextPackage(sourceId, { fromEventId: from.id, toEventId: to.id });
+    expect(selected.messages).toHaveLength(2);
+    const summary = (id: string) => manager.createSummaryFork(sourceId, { targetSessionId: id, fromEventId: from.id, toEventId: to.id, summary: "Owned selected context summary", sourceEventCount: selected.sourceEventCount, estimatedTokens: 8 }).bundle;
+    const same = summary(sameId);
+    authority.__setSessionWorkspaceServiceSessionManagerForTests(manager);
+    authority.__setSessionWorkspaceServiceProjectStoreForTests(store);
+    const handlers = new Map<string, any>();
+    registerProjectAuthorityIpc({ ipcMain: { handle: (channel: string, callback: any) => handlers.set(channel, callback) }, projectStore: store, getAllWindows: () => [], getBridge: () => undefined, getTrust: rejectUnused, showOpenDialog: rejectUnused, applyGitPathFromSettings: rejectUnused, assertSessionId: assertDesktopSessionId, trackGitRoot: rejectUnused, broadcastMobileProjects: async () => {}, getGitStatus: rejectUnused, getGitBranches: rejectUnused, revealInFinder: rejectUnused, openPath: rejectUnused });
+    handlers.set("fsRoot:readDir", mainCallback("fsRoot:readDir", { requireRendererProjectRoot: async (projectId: string, rootId: string) => requireRendererProjectRoot(projectId, rootId, { projects: await store.list() }), readDirectory }));
+    handlers.set("fsSession:readDir", mainCallback("fsSession:readDir", { assertDesktopSessionId, readSessionDirectoryForUi }));
+    const api = createProjectAuthorityApi({ on() {}, removeListener() {}, invoke: async (channel: string, ...args: any[]) => {
+      assert.ok(handlers.has(channel), "only registered or exactly extracted actual callbacks");
+      const call: any = { channel, args }; calls.push(call); pending++;
+      try { const value = await handlers.get(channel)({ sender: { id: 27 } }, ...args); call.result = value; return value; }
+      catch (error) { call.error = String(error); throw error; }
+      finally { pending--; }
+    } });
+    Object.assign(window, { codeshell: api });
+    const settle = async (predicate: () => boolean, label: string) => {
+      for (let i = 0; i < 200; i++) { await act(async () => { await flushMicrotasks(); await new Promise((done) => setTimeout(done, 5)); }); if (!pending && predicate()) return; }
+      throw Error(`fixture did not settle: ${label}`);
+    };
+    const unmount = async () => { if (root) { await act(async () => { root.unmount(); await flushMicrotasks(); }); root = undefined; } if (container?.parentNode) container.parentNode.removeChild(container); container = undefined; };
+    const render = async (sid: string, expectedChannel: string) => {
+      await unmount(); currentWorkspace = undefined;
+      const tracked = reconcileProjectsFromDiskWithRemap(await store.list(), []).projects[0];
+      const callStart = calls.length;
+      container = document.createElement("div"); document.body.appendChild(container); root = createRoot(container);
+      await act(async () => { root.render(React.createElement(PanelWorkspaceRootConsumer, { engineSessionId: sid, projectPath: tracked.path, children: (workspace: any) => { currentWorkspace = workspace; return panelWorkspaceBodyReady(workspace) ? React.createElement(FilesPanel, { cwd: workspace.root, project: tracked, engineSessionId: sid, sessionMainRootId: workspace.mainRootId ?? undefined }) : null; } })); await flushMicrotasks(); });
+      await settle(() => calls.slice(callStart).some((call) => call.channel === expectedChannel && (Object.hasOwn(call, "result") || call.error)), `render ${sid}`);
+      return { tracked, callStart };
+    };
+    const choose = async (id: string) => {
+      const select = elements(container, "SELECT")[0]; assert.ok(select);
+      const start = calls.length;
+      await act(async () => { propsOf(select).onChange({ target: { value: id } }); await flushMicrotasks(); });
+      await settle(() => calls.slice(start).some((call) => call.channel.startsWith("fs") && (Object.hasOwn(call, "result") || call.error)), `select ${id}`);
+    };
+    phase = "normal-same-primary-summary";
+    await render(sameId, "fsRoot:readDir");
+    expect(same.state.project).toBeUndefined();
+    expect(currentWorkspace.root).toBe(a); expect(currentWorkspace.mainRootId).toBeNull();
+    expect(textOf(container)).toContain("unique-a.txt");
+    observations.push({ control: "same-primary summary before change", workspace: currentWorkspace, text: textOf(container) });
+    await unmount();
+    phase = "make-primary-and-bound-control";
+    project = await store.setPrimary(project.id, bId);
+    const target = summary(targetId);
+    expect(manager.readSessionProjectBinding(sourceId)).toEqual({ projectId: project.id, mainRootId: aId });
+    expect(target.state.cwd).toBe(a); expect(target.state.project).toBeUndefined();
+    await render(sourceId, "fsSession:readDir");
+    expect(currentWorkspace.mainRootId).toBe(aId); expect(textOf(container)).toContain("unique-a.txt");
+    await choose(bId); expect(textOf(container)).toContain("unique-b.txt");
+    observations.push({ control: "bound source remains usable at both roots", workspace: currentWorkspace, text: textOf(container) });
+    phase = "summary-fallback-mapping";
+    const { tracked, callStart } = await render(targetId, "fsRoot:readDir");
+    const failed = calls.slice(callStart).find((call) => call.channel === "fsRoot:readDir");
+    expect(tracked.path).toBe(b); expect(tracked.primaryRootId).toBe(bId);
+    expect(currentWorkspace.root).toBe(a); expect(currentWorkspace.mainRootId).toBeNull();
+    expect(failed.args).toEqual([project.id, bId, a]);
+    expect(failed.error).toContain("path escapes workspace root");
+    expect(textOf(container)).not.toContain("unique-a.txt"); expect(textOf(container)).not.toContain("unique-b.txt");
+    expect(elements(container, "OPTION").map((option) => propsOf(option).value)).toEqual([bId, aId]);
+    observations.push({ candidate: "unbound summary after primary changed", workspace: currentWorkspace, project: tracked, defaultCall: failed, text: textOf(container) });
+    await choose(aId); expect(textOf(container)).toContain("unique-a.txt");
+    observations.push({ control: "selecting A uses its matching authority", text: textOf(container) });
+    await choose(bId); expect(textOf(container)).not.toContain("unique-b.txt");
+    const directB = await api.readProjectDir(project.id, bId, b);
+    expect(directB.map((entry: any) => entry.name)).toContain("unique-b.txt");
+    phase = "internal-binding-control";
+    assert.equal(manager.saveStateOrUpdateFields(target.state, { project: { projectId: project.id, mainRootId: aId } }), true);
+    await render(targetId, "fsSession:readDir");
+    expect(currentWorkspace.mainRootId).toBe(aId); expect(textOf(container)).toContain("unique-a.txt");
+    await choose(bId); expect(textOf(container)).toContain("unique-b.txt");
+    expect(readFileSync(join(a, "unique-a.txt"), "utf8")).toBe("A original\n");
+    expect(readFileSync(join(b, "unique-b.txt"), "utf8")).toBe("B original\n");
+    expect(attempts).toEqual([]);
+    observations.push({ control: "internal explicit binding only, not a real first send", workspace: currentWorkspace, text: textOf(container), originals: ["A original\n", "B original\n"] });
+    await unmount(); completed = true; phase = "completed";
+  } catch (error) { failure = String(error); phase = `failed:${phase}`; throw error; }
+  finally {
+    try { if (root) await act(async () => { root.unmount(); await flushMicrotasks(); }); } catch (error) { cleanup.errors.push(`unmount: ${error}`); }
+    try { if (container?.parentNode) container.parentNode.removeChild(container); } catch (error) { cleanup.errors.push(`container: ${error}`); }
+    for (let i = 0; pending && i < 200; i++) await new Promise((done) => setTimeout(done, 5));
+    if (pending) cleanup.errors.push("pending IPC/FS reads did not settle");
+    authority.__setSessionWorkspaceServiceSessionManagerForTests(undefined);
+    authority.__setSessionWorkspaceServiceProjectStoreForTests(undefined);
+    try { rmSync(ownedRoot, { recursive: true, force: true }); } catch (error) { cleanup.errors.push(`owned cleanup: ${error}`); }
+    cleanup.ownedFilesRemoved = !existsSync(ownedRoot);
+    if (!cleanup.ownedFilesRemoved) cleanup.errors.push("owned root remains");
+    if (cleanup.errors.length) { completed = false; failure ??= cleanup.errors.join("; "); phase = "failed:cleanup"; receipt(); throw Error(failure!); }
+    receipt();
+  }
+});

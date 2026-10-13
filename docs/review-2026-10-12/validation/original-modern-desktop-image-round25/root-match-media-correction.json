@@ -1,0 +1,13 @@
+{
+  "at": "2026-10-12T00:52:25.238968+00:00",
+  "previousSourceSha256": "8a033c557babcc11bbf1b8b8fe33543324c7e2fea509f5931adf3d02187262c4",
+  "sourceSha256": "411b12bcb249b6eeb5465fe67f1f30555ecc5fb2232c219c602e0ce1df049ca9",
+  "guardSha256": "6e1f5f5045f9606086f1b01e6eb988b88c5670f78000b260fcb9e035f1c69b3d",
+  "change": "Only supply MiniDom window.matchMedia for Workbench lazy SSR viewport state; matches=false. No product, guard, business logic, or assertions changed.",
+  "firstFailurePreserved": true,
+  "firstFailure": "0 pass / 2 fail / 22 Bun expects / no Completed; Workbench.tsx:105 missing matchMedia",
+  "productExecutions": 0,
+  "reference": "round24 legacy-history fixture browser adapter; Workbench.tsx:105-107",
+  "oldPrivateHomeExists": false,
+  "oldRunnerRootExists": false
+}

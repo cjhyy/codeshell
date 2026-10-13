@@ -1,0 +1,17 @@
+[
+  {
+    "file": "docs/review-2026-10-12/reproductions/context-cancel-round18/context-cancel.test.ts",
+    "sha256": "23068e7dff10968f5fbf1af99a0a4647a5f61ac8e3f845e52fb01faac2426b0d",
+    "equalAcrossBaselines": true
+  },
+  {
+    "file": "docs/review-2026-10-12/reproductions/model-switch-round18/model-preferences.test.tsx",
+    "sha256": "2c94d95e28e9e2f46f2b97363e2be2a2d3521bb115a5a98ca20c2ddc717c3e4b",
+    "equalAcrossBaselines": true
+  },
+  {
+    "file": "docs/review-2026-10-12/reproductions/hub-session-operations-round18/session-followup.test.tsx",
+    "sha256": "1ef5ed01a0369c36f82219bafaf28c3abd38aa764a4062197b82b94e8b332bec",
+    "equalAcrossBaselines": true
+  }
+]

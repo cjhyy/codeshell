@@ -1,0 +1,1242 @@
+{
+  "createdAtSingapore": "2026-10-12T11:26:12.550028+08:00",
+  "scope": "User-requested post-delivery report meta-review only",
+  "sourceCommit": "b52e83061fc33f6227da28032db14204223a1369",
+  "initialReportCount": 140,
+  "fullBodyAuditCount": 136,
+  "rootAggregateCrossChecks": 4,
+  "classificationCounts": {
+    "质量复核": 53,
+    "正式专项": 45,
+    "准备或预审": 15,
+    "正常反证": 14,
+    "历史交付": 9,
+    "总报告": 1,
+    "历史进度与最终状态": 1,
+    "流程覆盖汇总": 1,
+    "修复交接汇总": 1
+  },
+  "formalFindings": 86,
+  "priorities": {
+    "P1": 1,
+    "P2": 52,
+    "P3": 33
+  },
+  "orderedIds": [
+    "R35",
+    "R09",
+    "R42",
+    "R02",
+    "R66",
+    "R81",
+    "R37",
+    "R03",
+    "R33",
+    "R40",
+    "R41",
+    "R52",
+    "R28",
+    "R36",
+    "R77",
+    "R68",
+    "R31",
+    "R57",
+    "R50",
+    "R30",
+    "R01",
+    "R10",
+    "R12",
+    "R13",
+    "R73",
+    "R78",
+    "R79",
+    "R44",
+    "R45",
+    "R07",
+    "R08",
+    "R15",
+    "R18",
+    "R14",
+    "R04",
+    "R05",
+    "R16",
+    "R24",
+    "R72",
+    "R69",
+    "R58",
+    "R22",
+    "R23",
+    "R25",
+    "R21",
+    "R06",
+    "R32",
+    "R34",
+    "R17",
+    "R51",
+    "R53",
+    "R46",
+    "R47",
+    "R11",
+    "R19",
+    "R20",
+    "R26",
+    "R27",
+    "R29",
+    "R38",
+    "R39",
+    "R43",
+    "R48",
+    "R49",
+    "R54",
+    "R55",
+    "R56",
+    "R59",
+    "R60",
+    "R61",
+    "R62",
+    "R63",
+    "R64",
+    "R65",
+    "R67",
+    "R70",
+    "R71",
+    "R74",
+    "R75",
+    "R76",
+    "R80",
+    "R82",
+    "R83",
+    "R84",
+    "R85",
+    "R86"
+  ],
+  "sameFindingRowsAndEvidenceLabels": true,
+  "newProductFindings": 0,
+  "newProductTests": 0,
+  "newBuilds": 0,
+  "productChanges": false,
+  "goalReopened": false,
+  "heartbeatResumed": false,
+  "commonPerFrozenSnapshot": {
+    "files": 86,
+    "tests": 251
+  },
+  "earlierBaseline": {
+    "files": 706,
+    "tests": 6286,
+    "fileCountsByPackage": {
+      "server": 100,
+      "web": 41,
+      "desktop": 565
+    }
+  },
+  "artifacts": [
+    {
+      "original": "/tmp/codeshell-postdelivery-audit-a.json",
+      "sha256": "982d27f3f783ed7bafbf6da9354fcbd50b877a3fd907520d70f1827ca54adb61",
+      "archive": "validation/postdelivery-report-review/audit-a.raw.json"
+    },
+    {
+      "original": "/tmp/codeshell-postdelivery-audit-b.json",
+      "sha256": "c9d5d09c8cdcbb1b1935e46346fa006185632c093d5424c34cacdb56019037f6",
+      "archive": "validation/postdelivery-report-review/audit-b.raw.json"
+    },
+    {
+      "original": "/tmp/codeshell-postdelivery-audit-c.json",
+      "sha256": "c85dc55f39440fe1324c78a52d539a2e5276f0ec13f1a436e76d66f7f2364522",
+      "archive": "validation/postdelivery-report-review/audit-c.raw.json"
+    }
+  ],
+  "documents": [
+    {
+      "file": "README.md",
+      "sha256Before": "73c1ad7d1778446d823300b2dbaf14da1aa960ffdda348976196cd5d3355b6d6",
+      "classification": "总报告",
+      "reviewer": "root",
+      "method": "最终状态、正式86项、分级/计数、流程及交接口径交叉对照；不将历史进度作为当前发现或新执行"
+    },
+    {
+      "file": "approval-quality-round10.md",
+      "sha256Before": "f525ea372cfcc72d9b78fb365d10e9b0d91713f7735bae848cd48eb6a6ac76f0",
+      "classification": "质量复核",
+      "reviewer": "a",
+      "fullBodyRead": true
+    },
+    {
+      "file": "auth-round7.md",
+      "sha256Before": "5867acdd224c61e8b0a953e003a7574b2919271bcaa19bfe412b3903997de914",
+      "classification": "正常反证",
+      "reviewer": "b",
+      "fullBodyRead": true
+    },
+    {
+      "file": "automation-quality-round18.md",
+      "sha256Before": "867da87c7383b3aa7e5dd2deeb7e1773c9af7740412d2d9e2396deafecdc88d4",
+      "classification": "质量复核",
+      "reviewer": "c",
+      "fullBodyRead": true
+    },
+    {
+      "file": "automation-round5.md",
+      "sha256Before": "4a6aab0fb197862e288a17d1f6f37b804c665639d31344a24a8413ffe54cd755",
+      "classification": "正式专项",
+      "reviewer": "a",
+      "fullBodyRead": true
+    },
+    {
+      "file": "baseline-evidence-round28.md",
+      "sha256Before": "5df61f1d20e14104fed2fff5273c11ca23e929c0467b12050d48389bb3a6f35d",
+      "classification": "历史交付",
+      "reviewer": "b",
+      "fullBodyRead": true
+    },
+    {
+      "file": "blank-files-counterreview-round28.md",
+      "sha256Before": "d0e8bf53cc32e1e780e693bf1b0133f365075f2a0f41953f71342e68ebc3ed63",
+      "classification": "正常反证",
+      "reviewer": "c",
+      "fullBodyRead": true
+    },
+    {
+      "file": "browser-cancel-gates-round21.md",
+      "sha256Before": "5b77277c82542dff9de9fa92b50ebaa6125dab1e74466580c1f0ca1a38d67d98",
+      "classification": "准备或预审",
+      "reviewer": "a",
+      "fullBodyRead": true
+    },
+    {
+      "file": "browser-cancel-quality-round21.md",
+      "sha256Before": "c19e680aa1f89c80ffd56b1c96a7deaabc9b7f4375c34bcad9958708433deee2",
+      "classification": "质量复核",
+      "reviewer": "b",
+      "fullBodyRead": true
+    },
+    {
+      "file": "browser-lifecycle-round21.md",
+      "sha256Before": "615f03174c517de0b02b517f363641484cd9e706ca2979782467218622fdf102",
+      "classification": "正式专项",
+      "reviewer": "c",
+      "fullBodyRead": true
+    },
+    {
+      "file": "browser-quality-round21.md",
+      "sha256Before": "a9bf1fd3ecd3274cbd2d081a1b818289dc76fa4eb4d7551a6880dedc8490a0ad",
+      "classification": "质量复核",
+      "reviewer": "a",
+      "fullBodyRead": true
+    },
+    {
+      "file": "browser-stop-contract-round22.md",
+      "sha256Before": "7c4fb2573283b2aadc6d056037e2a17d07337b888a5e344b1fa83a87e0685866",
+      "classification": "准备或预审",
+      "reviewer": "b",
+      "fullBodyRead": true
+    },
+    {
+      "file": "browser-stop-core-gates-round22.md",
+      "sha256Before": "c158ac1046c85861c1c30c1860b25a205b72270d727efeb96a235d89b2fe02a5",
+      "classification": "准备或预审",
+      "reviewer": "c",
+      "fullBodyRead": true
+    },
+    {
+      "file": "browser-stop-discovery-round22.md",
+      "sha256Before": "893acdd06b6fb50268ff17b78aa7fce08f8362bf871d2da297b826200dfa4926",
+      "classification": "准备或预审",
+      "reviewer": "a",
+      "fullBodyRead": true
+    },
+    {
+      "file": "browser-stop-plan-round22.md",
+      "sha256Before": "6cc879ccceba986004466b741c1c2330ec80f233a86326e67cd4f3d4801d9329",
+      "classification": "准备或预审",
+      "reviewer": "b",
+      "fullBodyRead": true
+    },
+    {
+      "file": "browser-stop-preflight-round22.md",
+      "sha256Before": "77f8f1b9949191df9704578875b4f2f310b6662e1ef78f4f972b7a7f2f76703d",
+      "classification": "准备或预审",
+      "reviewer": "c",
+      "fullBodyRead": true
+    },
+    {
+      "file": "browser-stop-quality-round22.md",
+      "sha256Before": "36c08de7086fa7554e1a784e71ea2cd8de92ac42fffe581fa051655981747ef3",
+      "classification": "质量复核",
+      "reviewer": "a",
+      "fullBodyRead": true
+    },
+    {
+      "file": "browser-stop-round22.md",
+      "sha256Before": "c33003919a92272ccc54efd648ec0ce841d933dd110a4b3b4a39805c93213918",
+      "classification": "正式专项",
+      "reviewer": "b",
+      "fullBodyRead": true
+    },
+    {
+      "file": "cli-quality-round9.md",
+      "sha256Before": "1eafab70578f13bc42d4eb2fdd5f9e2ea9ae51d5a2207afc10a4cda4984e5af3",
+      "classification": "质量复核",
+      "reviewer": "c",
+      "fullBodyRead": true
+    },
+    {
+      "file": "cli-recovery-quality-round15.md",
+      "sha256Before": "42d10348491dc6340a7c616e8fd36ccf702435fa9f6b0b3702757e6045d2801f",
+      "classification": "质量复核",
+      "reviewer": "a",
+      "fullBodyRead": true
+    },
+    {
+      "file": "cli-recovery-round15.md",
+      "sha256Before": "3afdb57700ac89646c89afe3837401bda5d6e97656d4e8e8d4704612fceeb81f",
+      "classification": "正式专项",
+      "reviewer": "b",
+      "fullBodyRead": true
+    },
+    {
+      "file": "cloud-account-quality-round26.md",
+      "sha256Before": "6fc20ba1da77fd47709d83553aebb791369b996a7ff821bd06a7c154f6b35d01",
+      "classification": "质量复核",
+      "reviewer": "c",
+      "fullBodyRead": true
+    },
+    {
+      "file": "cloud-account-static-round26.md",
+      "sha256Before": "373a6b07183c85950d4942fbd4f49aba2c689c2e720ae15bde6408b19bb58ecc",
+      "classification": "正常反证",
+      "reviewer": "a",
+      "fullBodyRead": true
+    },
+    {
+      "file": "collections-round6.md",
+      "sha256Before": "6f9b3f7b7837caf1a02f8f7a1c1e6a08915a2213468afe7ea235552788b834c9",
+      "classification": "正式专项",
+      "reviewer": "b",
+      "fullBodyRead": true
+    },
+    {
+      "file": "command-recovery-round16.md",
+      "sha256Before": "83a0718ad204293590009edf3cce17ea6cd8cdadd2573663054ffe253786fed1",
+      "classification": "正常反证",
+      "reviewer": "c",
+      "fullBodyRead": true
+    },
+    {
+      "file": "connection-recovery-quality-round15.md",
+      "sha256Before": "69c10ccc744d6624e126bf3d766df6d5b554c45169cebfdfab911c60cd06c265",
+      "classification": "质量复核",
+      "reviewer": "a",
+      "fullBodyRead": true
+    },
+    {
+      "file": "connection-recovery-round15.md",
+      "sha256Before": "24bac410591d223abc62497a81c005d3b5d18f4390d61c8d4c9390f131afec3f",
+      "classification": "正式专项",
+      "reviewer": "b",
+      "fullBodyRead": true
+    },
+    {
+      "file": "context-cancel-quality-round18.md",
+      "sha256Before": "bfc971305bf88848f6e611dadb567e3973760ed8d42c70740e65f9fd1060344e",
+      "classification": "质量复核",
+      "reviewer": "c",
+      "fullBodyRead": true
+    },
+    {
+      "file": "context-cancel-round18.md",
+      "sha256Before": "9911524de544761e0cc106170b2bef7a078c71274a43fb7585c689102aa6bb66",
+      "classification": "正式专项",
+      "reviewer": "a",
+      "fullBodyRead": true
+    },
+    {
+      "file": "context-recovery-quality-round17.md",
+      "sha256Before": "616542a2a0c3f2ccec9a1df8a92ec35b8c18fed96d4505c81c684e60473800da",
+      "classification": "质量复核",
+      "reviewer": "b",
+      "fullBodyRead": true
+    },
+    {
+      "file": "context-recovery-round17.md",
+      "sha256Before": "74ba376b3eca7aa1ac537e05bf114926152b7008ec7fa74b2ce8ee79aa796b0a",
+      "classification": "正常反证",
+      "reviewer": "c",
+      "fullBodyRead": true
+    },
+    {
+      "file": "credentials-round5.md",
+      "sha256Before": "27bdf3ed6903cdfaa47837d32d08e3af7a0ae71c7e147d8ee50a52c4f58230bf",
+      "classification": "正式专项",
+      "reviewer": "a",
+      "fullBodyRead": true
+    },
+    {
+      "file": "delivery-audit.md",
+      "sha256Before": "1174ecfba1bc2ed9bbc938d2198e1418a0912bcf729938a0b2267ae10b6bdd6d",
+      "classification": "历史交付",
+      "reviewer": "b",
+      "fullBodyRead": true
+    },
+    {
+      "file": "desktop-preflight-round23.md",
+      "sha256Before": "78a1c06816062ccadcdcc18b632360ea3905ca97840812694af7ca774968caf3",
+      "classification": "准备或预审",
+      "reviewer": "c",
+      "fullBodyRead": true
+    },
+    {
+      "file": "desktop-quality-round10.md",
+      "sha256Before": "cf1787e7670bc910890e01f75da20fb4470b7f115a7ab206a9b1130cc786a90e",
+      "classification": "质量复核",
+      "reviewer": "a",
+      "fullBodyRead": true
+    },
+    {
+      "file": "desktop-round1.md",
+      "sha256Before": "b216b26c4273d04dbae0597115b63ef8b686fe7eda0996868bf4c387e93977d4",
+      "classification": "正式专项",
+      "reviewer": "b",
+      "fullBodyRead": true
+    },
+    {
+      "file": "desktop-round2.md",
+      "sha256Before": "6cd1aa8e8a492e67d26e9f6ff5384b132dbfa90a533b0cddb86adb5465365001",
+      "classification": "正式专项",
+      "reviewer": "c",
+      "fullBodyRead": true
+    },
+    {
+      "file": "desktop-round3.md",
+      "sha256Before": "16e1dbe84a3e8e6f36eec39447918a72339682b530471052723de46bc4aec7b4",
+      "classification": "正式专项",
+      "reviewer": "a",
+      "fullBodyRead": true
+    },
+    {
+      "file": "download-quality-round12.md",
+      "sha256Before": "0085952e9e020b36bb5604e902d65f52ac1b19254565a192d6a4ba32409e6d3d",
+      "classification": "质量复核",
+      "reviewer": "b",
+      "fullBodyRead": true
+    },
+    {
+      "file": "download-round11.md",
+      "sha256Before": "97196d787ffaf8129e30a674e9ac6514c33e9d9b499b8a2dea13eff6ecf574b2",
+      "classification": "正式专项",
+      "reviewer": "c",
+      "fullBodyRead": true
+    },
+    {
+      "file": "evidence-navigation-round29.md",
+      "sha256Before": "69fcf6c1e1b303f9c3cf2953b007d4c42fc029bfa96f1cad8efaf844bd64a100",
+      "classification": "历史交付",
+      "reviewer": "a",
+      "fullBodyRead": true
+    },
+    {
+      "file": "file-mutex-quality-round19.md",
+      "sha256Before": "6940a2c615572bc0e0955b3f962337a44393fc1715ec5a3f7b37f387390a6dde",
+      "classification": "质量复核",
+      "reviewer": "b",
+      "fullBodyRead": true
+    },
+    {
+      "file": "file-mutex-round19.md",
+      "sha256Before": "40a33225154448ecf505dade3a27b7c6abefaac3e936a999704cf19b8a072886",
+      "classification": "正式专项",
+      "reviewer": "c",
+      "fullBodyRead": true
+    },
+    {
+      "file": "file-navigation-quality-round14.md",
+      "sha256Before": "8006ef1842929f77b2452cdbd3701e1569d9e44cb460d8e8f7f7b4b18d4040a9",
+      "classification": "质量复核",
+      "reviewer": "a",
+      "fullBodyRead": true
+    },
+    {
+      "file": "file-navigation-round14.md",
+      "sha256Before": "8442a15342d04c69183b5ad42397431da3d10aef595cb2de8ef6ef3acf647f5f",
+      "classification": "正式专项",
+      "reviewer": "b",
+      "fullBodyRead": true
+    },
+    {
+      "file": "file-root-fixture-preflight-round27.md",
+      "sha256Before": "3f3f6e6fbf03715637d5ac314e9fe81172058fce38952a699ba494eb3ae6b3f0",
+      "classification": "准备或预审",
+      "reviewer": "c",
+      "fullBodyRead": true
+    },
+    {
+      "file": "file-root-quality-preflight-round27.md",
+      "sha256Before": "826e2f76992e0d2cc07afb13840e594095eefb06ff28ba7b09e98c0c51533c29",
+      "classification": "准备或预审",
+      "reviewer": "a",
+      "fullBodyRead": true
+    },
+    {
+      "file": "file-root-round27.md",
+      "sha256Before": "a032a7897961f673d11b0529b3cb25b6713c64f3e3d301ff88c625872b9b6be8",
+      "classification": "正式专项",
+      "reviewer": "b",
+      "fullBodyRead": true
+    },
+    {
+      "file": "files-round4.md",
+      "sha256Before": "4788d986505c6227cc46a534479781143221d285cca5b5cb1d26354c77e4677b",
+      "classification": "正式专项",
+      "reviewer": "c",
+      "fullBodyRead": true
+    },
+    {
+      "file": "flow-coverage.md",
+      "sha256Before": "6bf8657e6254b7feb220fd79a1b00d7f7c26cffbb832e02b16182e18ab0660cb",
+      "classification": "流程覆盖汇总",
+      "reviewer": "root",
+      "method": "最终状态、正式86项、分级/计数、流程及交接口径交叉对照；不将历史进度作为当前发现或新执行"
+    },
+    {
+      "file": "fork-authority-quality-round26.md",
+      "sha256Before": "5aa3206e3a14c7b624f424ab9d9c7cd32286e3da1708a914b9d948da923da7fd",
+      "classification": "正常反证",
+      "reviewer": "a",
+      "fullBodyRead": true
+    },
+    {
+      "file": "fresh-project-quality-round18.md",
+      "sha256Before": "6a9b2edf998f07299fe9f47d91b8bedbb1d336e6e833509613e94529a5f9c70a",
+      "classification": "质量复核",
+      "reviewer": "b",
+      "fullBodyRead": true
+    },
+    {
+      "file": "goal-bound-quality-round20.md",
+      "sha256Before": "d7cbc718181911e1a24793e23b89d3c92b1c74b2e88f04d2279779d80c820dc1",
+      "classification": "质量复核",
+      "reviewer": "c",
+      "fullBodyRead": true
+    },
+    {
+      "file": "goal-cold-quality-round20.md",
+      "sha256Before": "e93786f20385e23887b5c998631c57c2b4406ebe002662ef5306bc17672ae2c1",
+      "classification": "质量复核",
+      "reviewer": "a",
+      "fullBodyRead": true
+    },
+    {
+      "file": "goal-sleep-round20.md",
+      "sha256Before": "a790f5f6330fc21f95d83d0c39efecf4ab33950e48d24ea0902d0bfda85ccc55",
+      "classification": "正式专项",
+      "reviewer": "b",
+      "fullBodyRead": true
+    },
+    {
+      "file": "high-risk-quality-round17.md",
+      "sha256Before": "3254a130e251de5cadc4cca01f54d00846a7b439ab21dc175cb37f3d4c7ef177",
+      "classification": "质量复核",
+      "reviewer": "c",
+      "fullBodyRead": true
+    },
+    {
+      "file": "http-error-preflight-round23.md",
+      "sha256Before": "366fe95280c5cee9eaa82e13a6b0a39a848751243a828adae2294e3f4bac1233",
+      "classification": "准备或预审",
+      "reviewer": "a",
+      "fullBodyRead": true
+    },
+    {
+      "file": "hub-session-operations-quality-round18.md",
+      "sha256Before": "bbb52f96c5f5494cbee370d59f362a9e621d8efc2c77aeb83ca89a7e5f07be03",
+      "classification": "质量复核",
+      "reviewer": "b",
+      "fullBodyRead": true
+    },
+    {
+      "file": "hub-session-operations-round18.md",
+      "sha256Before": "565000b79719c562c38b981dd0e1466bc4cc50f223aafe89d4ab0559facbe1a9",
+      "classification": "正式专项",
+      "reviewer": "c",
+      "fullBodyRead": true
+    },
+    {
+      "file": "latest-baseline.md",
+      "sha256Before": "2674e305de313d25ea68c04d2b2b55833718a7ec3dd1e32de57ad5b1953f8c7a",
+      "classification": "历史交付",
+      "reviewer": "a",
+      "fullBodyRead": true
+    },
+    {
+      "file": "legacy-history-quality-round24.md",
+      "sha256Before": "5b8e893648235dd1c7caec7bf5810946b8216afe4b921ad9baab9210e988685e",
+      "classification": "质量复核",
+      "reviewer": "b",
+      "fullBodyRead": true
+    },
+    {
+      "file": "legacy-history-round24.md",
+      "sha256Before": "f6d718b8ffbc74b33c86c69f4091171bd4d8659ff709af57fb200a65ad0384b0",
+      "classification": "正式专项",
+      "reviewer": "c",
+      "fullBodyRead": true
+    },
+    {
+      "file": "link-recovery-round16.md",
+      "sha256Before": "94c4307afacd8ddffd9b37988ecc0b7de2285cd634d99e1198c4228c72a4dfaf",
+      "classification": "正常反证",
+      "reviewer": "a",
+      "fullBodyRead": true
+    },
+    {
+      "file": "links-round8.md",
+      "sha256Before": "a1364539fc211b930e122d7ed064503ea352c6d9c4351ddbc46e81729a51d55d",
+      "classification": "正常反证",
+      "reviewer": "b",
+      "fullBodyRead": true
+    },
+    {
+      "file": "menu-quality-preflight-round23.md",
+      "sha256Before": "9090e8a6414a6aad7df06ee2decff1d97247ab66c9752d89a1f32fdc0ce51826",
+      "classification": "准备或预审",
+      "reviewer": "c",
+      "fullBodyRead": true
+    },
+    {
+      "file": "menu-recents-preflight-round23.md",
+      "sha256Before": "533e92893e56d68b3a94eda9460ab0d624969e08351c6cfc54b118cf33e49df2",
+      "classification": "准备或预审",
+      "reviewer": "a",
+      "fullBodyRead": true
+    },
+    {
+      "file": "menu-recents-quality-round23.md",
+      "sha256Before": "f71416129225c187708bdc003172a8651892baf2d4f4bb05ad9460d9dc51ee83",
+      "classification": "质量复核",
+      "reviewer": "b",
+      "fullBodyRead": true
+    },
+    {
+      "file": "menu-recents-round23.md",
+      "sha256Before": "c55475ba78ec9804689d44e97f5930707517c7a03661fc7e445e14667f195b6b",
+      "classification": "正式专项",
+      "reviewer": "c",
+      "fullBodyRead": true
+    },
+    {
+      "file": "menu-routing-round23.md",
+      "sha256Before": "f493ff08565819c2a3c95a99754f6739c932730ccb0de6628bb301028d035edc",
+      "classification": "正式专项",
+      "reviewer": "a",
+      "fullBodyRead": true
+    },
+    {
+      "file": "model-native-quality-round20.md",
+      "sha256Before": "6bfb9ede9391ce3f060f08d3983bb58f8eef1ef839b068bc6e8f2e7c108b5da2",
+      "classification": "质量复核",
+      "reviewer": "b",
+      "fullBodyRead": true
+    },
+    {
+      "file": "model-native-round20.md",
+      "sha256Before": "eaf2f941ec5ae7b3299dce55afd082779d21566571a53032edcc9c3642f71815",
+      "classification": "正式专项",
+      "reviewer": "c",
+      "fullBodyRead": true
+    },
+    {
+      "file": "model-switch-quality-round18.md",
+      "sha256Before": "4de6c3ecdf5442672cfe69503046ddf20192894741a97007265e77a4bafd8f08",
+      "classification": "质量复核",
+      "reviewer": "a",
+      "fullBodyRead": true
+    },
+    {
+      "file": "model-switch-round18.md",
+      "sha256Before": "e70836526062a86067744225ab94f99f16aba9f25b62aaf8d2d5371559d968f5",
+      "classification": "正式专项",
+      "reviewer": "b",
+      "fullBodyRead": true
+    },
+    {
+      "file": "modern-desktop-image-quality-round25.md",
+      "sha256Before": "bcbf00394da57cb3ecd4d43e3d994141264c50ed4863b50b63c34c621adccb2b",
+      "classification": "准备或预审",
+      "reviewer": "c",
+      "fullBodyRead": true
+    },
+    {
+      "file": "modern-desktop-image-round25.md",
+      "sha256Before": "d11e6de36e65130b75c6d6b83e915336bd02da4f4ef51592bf5200277274fbb1",
+      "classification": "正式专项",
+      "reviewer": "a",
+      "fullBodyRead": true
+    },
+    {
+      "file": "multiwindow-round13.md",
+      "sha256Before": "7e201005ad70b003026478912746736a5c7aadba8f76751f86890971ce291244",
+      "classification": "正式专项",
+      "reviewer": "b",
+      "fullBodyRead": true
+    },
+    {
+      "file": "notification-quality-round14.md",
+      "sha256Before": "6fccdc4940862197c5719272a4b6ff358997624d1124db6822747a6022706b82",
+      "classification": "质量复核",
+      "reviewer": "c",
+      "fullBodyRead": true
+    },
+    {
+      "file": "notification-round14.md",
+      "sha256Before": "678802c7c7845c7c4f83afbcb4a335736ce0c53ca15b0af332027db43cdb0bdd",
+      "classification": "正式专项",
+      "reviewer": "a",
+      "fullBodyRead": true
+    },
+    {
+      "file": "panels-round6.md",
+      "sha256Before": "c2edc10152417249f841168110b9aad9cf7cf42f25ada6263d2f5e7c3b7a997f",
+      "classification": "正常反证",
+      "reviewer": "b",
+      "fullBodyRead": true
+    },
+    {
+      "file": "plugin-quality-round9.md",
+      "sha256Before": "d95a7591feb90602afbd339fc10c896e4fb7e119c545c625cf64e7e804e4598b",
+      "classification": "质量复核",
+      "reviewer": "c",
+      "fullBodyRead": true
+    },
+    {
+      "file": "plugins-round7.md",
+      "sha256Before": "2d94322748f32d12ed7c55c48224000db209ec62a9fe90c927d85c9bb56d8970",
+      "classification": "正式专项",
+      "reviewer": "a",
+      "fullBodyRead": true
+    },
+    {
+      "file": "priority-quality-round20.md",
+      "sha256Before": "1d9989e420bef47437f614d12252c2127fa97818b3fa4214a309f103d09ff1e2",
+      "classification": "质量复核",
+      "reviewer": "b",
+      "fullBodyRead": true
+    },
+    {
+      "file": "progress.md",
+      "sha256Before": "aec593ba7cbe132bc3c536afbc86c47b8c40af4684029adee9f3e775de854ff8",
+      "classification": "历史进度与最终状态",
+      "reviewer": "root",
+      "method": "最终状态、正式86项、分级/计数、流程及交接口径交叉对照；不将历史进度作为当前发现或新执行"
+    },
+    {
+      "file": "project-recovery-quality-round16.md",
+      "sha256Before": "b3673530d4ff3dfa7a09f2dada7af7dad3f2bf256b9f8c64ae0e93b44a1020f8",
+      "classification": "质量复核",
+      "reviewer": "c",
+      "fullBodyRead": true
+    },
+    {
+      "file": "project-recovery-round16.md",
+      "sha256Before": "1f32eed0705ce29ddbf804653927f496903d2f48761fe5bbad47655d020754bb",
+      "classification": "正式专项",
+      "reviewer": "a",
+      "fullBodyRead": true
+    },
+    {
+      "file": "quality-audit.md",
+      "sha256Before": "c2a286f5026778105341baa47927449137e5149fcc86c31d21f037abf8c639ea",
+      "classification": "质量复核",
+      "reviewer": "b",
+      "fullBodyRead": true
+    },
+    {
+      "file": "quality-round13.md",
+      "sha256Before": "ff3b9fff437939220add9cbeb2de54fa4408423c8e59908f676249ebcdaf87ab",
+      "classification": "历史交付",
+      "reviewer": "c",
+      "fullBodyRead": true
+    },
+    {
+      "file": "quality-round14.md",
+      "sha256Before": "7757158ff7ff848293dbcda6f430548149df9436d32525e3690db968251e7368",
+      "classification": "质量复核",
+      "reviewer": "a",
+      "fullBodyRead": true
+    },
+    {
+      "file": "quality-round15.md",
+      "sha256Before": "006e31f48c1d43819e2adfc0db685e5dbc9bd1315187ea9922619b6173a817db",
+      "classification": "质量复核",
+      "reviewer": "b",
+      "fullBodyRead": true
+    },
+    {
+      "file": "quality-round16.md",
+      "sha256Before": "ab92b289f8efed6264cf2e645d5b140e05c67f12775fd128d8445afaaf9f62f4",
+      "classification": "历史交付",
+      "reviewer": "c",
+      "fullBodyRead": true
+    },
+    {
+      "file": "quality-round17.md",
+      "sha256Before": "18845726d62d07f974d6e5a9a2446205d63cd1b841690cbe0b3ff8fc3a4c172e",
+      "classification": "质量复核",
+      "reviewer": "a",
+      "fullBodyRead": true
+    },
+    {
+      "file": "quality-round18.md",
+      "sha256Before": "bdbfb8256dc0213c632f9f8e9b47052a8f86b11639542853a350a5a39ef90963",
+      "classification": "质量复核",
+      "reviewer": "b",
+      "fullBodyRead": true
+    },
+    {
+      "file": "quality-round19.md",
+      "sha256Before": "178d8ec7637db0dc54003ba96a1f4e4ab85bec92b747a78f4ee8f3f556c99661",
+      "classification": "历史交付",
+      "reviewer": "c",
+      "fullBodyRead": true
+    },
+    {
+      "file": "quality-round20.md",
+      "sha256Before": "c498506965ba3fdbbf9b1fa0fbb89155809f5c505492c87d8ce71d81801d55c3",
+      "classification": "质量复核",
+      "reviewer": "a",
+      "fullBodyRead": true
+    },
+    {
+      "file": "quality-round21.md",
+      "sha256Before": "ddf5623049b1dbadcad3da0ecb98b8016357e5a5f2153e982ec537f373691bc1",
+      "classification": "质量复核",
+      "reviewer": "b",
+      "fullBodyRead": true
+    },
+    {
+      "file": "quality-round22.md",
+      "sha256Before": "05c849c718ff57c4b838b536cf3b9ee52219ac49b1ff7ae7d28db506424a42a6",
+      "classification": "历史交付",
+      "reviewer": "c",
+      "fullBodyRead": true
+    },
+    {
+      "file": "quality-round23.md",
+      "sha256Before": "2fae5540e009a535ccdf5ae75ef4700b4f9b20111fea1f3d953bc1601d3aca19",
+      "classification": "质量复核",
+      "reviewer": "a",
+      "fullBodyRead": true
+    },
+    {
+      "file": "quality-round24.md",
+      "sha256Before": "8be9e1623e6870055505ad5c7c1f23e3d07a11c60408d058833967402cc5e1ff",
+      "classification": "质量复核",
+      "reviewer": "b",
+      "fullBodyRead": true
+    },
+    {
+      "file": "quality-round25.md",
+      "sha256Before": "62c91f923fdabd5c2df7452db13fca944c02c52d0bfa53e9a0b190693bc42b98",
+      "classification": "质量复核",
+      "reviewer": "c",
+      "fullBodyRead": true
+    },
+    {
+      "file": "quality-round27.md",
+      "sha256Before": "041c852033471f583a6ceb7de9fc0749d228bb0102dd680d75407101c149d21d",
+      "classification": "质量复核",
+      "reviewer": "a",
+      "fullBodyRead": true
+    },
+    {
+      "file": "quality-round28.md",
+      "sha256Before": "a70053171ff2f44290830a16f2261b729a21990c93aee6f124b370123027774d",
+      "classification": "质量复核",
+      "reviewer": "b",
+      "fullBodyRead": true
+    },
+    {
+      "file": "quality-round29.md",
+      "sha256Before": "752e47a24b17798a902b89e596cbee44ce3811dc10af43a9a33f442fbf0845c2",
+      "classification": "历史交付",
+      "reviewer": "c",
+      "fullBodyRead": true
+    },
+    {
+      "file": "quality-round5.md",
+      "sha256Before": "bc5defe7fc1355527e11f0d96ba3ed267bb772bc5a8190ae19877bf8cf566d32",
+      "classification": "质量复核",
+      "reviewer": "a",
+      "fullBodyRead": true
+    },
+    {
+      "file": "quality-round6.md",
+      "sha256Before": "601a974c41e18a3aa5292547ef54948d360599c252b65573e990c8815582c278",
+      "classification": "质量复核",
+      "reviewer": "b",
+      "fullBodyRead": true
+    },
+    {
+      "file": "quickchat-round8.md",
+      "sha256Before": "82529356a7906739a2065f64f679d2290fadcdf36bc2d1998d65e812860285fe",
+      "classification": "正式专项",
+      "reviewer": "c",
+      "fullBodyRead": true
+    },
+    {
+      "file": "r29-priority-round20.md",
+      "sha256Before": "fccee7e527bfb3d8edd5b5b118c078a7813eba76da184f1382b8f6dac61daf40",
+      "classification": "质量复核",
+      "reviewer": "a",
+      "fullBodyRead": true
+    },
+    {
+      "file": "remote-settings-quality-round15.md",
+      "sha256Before": "1504edcf5ef1b98c4e71002cde575d0e3f9028ee05bc054e9cfa0eb2ab2860c5",
+      "classification": "质量复核",
+      "reviewer": "b",
+      "fullBodyRead": true
+    },
+    {
+      "file": "remote-settings-round15.md",
+      "sha256Before": "c0a135e71f7606b3fb54b6b3124c6375613838d45a27ba935906797908b714bd",
+      "classification": "正式专项",
+      "reviewer": "c",
+      "fullBodyRead": true
+    },
+    {
+      "file": "repair-handoff.md",
+      "sha256Before": "67f276e1eb1fc92f0998b0a36429dec8e82e6dadd4fde11c5436ea5a589df6e8",
+      "classification": "修复交接汇总",
+      "reviewer": "root",
+      "method": "最终状态、正式86项、分级/计数、流程及交接口径交叉对照；不将历史进度作为当前发现或新执行"
+    },
+    {
+      "file": "resource-quality-round8.md",
+      "sha256Before": "144f503bca6049c11ef1eca2faa108998d2d0ef5a4eafaaca3ea0946e9913975",
+      "classification": "质量复核",
+      "reviewer": "a",
+      "fullBodyRead": true
+    },
+    {
+      "file": "runtime-round3.md",
+      "sha256Before": "d3873d2f368812e049bda27862bca1b6a7a026a2c6d451e2b12765888a5230d7",
+      "classification": "正式专项",
+      "reviewer": "b",
+      "fullBodyRead": true
+    },
+    {
+      "file": "search-quality-round12.md",
+      "sha256Before": "9ce018cfa43d39516d6d9962afcd32b6bf162cd99d907c3280f8b688d242dc14",
+      "classification": "质量复核",
+      "reviewer": "c",
+      "fullBodyRead": true
+    },
+    {
+      "file": "search-routing-round11.md",
+      "sha256Before": "20d0d67f8e47b7706dca55f9bf2e51de5793b757fee31b3ee578e63d140dbc0c",
+      "classification": "正式专项",
+      "reviewer": "a",
+      "fullBodyRead": true
+    },
+    {
+      "file": "server-preflight-round23.md",
+      "sha256Before": "80ee715fa408a2ed8fcb9a1490301b933d40db9386988e9cc5d6e9dc7dcd2112",
+      "classification": "准备或预审",
+      "reviewer": "b",
+      "fullBodyRead": true
+    },
+    {
+      "file": "server-round1.md",
+      "sha256Before": "dc6a7308826b0a483310966e17b04ec7ca6cb56a37ebad9edbc7cfe2d42ff5e8",
+      "classification": "正式专项",
+      "reviewer": "c",
+      "fullBodyRead": true
+    },
+    {
+      "file": "server-routing-quality-round17.md",
+      "sha256Before": "5773d0834f94b56230913b0dc5599664ad95375e0a906326321fe55aa31e57cf",
+      "classification": "质量复核",
+      "reviewer": "a",
+      "fullBodyRead": true
+    },
+    {
+      "file": "server-routing-round17.md",
+      "sha256Before": "72976cb51679714421d8e411c6920189ac6c662bfbac63f0e3d86a7d5463bfd6",
+      "classification": "正式专项",
+      "reviewer": "b",
+      "fullBodyRead": true
+    },
+    {
+      "file": "session-actions-quality-round13.md",
+      "sha256Before": "5541c2ee2706164324739296a5b22089acee63d0aba61b50ac60667db38ba166",
+      "classification": "质量复核",
+      "reviewer": "c",
+      "fullBodyRead": true
+    },
+    {
+      "file": "session-actions-round13.md",
+      "sha256Before": "e93516afdcc2eef11850eaa1d2e7a2859b0524af030d3a8e07317176cb3b4e37",
+      "classification": "正式专项",
+      "reviewer": "a",
+      "fullBodyRead": true
+    },
+    {
+      "file": "session-close-round10.md",
+      "sha256Before": "979781b84893ec9989bc02ae4a1b84896268e50b29236ed9220f83f062d014c6",
+      "classification": "正常反证",
+      "reviewer": "b",
+      "fullBodyRead": true
+    },
+    {
+      "file": "session-continuation-round26.md",
+      "sha256Before": "0a62a74ebef8c320ab8ed6697d533a464f3faac7519b33bfc984b66d63f8e44b",
+      "classification": "正常反证",
+      "reviewer": "c",
+      "fullBodyRead": true
+    },
+    {
+      "file": "session-operations-quality-round17.md",
+      "sha256Before": "0010d542f2ab2210dfeb4a6733bef909eb8d2931970173929674be65ea56f39b",
+      "classification": "质量复核",
+      "reviewer": "a",
+      "fullBodyRead": true
+    },
+    {
+      "file": "session-operations-round17.md",
+      "sha256Before": "f70e6e23b7fb293b7510edc8af69470a4d01cdeb1f43b1b1453e4b684f9c9fd9",
+      "classification": "正式专项",
+      "reviewer": "b",
+      "fullBodyRead": true
+    },
+    {
+      "file": "settings-recovery-quality-round16.md",
+      "sha256Before": "4c2d905de81c6637dbbc5fb7dfc588490c16b57fe4ceca4bcd2abdab4562ca80",
+      "classification": "质量复核",
+      "reviewer": "c",
+      "fullBodyRead": true
+    },
+    {
+      "file": "settings-recovery-round16.md",
+      "sha256Before": "b5f501f9b6a20e6067db547d8a504ff27ba4b8d0ebdbd8b0971fd0e613d77bf8",
+      "classification": "正式专项",
+      "reviewer": "a",
+      "fullBodyRead": true
+    },
+    {
+      "file": "sidebar-account-local-round22.md",
+      "sha256Before": "bbadd7c470fff08c13d5c7c5e538419dbe3c7f15aa2bf39a492c9aedad29d483",
+      "classification": "准备或预审",
+      "reviewer": "b",
+      "fullBodyRead": true
+    },
+    {
+      "file": "sidebar-title-observation-round27.md",
+      "sha256Before": "a8066e62f720eb5f74ec3a776fdb98652ad2fb686302efb259b059a76315bb74",
+      "classification": "正常反证",
+      "reviewer": "c",
+      "fullBodyRead": true
+    },
+    {
+      "file": "terminal-lifecycle-round14.md",
+      "sha256Before": "9d1cc570aa45198dff160f02313f8a33b933b789a448424ea36b2ccb18130697",
+      "classification": "正式专项",
+      "reviewer": "a",
+      "fullBodyRead": true
+    },
+    {
+      "file": "terminal-review-quality-round13.md",
+      "sha256Before": "1cbd5595335bd61f74f844924f57abb75bea03f6cc6e22e868f8f7c59e98a34d",
+      "classification": "质量复核",
+      "reviewer": "b",
+      "fullBodyRead": true
+    },
+    {
+      "file": "terminal-review-round13.md",
+      "sha256Before": "66a12b0debbd243648ef214fa4b7b09204d87cc7111951bc00f0d91a35d5e33e",
+      "classification": "正式专项",
+      "reviewer": "c",
+      "fullBodyRead": true
+    },
+    {
+      "file": "transfer-round12.md",
+      "sha256Before": "0c16bb785db7e51ad820fab3094df950df8bce0040dba3b747ea7744d009ced1",
+      "classification": "正常反证",
+      "reviewer": "a",
+      "fullBodyRead": true
+    },
+    {
+      "file": "updater-candidate-audit.md",
+      "sha256Before": "bd941db5e6caed66a4e4839d82c126367351d886fb8886a4f977a0491f4830a1",
+      "classification": "正常反证",
+      "reviewer": "b",
+      "fullBodyRead": true
+    },
+    {
+      "file": "voice-round6.md",
+      "sha256Before": "94b7b9092aecaca35e1b8abf327bd9036fb2414a9b0a542eccc4a0b34fba95db",
+      "classification": "正式专项",
+      "reviewer": "c",
+      "fullBodyRead": true
+    },
+    {
+      "file": "web-lifecycle-round13.md",
+      "sha256Before": "8ddec54fe8563e0fd2b8583247821e7cca81f250e70c2b4d5f53ae317ee22b57",
+      "classification": "正式专项",
+      "reviewer": "a",
+      "fullBodyRead": true
+    },
+    {
+      "file": "web-quality-round10.md",
+      "sha256Before": "25fd8f7f3c444f587f674a9ffb8a7cb8816725d1d85a7f35c1bfee6bd94d3ef0",
+      "classification": "质量复核",
+      "reviewer": "b",
+      "fullBodyRead": true
+    },
+    {
+      "file": "web-round1.md",
+      "sha256Before": "062fe7be52825010fefd6ea12a3e1167c6c5d2d50d14aa06932dc1f980b4107a",
+      "classification": "正式专项",
+      "reviewer": "c",
+      "fullBodyRead": true
+    },
+    {
+      "file": "web-round2.md",
+      "sha256Before": "8b65c7d1e74d77bfbf4a6f5602917344b5aa12c2b805dc66ae95a201ace428de",
+      "classification": "正式专项",
+      "reviewer": "a",
+      "fullBodyRead": true
+    },
+    {
+      "file": "web-round3.md",
+      "sha256Before": "c96980d8023f4d2556fead8c049a16903d9ebffccf8d496e46d0b6b9f72eaec0",
+      "classification": "正式专项",
+      "reviewer": "b",
+      "fullBodyRead": true
+    },
+    {
+      "file": "web-round5.md",
+      "sha256Before": "c579cd8a99ca7a8f78c650eaa7e02d36a5d97861b5bb66d084148aa114dafd63",
+      "classification": "正式专项",
+      "reviewer": "c",
+      "fullBodyRead": true
+    },
+    {
+      "file": "workspace-quality-round11.md",
+      "sha256Before": "910177703a4d36a30222682689bc6314650ce917b2c96fee2ff7b1156a732230",
+      "classification": "质量复核",
+      "reviewer": "a",
+      "fullBodyRead": true
+    }
+  ],
+  "documentationChanges": [
+    {
+      "file": "README.md",
+      "beforeSha256": "73c1ad7d1778446d823300b2dbaf14da1aa960ffdda348976196cd5d3355b6d6",
+      "afterSha256": "0b3bbba150474889a536dda42e62e73490bcc7f4adbcdcf77a9be49ab940d9a7",
+      "sourceCommit": "b52e83061fc33f6227da28032db14204223a1369"
+    },
+    {
+      "file": "desktop-round3.md",
+      "beforeSha256": "16e1dbe84a3e8e6f36eec39447918a72339682b530471052723de46bc4aec7b4",
+      "afterSha256": "04430329ec33f8c40c8170f36f0b14855d184860e4dd4084bb1034d4fbfd336c",
+      "sourceCommit": "b52e83061fc33f6227da28032db14204223a1369"
+    },
+    {
+      "file": "quality-round16.md",
+      "beforeSha256": "ab92b289f8efed6264cf2e645d5b140e05c67f12775fd128d8445afaaf9f62f4",
+      "afterSha256": "fd4fb2e2530d7abc2852d1dfa89fd665a21a48e8e045602191db491089fd4e03",
+      "sourceCommit": "b52e83061fc33f6227da28032db14204223a1369"
+    },
+    {
+      "file": "modern-desktop-image-quality-round25.md",
+      "beforeSha256": "bcbf00394da57cb3ecd4d43e3d994141264c50ed4863b50b63c34c621adccb2b",
+      "afterSha256": "36d4892b31b9342551911b38aa236d77d058db58547f8b54e6a8394e512b918d",
+      "sourceCommit": "b52e83061fc33f6227da28032db14204223a1369"
+    },
+    {
+      "file": "progress.md",
+      "beforeSha256": "aec593ba7cbe132bc3c536afbc86c47b8c40af4684029adee9f3e775de854ff8",
+      "afterSha256": "6454bc34d825cf3535654665b98d7062c4e05e31166aa6ac7cbfa47c3f06ed03",
+      "sourceCommit": "b52e83061fc33f6227da28032db14204223a1369"
+    },
+    {
+      "file": "repair-handoff.md",
+      "beforeSha256": "67f276e1eb1fc92f0998b0a36429dec8e82e6dadd4fde11c5436ea5a589df6e8",
+      "afterSha256": "a7779ff8c02810b429e6d4aaf3ad37b5764842f5cf9339cb914c3d0775e5dc22",
+      "sourceCommit": "b52e83061fc33f6227da28032db14204223a1369"
+    }
+  ],
+  "moduleMappingGroups": {
+    "serverWeb": 23,
+    "desktop": 20,
+    "coreOtherPackagesRoot": 10
+  },
+  "currentProductScope": {
+    "frozenPrimary": "84740d56e55517b004948a0a0e07649ad6fbf998",
+    "frozenLatest": "a66f4ef291f304ee4df9da8095a90671d9a8f140",
+    "originMainAfterThisRoundFetch": "a66f4ef291f304ee4df9da8095a90671d9a8f140",
+    "localMainObserved": "62a58ac8",
+    "localMainDifferenceNotReReviewed": [
+      "packages/desktop/src/main/cloud-account-ipc.test.ts",
+      "packages/desktop/src/main/cloud-account-ipc.ts",
+      "packages/desktop/src/main/cloud-account-manager.test.ts",
+      "packages/desktop/src/main/cloud-account-manager.ts",
+      "packages/desktop/src/main/desktop-remote-services.test.ts",
+      "packages/desktop/src/preload/cloud-account-api.ts",
+      "packages/desktop/src/renderer/Sidebar.tsx",
+      "packages/desktop/src/renderer/account/AccountSidebarEntry.fixture.tsx",
+      "packages/desktop/src/renderer/account/AccountSidebarEntry.interaction.test.tsx",
+      "packages/desktop/src/renderer/account/AccountSidebarEntry.tsx",
+      "packages/desktop/src/renderer/i18n/ns/settings.ts",
+      "packages/desktop/src/renderer/settings/CloudAccountSettings.tsx",
+      "packages/desktop/src/shared/cloud-account.ts"
+    ]
+  },
+  "mechanicalQc": {
+    "checkedAtSingapore": "2026-10-12T11:28:13.279982+08:00",
+    "newProductExecutions": 0,
+    "formalRowsAndEvidenceUnchanged": true,
+    "all86RowsSortedAndUnique": true,
+    "all140OriginalReportsIndexed": true,
+    "fullBodyReads": 136,
+    "rootAggregateCrossChecks": 4,
+    "beforeHashesVerifiedAgainstCommit": "b52e83061fc33f6227da28032db14204223a1369",
+    "archivedAuditHashesVerified": 3,
+    "topMarkdownLocalLinks": 2050,
+    "sourceLineLinks": 1036,
+    "errors": [],
+    "frozenWorktrees": [
+      {
+        "tree": "/Users/admin/.codex/worktrees/server-desktop-review-20261012/codeshell",
+        "productDiff": []
+      },
+      {
+        "tree": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell",
+        "productDiff": []
+      }
+    ],
+    "commonMetadataPerSnapshot": {
+      "files": 86,
+      "tests": 251
+    },
+    "heartbeat": "PAUSED"
+  },
+  "independentFinalReview": {
+    "result": "PASS",
+    "reviewer": "/root/report_meta_audit_b",
+    "archive": "validation/postdelivery-report-review/final-independent-quality.raw.json",
+    "sha256": "567a0f1448a13087903cca12c9597198cbdf7367139a7b174bce224dc7f6ad05",
+    "readmeDiscoveryRowsUnchanged": 86,
+    "readmeFullLineCountBefore": 356,
+    "readmeFullLineCountAfter": 358,
+    "R21HeadingLinePreserved": 136,
+    "newProductExecutions": 0
+  },
+  "originalCheckoutReadback": {
+    "head": "62a58ac8702835f848108e152234a6bdd6c3eb3f",
+    "status": "clean; read only and preserved"
+  },
+  "goalReadback": "No active goal returned by get_goal; prior completed delivery receipt retained, no goal created/reopened.",
+  "finalizedAtSingapore": "2026-10-12T11:29:47.980415+08:00"
+}

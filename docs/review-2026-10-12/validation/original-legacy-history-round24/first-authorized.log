@@ -1,0 +1,21 @@
+bun test v1.3.11 (af24e281)
+
+../../../../../../private/tmp/codeshell-review-20261012-legacy-history-round24/legacy-native-history.test.ts:
+16 | const JPEG_SOF_MARKERS = new Set([
+17 |   0xc0, 0xc1, 0xc2, 0xc3, 0xc5, 0xc6, 0xc7, 0xc9, 0xca, 0xcb, 0xcd, 0xce, 0xcf,
+18 | ]);
+19 |
+20 | function invalid(mime: string, detail: string): never {
+21 |   throw new Error(`invalid ${mime} image structure: ${detail}`);
+                 ^
+error: invalid PNG image structure: IDAT CRC mismatch
+      at invalid (/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/server/src/image-byte-probe.ts:21:13)
+      at probePng (/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/server/src/image-byte-probe.ts:74:7)
+      at sanitizeImageBytes (/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/server/src/image-byte-probe.ts:311:21)
+      at stageImageBuffer (/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/server/src/attachment-service.ts:246:21)
+(fail) characterizes current native legacy image-history projection and modern cutover control [9.64ms]
+
+ 0 pass
+ 1 fail
+Ran 1 test across 1 file. [1236.00ms]
+Bun test process failed (1)

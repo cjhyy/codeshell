@@ -1,0 +1,134 @@
+{
+  "completed": true,
+  "phase": "completed",
+  "failure": null,
+  "isolatedHome": "/private/var/folders/1d/6__4f4y51g90nblfptt8s9v80000gn/T/codeshell-bun-completion-vdywGw/home",
+  "guardScope": {
+    "maintainedPrivateHome": true,
+    "exactOriginInstalledBeforeProductImports": "http://127.0.0.1:9",
+    "dummyOriginAlsoDenied": true,
+    "networkAndChildAPIs": "fetch/http(s)/net/tls/dgram/WebSocket/Bun listeners and child_process/worker_threads/Worker/Bun spawn",
+    "limitation": "in-process guards, not an OS sandbox or universal direct-native-network confinement"
+  },
+  "attempts": [],
+  "ownedPaths": [
+    "/private/var/folders/1d/6__4f4y51g90nblfptt8s9v80000gn/T/codeshell-bun-completion-vdywGw/home/.code-shell/round25-owned-no-repo/f25-paired-image-text",
+    "/private/var/folders/1d/6__4f4y51g90nblfptt8s9v80000gn/T/codeshell-bun-completion-vdywGw/home/.code-shell/sessions/f25-paired-image-text",
+    "/private/var/folders/1d/6__4f4y51g90nblfptt8s9v80000gn/T/codeshell-bun-completion-vdywGw/home/.code-shell/round25-owned-no-repo/f25-paired-image-only",
+    "/private/var/folders/1d/6__4f4y51g90nblfptt8s9v80000gn/T/codeshell-bun-completion-vdywGw/home/.code-shell/sessions/f25-paired-image-only"
+  ],
+  "cleanups": [
+    {
+      "sid": "f25-paired-image-text",
+      "ownedFilesRemoved": true,
+      "errors": []
+    },
+    {
+      "sid": "f25-paired-image-only",
+      "ownedFilesRemoved": true,
+      "errors": []
+    }
+  ],
+  "productResolutions": [
+    {
+      "specifier": "@cjhyy/code-shell-core",
+      "importer": "packages/desktop/src/main/session-transcript-ipc.ts",
+      "resolved": "packages/core/dist/index.js",
+      "sha256": "a84c1b1a20ae29520ce9d7464933b693199f4dd2c2427fd398dcc6f73e219c84"
+    },
+    {
+      "specifier": "@cjhyy/code-shell-core/internal",
+      "importer": "packages/desktop/src/main/session-transcript-ipc.ts",
+      "resolved": "packages/core/dist/index.internal.js",
+      "sha256": "46415f56ac55a61a9f0e407264483212a1455f66dbacace7c3a3ee1aea943997"
+    },
+    {
+      "specifier": "@cjhyy/code-shell-server/storage",
+      "importer": "packages/desktop/src/main/session-transcript-ipc.ts",
+      "resolved": "packages/server/dist/index.storage.js",
+      "sha256": "99ac1004fcd981d79a262fbbd4b8e85d44d348fdfb79f281807c72fab6664167"
+    },
+    {
+      "specifier": "@cjhyy/code-shell-web",
+      "importer": "packages/desktop/src/renderer/types.ts",
+      "resolved": "packages/web/src/index.ts",
+      "sha256": "d7639605eb73fc1ec2aa772ab2a687f46138ab873eb620778288be69871a3c73"
+    }
+  ],
+  "scope": {
+    "producer": "real paired dispatch/materialization + canonical input helpers + SessionManager/Transcript; submit/acceptance is controlled, no Engine.run/provider/worker",
+    "journal": "actual Core dist run-stream publisher and journal writer; source counterparts audited; no handwritten user display event",
+    "desktop": "actual IPC handlers/preload facade, modern recovery, hydrate reducer and MessageStream SSR; useTranscriptBuckets/App wiring statically reviewed, no hook/Electron/full App",
+    "cache": "empty Desktop reducer/local replay base for a paired Session with no Desktop optimistic copy",
+    "web": "same actual journal events through Web reducer and Workbench SSR; no socket/auth/authority service",
+    "control": "actual inline encoder and Desktop optimistic append/MessageStream render only; no assertion that native run persists displayText",
+    "manifests": "source/dist SHA receipts plus resolution-only addresses, not module-cache/import-graph probes",
+    "aliases": "five actual presentation leaf modules forwarded under both bare @ alias and absolute path; same actual exports, no user/image/recovery logic mocked"
+  },
+  "sourcePathCount": 63,
+  "runnerHomeRemoved": true,
+  "runnerRootRemoved": true,
+  "sourceSha256": "411b12bcb249b6eeb5465fe67f1f30555ecc5fb2232c219c602e0ce1df049ca9",
+  "guardSha256": "6e1f5f5045f9606086f1b01e6eb988b88c5670f78000b260fcb9e035f1c69b3d",
+  "printedResult": "2 pass / 0 fail / 32 Bun expect; Completed Bun shard: 2 tests, 0 skipped; 0 failures.",
+  "cases": [
+    {
+      "sid": "f25-paired-image-text",
+      "prompt": "Describe the modern image",
+      "userText": "Describe the modern image",
+      "attachmentCount": 1,
+      "attachment": {
+        "kind": "image",
+        "path": ".code-shell/attachments/f25-paired-image-text/431ced6916a2a21a-modern-shot.png",
+        "absPath": "/private/var/folders/1d/6__4f4y51g90nblfptt8s9v80000gn/T/codeshell-bun-completion-vdywGw/home/.code-shell/round25-owned-no-repo/f25-paired-image-text/.code-shell/attachments/f25-paired-image-text/431ced6916a2a21a-modern-shot.png",
+        "sessionId": "f25-paired-image-text",
+        "originalName": "modern-shot.png",
+        "size": 68,
+        "mime": "image/png"
+      },
+      "desktopHasFileName": false,
+      "desktopHasUserBubble": true,
+      "pairedWebHasFileName": true,
+      "optimisticHasFileName": true,
+      "optimisticHasDataUrl": true,
+      "originalBytes": 68,
+      "originalSha256": "431ced6916a2a21a156e38701afe55bbd7f88969fbbfc56d7fe099d47f265460",
+      "producerParamsKeys": [
+        "task",
+        "cwd",
+        "sessionId",
+        "clientMessageId",
+        "attachments"
+      ]
+    },
+    {
+      "sid": "f25-paired-image-only",
+      "prompt": "",
+      "userText": "",
+      "attachmentCount": 1,
+      "attachment": {
+        "kind": "image",
+        "path": ".code-shell/attachments/f25-paired-image-only/431ced6916a2a21a-modern-shot.png",
+        "absPath": "/private/var/folders/1d/6__4f4y51g90nblfptt8s9v80000gn/T/codeshell-bun-completion-vdywGw/home/.code-shell/round25-owned-no-repo/f25-paired-image-only/.code-shell/attachments/f25-paired-image-only/431ced6916a2a21a-modern-shot.png",
+        "sessionId": "f25-paired-image-only",
+        "originalName": "modern-shot.png",
+        "size": 68,
+        "mime": "image/png"
+      },
+      "desktopHasFileName": false,
+      "desktopHasUserBubble": false,
+      "pairedWebHasFileName": true,
+      "optimisticHasFileName": true,
+      "optimisticHasDataUrl": true,
+      "originalBytes": 68,
+      "originalSha256": "431ced6916a2a21a156e38701afe55bbd7f88969fbbfc56d7fe099d47f265460",
+      "producerParamsKeys": [
+        "task",
+        "cwd",
+        "sessionId",
+        "clientMessageId",
+        "attachments"
+      ]
+    }
+  ]
+}

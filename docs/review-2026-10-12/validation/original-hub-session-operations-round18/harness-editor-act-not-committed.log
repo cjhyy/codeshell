@@ -1,0 +1,52 @@
+bun test v1.3.11 (af24e281)
+
+../../../../../../private/tmp/codeshell-review-20261012-hub-session-operations-round18/session-followup.test.tsx:
+An update to HubSessions inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://react.dev/link/wrap-tests-with-act
+An update to HubSessions inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://react.dev/link/wrap-tests-with-act
+An update to HubSessions inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://react.dev/link/wrap-tests-with-act
+{"actualHeadlessAuthHttpWs":true,"actualCoreAgentServerAndChatSessionManager":true,"actualHubSessionsArchiveHandler":true,"bridge":"in-memory all Core frames forwarded","engine":"fake controlled run; no model or native worker","normalRunArchiveAndExport":409,"asyncAnswerFollowupCoreBusy":true,"hostHistoryRunning":false,"archiveSucceedsWhileFollowupActive":true,"durableSessionRetained":true,"restoreAndCompletionControl":true}
+(pass) real authenticated Hub history fails to recognize a real Core admitted asynchronous-answer follow-up as running [302.68ms]
+75 |   if (!headers.has("origin")) headers.set("origin", origin);
+76 |   return guardedFetch(url, { ...init, headers });
+77 | };
+78 |
+79 | const nodes = (node: any): any[] => [node, ...Array.from(node.childNodes ?? []).flatMap(nodes)];
+80 | const props = (node: any): any => { const key = Object.keys(node).find(k => k.startsWith("__reactProps$")); return key ? node[key] : {}; };
+                                                            ^
+TypeError: undefined is not an object (evaluating 'Object.keys(node)')
+      at props (/private/tmp/codeshell-review-20261012-hub-session-operations-round18/session-followup.test.tsx:80:56)
+      at <anonymous> (/private/tmp/codeshell-review-20261012-hub-session-operations-round18/session-followup.test.tsx:204:157)
+(fail) actual Hub history title editor preserves drafts through conflict, failed storage and vanished session; explicit review and same-draft retry recover [37.31ms]
+
+ 1 pass
+ 1 fail
+ 17 expect() calls
+Ran 2 tests across 1 file. [932.00ms]
+Bun test process failed (1)

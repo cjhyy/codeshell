@@ -1,0 +1,22 @@
+2026-10-11T19:41:43.524Z pw:browser <launching> /Users/admin/.codex/worktrees/review-latest-20261012/codeshell/node_modules/.bun/electron@33.4.11/node_modules/electron/dist/Electron.app/Contents/MacOS/Electron -r /Users/admin/.codex/worktrees/review-latest-20261012/codeshell/node_modules/.bun/playwright-core@1.60.0/node_modules/playwright-core/lib/server/electron/loader.js --inspect=0 --remote-debugging-port=0 --require /private/var/folders/1d/6__4f4y51g90nblfptt8s9v80000gn/T/codeshell-reload-identity-round14-APTOlQ/real-keyring.cjs --user-data-dir=/private/var/folders/1d/6__4f4y51g90nblfptt8s9v80000gn/T/codeshell-reload-identity-round14-APTOlQ/electron-user-data /private/var/folders/1d/6__4f4y51g90nblfptt8s9v80000gn/T/codeshell-reload-identity-round14-APTOlQ/guarded-main.mjs
+2026-10-11T19:41:43.526Z pw:browser <launched> pid=71807
+2026-10-11T19:41:43.708Z pw:browser [pid=71807][err] Debugger listening on ws://127.0.0.1:55203/d037dce6-172d-49fa-b439-7cf325bb968e
+2026-10-11T19:41:43.708Z pw:browser [pid=71807][err] For help, see: https://nodejs.org/en/docs/inspector
+2026-10-11T19:41:43.708Z pw:browser <ws connecting> ws://127.0.0.1:55203/d037dce6-172d-49fa-b439-7cf325bb968e
+2026-10-11T19:41:43.711Z pw:browser [pid=71807][err] Debugger attached.
+2026-10-11T19:41:43.712Z pw:browser <ws connected> ws://127.0.0.1:55203/d037dce6-172d-49fa-b439-7cf325bb968e
+2026-10-11T19:41:44.454Z pw:browser [pid=71807][err]
+2026-10-11T19:41:44.454Z pw:browser [pid=71807][err] DevTools listening on ws://127.0.0.1:55211/devtools/browser/b962073d-c7af-4359-b671-43a8533cfa62
+2026-10-11T19:41:44.454Z pw:browser <ws connecting> ws://127.0.0.1:55211/devtools/browser/b962073d-c7af-4359-b671-43a8533cfa62
+2026-10-11T19:41:44.497Z pw:browser <ws connected> ws://127.0.0.1:55211/devtools/browser/b962073d-c7af-4359-b671-43a8533cfa62
+2026-10-11T19:41:44.811Z pw:browser [pid=71807][out] seed: copied 4 default agent(s)
+Electron fixture: Main network/home guard verified; no worker was created
+{"snapshots":[{"token":"71825","webContentsId":1,"rendererPid":71825,"sameOwnerObject":true},{"token":"71825","webContentsId":1,"rendererPid":71825,"sameOwnerObject":true},{"token":"71825","webContentsId":1,"rendererPid":71825,"sameOwnerObject":true}],"sameTokenAcrossTwoReloads":true,"sameOwnerAcrossTwoReloads":true,"workerCreated":false,"terminalOpened":false,"actualPtyStarted":false,"rendererErrors":[],"guard":{"mainPid":71807,"homeId":"3091fb829fbff1cf3545f11365684320621cf885e87ac79fe5aa6fec2f82aaf4","receipts":[{"pid":71807,"ppid":71801,"origin":"http://127.0.0.1:9","homeId":"3091fb829fbff1cf3545f11365684320621cf885e87ac79fe5aa6fec2f82aaf4"}],"spawned":[],"workerCreated":false}}
+2026-10-11T19:41:45.236Z pw:browser <ws disconnecting> ws://127.0.0.1:55203/d037dce6-172d-49fa-b439-7cf325bb968e
+2026-10-11T19:41:45.236Z pw:browser [pid=71807][err] Debugger ending on ws://127.0.0.1:55203/d037dce6-172d-49fa-b439-7cf325bb968e
+2026-10-11T19:41:45.236Z pw:browser [pid=71807][err] For help, see: https://nodejs.org/en/docs/inspector
+2026-10-11T19:41:45.237Z pw:browser <ws disconnected> ws://127.0.0.1:55203/d037dce6-172d-49fa-b439-7cf325bb968e code=1005 reason=
+2026-10-11T19:41:45.476Z pw:browser <ws disconnected> ws://127.0.0.1:55211/devtools/browser/b962073d-c7af-4359-b671-43a8533cfa62 code=1006 reason=
+2026-10-11T19:41:45.476Z pw:browser [pid=71807] <process did exit: exitCode=0, signal=null>
+2026-10-11T19:41:45.476Z pw:browser [pid=71807] starting temporary directories cleanup
+2026-10-11T19:41:45.480Z pw:browser [pid=71807] finished temporary directories cleanup

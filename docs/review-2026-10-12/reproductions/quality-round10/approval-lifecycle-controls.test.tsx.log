@@ -1,0 +1,14 @@
+bun test v1.3.11 (af24e281)
+
+docs/review-2026-10-12/reproductions/quality-round10/approval-lifecycle-controls.test.tsx:
+(pass) R10: actual local resident stdio control remains unanswered after room restoration; explicit response recovers it [1126.72ms]
+(pass) R11 negative: actual offline approval buttons are disabled and the guarded handler preserves the card [453.49ms]
+(pass) R11 restricted: actual enabled card drops when readyState starts closing before onclose updates online state [519.26ms]
+(pass) R12: actual resident stdin gets one terminal response containing only first question answer [475.90ms]
+(pass) R19 boundary: held pre-processing delivery times out with a real Core approval still pending, snapshot recovers, normal delivery resolves immediately [506.33ms]
+
+ 5 pass
+ 0 fail
+ 38 expect() calls
+Ran 5 tests across 1 file. [3.85s]
+Completed Bun shard: 5 tests, 0 skipped; 0 failures.

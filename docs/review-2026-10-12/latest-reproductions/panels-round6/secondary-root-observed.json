@@ -1,0 +1,23 @@
+{
+  "primaryScope": {
+    "version": 1,
+    "environmentId": "daeeb9c4-ae0f-47fe-bd35-b41a7d4bcaff",
+    "projectId": "92a0d4c3-58db-433e-b2f0-d30528b65bb8",
+    "rootId": "8f3cbc3de8d088acf7cf267e6ec02abf4cca38495b8bcabbebb69df0936f1ba7"
+  },
+  "secondaryScope": {
+    "version": 1,
+    "environmentId": "daeeb9c4-ae0f-47fe-bd35-b41a7d4bcaff",
+    "projectId": "92a0d4c3-58db-433e-b2f0-d30528b65bb8",
+    "rootId": "6ade08c549cd3cd291916cf775c2026146f8c59540f171c9708d4b77ea31a780"
+  },
+  "registryRootStatus": {
+    "id": "451e970d-760e-44c2-8dfa-a03e669c9f36",
+    "path": "/private/var/folders/1d/6__4f4y51g90nblfptt8s9v80000gn/T/scope-review-round6-lmqDq3/secondary",
+    "canonicalIdentity": "/private/var/folders/1d/6__4f4y51g90nblfptt8s9v80000gn/T/scope-review-round6-lmqDq3/secondary",
+    "name": "secondary",
+    "addedAt": 1791741244634
+  },
+  "bindResolverCalls": 0,
+  "rejectionBeforeResolver": true
+}

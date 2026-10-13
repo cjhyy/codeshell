@@ -1,0 +1,66 @@
+bun test v1.3.11 (af24e281)
+
+../../../../../../private/tmp/codeshell-review-20261012-model-switch-round18/model-preferences.test.tsx:
+58 |       if (!popover) return;
+59 |
+60 |       // A cursor point is a zero-size rect; otherwise read the element.
+61 |       const anchorRect = point
+62 |         ? { top: point.y, bottom: point.y, left: point.x, right: point.x }
+63 |         : anchorRef.current?.getBoundingClientRect();
+                                  ^
+TypeError: anchorRef.current?.getBoundingClientRect is not a function. (In 'anchorRef.current?.getBoundingClientRect()', 'anchorRef.current?.getBoundingClientRect' is undefined)
+      at update (/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/desktop/src/renderer/chat/useAnchoredPopover.ts:63:30)
+      at <anonymous> (/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/desktop/src/renderer/chat/useAnchoredPopover.ts:102:5)
+      at react_stack_bottom_frame (/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/node_modules/.bun/react-dom@19.2.6+d86b59289c1a13ae/node_modules/react-dom/cjs/react-dom-client.development.js:25989:20)
+      at runWithFiberInDEV (/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/node_modules/.bun/react-dom@19.2.6+d86b59289c1a13ae/node_modules/react-dom/cjs/react-dom-client.development.js:874:13)
+      at commitHookEffectListMount (/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/node_modules/.bun/react-dom@19.2.6+d86b59289c1a13ae/node_modules/react-dom/cjs/react-dom-client.development.js:13249:29)
+      at commitHookLayoutEffects (/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/node_modules/.bun/react-dom@19.2.6+d86b59289c1a13ae/node_modules/react-dom/cjs/react-dom-client.development.js:13213:11)
+      at commitLayoutEffectOnFiber (/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/node_modules/.bun/react-dom@19.2.6+d86b59289c1a13ae/node_modules/react-dom/cjs/react-dom-client.development.js:13951:13)
+      at recursivelyTraverseLayoutEffects (/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/node_modules/.bun/react-dom@19.2.6+d86b59289c1a13ae/node_modules/react-dom/cjs/react-dom-client.development.js:15159:11)
+      at commitLayoutEffectOnFiber (/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/node_modules/.bun/react-dom@19.2.6+d86b59289c1a13ae/node_modules/react-dom/cjs/react-dom-client.development.js:13949:11)
+      at recursivelyTraverseLayoutEffects (/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/node_modules/.bun/react-dom@19.2.6+d86b59289c1a13ae/node_modules/react-dom/cjs/react-dom-client.development.js:15159:11)
+(fail) two already-open native composers overwrite an unrelated persisted model; reload falls back and reselection recovers [19.23ms]
+58 |       if (!popover) return;
+59 |
+60 |       // A cursor point is a zero-size rect; otherwise read the element.
+61 |       const anchorRect = point
+62 |         ? { top: point.y, bottom: point.y, left: point.x, right: point.x }
+63 |         : anchorRef.current?.getBoundingClientRect();
+                                  ^
+TypeError: anchorRef.current?.getBoundingClientRect is not a function. (In 'anchorRef.current?.getBoundingClientRect()', 'anchorRef.current?.getBoundingClientRect' is undefined)
+      at update (/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/desktop/src/renderer/chat/useAnchoredPopover.ts:63:30)
+      at <anonymous> (/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/desktop/src/renderer/chat/useAnchoredPopover.ts:102:5)
+      at react_stack_bottom_frame (/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/node_modules/.bun/react-dom@19.2.6+d86b59289c1a13ae/node_modules/react-dom/cjs/react-dom-client.development.js:25989:20)
+      at runWithFiberInDEV (/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/node_modules/.bun/react-dom@19.2.6+d86b59289c1a13ae/node_modules/react-dom/cjs/react-dom-client.development.js:874:13)
+      at commitHookEffectListMount (/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/node_modules/.bun/react-dom@19.2.6+d86b59289c1a13ae/node_modules/react-dom/cjs/react-dom-client.development.js:13249:29)
+      at commitHookLayoutEffects (/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/node_modules/.bun/react-dom@19.2.6+d86b59289c1a13ae/node_modules/react-dom/cjs/react-dom-client.development.js:13213:11)
+      at commitLayoutEffectOnFiber (/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/node_modules/.bun/react-dom@19.2.6+d86b59289c1a13ae/node_modules/react-dom/cjs/react-dom-client.development.js:13951:13)
+      at recursivelyTraverseLayoutEffects (/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/node_modules/.bun/react-dom@19.2.6+d86b59289c1a13ae/node_modules/react-dom/cjs/react-dom-client.development.js:15159:11)
+      at commitLayoutEffectOnFiber (/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/node_modules/.bun/react-dom@19.2.6+d86b59289c1a13ae/node_modules/react-dom/cjs/react-dom-client.development.js:13949:11)
+      at recursivelyTraverseLayoutEffects (/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/node_modules/.bun/react-dom@19.2.6+d86b59289c1a13ae/node_modules/react-dom/cjs/react-dom-client.development.js:15159:11)
+(fail) one window and a later-opened window preserve independent bucket selections [3.43ms]
+58 |       if (!popover) return;
+59 |
+60 |       // A cursor point is a zero-size rect; otherwise read the element.
+61 |       const anchorRect = point
+62 |         ? { top: point.y, bottom: point.y, left: point.x, right: point.x }
+63 |         : anchorRef.current?.getBoundingClientRect();
+                                  ^
+TypeError: anchorRef.current?.getBoundingClientRect is not a function. (In 'anchorRef.current?.getBoundingClientRect()', 'anchorRef.current?.getBoundingClientRect' is undefined)
+      at update (/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/desktop/src/renderer/chat/useAnchoredPopover.ts:63:30)
+      at <anonymous> (/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/desktop/src/renderer/chat/useAnchoredPopover.ts:102:5)
+      at react_stack_bottom_frame (/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/node_modules/.bun/react-dom@19.2.6+d86b59289c1a13ae/node_modules/react-dom/cjs/react-dom-client.development.js:25989:20)
+      at runWithFiberInDEV (/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/node_modules/.bun/react-dom@19.2.6+d86b59289c1a13ae/node_modules/react-dom/cjs/react-dom-client.development.js:874:13)
+      at commitHookEffectListMount (/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/node_modules/.bun/react-dom@19.2.6+d86b59289c1a13ae/node_modules/react-dom/cjs/react-dom-client.development.js:13249:29)
+      at commitHookLayoutEffects (/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/node_modules/.bun/react-dom@19.2.6+d86b59289c1a13ae/node_modules/react-dom/cjs/react-dom-client.development.js:13213:11)
+      at commitLayoutEffectOnFiber (/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/node_modules/.bun/react-dom@19.2.6+d86b59289c1a13ae/node_modules/react-dom/cjs/react-dom-client.development.js:13951:13)
+      at recursivelyTraverseLayoutEffects (/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/node_modules/.bun/react-dom@19.2.6+d86b59289c1a13ae/node_modules/react-dom/cjs/react-dom-client.development.js:15159:11)
+      at commitLayoutEffectOnFiber (/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/node_modules/.bun/react-dom@19.2.6+d86b59289c1a13ae/node_modules/react-dom/cjs/react-dom-client.development.js:13949:11)
+      at recursivelyTraverseLayoutEffects (/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/node_modules/.bun/react-dom@19.2.6+d86b59289c1a13ae/node_modules/react-dom/cjs/react-dom-client.development.js:15159:11)
+(fail) late rejected configure stays attached to the old session; chosen intent pins the subsequent run independently of ACK [2.05ms]
+
+ 0 pass
+ 3 fail
+ 8 expect() calls
+Ran 3 tests across 1 file. [312.00ms]
+Bun test process failed (1)

@@ -1,0 +1,14 @@
+{
+  "mainPid": 31130,
+  "homeId": "db276975883467a816365219aef2a20fedb813af2f9e0161545938c65097a178",
+  "receipts": [
+    {
+      "pid": 31130,
+      "ppid": 31126,
+      "origin": "http://127.0.0.1:9",
+      "homeId": "db276975883467a816365219aef2a20fedb813af2f9e0161545938c65097a178"
+    }
+  ],
+  "spawned": [],
+  "workerCreated": false
+}

@@ -1,0 +1,20 @@
+{
+  "snapshot": "a66f4ef291f304ee4df9da8095a90671d9a8f140",
+  "candidate": "M1 shared project activeSessionId replaces same-project peer window selection",
+  "suggestedPriority": "P3",
+  "formalDecision": "root pending",
+  "customTests": 3,
+  "customAssertions": 24,
+  "contractTests": 33,
+  "contractAssertions": 129,
+  "totalTests": 36,
+  "totalAssertions": 153,
+  "fail": 0,
+  "skip": 0,
+  "fullElectronExecuted": false,
+  "nativePtyExecuted": false,
+  "transcriptContentsExercised": false,
+  "productModified": false,
+  "linksChecked": 39,
+  "linkFailures": []
+}

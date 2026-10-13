@@ -1,0 +1,8 @@
+node:internal/process/promises:332
+    triggerUncaughtException(err, true /* fromPromise */);
+    ^
+
+[DOMException [AbortError]: This operation was aborted]
+
+Node.js v25.8.1
+Native smoke failed (1)
