@@ -3,7 +3,11 @@ import { mkdirSync, mkdtempSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import type { ExternalAgentSessionBinding } from "./external-agent-session-store.js";
-import { countRelatedSessions, discoverRelatedSessions } from "./related-session-discovery.js";
+import {
+  countRelatedSessions,
+  discoverRelatedSessions,
+  listRelatedCodexSessions,
+} from "./related-session-discovery.js";
 import { encodeCwd } from "./session-discovery.js";
 
 function binding(
@@ -54,6 +58,33 @@ function writeCodexSession(home: string, cwd: string, sessionId: string, prompt:
 }
 
 describe("discoverRelatedSessions", () => {
+  it("lists and counts Codex delegated threads without including unbound worktree history", async () => {
+    const home = mkdtempSync(join(tmpdir(), "codex-related-list-"));
+    const root = "/repo/main";
+    const worktree = "/repo/.worktrees/delegated";
+    writeCodexSession(home, root, "native", "main prompt");
+    writeCodexSession(home, worktree, "delegated", "delegated prompt");
+    writeCodexSession(home, worktree, "unbound", "another project");
+    writeCodexSession(home, "/other", "other", "other project");
+    const discovery = {
+      codexHome: home,
+      bindings: [
+        binding("codex", "delegated", worktree, root),
+        binding("codex", "missing", worktree, root),
+        binding("claude", "unbound", worktree, root),
+      ],
+    };
+    const result = await listRelatedCodexSessions(root, {}, discovery);
+    expect(result.total).toBe(2);
+    expect(new Set(result.sessions.map((s) => s.sessionId))).toEqual(
+      new Set(["native", "delegated"]),
+    );
+    expect(result.sessions.find((s) => s.sessionId === "delegated")?.cwd).toBe(worktree);
+    const limited = await listRelatedCodexSessions(root, { limit: 1 }, discovery);
+    expect(limited.sessions).toHaveLength(1);
+    expect(limited.total).toBe(2);
+  });
+
   it("includes delegated Claude worktrees and retains their authoritative cwd", () => {
     const home = mkdtempSync(join(tmpdir(), "claude-related-"));
     const root = "/repo/main";
