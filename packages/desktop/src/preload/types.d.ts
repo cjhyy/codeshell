@@ -2120,7 +2120,13 @@ export interface CodeshellApi
     input: PanelAppSourceInput,
     cwd: string,
   ): Promise<
-    { ok: true; preview: PanelAppPreview; installedVersion?: string } | { ok: false; error: string }
+    | {
+        ok: true;
+        preview: PanelAppPreview;
+        installedVersion?: string;
+        installedPermissions?: PanelAppPreview["permissions"];
+      }
+    | { ok: false; error: string }
   >;
   /** Discover every installable Panel App in a public GitHub repository. */
   discoverGitPanelApps(
@@ -2138,7 +2144,13 @@ export interface CodeshellApi
     cwd: string,
     expectedRevision: string,
   ): Promise<
-    { ok: true; preview: PanelAppPreview; installedVersion?: string } | { ok: false; error: string }
+    | {
+        ok: true;
+        preview: PanelAppPreview;
+        installedVersion?: string;
+        installedPermissions?: PanelAppPreview["permissions"];
+      }
+    | { ok: false; error: string }
   >;
   /** Install a reviewed Panel App into the independent Panel App registry. */
   installLocalPanelApp(input: {

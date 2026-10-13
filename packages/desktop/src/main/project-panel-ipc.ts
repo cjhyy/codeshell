@@ -158,6 +158,9 @@ export function registerProjectPanelIpc(deps: {
         return {
           preview: { ...review.preview, reviewToken: review.reviewToken },
           installedVersion: review.installedVersion,
+          ...(review.installedPermissions !== undefined
+            ? { installedPermissions: [...review.installedPermissions] }
+            : {}),
         };
       }),
   );
@@ -177,6 +180,9 @@ export function registerProjectPanelIpc(deps: {
         return {
           preview: { ...review.preview, reviewToken: review.reviewToken },
           installedVersion: review.installedVersion,
+          ...(review.installedPermissions !== undefined
+            ? { installedPermissions: [...review.installedPermissions] }
+            : {}),
         };
       }),
   );

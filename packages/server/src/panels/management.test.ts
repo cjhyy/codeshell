@@ -67,6 +67,14 @@ describe("shared Web panel management with the real Core installer", () => {
     commit = git(repo, "rev-parse", "HEAD");
   }
 
+  function localInput() {
+    const path = join(root, "local-source");
+    mkdirSync(path, { recursive: true });
+    cpSync(join(repo, ".codeshell-panel"), join(path, ".codeshell-panel"), { recursive: true });
+    cpSync(join(repo, "app"), join(path, "app"), { recursive: true });
+    return { kind: "dir" as const, path };
+  }
+
   function service(options: Partial<Parameters<typeof createPanelManagement>[0]> = {}) {
     const value = createPanelManagement({ cwd, resolveCommit: async () => commit, ...options });
     services.push(value);
@@ -213,6 +221,7 @@ describe("shared Web panel management with the real Core installer", () => {
     const review = await api.previewProjectUpdate(owner, current.id, current.revision);
     expect(review.preview.version).toBe("2.0.0");
     expect(review.installedVersion).toBe("1.0.0");
+    expect(review.installedPermissions).toEqual(["storage"]);
     writePanel("3.0.0");
     await api.install(owner, review.reviewToken, true, {
       overwrite: true,
@@ -231,6 +240,56 @@ describe("shared Web panel management with the real Core installer", () => {
     });
     expect(refLookups()).toBe(2);
     expect(fetches).toEqual([originalCommit, reviewedCommit]);
+  });
+
+  test("reviews compare permissions with the project's selected package rather than the newer catalog", async () => {
+    const first = service({ projectPackages: true, allowLocalSources: true });
+    await first.install(owner, (await first.previewProjectSource(owner, input)).reviewToken);
+    const elsewhere = join(root, "other-project");
+    mkdirSync(elsewhere);
+    const second = service({ cwd: elsewhere, projectPackages: true, allowLocalSources: true });
+    const available = (await second.snapshot()).panels[0]!;
+    await second.binding(owner, available.id, true, available.revision);
+    const selected = (await second.snapshot()).panels[0]!;
+
+    writePanel("2.0.0", ["context.workspace"]);
+    const current = (await first.snapshot()).panels[0]!;
+    const update = await first.previewUpdate(owner, current.id, current.revision);
+    await first.install(owner, update.reviewToken);
+    expect((await listInstalledPanelApps())[0]?.permissions).toEqual(["context.workspace"]);
+
+    writePanel("3.0.0", ["storage", "context.workspace"]);
+    for (const review of [
+      await second.previewUpdate(owner, selected.id, selected.revision),
+      await second.previewProjectUpdate(owner, selected.id, selected.revision),
+      await second.previewProjectSource(owner, localInput()),
+    ]) {
+      expect(review.installedVersion).toBe("1.0.0");
+      expect(review.installedPermissions).toEqual(["storage"]);
+      expect(review.preview.permissions).toEqual(["storage", "context.workspace"]);
+    }
+  });
+
+  test("reviews distinguish a known empty permission baseline from a new installation", async () => {
+    writePanel("1.1.0", []);
+    const api = service({ projectPackages: true, allowLocalSources: true });
+    const initial = await api.preview(owner, input);
+    const nativeInitial = await api.previewProjectSource(owner, localInput());
+    for (const review of [initial, nativeInitial]) {
+      expect(review).not.toHaveProperty("installedVersion");
+      expect(review).not.toHaveProperty("installedPermissions");
+    }
+    await api.install(owner, initial.reviewToken);
+    const current = (await api.snapshot()).panels[0]!;
+    writePanel("2.0.0");
+    for (const review of [
+      await api.previewUpdate(owner, current.id, current.revision),
+      await api.previewProjectUpdate(owner, current.id, current.revision),
+    ]) {
+      expect(review.installedVersion).toBe("1.1.0");
+      expect(review).toHaveProperty("installedPermissions", []);
+      expect(review.preview.permissions).toEqual(["storage"]);
+    }
   });
 
   test("scoped management snapshots keep current authorization and do not return another app", async () => {
@@ -395,7 +454,7 @@ describe("shared Web panel management with the real Core installer", () => {
   });
 
   test("missing pinned package and invalid project settings never fall through to the catalog", async () => {
-    const api = service({ projectPackages: true });
+    const api = service({ projectPackages: true, allowLocalSources: true });
     await api.install(owner, (await api.preview(owner, input)).reviewToken);
     const selected = (await listProjectPanelApps(cwd))[0]!;
     rmSync(selected.installPath, { recursive: true });
@@ -405,6 +464,10 @@ describe("shared Web panel management with the real Core installer", () => {
       { id: selected.id, version: "1.0.0", code: "package_unavailable" },
     ]);
     expect((await listInstalledPanelApps())[0]?.version).toBe("1.0.0");
+    const review = await api.previewProjectSource(owner, localInput());
+    expect(review.preview.alreadyInstalled).toBe(true);
+    expect(review).not.toHaveProperty("installedVersion");
+    expect(review).not.toHaveProperty("installedPermissions");
     writeFileSync(join(cwd, ".code-shell/settings.json"), '{"panelAppPins":null}');
     await expect(api.snapshot()).rejects.toThrow();
   });

@@ -1,5 +1,6 @@
 import { createHash } from "node:crypto";
 import { AssertionError } from "node:assert";
+import { types } from "node:util";
 
 const digest = (value) => createHash("sha256").update(String(value)).digest("hex");
 const finite = (value) => (typeof value === "number" && Number.isFinite(value) ? value : undefined);
@@ -76,6 +77,7 @@ const jobPdfStatuses = new Set([
   "interrupted",
 ]);
 const jobPdfFailures = new WeakMap();
+const jobBrowserFailures = new WeakMap();
 const jobPdfErrorCodes = new Set([
   "TOOL_FAILED",
   "HOST_INTERRUPTED",
@@ -176,6 +178,7 @@ export async function withJobHuntBrowserDiagnostics(run, capture, close) {
   let result, primary;
   let failed = false;
   const cleanup = [];
+  const phases = [];
   try {
     result = await run();
   } catch (error) {
@@ -185,22 +188,73 @@ export async function withJobHuntBrowserDiagnostics(run, capture, close) {
       await capture();
     } catch (error) {
       cleanup.push(error);
+      phases.push("capture");
     }
   } finally {
     try {
       await close();
     } catch (error) {
       cleanup.push(error);
+      phases.push("close");
     }
   }
-  if (cleanup.length)
-    throw new AggregateError(
+  if (cleanup.length) {
+    const failure = new AggregateError(
       [...(failed ? [primary] : []), ...cleanup],
       "Job Hunt browser acceptance and cleanup failed",
       failed ? { cause: primary } : undefined,
     );
+    try {
+      jobBrowserFailures.set(
+        failure,
+        Object.freeze({
+          version: 1,
+          source: "candidate-job-hunt-browser",
+          failed,
+          // Presence means run threw, even when its thrown value was undefined.
+          primaryPresent: failed,
+          ...(failed ? { primary: jobBrowserLeaf(primary) } : {}),
+          cleanup: Object.freeze(
+            cleanup.map((error, index) =>
+              Object.freeze({ phase: phases[index], ...jobBrowserLeaf(error) }),
+            ),
+          ),
+        }),
+      );
+    } catch {
+      /* Diagnostic registration must not replace the original aggregate. */
+    }
+    throw failure;
+  }
   if (failed) throw primary;
   return result;
+}
+
+function jobBrowserLeaf(error) {
+  const unavailable = Object.freeze({ available: false });
+  try {
+    // Never traverse arbitrary aggregates, proxy traps, accessors or toString.
+    if (types.isProxy(error) || !types.isNativeError(error)) return unavailable;
+    const message = Object.getOwnPropertyDescriptor(error, "message");
+    if (!message || !("value" in message) || typeof message.value !== "string") return unavailable;
+    if (message.value.length > 16_384) return unavailable;
+    const prototype = Object.getPrototypeOf(error);
+    if (types.isProxy(prototype)) return unavailable;
+    const assertion = prototype === AssertionError.prototype ? assertionNumbers(error) : undefined;
+    return Object.freeze({
+      available: true,
+      errorCodes: Object.freeze(
+        errorCodes.filter((value) => new RegExp(`\\b${value}\\b`).test(message.value)),
+      ),
+      categories: Object.freeze(
+        categories.filter(([, pattern]) => pattern.test(message.value)).map(([name]) => name),
+      ),
+      sha256: digest(message.value),
+      ...(assertion ? { assertion: Object.freeze(assertion) } : {}),
+    });
+  } catch {
+    return unavailable;
+  }
 }
 
 function panelFailure(error, panelId, kind, step) {
@@ -391,7 +445,9 @@ class ApprovalRunError extends Error {
 // Raw errors may contain settings, prompts, response bodies or credentials. Only
 // fixed classifications, numeric RPC codes and a fingerprint leave the scratch.
 export function summarizeFailure(error) {
-  return summarizeFailureAt(error, 0, false);
+  const summary = summarizeFailureAt(error, 0, false);
+  const browser = jobBrowserFailures.get(error);
+  return browser ? { ...summary, jobBrowser: browser } : summary;
 }
 
 function summarizeFailureAt(error, depth, trustedPanel) {

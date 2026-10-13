@@ -570,6 +570,12 @@ export function createPanelManagement(options: PanelManagementOptions) {
         source,
         expectedRevision: current?.revision ?? null,
         compatibility: compatibility(preview),
+        ...(current
+          ? {
+              installedVersion: current.app.version,
+              installedPermissions: [...current.app.permissions],
+            }
+          : {}),
       };
       reviews.set(reviewToken, {
         owner: context.ownerId,
@@ -637,7 +643,12 @@ export function createPanelManagement(options: PanelManagementOptions) {
         preview: publicPreview,
         expectedRevision: currentRevision,
         compatibility: compatibility(preview),
-        ...(current ? { installedVersion: current.app.version } : {}),
+        ...(current
+          ? {
+              installedVersion: current.app.version,
+              installedPermissions: [...current.app.permissions],
+            }
+          : {}),
       };
       reviews.set(value.reviewToken, {
         owner: context.ownerId,
