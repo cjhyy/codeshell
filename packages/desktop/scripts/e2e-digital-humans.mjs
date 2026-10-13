@@ -280,6 +280,73 @@ async function checkProjectConfiguration(projectButton) {
     const editor = ipcMain._invokeHandlers.get("shell:openInEditor");
     if (!exists || !editor) throw new Error("Project fixture IPC handlers were not ready");
     const fixture = { ...fixtureTarget, fail: true, reads: [], opens: 0, exists, editor };
+    fixture.switchHandlers = [];
+    fixture.switchEnabled = false;
+    fixture.switchRecords = [];
+    fixture.switchOverflow = false;
+    fixture.lastPreviewRevision = null;
+    fixture.lastAdoptRevision = null;
+    for (const [channel, kind] of [
+      ["profiles:previewSwitch", "preview"],
+      ["profiles:adoptSwitch", "adopt"],
+    ]) {
+      const original = ipcMain._invokeHandlers.get(channel);
+      if (typeof original !== "function") continue;
+      fixture.switchHandlers.push({ channel, original });
+      ipcMain.removeHandler(channel);
+      ipcMain.handle(channel, function (...args) {
+        let record = null;
+        try {
+          if (
+            fixture.switchEnabled &&
+            args[1]?.projectId === fixture.projectId &&
+            Object.keys(args[1]).length === 1 &&
+            args[2] === null
+          ) {
+            if (fixture.switchRecords.length < 20) {
+              record = { kind, state: "pending", started: Date.now(), elapsedMs: 0, error: null };
+              fixture.switchRecords.push(record);
+              if (kind === "adopt")
+                fixture.lastAdoptRevision = /^[a-f0-9]{64}$/.test(args[3]) ? args[3] : null;
+            } else fixture.switchOverflow = true;
+          }
+        } catch {}
+        const observe = (result, rejected) => {
+          try {
+            if (!record) return;
+            record.elapsedMs = Math.min(60_000, Math.max(0, Date.now() - record.started));
+            if (rejected) {
+              record.state = "rejected";
+              record.error = result?.status === 409 ? 409 : result?.status === 503 ? 503 : "other";
+            } else if (kind === "preview") {
+              record.state = "previewed";
+              fixture.lastPreviewRevision = /^[a-f0-9]{64}$/.test(result?.revision)
+                ? result.revision
+                : null;
+            } else {
+              record.state = ["adopted", "stale"].includes(result?.status)
+                ? result.status
+                : "unexpected";
+            }
+          } catch {}
+        };
+        let result;
+        try {
+          result = Reflect.apply(original, this, args);
+        } catch (error) {
+          observe(error, true);
+          throw error;
+        }
+        try {
+          // Observe settlement without replacing the promise returned to Electron.
+          result.then(
+            (value) => observe(value, false),
+            (error) => observe(error, true),
+          );
+        } catch {}
+        return result;
+      });
+    }
     globalThis.__projectConfigFixture = fixture;
     ipcMain.removeHandler("fsRoot:exists");
     ipcMain.handle("fsRoot:exists", (event, projectId, rootId, path) => {
@@ -375,6 +442,11 @@ async function checkProjectConfiguration(projectButton) {
     const currentSettings = JSON.parse((await projectSettingsBytes()) ?? "{}");
     currentSettings.profile = { active: "broken-default", preset: "general", overrides: {} };
     await writeFile(projectSettingsPath, JSON.stringify(currentSettings));
+    await app
+      .evaluate(() => {
+        globalThis.__projectConfigFixture.switchEnabled = true;
+      })
+      .catch(() => undefined);
     await win
       .getByRole("navigation", { name: /设置导航|Settings navigation/i })
       .getByRole("button", { name: /^数字人$|^Digital humans$/i })
@@ -397,8 +469,82 @@ async function checkProjectConfiguration(projectButton) {
     await switchReview()
       .getByRole("button", { name: /确认采用|Apply reviewed change/i })
       .click();
-    await switchReview().waitFor({ state: "hidden" });
+    try {
+      await switchReview().waitFor({ state: "hidden" });
+    } catch (error) {
+      try {
+        const bounded = async (promise) => {
+          let timer;
+          try {
+            return await Promise.race([
+              promise.catch(() => null),
+              new Promise((resolve) => {
+                timer = setTimeout(() => resolve(null), 1_000);
+              }),
+            ]);
+          } finally {
+            clearTimeout(timer);
+          }
+        };
+        const [ipc, dom, settings] = await Promise.all([
+          bounded(
+            app.evaluate(() => {
+              const fixture = globalThis.__projectConfigFixture;
+              return {
+                handlers: fixture.switchHandlers.length,
+                overflow: fixture.switchOverflow,
+                records: fixture.switchRecords.map((record) => ({
+                  kind: record.kind,
+                  state: record.state,
+                  elapsedMs:
+                    record.state === "pending"
+                      ? Math.min(60_000, Math.max(0, Date.now() - record.started))
+                      : record.elapsedMs,
+                  error: record.error,
+                })),
+                revisionEqual:
+                  fixture.lastPreviewRevision !== null && fixture.lastAdoptRevision !== null
+                    ? fixture.lastPreviewRevision === fixture.lastAdoptRevision
+                    : null,
+              };
+            }),
+          ),
+          bounded(
+            win.evaluate(() => {
+              const review = document.querySelector('[data-testid="profile-switch-preview"]');
+              const apply = [...(review?.querySelectorAll("button") ?? [])].find((button) =>
+                /确认采用|Apply reviewed change/i.test(button.textContent ?? ""),
+              );
+              return {
+                visible: !!review?.getClientRects().length,
+                alert: !!review?.querySelector('[role="alert"]'),
+                disabled: apply ? apply.disabled : null,
+              };
+            }),
+          ),
+          bounded(
+            projectSettingsBytes().then((bytes) => {
+              let profile = null;
+              try {
+                profile = bytes !== null && Object.hasOwn(JSON.parse(bytes), "profile");
+              } catch {}
+              return { profile, bytesUnchanged: bytes === damagedSettings };
+            }),
+          ),
+        ]);
+        console.error(
+          "digital-human recovery diagnostics:",
+          JSON.stringify({ ipc, dom, settings }),
+        );
+      } catch {}
+      throw error;
+    }
     await recovery.waitFor({ state: "hidden" });
+    await app
+      .evaluate(() => {
+        globalThis.__projectConfigFixture.switchEnabled = false;
+      })
+      .catch(() => undefined);
     const researcherRow = win.locator("main li").filter({ hasText: "Research Analyst" });
     const beforeSwitch = await projectSettingsBytes();
     await researcherRow.getByRole("button", { name: /设为项目默认|Set project default/i }).click();
@@ -415,6 +561,12 @@ async function checkProjectConfiguration(projectButton) {
   } finally {
     await app.evaluate(({ ipcMain }) => {
       const fixture = globalThis.__projectConfigFixture;
+      for (const { channel, original } of fixture.switchHandlers) {
+        try {
+          ipcMain.removeHandler(channel);
+          ipcMain.handle(channel, original);
+        } catch {}
+      }
       ipcMain.removeHandler("fsRoot:exists");
       ipcMain.handle("fsRoot:exists", fixture.exists);
       ipcMain.removeHandler("shell:openInEditor");
