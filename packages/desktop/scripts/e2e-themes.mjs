@@ -391,6 +391,9 @@ try {
     appDir,
     home: isolated.home,
     userDataDir: isolated.userDataDir,
+    // Three bundled skins, background playback and source-pack imports extend
+    // this smoke beyond the harness's default three-minute runtime budget.
+    runtimeTimeoutMs: 300_000,
     // The outer guarded runner owns a different fixture HOME. Keep the Core
     // test-runner fallback attached to this Electron profile as well.
     env: { CODE_SHELL_TEST_HOME: isolated.codeShellHome },
@@ -399,6 +402,7 @@ try {
     processLog = (processLog + chunk).slice(-20_000);
   });
   win = await findCodeShellWindow(app);
+  win.setDefaultTimeout(20_000);
   const errors = captureRendererErrors(win);
   await win.setViewportSize({ width: 1440, height: 960 });
   await dismissTrust();
