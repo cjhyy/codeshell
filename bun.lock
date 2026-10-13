@@ -35,7 +35,7 @@
     },
     "packages/browser-devtools": {
       "name": "@cjhyy/code-shell-browser-devtools",
-      "version": "0.9.37",
+      "version": "0.9.40",
     },
     "packages/cdp": {
       "name": "@cjhyy/code-shell-cdp",

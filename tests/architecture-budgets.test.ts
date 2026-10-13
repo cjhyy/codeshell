@@ -363,7 +363,9 @@ describe("architecture growth budgets", () => {
     // and finalizer wiring. Policy/permit/ledger/failure latch live in dedicated
     // owners; another forwarding wrapper would not improve that boundary.
     // Pin exact formatted owner composition, without future-feature headroom.
-    expect(lines("packages/core/src/engine/engine.ts")).toBeLessThanOrEqual(5_038);
+    // The combined current-main composition also retains twelve existing
+    // lifecycle/authority wiring lines from the intervening fixes.
+    expect(lines("packages/core/src/engine/engine.ts")).toBeLessThanOrEqual(5_050);
   });
 
   test("published entry points cannot silently expand their compatibility surface", () => {
