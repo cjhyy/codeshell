@@ -384,8 +384,9 @@ snapshot / element token，最终从计算器显示区的 `AXStaticText` 读回 
 
 ### 试用步骤（macOS）
 
-1. 安装 cua-driver，确认 `cua-driver --version` 可用；或设置 `CODESHELL_CUA_DRIVER_PATH=/path/to/cua-driver`。
-2. 在用户设置 `~/.code-shell/settings.json` 里加 `"featureFlags": { "computer_use_cua": true }`，重启 CodeShell。
+1. macOS 13+ 安装包随附锁定版本的 cua-driver，无需另行安装。开发模式可安装外部 driver，
+   或设置 `CODESHELL_CUA_DRIVER_PATH=/path/to/cua-driver`。
+2. 在「设置 → 常规 → 电脑操作（试用）」中启用，再重启 CodeShell。
 3. 授权：打开「设置 → 常规 → 电脑操作（试用）」，启用后分别申请辅助功能和屏幕录制。
    如果系统不再弹窗，使用对应的「打开系统设置」按钮，授权后完整重启。
    TCC 归属由实际启动责任链决定：从终端启动开发版通常归终端，从 Codex 启动的实测归
@@ -421,6 +422,23 @@ snapshot / element token，最终从计算器显示区的 `AXStaticText` 读回 
 界面开关默认关闭，开启需重启，关闭立即停服。相关主分支回归、全部 12 个工作区类型检查、
 Electron 主程序/面板冒烟及现有项目云端流程验收通过。启动和设置组合已移到
 `computer-use/desktop-setup.ts`，架构预算显式统计五项设置 IPC，未放宽主入口行数上限。
+
+### 10.7 常规发布包补齐驱动（2026-10-14）
+
+0.9.40 的常规 macOS 发布包只包含授权 helper，没有包含本地试用包单独附加的 Cua Driver。
+在未安装外部 driver 的机器上，启用会被主进程拒绝，而两项系统设置按钮又被关闭状态禁用，
+造成整个设置卡片无法完成配置。
+
+macOS 的普通 Desktop build 现下载并缓存官方 universal 0.34.1 CLI（要求 macOS 13+），
+校验锁定的 SHA256、双架构、原始代码签名和版本，再交给 electron-builder 放入 ASAR 外的
+`Contents/Resources/cua-driver/`。MIT 许可随包附带并校验摘要；不附带 SDK 或视觉模型。
+来源和摘要在 `packages/desktop/resources/cua-driver.lock.json` 中固定，构建失败会阻断打包。
+现有应用签名流程覆盖该 CLI。发布 CI 对 arm64 和 x64 两个成品 App 验证驱动、授权 helper、
+版本、双架构、许可证和完整签名，验收不申请系统权限。
+
+即使功能关闭或驱动缺失，也可打开两项系统设置。权限申请仍要求用户明确启用；驱动缺失时
+禁止开启并提示更新或重新安装，已开启的功能仍可关闭。相关回归覆盖缺失驱动时的界面状态、
+构建缓存/校验失败和发布包组件缺失。
 
 ## 11. 开放问题
 

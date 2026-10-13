@@ -23,9 +23,11 @@ function deferred<T>() {
   return { promise, resolve, reject };
 }
 let current: ComputerUseSettingsStatus = {
-  enabled: !["disabled", "enable-retry", "stale-read", "read-retry"].includes(scenario),
-  active: scenario === "disable-active",
-  driverAvailable: true,
+  enabled: !["disabled", "driver-missing", "enable-retry", "stale-read", "read-retry"].includes(
+    scenario,
+  ),
+  active: scenario === "disable-active" || scenario === "driver-missing-enabled",
+  driverAvailable: !scenario.startsWith("driver-missing"),
   packaged: true,
   restartRequired: false,
   permissions: {
@@ -132,9 +134,38 @@ try {
   assert.equal(restarts, 0, "Rendering never restarts the app");
   if (scenario === "disabled") {
     assert.equal(props(toggle())["aria-checked"], false);
+    assert.equal(props(toggle()).disabled, false, "An installed driver permits explicit opt-in");
     assert.equal(props(button("申请辅助功能权限")).disabled, true);
     assert.equal(props(button("申请屏幕录制权限")).disabled, true);
     assert.ok(textOf(container).includes("打开此页面不会自动弹出授权申请"));
+    await click("打开辅助功能设置");
+    await click("打开屏幕录制设置");
+    assert.deepEqual(settings, ["accessibility", "screenRecording"]);
+    assert.deepEqual(requests, [], "Opening System Settings does not request permission");
+    assert.deepEqual(writes, [], "Opening System Settings does not enable computer use");
+    assert.equal(restarts, 0);
+  } else if (scenario === "driver-missing") {
+    assert.equal(props(toggle())["aria-checked"], false);
+    assert.equal(props(toggle()).disabled, true, "A missing driver cannot be enabled");
+    assert.ok(textOf(container).includes("请更新或重新安装 CodeShell"));
+    assert.equal(props(button("申请辅助功能权限")).disabled, true);
+    assert.equal(props(button("申请屏幕录制权限")).disabled, true);
+    await click("打开辅助功能设置");
+    await click("打开屏幕录制设置");
+    assert.deepEqual(settings, ["accessibility", "screenRecording"]);
+    assert.deepEqual(requests, []);
+    assert.deepEqual(writes, []);
+    assert.equal(restarts, 0);
+  } else if (scenario === "driver-missing-enabled") {
+    assert.equal(props(toggle())["aria-checked"], true);
+    assert.equal(props(toggle()).disabled, false, "An enabled feature can always be disabled");
+    await setEnabled();
+    assert.deepEqual(writes, [false]);
+    assert.equal(props(toggle())["aria-checked"], false);
+    assert.equal(props(toggle()).disabled, true, "A missing driver cannot be re-enabled");
+    assert.deepEqual(requests, []);
+    assert.deepEqual(settings, []);
+    assert.equal(restarts, 0);
   } else if (scenario === "disable-active") {
     assert.equal(props(toggle())["aria-checked"], true);
     assert.ok(textOf(container).includes("电脑操作服务正在运行。"));
