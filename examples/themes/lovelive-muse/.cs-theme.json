@@ -1,0 +1,130 @@
+{
+  "schemaVersion": 1,
+  "id": "lovelive-muse",
+  "name": "Love Live! μ’s · Nine Colors",
+  "version": "1.0.0",
+  "colors": {
+    "light": {
+      "--cs-background": "35 43% 97%",
+      "--cs-foreground": "321 26% 18%",
+      "--cs-card": "35 48% 99%",
+      "--cs-card-foreground": "321 26% 18%",
+      "--cs-popover": "345 45% 99%",
+      "--cs-popover-foreground": "321 26% 18%",
+      "--cs-primary": "336 70% 40%",
+      "--cs-primary-foreground": "0 0% 100%",
+      "--cs-secondary": "341 45% 93%",
+      "--cs-secondary-foreground": "326 32% 26%",
+      "--cs-muted": "30 26% 93%",
+      "--cs-muted-foreground": "324 15% 39%",
+      "--cs-accent": "342 57% 91%",
+      "--cs-accent-foreground": "333 60% 29%",
+      "--cs-destructive": "354 68% 42%",
+      "--cs-destructive-foreground": "0 0% 100%",
+      "--cs-border": "338 28% 82%",
+      "--cs-input": "338 28% 78%",
+      "--cs-ring": "336 70% 40%",
+      "--cs-status-running": "205 71% 36%",
+      "--cs-status-ok": "138 49% 31%",
+      "--cs-status-warn": "31 86% 34%",
+      "--cs-status-err": "354 68% 42%",
+      "--cs-status-idle": "272 26% 43%"
+    },
+    "dark": {
+      "--cs-background": "288 25% 9%",
+      "--cs-foreground": "34 38% 94%",
+      "--cs-card": "289 25% 12%",
+      "--cs-card-foreground": "34 38% 94%",
+      "--cs-popover": "292 27% 13%",
+      "--cs-popover-foreground": "34 38% 94%",
+      "--cs-primary": "337 85% 76%",
+      "--cs-primary-foreground": "319 42% 13%",
+      "--cs-secondary": "300 25% 18%",
+      "--cs-secondary-foreground": "345 40% 91%",
+      "--cs-muted": "288 20% 16%",
+      "--cs-muted-foreground": "322 20% 73%",
+      "--cs-accent": "323 35% 23%",
+      "--cs-accent-foreground": "342 70% 88%",
+      "--cs-destructive": "354 82% 74%",
+      "--cs-destructive-foreground": "350 43% 13%",
+      "--cs-border": "301 24% 28%",
+      "--cs-input": "310 25% 32%",
+      "--cs-ring": "337 85% 76%",
+      "--cs-status-running": "201 86% 74%",
+      "--cs-status-ok": "132 54% 72%",
+      "--cs-status-warn": "42 89% 73%",
+      "--cs-status-err": "354 82% 74%",
+      "--cs-status-idle": "272 49% 76%"
+    }
+  },
+  "wallpaper": {
+    "light": "assets/stage.png",
+    "dark": "assets/stage.png",
+    "opacity": 0.16
+  },
+  "surfaces": {
+    "window": {
+      "background": { "light": "35 43% 97%", "dark": "288 25% 9%" }
+    },
+    "titlebar": {
+      "background": { "light": "340 54% 94%", "dark": "306 30% 12%" }
+    },
+    "sidebar": {
+      "background": { "light": "342 42% 95%", "dark": "290 28% 11%" },
+      "light": "assets/stage.png",
+      "dark": "assets/stage.png",
+      "opacity": 0.15,
+      "fit": "cover",
+      "position": "right"
+    },
+    "chat": {
+      "background": { "light": "35 43% 98%", "dark": "288 25% 9%" },
+      "light": "assets/stage.png",
+      "dark": "assets/stage.png",
+      "opacity": 0.22,
+      "fit": "cover",
+      "position": "right"
+    },
+    "composer": {
+      "background": { "light": "35 55% 99%", "dark": "301 27% 14%" },
+      "backgroundOpacity": 0.97
+    },
+    "panel": {
+      "background": { "light": "35 31% 97%", "dark": "288 23% 11%" }
+    }
+  },
+  "frame": {
+    "light": "336 67% 53%",
+    "dark": "336 64% 54%",
+    "width": 2,
+    "radius": 14
+  },
+  "sounds": {
+    "send": "assets/sound-send.wav",
+    "complete": "assets/sound-complete.wav",
+    "approval": "assets/sound-approval.wav",
+    "error": "assets/sound-error.wav"
+  },
+  "music": [
+    {
+      "title": "Nine Little Lights（原创器乐）",
+      "artist": "CodeShell",
+      "file": "assets/encore-loop.wav"
+    },
+    {
+      "title": "Snow halation",
+      "artist": "μ’s",
+      "url": "https://www.youtube.com/watch?v=vJ3jNTH2QL0"
+    },
+    {
+      "title": "Wonderful Rush",
+      "artist": "μ’s",
+      "url": "https://www.youtube.com/watch?v=3WOzeKu2hjw"
+    },
+    {
+      "title": "Music S.T.A.R.T!!",
+      "artist": "μ’s",
+      "url": "https://www.youtube.com/watch?v=NeaeJ0u3kR0"
+    }
+  ]
+}

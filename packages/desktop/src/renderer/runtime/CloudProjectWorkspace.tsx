@@ -1,6 +1,7 @@
 import React from "react";
 import { Loader2 } from "lucide-react";
 import { ChatView } from "../ChatView";
+import { CloudProjectSignIn } from "../projects/CloudProjectSignIn";
 import type { TrackedProject } from "../projects";
 import { useT } from "../i18n/I18nProvider";
 import { Button } from "../components/ui/button";
@@ -9,7 +10,6 @@ import type { CloudProjectRuntimeView } from "./useCloudProjectRuntime";
 
 export interface CloudProjectWorkspaceProps {
   runtime: CloudProjectRuntimeView;
-  runLocationControl?: React.ReactNode;
   projects: TrackedProject[];
   activeProjectId: string | null;
   onSelectProject: (id: string | null) => void;
@@ -17,11 +17,7 @@ export interface CloudProjectWorkspaceProps {
 }
 
 /** Native desktop conversation surface backed exclusively by the captured cloud connection. */
-export function CloudProjectWorkspace({
-  runtime,
-  runLocationControl,
-  ...projects
-}: CloudProjectWorkspaceProps) {
+export function CloudProjectWorkspace({ runtime, ...projects }: CloudProjectWorkspaceProps) {
   const { lang } = useT();
   const zh = lang === "zh";
   const unavailable = runtime.status !== "connected";
@@ -53,7 +49,9 @@ export function CloudProjectWorkspace({
             <Button type="button" variant="outline" size="sm" onClick={() => void runtime.start()}>
               {zh ? "启动云端环境" : "Start cloud environment"}
             </Button>
-          ) : unavailable && runtime.status !== "connecting" ? (
+          ) : unavailable &&
+            runtime.status !== "connecting" &&
+            runtime.status !== "auth-required" ? (
             <Button
               type="button"
               variant="outline"
@@ -63,11 +61,12 @@ export function CloudProjectWorkspace({
               {zh ? "重新连接" : "Reconnect"}
             </Button>
           ) : null}
-          {runtime.status === "auth-required" && (
-            <span>
-              {zh ? "请从运行位置菜单重新登录云端。" : "Sign in again from the Work in menu."}
-            </span>
-          )}
+          <CloudProjectSignIn
+            key={runtime.binding.id}
+            binding={runtime.binding}
+            required={runtime.status === "auth-required"}
+            reconnect={runtime.reconnect}
+          />
           {runtime.uncertain && (
             <span>
               {zh
@@ -99,7 +98,6 @@ export function CloudProjectWorkspace({
           <ChatView
             {...projects}
             localRuntime={false}
-            runLocationControl={runLocationControl}
             composerDisabled={
               unavailable ||
               runtime.loading ||

@@ -520,13 +520,20 @@ export {
   THEME_ASSET_DIR,
   THEME_VAR_NAMES,
   THEME_SURFACE_NAMES,
+  THEME_SOUND_EVENTS,
   detectThemeImage,
+  detectThemeWav,
+  MAX_THEME_SOUND_BYTES,
+  MAX_THEME_MUSIC_BYTES,
   type ThemePreview,
   type InstalledTheme,
   type ThemeManifest,
   type ThemeSurfaceName,
   type ThemeSurface,
   type ThemeFrame,
+  type ThemeSoundEvent,
+  type ThemeMusicTrack,
+  type ThemeWavInfo,
 } from "./themes/index.js";
 export { resolveSafePluginPath } from "./plugins/pluginInstaller.js";
 export { listPluginHooks, pluginHookKey, type PluginHookEntry } from "./plugins/loadPluginHooks.js";

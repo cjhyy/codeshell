@@ -1,4 +1,5 @@
 import { readdirSync, statSync, existsSync, openSync, readSync, closeSync } from "node:fs";
+import { open, readdir, stat } from "node:fs/promises";
 import { join } from "node:path";
 import { homedir } from "node:os";
 import type {
@@ -9,6 +10,130 @@ import type {
 } from "./session-discovery.js";
 import { externalSessionCwdEnabled, selectRecentStats } from "./session-discovery.js";
 import { codexUserText } from "./codex-user-text.js";
+
+export interface CodexSessionList {
+  sessions: DiscoveredSession[];
+  total: number;
+}
+
+/** Interactive room lists must not run the synchronous rollout walk on the
+ * host event loop. Read identities once for both the list and its total, then
+ * read titles only for the selected, deduplicated threads. */
+export async function listCodexSessionsForCwds(
+  cwds: readonly string[],
+  codexHome = join(homedir(), ".codex"),
+  opts: DiscoverOptions = {},
+  accept?: (session: { sessionId: string; cwd: string }) => boolean,
+): Promise<CodexSessionList> {
+  const cwdSet = new Set(cwds);
+  if (cwdSet.size === 0) return { sessions: [], total: 0 };
+  const files = await listRolloutsAsync(join(codexHome, "sessions"));
+  const matches = await mapConcurrent(files, async (file) => {
+    try {
+      const [info, firstLine] = await Promise.all([stat(file), readFirstLineAsync(file)]);
+      const meta = parseSessionMeta(firstLine);
+      if (!meta?.id || !meta.cwd || !cwdSet.has(meta.cwd)) return undefined;
+      if (accept && !accept({ sessionId: meta.id, cwd: meta.cwd })) return undefined;
+      return { file, mtimeMs: info.mtimeMs, sessionId: meta.id, cwd: meta.cwd };
+    } catch {
+      // Rollouts can disappear or still have a partial first line during a scan.
+      return undefined;
+    }
+  });
+  const byThread = new Map<string, NonNullable<(typeof matches)[number]>>();
+  for (const match of matches) {
+    if (!match) continue;
+    const prior = byThread.get(match.sessionId);
+    if (!prior || match.mtimeMs > prior.mtimeMs) byThread.set(match.sessionId, match);
+  }
+  const selected = selectRecentStats([...byThread.values()], opts);
+  const sessions = await mapConcurrent(selected, async (session): Promise<DiscoveredSession> => {
+    let firstMessage = "";
+    try {
+      firstMessage = firstUserMessageFromPrefix(await readPrefixAsync(session.file, 1 << 20));
+    } catch {
+      // Retain the session identity if its title cannot be read.
+    }
+    return {
+      sessionId: session.sessionId,
+      cwd: session.cwd,
+      firstMessage,
+      lastModified: session.mtimeMs,
+      messageCount: 0,
+    };
+  });
+  return { sessions, total: byThread.size };
+}
+
+/** Dirents avoid statting every directory and every file twice. Do not follow
+ * directory symlinks: a cyclic link must not make interactive discovery hang. */
+async function listRolloutsAsync(root: string): Promise<string[]> {
+  let entries;
+  try {
+    entries = await readdir(root, { withFileTypes: true });
+  } catch {
+    return [];
+  }
+  const files: string[] = [];
+  for (const entry of entries) {
+    const file = join(root, entry.name);
+    if (entry.isDirectory()) files.push(...(await listRolloutsAsync(file)));
+    else if (entry.isFile() && entry.name.startsWith("rollout-") && entry.name.endsWith(".jsonl")) {
+      files.push(file);
+    }
+  }
+  return files;
+}
+
+/** Bound open file handles and prefix buffers even for a large history. */
+async function mapConcurrent<T, R>(
+  items: readonly T[],
+  map: (item: T) => Promise<R>,
+): Promise<R[]> {
+  const results: R[] = new Array(items.length);
+  let next = 0;
+  await Promise.all(
+    Array.from({ length: Math.min(16, items.length) }, async () => {
+      while (next < items.length) {
+        const index = next++;
+        results[index] = await map(items[index]);
+      }
+    }),
+  );
+  return results;
+}
+
+async function readPrefixAsync(file: string, maxBytes: number): Promise<string> {
+  const handle = await open(file, "r");
+  try {
+    const buffer = Buffer.alloc(maxBytes);
+    const { bytesRead } = await handle.read(buffer, 0, maxBytes, 0);
+    return buffer.toString("utf-8", 0, bytesRead);
+  } finally {
+    await handle.close();
+  }
+}
+
+/** Most metadata fits in one 4 KiB read. Grow only for a longer first line,
+ * preserving the existing 64 KiB identity bound without reading transcript
+ * prefixes merely to count threads. */
+async function readFirstLineAsync(file: string): Promise<string> {
+  const handle = await open(file, "r");
+  try {
+    const chunks: Buffer[] = [];
+    for (let position = 0; position < 1 << 16; position += 4096) {
+      const buffer = Buffer.alloc(4096);
+      const { bytesRead } = await handle.read(buffer, 0, buffer.length, position);
+      const chunk = buffer.subarray(0, bytesRead);
+      const newline = chunk.indexOf(10);
+      chunks.push(newline === -1 ? chunk : chunk.subarray(0, newline));
+      if (newline !== -1 || bytesRead < buffer.length) break;
+    }
+    return Buffer.concat(chunks).toString("utf-8");
+  } finally {
+    await handle.close();
+  }
+}
 
 /**
  * Discover codex CLI sessions for a given `cwd`, mirroring the claude-side
@@ -214,7 +339,11 @@ function readFirstLine(file: string, maxBytes = 1 << 16): string {
 
 /** Parse the first-line `session_meta` event → `{ id, cwd }`. */
 function readSessionMeta(file: string): { id?: string; cwd?: string } | undefined {
-  const first = readFirstLine(file).trim();
+  return parseSessionMeta(readFirstLine(file));
+}
+
+function parseSessionMeta(line: string): { id?: string; cwd?: string } | undefined {
+  const first = line.trim();
   if (!first) return undefined;
   const d = JSON.parse(first) as { type?: string; payload?: { id?: string; cwd?: string } };
   if (d.type !== "session_meta" || !d.payload) return undefined;
@@ -246,6 +375,10 @@ function readFirstUserMessage(file: string, maxBytes = 1 << 20): string {
   } catch {
     return "";
   }
+  return firstUserMessageFromPrefix(chunk);
+}
+
+function firstUserMessageFromPrefix(chunk: string): string {
   for (const line of chunk.split("\n")) {
     if (!line.trim()) continue;
     let d: any;

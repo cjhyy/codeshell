@@ -162,6 +162,7 @@ export function registerPanelAppSchemePrivileges(): void {
         secure: true,
         supportFetchAPI: false,
         corsEnabled: false,
+        stream: true,
       },
     },
   ]);

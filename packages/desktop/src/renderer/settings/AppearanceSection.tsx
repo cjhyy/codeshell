@@ -19,6 +19,7 @@ import { Button } from "@/components/ui/button";
 import { useConfirm } from "../ui/DialogProvider";
 import { useToast } from "../ui/ToastProvider";
 import { ThemePackPreview } from "./ThemePackPreview";
+import { ThemeAudioSection } from "./ThemeAudioSection";
 
 /**
  * Builtin packs carry an i18n key in `name`; installed packs carry a plain
@@ -60,7 +61,10 @@ export function AppearanceSection() {
     let active = true;
     const reload = (): void => {
       void refreshInstalledThemes().then(() => {
-        if (active) setInstalled(installedThemePacks());
+        if (active) {
+          setInstalled(installedThemePacks());
+          setPackId(loadThemePackId());
+        }
       });
     };
     reload();
@@ -70,6 +74,19 @@ export function AppearanceSection() {
       off?.();
     };
   }, [api]);
+
+  useEffect(() => {
+    const sync = () => setPackId(loadThemePackId());
+    const storage = (event: StorageEvent) => {
+      if (event.key === "codeshell.theme-pack" || event.key === null) sync();
+    };
+    window.addEventListener("storage", storage);
+    window.addEventListener("codeshell:theme-pack-changed", sync);
+    return () => {
+      window.removeEventListener("storage", storage);
+      window.removeEventListener("codeshell:theme-pack-changed", sync);
+    };
+  }, []);
 
   const choose = (next: Theme): void => {
     setTheme(next);
@@ -99,6 +116,8 @@ export function AppearanceSection() {
         preview.wallpaperModes.length ? t("settingsX.appearance.pack.importWallpaper") : null,
         preview.surfaceNames?.length ? t("settingsX.appearance.pack.importSurfaces") : null,
         preview.hasFrame ? t("settingsX.appearance.pack.importFrame") : null,
+        preview.soundEvents?.length ? t("settingsX.appearance.pack.importSounds") : null,
+        preview.musicCount ? t("settingsX.appearance.pack.importMusic") : null,
       ].filter(Boolean);
       const approved = await confirm({
         title: t("settingsX.appearance.pack.importConfirmTitle", { name: preview.name }),
@@ -144,6 +163,7 @@ export function AppearanceSection() {
   };
 
   const allPacks: ThemePack[] = [...THEME_PACKS, ...installed];
+  const activePack = allPacks.find((pack) => pack.id === packId) ?? THEME_PACKS[0]!;
 
   return (
     <section className="mb-6 flex flex-col gap-3">
@@ -262,6 +282,7 @@ export function AppearanceSection() {
           </div>
         ))}
       </div>
+      <ThemeAudioSection key={activePack.id} pack={activePack} />
     </section>
   );
 }

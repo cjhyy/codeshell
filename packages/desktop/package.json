@@ -84,6 +84,8 @@
     ],
     "files": [
       "out/**/*",
+      "!out/cua-driver-cache{,/**/*}",
+      "!out/native{,/**/*}",
       "!out/managed-node-cache{,/**/*}",
       "!out/managed-runtimes{,/**/*}",
       "build/icon.png",
@@ -130,6 +132,10 @@
     },
     "mac": {
       "extraResources": [
+        {
+          "from": "out/native/cua-driver",
+          "to": "cua-driver"
+        },
         {
           "from": "out/native/codeshell-permissions",
           "to": "computer-use/codeshell-permissions"

@@ -37,6 +37,8 @@ function toThemePack(pack: InstalledThemePack): ThemePack {
     ...(pack.wallpaper ? { wallpaper: pack.wallpaper } : {}),
     ...(pack.surfaces ? { surfaces: pack.surfaces } : {}),
     ...(pack.frame ? { frame: pack.frame } : {}),
+    ...(pack.sounds ? { sounds: pack.sounds } : {}),
+    ...(pack.music ? { music: pack.music } : {}),
     source: "installed",
   };
 }
