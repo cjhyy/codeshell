@@ -7,6 +7,14 @@ import type { ThemeFrame, ThemeSurface, ThemeSurfaceName } from "@cjhyy/code-she
 
 export type ThemeImportKind = "zip" | "directory";
 
+export type ThemeSoundEvent = "send" | "complete" | "approval" | "error";
+export type ThemeSounds = Partial<Record<ThemeSoundEvent, string>>;
+/** Local files are resolved asset URLs; web tracks open only on an explicit click. */
+export type ThemeMusicTrack = { title: string; artist?: string } & (
+  | { file: string; url?: never }
+  | { url: string; file?: never }
+);
+
 export interface InstalledThemePack {
   id: string;
   name: string;
@@ -16,6 +24,8 @@ export interface InstalledThemePack {
   wallpaper?: { light?: string; dark?: string; opacity?: number };
   surfaces?: Partial<Record<ThemeSurfaceName, ThemeSurface>>;
   frame?: ThemeFrame;
+  sounds?: ThemeSounds;
+  music?: ThemeMusicTrack[];
   source: "installed";
 }
 
@@ -34,6 +44,8 @@ export type ThemePickPreview =
         wallpaperModes: Array<"light" | "dark">;
         surfaceNames?: ThemeSurfaceName[];
         hasFrame?: boolean;
+        soundEvents?: ThemeSoundEvent[];
+        musicCount?: number;
         swatch?: string;
         reviewToken: string;
         warnings: string[];

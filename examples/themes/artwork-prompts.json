@@ -1,0 +1,16 @@
+{
+  "tool": "image_gen.imagegen (built-in)",
+  "created": "2026-10-14",
+  "assets": [
+    {
+      "file": "hatsune-miku/assets/stage.png",
+      "kind": "AI-generated unofficial fan illustration",
+      "prompt": "Use case: illustration-story. Asset type: wide 1536x1024 desktop app wallpaper for an unofficial Hatsune Miku theme called Digital Encore. Primary request: a polished original anime fan illustration of Hatsune Miku, instantly recognizable very long turquoise twin tails, teal eyes, black and grey futuristic sleeveless idol outfit with turquoise trim and black detached sleeves, small magenta headset accents. Wholesome confident happy performer holding a glowing microphone, waist-up / three-quarter framing on the RIGHT THIRD of the canvas with flowing twin tails. Background is an elegant soft black-teal concert space with sparse cyan holographic music lines, subtle small stars, soft spotlight halos and a few pink luminous accents. LEFT HALF should be quiet empty atmospheric teal-black negative space with no objects so UI text can be read. Tasteful refined luminous line art, exquisite cel shading, detailed expressive face and hair, professional Japanese anime key visual, no text, no typography, no logos, no watermarks, no other people. Not a UI screenshot. Only wallpaper art."
+    },
+    {
+      "file": "lovelive-muse/assets/stage.png",
+      "kind": "AI-generated unofficial fan illustration",
+      "prompt": "Use case: illustration-story. Asset type: wide 1536x1024 desktop app wallpaper for an unofficial Love Live! μ’s theme called Nine Colors. Primary request: polished original anime fan illustration of all NINE members of μ’s together celebrating a school idol concert, each character distinct and recognizable: Honoka Kosaka with orange hair and side ponytail, Kotori Minami ash brown long hair with small side knot, Umi Sonoda long straight dark blue hair, Maki Nishikino shoulder length wavy red hair, Rin Hoshizora short ginger-orange hair, Hanayo Koizumi short light brown bob with glasses, Nico Yazawa black twin tails with pink ribbons, Nozomi Tojo long purple hair in low twin tails, Eli Ayase long blonde hair in high ponytail. Exactly nine cheerful young adult anime idols in tasteful coordinated white-pink/navy stage costumes with ribbons and star trim, wholesome performance, no revealing outfits. Arrange as a balanced dynamic group cluster on RIGHT TWO THIRDS of canvas, upper body group portrait, faces unobstructed, all nine faces and individual hair identities visible. LEFT THIRD quiet light pink and lavender negative space for app text. Dreamy cherry blossom night stage with delicate star particles, nine subtle colored stage lights (orange, gray, blue, red, turquoise, green, pink, purple, yellow). Refined Japanese anime key visual, beautiful expressive faces, luminous warm light, clean elegant detailed linework, professional cel shading. No text, no logos, no UI, no watermark."
+    }
+  ]
+}

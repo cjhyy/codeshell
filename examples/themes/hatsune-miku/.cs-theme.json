@@ -1,0 +1,130 @@
+{
+  "schemaVersion": 1,
+  "id": "hatsune-miku",
+  "name": "初音未来 · Digital Encore",
+  "version": "1.0.0",
+  "colors": {
+    "light": {
+      "--cs-background": "174 36% 97%",
+      "--cs-foreground": "186 31% 16%",
+      "--cs-card": "174 35% 99%",
+      "--cs-card-foreground": "186 31% 16%",
+      "--cs-popover": "174 30% 99%",
+      "--cs-popover-foreground": "186 31% 16%",
+      "--cs-primary": "177 84% 27%",
+      "--cs-primary-foreground": "0 0% 100%",
+      "--cs-secondary": "174 35% 92%",
+      "--cs-secondary-foreground": "184 35% 23%",
+      "--cs-muted": "176 23% 93%",
+      "--cs-muted-foreground": "184 19% 38%",
+      "--cs-accent": "174 58% 88%",
+      "--cs-accent-foreground": "179 65% 23%",
+      "--cs-destructive": "350 67% 42%",
+      "--cs-destructive-foreground": "0 0% 100%",
+      "--cs-border": "176 26% 81%",
+      "--cs-input": "176 28% 78%",
+      "--cs-ring": "177 84% 27%",
+      "--cs-status-running": "190 75% 33%",
+      "--cs-status-ok": "163 72% 29%",
+      "--cs-status-warn": "35 88% 32%",
+      "--cs-status-err": "350 67% 42%",
+      "--cs-status-idle": "184 16% 43%"
+    },
+    "dark": {
+      "--cs-background": "190 24% 8%",
+      "--cs-foreground": "174 30% 94%",
+      "--cs-card": "190 23% 11%",
+      "--cs-card-foreground": "174 30% 94%",
+      "--cs-popover": "190 25% 12%",
+      "--cs-popover-foreground": "174 30% 94%",
+      "--cs-primary": "174 83% 65%",
+      "--cs-primary-foreground": "188 48% 10%",
+      "--cs-secondary": "187 28% 17%",
+      "--cs-secondary-foreground": "174 30% 91%",
+      "--cs-muted": "189 21% 15%",
+      "--cs-muted-foreground": "178 20% 71%",
+      "--cs-accent": "179 45% 20%",
+      "--cs-accent-foreground": "173 64% 85%",
+      "--cs-destructive": "348 80% 72%",
+      "--cs-destructive-foreground": "347 46% 12%",
+      "--cs-border": "185 28% 27%",
+      "--cs-input": "184 29% 31%",
+      "--cs-ring": "174 83% 65%",
+      "--cs-status-running": "190 82% 71%",
+      "--cs-status-ok": "159 65% 66%",
+      "--cs-status-warn": "39 88% 70%",
+      "--cs-status-err": "348 80% 72%",
+      "--cs-status-idle": "179 17% 65%"
+    }
+  },
+  "wallpaper": {
+    "light": "assets/stage.png",
+    "dark": "assets/stage.png",
+    "opacity": 0.18
+  },
+  "surfaces": {
+    "window": {
+      "background": { "light": "174 36% 97%", "dark": "190 24% 8%" }
+    },
+    "titlebar": {
+      "background": { "light": "174 45% 93%", "dark": "186 34% 11%" }
+    },
+    "sidebar": {
+      "background": { "light": "174 37% 94%", "dark": "188 28% 10%" },
+      "light": "assets/stage.png",
+      "dark": "assets/stage.png",
+      "opacity": 0.16,
+      "fit": "cover",
+      "position": "right"
+    },
+    "chat": {
+      "background": { "light": "174 36% 98%", "dark": "190 24% 8%" },
+      "light": "assets/stage.png",
+      "dark": "assets/stage.png",
+      "opacity": 0.23,
+      "fit": "cover",
+      "position": "right"
+    },
+    "composer": {
+      "background": { "light": "174 40% 99%", "dark": "187 29% 13%" },
+      "backgroundOpacity": 0.97
+    },
+    "panel": {
+      "background": { "light": "174 28% 97%", "dark": "190 23% 10%" }
+    }
+  },
+  "frame": {
+    "light": "177 79% 37%",
+    "dark": "174 68% 49%",
+    "width": 2,
+    "radius": 14
+  },
+  "sounds": {
+    "send": "assets/sound-send.wav",
+    "complete": "assets/sound-complete.wav",
+    "approval": "assets/sound-approval.wav",
+    "error": "assets/sound-error.wav"
+  },
+  "music": [
+    {
+      "title": "Turquoise Afterglow（原创器乐）",
+      "artist": "CodeShell",
+      "file": "assets/encore-loop.wav"
+    },
+    {
+      "title": "Tell Your World",
+      "artist": "livetune feat. 初音ミク",
+      "url": "https://www.youtube.com/watch?v=PqJNc9KVIZE"
+    },
+    {
+      "title": "39みゅーじっく！",
+      "artist": "みきとP feat. 初音ミク",
+      "url": "https://www.youtube.com/watch?v=OuLZlZ18APQ"
+    },
+    {
+      "title": "ヴァンパイア",
+      "artist": "DECO*27 feat. 初音ミク",
+      "url": "https://www.youtube.com/watch?v=e1xCOsgWG0M"
+    }
+  ]
+}

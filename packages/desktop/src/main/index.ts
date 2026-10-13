@@ -1438,7 +1438,7 @@ async function createWindow(): Promise<BrowserWindow> {
             "worker-src 'self' blob:; " +
             "style-src 'self' 'unsafe-inline'; " +
             `img-src 'self' data: blob: ${THEME_ASSET_SCHEME}:; ` +
-            `media-src ${MEDIA_PREVIEW_SCHEME}:; ` +
+            `media-src 'self' blob: ${THEME_ASSET_SCHEME}: ${MEDIA_PREVIEW_SCHEME}:; ` +
             "font-src 'self' data:; " +
             "connect-src 'self' ws: wss: http://localhost:* http://127.0.0.1:*; " +
             "object-src 'none'; " +
@@ -1451,7 +1451,7 @@ async function createWindow(): Promise<BrowserWindow> {
             "worker-src 'self'; " +
             "style-src 'self' 'unsafe-inline'; " +
             `img-src 'self' data: ${THEME_ASSET_SCHEME}:; ` +
-            `media-src ${MEDIA_PREVIEW_SCHEME}:; ` +
+            `media-src 'self' blob: ${THEME_ASSET_SCHEME}: ${MEDIA_PREVIEW_SCHEME}:; ` +
             "font-src 'self' data:; " +
             // localhost connect is needed by the browser panel's dev-server
             // probe; without it the prod build can never detect local servers.

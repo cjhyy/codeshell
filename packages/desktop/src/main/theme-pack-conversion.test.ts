@@ -24,6 +24,14 @@ describe("installedThemeToPack", () => {
         composer: { background: { dark: "350 15% 20%" }, backgroundOpacity: 0 },
       },
       frame: { light: "350 60% 50%", dark: "350 50% 60%", width: 0, radius: 0 },
+      sounds: {
+        send: ".cs-theme-assets/sound-send.wav",
+        error: ".cs-theme-assets/sound-error.wav",
+      },
+      music: [
+        { title: "Local track", artist: "Artist", file: ".cs-theme-assets/music-1.wav" },
+        { title: "Official listening", url: "https://example.com/listen" },
+      ],
     };
     const before = JSON.stringify(theme);
     const pack = installedThemeToPack(theme);
@@ -45,6 +53,14 @@ describe("installedThemeToPack", () => {
     });
     expect(pack.surfaces?.composer).toEqual(theme.surfaces?.composer);
     expect(pack.frame).toEqual(theme.frame);
+    expect(pack.sounds).toEqual({
+      send: `${prefix}.cs-theme-assets/sound-send.wav`,
+      error: `${prefix}.cs-theme-assets/sound-error.wav`,
+    });
+    expect(pack.music).toEqual([
+      { title: "Local track", artist: "Artist", file: `${prefix}.cs-theme-assets/music-1.wav` },
+      { title: "Official listening", url: "https://example.com/listen" },
+    ]);
     expect(JSON.stringify(theme)).toBe(before);
   });
 

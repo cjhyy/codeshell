@@ -38,6 +38,24 @@ export function installedThemeToPack(theme: InstalledTheme): InstalledThemePack 
     ...(theme.wallpaper ? { wallpaper: withAssetUrls(theme.wallpaper, asset) } : {}),
     ...(surfaces ? { surfaces } : {}),
     ...(theme.frame ? { frame: theme.frame } : {}),
+    ...(theme.sounds
+      ? {
+          sounds: Object.fromEntries(
+            Object.entries(theme.sounds).flatMap(([event, file]) =>
+              file ? [[event, asset(file)]] : [],
+            ),
+          ),
+        }
+      : {}),
+    ...(theme.music
+      ? {
+          music: theme.music.map((track) => ({
+            title: track.title,
+            ...(track.artist ? { artist: track.artist } : {}),
+            ...(track.file ? { file: asset(track.file) } : { url: track.url! }),
+          })),
+        }
+      : {}),
     source: "installed",
   };
 }
