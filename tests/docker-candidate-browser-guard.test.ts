@@ -2,6 +2,8 @@ import { expect, test } from "bun:test";
 import { ChildProcess } from "node:child_process";
 import { createHash } from "node:crypto";
 import { EventEmitter } from "node:events";
+import http from "node:http";
+import { PassThrough } from "node:stream";
 import {
   chmodSync,
   linkSync,
@@ -15,6 +17,7 @@ import { join } from "node:path";
 import { runInNewContext } from "node:vm";
 import {
   assertDockerBrowserGuard,
+  bridgeDockerCandidateHttp,
   bridgeDockerCandidateWebSocket,
   createDockerBrowserGuard,
   releaseDockerCandidateSockets,
@@ -445,6 +448,57 @@ test("setup and cleanup failures both survive; each owned socket receives releas
   }
 });
 
+test("HTTP cleanup attempts every resource and preserves non-Error destroy failures", async () => {
+  const original = http.request;
+  const destroyed = [];
+  let started;
+  const ready = new Promise((resolve) => (started = resolve));
+  http.request = (_url, _options, callback) => {
+    const client = new EventEmitter();
+    client.end = () => {
+      const message = new EventEmitter();
+      Object.assign(message, {
+        statusCode: 200,
+        headers: {},
+        rawHeaders: [],
+        destroy() {
+          destroyed.push("response");
+          throw false;
+        },
+      });
+      callback(message);
+      started();
+    };
+    client.destroy = () => {
+      destroyed.push("request");
+      throw undefined;
+    };
+    return client;
+  };
+  try {
+    const operation = bridgeDockerCandidateHttp({
+      request: {
+        url: () => origin,
+        method: () => "GET",
+        allHeaders: async () => ({}),
+        postDataBuffer: () => null,
+      },
+      origin,
+      live() {},
+    });
+    await ready;
+    operation.stop();
+    await expect(operation.response).rejects.toThrow();
+    const failure = await operation.closed.catch((error) => error);
+    expect(destroyed).toEqual(["request", "response"]);
+    expect(failure).toBeInstanceOf(AggregateError);
+    expect(failure.errors).toEqual([undefined, false]);
+    expect(failure.cause).toBeUndefined();
+  } finally {
+    http.request = original;
+  }
+});
+
 function httpRoute(
   url,
   { status = 200, contentType = "application/octet-stream", accept = "", failFetch = false } = {},
@@ -458,12 +512,13 @@ function httpRoute(
     },
   };
   const route = {
-    request: () => ({ url: () => url, headers: () => ({ accept }) }),
-    async fetch(options) {
-      calls.push(["fetch", options]);
-      if (failFetch) throw new Error("private response");
-      return response;
-    },
+    request: () => ({
+      url: () => url,
+      method: () => "GET",
+      headers: () => ({ accept }),
+      allHeaders: async () => ({ accept }),
+      postDataBuffer: () => null,
+    }),
     async fulfill(value) {
       calls.push(["fulfill", value]);
     },
@@ -471,28 +526,58 @@ function httpRoute(
       calls.push(["abort", reason]);
     },
   };
-  return { route, response, calls };
+  const native = (target, options, onResponse) => {
+    calls.push(["native", target.href, options]);
+    const client = new EventEmitter();
+    client.destroy = () => client.emit("close");
+    client.end = () =>
+      queueMicrotask(() => {
+        if (failFetch) return client.emit("error", new Error("private response"));
+        const message = new PassThrough();
+        message.statusCode = status;
+        message.headers = { "content-type": contentType, "content-range": "bytes 0-7/8" };
+        message.rawHeaders = Object.entries(message.headers).flat();
+        onResponse(message);
+        if (!message.destroyed)
+          message.end(status === 304 ? Buffer.alloc(0) : Buffer.from("finite"));
+      });
+    return client;
+  };
+  return { route, response, calls, native };
 }
 
 test("HTTP permits exact finite responses and 304, blocks every redirect without following", async () => {
   const f = fixture();
+  const originalRequest = http.request;
   try {
     const guard = await createDockerBrowserGuard(f.input);
     const { browser } = fakeBrowser();
     const context = await guard.createContext(browser);
     for (const status of [200, 206, 304, 401, 500]) {
       const r = httpRoute(`${origin}/p/test/media?range=owned`, { status });
+      http.request = r.native;
       await context.http(r.route);
       expect(r.calls).toEqual([
-        ["fetch", { maxRedirects: 0, timeout: 150000 }],
-        ["fulfill", { response: r.response }],
-        ["dispose"],
+        [
+          "native",
+          `${origin}/p/test/media?range=owned`,
+          { method: "GET", headers: { accept: "" }, agent: false },
+        ],
+        [
+          "fulfill",
+          {
+            status,
+            headers: { "content-type": "application/octet-stream", "content-range": "bytes 0-7/8" },
+            body: status === 304 ? Buffer.alloc(0) : Buffer.from("finite"),
+          },
+        ],
       ]);
     }
     for (const status of [300, 301, 302, 303, 305, 307, 308, 399]) {
       const r = httpRoute(`${origin}/redirect`, { status });
+      http.request = r.native;
       await context.http(r.route);
-      expect(r.calls.map(([name]) => name)).toEqual(["fetch", "abort", "dispose"]);
+      expect(r.calls.map(([name]) => name)).toEqual(["native", "abort"]);
     }
     for (const url of [
       "https://evil.invalid/",
@@ -515,6 +600,7 @@ test("HTTP permits exact finite responses and 304, blocks every redirect without
       { failFetch: true },
     ]) {
       const r = httpRoute(`${origin}/events`, options);
+      http.request = r.native;
       await context.http(r.route);
       expect(r.calls.some(([name]) => name === "abort")).toBe(true);
       expect(r.calls.some(([name]) => name === "fulfill")).toBe(false);
@@ -525,6 +611,7 @@ test("HTTP permits exact finite responses and 304, blocks every redirect without
     expect(r.calls).toEqual([["abort", "blockedbyclient"]]);
     await browser.close();
   } finally {
+    http.request = originalRequest;
     f.dispose();
   }
 });

@@ -1,6 +1,7 @@
 // Test-only Playwright request boundary. This is not OS/process confinement.
 import { ChildProcess } from "node:child_process";
 import { createHash } from "node:crypto";
+import http from "node:http";
 import {
   closeSync,
   constants,
@@ -11,6 +12,7 @@ import {
   realpathSync,
 } from "node:fs";
 import { isAbsolute, relative, resolve, sep } from "node:path";
+import { createBrotliDecompress, createGunzip, createInflate } from "node:zlib";
 
 import { loadCandidateStockWebSocket } from "./docker-candidate-stock-ws.mjs";
 
@@ -148,6 +150,215 @@ function exactOrigin(value, origin) {
   } catch {
     return false;
   }
+}
+
+// A candidate package is at most 64 MiB (16 MiB per file); the real Download
+// fixture is <20 MiB and the Video fixtures use short audio/320x180 output.
+// This finite candidate transport budget is not the product resource limit.
+export const candidateHttpBodyLimit = 64 * 1024 * 1024;
+export const candidateHttpDeadline = 150000;
+const hopHeaders = new Set([
+  "connection",
+  "keep-alive",
+  "proxy-authenticate",
+  "proxy-authorization",
+  "te",
+  "trailer",
+  "transfer-encoding",
+  "upgrade",
+]);
+
+/** Finite HTTP through the already installed Node guard, never Playwright's Agent. */
+export function bridgeDockerCandidateHttp({ request, origin, live }) {
+  let client,
+    decoder,
+    stopped = false,
+    closed = false;
+  const resources = new Set();
+  let closeDone, closeFailed, cancel;
+  const closedPromise = new Promise((resolve, reject) => {
+    closeDone = resolve;
+    closeFailed = reject;
+  });
+  closedPromise.catch(() => {}); // A caller may still be awaiting headers/body.
+  const cancelled = new Promise((_, reject) => {
+    cancel = reject;
+  });
+  const finishClose = () => {
+    if (closed || !stopped || resources.size) return;
+    closed = true;
+    clearTimeout(timer);
+    closeDone();
+  };
+  const track = (resource) => {
+    resources.add(resource);
+    resource.once("close", () => {
+      resources.delete(resource);
+      finishClose();
+    });
+    return resource;
+  };
+  const stop = () => {
+    if (stopped) return;
+    stopped = true;
+    cancel(refused());
+    const errors = [];
+    for (const resource of resources) {
+      try {
+        resource.destroy();
+      } catch (error) {
+        errors.push(error);
+      }
+    }
+    if (errors.length) {
+      clearTimeout(timer);
+      closeFailed(
+        new AggregateError(errors, "Candidate HTTP cleanup failed", { cause: errors[0] }),
+      );
+    }
+    finishClose();
+  };
+  const check = () => {
+    require(!stopped);
+    live();
+  };
+  const timer = setTimeout(stop, candidateHttpDeadline);
+  const response = Promise.race([
+    cancelled,
+    (async () => {
+      check();
+      const url = new URL(request.url());
+      require(exactOrigin(url.href, origin));
+      const method = request.method();
+      require(["GET", "HEAD", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"].includes(method));
+      // Provisional request.headers() can omit Cookie. Obtain the actual bytes
+      // Chromium sent, including authentication, before constructing the bridge.
+      const source = await request.allHeaders();
+      check();
+      const descriptors = Object.getOwnPropertyDescriptors(source);
+      require(Object.keys(descriptors).length <= 128);
+      const headers = Object.create(null);
+      const nominated = new Set();
+      for (const [key, descriptor] of Object.entries(descriptors))
+        if (key.toLowerCase() === "connection") {
+          require("value" in descriptor && typeof descriptor.value === "string");
+          for (const name of descriptor.value.toLowerCase().split(",")) nominated.add(name.trim());
+        }
+      let headerBytes = 0;
+      for (const [key, descriptor] of Object.entries(descriptors)) {
+        require("value" in descriptor && typeof descriptor.value === "string");
+        const name = key.toLowerCase(),
+          value = descriptor.value;
+        require(/^[!#$%&'*+.^_`|~0-9a-z-]+$/.test(name) && !/[\0\r\n]/.test(value));
+        headerBytes += Buffer.byteLength(key) + Buffer.byteLength(value);
+        require(headerBytes <= 65536);
+        if (name === "host") require(value === url.host);
+        if (!hopHeaders.has(name) && !nominated.has(name) && name !== "host") headers[name] = value;
+      }
+      require(!/text\/event-stream/i.test(headers.accept ?? ""));
+      const body = request.postDataBuffer();
+      require(body === null || (Buffer.isBuffer(body) && body.length <= candidateHttpBodyLimit));
+      if (body !== null) headers["content-length"] = String(body.length);
+      else delete headers["content-length"];
+      check();
+      return await new Promise((resolveResponse, reject) => {
+        // Only explicit data crosses into Node. No Agent/lookup/createConnection,
+        // proxy/defaultAgent, Unix socket or caller routing options are copied.
+        client = http.request(url, { method, headers, agent: false }, (message) => {
+          track(message);
+          try {
+            check();
+            const status = message.statusCode;
+            require(Number.isInteger(status) && status >= 200 && status <= 599);
+            require(!(status >= 300 && status < 400 && status !== 304));
+            require(!/text\/event-stream/i.test(message.headers["content-type"] ?? ""));
+            const noBody = method === "HEAD" || status === 204 || status === 304;
+            const length = message.headers["content-length"];
+            require(
+              noBody ||
+                length === undefined ||
+                (/^\d+$/.test(length) && Number(length) <= candidateHttpBodyLimit),
+            );
+            const resultHeaders = Object.create(null);
+            const connectionHeaders = new Set(
+              (message.headers.connection ?? "")
+                .toLowerCase()
+                .split(",")
+                .map((value) => value.trim()),
+            );
+            for (let i = 0; i < message.rawHeaders.length; i += 2) {
+              const name = message.rawHeaders[i].toLowerCase(),
+                value = message.rawHeaders[i + 1];
+              if (hopHeaders.has(name) || connectionHeaders.has(name)) continue;
+              resultHeaders[name] =
+                resultHeaders[name] === undefined
+                  ? value
+                  : resultHeaders[name] + (name === "set-cookie" ? "\n" : ", ") + value;
+            }
+            const encoding = message.headers["content-encoding"]?.toLowerCase();
+            if (!noBody && encoding && encoding !== "identity") {
+              require(["gzip", "x-gzip", "br", "deflate"].includes(encoding));
+              decoder =
+                encoding === "br"
+                  ? createBrotliDecompress()
+                  : encoding === "deflate"
+                    ? createInflate()
+                    : createGunzip();
+              track(decoder);
+              // The fulfilled body is decoded, as with APIRequestContext. Keep
+              // encoding/length consistent rather than mislabelling these bytes.
+              delete resultHeaders["content-encoding"];
+              delete resultHeaders["content-length"];
+            }
+            const chunks = [];
+            let wireBytes = 0,
+              bodyBytes = 0;
+            message.on("data", (chunk) => {
+              wireBytes += chunk.length;
+              if (wireBytes > candidateHttpBodyLimit) {
+                reject(refused());
+                stop();
+              }
+            });
+            const stream = decoder ?? message;
+            stream.on("data", (chunk) => {
+              bodyBytes += chunk.length;
+              if (bodyBytes > candidateHttpBodyLimit) {
+                reject(refused());
+                stop();
+                return;
+              }
+              chunks.push(chunk);
+            });
+            stream.once("error", reject);
+            message.once("error", reject);
+            message.once("aborted", () => reject(refused()));
+            stream.once("end", () => {
+              try {
+                check();
+                const bytes = Buffer.concat(chunks);
+                if (decoder) resultHeaders["content-length"] = String(bytes.length);
+                resolveResponse({ status, headers: resultHeaders, body: bytes });
+              } catch (error) {
+                reject(error);
+              }
+            });
+            if (decoder) message.pipe(decoder);
+          } catch (error) {
+            reject(error);
+            stop();
+          }
+        });
+        track(client);
+        client.once("error", reject);
+        client.end(body ?? undefined);
+      });
+    })(),
+  ]).catch((error) => {
+    stop();
+    throw error;
+  });
+  return { response, stop, closed: closedPromise };
 }
 
 export function assertDockerBrowserGuard(guard) {
@@ -290,6 +501,7 @@ export async function createDockerBrowserGuard(input) {
           create: browser.newContext.bind(browser),
           contexts: new Set(),
           sockets: new Set(),
+          http: new Set(),
           closing: false,
         };
         browsers.set(browser, state);
@@ -301,6 +513,7 @@ export async function createDockerBrowserGuard(input) {
           state.closing = true;
           const results = await Promise.allSettled([
             releaseDockerCandidateSockets(state.sockets),
+            releaseDockerCandidateSockets(state.http),
             close(...args),
           ]);
           const errors = results
@@ -313,6 +526,7 @@ export async function createDockerBrowserGuard(input) {
       require(!state.closing);
       const context = await state.create({ ...options, serviceWorkers: "block" });
       const sockets = new Set();
+      const httpRequests = new Set();
       let accepting = true;
       const contextLive = () => {
         live();
@@ -320,6 +534,7 @@ export async function createDockerBrowserGuard(input) {
       };
       const stop = () => {
         for (const socket of sockets) socket.stop();
+        for (const request of httpRequests) request.stop();
       };
       owned.child.on("exit", stop);
       context.once("close", () => {
@@ -332,6 +547,7 @@ export async function createDockerBrowserGuard(input) {
         accepting = false;
         const results = await Promise.allSettled([
           releaseDockerCandidateSockets(sockets),
+          releaseDockerCandidateSockets(httpRequests),
           close(...args),
         ]);
         const errors = results
@@ -355,19 +571,22 @@ export async function createDockerBrowserGuard(input) {
               return await route.abort("blockedbyclient");
             // Playwright only routes the first redirect hop. Never let its HTTP
             // client or Chromium follow a redirect outside this callback.
-            const response = await route.fetch({ maxRedirects: 0, timeout: 150000 });
+            const operation = bridgeDockerCandidateHttp({
+              request,
+              origin: owned.origin,
+              live: contextLive,
+            });
+            httpRequests.add(operation);
+            state.http.add(operation);
             try {
+              const response = await operation.response;
               contextLive();
-              if (
-                (response.status() >= 300 &&
-                  response.status() < 400 &&
-                  response.status() !== 304) ||
-                /text\/event-stream/i.test(response.headers()["content-type"] ?? "")
-              )
-                return await route.abort("blockedbyclient");
-              await route.fulfill({ response }); // Preserve status, headers and finite body bytes/Range.
+              await route.fulfill(response);
             } finally {
-              await response.dispose();
+              operation.stop();
+              await operation.closed;
+              httpRequests.delete(operation);
+              state.http.delete(operation);
             }
           } catch {
             await route.abort("blockedbyclient");
