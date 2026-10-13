@@ -412,6 +412,7 @@ export {
   type ParsedSource,
 } from "./plugins/installer/parseSource.js";
 export { detectPluginFormat } from "./plugins/installer/detectFormat.js";
+export { validatePluginComposerSvg } from "./plugins/static-svg.js";
 export { uninstallPluginByName } from "./plugins/installer/uninstall.js";
 export { listInstalledPlugins, type PluginListRow } from "./plugins/installer/list.js";
 export { updatePluginByName, type UpdateResult } from "./plugins/installer/update.js";

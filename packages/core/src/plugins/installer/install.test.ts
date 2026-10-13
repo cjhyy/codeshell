@@ -40,6 +40,119 @@ describe("installPluginFromPath", () => {
     rmSync(src, { recursive: true, force: true });
   });
 
+  test("preserves declared static composer SVG bytes without replacing them with the logo", async () => {
+    mkdirSync(join(src, ".codex-plugin"), { recursive: true });
+    mkdirSync(join(src, "assets"), { recursive: true });
+    const vector = Buffer.from(
+      '<?xml version="1.0" encoding="UTF-8"?><svg id="icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><path d="M0 0L512 512z"/><ellipse cx="255.16" cy="258.86" rx="28.95" ry="28.76"/></svg>',
+    );
+    const manifest = JSON.stringify({
+      name: "static-composer",
+      version: "1.0.0",
+      interface: { composerIcon: "./assets/icon.svg", logo: "./assets/logo.png" },
+    });
+    writeFileSync(join(src, "assets", "icon.svg"), vector);
+    writeFileSync(join(src, "assets", "logo.png"), PNG);
+    writeFileSync(join(src, ".codex-plugin", "plugin.json"), manifest);
+    const dir = await installPluginFromPath(src, "static-composer", STAMP);
+    const canonical = JSON.parse(readFileSync(join(dir, ".cs-plugin-manifest.json"), "utf8"));
+    expect(canonical.interface.composerIcon).toBe(".cs-plugin-assets/composer-icon.svg");
+    expect(readFileSync(join(dir, canonical.interface.composerIcon))).toEqual(vector);
+    expect(readFileSync(join(dir, canonical.interface.logo))).toEqual(PNG);
+    expect(readFileSync(join(src, ".codex-plugin", "plugin.json"), "utf8")).toBe(manifest);
+    expect(readFileSync(join(src, "assets", "icon.svg"))).toEqual(vector);
+  });
+
+  test("preserves canonical SVG bytes while retaining environment rewrites in author files", async () => {
+    mkdirSync(join(src, ".codex-plugin"), { recursive: true });
+    mkdirSync(join(src, "assets", ".cs-plugin-assets"), { recursive: true });
+    mkdirSync(join(src, "nested", ".cs-plugin-assets"), { recursive: true });
+    mkdirSync(join(src, "hooks"), { recursive: true });
+    const vector =
+      '<svg id="CLAUDE_PLUGIN_ROOT" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1 1"><path id="CLAUDE_PLUGIN_DATA" d="M0 0L1 1"/></svg>';
+    const authorPaths = [
+      "assets/icon.svg",
+      "assets/.cs-plugin-assets/composer-icon.svg",
+      "nested/.cs-plugin-assets/composer-icon.svg",
+    ];
+    for (const path of authorPaths) writeFileSync(join(src, path), vector);
+    const hook = 'cat "${CLAUDE_PLUGIN_ROOT}/skills/example.md"; mkdir -p "${CLAUDE_PLUGIN_DATA}"';
+    writeFileSync(join(src, "hooks", "session-start"), hook);
+    writeFileSync(
+      join(src, ".codex-plugin", "plugin.json"),
+      JSON.stringify({
+        name: "svg-byte-preservation",
+        version: "1.0.0",
+        interface: { composerIcon: "./assets/icon.svg" },
+        hooks: {},
+      }),
+    );
+    const dir = await installPluginFromPath(src, "svg-byte-preservation", STAMP);
+    expect(readFileSync(join(dir, ".cs-plugin-assets", "composer-icon.svg"), "utf8")).toBe(vector);
+    const rewritten = vector
+      .replaceAll("CLAUDE_PLUGIN_ROOT", "CODESHELL_PLUGIN_ROOT")
+      .replaceAll("CLAUDE_PLUGIN_DATA", "CODESHELL_PLUGIN_DATA");
+    for (const path of authorPaths) {
+      expect(readFileSync(join(dir, path), "utf8")).toBe(rewritten);
+      expect(readFileSync(join(src, path), "utf8")).toBe(vector);
+    }
+    expect(readFileSync(join(dir, "hooks", "session-start"), "utf8")).toBe(
+      hook
+        .replaceAll("CLAUDE_PLUGIN_ROOT", "CODESHELL_PLUGIN_ROOT")
+        .replaceAll("CLAUDE_PLUGIN_DATA", "CODESHELL_PLUGIN_DATA"),
+    );
+  });
+
+  test("does not exempt an author canonical-like SVG path without a normalized composer declaration", async () => {
+    mkdirSync(join(src, ".claude-plugin"), { recursive: true });
+    mkdirSync(join(src, ".cs-plugin-assets"), { recursive: true });
+    writeFileSync(
+      join(src, ".claude-plugin", "plugin.json"),
+      JSON.stringify({ name: "author-image-path", version: "1.0.0" }),
+    );
+    const vector =
+      '<svg id="CLAUDE_PLUGIN_ROOT" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1 1"/>';
+    writeFileSync(join(src, ".cs-plugin-assets", "composer-icon.svg"), vector);
+    const dir = await installPluginFromPath(src, "author-image-path", STAMP);
+    expect(readFileSync(join(dir, ".cs-plugin-assets", "composer-icon.svg"), "utf8")).toBe(
+      vector.replaceAll("CLAUDE_PLUGIN_ROOT", "CODESHELL_PLUGIN_ROOT"),
+    );
+    expect(readFileSync(join(src, ".cs-plugin-assets", "composer-icon.svg"), "utf8")).toBe(vector);
+  });
+
+  test("unsafe, escaping and oversized SVG composer icons fail even with a valid raster logo", async () => {
+    mkdirSync(join(src, ".codex-plugin"), { recursive: true });
+    mkdirSync(join(src, "assets"), { recursive: true });
+    const valid =
+      '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1 1"><path d="M0 0L1 1"/></svg>';
+    writeFileSync(join(src, "assets", "logo.png"), PNG);
+    for (const [index, vector] of [
+      valid.replace("<path", '<image href="https://example.com/x"/><path'),
+      valid.replace("<path", "<script>alert(1)</script><path"),
+      valid + " ".repeat(2 * 1024 * 1024),
+    ].entries()) {
+      const name = `bad-svg-${index}`;
+      writeFileSync(join(src, "assets", "icon.svg"), vector);
+      writeFileSync(
+        join(src, ".codex-plugin", "plugin.json"),
+        JSON.stringify({
+          name,
+          version: "1.0.0",
+          interface: { composerIcon: "./assets/icon.svg", logo: "./assets/logo.png" },
+        }),
+      );
+      await expect(installPluginFromPath(src, name, STAMP)).rejects.toThrow();
+      expect(readInstalledPlugins().plugins[`${name}@local`]).toBeUndefined();
+      expect(existsSync(join(home, ".code-shell", "plugins", name))).toBe(false);
+    }
+    rmSync(join(src, "assets", "icon.svg"));
+    writeFileSync(join(home, "outside.svg"), valid);
+    symlinkSync(join(home, "outside.svg"), join(src, "assets", "icon.svg"));
+    await expect(installPluginFromPath(src, "escape-svg", STAMP)).rejects.toThrow(
+      /symbolic links|escapes/,
+    );
+  });
+
   test("installs a CC plugin: copies dir + writes cc meta", async () => {
     mkdirSync(join(src, "skills", "s"), { recursive: true });
     writeFileSync(join(src, "skills", "s", "SKILL.md"), "---\nname: s\ndescription: d\n---\nb");

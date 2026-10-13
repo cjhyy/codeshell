@@ -6,6 +6,7 @@ import {
   pluginLogoSources,
   pluginScreenshotDataUrls,
   safePluginImageDataUrl,
+  safePluginComposerIconDataUrl,
   shouldLoadPluginListMedia,
   summarizePluginHookApproval,
 } from "./pluginPresentation";
@@ -44,6 +45,44 @@ describe("plugin presentation", () => {
         screenshotDataUrls: [PNG, PNG, "javascript:alert(1)", PNG, PNG],
       }),
     ).toEqual([PNG, PNG, PNG]);
+  });
+
+  test("permits only a bounded composer SVG transport and keeps other slots raster-only", () => {
+    const vector = "data:image/svg+xml;base64,PHN2Zy8+";
+    expect(safePluginComposerIconDataUrl(vector)).toBe(vector);
+    expect(pluginLogoSources({ composerIconDataUrl: vector, screenshotDataUrls: [] })).toEqual({
+      light: vector,
+      dark: vector,
+    });
+    expect(
+      pluginLogoSources({ composerIconDataUrl: vector, logoDataUrl: PNG, screenshotDataUrls: [] }),
+    ).toEqual({ light: PNG, dark: PNG });
+    expect(
+      pluginLogoSources({ logoDataUrl: vector, logoDarkDataUrl: vector, screenshotDataUrls: [] }),
+    ).toEqual({ light: undefined, dark: undefined });
+    expect(pluginScreenshotDataUrls({ screenshotDataUrls: [vector, PNG] })).toEqual([PNG]);
+    for (const unsafe of [
+      "<svg/>",
+      "https://example.com/icon.svg",
+      "file:///icon.svg",
+      "javascript:alert(1)",
+      "data:image/svg+xml,<svg/>",
+      "data:image/svg+xml;charset=utf-8;base64,PHN2Zy8+",
+      "data:image/svg+xml;base64,%50HN2Zy8+",
+      "data:image/svg+xml;base64,",
+      "data:image/svg+xml;base64,A===",
+      "data:image/svg+xml;base64,AB==",
+      "data:image/svg+xml;base64,AAA",
+      "data:image/svg+xml;base64,PHN2Zy8+\n",
+    ])
+      expect(safePluginComposerIconDataUrl(unsafe)).toBeUndefined();
+    const atLimit = Buffer.alloc(2 * 1024 * 1024).toString("base64");
+    expect(safePluginComposerIconDataUrl(`data:image/svg+xml;base64,${atLimit}`)).toBeDefined();
+    expect(
+      safePluginComposerIconDataUrl(
+        `data:image/svg+xml;base64,${Buffer.alloc(2 * 1024 * 1024 + 1).toString("base64")}`,
+      ),
+    ).toBeUndefined();
   });
 
   test("loads list media for a dark-only logo declaration", () => {

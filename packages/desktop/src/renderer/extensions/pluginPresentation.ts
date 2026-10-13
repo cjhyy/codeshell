@@ -2,16 +2,40 @@ import type { PluginMediaDto } from "../../shared/plugin-media";
 import type { PluginHookEntry } from "../../preload/types";
 
 const SAFE_PLUGIN_IMAGE_DATA_URL = /^data:image\/(?:png|jpeg|webp);base64,[A-Za-z0-9+/=]+$/u;
+const COMPOSER_SVG_PREFIX = "data:image/svg+xml;base64,";
+const MAX_COMPOSER_SVG_BASE64 = Math.ceil((2 * 1024 * 1024) / 3) * 4;
+const CANONICAL_BASE64 = /^[A-Za-z0-9+/]+={0,2}$/u;
 
 export function safePluginImageDataUrl(value: unknown): string | undefined {
   return typeof value === "string" && SAFE_PLUGIN_IMAGE_DATA_URL.test(value) ? value : undefined;
+}
+
+/** Main validates SVG bytes; this only permits its bounded image transport. */
+export function safePluginComposerIconDataUrl(value: unknown): string | undefined {
+  const raster = safePluginImageDataUrl(value);
+  if (raster) return raster;
+  if (typeof value !== "string" || !value.startsWith(COMPOSER_SVG_PREFIX)) return undefined;
+  const base64 = value.slice(COMPOSER_SVG_PREFIX.length);
+  if (
+    !base64.length ||
+    base64.length > MAX_COMPOSER_SVG_BASE64 ||
+    base64.length % 4 ||
+    !CANONICAL_BASE64.test(base64)
+  )
+    return undefined;
+  const padding = base64.endsWith("==") ? 2 : base64.endsWith("=") ? 1 : 0;
+  if ((base64.length / 4) * 3 - padding > 2 * 1024 * 1024) return undefined;
+  const alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
+  const last = alphabet.indexOf(base64[base64.length - padding - 1]);
+  if ((padding === 2 && (last & 15) !== 0) || (padding === 1 && (last & 3) !== 0)) return undefined;
+  return value;
 }
 
 export function pluginLogoSources(media: PluginMediaDto | null | undefined): {
   light?: string;
   dark?: string;
 } {
-  const composerIcon = safePluginImageDataUrl(media?.composerIconDataUrl);
+  const composerIcon = safePluginComposerIconDataUrl(media?.composerIconDataUrl);
   const darkLogo = safePluginImageDataUrl(media?.logoDarkDataUrl);
   const light = safePluginImageDataUrl(media?.logoDataUrl) ?? composerIcon ?? darkLogo;
   const dark = darkLogo ?? light;
