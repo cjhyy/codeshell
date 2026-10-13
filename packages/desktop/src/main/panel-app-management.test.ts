@@ -201,6 +201,7 @@ test("a reviewed Desktop update uses the project's original source and only adva
   const review = await first.previewUpdate(context, old.id, displayed.revision);
   expect(review).toMatchObject({
     installedVersion: "1.0.0",
+    installedPermissions: ["storage"],
     preview: { version: "2.0.0", permissions: ["storage", "context.workspace", "workspace.write"] },
   });
   await expect(second.install(context, review.reviewToken, { overwrite: true })).rejects.toThrow(
