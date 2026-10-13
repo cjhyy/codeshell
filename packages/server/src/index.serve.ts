@@ -5,6 +5,7 @@ export {
   type ProjectControlServerOptions,
 } from "./project-runtime/control-server.js";
 export { CLOUD_MANAGEMENT_AUTHORITY_VERSION } from "./project-runtime/cloud-account-auth.js";
+export { CLOUD_BROWSER_AUTHORITY_VERSION } from "./project-runtime/cloud-browser-auth.js";
 export {
   adoptCloudAccount,
   inspectCloudAccountAdoption,

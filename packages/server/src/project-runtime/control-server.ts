@@ -7,6 +7,7 @@ import { join } from "node:path";
 import { extname } from "node:path";
 import { createHubAuth } from "../hub/auth-http.js";
 import { createCloudAccountAuth } from "./cloud-account-auth.js";
+import { createCloudBrowserAuth } from "./cloud-browser-auth.js";
 import { legacyProjectAuthority, type CloudAccountAuthority } from "./control-authority.js";
 import { resolveSafe } from "../mobile-remote/mobile-static.js";
 import { contentTypeFor } from "../static-files.js";
@@ -30,6 +31,8 @@ export interface ProjectControlServerOptions {
   provider?: ProjectRuntimeProvider;
   /** Trusted fixed Account-origin verifier. Requires explicit offline ownership adoption. */
   accountAuthority?: CloudAccountAuthority;
+  /** Explicit fresh-install multi-account browser workspaces; never adopts old owners. */
+  accountMode?: "multi-account";
 }
 
 function json(response: ServerResponse, status: number, value: unknown): void {
@@ -87,6 +90,14 @@ async function readBody(request: IncomingMessage): Promise<Record<string, unknow
 
 /** A small account/project gateway. It never creates a worker, executes tools or mounts cwd. */
 export async function startProjectControlServer(options: ProjectControlServerOptions) {
+  if (
+    (options.accountMode !== undefined && options.accountMode !== "multi-account") ||
+    (options.accountMode === "multi-account" &&
+      (!options.accountAuthority || !options.publicOrigin))
+  )
+    throw new Error(
+      "Multi-account Cloud requires an explicit fixed Account authority and public origin.",
+    );
   const remoteLink = remoteLinkHostConfiguration(options.remoteLink, options.publicOrigin);
   // Any entry is a barrier, including dangling symlinks. Only ENOENT means absent;
   // permission/I/O failures must abort before registry or Hub initialization.
@@ -96,21 +107,26 @@ export async function startProjectControlServer(options: ProjectControlServerOpt
   } catch (error) {
     if ((error as NodeJS.ErrnoException).code !== "ENOENT") throw error;
   }
-  const registry = new ProjectRegistry(options.dataDir);
+  const registry = new ProjectRegistry(options.dataDir, Date.now, {
+    ...(options.accountMode === "multi-account"
+      ? { multiAccountOrigin: options.accountAuthority!.accountOrigin }
+      : {}),
+  });
   let proxy: ReturnType<typeof createProjectRuntimeProxy> | undefined;
   let manager: ProjectManager | undefined;
   let provider: ProjectRuntimeProvider | undefined;
   let server: ReturnType<typeof createServer> | undefined;
   let shuttingDown = false;
   try {
-    const onRevoke = (sessionId: string) => {
+    const onRevoke = (sessionId: string, ownerId?: string) => {
       if (shuttingDown) return;
       void proxy?.revokeOwner(sessionId).catch(async () => {
         if (shuttingDown) return;
-        // The revoked browser's transports are already closed. If its inner
-        // session cannot be revoked, stop the single administrator's runtimes.
+        // Transports are already closed. If inner revocation fails, terminate
+        // only this Account owner's runtimes; legacy keeps its single-owner fallback.
         try {
-          await manager?.stopAll();
+          if (options.accountMode === "multi-account" && ownerId) await manager?.stopOwner(ownerId);
+          else await manager?.stopAll();
         } catch {
           console.error(
             "[project-control] could not confirm project termination after session revocation.",
@@ -119,25 +135,38 @@ export async function startProjectControlServer(options: ProjectControlServerOpt
       });
     };
     const binding = registry.accountBinding;
-    if (!!binding !== !!options.accountAuthority || (binding && !options.publicOrigin))
+    const multiAccount = registry.multiAccount;
+    if (
+      !!(binding || multiAccount) !== !!options.accountAuthority ||
+      ((binding || multiAccount) && !options.publicOrigin)
+    )
       throw new Error(
         "Cloud account authority requires explicit matching ownership and public origin.",
       );
-    const auth = binding
-      ? createCloudAccountAuth({
-          binding,
+    const auth = multiAccount
+      ? createCloudBrowserAuth({
+          ...multiAccount,
           installationId: registry.installationId,
           publicOrigin: options.publicOrigin!,
           authority: options.accountAuthority!,
+          ownerForAccount: (origin, id) => registry.ensureAccountOwner(origin, id),
           onRevoke,
         })
-      : legacyProjectAuthority(
-          await createHubAuth({
-            dataDir: options.dataDir,
-            publicOrigin: options.publicOrigin,
+      : binding
+        ? createCloudAccountAuth({
+            binding,
+            installationId: registry.installationId,
+            publicOrigin: options.publicOrigin!,
+            authority: options.accountAuthority!,
             onRevoke,
-          }),
-        );
+          })
+        : legacyProjectAuthority(
+            await createHubAuth({
+              dataDir: options.dataDir,
+              publicOrigin: options.publicOrigin,
+              onRevoke,
+            }),
+          );
     let listeningOrigin = "";
     const publicOrigin = () => options.publicOrigin ?? listeningOrigin;
     provider =
@@ -154,7 +183,7 @@ export async function startProjectControlServer(options: ProjectControlServerOpt
       provider,
       publicOrigin,
       isSessionActive: (session) => auth.isActive(session),
-      ...(binding
+      ...(binding || multiAccount
         ? {
             revalidateSession: (session: import("./control-authority.js").ProjectControlSession) =>
               auth.revalidate(session),
@@ -275,6 +304,7 @@ export async function startProjectControlServer(options: ProjectControlServerOpt
         "Content-Type": contentTypeFor(extname(file)),
         "Content-Length": bytes.length,
         "Cache-Control": "no-cache",
+        ...(multiAccount ? { "Content-Security-Policy": "frame-ancestors 'none'" } : {}),
       });
       response.end(request.method === "HEAD" ? undefined : bytes);
     };
