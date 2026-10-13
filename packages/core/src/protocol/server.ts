@@ -2037,6 +2037,8 @@ export class AgentServer {
           },
           clientMessageId:
             typeof params.clientMessageId === "string" ? params.clientMessageId : undefined,
+          operationBatchToken:
+            typeof params.operationBatchToken === "string" ? params.operationBatchToken : undefined,
           archiveBeforeCurrentTurn: params.archiveBeforeCurrentTurn,
           permissionMode: params.permissionMode,
           sandboxMode: params.sandboxMode,
@@ -2213,6 +2215,8 @@ export class AgentServer {
         onStream: streamToClient,
         clientMessageId:
           typeof params.clientMessageId === "string" ? params.clientMessageId : undefined,
+        operationBatchToken:
+          typeof params.operationBatchToken === "string" ? params.operationBatchToken : undefined,
         attachments: Array.isArray(params.attachments) ? params.attachments : undefined,
         permissionMode: params.permissionMode,
         sandboxMode: params.sandboxMode,

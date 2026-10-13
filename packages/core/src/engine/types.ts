@@ -53,6 +53,13 @@ export type ChildHostBindingsFactory = (input: {
 
 export interface EngineConfig {
   llm: LLMConfig;
+  /** Native Host reverse-RPC custody; never loaded from Settings or tool arguments. */
+  operationBatchAuthority?: (
+    input: import("../operations/desktop-batch-authority-client.js").DesktopOperationBatchAuthorityInput,
+    options: { signal?: AbortSignal },
+  ) => Promise<
+    import("../operations/desktop-batch-authority-client.js").DesktopOperationBatchAuthorityResult
+  >;
   /**
    * Cross-model runtime knobs (temperature/timeout/retryMaxAttempts/imageDetail).
    * Stays stable across hot model switches — only `llm` rotates. When omitted,

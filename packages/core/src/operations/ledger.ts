@@ -603,7 +603,157 @@ export class OperationLedger {
     return prepared;
   }
 
-  claim(id: string): { receipt: OperationReceipt; claimed: boolean } {
+  /** Native Host only: one immutable reservation, including its non-sendable default identity.
+   * The blocked anchor deliberately occupies the legacy single-write intent. Slots are
+   * published in the same ledger transaction; orphan encrypted recovery is never authority.
+   */
+  reserveBatch(
+    anchor: OperationPlan,
+    items: readonly OperationPlan[],
+    approval: unknown,
+    assertCurrent: () => void,
+  ): { anchor: OperationReceipt; slots: OperationReceipt[] } {
+    if (
+      this.finalizedSessions.has(anchor.sessionId) ||
+      anchor.intentVariant !== undefined ||
+      items.length < 1 ||
+      items.length > 8
+    )
+      throw new Error("Invalid operation batch");
+    for (const id of [anchor.sessionId, anchor.intentId])
+      if (typeof id !== "string" || !id || id.length > 500)
+        throw new Error("Invalid operation owner");
+    canonicalOperationValue([anchor, items, approval], 384 * 1024);
+    const prepared = this.transact((state, key, archives) => {
+      assertCurrent();
+      const owner = this.hash(key, "owner", anchor.sessionId);
+      const incarnation = this.incarnation(key, anchor.sessionId);
+      if (!incarnation) throw new Error("Batch requires a durable Session owner");
+      const make = (plan: OperationPlan, blocked: boolean): OperationReceipt => {
+        if (
+          plan.sessionId !== anchor.sessionId ||
+          plan.intentId !== anchor.intentId ||
+          plan.service !== anchor.service ||
+          plan.action !== anchor.action ||
+          plan.channel !== anchor.channel ||
+          canonicalOperationValue(plan.account) !== canonicalOperationValue(anchor.account)
+        )
+          throw new Error("Batch membership changed");
+        for (const item of [plan.service, plan.action, plan.channel]) label.parse(item);
+        const id = this.hash(key, "intent", [
+          plan.sessionId,
+          plan.intentId,
+          plan.intentVariant ?? null,
+        ]);
+        // Even an identical prior reservation is never upgraded or reactivated.
+        if (archives.lookup(id)) throw new Error("Operation intent already reserved");
+        return {
+          id,
+          owner,
+          ownerIncarnation: incarnation,
+          fingerprint: this.hash(key, "plan", [
+            plan.service,
+            plan.action,
+            plan.channel,
+            plan.account,
+            plan.target,
+            plan.parameters,
+            plan.postcondition,
+          ]),
+          service: plan.service,
+          action: plan.action,
+          channel: plan.channel,
+          state: blocked ? "blocked" : "planned",
+          ...(blocked ? { error: "unsupported" as const } : {}),
+          createdAt: Date.now(),
+          updatedAt: Date.now(),
+        };
+      };
+      const root = make(anchor, true);
+      const slots = items.map((plan, index) => {
+        if (plan.intentVariant !== undefined) throw new Error("Batch slot identity is Host-owned");
+        return make({ ...plan, intentVariant: { batchId: root.id, index } }, false);
+      });
+      if (Object.keys(state.records).length + slots.length + 1 > OPERATION_ACTIVE_MAX_RECORDS) {
+        archives.collect();
+        Object.assign(state, archives.retain(true));
+        if (Object.keys(state.records).length + slots.length + 1 > OPERATION_ACTIVE_MAX_RECORDS)
+          throw new Error("Operation ledger is full");
+      }
+      const stored = new OperationRecoveryFiles(this.directory).save(
+        key,
+        root.id,
+        canonicalOperationValue({ schema: 1, plan: anchor, payload: approval }, 512 * 1024),
+      );
+      root.recovery = { prepared: stored };
+      assertCurrent();
+      for (const receipt of [root, ...slots]) state.records[receipt.id] = receipt;
+      return { value: state, result: { anchor: root, slots } };
+    });
+    for (const receipt of [prepared.anchor, ...prepared.slots])
+      this.knownOwners.set(receipt.id, anchor.sessionId);
+    return prepared;
+  }
+
+  /** Exact immutable membership proof; archived receipts retain the same identity. */
+  batchReceipts(anchor: OperationPlan, items: readonly OperationPlan[]): OperationReceipt[] {
+    return this.transact((_state, key, archives) => {
+      const rootId = this.hash(key, "intent", [anchor.sessionId, anchor.intentId, null]);
+      const root = archives.lookup(rootId);
+      if (
+        !root ||
+        root.state !== "blocked" ||
+        root.attemptId ||
+        !root.recovery ||
+        !this.matchesPlan(key, root, anchor)
+      )
+        throw new Error("Batch approval is unavailable");
+      const result = items.map((plan, index) => {
+        const slot = { ...plan, intentVariant: { batchId: rootId, index } };
+        const receipt = archives.lookup(
+          this.hash(key, "intent", [slot.sessionId, slot.intentId, slot.intentVariant]),
+        );
+        if (!receipt || !this.matchesPlan(key, receipt, slot))
+          throw new Error("Batch membership changed");
+        return receipt;
+      });
+      return { result };
+    });
+  }
+
+  /** Admission failure/Host revocation also seals slots when no Engine ever started. */
+  sealBatch(anchor: OperationPlan, items: readonly OperationPlan[]): void {
+    const receipts = this.batchReceipts(anchor, items);
+    for (const receipt of receipts) this.sealedIds.add(receipt.id);
+    this.transact((state, key, archives) => {
+      let changed = false;
+      for (let index = 0; index < receipts.length; index++) {
+        const current = archives.lookup(receipts[index].id);
+        const plan = {
+          ...items[index],
+          intentVariant: {
+            batchId: this.hash(key, "intent", [anchor.sessionId, anchor.intentId, null]),
+            index,
+          },
+        };
+        if (!current || !this.matchesPlan(key, current, plan))
+          throw new Error("Batch membership changed");
+        if (
+          current.state === "planned" ||
+          current.state === "running" ||
+          current.state === "succeeded"
+        ) {
+          current.state = current.state === "planned" ? "blocked" : "unknown";
+          current.error ??= "cancelled";
+          current.updatedAt = Date.now();
+          changed = true;
+        }
+      }
+      return { ...(changed ? { value: state } : {}), result: undefined };
+    });
+  }
+
+  claim(id: string, previousVerifiedId?: string): { receipt: OperationReceipt; claimed: boolean } {
     return this.transact<{ receipt: OperationReceipt; claimed: boolean }>(
       (state, key, archives) => {
         const receipt = archives.lookup(digest.parse(id));
@@ -623,6 +773,16 @@ export class OperationLedger {
           return { value: state, result: { receipt, claimed: false } };
         }
         if (receipt.state !== "planned") return { result: { receipt, claimed: false } };
+        if (previousVerifiedId) {
+          const previous = archives.lookup(digest.parse(previousVerifiedId));
+          if (
+            !previous ||
+            previous.state !== "verified" ||
+            previous.owner !== receipt.owner ||
+            previous.ownerIncarnation !== receipt.ownerIncarnation
+          )
+            throw new Error("Previous batch slot is not verified");
+        }
         // Check the Session barrier in the same transaction as the claim. An
         // earlier async preflight cannot exclude another process's intervening send.
         if (

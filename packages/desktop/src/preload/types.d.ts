@@ -1045,6 +1045,7 @@ export interface CodeshellApi
   operationResolution: ReturnType<
     typeof import("./operation-resolution-api").createOperationResolutionApi
   >;
+  operationBatch: ReturnType<typeof import("./operation-batch-api").createOperationBatchApi>;
   optimizationLab: OptimizationLabApi;
   computerUse: ComputerUseSettingsApi;
   /** Main-process platform (`process.platform`), used for window chrome layout. */

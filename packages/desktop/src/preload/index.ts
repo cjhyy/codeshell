@@ -1,3 +1,4 @@
+import { createOperationBatchApi } from "./operation-batch-api.js";
 import { cloudAccountApi } from "./cloud-account-api.js";
 import { cloudEnvironmentApi } from "./cloud-environment-api.js";
 import type { CloudWorkbenchApi } from "../shared/cloud-management.js";
@@ -522,6 +523,7 @@ contextBridge.exposeInMainWorld("codeshell", {
   pet: createPetApi(ipcRenderer),
   taskInbox: createTaskInboxApi(ipcRenderer),
   operationResolution: createOperationResolutionApi(ipcRenderer),
+  operationBatch: createOperationBatchApi(ipcRenderer),
   optimizationLab: createOptimizationLabApi(ipcRenderer),
   computerUse: createComputerUseSettingsApi(ipcRenderer),
   /** Forward a renderer-side log line into ~/.code-shell/logs/desktop-*.log. */

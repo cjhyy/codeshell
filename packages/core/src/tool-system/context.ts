@@ -273,6 +273,15 @@ export interface ToolContext {
     resolver: import("../operations/resolver.js").CapabilityResolver;
     sessionId: string;
     runId: string;
+    /** Trusted run-lifetime failure notification; never model arguments. */
+    onToolFailure?: () => Promise<void>;
+    batchAuthority?: (
+      phase: "resolve" | "check",
+      connectionId: string,
+      parameters: Record<string, unknown>,
+    ) => Promise<
+      import("../operations/desktop-batch-authority-client.js").DesktopOperationBatchAuthorityResult
+    >;
   };
   /** Executor-stamped physical tool invocation, distinct from user-intent identity. */
   toolCallId?: string;

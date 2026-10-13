@@ -1,3 +1,4 @@
+import { createDesktopOperationBatchAuthorityClient } from "../operations/desktop-batch-authority-client.js";
 /**
  * agent-server-stdio — Electron worker entry point.
  *
@@ -98,6 +99,8 @@ async function loadConfiguredAgentModules(): Promise<AgentModule[]> {
 
 const cwd = process.env.AGENT_CWD ?? process.cwd();
 // Capture only the parent Host distribution root, before project settings/env are read.
+const operationBatchEnabled = process.env.CODE_SHELL_OPERATION_BATCH_ACCESS === "host";
+let operationBatchClient: ReturnType<typeof createDesktopOperationBatchAuthorityClient> | undefined;
 const documentRuntimeRoot = process.env.CODE_SHELL_DOCUMENT_RUNTIME_ROOT;
 const documentParserExecutable = documentRuntimeRoot
   ? createManagedDocumentParserResolver(documentRuntimeRoot)
@@ -304,6 +307,14 @@ const chatManager = new ChatSessionManager({
       origin: "desktop",
       builtinToolHost: "desktop",
       documentParserExecutable,
+      ...(operationBatchEnabled
+        ? {
+            operationBatchAuthority: (input, options) => {
+              if (!operationBatchClient) throw new Error("Native batch authority unavailable");
+              return operationBatchClient.request(input, options);
+            },
+          }
+        : {}),
       composition,
       // Inherit full scope so spawned subagents read user config too.
       settingsScope: "full",
@@ -371,6 +382,10 @@ cronScheduler.loadJobs();
 // ─── Step 5: AgentServer over stdio ──────────────────────────────
 
 const stdioTransport = new StdioTransport(process.stdin, process.stdout);
+if (operationBatchEnabled) {
+  operationBatchClient = createDesktopOperationBatchAuthorityClient(stdioTransport);
+  stdioTransport.send(createNotification("desktop/operationBatch", { phase: "ready", version: 1 }));
+}
 // Headless hosts explicitly use the local store. Electron remains the default
 // and keeps credential resolution in its safeStorage-owning main process.
 if (process.env.CODE_SHELL_CREDENTIAL_ACCESS !== "local") {
