@@ -318,7 +318,7 @@ export async function startBatchWorkerWire(caseName, { ledgerPath }) {
     },
     snapshot() {
       return {
-        requests: structuredClone(requests),
+        requests: globalThis.structuredClone(requests),
         modelCount,
         mainModelCount,
         linkStep,
@@ -412,7 +412,7 @@ export function installBatchProtocolObservation(home) {
         row.originHash = hash(String(message.params?.clientMessageId ?? ""));
         if (row.hasBatchToken) {
           row.tokenHash = hash(message.params.operationBatchToken);
-          rawRuns.push(structuredClone(message));
+          rawRuns.push(globalThis.structuredClone(message));
         }
       }
       if (
@@ -421,7 +421,7 @@ export function installBatchProtocolObservation(home) {
         typeof message.id === "string" &&
         message.id.startsWith("operation-batch-run-")
       )
-        runOutcomes.push(structuredClone(message));
+        runOutcomes.push(globalThis.structuredClone(message));
       frames.push(row);
       assert.ok(frames.length <= 10_000, "Protocol observation exceeded its finite frame budget");
       writeReceipt({ event: "frame", ...row });
@@ -459,18 +459,18 @@ export function installBatchProtocolObservation(home) {
   return {
     snapshot() {
       return {
-        workers: workers.map(({ record }) => structuredClone(record)),
-        frames: structuredClone(frames),
+        workers: workers.map(({ record }) => globalThis.structuredClone(record)),
+        frames: globalThis.structuredClone(frames),
       };
     },
     activeBatchInput() {
       assert.equal(rawRuns.length, 1);
-      return structuredClone(rawRuns[0].params);
+      return globalThis.structuredClone(rawRuns[0].params);
     },
     batchRunOutcome() {
       assert.equal(runOutcomes.length, 1);
       assert.equal(runOutcomes[0].error, undefined);
-      return structuredClone(runOutcomes[0].result);
+      return globalThis.structuredClone(runOutcomes[0].result);
     },
     async settleWorkers() {
       await Promise.all(
@@ -478,7 +478,7 @@ export function installBatchProtocolObservation(home) {
           record.close ? undefined : new Promise((done) => child.once("close", done)),
         ),
       );
-      const result = workers.map(({ record }) => structuredClone(record));
+      const result = workers.map(({ record }) => globalThis.structuredClone(record));
       assert.ok(
         result.every(
           (row) =>
