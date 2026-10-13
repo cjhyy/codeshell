@@ -560,8 +560,7 @@ describe("marker-only complete async writer", () => {
     const f = fixture();
     let active = false,
       releaseCount = -1;
-    let s!: AsyncFixtureStorage;
-    s = await f.writer({
+    const s = await f.writer({
       afterNative: (name) => {
         if (active && name === "lock.rmdir")
           releaseCount = (s as unknown as { index: { count: number } }).index.count;

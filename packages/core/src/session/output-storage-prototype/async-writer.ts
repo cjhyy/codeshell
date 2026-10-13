@@ -198,7 +198,7 @@ export async function prepareWriterMutation(
   // Request is our private holder. Fragment recipes retain only bytes, not a second full object.
   request.event = null as never;
   const stages: Stage[] = [];
-  let nextProof = proof;
+  let nextProof: VerifiedJournal;
   if (request.kind === "append") {
     const group = await prepareAsyncRecordGroup(lease, proof.head, undefined, source);
     nextProof = { ...proof, head: preparedGroupHead(group) };

@@ -134,7 +134,7 @@ describe("non-activated storage codec spike", () => {
     expect(() => parseUnique('{"x":{"y":1,"\\u0079":2}}')).toThrow("Duplicate");
     expect(() => parseUnique('{"x":[1,]}')).toThrow();
     expect(() => parseUnique('{"x":1} trailing')).toThrow();
-    expect(parseUnique('{"escaped":"a\\\"b","nested":[true,null,-1.5e2]}')).toEqual({
+    expect(parseUnique('{"escaped":"a\\"b","nested":[true,null,-1.5e2]}')).toEqual({
       escaped: 'a"b',
       nested: [true, null, -150],
     });
