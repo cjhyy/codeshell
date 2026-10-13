@@ -368,7 +368,19 @@ Desktop 的测试文件，报告包含重复注册，因此表中数量不作为
 流式回复、工具执行、用量回传、429 重试及文件、浏览器、review、终端和设置面板。模型请求
 由受隔离保护的本地 SSE fixture 响应。
 
-这些 Cua 场景使用模拟原生 driver；真实 cua-driver、计算器 GUI 和 macOS TCC 验收仍待执行。
+上述 6 个 Engine 场景使用模拟原生 driver。本机另行完成真实原生 AX 验收：下载官方
+cua-driver 0.34.1 的 universal 二进制并核对发布 SHA256 和代码签名；由真实 CodeShell
+Electron main 直接启动嵌入 daemon，MCP 返回的 `responsible_ppid` 与 main PID 一致。
+对 macOS 计算器依次使用后台 AXPress 点击全部清除、7、加、8、等于，每次动作前读取新
+snapshot / element token，最终从计算器显示区的 `AXStaticText` 读回 `7+8` 和 `15`。
+全部窗口读取使用 `include_screenshot:false`，正常退出后 main、daemon、proxy、socket 和
+临时 HOME 均已清理。另一次启动早期的退出探针因 renderer 尚未就绪触发保存 ACK 超时；
+等待真实 renderer 就绪后的正式验收正常退出。
+
+真实权限结果为 Accessibility 已授权、Screen Recording 未授权。开发版的实际父 bundle
+为 `com.github.Electron`，声明为 `com.cjhyy.codeshell`，所以 `health_report` 的
+`bundle_identity` 检查报告不匹配；不能仅凭 `attribution:host` 认为打包版身份验收通过。
+真实截图和视觉链路、打包 CodeShell 的 bundle 身份及 TCC 授权验收仍待完成。
 
 ### 试用步骤（macOS）
 
