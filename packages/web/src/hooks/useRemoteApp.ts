@@ -306,10 +306,24 @@ export function useRemoteApp(options: RemoteAppOptions = {}): RemoteApp {
   /** Transient banner message (errors, room-missing, …). Auto-clears. */
   const [notice, setNoticeState] = useState<string | undefined>();
   const noticeTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
+  const noticeMounted = useRef(true);
+  useEffect(() => {
+    noticeMounted.current = true;
+    return () => {
+      noticeMounted.current = false;
+      if (noticeTimer.current !== undefined) clearTimeout(noticeTimer.current);
+      noticeTimer.current = undefined;
+    };
+  }, []);
   const setNotice = useCallback((msg: string) => {
+    if (!noticeMounted.current) return;
     setNoticeState(msg);
-    if (noticeTimer.current) clearTimeout(noticeTimer.current);
-    noticeTimer.current = setTimeout(() => setNoticeState(undefined), 5000);
+    if (noticeTimer.current !== undefined) clearTimeout(noticeTimer.current);
+    noticeTimer.current = setTimeout(() => {
+      if (!noticeMounted.current) return;
+      noticeTimer.current = undefined;
+      setNoticeState(undefined);
+    }, 5000);
   }, []);
   const beginMobileUpload = useCallback(
     (metadata: MobileImageBase, expectedGeneration: number): Promise<MobileUploadTicket> => {
