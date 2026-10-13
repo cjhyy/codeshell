@@ -39,6 +39,7 @@ const codingDir = resolve(repoRoot, "packages/coding");
 // cdp is bundled into main by esbuild, so a stale dist ships old browser-action
 // code into the dev app just as silently as it did into installers.
 const cdpDir = resolve(repoRoot, "packages/cdp");
+const browserDevtoolsDir = resolve(repoRoot, "packages/browser-devtools");
 
 const VITE_PORT = 5273;
 const VITE_URL = `http://localhost:${VITE_PORT}`;
@@ -120,6 +121,7 @@ async function shutdown(code: number): Promise<void> {
   killTree(linkWatchProc);
   killTree(codingWatchProc);
   killTree(cdpWatchProc);
+  killTree(browserDevtoolsWatchProc);
 
   // esbuild watch contexts and vite servers hold their own child procs / ports;
   // dispose them so nothing lingers. Bounded so a hung dispose can't wedge exit.
@@ -190,6 +192,7 @@ let coreWatchProc: ChildProcess | null = null;
 let linkWatchProc: ChildProcess | null = null;
 let codingWatchProc: ChildProcess | null = null;
 let cdpWatchProc: ChildProcess | null = null;
+let browserDevtoolsWatchProc: ChildProcess | null = null;
 
 /**
  * Build core once (synchronously, so a stale dist never reaches main), then
@@ -246,6 +249,17 @@ function startCoreWatch(): void {
     process.exit(cdpBuilt.status ?? 1);
   }
 
+  // Like cdp, browser-devtools is bundled into main and needs fresh dist.
+  console.log("[dev] building @cjhyy/code-shell-browser-devtools (once)…");
+  const browserDevtoolsBuilt = spawnSync("bun", ["run", "build"], {
+    cwd: browserDevtoolsDir,
+    stdio: "inherit",
+  });
+  if (browserDevtoolsBuilt.status !== 0) {
+    console.error("[dev] browser-devtools build failed; aborting");
+    process.exit(browserDevtoolsBuilt.status ?? 1);
+  }
+
   // tsc --watch keeps dist in sync with core source edits. detached:true so the
   // bun wrapper + its tsc grandchild form one group killTree can take down —
   // bun does not forward SIGTERM to tsc, which is how these got orphaned before.
@@ -266,6 +280,11 @@ function startCoreWatch(): void {
   });
   cdpWatchProc = spawn("bun", ["run", "dev"], {
     cwd: cdpDir,
+    stdio: "inherit",
+    detached: true,
+  });
+  browserDevtoolsWatchProc = spawn("bun", ["run", "dev"], {
+    cwd: browserDevtoolsDir,
     stdio: "inherit",
     detached: true,
   });
@@ -300,10 +319,10 @@ function startCoreWatch(): void {
     }, 150);
   });
 
-  // NOTE: cdp deliberately gets no fs.watch here. Unlike core and coding (both
-  // `external` in main's bundle, so only the dist on disk changes), cdp is
+  // NOTE: cdp and browser-devtools deliberately get no fs.watch here. Unlike
+  // core and coding (both `external` in main's bundle), these packages are
   // bundled INTO out/main — esbuild tracks its dist as a bundle input, so
-  // `cdpWatchProc`'s tsc emit already triggers the main-rebuild plugin above,
+  // their tsc emits already trigger the main-rebuild plugin above,
   // which restarts electron. Watching it here too would double-restart.
 }
 
