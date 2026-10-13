@@ -17,6 +17,7 @@ export async function verifyCloudInterviewAudio({
   evidenceDir,
   readRequests,
   realSpeech = false,
+  markStep,
 }) {
   let transcript = TRANSCRIPT;
   const practice = async ({ frame }) => {
@@ -156,23 +157,30 @@ export async function verifyCloudInterviewAudio({
   console.log(
     "PASS: installed cloud Job Hunt records original WebM, explicitly hands the selected connection to its native task, resumes the transcript across browser sessions, preserves changed answers and cancels without resending or deleting audio",
   );
-  const download = async (client) => {
+  const download = async (client, marker) => {
+    marker?.("audio-download-practice");
     const audio = await practice(client);
+    marker?.("audio-download-refresh");
     await refresh(audio);
+    marker?.("audio-download-open-preview");
     await audio
       .locator(`[data-audio-task-id="${succeeded.id}"]`)
       .getByRole("button", { name: "打开原录音", exact: true })
       .click();
     const preview = client.page.getByRole("region", { name: "文件预览", exact: true });
     await preview.waitFor();
+    marker?.("audio-download-save");
     const saved = client.page.waitForEvent("download");
     await preview.getByRole("link", { name: "保存到此设备", exact: true }).click();
+    marker?.("audio-download-read-assert");
     assert.deepEqual(await readFile(await (await saved).path()), bytes);
+    marker?.("audio-download-close-preview");
     await client.page.getByRole("button", { name: "关闭预览", exact: true }).click();
   };
+  markStep?.("audio-close-interview");
   await a.frame.locator("#close-panel-interview").click();
-  await download(a);
-  return async (client) => {
+  await download(a, markStep);
+  return async (client, restartMarker) => {
     const job = await client.call("tasks.get", { id: succeeded.id });
     assert.equal(job.status, "succeeded");
     assert.equal((job.result?.result ?? job.result).text, transcript);
@@ -187,7 +195,7 @@ export async function verifyCloudInterviewAudio({
       2,
       "restart must not repeat manual-recovery speech tasks",
     );
-    await download(client);
+    await download(client, restartMarker);
     console.log(
       "PASS: cloud interview recording bytes, completed/cancelled tasks and reviewed answer survive project stop/start and package-source removal without another provider request",
     );

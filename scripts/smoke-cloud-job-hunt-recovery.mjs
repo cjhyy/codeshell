@@ -137,7 +137,7 @@ export async function verifyCloudJobHuntRecovery({
     const pages = [],
       errors = [];
     return withJobHuntBrowserDiagnostics(
-      async () => {
+      async (markStep) => {
         const open = async (project) => {
           const context = await browserGuard.createContext(browser, {
             viewport: { width: 1440, height: 1000 },
@@ -179,12 +179,14 @@ export async function verifyCloudJobHuntRecovery({
             });
           return { page, frame, call };
         };
-        await action(open);
+        await action(open, markStep);
+        markStep("page-errors");
         assert.deepEqual(errors, [], "Installed Job Hunt must not raise page errors");
       },
       async () => {
         const failures = [];
         for (const [index, page] of pages.entries()) {
+          if (typeof page.isClosed === "function" && page.isClosed() === true) continue;
           await page
             .screenshot({
               path: join(evidenceDir, `cloud-job-hunt-error-${index}.png`),
@@ -253,7 +255,7 @@ export async function verifyCloudJobHuntRecovery({
     assert.deepEqual(await readFile(await (await download).path()), pdfBytes);
     await a.page.getByRole("button", { name: "关闭预览", exact: true }).click();
   }
-  await browserRun(async (open) => {
+  await browserRun(async (open, markStep) => {
     const a = await open(projectA),
       b = await open(projectB);
     assert.deepEqual(
@@ -460,6 +462,7 @@ export async function verifyCloudJobHuntRecovery({
       });
     }
     verifyAudioRestart = await verifyCloudInterviewAudio({
+      markStep,
       realSpeech: !!speechFixture,
       a,
       b,
@@ -478,10 +481,16 @@ export async function verifyCloudJobHuntRecovery({
         ),
     });
     if (speechFixture) {
-      await writeFile(
-        join(evidenceDir, "cloud-job-hunt-speech-provider.log"),
-        await docker(["exec", containerA, "cat", "/tmp/codeshell-real-speech/provider.log"]),
-      );
+      markStep("speech-provider-log-read");
+      const providerLog = await docker([
+        "exec",
+        containerA,
+        "cat",
+        "/tmp/codeshell-real-speech/provider.log",
+      ]);
+      markStep("speech-provider-log-write");
+      await writeFile(join(evidenceDir, "cloud-job-hunt-speech-provider.log"), providerLog);
+      markStep("speech-provider-receipt-write");
       await writeFile(
         join(evidenceDir, "cloud-job-hunt-speech-provider.json"),
         JSON.stringify(
@@ -493,7 +502,7 @@ export async function verifyCloudJobHuntRecovery({
     }
   });
   return async () =>
-    browserRun(async (open) => {
+    browserRun(async (open, markStep) => {
       const a = await open(projectA);
       const current = JSON.parse(await readRoot(projectA));
       assert.equal(current.resume.markdown, freshResume);
@@ -518,7 +527,7 @@ export async function verifyCloudJobHuntRecovery({
       assert.equal(job.status, "succeeded");
       assert.equal(job.input.request.source.updatedAt, pdfReceipt.sourceUpdatedAt);
       await downloadPdf(a);
-      await verifyAudioRestart(a);
+      await verifyAudioRestart(a, markStep);
       console.log(
         "PASS: cloud resume PDF bytes, task history, source receipt and exact UI download survive project stop/start and package-source removal",
       );
