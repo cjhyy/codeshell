@@ -264,6 +264,11 @@ describe("project picker and registry synchronization", () => {
   });
 
   test("leaves the project list and selection unchanged when the picker is canceled", async () => {
+    let runtimeChanges = 0;
+    beforeSelectLocalSession = async () => {
+      runtimeChanges++;
+      return true;
+    };
     hook = await renderHook(useHarness);
     const adding = hook.result.current.handleAddProject();
     await act(async () => {
@@ -273,6 +278,44 @@ describe("project picker and registry synchronization", () => {
 
     expect(hook.result.current.projects).toEqual([]);
     expect(hook.result.current.sessionIndices).toEqual({});
+    expect(hook.result.current.activeProjectId).toBeNull();
+    expect(runtimeChanges).toBe(0);
+  });
+
+  test("reopening a registered folder selects local before activating its project", async () => {
+    diskProjects = [project];
+    initialIndices = { [project.id]: activeIndex };
+    const pending = deferred<boolean>();
+    const checked: Array<string | null> = [];
+    beforeSelectLocalSession = (id) => {
+      checked.push(id);
+      return pending.promise;
+    };
+    hook = await renderHook(useHarness);
+    const adding = hook.result.current.handleAddProject();
+    await act(async () => {
+      pendingPicks[0]!.resolve(project);
+      await flushMicrotasks();
+    });
+    expect(checked).toEqual([project.id]);
+    expect(hook.result.current.activeProjectId).toBeNull();
+    await act(async () => {
+      pending.resolve(true);
+      await adding;
+    });
+    expect(hook.result.current.activeProjectId).toBe(project.id);
+    expect(hook.result.current.sessionIndices[project.id]).toBe(activeIndex);
+  });
+
+  test("does not open a local project when saving its location fails", async () => {
+    diskProjects = [project];
+    beforeSelectLocalSession = async () => false;
+    hook = await renderHook(useHarness);
+    const adding = hook.result.current.handleAddProject();
+    await act(async () => {
+      pendingPicks[0]!.resolve(project);
+      await adding;
+    });
     expect(hook.result.current.activeProjectId).toBeNull();
   });
 

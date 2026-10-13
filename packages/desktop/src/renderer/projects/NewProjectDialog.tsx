@@ -10,6 +10,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { CloudProjectManager } from "./CloudProjectManager";
 import { useT } from "../i18n";
+import type { CloudProjectBinding } from "../../shared/project-runtime";
 
 const CLOUD_ADDRESS_KEY = "codeshell.cloud-workbench.v1";
 
@@ -17,10 +18,15 @@ interface Props {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onCreateLocal: () => Promise<void>;
+  cloudBindings?: CloudProjectBinding[];
+  onOpenCloudProject?: (binding: CloudProjectBinding) => Promise<void>;
 }
 
 /** Own the chooser lifecycle shared by App's sidebar, composer and native menu. */
-export function useNewProjectDialog(onCreateLocal: () => Promise<void>) {
+export function useNewProjectDialog(
+  onCreateLocal: () => Promise<void>,
+  cloud: Pick<Props, "cloudBindings" | "onOpenCloudProject"> = {},
+) {
   const [open, setOpen] = useState(false);
   const openNewProject = useCallback(() => setOpen(true), []);
   useEffect(
@@ -32,18 +38,31 @@ export function useNewProjectDialog(onCreateLocal: () => Promise<void>) {
   );
   return [
     openNewProject,
-    <NewProjectDialog open={open} onOpenChange={setOpen} onCreateLocal={onCreateLocal} />,
+    <NewProjectDialog
+      open={open}
+      onOpenChange={setOpen}
+      onCreateLocal={onCreateLocal}
+      {...cloud}
+    />,
   ] as const;
 }
 
 /** One location chooser shared by the sidebar, composer and native File menu. */
-export function NewProjectDialog({ open, onOpenChange, onCreateLocal }: Props) {
+export function NewProjectDialog({
+  open,
+  onOpenChange,
+  onCreateLocal,
+  cloudBindings = [],
+  onOpenCloudProject,
+}: Props) {
   const { t } = useT();
   const [location, setLocation] = useState<"choose" | "cloud">("choose");
   const [address, setAddress] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const pendingRef = useRef(false);
+  const projectPendingRef = useRef(false);
+  const cloudPendingRef = useRef(false);
   const composingRef = useRef(false);
   const localRef = useRef<HTMLButtonElement>(null);
   const openerRef = useRef<HTMLElement | null>(null);
@@ -69,30 +88,33 @@ export function NewProjectDialog({ open, onOpenChange, onCreateLocal }: Props) {
   }, [open, location]);
 
   const cloudBusy = useCallback((next: boolean) => {
-    pendingRef.current = next;
-    setBusy(next);
+    cloudPendingRef.current = next;
+    pendingRef.current = next || projectPendingRef.current;
+    setBusy(pendingRef.current);
   }, []);
 
-  const create = async () => {
+  const openProject = async (operation: () => Promise<void>) => {
     if (pendingRef.current) return;
+    projectPendingRef.current = true;
     pendingRef.current = true;
     setBusy(true);
     setError(null);
     try {
-      await onCreateLocal();
+      await operation();
       onOpenChange(false);
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : String(cause));
     } finally {
-      pendingRef.current = false;
-      setBusy(false);
+      projectPendingRef.current = false;
+      pendingRef.current = cloudPendingRef.current;
+      setBusy(pendingRef.current);
     }
   };
 
   return (
     <Dialog open={open} onOpenChange={(next) => !pendingRef.current && onOpenChange(next)}>
       <DialogContent
-        className="max-w-md"
+        className="max-h-[calc(100dvh-2rem)] w-[calc(100vw-2rem)] overflow-y-auto sm:max-w-md"
         onOpenAutoFocus={() => {
           openerRef.current =
             document.activeElement instanceof HTMLElement ? document.activeElement : null;
@@ -121,7 +143,7 @@ export function NewProjectDialog({ open, onOpenChange, onCreateLocal }: Props) {
               className="h-auto justify-start gap-3 whitespace-normal rounded-xl p-4 text-left"
               aria-label={t("sidebar.thisComputer")}
               disabled={busy}
-              onClick={() => void create()}
+              onClick={() => void openProject(onCreateLocal)}
             >
               {busy ? <Loader2 className="animate-spin" aria-hidden /> : <Monitor aria-hidden />}
               <span>
@@ -157,22 +179,57 @@ export function NewProjectDialog({ open, onOpenChange, onCreateLocal }: Props) {
             )}
           </div>
         ) : (
-          <CloudProjectManager
-            initialAddress={address}
-            onBusyChange={cloudBusy}
-            onBack={() => {
-              setError(null);
-              setLocation("choose");
-            }}
-            onOpened={(origin) => {
-              try {
-                window.localStorage.setItem(CLOUD_ADDRESS_KEY, `${origin}/`);
-              } catch {
-                /* Optional bookmark. */
-              }
-              onOpenChange(false);
-            }}
-          />
+          <div className="grid gap-4">
+            {cloudBindings.length > 0 && onOpenCloudProject && (
+              <section className="grid gap-2" aria-label={t("sidebar.linkedCloudProjects")}>
+                <p className="text-sm font-medium">{t("sidebar.linkedCloudProjects")}</p>
+                {cloudBindings.map((binding) => (
+                  <Button
+                    key={binding.id}
+                    type="button"
+                    variant="outline"
+                    className="h-auto justify-start gap-3 whitespace-normal p-3 text-left"
+                    aria-label={t("sidebar.openLinkedCloudProject", {
+                      name: binding.remoteProjectName,
+                    })}
+                    disabled={busy}
+                    onClick={() => void openProject(() => onOpenCloudProject(binding))}
+                  >
+                    <Cloud className="shrink-0" aria-hidden />
+                    <span className="min-w-0 break-words">
+                      <span className="block">{binding.remoteProjectName}</span>
+                      <span className="block text-xs font-normal text-muted-foreground">
+                        {binding.environmentName} · {binding.origin}
+                      </span>
+                    </span>
+                  </Button>
+                ))}
+                {error && (
+                  <p role="alert" className="break-words text-sm text-destructive">
+                    {error}
+                  </p>
+                )}
+              </section>
+            )}
+            <fieldset disabled={busy} className="min-w-0">
+              <CloudProjectManager
+                initialAddress={address}
+                onBusyChange={cloudBusy}
+                onBack={() => {
+                  setError(null);
+                  setLocation("choose");
+                }}
+                onOpened={(origin) => {
+                  try {
+                    window.localStorage.setItem(CLOUD_ADDRESS_KEY, `${origin}/`);
+                  } catch {
+                    /* Optional bookmark. */
+                  }
+                  onOpenChange(false);
+                }}
+              />
+            </fieldset>
+          </div>
         )}
       </DialogContent>
     </Dialog>

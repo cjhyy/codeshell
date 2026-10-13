@@ -4,6 +4,8 @@ import { fileURLToPath } from "node:url";
 // Each fixture has its own DOM and fake bridge; it never requests OS access.
 for (const scenario of [
   "disabled",
+  "driver-missing",
+  "driver-missing-enabled",
   "disable-active",
   "request-accessibility",
   "request-screen",

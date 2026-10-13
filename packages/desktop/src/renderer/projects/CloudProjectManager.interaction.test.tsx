@@ -19,6 +19,9 @@ test.each([
   "dialog-busy-before-effect",
   "ime-submit",
   "local-chooser",
+  "linked-cloud-entry",
+  "linked-cloud-retry",
+  "linked-cloud-pending",
 ])("Cloud project management interaction: %s", async (scenario) => {
   const directory = await mkdtemp(join(tmpdir(), "codeshell-cloud-project-ui-"));
   try {

@@ -11,13 +11,54 @@ import {
   type DiscoveredSession,
   type DiscoverOptions,
 } from "./session-discovery.js";
-import { countCodexSessions, discoverCodexSessionsForCwds } from "./codex-session-discovery.js";
+import {
+  countCodexSessions,
+  discoverCodexSessionsForCwds,
+  listCodexSessionsForCwds,
+  type CodexSessionList,
+} from "./codex-session-discovery.js";
 
 export interface RelatedSessionDiscoveryOptions {
   claudeHome?: string;
   codexHome?: string;
   /** Test seam; production reads DriveAgent's durable binding store. */
   bindings?: readonly ExternalAgentSessionBinding[];
+}
+
+/** Nonblocking Codex room list and exact total from the same identity scan.
+ * Only worktree sessions actually delegated by this project are included. */
+export async function listRelatedCodexSessions(
+  cwd: string,
+  opts: DiscoverOptions = {},
+  discovery: RelatedSessionDiscoveryOptions = {},
+): Promise<CodexSessionList> {
+  const root = resolve(cwd);
+  const expectedIdsByCwd = relatedSessionScope("codex", root, discovery);
+  return listCodexSessionsForCwds(
+    [...expectedIdsByCwd.keys()],
+    discovery.codexHome ?? join(homedir(), ".codex"),
+    opts,
+    ({ sessionId, cwd: sessionCwd }) => {
+      const normalizedCwd = resolve(sessionCwd);
+      return normalizedCwd === root || expectedIdsByCwd.get(normalizedCwd)?.has(sessionId) === true;
+    },
+  );
+}
+
+function relatedSessionScope(
+  cli: ExternalAgentCli,
+  root: string,
+  discovery: RelatedSessionDiscoveryOptions,
+): Map<string, Set<string>> {
+  const expectedIdsByCwd = new Map<string, Set<string>>([[root, new Set()]]);
+  for (const binding of discovery.bindings ?? externalAgentSessionStore.list()) {
+    if (binding.cli !== cli || !isRelatedBinding(binding, root)) continue;
+    const bindingCwd = resolve(binding.cwd);
+    const ids = expectedIdsByCwd.get(bindingCwd) ?? new Set<string>();
+    ids.add(binding.sessionId);
+    expectedIdsByCwd.set(bindingCwd, ids);
+  }
+  return expectedIdsByCwd;
 }
 
 /**
@@ -33,17 +74,7 @@ export function discoverRelatedSessions(
   discovery: RelatedSessionDiscoveryOptions = {},
 ): DiscoveredSession[] {
   const root = resolve(cwd);
-  const bindings = discovery.bindings ?? externalAgentSessionStore.list();
-  const expectedIdsByCwd = new Map<string, Set<string>>();
-  expectedIdsByCwd.set(root, new Set());
-
-  for (const binding of bindings) {
-    if (binding.cli !== cli || !isRelatedBinding(binding, root)) continue;
-    const bindingCwd = resolve(binding.cwd);
-    const ids = expectedIdsByCwd.get(bindingCwd) ?? new Set<string>();
-    ids.add(binding.sessionId);
-    expectedIdsByCwd.set(bindingCwd, ids);
-  }
+  const expectedIdsByCwd = relatedSessionScope(cli, root, discovery);
 
   const candidateCwds = [...expectedIdsByCwd.keys()];
   const candidates =
