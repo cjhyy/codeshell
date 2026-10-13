@@ -4,7 +4,7 @@
 > 分区规则：**小 feature = 体量 M 及以下（M/S/XS），可单会话直接着手**；**大功能升级 = 体量 L**，需先方案设计再分阶段落地。
 > 最近一次核对：2026-10-14。最新正式版为 [v0.9.40](https://github.com/cjhyy/codeshell/releases/tag/v0.9.40)，tag 解析到 `c86f003d`，不包含后续 PR #170/#171/#172/#174 或独立候选中的 SVG 补丁。当前远端 main 为 `3a752aea`，其首轮自然 [CI 38443116313](https://github.com/cjhyy/codeshell/actions/runs/38443116313) 十二项成功；源码合入、受控验收、正式发行和目标部署仍分别记证。完整十项门槛、准确输入及不可变回执见[交付检查点](docs/todo/p0-p1-release-2026-10-12.md)；旧版本与失败记录在该文档中保留为历史。
 
-> **P0：先完成真实插件与 SVG UI、完整候选和正式发行。** Superpowers 6.1.1 的真实 API 安装、14 Skills 与来源隔离冷启动通过，但该输入无 Hook；真实 v5.0.0 完整源码、API 安装及审阅批准通过，所引回执中的自动 Hook 尚未执行。SVG 的真实 Main/原 guard 探针、32 次原生 ps 和两次进程 metrics 已通过，随后 Settings 按钮等待超时，DTO/IMG/第二 phase 未到达；新增失败诊断仍在准备，不计通过。
+> **P0：先完成真实插件与 SVG UI、完整候选和正式发行。** Superpowers 6.1.1 的真实 API 安装、14 Skills 与来源隔离冷启动通过，但该输入无 Hook。真实 v5.0.0 已实际自动触发首次 SessionStart，原命令 shell 退出 127，报 literal `${CODESHELL_PLUGIN_ROOT}` 路径不存在；完整上下文未进入真实 Run，另有 `maxTurns=1` 与 fixture 要求 `completed` 的独立失败，整轮 baseline 仍为 false。SVG v7.1 截图已定位 Trust dialog 遮住 Settings；33 次原生 ps／两次 metrics 与进程退出已核，Main 另有 2 次 network／4 次 process 拒绝待归因，零计数门槛未过，DTO/IMG/第二 phase 未到达。后续 View only／拒绝归因方案仅在准备，未重试；原十项门槛和失败历史继续保留。
 >
 > 完整 Linux [38384214542](https://github.com/cjhyy/codeshell-services/actions/runs/38384214542) 固定 Host `676d3a14`／Services `a5958f0b`／Panels `75431542`、真实 speech／默认 all／无 exclusion，首轮终态失败：六包受控更新、Job 迁移恢复、真实 PDF、CPU speech 和音频局部流程通过，随后 Job 最终 `page-errors` 断言失败，具体错误仍未知；其余完整业务／重启／备份恢复／Link／归档未到达，候选上传 skipped，证据上传 quota 失败。这轮没有覆盖当前 main `3a752aea` 或 SVG 候选。
 >
