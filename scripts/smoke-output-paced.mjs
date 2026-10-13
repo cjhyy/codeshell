@@ -1,8 +1,19 @@
 import assert from "node:assert/strict";
 import { fork, spawnSync } from "node:child_process";
 import { once } from "node:events";
-import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import {
+  closeSync,
+  constants,
+  fstatSync,
+  lstatSync,
+  mkdirSync,
+  openSync,
+  readFileSync,
+  readSync,
+  writeFileSync,
+} from "node:fs";
 import { join, resolve } from "node:path";
+import { performance } from "node:perf_hooks";
 import { pathToFileURL } from "node:url";
 import {
   confinedWorkerEnvironment,
@@ -17,6 +28,10 @@ const server = fork(resolve("scripts/fixtures/output-paced-sse.mjs"), [], {
 server.stderr.pipe(process.stderr);
 const [{ origin, pid: serverPid }] = await once(server, "message");
 assert.notEqual(serverPid, process.pid);
+let sourceTiming;
+server.on("message", (message) => {
+  sourceTiming ??= message;
+});
 installLocalNetworkGuard(origin);
 const { WorkerBridgeCore } = await import("../packages/server/dist/index.worker.js");
 const { sessionsRoot } = await import("../packages/core/dist/index.js");
@@ -42,19 +57,40 @@ const snapshots = new SessionSnapshotStore({
 });
 const delays = [],
   controls = [],
-  events = [];
+  events = [],
+  mainTiming = [];
+let firstEntry;
 const main = new MainOutputPublisher({
   root: sessionsRoot,
   latest: (id) => snapshots.get(id).outputCursor,
   worker: (id, event) => apply(id, event),
 });
-function apply(id, event) {
+function apply(id, event, entry) {
+  const paced = id === "paced-output" && event.type === "text_delta";
+  const observeStarted = paced ? performance.now() : 0;
   if (!main.observeWorker(id, event)) return false;
+  const snapshotStarted = paced ? performance.now() : 0;
   snapshots.append(id, event);
+  const snapshotFinished = paced ? performance.now() : 0;
   events.push({ id, event, at: Date.now() });
   if (id === "paced-output" && event.type === "text_delta") {
-    for (const line of event.text.trim().split("\n"))
+    for (const line of event.text.trim().split("\n")) {
       delays.push(Date.now() - JSON.parse(line).sentAt);
+      if (mainTiming.length < 150) {
+        firstEntry ??= entry;
+        // index, original wall delay, local entry mono/wall offsets,
+        // entry->observe, observeWorker, snapshotAppend (milliseconds).
+        mainTiming.push([
+          JSON.parse(line).index,
+          delays.at(-1),
+          entry && firstEntry ? entry.mono - firstEntry.mono : -1,
+          entry && firstEntry ? entry.wall - firstEntry.wall : -1,
+          entry ? observeStarted - entry.mono : -1,
+          snapshotStarted - observeStarted,
+          snapshotFinished - snapshotStarted,
+        ]);
+      }
+    }
   }
   return true;
 }
@@ -84,7 +120,11 @@ const env = {
   CODE_SHELL_CREDENTIAL_ACCESS: "local",
   CODESHELL_SELF_UPDATE_CHECK: "0",
   CODESHELL_COST_SMOKE_GUARD_LOG: join(root, "paced-worker-guard.jsonl"),
+  CODESHELL_PACED_TIMING_PARENT_PID: String(process.pid),
 };
+// The unchanged network/HOME guard remains the first preload.
+env.NODE_OPTIONS += ` --import ${new URL("./fixtures/output-paced-worker-observer.mjs", import.meta.url).href}`;
+let observedWorkerPid;
 const worker = new WorkerBridgeCore({
   execPath: process.execPath,
   entryPath: resolve("packages/core/dist/cli/agent-server-stdio.js"),
@@ -92,10 +132,15 @@ const worker = new WorkerBridgeCore({
   onStderr: (line) => {
     if (!line.includes("Warning:")) process.stderr.write(line);
   },
+  onWorkerStarted: ({ pid }) => {
+    observedWorkerPid = pid;
+  },
 });
 worker.subscribeLines((line) => {
+  const entry = { mono: performance.now(), wall: Date.now() };
   const message = JSON.parse(line);
-  if (message.method === "agent/streamEvent") apply(message.params.sessionId, message.params.event);
+  if (message.method === "agent/streamEvent")
+    apply(message.params.sessionId, message.params.event, entry);
 });
 let serial = 0;
 function rpc(method, params) {
@@ -112,6 +157,137 @@ const quantile = (values, fraction) =>
   values.slice().sort((a, b) => a - b)[
     Math.min(values.length - 1, Math.floor(values.length * fraction))
   ];
+const diagnosticMs = (value) =>
+  typeof value === "number" && Number.isFinite(value) && Math.abs(value) <= 3_600_000
+    ? Math.round(value * 1000) / 1000
+    : -1;
+function sourceDiagnostics() {
+  const frames = sourceTiming?.pacedSourceTiming;
+  if (
+    !Array.isArray(frames) ||
+    frames.length !== 150 ||
+    frames.some(
+      (row, index) =>
+        !Array.isArray(row) ||
+        row.length !== 6 ||
+        row.some((value) => typeof value !== "number" || !Number.isFinite(value)) ||
+        row[0] !== index ||
+        !Number.isSafeInteger(row[1]) ||
+        row[1] < 0 ||
+        row[2] < 0 ||
+        row[2] > 3_600_000 ||
+        row[3] < 0 ||
+        row[3] > 3_600_000 ||
+        ![0, 1].includes(row[4]) ||
+        !Number.isSafeInteger(row[5]) ||
+        row[5] < 0 ||
+        row[5] > 64 * 1024 * 1024,
+    )
+  )
+    return { available: 0, frames: [] };
+  // Source-local wall/mono offsets only; never compare absolute clocks across
+  // processes. Columns: index, wall offset, mono offset, write ms, writable,
+  // writableLength. A missing/late receipt never delays the business check.
+  return {
+    available: 1,
+    frames: frames.map((row) => [
+      row[0],
+      diagnosticMs(row[1] - frames[0][1]),
+      diagnosticMs(row[2] - frames[0][2]),
+      diagnosticMs(row[3]),
+      row[4],
+      row[5],
+    ]),
+  };
+}
+function workerDiagnostics() {
+  let fd,
+    result = { available: 0 };
+  try {
+    const file = join(process.env.HOME, "paced-worker-timing.json");
+    fd = openSync(file, constants.O_RDONLY | constants.O_NOFOLLOW);
+    const before = fstatSync(fd);
+    if (
+      !before.isFile() ||
+      before.nlink !== 1 ||
+      before.uid !== process.getuid?.() ||
+      (before.mode & 0o777) !== 0o600 ||
+      before.size < 1 ||
+      before.size > 512 * 1024
+    )
+      return result;
+    const bytes = Buffer.alloc(before.size + 1);
+    let length = 0;
+    while (length < bytes.length) {
+      const count = readSync(fd, bytes, length, bytes.length - length, length);
+      if (!count) break;
+      length += count;
+    }
+    const after = fstatSync(fd),
+      path = lstatSync(file);
+    if (
+      length !== before.size ||
+      ["dev", "ino", "size", "mtimeMs", "ctimeMs", "mode", "uid", "nlink"].some(
+        (key) => before[key] !== after[key] || after[key] !== path[key],
+      ) ||
+      !path.isFile() ||
+      path.isSymbolicLink()
+    )
+      return result;
+    const data = JSON.parse(bytes.subarray(0, length).toString("utf8"));
+    const count = (value) => Number.isSafeInteger(value) && value >= 0;
+    const ms = (value) =>
+      typeof value === "number" && Number.isFinite(value) && Math.abs(value) <= 3_600_000;
+    if (
+      !data ||
+      Object.keys(data).sort().join() !==
+        "fsyncOverflow,fsyncRows,pid,ppid,stdoutOverflow,stdoutRows,version" ||
+      data.version !== 1 ||
+      data.pid !== observedWorkerPid ||
+      data.ppid !== process.pid ||
+      !count(data.fsyncOverflow) ||
+      !count(data.stdoutOverflow) ||
+      !Array.isArray(data.fsyncRows) ||
+      data.fsyncRows.length > 4096 ||
+      data.fsyncRows.some(
+        (row) =>
+          !Array.isArray(row) ||
+          row.length !== 3 ||
+          !row.every(ms) ||
+          row[0] < 0 ||
+          row[1] < 0 ||
+          ![0, 1].includes(row[2]),
+      ) ||
+      !Array.isArray(data.stdoutRows) ||
+      data.stdoutRows.length > 150 ||
+      data.stdoutRows.some(
+        (row) =>
+          !Array.isArray(row) ||
+          row.length !== 7 ||
+          !row.slice(0, 6).every(ms) ||
+          !count(row[0]) ||
+          row[0] >= 150 ||
+          row[2] < 0 ||
+          row[4] < 0 ||
+          ![0, 1].includes(row[5]) ||
+          !count(row[6]) ||
+          row[6] > 64 * 1024 * 1024,
+      )
+    )
+      return result;
+    result = { available: 1, ...data };
+  } catch {
+    /* One bounded read only; missing or invalid diagnostics stay unavailable. */
+  } finally {
+    if (fd !== undefined)
+      try {
+        closeSync(fd);
+      } catch {
+        result = { available: 0 };
+      }
+  }
+  return result;
+}
 async function waitFor(predicate) {
   const deadline = Date.now() + 10000;
   while (!predicate()) {
@@ -149,6 +325,17 @@ try {
   const page = core.readOutputJournal(sessionsRoot(), "paced-output");
   assert.equal(page.complete, true);
   assert.equal(page.through, snapshots.get("paced-output").outputCursor);
+  console.log(
+    JSON.stringify({
+      pacedTimingDiagnostics: {
+        version: 1,
+        observedFrames: delays.length,
+        mainFrames: mainTiming.map((row) => row.map(diagnosticMs)),
+        observedControls: controls.slice(0, 12).map(diagnosticMs),
+        source: sourceDiagnostics(),
+      },
+    }),
+  );
   assert.equal(quantile(delays, 0.95) < 200, true, `stream p95 ${quantile(delays, 0.95)}ms`);
   assert.equal(quantile(controls, 0.95) < 200, true, `control p95 ${quantile(controls, 0.95)}ms`);
   const cancelledRun = rpc("agent/run", {
@@ -235,4 +422,9 @@ try {
   await worker.stopAndWait();
   server.disconnect();
   await once(server, "exit");
+  try {
+    console.log(JSON.stringify({ pacedWorkerTimingDiagnostics: workerDiagnostics() }));
+  } catch {
+    /* Diagnostic output cannot mask the original stream/control assertion. */
+  }
 }
