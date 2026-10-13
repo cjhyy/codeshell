@@ -9,7 +9,6 @@ const deny = () => {
 const same = (a, b) => JSON.stringify(a) === JSON.stringify(b);
 const disabledFeatures = [
   "AvoidUnnecessaryBeforeUnloadCheckSync",
-  "BoundaryEventDispatchTracksNodeRemoval",
   "DestroyProfileOnBrowserClose",
   "DialMediaRouteProvider",
   "GlobalMediaControls",
@@ -18,14 +17,16 @@ const disabledFeatures = [
   "MediaRouter",
   "PaintHolding",
   "ThirdPartyStoragePartitioning",
+  "BlockOriginHeaderModificationOnRedirect",
   "Translate",
   "AutoDeElevate",
-  "RenderDocument",
   "OptimizationHints",
+  "NetworkTimeServiceQuerying",
+  "AimEnabled",
   "msForceBrowserSignIn",
   "msEdgeUpdateLaunchServicesPreferredVersion",
 ];
-// Frozen Playwright 1.60.0 Chromium.defaultArgs with headless + sandbox=true.
+// Frozen Playwright 1.64.0 Chromium.defaultArgs with headless + sandbox=true.
 // Changes to the locked library must be reviewed rather than admitted by prefix.
 export const candidateChromiumDefaults = Object.freeze([
   "--disable-field-trial-config",
@@ -50,6 +51,7 @@ export const candidateChromiumDefaults = Object.freeze([
   "--disable-popup-blocking",
   "--disable-prompt-on-repost",
   "--disable-renderer-backgrounding",
+  "--disable-updater-scheduler",
   "--force-color-profile=srgb",
   "--metrics-recording-only",
   "--no-first-run",
