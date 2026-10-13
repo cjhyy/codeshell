@@ -35,6 +35,8 @@ import { loadProjects, projectLabel, type TrackedProject } from "../projects";
 import { useAlert, useConfirm } from "../ui/DialogProvider";
 import { useToast } from "../ui/ToastProvider";
 import { PanelAppInstallReviewDialog } from "./PanelAppInstallReviewDialog";
+import { PanelAppCapabilities } from "./PanelAppCapabilities";
+import { getPanelAppPermissionCopy } from "./panelAppPermissions";
 import { PanelAppVersionsDialog } from "./PanelAppVersionsDialog";
 import { usePanelAppUpdates } from "./usePanelAppUpdates";
 import {
@@ -55,7 +57,7 @@ interface Props {
   query: string;
 }
 
-type PanelAppReviewState = { projectPath: string } & (
+type PanelAppReviewState = { projectPath: string; installedPermissions?: readonly string[] } & (
   | {
       mode: "install";
       source: PanelAppSourceInput;
@@ -271,6 +273,7 @@ export function PanelsTab({ cwd, activeProjectPath, query }: Props) {
         source,
         preview: result.preview,
         installedVersion: result.installedVersion,
+        installedPermissions: result.installedPermissions,
       });
     } catch (cause) {
       setError(String((cause as Error)?.message ?? cause));
@@ -301,6 +304,7 @@ export function PanelsTab({ cwd, activeProjectPath, query }: Props) {
         source,
         preview: result.preview,
         installedVersion: result.installedVersion,
+        installedPermissions: result.installedPermissions,
       });
     } catch (cause) {
       setError(String((cause as Error)?.message ?? cause));
@@ -495,7 +499,8 @@ export function PanelsTab({ cwd, activeProjectPath, query }: Props) {
         projectPath: cwd,
         appId: app.appId,
         rowId: app.id,
-        installedVersion: app.version,
+        installedVersion: result.installedVersion ?? app.version,
+        installedPermissions: result.installedPermissions,
         preview: result.preview,
       });
     } catch (cause) {
@@ -592,6 +597,7 @@ export function PanelsTab({ cwd, activeProjectPath, query }: Props) {
           }
           action={review.mode}
           installedVersion={review.installedVersion}
+          installedPermissions={review.installedPermissions}
           busy={installBusy !== null || (review.mode === "update" && busy === review.rowId)}
           onCancel={() => setReview(null)}
           onInstall={() => void installReviewed()}
@@ -1066,7 +1072,7 @@ export function PanelsTab({ cwd, activeProjectPath, query }: Props) {
                   ) : (
                     app.permissions.map((permission) => (
                       <Badge key={permission} variant="outline">
-                        {permission}
+                        {getPanelAppPermissionCopy(permission, t).label}
                       </Badge>
                     ))
                   )}
@@ -1082,6 +1088,12 @@ export function PanelsTab({ cwd, activeProjectPath, query }: Props) {
                     </Badge>
                   )}
                 </div>
+                <PanelAppCapabilities
+                  key={`${cwd}:${app.id}:${app.revision}`}
+                  permissions={app.permissions}
+                  agent={app.agent}
+                  nativeEntries={app.nativeEntries}
+                />
                 {(() => {
                   const summary = bindingsByApp.get(app.appId);
                   if (!summary) return null;

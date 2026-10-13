@@ -50,6 +50,7 @@ import {
 import { useT } from "../i18n/I18nProvider";
 import type { TFunction } from "../i18n/I18nProvider";
 import { optionalProjectConfigurationTarget } from "../configurationTarget";
+import { PanelAppCapabilities } from "../extensions/PanelAppCapabilities";
 
 type ProjectState = "inherit" | "on" | "off";
 type LucideIcon = React.ComponentType<{ size?: number; className?: string }>;
@@ -222,8 +223,10 @@ export function CapabilitiesOverviewSection({
     // the new heading. Re-seed from the target cache or show its loading state.
     const cached = cacheGet<CapabilityDescriptor[]>(cacheKey);
     setCaps(cached ?? []);
+    setPanelApps([]);
     setLoading(cached === undefined);
     setSavingId(null);
+    setSavingPanelApp(null);
     void load();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [cacheKey]);
@@ -558,39 +561,54 @@ export function CapabilitiesOverviewSection({
                 {panelApps.map((app) => {
                   const vetoed = app.projectBound && !app.enabled;
                   return (
-                    <div className="flex items-center gap-3 px-2 py-2 text-sm" key={app.appId}>
-                      <span className="min-w-0 flex flex-1 flex-col gap-1">
-                        <span className="font-medium text-foreground">{app.title}</span>
-                        {app.description && (
-                          <span className="text-xs text-muted-foreground">{app.description}</span>
-                        )}
-                        <span className="flex shrink-0 flex-wrap items-center gap-1">
-                          <span
-                            className={cn(
-                              "inline-flex items-center gap-1 rounded bg-muted px-1.5 py-0.5 text-[10px]",
-                              app.enabled ? "text-status-ok" : "text-muted-foreground",
-                            )}
-                          >
-                            {app.enabled ? <Check size={12} /> : <Circle size={12} />}
-                            {app.enabled
-                              ? t("settingsX.capOverview.effectiveOn")
-                              : t("settingsX.capOverview.effectiveOff")}
-                          </span>
-                          {vetoed && (
-                            <span className="rounded bg-muted px-1.5 py-0.5 text-[10px] text-status-warn">
-                              {t("settingsX.capOverview.panelAppVetoed")}
+                    <div className="px-2 py-2 text-sm" key={app.appId}>
+                      <div className="flex items-start gap-3">
+                        <span className="min-w-0 flex flex-1 flex-col gap-1">
+                          <span className="flex flex-wrap items-center gap-2 font-medium text-foreground">
+                            {app.title}
+                            <span className="text-xs font-normal text-muted-foreground">
+                              v{app.version}
                             </span>
+                          </span>
+                          {app.description && (
+                            <span className="text-xs text-muted-foreground">{app.description}</span>
                           )}
-                          <span className="rounded bg-muted px-1.5 py-0.5 text-[10px] font-mono text-muted-foreground">
-                            {app.appId}
+                          <span className="flex shrink-0 flex-wrap items-center gap-1">
+                            <span
+                              className={cn(
+                                "inline-flex items-center gap-1 rounded bg-muted px-1.5 py-0.5 text-[10px]",
+                                app.enabled ? "text-status-ok" : "text-muted-foreground",
+                              )}
+                            >
+                              {app.enabled ? <Check size={12} /> : <Circle size={12} />}
+                              {app.enabled
+                                ? t("settingsX.capOverview.effectiveOn")
+                                : t("settingsX.capOverview.effectiveOff")}
+                            </span>
+                            {vetoed && (
+                              <span className="rounded bg-muted px-1.5 py-0.5 text-[10px] text-status-warn">
+                                {t("settingsX.capOverview.panelAppVetoed")}
+                              </span>
+                            )}
+                            <span className="rounded bg-muted px-1.5 py-0.5 text-[10px] font-mono text-muted-foreground">
+                              {app.appId}
+                            </span>
                           </span>
                         </span>
-                      </span>
-                      <Switch
-                        checked={app.projectBound}
-                        disabled={savingPanelApp === app.appId}
-                        aria-label={t("settingsX.capOverview.panelAppRowAria", { name: app.title })}
-                        onCheckedChange={(v) => void onPanelAppToggle(app, v)}
+                        <Switch
+                          checked={app.projectBound}
+                          disabled={savingPanelApp === app.appId}
+                          aria-label={t("settingsX.capOverview.panelAppRowAria", {
+                            name: app.title,
+                          })}
+                          onCheckedChange={(v) => void onPanelAppToggle(app, v)}
+                        />
+                      </div>
+                      <PanelAppCapabilities
+                        key={`${cwd}:${app.appId}:${app.revision}`}
+                        permissions={app.permissions}
+                        agent={app.agent}
+                        nativeEntries={app.nativeEntries}
                       />
                     </div>
                   );

@@ -12,12 +12,14 @@ import {
 } from "@/components/ui/dialog";
 import type { PanelAppPreview } from "../../preload/types";
 import { useT } from "../i18n/I18nProvider";
+import { PanelAppAgentCapabilities, PanelAppPermissionList } from "./PanelAppCapabilities";
 
 interface Props {
   busy: boolean;
   action: "install" | "update";
   preview: PanelAppPreview;
   installedVersion?: string;
+  installedPermissions?: readonly string[];
   projectLabel?: string;
   onCancel: () => void;
   onInstall: () => void;
@@ -28,11 +30,18 @@ export function PanelAppInstallReviewDialog({
   action,
   preview,
   installedVersion,
+  installedPermissions,
   projectLabel,
   onCancel,
   onInstall,
 }: Props) {
   const { t } = useT();
+  const previous = installedPermissions === undefined ? undefined : new Set(installedPermissions);
+  const next = new Set<string>(preview.permissions);
+  const added = previous
+    ? preview.permissions.filter((permission) => !previous.has(permission))
+    : [];
+  const removed = installedPermissions?.filter((permission) => !next.has(permission)) ?? [];
 
   return (
     <Dialog open onOpenChange={(open) => !open && !busy && onCancel()}>
@@ -95,27 +104,20 @@ export function PanelAppInstallReviewDialog({
               <ShieldCheck className="h-4 w-4 text-muted-foreground" />
               {t("ext.panels.reviewPermissions")}
             </div>
-            <div className="flex flex-wrap gap-1.5">
-              {preview.permissions.length === 0 ? (
-                <Badge variant="outline">{t("ext.panels.noPermissions")}</Badge>
-              ) : (
-                preview.permissions.map((permission) => (
-                  <Badge key={permission} variant="outline">
-                    {permission === "media.capture"
-                      ? "麦克风、摄像头与屏幕录制"
-                      : permission === "resources"
-                        ? "存取已授权文件与工具结果"
-                        : permission === "resources.directRead"
-                          ? "让工具直接读取你选择的原文件（不复制）"
-                          : permission === "credentials.connections"
-                            ? "让工具使用选定的服务连接"
-                            : permission === "process"
-                              ? "运行已审核工具与后台任务"
-                              : permission}
-                  </Badge>
-                ))
+            {(installedVersion || action === "update" || preview.alreadyInstalled) &&
+              previous === undefined && (
+                <p className="text-xs text-status-warn">
+                  {t("ext.panels.permissionChangesUnavailable")}
+                </p>
               )}
-            </div>
+            {previous !== undefined && added.length === 0 && removed.length === 0 && (
+              <p className="text-xs text-muted-foreground">{t("ext.panels.noPermissionChanges")}</p>
+            )}
+            <PanelAppPermissionList
+              permissions={preview.permissions}
+              addedPermissions={added}
+              removedPermissions={removed}
+            />
             <p className="text-xs text-muted-foreground">{t("ext.panels.reviewIsolation")}</p>
           </section>
 
@@ -124,28 +126,11 @@ export function PanelAppInstallReviewDialog({
               <Bot className="h-4 w-4 text-muted-foreground" />
               {t("ext.panels.reviewAgent")}
             </div>
-            {!preview.agent ||
-            (preview.agent.tools.length === 0 && preview.agent.skills.length === 0) ? (
-              <Badge variant="outline">{t("ext.panels.reviewAgentNone")}</Badge>
-            ) : (
-              <>
-                <div className="flex flex-wrap gap-1.5">
-                  {preview.agent.tools.map((tool) => (
-                    <Badge key={tool.name} variant={tool.readOnly ? "secondary" : "warning"}>
-                      {tool.name}
-                    </Badge>
-                  ))}
-                  {preview.agent.skills.map((skill) => (
-                    <Badge key={skill} variant="outline">
-                      {skill.split("/").at(-2) ?? skill}
-                    </Badge>
-                  ))}
-                </div>
-                <p className="text-xs text-muted-foreground">
-                  {t("ext.panels.reviewAgentIsolation")}
-                </p>
-              </>
-            )}
+            <PanelAppAgentCapabilities
+              agent={preview.agent}
+              nativeEntries={preview.nativeEntries}
+            />
+            <p className="text-xs text-muted-foreground">{t("ext.panels.reviewAgentIsolation")}</p>
           </section>
         </div>
 
