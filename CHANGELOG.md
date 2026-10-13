@@ -8,6 +8,23 @@ breaking.
 
 ## [Unreleased]
 
+## [0.9.38] - 2026-10-13
+
+### Added
+
+- Open the real CodeShell project and conversation workbench after website sign-in.
+  Keep profile, password, sessions, connections, and administrator tools in settings
+  behind the compact account menu.
+- Give each registered account separate cloud project ownership and browser
+  sessions, with continuous Account authority checks and operator resource limits.
+  Multi-account mode requires a new installation and explicit configuration.
+
+### Fixed
+
+- Preserve the existing standalone Hub sign-in flow when cloud browser support is
+  unavailable. Keep its authentication and workspace separate from cloud accounts.
+- Restore and focus the originating desktop window after successful GitHub login.
+
 ## [0.9.37] - 2026-10-13
 
 ### Added

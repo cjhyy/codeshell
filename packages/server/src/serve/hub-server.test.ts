@@ -155,6 +155,27 @@ async function connect(server: HeadlessServer, cookie: string, origin = server.u
   };
 }
 
+test("standalone Hub explicitly declines Cloud browser capability before and after login", async () => {
+  const { server } = await fixture();
+  const path = "/api/v1/cloud-browser/capabilities";
+  const anonymous = await fetch(server.url + path);
+  expect(anonymous.status).toBe(404);
+  expect(anonymous.headers.get("cache-control")).toBe("no-store");
+  expect(await anonymous.json()).toEqual({ error: "API endpoint not found" });
+  expect((await fetch(server.url + "/api/v1/configuration")).status).toBe(401);
+  expect((await fetch(server.url + "/api/v1/sessions")).status).toBe(401);
+  expect((await fetch(server.url + path + "?ignored=1")).status).toBe(400);
+  expect((await json(server, path, {})).status).toBe(405);
+  const { cookie } = await login(server, true);
+  const authenticated = await fetch(server.url + path, { headers: { cookie } });
+  expect(authenticated.status).toBe(404);
+  expect(authenticated.headers.get("cache-control")).toBe("no-store");
+  expect(await authenticated.json()).toEqual({ error: "API endpoint not found" });
+  expect((await fetch(server.url + "/api/v1/configuration", { headers: { cookie } })).status).toBe(
+    200,
+  );
+});
+
 test("Hub public shell and health expose no API data; setup is one-time and Origin gates WS", async () => {
   const { server } = await fixture();
   expect(await (await fetch(server.url + "/health")).json()).toEqual({ status: "ok", mode: "hub" });

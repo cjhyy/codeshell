@@ -720,6 +720,18 @@ export async function startHeadlessServer(opts: HeadlessServeOptions): Promise<H
       hubJson(res, 200, { status: "ok", mode: hubAuth ? "hub" : "passcode" });
       return;
     }
+    // The public shell probes this before login. A standalone workspace has no
+    // Cloud browser authority; an explicit miss selects its existing Hub gate.
+    if (pathname === "/api/v1/cloud-browser/capabilities") {
+      if (req.url !== pathname) {
+        hubJson(res, 400, { error: "request parameters are not supported" });
+      } else if (req.method !== "GET") {
+        hubJson(res, 405, { error: "method not allowed" });
+      } else {
+        hubJson(res, 404, { error: "API endpoint not found" });
+      }
+      return;
+    }
     if (hubAuth) {
       if (await links?.handlePublic(req, res)) return;
       if (await panels?.handleAssets(req, res)) return;

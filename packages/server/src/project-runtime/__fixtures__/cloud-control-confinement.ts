@@ -7,7 +7,7 @@ import { syncBuiltinESMExports } from "node:module";
 import { realpathSync } from "node:fs";
 
 /** Install before Core imports. Only the fixture's already bound listeners mint origins. */
-export function installCloudControlConfinement() {
+export function installCloudControlConfinement({ nativeWebSockets = false } = {}) {
   if (
     !process.env.HOME ||
     realpathSync(process.env.HOME) !== process.env.HOME ||
@@ -42,9 +42,22 @@ export function installCloudControlConfinement() {
       (module as any)[name] = function (input: any, ...args: any[]) {
         const url = typeof input === "string" || input instanceof URL ? new URL(input) : undefined;
         const options = url ? (typeof args[0] === "object" ? args[0] : {}) : input;
-        if (options.socketPath || options.createConnection || options.lookup || options.agent)
-          deny();
         const scheme = options.protocol ?? url?.protocol ?? protocol;
+        // The reviewed ws client supplies its own plain net connector. Native
+        // fixtures may use it only for already allowlisted numeric loopback
+        // origins; the Socket.connect guard below independently checks its TCP
+        // destination. Custom DNS, agents, sockets and TLS stay forbidden.
+        const nativeConnector =
+          nativeWebSockets &&
+          scheme === "http:" &&
+          (options.hostname ?? options.host ?? url?.hostname) === "127.0.0.1";
+        if (
+          options.socketPath ||
+          (options.createConnection && !nativeConnector) ||
+          options.lookup ||
+          options.agent
+        )
+          deny();
         assertOrigin(
           `${scheme}//${options.hostname ?? options.host ?? url?.hostname ?? "localhost"}:${options.port ?? url?.port ?? (scheme === "http:" ? 80 : 443)}`,
         );

@@ -16,17 +16,20 @@ import { pipeline } from "node:stream/promises";
 import { Transform } from "node:stream";
 import { HubAuthStore } from "../hub/auth-store.js";
 import { ProjectRegistry } from "./registry.js";
+import { isCloudAccountOrigin } from "./account-binding.js";
 
 const LABEL = "io.codeshell.project-runtime";
 const FORMAT = "codeshell.project-installation-backup";
 const MAX_CONTROL_FILE = 16 * 1024 * 1024;
 const SHA = /^[a-f0-9]{64}$/;
 const UUID = /^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$/;
+const MULTI_CONTROL_FILES = ["project-control/initialized", "project-control/registry.json"];
 type Digest = { sha256: string; bytes: number };
 type Project = { id: string; ownerId: string; generation: number };
 interface Manifest {
   format: typeof FORMAT;
-  version: 1;
+  version: 1 | 2;
+  multiAccountOrigin?: string;
   createdAt: string;
   installationId: string;
   helperImage: string;
@@ -39,11 +42,14 @@ export interface ProjectBackupOptions {
   destination: string;
   /** Locally available, administrator-reviewed Linux image containing tar. No pull occurs. */
   helperImage: string;
+  /** Explicit policy for a schema 3 installation; never inferred from backup data. */
+  multiAccountOrigin?: string;
 }
 export interface ProjectRestoreOptions {
   source: string;
   destination: string;
   helperImage: string;
+  multiAccountOrigin?: string;
   /** Fault injection for offline restore durability tests. */
   io?: { fsync?: typeof fsyncSync; removeMarker?: typeof rm };
 }
@@ -299,6 +305,15 @@ async function copyControl(
   }
 }
 
+async function assertMultiControlInventory(source: string) {
+  for (const name of await readdir(source))
+    if (!["project-control", "project-control.lock", "project-runtime-secrets"].includes(name))
+      throw new Error("Multi-account backup refuses unknown controller state files.");
+  for (const name of await readdir(join(source, "project-control")))
+    if (!["initialized", "registry.json"].includes(name))
+      throw new Error("Multi-account backup refuses unknown project control files.");
+}
+
 /** Offline, owner-only backup. It never stops projects or modifies their volumes. */
 export async function backupProjectInstallation(options: ProjectBackupOptions) {
   imageId(options.helperImage);
@@ -306,14 +321,19 @@ export async function backupProjectInstallation(options: ProjectBackupOptions) {
   await directory(source);
   // Do not initialize a fresh registry as a side effect of a mistaken backup path.
   await regular(join(source, "project-control/registry.json"), 512 * 1024);
-  const registry = new ProjectRegistry(source);
+  const registry = new ProjectRegistry(source, Date.now, {
+    multiAccountOrigin: options.multiAccountOrigin,
+  });
   let destination: string | undefined;
   try {
     const rows = registry.all();
     if (rows.some((row) => row.status !== "stopped"))
       throw new Error("Stop all projects and the controller before backup.");
-    const auth = new HubAuthStore({ dataDir: source });
-    if (!auth.isInitialized()) throw new Error("Complete administrator setup before backing up.");
+    if (registry.multiAccount) await assertMultiControlInventory(source);
+    if (!registry.multiAccount) {
+      const auth = new HubAuthStore({ dataDir: source });
+      if (!auth.isInitialized()) throw new Error("Complete administrator setup before backing up.");
+    }
     const installationId = registry.installationId;
     const projects = rows.map(({ id, ownerId, generation }) => ({ id, ownerId, generation }));
     await stopped(installationId, projects);
@@ -323,7 +343,8 @@ export async function backupProjectInstallation(options: ProjectBackupOptions) {
     await mkdir(join(destination, "volumes"), { mode: 0o700 });
     const manifest: Manifest = {
       format: FORMAT,
-      version: 1,
+      version: registry.multiAccount ? 2 : 1,
+      ...(registry.multiAccount ? { multiAccountOrigin: registry.multiAccount.accountOrigin } : {}),
       createdAt: new Date().toISOString(),
       installationId,
       helperImage: options.helperImage,
@@ -331,7 +352,18 @@ export async function backupProjectInstallation(options: ProjectBackupOptions) {
       control: Object.create(null),
       volumes: [],
     };
-    await copyControl(source, join(destination, "control"), manifest.control);
+    if (registry.multiAccount) {
+      await mkdir(join(destination, "control/project-control"), { mode: 0o700 });
+      for (const path of MULTI_CONTROL_FILES) {
+        const bytes = await controlBytes(source, path);
+        await writeFile(join(destination, "control", path), bytes, {
+          mode: 0o600,
+          flag: "wx",
+          flush: true,
+        });
+        manifest.control[path] = digest(bytes);
+      }
+    } else await copyControl(source, join(destination, "control"), manifest.control);
     for (const project of projects) {
       let found = 0;
       for (const kind of ["data", "workspace"] as const) {
@@ -356,6 +388,7 @@ export async function backupProjectInstallation(options: ProjectBackupOptions) {
     }
     await stopped(installationId, projects);
     registry.all(); // Recheck registry ownership and unchanged bytes after asynchronous work.
+    if (registry.multiAccount) await assertMultiControlInventory(source);
     const manifestBytes = JSON.stringify(manifest, null, 2) + "\n";
     if (Buffer.byteLength(manifestBytes) > 1024 * 1024)
       throw new Error("Backup manifest exceeds its supported size.");
@@ -380,7 +413,10 @@ export async function backupProjectInstallation(options: ProjectBackupOptions) {
 function validateManifest(value: any): asserts value is Manifest {
   if (
     value?.format !== FORMAT ||
-    value.version !== 1 ||
+    ![1, 2].includes(value.version) ||
+    (value.version === 1
+      ? value.multiAccountOrigin !== undefined
+      : !isCloudAccountOrigin(value.multiAccountOrigin)) ||
     !UUID.test(value.installationId) ||
     !Array.isArray(value.projects) ||
     value.projects.length > 128 ||
@@ -417,6 +453,11 @@ function validateManifest(value: any): asserts value is Manifest {
     paths.add(item.file);
   }
   if (Object.keys(value.control).length > 4096) throw new Error("Invalid control inventory.");
+  if (
+    value.version === 2 &&
+    Object.keys(value.control).sort().join() !== MULTI_CONTROL_FILES.join()
+  )
+    throw new Error("Multi-account backup requires its exact controller inventory.");
   for (const [path, entry] of Object.entries(value.control) as Array<[string, any]>) {
     if (
       !path ||
@@ -453,7 +494,7 @@ function validateManifest(value: any): asserts value is Manifest {
   for (const path of [
     "project-control/registry.json",
     "project-control/initialized",
-    "hub/auth.json",
+    ...(value.version === 1 ? ["hub/auth.json"] : []),
   ])
     if (!Object.hasOwn(value.control, path)) throw new Error("Backup lacks required control data.");
 }
@@ -469,6 +510,10 @@ export async function restoreProjectInstallation(options: ProjectRestoreOptions)
     (await regular(join(source, "manifest.json"), 1024 * 1024)).toString(),
   );
   validateManifest(manifest);
+  if (manifest.multiAccountOrigin !== options.multiAccountOrigin)
+    throw new Error(
+      "Restore requires the explicitly configured Account origin and matching installation mode.",
+    );
   // Verify every archive before creating a destination or Docker resource.
   for (const volume of manifest.volumes)
     same(await fileDigest(join(source, volume.file)), volume.digest);
@@ -518,7 +563,10 @@ export async function restoreProjectInstallation(options: ProjectRestoreOptions)
         directories.add(parent);
       await writeFile(join(destination, path), bytes, { mode: 0o600, flag: "wx", flush: true });
     }
-    registry = new ProjectRegistry(destination, Date.now, { fsync: options.io?.fsync });
+    registry = new ProjectRegistry(destination, Date.now, {
+      fsync: options.io?.fsync,
+      multiAccountOrigin: options.multiAccountOrigin,
+    });
     const rows = registry.all();
     if (
       registry.installationId !== manifest.installationId ||
@@ -527,13 +575,15 @@ export async function restoreProjectInstallation(options: ProjectRestoreOptions)
         JSON.stringify(manifest.projects)
     )
       throw new Error("Backup control and volume identities disagree.");
-    const auth = new HubAuthStore({ dataDir: destination });
-    if (!auth.isInitialized()) throw new Error("Backup administrator is not initialized.");
-    auth.revokeAllSessions();
-    // HubAuthStore publishes by rename. Persist the replacement and its directory
-    // before a new namespace or removal of the restore barrier can become visible.
-    sync(join(destination, "hub/auth.json"));
-    sync(join(destination, "hub"));
+    if (!registry.multiAccount) {
+      const auth = new HubAuthStore({ dataDir: destination });
+      if (!auth.isInitialized()) throw new Error("Backup administrator is not initialized.");
+      auth.revokeAllSessions();
+      // HubAuthStore publishes by rename. Persist the replacement and its directory
+      // before a new namespace or removal of the restore barrier can become visible.
+      sync(join(destination, "hub/auth.json"));
+      sync(join(destination, "hub"));
+    }
     registry.renewInstallationForRestore();
     const installationId = registry.installationId;
     for (const volume of manifest.volumes) {

@@ -154,6 +154,16 @@ async function within<T>(promise: Promise<T>, signal: AbortSignal): Promise<T> {
   }
 }
 
+/** Shared trusted configuration parsing, including hosts with an injected provider. */
+export function resolveProjectRuntimeLimits(limits: DockerProjectProviderOptions["limits"]) {
+  const memoryMb = bounded(limits?.memoryMb ?? 2048, 128, 262144, "memory");
+  const cpus = bounded(limits?.cpus ?? 2, 0.1, 128, "CPU");
+  const pids = bounded(limits?.pids ?? 256, 16, 65536, "process");
+  if (!Number.isInteger(memoryMb) || !Number.isInteger(pids))
+    throw new ProjectRuntimeError("Invalid resource limits.");
+  return { memoryMb, cpus, pids };
+}
+
 /** An administrator-owned Docker control client. Project tasks never receive this client. */
 export function createDockerProjectProvider(
   options: DockerProjectProviderOptions,
@@ -169,11 +179,7 @@ export function createDockerProjectProvider(
   const dataDir = resolve(options.dataDir);
   if (/[\0,\r\n]/.test(dataDir))
     throw new ProjectRuntimeError("Unsupported project metadata path.");
-  const memory = bounded(options.limits?.memoryMb ?? 2048, 128, 262144, "memory");
-  const cpus = bounded(options.limits?.cpus ?? 2, 0.1, 128, "CPU");
-  const pids = bounded(options.limits?.pids ?? 256, 16, 65536, "process");
-  if (!Number.isInteger(memory) || !Number.isInteger(pids))
-    throw new ProjectRuntimeError("Invalid resource limits.");
+  const { memoryMb: memory, cpus, pids } = resolveProjectRuntimeLimits(options.limits);
   const commandTimeout = bounded(options.commandTimeoutMs ?? 15000, 10, 120000, "command timeout");
   const startupTimeout = bounded(options.startupTimeoutMs ?? 90000, 10, 300000, "startup timeout");
   const command = options.command ?? dockerCommand;

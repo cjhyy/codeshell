@@ -16,6 +16,20 @@ afterEach(() => {
 const projectA = "12345678-1234-1234-1234-1234567890ab";
 const projectB = "12345678-1234-1234-1234-1234567890cd";
 
+test("Cloud website environment discovery stays at its control plane after project selection", async () => {
+  setApiProject(projectA);
+  setApiWorkspace("/private/project");
+  let request: { path: string; headers: Headers } | undefined;
+  globalThis.fetch = (async (path, init) => {
+    request = { path: String(path), headers: new Headers(init?.headers) };
+    return Response.json({});
+  }) as typeof fetch;
+  await api("/api/v1/cloud-browser/environment");
+  expect(request?.path).toBe("/api/v1/cloud-browser/environment");
+  expect(request?.headers.has("X-CodeShell-Workspace")).toBe(false);
+  expect(apiUrl("/api/v1/environment")).toBe("/api/v1/environment");
+});
+
 test("project API scoping is idempotent and keeps account/lifecycle requests at the root", async () => {
   setApiProject(projectA);
   setApiWorkspace("/project/a");

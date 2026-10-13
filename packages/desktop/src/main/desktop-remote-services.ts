@@ -86,7 +86,20 @@ export function createDesktopRemoteServices(options: {
     [...options.windows()].some(
       (window) => !window.isDestroyed() && window.webContents === contents,
     );
-  registerCloudAccountIpc({ ipcMain: options.ipcMain, manager: cloudAccountManager, isMainWindow });
+  registerCloudAccountIpc({
+    ipcMain: options.ipcMain,
+    manager: cloudAccountManager,
+    isMainWindow,
+    focusMainWindow: (contents) => {
+      const window = [...options.windows()].find(
+        (candidate) => !candidate.isDestroyed() && candidate.webContents === contents,
+      );
+      if (!window) return;
+      if (window.isMinimized()) window.restore();
+      window.show();
+      window.focus();
+    },
+  });
   registerCloudWorkbenchIpc({
     ipcMain: options.ipcMain,
     manager: cloudManagementManager,

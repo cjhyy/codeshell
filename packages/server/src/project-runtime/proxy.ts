@@ -4,6 +4,7 @@ import { WebSocket, WebSocketServer, type RawData } from "ws";
 import { HUB_SESSION_COOKIE, type HubAuth } from "../hub/auth-http.js";
 import type { ProjectControlAuthority, ProjectControlSession } from "./control-authority.js";
 import type { ProjectRuntimeConnection } from "./types.js";
+import { ProjectRegistryError } from "./registry.js";
 import { createLinkBrowserHandoff } from "../links/browser-handoff.js";
 import type { LinkAuthorization } from "@cjhyy/code-shell-link";
 
@@ -853,16 +854,27 @@ function httpError(res: ServerResponse, error: unknown): void {
     res.destroy();
     return;
   }
-  const status = error instanceof ProxyError ? error.status : 503;
+  const status =
+    error instanceof ProxyError || error instanceof ProjectRegistryError ? error.status : 503;
   res.writeHead(status, { "Content-Type": "application/json", "Cache-Control": "no-store" });
   res.end(
     JSON.stringify({
-      error: error instanceof ProxyError ? error.message : "Project runtime unavailable",
+      error:
+        error instanceof ProxyError
+          ? error.message
+          : status === 401
+            ? "Authentication required"
+            : status === 404
+              ? "Project endpoint not found"
+              : "Project runtime unavailable",
     }),
   );
 }
 
 function upgradeError(socket: Duplex, error: unknown): void {
-  const status = error instanceof ProxyError ? error.status : 503;
-  socket.end(`HTTP/1.1 ${status} Error\r\nConnection: close\r\nContent-Length: 0\r\n\r\n`);
+  const status =
+    error instanceof ProxyError || error instanceof ProjectRegistryError ? error.status : 503;
+  socket.end(`HTTP/1.1 ${status} Error\r\nConnection: close\r\nContent-Length: 0\r\n\r\n`, () =>
+    socket.destroy(),
+  );
 }

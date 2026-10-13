@@ -5,7 +5,7 @@ import { join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { createBunTestEnvironment } from "../../../../scripts/bun-test-completion.mjs";
 
-test.each(["durability", "barriers", "legacy", "cleanup-failure"])(
+test.each(["durability", "barriers", "legacy", "cleanup-failure", "multi-account"])(
   "actual offline restore: %s",
   async (scenario) => {
     const root = await mkdtemp(join(tmpdir(), "codeshell-bun-completion-restore-"));

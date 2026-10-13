@@ -251,7 +251,144 @@ function assertPublishedDurability(events: string[]) {
   assert.equal(events.at(-1), "root");
 }
 try {
-  if (scenario === "durability") {
+  if (scenario === "multi-account") {
+    const accountOrigin = "https://account.restore.example.test",
+      dataDir = join(root, "multi-original"),
+      registry = new ProjectRegistry(dataDir, Date.now, { multiAccountOrigin: accountOrigin }),
+      accounts = ["11111111-1111-4111-8111-111111111111", "22222222-2222-4222-8222-222222222222"],
+      ownerIds = accounts.map((id) => registry.ensureAccountOwner(accountOrigin, id)),
+      projects = ownerIds.map((id, index) =>
+        registry.createAccount(id, `Independent account project ${index}`),
+      ),
+      oldInstallation = registry.installationId,
+      oldEpoch = registry.multiAccount!.managementEpoch,
+      beforeBytes = fs.readFileSync(join(dataDir, "project-control/registry.json"));
+    registry.close();
+    const backup = join(root, "multi-backup");
+    fs.writeFileSync(join(dataDir, "unknown-private-state.json"), "synthetic forbidden state");
+    await assert.rejects(
+      currentBackup.backupProjectInstallation({
+        dataDir,
+        destination: join(root, "multi-refused-backup"),
+        helperImage: image,
+        multiAccountOrigin: accountOrigin,
+      }),
+      /unknown controller state/,
+    );
+    assert.equal(fs.existsSync(join(root, "multi-refused-backup")), false);
+    fs.rmSync(join(dataDir, "unknown-private-state.json"));
+    await currentBackup.backupProjectInstallation({
+      dataDir,
+      destination: backup,
+      helperImage: image,
+      multiAccountOrigin: accountOrigin,
+    });
+    const manifestBytes = fs.readFileSync(join(backup, "manifest.json")),
+      snapshotBytes = fs.readFileSync(join(backup, "control/project-control/registry.json")),
+      manifest = JSON.parse(manifestBytes.toString());
+    assert.equal(manifest.version, 2);
+    assert.equal(manifest.multiAccountOrigin, accountOrigin);
+    assert.equal(fs.existsSync(join(dataDir, "hub")), false);
+    assert.equal(Object.hasOwn(manifest.control, "hub/auth.json"), false);
+    fs.writeFileSync(
+      join(backup, "manifest.json"),
+      JSON.stringify({
+        ...manifest,
+        control: {
+          ...manifest.control,
+          "unknown-private-state.json": { sha256: "a".repeat(64), bytes: 0 },
+        },
+      }),
+    );
+    await assert.rejects(
+      currentBackup.restoreProjectInstallation({
+        source: backup,
+        destination: join(root, "multi-bad-inventory"),
+        helperImage: image,
+        multiAccountOrigin: accountOrigin,
+      }),
+      /exact controller inventory/,
+    );
+    assert.equal(fs.existsSync(join(root, "multi-bad-inventory")), false);
+    fs.writeFileSync(join(backup, "manifest.json"), manifestBytes);
+    for (const configured of [undefined, "https://foreign.example.test"]) {
+      const destination = join(root, configured ? "wrong-origin" : "missing-origin");
+      await assert.rejects(
+        currentBackup.restoreProjectInstallation({
+          source: backup,
+          destination,
+          helperImage: image,
+          multiAccountOrigin: configured,
+        }),
+        /explicitly configured/,
+      );
+      assert.equal(fs.existsSync(destination), false);
+    }
+    const restore = async (destination: string, cut = 0) => {
+      let calls = 0;
+      const result = await currentBackup.restoreProjectInstallation({
+        source: backup,
+        destination,
+        helperImage: image,
+        multiAccountOrigin: accountOrigin,
+        io: {
+          fsync(fd) {
+            if (++calls === cut) throw Error("controlled multi-account restore flush failure");
+            rawFsync(fd);
+          },
+          async removeMarker(path) {
+            const current = JSON.parse(
+              fs.readFileSync(join(destination, "project-control/registry.json"), "utf8"),
+            );
+            assert.notEqual(current.installationId, oldInstallation);
+            assert.notEqual(current.multiAccount.managementEpoch, oldEpoch);
+            await rm(path);
+          },
+        },
+      });
+      return { result, calls };
+    };
+    const destination = join(root, "multi-success"),
+      baseline = await restore(destination),
+      restored = new ProjectRegistry(destination, Date.now, { multiAccountOrigin: accountOrigin });
+    try {
+      assert.equal(restored.multiAccount!.accountOrigin, accountOrigin);
+      assert.notEqual(restored.installationId, oldInstallation);
+      assert.notEqual(restored.multiAccount!.managementEpoch, oldEpoch);
+      for (const [index, account] of accounts.entries()) {
+        assert.equal(restored.ensureAccountOwner(accountOrigin, account), ownerIds[index]);
+        const retained = restored.getAccount(ownerIds[index], projects[index].id);
+        assert.ok(retained.updatedAt >= projects[index].updatedAt);
+        assert.deepEqual({ ...retained, updatedAt: projects[index].updatedAt }, projects[index]);
+        assert.throws(() => restored.getAccount(ownerIds[1 - index], projects[index].id));
+      }
+    } finally {
+      restored.close();
+    }
+    assert.equal(fs.existsSync(join(destination, "hub")), false);
+    assert.throws(() => new ProjectRegistry(destination), /configured Account origin/);
+    for (let cut = 1; cut <= baseline.calls; cut++) {
+      const failed = join(root, `multi-flush-cut-${cut}`);
+      await assert.rejects(restore(failed, cut), /controlled multi-account restore flush failure/);
+      await blocked(failed);
+    }
+    assert.deepEqual(fs.readFileSync(join(dataDir, "project-control/registry.json")), beforeBytes);
+    assert.deepEqual(fs.readFileSync(join(backup, "manifest.json")), manifestBytes);
+    assert.deepEqual(
+      fs.readFileSync(join(backup, "control/project-control/registry.json")),
+      snapshotBytes,
+    );
+    receipt = {
+      scenario,
+      passed: true,
+      schema3OwnersPreserved: true,
+      accountEpochRotated: true,
+      noHubAuthorityCreated: true,
+      originPolicyRequired: true,
+      fsyncCuts: baseline.calls,
+      sourceAndSnapshotUnchanged: true,
+    };
+  } else if (scenario === "durability") {
     const f = await source();
     const preserved = [
       join(f.dataDir, "hub/auth.json"),

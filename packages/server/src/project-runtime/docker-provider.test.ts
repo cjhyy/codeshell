@@ -118,6 +118,16 @@ async function fixture(extra: Record<string, unknown> = {}) {
   return { dataDir, docker, provider };
 }
 
+test("trusted resource configuration reaches actual container create arguments", async () => {
+  const { provider, docker } = await fixture({ limits: { memoryMb: 1024, cpus: 1, pids: 256 } });
+  await provider.ensure(project, origin);
+  const args = docker.commands.find((entry) => entry[0] === "container" && entry[1] === "create")!;
+  expect(docker.values(args, "--memory")).toEqual(["1024m"]);
+  expect(docker.values(args, "--memory-swap")).toEqual(["1024m"]);
+  expect(docker.values(args, "--cpus")).toEqual(["1"]);
+  expect(docker.values(args, "--pids-limit")).toEqual(["256"]);
+});
+
 test("project start creates separate labelled volumes/network, bounded non-root container and one read-only secret mount", async () => {
   const { provider, docker, dataDir } = await fixture();
   const result = await provider.ensure(project, origin);
