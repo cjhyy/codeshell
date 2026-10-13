@@ -190,3 +190,69 @@ test("an OAuth result started before another tab signed in cannot replace the ne
   );
   expect(writes).toEqual(["/api/v1/account/logout"]);
 });
+
+test("a delayed 401 cannot retry an old profile write or clear the newer root", async () => {
+  installLocks();
+  const entered = deferred<void>(),
+    late = deferred<Response>();
+  const writes: string[] = [];
+  const client = new AccountWebClient((async (_url, init) => {
+    if (init?.method === "PATCH") {
+      writes.push(new Headers(init.headers).get("X-CodeShell-CSRF")!);
+      if (writes.length === 1) {
+        entered.resolve();
+        return late.promise;
+      }
+      return Response.json({ account: snapshot(rootB).account });
+    }
+    return Response.json({ ...snapshot(rootB), csrfToken: "D".repeat(43) });
+  }) as typeof fetch);
+  let lost = false;
+  client.onSessionLost = () => {
+    lost = true;
+  };
+  client.setSession(snapshot(rootA));
+  const pending = client
+    .request("/profile", "PATCH", { displayName: "A 的旧编辑" })
+    .catch((cause) => cause);
+  await entered.promise;
+  client.setSession({ ...snapshot(rootB), csrfToken: "D".repeat(43) });
+  late.resolve(Response.json({ error: "authentication_required" }, { status: 401 }));
+  await pending;
+  expect(writes).toEqual(["C".repeat(43)]);
+  expect(lost).toBe(false);
+});
+
+test("cancelling a completed exchange resets client authority for the next anonymous sign-in", async () => {
+  installLocks();
+  const entered = deferred<void>(),
+    release = deferred<Response>();
+  let live = true,
+    exchanges = 0;
+  let current: unknown = anonymous;
+  const client = new AccountWebClient((async (url, init) => {
+    if (init?.method === "GET") return Response.json(current);
+    if (String(url) === "/api/v1/account/web/session") {
+      exchanges++;
+      if (exchanges === 1) {
+        entered.resolve();
+        const response = await release.promise;
+        current = snapshot(rootA);
+        return response;
+      }
+      current = snapshot(rootB);
+      return Response.json(current);
+    }
+    if (String(url) === "/api/v1/account/web/logout") {
+      current = anonymous;
+      return Response.json({ ok: true });
+    }
+    return Response.json({ ok: true });
+  }) as typeof fetch);
+  const cancelled = client.exchangeGrant(grant(rootA), () => live).catch((cause) => cause);
+  await entered.promise;
+  live = false;
+  release.resolve(Response.json(snapshot(rootA)));
+  await cancelled;
+  expect((await client.exchangeGrant(grant(rootB), () => true)).session?.id).toBe(rootB);
+});

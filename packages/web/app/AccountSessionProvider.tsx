@@ -145,11 +145,11 @@ export function AccountSessionProvider({ children }: { children: React.ReactNode
         const cleared: AccountWebSession = {
           authenticated: false,
           refreshRequired: false,
-          csrfToken: previous.csrfToken,
           cloudTarget: previous.cloudTarget,
         };
         setSession(cleared);
         sessionRef.current = cleared;
+        api.setSession(cleared);
       }
       setStatus("");
       setError("登录已过期，请重新登录。");
@@ -171,7 +171,11 @@ export function AccountSessionProvider({ children }: { children: React.ReactNode
           typeof value.githubEnabled !== "boolean"
         )
           throw new Error("登录方式数据无效。");
-        if (!controller.signal.aborted) setCapabilities(value);
+        if (!controller.signal.aborted)
+          setCapabilities({
+            registrationAllowed: value.registrationAllowed,
+            githubEnabled: value.githubEnabled,
+          });
       })
       .catch(() => {});
     const focus = () => {
@@ -205,7 +209,10 @@ export function AccountSessionProvider({ children }: { children: React.ReactNode
         const value = await api.restoreSession(60000);
         if (active(epoch)) accept(value);
       } catch (cause) {
-        if (active(epoch)) report(cause);
+        if (active(epoch)) {
+          if (cause instanceof AccountWebError && cause.status === 401) api.onSessionLost?.();
+          else report(cause);
+        }
       }
     };
     timer = setTimeout(renew, Math.max(1000, session.session.expiresAt - Date.now() - 60000));
@@ -408,7 +415,7 @@ export function AccountSessionProvider({ children }: { children: React.ReactNode
         report(cause);
       }
     } finally {
-      await cleanup(flow);
+      void cleanup(flow);
       if (pending.current === flow) {
         pending.current = null;
         setOAuthPending(false);

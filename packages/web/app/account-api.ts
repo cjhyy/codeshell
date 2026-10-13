@@ -234,6 +234,7 @@ export class AccountWebClient {
     this.csrfToken = value;
   }
   setSession(value: AccountWebSession): void {
+    if (this.rootId !== value.session?.id) this.invalidate();
     this.csrfToken = value.csrfToken ?? "";
     this.rootId = value.session?.id;
   }
@@ -349,6 +350,11 @@ export class AccountWebClient {
       if (!live()) {
         this.setSession(result);
         await this.cookieRequest("/logout", "POST", {});
+        this.setSession({
+          authenticated: false,
+          refreshRequired: false,
+          cloudTarget: result.cloudTarget,
+        });
         throw new AccountWebError("账号状态已改变。");
       }
       this.setSession(result);
@@ -442,6 +448,7 @@ export class AccountWebClient {
       });
     }
     const epoch = this.epoch;
+    const requestRoot = this.rootId;
     const controller = new AbortController();
     this.requests.add(controller);
     const timeout = AbortSignal.timeout(path === "/github/poll" ? 20000 : 10000);
@@ -471,13 +478,14 @@ export class AccountWebClient {
           path !== "/refresh" &&
           !path.startsWith("/github/")
         ) {
-          const expectedRoot = this.rootId;
+          const expectedRoot = requestRoot;
           try {
             const refreshed = await this.restoreSession();
             if (
               refreshed.authenticated &&
               refreshed.session?.id === expectedRoot &&
-              epoch === this.epoch
+              epoch === this.epoch &&
+              this.rootId === requestRoot
             ) {
               this.setSession(refreshed);
               return await this.request<T>(path, method, body, signal, beforeFence, 1);
@@ -486,6 +494,8 @@ export class AccountWebClient {
             /* An expired root cannot be restored or retried as another account. */
           }
         }
+        if (epoch !== this.epoch || requestRoot !== this.rootId)
+          throw new AccountWebError("账号状态已改变。");
         if (
           response.status === 401 &&
           path !== "/session" &&

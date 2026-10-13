@@ -341,3 +341,81 @@ test("password login exchanges its transient grant at the fixed Account path and
   expect(new Headers(exchange.init?.headers).get("Authorization")).toBe("Bearer " + "A".repeat(43));
   expect(view.calls.some((call) => call.path === "/api/v1/account/web/login")).toBe(false);
 });
+
+test("an expired browser root returns to a usable password login even while its invalid cookies remain", async () => {
+  const view = await fixture();
+  view.overrides.set("GET /api/v1/account/web/session", () =>
+    Response.json({ error: "authentication_required" }, { status: 401 }),
+  );
+  view.overrides.set("GET /api/v1/account/web/profile", () =>
+    Response.json({ error: "authentication_required" }, { status: 401 }),
+  );
+  await action(() => view.context.request("/profile").catch(() => {}));
+  expect(view.context.session?.authenticated).toBe(false);
+  expect(view.context.ready).toBe(true);
+  let login!: Promise<boolean>;
+  await action(() => {
+    login = view.context.signIn("login", {
+      username: "fixture-user",
+      password: "synthetic password",
+    });
+  });
+  expect(await login).toBe(true);
+  await action(() => {});
+  expect(view.context.session?.authenticated).toBe(true);
+});
+
+test("a refresh timer rejected by the Account authority clears both private UI and client authority", async () => {
+  const view = await fixture();
+  view.overrides.set("GET /api/v1/account/web/session", () =>
+    Response.json({ ...view.snapshot(), session: { id: sessionId, expiresAt: Date.now() + 7000 } }),
+  );
+  await action(() => view.context.restore());
+  await until(() => !view.context.busy);
+  view.overrides.set("GET /api/v1/account/web/session", () =>
+    Response.json({ error: "authentication_required" }, { status: 401 }),
+  );
+  await act(async () => {
+    await new Promise((resolve) => setTimeout(resolve, 1100));
+    await flushMicrotasks();
+  });
+  expect(view.context.session?.authenticated).toBe(false);
+  expect(view.context.error).toContain("登录已过期");
+  expect(text(view.container)).not.toContain("账号资料");
+});
+
+test("successful GitHub login exchanges its grant and becomes usable without waiting for receipt cleanup", async () => {
+  const view = await fixture();
+  await action(() => view.context.logout());
+  await until(() => !view.context.busy);
+  const cleanupResponse = deferred<Response>();
+  view.overrides.set("POST /api/v1/account/github/start", (call) =>
+    Response.json({
+      authorizationUrl: `https://github.com/login/oauth/authorize?scope=read%3Auser&code_challenge_method=S256&code_challenge=${call.body.codeChallenge}`,
+      receipt: "R".repeat(43),
+      expiresAt: Date.now() + 60000,
+      pollIntervalMs: 1000,
+    }),
+  );
+  view.overrides.set("POST /api/v1/account/github/poll", () =>
+    Response.json({
+      account: { id: accountId },
+      sessionId,
+      accessToken: "A".repeat(43),
+      refreshToken: "R".repeat(43),
+      accessTokenExpiresAt: Date.now() + 600000,
+    }),
+  );
+  view.overrides.set("POST /api/v1/account/github/cancel", () => cleanupResponse.promise);
+  let completed = false;
+  await action(() =>
+    view.context.github("login").then(() => {
+      completed = true;
+    }),
+  );
+  await until(() => completed);
+  expect(view.context.session?.authenticated).toBe(true);
+  expect(view.context.busy).toBe(false);
+  expect(view.calls.some((call) => call.path === "/api/v1/account/web/github/start")).toBe(false);
+  cleanupResponse.resolve(Response.json({ ok: true }));
+});
