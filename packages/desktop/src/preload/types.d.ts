@@ -52,6 +52,7 @@ import type { TaskInboxApi } from "./task-inbox-api";
 import type { ProfilePluginExportApi } from "../shared/profile-plugin-export";
 import type { ProfileMemoryPromotionApi } from "../shared/profile-memory-promotion";
 import type { OptimizationLabApi } from "./optimization-lab-api";
+import type { ComputerUseSettingsApi } from "../shared/computer-use";
 import type { PetApi } from "./pet-api";
 import type {
   StreamEventEnvelope,
@@ -1044,6 +1045,7 @@ export interface CodeshellApi
     typeof import("./operation-resolution-api").createOperationResolutionApi
   >;
   optimizationLab: OptimizationLabApi;
+  computerUse: ComputerUseSettingsApi;
   /** Main-process platform (`process.platform`), used for window chrome layout. */
   platform: string;
   /** Absolute local path for a File explicitly selected or dropped by the user. */

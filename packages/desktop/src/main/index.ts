@@ -124,7 +124,14 @@ import {
 } from "@cjhyy/code-shell-capability-coding/orchestration";
 import { normalizeWorktreeBranchPrefix } from "@cjhyy/code-shell-capability-coding/git";
 import { AgentBridge, resolveNoRepoCwd } from "./agent-bridge.js";
-import { initCuaComputerUse, getCuaDriverHost } from "./computer-use/service.js";
+import {
+  initCuaComputerUse,
+  getCuaDriverHost,
+  resetCuaComputerUse,
+} from "./computer-use/service.js";
+import { resolveCuaDriverPath } from "./computer-use/cua-driver-host.js";
+import { createComputerUsePermissionsController } from "./computer-use/permissions.js";
+import { registerComputerUseSettingsIpc } from "./computer-use/settings-ipc.js";
 import { readUserFeatureFlags } from "./capability-modules-env.js";
 import { externalRuntimeBrowserBucket } from "./external-runtime-browser-bucket.js";
 import { ExternalRuntimeService } from "./external-runtime-service.js";
@@ -3430,6 +3437,44 @@ app.whenReady().then(async () => {
         dlog("computer-use", "cua_driver_start_failed", { error: String(error) });
       });
     }
+    const permissions = createComputerUsePermissionsController({
+      platform: process.platform,
+      systemPreferences,
+      openExternal: (url) => shell.openExternal(url),
+      helperPath: app.isPackaged
+        ? join(process.resourcesPath, "computer-use", "codeshell-permissions")
+        : join(app.getAppPath(), "out", "native", "codeshell-permissions"),
+    });
+    registerComputerUseSettingsIpc({
+      ipcMain,
+      isMainWindow: (sender) =>
+        [...mainWindows].some((window) => !window.isDestroyed() && window.webContents === sender),
+      getEnabled: () => readUserFeatureFlags(resolveNoRepoCwd()).computer_use_cua === true,
+      saveEnabled: (enabled) => {
+        const cwd = resolveNoRepoCwd();
+        new SettingsManager(cwd, "full").mutateSettingsForScope("user", cwd, (current) => {
+          const flags = current.featureFlags;
+          current.featureFlags = {
+            ...(flags && typeof flags === "object" && !Array.isArray(flags) ? flags : {}),
+            computer_use_cua: enabled,
+          };
+        });
+      },
+      isActive: () => getCuaDriverHost()?.status().state === "running",
+      driverAvailable: () =>
+        !!resolveCuaDriverPath({
+          env: process.env,
+          isPackaged: app.isPackaged,
+          resourcesPath: process.resourcesPath,
+        }),
+      packaged: app.isPackaged,
+      permissions,
+      stop: resetCuaComputerUse,
+      restart: () => {
+        app.relaunch();
+        app.quit();
+      },
+    });
   }
   chromeNativeRegistration = await installChromeNativeMessagingHost({
     executablePath: process.execPath,

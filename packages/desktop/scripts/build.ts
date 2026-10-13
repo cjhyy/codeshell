@@ -10,6 +10,7 @@ import { rm } from "node:fs/promises";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { buildChromeExtension } from "./build-chrome-extension.js";
+import { buildComputerUsePermissions } from "./build-computer-use-permissions.js";
 
 const cwd = dirname(fileURLToPath(import.meta.url));
 const root = resolve(cwd, "..");
@@ -84,6 +85,7 @@ async function main(): Promise<void> {
     buildRenderer(),
     buildMobile(),
     buildChromeExtension(),
+    buildComputerUsePermissions(),
   ]);
   // eslint-disable-next-line no-console
   console.log("[build] main, preload, renderer, mobile, and Chrome extension OK");

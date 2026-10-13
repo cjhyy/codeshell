@@ -386,11 +386,28 @@ snapshot / element token，最终从计算器显示区的 `AXStaticText` 读回 
 
 1. 安装 cua-driver，确认 `cua-driver --version` 可用；或设置 `CODESHELL_CUA_DRIVER_PATH=/path/to/cua-driver`。
 2. 在用户设置 `~/.code-shell/settings.json` 里加 `"featureFlags": { "computer_use_cua": true }`，重启 CodeShell。
-3. 授权：dev 模式（`bun run dev` 从终端启动）时，TCC 权限归属于**启动它的终端 App**，需要给终端
-   授予辅助功能和屏幕录制；打包版归属于 CodeShell 本身。授权后要重启 App，因为 TCC 结果按进程缓存。
+3. 授权：打开「设置 → 常规 → 电脑操作（试用）」，启用后分别申请辅助功能和屏幕录制。
+   如果系统不再弹窗，使用对应的「打开系统设置」按钮，授权后完整重启。
+   TCC 归属由实际启动责任链决定：从终端启动开发版通常归终端，从 Codex 启动的实测归
+   `com.openai.codex`；从 Finder 启动打包版时应归 CodeShell，仍需验证，不能用声明的 bundle ID 代替。
 4. 新开会话，让模型调用 `mcp_host_cua-driver_check_permissions`，确认 `source.attribution` 为 `host`。
 5. 让模型打开计算器并计算 7+8，观察截图是否以图片形式进入对话。
 6. 日志：`~/.code-shell/logs/desktop/desktop-<日期>.log` 里搜 `computer-use`。
+
+### 10.6 授权入口与本地试用包（2026-10-13）
+
+- 全局常规设置新增电脑操作开关、两项权限状态、分别申请权限、打开系统设置、重新检查和重启。
+  读取状态和启用功能均不会自动请求系统权限，申请仅由桌面主窗口的显式操作发起。
+- 辅助功能由 Electron 主进程申请；屏幕录制通过签入 App 的 Swift helper 调用
+  `CGRequestScreenCaptureAccess()`。helper 是 Electron 的直接子进程，使用固定参数和环境白名单。
+  两种架构的 helper 在 macOS 构建时生成，随 App 放在 ASAR 外；不依赖用户安装 Swift。
+- 普通产品开关仍默认关闭。此次本地试用包另外包含已验证的官方 Cua Driver 0.34.1，
+  无需用户安装 driver 或设置路径环境变量；普通打包配置仍支持外部 driver。
+- 设置 IPC 只接受主窗口主 frame，拒绝任意权限名、重复并发申请及授权期间重启。
+  关闭功能立即停止 daemon；开关变更或权限更新后提示完整重启。
+- 相关隔离回归共 187 项通过，无跳过或失败；Desktop 主程序/renderer/mobile 类型检查通过。
+  本地 arm64 App 已完成打包及深度严格签名验证。真实系统弹窗和截图验收需要以该 App 的
+  实际 TCC 结果为准，不能以单元测试或先前的 AX 计算器结果替代。
 
 ## 11. 开放问题
 

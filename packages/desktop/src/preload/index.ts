@@ -25,6 +25,7 @@ import { createTaskInboxApi } from "./task-inbox-api";
 import { createNotificationNavigationApi } from "./notification-navigation-api";
 import { createOperationResolutionApi } from "./operation-resolution-api";
 import { createOptimizationLabApi } from "./optimization-lab-api";
+import { createComputerUseSettingsApi } from "./computer-use-api";
 import { createSessionTranscriptApi } from "./session-transcript-api";
 import { createProfilePluginExportApi } from "./profile-plugin-export-api";
 import { createProfileMemoryPromotionApi } from "./profile-memory-promotion-api";
@@ -518,6 +519,7 @@ contextBridge.exposeInMainWorld("codeshell", {
   taskInbox: createTaskInboxApi(ipcRenderer),
   operationResolution: createOperationResolutionApi(ipcRenderer),
   optimizationLab: createOptimizationLabApi(ipcRenderer),
+  computerUse: createComputerUseSettingsApi(ipcRenderer),
   /** Forward a renderer-side log line into ~/.code-shell/logs/desktop-*.log. */
   log: (msg: string, data?: Record<string, unknown>) =>
     ipcRenderer.send("desktop:log", { msg, data }),

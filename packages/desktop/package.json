@@ -126,6 +126,12 @@
       "buildResources": "build"
     },
     "mac": {
+      "extraResources": [
+        {
+          "from": "out/native/codeshell-permissions",
+          "to": "computer-use/codeshell-permissions"
+        }
+      ],
       "sign": "scripts/sign-managed-node-mac.cjs",
       "signIgnore": "\\/Contents\\/Resources\\/runtimes\\/node\\/bin\\/node$",
       "target": [
