@@ -3,6 +3,7 @@ import { fork, spawnSync } from "node:child_process";
 import { once } from "node:events";
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join, resolve } from "node:path";
+import { performance } from "node:perf_hooks";
 import { pathToFileURL } from "node:url";
 import {
   confinedWorkerEnvironment,
@@ -17,6 +18,10 @@ const server = fork(resolve("scripts/fixtures/output-paced-sse.mjs"), [], {
 server.stderr.pipe(process.stderr);
 const [{ origin, pid: serverPid }] = await once(server, "message");
 assert.notEqual(serverPid, process.pid);
+let sourceTiming;
+server.on("message", (message) => {
+  sourceTiming ??= message;
+});
 installLocalNetworkGuard(origin);
 const { WorkerBridgeCore } = await import("../packages/server/dist/index.worker.js");
 const { sessionsRoot } = await import("../packages/core/dist/index.js");
@@ -42,19 +47,40 @@ const snapshots = new SessionSnapshotStore({
 });
 const delays = [],
   controls = [],
-  events = [];
+  events = [],
+  mainTiming = [];
+let firstEntry;
 const main = new MainOutputPublisher({
   root: sessionsRoot,
   latest: (id) => snapshots.get(id).outputCursor,
   worker: (id, event) => apply(id, event),
 });
-function apply(id, event) {
+function apply(id, event, entry) {
+  const paced = id === "paced-output" && event.type === "text_delta";
+  const observeStarted = paced ? performance.now() : 0;
   if (!main.observeWorker(id, event)) return false;
+  const snapshotStarted = paced ? performance.now() : 0;
   snapshots.append(id, event);
+  const snapshotFinished = paced ? performance.now() : 0;
   events.push({ id, event, at: Date.now() });
   if (id === "paced-output" && event.type === "text_delta") {
-    for (const line of event.text.trim().split("\n"))
+    for (const line of event.text.trim().split("\n")) {
       delays.push(Date.now() - JSON.parse(line).sentAt);
+      if (mainTiming.length < 150) {
+        firstEntry ??= entry;
+        // index, original wall delay, local entry mono/wall offsets,
+        // entry->observe, observeWorker, snapshotAppend (milliseconds).
+        mainTiming.push([
+          JSON.parse(line).index,
+          delays.at(-1),
+          entry && firstEntry ? entry.mono - firstEntry.mono : -1,
+          entry && firstEntry ? entry.wall - firstEntry.wall : -1,
+          entry ? observeStarted - entry.mono : -1,
+          snapshotStarted - observeStarted,
+          snapshotFinished - snapshotStarted,
+        ]);
+      }
+    }
   }
   return true;
 }
@@ -94,8 +120,10 @@ const worker = new WorkerBridgeCore({
   },
 });
 worker.subscribeLines((line) => {
+  const entry = { mono: performance.now(), wall: Date.now() };
   const message = JSON.parse(line);
-  if (message.method === "agent/streamEvent") apply(message.params.sessionId, message.params.event);
+  if (message.method === "agent/streamEvent")
+    apply(message.params.sessionId, message.params.event, entry);
 });
 let serial = 0;
 function rpc(method, params) {
@@ -112,6 +140,49 @@ const quantile = (values, fraction) =>
   values.slice().sort((a, b) => a - b)[
     Math.min(values.length - 1, Math.floor(values.length * fraction))
   ];
+const diagnosticMs = (value) =>
+  typeof value === "number" && Number.isFinite(value) && Math.abs(value) <= 3_600_000
+    ? Math.round(value * 1000) / 1000
+    : -1;
+function sourceDiagnostics() {
+  const frames = sourceTiming?.pacedSourceTiming;
+  if (
+    !Array.isArray(frames) ||
+    frames.length !== 150 ||
+    frames.some(
+      (row, index) =>
+        !Array.isArray(row) ||
+        row.length !== 6 ||
+        row.some((value) => typeof value !== "number" || !Number.isFinite(value)) ||
+        row[0] !== index ||
+        !Number.isSafeInteger(row[1]) ||
+        row[1] < 0 ||
+        row[2] < 0 ||
+        row[2] > 3_600_000 ||
+        row[3] < 0 ||
+        row[3] > 3_600_000 ||
+        ![0, 1].includes(row[4]) ||
+        !Number.isSafeInteger(row[5]) ||
+        row[5] < 0 ||
+        row[5] > 64 * 1024 * 1024,
+    )
+  )
+    return { available: 0, frames: [] };
+  // Source-local wall/mono offsets only; never compare absolute clocks across
+  // processes. Columns: index, wall offset, mono offset, write ms, writable,
+  // writableLength. A missing/late receipt never delays the business check.
+  return {
+    available: 1,
+    frames: frames.map((row) => [
+      row[0],
+      diagnosticMs(row[1] - frames[0][1]),
+      diagnosticMs(row[2] - frames[0][2]),
+      diagnosticMs(row[3]),
+      row[4],
+      row[5],
+    ]),
+  };
+}
 async function waitFor(predicate) {
   const deadline = Date.now() + 10000;
   while (!predicate()) {
@@ -149,6 +220,17 @@ try {
   const page = core.readOutputJournal(sessionsRoot(), "paced-output");
   assert.equal(page.complete, true);
   assert.equal(page.through, snapshots.get("paced-output").outputCursor);
+  console.log(
+    JSON.stringify({
+      pacedTimingDiagnostics: {
+        version: 1,
+        observedFrames: delays.length,
+        mainFrames: mainTiming.map((row) => row.map(diagnosticMs)),
+        observedControls: controls.slice(0, 12).map(diagnosticMs),
+        source: sourceDiagnostics(),
+      },
+    }),
+  );
   assert.equal(quantile(delays, 0.95) < 200, true, `stream p95 ${quantile(delays, 0.95)}ms`);
   assert.equal(quantile(controls, 0.95) < 200, true, `control p95 ${quantile(controls, 0.95)}ms`);
   const cancelledRun = rpc("agent/run", {
