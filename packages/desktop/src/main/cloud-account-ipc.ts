@@ -8,6 +8,7 @@ export function registerCloudAccountIpc(options: {
   ipcMain: Pick<IpcMain, "handle">;
   manager: CloudAccountManager;
   isMainWindow: (sender: WebContents) => boolean;
+  focusMainWindow?: (sender: WebContents) => void;
 }) {
   const allowed = (event: IpcMainInvokeEvent) =>
     !event.sender.isDestroyed() &&
@@ -35,9 +36,20 @@ export function registerCloudAccountIpc(options: {
   options.ipcMain.handle("cloudAccount:github", (event, raw: unknown) => {
     owner(event);
     const input = accountGitHubRequest(raw);
-    return input.mode === "link"
-      ? options.manager.linkGitHub(() => allowed(event))
-      : options.manager.signInWithGitHub(input.input, () => allowed(event));
+    const operation =
+      input.mode === "link"
+        ? options.manager.linkGitHub(() => allowed(event))
+        : options.manager.signInWithGitHub(input.input, () => allowed(event));
+    return operation.then((status) => {
+      if (status.state === "signed-in") {
+        try {
+          if (allowed(event)) options.focusMainWindow?.(event.sender);
+        } catch {
+          // Window disposal or a focus failure must not change a completed login.
+        }
+      }
+      return status;
+    });
   });
   options.ipcMain.handle("cloudAccount:links", (event, raw: unknown) => {
     owner(event);

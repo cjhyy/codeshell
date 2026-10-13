@@ -20,7 +20,10 @@ import type { ProjectRuntimeRecord } from "./types.js";
 import {
   CLOUD_ADOPTION_PENDING,
   isCloudAccountBinding,
+  isCloudAccountOrigin,
+  isCloudMultiAccountConfiguration,
   type CloudAccountBinding,
+  type CloudMultiAccountConfiguration,
 } from "./account-binding.js";
 
 export type ProjectStatus = "stopped" | "starting" | "running" | "stopping" | "error";
@@ -40,12 +43,22 @@ export interface ProjectView {
   updatedAt: number;
   error?: string;
 }
+interface LegacyOwner {
+  id: string;
+  username: string;
+}
+interface AccountOwner {
+  id: string;
+  accountOrigin: string;
+  accountId: string;
+}
 interface RegistryData {
-  version: 1 | 2;
+  version: 1 | 2 | 3;
   installationId: string;
-  owners: Array<{ id: string; username: string }>;
+  owners: Array<LegacyOwner | AccountOwner>;
   projects: StoredProject[];
   accountBinding?: CloudAccountBinding;
+  multiAccount?: CloudMultiAccountConfiguration;
 }
 const UUID = /^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$/;
 const TOKEN = /^[A-Za-z0-9_-]{43}$/;
@@ -115,8 +128,22 @@ export class ProjectRegistry {
       rename?: typeof renameSync;
       fsync?: typeof fsyncSync;
       offlineAccountAdoption?: boolean;
+      /** Explicit startup policy; never inferred from the first authenticated user. */
+      multiAccountOrigin?: string;
     } = {},
   ) {
+    if (
+      this.io.multiAccountOrigin !== undefined &&
+      (!isCloudAccountOrigin(this.io.multiAccountOrigin) || this.io.offlineAccountAdoption)
+    )
+      throw new Error("Multi-account Cloud requires one explicit canonical Account origin.");
+    if (
+      this.io.multiAccountOrigin &&
+      lstatSync(join(resolve(dataDir), "hub"), { throwIfNoEntry: false })
+    )
+      throw new Error(
+        "Multi-account Cloud requires a fresh installation without legacy Hub authority.",
+      );
     this.directory = resolve(dataDir, "project-control");
     const existed = existsSync(this.directory);
     mkdirSync(this.directory, { recursive: true, mode: 0o700 });
@@ -147,13 +174,27 @@ export class ProjectRegistry {
         const bytes = privateFileBytes(this.file);
         this.data = JSON.parse(bytes.toString("utf8"));
         this.validate();
+        this.requireConfiguredMode();
         this.diskDigest = digest(bytes);
       } else {
         if (existsSync(this.marker) || existed)
           throw new Error(
             "Project registry is missing; restore the existing registry before starting",
           );
-        this.data = { version: 1, installationId: randomUUID(), owners: [], projects: [] };
+        this.data = {
+          version: this.io.multiAccountOrigin ? 3 : 1,
+          installationId: randomUUID(),
+          owners: [],
+          projects: [],
+          ...(this.io.multiAccountOrigin
+            ? {
+                multiAccount: {
+                  accountOrigin: this.io.multiAccountOrigin,
+                  managementEpoch: randomUUID(),
+                },
+              }
+            : {}),
+        };
         this.write();
       }
       if (!this.markerEstablished) {
@@ -178,6 +219,7 @@ export class ProjectRegistry {
     const next = structuredClone(this.data);
     next.installationId = randomUUID();
     if (next.accountBinding) next.accountBinding.managementEpoch = randomUUID();
+    if (next.multiAccount) next.multiAccount.managementEpoch = randomUUID();
     for (const project of next.projects) {
       if (project.generation > 0) project.generation += 1;
       project.updatedAt = Math.max(project.updatedAt, this.now());
@@ -195,6 +237,51 @@ export class ProjectRegistry {
   get accountBinding(): CloudAccountBinding | undefined {
     this.assertStorage();
     return this.data.accountBinding && { ...this.data.accountBinding };
+  }
+
+  get multiAccount(): CloudMultiAccountConfiguration | undefined {
+    this.assertStorage();
+    return this.data.multiAccount && { ...this.data.multiAccount };
+  }
+
+  /** Called only after trusted authority verification, never with browser-selected identity. */
+  ensureAccountOwner(accountOrigin: string, accountId: string): string {
+    this.assertStorage();
+    if (
+      this.data.version !== 3 ||
+      accountOrigin !== this.data.multiAccount?.accountOrigin ||
+      typeof accountId !== "string" ||
+      !UUID.test(accountId)
+    )
+      throw new ProjectRegistryError(403, "此账号没有工作台权限。");
+    const existing = this.data.owners.find(
+      (owner) =>
+        "accountId" in owner &&
+        owner.accountOrigin === accountOrigin &&
+        owner.accountId === accountId,
+    );
+    if (existing) return existing.id;
+    if (this.data.owners.length >= 128)
+      throw new ProjectRegistryError(429, "工作台账号数量已达到上限。");
+    const next = structuredClone(this.data),
+      ownerId = randomUUID();
+    next.owners.push({ id: ownerId, accountOrigin, accountId });
+    this.write(next);
+    this.data = next;
+    return ownerId;
+  }
+
+  private requireConfiguredMode(): void {
+    if (this.data.version === 3) {
+      if (this.io.multiAccountOrigin !== this.data.multiAccount?.accountOrigin)
+        throw new Error(
+          "Multi-account Cloud requires its configured Account origin; automatic mode adoption is refused.",
+        );
+    } else if (this.io.multiAccountOrigin !== undefined) {
+      throw new Error(
+        "Multi-account Cloud requires a fresh installation; legacy adoption is refused.",
+      );
+    }
   }
 
   /** Offline migration only; the caller must durably preserve source evidence first. */
@@ -221,7 +308,7 @@ export class ProjectRegistry {
   private validate(data = this.data): void {
     if (
       !data ||
-      (data.version !== 1 && data.version !== 2) ||
+      ![1, 2, 3].includes(data.version) ||
       !UUID.test(data.installationId) ||
       !Array.isArray(data.owners) ||
       !Array.isArray(data.projects) ||
@@ -230,18 +317,44 @@ export class ProjectRegistry {
     )
       throw new Error("Project registry is corrupt; restore its backup");
     if (
+      (data.version !== 3 && data.multiAccount !== undefined) ||
       (data.version === 1 && data.accountBinding !== undefined) ||
       (data.version === 2 &&
         (!isCloudAccountBinding(data.accountBinding) ||
           data.owners.length !== 1 ||
-          data.owners[0]?.id !== data.accountBinding.ownerId))
+          data.owners[0]?.id !== data.accountBinding.ownerId)) ||
+      (data.version === 3 &&
+        (data.accountBinding !== undefined ||
+          !isCloudMultiAccountConfiguration(data.multiAccount) ||
+          typeof data.installationId !== "string" ||
+          Object.keys(data).sort().join() !==
+            "installationId,multiAccount,owners,projects,version"))
     )
       throw new Error("Cloud account ownership is missing or corrupt; restore its backup.");
     const owners = new Set<string>();
     const names = new Set<string>();
     for (const owner of data.owners) {
+      if (data.version === 3) {
+        if (
+          !owner ||
+          typeof owner.id !== "string" ||
+          !UUID.test(owner.id) ||
+          owners.has(owner.id) ||
+          !("accountId" in owner) ||
+          Object.keys(owner).sort().join() !== "accountId,accountOrigin,id" ||
+          owner.accountOrigin !== data.multiAccount!.accountOrigin ||
+          typeof owner.accountId !== "string" ||
+          !UUID.test(owner.accountId) ||
+          names.has(owner.accountId)
+        )
+          throw new Error("Project account owner registry is corrupt");
+        owners.add(owner.id);
+        names.add(owner.accountId);
+        continue;
+      }
       if (
         !owner ||
+        !("username" in owner) ||
         !UUID.test(owner.id) ||
         typeof owner.username !== "string" ||
         !owner.username.trim() ||
@@ -257,6 +370,29 @@ export class ProjectRegistry {
     }
     const ids = new Set<string>();
     for (const project of data.projects) {
+      if (
+        data.version === 3 &&
+        (!project ||
+          typeof project.id !== "string" ||
+          typeof project.ownerId !== "string" ||
+          typeof project.runtimePassword !== "string" ||
+          Object.keys(project).sort().join() !==
+            [
+              "id",
+              "ownerId",
+              "generation",
+              "runtimeUsername",
+              "runtimePassword",
+              "name",
+              "status",
+              "createdAt",
+              "updatedAt",
+              ...(project.error === undefined ? [] : ["error"]),
+            ]
+              .sort()
+              .join())
+      )
+        throw new Error("Project account runtime registry is corrupt");
       if (
         !project ||
         !UUID.test(project.id) ||
@@ -343,14 +479,14 @@ export class ProjectRegistry {
   list(username: string): ProjectView[] {
     this.assertStorage();
     this.requireLegacy();
-    const owner = this.data.owners.find((item) => item.username === username);
+    const owner = this.data.owners.find((item) => "username" in item && item.username === username);
     return this.data.projects.filter((item) => item.ownerId === owner?.id).map(projectView);
   }
 
   get(username: string, id: string): StoredProject {
     this.assertStorage();
     this.requireLegacy();
-    const owner = this.data.owners.find((item) => item.username === username);
+    const owner = this.data.owners.find((item) => "username" in item && item.username === username);
     const project = this.data.projects.find((item) => item.id === id && item.ownerId === owner?.id);
     if (!project) throw new ProjectRegistryError(404, "找不到这个项目。");
     return { ...project };
@@ -376,8 +512,9 @@ export class ProjectRegistry {
 
   createAccount(ownerId: string, name: unknown): StoredProject {
     this.requireAccountOwner(ownerId);
+    if (this.data.version === 3) return this.createForAccountOwner(ownerId, name);
     // This username is internal legacy metadata, never the Account display name.
-    return this.createForOwner(this.data.owners[0]!.username, name);
+    return this.createForOwner((this.data.owners[0]! as LegacyOwner).username, name);
   }
 
   private requireLegacy(): void {
@@ -387,8 +524,12 @@ export class ProjectRegistry {
 
   private requireAccountOwner(ownerId: string): void {
     this.assertStorage();
-    if (this.data.version !== 2 || this.data.accountBinding?.ownerId !== ownerId)
-      throw new ProjectRegistryError(403, "此账号没有 Cloud 管理权限。");
+    if (
+      (this.data.version === 2 && this.data.accountBinding?.ownerId === ownerId) ||
+      (this.data.version === 3 && this.data.owners.some((owner) => owner.id === ownerId))
+    )
+      return;
+    throw new ProjectRegistryError(403, "此账号没有 Cloud 管理权限。");
   }
 
   private createForOwner(username: string, name: unknown): StoredProject {
@@ -410,7 +551,7 @@ export class ProjectRegistry {
     if (this.data.projects.length >= 32)
       throw new ProjectRegistryError(429, "项目数量已达到上限（32 个）。");
     const next = structuredClone(this.data);
-    let owner = next.owners.find((item) => item.username === username);
+    let owner = next.owners.find((item) => "username" in item && item.username === username);
     if (!owner) {
       owner = { id: randomUUID(), username };
       next.owners.push(owner);
@@ -427,6 +568,35 @@ export class ProjectRegistry {
       createdAt: timestamp,
       updatedAt: timestamp,
     };
+    next.projects.push(project);
+    this.write(next);
+    this.data = next;
+    return { ...project };
+  }
+
+  private createForAccountOwner(ownerId: string, name: unknown): StoredProject {
+    if (
+      typeof name !== "string" ||
+      !name.trim() ||
+      name.trim().length > 80 ||
+      /[\x00-\x1f\x7f]/.test(name)
+    )
+      throw new ProjectRegistryError(400, "请输入 1 至 80 个字符的项目名称。");
+    if (this.data.projects.length >= 128)
+      throw new ProjectRegistryError(429, "工作台项目数量已达到上限（128 个）。");
+    const next = structuredClone(this.data),
+      timestamp = this.now(),
+      project: StoredProject = {
+        id: randomUUID(),
+        ownerId,
+        name: name.trim(),
+        status: "stopped",
+        generation: 0,
+        runtimeUsername: "project-runtime",
+        runtimePassword: randomBytes(32).toString("base64url"),
+        createdAt: timestamp,
+        updatedAt: timestamp,
+      };
     next.projects.push(project);
     this.write(next);
     this.data = next;

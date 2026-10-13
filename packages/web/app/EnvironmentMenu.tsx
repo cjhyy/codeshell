@@ -11,6 +11,11 @@ import {
 } from "./environments.js";
 import "./environments.css";
 
+type EnvironmentApiPath = "/api/v1/environment" | "/api/v1/cloud-browser/environment";
+
+/** A website may share its origin with an independently authenticated legacy Hub. */
+export const EnvironmentApiContext = React.createContext<EnvironmentApiPath>("/api/v1/environment");
+
 /** Each destination authenticates independently; switching never changes a running job's host. */
 export function EnvironmentMenu({
   discover = true,
@@ -19,6 +24,7 @@ export function EnvironmentMenu({
   discover?: boolean;
   navigate?: (address: string) => void;
 }) {
+  const environmentApi = React.useContext(EnvironmentApiContext);
   const [open, setOpen] = React.useState(false);
   const [environment, setEnvironment] = React.useState<EnvironmentDescriptor>();
   const [saved, setSaved] = React.useState<SavedEnvironment[]>([]);
@@ -39,7 +45,7 @@ export function EnvironmentMenu({
   React.useEffect(() => {
     if (!discover) return;
     const controller = new AbortController();
-    void api<unknown>("/api/v1/environment", { signal: controller.signal })
+    void api<unknown>(environmentApi, { signal: controller.signal })
       .then((value) => {
         if (controller.signal.aborted) return;
         if (!isEnvironmentDescriptor(value)) throw new Error("环境信息无效，请更新工作台后重试。");
@@ -59,7 +65,7 @@ export function EnvironmentMenu({
         setError(cause instanceof Error ? cause.message : "无法读取环境信息。");
       });
     return () => controller.abort();
-  }, [discover]);
+  }, [discover, environmentApi]);
 
   React.useEffect(() => {
     if (!open) return;

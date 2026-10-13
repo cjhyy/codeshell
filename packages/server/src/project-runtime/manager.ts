@@ -20,6 +20,8 @@ export interface ProjectManagerOptions {
   revokeProject(id: string): Promise<void>;
   revalidateSession?(session: ProjectControlSession): Promise<void>;
   maxRunning?: number;
+  maxRunningPerOwner?: number;
+  maxProjectsPerOwner?: number;
   /** Clock seam for Docker observations; authorization is never cached. */
   now?: () => number;
 }
@@ -49,6 +51,12 @@ export class ProjectManager {
       (options.maxRunning ?? 4) > 32
     )
       throw new Error("Project running limit must be between 1 and 32.");
+    for (const [name, value, maximum] of [
+      ["running per owner", options.maxRunningPerOwner ?? 2, 32],
+      ["projects per owner", options.maxProjectsPerOwner ?? 16, 128],
+    ] as const)
+      if (!Number.isSafeInteger(value) || value < 1 || value > maximum)
+        throw new Error(`Project ${name} limit must be between 1 and ${maximum}.`);
   }
 
   private authorize(session: ProjectControlSession): void {
@@ -100,6 +108,16 @@ export class ProjectManager {
 
   create(session: ProjectControlSession, name: unknown): ProjectView {
     this.authorize(session);
+    if (
+      this.options.registry.multiAccount &&
+      "kind" in session &&
+      this.options.registry.listAccount(session.ownerId).length >=
+        (this.options.maxProjectsPerOwner ?? 16)
+    )
+      throw new ProjectRegistryError(
+        429,
+        `每个账号最多创建 ${this.options.maxProjectsPerOwner ?? 16} 个项目。`,
+      );
     return projectView(
       "kind" in session
         ? this.options.registry.createAccount(session.ownerId, name)
@@ -147,6 +165,22 @@ export class ProjectManager {
         429,
         `最多同时运行 ${this.options.maxRunning ?? 4} 个项目，请先停止其他项目。`,
       );
+    if (this.options.registry.multiAccount) {
+      const ownerCount = this.options.registry
+        .all()
+        .filter(
+          (item) =>
+            item.ownerId === project.ownerId &&
+            item.id !== id &&
+            ["running", "starting", "stopping", "error"].includes(item.status) &&
+            item.generation > 0,
+        ).length;
+      if (ownerCount >= (this.options.maxRunningPerOwner ?? 2))
+        throw new ProjectRegistryError(
+          429,
+          `每个账号最多同时运行 ${this.options.maxRunningPerOwner ?? 2} 个项目。`,
+        );
+    }
     this.statusChecks.delete(id);
     const record = this.options.registry.update(id, {
       status: "starting",
@@ -321,6 +355,21 @@ export class ProjectManager {
     );
     if (results.some((result) => result.status === "rejected" || result.value.status !== "stopped"))
       throw new ProjectRegistryError(503, "部分项目尚未确认停止，请检查 Docker。");
+  }
+
+  /** Revocation fallback for one Account; never interrupts another owner's runtimes. */
+  async stopOwner(ownerId: string): Promise<void> {
+    this.options.registry.listAccount(ownerId); // Require an actual Account owner.
+    const projects = this.options.registry.all().filter((project) => project.ownerId === ownerId);
+    for (const project of projects)
+      this.stopRevisions.set(project.id, (this.stopRevisions.get(project.id) ?? 0) + 1);
+    const results = await Promise.allSettled(
+      projects
+        .filter((project) => project.generation > 0 && project.status !== "stopped")
+        .map((project) => this.beginStop(project.id)),
+    );
+    if (results.some((result) => result.status === "rejected" || result.value.status !== "stopped"))
+      throw new ProjectRegistryError(503, "部分账号项目尚未确认停止，请检查 Docker。");
   }
 
   close(): Promise<void> {

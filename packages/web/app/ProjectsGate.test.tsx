@@ -62,6 +62,9 @@ async function fixture(
     intercept?: (path: string, init?: RequestInit) => Response | Promise<Response> | undefined;
     available?: boolean;
     strict?: boolean;
+    autoEnterSingle?: boolean;
+    startCreatedProject?: boolean;
+    allowLegacy?: boolean;
   } = {},
 ) {
   ensureMiniDom();
@@ -148,6 +151,9 @@ async function fixture(
   }
   function Gate() {
     tree = ProjectsGate({
+      autoEnterSingle: options.autoEnterSingle,
+      startCreatedProject: options.startCreatedProject,
+      allowLegacy: options.allowLegacy,
       onAuthLost: () => {
         authLost++;
       },
@@ -366,4 +372,41 @@ test("a late start response cannot reopen its project after the gate unmounts", 
   expect(signal?.aborted).toBe(true);
   expect(view.child).toBeUndefined();
   expect(getApiProject()).toBe(projectB.id);
+});
+
+test("website mode auto-opens only one running authorized project and respects returning to the list", async () => {
+  const view = await fixture({ projects: [projectA], autoEnterSingle: true, allowLegacy: false });
+  expect(view.child?.project?.id).toBe(projectA.id);
+  await action(() => view.child!.back!());
+  await view.focus();
+  expect(view.child).toBeUndefined();
+  expect(text(view.tree)).toContain("你的项目");
+});
+
+test("website create-and-open performs actual create and start before mounting a runtime", async () => {
+  const view = await fixture({ projects: [], startCreatedProject: true, allowLegacy: false });
+  const input = elements(view.tree).find((item) => item.type === "input")!;
+  await action(() => input.props.onChange({ target: { value: "  私人项目  " } }));
+  await action(() =>
+    elements(view.tree)
+      .find((item) => item.type === "form")!
+      .props.onSubmit({ preventDefault() {} }),
+  );
+  expect(
+    view.requests.filter((item) => item.init?.method === "POST").map((item) => item.path),
+  ).toEqual(["/api/v1/projects", `/api/v1/projects/${projectA.id}/start`]);
+  expect(view.child?.project?.name).toBe("私人项目");
+  expect(view.child?.project?.status).toBe("running");
+});
+
+test("website project capability errors never open the legacy shared workspace", async () => {
+  const view = await fixture({
+    allowLegacy: false,
+    autoEnterSingle: true,
+    intercept: (path) =>
+      path === "/api/v1/projects" ? Response.json({}, { status: 404 }) : undefined,
+  });
+  expect(view.child).toBeUndefined();
+  expect(view.requests.some((item) => item.path.includes("configuration"))).toBe(false);
+  expect(text(view.tree)).toContain("刷新项目");
 });

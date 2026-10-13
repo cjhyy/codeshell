@@ -8,6 +8,12 @@ export interface CloudAccountBinding {
   createdAt: number;
 }
 
+/** Fresh installation policy. Each verified Account receives its own internal owner. */
+export interface CloudMultiAccountConfiguration {
+  accountOrigin: string;
+  managementEpoch: string;
+}
+
 export const CLOUD_ADOPTION_PENDING = "account-adoption-pending.json";
 
 const UUID = /^[a-f0-9]{8}(?:-[a-f0-9]{4}){3}-[a-f0-9]{12}$/;
@@ -42,5 +48,18 @@ export function isCloudAccountBinding(value: unknown): value is CloudAccountBind
     UUID.test(row.managementEpoch) &&
     Number.isSafeInteger(row.createdAt) &&
     row.createdAt >= 0
+  );
+}
+
+export function isCloudMultiAccountConfiguration(
+  value: unknown,
+): value is CloudMultiAccountConfiguration {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return false;
+  const row = value as CloudMultiAccountConfiguration;
+  return (
+    Object.keys(row).sort().join() === "accountOrigin,managementEpoch" &&
+    isCloudAccountOrigin(row.accountOrigin) &&
+    typeof row.managementEpoch === "string" &&
+    UUID.test(row.managementEpoch)
   );
 }

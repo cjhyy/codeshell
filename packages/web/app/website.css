@@ -1,0 +1,523 @@
+.website-login {
+  min-height: 100dvh;
+  padding: 30px max(24px, calc((100vw - 1200px) / 2));
+}
+.website-brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 18px;
+  font-weight: 650;
+}
+.website-brand > span {
+  color: var(--muted);
+  font-size: 11px;
+  border: 1px solid var(--border);
+  padding: 4px 7px;
+  border-radius: 5px;
+  font-weight: 450;
+}
+.website-welcome {
+  display: grid;
+  grid-template-columns: 1fr 390px;
+  gap: 80px;
+  max-width: 1060px;
+  margin: 75px auto 60px;
+  align-items: start;
+}
+.website-eyebrow {
+  color: var(--muted);
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  margin: 0 0 15px;
+}
+.website-introduction {
+  padding-top: 30px;
+}
+.website-introduction h1 {
+  font-size: clamp(40px, 5vw, 64px);
+  letter-spacing: -2px;
+  line-height: 1.12;
+  font-weight: 550;
+  margin: 22px 0;
+}
+.website-introduction > p:not(.website-eyebrow) {
+  color: var(--muted);
+  line-height: 1.9;
+}
+.website-features {
+  display: grid;
+  gap: 13px;
+  margin-top: 35px;
+}
+.website-features p {
+  display: grid;
+  gap: 5px;
+  margin: 0;
+  padding: 13px 0;
+  border-top: 1px solid var(--subtle);
+}
+.website-features strong {
+  font-size: 13px;
+  font-weight: 550;
+}
+.website-features span {
+  color: var(--muted);
+  font-size: 12px;
+}
+.website-auth {
+  width: 100%;
+  max-width: none;
+  padding: 30px;
+  box-shadow: var(--shadow);
+}
+.website-auth h2 {
+  font-size: 25px;
+  margin: 10px 0 12px;
+  font-weight: 550;
+  letter-spacing: -0.6px;
+}
+.website-muted {
+  color: var(--muted);
+  line-height: 1.7;
+}
+.website-hint {
+  font-size: 11px;
+  color: var(--muted);
+  line-height: 1.7;
+}
+.website-auth form,
+.website-settings-card form {
+  display: grid;
+  gap: 16px;
+}
+.website-auth label,
+.website-settings-card label {
+  display: grid;
+  gap: 8px;
+  font-size: 12px;
+  font-weight: 500;
+}
+.website-auth input,
+.website-settings-card input {
+  width: 100%;
+  padding: 11px 12px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 7px;
+  color: var(--text);
+  min-width: 0;
+}
+.website-auth label small,
+.website-settings-card label small {
+  font-size: 11px;
+  color: var(--muted);
+  font-weight: 400;
+  line-height: 1.6;
+}
+.website-button {
+  display: inline-flex;
+  justify-content: center;
+  align-items: center;
+  gap: 8px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  padding: 9px 13px;
+  border-radius: 7px;
+  font-size: 12px;
+  color: var(--text);
+  cursor: pointer;
+  line-height: 1.4;
+}
+.website-button:hover {
+  background: var(--hover);
+}
+.website-button.primary {
+  color: var(--surface);
+  background: var(--text);
+  border-color: var(--text);
+}
+.website-wide {
+  width: 100%;
+  margin-top: 10px;
+}
+.website-divider {
+  display: flex;
+  align-items: center;
+  gap: 13px;
+  color: var(--muted);
+  font-size: 10px;
+  margin: 25px 0;
+}
+.website-divider::before,
+.website-divider::after {
+  content: "";
+  flex: 1;
+  border-top: 1px solid var(--subtle);
+}
+.website-login-footer {
+  font-size: 11px;
+  color: var(--muted);
+  text-align: center;
+  padding: 30px 0;
+}
+.website-workbench-root {
+  height: 100%;
+}
+.website-account-menu {
+  position: relative;
+  flex: 0 0 auto;
+}
+.website-account-menu > summary {
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  display: grid;
+  place-items: center;
+  cursor: pointer;
+  list-style: none;
+  font-size: 12px;
+  font-weight: 600;
+}
+.website-account-menu > summary::-webkit-details-marker {
+  display: none;
+}
+.website-account-menu > summary:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 3px;
+}
+.website-account-popover {
+  position: absolute;
+  z-index: 60;
+  bottom: 43px;
+  left: 0;
+  width: 200px;
+  display: grid;
+  gap: 3px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  box-shadow: var(--shadow);
+  border-radius: 10px;
+  padding: 10px;
+}
+.website-account-popover strong,
+.website-account-popover small {
+  padding: 3px 8px;
+  overflow-wrap: anywhere;
+  font-size: 12px;
+}
+.website-account-popover small {
+  color: var(--muted);
+  padding-bottom: 10px;
+}
+.website-account-popover button {
+  border: 0;
+  border-radius: 5px;
+  color: var(--text);
+  background: transparent;
+  text-align: left;
+  padding: 9px;
+  font-size: 12px;
+  cursor: pointer;
+}
+.website-account-popover button:hover {
+  background: var(--hover);
+}
+.website-account-popover button:last-child {
+  border-top: 1px solid var(--subtle);
+  margin-top: 5px;
+  border-radius: 0;
+  color: var(--danger);
+}
+.rail-footer > .website-account-menu {
+  margin-top: 12px;
+}
+.projects-header > .website-account-menu {
+  position: absolute;
+  right: 0;
+  top: 0;
+}
+.projects-header > .website-account-menu .website-account-popover,
+.website-environment-empty .website-account-popover {
+  bottom: auto;
+  top: 43px;
+  left: auto;
+  right: 0;
+}
+.website-environment-empty {
+  height: 100%;
+  padding: 25px 40px;
+}
+.website-environment-empty header {
+  justify-content: space-between;
+}
+.website-environment-empty > section {
+  max-width: 560px;
+  margin: 15vh auto;
+  text-align: center;
+}
+.website-environment-empty h1 {
+  font-size: 28px;
+  font-weight: 550;
+}
+.website-environment-empty section > button {
+  margin: 14px 5px;
+}
+.website-settings-shell {
+  min-height: 100dvh;
+  display: grid;
+  grid-template-columns: 220px minmax(0, 1fr);
+}
+.website-settings-nav {
+  position: sticky;
+  top: 0;
+  height: 100dvh;
+  background: var(--panel);
+  border-right: 1px solid var(--subtle);
+  padding: 25px 15px;
+  display: flex;
+  flex-direction: column;
+}
+.website-back {
+  border: 0;
+  background: transparent;
+  color: var(--text);
+  text-align: left;
+  padding: 12px 10px;
+  cursor: pointer;
+  margin-bottom: 32px;
+  font-size: 12px;
+}
+.website-settings-nav > p {
+  margin: 25px 11px 10px;
+}
+.website-settings-nav nav {
+  display: grid;
+  gap: 4px;
+}
+.website-settings-nav nav button {
+  text-align: left;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--text);
+  padding: 11px 12px;
+  font-size: 12px;
+  cursor: pointer;
+}
+.website-settings-nav nav button:hover,
+.website-settings-nav nav button[aria-current="page"] {
+  background: var(--hover);
+}
+.website-settings-avatar {
+  margin-top: auto;
+  padding: 15px 10px 0;
+}
+.website-settings-content {
+  max-width: 1000px;
+  padding: 50px 55px;
+  margin: auto;
+}
+.website-settings-heading {
+  margin-bottom: 30px;
+}
+.website-settings-heading h1 {
+  font-size: 29px;
+  letter-spacing: -0.8px;
+  font-weight: 550;
+  margin: 0 0 15px;
+}
+.website-settings-heading p {
+  margin-top: 0;
+}
+.website-settings-card {
+  padding: 28px;
+  border: 1px solid var(--border);
+  border-radius: 11px;
+  background: var(--surface);
+  margin: 20px 0 30px;
+  display: grid;
+  gap: 21px;
+}
+.website-settings-card h2,
+.website-settings-content > h2 {
+  margin: 0;
+  font-size: 15px;
+  font-weight: 550;
+}
+.website-settings-card input {
+  max-width: 460px;
+}
+.website-settings-card > button,
+.website-settings-card form > button {
+  justify-self: start;
+}
+.website-setting-line {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+}
+.website-setting-line p {
+  font-size: 12px;
+  margin-bottom: 0;
+}
+.website-tag {
+  display: inline-block;
+  border: 1px solid var(--border);
+  border-radius: 5px;
+  padding: 4px 7px;
+  font-size: 10px;
+  color: var(--muted);
+  margin-left: 10px;
+  white-space: nowrap;
+}
+.website-action-row {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin: 15px 0;
+}
+.website-list {
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  overflow: hidden;
+  margin: 20px 0;
+  background: var(--surface);
+}
+.website-list > p {
+  padding: 15px 20px;
+}
+.website-list article {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+  padding: 20px 24px;
+  border-bottom: 1px solid var(--subtle);
+}
+.website-list article:last-child {
+  border-bottom: 0;
+}
+.website-list article > div:first-child {
+  min-width: 0;
+}
+.website-list strong {
+  font-size: 13px;
+  font-weight: 550;
+  overflow-wrap: anywhere;
+}
+.website-list article p {
+  color: var(--muted);
+  font-size: 11px;
+  margin: 7px 0 0;
+  line-height: 1.6;
+  overflow-wrap: anywhere;
+}
+.website-notice {
+  color: var(--success);
+  font-size: 12px;
+  line-height: 1.7;
+}
+.website-statistics {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 15px;
+  margin: 25px 0;
+}
+.website-statistics article {
+  display: grid;
+  gap: 14px;
+  padding: 22px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+}
+.website-statistics span {
+  color: var(--muted);
+  font-size: 12px;
+}
+.website-statistics strong {
+  font-size: 29px;
+  font-weight: 550;
+}
+@media (max-width: 760px) {
+  .website-login {
+    padding: 23px;
+  }
+  .website-welcome {
+    display: flex;
+    flex-direction: column;
+    gap: 30px;
+    margin: 35px auto;
+    max-width: 440px;
+  }
+  .website-introduction {
+    padding: 0;
+  }
+  .website-introduction h1 {
+    font-size: 40px;
+  }
+  .website-introduction > p:not(.website-eyebrow) {
+    font-size: 13px;
+  }
+  .website-features {
+    display: none;
+  }
+  .website-auth {
+    padding: 25px;
+  }
+  .website-settings-shell {
+    display: block;
+  }
+  .website-settings-nav {
+    position: static;
+    height: auto;
+    border-right: 0;
+    border-bottom: 1px solid var(--subtle);
+    padding: 15px;
+  }
+  .website-back {
+    margin-bottom: 5px;
+  }
+  .website-settings-nav > p {
+    margin: 15px 10px 8px;
+  }
+  .website-settings-nav nav {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 3px;
+  }
+  .website-settings-nav nav button {
+    padding: 9px 10px;
+  }
+  .website-settings-avatar {
+    position: absolute;
+    top: 21px;
+    right: 22px;
+    padding: 0;
+  }
+  .website-settings-avatar .website-account-popover {
+    top: 43px;
+    bottom: auto;
+    right: 0;
+    left: auto;
+  }
+  .website-settings-content {
+    padding: 30px 22px;
+  }
+  .website-settings-card {
+    padding: 21px;
+  }
+  .website-list article {
+    padding: 18px;
+    flex-wrap: wrap;
+  }
+  .website-statistics {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .website-environment-empty {
+    padding: 22px;
+  }
+}
