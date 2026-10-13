@@ -241,6 +241,9 @@ export function createCloudBrowserAuth(options: {
         req.headers["transfer-encoding"] !== undefined)
     )
       throw new ProjectRegistryError(400, "读取请求不接受额外内容。");
+    // The controller owns the environment DTO; retain this authority's exact
+    // admission checks before delegating its browser-only alias.
+    if (path === "/api/v1/cloud-browser/environment") return false;
     if (path === "/api/v1/cloud-browser/capabilities" && req.method === "GET") {
       json(res, 200, {
         version: CLOUD_BROWSER_AUTHORITY_VERSION,
@@ -342,7 +345,10 @@ export function createCloudBrowserAuth(options: {
       }
       return true;
     }
-    if (path === "/api/v1/auth/status" && req.method === "GET") {
+    if (
+      ["/api/v1/auth/status", "/api/v1/cloud-browser/status"].includes(path) &&
+      req.method === "GET"
+    ) {
       const session = await authenticate(req);
       json(res, 200, {
         initialized: true,

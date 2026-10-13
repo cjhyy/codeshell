@@ -270,6 +270,13 @@ test("multi-account capability is explicit and bootstrap rejects CSRF before con
     installationId: expect.any(String),
     accountOrigin,
   });
+  const anonymousStatus = await f.request("/api/v1/cloud-browser/status");
+  expect(anonymousStatus.status).toBe(200);
+  expect(await anonymousStatus.json()).toEqual({
+    initialized: true,
+    mode: "cloud-account",
+    authenticated: false,
+  });
   const ticket = f.issue(f.identity());
   for (const headers of [
     {},
@@ -306,10 +313,45 @@ test("multi-account capability is explicit and bootstrap rejects CSRF before con
   );
 });
 
+test("browser-specific environment and status aliases retain their exact authority gates", async () => {
+  const f = await fixture();
+  expect((await f.request("/api/v1/cloud-browser/environment")).status).toBe(401);
+  const a = await f.login(f.identity());
+  const response = await f.request("/api/v1/cloud-browser/environment", "GET", undefined, a.cookie);
+  expect(response.status).toBe(200);
+  expect(await response.json()).toEqual({
+    version: 1,
+    id: expect.any(String),
+    name: "云端项目",
+    kind: "project-host",
+    entryPath: "/",
+  });
+  for (const path of ["/api/v1/cloud-browser/status", "/api/v1/cloud-browser/environment"]) {
+    expect((await f.request(path + "?ignored=1", "GET", undefined, a.cookie)).status).toBe(400);
+    for (const headers of [
+      { "Sec-Fetch-Site": "cross-site" },
+      { Origin: "https://attacker.invalid", "Sec-Fetch-Site": "same-origin" },
+    ])
+      expect((await f.request(path, "GET", undefined, a.cookie, headers)).status).toBe(403);
+  }
+  expect((await f.request("/api/v1/cloud-browser/environment", "POST", {}, a.cookie)).status).toBe(
+    405,
+  );
+  f.active.delete(a.session.rootSessionId);
+  expect(
+    (await f.request("/api/v1/cloud-browser/environment", "GET", undefined, a.cookie)).status,
+  ).toBe(401);
+});
+
 test("two Account UUIDs cannot list, control or proxy each other's files, sessions and Panel assets", async () => {
   const f = await fixture();
   const a = await f.login(f.identity()),
     b = await f.login(f.identity());
+  const safeStatus = await (
+    await f.request("/api/v1/cloud-browser/status", "GET", undefined, a.cookie)
+  ).json();
+  expect(safeStatus.session.accountId).toBe(a.session.accountId);
+  expect(safeStatus.session.ownerId).toBeUndefined();
   const pa = await f.project(a.cookie, "A private project"),
     pb = await f.project(b.cookie, "B private project");
   for (const [own, other] of [
