@@ -368,7 +368,7 @@ export async function createDockerCandidateFixture({
     let browserPin;
     if (browserRequired) {
       const require = createRequire(join(root, "packages/desktop/package.json"));
-      if (require("playwright-core/package.json").version !== "1.60.0") deny();
+      if (require("playwright-core/package.json").version !== "1.64.0") deny();
       const executable = realpathSync(require("playwright").chromium.executablePath());
       browserPin = {
         path: executable,

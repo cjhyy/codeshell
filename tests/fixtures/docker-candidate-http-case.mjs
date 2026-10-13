@@ -1,5 +1,6 @@
 // Actual Node HTTP / optional Chromium only. Guards precede all fixture I/O and
 // maintained browser imports. No Core, Docker, provider or operator state.
+/* global document, localStorage, navigator, parent, Worker */
 import assert from "node:assert/strict";
 import { spawn } from "node:child_process";
 import { once } from "node:events";
@@ -56,9 +57,8 @@ const {
   candidateHttpDeadline,
   createDockerBrowserGuard,
 } = await import(pathToFileURL(join(root, "scripts/docker-candidate-browser-guard.mjs")));
-const { validateCandidateChromiumArguments: validateBrowser } = await import(
-  pathToFileURL(join(root, "scripts/docker-candidate-driver.mjs"))
-);
+const { candidateChromiumDefaults, validateCandidateChromiumArguments: validateBrowser } =
+  await import(pathToFileURL(join(root, "scripts/docker-candidate-driver.mjs")));
 const binary = Buffer.from([0, 128, 255, 3, 2, 1]);
 const text = "owned compressed browser text";
 
@@ -72,6 +72,24 @@ function fixtureServer() {
   const server = http.createServer(async (request, response) => {
     const path = new URL(request.url, "http://127.0.0.1").pathname;
     counts.set(path, (counts.get(path) ?? 0) + 1);
+    if (path === "/opaque-child") {
+      response
+        .writeHead(200, {
+          "content-type": "text/html",
+          "content-security-policy": "default-src 'none'; sandbox allow-scripts allow-downloads",
+        })
+        .end("<!doctype html><p>owned opaque frame</p>");
+      return;
+    }
+    if (path === "/browser-worker-counts") {
+      response.writeHead(200, { "content-type": "application/json" }).end(
+        JSON.stringify({
+          serviceWorker: counts.get("/owned-sw.js") ?? 0,
+          worker: counts.get("/owned-worker.js") ?? 0,
+        }),
+      );
+      return;
+    }
     if (path === "/slow") {
       const sequence = counts.get(path);
       response.once("close", () => send({ slowClosed: true, sequence }));
@@ -470,7 +488,17 @@ async function chromium() {
     });
     const require = createRequire(join(root, "packages/desktop/package.json"));
     const { chromium } = require("playwright");
-    assert.equal(require("playwright-core/package.json").version, "1.60.0");
+    assert.equal(require("playwright-core/package.json").version, "1.64.0");
+    const defaultProfile = join(config.temporaryRoot, "reviewed-default-profile");
+    const actualDefaults = await require("playwright-core/lib/coreBundle")
+      .server.createPlaywright({ sdkLanguage: "javascript" })
+      .chromium.defaultArgs({ headless: true, chromiumSandbox: true }, false, defaultProfile);
+    assert.deepEqual(actualDefaults, [
+      ...candidateChromiumDefaults,
+      `--user-data-dir=${defaultProfile}`,
+      "--remote-debugging-pipe",
+      "--no-startup-window",
+    ]);
     browserPath = realpathSync(chromium.executablePath());
     browserHash = candidateFile(browserPath, { maximum: 1024 ** 3 }).sha256;
     const launch = async () => {
@@ -551,6 +579,76 @@ async function chromium() {
       await fetch("/logout", { method: "POST" });
     });
     assert.equal((await context.cookies(ready.origin)).length, 0);
+    const pageErrors = [];
+    page.on("pageerror", (error) => pageErrors.push(error.message));
+    await page.evaluate(() => {
+      const frame = document.createElement("iframe");
+      frame.id = "owned-opaque";
+      frame.src = "/opaque-child";
+      frame.setAttribute("sandbox", "allow-scripts allow-downloads");
+      document.body.appendChild(frame);
+    });
+    const frame = await (await page.locator("#owned-opaque").elementHandle()).contentFrame();
+    await frame.locator("p").waitFor();
+    assert.deepEqual(
+      pageErrors,
+      [],
+      "Blocking service workers must not inject opaque-frame errors",
+    );
+    assert.deepEqual(
+      await frame.evaluate(async () => {
+        const denied = (action) => {
+          try {
+            action();
+            return false;
+          } catch (error) {
+            return error.name === "SecurityError";
+          }
+        };
+        return {
+          parent: denied(() => parent.document),
+          storage: denied(() => localStorage),
+          network: await fetch("/cookie").then(
+            () => false,
+            () => true,
+          ),
+        };
+      }),
+      { parent: true, storage: true, network: true },
+    );
+    assert.equal(
+      await page.evaluate(
+        async () => (await navigator.serviceWorker.register("/owned-sw.js")) === undefined,
+      ),
+      true,
+    );
+    assert.equal(context.serviceWorkers().length, 0);
+    assert.equal(
+      await page.evaluate(() => {
+        try {
+          new Worker("/owned-worker.js");
+          return false;
+        } catch (error) {
+          return error.message === "Candidate browser transport refused";
+        }
+      }),
+      true,
+    );
+    assert.deepEqual(
+      await page.evaluate(async () => (await fetch("/browser-worker-counts")).json()),
+      { serviceWorker: 0, worker: 0 },
+    );
+    const applicationError = page.waitForEvent("pageerror");
+    await page.evaluate(() => {
+      setTimeout(() => {
+        throw new Error("Owned application failure");
+      }, 0);
+    });
+    assert.equal((await applicationError).message, "Owned application failure");
+    assert.throws(
+      () => assert.deepEqual(pageErrors, [], "Installed Job Hunt must not raise page errors"),
+      /Owned application failure/,
+    );
     const first = await beginSlow();
     await bounded(context.close(), "Owned context close timeout");
     context = undefined;
@@ -621,6 +719,11 @@ async function chromium() {
     compression: true,
     redirectsBlocked: true,
     sseBlocked: true,
+    opaqueFrameNoInjectedErrors: true,
+    opaqueOriginPreserved: true,
+    serviceWorkerBlocked: true,
+    workerBlocked: true,
+    applicationErrorsDetected: true,
     contextInflightClosed: true,
     browserInflightClosed: true,
     controllerInflightClosed: true,
