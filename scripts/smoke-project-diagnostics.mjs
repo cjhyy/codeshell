@@ -78,6 +78,20 @@ const jobPdfStatuses = new Set([
 ]);
 const jobPdfFailures = new WeakMap();
 const jobBrowserFailures = new WeakMap();
+const jobBrowserSteps = new Set([
+  "action",
+  "audio-close-interview",
+  "audio-download-practice",
+  "audio-download-refresh",
+  "audio-download-open-preview",
+  "audio-download-save",
+  "audio-download-read-assert",
+  "audio-download-close-preview",
+  "speech-provider-log-read",
+  "speech-provider-log-write",
+  "speech-provider-receipt-write",
+  "page-errors",
+]);
 const jobPdfErrorCodes = new Set([
   "TOOL_FAILED",
   "HOST_INTERRUPTED",
@@ -177,13 +191,52 @@ function jobPdfContext(error) {
 export async function withJobHuntBrowserDiagnostics(run, capture, close) {
   let result, primary;
   let failed = false;
+  let active = true;
+  let step = "action",
+    primaryStep,
+    primaryLeaf,
+    primarySummary;
   const cleanup = [];
   const phases = [];
+  const markStep = (value) => {
+    if (!active || typeof value !== "string" || !jobBrowserSteps.has(value)) return false;
+    step = value;
+    return true;
+  };
+  const register = (failure, summary) => {
+    try {
+      jobBrowserFailures.set(
+        failure,
+        Object.freeze({
+          summary,
+          context: Object.freeze({
+            version: 1,
+            source: "candidate-job-hunt-browser",
+            failed,
+            // Presence means run threw, even when its thrown value was undefined.
+            primaryPresent: failed,
+            ...(failed ? { primaryStep, primary: primaryLeaf } : {}),
+            cleanup: Object.freeze(
+              cleanup.map((error, index) =>
+                Object.freeze({ phase: phases[index], ...jobBrowserLeaf(error) }),
+              ),
+            ),
+          }),
+        }),
+      );
+    } catch {
+      /* Diagnostics must not replace or wrap the original thrown value. */
+    }
+  };
   try {
-    result = await run();
+    result = await run(markStep);
   } catch (error) {
     failed = true;
     primary = error;
+    active = false;
+    primaryStep = step;
+    primaryLeaf = jobBrowserLeaf(error);
+    primarySummary = jobBrowserSummary(error);
     try {
       await capture();
     } catch (error) {
@@ -191,6 +244,7 @@ export async function withJobHuntBrowserDiagnostics(run, capture, close) {
       phases.push("capture");
     }
   } finally {
+    active = false;
     try {
       await close();
     } catch (error) {
@@ -204,30 +258,110 @@ export async function withJobHuntBrowserDiagnostics(run, capture, close) {
       "Job Hunt browser acceptance and cleanup failed",
       failed ? { cause: primary } : undefined,
     );
-    try {
-      jobBrowserFailures.set(
-        failure,
-        Object.freeze({
-          version: 1,
-          source: "candidate-job-hunt-browser",
-          failed,
-          // Presence means run threw, even when its thrown value was undefined.
-          primaryPresent: failed,
-          ...(failed ? { primary: jobBrowserLeaf(primary) } : {}),
-          cleanup: Object.freeze(
-            cleanup.map((error, index) =>
-              Object.freeze({ phase: phases[index], ...jobBrowserLeaf(error) }),
-            ),
-          ),
-        }),
-      );
-    } catch {
-      /* Diagnostic registration must not replace the original aggregate. */
-    }
+    register(
+      failure,
+      failed && (jobPdfContext(primary) || panelContext(primary))
+        ? primarySummary
+        : jobBrowserSummary(failure),
+    );
     throw failure;
   }
-  if (failed) throw primary;
+  if (failed) {
+    register(primary, primarySummary);
+    throw primary;
+  }
   return result;
+}
+
+// Use only native own-data leaves and our factory records, never arbitrary
+// messages, coercion, prototype chains, causes or AggregateError.errors.
+function jobBrowserSummary(error, depth = 0, trusted = false) {
+  const unavailable = () =>
+    Object.freeze({
+      errorCodes: Object.freeze([]),
+      categories: Object.freeze([]),
+      sha256: digest("Unavailable owned Job Hunt browser failure"),
+    });
+  try {
+    const job = depth < 8 ? jobPdfContext(error) : undefined;
+    if (job)
+      return Object.freeze({
+        ...jobBrowserSummary(job.error, depth + 1, true),
+        jobPdf: Object.freeze({
+          source: job.source,
+          step: job.step,
+          ...(Object.hasOwn(job, "taskStatus") ? { taskStatus: job.taskStatus } : {}),
+          ...(Object.hasOwn(job, "taskError") ? { taskError: job.taskError } : {}),
+        }),
+      });
+    const panel = depth < 8 ? panelContext(error) : undefined;
+    if (panel) {
+      const summary = jobBrowserSummary(panel.error, depth + 1, true);
+      return Object.freeze({
+        ...summary,
+        panelLifecycle: Object.freeze({
+          ...(summary.panelLifecycle?.panelId === panel.panelId ? summary.panelLifecycle : {}),
+          source: panel.source,
+          panelId: panel.panelId,
+          [panel.kind]: panel.step,
+        }),
+      });
+    }
+    const native = !types.isProxy(error) && types.isNativeError(error);
+    if (!native && !trusted) return unavailable();
+    const prototype = native ? Object.getPrototypeOf(error) : undefined;
+    const message = native ? ownValue(error, "message") : undefined;
+    const text = native
+      ? typeof message === "string"
+        ? message
+        : trusted
+          ? "Unavailable Panel error message"
+          : "Unavailable owned Job Hunt browser failure"
+      : error === null || !["object", "function"].includes(typeof error)
+        ? String(error)
+        : "Non-Error Panel failure";
+    const cause = native ? ownValue(error, "cause") : undefined;
+    if (
+      depth < 8 &&
+      prototype === AggregateError.prototype &&
+      (jobPdfContext(cause) || panelContext(cause))
+    )
+      return jobBrowserSummary(cause, depth + 1, true);
+    let code;
+    try {
+      code = finite(JSON.parse(text)?.code);
+    } catch {}
+    let refusal;
+    const metadata = native ? ownValue(error, "candidateGuardRefusal") : undefined;
+    if (metadata && typeof metadata === "object" && !types.isProxy(metadata)) {
+      const fields = Object.getOwnPropertyDescriptors(metadata);
+      if (
+        Object.keys(fields).length === 5 &&
+        Object.values(fields).every((field) => "value" in field)
+      )
+        refusal = guardRefusal({
+          candidateGuardRefusal: Object.fromEntries(
+            Object.entries(fields).map(([key, field]) => [key, field.value]),
+          ),
+        });
+    }
+    const assertion =
+      trusted && prototype === AssertionError.prototype ? assertionNumbers(error) : undefined;
+    return Object.freeze({
+      code,
+      errorCodes: Object.freeze(
+        errorCodes.filter((value) => new RegExp(`\\b${value}\\b`).test(text)),
+      ),
+      categories: Object.freeze(
+        categories.filter(([, pattern]) => pattern.test(text)).map(([name]) => name),
+      ),
+      sha256: digest(text),
+      guardRefusal: refusal && Object.freeze(refusal),
+      ...(assertion ? { assertion: Object.freeze(assertion) } : {}),
+    });
+  } catch {
+    return unavailable();
+  }
 }
 
 function jobBrowserLeaf(error) {
@@ -445,9 +579,10 @@ class ApprovalRunError extends Error {
 // Raw errors may contain settings, prompts, response bodies or credentials. Only
 // fixed classifications, numeric RPC codes and a fingerprint leave the scratch.
 export function summarizeFailure(error) {
-  const summary = summarizeFailureAt(error, 0, false);
   const browser = jobBrowserFailures.get(error);
-  return browser ? { ...summary, jobBrowser: browser } : summary;
+  return browser
+    ? { ...browser.summary, jobBrowser: browser.context }
+    : summarizeFailureAt(error, 0, false);
 }
 
 function summarizeFailureAt(error, depth, trustedPanel) {
