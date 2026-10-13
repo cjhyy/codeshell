@@ -866,6 +866,42 @@ export async function startHeadlessServer(opts: HeadlessServeOptions): Promise<H
           log("tab.frame_dropped", { reason: "not jsonrpc", raw: previewLine(line) });
           return;
         }
+        if (hubAuth && parsed.method === "serve/approval.snapshot") {
+          const id = parsed.id;
+          if (
+            !(
+              (typeof id === "string" && id.length > 0 && id.length <= 512) ||
+              (typeof id === "number" && Number.isSafeInteger(id))
+            )
+          ) {
+            sendToTab(ws, hostQueryError(null, -32600, "request id required"), "approval-snapshot");
+          } else if (
+            parsed.params !== undefined &&
+            (!parsed.params ||
+              typeof parsed.params !== "object" ||
+              Array.isArray(parsed.params) ||
+              Object.keys(parsed.params).length !== 0)
+          ) {
+            sendToTab(
+              ws,
+              hostQueryError(id, -32602, "snapshot takes no parameters"),
+              "approval-snapshot",
+            );
+          } else {
+            // Same authenticated workspace scope as the upgrade snapshot. No
+            // lease mutation, worker start, approval submission or new authority.
+            sendToTab(
+              ws,
+              JSON.stringify({
+                jsonrpc: "2.0",
+                id,
+                result: { approvals: leases.snapshot(), leases: leases.snapshotLeases() },
+              }),
+              "approval-snapshot",
+            );
+          }
+          return;
+        }
         if (
           hubAuth &&
           (parsed.method === "serve/approval.claim" || parsed.method === "serve/approval.release")

@@ -176,6 +176,44 @@ test("standalone Hub explicitly declines Cloud browser capability before and aft
   );
 });
 
+test("read-only approval snapshots keep exact reservations, reject malformed IDs/params and never wake a worker", async () => {
+  const { server } = await fixture();
+  const { cookie } = await login(server, true);
+  const client = await connect(server, cookie);
+  client.send("empty", "serve/approval.snapshot", {});
+  expect((await client.wait((m) => m.id === "empty")).result).toEqual({
+    approvals: [],
+    leases: [],
+  });
+  expect(server.bridge.hasChild()).toBe(false);
+  client.ws.send(JSON.stringify({ jsonrpc: "2.0", method: "serve/approval.snapshot" }));
+  expect((await client.wait((m) => m.id === null)).error.code).toBe(-32600);
+  client.send("extra", "serve/approval.snapshot", { requestId: "not-a-claim" });
+  expect((await client.wait((m) => m.id === "extra")).error.code).toBe(-32602);
+  expect(server.bridge.hasChild()).toBe(false);
+  client.send("run", "agent/run", { sessionId: "snapshot-session", task: "approval" });
+  await client.wait((m) => m.method === "agent/approvalRequest");
+  client.send("claim", "serve/approval.claim", { requestId: "test-approval" });
+  const claim = (await client.wait((m) => m.id === "claim")).result;
+  client.send("snapshot", "serve/approval.snapshot", {});
+  const snapshot = (await client.wait((m) => m.id === "snapshot")).result;
+  expect(snapshot.approvals.map((a: any) => a.requestId)).toEqual(["test-approval"]);
+  expect(snapshot.leases).toEqual([claim]);
+  client.send("again", "serve/approval.snapshot", {});
+  expect((await client.wait((m) => m.id === "again")).result).toEqual(snapshot);
+  client.send("approve", "agent/approve", {
+    sessionId: "snapshot-session",
+    requestId: "test-approval",
+    decision: { approved: true },
+  });
+  await client.wait((m) => m.id === "approve");
+  client.send("resolved", "serve/approval.snapshot", {});
+  expect((await client.wait((m) => m.id === "resolved")).result).toEqual({
+    approvals: [],
+    leases: [],
+  });
+});
+
 test("Hub public shell and health expose no API data; setup is one-time and Origin gates WS", async () => {
   const { server } = await fixture();
   expect(await (await fetch(server.url + "/health")).json()).toEqual({ status: "ok", mode: "hub" });

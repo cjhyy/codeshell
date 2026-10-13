@@ -1,4 +1,5 @@
 import { apiUrl } from "./api-context.js";
+import { ConnectionLiveness, connectionPageHidden } from "../src/lib/connectionLiveness.js";
 // packages/web/app/protocol.ts
 //
 // Browser-side client for the CodeShell core JSON-RPC protocol over the
@@ -108,6 +109,12 @@ export class ProtocolClient {
   private closedByUser = false;
   private reconnectTimer?: ReturnType<typeof setTimeout>;
   private readonly authHandlers = new Set<() => void>();
+  private readonly resyncHandlers = new Set<() => void>();
+  private health?: ConnectionLiveness;
+  private healthProbeId?: string;
+  private generation = 0;
+  private resumeRequested = false;
+  private removePageListeners?: () => void;
 
   constructor(private readonly url: string) {}
 
@@ -115,6 +122,7 @@ export class ProtocolClient {
     if (this.ws) return;
     clearTimeout(this.reconnectTimer);
     this.closedByUser = false;
+    this.installPageListeners();
     this.openSocket();
   }
 
@@ -124,8 +132,31 @@ export class ProtocolClient {
     this.emitState("connecting");
     const ws = new WebSocket(this.url);
     this.ws = ws;
+    this.generation++;
+    const health = new ConnectionLiveness(
+      () => {
+        // Host answers this read-only query without waking the worker. Responses
+        // (including unsupported/denied errors) are health, never authorization.
+        this.healthProbeId = `web-health-${this.nextId++}`;
+        ws.send(
+          JSON.stringify({
+            jsonrpc: "2.0",
+            id: this.healthProbeId,
+            method: "agent/query",
+            params: { type: "sessions" },
+          }),
+        );
+      },
+      () => this.retire(ws),
+      connectionPageHidden(),
+    );
+    this.health = health;
+    this.healthProbeId = undefined;
+    this.resumeRequested = false;
     ws.onopen = () => {
       if (this.ws !== ws || this.closedByUser) return;
+      health.connected();
+      this.resumeRequested = false;
       this.reconnectDelay = RECONNECT_BASE_MS;
       this.emitState("open");
     };
@@ -143,6 +174,18 @@ export class ProtocolClient {
         if (!msg || typeof msg !== "object" || Array.isArray(msg)) return;
       } catch {
         return;
+      }
+      if (
+        msg.id === this.healthProbeId &&
+        msg.method === undefined &&
+        (Object.hasOwn(msg, "result") || Object.hasOwn(msg, "error"))
+      ) {
+        this.healthProbeId = undefined;
+        const checked = health.received();
+        if (checked && this.resumeRequested) {
+          this.resumeRequested = false;
+          for (const handler of this.resyncHandlers) handler();
+        }
       }
       if (msg.id !== undefined && msg.method === undefined) {
         const pending = this.pending.get(String(msg.id));
@@ -168,19 +211,13 @@ export class ProtocolClient {
     };
     ws.onclose = (event) => {
       if (this.ws !== ws) return;
-      this.ws = null;
-      this.emitState("closed");
-      this.failAllPending(new ProtocolRequestError("connection closed", "transport"));
       if (event.code === 4401 || event.code === 4403) {
         this.closedByUser = true;
         for (const handler of this.authHandlers) handler();
+        this.removePageListeners?.();
+        this.removePageListeners = undefined;
       }
-      if (!this.closedByUser) {
-        // Reconnect with backoff — the serve host may be restarting; sessions
-        // persist on disk so the UI can simply re-list once we're back.
-        this.reconnectTimer = setTimeout(() => this.openSocket(), this.reconnectDelay);
-        this.reconnectDelay = Math.min(this.reconnectDelay * 2, RECONNECT_MAX_MS);
-      }
+      this.retire(ws);
     };
     ws.onerror = () => {
       // onclose follows; nothing to do here.
@@ -189,10 +226,18 @@ export class ProtocolClient {
 
   close(): void {
     this.closedByUser = true;
+    this.generation++;
     clearTimeout(this.reconnectTimer);
     this.reconnectTimer = undefined;
+    this.health?.stop();
+    this.health = undefined;
+    this.healthProbeId = undefined;
+    this.resumeRequested = false;
+    this.removePageListeners?.();
+    this.removePageListeners = undefined;
     const ws = this.ws;
     this.ws = null;
+    if (ws) ws.onopen = ws.onmessage = ws.onclose = ws.onerror = null;
     ws?.close();
     this.failAllPending(new ProtocolRequestError("connection closed", "transport"));
   }
@@ -210,6 +255,85 @@ export class ProtocolClient {
   onAuthLost(handler: () => void): () => void {
     this.authHandlers.add(handler);
     return () => this.authHandlers.delete(handler);
+  }
+
+  /** Resume must reread the selected conversation, never repeat its Run. */
+  onResync(handler: () => void): () => void {
+    this.resyncHandlers.add(handler);
+    return () => this.resyncHandlers.delete(handler);
+  }
+
+  get connectionGeneration(): number {
+    return this.generation;
+  }
+
+  /** Compatibility fallback for a Host explicitly missing read-only snapshots. */
+  reconnect(): void {
+    if (!this.closedByUser && this.ws) this.retire(this.ws);
+  }
+
+  approvalSnapshot(): Promise<{
+    approvals: ApprovalRequestPayload[];
+    leases: Array<{ requestId: string; holderId: string | null; expiresAt: number | null }>;
+  }> {
+    return this.request("serve/approval.snapshot", {});
+  }
+
+  private retire(ws: WebSocket): void {
+    if (this.ws !== ws) return;
+    this.generation++;
+    this.ws = null;
+    this.health?.stop();
+    this.health = undefined;
+    this.healthProbeId = undefined;
+    this.resumeRequested = false;
+    ws.onopen = ws.onmessage = ws.onclose = ws.onerror = null;
+    this.emitState("closed");
+    this.failAllPending(new ProtocolRequestError("connection closed", "transport"));
+    // Retirement cannot depend on a close event arriving through the dead wire.
+    try {
+      ws.close();
+    } catch {
+      /* already unusable */
+    }
+    if (!this.closedByUser && !connectionPageHidden()) {
+      clearTimeout(this.reconnectTimer);
+      this.reconnectTimer = setTimeout(() => this.openSocket(), this.reconnectDelay);
+      this.reconnectDelay = Math.min(this.reconnectDelay * 2, RECONNECT_MAX_MS);
+    }
+  }
+
+  private installPageListeners(): void {
+    if (this.removePageListeners || typeof window === "undefined") return;
+    const resume = () => {
+      if (this.closedByUser || connectionPageHidden()) return;
+      if (!this.ws) {
+        clearTimeout(this.reconnectTimer);
+        this.openSocket();
+      } else {
+        this.resumeRequested = true;
+        this.health?.resume();
+      }
+    };
+    const visibility = () => {
+      if (connectionPageHidden()) {
+        this.health?.pause();
+        this.healthProbeId = undefined;
+        this.resumeRequested = false;
+        clearTimeout(this.reconnectTimer);
+      } else resume();
+    };
+    window.addEventListener("online", resume);
+    window.addEventListener("focus", resume);
+    window.addEventListener("pageshow", resume);
+    if (typeof document !== "undefined") document.addEventListener("visibilitychange", visibility);
+    this.removePageListeners = () => {
+      window.removeEventListener("online", resume);
+      window.removeEventListener("focus", resume);
+      window.removeEventListener("pageshow", resume);
+      if (typeof document !== "undefined")
+        document.removeEventListener("visibilitychange", visibility);
+    };
   }
 
   /** Correlated request; rejects on protocol error / timeout / disconnect. */

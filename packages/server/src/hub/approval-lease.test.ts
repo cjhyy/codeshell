@@ -2,6 +2,30 @@ import { describe, expect, test } from "bun:test";
 import { ApprovalLeases, type ApprovalLease } from "./approval-lease.js";
 
 describe("Hub approval leases", () => {
+  test("snapshot reads preserve reservations and never reopen submitted approvals", () => {
+    let now = 10;
+    const changes: ApprovalLease[] = [];
+    const leases = new ApprovalLeases(
+      (value) => changes.push(value),
+      100,
+      () => now,
+    );
+    leases.add({ requestId: "one", sessionId: "session" });
+    const claimed = leases.claim("one", "device");
+    expect(leases.snapshotLeases()).toEqual([claimed]);
+    expect(leases.snapshotLeases()).toEqual([claimed]);
+    expect(changes).toHaveLength(1);
+    now = 111;
+    expect(leases.snapshotLeases()).toEqual([
+      { requestId: "one", holderId: null, expiresAt: null },
+    ]);
+    expect(changes).toHaveLength(1);
+    leases.submit("one", "device");
+    expect(leases.snapshotLeases()).toEqual([]);
+    expect(leases.snapshot()).toEqual([]);
+    leases.releaseHolder("device");
+    expect(() => leases.claim("one", "other")).toThrow("no longer pending");
+  });
   test("first device wins, explicit release and expiry permit another claimant", () => {
     let now = 1_000;
     const changes: ApprovalLease[] = [];

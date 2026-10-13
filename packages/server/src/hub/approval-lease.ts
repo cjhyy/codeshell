@@ -44,6 +44,19 @@ export class ApprovalLeases {
       .map((entry) => entry.approval);
   }
 
+  /** Read-only companion to snapshot; expired reservations are displayed free.
+   * Submitted decisions remain excluded until their worker ACK resolves/retries. */
+  snapshotLeases(): ApprovalLease[] {
+    const now = this.now();
+    return [...this.entries.values()]
+      .filter((entry) => !entry.submitted)
+      .map((entry) => ({
+        requestId: entry.approval.requestId,
+        holderId: entry.expiresAt > now ? entry.holderId : null,
+        expiresAt: entry.expiresAt > now ? entry.expiresAt : null,
+      }));
+  }
+
   claim(requestId: string, holderId: string): ApprovalLease {
     this.sweep();
     const entry = this.entries.get(requestId);
