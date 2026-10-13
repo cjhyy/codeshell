@@ -1,7 +1,7 @@
 // Frozen candidate-only native consumers; network confinement is the netns
 // firewall, not this argv check. Native programs' own grandchildren are covered
 // by that same namespace, not by the JavaScript child-process wrappers.
-import { basename } from "node:path";
+import { basename, dirname } from "node:path";
 import { lstatSync, realpathSync } from "node:fs";
 import { validateCandidateVideoArguments } from "./docker-candidate-video-argv.mjs";
 const same = (a, b) => JSON.stringify(a) === JSON.stringify(b);
@@ -113,8 +113,21 @@ export function validateCandidateNativeArguments(path, args, cwd) {
     )
       deny();
     const profile = profileArg.slice("--user-data-dir=".length);
+    const hubJobProfile =
+      /^\/data\/panel-tool-jobs\/[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}\/work\/\.pdf-browser-[A-Za-z0-9]{6}$/.test(
+        profile,
+      );
+    if (hubJobProfile) {
+      // Managed Hub tools receive /data/panel-tool-jobs/<UUID>/work as both
+      // their authorized --job-dir and cwd. Keep this new path tied to that
+      // exact private job; existing workspace/home consumers keep their contract.
+      if (dirname(profile) !== cwd || realpathSync(cwd) !== cwd) deny();
+      const work = lstatSync(cwd);
+      if (!work.isDirectory() || work.mode & 0o077 || work.uid !== process.getuid()) deny();
+    }
     if (
-      !/^\/(?:workspace|data\/home)\/.+\/\.pdf-browser-[A-Za-z0-9]+$/.test(profile) ||
+      (!hubJobProfile &&
+        !/^\/(?:workspace|data\/home)\/.+\/\.pdf-browser-[A-Za-z0-9]+$/.test(profile)) ||
       realpathSync(profile) !== profile
     )
       deny();
