@@ -164,6 +164,52 @@ The installer now:
     ever run. Phase A deliberately excludes private registries, ranges,
     dependency installation, auto-update, and a Desktop remote-install UI.
 
+Approved hook commands accept complete rooted path words using
+`$CODESHELL_PLUGIN_ROOT`, `$CODESHELL_PLUGIN_DATA`, `$PLUGIN_ROOT`, and
+`$PLUGIN_DATA`, including their `${NAME}` forms. Runtime compilation preserves
+the installed command and approval digest. On POSIX, bare, double-quoted and
+single-quoted path words become quoted references to the injected environment;
+actual path bytes never become shell source. Spaces, Unicode, apostrophes,
+quotes, and command-substitution-looking characters in a filesystem path stay
+data. Escaped dollars, comments and unrelated parameter expansions retain their
+shell meaning. Commands without target macros are returned byte-for-byte.
+
+This compiler deliberately refuses target templates in ambiguous contexts:
+heredocs/here-strings, backticks, arithmetic, nested target parameter expansions,
+command substitutions inside unknown parameters, ANSI-C quoting, mixed
+path-word quotes, shell control-flow/functions, and dynamic source interpreters.
+It tracks independent quotes in ordinary `$()` command substitutions. Put complex
+logic in an approved plugin script and invoke its rooted path word instead of
+embedding a program in the command string.
+Source-interpreter checks use quote/escape-decoded literal words, so quoting or
+splitting `-c` does not bypass them. Known interpreters also refuse dynamic
+arguments and flags before a template script path, including combined short
+flags such as `sh -ec` and `node -pe`; this bounded grammar does not infer each
+interpreter's option language. An escaped/comment-only macro retains the legacy
+command bytes. This establishes host compilation into path data; subsequent
+interpretation inside an approved executable remains that executable's behavior.
+
+On Windows, a simple invocation beginning with a complete rooted path token
+uses private per-invocation environment slots and a system `cmd.exe` invocation
+with `/d /v:off /s /c`. POSIX single quotes are template delimiters in this
+specific form, rather than native cmd quoting. Original native `%VAR%` text is
+preserved, while path slots expand once inside double quotes; path values are
+not recursively scanned for percent variables. The compiler refuses occupied
+slot names (including case variants and references already in the command),
+duplicate/non-system `ComSpec`, shell operators/re-parsing commands, invalid
+Win32 paths, trailing-backslash path arguments, and over-limit command lines.
+For a compiled invocation, retained native percent references must be simple
+names present in the captured environment so their one-pass length can be
+bounded; substring/substitution operators and dynamic/unknown cmd variables
+are refused rather than guessed.
+Commands without target macros retain their previous shell/`ComSpec` behavior.
+The host's single parse does not make a plugin's own `CALL`, interpreter or
+enabled delayed expansion safe; those remain part of the approved script's
+behavior. See the [cmd reference](https://learn.microsoft.com/en-us/windows-server/administration/windows-commands/cmd)
+for `/d`, `/v:off`, quoting and non-recursive percent substitution. Pure Windows
+planner tests are separate from the Windows-only native fixture; a POSIX run
+does not establish native Windows behavior.
+
 This closes the difference between "the marketplace says installed" and "the
 runtime contributions are actually discoverable."
 
