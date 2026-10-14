@@ -20,20 +20,24 @@ function begin(frame){
  const sessionId=frame.params.sessionId;
  runs.set(sessionId,frame);
  if(frame.params.behaviorMode==='isolatedTask')return;
- send({method:'agent/approvalRequest',params:{sessionId,requestId:'panel-'+frame.id,connectionId:'loopback-worker',generation:23,request:{toolName:'__panel_action__',description:'Panel operation',riskLevel:'low',args:JSON.parse(frame.params.task)}}});
+ const args=JSON.parse(frame.params.task);
+ if(args.childHost)send({method:'agent/approvalRequest',params:{sessionId,requestId:'child-'+frame.id,childHost:{sourceSessionId:'child-session',bindingId:'binding-1',[args.childHost]:true},request:{toolName:'__browser_action__',args:{action:args.childHost},description:'child browser',riskLevel:'low'}}});
+ send({method:'agent/approvalRequest',params:{sessionId,requestId:'panel-'+frame.id,connectionId:'loopback-worker',generation:23,request:{toolName:args.loopback??'__panel_action__',description:'Panel operation',riskLevel:'low',args}}});
 }
+const approved=[];
 createInterface({input:process.stdin}).on('line',line=>{
  const frame=JSON.parse(line);
  if(frame.method==='agent/run'){
   const sessionId=frame.params.sessionId;
   if(runs.has(sessionId)){const queue=queues.get(sessionId)||[];queue.push(frame);queues.set(sessionId,queue);}else begin(frame);
  }else if(frame.method==='agent/approve'){
+  approved.push(frame.params.requestId);
   const run=runs.get(frame.params.sessionId);
   if(frame.params.connectionId!=='loopback-worker'||frame.params.generation!==23||frame.params.decision?.approved!==true||typeof frame.params.decision.answer!=='string')
    return send({id:frame.id,error:{message:'invalid loopback decision'}});
   const answer=JSON.parse(frame.params.decision.answer);
   send({id:frame.id,result:{accepted:true}});
-  if(run){send({id:run.id,result:{answer,decision:frame.params.decision,route:{connectionId:frame.params.connectionId,generation:frame.params.generation}}});runs.delete(frame.params.sessionId);const next=queues.get(frame.params.sessionId)?.shift();if(next)begin(next);}
+  if(run){send({id:run.id,result:{answer,approved,decision:frame.params.decision,route:{connectionId:frame.params.connectionId,generation:frame.params.generation}}});runs.delete(frame.params.sessionId);const next=queues.get(frame.params.sessionId)?.shift();if(next)begin(next);}
  }else if(frame.method==='agent/cancel'){
   const run=runs.get(frame.params.sessionId);
   send({id:frame.id,result:{ok:true}});
@@ -209,9 +213,16 @@ async function fixture() {
       );
       return until(async () => received.find((item) => item.id === id), Boolean);
     }
+    async function approvalSnapshot() {
+      const id = `snapshot-${++counter}`;
+      ws.send(JSON.stringify({ jsonrpc: "2.0", id, method: "serve/approval.snapshot" }));
+      const reply = await until(async () => received.find((item) => item.id === id), Boolean);
+      return reply.result as { approvals: unknown[]; leases: unknown[] };
+    }
     return {
       received,
       request,
+      approvalSnapshot,
       async run(sessionId: string, action: Record<string, unknown>) {
         const reply = await request(sessionId, action);
         expect(reply.error).toBeUndefined();
@@ -404,4 +415,49 @@ test("active independent Panel tasks block model configuration until cancellatio
     (value) => value.status === "cancelled",
   );
   expect((await save()).status).toBe(200);
+});
+
+test("hub serve answers Desktop-only loopbacks as unsupported and never leases them to tabs", async () => {
+  const f = await fixture();
+  await f.prepare("session-browser");
+  const client = await f.connect();
+  const browser = await client.run("session-browser", { loopback: "__browser_action__" });
+  expect(browser.answer).toMatchObject({
+    ok: false,
+    failure: "unsupported",
+    capability: "browser",
+  });
+  expect(await client.approvalSnapshot()).toEqual({ approvals: [], leases: [] });
+  // Panel actions still reach the hub's Panel runtime, not the unsupported path.
+  const panel = await client.run("session-browser", { action: "list" });
+  expect(panel.answer).toMatchObject({ ok: true, panels: [{ id: "panel-app:hub-loopback" }] });
+  expect(
+    client.received.some(
+      (message) =>
+        message.method === "agent/approvalRequest" ||
+        message.method === "serve/approvalLease" ||
+        (message.method === "serve/approvalSnapshot" && message.params?.approvals?.length > 0),
+    ),
+  ).toBe(false);
+});
+
+test("one-way child browser activate frames are neither answered nor broadcast", async () => {
+  const f = await fixture();
+  await f.prepare("session-child");
+  const client = await f.connect();
+  const result = await client.run("session-child", {
+    loopback: "__browser_action__",
+    childHost: "activate",
+  });
+  // The worker saw exactly one agent/approve: the reply to the ordinary
+  // browser loopback, never one for the unregistered child frame.
+  expect(result.approved).toEqual([expect.stringMatching(/^panel-/)]);
+  expect(result.answer).toMatchObject({ ok: false, failure: "unsupported" });
+  expect(await client.approvalSnapshot()).toEqual({ approvals: [], leases: [] });
+  expect(
+    client.received.some(
+      (message) =>
+        message.method === "agent/approvalRequest" || JSON.stringify(message).includes("childHost"),
+    ),
+  ).toBe(false);
 });
