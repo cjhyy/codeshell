@@ -29,8 +29,19 @@ describe("source schemas", () => {
   test("binding requires sourceId + scopes; readPolicy defaults to ask and only allows ask|deny", () => {
     const b = WorkspaceSourceBindingSchema.parse({ sourceId: "github-work", scopes: ["issues"] });
     expect(b.readPolicy).toBe("ask");
+    expect(b).not.toHaveProperty("priority");
     expect(() =>
       WorkspaceSourceBindingSchema.parse({ sourceId: "x", scopes: [], readPolicy: "allow" }),
+    ).toThrow();
+  });
+
+  test("accepts only explicit normal or high reference priority", () => {
+    for (const priority of ["normal", "high"] as const)
+      expect(
+        WorkspaceSourceBindingSchema.parse({ sourceId: "docs", scopes: [], priority }).priority,
+      ).toBe(priority);
+    expect(() =>
+      WorkspaceSourceBindingSchema.parse({ sourceId: "docs", scopes: [], priority: "urgent" }),
     ).toThrow();
   });
 });

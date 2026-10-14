@@ -291,6 +291,7 @@ export {
   listSourceDefinitions,
   readSourceDefinition,
   saveSourceDefinition,
+  insertSourceDefinitionsIfAbsent,
   deleteSourceDefinition,
 } from "./sources/catalog.js";
 export { registerConnectorAdapter, connectorAdapterFor } from "./sources/adapter.js";

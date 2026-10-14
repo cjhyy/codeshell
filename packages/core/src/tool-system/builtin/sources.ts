@@ -28,6 +28,7 @@ import {
 import { collectionConfig } from "../../sources/collection.js";
 import { collectionLocalDirectoryIdentity } from "../../sources/collection-local.js";
 import { defaultCredentialStatus } from "../../sources/credential-status.js";
+import { HIGH_PRIORITY_SOURCE_GUIDANCE } from "../../sources/context-summary.js";
 import { resolveEffectiveSourceAccess, type EffectiveSourceAccess } from "../../sources/resolve.js";
 import { truncateUtf8Text } from "../../sources/truncate-utf8.js";
 import type { SourceResourceMeta } from "../../sources/types.js";
@@ -129,11 +130,12 @@ export async function listSourcesTool(
   if (access.length === 0) return "No data sources are bound to this workspace.";
 
   const lines: string[] = [];
+  if (access.some((item) => item.priority === "high")) lines.push(HIGH_PRIORITY_SOURCE_GUIDANCE);
   for (const item of access) {
     if (!authorityIsCurrent(item, cwd, ctx))
       return "Error: source authorization changed during listing.";
     lines.push(
-      `## ${item.label} (id: ${item.sourceId}, kind: ${item.kind}, status: ${item.status}, readPolicy: ${item.readPolicy})`,
+      `## ${item.label} (id: ${item.sourceId}, kind: ${item.kind}, status: ${item.status}, readPolicy: ${item.readPolicy}${item.priority === "high" ? ", priority: high" : ""})`,
     );
     if (item.status !== "ok") continue;
 
