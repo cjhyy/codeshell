@@ -7,7 +7,7 @@
  * types come from preload/types and ADAPTER_KINDS from catalogEditor.
  */
 import React, { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
-import { Plus, Trash2, ChevronDown, ChevronRight, RefreshCw } from "lucide-react";
+import { Plus, Trash2, ChevronDown, ChevronRight, RefreshCw, Loader2 } from "lucide-react";
 import type { CatalogEntry, ModelPreset, ParamSpec } from "../../preload/types";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -330,13 +330,29 @@ export function ModelCatalogPanel(_props: Props) {
     >
       <header className="flex min-w-0 flex-wrap items-start justify-between gap-3">
         <div className="flex min-w-0 flex-1 basis-56 flex-col gap-1">
-          <h3
-            ref={heading}
-            tabIndex={-1}
-            className="m-0 text-[0.95rem] font-semibold text-foreground"
-          >
-            {t("settingsX.catalog.title")}
-          </h3>
+          <div className="flex min-w-0 items-center gap-2">
+            <h3
+              ref={heading}
+              tabIndex={-1}
+              className="m-0 text-[0.95rem] font-semibold text-foreground"
+            >
+              {t("settingsX.catalog.title")}
+            </h3>
+            {/* Keep refresh progress in the header without shifting the editor. */}
+            <span
+              role={pending || loading ? "status" : undefined}
+              className="flex size-4 shrink-0 items-center justify-center"
+            >
+              {(pending || loading) && (
+                <>
+                  <Loader2 size={14} className="animate-spin text-muted-foreground" aria-hidden />
+                  <span className="sr-only">
+                    {t(pending ? "settingsX.catalog.updating" : "settingsX.catalog.loading")}
+                  </span>
+                </>
+              )}
+            </span>
+          </div>
           <p className="m-0 text-xs leading-relaxed text-muted-foreground">
             {t("settingsX.catalog.desc")}
           </p>
@@ -352,15 +368,6 @@ export function ModelCatalogPanel(_props: Props) {
         </Button>
       </header>
 
-      {pending ? (
-        <p role="status" className="text-sm text-muted-foreground">
-          {t("settingsX.catalog.updating")}
-        </p>
-      ) : loading ? (
-        <p role="status" className="text-sm text-muted-foreground">
-          {t("settingsX.catalog.loading")}
-        </p>
-      ) : null}
       {readError && (
         <div
           role="alert"
