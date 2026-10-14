@@ -12,6 +12,8 @@ import {
   ListTodo,
   KeyRound,
   FlaskConical,
+  UserRound,
+  LogOut,
 } from "lucide-react";
 import { saveUILanguage, languageLabel, type UILanguage } from "../uiLanguage";
 import { useT } from "../i18n/I18nProvider";
@@ -22,6 +24,7 @@ import {
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuSeparator,
+  DropdownMenuLabel,
   DropdownMenuPortal,
   DropdownMenuSub,
   DropdownMenuSubTrigger,
@@ -33,7 +36,7 @@ import { cn } from "@/lib/utils";
 
 export type ActivityPage = "task_inbox" | "sessions" | "runs" | "approvals" | "logs";
 
-interface Props {
+export interface SettingsMenuProps {
   onOpenSettingsPage: () => void;
   /** Task and history pages also stay available from the global command palette. */
   onNavigate?: (page: ActivityPage | "credentials" | "optimization_lab") => void;
@@ -43,6 +46,15 @@ interface Props {
   sidebarCollapsed?: boolean;
   petWidgetVisible: boolean;
   onTogglePetWidget: () => void;
+  trigger?: React.ReactElement;
+  account?: {
+    label: string;
+    username?: string;
+    detail: string;
+    onManage: () => void;
+    onLogout?: () => void;
+    logoutDisabled?: boolean;
+  };
 }
 
 const LANGUAGES: UILanguage[] = ["zh", "en"];
@@ -56,7 +68,9 @@ export function SettingsMenu({
   sidebarCollapsed,
   petWidgetVisible,
   onTogglePetWidget,
-}: Props) {
+  trigger: customTrigger,
+  account,
+}: SettingsMenuProps) {
   const { t, lang } = useT();
   const [open, setOpen] = useState(false);
   const [submenu, setSubmenu] = useState<"activity" | "language" | null>(null);
@@ -75,7 +89,7 @@ export function SettingsMenu({
     setSubmenu(null);
     (kind === "activity" ? activityRef : languageRef).current?.focus();
   };
-  const trigger = (
+  const trigger = customTrigger ?? (
     <Button
       ref={triggerRef}
       type="button"
@@ -101,12 +115,15 @@ export function SettingsMenu({
         if (!next) setSubmenu(null);
       }}
     >
-      <DropdownMenuTrigger asChild>{trigger}</DropdownMenuTrigger>
+      <DropdownMenuTrigger ref={triggerRef} asChild>
+        {trigger}
+      </DropdownMenuTrigger>
       <DropdownMenuContent
-        aria-label={t("settingsX.menu.settings")}
+        aria-label={t(account ? "settingsX.cloudAccount.manage" : "settingsX.menu.settings")}
+        aria-labelledby={undefined}
         side="top"
         align="start"
-        className="w-60 max-w-[calc(100vw-1.5rem)] rounded-xl p-1.5"
+        className="w-64 max-w-[calc(100vw-1.5rem)] rounded-xl p-1.5"
         onCloseAutoFocus={(event) => {
           const navigate = pendingNavigationRef.current;
           if (!navigate) return;
@@ -121,6 +138,63 @@ export function SettingsMenu({
           if (event.isComposing || event.keyCode === 229) event.preventDefault();
         }}
       >
+        {account && (
+          <DropdownMenuLabel className="min-w-0 px-2.5 pb-2 pt-1.5 font-normal">
+            <div className="truncate text-sm" title={account.username || account.label}>
+              {account.username || account.label}
+            </div>
+            <div className="mt-0.5 text-xs">{account.detail}</div>
+          </DropdownMenuLabel>
+        )}
+        <DropdownMenuItem
+          className="rounded-lg py-2"
+          onSelect={() => closeThenNavigate(onOpenSettingsPage)}
+        >
+          <SettingsIcon size={14} aria-hidden />
+          {t(account ? "settingsX.menu.settings" : "settingsX.menu.openSettings")}
+          {!account && <ArrowRight size={12} className="ml-auto" aria-hidden />}
+        </DropdownMenuItem>
+        <DropdownMenuSub
+          open={submenu === "language"}
+          onOpenChange={(next) =>
+            setSubmenu((current) => (next ? "language" : current === "language" ? null : current))
+          }
+        >
+          <DropdownMenuSubTrigger
+            ref={languageRef}
+            className="gap-2 rounded-lg py-2"
+            onPointerMove={(event) => event.preventDefault()}
+            onClick={(event) => {
+              event.preventDefault();
+              setSubmenu((current) => (current === "language" ? null : "language"));
+            }}
+          >
+            <Globe size={14} aria-hidden />
+            {t("settingsX.menu.switchLanguage")}
+          </DropdownMenuSubTrigger>
+          <DropdownMenuPortal>
+            <DropdownMenuSubContent
+              aria-label={t("settingsX.menu.switchLanguage")}
+              className="w-44 rounded-xl p-1.5"
+              onFocusOutside={(event) => event.preventDefault()}
+              onEscapeKeyDown={(event) => closeSubmenu(event, "language")}
+            >
+              <DropdownMenuRadioGroup
+                value={lang}
+                onValueChange={(value) => {
+                  if (LANGUAGES.includes(value as UILanguage)) saveUILanguage(value as UILanguage);
+                }}
+              >
+                {LANGUAGES.map((code) => (
+                  <DropdownMenuRadioItem key={code} value={code} className="rounded-lg py-2">
+                    {languageLabel(code)}
+                  </DropdownMenuRadioItem>
+                ))}
+              </DropdownMenuRadioGroup>
+            </DropdownMenuSubContent>
+          </DropdownMenuPortal>
+        </DropdownMenuSub>
+        <DropdownMenuSeparator />
         {onNavigate && (
           <DropdownMenuSub
             open={submenu === "activity"}
@@ -203,55 +277,35 @@ export function SettingsMenu({
           <Ghost size={14} aria-hidden />
           {t(petWidgetVisible ? "pet.widget.hide" : "pet.widget.show")}
         </DropdownMenuItem>
-        <DropdownMenuSub
-          open={submenu === "language"}
-          onOpenChange={(next) =>
-            setSubmenu((current) => (next ? "language" : current === "language" ? null : current))
-          }
-        >
-          <DropdownMenuSubTrigger
-            ref={languageRef}
-            className="gap-2 rounded-lg py-2"
-            onPointerMove={(event) => event.preventDefault()}
-            onClick={(event) => {
-              event.preventDefault();
-              setSubmenu((current) => (current === "language" ? null : "language"));
-            }}
-          >
-            <Globe size={14} aria-hidden />
-            {t("settingsX.menu.switchLanguage")}
-          </DropdownMenuSubTrigger>
-          <DropdownMenuPortal>
-            <DropdownMenuSubContent
-              aria-label={t("settingsX.menu.switchLanguage")}
-              className="w-44 rounded-xl p-1.5"
-              onFocusOutside={(event) => event.preventDefault()}
-              onEscapeKeyDown={(event) => closeSubmenu(event, "language")}
+        {account && (
+          <>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem
+              className="rounded-lg py-2"
+              onSelect={() => closeThenNavigate(account.onManage)}
             >
-              <DropdownMenuRadioGroup
-                value={lang}
-                onValueChange={(value) => {
-                  if (LANGUAGES.includes(value as UILanguage)) saveUILanguage(value as UILanguage);
-                }}
-              >
-                {LANGUAGES.map((code) => (
-                  <DropdownMenuRadioItem key={code} value={code} className="rounded-lg py-2">
-                    {languageLabel(code)}
-                  </DropdownMenuRadioItem>
-                ))}
-              </DropdownMenuRadioGroup>
-            </DropdownMenuSubContent>
-          </DropdownMenuPortal>
-        </DropdownMenuSub>
-        <DropdownMenuSeparator />
-        <DropdownMenuItem
-          className="rounded-lg py-2 font-medium text-primary"
-          onSelect={() => closeThenNavigate(onOpenSettingsPage)}
-        >
-          <SettingsIcon size={14} aria-hidden />
-          {t("settingsX.menu.openSettings")}
-          <ArrowRight size={12} className="ml-auto" aria-hidden />
-        </DropdownMenuItem>
+              <UserRound size={14} aria-hidden />
+              {t(
+                account.username
+                  ? "settingsX.cloudAccount.manage"
+                  : "settingsX.cloudAccount.signInAccount",
+              )}
+            </DropdownMenuItem>
+            {account.onLogout && (
+              <>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem
+                  className="rounded-lg py-2"
+                  disabled={account.logoutDisabled}
+                  onSelect={() => closeThenNavigate(() => account.onLogout?.())}
+                >
+                  <LogOut size={14} aria-hidden />
+                  {t("settingsX.cloudAccount.logout")}
+                </DropdownMenuItem>
+              </>
+            )}
+          </>
+        )}
       </DropdownMenuContent>
     </DropdownMenu>
   );

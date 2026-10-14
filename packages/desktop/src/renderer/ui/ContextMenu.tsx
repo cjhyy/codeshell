@@ -1,4 +1,5 @@
 import React, { useEffect, useRef } from "react";
+import { createPortal } from "react-dom";
 import { cn } from "@/lib/utils";
 import { useAnchoredPopover } from "../chat/useAnchoredPopover";
 
@@ -14,20 +15,23 @@ interface Props {
   y: number;
   items: ContextMenuItem[];
   onClose: () => void;
+  /** Keep a menu inside its modal focus boundary while escaping themed surfaces. */
+  container?: HTMLElement | null;
 }
 
 /**
  * Tiny right-click menu rendered at viewport coordinates.
  *
  * Closes on outside click, escape, or after any item activation. The
- * menu is portal-free — we trust the parent's z-index ladder. Items
- * with `danger` get a red text tint; disabled items are no-ops.
+ * menu escapes clipping and stacking ancestors through a portal. A modal
+ * caller supplies its content boundary to preserve pointer/focus isolation.
+ * Items with `danger` get a red text tint; disabled items are no-ops.
  *
  * Positioned via `useAnchoredPopover` with the cursor as a virtual
  * anchor, so it flips left/up and clamps to the viewport near the
  * right/bottom edges instead of overflowing.
  */
-export function ContextMenu({ x, y, items, onClose }: Props) {
+export function ContextMenu({ x, y, items, onClose, container }: Props) {
   const ref = useRef<HTMLUListElement>(null);
   const openerRef = useRef<HTMLElement | null>(null);
   const closeRef = useRef(onClose);
@@ -87,7 +91,7 @@ export function ContextMenu({ x, y, items, onClose }: Props) {
     };
   }, []);
 
-  return (
+  return createPortal(
     <ul
       ref={ref}
       className="max-h-[calc(100dvh-1.25rem)] w-max min-w-40 max-w-[calc(100vw-1.25rem)] list-none overflow-y-auto rounded-xl border border-border/80 bg-popover p-1 text-sm text-popover-foreground shadow-xl outline-none"
@@ -152,6 +156,7 @@ export function ContextMenu({ x, y, items, onClose }: Props) {
           </button>
         </li>
       ))}
-    </ul>
+    </ul>,
+    container ?? document.body,
   );
 }

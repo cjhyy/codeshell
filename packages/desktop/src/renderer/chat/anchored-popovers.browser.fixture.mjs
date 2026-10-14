@@ -42,10 +42,11 @@ const source = `
     const [goal,setGoal]=React.useState('Long objective '.repeat(40));
     const [contextOpen,setContextOpen]=React.useState(false);
     const toggleRef=React.useRef(null);
+    const contextHostRef=React.useRef(null);
     if(kind==='context'||kind==='drawer-session') return <ResponsiveSidebar narrow open onClose={()=>window.actions.push('drawer-close')} onAfterClose={()=>{}} toggleRef={toggleRef}>
-      <div className="w-full p-3">
+      <div ref={contextHostRef} className="w-full p-3">
         {kind==='context'?<><button id="context-trigger" onContextMenu={event=>{event.preventDefault();setContextOpen(true)}}>Open menu</button>
-          {contextOpen&&<ContextMenu x={12} y={100} items={projects.map(p=>({label:p.name,onClick:()=>window.actions.push(p.id)}))} onClose={()=>setContextOpen(false)}/>}</>
+          {contextOpen&&<ContextMenu x={12} y={100} container={contextHostRef.current?.closest('[role="dialog"]')} items={projects.map(p=>({label:p.name,onClick:()=>window.actions.push(p.id)}))} onClose={()=>setContextOpen(false)}/>}</>
           :<ul><FixtureSessionRow s={{id:'session',title:'Long session title '.repeat(100),updatedAt:1}} isActive={false} folderName="project" branch="main" showKbd={false} kbdIndex={0} onClick={()=>{}} onContextMenu={()=>{}}/></ul>}
       </div>
     </ResponsiveSidebar>;

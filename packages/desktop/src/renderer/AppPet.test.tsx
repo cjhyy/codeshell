@@ -120,16 +120,11 @@ describe("App Pet lifecycle boundaries", () => {
     expect(settingsMenuSource).toContain('"pet.widget.show"');
   });
 
-  test("opens language explicitly and keeps the full settings entry last", () => {
-    const petToggleIndex = settingsMenuSource.indexOf('"pet.widget.hide"');
-    const languageIndex = settingsMenuSource.indexOf('t("settingsX.menu.switchLanguage")');
-    const openSettingsIndex = settingsMenuSource.indexOf('t("settingsX.menu.openSettings")');
+  test("opens language explicitly from the account menu", () => {
     expect(settingsMenuSource).not.toContain("onMouseEnter");
     expect(settingsMenuSource).not.toMatch(/\bonFocus\s*=/);
     expect(settingsMenuSource).toContain("onPointerMove={(event) => event.preventDefault()}");
-    expect(petToggleIndex).toBeGreaterThan(-1);
-    expect(languageIndex).toBeGreaterThan(petToggleIndex);
-    expect(openSettingsIndex).toBeGreaterThan(languageIndex);
+    expect(sidebarSource).toContain("<AccountSidebarEntry");
   });
 
   test("starts the desktop Pet hidden until the user explicitly toggles it", () => {

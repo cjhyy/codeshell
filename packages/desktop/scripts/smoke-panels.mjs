@@ -21,6 +21,7 @@ import {
   findCodeShellWindow,
   launchCodeShellElectron,
   makeIsolatedElectronHome,
+  navigateSettingsMenu,
 } from "./electron-harness.mjs";
 import { startMockProviderServer } from "./mock-provider-server.mjs";
 import { prepareConfinedElectronFixture } from "./confined-electron-fixture.mjs";
@@ -451,10 +452,7 @@ async function mountCorePanels(win) {
 }
 
 async function openSettings(win) {
-  const settings = win.getByRole("button", { name: /设置|Settings/i }).last();
-  await settings.click();
-  const open = win.getByText(/打开设置|Open settings/i).first();
-  if (await open.isVisible().catch(() => false)) await open.click();
+  await navigateSettingsMenu(win, /^(设置|Settings)$/);
   await win.waitForFunction(() => {
     try {
       return (

@@ -72,24 +72,29 @@ export function resolveEffectiveSourceAccess(
   input: ResolveSourceAccessInput,
 ): EffectiveSourceAccess[] {
   const bindings = listBindings(input.settings, input.cwd);
-  const access = bindings.map((binding) => {
+  const access = bindings.flatMap((binding) => {
     const definition = definitionFor(binding, input.cwd);
-    return {
-      sourceId: binding.sourceId,
-      label: definition?.label ?? binding.sourceId,
-      kind: definition?.kind ?? "unknown",
-      scopes: binding.scopes,
-      readPolicy: binding.readPolicy,
-      ...(binding.priority ? { priority: binding.priority } : {}),
-      status: statusOf(definition, input.credentialStatus, input),
-      ...(definition ? { definition } : {}),
-      ...(definition?.kind === "link"
-        ? { credentialRevision: linkSourceAuthorityRevision(definition, input) }
-        : {}),
-    } satisfies EffectiveSourceAccess;
+    // Historical demo definitions must not appear in prompts or become readable
+    // in a host. Keep the adapter available to isolated regression fixtures only.
+    if (definition?.kind === "mock" && process.env.NODE_ENV !== "test") return [];
+    return [
+      {
+        sourceId: binding.sourceId,
+        label: definition?.label ?? binding.sourceId,
+        kind: definition?.kind ?? "unknown",
+        scopes: binding.scopes,
+        readPolicy: binding.readPolicy,
+        ...(binding.priority ? { priority: binding.priority } : {}),
+        status: statusOf(definition, input.credentialStatus, input),
+        ...(definition ? { definition } : {}),
+        ...(definition?.kind === "link"
+          ? { credentialRevision: linkSourceAuthorityRevision(definition, input) }
+          : {}),
+      } satisfies EffectiveSourceAccess,
+    ];
   });
 
-  const hasImplicitLocalFiles = bindings.length > 0 || listLocalFiles(input.cwd).length > 0;
+  const hasImplicitLocalFiles = access.length > 0 || listLocalFiles(input.cwd).length > 0;
   if (hasImplicitLocalFiles && !access.some((item) => item.sourceId === LOCAL_FILES_SOURCE_ID)) {
     const definition = localFilesSourceFor(input.cwd);
     access.push({

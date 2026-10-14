@@ -21,6 +21,7 @@ import {
   listBindings,
   listLocalFiles,
   listSourceDefinitions,
+  LOCAL_FILES_SOURCE_ID,
   invalidateUploadedDocumentIndex,
   readSourceDefinition,
   resolveEffectiveSourceAccess,
@@ -70,7 +71,7 @@ function checkedUploadsDir(cwd: string, create: boolean): string | undefined {
 }
 
 export function catalogList() {
-  return listSourceDefinitions();
+  return listSourceDefinitions().filter((definition) => definition.kind !== "mock");
 }
 
 export function catalogSave(definition: Parameters<typeof saveSourceDefinition>[0]): void {
@@ -79,6 +80,7 @@ export function catalogSave(definition: Parameters<typeof saveSourceDefinition>[
     readSourceDefinition(definition.id)?.kind === "collection"
   )
     throw new Error("资料集请通过文件选择和资料集编辑界面修改。");
+  if (definition.kind === "mock") throw new Error("演示数据仅用于测试，不能保存为项目资料。");
   saveSourceDefinition(definition);
 }
 
@@ -90,24 +92,36 @@ export function catalogDelete(id: string): void {
 
 export function workspaceAccess(cwd: string) {
   const settings = new SettingsManager(cwd, "full");
+  const mockIds = new Set(
+    listSourceDefinitions()
+      .filter((definition) => definition.kind === "mock")
+      .map((definition) => definition.id),
+  );
   let uploads: ReturnType<typeof listLocalFiles> = [];
   try {
     if (checkedUploadsDir(cwd, false)) uploads = listLocalFiles(cwd);
   } catch {
     // An invalid/symlinked project upload root is unavailable, not a source.
   }
+  const bindings = listBindings(settings, cwd).filter((binding) => !mockIds.has(binding.sourceId));
   return {
-    bindings: listBindings(settings, cwd),
+    bindings,
     access: resolveEffectiveSourceAccess({
       cwd,
       settings,
       credentialStatus: defaultCredentialStatus,
-    }),
+    }).filter(
+      (access) =>
+        access.kind !== "mock" &&
+        (access.sourceId !== LOCAL_FILES_SOURCE_ID || bindings.length > 0 || uploads.length > 0),
+    ),
     uploads,
   };
 }
 
 export function bind(cwd: string, binding: Parameters<typeof bindWorkspaceSource>[2]): void {
+  if (readSourceDefinition(binding.sourceId)?.kind === "mock")
+    throw new Error("演示数据仅用于测试，不能绑定到项目。");
   bindWorkspaceSource(new SettingsManager(cwd, "full"), cwd, binding);
 }
 
@@ -118,6 +132,7 @@ export function unbind(cwd: string, sourceId: string): void {
 export async function listScopes(sourceId: string) {
   const definition = readSourceDefinition(sourceId);
   if (!definition) throw new Error(`source not found: ${sourceId}`);
+  if (definition.kind === "mock") throw new Error("演示数据仅用于测试，不能读取。");
 
   const adapter = connectorAdapterFor(definition.kind);
   if (!adapter) throw new Error(`no adapter registered for source kind: ${definition.kind}`);

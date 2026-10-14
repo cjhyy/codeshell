@@ -273,16 +273,29 @@ const expectedGithub: [string, AddLinkedFileSourcesInput] = [
 ];
 
 try {
+  const chooseProject = ["stale-project-snapshot", "project-change-clears-selection"].includes(
+    scenario,
+  );
   await update(() =>
     root.render(
       <LinkedFileSourcesDialog
         projects={projects}
-        initialProjectId="project-a"
+        initialProjectId={chooseProject ? undefined : "project-a"}
         onClose={() => closeCount++}
         onAdded={() => addedCount++}
       />,
     ),
   );
+  if (chooseProject) await select("项目", "project-a");
+  else {
+    assert.equal(
+      nodes().filter((node) => node.tagName === "SELECT" && props(node)["aria-label"] === "项目")
+        .length,
+      0,
+    );
+    assert.ok(text(container).includes("Project A"));
+    assert.ok(text(container).includes("/fixture/project-a"));
+  }
   assert.equal(addCalls.length, 0);
   assert.deepEqual(forbiddenCalls, []);
   assert.deepEqual(snapshotCalls, ["project-a"]);
@@ -446,7 +459,12 @@ try {
       } else if (["add-lock", "add-unmount", "add-project-disappears"].includes(scenario)) {
         assert.equal(addedCount, 0);
         assert.equal(closeCount, 0);
-        assert.equal(props(selection("项目")).disabled, true);
+        assert.equal(
+          nodes().filter(
+            (node) => node.tagName === "SELECT" && props(node)["aria-label"] === "项目",
+          ).length,
+          0,
+        );
         assert.equal(props(selection("已连接服务")).disabled, true);
         assert.equal(props(selection("权重")).disabled, true);
         assert.equal(props(field("linked-file-paths")).disabled, true);

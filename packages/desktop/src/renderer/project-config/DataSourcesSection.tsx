@@ -40,7 +40,6 @@ function statusLabel(t: TFunction, status: EffectiveSourceAccess["status"]): str
 
 function kindLabel(t: TFunction, kind: string): string {
   if (kind === "collection") return t("sourceCollections.kind");
-  if (kind === "mock") return t("projectConfig.dataSources.kindMock");
   if (kind === "mcp-resource") return t("projectConfig.dataSources.kindMcpResource");
   if (kind === "link") return t("ext.link.sourcesKindLink");
   if (kind === "local-files") return t("projectConfig.dataSources.kindLocalFiles");
@@ -120,10 +119,18 @@ function ProjectDataSources({
         window.codeshell.projectSourceAccess(projectId),
       ]);
       if (!active.current || request !== loadRequest.current) return false;
-      setCatalog(nextCatalog);
+      // Retired fixtures may still appear in older host snapshots; keep unrelated dangling IDs.
+      const sourceKinds = new Map(nextCatalog.map((source) => [source.id, source.kind]));
+      const mockSourceIds = new Set([
+        ...nextCatalog.filter((source) => source.kind === "mock").map((source) => source.id),
+        ...nextSnapshot.access
+          .filter((item) => (sourceKinds.get(item.sourceId) ?? item.kind) === "mock")
+          .map((item) => item.sourceId),
+      ]);
+      setCatalog(nextCatalog.filter((source) => source.kind !== "mock"));
       setSnapshot({
-        bindings: nextSnapshot.bindings ?? [],
-        access: nextSnapshot.access,
+        bindings: (nextSnapshot.bindings ?? []).filter((item) => !mockSourceIds.has(item.sourceId)),
+        access: nextSnapshot.access.filter((item) => !mockSourceIds.has(item.sourceId)),
         uploads: nextSnapshot.uploads,
       });
       setError(null);
@@ -230,6 +237,7 @@ function ProjectDataSources({
       const projected = snapshot.access.find((item) => item.sourceId === binding.sourceId);
       return {
         ...binding,
+        definition,
         label: definition?.label ?? projected?.label ?? binding.sourceId,
         kind: definition?.kind ?? projected?.kind ?? "unknown",
         status: (!definition
@@ -369,7 +377,11 @@ function ProjectDataSources({
                 <div className="min-w-0 space-y-1">
                   <div className="flex flex-wrap items-center gap-2">
                     <span className="text-sm font-medium text-foreground">{item.label}</span>
-                    <Badge variant="secondary">{kindLabel(t, item.kind)}</Badge>
+                    <Badge variant="secondary">
+                      {item.kind === "link" && item.definition?.adapterConfig.action === "get_file"
+                        ? t("ext.link.sourcesKindFile")
+                        : kindLabel(t, item.kind)}
+                    </Badge>
                     {item.priority === "high" && (
                       <Badge>{t("sourceCollections.linkedFiles.high")}</Badge>
                     )}
@@ -483,7 +495,10 @@ function ProjectDataSources({
                 options={available.map((source) => ({
                   value: source.id,
                   label: source.label,
-                  description: kindLabel(t, source.kind),
+                  description:
+                    source.kind === "link" && source.adapterConfig.action === "get_file"
+                      ? t("ext.link.sourcesKindFile")
+                      : kindLabel(t, source.kind),
                 }))}
               />
             </label>
