@@ -5,11 +5,15 @@ export const sourceCollections = {
       description:
         "将本地文件和静态文件链接归入一个集合，供多个项目引用。原文件保留在原处，不会重复上传。",
       new: "新建资料集",
-      empty: "还没有资料集。创建后可添加文件或文件夹的当前清单。",
+      empty: "还没有资料集。选择上方的文件、文件夹或链接入口，开始添加资料。",
+      addSource: "添加资料",
       name: "资料集名称",
       descriptionLabel: "说明",
       nameRequired: "请填写资料集名称。",
       create: "创建资料集",
+      createAndAddFiles: "创建并选择文件",
+      createAndAddFolder: "创建并选择文件夹",
+      createAndAddUrl: "创建并添加链接",
       edit: "管理资料集",
       save: "保存名称与设置",
       cancel: "取消",
@@ -50,7 +54,8 @@ export const sourceCollections = {
       loading: "正在读取资料集…",
       reload: "重新加载",
       advanced: "高级数据源（Link / MCP / 演示）",
-      globalHint: "这里管理可复用资料集；切换到项目范围，选择该项目可访问的当前文件。",
+      globalHint:
+        "添加可复用的本地文件、文件夹或文档链接。在项目配置的数据源中，选择该项目可访问的资料。",
       projectHint:
         "引用已有资料集或其他源，无需复制文件。项目权限独立保存，数字人权限只能进一步收窄访问范围。",
       kind: "资料集",
@@ -65,7 +70,9 @@ export const sourceCollections = {
       removedSelection: "原引用中有 {count} 个文件已移出集合；保存后将移除这些失效引用。",
       projectFiles: "本项目文件",
       projectFilesHint: "保留原有上传文件，仅供本项目使用；跨项目复用资料请在全局资料集中添加。",
-      availableHint: "没有可添加的源。请切换到全局范围创建资料集，或管理已有高级数据源。",
+      availableHint:
+        "还没有可引用的资料集。先添加文件、文件夹或文档链接，再回来选择本项目可访问的文件。",
+      manageCollections: "添加或管理资料集",
       updated: "已保存",
     },
   },
@@ -75,11 +82,15 @@ export const sourceCollections = {
       description:
         "Group local files and static file links for reuse across projects. Original files stay in place without repeated uploads.",
       new: "New collection",
-      empty: "No collections yet. Create one and add files or a folder's current file list.",
+      empty: "No collections yet. Choose files, a folder, or a file URL above to add documents.",
+      addSource: "Add documents",
       name: "Collection name",
       descriptionLabel: "Description",
       nameRequired: "Enter a collection name.",
       create: "Create collection",
+      createAndAddFiles: "Create and choose files",
+      createAndAddFolder: "Create and choose folder",
+      createAndAddUrl: "Create and add URL",
       edit: "Manage collection",
       save: "Save name and settings",
       cancel: "Cancel",
@@ -123,7 +134,7 @@ export const sourceCollections = {
       reload: "Reload",
       advanced: "Advanced sources (Link / MCP / demo)",
       globalHint:
-        "Manage reusable collections here. Switch to a project to select the current files it may access.",
+        "Add reusable local files, folders, or file URLs. Choose what a project may access in its data source settings.",
       projectHint:
         "Reference existing collections or other sources without copying files. Project permissions are saved independently; digital human permissions can only narrow access further.",
       kind: "Collection",
@@ -144,7 +155,8 @@ export const sourceCollections = {
       projectFilesHint:
         "Existing uploads remain available to this project. Add files to a global collection to reuse them across projects.",
       availableHint:
-        "No sources to add. Switch to global scope to create a collection or manage existing advanced sources.",
+        "No collections to reference yet. Add files, a folder, or a file URL, then return to choose what this project may access.",
+      manageCollections: "Add or manage collections",
       updated: "Saved",
     },
   },

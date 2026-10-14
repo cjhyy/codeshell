@@ -44,6 +44,7 @@ export function DataSourceCatalogSection({
   const [actionId, setActionId] = React.useState("");
   const [params, setParams] = React.useState("{}");
   const [loading, setLoading] = React.useState(true);
+  const [catalogLoaded, setCatalogLoaded] = React.useState(false);
   const [busy, setBusy] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
   const active = React.useRef(true);
@@ -98,21 +99,25 @@ export function DataSourceCatalogSection({
 
   const refresh = React.useCallback(async () => {
     const request = ++loadRequest.current;
-    const next = await window.codeshell.listSourceCatalog();
-    if (active.current && request === loadRequest.current) setSources(next);
+    setLoading(true);
+    setError(null);
+    try {
+      const next = await window.codeshell.listSourceCatalog();
+      if (active.current && request === loadRequest.current) {
+        setSources(next);
+        setCatalogLoaded(true);
+      }
+    } catch (caught) {
+      if (!active.current || request !== loadRequest.current) return;
+      setError(errorText(caught));
+      throw caught;
+    } finally {
+      if (active.current && request === loadRequest.current) setLoading(false);
+    }
   }, []);
 
   React.useEffect(() => {
-    void refresh()
-      .then(() => {
-        if (active.current) setError(null);
-      })
-      .catch((caught) => {
-        if (active.current) setError(errorText(caught));
-      })
-      .finally(() => {
-        if (active.current) setLoading(false);
-      });
+    void refresh().catch(() => {});
   }, [refresh]);
 
   const run = async (operation: () => Promise<unknown>): Promise<boolean> => {
@@ -195,14 +200,31 @@ export function DataSourceCatalogSection({
   const advancedSources = sources.filter((source) => source.kind !== "collection");
   return (
     <div className="space-y-5">
-      <SourceCollectionsSection
-        definitions={sources.filter((source) => source.kind === "collection")}
-        onChanged={() => {
-          void refresh().catch((cause) => {
-            if (active.current) setError(errorText(cause));
-          });
-        }}
-      />
+      {loading && (
+        <p role="status" className="text-xs text-muted-foreground">
+          {t("ext.link.sourcesLoading")}
+        </p>
+      )}
+      {error && (
+        <div role="alert" className="space-y-2 text-xs text-status-err">
+          <p>{error}</p>
+          <Button
+            type="button"
+            size="sm"
+            variant="outline"
+            disabled={loading || busy}
+            onClick={() => void refresh().catch(() => {})}
+          >
+            {t("sourceCollections.reload")}
+          </Button>
+        </div>
+      )}
+      {catalogLoaded && (
+        <SourceCollectionsSection
+          definitions={sources.filter((source) => source.kind === "collection")}
+          onChanged={() => void refresh().catch(() => {})}
+        />
+      )}
       <details className="rounded-lg border border-border p-4">
         <summary className="cursor-pointer text-sm font-medium">
           {t("sourceCollections.advanced")}
@@ -321,15 +343,7 @@ export function DataSourceCatalogSection({
             </Button>
           </div>
 
-          {error ? (
-            <p role="alert" className="text-xs text-status-err">
-              {error}
-            </p>
-          ) : null}
-
-          {loading ? (
-            <p className="text-xs text-muted-foreground">{t("ext.link.sourcesLoading")}</p>
-          ) : advancedSources.length === 0 ? (
+          {!catalogLoaded ? null : advancedSources.length === 0 ? (
             <p className="text-xs text-muted-foreground">{t("ext.link.sourcesEmpty")}</p>
           ) : (
             <ul className="space-y-2">

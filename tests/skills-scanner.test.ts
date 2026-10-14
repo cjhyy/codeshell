@@ -162,6 +162,44 @@ describe("scanSkills - directory layout", () => {
     expect(review!.content).toBe("review body");
   });
 
+  it.each(["", " \t\n "])(
+    "keeps global scans independent of the process directory (cwd: %j)",
+    (cwd) => {
+      makeSkillDir(
+        join(fakeHome, ".code-shell", "skills"),
+        "shared",
+        "description: from user",
+        "user body",
+      );
+      makeSkillDir(
+        join(projectRoot, ".code-shell", "skills"),
+        "shared",
+        "description: from project",
+        "project body",
+      );
+      makeSkillDir(
+        join(projectRoot, ".agents", "skills"),
+        "project-only",
+        "description: from agents",
+        "agents body",
+      );
+
+      const originalCwd = process.cwd();
+      try {
+        process.chdir(projectRoot);
+        const skills = scanSkills(cwd);
+        expect(skills).toHaveLength(1);
+        expect(skills[0]).toMatchObject({
+          name: "shared",
+          source: "user",
+          content: "user body",
+        });
+      } finally {
+        process.chdir(originalCwd);
+      }
+    },
+  );
+
   it("project skill shadows user skill of the same name", () => {
     makeSkillDir(
       join(fakeHome, ".code-shell", "skills"),
@@ -435,6 +473,18 @@ describe("scanSkills - plugin integration", () => {
       expect(pdf!.source).toBe("plugin");
       expect(pdf!.description).toBe("pdf desc");
       expect(pdf!.content).toBe("PDF body");
+    } finally {
+      rmSync(cache, { recursive: true, force: true });
+    }
+  });
+
+  it("discovers installed plugin skills without a project directory", () => {
+    const cache = mkdtempSync(join(tmpdir(), "scan-plugin-global-"));
+    try {
+      makePluginInstall("docs@mkt", cache, "pdf", "PDF body");
+      expect(scanSkills("")).toContainEqual(
+        expect.objectContaining({ name: "docs:pdf", source: "plugin", content: "PDF body" }),
+      );
     } finally {
       rmSync(cache, { recursive: true, force: true });
     }
