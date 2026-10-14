@@ -27,7 +27,7 @@
     },
     "packages/arena": {
       "name": "@cjhyy/code-shell-arena",
-      "version": "0.9.40",
+      "version": "0.9.41",
       "dependencies": {
         "@cjhyy/code-shell-core": "workspace:*",
         "zod": "^3.24.2",
@@ -35,15 +35,15 @@
     },
     "packages/browser-devtools": {
       "name": "@cjhyy/code-shell-browser-devtools",
-      "version": "0.9.40",
+      "version": "0.9.41",
     },
     "packages/cdp": {
       "name": "@cjhyy/code-shell-cdp",
-      "version": "0.9.40",
+      "version": "0.9.41",
     },
     "packages/chat": {
       "name": "@cjhyy/code-shell-chat",
-      "version": "0.9.40",
+      "version": "0.9.41",
       "bin": {
         "code-shell-chat": "./dist/cli.js",
       },
@@ -66,14 +66,14 @@
     },
     "packages/coding": {
       "name": "@cjhyy/code-shell-capability-coding",
-      "version": "0.9.40",
+      "version": "0.9.41",
       "dependencies": {
         "@cjhyy/code-shell-core": "workspace:*",
       },
     },
     "packages/core": {
       "name": "@cjhyy/code-shell-core",
-      "version": "0.9.40",
+      "version": "0.9.41",
       "bin": {
         "code-shell-output-journal": "./dist/cli/output-journal-repair.js",
       },
@@ -104,7 +104,7 @@
     },
     "packages/desktop": {
       "name": "@cjhyy/code-shell-desktop",
-      "version": "0.9.40",
+      "version": "0.9.41",
       "dependencies": {
         "@cjhyy/code-shell-capability-coding": "workspace:*",
         "@cjhyy/code-shell-capability-optimization-lab": "workspace:*",
@@ -171,11 +171,11 @@
     },
     "packages/link": {
       "name": "@cjhyy/code-shell-link",
-      "version": "0.9.40",
+      "version": "0.9.41",
     },
     "packages/optimization-lab": {
       "name": "@cjhyy/code-shell-capability-optimization-lab",
-      "version": "0.9.40",
+      "version": "0.9.41",
       "dependencies": {
         "@cjhyy/code-shell-core": "workspace:*",
         "zod": "^3.24.2",
@@ -183,14 +183,14 @@
     },
     "packages/pet": {
       "name": "@cjhyy/code-shell-pet",
-      "version": "0.9.40",
+      "version": "0.9.41",
       "dependencies": {
         "@cjhyy/code-shell-core": "workspace:*",
       },
     },
     "packages/server": {
       "name": "@cjhyy/code-shell-server",
-      "version": "0.9.40",
+      "version": "0.9.41",
       "bin": {
         "code-shell-serve": "./dist/bin/code-shell-serve.js",
         "code-shell-settings-recovery": "./dist/bin/code-shell-settings-recovery.js",
@@ -208,7 +208,7 @@
     },
     "packages/tui": {
       "name": "@cjhyy/code-shell-tui",
-      "version": "0.9.40",
+      "version": "0.9.41",
       "bin": {
         "code-shell": "./dist/cli/main.js",
       },
@@ -244,7 +244,7 @@
     },
     "packages/web": {
       "name": "@cjhyy/code-shell-web",
-      "version": "0.9.40",
+      "version": "0.9.41",
       "dependencies": {
         "@cjhyy/code-shell-core": "workspace:*",
         "@cjhyy/code-shell-link": "workspace:*",
