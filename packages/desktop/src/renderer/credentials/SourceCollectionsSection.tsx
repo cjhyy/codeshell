@@ -13,6 +13,8 @@ function errorText(cause: unknown): string {
   return cause instanceof Error ? cause.message : String(cause);
 }
 
+type AddKind = "files" | "folder" | "url";
+
 /** Collection mutations go through native selection and revision checks, never the generic catalog. */
 export function SourceCollectionsSection({
   definitions,
@@ -24,6 +26,7 @@ export function SourceCollectionsSection({
   const { t } = useT();
   const confirm = useConfirm();
   const [editing, setEditing] = React.useState(false);
+  const [addKind, setAddKind] = React.useState<AddKind | null>(null);
   const [view, setView] = React.useState<SourceCollectionView | null>(null);
   const [editorId, setEditorId] = React.useState<string | null>(null);
   const [label, setLabel] = React.useState("");
@@ -34,6 +37,7 @@ export function SourceCollectionsSection({
   const [busy, setBusy] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
   const [notice, setNotice] = React.useState<string | null>(null);
+  const nameRef = React.useRef<HTMLInputElement>(null);
   const lifetime = React.useRef(0);
   const active = React.useRef(true);
   const lock = React.useRef<"idle" | "confirming" | "mutating">("idle");
@@ -45,6 +49,9 @@ export function SourceCollectionsSection({
       lifetime.current += 1;
     };
   }, []);
+  React.useLayoutEffect(() => {
+    if (editing && !loading) nameRef.current?.focus();
+  }, [editing, editorId, loading]);
   const isCurrent = (request: number) => active.current && request === lifetime.current;
   const adopt = (next: SourceCollectionView, metadata = false) => {
     setView(next);
@@ -64,10 +71,11 @@ export function SourceCollectionsSection({
     setView(null);
     setError(null);
   };
-  const open = async (id?: string) => {
+  const open = async (id?: string, initialAddKind: AddKind | null = null) => {
     if (lock.current !== "idle") return;
     const request = ++lifetime.current;
     setEditing(true);
+    setAddKind(initialAddKind);
     setEditorId(id ?? null);
     setView(null);
     setLabel("");
@@ -93,6 +101,10 @@ export function SourceCollectionsSection({
       setError(t("sourceCollections.nameRequired"));
       return;
     }
+    if (addKind === "url" && !url.trim()) {
+      setError(t("sourceCollections.urlRequired"));
+      return;
+    }
     const request = lifetime.current;
     lock.current = "mutating";
     setBusy(true);
@@ -104,7 +116,26 @@ export function SourceCollectionsSection({
       });
       if (!isCurrent(request)) return;
       adopt(next, true);
+      setAddKind(null);
       onChanged();
+      if (addKind) {
+        const populated =
+          addKind === "url"
+            ? await window.codeshell.sourceCollections.update(next.definition.id, next.revision, {
+                kind: "url",
+                url: url.trim(),
+              })
+            : await window.codeshell.sourceCollections.pick(
+                next.definition.id,
+                next.revision,
+                addKind,
+              );
+        if (!isCurrent(request) || !populated) return;
+        adopt(populated);
+        if (addKind === "url") setUrl("");
+        setNotice(t("sourceCollections.updated"));
+        onChanged();
+      }
     } catch (cause) {
       if (isCurrent(request)) setError(errorText(cause));
     } finally {
@@ -211,46 +242,26 @@ export function SourceCollectionsSection({
           {t("sourceCollections.new")}
         </Button>
       </header>
-      {definitions.length === 0 ? (
-        <p className="text-xs text-muted-foreground">{t("sourceCollections.empty")}</p>
-      ) : (
-        <ul className="space-y-2">
-          {definitions.map((definition) => (
-            <li
-              key={definition.id}
-              data-collection-id={definition.id}
-              className="flex items-center justify-between gap-3 rounded-lg border border-border p-3"
+      {!editing && (
+        <div className="flex flex-wrap gap-2" aria-label={t("sourceCollections.addSource")}>
+          {(["files", "folder", "url"] as const).map((kind) => (
+            <Button
+              key={kind}
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={() => void open(undefined, kind)}
             >
-              <div className="min-w-0">
-                <span className="text-sm font-medium">{definition.label}</span>
-                {!definition.enabled && (
-                  <Badge className="ml-2" variant="secondary">
-                    {t("sourceCollections.disabled")}
-                  </Badge>
-                )}
-                {definition.description && (
-                  <p className="text-xs text-muted-foreground">{definition.description}</p>
-                )}
-                <p className="text-xs text-muted-foreground">
-                  {t("sourceCollections.files", {
-                    count: Array.isArray(definition.adapterConfig.entries)
-                      ? definition.adapterConfig.entries.length
-                      : 0,
-                  })}
-                </p>
-              </div>
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                disabled={busy}
-                onClick={() => void open(definition.id)}
-              >
-                {t("sourceCollections.edit")}
-              </Button>
-            </li>
+              {t(
+                kind === "files"
+                  ? "sourceCollections.addFiles"
+                  : kind === "folder"
+                    ? "sourceCollections.addFolder"
+                    : "sourceCollections.addUrl",
+              )}
+            </Button>
           ))}
-        </ul>
+        </div>
       )}
       {editing && (
         <section
@@ -259,7 +270,16 @@ export function SourceCollectionsSection({
         >
           <div className="flex items-center justify-between gap-3">
             <h4 className="text-sm font-semibold">
-              {view?.definition.label ?? t("sourceCollections.new")}
+              {view?.definition.label ??
+                t(
+                  addKind === "files"
+                    ? "sourceCollections.addFiles"
+                    : addKind === "folder"
+                      ? "sourceCollections.addFolder"
+                      : addKind === "url"
+                        ? "sourceCollections.addUrl"
+                        : "sourceCollections.new",
+                )}
             </h4>
             <Button
               type="button"
@@ -300,6 +320,7 @@ export function SourceCollectionsSection({
                   <label className="space-y-1 text-xs text-muted-foreground">
                     <span>{t("sourceCollections.name")}</span>
                     <Input
+                      ref={nameRef}
                       name="collection-label"
                       value={label}
                       disabled={busy}
@@ -326,10 +347,27 @@ export function SourceCollectionsSection({
                     {t("sourceCollections.enabled")}
                   </label>
                 )}
+                {!view && addKind === "url" && (
+                  <div className="space-y-2">
+                    <label className="block space-y-1 text-xs text-muted-foreground">
+                      <span>{t("sourceCollections.url")}</span>
+                      <Input
+                        name="collection-url"
+                        value={url}
+                        disabled={busy}
+                        placeholder="https://example.com/manual.pdf"
+                        onChange={(event) => setUrl(event.target.value)}
+                      />
+                    </label>
+                    <p className="text-xs text-muted-foreground">
+                      {t("sourceCollections.urlHint")}
+                    </p>
+                  </div>
+                )}
                 <Button
                   type="button"
                   size="sm"
-                  disabled={busy || !label.trim()}
+                  disabled={busy || !label.trim() || (addKind === "url" && !url.trim())}
                   onClick={() =>
                     view
                       ? void update(
@@ -344,7 +382,17 @@ export function SourceCollectionsSection({
                       : void create()
                   }
                 >
-                  {t(view ? "sourceCollections.save" : "sourceCollections.create")}
+                  {t(
+                    view
+                      ? "sourceCollections.save"
+                      : addKind === "files"
+                        ? "sourceCollections.createAndAddFiles"
+                        : addKind === "folder"
+                          ? "sourceCollections.createAndAddFolder"
+                          : addKind === "url"
+                            ? "sourceCollections.createAndAddUrl"
+                            : "sourceCollections.create",
+                  )}
                 </Button>
                 {view && (
                   <>
@@ -509,6 +557,47 @@ export function SourceCollectionsSection({
             )
           )}
         </section>
+      )}
+      {definitions.length === 0 ? (
+        !editing && <p className="text-xs text-muted-foreground">{t("sourceCollections.empty")}</p>
+      ) : (
+        <ul className="space-y-2">
+          {definitions.map((definition) => (
+            <li
+              key={definition.id}
+              data-collection-id={definition.id}
+              className="flex items-center justify-between gap-3 rounded-lg border border-border p-3"
+            >
+              <div className="min-w-0">
+                <span className="text-sm font-medium">{definition.label}</span>
+                {!definition.enabled && (
+                  <Badge className="ml-2" variant="secondary">
+                    {t("sourceCollections.disabled")}
+                  </Badge>
+                )}
+                {definition.description && (
+                  <p className="text-xs text-muted-foreground">{definition.description}</p>
+                )}
+                <p className="text-xs text-muted-foreground">
+                  {t("sourceCollections.files", {
+                    count: Array.isArray(definition.adapterConfig.entries)
+                      ? definition.adapterConfig.entries.length
+                      : 0,
+                  })}
+                </p>
+              </div>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                disabled={busy}
+                onClick={() => void open(definition.id)}
+              >
+                {t("sourceCollections.edit")}
+              </Button>
+            </li>
+          ))}
+        </ul>
       )}
     </section>
   );

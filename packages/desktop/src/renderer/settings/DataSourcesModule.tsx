@@ -6,17 +6,18 @@ import { DataSourcesSection } from "../project-config/DataSourcesSection";
 interface Props {
   scope: "user" | "project";
   projectId: string | null;
+  onManageCollections?: () => void;
 }
 
 /**
  * Global scope owns reusable collections and advanced sources; project scope
  * saves explicit references and retains existing project-local uploads.
  */
-export function DataSourcesModule({ scope, projectId }: Props) {
+export function DataSourcesModule({ scope, projectId, onManageCollections }: Props) {
   const { t } = useT();
   if (scope === "project") {
     if (!projectId) return null;
-    return <DataSourcesSection projectId={projectId} />;
+    return <DataSourcesSection projectId={projectId} onManageCollections={onManageCollections} />;
   }
   return (
     <div className="flex flex-col gap-4">

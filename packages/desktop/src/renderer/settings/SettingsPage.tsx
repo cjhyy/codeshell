@@ -822,7 +822,11 @@ export function SettingsPage({
                 />
               )}
               {active === "data-sources" && (
-                <DataSourcesModule scope={scope} projectId={scopeProject?.id ?? null} />
+                <DataSourcesModule
+                  scope={scope}
+                  projectId={scopeProject?.id ?? null}
+                  onManageCollections={() => changeScope({ kind: "user" })}
+                />
               )}
               {active === "git" && <GitSection />}
               {active === "environment" && <EnvironmentSection projects={projects} />}
