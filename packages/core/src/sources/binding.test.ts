@@ -24,6 +24,21 @@ afterEach(() => {
 });
 
 describe("workspace source binding", () => {
+  test("persists reference priority without adding it to legacy bindings", () => {
+    const settings = new SettingsManager(cwd, "full");
+    bindSource(settings, cwd, { sourceId: "legacy", scopes: ["alpha"], readPolicy: "ask" });
+    bindSource(settings, cwd, {
+      sourceId: "focused",
+      scopes: ["beta"],
+      readPolicy: "ask",
+      priority: "high",
+    });
+    expect(listBindings(new SettingsManager(cwd, "full"), cwd)).toEqual([
+      { sourceId: "legacy", scopes: ["alpha"], readPolicy: "ask" },
+      { sourceId: "focused", scopes: ["beta"], readPolicy: "ask", priority: "high" },
+    ]);
+  });
+
   test("rebinding the same source replaces scopes and policy without duplicating it", () => {
     const settings = new SettingsManager(cwd, "full");
     bindSource(settings, cwd, { sourceId: "research", scopes: ["alpha"], readPolicy: "ask" });

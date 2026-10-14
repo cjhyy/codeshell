@@ -1,3 +1,5 @@
+import { registerLinkedFileSourceIpc } from "./linked-file-sources-ipc.js";
+import { openLinkedFileSourceOperation } from "./linked-file-sources-host.js";
 import { registerOperationBatchHost } from "./operation-batch-host.js";
 import { createDesktopRemoteServices } from "./desktop-remote-services.js";
 import { createDesktopShutdownHandler } from "./desktop-shutdown.js";
@@ -3777,6 +3779,15 @@ registerSourceCollectionIpc({
   ipcMain,
   open: (event) => openSourceCollectionOperation(event, (window) => mainWindows.has(window)),
 });
+registerLinkedFileSourceIpc({
+  ipcMain,
+  open: (event) =>
+    openLinkedFileSourceOperation(
+      event,
+      (window) => mainWindows.has(window),
+      remoteLinkIpc.storedSnapshot,
+    ),
+});
 ipcMain.handle("sources:catalogList", async () => listSourceCatalog());
 ipcMain.handle("sources:catalogSave", async (_e, definition: unknown) => {
   if (typeof definition !== "object" || definition === null || Array.isArray(definition)) {
@@ -4117,7 +4128,7 @@ ipcMain.handle(
 );
 ipcMain.handle("links:listLocalProviders", () => listDesktopLinkProviders());
 
-prepareAccountGitHubLink = registerRemoteLinkIpc({
+const remoteLinkIpc = registerRemoteLinkIpc({
   ipcMain,
   requireRendererProjectPath,
   isMainWindow: (sender) =>
@@ -4125,7 +4136,8 @@ prepareAccountGitHubLink = registerRemoteLinkIpc({
   withMutation: (cwd, write) =>
     bridge ? bridge.withWebConfigurationMutation(cwd, write) : write(),
   onChanged: () => bridge?.notifyWebConfigurationChanged(),
-}).prepareGitHubLink;
+});
+prepareAccountGitHubLink = remoteLinkIpc.prepareGitHubLink;
 
 function assertGenericCredentialMutation(cwd: string, id: string) {
   const credential = new CredentialStore(cwd || undefined).resolve(id);

@@ -161,6 +161,7 @@ const originalBinding: WorkspaceSourceBinding = {
   sourceId: "collection_a",
   scopes: ["file_a"],
   readPolicy: "ask",
+  ...(scenario.startsWith("project-priority-edit-") ? { priority: "high" as const } : {}),
 };
 const access = {
   ...originalBinding,
@@ -169,11 +170,32 @@ const access = {
   status: "ok",
   definition: current.definition,
 };
-const snapshot = () => ({
-  bindings: scenario === "profile-excluded-binding" ? [originalBinding] : [],
-  access: scenario === "profile-excluded-binding" ? [] : [],
-  uploads: [],
-});
+const snapshot = () =>
+  scenario === "project-priority-order"
+    ? {
+        bindings: [
+          { ...originalBinding, priority: "normal" },
+          { sourceId: "collection_b", scopes: ["file_c"], readPolicy: "ask", priority: "high" },
+        ],
+        access: [
+          access,
+          {
+            ...access,
+            sourceId: "collection_b",
+            label: "Second docs",
+            definition: second.definition,
+          },
+        ],
+        uploads: [],
+      }
+    : {
+        bindings:
+          scenario === "profile-excluded-binding" || scenario.startsWith("project-priority-edit-")
+            ? [originalBinding]
+            : [],
+        access: scenario.startsWith("project-priority-edit-") ? [access] : [],
+        uploads: [],
+      };
 const legacy = {
   id: "legacy_mock",
   kind: "mock",
@@ -716,7 +738,32 @@ try {
     assert.equal(props(find((node) => props(node)["data-scope-id"] === "file_a")).checked, true);
     assert.equal(props(find((node) => props(node)["data-scope-id"] === "file_b")).checked, false);
     await click(button("保存引用范围"));
-    assert.deepEqual(bindCalls, [["project-a", originalBinding]]);
+    assert.deepEqual(bindCalls, [["project-a", { ...originalBinding, priority: "normal" }]]);
+  } else if (scenario === "project-priority-order") {
+    const rows = nodes().filter((node) => props(node)["data-source-access"]);
+    assert.equal(rows.length, 2);
+    assert.ok(text(rows[0]).includes("Second docs"));
+    assert.ok(text(rows[0]).includes(t("sourceCollections.linkedFiles.high")));
+    assert.ok(text(rows[1]).includes("Product docs"));
+    assert.ok(!text(rows[1]).includes(t("sourceCollections.linkedFiles.high")));
+    assert.deepEqual(bindCalls, []);
+  } else if (scenario.startsWith("project-priority-edit-")) {
+    await click(button("调整引用"));
+    assert.equal(props(find((node) => props(node)["aria-label"] === "权重")).value, "high");
+    assert.equal(props(find((node) => props(node)["data-scope-id"] === "file_a")).checked, true);
+    assert.equal(props(find((node) => props(node)["data-scope-id"] === "file_b")).checked, false);
+    assert.deepEqual(bindCalls, []);
+    if (scenario === "project-priority-edit-change") await select("权重", "normal");
+    await click(button("保存引用范围"));
+    assert.deepEqual(bindCalls, [
+      [
+        "project-a",
+        {
+          ...originalBinding,
+          priority: scenario === "project-priority-edit-change" ? "normal" : "high",
+        },
+      ],
+    ]);
   } else {
     await select("数据源", "collection_a");
     if (scenario === "stale-scope-load") {
@@ -726,6 +773,7 @@ try {
       assert.equal(nodes().filter((node) => props(node)["data-scope-id"] === "file_c").length, 1);
       assert.equal(bindCalls.length, 0);
     } else {
+      assert.equal(props(find((node) => props(node)["aria-label"] === "权重")).value, "normal");
       assert.equal(props(button("绑定所选范围")).disabled, true);
       if (scenario === "project-all-current") {
         await select("资料集", "all");
@@ -737,6 +785,7 @@ try {
           }),
         );
       const bind = button("绑定所选范围");
+      if (scenario === "project-priority-new-high") await select("权重", "high");
       await update(() => {
         props(bind).onClick();
         props(bind).onClick();
@@ -748,6 +797,7 @@ try {
             sourceId: "collection_a",
             scopes: scenario === "project-all-current" ? ["file_a", "file_b"] : ["file_b"],
             readPolicy: "ask",
+            priority: scenario === "project-priority-new-high" ? "high" : "normal",
           },
         ],
       ]);

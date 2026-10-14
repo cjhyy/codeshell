@@ -90,6 +90,7 @@ function ProjectDataSources({
   const [selectedSourceId, setSelectedSourceId] = React.useState("");
   const [scopes, setScopes] = React.useState<SourceScope[]>([]);
   const [selectedScopes, setSelectedScopes] = React.useState<Set<string>>(() => new Set());
+  const [priority, setPriority] = React.useState<"normal" | "high">("normal");
   const [readPolicy, setReadPolicy] = React.useState<"ask" | "deny">("ask");
   const [loading, setLoading] = React.useState(true);
   const [loadingScopes, setLoadingScopes] = React.useState(false);
@@ -156,6 +157,7 @@ function ProjectDataSources({
         setScopes([]);
         setSelectedScopes(new Set());
         setReadPolicy("ask");
+        setPriority("normal");
         setEditingBinding(false);
         setMissingSelection(0);
         setSelectionMode("selected");
@@ -179,6 +181,7 @@ function ProjectDataSources({
     setMissingSelection(0);
     setEditingBinding(Boolean(binding));
     setReadPolicy(binding?.readPolicy ?? "ask");
+    setPriority(binding?.priority ?? "normal");
     setError(null);
     if (!sourceId) {
       setLoadingScopes(false);
@@ -221,6 +224,7 @@ function ProjectDataSources({
   const isCollection = selectedSource?.kind === "collection";
   const visibleAccess = snapshot.bindings
     .filter((binding) => binding.sourceId !== "project-uploads")
+    .sort((a, b) => Number(b.priority === "high") - Number(a.priority === "high"))
     .map((binding) => {
       const definition = catalog.find((item) => item.id === binding.sourceId);
       const projected = snapshot.access.find((item) => item.sourceId === binding.sourceId);
@@ -366,6 +370,9 @@ function ProjectDataSources({
                   <div className="flex flex-wrap items-center gap-2">
                     <span className="text-sm font-medium text-foreground">{item.label}</span>
                     <Badge variant="secondary">{kindLabel(t, item.kind)}</Badge>
+                    {item.priority === "high" && (
+                      <Badge>{t("sourceCollections.linkedFiles.high")}</Badge>
+                    )}
                     <Badge variant={item.status === "ok" ? "default" : "destructive"}>
                       {statusLabel(t, item.status)}
                     </Badge>
@@ -556,6 +563,21 @@ function ProjectDataSources({
             </fieldset>
 
             <label className="block space-y-1 text-xs text-muted-foreground">
+              <span>{t("sourceCollections.linkedFiles.priority")}</span>
+              <SimpleSelect<"normal" | "high">
+                value={priority}
+                disabled={busy}
+                ariaLabel={t("sourceCollections.linkedFiles.priority")}
+                onChange={setPriority}
+                options={[
+                  { value: "high", label: t("sourceCollections.linkedFiles.high") },
+                  { value: "normal", label: t("sourceCollections.linkedFiles.normal") },
+                ]}
+              />
+              <span className="block">{t("sourceCollections.linkedFiles.priorityHint")}</span>
+            </label>
+
+            <label className="block space-y-1 text-xs text-muted-foreground">
               <span>{t("projectConfig.dataSources.readPolicyLabel")}</span>
               <SimpleSelect<"ask" | "deny">
                 size="sm"
@@ -596,6 +618,7 @@ function ProjectDataSources({
                         .filter((scope) => selectedScopes.has(scope.id))
                         .map((scope) => scope.id),
                       readPolicy,
+                      priority,
                     }),
                   {
                     clearSelection: true,

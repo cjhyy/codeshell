@@ -28,6 +28,35 @@ afterEach(() => {
 });
 
 describe("buildSourcesContextSummary", () => {
+  test("marks focused metadata first and keeps content and credentials out of the prompt", () => {
+    const settings = new SettingsManager(cwd, "full");
+    for (const id of ["ordinary", "focused"])
+      saveSourceDefinition({
+        id,
+        kind: "mock",
+        label: id,
+        adapterConfig: { token: "adapter-secret", content: "document body" },
+        enabled: true,
+      });
+    bindSource(settings, cwd, { sourceId: "ordinary", scopes: ["alpha"], readPolicy: "ask" });
+    bindSource(settings, cwd, {
+      sourceId: "focused",
+      scopes: ["beta"],
+      readPolicy: "ask",
+      priority: "high",
+    });
+    const summary = buildSourcesContextSummary({ cwd, settings });
+    expect(summary.indexOf("- focused")).toBeLessThan(summary.indexOf("- ordinary"));
+    expect(summary).toContain("focused [high priority]");
+    expect(summary).toContain("For tasks relevant to these materials");
+    expect(summary).toContain("approval requirements");
+    expect(summary).not.toContain("adapter-secret");
+    expect(summary).not.toContain("document body");
+    expect(buildSourcesContextSummary({ cwd, settings, isSourceProfileCurrent: () => false })).toBe(
+      "",
+    );
+  });
+
   test("dynamic summary uses Session pin and current Profile policy, and disappears when the live pin changes", () => {
     const settings = new SettingsManager(cwd, "full");
     saveSourceDefinition({
@@ -102,5 +131,6 @@ describe("buildSourcesContextSummary", () => {
     expect(summary).not.toContain("adapter-secret");
     expect(summary).not.toContain("private resource body");
     expect(summary).not.toContain("credential-secret-ref");
+    expect(summary).not.toContain("high-priority");
   });
 });

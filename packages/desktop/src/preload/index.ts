@@ -1120,6 +1120,13 @@ contextBridge.exposeInMainWorld("codeshell", {
     state: "inherit" | "on" | "off",
   ) => ipcRenderer.invoke("capabilities:setOverride", target, id, state),
   listSourceCatalog: () => ipcRenderer.invoke("sources:catalogList"),
+  linkedFileSources: {
+    snapshot: (projectId: string) => ipcRenderer.invoke("sources:linkedFiles:snapshot", projectId),
+    add: (
+      projectId: string,
+      input: import("../shared/linked-file-sources").AddLinkedFileSourcesInput,
+    ) => ipcRenderer.invoke("sources:linkedFiles:add", projectId, input),
+  },
   sourceCollections: {
     create: (input: { label: string; description?: string }) =>
       ipcRenderer.invoke("sources:collections:create", input),

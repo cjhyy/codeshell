@@ -1827,6 +1827,7 @@ export interface CodeshellApi
   ): Promise<void>;
   listSourceCatalog(): Promise<SourceDefinition[]>;
   sourceCollections: import("../shared/source-collections").SourceCollectionApi;
+  linkedFileSources: import("../shared/linked-file-sources").LinkedFileSourceApi;
   saveSourceCatalog(definition: SourceDefinition): Promise<void>;
   deleteSourceCatalog(id: string): Promise<void>;
   projectSourceAccess(projectId: string): Promise<{
