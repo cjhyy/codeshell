@@ -1,3 +1,4 @@
+import { fileURLToPath } from "node:url";
 import { afterAll, afterEach, beforeEach, expect, test } from "bun:test";
 import { mkdirSync, mkdtempSync, readFileSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
@@ -395,7 +396,7 @@ test("a failed project save retains safe references and retry reuses them withou
 test("failure in one project cannot delete the shared reference another project just reused", async () => {
   const other = join(home, "other-project");
   mkdirSync(other);
-  const modulePath = new URL("./linked-file-sources-service.ts", import.meta.url).pathname;
+  const modulePath = fileURLToPath(new URL("./linked-file-sources-service.ts", import.meta.url));
   const f = fixture({
     settings: () => ({
       mutateSettingsForScope() {
@@ -434,7 +435,7 @@ test("failure in one project cannot delete the shared reference another project 
 });
 
 test("concurrent project writers retain every independent file binding", async () => {
-  const modulePath = new URL("./linked-file-sources-service.ts", import.meta.url).pathname;
+  const modulePath = fileURLToPath(new URL("./linked-file-sources-service.ts", import.meta.url));
   const total = 4;
   const children = Array.from({ length: total }, (_, index) => {
     const script = `
