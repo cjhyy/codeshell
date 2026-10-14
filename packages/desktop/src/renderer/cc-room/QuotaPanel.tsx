@@ -10,6 +10,7 @@ import React from "react";
 import type { ProviderQuota, QuotaResult } from "@cjhyy/code-shell-capability-coding/orchestration";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 
 type Which = "claude" | "codex" | "both";
 
@@ -17,7 +18,6 @@ export function QuotaPanel({ which = "both" }: { which?: Which }) {
   const [open, setOpen] = React.useState(false);
   const [data, setData] = React.useState<QuotaResult | null>(null);
   const [loading, setLoading] = React.useState(false);
-  const rootRef = React.useRef<HTMLDivElement>(null);
 
   const load = React.useCallback(async () => {
     setLoading(true);
@@ -36,73 +36,61 @@ export function QuotaPanel({ which = "both" }: { which?: Which }) {
     if (open && !data && !loading) void load();
   }, [open, data, loading, load]);
 
-  // Close on outside click.
-  React.useEffect(() => {
-    if (!open) return;
-    const onDown = (e: MouseEvent) => {
-      if (rootRef.current && !rootRef.current.contains(e.target as Node)) setOpen(false);
-    };
-    document.addEventListener("mousedown", onDown);
-    return () => document.removeEventListener("mousedown", onDown);
-  }, [open]);
-
   // Compact chip summary: the highest used-% across shown providers/windows.
   const peak = data ? peakPercent(data) : null;
 
   return (
-    <div ref={rootRef} className="relative">
-      <button
-        type="button"
-        onClick={() => setOpen((v) => !v)}
-        className={cn(
-          "flex shrink-0 items-center gap-1 rounded-md border px-2 py-1 text-xs",
-          "hover:bg-accent",
-          peak != null && peak >= 90
-            ? "border-status-err/50 text-status-err"
-            : peak != null && peak >= 75
-              ? "border-status-warn/50 text-status-warn"
-              : "text-muted-foreground",
-        )}
-        title="查看 CC/Codex 剩余额度"
-      >
-        <span>额度</span>
-        {peak != null && <span className="font-mono">{peak.toFixed(0)}%</span>}
-      </button>
-
-      {open && (
-        <div className="absolute right-0 z-50 mt-1 w-[280px] rounded-md border bg-popover p-3 text-sm text-popover-foreground shadow-lg">
-          <div className="mb-2 flex items-center justify-between">
-            <span className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-              剩余额度
-            </span>
-            <Button
-              size="sm"
-              variant="ghost"
-              className="h-6 px-2 text-xs"
-              disabled={loading}
-              onClick={() => {
-                setData(null);
-                void load();
-              }}
-            >
-              {loading ? "查询中…" : "刷新"}
-            </Button>
-          </div>
-
-          {!data && loading && <p className="text-xs text-muted-foreground">查询中…</p>}
-          {data && (
-            <div className="flex flex-col gap-3">
-              {data.claude && <ProviderBlock name="Claude Code" pq={data.claude} />}
-              {data.codex && <ProviderBlock name="Codex" pq={data.codex} />}
-            </div>
+    <Popover open={open} onOpenChange={setOpen}>
+      <PopoverTrigger asChild>
+        <button
+          type="button"
+          className={cn(
+            "flex shrink-0 items-center gap-1 rounded-md border px-2 py-1 text-xs",
+            "hover:bg-accent",
+            peak != null && peak >= 90
+              ? "border-status-err/50 text-status-err"
+              : peak != null && peak >= 75
+                ? "border-status-warn/50 text-status-warn"
+                : "text-muted-foreground",
           )}
-
-          <p className="mt-2 border-t border-border pt-2 text-[10px] leading-tight text-muted-foreground">
-            Codex 免费查询；Claude 会发 1-token 探测。
-          </p>
+          title="查看 CC/Codex 剩余额度"
+        >
+          <span>额度</span>
+          {peak != null && <span className="font-mono">{peak.toFixed(0)}%</span>}
+        </button>
+      </PopoverTrigger>
+      <PopoverContent align="end" aria-label="剩余额度" className="w-[280px] p-3 text-sm">
+        <div className="mb-2 flex items-center justify-between">
+          <span className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+            剩余额度
+          </span>
+          <Button
+            size="sm"
+            variant="ghost"
+            className="h-6 px-2 text-xs"
+            disabled={loading}
+            onClick={() => {
+              setData(null);
+              void load();
+            }}
+          >
+            {loading ? "查询中…" : "刷新"}
+          </Button>
         </div>
-      )}
-    </div>
+
+        {!data && loading && <p className="text-xs text-muted-foreground">查询中…</p>}
+        {data && (
+          <div className="flex flex-col gap-3">
+            {data.claude && <ProviderBlock name="Claude Code" pq={data.claude} />}
+            {data.codex && <ProviderBlock name="Codex" pq={data.codex} />}
+          </div>
+        )}
+
+        <p className="mt-2 border-t border-border pt-2 text-[10px] leading-tight text-muted-foreground">
+          Codex 免费查询；Claude 会发 1-token 探测。
+        </p>
+      </PopoverContent>
+    </Popover>
   );
 }
 

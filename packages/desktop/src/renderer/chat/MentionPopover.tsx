@@ -14,7 +14,7 @@
  * exposes its flat item list through `items` so ChatView can drive the
  * cursor without owning render details.
  */
-import React, { useEffect, useMemo, useRef, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState, type RefObject } from "react";
 import { Clock, FileText, Folder, Puzzle, Search } from "lucide-react";
 import type {
   SkillSummary,
@@ -25,6 +25,7 @@ import type {
 import { cn } from "@/lib/utils";
 import { useT } from "../i18n/I18nProvider";
 import { filterMentionSkills } from "./mention";
+import { ComposerSuggestions } from "./ComposerSuggestions";
 
 export type MentionItem =
   | { kind: "skill"; skill: SkillSummary }
@@ -32,6 +33,7 @@ export type MentionItem =
   | { kind: "recent"; attachment: InputAttachmentMeta };
 
 interface Props {
+  anchorRef: RefObject<HTMLElement | null>;
   /** Active repo cwd. When null the popover only shows skills (no files). */
   cwd: string | null;
   /** Authoritative root within a multi-root project. */
@@ -52,6 +54,7 @@ interface Props {
 const EMPTY_PROJECT_ROOTS: Array<{ id: string; path: string }> = [];
 
 export function MentionPopover({
+  anchorRef,
   cwd,
   rootId,
   configurationTarget,
@@ -192,10 +195,11 @@ export function MentionPopover({
   const isEmpty = items.length === 0;
 
   return (
-    <div
-      className="cs-popup-surface absolute bottom-full left-0 z-50 mb-2 max-h-[min(20rem,calc(100vh-120px))] w-80 max-w-[min(20rem,calc(100vw-24px))] overflow-y-auto rounded-md p-1"
-      role="listbox"
-      aria-label={t("chat.mention.ariaLabel")}
+    <ComposerSuggestions
+      anchorRef={anchorRef}
+      label={t("chat.mention.ariaLabel")}
+      selected={selected}
+      items={items}
     >
       {filteredSkills.length > 0 && (
         <div className="py-1">
@@ -351,6 +355,6 @@ export function MentionPopover({
           <span>{cwd ? t("chat.mention.noMatch") : t("chat.mention.selectProjectFirst")}</span>
         </div>
       )}
-    </div>
+    </ComposerSuggestions>
   );
 }

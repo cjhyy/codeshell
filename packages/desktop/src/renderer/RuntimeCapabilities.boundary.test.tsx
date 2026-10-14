@@ -12,6 +12,7 @@ import { Lightbox } from "./chat/Lightbox";
 import { UnifiedDiffViewer } from "./diff/UnifiedDiffViewer";
 import { ensureMiniDom, flushMicrotasks } from "./test-utils/renderHook";
 import type { FilesChangedSummaryMessage } from "./types";
+import { fileURLToPath } from "node:url";
 
 function descendants(node: any): any[] {
   return [node, ...Array.from(node.childNodes ?? []).flatMap(descendants)];
@@ -28,8 +29,6 @@ const authority = {
   sessionMainRootId: "root-also-valid-locally",
   rootStatus: "ok" as const,
 };
-const snapshot =
-  "diff --git a/report.md b/report.md\n--- a/report.md\n+++ b/report.md\n@@ -1 +1 @@\n-old\n+new\n";
 const changed: FilesChangedSummaryMessage = {
   kind: "files_changed",
   id: "remote-files",
@@ -222,30 +221,19 @@ describe("cloud transcript local capability boundary", () => {
     expectNoLocalActions();
   });
 
-  test("cloud snapshot review is readable and exposes no local open or comment action", async () => {
-    await render(
-      <FilesChangedCard
-        message={{
-          ...changed,
-          sessionDiffs: [{ path: "report.md", toolCallId: "remote-edit", diff: snapshot }],
-        }}
-        cwd={authority.cwd}
-        sessionId={authority.sessionId}
-        isLatest
-      />,
-    );
-    const review = descendants(container).find((node) =>
-      propsOf(node)["aria-label"]?.includes("审核"),
-    );
-    expect(review).toBeDefined();
-    await click(review);
-    expect(descendants(container).some((node) => node.tagName === "TABLE")).toBe(true);
-    expect(
-      descendants(container).some((node) =>
-        ["打开文件", "评论此行"].includes(propsOf(node)["aria-label"]),
-      ),
-    ).toBe(false);
-    expectNoLocalActions();
+  test("cloud snapshot review is readable and exposes no local open or comment action", () => {
+    const result = Bun.spawnSync({
+      cmd: [
+        process.execPath,
+        fileURLToPath(new URL("./RuntimeCapabilities.snapshot-review.fixture.tsx", import.meta.url)),
+      ],
+      stdout: "pipe",
+      stderr: "pipe",
+    });
+    expect({ exitCode: result.exitCode, stderr: result.stderr.toString() }).toEqual({
+      exitCode: 0,
+      stderr: "",
+    });
   });
 
   test("remote lightbox can display supplied bytes without native save or reveal actions", async () => {

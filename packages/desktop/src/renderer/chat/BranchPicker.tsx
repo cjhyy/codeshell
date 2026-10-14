@@ -1,4 +1,5 @@
 import React, { useEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { Check, ChevronDown, GitBranch } from "lucide-react";
 import type { GitBranches } from "../../preload/types";
 import { Button } from "@/components/ui/button";
@@ -89,7 +90,9 @@ export function BranchPicker({ projectId, cwd, clean, disabled }: Props) {
       return;
     }
     const onDoc = (e: MouseEvent) => {
-      if (wrapRef.current && !wrapRef.current.contains(e.target as Node)) setOpen(false);
+      const target = e.target as Node;
+      if (!wrapRef.current?.contains(target) && !popoverRef.current?.contains(target))
+        setOpen(false);
     };
     const onEsc = (e: KeyboardEvent) => {
       if (e.key === "Escape") setOpen(false);
@@ -196,68 +199,70 @@ export function BranchPicker({ projectId, cwd, clean, disabled }: Props) {
         <ChevronDown size={11} />
       </Button>
 
-      {open && (
-        <div
-          ref={popoverRef}
-          style={popoverStyle}
-          className="w-72 rounded-md border bg-popover p-3 text-popover-foreground shadow-lg"
-        >
-          {error && (
-            <div className="rounded bg-status-err/10 p-2 text-xs text-status-err">{error}</div>
-          )}
-          {pendingBranch ? (
-            <div className="rounded-md border p-3">
-              <div className="font-medium text-foreground">{t("chat.branch.dirtyHeading")}</div>
-              <div className="mt-1 text-xs text-muted-foreground">
-                {t("chat.branch.stashNeeded", { branch: pendingBranch })}
-              </div>
-              <div className="mt-3 flex justify-end gap-2">
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => setPendingBranch(null)}
-                >
-                  {t("chat.branch.cancel")}
-                </Button>
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  className="border-primary/40 text-primary hover:bg-primary/10"
-                  onClick={() => {
-                    void stashAndSwitch();
-                  }}
-                >
-                  {t("chat.branch.stashAndSwitch")}
-                </Button>
-              </div>
-            </div>
-          ) : (
-            <ul className="max-h-64 overflow-y-auto py-1">
-              {branches.branches.map((branch) => {
-                const active = branch === branches.current;
-                return (
-                  <li
-                    key={branch}
-                    className={cn(
-                      "flex cursor-pointer items-center gap-2 rounded-md px-2 py-1.5 text-sm hover:bg-accent",
-                      active && "bg-accent",
-                    )}
+      {open &&
+        createPortal(
+          <div
+            ref={popoverRef}
+            style={popoverStyle}
+            className="w-72 rounded-md border bg-popover p-3 text-popover-foreground shadow-lg"
+          >
+            {error && (
+              <div className="rounded bg-status-err/10 p-2 text-xs text-status-err">{error}</div>
+            )}
+            {pendingBranch ? (
+              <div className="rounded-md border p-3">
+                <div className="font-medium text-foreground">{t("chat.branch.dirtyHeading")}</div>
+                <div className="mt-1 text-xs text-muted-foreground">
+                  {t("chat.branch.stashNeeded", { branch: pendingBranch })}
+                </div>
+                <div className="mt-3 flex flex-wrap justify-end gap-2">
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setPendingBranch(null)}
+                  >
+                    {t("chat.branch.cancel")}
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    className="border-primary/40 text-primary hover:bg-primary/10"
                     onClick={() => {
-                      void choose(branch);
+                      void stashAndSwitch();
                     }}
                   >
-                    <GitBranch size={12} className="shrink-0 opacity-60" />
-                    <span className="flex-1 truncate">{branch}</span>
-                    {active && <Check size={12} className="text-primary" />}
-                  </li>
-                );
-              })}
-            </ul>
-          )}
-        </div>
-      )}
+                    {t("chat.branch.stashAndSwitch")}
+                  </Button>
+                </div>
+              </div>
+            ) : (
+              <ul className="max-h-64 overflow-y-auto py-1">
+                {branches.branches.map((branch) => {
+                  const active = branch === branches.current;
+                  return (
+                    <li
+                      key={branch}
+                      className={cn(
+                        "flex cursor-pointer items-center gap-2 rounded-md px-2 py-1.5 text-sm hover:bg-accent",
+                        active && "bg-accent",
+                      )}
+                      onClick={() => {
+                        void choose(branch);
+                      }}
+                    >
+                      <GitBranch size={12} className="shrink-0 opacity-60" />
+                      <span className="flex-1 truncate">{branch}</span>
+                      {active && <Check size={12} className="text-primary" />}
+                    </li>
+                  );
+                })}
+              </ul>
+            )}
+          </div>,
+          document.body,
+        )}
     </div>
   );
 }

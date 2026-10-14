@@ -7,7 +7,7 @@
  * CODESHELL_SETTINGS_SCREENSHOT_DIR is set.
  */
 /* global document, getComputedStyle, localStorage, window */
-import { mkdir, writeFile } from "node:fs/promises";
+import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { basename, join, resolve } from "node:path";
 import { dirname } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -26,6 +26,15 @@ const projectPath = join(isolated.home, "settings-project");
 const sourceFolder = join(isolated.home, "source-documents");
 const sourceFile = join(sourceFolder, "settings-reference.txt");
 const screenshotDir = process.env.CODESHELL_SETTINGS_SCREENSHOT_DIR;
+const networkReceipt = join(isolated.home, "network-attempts.jsonl");
+async function networkAttempts() {
+  return (
+    await readFile(networkReceipt, "utf8").catch((error) => {
+      if (error.code === "ENOENT") return "";
+      throw error;
+    })
+  ).length;
+}
 let app;
 let win;
 
@@ -53,6 +62,31 @@ async function seedFixture() {
   await writeFile(
     join(isolated.codeShellHome, "settings.json"),
     `${JSON.stringify({ autoUpdates: false }, null, 2)}\n`,
+    { mode: 0o600 },
+  );
+  await writeFile(
+    join(isolated.codeShellHome, "credentials.json"),
+    JSON.stringify({
+      version: 1,
+      credentials: [
+        ["github", "fine-grained-pat", "Fixture GitHub"],
+        ["figma", "personal-access-token", "Fixture Figma"],
+      ].map(([provider, method, label]) => ({
+        id: `settings-fixture-${provider}`,
+        type: "link",
+        label,
+        secret: "settings-e2e-synthetic-token",
+        createdAt: new Date().toISOString(),
+        meta: {
+          linkProvider: provider,
+          linkConnectionMethod: method,
+          linkExecutionRuntime: "local",
+          linkExecutionBackend: "http-token",
+          linkAuthSource: "manual-token",
+          linkCapabilityIds: [`${provider}.get_file`],
+        },
+      })),
+    }),
     { mode: 0o600 },
   );
   if (screenshotDir) await mkdir(screenshotDir, { recursive: true });
@@ -303,14 +337,102 @@ async function checkDataSourceAdds(app, win) {
     .waitFor({ state: "visible" });
   await screenshot(win, "settings-data-source-url.png");
   await collections.getByRole("button", { name: "取消", exact: true }).click();
+
+  // Exercise real renderer/preload/Main Link authority and project binding; no file read occurs.
+  const attemptsBefore = await networkAttempts();
+  await win.getByRole("button", { name: "从 Link 选择文件", exact: true }).click();
+  let linked = win.getByRole("dialog", { name: "从 Link 选择文件", exact: true });
+  await linked.getByRole("combobox", { name: "已连接服务", exact: true }).waitFor();
+  await linked.locator('[name="linked-file-owner"]').fill("acme");
+  await linked.locator('[name="linked-file-repo"]').fill("docs");
+  await linked.locator('[name="linked-file-paths"]').fill("README.md\ndocs/guide.md");
+  await linked.locator('[name="linked-file-ref"]').fill("release");
+  await screenshot(win, "settings-linked-github.png");
+  const before = await win.evaluate(async () =>
+    (await window.codeshell.listSourceCatalog()).filter((item) => item.kind === "link"),
+  );
+  assert(before.length === 0, "Selecting linked files mutated the catalog before Add");
+  await linked.getByRole("button", { name: "添加到数据源", exact: true }).click();
+  await linked.waitFor({ state: "hidden", timeout: 10_000 });
+  const references = await win.evaluate(async () => {
+    const project = (await window.codeshell.projectRegistry.list())[0];
+    return {
+      catalog: await window.codeshell.listSourceCatalog(),
+      access: await window.codeshell.projectSourceAccess(project.id),
+    };
+  });
+  const github = references.catalog.filter(
+    (item) => item.credentialRef === "settings-fixture-github",
+  );
+  assert(github.length === 2, "Linked GitHub batch was not saved through production IPC");
+  assert(
+    github.every((item) =>
+      references.access.bindings.some(
+        (binding) =>
+          binding.sourceId === item.id &&
+          binding.priority === "high" &&
+          binding.readPolicy === "ask",
+      ),
+    ),
+    "Linked references lost priority or read approval",
+  );
+
+  await win.getByRole("button", { name: "从 Link 选择文件", exact: true }).click();
+  linked = win.getByRole("dialog", { name: "从 Link 选择文件", exact: true });
+  await linked.getByRole("combobox", { name: "已连接服务", exact: true }).click();
+  await win.getByRole("option", { name: "Fixture Figma", exact: false }).click();
+  await linked
+    .locator('[name="linked-file-figma"]')
+    .fill("https://www.figma.com/design/fixtureFile/Product");
+  for (const width of [1280, 390]) {
+    await win.setViewportSize({ width, height: 820 });
+    const overflow = await linked.evaluate((node) => node.scrollWidth > node.clientWidth + 1);
+    assert(!overflow, `Linked file dialog overflowed at ${width}px`);
+    await screenshot(win, `settings-linked-figma-${width}.png`);
+  }
+  await win.setViewportSize({ width: 1280, height: 820 });
+  await linked.getByRole("button", { name: "添加到数据源", exact: true }).click();
+  await linked.waitFor({ state: "hidden", timeout: 10_000 });
+  const figma = await win.evaluate(async () =>
+    (await window.codeshell.listSourceCatalog()).filter(
+      (item) => item.credentialRef === "settings-fixture-figma",
+    ),
+  );
+  assert(
+    figma.length === 1 && figma[0].adapterConfig.params.file_url_or_key === "fixtureFile",
+    "Figma reference did not retain exact file key",
+  );
+  assert(
+    (await networkAttempts()) === attemptsBefore,
+    "Linked selection attempted a network request",
+  );
+  console.log(
+    "PASS linked files: real account/project revisions, exact file batches, priority and responsive dialog",
+  );
 }
 
 try {
   await seedFixture();
+  const networkGuard = join(isolated.home, "deny-network.cjs");
+  await writeFile(
+    networkGuard,
+    `const deny = () => { require("node:fs").appendFileSync(${JSON.stringify(networkReceipt)}, JSON.stringify({ pid: process.pid }) + "\\n", { mode: 0o600 }); throw new Error("Settings fixture forbids network"); };
+globalThis.fetch = async () => deny();
+for (const name of ["node:http", "node:https"]) {
+  const transport = require(name);
+  transport.request = deny;
+  transport.get = deny;
+}
+require("node:module").syncBuiltinESMExports();
+`,
+    { mode: 0o600 },
+  );
   app = await launchCodeShellElectron({
     appDir,
     home: isolated.home,
     userDataDir: isolated.userDataDir,
+    mainBootstrap: networkGuard,
+    env: { NODE_OPTIONS: `--require ${networkGuard}` },
   });
   win = await findCodeShellWindow(app);
   const rendererErrors = captureRendererErrors(win);

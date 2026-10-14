@@ -1,4 +1,5 @@
 import React, { useEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { ChevronDown } from "lucide-react";
 import { useAnchoredPopover } from "./useAnchoredPopover";
 import { useT } from "../i18n/I18nProvider";
@@ -93,7 +94,8 @@ export function PermissionPill({ value, onChange, disabled }: Props) {
   useEffect(() => {
     if (!open) return;
     const onClick = (e: MouseEvent) => {
-      if (ref.current && !ref.current.contains(e.target as Node)) {
+      const target = e.target as Node;
+      if (!ref.current?.contains(target) && !popoverRef.current?.contains(target)) {
         setOpen(false);
       }
     };
@@ -143,39 +145,41 @@ export function PermissionPill({ value, onChange, disabled }: Props) {
           aria-hidden="true"
         />
       </Button>
-      {open && (
-        <ul
-          ref={popoverRef}
-          style={popoverStyle}
-          className="cs-popup-surface w-64 overflow-hidden rounded-md p-1"
-          role="listbox"
-          aria-label={t("chat.permission.currentLabel", { label: t(cur.labelKey) })}
-        >
-          {MODES.map((m) => (
-            <li key={m.id} role="none">
-              <Button
-                type="button"
-                variant="ghost"
-                size="sm"
-                role="option"
-                aria-selected={m.id === value}
-                className={cn(
-                  "cs-menu-item h-auto w-full justify-start gap-2 px-2 py-1.5 text-sm",
-                  m.id === value && "bg-accent",
-                )}
-                onClick={() => {
-                  onChange(m.id);
-                  setOpen(false);
-                  anchorRef.current?.focus();
-                }}
-              >
-                <span className={`h-2 w-2 shrink-0 rounded-full ${toneDot(m.tone)}`} />
-                <span className="font-medium">{t(m.labelKey)}</span>
-              </Button>
-            </li>
-          ))}
-        </ul>
-      )}
+      {open &&
+        createPortal(
+          <ul
+            ref={popoverRef}
+            style={popoverStyle}
+            className="cs-popup-surface w-64 overflow-hidden rounded-md p-1"
+            role="listbox"
+            aria-label={t("chat.permission.currentLabel", { label: t(cur.labelKey) })}
+          >
+            {MODES.map((m) => (
+              <li key={m.id} role="none">
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  role="option"
+                  aria-selected={m.id === value}
+                  className={cn(
+                    "cs-menu-item h-auto w-full justify-start gap-2 px-2 py-1.5 text-sm",
+                    m.id === value && "bg-accent",
+                  )}
+                  onClick={() => {
+                    onChange(m.id);
+                    setOpen(false);
+                    anchorRef.current?.focus();
+                  }}
+                >
+                  <span className={`h-2 w-2 shrink-0 rounded-full ${toneDot(m.tone)}`} />
+                  <span className="font-medium">{t(m.labelKey)}</span>
+                </Button>
+              </li>
+            ))}
+          </ul>,
+          document.body,
+        )}
     </div>
   );
 }
