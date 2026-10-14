@@ -831,6 +831,7 @@ export function SettingsPage({
               )}
               {active === "data-sources" && (
                 <DataSourcesModule
+                  projects={projects}
                   scope={scope}
                   projectId={scopeProject?.id ?? null}
                   onManageCollections={() => changeScope({ kind: "user" })}

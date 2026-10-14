@@ -1,4 +1,6 @@
 export { LINK_PROVIDER_MANIFESTS, getLinkProviderManifest, localizeLinkText } from "./catalog.js";
+export { resolveLinkFileSelection } from "./file-selection.js";
+export type { LinkFileSelectionInput } from "./file-selection.js";
 export type {
   LinkAuthGuide,
   LinkAuthKind,

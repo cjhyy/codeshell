@@ -97,4 +97,11 @@ export interface LinkProviderManifest {
   featured?: boolean;
   connectionMethods: LinkConnectionMethodManifest[];
   actionIds: string[];
+  /** Reviewed exact-file reads; absence means this provider cannot supply file content. */
+  fileSelection?: {
+    kind: "github-file" | "figma-file";
+    action: "get_file";
+    resourceGroup: "repositories" | "files";
+  };
+  fileSelectionLimitation?: "document-content-unavailable";
 }

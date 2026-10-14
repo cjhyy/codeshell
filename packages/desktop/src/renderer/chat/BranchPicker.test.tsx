@@ -162,7 +162,7 @@ describe("BranchPicker context visibility", () => {
       getBoundingClientRect: () => ({ top: 400, bottom: 432, left: 40, right: 160 }),
     });
     await click(anchor);
-    const item = descendants(container).find(
+    const item = descendants(document.body).find(
       (node) => node.tagName === "LI" && textOf(node) === "feature",
     );
     expect(item).toBeDefined();

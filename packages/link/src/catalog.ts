@@ -126,6 +126,7 @@ export const LINK_PROVIDER_MANIFESTS: LinkProviderManifest[] = [
       },
       { ...managedOAuth("GitHub App"), id: "github-app" },
     ],
+    fileSelection: { kind: "github-file", action: "get_file", resourceGroup: "repositories" },
     actionIds: [
       "list_repositories",
       "get_repository",
@@ -394,6 +395,7 @@ export const LINK_PROVIDER_MANIFESTS: LinkProviderManifest[] = [
   },
   {
     id: "notion",
+    fileSelectionLimitation: "document-content-unavailable",
     displayName: "Notion",
     category: "work",
     description: text(
@@ -654,6 +656,7 @@ export const LINK_PROVIDER_MANIFESTS: LinkProviderManifest[] = [
       ),
       { ...managedOAuth("Figma"), id: "figma-oauth" },
     ],
+    fileSelection: { kind: "figma-file", action: "get_file", resourceGroup: "files" },
     actionIds: ["get_file", "get_comments"],
   },
 ];

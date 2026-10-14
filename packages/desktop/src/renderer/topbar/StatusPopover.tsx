@@ -53,7 +53,7 @@ export function StatusPopover({
   // minimal idle/running placeholder.
   if (activeGoal || hasTasks) {
     return (
-      <div className="w-[300px] rounded-md border bg-popover p-2.5 text-sm text-popover-foreground shadow-lg">
+      <div className="w-[300px] max-w-full rounded-md border bg-popover p-2.5 text-sm text-popover-foreground shadow-lg">
         {activeGoal && (
           <GoalBlock
             goal={activeGoal}

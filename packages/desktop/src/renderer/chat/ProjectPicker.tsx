@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { ChevronDown, Folder, FolderPlus, Search, X, Check } from "lucide-react";
 import { projectLabel, type TrackedProject } from "../projects";
 import { useAnchoredPopover } from "./useAnchoredPopover";
@@ -48,7 +49,9 @@ export function ProjectPicker({
   useEffect(() => {
     if (!open) return;
     const onDoc = (e: MouseEvent) => {
-      if (wrapRef.current && !wrapRef.current.contains(e.target as Node)) setOpen(false);
+      const target = e.target as Node;
+      if (!wrapRef.current?.contains(target) && !popoverRef.current?.contains(target))
+        setOpen(false);
     };
     const onEsc = (e: KeyboardEvent) => {
       if (e.key === "Escape") setOpen(false);
@@ -96,108 +99,114 @@ export function ProjectPicker({
         <ChevronDown size={11} className="opacity-60" />
       </Button>
 
-      {open && (
-        <div ref={popoverRef} style={popoverStyle} className="cs-popup-surface w-64 rounded-md p-1">
-          <div className="flex items-center gap-1.5 border-b border-border px-2 py-1.5">
-            <Search size={12} className="opacity-50" />
-            <Input
-              ref={inputRef}
-              className="h-7 flex-1 border-0 bg-transparent px-0 text-sm shadow-none focus-visible:ring-0"
-              placeholder={t("chat.project.searchPlaceholder")}
-              aria-label={t("chat.project.searchPlaceholder")}
-              value={filter}
-              onChange={(e) => setFilter(e.target.value)}
-            />
-            {filter && (
-              <Button
-                variant="ghost"
-                size="icon"
-                className="h-6 w-6 opacity-50 hover:opacity-100"
-                onClick={() => setFilter("")}
-                aria-label={t("chat.project.clearAria")}
-              >
-                <X size={12} />
-              </Button>
-            )}
-          </div>
-
-          <ul
-            className="max-h-64 overflow-y-auto py-1"
-            role="listbox"
-            aria-label={t("chat.project.searchPlaceholder")}
+      {open &&
+        createPortal(
+          <div
+            ref={popoverRef}
+            style={popoverStyle}
+            className="cs-popup-surface w-64 rounded-md p-1"
           >
-            {filtered.length === 0 && (
-              <li className="px-2 py-1.5 text-sm text-muted-foreground">
-                {t("chat.project.noMatch")}
-              </li>
-            )}
-            {filtered.map((project) => {
-              const isActive = project.id === activeProjectId;
-              return (
-                <li key={project.id} role="none">
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="sm"
-                    role="option"
-                    aria-selected={isActive}
-                    className={`${itemCls(isActive)} h-auto w-full justify-start font-normal`}
-                    onClick={() => {
-                      onSelect(project.id);
-                      setFilter("");
-                      setOpen(false);
-                    }}
-                  >
-                    <Folder size={12} className="opacity-60" />
-                    <span className="flex-1 truncate text-left">{projectLabel(project)}</span>
-                    {isActive && <Check size={12} className="text-primary" />}
-                  </Button>
+            <div className="flex items-center gap-1.5 border-b border-border px-2 py-1.5">
+              <Search size={12} className="opacity-50" />
+              <Input
+                ref={inputRef}
+                className="h-7 flex-1 border-0 bg-transparent px-0 text-sm shadow-none focus-visible:ring-0"
+                placeholder={t("chat.project.searchPlaceholder")}
+                aria-label={t("chat.project.searchPlaceholder")}
+                value={filter}
+                onChange={(e) => setFilter(e.target.value)}
+              />
+              {filter && (
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-6 w-6 opacity-50 hover:opacity-100"
+                  onClick={() => setFilter("")}
+                  aria-label={t("chat.project.clearAria")}
+                >
+                  <X size={12} />
+                </Button>
+              )}
+            </div>
+
+            <ul
+              className="max-h-64 overflow-y-auto py-1"
+              role="listbox"
+              aria-label={t("chat.project.searchPlaceholder")}
+            >
+              {filtered.length === 0 && (
+                <li className="px-2 py-1.5 text-sm text-muted-foreground">
+                  {t("chat.project.noMatch")}
                 </li>
-              );
-            })}
-          </ul>
+              )}
+              {filtered.map((project) => {
+                const isActive = project.id === activeProjectId;
+                return (
+                  <li key={project.id} role="none">
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      role="option"
+                      aria-selected={isActive}
+                      className={`${itemCls(isActive)} h-auto w-full justify-start font-normal`}
+                      onClick={() => {
+                        onSelect(project.id);
+                        setFilter("");
+                        setOpen(false);
+                      }}
+                    >
+                      <Folder size={12} className="opacity-60" />
+                      <span className="flex-1 truncate text-left">{projectLabel(project)}</span>
+                      {isActive && <Check size={12} className="text-primary" />}
+                    </Button>
+                  </li>
+                );
+              })}
+            </ul>
 
-          <div className="my-1 h-px bg-border" />
+            <div className="my-1 h-px bg-border" />
 
-          <ul className="py-1" role="none">
-            <li role="none">
-              <Button
-                type="button"
-                variant="ghost"
-                size="sm"
-                className={`${itemCls(false)} h-auto w-full justify-start font-normal`}
-                onClick={() => {
-                  onAddProject();
-                  setFilter("");
-                  setOpen(false);
-                }}
-              >
-                <FolderPlus size={12} className="opacity-60" />
-                <span className="flex-1 truncate text-left">{t("chat.project.addNew")}</span>
-              </Button>
-            </li>
-            <li role="none">
-              <Button
-                type="button"
-                variant="ghost"
-                size="sm"
-                role="option"
-                aria-selected={activeProjectId === null}
-                className={`${itemCls(activeProjectId === null)} h-auto w-full justify-start font-normal`}
-                onClick={() => {
-                  onSelect(null);
-                  setFilter("");
-                  setOpen(false);
-                }}
-              >
-                <Folder size={12} className="opacity-60" />
-                <span className="flex-1 truncate text-left">{t("chat.project.none")}</span>
-                {activeProjectId === null && <Check size={12} className="text-primary" />}
-              </Button>
-            </li>
-          </ul>
-        </div>
-      )}
+            <ul className="py-1" role="none">
+              <li role="none">
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  className={`${itemCls(false)} h-auto w-full justify-start font-normal`}
+                  onClick={() => {
+                    onAddProject();
+                    setFilter("");
+                    setOpen(false);
+                  }}
+                >
+                  <FolderPlus size={12} className="opacity-60" />
+                  <span className="flex-1 truncate text-left">{t("chat.project.addNew")}</span>
+                </Button>
+              </li>
+              <li role="none">
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  role="option"
+                  aria-selected={activeProjectId === null}
+                  className={`${itemCls(activeProjectId === null)} h-auto w-full justify-start font-normal`}
+                  onClick={() => {
+                    onSelect(null);
+                    setFilter("");
+                    setOpen(false);
+                  }}
+                >
+                  <Folder size={12} className="opacity-60" />
+                  <span className="flex-1 truncate text-left">{t("chat.project.none")}</span>
+                  {activeProjectId === null && <Check size={12} className="text-primary" />}
+                </Button>
+              </li>
+            </ul>
+          </div>,
+          document.body,
+        )}
     </div>
   );
 }

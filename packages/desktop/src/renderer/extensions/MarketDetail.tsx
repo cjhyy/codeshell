@@ -144,7 +144,7 @@ export function MarketDetail({ configurationTarget, marketName, onBack, onInstal
 
   return (
     <>
-      <div className="mb-3 flex items-center justify-between gap-3">
+      <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
         <div className="flex min-w-0 items-center gap-2">
           <Button variant="ghost" size="sm" className="h-7 px-2 text-sm text-muted-foreground hover:text-foreground" onClick={onBack}>
             ‹ {t("ext.common.back")}

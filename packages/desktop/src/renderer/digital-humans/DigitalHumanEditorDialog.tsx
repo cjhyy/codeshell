@@ -534,10 +534,10 @@ export function DigitalHumanEditorDialog({
   return (
     <Dialog open={open} onOpenChange={requestClose}>
       <DialogContent
-        className="flex max-h-[90vh] max-w-4xl flex-col gap-0 overflow-hidden p-0"
+        className="flex max-h-[90vh] max-w-4xl flex-col gap-0 overflow-y-auto p-0"
         showClose={!operationBusy}
       >
-        <DialogHeader className="border-b border-border/70 bg-muted/25 px-6 py-5 pr-12">
+        <DialogHeader className="shrink-0 border-b border-border/70 bg-muted/25 px-6 py-5 pr-12">
           <div className="flex items-start gap-3.5">
             <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl border border-primary/15 bg-primary/10 text-sm font-semibold text-primary shadow-sm">
               {previewInitials}
@@ -556,15 +556,15 @@ export function DigitalHumanEditorDialog({
         </DialogHeader>
 
         <form
-          className="flex min-h-0 flex-1 flex-col"
+          className="flex min-h-64 flex-1 flex-col"
           onSubmit={(event) => {
             event.preventDefault();
             submit();
           }}
         >
-          <div className="grid min-h-0 flex-1 md:grid-cols-[210px_minmax(0,1fr)]">
+          <div className="grid min-h-0 flex-1 grid-rows-[auto_minmax(0,1fr)] md:grid-cols-[210px_minmax(0,1fr)] md:grid-rows-[minmax(0,1fr)]">
             <nav
-              className="border-b border-border/70 bg-muted/15 p-3 md:border-b-0 md:border-r md:p-4"
+              className="min-h-0 overflow-y-auto border-b border-border/70 bg-muted/15 p-3 md:border-b-0 md:border-r md:p-4"
               aria-label={t("digitalHumans.editor.navigationLabel")}
             >
               <div className="grid grid-cols-4 gap-1 md:flex md:flex-col">
@@ -1184,7 +1184,7 @@ export function DigitalHumanEditorDialog({
             </div>
           </div>
 
-          <DialogFooter className="border-t border-border/70 bg-background px-5 py-3.5 sm:items-center sm:justify-between sm:px-6">
+          <DialogFooter className="shrink-0 border-t border-border/70 bg-background px-5 py-3.5 sm:items-center sm:justify-between sm:px-6">
             <p className="hidden text-xs text-muted-foreground sm:block">
               {dirty
                 ? t("digitalHumans.editor.unsavedChanges")
