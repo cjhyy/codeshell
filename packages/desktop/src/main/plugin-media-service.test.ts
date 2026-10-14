@@ -27,6 +27,26 @@ describe("desktop plugin media service", () => {
     return root;
   }
 
+  for (const field of ["logo", "logoDark"] as const) {
+    test(`does not grant the composer SVG path to the ${field} DTO slot`, () => {
+      const root = pluginRoot();
+      const vector =
+        '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1 1"><path d="M0 0L1 1"/></svg>';
+      const canonical = ".cs-plugin-assets/composer-icon.svg";
+      writeFileSync(join(root, canonical), vector);
+      const media = readPluginMediaFromManifest(
+        root,
+        { composerIcon: canonical, [field]: canonical, screenshots: [canonical] },
+        true,
+      );
+      expect(media.composerIconDataUrl).toBe(
+        `data:image/svg+xml;base64,${Buffer.from(vector).toString("base64")}`,
+      );
+      expect(media[field === "logo" ? "logoDataUrl" : "logoDarkDataUrl"]).toBeUndefined();
+      expect(media.screenshotDataUrls).toEqual([]);
+    });
+  }
+
   test("returns bounded data URLs without exposing canonical file paths", () => {
     const root = pluginRoot();
     writeFileSync(join(root, ".cs-plugin-assets", "logo.png"), PNG);
@@ -91,5 +111,68 @@ describe("desktop plugin media service", () => {
       logoDark: true,
       screenshotCount: 2,
     });
+  });
+
+  test("reads exact static composer SVG bytes and revalidates after replacement", () => {
+    const root = pluginRoot();
+    const vector =
+      '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><path d="M0 0L512 512z"/></svg>';
+    const path = join(root, ".cs-plugin-assets", "composer-icon.svg");
+    writeFileSync(path, vector);
+    const media = readPluginMediaFromManifest(root, {
+      composerIcon: ".cs-plugin-assets/composer-icon.svg",
+    });
+    expect(media.composerIconDataUrl).toBe(
+      `data:image/svg+xml;base64,${Buffer.from(vector).toString("base64")}`,
+    );
+    expect(
+      pluginMediaAvailability({ composerIcon: ".cs-plugin-assets/composer-icon.svg" }).composerIcon,
+    ).toBe(true);
+    for (const unsafe of [
+      vector.replace("<path", "<script>alert(1)</script><path"),
+      vector.replace("<path", '<image href="https://example.com/x"/><path'),
+      "<svg/>",
+    ]) {
+      writeFileSync(path, unsafe);
+      expect(
+        readCanonicalPluginAssetDataUrl(root, ".cs-plugin-assets/composer-icon.svg", 2048),
+      ).toBeUndefined();
+    }
+    writeFileSync(path, vector);
+    expect(
+      readCanonicalPluginAssetDataUrl(
+        root,
+        ".cs-plugin-assets/composer-icon.svg",
+        Buffer.byteLength(vector) - 1,
+      ),
+    ).toBeUndefined();
+    truncateSync(path, 2 * 1024 * 1024 + 1);
+    expect(
+      readPluginMediaFromManifest(root, { composerIcon: ".cs-plugin-assets/composer-icon.svg" })
+        .composerIconDataUrl,
+    ).toBeUndefined();
+  });
+
+  test("keeps SVG out of other canonical slots and refuses symlinked SVG leaves", () => {
+    const root = pluginRoot();
+    const vector = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1 1"/>';
+    for (const name of ["logo.svg", "logo-dark.svg", "screenshot-1.svg"]) {
+      writeFileSync(join(root, ".cs-plugin-assets", name), vector);
+      expect(
+        readCanonicalPluginAssetDataUrl(root, `.cs-plugin-assets/${name}`, 2048),
+      ).toBeUndefined();
+    }
+    expect(
+      pluginMediaAvailability({
+        logo: ".cs-plugin-assets/logo.svg",
+        logoDark: ".cs-plugin-assets/logo-dark.svg",
+        screenshots: [".cs-plugin-assets/screenshot-1.svg"],
+      }),
+    ).toEqual({ composerIcon: false, logo: false, logoDark: false, screenshotCount: 0 });
+    writeFileSync(join(root, "original.svg"), vector);
+    symlinkSync(join(root, "original.svg"), join(root, ".cs-plugin-assets", "composer-icon.svg"));
+    expect(
+      readCanonicalPluginAssetDataUrl(root, ".cs-plugin-assets/composer-icon.svg", 2048),
+    ).toBeUndefined();
   });
 });

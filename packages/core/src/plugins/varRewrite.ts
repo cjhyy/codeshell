@@ -31,7 +31,7 @@
  * explanation in-place.
  */
 
-import { readdirSync, readFileSync, statSync, writeFileSync } from "node:fs";
+import { lstatSync, readdirSync, readFileSync, statSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 
 const REWRITES = [
@@ -55,7 +55,11 @@ function isLikelyBinary(buf: Buffer): boolean {
   return false;
 }
 
-function walkAndRewrite(dir: string, summary: RewriteSummary): void {
+function walkAndRewrite(
+  dir: string,
+  summary: RewriteSummary,
+  canonicalComposerSvg: string | undefined,
+): void {
   let entries: {
     name: string;
     isDirectory(): boolean;
@@ -75,10 +79,13 @@ function walkAndRewrite(dir: string, summary: RewriteSummary): void {
       // Skip VCS metadata: we never want to mutate a plugin's .git internals,
       // even though we don't expect one in a cache dir.
       if (ent.name === ".git") continue;
-      walkAndRewrite(full, summary);
+      walkAndRewrite(full, summary, canonicalComposerSvg);
       continue;
     }
     if (!ent.isFile()) continue;
+    // This installer-owned image is already validated and byte-preserved.
+    // Its SVG IDs are image data, not hook/script environment templates.
+    if (full === canonicalComposerSvg) continue;
 
     let raw: Buffer;
     try {
@@ -126,7 +133,23 @@ export function rewritePluginVars(installPath: string): RewriteSummary {
     return summary;
   }
 
-  walkAndRewrite(installPath, summary);
+  let canonicalComposerSvg: string | undefined;
+  try {
+    const manifestPath = join(installPath, ".cs-plugin-manifest.json");
+    const info = lstatSync(manifestPath);
+    if (info.isFile() && !info.isSymbolicLink() && info.size <= 1024 * 1024) {
+      const bytes = readFileSync(manifestPath);
+      if (bytes.length <= 1024 * 1024) {
+        const manifest = JSON.parse(bytes.toString("utf8"));
+        if (manifest?.interface?.composerIcon === ".cs-plugin-assets/composer-icon.svg") {
+          canonicalComposerSvg = join(installPath, ".cs-plugin-assets", "composer-icon.svg");
+        }
+      }
+    }
+  } catch {
+    // Standalone/raw-source rewriting has no normalized image declaration.
+  }
+  walkAndRewrite(installPath, summary, canonicalComposerSvg);
 
   const breadcrumb = {
     rewrittenAt: new Date().toISOString(),

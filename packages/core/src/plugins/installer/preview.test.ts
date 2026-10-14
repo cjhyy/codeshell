@@ -5,6 +5,7 @@ import {
   mkdirSync,
   mkdtempSync,
   readdirSync,
+  readFileSync,
   rmSync,
   symlinkSync,
   writeFileSync,
@@ -178,18 +179,22 @@ describe("previewLocalPlugin", () => {
     expect(readdirSync(previewTmp)).toEqual([]);
   });
 
-  test("uses the same safe zip extraction and cleans every temporary directory", async () => {
-    writeCodexPlugin();
-    const archive = join(scratch, "review.zip");
-    zipDirectory(source, archive);
+  test(
+    "uses the same safe zip extraction and cleans every temporary directory",
+    async () => {
+      writeCodexPlugin();
+      const archive = join(scratch, "review.zip");
+      zipDirectory(source, archive);
 
-    const preview = await previewLocalPlugin({ kind: "zip", path: archive });
+      const preview = await previewLocalPlugin({ kind: "zip", path: archive });
 
-    expect(preview.name).toBe("review-plugin");
-    expect(preview.source.kind).toBe("zip");
-    expect(readdirSync(previewTmp)).toEqual([]);
-    expect(existsSync(join(home, ".code-shell", "plugins"))).toBe(false);
-  }, PREVIEW_TEST_TIMEOUT_MS);
+      expect(preview.name).toBe("review-plugin");
+      expect(preview.source.kind).toBe("zip");
+      expect(readdirSync(previewTmp)).toEqual([]);
+      expect(existsSync(join(home, ".code-shell", "plugins"))).toBe(false);
+    },
+    PREVIEW_TEST_TIMEOUT_MS,
+  );
 
   test("source changes produce a new review token", async () => {
     writeCodexPlugin();
@@ -197,6 +202,47 @@ describe("previewLocalPlugin", () => {
     writeFileSync(join(source, "server.js"), "console.log('changed')\n");
     const after = await previewLocalPlugin({ kind: "dir", path: source });
     expect(after.reviewToken).not.toBe(before.reviewToken);
+  });
+
+  test("composer SVG bytes participate in stable previews and the reviewed private snapshot", async () => {
+    mkdirSync(join(source, ".codex-plugin"), { recursive: true });
+    mkdirSync(join(source, "assets"), { recursive: true });
+    writeFileSync(
+      join(source, ".codex-plugin", "plugin.json"),
+      JSON.stringify({
+        name: "svg-review",
+        version: "1.0.0",
+        interface: { composerIcon: "./assets/icon.svg" },
+      }),
+    );
+    const vector =
+      '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1 1"><path d="M0 0L1 1"/></svg>';
+    writeFileSync(join(source, "assets", "icon.svg"), vector);
+    const before = await previewLocalPlugin({ kind: "dir", path: source });
+    const again = await previewLocalPlugin({ kind: "dir", path: source });
+    expect(before.interface.media.composerIcon).toBe(".cs-plugin-assets/composer-icon.svg");
+    expect(again.reviewToken).toBe(before.reviewToken);
+    const changed = vector.replace("L1 1", "L0 1");
+    writeFileSync(join(source, "assets", "icon.svg"), changed);
+    const after = await previewLocalPlugin({ kind: "dir", path: source });
+    expect(after.reviewToken).not.toBe(before.reviewToken);
+    await expect(
+      installReviewedLocalPlugin(
+        { kind: "dir", path: source },
+        before.reviewToken,
+        "2026-10-14T00:00:00Z",
+      ),
+    ).rejects.toBeInstanceOf(LocalPluginReviewChangedError);
+    expect(existsSync(join(home, ".code-shell", "plugins", "svg-review"))).toBe(false);
+    const installed = await installReviewedLocalPlugin(
+      { kind: "dir", path: source },
+      after.reviewToken,
+      "2026-10-14T00:00:00Z",
+    );
+    expect(
+      readFileSync(join(installed.dir, ".cs-plugin-assets", "composer-icon.svg"), "utf8"),
+    ).toBe(changed);
+    expect(readdirSync(previewTmp)).toEqual([]);
   });
 
   test("installs only the private snapshot that matches the review token", async () => {
@@ -242,30 +288,34 @@ describe("previewLocalPlugin", () => {
     expect(existsSync(join(home, ".code-shell", "plugins", "linked-plugin"))).toBe(false);
   });
 
-  test("invalid hooks and oversized preview output fail before installation", async () => {
-    mkdirSync(join(source, ".claude-plugin"), { recursive: true });
-    mkdirSync(join(source, "hooks"), { recursive: true });
-    writeFileSync(
-      join(source, ".claude-plugin", "plugin.json"),
-      JSON.stringify({ name: "invalid-hooks" }),
-    );
-    writeFileSync(
-      join(source, "hooks", "hooks.json"),
-      JSON.stringify({ hooks: { SessionStart: "not-an-array" } }),
-    );
-    await expect(previewLocalPlugin({ kind: "dir", path: source })).rejects.toThrow(
-      /invalid plugin hooks/,
-    );
-    expect(existsSync(join(home, ".code-shell", "plugins"))).toBe(false);
+  test(
+    "invalid hooks and oversized preview output fail before installation",
+    async () => {
+      mkdirSync(join(source, ".claude-plugin"), { recursive: true });
+      mkdirSync(join(source, "hooks"), { recursive: true });
+      writeFileSync(
+        join(source, ".claude-plugin", "plugin.json"),
+        JSON.stringify({ name: "invalid-hooks" }),
+      );
+      writeFileSync(
+        join(source, "hooks", "hooks.json"),
+        JSON.stringify({ hooks: { SessionStart: "not-an-array" } }),
+      );
+      await expect(previewLocalPlugin({ kind: "dir", path: source })).rejects.toThrow(
+        /invalid plugin hooks/,
+      );
+      expect(existsSync(join(home, ".code-shell", "plugins"))).toBe(false);
 
-    rmSync(join(source, "hooks"), { recursive: true, force: true });
-    mkdirSync(join(source, "commands"), { recursive: true });
-    for (let index = 0; index < 257; index += 1) {
-      writeFileSync(join(source, "commands", `command-${index}.md`), "body\n");
-    }
-    await expect(previewLocalPlugin({ kind: "dir", path: source })).rejects.toThrow(
-      /more than 256/,
-    );
-    expect(existsSync(join(home, ".code-shell", "plugins"))).toBe(false);
-  }, PREVIEW_TEST_TIMEOUT_MS);
+      rmSync(join(source, "hooks"), { recursive: true, force: true });
+      mkdirSync(join(source, "commands"), { recursive: true });
+      for (let index = 0; index < 257; index += 1) {
+        writeFileSync(join(source, "commands", `command-${index}.md`), "body\n");
+      }
+      await expect(previewLocalPlugin({ kind: "dir", path: source })).rejects.toThrow(
+        /more than 256/,
+      );
+      expect(existsSync(join(home, ".code-shell", "plugins"))).toBe(false);
+    },
+    PREVIEW_TEST_TIMEOUT_MS,
+  );
 });

@@ -2,11 +2,11 @@
 
 > 本文件只保留**未完成**的待办；已完成实现与历史验收见 Git 历史和 [能力盘点](docs/architecture/11-feature-inventory.md)。
 > 分区规则：**小 feature = 体量 M 及以下（M/S/XS），可单会话直接着手**；**大功能升级 = 体量 L**，需先方案设计再分阶段落地。
-> 最近一次核对：2026-10-14。最新正式版为 [v0.9.40](https://github.com/cjhyy/codeshell/releases/tag/v0.9.40)，tag 解析到 `c86f003d`，不包含后续 PR #170/#171/#172/#174 或独立候选中的 SVG 补丁。当前远端 main 为 `3a752aea`，其首轮自然 [CI 38443116313](https://github.com/cjhyy/codeshell/actions/runs/38443116313) 十二项成功；源码合入、受控验收、正式发行和目标部署仍分别记证。完整十项门槛、准确输入及不可变回执见[交付检查点](docs/todo/p0-p1-release-2026-10-12.md)；旧版本与失败记录在该文档中保留为历史。
+> 最近一次核对：2026-10-14。最新正式版为 [v0.9.40](https://github.com/cjhyy/codeshell/releases/tag/v0.9.40)，tag 解析到 `c86f003d`，不包含后续 PR #170/#171/#172/#174/#176 或独立候选中的 SVG 补丁。当前远端 main 为 `8ec7597c`，Hook 引号内路径变量修复已随 PR #176 合入，其首轮自然 [CI 38479241709](https://github.com/cjhyy/codeshell/actions/runs/38479241709) 十二项成功；源码合入、受控验收、正式发行和目标部署仍分别记证。完整十项门槛、准确输入及不可变回执见[交付检查点](docs/todo/p0-p1-release-2026-10-12.md)；旧版本与失败记录在该文档中保留为历史。
 
-> **P0：先完成真实插件与 SVG UI、完整候选和正式发行。** Superpowers 6.1.1 的真实 API 安装、14 Skills 与来源隔离冷启动通过，但该输入无 Hook。真实 v5.0.0 已实际自动触发首次 SessionStart，原命令 shell 退出 127，报 literal `${CODESHELL_PLUGIN_ROOT}` 路径不存在；完整上下文未进入真实 Run，另有 `maxTurns=1` 与 fixture 要求 `completed` 的独立失败，整轮 baseline 仍为 false。SVG v7.1 截图已定位 Trust dialog 遮住 Settings；33 次原生 ps／两次 metrics 与进程退出已核，Main 另有 2 次 network／4 次 process 拒绝待归因，零计数门槛未过，DTO/IMG/第二 phase 未到达。后续 View only／拒绝归因方案仅在准备，未重试；原十项门槛和失败历史继续保留。
+> **P0：完成正式安装包运行验收、完整候选和发行。** 新构建并独立安装的 SDK 已通过真实 Superpowers v5.0.0 安装、审阅及审批，保留原命令、审批摘要和 14 Skills；随后真实 Engine 自动 startup 和新进程同 Session cold resume 均通过，每轮受控 HTTP 请求中的完整 5187 字节上下文恰好一次，冷恢复保留首轮对话。SVG v11 已通过两次真实 Electron 冷启动：完整 SVG 解码、PNG 优先级、列表／详情显示和退出清理均通过，源码仍在独立交付分支。此结果采用明确版本化的来源绑定拒绝合同，每轮 2 次 network／4 次 process 拒绝、renderer 0；不称原整个 Main 零尝试门槛通过，也不替代 Keychain、微信或正式安装包验收。旧 v5 shell 127／maxTurns 失败及 SVG 旧失败记录保留。
 >
-> 完整 Linux [38384214542](https://github.com/cjhyy/codeshell-services/actions/runs/38384214542) 固定 Host `676d3a14`／Services `a5958f0b`／Panels `75431542`、真实 speech／默认 all／无 exclusion，首轮终态失败：六包受控更新、Job 迁移恢复、真实 PDF、CPU speech 和音频局部流程通过，随后 Job 最终 `page-errors` 断言失败，具体错误仍未知；其余完整业务／重启／备份恢复／Link／归档未到达，候选上传 skipped，证据上传 quota 失败。这轮没有覆盖当前 main `3a752aea` 或 SVG 候选。
+> 完整 Linux [38384214542](https://github.com/cjhyy/codeshell-services/actions/runs/38384214542) 固定 Host `676d3a14`／Services `a5958f0b`／Panels `75431542`、真实 speech／默认 all／无 exclusion，首轮终态失败：六包受控更新、Job 迁移恢复、真实 PDF、CPU speech 和音频局部流程通过，随后 Job 最终 `page-errors` 断言失败，具体错误仍未知；其余完整业务／重启／备份恢复／Link／归档未到达，候选上传 skipped，证据上传 quota 失败。这轮没有覆盖当前 main `8ec7597c` 或 SVG 候选。
 >
 > **P1：完成真实环境闭环。** 五 Panel 正式资产／生产更新链、正式安装包 Pet/Keychain 和真实微信、二十四项完整业务、真实旧数据迁移、账号/设备 authority、目标部署／备份恢复／回滚、实体手机及最终输出恢复验收继续保留。目标 SSH 入口仍待确认；严格 HTTPS 200 不关闭部署验收。P2/P3、新第三方 Link 接入及未获授权的配额删除不在本轮推进范围，不缩减原 3 P0 + 7 P1。
 

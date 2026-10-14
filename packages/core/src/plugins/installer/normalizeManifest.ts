@@ -12,6 +12,7 @@ import {
   type CanonicalPluginManifest as CanonicalPluginManifestData,
 } from "./types.js";
 import { validateSchedule } from "../../automation/scheduler.js";
+import { validatePluginComposerSvg } from "../static-svg.js";
 
 export interface NormalizePluginManifestOptions {
   name: string;
@@ -32,6 +33,11 @@ type RasterMediaType = "image/png" | "image/jpeg" | "image/webp";
 interface ValidatedRasterAsset {
   bytes: Buffer;
   mediaType: RasterMediaType;
+}
+
+interface ValidatedComposerSvgAsset {
+  bytes: Buffer;
+  mediaType: "image/svg+xml";
 }
 
 function manifestPath(sourceRoot: string, format: "cc" | "codex"): string {
@@ -191,23 +197,13 @@ async function validateRasterAsset(
     throw new Error(`${field} must be PNG, JPEG, or WebP`);
   }
 
-  const candidate = resolve(sourceRoot, ...relativePath.split("/"));
-  let target: string;
-  try {
-    target = await realpath(candidate);
-  } catch {
-    throw new Error(`${field} does not exist: ${declaredPath}`);
-  }
-  if (!isContained(sourceRootReal, target)) {
-    throw new Error(`${field} escapes the plugin root: ${declaredPath}`);
-  }
-  const info = await stat(target);
-  if (!info.isFile()) throw new Error(`${field} is not a file: ${declaredPath}`);
-  if (info.size > maxBytes) {
-    throw new Error(`${field} exceeds the ${Math.floor(maxBytes / 1024 / 1024)} MiB limit`);
-  }
-
-  const bytes = await readFile(target);
+  const bytes = await readAuthorAssetBytes(
+    sourceRoot,
+    sourceRootReal,
+    declaredPath,
+    field,
+    maxBytes,
+  );
   const detected = detectRaster(bytes);
   if (!detected || detected.mediaType !== expected) {
     throw new Error(`${field} content does not match its supported raster extension`);
@@ -226,7 +222,39 @@ async function validateRasterAsset(
   return { bytes, mediaType: detected.mediaType };
 }
 
-function canonicalAssetExtension(mediaType: RasterMediaType): string {
+async function readAuthorAssetBytes(
+  sourceRoot: string,
+  sourceRootReal: string,
+  declaredPath: string,
+  field: string,
+  maxBytes: number,
+): Promise<Buffer> {
+  const relativePath = safeAuthorAssetPath(declaredPath, field);
+  const candidate = resolve(sourceRoot, ...relativePath.split("/"));
+  let target: string;
+  try {
+    target = await realpath(candidate);
+  } catch {
+    throw new Error(`${field} does not exist: ${declaredPath}`);
+  }
+  if (!isContained(sourceRootReal, target)) {
+    throw new Error(`${field} escapes the plugin root: ${declaredPath}`);
+  }
+  const info = await stat(target);
+  if (!info.isFile()) throw new Error(`${field} is not a file: ${declaredPath}`);
+  if (info.size > maxBytes) {
+    throw new Error(`${field} exceeds the ${Math.floor(maxBytes / 1024 / 1024)} MiB limit`);
+  }
+
+  const bytes = await readFile(target);
+  if (bytes.length > maxBytes) {
+    throw new Error(`${field} exceeds the ${Math.floor(maxBytes / 1024 / 1024)} MiB limit`);
+  }
+  return bytes;
+}
+
+function canonicalAssetExtension(mediaType: RasterMediaType | "image/svg+xml"): string {
+  if (mediaType === "image/svg+xml") return "svg";
   if (mediaType === "image/jpeg") return "jpeg";
   if (mediaType === "image/webp") return "webp";
   return "png";
@@ -251,14 +279,27 @@ async function normalizeInterfaceAssets(
   const brandAssets = await Promise.all(
     declared.map(async ([field, value, canonicalName]) => {
       if (!value) return null;
-      const asset = await validateRasterAsset(
-        sourceRoot,
-        sourceRootReal,
-        value,
-        `interface.${field}`,
-        MAX_PLUGIN_BRAND_ASSET_BYTES,
-        false,
-      );
+      let asset: ValidatedRasterAsset | ValidatedComposerSvgAsset;
+      if (field === "composerIcon" && extname(value).toLowerCase() === ".svg") {
+        const bytes = await readAuthorAssetBytes(
+          sourceRoot,
+          sourceRootReal,
+          value,
+          `interface.${field}`,
+          MAX_PLUGIN_BRAND_ASSET_BYTES,
+        );
+        validatePluginComposerSvg(bytes);
+        asset = { bytes, mediaType: "image/svg+xml" };
+      } else {
+        asset = await validateRasterAsset(
+          sourceRoot,
+          sourceRootReal,
+          value,
+          `interface.${field}`,
+          MAX_PLUGIN_BRAND_ASSET_BYTES,
+          false,
+        );
+      }
       return { field, canonicalName, asset };
     }),
   );

@@ -1,5 +1,15 @@
 import { loadPluginCatalog } from "@cjhyy/code-shell-core";
-import { lstatSync, readFileSync, realpathSync, statSync } from "node:fs";
+import { validatePluginComposerSvg } from "@cjhyy/code-shell-core/internal";
+import {
+  closeSync,
+  constants,
+  fstatSync,
+  lstatSync,
+  openSync,
+  readSync,
+  realpathSync,
+  statSync,
+} from "node:fs";
 import { extname, isAbsolute, relative, resolve, sep } from "node:path";
 import type { PluginMediaAvailability, PluginMediaDto } from "../shared/plugin-media.js";
 
@@ -8,7 +18,7 @@ const MAX_SCREENSHOT_BYTES = 5 * 1024 * 1024;
 const MAX_IMAGE_DIMENSION = 8192;
 const MAX_IMAGE_PIXELS = 40_000_000;
 const CANONICAL_ASSET_PATH =
-  /^\.cs-plugin-assets\/(?:composer-icon|logo|logo-dark|screenshot-[1-3])\.(?:png|jpeg|webp)$/u;
+  /^\.cs-plugin-assets\/(?:(?:composer-icon|logo|logo-dark|screenshot-[1-3])\.(?:png|jpeg|webp)|composer-icon\.svg)$/u;
 const CANONICAL_SCREENSHOT_PATH = /^\.cs-plugin-assets\/screenshot-[1-3]\.png$/u;
 
 interface PluginMediaManifest {
@@ -146,7 +156,7 @@ export function pluginMediaAvailability(
   return {
     composerIcon:
       typeof manifest?.composerIcon === "string" &&
-      /^\.cs-plugin-assets\/composer-icon\.(?:png|jpeg|webp)$/u.test(manifest.composerIcon),
+      /^\.cs-plugin-assets\/composer-icon\.(?:png|jpeg|webp|svg)$/u.test(manifest.composerIcon),
     logo:
       typeof manifest?.logo === "string" &&
       /^\.cs-plugin-assets\/logo\.(?:png|jpeg|webp)$/u.test(manifest.logo),
@@ -181,7 +191,50 @@ export function readCanonicalPluginAssetDataUrl(
     if (!isInside(targetReal, rootReal)) return undefined;
     const info = statSync(targetReal);
     if (!info.isFile() || info.size > maxBytes) return undefined;
-    const bytes = readFileSync(targetReal);
+    // Bind the bounded read to the checked regular leaf. O_NOFOLLOW prevents
+    // a leaf swap on supporting platforms; identity checks also bind the
+    // descriptor to the containment check. This is not an OS sandbox.
+    const fd = openSync(candidate, constants.O_RDONLY | (constants.O_NOFOLLOW ?? 0));
+    let bytes: Buffer;
+    try {
+      const opened = fstatSync(fd);
+      if (
+        !opened.isFile() ||
+        opened.size > maxBytes ||
+        opened.dev !== entry.dev ||
+        opened.ino !== entry.ino ||
+        opened.dev !== info.dev ||
+        opened.ino !== info.ino
+      )
+        return undefined;
+      const openedTarget = realpathSync(candidate);
+      if (!isInside(openedTarget, rootReal)) return undefined;
+      const current = statSync(openedTarget);
+      if (current.dev !== opened.dev || current.ino !== opened.ino) return undefined;
+      const buffer = Buffer.alloc(Math.min(opened.size + 1, maxBytes + 1));
+      let length = 0;
+      while (length < buffer.length) {
+        const read = readSync(fd, buffer, length, buffer.length - length, null);
+        if (read === 0) break;
+        length += read;
+      }
+      const after = fstatSync(fd);
+      if (
+        length !== opened.size ||
+        after.size !== opened.size ||
+        after.mtimeMs !== opened.mtimeMs ||
+        after.ctimeMs !== opened.ctimeMs
+      )
+        return undefined;
+      bytes = buffer.subarray(0, length);
+    } finally {
+      closeSync(fd);
+    }
+    if (bytes.length > maxBytes) return undefined;
+    if (assetPath === ".cs-plugin-assets/composer-icon.svg") {
+      validatePluginComposerSvg(bytes);
+      return `data:image/svg+xml;base64,${bytes.toString("base64")}`;
+    }
     const raster = detectRaster(bytes);
     if (!raster || !isBoundedRaster(raster) || raster.mediaType !== expectedMediaType(assetPath)) {
       return undefined;
@@ -197,22 +250,20 @@ export function readPluginMediaFromManifest(
   manifest: PluginMediaManifest | null | undefined,
   includeScreenshots = false,
 ): PluginMediaDto {
+  // A modified manifest cannot borrow the valid composer SVG path for a raster
+  // DTO slot. The generic canonical reader still validates actual SVG bytes.
+  const rasterBrand = (assetPath: string | undefined) =>
+    assetPath === ".cs-plugin-assets/composer-icon.svg"
+      ? undefined
+      : readCanonicalPluginAssetDataUrl(installPath, assetPath, MAX_BRAND_ASSET_BYTES);
   return {
     composerIconDataUrl: readCanonicalPluginAssetDataUrl(
       installPath,
       manifest?.composerIcon,
       MAX_BRAND_ASSET_BYTES,
     ),
-    logoDataUrl: readCanonicalPluginAssetDataUrl(
-      installPath,
-      manifest?.logo,
-      MAX_BRAND_ASSET_BYTES,
-    ),
-    logoDarkDataUrl: readCanonicalPluginAssetDataUrl(
-      installPath,
-      manifest?.logoDark,
-      MAX_BRAND_ASSET_BYTES,
-    ),
+    logoDataUrl: rasterBrand(manifest?.logo),
+    logoDarkDataUrl: rasterBrand(manifest?.logoDark),
     screenshotDataUrls: includeScreenshots
       ? (manifest?.screenshots ?? [])
           .filter((assetPath) => CANONICAL_SCREENSHOT_PATH.test(assetPath))

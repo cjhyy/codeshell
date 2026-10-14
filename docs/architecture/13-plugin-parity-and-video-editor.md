@@ -75,10 +75,20 @@ The installer now:
    against their real paths, rejects escaping symlinks, missing files, format
    spoofing, oversized/dimension-bomb images, and non-`assets/*.png`
    screenshots, then copies accepted bytes into an installer-owned canonical
-   asset directory. Brand images are capped at 2 MiB each, screenshots at
+   asset directory. `composerIcon` additionally accepts a validated static SVG
+   shape subset: namespace-aware XML, bounded finite geometry and no script,
+   style, links, resources, entities, animation, or nested SVG. Its original
+   bytes are preserved as `composer-icon.svg`; `logo`, `logoDark`, and screenshots
+   retain their existing formats. This installer-owned SVG is excluded from
+   environment-variable template rewriting; author scripts and other files
+   retain their existing rewriting behavior. Logos and screenshots
+   retain the raster-only contract. Brand images are capped at 2 MiB each, screenshots at
    5 MiB each and three entries, with an 8192 px edge / 40-megapixel ceiling;
 10. serves plugin media through a bounded main-process DTO containing only
-    PNG/JPEG/WebP data URLs. Author and installed file paths never enter the
+    PNG/JPEG/WebP data URLs plus the composer-only static SVG exception. Main
+    binds canonical reads to a bounded regular-file descriptor and revalidates
+    the actual SVG bytes on every read; the renderer uses image data URLs only,
+    never inline SVG or author DOM. Author and installed file paths never enter the
     rich-media renderer contract, and Extensions opens only normalized HTTPS
     website/privacy/terms links through the existing external-browser host.
 11. records a separate `approvedHookDigest`: new installs with executable
