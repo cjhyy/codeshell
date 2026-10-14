@@ -120,6 +120,7 @@ export function SettingsMenu({
       </DropdownMenuTrigger>
       <DropdownMenuContent
         aria-label={t(account ? "settingsX.cloudAccount.manage" : "settingsX.menu.settings")}
+        aria-labelledby={undefined}
         side="top"
         align="start"
         className="w-64 max-w-[calc(100vw-1.5rem)] rounded-xl p-1.5"

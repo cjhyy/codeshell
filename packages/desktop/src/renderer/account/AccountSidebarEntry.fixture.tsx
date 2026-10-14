@@ -12,6 +12,24 @@ import type {
 import { ensureMiniDom, flushMicrotasks } from "../test-utils/renderHook";
 
 ensureMiniDom();
+HTMLElement.prototype.getBoundingClientRect = () =>
+  ({ x: 0, y: 0, top: 0, left: 0, right: 240, bottom: 36, width: 240, height: 36 }) as DOMRect;
+// Popper reads CSS custom properties when the account dropdown mounts.
+const createElement = document.createElement.bind(document);
+document.createElement = ((...args: Parameters<typeof document.createElement>) => {
+  const element = createElement(...args);
+  element.style.setProperty = (name: string, value: string | null) => {
+    (element.style as unknown as Record<string, string>)[name] = value ?? "";
+  };
+  element.style.removeProperty = (name: string) => {
+    const value = (element.style as unknown as Record<string, string>)[name] ?? "";
+    delete (element.style as unknown as Record<string, string>)[name];
+    return value;
+  };
+  element.style.getPropertyValue = (name: string) =>
+    (element.style as unknown as Record<string, string>)[name] ?? "";
+  return element;
+}) as typeof document.createElement;
 Object.defineProperty(globalThis, "localStorage", {
   configurable: true,
   value: { getItem: () => null },
@@ -26,6 +44,7 @@ Object.defineProperty(globalThis, "cancelAnimationFrame", {
 });
 
 const { AccountSidebarEntry } = await import("./AccountSidebarEntry");
+const { ToastProvider } = await import("../ui/ToastProvider");
 const scenario = process.argv[2];
 type Capabilities = Awaited<ReturnType<CloudAccountApi["capabilities"]>>;
 const deferred = <T = CloudAccountStatus,>() => {
@@ -47,6 +66,8 @@ const capabilityRequests: Array<{
 let capabilityAttempts = 0;
 const credentials: Array<{ action: string; input: CloudAccountLogin }> = [];
 const authenticationRequest = deferred<CloudAccountStatus>();
+const logoutRequest = deferred<void>();
+let logoutCalls = 0;
 const profileRequest = deferred<CloudAccountStatus>();
 const profileCalls: Array<Parameters<CloudAccountApi["profile"]>[0]> = [];
 let remoteProfile: CloudAccountIdentity | undefined;
@@ -170,7 +191,13 @@ const api: CloudAccountApi = {
     cancellations += 1;
     emit({ state: "signed-out" });
   },
-  logout: async () => emit({ state: "signed-out" }),
+  logout: async () => {
+    logoutCalls += 1;
+    if (scenario === "menu-logout-failure" && logoutCalls === 1)
+      throw new Error("Unable to sign out");
+    if (scenario === "menu-logout-pending") await logoutRequest.promise;
+    emit({ state: "signed-out" });
+  },
   onStatus: (callback) => {
     subscriptions += 1;
     subscribed.push(callback);
@@ -209,6 +236,14 @@ const trigger = () => {
   return button as HTMLButtonElement;
 };
 const dialog = () => nodes(document.body).find((node) => props(node).role === "dialog");
+const menu = () => nodes(document.body).find((node) => props(node).role === "menu");
+const menuItem = (label: string) => {
+  const found = nodes(menu()!).find(
+    (node) => props(node).role === "menuitem" && text(node) === label,
+  );
+  assert.ok(found, `Account menu action is available: ${label}`);
+  return found;
+};
 const form = () => {
   const found = nodes(dialog()!).find((node) => node.tagName === "FORM");
   assert.ok(found, "Password credentials use a form that supports Enter submission");
@@ -240,6 +275,12 @@ const settleCapabilities = async () => {
     await flushMicrotasks();
   });
 };
+const settleClose = async () => {
+  await act(async () => {
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    await flushMicrotasks();
+  });
+};
 const click = (node: Element) =>
   settle(() => {
     assert.ok(!props(node).disabled, `Action must be enabled: ${text(node)}`);
@@ -259,18 +300,51 @@ const check = (node: Element, checked: boolean) =>
     assert.equal(props(node).disabled, false, "The GitHub connection choice can be changed");
     props(node).onChange({ target: { checked } });
   });
-const open = async () => {
+const openMenu = async () => {
   trigger().focus();
-  await click(trigger());
-  assert.ok(dialog(), "The real dialog opens from the account button");
+  await settle(() =>
+    props(trigger()).onKeyDown({ key: "Enter", defaultPrevented: false, preventDefault() {} }),
+  );
+  assert.ok(menu(), "The account button opens its menu");
   assert.equal(props(trigger())["aria-expanded"], true);
+};
+const selectMenu = async (label: string) => {
+  const node = menuItem(label);
+  assert.equal(props(node)["data-disabled"], undefined, `${label} is enabled`);
+  await settle(() =>
+    props(node).onClick({
+      defaultPrevented: false,
+      stopPropagation() {},
+      currentTarget: node,
+    }),
+  );
+  await settleClose();
+};
+const closeMenu = async () => {
+  await settle(() =>
+    document.dispatchEvent(
+      Object.assign(new Event("keydown", { cancelable: true }), { key: "Escape" }),
+    ),
+  );
+  await settleClose();
+  assert.equal(menu(), undefined);
+  assert.equal(document.activeElement, trigger(), "Dismissing the menu restores account focus");
+};
+const open = async () => {
+  await openMenu();
+  assert.equal(dialog(), undefined, "Opening the menu does not mount account management");
+  await selectMenu(current.account?.username ? "账号管理" : "登录账号");
+  assert.ok(dialog(), "The account menu opens the real management dialog");
+  assert.equal(menu(), undefined, "The menu releases its surface before management opens");
+  assert.equal(props(trigger())["aria-expanded"], false);
   assert.ok(text(dialog()!).includes("账号管理"));
 };
 const close = async () => {
   await click(button("Close"));
-  await settle(() => {});
+  await settleClose();
   assert.equal(dialog(), undefined, "Closing removes account management");
   assert.equal(props(trigger())["aria-expanded"], false);
+  assert.equal(document.activeElement, trigger(), "Closing management restores account focus");
 };
 const assertTriggerDetails = (detail: string) => {
   const describedBy = props(trigger())["aria-describedby"];
@@ -302,10 +376,114 @@ const assertSignedIn = (username: string) => {
 };
 
 try {
-  await settle(() => root.render(<AccountSidebarEntry />));
+  await settle(() =>
+    root.render(
+      <ToastProvider>
+        <AccountSidebarEntry
+          onOpenSettingsPage={() => {}}
+          petWidgetVisible={false}
+          onTogglePetWidget={() => {}}
+        />
+      </ToastProvider>,
+    ),
+  );
   assert.equal(listeners.size, 1, "The footer listens even before management opens");
 
-  if (scenario.startsWith("profile-")) {
+  if (scenario === "menu-preview") {
+    assertSignedOut();
+    await openMenu();
+    assert.equal(dialog(), undefined, "The account form stays unmounted in the menu");
+    assert.equal(listeners.size, 1, "Opening the menu does not subscribe an account form");
+    assert.deepEqual(
+      nodes(menu()!)
+        .filter((node) => props(node).role === "menuitem")
+        .slice(0, 2)
+        .map(text),
+      ["设置", "切换语言"],
+      "Settings and language lead the account menu",
+    );
+    menuItem("登录账号");
+    assert.ok(!text(menu()!).includes("退出云账号"), "Local mode has no sign-out action");
+    await settleCapabilities();
+    assert.equal(capabilityAttempts, 0, "Opening an account menu never contacts the service");
+    await closeMenu();
+    await settle(() => emit(signedIn("menu-user")));
+    await openMenu();
+    assert.ok(
+      text(menu()!).includes("menu-user"),
+      "The account menu identifies the signed-in user",
+    );
+    menuItem("账号管理");
+    menuItem("退出云账号");
+    await settleCapabilities();
+    assert.equal(capabilityAttempts, 0, "A signed-in menu also uses only the local status");
+  } else if (scenario === "menu-logout") {
+    await settle(() => emit(signedIn("menu-user")));
+    await openMenu();
+    await selectMenu("退出云账号");
+    assert.equal(logoutCalls, 1);
+    assertSignedOut();
+    assert.equal(dialog(), undefined, "Menu sign-out does not open account management");
+    assert.equal(menu(), undefined, "Sign-out dismisses its menu");
+    assert.equal(capabilityAttempts, 0, "Sign-out does not discover service capabilities");
+    assert.equal(document.activeElement, trigger());
+    assert.notEqual(document.body.style.pointerEvents, "none");
+  } else if (scenario === "menu-logout-pending") {
+    for (const pending of [
+      { ...signedIn("menu-user"), state: "signing-in" as const },
+      { ...signedIn("menu-user"), githubConnection: { state: "pending" as const } },
+    ]) {
+      await settle(() => emit(pending));
+      await openMenu();
+      assert.notEqual(
+        props(menuItem("退出云账号"))["data-disabled"],
+        undefined,
+        "Sign-out is disabled while authentication or a GitHub connection is pending",
+      );
+      await closeMenu();
+    }
+    await settle(() => emit(signedIn("menu-user")));
+    await openMenu();
+    const node = menuItem("退出云账号");
+    const onClick = props(node).onClick;
+    const select = () =>
+      onClick({
+        defaultPrevented: false,
+        stopPropagation() {},
+        currentTarget: node,
+      });
+    await settle(() => {
+      select();
+      select();
+    });
+    await settleClose();
+    assert.equal(logoutCalls, 1, "Two selections in one tick send one sign-out request");
+    assertSignedIn("menu-user");
+    await openMenu();
+    assert.notEqual(
+      props(menuItem("退出云账号"))["data-disabled"],
+      undefined,
+      "Reopening while sign-out runs keeps the action disabled",
+    );
+    await settle(() => logoutRequest.resolve());
+    assert.equal(logoutCalls, 1);
+    assertSignedOut();
+    assert.ok(!text(menu()!).includes("退出云账号"), "Completed sign-out removes its action");
+  } else if (scenario === "menu-logout-failure") {
+    await settle(() => emit(signedIn("menu-user")));
+    await openMenu();
+    await selectMenu("退出云账号");
+    assert.equal(logoutCalls, 1);
+    assertSignedIn("menu-user");
+    assert.ok(text(document.body).includes("Unable to sign out"), "A failed sign-out explains why");
+    assert.equal(dialog(), undefined);
+    assert.notEqual(document.body.style.pointerEvents, "none");
+    await openMenu();
+    assert.equal(props(menuItem("退出云账号"))["data-disabled"], undefined);
+    await selectMenu("退出云账号");
+    assert.equal(logoutCalls, 2, "A failed sign-out can be retried");
+    assertSignedOut();
+  } else if (scenario.startsWith("profile-")) {
     await settle(() => emit(signedIn("github-123")));
     await open();
     await settleCapabilities();

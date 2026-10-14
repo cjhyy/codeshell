@@ -220,7 +220,7 @@ async function launch() {
     localStorage.setItem("codeshell.uiLanguage", "en");
   }, projectId);
   await win.reload();
-  await win.getByRole("button", { name: /^(Settings|设置)$/ }).waitFor();
+  await win.locator('#codeshell-sidebar-navigation button[aria-haspopup="menu"]').waitFor();
   await installDialogs();
 }
 async function installDialogs() {

@@ -871,7 +871,7 @@ try {
         await restoredSettings.waitFor({ state: "hidden" });
         phaseReport.restoredSettings.hiddenAfterBack = true;
       }
-      await navigateSettingsMenu(win, /Open settings/i);
+      await navigateSettingsMenu(win, /^(设置|Settings)$/);
       await win
         .getByRole("navigation", { name: "Settings navigation" })
         .getByRole("button", { name: "Appearance", exact: true })

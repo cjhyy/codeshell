@@ -13,6 +13,7 @@ import {
   findCodeShellWindow,
   launchCodeShellElectron,
   makeIsolatedElectronHome,
+  navigateSettingsMenu,
 } from "./electron-harness.mjs";
 
 const appDir = resolve(dirname(fileURLToPath(import.meta.url)), "..");
@@ -202,11 +203,7 @@ async function openSettings() {
   ) {
     await viewOnly.click();
   }
-  await win
-    .getByRole("button", { name: /设置|Settings/i })
-    .last()
-    .click();
-  await win.getByRole("menuitem", { name: /打开设置|Open settings/i }).click();
+  await navigateSettingsMenu(win, /^(设置|Settings)$/);
   await win.getByRole("heading", { name: "常规", exact: true, level: 1 }).waitFor();
 }
 

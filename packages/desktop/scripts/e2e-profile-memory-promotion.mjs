@@ -194,7 +194,7 @@ process.once("exit", () => appendFileSync(${JSON.stringify(join(isolated.home, "
     localStorage.setItem("codeshell.uiLanguage", "en");
     window.dispatchEvent(new window.Event("codeshell:language-changed"));
   });
-  await navigateSettingsMenu(win, /Open settings/i);
+  await navigateSettingsMenu(win, /^(设置|Settings)$/);
   await win
     .getByRole("navigation", { name: "Settings navigation" })
     .getByRole("button", { name: "Memory", exact: true })

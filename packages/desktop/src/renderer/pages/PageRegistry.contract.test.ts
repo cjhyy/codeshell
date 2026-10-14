@@ -35,7 +35,7 @@ describe("PageRegistry contract", () => {
     expect(registry).toContain('"sidebar.credentials"');
     expect(registry).toContain('"sidebar.settings"');
     expect(registry).not.toContain('target: "settings_page"');
-    expect(sidebar).toContain("SettingsMenu");
+    expect(sidebar).toContain("AccountSidebarEntry");
   });
 
   test("pet entry and the action items stay outside the registry", () => {
