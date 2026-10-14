@@ -27,12 +27,15 @@ function storedTab(): TabKey {
 export function CredentialsPage({
   activeProjectPath,
   activeBucket = null,
+  initialTab,
 }: {
   activeProjectPath: string | null;
   activeBucket?: string | null;
+  /** Explicit entry destination; normal navigation restores the last category. */
+  initialTab?: TabKey;
 }) {
   const { t } = useT();
-  const [tab, setTab] = useState<TabKey>(storedTab);
+  const [tab, setTab] = useState<TabKey>(() => initialTab ?? storedTab());
   const [focusedTab, setFocusedTab] = useState(tab);
   const tabRefs = useRef(new Map<TabKey, HTMLButtonElement>());
   const pageId = useId();

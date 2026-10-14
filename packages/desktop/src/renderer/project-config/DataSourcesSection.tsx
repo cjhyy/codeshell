@@ -230,6 +230,7 @@ function ProjectDataSources({
       const projected = snapshot.access.find((item) => item.sourceId === binding.sourceId);
       return {
         ...binding,
+        definition,
         label: definition?.label ?? projected?.label ?? binding.sourceId,
         kind: definition?.kind ?? projected?.kind ?? "unknown",
         status: (!definition
@@ -369,7 +370,11 @@ function ProjectDataSources({
                 <div className="min-w-0 space-y-1">
                   <div className="flex flex-wrap items-center gap-2">
                     <span className="text-sm font-medium text-foreground">{item.label}</span>
-                    <Badge variant="secondary">{kindLabel(t, item.kind)}</Badge>
+                    <Badge variant="secondary">
+                      {item.kind === "link" && item.definition?.adapterConfig.action === "get_file"
+                        ? t("ext.link.sourcesKindFile")
+                        : kindLabel(t, item.kind)}
+                    </Badge>
                     {item.priority === "high" && (
                       <Badge>{t("sourceCollections.linkedFiles.high")}</Badge>
                     )}
@@ -483,7 +488,10 @@ function ProjectDataSources({
                 options={available.map((source) => ({
                   value: source.id,
                   label: source.label,
-                  description: kindLabel(t, source.kind),
+                  description:
+                    source.kind === "link" && source.adapterConfig.action === "get_file"
+                      ? t("ext.link.sourcesKindFile")
+                      : kindLabel(t, source.kind),
                 }))}
               />
             </label>

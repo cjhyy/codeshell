@@ -293,6 +293,14 @@ async function checkDataSourceAdds(app, win) {
     await collections.getByRole("button", { name, exact: true }).waitFor({ state: "visible" });
   }
   await screenshot(win, "settings-data-source-add.png");
+  assert(
+    (await win.locator('[name="source-id"], [name="source-link-params"]').count()) === 0,
+    "The material library exposed a technical creation form by default",
+  );
+  assert(
+    (await win.getByRole("button", { name: "从 Link 选择文件", exact: true }).count()) === 0,
+    "Global material management still implicitly adds files to a project",
+  );
 
   // Keep the production IPC/service/manifest path. The native chooser returns
   // only this isolated fixture's explicit file or folder selection.
@@ -340,8 +348,15 @@ async function checkDataSourceAdds(app, win) {
 
   // Exercise real renderer/preload/Main Link authority and project binding; no file read occurs.
   const attemptsBefore = await networkAttempts();
+  await win.getByRole("combobox", { name: "选择要配置的项目", exact: true }).click();
+  await win.getByRole("option", { name: basename(projectPath), exact: false }).click();
+  await win.getByRole("button", { name: "管理项目数据源", exact: true }).click();
   await win.getByRole("button", { name: "从 Link 选择文件", exact: true }).click();
   let linked = win.getByRole("dialog", { name: "从 Link 选择文件", exact: true });
+  assert(
+    (await linked.getByRole("combobox", { name: "项目", exact: true }).count()) === 0,
+    "The project file chooser still allows changing its destination",
+  );
   await linked.getByRole("combobox", { name: "已连接服务", exact: true }).waitFor();
   await linked.locator('[name="linked-file-owner"]').fill("acme");
   await linked.locator('[name="linked-file-repo"]').fill("docs");
@@ -406,8 +421,34 @@ async function checkDataSourceAdds(app, win) {
     (await networkAttempts()) === attemptsBefore,
     "Linked selection attempted a network request",
   );
+  await win.getByRole("button", { name: "添加或管理资料集", exact: true }).click();
+  const online = win.locator("[data-connected-materials]");
+  assert(
+    (await online.locator("[data-source-definition]").count()) === 3,
+    "Selected online files are hidden in advanced definitions",
+  );
+  await screenshot(win, "settings-online-materials.png");
+  await win
+    .getByRole("button", { name: `返回 ${basename(projectPath)} 数据源`, exact: true })
+    .click();
+  await win.getByRole("button", { name: "从 Link 选择文件", exact: true }).waitFor();
+  assert(
+    (await win.locator("[data-source-access]").count()) === 3,
+    "Returning to the project lost its file references",
+  );
+  // Leave the remainder of this settings smoke in its original global context.
+  await win.getByRole("button", { name: "添加或管理资料集", exact: true }).click();
+  await win.getByRole("button", { name: "管理 Link 连接", exact: true }).click();
+  const linkTab = win.getByRole("tab", { name: /Link/ });
+  await linkTab.waitFor({ state: "visible", timeout: 10_000 });
+  assert(
+    (await linkTab.getAttribute("aria-selected")) === "true",
+    "Link management opened the wrong category",
+  );
+  await screenshot(win, "settings-materials-link-destination.png");
+  await openSettings(win);
   console.log(
-    "PASS linked files: real account/project revisions, exact file batches, priority and responsive dialog",
+    "PASS linked files: explicit project navigation, fixed destination, reusable online materials, return path and read approval",
   );
 }
 
@@ -491,6 +532,11 @@ require("node:module").syncBuiltinESMExports();
   await win.getByRole("button", { name: /外观|Appearance/i }).click();
   await win.getByRole("heading", { name: /外观|Appearance/i }).waitFor({ state: "visible" });
   await openProjectSettings(win);
+  // Project navigation above remembered its data-sources module for this visit.
+  await win
+    .getByRole("navigation", { name: /设置导航|Settings navigation/i })
+    .getByRole("button", { name: /项目概览|Project overview/i, exact: true })
+    .click();
   await win
     .getByRole("heading", { name: /项目概览|Project overview/i })
     .waitFor({ state: "visible", timeout: 10_000 });

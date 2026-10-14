@@ -69,6 +69,7 @@ export function LinkedFileSourcesDialog({
   const validProject = projects.some((item) => item.id === projectId);
   const currentProject = React.useRef<string | null>(null);
   currentProject.current = validProject ? projectId : null;
+  const fixedProject = projects.find((item) => item.id === initialProjectId);
   React.useLayoutEffect(() => {
     active.current = true;
     return () => {
@@ -190,23 +191,33 @@ export function LinkedFileSourcesDialog({
           <DialogTitle>{t("sourceCollections.linkedFiles.title")}</DialogTitle>
           <DialogDescription>{t("sourceCollections.linkedFiles.hint")}</DialogDescription>
         </DialogHeader>
-        <label className="space-y-1 text-xs text-muted-foreground">
-          <span>{t("sourceCollections.linkedFiles.project")}</span>
-          <SimpleSelect
-            value={validProject ? projectId : ""}
-            ariaLabel={t("sourceCollections.linkedFiles.project")}
-            disabled={busy}
-            placeholder={t("sourceCollections.linkedFiles.chooseProject")}
-            onChange={(value) => {
-              if (!saveLock.current) setProjectId(value);
-            }}
-            options={projects.map((item) => ({
-              value: item.id,
-              label: optionText(item.displayName ?? item.name),
-              description: optionText(item.path),
-            }))}
-          />
-        </label>
+        {fixedProject ? (
+          <div className="min-w-0 rounded-md border border-border bg-muted/30 p-3 text-xs">
+            <p className="text-muted-foreground">{t("sourceCollections.linkedFiles.project")}</p>
+            <p className="mt-1 break-words font-medium text-foreground">
+              {fixedProject.displayName ?? fixedProject.name}
+            </p>
+            <p className="mt-1 break-all text-muted-foreground">{fixedProject.path}</p>
+          </div>
+        ) : (
+          <label className="space-y-1 text-xs text-muted-foreground">
+            <span>{t("sourceCollections.linkedFiles.project")}</span>
+            <SimpleSelect
+              value={validProject ? projectId : ""}
+              ariaLabel={t("sourceCollections.linkedFiles.project")}
+              disabled={busy}
+              placeholder={t("sourceCollections.linkedFiles.chooseProject")}
+              onChange={(value) => {
+                if (!saveLock.current) setProjectId(value);
+              }}
+              options={projects.map((item) => ({
+                value: item.id,
+                label: optionText(item.displayName ?? item.name),
+                description: optionText(item.path),
+              }))}
+            />
+          </label>
+        )}
         {loading && (
           <p className="text-xs text-muted-foreground">
             {t("sourceCollections.linkedFiles.loading")}
