@@ -1,5 +1,6 @@
 import { createHash, randomBytes, randomUUID } from "node:crypto";
 import type { IncomingMessage, ServerResponse } from "node:http";
+import { CONTRACTS } from "@cjhyy/code-shell-core";
 import { isCloudAccountOrigin, type CloudAccountBinding } from "./account-binding.js";
 import type {
   CloudAccountAuthority,
@@ -10,7 +11,7 @@ import type {
 } from "./control-authority.js";
 import { ProjectRegistryError } from "./registry.js";
 
-export const CLOUD_MANAGEMENT_AUTHORITY_VERSION = 2;
+export const CLOUD_MANAGEMENT_AUTHORITY_VERSION = CONTRACTS.cloudManagementAuthority;
 export const CLOUD_MANAGEMENT_COOKIE = "cs_cloud_management";
 const TOKEN = /^[A-Za-z0-9_-]{43}$/;
 const UUID = /^[a-f0-9]{8}(?:-[a-f0-9]{4}){3}-[a-f0-9]{12}$/;

@@ -623,6 +623,8 @@ export interface RunAcceptedNotification {
 
 export const Methods = {
   // Client → Server
+  /** Handshake. Unprefixed on purpose: it is the Protocol v2 entry point (ch.16 §4.1). */
+  Initialize: "initialize",
   Run: "agent/run",
   ForkSession: "agent/forkSession",
   Approve: "agent/approve",

@@ -856,3 +856,4 @@ export {
   type RemoteLinkProviderId,
   type RemoteLinkResourceGroup,
 } from "./links/remote-adapters.js";
+export { CONTRACTS, type Contracts } from "./contracts.js";

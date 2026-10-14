@@ -5,6 +5,9 @@
 // with user-supplied code. The paths that matter are the ones that decide
 // whether a run is reported as success, timeout, abort, or failure.
 import { describe, expect, test } from "bun:test";
+import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import { replTool } from "./repl.js";
 
 describe("REPL tool", () => {
@@ -81,5 +84,41 @@ describe("REPL tool", () => {
     );
     // macOS resolves /tmp through a symlink, so match the tail.
     expect(out.endsWith("/tmp")).toBe(true);
+  });
+
+  test("does not inherit host secrets but keeps PATH and project env", async () => {
+    const previous = process.env.CODESHELL_REPL_PROBE_TOKEN;
+    process.env.CODESHELL_REPL_PROBE_TOKEN = "must-not-leak";
+    try {
+      const out = await replTool(
+        {
+          language: "javascript",
+          code: "console.log(JSON.stringify({secret: process.env.CODESHELL_REPL_PROBE_TOKEN ?? null, path: Boolean(process.env.PATH), project: process.env.PROJECT_FLAG ?? null}))",
+        },
+        { shellEnv: { PROJECT_FLAG: "on" } } as any,
+      );
+      expect(JSON.parse(out)).toEqual({ secret: null, path: true, project: "on" });
+    } finally {
+      if (previous === undefined) delete process.env.CODESHELL_REPL_PROBE_TOKEN;
+      else process.env.CODESHELL_REPL_PROBE_TOKEN = previous;
+    }
+  });
+
+  test("typescript runtime does not auto-load the cwd .env", async () => {
+    if (typeof (globalThis as { Bun?: unknown }).Bun === "undefined") return;
+    const dir = mkdtempSync(join(tmpdir(), "repl-dotenv-"));
+    try {
+      writeFileSync(join(dir, ".env"), "CODESHELL_DOTENV_PROBE=leaked\n");
+      const out = await replTool(
+        {
+          language: "typescript",
+          code: "console.log(JSON.stringify(process.env.CODESHELL_DOTENV_PROBE ?? null))",
+        },
+        { cwd: dir } as never,
+      );
+      expect(out).toBe("null");
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
   });
 });

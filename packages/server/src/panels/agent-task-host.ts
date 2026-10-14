@@ -346,6 +346,9 @@ export function createPanelAgentTaskHost(options: PanelAgentTaskHostOptions = {}
             options.buildEnv ??
             (() => ({
               ...process.env,
+              // These switch on Desktop-main-only IPC clients in the worker.
+              CODE_SHELL_OPERATION_BATCH_ACCESS: undefined,
+              CODE_SHELL_MODEL_REQUEST_SIGNING: undefined,
               CODE_SHELL_CREDENTIAL_ACCESS: "local",
               CODE_SHELL_CAPABILITY_MODULES: `${import.meta.resolve("@cjhyy/code-shell-capability-coding")}#createCodingModule`,
             })),

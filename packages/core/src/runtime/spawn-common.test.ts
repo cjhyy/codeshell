@@ -7,6 +7,8 @@ import {
   buildSandboxEnv,
   mergeShellEnv,
   ENV_DENY_REGEX,
+  ENV_ALLOWLIST,
+  ENV_ALLOWLIST_WIN32,
   resolveShellInvocation,
 } from "./spawn-common.js";
 import { createOffBackend } from "../tool-system/sandbox/off.js";
@@ -150,6 +152,54 @@ describe("Windows shell invocation", () => {
 });
 
 describe("buildSandboxEnv", () => {
+  test("win32 keeps startup vars (any key case) and drops secrets", () => {
+    const env = buildSandboxEnv(
+      {
+        SYSTEMROOT: "C:\\Windows",
+        PATHEXT: ".COM;.EXE",
+        USERPROFILE: "C:\\Users\\me",
+        GITHUB_TOKEN: "ghp_x",
+      },
+      "win32",
+    );
+    expect(env.SYSTEMROOT).toBe("C:\\Windows");
+    expect(env.PATHEXT).toBe(".COM;.EXE");
+    expect(env.USERPROFILE).toBe("C:\\Users\\me");
+    expect(env.GITHUB_TOKEN).toBeUndefined();
+  });
+
+  test("linux does not forward the win32-only names", () => {
+    const env = buildSandboxEnv(
+      { SystemRoot: "C:\\Windows", USERPROFILE: "x", PATHEXT: "y", PATH: "/usr/bin" },
+      "linux",
+    );
+    expect(env).toEqual({ PATH: "/usr/bin" });
+  });
+
+  test("certificate path variables pass on both platforms; proxies do not", () => {
+    const source = {
+      SSL_CERT_FILE: "/c/ca.pem",
+      SSL_CERT_DIR: "/c",
+      NODE_EXTRA_CA_CERTS: "/c/extra.pem",
+      REQUESTS_CA_BUNDLE: "/c/b.pem",
+      HTTPS_PROXY: "http://user:pw@proxy",
+    };
+    for (const platform of ["linux", "win32"] as const) {
+      const env = buildSandboxEnv(source, platform);
+      expect(Object.keys(env).sort()).toEqual(
+        ["NODE_EXTRA_CA_CERTS", "REQUESTS_CA_BUNDLE", "SSL_CERT_DIR", "SSL_CERT_FILE"].sort(),
+      );
+    }
+  });
+
+  test("no allowlisted name on any platform matches the deny regex", () => {
+    for (const name of [...ENV_ALLOWLIST, ...ENV_ALLOWLIST_WIN32]) {
+      expect(ENV_DENY_REGEX.test(name)).toBe(false);
+    }
+    const env = buildSandboxEnv({ PATH_TOKEN: "x", APPDATA_SECRET: "y" }, "win32");
+    expect(env).toEqual({});
+  });
+
   test("forwards allowlisted vars, drops secrets", () => {
     const env = buildSandboxEnv({
       PATH: "/usr/bin",

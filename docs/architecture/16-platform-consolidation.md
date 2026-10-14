@@ -1,6 +1,6 @@
 # 16 · 平台层收敛技术方案
 
-> 状态：v1.0 定稿（2026-10-14）；变更记录见文末
+> 状态：v1.1（2026-10-14，S0 实施后对齐）；变更记录见文末
 > 基线：codeshell `main @ 08eaa4369`（0.9.41 源码已合入、尚未正式发布；v0.9.40 之后 97 个提交）；codeshell-services `main @ a5958f0`（锁定 `@cjhyy/code-shell-server` 0.9.38）
 > 对照：Codex（本机 ChatGPT.app 26.1002.52244 安装包、本仓库第 15 章）、Claude Code（公开设计）
 > 上游文档：[15 · Codex 对比与路线](15-codex-harness-comparison-and-roadmap.md)（Protocol v2 契约与术语以该章为准）
@@ -13,7 +13,7 @@
 
 1. **宿主分散。** Desktop main（约 85k 行，其中 `index.ts` 7,254 行）、`server` 包、services 仓库各自实现了一部分 Host 能力。一部分重复实现，另一部分只在 Desktop 里有。
 2. **协议没有版本，也没有握手。** AgentServer 有 30 个 `agent/*` 方法与通知名、29 种 StreamEvent，没有 `initialize`，也没有协议版本号。宿主侧动作伪装成审批请求（`toolName: "__browser_action__"` 等）回传。手机 WS 协议完全没有版本号。
-3. **策略和执行入口分散。** 审批和策略分散在 10 多处。沙箱只覆盖 Bash、后台 shell 和 worktree，桌面端默认关闭。REPL 继承完整环境变量。
+3. **策略和执行入口分散。** 审批和策略分散在 10 多处。沙箱只覆盖 Bash、后台 shell 和 worktree，桌面端默认关闭。REPL 继承完整环境变量（S0 已处理：改用沙箱 Bash 的环境变量白名单，见 5.2）。
 4. **扩展形态多、发版耦合重。** 扩展有四种形态，各自安装和审核；契约版本号分散，`PANEL_APP_API_VERSION` 和 `DESKTOP_CONTROL_PROTOCOL_VERSION` 各在两处重复定义。services 锁定 0.9.38，生产 Hub 仍是 0.9.23（2026-10-12 SSH 核实）。
 
 对应六条工作线：
@@ -69,6 +69,8 @@ W1 和 W2 是交织的，不是先后关系。步骤级依赖见第 9.1 节。�
 | `__ask_user__`                                                                                                                                                                                                                                               | 渲染进程                     | 租给 Web 标签页处理                                                                                 |
 | `desktop/*` 请求共 10 个：`credentialResolve`、`credentialSnapshot`、`credentialMaterializeCookie`、`oauthAccessResolve`、`localOAuthLinkAction`、`localOAuthLinkActionCancel`、`remoteLinkAction`、`modelRequestSign`、`automationCreate`、`operationBatch` | `agent-bridge.ts` 处理       | 凭据类靠 `CODE_SHELL_CREDENTIAL_ACCESS=local` 绕开；`automationCreate` 和 `operationBatch` 无人应答 |
 
+- S0 已处理（serve）：`desktop/*` 请求立即返回 JSON-RPC `-32601`（`failure: "unsupported"`），不再广播给 Web 标签页；`__browser_action__`、`__credential_action__`、`__workspace_action__`（passcode 模式下还有 `__panel_action__`）立即应答 `{ ok: false, failure: "unsupported", capability }`。逐项清单见 [S0 协议清点](../todo/platform-s0-protocol-inventory.md)，遗留见 9.2。
+
 - 手机端走的是 Desktop 自己那套 mobile WS 协议（`MobileRemoteOrchestrator` 调用 `AgentBridge.injectWorkerMessage`），没有协议版本号，和 serve 的协议投影（`serve/hello`、审批租约）不是一回事。
 - Desktop 在生产环境里从不在本地拉起 `code-shell-serve`。它只会以客户端身份连远程 serve，或者在进程内嵌入 `RemoteHostManager`。但用户可以手动在同一台机器上同时跑 Desktop 和 `code-shell serve`，两者会读写同一份 `~/.code-shell`。
 
@@ -76,7 +78,7 @@ W1 和 W2 是交织的，不是先后关系。步骤级依赖见第 9.1 节。�
 
 - `packages/core/src/protocol/types.ts` 定义 30 个 `agent/*` 名字（含请求与通知），`agent/query` 下另有子类型。未知方法转给 CapabilityModule 注册的扩展查询。
 - StreamEvent 有 29 种。信封里带 `runId`、`clientMessageId`、`outputCursor`、`outputOriginCursor`、`outputRecovery`。
-- **没有握手，也没有协议版本。** 其他协议是有版本的：`RELAY_PROTOCOL_VERSION=1`、`CLOUD_MANAGEMENT_AUTHORITY_VERSION=2`、`CLOUD_BROWSER_AUTHORITY_VERSION=1`、`PANEL_APP_API_VERSION=14`（desktop/shared 和 server/panels 各定义一次）、`DESKTOP_CONTROL_PROTOCOL_VERSION=1`（chat 和 desktop/main 各定义一次）、output journal storage `version: 1`。
+- **没有握手，也没有协议版本**（S0 已加最小版 `initialize` 和 `CONTRACTS`，见 4.1、7.1）。其他协议是有版本的：`RELAY_PROTOCOL_VERSION=1`、`CLOUD_MANAGEMENT_AUTHORITY_VERSION=2`、`CLOUD_BROWSER_AUTHORITY_VERSION=1`、`PANEL_APP_API_VERSION=14`（desktop/shared 和 server/panels 各定义一次）、`DESKTOP_CONTROL_PROTOCOL_VERSION=1`（chat 和 desktop/main 各定义一次）、output journal storage `version: 1`。
 - **output journal 已经实现，而且质量不错**：`core/src/session/output-journal.ts`，JSONL 分段存储，cursor 不透明、按哈希链接、绑定日志身份，并支持修复。Desktop、serve、Web、手机都在用。但另外还有两套内存里的回放 cursor。
 
 ### 1.3 策略、审批与沙箱
@@ -85,7 +87,7 @@ W1 和 W2 是交织的，不是先后关系。步骤级依赖见第 9.1 节。�
 
 - 工具权限：6 种模式，"总是允许"写进 `<cwd>/.code-shell/settings.local.json`；allow 和 deny 分开跟踪，一次性 deny 不阻塞无关操作
 - 浏览器域名白名单，加上每次动作的审批和 TabControl 租约
-- Panel 进程审批存储 `panel-app-process-approval-store.ts`：**只有两个测试文件引用，生产代码未使用**
+- Panel 进程审批存储 `panel-app-process-approval-store.ts`：原先只有测试引用、生产代码未使用。**S0 已处理**：连同测试删除；其设计（可执行路径 + sha256 指纹作用域、绑定 revision 与应用生命周期两类授权、容量上限、拒绝符号链接）可在 main 的 `40a71d9ca` 读取（文件 `packages/desktop/src/main/panel-app-process-approval-store.ts`），供 S1 的 `process.native` 规则参考
 - Panel 进程执行：Desktop 是 `confirmExecution: async () => true`（`panel-app-bridge.ts`），serve 是按 guest grant 弹确认（`panels/runtime.ts`）
 - 工作区信任 `trust.json`、Panel 项目绑定
 - 凭据和工作区回环
@@ -93,7 +95,7 @@ W1 和 W2 是交织的，不是先后关系。步骤级依赖见第 9.1 节。�
 - external runtime 和 cc-room 审批
 - Hub 审批租约、手机待审批、自动化写入分级和 authority、operation batch authority
 
-沙箱：`seatbelt`、`bwrap`、`off`、`auto` 四种模式，网络可设 allow / deny。`sandbox-config.ts` 的默认值是 headless 为 `auto`，Desktop 和 REPL 为 `off`。只有 Bash、后台 shell 和 worktree 走沙箱。PowerShell 恒为 `off`。REPL 工具 `env: { ...process.env }` 继承完整环境。Panel 原生工具走 `panels/process-service.ts` 自己的 `safeProcessEnv`（模块私有函数，未导出），不进沙箱。工具结果里已经带 `sandbox {backend, network}`，UI 有对应的徽标。
+沙箱：`seatbelt`、`bwrap`、`off`、`auto` 四种模式，网络可设 allow / deny。`sandbox-config.ts` 的默认值是 headless 为 `auto`，Desktop 和 REPL 为 `off`。只有 Bash、后台 shell 和 worktree 走沙箱。PowerShell 恒为 `off`。REPL 工具原先 `env: { ...process.env }` 继承完整环境（S0 已处理：改为 `mergeShellEnv(buildSandboxEnv(), ctx.shellEnv)`，仍不进沙箱，见 5.2）。Panel 原生工具走 `panels/process-service.ts` 自己的 `safeProcessEnv`（模块私有函数，未导出），不进沙箱。工具结果里已经带 `sandbox {backend, network}`，UI 有对应的徽标。
 
 ### 1.4 扩展与发布
 
@@ -139,7 +141,7 @@ W1 和 W2 是交织的，不是先后关系。步骤级依赖见第 9.1 节。�
 
 - **HostRuntime 是唯一的宿主实现。** Electron main 只负责窗口、webContents、系统集成，再加上一个 HostAdapter。
 - **所有客户端都是平等的 Protocol v2 客户端。** Desktop 渲染进程也不例外：它通过 IPC 承载 v2 消息，不再走 276 个零散的 IPC handler。
-- **不支持的能力要明确声明。** serve 没有浏览器能力，就在 capabilities 里说明，并对相应请求立即返回 `host_unsupported`，不能让请求挂起。
+- **不支持的能力要明确声明。** serve 没有浏览器能力，就在 capabilities 里说明，并对相应请求立即返回 `host_unsupported`（S0 线上为 `failure: "unsupported"`，`host_unsupported` 是 v2 错误码名），不能让请求挂起。
 - **一台机器一个 Host 写入者。** 同机并存的 Desktop 和 serve 对共享文件（automation、session 目录、settings）必须经过同一把跨进程锁，或者由 capabilities 协商出单一 owner。
 
 ### 2.1 能力协商与降级
@@ -231,13 +233,14 @@ class HostRuntime {
                     "clientRequests": ["dialog","askUser"], "media": ["image/png"] },
   "resume": { "sessionId": "…", "cursor": "…" } }
 // ← result
-{ "protocolVersion": "2.0", "host": { "kind": "electron", "id": "…", "contracts": { /* 见 7.1 */ } },
+{ "protocolVersion": "2.0", "contracts": { /* 见 7.1 */ }, "host": { "kind": "electron", "id": "…" },
   "capabilities": { "browser": { "backends": ["iab","extension"] }, "panels": { "api": 14 }, "sandbox": { "backends": ["seatbelt"] } },
   "methods": ["session/start", "…"], "unsupported": [{ "capability": "browser", "reason": "headless host" }] }
 ```
 
 - 客户端声明自己**能应答**哪些 `client/*` 反向请求；宿主声明自己**提供**哪些能力和方法。
 - 没发 `initialize` 的连接按 v1 处理。
+- **S0 已实现的子集**：`initialize` 返回 `{ protocolVersion: "1", contracts }`（`packages/core/src/protocol/initialize.ts` 的 `InitializeResult`），在 `moduleReady` 之后分发，暂不读取客户端参数、不做版本协商。`contracts` 永久留在顶层，S1 在它旁边增加 `host`、`capabilities`、`methods`、`unsupported`。serve 的 `/health` 同样返回 `{ status, mode, contracts }`（no-store）。
 
 ### 4.2 对象模型
 
@@ -386,9 +389,10 @@ interface ExecSpec { argv: string[]; cwd: string; env: EnvPolicy; stdin?: …; t
   sandbox: SandboxProfile; network: "deny" | "allow" | { allowHosts: string[] }; owner: ActionRequest["actor"] }
 ```
 
-- 把 `panels/process-service.ts` 里的 `safeProcessEnv` 抽到 core 并导出，所有子进程统一走白名单。REPL 不再继承完整的 `process.env`。
+- 所有子进程统一走环境变量白名单。S0 已先处理 REPL：改用沙箱 Bash 的白名单 `mergeShellEnv(buildSandboxEnv(), ctx.shellEnv)`（`core/src/runtime/spawn-common.ts`），而不是 server 的 `safeProcessEnv`；bun 以 `--no-env-file` 启动。`buildSandboxEnv` 同时补了 win32 必需变量（`SystemRoot`、`PATHEXT`、`USERPROFILE`、`TEMP` 等）和 CA 路径变量（`SSL_CERT_FILE`、`SSL_CERT_DIR`、`NODE_EXTRA_CA_CERTS`、`REQUESTS_CA_BUNDLE`）；代理变量刻意不放行。Panel 原生工具的 `safeProcessEnv` 仍在 server 内，随 ExecutionService 统一。
+- 这只是纵深防御，**不是沙箱**：REPL 仍不进沙箱，同用户的子进程照样能读父进程环境（`ps eww $PPID`、`/proc/$PPID/environ`）和文件。REPL 改走沙箱后端在 S1 做。
 - **默认沙箱分两步切换**，避免打断现有依赖非沙箱的 Panel 工具和插件脚本：
-  1. **report-only**：Desktop 默认仍 `off`，但 ExecutionService 用 `auto` 后端做一次"假如在沙箱里会不会被拒"的评估，把结果写进 trace 和工具结果徽标，不改变实际行为。维持一个小版本。
+  1. **report-only**（S1，需先做技术验证）：Desktop 默认仍 `off`，但 ExecutionService 用 `auto` 后端做一次"假如在沙箱里会不会被拒"的评估，把结果写进 trace 和工具结果徽标，不改变实际行为。维持一个小版本。
   2. **enforce**：Desktop 默认改为 `auto`。report-only 阶段记录到的高频被拒路径转成默认 `writableRoots` 建议，由用户在设置页确认。
 - 没有可用后端（Windows、无 bwrap 的 Linux）时，明确报告实际状态，并按策略决定拒绝执行还是降级提示。
 - 网络默认对 REPL 和原生工具关闭；Bash 按项目信任级别区分：受信任项目 `allow`，未信任项目 `deny`。
@@ -469,9 +473,13 @@ export const CONTRACTS = {
 } as const;
 ```
 
-- 去掉 `PANEL_APP_API_VERSION` / `panelRuntimeApiVersion` 和两处 `DESKTOP_CONTROL_PROTOCOL_VERSION` 的重复定义。
-- 手机 WS 协议补上 `mobileRemote: 1`，这是它下线前能做兼容判断的前提。
-- `initialize` 的响应和 `/health` 都返回 `CONTRACTS`。
+上面是目标形态。S0 已落地的版本：
+
+- `CONTRACTS` 从 core 公共入口导出，整张表深度冻结，源文件里用仅类型的断言锁住每个字面量类型。当前 `agentProtocol` 为 `{ supported: ["1"], preferred: "1" }`，v2 时加 `"2.0"`；`packageManifest` 等 W4 落地再加。
+- 其他定义改为从 `CONTRACTS` 派生：server 的 `panelRuntimeApiVersion`、`CLOUD_MANAGEMENT_AUTHORITY_VERSION`、`CLOUD_BROWSER_AUTHORITY_VERSION`，Desktop main 的 `DESKTOP_CONTROL_PROTOCOL_VERSION`。
+- 三处必须保留字面量，由 `packages/desktop/src/main/contract-versions.test.ts` 守卫与 `CONTRACTS` 一致：renderer-shared 的 `PANEL_APP_API_VERSION`（渲染进程只能在运行时引入浏览器安全的入口）、chat 包的 `DESKTOP_CONTROL_PROTOCOL_VERSION`（chat 不依赖 core）、`RELAY_PROTOCOL_VERSION`（remote-relay 入口只依赖 Node 内置模块）。改成直接引用的前提见 9.2。
+- `mobileRemote: 1` 已在表里声明；手机 WS hello 随 1.5 开始携带，这是它下线前能做兼容判断的前提。
+- `initialize` 的响应和 `/health` 都返回 `CONTRACTS`（S0 已实现）。
 
 ### 7.2 兼容矩阵与契约测试
 
@@ -538,12 +546,12 @@ export const CONTRACTS = {
 
 阶段编号 S0–S3 与 `TODO.md` 的产品交付 P0 / P1 无关。S0 不占用 P0.1 发版和 P0.2 Panel 正式发布的人力窗口，按两周为单位错开排期。
 
-| 阶段              | 周期   | 内容                                                                                                                                                                                                                                                | 出口标准                                                         |
-| ----------------- | ------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------- |
-| **S0 快速修复**   | 1–2 周 | 1.0 清点；1.1 回环分发器加 `host_unsupported`；`contracts.ts`（含手机协议版本号）；删除没人用的进程审批存储；REPL 改环境变量白名单；沙箱 report-only；最小版 `initialize`（只返回版本和能力，先不改对象模型）；∥ 域名 / DNS / 备案；∥ 生产 Hub 升级 | serve 不再挂起；所有宿主都能报告自己的契约版本；1.0 清单评审通过 |
-| **S1 地基**       | 4–6 周 | `packages/host` 和步骤 1.2–1.4；W2 v2.0（Session/Turn/Item 模型、两类续传、`client/*`、Schema 生成、TUI 先切）；W3 的 PolicyEngine 和 ApprovalStore（先接工具、浏览器、进程三类）；∥ W5 兼容矩阵、契约测试、验收进 CI                               | Desktop 和 serve 共用会话、凭据、automation；TUI 跑在 v2 上      |
-| **S2 多端**       | 4–6 周 | 1.5、1.6（拆分 `index.ts`）；Desktop 渲染进程和 Web 切到 v2；ExecutionService 沙箱 enforce；8.1 薄云端：中继改用票据、配对与设备表、推送网关、保持在线、Capacitor App 内测                                                                          | 手机遥控整条链路跑通，含在手机上用电脑的 Panel                   |
-| **S3 生态与沙箱** | 持续   | W4 统一包清单和签名；Browser Panel 运行时；1.7 其余服务；8.2 沙箱任务 runner；评估 Desktop 是否改连本机守护进程                                                                                                                                     | 能按工作线分别验收                                               |
+| 阶段              | 周期   | 内容                                                                                                                                                                                                                                                                                                                                                                                                 | 出口标准                                                                                     |
+| ----------------- | ------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------- |
+| **S0 快速修复**   | 1–2 周 | 1.0 清点；1.1 回环分发器加 `host_unsupported`（S0 线上为 `failure: "unsupported"`，`host_unsupported` 是 v2 错误码名）（分发逻辑先放在 `server/serve/host-requests.ts`，S1 随 `packages/host` 迁移）；`contracts.ts`（含手机协议版本号）；删除没人用的进程审批存储；REPL 改环境变量白名单；最小版 `initialize`（只返回协议版本和 `CONTRACTS`，先不改对象模型）；∥ 域名 / DNS / 备案；∥ 生产 Hub 升级 | serve 不再挂起；serve `/health` 与 AgentServer `initialize` 能报告契约版本；1.0 清单评审通过 |
+| **S1 地基**       | 4–6 周 | `packages/host` 和步骤 1.2–1.4；W2 v2.0（Session/Turn/Item 模型、两类续传、`client/*`、Schema 生成、TUI 先切）；W3 的 PolicyEngine 和 ApprovalStore（先接工具、浏览器、进程三类）；ExecutionService 沙箱 report-only（需先做技术验证）；∥ W5 兼容矩阵、契约测试、验收进 CI                                                                                                                           | Desktop 和 serve 共用会话、凭据、automation；TUI 跑在 v2 上                                  |
+| **S2 多端**       | 4–6 周 | 1.5、1.6（拆分 `index.ts`）；Desktop 渲染进程和 Web 切到 v2；ExecutionService 沙箱 enforce；8.1 薄云端：中继改用票据、配对与设备表、推送网关、保持在线、Capacitor App 内测                                                                                                                                                                                                                           | 手机遥控整条链路跑通，含在手机上用电脑的 Panel                                               |
+| **S3 生态与沙箱** | 持续   | W4 统一包清单和签名；Browser Panel 运行时；1.7 其余服务；8.2 沙箱任务 runner；评估 Desktop 是否改连本机守护进程                                                                                                                                                                                                                                                                                      | 能按工作线分别验收                                                                           |
 
 ### 9.1 步骤级依赖
 
@@ -570,6 +578,22 @@ flowchart LR
     W31 --> W62
     W5["W5 contracts.ts"] -.-> W21
 ```
+
+### 9.2 S0 遗留与 S1 待办
+
+- **内部回环的标识。** core 应拒绝名字以 `__` 开头的工具注册，或者在 `agent/approvalRequest` 上用显式 kind 标记内部回环，让宿主不再按 `toolName` 匹配。
+- **`packages/server/src/panels/agent-task-host.ts`。** `desktop/*` worker 请求从不应答（worker 等到自己的超时）；`__*__` 回环应答 `approved: false, failure: "unavailable"`，core 会当成拒绝，应复用 `unsupportedLoopbackAnswer`；它的环境变量构造没有清除 `CODE_SHELL_REMOTE_LINK_CLIENT_SECRET`。
+- **拦截逻辑收口。** 在步骤 1.2 之前把 `routeWorkerLine` 里的拦截抽成一个 `interceptHostRequest`；host-requests 的提示文案迁到 `packages/host` 时加宿主标签参数。
+- **环境变量开关。** serve 仍继承 `CODE_SHELL_HOST_MCP_SERVERS`；Desktop 自己的 agent-task 环境（`packages/desktop/src/main/desktop-web-service.ts`）没有清除 `CODE_SHELL_OPERATION_BATCH_ACCESS` 和 `CODE_SHELL_MODEL_REQUEST_SIGNING` 两个 IPC 开关。
+- **`packages/core/src/protocol/server.ts` 行数预算。** 已正好顶到架构行数上限；S1 的 v2 分发落地前先抽出一块内聚逻辑（例如表驱动的 `protocol/dispatch.ts`）。
+- **Windows `Path` 大小写。** `mergeShellEnv` 可能同时保留 `PATH` 和用户覆盖的 `Path`；win32 上应按大小写不敏感归一。
+- **REPL 写入协议。** REPL 没有像 Bash 那样设置 `CODESHELL_WORKSPACE_WRITE_PROTOCOL=1`。
+- **`process.native` 规则。** 已删除的进程审批存储可在 main 的 `40a71d9ca` 读取（`packages/desktop/src/main/panel-app-process-approval-store.ts`），以其设计为参考。
+- **浏览器安全的 contracts 子路径。** 考虑提供 `@cjhyy/code-shell-core/contracts`，让 renderer、chat 和 services 直接引用 `CONTRACTS`，去掉受守卫的字面量。
+- **REPL 环境变量变更的发版说明。** 需写明：不再传代理变量和 `NODE_PATH`、`PYTHONPATH`、`VIRTUAL_ENV`、`CONDA_*`；沙箱关闭时与 Bash 的差异（Bash 仍继承完整环境）；凭据服务的环境变量暴露（credential env exposures）现在也会进入 REPL；这不是防外泄的修复。
+- **`__workspace_action__` 还承载 `resolve_session_run`。** 跨会话消息（`packages/core/src/protocol/server.ts` 约 1211）、异步 AskUser 唤醒（约 4246）、邮箱唤醒（约 947）都走它；`packages/core/src/cli/agent-server-stdio.ts` 约 441 无条件开启 workspace bridge，所以 serve 里这些路径现在会按 `workspace.switch` 不支持而立即失败（之前是挂 5 分钟），而不是走 core 的磁盘回退（约 1214–1229）。S1：用宿主环境变量开关控制 bridge，让 serve 走回退。
+- **契约上报缺口。** `packages/server/src/project-runtime/control-server.ts` 约 234 与 `packages/server/src/mobile-remote/remote-host-manager.ts` 约 176 的 `/health` 没有返回 contracts；目前没有客户端调用 `initialize`，serve 的 Web 标签页调用它会得到 -32601。
+- **REPL 的 `bun` 来源。** REPL 从 PATH 运行 `bun`（`packages/core/src/tool-system/builtin/repl.ts` 约 63），可能与宿主自己的 bun 不是同一个；宿主运行在 Bun 下时考虑改用 `process.execPath`。
 
 ## 10. 决策（已定）
 
@@ -600,3 +624,4 @@ flowchart LR
 | ---- | ---------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | 草案 | 2026-10-13 | 初稿，基线 012cab6 / 0.9.40                                                                                                                                                                                                                                                                        |
 | v1.0 | 2026-10-14 | 评审修订：基线刷新到 08eaa4369 / 0.9.41 与 services a5958f0；术语与范围对齐第 15 章；新增 2.1 能力协商、4.3 两类续传、4.5 客户端反向请求、5.1 策略合成规则、5.2 沙箱两步切换；W6 收窄为薄云端加沙箱任务，不做常驻云端工作台和云端 Panel 运行时；阶段改为 S0–S3；八项决策全部定稿；附目标架构交互图 |
+| v1.1 | 2026-10-14 | S0 实施后对齐：4.1 标注已实现的 `initialize` 子集（`contracts` 永久在顶层）；5.2 写明 REPL 改用沙箱 Bash 白名单且不是沙箱；7.1 写明派生方式与三处受守卫的字面量；沙箱 report-only 移到 S1；1.3 标注已删除的进程审批存储；新增 9.2 S0 遗留与 S1 待办                                                |

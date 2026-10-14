@@ -1,5 +1,6 @@
 import { createHash, randomBytes, randomUUID } from "node:crypto";
 import type { IncomingMessage, ServerResponse } from "node:http";
+import { CONTRACTS } from "@cjhyy/code-shell-core";
 import { isCloudAccountOrigin } from "./account-binding.js";
 import { cloudManagementSessionView } from "./cloud-account-auth.js";
 import type {
@@ -12,7 +13,7 @@ import type {
 import { ProjectRegistryError } from "./registry.js";
 
 /** Browser bootstrap is separate from the native, single-operator v2 API. */
-export const CLOUD_BROWSER_AUTHORITY_VERSION = 1;
+export const CLOUD_BROWSER_AUTHORITY_VERSION = CONTRACTS.cloudBrowserAuthority;
 export const CLOUD_BROWSER_COOKIE = "cs_cloud_browser";
 const TOKEN = /^[A-Za-z0-9_-]{43}$/;
 const UUID = /^[a-f0-9]{8}(?:-[a-f0-9]{4}){3}-[a-f0-9]{12}$/;

@@ -14,6 +14,7 @@
  * falls back to borrowing any live session's engine for those reads.
  */
 
+import { initializeResult } from "./initialize.js";
 import type { Transport } from "./transport.js";
 import { handleCancelRequest, handleSteerRequest, runGoalOptions } from "./server-run-controls.js";
 import { deliverAsyncUserAnswer } from "./async-user-answer.js";
@@ -318,6 +319,8 @@ export type HostLoopbackFailure =
   | "session_closed"
   | "owner_lost"
   | "timed_out"
+  /** The host does not provide this capability (e.g. headless serve has no browser). */
+  | "unsupported"
   /** The host replied, but with something that wasn't parseable JSON. */
   | "malformed";
 
@@ -355,6 +358,7 @@ const HOST_LOOPBACK_FAILURE_DETAIL: Record<HostLoopbackFailure, string> = {
   session_closed: "cancelled because the session closed",
   owner_lost: "unavailable because the approving client disconnected",
   timed_out: "timed out waiting for the host",
+  unsupported: "is not supported by this host",
   malformed: "returned a malformed result",
 };
 
@@ -1339,6 +1343,9 @@ export class AgentServer {
     if (this.hasHostActivators) await this.moduleReady;
     if (this.disconnected) throw new Error("AgentServer transport is disconnected");
     switch (req.method) {
+      case Methods.Initialize:
+        this.transport.send(createResponse(req.id, initializeResult()));
+        break;
       case Methods.Run:
         await this.handleRun(req);
         break;

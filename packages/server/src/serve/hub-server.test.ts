@@ -1,4 +1,5 @@
 import { afterEach, expect, test } from "bun:test";
+import { CONTRACTS } from "@cjhyy/code-shell-core";
 import {
   mkdirSync,
   mkdtempSync,
@@ -214,9 +215,15 @@ test("read-only approval snapshots keep exact reservations, reject malformed IDs
   });
 });
 
-test("Hub public shell and health expose no API data; setup is one-time and Origin gates WS", async () => {
+test("Hub public shell and health expose no account or session data; setup is one-time and Origin gates WS", async () => {
   const { server } = await fixture();
-  expect(await (await fetch(server.url + "/health")).json()).toEqual({ status: "ok", mode: "hub" });
+  const healthResponse = await fetch(server.url + "/health");
+  expect(healthResponse.headers.get("cache-control")).toBe("no-store");
+  expect(await healthResponse.json()).toEqual({
+    status: "ok",
+    mode: "hub",
+    contracts: JSON.parse(JSON.stringify(CONTRACTS)),
+  });
   expect(await (await fetch(server.url)).text()).toBe("HUB_SHELL");
   expect((await fetch(server.url + "/api/v1/uploads/anything")).status).toBe(401);
   await expect(connect(server, "")).rejects.toBeDefined();

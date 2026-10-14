@@ -24,7 +24,7 @@ import { basename, dirname, extname, join, resolve } from "node:path";
 import type { Duplex } from "node:stream";
 import { randomBytes, randomUUID } from "node:crypto";
 import { WebSocketServer, type WebSocket } from "ws";
-import { SessionManager, SettingsManager } from "@cjhyy/code-shell-core";
+import { CONTRACTS, SessionManager, SettingsManager } from "@cjhyy/code-shell-core";
 import {
   SessionOutputCoverageStore,
   readOutputJournal,
@@ -54,6 +54,12 @@ import {
 import { createHubFiles } from "../hub/files.js";
 import { createSessionHttpResponses } from "../session-http-responses.js";
 import { WorkerBridgeCore, previewLine, type WorkerBridgeLog } from "../worker-bridge-core.js";
+import {
+  isHostAuthorityRequest,
+  unsupportedHostRequestResponse,
+  unsupportedLoopbackAnswer,
+  unsupportedLoopbackCapability,
+} from "./host-requests.js";
 
 export interface HeadlessServeOptions {
   /** Bind host. Default 127.0.0.1 — expose beyond loopback deliberately. */
@@ -334,6 +340,55 @@ export async function startHeadlessServer(opts: HeadlessServeOptions): Promise<H
   }, pendingResponseReaperMs);
   pendingResponseReaper.unref?.();
 
+  // Answer loopbacks only Desktop main can serve, instead of leasing them to a
+  // Web tab that has no way to fulfil them (ch.16 §3.2 step 1.1). Hub mode
+  // serves Panel actions itself; passcode mode has no Panel runtime.
+  const serveCapabilities = { panels: Boolean(hubAuth) };
+  const replyUnsupportedLoopback = (params: unknown): boolean => {
+    const approval = params as HubApproval | undefined;
+    if (
+      !approval ||
+      typeof approval.requestId !== "string" ||
+      typeof approval.sessionId !== "string"
+    )
+      return false;
+    const request = approval.request as { toolName?: unknown } | undefined;
+    const capability = unsupportedLoopbackCapability(request?.toolName, serveCapabilities);
+    if (!capability) return false;
+    // Core's child-browser activate/release frames are one-way notifications
+    // (protocol/server.ts childHost.activate / childHost.release): their
+    // requestId is never registered, so there is nothing to answer.
+    const childHost = approval.childHost as { activate?: unknown; release?: unknown } | undefined;
+    if (childHost?.activate === true || childHost?.release === true) return true;
+    log("worker.loopback_unsupported", { capability });
+    void bridge
+      .request(
+        "agent/approve",
+        {
+          sessionId: approval.sessionId,
+          requestId: approval.requestId,
+          connectionId: approval.connectionId,
+          generation: approval.generation,
+          decision: { approved: true, answer: unsupportedLoopbackAnswer(capability) },
+        },
+        {
+          id: `unsupported-reply-${randomUUID()}`,
+          consume: true,
+          settleOnExit: true,
+          failFast: true,
+          timeoutMs: 5000,
+          meta: { origin: "host", producer: "serve-unsupported-loopback" },
+        },
+      )
+      .catch((e) =>
+        log("worker.loopback_unsupported_failed", {
+          capability,
+          reason: e instanceof Error ? e.message : "error",
+        }),
+      );
+    return true;
+  };
+
   // Notifications describe shared agent state and are broadcast. Correlated
   // JSON-RPC responses must return only to the tab that issued the request;
   // browser tabs all start their local counters at `web-1`, so broadcasting a
@@ -353,6 +408,17 @@ export async function startHeadlessServer(opts: HeadlessServeOptions): Promise<H
       return;
     }
     if (!message || message.id === undefined || message.method !== undefined) {
+      if (message && isHostAuthorityRequest(message)) {
+        log("worker.host_request_unsupported", { method: message.method });
+        bridge.sendLine(unsupportedHostRequestResponse(message.id, message.method));
+        return;
+      }
+      if (
+        !hubAuth &&
+        message?.method === "agent/approvalRequest" &&
+        replyUnsupportedLoopback(message.params)
+      )
+        return;
       if (hubAuth && message?.method === "agent/streamEvent") {
         const params = message.params as { sessionId?: unknown; event?: unknown } | undefined;
         if (typeof params?.sessionId === "string" && params.event !== undefined) {
@@ -408,6 +474,7 @@ export async function startHeadlessServer(opts: HeadlessServeOptions): Promise<H
           typeof approval.sessionId === "string"
         ) {
           if (automationWorker?.handleApproval(approval)) return;
+          if (replyUnsupportedLoopback(approval)) return;
           const request = approval.request as
             | { toolName?: string; args?: Record<string, unknown> }
             | undefined;
@@ -511,6 +578,9 @@ export async function startHeadlessServer(opts: HeadlessServeOptions): Promise<H
     buildEnv: () => ({
       ...process.env,
       CODE_SHELL_REMOTE_LINK_CLIENT_SECRET: undefined,
+      // These switch on Desktop-main-only IPC clients in the worker.
+      CODE_SHELL_OPERATION_BATCH_ACCESS: undefined,
+      CODE_SHELL_MODEL_REQUEST_SIGNING: undefined,
       CODE_SHELL_DATA_ROOT: workerDataRoot,
       CODE_SHELL_CREDENTIAL_ACCESS: "local",
       ...(opts.workerCapabilityModules
@@ -627,6 +697,9 @@ export async function startHeadlessServer(opts: HeadlessServeOptions): Promise<H
           buildEnv: () => ({
             ...process.env,
             CODE_SHELL_REMOTE_LINK_CLIENT_SECRET: undefined,
+            // These switch on Desktop-main-only IPC clients in the worker.
+            CODE_SHELL_OPERATION_BATCH_ACCESS: undefined,
+            CODE_SHELL_MODEL_REQUEST_SIGNING: undefined,
             CODE_SHELL_DATA_ROOT: workerDataRoot,
             CODE_SHELL_CREDENTIAL_ACCESS: "local",
             ...(opts.workerCapabilityModules
@@ -717,7 +790,7 @@ export async function startHeadlessServer(opts: HeadlessServeOptions): Promise<H
     res.setHeader("x-content-type-options", "nosniff");
     res.setHeader("referrer-policy", "no-referrer");
     if (pathname === "/health" && req.method === "GET") {
-      hubJson(res, 200, { status: "ok", mode: hubAuth ? "hub" : "passcode" });
+      hubJson(res, 200, { status: "ok", mode: hubAuth ? "hub" : "passcode", contracts: CONTRACTS });
       return;
     }
     // The public shell probes this before login. A standalone workspace has no

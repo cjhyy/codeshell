@@ -1,6 +1,7 @@
+import { CONTRACTS } from "@cjhyy/code-shell-core";
 import { processLimits } from "./process-state.js";
 
-export const panelRuntimeApiVersion = 14;
+export const panelRuntimeApiVersion = CONTRACTS.panelApi;
 export const panelProcessMethods = [
   "process.find",
   "process.info",

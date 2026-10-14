@@ -6,12 +6,11 @@ import { runInNewContext } from "node:vm";
 import ts from "typescript";
 import { panelExecutionGate, PanelBridgeError } from "@cjhyy/code-shell-server/panels";
 import { isPanelAppDescriptorSelected } from "./panel-app-project-packages.js";
-import { PanelAppProcessApprovalStore } from "./panel-app-process-approval-store.js";
 import { PanelAppProcessService, type PanelProcessOwner } from "./panel-app-process-service.js";
 
 // Exercise the real Desktop callback wiring without booting Electron. Only the
-// native dialog and window lookup are replaced; persistence and process spawning
-// use their production implementations in an isolated temporary directory.
+// native dialog and window lookup are replaced; process spawning uses the
+// production implementation in an isolated temporary directory.
 const source = await readFile(new URL("./panel-app-bridge.ts", import.meta.url), "utf8");
 const parsed = ts.createSourceFile("bridge.ts", source, ts.ScriptTarget.Latest, true);
 let constructorOptions: ts.Expression | undefined;
@@ -39,7 +38,6 @@ async function fixture() {
   const executablePath = join(root, "fixture-tool");
   await writeFile(executablePath, "#!/bin/sh\nprintf 'fixture-ok\\n'\n");
   await chmod(executablePath, 0o700);
-  const file = join(root, "approvals.json");
   const decisions: Array<Record<string, any>> = [];
   let response = 0;
   let trusted = true;
@@ -53,7 +51,6 @@ async function fixture() {
   };
   const createService = (identity = owner) => {
     const optionsForHost = runInNewContext(`${compiled}\noptionsForHost`, {
-      processApprovalStore: new PanelAppProcessApprovalStore(file),
       panelExecutionGate,
       PanelBridgeError,
       isPanelAppDescriptorSelected,
