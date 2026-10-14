@@ -27,11 +27,15 @@ import { dirname, join } from "node:path";
 import type { SandboxBackend } from "../tool-system/sandbox/index.js";
 
 /**
- * Env vars that are always safe to forward into a sandboxed shell. Mirrors
- * the allowlist that previously lived in bash.ts — kept here so foreground
- * and background shells share one source of truth. The `off` backend keeps
- * the historical full-passthrough behavior (the user opted out of sandboxing)
- * and does NOT call this.
+ * Env vars that are always safe to forward into a hardened child process.
+ * Shared by sandboxed Bash, background shells and the REPL tool, so
+ * foreground and background runs have one source of truth. The Bash `off`
+ * backend keeps the historical full-passthrough behavior (the user opted out
+ * of sandboxing) and does NOT call this.
+ *
+ * Certificate-path variables are included so children still work behind a
+ * custom CA; they hold file paths, not secrets. Proxy variables are NOT
+ * included (URLs may embed credentials) - put them in `localEnvironment.env`.
  */
 export const ENV_ALLOWLIST: ReadonlySet<string> = new Set([
   "PATH",
@@ -48,6 +52,31 @@ export const ENV_ALLOWLIST: ReadonlySet<string> = new Set([
   "COLUMNS",
   "LINES",
   "PWD",
+  "SSL_CERT_FILE",
+  "SSL_CERT_DIR",
+  "NODE_EXTRA_CA_CERTS",
+  "REQUESTS_CA_BUNDLE",
+]);
+
+/**
+ * Extra names forwarded only on Windows, where processes cannot start (or
+ * resolve executables/profile dirs) without them. Matched case-insensitively
+ * against the source because Windows env names are case-insensitive.
+ */
+export const ENV_ALLOWLIST_WIN32: ReadonlySet<string> = new Set([
+  "SystemRoot",
+  "SYSTEMDRIVE",
+  "WINDIR",
+  "ComSpec",
+  "PATHEXT",
+  "TEMP",
+  "TMP",
+  "USERPROFILE",
+  "APPDATA",
+  "LOCALAPPDATA",
+  "PROGRAMDATA",
+  "HOMEDRIVE",
+  "HOMEPATH",
 ]);
 
 /**
@@ -59,16 +88,30 @@ export const ENV_DENY_REGEX =
   /(KEY|TOKEN|SECRET|PASSWORD|PASSWD|CREDENTIAL|SESSION|AUTH|COOKIE|PRIVATE)/i;
 
 /**
- * Build a hardened env for a sandboxed shell: allowlist ∖ deny-regex.
+ * Build a hardened env: allowlist minus deny-regex. On win32 the Windows
+ * startup variables ({@link ENV_ALLOWLIST_WIN32}) are added too.
  * `source` defaults to `process.env` so callers usually omit it; tests pass
- * a fixed object.
+ * a fixed object and a `platform`.
  */
-export function buildSandboxEnv(source: NodeJS.ProcessEnv = process.env): NodeJS.ProcessEnv {
+export function buildSandboxEnv(
+  source: NodeJS.ProcessEnv = process.env,
+  platform: NodeJS.Platform = process.platform,
+): NodeJS.ProcessEnv {
   const out: NodeJS.ProcessEnv = {};
   for (const name of ENV_ALLOWLIST) {
     const v = source[name];
     if (v !== undefined && !ENV_DENY_REGEX.test(name)) {
       out[name] = v;
+    }
+  }
+  if (platform === "win32") {
+    const byLower = new Map<string, string>();
+    for (const key of Object.keys(source)) byLower.set(key.toLowerCase(), key);
+    for (const name of ENV_ALLOWLIST_WIN32) {
+      if (ENV_DENY_REGEX.test(name)) continue;
+      const actual = source[name] !== undefined ? name : byLower.get(name.toLowerCase());
+      const v = actual === undefined ? undefined : source[actual];
+      if (v !== undefined) out[actual ?? name] = v;
     }
   }
   return out;

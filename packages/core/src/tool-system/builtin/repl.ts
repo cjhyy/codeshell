@@ -9,6 +9,7 @@
 import type { ToolDefinition } from "../../types.js";
 import type { ToolContext } from "../context.js";
 import { safeSpawn } from "../../runtime/safe-spawn.js";
+import { buildSandboxEnv, mergeShellEnv } from "../../runtime/spawn-common.js";
 
 export const replToolDef: ToolDefinition = {
   name: "REPL",
@@ -59,7 +60,7 @@ export async function replTool(args: Record<string, unknown>, ctx?: ToolContext)
     javascript: { file: "node", pre: ["-e"] },
     typescript:
       typeof (globalThis as any).Bun !== "undefined"
-        ? { file: "bun", pre: ["-e"] }
+        ? { file: "bun", pre: ["--no-env-file", "-e"] }
         : { file: "npx", pre: ["tsx", "-e"] },
     python: { file: "python3", pre: ["-c"] },
     ruby: { file: "ruby", pre: ["-e"] },
@@ -73,7 +74,9 @@ export async function replTool(args: Record<string, unknown>, ctx?: ToolContext)
   const wasAbortedBeforeStart = ctx?.signal?.aborted === true;
   const result = await safeSpawn(runtime.file, [...runtime.pre, code], {
     cwd,
-    env: { ...process.env },
+    // Same allowlist as a sandboxed Bash: host secrets stay out, the user's
+    // explicit project env (localEnvironment.env) is layered on top.
+    env: mergeShellEnv(buildSandboxEnv(), ctx?.shellEnv),
     timeoutMs: timeout,
     maxOutputBytes: REPL_MAX_BUFFER,
     signal: ctx?.signal,

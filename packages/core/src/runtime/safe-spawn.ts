@@ -47,7 +47,7 @@ import {
 export interface SafeSpawnOptions {
   /** Process working directory. Required — callers know their cwd; SafeSpawn does not fall back to process.cwd(). */
   cwd: string;
-  /** Environment for the child. Required — callers decide whether to forward host env (Bash builds a hardened env; REPL/PowerShell/gitOps forward process.env). */
+  /** Environment for the child. Required — callers decide whether to forward host env (Bash and REPL build a hardened env via buildSandboxEnv; PowerShell/gitOps forward process.env). */
   env: NodeJS.ProcessEnv;
   /** Hard timeout in ms. On expiry: SIGTERM, then SIGKILL after 2s. */
   timeoutMs: number;
