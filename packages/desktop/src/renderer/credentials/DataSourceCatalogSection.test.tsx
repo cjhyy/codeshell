@@ -39,6 +39,24 @@ function withDataAttribute(container: HTMLElement, tagName: string, name: string
   );
 }
 
+function deferred<T>() {
+  let resolve!: (value: T) => void;
+  let reject!: (cause: unknown) => void;
+  const promise = new Promise<T>((complete, fail) => {
+    resolve = complete;
+    reject = fail;
+  });
+  return { promise, resolve, reject };
+}
+
+const collectionSource: SourceDefinition = {
+  id: "collection-notes",
+  kind: "collection",
+  label: "Shared Notes",
+  adapterConfig: { version: 1, revision: "fixture-revision", entries: [] },
+  enabled: true,
+};
+
 const mockSource: SourceDefinition = {
   id: "mock-notes",
   kind: "mock",
@@ -87,6 +105,91 @@ afterEach(async () => {
 });
 
 describe("DataSourceCatalogSection", () => {
+  test("shows initial catalog loading and failure outside advanced sources, then retries", async () => {
+    ensureMiniDom();
+    const initial = deferred<SourceDefinition[]>();
+    const retried = deferred<SourceDefinition[]>();
+    let listCalls = 0;
+    Object.assign(window, {
+      codeshell: {
+        listSourceCatalog: () => {
+          listCalls += 1;
+          return listCalls === 1 ? initial.promise : retried.promise;
+        },
+      },
+    });
+    const container = await renderSection();
+    const advanced = findElements(container, "DETAILS")[0];
+    expect(reactPropsOf(advanced).open).not.toBe(true);
+    expect(
+      findElements(container, "P").filter((node) => reactPropsOf(node).role === "status"),
+    ).toHaveLength(1);
+    expect(
+      findElements(advanced, "P").filter((node) => reactPropsOf(node).role === "status"),
+    ).toHaveLength(0);
+    expect(textOf(container)).not.toContain("还没有资料集");
+
+    await act(async () => {
+      initial.reject(new Error("catalog offline"));
+      await flushMicrotasks();
+      await flushMicrotasks();
+    });
+    expect(textOf(container)).toContain("catalog offline");
+    expect(textOf(advanced)).not.toContain("catalog offline");
+    expect(textOf(container)).not.toContain("还没有资料集");
+    const retry = findElements(container, "BUTTON").find((node) => textOf(node) === "重新加载");
+    expect(retry).toBeDefined();
+    expect(reactPropsOf(retry).disabled).toBe(false);
+
+    await act(async () => {
+      reactPropsOf(retry).onClick();
+      await flushMicrotasks();
+    });
+    expect(listCalls).toBe(2);
+    expect(textOf(container)).not.toContain("catalog offline");
+    expect(textOf(container)).not.toContain("还没有资料集");
+    await act(async () => {
+      retried.resolve([collectionSource]);
+      await flushMicrotasks();
+      await flushMicrotasks();
+    });
+    expect(textOf(container)).toContain("Shared Notes");
+    expect(withDataAttribute(container, "LI", "data-collection-id")).toHaveLength(1);
+    expect(
+      findElements(container, "P").filter((node) => reactPropsOf(node).role === "status"),
+    ).toHaveLength(0);
+    expect(textOf(container)).not.toContain("catalog offline");
+  });
+
+  test("retains the loaded collection and source lists when a later refresh fails", async () => {
+    ensureMiniDom();
+    let listCalls = 0;
+    Object.assign(window, {
+      codeshell: {
+        listSourceCatalog: async () => {
+          listCalls += 1;
+          if (listCalls === 2) throw new Error("refresh unavailable");
+          return [collectionSource, mockSource];
+        },
+        saveSourceCatalog: async () => undefined,
+      },
+    });
+    const container = await renderSection();
+    const toggle = withDataAttribute(container, "BUTTON", "data-source-toggle")[0];
+    await act(async () => {
+      reactPropsOf(toggle).onClick();
+      await flushMicrotasks();
+      await flushMicrotasks();
+    });
+    expect(listCalls).toBe(2);
+    expect(textOf(container)).toContain("refresh unavailable");
+    expect(textOf(findElements(container, "DETAILS")[0])).not.toContain("refresh unavailable");
+    expect(textOf(container)).toContain("Shared Notes");
+    expect(withDataAttribute(container, "LI", "data-collection-id")).toHaveLength(1);
+    expect(withDataAttribute(container, "LI", "data-source-definition")).toHaveLength(1);
+    expect(textOf(container)).not.toContain("还没有资料集");
+  });
+
   test("creates a fixed Link read view from masked saved connections and excludes writes", async () => {
     ensureMiniDom();
     const saved: SourceDefinition[] = [];

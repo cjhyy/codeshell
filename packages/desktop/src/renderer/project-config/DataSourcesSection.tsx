@@ -51,8 +51,10 @@ function kindLabel(t: TFunction, kind: string): string {
 export function DataSourcesSection({
   projectId,
   confirmDeleteUpload,
+  onManageCollections,
 }: {
   projectId: string;
+  onManageCollections?: () => void;
   /** Test seam; production uses the app-level themed confirmation dialog. */
   confirmDeleteUpload?: (upload: SourceResourceMeta) => Promise<boolean>;
 }) {
@@ -62,6 +64,7 @@ export function DataSourcesSection({
       key={projectId}
       projectId={projectId}
       confirmDeleteUpload={confirmDeleteUpload}
+      onManageCollections={onManageCollections}
     />
   );
 }
@@ -69,9 +72,11 @@ export function DataSourcesSection({
 function ProjectDataSources({
   projectId,
   confirmDeleteUpload,
+  onManageCollections,
 }: {
   projectId: string;
   confirmDeleteUpload?: (upload: SourceResourceMeta) => Promise<boolean>;
+  onManageCollections?: () => void;
 }) {
   const { t } = useT();
   const toast = useToast();
@@ -442,6 +447,18 @@ function ProjectDataSources({
           <p className="text-xs text-muted-foreground">
             {t("projectConfig.dataSources.bindSubtitle")}
           </p>
+          {onManageCollections && (
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              className="mt-2"
+              disabled={busy}
+              onClick={onManageCollections}
+            >
+              {t("sourceCollections.manageCollections")}
+            </Button>
+          )}
         </div>
         {available.length === 0 ? (
           <p className="text-xs text-muted-foreground">{t("sourceCollections.availableHint")}</p>

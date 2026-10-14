@@ -23,12 +23,16 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
 const appDir = resolve(__dirname, "..");
 const isolated = await makeIsolatedElectronHome("codeshell-settings-e2e-");
 const projectPath = join(isolated.home, "settings-project");
+const sourceFolder = join(isolated.home, "source-documents");
+const sourceFile = join(sourceFolder, "settings-reference.txt");
 const screenshotDir = process.env.CODESHELL_SETTINGS_SCREENSHOT_DIR;
 let app;
 let win;
 
 async function seedFixture() {
   await mkdir(projectPath, { recursive: true });
+  await mkdir(sourceFolder, { recursive: true });
+  await writeFile(sourceFile, "Settings document collection fixture.\n");
   await mkdir(join(isolated.codeShellHome, "desktop"), { recursive: true });
   await writeFile(
     join(isolated.codeShellHome, "desktop", "recents.json"),
@@ -117,7 +121,9 @@ async function openProjectSettings(win) {
       return false;
     }
   });
-  const project = win.getByText(basename(projectPath), { exact: true });
+  const project = win
+    .locator("#codeshell-sidebar-navigation")
+    .getByText(basename(projectPath), { exact: true });
   assert((await project.count()) === 1, "Seeded project entry is not unique");
   await project.click({ button: "right" });
   const open = win.getByRole("menuitem", { name: /项目配置|Project configuration/i });
@@ -242,6 +248,63 @@ async function checkShortcuts(win) {
   console.log("PASS shortcuts: platform keys, grouped rows, three widths and two languages/themes");
 }
 
+async function checkDataSourceAdds(app, win) {
+  await win.setViewportSize({ width: 1_280, height: 820 });
+  await win
+    .getByRole("navigation", { name: /设置导航|Settings navigation/i })
+    .getByRole("button", { name: /数据源|Data sources/i, exact: true })
+    .click();
+  const collections = win.locator("[data-source-collections]");
+  for (const name of ["添加本地文件", "添加文件夹当前清单", "添加并检查链接"]) {
+    await collections.getByRole("button", { name, exact: true }).waitFor({ state: "visible" });
+  }
+  await screenshot(win, "settings-data-source-add.png");
+
+  // Keep the production IPC/service/manifest path. The native chooser returns
+  // only this isolated fixture's explicit file or folder selection.
+  await app.evaluate(
+    ({ dialog }, fixture) => {
+      dialog.showOpenDialog = async (...args) => {
+        const options = args.at(-1);
+        return {
+          canceled: false,
+          filePaths: [options.properties.includes("openDirectory") ? fixture.folder : fixture.file],
+        };
+      };
+    },
+    { file: sourceFile, folder: sourceFolder },
+  );
+
+  for (const [opener, create, label] of [
+    ["添加本地文件", "创建并选择文件", "Settings files"],
+    ["添加文件夹当前清单", "创建并选择文件夹", "Settings folder"],
+  ]) {
+    await collections.getByRole("button", { name: opener, exact: true }).click();
+    const name = collections.getByRole("textbox", { name: "资料集名称", exact: true });
+    assert(
+      await name.evaluate((node) => node === document.activeElement),
+      "Collection name was not focused",
+    );
+    await name.fill(label);
+    await collections.getByRole("button", { name: create, exact: true }).click();
+    await collections
+      .locator("[data-collection-entry]")
+      .getByText(basename(sourceFile), { exact: true })
+      .waitFor({ state: "visible", timeout: 10_000 });
+    await assertNoHorizontalOverflow(win, `data source add ${label}`);
+    await collections.getByRole("button", { name: "关闭", exact: true }).click();
+  }
+  await collections.getByRole("button", { name: "添加并检查链接", exact: true }).click();
+  await collections
+    .getByRole("textbox", { name: "静态文件链接", exact: true })
+    .waitFor({ state: "visible" });
+  await collections
+    .getByRole("button", { name: "创建并添加链接", exact: true })
+    .waitFor({ state: "visible" });
+  await screenshot(win, "settings-data-source-url.png");
+  await collections.getByRole("button", { name: "取消", exact: true }).click();
+}
+
 try {
   await seedFixture();
   app = await launchCodeShellElectron({
@@ -280,6 +343,27 @@ try {
   );
   await search.fill("");
 
+  await win.setViewportSize({ width: 1_440, height: 560 });
+  const main = win.locator("main").filter({ has: win.getByRole("heading", { level: 1 }) });
+  await main.evaluate((node) => {
+    node.scrollTop = node.scrollHeight;
+  });
+  await win
+    .getByRole("navigation", { name: /设置导航|Settings navigation/i })
+    .getByRole("button", { name: /能力总览|Capability overview/i })
+    .click();
+  const builtinGroup = win.getByRole("button", { name: /内置工具|Built-in tools/i });
+  await builtinGroup.waitFor({ state: "visible", timeout: 10_000 });
+  assert(
+    (await main.evaluate((node) => node.scrollTop)) === 0,
+    "Capability overview retained the previous settings module's scroll position",
+  );
+  await builtinGroup.click();
+  await win.getByText("SwitchSessionWorkspace", { exact: true }).waitFor({ state: "visible" });
+  await assertNoHorizontalOverflow(win, "global capability overview");
+  await screenshot(win, "settings-capabilities.png");
+
+  await checkDataSourceAdds(app, win);
   await checkShortcuts(win);
 
   await win.getByRole("button", { name: /外观|Appearance/i }).click();
@@ -291,6 +375,16 @@ try {
   await win.getByText(projectPath, { exact: false }).waitFor({ state: "visible" });
   await assertNoHorizontalOverflow(win, "project settings");
   await screenshot(win, "settings-project.png");
+
+  await win
+    .getByRole("navigation", { name: /设置导航|Settings navigation/i })
+    .getByRole("button", { name: /数据源|Data sources/i, exact: true })
+    .click();
+  await win.getByRole("button", { name: "添加或管理资料集", exact: true }).click();
+  await win
+    .getByRole("button", { name: "添加本地文件", exact: true })
+    .waitFor({ state: "visible" });
+  await openProjectSettings(win);
 
   await win
     .getByRole("navigation", { name: /设置导航|Settings navigation/i })
