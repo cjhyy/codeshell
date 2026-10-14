@@ -21,6 +21,7 @@ import {
 import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
+import { CONTRACTS } from "../packages/core/dist/index.js";
 import { applyOutputJournalPage } from "../packages/web/dist/index.js";
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), "..");
@@ -283,10 +284,12 @@ async function boot() {
     child.stderr.on("data", receive);
   });
   const server = await ready;
-  assert.deepEqual(await (await fetch(`${server.url}/health`)).json(), {
-    status: "ok",
-    mode: "hub",
-  });
+  const health = await (await fetch(`${server.url}/health`)).json();
+  assert.deepEqual(
+    { status: health.status, mode: health.mode, keys: Object.keys(health).sort() },
+    { status: "ok", mode: "hub", keys: ["contracts", "mode", "status"] },
+  );
+  assert.deepEqual(health.contracts, JSON.parse(JSON.stringify(CONTRACTS)));
   return server;
 }
 

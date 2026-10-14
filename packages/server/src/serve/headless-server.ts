@@ -24,7 +24,7 @@ import { basename, dirname, extname, join, resolve } from "node:path";
 import type { Duplex } from "node:stream";
 import { randomBytes, randomUUID } from "node:crypto";
 import { WebSocketServer, type WebSocket } from "ws";
-import { SessionManager, SettingsManager } from "@cjhyy/code-shell-core";
+import { CONTRACTS, SessionManager, SettingsManager } from "@cjhyy/code-shell-core";
 import {
   SessionOutputCoverageStore,
   readOutputJournal,
@@ -717,7 +717,7 @@ export async function startHeadlessServer(opts: HeadlessServeOptions): Promise<H
     res.setHeader("x-content-type-options", "nosniff");
     res.setHeader("referrer-policy", "no-referrer");
     if (pathname === "/health" && req.method === "GET") {
-      hubJson(res, 200, { status: "ok", mode: hubAuth ? "hub" : "passcode" });
+      hubJson(res, 200, { status: "ok", mode: hubAuth ? "hub" : "passcode", contracts: CONTRACTS });
       return;
     }
     // The public shell probes this before login. A standalone workspace has no
