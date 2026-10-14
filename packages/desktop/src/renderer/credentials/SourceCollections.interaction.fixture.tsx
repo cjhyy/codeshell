@@ -49,6 +49,7 @@ function deferred<T>() {
   return { promise, resolve };
 }
 const pendingView = deferred<SourceCollectionView>();
+const pendingCreate = deferred<SourceCollectionView>();
 const pendingPick = deferred<SourceCollectionView | null>();
 const pendingConfirm = deferred<boolean>();
 const pendingSnapshot = deferred<any>();
@@ -134,6 +135,16 @@ let catalog =
   scenario === "cancel-create" || scenario === "create-and-edit"
     ? []
     : [current.definition, second.definition];
+const quickAdd = scenario.startsWith("quick-add-");
+const pendingCreateScenario = quickAdd && /-(unmount|navigation)$/.test(scenario);
+if (quickAdd) {
+  catalog.push(
+    ...Array.from({ length: 30 }, (_, index) => ({
+      ...definition(`collection_long_${index}`),
+      label: `Long collection ${index + 1}`,
+    })),
+  );
+}
 const createCalls: any[] = [];
 const updateCalls: Array<[string, string, SourceCollectionChange]> = [];
 const pickCalls: any[] = [];
@@ -183,8 +194,18 @@ Object.assign(window, {
     sourceCollections: {
       create: async (input: any) => {
         createCalls.push(input);
-        current = { ...current, definition: { ...current.definition, ...input }, entries: [] };
-        catalog = [current.definition];
+        current = {
+          ...current,
+          definition: {
+            ...current.definition,
+            ...(quickAdd ? { id: "collection_new" } : {}),
+            ...input,
+          },
+          ...(quickAdd ? { revision: "created-revision", references: [] } : {}),
+          entries: [],
+        };
+        catalog = quickAdd ? [...catalog, current.definition] : [current.definition];
+        if (pendingCreateScenario) return pendingCreate.promise;
         return structuredClone(current);
       },
       get: async (id: string) => {
@@ -205,6 +226,26 @@ Object.assign(window, {
       },
       pick: async (...args: any[]) => {
         pickCalls.push(args);
+        if (scenario === "quick-add-picker-failure" && pickCalls.length === 1)
+          throw new Error("native picker failed");
+        if (scenario === "quick-add-picker-cancel" && pickCalls.length === 1) return null;
+        if (quickAdd) {
+          current = {
+            ...current,
+            revision: `picked-revision-${pickCalls.length}`,
+            entries: [
+              ...current.entries,
+              {
+                entry:
+                  args[2] === "folder"
+                    ? { ...entry("folder_file"), relativePath: "guides/folder_file.txt" }
+                    : entry("added_file"),
+                status: "ready",
+              },
+            ],
+          };
+          return structuredClone(current);
+        }
         if (scenario === "folder-current-list")
           return (current = {
             ...current,
@@ -221,6 +262,8 @@ Object.assign(window, {
       },
       update: async (id: string, revision: string, change: SourceCollectionChange) => {
         updateCalls.push([id, revision, structuredClone(change)]);
+        if (scenario === "quick-add-url-failure" && updateCalls.length === 1)
+          throw new Error("URL check failed");
         if (scenario === "url-refresh-failure" && change.kind === "refresh")
           throw new Error("refresh rejected; old manifest retained");
         const next = structuredClone(current);
@@ -297,6 +340,7 @@ const { DataSourcesSection } = await import("../project-config/DataSourcesSectio
 const container = document.createElement("div");
 document.body.appendChild(container);
 const root = createRoot(container);
+let rootMounted = true;
 const nodes = (node: any = container): any[] => [
   node,
   ...(node.childNodes ?? []).flatMap((child: any) => nodes(child)),
@@ -362,7 +406,167 @@ const entryButton = (id: string, label: string) =>
   );
 try {
   await render();
-  if (scenario === "create-and-edit" || scenario === "cancel-create") {
+  if (quickAdd) {
+    const kind = scenario.includes("url")
+      ? "url"
+      : scenario.includes("folder")
+        ? "folder"
+        : "files";
+    const addLabel = {
+      files: "添加本地文件",
+      folder: "添加文件夹当前清单",
+      url: "添加并检查链接",
+    }[kind];
+    const createLabel = {
+      files: "创建并选择文件",
+      folder: "创建并选择文件夹",
+      url: "创建并添加链接",
+    }[kind];
+    const collections = find((node) => props(node)["data-source-collections"]);
+    const listRows = nodes(collections).filter((node) => props(node)["data-collection-id"]);
+    assert.equal(listRows.length, 32);
+    const addActions = find((node) => props(node)["aria-label"] === "添加资料");
+    for (const label of ["添加本地文件", "添加文件夹当前清单", "添加并检查链接"])
+      assert.ok(nodes(addActions).includes(button(label)));
+    assert.ok(nodes(collections).indexOf(addActions) < nodes(collections).indexOf(listRows[0]));
+
+    await click(button(addLabel));
+    const editor = find(
+      (node) => node.tagName === "SECTION" && props(node)["aria-label"] === "管理资料集",
+    );
+    const listing = listRows[0].parentNode;
+    assert.equal(editor.parentNode, collections);
+    assert.equal(listing.parentNode, collections);
+    assert.ok(collections.childNodes.indexOf(editor) < collections.childNodes.indexOf(listing));
+    const nameInput = find((node) => props(node).name === "collection-label");
+    assert.equal(document.activeElement, nameInput);
+    assert.equal(props(button(createLabel)).disabled, true);
+    assert.deepEqual(createCalls, []);
+    assert.deepEqual(pickCalls, []);
+    assert.deepEqual(updateCalls, []);
+
+    await change("collection-label", "  Added docs  ");
+    await change("collection-description", "  Reusable references  ");
+    if (kind === "url") {
+      assert.equal(props(button(createLabel)).disabled, true);
+      await change("collection-url", "  https://fixture.invalid/manual.txt  ");
+    }
+    const submit = button(createLabel);
+    assert.equal(props(submit).disabled, false);
+    await update(() => {
+      props(submit).onClick();
+      props(submit).onClick();
+    });
+    assert.deepEqual(createCalls, [{ label: "Added docs", description: "Reusable references" }]);
+
+    if (pendingCreateScenario) {
+      assert.deepEqual(pickCalls, []);
+      assert.deepEqual(updateCalls, []);
+      assert.equal(props(button(createLabel)).disabled, true);
+      assert.equal(props(button("取消")).disabled, true);
+      if (scenario.endsWith("unmount")) {
+        await update(() => root.unmount());
+        rootMounted = false;
+      } else {
+        await update(() => root.render(<p>Data source settings closed</p>));
+      }
+      await update(() => pendingCreate.resolve(structuredClone(current)));
+      assert.deepEqual(pickCalls, []);
+      assert.deepEqual(updateCalls, []);
+      assert.equal(text(container), rootMounted ? "Data source settings closed" : "");
+      assert.equal(catalog.filter((item) => item.id === "collection_new").length, 1);
+    } else {
+      assert.equal(
+        props(find((node) => props(node).name === "collection-label")).value,
+        "Added docs",
+      );
+      assert.equal(props(button("保存名称与设置")).disabled, false);
+      assert.ok(collectionButton("collection_new"));
+      if (kind === "url") {
+        assert.deepEqual(pickCalls, []);
+        assert.deepEqual(updateCalls[0], [
+          "collection_new",
+          "created-revision",
+          { kind: "url", url: "https://fixture.invalid/manual.txt" },
+        ]);
+      } else {
+        assert.deepEqual(pickCalls, [["collection_new", "created-revision", kind]]);
+        assert.deepEqual(updateCalls, []);
+      }
+
+      if (scenario === "quick-add-picker-cancel") {
+        assert.ok(text(editor).includes("这个资料集还没有文件。"));
+        assert.equal(
+          nodes(editor).filter((node) => props(node)["data-collection-entry"]).length,
+          0,
+        );
+        assert.equal(nodes(editor).filter((node) => props(node).role === "alert").length, 0);
+        await change("collection-label", "Empty docs renamed");
+        await click(button("保存名称与设置"));
+        assert.deepEqual(updateCalls[0], [
+          "collection_new",
+          "created-revision",
+          {
+            kind: "metadata",
+            label: "Empty docs renamed",
+            description: "Reusable references",
+            enabled: true,
+          },
+        ]);
+        await click(button("添加本地文件"));
+        assert.deepEqual(pickCalls[1], ["collection_new", "revision-2", "files"]);
+        assert.ok(text(editor).includes("added_file.txt"));
+      } else if (scenario === "quick-add-picker-failure" || scenario === "quick-add-url-failure") {
+        const message = kind === "url" ? "URL check failed" : "native picker failed";
+        assert.ok(text(find((node) => props(node).role === "alert")).includes(message));
+        assert.ok(text(editor).includes("这个资料集还没有文件。"));
+        assert.equal(
+          nodes(editor).filter((node) => props(node)["data-collection-entry"]).length,
+          0,
+        );
+        if (kind === "url") {
+          assert.equal(
+            props(find((node) => props(node).name === "collection-url")).value.trim(),
+            "https://fixture.invalid/manual.txt",
+          );
+          await click(button("添加并检查链接"));
+          assert.deepEqual(updateCalls[1], updateCalls[0]);
+          assert.ok(text(editor).includes("file_url.txt"));
+          assert.equal(props(find((node) => props(node).name === "collection-url")).value, "");
+        } else {
+          await click(button("重新加载"));
+          assert.equal(
+            document.activeElement,
+            find((node) => props(node).name === "collection-label"),
+          );
+          await click(button("添加本地文件"));
+          assert.deepEqual(pickCalls[1], pickCalls[0]);
+          assert.ok(text(editor).includes("added_file.txt"));
+        }
+        assert.equal(nodes(editor).filter((node) => props(node).role === "alert").length, 0);
+      } else {
+        const addedId =
+          kind === "url" ? "file_url" : kind === "folder" ? "folder_file" : "added_file";
+        assert.equal(
+          nodes(editor).filter((node) => props(node)["data-collection-entry"]).length,
+          1,
+        );
+        assert.ok(
+          text(editor).includes(kind === "folder" ? "guides/folder_file.txt" : `${addedId}.txt`),
+        );
+        assert.ok(text(editor).includes("已保存"));
+        if (kind === "url")
+          assert.equal(props(find((node) => props(node).name === "collection-url")).value, "");
+        await click(entryButton(addedId, "更新检查"));
+        assert.deepEqual(updateCalls.at(-1), [
+          "collection_new",
+          kind === "url" ? "revision-2" : "picked-revision-1",
+          { kind: "refresh", entryId: addedId },
+        ]);
+      }
+      assert.equal(createCalls.length, 1);
+    }
+  } else if (scenario === "create-and-edit" || scenario === "cancel-create") {
     await click(button("新建资料集"));
     await change("collection-label", "Engineering docs");
     await change("collection-description", "Reuse across projects");
@@ -560,6 +764,6 @@ try {
   assert.deepEqual(unhandled, []);
   process.stdout.write(JSON.stringify({ scenario, passed: true, unexpectedRequests }));
 } finally {
-  await act(async () => root.unmount());
+  if (rootMounted) await act(async () => root.unmount());
   container.parentNode?.removeChild(container);
 }
