@@ -168,6 +168,7 @@ export function Sidebar({
   viewMode,
 }: SidebarProps) {
   const { t } = useT();
+  const sidebarRef = useRef<HTMLElement>(null);
   const [menu, setMenu] = useState<MenuTarget | null>(null);
   const [editingProjectId, setEditingProjectId] = useState<string | null>(null);
   const [pendingPrimary, setPendingPrimary] = useState<{
@@ -336,6 +337,7 @@ export function Sidebar({
 
   return (
     <aside
+      ref={sidebarRef}
       className="flex h-full w-60 max-w-full shrink-0 flex-col border-r border-border/70"
       data-theme-surface="sidebar"
     >
@@ -512,6 +514,7 @@ export function Sidebar({
 
       {menu && (
         <ContextMenu
+          container={sidebarRef.current?.closest<HTMLElement>('[role="dialog"]')}
           x={menu.x}
           y={menu.y}
           onClose={closeMenu}

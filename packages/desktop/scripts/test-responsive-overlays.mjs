@@ -9,6 +9,7 @@ const fixtures = [
   "settings/SettingsMenu.browser.fixture.mjs",
   "account/AccountSidebarEntry.browser.fixture.mjs",
   "chat/anchored-popovers.browser.fixture.mjs",
+  "ui/ContextMenu.browser.fixture.mjs",
   "ChatView.autocomplete.browser.fixture.mjs",
   "ui/specialized-overlays.browser.fixture.mjs",
   "ui/page-surfaces.browser.fixture.mjs",

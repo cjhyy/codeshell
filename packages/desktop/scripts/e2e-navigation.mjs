@@ -153,6 +153,17 @@ try {
   await draft.click({ button: "right" });
   const contextMenu = drawer.getByRole("menu");
   await contextMenu.waitFor();
+  assert(
+    await contextMenu.evaluate((menu) =>
+      Array.from(menu.querySelectorAll('[role="menuitem"]')).every((item) => {
+        const rect = item.getBoundingClientRect();
+        const hit = document.elementFromPoint(rect.right - 8, rect.top + rect.height / 2);
+        return hit === item || item.contains(hit);
+      }),
+    ),
+    "Every context action remains reachable beyond the themed sidebar boundary",
+  );
+  await screenshot(win, "navigation-context-menu-boundary.png");
   const menuItems = contextMenu.getByRole("menuitem");
   const expectMenuFocus = async (index) => {
     await win.waitForFunction(

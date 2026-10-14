@@ -70,7 +70,9 @@ async function openContextMenu(): Promise<any[]> {
     });
     await flushMicrotasks();
   });
-  return findElements(container, "BUTTON").filter((node) => reactPropsOf(node).role === "menuitem");
+  return findElements(document.body, "BUTTON").filter(
+    (node) => reactPropsOf(node).role === "menuitem",
+  );
 }
 
 beforeEach(async () => {
