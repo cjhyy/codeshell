@@ -4,6 +4,10 @@ import React, { act } from "react";
 import { createRoot, type Root } from "react-dom/client";
 import { ensureMiniDom, flushMicrotasks } from "./test-utils/renderHook";
 
+// Install the DOM before Radix loads: its layout effect is chosen once at module
+// load, so importing first would leave composer popovers unmounted in isolation
+// while a shard that installed a DOM earlier mounts them.
+ensureMiniDom();
 // Keep the real component even when another ChatView test installs a module mock.
 // @ts-expect-error Bun supports query-suffixed TypeScript module imports.
 const { ChatView } = await import("./ChatView.tsx?plugin-command-test");
