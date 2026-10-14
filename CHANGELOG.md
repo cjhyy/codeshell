@@ -8,6 +8,25 @@ breaking.
 
 ## [Unreleased]
 
+### Added
+
+- Add a minimal `initialize` handshake to AgentServer that returns the protocol
+  version and the contract table, and export `CONTRACTS` from core.
+- Include `contracts` in the serve `/health` response.
+
+### Changed
+
+- Run REPL with the sandboxed-Bash environment allowlist plus project env.
+  Proxy variables, `NODE_PATH`, `PYTHONPATH`, `VIRTUAL_ENV`, `CONDA_*` and the
+  cwd `.env` no longer reach REPL; set them in project env instead.
+- Add Windows and CA-certificate variables to the shared shell allowlist.
+
+### Fixed
+
+- Serve now answers Desktop-only host requests with `unsupported` immediately
+  instead of hanging, and no longer broadcasts worker `desktop/*` requests to
+  Web tabs.
+
 ## [0.9.40] - 2026-10-13
 
 ### Fixed

@@ -215,7 +215,7 @@ test("read-only approval snapshots keep exact reservations, reject malformed IDs
   });
 });
 
-test("Hub public shell and health expose no API data; setup is one-time and Origin gates WS", async () => {
+test("Hub public shell and health expose no account or session data; setup is one-time and Origin gates WS", async () => {
   const { server } = await fixture();
   const healthResponse = await fetch(server.url + "/health");
   expect(healthResponse.headers.get("cache-control")).toBe("no-store");

@@ -1,6 +1,6 @@
 # S0 协议与宿主请求清点
 
-> 基线：`abc63a156`。供第 16 章 1.1 与 4.4 使用。
+> 基线：`40a71d9ca`（清点的代码与 main 在该提交上一致，仅计划文档不同）。供第 16 章 1.1 与 4.4 使用。
 >
 > 采集方式：对 `packages/core/src/protocol/types.ts`、`packages/core/src/types.ts`、`packages/core/src/protocol/server.ts`、`packages/desktop/src/main/agent-bridge.ts`、`packages/server/src/serve/headless-server.ts` 逐行核对，不依赖二手描述。v2 去向栏里的具体方法名（如 `turn/start`）是**暂定命名**，第 16 章 §4 只固定了命名空间、Item 类型、通知名和 `host/*`、`client/*` 方法名。
 
@@ -99,7 +99,7 @@
 | ----------------------- | ------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------- | ---------------------------------------------------------------------- |
 | `__browser_action__`    | `browser`                                         | `agent-bridge.ts` `maybeHandleBrowserAction`（1147 行）；解析 `intercept.ts` `parseBrowserActionLine`                                                                     | 无处理，当作普通审批广播并进入租约（`headless-server.ts` 的 `leases.add`），worker 等到 5 分钟超时                                                                | serve 立即返回 unsupported                                                       | `host/browser.act`                                                     |
 | `__credential_action__` | `credential.browserCookie`                        | `agent-bridge.ts` `maybeHandleCredentialAction`（1393 行）；解析 `intercept.ts` `parseCredentialActionLine`；动作目前只有 `injectCookie`（把凭据 Cookie 注入内置浏览器）  | 同上，无处理，挂到超时                                                                                                                                            | serve 立即返回 unsupported                                                       | `host/credential.materialize`（暂定：injectCookie 语义，1.1 复核）     |
-| `__workspace_action__`  | `workspace.switch`                                | `agent-bridge.ts` `maybeHandleWorkspaceAction`（1454 行）；解析 `intercept.ts` `parseWorkspaceActionLine`                                                                 | 同上，无处理，挂到超时                                                                                                                                            | serve 立即返回 unsupported                                                       | `host/workspace.switch`                                                |
+| `__workspace_action__`  | `workspace.switch`                                | `agent-bridge.ts` `maybeHandleWorkspaceAction`（1454 行）；解析 `intercept.ts` `parseWorkspaceActionLine`                                                                 | 同上，无处理，挂到超时。另承载 `resolve_session_run`（跨会话消息、异步唤醒）；serve 里两个 action 都得到 `workspace.switch` unsupported 应答，见第 16 章 §9.2     | serve 立即返回 unsupported                                                       | `host/workspace.switch`                                                |
 | `__panel_action__`      | `panel`（仅非 hub 模式的 serve 使用，见 S0 处理） | `agent-bridge.ts` `maybeHandlePanelAction`（1562 行）；解析 `intercept.ts` `parsePanelActionLine`（action 为 list / open / tools / invoke）                               | 仅 hub 鉴权模式（`hubAuth`）在 `headless-server.ts:471` 处理：转 `panels.panelAction`，再用 `agent/approve` 回写；非 hub 的 serve 同上挂到超时                    | hub 模式：不变；非 hub（口令）模式：serve 立即返回 unsupported（能力名 `panel`） | `host/panel.call`                                                      |
 | `__ask_user__`          | —                                                 | 作为普通审批转给渲染进程，`packages/desktop/src/renderer/app/useHostSubscriptions.ts:734` 路由进聊天；Pet IM 路径另有 `packages/desktop/src/main/pet/pet-im-decisions.ts` | 当作普通审批广播并租约给 Web tab（`headless-server.ts` 的 `leases.add`；Web 侧 `packages/web/app/HubApprovalCard.tsx`、`useRemoteApp.ts:1281`）；有回应路径，可用 | 不变                                                                             | `host/user.ask`（宿主再向客户端发 `client/askUser`，沿用现有租约逻辑） |
 
@@ -109,7 +109,7 @@
 
 serve 对不支持的宿主能力立即应答，不再挂到超时。格式如下，供 S0 的 unsupported 分发器实现。
 
-- 回环（第 3 表）通过 `agent/approve` 回写，`decision: { approved: true, answer: <JSON 字符串> }`。JSON 内容为 `{ ok: false, failure: "unsupported", capability, error, detail }`，其中 `error` 与 `detail` 均为 `<capability> is not supported by this host (headless serve)`。core 里三个回环解析器都会把它解析成带类型的失败。
+- 回环（第 3 表）通过 `agent/approve` 回写，`decision: { approved: true, answer: <JSON 字符串> }`。JSON 内容为 `{ ok: false, failure: "unsupported", capability, error, detail }`，其中 `error` 与 `detail` 均为 `<capability> is not supported by this host (headless serve)`。core 里四个回环解析器（浏览器、凭据、工作区、panel）都会把它解析成带类型的失败。
 - `desktop/*` worker 请求（第 4 表）回 JSON-RPC 错误响应：`{ code: -32601, message: "<method> is not supported by this host (headless serve)", data: { failure: "unsupported", capability: "<method>" } }`。没有 `id` 的通知不回复。
 - 术语：`unsupported` 是 S0 的失败种类（`HostLoopbackFailure` 新增成员）；`host_unsupported` 是第 16 章 v2 的错误码名。同一个概念，分属两层。
 

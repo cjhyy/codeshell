@@ -1,10 +1,12 @@
 # 平台收敛 S0 快速修复 Implementation Plan
 
+> 状态：已执行（2026-10-14），实际做法与偏差见第 16 章 v1.1 与 §9.2。
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** 让 headless serve 对它不支持的宿主请求立即返回 `unsupported`，不再挂起；所有宿主都能报告统一的契约版本；收紧 REPL 环境变量；删除没人用的进程审批存储。
 
-**Architecture:** 新增 `packages/core/src/contracts.ts` 作为契约版本的唯一定义，server、desktop 引用它；渲染进程共享的字面量用漂移测试守住。serve 侧新增一个纯函数模块 `host-requests.ts`，识别浏览器 / 凭据 / 工作区三种回环和 `desktop/*` 授权请求，并生成类型化的 `unsupported` 应答，`headless-server.ts` 在转发 worker 消息前调用它。AgentServer 新增最小版 `initialize`，只返回协议版本和契约表。
+**Architecture:** 新增 `packages/core/src/contracts.ts` 作为契约版本的唯一定义，server、desktop 引用它；渲染进程共享的字面量用漂移测试守住。serve 侧新增一个纯函数模块 `host-requests.ts`，识别浏览器 / 凭据 / 工作区 / panel 四种回环和 `desktop/*` 授权请求，并生成类型化的 `unsupported` 应答，`headless-server.ts` 在转发 worker 消息前调用它。AgentServer 新增最小版 `initialize`，只返回协议版本和契约表。
 
 **Tech Stack:** TypeScript、Bun test（经 `scripts/run-bun-test-shard.mjs` 守卫运行）、JSON-RPC 2.0 over stdio / WebSocket。
 
@@ -1259,7 +1261,7 @@ git push -u origin claude/host/s0-quick-fixes
 gh pr create --base main --title "feat: platform consolidation S0 quick fixes" --body-file <PR 说明文件>
 ```
 
-PR 说明列出：serve 不再挂起的三种回环和 `desktop/*` 请求、`CONTRACTS` 与 `/health`、`initialize`、REPL 环境变量的行为变化（需要在项目 env 里配置 API key）、删除的文件，以及本计划"范围决定"表里没做的两项。末尾加 `🤖 Generated with [Claude Code](https://claude.com/claude-code)`。
+PR 说明列出：serve 不再挂起的四种回环和 `desktop/*` 请求、`CONTRACTS` 与 `/health`、`initialize`、REPL 环境变量的行为变化（需要在项目 env 里配置 API key）、删除的文件，以及本计划"范围决定"表里没做的两项。末尾加 `🤖 Generated with [Claude Code](https://claude.com/claude-code)`。
 
 ---
 
