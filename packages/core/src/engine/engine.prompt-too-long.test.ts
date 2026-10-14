@@ -65,12 +65,17 @@ describe("Engine prompt_too_long terminal event", () => {
       expect(events).toContainEqual({
         type: "error",
         error: "Context limit exceeded after 3 recovery attempts",
+        timestamp: expect.any(Number),
         outputCursor: expect.any(String),
       });
       expect(events).toContainEqual({
         type: "turn_complete",
         reason: "prompt_too_long",
         text: result.text,
+        timestamp: expect.any(Number),
+        startedAt: expect.any(Number),
+        completedAt: expect.any(Number),
+        durationMs: expect.any(Number),
         outputCursor: expect.any(String),
       });
 

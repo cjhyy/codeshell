@@ -110,12 +110,38 @@ describe("SessionSnapshotStore", () => {
     expect(snap.topLevelRunning).toBe(true);
   });
 
+  it.each(["runId", "clientMessageId"])(
+    "late terminal and request events cannot close a successor identified by %s after eviction",
+    (identity) => {
+      const store = new SessionSnapshotStore({ maxPerSession: 2 });
+      store.append("relay", { type: "session_started", [identity]: "A" });
+      store.append("relay", { type: "session_started", [identity]: "B" });
+      store.append("relay", { type: "text_delta", text: "new output", [identity]: "B" });
+      store.append("relay", { type: "stream_request_start", [identity]: "A" });
+      for (const type of ["turn_complete", "error"]) {
+        store.append("relay", { type, [identity]: "A" });
+        expect(store.get("relay").topLevelRunning).toBe(true);
+      }
+      store.append("relay", { type: "turn_complete", agentId: "child", [identity]: "B" });
+      expect(store.get("relay").topLevelRunning).toBe(true);
+      store.append("relay", { type: "turn_complete", [identity]: "B" });
+      expect(store.get("relay").topLevelRunning).toBe(false);
+    },
+  );
+
   it("marks retained unfinished starts idle when the worker exits", () => {
     const store = new SessionSnapshotStore();
     store.append("s1", { type: "session_started" });
     store.onWorkerExit(["s1"]);
 
     expect(store.get("s1").topLevelRunning).toBe(false);
+  });
+
+  it("retains compatibility with legacy terminals that carry no run identity", () => {
+    const store = new SessionSnapshotStore();
+    store.append("legacy", { type: "session_started", runId: "current" });
+    store.append("legacy", { type: "turn_complete" });
+    expect(store.get("legacy").topLevelRunning).toBe(false);
   });
 
   it("clears only worker-owned running sessions when automation is also running", () => {

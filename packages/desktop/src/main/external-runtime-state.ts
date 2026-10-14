@@ -20,7 +20,11 @@ import {
   type StreamEvent,
   type TerminalReason,
 } from "@cjhyy/code-shell-core";
-import { SessionOutputJournal, outputUserMessage } from "@cjhyy/code-shell-core/internal";
+import {
+  SessionOutputJournal,
+  outputUserMessage,
+  createRunTiming,
+} from "@cjhyy/code-shell-core/internal";
 import {
   textWithAttachmentReferences,
   type ExternalRuntimeKind,
@@ -207,6 +211,7 @@ export class ExternalRuntimeSessionRecorder {
   private journal: SessionOutputJournal | undefined;
   private runId: string | undefined;
   private runClosed = true;
+  private runTiming: ReturnType<typeof createRunTiming> | undefined;
   private persistenceFailed = false;
   private boundaryId: string | undefined;
 
@@ -304,6 +309,7 @@ export class ExternalRuntimeSessionRecorder {
     this.assertNewSubmission(input);
     this.assertOwner(continueRun);
     if (this.persistenceFailed) throw new Error("Session output recovery is incomplete");
+    if (!continueRun) this.runTiming = createRunTiming();
     this.textBuffer = "";
     this.finalText = "";
     this.pendingToolBlocks = [];
@@ -348,7 +354,10 @@ export class ExternalRuntimeSessionRecorder {
         index > 0 ? events[index - 1].id : undefined,
       );
     }
-    return this.appendOutput(outputUserMessage(user.data, this.sessionId, this.cwd));
+    return this.appendOutput({
+      ...outputUserMessage(user.data, this.sessionId, this.cwd),
+      timestamp: user.timestamp,
+    });
   }
 
   get isCurrentOutputOwner(): boolean {
@@ -434,6 +443,7 @@ export class ExternalRuntimeSessionRecorder {
     if (this.persistenceFailed || !this.journal)
       throw new Error("Session output recovery is incomplete");
     if (this.transcript.flushFailed()) throw new Error("Transcript persistence is incomplete");
+    event = this.runTiming?.prepareEvent(event) ?? event;
     if (event.type === "session_started") event = { ...event, runId: this.runId };
     return { ...event, outputCursor: this.journal.append(event) };
   }

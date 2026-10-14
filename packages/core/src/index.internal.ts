@@ -12,6 +12,7 @@ export {
 } from "./session/output-coverage-state.js";
 
 export { outputUserMessage } from "./engine/run-output-user-message.js";
+export { createRunTiming } from "./session/stream-timing.js";
 
 // ─── Utils (shared primitives used by TUI) ───────────────────────
 

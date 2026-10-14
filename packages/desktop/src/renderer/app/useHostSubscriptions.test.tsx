@@ -151,6 +151,7 @@ describe("host subscriptions and recovery", () => {
           approveCalls.push(args);
         },
         mobileRemote: { notifyApprovalResolved: async () => {} },
+        externalRuntime: { onSessionState: subscribe("onExternalSessionState") },
         ...Object.fromEntries(
           [
             "onStreamEvent",
@@ -241,6 +242,124 @@ describe("host subscriptions and recovery", () => {
     expect(notices[0]?.variant).toBe("error");
     expect(notices[0]?.detail).toContain("workId: bg-server");
     expect(notices[0]?.detail).toContain("sessionId: shell-session");
+  });
+
+  test.each([
+    ["completed", "completed"],
+    ["aborted_streaming", "cancelled"],
+    ["aborted_tools", "cancelled"],
+    ["model_error", "failed"],
+    ["image_error", "failed"],
+    ["prompt_too_long", "failed"],
+    ["replay_incomplete", "failed"],
+    ["batch_incomplete", "failed"],
+    ["unverified_write", "failed"],
+    ["max_turns", "completed"],
+    ["goal_budget_exhausted", "completed"],
+    ["hook_stopped", "completed"],
+    ["stop_hook_prevented", "completed"],
+  ])("automation %s retains its actual terminal status %s", async (reason, status) => {
+    const sessionId = "automation-session";
+    const bucket = bucketKey("project", sessionId);
+    const index: SessionIndex = {
+      sessions: [
+        {
+          id: sessionId,
+          engineSessionId: sessionId,
+          title: "Automation",
+          source: "automation",
+          runStatus: "running",
+          createdAt: 1,
+          updatedAt: 1,
+        },
+      ],
+      activeSessionId: sessionId,
+    };
+    indices.value = { project: index };
+    saveSessionIndex("project", index);
+    params.routing.sessionIndicesRef.current = indices.value;
+    params.routing.engineToBucketRef.current.set(sessionId, bucket);
+    hook = await renderHook(() => useHostSubscriptions(params));
+    await act(async () => {
+      listeners.get("onStreamEvent")!({
+        sessionId,
+        event: { type: "turn_complete", reason },
+      });
+      await flushMicrotasks();
+    });
+    expect(indices.value.project?.sessions[0]?.runStatus).toBe(status);
+    expect(loadSessionIndex("project").sessions[0]?.runStatus).toBe(status);
+  });
+
+  test.each(["exited", "gave_up"])(
+    "Core %s clears only its own running Sessions before external ownership events arrive",
+    async (type) => {
+      const native = bucketKey("project", "native");
+      const external = bucketKey("project", "external");
+      const automation = bucketKey("project", "automation");
+      const clocks = new Map([
+        [native, 1],
+        [external, 2],
+        [automation, 3],
+      ]);
+      busy = new Set(clocks.keys());
+      params.routing.engineToBucketRef.current = new Map([
+        ["native", native],
+        ["external", external],
+        ["automation", automation],
+      ]);
+      params.routing.runningBucketRef.current = external;
+      params.activity.setBusyKeys = (action) => {
+        busy = typeof action === "function" ? action(busy) : action;
+      };
+      params.activity.setBusyForKey = (key, value) => {
+        if (value) busy.add(key);
+        else {
+          busy.delete(key);
+          clocks.delete(key);
+        }
+      };
+      hook = await renderHook(() => useHostSubscriptions(params));
+      await act(async () => {
+        listeners.get("onAgentLifecycle")!({ type, code: 1, sessionIds: ["native"] });
+      });
+      expect([...busy]).toEqual([external, automation]);
+      expect([...clocks.keys()]).toEqual([external, automation]);
+      expect(params.routing.runningBucketRef.current).toBe(external);
+    },
+  );
+
+  test("an empty worker ownership list never falls back to every Session", async () => {
+    const external = bucketKey("project", "external");
+    busy.add(external);
+    params.routing.engineToBucketRef.current.set("external", external);
+    params.activity.setBusyKeys = (action) => {
+      busy = typeof action === "function" ? action(busy) : action;
+    };
+    hook = await renderHook(() => useHostSubscriptions(params));
+    await act(async () => {
+      listeners.get("onAgentLifecycle")!({ type: "exited", code: 0, sessionIds: [] });
+    });
+    expect(busy.has(external)).toBe(true);
+  });
+
+  test("legacy worker exit clears native routes while retaining known external runtimes", async () => {
+    const native = bucketKey("project", "native");
+    const external = bucketKey("project", "external");
+    busy = new Set([native, external]);
+    params.routing.engineToBucketRef.current = new Map([
+      ["native", native],
+      ["external", external],
+    ]);
+    params.activity.setBusyKeys = (action) => {
+      busy = typeof action === "function" ? action(busy) : action;
+    };
+    hook = await renderHook(() => useHostSubscriptions(params));
+    await act(async () => {
+      listeners.get("onExternalSessionState")!({ sessionId: "external", active: true });
+      listeners.get("onAgentLifecycle")!({ type: "exited", code: 1 });
+    });
+    expect([...busy]).toEqual([external]);
   });
 
   test("theme sounds follow top-level completion and live approvals without replaying restored requests", async () => {

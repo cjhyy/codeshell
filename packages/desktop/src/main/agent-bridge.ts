@@ -31,6 +31,7 @@ import {
 } from "@cjhyy/code-shell-core/internal";
 import { randomUUID } from "node:crypto";
 import { MainOutputPublisher, type MainOutputSource } from "./main-output-publisher.js";
+import { WorkerRunOwnership } from "./worker-run-ownership.js";
 import { createRequire } from "node:module";
 import { homedir } from "node:os";
 import { join } from "node:path";
@@ -284,8 +285,8 @@ export class AgentBridge implements PetStateBridge {
       return this.snapshots.get(sessionId).outputCursor === event.outputCursor;
     },
   });
-  /** Sessions the CURRENT worker streamed events for (reset per spawn). */
-  private workerSnapshotSessionIds = new Set<string>();
+  /** In-flight runs actually owned by the CURRENT stdio worker. */
+  private readonly workerRuns = new WorkerRunOwnership();
   /**
    * Out-of-band observers of worker→renderer lines (e.g. the Mobile Web
    * Remote, which streams the same events to a phone). Taps are read-only:
@@ -400,15 +401,19 @@ export class AgentBridge implements PetStateBridge {
         process.stderr.write(`[agent] ${text}`);
       },
       onWorkerStarted: () => {
-        this.workerSnapshotSessionIds = new Set<string>();
+        this.workerRuns.beginWorker();
         this.petWorkerGeneration.beginWorker();
         this.emitPetProjection({ kind: "lifecycle", state: "active" });
       },
       onSpawnFailed: () => {
         this.emitPetProjection({ kind: "lifecycle", state: "disconnected" });
-        this.safeSend("agent:lifecycle", { type: "gave_up" });
+        this.safeSend("agent:lifecycle", {
+          type: "gave_up",
+          sessionIds: this.workerRuns.endWorker(),
+        });
       },
       onSpawnError: () => {
+        const sessionIds = this.workerRuns.endWorker();
         this.abortLocalOAuthLinkActions();
         this.webConfiguration.workerExited();
         this.childBrowserLifetime.close();
@@ -416,25 +421,26 @@ export class AgentBridge implements PetStateBridge {
         this.failPendingQuickChatForks();
         // Snapshots intentionally survive worker exit — a respawn may resume
         // the same session, and a remounted renderer still needs to replay.
-        this.snapshots.onWorkerExit(this.workerSnapshotSessionIds);
+        this.snapshots.onWorkerExit(sessionIds);
         this.emitPetProjection({ kind: "lifecycle", state: "disconnected" });
-        this.safeSend("agent:lifecycle", { type: "gave_up" });
+        this.safeSend("agent:lifecycle", { type: "gave_up", sessionIds });
       },
       onExit: ({ code, clean, gaveUp }) => {
+        const sessionIds = this.workerRuns.endWorker();
         this.abortLocalOAuthLinkActions();
         this.webConfiguration.workerExited();
         this.childBrowserLifetime.close();
         this.evictPendingTentativeRuns();
         this.failPendingQuickChatForks();
-        this.snapshots.onWorkerExit(this.workerSnapshotSessionIds);
+        this.snapshots.onWorkerExit(sessionIds);
         if (clean) {
           this.emitPetProjection({ kind: "lifecycle", state: "reclaimed" });
-          this.safeSend("agent:lifecycle", { type: "exited", code });
+          this.safeSend("agent:lifecycle", { type: "exited", code, sessionIds });
           return;
         }
         this.emitPetProjection({ kind: "lifecycle", state: "disconnected" });
-        if (gaveUp) this.safeSend("agent:lifecycle", { type: "gave_up" });
-        else this.safeSend("agent:lifecycle", { type: "exited", code });
+        if (gaveUp) this.safeSend("agent:lifecycle", { type: "gave_up", sessionIds });
+        else this.safeSend("agent:lifecycle", { type: "exited", code, sessionIds });
       },
     });
     this.core.subscribeLines((line) => this.handleWorkerLine(line));
@@ -552,7 +558,7 @@ export class AgentBridge implements PetStateBridge {
           event: annotateBrowserRuntimeStreamEvent(rawAppend.event, "milestones"),
         }
       : null;
-    if (append) this.workerSnapshotSessionIds.add(append.sessionId);
+    if (append) this.workerRuns.observeWorker(append.sessionId, append.event);
     let snapshotEntry;
     try {
       snapshotEntry = append
@@ -602,6 +608,13 @@ export class AgentBridge implements PetStateBridge {
 
   private handleAgentRunMetadata(prepared: ReturnType<typeof prepareAgentRunMetadata>): string {
     this.core.ensureWorker(prepared.cwd);
+    if (prepared.sessionId && this.core.canSend()) {
+      const clientMessageId = prepared.parsed.params?.clientMessageId;
+      this.workerRuns.beginRun(
+        prepared.sessionId,
+        typeof clientMessageId === "string" ? clientMessageId : undefined,
+      );
+    }
     this.lastRunContext = {
       cwd: prepared.cwd,
       sessionId: prepared.sessionId,
@@ -2435,6 +2448,7 @@ export class AgentBridge implements PetStateBridge {
     event: unknown,
     options: { browserVisibility?: "hidden" | "milestones" | "full" },
   ): boolean {
+    this.workerRuns.observeExternal(sessionId, event);
     const projected = annotateBrowserRuntimeStreamEvent(event, options.browserVisibility ?? "full");
     let entry;
     try {
@@ -2454,6 +2468,7 @@ export class AgentBridge implements PetStateBridge {
 
   /** External interactive streams retain their exact owning window. */
   ingestOwnedExternalEvent(sessionId: string, event: unknown): void {
+    this.workerRuns.observeExternal(sessionId, event);
     const entry = publishOwnedExternalStream(
       this.snapshots,
       this.windows,

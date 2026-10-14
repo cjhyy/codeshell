@@ -1,6 +1,7 @@
 /** Trusted publisher seam for visible events outside the Engine run wrapper. */
 import { randomUUID } from "node:crypto";
 import type { StreamEvent } from "../types.js";
+import { stampStreamEvent } from "./stream-timing.js";
 import {
   SessionOutputJournal,
   outputJournalCutover,
@@ -158,7 +159,8 @@ export class SessionOutputPublisher {
       this.writers.set(sessionId, writer);
       if (this.writers.size > 16) this.writers.delete(this.writers.keys().next().value!);
     }
-    const event = { ...(raw as StreamEvent), outputCursor: writer.append(raw as StreamEvent) };
+    const stamped = stampStreamEvent(raw as StreamEvent);
+    const event = { ...stamped, outputCursor: writer.append(stamped) };
     this.domains.set(
       sessionId,
       JSON.parse(Buffer.from(event.outputCursor, "base64url").toString("utf8")).identity,

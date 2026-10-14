@@ -31,6 +31,48 @@ import type { EngineRunOptions, RunBehaviorProfile } from "./run-types.js";
 
 type TurnLoopRunResult = Awaited<ReturnType<TurnLoop["run"]>>;
 
+/** Bind failure settlement to the claimed Session and its wrapped output stream. */
+export function createRunFailureHandler(
+  args: Omit<Parameters<typeof buildRunFailureResult>[0], "err" | "reason"> & {
+    runId: string;
+    sealForFinalization(): void;
+  },
+): (error: unknown) => EngineResult {
+  return (err) => {
+    try {
+      args.sealForFinalization();
+    } catch {
+      /* Failure remains non-completed; in-memory fences were installed first. */
+    }
+    const failed = buildRunFailureResult({
+      ...args,
+      err,
+      reason: args.options?.signal?.aborted ? "aborted_streaming" : "model_error",
+    });
+    failed.runId = args.runId;
+    if (args.options?.clientMessageId)
+      appendClientRunReceipt(args.session, args.options.clientMessageId, failed);
+    return failed;
+  };
+}
+
+/** A receipt write failure cannot relabel an already finalized model result. */
+export function appendClientRunReceipt(
+  session: SessionBundle,
+  clientMessageId: string,
+  result: EngineResult,
+): void {
+  try {
+    session.transcript.appendRunResult(clientMessageId, result);
+  } catch (error) {
+    logger.warn("engine.client_message.receipt_persist_failed", {
+      sessionId: session.state.sessionId,
+      clientMessageId,
+      error: error instanceof Error ? error.message : String(error),
+    });
+  }
+}
+
 /** engine.ts:headless 一次性 run 的后台子代理排水循环。 */
 export async function drainHeadlessBackgroundAgents(args: {
   sid: string;
@@ -391,14 +433,16 @@ export function buildRunFailureResult(args: {
   err: unknown;
   session: SessionBundle;
   options: EngineRunOptions | undefined;
+  reason?: "model_error" | "aborted_streaming";
   persistFinalRunState: (state: SessionBundle["state"]) => void;
 }): EngineResult {
   const { err, session, options } = args;
+  const reason = args.reason ?? "model_error";
   // The session is already persisted as active before runWithSid starts.
   // Initialization failures (client creation, MCP connection, prompt/hooks)
   // therefore need the same terminal lifecycle treatment as turn-loop errors.
   const error = formatFriendlyError(err);
-  session.state.status = "model_error";
+  session.state.status = reason;
   delete session.state.lastCompletionKind;
   args.persistFinalRunState(session.state);
   session.transcript.appendError(error, { phase: "initialization" });
@@ -407,16 +451,21 @@ export function buildRunFailureResult(args: {
     error: err instanceof Error ? err.message : String(err),
   });
   recordSessionEnd(session.state.sessionId, {
-    reason: "model_error",
+    reason,
     turns: session.state.turnCount,
   });
-  options?.onStream?.({ type: "error", error });
-  options?.onStream?.({ type: "turn_complete", reason: "model_error" });
+  try {
+    options?.onStream?.({ type: "error", error });
+  } finally {
+    // A failed journal append latches the stream's recovery fence. Still send
+    // the non-success terminal through that fence so the live clock can stop.
+    options?.onStream?.({ type: "turn_complete", reason });
+  }
 
   const usage = session.state.tokenUsage;
   return {
     text: `ERROR: ${error}`,
-    reason: "model_error",
+    reason,
     sessionId: session.state.sessionId,
     turnCount: session.state.turnCount,
     usage: {

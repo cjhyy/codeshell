@@ -60,7 +60,6 @@ function TurnProcessGroupCardImpl({
 }: Props) {
   const [open, setOpen] = useState(group.isLive);
   const prevIsLiveRef = useRef(group.isLive);
-  const prevTurnEpochRef = useRef(turnEpoch);
 
   // Force-collapse only the process card whose own clean turn just transitioned
   // from live to closed. Older closed groups may have been manually expanded;
@@ -68,22 +67,28 @@ function TurnProcessGroupCardImpl({
   // again. Interrupted (stopped) turns still render flat; see showHeader below.
   useEffect(() => {
     const wasLive = prevIsLiveRef.current;
-    const turnEpochChanged = turnEpoch !== undefined && prevTurnEpochRef.current !== turnEpoch;
-    if (wasLive && !group.isLive && turnEpochChanged && !group.stopped) setOpen(false);
+    if (wasLive && !group.isLive && !group.stopped && group.completedCleanly !== false)
+      setOpen(false);
     prevIsLiveRef.current = group.isLive;
-    prevTurnEpochRef.current = turnEpoch;
-  }, [turnEpoch, group.isLive, group.stopped]);
+  }, [group.isLive, group.stopped, group.completedCleanly]);
 
   // Codex-style "已处理 X m Y s" header. Live turn: tick every 1s from the
-  // first tool's start so the elapsed time counts up (group.durationMs is 0
-  // while a tool is still running). Closed turn: static group.durationMs.
+  // run start, including model work before the first tool. Closed turn uses
+  // the frozen backend duration, with source timestamp fallback for old history.
   const [nowMs, setNowMs] = useState(() => Date.now());
   useEffect(() => {
     if (!group.isLive) return;
+    setNowMs(Date.now());
     const t = setInterval(() => setNowMs(Date.now()), 1000);
     return () => clearInterval(t);
-  }, [group.isLive]);
-  const elapsedMs = group.isLive ? Math.max(0, nowMs - group.firstToolStartedAt) : group.durationMs;
+  }, [group.isLive, group.startedAt, group.firstToolStartedAt]);
+  const startedAt =
+    group.startedAt ?? (group.firstToolStartedAt > 0 ? group.firstToolStartedAt : undefined);
+  const elapsedMs = group.isLive
+    ? startedAt === undefined
+      ? undefined
+      : Math.max(0, nowMs - startedAt)
+    : group.durationMs;
   const label = processGroupLabel(elapsedMs);
 
   // An interrupted turn never collapses behind the "已处理 Xs ⌄" header — its

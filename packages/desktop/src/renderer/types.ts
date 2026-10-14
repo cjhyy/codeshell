@@ -13,6 +13,7 @@ import type { PetChatAttachment } from "../shared/pet-chat-attachments";
 import { aggregateFileChangeSummary } from "./messages/fileChangeAggregator";
 import { translate } from "./i18n/translate";
 import { loadUILanguage } from "./uiLanguage";
+import { isSystemReminderText } from "./contextSelection";
 
 export type ToolStatus = "queued" | "running" | "succeeded" | "failed" | "denied" | "cancelled";
 
@@ -20,9 +21,16 @@ export interface UserMessage {
   kind: "user";
   id: string;
   text: string;
-  /** Epoch ms the user sent this message. Absent on replayed/historical
-   *  transcripts (FoldItem carries no timestamp) — render nothing then. */
+  /** Epoch ms the user sent this message. Legacy history may lack this stamp. */
   createdAt?: number;
+  /** Run lifecycle timing, independent of individual assistant/tool segments. */
+  turnTiming?: {
+    startedAt?: number;
+    completedAt?: number;
+    durationMs?: number;
+    completed?: boolean;
+    completedCleanly?: boolean;
+  };
   /** True when this send established/advanced a persistent goal (CC /goal).
    *  Drives the ◎ goal marker on the message bubble. */
   isGoal?: boolean;
@@ -47,9 +55,9 @@ export interface AssistantMessage {
   id: string;
   text: string;
   done: boolean;
-  /** Epoch ms this assistant turn began streaming. */
+  /** Epoch ms this assistant segment began streaming. */
   createdAt?: number;
-  /** Epoch ms this turn finished (done:true). Elapsed = doneAt − createdAt. */
+  /** Epoch ms this segment closed. Whole-run timing lives on its user anchor. */
   doneAt?: number;
 }
 
@@ -449,14 +457,19 @@ function assistantMessageToText(content: unknown): string | undefined {
   return text.length > 0 ? text : undefined;
 }
 
-function sealToolWithoutResult(tool: ToolMessage, endedAt: number): ToolMessage {
-  if (tool.status !== "running") return tool;
+function sealToolWithoutResult(
+  tool: ToolMessage,
+  endedAt: number,
+  status: "failed" | "cancelled" = "failed",
+): ToolMessage {
+  if (tool.status !== "running" && tool.status !== "queued") return tool;
   return {
     ...tool,
-    status: "failed",
-    error: tool.error ?? "Tool execution ended without a result.",
+    status,
+    error:
+      tool.error ?? (status === "cancelled" ? undefined : "Tool execution ended without a result."),
     endedAt,
-    durationMs: Math.max(0, endedAt - tool.startedAt),
+    durationMs: toolDurationMs(tool.startedAt, endedAt),
   };
 }
 
@@ -473,6 +486,97 @@ function sealToolWithoutResult(tool: ToolMessage, endedAt: number): ToolMessage 
  * render no footer — same as replayed user messages.
  */
 export type MessageClock = () => number | undefined;
+
+function validTime(value: number | undefined): number | undefined {
+  return typeof value === "number" && Number.isFinite(value) && value >= 0 ? value : undefined;
+}
+
+function validTimestamp(value: number | undefined): number | undefined {
+  // Older persisted projections used 0 when the source timestamp was absent.
+  return value === 0 ? undefined : validTime(value);
+}
+
+function toolDurationMs(startedAt: number, endedAt: number): number | undefined {
+  return validTimestamp(startedAt) !== undefined && validTimestamp(endedAt) !== undefined
+    ? Math.max(0, endedAt - startedAt)
+    : undefined;
+}
+
+function withTurnTiming(
+  messages: Message[],
+  event: Extract<
+    StreamEvent,
+    { type: "session_started" | "stream_request_start" | "turn_complete" }
+  >,
+  timestamp: number | undefined,
+): Message[] {
+  // Keep the same boundaries as the process fold: a steer (including legacy
+  // id-less steers) cannot take timing away from an unfinished run. A wakeup
+  // after a terminal run opens a new segment.
+  let index = -1;
+  let legacyAssistantDone = false;
+  let runningTool = false;
+  let ended = false;
+  for (let i = 0; i < messages.length; i++) {
+    const message = messages[i]!;
+    if (message.kind === "user" && !message.pending && !message.steerId) {
+      const anchor = messages[index];
+      const timing = anchor?.kind === "user" ? anchor.turnTiming : undefined;
+      const completed =
+        ended ||
+        (timing
+          ? timing.completed === true || timing.completedAt !== undefined
+          : legacyAssistantDone && !runningTool);
+      const injected = message.injected === true || isSystemReminderText(message.text);
+      if (!injected || index < 0 || completed) {
+        index = i;
+        legacyAssistantDone = false;
+        runningTool = false;
+        ended = false;
+      }
+    } else if (message.kind === "assistant") legacyAssistantDone = message.done;
+    else if (
+      message.kind === "tool" &&
+      (message.status === "running" || message.status === "queued")
+    )
+      runningTool = true;
+    else if (message.kind === "turn_end") ended = true;
+  }
+  const user = messages[index];
+  if (!user || user.kind !== "user") return messages;
+  const previous = user.turnTiming;
+  let timing: NonNullable<UserMessage["turnTiming"]>;
+  if (event.type === "session_started") {
+    timing = { startedAt: validTimestamp(event.startedAt) ?? validTimestamp(timestamp) };
+  } else if (event.type === "stream_request_start") {
+    if (previous) return messages;
+    timing = { startedAt: validTimestamp(user.createdAt) ?? validTimestamp(timestamp) };
+  } else {
+    const startedAt =
+      validTimestamp(event.startedAt) ??
+      validTimestamp(previous?.startedAt) ??
+      validTimestamp(user.createdAt);
+    const completedAt =
+      validTimestamp(event.completedAt) ??
+      validTimestamp(previous?.completedAt) ??
+      validTimestamp(timestamp);
+    timing = {
+      startedAt,
+      completedAt,
+      durationMs:
+        validTime(event.durationMs) ??
+        previous?.durationMs ??
+        (startedAt !== undefined && completedAt !== undefined
+          ? Math.max(0, completedAt - startedAt)
+          : undefined),
+      completed: true,
+      completedCleanly: event.reason === "completed",
+    };
+  }
+  const next = messages.slice();
+  next[index] = { ...user, turnTiming: timing };
+  return next;
+}
 
 /** Shared text for a background-task completion (video etc.) — used by the
  *  reducer (message stream) and App.tsx (toast) so the two never drift. */
@@ -653,6 +757,10 @@ export function applyStreamEvent(
   event: StreamEvent,
   now: MessageClock = Date.now,
 ): MessagesReducerState {
+  // A journal replay or delayed/reconnected delivery must retain the source
+  // event's time. Sample the fallback clock once so one event has one timestamp.
+  const eventTime = validTimestamp(event.timestamp) ?? now();
+  now = () => eventTime;
   if (
     (event.type === "session_user_message" || event.type === "steer_injected") &&
     "agentId" in event &&
@@ -767,7 +875,26 @@ export function applyStreamEvent(
       singleTurnCacheReadTokens: 0,
       singleTurnCacheCreationTokens: 0,
     };
-  let next = applyStreamEventToTurn(scoped, event, now);
+  const stoppedAssistantId = previous?.stopped ? previous.streamingAssistantId : undefined;
+  const stoppedAssistant = stoppedAssistantId
+    ? scoped.messages.find(
+        (message) => message.kind === "assistant" && message.id === stoppedAssistantId,
+      )
+    : undefined;
+  // Stop seals the displayed segment immediately. Already-produced deltas can
+  // still arrive before its durable terminal; retain them on that exact run's
+  // sealed segment, without reopening a spinner or moving text past Stop.
+  let next =
+    event.type === "text_delta" && stoppedAssistant
+      ? {
+          ...scoped,
+          messages: scoped.messages.map((message) =>
+            message === stoppedAssistant && message.kind === "assistant"
+              ? { ...message, text: message.text + event.text }
+              : message,
+          ),
+        }
+      : applyStreamEventToTurn(scoped, event, now);
   if (event.type === "usage_update" && (previous?.completed || previous?.stopped)) {
     next = { ...next, messages: withTurnUsage(next.messages, next) };
   }
@@ -775,7 +902,10 @@ export function applyStreamEvent(
     runId: event.runId ?? previous?.runId,
     clientMessageId: event.clientMessageId ?? previous?.clientMessageId,
     userMessageId: ownerId,
-    streamingAssistantId: next.streamingAssistantId,
+    streamingAssistantId:
+      previous?.stopped && event.type !== "turn_complete"
+        ? previous.streamingAssistantId
+        : next.streamingAssistantId,
     streamingThinkingId: next.streamingThinkingId,
     promptTokens: next.promptTokens,
     singleTurnPromptTokens: next.singleTurnPromptTokens,
@@ -928,6 +1058,7 @@ function applyStreamEventToTurn(
       return {
         ...state,
         sessionId: event.sessionId,
+        messages: withTurnTiming(state.messages, event, now()),
       };
     }
 
@@ -950,7 +1081,7 @@ function applyStreamEventToTurn(
       return {
         ...state,
         messages: [
-          ...messages,
+          ...withTurnTiming(messages, event, startedAt),
           { kind: "assistant", id, text: "", done: false, createdAt: startedAt },
         ],
         streamingAssistantId: id,
@@ -1091,8 +1222,8 @@ function applyStreamEventToTurn(
         // the PERSISTED timestamp so a tool's startedAt reflects when it really
         // ran, not the replay moment. Hard-coding Date.now() made the turn span
         // stretch to "now" and grow on every reopen. Fall back to 0 (never the
-        // replay clock) for legacy items with no timestamp — turnSpanMs/
-        // spanDurationMs filter 0/non-finite stamps out.
+        // replay clock) for legacy items with no timestamp. Process grouping
+        // filters missing/non-finite wall-clock stamps out.
         startedAt: startedAt ?? 0,
       };
       if (event.agentId) {
@@ -1200,7 +1331,7 @@ function applyStreamEventToTurn(
           uiVisibility: event.result.uiVisibility ?? t.uiVisibility,
           status: failed ? "failed" : "succeeded",
           endedAt: end,
-          durationMs: Math.max(0, end - t.startedAt),
+          durationMs: toolDurationMs(t.startedAt, end),
         };
       };
       if (event.agentId) {
@@ -1657,7 +1788,7 @@ function applyStreamEventToTurn(
       //    the turn ends. (#4 stuck background count) A genuinely-backgrounded
       //    agent reports separately via background_agent_completed.
       const cleanSweep = event.reason === "completed";
-      const msgs = state.messages.slice();
+      const msgs = withTurnTiming(state.messages, event, now()).slice();
       const nextActiveAgents = { ...state.activeAgents };
       for (const agentId of Object.keys(state.activeAgents)) {
         const idx = state.agentMessageIndex[agentId];
@@ -2034,6 +2165,7 @@ export function appendTurnEndMessage(
   reason: TurnEndMessage["reason"],
   elapsedMs?: number,
   detail?: string,
+  clock: MessageClock = Date.now,
 ): MessagesReducerState {
   const msg: TurnEndMessage = {
     kind: "turn_end",
@@ -2042,7 +2174,51 @@ export function appendTurnEndMessage(
     elapsedMs,
     detail,
   };
-  const msgs = state.messages.slice();
+  const stoppedAt = clock();
+  const activeAgents = { ...state.activeAgents };
+  let latestUserIndex = -1;
+  for (let i = state.messages.length - 1; i >= 0; i--) {
+    const message = state.messages[i]!;
+    if (message.kind === "user" && !message.injected && !message.pending) {
+      latestUserIndex = i;
+      break;
+    }
+  }
+  const msgs = withTurnTiming(
+    state.messages,
+    {
+      type: "turn_complete",
+      reason: reason === "stopped" ? "aborted_streaming" : "model_error",
+      durationMs: validTime(elapsedMs),
+    },
+    stoppedAt,
+  ).map((message, index) => {
+    if (index <= latestUserIndex) return message;
+    if (message.kind === "assistant" && !message.done) {
+      return { ...message, done: true, doneAt: message.doneAt ?? stoppedAt };
+    }
+    if (message.kind === "thinking" && !message.done) return { ...message, done: true };
+    const toolStatus = reason === "stopped" ? "cancelled" : "failed";
+    if (message.kind === "tool") {
+      return sealToolWithoutResult(message, stoppedAt ?? message.startedAt, toolStatus);
+    }
+    if (message.kind === "agent" && !message.done && !message.backgrounded) {
+      delete activeAgents[message.id];
+      const endedAt = message.endedAt ?? stoppedAt ?? message.startedAt;
+      return {
+        ...message,
+        done: true,
+        endedAt,
+        error: message.error ?? detail,
+        text: (message.text ?? "") + message.textBuffer,
+        textBuffer: "",
+        toolCalls: message.toolCalls.map((tool) =>
+          sealToolWithoutResult(tool, endedAt, toolStatus),
+        ),
+      };
+    }
+    return message;
+  });
   // Keep repeat Stop clicks idempotent when the usage detail follows the marker.
   const usage = msgs[msgs.length - 1]?.kind === "turn_usage" ? msgs.pop() : undefined;
   const last = msgs[msgs.length - 1];
@@ -2073,6 +2249,7 @@ export function appendTurnEndMessage(
         }
       : {}),
     messages: withTurnUsage(msgs, state),
+    activeAgents,
     streamingAssistantId: null,
     streamingThinkingId: null,
   };

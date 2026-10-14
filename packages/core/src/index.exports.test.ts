@@ -106,6 +106,7 @@ const expectedRuntimeExportsByPartition = {
     "readOutputJournal",
     "readOutputJournalLegacyBase",
     "outputUserMessage",
+    "createRunTiming",
   ],
   logging: ["rotateLogs", "recordUIEvent"],
   // Native approval and private worker RPC stay on the Host-only entry.

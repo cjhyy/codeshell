@@ -447,7 +447,10 @@ describe("architecture growth budgets", () => {
       // No model, stable public SDK or extension authority is added.
       // +1 Host-only static composer SVG validator shared by installer and Main.
       // Public/extension surfaces stay unchanged; no future growth allowance.
-      "packages/core/src/index.internal.ts": 111,
+      // The reviewed run-timing owner is shared by native Engine runs and
+      // Desktop's external runtime recorder. One Host-only export statement
+      // exposes that lifecycle seam; the stable public SDK surface is unchanged.
+      "packages/core/src/index.internal.ts": 112,
       "packages/coding/src/index.ts": 12,
       "packages/arena/src/index.ts": 19,
       // +1 for conversation-session.ts, which re-exports the four modules
