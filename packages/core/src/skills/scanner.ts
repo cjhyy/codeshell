@@ -54,11 +54,17 @@ function userHome(): string {
 }
 
 function bases(cwd: string): ScanBase[] {
-  return [
-    { dir: join(cwd, ".code-shell", "skills"), source: "project" },
-    { dir: join(cwd, ".agents", "skills"), source: "project" },
-    { dir: join(userHome(), ".code-shell", "skills"), source: "user" },
-  ];
+  const result: ScanBase[] = [];
+  // An empty cwd requests global skills; relative bases would otherwise read
+  // project skills from the host process's working directory.
+  if (cwd.trim()) {
+    result.push(
+      { dir: join(cwd, ".code-shell", "skills"), source: "project" },
+      { dir: join(cwd, ".agents", "skills"), source: "project" },
+    );
+  }
+  result.push({ dir: join(userHome(), ".code-shell", "skills"), source: "user" });
+  return result;
 }
 
 function isENOENT(e: unknown): boolean {

@@ -103,6 +103,29 @@ describe("SettingsManager scope", () => {
     ]);
   });
 
+  test("full without a project reads user and managed settings without process cwd layers", () => {
+    const previousCwd = process.cwd();
+    process.chdir(cwd);
+    try {
+      for (const emptyCwd of ["", "  "]) {
+        const sm = new SettingsManager(emptyCwd, "full");
+        expect(layersIn(sm)).toEqual(["MANAGED", "USER"]);
+        expect(sm.getForScope("project")).toEqual({});
+        expect(sm.getForScope("local")).toEqual({});
+        for (const layer of ["project", "local"] as const) {
+          expect(() => sm.getRawForScope(layer, undefined, { strict: true })).toThrow(
+            /requires a non-empty cwd/,
+          );
+          expect(() => sm.mutateSettingsForScope(layer, emptyCwd, () => undefined)).toThrow(
+            /requires a non-empty cwd/,
+          );
+        }
+      }
+    } finally {
+      process.chdir(previousCwd);
+    }
+  });
+
   test("project (default) reads project+local, never user/managed", () => {
     expect(layersIn(new SettingsManager(cwd, "project"))).toEqual(["LOCAL", "PROJECT"]);
   });
@@ -493,7 +516,10 @@ describe("SettingsManager project writes", () => {
   test("oversized settings are skipped and oversized writes fail without a partial file", () => {
     mkdirSync(join(cwd, ".code-shell"));
     const path = join(cwd, ".code-shell", "settings.json");
-    writeFileSync(path, JSON.stringify({ agent: { appendSystemPrompt: "x".repeat(4 * 1024 * 1024) } }));
+    writeFileSync(
+      path,
+      JSON.stringify({ agent: { appendSystemPrompt: "x".repeat(4 * 1024 * 1024) } }),
+    );
     expect(new SettingsManager(cwd, "project").get().agent?.appendSystemPrompt).toBeUndefined();
 
     rmSync(path);

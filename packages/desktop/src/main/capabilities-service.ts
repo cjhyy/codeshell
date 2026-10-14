@@ -72,13 +72,11 @@ function makeService(cwd: string, readOnly = false): CapabilityService {
 }
 
 export function listCapabilities(cwd: string): CapabilityDescriptor[] {
-  try {
-    // A non-empty cwd → project view (descriptors carry the tri-state overlay
-    // via globalEnabled/projectOverride/effectiveSource). Empty cwd → user view.
-    return makeService(cwd).list(cwd || undefined);
-  } catch {
-    return [];
-  }
+  // A non-empty cwd → project view (descriptors carry the tri-state overlay
+  // via globalEnabled/projectOverride/effectiveSource). Empty cwd → user view.
+  // Let IPC reject on a read failure so Settings can show the error instead of
+  // presenting a broken inventory as an empty, successfully loaded list.
+  return makeService(cwd).list(cwd || undefined);
 }
 
 /** Unfolded switch baseline and inventory for a reviewed Profile configuration plan. */

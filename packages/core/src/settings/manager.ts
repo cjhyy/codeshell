@@ -764,9 +764,11 @@ export class SettingsManager {
     filename: "settings.json" | "settings.local.json",
     strict = false,
   ): string | null {
-    this.validateProjectCwd(cwd, filename === "settings.json" ? "project" : "local");
-    if (!existsSync(cwd)) return join(cwd, ".code-shell", filename);
     try {
+      // Global previews have no project root. Ordinary reads skip that layer;
+      // strict authority reads and mutations still require a concrete cwd.
+      this.validateProjectCwd(cwd, filename === "settings.json" ? "project" : "local");
+      if (!existsSync(cwd)) return join(cwd, ".code-shell", filename);
       const root = realpathSync(cwd);
       if (!lstatSync(root).isDirectory()) throw new Error("project root is not a directory");
       const stateDir = join(root, ".code-shell");
