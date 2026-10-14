@@ -344,6 +344,24 @@ async function executeLinkAction(
   }
 
   if (action.risk === "write") {
+    if (!ctx?.operations || !ctx.executeBoundTool) {
+      return JSON.stringify({
+        kind: "error",
+        provider: providerId,
+        action: actionId,
+        error: "Verified writes require the owning Engine and tool authorization pipeline.",
+      });
+    }
+    try {
+      ctx.operations.assertAuthorized?.();
+    } catch (error) {
+      return JSON.stringify({
+        kind: "error",
+        provider: providerId,
+        action: actionId,
+        error: error instanceof Error ? error.message : String(error),
+      });
+    }
     if (!ctx?.askUser) {
       return JSON.stringify({
         kind: "error",
@@ -370,13 +388,20 @@ async function executeLinkAction(
   const cwd = ctx?.cwd ?? process.cwd();
   const scope = credentialAccessScope(ctx?.settingsScope);
   const access = getCredentialAccess();
-  const authority = linkAuthoritySnapshot(connection.credential);
+  // Token rotation is a transition within the same grant, not a disconnect.
+  const activeAuthority = (credential: CredentialMetadata) =>
+    linkAuthoritySnapshot(
+      credential.meta?.linkRemoteState === "refreshing"
+        ? { ...credential, meta: { ...credential.meta, linkRemoteState: "connected" } }
+        : credential,
+    );
+  const authority = activeAuthority(connection.credential);
   const invalidated = new AbortController();
   const stillConnected = (): boolean => {
     const live = access.resolveMeta(cwd, connection.credential.id, scope);
     return Boolean(
       live?.hasSecret &&
-      linkAuthoritySnapshot(live) === authority &&
+      activeAuthority(live) === authority &&
       (live.type === "link" || isRemoteLinkCredential(live)) &&
       live.meta?.linkExecutionRuntime === connection.credential.meta?.linkExecutionRuntime &&
       live.meta?.linkRemoteGrantId === connection.credential.meta?.linkRemoteGrantId &&
@@ -399,6 +424,7 @@ async function executeLinkAction(
     ? AbortSignal.any([ctx.signal, invalidated.signal])
     : invalidated.signal;
   const assertConnected = (): void => {
+    ctx?.operations?.assertAuthorized?.();
     if (!stillConnected()) throw new Error(`${provider.displayName} connection was disconnected`);
     signal.throwIfAborted();
   };
@@ -409,14 +435,17 @@ async function executeLinkAction(
       if (isRemoteLinkCredential(connection.credential)) {
         if (!access.executeRemoteLinkAction || !connection.credential.meta?.linkRemoteGrantId)
           throw new Error("Remote Link actions are unavailable on this Host");
-        data = await access.executeRemoteLinkAction({
-          cwd,
-          scope,
-          id: connection.credential.id,
-          grantId: connection.credential.meta.linkRemoteGrantId,
-          action: actionId,
-          params,
-        });
+        data = await access.executeRemoteLinkAction(
+          {
+            cwd,
+            scope,
+            id: connection.credential.id,
+            grantId: connection.credential.meta.linkRemoteGrantId,
+            action: actionId,
+            params,
+          },
+          { signal, assertAuthorized: assertConnected },
+        );
       } else if (connection.credential.meta?.linkExecutionBackend === "cli") {
         if (!isCliLinkProvider(providerId)) {
           throw new Error(`${provider.displayName} does not support local CLI execution`);
@@ -442,7 +471,7 @@ async function executeLinkAction(
             action: actionId,
             params,
           },
-          { signal },
+          { signal, assertAuthorized: assertConnected },
         );
       } else {
         // Resolve on every invocation (and after write approval). Disconnecting the

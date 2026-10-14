@@ -119,6 +119,7 @@ const expectedRuntimeExportsByPartition = {
     "linkAuthoritySnapshot",
     "normalizeGithubIssueBatch",
     "readOperationSessionOwner",
+    "createSessionOperationServices",
   ],
   managedRuntimes: [
     "createConstrainedDockerProcessHost",
@@ -241,6 +242,7 @@ const expectedRuntimeExportsByPartition = {
     "effectiveProjectOverrides",
     "profileOverridesFromDefinition",
     "resolveActiveWorkspaceProfile",
+    "resolveActiveWorkspaceProfileSelection",
     "workspaceProfilePresetFor",
     // Digital-human repos: a distribution channel parallel to the plugin
     // marketplace (profile/catalog-store.ts).

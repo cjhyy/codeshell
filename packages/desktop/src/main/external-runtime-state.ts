@@ -385,6 +385,23 @@ export class ExternalRuntimeSessionRecorder {
     return this.runId;
   }
 
+  /** Automatic wakeups continue the last real user intent, including after restart. */
+  get operationIntentId(): string | undefined {
+    const messages = this.transcript.getEvents("message");
+    for (let index = messages.length - 1; index >= 0; index--) {
+      const event = messages[index];
+      if (
+        event.data.role === "user" &&
+        event.data.injected !== true &&
+        (event.data.authority === undefined || event.data.authority === "user")
+      )
+        return typeof event.data.clientMessageId === "string" && event.data.clientMessageId
+          ? event.data.clientMessageId
+          : event.id;
+    }
+    return undefined;
+  }
+
   get hasOpenRun(): boolean {
     return !!this.runId && !this.runClosed && this.isCurrentOutputOwner;
   }

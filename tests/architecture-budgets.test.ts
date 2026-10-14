@@ -450,7 +450,10 @@ describe("architecture growth budgets", () => {
       // The reviewed run-timing owner is shared by native Engine runs and
       // Desktop's external runtime recorder. One Host-only export statement
       // exposes that lifecycle seam; the stable public SDK surface is unchanged.
-      "packages/core/src/index.internal.ts": 112,
+      // +1 reviewed Host composition of the existing operation controller and
+      // resolver for external runtime run custody; public SDK and extension runtime
+      // exports stay unchanged.
+      "packages/core/src/index.internal.ts": 113,
       "packages/coding/src/index.ts": 12,
       "packages/arena/src/index.ts": 19,
       // +1 for conversation-session.ts, which re-exports the four modules
