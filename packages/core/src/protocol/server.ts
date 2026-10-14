@@ -14,6 +14,7 @@
  * falls back to borrowing any live session's engine for those reads.
  */
 
+import { initializeResult } from "./initialize.js";
 import type { Transport } from "./transport.js";
 import { handleCancelRequest, handleSteerRequest, runGoalOptions } from "./server-run-controls.js";
 import { deliverAsyncUserAnswer } from "./async-user-answer.js";
@@ -1342,6 +1343,9 @@ export class AgentServer {
     if (this.hasHostActivators) await this.moduleReady;
     if (this.disconnected) throw new Error("AgentServer transport is disconnected");
     switch (req.method) {
+      case Methods.Initialize:
+        this.transport.send(createResponse(req.id, initializeResult()));
+        break;
       case Methods.Run:
         await this.handleRun(req);
         break;
