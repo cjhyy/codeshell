@@ -52,7 +52,52 @@ const css = compiled.build([
   ...scanner.scan(),
   ...scanner.scanFiles([{ content: source, extension: "tsx" }]),
 ]);
-const browser = await chromium.launch({ headless: true });
+const browser = await chromium.launch({
+  headless: true,
+  executablePath: process.env.CODESHELL_TEST_CHROMIUM || undefined,
+});
+
+async function assertMenuFits(page, menu, label) {
+  // Wait for Radix's collision update and the entrance animation before
+  // checking actual painted bounds, including the submenu overlap transform.
+  await page.waitForFunction(
+    (name) => {
+      const node = Array.from(document.querySelectorAll('[role="menu"]')).find(
+        (candidate) => candidate.getAttribute("aria-label") === name,
+      );
+      if (!node) return false;
+      const rect = node.getBoundingClientRect();
+      return (
+        rect.left >= 11 &&
+        rect.top >= 11 &&
+        rect.right <= window.innerWidth - 11 &&
+        rect.bottom <= window.innerHeight - 11 &&
+        rect.width >= Math.min(159, window.innerWidth - 24)
+      );
+    },
+    await menu.getAttribute("aria-label"),
+  );
+  const box = await menu.boundingBox();
+  assert.ok(box.width >= Math.min(159, page.viewportSize().width - 24), `${label}: readable width`);
+  assert.equal(
+    await menu.evaluate((node) => node.scrollWidth <= node.clientWidth + 1),
+    true,
+    `${label}: menu content fits horizontally`,
+  );
+}
+
+async function assertItemReachable(item, label) {
+  await item.scrollIntoViewIfNeeded();
+  assert.ok(
+    await item.evaluate((node) => {
+      const rect = node.getBoundingClientRect();
+      const hit = document.elementFromPoint(rect.left + rect.width / 2, rect.top + rect.height / 2);
+      return hit === node || node.contains(hit);
+    }),
+    `${label}: menu item receives pointer input after scrolling`,
+  );
+}
+
 try {
   for (const width of [1280, 390]) {
     for (const lang of ["zh", "en"]) {
@@ -109,6 +154,7 @@ try {
       assert.equal(await activityMenu.isVisible(), false, "Hover alone does not open a submenu");
       await activity.click();
       await activityMenu.waitFor();
+      await assertMenuFits(page, activityMenu, `${width}/${lang} activity`);
       // Slowly pass the trigger edge and a neighbouring parent item. Radix's
       // default pointer leave moves focus outside the submenu after its grace area.
       await pet.hover({ position: { x: 12, y: 12 } });
@@ -125,6 +171,7 @@ try {
       assert.equal(await languageMenu.isVisible(), false, "Hover does not switch submenus");
       await language.click();
       await languageMenu.waitFor();
+      await assertMenuFits(page, languageMenu, `${width}/${lang} language`);
       await activityMenu.waitFor({ state: "hidden" });
       await pet.hover({ position: { x: 12, y: 12 } });
       await page.waitForTimeout(400);
@@ -198,12 +245,53 @@ try {
       assert.ok(await logs.isVisible(), "Disabling tasks leaves history available");
       await page.mouse.click(width - 20, 20);
       await menu.waitFor({ state: "hidden" });
+
+      // Keep menus open through narrow and short viewport changes. Every
+      // action must remain reachable even when the full menu needs scrolling.
+      await page.evaluate((value) => window.renderFixture(value), lang);
+      await opener.click();
+      await activity.click();
+      for (const viewport of [
+        { width: 390, height: 320 },
+        { width: 280, height: 200 },
+        { width: 1280, height: 760 },
+      ]) {
+        await page.setViewportSize(viewport);
+        await assertMenuFits(page, menu, `${lang} resized settings`);
+        await assertMenuFits(page, activityMenu, `${lang} resized activity`);
+        if (viewport.height === 200) {
+          assert.ok(
+            await activityMenu.evaluate((node) => node.scrollHeight > node.clientHeight),
+            `${lang}: short activity menu scrolls instead of clipping actions`,
+          );
+        }
+        for (const item of await activityMenu.getByRole("menuitem").all()) {
+          await assertItemReachable(item, `${lang} activity ${await item.textContent()}`);
+        }
+      }
+      await logs.click();
+      await menu.waitFor({ state: "hidden" });
+      await opener.click();
+      await language.click();
+      await page.setViewportSize({ width: 280, height: 200 });
+      await assertMenuFits(page, menu, `${lang} short settings`);
+      await assertMenuFits(page, languageMenu, `${lang} short language`);
+      for (const item of await languageMenu.getByRole("menuitemradio").all()) {
+        await assertItemReachable(item, `${lang} language ${await item.textContent()}`);
+      }
+      await page.keyboard.press("Escape");
+      await languageMenu.waitFor({ state: "hidden" });
+      const openSettings = menu.getByRole("menuitem", { name: /打开设置|Open settings/ });
+      await assertItemReachable(openSettings, `${lang} short open settings`);
+      await openSettings.click();
+      await menu.waitFor({ state: "hidden" });
+      assert.equal(await page.evaluate(() => window.actions.at(-1)), "settings");
       assert.deepEqual(errors, []);
       await page.close();
     }
   }
   console.log(
-    "PASS: settings submenus survive pointer travel and preserve explicit dismissal (wide/narrow, zh/en)",
+    "PASS: settings menus preserve pointer/focus behavior and fit narrow/short/resized windows (zh/en)",
   );
 } finally {
   await browser.close();
