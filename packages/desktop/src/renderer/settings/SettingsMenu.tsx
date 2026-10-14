@@ -174,7 +174,7 @@ export function SettingsMenu({
           <DropdownMenuPortal>
             <DropdownMenuSubContent
               aria-label={t("settingsX.menu.switchLanguage")}
-              className="w-44 min-w-0 max-w-[min(var(--radix-dropdown-menu-content-available-width),calc(100vw-1.5rem))] rounded-xl p-1.5"
+              className="w-44 rounded-xl p-1.5"
               onFocusOutside={(event) => event.preventDefault()}
               onEscapeKeyDown={(event) => closeSubmenu(event, "language")}
             >
@@ -216,7 +216,7 @@ export function SettingsMenu({
             <DropdownMenuPortal>
               <DropdownMenuSubContent
                 aria-label={t("settingsX.menu.activity")}
-                className="w-48 min-w-0 max-w-[min(var(--radix-dropdown-menu-content-available-width),calc(100vw-1.5rem))] rounded-xl p-1.5"
+                className="w-48 rounded-xl p-1.5"
                 // Click-open menus stay open while pointer travel moves focus
                 // through the parent. Explicit keys, selection and outside
                 // clicks still dismiss through their existing handlers.
@@ -296,7 +296,7 @@ export function SettingsMenu({
                 <DropdownMenuItem
                   className="rounded-lg py-2"
                   disabled={account.logoutDisabled}
-                  onSelect={() => closeThenNavigate(account.onLogout!)}
+                  onSelect={() => closeThenNavigate(() => account.onLogout?.())}
                 >
                   <LogOut size={14} aria-hidden />
                   {t("settingsX.cloudAccount.logout")}

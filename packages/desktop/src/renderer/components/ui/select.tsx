@@ -33,7 +33,10 @@ const SelectScrollUpButton = React.forwardRef<
 >(({ className, ...props }, ref) => (
   <SelectPrimitive.ScrollUpButton
     ref={ref}
-    className={cn("flex cursor-default items-center justify-center py-1 text-muted-foreground", className)}
+    className={cn(
+      "flex cursor-default items-center justify-center py-1 text-muted-foreground",
+      className,
+    )}
     {...props}
   >
     <ChevronUp className="h-4 w-4" />
@@ -47,7 +50,10 @@ const SelectScrollDownButton = React.forwardRef<
 >(({ className, ...props }, ref) => (
   <SelectPrimitive.ScrollDownButton
     ref={ref}
-    className={cn("flex cursor-default items-center justify-center py-1 text-muted-foreground", className)}
+    className={cn(
+      "flex cursor-default items-center justify-center py-1 text-muted-foreground",
+      className,
+    )}
     {...props}
   >
     <ChevronDown className="h-4 w-4" />
@@ -71,21 +77,15 @@ const SelectContent = React.forwardRef<
       collisionPadding={12}
       sticky="partial"
       className={cn(
-        "cs-popup-surface relative z-50 max-h-[min(var(--radix-select-content-available-height),22rem)] min-w-[8rem] overflow-hidden rounded-md p-1 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95",
+        "cs-popup-surface relative z-50 max-h-[min(var(--radix-select-content-available-height),22rem)] min-w-[min(8rem,calc(100vw-1.5rem))] max-w-[min(var(--radix-select-content-available-width),calc(100vw-1.5rem))] overflow-hidden rounded-md p-1 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95",
         position === "popper" &&
-          "min-w-[var(--radix-select-trigger-width)] data-[side=bottom]:translate-y-0 data-[side=top]:translate-y-0",
+          "min-w-[min(var(--radix-select-trigger-width),var(--radix-select-content-available-width),calc(100vw-1.5rem))] data-[side=bottom]:translate-y-0 data-[side=top]:translate-y-0",
         className,
       )}
       {...props}
     >
       <SelectScrollUpButton />
-      <SelectPrimitive.Viewport
-        className={cn(
-          "max-h-[min(var(--radix-select-content-available-height),22rem)] w-full overflow-y-auto",
-          position === "popper" &&
-            "min-w-[var(--radix-select-trigger-width)]",
-        )}
-      >
+      <SelectPrimitive.Viewport className="max-h-[min(var(--radix-select-content-available-height),22rem)] w-full min-w-0 max-w-full overflow-y-auto">
         {children}
       </SelectPrimitive.Viewport>
       <SelectScrollDownButton />
@@ -101,7 +101,7 @@ const SelectItem = React.forwardRef<
   <SelectPrimitive.Item
     ref={ref}
     className={cn(
-      "cs-menu-item relative w-full cursor-default select-none px-2 py-1.5 pr-8 text-sm data-[disabled]:pointer-events-none data-[disabled]:opacity-50",
+      "cs-menu-item relative w-full min-w-0 cursor-default select-none whitespace-normal px-2 py-1.5 pr-8 text-sm [overflow-wrap:anywhere] data-[disabled]:pointer-events-none data-[disabled]:opacity-50",
       className,
     )}
     {...props}

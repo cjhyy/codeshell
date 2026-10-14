@@ -2,13 +2,13 @@ import React, {
   useCallback,
   useEffect,
   useId,
-  useLayoutEffect,
   useMemo,
   useRef,
   useState,
   useSyncExternalStore,
 } from "react";
 import { createPortal } from "react-dom";
+import { useAnchoredPopover } from "./chat/useAnchoredPopover";
 import {
   MessageSquare,
   Search,
@@ -139,7 +139,6 @@ export function Sidebar({
   collapsedProjects,
   revealedSessionIds,
   sessionStatuses,
-  sidebarCollapsed,
   petPendingCount,
   petRunningCount,
   petWidgetVisible,
@@ -1206,6 +1205,8 @@ function SessionHoverCard({
   relativeTime,
   folderName,
   branch,
+  onMouseEnter,
+  onMouseLeave,
 }: {
   id: string;
   open: boolean;
@@ -1214,48 +1215,15 @@ function SessionHoverCard({
   relativeTime: string;
   folderName: string;
   branch?: string;
+  onMouseEnter?: () => void;
+  onMouseLeave?: () => void;
 }) {
   const cardRef = useRef<HTMLDivElement>(null);
-  const [style, setStyle] = useState<React.CSSProperties>({ visibility: "hidden" });
-
-  useLayoutEffect(() => {
-    if (!open) {
-      setStyle({ visibility: "hidden" });
-      return;
-    }
-
-    let frame = 0;
-    const update = (): void => {
-      const anchor = anchorRef.current;
-      const card = cardRef.current;
-      if (!anchor || !card) return;
-      const rect = anchor.getBoundingClientRect();
-      const gap = 10;
-      const padding = 12;
-      const width = card.offsetWidth;
-      const height = card.offsetHeight;
-      const rightSide = rect.right + gap;
-      const left =
-        rightSide + width <= window.innerWidth - padding
-          ? rightSide
-          : Math.max(padding, rect.left - width - gap);
-      const top = Math.min(
-        Math.max(padding, rect.top - 6),
-        Math.max(padding, window.innerHeight - height - padding),
-      );
-      setStyle({ position: "fixed", left, top, zIndex: 50, visibility: "visible" });
-    };
-
-    update();
-    frame = window.requestAnimationFrame(update);
-    window.addEventListener("resize", update);
-    window.addEventListener("scroll", update, true);
-    return () => {
-      window.cancelAnimationFrame(frame);
-      window.removeEventListener("resize", update);
-      window.removeEventListener("scroll", update, true);
-    };
-  }, [anchorRef, open]);
+  const style = useAnchoredPopover(open, anchorRef, cardRef, {
+    preferredSide: "right",
+    gap: 10,
+    padding: 12,
+  });
 
   if (!open || typeof document === "undefined") return null;
   return createPortal(
@@ -1264,6 +1232,8 @@ function SessionHoverCard({
       id={id}
       role="tooltip"
       style={style}
+      onMouseEnter={onMouseEnter}
+      onMouseLeave={onMouseLeave}
       className="w-60 animate-in rounded-xl border border-border bg-popover p-3 text-popover-foreground shadow-lg fade-in-0 zoom-in-95"
     >
       <div className="flex min-w-0 items-baseline gap-2">
@@ -1283,7 +1253,10 @@ function SessionHoverCard({
         )}
       </div>
     </div>,
-    document.body,
+    // The narrow sidebar is a modal with pointer/focus isolation. Its content
+    // has no fixed containing block, so keep the viewport-positioned tooltip
+    // inside that boundary while desktop tooltips can escape to the body.
+    anchorRef.current?.closest('[role="dialog"]') ?? document.body,
   );
 }
 
@@ -1337,6 +1310,13 @@ const SessionRow = React.memo(
     const hoverTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
     const rowRef = useRef<HTMLLIElement>(null);
     const hoverCardId = useId();
+    const cancelHoverClose = (): void => {
+      if (hoverTimerRef.current) clearTimeout(hoverTimerRef.current);
+    };
+    const scheduleHoverClose = (): void => {
+      cancelHoverClose();
+      hoverTimerRef.current = setTimeout(() => setHoverCardOpen(false), 120);
+    };
 
     useEffect(() => {
       return () => {
@@ -1380,14 +1360,13 @@ const SessionRow = React.memo(
           )}
           onContextMenu={onContextMenu}
           onMouseEnter={() => {
-            if (hoverTimerRef.current) clearTimeout(hoverTimerRef.current);
+            cancelHoverClose();
             hoverTimerRef.current = setTimeout(() => setHoverCardOpen(true), 350);
             onHover?.();
           }}
           onFocus={onHover}
           onMouseLeave={() => {
-            if (hoverTimerRef.current) clearTimeout(hoverTimerRef.current);
-            setHoverCardOpen(false);
+            scheduleHoverClose();
             if (confirming) {
               if (timerRef.current) clearTimeout(timerRef.current);
               setConfirming(false);
@@ -1556,6 +1535,8 @@ const SessionRow = React.memo(
           relativeTime={formatRelative(s.updatedAt, lang)}
           folderName={folderName}
           branch={branch}
+          onMouseEnter={cancelHoverClose}
+          onMouseLeave={scheduleHoverClose}
         />
       </>
     );

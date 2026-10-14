@@ -306,9 +306,9 @@ export function MarketList({ configurationTarget, onInstalled }: Props) {
     ) : null;
 
   const addForm = (
-    <div className="flex min-w-0 flex-1 items-center gap-2">
+    <div className="flex min-w-0 basis-64 flex-1 flex-wrap items-center gap-2">
       <Input
-        className="h-8 max-w-xs"
+        className="h-8 min-w-0 max-w-xs basis-40 flex-1"
         placeholder={t("ext.market.addPlaceholder")}
         value={input}
         onChange={(e) => {
@@ -535,7 +535,7 @@ export function MarketList({ configurationTarget, onInstalled }: Props) {
   return (
     <>
       {gitBanner}
-      <div className="mb-3 flex items-start justify-between gap-3">
+      <div className="mb-3 flex flex-wrap items-start justify-between gap-3">
         {addForm}
         <PluginInstallJobsPanel jobs={installJobs} onRetry={retryInstallJob} />
       </div>

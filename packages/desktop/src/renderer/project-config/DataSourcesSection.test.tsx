@@ -275,7 +275,15 @@ describe("DataSourcesSection", () => {
       },
     });
     const container = await renderSection();
-    const [sourceSelect, policySelect] = findElements(container, "SELECT");
+    const selectForLabel = (label: string) => {
+      const trigger = findElements(container, "BUTTON").find(
+        (button) => reactPropsOf(button)["aria-label"] === label,
+      );
+      return findElements(trigger.parentNode, "SELECT")[0];
+    };
+    const sourceSelect = selectForLabel("数据源");
+    const policySelect = selectForLabel("读取策略");
+    expect(reactPropsOf(selectForLabel("权重")).defaultValue).toBe("normal");
 
     await act(async () => {
       reactPropsOf(sourceSelect).onChange({ target: { value: "mock-one" } });
@@ -305,7 +313,10 @@ describe("DataSourcesSection", () => {
 
     expect(scopeCalls).toEqual(["mock-one"]);
     expect(bindings).toEqual([
-      ["project-1", { sourceId: "mock-one", scopes: ["alpha"], readPolicy: "deny" }],
+      [
+        "project-1",
+        { sourceId: "mock-one", scopes: ["alpha"], readPolicy: "deny", priority: "normal" },
+      ],
     ]);
     expect(accessCalls).toBe(2);
   });

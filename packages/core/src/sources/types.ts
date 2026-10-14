@@ -51,6 +51,8 @@ export const WorkspaceSourceBindingSchema = z.object({
     .refine((scopes) => new Set(scopes).size === scopes.length, "source scopes must be unique"),
   /** ask（默认，ReadSource 每次审批）| deny（只许 list metadata，禁读内容）。无 allow 档（ADR §1.2）。 */
   readPolicy: z.enum(["ask", "deny"]).default("ask"),
+  /** Project-owned reference preference; it never grants access or changes search scores. */
+  priority: z.enum(["normal", "high"]).optional(),
 });
 export type WorkspaceSourceBinding = z.infer<typeof WorkspaceSourceBindingSchema>;
 

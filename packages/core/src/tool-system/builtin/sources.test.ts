@@ -49,6 +49,38 @@ afterEach(() => {
 const ctx = (): ToolContext => ({ cwd }) as ToolContext;
 
 describe("ListSources", () => {
+  test("lists focused sources first as metadata without reading their content", async () => {
+    const settings = new SettingsManager(cwd, "full");
+    saveSourceDefinition({
+      id: "focused",
+      kind: "mock",
+      label: "Focused",
+      adapterConfig: {},
+      enabled: true,
+    });
+    bindSource(settings, cwd, {
+      sourceId: "focused",
+      scopes: ["alpha"],
+      readPolicy: "ask",
+      priority: "high",
+    });
+    let reads = 0;
+    registerConnectorAdapter({
+      ...mockAdapter,
+      async read(...args) {
+        reads++;
+        return mockAdapter.read(...args);
+      },
+    });
+    const out = await listSourcesTool({}, ctx());
+    expect(out.indexOf("## Focused")).toBeLessThan(out.indexOf("## Mock1"));
+    expect(out).toContain("priority: high");
+    expect(out).toContain("For tasks relevant to these materials");
+    expect(out).toContain("approval requirements");
+    expect(out).not.toContain("alpha doc one 内容");
+    expect(reads).toBe(0);
+  });
+
   test("lists bound sources and implicit uploads as metadata only", async () => {
     const out = await listSourcesTool({}, ctx());
 
@@ -169,12 +201,17 @@ describe("ReadSource", () => {
     );
 
     const sm = new SettingsManager(cwd, "full");
-    bindSource(sm, cwd, { sourceId: "m1", scopes: ["alpha"], readPolicy: "deny" });
+    bindSource(sm, cwd, {
+      sourceId: "m1",
+      scopes: ["alpha"],
+      readPolicy: "deny",
+      priority: "high",
+    });
     expect(
       await readSourceTool({ source: "m1", scope: "alpha", resource: "alpha/doc-1" }, ctx()),
     ).toMatch(/^Error:/);
 
-    bindSource(sm, cwd, { sourceId: "ghost", scopes: ["x"], readPolicy: "ask" });
+    bindSource(sm, cwd, { sourceId: "ghost", scopes: ["x"], readPolicy: "ask", priority: "high" });
     expect(
       await readSourceTool({ source: "ghost", scope: "x", resource: "anything" }, ctx()),
     ).toContain("dangling");
@@ -186,7 +223,7 @@ describe("ReadSource", () => {
       adapterConfig: {},
       enabled: false,
     });
-    bindSource(sm, cwd, { sourceId: "m1", scopes: ["alpha"], readPolicy: "ask" });
+    bindSource(sm, cwd, { sourceId: "m1", scopes: ["alpha"], readPolicy: "ask", priority: "high" });
     expect(
       await readSourceTool({ source: "m1", scope: "alpha", resource: "alpha/doc-1" }, ctx()),
     ).toContain("unavailable");

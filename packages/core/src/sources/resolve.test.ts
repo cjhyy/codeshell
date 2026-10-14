@@ -46,6 +46,68 @@ afterEach(() => {
 const okCred = () => "ok" as const;
 
 describe("effective source access", () => {
+  test("orders project high-priority references first while preserving each tier's order", () => {
+    const settings = new SettingsManager(cwd, "full");
+    for (const id of ["m3", "m4"])
+      saveSourceDefinition({ id, kind: "mock", label: id, adapterConfig: {}, enabled: true });
+    bindSource(settings, cwd, { sourceId: "m1", scopes: ["alpha"], readPolicy: "ask" });
+    bindSource(settings, cwd, {
+      sourceId: "m2",
+      scopes: ["alpha"],
+      readPolicy: "ask",
+      priority: "high",
+    });
+    bindSource(settings, cwd, {
+      sourceId: "m3",
+      scopes: ["alpha"],
+      readPolicy: "ask",
+      priority: "normal",
+    });
+    bindSource(settings, cwd, {
+      sourceId: "m4",
+      scopes: ["alpha"],
+      readPolicy: "ask",
+      priority: "high",
+    });
+    const access = resolveEffectiveSourceAccess({ cwd, settings, credentialStatus: okCred });
+    expect(access.map((item) => item.sourceId)).toEqual([
+      "m2",
+      "m4",
+      "m1",
+      "m3",
+      "project-uploads",
+    ]);
+    expect(access.find((item) => item.sourceId === "m1")).not.toHaveProperty("priority");
+    expect(access.find((item) => item.sourceId === "m3")?.priority).toBe("normal");
+  });
+
+  test("Profile priority cannot promote or demote the project's references or bypass deny", () => {
+    const settings = new SettingsManager(cwd, "full");
+    bindSource(settings, cwd, {
+      sourceId: "m1",
+      scopes: ["alpha", "beta"],
+      readPolicy: "ask",
+      priority: "high",
+    });
+    bindSource(settings, cwd, { sourceId: "m2", scopes: ["alpha"], readPolicy: "deny" });
+    const access = resolveEffectiveSourceAccess({
+      cwd,
+      settings,
+      credentialStatus: okCred,
+      profile: {
+        name: "limited",
+        sourceAccess: [
+          { sourceId: "m1", scopes: ["beta", "unbound"], readPolicy: "deny", priority: "normal" },
+          { sourceId: "m2", scopes: ["alpha"], readPolicy: "ask", priority: "high" },
+        ],
+      },
+    });
+    expect(access.map((item) => item.sourceId)).toEqual(["m1", "m2"]);
+    expect(access[0]).toMatchObject({ priority: "high", scopes: ["beta"], readPolicy: "deny" });
+    expect(access[1]).not.toHaveProperty("priority");
+    expect(access[1]?.readPolicy).toBe("deny");
+  });
+
   test("Profile intersects scopes and deny, cannot add sources or scopes, and hides implicit uploads", () => {
     const settings = new SettingsManager(cwd, "full");
     bindSource(settings, cwd, { sourceId: "m1", scopes: ["alpha", "beta"], readPolicy: "deny" });
