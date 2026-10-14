@@ -33,7 +33,6 @@ import { truncateTitle } from "./ui/ConfirmDialog";
 import { useConfirm, usePrompt } from "./ui/DialogProvider";
 import { useToast } from "./ui/ToastProvider";
 import { copyText } from "./lib/clipboard";
-import { SettingsMenu } from "./settings/SettingsMenu";
 import { SidebarUpdaterButton } from "./updater/UpdaterBanner";
 import type { ViewMode } from "./view";
 import { PAGE_REGISTRY, pageEntryTitle } from "./pages/PageRegistry";
@@ -140,7 +139,6 @@ export function Sidebar({
   collapsedProjects,
   revealedSessionIds,
   sessionStatuses,
-  sidebarCollapsed,
   petPendingCount,
   petRunningCount,
   petWidgetVisible,
@@ -170,6 +168,7 @@ export function Sidebar({
   viewMode,
 }: SidebarProps) {
   const { t } = useT();
+  const sidebarRef = useRef<HTMLElement>(null);
   const [menu, setMenu] = useState<MenuTarget | null>(null);
   const [editingProjectId, setEditingProjectId] = useState<string | null>(null);
   const [pendingPrimary, setPendingPrimary] = useState<{
@@ -338,6 +337,7 @@ export function Sidebar({
 
   return (
     <aside
+      ref={sidebarRef}
       className="flex h-full w-60 max-w-full shrink-0 flex-col border-r border-border/70"
       data-theme-surface="sidebar"
     >
@@ -498,14 +498,12 @@ export function Sidebar({
 
       <div className="border-t border-border/70 bg-card/40 px-3 py-2">
         <div className="flex items-center gap-1.5">
-          <AccountSidebarEntry />
           <div className="min-w-0 flex-1">
-            <SettingsMenu
+            <AccountSidebarEntry
               onOpenSettingsPage={onOpenSettingsPage}
               onNavigate={onNavigate}
               taskInboxEnabled={taskInboxEnabled}
               optimizationLabEnabled={optimizationLabEnabled}
-              sidebarCollapsed={sidebarCollapsed}
               petWidgetVisible={petWidgetVisible}
               onTogglePetWidget={onTogglePetWidget}
             />
@@ -516,6 +514,7 @@ export function Sidebar({
 
       {menu && (
         <ContextMenu
+          container={sidebarRef.current?.closest<HTMLElement>('[role="dialog"]')}
           x={menu.x}
           y={menu.y}
           onClose={closeMenu}

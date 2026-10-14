@@ -171,12 +171,12 @@ export async function expandSidebar(win) {
   await win.locator("#codeshell-sidebar-navigation").waitFor({ state: "visible" });
 }
 
-/** Open the production settings menu, including the narrow-window drawer. */
+/** Open the production account menu, including the narrow-window drawer. */
 export async function openSettingsMenu(win) {
-  const menu = win.getByRole("menu", { name: /^(设置|Settings)$/ });
+  const menu = win.getByRole("menu", { name: /^(账号管理|Manage account)$/ });
   if (await menu.isVisible()) return menu;
   await expandSidebar(win);
-  const trigger = win.getByRole("button", { name: /^(设置|Settings)$/ });
+  const trigger = win.locator('#codeshell-sidebar-navigation button[aria-haspopup="menu"]');
   await trigger.click();
   await menu.waitFor({ state: "visible" });
   return menu;

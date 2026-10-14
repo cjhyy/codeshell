@@ -50,7 +50,10 @@ const built = await build({
   platform: "browser",
   define: { "process.env.NODE_ENV": '"development"' },
 });
-const browser = await chromium.launch({ headless: true });
+const browser = await chromium.launch({
+  headless: true,
+  executablePath: process.env.CODESHELL_TEST_CHROMIUM || undefined,
+});
 const page = await browser.newPage({ viewport: { width: 800, height: 600 } });
 const failures = [];
 const errors = [];

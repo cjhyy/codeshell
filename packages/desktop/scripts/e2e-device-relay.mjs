@@ -14,6 +14,7 @@ import {
   findCodeShellWindow,
   launchCodeShellElectron,
   makeIsolatedElectronHome,
+  navigateSettingsMenu,
 } from "./electron-harness.mjs";
 const appDir = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const isolated = await makeIsolatedElectronHome("codeshell-desktop-relay-ui-");
@@ -45,11 +46,7 @@ async function openSettings(win) {
     )
   )
     await viewOnly.click();
-  await win
-    .getByRole("button", { name: /设置|Settings/i })
-    .last()
-    .click();
-  await win.getByRole("menuitem", { name: /打开设置|Open settings/i }).click();
+  await navigateSettingsMenu(win, /^(设置|Settings)$/);
   await win.getByRole("button", { name: /^(手机遥控|Mobile remote)$/i }).click();
 }
 async function launch(origin) {

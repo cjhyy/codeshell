@@ -17,6 +17,18 @@ function reactPropsOf(node: unknown): Record<string, any> {
   return key ? current[key] : {};
 }
 
+/** Closed Radix menus live outside the mini-DOM; inspect their owning selector contract. */
+function selectPropsOf(node: unknown): Record<string, any> {
+  const current = node as Record<string, any>;
+  const key = Object.keys(current).find((name) => name.startsWith("__reactFiber$"));
+  let fiber = key ? current[key] : undefined;
+  while (fiber) {
+    if (fiber.type?.name === "SimpleSelect") return fiber.memoizedProps;
+    fiber = fiber.return;
+  }
+  throw new Error("Expected a rendered SimpleSelect");
+}
+
 function findElements(node: unknown, tagName: string): any[] {
   const current = node as { tagName?: string; childNodes?: unknown[] };
   return [
@@ -42,22 +54,22 @@ function elementsWithAttribute(node: unknown, name: string): any[] {
   return findElements(node, "LI").filter((element) => element.attributes?.has(name));
 }
 
-const mockSource: SourceDefinition = {
-  id: "mock-one",
-  kind: "mock",
-  label: "Mock One",
-  adapterConfig: {},
+const mcpSource: SourceDefinition = {
+  id: "docs-one",
+  kind: "mcp-resource",
+  label: "Project Docs",
+  adapterConfig: { server: "docs" },
   enabled: true,
 };
 
 const okAccess: EffectiveSourceAccess = {
-  sourceId: "mock-one",
-  label: "Mock One",
-  kind: "mock",
+  sourceId: "docs-one",
+  label: "Project Docs",
+  kind: "mcp-resource",
   scopes: ["alpha"],
   readPolicy: "ask",
   status: "ok",
-  definition: mockSource,
+  definition: mcpSource,
 };
 
 const danglingAccess: EffectiveSourceAccess = {
@@ -118,11 +130,81 @@ afterEach(async () => {
 });
 
 describe("DataSourcesSection", () => {
+  test("excludes legacy mock sources and bindings while retaining real and dangling references", async () => {
+    ensureMiniDom();
+    const boundMock: SourceDefinition = {
+      id: "retired-fixture",
+      kind: "mock",
+      label: "Retired fixture",
+      adapterConfig: {},
+      enabled: true,
+    };
+    const unboundMock: SourceDefinition = {
+      ...boundMock,
+      id: "unbound-fixture",
+      label: "Unbound fixture",
+    };
+    const availableMcp: SourceDefinition = {
+      ...mcpSource,
+      id: "mock-docs",
+      label: "Published docs",
+    };
+    const unknownReference: EffectiveSourceAccess = {
+      ...danglingAccess,
+      sourceId: "mock-archive",
+      label: "Offline archive",
+    };
+    const orphanedMock: EffectiveSourceAccess = {
+      ...okAccess,
+      sourceId: "orphaned-fixture",
+      label: "Orphaned fixture",
+      kind: "mock",
+      definition: undefined,
+    };
+    const access = [okAccess, danglingAccess, unknownReference, orphanedMock];
+    Object.assign(window, {
+      codeshell: {
+        listSourceCatalog: async () => [boundMock, unboundMock, mcpSource, availableMcp],
+        projectSourceAccess: async () =>
+          snapshot(
+            access,
+            [],
+            [
+              ...access.map(({ sourceId, scopes, readPolicy }) => ({
+                sourceId,
+                scopes,
+                readPolicy,
+              })),
+              { sourceId: boundMock.id, scopes: ["alpha"], readPolicy: "ask" },
+            ],
+          ),
+        listSourceScopes: async () => [],
+      },
+    });
+
+    const container = await renderSection();
+
+    expect(elementsWithAttribute(container, "data-source-access")).toHaveLength(3);
+    expect(textOf(container)).toContain("Project Docs");
+    expect(textOf(container)).toContain("removed-source");
+    expect(textOf(container)).toContain("Offline archive");
+    expect(textOf(container)).not.toContain("Retired fixture");
+    expect(textOf(container)).not.toContain("Unbound fixture");
+    expect(textOf(container)).not.toContain("Orphaned fixture");
+    expect(textOf(container)).not.toContain("演示");
+    const picker = findElements(container, "BUTTON").find(
+      (button) => reactPropsOf(button)["aria-label"] === "数据源",
+    );
+    expect(selectPropsOf(picker).options.map((option: any) => option.value)).toEqual([
+      availableMcp.id,
+    ]);
+  });
+
   test("renders access rows, dangling status, and uploaded files", async () => {
     ensureMiniDom();
     Object.assign(window, {
       codeshell: {
-        listSourceCatalog: async () => [mockSource],
+        listSourceCatalog: async () => [mcpSource],
         projectSourceAccess: async () => snapshot([okAccess, danglingAccess], [uploadedBrief]),
         listSourceScopes: async () => [],
         bindProjectSource: async () => undefined,
@@ -135,7 +217,7 @@ describe("DataSourcesSection", () => {
     const container = await renderSection();
 
     expect(elementsWithAttribute(container, "data-source-access")).toHaveLength(2);
-    expect(textOf(container)).toContain("Mock One");
+    expect(textOf(container)).toContain("Project Docs");
     expect(textOf(container)).toContain("失效引用");
     expect(textOf(container)).toContain("brief.md");
     expect(textOf(container)).toContain("1.5 KB");
@@ -147,7 +229,7 @@ describe("DataSourcesSection", () => {
     let accessCalls = 0;
     Object.assign(window, {
       codeshell: {
-        listSourceCatalog: async () => [mockSource],
+        listSourceCatalog: async () => [mcpSource],
         projectSourceAccess: async () => {
           accessCalls += 1;
           return snapshot([okAccess]);
@@ -172,7 +254,7 @@ describe("DataSourcesSection", () => {
       await flushMicrotasks();
     });
 
-    expect(unbound).toEqual([["project-1", "mock-one"]]);
+    expect(unbound).toEqual([["project-1", "docs-one"]]);
     expect(accessCalls).toBe(2);
   });
 
@@ -254,7 +336,7 @@ describe("DataSourcesSection", () => {
     let accessCalls = 0;
     Object.assign(window, {
       codeshell: {
-        listSourceCatalog: async () => [mockSource],
+        listSourceCatalog: async () => [mcpSource],
         projectSourceAccess: async () => {
           accessCalls += 1;
           return snapshot();
@@ -286,7 +368,7 @@ describe("DataSourcesSection", () => {
     expect(reactPropsOf(selectForLabel("权重")).defaultValue).toBe("normal");
 
     await act(async () => {
-      reactPropsOf(sourceSelect).onChange({ target: { value: "mock-one" } });
+      reactPropsOf(sourceSelect).onChange({ target: { value: "docs-one" } });
       await flushMicrotasks();
       await flushMicrotasks();
     });
@@ -311,11 +393,11 @@ describe("DataSourcesSection", () => {
       await flushMicrotasks();
     });
 
-    expect(scopeCalls).toEqual(["mock-one"]);
+    expect(scopeCalls).toEqual(["docs-one"]);
     expect(bindings).toEqual([
       [
         "project-1",
-        { sourceId: "mock-one", scopes: ["alpha"], readPolicy: "deny", priority: "normal" },
+        { sourceId: "docs-one", scopes: ["alpha"], readPolicy: "deny", priority: "normal" },
       ],
     ]);
     expect(accessCalls).toBe(2);
