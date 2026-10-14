@@ -435,7 +435,9 @@ describe("architecture growth budgets", () => {
       // +4 Native batch Host-only declarations: issuer/policy, persisted owner,
       // existing Link authority helpers, and private worker RPC frame/types.
       // No model, stable public SDK or extension authority is added.
-      "packages/core/src/index.internal.ts": 110,
+      // +1 Host-only static composer SVG validator shared by installer and Main.
+      // Public/extension surfaces stay unchanged; no future growth allowance.
+      "packages/core/src/index.internal.ts": 111,
       "packages/coding/src/index.ts": 12,
       "packages/arena/src/index.ts": 19,
       // +1 for conversation-session.ts, which re-exports the four modules

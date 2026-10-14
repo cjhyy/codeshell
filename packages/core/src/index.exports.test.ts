@@ -255,6 +255,7 @@ const expectedRuntimeExportsByPartition = {
     "computeEffectiveDisabledLists",
   ],
   hostAssembly: [
+    "validatePluginComposerSvg",
     "installPluginFromPath",
     "installPluginFromSource",
     "installPluginFromNpm",
@@ -369,6 +370,7 @@ const hostOnlySamples = [
   "CapabilityService",
   "computeEffectiveDisabledLists",
   "installPluginFromPath",
+  "validatePluginComposerSvg",
   "installPlugin",
   "previewLocalPlugin",
   "uninstallPluginByName",
