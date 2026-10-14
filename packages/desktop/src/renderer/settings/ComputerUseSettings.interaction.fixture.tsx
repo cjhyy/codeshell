@@ -262,8 +262,7 @@ try {
     assert.ok(textOf(container).includes("Not granted"));
     assert.ok(!textOf(container).includes("settingsX.computerUse"));
   } else if (scenario === "scope") {
-    // Scope behavior is checked on the real GeneralSection. Other app-global
-    // sections are irrelevant to this card and would require unrelated bridges.
+    // General settings must never mount the separate computer-use module.
     mock.module("./PermissionSection", () => ({ PermissionSection: () => null }));
     mock.module("./CloudAccountSettings", () => ({ CloudAccountSettings: () => null }));
     mock.module("../updater/UpdaterBanner", () => ({ UpdaterSettingsRow: () => null }));
@@ -274,8 +273,8 @@ try {
     assert.ok(!textOf(container).includes("电脑操作（试用）"));
     const previousReads = reads;
     await update(() => root.render(<GeneralSection scope="user" activeProjectPath={null} />));
-    assert.ok(textOf(container).includes("电脑操作（试用）"));
-    assert.equal(reads, previousReads + 1);
+    assert.ok(!textOf(container).includes("电脑操作（试用）"));
+    assert.equal(reads, previousReads);
   } else throw new Error(`Unknown scenario: ${scenario}`);
   await new Promise((resolve) => setTimeout(resolve, 10));
   assert.deepEqual(unhandled, [], "All asynchronous bridge failures are handled");

@@ -2,6 +2,10 @@ import { expect, test } from "bun:test";
 import { fileURLToPath } from "node:url";
 
 const scenarios = {
+  "menu-preview": "shows account actions without mounting a form or contacting the service",
+  "menu-logout": "signs out directly from the account menu and restores focus",
+  "menu-logout-pending": "disables pending sign-out and prevents duplicate menu requests",
+  "menu-logout-failure": "explains sign-out failures and allows another attempt",
   "profile-read-pending": "gates updates while loading and compares edits to the latest profile",
   "profile-name-only": "preserves a username changed remotely when saving only the nickname",
   "profile-username-only": "preserves a nickname changed remotely when saving only the username",

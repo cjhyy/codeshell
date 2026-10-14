@@ -10,7 +10,7 @@ import { useConfirm } from "../ui/DialogProvider";
 import type { LocalLinkProviderView, MaskedCredentialView } from "../../preload/types";
 import { SourceCollectionsSection } from "./SourceCollectionsSection";
 
-type EditableSourceKind = "mock" | "mcp-resource" | "link";
+type EditableSourceKind = "mcp-resource" | "link";
 
 function errorText(caught: unknown): string {
   return caught instanceof Error ? caught.message : String(caught);
@@ -27,15 +27,17 @@ function kindLabel(t: TFunction, kind: string): string {
 /** Global connection definitions; project-specific grants stay in Project Config. */
 export function DataSourceCatalogSection({
   confirmDelete,
+  onManageConnections,
 }: {
   /** Test seam; production uses the app-level themed confirmation dialog. */
   confirmDelete?: (source: SourceDefinition) => Promise<boolean>;
+  onManageConnections?: () => void;
 } = {}) {
   const { t } = useT();
   const confirm = useConfirm();
   const [sources, setSources] = React.useState<SourceDefinition[]>([]);
-  const [id, setId] = React.useState("");
-  const [kind, setKind] = React.useState<EditableSourceKind>("mock");
+  const [editing, setEditing] = React.useState(false);
+  const [kind, setKind] = React.useState<EditableSourceKind>("link");
   const [label, setLabel] = React.useState("");
   const [server, setServer] = React.useState("");
   const [connections, setConnections] = React.useState<MaskedCredentialView[]>([]);
@@ -43,6 +45,10 @@ export function DataSourceCatalogSection({
   const [connectionId, setConnectionId] = React.useState("");
   const [actionId, setActionId] = React.useState("");
   const [params, setParams] = React.useState("{}");
+  const [connectionLoading, setConnectionLoading] = React.useState(false);
+  const [connectionLoaded, setConnectionLoaded] = React.useState(false);
+  const [connectionError, setConnectionError] = React.useState<string | null>(null);
+  const [connectionRevision, setConnectionRevision] = React.useState(0);
   const [loading, setLoading] = React.useState(true);
   const [catalogLoaded, setCatalogLoaded] = React.useState(false);
   const [busy, setBusy] = React.useState(false);
@@ -59,8 +65,11 @@ export function DataSourceCatalogSection({
   }, []);
 
   React.useEffect(() => {
-    if (kind !== "link") return;
+    if (!editing || kind !== "link") return;
     let cancelled = false;
+    setConnectionLoading(true);
+    setConnectionLoaded(false);
+    setConnectionError(null);
     void Promise.all([
       window.codeshell.credentials.list(""),
       window.codeshell.links.listLocalProviders(),
@@ -76,14 +85,18 @@ export function DataSourceCatalogSection({
           ),
         );
         setProviders(nextProviders);
+        setConnectionLoaded(true);
       })
       .catch((caught) => {
-        if (!cancelled) setError(errorText(caught));
+        if (!cancelled) setConnectionError(errorText(caught));
+      })
+      .finally(() => {
+        if (!cancelled) setConnectionLoading(false);
       });
     return () => {
       cancelled = true;
     };
-  }, [kind]);
+  }, [editing, kind, connectionRevision]);
 
   const connection = connections.find((entry) => entry.id === connectionId);
   const provider = providers.find((entry) => entry.id === connection?.meta?.linkProvider);
@@ -120,13 +133,17 @@ export function DataSourceCatalogSection({
     void refresh().catch(() => {});
   }, [refresh]);
 
-  const run = async (operation: () => Promise<unknown>): Promise<boolean> => {
+  const run = async (
+    operation: () => Promise<unknown>,
+    onCommitted?: () => void,
+  ): Promise<boolean> => {
     if (busyLock.current || !active.current) return false;
     busyLock.current = true;
     setBusy(true);
     setError(null);
     try {
       await operation();
+      if (active.current) onCommitted?.();
       await refresh();
       return true;
     } catch (caught) {
@@ -139,10 +156,9 @@ export function DataSourceCatalogSection({
   };
 
   const createSource = async () => {
-    const trimmedId = id.trim();
     const trimmedLabel = label.trim();
     const trimmedServer = server.trim();
-    if (!trimmedId || !trimmedLabel) {
+    if (!trimmedLabel) {
       setError(t("ext.link.sourcesRequired"));
       return;
     }
@@ -152,7 +168,13 @@ export function DataSourceCatalogSection({
     }
     let linkConfig: Record<string, unknown> | undefined;
     if (kind === "link") {
-      if (!connection || !provider || !actions.some((entry) => entry.id === actionId)) {
+      if (
+        connectionLoading ||
+        !connectionLoaded ||
+        !connection ||
+        !provider ||
+        !actions.some((entry) => entry.id === actionId)
+      ) {
         setError(t("ext.link.sourcesLinkRequired"));
         return;
       }
@@ -166,22 +188,26 @@ export function DataSourceCatalogSection({
       }
     }
     const definition: SourceDefinition = {
-      id: trimmedId,
+      id: `source_${crypto.randomUUID().replaceAll("-", "")}`,
       kind,
       label: trimmedLabel,
       adapterConfig: linkConfig ?? (kind === "mcp-resource" ? { server: trimmedServer } : {}),
       ...(kind === "link" ? { credentialRef: connectionId } : {}),
       enabled: true,
     };
-    if (await run(() => window.codeshell.saveSourceCatalog(definition))) {
-      setId("");
-      setKind("mock");
-      setLabel("");
-      setServer("");
-      setConnectionId("");
-      setActionId("");
-      setParams("{}");
-    }
+    await run(
+      () => window.codeshell.saveSourceCatalog(definition),
+      () => {
+        // A committed view is complete even if refreshing its list fails.
+        setEditing(false);
+        setKind("link");
+        setLabel("");
+        setServer("");
+        setConnectionId("");
+        setActionId("");
+        setParams("{}");
+      },
+    );
   };
 
   const deleteSource = async (source: SourceDefinition) => {
@@ -197,7 +223,70 @@ export function DataSourceCatalogSection({
     await run(() => window.codeshell.deleteSourceCatalog(source.id));
   };
 
-  const advancedSources = sources.filter((source) => source.kind !== "collection");
+  const onlineSources = sources.filter((source) => source.kind === "link");
+  const advancedSources = sources.filter(
+    (source) => source.kind !== "collection" && source.kind !== "link",
+  );
+  const renderSources = (items: SourceDefinition[]) => (
+    <ul className="space-y-2">
+      {items.map((source) => (
+        <li
+          key={source.id}
+          data-source-definition
+          className="flex flex-wrap items-center gap-3 rounded-lg border border-border bg-card p-3"
+        >
+          <div className="min-w-0 flex-1">
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="break-words text-sm font-medium text-foreground">
+                {source.label}
+              </span>
+              <Badge variant="secondary">
+                {source.kind === "link" && source.adapterConfig.action === "get_file"
+                  ? t("ext.link.sourcesKindFile")
+                  : kindLabel(t, source.kind)}
+              </Badge>
+              <Badge variant={source.enabled ? "success" : "secondary"}>
+                {source.enabled ? t("ext.link.sourcesEnabled") : t("ext.link.sourcesDisabled")}
+              </Badge>
+            </div>
+            <p className="mt-1 break-all text-xs text-muted-foreground">
+              {source.kind === "link"
+                ? String(source.adapterConfig.providerId ?? "Link")
+                : source.kind === "mcp-resource"
+                  ? String(source.adapterConfig.server ?? "MCP")
+                  : source.id}
+            </p>
+          </div>
+          <div className="flex shrink-0 items-center gap-2">
+            <Button
+              type="button"
+              size="sm"
+              variant="outline"
+              disabled={busy}
+              data-source-toggle={source.id}
+              onClick={() =>
+                void run(() =>
+                  window.codeshell.saveSourceCatalog({ ...source, enabled: !source.enabled }),
+                )
+              }
+            >
+              {source.enabled ? t("ext.link.sourcesDisable") : t("ext.link.sourcesEnable")}
+            </Button>
+            <Button
+              type="button"
+              size="sm"
+              variant="destructive"
+              disabled={busy}
+              data-source-delete={source.id}
+              onClick={() => void deleteSource(source)}
+            >
+              {t("ext.link.sourcesDelete")}
+            </Button>
+          </div>
+        </li>
+      ))}
+    </ul>
+  );
   return (
     <div className="space-y-5">
       {loading && (
@@ -225,180 +314,220 @@ export function DataSourceCatalogSection({
           onChanged={() => void refresh().catch(() => {})}
         />
       )}
+      <section className="space-y-3" data-connected-materials>
+        <header className="flex flex-wrap items-start justify-between gap-3">
+          <div>
+            <h3 className="text-sm font-semibold">{t("sourceCollections.catalog.title")}</h3>
+            <p className="mt-1 max-w-2xl text-xs text-muted-foreground">
+              {t("sourceCollections.catalog.description")}
+            </p>
+          </div>
+          {onManageConnections && (
+            <Button type="button" size="sm" variant="outline" onClick={onManageConnections}>
+              {t("ext.link.sourcesManageConnections")}
+            </Button>
+          )}
+        </header>
+        {catalogLoaded &&
+          (onlineSources.length ? (
+            renderSources(onlineSources)
+          ) : (
+            <p className="text-xs text-muted-foreground">{t("sourceCollections.catalog.empty")}</p>
+          ))}
+      </section>
       <details className="rounded-lg border border-border p-4">
         <summary className="cursor-pointer text-sm font-medium">
-          {t("sourceCollections.advanced")}
+          {t("sourceCollections.catalog.advanced")}
         </summary>
-        <section className="space-y-3">
-          <div>
-            <h3 className="text-sm font-semibold">{t("ext.link.sourcesTitle")}</h3>
-            <p className="mt-1 text-xs text-muted-foreground">{t("ext.link.sourcesDescription")}</p>
-          </div>
-
-          <div className="space-y-3 rounded-lg border border-border bg-card p-4">
-            <h4 className="text-sm font-medium text-foreground">{t("ext.link.sourcesCreate")}</h4>
-            <div className="grid gap-3 sm:grid-cols-2">
-              <label className="space-y-1 text-xs text-muted-foreground">
-                <span>{t("ext.link.sourcesId")}</span>
-                <Input
-                  name="source-id"
-                  value={id}
-                  disabled={busy}
-                  placeholder="team-docs"
-                  onChange={(event) => setId(event.target.value)}
-                />
-              </label>
-              <label className="space-y-1 text-xs text-muted-foreground">
-                <span>{t("ext.link.sourcesKind")}</span>
-                <SimpleSelect<EditableSourceKind>
-                  size="sm"
-                  value={kind}
-                  disabled={busy}
-                  ariaLabel={t("ext.link.sourcesKind")}
-                  onChange={setKind}
-                  options={[
-                    { value: "mock", label: kindLabel(t, "mock") },
-                    { value: "mcp-resource", label: kindLabel(t, "mcp-resource") },
-                    { value: "link", label: kindLabel(t, "link") },
-                  ]}
-                />
-              </label>
-              <label className="space-y-1 text-xs text-muted-foreground">
-                <span>{t("ext.link.sourcesLabel")}</span>
-                <Input
-                  name="source-label"
-                  value={label}
-                  disabled={busy}
-                  placeholder={t("ext.link.sourcesLabelPlaceholder")}
-                  onChange={(event) => setLabel(event.target.value)}
-                />
-              </label>
-              {kind === "mcp-resource" ? (
-                <label className="space-y-1 text-xs text-muted-foreground">
-                  <span>{t("ext.link.sourcesServer")}</span>
-                  <Input
-                    name="source-server"
-                    value={server}
-                    disabled={busy}
-                    placeholder={t("ext.link.sourcesServerPlaceholder")}
-                    onChange={(event) => setServer(event.target.value)}
-                  />
-                </label>
-              ) : null}
-              {kind === "link" ? (
-                <>
-                  <label className="space-y-1 text-xs text-muted-foreground">
-                    <span>{t("ext.link.sourcesConnection")}</span>
-                    <SimpleSelect
-                      size="sm"
-                      value={connectionId}
-                      disabled={busy}
-                      ariaLabel={t("ext.link.sourcesConnection")}
-                      onChange={(value) => {
-                        setConnectionId(value);
-                        setActionId("");
-                      }}
-                      options={connections.map((entry) => ({
-                        value: entry.id,
-                        label: `${entry.label} (${entry.meta?.linkAccountLabel ?? entry.meta?.linkProvider})`,
-                      }))}
-                    />
-                  </label>
-                  <label className="space-y-1 text-xs text-muted-foreground">
-                    <span>{t("ext.link.sourcesAction")}</span>
-                    <SimpleSelect
-                      size="sm"
-                      value={actionId}
-                      disabled={busy}
-                      ariaLabel={t("ext.link.sourcesAction")}
-                      onChange={setActionId}
-                      options={actions.map((entry) => ({
-                        value: entry.id,
-                        label: `${entry.title} (${entry.id})`,
-                      }))}
-                    />
-                  </label>
-                  <label className="space-y-1 text-xs text-muted-foreground sm:col-span-2">
-                    <span>{t("ext.link.sourcesParams")}</span>
-                    <Textarea
-                      name="source-link-params"
-                      value={params}
-                      disabled={busy}
-                      onChange={(event) => setParams(event.target.value)}
-                    />
-                    <p>{t("ext.link.sourcesLinkHelp")}</p>
-                    {actions.find((entry) => entry.id === actionId)?.description}
-                  </label>
-                </>
-              ) : null}
-            </div>
+        <section className="mt-4 space-y-3">
+          <p className="text-xs text-muted-foreground">
+            {t("sourceCollections.catalog.advancedHint")}
+          </p>
+          {catalogLoaded && renderSources(advancedSources)}
+          {!editing ? (
             <Button
               type="button"
               size="sm"
-              disabled={busy}
-              data-source-create
-              onClick={() => void createSource()}
+              variant="outline"
+              disabled={busy || !catalogLoaded}
+              onClick={() => {
+                setError(null);
+                setEditing(true);
+              }}
             >
-              {t("ext.link.sourcesSave")}
+              {t("sourceCollections.catalog.createView")}
             </Button>
-          </div>
-
-          {!catalogLoaded ? null : advancedSources.length === 0 ? (
-            <p className="text-xs text-muted-foreground">{t("ext.link.sourcesEmpty")}</p>
           ) : (
-            <ul className="space-y-2">
-              {advancedSources.map((source) => (
-                <li
-                  key={source.id}
-                  data-source-definition
-                  className="flex flex-wrap items-center gap-3 rounded-lg border border-border bg-card p-3"
-                >
-                  <div className="min-w-0 flex-1">
-                    <div className="flex flex-wrap items-center gap-2">
-                      <span className="text-sm font-medium text-foreground">{source.label}</span>
-                      <Badge variant="secondary">{kindLabel(t, source.kind)}</Badge>
-                      <Badge variant={source.enabled ? "success" : "secondary"}>
-                        {source.enabled
-                          ? t("ext.link.sourcesEnabled")
-                          : t("ext.link.sourcesDisabled")}
-                      </Badge>
+            <div className="space-y-3 rounded-lg border border-border bg-card p-4">
+              <h4 className="text-sm font-medium text-foreground">
+                {t("sourceCollections.catalog.createView")}
+              </h4>
+              <p className="text-xs text-muted-foreground">
+                {t("sourceCollections.catalog.viewHint")}
+              </p>
+              <div className="grid gap-3 sm:grid-cols-2">
+                <label className="space-y-1 text-xs text-muted-foreground">
+                  <span>{t("ext.link.sourcesLabel")}</span>
+                  <Input
+                    name="source-label"
+                    value={label}
+                    disabled={busy}
+                    placeholder={t("ext.link.sourcesLabelPlaceholder")}
+                    onChange={(event) => setLabel(event.target.value)}
+                  />
+                </label>
+                <label className="space-y-1 text-xs text-muted-foreground">
+                  <span>{t("sourceCollections.catalog.chooseKind")}</span>
+                  <SimpleSelect<EditableSourceKind>
+                    size="sm"
+                    value={kind}
+                    disabled={busy}
+                    ariaLabel={t("sourceCollections.catalog.chooseKind")}
+                    onChange={(value) => {
+                      setKind(value);
+                      setConnectionId("");
+                      setActionId("");
+                      setParams("{}");
+                      setError(null);
+                    }}
+                    options={[
+                      { value: "link", label: kindLabel(t, "link") },
+                      { value: "mcp-resource", label: kindLabel(t, "mcp-resource") },
+                    ]}
+                  />
+                </label>
+                {kind === "mcp-resource" && (
+                  <label className="space-y-1 text-xs text-muted-foreground sm:col-span-2">
+                    <span>{t("ext.link.sourcesServer")}</span>
+                    <Input
+                      name="source-server"
+                      value={server}
+                      disabled={busy}
+                      placeholder={t("ext.link.sourcesServerPlaceholder")}
+                      onChange={(event) => setServer(event.target.value)}
+                    />
+                  </label>
+                )}
+                {kind === "link" && (
+                  <>
+                    {connectionLoading && (
+                      <p role="status" className="text-xs text-muted-foreground sm:col-span-2">
+                        {t("sourceCollections.catalog.connectionLoading")}
+                      </p>
+                    )}
+                    {connectionError && (
+                      <p role="alert" className="text-xs text-status-err sm:col-span-2">
+                        {connectionError}
+                      </p>
+                    )}
+                    {connectionLoaded && connections.length === 0 && (
+                      <p className="text-xs text-muted-foreground sm:col-span-2">
+                        {t("sourceCollections.catalog.connectionEmpty")}
+                      </p>
+                    )}
+                    <label className="space-y-1 text-xs text-muted-foreground">
+                      <span>{t("ext.link.sourcesConnection")}</span>
+                      <SimpleSelect
+                        size="sm"
+                        value={connectionId}
+                        disabled={busy || connectionLoading || !connectionLoaded}
+                        ariaLabel={t("ext.link.sourcesConnection")}
+                        placeholder={t("sourceCollections.catalog.connectionPlaceholder")}
+                        onChange={(value) => {
+                          setConnectionId(value);
+                          setActionId("");
+                          setParams("{}");
+                        }}
+                        options={connections.map((entry) => ({
+                          value: entry.id,
+                          label: `${entry.label} (${entry.meta?.linkAccountLabel ?? entry.meta?.linkProvider})`,
+                        }))}
+                      />
+                    </label>
+                    <label className="space-y-1 text-xs text-muted-foreground">
+                      <span>{t("ext.link.sourcesAction")}</span>
+                      <SimpleSelect
+                        size="sm"
+                        value={actionId}
+                        disabled={busy || connectionLoading || !connectionLoaded || !connection}
+                        ariaLabel={t("ext.link.sourcesAction")}
+                        placeholder={t("sourceCollections.catalog.actionPlaceholder")}
+                        onChange={(value) => {
+                          setActionId(value);
+                          setParams("{}");
+                        }}
+                        options={actions.map((entry) => ({
+                          value: entry.id,
+                          label: entry.title,
+                          description: entry.description,
+                        }))}
+                      />
+                    </label>
+                    <div className="flex flex-wrap gap-2 sm:col-span-2">
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant="outline"
+                        disabled={busy || connectionLoading}
+                        onClick={() => {
+                          setConnectionId("");
+                          setActionId("");
+                          setParams("{}");
+                          setConnectionRevision((value) => value + 1);
+                        }}
+                      >
+                        {t("sourceCollections.catalog.connectionRetry")}
+                      </Button>
                     </div>
-                    <p className="mt-1 truncate font-mono text-xs text-muted-foreground">
-                      {source.id}
-                    </p>
-                  </div>
-                  <div className="flex shrink-0 items-center gap-2">
-                    <Button
-                      type="button"
-                      size="sm"
-                      variant="outline"
-                      disabled={busy}
-                      data-source-toggle={source.id}
-                      onClick={() =>
-                        void run(() =>
-                          window.codeshell.saveSourceCatalog({
-                            ...source,
-                            enabled: !source.enabled,
-                          }),
-                        )
-                      }
-                    >
-                      {source.enabled ? t("ext.link.sourcesDisable") : t("ext.link.sourcesEnable")}
-                    </Button>
-                    <Button
-                      type="button"
-                      size="sm"
-                      variant="destructive"
-                      disabled={busy}
-                      data-source-delete={source.id}
-                      onClick={() => void deleteSource(source)}
-                    >
-                      {t("ext.link.sourcesDelete")}
-                    </Button>
-                  </div>
-                </li>
-              ))}
-            </ul>
+                    {connection && actionId && (
+                      <label className="space-y-1 text-xs text-muted-foreground sm:col-span-2">
+                        <span>{t("ext.link.sourcesParams")}</span>
+                        <Textarea
+                          name="source-link-params"
+                          value={params}
+                          disabled={busy}
+                          onChange={(event) => setParams(event.target.value)}
+                        />
+                        <p>{t("ext.link.sourcesLinkHelp")}</p>
+                        {actions.find((entry) => entry.id === actionId)?.description}
+                      </label>
+                    )}
+                  </>
+                )}
+              </div>
+              <p className="text-xs text-muted-foreground">
+                {t("sourceCollections.catalog.generatedId")}
+              </p>
+              <div className="flex flex-wrap gap-2">
+                <Button
+                  type="button"
+                  size="sm"
+                  disabled={busy || (kind === "link" && (connectionLoading || !connectionLoaded))}
+                  data-source-create
+                  onClick={() => void createSource()}
+                >
+                  {t("ext.link.sourcesSave")}
+                </Button>
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="outline"
+                  disabled={busy}
+                  onClick={() => {
+                    setEditing(false);
+                    setError(null);
+                    setLabel("");
+                    setServer("");
+                    setConnectionId("");
+                    setActionId("");
+                    setParams("{}");
+                    setKind("link");
+                  }}
+                >
+                  {t("sourceCollections.catalog.cancel")}
+                </Button>
+              </div>
+            </div>
           )}
         </section>
       </details>

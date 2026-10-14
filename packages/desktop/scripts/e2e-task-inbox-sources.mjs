@@ -180,7 +180,7 @@ async function launch() {
     await viewOnly.click();
     await viewOnly.waitFor({ state: "hidden" });
   }
-  await win.getByRole("button", { name: /^(设置|Settings)$/ }).waitFor();
+  await win.locator('#codeshell-sidebar-navigation button[aria-haspopup="menu"]').waitFor();
   await win.evaluate(() => {
     localStorage.setItem("codeshell.uiLanguage", "zh");
     window.dispatchEvent(new window.Event("codeshell:language-changed"));

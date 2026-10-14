@@ -227,6 +227,10 @@ function App() {
     loadActiveProjectId(),
   );
   const [view, setView] = useState<ViewState>(() => loadView((mode) => PAGE_REGISTRY.has(mode)));
+  const [credentialsInitialTab, setCredentialsInitialTab] = useState<"link" | undefined>();
+  useEffect(() => {
+    if (view.viewMode !== "credentials") setCredentialsInitialTab(undefined);
+  }, [view.viewMode]);
   // Settings replace the chrome, while the wide-window navigation preference
   // remains independent of the temporary narrow-window drawer.
   const isSettingsPage = view.viewMode === "settings_page" || view.viewMode === "project_config";
@@ -2530,6 +2534,7 @@ function App() {
                   <CredentialsPage
                     activeProjectPath={activeProject?.path ?? null}
                     activeBucket={activeSessionId !== null ? activeBucket : null}
+                    initialTab={credentialsInitialTab}
                   />
                 </React.Suspense>
               ) : view.viewMode === "automation" ? (
@@ -2866,6 +2871,10 @@ function App() {
                 isFullscreen={isFullscreen}
                 onBack={() => setViewMode("chat")}
                 onOpenDigitalHumans={() => setViewMode("digital_humans")}
+                onOpenLink={() => {
+                  setCredentialsInitialTab("link");
+                  setViewMode("credentials");
+                }}
               />
             ) : activeProject ? (
               // project_config: the same settings center, preselected to the
@@ -2890,6 +2899,10 @@ function App() {
                 isFullscreen={isFullscreen}
                 onBack={() => setViewMode("chat")}
                 onOpenDigitalHumans={() => setViewMode("digital_humans")}
+                onOpenLink={() => {
+                  setCredentialsInitialTab("link");
+                  setViewMode("credentials");
+                }}
               />
             ) : null}
           </React.Suspense>

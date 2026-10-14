@@ -84,6 +84,9 @@ describe("CredentialsPage navigation and search", () => {
           return FIXTURES;
         },
       },
+      links: {
+        listLocalProviders: async () => [],
+      },
     });
     container = document.createElement("div");
     root = createRoot(container);
@@ -97,12 +100,14 @@ describe("CredentialsPage navigation and search", () => {
     for (const reset of restore.reverse()) reset();
   });
 
-  const render = async () => {
+  const render = async (
+    initialTab?: React.ComponentProps<typeof CredentialsPage>["initialTab"],
+  ) => {
     await act(async () => {
       root.render(
         <ToastProvider>
           <DialogProvider>
-            <CredentialsPage activeProjectPath={null} />
+            <CredentialsPage activeProjectPath={null} initialTab={initialTab} />
           </DialogProvider>
         </ToastProvider>,
       );
@@ -180,5 +185,22 @@ describe("CredentialsPage navigation and search", () => {
     await searchFor("BUILD_API_TOKEN");
     expect(articles()).toEqual(["Build service"]);
     expect(listCalls).toBe(1);
+  });
+
+  test("explicit Link entry overrides the saved category only when entering the page", async () => {
+    stored.set("codeshell:credentials:last-tab", "cookie");
+    await render("link");
+    expect(propsOf(tab("link"))["aria-selected"]).toBe(true);
+    expect(stored.get("codeshell:credentials:last-tab")).toBe("link");
+    await act(async () => {
+      propsOf(tab("token")).onClick();
+      await flushMicrotasks();
+    });
+    await render("link");
+    expect(propsOf(tab("token"))["aria-selected"]).toBe(true);
+    expect(stored.get("codeshell:credentials:last-tab")).toBe("token");
+    await act(async () => root.render(null));
+    await render();
+    expect(propsOf(tab("token"))["aria-selected"]).toBe(true);
   });
 });
