@@ -1,4 +1,6 @@
 import React, { memo, useState, useRef, useEffect } from "react";
+import { createPortal } from "react-dom";
+import { useAnchoredPopover } from "./chat/useAnchoredPopover";
 import { StatusDot } from "./ui/StatusDot";
 import { IconButton } from "./ui/IconButton";
 import { Forward, PanelLeft, PanelRight, UserRound } from "lucide-react";
@@ -286,6 +288,14 @@ function StatusBadge({
   const [open, setOpen] = useState(false);
   const closeTimer = useRef<number | null>(null);
   const containerRef = useRef<HTMLDivElement | null>(null);
+  const anchorRef = useRef<HTMLButtonElement | null>(null);
+  const popoverRef = useRef<HTMLDivElement | null>(null);
+  const hasStatusDetail = Boolean(activeGoal) || (tasks?.tasks.length ?? 0) > 0 || busy;
+  const popoverStyle = useAnchoredPopover(open && hasStatusDetail, anchorRef, popoverRef, {
+    preferredSide: "bottom",
+    align: "end",
+    gap: 4,
+  });
   const cancelClose = (): void => {
     if (closeTimer.current !== null) {
       window.clearTimeout(closeTimer.current);
@@ -297,7 +307,11 @@ function StatusBadge({
     closeTimer.current = window.setTimeout(() => {
       // Keep the popover mounted while its inline Goal editor has focus, even
       // if the pointer temporarily leaves the hover zone.
-      if (containerRef.current?.contains(document.activeElement)) return;
+      if (
+        containerRef.current?.contains(document.activeElement) ||
+        popoverRef.current?.contains(document.activeElement)
+      )
+        return;
       setOpen(false);
     }, 120);
   };
@@ -311,8 +325,6 @@ function StatusBadge({
    * The dot itself already carries that state via its colour and tooltip, so
    * skip the panel entirely instead of showing an empty one.
    */
-  const hasStatusDetail = Boolean(activeGoal) || (tasks?.tasks.length ?? 0) > 0 || busy;
-
   return (
     <div
       ref={containerRef}
@@ -321,6 +333,8 @@ function StatusBadge({
       style={{ WebkitAppRegion: "no-drag" } as React.CSSProperties}
       onKeyDown={(event) => {
         if (event.key === "Escape") {
+          const restoreFocus = popoverRef.current?.contains(document.activeElement);
+          if (restoreFocus) anchorRef.current?.focus({ preventScroll: true });
           setOpen(false);
         }
       }}
@@ -333,6 +347,7 @@ function StatusBadge({
       onBlur={scheduleClose}
     >
       <Button
+        ref={anchorRef}
         type="button"
         variant="ghost"
         size="sm"
@@ -373,28 +388,40 @@ function StatusBadge({
           title={t(busy ? "misc.status.running" : "misc.status.idle")}
         />
       </Button>
-      {open && hasStatusDetail && (
-        <div className="absolute right-0 top-full z-50 mt-1">
-          <StatusPopover
-            activity={
-              activity ?? {
-                lastToolName: "",
-                lastTool: null,
-                toolCount: 0,
-                turnStartedAt: 0,
-                toolInFlight: false,
+      {open &&
+        hasStatusDetail &&
+        createPortal(
+          <div
+            ref={popoverRef}
+            style={popoverStyle}
+            className="w-max"
+            data-status-popover="true"
+            onMouseEnter={cancelClose}
+            onMouseLeave={scheduleClose}
+            onFocus={cancelClose}
+            onBlur={scheduleClose}
+          >
+            <StatusPopover
+              activity={
+                activity ?? {
+                  lastToolName: "",
+                  lastTool: null,
+                  toolCount: 0,
+                  turnStartedAt: 0,
+                  toolInFlight: false,
+                }
               }
-            }
-            busy={busy}
-            tasks={tasks}
-            activeGoal={activeGoal}
-            onClearGoal={onClearGoal}
-            onUpdateGoal={onUpdateGoal}
-            onGoalPausedChange={onGoalPausedChange}
-            onDeleteGoal={onDeleteGoal}
-          />
-        </div>
-      )}
+              busy={busy}
+              tasks={tasks}
+              activeGoal={activeGoal}
+              onClearGoal={onClearGoal}
+              onUpdateGoal={onUpdateGoal}
+              onGoalPausedChange={onGoalPausedChange}
+              onDeleteGoal={onDeleteGoal}
+            />
+          </div>,
+          document.body,
+        )}
     </div>
   );
 }

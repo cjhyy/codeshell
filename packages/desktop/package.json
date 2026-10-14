@@ -39,7 +39,7 @@
     "test:e2e:media-playback": "node scripts/e2e-media-playback.mjs",
     "test:e2e:model-settings": "node scripts/e2e-model-settings.mjs",
     "test:e2e:settings": "node scripts/e2e-settings.mjs",
-    "test:ui:overlays": "node ../../scripts/run-isolated-node-smoke.mjs src/renderer/components/ui/overlay.browser.fixture.mjs && node ../../scripts/run-isolated-node-smoke.mjs src/renderer/settings/SettingsMenu.browser.fixture.mjs",
+    "test:ui:overlays": "node scripts/test-responsive-overlays.mjs",
     "test:e2e:themes": "node ../../scripts/run-isolated-node-smoke.mjs --private-keyring scripts/e2e-themes.mjs",
     "test:e2e:panel-recovery": "node scripts/e2e-panel-recovery-ui.mjs",
     "test:e2e:panel-app": "node scripts/e2e-panel-app.mjs",

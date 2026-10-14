@@ -6,6 +6,7 @@ import { basename } from "../tool-cards/utils";
 import { UnifiedDiffViewer } from "../diff/UnifiedDiffViewer";
 import { openFileTarget } from "../chat/openWith";
 import { Button } from "@/components/ui/button";
+import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/components/ui/dialog";
 import { useT } from "../i18n/I18nProvider";
 import { useLocalRuntimeActions } from "../runtime/RuntimeCapabilities";
 
@@ -314,18 +315,29 @@ function ConfirmUndoModal({
   onConfirm: () => void;
 }) {
   const { t } = useT();
+  const openerRef = useRef<HTMLElement | null>(
+    typeof document !== "undefined" && document.activeElement instanceof HTMLElement
+      ? document.activeElement
+      : null,
+  );
   return (
-    <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/35 p-4"
-      onClick={(e) => {
-        if (e.target === e.currentTarget) onCancel();
-      }}
-    >
-      <div className="w-full overflow-hidden rounded-md border bg-popover text-popover-foreground shadow-2xl max-w-md">
+    <Dialog open onOpenChange={(open) => !open && onCancel()}>
+      <DialogContent
+        className="max-w-md gap-0 p-0"
+        showClose={false}
+        onCloseAutoFocus={(event) => {
+          event.preventDefault();
+          openerRef.current?.focus();
+        }}
+      >
         <div className="flex items-center justify-between gap-3 border-b px-4 py-3">
-          <strong>{t("msg.files.confirmTitle", { count: fileCount })}</strong>
+          <DialogTitle className="text-base">
+            {t("msg.files.confirmTitle", { count: fileCount })}
+          </DialogTitle>
         </div>
-        <div className="p-4">{t("msg.files.confirmBody")}</div>
+        <DialogDescription className="p-4 text-foreground">
+          {t("msg.files.confirmBody")}
+        </DialogDescription>
         <div className="flex justify-end gap-2 border-t px-4 py-3">
           <Button type="button" variant="ghost" size="sm" onClick={onCancel}>
             {t("msg.files.cancel")}
@@ -340,8 +352,8 @@ function ConfirmUndoModal({
             {t("msg.files.confirmUndo")}
           </Button>
         </div>
-      </div>
-    </div>
+      </DialogContent>
+    </Dialog>
   );
 }
 
@@ -357,20 +369,30 @@ function ReviewModal({
   onClose: () => void;
 }) {
   const { t } = useT();
+  const openerRef = useRef<HTMLElement | null>(
+    typeof document !== "undefined" && document.activeElement instanceof HTMLElement
+      ? document.activeElement
+      : null,
+  );
   // When the card carries session-scoped diffs, render those directly
   // instead of asking Git for the whole worktree. The scopedFile fallback
   // keeps older persisted messages working.
   const scopedFile = files.length === 1 ? files[0]! : undefined;
   return (
-    <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/35 p-4"
-      onClick={(e) => {
-        if (e.target === e.currentTarget) onClose();
-      }}
-    >
-      <div className="w-full overflow-hidden rounded-md border bg-popover text-popover-foreground shadow-2xl max-w-5xl">
-        <div className="flex items-center justify-between gap-3 border-b px-4 py-3">
-          <strong>{t("msg.files.reviewModalTitle", { count: files.length })}</strong>
+    <Dialog open onOpenChange={(open) => !open && onClose()}>
+      <DialogContent
+        className="flex max-w-5xl flex-col gap-0 overflow-hidden p-0"
+        showClose={false}
+        aria-describedby={undefined}
+        onCloseAutoFocus={(event) => {
+          event.preventDefault();
+          openerRef.current?.focus();
+        }}
+      >
+        <div className="flex shrink-0 items-center justify-between gap-3 border-b px-4 py-3">
+          <DialogTitle className="text-base">
+            {t("msg.files.reviewModalTitle", { count: files.length })}
+          </DialogTitle>
           <Button
             type="button"
             variant="ghost"
@@ -382,10 +404,10 @@ function ReviewModal({
             <X size={14} />
           </Button>
         </div>
-        <div className="p-4 max-h-[70vh] overflow-y-auto">
+        <div className="min-h-0 max-h-[70dvh] overflow-y-auto p-4">
           <UnifiedDiffViewer cwd={cwd} file={scopedFile} diffText={diffText} />
         </div>
-      </div>
-    </div>
+      </DialogContent>
+    </Dialog>
   );
 }

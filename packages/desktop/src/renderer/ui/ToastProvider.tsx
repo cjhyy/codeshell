@@ -147,7 +147,7 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
       <ToastHistoryContext.Provider value={historyValue}>
         {children}
         <div
-          className="pointer-events-none fixed bottom-4 right-4 z-[60] flex flex-col gap-2"
+          className="pointer-events-none fixed bottom-4 right-4 z-[60] flex w-[min(24rem,calc(100vw-2rem))] flex-col gap-2"
           aria-live="polite"
           role="status"
         >
@@ -155,6 +155,7 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
             <ToastCard
               key={t.id}
               variant={t.variant}
+              stackSize={state.toasts.length}
               onDismiss={() => dismiss(t.id)}
               onPause={() => pause(t.id)}
               onResume={() => resume(t.id)}
@@ -192,12 +193,14 @@ const VARIANT_ICON: Record<ToastVariant, React.ReactNode> = {
 
 function ToastCard({
   variant,
+  stackSize,
   onDismiss,
   onPause,
   onResume,
   children,
 }: {
   variant: ToastVariant;
+  stackSize: number;
   onDismiss: () => void;
   onPause: () => void;
   onResume: () => void;
@@ -208,7 +211,7 @@ function ToastCard({
   return (
     <div
       className={cn(
-        "pointer-events-auto flex max-w-sm items-start gap-2 rounded-md border border-border",
+        "pointer-events-auto flex min-w-0 items-start gap-2 rounded-md border border-border",
         "bg-popover px-3 py-2 text-sm text-popover-foreground shadow-lg",
         "animate-in slide-in-from-bottom-2 fade-in",
       )}
@@ -226,7 +229,10 @@ function ToastCard({
       }}
     >
       <span className="mt-0.5 shrink-0">{VARIANT_ICON[variant]}</span>
-      <span className="max-h-48 min-w-0 flex-1 overflow-auto whitespace-pre-wrap break-words select-text">
+      <span
+        className="max-h-48 min-w-0 flex-1 overflow-auto overscroll-contain whitespace-pre-wrap break-words select-text"
+        style={{ maxHeight: `min(12rem,max(1rem,calc((100dvh - 2rem) / ${stackSize} - 1.75rem)))` }}
+      >
         {children}
       </span>
       <button
