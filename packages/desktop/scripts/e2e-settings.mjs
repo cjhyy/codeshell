@@ -280,6 +280,26 @@ try {
   );
   await search.fill("");
 
+  await win.setViewportSize({ width: 1_440, height: 560 });
+  const main = win.locator("main").filter({ has: win.getByRole("heading", { level: 1 }) });
+  await main.evaluate((node) => {
+    node.scrollTop = node.scrollHeight;
+  });
+  await win
+    .getByRole("navigation", { name: /设置导航|Settings navigation/i })
+    .getByRole("button", { name: /能力总览|Capability overview/i })
+    .click();
+  const builtinGroup = win.getByRole("button", { name: /内置工具|Built-in tools/i });
+  await builtinGroup.waitFor({ state: "visible", timeout: 10_000 });
+  assert(
+    (await main.evaluate((node) => node.scrollTop)) === 0,
+    "Capability overview retained the previous settings module's scroll position",
+  );
+  await builtinGroup.click();
+  await win.getByText("SwitchSessionWorkspace", { exact: true }).waitFor({ state: "visible" });
+  await assertNoHorizontalOverflow(win, "global capability overview");
+  await screenshot(win, "settings-capabilities.png");
+
   await checkShortcuts(win);
 
   await win.getByRole("button", { name: /外观|Appearance/i }).click();

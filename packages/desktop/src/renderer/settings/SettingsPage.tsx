@@ -404,6 +404,7 @@ export function SettingsPage({
   const searchRef = useRef<HTMLInputElement>(null);
   const narrowSearchRef = useRef<HTMLInputElement>(null);
   const moduleHeadingRef = useRef<HTMLHeadingElement>(null);
+  const contentRef = useRef<HTMLElement>(null);
   const focusModuleHeading = useRef(false);
   const [scopeState, setScopeState] = useState<SettingsScope>(() =>
     initialProjectPath ? { kind: "project", path: initialProjectPath } : { kind: "user" },
@@ -447,6 +448,12 @@ export function SettingsPage({
   // so state from project A cannot flash or save into project B.
   const contentTargetKey =
     scopeState.kind === "project" ? `project:${scopeState.path}:${active}` : `user:${active}`;
+
+  useLayoutEffect(() => {
+    // A newly selected module starts at its heading, even when the previous
+    // module was scrolled far down or the window is short.
+    if (contentRef.current) contentRef.current.scrollTop = 0;
+  }, [contentTargetKey]);
 
   useEffect(() => {
     try {
@@ -660,7 +667,10 @@ export function SettingsPage({
           )}
         </div>
 
-        <main className="min-w-0 flex-1 overflow-y-auto px-8 pb-10 pt-8 max-[1100px]:px-6 max-[720px]:px-4 max-[720px]:pt-5">
+        <main
+          ref={contentRef}
+          className="min-w-0 flex-1 overflow-y-auto px-8 pb-10 pt-8 max-[1100px]:px-6 max-[720px]:px-4 max-[720px]:pt-5"
+        >
           <div className="mx-auto w-full max-w-5xl">
             <div className="mb-7 rounded-2xl border border-border/70 bg-muted/20 p-5 max-[720px]:p-4">
               <div className="flex min-w-0 items-center gap-3.5">
