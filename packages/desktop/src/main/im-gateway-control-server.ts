@@ -17,10 +17,11 @@ import { chmod, lstat, mkdir, rename, rm, writeFile } from "node:fs/promises";
 import { createServer, type IncomingMessage, type Server, type ServerResponse } from "node:http";
 import { dirname, isAbsolute, join } from "node:path";
 import { acquireGatewayInstanceLock, type GatewayInstanceLease } from "@cjhyy/code-shell-chat";
+import { CONTRACTS } from "@cjhyy/code-shell-core";
 import { dlog } from "./desktop-logger.js";
 import { GatewayChatRequests, GatewayChatRequestError } from "./im-gateway-chat-requests.js";
 
-export const DESKTOP_CONTROL_PROTOCOL_VERSION = 1;
+export const DESKTOP_CONTROL_PROTOCOL_VERSION = CONTRACTS.desktopControl;
 
 const MAX_DESKTOP_CONTROL_DESCRIPTOR_BYTES = 64 * 1024;
 const DESCRIPTOR_HEALTH_CHECK_INTERVAL_MS = 5_000;
