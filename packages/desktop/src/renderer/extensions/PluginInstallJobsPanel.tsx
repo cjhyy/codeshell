@@ -1,12 +1,11 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { AlertTriangle, CheckCircle2, Clock3, Loader2 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { useT, type TFunction } from "../i18n/I18nProvider";
 
-type PluginInstallJob = Awaited<
-  ReturnType<typeof window.codeshell.listPluginInstallJobs>
->[number];
+type PluginInstallJob = Awaited<ReturnType<typeof window.codeshell.listPluginInstallJobs>>[number];
 
 interface Props {
   jobs: PluginInstallJob[];
@@ -22,7 +21,9 @@ function statusLabel(status: PluginInstallJob["status"], t: TFunction): string {
   return t("ext.market.jobFailed");
 }
 
-function statusBadgeVariant(status: PluginInstallJob["status"]): "secondary" | "info" | "success" | "error" {
+function statusBadgeVariant(
+  status: PluginInstallJob["status"],
+): "secondary" | "info" | "success" | "error" {
   if (status === "installing") return "info";
   if (status === "installed") return "success";
   if (status === "failed") return "error";
@@ -89,6 +90,37 @@ function nextInstalledExpiryDelay(jobs: PluginInstallJob[], now: number): number
 export function PluginInstallJobsPanel({ jobs, onRetry }: Props) {
   const { t } = useT();
   const [now, setNow] = useState(() => Date.now());
+  const [open, setOpen] = useState(false);
+  const triggerRef = useRef<HTMLButtonElement>(null);
+  const contentRef = useRef<HTMLDivElement>(null);
+  const hoverOnly = useRef(false);
+  const restoreFocus = useRef(false);
+  const closeTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const cancelClose = () => {
+    if (closeTimer.current !== null) clearTimeout(closeTimer.current);
+    closeTimer.current = null;
+  };
+  const enter = () => {
+    cancelClose();
+    if (!open) {
+      restoreFocus.current = false;
+      hoverOnly.current = true;
+      setOpen(true);
+    }
+  };
+  const leave = () => {
+    cancelClose();
+    closeTimer.current = setTimeout(() => {
+      if (
+        !hoverOnly.current ||
+        triggerRef.current?.contains(document.activeElement) ||
+        contentRef.current?.contains(document.activeElement)
+      )
+        return;
+      setOpen(false);
+    }, 120);
+  };
+  useEffect(() => () => cancelClose(), []);
 
   useEffect(() => {
     setNow(Date.now());
@@ -103,31 +135,80 @@ export function PluginInstallJobsPanel({ jobs, onRetry }: Props) {
 
   const visibleJobs = useMemo(() => jobs.filter((job) => isVisibleJob(job, now)), [jobs, now]);
   const summary = summaryJob(visibleJobs);
+  const hasVisibleJobs = visibleJobs.length > 0;
+  useEffect(() => {
+    if (hasVisibleJobs) return;
+    cancelClose();
+    hoverOnly.current = false;
+    restoreFocus.current = false;
+    setOpen(false);
+  }, [hasVisibleJobs]);
   if (!summary) return null;
 
   return (
-    <div className="group/install-jobs relative z-30 ml-auto shrink-0">
-      <button
-        type="button"
-        className="flex h-8 max-w-[22rem] items-center gap-2 rounded-md border bg-background px-2.5 text-xs text-foreground shadow-sm transition-colors hover:bg-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-        title={t("ext.market.installJobsHover")}
-        aria-label={t("ext.market.installJobsHover")}
+    <div className="ml-auto min-w-0 max-w-full shrink-0">
+      <Popover
+        open={open}
+        onOpenChange={(next) => {
+          restoreFocus.current = !next && !!contentRef.current?.contains(document.activeElement);
+          cancelClose();
+          hoverOnly.current = false;
+          setOpen(next);
+        }}
       >
-        <StatusIcon status={summary.status} />
-        <span className="min-w-0 truncate">{summaryLabel(summary, t)}</span>
-        <Badge variant="secondary" className="h-5 shrink-0 px-1.5">
-          {visibleJobs.length}
-        </Badge>
-      </button>
-      <div className="pointer-events-none absolute right-0 top-full z-50 pt-2 opacity-0 transition-opacity group-hover/install-jobs:pointer-events-auto group-hover/install-jobs:opacity-100 group-focus-within/install-jobs:pointer-events-auto group-focus-within/install-jobs:opacity-100">
-        <section className="cs-popup-surface w-[min(28rem,calc(100vw-2rem))] rounded-md p-2">
-          <div className="mb-2 flex items-center justify-between gap-3 px-1">
+        <PopoverTrigger asChild>
+          <button
+            ref={triggerRef}
+            onMouseEnter={enter}
+            onMouseLeave={leave}
+            onClick={(event) => {
+              // The first click pins an already-hovered list instead of toggling it shut.
+              if (open && hoverOnly.current) event.preventDefault();
+              hoverOnly.current = false;
+            }}
+            type="button"
+            className="flex h-8 w-full max-w-[22rem] items-center gap-2 rounded-md border bg-background px-2.5 text-xs text-foreground shadow-sm transition-colors hover:bg-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            title={t("ext.market.installJobsHover")}
+            aria-label={t("ext.market.installJobsHover")}
+          >
+            <StatusIcon status={summary.status} />
+            <span className="min-w-0 truncate">{summaryLabel(summary, t)}</span>
+            <Badge variant="secondary" className="h-5 shrink-0 px-1.5">
+              {visibleJobs.length}
+            </Badge>
+          </button>
+        </PopoverTrigger>
+        <PopoverContent
+          ref={contentRef}
+          align="end"
+          aria-label={t("ext.market.installJobsTitle")}
+          className="flex w-[min(28rem,calc(100vw-2rem))] flex-col overflow-hidden p-2"
+          onMouseEnter={cancelClose}
+          onMouseLeave={leave}
+          onFocusCapture={() => {
+            hoverOnly.current = false;
+          }}
+          onOpenAutoFocus={(event) => {
+            if (hoverOnly.current) event.preventDefault();
+          }}
+          onCloseAutoFocus={(event) => {
+            // Passive hover must not move focus away from the user's current field.
+            event.preventDefault();
+            if (restoreFocus.current) triggerRef.current?.focus({ preventScroll: true });
+          }}
+        >
+          <div className="mb-2 flex shrink-0 items-center justify-between gap-3 px-1">
             <div className="text-sm font-medium">{t("ext.market.installJobsTitle")}</div>
-            <Badge variant="secondary">{t("ext.market.installJobsCount", { count: visibleJobs.length })}</Badge>
+            <Badge variant="secondary">
+              {t("ext.market.installJobsCount", { count: visibleJobs.length })}
+            </Badge>
           </div>
-          <ul className="max-h-72 space-y-1 overflow-y-auto pr-1">
+          <ul className="min-h-0 max-h-72 space-y-1 overflow-y-auto overscroll-contain pr-1">
             {visibleJobs.map((job) => (
-              <li key={job.id} className="flex items-center gap-3 rounded-md bg-muted/40 px-2 py-2 text-xs">
+              <li
+                key={job.id}
+                className="flex items-center gap-3 rounded-md bg-muted/40 px-2 py-2 text-xs"
+              >
                 <StatusIcon status={job.status} />
                 <div className="min-w-0 flex-1">
                   <div className="flex min-w-0 items-center gap-2">
@@ -140,15 +221,20 @@ export function PluginInstallJobsPanel({ jobs, onRetry }: Props) {
                   {statusLabel(job.status, t)}
                 </Badge>
                 {job.status === "failed" && (
-                  <Button size="sm" variant="outline" className="h-7 px-2" onClick={() => void onRetry(job.id)}>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="h-7 px-2"
+                    onClick={() => void onRetry(job.id)}
+                  >
                     {t("ext.market.retryInstall")}
                   </Button>
                 )}
               </li>
             ))}
           </ul>
-        </section>
-      </div>
+        </PopoverContent>
+      </Popover>
     </div>
   );
 }

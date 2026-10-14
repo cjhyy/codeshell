@@ -57,9 +57,13 @@ export function Combobox({
         </Button>
       </PopoverTrigger>
       <PopoverContent
-        className={cn("w-[var(--radix-popover-trigger-width)] min-w-[200px]", className)}
+        className={cn(
+          "w-[var(--radix-popover-trigger-width)] min-w-[min(200px,var(--radix-popover-content-available-width),calc(100vw-1.5rem))]",
+          className,
+        )}
       >
-        <Command>
+        {/* Bound the results list so keyboard navigation keeps search visible. */}
+        <Command className="max-h-[calc(var(--radix-popover-content-available-height)-2px)]">
           <CommandInput placeholder={searchPlaceholder} />
           <CommandList>
             <CommandEmpty>{emptyText}</CommandEmpty>

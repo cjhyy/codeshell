@@ -28,6 +28,7 @@ export interface EffectiveSourceAccess {
   kind: string;
   scopes: string[];
   readPolicy: "ask" | "deny";
+  priority?: "normal" | "high";
   status: SourceAccessStatus;
   definition?: SourceDefinition;
   /** Opaque Profile identity/revision for final authority checks, never prompt content. */
@@ -79,6 +80,7 @@ export function resolveEffectiveSourceAccess(
       kind: definition?.kind ?? "unknown",
       scopes: binding.scopes,
       readPolicy: binding.readPolicy,
+      ...(binding.priority ? { priority: binding.priority } : {}),
       status: statusOf(definition, input.credentialStatus, input),
       ...(definition ? { definition } : {}),
       ...(definition?.kind === "link"
@@ -114,16 +116,18 @@ export function resolveEffectiveSourceAccess(
     ? createHash("sha256").update(JSON.stringify(selection)).digest("hex")
     : undefined;
   const rules = selection.profile?.sourceAccess;
-  return access.flatMap((item) => {
-    const rule = rules?.find((candidate) => candidate.sourceId === item.sourceId);
-    if (rules !== undefined && !rule) return [];
-    return [
-      {
-        ...item,
-        scopes: rule ? item.scopes.filter((scope) => rule.scopes.includes(scope)) : item.scopes,
-        readPolicy: item.readPolicy === "deny" || rule?.readPolicy === "deny" ? "deny" : "ask",
-        ...(profileRevision ? { profileRevision } : {}),
-      },
-    ];
-  });
+  return access
+    .flatMap((item) => {
+      const rule = rules?.find((candidate) => candidate.sourceId === item.sourceId);
+      if (rules !== undefined && !rule) return [];
+      return [
+        {
+          ...item,
+          scopes: rule ? item.scopes.filter((scope) => rule.scopes.includes(scope)) : item.scopes,
+          readPolicy: item.readPolicy === "deny" || rule?.readPolicy === "deny" ? "deny" : "ask",
+          ...(profileRevision ? { profileRevision } : {}),
+        } satisfies EffectiveSourceAccess,
+      ];
+    })
+    .sort((left, right) => Number(right.priority === "high") - Number(left.priority === "high"));
 }

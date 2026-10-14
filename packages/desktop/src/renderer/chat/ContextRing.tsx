@@ -1,4 +1,5 @@
-import React, { useRef, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { useAnchoredPopover } from "./useAnchoredPopover";
 import { useT } from "../i18n/I18nProvider";
 
@@ -65,6 +66,20 @@ export function ContextRing({
   const [hover, setHover] = useState(false);
   const anchorRef = useRef<HTMLDivElement>(null);
   const popoverRef = useRef<HTMLDivElement>(null);
+  const closeTimer = useRef<number | null>(null);
+  const cancelClose = () => {
+    if (closeTimer.current !== null) window.clearTimeout(closeTimer.current);
+    closeTimer.current = null;
+  };
+  const openPopover = () => {
+    cancelClose();
+    setHover(true);
+  };
+  const scheduleClose = () => {
+    cancelClose();
+    closeTimer.current = window.setTimeout(() => setHover(false), 120);
+  };
+  useEffect(() => () => cancelClose(), []);
   // Anchored to the viewport with flip + four-edge clamp so the card can't spill
   // off-screen when the TopBar narrows (was `absolute bottom-full right-0`).
   const popoverStyle = useAnchoredPopover(hover, anchorRef, popoverRef, {
@@ -113,8 +128,8 @@ export function ContextRing({
       data-context-used={used}
       data-cache-read={singleTurnCacheReadTokens ?? 0}
       data-cache-created={singleTurnCacheCreationTokens ?? 0}
-      onMouseEnter={() => setHover(true)}
-      onMouseLeave={() => setHover(false)}
+      onMouseEnter={openPopover}
+      onMouseLeave={scheduleClose}
     >
       <div className="leading-none">
         <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`}>
@@ -146,76 +161,80 @@ export function ContextRing({
         {pctLabel}
       </span>
 
-      {hover && (
-        <div
-          ref={popoverRef}
-          style={popoverStyle}
-          className="w-64 rounded-md border bg-popover p-3 text-popover-foreground shadow-md"
-        >
-          {!hasUsage ? (
-            <div className="text-sm">
-              {busy ? t("chat.contextRing.waitingEngine") : t("chat.contextRing.newSession")}
-              <div className="mt-1 text-xs text-muted-foreground">
-                {t("chat.contextRing.max", { value: formatTok(safeMax) })}
-                {!hasDeclaredMax && t("chat.contextRing.maxDefaultNote")}
-              </div>
-            </div>
-          ) : (
-            <>
-              <div className="flex items-center justify-between text-sm">
-                <span className="text-muted-foreground">{t("chat.contextRing.used")}</span>
-                <span>{formatTok(used)}</span>
-              </div>
-              <div className="flex items-center justify-between text-sm">
-                <span className="text-muted-foreground">{t("chat.contextRing.remaining")}</span>
-                <span>{formatTok(remaining)}</span>
-              </div>
-              <div className="flex items-center justify-between text-sm">
-                <span className="text-muted-foreground">{t("chat.contextRing.maxLabel")}</span>
-                <span>
-                  {formatTok(safeMax)}
-                  {!hasDeclaredMax && (
-                    <span className="text-muted-foreground">
-                      {t("chat.contextRing.defaultSuffix")}
-                    </span>
-                  )}
-                </span>
-              </div>
-              <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-muted">
-                <div
-                  className="h-full rounded-full"
-                  style={{ width: `${pct}%`, background: tone }}
-                />
-              </div>
-              {(singleTurnHitRate !== null || cumulativeHitRate !== null) && (
-                <div className="mt-2 space-y-1">
-                  {singleTurnHitRate !== null && (
-                    <div className="flex items-center justify-between gap-3 text-sm">
-                      <span className="min-w-0 text-muted-foreground">
-                        {t("chat.contextRing.cacheHitSingleTurn")}
-                      </span>
-                      <span className="shrink-0">{Math.round(singleTurnHitRate * 100)}%</span>
-                    </div>
-                  )}
-                  {cumulativeHitRate !== null && (
-                    <div className="flex items-center justify-between gap-3 text-sm">
-                      <span className="min-w-0 text-muted-foreground">
-                        {t("chat.contextRing.cacheHitCumulative")}
-                      </span>
-                      <span className="shrink-0">{Math.round(cumulativeHitRate * 100)}%</span>
-                    </div>
-                  )}
+      {hover &&
+        createPortal(
+          <div
+            ref={popoverRef}
+            style={popoverStyle}
+            onMouseEnter={openPopover}
+            onMouseLeave={scheduleClose}
+            className="w-64 rounded-md border bg-popover p-3 text-popover-foreground shadow-md"
+          >
+            {!hasUsage ? (
+              <div className="text-sm">
+                {busy ? t("chat.contextRing.waitingEngine") : t("chat.contextRing.newSession")}
+                <div className="mt-1 text-xs text-muted-foreground">
+                  {t("chat.contextRing.max", { value: formatTok(safeMax) })}
+                  {!hasDeclaredMax && t("chat.contextRing.maxDefaultNote")}
                 </div>
-              )}
-              {!hasDeclaredMax && (
-                <div className="mt-2 text-xs text-muted-foreground">
-                  {t("chat.contextRing.fallbackNote")}
+              </div>
+            ) : (
+              <>
+                <div className="flex items-center justify-between text-sm">
+                  <span className="text-muted-foreground">{t("chat.contextRing.used")}</span>
+                  <span>{formatTok(used)}</span>
                 </div>
-              )}
-            </>
-          )}
-        </div>
-      )}
+                <div className="flex items-center justify-between text-sm">
+                  <span className="text-muted-foreground">{t("chat.contextRing.remaining")}</span>
+                  <span>{formatTok(remaining)}</span>
+                </div>
+                <div className="flex items-center justify-between text-sm">
+                  <span className="text-muted-foreground">{t("chat.contextRing.maxLabel")}</span>
+                  <span>
+                    {formatTok(safeMax)}
+                    {!hasDeclaredMax && (
+                      <span className="text-muted-foreground">
+                        {t("chat.contextRing.defaultSuffix")}
+                      </span>
+                    )}
+                  </span>
+                </div>
+                <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-muted">
+                  <div
+                    className="h-full rounded-full"
+                    style={{ width: `${pct}%`, background: tone }}
+                  />
+                </div>
+                {(singleTurnHitRate !== null || cumulativeHitRate !== null) && (
+                  <div className="mt-2 space-y-1">
+                    {singleTurnHitRate !== null && (
+                      <div className="flex items-center justify-between gap-3 text-sm">
+                        <span className="min-w-0 text-muted-foreground">
+                          {t("chat.contextRing.cacheHitSingleTurn")}
+                        </span>
+                        <span className="shrink-0">{Math.round(singleTurnHitRate * 100)}%</span>
+                      </div>
+                    )}
+                    {cumulativeHitRate !== null && (
+                      <div className="flex items-center justify-between gap-3 text-sm">
+                        <span className="min-w-0 text-muted-foreground">
+                          {t("chat.contextRing.cacheHitCumulative")}
+                        </span>
+                        <span className="shrink-0">{Math.round(cumulativeHitRate * 100)}%</span>
+                      </div>
+                    )}
+                  </div>
+                )}
+                {!hasDeclaredMax && (
+                  <div className="mt-2 text-xs text-muted-foreground">
+                    {t("chat.contextRing.fallbackNote")}
+                  </div>
+                )}
+              </>
+            )}
+          </div>,
+          document.body,
+        )}
     </div>
   );
 }

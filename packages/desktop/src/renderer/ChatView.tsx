@@ -51,6 +51,7 @@ import {
 } from "./chat/localFilePaths";
 import { compressBatch, type ImageDetail } from "./chat/compress";
 import { MentionPopover, type MentionItem } from "./chat/MentionPopover";
+import { ComposerSuggestions } from "./chat/ComposerSuggestions";
 import { detectMention } from "./chat/mention";
 import {
   buildLoopCommandPrompt,
@@ -1901,6 +1902,7 @@ export function ChatView({
             <div className="relative">
               {mention && (
                 <MentionPopover
+                  anchorRef={textareaRef}
                   cwd={configurationAvailable ? conversationRoot : null}
                   rootId={configurationAvailable ? conversationRootId : null}
                   configurationTarget={pluginCommandTarget}
@@ -1919,10 +1921,11 @@ export function ChatView({
                 />
               )}
               {slash && (
-                <div
-                  className="cs-popup-surface absolute bottom-full left-0 z-50 mb-2 max-h-[min(18rem,calc(100vh-120px))] w-80 max-w-[min(20rem,calc(100vw-24px))] overflow-y-auto rounded-md p-1"
-                  role="listbox"
-                  aria-label={t("chat.slash.ariaLabel")}
+                <ComposerSuggestions
+                  anchorRef={textareaRef}
+                  label={t("chat.slash.ariaLabel")}
+                  selected={slashSelected}
+                  items={slashItems}
                 >
                   <div className="px-2 py-1 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
                     {t("chat.slash.commands")}
@@ -1971,7 +1974,7 @@ export function ChatView({
                       {t("chat.slash.noMatch")}
                     </div>
                   )}
-                </div>
+                </ComposerSuggestions>
               )}
               <Textarea
                 ref={textareaRef}

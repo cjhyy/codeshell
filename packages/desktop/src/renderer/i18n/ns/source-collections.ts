@@ -1,6 +1,34 @@
 export const sourceCollections = {
   zh: {
     sourceCollections: {
+      linkedFiles: {
+        title: "从 Link 选择文件",
+        hint: "从已连接账号挑选与项目相关的文件，保存到该项目的数据源。读取沿用原账号授权。",
+        project: "项目",
+        chooseProject: "选择资料所属项目",
+        connection: "已连接服务",
+        loading: "正在读取已连接服务…",
+        empty: "暂无支持文件读取的已连接服务。请先在 Link 中连接账号。",
+        retry: "重试",
+        reload: "重新加载连接",
+        repository: "仓库",
+        chooseRepository: "选择已授权仓库",
+        owner: "仓库所有者",
+        paths: "文件路径",
+        pathsHint: "填写仓库内路径，每行一个。目前支持指定文件，不会自动导入整个仓库。",
+        ref: "分支或版本（可选）",
+        figma: "Figma 文件链接或 Key（每行一个）",
+        figmaHint: "Figma 当前提供文件和第一页的结构摘要；添加时不会预读文件内容。",
+        limitation: "{names} 暂未提供文档正文读取能力，尚不能作为文件资料添加。",
+        unavailable: "{names} 的当前连接尚未提供文件选择能力。支持的服务会自动出现在上方列表中。",
+        priority: "权重",
+        high: "重点资料（优先参考）",
+        normal: "普通资料",
+        priorityHint:
+          "重点资料在相关任务的参考顺序中靠前。模型按需读取，仍遵守项目权限和读取审批。",
+        add: "添加到数据源",
+        tooMany: "每次最多添加 100 个文件，请减少本次选择。",
+      },
       title: "资料集",
       description:
         "将本地文件和静态文件链接归入一个集合，供多个项目引用。原文件保留在原处，不会重复上传。",
@@ -78,6 +106,38 @@ export const sourceCollections = {
   },
   en: {
     sourceCollections: {
+      linkedFiles: {
+        title: "Choose files from Link",
+        hint: "Choose relevant files from connected accounts and save them to a project. Reads use the original account authorization.",
+        project: "Project",
+        chooseProject: "Choose a project",
+        connection: "Connected service",
+        loading: "Loading connected services…",
+        empty: "No connected service supports file reads yet. Connect an account in Link first.",
+        retry: "Retry",
+        reload: "Reload connections",
+        repository: "Repository",
+        chooseRepository: "Choose an authorized repository",
+        owner: "Repository owner",
+        paths: "File paths",
+        pathsHint:
+          "Enter repository paths, one per line. Only explicit files are added; the repository is not imported automatically.",
+        ref: "Branch or revision (optional)",
+        figma: "Figma file URLs or keys (one per line)",
+        figmaHint:
+          "Figma currently provides file and first-page structure summaries. Adding files does not read their content.",
+        limitation:
+          "{names} does not currently provide document body reads and cannot be added as file references yet.",
+        unavailable:
+          "The current {names} connection does not expose file selection. Supported services appear automatically above.",
+        priority: "Priority",
+        high: "Important documents (reference first)",
+        normal: "Standard documents",
+        priorityHint:
+          "Important documents come first for relevant tasks. Content is read on demand, subject to project access and read approval.",
+        add: "Add to data sources",
+        tooMany: "Add up to 100 files at a time. Reduce this selection to continue.",
+      },
       title: "Document collections",
       description:
         "Group local files and static file links for reuse across projects. Original files stay in place without repeated uploads.",
