@@ -2,15 +2,15 @@
 
 > 本文件只保留**未完成**的待办；已完成实现与历史验收见 Git 历史和 [能力盘点](docs/architecture/11-feature-inventory.md)。
 > 分区规则：**小 feature = 体量 M 及以下（M/S/XS），可单会话直接着手**；**大功能升级 = 体量 L**，需先方案设计再分阶段落地。
-> 最近一次核对：2026-10-14。已完成的 Hook 路径、静态 Composer SVG 和 0.9.41 版本准备已随 PR #176/#177/#178 合入。已验收的产品基线为 `bfebd1a4`，首轮自然 [CI 38503640164](https://github.com/cjhyy/codeshell/actions/runs/38503640164) 十二项全部成功。源码合入、正式发行及真实环境验收分别记录；本轮尚未正式发布 0.9.41。完整标准与历史原件见[交付检查点](docs/todo/p0-p1-release-2026-10-12.md)。
+> 最近一次核对：2026-10-14。已完成的 Hook 路径、静态 Composer SVG 和 0.9.41 版本准备已随 PR #176/#177/#178 合入。早先验收的产品基线为 `bfebd1a4`（首轮自然 [CI 38503640164](https://github.com/cjhyy/codeshell/actions/runs/38503640164) 十二项全部成功）；PR #181 合入后 main head 已为 `7047ace6`，其推送 [CI 38534752446](https://github.com/cjhyy/codeshell/actions/runs/38534752446) 十二项全部成功，`bfebd1a4` 的 CI 结论不能沿用。源码合入、正式发行及真实环境验收分别记录；本轮尚未正式发布 0.9.41。完整标准与历史原件见[交付检查点](docs/todo/p0-p1-release-2026-10-12.md)。
 >
 > 按本次核查要求，先收口已完成和进行中的工作，新的完整 Linux 候选、三平台打包、Panel 正式发布及目标部署保持未启动，供用户核查下列剩余项。原 **3 P0 + 7 P1** 完整保留，不把某个已通过子项算作整项完成。
 >
-> **本地 main 未推送的产品修复（2026-10-14 14:20 核对）：** 本地 main 已快进合入 `0b95244f`（设置页能力概览，core settings / skills scanner / desktop capabilities 与 SettingsPage）和 `e0121758`（数据源与资料集添加入口），两者均含测试，但尚未推送到远端、无 PR、无 CI。推送合入后 main 不再是 `bfebd1a4`，P0.1 须按新 head 重新固定输入并重跑十二项 CI。
+> **本地 main 的产品修复已合入（2026-10-14 核对）：** 原本地 main 未推送的 `0b95244f`（设置页能力概览，core settings / skills scanner / desktop capabilities 与 SettingsPage）和 `e0121758`（数据源与资料集添加入口）已从 `origin/main` 以 cherry-pick（`6f968c65`、`19c278d1`，tree 与本地合并 `fe291922` 一致）经 [PR #181](https://github.com/cjhyy/codeshell/pull/181) 合入，[PR CI 38533466752](https://github.com/cjhyy/codeshell/actions/runs/38533466752) 十二项全部成功；文档收口随 [PR #180](https://github.com/cjhyy/codeshell/pull/180) 合入。合入后 main head 为 `7047ace6ea60e893b7908d88b60e56ed6ffeffc7`，推送 [CI 38534752446](https://github.com/cjhyy/codeshell/actions/runs/38534752446) 十二项全部成功。P0.1 验收基线改为该 head，`bfebd1a4` 的 CI 结论不能沿用。本地 main 上另有其他任务的未推送提交（小窗 overlays、linked-focus-sources、responsive-ui-review），不属于本次合入。
 
 ## 本轮 P0 / P1：待核查与继续交付
 
-- [ ] **P0.1 — 完整候选与正式发版。** 完成准确最终源码的 Linux 全业务、恢复、Link、镜像和归档验收，两个原工件均实际上传并完整下载；交付三平台安装包、更新清单和九个公开包。0.9.41 源码及十二项 CI 已完成，候选构建与正式发布未执行。后续 main 变化须重新固定准确输入，不能继承旧 head 的 CI 结论。**已知风险：**上一轮完整 Linux [38384214542](https://github.com/cjhyy/codeshell-services/actions/runs/38384214542) 在 Job 最终 `page-errors` 断言失败，具体错误仍未查明，后续业务／重启／恢复／Link／归档未到达且证据上传因 quota 失败；重跑前先定位该失败并确认证据上传容量，否则可能在同一处再次中断。
+- [ ] **P0.1 — 完整候选与正式发版。** 完成准确最终源码的 Linux 全业务、恢复、Link、镜像和归档验收，两个原工件均实际上传并完整下载；交付三平台安装包、更新清单和九个公开包。0.9.41 源码已完成；验收基线自 `bfebd1a4` 改为 `7047ace6`（PR #181 合入后的 main head，推送 [CI 38534752446](https://github.com/cjhyy/codeshell/actions/runs/38534752446) 十二项全部成功），`bfebd1a4` 的十二项 CI 结论不能沿用，候选构建与正式发布未执行。后续 main 变化仍须重新固定准确输入，不能继承旧 head 的 CI 结论。**已知风险：**上一轮完整 Linux [38384214542](https://github.com/cjhyy/codeshell-services/actions/runs/38384214542) 在 Job 最终 `page-errors` 断言失败，具体错误仍未查明，后续业务／重启／恢复／Link／归档未到达且证据上传因 quota 失败；重跑前先定位该失败并确认证据上传容量，否则可能在同一处再次中断。
 - [ ] **P0.2 — Panel 正式安装与生产更新。** 正式发布 Design 0.18.2、Quant 0.46.2、Download 0.22.7、Video 0.7.3、Starter 0.1.1；完成含 Job 4.2.1 在内六包的真实安装、更新、加载、项目版本绑定与权限验收。五包远端草稿、完整上传下载、194 文件核对及五轮自然 CI 已完成，正式发布与生产更新链未完成。
 - [ ] **P0.3 — 正式包 Pet / Mimi 与插件可靠性。** 用最终正式包验证真实 Electron / worker / Keychain、固定版本真实插件安装审阅与初始化、同 Session 续办和冷重启；完成真实微信长回合、断线与图片验收。早期真实插件 SDK 和 SVG 两次冷启动已通过，保留各自旧输入，仍缺最终正式包证据。
 - [ ] **P1.1 — 六 Panel 的 24 组合完整业务。** 补齐电脑 / 手机 × 本地 / 云端四组合的完整领域流程、真实服务商与项目隔离；实体设备证据单独记录。受控 CI、窄屏浏览器和局部通过项不关闭完整矩阵。
