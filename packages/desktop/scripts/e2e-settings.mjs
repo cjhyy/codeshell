@@ -44,6 +44,23 @@ async function seedFixture() {
   await mkdir(sourceFolder, { recursive: true });
   await writeFile(sourceFile, "Settings document collection fixture.\n");
   await mkdir(join(isolated.codeShellHome, "desktop"), { recursive: true });
+  // Old versions exposed a demo source as a normal user setting.
+  await writeFile(
+    join(isolated.codeShellHome, "sources.json"),
+    JSON.stringify({
+      version: 1,
+      sources: [{ id: "settings-legacy-demo", kind: "mock", label: "Legacy demo fixture" }],
+    }),
+    { mode: 0o600 },
+  );
+  await mkdir(join(projectPath, ".code-shell"), { recursive: true });
+  await writeFile(
+    join(projectPath, ".code-shell", "settings.json"),
+    JSON.stringify({
+      sources: [{ sourceId: "settings-legacy-demo", scopes: ["alpha"], readPolicy: "ask" }],
+    }),
+    { mode: 0o600 },
+  );
   await writeFile(
     join(isolated.codeShellHome, "desktop", "recents.json"),
     `${JSON.stringify(
@@ -289,6 +306,26 @@ async function checkDataSourceAdds(app, win) {
     await collections.getByRole("button", { name, exact: true }).waitFor({ state: "visible" });
   }
   await screenshot(win, "settings-data-source-add.png");
+  assert(
+    (await win.getByText("Legacy demo fixture", { exact: true }).count()) === 0,
+    "The global material library exposed a legacy demo source",
+  );
+  const retiredSources = await win.evaluate(async () => {
+    const project = (await window.codeshell.projectRegistry.list())[0];
+    const access = await window.codeshell.projectSourceAccess(project.id);
+    return {
+      catalogHasDemo: (await window.codeshell.listSourceCatalog()).some(
+        (item) => item.kind === "mock",
+      ),
+      bindings: access.bindings,
+      access: access.access,
+    };
+  });
+  assert(!retiredSources.catalogHasDemo, "The catalog IPC exposed a demo definition");
+  assert(
+    retiredSources.bindings.length === 0 && retiredSources.access.length === 0,
+    "A legacy demo binding left a visible source or phantom upload entry",
+  );
   assert(
     (await win.locator('[name="source-id"], [name="source-link-params"]').count()) === 0,
     "The material library exposed a technical creation form by default",

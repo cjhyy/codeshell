@@ -17,7 +17,6 @@ function errorText(caught: unknown): string {
 }
 
 function kindLabel(t: TFunction, kind: string): string {
-  if (kind === "mock") return t("ext.link.sourcesKindMock");
   if (kind === "mcp-resource") return t("ext.link.sourcesKindMcpResource");
   if (kind === "local-files") return t("projectConfig.dataSources.kindLocalFiles");
   if (kind === "link") return t("ext.link.sourcesKindLink");
@@ -117,7 +116,7 @@ export function DataSourceCatalogSection({
     try {
       const next = await window.codeshell.listSourceCatalog();
       if (active.current && request === loadRequest.current) {
-        setSources(next);
+        setSources(next.filter((source) => source.kind !== "mock"));
         setCatalogLoaded(true);
       }
     } catch (caught) {

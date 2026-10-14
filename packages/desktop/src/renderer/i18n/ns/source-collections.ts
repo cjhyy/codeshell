@@ -18,7 +18,7 @@ export const sourceCollections = {
           "从项目中选择的在线文件和已保存查询，可供其他项目引用。账号与授权在 Link 中管理。",
         empty: "还没有在线资料。进入项目后从已连接服务选择文件；连接账号在 Link 中完成。",
         advanced: "扩展资源与固定查询",
-        advancedHint: "配置 MCP 资源或保存固定查询；已有 MCP 与演示源可继续管理。",
+        advancedHint: "配置 MCP 资源或保存 Link 只读查询，供项目按需引用。",
         createView: "添加资源视图",
         viewHint: "给已有服务资源或固定查询命名，保存后在项目中选择其可见范围。",
         generatedId: "内部标识自动生成，保存视图不会自动授权给项目。",
@@ -110,7 +110,7 @@ export const sourceCollections = {
       working: "正在处理…",
       loading: "正在读取资料集…",
       reload: "重新加载",
-      advanced: "高级数据源（Link / MCP / 演示）",
+      advanced: "高级数据源（Link / MCP）",
       globalHint: "整理可供多个项目引用的文件和在线资料。项目可读范围在各项目中单独配置。",
       projectHint:
         "引用已有资料集或其他源，无需复制文件。项目权限独立保存，数字人权限只能进一步收窄访问范围。",
@@ -153,7 +153,7 @@ export const sourceCollections = {
           "No online documents yet. Open a project to choose files from connected services; connect accounts in Link.",
         advanced: "Extension resources and saved queries",
         advancedHint:
-          "Configure MCP resources or save fixed queries. Existing MCP and demo sources remain manageable.",
+          "Configure MCP resources or save read-only Link queries for projects to reference.",
         createView: "Add resource view",
         viewHint:
           "Name a service resource or fixed query, then choose its visible scope in a project.",
@@ -253,7 +253,7 @@ export const sourceCollections = {
       working: "Working…",
       loading: "Loading collection…",
       reload: "Reload",
-      advanced: "Advanced sources (Link / MCP / demo)",
+      advanced: "Advanced sources (Link / MCP)",
       globalHint:
         "Organize files and online documents for reuse across projects. Configure each project's readable scope separately.",
       projectHint:

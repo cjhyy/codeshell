@@ -74,7 +74,8 @@ interface ConnectorAdapter {
 
 MVP 三个实现，core 不出现任何 Figma/Notion 字样：
 
-1. **mock**：本地 fake（2 scope / 3 resource），零外部依赖，进 CI；纵切 e2e 的载体（DS-13）。
+1. **mock**：本地 fake（2 scope / 3 resource），仅用于自动化测试和纵切 e2e（DS-13）。
+   不属于正式数据源；生产环境不注册其 adapter、不向模型提供其绑定，Desktop 禁止保存、绑定和读取。
 2. **mcp-resource**：包装现有 MCP List/Read；`adapterConfig = { server: string }`。
 3. **local-files（本轮新增，承接"上传"需求）**：
    - **每个 workspace 隐式自带一个内置源**（如 `id: "project-uploads"`，label "项目文件"），**不进全局 catalog**——上传的文件天然项目本地，三层模型通过"隐式定义 + 默认绑定"保持不破。
@@ -118,7 +119,8 @@ Link 内容读取必须同时通过 ReadSource 和 LinkAction 的现有工具执
 - 从项目进入全局资料集管理保留返回项目的入口。创建资料集不会自动绑定项目，
   返回后仍明确选择当前文件范围。
 - 固定 Link 查询与 MCP 资源属于主动展开的扩展配置。新建视图不要求用户填写
-  内部 ID，不提供新建 mock；已有演示/MCP/查询定义继续保留及管理。
+  内部 ID；已有 MCP/查询定义继续保留及管理。演示 mock 仅留在自动化测试中，
+  正式资料库、项目绑定列表与选择器不展示，也不接受其创建、绑定或读取。
   JSON 参数仅属于明确新建固定查询的技术配置，不是普通文件添加流程。
 - 不将 MCP 资源或固定查询宣称为“已选择的文件”：collection 的 scope 是逐文件，
   Link 查询是固定结果视图，MCP 则沿现有服务资源 scope。公开静态文件 URL
@@ -126,6 +128,13 @@ Link 内容读取必须同时通过 ReadSource 和 LinkAction 的现有工具执
 
 本次不迁移 source ID、binding、priority 或 readPolicy，不复制文件、不自动扩大
 项目授权；读取及查询继续走既有审批、撤销检查和 Profile 求交。
+
+历史演示记录可用 `bun scripts/cleanup-legacy-source-mocks.ts --registered-projects`
+先预览，确认非空清单后关闭应用并加 `--apply` 执行。工具仅删除 `kind=mock`
+记录及其精确 ID 在项目设置、数字人 `sourceAccess` 中的引用；真实同 ID 记录、
+普通失效引用和其他字段保留。每个改动文件先备份原始字节再原子替换，目录锁
+按固定顺序获取；引用先清理、全局源清单最后保存，失败可重试。显式 `sourceAccess: []`
+继续保留，不能通过删除策略字段恢复访问。空清单不创建备份、不改写文件。
 
 按项目维度的独立配置页（不是全局设置页里的散块），聚合：
 

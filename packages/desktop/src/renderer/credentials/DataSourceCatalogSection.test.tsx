@@ -85,6 +85,14 @@ const mcpSource: SourceDefinition = {
   enabled: false,
 };
 
+const enabledMcpSource: SourceDefinition = {
+  ...mcpSource,
+  id: "docs-mcp",
+  label: "Docs MCP",
+  adapterConfig: { server: "docs" },
+  enabled: true,
+};
+
 const linkedFileSource: SourceDefinition = {
   id: "linked-readme",
   kind: "link",
@@ -252,7 +260,7 @@ describe("DataSourceCatalogSection", () => {
         listSourceCatalog: async () => {
           listCalls += 1;
           if (listCalls === 2) throw new Error("refresh unavailable");
-          return [collectionSource, mockSource];
+          return [collectionSource, enabledMcpSource];
         },
         saveSourceCatalog: async () => undefined,
       },
@@ -278,7 +286,7 @@ describe("DataSourceCatalogSection", () => {
     let managedConnections = 0;
     Object.assign(window, {
       codeshell: {
-        listSourceCatalog: async () => [linkedFileSource, linkedQuerySource, mockSource, mcpSource],
+        listSourceCatalog: async () => [linkedFileSource, linkedQuerySource, mcpSource],
       },
     });
     const container = await renderSection(undefined, () => {
@@ -294,7 +302,6 @@ describe("DataSourceCatalogSection", () => {
     expect(textOf(online)).toContain("保存的查询");
     expect(textOf(advanced)).not.toContain("acme/docs/README.md");
     expect(textOf(advanced)).not.toContain("Team issues");
-    expect(textOf(advanced)).toContain("Mock Notes");
     expect(textOf(advanced)).toContain("Design MCP");
     expect(textOf(advanced)).not.toContain("管理 Link 连接");
     await click(buttonWithText(container, "管理 Link 连接"));
@@ -468,7 +475,7 @@ describe("DataSourceCatalogSection", () => {
     expect(input("source-label")).toBeUndefined();
     expect(withDataAttribute(container, "BUTTON", "data-source-create")).toHaveLength(0);
   });
-  test("keeps legacy demo and MCP resources manageable inside advanced configuration", async () => {
+  test("hides legacy mock definitions while keeping MCP resources manageable", async () => {
     ensureMiniDom();
     Object.assign(window, {
       codeshell: {
@@ -480,11 +487,21 @@ describe("DataSourceCatalogSection", () => {
 
     const container = await renderSection();
 
-    expect(withDataAttribute(container, "LI", "data-source-definition")).toHaveLength(2);
-    expect(textOf(container)).toContain("mock-notes");
-    expect(textOf(container)).toContain("mock");
-    expect(textOf(container)).toContain("Mock Notes");
-    expect(textOf(container)).toContain("已启用");
+    expect(withDataAttribute(container, "LI", "data-source-definition")).toHaveLength(1);
+    expect(textOf(container)).not.toContain("mock-notes");
+    expect(textOf(container)).not.toContain("mock");
+    expect(textOf(container)).not.toContain("Mock Notes");
+    expect(textOf(container)).not.toContain("演示");
+    expect(
+      withDataAttribute(container, "BUTTON", "data-source-toggle").map(
+        (button) => reactPropsOf(button)["data-source-toggle"],
+      ),
+    ).toEqual([mcpSource.id]);
+    expect(
+      withDataAttribute(container, "BUTTON", "data-source-delete").map(
+        (button) => reactPropsOf(button)["data-source-delete"],
+      ),
+    ).toEqual([mcpSource.id]);
     expect(textOf(container)).toContain("figma");
     expect(textOf(container)).toContain("MCP 资源");
     expect(textOf(container)).toContain("Design MCP");
@@ -668,7 +685,7 @@ describe("DataSourceCatalogSection", () => {
       codeshell: {
         listSourceCatalog: async () => {
           listCalls += 1;
-          return [mockSource];
+          return [enabledMcpSource];
         },
         saveSourceCatalog: async (definition: SourceDefinition) => void saved.push(definition),
         deleteSourceCatalog: async () => undefined,
@@ -683,7 +700,7 @@ describe("DataSourceCatalogSection", () => {
       await flushMicrotasks();
     });
 
-    expect(saved).toEqual([{ ...mockSource, enabled: false }]);
+    expect(saved).toEqual([{ ...enabledMcpSource, enabled: false }]);
     expect(listCalls).toBe(2);
   });
 
@@ -696,7 +713,7 @@ describe("DataSourceCatalogSection", () => {
       codeshell: {
         listSourceCatalog: async () => {
           listCalls += 1;
-          return [mockSource];
+          return [enabledMcpSource];
         },
         saveSourceCatalog: async () => undefined,
         deleteSourceCatalog: async (id: string) => void deleted.push(id),
@@ -718,7 +735,7 @@ describe("DataSourceCatalogSection", () => {
       await flushMicrotasks();
       await flushMicrotasks();
     });
-    expect(deleted).toEqual(["mock-notes"]);
+    expect(deleted).toEqual([enabledMcpSource.id]);
     expect(listCalls).toBe(2);
   });
 

@@ -197,9 +197,9 @@ const snapshot = () =>
         uploads: [],
       };
 const legacy = {
-  id: "legacy_mock",
-  kind: "mock",
-  label: "Legacy demo",
+  id: "legacy_mcp",
+  kind: "mcp-resource",
+  label: "Legacy MCP",
   enabled: true,
   adapterConfig: {},
 };
@@ -315,7 +315,7 @@ Object.assign(window, {
         return pendingSnapshot.promise;
       if (scenario === "project-compatibility")
         return {
-          bindings: [{ sourceId: "legacy_mock", scopes: ["demo"], readPolicy: "deny" }],
+          bindings: [{ sourceId: "legacy_mcp", scopes: ["resources"], readPolicy: "deny" }],
           access: [
             {
               sourceId: "project-uploads",
@@ -326,10 +326,10 @@ Object.assign(window, {
               status: "ok",
             },
             {
-              sourceId: "legacy_mock",
-              label: "Legacy demo",
-              kind: "mock",
-              scopes: ["demo"],
+              sourceId: "legacy_mcp",
+              label: "Legacy MCP",
+              kind: "mcp-resource",
+              scopes: ["resources"],
               readPolicy: "deny",
               status: "ok",
             },
@@ -725,12 +725,12 @@ try {
     assert.equal(bindCalls.length, 0);
   } else if (scenario === "project-compatibility") {
     assert.ok(text(container).includes("old.md"));
-    assert.ok(text(container).includes("Legacy demo"));
+    assert.ok(text(container).includes("Legacy MCP"));
     assert.ok(!text(container).includes("Duplicated uploads source"));
     assert.equal(nodes().filter((node) => props(node)["data-source-upload"]).length, 1);
     assert.equal(nodes().filter((node) => props(node)["data-source-access"]).length, 1);
     await click(button("解绑"));
-    assert.deepEqual(unbindCalls, [["project-a", "legacy_mock"]]);
+    assert.deepEqual(unbindCalls, [["project-a", "legacy_mcp"]]);
   } else if (scenario === "profile-excluded-binding") {
     assert.ok(text(container).includes("当前数字人未开放此源"));
     assert.equal(nodes().filter((node) => props(node)["data-source-access"]).length, 1);
