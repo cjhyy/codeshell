@@ -1,4 +1,5 @@
 import { afterEach, describe, expect, mock, test } from "bun:test";
+import { fileURLToPath } from "node:url";
 import React, { act } from "react";
 import { createRoot, type Root } from "react-dom/client";
 import { ensureMiniDom, flushMicrotasks } from "./test-utils/renderHook";
@@ -375,104 +376,18 @@ describe("ChatView plugin slash commands", () => {
     expect(searchProjectFiles).not.toHaveBeenCalled();
   });
 
-  test("uses the Session target and authoritative root for Mention discovery", async () => {
-    ensureMiniDom();
-    Object.getPrototypeOf(document.createElement("div")).scrollIntoView = () => undefined;
-    const listSkills = mock(async () => [
-      {
-        name: "old-skill",
-        description: "from old root",
-        filePath: "/old-root/.agents/skills/old-skill/SKILL.md",
-        enabled: true,
-      },
-    ]);
-    const inspectAttachments = mock(async () => []);
-    const searchProjectFiles = mock(async () => [
-      { rootId: "old-root", path: "same-relative.md", name: "same-relative.md", kind: "file" },
-      { rootId: "new-root", path: "same-relative.md", name: "same-relative.md", kind: "file" },
-    ]);
-    Object.defineProperty(window, "codeshell", {
-      configurable: true,
-      writable: true,
-      value: {
-        sttAvailable: async () => ({ available: false }),
-        listPluginCommands: async () => [],
-        listSkills,
-        inspectAttachments,
-        searchProjectFiles,
-        onPluginCommandsChanged: () => () => undefined,
-      },
+  test("uses the Session target and authoritative root for Mention discovery", () => {
+    const result = Bun.spawnSync({
+      cmd: [
+        process.execPath,
+        fileURLToPath(new URL("./ChatView.mention-discovery.fixture.tsx", import.meta.url)),
+      ],
+      stdout: "pipe",
+      stderr: "pipe",
     });
-
-    const container = document.createElement("div");
-    root = createRoot(container);
-    function Host() {
-      const [draft, setDraft] = React.useState("");
-      return (
-        <ChatView
-          variant="quickChat"
-          messages={[]}
-          engineSessionId="old-session"
-          onSend={() => undefined}
-          onStop={() => undefined}
-          busy={false}
-          activeProjectId="project-1"
-          permissionMode="plan"
-          onPermissionChange={() => undefined}
-          goalEnabled={false}
-          onGoalToggle={() => undefined}
-          modelOptions={[]}
-          activeModelKey={null}
-          onModelChange={() => undefined}
-          contextTokens={0}
-          projects={[
-            {
-              id: "project-1",
-              name: "Multi root",
-              path: "/new-root",
-              roots: [
-                { id: "old-root", path: "/old-root", name: "Old", addedAt: 1 },
-                { id: "new-root", path: "/new-root", name: "New", addedAt: 2 },
-              ],
-              primaryRootId: "new-root",
-              addedAt: 1,
-            },
-          ]}
-          onSelectProject={() => undefined}
-          onAddProject={() => undefined}
-          configurationTarget={{ sessionId: "old-session" }}
-          configurationAvailable
-          conversationRoot="/old-root"
-          conversationRootId="old-root"
-          draft={draft}
-          onDraftChange={setDraft}
-          attachments={[]}
-          onAttachmentsChange={() => undefined}
-        />
-      );
-    }
-
-    await act(async () => {
-      root?.render(<Host />);
-      await flushMicrotasks();
+    expect({ exitCode: result.exitCode, stderr: result.stderr.toString() }).toEqual({
+      exitCode: 0,
+      stderr: "",
     });
-    const textarea = findComposer(container);
-    await act(async () => {
-      reactProps(textarea).onChange({ target: { value: "@same", selectionStart: 5 } });
-      await flushMicrotasks();
-    });
-    await act(async () => {
-      await new Promise((resolve) => setTimeout(resolve, 80));
-      await flushMicrotasks();
-    });
-
-    expect(listSkills).toHaveBeenCalledWith({ sessionId: "old-session" });
-    expect(inspectAttachments).toHaveBeenCalledWith({ cwd: "/old-root" });
-    expect(searchProjectFiles).toHaveBeenCalledWith("project-1", "same");
-    const renderedText = descendants(container)
-      .map((node) => node.nodeValue ?? node.textContent ?? "")
-      .join("");
-    expect(renderedText).toContain("/old-root/same-relative.md");
-    expect(renderedText).not.toContain("/new-root/same-relative.md");
   });
 });

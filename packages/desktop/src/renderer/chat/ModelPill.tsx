@@ -37,7 +37,7 @@ interface Props {
   portal?: boolean;
 }
 
-export function ModelPill({ activeKey, options, onSelect, disabled, portal = false }: Props) {
+export function ModelPill({ activeKey, options, onSelect, disabled, portal = true }: Props) {
   const { t } = useT();
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
@@ -46,6 +46,7 @@ export function ModelPill({ activeKey, options, onSelect, disabled, portal = fal
   const popoverStyle = useAnchoredPopover(open, anchorRef, popoverRef, {
     align: "end",
     preferredSide: "top",
+    maxHeight: "20rem",
   });
 
   useEffect(() => {
@@ -80,9 +81,7 @@ export function ModelPill({ activeKey, options, onSelect, disabled, portal = fal
       aria-label={t("chat.model.select")}
     >
       {options.length === 0 ? (
-        <li className="px-2 py-1.5 text-sm text-muted-foreground">
-          {t("chat.model.noModels")}
-        </li>
+        <li className="px-2 py-1.5 text-sm text-muted-foreground">{t("chat.model.noModels")}</li>
       ) : (
         options.map((o) => (
           <li key={o.key} role="none">
