@@ -8,11 +8,17 @@ breaking.
 
 ## [Unreleased]
 
+## [0.9.42] - 2026-10-15
+
 ### Added
 
 - Add a minimal `initialize` handshake to AgentServer that returns the protocol
   version and the contract table, and export `CONTRACTS` from core.
 - Include `contracts` in the serve `/health` response.
+- Combine account actions and Settings in a grouped sidebar menu with direct
+  access to common settings pages.
+- Make the shared source library and each project's selected sources separate
+  destinations, with a project chooser and a return path between them.
 
 ### Changed
 
@@ -20,12 +26,21 @@ breaking.
   Proxy variables, `NODE_PATH`, `PYTHONPATH`, `VIRTUAL_ENV`, `CONDA_*` and the
   cwd `.env` no longer reach REPL; set them in project env instead.
 - Add Windows and CA-certificate variables to the shared shell allowlist.
+- Explicit project env, including configured credential env exposures, also
+  reaches REPL. REPL remains unsandboxed; Bash with sandboxing disabled still
+  inherits the full host environment.
+- Retire demonstration data sources from production and provide an opt-in
+  cleanup script for legacy source mock data.
 
 ### Fixed
 
 - Serve now answers Desktop-only host requests with `unsupported` immediately
   instead of hanging, and no longer broadcasts worker `desktop/*` requests to
   Web tabs.
+- Keep account, settings, source dialogs and context menus usable in narrow
+  windows and themed surfaces, including focus, scrolling and menu handoff.
+- Restore capability overview content and source add workflows, and open the
+  Link account page from the source settings destination.
 
 ## [0.9.40] - 2026-10-13
 
