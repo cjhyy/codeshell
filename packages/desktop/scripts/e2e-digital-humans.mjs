@@ -17,6 +17,7 @@ import {
   findCodeShellWindow,
   launchCodeShellElectron,
   makeIsolatedElectronHome,
+  navigateSettingsMenu,
 } from "./electron-harness.mjs";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
@@ -1294,11 +1295,7 @@ require("node:module").syncBuiltinESMExports();
       content: "Lead with the outcome, then list only the decisions and next actions.",
     });
   });
-  await win
-    .locator("aside")
-    .getByRole("button", { name: /^设置$|^Settings$/i })
-    .click();
-  await win.getByRole("menuitem", { name: /打开设置|Open settings/i }).click();
+  await navigateSettingsMenu(win, /^(设置|Settings)$/);
   const settingsNavigation = win.getByRole("navigation", {
     name: /设置导航|Settings navigation/i,
   });

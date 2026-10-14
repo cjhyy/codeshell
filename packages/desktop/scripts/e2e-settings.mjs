@@ -17,6 +17,7 @@ import {
   findCodeShellWindow,
   launchCodeShellElectron,
   makeIsolatedElectronHome,
+  openSettingsMenu,
 } from "./electron-harness.mjs";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
@@ -109,15 +110,11 @@ async function dismissTrustDialog(win) {
 
 async function openSettings(win) {
   await dismissTrustDialog(win);
-  const settings = win.getByRole("button", { name: /设置|Settings/i }).last();
-  await settings.waitFor({ state: "visible", timeout: 20_000 });
-  await settings.click();
-  const menu = win.getByRole("menu");
-  await menu.waitFor({ state: "visible", timeout: 10_000 });
+  const menu = await openSettingsMenu(win);
   const menuLabels = await menu.getByRole("menuitem").allTextContents();
   assert(
-    /打开设置|Open settings/i.test(menuLabels.at(-1) ?? ""),
-    "Open settings is not the last menu action",
+    /^(设置|Settings)$/.test(menuLabels[0]?.trim() ?? ""),
+    "Settings is not the first menu action",
   );
   const language = menu.getByRole("menuitem", { name: /切换语言|Switch language/i });
   await language.hover();
@@ -130,8 +127,7 @@ async function openSettings(win) {
   await screenshot(win, "settings-menu-language.png");
   await language.click();
   await win.getByRole("menuitemradio").first().waitFor({ state: "hidden", timeout: 10_000 });
-  const open = win.getByText(/打开设置|Open settings/i).first();
-  if (await open.isVisible().catch(() => false)) await open.click();
+  await menu.getByRole("menuitem", { name: /^(设置|Settings)$/ }).click();
   await win.waitForFunction(() => {
     try {
       return (

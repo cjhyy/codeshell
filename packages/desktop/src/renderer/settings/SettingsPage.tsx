@@ -23,6 +23,7 @@ import {
   LayoutDashboard,
   LayoutTemplate,
   Smartphone,
+  Monitor,
   MessageSquare,
   Gauge,
   UsersRound,
@@ -36,6 +37,7 @@ import { DataSourcesModule } from "./DataSourcesModule";
 import { MemorySection } from "./MemorySection";
 import { McpSection } from "./McpSection";
 import { GeneralSection } from "./GeneralSection";
+import { ComputerUseSettings } from "./ComputerUseSettings";
 import { ExtensionsPage } from "../extensions/ExtensionsPage";
 import { ProjectInstructionsSection } from "../project-config/ProjectInstructionsSection";
 import { ProjectOverviewSection } from "./ProjectOverviewSection";
@@ -73,6 +75,7 @@ import { NotificationHistory } from "../ui/NotificationHistory";
 export type SettingsModuleId =
   | "project-overview"
   | "general"
+  | "computer-use"
   | "appearance"
   | "config"
   | "model-catalog"
@@ -329,6 +332,7 @@ function buildModuleGroups(t: TFunction): ModuleGroup[] {
           Icon: ShieldCheck,
           scopeControl: "internal",
         },
+        { id: "computer-use", label: t("settingsX.page.computerUse"), Icon: Monitor },
         { id: "conversation", label: t("settingsX.page.conversation"), Icon: MessageSquare },
         { id: "context", label: t("settingsX.page.context"), Icon: Gauge },
         { id: "mobile-remote", label: t("settingsX.page.mobileRemote"), Icon: Smartphone },
@@ -598,12 +602,12 @@ export function SettingsPage({
   );
 
   return (
-    <div className="h-full min-w-0 bg-background">
-      <div className="flex h-full max-[720px]:flex-col">
+    <div className="h-full min-h-0 min-w-0 overflow-hidden bg-background">
+      <div className="flex h-full min-h-0 max-[720px]:flex-col">
         <nav
           aria-label={t("settingsX.page.settingsNav")}
           className={cn(
-            "flex w-60 shrink-0 flex-col border-r border-border/70 bg-muted/25 max-[1100px]:w-56 max-[720px]:hidden",
+            "flex min-h-0 w-60 shrink-0 flex-col border-r border-border/70 bg-muted/25 max-[1100px]:w-56 max-[720px]:hidden",
             showTrafficLightGutter ? "pt-8" : "pt-3",
           )}
         >
@@ -633,7 +637,9 @@ export function SettingsPage({
             <SettingsSearchField inputRef={searchRef} query={query} onChange={setQuery} />
           </div>
 
-          <div className="min-h-0 flex-1 overflow-y-auto px-3 pb-4 pt-3">{moduleNavigation}</div>
+          <div className="min-h-0 flex-1 overflow-y-auto [scrollbar-gutter:stable] px-3 pb-4 pt-3">
+            {moduleNavigation}
+          </div>
         </nav>
 
         <div
@@ -665,16 +671,17 @@ export function SettingsPage({
           {query.trim() && (
             <nav
               aria-label={t("settingsX.page.settingsNav")}
-              className="max-h-[40vh] overflow-y-auto rounded-xl border border-border/70 bg-background p-2"
+              className="max-h-[40vh] overflow-y-auto [scrollbar-gutter:stable] rounded-xl border border-border/70 bg-background p-2"
             >
               {moduleNavigation}
             </nav>
           )}
         </div>
 
+        {/* Reserve scrollbar space while modules load or search results change. */}
         <main
           ref={contentRef}
-          className="min-w-0 flex-1 overflow-y-auto px-8 pb-10 pt-8 max-[1100px]:px-6 max-[720px]:px-4 max-[720px]:pt-5"
+          className="min-h-0 min-w-0 flex-1 overflow-y-auto [scrollbar-gutter:stable] px-8 pb-10 pt-8 max-[1100px]:px-6 max-[720px]:px-4 max-[720px]:pt-5"
         >
           <div className="mx-auto w-full max-w-5xl">
             <div className="mb-7 rounded-2xl border border-border/70 bg-muted/20 p-5 max-[720px]:p-4">
@@ -733,6 +740,7 @@ export function SettingsPage({
                   activeProjectPath={scopeProjectPath ?? activeProjectPath}
                 />
               )}
+              {active === "computer-use" && <ComputerUseSettings />}
               {active === "appearance" && <AppearanceSection />}
               {active === "config" && (
                 <>

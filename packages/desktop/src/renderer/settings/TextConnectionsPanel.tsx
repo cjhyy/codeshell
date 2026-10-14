@@ -124,19 +124,30 @@ export function TextConnectionsPanel({ scope, activeProjectPath, tag = "text", t
       }}
       className="mb-6 flex min-w-0 flex-col gap-3 border-0 p-0"
     >
-      {pending ? (
-        <p role="status" className="text-xs text-muted-foreground">
-          {t("settingsX.textConn.updating")}
-        </p>
-      ) : null}
-      <header className="flex items-center justify-between">
-        <h3
-          ref={headingRef}
-          tabIndex={-1}
-          className="m-0 text-[0.95rem] font-semibold text-foreground"
-        >
-          {heading}
-        </h3>
+      <header className="flex items-center justify-between gap-3">
+        <div className="flex min-w-0 items-center gap-2">
+          <h3
+            ref={headingRef}
+            tabIndex={-1}
+            className="m-0 text-[0.95rem] font-semibold text-foreground"
+          >
+            {heading}
+          </h3>
+          {/* Reserve the small status slot so background reads do not move the cards. */}
+          <span
+            role={pending || loading ? "status" : undefined}
+            className="flex size-4 shrink-0 items-center justify-center"
+          >
+            {(pending || loading) && (
+              <>
+                <Loader2 size={14} className="animate-spin text-muted-foreground" aria-hidden />
+                <span className="sr-only">
+                  {t(pending ? "settingsX.textConn.updating" : "settingsX.textConn.loading")}
+                </span>
+              </>
+            )}
+          </span>
+        </div>
         <DropdownMenu>
           <DropdownMenuTrigger asChild disabled={!hasLoaded}>
             <Button ref={addButtonRef} disabled={!hasLoaded}>
@@ -170,12 +181,6 @@ export function TextConnectionsPanel({ scope, activeProjectPath, tag = "text", t
         </DropdownMenu>
       </header>
 
-      {loading && (
-        <p role="status" className="flex items-center gap-2 text-xs text-muted-foreground">
-          <Loader2 size={14} className="animate-spin" aria-hidden />
-          {t("settingsX.textConn.loading")}
-        </p>
-      )}
       {loadFailed && (
         <div
           role="alert"

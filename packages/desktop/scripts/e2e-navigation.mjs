@@ -239,8 +239,8 @@ try {
   await waitForToggleFocus(win);
 
   drawer = await openDrawer();
-  await drawer.getByRole("button", { name: "设置", exact: true }).click();
-  const settingsMenu = win.getByRole("menu", { name: "设置", exact: true });
+  await drawer.locator('button[aria-haspopup="menu"]').click();
+  const settingsMenu = win.getByRole("menu", { name: "账号管理", exact: true });
   await settingsMenu.waitFor();
   const language = settingsMenu.getByRole("menuitem", { name: "切换语言", exact: true });
   const languageMenu = win.getByRole("menu", { name: "切换语言", exact: true });
@@ -252,7 +252,7 @@ try {
   await expectMenuInsideWindow(win, "切换语言");
   await languageMenu.getByRole("menuitemradio").first().hover();
   await settingsMenu
-    .getByRole("menuitem", { name: /^打开设置/ })
+    .getByRole("menuitem", { name: "设置", exact: true })
     .hover({ position: { x: 12, y: 12 } });
   await win.waitForTimeout(400); // Beyond Radix's pointer grace and exit animation.
   assert(await languageMenu.isVisible(), "Hovering past a child keeps the language menu open");
@@ -273,18 +273,21 @@ try {
   await languageMenu.waitFor();
   await languageMenu.getByRole("menuitemradio", { name: "English", exact: true }).click();
   await settingsMenu.waitFor({ state: "hidden" });
-  const englishSettings = win.getByRole("button", { name: "Settings", exact: true });
-  await englishSettings.waitFor();
-  await win.waitForFunction(() => document.activeElement?.textContent?.trim() === "Settings");
-  await englishSettings.click();
+  const englishAccount = win.getByRole("button", { name: "Sign in to CodeShell", exact: true });
+  await englishAccount.waitFor();
+  await win.waitForFunction(
+    (node) => document.activeElement === node,
+    await englishAccount.elementHandle(),
+  );
+  await englishAccount.click();
   await win.getByRole("menuitem", { name: "Activity", exact: true }).click();
   await expectMenuInsideWindow(win, "Activity");
   await screenshot(win, "navigation-narrow-activity-en.png");
   await win.keyboard.press("Escape");
   await win.getByRole("menuitem", { name: "Switch language", exact: true }).click();
   await win.getByRole("menuitemradio", { name: "中文", exact: true }).click();
-  await win.getByRole("button", { name: "设置", exact: true }).waitFor();
-  await drawer.getByRole("button", { name: "设置", exact: true }).click();
+  await win.getByRole("button", { name: "登录账号", exact: true }).waitFor();
+  await drawer.locator('button[aria-haspopup="menu"]').click();
   await settingsMenu.waitFor();
   const activity = settingsMenu.getByRole("menuitem", { name: "活动记录", exact: true });
   await activity.focus();
@@ -308,15 +311,15 @@ try {
   await win.keyboard.press("Escape");
   await settingsMenu.waitFor({ state: "hidden" });
   assert(await drawer.isVisible(), "Escape dismisses settings options before navigation");
-  await drawer.getByRole("button", { name: "设置", exact: true }).click();
+  await drawer.locator('button[aria-haspopup="menu"]').click();
   await settingsMenu.getByRole("menuitem", { name: "活动记录", exact: true }).click();
   await activityMenu.getByRole("menuitem", { name: "日志", exact: true }).click();
   await drawer.waitFor({ state: "hidden" });
   await win.getByRole("heading", { name: "日志", level: 1, exact: true }).waitFor();
   await win.waitForFunction(() => getComputedStyle(document.body).pointerEvents !== "none");
   drawer = await openDrawer();
-  await drawer.getByRole("button", { name: "设置", exact: true }).click();
-  await settingsMenu.getByRole("menuitem", { name: /^打开设置/ }).click();
+  await drawer.locator('button[aria-haspopup="menu"]').click();
+  await settingsMenu.getByRole("menuitem", { name: "设置", exact: true }).click();
   await drawer.waitFor({ state: "hidden" });
   const backToApp = win.getByRole("button", { name: "返回应用", exact: true });
   await backToApp.waitFor();
