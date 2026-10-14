@@ -63,7 +63,7 @@ const mcpResourceAdapter = defaultMcpResourceAdapter();
 
 /** Registering the same adapter objects is safe to repeat across test/host imports. */
 export function registerBuiltinSourceAdapters(): void {
-  registerConnectorAdapter(mockAdapter);
+  if (process.env.NODE_ENV === "test") registerConnectorAdapter(mockAdapter);
   registerConnectorAdapter(localFilesAdapter);
   registerConnectorAdapter(mcpResourceAdapter);
   registerConnectorAdapter(linkSourceAdapter);

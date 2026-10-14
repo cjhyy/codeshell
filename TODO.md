@@ -29,6 +29,7 @@ P2 / P3、统一工作台等后续增强和新增第三方 Link / OAuth / token 
 
 ## 小 feature（体量 M 及以下）
 
+- **Desktop 旧聊天历史恢复基线超限**（M，待修复）。2026-10-14 18:51–18:56（UTC+08:00），0.9.40 主聊天页反复记录 `Output recovery has no exact legacy base`；已核实真实样本的旧基线标记位于 transcript 第 1200 行、结束字节 1,963,815，超过 `readOutputJournalLegacyBase` 的 1 MiB 扫描上限，导致历史恢复失败。当前仓库源码仍有同一限制；本次采样未确认整页主线程卡死，18:56 已收到完整回复并回到空闲。修复需保留有界读取与完整基线校验，验收覆盖标记位于 1 MiB 边界前后、单条记录跨界、失败重试、历史与后续流式输出衔接、刷新及冷重启恢复；损坏基线继续显式失败并保全原数据。原始日志与个人会话标识保留在本次排查聊天，不写入公开待办。
 - **Pet 可靠性修复的真实环境验收**（S，部署验证；正式包部分与 P0.3 同一验收，状态以 P0.3 为准）。续办、插件初始化/故障反馈、预算终态、图片保留和提示约束已修复并做本地回归；9 月 21 日补齐微信纯图片路由、Mimi 长回合等待、断线保留消息与工具参数损坏反馈。10 月 12 日已用新构建的真实 Electron／stdio worker 验证 Pet 同 Session 连续输入、普通 Work 同 Session 续办、冷启动聊天／记忆恢复、合成固定版本插件初始化和原生 safeStorage，见[运行时验收与回执](docs/todo/pet-built-runtime-acceptance-2026-10-12.md)。仍需真实插件与固定版本／预安装发行入口、真实微信长回合及该环境的自动 Pet Work 续办、正式安装包验收。详见 [逐项 TODO 与证据](docs/todo/pet-work-reliability-audit-2026-09-20.md)、[技术方案](docs/todo/pet-work-reliability-design-2026-09-20.md) 和 [微信回合修复与回归](docs/todo/mimi-wechat-turn-lifecycle-2026-09-21.md)。不把本机隔离验收当作已部署，不重放真实账号写操作。
 - **Link 真账号 / 真 token 验证**（S，验证任务；GitHub 严格单仓库读取与账号 authority 归 P1.3，其余 provider 留在此项）。按 2026-10-09 用户要求，新增第三方应用、OAuth 授权、token 配置与接入部署暂缓，继续保留未完成。各 provider 仍需授权账号验证 action 响应与错误形状；现有 stub、契约和本地 CLI 测试不能代替真实账号验收。执行时按 provider 单独记录，不写入用户真实数据来代替只读验证。
 

@@ -22,7 +22,12 @@ import {
   uploadFiles,
   workspaceAccess,
 } from "./sources-service.js";
-import { localFilesAdapter, localFilesSourceFor } from "@cjhyy/code-shell-core/internal";
+import {
+  localFilesAdapter,
+  localFilesSourceFor,
+  saveSourceDefinition,
+} from "@cjhyy/code-shell-core/internal";
+import { SettingsManager } from "@cjhyy/code-shell-core";
 
 let home: string;
 let cwd: string;
@@ -47,8 +52,8 @@ afterEach(() => {
 
 describe("desktop sources service", () => {
   test("catalog save/list/delete round-trips through the global store", () => {
-    catalogSave({ id: "zeta", kind: "mock", label: "Zeta" });
-    catalogSave({ id: "alpha", kind: "mock", label: "Alpha", enabled: false });
+    catalogSave({ id: "zeta", kind: "mcp-resource", label: "Zeta" });
+    catalogSave({ id: "alpha", kind: "mcp-resource", label: "Alpha", enabled: false });
 
     expect(catalogList().map((definition) => definition.id)).toEqual(["alpha", "zeta"]);
     expect(catalogList()[0]).toMatchObject({ adapterConfig: {}, enabled: false });
@@ -58,18 +63,18 @@ describe("desktop sources service", () => {
   });
 
   test("bind/unbind updates workspace bindings and effective access", () => {
-    catalogSave({ id: "research", kind: "mock", label: "Research" });
+    catalogSave({ id: "research", kind: "mcp-resource", label: "Research" });
 
-    bind(cwd, { sourceId: "research", scopes: ["alpha"], readPolicy: "ask" });
+    bind(cwd, { sourceId: "research", scopes: ["resources"], readPolicy: "ask" });
 
     const bound = workspaceAccess(cwd);
     expect(bound.bindings).toEqual([
-      { sourceId: "research", scopes: ["alpha"], readPolicy: "ask" },
+      { sourceId: "research", scopes: ["resources"], readPolicy: "ask" },
     ]);
     expect(bound.access.find((item) => item.sourceId === "research")).toMatchObject({
       label: "Research",
-      kind: "mock",
-      scopes: ["alpha"],
+      kind: "mcp-resource",
+      scopes: ["resources"],
       status: "ok",
     });
 
@@ -79,13 +84,75 @@ describe("desktop sources service", () => {
   });
 
   test("lists adapter scopes for a catalog source", async () => {
-    catalogSave({ id: "research", kind: "mock", label: "Research" });
+    catalogSave({ id: "research", kind: "mcp-resource", label: "Research" });
 
-    expect(await listScopes("research")).toEqual([
-      { id: "alpha", label: "Alpha" },
-      { id: "beta", label: "Beta" },
-    ]);
+    expect(await listScopes("research")).toEqual([{ id: "resources", label: "Resources" }]);
     await expect(listScopes("missing")).rejects.toThrow(/source.*missing/i);
+  });
+
+  test("rejects legacy demo sources at every production editing boundary", async () => {
+    expect(() => catalogSave({ id: "demo", kind: "mock", label: "Demo" })).toThrow(/仅用于测试/);
+    saveSourceDefinition({
+      id: "demo",
+      kind: "mock",
+      label: "Demo",
+      adapterConfig: {},
+      enabled: true,
+    });
+    expect(() => bind(cwd, { sourceId: "demo", scopes: ["alpha"], readPolicy: "ask" })).toThrow(
+      /仅用于测试/,
+    );
+    await expect(listScopes("demo")).rejects.toThrow(/仅用于测试/);
+    expect(catalogList()).toEqual([]);
+    new SettingsManager(cwd, "full").saveProjectSetting(
+      "sources",
+      [{ sourceId: "demo", scopes: ["alpha"], readPolicy: "ask" }],
+      cwd,
+    );
+    expect(workspaceAccess(cwd)).toEqual({ bindings: [], access: [], uploads: [] });
+    // Explicit deletion remains available for legacy maintenance.
+    catalogDelete("demo");
+    expect(catalogList()).toEqual([]);
+  });
+
+  test("omits exact demo definitions and bindings while retaining real and dangling references", () => {
+    saveSourceDefinition({
+      id: "demo",
+      kind: "mock",
+      label: "Demo",
+      adapterConfig: {},
+      enabled: true,
+    });
+    catalogSave({
+      id: "mock-real-docs",
+      kind: "mcp-resource",
+      label: "Real docs",
+      adapterConfig: { server: "docs" },
+      enabled: true,
+    });
+    new SettingsManager(cwd, "full").saveProjectSetting(
+      "sources",
+      [
+        { sourceId: "demo", scopes: ["alpha"], readPolicy: "ask" },
+        { sourceId: "mock-real-docs", scopes: ["resources"], readPolicy: "deny", priority: "high" },
+        { sourceId: "removed-real-source", scopes: ["resources"], readPolicy: "deny" },
+      ],
+      cwd,
+    );
+    expect(catalogList().map((source) => source.id)).toEqual(["mock-real-docs"]);
+    const snapshot = workspaceAccess(cwd);
+    expect(snapshot.bindings.map((binding) => binding.sourceId)).toEqual([
+      "mock-real-docs",
+      "removed-real-source",
+    ]);
+    expect(snapshot.access.some((access) => access.sourceId === "demo")).toBe(false);
+    expect(snapshot.access.find((access) => access.sourceId === "mock-real-docs")).toMatchObject({
+      readPolicy: "deny",
+      priority: "high",
+    });
+    expect(
+      snapshot.access.find((access) => access.sourceId === "removed-real-source"),
+    ).toMatchObject({ status: "dangling" });
   });
 
   test("copies selected files by basename, lists metadata, overwrites, and deletes", () => {

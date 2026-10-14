@@ -200,7 +200,7 @@ async function dismissTrust() {
 }
 
 async function appearance() {
-  await navigateSettingsMenu(win, /^(打开设置|Open settings)/);
+  await navigateSettingsMenu(win, /^(设置|Settings)$/);
   await win.getByRole("button", { name: /^(外观|Appearance)$/ }).click();
   await win.locator("[data-theme-import]").waitFor({ state: "visible" });
 }

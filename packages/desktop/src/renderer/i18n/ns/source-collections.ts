@@ -1,6 +1,35 @@
 export const sourceCollections = {
   zh: {
     sourceCollections: {
+      workflow: {
+        library: "可复用资料库",
+        manageConnections: "管理 Link 连接",
+        projectAccess: "配置项目可读资料",
+        projectAccessHint:
+          "资料库中的文件不会自动对项目开放。进入项目后，选择可读文件、引用资料集，或从已连接服务添加在线资料。",
+        chooseProject: "选择要配置的项目",
+        openProject: "管理项目数据源",
+        returnProject: "返回 {project} 数据源",
+        noProjects: "添加项目后，可为项目选择允许读取的资料。",
+      },
+      catalog: {
+        title: "已连接服务的资料",
+        description:
+          "从项目中选择的在线文件和已保存查询，可供其他项目引用。账号与授权在 Link 中管理。",
+        empty: "还没有在线资料。进入项目后从已连接服务选择文件；连接账号在 Link 中完成。",
+        advanced: "扩展资源与固定查询",
+        advancedHint: "配置 MCP 资源或保存 Link 只读查询，供项目按需引用。",
+        createView: "添加资源视图",
+        viewHint: "给已有服务资源或固定查询命名，保存后在项目中选择其可见范围。",
+        generatedId: "内部标识自动生成，保存视图不会自动授权给项目。",
+        chooseKind: "资源类型",
+        cancel: "取消",
+        connectionLoading: "正在读取可用连接…",
+        connectionEmpty: "还没有可用的 Link 连接。请先连接账号。",
+        connectionRetry: "重新加载连接",
+        connectionPlaceholder: "选择已连接账号",
+        actionPlaceholder: "选择只读查询",
+      },
       linkedFiles: {
         title: "从 Link 选择文件",
         hint: "从已连接账号挑选与项目相关的文件，保存到该项目的数据源。读取沿用原账号授权。",
@@ -81,9 +110,8 @@ export const sourceCollections = {
       working: "正在处理…",
       loading: "正在读取资料集…",
       reload: "重新加载",
-      advanced: "高级数据源（Link / MCP / 演示）",
-      globalHint:
-        "添加可复用的本地文件、文件夹或文档链接。在项目配置的数据源中，选择该项目可访问的资料。",
+      advanced: "高级数据源（Link / MCP）",
+      globalHint: "整理可供多个项目引用的文件和在线资料。项目可读范围在各项目中单独配置。",
       projectHint:
         "引用已有资料集或其他源，无需复制文件。项目权限独立保存，数字人权限只能进一步收窄访问范围。",
       kind: "资料集",
@@ -106,6 +134,39 @@ export const sourceCollections = {
   },
   en: {
     sourceCollections: {
+      workflow: {
+        library: "Reusable document library",
+        manageConnections: "Manage Link connections",
+        projectAccess: "Configure project documents",
+        projectAccessHint:
+          "Library files are not automatically available to projects. Open a project to choose readable files, reference collections, or add documents from connected services.",
+        chooseProject: "Choose a project to configure",
+        openProject: "Manage project data sources",
+        returnProject: "Return to {project} data sources",
+        noProjects: "Add a project to choose which documents it may read.",
+      },
+      catalog: {
+        title: "Documents from connected services",
+        description:
+          "Online files selected in projects and saved queries can be referenced by other projects. Manage accounts and authorization in Link.",
+        empty:
+          "No online documents yet. Open a project to choose files from connected services; connect accounts in Link.",
+        advanced: "Extension resources and saved queries",
+        advancedHint:
+          "Configure MCP resources or save read-only Link queries for projects to reference.",
+        createView: "Add resource view",
+        viewHint:
+          "Name a service resource or fixed query, then choose its visible scope in a project.",
+        generatedId:
+          "An internal ID is generated automatically. Saving a view does not grant project access.",
+        chooseKind: "Resource type",
+        cancel: "Cancel",
+        connectionLoading: "Loading available connections…",
+        connectionEmpty: "No usable Link connections yet. Connect an account first.",
+        connectionRetry: "Reload connections",
+        connectionPlaceholder: "Choose a connected account",
+        actionPlaceholder: "Choose a read-only query",
+      },
       linkedFiles: {
         title: "Choose files from Link",
         hint: "Choose relevant files from connected accounts and save them to a project. Reads use the original account authorization.",
@@ -192,9 +253,9 @@ export const sourceCollections = {
       working: "Working…",
       loading: "Loading collection…",
       reload: "Reload",
-      advanced: "Advanced sources (Link / MCP / demo)",
+      advanced: "Advanced sources (Link / MCP)",
       globalHint:
-        "Add reusable local files, folders, or file URLs. Choose what a project may access in its data source settings.",
+        "Organize files and online documents for reuse across projects. Configure each project's readable scope separately.",
       projectHint:
         "Reference existing collections or other sources without copying files. Project permissions are saved independently; digital human permissions can only narrow access further.",
       kind: "Collection",

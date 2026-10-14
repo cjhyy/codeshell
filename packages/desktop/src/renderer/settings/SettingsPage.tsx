@@ -363,6 +363,8 @@ interface Props {
   onBack: () => void;
   /** Jump to the full digital-humans page (market / teams). */
   onOpenDigitalHumans?: () => void;
+  /** Open account connections directly on the Link category. */
+  onOpenLink?: () => void;
 }
 
 /**
@@ -385,6 +387,7 @@ export function SettingsPage({
   isFullscreen,
   onBack,
   onOpenDigitalHumans,
+  onOpenLink,
 }: Props) {
   const { t } = useT();
   const MODULE_GROUPS = useMemo(() => buildModuleGroups(t), [t]);
@@ -413,6 +416,8 @@ export function SettingsPage({
   const [scopeState, setScopeState] = useState<SettingsScope>(() =>
     initialProjectPath ? { kind: "project", path: initialProjectPath } : { kind: "user" },
   );
+  // The library is a temporary stop when adding reusable documents for a project.
+  const [dataSourcesReturnProjectId, setDataSourcesReturnProjectId] = useState<string | null>(null);
   const scope: "user" | "project" = scopeState.kind;
   const scopeProjectPath = scopeState.kind === "project" ? scopeState.path : null;
   const scopeProject =
@@ -834,7 +839,19 @@ export function SettingsPage({
                   projects={projects}
                   scope={scope}
                   projectId={scopeProject?.id ?? null}
-                  onManageCollections={() => changeScope({ kind: "user" })}
+                  returnProjectId={dataSourcesReturnProjectId}
+                  onManageCollections={() => {
+                    setDataSourcesReturnProjectId(scopeProject?.id ?? null);
+                    changeScope({ kind: "user" });
+                  }}
+                  onOpenProject={(projectId) => {
+                    const project = projects.find((item) => item.id === projectId);
+                    if (!project) return;
+                    setDataSourcesReturnProjectId(null);
+                    changeScope({ kind: "project", path: project.path });
+                    selectModule("data-sources");
+                  }}
+                  onManageConnections={onOpenLink}
                 />
               )}
               {active === "git" && <GitSection />}
