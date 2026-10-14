@@ -103,9 +103,49 @@ class MiniNode extends MiniEventTarget {
   }
 }
 
+/**
+ * A plain-object style with the CSSStyleDeclaration methods React calls for
+ * custom properties (Radix writes `--radix-*` variables on popper content).
+ * The methods are non-enumerable so tests can still compare `style` with a
+ * plain object, and writable so a test may still substitute its own.
+ */
+function createMiniStyle(): Record<string, string> {
+  const style: Record<string, string> = {};
+  const method = (value: (...args: any[]) => unknown): PropertyDescriptor => ({
+    value,
+    writable: true,
+    configurable: true,
+  });
+  Object.defineProperties(style, {
+    setProperty: method((name: string, value: string | null) => {
+      if (value === null || value === "") delete style[name];
+      else style[name] = String(value);
+    }),
+    removeProperty: method((name: string) => {
+      const previous = style[name] ?? "";
+      delete style[name];
+      return previous;
+    }),
+    getPropertyValue: method((name: string) => style[name] ?? ""),
+  });
+  return style;
+}
+
+const EMPTY_RECT = Object.freeze({
+  x: 0,
+  y: 0,
+  top: 0,
+  left: 0,
+  right: 0,
+  bottom: 0,
+  width: 0,
+  height: 0,
+  toJSON: () => ({}),
+});
+
 class MiniElement extends MiniNode {
   readonly attributes = new Map<string, string>();
-  readonly style: Record<string, string> = {};
+  readonly style: Record<string, string> = createMiniStyle();
   namespaceURI = "http://www.w3.org/1999/xhtml";
   tagName: string;
   private formValue = "";
@@ -116,6 +156,11 @@ class MiniElement extends MiniNode {
     this.ownerDocument = ownerDocument;
     this.tagName = tagName.toUpperCase();
     this.nodeName = this.tagName;
+  }
+
+  /** No layout engine: Radix Popper measures anchors, so report an empty box. */
+  getBoundingClientRect() {
+    return { ...EMPTY_RECT };
   }
 
   override appendChild<T extends MiniNode>(node: T): T {

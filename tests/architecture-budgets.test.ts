@@ -107,7 +107,10 @@ describe("architecture growth budgets", () => {
     // Twelve composition lines construct and return the user-scoped account
     // preparer through the same mutation/configuration seams. It adds no IPC
     // route; its lifecycle and remote-connection reuse stay outside this registrar.
-    expect(lines("packages/desktop/src/main/remote-link-ipc.ts")).toBeLessThanOrEqual(185);
+    // Pinned linked files read the window's stored Link revisions through one
+    // accessor that reuses the same owner/context and live authorization guard.
+    // It adds no IPC route and fetches no remote catalog or file content.
+    expect(lines("packages/desktop/src/main/remote-link-ipc.ts")).toBeLessThanOrEqual(188);
     // Count extracted registrations too: moving a route cannot hide API growth.
     // New explicit project-package, remote-Link and Cloud-window operations are
     // part of this feature's reviewed transport contract, total 295 routes.
@@ -144,6 +147,9 @@ describe("architecture growth budgets", () => {
         matches("packages/desktop/src/main/profile-plugin-export-ipc.ts", /ipcMain\.handle\(/g) +
         matches("packages/desktop/src/main/profile-memory-promotion-ipc.ts", /ipcMain\.handle\(/g) +
         matches("packages/desktop/src/main/source-collections-ipc.ts", /ipcMain\.handle\(/g) +
+        // Two linked-file source routes: snapshot and add. Project resolution and
+        // Link authorization stay in Main; extraction must not hide them.
+        matches("packages/desktop/src/main/linked-file-sources-ipc.ts", /ipcMain\.handle\(/g) +
         matches("packages/desktop/src/main/task-inbox/task-inbox-ipc.ts", /handle\("taskInbox:/g) +
         // Nine local-only Lab routes: eight existing operations plus P2 native
         // adoption. Exact body/scope review and post-dialog revalidation remain
@@ -168,7 +174,8 @@ describe("architecture growth budgets", () => {
       // +5 main-frame-owned Computer Use setup operations: status, enable,
       // permission request, fixed System Settings links, and restart.
       // +2 main-frame-owned Native batch options/start operations.
-    ).toBeLessThanOrEqual(353);
+      // +2 linked-file source snapshot/add operations; no file content crosses IPC.
+    ).toBeLessThanOrEqual(355);
     // v0.8.17 added the reviewed Panel catalog/task bridge to both preload
     // surfaces. Mimi's bounded transcript pagination adds one typed invoke;
     // the validation and file-reading implementation remain extracted in main.
@@ -190,7 +197,8 @@ describe("architecture growth budgets", () => {
     // +2 import/composition lines for the extracted static export contract.
     // +2 composition lines for masked native operation review; no resolution logic in preload.
     // +2 import/composition lines for the reviewed memory-copy API.
-    expect(lines("packages/desktop/src/preload/index.ts")).toBeLessThanOrEqual(1_884);
+    // +4 typed linked-file snapshot/add adapters over fixed literal channels.
+    expect(lines("packages/desktop/src/preload/index.ts")).toBeLessThanOrEqual(1_888);
     // Include all nine extracted Lab invokes and the five generic Link
     // challenge invokes plus usage history. Main-only routes remain counted
     // above even when no renderer adapter exists; do not equate the totals.
@@ -220,7 +228,8 @@ describe("architecture growth budgets", () => {
       // read/update route above; no credential-read or additional route is added.
       // +5 typed Computer Use setup invokes; no raw native command surface.
       // +2 typed Native batch adapters return no private nonce.
-    ).toBeLessThanOrEqual(346);
+      // +2 typed linked-file snapshot/add invokes mirror the two Main routes above.
+    ).toBeLessThanOrEqual(348);
     // GitHub skill previews and Panel task hosting carry main-issued review and
     // ownership fields across the typed preload boundary. The optional Mimi
     // transcript-page method adds its bounded response shape without widening

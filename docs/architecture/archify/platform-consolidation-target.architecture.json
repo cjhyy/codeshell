@@ -1,0 +1,398 @@
+{
+  "schema_version": 1,
+  "diagram_type": "architecture",
+  "meta": {
+    "title": "平台层收敛目标架构",
+    "locale": "zh-CN",
+    "output": "platform-consolidation-target.architecture.html",
+    "quality_profile": "showcase",
+    "views": [
+      {
+        "id": "clients",
+        "label": "统一客户端入口",
+        "focus": [
+          "desktop-ui",
+          "web-spa",
+          "tui-sdk",
+          "mobile-app",
+          "protocol-v2",
+          "host-runtime"
+        ],
+        "note": "四类客户端都是平等的 Protocol v2 客户端，Desktop 渲染进程也只是其中之一。"
+      },
+      {
+        "id": "policy-exec",
+        "label": "策略与执行",
+        "focus": [
+          "host-runtime",
+          "policy-engine",
+          "execution-service",
+          "agent-worker"
+        ],
+        "note": "审批只经过 PolicyEngine，子进程只经过 ExecutionService；worker 用类型化 host/* 请求取代 __*__ 回环。"
+      },
+      {
+        "id": "deploy",
+        "label": "部署形态与薄云端",
+        "focus": [
+          "host-runtime",
+          "host-adapter",
+          "backends",
+          "cloud-services"
+        ],
+        "note": "同一份 HostRuntime 由 Electron / Headless / Container 三种 Adapter 注入；云端只做配对、转发、推送与 OAuth 回调。"
+      }
+    ],
+    "legend": {
+      "mode": "auto",
+      "entries": {
+        "frontend": {
+          "label": "客户端"
+        },
+        "messagebus": {
+          "label": "协议"
+        },
+        "backend": {
+          "label": "宿主与执行单元"
+        },
+        "security": {
+          "label": "策略与沙箱"
+        },
+        "external": {
+          "label": "云端服务"
+        }
+      }
+    },
+    "viewBox": [
+      1390,
+      790
+    ]
+  },
+  "components": [
+    {
+      "id": "desktop-ui",
+      "type": "frontend",
+      "label": "Desktop UI",
+      "sublabel": "Electron renderer",
+      "tag": "客户端",
+      "pos": [
+        40,
+        50
+      ],
+      "size": [
+        200,
+        72
+      ]
+    },
+    {
+      "id": "web-spa",
+      "type": "frontend",
+      "label": "Web / Hub SPA",
+      "sublabel": "packages/web",
+      "tag": "客户端",
+      "pos": [
+        280,
+        50
+      ],
+      "size": [
+        200,
+        72
+      ]
+    },
+    {
+      "id": "tui-sdk",
+      "type": "frontend",
+      "label": "TUI / SDK / 外部 Agent",
+      "sublabel": "进程内与 stdio 传输",
+      "tag": "客户端",
+      "pos": [
+        520,
+        50
+      ],
+      "size": [
+        220,
+        72
+      ]
+    },
+    {
+      "id": "mobile-app",
+      "type": "frontend",
+      "label": "iOS / Android",
+      "sublabel": "Capacitor 包装 packages/web",
+      "tag": "客户端",
+      "pos": [
+        1040,
+        50
+      ],
+      "size": [
+        240,
+        72
+      ]
+    },
+    {
+      "id": "protocol-v2",
+      "type": "messagebus",
+      "label": "Protocol v2",
+      "sublabel": "initialize · Session/Turn/Item · cursor 续传 · client/*",
+      "tag": "唯一契约",
+      "pos": [
+        290,
+        190
+      ],
+      "size": [
+        660,
+        72
+      ]
+    },
+    {
+      "id": "cloud-services",
+      "type": "external",
+      "label": "薄云端",
+      "sublabel": "配对 · 中继 · 推送网关 · Link OAuth",
+      "tag": "无状态",
+      "pos": [
+        1040,
+        190
+      ],
+      "size": [
+        300,
+        72
+      ]
+    },
+    {
+      "id": "policy-engine",
+      "type": "security",
+      "label": "PolicyEngine + ApprovalStore",
+      "sublabel": "策略源合成 · deny 优先 · 唯一存储",
+      "tag": "W3",
+      "pos": [
+        40,
+        330
+      ],
+      "size": [
+        240,
+        96
+      ]
+    },
+    {
+      "id": "host-runtime",
+      "type": "backend",
+      "label": "HostRuntime",
+      "sublabel": "packages/host · HostServices · 请求分发",
+      "tag": "W1 · 唯一宿主实现",
+      "pos": [
+        440,
+        330
+      ],
+      "size": [
+        360,
+        96
+      ]
+    },
+    {
+      "id": "execution-service",
+      "type": "security",
+      "label": "ExecutionService",
+      "sublabel": "唯一子进程入口 · 沙箱 · env 白名单",
+      "tag": "W3",
+      "pos": [
+        40,
+        480
+      ],
+      "size": [
+        240,
+        96
+      ]
+    },
+    {
+      "id": "host-adapter",
+      "type": "backend",
+      "label": "HostAdapter",
+      "sublabel": "Electron / Headless / Container 三选一注入",
+      "tag": "部署形态",
+      "pos": [
+        560,
+        480
+      ],
+      "size": [
+        240,
+        72
+      ]
+    },
+    {
+      "id": "backends",
+      "type": "backend",
+      "label": "浏览器后端 · Panel services",
+      "sublabel": "iab / chromium · 包内服务进程",
+      "tag": "薄后端",
+      "pos": [
+        1040,
+        480
+      ],
+      "size": [
+        300,
+        96
+      ]
+    },
+    {
+      "id": "agent-worker",
+      "type": "backend",
+      "label": "Agent worker",
+      "sublabel": "Engine · TurnLoop（不改）",
+      "tag": "引擎层",
+      "pos": [
+        300,
+        620
+      ],
+      "size": [
+        300,
+        80
+      ]
+    }
+  ],
+  "boundaries": [
+    {
+      "kind": "region",
+      "label": "宿主进程：Desktop main / serve 常驻，沙箱容器一任务一份",
+      "wraps": [
+        "policy-engine",
+        "host-runtime",
+        "execution-service",
+        "host-adapter",
+        "backends",
+        "agent-worker"
+      ],
+      "pad": 24
+    }
+  ],
+  "connections": [
+    {
+      "id": "desktop-to-protocol",
+      "from": "desktop-ui",
+      "to": "protocol-v2",
+      "label": "IPC 承载 v2 消息",
+      "variant": "emphasis",
+      "width": 2,
+      "fromSide": "bottom",
+      "toSide": "top",
+      "labelSegment": 0,
+      "labelDx": 60,
+      "labelDy": 10
+    },
+    {
+      "id": "web-to-protocol",
+      "from": "web-spa",
+      "to": "protocol-v2",
+      "label": "WebSocket",
+      "fromSide": "bottom",
+      "toSide": "top"
+    },
+    {
+      "id": "tui-to-protocol",
+      "from": "tui-sdk",
+      "to": "protocol-v2",
+      "label": "进程内 / stdio",
+      "fromSide": "bottom",
+      "toSide": "top",
+      "labelDy": 24
+    },
+    {
+      "id": "mobile-to-cloud",
+      "from": "mobile-app",
+      "to": "cloud-services",
+      "label": "设备中继 · 推送",
+      "fromSide": "bottom",
+      "toSide": "top"
+    },
+    {
+      "id": "cloud-to-protocol",
+      "from": "cloud-services",
+      "to": "protocol-v2",
+      "label": "中继转发 v2 会话",
+      "labelDy": -40
+    },
+    {
+      "id": "protocol-to-host",
+      "from": "protocol-v2",
+      "to": "host-runtime",
+      "label": "v2 方法 / 通知 / client/* 反向请求",
+      "variant": "emphasis",
+      "width": 2,
+      "fromSide": "bottom",
+      "toSide": "top",
+      "labelDy": 24
+    },
+    {
+      "id": "host-to-policy",
+      "from": "host-runtime",
+      "to": "policy-engine",
+      "label": "ActionRequest → Decision"
+    },
+    {
+      "id": "host-to-exec",
+      "from": "host-runtime",
+      "to": "execution-service",
+      "label": "ExecSpec"
+    },
+    {
+      "id": "host-to-adapter",
+      "from": "host-runtime",
+      "to": "host-adapter",
+      "label": "注入平台能力",
+      "variant": "dashed",
+      "fromSide": "bottom",
+      "toSide": "top"
+    },
+    {
+      "id": "host-to-worker",
+      "from": "host-runtime",
+      "to": "agent-worker",
+      "label": "stdio bridge · host/* 请求",
+      "variant": "emphasis",
+      "width": 2,
+      "fromSide": "bottom",
+      "toSide": "top",
+      "labelDx": -40
+    },
+    {
+      "id": "host-to-backends",
+      "from": "host-runtime",
+      "to": "backends",
+      "label": "薄后端协议 / 进程"
+    },
+    {
+      "id": "host-to-cloud",
+      "from": "host-runtime",
+      "to": "cloud-services",
+      "label": "Account 票据 · 推送事件",
+      "fromSide": "right",
+      "toSide": "bottom"
+    }
+  ],
+  "cards": [
+    {
+      "dot": "cyan",
+      "title": "一个宿主，三种部署",
+      "items": [
+        "HostRuntime 是唯一宿主实现，Electron main 只剩窗口与系统集成",
+        "Desktop / serve 常驻，沙箱一任务一容器，云端不跑常驻状态"
+      ]
+    },
+    {
+      "dot": "violet",
+      "title": "一个协议，平等客户端",
+      "items": [
+        "握手声明双方能力，不支持的能力立即返回 host_unsupported",
+        "Turn 输出走 journal cursor，宿主状态走 stateVersion"
+      ]
+    },
+    {
+      "dot": "amber",
+      "title": "一个入口管审批与子进程",
+      "items": [
+        "所有策略源汇入 PolicyEngine，deny 优先、allow 按层级",
+        "所有子进程经 ExecutionService，沙箱先 report-only 再 enforce"
+      ]
+    }
+  ]
+}
