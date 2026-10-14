@@ -39,8 +39,8 @@ breaking.
   Web tabs.
 - Keep account, settings, source dialogs and context menus usable in narrow
   windows and themed surfaces, including focus, scrolling and menu handoff.
-- Restore capability overview content and source add workflows, and open the
-  Link account page from the source settings destination.
+- Improve source-add forms with generated identifiers, and open the Link account
+  page from the source settings destination.
 
 ## [0.9.40] - 2026-10-13
 
