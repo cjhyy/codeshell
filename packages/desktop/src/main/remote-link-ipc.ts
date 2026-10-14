@@ -176,5 +176,13 @@ export function registerRemoteLinkIpc(deps: {
       return manager.service.disconnect(context, id, revision);
     },
   );
-  return { prepareGitHubLink };
+  return {
+    prepareGitHubLink,
+    /** Reuse the window's Link revisions without fetching a remote catalog or file content. */
+    async storedSnapshot(event: IpcMainInvokeEvent, cwd: string) {
+      const { manager, context } = await nativeLinkContext(event, cwd);
+      await manager.service.assertAuthorized(context);
+      return () => manager.service.snapshot();
+    },
+  };
 }

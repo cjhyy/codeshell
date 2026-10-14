@@ -76,7 +76,7 @@ function load(): SourceDefinition[] {
 
 function mutateCatalog(
   mutation: (current: SourceDefinition[]) => SourceDefinition[],
-  guardedId?: string,
+  guardedId?: string | string[],
 ): void {
   const path = sourceCatalogPath();
   const directory = dirname(path);
@@ -95,16 +95,19 @@ function mutateCatalog(
           value.sources.length > MAX_CATALOG_SOURCES
         )
           throw new Error("Invalid source catalog");
-        const matches = value.sources.filter(
-          (item: unknown) =>
-            item && typeof item === "object" && (item as { id?: unknown }).id === guardedId,
-        );
-        if (matches.length > 1) throw new Error("Ambiguous collection identity");
-        if (matches.length) {
-          const current = SourceDefinitionSchema.parse(matches[0]);
-          if (current.kind === "collection") collectionConfig(current);
-          if (Buffer.byteLength(JSON.stringify(current)) > MAX_SOURCE_DEFINITION_BYTES)
-            throw new Error("Existing source definition exceeds its size limit");
+        for (const id of typeof guardedId === "string" ? [guardedId] : guardedId) {
+          const matches = value.sources.filter(
+            (item: unknown) =>
+              item && typeof item === "object" && (item as { id?: unknown }).id === id,
+          );
+          if (matches.length > 1) throw new Error("Ambiguous collection identity");
+          if (matches.length) {
+            const current = SourceDefinitionSchema.parse(matches[0]);
+            if (current.kind === "collection") collectionConfig(current);
+            if (current.kind === "link") linkSourceView(current);
+            if (Buffer.byteLength(JSON.stringify(current)) > MAX_SOURCE_DEFINITION_BYTES)
+              throw new Error("Existing source definition exceeds its size limit");
+          }
         }
       }
       return parseCatalog(raw);
@@ -126,6 +129,37 @@ export function listSourceDefinitions(): SourceDefinition[] {
 
 export function readSourceDefinition(id: string): SourceDefinition | undefined {
   return load().find((source) => source.id === id);
+}
+
+/** Batch create-only write. Existing definitions, including disabled ones, remain untouched. */
+export function insertSourceDefinitionsIfAbsent(
+  definitions: SourceDefinition[],
+): SourceDefinition[] {
+  if (!Array.isArray(definitions) || definitions.length > 100)
+    throw new Error("Invalid source batch");
+  if (!definitions.length) return [];
+  const parsed = definitions.map((definition) => {
+    const source = SourceDefinitionSchema.parse(definition);
+    if (source.kind === "link") linkSourceView(source);
+    if (source.kind === "collection") throw new Error("Collections require their revision API");
+    if (Buffer.byteLength(JSON.stringify(source)) > MAX_SOURCE_DEFINITION_BYTES)
+      throw new Error("source definition exceeds the size limit");
+    return source;
+  });
+  if (new Set(parsed.map((source) => source.id)).size !== parsed.length)
+    throw new Error("Duplicate source identities");
+  let inserted: SourceDefinition[] = [];
+  mutateCatalog(
+    (current) => {
+      const ids = new Set(current.map((source) => source.id));
+      inserted = parsed.filter((source) => !ids.has(source.id));
+      if (current.length + inserted.length > MAX_CATALOG_SOURCES)
+        throw new Error("source catalog is full");
+      return [...current, ...inserted];
+    },
+    parsed.map((source) => source.id),
+  );
+  return inserted;
 }
 
 export function saveSourceDefinition(
