@@ -202,6 +202,7 @@ const expectedRuntimeExportsByPartition = {
     "listSourceDefinitions",
     "readSourceDefinition",
     "saveSourceDefinition",
+    "insertSourceDefinitionsIfAbsent",
     "deleteSourceDefinition",
     "registerConnectorAdapter",
     "connectorAdapterFor",
