@@ -14,6 +14,7 @@ import type {
   WorkspaceProfileSubtree as _WorkspaceProfileSubtree,
 } from "./index.js";
 import * as publicApi from "./index.js";
+import { CONTRACTS } from "./contracts.js";
 
 // The full pinned runtime surface of the /internal host entry. /internal is the
 // ONLY entry for these host-facing exports — index.ts no longer re-exports them
@@ -441,6 +442,9 @@ describe("core public/internal export contract", () => {
     for (const name of sourcePublicRuntimeContract) {
       expect(publicApi[name], `public root must export ${name}`).toBeDefined();
     }
+
+    // CONTRACTS: read-only contract version table, public and host-state free.
+    expect(publicApi.CONTRACTS).toBe(CONTRACTS);
 
     expect(publicApi).not.toHaveProperty("getSessionId");
     expect(publicApi).not.toHaveProperty("markScrollActivity");

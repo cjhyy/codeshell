@@ -392,7 +392,8 @@ describe("architecture growth budgets", () => {
       // exposing the key store, worker IPC or mutable default signer authority.
       // +1 collection manifest schema/types for standalone Hosts and type-only Desktop UI.
       // +1 type-only preset routing policy/rule contract; no runtime or permission authority.
-      "packages/core/src/index.ts": 133,
+      // +1 CONTRACTS: read-only contract version table reported by initialize and /health; no host state.
+      "packages/core/src/index.ts": 134,
       // +3 reviewed Optimization Lab foundations: read-only Skill snapshots,
       // the shared file lock, and text-connection resolution (§5.2 of the plan).
       // +1 type-only LifetimeScope/Disposable contract lets capability modules
