@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from "react";
+import React, { useId, useLayoutEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { ChevronDown } from "lucide-react";
 import { useAnchoredPopover } from "./useAnchoredPopover";
@@ -83,36 +83,113 @@ interface Props {
 export function PermissionPill({ value, onChange, disabled, compact = false }: Props) {
   const { t } = useT();
   const [open, setOpen] = useState(false);
+  const [focusedMode, setFocusedMode] = useState<PermissionMode>("default");
+  const popupId = useId();
   const ref = useRef<HTMLDivElement>(null);
   const anchorRef = useRef<HTMLButtonElement>(null);
   const popoverRef = useRef<HTMLUListElement>(null);
-  const popoverStyle = useAnchoredPopover(open, anchorRef, popoverRef, {
+  const optionRefs = useRef(new Map<PermissionMode, HTMLButtonElement>());
+  const popupOwned = useRef(false);
+  const isOpen = open && !disabled;
+  const popoverStyle = useAnchoredPopover(isOpen, anchorRef, popoverRef, {
     align: "start",
     preferredSide: "top",
   });
   const cur = MODES.find((m) => m.id === value) ?? MODES[1];
 
-  useEffect(() => {
-    if (!open) return;
-    const onClick = (e: MouseEvent) => {
-      const target = e.target as Node;
-      if (!ref.current?.contains(target) && !popoverRef.current?.contains(target)) {
-        setOpen(false);
-      }
+  useLayoutEffect(() => {
+    if (disabled) {
+      popupOwned.current = false;
+      setOpen(false);
+    }
+  }, [disabled]);
+
+  useLayoutEffect(() => {
+    if (!isOpen) return;
+    const onOutside = (event: PointerEvent | FocusEvent) => {
+      const target = event.target as Node;
+      if (ref.current?.contains(target) || popoverRef.current?.contains(target)) return;
+      popupOwned.current = false;
+      setOpen(false);
     };
-    const onKeyDown = (event: KeyboardEvent) => {
-      if (event.key === "Escape") {
-        setOpen(false);
-        anchorRef.current?.focus();
-      }
+    const onBlur = () => {
+      popupOwned.current = false;
+      setOpen(false);
     };
-    document.addEventListener("mousedown", onClick);
-    document.addEventListener("keydown", onKeyDown);
+    document.addEventListener("pointerdown", onOutside, true);
+    document.addEventListener("focusin", onOutside, true);
+    window.addEventListener("blur", onBlur);
     return () => {
-      document.removeEventListener("mousedown", onClick);
-      document.removeEventListener("keydown", onKeyDown);
+      document.removeEventListener("pointerdown", onOutside, true);
+      document.removeEventListener("focusin", onOutside, true);
+      window.removeEventListener("blur", onBlur);
     };
-  }, [open]);
+  }, [isOpen]);
+
+  useLayoutEffect(() => {
+    const list = popoverRef.current;
+    if (!isOpen || !list || popoverStyle.visibility !== "visible") return;
+    const active = document.activeElement;
+    if (
+      !list.contains(active) &&
+      active !== anchorRef.current &&
+      !(active === document.body && popupOwned.current)
+    )
+      return;
+    const target = optionRefs.current.get(focusedMode);
+    if (!target) return;
+    if (active !== target) target.focus({ preventScroll: true });
+    popupOwned.current = true;
+    const bounds = list.getBoundingClientRect();
+    const box = target.getBoundingClientRect();
+    const top = bounds.top + list.clientTop;
+    const bottom = top + list.clientHeight;
+    if (box.top < top - 1) list.scrollTop += box.top - top;
+    else if (box.bottom > bottom + 1) list.scrollTop += box.bottom - bottom;
+  }, [focusedMode, isOpen, popoverStyle]);
+
+  const openMenu = () => {
+    if (disabled) return;
+    popupOwned.current = true;
+    setFocusedMode(cur.id);
+    setOpen(true);
+  };
+  const closeMenu = (restore = false) => {
+    const active = document.activeElement;
+    const owned = popoverRef.current?.contains(active) || active === anchorRef.current;
+    popupOwned.current = false;
+    setOpen(false);
+    if (restore && owned && anchorRef.current?.isConnected && !anchorRef.current.disabled)
+      anchorRef.current.focus();
+  };
+  const composing = (event: React.KeyboardEvent) => {
+    if (!event.nativeEvent.isComposing && event.keyCode !== 229) return false;
+    event.preventDefault();
+    return true;
+  };
+  const onMenuKeyDown = (event: React.KeyboardEvent) => {
+    if (composing(event)) return;
+    if (event.key === "Escape") {
+      event.preventDefault();
+      event.stopPropagation();
+      closeMenu(true);
+    } else if (event.key === "Tab") {
+      // Let native Tab continue from the trigger through the surrounding UI.
+      closeMenu(true);
+    } else if (["ArrowDown", "ArrowUp", "Home", "End"].includes(event.key)) {
+      event.preventDefault();
+      const index = MODES.findIndex((mode) => mode.id === focusedMode);
+      const next =
+        event.key === "Home"
+          ? 0
+          : event.key === "End"
+            ? MODES.length - 1
+            : event.key === "ArrowDown"
+              ? Math.min(index + 1, MODES.length - 1)
+              : Math.max(index - 1, 0);
+      setFocusedMode(MODES[next].id);
+    }
+  };
 
   const toneText = (t: "ok" | "warn" | "err") =>
     t === "ok" ? "text-status-ok" : t === "warn" ? "text-status-warn" : "text-status-err";
@@ -138,8 +215,19 @@ export function PermissionPill({ value, onChange, disabled, compact = false }: P
         aria-label={t("chat.permission.currentLabel", { label: t(cur.labelKey) })}
         title={t("chat.permission.currentLabel", { label: t(cur.labelKey) })}
         aria-haspopup="listbox"
-        aria-expanded={open}
-        onClick={() => setOpen((o) => !o)}
+        aria-expanded={isOpen}
+        aria-controls={isOpen ? popupId : undefined}
+        onKeyDown={(event) => {
+          if (composing(event)) return;
+          if (event.key === "ArrowDown" || event.key === "ArrowUp") {
+            event.preventDefault();
+            openMenu();
+          } else if (event.key === "Escape" && isOpen) {
+            event.preventDefault();
+            closeMenu(true);
+          }
+        }}
+        onClick={() => (isOpen ? closeMenu() : openMenu())}
       >
         <span className={`h-2 w-2 shrink-0 rounded-full ${toneDot(cur.tone)}`} aria-hidden="true" />
         <span
@@ -156,34 +244,46 @@ export function PermissionPill({ value, onChange, disabled, compact = false }: P
           aria-hidden="true"
         />
       </Button>
-      {open &&
+      {isOpen &&
         createPortal(
           <ul
+            id={popupId}
             ref={popoverRef}
             style={popoverStyle}
             className="cs-popup-surface w-64 overflow-hidden rounded-md p-1"
             role="listbox"
+            onKeyDown={onMenuKeyDown}
             aria-label={t("chat.permission.currentLabel", { label: t(cur.labelKey) })}
           >
             {MODES.map((m) => (
               <li key={m.id} role="none">
                 <Button
+                  id={`${popupId}-${m.id}`}
+                  ref={(node) => {
+                    if (node) optionRefs.current.set(m.id, node);
+                    else optionRefs.current.delete(m.id);
+                  }}
                   type="button"
                   variant="ghost"
                   size="sm"
                   role="option"
                   aria-selected={m.id === value}
+                  tabIndex={m.id === focusedMode ? 0 : -1}
+                  onFocus={() => setFocusedMode(m.id)}
                   className={cn(
                     "cs-menu-item h-auto w-full justify-start gap-2 px-2 py-1.5 text-sm",
                     m.id === value && "bg-accent",
                   )}
                   onClick={() => {
+                    if (disabled) return;
                     onChange(m.id);
-                    setOpen(false);
-                    anchorRef.current?.focus();
+                    closeMenu(true);
                   }}
                 >
-                  <span className={`h-2 w-2 shrink-0 rounded-full ${toneDot(m.tone)}`} />
+                  <span
+                    className={`h-2 w-2 shrink-0 rounded-full ${toneDot(m.tone)}`}
+                    aria-hidden="true"
+                  />
                   <span className="font-medium">{t(m.labelKey)}</span>
                 </Button>
               </li>
