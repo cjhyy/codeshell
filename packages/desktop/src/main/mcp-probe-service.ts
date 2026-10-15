@@ -10,17 +10,13 @@
  * so the UI can be refreshed without re-probing on every tab switch.
  */
 
-import { Client } from "@modelcontextprotocol/sdk/client/index.js";
-import { StdioClientTransport } from "@modelcontextprotocol/sdk/client/stdio.js";
-import { StreamableHTTPClientTransport } from "@modelcontextprotocol/sdk/client/streamableHttp.js";
 import {
   buildHttpHeaders,
-  buildStdioEnv,
-  createMcpAuthenticatedFetch,
   CredentialStore,
   isCredentialSecretAvailable,
   localCredentialAccess,
 } from "@cjhyy/code-shell-core";
+import { probeMcp, mcpProbeTransport } from "@cjhyy/code-shell-host";
 import { dlog } from "./desktop-logger.js";
 import type { McpOAuthService } from "./mcp-oauth-service.js";
 
@@ -61,7 +57,7 @@ export interface McpProbeResult {
   tools?: McpProbedTool[];
   /** Short, user-readable error if status is "error". */
   errorMessage?: string;
-  /** Verbatim error stack/output (for "查看详情" expander). */
+  /** Redacted error detail (for "查看详情" expander). */
   errorDetail?: string;
 }
 
@@ -78,7 +74,7 @@ const cache = new Map<string, CacheEntry>();
 
 function hashConfig(cfg: McpServerConfig): string {
   return JSON.stringify({
-    t: cfg.transport ?? (cfg.command ? "stdio" : "streamable-http"),
+    t: mcpProbeTransport(cfg),
     c: cfg.command,
     a: cfg.args ?? [],
     u: cfg.url,
@@ -89,12 +85,6 @@ function hashConfig(cfg: McpServerConfig): string {
     eh: cfg.envHeaders ?? {},
     cr: cfg.credentialRef ?? "",
   });
-}
-
-function transportOf(cfg: McpServerConfig): "stdio" | "streamable-http" | "sse" {
-  if (cfg.transport) return cfg.transport;
-  if (cfg.url) return "streamable-http";
-  return "stdio";
 }
 
 /** Exported for unit testing (error classification). */
@@ -135,119 +125,52 @@ export function humanizeError(raw: string, command?: string): string {
   return raw.split("\n")[0].slice(0, 200);
 }
 
-async function withTimeout<T>(p: Promise<T>, ms: number, label: string): Promise<T> {
-  let timeout: NodeJS.Timeout | undefined;
-  try {
-    return await Promise.race<T>([
-      p,
-      new Promise<T>((_resolve, reject) => {
-        timeout = setTimeout(() => reject(new Error(`${label} timed out after ${ms}ms`)), ms);
-      }),
-    ]);
-  } finally {
-    if (timeout) clearTimeout(timeout);
-  }
+interface ProbeOptions {
+  force?: boolean;
+  cwd?: string;
+  signal?: AbortSignal;
+  oauthService?: Pick<McpOAuthService, "resolveAccessToken">;
 }
 
-async function probeOne(
-  cfg: McpServerConfig,
-  oauthService?: Pick<McpOAuthService, "resolveAccessToken">,
-): Promise<McpProbeResult> {
-  const transport = transportOf(cfg);
-  const startedAt = new Date().toISOString();
-  const base: McpProbeResult = {
+async function probeOne(cfg: McpServerConfig, options: ProbeOptions): Promise<McpProbeResult> {
+  const base = {
     name: cfg.name,
-    transport,
-    status: "probing",
-    lastProbedAt: startedAt,
+    transport: mcpProbeTransport(cfg),
+    lastProbedAt: new Date().toISOString(),
   };
-
-  let client: Client | undefined;
-  let mcpTransport: StdioClientTransport | StreamableHTTPClientTransport | undefined;
-
-  try {
-    client = new Client({ name: "code-shell-probe", version: "0.1.0" }, { capabilities: {} });
-
-    if (transport === "stdio") {
-      if (!cfg.command) throw new Error("stdio 缺少 command 字段");
-      // Same env semantics as the real connection (core buildStdioEnv):
-      // inherited process.env < forwarded envVars < explicit env.
-      mcpTransport = new StdioClientTransport({
-        command: cfg.command,
-        args: cfg.args,
-        env: buildStdioEnv(cfg.name, cfg),
-      });
-    } else {
-      if (!cfg.url) throw new Error("远程 transport 缺少 url 字段");
-      // Same header semantics as the real connection (core buildHttpHeaders):
-      // static headers + env-sourced bearerTokenEnvVar / envHeaders. A missing
-      // env var throws here and is classified by humanizeError below — before
-      // this the probe silently ignored env-based auth and reported a
-      // misleading 401 even when the config was correct.
-      // Resolve credentialRef against the user-scope store (same surface as the
-      // real connect in core's MCPManager) so testing a credential-bound server
-      // actually sends its auth instead of a misleading 401.
-      const credential = cfg.credentialRef
-        ? new CredentialStore(undefined).resolve(cfg.credentialRef)
-        : undefined;
-      const oauth = credential?.type === "oauth";
-      const headers = oauth
-        ? buildHttpHeaders(cfg.name, { ...cfg, credentialRef: undefined })
-        : buildProbeHttpHeaders(cfg);
-      const access = oauthService
-        ? {
-            ...localCredentialAccess,
-            resolveOAuthAccess: (req: { id: string; scope: "full"; forceRefresh?: boolean }) =>
-              oauthService.resolveAccessToken(req.id, { forceRefresh: req.forceRefresh }),
-          }
-        : localCredentialAccess;
-      mcpTransport = new StreamableHTTPClientTransport(new URL(cfg.url), {
-        requestInit: Object.keys(headers).length > 0 ? { headers } : undefined,
-        fetch: createMcpAuthenticatedFetch(cfg.name, cfg, access) as never,
-      });
-    }
-
-    await withTimeout(client.connect(mcpTransport), PROBE_TIMEOUT_MS, "connect");
-    const list = await withTimeout(client.listTools(), PROBE_TIMEOUT_MS, "listTools");
-    const tools = list.tools.map((t) => ({
-      name: t.name,
-      description: t.description,
-    }));
-
-    return {
-      ...base,
-      status: "ok",
-      toolCount: tools.length,
-      tools,
-      lastProbedAt: new Date().toISOString(),
-    };
-  } catch (err) {
-    const raw = err instanceof Error ? err.message : String(err);
-    const detail = err instanceof Error ? (err.stack ?? raw) : raw;
-    dlog("mcp-probe", "failed", { server: cfg.name, transport, error: raw });
+  if (!options.cwd)
     return {
       ...base,
       status: "error",
-      errorMessage: humanizeError(raw, cfg.command),
-      errorDetail: detail,
-      lastProbedAt: new Date().toISOString(),
+      errorMessage: "缺少明确的工作区，请重新打开 MCP 设置后重试。",
     };
-  } finally {
-    if (client) {
-      try {
-        await client.close();
-      } catch {
-        /* best-effort cleanup */
+  const access = options.oauthService
+    ? {
+        ...localCredentialAccess,
+        resolveOAuthAccess: (req: { id: string; scope: "full"; forceRefresh?: boolean }) =>
+          options.oauthService!.resolveAccessToken(req.id, { forceRefresh: req.forceRefresh }),
       }
-    }
-    if (mcpTransport && !client) {
-      try {
-        await mcpTransport.close?.();
-      } catch {
-        /* best-effort */
-      }
-    }
-  }
+    : localCredentialAccess;
+  const result = await probeMcp(cfg, {
+    cwd: options.cwd,
+    signal: options.signal,
+    timeoutMs: PROBE_TIMEOUT_MS,
+    credentialAccess: access,
+  });
+  if (result.status === "ok")
+    return {
+      ...base,
+      status: "ok",
+      toolCount: result.toolCount,
+      tools: result.tools?.map(({ name, description }) => ({ name, description })),
+    };
+  const detail = result.error?.message ?? "连接测试失败";
+  dlog("mcp-probe", "failed", {
+    server: cfg.name,
+    transport: base.transport,
+    code: result.error?.code,
+  });
+  return { ...base, status: "error", errorMessage: detail, errorDetail: detail };
 }
 
 export function buildProbeHttpHeaders(cfg: McpServerConfig): Record<string, string> {
@@ -265,10 +188,20 @@ export function buildProbeHttpHeaders(cfg: McpServerConfig): Record<string, stri
  */
 export async function probeMcpServer(
   cfg: McpServerConfig,
-  options: { force?: boolean; oauthService?: Pick<McpOAuthService, "resolveAccessToken"> } = {},
+  options: ProbeOptions = {},
 ): Promise<McpProbeResult> {
   const configHash = hashConfig(cfg);
-  const cached = cache.get(cfg.name);
+  const key = JSON.stringify([options.cwd, cfg.name]);
+  // Credential and forwarded-env revisions are owned by the adapter. Without
+  // a versioned snapshot, do not retain their results across authorization changes.
+  const cacheable =
+    !!options.cwd &&
+    !options.signal &&
+    !cfg.credentialRef &&
+    !cfg.bearerTokenEnvVar &&
+    !cfg.envVars?.length &&
+    !Object.keys(cfg.envHeaders ?? {}).length;
+  const cached = cacheable ? cache.get(key) : undefined;
   if (
     !options.force &&
     cached &&
@@ -278,12 +211,13 @@ export async function probeMcpServer(
     return cached.result;
   }
 
-  const result = await probeOne(cfg, options.oauthService);
-  cache.set(cfg.name, {
-    result,
-    configHash,
-    expiresAt: Date.now() + CACHE_TTL_MS,
-  });
+  const result = await probeOne(cfg, options);
+  if (cacheable)
+    cache.set(key, {
+      result,
+      configHash,
+      expiresAt: Date.now() + CACHE_TTL_MS,
+    });
   return result;
 }
 
@@ -293,12 +227,13 @@ export async function probeMcpServer(
  */
 export async function probeMcpServers(
   configs: McpServerConfig[],
-  options: { force?: boolean; oauthService?: Pick<McpOAuthService, "resolveAccessToken"> } = {},
+  options: ProbeOptions = {},
 ): Promise<McpProbeResult[]> {
   return Promise.all(configs.map((c) => probeMcpServer(c, options)));
 }
 
 export function invalidateMcpProbeCache(name?: string): void {
-  if (name) cache.delete(name);
-  else cache.clear();
+  if (name) {
+    for (const key of cache.keys()) if (JSON.parse(key)[1] === name) cache.delete(key);
+  } else cache.clear();
 }

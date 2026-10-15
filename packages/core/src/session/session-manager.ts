@@ -2344,14 +2344,51 @@ export class SessionManager {
       filter?: (entry: Readonly<SessionListEntry>) => boolean;
     },
   ): SessionListEntry[] {
-    if (!existsSync(this.sessionsDir)) return [];
-    // Core is domain-agnostic: only the composition root knows which
-    // extension-owned kinds belong outside its generic list. AgentServer passes
-    // the resolved hidden-kind union explicitly; direct SDK callers see every
-    // kind unless they choose exclusions themselves.
-    const excludeKinds = opts?.excludeKinds ?? [];
+    return listSessionEntries(this.sessionsDir, limit, opts);
+  }
+}
 
-    const dirs = readdirSync(this.sessionsDir, { withFileTypes: true })
+/** In-repo Host listing seam; SessionManager's public list contract remains unchanged. */
+export function listSessionEntries(
+  sessionsDir: string,
+  limit = 20,
+  opts?: {
+    excludeKinds?: readonly string[];
+    /** Apply workspace/visibility filters before the result limit and previews. */
+    cwd?: string;
+    archived?: boolean;
+    rootsOnly?: boolean;
+    before?: { lastActiveAt: number; sessionId: string };
+    filter?: (entry: Readonly<SessionListEntry>) => boolean;
+  },
+  storage?: {
+    candidates(): { dir: string; lastActiveAt: number; transcriptExists: boolean }[];
+    readState(sessionId: string, maximumBytes: number): string;
+  },
+): SessionListEntry[] {
+  if (!existsSync(sessionsDir)) return [];
+  // Core is domain-agnostic: only the composition root knows which
+  // extension-owned kinds belong outside its generic list. AgentServer passes
+  // the resolved hidden-kind union explicitly; direct SDK callers see every
+  // kind unless they choose exclusions themselves.
+  const excludeKinds = opts?.excludeKinds ?? [];
+
+  type Candidate = {
+    dir: string;
+    lastActiveAt: number;
+    transcriptFile: string;
+    stateFile: string;
+    transcriptExists: boolean;
+  };
+  const candidates: Candidate[] = storage
+    ? storage.candidates().map((candidate) => ({
+        ...candidate,
+        stateFile: join(sessionsDir, candidate.dir, "state.json"),
+        transcriptFile: join(sessionsDir, candidate.dir, "transcript.jsonl"),
+      }))
+    : [];
+  if (!storage) {
+    const dirs = readdirSync(sessionsDir, { withFileTypes: true })
       .filter(
         (d) => d.isDirectory() && !d.name.startsWith(".pending-") && !d.name.startsWith("qchat-"),
       )
@@ -2362,18 +2399,10 @@ export class SessionManager {
     // finds `limit` non-ephemeral winners, then tails only those transcripts
     // for previews. With ~1 k sessions on disk the difference is ~1 s
     // (preview-every) vs ~50 ms (preview-top-20).
-    type Candidate = {
-      dir: string;
-      lastActiveAt: number;
-      transcriptFile: string;
-      stateFile: string;
-      transcriptExists: boolean;
-    };
-    const candidates: Candidate[] = [];
     for (const dir of dirs) {
-      const stateFile = join(this.sessionsDir, dir, "state.json");
+      const stateFile = join(sessionsDir, dir, "state.json");
       if (!existsSync(stateFile)) continue;
-      const transcriptFile = join(this.sessionsDir, dir, "transcript.jsonl");
+      const transcriptFile = join(sessionsDir, dir, "transcript.jsonl");
       let lastActiveAt: number;
       let transcriptExists: boolean;
       try {
@@ -2399,37 +2428,38 @@ export class SessionManager {
       }
       candidates.push({ dir, lastActiveAt, transcriptFile, stateFile, transcriptExists });
     }
-
-    candidates.sort((a, b) => b.lastActiveAt - a.lastActiveAt || a.dir.localeCompare(b.dir));
-    const sessions: SessionListEntry[] = [];
-    for (const c of candidates) {
-      if (sessions.length >= limit) break;
-      try {
-        const state = readSessionListState(c.stateFile, c.dir);
-        if (isEphemeralSessionState(state)) continue;
-        state.kind = normalizedSessionKind(state.kind);
-        if (excludeKinds.includes(state.kind)) continue;
-        if (opts?.cwd !== undefined && resolve(state.cwd) !== resolve(opts.cwd)) continue;
-        if (opts?.archived !== undefined && Boolean(state.archivedAt) !== opts.archived) continue;
-        if (opts?.rootsOnly && state.parentSessionId) continue;
-        if (
-          opts?.before &&
-          (c.lastActiveAt > opts.before.lastActiveAt ||
-            (c.lastActiveAt === opts.before.lastActiveAt &&
-              c.dir.localeCompare(opts.before.sessionId) <= 0))
-        )
-          continue;
-        const preview = c.transcriptExists ? readLastUserMessage(c.transcriptFile) : undefined;
-        const entry = { ...state, preview, lastActiveAt: c.lastActiveAt };
-        if (opts?.filter && !opts.filter(entry)) continue;
-        sessions.push(entry);
-      } catch {
-        // Skip corrupted sessions
-      }
-    }
-
-    return sessions;
   }
+  candidates.sort((a, b) => b.lastActiveAt - a.lastActiveAt || a.dir.localeCompare(b.dir));
+  const sessions: SessionListEntry[] = [];
+  for (const c of candidates) {
+    if (sessions.length >= limit) break;
+    try {
+      const state = storage
+        ? parseSessionListState(storage.readState(c.dir, MAX_LIST_STATE_BYTES), c.dir)
+        : readSessionListState(c.stateFile, c.dir);
+      if (isEphemeralSessionState(state)) continue;
+      state.kind = normalizedSessionKind(state.kind);
+      if (excludeKinds.includes(state.kind)) continue;
+      if (opts?.cwd !== undefined && resolve(state.cwd) !== resolve(opts.cwd)) continue;
+      if (opts?.archived !== undefined && Boolean(state.archivedAt) !== opts.archived) continue;
+      if (opts?.rootsOnly && state.parentSessionId) continue;
+      if (
+        opts?.before &&
+        (c.lastActiveAt > opts.before.lastActiveAt ||
+          (c.lastActiveAt === opts.before.lastActiveAt &&
+            c.dir.localeCompare(opts.before.sessionId) <= 0))
+      )
+        continue;
+      const preview = c.transcriptExists ? readLastUserMessage(c.transcriptFile) : undefined;
+      const entry = { ...state, preview, lastActiveAt: c.lastActiveAt };
+      if (opts?.filter && !opts.filter(entry)) continue;
+      sessions.push(entry);
+    } catch {
+      // Skip corrupted sessions
+    }
+  }
+
+  return sessions;
 }
 
 export function buildForkState(
@@ -2690,13 +2720,19 @@ function readSessionListState(file: string, sessionId: string): SessionState {
       if (!count) break;
       bytes += count;
     }
-    const state = JSON.parse(buffer.subarray(0, bytes).toString("utf8")) as SessionState;
-    if (!state || state.sessionId !== sessionId || typeof state.cwd !== "string")
-      throw new Error("invalid session metadata");
-    return state;
+    return parseSessionListState(buffer.subarray(0, bytes).toString("utf8"), sessionId);
   } finally {
     closeSync(fd);
   }
+}
+
+function parseSessionListState(raw: string, sessionId: string): SessionState {
+  if (Buffer.byteLength(raw) > MAX_LIST_STATE_BYTES)
+    throw new Error("session list state is too large");
+  const state = JSON.parse(raw) as SessionState;
+  if (!state || state.sessionId !== sessionId || typeof state.cwd !== "string")
+    throw new Error("invalid session metadata");
+  return state;
 }
 
 const TAIL_CHUNK_SIZE = 64 * 1024;

@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, test } from "bun:test";
+import { afterAll, afterEach, describe, expect, test } from "bun:test";
 import { createServer, request as httpRequest, type Server } from "node:http";
 import {
   mkdtempSync,
@@ -11,8 +11,12 @@ import {
 } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { SettingsManager } from "@cjhyy/code-shell-core";
-import { createHubMcpConfiguration, type HubMcpConfigurationOptions } from "./mcp-configuration.js";
+import { installFixtureNetworkGuard } from "../../../../tests/helpers/network-fixture.js";
+const network = installFixtureNetworkGuard();
+afterAll(() => network.restore());
+const { SettingsManager } = await import("@cjhyy/code-shell-core");
+import type { HubMcpConfigurationOptions } from "./mcp-configuration.js";
+const { createHubMcpConfiguration } = await import("./mcp-configuration.js");
 
 const fixtures: {
   directory: string;
@@ -92,6 +96,7 @@ async function fixture(options: Partial<HubMcpConfigurationOptions> = {}) {
   await new Promise<void>((resolve) => http.listen(0, "127.0.0.1", resolve));
   fixtures.push({ directory, http, api });
   const url = `http://127.0.0.1:${(http.address() as { port: number }).port}`;
+  network.allowOrigin(url);
   const request = (path: string, method = "GET", body?: unknown, extra: RequestInit = {}) =>
     fetch(`${url}/api/v1/mcp${path}`, {
       method,
@@ -415,6 +420,7 @@ describe("Hub MCP configuration", () => {
     extraServers.push(mcp);
     await new Promise<void>((resolve) => mcp.listen(0, "127.0.0.1", resolve));
     const url = `http://127.0.0.1:${(mcp.address() as { port: number }).port}/mcp`;
+    network.allowOrigin(url);
     const f = await fixture();
     await f.request("/servers", "POST", {
       name: "fixture-http",

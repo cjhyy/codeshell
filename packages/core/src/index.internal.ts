@@ -482,3 +482,10 @@ export {
   type DesktopOperationBatchAuthorityInput,
   type DesktopOperationBatchAuthorityResult,
 } from "./operations/desktop-batch-authority-client.js";
+
+export {
+  createMcpProbeConnection,
+  McpProbeConnectionError,
+} from "./tool-system/mcp-probe-connection.js";
+
+export { listSessionEntries } from "./session/session-manager.js";

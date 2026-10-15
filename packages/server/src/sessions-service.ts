@@ -4,6 +4,7 @@
  */
 
 import { SessionManager, sessionsRoot, type TurnCompletionKind } from "@cjhyy/code-shell-core";
+import { scanSessionDirectories, readSessionFile } from "@cjhyy/code-shell-host";
 import * as fs from "node:fs/promises";
 import * as fsSync from "node:fs";
 import * as path from "node:path";
@@ -278,29 +279,12 @@ export async function listDiskSessions(
   ) {
     throw new Error("invalid parent session id");
   }
-  // Async fs throughout: this is an IPC handler on the Electron main thread
-  // (sessions:listDisk). The previous synchronous statSync/readFileSync loops
-  // never yielded the event loop and froze the UI while enumerating sessions.
-  let entries: fsSync.Dirent[];
-  try {
-    entries = await fs.readdir(baseDir, { withFileTypes: true });
-  } catch (e) {
-    if ((e as NodeJS.ErrnoException).code === "ENOENT") return { sessions: [], nextCursor: null };
-    throw e;
-  }
-  const candidates = entries.filter(
-    (e) => e.isDirectory() && SAFE_ID.test(e.name) && !isInternalEphemeralSessionId(e.name),
+  // Preserve the public adapter's explicit relative-root form. Host receives
+  // one absolute root; it never guesses a workspace for the caller.
+  baseDir = path.resolve(baseDir);
+  const dirs = (await scanSessionDirectories(baseDir)).filter(
+    ({ id }) => !isInternalEphemeralSessionId(id),
   );
-  const stats = await Promise.all(
-    candidates.map(async (e) => {
-      try {
-        return { id: e.name, mtime: (await fs.stat(path.join(baseDir, e.name))).mtimeMs };
-      } catch {
-        return null; // skip unreadable
-      }
-    }),
-  );
-  const dirs = stats.filter((d): d is { id: string; mtime: number } => d !== null);
   dirs.sort((a, b) => b.mtime - a.mtime || a.id.localeCompare(b.id));
 
   const decodedCursor = decodeDiskSessionCursor(opts.cursor);
@@ -312,7 +296,7 @@ export async function listDiskSessions(
           const index = dirs.findIndex(
             (entry) =>
               entry.mtime < decodedCursor.mtime ||
-              (entry.mtime === decodedCursor.mtime && entry.id > decodedCursor.id),
+              (entry.mtime === decodedCursor.mtime && entry.id.localeCompare(decodedCursor.id) > 0),
           );
           return index < 0 ? dirs.length : index;
         })();
@@ -336,7 +320,8 @@ export async function listDiskSessions(
     const { id, mtime } = dirs[i]!;
     let state: Record<string, unknown>;
     try {
-      state = JSON.parse(await fs.readFile(path.join(baseDir, id, "state.json"), "utf8"));
+      state = JSON.parse(await readSessionFile(baseDir, id, "state.json", MAX_HISTORY_STATE_BYTES));
+      if (!state || typeof state !== "object" || Array.isArray(state)) continue;
     } catch {
       continue;
     }
