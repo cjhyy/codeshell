@@ -108,7 +108,7 @@ export interface MaskedLinkConnection {
   methodId: string;
   label: string;
   runtime: "local" | "server";
-  authSource: "manual-token" | "cli-session" | "browser-oauth" | "remote-link";
+  authSource: "manual-token" | "cli-session" | "browser-oauth" | "mcp-oauth" | "remote-link";
   status: "connected" | "expired" | "invalid" | "unavailable";
   account?: {
     id?: string;
@@ -138,6 +138,14 @@ export interface LinkSnapshot {
     browserHandoff?: 1;
   };
   remoteServer?: { issuer: string };
+  /** Discovery health is independent of saved account/grant state. */
+  remoteCatalog?: {
+    state: "unconfigured" | "unknown" | "ready" | "unavailable" | "stale";
+    checkedAt?: string;
+    lastSuccessAt?: string;
+    errorCode?: "network_error" | "http_error" | "invalid_response" | "response_too_large";
+    httpStatus?: number;
+  };
   /** Count only; retired secrets never leave the Host. Retried after restart with backoff. */
   remoteCleanupPending?: number;
   revision: string;
@@ -195,4 +203,42 @@ export interface LinkAuthorization {
   previousGrantRevocationPending?: boolean;
   connection?: MaskedLinkConnection;
   errorCode?: LinkErrorCode;
+  failure?: LinkAuthorizationFailure;
+}
+
+/** Fixed Host diagnostics only: never upstream messages, response bodies, or credentials. */
+export interface LinkAuthorizationFailure {
+  code:
+    | "invalid_request"
+    | "access_denied"
+    | "timeout"
+    | "network_error"
+    | "server_error"
+    | "protocol_error";
+  stage:
+    | "validation"
+    | "authorization"
+    | "discovery_registration"
+    | "authorization_callback"
+    | "token_exchange"
+    | "credential_verification";
+  verificationStage?:
+    | "credential_binding"
+    | "mcp_initialize"
+    | "tool_discovery"
+    | "account_verification"
+    | "capability_verification";
+  reason?:
+    | "binding_mismatch"
+    | "cancelled"
+    | "network_error"
+    | "http_error"
+    | "protocol_error"
+    | "tool_unavailable"
+    | "invalid_pagination"
+    | "response_too_large"
+    | "account_tool_error"
+    | "account_identity_unavailable"
+    | "no_read_capabilities";
+  httpStatus?: number;
 }

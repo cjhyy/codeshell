@@ -26,6 +26,10 @@ import {
 } from "./owned-external-stream.js";
 import {
   DESKTOP_OPERATION_BATCH_METHOD,
+  executeFigmaMcpLinkAction,
+  isFigmaMcpCredential,
+  McpLinkActionError,
+  type McpLinkActionRequest,
   type DesktopOperationBatchAuthorityInput,
   type DesktopOperationBatchAuthorityResult,
 } from "@cjhyy/code-shell-core/internal";
@@ -71,6 +75,7 @@ import {
   executeRemoteLinkAction,
   RemoteLinkError,
   executeLocalOAuthLinkAction,
+  CredentialStore,
   type LocalOAuthLinkActionRequest,
   type RemoteLinkActionRequest,
   ErrorCodes,
@@ -374,6 +379,7 @@ export class AgentBridge implements PetStateBridge {
     private readonly oauthAccessResolver?: (req: {
       id: string;
       scope: "full";
+      serverUrl: string;
       forceRefresh?: boolean;
     }) => Promise<{ accessToken: string; expiresAt?: string }>,
     private readonly quickChatForkLifecycle?: QuickChatForkLifecycle,
@@ -1280,6 +1286,7 @@ export class AgentBridge implements PetStateBridge {
       parsed.method !== "desktop/oauthAccessResolve" &&
       parsed.method !== "desktop/remoteLinkAction" &&
       parsed.method !== "desktop/localOAuthLinkAction" &&
+      parsed.method !== "desktop/mcpLinkAction" &&
       parsed.method !== "desktop/modelRequestSign" &&
       parsed.method !== "desktop/localOAuthLinkActionCancel"
     ) {
@@ -1318,7 +1325,10 @@ export class AgentBridge implements PetStateBridge {
               normalizeCredentialResolveParams(parsed.params),
             ),
           };
-        } else if (parsed.method === "desktop/localOAuthLinkAction") {
+        } else if (
+          parsed.method === "desktop/localOAuthLinkAction" ||
+          parsed.method === "desktop/mcpLinkAction"
+        ) {
           if (this.localOAuthLinkActions.has(id))
             throw new Error("Local Link request is already running");
           const controller = new AbortController();
@@ -1327,10 +1337,23 @@ export class AgentBridge implements PetStateBridge {
             reply = {
               jsonrpc: "2.0",
               id,
-              result: await executeLocalOAuthLinkAction(
-                parsed.params as unknown as LocalOAuthLinkActionRequest,
-                { signal: controller.signal },
-              ),
+              result:
+                parsed.method === "desktop/mcpLinkAction"
+                  ? await executeFigmaMcpLinkAction(
+                      parsed.params as unknown as McpLinkActionRequest,
+                      {
+                        signal: controller.signal,
+                        resolveOAuthAccess: (request) => {
+                          if (!this.oauthAccessResolver)
+                            throw new Error("OAuth access resolver is unavailable");
+                          return this.oauthAccessResolver(request);
+                        },
+                      },
+                    )
+                  : await executeLocalOAuthLinkAction(
+                      parsed.params as unknown as LocalOAuthLinkActionRequest,
+                      { signal: controller.signal },
+                    ),
             };
           } finally {
             if (this.localOAuthLinkActions.get(id) === controller)
@@ -1356,14 +1379,33 @@ export class AgentBridge implements PetStateBridge {
           if (!this.oauthAccessResolver) throw new Error("OAuth access resolver is unavailable");
           const credentialId = typeof parsed.params?.id === "string" ? parsed.params.id : "";
           if (!credentialId) throw new Error("oauthAccessResolve requires id");
+          const serverUrl =
+            typeof parsed.params?.serverUrl === "string" ? parsed.params.serverUrl : "";
+          if (!serverUrl) throw new Error("oauthAccessResolve requires the selected server URL");
+          const assertWorkerOAuthAccess = () => {
+            // This generic IPC returns a bearer to the Worker. Link-owned MCP
+            // tokens may only feed the dedicated Host execution route above.
+            const credential = new CredentialStore(undefined).resolve(credentialId, "full");
+            if (
+              !credential ||
+              credential.type !== "oauth" ||
+              credential.meta?.agentExposable === false ||
+              isFigmaMcpCredential(credential)
+            )
+              throw new Error("OAuth credential is restricted to Host-owned actions");
+          };
+          assertWorkerOAuthAccess();
+          const result = await this.oauthAccessResolver({
+            id: credentialId,
+            scope: "full",
+            serverUrl,
+            forceRefresh: parsed.params?.forceRefresh === true,
+          });
+          assertWorkerOAuthAccess();
           reply = {
             jsonrpc: "2.0",
             id,
-            result: await this.oauthAccessResolver({
-              id: credentialId,
-              scope: "full",
-              forceRefresh: parsed.params?.forceRefresh === true,
-            }),
+            result,
           };
         }
       } catch (err) {
@@ -1373,6 +1415,9 @@ export class AgentBridge implements PetStateBridge {
           error: {
             code: -32603,
             message: err instanceof Error ? err.message : String(err),
+            ...(parsed.method === "desktop/mcpLinkAction" && err instanceof McpLinkActionError
+              ? { data: { mcpLinkCode: err.code } }
+              : {}),
             ...(parsed.method === "desktop/remoteLinkAction" &&
             err instanceof RemoteLinkError &&
             [
@@ -1388,6 +1433,7 @@ export class AgentBridge implements PetStateBridge {
       }
       if (
         (parsed.method === "desktop/localOAuthLinkAction" ||
+          parsed.method === "desktop/mcpLinkAction" ||
           parsed.method === "desktop/modelRequestSign") &&
         workerEpoch !== this.localOAuthLinkEpoch
       )

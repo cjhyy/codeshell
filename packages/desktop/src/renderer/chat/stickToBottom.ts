@@ -1,4 +1,6 @@
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
+import { flushSync } from "react-dom";
+import type { AnchoredLayoutChange } from "./TranscriptScrollContext";
 import {
   nextFollowState,
   showJumpButton,
@@ -17,6 +19,8 @@ export interface StickApi<T extends HTMLElement> {
   showJump: boolean;
   /** Explicit "take me to now": re-arm follow + snap to bottom. */
   scrollToBottom: () => void;
+  /** A deliberate disclosure is a reading action: pause follow and keep its header in place. */
+  preserveScrollOnChange: AnchoredLayoutChange;
 }
 
 interface StickOptions {
@@ -63,6 +67,7 @@ export function useStickToBottom<T extends HTMLElement>({
   const [uiState, setUiState] = useState<FollowState>(INITIAL_FOLLOW_STATE);
   // scrollTop we last set ourselves; lets onScroll reject its own snap (S2).
   const lastProgrammaticTopRef = useRef<number | null>(null);
+  const readingAnchorRef = useRef<{ container: T; element: HTMLElement; top: number } | null>(null);
 
   const sync = useCallback((next: FollowState) => {
     followRef.current = next;
@@ -73,15 +78,152 @@ export function useStickToBottom<T extends HTMLElement>({
   }, []);
 
   const snapToBottom = useCallback((el: T) => {
+    readingAnchorRef.current = null;
     el.scrollTop = el.scrollHeight;
     lastProgrammaticTopRef.current = el.scrollTop;
   }, []);
+
+  const restoreReadingAnchor = useCallback((el: T) => {
+    const anchor = readingAnchorRef.current;
+    if (!anchor) return;
+    if (anchor.container !== el || !el.contains(anchor.element) || followRef.current.following) {
+      readingAnchorRef.current = null;
+      return;
+    }
+    const delta = anchor.element.getBoundingClientRect().top - anchor.top;
+    if (Math.abs(delta) > 0.5) {
+      el.scrollTop += delta;
+      lastProgrammaticTopRef.current = el.scrollTop;
+      // Accept unavoidable clamping when the remaining content is too short.
+      anchor.top = anchor.element.getBoundingClientRect().top;
+    }
+  }, []);
+
+  const measurePosition = useCallback(
+    (el: T) => {
+      const distance = el.scrollHeight - (el.scrollTop + el.clientHeight);
+      sync({ following: followRef.current.following, atBottom: distance <= threshold });
+    },
+    [sync, threshold],
+  );
+
+  const preserveScrollOnChange = useCallback<AnchoredLayoutChange>(
+    (anchor, change) => {
+      const el = ref.current;
+      if (!el || !el.contains(anchor)) {
+        change();
+        return;
+      }
+      const beforeTop = anchor.getBoundingClientRect().top;
+      readingAnchorRef.current = { container: el, element: anchor, top: beforeTop };
+      // This ref must change before React commits and ResizeObserver can run.
+      sync({ following: false, atBottom: uiPosition(el, threshold) });
+      lastProgrammaticTopRef.current = null;
+      // Discrete user actions commit synchronously so no later restoration can
+      // race a send, Session switch, or explicit jump-to-bottom request.
+      flushSync(change);
+      if (ref.current !== el || !el.contains(anchor) || followRef.current.following) return;
+      restoreReadingAnchor(el);
+      lastProgrammaticTopRef.current = el.scrollTop;
+      measurePosition(el);
+    },
+    [measurePosition, restoreReadingAnchor, sync, threshold],
+  );
 
   // (1) Manual scroll detection — via the pure reducer, rejecting our own snap.
   useEffect(() => {
     const el = ref.current;
     if (!el) return;
+    let userScrollUntil = 0;
+    let draggingScrollbar = false;
+    let primaryPointerDown = false;
+    const noteUserScroll = () => {
+      readingAnchorRef.current = null;
+      lastProgrammaticTopRef.current = null;
+      userScrollUntil = performance.now() + 1000;
+    };
+    const pauseForReading = () => sync({ following: false, atBottom: uiPosition(el, threshold) });
+    const onWheel = (event: WheelEvent) => {
+      if (!event.deltaY) return;
+      noteUserScroll();
+      if (event.deltaY < 0) pauseForReading();
+    };
+    const onTouchMove = () => {
+      noteUserScroll();
+      pauseForReading();
+    };
+    const onPointerDown = (event: PointerEvent) => {
+      readingAnchorRef.current = null;
+      primaryPointerDown = event.button === 0 && event.isPrimary;
+      // Native scrollbar interaction targets the scroll container itself.
+      draggingScrollbar = event.target === el;
+      if (draggingScrollbar) {
+        noteUserScroll();
+        pauseForReading();
+      }
+    };
+    const onPointerUp = () => {
+      if (draggingScrollbar) noteUserScroll();
+      draggingScrollbar = false;
+      primaryPointerDown = false;
+    };
+    const pauseForSelection = () => {
+      const selection = window.getSelection();
+      if (
+        !primaryPointerDown ||
+        !selection ||
+        selection.isCollapsed ||
+        !el.contains(selection.anchorNode) ||
+        !el.contains(selection.focusNode)
+      )
+        return false;
+      noteUserScroll();
+      pauseForReading();
+      return true;
+    };
+    const onPointerMove = () => {
+      pauseForSelection();
+    };
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.defaultPrevented) return;
+      // Keyboard focus navigation can scroll a link or button into view too.
+      if (event.key === "Tab" && !event.altKey && !event.ctrlKey && !event.metaKey) {
+        noteUserScroll();
+        pauseForReading();
+        return;
+      }
+      const target = event.target as HTMLElement | null;
+      if (
+        target?.closest(
+          "input, textarea, select, [contenteditable]:not([contenteditable=false])",
+        ) ||
+        event.altKey ||
+        ((event.ctrlKey || event.metaKey) &&
+          !["Home", "End", "ArrowUp", "ArrowDown"].includes(event.key)) ||
+        !["ArrowUp", "ArrowDown", "PageUp", "PageDown", "Home", "End", " "].includes(event.key) ||
+        (event.key === " " && target?.closest("button, a"))
+      )
+        return;
+      noteUserScroll();
+      if (
+        ["ArrowUp", "PageUp", "Home"].includes(event.key) ||
+        (event.key === " " && event.shiftKey)
+      )
+        pauseForReading();
+    };
     const onScroll = () => {
+      // Dragging a selection beyond the viewport causes native auto-scroll.
+      if (pauseForSelection()) {
+        measurePosition(el);
+        return;
+      }
+      // Chromium can scroll when its layout anchor moves or content shrinks.
+      // Those events must not turn a paused reader back into an auto-follower.
+      if (readingAnchorRef.current || (!draggingScrollbar && performance.now() > userScrollUntil)) {
+        restoreReadingAnchor(el);
+        measurePosition(el);
+        return;
+      }
       const distance = el.scrollHeight - (el.scrollTop + el.clientHeight);
       const { state } = nextFollowState(followRef.current, {
         kind: "scroll",
@@ -93,8 +235,24 @@ export function useStickToBottom<T extends HTMLElement>({
       sync(state);
     };
     el.addEventListener("scroll", onScroll, { passive: true });
-    return () => el.removeEventListener("scroll", onScroll);
-  }, [threshold, sync]);
+    el.addEventListener("wheel", onWheel, { passive: true });
+    el.addEventListener("touchmove", onTouchMove, { passive: true });
+    el.addEventListener("pointerdown", onPointerDown, { passive: true });
+    el.addEventListener("keydown", onKeyDown);
+    window.addEventListener("pointerup", onPointerUp, { passive: true });
+    window.addEventListener("pointercancel", onPointerUp, { passive: true });
+    window.addEventListener("pointermove", onPointerMove, { passive: true });
+    return () => {
+      el.removeEventListener("scroll", onScroll);
+      el.removeEventListener("wheel", onWheel);
+      el.removeEventListener("touchmove", onTouchMove);
+      el.removeEventListener("pointerdown", onPointerDown);
+      el.removeEventListener("keydown", onKeyDown);
+      window.removeEventListener("pointerup", onPointerUp);
+      window.removeEventListener("pointercancel", onPointerUp);
+      window.removeEventListener("pointermove", onPointerMove);
+    };
+  }, [measurePosition, restoreReadingAnchor, threshold, sync]);
 
   // (2) Height changes (ResizeObserver): when following, stay pinned to the
   // bottom even if the key didn't move — e.g. streaming `<pre>` swapping to
@@ -105,13 +263,15 @@ export function useStickToBottom<T extends HTMLElement>({
     if (!el || typeof ResizeObserver === "undefined") return;
     const ro = new ResizeObserver(() => {
       if (followRef.current.following) snapToBottom(el);
+      else restoreReadingAnchor(el);
+      measurePosition(el);
     });
     // Observe the content wrapper (first child) so we react to content growth,
     // not just the fixed-height scroll container.
     const target = el.firstElementChild ?? el;
     ro.observe(target);
     return () => ro.disconnect();
-  }, [snapToBottom]);
+  }, [measurePosition, restoreReadingAnchor, snapToBottom]);
 
   // (3) Session switch (jumpKey): unconditional snap before paint + re-arm.
   useLayoutEffect(() => {
@@ -141,9 +301,11 @@ export function useStickToBottom<T extends HTMLElement>({
   // (5) Content change (trigger): snap only while following.
   useEffect(() => {
     const el = ref.current;
-    if (!el || !followRef.current.following) return;
-    snapToBottom(el);
-  }, [trigger, snapToBottom]);
+    if (!el) return;
+    if (followRef.current.following) snapToBottom(el);
+    else restoreReadingAnchor(el);
+    measurePosition(el);
+  }, [trigger, measurePosition, restoreReadingAnchor, snapToBottom]);
 
   const scrollToBottom = useCallback(() => {
     const el = ref.current;
@@ -158,5 +320,10 @@ export function useStickToBottom<T extends HTMLElement>({
     following: uiState.following,
     showJump: showJumpButton(uiState),
     scrollToBottom,
+    preserveScrollOnChange,
   };
+}
+
+function uiPosition(el: HTMLElement, threshold: number): boolean {
+  return el.scrollHeight - (el.scrollTop + el.clientHeight) <= threshold;
 }

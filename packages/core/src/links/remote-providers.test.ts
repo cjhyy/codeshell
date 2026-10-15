@@ -35,6 +35,7 @@ import { createSessionOperationController } from "../operations/controller.js";
 import { CapabilityResolver } from "../operations/resolver.js";
 
 import { createBunTestEnvironment } from "../../../../scripts/bun-test-completion.mjs";
+import { isFigmaMcpAction } from "@cjhyy/code-shell-link";
 
 const cleanups: Array<() => void | Promise<void>> = [];
 afterEach(async () => {
@@ -959,7 +960,7 @@ test("GitLab, Figma and Linear distinguish personal-token headers from OAuth Bea
   for (const providerId of ["gitlab", "figma", "linear"] as const) {
     for (const authKind of ["token", "oauth"] as const) {
       let headers = new Headers();
-      await validateLocalLinkToken(providerId, "synthetic-private", {
+      const validated = await validateLocalLinkToken(providerId, "synthetic-private", {
         authKind,
         fetchImpl: (async (_url: unknown, init?: RequestInit) => {
           headers = new Headers(init?.headers);
@@ -986,9 +987,20 @@ test("GitLab, Figma and Linear distinguish personal-token headers from OAuth Bea
       expect(headers.get("x-figma-token")).toBe(
         providerId === "figma" && authKind === "token" ? "synthetic-private" : null,
       );
+      if (providerId === "figma") {
+        expect(validated.capabilityIds).toEqual([
+          "figma.get_file",
+          "figma.get_nodes",
+          "figma.get_images",
+          "figma.get_image_fills",
+          "figma.get_comments",
+        ]);
+      }
     }
     const provider = getLocalLinkProvider(providerId)!;
-    expect(provider.actions.length).toBe(providerId === "figma" ? 5 : 2);
+    expect(provider.actions.filter((action) => !isFigmaMcpAction(action.id)).length).toBe(
+      providerId === "figma" ? 5 : 2,
+    );
   }
 });
 

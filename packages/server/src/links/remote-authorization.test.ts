@@ -102,13 +102,13 @@ async function fixture(
               : { repositories: ["owner/repo"] }),
           }),
         );
-      } else if (req.url === "/api/v1/links/providers" && provider === "figma") {
+      } else if (req.url === "/api/v1/links/providers") {
         res.end(
           JSON.stringify({
             version: 1,
             providers: [
               {
-                id: "figma",
+                id: provider,
                 methods: [
                   {
                     id: "remote-link",
@@ -117,7 +117,7 @@ async function fixture(
                     authModes: [{ id: "browser", kind: "redirect" }],
                   },
                 ],
-                actions: ["get_file", "get_comments"],
+                actions: scopes.map((scope) => scope.split(":")[1]),
                 scopes,
               },
             ],

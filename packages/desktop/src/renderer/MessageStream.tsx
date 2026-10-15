@@ -19,6 +19,7 @@ import { buildStreamItems, reconcileStreamItems, type StreamItem } from "./messa
 import { foldAgentGroups, type RenderedStreamItem } from "./messages/agentGroup";
 import { AgentGroupCard } from "./messages/AgentGroupCard";
 import { useStickToBottom } from "./chat/stickToBottom";
+import { TranscriptScrollContext } from "./chat/TranscriptScrollContext";
 import { buildScrollTrigger } from "./chat/scrollTrigger";
 import { Button } from "@/components/ui/button";
 import { ChevronDown } from "./ui/icons";
@@ -161,10 +162,20 @@ export function MessageStream({
 }: Props) {
   const { t } = useT();
   const [selectedSubagent, setSelectedSubagent] = useState<SubagentSelection | null>(null);
-  // Context consumers only need identity, label and completion. Preserve the
+  // Context consumers only need identity, label, status and timing. Preserve the
   // value across unrelated token deltas so memoized tool cards stay cheap.
   const subagentSummariesRef = useRef<SubagentSummary[]>([]);
-  const nextSubagents = messages.filter((message) => message.kind === "agent");
+  const nextSubagents: SubagentSummary[] = messages
+    .filter((message) => message.kind === "agent")
+    .map(({ id, name, description, done, error, startedAt, endedAt }) => ({
+      id,
+      name,
+      description,
+      done,
+      error,
+      startedAt,
+      endedAt,
+    }));
   if (
     nextSubagents.length !== subagentSummariesRef.current.length ||
     nextSubagents.some((agent, index) => {
@@ -172,7 +183,11 @@ export function MessageStream({
       return (
         agent.id !== previous?.id ||
         agent.description !== previous.description ||
-        agent.done !== previous.done
+        agent.done !== previous.done ||
+        agent.name !== previous.name ||
+        agent.error !== previous.error ||
+        agent.startedAt !== previous.startedAt ||
+        agent.endedAt !== previous.endedAt
       );
     })
   )
@@ -198,15 +213,16 @@ export function MessageStream({
       break;
     }
   }
-  const { ref, showJump, scrollToBottom } = useStickToBottom<HTMLDivElement>({
-    // Trigger encodes message count + trailing key + bucketed streaming tail
-    // length, so growth within a single streaming message keeps following.
-    trigger: buildScrollTrigger(messages, liveTurnActive, trailingKey),
-    // Session switch → snap to bottom instantly (before paint), no scroll flash.
-    jumpKey: engineSessionId ?? null,
-    // User send → unconditional re-arm + snap (separate dep from session id).
-    sendEpoch,
-  });
+  const { ref, showJump, scrollToBottom, preserveScrollOnChange } =
+    useStickToBottom<HTMLDivElement>({
+      // Trigger encodes message count + trailing key + bucketed streaming tail
+      // length, so growth within a single streaming message keeps following.
+      trigger: buildScrollTrigger(messages, liveTurnActive, trailingKey),
+      // Session switch → snap to bottom instantly (before paint), no scroll flash.
+      jumpKey: engineSessionId ?? null,
+      // User send → unconditional re-arm + snap (separate dep from session id).
+      sendEpoch,
+    });
   // Zoom state carries the whole sibling-image group plus the clicked index,
   // so the Lightbox can offer prev/next across the images in one message.
   const [zoomed, setZoomed] = useState<{
@@ -769,9 +785,13 @@ export function MessageStream({
                 // where streaming output lands, and containment there would
                 // fight the live-growth path (and the auto-scroll that follows
                 // it). Cheap, reversible, and no virtualization bookkeeping.
-                if (index >= items.length - LIVE_TAIL_UNCONTAINED) return node;
                 return (
-                  <div key={`vc-${item.id}`} className="cs-stream-item">
+                  <div
+                    key={`vc-${item.id}`}
+                    className={
+                      index < items.length - LIVE_TAIL_UNCONTAINED ? "cs-stream-item" : undefined
+                    }
+                  >
                     {node}
                   </div>
                 );
@@ -878,7 +898,9 @@ export function MessageStream({
   );
   return (
     <SubagentNavigationContext.Provider value={subagentNavigation}>
-      {stream}
+      <TranscriptScrollContext.Provider value={preserveScrollOnChange}>
+        {stream}
+      </TranscriptScrollContext.Provider>
     </SubagentNavigationContext.Provider>
   );
 }

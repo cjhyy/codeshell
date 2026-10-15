@@ -81,6 +81,14 @@ try {
     join(sessionDir, "transcript.jsonl"),
     events.map(JSON.stringify).join("\n") + "\n",
   );
+  await writeFile(
+    join(isolated.codeShellHome, "sessions", "activity-legacy.jsonl"),
+    events.map(JSON.stringify).join("\n") + "\n",
+  );
+  await writeFile(
+    join(isolated.codeShellHome, "sessions", "activity-export.json"),
+    JSON.stringify(events),
+  );
   app = await launchCodeShellElectron({
     appDir,
     home: isolated.home,
@@ -128,10 +136,27 @@ try {
     .locator("[data-sessions-page]")
     .getByRole("heading", { name: title, exact: true })
     .waitFor();
+  const historyPage = win.locator("[data-sessions-page]");
+  const archivedRow = historyPage
+    .getByRole("listitem")
+    .filter({ has: win.getByRole("heading", { name: title, exact: true }) });
+  await archivedRow.getByRole("button", { name: "打开会话", exact: true }).click();
+  await win.getByText("只读历史记录", { exact: true }).waitFor();
+  await win.getByText(objective, { exact: true }).waitFor();
+  await win.getByRole("button", { name: "返回会话历史", exact: true }).click();
+  for (const id of ["activity-legacy", "activity-export"]) {
+    await historyPage.getByRole("searchbox").fill(id);
+    await historyPage.getByRole("button", { name: "查看记录", exact: true }).click();
+    await win.getByText("只读历史记录", { exact: true }).waitFor();
+    await win.getByText(objective, { exact: true }).waitFor();
+    await win.getByRole("button", { name: "返回会话历史", exact: true }).click();
+  }
+  await historyPage.getByRole("searchbox").fill("");
   await navigate("打开 运行", "运行记录");
   await win
     .getByRole("region", { name: "运行列表", exact: true })
     .getByRole("button", { name: new RegExp(`^${objective}`) })
+    .first()
     .click();
   const detail = win.getByRole("region", { name: "运行详情", exact: true });
   await detail.getByRole("heading", { name: objective, exact: true }).waitFor();

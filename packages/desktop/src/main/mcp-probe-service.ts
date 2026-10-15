@@ -197,8 +197,16 @@ async function probeOne(
       const access = oauthService
         ? {
             ...localCredentialAccess,
-            resolveOAuthAccess: (req: { id: string; scope: "full"; forceRefresh?: boolean }) =>
-              oauthService.resolveAccessToken(req.id, { forceRefresh: req.forceRefresh }),
+            resolveOAuthAccess: (req: {
+              id: string;
+              scope: "full";
+              serverUrl: string;
+              forceRefresh?: boolean;
+            }) =>
+              oauthService.resolveAccessToken(req.id, {
+                serverUrl: req.serverUrl,
+                forceRefresh: req.forceRefresh,
+              }),
           }
         : localCredentialAccess;
       mcpTransport = new StreamableHTTPClientTransport(new URL(cfg.url), {

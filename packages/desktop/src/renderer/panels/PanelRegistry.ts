@@ -31,7 +31,7 @@ interface TerminalPanelProps {
 import { BackgroundShellPanel } from "./BackgroundShellPanel";
 import { CCRoomView } from "../cc-room/CCRoomView";
 import type { OpenCliSessionRequest } from "../cc-room/types";
-import { PanelAppHost } from "./PanelAppHost";
+import { PanelAppHost, type PanelAppStateChange } from "./PanelAppHost";
 import type { DesktopBuiltinPanelAppHost } from "./DesktopBuiltinPanelApp";
 import { SubagentSessionDetail } from "../subagents/SubagentSessionDetail";
 import type { SubagentSelection } from "../subagents/SubagentNavigation";
@@ -69,6 +69,8 @@ export interface PanelRenderContext extends PanelAvailabilityContext {
   onRemoveBrowserAnchor?: (anchorId: string) => void;
   onUpdateBrowserAnchor?: (anchorId: string, comment: string) => void;
   builtinPanelAppHost?: DesktopBuiltinPanelAppHost;
+  /** Renderer readiness only; Main still derives and validates all window authority. */
+  onPanelAppStateChange?: PanelAppStateChange;
 }
 
 export type PanelOwner =
@@ -85,6 +87,8 @@ export interface PanelEntry {
   readonly icon: LucideIcon;
   readonly order: number;
   readonly singleton: boolean;
+  /** Open only through dedicated in-app navigation, never a generic picker or external Host capability. */
+  readonly internalOnly?: boolean;
   readonly enabled: (context: PanelAvailabilityContext) => boolean;
   readonly render: (context: PanelRenderContext) => ReactNode;
   /** Present only for trusted built-in Panel Apps coordinated by core's lifecycle runtime. */
@@ -204,6 +208,7 @@ const BUILTIN_PANEL_ENTRIES: PanelEntry[] = [
       title: { kind: "i18n", key: "panels.kinds.subagent" },
       icon: Bot,
       order: 45,
+      internalOnly: true,
       enabled: alwaysEnabled,
       render: ({ engineSessionId, subagentSelection, foregroundVisible }) =>
         createElement(SubagentSessionDetail, {
@@ -388,6 +393,7 @@ export function replacePanelApps(
             permissionMode,
             planMode,
             hasGoal,
+            onPanelAppStateChange,
           }) =>
             createElement(PanelAppHost, {
               descriptor,
@@ -402,6 +408,7 @@ export function replacePanelApps(
               planMode,
               hasGoal,
               visible: foregroundVisible,
+              onStateChange: onPanelAppStateChange,
             }),
         };
       });
