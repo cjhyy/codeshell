@@ -320,6 +320,47 @@ export function FilesPanel({
     if (back?.getClientRects?.().length) back.focus({ preventScroll: true });
   }, [previewOpen, selectedForCurrentRoot]);
 
+  useEffect(() => {
+    const panel = panelRef.current;
+    if (!panel || typeof ResizeObserver === "undefined") return;
+    let lastFocused = panel.contains(document.activeElement)
+      ? (document.activeElement as HTMLElement)
+      : null;
+    const rememberFocus = (event: FocusEvent) => {
+      if (event.target === document.body) return;
+      lastFocused =
+        event.target instanceof HTMLElement && panel.contains(event.target) ? event.target : null;
+    };
+    const forgetOutsidePointer = (event: PointerEvent) => {
+      if (event.target instanceof Node && !panel.contains(event.target)) lastFocused = null;
+    };
+    const observer = new ResizeObserver(() => {
+      // Hiding a focused tree row can return focus to body before this callback.
+      // Remember only panel focus, so resizing never steals focus from other UI.
+      const active = document.activeElement;
+      const focused = panel.contains(active)
+        ? (active as HTMLElement)
+        : active === document.body
+          ? lastFocused
+          : null;
+      if (!focused || !panel.contains(focused) || focused.getClientRects().length) return;
+      const back = panel.querySelector<HTMLButtonElement>("[data-files-back]");
+      const row = Array.from(panel.querySelectorAll<HTMLButtonElement>("[data-files-path]")).find(
+        (element) => element.dataset.filesPath === selectedForCurrentRoot,
+      );
+      const filterInput = panel.querySelector<HTMLInputElement>("input");
+      [back, row, filterInput].find((element) => element?.getClientRects().length)?.focus();
+    });
+    document.addEventListener("focusin", rememberFocus);
+    document.addEventListener("pointerdown", forgetOutsidePointer, { passive: true });
+    observer.observe(panel);
+    return () => {
+      document.removeEventListener("focusin", rememberFocus);
+      document.removeEventListener("pointerdown", forgetOutsidePointer);
+      observer.disconnect();
+    };
+  }, [cwd, pendingExternalPreview, previewOpen, selectedForCurrentRoot, treeOpen]);
+
   if (!cwd && !selectedForCurrentRoot && !pendingExternalPreview) {
     return (
       <div className="flex min-h-0 flex-1 items-center justify-center text-sm text-muted-foreground">

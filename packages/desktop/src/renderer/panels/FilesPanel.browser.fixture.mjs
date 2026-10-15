@@ -199,12 +199,50 @@ try {
         await page.getByRole("button", { name: "README.md", exact: true }).focus();
         await page.evaluate(() => window.renderFixture({ width: 480 }, false));
         await back(page).waitFor();
-        assert.ok(
-          await page.evaluate(() => document.activeElement?.getClientRects().length > 0),
-          "Resizing does not leave focus in the hidden tree",
-        );
+        await page.waitForFunction(() => document.activeElement?.hasAttribute("data-files-back"));
         await page.evaluate(() => window.renderFixture({ width: 760 }, false));
         await filter(page).waitFor();
+        await page.waitForFunction(
+          () => document.activeElement?.getAttribute("data-files-path") === "/fixture/README.md",
+        );
+        await page.evaluate(() => {
+          const outside = document.createElement("button");
+          outside.id = "outside-focus";
+          outside.textContent = "Other action";
+          outside.style.cssText = "position:fixed;left:900px;top:0";
+          document.body.appendChild(outside);
+          outside.focus();
+          window.renderFixture({ width: 480 }, false);
+        });
+        await back(page).waitFor();
+        await page.evaluate(
+          () =>
+            new Promise((resolve) =>
+              window.requestAnimationFrame(() => window.requestAnimationFrame(resolve)),
+            ),
+        );
+        assert.equal(
+          await page.evaluate(() => document.activeElement?.id),
+          "outside-focus",
+          "Panel resize preserves focus elsewhere",
+        );
+        await page.evaluate(() => document.getElementById("outside-focus").remove());
+        await page.evaluate(() => window.renderFixture({ width: 760 }, false));
+        await page.getByRole("button", { name: "README.md", exact: true }).focus();
+        await page.evaluate(() => {
+          const outside = document.createElement("div");
+          outside.id = "outside-pointer";
+          outside.textContent = "Other content";
+          outside.style.cssText = "position:fixed;left:900px;top:20px;width:150px;height:24px";
+          document.body.appendChild(outside);
+        });
+        await page.locator("#outside-pointer").click();
+        assert.equal(await page.evaluate(() => document.activeElement === document.body), true);
+        await page.evaluate(() => window.renderFixture({ width: 480 }, false));
+        await back(page).waitFor();
+        await page.evaluate(() => new Promise(resolve => window.requestAnimationFrame(() => window.requestAnimationFrame(resolve))));
+        assert.equal(await page.evaluate(() => document.activeElement === document.body), true, "Resize respects a pointer move to non-focusable content outside the panel");
+        await page.evaluate(() => document.getElementById("outside-pointer").remove());
       }
       await inspect(page, page.locator("#qa-frame"), `frame-${width}x${height}`);
     }
