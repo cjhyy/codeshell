@@ -1,6 +1,6 @@
 # PR188 非阻断修复清单
 
-PR188 已通过整批 CC 静态审查、宿主原 smoke/完整 overlays 和远端 12 项 CI，并合入 `fc0af197078d4433a9f2cfca8668bdf95a3ffb7e`。以下 3 个 P2 不阻断该次合并，安排在第 8 批开头由 Codex 修复，再随本批代码交 CC review。本批实现与定向验证已完成（下方证据），独立 CC review 与正常宿主 HTTP 补验仍待主控接续；勾选仅表示修复已落代码，不能解释为 CC 已复审通过。
+PR188 已通过整批 CC 静态审查、宿主原 smoke/完整 overlays 和远端 12 项 CI，并合入 `fc0af197078d4433a9f2cfca8668bdf95a3ffb7e`。以下 3 个 P2 不阻断该次合并，在第 8 批开头由 Codex 修复。CC 已审查至 `5d891c836fe99f67f104c96646d6d4b5d59ac2ed` 并确认这三项 closed；主控正常宿主 bg_5u1l8 的真实 HTTP/账本契约也已通过。第 8a 新发现另见[本轮审查清单](evidence/host-shared-services-cc-review-20261015.md)，不与本清单混算。
 
 - [x] **账本归属不可认领时提供可恢复提示。** `desktop/src/main/external-runtime-operations.ts` / `external-runtime-service.ts`：搬迁或导入目录会使 usage-ledger 的 sessionScopeId 不再匹配。保留归属校验与 fail-closed，不能认领其他 owner 的账本；给出可操作提示（如在 Native 重建归属），不要把该情况误当 CLI 进程损坏而永久置 faulted。覆盖目录迁移/非法引用/再次提交，不修改已有归属或费用。
 - [x] **已发送终态的初始化失败不要重复显示。** `core/src/engine/engine.ts` 的 failClaimedRun 已发送 error/turn_complete 后 RPC 仍 reject，`desktop/renderer/app/useRunController.ts` catch 不应为同一 run 再追加终态和 toast。按本次 run/bucket 判断，不能用旧终态掩盖新失败；来自其他窗口的 abort 也不误报红色失败。覆盖已发终态、纯 RPC 失败、跨窗口取消、下一次真实失败。

@@ -1,4 +1,6 @@
-# Host 1.2a 共享服务首版交付（2026-10-15）
+# Host 1.2a 共享服务首轮交付（2026-10-15，历史记录）
+
+**首轮限制已 resolved：**主控已正常宿主补交 `b497f6d01`、`cd5489539`、`5d891c836fe99f67f104c96646d6d4b5d59ac2ed` 并建立 draft PR190。bg_5u1l8 已通过本记录原待验的完整 package-release、84 项真实 HTTP/账本契约、完整 typecheck 14 workspace、Desktop main 与 Node identity。CC 已确认 PR188 原三 P2 closed。下列命令和限制保留为当时记录，不再表示旧 head 待验/未提交；当前修复、提交和宿主补验以[本轮复审清单](host-shared-services-cc-review-20261015.md)为准，旧 head 证据不替代新代码验证。
 
 范围仅第 8a（输出回放除外）和 PR188 的三个非阻断 P2。没有继续 9–14 或 S2/S3，没有改 main/其他任务树，没有调用 Claude 或其他写入 worker。只读辅助审计不替代主控独立 CC review。
 
@@ -11,7 +13,7 @@
 
 | 领域 | 真实生产调用 | 迁移/保留边界 |
 | --- | --- | --- |
-| Skills | Desktop `index.ts skills:list/read/uninstall → skills-service.listSkills → Host.readSkillInventory`；Hub `skills-management.snapshot/listed/重名与来源预览 → 同一 inventory` | 删除两边 effective disabled + all/enabled 扫描组合。Core `/internal/skills` 安装/下载/bundle/revision 未复制。Desktop 精确 renderer target/listed path/safe-read grants；Hub owner、项目独占修改、revision/review token、写前写后授权、revoke/mutation gate 仍在 adapter。 |
+| Skills | Desktop `index.ts skills:list/read/uninstall → skills-service.listSkills → Host.readSkillInventory`；Hub `skills-management.snapshot/listed → 同一 inventory`；重名与来源预览只需 Core definitions scan | 删除两边 effective disabled + all/enabled 扫描组合。Core `/internal/skills` 安装/下载/bundle/revision 未复制。Desktop 精确 renderer target/listed path/safe-read grants；Hub owner、项目独占修改、revision/review token、写前写后授权、revoke/mutation gate 仍在 adapter。 |
 | MCP | Desktop `mcp:probe → mcp-probe-service → Host.probeMcp`；Hub `mcp-configuration → 兼容 mcp-probe → 同一 Host.probeMcp` | 删除 Desktop 短连接和 Hub 的实际探测/分页循环。Host 统一 transport、8 页/100 preview、重复 cursor、2 MiB总量、timeout/cancel、typed errors/脱敏。Core `/internal createMcpProbeConnection` 只提供 connect/listTools/close，并封装 SDK、512 KiB stdio帧及进程组回收；Host 不直接依赖 SDK。Desktop 保留 8 s、60 s cache/DTO/logger/OAuth resolver，cache 显式绑定 workspace/config，无授权版本的 credential/env 引用不缓存；IPC 兼容追加配置 target，Main 解析授权 cwd。Hub 的 workspace/owner 并发/HTTPdisconnect/revoke→signal 保留。 |
 | Model | Hub `configuration.ts → Host.probeConfiguredModel`；旧 `hub/model-probe` 仅兼容转导出 | 这是 Hub 独有的 Core-only 连接测试 ownership 迁移，未虚称三份算法去重。Core model-fetcher 与 Desktop metadata 未改；保持最多一次物理请求、拒 redirect、1 MiB、32 tokens、无工具、timeout/cancel/脱敏。未新增 Desktop 付费测试入口。 |
 | Session FS | Desktop `sessions:listDisk → server/storage → sessions-service.listDiskSessions → Host.async scan/read`；Hub `session-management.list/readHubSessionState/文件快照读取 → Host.scan/read + Core.internal.listSessionEntries` | Host 共享 safe ID、显式 root、有界 ordinary-file read、拒目录/文件 symlink、dev/ino重验与候选扫描。Core 原 SessionManager.list 算法原地抽 internal 窄函数，公开签名/默认行为保持；Hub 注入 Host storage，Core 不反向依赖 Host。Desktop 按目录 mtime/origin/legacy parent/missing cwd；Hub 按 transcript/state mtime、workspace/search/custom title/cursor，CAS/running guard 保留。默认根只用 Core.sessionsRoot。 |
@@ -20,7 +22,7 @@
 
 兼容收尾：公开 Session adapter 先解析调用方显式传入的相对 root，Host 仍只接受绝对 root；默认 scanner 先调用 Core.sessionsRoot（含测试守卫）再规范化，相对 CODE_SHELL_HOME 也保持兼容。Desktop 同目录 mtime 的排序与 cursor 统一 localeCompare，修复混合大小写 ID 漏页，并用两端入口测试前页删除。
 
-Core stable public SDK 与 extension 导出预算未变。Core internal 预算 113→115：仅两个本批必要窄入口（MCP connection 与原有 list 算法的 storage 注入），预算测试逐项注明原因。Host 运行依赖仍只有 Core 与 Node builtin。
+Core stable public SDK 与 extension 导出预算未变。Core internal 预算 113→115 计的是 export 语句；本批两个窄服务边界新增两个语句、三个 runtime 值：`McpProbeConnectionError`、`createMcpProbeConnection`、`listSessionEntries`。完整 runtime 清单已在本轮精确批准三者，不能将两个边界误写成两个 runtime 值。Host 运行依赖仍只有 Core 与 Node builtin。
 
 ## P2 修复
 

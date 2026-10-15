@@ -38,9 +38,22 @@ The first shared services live under `services/` and are exported from this pack
   ordinary-file reads, safe IDs and identity checks. Roots are explicit; default
   scanners use Core `sessionsRoot()`. Adapters retain their catalog semantics.
 
+Storage consumers import `@cjhyy/code-shell-host/session-files`; that entry does
+not load probes, model clients or skill inventory. List-only state reads retry
+at most twice after an ordinary file is atomically replaced, while single-session
+authorization reads reject identity changes. Desktop catalog state is capped at
+2 MiB; oversized entries are omitted with `SESSION_LIST_STATE_TOO_LARGE`, without
+logging state contents. Candidate discovery uses lstat and does not open transcripts.
+
+MCP adapters select their stdio policy explicitly: Desktop tolerates non-JSON
+launcher banners, Hub remains strict. Both retain byte limits and reject invalid
+JSON-RPC frames. Optional HTTP GET/SSE diagnostics do not invalidate successful
+POST requests. Host returns neutral error codes and bounded safe detail; adapters
+choose local or server wording, and explicit credentials remain redacted.
+
 These explicit async methods do not change HostRuntime's synchronous lifecycle.
 Desktop retains path grants/cache/OAuth resolution; Hub retains HTTP authority,
 owner cancellation, review tokens, revision checks and mutation gates. Snapshot,
 journal, output replay, UI catalog and transcript formatting remain with their
-existing owners. See the [batch evidence](../../../docs/todo/evidence/host-shared-services-20261015.md)
+existing owners. See the [review evidence](../../../docs/todo/evidence/host-shared-services-cc-review-20261015.md)
 for review state and validation limits.

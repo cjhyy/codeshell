@@ -40,6 +40,12 @@ breaking.
 
 ### Fixed
 
+- Keep successful MCP POST probes usable after optional GET/SSE diagnostics,
+  preserve Desktop launcher-banner compatibility, and retain explicit secret
+  redaction without corrupting ordinary tool names or protocol text.
+- Retry ordinary session-state atomic replacements only in lists, retain strict
+  authorization reads, and expose a narrow Host storage entry. Desktop catalog
+  state over 2 MiB now emits a safe diagnostic when omitted.
 - Reject mismatched external accounting references with actionable Native recovery
   guidance while preserving historical costs and keeping a healthy CLI retryable.
 - Avoid a second renderer failure terminal/toast after the current run has already
