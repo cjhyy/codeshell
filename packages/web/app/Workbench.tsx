@@ -273,14 +273,14 @@ export function Workbench({
       latest.resume();
       action();
     });
-  const openSession = (id: string, source?: HTMLElement) => {
+  const openSession = (id: string, intent?: ReturnType<typeof historyFocus.capture>) => {
     if (historyHandoff.current) historyFocus.finish(historyHandoff.current.request, null);
     historyHandoff.current = null;
     // A keyboard-opened history row is removed by this navigation. Keep that
     // actual intent through the selected-session commit, not later replay.
-    if (source && !narrow && document.activeElement === source)
+    if (intent && !narrow)
       historyHandoff.current = {
-        request: historyFocus.capture(source),
+        request: historyFocus.adopt(intent),
         id,
         workspace: controller.workspaceKey,
       };
@@ -978,7 +978,7 @@ export function Workbench({
           <HubSessions
             key={`${controller.workspaceKey}:history`}
             onAuthLost={onAuthLost}
-            onOpen={(id, source) => void openSession(id, source)}
+            onOpen={(id, intent) => void openSession(id, intent)}
             onChanged={() => void refreshSessions()}
             version={sessionsVersion}
             onDirtyChange={setNavigationDirty}
