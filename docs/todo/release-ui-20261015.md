@@ -329,6 +329,9 @@ renderer build, scoped lint and 24 guarded tests passed; independent review was
 green. Root independently passed the integrated 32/102 fixture. The unpublished
 checkpoint history is retained on
 `codex/desktop/session-search-layout-checkpoint-20261015` (`b48e9b9d3`).
+Root also independently passed all 32/102 Electron layouts and native live-resize
+wheel checks after integration; evidence `codeshell-search-layout-cgJAWY` and
+`/tmp/codeshell-ui-wave5-search-native-combined.log`.
 
 The actual Settings→MCP audit confirmed the two detail viewers have no dialog
 role/focus containment/Escape ownership, leave keyboard focus in background
@@ -339,6 +342,25 @@ on main `94f1a462b`. Accepted scope is only ToolsViewer/ErrorDetailViewer modal
 keyboard/focus recovery and complete long-content bounds. Preserve every tool
 and raw diagnostic; no MCP probe/save/trust/credential/transport changes.
 Its completion and independent review determine whether it joins UI5 or UI6.
+
+Root's production TopBar→NotificationHistory audit passed 16 language/theme/
+window combinations down to 320×240 with 40 complete long notifications, native
+wheel, keyboard reachability, full final actions and exact Escape focus return.
+No product change is needed; evidence
+`/tmp/codeshell-notifications-ui-audit-20261015/report.json`. The initial immediate
+post-unmount focus sample was premature; waiting for Radix close autofocus
+confirmed correct return in every case without modifying product behavior.
+
+Next independent candidate: valid long cloud environment/project names make
+NewProjectDialog's linked-project view scroll 2073px inside a 286px client width.
+CloudProjectSignIn starts at 2310px scroll width and a rejected owned login leaves
+BODY focus; native form focus can scroll Close to negative x. Root reproduced
+18 production component layouts with zero page errors/outside requests and
+confirmed active App/CloudProjectWorkspace entry points. Evidence:
+`/tmp/codeshell-project-dialogs-ui-audit-20261015/report.json` and screenshots.
+ui_audit may independently verify after Connections delivery. Any accepted fix
+must be limited to layout/focus recovery, preserving login identity, authority,
+password clearing, duplicate-submit, stale-binding and reconnect semantics.
 
 Initial audit history follows:
 
