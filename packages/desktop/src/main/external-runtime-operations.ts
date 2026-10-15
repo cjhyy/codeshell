@@ -56,7 +56,16 @@ export class ExternalRuntimeOperationRun {
       // receipts. Keep known Host costs without presenting their subtotal as an
       // exact total, even on the first turn with zero persisted tokens.
       this.usage.noteHistoricalGap(input.sessionId, this.root);
-      return { costState: this.usage.sessionState(input.sessionId, this.root) };
+      return {
+        costState: {
+          ...this.usage.sessionState(input.sessionId, this.root),
+          // Engine restores this opaque store when returning to the native loop.
+          // Carry only its documented slot from a validated accounting owner.
+          ...(adopted && state.costState?.legacyStore !== undefined
+            ? { legacyStore: state.costState.legacyStore }
+            : {}),
+        },
+      };
     });
     const owner = readOperationSessionOwner(this.root, input.sessionId, this.usage);
     this.incarnation = owner.incarnation;

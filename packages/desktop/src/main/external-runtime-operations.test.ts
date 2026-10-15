@@ -34,7 +34,7 @@ syncBuiltinESMExports();
 expect(() => fetch("https://outside.invalid/probe")).toThrow("denied outbound");
 expect(() => https.get("https://outside.invalid/probe")).toThrow("denied outbound");
 
-const { SessionManager, ToolRegistry, setDefaultCredentialAccess } =
+const { SessionManager, ToolRegistry, UsageLedger, setDefaultCredentialAccess } =
   await import("@cjhyy/code-shell-core");
 const { createSessionToolHost } = await import("@cjhyy/code-shell-core/extension");
 const { ExternalRuntimeOperationRun } = await import("./external-runtime-operations.js");
@@ -354,6 +354,86 @@ test("external model billing remains incomplete even before its first token even
     historicalCoverageIncomplete: true,
     summary: { partial: true, requests: 0 },
   });
+});
+
+test("cold external leases retain the adopted cost store and auxiliary receipts", () => {
+  const f = fixture();
+  const ledger = new UsageLedger({ storageDir: join(f.root, ".usage-ledger") });
+  expect(
+    ledger.adoptSession(f.sessionId, f.sessions.readSessionState(f.sessionId)!.costState, f.root),
+  ).toBe(true);
+  const usage = { promptTokens: 30, completionTokens: 3, totalTokens: 33 };
+  const receipt = ledger.begin(ledger.owner(f.sessionId, "aux-run", [], "aux_summary", f.root), {
+    provider: "openai",
+    model: "gpt-4o",
+  });
+  ledger.settle(receipt, usage);
+  ledger.finish(receipt, "completed");
+  const costState = {
+    ...ledger.sessionState(f.sessionId, f.root),
+    legacyStore: { marker: "preserved" },
+  };
+  f.sessions.recordAuxiliaryUsage(f.sessionId, usage, costState);
+  f.sessions.updateSessionState(f.sessionId, {
+    title: "retained title",
+    workspaceProfile: "fixture-profile",
+  });
+
+  for (const origin of ["cold-first", "cold-next"]) {
+    f.begin(origin);
+    const state = f.sessions.readSessionState(f.sessionId)!;
+    expect(state).toMatchObject({
+      title: "retained title",
+      workspaceProfile: "fixture-profile",
+      tokenUsage: usage,
+      cumulativePromptTokens: 30,
+    });
+    expect(state.costState).toEqual(JSON.parse(JSON.stringify(costState)));
+    const restarted = new UsageLedger({ storageDir: join(f.root, ".usage-ledger") });
+    expect(restarted.adoptSession(f.sessionId, state.costState, f.root)).toBe(true);
+    expect(restarted.summary({ scope: "session", sessionId: f.sessionId }, f.root)).toEqual(
+      costState.summary,
+    );
+  }
+});
+
+test("invalid or superseded accounting owners cannot replace Session metadata", () => {
+  const f = fixture();
+  const valid = f.sessions.readSessionState(f.sessionId)!.costState!;
+  for (const corrupt of [
+    { accountingSessionId: "invalid" },
+    { sessionId: "another-session" },
+    { sessionScopeId: "0".repeat(64) },
+    { namespace: "another-namespace" },
+  ]) {
+    f.sessions.updateSessionState(f.sessionId, { costState: { ...valid, ...corrupt } });
+    const before = readFileSync(join(f.root, f.sessionId, "state.json"));
+    expect(
+      () =>
+        new ExternalRuntimeOperationRun({
+          root: f.root,
+          sessionId: f.sessionId,
+          runId: "run-1",
+          originClientMessageId: "late",
+          isCurrent: () => true,
+        }),
+    ).toThrow("accounting owner changed");
+    expect(readFileSync(join(f.root, f.sessionId, "state.json")).equals(before)).toBe(true);
+  }
+  f.sessions.updateSessionState(f.sessionId, { costState: valid, title: "current metadata" });
+  f.begin("current-user");
+  const before = readFileSync(join(f.root, f.sessionId, "state.json"));
+  expect(
+    () =>
+      new ExternalRuntimeOperationRun({
+        root: f.root,
+        sessionId: f.sessionId,
+        runId: "unknown-late-run",
+        originClientMessageId: "late",
+        isCurrent: () => true,
+      }),
+  ).toThrow("run identity conflict");
+  expect(readFileSync(join(f.root, f.sessionId, "state.json")).equals(before)).toBe(true);
 });
 
 test("a superseded run freezes only its own physical send after a late acknowledgement", async () => {
