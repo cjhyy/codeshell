@@ -285,6 +285,7 @@ require("node:module").syncBuiltinESMExports();
     `Unauthenticated Link settings attempted authorization or content retrieval: ${JSON.stringify(await networkAttempts())}`,
   );
   await assertNoHorizontalOverflow("expanded Figma settings");
+  await figma.evaluate((card) => card.scrollIntoView({ block: "start" }));
   await screenshot("link-figma-expanded.png");
   await collapseProvider("figma");
 
@@ -335,8 +336,9 @@ require("node:module").syncBuiltinESMExports();
     await screenshot(screenshotName);
   }
 
-  await expandProvider("figma");
+  const mobileFigma = await expandProvider("figma");
   await assertNoHorizontalOverflow("mobile expanded Figma settings");
+  await mobileFigma.evaluate((card) => card.scrollIntoView({ block: "start" }));
   await screenshot("link-figma-mobile.png");
   await collapseProvider("figma");
 
