@@ -1,0 +1,63 @@
+{
+  "schemaVersion": 1,
+  "timezone": "Asia/Singapore",
+  "result": "blocked_at_client_registration",
+  "oauthSucceeded": false,
+  "figmaReadSucceeded": false,
+  "desktopAttempt": {
+    "appVersion": "0.9.42",
+    "observedAt": "2026-10-15T08:20:46.693Z",
+    "stage": "discovery_registration",
+    "code": "protocol_error",
+    "httpStatus": 403,
+    "browserOpened": false,
+    "serverConfigurationSavedByProbe": false
+  },
+  "isolatedSourceProbe": {
+    "implementation": "CodeShell McpOAuthService with production OAuth discovery and SDK auth",
+    "sdkVersion": "1.31.0",
+    "credentialStorage": "memory_only",
+    "receivedToken": false,
+    "browserOpened": false,
+    "memoryCleared": true
+  },
+  "httpEvidence": [
+    {
+      "time": "2026-10-15T08:29:53.505Z",
+      "stage": "http",
+      "origin": "https://mcp.figma.com",
+      "path": "/.well-known/oauth-protected-resource/mcp",
+      "method": "GET",
+      "status": 200
+    },
+    {
+      "time": "2026-10-15T08:29:54.017Z",
+      "stage": "http",
+      "origin": "https://api.figma.com",
+      "path": "/.well-known/oauth-authorization-server",
+      "method": "GET",
+      "status": 200
+    },
+    {
+      "time": "2026-10-15T08:29:54.601Z",
+      "stage": "http",
+      "origin": "https://api.figma.com",
+      "path": "/v1/oauth/mcp/register",
+      "method": "POST",
+      "status": 403
+    }
+  ],
+  "notReached": [
+    "user_authorization",
+    "token_exchange",
+    "authenticated_mcp_initialize",
+    "tools_list",
+    "figma_content_read",
+    "token_refresh"
+  ],
+  "interpretation": {
+    "confirmed": "The official registration endpoint returned HTTP 403 for this CodeShell request.",
+    "unconfirmed": "The response trace did not expose a reason; Catalog allowlisting is not proven to be the cause.",
+    "diagnosticProcessExitZero": "The probe completed its diagnostics; it does not mean OAuth succeeded."
+  }
+}
