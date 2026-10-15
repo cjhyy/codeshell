@@ -48,6 +48,8 @@ breaking.
   delayed operations, and keep connection cards within narrow Settings panes.
 - Make MCP tool and error details keyboard-operable dialogs with visible Close
   controls, complete scrollable content and focus return to their opener.
+- Keep cloud project status and long errors within a keyboard-scrollable region
+  while preserving visible conversation output, draft input and status actions.
 
 ## [0.9.44] - 2026-10-15
 

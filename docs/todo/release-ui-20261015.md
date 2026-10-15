@@ -388,8 +388,9 @@ Settings, Search and Operations pages all passed. Logs are
 `/tmp/codeshell-ui-wave5-{typecheck,lint,desktop-build,unit,overlays,native-settings,native-search,native-operations}.log`.
 Root independently verified every final scope in the combination and refreshed
 remote main before delivery. UI5 is delivered at `bef6e513e` and independently
-confirmed by remote ls-remote. CI `38740819315` is queued/running; do not push
-UI6 until that run is complete. Current integration now starts UI6 from the
+confirmed by remote ls-remote. CI `38740819315` completed with all 12 jobs
+successful, including real Electron, real win32 and the full desktop/browser
+shard. Current integration now starts UI6 from the
 delivered main while its three independent scopes refresh against that base.
 
 The repository's later release `v0.9.44` was published at 09:44:42Z with all
@@ -447,6 +448,34 @@ Primary checkout currently remains on another task's main at `2e0462c68`,
 26 local commits ahead of the current remote, plus pre-existing `.claude/` and
 `docs/todo/browser-panel-runtime-design.md`. Leave it untouched; task delivery
 uses the clean integration checkout and does not publish unknown local commits.
+
+UI6 metadata is integrated as `df9ad21f4` (source `488944948`, refreshed source
+merge `9e779bfe1` against delivered UI5). Only CloudProjectWorkspace layout and
+owned focus visibility change: complete status/error metadata stays within 40%
+of the pane, leaving useful ChatView space, with named keyboard scroll and
+ResizeObserver adjusting only a currently focused metadata descendant. Source
+production/development Chrome 8+8 layouts, actual Electron language/100–200%
+zoom 4 layouts, 16 guarded tests/46 assertions, Desktop/mobile types, renderer
+build and scoped lint/format passed. Independent ui_audit/Root product review
+found no blocker. Exact legal 1015-character before source leaves chat height
+zero; after preserves full error/name/draft/identity/action wires, portal focus
+and all hidden ancestor/document bounds. Root registered the 30th fixture.
+
+Root also owns `codex/web/model-editor-focus-20261015` in the exclusively reused
+file-browser worktree, from UI5 `bef6e513e`. Actual Workbench with 12 connections
+opens a last-row editor thousands of pixels above the viewport and leaves BODY
+focus on open/cancel/save failure; dirty Continue likewise loses focus. Scope
+is inline editor open/close/owned failure/Continue focus, keeping all API,
+secret, revision, validation, draft and confirmation behavior. Independent
+bridge checks confirmed source ownership guards and 12 held-write outcomes,
+with real field/blank interaction; window-blur cancellation is synthetic,
+not an OS-level claim. Root's strict document-height assertion additionally
+caught an escaping absolute sr-only legend; a local positioned editor fixes
+612px document height in a 360px pane. Formal production/development 8 layouts/
+10 behaviors, 524 guarded Web tests/2452 assertions, types/build/lint have
+passed before that CSS bound; final reruns with the retained tighter assertion
+are in progress. The same final fixture against unchanged UI5 fails directly
+on visible/focused model field, not a timeout.
 
 Initial audit history follows:
 
