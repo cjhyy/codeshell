@@ -94,6 +94,86 @@ describe("readCodexRecentHistory", () => {
     ).toEqual([{ type: "user", text: "live prompt" }]);
   });
 
+  it("hides Page context in history and live tails while preserving assistant text", () => {
+    const home = mkdtempSync(join(tmpdir(), "codex-home-"));
+    const cwd = "/tmp/proj";
+    const id = "id-page-context";
+    const emptyPage =
+      '<external_codex_apps_open_page>{"page_id":null}</external_codex_apps_open_page>';
+    const selectedPage =
+      '<external_codex_apps_open_page>{"page_id":"page-123"}</external_codex_apps_open_page>';
+    const assistantText = `${emptyPage}\n这是 Page 上下文标记。`;
+    const items = [
+      userItem(emptyPage),
+      userItem(selectedPage),
+      userItem("查看这段对话"),
+      assistantItem(assistantText),
+    ];
+    writeRollout(home, "2026/06/24", `rollout-${id}.jsonl`, [metaLine(id, cwd), ...items]);
+
+    expect(readCodexRecentHistory(cwd, id, 10, home)).toEqual({
+      messages: [
+        { role: "user", text: "查看这段对话" },
+        { role: "assistant", text: assistantText },
+      ],
+      hasMore: false,
+      totalCount: 2,
+    });
+    expect(items.flatMap((item) => parseCodexTranscriptLine(JSON.stringify(item)))).toEqual([
+      { type: "user", text: "查看这段对话" },
+      { type: "assistant", text: assistantText },
+    ]);
+  });
+
+  it("keeps user input beside repeated Page context in the same or separate parts", () => {
+    const home = mkdtempSync(join(tmpdir(), "codex-home-"));
+    const cwd = "/tmp/proj";
+    const id = "id-page-context-prompt";
+    const pageContext =
+      '<external_codex_apps_open_page>{"page_id":null}</external_codex_apps_open_page>';
+    const items = [
+      userItem(`  ${pageContext}\n${pageContext}\n为什么老是显示这个`),
+      multipartUserItem([
+        pageContext,
+        "<environment_context>hidden</environment_context>",
+        pageContext,
+        "保留真正的用户输入",
+      ]),
+    ];
+    writeRollout(home, "2026/06/24", `rollout-${id}.jsonl`, [metaLine(id, cwd), ...items]);
+
+    expect(readCodexRecentHistory(cwd, id, 10, home).messages).toEqual([
+      { role: "user", text: "为什么老是显示这个" },
+      { role: "user", text: "保留真正的用户输入" },
+    ]);
+    expect(items.flatMap((item) => parseCodexTranscriptLine(JSON.stringify(item)))).toEqual([
+      { type: "user", text: "为什么老是显示这个" },
+      { type: "user", text: "保留真正的用户输入" },
+    ]);
+  });
+
+  it("preserves literal and incomplete Page markers and accepts string content", () => {
+    const pageContext =
+      '<external_codex_apps_open_page>{"page_id":null}</external_codex_apps_open_page>';
+    for (const text of [
+      `请解释这个标记：${pageContext}`,
+      `\`\`\`xml\n${pageContext}\n\`\`\``,
+      '<external_codex_apps_open_page>{"page_id":null}',
+    ]) {
+      expect(parseCodexTranscriptLine(JSON.stringify(userItem(text)))).toEqual([
+        { type: "user", text },
+      ]);
+    }
+    expect(
+      parseCodexTranscriptLine(
+        JSON.stringify({
+          type: "response_item",
+          payload: { type: "message", role: "user", content: `${pageContext}\nstring prompt` },
+        }),
+      ),
+    ).toEqual([{ type: "user", text: "string prompt" }]);
+  });
+
   it("captures function_call and custom_tool_call as tool summaries", () => {
     const home = mkdtempSync(join(tmpdir(), "codex-home-"));
     const cwd = "/tmp/proj";
