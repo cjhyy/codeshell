@@ -202,6 +202,7 @@ export function SessionPanelDock(props: SessionPanelDockProps) {
         onRevealConsumed={(nonce) => props.onRevealConsumed(panelBucket, nonce)}
         openUrl={panelState.openUrl}
         openCliSession={panelState.openCliSession}
+        subagentSelection={panelState.subagentSelection}
         onOpenCliSessionConsumed={(nonce) => props.onOpenCliSessionConsumed(panelBucket, nonce)}
         width={props.panelWidth}
         onResizeStart={props.beginPanelResize}

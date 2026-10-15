@@ -150,7 +150,8 @@ export interface LinkConnectionInput {
   label: string;
   connectionId?: string;
   expectedRevision: string | null;
-  /** User-pasted Figma file URL/key. Existing files are recovered by the Host, never this input. */
+  /** One user-pasted Figma file for initial or existing-account authorization.
+   * Previously authorized files are recovered by the Host, never this input. */
   resourceUrl?: string;
 }
 

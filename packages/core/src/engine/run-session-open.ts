@@ -4,8 +4,11 @@
  * early), user-message append, cold-start summary and the turnSeq bump.
  */
 import { getCurrentSid, logger } from "../logging/logger.js";
+import { isDeepStrictEqual } from "node:util";
 import type { Message, SessionKind, SessionProjectBinding } from "../types.js";
 import type { SessionBundle, SessionManager } from "../session/session-manager.js";
+import { parseSubAgentContinuation } from "../session/subagent-continuation.js";
+import { SessionError } from "../exceptions.js";
 import { patchOrphanedToolUses } from "./patch-orphaned-tools.js";
 import type { ParsedTask } from "./parse-task.js";
 import type { buildRunUserMessageContent } from "./run-image-input.js";
@@ -57,6 +60,13 @@ export type OpenRunSessionResult =
 
 export function openRunSession(args: OpenRunSessionArgs): OpenRunSessionResult {
   const { options } = args;
+  const continuation =
+    options?.subAgentContinuation === undefined
+      ? undefined
+      : parseSubAgentContinuation(options.subAgentContinuation, getCurrentSid());
+  if (options?.subAgentContinuation !== undefined && (!args.isSubAgent || !continuation)) {
+    throw new SessionError("Invalid sub-agent continuation metadata or parent ownership");
+  }
   const claimedClientMessageIds = new Set<string>();
 
   let session: SessionBundle;
@@ -88,6 +98,21 @@ export function openRunSession(args: OpenRunSessionArgs): OpenRunSessionResult {
   if (options?.sessionId && args.sessionManager.exists(options.sessionId)) {
     resumedFromDisk = true;
     session = args.sessionManager.resumeForRun(options.sessionId);
+    if (continuation) {
+      const persisted = parseSubAgentContinuation(
+        session.state.subAgentContinuation,
+        session.state.parentSessionId,
+      );
+      if (
+        session.state.parentSessionId !== continuation.parentSessionId ||
+        (session.state.subAgentContinuation !== undefined &&
+          (!persisted || !isDeepStrictEqual(persisted, continuation)))
+      ) {
+        throw new SessionError("Sub-agent continuation cannot change its parent or frozen scope");
+      }
+      // Legacy same-process callers may hold a trusted scope without a durable
+      // snapshot. Do not invent or replace persisted authority on resume.
+    }
     if (!session.state.project && args.projectBinding) {
       args.sessionManager.saveStateOrUpdateFields(session.state, { project: args.projectBinding });
     }
@@ -178,6 +203,7 @@ export function openRunSession(args: OpenRunSessionArgs): OpenRunSessionResult {
       args.isSubAgent ? "subagent" : args.origin,
       args.sessionKind,
       options?.ephemeral === true,
+      continuation,
     );
     if (args.projectBinding) {
       args.sessionManager.saveStateOrUpdateFields(session.state, { project: args.projectBinding });

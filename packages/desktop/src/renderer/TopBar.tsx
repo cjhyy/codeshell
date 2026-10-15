@@ -173,9 +173,6 @@ function TopBarImpl({
           >
             <UserRound size={11} className="shrink-0" />
             {onWorkspaceProfileChange && workspaceProfiles.length > 0 ? (
-              // The last native <select> in the renderer — it rendered as a raw
-              // OS control, visually detached from the shadcn theme. SimpleSelect
-              // is the drop-in adapter for this value/onChange/options shape.
               <span data-session-profile-switch="true" className="min-w-0">
                 <SimpleSelect
                   size="sm"

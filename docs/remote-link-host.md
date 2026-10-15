@@ -1,6 +1,6 @@
 # 远程 Link 的 Host 执行契约
 
-状态：Host 与独立 Link 已实现现有全部 10 个 provider、26 个动作的远程执行契约，
+状态：Host 与独立 Link 已实现现有 10 个 provider 的固定动作远程执行契约，
 包括授权、资源选择、下游令牌轮换、撤销与断开。Core／Server 和独立服务的 production
 模块已通过受控上游 HTTP 验证；Hub、配对 Web、Electron 云端窗口、原生 Desktop 和
 Docker 的既有 GitHub 授权流程已有实际程序验收。真实第三方账号、其他 provider 的
@@ -17,11 +17,15 @@ Docker 的既有 GitHub 授权流程已有实际程序验收。真实第三方�
 | Linear   | 分配给当前用户的 Issue、团队（2）                                    | 团队                           |
 | Todoist  | 项目、任务（2）                                                      | 项目                           |
 | Airtable | Base、表结构（2）                                                    | Base                           |
-| Figma    | 文件摘要、评论（2）                                                  | 用户输入并经上游验证的文件 key |
+| Figma    | 完整文件、节点子树、渲染图、图片填充、评论（5）                      | 用户输入并经上游验证的文件 key |
 
 服务仅发布已配置的 provider。Host 取远端 catalog 与编译内静态 adapter 的交集；未知
 provider、动作、额外 scope、含糊资源组或错误授权机制均不能扩大执行权限。旧 API v1
 的 GitHub 三个只读动作仍兼容，缺少 catalog 的 404／501 仅回退到这三个动作。
+
+Figma 按需读取的参数、大小限制及授权规则见 [Figma Link 完整读取](figma-link.md)。
+需要 Host 与独立 Link 服务的对应版本同时具备此实现；原部署的摘要接口不会因客户端
+更新自动获得完整节点数据。
 
 不同授权方式已接入首版通用 UI，见 [Link 授权 UI 通用化方案](todo/link-authorization-ui-unification.md)。
 Desktop 与 Hub Web 共用授权 controller 和步骤视图，Host 提供统一任务及步骤提交 API；

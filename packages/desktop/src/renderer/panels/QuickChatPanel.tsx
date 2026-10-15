@@ -1,9 +1,11 @@
-import React from "react";
+import React, { useState } from "react";
 import type { Message } from "../types";
 import type { ApprovalRequestEnvelope, InputAttachmentMeta } from "../../preload/types";
 import type { ApproveChoice, ApprovePathScope } from "../approvals/approvalDecision";
 import { useT } from "../i18n/I18nProvider";
 import { MessageSquare } from "../ui/icons";
+import { AlertCircle, ArrowUpRight, GitBranch, Loader2, MessageCircle } from "lucide-react";
+import { Button } from "../components/ui/button";
 import type { QuickChatContextMode, QuickChatCreationStatus } from "../quickChatSession";
 import type { PermissionMode } from "../chat/PermissionPill";
 import type { ModelOption } from "../chat/ModelPill";
@@ -86,51 +88,102 @@ export function QuickChatPanel({
   onApprovalDecide,
 }: Props) {
   const { t } = useT();
+  const [starter, setStarter] = useState({ text: "", nonce: 0 });
+  const contextLabel =
+    contextMode === "full" && copiedEventCount === 0
+      ? t("panels.quickChat.noInheritedContext")
+      : contextMode === "full" && sourceTitle
+        ? t("panels.quickChat.fromSource", { title: sourceTitle })
+        : t(
+            contextMode === "full"
+              ? "panels.quickChat.sourceContext"
+              : "panels.quickChat.independentContext",
+          );
+  const starters = [
+    { label: t("panels.quickChat.explain"), prompt: t("panels.quickChat.explainPrompt") },
+    { label: t("panels.quickChat.compare"), prompt: t("panels.quickChat.comparePrompt") },
+    { label: t("panels.quickChat.brainstorm"), prompt: t("panels.quickChat.brainstormPrompt") },
+  ];
 
   return (
-    <div className="flex h-full min-h-0 flex-col bg-background">
-      <div className="flex shrink-0 items-center gap-2 border-b border-border px-3 py-2">
-        <MessageSquare className="h-4 w-4 text-muted-foreground" />
+    <div className="cs-quick-chat flex h-full min-h-0 min-w-0 flex-col bg-background">
+      <div className="flex shrink-0 items-start gap-3 border-b border-border/60 px-4 py-3">
+        <div className="flex size-9 shrink-0 items-center justify-center rounded-xl border border-primary/10 bg-primary/5 text-primary">
+          <MessageSquare size={17} aria-hidden="true" />
+        </div>
         <div className="min-w-0 flex-1">
-          <div className="truncate text-sm font-medium text-foreground">
-            {t("panels.quickChat.title")}
+          <div className="flex items-center gap-2">
+            <h2 className="truncate text-sm font-semibold text-foreground">
+              {t("panels.quickChat.title")}
+            </h2>
+            <span className="rounded-md bg-muted px-1.5 py-0.5 text-[10px] font-medium text-muted-foreground">
+              {t("panels.quickChat.temporary")}
+            </span>
           </div>
-          <div className="truncate text-[11px] text-muted-foreground">
-            {contextMode === "full" && copiedEventCount === 0
-              ? t("panels.quickChat.noInheritedContext")
-              : contextMode === "full" && sourceTitle
-                ? t("panels.quickChat.fromSource", { title: sourceTitle })
-                : sessionId}
-            {contextMode === "full" ? ` · ${t("panels.quickChat.sharedWorkspace")}` : ""}
+          <div
+            className="mt-1 truncate text-[11px] leading-4 text-muted-foreground"
+            title={contextLabel}
+          >
+            {contextLabel}
           </div>
+          {contextMode === "full" && (
+            <div className="mt-1 flex items-center gap-1 text-[10px] text-muted-foreground">
+              <GitBranch size={11} aria-hidden="true" />
+              {t("panels.quickChat.sharedWorkspace")}
+            </div>
+          )}
         </div>
         {(busy || creationStatus === "creating") && (
-          <span className="h-4 w-4 animate-spin rounded-full border-2 border-muted-foreground/30 border-t-muted-foreground" />
+          <span role="status" className="mt-1.5 shrink-0 text-muted-foreground">
+            <Loader2 size={15} className="animate-spin" aria-hidden="true" />
+            <span className="sr-only">
+              {t(
+                creationStatus === "creating"
+                  ? "panels.quickChat.loading"
+                  : "panels.quickChat.responding",
+              )}
+            </span>
+          </span>
         )}
       </div>
 
       {creationStatus === "error" ? (
-        <div className="flex min-h-0 flex-1 items-center justify-center px-4 text-center">
-          <div className="space-y-3 text-sm">
-            <p className="text-status-err">{creationError ?? t("panels.quickChat.forkFailed")}</p>
-            <div className="flex justify-center gap-2">
-              <button type="button" className="rounded-md border px-3 py-1.5" onClick={onRetry}>
+        <div className="cs-quick-chat-state">
+          <div className="cs-quick-chat-state-card">
+            <AlertCircle size={24} className="mx-auto text-status-err" aria-hidden="true" />
+            <h3 className="mt-4 text-sm font-medium text-foreground">
+              {t("panels.quickChat.forkFailed")}
+            </h3>
+            <p role="alert" className="mt-2 break-words text-xs leading-5 text-muted-foreground">
+              {creationError ?? t("panels.quickChat.forkFailedHint")}
+            </p>
+            <div className="mt-5 flex flex-wrap justify-center gap-2">
+              <Button type="button" size="sm" onClick={onRetry}>
                 {t("panels.quickChat.retryFork")}
-              </button>
-              <button type="button" className="rounded-md border px-3 py-1.5" onClick={onUseBlank}>
+              </Button>
+              <Button type="button" variant="outline" size="sm" onClick={onUseBlank}>
                 {t("panels.quickChat.useBlank")}
-              </button>
+              </Button>
             </div>
           </div>
         </div>
       ) : creationStatus === "creating" ? (
-        <div className="flex min-h-0 flex-1 items-center justify-center px-4 text-center">
-          <div className="space-y-3 text-sm text-muted-foreground">
-            <p>{t("panels.quickChat.forking")}</p>
+        <div className="cs-quick-chat-state">
+          <div className="cs-quick-chat-state-card">
+            <Loader2 size={24} className="mx-auto animate-spin text-primary" aria-hidden="true" />
+            <p role="status" className="mt-4 text-sm leading-6 text-muted-foreground">
+              {t("panels.quickChat.forking")}
+            </p>
             {contextMode === "full" && (
-              <button type="button" className="rounded-md border px-3 py-1.5" onClick={onUseBlank}>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                className="mt-5"
+                onClick={onUseBlank}
+              >
                 {t("panels.quickChat.useBlank")}
-              </button>
+              </Button>
             )}
           </div>
         </div>
@@ -165,7 +218,44 @@ export function QuickChatPanel({
             conversationRoot={cwd ?? null}
             conversationRootId={null}
             welcomeNode={
-              <div className="text-sm text-muted-foreground">{t("panels.quickChat.empty")}</div>
+              <div className="cs-quick-chat-intro">
+                <div className="cs-quick-chat-intro-icon mx-auto mb-4 size-12 rounded-2xl border border-border/70 bg-card text-primary shadow-sm">
+                  <MessageCircle size={23} strokeWidth={1.5} aria-hidden="true" />
+                </div>
+                <h3 className="text-base font-semibold tracking-tight text-foreground">
+                  {t("panels.quickChat.empty")}
+                </h3>
+                <p className="cs-quick-chat-intro-description mx-auto mt-2 max-w-64 text-xs leading-5 text-muted-foreground">
+                  {t("panels.quickChat.emptyHint")}
+                </p>
+                <div
+                  className="cs-quick-chat-starters mt-5"
+                  role="group"
+                  aria-label={t("panels.quickChat.starters")}
+                >
+                  {starters.map(({ label, prompt }) => (
+                    <button
+                      key={label}
+                      type="button"
+                      className="cs-quick-chat-starter"
+                      disabled={busy}
+                      onClick={() =>
+                        setStarter((current) => ({ text: prompt, nonce: current.nonce + 1 }))
+                      }
+                    >
+                      {label}
+                      <ArrowUpRight size={12} aria-hidden="true" />
+                    </button>
+                  ))}
+                </div>
+              </div>
+            }
+            composerSeed={starter.text}
+            composerSeedNonce={starter.nonce}
+            onComposerSeedConsumed={(nonce) =>
+              setStarter((current) =>
+                current.nonce === nonce ? { ...current, text: "" } : current,
+              )
             }
             draft={draft}
             onDraftChange={onDraftChange}

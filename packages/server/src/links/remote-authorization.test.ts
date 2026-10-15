@@ -38,7 +38,7 @@ async function listen(server: Server) {
   return `http://127.0.0.1:${(server.address() as { port: number }).port}`;
 }
 async function fixture(
-  options: Pick<LinkHttpOptions, "onChanged" | "browserHandoff"> & {
+  options: Pick<LinkHttpOptions, "onChanged" | "browserHandoff" | "reuseRemoteConnection"> & {
     provider?: "github" | "figma";
   } = {},
 ) {
@@ -330,27 +330,84 @@ test("Figma rejects account switching and incomplete or expanded callbacks witho
   expect(f.requests.filter((request) => request.path === "/oauth/revoke")).toHaveLength(3);
 });
 
-test("Figma file additions require an existing connection and provider-bound user input", async () => {
+test("Figma first connection selects the exact pasted file in one consent", async () => {
+  const f = await fixture({ provider: "figma" });
+  const job = await f.start({
+    resourceUrl: "https://www.figma.com/design/FileFirst/Design?node-id=0-1",
+  });
+  const query = new URL(job.redirect!.authorizationUrl).searchParams;
+  expect(query.get("resource_mode")).toBe("select");
+  expect(JSON.parse(query.get("resource_files")!)).toEqual(["FileFirst"]);
+  expect(f.store.list()).toHaveLength(0);
+  f.setFiles(["FileFirst"]);
+  const response = await f.complete(job);
+  expect(response.status).toBe(200);
+  const { connection } = await response.json();
+  expect(connection.account.resourceGroups).toEqual([
+    { id: "files", items: [{ id: "FileFirst", label: "FileFirst" }] },
+  ]);
+  expect(f.store.list()).toHaveLength(1);
+});
+
+test("first file consent rejects missing or expanded callbacks without creating a connection", async () => {
+  const f = await fixture({ provider: "figma" });
+  for (const files of [[], ["FileFirst", "UnrequestedFile"]]) {
+    const job = await f.start({ resourceUrl: "FileFirst" });
+    f.setFiles(files);
+    expect((await f.complete(job)).status).toBe(422);
+    expect(f.store.list()).toHaveLength(0);
+  }
+});
+
+test("concurrent first file consents cannot replace an existing grant with a narrower whitelist", async () => {
+  const f = await fixture({ provider: "figma", reuseRemoteConnection: true });
+  const firstJob = await f.start({ resourceUrl: "FileFirst" });
+  const competingJob = await f.start({ resourceUrl: "FileSecond" }, "two");
+  f.setFiles(["FileFirst"]);
+  const firstResponse = await f.complete(firstJob);
+  expect(firstResponse.status).toBe(200);
+  const { connection } = await firstResponse.json();
+  const original = f.store.resolve(connection.id);
+
+  f.setFiles(["FileSecond"]);
+  expect((await f.complete(competingJob, "two")).status).toBe(409);
+  expect(f.store.list()).toHaveLength(1);
+  expect(f.store.resolve(connection.id)).toEqual(original);
+  expect(f.requests.filter((request) => request.path === "/oauth/revoke")).toHaveLength(1);
+
+  // Retry against the now-visible connection and its exact reviewed revision.
+  const retry = await f.start(
+    {
+      connectionId: connection.id,
+      expectedRevision: connection.revision,
+      resourceUrl: "FileSecond",
+    },
+    "two",
+  );
+  expect(new URL(retry.redirect!.authorizationUrl).searchParams.get("resource_files")).toBe(
+    '["FileFirst","FileSecond"]',
+  );
+  f.setFiles(["FileFirst", "FileSecond"]);
+  expect((await f.complete(retry, "two")).status).toBe(200);
+  expect(f.store.resolve(connection.id)?.meta?.linkResourceLabels).toEqual([
+    "FileFirst",
+    "FileSecond",
+  ]);
+});
+
+test("Figma file selections remain provider-bound and require the reviewed connection revision", async () => {
   const f = await fixture({ provider: "figma" });
   expect(
     (
       await f.api("/authorizations/remote", "POST", {
         ...input,
         providerId: "figma",
-        resourceUrl: "FileFirst",
-      })
-    ).status,
-  ).toBe(400);
-  expect(
-    (
-      await f.api("/authorizations/remote", "POST", {
-        ...input,
-        providerId: "figma",
         connectionId: "link-remote-new",
+        expectedRevision: "unknown-revision",
         resourceUrl: "FileFirst",
       })
     ).status,
-  ).toBe(400);
+  ).toBe(409);
   const github = await fixture();
   expect(
     (

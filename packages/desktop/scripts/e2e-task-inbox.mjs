@@ -175,13 +175,14 @@ try {
   );
   const source = win.getByLabel("来源", { exact: true });
   await source.focus();
-  await win.keyboard.press("b");
-  await source.selectOption("background-job");
+  await win.keyboard.press("Enter");
+  await win.getByRole("option", { name: "后台任务", exact: true }).click();
   assert(
     (await win.locator("article[data-task-key]").count()) === 1,
-    "Source filter works with native keyboard-selectable control",
+    "Source filter opens by keyboard and selects a background task",
   );
-  await source.selectOption("");
+  await source.click();
+  await win.getByRole("option", { name: "全部", exact: true }).click();
   await win.getByLabel("搜索任务标题", { exact: true }).fill("waiting");
   const cancel = win.getByRole("button", { name: "取消任务：任务 waiting", exact: true });
   await cancel.focus();

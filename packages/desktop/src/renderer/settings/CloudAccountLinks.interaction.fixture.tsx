@@ -70,6 +70,12 @@ let late: ((value: any) => void) | undefined;
 let onStatus!: (status: CloudAccountStatus) => void;
 const lateList = scenario === "stale-account" || scenario === "same-account-relogin";
 (globalThis as any).window.codeshell = {
+  credentials: {
+    list: async (cwd: string) => {
+      assert.equal(cwd, "");
+      return [];
+    },
+  },
   cloudAccount: {
     status: async () => alice,
     onStatus: (callback: typeof onStatus) => {

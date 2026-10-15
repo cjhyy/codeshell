@@ -291,7 +291,7 @@ describe("subagent spawner", () => {
       llm: { model: "parent" },
       clientDefaults: { temperature: 0.4, retryMaxAttempts: 2 },
       enabledBuiltinTools: ["Read"],
-      disabledBuiltinTools: ["Agent", "AgentStatus", "AgentCancel", "AgentSendInput"],
+      disabledBuiltinTools: ["Write", "Agent", "AgentStatus", "AgentCancel", "AgentSendInput"],
       appendSystemPrompt: "parent append\n\nrole body",
       maxTurns: 9,
       skillAllowlist: ["docs"],

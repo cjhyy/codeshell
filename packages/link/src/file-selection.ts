@@ -69,6 +69,10 @@ export function resolveLinkFileSelection(providerId: string, input: unknown) {
         url.port
       )
         throw new Error("Invalid Figma file URL");
+      if (/^\/make(?:\/|$)/.test(url.pathname))
+        throw new Error(
+          "unsupported_file_type: Figma Make links are not supported by Figma file REST actions; use a Design, FigJam, or file link",
+        );
       key =
         /^\/(?:file|design|board)\/([A-Za-z0-9_-]{1,200})(?:\/|$)/.exec(url.pathname)?.[1] ?? "";
     }

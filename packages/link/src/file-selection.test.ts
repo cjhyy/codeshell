@@ -3,6 +3,14 @@ import { LINK_PROVIDER_MANIFESTS, getLinkProviderManifest } from "./catalog.js";
 import { resolveLinkFileSelection } from "./file-selection.js";
 
 describe("reviewed provider file selection", () => {
+  test("Figma Make reports an unsupported file type rather than a missing grant", () => {
+    expect(() =>
+      resolveLinkFileSelection("figma", {
+        kind: "figma-file",
+        fileUrlOrKey: "https://www.figma.com/make/MakeOne/Prototype",
+      }),
+    ).toThrow("unsupported_file_type");
+  });
   test("only providers with actual file readers advertise selection", () => {
     expect(
       LINK_PROVIDER_MANIFESTS.filter((provider) => provider.fileSelection).map(

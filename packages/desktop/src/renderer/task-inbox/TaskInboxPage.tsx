@@ -10,6 +10,7 @@ import type {
 } from "../../preload/task-inbox-api";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { SimpleSelect } from "@/components/ui/simple-select";
 import { useT } from "../i18n/I18nProvider";
 import { useOptionalConfirm } from "../ui/DialogProvider";
 import { OperationResolutionReview } from "./OperationResolutionReview";
@@ -524,19 +525,14 @@ function FilterSelect({
   return (
     <div className="space-y-1.5 text-xs text-muted-foreground">
       <label htmlFor={id}>{label}</label>
-      <select
-        id={id}
+      <SimpleSelect
+        ariaLabel={label}
+        triggerProps={{ id }}
         value={value}
-        onChange={(event) => onChange(event.target.value)}
-        className="flex h-9 w-full min-w-0 rounded-lg border border-input bg-background px-3 text-sm text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-      >
-        <option value="">{all}</option>
-        {options.map((option) => (
-          <option key={option.value} value={option.value}>
-            {option.label}
-          </option>
-        ))}
-      </select>
+        onChange={onChange}
+        options={[{ value: "", label: all }, ...options]}
+        className="h-9 text-foreground"
+      />
     </div>
   );
 }

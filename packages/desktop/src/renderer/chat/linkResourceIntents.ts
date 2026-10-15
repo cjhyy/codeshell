@@ -1,4 +1,5 @@
 import type { MaskedLinkConnection } from "@cjhyy/code-shell-link";
+import type { Message } from "../types";
 
 export interface ChatLinkResource {
   providerId: "figma";
@@ -11,6 +12,8 @@ export interface ChatLinkResourceIntent extends ChatLinkResource {
   clientMessageId: string;
   bucket: string;
   cwd: string;
+  /** A completed, explicit authorization can resume after the original turn settles. */
+  resumeConnection?: MaskedLinkConnection;
 }
 
 /** The owner resolves live authority at the instant a user requests a read. */
@@ -94,12 +97,72 @@ export function figmaFileGranted(
   );
 }
 
-/** A narrowly scoped follow-up, never a replay of the original prompt or its attachments. */
+/** Start with shallow structure, preserving any node scope in the exact submitted URL. */
 export function chatLinkReadArguments(intent: ChatLinkResource, connectionId: string) {
   return {
     provider: intent.providerId,
     action: "get_file",
     connectionId,
-    params: { file_url_or_key: intent.url },
+    params: { file_url_or_key: intent.url, depth: 2 },
   };
+}
+
+/** A tool result can resolve an existing composer intent; it cannot create one. */
+export function chatLinkReadOutcome(
+  intent: ChatLinkResourceIntent,
+  messages: readonly Message[],
+): "succeeded" | "failed" | "in-progress" | undefined {
+  const submitted = messages.findIndex(
+    (message) => message.kind === "user" && message.clientMessageId === intent.clientMessageId,
+  );
+  if (submitted === -1) return undefined;
+  let failed = false;
+  let inProgress = false;
+  const tools = messages
+    .slice(submitted + 1)
+    .flatMap((message) =>
+      message.kind === "tool" ? [message] : message.kind === "agent" ? message.toolCalls : [],
+    );
+  for (const message of tools) {
+    if (message.toolName !== "LinkAction") continue;
+    try {
+      const args = JSON.parse(message.args);
+      if (
+        args.provider !== intent.providerId ||
+        !["get_file", "get_nodes", "get_images", "get_image_fills", "get_comments"].includes(
+          args.action,
+        )
+      )
+        continue;
+      const input = args.params?.file_url_or_key ?? args.params?.file_key;
+      const file = typeof input === "string" ? input.trim() : undefined;
+      const candidate = file ? composerLinkResources(file)[0] : undefined;
+      if (
+        typeof file !== "string" ||
+        (file !== intent.resourceId &&
+          (candidate?.url !== file || candidate.resourceId !== intent.resourceId))
+      )
+        continue;
+      if (message.status === "queued" || message.status === "running") inProgress = true;
+      if (["failed", "denied", "cancelled"].includes(message.status)) failed = true;
+      if (message.status !== "succeeded" || !message.result) continue;
+      const result = JSON.parse(message.result);
+      if (
+        result.kind === "action_result" &&
+        result.provider === intent.providerId &&
+        result.action === args.action &&
+        Object.prototype.hasOwnProperty.call(result, "data") &&
+        result.error === undefined
+      )
+        return "succeeded";
+      if (
+        ["error", "connection_required", "cancelled"].includes(result.kind) ||
+        result.error !== undefined
+      )
+        failed = true;
+    } catch {
+      // Partial streamed arguments and unrecognized results cannot consume an intent.
+    }
+  }
+  return inProgress ? "in-progress" : failed ? "failed" : undefined;
 }

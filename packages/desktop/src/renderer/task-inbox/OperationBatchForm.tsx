@@ -1,5 +1,6 @@
 import React, { useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
+import { SimpleSelect } from "@/components/ui/simple-select";
 import { useT } from "../i18n/I18nProvider";
 import type { OperationBatchItem, OperationBatchOptions } from "../../shared/operation-batch.js";
 const emptyItem = (): OperationBatchItem => ({ owner: "", repo: "", title: "", body: "" });
@@ -88,22 +89,21 @@ export function OperationBatchForm({ sessionId }: { sessionId: string }) {
               ? "手动填写 1–8 项固定清单。原生确认后按顺序执行；失败、取消或结果未知时停止，关闭后不会自动继续。"
               : "Enter 1–8 fixed items. Native confirmation starts sequential execution; failure, cancellation or unknown results stop it. Restart never resumes writes."}
           </p>
-          <label className="block text-xs">
+          <label className="block space-y-1.5 text-xs">
             {zh ? "已保存的 GitHub 连接" : "Saved GitHub connection"}
-            <select
+            <SimpleSelect
               required
+              ariaLabel={zh ? "已保存的 GitHub 连接" : "Saved GitHub connection"}
               disabled={busy}
               value={connectionId}
-              onChange={(event) => setConnectionId(event.target.value)}
-              className="ml-2 rounded border bg-background p-1"
-            >
-              <option value="">{zh ? "明确选择连接" : "Select a connection"}</option>
-              {options.connections.map((connection) => (
-                <option key={connection.id} value={connection.id}>
-                  {connection.label}
-                </option>
-              ))}
-            </select>
+              onChange={setConnectionId}
+              placeholder={zh ? "明确选择连接" : "Select a connection"}
+              options={options.connections.map((connection) => ({
+                value: connection.id,
+                label: connection.label,
+              }))}
+              size="sm"
+            />
           </label>
           {items.map((item, index) => (
             <fieldset key={index} disabled={busy} className="space-y-1 rounded border p-2">

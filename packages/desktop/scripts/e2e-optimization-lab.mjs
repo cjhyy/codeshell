@@ -209,6 +209,10 @@ async function launch() {
           .map((key) => [key, ""]),
       ),
       CODESHELL_COST_SMOKE_GUARD_LOG: guardLog,
+      // The worker guard inherits the outer test runner's environment; keep
+      // both state aliases bound to this Electron fixture's seeded profile.
+      CODE_SHELL_HOME: isolated.codeShellHome,
+      CODE_SHELL_TEST_HOME: isolated.codeShellHome,
     },
   });
   app.process().stderr.on("data", (value) => mainErrors.push(String(value)));
@@ -327,6 +331,67 @@ async function crashOwnedElectron() {
   win = null;
 }
 
+async function chooseLabOption(testId, label) {
+  await win.getByTestId(testId).click();
+  await win.getByRole("option", { name: label, exact: true }).click();
+}
+async function chooseSavedExperiment(id) {
+  if (!id) {
+    await chooseLabOption("optimization-lab-saved", "Create an experiment");
+    return;
+  }
+  const result = await query("list");
+  const experiments = Array.isArray(result) ? result : result.experiments;
+  const index = experiments.findIndex((experiment) => experiment.id === id);
+  assert.ok(index >= 0, "Saved experiment is listed");
+  await win.getByTestId("optimization-lab-saved").click();
+  await win
+    .getByRole("option")
+    .nth(index + 1)
+    .click();
+}
+
+async function readSelectedExperiment(message) {
+  // The themed selector is a button. Read the durable ID from the page's
+  // frozen details, then verify that the real listbox selected that experiment.
+  const details = win.locator("details").filter({ has: win.getByTestId("optimization-lab-plan") });
+  const wasOpen = await details.evaluate((node) => node.open);
+  if (!wasOpen) await details.locator("summary").click();
+  const id = await until(
+    async () => (await details.locator("p").first().innerText()).split("\n")[0].trim(),
+    message,
+  );
+  const saved = await query("list");
+  const experiments = Array.isArray(saved) ? saved : saved.experiments;
+  const selectedIndex = experiments.findIndex((experiment) => experiment.id === id);
+  const selected = experiments[selectedIndex];
+  assert.ok(selected, "The displayed durable ID belongs to a saved experiment");
+  const label = `${selected.title ?? selected.id} · ${selected.status ?? selected.state?.status}`;
+  const trigger = win.getByTestId("optimization-lab-saved");
+  await until(async () => (await trigger.textContent()).trim() === label, message);
+  assert.equal(await trigger.getAttribute("role"), "combobox");
+  await trigger.click();
+  const listbox = win.getByRole("listbox");
+  await listbox.waitFor();
+  assert.equal(
+    await listbox
+      .getByRole("option")
+      .nth(selectedIndex + 1)
+      .getAttribute("aria-selected"),
+    "true",
+    "The selected option matches the displayed durable experiment ID",
+  );
+  assert.equal(
+    (await listbox.getByRole("option", { selected: true }).textContent()).trim(),
+    label,
+    "The themed selector marks the prepared experiment as selected",
+  );
+  await win.keyboard.press("Escape");
+  await listbox.waitFor({ state: "hidden" });
+  if (!wasOpen) await details.locator("summary").click();
+  return query("get", { id });
+}
+
 async function recoverWithoutReplay(id, requestCount, interruptedPayload) {
   const interrupted = await until(
     async () => {
@@ -340,7 +405,7 @@ async function recoverWithoutReplay(id, requestCount, interruptedPayload) {
   assert.ok(interrupted.ledger.totals.unknownTokens > 0);
   assert.equal(interrupted.ledger.totals.requests, 1);
   await openPage();
-  await win.getByTestId("optimization-lab-saved").selectOption(id);
+  await chooseSavedExperiment(id);
   await win.getByTestId("optimization-lab-continue").waitFor();
   await until(
     async () => win.getByTestId("optimization-lab-continue").isEnabled(),
@@ -364,14 +429,19 @@ async function recoverWithoutReplay(id, requestCount, interruptedPayload) {
 }
 
 async function preparePage(cases) {
-  await win.getByTestId("optimization-lab-saved").selectOption("");
+  await chooseSavedExperiment("");
   if (cases) {
     await win.getByTestId("optimization-lab-dataset-json").click();
     await win.getByTestId("optimization-lab-dataset").fill(JSON.stringify(cases));
   }
-  await win.getByTestId("optimization-lab-skill").selectOption(skillName);
-  await win.getByTestId("optimization-lab-target-connection").selectOption("lab-connection");
-  await win.getByTestId("optimization-lab-optimizer-connection").selectOption("lab-connection");
+  const discovery = await query("discover");
+  const skill = discovery.skills.find((item) => item.name === skillName);
+  const connection = discovery.connections.find((item) => item.id === "lab-connection");
+  assert.ok(skill && connection, "Local fixture choices are available");
+  await chooseLabOption("optimization-lab-skill", `${skill.name} · ${skill.source}`);
+  for (const id of ["target-connection", "optimizer-connection"]) {
+    await chooseLabOption(`optimization-lab-${id}`, `${connection.label} · ${connection.model}`);
+  }
   await win.getByTestId("optimization-lab-maxRequests").fill("40");
   await win.getByTestId("optimization-lab-maxExecutionMs").fill("300000");
   await win.getByTestId("optimization-lab-maxOutputTokens").fill("2048");
@@ -384,12 +454,11 @@ async function preparePage(cases) {
         .querySelector('[data-testid="optimization-lab-state"]')
         ?.getAttribute("data-status") === "ready",
   );
-  const id = await until(
-    () => win.getByTestId("optimization-lab-saved").inputValue(),
+  const prepared = await readSelectedExperiment(
     "Prepared experiment was not selected after saved experiments refreshed",
   );
-  assert.ok(id, "Prepared experiment is selected by its durable ID");
-  return query("get", { id });
+  assert.ok(prepared.id, "Prepared experiment is selected by its durable ID");
+  return prepared;
 }
 async function editDatasetOffline() {
   await json(datasetFile, dataset);
@@ -445,11 +514,9 @@ async function editDatasetOffline() {
   await win.getByTestId("optimization-lab-case-6-missingEvidence-add").click();
   await win.getByTestId("optimization-lab-case-6-missingEvidence-0").fill("missing line 1\nline 2");
   await win.getByTestId("optimization-lab-case-6-assertion-add").click();
-  await win
-    .getByTestId("optimization-lab-case-6-assertion-0-kind")
-    .selectOption("json_field_equals");
+  await chooseLabOption("optimization-lab-case-6-assertion-0-kind", "JSON field equals");
   await win.getByTestId("optimization-lab-case-6-assertion-0-path-0").fill("nested\nfield");
-  await win.getByTestId("optimization-lab-case-6-assertion-0-value-type").selectOption("number");
+  await chooseLabOption("optimization-lab-case-6-assertion-0-value-type", "Number");
   await win.getByTestId("optimization-lab-case-6-assertion-0-value").fill("1.25");
   await win.getByTestId("optimization-lab-export-dataset").click();
   await until(async () => {
@@ -689,7 +756,7 @@ try {
   assert.equal(requests.length, 13, "Reopening a report does not replay model requests");
   assert.equal(reopened.plan.planHash, final.plan.planHash);
   await openPage();
-  await win.getByTestId("optimization-lab-saved").selectOption(id);
+  await chooseSavedExperiment(id);
   await win.getByTestId("optimization-lab-open-report").click();
   await win.getByTestId("optimization-lab-report").waitFor();
   assert.ok((await win.getByTestId("optimization-lab-report").innerText()).length > 100);
@@ -812,7 +879,7 @@ try {
   assert.equal(requests.length, 31, "App restart never starts a saved experiment");
   await recoverWithoutReplay(crashedApp.id, 31, appPayload);
   stage = "fixed candidate trial through page, new native grant and no optimizer";
-  await win.getByTestId("optimization-lab-saved").selectOption(id);
+  await chooseSavedExperiment(id);
   await win.getByTestId("optimization-lab-try-candidate").click();
   await win.getByTestId("optimization-lab-trial-source").waitFor();
   const fresh = structuredClone(dataset);
@@ -826,11 +893,8 @@ try {
   await win.getByTestId("optimization-lab-dataset").fill(JSON.stringify(fresh));
   await win.getByTestId("optimization-lab-prepare").click();
   await win.getByTestId("optimization-lab-state").waitFor();
-  const fixedId = await until(
-    () => win.getByTestId("optimization-lab-saved").inputValue(),
-    "Fixed trial was not selected",
-  );
-  const fixed = await query("get", { id: fixedId });
+  const fixed = await readSelectedExperiment("Fixed trial was not selected");
+  const fixedId = fixed.id;
   assert.equal(fixed.plan.strategyVersion, "fixed_candidate_trial_v1");
   assert.equal(fixed.plan.fixedCandidate.sourcePlanHash, prepared.plan.planHash);
   assert.equal(

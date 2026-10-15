@@ -57,7 +57,8 @@ describe("Agent role sandbox and MCP spawn integration", () => {
       { subAgentSpawner: spawner, agentDefinitions: registry } as ToolContext,
     );
 
-    expect(result).toBe("done");
+    expect(result).toContain("AgentSendInput");
+    expect(result.endsWith("\n\ndone")).toBe(true);
     expect(Object.keys(childConfig?.mcpServers ?? {})).toEqual(["github"]);
     expect(childConfig?.sandbox).toEqual({
       mode: "auto",

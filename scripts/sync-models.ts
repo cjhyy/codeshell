@@ -15,6 +15,30 @@ import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
 const ENDPOINT = "https://openrouter.ai/api/v1/models";
+
+export const CURATED_MODEL_IDS = [
+  "openai/gpt-6.1-sol-pro",
+  "openai/gpt-6.1-sol",
+  "anthropic/claude-opus-5.5",
+  "anthropic/claude-sonnet-5.5",
+  "anthropic/claude-haiku-5.5",
+  "google/gemini-4-argon",
+  "google/gemini-3.8-flash",
+  "~deepseek/deepseek-pro-latest",
+  "~deepseek/deepseek-flash-latest",
+  "qwen/qwen3.8-max-prime",
+  "qwen/qwen3.8-omni-flash",
+  "z-ai/glm-5.3-prime",
+  "z-ai/glm-5.3-flash",
+  "moonshotai/kimi-k3",
+  "x-ai/grok-4.7",
+  "mistralai/mistral-large-4-0",
+  "meta/muse-wonder",
+  "cohere/command-a-plus",
+  "stepfun/step-5-preview",
+  "liquid/lfm-2.5-24b-a2b",
+] as const;
+
 const OUT_PATH = join(
   dirname(fileURLToPath(import.meta.url)),
   "..",
@@ -74,6 +98,19 @@ function slim(m: RawModel): SlimModel {
   };
 }
 
+export function selectCuratedModels(raw: RawModel[]): {
+  models: SlimModel[];
+  missing: string[];
+} {
+  const byId = new Map(raw.map((model) => [model.id, model]));
+  const models = CURATED_MODEL_IDS.flatMap((id) => {
+    const model = byId.get(id);
+    return model ? [slim(model)] : [];
+  });
+  const missing = CURATED_MODEL_IDS.filter((id) => !byId.has(id));
+  return { models, missing };
+}
+
 async function main(): Promise<void> {
   console.log(`[sync-models] fetching ${ENDPOINT}`);
   let payload: { data?: RawModel[] };
@@ -98,7 +135,10 @@ async function main(): Promise<void> {
   }
 
   const raw = payload.data ?? [];
-  const models = raw.map(slim).sort((a, b) => b.created - a.created);
+  const { models, missing } = selectCuratedModels(raw);
+  if (missing.length > 0) {
+    console.warn(`[sync-models] curated models missing from OpenRouter: ${missing.join(", ")}`);
+  }
 
   const snapshot: Snapshot = {
     fetchedAt: new Date().toISOString(),
@@ -127,7 +167,9 @@ function writeStub(reason: string): void {
   );
 }
 
-main().catch((err) => {
-  console.error(`[sync-models] unexpected error:`, err);
-  process.exit(0); // never block build
-});
+if (import.meta.main) {
+  main().catch((err) => {
+    console.error(`[sync-models] unexpected error:`, err);
+    process.exit(0); // never block build
+  });
+}

@@ -5,7 +5,10 @@ export const chat = {
       linkResource: {
         title: "Figma 文件",
         description: "首次读取此文件需要确认只读授权。",
-        granted: "此文件已授权，可以读取文件摘要和评论。",
+        granted: "此文件已授权，会根据任务按需读取内容。",
+        waiting: "文件已授权，当前任务结束后会继续处理。",
+        readFailed: "文件读取未完成，可以重试。",
+        dismiss: "关闭文件提示",
         account: "使用账号",
         chooseAccount: "选择 Figma 连接",
         connect: "连接 Figma",
@@ -15,7 +18,8 @@ export const chat = {
         changed: "连接或权限已变化，请确认当前账号后重试。",
         sessionChanged: "会话已切换或正在运行，请回到原会话后重试。",
         unavailable: "此连接暂时不能添加文件，请检查 Link 服务或连接权限。",
-        readPrompt: "请使用 LinkAction 读取这个 Figma 文件的摘要。参数：{arguments}",
+        readPrompt:
+          "此 Figma 文件已授权。请继续此前任务，先使用 LinkAction 按以下参数查看页面和顶层结构；链接含 node-id 时仅查看该节点。根据任务需要用 get_nodes 继续读取目标子树，仅在原任务确有需要时用 full:true 读取整个文件。参数：{arguments}",
       },
       loadingSession: "正在加载会话…",
       loadEarlierHistory: "加载更早记录",
@@ -281,7 +285,10 @@ export const chat = {
       linkResource: {
         title: "Figma file",
         description: "Confirm read-only access before reading this file for the first time.",
-        granted: "This file is authorized. File summaries and comments can be read.",
+        granted: "This file is authorized. Content will be read as the task needs it.",
+        waiting: "File authorized. Work will continue when the current task finishes.",
+        readFailed: "The file could not be read. Try again.",
+        dismiss: "Dismiss file notice",
         account: "Account",
         chooseAccount: "Choose a Figma connection",
         connect: "Connect Figma",
@@ -293,7 +300,8 @@ export const chat = {
           "The session changed or is busy. Return to the original chat and try again.",
         unavailable:
           "This connection cannot add files. Check the Link service or connection access.",
-        readPrompt: "Use LinkAction to read this Figma file summary. Arguments: {arguments}",
+        readPrompt:
+          "This Figma file is authorized. Continue the earlier task: first use LinkAction with these arguments to inspect pages and top-level structure. For a node-id link, stay within that node. Read target subtrees with get_nodes as needed; use full:true for the whole file only if the original task requires it. Arguments: {arguments}",
       },
       loadingSession: "Loading conversation…",
       loadEarlierHistory: "Load earlier messages",

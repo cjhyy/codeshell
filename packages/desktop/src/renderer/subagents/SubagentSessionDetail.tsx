@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import { ArrowLeft, RefreshCw } from "lucide-react";
+import { SimpleSelect } from "@/components/ui/simple-select";
 import { MessageStream } from "../MessageStream";
 import { foldTranscript } from "../automation/foldTranscript";
 import { useT } from "../i18n/I18nProvider";
@@ -10,6 +11,10 @@ type ChildSession = Awaited<
   ReturnType<typeof window.codeshell.listDiskSessions>
 >["sessions"][number];
 
+// Nested child details share the dock's visibility even when MessageStream owns
+// their local navigation state.
+const SubagentDetailActiveContext = React.createContext(true);
+
 /** Read the existing child transcript without registering it in the main session
  * index. One detail surface can navigate nested children through MessageStream. */
 export function SubagentSessionDetail({
@@ -17,9 +22,14 @@ export function SubagentSessionDetail({
   parentSessionId,
   label,
   running = false,
+  active = true,
   onBack,
-}: SubagentSelection & { onBack: () => void }) {
+}: SubagentSelection & { active?: boolean; onBack?: () => void }) {
   const { t } = useT();
+  const parentActive = React.useContext(SubagentDetailActiveContext);
+  const detailActive = active && parentActive;
+  const activeRef = useRef(detailActive);
+  activeRef.current = detailActive;
   const [selectedId, setSelectedId] = useState(agentId);
   const [children, setChildren] = useState<ChildSession[]>([]);
   const [state, setState] = useState<MessagesReducerState | null>(null);
@@ -31,7 +41,7 @@ export function SubagentSessionDetail({
   const catalogGeneration = useRef(0);
 
   const loadChildren = useCallback(async () => {
-    if (!parentSessionId) return;
+    if (!activeRef.current || !parentSessionId) return;
     const request = ++catalogGeneration.current;
     setLoadingChildren(true);
     try {
@@ -43,7 +53,7 @@ export function SubagentSessionDetail({
           cursor,
           limit: 100,
         });
-        if (request !== catalogGeneration.current) return;
+        if (!activeRef.current || request !== catalogGeneration.current) return;
         rows.push(...page.sessions);
         cursor = page.nextCursor ?? undefined;
       } while (cursor);
@@ -52,27 +62,36 @@ export function SubagentSessionDetail({
         setSelectedId((current) => current ?? rows[0].engineSessionId);
       setCatalogError(null);
     } catch (cause) {
-      if (request === catalogGeneration.current && !agentId) {
+      if (activeRef.current && request === catalogGeneration.current && !agentId) {
         setCatalogError(String(cause instanceof Error ? cause.message : cause));
       }
     } finally {
-      if (request === catalogGeneration.current) setLoadingChildren(false);
+      if (activeRef.current && request === catalogGeneration.current) setLoadingChildren(false);
     }
   }, [agentId, parentSessionId]);
 
   useEffect(() => {
     setSelectedId(agentId);
     setChildren([]);
+    setCatalogError(null);
+  }, [agentId, parentSessionId]);
+
+  useEffect(() => {
+    if (!detailActive) {
+      setLoadingChildren(false);
+      return;
+    }
     void loadChildren();
     return () => {
       catalogGeneration.current += 1;
     };
-  }, [agentId, loadChildren]);
+  }, [detailActive, loadChildren]);
 
   const selectedStatus = children.find((child) => child.engineSessionId === selectedId)?.status;
   const selectedRunning = selectedStatus ? selectedStatus === "active" : running;
 
   const refresh = useCallback(async () => {
+    if (!activeRef.current) return;
     const request = ++generation.current;
     if (!selectedId) {
       setLoading(false);
@@ -81,14 +100,14 @@ export function SubagentSessionDetail({
     setLoading(true);
     try {
       const items = await window.codeshell.getSessionTranscript(selectedId);
-      if (generation.current !== request) return;
+      if (!activeRef.current || generation.current !== request) return;
       setState(foldTranscript(items, { live: selectedRunning }));
       setError(null);
     } catch (cause) {
-      if (generation.current !== request) return;
+      if (!activeRef.current || generation.current !== request) return;
       setError(String(cause instanceof Error ? cause.message : cause));
     } finally {
-      if (generation.current === request) setLoading(false);
+      if (activeRef.current && generation.current === request) setLoading(false);
     }
   }, [selectedId, selectedRunning]);
 
@@ -98,11 +117,15 @@ export function SubagentSessionDetail({
   }, [selectedId]);
 
   useEffect(() => {
+    if (!detailActive) {
+      setLoading(false);
+      return;
+    }
     void refresh();
     return () => {
       generation.current += 1;
     };
-  }, [refresh]);
+  }, [detailActive, refresh]);
 
   const refreshAll = useCallback(() => {
     void loadChildren();
@@ -110,6 +133,7 @@ export function SubagentSessionDetail({
   }, [loadChildren, refresh]);
 
   useEffect(() => {
+    if (!detailActive) return;
     const onChanged = refreshAll;
     window.addEventListener("codeshell:files-changed", onChanged);
     const timer = selectedRunning
@@ -121,7 +145,7 @@ export function SubagentSessionDetail({
       window.removeEventListener("codeshell:files-changed", onChanged);
       if (timer !== undefined) clearInterval(timer);
     };
-  }, [refreshAll, selectedRunning]);
+  }, [detailActive, refreshAll, selectedRunning]);
 
   return (
     <section
@@ -129,14 +153,16 @@ export function SubagentSessionDetail({
       className="flex min-h-0 min-w-0 flex-1 flex-col"
     >
       <div className="flex shrink-0 items-center gap-2 border-b border-border px-3 py-2">
-        <button
-          type="button"
-          onClick={onBack}
-          aria-label={t("msg.agent.back")}
-          className="rounded p-1 text-muted-foreground hover:bg-accent focus-visible:ring-2 focus-visible:ring-ring"
-        >
-          <ArrowLeft className="size-4" />
-        </button>
+        {onBack && (
+          <button
+            type="button"
+            onClick={onBack}
+            aria-label={t("msg.agent.back")}
+            className="rounded p-1 text-muted-foreground hover:bg-accent focus-visible:ring-2 focus-visible:ring-ring"
+          >
+            <ArrowLeft className="size-4" />
+          </button>
+        )}
         <div className="min-w-0 flex-1">
           <div className="truncate text-sm font-medium">
             {children.find((child) => child.engineSessionId === selectedId)?.title ||
@@ -148,7 +174,9 @@ export function SubagentSessionDetail({
         <button
           type="button"
           onClick={refreshAll}
-          disabled={loading || loadingChildren || (!selectedId && !parentSessionId)}
+          disabled={
+            !detailActive || loading || loadingChildren || (!selectedId && !parentSessionId)
+          }
           aria-label={t("msg.agent.refresh")}
           className="rounded p-1 text-muted-foreground hover:bg-accent disabled:opacity-50"
         >
@@ -156,22 +184,22 @@ export function SubagentSessionDetail({
         </button>
       </div>
       {children.length > 1 && (
-        <select
-          aria-label={t("msg.agent.chooseChild")}
+        <SimpleSelect
+          ariaLabel={t("msg.agent.chooseChild")}
           value={selectedId ?? ""}
-          className="m-2 min-w-0 rounded border border-border bg-background p-2 text-sm"
-          onChange={(event) => setSelectedId(event.target.value || undefined)}
-        >
-          <option value="">{t("msg.agent.chooseChild")}</option>
-          {agentId && !children.some((child) => child.engineSessionId === agentId) && (
-            <option value={agentId}>{label || agentId}</option>
-          )}
-          {children.map((child) => (
-            <option key={child.engineSessionId} value={child.engineSessionId}>
-              {child.title || child.engineSessionId}
-            </option>
-          ))}
-        </select>
+          className="m-2 w-[calc(100%-1rem)]"
+          onChange={(value) => setSelectedId(value || undefined)}
+          options={[
+            { value: "", label: t("msg.agent.chooseChild") },
+            ...(agentId && !children.some((child) => child.engineSessionId === agentId)
+              ? [{ value: agentId, label: label || agentId }]
+              : []),
+            ...children.map((child) => ({
+              value: child.engineSessionId,
+              label: child.title || child.engineSessionId,
+            })),
+          ]}
+        />
       )}
       {(error || catalogError) && (
         <div role="alert" className="px-4 py-3 text-sm text-status-err">
@@ -187,7 +215,9 @@ export function SubagentSessionDetail({
               : t("msg.agent.emptyTranscript")}
         </div>
       ) : (
-        <MessageStream messages={state.messages} engineSessionId={selectedId} readOnly />
+        <SubagentDetailActiveContext.Provider value={detailActive}>
+          <MessageStream messages={state.messages} engineSessionId={selectedId} readOnly />
+        </SubagentDetailActiveContext.Provider>
       )}
     </section>
   );

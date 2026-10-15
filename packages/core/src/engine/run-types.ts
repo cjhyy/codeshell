@@ -219,6 +219,8 @@ export interface EngineRunOptions {
   };
   /** Trusted child writer generation used to fence mailbox drains. */
   runtimeGeneration?: number;
+  /** Trusted child spawn snapshot; model/tool schemas never expose this field. */
+  subAgentContinuation?: import("../types.js").SubAgentContinuation;
   /** Trusted runtime-only progress events; never model/tool input. */
   onAgentProgress?: (event: AgentRuntimeProgressEvent) => void;
 }
@@ -246,7 +248,10 @@ export interface ChildEngineRunner {
   runChild(
     config: EngineConfig,
     task: string,
-    options: Pick<EngineRunOptions, "signal" | "onStream" | "sessionId">,
+    options: Pick<
+      EngineRunOptions,
+      "signal" | "onStream" | "sessionId" | "subAgentContinuation" | "toolAllowlist"
+    >,
   ): Promise<Pick<EngineResult, "text" | "sessionId" | "usage">>;
 }
 

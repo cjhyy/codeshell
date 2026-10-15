@@ -2618,6 +2618,8 @@ export class Engine {
       },
       sessionExists: (sessionId) => this.sessionManager.exists(sessionId),
       getSessionParentId: (sessionId) => this.sessionManager.readParentSessionId(sessionId),
+      getSessionContinuation: (sessionId) =>
+        this.sessionManager.readSubAgentContinuation(sessionId),
       childRunner: {
         createChild: (config) => new Engine(config),
         runChild: async (config, childTask, childOptions) => {

@@ -8,14 +8,28 @@ breaking.
 
 ## [Unreleased]
 
+## [0.9.43] - 2026-10-15
+
 ### Added
 
+- Read Figma nodes, exported images and image-fill assets through Link with
+  on-demand content loading, bounded responses and account authorization guidance.
+- Open sub-agent conversations in the side dock while keeping the parent chat
+  available.
 - Add `@cjhyy/code-shell-host`, a Core-only HostRuntime foundation with capability
   registration, adapter lifecycle and a shared worker request interceptor used by
   Desktop, serve and Panel task hosts. Larger service migrations remain pending.
 
 ### Changed
 
+- Unify themed dropdowns across Desktop and keep theme music local, including
+  imported MP3/WAV tracks and playback that continues outside Appearance settings.
+- Improve Quick Chat layout and composer usability in short panels.
+- Refresh the curated OpenRouter model catalog.
+- Return a reusable `agent_id` with synchronous Agent reports and guide related
+  follow-up work through `AgentSendInput` using saved context and incremental input.
+- Persist sub-agent role scopes for continuation after restart. Legacy sessions
+  without saved scope metadata require a new Agent after restarting.
 - Extract protocol request dispatch and ingress validation without changing the
   legacy wire contract; reduce the AgentServer architecture budget to 4,949 lines.
 - Reserve tool names beginning with `__` for internal host loopbacks, including
@@ -33,6 +47,16 @@ breaking.
 
 ### Fixed
 
+- Preserve external runtime output across restarts, adopted cost snapshots and
+  turn timing; keep reopened autocomplete suggestions focused.
+- Make GitHub data access opt-in at sign-in and distinguish local logout from
+  unconfirmed remote revocation.
+- Expose verified Node runtime fallbacks to Panel CLIs.
+- Track resumed sub-agents as running, route further input to their existing
+  runtime, and preserve cancellation until that runtime fully exits, including
+  across the automatic background threshold.
+- Enforce sub-agent role tool allowlists at execution time on both initial and
+  resumed runs, while retaining parent-disabled tools and the flat agent hierarchy.
 - Keep the bundled Host package in Desktop devDependencies, and derive the
   production workspace packaging guard from predist's actual materialization list.
 - Include a unique JSON-RPC id in Desktop unsupported-loopback replies so Core

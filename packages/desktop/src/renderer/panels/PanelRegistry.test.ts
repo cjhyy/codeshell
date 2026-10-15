@@ -19,6 +19,7 @@ const PANEL_KEYS: PanelTab[] = [
   "review",
   "terminal",
   "shells",
+  "subagent",
   "ccRoom",
   "quickChat",
 ];

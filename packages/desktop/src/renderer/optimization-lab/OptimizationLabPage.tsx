@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { FlaskConical, RefreshCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { SimpleSelect } from "@/components/ui/simple-select";
 import type { LabQueryType } from "../../shared/optimization-lab";
 import { useT } from "../i18n";
 import { OptimizationLabSummary } from "./OptimizationLabSummary";
@@ -321,26 +322,25 @@ function OptimizationLabProjectPage({ activeProjectId }: { activeProjectId?: str
         )}
         <section className="rounded-xl border p-4 space-y-3">
           <h2 className="font-medium">{t("optimizationLab.saved")}</h2>
-          <select
-            data-testid="optimization-lab-saved"
-            className={inputClass}
+          <SimpleSelect
+            ariaLabel={t("optimizationLab.saved")}
+            triggerProps={{ "data-testid": "optimization-lab-saved" }}
             value={snapshot?.id ?? ""}
             disabled={pending}
-            onChange={(event) => {
-              const id = event.target.value;
+            onChange={(id) => {
               void run(async () => {
                 setReport(null);
                 setSnapshot(id ? await query("get", { id }) : null);
               });
             }}
-          >
-            <option value="">{t("optimizationLab.newExperiment")}</option>
-            {experiments.map((item) => (
-              <option key={item.id} value={item.id}>
-                {item.title ?? item.id} · {item.status ?? item.state?.status}
-              </option>
-            ))}
-          </select>
+            options={[
+              { value: "", label: t("optimizationLab.newExperiment") },
+              ...experiments.map((item) => ({
+                value: item.id,
+                label: `${item.title ?? item.id} · ${item.status ?? item.state?.status}`,
+              })),
+            ]}
+          />
         </section>
         <section
           className="rounded-xl border p-4 space-y-3"
@@ -391,15 +391,16 @@ function OptimizationLabProjectPage({ activeProjectId }: { activeProjectId?: str
             <h2 className="font-medium">{t("optimizationLab.materials")}</h2>
             <label className="space-y-1 text-sm block">
               <span>{t("optimizationLab.executionMode")}</span>
-              <select
-                data-testid="optimization-lab-execution-mode"
-                className={inputClass}
+              <SimpleSelect<typeof executionMode>
+                ariaLabel={t("optimizationLab.executionMode")}
+                triggerProps={{ "data-testid": "optimization-lab-execution-mode" }}
                 value={executionMode}
-                onChange={(event) => setExecutionMode(event.target.value as typeof executionMode)}
-              >
-                <option value="text_fragment">{t("optimizationLab.textMode")}</option>
-                <option value="codeshell_isolated">{t("optimizationLab.isolatedMode")}</option>
-              </select>
+                onChange={setExecutionMode}
+                options={[
+                  { value: "text_fragment", label: t("optimizationLab.textMode") },
+                  { value: "codeshell_isolated", label: t("optimizationLab.isolatedMode") },
+                ]}
+              />
             </label>
             {trialSource && (
               <div
@@ -425,19 +426,17 @@ function OptimizationLabProjectPage({ activeProjectId }: { activeProjectId?: str
               <div className="grid gap-4 sm:grid-cols-3">
                 <label className="space-y-1 text-sm">
                   <span>{t("optimizationLab.skill")}</span>
-                  <select
-                    data-testid="optimization-lab-skill"
-                    className={inputClass}
+                  <SimpleSelect
+                    ariaLabel={t("optimizationLab.skill")}
+                    triggerProps={{ "data-testid": "optimization-lab-skill" }}
                     value={skillName}
                     disabled={Boolean(trialSource)}
-                    onChange={(e) => setSkillName(e.target.value)}
-                  >
-                    {discovery.skills.map((skill) => (
-                      <option key={skill.name} value={skill.name}>
-                        {skill.name} · {skill.source}
-                      </option>
-                    ))}
-                  </select>
+                    onChange={setSkillName}
+                    options={discovery.skills.map((skill) => ({
+                      value: skill.name,
+                      label: `${skill.name} · ${skill.source}`,
+                    }))}
+                  />
                 </label>
                 {[
                   {
@@ -455,24 +454,18 @@ function OptimizationLabProjectPage({ activeProjectId }: { activeProjectId?: str
                 ].map((item) => (
                   <label key={item.id} className="space-y-1 text-sm">
                     <span>{item.label}</span>
-                    <select
-                      data-testid={`optimization-lab-${item.id}`}
-                      className={inputClass}
+                    <SimpleSelect
+                      ariaLabel={item.label}
+                      triggerProps={{ "data-testid": `optimization-lab-${item.id}` }}
                       value={item.value}
                       disabled={Boolean(trialSource)}
-                      onChange={(e) => item.set(e.target.value)}
-                    >
-                      {discovery.connections.map((connection) => (
-                        <option
-                          key={connection.id}
-                          value={connection.id}
-                          disabled={!connection.eligible}
-                        >
-                          {connection.label} · {connection.model}
-                          {connection.reason ? ` (${connection.reason})` : ""}
-                        </option>
-                      ))}
-                    </select>
+                      onChange={item.set}
+                      options={discovery.connections.map((connection) => ({
+                        value: connection.id,
+                        label: `${connection.label} · ${connection.model}${connection.reason ? ` (${connection.reason})` : ""}`,
+                        disabled: !connection.eligible,
+                      }))}
+                    />
                   </label>
                 ))}
               </div>
@@ -631,28 +624,30 @@ function OptimizationLabProjectPage({ activeProjectId }: { activeProjectId?: str
               {field("timeoutMs", t("optimizationLab.timeout"))}
               <label className="space-y-1 text-sm">
                 <span>{t("optimizationLab.candidates")}</span>
-                <select
-                  className={inputClass}
-                  value={limits.maxCandidates}
+                <SimpleSelect
+                  ariaLabel={t("optimizationLab.candidates")}
+                  value={String(limits.maxCandidates)}
                   disabled={Boolean(trialSource)}
-                  onChange={(e) =>
-                    setLimits((current) => ({ ...current, maxCandidates: Number(e.target.value) }))
+                  onChange={(value) =>
+                    setLimits((current) => ({ ...current, maxCandidates: Number(value) }))
                   }
-                >
-                  <option value={1}>1</option>
-                  <option value={2}>2</option>
-                </select>
+                  options={[
+                    { value: "1", label: "1" },
+                    { value: "2", label: "2" },
+                  ]}
+                />
               </label>
               <label className="space-y-1 text-sm">
                 <span>{t("optimizationLab.objective")}</span>
-                <select
-                  className={inputClass}
+                <SimpleSelect<"quality" | "cost">
+                  ariaLabel={t("optimizationLab.objective")}
                   value={objective}
-                  onChange={(e) => setObjective(e.target.value as "quality" | "cost")}
-                >
-                  <option value="quality">{t("optimizationLab.quality")}</option>
-                  <option value="cost">{t("optimizationLab.cost")}</option>
-                </select>
+                  onChange={setObjective}
+                  options={[
+                    { value: "quality", label: t("optimizationLab.quality") },
+                    { value: "cost", label: t("optimizationLab.cost") },
+                  ]}
+                />
               </label>
             </div>
             <Button
@@ -699,17 +694,16 @@ function OptimizationLabProjectPage({ activeProjectId }: { activeProjectId?: str
               </p>
               {(report?.json as any)?.adoptionEligible === true && (
                 <div className="space-y-2" data-testid="optimization-lab-adoption">
-                  <select
-                    data-testid="optimization-lab-adoption-scope"
-                    className={inputClass}
+                  <SimpleSelect<typeof adoptionScope>
+                    ariaLabel={t("optimizationLab.adoptedVersions")}
+                    triggerProps={{ "data-testid": "optimization-lab-adoption-scope" }}
                     value={adoptionScope}
-                    onChange={(event) =>
-                      setAdoptionScope(event.target.value as typeof adoptionScope)
-                    }
-                  >
-                    <option value="project">{t("optimizationLab.projectScope")}</option>
-                    <option value="session">{t("optimizationLab.sessionScope")}</option>
-                  </select>
+                    onChange={setAdoptionScope}
+                    options={[
+                      { value: "project", label: t("optimizationLab.projectScope") },
+                      { value: "session", label: t("optimizationLab.sessionScope") },
+                    ]}
+                  />
                   {adoptionScope === "session" && (
                     <input
                       data-testid="optimization-lab-adoption-session"

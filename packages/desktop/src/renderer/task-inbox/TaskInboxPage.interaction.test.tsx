@@ -42,6 +42,19 @@ function props(node: Element): Record<string, any> {
   const key = Object.keys(node).find((name) => name.startsWith("__reactProps$"));
   return key ? (node as any)[key] : {};
 }
+
+/** Closed Radix menus live outside the mini-DOM; inspect the owning selector contract. */
+function selectProps(node: Element): Record<string, any> {
+  const current = node as unknown as Record<string, any>;
+  const key = Object.keys(current).find((name) => name.startsWith("__reactFiber$"));
+  let fiber = key ? current[key] : undefined;
+  while (fiber) {
+    if (fiber.type?.name === "SimpleSelect") return fiber.memoizedProps;
+    fiber = fiber.return;
+  }
+  throw new Error("Expected a rendered SimpleSelect");
+}
+
 function textOf(node: Node): string {
   if (node.nodeType === 3) return node.nodeValue ?? (node as Text).data ?? node.textContent ?? "";
   return node.childNodes.length
@@ -320,7 +333,7 @@ describe("TaskInboxPage", () => {
     expect(textOf(cards()[0])).toContain("需要审批");
     expect(textOf(cards()[3])).toContain("仅查看");
     expect(textOf(cards()[3])).toContain("/work/a");
-    expect(nodes().filter((node) => node.tagName === "SELECT")).toHaveLength(3);
+    expect(nodes().filter((node) => props(node).role === "combobox")).toHaveLength(3);
     expect(
       nodes()
         .filter((node) => node.tagName === "LABEL")
@@ -334,9 +347,9 @@ describe("TaskInboxPage", () => {
     ).toHaveLength(1);
     expect(textOf(container)).not.toContain("取消任务");
     const source = nodes().find(
-      (node) => node.tagName === "SELECT" && String(props(node).id).endsWith("-source"),
+      (node) => props(node).role === "combobox" && String(props(node).id).endsWith("-source"),
     )!;
-    await settle(() => props(source).onChange({ target: { value: "legacy-run" } }));
+    await settle(() => selectProps(source).onChange("legacy-run"));
     expect(cards()).toHaveLength(1);
     const input = nodes().find((node) => node.tagName === "INPUT")!;
     await settle(() => props(input).onChange({ target: { value: "missing" } }));

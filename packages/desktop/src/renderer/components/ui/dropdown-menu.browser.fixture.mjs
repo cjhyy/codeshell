@@ -72,7 +72,10 @@ const css = compiled.build([
   ...scanner.scan(),
   ...scanner.scanFiles([{ content: source, extension: "tsx" }]),
 ]);
-const browser = await chromium.launch({ headless: true });
+const browser = await chromium.launch({
+  headless: true,
+  executablePath: process.env.CODESHELL_TEST_CHROMIUM || undefined,
+});
 const reports = [];
 try {
   for (const width of [390, 820]) {
