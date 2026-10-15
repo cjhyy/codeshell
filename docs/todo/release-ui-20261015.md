@@ -314,6 +314,28 @@ in the desktop-bridge tree; ui_audit owns
 Root integrates reviewed commits in the current UI5 branch, preserves incoming
 main, verifies the final combination and waits for the UI4 CI before another push.
 
+Search is now complete and integrated as `9882f5b35` (source `ed1bc6374`, parent
+`94f1a462b`). The final six-file commit contains scoped short-window density,
+fully wrapped search mode labels and a 371-line production fixture, registered
+as the 26th browser check. Chrome uses fresh contexts at each exact initial
+viewport; Electron uses actual BrowserWindow content sizes and also proves wheel
+after every live resize. Both passed 32 layouts/102 observations with strict
+wheel, full Retry bounds/hit, unchanged action wires, query/focus retention,
+synthetic composing guard and Escape return. All hidden/clip ancestors stay at
+scroll zero; no product wheel handler or diagnostic build plugin remains. Types,
+renderer build, scoped lint and 24 guarded tests passed; independent review was
+green. Root independently passed the integrated 32/102 fixture. The unpublished
+checkpoint history is retained on
+`codex/desktop/session-search-layout-checkpoint-20261015` (`b48e9b9d3`).
+
+release_audit now independently audits actual MCP settings viewers with only
+owned settings/probe results. Root code inspection found ToolsViewer and
+ErrorDetailViewer are manual fixed div overlays without modal role/FocusScope/
+Escape ownership, plus potentially overflowing long names. Reproduce actual
+Settings→MCP keyboard/short-pane behavior before deciding implementation scope;
+preserve transport, credential and plugin trust authority. No MCP product edit
+has been authorized without that evidence yet.
+
 Initial audit history follows:
 
 - Read-only audit is in progress, including Desktop and mobile/Web.
