@@ -1,4 +1,4 @@
-import { describe, test, expect, beforeEach, afterEach } from "bun:test";
+import { describe, test, expect, beforeEach, afterEach, spyOn } from "bun:test";
 import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -9,7 +9,7 @@ import { bashTool } from "./bash.js";
 function text(out: string | { result?: string; error?: string }): string {
   return typeof out === "string" ? out : (out.result ?? out.error ?? "");
 }
-import type { ToolContext } from "../context.js";
+import type { ToolContext, ToolRunYieldReason } from "../context.js";
 import { notificationQueue } from "./agent-notifications.js";
 
 let home: string;
@@ -44,28 +44,98 @@ function ctx(sessionId = "sessA"): ToolContext {
   } as unknown as ToolContext;
 }
 
+function yieldingContext() {
+  const context = ctx();
+  const pending = new Set<ToolRunYieldReason>();
+  context.runYield = {
+    request: (reason) => {
+      pending.add(reason);
+    },
+    peek: (reason) => pending.has(reason),
+    consume: (reason) => pending.delete(reason),
+  };
+  return { context, pending };
+}
+
 describe("Bash run_in_background", () => {
-  test("returns a shell_id and does not block", async () => {
-    let yielded: string | undefined;
-    const context = ctx();
-    context.runYield = {
-      request: (reason) => {
-        yielded = reason;
-      },
-      peek: (reason) => yielded === reason,
-      consume: (reason) => {
-        if (yielded !== reason) return false;
-        yielded = undefined;
-        return true;
-      },
-    };
+  test("an omitted behavior keeps the exit-wait boundary for existing callers", async () => {
+    const { context, pending } = yieldingContext();
     const out = await bashTool({ command: "sleep 100", run_in_background: true }, context);
     expect(text(out)).toBeTypeOf("string");
     expect(text(out)).toContain("shell_id:");
     expect(text(out)).toMatch(/bg_/);
     expect(mgr.listForSession("sessA")).toHaveLength(1);
-    expect(yielded).toBe("background_notification");
+    expect(pending.has("background_notification")).toBe(true);
   });
+
+  test("continue keeps a background service running without yielding the turn", async () => {
+    const { context, pending } = yieldingContext();
+    const out = await bashTool(
+      { command: "sleep 100", run_in_background: true, background_behavior: "continue" },
+      context,
+    );
+    expect(text(out)).toContain("shell_id:");
+    expect(text(out)).toContain("background_behavior: continue");
+    expect(mgr.listForSession("sessA")).toHaveLength(1);
+    expect(mgr.listForSession("sessA")[0]!.status).toBe("running");
+    expect(pending.size).toBe(0);
+  });
+
+  test("wait_for_exit explicitly requests the completion boundary", async () => {
+    const { context, pending } = yieldingContext();
+    const out = await bashTool(
+      { command: "sleep 100", run_in_background: true, background_behavior: "wait_for_exit" },
+      context,
+    );
+    expect(text(out)).toContain("shell_id:");
+    expect(pending.has("background_notification")).toBe(true);
+  });
+
+  test.each(["wait", null, true])(
+    "rejects invalid behavior %p before spawning",
+    async (behavior) => {
+      const { context, pending } = yieldingContext();
+      const spawn = spyOn(mgr, "spawnBackground");
+      try {
+        const out = await bashTool(
+          { command: "sleep 100", run_in_background: true, background_behavior: behavior },
+          context,
+        );
+        expect(out).toMatchObject({
+          ok: false,
+          error: expect.stringContaining("background_behavior"),
+        });
+        expect(spawn).not.toHaveBeenCalled();
+        expect(pending.size).toBe(0);
+      } finally {
+        spawn.mockRestore();
+      }
+    },
+  );
+
+  test.each(["continue", "wait_for_exit"])(
+    "failed spawn does not yield in %s mode",
+    async (behavior) => {
+      const { context, pending } = yieldingContext();
+      const spawn = spyOn(mgr, "spawnBackground").mockReturnValue({
+        ok: false,
+        error: "fixture spawn failure",
+      });
+      try {
+        const out = await bashTool(
+          { command: "fixture command", run_in_background: true, background_behavior: behavior },
+          context,
+        );
+        expect(out).toMatchObject({
+          ok: false,
+          error: expect.stringContaining("fixture spawn failure"),
+        });
+        expect(pending.size).toBe(0);
+      } finally {
+        spawn.mockRestore();
+      }
+    },
+  );
 
   test("automation context rejects run_in_background", async () => {
     const c = { ...ctx(), allowBackgroundShells: false } as unknown as ToolContext;
