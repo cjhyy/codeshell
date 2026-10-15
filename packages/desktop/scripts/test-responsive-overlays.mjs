@@ -6,6 +6,7 @@ const isolatedRunner = fileURLToPath(
 );
 const fixtures = [
   "components/ui/overlay.browser.fixture.mjs",
+  "components/ui/dropdown-surfaces.browser.fixture.mjs",
   "settings/SettingsMenu.browser.fixture.mjs",
   "account/AccountSidebarEntry.browser.fixture.mjs",
   "chat/anchored-popovers.browser.fixture.mjs",
