@@ -19,6 +19,8 @@ import {
 import { isRemoteLinkCredential, RemoteLinkError } from "./remote.js";
 import { getLinkStatus } from "./status.js";
 import { allowsLinkAction, linkAuthoritySnapshot } from "./authority.js";
+import { FigmaContentUnavailableError, UnsupportedFigmaFileTypeError } from "./figma.js";
+import { LinkProviderResponseTooLargeError } from "./http.js";
 import { canonicalOperationValue } from "../operations/ledger.js";
 import { githubCreateIssueParameters, verifiedGithubCreateIssue } from "./verified-write.js";
 
@@ -557,7 +559,12 @@ async function executeLinkAction(
       provider: providerId,
       action: actionId,
       error: error instanceof Error ? error.message : String(error),
-      ...(error instanceof RemoteLinkError ? { code: error.code } : {}),
+      ...(error instanceof RemoteLinkError ||
+      error instanceof FigmaContentUnavailableError ||
+      error instanceof UnsupportedFigmaFileTypeError ||
+      error instanceof LinkProviderResponseTooLargeError
+        ? { code: error.code }
+        : {}),
     });
   } finally {
     unsubscribe?.();

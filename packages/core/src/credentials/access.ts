@@ -173,10 +173,14 @@ export function createIpcCredentialAccess(
     waiter.cleanup?.();
     if ("error" in msg && msg.error) {
       const data = msg.error.data as { remoteLinkCode?: unknown } | undefined;
+      const remoteLinkCode =
+        waiter.method === "desktop/remoteLinkAction" ? data?.remoteLinkCode : undefined;
       waiter.reject(
-        waiter.method === "desktop/remoteLinkAction" &&
-          data?.remoteLinkCode === "file_not_authorized"
-          ? new RemoteLinkError("file_not_authorized")
+        remoteLinkCode === "file_not_authorized" ||
+          remoteLinkCode === "unsupported_file_type" ||
+          remoteLinkCode === "response_too_large" ||
+          remoteLinkCode === "content_unavailable"
+          ? new RemoteLinkError(remoteLinkCode)
           : new Error(msg.error.message),
       );
     } else {

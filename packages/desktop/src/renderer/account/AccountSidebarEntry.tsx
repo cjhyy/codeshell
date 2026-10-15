@@ -27,6 +27,7 @@ export function AccountSidebarEntry(props: Props) {
   const loggingOutRef = useRef(false);
   const triggerRef = useRef<HTMLButtonElement>(null);
   const statusRevisionRef = useRef(0);
+  const signedInRevisionRef = useRef(0);
   const activeRef = useRef(false);
   const detailId = useId();
 
@@ -39,6 +40,7 @@ export function AccountSidebarEntry(props: Props) {
       if (!active) return;
       receivedStatus = true;
       statusRevisionRef.current += 1;
+      if (next.state === "signed-in") signedInRevisionRef.current += 1;
       setStatus(next);
       setUnavailable(false);
     });
@@ -80,8 +82,19 @@ export function AccountSidebarEntry(props: Props) {
     if (loggingOutRef.current || logoutDisabled) return;
     loggingOutRef.current = true;
     setLoggingOut(true);
+    const signedInRevision = signedInRevisionRef.current;
     try {
-      await window.codeshell.cloudAccount.logout();
+      const result = await window.codeshell.cloudAccount.logout();
+      if (
+        activeRef.current &&
+        signedInRevision === signedInRevisionRef.current &&
+        result.revocation === "unconfirmed"
+      ) {
+        toast({
+          message: t("settingsX.cloudAccount.logoutUnconfirmed"),
+          durationMs: 10_000,
+        });
+      }
       // Refresh services that do not emit an event, without overwriting a newer
       // account event that arrives while this local snapshot is in transit.
       const revision = statusRevisionRef.current;

@@ -40,6 +40,7 @@ function setup(
     signal: AbortSignal,
     authorized: () => boolean,
   ) => Promise<PreparedGitHubLink>,
+  now?: () => number,
 ) {
   let stored = initial;
   let writes = 0;
@@ -52,6 +53,7 @@ function setup(
   let unavailable = false;
   let retireFailure = false;
   let saveFailure = false;
+  let forgetFailure = false;
   const store = {
     load: () => {
       reads++;
@@ -67,11 +69,13 @@ function setup(
       if (unavailable) throw new Error("keyring unavailable");
     },
     forget: () => {
+      if (forgetFailure) throw new Error("account store cannot delete");
       stored = undefined;
     },
   } as unknown as CloudAccountStore;
   const manager = new CloudAccountManager({
     store,
+    now,
     prepareGitHubLink,
     request: async (input) => {
       requests.push(input);
@@ -106,6 +110,9 @@ function setup(
     },
     failSave: () => {
       saveFailure = true;
+    },
+    failForget: () => {
+      forgetFailure = true;
     },
   };
 }
@@ -553,7 +560,7 @@ test("logout fences late refresh and login results, retiring only account-scoped
   const logout = ctx.manager.logout();
   expect(ctx.manager.status().state).toBe("signed-out");
   response.resolve(grant({ account: old.account, sessionId: old.sessionId }));
-  await logout;
+  expect(await logout).toEqual({ state: "signed-out", revocation: "confirmed" });
   expect(await pending).toBe("cancelled");
   expect(ctx.saved()).toBeUndefined();
   expect(ctx.manager.status()).toEqual({ state: "signed-out" });
@@ -671,12 +678,12 @@ test("switching accounts revokes a rotated grant that arrives after the old refr
   ).toBe(true);
 });
 
-test("failed server revocation reports uncertainty after local logout; local credentials remain erased", async () => {
+test("failed server revocation returns uncertainty after local logout; local credentials remain erased", async () => {
   const old = grant();
   const ctx = setup(old, async () => {
     throw new CloudAccountHttpError(0);
   });
-  await expect(ctx.manager.logout()).rejects.toThrow("本机已退出");
+  expect(await ctx.manager.logout()).toEqual({ state: "signed-out", revocation: "unconfirmed" });
   expect(ctx.saved()).toBeUndefined();
   expect(ctx.manager.status().state).toBe("signed-out");
   expect(ctx.retired).toHaveLength(1);
@@ -687,7 +694,7 @@ test.each([{}, { ok: false }, { revoked: false }, { revoked: true }, { ok: "true
   async (ack) => {
     const old = grant();
     const ctx = setup(old, async () => ack);
-    await expect(ctx.manager.logout()).rejects.toThrow("服务端未确认撤销");
+    expect(await ctx.manager.logout()).toEqual({ state: "signed-out", revocation: "unconfirmed" });
     expect(ctx.saved()).toBeUndefined();
     expect(ctx.manager.status().state).toBe("signed-out");
     expect(ctx.retired).toEqual([{ origin, accountId: old.account.id }]);
@@ -699,9 +706,89 @@ test.each([{}, { ok: false }, { revoked: false }, { revoked: true }, { ok: "true
 
 test("Account logout accepts the real service revocation acknowledgement", async () => {
   const ctx = setup(grant(), async () => ({ ok: true }));
-  await ctx.manager.logout();
+  expect(await ctx.manager.logout()).toEqual({ state: "signed-out", revocation: "confirmed" });
   expect(ctx.saved()).toBeUndefined();
   expect(ctx.manager.status().state).toBe("signed-out");
+});
+
+test.each([true, false])(
+  "logout revokes an in-flight rotated session after the saved refresh expires (ack: %j)",
+  async (ack) => {
+    let now = Date.now();
+    const old = grant({
+      accessTokenExpiresAt: now + 1000,
+      refreshTokenExpiresAt: now + 2000,
+    });
+    const rotated = grant({ account: old.account, sessionId: old.sessionId });
+    const response = deferred<unknown>();
+    const ctx = setup(
+      old,
+      async (req) => (req.path.endsWith("refresh") ? response.promise : { ok: ack }),
+      undefined,
+      () => now,
+    );
+    const pending = ctx.manager.getCredential(origin).catch(() => "cancelled");
+    expect(ctx.requests[0].path).toBe("/api/v1/account/refresh");
+    now = old.refreshTokenExpiresAt;
+    const logout = ctx.manager.logout();
+    expect(ctx.saved()).toBeUndefined();
+    response.resolve(rotated);
+    expect(await logout).toEqual({
+      state: "signed-out",
+      revocation: ack ? "confirmed" : "unconfirmed",
+    });
+    expect(await pending).toBe("cancelled");
+    expect(ctx.requests.filter((req) => req.path.endsWith("logout"))).toMatchObject([
+      { token: rotated.accessToken, body: {} },
+    ]);
+    expect(ctx.saved()).toBeUndefined();
+  },
+);
+
+test("local credential deletion failure still rejects logout after attempting remote revocation", async () => {
+  const old = grant();
+  const ctx = setup(old);
+  ctx.failForget();
+  await expect(ctx.manager.logout()).rejects.toThrow("无法移除账号登记");
+  expect(ctx.saved()).toBe(old);
+  expect(ctx.manager.status()).toEqual({ state: "storage-error" });
+  expect(ctx.retired).toEqual([{ origin, accountId: old.account.id }]);
+  expect(ctx.requests).toMatchObject([{ path: "/api/v1/account/logout", token: old.accessToken }]);
+});
+
+test("already signed-out logout succeeds without contacting the service", async () => {
+  const ctx = setup();
+  expect(await ctx.manager.logout()).toEqual({ state: "signed-out", revocation: "confirmed" });
+  expect(ctx.requests).toHaveLength(0);
+  expect(ctx.retired).toHaveLength(0);
+});
+
+test("an expired session without an in-flight refresh needs no server request", async () => {
+  const now = Date.now();
+  const ctx = setup(
+    grant({
+      accessTokenExpiresAt: now - 2000,
+      refreshTokenExpiresAt: now - 1000,
+    }),
+  );
+  expect(await ctx.manager.logout()).toEqual({ state: "signed-out", revocation: "confirmed" });
+  expect(ctx.requests).toHaveLength(0);
+  expect(ctx.saved()).toBeUndefined();
+});
+
+test("a newer login cannot hide a previous logout's local deletion failure", async () => {
+  const old = grant();
+  const next = grant({ account: { id: randomUUID(), username: "bob" } });
+  const response = deferred<unknown>();
+  const ctx = setup(old, async (req) => (req.path.endsWith("logout") ? response.promise : next));
+  ctx.failForget();
+  const logout = ctx.manager.logout();
+  await waitForRequest(ctx.requests, "logout");
+  await ctx.manager.signIn("login", { origin, username: "bob", password: "long fixture password" });
+  response.resolve({ ok: true });
+  await expect(logout).rejects.toThrow("无法移除账号登记");
+  expect(ctx.manager.status().account?.id).toBe(next.account.id);
+  expect(ctx.saved()?.sessionId).toBe(next.sessionId);
 });
 
 test("cancelling GitHub login aborts the private polling proof and cannot accept a late grant", async () => {

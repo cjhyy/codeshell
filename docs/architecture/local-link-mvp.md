@@ -57,7 +57,7 @@ Chat LinkAction
 | -------- | ------------------------------- | ----------------------------------------------------------------- | ------------------------------------------------------- |
 | GitHub   | `gh` 会话 / Fine-grained PAT    | 仓库、README、指定文件、Issue 列表/详情、PR 列表/详情、创建 Issue | 创建 Issue 固定审批                                     |
 | GitLab   | `glab` 会话 / PAT               | 项目、分配的 Issue                                                | 当前先支持 gitlab.com                                   |
-| Figma    | PAT                             | 文件摘要、评论                                                    | 传 `file_url_or_key`；Figma 没有全局文件列表 API        |
+| Figma    | PAT                             | 完整文件、节点子树、渲染图、图片填充、评论                        | 传 `file_url_or_key`；Figma 没有全局文件列表 API        |
 | Notion   | `ntn` 会话 / Integration token  | 搜索、页面属性                                                    | CLI 使用用户会话；Integration 方式只看到已 Share 内容   |
 | Linear   | Personal API key                | 分配的 Issue、团队                                                | 官方 OAuth 需要注册应用，当前保留服务器方式             |
 | Slack    | Slack App token                 | 频道、频道消息                                                    | Slack CLI 是 App 开发工具，不能替代工作区 Web API Token |

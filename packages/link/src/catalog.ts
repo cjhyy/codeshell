@@ -611,7 +611,10 @@ export const LINK_PROVIDER_MANIFESTS: LinkProviderManifest[] = [
     id: "figma",
     displayName: "Figma",
     category: "design",
-    description: text("读取文件结构摘要和评论。", "Read file structure summaries and comments."),
+    description: text(
+      "按需读取设计结构、节点、渲染图、填充图片和评论。",
+      "Read design structure, nodes, rendered images, image fills, and comments on demand.",
+    ),
     brandText: "Fi",
     icon: "figma",
     accent: "violet",
@@ -657,7 +660,7 @@ export const LINK_PROVIDER_MANIFESTS: LinkProviderManifest[] = [
       { ...managedOAuth("Figma"), id: "figma-oauth" },
     ],
     fileSelection: { kind: "figma-file", action: "get_file", resourceGroup: "files" },
-    actionIds: ["get_file", "get_comments"],
+    actionIds: ["get_file", "get_comments", "get_nodes", "get_images", "get_image_fills"],
   },
 ];
 

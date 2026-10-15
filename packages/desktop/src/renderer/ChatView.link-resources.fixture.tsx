@@ -7,7 +7,7 @@ import type {
   MaskedLinkConnection,
 } from "@cjhyy/code-shell-link";
 import { ensureMiniDom, flushMicrotasks } from "./test-utils/renderHook";
-import type { Message } from "./types";
+import type { Message, ToolMessage, ToolStatus } from "./types";
 import { createChatLinkReadHandler } from "./chat/linkResourceIntents";
 
 // Keep the actual controller and dialog; only Radix portals are replaced for the mini DOM.
@@ -140,6 +140,8 @@ async function fixture(
   const submissions: Array<{ text: string; opts: Record<string, any> }> = [];
   let prepareCalls = 0;
   let snapshotCalls = 0;
+  let liveMessages: Message[] = options.history ?? [];
+  let toolSequence = 0;
   let nextSnapshot: (() => Promise<LinkSnapshot>) | undefined;
   let startConnected = false;
   Object.defineProperty(window, "codeshell", {
@@ -206,6 +208,7 @@ async function fixture(
     });
     const [draft, setDraft] = React.useState("");
     update = setState;
+    liveMessages = state.messages;
     const submit = (text: string, opts: Record<string, any> = {}) => {
       submissions.push({ text, opts });
       liveBucket = opts.bucket ?? state.bucket;
@@ -317,6 +320,7 @@ async function fixture(
     cancellations,
     reads,
     submissions,
+    messages: () => liveMessages,
     send,
     click,
     type,
@@ -340,8 +344,68 @@ async function fixture(
       });
     },
     setBusy: async (busy: boolean) => {
+      if (!busy) synchronousBusy.delete(liveBucket);
       await act(async () => {
         update((state) => ({ ...state, busy }));
+        await flushMicrotasks();
+      });
+    },
+    fileReadResult: async (
+      resourceId = "FileOne",
+      options: {
+        failed?: boolean;
+        status?: ToolStatus;
+        action?: string;
+        agentId?: string;
+      } = {},
+    ) => {
+      const action = options.action ?? "get_file";
+      toolSequence += 1;
+      const message: ToolMessage = {
+        kind: "tool",
+        id: options.agentId
+          ? `link-${options.agentId}-${resourceId}-${action}`
+          : `link-result-${toolSequence}`,
+        toolName: "LinkAction",
+        args: JSON.stringify({
+          provider: "figma",
+          action,
+          params: { file_url_or_key: resourceId },
+        }),
+        status: options.status ?? "succeeded",
+        startedAt: toolSequence,
+        result: JSON.stringify(
+          options.failed
+            ? { kind: "error", provider: "figma", action, error: "File read failed" }
+            : { kind: "action_result", provider: "figma", action, data: { name: resourceId } },
+        ),
+      };
+      const entry: Message = options.agentId
+        ? {
+            kind: "agent",
+            id: options.agentId,
+            description: "Read the Figma file",
+            done: message.status !== "queued" && message.status !== "running",
+            backgrounded: true,
+            startedAt: toolSequence,
+            toolCalls: [message],
+            toolCount: 1,
+            textBuffer: "",
+          }
+        : message;
+      await act(async () => {
+        update((state) => {
+          const existingAgent = options.agentId
+            ? state.messages.findIndex(
+                (item) => item.kind === "agent" && item.id === options.agentId,
+              )
+            : -1;
+          if (existingAgent === -1) return { ...state, messages: [...state.messages, entry] };
+          return {
+            ...state,
+            messages: state.messages.map((item, index) => (index === existingAgent ? entry : item)),
+          };
+        });
         await flushMicrotasks();
       });
     },
@@ -409,26 +473,273 @@ describe("chat file authorization", () => {
     expect(f.reads).toHaveLength(0);
   });
 
-  test("completion never sends a model turn; one explicit read uses the selected connection once", async () => {
+  test("file consent resumes once with shallow structure and removes the completed card", async () => {
     const f = await fixture();
     f.completeImmediately();
     await f.send();
     await f.click("授权此文件");
-    expect(f.reads).toHaveLength(0);
-    const read = button(f.container, "读取文件");
-    expect(read).toBeDefined();
-    await act(async () => {
-      props(read).onClick();
-      props(read).onClick();
-      await flushMicrotasks();
-    });
     expect(f.reads).toHaveLength(1);
     expect(f.reads[0]!.bucket).toBe("project::session-one");
     expect(f.reads[0]!.text).toContain('"connectionId":"one"');
     expect(f.reads[0]!.text).toContain(
       '"file_url_or_key":"https://www.figma.com/design/FileOne/Design?node-id=0-1"',
     );
+    expect(f.reads[0]!.text).toContain('"depth":2');
+    expect(f.reads[0]!.text).toContain("页面和顶层结构");
+    expect(f.reads[0]!.text).toContain("node-id 时仅查看该节点");
+    expect(f.reads[0]!.text).toContain("根据任务需要用 get_nodes");
+    expect(f.reads[0]!.text).toContain("仅在原任务确有需要时用 full:true");
+    expect(f.reads[0]!.text).not.toContain('"full":true');
+    expect(f.reads[0]!.text).not.toContain("摘要");
     expect(f.starts).toHaveLength(1);
+    expect(descendants(f.container).some((node) => props(node)["data-chat-link-resource"])).toBe(
+      false,
+    );
+    const history = f.messages();
+    await f.navigate("project::session-two");
+    f.setSnapshot({ ...f.snapshot(), connections: [connection()] });
+    await f.navigate("project::session-one", history);
+    expect(descendants(f.container).some((node) => props(node)["data-chat-link-resource"])).toBe(
+      false,
+    );
+  });
+
+  test("an already granted link stays in the original request without a duplicate model turn", async () => {
+    const f = await fixture({ connections: [connection("one", ["FileOne"])] });
+    await f.send();
+    expect(f.submissions).toHaveLength(1);
+    expect(f.submissions[0]!.text).toBe(
+      "读取 https://www.figma.com/design/FileOne/Design?node-id=0-1",
+    );
+    expect(f.reads).toHaveLength(0);
+    expect(f.starts).toHaveLength(0);
+    expect(descendants(f.container).some((node) => props(node)["data-chat-link-resource"])).toBe(
+      false,
+    );
+    await f.fileReadResult();
+    const history = f.messages();
+    await f.navigate("project::session-two");
+    f.setSnapshot({ ...f.snapshot(), connections: [connection()] });
+    await f.navigate("project::session-one", history);
+    expect(descendants(f.container).some((node) => props(node)["data-chat-link-resource"])).toBe(
+      false,
+    );
+    expect(f.reads).toHaveLength(0);
+  });
+
+  test("a failed original read can be retried and its accepted retry removes the notice", async () => {
+    const f = await fixture({ connections: [connection("one", ["FileOne"])] });
+    await f.send();
+    await f.fileReadResult("FileOne", { failed: true });
+    expect(button(f.container, "读取文件")).toBeDefined();
+    f.changeLiveCwd("/tmp/changed");
+    await f.click("读取文件");
+    expect(f.reads).toHaveLength(0);
+    expect(button(f.container, "读取文件")).toBeDefined();
+    f.changeLiveCwd("/tmp/project");
+    await f.click("读取文件");
+    expect(f.reads).toHaveLength(1);
+    expect(f.starts).toHaveLength(0);
+    expect(descendants(f.container).some((node) => props(node)["data-chat-link-resource"])).toBe(
+      false,
+    );
+  });
+
+  test("dismissing a notice only clears its UI provenance and never revokes a grant", async () => {
+    const saved = connection("one", ["FileOne"]);
+    const f = await fixture({ connections: [saved] });
+    await f.send();
+    await f.fileReadResult("FileOne", { failed: true });
+    const dismiss = descendants(f.container).find(
+      (node) => node.tagName === "BUTTON" && props(node)["aria-label"] === "关闭文件提示",
+    );
+    expect(dismiss).toBeDefined();
+    await act(async () => {
+      props(dismiss).onClick();
+      await flushMicrotasks();
+    });
+    expect(f.snapshot().connections).toEqual([saved]);
+    expect(f.starts).toHaveLength(0);
+    expect(f.cancellations).toHaveLength(0);
+    expect(f.reads).toHaveLength(0);
+    const history = f.messages();
+    await f.navigate("project::session-two");
+    f.setSnapshot({ ...f.snapshot(), connections: [connection()] });
+    await f.navigate("project::session-one", history);
+    expect(descendants(f.container).some((node) => props(node)["data-chat-link-resource"])).toBe(
+      false,
+    );
+    await f.send();
+    expect(button(f.container, "授权此文件")).toBeDefined();
+  });
+
+  test("first connection authorizes the composer file in one dialog and resumes it", async () => {
+    const f = await fixture({ connections: [] });
+    f.completeImmediately();
+    await f.send();
+    expect(f.starts).toHaveLength(0);
+    await f.click("连接 Figma");
+    expect(f.starts).toHaveLength(1);
+    expect(f.starts[0]!.connectionId).toBeUndefined();
+    expect(f.starts[0]!.expectedRevision).toBeNull();
+    expect(f.starts[0]!.resourceUrl).toBe(
+      "https://www.figma.com/design/FileOne/Design?node-id=0-1",
+    );
+    expect(f.reads).toHaveLength(1);
+    expect(f.reads[0]!.text).toContain('"connectionId":"created"');
+  });
+
+  test.each([false, true])(
+    "completed consent waits for the original turn and avoids a duplicate when it read the file: %s",
+    async (originalRead) => {
+      const gate = deferred<unknown>();
+      const f = await fixture({ delayedStart: gate.promise });
+      await f.send();
+      await f.click("授权此文件");
+      await f.setBusy(true);
+      const granted = connection("one", ["FileOne"]);
+      f.setSnapshot({ ...f.snapshot(), connections: [granted] });
+      await act(async () => {
+        gate.resolve({
+          id: "completed",
+          providerId: "figma",
+          methodId: "remote-link",
+          state: "connected",
+          connection: granted,
+        });
+        await flushMicrotasks();
+      });
+      expect(f.reads).toHaveLength(0);
+      if (originalRead) await f.fileReadResult();
+      await f.setBusy(false);
+      expect(f.reads).toHaveLength(originalRead ? 0 : 1);
+      expect(f.starts).toHaveLength(1);
+      expect(descendants(f.container).some((node) => props(node)["data-chat-link-resource"])).toBe(
+        false,
+      );
+    },
+  );
+
+  test("a subagent read completing before the consent callback prevents a duplicate follow-up", async () => {
+    const gate = deferred<unknown>();
+    const f = await fixture({ delayedStart: gate.promise });
+    await f.send();
+    await f.click("授权此文件");
+    await f.setBusy(true);
+    const granted = connection("one", ["FileOne"]);
+    f.setSnapshot({ ...f.snapshot(), connections: [granted] });
+    await f.fileReadResult("FileOne", { agentId: "delegated-reader" });
+    await act(async () => {
+      gate.resolve({
+        id: "completed",
+        providerId: "figma",
+        state: "connected",
+        connection: granted,
+      });
+      await flushMicrotasks();
+    });
+    await f.setBusy(false);
+    expect(f.reads).toHaveLength(0);
+    expect(f.starts).toHaveLength(1);
+    expect(descendants(f.container).some((node) => props(node)["data-chat-link-resource"])).toBe(
+      false,
+    );
+  });
+
+  test.each(["succeeded", "failed", "cancelled"] as const)(
+    "a background file read blocks an idle owner's consent resume until its result is %s",
+    async (status) => {
+      const gate = deferred<unknown>();
+      const f = await fixture({ delayedStart: gate.promise });
+      await f.send();
+      await f.click("授权此文件");
+      const granted = connection("one", ["FileOne"]);
+      f.setSnapshot({ ...f.snapshot(), connections: [granted] });
+      await f.fileReadResult("FileOne", { agentId: "background-reader", status: "running" });
+      await act(async () => {
+        gate.resolve({
+          id: "completed",
+          providerId: "figma",
+          state: "connected",
+          connection: granted,
+        });
+        await flushMicrotasks();
+      });
+      expect(f.reads).toHaveLength(0);
+      const retry = button(f.container, "读取文件");
+      expect(retry).toBeDefined();
+      expect(props(retry).disabled).toBe(true);
+      await f.click("读取文件");
+      expect(f.reads).toHaveLength(0);
+      await f.fileReadResult("FileOne", {
+        agentId: "background-reader",
+        status,
+        failed: status !== "succeeded",
+      });
+      expect(f.reads).toHaveLength(status === "succeeded" ? 0 : 1);
+      expect(f.starts).toHaveLength(1);
+      expect(descendants(f.container).some((node) => props(node)["data-chat-link-resource"])).toBe(
+        false,
+      );
+    },
+  );
+
+  test("a background read of another file does not block this file's manual retry", async () => {
+    const f = await fixture({ connections: [connection("one", ["FileOne", "FileTwo"])] });
+    await f.send("https://figma.com/design/FileOne/One https://figma.com/design/FileTwo/Two");
+    await f.fileReadResult("FileOne", { agentId: "background-reader", status: "queued" });
+    await f.fileReadResult("FileTwo", { failed: true });
+    expect(props(button(f.container, "读取文件")).disabled).toBe(false);
+    await f.click("读取文件");
+    expect(f.reads).toHaveLength(1);
+    expect(f.reads[0]!.text).toContain("https://figma.com/design/FileTwo/Two");
+    expect(f.starts).toHaveLength(0);
+  });
+
+  test("a connection revision changing while consent waits leaves a retry instead of auto-reading", async () => {
+    const gate = deferred<unknown>();
+    const f = await fixture({ delayedStart: gate.promise });
+    await f.send();
+    await f.click("授权此文件");
+    await f.setBusy(true);
+    const granted = connection("one", ["FileOne"]);
+    f.setSnapshot({ ...f.snapshot(), connections: [granted] });
+    await act(async () => {
+      gate.resolve({
+        id: "completed",
+        providerId: "figma",
+        state: "connected",
+        connection: granted,
+      });
+      await flushMicrotasks();
+    });
+    f.setSnapshot({ ...f.snapshot(), connections: [{ ...granted, revision: "changed-again" }] });
+    await f.setBusy(false);
+    expect(f.reads).toHaveLength(0);
+    expect(descendants(f.container).some((node) => props(node).role === "alert")).toBe(true);
+    await f.click("读取文件");
+    expect(f.reads).toHaveLength(1);
+    expect(f.starts).toHaveLength(1);
+  });
+
+  test("an authorization returning a different account cannot silently resume the read", async () => {
+    const gate = deferred<unknown>();
+    const f = await fixture({ delayedStart: gate.promise });
+    await f.send();
+    await f.click("授权此文件");
+    const different = connection("other", ["FileOne"]);
+    f.setSnapshot({ ...f.snapshot(), connections: [different] });
+    await act(async () => {
+      gate.resolve({
+        id: "completed",
+        providerId: "figma",
+        state: "connected",
+        connection: different,
+      });
+      await flushMicrotasks();
+    });
+    expect(f.reads).toHaveLength(0);
+    expect(descendants(f.container).some((node) => props(node).role === "alert")).toBe(true);
   });
 
   test("draft preparation uses the live project bucket instead of the rendered project", async () => {
@@ -475,7 +786,9 @@ describe("chat file authorization", () => {
     await f.click("连接 Figma");
     expect(f.starts).toHaveLength(1);
     expect(f.starts[0]!.connectionId).toBeUndefined();
-    expect(f.starts[0]!.resourceUrl).toBeUndefined();
+    expect(f.starts[0]!.resourceUrl).toBe(
+      "https://www.figma.com/design/FileOne/Design?node-id=0-1",
+    );
   });
 
   test("queued local human input still has provenance when echoed as injected steering", async () => {
@@ -505,6 +818,8 @@ describe("chat file authorization", () => {
   test("two file read clicks in one frame share the owner's synchronous busy guard", async () => {
     const f = await fixture({ connections: [connection("one", ["FileOne", "FileTwo"])] });
     await f.send("https://figma.com/design/FileOne/One https://figma.com/design/FileTwo/Two");
+    await f.fileReadResult("FileOne", { failed: true });
+    await f.fileReadResult("FileTwo", { failed: true });
     const buttons = descendants(f.container).filter(
       (node) => node.tagName === "BUTTON" && childText(props(node).children) === "读取文件",
     );
@@ -516,11 +831,17 @@ describe("chat file authorization", () => {
     });
     expect(f.reads).toHaveLength(1);
     expect(f.starts).toHaveLength(0);
+    expect(
+      descendants(f.container)
+        .map((node) => props(node)["data-chat-link-resource"])
+        .filter(Boolean),
+    ).toEqual(["FileTwo"]);
   });
 
   test("revocation during a reviewed read never silently starts new authorization", async () => {
     const f = await fixture({ connections: [connection("one", ["FileOne"])] });
     await f.send();
+    await f.fileReadResult("FileOne", { failed: true });
     f.setSnapshot({
       ...f.snapshot(),
       connections: [{ ...connection("one", ["FileOne"]), status: "unavailable" }],
@@ -536,6 +857,7 @@ describe("chat file authorization", () => {
     async (kind) => {
       const f = await fixture({ connections: [connection("one", ["FileOne"])] });
       await f.send();
+      await f.fileReadResult("FileOne", { failed: true });
       if (kind === "cwd") f.changeLiveCwd("/tmp/different-project");
       else f.disableConfiguration();
       await f.click("读取文件");
@@ -547,6 +869,7 @@ describe("chat file authorization", () => {
   test("switching sessions during a fresh check cannot grant or read in the new session", async () => {
     const f = await fixture({ connections: [connection("one", ["FileOne"])] });
     await f.send();
+    await f.fileReadResult("FileOne", { failed: true });
     const gate = deferred<LinkSnapshot>();
     f.nextSnapshot(() => gate.promise);
     await f.click("读取文件");
@@ -565,10 +888,34 @@ describe("chat file authorization", () => {
   test("owner live navigation before a React commit refuses a read", async () => {
     const f = await fixture({ connections: [connection("one", ["FileOne"])] });
     await f.send();
+    await f.fileReadResult("FileOne", { failed: true });
     f.changeLiveBucket("project::session-two");
     await f.click("读取文件");
     expect(f.reads).toHaveLength(0);
     expect(f.starts).toHaveLength(0);
+  });
+
+  test("dismissing a card synchronously cancels a read whose snapshot resolves in the same frame", async () => {
+    const f = await fixture({ connections: [connection("one", ["FileOne"])] });
+    await f.send();
+    await f.fileReadResult("FileOne", { failed: true });
+    const gate = deferred<LinkSnapshot>();
+    f.nextSnapshot(() => gate.promise);
+    await f.click("读取文件");
+    const dismiss = descendants(f.container).find(
+      (node) => node.tagName === "BUTTON" && props(node)["aria-label"] === "关闭文件提示",
+    );
+    expect(dismiss).toBeDefined();
+    await act(async () => {
+      props(dismiss).onClick();
+      gate.resolve(f.snapshot());
+      await flushMicrotasks();
+    });
+    expect(f.reads).toHaveLength(0);
+    expect(f.starts).toHaveLength(0);
+    expect(descendants(f.container).some((node) => props(node)["data-chat-link-resource"])).toBe(
+      false,
+    );
   });
 
   test("unmounting an authorization cancels it; a late completed callback cannot resume", async () => {
