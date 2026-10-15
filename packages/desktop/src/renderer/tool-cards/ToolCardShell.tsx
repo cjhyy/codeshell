@@ -65,7 +65,7 @@ export function ToolCardShell({
   return (
     <div
       className={
-        "rounded-lg border text-sm " +
+        "min-w-0 rounded-lg border text-sm [overflow-wrap:anywhere] " +
         (selected ? "border-primary/40 bg-accent/40" : "border-border")
       }
       onClick={() => onSelect?.(message)}
@@ -73,7 +73,7 @@ export function ToolCardShell({
       <div className="flex items-center">
         <button
           type="button"
-          className="flex min-w-0 flex-1 items-center gap-2 rounded-lg px-3 py-2 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring"
+          className="flex min-w-0 flex-1 items-center gap-2 rounded-lg px-3 py-2 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring [&>svg]:shrink-0"
           onClick={(e) => {
             e.stopPropagation();
             setOpen((o) => !o);
@@ -83,8 +83,10 @@ export function ToolCardShell({
         >
           {open ? <ChevronDown size={12} /> : <ChevronRight size={12} />}
           <StatusDot status={status} title={message.status} />
-          <span className="font-medium">{message.toolName}</span>
-          <span className="min-w-0 flex-1 truncate text-muted-foreground">{summary}</span>
+          <span className="flex min-w-0 flex-1 flex-col gap-0.5">
+            <span className="font-medium">{message.toolName}</span>
+            <span className="truncate text-xs text-muted-foreground">{summary}</span>
+          </span>
           {headerBadge}
           {duration && <span className="shrink-0 text-xs text-muted-foreground">{duration}</span>}
           {message.status === "failed" && (
