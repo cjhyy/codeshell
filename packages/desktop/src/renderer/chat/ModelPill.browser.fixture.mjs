@@ -3,6 +3,7 @@
  * Composition/window blur assertions cover DOM events, not OS IME or screen-reader speech. */
 /* global document, window, requestAnimationFrame, getComputedStyle, innerWidth, innerHeight, KeyboardEvent, Event */
 import assert from "node:assert/strict";
+import { createServer } from "node:http";
 import { createRequire } from "node:module";
 import { mkdir, mkdtemp, readFile, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
@@ -15,7 +16,7 @@ const sourceDesktop =
 const renderer = path.join(sourceDesktop, "src/renderer");
 const require = createRequire(path.join(desktop, "package.json"));
 const { build } = require("esbuild");
-const { chromium } = require("playwright");
+const { chromium, _electron } = require("playwright");
 const tailwindRequire = createRequire(require.resolve("@tailwindcss/vite"));
 const { compile } = tailwindRequire("@tailwindcss/node");
 const { Scanner } = tailwindRequire("@tailwindcss/oxide");
@@ -79,10 +80,48 @@ const css = compiled.build([
   ...scanner.scan(),
   ...scanner.scanFiles([{ content: source, extension: "tsx" }]),
 ]);
-const browser = await chromium.launch({
-  headless: true,
-  executablePath: process.env.CODESHELL_TEST_CHROMIUM || undefined,
-});
+const native = process.argv.includes("--electron-zoom");
+const html =
+  '<!doctype html><meta name="viewport" content="width=device-width,initial-scale=1"><style>html,body,#root{height:100%;margin:0;overflow:hidden}</style><div id="root"></div><input aria-label="Outside field" style="position:fixed;top:0;right:0;width:60px;z-index:999"><svg id="outside-svg" width="24" height="24" style="position:fixed;bottom:0;left:0;z-index:999"><rect width="24" height="24" fill="black"/></svg>';
+let app, server, browser;
+let origin = "http://model-picker-owned.test";
+if (native) {
+  server = createServer((request, response) => {
+    response.writeHead(request.url === "/" ? 200 : 404, { "content-type": "text/html" });
+    response.end(request.url === "/" ? html : "");
+  });
+  await new Promise((resolve) => server.listen(0, "127.0.0.1", resolve));
+  origin = `http://127.0.0.1:${server.address().port}`;
+  const entry = path.join(output, "main.cjs");
+  await writeFile(
+    entry,
+    `const {app,BrowserWindow,session}=require('electron');global.blocked=[];
+    app.setPath('userData',process.env.FIXTURE_USER_DATA);
+    app.on('window-all-closed',()=>app.quit());
+    app.whenReady().then(()=>{session.defaultSession.webRequest.onBeforeRequest({urls:['*://*/*']},(details,callback)=>{
+      const blocked=new URL(details.url).origin!==process.env.FIXTURE_ORIGIN;
+      if(blocked)global.blocked.push(details.url);callback({cancel:blocked});});
+      const window=new BrowserWindow({width:800,height:480,frame:false,show:false,
+        webPreferences:{nodeIntegration:false,contextIsolation:true,backgroundThrottling:false}});
+      window.loadURL(process.env.FIXTURE_ORIGIN);});`,
+  );
+  try {
+    app = await _electron.launch({
+      executablePath: require("electron"),
+      args: [entry],
+      timeout: 15000,
+      env: { ...process.env, FIXTURE_ORIGIN: origin, FIXTURE_USER_DATA: path.join(output, "data") },
+    });
+  } catch (cause) {
+    server.closeAllConnections();
+    await new Promise((resolve) => server.close(resolve));
+    throw cause;
+  }
+} else
+  browser = await chromium.launch({
+    headless: true,
+    executablePath: process.env.CODESHELL_TEST_CHROMIUM || undefined,
+  });
 
 const onlyCase = process.argv.find((arg) => arg.startsWith("--case="))?.slice(7);
 const reports = [],
@@ -103,31 +142,49 @@ const active = (page) =>
   }));
 let currentPage;
 try {
-  const context = await browser.newContext({ serviceWorkers: "block" });
+  const context = app ? app.context() : await browser.newContext({ serviceWorkers: "block" });
   await context.route("**/*", (route) => {
-    if (route.request().url() === "http://model-picker-owned.test/")
+    if (route.request().url() === origin + "/")
       return route.fulfill({
         contentType: "text/html",
-        body: '<!doctype html><meta name="viewport" content="width=device-width,initial-scale=1"><style>html,body,#root{height:100%;margin:0;overflow:hidden}</style><div id="root"></div><input aria-label="Outside field" style="position:fixed;top:0;right:0;width:60px;z-index:999"><svg id="outside-svg" width="24" height="24" style="position:fixed;bottom:0;left:0;z-index:999"><rect width="24" height="24" fill="black"/></svg>',
+        body: html,
       });
     blocked.push(route.request().url());
     return route.abort();
   });
-  const page = await context.newPage();
+  const page = app ? await app.firstWindow() : await context.newPage();
   const accessibility = await context.newCDPSession(page);
   await accessibility.send("Accessibility.enable");
   currentPage = page;
   page.setDefaultTimeout(7000);
   page.on("pageerror", (error) => errors.push(error.message));
-  await page.goto("http://model-picker-owned.test/");
+  await page.goto(origin + "/");
   await page.addStyleTag({ content: css });
   await page.addScriptTag({ content: built.outputFiles[0].text });
   const trigger = (index = 0) =>
     page.locator(`[data-composer-index="${index}"] [data-active-model]`);
   const menu = () => page.getByRole("listbox");
   const option = (key) => menu().locator(`[data-model-key="${key}"]`);
+  async function resize(width, height) {
+    if (app) {
+      await app.evaluate(
+        ({ BrowserWindow }, { width, height }) => {
+          const window = BrowserWindow.getAllWindows()[0];
+          const zoom = width < 500 ? 2 : 1;
+          window.webContents.setZoomFactor(zoom);
+          window.setContentSize(width * zoom, height * zoom);
+        },
+        { width, height },
+      );
+      await page.waitForFunction(
+        ({ width, height }) => innerWidth === width && innerHeight === height,
+        { width, height },
+      );
+    } else await page.setViewportSize({ width, height });
+    await frames(page);
+  }
   async function boot(width = 320, height = 360, lang = "en", extra = {}) {
-    await page.setViewportSize({ width, height });
+    await resize(width, height);
     await page.evaluate((props) => window.renderFixture(props), { lang, ...extra });
     await trigger().waitFor();
     await frames(page);
@@ -215,6 +272,13 @@ try {
       viewport: page.viewportSize(),
       active: await active(page),
       bounds,
+      ...(app
+        ? {
+            zoom: await app.evaluate(({ BrowserWindow }) =>
+              BrowserWindow.getAllWindows()[0].webContents.getZoomFactor(),
+            ),
+          }
+        : {}),
       ...extra,
     });
   }
@@ -385,25 +449,31 @@ try {
         assert.equal(await page.evaluate(() => window.calls.length), 0);
         await record("full-names", { lang, full, glyphs: needed });
       }
-  if (!onlyCase || onlyCase === "busy") {
-    await boot();
-    await trigger().click();
-    await menu().waitFor();
-    await page.evaluate(() => window.composers[0]({ busy: true }));
-    await frames(page);
-    await menu().waitFor({ state: "hidden" });
-    assert.equal(await trigger().isDisabled(), true);
-    assert.equal(await trigger().getAttribute("aria-expanded"), "false");
-    assert.equal(await trigger().getAttribute("aria-controls"), null);
-    assert.equal(await page.evaluate(() => window.calls.length), 0);
-    await page.getByRole("textbox", { name: "Outside field", exact: true }).focus();
-    await page.evaluate(() => window.composers[0]({ busy: false, active: "model-12" }));
-    await frames(page);
-    assert.equal((await active(page)).label, "Outside field");
-    assert.equal(await menu().count(), 0);
-    assert.equal(await trigger().getAttribute("data-active-model"), "model-12");
-    await record("busy-closes-without-selection-or-reopen");
-  }
+  if (!onlyCase || onlyCase === "busy")
+    for (const empty of [false, true]) {
+      await boot();
+      if (empty) await page.evaluate(() => window.composers[0]({ models: [] }));
+      await trigger().click();
+      await menu().waitFor();
+      await frames(page);
+      if (empty)
+        assert.equal(await menu().evaluate((node) => node === document.activeElement), true);
+      else await selectedFocus("model-0");
+      await page.evaluate(() => window.composers[0]({ busy: true }));
+      await frames(page);
+      await menu().waitFor({ state: "hidden" });
+      assert.equal(await trigger().isDisabled(), true);
+      assert.equal(await trigger().getAttribute("aria-expanded"), "false");
+      assert.equal(await trigger().getAttribute("aria-controls"), null);
+      assert.equal(await page.evaluate(() => window.calls.length), 0);
+      await page.getByRole("textbox", { name: "Outside field", exact: true }).focus();
+      await page.evaluate(() => window.composers[0]({ busy: false, active: "model-12" }));
+      await frames(page);
+      assert.equal((await active(page)).label, "Outside field");
+      assert.equal(await menu().count(), 0);
+      assert.equal(await trigger().getAttribute("data-active-model"), "model-12");
+      await record("busy-closes-without-selection-or-reopen", { empty });
+    }
   if (!onlyCase || onlyCase === "lifecycle") {
     await boot();
     await opened();
@@ -488,7 +558,7 @@ try {
     await boot(1280, 700);
     await opened();
     await page.keyboard.press("End");
-    await page.setViewportSize({ width: 320, height: 240 });
+    await resize(320, 240);
     await frames(page);
     await selectedFocus("model-29");
     const box = await menu().boundingBox();
@@ -499,7 +569,7 @@ try {
     await opened();
     await page.evaluate(() => window.unmountFixture());
     await page.getByRole("textbox", { name: "Outside field", exact: true }).focus();
-    await page.setViewportSize({ width: 390, height: 360 });
+    await resize(390, 360);
     await frames(page);
     assert.equal(await menu().count(), 0);
     assert.equal((await active(page)).label, "Outside field");
@@ -507,18 +577,28 @@ try {
   }
   assert.deepEqual(errors, []);
   assert.deepEqual(blocked, []);
-  await context.close();
+  if (app) assert.deepEqual(await app.evaluate(() => globalThis.blocked), []);
+  else await context.close();
 } catch (cause) {
   if (currentPage)
     await currentPage.screenshot({ path: path.join(output, "failure.png") }).catch(() => {});
   throw cause;
 } finally {
-  await browser.close();
+  try {
+    if (app) await app.close();
+    else await browser?.close();
+  } finally {
+    if (server) {
+      server.closeAllConnections();
+      await new Promise((resolve) => server.close(resolve));
+    }
+  }
   await writeFile(
     path.join(output, "report.json"),
     JSON.stringify(
       {
         sourceDesktop,
+        native,
         development: process.argv.includes("--development"),
         reports,
         errors,
