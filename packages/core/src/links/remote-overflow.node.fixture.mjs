@@ -48,7 +48,7 @@ https.request = function () {
 };
 globalThis.fetch = async (input, init) => {
   assertOwned(input);
-  return nativeFetch(input, init);
+  return nativeFetch(input, { ...init, redirect: "error" });
 };
 syncBuiltinESMExports();
 
