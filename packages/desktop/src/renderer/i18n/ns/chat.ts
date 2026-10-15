@@ -45,6 +45,7 @@ export const chat = {
       },
 
       composer: {
+        inputLabel: "聊天消息",
         placeholderBusy: "要求后续变更",
         placeholderCompacting: "正在压缩上下文…",
         placeholderExpandingCommand: "正在展开插件命令…",
@@ -330,6 +331,7 @@ export const chat = {
       },
 
       composer: {
+        inputLabel: "Chat message",
         placeholderBusy: "Request a follow-up change",
         placeholderCompacting: "Compacting context…",
         placeholderExpandingCommand: "Expanding plugin command…",

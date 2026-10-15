@@ -105,6 +105,7 @@ async function association(input, menu, { empty = false } = {}) {
     const selected = list?.querySelectorAll('[role="option"][aria-selected="true"]');
     return {
       role: node.getAttribute("role"),
+      label: node.getAttribute("aria-label"),
       autocomplete: node.getAttribute("aria-autocomplete"),
       hasPopup: node.getAttribute("aria-haspopup"),
       expanded: node.getAttribute("aria-expanded"),
@@ -119,6 +120,7 @@ async function association(input, menu, { empty = false } = {}) {
     };
   });
   assert.equal(state.role, null, "The multiline textarea retains its native textbox role");
+  assert.ok(state.label, "The composer has a stable accessible label");
   assert.equal(state.expanded, null, "aria-expanded is not supported on a native textbox");
   assert.equal(state.autocomplete, "list");
   assert.equal(state.hasPopup, "listbox");

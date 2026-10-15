@@ -2048,6 +2048,7 @@ export function ChatView({
               )}
               <Textarea
                 ref={textareaRef}
+                aria-label={t("chat.composer.inputLabel")}
                 aria-autocomplete="list"
                 aria-haspopup="listbox"
                 value={draft}

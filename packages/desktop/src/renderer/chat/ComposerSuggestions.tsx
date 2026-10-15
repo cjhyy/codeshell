@@ -64,6 +64,8 @@ export function ComposerSuggestions({
     return () => {
       // An old popup must not clear a replacement popup's association.
       if (anchor.getAttribute("aria-controls") !== id) return;
+      const currentContent = document.getElementById(id);
+      if (currentContent && currentContent !== content) return;
       anchor.removeAttribute("aria-controls");
       anchor.removeAttribute("aria-activedescendant");
     };
