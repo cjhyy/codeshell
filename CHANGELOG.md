@@ -8,6 +8,23 @@ breaking.
 
 ## [Unreleased]
 
+### Changed
+
+- Keep Task center search and advanced filters compact in narrow and short windows.
+- Use the file panel's available width for readable previews and keyboard-visible
+  actions, with a return path to the file list on small screens.
+- Add a return-to-latest control and new-output count to Web conversations while
+  preserving the reader's position during streaming.
+
+### Fixed
+
+- Show recoverable file-loading errors and prevent stale directory responses from
+  replacing the current location in Desktop and Web.
+- Keep composer suggestion accessibility targets synchronized with their actual
+  options and provide a stable input name.
+- Preserve the selected theme when removal fails, report the error, and restore
+  keyboard focus without interrupting another control.
+
 ## [0.9.44] - 2026-10-15
 
 ### Changed
