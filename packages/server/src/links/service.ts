@@ -1638,9 +1638,7 @@ export function createLinkService(options: LinkServiceOptions = {}) {
       throw new LinkServiceError(400, "invalid_request");
     const config = options.remoteLink?.();
     if (!config) throw new LinkServiceError(503, "unavailable");
-    // Recheck after discovery; only the currently selected deployment may authorize.
-    await authorize(context);
-    checkCapacity();
+    // No await between selecting the deployment and creating its authorization URL.
     const capabilities =
       remoteCatalog?.issuer === config.issuer && remoteCatalog.health.state === "ready"
         ? remoteCatalog.providers.find((provider) => provider.id === input.providerId)
