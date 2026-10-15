@@ -15,6 +15,7 @@ breaking.
   actions, with a return path to the file list on small screens.
 - Add a return-to-latest control and new-output count to Web conversations while
   preserving the reader's position during streaming.
+- Keep Web sidebar navigation and account controls reachable in short windows.
 
 ### Fixed
 
@@ -24,6 +25,12 @@ breaking.
   options and provide a stable input name.
 - Preserve the selected theme when removal fails, report the error, and restore
   keyboard focus without interrupting another control.
+- Preserve Context settings drafts through read/save/reset failures and support
+  normal numeric editing with named keyboard-accessible sliders.
+- Close suggestions after accepted submissions and cancel stale composer caret
+  restoration when the reader edits, changes focus or switches conversations.
+- Recover failed update-status reads and actions with visible errors and retries;
+  keep newer pushed state and contain long diagnostics on small screens.
 
 ## [0.9.44] - 2026-10-15
 
