@@ -116,7 +116,9 @@ node scripts/run-bun-test-shard.mjs --timeout 30000 \
 ```
 
 
-## CC 首轮 review 修复（起点 65dbd365b，本轮待复审）
+## CC 首轮 review 修复（起点 65dbd365b，已复审通过）
+
+CC 已只读复审 `65dbd365b..dfe75f6ef`，确认原 2 个 P1、1 个 P2 均关闭，未发现新增 P0/P1/P2。该结论仅覆盖代码审查；当前版本的完整包 smoke、unsigned pack 与 PR CI 仍是独立验收门槛。unsigned smoke 的 bundle 阶段会覆盖 predist main，因此其产物只用于依赖包装边界验证，不能视为与正式发布构建等价。
 
 - P1-1：Host 改为 Desktop devDependency；`DESKTOP_MATERIALIZED_WORKSPACES` 真实驱动 predist 复制、生产依赖安装和导入校验，同一列表守卫 Desktop 及被实体化包的生产 workspace 闭包。静态测试阻止 Host 再进入生产依赖，unsigned pack 结果随后记录。
 - P1-2：纠正初版“Panel AskUser 保留”的错误描述。Panel runtime 没有文字问答 UI，立即回 typed unavailable + unsupported 原因，不经 confirm、不泄露内部 ID/toolName。真实 runtime.taskScope→confirm→approvalRespond 验证普通审批批准/拒绝仍有效，已安装 Panel callback 仍经 tools.invoke/tool-results。真实 Core 验证 sync 不得到空答案/用户拒绝、async pending 退役且不注入答案/唤醒；正常 Desktop/Web 文字回答及用户明确拒绝保持原逻辑。
