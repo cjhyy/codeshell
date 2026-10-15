@@ -284,6 +284,16 @@ Next read-only audits are delegated: bridge_test_fix owns actual Sessions/Runs
 pages; ui_audit owns actual connection-configuration panels (models/text/speech/
 search). Both must use only owned bridge/state and report reproduced issues
 before implementation on a fresh branch from the next delivered main.
+The Sessions/Runs audit has now confirmed and accepted the next implementation
+scope: a 320×360 Runs pane can have zero detail height even with no model rows;
+12 valid per-model usage rows reduce a 480px pane's list/detail to 16/26px. A long
+Sessions read error pushes its only Retry below a 320×360 pane, and wheel cannot
+reach it through AppMainView's hidden ancestor. Preserve complete model evidence,
+history identity, pagination and authority while bounding and scrolling the
+page content. Refresh/delete failure focus is being checked as the same recovery
+boundary. Evidence: `/tmp/codeshell-history-ui-review-report.json`,
+`/tmp/codeshell-runs-usage-800x480.png`,
+`/tmp/codeshell-sessions-error-320x360.png`.
 
 Initial audit history follows:
 
