@@ -10,6 +10,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { CloudProjectManager } from "./CloudProjectManager";
 import { useT } from "../i18n";
+import { useCloudDialogFocus, type CloudFocusLease } from "./useCloudDialogFocus";
 import type { CloudProjectBinding } from "../../shared/project-runtime";
 
 const CLOUD_ADDRESS_KEY = "codeshell.cloud-workbench.v1";
@@ -65,7 +66,9 @@ export function NewProjectDialog({
   const cloudPendingRef = useRef(false);
   const composingRef = useRef(false);
   const localRef = useRef<HTMLButtonElement>(null);
-  const openerRef = useRef<HTMLElement | null>(null);
+  const contentRef = useRef<HTMLDivElement>(null);
+  const focus = useCloudDialogFocus(contentRef);
+  const returnFocus = useRef<CloudFocusLease | null>(null);
 
   useEffect(() => {
     if (!open) return;
@@ -95,12 +98,15 @@ export function NewProjectDialog({
 
   const openProject = async (operation: () => Promise<void>) => {
     if (pendingRef.current) return;
+    const lease = focus.capture();
+    let opened = false;
     projectPendingRef.current = true;
     pendingRef.current = true;
     setBusy(true);
     setError(null);
     try {
       await operation();
+      opened = true;
       onOpenChange(false);
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : String(cause));
@@ -108,16 +114,19 @@ export function NewProjectDialog({
       projectPendingRef.current = false;
       pendingRef.current = cloudPendingRef.current;
       setBusy(pendingRef.current);
+      if (opened) focus.discard(lease);
+      else focus.recover(lease, () => localRef.current ?? contentRef.current);
     }
   };
 
   return (
     <Dialog open={open} onOpenChange={(next) => !pendingRef.current && onOpenChange(next)}>
       <DialogContent
-        className="max-h-[calc(100dvh-2rem)] w-[calc(100vw-2rem)] overflow-y-auto sm:max-w-md"
+        ref={contentRef}
+        className="flex min-h-0 min-w-0 max-h-[calc(100dvh-2rem)] w-[calc(100vw-2rem)] flex-col overflow-hidden sm:max-w-md"
         onOpenAutoFocus={() => {
-          openerRef.current =
-            document.activeElement instanceof HTMLElement ? document.activeElement : null;
+          focus.discard(returnFocus.current);
+          returnFocus.current = focus.capture(true);
         }}
         onEscapeKeyDown={(event) => {
           if (composingRef.current || event.isComposing || event.keyCode === 229 || busy)
@@ -125,112 +134,123 @@ export function NewProjectDialog({
         }}
         onCloseAutoFocus={(event) => {
           event.preventDefault();
-          if (openerRef.current?.isConnected) openerRef.current.focus({ preventScroll: true });
+          focus.restoreReturn(returnFocus.current);
+          returnFocus.current = null;
         }}
       >
-        <DialogHeader>
+        <DialogHeader className="min-w-0 shrink-0 pr-6 [overflow-wrap:anywhere]">
           <DialogTitle>{t("sidebar.addProject")}</DialogTitle>
           <DialogDescription>
             {t(location === "choose" ? "sidebar.projectLocation" : "sidebar.cloudHint")}
           </DialogDescription>
         </DialogHeader>
-        {location === "choose" ? (
-          <div className="grid gap-3">
-            <Button
-              ref={localRef}
-              type="button"
-              variant="outline"
-              className="h-auto justify-start gap-3 whitespace-normal rounded-xl p-4 text-left"
-              aria-label={t("sidebar.thisComputer")}
-              disabled={busy}
-              onClick={() => void openProject(onCreateLocal)}
-            >
-              {busy ? <Loader2 className="animate-spin" aria-hidden /> : <Monitor aria-hidden />}
-              <span>
-                <span className="block font-medium">{t("sidebar.thisComputer")}</span>
-                <span className="mt-1 block text-xs font-normal leading-5 text-muted-foreground">
-                  {t("sidebar.thisComputerHint")}
+        <div
+          role="region"
+          aria-label={t(location === "choose" ? "sidebar.projectLocation" : "sidebar.cloudHint")}
+          tabIndex={0}
+          className="min-h-0 min-w-0 overflow-y-auto overscroll-contain [overflow-wrap:anywhere]"
+        >
+          {location === "choose" ? (
+            <div className="grid min-w-0 grid-cols-[minmax(0,1fr)] gap-3">
+              <Button
+                ref={localRef}
+                type="button"
+                variant="outline"
+                className="h-auto justify-start gap-3 whitespace-normal rounded-xl p-4 text-left"
+                aria-label={t("sidebar.thisComputer")}
+                disabled={busy}
+                onClick={() => void openProject(onCreateLocal)}
+              >
+                {busy ? <Loader2 className="animate-spin" aria-hidden /> : <Monitor aria-hidden />}
+                <span>
+                  <span className="block font-medium">{t("sidebar.thisComputer")}</span>
+                  <span className="mt-1 block text-xs font-normal leading-5 text-muted-foreground">
+                    {t("sidebar.thisComputerHint")}
+                  </span>
                 </span>
-              </span>
-            </Button>
-            <Button
-              type="button"
-              variant="outline"
-              className="h-auto justify-start gap-3 whitespace-normal rounded-xl p-4 text-left"
-              aria-label={t("sidebar.cloud")}
-              disabled={busy}
-              onClick={() => {
-                setError(null);
-                setLocation("cloud");
-              }}
-            >
-              <Cloud aria-hidden />
-              <span>
-                <span className="block font-medium">{t("sidebar.cloud")}</span>
-                <span className="mt-1 block text-xs font-normal leading-5 text-muted-foreground">
-                  {t("sidebar.cloudProjectHint")}
-                </span>
-              </span>
-            </Button>
-            {error && (
-              <p role="alert" className="break-words text-sm text-destructive">
-                {error}
-              </p>
-            )}
-          </div>
-        ) : (
-          <div className="grid gap-4">
-            {cloudBindings.length > 0 && onOpenCloudProject && (
-              <section className="grid gap-2" aria-label={t("sidebar.linkedCloudProjects")}>
-                <p className="text-sm font-medium">{t("sidebar.linkedCloudProjects")}</p>
-                {cloudBindings.map((binding) => (
-                  <Button
-                    key={binding.id}
-                    type="button"
-                    variant="outline"
-                    className="h-auto justify-start gap-3 whitespace-normal p-3 text-left"
-                    aria-label={t("sidebar.openLinkedCloudProject", {
-                      name: binding.remoteProjectName,
-                    })}
-                    disabled={busy}
-                    onClick={() => void openProject(() => onOpenCloudProject(binding))}
-                  >
-                    <Cloud className="shrink-0" aria-hidden />
-                    <span className="min-w-0 break-words">
-                      <span className="block">{binding.remoteProjectName}</span>
-                      <span className="block text-xs font-normal text-muted-foreground">
-                        {binding.environmentName} · {binding.origin}
-                      </span>
-                    </span>
-                  </Button>
-                ))}
-                {error && (
-                  <p role="alert" className="break-words text-sm text-destructive">
-                    {error}
-                  </p>
-                )}
-              </section>
-            )}
-            <fieldset disabled={busy} className="min-w-0">
-              <CloudProjectManager
-                initialAddress={address}
-                onBusyChange={cloudBusy}
-                onBack={() => {
+              </Button>
+              <Button
+                type="button"
+                variant="outline"
+                className="h-auto justify-start gap-3 whitespace-normal rounded-xl p-4 text-left"
+                aria-label={t("sidebar.cloud")}
+                disabled={busy}
+                onClick={() => {
                   setError(null);
-                  setLocation("choose");
+                  setLocation("cloud");
                 }}
-                onOpened={(origin) => {
-                  try {
-                    window.localStorage.setItem(CLOUD_ADDRESS_KEY, `${origin}/`);
-                  } catch {
-                    /* Optional bookmark. */
-                  }
-                  onOpenChange(false);
-                }}
-              />
-            </fieldset>
-          </div>
-        )}
+              >
+                <Cloud aria-hidden />
+                <span>
+                  <span className="block font-medium">{t("sidebar.cloud")}</span>
+                  <span className="mt-1 block text-xs font-normal leading-5 text-muted-foreground">
+                    {t("sidebar.cloudProjectHint")}
+                  </span>
+                </span>
+              </Button>
+              {error && (
+                <p role="alert" className="text-sm text-destructive [overflow-wrap:anywhere]">
+                  {error}
+                </p>
+              )}
+            </div>
+          ) : (
+            <div className="grid min-w-0 grid-cols-[minmax(0,1fr)] gap-4">
+              {cloudBindings.length > 0 && onOpenCloudProject && (
+                <section
+                  className="grid min-w-0 grid-cols-[minmax(0,1fr)] gap-2"
+                  aria-label={t("sidebar.linkedCloudProjects")}
+                >
+                  <p className="text-sm font-medium">{t("sidebar.linkedCloudProjects")}</p>
+                  {cloudBindings.map((binding) => (
+                    <Button
+                      key={binding.id}
+                      type="button"
+                      variant="outline"
+                      className="h-auto min-w-0 justify-start gap-3 whitespace-normal p-3 text-left"
+                      aria-label={t("sidebar.openLinkedCloudProject", {
+                        name: binding.remoteProjectName,
+                      })}
+                      disabled={busy}
+                      onClick={() => void openProject(() => onOpenCloudProject(binding))}
+                    >
+                      <Cloud className="shrink-0" aria-hidden />
+                      <span className="min-w-0 [overflow-wrap:anywhere]">
+                        <span className="block">{binding.remoteProjectName}</span>
+                        <span className="block text-xs font-normal text-muted-foreground">
+                          {binding.environmentName} · {binding.origin}
+                        </span>
+                      </span>
+                    </Button>
+                  ))}
+                  {error && (
+                    <p role="alert" className="text-sm text-destructive [overflow-wrap:anywhere]">
+                      {error}
+                    </p>
+                  )}
+                </section>
+              )}
+              <fieldset disabled={busy} className="min-w-0">
+                <CloudProjectManager
+                  initialAddress={address}
+                  onBusyChange={cloudBusy}
+                  onBack={() => {
+                    setError(null);
+                    setLocation("choose");
+                  }}
+                  onOpened={(origin) => {
+                    try {
+                      window.localStorage.setItem(CLOUD_ADDRESS_KEY, `${origin}/`);
+                    } catch {
+                      /* Optional bookmark. */
+                    }
+                    onOpenChange(false);
+                  }}
+                />
+              </fieldset>
+            </div>
+          )}
+        </div>
       </DialogContent>
     </Dialog>
   );
