@@ -50,7 +50,7 @@ The initial blockers below are retained as resolved verification history.
 
 Current integration worktree:
 `/Users/admin/.codex/worktrees/ui-task-center-20261015/codeshell`, branch
-`codex/integration/ui-review-wave3-20261015`. Other work advanced remote main to
+`codex/integration/ui-review-wave4-20261015`. Other work advanced remote main to
 `0.9.44`; this branch merged `976a79322` and `bb7a9b59a`, preserving the incoming model-capability,
 forwarding and Figma updates. The CSS merge preserves both context-selection and
 file-action styles. Do not revert incoming work or republish another version on
@@ -138,8 +138,14 @@ Both merge conflicts preserved all changes: Appearance + Context fixture entries
 and the listbox useId + new caret hook in ChatView. CI now includes all 19 Desktop
 browser fixtures and all three Web navigation/scrolling fixtures.
 
-Third-wave changes are integrated on the current task branch and passed the
-final combined local gate, ready for main delivery:
+Third-wave changes were delivered to remote main at `505263089`. CI
+`38722674533` passed all 12 jobs on attempt 2. The first attempt passed 11 jobs
+but the existing paced-output smoke measured stream p95 265ms against its 200ms
+limit: four worker fsync calls exceeded 200ms (maximum 280.062ms), while source
+write, Main observation/snapshot and stdout writes stayed below 1ms. Diagnostics
+were retained in `/tmp/codeshell-ui-wave3-ci-failure.log`; only the failed job
+was rerun, with all thresholds and production code unchanged. They passed the
+final combined local gate:
 
 - `5efea027a` (source `7b00fb28e`): native keyboard-accessible AskUser options,
   IME-safe confirmation, rejection recovery and request-bound question state.
@@ -202,6 +208,13 @@ Two further independent review tasks are accepted for the next wave:
   and preserve content/external/portal focus. Evidence:
   `/tmp/codeshell-settings-focus-review.log` and
   `/tmp/codeshell-settings-focus-electron-review.log`.
+
+Fourth-wave implementations use separate branches/trees from the latest delivered
+main: `codex/desktop/composer-overflow-20261015`,
+`codex/desktop/sidebar-overflow-20261015` and
+`codex/desktop/settings-nav-focus-20261015`. Integrate only their reviewed commits
+on the current root branch, refresh main, and verify the final combination before
+delivery. Third-wave CI must be checked before another main push cancels it.
 
 Initial audit history follows:
 
