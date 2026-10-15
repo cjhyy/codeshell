@@ -271,13 +271,14 @@ try {
           `${label}: no subagent landing card`,
         );
         await page.locator('[data-panel-action="new-tab"]').click();
-        await page.getByRole("menu").waitFor();
+        await page.locator("[data-panel-launcher]").waitFor();
         assert.equal(
-          await page.locator('[data-panel-menu-kind="subagent"]').count(),
+          await page.locator('[data-panel-launcher-kind="subagent"]').count(),
           0,
           `${label}: no generic new-tab option`,
         );
-        await page.keyboard.press("Escape");
+        await page.getByRole("tab").focus();
+        await page.getByRole("tab").press("Delete");
         await page.getByRole("button", { name: "Toggle panels", exact: true }).click();
         const before = await page.evaluate(() => JSON.stringify(window.fixtureState.panelByBucket));
         await page.evaluate(() => window.tryGenericNavigation());
@@ -289,6 +290,42 @@ try {
         );
         let dock = await exactChild("parent-a", "second", `${label}-second`);
         const firstTab = await page.getByRole("tab").getAttribute("id");
+        const firstNonce = await page.evaluate(() => {
+          const state = window.fixtureState;
+          return state.panelByBucket[state.activeBucket].subagentSelection.navigationNonce;
+        });
+        await dock.locator('[data-subagent-action="back-to-list"]').click();
+        await dock.locator('[data-subagent-list-id="parent-a-third"]').waitFor();
+        const readsBeforeReopen = (await page.evaluate(() => window.actions)).filter(
+          (item) => item[0] === "transcript",
+        ).length;
+        dock = await exactChild("parent-a", "second", `${label}-same-child-reopen`);
+        assert.equal(
+          await dock.locator("[data-subagent-list]").count(),
+          0,
+          `${label}: repeating the same chat action leaves the list for the exact conversation`,
+        );
+        assert.equal(
+          await page.getByRole("tab").getAttribute("id"),
+          firstTab,
+          `${label}: repeating the same child retains the tab`,
+        );
+        const repeated = await page.evaluate(() => {
+          const state = window.fixtureState;
+          return {
+            nonce: state.panelByBucket[state.activeBucket].subagentSelection.navigationNonce,
+            reads: window.actions.filter((item) => item[0] === "transcript").length,
+          };
+        });
+        assert.ok(
+          repeated.nonce > firstNonce,
+          `${label}: real hook issues a fresh navigation nonce`,
+        );
+        assert.equal(
+          repeated.reads,
+          readsBeforeReopen + 1,
+          `${label}: repeated child gets one fresh transcript read`,
+        );
         await dock.screenshot({
           path: path.join(output, `preview-${label}-second.png`),
           animations: "disabled",

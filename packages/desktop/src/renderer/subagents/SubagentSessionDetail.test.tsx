@@ -167,7 +167,7 @@ describe("subagent full transcript navigation", () => {
     expect(text(container)).not.toContain("Child request");
   });
 
-  test("Agent tool cards open the child and returning restores the parent stream", async () => {
+  test("Agent tool cards open the child and return through its list to the parent stream", async () => {
     const reads: string[] = [];
     api({
       getSessionTranscript: async (id: string) => {
@@ -193,6 +193,14 @@ describe("subagent full transcript navigation", () => {
     }
     expect(reads).toEqual(["child-a"]);
     expect(text(container)).toContain("Child request");
+    await click(
+      nodes(container, "BUTTON").find((node) => props(node)["aria-label"] === "返回子代理列表"),
+    );
+    expect(text(container)).not.toContain("Child request");
+    expect(reads).toEqual(["child-a"]);
+    expect(
+      nodes(container, "SECTION").some((node) => props(node)["data-subagent-list"] !== undefined),
+    ).toBe(true);
     await click(
       nodes(container, "BUTTON").find((node) => props(node)["aria-label"] === "返回上级对话"),
     );
@@ -268,7 +276,13 @@ describe("subagent full transcript navigation", () => {
       );
     }
     expect(selections).toEqual([
-      { agentId: "child-a", parentSessionId: "parent-a", label: "Read document", running: true },
+      {
+        agentId: "child-a",
+        parentSessionId: "parent-a",
+        label: "Read document",
+        running: true,
+        agents: [],
+      },
     ]);
     expect(reads).toEqual([]);
     expect(text(container)).toContain("Continue the parent task");
@@ -289,7 +303,7 @@ describe("subagent full transcript navigation", () => {
     expect(reads).toEqual([]);
   });
 
-  test("inactive dock details defer reads and refresh when shown without a back button", async () => {
+  test("inactive dock details defer reads and keep their internal list navigation", async () => {
     const reads: string[] = [];
     const queries: string[] = [];
     api({
@@ -310,8 +324,8 @@ describe("subagent full transcript navigation", () => {
     expect(reads).toEqual([]);
     expect(queries).toEqual([]);
     expect(
-      nodes(container, "BUTTON").some((node) => props(node)["aria-label"] === "返回上级对话"),
-    ).toBe(false);
+      nodes(container, "BUTTON").some((node) => props(node)["aria-label"] === "返回子代理列表"),
+    ).toBe(true);
     expect(
       props(nodes(container, "BUTTON").find((node) => props(node)["aria-label"] === "刷新对话"))
         .disabled,

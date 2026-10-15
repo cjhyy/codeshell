@@ -202,7 +202,10 @@ describe("subagent conversation dock requests", () => {
     });
     expect(hook.result.current.panelByBucket).toBe(openedPanels);
     expect(hook.result.current.activePanelState).toBe(openedState);
-    expect(hook.result.current.activePanelState.subagentSelection).toEqual(firstSelection);
+    expect(hook.result.current.activePanelState.subagentSelection).toEqual({
+      ...firstSelection,
+      navigationNonce: 1,
+    });
   });
 
   test("reissues the same dock request with a new selection and preserves its tabs", async () => {
@@ -230,6 +233,7 @@ describe("subagent conversation dock requests", () => {
     expect(secondRequest.requestKind).toBe("subagent");
     expect(secondRequest.requestNonce).toBe(firstRequest.requestNonce + 1);
     expect(secondRequest.subagentSelection?.agentId).toBe("child-a-followup");
+    expect(secondRequest.subagentSelection?.navigationNonce).toBe(secondRequest.requestNonce);
     expect(secondRequest.tabs).toBe(tabs);
     expect(secondRequest.activeId).toBe("subagent-tab");
     expect(hook.result.current.mainSessionId).toBe("parent-a");
@@ -253,7 +257,10 @@ describe("subagent conversation dock requests", () => {
       hook!.result.current.openSubagent(secondSelection);
     });
     expect(hook.result.current.mainSessionId).toBe("parent-b");
-    expect(hook.result.current.activePanelState.subagentSelection).toEqual(secondSelection);
+    expect(hook.result.current.activePanelState.subagentSelection).toEqual({
+      ...secondSelection,
+      navigationNonce: 1,
+    });
     expect(hook.result.current.activePanelState.requestNonce).toBe(1);
     expect(hook.result.current.panelByBucket[firstBucket]).toBe(firstState);
 
@@ -261,10 +268,14 @@ describe("subagent conversation dock requests", () => {
       hook!.result.current.selectSession("parent-a");
     });
     expect(hook.result.current.activePanelState).toBe(firstState);
-    expect(hook.result.current.activePanelState.subagentSelection).toEqual(firstSelection);
-    expect(hook.result.current.panelByBucket[secondBucket]?.subagentSelection).toEqual(
-      secondSelection,
-    );
+    expect(hook.result.current.activePanelState.subagentSelection).toEqual({
+      ...firstSelection,
+      navigationNonce: 1,
+    });
+    expect(hook.result.current.panelByBucket[secondBucket]?.subagentSelection).toEqual({
+      ...secondSelection,
+      navigationNonce: 1,
+    });
   });
 
   test("routes an existing click callback through the latest active bucket ref", async () => {

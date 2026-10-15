@@ -2,13 +2,18 @@ import { createContext, useContext } from "react";
 import type { AgentMessage, ToolMessage } from "../types";
 import { parsedArgs } from "../tool-cards/utils";
 
-export type SubagentSummary = Pick<AgentMessage, "id" | "description" | "done">;
+export type SubagentSummary = Pick<AgentMessage, "id" | "description" | "done"> &
+  Partial<Pick<AgentMessage, "name" | "startedAt" | "endedAt" | "error">>;
 
 export interface SubagentSelection {
   agentId?: string;
   parentSessionId?: string | null;
   label?: string;
   running?: boolean;
+  /** Lean summaries from this parent conversation, used until its disk catalog loads. */
+  agents?: readonly SubagentSummary[];
+  /** Explicit chat reopen requests reset local list/detail navigation. */
+  navigationNonce?: number;
 }
 
 export const SubagentNavigationContext = createContext<{

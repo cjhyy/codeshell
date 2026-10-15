@@ -161,10 +161,20 @@ export function MessageStream({
 }: Props) {
   const { t } = useT();
   const [selectedSubagent, setSelectedSubagent] = useState<SubagentSelection | null>(null);
-  // Context consumers only need identity, label and completion. Preserve the
+  // Context consumers only need identity, label, status and timing. Preserve the
   // value across unrelated token deltas so memoized tool cards stay cheap.
   const subagentSummariesRef = useRef<SubagentSummary[]>([]);
-  const nextSubagents = messages.filter((message) => message.kind === "agent");
+  const nextSubagents: SubagentSummary[] = messages
+    .filter((message) => message.kind === "agent")
+    .map(({ id, name, description, done, error, startedAt, endedAt }) => ({
+      id,
+      name,
+      description,
+      done,
+      error,
+      startedAt,
+      endedAt,
+    }));
   if (
     nextSubagents.length !== subagentSummariesRef.current.length ||
     nextSubagents.some((agent, index) => {
@@ -172,7 +182,11 @@ export function MessageStream({
       return (
         agent.id !== previous?.id ||
         agent.description !== previous.description ||
-        agent.done !== previous.done
+        agent.done !== previous.done ||
+        agent.name !== previous.name ||
+        agent.error !== previous.error ||
+        agent.startedAt !== previous.startedAt ||
+        agent.endedAt !== previous.endedAt
       );
     })
   )

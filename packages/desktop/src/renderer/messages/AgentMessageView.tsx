@@ -85,6 +85,7 @@ function AgentMessageViewImpl({ message }: { message: AgentMessage }) {
                   parentSessionId: navigation.sessionId,
                   label: message.description || message.name,
                   running: !message.done,
+                  agents: navigation.agents,
                 })
               }
             >

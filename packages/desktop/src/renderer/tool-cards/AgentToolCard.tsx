@@ -90,6 +90,7 @@ export function AgentToolCard({ message, onSelect, selected, turnEpoch }: Props)
                 parentSessionId: navigation.sessionId,
                 label: description,
                 running: !navigation.agents.find((agent) => agent.id === agentId)?.done,
+                agents: navigation.agents,
               });
             }}
           >
