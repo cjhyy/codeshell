@@ -156,7 +156,12 @@ describe("createIpcCredentialAccess", () => {
         });
         main.send({ jsonrpc: "2.0", id: msg.id, result: { repositories: [] } });
       } else if (msg.method === "desktop/oauthAccessResolve") {
-        expect(msg.params).toEqual({ id: "oauth", scope: "full", forceRefresh: true });
+        expect(msg.params).toEqual({
+          id: "oauth",
+          scope: "full",
+          serverUrl: "https://mcp.example/mcp",
+          forceRefresh: true,
+        });
         main.send({
           jsonrpc: "2.0",
           id: msg.id,
@@ -172,7 +177,12 @@ describe("createIpcCredentialAccess", () => {
       access.materializeCookie?.({ cwd: "/repo", id: "xhs", scope: "full" }),
     ).resolves.toEqual({ cookiesFile: "/tmp/cookies.txt", count: 3 });
     await expect(
-      access.resolveOAuthAccess?.({ id: "oauth", scope: "full", forceRefresh: true }),
+      access.resolveOAuthAccess?.({
+        id: "oauth",
+        scope: "full",
+        serverUrl: "https://mcp.example/mcp",
+        forceRefresh: true,
+      }),
     ).resolves.toEqual({
       accessToken: "access-only",
       expiresAt: "2030-01-01T00:00:00.000Z",

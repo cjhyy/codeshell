@@ -1075,6 +1075,11 @@ describe("createMcpAuthenticatedFetch", () => {
         type: "oauth" as const,
         label: "OAuth",
         hasSecret: true,
+        meta: {
+          mcpServerUrl: oauthConfig.url,
+          resource: "https://mcp.example/",
+          issuer: "https://auth.example/",
+        },
       }),
       envExposures: () => ({}),
       resolveOAuthAccess: async (req: { forceRefresh?: boolean }) => ({
@@ -1182,9 +1187,9 @@ describe("createMcpAuthenticatedFetch", () => {
       }) as unknown as typeof fetch,
     );
 
-    expect(
-      (await authenticatedFetch("https://mcp.example/rpc", { signal: controller.signal })).status,
-    ).toBe(401);
+    await expect(
+      authenticatedFetch("https://mcp.example/rpc", { signal: controller.signal }),
+    ).rejects.toThrow();
     expect(resolved).toEqual([false]);
     expect(sends).toBe(1);
   });
@@ -1204,11 +1209,24 @@ describe("createMcpAuthenticatedFetch", () => {
     try {
       const authenticatedFetch = createMcpAuthenticatedFetch(
         "srv",
-        oauthConfig,
-        access(async (force) => {
-          resolved.push(force);
-          return "access";
-        }),
+        { ...oauthConfig, url: "https://mcp.example/unreplayable" },
+        {
+          ...access(async (force) => {
+            resolved.push(force);
+            return "access";
+          }),
+          resolveMeta: () => ({
+            id: "oauth-account",
+            type: "oauth",
+            label: "OAuth",
+            hasSecret: true,
+            meta: {
+              mcpServerUrl: "https://mcp.example/unreplayable",
+              resource: "https://mcp.example/",
+              issuer: "https://auth.example/",
+            },
+          }),
+        },
         (async () => {
           sends++;
           return new Response("", { status: 401 });
