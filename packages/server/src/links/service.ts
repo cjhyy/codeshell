@@ -40,6 +40,7 @@ import type {
   LinkSnapshot,
   MaskedLinkConnection,
   TokenConnectionInput,
+  HostLinkOAuthAdapter,
 } from "./types.js";
 
 const messages: Record<LinkErrorCode, string> = {
@@ -95,6 +96,18 @@ export interface LinkServiceOptions {
   readRemoteCatalog?: typeof readRemoteProviderCatalog;
   /** Native Host only; remote browser callers may bind existing Host sessions but cannot start login. */
   allowCliLogin?: boolean;
+  hostOAuthAdapters?: readonly HostLinkOAuthAdapter[];
+}
+
+interface HostOAuthJob {
+  context: LinkOperationContext;
+  adapter: HostLinkOAuthAdapter;
+  prepared: PreparedConnection;
+  operation: ActiveOperation;
+  public: LinkAuthorization;
+  timer?: ReturnType<typeof setTimeout>;
+  retireAt?: number;
+  cancel?: (code: LinkErrorCode) => void;
 }
 
 /** Trusted host adapter input; deliberately absent from the HTTP API. */
@@ -156,6 +169,8 @@ export function createLinkService(options: LinkServiceOptions = {}) {
   const jobs = new Map<string, AuthorizationJob>();
   const remoteJobs = new Map<string, RemoteAuthorizationJob>();
   const interactiveJobs = new Map<string, InteractiveAuthorizationJob>();
+  const hostOAuthJobs = new Map<string, HostOAuthJob>();
+  const hostOAuthAdapters = options.hostOAuthAdapters ?? [];
   let remoteCatalog:
     | { issuer: string; expiresAt: number; providers: RemoteProviderCapabilities[] }
     | undefined;
@@ -247,22 +262,27 @@ export function createLinkService(options: LinkServiceOptions = {}) {
       isRemoteLinkCredential(credential) ||
       (credential.type === "link" &&
         credential.meta?.linkExecutionRuntime === "local" &&
+        providers.some((provider) => provider.id === credential.meta?.linkProvider)) ||
+      (credential.type === "oauth" &&
+        credential.meta?.linkExecutionBackend === "mcp" &&
+        credential.meta.linkExecutionRuntime === "local" &&
         providers.some((provider) => provider.id === credential.meta?.linkProvider))
     );
   }
   function masked(credential: Credential, scope: "user" | "project"): MaskedLinkConnection {
     const meta = credential.meta!;
     const oauth =
-      meta.linkAuthSource === "browser-oauth"
+      meta.linkAuthSource === "browser-oauth" || meta.linkAuthSource === "mcp-oauth"
         ? summarizeOAuthCredentialSecret(credential.secret)
         : undefined;
     const remote = isRemoteLinkCredential(credential);
     const status =
       (remote && meta.linkRemoteState !== "connected") ||
-      (meta.linkAuthSource === "browser-oauth" &&
+      ((meta.linkAuthSource === "browser-oauth" || meta.linkAuthSource === "mcp-oauth") &&
         meta.linkOAuthState &&
         meta.linkOAuthState !== "connected") ||
-      (meta.linkAuthSource === "browser-oauth" && meta.linkCapabilityIds?.length === 0)
+      ((meta.linkAuthSource === "browser-oauth" || meta.linkAuthSource === "mcp-oauth") &&
+        meta.linkCapabilityIds?.length === 0)
         ? "unavailable"
         : !isCredentialSecretAvailable(credential.secret)
           ? "unavailable"
@@ -281,9 +301,11 @@ export function createLinkService(options: LinkServiceOptions = {}) {
         ? "remote-link"
         : meta.linkExecutionBackend === "cli"
           ? "cli-session"
-          : meta.linkAuthSource === "browser-oauth"
-            ? "browser-oauth"
-            : "manual-token",
+          : meta.linkAuthSource === "mcp-oauth"
+            ? "mcp-oauth"
+            : meta.linkAuthSource === "browser-oauth"
+              ? "browser-oauth"
+              : "manual-token",
       status,
       scope,
       editable: scope === "user",
@@ -323,7 +345,24 @@ export function createLinkService(options: LinkServiceOptions = {}) {
           ? createBroker().status(provider.id)
           : undefined;
         const authModes: LinkAuthMode[] = [];
+        for (const adapter of hostOAuthAdapters.filter((entry) => entry.providerId === provider.id))
+          authModes.push({
+            id: adapter.authModeId,
+            methodId: adapter.methodId,
+            kind: "redirect",
+            label: adapter.label,
+            preferred: true,
+            available: true,
+          });
         for (const method of provider.connectionMethods) {
+          if (
+            hostOAuthAdapters.some(
+              (adapter) => adapter.providerId === provider.id && adapter.methodId === method.id,
+            )
+          )
+            continue;
+          if (method.oauthProfileId && method.browserAuth?.flow === "authorization-code-pkce")
+            continue;
           if (method.executionRuntime !== "local" || method.availability !== "available") continue;
           if (method.browserAuth?.flow === "device-code")
             authModes.push({
@@ -475,7 +514,10 @@ export function createLinkService(options: LinkServiceOptions = {}) {
       throw new LinkServiceError(409, "conflict");
     return credential;
   }
-  function prepare(raw: LinkConnectionInput): PreparedConnection {
+  function prepare(
+    raw: LinkConnectionInput,
+    hostAdapter?: HostLinkOAuthAdapter,
+  ): PreparedConnection {
     if (!raw || typeof raw !== "object") throw new LinkServiceError(400, "invalid_request");
     const input = {
       providerId: string(raw.providerId, 80),
@@ -488,6 +530,14 @@ export function createLinkService(options: LinkServiceOptions = {}) {
       .find((provider) => provider.id === input.providerId)
       ?.connectionMethods.find((candidate) => candidate.id === input.methodId);
     if (!method || method.executionRuntime !== "local" || method.availability !== "available")
+      throw new LinkServiceError(400, "invalid_request");
+    if (
+      method.oauthProfileId &&
+      method.browserAuth?.flow === "authorization-code-pkce" &&
+      (!hostAdapter ||
+        hostAdapter.providerId !== input.providerId ||
+        hostAdapter.methodId !== input.methodId)
+    )
       throw new LinkServiceError(400, "invalid_request");
     const id = input.connectionId ?? `link-${input.providerId}-${input.methodId}`;
     let expected: Credential | null = null;
@@ -733,6 +783,22 @@ export function createLinkService(options: LinkServiceOptions = {}) {
   async function disconnect(context: LinkOperationContext, id: string, expectedRevision: string) {
     await authorize(context);
     const credential = reviewed(safeId(id), expectedRevision);
+    if (credential.meta?.linkExecutionBackend === "mcp") {
+      const adapter = hostOAuthAdapters.find(
+        (entry) =>
+          entry.providerId === credential.meta?.linkProvider &&
+          entry.methodId === credential.meta?.linkConnectionMethod,
+      );
+      await change(
+        context,
+        () =>
+          swap({ id: credential.id, expected: credential, input: {} as LinkConnectionInput }, null),
+        true,
+      );
+      // Local authority is already gone. Cleanup never deletes a new connection with this ID.
+      await adapter?.disconnect?.(credential).catch(() => {});
+      return;
+    }
     if (isRemoteLinkCredential(credential)) {
       // Disable local use before external I/O. Retain the disabled record if remote revocation
       // fails so the user can retry; never report successful remote revocation on a timeout.
@@ -855,6 +921,152 @@ export function createLinkService(options: LinkServiceOptions = {}) {
     }
     return cliStep(job, job.public.expiresAt!, status.installed, validation);
   }
+  async function startHostOAuth(
+    context: LinkOperationContext,
+    input: LinkConnectionInput,
+    adapter: HostLinkOAuthAdapter,
+  ): Promise<LinkAuthorization> {
+    for (const [id, job] of hostOAuthJobs)
+      if (job.retireAt !== undefined && job.retireAt <= now()) hostOAuthJobs.delete(id);
+    if (hostOAuthJobs.size >= 32) throw new LinkServiceError(409, "busy");
+    const prepared = prepare(input, adapter);
+    const operation = begin(context);
+    const expiresAt = new Date(now() + 10 * 60_000).toISOString();
+    const job: HostOAuthJob = {
+      context,
+      adapter,
+      prepared,
+      operation,
+      public: {
+        id: randomUUID(),
+        providerId: input.providerId,
+        methodId: input.methodId,
+        authModeId: adapter.authModeId,
+        state: "pending",
+        expiresAt,
+        step: { id: randomUUID(), kind: "processing", expiresAt },
+      },
+    };
+    hostOAuthJobs.set(job.public.id, job);
+    let ready!: () => void;
+    const preparedStep = new Promise<void>((resolve) => {
+      ready = resolve;
+    });
+    const end = (code: LinkErrorCode) => {
+      if (job.public.state !== "pending") return;
+      operation.controller.abort();
+      job.public = terminal(job.public, code === "cancelled" ? "cancelled" : "failed", {
+        errorCode: code,
+      });
+      job.retireAt = now() + 5 * 60_000;
+      clearTimeout(job.timer);
+      ready();
+    };
+    job.cancel = end;
+    const onAbort = () => end("cancelled");
+    context.signal?.addEventListener("abort", onAbort, { once: true });
+    job.timer = setTimeout(() => end("authorization_expired"), 10 * 60_000);
+    job.timer.unref?.();
+    if (context.signal?.aborted) end("cancelled");
+    void (async () => {
+      try {
+        operation.controller.signal.throwIfAborted();
+        const candidate = await adapter.authorize({
+          id: prepared.id,
+          label: prepared.input.label,
+          previous: prepared.expected,
+          signal: operation.controller.signal,
+          onAuthorizationUrl: async (url, expiry) => {
+            await authorize(context);
+            operation.controller.signal.throwIfAborted();
+            const target = new URL(url);
+            const time = Date.parse(expiry);
+            if (
+              target.protocol !== "https:" ||
+              target.username ||
+              target.password ||
+              target.hash ||
+              !Number.isFinite(time) ||
+              time <= now() ||
+              time > now() + 10 * 60_000 + 1_000
+            )
+              throw new LinkServiceError(422, "authorization_failed");
+            if (job.public.state !== "pending") throw new LinkServiceError(409, "cancelled");
+            job.public.expiresAt = expiry;
+            clearTimeout(job.timer);
+            job.timer = setTimeout(() => end("authorization_expired"), Math.max(1, time - now()));
+            job.timer.unref?.();
+            job.public.step = {
+              id: randomUUID(),
+              kind: "redirect",
+              expiresAt: expiry,
+              authorizationUrl: target.href,
+            };
+            ready();
+          },
+        });
+        await authorize(context);
+        operation.controller.signal.throwIfAborted();
+        if (
+          job.public.state !== "pending" ||
+          candidate.id !== prepared.id ||
+          candidate.type !== "oauth" ||
+          candidate.meta?.linkProvider !== input.providerId ||
+          candidate.meta.linkConnectionMethod !== input.methodId ||
+          candidate.meta.linkExecutionBackend !== "mcp" ||
+          candidate.meta.agentExposable !== false
+        )
+          throw new LinkServiceError(422, "provider_rejected");
+        await change(context, () => {
+          operation.controller.signal.throwIfAborted();
+          if (job.public.state !== "pending") throw new LinkServiceError(409, "cancelled");
+          swap(prepared, candidate);
+          job.public = terminal(job.public, "connected", { connection: masked(candidate, "user") });
+        });
+      } catch (error) {
+        if (job.public.state === "pending")
+          end(
+            operation.controller.signal.aborted
+              ? "cancelled"
+              : error instanceof LinkServiceError
+                ? error.code
+                : "authorization_failed",
+          );
+      } finally {
+        clearTimeout(job.timer);
+        context.signal?.removeEventListener("abort", onAbort);
+        job.retireAt = now() + 5 * 60_000;
+        finish(operation);
+        ready();
+      }
+    })();
+    await preparedStep;
+    return structuredClone(job.public);
+  }
+
+  async function openHostAuthorization(
+    context: LinkOperationContext,
+    id: string,
+  ): Promise<boolean> {
+    await authorize(context);
+    const job = hostOAuthJobs.get(safeId(id));
+    if (!job) return false;
+    if (
+      job.context.ownerId !== context.ownerId ||
+      job.public.state !== "pending" ||
+      job.operation.controller.signal.aborted ||
+      job.public.step?.kind !== "redirect" ||
+      Date.parse(job.public.step.expiresAt) <= now()
+    )
+      throw new LinkServiceError(409, "conflict");
+    const target = new URL(job.public.step.authorizationUrl);
+    if (target.protocol !== "https:" || target.username || target.password || target.hash)
+      throw new LinkServiceError(400, "invalid_request");
+    await job.adapter.openAuthorizationUrl(target.href);
+    await authorize(context);
+    return true;
+  }
+
   async function startAuthorization(
     context: LinkOperationContext,
     input: LinkConnectionInput,
@@ -862,7 +1074,13 @@ export function createLinkService(options: LinkServiceOptions = {}) {
   ): Promise<LinkAuthorization> {
     await authorize(context);
     const authModeId = string(rawAuthModeId, 80);
-    if (input?.resourceUrl !== undefined && authModeId !== "remote-link")
+    const hostAdapter = hostOAuthAdapters.find(
+      (adapter) =>
+        adapter.providerId === input?.providerId &&
+        adapter.methodId === input.methodId &&
+        adapter.authModeId === authModeId,
+    );
+    if (input?.resourceUrl !== undefined && authModeId !== "remote-link" && !hostAdapter)
       throw new LinkServiceError(400, "invalid_request");
     if (authModeId === "remote-link") await refreshRemoteCatalog(context);
     const provider = snapshot().providers.find((candidate) => candidate.id === input?.providerId);
@@ -871,6 +1089,7 @@ export function createLinkService(options: LinkServiceOptions = {}) {
         candidate.id === authModeId && candidate.methodId === input.methodId && candidate.available,
     );
     if (!mode) throw new LinkServiceError(400, "invalid_request");
+    if (hostAdapter) return startHostOAuth(context, input, hostAdapter);
     if (mode.kind === "redirect") {
       const result = await startRemoteAuth(context, input);
       const job = remoteJobs.get(result.id)!;
@@ -1494,6 +1713,11 @@ export function createLinkService(options: LinkServiceOptions = {}) {
     pruneJobs();
     pruneRemoteJobs();
     pruneInteractive();
+    const host = hostOAuthJobs.get(safeId(id));
+    if (host) {
+      if (host.context.ownerId !== context.ownerId) throw new LinkServiceError(404, "not_found");
+      return structuredClone(host.public);
+    }
     const interactive = interactiveJobs.get(safeId(id));
     if (interactive) {
       if (interactive.context.ownerId !== context.ownerId)
@@ -1514,10 +1738,15 @@ export function createLinkService(options: LinkServiceOptions = {}) {
     await authorize(context);
     safeId(id);
     const ownerId =
+      hostOAuthJobs.get(id)?.context.ownerId ??
       remoteJobs.get(id)?.context.ownerId ??
       interactiveJobs.get(id)?.context.ownerId ??
       jobs.get(id)?.ownerId;
     if (!ownerId || ownerId !== context.ownerId) throw new LinkServiceError(404, "not_found");
+    const host = hostOAuthJobs.get(id);
+    if (host?.public.state === "pending") {
+      host.cancel?.("cancelled");
+    }
     const remote = remoteJobs.get(id);
     if (remote?.public.state === "pending") {
       remote.public = terminal(remote.public, "cancelled", { errorCode: "cancelled" });
@@ -1531,6 +1760,13 @@ export function createLinkService(options: LinkServiceOptions = {}) {
   }
   function cancelOwner(ownerId: string): void {
     revokedOwners.add(ownerId);
+    for (const [id, job] of hostOAuthJobs)
+      if (job.context.ownerId === ownerId) {
+        job.cancel?.("cancelled");
+        job.operation.controller.abort();
+        clearTimeout(job.timer);
+        hostOAuthJobs.delete(id);
+      }
     for (const [id, job] of interactiveJobs)
       if (job.context.ownerId === ownerId) {
         endInteractive(job, "cancelled");
@@ -1553,6 +1789,12 @@ export function createLinkService(options: LinkServiceOptions = {}) {
     clearInterval(cleanupTimer);
     clearTimeout(cleanupStartup);
     remoteJobs.clear();
+    for (const job of hostOAuthJobs.values()) {
+      job.cancel?.("cancelled");
+      job.operation.controller.abort();
+      clearTimeout(job.timer);
+    }
+    hostOAuthJobs.clear();
     for (const job of interactiveJobs.values()) endInteractive(job, "cancelled");
     interactiveJobs.clear();
     for (const operation of operations) operation.controller.abort();
@@ -1571,6 +1813,7 @@ export function createLinkService(options: LinkServiceOptions = {}) {
     disconnect,
     startDeviceAuth,
     startAuthorization,
+    openHostAuthorization,
     respondAuthorization,
     refreshRemoteCatalog,
     startRemoteAuth,

@@ -108,7 +108,7 @@ export interface MaskedLinkConnection {
   methodId: string;
   label: string;
   runtime: "local" | "server";
-  authSource: "manual-token" | "cli-session" | "browser-oauth" | "remote-link";
+  authSource: "manual-token" | "cli-session" | "browser-oauth" | "mcp-oauth" | "remote-link";
   status: "connected" | "expired" | "invalid" | "unavailable";
   account?: {
     id?: string;

@@ -654,8 +654,9 @@ export interface CredentialView {
       | "github-cli"
       | "cli-session"
       | "browser-oauth"
+      | "mcp-oauth"
       | "remote-link";
-    linkExecutionBackend?: "http-token" | "cli" | "remote";
+    linkExecutionBackend?: "http-token" | "cli" | "remote" | "mcp";
     agentExposable?: boolean;
     linkAccountId?: string;
     linkAccountLabel?: string;
@@ -1411,8 +1412,9 @@ export interface CodeshellApi
             | "github-cli"
             | "cli-session"
             | "browser-oauth"
+            | "mcp-oauth"
             | "remote-link";
-          linkExecutionBackend?: "http-token" | "cli" | "remote";
+          linkExecutionBackend?: "http-token" | "cli" | "remote" | "mcp";
           agentExposable?: boolean;
           linkAccountId?: string;
           linkAccountLabel?: string;
