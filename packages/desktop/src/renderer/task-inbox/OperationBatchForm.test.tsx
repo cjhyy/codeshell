@@ -85,6 +85,9 @@ describe("OperationBatchForm", () => {
     unexpectedBridgeReads = [];
     Object.defineProperty(window, "codeshell", {
       configurable: true,
+      // Prior suites may leave an enumerable bridge. Do not inherit that flag:
+      // React's dev prop diagnostics traverse the mini-DOM's defaultView.
+      enumerable: false,
       value: new Proxy(
         {
           operationBatch: {
