@@ -104,8 +104,7 @@ import {
 import {
   activeGuestForSession,
   bucketForSession,
-  // Aliased: this class has its own forgetSession, and the two clear DIFFERENT
-  // registries. releaseExternalSession has to call both.
+  // Aliased: this clears the browser registration, not the retained stream.
   forgetSession as forgetSessionBucket,
   partitionForSession,
   registerSessionBucket,
@@ -1908,6 +1907,11 @@ export class AgentBridge implements PetStateBridge {
   forgetSession(sessionId: string): void {
     this.snapshots.forget(sessionId);
     this.mainOutput.forget(sessionId);
+    this.releaseSessionResources(sessionId);
+  }
+
+  /** Release a runtime's authority without deleting its business Session output. */
+  private releaseSessionResources(sessionId: string): void {
     forgetHostSessionMaps(this.sessionCwd, this.hostReservations, sessionId);
     getSessionCwdIndex().forget(sessionId);
     this.panelHostWindowRoutes.forgetSession(sessionId);
@@ -2017,8 +2021,8 @@ export class AgentBridge implements PetStateBridge {
    *
    * Paired with {@link releaseExternalSession} on purpose. The two registries
    * live in different modules and are torn down by different functions —
-   * `forgetSession` here clears sessionCwd, while the bucket lives in
-   * browser-driver/active-guest and is cleared by ITS own forgetSession. Split
+   * `releaseSessionResources` clears sessionCwd, while the bucket lives in
+   * browser-driver/active-guest and is cleared by its own forgetSession. Split
    * the register/release halves across call sites and the bucket leaks for the
    * lifetime of the process.
    *
@@ -2037,9 +2041,13 @@ export class AgentBridge implements PetStateBridge {
     if (webContentsId !== undefined) this.claimSessionPanelOwner(sessionId, webContentsId);
   }
 
-  /** Release everything {@link registerExternalSession} registered. */
+  /**
+   * Release runtime resources while retaining the Session's stream and coverage.
+   * A replacement uses the same snapshot epoch, so resetting its sequence would
+   * make the renderer discard new output as already applied.
+   */
   releaseExternalSession(sessionId: string): void {
-    this.forgetSession(sessionId);
+    this.releaseSessionResources(sessionId);
   }
 
   /**
