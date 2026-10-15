@@ -4,8 +4,17 @@ import { fileURLToPath } from "node:url";
 const scenarios = {
   "menu-preview": "shows account actions without mounting a form or contacting the service",
   "menu-logout": "signs out directly from the account menu and restores focus",
+  "menu-logout-unconfirmed": "explains unconfirmed revocation after signing out from the menu",
+  "menu-logout-stale": "ignores a late menu revocation notice after a new account signs in",
   "menu-logout-pending": "disables pending sign-out and prevents duplicate menu requests",
   "menu-logout-failure": "explains sign-out failures and allows another attempt",
+  "settings-logout-unconfirmed":
+    "keeps a revocation notice after signing out from account settings",
+  "settings-logout-stale": "ignores a late settings revocation notice after a new account signs in",
+  "storage-logout-unconfirmed":
+    "explains unconfirmed revocation after clearing unavailable account storage",
+  "settings-logout-failure":
+    "preserves settings account state on sign-out failure and allows retry",
   "profile-read-pending": "gates updates while loading and compares edits to the latest profile",
   "profile-name-only": "preserves a username changed remotely when saving only the nickname",
   "profile-username-only": "preserves a nickname changed remotely when saving only the username",
@@ -40,8 +49,39 @@ const scenarios = {
     "keeps GitHub sign-in available when password registration is closed",
   "github-automatic-account":
     "signs in a first-time GitHub account without entering password credentials",
-  "github-connect-default":
-    "requests a GitHub connection by default and shows its result separately",
+  "github-first-connect":
+    "automatically connects GitHub with the first local login and consumes the default",
+  "github-first-unrelated":
+    "ignores project Links and unrelated credentials when choosing the first GitHub default",
+  "github-first-optout":
+    "keeps a first GitHub login opted out after explicitly unchecking the connection",
+  "github-existing-local":
+    "preserves an existing local GitHub Link without repeating authorization",
+  "github-existing-server": "preserves an existing server GitHub Link identified by OAuth metadata",
+  "github-existing-legacy": "preserves a legacy GitHub OAuth credential without provider metadata",
+  "github-existing-expired":
+    "preserves an expired saved GitHub Link without automatic authorization",
+  "github-existing-invalid":
+    "preserves an invalid saved GitHub Link without automatic authorization",
+  "github-existing-missing":
+    "preserves a saved GitHub Link with a missing secret without automatic authorization",
+  "github-credentials-pending":
+    "gates GitHub until saved Links are known while leaving password login available",
+  "github-credentials-rejected":
+    "keeps GitHub login available without automatic Link after a local read failure",
+  "github-credentials-malformed":
+    "keeps GitHub login available without automatic Link after malformed local metadata",
+  "github-credentials-account-only":
+    "allows account-only GitHub login while a saved Link check is still pending",
+  "github-credentials-deadline":
+    "releases GitHub login after a hung local check and ignores its late result",
+  "github-credentials-late-status": "ignores a late Link default after a password login succeeds",
+  "github-credentials-unmount":
+    "ignores a closed form's late local Link check when account management reopens",
+  "github-login-only-default": "signs in with GitHub while preserving the saved Link by default",
+  "github-connect-optin":
+    "updates an existing GitHub connection only after opting in and shows its result",
+  "github-connect-repeat": "resets the connection choice after sign-in and allows a fresh opt-in",
   "github-connect-optout": "keeps GitHub login available when the connection choice is unchecked",
   "github-connect-unavailable": "disables unsupported GitHub connections without blocking sign-in",
   "github-connect-legacy": "treats missing connection support as unavailable for older services",
