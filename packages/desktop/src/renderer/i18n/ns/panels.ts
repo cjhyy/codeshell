@@ -134,6 +134,11 @@ export const panels = {
       },
       files: {
         filterPlaceholder: "筛选文件…",
+        backToFiles: "返回文件列表",
+        directoryReadFailed: "无法读取此文件夹",
+        retryDirectory: "重新读取",
+        emptyDirectory: "此文件夹为空",
+        noMatches: "当前目录没有匹配的项目",
         rootPicker: "项目文件夹",
         primaryRoot: "主目录",
         hideTree: "隐藏文件树",
@@ -429,6 +434,11 @@ export const panels = {
       },
       files: {
         filterPlaceholder: "Filter files…",
+        backToFiles: "Back to files",
+        directoryReadFailed: "Cannot read this folder",
+        retryDirectory: "Retry folder",
+        emptyDirectory: "This folder is empty",
+        noMatches: "No matching items in this folder",
         rootPicker: "Project folder",
         primaryRoot: "primary",
         hideTree: "Hide file tree",

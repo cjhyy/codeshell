@@ -15,6 +15,7 @@ const fixtures = [
   "ChatView.autocomplete.browser.fixture.mjs",
   "panels/QuickChatPanel.browser.fixture.mjs",
   "task-inbox/TaskInboxPage.browser.fixture.mjs",
+  "panels/FilesPanel.browser.fixture.mjs",
   "ui/specialized-overlays.browser.fixture.mjs",
   "ui/page-surfaces.browser.fixture.mjs",
 ];

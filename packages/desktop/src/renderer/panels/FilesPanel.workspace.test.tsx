@@ -250,9 +250,17 @@ describe("FilesPanel workspace identity", () => {
   });
 
   test("keeps a manually hidden tree hidden after previewing an external file", async () => {
-    // The first button is the tree visibility control in the panel toolbar.
+    // Find the actual visibility action; the tree has its own refresh control.
+    const findHideTree = (node: any): any => {
+      if (reactPropsOf(node)["aria-label"] === "隐藏文件树") return node;
+      for (const child of node.childNodes ?? []) {
+        const found = findHideTree(child);
+        if (found) return found;
+      }
+      return undefined;
+    };
     await act(async () => {
-      reactPropsOf(findElement(container, "BUTTON")).onClick();
+      reactPropsOf(findHideTree(container)).onClick();
       await flushMicrotasks();
     });
     expect(findElement(container, "INPUT")).toBeUndefined();

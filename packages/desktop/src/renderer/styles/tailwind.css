@@ -201,6 +201,23 @@
     transition: opacity 150ms ease;
   }
 
+  .cs-file-action {
+    opacity: 1;
+  }
+
+  @media (hover: hover) and (pointer: fine) {
+    .cs-file-action {
+      opacity: 0;
+    }
+
+    [data-file-row]:hover .cs-file-action,
+    [data-file-row]:focus-within .cs-file-action,
+    .cs-file-action[data-state="open"],
+    .cs-file-action[data-active="true"] {
+      opacity: 1;
+    }
+  }
+
   @media (hover: hover) and (pointer: fine) {
     .cs-message-actions {
       opacity: 0;

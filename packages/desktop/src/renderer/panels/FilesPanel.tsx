@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import {
+  ArrowLeft,
   ChevronRight,
   ChevronDown,
   File as FileIcon,
@@ -19,6 +20,8 @@ import { MoreHorizontal, Paperclip } from "lucide-react";
 import { CODESHELL_PATH_DND_MIME } from "../chat/attachments";
 import { useT, type TFunction } from "../i18n/I18nProvider";
 import type { TrackedProject } from "../projects";
+import { Button } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
 
 /** localStorage key persisting whether the file tree is shown ("1") or hidden ("0"). */
 const TREE_OPEN_KEY = "codeshell.filesPanel.treeOpen";
@@ -195,6 +198,8 @@ export function FilesPanel({
   }, [activeRoot, engineSessionId, project, sessionMainRootId]);
   const [selected, setSelected] = useState<string | null>(null);
   const [filter, setFilter] = useState("");
+  const [previewOpen, setPreviewOpen] = useState(false);
+  const panelRef = useRef<HTMLDivElement>(null);
   // Show/hide the file tree — persisted so hiding it sticks across panel
   // switches, session changes, and app restarts (it used to reset to shown
   // every remount). Default shown when no preference is stored.
@@ -240,6 +245,8 @@ export function FilesPanel({
     previousRootRef.current = cwd;
     selectedRootRef.current = cwd;
     setSelected(null);
+    setPreviewOpen(false);
+    setFilter("");
     setRevealDirs(new Set());
     setReloadNonce((n) => n + 1);
   }, [cwd]);
@@ -278,6 +285,7 @@ export function FilesPanel({
     lastRevealNonceRef.current = revealFile.nonce;
     selectedRootRef.current = cwd;
     setSelected(abs ?? revealPath);
+    setPreviewOpen(true);
     setRevealDirs(cwd && abs ? ancestorDirs(cwd, abs) : new Set());
     setReloadNonce((n) => n + 1);
     // Tell the parent we handled this nonce. Consuming AFTER the reveal (rather
@@ -304,6 +312,14 @@ export function FilesPanel({
     setRevealDirs((prev) => (sameStringSet(prev, dirs) ? prev : dirs));
   }, [cwd, selectedForCurrentRoot, treeOpen]);
 
+  useEffect(() => {
+    if (!previewOpen) return;
+    const back = panelRef.current?.querySelector<HTMLButtonElement>("[data-files-back]");
+    // The CSS container query owns the layout. Only the single-column preview
+    // needs a focus handoff; a wide panel keeps focus on its visible file row.
+    if (back?.getClientRects?.().length) back.focus({ preventScroll: true });
+  }, [previewOpen, selectedForCurrentRoot]);
+
   if (!cwd && !selectedForCurrentRoot && !pendingExternalPreview) {
     return (
       <div className="flex min-h-0 flex-1 items-center justify-center text-sm text-muted-foreground">
@@ -314,9 +330,14 @@ export function FilesPanel({
 
   return (
     <FileSystemContext.Provider value={externalPreview ? LOCAL_FILE_SYSTEM : fileSystem}>
-      <div className="flex min-h-0 min-w-0 flex-1">
+      <div ref={panelRef} className="@container/files-panel flex min-h-0 min-w-0 flex-1">
         {treeAvailable && treeOpen && cwd && (
-          <div className="flex w-72 min-w-0 max-w-[65%] shrink-0 flex-col border-r border-border">
+          <div
+            className={cn(
+              "flex w-72 min-w-0 max-w-[65%] shrink-0 flex-col border-r border-border @max-[640px]/files-panel:w-full @max-[640px]/files-panel:max-w-none @max-[640px]/files-panel:border-r-0",
+              previewOpen && "@max-[640px]/files-panel:hidden",
+            )}
+          >
             <div className="shrink-0 border-b border-border p-2">
               {rootOptions.length > 1 && (
                 <SimpleSelect
@@ -339,15 +360,30 @@ export function FilesPanel({
                   }))}
                 />
               )}
-              <Input
-                value={filter}
-                onChange={(e) => setFilter(e.target.value)}
-                placeholder={t("panels.files.filterPlaceholder")}
-                className="h-8"
-              />
+              <div className="flex min-w-0 items-center gap-1">
+                <Input
+                  value={filter}
+                  aria-label={t("panels.files.filterPlaceholder")}
+                  onChange={(e) => setFilter(e.target.value)}
+                  placeholder={t("panels.files.filterPlaceholder")}
+                  className="h-8 min-w-0 flex-1"
+                />
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon"
+                  className="hidden size-8 shrink-0 @max-[640px]/files-panel:inline-flex"
+                  aria-label={t("panels.common.refresh")}
+                  title={t("panels.files.refreshTitle")}
+                  onClick={() => setReloadNonce((n) => n + 1)}
+                >
+                  <RefreshCw className="size-4" aria-hidden />
+                </Button>
+              </div>
             </div>
             <div className="min-h-0 flex-1 overflow-auto py-1">
               <DirNode
+                key={`${project?.id}:${engineSessionId}:${activeRoot?.id}:${cwd}`}
                 root={cwd}
                 dir={cwd}
                 depth={0}
@@ -355,6 +391,7 @@ export function FilesPanel({
                 onSelect={(path) => {
                   selectedRootRef.current = cwd;
                   setSelected(path);
+                  setPreviewOpen(true);
                 }}
                 filter={filter.trim().toLowerCase()}
                 onAttachImage={onAttachImage}
@@ -364,25 +401,58 @@ export function FilesPanel({
             </div>
           </div>
         )}
-        <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
+        <div
+          className={cn(
+            "flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden",
+            treeAvailable && treeOpen && !previewOpen && "@max-[640px]/files-panel:hidden",
+          )}
+        >
           <div className="flex shrink-0 items-center border-b border-border px-1 py-1">
             {treeAvailable && (
               <button
                 type="button"
                 aria-label={treeOpen ? t("panels.files.hideTree") : t("panels.files.showTree")}
                 title={treeOpen ? t("panels.files.hideTree") : t("panels.files.showTree")}
-                className="rounded-md p-1 text-muted-foreground hover:bg-accent"
-                onClick={() => setTreeOpen((v) => !v)}
+                className={cn(
+                  "rounded-md p-1 text-muted-foreground hover:bg-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+                  treeOpen && "@max-[640px]/files-panel:hidden",
+                )}
+                onClick={() => {
+                  setTreeOpen((v) => !v);
+                  setPreviewOpen(false);
+                }}
               >
                 <PanelLeftClose className={treeOpen ? "h-4 w-4" : "h-4 w-4 rotate-180"} />
               </button>
+            )}
+            {treeAvailable && treeOpen && previewOpen && (
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                className="hidden h-7 gap-1.5 px-2 @max-[640px]/files-panel:inline-flex"
+                data-files-back
+                onClick={() => {
+                  setPreviewOpen(false);
+                  requestAnimationFrame(() => {
+                    const row = Array.from(
+                      panelRef.current?.querySelectorAll<HTMLButtonElement>("[data-files-path]") ??
+                        [],
+                    ).find((element) => element.dataset.filesPath === selectedForCurrentRoot);
+                    (row ?? panelRef.current?.querySelector<HTMLInputElement>("input"))?.focus();
+                  });
+                }}
+              >
+                <ArrowLeft className="size-3.5" aria-hidden />
+                {t("panels.files.backToFiles")}
+              </Button>
             )}
             <div className="flex-1" />
             <button
               type="button"
               aria-label={t("panels.common.refresh")}
               title={t("panels.files.refreshTitle")}
-              className="rounded-md p-1 text-muted-foreground hover:bg-accent"
+              className="rounded-md p-1 text-muted-foreground hover:bg-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
               onClick={() => setReloadNonce((n) => n + 1)}
             >
               <RefreshCw className="h-4 w-4" />
@@ -437,6 +507,9 @@ function DirNode({
   const { t } = useT();
   const fileSystem = React.useContext(FileSystemContext);
   const [entries, setEntries] = useState<FsEntry[] | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [retryNonce, setRetryNonce] = useState(0);
   // Top level auto-expands; deeper levels expand on click.
   const [open, setOpen] = useState<Set<string>>(new Set());
 
@@ -465,22 +538,49 @@ function DirNode({
 
   useEffect(() => {
     let cancelled = false;
+    setLoading(true);
+    setError(null);
     void fileSystem
       .readDir(root, dir)
       .then((e) => {
         if (!cancelled) setEntries(e);
       })
-      .catch(() => {
-        if (!cancelled) setEntries([]);
+      .catch((cause: unknown) => {
+        if (!cancelled) setError(cause instanceof Error ? cause.message : String(cause));
+      })
+      .finally(() => {
+        if (!cancelled) setLoading(false);
       });
     return () => {
       cancelled = true;
     };
-  }, [dir, fileSystem, reloadNonce, root]);
+  }, [dir, fileSystem, reloadNonce, retryNonce, root]);
 
+  if (error)
+    return (
+      <div className="m-2 rounded-lg border border-status-err/25 bg-status-err/5 p-3 text-xs">
+        <p role="alert" className="break-words font-medium text-status-err">
+          {t("panels.files.directoryReadFailed")}
+        </p>
+        <p className="mt-1 break-words leading-5 text-muted-foreground [overflow-wrap:anywhere]">
+          {error}
+        </p>
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          className="mt-2 h-7"
+          onClick={() => setRetryNonce((n) => n + 1)}
+        >
+          {t("panels.files.retryDirectory")}
+        </Button>
+      </div>
+    );
   if (!entries)
     return (
-      <div className="px-3 py-1 text-xs text-muted-foreground">{t("panels.common.loading")}</div>
+      <div role="status" className="px-3 py-2 text-xs text-muted-foreground">
+        {t("panels.common.loading")}
+      </div>
     );
 
   // When filtering, match by name on BOTH files and directories. We can't do
@@ -489,8 +589,26 @@ function DirNode({
   // instead of showing every directory regardless of the query.
   const visible = filter ? entries.filter((e) => e.name.toLowerCase().includes(filter)) : entries;
 
+  if (visible.length === 0)
+    return (
+      <p role="status" className="px-3 py-3 text-xs leading-5 text-muted-foreground">
+        {t(
+          loading
+            ? "panels.common.loading"
+            : filter
+              ? "panels.files.noMatches"
+              : "panels.files.emptyDirectory",
+        )}
+      </p>
+    );
+
   return (
-    <>
+    <div aria-busy={loading}>
+      {loading && (
+        <p role="status" className="px-3 py-1 text-xs text-muted-foreground">
+          {t("panels.common.loading")}
+        </p>
+      )}
       {visible.map((e) => {
         const isOpen = open.has(e.path);
         const pad = { paddingLeft: `${8 + depth * 14}px` };
@@ -504,11 +622,13 @@ function DirNode({
                 // reference so the model knows to look at that directory (TODO
                 // 2.1). Folders can't be image attachments, only path refs.
                 draggable={!!onAttachImage}
+                aria-expanded={isOpen}
+                title={e.name}
                 onDragStart={(ev) => {
                   ev.dataTransfer.setData(CODESHELL_PATH_DND_MIME, e.path);
                   ev.dataTransfer.effectAllowed = "copy";
                 }}
-                className="flex w-full items-center gap-1 py-1 pr-2 text-left text-sm text-foreground hover:bg-accent"
+                className="flex w-full items-center gap-1 py-1 pr-2 text-left text-sm text-foreground hover:bg-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring"
                 onClick={() =>
                   setOpen((prev) => {
                     const next = new Set(prev);
@@ -556,7 +676,7 @@ function DirNode({
           />
         );
       })}
-    </>
+    </div>
   );
 }
 
@@ -590,10 +710,13 @@ function FileRow({
   }, [isSelected]);
 
   return (
-    <div className="group/file relative flex items-center">
+    <div className="relative flex items-center" data-file-row>
       <button
         type="button"
         ref={ref}
+        data-files-path={e.path}
+        aria-current={isSelected ? "true" : undefined}
+        title={e.name}
         style={pad}
         // Every file row is draggable onto the composer (TODO 2.1). The
         // drag payload is the absolute path under a custom MIME so the
@@ -606,8 +729,8 @@ function FileRow({
           ev.dataTransfer.effectAllowed = "copy";
         }}
         className={`flex w-full items-center gap-1 py-1 ${
-          isImageFile && onAttachImage ? "pr-12" : "pr-7"
-        } text-left text-sm hover:bg-accent ${
+          isImageFile && onAttachImage ? "pr-16" : "pr-9"
+        } text-left text-sm hover:bg-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring ${
           isSelected ? "bg-accent text-accent-foreground" : "text-foreground"
         }`}
         onClick={() => onSelect(e.path)}
@@ -623,7 +746,7 @@ function FileRow({
           type="button"
           title={t("panels.files.addToComposer")}
           aria-label={t("panels.files.addToComposer")}
-          className="absolute right-7 top-1/2 -translate-y-1/2 rounded p-0.5 text-muted-foreground opacity-0 hover:bg-background hover:text-foreground group-hover/file:opacity-100"
+          className="cs-file-action absolute right-8 top-1/2 flex size-7 -translate-y-1/2 items-center justify-center rounded text-muted-foreground hover:bg-background hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
           onClick={() => onAttachImage(e.path)}
         >
           <Paperclip className="h-3.5 w-3.5" />
@@ -635,7 +758,7 @@ function FileRow({
           type="button"
           title={t("panels.common.openWith")}
           aria-label={t("panels.common.openWith")}
-          className="absolute right-1 top-1/2 -translate-y-1/2 rounded p-0.5 text-muted-foreground opacity-0 hover:bg-background hover:text-foreground group-hover/file:opacity-100 data-[state=open]:opacity-100"
+          className="cs-file-action absolute right-1 top-1/2 flex size-7 -translate-y-1/2 items-center justify-center rounded text-muted-foreground hover:bg-background hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
         >
           <MoreHorizontal className="h-3.5 w-3.5" />
         </button>
@@ -842,7 +965,12 @@ function CodeWithComments({ path, text }: { path: string; text: string }) {
   const { t } = useT();
   const lines = useMemo(() => text.replace(/\n$/, "").split("\n"), [text]);
   const [commenting, setCommenting] = useState<number | null>(null);
+  const commentButton = useRef<HTMLButtonElement | null>(null);
   const name = path.split("/").pop() ?? path;
+  const closeComment = () => {
+    setCommenting(null);
+    commentButton.current?.focus({ preventScroll: true });
+  };
 
   return (
     <div className="p-2 font-mono text-xs leading-relaxed">
@@ -853,7 +981,7 @@ function CodeWithComments({ path, text }: { path: string; text: string }) {
           // index, so `commenting` state can't follow the wrong row if line list
           // composition ever changes without a full remount.
           <div key={no}>
-            <div className="group flex items-start gap-1 px-1 hover:bg-accent/40">
+            <div className="flex items-start gap-1 px-1 hover:bg-accent/40" data-file-row>
               {/* Gutter comment button (left): a clear blue + that appears on
                   row hover, GitHub-style. Click pins this line + your comment
                   into the composer as an anchor. Replaces the old tiny,
@@ -862,10 +990,12 @@ function CodeWithComments({ path, text }: { path: string; text: string }) {
                 type="button"
                 aria-label={t("panels.files.commentThisLine")}
                 title={t("panels.files.commentThisLineTitle")}
-                className={`shrink-0 mt-px flex h-4 w-4 items-center justify-center rounded bg-primary text-primary-foreground transition-opacity hover:bg-primary/90 ${
-                  commenting === no ? "opacity-100" : "opacity-0 group-hover:opacity-100"
-                }`}
-                onClick={() => setCommenting(commenting === no ? null : no)}
+                className="cs-file-action mt-px flex h-4 w-4 shrink-0 items-center justify-center rounded bg-primary text-primary-foreground hover:bg-primary/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                data-active={commenting === no ? "true" : undefined}
+                onClick={(event) => {
+                  commentButton.current = event.currentTarget;
+                  setCommenting(commenting === no ? null : no);
+                }}
               >
                 <MessageSquarePlus size={11} />
               </button>
@@ -880,7 +1010,7 @@ function CodeWithComments({ path, text }: { path: string; text: string }) {
               <div className="px-2">
                 <CommentBox
                   title={`${name}:${no}`}
-                  onCancel={() => setCommenting(null)}
+                  onCancel={closeComment}
                   onSubmit={(comment) => {
                     addAnchor({
                       kind: "file",
@@ -888,7 +1018,7 @@ function CodeWithComments({ path, text }: { path: string; text: string }) {
                       locator: { 文件: path, 行号: String(no), 代码: line.trim().slice(0, 200) },
                       comment,
                     });
-                    setCommenting(null);
+                    closeComment();
                   }}
                 />
               </div>

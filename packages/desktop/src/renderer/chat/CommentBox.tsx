@@ -20,6 +20,7 @@ export function CommentBox({ title, onSubmit, onCancel }: Props) {
   const { t } = useT();
   const [value, setValue] = useState("");
   const ref = useRef<HTMLTextAreaElement>(null);
+  const composing = useRef(false);
   useEffect(() => {
     ref.current?.focus();
   }, []);
@@ -38,8 +39,16 @@ export function CommentBox({ title, onSubmit, onCancel }: Props) {
       <Textarea
         ref={ref}
         value={value}
+        aria-label={t("chat.comment.localComment", { title })}
         onChange={(e) => setValue(e.target.value)}
+        onCompositionStart={() => {
+          composing.current = true;
+        }}
+        onCompositionEnd={() => {
+          composing.current = false;
+        }}
         onKeyDown={(e) => {
+          if (composing.current || e.nativeEvent.isComposing || e.keyCode === 229) return;
           if (e.key === "Escape") {
             e.preventDefault();
             onCancel();
