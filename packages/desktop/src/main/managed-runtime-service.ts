@@ -1,4 +1,4 @@
-import { join } from "node:path";
+import { dirname, join } from "node:path";
 import { createManagedRuntimeProvider } from "@cjhyy/code-shell-core/internal";
 
 export interface DesktopManagedRuntimeOptions {
@@ -22,6 +22,39 @@ export function createDesktopManagedRuntimeProvider(options: DesktopManagedRunti
     platform: options.platform,
     arch: options.arch,
   });
+}
+
+/** Add Host-owned executable fallbacks without replacing the user's PATH choices. */
+export async function injectDesktopManagedRuntimePath(
+  options: DesktopManagedRuntimeOptions & {
+    env?: NodeJS.ProcessEnv;
+    additionalDirectories?: readonly string[];
+  },
+): Promise<{ nodeAvailable: boolean; addedPathEntryCount: number }> {
+  // Verify on repeated calls too. A failed verification leaves the original
+  // environment intact instead of adding an unverified executable fallback.
+  const runtime = await createDesktopManagedRuntimeProvider(options).resolve("node");
+  const env = options.env ?? process.env;
+  const windows = (options.platform ?? process.platform) === "win32";
+  const delimiter = windows ? ";" : ":";
+  const pathKey =
+    windows && env.PATH === undefined
+      ? (Object.keys(env).find((key) => key.toUpperCase() === "PATH") ?? "PATH")
+      : "PATH";
+  const before = env[pathKey] ?? "";
+  const identity = (path: string) => (windows ? path.toLowerCase() : path);
+  const existing = new Set(before.split(delimiter).filter(Boolean).map(identity));
+  const added: string[] = [];
+  for (const directory of [
+    ...(options.additionalDirectories ?? []),
+    ...(runtime ? [dirname(runtime.executablePath)] : []),
+  ]) {
+    if (!directory || existing.has(identity(directory))) continue;
+    existing.add(identity(directory));
+    added.push(directory);
+  }
+  if (added.length) env[pathKey] = [before, ...added].filter(Boolean).join(delimiter);
+  return { nodeAvailable: !!runtime, addedPathEntryCount: added.length };
 }
 
 /** Read-only Desktop discovery. Resolving a path is not execution authorization. */

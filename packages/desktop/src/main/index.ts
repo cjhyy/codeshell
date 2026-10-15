@@ -41,6 +41,7 @@ import { registerCloudEnvironmentIpc } from "./cloud-environment-ipc.js";
 import {
   createDesktopManagedRuntimeProvider,
   createManagedRuntimeHandlers,
+  injectDesktopManagedRuntimePath,
 } from "./managed-runtime-service.js";
 import { fileURLToPath } from "node:url";
 import { createHash, randomUUID } from "node:crypto";
@@ -3495,6 +3496,17 @@ app.whenReady().then(async () => {
   await injectLoginShellPathAtStartup({
     log: (event, data) => dlog("main", event, data),
   });
+
+  // Bash, Panel processes and their children inherit these fallbacks. Keep
+  // existing executables first; explicit project PATH settings still override.
+  await injectDesktopManagedRuntimePath({
+    isPackaged: app.isPackaged,
+    resourcesPath: process.resourcesPath,
+    appPath: app.getAppPath(),
+    additionalDirectories: [join(app.getPath("userData"), "bin")],
+  })
+    .then((result) => dlog("main", "managed-runtime-path.ready", result))
+    .catch((error) => dlog("main", "managed-runtime-path.failed", { error: String(error) }));
 
   // Main owns Electron safeStorage. Worker gets metadata snapshots and asks
   // main to resolve/materialize secrets on demand; if safeStorage is unavailable
