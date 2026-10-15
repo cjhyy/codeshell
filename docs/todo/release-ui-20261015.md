@@ -16,6 +16,15 @@ deliver a final report, and disable the follow-up heartbeat.
   in a React test and an obsolete native-select/external-track theme E2E.
 - Integrated test fixes `1ae1b1974` and `3fa768267`; theme E2E now uses the real
   Radix selector and validates local playback. No release tag exists yet.
+- Main follow-up CI `38705047770` passed 10 jobs and the theme acceptance, then
+  exposed a shared App mock leaking into the subagent dock fixture and two
+  obsolete native-select reads in Optimization Lab E2E. The dock fixture now
+  imports its own production module (`79ed30b2e`, 175 related tests passed).
+  Optimization Lab reads the durable ID from visible frozen details and checks
+  the actual selected Radix option. Its full isolated Electron/worker/local-HTTP
+  acceptance passed, including restart, native authorization, request counts,
+  revoke/stop and no automatic replay/spending. Both state aliases are explicitly
+  bound to its seeded Electron HOME when called through the outer guarded runner.
 - Local verification passed: package release smoke (10 tarballs, 48 typed
   entries), all 14 workspace typechecks, complete Desktop build, targeted
   guarded tests (28 tests, 496 assertions), ESLint baseline (0 errors), and real
@@ -42,6 +51,16 @@ deliver a final report, and disable the follow-up heartbeat.
 - Further confirmed review targets: composer/listbox accessibility links,
   theme uninstall recovery and mode selection semantics, plus a return-to-latest
   control in the Web conversation view.
+- Layout audit reproduced unreadable preview widths in the default 480px
+  Desktop dock, a 390x360 Task center with its list below the viewport, and Web
+  mobile previews opening below the visible content. Evidence:
+  `/tmp/codeshell-ui-layout-audit-2026-10-15/`.
+- UI implementations are isolated from the release: Desktop file browsing,
+  compact Task center filters and Web file browsing each have a task worktree.
+  Their commits will be integrated after the current version is tagged.
+- Baseline UI verification passed: all 11 responsive overlay fixtures and real
+  Electron navigation/settings tests. Captured screenshots are retained under
+  `/tmp/codeshell-ui-20261015-navigation` and `/tmp/codeshell-ui-20261015-settings`.
 - Use production component browser fixtures and isolated Electron E2E for visual
   evidence. Prioritize reproduced user-visible issues and consistent UI behavior.
 - Each concurrent implementation uses its own task branch/worktree. Keep Panel

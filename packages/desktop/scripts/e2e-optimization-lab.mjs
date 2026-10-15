@@ -209,6 +209,10 @@ async function launch() {
           .map((key) => [key, ""]),
       ),
       CODESHELL_COST_SMOKE_GUARD_LOG: guardLog,
+      // The worker guard inherits the outer test runner's environment; keep
+      // both state aliases bound to this Electron fixture's seeded profile.
+      CODE_SHELL_HOME: isolated.codeShellHome,
+      CODE_SHELL_TEST_HOME: isolated.codeShellHome,
     },
   });
   app.process().stderr.on("data", (value) => mainErrors.push(String(value)));
@@ -347,6 +351,47 @@ async function chooseSavedExperiment(id) {
     .click();
 }
 
+async function readSelectedExperiment(message) {
+  // The themed selector is a button. Read the durable ID from the page's
+  // frozen details, then verify that the real listbox selected that experiment.
+  const details = win.locator("details").filter({ has: win.getByTestId("optimization-lab-plan") });
+  const wasOpen = await details.evaluate((node) => node.open);
+  if (!wasOpen) await details.locator("summary").click();
+  const id = await until(
+    async () => (await details.locator("p").first().innerText()).split("\n")[0].trim(),
+    message,
+  );
+  const saved = await query("list");
+  const experiments = Array.isArray(saved) ? saved : saved.experiments;
+  const selectedIndex = experiments.findIndex((experiment) => experiment.id === id);
+  const selected = experiments[selectedIndex];
+  assert.ok(selected, "The displayed durable ID belongs to a saved experiment");
+  const label = `${selected.title ?? selected.id} · ${selected.status ?? selected.state?.status}`;
+  const trigger = win.getByTestId("optimization-lab-saved");
+  await until(async () => (await trigger.textContent()).trim() === label, message);
+  assert.equal(await trigger.getAttribute("role"), "combobox");
+  await trigger.click();
+  const listbox = win.getByRole("listbox");
+  await listbox.waitFor();
+  assert.equal(
+    await listbox
+      .getByRole("option")
+      .nth(selectedIndex + 1)
+      .getAttribute("aria-selected"),
+    "true",
+    "The selected option matches the displayed durable experiment ID",
+  );
+  assert.equal(
+    (await listbox.getByRole("option", { selected: true }).textContent()).trim(),
+    label,
+    "The themed selector marks the prepared experiment as selected",
+  );
+  await win.keyboard.press("Escape");
+  await listbox.waitFor({ state: "hidden" });
+  if (!wasOpen) await details.locator("summary").click();
+  return query("get", { id });
+}
+
 async function recoverWithoutReplay(id, requestCount, interruptedPayload) {
   const interrupted = await until(
     async () => {
@@ -409,12 +454,11 @@ async function preparePage(cases) {
         .querySelector('[data-testid="optimization-lab-state"]')
         ?.getAttribute("data-status") === "ready",
   );
-  const id = await until(
-    () => win.getByTestId("optimization-lab-saved").inputValue(),
+  const prepared = await readSelectedExperiment(
     "Prepared experiment was not selected after saved experiments refreshed",
   );
-  assert.ok(id, "Prepared experiment is selected by its durable ID");
-  return query("get", { id });
+  assert.ok(prepared.id, "Prepared experiment is selected by its durable ID");
+  return prepared;
 }
 async function editDatasetOffline() {
   await json(datasetFile, dataset);
@@ -849,11 +893,8 @@ try {
   await win.getByTestId("optimization-lab-dataset").fill(JSON.stringify(fresh));
   await win.getByTestId("optimization-lab-prepare").click();
   await win.getByTestId("optimization-lab-state").waitFor();
-  const fixedId = await until(
-    () => win.getByTestId("optimization-lab-saved").inputValue(),
-    "Fixed trial was not selected",
-  );
-  const fixed = await query("get", { id: fixedId });
+  const fixed = await readSelectedExperiment("Fixed trial was not selected");
+  const fixedId = fixed.id;
   assert.equal(fixed.plan.strategyVersion, "fixed_candidate_trial_v1");
   assert.equal(fixed.plan.fixedCandidate.sourcePlanHash, prepared.plan.planHash);
   assert.equal(
