@@ -138,8 +138,8 @@ Both merge conflicts preserved all changes: Appearance + Context fixture entries
 and the listbox useId + new caret hook in ChatView. CI now includes all 19 Desktop
 browser fixtures and all three Web navigation/scrolling fixtures.
 
-Third-wave changes are integrated on the current task branch and undergoing the
-final combined gate:
+Third-wave changes are integrated on the current task branch and passed the
+final combined local gate, ready for main delivery:
 
 - `5efea027a` (source `7b00fb28e`): native keyboard-accessible AskUser options,
   IME-safe confirmation, rejection recovery and request-bound question state.
@@ -167,9 +167,13 @@ final combined gate:
   counts, credential state, 413 mapping and recovery remain asserted. Root's
   guarded provider suite passed 29 tests and 311 assertions.
 
-Third-wave final local checks so far: all 14 workspace typechecks and lint
-baseline (0 errors, 104 existing warnings) passed. Desktop build, complete
-renderer/Web unit shard and all 22 browser fixtures are being finalized. Evidence
+Third-wave final local checks so far: all 14 workspace typechecks, full Desktop
+build (main/preload/renderer/mobile/extension), lint baseline (0 errors, 104
+existing warnings) and 3,395 guarded renderer/shared/Web tests with 12,590
+assertions passed (one browser test separately covered). All 22 Desktop browser
+fixtures passed, including 144 Quick Chat layouts, 120 interactions, 72 responsive
+cases, the new Ask/receipt/tool/approval fixtures and all existing shared overlays.
+Evidence
 includes `/tmp/codeshell-ui-wave3-*`, `/tmp/codeshell-approval-portal-final-review.log`
 and the independent task fixture reports.
 
@@ -181,6 +185,23 @@ Quick Chat panel already scrolls internally and has no queue interface. All queu
 wire contracts passed. Independent implementation starts from `1411d3c0f` on
 `codex/desktop/composer-overflow-20261015`; preserve all pending-interaction fixes.
 Evidence: `/tmp/codeshell-ordinary-composer-audit-20261015/report.json`.
+
+Two further independent review tasks are accepted for the next wave:
+
+- Desktop Sidebar P1: in 800×360, the session scroller falls to 12px; in a
+  390×360 drawer the account footer is outside the viewport. At 320×240, navigation,
+  empty-state actions and account controls are clipped. Keep the content in a
+  usable scroll region and the footer reachable, preserving pagination, session
+  states and menus. Source `9862c50be`; production owned-bridge evidence:
+  `/tmp/codeshell-desktop-sidebar-audit.mjs`. A separate tiny search-dialog content
+  region at 320×240 is retained as a later P2, not part of the Sidebar fix.
+- Settings navigation P2: clear-search and narrow search-result activation lose
+  focus to BODY; switching across the responsive breakpoint while searching does
+  the same, including an isolated native Electron 200% zoom. Hand off only
+  settings-navigation focus to its visible equivalent, retain search selection,
+  and preserve content/external/portal focus. Evidence:
+  `/tmp/codeshell-settings-focus-review.log` and
+  `/tmp/codeshell-settings-focus-electron-review.log`.
 
 Initial audit history follows:
 
