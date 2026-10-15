@@ -12,6 +12,7 @@ export function FigmaConnectionCard({
   cwd,
   snapshot,
   loadError,
+  loading = false,
   reload,
   onChanged,
   localApi,
@@ -19,6 +20,7 @@ export function FigmaConnectionCard({
   cwd: string;
   snapshot?: LinkSnapshot;
   loadError: string;
+  loading?: boolean;
   reload: () => Promise<void>;
   onChanged: () => void;
   localApi?: React.ReactNode;
@@ -105,6 +107,7 @@ export function FigmaConnectionCard({
             cwd={cwd}
             snapshot={snapshot}
             loadError={loadError}
+            loading={loading}
             reload={reload}
             onChanged={onChanged}
             providerId="figma"
@@ -130,9 +133,11 @@ export function FigmaConnectionCard({
             ? t("ext.link.remoteAvailable")
             : connections.length
               ? t("ext.link.remoteReconnectNeeded")
-              : !available
-                ? t("ext.link.directory.unavailable")
-                : t("ext.link.directory.notConnected")
+              : loading
+                ? t("ext.link.directory.checking")
+                : !available
+                  ? t("ext.link.directory.unavailable")
+                  : t("ext.link.directory.notConnected")
         }
         tone={
           connections.some((connection) => connection.status === "connected")
@@ -213,7 +218,9 @@ export function FigmaConnectionCard({
           </Button>
         )}
         {!available && (
-          <p className="text-xs text-muted-foreground">{t("ext.link.directory.unavailableHint")}</p>
+          <p className="text-xs text-muted-foreground">
+            {t(loading ? "ext.link.loadingConnections" : "ext.link.directory.unavailableHint")}
+          </p>
         )}
         {(error || loadError) && (
           <p role="alert" className="text-xs text-status-err">

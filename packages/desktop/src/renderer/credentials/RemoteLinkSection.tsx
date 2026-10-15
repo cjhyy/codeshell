@@ -18,12 +18,17 @@ import { LinkConnectionRow } from "./LinkProviderCard";
 export function useRemoteLinkSnapshot(cwd: string) {
   const [snapshot, setSnapshot] = React.useState<LinkSnapshot>();
   const [error, setError] = React.useState("");
+  const [loading, setLoading] = React.useState(true);
   const api = window.codeshell.links;
   const alive = React.useRef(false);
   const generation = React.useRef(0);
   const reload = React.useCallback(async () => {
-    if (!api.remoteSnapshot) return;
+    if (!api.remoteSnapshot) {
+      if (alive.current) setLoading(false);
+      return;
+    }
     const current = ++generation.current;
+    if (alive.current) setLoading(true);
     try {
       const next = await api.remoteSnapshot(cwd);
       if (alive.current && current === generation.current) {
@@ -32,6 +37,8 @@ export function useRemoteLinkSnapshot(cwd: string) {
       }
     } catch (cause) {
       if (alive.current && current === generation.current) setError(linkError(cause));
+    } finally {
+      if (alive.current && current === generation.current) setLoading(false);
     }
   }, [cwd, api]);
   React.useEffect(() => {
@@ -39,6 +46,7 @@ export function useRemoteLinkSnapshot(cwd: string) {
     generation.current++;
     setSnapshot(undefined);
     setError("");
+    setLoading(true);
     const refresh = () => void reload();
     refresh();
     window.addEventListener("focus", refresh);
@@ -53,7 +61,7 @@ export function useRemoteLinkSnapshot(cwd: string) {
     const timer = setInterval(() => void reload(), 30_000);
     return () => clearInterval(timer);
   }, [snapshot?.remoteCleanupPending, reload]);
-  return { snapshot, error, reload };
+  return { snapshot, error, loading: loading && !snapshot, reload };
 }
 
 function linkError(cause: unknown): string {
@@ -120,6 +128,7 @@ export function RemoteProviderSection({
   cwd,
   snapshot,
   loadError,
+  loading = false,
   reload,
   onChanged,
   providerId,
@@ -129,6 +138,7 @@ export function RemoteProviderSection({
   cwd: string;
   snapshot?: LinkSnapshot;
   loadError: string;
+  loading?: boolean;
   reload: () => Promise<void>;
   onChanged: () => void;
   providerId: string;
@@ -196,6 +206,14 @@ export function RemoteProviderSection({
   const editableConnected = connected.filter((item) => item.editable);
   const available = modes.some((mode) => mode.available);
   const failed = error || loadError;
+  const catalogState = snapshot?.remoteCatalog?.state;
+  const unavailableHint = loading
+    ? t("ext.link.loadingConnections")
+    : catalogState === "unconfigured"
+      ? t("ext.link.remoteUnconfigured")
+      : catalogState === "unavailable" || catalogState === "stale"
+        ? t("ext.link.directory.catalogUnavailable")
+        : t("ext.link.directory.unavailableHint");
   const Management = embedded ? InlineManagement : Dialog;
   const ManagementContent = embedded ? "div" : DialogContent;
   const feedback = (
@@ -279,15 +297,17 @@ export function RemoteProviderSection({
             ) : (
               <Button
                 size="sm"
-                disabled={busy || (!available && !loadError)}
+                disabled={busy || loading || (!available && !loadError)}
                 onClick={() => (loadError ? void reload() : start())}
               >
                 {t(
-                  loadError
-                    ? "ext.link.retry"
-                    : busy
-                      ? "ext.link.remoteConnecting"
-                      : "ext.link.remoteConnect",
+                  loading
+                    ? "ext.link.directory.checking"
+                    : loadError
+                      ? "ext.link.retry"
+                      : busy
+                        ? "ext.link.remoteConnecting"
+                        : "ext.link.remoteConnect",
                 )}
               </Button>
             )}
@@ -304,7 +324,7 @@ export function RemoteProviderSection({
             <p className="mt-2 text-xs text-muted-foreground">{t("ext.link.remoteNoFiles")}</p>
           )}
         {!available && connections.length > 0 && (
-          <p className="mt-3 text-xs text-muted-foreground">{t("ext.link.remoteUnconfigured")}</p>
+          <p className="mt-3 text-xs text-muted-foreground">{unavailableHint}</p>
         )}
         {!managing && <div className="mt-2 space-y-2">{feedback}</div>}
       </LinkConnectionRow>
