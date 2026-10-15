@@ -242,7 +242,7 @@ export function createLinkService(options: LinkServiceOptions = {}) {
         health: NonNullable<LinkSnapshot["remoteCatalog"]>;
       }
     | undefined;
-  let catalogPending: Promise<void> | undefined;
+  const catalogPending = new Map<string, Promise<void>>();
   const revokedOwners = new Set<string>();
   let closed = false;
   let snapshotSignature = "";
@@ -552,8 +552,8 @@ export function createLinkService(options: LinkServiceOptions = {}) {
       (!force && remoteCatalog?.issuer === config.issuer && remoteCatalog.expiresAt > now())
     )
       return;
-    if (!catalogPending) {
-      catalogPending = (async () => {
+    if (!catalogPending.has(config.issuer)) {
+      const pending = (async () => {
         const previous = remoteCatalog?.issuer === config.issuer ? remoteCatalog : undefined;
         let available = previous?.providers ?? [];
         let health: NonNullable<LinkSnapshot["remoteCatalog"]>;
@@ -590,10 +590,11 @@ export function createLinkService(options: LinkServiceOptions = {}) {
             health,
           };
       })().finally(() => {
-        catalogPending = undefined;
+        if (catalogPending.get(config.issuer) === pending) catalogPending.delete(config.issuer);
       });
+      catalogPending.set(config.issuer, pending);
     }
-    await catalogPending;
+    await catalogPending.get(config.issuer);
     await authorize(context);
   }
   function string(value: unknown, max = 200): string {
@@ -1225,7 +1226,7 @@ export function createLinkService(options: LinkServiceOptions = {}) {
     if (!mode) throw new LinkServiceError(400, "invalid_request");
     if (hostAdapter) return startHostOAuth(context, input, hostAdapter);
     if (mode.kind === "redirect") {
-      const result = await startRemoteAuth(context, input);
+      const result = await startRemoteAuthAfterCatalog(context, input);
       const job = remoteJobs.get(result.id)!;
       job.public.methodId = input.methodId;
       job.public.authModeId = authModeId;
@@ -1606,6 +1607,13 @@ export function createLinkService(options: LinkServiceOptions = {}) {
     context: LinkOperationContext,
     input: LinkConnectionInput,
   ): Promise<LinkAuthorization> {
+    await refreshRemoteCatalog(context, true);
+    return startRemoteAuthAfterCatalog(context, input);
+  }
+  async function startRemoteAuthAfterCatalog(
+    context: LinkOperationContext,
+    input: LinkConnectionInput,
+  ): Promise<LinkAuthorization> {
     await authorize(context);
     const checkCapacity = () => {
       pruneRemoteJobs();
@@ -1630,8 +1638,7 @@ export function createLinkService(options: LinkServiceOptions = {}) {
       throw new LinkServiceError(400, "invalid_request");
     const config = options.remoteLink?.();
     if (!config) throw new LinkServiceError(503, "unavailable");
-    await refreshRemoteCatalog(context, remoteCatalog?.health.state !== "ready");
-    // Discovery awaits must not bypass owner revocation or the pending-job limit.
+    // Recheck after discovery; only the currently selected deployment may authorize.
     await authorize(context);
     checkCapacity();
     const capabilities =
