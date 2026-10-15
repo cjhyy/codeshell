@@ -158,7 +158,13 @@ describe("DigitalHumansView contract", () => {
     expect(memorySection).toContain("settingsX.memory.fieldContent");
     expect(memoryDialog).toContain("onDirtyChange={setDirty}");
     expect(memoryDialog).toContain("onSavingChange={setSaving}");
-    expect(memoryDialog).toContain("showClose={!saving}");
+    // The explicit Close stays visible and focusable while saving, but every
+    // closing path still passes through the pending-write and dirty guards.
+    expect(memoryDialog).toContain("showClose={false}");
+    expect(memoryDialog).toContain("aria-disabled={saving}");
+    expect(memoryDialog).toContain("if (!open && saving) return");
+    expect(memoryDialog).toContain("onOpenChange={requestClose}");
+    expect(memoryDialog).toContain("onClick={() => requestClose(false)}");
     expect(memoryDialog).toContain("settingsX.memory.discardTitle");
     expect(memorySection).toContain("confirmDiscardDraft");
     // Saving may outlive a click. Scope/navigation actions stay locked until
@@ -346,7 +352,12 @@ describe("DigitalHumansView contract", () => {
     expect(source).toContain("editorSaveFlowLock.current");
     expect(source).toContain("editorSaveFlowBusy || operations.isBusy");
     // Busy and stale discard decisions are exercised by the editor interaction suite.
-    expect(editor).toContain("showClose={!operationBusy}");
+    expect(editor).toContain("showClose={false}");
+    expect(editor).toContain("aria-disabled={operationBusy}");
+    expect(editor).toContain(
+      "if (!next && (operationBusy || installRequest.current !== null)) return",
+    );
+    expect(editor).toContain("onClick={() => requestClose(false)}");
     // Radix closes on backdrop click / Esc; a half-written profile must not
     // vanish without asking.
     expect(editor).toContain("const dirty =");
@@ -479,7 +490,12 @@ describe("DigitalHumansView contract", () => {
     // The dead end must offer the two real ways to get a digital human.
     expect(source).toContain("<CatalogEmptyState");
     expect(source).toContain("onImport={() => void pickProfileDefinitionImport()}");
-    expect(source).toContain("onCreate={() => setEditor({})}");
+    expect(source).toMatch(
+      /<CatalogEmptyState\b[\s\S]*?onCreate=\{\(opener\) => \{\s*editorOpener\.current = opener;\s*setEditor\(\{\}\);\s*\}\}/,
+    );
+    expect(source).toMatch(
+      /function CatalogEmptyState[\s\S]*?onClick=\{\(event\) => onCreate\(event\.currentTarget\)\}/,
+    );
     expect(source).toContain("digitalHumans.emptyCatalogDescription");
   });
 });
