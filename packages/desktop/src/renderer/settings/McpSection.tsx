@@ -16,6 +16,7 @@ import { translate } from "../i18n/translate";
 import { loadUILanguage } from "../uiLanguage";
 import type { MaskedCredentialView } from "../credentials/types";
 import { buildMcpSettingsPatch } from "./mcpSettingsPatch";
+import { ToolsViewer, ErrorDetailViewer } from "./McpDetailDialogs";
 
 interface McpServer {
   name: string;
@@ -220,6 +221,7 @@ function McpSectionForTarget({ scope, activeProjectPath, settingsProjectPath }: 
   editRef.current = edit;
   const [toolsViewer, setToolsViewer] = useState<McpProbeResult | null>(null);
   const [errorDetailFor, setErrorDetailFor] = useState<McpProbeResult | null>(null);
+  const detailOpener = useRef<HTMLButtonElement | null>(null);
   const [pluginMcpTrust, setPluginMcpTrust] = useState<PluginMcpTrustEntry[]>([]);
   const [pluginTrustAction, setPluginTrustAction] = useState<string | null>(null);
   const confirm = useConfirm();
@@ -634,8 +636,14 @@ function McpSectionForTarget({ scope, activeProjectPath, settingsProjectPath }: 
               onEdit={() => setEdit({ kind: "edit", original: s.name })}
               onOverride={() => setEdit({ kind: "override", original: s.name })}
               onRemove={() => runAction(() => removeServer(s.name))}
-              onViewTools={() => setToolsViewer(probe ?? null)}
-              onShowErrorDetail={() => setErrorDetailFor(probe ?? null)}
+              onViewTools={(opener) => {
+                detailOpener.current = opener;
+                setToolsViewer(probe ?? null);
+              }}
+              onShowErrorDetail={(opener) => {
+                detailOpener.current = opener;
+                setErrorDetailFor(probe ?? null);
+              }}
             />
           );
         };
@@ -678,9 +686,19 @@ function McpSectionForTarget({ scope, activeProjectPath, settingsProjectPath }: 
         />
       )}
 
-      {toolsViewer && <ToolsViewer probe={toolsViewer} onClose={() => setToolsViewer(null)} />}
+      {toolsViewer && (
+        <ToolsViewer
+          probe={toolsViewer}
+          opener={detailOpener.current}
+          onClose={() => setToolsViewer(null)}
+        />
+      )}
       {errorDetailFor && (
-        <ErrorDetailViewer probe={errorDetailFor} onClose={() => setErrorDetailFor(null)} />
+        <ErrorDetailViewer
+          probe={errorDetailFor}
+          opener={detailOpener.current}
+          onClose={() => setErrorDetailFor(null)}
+        />
       )}
     </section>
   );
@@ -700,8 +718,8 @@ interface McpCardProps {
   /** Open the env/credential supplement editor (plugin servers only). */
   onOverride: () => void;
   onRemove: () => void;
-  onViewTools: () => void;
-  onShowErrorDetail: () => void;
+  onViewTools: (opener: HTMLButtonElement) => void;
+  onShowErrorDetail: (opener: HTMLButtonElement) => void;
 }
 
 function McpCard({
@@ -907,7 +925,7 @@ function McpCard({
             variant="link"
             size="sm"
             className="h-auto p-0 text-xs"
-            onClick={onViewTools}
+            onClick={(event) => onViewTools(event.currentTarget)}
           >
             {probe.toolCount ?? 0} tools
           </Button>
@@ -923,7 +941,7 @@ function McpCard({
                 variant="link"
                 size="sm"
                 className="h-auto p-0 text-xs"
-                onClick={onShowErrorDetail}
+                onClick={(event) => onShowErrorDetail(event.currentTarget)}
               >
                 {t("settingsX.mcp.viewDetail")}
               </Button>
@@ -1692,81 +1710,6 @@ function McpEditor({ initial, existingNames, mode = "full", onCancel, onSave }: 
         <Button variant="solid" onClick={submit} disabled={oauthBusy || saving}>
           {initial ? t("settingsX.mcp.save") : t("settingsX.mcp.add")}
         </Button>
-      </div>
-    </div>
-  );
-}
-
-interface ToolsViewerProps {
-  probe: McpProbeResult;
-  onClose: () => void;
-}
-
-function ToolsViewer({ probe, onClose }: ToolsViewerProps) {
-  const { t } = useT();
-  return (
-    <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/35 p-4"
-      onClick={onClose}
-    >
-      <div
-        className="max-h-[80vh] w-full max-w-2xl overflow-y-auto rounded-md border bg-popover p-4 text-popover-foreground shadow-2xl"
-        onClick={(e) => e.stopPropagation()}
-      >
-        <header className="mb-3 flex items-center justify-between gap-3">
-          <strong>
-            {t("settingsX.mcp.toolsHeader", { name: probe.name, count: probe.tools?.length ?? 0 })}
-          </strong>
-          <Button type="button" variant="ghost" size="sm" onClick={onClose}>
-            {t("settingsX.mcp.close")}
-          </Button>
-        </header>
-        {probe.tools && probe.tools.length > 0 ? (
-          <ul className="flex flex-col gap-2">
-            {probe.tools.map((tool) => (
-              <li key={tool.name} className="rounded-md border p-2">
-                <code className="font-mono text-xs text-foreground">{tool.name}</code>
-                {tool.description && (
-                  <span className="mt-1 block text-xs text-muted-foreground">
-                    {tool.description}
-                  </span>
-                )}
-              </li>
-            ))}
-          </ul>
-        ) : (
-          <div className="p-4 text-center text-sm text-muted-foreground">
-            {t("settingsX.mcp.noToolReturned")}
-          </div>
-        )}
-      </div>
-    </div>
-  );
-}
-
-function ErrorDetailViewer({ probe, onClose }: { probe: McpProbeResult; onClose: () => void }) {
-  const { t } = useT();
-  return (
-    <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/35 p-4"
-      onClick={onClose}
-    >
-      <div
-        className="max-h-[80vh] w-full max-w-2xl overflow-y-auto rounded-md border bg-popover p-4 text-popover-foreground shadow-2xl"
-        onClick={(e) => e.stopPropagation()}
-      >
-        <header className="mb-3 flex items-center justify-between gap-3">
-          <strong>{t("settingsX.mcp.errorDetailHeader", { name: probe.name })}</strong>
-          <Button type="button" variant="ghost" size="sm" onClick={onClose}>
-            {t("settingsX.mcp.close")}
-          </Button>
-        </header>
-        <div className="rounded-md bg-status-err/10 p-2 text-sm text-status-err">
-          {probe.errorMessage}
-        </div>
-        <pre className="mt-2 max-h-96 overflow-auto rounded-md bg-muted/40 p-3 font-mono text-xs">
-          {probe.errorDetail}
-        </pre>
       </div>
     </div>
   );

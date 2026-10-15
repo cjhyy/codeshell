@@ -24,6 +24,9 @@ interface Props {
 }
 
 type TitleEdit = { id: string; draft: string; error: string | null };
+type FocusRestore =
+  | { kind: "rename"; id: string; source: HTMLElement | null }
+  | { kind: "search"; source: HTMLElement };
 const errorMessage = (error: unknown) => (error instanceof Error ? error.message : String(error));
 
 export function SessionsView({ onNewSession, onSessionRenamed, onSessionDeleted }: Props) {
@@ -40,16 +43,18 @@ export function SessionsView({ onNewSession, onSessionRenamed, onSessionDeleted 
   const [deleteError, setDeleteError] = useState<{ id: string; message: string } | null>(null);
   const mounted = useRef(true);
   const readVersion = useRef(0);
+  const readPending = useRef(false);
   const savingRef = useRef(false);
   const deletingRef = useRef(false);
   const inputRef = useRef<HTMLInputElement>(null);
   const searchRef = useRef<HTMLInputElement>(null);
   const editorRef = useRef<HTMLDivElement>(null);
   const renameRefs = useRef(new Map<string, HTMLButtonElement>());
-  const restoreFocus = useRef<string | null>(null);
+  const restoreFocus = useRef<FocusRestore | null>(null);
 
-  const refresh = useCallback(async () => {
+  const refresh = useCallback(async (retrySource?: HTMLElement) => {
     const version = ++readVersion.current;
+    readPending.current = true;
     setRefreshing(true);
     try {
       const [list, titleMap] = await Promise.all([
@@ -57,6 +62,9 @@ export function SessionsView({ onNewSession, onSessionRenamed, onSessionDeleted 
         window.codeshell.listSessionTitles(),
       ]);
       if (!mounted.current || version !== readVersion.current) return;
+      if (retrySource && document.activeElement === retrySource) {
+        restoreFocus.current = { kind: "search", source: retrySource };
+      }
       setSessions(list);
       setTitles({
         ...Object.fromEntries(list.map((session) => [session.id, session.title ?? ""])),
@@ -66,7 +74,10 @@ export function SessionsView({ onNewSession, onSessionRenamed, onSessionDeleted 
     } catch (error) {
       if (mounted.current && version === readVersion.current) setReadError(errorMessage(error));
     } finally {
-      if (mounted.current && version === readVersion.current) setRefreshing(false);
+      if (mounted.current && version === readVersion.current) {
+        readPending.current = false;
+        setRefreshing(false);
+      }
     }
   }, []);
 
@@ -87,11 +98,23 @@ export function SessionsView({ onNewSession, onSessionRenamed, onSessionDeleted 
   }, [editing?.id]);
 
   useLayoutEffect(() => {
-    if (editing || !restoreFocus.current) return;
-    const target = renameRefs.current.get(restoreFocus.current) ?? searchRef.current;
+    const request = restoreFocus.current;
+    if (editing || !request) return;
     restoreFocus.current = null;
-    target?.focus({ preventScroll: true });
-  }, [editing, sessions, deleting]);
+    if (document.activeElement !== document.body && document.activeElement !== request.source) {
+      return;
+    }
+    const target =
+      request.kind === "rename"
+        ? (renameRefs.current.get(request.id) ?? searchRef.current)
+        : searchRef.current;
+    target?.focus();
+  }, [editing, sessions, deleting, readError]);
+
+  const requestRefresh = (retrySource?: HTMLElement) => {
+    if (readPending.current || editing || deletingRef.current) return;
+    void refresh(retrySource);
+  };
 
   const query = filter.trim().toLowerCase();
   const filtered = (sessions ?? []).filter(
@@ -102,18 +125,19 @@ export function SessionsView({ onNewSession, onSessionRenamed, onSessionDeleted 
   );
 
   const startEdit = (session: DesktopSessionSummary) => {
-    if (editing || refreshing || deletingRef.current) return;
+    if (editing || readPending.current || deletingRef.current) return;
     setEditing({ id: session.id, draft: titles[session.id] ?? "", error: null });
   };
 
   const closeEditor = (id: string) => {
     // A save may finish after focus has moved elsewhere. Only restore focus
-    // when this editor still owns it, or its pending button lost browser focus.
-    if (
-      document.activeElement === document.body ||
-      editorRef.current?.contains(document.activeElement)
-    ) {
-      restoreFocus.current = id;
+    // when this editor still owns it.
+    if (editorRef.current?.contains(document.activeElement)) {
+      restoreFocus.current = {
+        kind: "rename",
+        id,
+        source: document.activeElement as HTMLElement,
+      };
     }
     setEditing(null);
   };
@@ -143,10 +167,7 @@ export function SessionsView({ onNewSession, onSessionRenamed, onSessionDeleted 
       setEditing((current) =>
         current?.id === id ? { ...current, error: errorMessage(error) } : current,
       );
-      if (
-        document.activeElement === document.body ||
-        editorRef.current?.contains(document.activeElement)
-      ) {
+      if (editorRef.current?.contains(document.activeElement)) {
         inputRef.current?.focus();
       }
     } finally {
@@ -156,16 +177,18 @@ export function SessionsView({ onNewSession, onSessionRenamed, onSessionDeleted 
   };
 
   const removeSession = async (session: DesktopSessionSummary, row: HTMLElement | null) => {
-    if (deletingRef.current || editing || savingRef.current) return;
+    if (deletingRef.current || editing || savingRef.current || readPending.current) return;
     deletingRef.current = true;
     setDeleting(session.id);
-    setDeleteError(null);
+    // Keep a retry action mounted while its request is pending so keyboard
+    // focus survives both another failure and the eventual successful removal.
+    setDeleteError((current) => (current?.id === session.id ? current : null));
     try {
       await window.codeshell.deleteSession(session.id);
       onSessionDeleted?.(session.id);
       if (!mounted.current) return;
-      if (document.activeElement === document.body || row?.contains(document.activeElement))
-        restoreFocus.current = "search";
+      if (row?.contains(document.activeElement))
+        restoreFocus.current = { kind: "search", source: document.activeElement as HTMLElement };
       setSessions((current) => current?.filter((item) => item.id !== session.id) ?? null);
     } catch (error) {
       if (mounted.current) setDeleteError({ id: session.id, message: errorMessage(error) });
@@ -181,14 +204,23 @@ export function SessionsView({ onNewSession, onSessionRenamed, onSessionDeleted 
   };
 
   return (
-    <div className="flex h-full min-h-0 min-w-0 flex-col bg-muted/10" data-sessions-page>
+    <div
+      role="region"
+      aria-labelledby={`${pageId}-title`}
+      tabIndex={0}
+      className="flex h-full min-h-0 min-w-0 flex-col overflow-y-auto overscroll-contain bg-muted/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset"
+      data-sessions-page
+    >
       <div className="mx-auto flex w-full max-w-5xl shrink-0 flex-wrap items-center justify-between gap-3 px-4 pt-6 sm:px-6">
         <div className="flex min-w-0 items-start gap-3">
           <span className="flex size-11 shrink-0 items-center justify-center rounded-2xl border border-border/70 bg-card text-primary">
             <MessageSquare size={20} aria-hidden />
           </span>
           <div className="min-w-0">
-            <h1 className="text-xl font-semibold tracking-tight text-foreground">
+            <h1
+              id={`${pageId}-title`}
+              className="text-xl font-semibold tracking-tight text-foreground"
+            >
               {t("auto.sessions.title")}
             </h1>
             <p className="mt-1 text-sm leading-relaxed text-muted-foreground">
@@ -240,9 +272,9 @@ export function SessionsView({ onNewSession, onSessionRenamed, onSessionDeleted 
             type="button"
             size="sm"
             variant="ghost"
-            className="rounded-lg"
-            disabled={refreshing || !!editing || !!deleting}
-            onClick={() => void refresh()}
+            className="rounded-lg aria-disabled:cursor-wait aria-disabled:opacity-50"
+            aria-disabled={refreshing || !!editing || !!deleting}
+            onClick={() => requestRefresh()}
           >
             <RefreshCw size={14} aria-hidden className={refreshing ? "animate-spin" : undefined} />
             {t("auto.sessions.refresh")}
@@ -261,8 +293,9 @@ export function SessionsView({ onNewSession, onSessionRenamed, onSessionDeleted 
               type="button"
               size="sm"
               variant="outline"
-              disabled={refreshing || !!editing || !!deleting}
-              onClick={() => void refresh()}
+              className="aria-disabled:cursor-wait aria-disabled:opacity-50"
+              aria-disabled={refreshing || !!editing || !!deleting}
+              onClick={(event) => requestRefresh(event.currentTarget)}
             >
               {t("auto.sessions.retry")}
             </Button>
@@ -285,7 +318,7 @@ export function SessionsView({ onNewSession, onSessionRenamed, onSessionDeleted 
               {t("auto.sessions.resultCount", { count: filtered.length, total: sessions.length })}
             </p>
             {filtered.length === 0 ? (
-              <div className="overflow-y-auto rounded-2xl border border-dashed border-border/80 bg-card/50 px-5 py-10 text-center">
+              <div className="min-h-40 shrink-0 overflow-y-auto rounded-2xl border border-dashed border-border/80 bg-card/50 px-5 py-10 text-center">
                 <MessageSquare size={24} aria-hidden className="mx-auto text-muted-foreground" />
                 <h2 className="mt-3 text-base font-medium">
                   {t(query ? "auto.sessions.noMatch" : "auto.sessions.emptyTitle")}
@@ -308,7 +341,7 @@ export function SessionsView({ onNewSession, onSessionRenamed, onSessionDeleted 
             ) : (
               <ul
                 aria-label={t("auto.sessions.title")}
-                className="min-h-0 min-w-0 space-y-2 overflow-y-auto pb-1"
+                className="min-h-40 min-w-0 flex-1 shrink-0 space-y-2 overflow-y-auto pb-1"
               >
                 {filtered.map((session) => {
                   const title = titles[session.id];
@@ -374,8 +407,8 @@ export function SessionsView({ onNewSession, onSessionRenamed, onSessionDeleted 
                             <Button
                               type="button"
                               size="sm"
-                              className="rounded-lg"
-                              disabled={saving}
+                              className="rounded-lg aria-disabled:cursor-wait aria-disabled:opacity-50"
+                              aria-disabled={saving}
                               onClick={() => void commitEdit()}
                             >
                               {saving ? (
@@ -420,8 +453,11 @@ export function SessionsView({ onNewSession, onSessionRenamed, onSessionDeleted 
                               type="button"
                               size="sm"
                               variant="ghost"
-                              className="rounded-lg text-muted-foreground hover:bg-status-err/10 hover:text-status-err"
-                              disabled={!!editing || !!deleting || refreshing}
+                              className="rounded-lg text-muted-foreground hover:bg-status-err/10 hover:text-status-err aria-disabled:cursor-wait aria-disabled:opacity-50"
+                              disabled={
+                                !!editing || (!!deleting && deleting !== session.id) || refreshing
+                              }
+                              aria-disabled={deleting === session.id}
                               aria-label={t("auto.sessions.deleteNamed", {
                                 title: title || session.id,
                               })}
@@ -460,7 +496,9 @@ export function SessionsView({ onNewSession, onSessionRenamed, onSessionDeleted 
                             type="button"
                             size="sm"
                             variant="outline"
-                            disabled={!!deleting || !!editing}
+                            className="aria-disabled:cursor-wait aria-disabled:opacity-50"
+                            disabled={!!editing || (!!deleting && deleting !== session.id)}
+                            aria-disabled={deleting === session.id || refreshing}
                             onClick={(event) =>
                               void removeSession(session, event.currentTarget.closest("li"))
                             }

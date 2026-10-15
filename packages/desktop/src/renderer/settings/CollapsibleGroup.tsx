@@ -28,7 +28,7 @@ export function CollapsibleGroup({ title, subtitle, badge, defaultOpen = true, c
         aria-expanded={open}
         onClick={() => setOpen((v) => !v)}
         className={cn(
-          "h-auto w-full select-none justify-between gap-3 rounded-none px-3 py-2.5 text-left hover:bg-accent/50",
+          "h-auto w-full select-none whitespace-normal [overflow-wrap:anywhere] justify-between gap-3 rounded-none px-3 py-2.5 text-left hover:bg-accent/50",
           // No stray focus ring on mouse click; only a subtle inset ring on
           // keyboard focus (the orange browser-default outline looked broken).
           "outline-none focus-visible:ring-2 focus-visible:ring-ring/40 focus-visible:ring-inset",

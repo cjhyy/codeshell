@@ -50,7 +50,7 @@ The initial blockers below are retained as resolved verification history.
 
 Current integration worktree:
 `/Users/admin/.codex/worktrees/ui-task-center-20261015/codeshell`, branch
-`codex/integration/ui-review-wave4-20261015`. Other work advanced remote main to
+`codex/integration/ui-review-wave5-20261015`. Other work advanced remote main to
 `0.9.44`; this branch merged `976a79322` and `bb7a9b59a`, preserving the incoming model-capability,
 forwarding and Figma updates. The CSS merge preserves both context-selection and
 file-action styles. Do not revert incoming work or republish another version on
@@ -216,7 +216,10 @@ main: `codex/desktop/composer-overflow-20261015`,
 on the current root branch, refresh main, and verify the final combination before
 delivery. Third-wave CI must be checked before another main push cancels it.
 
-Fourth wave in progress (root branch contains the reviewed commits):
+Fourth wave delivered to remote main at `94f1a462b`. CI `38733481703` completed
+successfully with all 12 jobs green, including real Electron, real win32, all
+workspace types, guarded unit shards and all responsive browser checks.
+The root branch contains these reviewed commits:
 
 - `95579ea41` (source `dc92d56cd`): Sidebar content scrolls as one region while
   the account footer stays reachable. Resize/focusin only scroll the currently
@@ -247,8 +250,8 @@ Fourth wave in progress (root branch contains the reviewed commits):
   Production TSX only assigns that attribute in ChatView. The fixture now leaves
   the attribute on the standalone cards surface only, asserts exactly one variant
   root, and retains all bounds/wire/120-frame assertions. No production change or
-  assertion weakening was made; the complete 25-fixture rerun passed. Fourth wave
-  is ready for main delivery after a final origin refresh.
+  assertion weakening was made; the complete 25-fixture rerun passed before the
+  fresh-origin fast-forward delivery.
 - Root separately owns the accepted search-dialog short-window P2 on
   `codex/desktop/session-search-layout-20261015` in the clean reused
   `file-browser-ui-20261015` tree, checkpoint `c5b7473a7`. Scoped
@@ -304,6 +307,143 @@ nested group, plus long connection IDs widening the page. Evidence:
 `/tmp/codeshell-connections-ui-audit-20261015/report.json`. Accept recovery and
 actual-pane card bounds as the next independent scope; preserve persisted
 connection/provider identity, confirmation and all existing probe authority.
+
+Fifth wave is now implementing three independent scopes from delivered main:
+release_audit owns Search and its exact viewport/native-wheel harness in the
+file-browser tree; bridge_test_fix owns `codex/desktop/history-page-recovery-20261015`
+in the desktop-bridge tree; ui_audit owns
+`codex/desktop/connection-settings-recovery-20261015` in the context-settings tree.
+Root integrates reviewed commits in the current UI5 branch, preserves incoming
+main and verifies the final combination before another push. UI4 CI is now green.
+
+Search is now complete and integrated as `9882f5b35` (source `ed1bc6374`, parent
+`94f1a462b`). The final six-file commit contains scoped short-window density,
+fully wrapped search mode labels and a 371-line production fixture, registered
+as the 26th browser check. Chrome uses fresh contexts at each exact initial
+viewport; Electron uses actual BrowserWindow content sizes and also proves wheel
+after every live resize. Both passed 32 layouts/102 observations with strict
+wheel, full Retry bounds/hit, unchanged action wires, query/focus retention,
+synthetic composing guard and Escape return. All hidden/clip ancestors stay at
+scroll zero; no product wheel handler or diagnostic build plugin remains. Types,
+renderer build, scoped lint and 24 guarded tests passed; independent review was
+green. Root independently passed the integrated 32/102 fixture. The unpublished
+checkpoint history is retained on
+`codex/desktop/session-search-layout-checkpoint-20261015` (`b48e9b9d3`).
+Root also independently passed all 32/102 Electron layouts and native live-resize
+wheel checks after integration; evidence `codeshell-search-layout-cgJAWY` and
+`/tmp/codeshell-ui-wave5-search-native-combined.log`.
+
+The actual Settings→MCP audit confirmed the two detail viewers have no dialog
+role/focus containment/Escape ownership, leave keyboard focus in background
+actions and push Close offscreen with long server names. Owned bridge evidence:
+`codeshell-mcp-details-audit-zr8R5s/report.json`. release_audit now owns
+`codex/desktop/mcp-detail-dialogs-20261015` in the clean sidebar worktree, based
+on main `94f1a462b`. Accepted scope is only ToolsViewer/ErrorDetailViewer modal
+keyboard/focus recovery and complete long-content bounds. Preserve every tool
+and raw diagnostic; no MCP probe/save/trust/credential/transport changes.
+Its completion and independent review determine whether it joins UI5 or UI6.
+
+UI5 History is integrated as `b192e9cc9` (source `0dc8b31dd`, base `94f1a462b`):
+complete model usage has a bounded named keyboard scroll region, list/detail
+retain useful minimum reading areas, and Sessions owns its error/empty/list
+scrolling. Refresh/delete/rename use synchronous guards and focus ownership;
+failed drafts remain, external field/blank clicks prevent recovery focus theft.
+Source checks passed 19 guarded tests/143 assertions, Desktop/mobile types,
+renderer build, scoped lint/format, 8 Chrome layouts and 4 actual Electron
+language/100–200% zoom layouts. ui_audit independently reviewed and passed the
+production matrix. The same final fixture against unmodified Root history
+failed directly on minimum readable run detail height; evidence
+`/tmp/codeshell-history-page-recovery-before.log`.
+
+UI5 Connections is integrated as `9cd1cbe66`/`a5552da9d` (source
+`1054493cf`/`89c3eda85`, base `94f1a462b`). Search writes commit UI state only
+after success, preserve newer provider drafts and selection, serialize pending
+operations and protect unknown settings after failed reads. Actual user/project
+wire contracts and legacy credentials remain intact. Shared cards fit their
+actual pane and long IDs/subtitles wrap. Source checks passed 50 guarded
+tests/72 assertions, Desktop/mobile types, renderer build, scoped lint/format,
+24 production layouts/187 observations and independent bridge review. Strong
+document-height/hidden-ancestor assertions caught an escaping sr-only heading;
+the final local `relative` containing block fixes it without global shell edits.
+Evidence `codeshell-connections-ui-p5YgCr/report.json`; baseline fails the same
+default-provider and long-ID assertions. Root reviewed the final source and
+registered both new fixtures; combined UI5 gates remain pending MCP delivery.
+
+MCP is now integrated from `febb3dee2` (parent `94f1a462b`); only the two
+viewers and their actual opener capture changed. Complete tools/raw diagnostics
+remain; standard dialogs contain Tab, close with Escape and return only owned
+focus. External pointer/focus, window blur and unmounted targets cancel return.
+Source Chrome 16 layouts/84 observations and real Electron 16/96 (including
+12 actual live-resize observations) passed with no errors/outside requests/
+mutations. Types, renderer build, lint/format and 13 lifecycle tests passed,
+with two independent product reviews green. Before evidence fails directly
+because the old viewer has no dialog role. Root registered the MCP fixture;
+UI5 now freezes Search/History/Connections/MCP for combined gates, 29 browser
+fixtures in total. No additional release/version change is planned.
+Combined all 14 workspace types, lint (0 errors/104 existing warnings) and full
+Desktop main/preload/renderer/mobile/extension build passed. Guarded units passed
+3399 tests/12595 assertions across 372 files (one separately browser-covered
+skip); all 29 browser fixtures passed. Sequential production full-app Electron
+Settings, Search and Operations pages all passed. Logs are
+`/tmp/codeshell-ui-wave5-{typecheck,lint,desktop-build,unit,overlays,native-settings,native-search,native-operations}.log`.
+Root independently verified every final scope in the combination and refreshed
+remote main before delivery. Remote CI remains pending the push.
+
+The repository's later release `v0.9.44` was published at 09:44:42Z with all
+14 native/update assets present. This follows our verified `v0.9.43` publication;
+preserve that later release and collect UI work under Unreleased.
+
+Root's production TopBar→NotificationHistory audit passed 16 language/theme/
+window combinations down to 320×240 with 40 complete long notifications, native
+wheel, keyboard reachability, full final actions and exact Escape focus return.
+No product change is needed; evidence
+`/tmp/codeshell-notifications-ui-audit-20261015/report.json`. The initial immediate
+post-unmount focus sample was premature; waiting for Radix close autofocus
+confirmed correct return in every case without modifying product behavior.
+
+Next independent candidate: valid long cloud environment/project names make
+NewProjectDialog's linked-project view scroll 2073px inside a 286px client width.
+CloudProjectSignIn starts at 2310px scroll width and a rejected owned login leaves
+BODY focus; native form focus can scroll Close to negative x. Root reproduced
+18 production component layouts with zero page errors/outside requests and
+confirmed active App/CloudProjectWorkspace entry points. Evidence:
+`/tmp/codeshell-project-dialogs-ui-audit-20261015/report.json` and screenshots.
+ui_audit may independently verify after Connections delivery. Any accepted fix
+must be limited to layout/focus recovery, preserving login identity, authority,
+password clearing, duplicate-submit, stale-binding and reconnect semantics.
+Independent ui_audit reproduced long-name overflow and normal-name SignIn
+failure (6/6 BODY after settling); local chooser failure retains its own button.
+
+bridge_test_fix independently confirmed CloudProjectWorkspace metadata can
+collapse an enabled restored draft and output to zero after a definite connected
+send failure: native 800×480 at actual 200% zoom (400×240) has a 397px long-error
+alert above a 0px chat. Keyboard can focus the clipped textarea and shift the
+hidden app ancestor; native wheel cannot recover it. Names tested stay within
+host/server limits (128/80). Accepted scope is only complete bounded, named,
+keyboard-scrollable identity/status/error metadata and existing action/focus
+reachability, preserving all ChatView/runtime/send/auth behavior. New branch
+`codex/desktop/cloud-workspace-metadata-20261015` may start from current origin
+main `94f1a462b` because this component is unchanged, then must refresh against
+delivered UI5 before final gates. Evidence `/tmp/codeshell-cloud-banner-review-report.json`
+and `/tmp/codeshell-cloud-banner-native-report.json`.
+
+UI6 also accepts ui_audit's independently reproduced Cloud chooser/sign-in/
+manager layout and owned failure-focus scope on
+`codex/desktop/cloud-dialog-recovery-20261015`; preserve all authentication,
+identity, password-clearing, uncertain-state and request guards. release_audit
+owns `codex/desktop/profile-dialog-layout-20261015`: actual Settings Editor,
+Memory and Switch dialogs have existing modal semantics but lose Escape focus,
+scroll Close outside short windows and overflow with long content. Limit changes
+to bounded header/body/footer, complete content and safe actual opener capture;
+preserve save/switch/memory/capability business. Each starts from fresh main
+`94f1a462b` because these files are unchanged, then must refresh delivered UI5
+before final verification. Independent owned fixtures only; no real credentials,
+provider traffic or configuration writes. Native windows are coordinated.
+
+Primary checkout currently remains on another task's main at `2e0462c68`,
+26 local commits ahead of the current remote, plus pre-existing `.claude/` and
+`docs/todo/browser-panel-runtime-design.md`. Leave it untouched; task delivery
+uses the clean integration checkout and does not publish unknown local commits.
 
 Initial audit history follows:
 

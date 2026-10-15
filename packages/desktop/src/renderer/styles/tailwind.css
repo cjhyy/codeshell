@@ -83,6 +83,43 @@
   }
 }
 
+/* Short search windows need room for results. These scoped overrides sit
+   outside layers so the normal utility spacing remains the large-window default. */
+@media (max-height: 32rem) {
+  .cs-search-dialog {
+    top: 0.5rem;
+    max-height: calc(100dvh - 1rem);
+  }
+
+  .cs-search-dialog-heading {
+    padding-top: 0.25rem;
+    padding-bottom: 0;
+  }
+
+  .cs-search-dialog-hint {
+    padding-block: 0.375rem;
+  }
+
+  .cs-search-dialog [cmdk-input] {
+    height: 2.25rem;
+  }
+
+  .cs-search-results-heading {
+    padding-top: 0;
+  }
+
+  .cs-search-state {
+    gap: 0.5rem;
+    padding-block: 0.75rem;
+  }
+}
+
+@media (max-height: 20rem) {
+  .cs-search-dialog-hint {
+    display: none;
+  }
+}
+
 /*
  * Explicit, class-scoped state styling for components that rely on Radix's
  * `data-state` attribute. Tailwind v4.3 mis-compiles the `data-[state=...]:`

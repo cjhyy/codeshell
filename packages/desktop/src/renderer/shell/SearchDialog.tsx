@@ -24,7 +24,7 @@ export function SearchDialog({ open, title, onClose, inputRef, children }: Props
         <Dialog.Overlay className="fixed inset-0 z-50 bg-black/40 backdrop-blur-[2px]" />
         <Dialog.Content
           ref={contentRef}
-          className="fixed left-1/2 top-[min(12vh,6rem)] z-50 flex max-h-[calc(88dvh-1rem)] w-[calc(100%-2rem)] max-w-2xl -translate-x-1/2 flex-col overflow-hidden rounded-2xl border border-border/80 bg-popover text-popover-foreground shadow-2xl"
+          className="cs-search-dialog fixed left-1/2 top-[min(12vh,6rem)] z-50 flex max-h-[calc(88dvh-1rem)] w-[calc(100%-2rem)] max-w-2xl -translate-x-1/2 flex-col overflow-hidden rounded-2xl border border-border/80 bg-popover text-popover-foreground shadow-2xl"
           aria-describedby={undefined}
           onOpenAutoFocus={(event) => {
             openerRef.current = resolveSearchOpener(document.activeElement);
@@ -57,7 +57,7 @@ export function SearchDialog({ open, title, onClose, inputRef, children }: Props
             if (event.isComposing || event.keyCode === 229) event.preventDefault();
           }}
         >
-          <div className="flex shrink-0 items-center justify-between gap-3 px-4 pb-1 pt-3">
+          <div className="cs-search-dialog-heading flex shrink-0 items-center justify-between gap-3 px-4 pb-1 pt-3">
             <Dialog.Title className="text-sm font-semibold">{title}</Dialog.Title>
             <Dialog.Close asChild>
               <Button
@@ -72,7 +72,7 @@ export function SearchDialog({ open, title, onClose, inputRef, children }: Props
             </Dialog.Close>
           </div>
           {children}
-          <div className="shrink-0 border-t border-border/70 bg-muted/25 px-4 py-2.5 text-[11px] text-muted-foreground">
+          <div className="cs-search-dialog-hint shrink-0 border-t border-border/70 bg-muted/25 px-4 py-2.5 text-[11px] text-muted-foreground">
             {t("panels.search.keyboardHint")}
           </div>
         </Dialog.Content>

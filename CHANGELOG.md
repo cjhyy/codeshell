@@ -41,6 +41,13 @@ breaking.
   visible conversation output and access to input and Stop.
 - Preserve Settings search and navigation focus through clearing, result
   selection, responsive layouts, zoom and closing navigation popups.
+- Keep search results and full search-mode labels usable in short windows.
+- Keep complete run usage, session history and recovery actions reachable in
+  short panes, preserving rename drafts and the user's current focus.
+- Preserve search-connection drafts and persisted defaults through failed or
+  delayed operations, and keep connection cards within narrow Settings panes.
+- Make MCP tool and error details keyboard-operable dialogs with visible Close
+  controls, complete scrollable content and focus return to their opener.
 
 ## [0.9.44] - 2026-10-15
 
