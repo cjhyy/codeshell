@@ -42,6 +42,64 @@ describe("browser tools — host without a browser bridge", () => {
   });
 });
 describe("browser_observe", () => {
+  test.each([
+    ["openai/gpt-6.1-sol", true, true],
+    ["future/unknown-model", true, true],
+    ["openai/gpt-5.6-sol", false, false],
+    ["openai/gpt-5.6-sol", undefined, true],
+    ["future/unknown-model", undefined, false],
+  ] as const)(
+    "image, vision and timeout fallback use current model capability for %s",
+    async (model, configured, allowed) => {
+      for (const mode of ["image", "vision", "snapshot"]) {
+        const screenshot = mock(async () => ({ ok: true, base64: "QUJD", mediaType: "image/png" }));
+        const fetchImages = mock(async () => [
+          { ok: true, base64: "QUJD", mediaType: "image/png", ref: "img1" },
+        ]);
+        const ctx = {
+          ...ctxWith({
+            screenshot,
+            fetchImages,
+            snapshot: async () => ({
+              code: "TIMEOUT" as const,
+              detail: "timed out",
+              url: "",
+              elements: [],
+            }),
+          }),
+          llmConfig: {
+            provider: "openrouter",
+            providerKind: "openrouter",
+            model,
+            supportsVision: configured,
+          },
+        } as ToolContext;
+        const out = await browserObserveTool({ mode, refs: ["img1"] }, ctx);
+        expect(typeof out).toBe(allowed ? "object" : "string");
+        expect(fetchImages).toHaveBeenCalledTimes(allowed && mode === "image" ? 1 : 0);
+        expect(screenshot).toHaveBeenCalledTimes(allowed && mode !== "image" ? 1 : 0);
+      }
+    },
+  );
+
+  test("model replacement and same-model capability updates affect the next observation", async () => {
+    const screenshot = mock(async () => ({ ok: true, base64: "QUJD", mediaType: "image/png" }));
+    const ctx = {
+      ...ctxWith({ screenshot }),
+      llmConfig: {
+        provider: "openrouter",
+        model: "openai/gpt-6.1-sol",
+        supportsVision: true,
+      },
+    } as ToolContext;
+    expect(typeof (await browserObserveTool({ mode: "vision" }, ctx))).toBe("object");
+    ctx.llmConfig = { provider: "openrouter", model: "openai/gpt-5.6-sol", supportsVision: false };
+    expect(await browserObserveTool({ mode: "vision" }, ctx)).toContain("不支持视觉");
+    ctx.llmConfig = { ...ctx.llmConfig, supportsVision: true };
+    expect(typeof (await browserObserveTool({ mode: "vision" }, ctx))).toBe("object");
+    expect(screenshot).toHaveBeenCalledTimes(2);
+  });
+
   test.each(["snapshot", "read", "extract"])(
     "%s timeout falls back once without replaying actions",
     async (mode) => {

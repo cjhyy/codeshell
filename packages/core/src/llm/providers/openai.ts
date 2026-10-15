@@ -24,11 +24,10 @@ import { LLMClientBase } from "../client-base.js";
 import { ContextLimitError, LLMError, LLMRateLimitError } from "../../exceptions.js";
 import { logger } from "../../logging/logger.js";
 import { countTokens } from "../token-counter.js";
-import { capabilitiesFor, type Capability } from "../capabilities/index.js";
+import { capabilitiesForConfig, type Capability } from "../capabilities/index.js";
 import { clampMaxTokens } from "../clamp-max-tokens.js";
 import { resolveApiKey, resolveHeaders } from "../provider-auth.js";
 import { stripVisionFromHistory } from "../strip-vision.js";
-import type { ProviderKindName } from "../provider-kinds.js";
 import {
   createPromptCacheKey,
   PromptCacheHistory,
@@ -350,15 +349,13 @@ export class OpenAIClient extends LLMClientBase {
   /**
    * Resolve the capability descriptor for the current (provider kind, model)
    * pair. Cached for the lifetime of the client — model never changes
-   * mid-client. `providerKind` defaults to "openai" because legacy LLMConfig
-   * paths (arena, env-derived) don't always populate it; for those, the
-   * built-in rules table treats them as plain OpenAI.
+   * mid-client. Explicit catalog capabilities override the family rules, just
+   * as they do for tools and image attachments.
    */
   private _capability: Capability | null = null;
   private get capability(): Capability {
     if (!this._capability) {
-      const kind = (this.config.providerKind ?? "openai") as ProviderKindName;
-      this._capability = capabilitiesFor(kind, this.model);
+      this._capability = capabilitiesForConfig(this.config);
     }
     return this._capability;
   }

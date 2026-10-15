@@ -462,6 +462,9 @@ export class Engine {
    * writers are additionally fenced by SessionManager's persisted revision CAS.
    */
   private runInProgress = false;
+  private pendingLlm?: import("../types.js").LLMConfig;
+  /** Only bind selections owned by this Engine's pool; child/SDK snapshots may name a foreign pool. */
+  private boundModelKey?: string;
   private runAbort?: AbortController;
   private revokedInstructionContext: SessionBundle | undefined;
   private activeInstructionSessionId: string | undefined;
@@ -803,6 +806,13 @@ export class Engine {
       if (!config.runtime) {
         this.populateModelPoolFromSettings();
       }
+      if (
+        config.isSubAgent !== true &&
+        this.config.llm.modelKey &&
+        this.modelPool.has(this.config.llm.modelKey)
+      ) {
+        this.boundModelKey = this.config.llm.modelKey;
+      }
       this.lifetime.own(() => (this.runtime?.mcpPool ?? this.mcpManager)?.unregisterOwner(this));
       const serviceHost = this.moduleServiceHost();
       this.moduleReady = createPrivateServices(
@@ -983,8 +993,8 @@ export class Engine {
   /**
    * Re-read settings and refresh the model pool. Used after onboarding /login
    * writes new modelConnections[] to disk so the running engine picks them
-   * up without a process restart. Existing pool entries are kept (re-registering
-   * the same key overwrites them), so callers don't need to clear first.
+   * up without a process restart. Replace definitions, retaining this session's
+   * selected connection; deleted connections fail closed at the next boundary.
    */
   reloadModelPool(): void {
     // When sharing a runtime, the owner of the runtime is responsible
@@ -992,8 +1002,31 @@ export class Engine {
     // blast that owner's contributions and affect every other Engine
     // that shares this runtime.
     if (!this.runtime) {
+      const selectedLlm = this.config.llm;
+      this.getSettingsManager().invalidate();
+      this.modelPool.clear();
       this.populateModelPoolFromSettings();
+      // Reload definitions without replacing this session's selected connection
+      // or mutating a live run. The next boundary resolves its fresh metadata.
+      if (this.boundModelKey || this.runInProgress) {
+        this.config = { ...this.config, llm: selectedLlm };
+      } else {
+        this.boundModelKey = this.config.llm.modelKey;
+      }
     }
+  }
+
+  private refreshCurrentModelConfig(): void {
+    if (this.pendingLlm) {
+      this.config = { ...this.config, llm: this.pendingLlm };
+      this.boundModelKey = this.pendingLlm.modelKey;
+      this.pendingLlm = undefined;
+    }
+    const key = this.boundModelKey;
+    if (!key) return; // Explicit SDK configs have no catalog/connection binding.
+    const llm = this.modelPool.resolveLLMConfig(key);
+    if (!llm) throw new ConfigError(`Selected model connection "${key}" is no longer configured`);
+    this.config = { ...this.config, llm };
   }
 
   /**
@@ -1394,6 +1427,7 @@ export class Engine {
       throw new Error(`Persisted source model is no longer configured: ${state.model}`);
     }
     this.config = { ...this.config, llm: this.modelPool.toLLMConfig(entry) };
+    this.boundModelKey = entry.key;
   }
 
   /**
@@ -1421,6 +1455,7 @@ export class Engine {
     try {
       await this.ready();
       if (this.disposed) throw new Error("Engine has been disposed");
+      this.refreshCurrentModelConfig();
       return await this.runExclusive(task, options, runTiming);
     } catch (error) {
       // Once a run is durably claimed, even a pre-loop initialization failure
@@ -3581,7 +3616,12 @@ export class Engine {
     // runtime knobs (temperature/timeout/retryMaxAttempts/imageDetail) live on
     // this.config.clientDefaults and survive the switch untouched.
     const nextLlm = this.modelPool.toLLMConfig(entry);
-    this.config = { ...this.config, llm: nextLlm };
+    if (this.runInProgress) this.pendingLlm = nextLlm;
+    else {
+      this.pendingLlm = undefined;
+      this.boundModelKey = entry.key;
+      this.config = { ...this.config, llm: nextLlm };
+    }
     // persist: false is the per-session path (ChatSession) — switching one
     // session's model must not rewrite settings.defaults.text, the boot
     // default every future session inherits.
@@ -4906,6 +4946,7 @@ export class Engine {
     profileMemoryDir?: string,
   ): ToolContext {
     if (this.disposed || this.lifetime.disposed) throw new Error("Engine has been disposed");
+    if (!this.runInProgress) this.refreshCurrentModelConfig();
     const { disabledSkills, disabledPlugins } = this.readDisabledLists(
       cwd,
       explicitProfileOverrides,

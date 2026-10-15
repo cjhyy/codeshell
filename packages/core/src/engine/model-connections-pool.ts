@@ -63,10 +63,13 @@ export function modelEntriesFromConnections(
       provider: clientProvider(entry),
       providerKind: entry.adapterKind,
       model: resolved.model,
+      ...(preset?.supportsVision !== undefined ? { supportsVision: preset.supportsVision } : {}),
       baseUrl: resolved.baseUrl,
       needsKey: resolved.needsKey,
       ...(resolved.apiKey !== undefined ? { apiKey: resolved.apiKey } : {}),
-      ...(preset?.maxContextTokens !== undefined ? { maxContextTokens: preset.maxContextTokens } : {}),
+      ...(preset?.maxContextTokens !== undefined
+        ? { maxContextTokens: preset.maxContextTokens }
+        : {}),
       ...(preset?.maxOutputTokens !== undefined ? { maxOutputTokens: preset.maxOutputTokens } : {}),
       ...(reasoning !== undefined ? { reasoning } : {}),
       ...(Object.keys(extraBody).length > 0 ? { extraBody } : {}),

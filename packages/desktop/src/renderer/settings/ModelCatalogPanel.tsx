@@ -18,6 +18,7 @@ import { useConfirm } from "../ui/ConfirmDialog";
 import { useToast } from "../ui/ToastProvider";
 import { useT } from "../i18n/I18nProvider";
 import type { TranslationKey } from "../i18n/dict";
+import { notifySettingsChanged } from "../settingsBus";
 import { useRefreshOnSettingsChange } from "./useSettingsResource";
 import { ConnCard, ConnField, ConnCardFooter, ConnFooterRight } from "./connUi";
 import {
@@ -213,6 +214,7 @@ export function ModelCatalogPanel(_props: Props) {
     try {
       const r = await window.codeshell.saveCatalogEntry(draft);
       if (!r.ok) throw new Error("Catalog save failed");
+      notifySettingsChanged();
       if (!mounted.current) return;
       // A successful write is authoritative even if the following read fails.
       setEntries((current) =>
@@ -273,6 +275,7 @@ export function ModelCatalogPanel(_props: Props) {
       setMutationError(null);
       const r = await window.codeshell.deleteCatalogEntry(entry.id);
       if (!r.ok) throw new Error("Catalog removal failed");
+      notifySettingsChanged();
       if (!mounted.current) return;
       if (action === "delete")
         setEntries((current) => current.filter((item) => item.id !== entry.id));
