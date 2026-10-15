@@ -32,7 +32,72 @@ interface Props {
 type Save = (
   label: string,
   operation: (signal: AbortSignal) => Promise<HubConfiguration>,
+  feedback?: { error: (message: string) => void; saved: (message: string) => void },
 ) => Promise<boolean>;
+
+interface ModelFocusRequest {
+  source: HTMLElement;
+  cancelled: boolean;
+}
+type ModelFeedback = { kind: "error" | "success"; message: string };
+
+/** A Models action can recover native disabled-control focus, never a later user handoff. */
+function useModelActionFocus() {
+  const live = React.useRef(false);
+  const current = React.useRef<ModelFocusRequest | null>(null);
+  React.useLayoutEffect(() => {
+    live.current = true;
+    const outside = (target: EventTarget | null) => {
+      if (current.current && target instanceof Node && !current.current.source.contains(target))
+        current.current.cancelled = true;
+    };
+    const pointer = (event: PointerEvent) => outside(event.target);
+    const focus = (event: FocusEvent) => {
+      if (event.target !== document.body) outside(event.target);
+    };
+    const focusOut = (event: FocusEvent) => {
+      if (event.relatedTarget && event.relatedTarget !== document.body)
+        outside(event.relatedTarget);
+    };
+    const blur = () => {
+      if (current.current) current.current.cancelled = true;
+    };
+    document.addEventListener("pointerdown", pointer, true);
+    document.addEventListener("focusin", focus, true);
+    document.addEventListener("focusout", focusOut, true);
+    window.addEventListener("blur", blur);
+    return () => {
+      live.current = false;
+      current.current = null;
+      document.removeEventListener("pointerdown", pointer, true);
+      document.removeEventListener("focusin", focus, true);
+      document.removeEventListener("focusout", focusOut, true);
+      window.removeEventListener("blur", blur);
+    };
+  }, []);
+  return {
+    isLive: () => live.current,
+    capture: (source: Element | null = document.activeElement) => {
+      const request =
+        source instanceof HTMLElement && source !== document.body
+          ? { source, cancelled: false }
+          : null;
+      current.current = request;
+      return request;
+    },
+    apply: (request: ModelFocusRequest | null, action: () => void) => {
+      if (!request || !live.current || current.current !== request) return;
+      current.current = null;
+      const focused = document.activeElement;
+      if (
+        request.cancelled ||
+        (focused && focused !== document.body && focused !== request.source && focused.isConnected)
+      )
+        return;
+      action();
+    },
+  };
+}
 
 const sectionCopy: Record<HubSettingsSection, { title: string; description: string }> = {
   overview: {
@@ -132,7 +197,7 @@ function ConfigurationSettings({
     return () => controller.abort();
   }, [reload, report]);
 
-  const save: Save = async (label, operation) => {
+  const save: Save = async (label, operation, feedback) => {
     // Fence in-flight refreshes so their old snapshot cannot replace a successful write.
     if (writeController.current) return false;
     readController.current?.abort();
@@ -149,14 +214,20 @@ function ConfigurationSettings({
         return false;
       }
       setConfiguration(value);
-      setNotice(
-        value.restartRequired ? "设置已保存，重启服务后生效。" : "设置已保存，下次运行任务时生效。",
-      );
+      const message = value.restartRequired
+        ? "设置已保存，重启服务后生效。"
+        : "设置已保存，下次运行任务时生效。";
+      if (feedback) feedback.saved(message);
+      else setNotice(message);
       callbacks.current.onConfigurationChange?.();
       return true;
     } catch (cause) {
       if (cause instanceof ApiError && cause.status === 409) refreshQueued.current = true;
-      if (mounted.current && !controller.signal.aborted) report(cause);
+      if (mounted.current && !controller.signal.aborted) {
+        if (feedback && !(cause instanceof ApiError && cause.status === 401))
+          feedback.error(configurationErrorMessage(cause));
+        else report(cause);
+      }
       return false;
     } finally {
       if (writeController.current === controller) writeController.current = null;
@@ -164,6 +235,9 @@ function ConfigurationSettings({
         setBusy(null);
         if (refreshQueued.current) {
           refreshQueued.current = false;
+          // Keep fields disabled continuously through the queued read. A
+          // recovered control must not be disabled again on the next effect.
+          setLoading(true);
           setReload((value) => value + 1);
         }
       }
@@ -367,10 +441,41 @@ function Models({
   const editorOpener = React.useRef<HTMLButtonElement | null>(null);
   const addButton = React.useRef<HTMLButtonElement>(null);
   const connectionsHeading = React.useRef<HTMLHeadingElement>(null);
+  const removalOpener = React.useRef<HTMLButtonElement | null>(null);
+  const removalCancel = React.useRef<HTMLButtonElement>(null);
+  const removalConfirm = React.useRef<HTMLButtonElement>(null);
+  const replacementSelect = React.useRef<HTMLSelectElement>(null);
+  const removalMessage = React.useRef<HTMLDivElement>(null);
+  const removalPending = React.useRef(false);
+  const removalFocus = useModelActionFocus();
+  const removalTitleId = React.useId();
+  const [removalFeedback, setRemovalFeedback] = React.useState<ModelFeedback | null>(null);
+  const [removalFinished, setRemovalFinished] = React.useState<{
+    request: ModelFocusRequest | null;
+    kind: "open" | "close" | "failed";
+  } | null>(null);
   const restoreEditorFocus = React.useRef<HTMLElement | null>(null);
   const connections = configuration.connections.filter((item) => item.tag === "text");
   const otherCount = configuration.connections.length - connections.length;
   const blocked = disabled || !!probing;
+  React.useLayoutEffect(() => {
+    if (!removalFinished || blocked || (removalFinished.kind === "close" && removing)) return;
+    setRemovalFinished(null);
+    removalFocus.apply(removalFinished.request, () => {
+      const target =
+        removalFinished.kind === "open"
+          ? (replacementSelect.current ?? removalCancel.current)
+          : removalFinished.kind === "failed" && removing
+            ? removalConfirm.current && !removalConfirm.current.disabled
+              ? removalConfirm.current
+              : removalCancel.current
+            : removalOpener.current?.isConnected && !removalOpener.current.disabled
+              ? removalOpener.current
+              : connectionsHeading.current;
+      target?.focus();
+      removalMessage.current?.scrollIntoView({ block: "nearest", inline: "nearest" });
+    });
+  }, [blocked, removalFinished, removing]);
   React.useLayoutEffect(() => {
     const source = restoreEditorFocus.current;
     if (editing !== null || !source) return;
@@ -471,6 +576,17 @@ function Models({
           <span aria-hidden="true">＋</span> 添加连接
         </button>
       </div>
+      {!removing && removalFeedback && (
+        <div
+          ref={removalMessage}
+          className={`config-message config-action-feedback config-${removalFeedback.kind}`}
+          role={removalFeedback.kind === "error" ? "alert" : "status"}
+          aria-label={removalFeedback.kind === "success" ? "删除模型连接结果" : undefined}
+          tabIndex={0}
+        >
+          {removalFeedback.message}
+        </div>
+      )}
       {editing !== null && (
         <div className="config-card config-editor-card">
           <h3>{editing === "__new__" ? "添加模型连接" : `编辑 ${editing.id}`}</h3>
@@ -567,9 +683,13 @@ function Models({
                 <button
                   className="config-button config-button-quiet config-remove-connection"
                   disabled={blocked || editing !== null || removing !== null}
-                  onClick={() => {
+                  onClick={(event) => {
+                    removalOpener.current = event.currentTarget;
+                    const request = removalFocus.capture(event.currentTarget);
                     setRemoving(connection);
                     setReplacement("");
+                    setRemovalFeedback(null);
+                    setRemovalFinished({ request, kind: "open" });
                   }}
                 >
                   删除
@@ -590,12 +710,13 @@ function Models({
                 </div>
               )}
               {isRemoving && (
-                <div className="config-remove-confirm">
-                  <h3>删除连接 {connection.id}？</h3>
+                <div
+                  className="config-remove-confirm"
+                  role="group"
+                  aria-labelledby={removalTitleId}
+                >
+                  <h3 id={removalTitleId}>删除连接 {connection.id}？</h3>
                   <p>连接会从当前工作区移除，已有对话记录会保留。</p>
-                  {removalChanged && (
-                    <p role="alert">连接已被其他设备更新，请取消后重新检查再删除。</p>
-                  )}
                   {connections.length === 1 && (
                     <p>这是最后一个文字模型连接。删除后需重新添加连接才能继续对话。</p>
                   )}
@@ -603,6 +724,7 @@ function Models({
                     <label>
                       <span>替代默认模型</span>
                       <select
+                        ref={replacementSelect}
                         aria-label="替代默认模型"
                         value={replacement}
                         onChange={(event) => setReplacement(event.target.value)}
@@ -621,31 +743,78 @@ function Models({
                   )}
                   <div className="config-form-actions">
                     <button
+                      ref={removalCancel}
                       className="config-button"
                       disabled={blocked}
-                      onClick={() => setRemoving(null)}
+                      onClick={(event) => {
+                        if (blocked || removalPending.current) return;
+                        const request = removalFocus.capture(event.currentTarget);
+                        setRemoving(null);
+                        setRemovalFeedback(null);
+                        setRemovalFinished({ request, kind: "close" });
+                      }}
                     >
                       取消删除
                     </button>
                     <button
+                      ref={removalConfirm}
                       className="config-button config-button-danger"
                       disabled={blocked || removalChanged || (replacementNeeded && !replacement)}
-                      onClick={() =>
-                        void save("删除连接", (signal) =>
-                          deleteConnection(
-                            connection.id,
-                            replacement || undefined,
-                            signal,
-                            removing?.revision,
-                          ),
-                        ).then((ok) => {
-                          if (ok) setRemoving(null);
-                        })
-                      }
+                      onClick={async (event) => {
+                        if (
+                          blocked ||
+                          removalPending.current ||
+                          removalChanged ||
+                          (replacementNeeded && !replacement)
+                        )
+                          return;
+                        removalPending.current = true;
+                        const request = removalFocus.capture(event.currentTarget);
+                        setRemovalFeedback(null);
+                        let reported = false;
+                        const ok = await save(
+                          "删除连接",
+                          (signal) =>
+                            deleteConnection(
+                              connection.id,
+                              replacement || undefined,
+                              signal,
+                              removing?.revision,
+                            ),
+                          {
+                            error: (message) => {
+                              reported = true;
+                              if (removalFocus.isLive())
+                                setRemovalFeedback({ kind: "error", message });
+                            },
+                            saved: (message) => {
+                              if (removalFocus.isLive())
+                                setRemovalFeedback({ kind: "success", message });
+                            },
+                          },
+                        );
+                        removalPending.current = false;
+                        if (!removalFocus.isLive()) return;
+                        if (ok) setRemoving(null);
+                        if (ok || reported)
+                          setRemovalFinished({ request, kind: ok ? "close" : "failed" });
+                      }}
                     >
                       确认删除连接
                     </button>
                   </div>
+                  {(removalChanged || removalFeedback?.kind === "error") && (
+                    <div
+                      ref={removalMessage}
+                      className="config-message config-error config-action-feedback"
+                      role="alert"
+                      tabIndex={0}
+                    >
+                      {removalChanged && "连接已被其他设备更新，请取消后重新检查再删除。"}
+                      {removalChanged && removalFeedback?.kind === "error" ? "\n" : null}
+                      {removalFeedback?.kind === "error" && removalFeedback.message}
+                    </div>
+                  )}
                 </div>
               )}
             </article>
@@ -674,6 +843,27 @@ function DefaultModels({
 }) {
   const [text, setText] = React.useState(configuration.defaults.text ?? "");
   const [auxText, setAuxText] = React.useState(configuration.defaults.auxText ?? "");
+  const [feedback, setFeedback] = React.useState<ModelFeedback | null>(null);
+  const [finished, setFinished] = React.useState<{
+    request: ModelFocusRequest | null;
+  } | null>(null);
+  const pending = React.useRef(false);
+  const saveButton = React.useRef<HTMLButtonElement>(null);
+  const conversationSelect = React.useRef<HTMLSelectElement>(null);
+  const feedbackMessage = React.useRef<HTMLDivElement>(null);
+  const focus = useModelActionFocus();
+  React.useLayoutEffect(() => {
+    if (disabled || !finished) return;
+    setFinished(null);
+    focus.apply(finished.request, () => {
+      const target =
+        saveButton.current && !saveButton.current.disabled
+          ? saveButton.current
+          : (feedbackMessage.current ?? conversationSelect.current);
+      target?.focus();
+      feedbackMessage.current?.scrollIntoView({ block: "nearest", inline: "nearest" });
+    });
+  }, [disabled, finished]);
   const previousDefaults = React.useRef(configuration.defaults);
   React.useEffect(() => {
     const previous = previousDefaults.current;
@@ -697,9 +887,29 @@ function DefaultModels({
   return (
     <form
       className="config-card config-defaults"
-      onSubmit={(event) => {
+      onSubmit={async (event) => {
         event.preventDefault();
-        void save("默认模型", (signal) => saveDefaults({ text, auxText: auxText || null }, signal));
+        if (pending.current || disabled || !connections.length || !changed || !text) return;
+        pending.current = true;
+        const submitter = (event.nativeEvent as SubmitEvent).submitter;
+        const request = focus.capture(submitter ?? document.activeElement);
+        setFeedback(null);
+        let reported = false;
+        const ok = await save(
+          "默认模型",
+          (signal) => saveDefaults({ text, auxText: auxText || null }, signal),
+          {
+            error: (message) => {
+              reported = true;
+              if (focus.isLive()) setFeedback({ kind: "error", message });
+            },
+            saved: (message) => {
+              if (focus.isLive()) setFeedback({ kind: "success", message });
+            },
+          },
+        );
+        pending.current = false;
+        if (focus.isLive() && (ok || reported)) setFinished({ request });
       }}
     >
       <fieldset disabled={disabled || !connections.length}>
@@ -708,9 +918,13 @@ function DefaultModels({
           <label>
             <span>对话模型</span>
             <select
+              ref={conversationSelect}
               required
               value={text}
-              onChange={(event) => setText(event.target.value)}
+              onChange={(event) => {
+                setText(event.target.value);
+                setFeedback(null);
+              }}
               aria-label="默认对话模型"
             >
               <option value="" disabled>
@@ -732,7 +946,10 @@ function DefaultModels({
             <span>辅助模型</span>
             <select
               value={auxText}
-              onChange={(event) => setAuxText(event.target.value)}
+              onChange={(event) => {
+                setAuxText(event.target.value);
+                setFeedback(null);
+              }}
               aria-label="默认辅助模型"
             >
               <option value="">跟随对话模型</option>
@@ -751,10 +968,26 @@ function DefaultModels({
         </div>
         <div className="config-form-footer">
           <p className="config-help">辅助模型用于标题生成等轻量任务。</p>
-          <button className="config-button" disabled={!changed || !text} type="submit">
+          <button
+            ref={saveButton}
+            className="config-button"
+            disabled={!changed || !text}
+            type="submit"
+          >
             保存默认模型
           </button>
         </div>
+        {feedback && (
+          <div
+            ref={feedbackMessage}
+            className={`config-message config-action-feedback config-${feedback.kind}`}
+            role={feedback.kind === "error" ? "alert" : "status"}
+            aria-label={feedback.kind === "success" ? "默认模型保存结果" : undefined}
+            tabIndex={0}
+          >
+            {feedback.message}
+          </div>
+        )}
       </fieldset>
     </form>
   );

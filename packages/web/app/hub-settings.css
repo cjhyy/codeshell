@@ -240,6 +240,19 @@
   color: var(--accent);
   background: color-mix(in srgb, var(--accent) 5%, transparent);
 }
+.hub-settings .config-action-feedback {
+  max-height: min(12rem, 30dvh);
+  min-width: 0;
+  overflow: auto;
+  overscroll-behavior: contain;
+  margin: 12px 0 0;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+.hub-settings .config-action-feedback:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 3px;
+}
 .config-loading,
 .config-help {
   color: var(--muted);
