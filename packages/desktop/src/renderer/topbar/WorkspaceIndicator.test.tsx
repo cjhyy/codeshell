@@ -167,6 +167,18 @@ function clickHostNode(node: unknown): void {
   });
 }
 
+async function enableChangeStats(container: unknown): Promise<void> {
+  const toggle = findElement(
+    container,
+    (node) => node.tagName === "BUTTON" && /^(改动统计|Change stats)$/.test(textOf(node)),
+  );
+  expect(toggle).not.toBeNull();
+  await act(async () => {
+    clickHostNode(toggle);
+    await flushMicrotasks();
+  });
+}
+
 let root: Root | null = null;
 
 afterEach(async () => {
@@ -853,8 +865,17 @@ describe("WorkspaceIndicator", () => {
       await flushMicrotasks();
     });
 
+    expect(textOf(container)).not.toContain("external/branch");
+    const externalToggle = findElement(
+      container,
+      (node) => node.tagName === "BUTTON" && /外部 worktrees|External worktrees/.test(textOf(node)),
+    );
+    await act(async () => {
+      clickHostNode(externalToggle);
+      await flushMicrotasks();
+    });
     const text = textOf(container);
-    expect(text).toMatch(/主工作区|Main workspace/);
+    expect(text).toMatch(/当前工作区|Current workspace/);
     expect(text).toContain("CodeShell worktrees");
     expect(text).toMatch(/外部 worktrees|External worktrees/);
     expect(text).toContain("⑃ release/main");
@@ -1060,11 +1081,15 @@ describe("WorkspaceIndicator", () => {
       ],
     };
     const diffResponse = deferred<SessionWorkspaceWorktreeInfo["diff"]>();
+    let diffCalls = 0;
     (window as unknown as { codeshell: Record<string, unknown> }).codeshell = {
       getSessionGitBranches: async () => ({ isRepo: true, current: null, branches: [] }),
       getSessionWorkspace: async () => mainWorkspace,
       listSessionWorktrees: async () => listResponse,
-      getSessionWorktreeDiff: () => diffResponse.promise,
+      getSessionWorktreeDiff: () => {
+        diffCalls += 1;
+        return diffResponse.promise;
+      },
     };
     const container = document.createElement("div");
     root = createRoot(container);
@@ -1083,8 +1108,11 @@ describe("WorkspaceIndicator", () => {
       await flushMicrotasks();
     });
 
+    expect(diffCalls).toBe(0);
+    expect(textOf(container)).not.toContain(translate("zh", "topbar.workspace.diffChecking"));
+    await enableChangeStats(container);
     expect(textOf(container)).toContain("worktree/feature-session");
-    expect(textOf(container)).toContain("checking…");
+    expect(textOf(container)).toContain(translate("zh", "topbar.workspace.diffChecking"));
     expect(textOf(container)).not.toMatch(/Dirty|未提交/);
 
     await act(async () => {
@@ -1099,7 +1127,280 @@ describe("WorkspaceIndicator", () => {
     expect(textOf(container)).toMatch(/Dirty|未提交/);
     expect(textOf(container)).toMatch(/2 files|2 文件/);
     expect(textOf(container)).toMatch(/ahead 1|领先 1/);
+    await act(async () => {
+      clickHostNode(trigger);
+      await flushMicrotasks();
+    });
+    await act(async () => {
+      clickHostNode(trigger);
+      await flushMicrotasks();
+    });
+    expect(diffCalls).toBe(1);
+    expect(textOf(container)).toMatch(/2 files|2 文件/);
+    expect(textOf(container)).not.toContain(translate("zh", "topbar.workspace.diffChecking"));
   });
+
+  test("checks only intersecting rows and ends a failed check", async () => {
+    ensureMiniDom();
+    const previousObserver = globalThis.IntersectionObserver;
+    const observed = new Map<Element, IntersectionObserverCallback>();
+    class VisibilityObserver {
+      constructor(private callback: IntersectionObserverCallback) {}
+      observe(node: Element) {
+        observed.set(node, this.callback);
+      }
+      disconnect() {}
+    }
+    globalThis.IntersectionObserver = VisibilityObserver as unknown as typeof IntersectionObserver;
+    try {
+      const mainWorkspace: SessionWorkspace = { root: "/repo", kind: "main" };
+      const diffCalls: string[] = [];
+      (window as unknown as { codeshell: Record<string, unknown> }).codeshell = {
+        getSessionGitBranches: async () => ({ isRepo: true, current: "main", branches: [] }),
+        getSessionWorkspace: async () => mainWorkspace,
+        listSessionWorktrees: async () => ({
+          current: mainWorkspace,
+          mainRoot: "/repo",
+          worktrees: ["visible", "hidden"].map((name) => ({
+            path: `/repo/.worktrees/${name}`,
+            branch: `worktree/${name}`,
+            head: "abc123",
+            isManaged: true,
+          })),
+        }),
+        getSessionWorktreeDiff: async (_sessionId: string, path: string) => {
+          diffCalls.push(path);
+          throw new Error("Git timed out");
+        },
+      };
+      const container = document.createElement("div");
+      root = createRoot(container);
+      await act(async () => {
+        root?.render(
+          <React.StrictMode>
+            <WorkspaceIndicator sessionId="session" projectPath="/repo" projectName="repo" />
+          </React.StrictMode>,
+        );
+        await flushMicrotasks();
+      });
+      const trigger = findElement(container, (node) => node.tagName === "BUTTON");
+      await act(async () => {
+        clickHostNode(trigger);
+        await flushMicrotasks();
+      });
+      await enableChangeStats(container);
+      expect(observed.size).toBe(2);
+      expect(diffCalls).toHaveLength(0);
+      const visible = [...observed].find(([node]) => textOf(node).includes("worktree/visible"));
+      expect(visible).toBeDefined();
+      await act(async () => {
+        const [node, notify] = visible!;
+        notify(
+          [{ target: node, isIntersecting: true }] as IntersectionObserverEntry[],
+          {} as IntersectionObserver,
+        );
+        await flushMicrotasks();
+      });
+      expect(diffCalls).toEqual(["/repo/.worktrees/visible"]);
+      expect(textOf(container)).toContain(translate("zh", "topbar.workspace.diffFailed"));
+      expect(textOf(container)).not.toContain(translate("zh", "topbar.workspace.diffChecking"));
+      await act(async () => {
+        clickHostNode(trigger);
+        await flushMicrotasks();
+      });
+      expect(diffCalls).toHaveLength(1);
+    } finally {
+      globalThis.IntersectionObserver = previousObserver;
+    }
+  });
+
+  test("searches folded external worktrees without requesting statistics", async () => {
+    ensureMiniDom();
+    const mainWorkspace: SessionWorkspace = { root: "/repo", kind: "main" };
+    let diffCalls = 0;
+    let worktreeCount = 10;
+    (window as unknown as { codeshell: Record<string, unknown> }).codeshell = {
+      getSessionGitBranches: async () => ({ isRepo: true, current: "main", branches: [] }),
+      getSessionWorkspace: async () => mainWorkspace,
+      listSessionWorktrees: async () => ({
+        current: mainWorkspace,
+        mainRoot: "/repo",
+        worktrees: [
+          { path: "/repo", branch: "main", head: "abc123", isMain: true },
+          ...Array.from({ length: worktreeCount }, (_, index) => ({
+            path: `/worktrees/feature-${index}/repo`,
+            branch: `external/feature-${index}`,
+            head: "def456",
+            isManaged: false,
+          })),
+        ],
+      }),
+      getSessionWorktreeDiff: async () => {
+        diffCalls += 1;
+        return { changedFiles: 0, aheadCommits: 0, hasUncommittedChanges: false };
+      },
+    };
+    const container = document.createElement("div");
+    root = createRoot(container);
+    await act(async () => {
+      root?.render(
+        <WorkspaceIndicator sessionId="session" projectPath="/repo" projectName="repo" />,
+      );
+      await flushMicrotasks();
+    });
+    await act(async () => {
+      clickHostNode(findElement(container, (node) => node.tagName === "BUTTON"));
+      await flushMicrotasks();
+    });
+    expect(textOf(container)).not.toContain("external/feature-9");
+    const input = findElement(container, (node) => node.tagName === "INPUT");
+    expect(input).not.toBeNull();
+    await act(async () => {
+      reactPropsOf(input).onChange({ target: { value: "/FEATURE-9/" } });
+      await flushMicrotasks();
+    });
+    expect(textOf(container)).toContain("external/feature-9");
+    expect(textOf(container)).not.toContain("external/feature-8");
+    expect(diffCalls).toBe(0);
+    await act(async () => {
+      reactPropsOf(input).onChange({ target: { value: "no-match" } });
+      await flushMicrotasks();
+    });
+    expect(textOf(container)).toContain(translate("zh", "topbar.workspace.noMatches"));
+    expect(diffCalls).toBe(0);
+    worktreeCount = 3;
+    await act(async () => {
+      window.dispatchEvent(
+        new CustomEvent("codeshell:git-branches-changed", { detail: { cwd: "/repo" } }),
+      );
+      await flushMicrotasks();
+    });
+    const retainedInput = findElement(container, (node) => node.tagName === "INPUT");
+    expect(retainedInput).not.toBeNull();
+    await act(async () => {
+      reactPropsOf(retainedInput).onChange({ target: { value: "" } });
+      await flushMicrotasks();
+    });
+    expect(textOf(container)).not.toContain(translate("zh", "topbar.workspace.noMatches"));
+    expect(textOf(container)).toContain("⑃ main");
+    expect(diffCalls).toBe(0);
+  });
+
+  test("coalesces file events before refreshing visible summaries", async () => {
+    ensureMiniDom();
+    const mainWorkspace: SessionWorkspace = { root: "/repo", kind: "main" };
+    let diffCalls = 0;
+    let listCalls = 0;
+    (window as unknown as { codeshell: Record<string, unknown> }).codeshell = {
+      getSessionGitBranches: async () => ({ isRepo: true, current: "main", branches: [] }),
+      getSessionWorkspace: async () => mainWorkspace,
+      listSessionWorktrees: async () => {
+        listCalls += 1;
+        return {
+          current: mainWorkspace,
+          mainRoot: "/repo",
+          worktrees: [{ path: "/repo", branch: "main", head: "abc123", isMain: true }],
+        };
+      },
+      getSessionWorktreeDiff: async () => {
+        diffCalls += 1;
+        return { changedFiles: diffCalls, aheadCommits: 0, hasUncommittedChanges: true };
+      },
+    };
+    const container = document.createElement("div");
+    root = createRoot(container);
+    await act(async () => {
+      root?.render(
+        <WorkspaceIndicator sessionId="session" projectPath="/repo" projectName="repo" />,
+      );
+      await flushMicrotasks();
+    });
+    await act(async () => {
+      clickHostNode(findElement(container, (node) => node.tagName === "BUTTON"));
+      await flushMicrotasks();
+    });
+    await enableChangeStats(container);
+    expect(diffCalls).toBe(1);
+    await act(async () => {
+      for (let i = 0; i < 10; i += 1) window.dispatchEvent(new Event("codeshell:files-changed"));
+      await flushMicrotasks();
+    });
+    expect(diffCalls).toBe(1);
+    await act(async () => {
+      await new Promise((resolve) => setTimeout(resolve, 1100));
+      await flushMicrotasks();
+    });
+    expect(listCalls).toBe(2);
+    expect(diffCalls).toBe(2);
+    expect(textOf(container)).toMatch(/2 files|2 文件/);
+  });
+
+  for (const staleFirst of [true, false]) {
+    test(`preserves invalidation when reopening supersedes a list refresh (stale first: ${staleFirst})`, async () => {
+      ensureMiniDom();
+      const mainWorkspace: SessionWorkspace = { root: "/repo", kind: "main" };
+      const snapshot: SessionWorkspaceList = {
+        current: mainWorkspace,
+        mainRoot: "/repo",
+        worktrees: [{ path: "/repo", branch: "main", head: "abc123", isMain: true }],
+      };
+      const lists: ReturnType<typeof deferred<SessionWorkspaceList>>[] = [];
+      let diffCalls = 0;
+      (window as unknown as { codeshell: Record<string, unknown> }).codeshell = {
+        getSessionGitBranches: async () => ({ isRepo: true, current: "main", branches: [] }),
+        getSessionWorkspace: async () => mainWorkspace,
+        listSessionWorktrees: () => {
+          const response = deferred<SessionWorkspaceList>();
+          lists.push(response);
+          return response.promise;
+        },
+        getSessionWorktreeDiff: async () => {
+          diffCalls += 1;
+          return { changedFiles: diffCalls, aheadCommits: 0, hasUncommittedChanges: true };
+        },
+      };
+      const container = document.createElement("div");
+      root = createRoot(container);
+      await act(async () => {
+        root?.render(
+          <WorkspaceIndicator sessionId="session" projectPath="/repo" projectName="repo" />,
+        );
+        await flushMicrotasks();
+      });
+      const trigger = findElement(container, (node) => node.tagName === "BUTTON");
+      await act(async () => {
+        clickHostNode(trigger);
+        await flushMicrotasks();
+        lists[0].resolve(snapshot);
+        await flushMicrotasks();
+      });
+      await enableChangeStats(container);
+      expect(diffCalls).toBe(1);
+      await act(async () => {
+        window.dispatchEvent(
+          new CustomEvent("codeshell:git-branches-changed", { detail: { cwd: "/repo" } }),
+        );
+        await flushMicrotasks();
+      });
+      await act(async () => {
+        clickHostNode(trigger);
+        await flushMicrotasks();
+      });
+      await act(async () => {
+        clickHostNode(trigger);
+        await flushMicrotasks();
+      });
+      expect(lists).toHaveLength(3);
+      for (const index of staleFirst ? [1, 2] : [2, 1]) {
+        await act(async () => {
+          lists[index].resolve(snapshot);
+          await flushMicrotasks();
+        });
+      }
+      expect(diffCalls).toBe(2);
+      expect(textOf(container)).toMatch(/2 files|2 文件/);
+    });
+  }
 
   test("does not toast when an unmounted list request rejects", async () => {
     ensureMiniDom();
@@ -1269,6 +1570,7 @@ describe("WorkspaceIndicator", () => {
       clickHostNode(trigger);
       await flushMicrotasks();
     });
+    await enableChangeStats(container);
     expect(textOf(container)).toContain("worktree/old-session");
     expect(diffResponses).toHaveLength(1);
 
@@ -1581,6 +1883,7 @@ describe("WorkspaceIndicator", () => {
       clickHostNode(trigger);
       await flushMicrotasks();
     });
+    await enableChangeStats(container);
     expect(textOf(container)).toContain("worktree/old-authority");
 
     await act(async () => {
