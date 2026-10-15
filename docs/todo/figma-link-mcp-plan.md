@@ -31,6 +31,17 @@
 
 ## 后续验收
 
+本次代码验收（合入当日）已通过：
+
+- 最终合并回归：59 个测试文件、778 项测试、0 失败；聊天组件隔离 fixture 同时覆盖
+  原动作恢复、后台执行、切换会话和关闭竞态。
+- 整包构建、Desktop main/preload/renderer/mobile/extension 构建、所有工作区类型检查。
+- 全仓 ESLint 0 error（101 项既有 warning）；新增公共依赖边界 guard 5 项通过。
+- 实际 Electron 隔离 smoke：一个 Figma 卡、API/MCP 双通道、官方 MCP 按钮唯一、
+  未授权零网络请求，以及 CLI 入口和 700px 响应式布局。
+- 候选 OAuth 未保存时的尽力撤销、已保存连接保护，以及 reconnect 快照先于 RPC 错误
+  到达时的恢复回归。
+
 真实账号此前已通过 OAuth、工具发现和 Design metadata 读取；受控回归验证保存/刷新与
 产品链路。真实 Make 源码、设计上下文、动画、Code Connect 及各账号计划/席位仍按实际资源
 验收。本次不启用画布写入、生成插件或 shader 工作流，也不把本地退出误报为上游已吊销。
