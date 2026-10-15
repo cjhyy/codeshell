@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { useT } from "../i18n/I18nProvider";
 import { LinkConnectionDialog } from "./LinkConnectionDialog";
 import { RemoteProviderSection } from "./RemoteLinkSection";
+import { LinkConnectionRow, LinkStatus } from "./LinkProviderCard";
 
 /** Figma owns both channels. Connecting either channel never reads a design. */
 export function FigmaConnectionCard({
@@ -97,20 +98,9 @@ export function FigmaConnectionCard({
     });
 
   return (
-    <section
-      data-link-integration="figma"
-      className="space-y-4 rounded-2xl border border-border/70 bg-card p-4"
-    >
-      <div className="flex items-start gap-3">
-        <Figma className="mt-1 size-5 shrink-0" aria-hidden />
-        <div>
-          <h4 className="text-sm font-semibold">Figma</h4>
-          <p className="mt-1 text-xs text-muted-foreground">{t("ext.link.figma.description")}</p>
-        </div>
-      </div>
-      <div data-figma-channel="api" className="space-y-3 rounded-xl border border-border/60 p-3">
-        {!hasRemoteApi && <h5 className="text-sm font-medium">{t("ext.link.figma.apiTitle")}</h5>}
-        {hasRemoteApi && (
+    <>
+      <div data-figma-channel="api">
+        {hasRemoteApi ? (
           <RemoteProviderSection
             cwd={cwd}
             snapshot={snapshot}
@@ -121,35 +111,60 @@ export function FigmaConnectionCard({
             provider={provider}
             embedded
           />
+        ) : (
+          <LinkConnectionRow
+            title={t("ext.link.directory.basicReading")}
+            technical="API"
+            description={t("ext.link.directory.basicReadingDescription")}
+          />
         )}
-        {localApi && (
-          <details>
-            <summary className="cursor-pointer text-xs text-muted-foreground">
-              {t("ext.link.figma.localApi")}
-            </summary>
-            <div className="mt-3 space-y-3">{localApi}</div>
-          </details>
-        )}
+        {localApi}
       </div>
-      <div data-figma-channel="mcp" className="space-y-3 rounded-xl border border-border/60 p-3">
-        <div>
-          <h5 className="text-sm font-medium">{t("ext.link.figma.mcpTitle")}</h5>
-          <p className="mt-1 text-xs text-muted-foreground">{t("ext.link.figma.mcpDescription")}</p>
-        </div>
+      <LinkConnectionRow
+        data-figma-channel="mcp"
+        title={t("ext.link.directory.designContext")}
+        technical="MCP"
+        description={t("ext.link.directory.designContextDescription")}
+        status={
+          connections.some((connection) => connection.status === "connected")
+            ? t("ext.link.remoteAvailable")
+            : connections.length
+              ? t("ext.link.remoteReconnectNeeded")
+              : !available
+                ? t("ext.link.directory.unavailable")
+                : t("ext.link.directory.notConnected")
+        }
+        tone={
+          connections.some((connection) => connection.status === "connected")
+            ? "ready"
+            : connections.length
+              ? "warning"
+              : "neutral"
+        }
+      >
         {connections.map((connection) => (
           <div
             key={connection.id}
             data-figma-mcp-connection={connection.id}
             className="space-y-2 text-xs"
           >
-            <p>
-              {connection.account?.label ?? connection.label} ·{" "}
-              {t(
-                connection.status === "connected"
-                  ? "ext.link.remoteAvailable"
-                  : "ext.link.remoteReconnectNeeded",
-              )}
-            </p>
+            <div className="flex items-start justify-between gap-3">
+              <div className="min-w-0">
+                <strong className="block truncate text-sm font-medium">{connection.label}</strong>
+                <p className="mt-1 truncate text-xs text-muted-foreground">
+                  {connection.account?.label ?? "Figma"}
+                </p>
+              </div>
+              <LinkStatus tone={connection.status === "connected" ? "ready" : "warning"}>
+                {t(
+                  connection.status === "unavailable"
+                    ? "ext.link.directory.serviceUnavailable"
+                    : connection.status === "connected"
+                      ? "ext.link.remoteAvailable"
+                      : "ext.link.remoteReconnectNeeded",
+                )}
+              </LinkStatus>
+            </div>
             <div className="flex flex-wrap gap-2">
               <Button
                 size="sm"
@@ -194,18 +209,18 @@ export function FigmaConnectionCard({
             onClick={() => connect()}
           >
             {busy && <Loader2 className="size-3.5 animate-spin" aria-hidden />}
-            {t("ext.link.figma.connectMcp")}
+            {t("ext.link.directory.connectDesignContext")}
           </Button>
         )}
         {!available && (
-          <p className="text-xs text-muted-foreground">{t("ext.link.figma.unavailable")}</p>
+          <p className="text-xs text-muted-foreground">{t("ext.link.directory.unavailableHint")}</p>
         )}
         {(error || loadError) && (
           <p role="alert" className="text-xs text-status-err">
             {error || loadError}
           </p>
         )}
-      </div>
+      </LinkConnectionRow>
       {authorization && (
         <LinkConnectionDialog
           key={authorization.id}
@@ -232,6 +247,6 @@ export function FigmaConnectionCard({
           }}
         />
       )}
-    </section>
+    </>
   );
 }
