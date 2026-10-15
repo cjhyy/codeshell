@@ -35,6 +35,12 @@ breaking.
   submissions, and keep questions and approvals usable in short chat panes.
 - Wrap complete question-answer receipts and long tool identities while keeping
   approval risk, execution status and action controls visible.
+- Keep Desktop navigation, sessions and account controls reachable in short
+  windows, including keyboard focus after resizing.
+- Keep long drafts and queued messages within the main chat pane while retaining
+  visible conversation output and access to input and Stop.
+- Preserve Settings search and navigation focus through clearing, result
+  selection, responsive layouts, zoom and closing navigation popups.
 
 ## [0.9.44] - 2026-10-15
 
