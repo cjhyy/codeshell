@@ -540,12 +540,12 @@ export function useRunController({
         // Claimed initialization failures reject RPC after publishing a durable
         // terminal. This exact launch already rendered its error/cancellation,
         // including Stop from another window. Older runs cannot cover a new RPC failure.
-        if (hasStreamedTerminal()) return;
-        playThemeSound("error");
         window.codeshell.log("run.rejected", {
           bucket,
           error: String((err as Error)?.message ?? err),
         });
+        if (hasStreamedTerminal()) return;
+        playThemeSound("error");
         const detail = directorySaved
           ? String((err as Error)?.message ?? err) || t("misc.app.requestRejected")
           : t("misc.session.sendSaveFailed");
