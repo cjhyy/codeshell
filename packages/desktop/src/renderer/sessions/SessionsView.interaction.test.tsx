@@ -51,6 +51,7 @@ describe("SessionsView editing and recovery", () => {
   let sessions: DesktopSessionSummary[];
   let titles: Record<string, string>;
   let readFailure: string | null;
+  let titlesFailure: string | null;
   let reads: number;
   const renames: Array<{ id: string; title: string; result: ReturnType<typeof deferred> }> = [];
   const deletes: Array<{ id: string; result: ReturnType<typeof deferred> }> = [];
@@ -77,6 +78,7 @@ describe("SessionsView editing and recovery", () => {
     sessions = [FIRST, SECOND];
     titles = { [FIRST.id]: "Alpha review", [SECOND.id]: "Beta planning" };
     readFailure = null;
+    titlesFailure = null;
     reads = 0;
     renames.length = 0;
     deletes.length = 0;
@@ -88,7 +90,10 @@ describe("SessionsView editing and recovery", () => {
           if (readFailure) throw new Error(readFailure);
           return sessions;
         },
-        listSessionTitles: async () => titles,
+        listSessionTitles: async () => {
+          if (titlesFailure) throw new Error(titlesFailure);
+          return titles;
+        },
         renameSession: (id: string, title: string) => {
           const result = deferred();
           renames.push({ id, title, result });
@@ -142,7 +147,7 @@ describe("SessionsView editing and recovery", () => {
     onNewSession?: () => void,
     notifications: Pick<
       React.ComponentProps<typeof SessionsView>,
-      "onSessionRenamed" | "onSessionDeleted"
+      "onSessionRenamed" | "onSessionDeleted" | "onOpenSession"
     > = {},
   ) => {
     await act(async () => {
@@ -319,7 +324,10 @@ describe("SessionsView editing and recovery", () => {
     await render(undefined, { onSessionDeleted: (id) => notifications.push(id) });
     const remove = button("删除");
     await click(remove);
-    await click(remove);
+    expect(deletes).toHaveLength(0);
+    expect(document.activeElement === button("取消")).toBe(true);
+    await click(button("确认删除"));
+    await click(button("确认删除"));
     expect(deletes).toHaveLength(1);
     expect(notifications).toEqual([]);
     await finish(deletes[0].result, "file is locked");
@@ -368,6 +376,7 @@ describe("SessionsView editing and recovery", () => {
         await key("Enter");
       } else {
         await click(button("删除"));
+        await click(button("确认删除"));
       }
       await act(async () => root.render(null));
       expect(notifications).toEqual([]);
@@ -377,4 +386,155 @@ describe("SessionsView editing and recovery", () => {
       ]);
     },
   );
+
+  test("requires confirmation and restores the original delete control when cancelled", async () => {
+    await render();
+    const remove = button("删除");
+    await click(remove);
+    expect(textOf(container)).toContain("此操作无法撤销");
+    expect(deletes).toHaveLength(0);
+    await click(button("取消"));
+    expect(button("确认删除")).toBeUndefined();
+    expect(document.activeElement === remove).toBe(true);
+    expect(deletes).toHaveLength(0);
+  });
+
+  test("opens the selected ID once, reports failure, and permits retry", async () => {
+    const opens: Array<{ id: string; result: ReturnType<typeof deferred> }> = [];
+    await render(undefined, {
+      onOpenSession: (id) => {
+        const result = deferred();
+        opens.push({ id, result });
+        return result.promise;
+      },
+    });
+    await click(button("打开会话"));
+    await click(button("正在打开…"));
+    expect(opens.map((request) => request.id)).toEqual([FIRST.id]);
+    await finish(opens[0].result, "workspace unavailable");
+    expect(textOf(rows()[0])).toContain("无法打开会话：workspace unavailable");
+    await click(button("打开会话"));
+    await finish(opens[1].result);
+    expect(textOf(container)).not.toContain("workspace unavailable");
+  });
+
+  test("keeps session records usable when the optional titles read fails", async () => {
+    sessions = [{ ...FIRST, title: "Durable title" }, SECOND];
+    titlesFailure = "title store unavailable";
+    await render();
+    expect(rows()).toHaveLength(2);
+    expect(textOf(rows()[0])).toContain("Durable title");
+    expect(textOf(container)).toContain("部分标题未能读取");
+    titlesFailure = null;
+    await click(button("重试"));
+    expect(textOf(rows()[0])).toContain("Alpha review");
+    expect(textOf(container)).not.toContain("title store unavailable");
+  });
+
+  test("sorts and paginates the full result set, and resets pagination for multiword search", async () => {
+    sessions = Array.from({ length: 121 }, (_, index) => ({
+      ...FIRST,
+      id: `session-${String(index).padStart(3, "0")}`,
+      updatedAt: index,
+      title: index === 120 ? "Alpha project review" : `Session ${index}`,
+    }));
+    titles = {};
+    await render();
+    expect(rows()).toHaveLength(50);
+    expect(textOf(rows()[0])).toContain("session-120");
+    await click(button("下一页"));
+    expect(rows()).toHaveLength(50);
+    expect(textOf(rows()[0])).toContain("session-070");
+    await click(button("下一页"));
+    expect(rows()).toHaveLength(21);
+    expect(textOf(container)).toContain("第 3 / 3 页");
+    await change(search(), "review alpha");
+    expect(rows()).toHaveLength(1);
+    expect(textOf(rows()[0])).toContain("session-120");
+    await change(search(), "");
+    const sortControl = nodes().find((node) => node.tagName === "SELECT")!;
+    await change(sortControl, "oldest");
+    expect(textOf(rows()[0])).toContain("session-000");
+  });
+
+  test("renders invalid historical dates without crashing the page", async () => {
+    sessions = [{ ...FIRST, updatedAt: Number.NaN }];
+    await render();
+    expect(rows()).toHaveLength(1);
+    expect(textOf(container)).toContain("更新时间未知");
+  });
+
+  test("reads a historical transcript without opening a workspace and preserves it on refresh failure", async () => {
+    const reads: Array<[string, number]> = [];
+    let fail = false;
+    Object.assign(window.codeshell, {
+      getSessionTranscriptPage: async (id: string, options: { maxBytes: number }) => {
+        reads.push([id, options.maxBytes]);
+        if (fail) throw new Error("historical read failed");
+        return {
+          items: [{ kind: "user", text: "Original legacy input" }],
+          loadedBytes: options.maxBytes,
+          hasMore: true,
+        };
+      },
+    });
+    let opened = false;
+    await render(undefined, {
+      onOpenSession: () => {
+        opened = true;
+      },
+    });
+    await click(button("查看记录"));
+    await act(async () => {
+      await import("./SessionHistoryDetail");
+      await flushMicrotasks();
+    });
+    expect(reads).toEqual([[FIRST.id, 512 * 1024]]);
+    expect(opened).toBe(false);
+    expect(textOf(container)).toContain("只读历史记录");
+    expect(textOf(container)).toContain("Original legacy input");
+    await click(button("加载更早记录"));
+    expect(reads[1]).toEqual([FIRST.id, 1024 * 1024]);
+    fail = true;
+    await click(button("刷新"));
+    expect(textOf(container)).toContain("historical read failed");
+    expect(textOf(container)).toContain("Original legacy input");
+    await click(button("返回会话历史"));
+    expect(rows()).toHaveLength(2);
+    expect(document.activeElement).toBe(search());
+  });
+
+  test("falls back to read-only history when the retained session cannot be resumed", async () => {
+    Object.assign(window.codeshell, {
+      getSessionTranscript: async () => [{ kind: "user", text: "Archived original input" }],
+    });
+    await render(undefined, { onOpenSession: async () => false });
+    await click(button("打开会话"));
+    await act(async () => {
+      await import("./SessionHistoryDetail");
+      await flushMicrotasks();
+    });
+    expect(textOf(container)).toContain("只读历史记录");
+    expect(textOf(container)).toContain("Archived original input");
+  });
+
+  test("returns to the last populated page after deleting the final row on a page", async () => {
+    sessions = Array.from({ length: 101 }, (_, index) => ({
+      ...FIRST,
+      id: `history-${index}`,
+      updatedAt: index,
+    }));
+    titles = {};
+    await render();
+    await click(button("下一页"));
+    await click(button("下一页"));
+    expect(rows()).toHaveLength(1);
+    expect(textOf(container)).toContain("第 3 / 3 页");
+    await click(button("删除"));
+    await click(button("确认删除"));
+    await finish(deletes[0].result);
+    expect(rows()).toHaveLength(50);
+    expect(textOf(container)).toContain("第 2 / 2 页");
+    expect(document.activeElement === search()).toBe(true);
+  });
 });

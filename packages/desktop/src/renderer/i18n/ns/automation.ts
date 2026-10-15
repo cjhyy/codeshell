@@ -310,7 +310,7 @@ export const automation = {
       // LogsView
       logs: {
         title: "日志",
-        description: "查看各部分最近 500 行记录，定位运行中的问题。",
+        description: "按来源查看最近的日志，可调整读取行数并搜索内容。",
         sources: "日志来源",
         desktop: "桌面应用",
         engine: "任务引擎",
@@ -647,7 +647,8 @@ export const automation = {
       },
       logs: {
         title: "Logs",
-        description: "Inspect the latest 500 lines from each source to troubleshoot issues.",
+        description:
+          "Inspect recent logs by source, adjust the line limit and search their contents.",
         sources: "Log source",
         desktop: "Desktop",
         engine: "Engine",

@@ -473,6 +473,51 @@ describe("TaskInboxPage", () => {
     expect(cards()).toHaveLength(1);
     expect(textOf(container)).toContain("offline");
   });
+  test("initial read failure is not displayed as an empty inbox and can be retried", async () => {
+    await render();
+    await settle(() => requests[0].request.reject(new Error("initial outage")));
+    expect(textOf(container)).toContain("initial outage");
+    expect(textOf(container)).toContain("任务暂时无法读取");
+    expect(textOf(container)).not.toContain("没有任务记录");
+    await click(button("重试读取"));
+    await settle(() => requests[1].request.resolve(snapshot([row("recovered")])));
+    expect(cards()).toHaveLength(1);
+    expect(textOf(container)).not.toContain("initial outage");
+  });
+  test("a notification during a failed read is followed once instead of swallowed", async () => {
+    await render();
+    await settle(() => changed(2));
+    await settle(() => requests[0].request.reject(new Error("transient")));
+    expect(requests).toHaveLength(2);
+    await settle(() => requests[1].request.reject(new Error("still offline")));
+    expect(requests).toHaveLength(2);
+    expect(textOf(container)).toContain("still offline");
+  });
+  test("repeated mixed pagination versions stop with a recoverable error", async () => {
+    await render();
+    for (let attempt = 0; attempt < 3; attempt += 1) {
+      await settle(() =>
+        requests[attempt * 2].request.resolve({ ...snapshot([row("old")], 1), nextCursor: "p2" }),
+      );
+      await settle(() => requests[attempt * 2 + 1].request.resolve(snapshot([row("mixed")], 2)));
+    }
+    expect(requests).toHaveLength(6);
+    expect(cards()).toHaveLength(0);
+    expect(textOf(container)).toContain("Task snapshot changed repeatedly");
+    expect(button("重试读取")).toBeDefined();
+  });
+  test("summary search and clear-all restore the full inbox and keyboard focus", async () => {
+    await render();
+    await settle(() =>
+      requests[0].request.resolve(snapshot([row("a", { summary: "Needle in summary" }), row("b")])),
+    );
+    const search = nodes().find((node) => props(node).type === "search")!;
+    await settle(() => props(search).onChange({ target: { value: " needle " } }));
+    expect(cards()).toHaveLength(1);
+    await click(button("清除所有筛选"));
+    expect(cards()).toHaveLength(2);
+    expect(document.activeElement).toBe(search);
+  });
   test("open validates revision, invokes original detail callback and stale failures refresh", async () => {
     await render();
     await settle(() => requests[0].request.resolve(snapshot([row("a")])));
@@ -486,6 +531,16 @@ describe("TaskInboxPage", () => {
     await click(button("暂停"));
     expect(textOf(container)).toContain("任务状态已变化");
     expect(requests).toHaveLength(3);
+  });
+  test("an open action response cannot navigate after leaving the task page", async () => {
+    const pendingOpen = deferred<TaskInboxActionResult>();
+    window.codeshell.taskInbox.act = () => pendingOpen.promise;
+    await render();
+    await settle(() => requests[0].request.resolve(snapshot([row("a")])));
+    await click(button("打开来源"));
+    await settle(() => root.render(null));
+    await settle(() => pendingOpen.resolve({ status: "ok" }));
+    expect(opened).toEqual([]);
   });
   test("a durable child opens its exact transcript without a live observer or ordinary Session import", async () => {
     const reads: string[] = [];

@@ -122,6 +122,7 @@ describe("project picker and registry synchronization", () => {
       configurable: true,
       value: {
         log: () => {},
+        listDiskSessions: async () => ({ sessions: [], nextCursor: null }),
         projectRegistry: {
           list: async () => diskProjects,
           beginLegacyMigration: async () => ({ completed: true }),
@@ -562,4 +563,89 @@ describe("project picker and registry synchronization", () => {
       expect(loadSessionIndex(project.id).activeSessionId).toBeNull();
     },
   );
+
+  test.each(["scan", "workspace", "runtime"] as const)(
+    "history preserves newer selection, draft and page navigation during %s resolution",
+    async (phase) => {
+      for (const replacement of ["selection", "draft", "page"] as const) {
+        seedLocalSession();
+        const disk = {
+          id: `history-${phase}-${replacement}`,
+          engineSessionId: `history-${phase}-${replacement}`,
+          cwd: project.roots[0]!.path,
+          title: "Older requested history",
+          updatedAt: 3,
+        };
+        const scan = deferred<{ sessions: (typeof disk)[]; nextCursor: null }>();
+        const workspace =
+          deferred<Array<{ projectId: string; rootId: string; created: boolean }>>();
+        const runtime = deferred<boolean>();
+        let runtimeChecks = 0;
+        let viewRevision = 0;
+        const bridge = window.codeshell as any;
+        bridge.listDiskSessions = () =>
+          phase === "scan" ? scan.promise : Promise.resolve({ sessions: [disk], nextCursor: null });
+        bridge.projectRegistry.resolveForCwdBatch = () =>
+          phase === "workspace"
+            ? workspace.promise
+            : Promise.resolve([
+                { projectId: project.id, rootId: project.primaryRootId, created: false },
+              ]);
+        beforeSelectLocalSession = () =>
+          phase === "runtime" && runtimeChecks++ === 0 ? runtime.promise : Promise.resolve(true);
+        hook = await renderHook(useHarness);
+        const opening = hook.result.current.handleOpenHistorySession(
+          disk.engineSessionId,
+          () => viewRevision === 0,
+        );
+        await act(flushMicrotasks);
+        await act(async () => {
+          if (replacement === "selection")
+            await hook!.result.current.handleSelectSession(project.id, "travel-session");
+          else if (replacement === "draft")
+            hook!.result.current.handleNewConversationForProject(project.id);
+          else viewRevision += 1;
+        });
+        const expectedBucket = hook.result.current.activeBucketRef.current;
+        await act(async () => {
+          scan.resolve({ sessions: [disk], nextCursor: null });
+          workspace.resolve([
+            { projectId: project.id, rootId: project.primaryRootId, created: false },
+          ]);
+          runtime.resolve(true);
+          expect(await opening).toBe("cancelled");
+        });
+        expect(hook.result.current.activeBucketRef.current).toBe(expectedBucket);
+        if (phase !== "runtime")
+          expect(
+            loadSessionIndex(project.id).sessions.some((session) => session.id === disk.id),
+          ).toBe(false);
+        await hook.unmount();
+        hook = undefined;
+      }
+    },
+  );
+
+  test("history uses its reserved intent through disk import and reports a successful selection", async () => {
+    diskProjects = [project];
+    (window.codeshell as any).listDiskSessions = async () => ({
+      sessions: [
+        {
+          id: "imported-history",
+          engineSessionId: "imported-history",
+          cwd: project.roots[0]!.path,
+          title: "Imported history",
+          updatedAt: 2,
+        },
+      ],
+      nextCursor: null,
+    });
+    hook = await renderHook(useHarness);
+    await act(async () => {
+      expect(await hook!.result.current.handleOpenHistorySession("imported-history")).toBe(
+        "opened",
+      );
+    });
+    expect(loadSessionIndex(project.id).activeSessionId).toBe("imported-history");
+  });
 });

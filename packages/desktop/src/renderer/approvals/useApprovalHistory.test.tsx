@@ -173,7 +173,13 @@ describe("persistent approval history", () => {
     function HistoryPage() {
       const [history] = useApprovalHistory();
       return (
-        <ApprovalsView queue={[]} history={history} onDecide={(...args) => decisions.push(args)} />
+        <ApprovalsView
+          queue={[]}
+          history={history}
+          onDecide={(...args) => {
+            decisions.push(args);
+          }}
+        />
       );
     }
     const container = document.createElement("div");

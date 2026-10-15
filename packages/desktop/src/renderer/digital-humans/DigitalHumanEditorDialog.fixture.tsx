@@ -267,10 +267,11 @@ try {
     await update(() => pendingConfirmation.resolve(true));
     assert.deepEqual(openChanges, [], "A discard decision for A cannot close the editor for B");
   } else if (scenario === "parent-installing") {
-    assert.equal(
-      props(find((node) => node.tagName === "BUTTON" && props(node).type === "submit")).disabled,
-      true,
-    );
+    assert.equal(props(saveButton()).disabled, false, "Busy Save remains focusable");
+    assert.equal(props(saveButton())["aria-disabled"], true);
+    assert.equal(props(saveButton())["aria-busy"], true);
+    await submit();
+    assert.deepEqual(saved, [], "Parent installation still rejects a repeated save");
     await update(() => requestClose(false));
     assert.deepEqual(openChanges, [], "Installation supplied by the parent keeps the editor open");
   } else if (scenario === "dependencies-roundtrip") {

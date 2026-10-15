@@ -60,4 +60,18 @@ describe("tailLog", () => {
     expect(await tailLog("desktop", 200, path.join(dir, "missing"))).toEqual([]);
     expect(await tailLog("engine", 200, dir)).toEqual([]);
   });
+
+  it("tails across byte chunks without corrupting UTF-8, CRLF or the final unterminated line", async () => {
+    const long = "中文🙂".repeat(10_000);
+    writeLog("engine-2026-10-15.log", `old\r\n${long}\r\n\r\n最后一行🙂`);
+    expect(await tailLog("engine", 2, dir)).toEqual([long, "最后一行🙂"]);
+    expect(await tailLog("engine", 1, dir)).toEqual(["最后一行🙂"]);
+  });
+
+  it("bounds a large file tail and normalizes invalid requested limits", async () => {
+    writeLog("engine-2026-10-15.log", `${"old line\n".repeat(1_100_000)}latest\n`);
+    expect(await tailLog("engine", 1, dir)).toEqual(["latest"]);
+    expect(await tailLog("engine", 0, dir)).toHaveLength(200);
+    expect(await tailLog("engine", Number.NaN, dir)).toHaveLength(200);
+  });
 });

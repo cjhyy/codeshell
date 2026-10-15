@@ -84,6 +84,7 @@ import { foldTranscript } from "./automation/foldTranscript";
 import { type SerialTaskQueue, type QueuedInputState } from "./queuedInput";
 import { loadView, saveView, type ViewState } from "./view";
 import { useTaskInboxFeature } from "./task-inbox/useTaskInboxFeature";
+import { ActivityNavigation, isActivityPage } from "./activity/ActivityNavigation";
 import { useOptimizationLabFeature } from "./optimization-lab/useOptimizationLabFeature";
 import { PAGE_REGISTRY } from "./pages/PageRegistry";
 import { replacePanelApps } from "./panels/PanelRegistry";
@@ -227,6 +228,13 @@ function App() {
     loadActiveProjectId(),
   );
   const [view, setView] = useState<ViewState>(() => loadView((mode) => PAGE_REGISTRY.has(mode)));
+  const historyViewIntentRef = useRef({ mode: view.viewMode, revision: 0 });
+  if (historyViewIntentRef.current.mode !== view.viewMode) {
+    historyViewIntentRef.current = {
+      mode: view.viewMode,
+      revision: historyViewIntentRef.current.revision + 1,
+    };
+  }
   const [credentialsInitialTab, setCredentialsInitialTab] = useState<"link" | undefined>();
   useEffect(() => {
     if (view.viewMode !== "credentials") setCredentialsInitialTab(undefined);
@@ -1327,6 +1335,7 @@ function App() {
     handleDeleteSession,
     handleOpenAutomationRunSession,
     handleOpenAutomationDiskSession,
+    handleOpenHistorySession,
   } = useSessionNavigation({
     projects,
     setProjects,
@@ -1397,6 +1406,10 @@ function App() {
       sessionIndices,
       selectSession: handleSelectSession,
       openDiskSession: handleOpenAutomationDiskSession,
+      openHistorySession: (id) => {
+        const intent = historyViewIntentRef.current.revision;
+        return handleOpenHistorySession(id, () => historyViewIntentRef.current.revision === intent);
+      },
       openPetTarget: handleOpenPetTarget,
       petSnapshot: petState.projection,
       openPetPage,
@@ -2352,6 +2365,15 @@ function App() {
           <div className="relative flex min-w-0 flex-1 overflow-hidden">
             <AppMainView
               lifecycle={isChatView && !cloudSelected ? lifecycle : null}
+              navigation={
+                isActivityPage(view.viewMode) ? (
+                  <ActivityNavigation
+                    page={view.viewMode}
+                    taskInboxEnabled={taskInboxEnabled}
+                    onNavigate={setViewMode}
+                  />
+                ) : null
+              }
               searchLayer={
                 !isPetSurface ? (
                   <SearchBar
@@ -2408,6 +2430,14 @@ function App() {
                     activeProjectPath: activeProject?.path ?? null,
                     activeProjectId: activeProject?.id ?? null,
                     onNewSession: handleNewConversation,
+                    onOpenSession: async (id) => {
+                      const intent = historyViewIntentRef.current.revision;
+                      const result = await handleOpenHistorySession(
+                        id,
+                        () => historyViewIntentRef.current.revision === intent,
+                      );
+                      if (result === "unavailable") return false;
+                    },
                     onSessionRenamed,
                     onSessionDeleted,
                   })}

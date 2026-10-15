@@ -373,6 +373,7 @@
   overflow-wrap: anywhere;
 }
 .config-connection-editor {
+  position: relative;
   margin-top: 18px;
 }
 .config-field-meta {

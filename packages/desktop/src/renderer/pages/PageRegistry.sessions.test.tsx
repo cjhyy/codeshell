@@ -101,4 +101,40 @@ describe("session history page route", () => {
     await act(async () => props(newSession).onClick());
     expect(created).toBe(1);
   });
+
+  test("history forwards the durable session ID to the host's open action", async () => {
+    const opened: string[] = [];
+    Object.defineProperty(window, "codeshell", {
+      configurable: true,
+      value: {
+        listSessions: async () => [
+          { id: "history-engine-id", title: "History item", updatedAt: 1000, size: 10 },
+        ],
+        listSessionTitles: async () => ({}),
+      },
+    });
+    await import("../sessions/SessionsView");
+    await act(async () => {
+      root.render(
+        <React.Suspense fallback={null}>
+          {PAGE_REGISTRY.get("sessions")!.render!({
+            runsInitialRunId: null,
+            activeProjectPath: null,
+            onOpenSession: (id) => {
+              opened.push(id);
+            },
+          })}
+        </React.Suspense>,
+      );
+      await flushMicrotasks();
+    });
+    const open = descendants(container).find(
+      (node) => node.tagName === "BUTTON" && textOf(node) === "打开会话",
+    )!;
+    await act(async () => {
+      props(open).onClick();
+      await flushMicrotasks();
+    });
+    expect(opened).toEqual(["history-engine-id"]);
+  });
 });

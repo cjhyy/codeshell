@@ -1,0 +1,38 @@
+export const activityApprovals = {
+  zh: {
+    activityApprovals: {
+      search: "搜索工具、参数、会话或理由…",
+      clearSearch: "清除搜索",
+      decisionFilter: "筛选审批结果",
+      allDecisions: "全部结果",
+      noMatches: "没有匹配的审批记录",
+      matching: "匹配 {count} / {total} 条",
+      showing: "显示 {count} / {total} 条记录",
+      loadMore: "加载更多",
+      details: "查看完整请求",
+      session: "会话",
+      requestId: "请求 ID",
+      unknownTime: "时间未知",
+      submitting: "正在提交决定…",
+      failed: "提交失败，请重试",
+    },
+  },
+  en: {
+    activityApprovals: {
+      search: "Search tools, arguments, sessions or reasons…",
+      clearSearch: "Clear search",
+      decisionFilter: "Filter approval decisions",
+      allDecisions: "All decisions",
+      noMatches: "No matching approval records",
+      matching: "{count} of {total} match",
+      showing: "Showing {count} of {total} records",
+      loadMore: "Load more",
+      details: "View full request",
+      session: "Session",
+      requestId: "Request ID",
+      unknownTime: "Unknown time",
+      submitting: "Submitting decision…",
+      failed: "Submission failed. Try again.",
+    },
+  },
+} as const;

@@ -50,7 +50,7 @@ The initial blockers below are retained as resolved verification history.
 
 Current integration worktree:
 `/Users/admin/.codex/worktrees/ui-task-center-20261015/codeshell`, branch
-`codex/integration/ui-review-wave5-20261015`. Other work advanced remote main to
+`codex/integration/ui-review-wave6-20261015`. Other work advanced remote main to
 `0.9.44`; this branch merged `976a79322` and `bb7a9b59a`, preserving the incoming model-capability,
 forwarding and Figma updates. The CSS merge preserves both context-selection and
 file-action styles. Do not revert incoming work or republish another version on
@@ -387,7 +387,11 @@ skip); all 29 browser fixtures passed. Sequential production full-app Electron
 Settings, Search and Operations pages all passed. Logs are
 `/tmp/codeshell-ui-wave5-{typecheck,lint,desktop-build,unit,overlays,native-settings,native-search,native-operations}.log`.
 Root independently verified every final scope in the combination and refreshed
-remote main before delivery. Remote CI remains pending the push.
+remote main before delivery. UI5 is delivered at `bef6e513e` and independently
+confirmed by remote ls-remote. CI `38740819315` completed with all 12 jobs
+successful, including real Electron, real win32 and the full desktop/browser
+shard. Current integration now starts UI6 from the
+delivered main while its three independent scopes refresh against that base.
 
 The repository's later release `v0.9.44` was published at 09:44:42Z with all
 14 native/update assets present. This follows our verified `v0.9.43` publication;
@@ -441,9 +445,159 @@ before final verification. Independent owned fixtures only; no real credentials,
 provider traffic or configuration writes. Native windows are coordinated.
 
 Primary checkout currently remains on another task's main at `2e0462c68`,
-26 local commits ahead of the current remote, plus pre-existing `.claude/` and
+containing other local task commits, plus pre-existing `.claude/` and
 `docs/todo/browser-panel-runtime-design.md`. Leave it untouched; task delivery
 uses the clean integration checkout and does not publish unknown local commits.
+
+UI6 metadata is integrated as `df9ad21f4` (source `488944948`, refreshed source
+merge `9e779bfe1` against delivered UI5). Only CloudProjectWorkspace layout and
+owned focus visibility change: complete status/error metadata stays within 40%
+of the pane, leaving useful ChatView space, with named keyboard scroll and
+ResizeObserver adjusting only a currently focused metadata descendant. Source
+production/development Chrome 8+8 layouts, actual Electron language/100–200%
+zoom 4 layouts, 16 guarded tests/46 assertions, Desktop/mobile types, renderer
+build and scoped lint/format passed. Independent ui_audit/Root product review
+found no blocker. Exact legal 1015-character before source leaves chat height
+zero; after preserves full error/name/draft/identity/action wires, portal focus
+and all hidden ancestor/document bounds. Root registered the 30th fixture.
+
+Root also owns `codex/web/model-editor-focus-20261015` in the exclusively reused
+file-browser worktree, from UI5 `bef6e513e`. Actual Workbench with 12 connections
+opens a last-row editor thousands of pixels above the viewport and leaves BODY
+focus on open/cancel/save failure; dirty Continue likewise loses focus. Scope
+is inline editor open/close/owned failure/Continue focus, keeping all API,
+secret, revision, validation, draft and confirmation behavior. Independent
+bridge checks confirmed source ownership guards and 12 held-write outcomes,
+with real field/blank interaction; window-blur cancellation is synthetic,
+not an OS-level claim. Root's strict document-height assertion additionally
+caught an escaping absolute sr-only legend; a local positioned editor fixes
+612px document height in a 360px pane. Formal production/development 8 layouts/
+10 behaviors, 524 guarded Web tests/2452 assertions, types/build/lint have
+passed before that CSS bound; final reruns with the retained tighter assertion
+are in progress. The same final fixture against unchanged UI5 fails directly
+on visible/focused model field, not a timeout.
+Final Web source is `81bae2e8b`/`ea35fe965`; production and development 8/10
+reruns, public isolated test command, final app build and scoped lint all pass
+with document width/height and hidden-ancestor assertions retained. bridge
+independently passed the final production 8/10, CSS review, 12 held-write
+outcomes and dirty Continue in three sizes. Source hooks match reviewed blobs
+`6fe8acdbc4`/CSS `d87d44babc0`. The fourth Web browser command is registered in
+the existing desktop CI shard after browser installation/workspace build.
+Root integrates both commits into UI6; only Cloud dialogs and Profile dialogs
+remain outstanding before combined gates.
+
+UI6 Cloud dialogs are integrated as `8eb2fe4ed` / `550724291` / `cff9a7dc7`
+(source `6c6611f95` / `15b2aebbd` / `2e479aa3f`), with the 31st public Desktop
+fixture registered. Chooser, manager and re-login keep bounded header/body,
+complete legal names/errors and visible Close. A local operation focus lease
+retains captured identity and cancels after explicit pointer/focus handoff,
+window blur, identity changes and unmount; uncertain manager failures still
+require Reload, failed login still clears its password. Native disabled-control
+FocusScope fallback is accepted only while the original operation owns focus.
+ResizeObserver only scrolls marked owned auto-scrollers with a current focused
+descendant, never the hidden shell or focus itself. Source production Chrome
+141 observations, development 33, actual Electron 69 including true 100/200%
+zoom and live resize, 21 guarded tests/42 assertions, Desktop/mobile types,
+renderer build and lint/format passed. Root and bridge independently reviewed
+the frozen source; final combined UI6 verification remains outstanding.
+
+Root's combined metadata + new Cloud sign-in portal Chrome matrix passed all
+8 layouts without errors. Additional read-only actual SettingsPage Appearance
+and Shortcuts review passed 32 language/theme/window cases down to 320×240;
+both sound/music sliders retain keyboard focus and hit visibility, all owned
+layout/document bounds hold and outside traffic/page errors are zero. Existing
+intentional theme/nav title truncation is not an overflow regression. Evidence
+`/tmp/codeshell-audio-shortcuts-ui-audit-20261015/report.json`; no product edit.
+
+UI7 accepted candidates from bridge's real Workbench owned-HTTP evidence:
+Skills detail GET finishing after the user resumes search steals input focus
+and later typing; create-close tries to focus its still-disabled opener before
+React re-enables it. bridge owns the local asynchronous pane/return focus scope.
+Models default save and connection deletion reject while the only error sits
+above the viewport (320 default error y−118; last-row deletion y−3302, also
+y−2272 at 1280). Confirmation initially opens below the short viewport with
+BODY focus. ui_audit may own local feedback/confirm/focus recovery after its
+independent Profile review. Keep original writes, revisions, replacement rules,
+drafts, refresh and authorization semantics. Evidence
+`/tmp/codeshell-web-settings-readonly-review-report.json`; neither fix is part
+of UI6 until independently completed and explicitly integrated later.
+
+UI7 Skills checkpoint `dae09e610` is clean and ready for refresh after UI6.
+Only HubSkills, its local CSS and `scripts/test-skills-browser.mjs` change.
+Production/development StrictMode 34 observations each, 16 guarded tests/59
+assertions, types/build/lint/format passed; ui_audit independently reviewed.
+Old Root `12ca02005` has the same HubSkills blob as delivered UI5; formal close
+and held-read tests fail directly there. Callback ownership spans the actual
+click through asynchronous response; still-focused filters stay visible when
+the pane is inserted, and close waits for React's re-enabled opener.
+
+UI7 MCP checkpoint `96357a2a4` is clean in the exclusively owned file-browser
+tree on `codex/web/mcp-ui-recovery-20261015`, with the verified Web model editor
+commits as prerequisites. Only HubMcp, local CSS and its new browser fixture
+change; public commands/CI registration await UI7 integration. Actual Workbench
+read-only baseline reproduced edit/cancel BODY focus and failed edit/removal
+errors thousands of pixels above the viewport in 320/1280 windows. Local
+bounded full error feedback now remains with the operation, a remounted Edit
+opener is resolved by service identity, and source-owned recovery cancels on
+explicit pointer/focus handoff, blur or unmount. Regular save cannot probe;
+explicit Save and Test retains its exact owned HTTP sequence. Native disabling,
+401 auth loss, original credentials/reuse consent, cancellation and inheritance
+guards remain. Strict production/development each pass 30 observations,
+524 guarded Web tests/2452 assertions, types/build/lint/format pass. Final
+product blob `5982ace2b` / CSS `3eb874589` differs from bridge's reviewed Node
+version only by formatter whitespace. Root's before test fails directly on
+focused/hit input and 3140px document height. bridge additionally reproduced a
+real Workbench rail brand SVG pointer handoff missed by HTMLElement-only guards;
+the Node fix passes its four edit/remove × success/rejection cases without
+reclaiming focus. Evidence `/tmp/codeshell-web-mcp-svg-peer-{review,after}.log`,
+before `P9SjEx` / after `q12vgQ`; do not describe Root's injected SVG case as
+the actual entry proof. No UI7 change has been pushed yet.
+
+UI6 Profile dialogs final source `0f8a718ec` is integrated as `6464cf566`,
+with the 32nd Desktop browser fixture registered. Editing, memory and switch
+review use bounded content and visible Close/footer actions, with the actual
+More/Edit/Deactivate opener captured by callers. Focus intent spans asynchronous
+requirements and preview, explicit nested confirmations and Select portals;
+external focus/pointer/window blur permanently cancels return. Old closing
+callbacks consume their own content's lease, so rapid A-close/B-open cannot
+dispose or restore B's ownership. Resize only scrolls marked owned content for
+the current focused descendant. Native Save/Apply retain focus via aria-disabled
+while original synchronous save/adopt/close guards still block duplicate work.
+Original memory/capability/preview/adopt/configuration wires are preserved.
+Source production Chrome 16 layouts/968 observations, actual Electron 16/1004
+including true 200% zoom and 36 focus-preserving live resizes, 68 guarded tests,
+Desktop/mobile types, renderer build and lint/format passed. ui_audit independently
+verified held preview, held requirements, delayed close blur and rapid reopening
+in production/development; Root read the final ownership helper and callers and
+reviewed wide/narrow screenshots without a new blocker. Strict before source
+fails directly on 138px hidden dialog scroll. Root's integrated Cloud metadata
+and new SignIn portal additionally passed all 4 native language/100–200% cases.
+
+At UI6 freeze the primary checkout has advanced under another task to
+`f158ed9b5`, 30 local commits ahead of remote UI5 `bef6e513e`, including panel
+launcher and child conversation work. The pre-existing untracked files remain
+unchanged. Continue delivering only this goal's clean integration branch; do not
+publish, reset or synchronize those other local commits.
+UI6 combined gates now start after a fresh fetch; UI7 changes remain separate.
+
+UI6 final combined gates passed on the frozen product source. All 14 workspace
+types, full Desktop main/preload/renderer/mobile/extension build, lint (0 errors,
+104 existing warnings), all 32 Desktop browser fixtures and four isolated Web
+browser commands passed. The guarded combined shard completed with 3399 passes,
+12603 assertions across 372 files, and one existing Chromium-covered skip.
+The first shard found three legacy source-string expectations for old Close
+and create-callback wiring; source `c11f983a0`, integrated as `aba4829ff`, updates
+only that contract test while retaining pending-close guards and actual creation
+requirements. The full zero-failure shard rerun is recorded; product code did
+not change or require repeated layout/build checks. Native full-App Settings
+and DigitalHumans E2E passed sequentially, plus the four combined Cloud metadata
+/ new SignIn portal native language/100–200% cases. Scoped follow-up lint,
+format and diff checks passed. Logs: `/tmp/codeshell-ui-wave6-{typecheck,lint,
+desktop-build,unit,overlays,web-latest,web-sidebar,web-files,web-settings,
+native-settings,native-digital-humans,cloud-metadata-native}.log`.
+Fresh remote main is still UI5 `bef6e513e`; publish this verified UI6 source
+through the clean integration branch and retain other local main commits.
+Remote CI has not yet been verified; record it in the next continuation.
 
 Initial audit history follows:
 
