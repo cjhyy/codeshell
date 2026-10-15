@@ -508,9 +508,11 @@ export function createLinkService(options: LinkServiceOptions = {}) {
                     available: remoteAvailable,
                     ...(!remoteAvailable
                       ? {
-                          unavailableReason: remoteConfig
-                            ? "连接目录暂时不可用。已有账号仍可管理，请稍后重试。"
-                            : "当前未配置 Link 服务。已有账号仍可管理。",
+                          unavailableReason: !remoteConfig
+                            ? "当前未配置 Link 服务。已有账号仍可管理。"
+                            : remoteReady
+                              ? "当前 Link 服务未提供此连接方式。已有账号仍可管理。"
+                              : "连接目录暂时不可用。已有账号仍可管理，请稍后重试。",
                         }
                       : {}),
                   },
