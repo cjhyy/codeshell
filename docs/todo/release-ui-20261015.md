@@ -677,7 +677,17 @@ Evidence `codeshell-model-picker-FDUYMl` and
 `/tmp/codeshell-model-picker-native-capture-20261016.log`; Root inspected the
 complete 320x240 logical/200% capture (1280x960 PNG). Native window/server have
 closed and the slot is free. The Desktop public runner now includes 35 fixtures.
-History final source and combined UI8 gates remain pending.
+History is integrated as `1f46c50b9`, `29ee3e5c4`, `0b1e41fe7`, `3d96bcbf4`
+and `bef12eab9`. Source production 32 layouts plus 104 behaviors, development
+104 behaviors, 18 guarded tests/118 assertions, Web types/build/lint/format and
+independent review passed. The actual Desktop version increment is represented
+in the fixture: successful restoration/open survives its own refresh, while
+user filter/workspace/navigation changes cancel stale intent. Pagination
+failure keeps records and exposes owned retry/error; title CAS, automatic title,
+archive/restore/export and genuine dirty-navigation confirmation are preserved.
+The scoped resize observer only scrolls the actual history pane for its focused
+descendant and consumes queued callbacks safely after unmount. The eighth Web
+browser command is registered in CI. Combined UI8 gates start on this source.
 
 UI8 is isolated while UI7 gates finish. History's actual Workbench audit found
 offscreen archive failures and late rename completions stealing external focus;

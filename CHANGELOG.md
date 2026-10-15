@@ -68,6 +68,8 @@ breaking.
 - Show project-trust read and save failures with retries, keep trust choices
   visible in short windows, and ignore results belonging to an earlier project.
 - Point the empty model picker to model connections in Settings.
+- Keep Web history errors and focused actions visible, preserve rename drafts
+  and restore/open intent through refreshes, and recover failed pagination.
 
 ## [0.9.44] - 2026-10-15
 
