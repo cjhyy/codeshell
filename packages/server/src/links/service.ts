@@ -31,6 +31,7 @@ import {
 } from "./device-oauth.js";
 import type {
   LinkAuthorization,
+  LinkAuthorizationFailure,
   LinkAuthMode,
   LinkAuthorizationResponse,
   LinkAuthorizationStep,
@@ -65,6 +66,67 @@ export class LinkServiceError extends Error {
   ) {
     super(messages[code]);
     this.name = "LinkServiceError";
+  }
+}
+
+/** Trusted Host adapters use this to expose reviewed failure stages, never raw provider text. */
+export class HostLinkOAuthError extends LinkServiceError {
+  readonly failure: LinkAuthorizationFailure;
+  constructor(failure: LinkAuthorizationFailure) {
+    super(422, "authorization_failed");
+    this.name = "HostLinkOAuthError";
+    if (
+      ![
+        "invalid_request",
+        "access_denied",
+        "timeout",
+        "network_error",
+        "server_error",
+        "protocol_error",
+      ].includes(failure.code) ||
+      ![
+        "validation",
+        "authorization",
+        "discovery_registration",
+        "authorization_callback",
+        "token_exchange",
+        "credential_verification",
+      ].includes(failure.stage) ||
+      (failure.verificationStage !== undefined &&
+        ![
+          "credential_binding",
+          "mcp_initialize",
+          "tool_discovery",
+          "account_verification",
+          "capability_verification",
+        ].includes(failure.verificationStage)) ||
+      (failure.reason !== undefined &&
+        ![
+          "binding_mismatch",
+          "cancelled",
+          "network_error",
+          "http_error",
+          "protocol_error",
+          "tool_unavailable",
+          "invalid_pagination",
+          "response_too_large",
+          "account_tool_error",
+          "account_identity_unavailable",
+          "no_read_capabilities",
+        ].includes(failure.reason)) ||
+      (failure.httpStatus !== undefined &&
+        (!Number.isInteger(failure.httpStatus) ||
+          failure.httpStatus < 400 ||
+          failure.httpStatus > 599))
+    )
+      throw new LinkServiceError(400, "invalid_request");
+    this.failure = Object.freeze({
+      code: failure.code,
+      stage: failure.stage,
+      ...(failure.verificationStage ? { verificationStage: failure.verificationStage } : {}),
+      ...(failure.reason ? { reason: failure.reason } : {}),
+      ...(failure.httpStatus !== undefined ? { httpStatus: failure.httpStatus } : {}),
+    });
   }
 }
 
@@ -1029,7 +1091,7 @@ export function createLinkService(options: LinkServiceOptions = {}) {
           });
         });
       } catch (error) {
-        if (job.public.state === "pending")
+        if (job.public.state === "pending") {
           end(
             operation.controller.signal.aborted
               ? "cancelled"
@@ -1037,6 +1099,9 @@ export function createLinkService(options: LinkServiceOptions = {}) {
                 ? error.code
                 : "authorization_failed",
           );
+          if (job.public.state === "failed" && error instanceof HostLinkOAuthError)
+            job.public = { ...job.public, failure: { ...error.failure } };
+        }
       } finally {
         if (candidate?.secret && !committed) {
           try {
