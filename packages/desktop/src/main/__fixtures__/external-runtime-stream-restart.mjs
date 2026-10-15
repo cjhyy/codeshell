@@ -60,6 +60,7 @@ mock.module(join(main, "session-workspace-service.ts"), () => ({
 
 const { AgentBridge } = await import("../agent-bridge.ts");
 const { SessionSnapshotStore } = await import("../SessionSnapshotStore.ts");
+const { WorkerRunOwnership } = await import("../worker-run-ownership.ts");
 const { PanelHostWindowRoutes } = await import("../panel-host-routing.ts");
 const { bucketForSession } = await import("../browser-driver/active-guest.ts");
 const sessionId = "runtime-restart";
@@ -78,6 +79,7 @@ const owner = {
 // Electron, a worker or a provider process.
 const bridge = Object.create(AgentBridge.prototype);
 bridge.snapshots = new SessionSnapshotStore();
+bridge.workerRuns = new WorkerRunOwnership();
 let forgottenOutput = 0;
 bridge.mainOutput = { forget: () => forgottenOutput++ };
 bridge.sessionCwd = new Map();
