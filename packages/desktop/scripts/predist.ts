@@ -1,4 +1,4 @@
-// Pre-package step: replace the core and capability workspace
+// Pre-package step: replace the Link, core and capability workspace
 // SYMLINKS with real, self-contained directories inside desktop/node_modules.
 //
 // WHY THIS EXISTS
@@ -13,10 +13,11 @@
 // symlink target, so neither a negative `files` glob nor trimming core's own
 // `files` field avoids it — both were tried and don't work.
 //
-// All of desktop's OTHER deps are build-time only (esbuild bundles main, vite
-// bundles the renderer). Core, coding, Pet, and Optimization Lab are
-// runtime deps: main spawns the coding worker, which dynamically loads the
-// capabilities through core's extension seam.
+// The materialized workspace list below drives every production copy operation.
+// Core, coding, Pet, and Optimization Lab are runtime deps: main spawns the coding
+// worker, which dynamically loads the capabilities through core's extension seam.
+// Link is also copied for runtime consumers of its manifests. Other workspaces
+// are build-time deps (esbuild bundles main, vite bundles the renderer).
 // Host is built before main and bundled by esbuild; it needs no separate
 // materialized runtime directory or additional production dependency closure.
 //
@@ -46,23 +47,33 @@ import { execFileSync } from "node:child_process";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { buildDesktopWorkspaceDependencies } from "./build-workspace-dependencies.js";
+import {
+  assertMaterializedWorkspaceDependencies,
+  DESKTOP_MATERIALIZED_WORKSPACES,
+  readRepositoryWorkspaceNames,
+  type ProductionWorkspaceManifest,
+} from "./materialized-workspaces.js";
 
 const here = dirname(fileURLToPath(import.meta.url));
 const desktopRoot = resolve(here, "..");
 const repoRoot = resolve(desktopRoot, "../..");
-const linkSrc = resolve(repoRoot, "packages/link");
-const coreSrc = resolve(repoRoot, "packages/core");
-const codingSrc = resolve(repoRoot, "packages/coding");
-const petSrc = resolve(repoRoot, "packages/pet");
-const linkTarget = resolve(desktopRoot, "node_modules/@cjhyy/code-shell-link");
-const coreTarget = resolve(desktopRoot, "node_modules/@cjhyy/code-shell-core");
-const codingTarget = resolve(desktopRoot, "node_modules/@cjhyy/code-shell-capability-coding");
-const petTarget = resolve(desktopRoot, "node_modules/@cjhyy/code-shell-pet");
-const optimizationLabSrc = resolve(repoRoot, "packages/optimization-lab");
-const optimizationLabTarget = resolve(
-  desktopRoot,
-  "node_modules/@cjhyy/code-shell-capability-optimization-lab",
-);
+const materializedWorkspaces = DESKTOP_MATERIALIZED_WORKSPACES.map((entry) => ({
+  ...entry,
+  source: resolve(repoRoot, entry.relativeDir),
+  target: resolve(desktopRoot, "node_modules", entry.packageName),
+}));
+
+function readManifest(directory: string): ProductionWorkspaceManifest {
+  return JSON.parse(readFileSync(resolve(directory, "package.json"), "utf8"));
+}
+
+function verifyWorkspaceMaterialization(): void {
+  const workspaceNames = readRepositoryWorkspaceNames(repoRoot);
+  assertMaterializedWorkspaceDependencies(readManifest(desktopRoot), workspaceNames);
+  for (const { source } of materializedWorkspaces) {
+    assertMaterializedWorkspaceDependencies(readManifest(source), workspaceNames);
+  }
+}
 
 function log(msg: string): void {
   // eslint-disable-next-line no-console
@@ -70,13 +81,12 @@ function log(msg: string): void {
 }
 
 function main(): void {
-  if (!existsSync(linkSrc)) throw new Error(`Link package not found at ${linkSrc}`);
-  if (!existsSync(coreSrc)) throw new Error(`core package not found at ${coreSrc}`);
-  if (!existsSync(codingSrc)) throw new Error(`coding package not found at ${codingSrc}`);
-  if (!existsSync(petSrc)) throw new Error(`Pet package not found at ${petSrc}`);
-  if (!existsSync(optimizationLabSrc)) {
-    throw new Error(`Optimization Lab package not found at ${optimizationLabSrc}`);
+  for (const { label, source } of materializedWorkspaces) {
+    if (!existsSync(source)) throw new Error(`${label} package not found at ${source}`);
   }
+  // Fail before building or modifying node_modules if a new production workspace
+  // dependency would make electron-builder follow a symlink outside this app.
+  verifyWorkspaceMaterialization();
   // Rebuild every direct desktop workspace dependency, in dependency order,
   // BEFORE the desktop bundle. Previously this step only asserted that
   // each `dist` existed (see copyDir) — so whatever a developer or CI job had
@@ -90,9 +100,9 @@ function main(): void {
   // removes the "did you remember to run the root build first?" failure mode.
   buildDesktopWorkspaceDependencies();
 
-  // electron-builder only packs whatever is already in out/**; predist itself
-  // just materializes core. Without this, a stale out/ (source changed but never
-  // rebuilt) is silently packaged — you ship old main/renderer/mobile code.
+  // electron-builder only packs whatever is already in out/**. Materializing
+  // runtime packages alone would silently ship a stale main/renderer/mobile
+  // bundle whenever sources changed without rebuilding out/.
   // `build` is fast (esbuild + vite prod) and idempotent.
   log("building desktop bundle (out/) before packaging");
   execFileSync("bun", ["run", "build"], { cwd: desktopRoot, stdio: "inherit" });
@@ -103,27 +113,21 @@ function main(): void {
   // `recursive: true`. For a junction/symlink, `recursive` removes only the
   // link entry, never following it into the real core dir (verified: rm of a
   // junction does not delete the target's contents).
-  removeWorkspaceTarget(linkTarget, "Link");
-  removeWorkspaceTarget(coreTarget, "core");
-  removeWorkspaceTarget(codingTarget, "coding");
-  removeWorkspaceTarget(petTarget, "Pet");
-  removeWorkspaceTarget(optimizationLabTarget, "Optimization Lab");
-
-  materializePackage(linkSrc, linkTarget);
-  materializePackage(coreSrc, coreTarget);
-  materializePackage(codingSrc, codingTarget);
-  materializePackage(petSrc, petTarget);
-  materializePackage(optimizationLabSrc, optimizationLabTarget);
+  for (const { label, source, target } of materializedWorkspaces) {
+    removeWorkspaceTarget(target, label);
+    materializePackage(source, target);
+  }
 
   // Each materialized sibling owns its production closure.
   // Optimization Lab imports zod directly; core's nested node_modules cannot serve
   // sibling-package resolution in the packaged app.
-  installProductionDeps(coreSrc, coreTarget, "core");
-  installProductionDeps(optimizationLabSrc, optimizationLabTarget, "Optimization Lab");
+  for (const { label, source, target, installProductionDependencies } of materializedWorkspaces) {
+    if (installProductionDependencies) installProductionDeps(source, target, label);
+  }
   verifyMaterializedCapabilities();
 
   log(
-    `materialized Link + core + coding + Pet + Optimization Lab into node_modules (LICENSE/README excluded)`,
+    `materialized ${materializedWorkspaces.map(({ label }) => label).join(" + ")} into node_modules (LICENSE/README excluded)`,
   );
 }
 
@@ -133,7 +137,9 @@ function verifyMaterializedCapabilities(): void {
     "bun",
     [
       "--eval",
-      "await import('@cjhyy/code-shell-link'); await import('@cjhyy/code-shell-core'); await import('@cjhyy/code-shell-pet'); await import('@cjhyy/code-shell-capability-coding'); await import('@cjhyy/code-shell-capability-optimization-lab/capability')",
+      materializedWorkspaces
+        .map(({ importSpecifier }) => `await import(${JSON.stringify(importSpecifier)})`)
+        .join("; "),
     ],
     { cwd: desktopRoot, stdio: "inherit" },
   );

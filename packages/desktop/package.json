@@ -196,13 +196,13 @@
     "@cjhyy/code-shell-core": "workspace:*",
     "@cjhyy/code-shell-pet": "workspace:*",
     "node-pty": "^1.1.0",
-    "playwright-core": "1.64.0",
-    "@cjhyy/code-shell-host": "workspace:*"
+    "playwright-core": "1.64.0"
   },
   "devDependencies": {
     "@cjhyy/code-shell-browser-devtools": "workspace:*",
     "@cjhyy/code-shell-cdp": "workspace:*",
     "@cjhyy/code-shell-chat": "workspace:*",
+    "@cjhyy/code-shell-host": "workspace:*",
     "@cjhyy/code-shell-link": "workspace:*",
     "@cjhyy/code-shell-server": "workspace:*",
     "@cjhyy/code-shell-web": "workspace:*",
