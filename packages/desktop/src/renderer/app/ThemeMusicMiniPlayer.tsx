@@ -12,7 +12,7 @@ export function ThemeMusicMiniPlayer() {
   if (!state.active || !track) return null;
   return (
     <div
-      className="flex shrink-0 items-center justify-end gap-2 border-b border-border bg-card/90 px-3 py-1"
+      className="relative flex shrink-0 items-center justify-end gap-2 border-b border-border/70 bg-card/90 px-3 py-1"
       data-theme-music-dock
     >
       <Music2 size={13} className="shrink-0 text-primary" aria-hidden="true" />

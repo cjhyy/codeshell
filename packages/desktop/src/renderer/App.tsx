@@ -2417,7 +2417,12 @@ function App() {
   }, [pendingNewProject, activeProjectId, projectRuntime.ready, cloudSelected, cloudRuntime]);
 
   return (
-    <AppShell platformClass={platformClass} sidebarCollapsed={!sidebarVisible}>
+    <AppShell
+      platformClass={platformClass}
+      sidebarCollapsed={!sidebarVisible}
+      isFullscreen={isFullscreen}
+      sidebarIsDialog={isNarrowWindow}
+    >
       <div
         className={isSettingsPage ? "hidden" : "flex min-h-0 flex-1 flex-col"}
         aria-hidden={isSettingsPage}
@@ -2481,7 +2486,7 @@ function App() {
         </div>
 
         <ThemeMusicMiniPlayer />
-        <div className="flex min-h-0 flex-1">
+        <div data-app-body className="relative flex min-h-0 flex-1">
           <ResponsiveSidebar
             narrow={isNarrowWindow}
             open={sidebarVisible}

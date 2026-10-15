@@ -560,7 +560,7 @@ function ResolvedPanelArea({
     <div
       className={cn(
         "relative flex min-h-0 min-w-0 flex-col",
-        maximized ? "absolute inset-0 z-30 shrink" : "shrink-0 border-l border-border",
+        maximized ? "absolute inset-0 z-30 shrink" : "shrink-0 border-l border-border/70",
       )}
       // Closed docks use display:none so BrowserPanel may idle-evict. Temporary
       // full-page views keep the dock invisible but laid out enough for webview
@@ -586,7 +586,7 @@ function ResolvedPanelArea({
         />
       )}
       {/* Tab strip */}
-      <div className="flex min-w-0 shrink-0 items-center gap-1 border-b border-border/80 bg-muted/35 px-1.5 py-0.5">
+      <div className="flex h-[var(--cs-titlebar-height,2.75rem)] min-w-0 shrink-0 items-center gap-1 border-b border-border/70 bg-muted/35 px-1.5">
         {activeTabs.length > 0 ? (
           <PanelTabStrip
             tabs={activeTabs.map((tab) => {

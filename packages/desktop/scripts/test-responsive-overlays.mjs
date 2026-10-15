@@ -5,6 +5,7 @@ const isolatedRunner = fileURLToPath(
   new URL("../../../scripts/run-isolated-node-smoke.mjs", import.meta.url),
 );
 const fixtures = [
+  "app/AppShell.browser.fixture.mjs",
   "components/ui/overlay.browser.fixture.mjs",
   "components/ui/dropdown-menu.browser.fixture.mjs",
   "components/ui/dropdown-surfaces.browser.fixture.mjs",
