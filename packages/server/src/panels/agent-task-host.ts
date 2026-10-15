@@ -1,4 +1,8 @@
-import { HostRuntime, interceptHostRequest } from "@cjhyy/code-shell-host";
+import {
+  HostRuntime,
+  interceptHostRequest,
+  unsupportedAskUserDecision,
+} from "@cjhyy/code-shell-host";
 import { randomUUID } from "node:crypto";
 import { createRequire } from "node:module";
 import { isAbsolute } from "node:path";
@@ -49,7 +53,6 @@ interface PendingApproval {
   connectionId?: string;
   generation?: number;
   settling: boolean;
-  askUser: boolean;
 }
 
 interface RunningTask {
@@ -220,10 +223,23 @@ export function createPanelAgentTaskHost(options: PanelAgentTaskHostOptions = {}
       taskId: running.taskId,
       sessionId: running.sessionId,
       settling: false,
-      askUser: request.toolName === "__ask_user__",
       ...(typeof params.connectionId === "string" ? { connectionId: params.connectionId } : {}),
       ...(Number.isInteger(params.generation) ? { generation: params.generation } : {}),
     };
+    if (request.toolName === "__ask_user__") {
+      // The Panel runtime only has a yes/no confirmation UI. It cannot answer
+      // a question; Core retires async questions without injecting a user answer.
+      outcomeResult(
+        await rpc(running, "agent/approve", {
+          sessionId: pending.sessionId,
+          requestId: pending.id,
+          connectionId: pending.connectionId,
+          generation: pending.generation,
+          decision: unsupportedAskUserDecision(hostRuntime.adapter.label),
+        }),
+      );
+      return;
+    }
     if (request.toolName === "__panel_action__" && options.onPanelAction) {
       let decision: Record<string, unknown>;
       try {
@@ -525,7 +541,6 @@ export function createPanelAgentTaskHost(options: PanelAgentTaskHostOptions = {}
           taskId?: unknown;
           requestId?: unknown;
           approved?: unknown;
-          answer?: unknown;
         };
         const pending =
           typeof input?.requestId === "string"
@@ -552,9 +567,6 @@ export function createPanelAgentTaskHost(options: PanelAgentTaskHostOptions = {}
                 ? {
                     approved: true,
                     scope: "once",
-                    ...(pending.askUser && typeof input.answer === "string"
-                      ? { answer: input.answer.slice(0, 12_000) }
-                      : {}),
                   }
                 : { approved: false, reason: "Declined by user" },
             }),

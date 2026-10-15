@@ -307,24 +307,21 @@ for (const [tool, capability] of [
   });
 }
 
-test("preserves AskUser approval and answer routing", async () => {
+test("an unsupported AskUser is not exposed as a tool approval or fake user answer", async () => {
   const f = await fixture();
   const started = (await f.host.call(f.scope, "agent.task.start", {
     prompt: "loop:__ask_user__",
     label: "Ask",
   })) as PanelAgentTaskView;
-  await until(() => f.events.some(({ event }) => event === "agent.task.approvalRequested"));
-  const request = f.events.find(({ event }) => event === "agent.task.approvalRequested")!.payload;
-  await f.host.call(f.scope, "agent.task.approvalRespond", {
-    ...request,
-    approved: true,
-    answer: "chosen",
-  });
   await until(async () => (await task(f.host, f.scope, started.id)).status === "completed");
-  expect(JSON.parse(await readFile(`${f.log}.approval`, "utf8")).decision).toMatchObject({
-    approved: true,
-    answer: "chosen",
+  expect(JSON.parse(await readFile(`${f.log}.approval`, "utf8")).decision).toEqual({
+    approved: false,
+    failure: "unavailable",
+    reason: "user.ask is not supported by this host (Panel agent task)",
   });
+  expect(f.events.some(({ event }) => event === "agent.task.approvalRequested")).toBe(false);
+  expect(JSON.stringify(f.events)).not.toContain('"ask-1"');
+  expect(JSON.stringify(f.events)).not.toContain("__ask_user__");
 });
 
 test("clears Desktop-only authority and secret env even with a custom builder", async () => {

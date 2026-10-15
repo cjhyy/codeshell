@@ -44,6 +44,19 @@ export function unsupportedLoopbackAnswer(
   });
 }
 
+/** AskUser expects human text, so an unsupported host must never approve a synthetic answer. */
+export function unsupportedAskUserDecision(hostLabel: string): {
+  approved: false;
+  failure: "unavailable";
+  reason: string;
+} {
+  return {
+    approved: false,
+    failure: "unavailable",
+    reason: unsupportedText("user.ask", hostLabel),
+  };
+}
+
 export function isHostAuthorityRequest(message: {
   id?: unknown;
   method?: unknown;

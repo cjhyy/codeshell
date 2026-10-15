@@ -3,6 +3,7 @@ export {
   classifyHostRequest,
   interceptHostRequest,
   isHostAuthorityRequest,
+  unsupportedAskUserDecision,
   unsupportedHostRequestResponse,
   unsupportedLoopbackAnswer,
   unsupportedLoopbackCapability,
