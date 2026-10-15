@@ -380,6 +380,13 @@ with two independent product reviews green. Before evidence fails directly
 because the old viewer has no dialog role. Root registered the MCP fixture;
 UI5 now freezes Search/History/Connections/MCP for combined gates, 29 browser
 fixtures in total. No additional release/version change is planned.
+Combined all 14 workspace types, lint (0 errors/104 existing warnings) and full
+Desktop main/preload/renderer/mobile/extension build passed. Guarded unit,
+29 browser fixtures and sequential full-app native checks are running.
+
+The repository's later release `v0.9.44` was published at 09:44:42Z with all
+14 native/update assets present. This follows our verified `v0.9.43` publication;
+preserve that later release and collect UI work under Unreleased.
 
 Root's production TopBar→NotificationHistory audit passed 16 language/theme/
 window combinations down to 320×240 with 40 complete long notifications, native
@@ -399,6 +406,21 @@ confirmed active App/CloudProjectWorkspace entry points. Evidence:
 ui_audit may independently verify after Connections delivery. Any accepted fix
 must be limited to layout/focus recovery, preserving login identity, authority,
 password clearing, duplicate-submit, stale-binding and reconnect semantics.
+Independent ui_audit reproduced long-name overflow and normal-name SignIn
+failure (6/6 BODY after settling); local chooser failure retains its own button.
+
+bridge_test_fix independently confirmed CloudProjectWorkspace metadata can
+collapse an enabled restored draft and output to zero after a definite connected
+send failure: native 800×480 at actual 200% zoom (400×240) has a 397px long-error
+alert above a 0px chat. Keyboard can focus the clipped textarea and shift the
+hidden app ancestor; native wheel cannot recover it. Names tested stay within
+host/server limits (128/80). Accepted scope is only complete bounded, named,
+keyboard-scrollable identity/status/error metadata and existing action/focus
+reachability, preserving all ChatView/runtime/send/auth behavior. New branch
+`codex/desktop/cloud-workspace-metadata-20261015` may start from current origin
+main `94f1a462b` because this component is unchanged, then must refresh against
+delivered UI5 before final gates. Evidence `/tmp/codeshell-cloud-banner-review-report.json`
+and `/tmp/codeshell-cloud-banner-native-report.json`.
 
 Initial audit history follows:
 
