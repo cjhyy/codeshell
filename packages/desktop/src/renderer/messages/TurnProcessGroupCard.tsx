@@ -1,5 +1,5 @@
-import React, { memo, useState, useEffect, useRef, useId } from "react";
-import { ChevronRight, ChevronDown } from "lucide-react";
+import React, { memo, useState, useEffect, useId } from "react";
+import { ChevronRight, ChevronDown, LoaderCircle } from "lucide-react";
 import { ToolCard } from "../tool-cards";
 import { ToolGroupCard } from "./ToolGroupCard";
 import { ThinkingMessageView } from "./ThinkingMessageView";
@@ -7,11 +7,13 @@ import { AgentMessageView } from "./AgentMessageView";
 import { ContextBoundaryView } from "./ContextBoundaryView";
 import { GoalProgressView } from "./GoalProgressView";
 import { StreamingMarkdown } from "./StreamingMarkdown";
-import { processGroupLabel, type RenderedTurnProcessGroup } from "./streamGroups";
+import { processGroupDuration, type RenderedTurnProcessGroup } from "./streamGroups";
 import { AgentGroupCard } from "./AgentGroupCard";
 import { isSystemReminderText } from "../contextSelection";
 import { SystemReminderTask } from "./SystemReminderTask";
 import type { MarkdownRootStatus } from "../Markdown";
+import { useT } from "../i18n/I18nProvider";
+import { useAnchoredLayoutChange } from "../chat/TranscriptScrollContext";
 
 interface Props {
   /** Rendered shape: inner items may include an AgentGroup (foldAgentGroups). */
@@ -42,13 +44,13 @@ function dedupeById<T extends { id: string }>(items: T[]): T[] {
 }
 
 /**
- * Codex-style "已处理 X m Y s ⌄" — wraps a whole turn from just after
+ * A turn's activity disclosure, from just after
  * the user message through its last tool call (lead-in + mid-run
  * narration ride inside). Only the user bubble and the post-tool final
  * summary live OUTSIDE this card (rendered by the caller).
  *
- * Live turn: defaults to OPEN with a 1s elapsed ticker. Closed turn:
- * defaults to CLOSED with static total wall time.
+ * A newly mounted live turn opens; history starts closed. Completion freezes
+ * its clock while retaining the current disclosure and reading position.
  */
 function TurnProcessGroupCardImpl({
   group,
@@ -60,20 +62,10 @@ function TurnProcessGroupCardImpl({
 }: Props) {
   const [open, setOpen] = useState(group.isLive);
   const detailsId = useId();
-  const prevIsLiveRef = useRef(group.isLive);
+  const { t } = useT();
+  const anchoredChange = useAnchoredLayoutChange();
 
-  // Force-collapse only the process card whose own clean turn just transitioned
-  // from live to closed. Older closed groups may have been manually expanded;
-  // a later turnEpoch bump (background wakeup / next turn) must not fold them
-  // again. Interrupted (stopped) turns still render flat; see showHeader below.
-  useEffect(() => {
-    const wasLive = prevIsLiveRef.current;
-    if (wasLive && !group.isLive && !group.stopped && group.completedCleanly !== false)
-      setOpen(false);
-    prevIsLiveRef.current = group.isLive;
-  }, [group.isLive, group.stopped, group.completedCleanly]);
-
-  // Codex-style "已处理 X m Y s" header. Live turn: tick every 1s from the
+  // Live turn: tick every 1s from the
   // run start, including model work before the first tool. Closed turn uses
   // the frozen backend duration, with source timestamp fallback for old history.
   const [nowMs, setNowMs] = useState(() => Date.now());
@@ -90,9 +82,10 @@ function TurnProcessGroupCardImpl({
       ? undefined
       : Math.max(0, nowMs - startedAt)
     : group.durationMs;
-  const label = processGroupLabel(elapsedMs);
+  const duration = processGroupDuration(elapsedMs);
+  const label = t(group.isLive ? "msg.process.processRunning" : "msg.process.processCompleted");
 
-  // An interrupted turn never collapses behind the "已处理 Xs ⌄" header — its
+  // An interrupted turn never collapses behind the activity disclosure — its
   // produced content shows flat. The elapsed time + "你在 Ns 后停止了" marker is
   // rendered separately by TurnEndMessageView (the turn_end sibling outside this
   // group), so we deliberately drop the header here to avoid a duplicate marker.
@@ -124,12 +117,33 @@ function TurnProcessGroupCardImpl({
         <button
           type="button"
           className="cs-process-heading"
-          onClick={() => setOpen((v) => !v)}
+          onClick={(event) => anchoredChange(event.currentTarget, () => setOpen((v) => !v))}
           aria-expanded={open}
           aria-controls={detailsId}
         >
-          {open ? <ChevronDown size={12} /> : <ChevronRight size={12} />}
-          <span>{label}</span>
+          <span className="cs-process-label">
+            {group.isLive && (
+              <LoaderCircle
+                size={13}
+                className="animate-spin motion-reduce:animate-none"
+                aria-hidden="true"
+              />
+            )}
+            {label}
+          </span>
+          {duration && (
+            <span
+              className="cs-process-duration"
+              aria-label={t("msg.process.processDurationAccessible", { time: duration })}
+            >
+              {duration}
+            </span>
+          )}
+          {open ? (
+            <ChevronDown className="cs-process-chevron" size={13} aria-hidden="true" />
+          ) : (
+            <ChevronRight className="cs-process-chevron" size={13} aria-hidden="true" />
+          )}
         </button>
       )}
       {visibleItems.length > 0 && (
