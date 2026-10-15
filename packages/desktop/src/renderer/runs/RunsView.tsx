@@ -234,11 +234,18 @@ export function RunsView({ initialRunId }: { initialRunId?: string | null } = {}
   };
 
   return (
-    <div className="@container/runs flex h-full min-h-0 min-w-0 flex-col bg-background">
+    <div
+      role="region"
+      aria-labelledby={`${detailId}-title`}
+      tabIndex={0}
+      className="@container/runs flex h-full min-h-0 min-w-0 flex-col overflow-y-auto overscroll-contain bg-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset"
+    >
       <div className="flex shrink-0 flex-wrap items-center justify-between gap-3 px-4 py-5 @min-[760px]/runs:px-6">
         <div className="min-w-0">
           <div className="flex flex-wrap items-center gap-2.5">
-            <h1 className="text-xl font-semibold tracking-tight">{t("auto.runs.title")}</h1>
+            <h1 id={`${detailId}-title`} className="text-xl font-semibold tracking-tight">
+              {t("auto.runs.title")}
+            </h1>
             {runs && (
               <span className="rounded-full border border-border/70 bg-card px-2.5 py-0.5 text-xs tabular-nums text-muted-foreground">
                 {t("auto.runs.count", { count: runs.length })}
@@ -263,9 +270,9 @@ export function RunsView({ initialRunId }: { initialRunId?: string | null } = {}
           {t("auto.runs.refresh")}
         </Button>
       </div>
-      <div className="mx-4 mb-3 @min-[760px]/runs:mx-6">
+      <div className="mx-4 mb-3 shrink-0 @min-[760px]/runs:mx-6">
         {usageSummary && (
-          <UsageSummaryView summary={usageSummary} title={t("auto.runs.hostUsage")} />
+          <UsageSummaryView summary={usageSummary} title={t("auto.runs.hostUsage")} scrollable />
         )}
         {usageFailed && (
           <p role="status" className="text-xs text-status-warn">
@@ -289,7 +296,7 @@ export function RunsView({ initialRunId }: { initialRunId?: string | null } = {}
           </Button>
         </div>
       )}
-      <div className="grid min-h-0 min-w-0 flex-1 grid-rows-[minmax(128px,0.4fr)_minmax(0,1fr)] gap-4 px-4 pb-4 @min-[760px]/runs:grid-cols-[minmax(240px,300px)_minmax(0,1fr)] @min-[760px]/runs:grid-rows-1 @min-[760px]/runs:px-6 @min-[760px]/runs:pb-6">
+      <div className="grid min-h-80 min-w-0 flex-1 grid-rows-[minmax(128px,0.4fr)_minmax(160px,1fr)] gap-4 px-4 pb-4 @min-[760px]/runs:grid-cols-[minmax(240px,300px)_minmax(0,1fr)] @min-[760px]/runs:grid-rows-1 @min-[760px]/runs:px-6 @min-[760px]/runs:pb-6">
         <section
           aria-label={t("auto.runs.list")}
           className="flex min-h-0 min-w-0 flex-col overflow-hidden rounded-2xl border border-border/70 bg-card/70"
