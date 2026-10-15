@@ -5,7 +5,7 @@
 
 每批由 Codex 实现、验证、提交，再交主控安排 Claude Code 审查；Codex 修复并复审通过后才继续下一批。不得以计划、fixture 或接口声明代替生产接线和真实环境验收。
 
-## S1 当前批：3–7（CC 首轮修复完成，待同一 CC 复审）
+## S1 当前批：3–7（CC 复审和宿主验证通过，待 CI）
 
 - [x] 3. 从 protocol/server.ts 抽请求分发和输入校验到 dispatch.ts，保持 v1 wire，降低架构行数预算；验收旧协议路由与非法输入。
 - [x] 4. workspace bridge 改宿主显式安装开关；Desktop 保持启用，serve/Panel 无 bridge 使用磁盘回退；验收跨会话 send_message、resolve_session_run 的异步 AskUser 与邮箱唤醒实际路径。
@@ -118,7 +118,7 @@ node scripts/run-bun-test-shard.mjs --timeout 30000 \
 
 ## CC 首轮 review 修复（起点 65dbd365b，已复审通过）
 
-CC 已只读复审 `65dbd365b..dfe75f6ef`，确认原 2 个 P1、1 个 P2 均关闭，未发现新增 P0/P1/P2。该结论仅覆盖代码审查；当前版本的完整包 smoke、unsigned pack 与 PR CI 仍是独立验收门槛。unsigned smoke 的 bundle 阶段会覆盖 predist main，因此其产物只用于依赖包装边界验证，不能视为与正式发布构建等价。
+CC 已只读复审 `65dbd365b..dfe75f6ef`，确认原 2 个 P1、1 个 P2 均关闭，未发现新增 P0/P1/P2。该结论仅覆盖代码审查；随后主控 `bg_24buse` 已严格串行完成冻结安装、完整 package-release、unsigned predist、Host 内联验证和 unsigned pack，全部 exit 0。CI 仍是独立验收门槛，宿主结果见[验收记录](evidence/platform-foundation-host-pack-20261015.json)。unsigned smoke 的 bundle 阶段会覆盖 predist main，因此其产物只用于依赖包装边界验证，不能视为与正式发布构建等价。
 
 - P1-1：Host 改为 Desktop devDependency；`DESKTOP_MATERIALIZED_WORKSPACES` 真实驱动 predist 复制、生产依赖安装和导入校验，同一列表守卫 Desktop 及被实体化包的生产 workspace 闭包。静态测试阻止 Host 再进入生产依赖，unsigned pack 结果随后记录。
 - P1-2：纠正初版“Panel AskUser 保留”的错误描述。Panel runtime 没有文字问答 UI，立即回 typed unavailable + unsupported 原因，不经 confirm、不泄露内部 ID/toolName。真实 runtime.taskScope→confirm→approvalRespond 验证普通审批批准/拒绝仍有效，已安装 Panel callback 仍经 tools.invoke/tool-results。真实 Core 验证 sync 不得到空答案/用户拒绝、async pending 退役且不注入答案/唤醒；正常 Desktop/Web 文字回答及用户明确拒绝保持原逻辑。
