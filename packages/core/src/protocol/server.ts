@@ -14,13 +14,17 @@
  * falls back to borrowing any live session's engine for those reads.
  */
 
-import { initializeResult } from "./initialize.js";
+import {
+  createProtocolDispatcher,
+  goalExtensionInputError,
+  runInputError,
+  type ProtocolRequestHandler,
+} from "./dispatch.js";
 import type { Transport } from "./transport.js";
 import { handleCancelRequest, handleSteerRequest, runGoalOptions } from "./server-run-controls.js";
 import { deliverAsyncUserAnswer } from "./async-user-answer.js";
 import {
   type RpcRequest,
-  type InputAttachmentMeta,
   type RunParams,
   type RunResult,
   type ApproveParams,
@@ -81,7 +85,6 @@ import {
 import { clearSessionPathApprovals, openSessionPathApprovals } from "../tool-system/path-policy.js";
 import { backgroundShellManager } from "../runtime/background-shell.js";
 import { backgroundJobRegistry } from "../tool-system/builtin/background-jobs.js";
-import { handleBackgroundWork, handleBackgroundWorkCancel } from "./background-work-rpc.js";
 import { logger } from "../logging/logger.js";
 import { nanoid } from "nanoid";
 import type { ChatSession } from "./chat-session.js";
@@ -137,168 +140,6 @@ function cancelRunStarts(manager: ChatSessionManager, id: string): boolean {
   if (!starts?.size) return false;
   for (const controller of [...starts]) controller.abort();
   return true;
-}
-
-function isValidRunAttachment(value: unknown): value is InputAttachmentMeta {
-  if (!value || typeof value !== "object") return false;
-  const attachment = value as Partial<InputAttachmentMeta>;
-  const hasPath = [attachment.path, attachment.relPath, attachment.absPath].some(
-    (path) => typeof path === "string" && path.trim().length > 0,
-  );
-  return (
-    typeof attachment.id === "string" &&
-    attachment.id.length > 0 &&
-    typeof attachment.sessionId === "string" &&
-    attachment.sessionId.length > 0 &&
-    (attachment.kind === "image" ||
-      attachment.kind === "file" ||
-      attachment.kind === "directory") &&
-    hasPath
-  );
-}
-
-function runInputError(params: RunParams): string | null {
-  if (typeof params.task !== "string") return "task must be a string";
-  if (
-    params.sandboxMode !== undefined &&
-    !["off", "auto", "seatbelt", "bwrap"].includes(params.sandboxMode)
-  )
-    return "sandboxMode must be off, auto, seatbelt or bwrap";
-  if (
-    params.allowBackgroundShells !== undefined &&
-    typeof params.allowBackgroundShells !== "boolean"
-  )
-    return "allowBackgroundShells must be boolean";
-  const hasAttachment =
-    Array.isArray(params.attachments) && params.attachments.some(isValidRunAttachment);
-  if (params.task.trim().length === 0 && !hasAttachment) {
-    return "task or a valid attachment is required";
-  }
-  if (
-    params.displayText !== undefined &&
-    (typeof params.displayText !== "string" ||
-      params.displayText.trim().length === 0 ||
-      params.displayText.length > 20_000)
-  ) {
-    return "displayText must be a non-empty string up to 20000 characters";
-  }
-  if (params.injected !== undefined && typeof params.injected !== "boolean") {
-    return "injected must be a boolean";
-  }
-  if (
-    params.quickChatClaimId !== undefined &&
-    (typeof params.quickChatClaimId !== "string" || params.quickChatClaimId.length === 0)
-  ) {
-    return "quickChatClaimId must be a non-empty string";
-  }
-  if (params.archiveBeforeCurrentTurn !== undefined) {
-    const archive = params.archiveBeforeCurrentTurn;
-    if (!archive || typeof archive !== "object" || Array.isArray(archive)) {
-      return "archiveBeforeCurrentTurn must be an object";
-    }
-    if (typeof params.clientMessageId !== "string" || params.clientMessageId.length === 0) {
-      return "archiveBeforeCurrentTurn requires clientMessageId";
-    }
-    for (const [field, value] of [
-      ["fromClientMessageId", archive.fromClientMessageId],
-      ["segmentId", archive.segmentId],
-    ] as const) {
-      if (
-        value !== undefined &&
-        (typeof value !== "string" ||
-          value.length === 0 ||
-          value.length > 256 ||
-          /[\r\n]/.test(value))
-      ) {
-        return `archiveBeforeCurrentTurn.${field} must be a bounded non-empty string`;
-      }
-    }
-    if (
-      archive.summary !== undefined &&
-      (typeof archive.summary !== "string" ||
-        archive.summary.trim().length === 0 ||
-        archive.summary.length > 4_000 ||
-        /[\u0000]/u.test(archive.summary))
-    ) {
-      return "archiveBeforeCurrentTurn.summary must be a non-empty string up to 4000 characters";
-    }
-  }
-  if (
-    params.behaviorMode !== undefined &&
-    (typeof params.behaviorMode !== "string" || params.behaviorMode.length === 0)
-  ) {
-    return `invalid behavior mode: ${String(params.behaviorMode)}`;
-  }
-  if (
-    params.preset !== undefined &&
-    (typeof params.preset !== "string" ||
-      params.preset.length === 0 ||
-      params.preset.length > 128 ||
-      /[\r\n]/.test(params.preset))
-  ) {
-    return "preset must be a bounded non-empty string";
-  }
-  for (const [field, value, maxItems] of [
-    ["toolAllowlist", params.toolAllowlist, 32],
-    ["skillAllowlist", params.skillAllowlist, 8],
-  ] as const) {
-    if (value === undefined) continue;
-    if (
-      !Array.isArray(value) ||
-      value.length > maxItems ||
-      value.some(
-        (name) =>
-          typeof name !== "string" || name.length === 0 || name.length > 128 || /[\r\n]/.test(name),
-      )
-    ) {
-      return `${field} must be an array of at most ${maxItems} bounded names`;
-    }
-  }
-  if (params.ephemeral !== undefined && typeof params.ephemeral !== "boolean") {
-    return "ephemeral must be a boolean";
-  }
-  if (
-    params.maxTurns !== undefined &&
-    (!Number.isInteger(params.maxTurns) || params.maxTurns < 1 || params.maxTurns > 30)
-  ) {
-    return "maxTurns must be an integer from 1 to 30";
-  }
-  if (
-    params.maxContextTokens !== undefined &&
-    (!Number.isInteger(params.maxContextTokens) ||
-      params.maxContextTokens < 4_096 ||
-      params.maxContextTokens > 131_072)
-  ) {
-    return "maxContextTokens must be an integer from 4096 to 131072";
-  }
-  if (params.kind !== undefined && (typeof params.kind !== "string" || params.kind.length === 0)) {
-    return `invalid session kind: ${String(params.kind)}`;
-  }
-  if (
-    params.profileParams !== undefined &&
-    (!params.profileParams ||
-      typeof params.profileParams !== "object" ||
-      Array.isArray(params.profileParams))
-  ) {
-    return "profileParams must be an object";
-  }
-  // Domain-specific run-param validation (e.g. behavior-mode vocabularies and
-  // extension-owned param shapes) lives in AgentModule protocol.validateRunParams.
-  return null;
-}
-
-function goalExtensionInputError(params: Record<string, unknown>): string | null {
-  const fields = ["addTurns", "addTokenBudget", "addTimeBudgetMs", "addStopBlocks"] as const;
-  let supplied = false;
-  for (const field of fields) {
-    const value = params[field];
-    if (value === undefined) continue;
-    supplied = true;
-    if (typeof value !== "number" || !Number.isSafeInteger(value) || value <= 0) {
-      return `${field} must be a positive safe integer`;
-    }
-  }
-  return supplied ? null : "at least one goal extension is required";
 }
 
 const INTERNAL_PENDING_TOOLS = new Set([
@@ -696,6 +537,7 @@ export class AgentServer {
   private readonly ownsBackgroundWakeups: boolean;
   private readonly wakeupsInFlight = new Set<string>();
   private readonly sessionWorkspaceRpc: SessionWorkspaceRpcHandlers;
+  private readonly dispatchRequest: ProtocolRequestHandler;
   private readonly notificationMailbox: NotificationQueue;
 
   /**
@@ -767,6 +609,36 @@ export class AgentServer {
       rememberSessionSlice: (sessionId, slice) => this.rememberSessionSlice(sessionId, slice),
       wireInteractiveSession: (session, sessionId) =>
         this.wireInteractiveSession(session, sessionId),
+    });
+
+    this.dispatchRequest = createProtocolDispatcher({
+      transport: this.transport,
+      extensionHandlers: this.protocolQueryHandlers,
+      handlers: {
+        [Methods.Run]: (req) => this.handleRun(req),
+        [Methods.ForkSession]: (req) => this.handleForkSession(req),
+        [Methods.Approve]: (req) => this.handleApprove(req),
+        [Methods.Cancel]: (req) => this.handleCancel(req),
+        [Methods.Configure]: (req) => this.handleConfigure(req),
+        [Methods.Query]: (req) => this.handleQuery(req),
+        [Methods.Inject]: (req) => this.handleInject(req),
+        [Methods.Steer]: (req) => this.handleSteer(req),
+        [Methods.Unsteer]: (req) => this.handleUnsteer(req),
+        [Methods.CloseSession]: (req) => this.handleCloseSession(req),
+        [Methods.ReleaseWorkspace]: (req) => this.sessionWorkspaceRpc.release(req),
+        [Methods.SetWorkspace]: (req) => this.sessionWorkspaceRpc.set(req),
+        [Methods.MigrateSessionMainRoot]: (req) => this.sessionWorkspaceRpc.migrateMainRoot(req),
+        [Methods.CompleteSessionMainRootMigration]: (req) =>
+          this.sessionWorkspaceRpc.completeMainRootMigration(req),
+        [Methods.GoalExtend]: (req) => this.handleGoalExtend(req),
+        [Methods.GoalUpdate]: (req) => this.handleGoalUpdate(req),
+        [Methods.GoalDelete]: (req) => this.handleGoalClear(req, true),
+        [Methods.GoalClear]: (req) => this.handleGoalClear(req),
+        [Methods.GoalGet]: (req) => this.handleGoalGet(req),
+        [Methods.BackgroundShells]: (req) => this.handleBackgroundShells(req),
+        [Methods.PluginCommandsList]: (req) => this.handlePluginCommandsList(req),
+        [Methods.PluginCommandExpand]: (req) => this.handlePluginCommandExpand(req),
+      },
     });
 
     // Protocol surface from the compiled composition. Each contributing
@@ -1342,85 +1214,7 @@ export class AgentServer {
     // Preserve synchronous protocol controls when there is no asynchronous activation.
     if (this.hasHostActivators) await this.moduleReady;
     if (this.disconnected) throw new Error("AgentServer transport is disconnected");
-    switch (req.method) {
-      case Methods.Initialize:
-        this.transport.send(createResponse(req.id, initializeResult()));
-        break;
-      case Methods.Run:
-        await this.handleRun(req);
-        break;
-      case Methods.ForkSession:
-        await this.handleForkSession(req);
-        break;
-      case Methods.Approve:
-        await this.handleApprove(req);
-        break;
-      case Methods.Cancel:
-        this.handleCancel(req);
-        break;
-      case Methods.Configure:
-        this.handleConfigure(req);
-        break;
-      case Methods.Query:
-        await this.handleQuery(req);
-        break;
-      case Methods.Inject:
-        this.handleInject(req);
-        break;
-      case Methods.Steer:
-        this.handleSteer(req);
-        break;
-      case Methods.Unsteer:
-        this.handleUnsteer(req);
-        break;
-      case Methods.CloseSession:
-        await this.handleCloseSession(req);
-        break;
-      case Methods.ReleaseWorkspace:
-        this.sessionWorkspaceRpc.release(req);
-        break;
-      case Methods.SetWorkspace:
-        this.sessionWorkspaceRpc.set(req);
-        break;
-      case Methods.MigrateSessionMainRoot:
-        await this.sessionWorkspaceRpc.migrateMainRoot(req);
-        break;
-      case Methods.CompleteSessionMainRootMigration:
-        this.sessionWorkspaceRpc.completeMainRootMigration(req);
-        break;
-      case Methods.GoalExtend:
-        this.handleGoalExtend(req);
-        break;
-      case Methods.GoalUpdate:
-        await this.handleGoalUpdate(req);
-        break;
-      case Methods.GoalDelete:
-        this.handleGoalClear(req, true);
-        break;
-      case Methods.GoalClear:
-        this.handleGoalClear(req);
-        break;
-      case Methods.GoalGet:
-        this.handleGoalGet(req);
-        break;
-      case Methods.BackgroundShells:
-        this.handleBackgroundShells(req);
-        break;
-      case Methods.BackgroundWork:
-        handleBackgroundWork(req, this.transport);
-        break;
-      case Methods.BackgroundWorkCancel:
-        await handleBackgroundWorkCancel(req, this.transport);
-        break;
-      case Methods.PluginCommandsList:
-        this.handlePluginCommandsList(req);
-        break;
-      case Methods.PluginCommandExpand:
-        this.handlePluginCommandExpand(req);
-        break;
-      default:
-        await this.handleExtensionProtocolMethod(req);
-    }
+    await this.dispatchRequest(req);
   }
 
   private pluginCommandContext(
@@ -1519,25 +1313,6 @@ export class AgentServer {
     } catch (error) {
       this.transport.send(
         createErrorResponse(req.id, ErrorCodes.InvalidParams, (error as Error).message),
-      );
-    }
-  }
-
-  /** Route a protocol method to its extension-registered handler, if any. */
-  private async handleExtensionProtocolMethod(req: RpcRequest): Promise<void> {
-    const handler = this.protocolQueryHandlers.get(req.method);
-    if (!handler) {
-      this.transport.send(
-        createErrorResponse(req.id, ErrorCodes.MethodNotFound, `Unknown method: ${req.method}`),
-      );
-      return;
-    }
-    try {
-      const data = await handler((req.params ?? {}) as Readonly<Record<string, unknown>>);
-      this.transport.send(createResponse(req.id, data as Record<string, unknown>));
-    } catch (err) {
-      this.transport.send(
-        createErrorResponse(req.id, ErrorCodes.InternalError, (err as Error).message),
       );
     }
   }

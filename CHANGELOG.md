@@ -8,6 +8,48 @@ breaking.
 
 ## [Unreleased]
 
+### Added
+
+- Add `@cjhyy/code-shell-host`, a Core-only HostRuntime foundation with capability
+  registration, adapter lifecycle and a shared worker request interceptor used by
+  Desktop, serve and Panel task hosts. Larger service migrations remain pending.
+
+### Changed
+
+- Extract protocol request dispatch and ingress validation without changing the
+  legacy wire contract; reduce the AgentServer architecture budget to 4,949 lines.
+- Reserve tool names beginning with `__` for internal host loopbacks, including
+  extension tool catalogs and late registration.
+- REPL uses the sandboxed-Bash environment allowlist plus explicit project env,
+  including credential env exposures. Proxy variables, `NODE_PATH`, `PYTHONPATH`,
+  `VIRTUAL_ENV` and `CONDA_*` are not inherited. Bash with sandboxing disabled
+  still inherits the full environment. This allowlist does not prevent theft of
+  files or environment data accessible to the same OS user; REPL remains outside
+  the OS sandbox.
+- TypeScript REPL reuses the host's Bun executable under Bun, and requires an
+  already available PATH Bun under Node, with `--no-env-file` in both cases.
+  REPL now advertises the workspace write protocol. Windows shell env overrides
+  merge without case-sensitive PATH/Path duplicates.
+
+### Fixed
+
+- Keep the bundled Host package in Desktop devDependencies, and derive the
+  production workspace packaging guard from predist's actual materialization list.
+- Include a unique JSON-RPC id in Desktop unsupported-loopback replies so Core
+  consumes the pending request immediately; keep known authority notifications private.
+- Enable workspace IPC only when the host explicitly installs it. Desktop keeps
+  its bridge; serve and Panel workers use Core's disk fallback for cross-session
+  messages, asynchronous AskUser and mailbox wakeups.
+- Panel task workers immediately answer unsupported `desktop/*` and internal
+  loopbacks with typed failures instead of timing out or reporting user denial;
+  private loopback IDs are kept out of client approval events. Ordinary approvals
+  and installed Panel callbacks keep their routes. Panel tasks have no text-answer
+  UI: AskUser now returns an explicit host-unavailable failure without displaying
+  a yes/no approval or supplying a fake answer; asynchronous questions retire
+  without injecting an answer or waking a follow-up run.
+- Clear inherited host MCP/IPC switches from serve and Panel workers, and clear
+  the remote Link client secret even when a Panel host supplies a custom env.
+
 ## [0.9.42] - 2026-10-15
 
 ### Added

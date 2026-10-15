@@ -60,6 +60,11 @@ export const RELEASE_PACKAGES: readonly ReleasePackageDefinition[] = [
     runtimeExcludedSubpaths: ["./bin/agent-server-stdio"],
   },
   {
+    directory: "packages/host",
+    name: "@cjhyy/code-shell-host",
+    publish: true,
+  },
+  {
     directory: "packages/pet",
     name: "@cjhyy/code-shell-pet",
     publish: true,

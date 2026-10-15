@@ -20,7 +20,7 @@ createInterface({input:process.stdin}).on('line',line=>{
  const frame=JSON.parse(line);
  if(frame.method==='agent/run'){
   const {sessionId,task}=frame.params;
-  if(task==='env'){send({id:frame.id,result:{env:{batch:process.env.CODE_SHELL_OPERATION_BATCH_ACCESS??null,signing:process.env.CODE_SHELL_MODEL_REQUEST_SIGNING??null}}});return;}
+  if(task==='env'){send({id:frame.id,result:{env:{batch:process.env.CODE_SHELL_OPERATION_BATCH_ACCESS??null,signing:process.env.CODE_SHELL_MODEL_REQUEST_SIGNING??null,mcp:process.env.CODE_SHELL_HOST_MCP_SERVERS??null,workspace:process.env.CODE_SHELL_WORKSPACE_ACCESS??null,secret:process.env.CODE_SHELL_REMOTE_LINK_CLIENT_SECRET??null}}});return;}
   if(task.startsWith('desktop/')){runs.set('host-'+frame.id,frame);send({id:'host-'+frame.id,method:task,params:{prompt:'secret prompt'}});return;}
   runs.set(sessionId,frame);
   send({method:'agent/approvalRequest',params:{sessionId,requestId:'req-'+frame.id,connectionId:'c1',generation:1,request:{toolName:task,description:'x',riskLevel:'low',args:{}}}});
@@ -165,17 +165,37 @@ test("serve workers do not inherit host-only IPC switches", async () => {
   const previous = {
     batch: process.env.CODE_SHELL_OPERATION_BATCH_ACCESS,
     signing: process.env.CODE_SHELL_MODEL_REQUEST_SIGNING,
+    mcp: process.env.CODE_SHELL_HOST_MCP_SERVERS,
+    workspace: process.env.CODE_SHELL_WORKSPACE_ACCESS,
+    secret: process.env.CODE_SHELL_REMOTE_LINK_CLIENT_SECRET,
   };
   process.env.CODE_SHELL_OPERATION_BATCH_ACCESS = "host";
   process.env.CODE_SHELL_MODEL_REQUEST_SIGNING = "host";
+  process.env.CODE_SHELL_HOST_MCP_SERVERS = "fixture";
+  process.env.CODE_SHELL_WORKSPACE_ACCESS = "host";
+  process.env.CODE_SHELL_REMOTE_LINK_CLIENT_SECRET = "fixture-secret";
   try {
     const client = await connect(await startServer());
     const reply = await client.run("session-unsupported-env", "env");
-    expect(reply.result.env).toEqual({ batch: null, signing: null });
+    expect(reply.result.env).toEqual({
+      batch: null,
+      signing: null,
+      mcp: null,
+      workspace: null,
+      secret: null,
+    });
   } finally {
     if (previous.batch === undefined) delete process.env.CODE_SHELL_OPERATION_BATCH_ACCESS;
     else process.env.CODE_SHELL_OPERATION_BATCH_ACCESS = previous.batch;
     if (previous.signing === undefined) delete process.env.CODE_SHELL_MODEL_REQUEST_SIGNING;
     else process.env.CODE_SHELL_MODEL_REQUEST_SIGNING = previous.signing;
+    for (const [key, value] of [
+      ["CODE_SHELL_HOST_MCP_SERVERS", previous.mcp],
+      ["CODE_SHELL_WORKSPACE_ACCESS", previous.workspace],
+      ["CODE_SHELL_REMOTE_LINK_CLIENT_SECRET", previous.secret],
+    ]) {
+      if (value === undefined) delete process.env[key!];
+      else process.env[key!] = value;
+    }
   }
 });

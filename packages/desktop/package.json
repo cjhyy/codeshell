@@ -202,6 +202,7 @@
     "@cjhyy/code-shell-browser-devtools": "workspace:*",
     "@cjhyy/code-shell-cdp": "workspace:*",
     "@cjhyy/code-shell-chat": "workspace:*",
+    "@cjhyy/code-shell-host": "workspace:*",
     "@cjhyy/code-shell-link": "workspace:*",
     "@cjhyy/code-shell-server": "workspace:*",
     "@cjhyy/code-shell-web": "workspace:*",

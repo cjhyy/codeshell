@@ -142,7 +142,7 @@ jobs:
             paths: >-
               tests packages/coding packages/tui packages/pet packages/server
               packages/chat packages/web packages/arena packages/cdp
-              packages/link packages/optimization-lab packages/browser-devtools
+              packages/link packages/optimization-lab packages/browser-devtools packages/host
     steps:
       - uses: actions/checkout@v7
       - uses: oven-sh/setup-bun@v2

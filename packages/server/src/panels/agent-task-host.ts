@@ -1,3 +1,8 @@
+import {
+  HostRuntime,
+  interceptHostRequest,
+  unsupportedAskUserDecision,
+} from "@cjhyy/code-shell-host";
 import { randomUUID } from "node:crypto";
 import { createRequire } from "node:module";
 import { isAbsolute } from "node:path";
@@ -122,6 +127,10 @@ function progressFromEvent(event: Record<string, unknown>): PanelAgentTaskProgre
 
 /** Real independent Core workers shared by Desktop Web and standalone Hub. */
 export function createPanelAgentTaskHost(options: PanelAgentTaskHostOptions = {}) {
+  const hostRuntime = new HostRuntime({ kind: "headless", label: "Panel agent task" }, [
+    { id: "panels", capabilities: options.onPanelAction ? ["panel"] : [] },
+  ]);
+  hostRuntime.start();
   const instances = new Map<string, Instance>();
   let closed = false;
   const models =
@@ -217,28 +226,37 @@ export function createPanelAgentTaskHost(options: PanelAgentTaskHostOptions = {}
       ...(typeof params.connectionId === "string" ? { connectionId: params.connectionId } : {}),
       ...(Number.isInteger(params.generation) ? { generation: params.generation } : {}),
     };
-    if (request.toolName.startsWith("__")) {
+    if (request.toolName === "__ask_user__") {
+      // The Panel runtime only has a yes/no confirmation UI. It cannot answer
+      // a question; Core retires async questions without injecting a user answer.
+      outcomeResult(
+        await rpc(running, "agent/approve", {
+          sessionId: pending.sessionId,
+          requestId: pending.id,
+          connectionId: pending.connectionId,
+          generation: pending.generation,
+          decision: unsupportedAskUserDecision(hostRuntime.adapter.label),
+        }),
+      );
+      return;
+    }
+    if (request.toolName === "__panel_action__" && options.onPanelAction) {
       let decision: Record<string, unknown>;
-      if (request.toolName === "__panel_action__" && options.onPanelAction) {
-        try {
-          const result = await options.onPanelAction(instance.scope, request.args ?? {});
-          await assertAuthorized(instance);
-          const answer = JSON.stringify(result);
-          if (!answer || Buffer.byteLength(answer) > 512 * 1024)
-            throw new Error("Panel callback returned an invalid or oversized result");
-          decision = { approved: true, answer };
-        } catch (error) {
-          decision = {
-            approved: false,
-            failure: "unavailable",
-            reason: String(error).slice(0, 500),
-          };
-        }
-      } else {
+      try {
+        const result = await options.onPanelAction(instance.scope, request.args ?? {});
+        await assertAuthorized(instance);
+        const answer = JSON.stringify(result);
+        if (!answer || Buffer.byteLength(answer) > 512 * 1024)
+          throw new Error("Panel callback returned an invalid or oversized result");
+        decision = { approved: true, answer };
+      } catch (error) {
         decision = {
-          approved: false,
-          failure: "unavailable",
-          reason: "This task host does not provide that capability",
+          approved: true,
+          answer: JSON.stringify({
+            ok: false,
+            failure: "unavailable",
+            detail: String(error).slice(0, 500),
+          }),
         };
       }
       await assertAuthorized(instance);
@@ -342,16 +360,19 @@ export function createPanelAgentTaskHost(options: PanelAgentTaskHostOptions = {}
           entryPath,
           execPath: options.execPath,
           fallbackCwd: () => scope.cwd,
-          buildEnv:
-            options.buildEnv ??
-            (() => ({
+          buildEnv: () => ({
+            ...(options.buildEnv?.() ?? {
               ...process.env,
-              // These switch on Desktop-main-only IPC clients in the worker.
-              CODE_SHELL_OPERATION_BATCH_ACCESS: undefined,
-              CODE_SHELL_MODEL_REQUEST_SIGNING: undefined,
-              CODE_SHELL_CREDENTIAL_ACCESS: "local",
               CODE_SHELL_CAPABILITY_MODULES: `${import.meta.resolve("@cjhyy/code-shell-capability-coding")}#createCodingModule`,
-            })),
+            }),
+            // A task worker has no Desktop main bridge, even inside Desktop Web.
+            CODE_SHELL_REMOTE_LINK_CLIENT_SECRET: undefined,
+            CODE_SHELL_OPERATION_BATCH_ACCESS: undefined,
+            CODE_SHELL_MODEL_REQUEST_SIGNING: undefined,
+            CODE_SHELL_WORKSPACE_ACCESS: undefined,
+            CODE_SHELL_HOST_MCP_SERVERS: undefined,
+            CODE_SHELL_CREDENTIAL_ACCESS: "local",
+          }),
           onWorkerStarted: ({ pid }) => {
             running.pid = pid;
           },
@@ -365,13 +386,27 @@ export function createPanelAgentTaskHost(options: PanelAgentTaskHostOptions = {}
           } catch {
             return;
           }
+          if (
+            interceptHostRequest(message, line, {
+              runtime: hostRuntime,
+              sendLine: (reply) => running.bridge.sendLine(reply),
+              approve: (params) => {
+                if (params.sessionId !== running.sessionId) return;
+                void assertAuthorized(instance)
+                  .then(() => rpc(running, "agent/approve", params))
+                  .then(outcomeResult)
+                  .catch(() => stopWorker(running));
+              },
+            })
+          )
+            return;
           if (message.params?.sessionId !== input.sessionId) return;
           if (message.method === "agent/approvalRequest") {
             void handleWorkerApproval(instance, running, message.params).catch(() =>
               stopWorker(running),
             );
           } else if (message.method === "agent/approvalResolved") {
-            instance.approvals.delete(message.params.requestId);
+            if (!instance.approvals.delete(message.params.requestId)) return;
             void deliver(instance, "agent.task.approvalResolved", {
               taskId: input.taskId,
               requestId: message.params.requestId,
@@ -502,7 +537,11 @@ export function createPanelAgentTaskHost(options: PanelAgentTaskHostOptions = {}
       }
       // Host-private: never expose this method to an iframe's allowed SDK methods.
       if (method === "agent.task.approvalRespond") {
-        const input = params as { taskId?: unknown; requestId?: unknown; approved?: unknown };
+        const input = params as {
+          taskId?: unknown;
+          requestId?: unknown;
+          approved?: unknown;
+        };
         const pending =
           typeof input?.requestId === "string"
             ? instance.approvals.get(input.requestId)
@@ -525,7 +564,10 @@ export function createPanelAgentTaskHost(options: PanelAgentTaskHostOptions = {}
               connectionId: pending.connectionId,
               generation: pending.generation,
               decision: input.approved
-                ? { approved: true, scope: "once" }
+                ? {
+                    approved: true,
+                    scope: "once",
+                  }
                 : { approved: false, reason: "Declined by user" },
             }),
           );
@@ -543,6 +585,7 @@ export function createPanelAgentTaskHost(options: PanelAgentTaskHostOptions = {}
     close(): void {
       for (const id of instances.keys()) revokeInstance(id);
       closed = true;
+      hostRuntime.stop();
     },
     activeTaskCount,
   };

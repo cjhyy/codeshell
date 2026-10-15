@@ -58,10 +58,13 @@ export async function replTool(args: Record<string, unknown>, ctx?: ToolContext)
   // execSync-style shell-quoting risk.
   const commands: Record<string, { file: string; pre: string[] }> = {
     javascript: { file: "node", pre: ["-e"] },
-    typescript:
-      typeof (globalThis as any).Bun !== "undefined"
-        ? { file: "bun", pre: ["--no-env-file", "-e"] }
-        : { file: "npx", pre: ["tsx", "-e"] },
+    // Bun workers reuse their own binary even if a project overrides PATH.
+    // Node hosts use their installed Bun from PATH; never download a runtime
+    // through npx or load the project's .env implicitly.
+    typescript: {
+      file: typeof (globalThis as { Bun?: unknown }).Bun !== "undefined" ? process.execPath : "bun",
+      pre: ["--no-env-file", "-e"],
+    },
     python: { file: "python3", pre: ["-c"] },
     ruby: { file: "ruby", pre: ["-e"] },
   };
@@ -76,7 +79,10 @@ export async function replTool(args: Record<string, unknown>, ctx?: ToolContext)
     cwd,
     // Same allowlist as a sandboxed Bash: host secrets stay out, the user's
     // explicit project env (localEnvironment.env) is layered on top.
-    env: mergeShellEnv(buildSandboxEnv(), ctx?.shellEnv),
+    env: mergeShellEnv(buildSandboxEnv(), {
+      ...ctx?.shellEnv,
+      CODESHELL_WORKSPACE_WRITE_PROTOCOL: "1",
+    }),
     timeoutMs: timeout,
     maxOutputBytes: REPL_MAX_BUFFER,
     signal: ctx?.signal,
@@ -91,7 +97,8 @@ export async function replTool(args: Record<string, unknown>, ctx?: ToolContext)
     return `${language} timed out after ${timeout}ms`;
   }
   if (result.spawnFailed) {
-    return `Failed to spawn ${language}: ${result.error ?? "unknown error"}`;
+    const requirement = language === "typescript" ? " (Bun must be installed and available)" : "";
+    return `Failed to spawn ${language}${requirement}: ${result.error ?? "unknown error"}`;
   }
   if (result.exitCode !== 0) {
     const out = [result.stdout.trim(), result.stderr.trim()].filter(Boolean).join("\n");

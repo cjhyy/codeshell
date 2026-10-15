@@ -1,5 +1,8 @@
 # S0 协议与宿主请求清点
 
+> S1 第 3–7 项跟进（2026-10-15）：本清单保留 S0 时点的调用清点与兼容 wire。当前纯拦截逻辑已迁 `packages/host`，由 serve、Panel agent-task、Desktop adapter 共用；Panel 已即时回答 unsupported 并隐藏内部回环 ID。stdio workspace bridge 改为宿主显式 `CODE_SHELL_WORKSPACE_ACCESS=host`，无安装的 serve/Panel 使用磁盘回退。后续 typed host/* 和 v2 仍待实施，进度及验收见[首版清单](platform-first-version-plan.md)。
+
+
 > 基线：`40a71d9ca`（清点的代码与 main 在该提交上一致，仅计划文档不同）。供第 16 章 1.1 与 4.4 使用。
 >
 > 采集方式：对 `packages/core/src/protocol/types.ts`、`packages/core/src/types.ts`、`packages/core/src/protocol/server.ts`、`packages/desktop/src/main/agent-bridge.ts`、`packages/server/src/serve/headless-server.ts` 逐行核对，不依赖二手描述。v2 去向栏里的具体方法名（如 `turn/start`）是**暂定命名**，第 16 章 §4 只固定了命名空间、Item 类型、通知名和 `host/*`、`client/*` 方法名。

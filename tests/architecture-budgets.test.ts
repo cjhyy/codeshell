@@ -309,7 +309,11 @@ describe("architecture growth budgets", () => {
     // journal queries; persistence, cursor validation and paging remain extracted.
     // +4 private-token forwarding lines at the two existing Run paths. Main
     // admission and worker batch authority remain in their dedicated owners.
-    expect(lines("packages/core/src/protocol/server.ts")).toBeLessThanOrEqual(5_174);
+    // Platform foundation extracts the request routing table, extension alias
+    // dispatch and generic run/Goal ingress validation into protocol/dispatch.
+    // Connection activation, approval ownership and Session lifetimes stay here.
+    expect(lines("packages/core/src/protocol/server.ts")).toBeLessThanOrEqual(4_949);
+    expect(lines("packages/core/src/protocol/dispatch.ts")).toBeLessThanOrEqual(246);
     // Topic-boundary archival stays inside run startup. Synthetic worktree
     // authority is only a public delegation seam here; its implementation was
     // extracted to engine-workspace-authority.ts. The run-yield visibility

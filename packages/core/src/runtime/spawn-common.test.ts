@@ -152,6 +152,12 @@ describe("Windows shell invocation", () => {
 });
 
 describe("buildSandboxEnv", () => {
+  test("win32 preserves a Path-only source using the canonical PATH name", () => {
+    expect(buildSandboxEnv({ Path: "C:\\Tools", path_token: "secret" }, "win32")).toEqual({
+      PATH: "C:\\Tools",
+    });
+  });
+
   test("win32 keeps startup vars (any key case) and drops secrets", () => {
     const env = buildSandboxEnv(
       {
@@ -222,10 +228,10 @@ describe("buildSandboxEnv", () => {
 });
 
 describe("mergeShellEnv", () => {
-  test("returns base unchanged when projectEnv is undefined or empty", () => {
+  test("POSIX returns base unchanged when projectEnv is undefined or empty", () => {
     const base = { PATH: "/usr/bin" };
-    expect(mergeShellEnv(base, undefined)).toBe(base);
-    expect(mergeShellEnv(base, {})).toBe(base);
+    expect(mergeShellEnv(base, undefined, "linux")).toBe(base);
+    expect(mergeShellEnv(base, {}, "linux")).toBe(base);
   });
 
   test("layers project values on top of base", () => {
@@ -257,6 +263,39 @@ describe("mergeShellEnv", () => {
     const base = { PATH: "/usr/bin" };
     mergeShellEnv(base, { FOO: "bar" });
     expect(base).toEqual({ PATH: "/usr/bin" });
+  });
+
+  test("win32 project overrides are case-insensitive and leave one PATH", () => {
+    const base = { PATH: "C:\\Host", Path: "C:\\Duplicate", SystemRoot: "C:\\Windows" };
+    const env = mergeShellEnv(base, { Path: "C:\\Project", SYSTEMROOT: "D:\\Windows" }, "win32");
+    expect(env).toEqual({ PATH: "C:\\Project", SystemRoot: "D:\\Windows" });
+    expect(base).toEqual({
+      PATH: "C:\\Host",
+      Path: "C:\\Duplicate",
+      SystemRoot: "C:\\Windows",
+    });
+  });
+
+  test("win32 normalizes inherited duplicates even without project overrides", () => {
+    expect(mergeShellEnv({ Path: "first", PATH: "second" }, undefined, "win32")).toEqual({
+      PATH: "second",
+    });
+  });
+
+  test("win32 last defined project spelling wins without filtering explicit secrets", () => {
+    const env = mergeShellEnv(
+      { PATH: "host", MY_TOKEN: "old" },
+      { Path: "first", path: "last", my_token: "project-secret", PATH: undefined! },
+      "win32",
+    );
+    expect(env).toEqual({ PATH: "last", MY_TOKEN: "project-secret" });
+  });
+
+  test("POSIX keeps differently cased names distinct", () => {
+    expect(mergeShellEnv({ PATH: "/host" }, { Path: "/project" }, "linux")).toEqual({
+      PATH: "/host",
+      Path: "/project",
+    });
   });
 });
 

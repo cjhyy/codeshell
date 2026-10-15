@@ -117,6 +117,7 @@
         "@cjhyy/code-shell-browser-devtools": "workspace:*",
         "@cjhyy/code-shell-cdp": "workspace:*",
         "@cjhyy/code-shell-chat": "workspace:*",
+        "@cjhyy/code-shell-host": "workspace:*",
         "@cjhyy/code-shell-link": "workspace:*",
         "@cjhyy/code-shell-server": "workspace:*",
         "@cjhyy/code-shell-web": "workspace:*",
@@ -169,6 +170,13 @@
         "ws": "^8.21.0",
       },
     },
+    "packages/host": {
+      "name": "@cjhyy/code-shell-host",
+      "version": "0.9.42",
+      "dependencies": {
+        "@cjhyy/code-shell-core": "workspace:*",
+      },
+    },
     "packages/link": {
       "name": "@cjhyy/code-shell-link",
       "version": "0.9.42",
@@ -199,6 +207,7 @@
       "dependencies": {
         "@cjhyy/code-shell-capability-coding": "workspace:*",
         "@cjhyy/code-shell-core": "workspace:*",
+        "@cjhyy/code-shell-host": "workspace:*",
         "@cjhyy/code-shell-link": "workspace:*",
         "@cjhyy/code-shell-web": "workspace:*",
         "@modelcontextprotocol/sdk": "^1.31.0",
@@ -354,6 +363,8 @@
     "@cjhyy/code-shell-core": ["@cjhyy/code-shell-core@workspace:packages/core"],
 
     "@cjhyy/code-shell-desktop": ["@cjhyy/code-shell-desktop@workspace:packages/desktop"],
+
+    "@cjhyy/code-shell-host": ["@cjhyy/code-shell-host@workspace:packages/host"],
 
     "@cjhyy/code-shell-link": ["@cjhyy/code-shell-link@workspace:packages/link"],
 

@@ -66,6 +66,7 @@ import { createDesktopAutomationAuthorityClient } from "../automation/desktop-au
 import { compileComposition } from "../composition/compiler.js";
 import type { AgentModule } from "../composition/types.js";
 import { resolveSessionAgentConfig, resolveSessionCwd } from "./stdio-session-config.js";
+import { hasWorkspaceHostBridge } from "./stdio-host-config.js";
 
 /**
  * Load AgentModules from CODE_SHELL_CAPABILITY_MODULES: comma-separated
@@ -98,8 +99,9 @@ async function loadConfiguredAgentModules(): Promise<AgentModule[]> {
 // ─── Read base config from environment / settings ─────────────────
 
 const cwd = process.env.AGENT_CWD ?? process.cwd();
-// Capture only the parent Host distribution root, before project settings/env are read.
+// Capture the parent Host capabilities and distribution paths before project settings/env load.
 const operationBatchEnabled = process.env.CODE_SHELL_OPERATION_BATCH_ACCESS === "host";
+const workspaceBridgeEnabled = hasWorkspaceHostBridge(process.env);
 let operationBatchClient: ReturnType<typeof createDesktopOperationBatchAuthorityClient> | undefined;
 const documentRuntimeRoot = process.env.CODE_SHELL_DOCUMENT_RUNTIME_ROOT;
 const documentParserExecutable = documentRuntimeRoot
@@ -438,7 +440,7 @@ const agentServer = new AgentServer({
   chatManager,
   transport: stdioTransport,
   composition,
-  workspaceBridge: true,
+  workspaceBridge: workspaceBridgeEnabled,
   panelBridge: true,
   // Cold background-wakeup rehydrate must read the same sessions store the
   // engines write when the data root is relocated (undefined → default root).

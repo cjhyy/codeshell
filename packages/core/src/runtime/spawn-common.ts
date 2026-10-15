@@ -98,15 +98,18 @@ export function buildSandboxEnv(
   platform: NodeJS.Platform = process.platform,
 ): NodeJS.ProcessEnv {
   const out: NodeJS.ProcessEnv = {};
+  const byLower = new Map<string, string>();
+  if (platform === "win32") {
+    for (const key of Object.keys(source)) byLower.set(key.toLowerCase(), key);
+  }
   for (const name of ENV_ALLOWLIST) {
-    const v = source[name];
+    const actual = source[name] !== undefined ? name : byLower.get(name.toLowerCase());
+    const v = actual === undefined ? undefined : source[actual];
     if (v !== undefined && !ENV_DENY_REGEX.test(name)) {
       out[name] = v;
     }
   }
   if (platform === "win32") {
-    const byLower = new Map<string, string>();
-    for (const key of Object.keys(source)) byLower.set(key.toLowerCase(), key);
     for (const name of ENV_ALLOWLIST_WIN32) {
       if (ENV_DENY_REGEX.test(name)) continue;
       const actual = source[name] !== undefined ? name : byLower.get(name.toLowerCase());
@@ -129,15 +132,31 @@ export function buildSandboxEnv(
  * the *host's* secrets via `env | curl`; values the user typed into project
  * settings are a different trust class.
  *
- * Returns the base unchanged when `projectEnv` is empty/undefined, so the
- * caller can pass it through unconditionally with zero behavior change for
- * projects that don't configure one. `undefined` values in `projectEnv` are
- * skipped (they'd otherwise stringify to "undefined").
+ * Windows names are case-insensitive: normalize duplicates (including PATH /
+ * Path) before spawning, with the last defined project value winning. PATH
+ * always uses its canonical spelling; other names retain the base spelling.
+ * On other platforms, an empty/undefined project env returns the base as-is.
+ * Undefined project values are skipped rather than erasing a base value.
  */
 export function mergeShellEnv(
   base: NodeJS.ProcessEnv,
   projectEnv: Record<string, string> | undefined,
+  platform: NodeJS.Platform = process.platform,
 ): NodeJS.ProcessEnv {
+  if (platform === "win32") {
+    const out: NodeJS.ProcessEnv = {};
+    const names = new Map<string, string>();
+    for (const source of [base, projectEnv ?? {}]) {
+      for (const [key, value] of Object.entries(source)) {
+        if (value === undefined) continue;
+        const lower = key.toLowerCase();
+        const name = lower === "path" ? "PATH" : (names.get(lower) ?? key);
+        names.set(lower, name);
+        out[name] = value;
+      }
+    }
+    return out;
+  }
   if (!projectEnv) return base;
   const keys = Object.keys(projectEnv);
   if (keys.length === 0) return base;
