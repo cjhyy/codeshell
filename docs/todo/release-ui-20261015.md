@@ -50,13 +50,13 @@ The initial blockers below are retained as resolved verification history.
 
 Current integration worktree:
 `/Users/admin/.codex/worktrees/ui-task-center-20261015/codeshell`, branch
-`codex/integration/ui-review-wave1-20261015`. Other work advanced remote main to
+`codex/integration/ui-review-wave2-20261015`. Other work advanced remote main to
 `0.9.44`; this branch merged `976a79322` and `bb7a9b59a`, preserving the incoming model-capability,
 forwarding and Figma updates. The CSS merge preserves both context-selection and
 file-action styles. Do not revert incoming work or republish another version on
 the assumption that `0.9.43` is still the repository manifest version.
 
-Implemented task commits (integration hashes):
+First wave integrated into remote main at `3ddba56c7` (integration hashes):
 
 - `ddf69b9f7`: compact Task center header and advanced-filter popover; 14 real
   browser layout cases, search/filter/clear/resize/focus/actions, 22 existing tests.
@@ -87,7 +87,12 @@ both Web production-browser fixtures, all 15 Desktop browser fixtures and real
 Electron navigation/settings checks passed. The guarded renderer/Web/persistence
 shard passed 3,291 tests with 12,330 assertions (one separately covered browser
 test skipped). CI now also runs both Web browser fixtures with the already-installed
-locked browser. This first wave is ready for main integration and remote CI.
+locked browser. Remote CI `38713943455` passed all UI/renderer/Web checks but found
+an old Electron Task center locator (textbox instead of the new searchbox) and an
+intermittent Figma large-response read stall. The locator fix `e028d0d5b` is on main
+and its full 2,050-record Electron acceptance passed locally. Follow-up CI is
+`38716066133`. Figma is under isolated diagnosis; keep all response budgets and
+overflow/recovery assertions intact.
 
 The first autocomplete browser run exposed a pending-caret timing issue: a queued
 production rAF can interrupt Playwright fill's select-all/insertText replacement.
@@ -103,8 +108,36 @@ cleanup after an accepted send and cancellation of stale caret restoration.
 Root also reproduced update-settings issues with production components and an
 owned bridge: a long error expands a 320px page to 5,853px, a delayed initial status
 overwrites a newer event, and version/action rejections are unhandled. Evidence:
-`/tmp/codeshell-updater-ui-audit-20261015/report.json`; no network was allowed.
+`/tmp/codeshell-updater-ui-before-20261015/report.json`; no network was allowed.
 Continue with the current commits and evidence instead of redoing the initial audit.
+
+Second wave is committed on the current integration branch and undergoing combined
+verification:
+
+- `6396a90f2`, `809e0495b`: updater snapshot/event ordering, recoverable reads and
+  actions, long-error wrapping, keyboard retry focus and concise update guidance.
+  An independent production fixture passed 32 layouts and 15 behavior cases,
+  including Sidebar error toasts; no native update or external request was made.
+- `2134bfe99`: short-screen Web sidebar keeps navigation/session/root lists
+  scrollable and account controls reachable; native environment-dialog close
+  restores its trigger. Fourteen layouts and real keyboard navigation passed.
+- `2dcd041ff`: Context settings cannot overwrite unknown settings after a failed
+  read, accept normal numeric drafts, preserve failed save/reset drafts and name
+  actual slider thumbs. Sixteen layouts and 24 related tests passed.
+- `bd17170a6`, `9fab94dee`: accepted send/queue/Guide closes suggestions, rejected
+  submission retains the draft, and later input/focus/scope operations invalidate
+  stale caret callbacks. Ten submission and 15 deterministic caret cases passed,
+  plus independent native-keyboard review.
+
+Both merge conflicts preserved all changes: Appearance + Context fixture entries,
+and the listbox useId + new caret hook in ChatView. CI now includes all 19 Desktop
+browser fixtures and all three Web navigation/scrolling fixtures.
+
+Third-wave read-only audit confirmed AskUser keyboard-inaccessible options,
+IME-confirmation submission and overflowing sticky questions on short containers.
+These P1 fixes are in a separate task. Keep the long Approval/Tool card header and
+resolved-answer readability findings for a later reviewed change. Evidence:
+`/tmp/codeshell-session-cards-audit-20261015/report.json`.
 
 - Read-only audit is in progress, including Desktop and mobile/Web.
 - Initial mobile candidates were excluded after entry-point inspection: those
