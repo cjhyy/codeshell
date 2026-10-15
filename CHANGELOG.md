@@ -21,7 +21,8 @@ breaking.
   across provider requests, image input, Browser, ViewImage and MCP image results.
 - Refresh auxiliary clients when model settings change, and retain the selected
   model identity and capability when resolving pooled connections.
-- Allow saving model capability edits without requiring unrelated probe success.
+- Refresh active model settings after saving, deleting or restoring model
+  catalog entries.
 
 ## [0.9.43] - 2026-10-15
 
