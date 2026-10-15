@@ -5,6 +5,7 @@ import { ThinkingMessageView } from "./ThinkingMessageView";
 import { toolGroupActivityLabel, type ToolGroup } from "./streamGroups";
 import { Button } from "@/components/ui/button";
 import type { AttachmentContext } from "../tool-cards/attachments";
+import { useAnchoredLayoutChange } from "../chat/TranscriptScrollContext";
 
 interface Props extends AttachmentContext {
   group: ToolGroup;
@@ -23,18 +24,20 @@ interface Props extends AttachmentContext {
  * count still reflects tools-only; the expanded body renders each
  * inner item with its native component.
  *
- * At the end of its own running epoch, the group returns to defaultOpen.
- * Later turns leave manually opened historical groups alone.
+ * At the end of its own running epoch, an untouched group returns to defaultOpen.
+ * Once the reader chooses a state, completion and later turns preserve it.
  */
 function ToolGroupCardImpl({ group, turnEpoch, defaultOpen = false, ...attachmentContext }: Props) {
   const [open, setOpen] = useState(defaultOpen);
+  const anchoredChange = useAnchoredLayoutChange();
+  const manuallyToggled = useRef(false);
   const detailsId = useId();
   const previousEpochRef = useRef(turnEpoch);
   const ranInEpochRef = useRef(false);
   const running = group.items.some((item) => item.kind === "tool" && item.status === "running");
   useEffect(() => {
     if (turnEpoch !== undefined && previousEpochRef.current !== turnEpoch) {
-      if (ranInEpochRef.current) setOpen(defaultOpen);
+      if (ranInEpochRef.current && !manuallyToggled.current) setOpen(defaultOpen);
       ranInEpochRef.current = false;
     }
     // Latch activity until the turn ends, including tools that finish before
@@ -50,7 +53,10 @@ function ToolGroupCardImpl({ group, turnEpoch, defaultOpen = false, ...attachmen
         type="button"
         variant="ghost"
         className="h-auto w-full justify-start gap-2 rounded-md px-3 py-2 text-left focus-visible:ring-inset"
-        onClick={() => setOpen((v) => !v)}
+        onClick={(event) => {
+          manuallyToggled.current = true;
+          anchoredChange(event.currentTarget, () => setOpen((v) => !v));
+        }}
         aria-expanded={open}
         aria-controls={detailsId}
       >

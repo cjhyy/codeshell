@@ -122,6 +122,9 @@ export const messagesNs = {
       },
       // process / tool group header labels
       process: {
+        processRunning: "处理中",
+        processCompleted: "执行过程",
+        processDurationAccessible: "耗时 {time}",
         toolGroupCommands: "已处理 {count} 条命令",
         elapsedUnknown: "已处理",
         elapsedLong: "已处理 {time}",
@@ -309,6 +312,9 @@ export const messagesNs = {
         keepGoing: "— Keep going",
       },
       process: {
+        processRunning: "Working",
+        processCompleted: "Activity",
+        processDurationAccessible: "Elapsed {time}",
         // Count-neutral wording — avoids the ungrammatical "Processed 1 commands"
         // (no ICU plural engine for beta1). "Elapsed" reads right for a ticking timer.
         toolGroupCommands: "Commands: {count}",

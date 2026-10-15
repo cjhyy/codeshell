@@ -299,6 +299,25 @@ describe("buildStreamItems", () => {
     expect(inner.map((it) => it.kind)).toEqual(["tool_group", "assistant", "tool_group"]);
   });
 
+  test("a tools-first live process keeps its identity when its first tool becomes a ToolGroup", () => {
+    const request = user("Inspect the files");
+    const first = tool("Read", 10, 20);
+    const second: ToolMessage = { ...tool("Grep", 21, 30), status: "running" };
+    const single = processGroups(buildStreamItems([request, first], { liveTurnActive: true }));
+    const grouped = processGroups(
+      buildStreamItems([request, first, second], { liveTurnActive: true }),
+    );
+
+    expect(single).toHaveLength(1);
+    expect(grouped).toHaveLength(1);
+    expect(single[0]!.isLive).toBe(true);
+    expect(grouped[0]!.isLive).toBe(true);
+    expect(single[0]!.items[0]?.kind).toBe("tool");
+    expect(grouped[0]!.items[0]?.kind).toBe("tool_group");
+    expect(grouped[0]!.toolCount).toBe(2);
+    expect(grouped[0]!.id).toBe(single[0]!.id);
+  });
+
   test("keeps thinking transparent between adjacent tools", () => {
     const messages: Message[] = [user(), tool("Read", 10, 20), thinking(), tool("Grep", 21, 30)];
 
