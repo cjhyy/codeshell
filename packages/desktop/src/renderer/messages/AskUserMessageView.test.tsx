@@ -126,7 +126,7 @@ describe("AskUserMessageView asynchronous questions", () => {
     const answers: string[] = [];
     const click = async (node: Element) => {
       await act(async () => {
-        props(node).onClick();
+        props(node).onClick({ isPropagationStopped: () => false, stopPropagation() {} });
         await flushMicrotasks();
       });
     };
@@ -144,9 +144,12 @@ describe("AskUserMessageView asynchronous questions", () => {
         );
         await flushMicrotasks();
       });
-      const options = descendants(container).filter((node) => node.tagName === "LI");
+      const options = descendants(container).filter((node) => props(node).role === "checkbox");
       await click(options[0]!);
-      await click(options[2]!);
+      const other = descendants(container).find(
+        (node) => node.tagName === "BUTTON" && props(node)["aria-controls"],
+      )!;
+      await click(other);
       await act(async () => {
         const input = descendants(container).find((node) => node.tagName === "INPUT")!;
         props(input).onChange({ target: { value: "只处理文档" } });
