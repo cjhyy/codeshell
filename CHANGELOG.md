@@ -8,14 +8,24 @@ breaking.
 
 ## [Unreleased]
 
+## [0.9.43] - 2026-10-15
+
 ### Added
 
+- Read Figma nodes, exported images and image-fill assets through Link with
+  on-demand content loading, bounded responses and account authorization guidance.
+- Open sub-agent conversations in the side dock while keeping the parent chat
+  available.
 - Add `@cjhyy/code-shell-host`, a Core-only HostRuntime foundation with capability
   registration, adapter lifecycle and a shared worker request interceptor used by
   Desktop, serve and Panel task hosts. Larger service migrations remain pending.
 
 ### Changed
 
+- Unify themed dropdowns across Desktop and keep theme music local, including
+  imported MP3/WAV tracks and playback that continues outside Appearance settings.
+- Improve Quick Chat layout and composer usability in short panels.
+- Refresh the curated OpenRouter model catalog.
 - Return a reusable `agent_id` with synchronous Agent reports and guide related
   follow-up work through `AgentSendInput` using saved context and incremental input.
 - Persist sub-agent role scopes for continuation after restart. Legacy sessions
@@ -37,6 +47,11 @@ breaking.
 
 ### Fixed
 
+- Preserve external runtime output across restarts, adopted cost snapshots and
+  turn timing; keep reopened autocomplete suggestions focused.
+- Make GitHub data access opt-in at sign-in and distinguish local logout from
+  unconfirmed remote revocation.
+- Expose verified Node runtime fallbacks to Panel CLIs.
 - Track resumed sub-agents as running, route further input to their existing
   runtime, and preserve cancellation until that runtime fully exits, including
   across the automatic background threshold.
