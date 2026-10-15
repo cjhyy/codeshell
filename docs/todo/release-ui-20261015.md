@@ -216,6 +216,37 @@ main: `codex/desktop/composer-overflow-20261015`,
 on the current root branch, refresh main, and verify the final combination before
 delivery. Third-wave CI must be checked before another main push cancels it.
 
+Fourth wave in progress (root branch contains the reviewed commits):
+
+- `95579ea41` (source `dc92d56cd`): Sidebar content scrolls as one region while
+  the account footer stays reachable. Resize/focusin only scroll the currently
+  focused descendant. Twenty Chrome layouts, seven behavior cases and sixteen
+  isolated native Electron 200% layouts passed, with no hidden-ancestor scrolling.
+- `b536278d5`, `c4959f81a` (sources `85724a135`, `9ef67cddd`): active main chat
+  with a queue reserves 40% for output and scrolls the composer in the remaining
+  space. Without a queue, normal draft height is retained with at least 64px of
+  output in short panes. New-chat nested scroll/focus bounds and actual pane
+  width are respected; pending 60/40 and Quick Chat rules remain. Sixty production
+  layouts and fifteen behavior cases passed, with original Ask/autocomplete,
+  types/build/lint and independent review. Settings navigation is still finishing
+  self-owned portal close focus across its responsive breakpoint.
+- Root separately owns the accepted search-dialog short-window P2 on
+  `codex/desktop/session-search-layout-20261015` in the clean reused
+  `file-browser-ui-20261015` tree (now has uncommitted task-owned changes). Scoped
+  short-window density and wrapped mode labels increase 320×240 results from
+  8px to 85–97px; title empty states fit. Owned production audit passes recovery
+  and focus, but the new strict mouse-wheel fixture found a real unresolved
+  scrolling issue: error list client97/scroll128 can scroll programmatically yet
+  native wheel20/40/800 never emits scroll, despite correct target and no prevented
+  event. Independent release_audit confirmed six fresh cases and is diagnosing.
+  Do not integrate or claim this search fix complete until actual mouse and
+  keyboard reachability is proven. Root file:
+  `shell/SearchDialog.browser.fixture.mjs`; logs
+  `/tmp/codeshell-search-layout-fixture.log` and
+  `/tmp/codeshell-search-native-wheel-review.log`. Existing shell 27 tests, scoped
+  lint and Desktop/mobile typecheck passed. Keep the strict wheel assertion;
+  temporary catch-only instrumentation must be cleaned before commit.
+
 Initial audit history follows:
 
 - Read-only audit is in progress, including Desktop and mobile/Web.
