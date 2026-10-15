@@ -43,6 +43,7 @@
     "test:e2e:themes": "node ../../scripts/run-isolated-node-smoke.mjs --private-keyring scripts/e2e-themes.mjs",
     "test:e2e:panel-recovery": "node scripts/e2e-panel-recovery-ui.mjs",
     "test:e2e:panel-app": "node scripts/e2e-panel-app.mjs",
+    "test:e2e:panel-app-window": "node ../../scripts/run-isolated-node-smoke.mjs --private-keyring scripts/e2e-panel-app-window.mjs",
     "smoke:background-browser": "esbuild scripts/smoke-background-browser.ts --bundle --platform=node --format=esm --outfile=out/smoke-background-browser.mjs --external:electron --external:@cjhyy/code-shell-core && electron out/smoke-background-browser.mjs",
     "smoke:cookie-sync": "esbuild scripts/smoke-cookie-credential-auto-refresh.ts --bundle --platform=node --format=esm --outfile=out/smoke-cookie-credential-auto-refresh.mjs --external:electron --external:@cjhyy/code-shell-core && electron out/smoke-cookie-credential-auto-refresh.mjs",
     "smoke": "node scripts/smoke-panels.mjs",

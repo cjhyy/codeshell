@@ -498,6 +498,28 @@ Two screens edit the same `panelAppBindings` key from opposite directions:
 
 Extensions → Plugins owns Agent Plugin packages and never lists Panel Apps.
 
+## Separate Desktop windows
+
+An installed Panel App's dock title bar offers **Open in a separate window**.
+It opens one native window per source tab; repeating the action focuses that
+window. Closing it leaves the source tab intact. Closing the source tab or its
+main window also closes the separate view. Built-in and internal chat panels
+do not use this action.
+
+This is a new view of the same app and project, with shared persisted storage.
+The source remains mounted, preserving its unsaved UI state; transient editor
+state is not transferred or mirrored. Apps with editable documents should use
+the conditional storage methods above to detect concurrent saves. `singleton`
+continues to control dock tab creation within a conversation.
+
+Main derives the window's project, Session and execution settings from the
+already-bound source guest. Switching conversations does not retarget it;
+changing the source binding's identity revokes the window. Theme, locale and
+execution-setting updates follow the source. The native view exposes only the
+scoped Panel preload, never the Desktop bridge. Session submissions and Agent
+Tasks retain their main-window owner, and host-invoked Panel tools execute once
+in the original dock guest.
+
 ## Add and iterate on an app
 
 The quickest starting point is

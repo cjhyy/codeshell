@@ -105,6 +105,8 @@ import {
   type PanelAppCookieCredential,
   type PanelAppHostContext,
   type PanelAppAgentToolInvocation,
+  type PanelAppDescriptor,
+  type PanelAppWindowTarget,
 } from "../shared/panel-apps.js";
 
 const MAX_PARAMS_BYTES = 64 * 1024;
@@ -159,6 +161,12 @@ const DENIED_WORKSPACE_SEGMENTS = new Set(["node_modules"]);
 interface GuestBinding {
   guest: WebContents;
   ownerWindowId: number;
+  tabId?: string;
+  lastBindInput?: PanelAppBindInput;
+  /** Standalone views inherit authority from one immutable, trusted dock binding. */
+  windowSourceGuestId?: number;
+  windowSourceIdentity?: string;
+  logicalOwnerWebContentsId?: number;
   resource: PanelAppProtocolResource;
   context: PanelAppHostContext;
   callTimes: number[];
@@ -200,6 +208,13 @@ interface GuestBinding {
     planMode: boolean;
     hasGoal: boolean;
   };
+}
+
+export interface PanelAppWindowSource {
+  guestId: number;
+  ownerWindowId: number;
+  descriptor: PanelAppDescriptor;
+  bindInput: PanelAppBindInput;
 }
 
 interface PendingAgentToolCall {
@@ -452,6 +467,10 @@ function withTimeout<T>(
 
 export class PanelAppBridge {
   private readonly guests = new Map<number, GuestBinding>();
+  private readonly windowSourceListeners = new Map<
+    number,
+    Set<{ onChanged(): void; onRevoked(): void }>
+  >();
   private readonly storageQueues = new Map<string, Promise<void>>();
   private readonly workspaceWriteQueues = new Map<string, Promise<void>>();
   private readonly pendingAgentToolCalls = new Map<string, PendingAgentToolCall>();
@@ -699,6 +718,7 @@ export class PanelAppBridge {
 
   async shutdownMedia(): Promise<void> {
     this.resourceTransfersStopping = true;
+    for (const guestId of [...this.windowSourceListeners.keys()]) this.revokeWindowSource(guestId);
     for (const binding of this.guests.values()) binding.bindController?.abort();
     revokePanelAppMediaReads();
     for (const controller of this.resourceTransfers.keys()) controller.abort();
@@ -761,6 +781,7 @@ export class PanelAppBridge {
       if (transfer.guestId === guestId) controller.abort();
     this.processService.revokeGuest(guestId);
     this.guests.delete(guestId);
+    this.revokeWindowSource(guestId);
     for (const [requestId, pending] of this.pendingAgentToolCalls) {
       if (pending.guestId !== guestId) continue;
       clearTimeout(pending.timer);
@@ -787,6 +808,165 @@ export class PanelAppBridge {
     if (!this.options.isTrustedHost(sender)) throw new Error("untrusted Panel App host sender");
   }
 
+  /** Resolve only a dock guest already bound by this trusted main window. */
+  getWindowSource(sender: WebContents, target: PanelAppWindowTarget): PanelAppWindowSource {
+    this.assertTrustedHost(sender);
+    if (
+      !target ||
+      [target.appDescriptorId, target.tabId, target.bucket].some(
+        (value) =>
+          typeof value !== "string" || !value || value.length > 512 || value.includes("\0"),
+      )
+    )
+      throw new Error("invalid Panel App window target");
+    const owner = BrowserWindow.fromWebContents(sender);
+    if (!owner || owner.isDestroyed()) throw new Error("owner window is unavailable");
+    const candidates = [...this.guests.values()].filter(
+      (binding) =>
+        binding.windowSourceGuestId === undefined &&
+        binding.ownerWindowId === owner.id &&
+        binding.resource.descriptor.id === target.appDescriptorId &&
+        binding.tabId === target.tabId &&
+        binding.bucket === target.bucket,
+    );
+    if (candidates.length !== 1) throw new Error("Panel App window source is unavailable");
+    const source = candidates[0]!;
+    this.assertWindowSource(source);
+    return {
+      guestId: source.guest.id,
+      ownerWindowId: source.ownerWindowId,
+      descriptor: structuredClone(source.resource.descriptor),
+      bindInput: { ...source.lastBindInput! },
+    };
+  }
+
+  /** Main-only binding: the new guest cannot supply its own Session or permissions. */
+  async bindWindowGuest(guestId: number, sourceGuestId: number): Promise<boolean> {
+    const source = this.guests.get(sourceGuestId);
+    if (!source) throw new Error("Panel App window source is unavailable");
+    const sourceOwner = this.assertWindowSource(source);
+    const binding = this.guests.get(guestId);
+    const owner = binding ? BrowserWindow.fromId(binding.ownerWindowId) : null;
+    if (
+      !binding ||
+      binding === source ||
+      binding.guest.isDestroyed() ||
+      !owner ||
+      owner.isDestroyed() ||
+      owner.id === sourceOwner.id ||
+      binding.resource.descriptor.id !== source.resource.descriptor.id ||
+      binding.resource.descriptor.hostId !== source.resource.descriptor.hostId ||
+      binding.resource.descriptor.revision !== source.resource.descriptor.revision ||
+      binding.projectPath !== source.projectPath ||
+      (binding.windowSourceGuestId === undefined && binding.lastBindInput)
+    )
+      throw new Error("Panel App window guest does not match its source");
+    const identity = this.windowSourceIdentity(source);
+    if (
+      binding.windowSourceGuestId !== undefined &&
+      (binding.windowSourceGuestId !== sourceGuestId || binding.windowSourceIdentity !== identity)
+    ) {
+      this.revokeGuest(guestId);
+      throw new Error("Panel App window source changed");
+    }
+    this.assertProjectBinding(binding);
+    binding.windowSourceGuestId = sourceGuestId;
+    binding.windowSourceIdentity = identity;
+    binding.logicalOwnerWebContentsId = sourceOwner.webContents.id;
+    binding.tabId = source.tabId;
+    binding.bucket = source.bucket;
+    binding.cwd = source.cwd;
+    binding.projectScope = source.projectScope;
+    binding.sensitiveSessionId = source.sensitiveSessionId;
+    binding.sensitiveSessionRevoked = source.sensitiveSessionRevoked;
+    binding.execution = { ...source.execution };
+    binding.context = {
+      ...source.context,
+      visible: owner.isVisible() && !owner.isMinimized(),
+    };
+    binding.lastBindInput = {
+      ...source.lastBindInput!,
+      guestId,
+      visible: binding.context.visible,
+    };
+    if (binding.guest.getURL())
+      binding.guest.send("panel-app:event", { event: "context.changed", payload: binding.context });
+    if (binding.resource.descriptor.permissions.includes("agent.task"))
+      this.agentTaskService.rebind(this.agentTaskOwner(binding));
+    return true;
+  }
+
+  subscribeWindowSource(
+    sourceGuestId: number,
+    onChanged: () => void,
+    onRevoked: () => void,
+  ): () => void {
+    const source = this.guests.get(sourceGuestId);
+    if (!source) throw new Error("Panel App window source is unavailable");
+    this.assertWindowSource(source);
+    const listeners = this.windowSourceListeners.get(sourceGuestId) ?? new Set();
+    const listener = { onChanged, onRevoked };
+    listeners.add(listener);
+    this.windowSourceListeners.set(sourceGuestId, listeners);
+    return () => {
+      listeners.delete(listener);
+      if (listeners.size === 0 && this.windowSourceListeners.get(sourceGuestId) === listeners)
+        this.windowSourceListeners.delete(sourceGuestId);
+    };
+  }
+
+  private windowSourceIdentity(binding: GuestBinding): string {
+    return JSON.stringify([
+      binding.resource.descriptor.id,
+      binding.resource.descriptor.hostId,
+      binding.resource.descriptor.revision,
+      binding.projectPath,
+      binding.cwd,
+      binding.tabId,
+      binding.bucket,
+      binding.lastBindInput?.sessionId || null,
+    ]);
+  }
+
+  private assertWindowSource(binding: GuestBinding): BrowserWindow {
+    if (binding.windowSourceGuestId !== undefined || !binding.lastBindInput)
+      throw new Error("Panel App window requires a bound dock source");
+    this.assertLiveProjectBinding(binding);
+    if (binding.sensitiveSessionRevoked) throw new Error("Panel App window source session changed");
+    const owner = BrowserWindow.fromId(binding.ownerWindowId);
+    if (!owner || owner.isDestroyed()) throw new Error("owner window is unavailable");
+    this.assertTrustedHost(owner.webContents);
+    return owner;
+  }
+
+  private revokeWindowSource(sourceGuestId: number): void {
+    const listeners = this.windowSourceListeners.get(sourceGuestId);
+    this.windowSourceListeners.delete(sourceGuestId);
+    for (const binding of [...this.guests.values()]) {
+      if (binding.windowSourceGuestId === sourceGuestId) this.revokeGuest(binding.guest.id);
+    }
+    for (const listener of listeners ?? []) {
+      try {
+        listener.onRevoked();
+      } catch {
+        // One closing window must not prevent other derived scopes from being revoked.
+      }
+    }
+  }
+
+  private sessionOwnerWindow(binding: GuestBinding): BrowserWindow | null {
+    const source = this.guests.get(binding.windowSourceGuestId ?? binding.guest.id);
+    const owner = source ? BrowserWindow.fromId(source.ownerWindowId) : null;
+    if (
+      !owner ||
+      owner.isDestroyed() ||
+      (binding.logicalOwnerWebContentsId !== undefined &&
+        binding.logicalOwnerWebContentsId !== owner.webContents.id)
+    )
+      return null;
+    return owner;
+  }
+
   private findAgentToolBinding(
     appDescriptorId: string,
     bucket: string,
@@ -796,6 +976,7 @@ export class PanelAppBridge {
       .filter(
         (binding) =>
           !binding.guest.isDestroyed() &&
+          binding.windowSourceGuestId === undefined &&
           binding.ownerWindowId === ownerWindowId &&
           binding.resource.descriptor.id === appDescriptorId &&
           binding.bucket === bucket,
@@ -960,7 +1141,12 @@ export class PanelAppBridge {
     if (this.resourceTransfersStopping) throw new Error("Panel App Host is stopping");
     const binding = this.guests.get(input.guestId);
     const owner = BrowserWindow.fromWebContents(sender);
-    if (!binding || !owner || binding.ownerWindowId !== owner.id) {
+    if (
+      !binding ||
+      !owner ||
+      binding.ownerWindowId !== owner.id ||
+      binding.windowSourceGuestId !== undefined
+    ) {
       throw new Error("Panel App guest does not belong to this window");
     }
     if (binding.resource.descriptor.id !== input.appDescriptorId) {
@@ -1054,15 +1240,19 @@ export class PanelAppBridge {
       (!projectScope || !isDeepStrictEqual(binding.projectScope.scope, projectScope.scope))
     ) {
       binding.projectScopeRevoked = true;
+      this.revokeWindowSource(binding.guest.id);
       throw new Error("Panel project scope changed; reopen the panel");
     }
+    const previousIdentity = binding.lastBindInput ? this.windowSourceIdentity(binding) : null;
     binding.projectScope ??= projectScope;
     const sessionId = input.sessionId || undefined;
     if (binding.sensitiveSessionId && binding.sensitiveSessionId !== sessionId)
       binding.sensitiveSessionRevoked = true;
     binding.sensitiveSessionId ??= sessionId;
     binding.bucket = input.bucket;
+    binding.tabId = input.tabId;
     binding.cwd = cwd;
+    binding.lastBindInput = { ...input };
     binding.execution = {
       cwd: input.projectPath,
       ...(typeof input.modelKey === "string" ? { modelKey: input.modelKey } : {}),
@@ -1096,6 +1286,17 @@ export class PanelAppBridge {
     }
     if (binding.resource.descriptor.permissions.includes("agent.task")) {
       this.agentTaskService.rebind(this.agentTaskOwner(binding));
+    }
+    if (previousIdentity !== null && previousIdentity !== this.windowSourceIdentity(binding)) {
+      this.revokeWindowSource(binding.guest.id);
+    } else {
+      for (const listener of this.windowSourceListeners.get(binding.guest.id) ?? []) {
+        try {
+          listener.onChanged();
+        } catch {
+          // A view update cannot invalidate the trusted source binding.
+        }
+      }
     }
     return true;
   }
@@ -1295,6 +1496,12 @@ export class PanelAppBridge {
       this.resourceTransfersStopping
     )
       throw new PanelBridgeError("REVOKED", "Panel App scope is no longer bound");
+    if (binding.windowSourceGuestId !== undefined) {
+      const source = this.guests.get(binding.windowSourceGuestId);
+      if (!source || binding.windowSourceIdentity !== this.windowSourceIdentity(source))
+        throw new PanelBridgeError("REVOKED", "Panel App window source changed");
+      this.assertWindowSource(source);
+    }
   }
 
   private capabilitiesFor(binding: GuestBinding) {
@@ -2001,7 +2208,7 @@ export class PanelAppBridge {
   }
 
   private agentTaskOwner(binding: GuestBinding): PanelAgentTaskOwner {
-    const owner = BrowserWindow.fromId(binding.ownerWindowId);
+    const owner = this.sessionOwnerWindow(binding);
     if (!owner || owner.isDestroyed()) throw new Error("owner window is unavailable");
     if (!binding.bucket) throw new Error("Panel App scope is not bound");
     const availableSkills = (binding.resource.descriptor.agent?.skills ?? []).flatMap((entry) => {
@@ -3046,7 +3253,12 @@ export class PanelAppBridge {
     // Reject on EITHER the renderer-reported busy state or our own in-flight
     // reservation. The reservation covers the gap where a run has been handed to
     // the worker but `context.busy` has not been pushed back yet.
-    if (binding.context.busy || binding.agentSubmitInFlight) {
+    const submissionBinding = this.guests.get(binding.windowSourceGuestId ?? binding.guest.id)!;
+    if (
+      binding.context.busy ||
+      submissionBinding.context.busy ||
+      submissionBinding.agentSubmitInFlight
+    ) {
       throw new Error("the target session is busy");
     }
     const bridge = this.options.getAgentBridge();
@@ -3067,12 +3279,12 @@ export class PanelAppBridge {
     // renderer agent:msg path that normally claims the session's unique host
     // window. Claim it explicitly before dispatch; the worker may invoke a
     // mutating Panel tool immediately after accepting the run.
-    const owner = BrowserWindow.fromId(binding.ownerWindowId);
+    const owner = this.sessionOwnerWindow(binding);
     claimPanelHostOwnerForRun(bridge, sessionId, owner);
 
     // Claim the slot BEFORE the await point. Everything above is synchronous, so
     // no second call can interleave between the check and this assignment.
-    binding.agentSubmitInFlight = true;
+    submissionBinding.agentSubmitInFlight = true;
 
     // Snapshot the route before the first await. A renderer re-bind may update
     // the selected model while handoff context is loading; one submission must
@@ -3158,7 +3370,7 @@ export class PanelAppBridge {
         // Release once the worker has answered. By now either the run finished
         // or it failed; in the success case `context.busy` has long since been
         // pushed by the renderer, so there is no gap to re-open.
-        binding.agentSubmitInFlight = false;
+        submissionBinding.agentSubmitInFlight = false;
         if (result.ok || result.failureStreamed) return;
         output.publish({
           type: "error",
@@ -3168,7 +3380,7 @@ export class PanelAppBridge {
       .catch((error: unknown) => {
         // Must also release on failure, or one dropped request would wedge the
         // panel into a permanent "session is busy".
-        binding.agentSubmitInFlight = false;
+        submissionBinding.agentSubmitInFlight = false;
         output.publish({
           type: "error",
           error: `Panel App request failed: ${

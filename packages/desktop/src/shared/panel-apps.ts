@@ -126,6 +126,13 @@ export interface PreparedPanelApp {
   revision: string;
 }
 
+/** Select an already-bound Panel tab; authority is derived in Main. */
+export interface PanelAppWindowTarget {
+  appDescriptorId: string;
+  tabId: string;
+  bucket: string;
+}
+
 export interface PanelAppBindInput {
   guestId: number;
   appDescriptorId: string;

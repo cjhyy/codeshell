@@ -74,6 +74,7 @@ import type {
   PanelAppExtensionSummary,
   PanelAppHostContext,
   PanelAppAgentToolInvocation,
+  PanelAppWindowTarget,
   PreparedPanelApp,
 } from "../shared/panel-apps";
 import type { AgentPanelHostRequest, AgentPanelHostResponse } from "../shared/agent-panels";
@@ -1500,6 +1501,8 @@ export interface CodeshellApi
   probeLocalhostPorts(ports?: number[]): Promise<number[]>;
   /** Open the standalone browser window, optionally at an initial URL. */
   openBrowserPopout(initialUrl?: string): Promise<void>;
+  /** Open or focus a separate view of an already-bound installed Panel tab. */
+  openPanelAppWindow(target: PanelAppWindowTarget): Promise<void>;
   /** From a popout: send an element-pick anchor back to the parent window. */
   sendBrowserAnchor(anchor: unknown): void;
   /** In the parent: receive anchors forwarded from a popout. Returns unsubscribe. */

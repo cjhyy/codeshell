@@ -1,5 +1,13 @@
 import React, { useEffect, useId, useMemo, useRef, useState, useSyncExternalStore } from "react";
-import { CircleOff, Plus, Maximize2, Minimize2, PanelsTopLeft, LoaderCircle } from "lucide-react";
+import {
+  CircleOff,
+  Plus,
+  Maximize2,
+  Minimize2,
+  PanelsTopLeft,
+  LoaderCircle,
+  AppWindow,
+} from "lucide-react";
 import type { PanelTab } from "../view";
 import { cn } from "@/lib/utils";
 import {
@@ -32,6 +40,7 @@ import {
 import { PanelTabStrip } from "./PanelTabStrip";
 import { useReviewAvailability } from "./useReviewAvailability";
 import type { SubagentSelection } from "../subagents/SubagentNavigation";
+import { useToast } from "../ui/ToastProvider";
 
 export interface OpenTab {
   id: string;
@@ -178,6 +187,7 @@ function ResolvedPanelArea({
   workspace,
 }: Props & { workspace: PanelWorkspaceState }) {
   const { t } = useT();
+  const toast = useToast();
   const panelDomId = useId();
   const panelRegistryRevision = useSyncExternalStore(
     PANEL_REGISTRY.subscribe,
@@ -253,6 +263,42 @@ function ResolvedPanelArea({
     candidateActiveId && activeTabs.some((tb) => tb.id === candidateActiveId)
       ? candidateActiveId
       : (activeTabs[0]?.id ?? null);
+  const activeTab = activeTabs.find((tab) => tab.id === visibleActiveId);
+  const activeEntry = activeTab
+    ? getPanelEntry(activeTab.kind, {
+        projectPath,
+        cwd,
+        engineSessionId: engineSessionId ?? null,
+      })
+    : undefined;
+  const canOpenWindow = activeEntry?.owner.kind === "panel-app" && !activeEntry.internalOnly;
+  const openingWindowTabs = useRef(new Set<string>());
+  const [openingWindowTabIds, setOpeningWindowTabIds] = useState<ReadonlySet<string>>(new Set());
+  const openingActiveWindow = Boolean(activeTab && openingWindowTabIds.has(activeTab.id));
+
+  const openActiveWindow = async (): Promise<void> => {
+    if (!canOpenWindow || !activeTab || !activeEntry || openingWindowTabs.current.has(activeTab.id))
+      return;
+    const tabId = activeTab.id;
+    openingWindowTabs.current.add(tabId);
+    setOpeningWindowTabIds(new Set(openingWindowTabs.current));
+    try {
+      await window.codeshell.openPanelAppWindow({
+        appDescriptorId: activeEntry.key,
+        tabId,
+        bucket,
+      });
+    } catch (error) {
+      toast({
+        message: t("panels.area.openWindowFailed"),
+        detail: error instanceof Error ? error.message : String(error),
+        variant: "error",
+      });
+    } finally {
+      openingWindowTabs.current.delete(tabId);
+      setOpeningWindowTabIds(new Set(openingWindowTabs.current));
+    }
+  };
 
   // Maximized = overlay the chat column (incl. composer) for more room (TODO
   // 2.4). Resets each open (local) — chat/composer state lives in App.
@@ -448,6 +494,26 @@ function ResolvedPanelArea({
               })}
             </DropdownMenuContent>
           </DropdownMenu>
+          {canOpenWindow && (
+            <Button
+              type="button"
+              onClick={() => void openActiveWindow()}
+              disabled={openingActiveWindow}
+              aria-label={t("panels.area.openWindow")}
+              title={t("panels.area.openWindow")}
+              aria-busy={openingActiveWindow || undefined}
+              data-panel-action="popout"
+              size="icon"
+              variant="ghost"
+              className="size-8 shrink-0 rounded-lg text-muted-foreground"
+            >
+              {openingActiveWindow ? (
+                <LoaderCircle className="size-4 animate-spin motion-reduce:animate-none" />
+              ) : (
+                <AppWindow className="size-4" />
+              )}
+            </Button>
+          )}
           <Button
             type="button"
             onClick={() => setMaximized((v) => !v)}

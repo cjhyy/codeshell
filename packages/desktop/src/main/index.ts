@@ -18,6 +18,7 @@ import { registerOperationResolutionHost } from "./operation-resolution-host.js"
 import {
   app,
   BrowserWindow,
+  WebContentsView,
   clipboard,
   dialog,
   ipcMain,
@@ -452,11 +453,13 @@ import { expandPluginCommand, listPluginCommands } from "./plugin-command-servic
 import { getPluginMedia } from "./plugin-media-service.js";
 import {
   preparedPanelAppPartitionProjectPath,
+  preparePanelApp,
   registerPanelAppSchemePrivileges,
   validatePanelAppEntryUrl,
 } from "./panel-app-protocol.js";
 import { installThemeAssetProtocol, THEME_ASSET_SCHEME } from "./theme-asset-protocol.js";
 import { PanelAppBridge } from "./panel-app-bridge.js";
+import { PanelAppWindows } from "./panel-app-windows.js";
 import { buildPanelAgentTaskModelCatalog } from "./panel-app-agent-task-models.js";
 import {
   listMarketplacesForUi,
@@ -863,6 +866,22 @@ const panelAppBridge = new PanelAppBridge({
   },
 });
 panelAppBridge.registerIpc();
+const panelAppWindows = new PanelAppWindows({
+  bridge: panelAppBridge,
+  prepare: preparePanelApp,
+  validateEntry: validatePanelAppEntryUrl,
+  ownerWindow: (id) => BrowserWindow.fromId(id),
+  createWindow: (options) => new BrowserWindow(options),
+  createView: (options) => new WebContentsView(options),
+  preloadPath: resolve(__dirname, "..", "preload", "panel-app.cjs"),
+});
+ipcMain.handle("panel-apps:open-window", async (event, target) => {
+  const parent = BrowserWindow.fromWebContents(event.sender);
+  if (!parent || !mainWindows.has(parent) || event.senderFrame !== event.sender.mainFrame) {
+    throw new Error("Panel windows can only be opened from their Desktop tab");
+  }
+  await panelAppWindows.open(event.sender, target);
+});
 const imGatewayService = new ImGatewayService({
   ensureDesktopControl: async () => {
     if (!gatewayControlServer) throw new Error("Desktop 消息桥接尚未启动");
