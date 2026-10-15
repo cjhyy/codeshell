@@ -5,7 +5,11 @@ import { MessageStream } from "../MessageStream";
 import type { SubagentSelection } from "../subagents/SubagentNavigation";
 import type { AgentMessage } from "../types";
 import { ensureMiniDom, flushMicrotasks } from "../test-utils/renderHook";
-import { PanelArea, type OpenTab } from "./PanelArea";
+import type { OpenTab } from "./PanelArea";
+
+// App integration suites mock the canonical PanelArea module. Keep this
+// interaction test on the real dock regardless of the shared shard's order.
+const { PanelArea } = await import("./PanelArea?subagent-dock-test");
 
 let root: Root | undefined;
 let descriptor: PropertyDescriptor | undefined;
