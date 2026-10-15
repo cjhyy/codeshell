@@ -633,7 +633,25 @@ async function executeLinkAction(
       ...(operation ? { operation } : {}),
     });
   } catch (error) {
-    if (wantsFigmaMcp && error instanceof McpLinkActionError && error.code === "reconnect")
+    let reconnectCurrentMcp = false;
+    if (wantsFigmaMcp && !ctx?.signal?.aborted) {
+      try {
+        ctx?.operations?.assertAuthorized?.();
+        const live = access.resolveMeta(cwd, connection.credential.id, scope);
+        reconnectCurrentMcp = Boolean(
+          live &&
+          isFigmaMcpCredential(live) &&
+          activeAuthority(live) === authority &&
+          (live.meta?.linkOAuthState === "reconnect" ||
+            (error instanceof McpLinkActionError && error.code === "reconnect")),
+        );
+      } catch {
+        /* Revoked runs cannot trigger a new authorization prompt. */
+      }
+    }
+    // A reconnect snapshot may cancel the worker IPC before its reviewed error
+    // arrives. Recover only for this same current grant, never a task cancellation.
+    if (reconnectCurrentMcp)
       return JSON.stringify({
         kind: "authorization_required",
         provider: "figma",
@@ -641,7 +659,7 @@ async function executeLinkAction(
         action: actionId,
         connectionId: connection.credential.id,
         ...(figmaResourceUrl ? { resourceUrl: figmaResourceUrl } : {}),
-        message: error.message,
+        message: new McpLinkActionError("reconnect").message,
       });
     return JSON.stringify({
       kind: "error",

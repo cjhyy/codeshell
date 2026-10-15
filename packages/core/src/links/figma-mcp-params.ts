@@ -155,6 +155,10 @@ export function figmaMcpParameters(action: string, params: Record<string, unknow
 export function assertFigmaMakeResourceUri(value: unknown, fileKey: string): string {
   if (typeof value !== "string" || value.length > 4096 || /[\x00-\x20\x7f\\]/.test(value))
     throw new Error("Invalid Figma Make resource URI.");
+  // URL normalizes literal and percent-encoded dot segments. Reject them in
+  // the original URI before that can disguise another file namespace.
+  if (value.split("/").some((part) => [".", ".."].includes(decodeURIComponent(part))))
+    throw new Error("Invalid Figma Make resource URI.");
   let url: URL;
   try {
     url = new URL(value);

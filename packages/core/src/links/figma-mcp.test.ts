@@ -4,6 +4,7 @@ import { CredentialStore } from "../credentials/store.js";
 import type { Credential } from "../credentials/types.js";
 import {
   setDefaultCredentialAccess,
+  createIpcCredentialAccess,
   type CredentialAccess,
   type CredentialMetadata,
 } from "../credentials/access.js";
@@ -16,6 +17,7 @@ import {
 import { assertFigmaMakeResourceUri, figmaMcpParameters } from "./figma-mcp-params.js";
 import { allowsLinkAction, linkAuthoritySnapshot } from "./authority.js";
 import { linkActionTool } from "./link-action-tool.js";
+import { createInProcessTransport } from "../protocol/transport.js";
 
 let nextId = 0;
 function credential(): Credential {
@@ -202,6 +204,8 @@ describe("Figma MCP on-demand target and resource boundaries", () => {
       "file://figma/make/source/OtherOne/src/App.tsx",
       "file://figma/make/source/MakeOne/src%2Fsecret",
       "file://figma/make/source/MakeOne/src/App.tsx?token=x",
+      "file://figma/make/source/OtherOne/../MakeOne/src/App.tsx",
+      "file://figma/make/source/OtherOne/%2e%2e/MakeOne/src/App.tsx",
     ])
       expect(() => assertFigmaMakeResourceUri(uri, "MakeOne")).toThrow();
   });
@@ -519,5 +523,62 @@ describe("Figma Link channel routing", () => {
       code: "provider_rejected",
       untrustedExternalContent: true,
     });
+  });
+  test("a reconnect snapshot preceding the Host error recovers authorization, except after task cancellation", async () => {
+    for (const cancelTask of [false, true]) {
+      const [host, worker] = createInProcessTransport();
+      const mcp = publicCredential();
+      const access = createIpcCredentialAccess(worker);
+      setDefaultCredentialAccess(access);
+      const controller = new AbortController();
+      const snapshot = (revision: number) =>
+        host.send({
+          jsonrpc: "2.0",
+          method: "desktop/credentialSnapshot",
+          params: {
+            revision,
+            entries: [
+              {
+                cwd: "/repo",
+                full: [mcp],
+                project: [],
+                envFull: {},
+                envProject: {},
+                readableFull: true,
+                readableProject: true,
+              },
+            ],
+          },
+        });
+      snapshot(1);
+      host.onMessage((message) => {
+        if (
+          !("method" in message) ||
+          !("id" in message) ||
+          message.method !== "desktop/mcpLinkAction"
+        )
+          return;
+        if (cancelTask) controller.abort();
+        mcp.meta!.linkOAuthState = "reconnect";
+        snapshot(2);
+        host.send({
+          jsonrpc: "2.0",
+          id: message.id,
+          error: {
+            code: -32603,
+            message: "reviewed reconnect",
+            data: { mcpLinkCode: "reconnect" },
+          },
+        });
+      });
+      const result = JSON.parse(
+        await linkActionTool(
+          { provider: "figma", action: "get_metadata", params: { file_key: "FileOne" } },
+          { ...ctx, signal: controller.signal },
+        ),
+      );
+      expect(result.kind).toBe(cancelTask ? "error" : "authorization_required");
+      if (!cancelTask) expect(result.connectionId).toBe(mcp.id);
+    }
   });
 });
