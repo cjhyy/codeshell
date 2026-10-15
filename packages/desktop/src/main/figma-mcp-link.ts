@@ -2,6 +2,7 @@ import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { StreamableHTTPClientTransport } from "@modelcontextprotocol/sdk/client/streamableHttp.js";
 import {
   createMcpAuthenticatedFetch,
+  logger,
   parseOAuthCredentialSecret,
   type Credential,
   type CredentialAccess,
@@ -26,6 +27,22 @@ function record(value: unknown): Record<string, unknown> | undefined {
 /** Fixed structural diagnostics; account values and provider text never leave this function. */
 function accountShape(value: unknown): Record<string, unknown> {
   if (Buffer.byteLength(JSON.stringify(value)) > 65_536) return { oversized: true };
+  const diagnosticKeys = new Set([
+    "content",
+    "structuredContent",
+    "isError",
+    "type",
+    "text",
+    "user",
+    "result",
+    "id",
+    "email",
+    "name",
+    "handle",
+    "plans",
+    "seat",
+    "tier",
+  ]);
   const shape = (item: unknown, depth = 0): unknown => {
     if (item === null) return "null";
     if (Array.isArray(item))
@@ -42,10 +59,10 @@ function accountShape(value: unknown): Record<string, unknown> {
           ? {
               fields: Object.fromEntries(
                 Object.entries(object)
-                  .filter(([key]) => /^[A-Za-z_][A-Za-z0-9_]{0,59}$/.test(key))
-                  .slice(0, 30)
+                  .filter(([key]) => diagnosticKeys.has(key))
                   .map(([key, entry]) => [key, shape(entry, depth + 1)]),
               ),
+              unknownFields: Object.keys(object).filter((key) => !diagnosticKeys.has(key)).length,
             }
           : {}),
       };
@@ -115,8 +132,26 @@ function accountResult(value: unknown): { id: string; label: string } {
       /* Other text blocks carry no identity. */
     }
   }
-  for (const candidate of candidates) {
-    const account = record(record(candidate)?.user) ?? record(candidate);
+  // MCP SDKs wrap scalar results in { result: ... }. Accept bounded object or
+  // JSON-object wrappers, never arbitrary prose, lists or nested plan members.
+  const accounts = (value: unknown, depth = 0): Record<string, unknown>[] => {
+    if (depth > 3) return [];
+    if (typeof value === "string") {
+      try {
+        value = JSON.parse(value);
+      } catch {
+        return [];
+      }
+    }
+    const object = record(value);
+    if (!object) return [];
+    return [
+      ...(record(object.user) ? accounts(object.user, depth + 1) : []),
+      object,
+      ...(Object.hasOwn(object, "result") ? accounts(object.result, depth + 1) : []),
+    ];
+  };
+  for (const account of candidates.flatMap((candidate) => accounts(candidate))) {
     const email = typeof account?.email === "string" ? account.email.trim() : "";
     const id = typeof account?.id === "string" ? account.id.trim() : email.toLowerCase();
     const displayName =
@@ -256,7 +291,18 @@ export function createFigmaMcpLinkAdapter(options: {
                 } catch {
                   /* Diagnostics never decide authorization. */
                 }
-                const account = accountResult(accountResponse);
+                let account: { id: string; label: string };
+                try {
+                  account = accountResult(accountResponse);
+                } catch (error) {
+                  try {
+                    if (!options.onAccountShape)
+                      logger.warn("link.figma.mcp.account_shape", accountShape(accountResponse));
+                  } catch {
+                    /* Diagnostics cannot change the authorization failure. */
+                  }
+                  throw error;
+                }
                 stage = "capability_verification";
                 status = undefined;
                 const capabilities: string[] = FIGMA_MCP_TOOL_IDS.filter((name) =>

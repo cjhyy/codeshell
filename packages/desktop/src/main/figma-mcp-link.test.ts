@@ -251,6 +251,8 @@ test("official account fields survive separate JSON, explanatory text and empty 
       content: [{ type: "text", text: `\`\`\`json\n${JSON.stringify(account)}\n\`\`\`` }],
     },
     { structuredContent: { user: account }, content: [] },
+    { structuredContent: { result: account }, content: [] },
+    { structuredContent: { result: JSON.stringify(account) }, content: [] },
   ]) {
     const f = fixture({ whoamiResult: result });
     const value = await f.adapter.authorize({
@@ -270,6 +272,93 @@ test("official account fields survive separate JSON, explanatory text and empty 
         .map((request) => request.params?.name),
     ).toEqual(["whoami"]);
   }
+});
+
+test("account result wrappers reject prose, lists, excessive nesting and display-only handles", async () => {
+  let deep: unknown = { email: "fixture@example.test", handle: "Fixture" };
+  for (let index = 0; index < 10; index++) deep = { result: deep };
+  for (const result of [
+    { result: "email: fixture@example.test" },
+    { result: [{ email: "fixture@example.test", handle: "Fixture" }] },
+    { result: { handle: "Mutable display name" } },
+    { result: true },
+    deep,
+  ]) {
+    const f = fixture({ whoamiResult: { structuredContent: result, content: [] } });
+    await expect(
+      f.adapter.authorize({
+        id: "link-figma-mcp",
+        label: "Figma",
+        previous: null,
+        signal: new AbortController().signal,
+        onAuthorizationUrl: async () => {},
+      }),
+    ).rejects.toMatchObject({
+      verificationStage: "account_verification",
+      reason: "account_identity_unavailable",
+    });
+  }
+  const oversized = fixture({
+    whoamiResult: {
+      structuredContent: {
+        result: JSON.stringify({
+          email: "fixture@example.test",
+          handle: "Fixture",
+          padding: "x".repeat(65_536),
+        }),
+      },
+      content: [],
+    },
+  });
+  await expect(
+    oversized.adapter.authorize({
+      id: "link-figma-mcp",
+      label: "Figma",
+      previous: null,
+      signal: new AbortController().signal,
+      onAuthorizationUrl: async () => {},
+    }),
+  ).rejects.toMatchObject({
+    verificationStage: "account_verification",
+    reason: "response_too_large",
+  });
+});
+
+test("account diagnostics expose only fixed field names and types", async () => {
+  const f = fixture({
+    whoamiResult: {
+      structuredContent: {
+        email: "fixture@example.test",
+        handle: "Fixture user",
+        syntheticSecretAsKey: "private value",
+        plans: [{ seat: "Dev", tier: "pro", nestedSecretAsKey: "private value" }],
+      },
+      content: [
+        {
+          type: "text",
+          text: JSON.stringify({ user: { textSecretAsKey: "private value" } }),
+        },
+      ],
+    },
+  });
+  await f.adapter.authorize({
+    id: "link-figma-mcp",
+    label: "Figma",
+    previous: null,
+    signal: new AbortController().signal,
+    onAuthorizationUrl: async () => {},
+  });
+  const diagnostics = JSON.stringify(f.shapes);
+  for (const secret of [
+    "syntheticSecretAsKey",
+    "nestedSecretAsKey",
+    "textSecretAsKey",
+    "private value",
+    "fixture@example.test",
+    "Fixture user",
+  ])
+    expect(diagnostics).not.toContain(secret);
+  expect(diagnostics).toContain('"unknownFields":1');
 });
 
 test("verification reports fixed stages and HTTP status without provider details", async () => {
