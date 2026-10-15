@@ -580,6 +580,25 @@ unchanged. Continue delivering only this goal's clean integration branch; do not
 publish, reset or synchronize those other local commits.
 UI6 combined gates now start after a fresh fetch; UI7 changes remain separate.
 
+UI6 final combined gates passed on the frozen product source. All 14 workspace
+types, full Desktop main/preload/renderer/mobile/extension build, lint (0 errors,
+104 existing warnings), all 32 Desktop browser fixtures and four isolated Web
+browser commands passed. The guarded combined shard completed with 3399 passes,
+12603 assertions across 372 files, and one existing Chromium-covered skip.
+The first shard found three legacy source-string expectations for old Close
+and create-callback wiring; source `c11f983a0`, integrated as `aba4829ff`, updates
+only that contract test while retaining pending-close guards and actual creation
+requirements. The full zero-failure shard rerun is recorded; product code did
+not change or require repeated layout/build checks. Native full-App Settings
+and DigitalHumans E2E passed sequentially, plus the four combined Cloud metadata
+/ new SignIn portal native language/100–200% cases. Scoped follow-up lint,
+format and diff checks passed. Logs: `/tmp/codeshell-ui-wave6-{typecheck,lint,
+desktop-build,unit,overlays,web-latest,web-sidebar,web-files,web-settings,
+native-settings,native-digital-humans,cloud-metadata-native}.log`.
+Fresh remote main is still UI5 `bef6e513e`; publish this verified UI6 source
+through the clean integration branch and retain other local main commits.
+Remote CI has not yet been verified; record it in the next continuation.
+
 Initial audit history follows:
 
 - Read-only audit is in progress, including Desktop and mobile/Web.
