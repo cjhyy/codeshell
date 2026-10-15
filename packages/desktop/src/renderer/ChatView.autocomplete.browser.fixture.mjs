@@ -195,6 +195,11 @@ async function waitForPick(page, input, expected) {
       document.activeElement === node
     );
   }, expected);
+  // A pick schedules caret restoration for the next paint. Let it finish
+  // before fill() starts its select-all/insertText replacement sequence.
+  await page.evaluate(async () => {
+    await new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+  });
   assert.equal(await input.inputValue(), expected);
 }
 
@@ -438,11 +443,6 @@ try {
               // controlled draft, then let the pick's scheduled caret restore
               // finish before replacing the input again.
               await waitForPick(page, input, pickedDraft);
-              await page.evaluate(async () => {
-                await new Promise((resolve) =>
-                  requestAnimationFrame(() => requestAnimationFrame(resolve)),
-                );
-              });
               assert.ok(
                 await input.evaluate((node) => document.activeElement === node),
                 "Pointer selection retains composer focus",

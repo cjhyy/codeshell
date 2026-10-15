@@ -82,16 +82,29 @@ Implemented task commits (integration hashes):
   selection and stay synchronized across windows. Real keyboard/Host timing,
   eight layout/theme/language cases and independent review passed.
 
-These product changes are awaiting final combined verification and integration
-into main. The combined 14-workspace typecheck, complete Desktop build, ESLint
-baseline and the two Web production-browser fixtures have passed. The complete
-renderer/Web unit shard and 15 Desktop browser fixtures are running. CI now also
-runs both Web browser fixtures with the already-installed locked browser.
+The combined 14-workspace typecheck, complete Desktop build, ESLint baseline,
+both Web production-browser fixtures, all 15 Desktop browser fixtures and real
+Electron navigation/settings checks passed. The guarded renderer/Web/persistence
+shard passed 3,291 tests with 12,330 assertions (one separately covered browser
+test skipped). CI now also runs both Web browser fixtures with the already-installed
+locked browser. This first wave is ready for main integration and remote CI.
+
+The first autocomplete browser run exposed a pending-caret timing issue: a queued
+production rAF can interrupt Playwright fill's select-all/insertText replacement.
+An independent deterministic reproduction matched the double-mention result.
+The fixture now drains the callback after every pointer/Enter/Tab pick and retains
+the original failure context; no assertions were loosened. The complete browser
+matrix passed on rerun. The corresponding real fast-user-interaction race is
+being fixed separately in the second composer commit.
 
 The second review wave uses independent trees: Desktop context settings read,
 edit and reset recovery; Web workspace/session navigation; and autocomplete
-cleanup after an accepted send. Continue with the current commits and evidence
-instead of redoing the initial audit.
+cleanup after an accepted send and cancellation of stale caret restoration.
+Root also reproduced update-settings issues with production components and an
+owned bridge: a long error expands a 320px page to 5,853px, a delayed initial status
+overwrites a newer event, and version/action rejections are unhandled. Evidence:
+`/tmp/codeshell-updater-ui-audit-20261015/report.json`; no network was allowed.
+Continue with the current commits and evidence instead of redoing the initial audit.
 
 - Read-only audit is in progress, including Desktop and mobile/Web.
 - Initial mobile candidates were excluded after entry-point inspection: those
