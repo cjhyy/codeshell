@@ -63,6 +63,11 @@ breaking.
   in short windows, including refreshed entries that have disappeared elsewhere.
 - Support keyboard navigation and selection in the Desktop model picker, keep
   complete names readable, and close an open picker when selection is disabled.
+- Make the conversation permission picker keyboard accessible and close stale
+  options when selection becomes unavailable.
+- Show project-trust read and save failures with retries, keep trust choices
+  visible in short windows, and ignore results belonging to an earlier project.
+- Point the empty model picker to model connections in Settings.
 
 ## [0.9.44] - 2026-10-15
 

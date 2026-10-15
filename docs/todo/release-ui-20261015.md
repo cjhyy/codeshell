@@ -50,7 +50,7 @@ The initial blockers below are retained as resolved verification history.
 
 Current integration worktree:
 `/Users/admin/.codex/worktrees/ui-task-center-20261015/codeshell`, branch
-`codex/integration/ui-review-wave7-20261015`. Other work advanced remote main to
+`codex/integration/ui-review-wave8-20261016`. Other work advanced remote main to
 `0.9.44`; this branch merged `976a79322` and `bb7a9b59a`, preserving the incoming model-capability,
 forwarding and Figma updates. The CSS merge preserves both context-selection and
 file-action styles. Do not revert incoming work or republish another version on
@@ -659,6 +659,25 @@ UI8 frozen source checkpoints now include TrustGate `ea92663db` and PermissionPi
 native tests passed actual 100/200% with complete capturePage screenshots and
 strict PNG dimensions; the earlier cropped Playwright screenshots remain only
 DOM/AX evidence. Root will apply the same capture correction to ModelPill in UI8.
+
+UI7 is now pushed and remote main confirmed at
+`756d5710f7a8899fd46772347d524d45bd7ed10e`. Remote CI `38775300622` is running;
+keep its clean integration branch until success. The watch log is
+`/tmp/codeshell-ui-wave7-ci.log`; verify the structured run conclusion if the
+watch process encounters a transient API error.
+
+UI8 integration currently contains TrustGate `658d9225e`, PermissionPill
+`d791df911` plus capture fixture `4bbd6dc69`, and the model empty hint
+`2cc74070e`. Both agent scopes normally merged UI7 main and reverified unchanged
+product/fixture blobs in production/development, types, renderer build and lint.
+Root ModelPill capture-only source `e26d21b5e` is also integrated: its complete
+native 24-observation run passed on the new hint source with six full-frame
+captures, strict PNG dimensions, zero errors and zero blocked requests.
+Evidence `codeshell-model-picker-FDUYMl` and
+`/tmp/codeshell-model-picker-native-capture-20261016.log`; Root inspected the
+complete 320x240 logical/200% capture (1280x960 PNG). Native window/server have
+closed and the slot is free. The Desktop public runner now includes 35 fixtures.
+History final source and combined UI8 gates remain pending.
 
 UI8 is isolated while UI7 gates finish. History's actual Workbench audit found
 offscreen archive failures and late rename completions stealing external focus;
