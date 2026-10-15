@@ -41,7 +41,10 @@ const source = `
     window.actionSnapshots.push({action,...snapshot()});
   };
   const unexpected=method=>async()=>{throw new Error('Unexpected account method: '+method)};
-  window.codeshell={cloudAccount:{
+  window.codeshell={credentials:{list:async cwd=>{
+    if(cwd!=='') throw new Error('Account form must read global credentials');
+    return [];
+  }},cloudAccount:{
     status:async()=>{window.requests.status.push(snapshot());return current;},
     onStatus:listener=>{
       listeners.add(listener);

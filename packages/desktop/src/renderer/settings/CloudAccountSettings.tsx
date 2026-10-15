@@ -21,6 +21,10 @@ export function CloudAccountSettings({ embedded = false }: { embedded?: boolean 
   const [confirmation, setConfirmation] = useState("");
   const [mode, setMode] = useState<"login" | "register">("login");
   const [connectGitHub, setConnectGitHub] = useState(false);
+  const [githubLinkDefaultCheck, setGitHubLinkDefaultCheck] = useState<
+    "checking" | "ready" | "failed"
+  >("checking");
+  const githubLinkDefaultOverrideRef = useRef(false);
   const [busy, setBusy] = useState(false);
   const [logoutUnconfirmed, setLogoutUnconfirmed] = useState(false);
   const busyRef = useRef(false);
@@ -29,7 +33,10 @@ export function CloudAccountSettings({ embedded = false }: { embedded?: boolean 
   const authorityGenerationRef = useRef(0);
   const [authorityGeneration, setAuthorityGeneration] = useState(0);
   const applyStatus = (next: CloudAccountStatus) => {
-    if (next.state === "signed-in") setConnectGitHub(false);
+    if (next.state === "signed-in") {
+      githubLinkDefaultOverrideRef.current = true;
+      setConnectGitHub(false);
+    }
     if (next.account) setLogoutUnconfirmed(false);
     const identity =
       next.state === "signed-in" && next.account ? `${next.origin}\n${next.account.id}` : "";
@@ -74,6 +81,43 @@ export function CloudAccountSettings({ embedded = false }: { embedded?: boolean 
       off();
     };
   }, []);
+  // Inspect only saved, masked global Link records. Presence preserves the
+  // user's existing connection even when its secret or authorization needs repair.
+  useEffect(() => {
+    let active = true;
+    let settled = false;
+    const finish = (hasSavedGitHub?: boolean) => {
+      if (!active || settled) return;
+      settled = true;
+      clearTimeout(timer);
+      setGitHubLinkDefaultCheck(hasSavedGitHub === undefined ? "failed" : "ready");
+      if (!githubLinkDefaultOverrideRef.current) setConnectGitHub(hasSavedGitHub === false);
+    };
+    const timer = setTimeout(() => finish(), 3_000);
+    void Promise.resolve()
+      .then(() => window.codeshell.credentials.list(""))
+      .then((credentials) =>
+        finish(
+          credentials.some((credential) => {
+            if (
+              credential.storeScope === "project" ||
+              (credential.type !== "link" && credential.type !== "oauth")
+            )
+              return false;
+            const provider =
+              credential.meta?.linkProvider ??
+              credential.meta?.oauthProvider ??
+              (credential.id === "github-oauth" ? "github" : undefined);
+            return provider === "github";
+          }),
+        ),
+      )
+      .catch(() => finish());
+    return () => {
+      active = false;
+      clearTimeout(timer);
+    };
+  }, []);
   // The account form is opened explicitly; the persistent sidebar and local
   // sign-in snapshot never contact the service. Debounce edits and fence replies
   // so capabilities from a previous address cannot enable this one's buttons.
@@ -101,6 +145,7 @@ export function CloudAccountSettings({ embedded = false }: { embedded?: boolean 
   const capabilityCheckFailed = service?.origin === serviceOrigin && service.failed;
   const githubLinkAvailable =
     capabilities?.githubEnabled === true && capabilities.githubLinkEnabled === true;
+  const githubLinkDefaultPending = githubLinkDefaultCheck === "checking";
   const githubConnectionPending = status.githubConnection?.state === "pending";
   const act = async (
     work: () => Promise<unknown>,
@@ -301,7 +346,12 @@ export function CloudAccountSettings({ embedded = false }: { embedded?: boolean 
             <Button
               type="button"
               className="w-full"
-              disabled={pending || !origin.trim() || !capabilities?.githubEnabled}
+              disabled={
+                pending ||
+                (githubLinkAvailable && githubLinkDefaultPending) ||
+                !origin.trim() ||
+                !capabilities?.githubEnabled
+              }
               onClick={() =>
                 void act(() =>
                   window.codeshell.cloudAccount.signInWithGitHub({
@@ -318,8 +368,11 @@ export function CloudAccountSettings({ embedded = false }: { embedded?: boolean 
                 type="checkbox"
                 className="mt-0.5 h-4 w-4 shrink-0 accent-primary"
                 checked={githubLinkAvailable && connectGitHub}
-                disabled={pending || !githubLinkAvailable}
-                onChange={(event) => setConnectGitHub(event.target.checked)}
+                disabled={pending || githubLinkDefaultPending || !githubLinkAvailable}
+                onChange={(event) => {
+                  githubLinkDefaultOverrideRef.current = true;
+                  setConnectGitHub(event.target.checked);
+                }}
                 aria-describedby={`${helpId}-github-connection`}
               />
               {t("settingsX.cloudAccount.connectGitHub")}
@@ -330,9 +383,13 @@ export function CloudAccountSettings({ embedded = false }: { embedded?: boolean 
                   ? "settingsX.cloudAccount.connectGitHubChecking"
                   : !capabilities.githubEnabled
                     ? "settingsX.cloudAccount.githubUnavailable"
-                    : githubLinkAvailable
-                      ? "settingsX.cloudAccount.connectGitHubDescription"
-                      : "settingsX.cloudAccount.connectGitHubUnavailable",
+                    : !githubLinkAvailable
+                      ? "settingsX.cloudAccount.connectGitHubUnavailable"
+                      : githubLinkDefaultPending
+                        ? "settingsX.cloudAccount.connectGitHubDefaultChecking"
+                        : githubLinkDefaultCheck === "failed"
+                          ? "settingsX.cloudAccount.connectGitHubDefaultUnavailable"
+                          : "settingsX.cloudAccount.connectGitHubDescription",
               )}
             </p>
             {capabilities?.githubEnabled && (

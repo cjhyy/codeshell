@@ -74,8 +74,11 @@ export const settingsNs = {
         connectGitHub: "同时连接 GitHub",
         cancelGitHubConnection: "取消 GitHub 连接",
         connectGitHubChecking: "正在检查此云服务是否支持同时连接 GitHub…",
+        connectGitHubDefaultChecking: "正在检查已保存的 GitHub Link 连接…",
+        connectGitHubDefaultUnavailable:
+          "暂时无法确认已保存的 GitHub Link，已取消自动勾选。仍可登录，或手动勾选以连接 GitHub；将申请公开和私有仓库读写权限（repo），随后在「凭证 → Link」中选择要使用的仓库和 Actions 权限。",
         connectGitHubDescription:
-          "登录只验证云账号，并保留已有 Link 连接。仅在需要新建或更新 GitHub 数据连接时勾选；将申请公开和私有仓库读写权限（repo），随后在「凭证 → Link」中选择要使用的仓库和 Actions 权限。",
+          "本机尚未保存 GitHub Link 时默认勾选，首次登录即可同时连接，也可取消勾选。已有 Link 连接会保留，默认不重复授权。勾选将申请公开和私有仓库读写权限（repo），随后在「凭证 → Link」中选择要使用的仓库和 Actions 权限。",
         connectGitHubUnavailable:
           "此云服务暂不支持登录时连接 GitHub；仍可使用 GitHub 登录，稍后在「凭证 → Link」连接。",
         githubConnection: "GitHub 连接",
@@ -1228,8 +1231,11 @@ export const settingsNs = {
         cancelGitHubConnection: "Cancel GitHub connection",
         connectGitHubChecking:
           "Checking whether this service supports connecting GitHub during sign-in…",
+        connectGitHubDefaultChecking: "Checking saved GitHub Link connections…",
+        connectGitHubDefaultUnavailable:
+          "Saved GitHub Link connections could not be checked, so automatic connection is off. You can still sign in or select this to connect GitHub; it requests read and write access to public and private repositories (repo). Then choose the repositories and Actions permissions to use in Credentials → Link.",
         connectGitHubDescription:
-          "Signing in verifies your cloud account and preserves existing Link connections. Select this only to create or update a GitHub data connection; it requests read and write access to public and private repositories (repo). Then choose the repositories and Actions permissions to use in Credentials → Link.",
+          "Selected by default when no GitHub Link is saved on this computer, so your first sign-in can connect GitHub too. You can clear it. Existing Link connections are preserved and are not authorized again by default. Selecting this requests read and write access to public and private repositories (repo). Then choose the repositories and Actions permissions to use in Credentials → Link.",
         connectGitHubUnavailable:
           "This service does not support connecting GitHub during sign-in yet. You can still sign in with GitHub and connect later in Credentials → Link.",
         githubConnection: "GitHub connection",

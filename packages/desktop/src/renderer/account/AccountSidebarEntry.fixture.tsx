@@ -10,6 +10,7 @@ import type {
   CloudAccountLogoutResult,
   CloudAccountStatus,
 } from "../../shared/cloud-account.js";
+import type { MaskedCredentialView } from "../credentials/types";
 import { ensureMiniDom, flushMicrotasks } from "../test-utils/renderHook";
 
 ensureMiniDom();
@@ -56,6 +57,60 @@ const deferred = <T = CloudAccountStatus,>() => {
     reject = no;
   });
   return { promise, resolve, reject };
+};
+const savedGitHubLink: MaskedCredentialView = {
+  id: "saved-github-link",
+  type: "link",
+  label: "Saved GitHub Link",
+  storeScope: "user",
+  hasSecret: true,
+  meta: { linkProvider: "github", linkExecutionRuntime: "local" },
+};
+const savedCredentialRows = (): MaskedCredentialView[] => {
+  if (
+    scenario.startsWith("github-first-") ||
+    ["github-connect-unavailable", "github-connect-legacy"].includes(scenario)
+  ) {
+    if (scenario !== "github-first-unrelated") return [];
+    return [
+      { ...savedGitHubLink, type: "token" },
+      { ...savedGitHubLink, storeScope: "project" },
+      { ...savedGitHubLink, id: "figma-link", meta: { linkProvider: "figma" } },
+    ];
+  }
+  if (scenario === "github-existing-server")
+    return [
+      { ...savedGitHubLink, meta: { oauthProvider: "github", linkExecutionRuntime: "server" } },
+    ];
+  if (scenario === "github-existing-legacy")
+    return [{ ...savedGitHubLink, id: "github-oauth", type: "oauth", meta: undefined }];
+  const state = scenario.replace("github-existing-", "");
+  if (["expired", "invalid", "missing"].includes(state))
+    return [
+      {
+        ...savedGitHubLink,
+        type: "oauth",
+        hasSecret: state !== "missing",
+        oauthStatus: { state: state as "expired" | "invalid" | "missing" },
+      },
+    ];
+  return [savedGitHubLink];
+};
+const credentialListCalls: string[] = [];
+const credentialListRequests: ReturnType<typeof deferred<MaskedCredentialView[]>>[] = [];
+const listCredentials = (cwd: string) => {
+  assert.equal(cwd, "", "Login defaults read masked global credentials only");
+  credentialListCalls.push(cwd);
+  if (scenario === "github-credentials-rejected")
+    return Promise.reject(new Error("Local read failed"));
+  if (scenario === "github-credentials-malformed")
+    return Promise.resolve(null as unknown as MaskedCredentialView[]);
+  if (scenario.startsWith("github-credentials-")) {
+    const request = deferred<MaskedCredentialView[]>();
+    credentialListRequests.push(request);
+    return request.promise;
+  }
+  return Promise.resolve(savedCredentialRows());
 };
 const listeners = new Set<(status: CloudAccountStatus) => void>();
 const subscribed: Array<(status: CloudAccountStatus) => void> = [];
@@ -142,7 +197,12 @@ const api: CloudAccountApi = {
       githubEnabled: !["github-unavailable", "link-unavailable"].includes(scenario),
       ...(scenario === "github-connect-legacy"
         ? {}
-        : { githubLinkEnabled: scenario !== "github-connect-unavailable" }),
+        : {
+            githubLinkEnabled: ![
+              "github-connect-unavailable",
+              "github-credentials-account-only",
+            ].includes(scenario),
+          }),
     });
   },
   status: () => {
@@ -171,17 +231,28 @@ const api: CloudAccountApi = {
         "github-connect-late-status",
         "github-connect-late-failure",
       ].includes(scenario) ||
-      (scenario === "github-connect-repeat" && input.connectGitHub)
+      (["github-connect-repeat", "github-first-connect", "github-first-unrelated"].includes(
+        scenario,
+      ) &&
+        input.connectGitHub)
     ) {
       emit({ ...signedIn("github-user"), githubConnection: { state: "pending" } });
     } else if (
       [
+        "github-first-connect",
+        "github-first-unrelated",
+        "github-first-optout",
+        "github-credentials-rejected",
+        "github-credentials-malformed",
+        "github-credentials-account-only",
+        "github-credentials-deadline",
         "github-login-only-default",
         "github-connect-repeat",
         "github-connect-optout",
         "github-connect-unavailable",
         "github-connect-legacy",
-      ].includes(scenario)
+      ].includes(scenario) ||
+      scenario.startsWith("github-existing-")
     ) {
       emit({ ...signedIn("github-user"), githubConnection: { state: "skipped" } });
     } else {
@@ -225,6 +296,7 @@ Object.defineProperty(window, "codeshell", {
   configurable: true,
   value: {
     cloudAccount: api,
+    credentials: { list: listCredentials },
     log: (event: string) => {
       if (event === "ui.toast.error") toastErrors.push(event);
     },
@@ -406,6 +478,7 @@ try {
     ),
   );
   assert.equal(listeners.size, 1, "The footer listens even before management opens");
+  assert.equal(credentialListCalls.length, 0, "The footer does not inspect saved credentials");
 
   if (scenario === "menu-preview") {
     assertSignedOut();
@@ -1034,6 +1107,151 @@ try {
       "GitHub creates and signs in the account without a password form",
     );
   } else if (
+    ["github-first-connect", "github-first-unrelated", "github-first-optout"].includes(scenario)
+  ) {
+    await open();
+    await settleCapabilities();
+    assert.deepEqual(credentialListCalls, [""], "The form checks saved global Links once");
+    assert.equal(props(input("同时连接 GitHub")).checked, true);
+    assert.equal(props(input("同时连接 GitHub")).disabled, false);
+    assert.ok(text(dialog()!).includes("本机尚未保存 GitHub Link 时默认勾选"));
+    assert.ok(text(dialog()!).includes("已有 Link 连接会保留，默认不重复授权"));
+    if (scenario === "github-first-optout") {
+      await check(input("同时连接 GitHub"), false);
+      await change(input("云服务地址"), "https://another.example.test");
+      await settleCapabilities();
+      assert.equal(
+        props(input("同时连接 GitHub")).checked,
+        false,
+        "Explicit opt-out survives discovery",
+      );
+    }
+    await click(button("使用 GitHub 登录"));
+    assert.equal(githubRequests[0]?.connectGitHub, scenario !== "github-first-optout");
+    assertSignedIn("github-user");
+    if (scenario !== "github-first-optout") {
+      assert.ok(text(dialog()!).includes("云账号已登录，正在连接 GitHub"));
+      await settle(() =>
+        emit({ ...signedIn("github-user"), githubConnection: { state: "connected" } }),
+      );
+      assert.ok(text(dialog()!).includes("GitHub 已连接。"));
+    }
+    await click(button("退出云账号"));
+    await settleCapabilities();
+    assert.equal(
+      props(input("同时连接 GitHub")).checked,
+      false,
+      "A completed login consumes the automatic default",
+    );
+    assert.deepEqual(
+      credentialListCalls,
+      [""],
+      "Relogin in the same form does not re-read credentials",
+    );
+    await click(button("使用 GitHub 登录"));
+    assert.equal(
+      githubRequests[1]?.connectGitHub,
+      false,
+      "Relogin does not repeat Link authorization",
+    );
+  } else if (scenario.startsWith("github-credentials-")) {
+    await open();
+    await settleCapabilities();
+    assert.deepEqual(credentialListCalls, [""]);
+    if (["github-credentials-rejected", "github-credentials-malformed"].includes(scenario)) {
+      assert.equal(props(button("使用 GitHub 登录")).disabled, false);
+      assert.equal(props(input("同时连接 GitHub")).checked, false);
+      assert.equal(props(input("同时连接 GitHub")).disabled, false);
+      assert.ok(text(dialog()!).includes("暂时无法确认已保存的 GitHub Link，已取消自动勾选"));
+      await click(button("使用 GitHub 登录"));
+      assert.equal(githubRequests[0]?.connectGitHub, false);
+      assertSignedIn("github-user");
+    } else if (scenario === "github-credentials-account-only") {
+      assert.equal(props(input("同时连接 GitHub")).disabled, true);
+      assert.equal(props(input("同时连接 GitHub")).checked, false);
+      assert.equal(props(button("使用 GitHub 登录")).disabled, false);
+      assert.ok(text(dialog()!).includes("此云服务暂不支持登录时连接 GitHub"));
+      await click(button("使用 GitHub 登录"));
+      assert.equal(githubRequests[0]?.connectGitHub, false);
+      assertSignedIn("github-user");
+      await settle(() => credentialListRequests[0]!.resolve([]));
+      assertSignedIn("github-user");
+    } else {
+      assert.equal(props(button("使用 GitHub 登录")).disabled, true);
+      assert.equal(props(input("同时连接 GitHub")).disabled, true);
+      assert.ok(text(dialog()!).includes("正在检查已保存的 GitHub Link 连接"));
+      await change(input("账号名称"), "existing-user");
+      await change(input("密码（至少 12 位）"), "existing-user-password");
+      assert.equal(
+        props(button("登录")).disabled,
+        false,
+        "Local Link checks leave password login available",
+      );
+      if (scenario === "github-credentials-pending") {
+        await settle(() => credentialListRequests[0]!.resolve([]));
+        assert.equal(props(button("使用 GitHub 登录")).disabled, false);
+        assert.equal(props(input("同时连接 GitHub")).checked, true);
+        await change(input("云服务地址"), "https://another.example.test");
+        await settleCapabilities();
+        assert.equal(props(input("同时连接 GitHub")).checked, true);
+        assert.deepEqual(
+          credentialListCalls,
+          [""],
+          "Changing cloud services does not repeat a local check",
+        );
+      } else if (scenario === "github-credentials-deadline") {
+        await act(async () => {
+          await new Promise((resolve) => setTimeout(resolve, 3_050));
+          await flushMicrotasks();
+        });
+        assert.equal(props(button("使用 GitHub 登录")).disabled, false);
+        assert.equal(props(input("同时连接 GitHub")).checked, false);
+        assert.ok(text(dialog()!).includes("暂时无法确认已保存的 GitHub Link，已取消自动勾选"));
+        await settle(() => credentialListRequests[0]!.resolve([]));
+        assert.equal(
+          props(input("同时连接 GitHub")).checked,
+          false,
+          "A late local read cannot restore automatic authorization",
+        );
+        await click(button("使用 GitHub 登录"));
+        assert.equal(githubRequests[0]?.connectGitHub, false);
+        assertSignedIn("github-user");
+      } else if (scenario === "github-credentials-late-status") {
+        await click(button("登录"));
+        assertSignedIn("existing-user");
+        await settle(() => credentialListRequests[0]!.resolve([]));
+        await click(button("退出云账号"));
+        await settleCapabilities();
+        assert.equal(
+          props(input("同时连接 GitHub")).checked,
+          false,
+          "Late local rows cannot override a completed login",
+        );
+        assert.equal(props(button("使用 GitHub 登录")).disabled, false);
+      } else if (scenario === "github-credentials-unmount") {
+        await close();
+        await open();
+        await settleCapabilities();
+        assert.equal(
+          credentialListRequests.length,
+          2,
+          "A reopened account form starts a fresh local read",
+        );
+        await settle(() => credentialListRequests[0]!.resolve([]));
+        assert.equal(
+          props(button("使用 GitHub 登录")).disabled,
+          true,
+          "An unmounted form cannot release the fresh check",
+        );
+        assert.equal(props(input("同时连接 GitHub")).checked, false);
+        await settle(() => credentialListRequests[1]!.resolve([savedGitHubLink]));
+        assert.equal(props(button("使用 GitHub 登录")).disabled, false);
+        assert.equal(props(input("同时连接 GitHub")).checked, false);
+      } else {
+        assert.fail(`Unknown credential check scenario: ${scenario}`);
+      }
+    }
+  } else if (
     [
       "github-connect-optin",
       "github-connect-repeat",
@@ -1043,10 +1261,14 @@ try {
   ) {
     await open();
     await settleCapabilities();
-    assert.equal(props(input("同时连接 GitHub")).checked, false, "GitHub connection is opt-in");
+    assert.equal(
+      props(input("同时连接 GitHub")).checked,
+      false,
+      "Existing Links require explicit opt-in",
+    );
     assert.equal(props(input("同时连接 GitHub")).disabled, false);
-    assert.ok(text(dialog()!).includes("登录只验证云账号，并保留已有 Link 连接"));
-    assert.ok(text(dialog()!).includes("仅在需要新建或更新 GitHub 数据连接时勾选"));
+    assert.ok(text(dialog()!).includes("已有 Link 连接会保留，默认不重复授权"));
+    assert.ok(text(dialog()!).includes("本机尚未保存 GitHub Link 时默认勾选"));
     assert.ok(text(dialog()!).includes("公开和私有仓库读写权限（repo）"));
     assert.ok(text(dialog()!).includes("选择要使用的仓库和 Actions 权限"));
     await check(input("同时连接 GitHub"), true);
@@ -1099,11 +1321,14 @@ try {
       assertSignedIn("github-user");
       assert.ok(text(dialog()!).includes("GitHub 已连接。"));
     }
-  } else if (["github-login-only-default", "github-connect-optout"].includes(scenario)) {
+  } else if (
+    ["github-login-only-default", "github-connect-optout"].includes(scenario) ||
+    scenario.startsWith("github-existing-")
+  ) {
     await open();
     await settleCapabilities();
     assert.equal(props(input("同时连接 GitHub")).checked, false);
-    assert.ok(text(dialog()!).includes("登录只验证云账号，并保留已有 Link 连接"));
+    assert.ok(text(dialog()!).includes("已有 Link 连接会保留，默认不重复授权"));
     if (scenario === "github-connect-optout") {
       await check(input("同时连接 GitHub"), true);
       await check(input("同时连接 GitHub"), false);
