@@ -12,6 +12,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { useT } from "../i18n/I18nProvider";
 import { LinkConnectionDialog } from "./LinkConnectionDialog";
+import { LinkConnectionRow } from "./LinkProviderCard";
 
 /** Keep the snapshot above filters so connected accounts can always be discovered. */
 export function useRemoteLinkSnapshot(cwd: string) {
@@ -22,7 +23,7 @@ export function useRemoteLinkSnapshot(cwd: string) {
   const generation = React.useRef(0);
   const reload = React.useCallback(async () => {
     if (!api.remoteSnapshot) return;
-    const current = generation.current;
+    const current = ++generation.current;
     try {
       const next = await api.remoteSnapshot(cwd);
       if (alive.current && current === generation.current) {
@@ -82,6 +83,7 @@ export function RemoteLinkSection(props: {
   loadError: string;
   reload: () => Promise<void>;
   onChanged: () => void;
+  excludeProviderIds?: readonly string[];
 }) {
   const { t } = useT();
   const providers = remoteLinkProviders(props.snapshot);
@@ -99,20 +101,22 @@ export function RemoteLinkSection(props: {
     );
   return (
     <div data-remote-links className="space-y-3">
-      {[...providers].map(([providerId, provider]) => (
-        <RemoteProviderSection
-          key={providerId}
-          {...props}
-          providerId={providerId}
-          provider={provider}
-        />
-      ))}
+      {[...providers]
+        .filter(([id]) => !props.excludeProviderIds?.includes(id))
+        .map(([providerId, provider]) => (
+          <RemoteProviderSection
+            key={providerId}
+            {...props}
+            providerId={providerId}
+            provider={provider}
+          />
+        ))}
     </div>
   );
 }
 
 /** Native owner-bound IPC; private credentials never enter this component. */
-function RemoteProviderSection({
+export function RemoteProviderSection({
   cwd,
   snapshot,
   loadError,
@@ -120,6 +124,7 @@ function RemoteProviderSection({
   onChanged,
   providerId,
   provider,
+  embedded = false,
 }: {
   cwd: string;
   snapshot?: LinkSnapshot;
@@ -128,6 +133,7 @@ function RemoteProviderSection({
   onChanged: () => void;
   providerId: string;
   provider?: LinkProviderView;
+  embedded?: boolean;
 }) {
   const { t, lang } = useT();
   const [busy, setBusy] = React.useState(false);
@@ -190,6 +196,8 @@ function RemoteProviderSection({
   const editableConnected = connected.filter((item) => item.editable);
   const available = modes.some((mode) => mode.available);
   const failed = error || loadError;
+  const Management = embedded ? InlineManagement : Dialog;
+  const ManagementContent = embedded ? "div" : DialogContent;
   const feedback = (
     <>
       {failed && (
@@ -211,25 +219,22 @@ function RemoteProviderSection({
   );
   return (
     <div className="space-y-3">
-      <article
-        data-link-integration={providerId}
+      <LinkConnectionRow
+        data-link-method-provider={providerId}
         data-link-runtime="server"
-        className="rounded-xl border border-border/70 bg-card p-4"
+        title={
+          providerId === "figma"
+            ? t("ext.link.directory.basicReading")
+            : t("ext.link.directory.browserConnection")
+        }
+        technical={providerId === "figma" ? "API" : undefined}
+        description={
+          providerId === "figma"
+            ? t("ext.link.directory.basicReadingDescription")
+            : provider?.description[lang]
+        }
       >
         <div className="flex flex-wrap items-center justify-between gap-3">
-          <div className="flex min-w-0 items-center gap-3">
-            <div className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-foreground text-background">
-              <Icon className="size-5" aria-hidden />
-            </div>
-            <div className="min-w-0">
-              <h5 className="text-sm font-semibold">{providerName}</h5>
-              <p className="mt-0.5 text-xs text-muted-foreground">
-                {providerId === "github"
-                  ? t("ext.link.remoteDescription")
-                  : provider?.description[lang]}
-              </p>
-            </div>
-          </div>
           <div className="flex items-center gap-2">
             {connected.length > 0 ? (
               <>
@@ -251,14 +256,25 @@ function RemoteProviderSection({
                     {t("ext.link.remoteAddFile")}
                   </Button>
                 )}
-                <Button size="sm" variant="outline" onClick={() => setManaging(true)}>
-                  <Settings2 className="size-3.5" aria-hidden />
-                  {t("ext.link.remoteManage")}
-                </Button>
+                {!embedded && (
+                  <Button size="sm" variant="outline" onClick={() => setManaging(true)}>
+                    <Settings2 className="size-3.5" aria-hidden />
+                    {t("ext.link.remoteManage")}
+                  </Button>
+                )}
               </>
             ) : connections.length > 0 ? (
-              <Button size="sm" variant="outline" onClick={() => setManaging(true)}>
-                {t("ext.link.remoteReconnectNeeded")}
+              <Button
+                size="sm"
+                variant="outline"
+                hidden={embedded}
+                onClick={() => setManaging(true)}
+              >
+                {t(
+                  connections.some((connection) => connection.status === "unavailable")
+                    ? "ext.link.directory.serviceUnavailable"
+                    : "ext.link.remoteReconnectNeeded",
+                )}
               </Button>
             ) : (
               <Button
@@ -291,25 +307,35 @@ function RemoteProviderSection({
           <p className="mt-3 text-xs text-muted-foreground">{t("ext.link.remoteUnconfigured")}</p>
         )}
         {!managing && <div className="mt-2 space-y-2">{feedback}</div>}
-      </article>
-      <Dialog open={managing} onOpenChange={setManaging}>
-        <DialogContent className="max-h-[85vh] max-w-md overflow-y-auto rounded-2xl">
-          <DialogHeader>
-            <DialogTitle>
-              {t("ext.link.authorizationManageTitle", { name: providerName })}
-            </DialogTitle>
-            <DialogDescription>
-              {providerId === "github"
-                ? t("ext.link.remoteDescription")
-                : provider?.description[lang]}
-            </DialogDescription>
-          </DialogHeader>
+      </LinkConnectionRow>
+      <Management open={managing} onOpenChange={setManaging}>
+        <ManagementContent
+          className={
+            embedded ? "space-y-3 pb-4" : "max-h-[85vh] max-w-md overflow-y-auto rounded-2xl"
+          }
+        >
+          {!embedded && (
+            <DialogHeader>
+              <DialogTitle>
+                {t("ext.link.authorizationManageTitle", { name: providerName })}
+              </DialogTitle>
+              <DialogDescription>
+                {providerId === "github"
+                  ? t("ext.link.remoteDescription")
+                  : provider?.description[lang]}
+              </DialogDescription>
+            </DialogHeader>
+          )}
           {feedback}
           {connections.map((connection) => (
             <article
               key={connection.id}
               data-remote-link={connection.id}
-              className="space-y-3 rounded-xl border border-border/70 p-3"
+              className={
+                embedded
+                  ? "space-y-3 border-b border-border/60 pb-4 last:border-b-0"
+                  : "space-y-3 rounded-xl border border-border/70 p-3"
+              }
             >
               <div className="flex items-start justify-between gap-3">
                 <div className="min-w-0">
@@ -320,9 +346,11 @@ function RemoteProviderSection({
                 </div>
                 <span className="text-xs text-muted-foreground">
                   {t(
-                    connection.status === "connected"
-                      ? "ext.link.remoteAvailable"
-                      : "ext.link.remoteReconnectNeeded",
+                    connection.status === "unavailable"
+                      ? "ext.link.directory.serviceUnavailable"
+                      : connection.status === "connected"
+                        ? "ext.link.remoteAvailable"
+                        : "ext.link.remoteReconnectNeeded",
                   )}
                 </span>
               </div>
@@ -443,8 +471,8 @@ function RemoteProviderSection({
               <p className="mt-2 break-all">{snapshot.remoteServer.issuer}</p>
             </details>
           )}
-        </DialogContent>
-      </Dialog>
+        </ManagementContent>
+      </Management>
       <Dialog open={Boolean(addingFile)} onOpenChange={(open) => !open && setAddingFile(undefined)}>
         <DialogContent className="max-w-md rounded-2xl">
           <DialogHeader>
@@ -504,4 +532,14 @@ function RemoteProviderSection({
       )}
     </div>
   );
+}
+
+function InlineManagement({
+  children,
+}: {
+  children: React.ReactNode;
+  open?: boolean;
+  onOpenChange?: (open: boolean) => void;
+}) {
+  return <>{children}</>;
 }

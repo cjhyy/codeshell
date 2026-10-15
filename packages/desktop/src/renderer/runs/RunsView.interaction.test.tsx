@@ -155,6 +155,19 @@ describe("RunsView loading and selection", () => {
       (node) => props(node).role === "region" && props(node)["aria-label"] === "运行详情",
     ) as HTMLElement;
   const click = (node: Element) => settle(() => props(node).onClick());
+  const ariaButton = (label: string) => {
+    const node = descendants(container).find(
+      (candidate) => candidate.tagName === "BUTTON" && props(candidate)["aria-label"] === label,
+    );
+    expect(node).toBeDefined();
+    return node as HTMLButtonElement;
+  };
+  const search = () =>
+    descendants(container).find(
+      (candidate) => candidate.tagName === "INPUT" && props(candidate).type === "search",
+    ) as HTMLInputElement;
+  const searchFor = (value: string) =>
+    settle(() => props(search()).onChange({ target: { value } }));
 
   test("uses native keyboard-selectable rows with readable status and linked details", async () => {
     await render();
@@ -261,6 +274,94 @@ describe("RunsView loading and selection", () => {
     expect(textOf(pane())).toContain("摘要 a");
     expect(lists).toHaveLength(1);
   });
+
+  test("large lists are paged, search spans all pages, and hidden selection is retained", async () => {
+    await render("row-2");
+    await settle(() => {
+      lists[0].resolve(Array.from({ length: 121 }, (_, index) => run(`row-${index}`)));
+      details[0].request.resolve(run("row-2"));
+    });
+    expect(choices()).toHaveLength(50);
+    await click(ariaButton("下一页运行"));
+    expect(choices()).toHaveLength(50);
+    expect(textOf(choices()[0])).toContain("目标 row-50");
+    expect(textOf(pane())).toContain("摘要 row-2");
+    await searchFor("row-120");
+    expect(choices()).toHaveLength(1);
+    expect(textOf(choices()[0])).toContain("目标 row-120");
+    expect(textOf(pane())).toContain("当前运行不在筛选结果中");
+    expect(textOf(pane())).toContain("摘要 row-2");
+    expect(details).toHaveLength(1);
+    await searchFor("missing record");
+    expect(textOf(container)).toContain("没有符合搜索和状态筛选的运行");
+    await click(button("清空筛选条件"));
+    expect(choices()).toHaveLength(50);
+    expect(textOf(choices()[0])).toContain("目标 row-0");
+    expect(document.activeElement === search()).toBe(true);
+  });
+
+  test("a deep link reveals its list page while refresh keeps the page bounded", async () => {
+    await render("row-120");
+    await settle(() => {
+      lists[0].resolve(Array.from({ length: 121 }, (_, index) => run(`row-${index}`)));
+      details[0].request.resolve(run("row-120"));
+    });
+    expect(choices()).toHaveLength(21);
+    expect(props(choices().at(-1)!)["aria-pressed"]).toBe(true);
+    expect(textOf(container)).toContain("第 3 / 3 页");
+    await click(button("刷新"));
+    await settle(() => {
+      lists[1].resolve([run("row-120")]);
+      details[1].request.resolve(run("row-120"));
+    });
+    expect(choices()).toHaveLength(1);
+    expect(props(choices()[0])["aria-pressed"]).toBe(true);
+    expect(textOf(pane())).toContain("摘要 row-120");
+  });
+
+  test("refresh retains expanded detail and scroll position through an error and retry", async () => {
+    await render("a");
+    await settle(() => {
+      lists[0].resolve([run("a")]);
+      details[0].request.resolve(run("a"));
+    });
+    expect(textOf(pane())).not.toContain("file body");
+    const disclosure = descendants(pane()).find((node) => node.tagName === "DETAILS")!;
+    await settle(() => props(disclosure).onToggle({ currentTarget: { open: true } }));
+    expect(textOf(pane())).toContain("file body");
+    pane().scrollTop = 150;
+    await click(button("刷新"));
+    expect(textOf(pane())).toContain("摘要 a");
+    expect(textOf(pane())).toContain("file body");
+    expect(pane().scrollTop).toBe(150);
+    expect(props(pane())["aria-busy"]).toBe(true);
+    await settle(() => {
+      lists[1].resolve([run("a")]);
+      details[1].request.reject(new Error("temporary detail outage"));
+    });
+    expect(textOf(pane())).toContain("显示上次加载的记录");
+    expect(textOf(pane())).toContain("temporary detail outage");
+    expect(textOf(pane())).toContain("file body");
+    expect(props(pane())["aria-busy"]).toBe(false);
+    await click(button("重试详情"));
+    await settle(() => details[2].request.resolve({ ...run("a"), summary: "new summary" }));
+    expect(textOf(pane())).toContain("new summary");
+    expect(textOf(pane())).toContain("file body");
+    expect(textOf(pane())).not.toContain("temporary detail outage");
+    expect(lists).toHaveLength(2);
+  });
+
+  test("synchronous repeated refresh actions start only one list request", async () => {
+    await render();
+    await settle(() => lists[0].resolve([run("a")]));
+    const refresh = button("刷新");
+    await settle(() => {
+      props(refresh).onClick();
+      props(refresh).onClick();
+    });
+    expect(lists).toHaveLength(2);
+  });
+
   test("renders known estimates with explicit unknown and partial coverage in the existing history page", async () => {
     window.codeshell.getUsageSummary = async () => ({
       version: 1,

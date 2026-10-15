@@ -114,7 +114,17 @@ const settle = async (status: ReviewGitStatusResult) => {
   });
 };
 
-describe("PanelArea Git availability", () => {
+describe("PanelArea launcher availability", () => {
+  test("keeps chat-owned subagent navigation out of the empty dock launcher", async () => {
+    await render();
+    await settle(emptyStatus);
+    const launchers = nodes(container)
+      .filter((node) => node.tagName === "BUTTON")
+      .map((node) => text(node).trim());
+    expect(launchers.some((label) => /^(Files|文件)$/.test(label))).toBe(true);
+    expect(launchers.some((label) => /^(Subagent|子代理)$/.test(label))).toBe(false);
+  });
+
   test("hides launcher, restored tabs and direct requests while unknown or non-Git", async () => {
     await render({ requestKind: "review" });
     expect(reviewTabs()).toHaveLength(0);

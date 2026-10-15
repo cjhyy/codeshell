@@ -69,6 +69,7 @@ describe("Desktop worker Host adapter", () => {
     "oauthAccessResolve",
     "remoteLinkAction",
     "localOAuthLinkAction",
+    "mcpLinkAction",
     "modelRequestSign",
   ])("keeps supported desktop/%s on the existing credential authority", (method) => {
     const f = fixture();
@@ -111,27 +112,30 @@ describe("Desktop worker Host adapter", () => {
     expect(f.clientLines).toEqual([]);
   });
 
-  test("consumes batch readiness and OAuth cancellation notifications without JSON-RPC replies", () => {
-    const f = fixture();
-    const ready = JSON.stringify({
-      jsonrpc: "2.0",
-      method: "desktop/operationBatch",
-      params: { phase: "ready", version: 1 },
-    });
-    const cancel = JSON.stringify({
-      jsonrpc: "2.0",
-      method: "desktop/localOAuthLinkActionCancel",
-      params: { requestId: "oauth-private-request" },
-    });
-    expect(f.deliver(ready)).toBe(true);
-    expect(f.deliver(cancel)).toBe(true);
-    expect(f.handled).toEqual([
-      { route: "operationBatch", line: ready },
-      { route: "credentials", line: cancel },
-    ]);
-    expect(f.workerReplies).toEqual([]);
-    expect(f.clientLines).toEqual([]);
-  });
+  test.each(["oauth-private-request", "mcp-private-request"])(
+    "consumes batch readiness and Link cancellation notifications privately (%s)",
+    (requestId) => {
+      const f = fixture();
+      const ready = JSON.stringify({
+        jsonrpc: "2.0",
+        method: "desktop/operationBatch",
+        params: { phase: "ready", version: 1 },
+      });
+      const cancel = JSON.stringify({
+        jsonrpc: "2.0",
+        method: "desktop/localOAuthLinkActionCancel",
+        params: { requestId },
+      });
+      expect(f.deliver(ready)).toBe(true);
+      expect(f.deliver(cancel)).toBe(true);
+      expect(f.handled).toEqual([
+        { route: "operationBatch", line: ready },
+        { route: "credentials", line: cancel },
+      ]);
+      expect(f.workerReplies).toEqual([]);
+      expect(f.clientLines).toEqual([]);
+    },
+  );
 
   test.each([
     ["desktop/credentialResolve", "credentials"],
@@ -139,6 +143,7 @@ describe("Desktop worker Host adapter", () => {
     ["desktop/oauthAccessResolve", "credentials"],
     ["desktop/remoteLinkAction", "credentials"],
     ["desktop/localOAuthLinkAction", "credentials"],
+    ["desktop/mcpLinkAction", "credentials"],
     ["desktop/modelRequestSign", "credentials"],
     ["desktop/automationCreate", "automation"],
   ] as const)("keeps legacy %s frames without an id private", (method, route) => {

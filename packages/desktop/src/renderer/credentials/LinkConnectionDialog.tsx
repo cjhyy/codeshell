@@ -23,6 +23,7 @@ import {
 import { cn } from "@/lib/utils";
 import { useT } from "../i18n/I18nProvider";
 import type { LinkAuthGuide } from "./link-catalog";
+import { linkAuthorizationFailureMessage } from "./linkAuthorizationFailure";
 
 /** All secrets stay in the current step form until submitted to the owning Host. */
 export function LinkConnectionDialog({
@@ -47,6 +48,7 @@ export function LinkConnectionDialog({
   onConnected: (connection?: MaskedLinkConnection) => void;
 }) {
   const { t, lang } = useT();
+  const designContext = input.methodId === "mcp";
   const requestId = React.useRef<string | undefined>(undefined);
   const api = window.codeshell.links;
   const initialInput = React.useRef(input).current;
@@ -189,7 +191,7 @@ export function LinkConnectionDialog({
   };
   const labels: Partial<LinkAuthorizationLabels> = authorizationLabels(
     lang,
-    Boolean(input.resourceUrl),
+    Boolean(input.resourceUrl) && !designContext,
   );
   return (
     <Dialog open onOpenChange={(open) => !open && close()}>
@@ -206,7 +208,7 @@ export function LinkConnectionDialog({
           </div>
           <DialogTitle className="text-lg">
             {t(
-              input.resourceUrl
+              input.resourceUrl && !designContext
                 ? connected
                   ? "ext.link.authorizationFileAddedTitle"
                   : "ext.link.authorizationFileTitle"
@@ -220,17 +222,19 @@ export function LinkConnectionDialog({
           </DialogTitle>
           <DialogDescription className="max-w-[330px] text-xs leading-5">
             {t(
-              input.resourceUrl
-                ? connected
-                  ? "ext.link.authorizationFileAddedDescription"
-                  : "ext.link.remoteAddFileDescription"
-                : connected &&
-                    input.providerId === "figma" &&
-                    !authorization?.connection?.account?.resources.length
-                  ? "ext.link.remoteNoFiles"
-                  : connected
-                    ? "ext.link.authorizationConnectedDescription"
-                    : "ext.link.authorizationDescription",
+              designContext
+                ? "ext.link.directory.designContextDescription"
+                : input.resourceUrl
+                  ? connected
+                    ? "ext.link.authorizationFileAddedDescription"
+                    : "ext.link.remoteAddFileDescription"
+                  : connected &&
+                      input.providerId === "figma" &&
+                      !authorization?.connection?.account?.resources.length
+                    ? "ext.link.remoteNoFiles"
+                    : connected
+                      ? "ext.link.authorizationConnectedDescription"
+                      : "ext.link.authorizationDescription",
             )}
           </DialogDescription>
         </DialogHeader>
@@ -295,16 +299,14 @@ export function LinkConnectionDialog({
                 : t("ext.link.authorizationUnavailable")}
             </div>
           )}
-          {(state.error || openError) && (
+          {(authorization?.failure || state.error || openError) && (
             <p
               role="alert"
+              data-link-auth-failure-stage={authorization?.failure?.stage}
               className="break-words rounded-lg bg-status-err/8 px-3 py-2 text-xs leading-5 text-status-err"
             >
-              {openError ||
-                state.error?.message.replace(
-                  /^Error invoking remote method '[^']+': (?:Error: )?/,
-                  "",
-                )}
+              {linkAuthorizationFailureMessage(authorization?.failure, t) ??
+                t("ext.link.authorizationFailure.safeFailure")}
             </p>
           )}
           {authorization?.step?.kind === "local-session" &&

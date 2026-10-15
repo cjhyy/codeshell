@@ -8,7 +8,6 @@ import { ensureMiniDom, flushMicrotasks } from "../test-utils/renderHook";
 import { buildLinkCatalog } from "./link-catalog";
 import type { LocalLinkProviderView } from "../../preload/types";
 import type { MaskedCredentialView } from "./types";
-import { LINK_PROVIDER_MANIFESTS } from "../../../../link/src/catalog";
 import type { LinkSnapshot } from "../../../../link/src/management-types";
 
 // The mini-DOM cannot host Radix portals, so dialogs render inline (mirrors
@@ -39,7 +38,10 @@ const {
 } = await import("./LinkTab");
 const { DialogProvider } = await import("../ui/DialogProvider");
 const { LinkConnectionDialog } = await import("./LinkConnectionDialog");
-const { Github } = await import("lucide-react");
+const { FigmaConnectionCard } = await import("./FigmaConnectionCard");
+const { LinkProviderCard } = await import("./LinkProviderCard");
+const { useRemoteLinkSnapshot } = await import("./RemoteLinkSection");
+const { Github, Figma } = await import("lucide-react");
 
 function reactPropsOf(node: unknown): Record<string, any> {
   const current = node as Record<string, any>;
@@ -218,38 +220,65 @@ function visibleElements(node: unknown, tagName: string): any[] {
   ];
 }
 
-function expectRuntimeCardCount(container: HTMLElement, runtime: string, expected: number) {
-  const section = visibleElements(container, "SECTION").find(
-    (node) => reactPropsOf(node)["data-link-runtime-section"] === runtime,
+async function expandProvider(container: HTMLElement, id: string) {
+  const card = findElements(container, "ARTICLE").find(
+    (node) => reactPropsOf(node)["data-link-provider-card"] === id,
   );
-  const cards = visibleElements(section, "ARTICLE").filter(
-    (node) => reactPropsOf(node)["data-link-runtime"] === runtime,
+  expect(card).toBeDefined();
+  const toggle = findElements(card, "BUTTON").find(
+    (node) => reactPropsOf(node)["data-link-provider-toggle"] !== undefined,
   );
-  const count = findElements(section, "SPAN").find(
-    (node) => reactPropsOf(node).className === "text-xs tabular-nums text-muted-foreground",
+  if (!reactPropsOf(toggle)["aria-expanded"])
+    await act(async () => {
+      reactPropsOf(toggle).onClick();
+      await flushMicrotasks();
+    });
+  return card;
+}
+function providerCards(container: HTMLElement) {
+  return visibleElements(container, "ARTICLE").filter(
+    (node) => reactPropsOf(node)["data-link-provider-card"],
   );
-  expect(cards).toHaveLength(expected);
-  expect(reactChildText(reactPropsOf(count).children)).toBe(String(cards.length));
+}
+function methodRows(container: HTMLElement, provider?: string, runtime?: string) {
+  return findElements(container, "SECTION").filter(
+    (node) =>
+      reactPropsOf(node)["data-link-method-provider"] &&
+      (!provider || reactPropsOf(node)["data-link-method-provider"] === provider) &&
+      (!runtime || reactPropsOf(node)["data-link-runtime"] === runtime),
+  );
 }
 
 async function renderProjectedCatalog(
   providers: LinkSnapshot["providers"],
   credentials: MaskedCredentialView[] = [],
   connections: LinkSnapshot["connections"] = [],
+  failures: {
+    providers?: boolean;
+    snapshot?: boolean;
+    remoteCatalog?: "stale" | "unavailable";
+  } = {},
 ) {
   ensureMiniDom();
   Object.assign(window, {
     codeshell: {
       credentials: { list: async () => credentials },
       links: {
-        listLocalProviders: async () => projectedCatalog([]),
-        remoteSnapshot: async () => ({
-          providers,
-          connections,
-          revision: "fixture",
-          capabilities: { token: true, cliBinding: true, deviceAuth: false, remoteAuth: true },
-          remoteServer: { issuer: "https://fixture.invalid" },
-        }),
+        listLocalProviders: async () => {
+          if (failures.providers) throw new Error("Provider directory unreachable");
+          return projectedCatalog([]);
+        },
+        remoteSnapshot: async () => {
+          if (failures.snapshot) throw new Error("Link service unreachable");
+          return {
+            providers,
+            connections,
+            revision: "fixture",
+            capabilities: { token: true, cliBinding: true, deviceAuth: false, remoteAuth: true },
+            remoteServer: { issuer: "https://fixture.invalid" },
+            ...(failures.remoteCatalog ? { remoteCatalog: { state: failures.remoteCatalog } } : {}),
+          };
+        },
         cliStatus: async () => ({
           installed: true,
           authenticated: true,
@@ -286,25 +315,23 @@ afterEach(async () => {
 });
 
 describe("LinkTab integrations", () => {
-  test("deduplicates a configured provider's server OAuth placeholder using the live catalog", async () => {
-    const localCredentials: MaskedCredentialView[] = [
+  test("renders one shared provider entry with collapsed connection management and keeps search/filter", async () => {
+    const credentials: MaskedCredentialView[] = [
       {
-        id: "fixture-cli",
+        id: "saved-github",
         type: "link",
-        label: "Saved CLI",
+        label: "GitHub account",
         hasSecret: true,
         meta: {
           linkProvider: "github",
           linkExecutionRuntime: "local",
-          linkExecutionBackend: "cli",
           linkConnectionMethod: "fine-grained-pat",
-          linkAccountId: "fixture-cli",
         },
       },
       {
-        id: "fixture-pat",
+        id: "saved-figma",
         type: "link",
-        label: "Saved PAT",
+        label: "Figma account",
         hasSecret: true,
         meta: {
           linkProvider: "figma",
@@ -315,93 +342,71 @@ describe("LinkTab integrations", () => {
     ];
     const container = await renderProjectedCatalog(
       await projectedCatalog(["github", "figma"]),
-      localCredentials,
+      credentials,
     );
-    const cards = (runtime: string, provider?: string) =>
-      visibleElements(container, "ARTICLE").filter(
-        (node) =>
-          reactPropsOf(node)["data-link-runtime"] === runtime &&
-          (!provider || reactPropsOf(node)["data-link-integration"] === provider),
-      );
-    expect(cards("server", "figma")).toHaveLength(1);
-    expect(buttonWithLabel(cards("server", "figma")[0], "连接")).toBeDefined();
-    expect(reactChildText(reactPropsOf(cards("server", "figma")[0]).children)).not.toContain(
-      "即将开放",
-    );
-    expect(cards("server", "github")).toHaveLength(1);
-    expectRuntimeCardCount(container, "server", 10);
-    const plannedProviders = LINK_PROVIDER_MANIFESTS.filter(
-      (provider) => !["github", "figma"].includes(provider.id),
-    );
-    expect(plannedProviders).toHaveLength(8);
-    for (const provider of plannedProviders) {
-      expect(cards("server", provider.id)).toHaveLength(1);
-      expect(reactChildText(reactPropsOf(cards("server", provider.id)[0]).children)).toContain(
-        "即将开放",
-      );
-    }
-    expect(cards("local")).toHaveLength(
-      LINK_PROVIDER_MANIFESTS.flatMap((provider) =>
-        provider.connectionMethods.filter((method) => method.executionRuntime === "local"),
-      ).length,
-    );
-    expect(reactChildText(reactPropsOf(cards("local", "github")[0]).children)).toContain(
-      "通过本机 gh",
-    );
-    expect(reactChildText(reactPropsOf(cards("local", "figma")[0]).children)).toContain(
-      "Saved PAT",
-    );
+    expect(providerCards(container)).toHaveLength(10);
     expect(
-      findElements(container, "DIV").some(
-        (node) => reactChildText(reactPropsOf(node).children) === "2已连接",
+      new Set(providerCards(container).map((card) => reactPropsOf(card)["data-link-provider-card"]))
+        .size,
+    ).toBe(10);
+    expect(
+      findElements(container, "SECTION").some(
+        (node) => reactPropsOf(node)["data-link-runtime-section"],
+      ),
+    ).toBe(false);
+    expect(
+      findElements(container, "DIV")
+        .filter((node) => reactPropsOf(node)["data-link-provider-details"])
+        .every((node) => reactPropsOf(node).hidden),
+    ).toBe(true);
+    const figma = await expandProvider(container, "figma");
+    expect(reactPropsOf(figma).className).toContain("lg:col-span-2");
+    expect(
+      findElements(container, "SPAN").some(
+        (node) => reactChildText(reactPropsOf(node).children) === "GL",
       ),
     ).toBe(true);
-    await act(async () => {
-      reactPropsOf(buttonWithLabel(container, "接入计划")).onClick();
-      await flushMicrotasks();
-    });
-    expect(cards("server")).toHaveLength(8);
-    expect(cards("local")).toHaveLength(0);
-    expectRuntimeCardCount(container, "server", 8);
+    const github = await expandProvider(container, "github");
+    expect(reactPropsOf(github).className).toContain("lg:col-span-2");
+    expect(methodRows(container, "figma", "server")).toHaveLength(1);
+    expect(reactChildText(reactPropsOf(figma).children)).not.toContain("即将开放");
+    expect(buttonWithLabel(figma, "连接设计上下文")).toBeDefined();
     await act(async () => {
       reactPropsOf(buttonWithLabel(container, "已连接")).onClick();
       await flushMicrotasks();
     });
-    expect(cards("local")).toHaveLength(2);
-    expect(cards("server")).toHaveLength(0);
+    expect(
+      providerCards(container)
+        .map((card) => reactPropsOf(card)["data-link-provider-card"])
+        .sort(),
+    ).toEqual(["figma", "github"]);
     await act(async () => {
       reactPropsOf(
         findElements(container, "INPUT").find((node) => reactPropsOf(node).type === "search"),
       ).onChange({ target: { value: "Figma" } });
       await flushMicrotasks();
     });
-    expect(cards("local")).toHaveLength(1);
-    expect(cards("local", "figma")).toHaveLength(1);
-    await act(async () => {
-      reactPropsOf(buttonWithLabel(container, "全部")).onClick();
-      await flushMicrotasks();
-    });
-    expect(cards("server", "figma")).toHaveLength(1);
+    expect(providerCards(container)).toHaveLength(1);
+    expect(reactPropsOf(providerCards(container)[0])["data-link-provider-card"]).toBe("figma");
   });
 
-  test("counts a single configured remote provider alongside the nine unconfigured placeholders", async () => {
+  test("partial remote catalogs never duplicate providers or render coming-soon account fallbacks", async () => {
     const container = await renderProjectedCatalog(await projectedCatalog(["github"]));
-    expectRuntimeCardCount(container, "server", 10);
-    const github = visibleElements(container, "ARTICLE").filter(
-      (node) =>
-        reactPropsOf(node)["data-link-integration"] === "github" &&
-        reactPropsOf(node)["data-link-runtime"] === "server",
-    );
-    expect(github).toHaveLength(1);
-    expect(buttonWithLabel(github[0], "连接")).toBeDefined();
+    expect(providerCards(container)).toHaveLength(10);
+    expect(methodRows(container, "github", "server")).toHaveLength(1);
+    expect(
+      providerCards(container).every(
+        (card) => !reactChildText(reactPropsOf(card).children).includes("即将开放"),
+      ),
+    ).toBe(true);
     await act(async () => {
-      reactPropsOf(buttonWithLabel(container, "接入计划")).onClick();
+      reactPropsOf(buttonWithLabel(container, "需处理")).onClick();
       await flushMicrotasks();
     });
-    expectRuntimeCardCount(container, "server", 9);
+    expect(providerCards(container)).toHaveLength(0);
   });
 
-  test("preserves saved legacy OAuth and a different configured authorization method", async () => {
+  test("preserves every saved OAuth method independently inside the provider", async () => {
     const providers = await projectedCatalog(["figma"]);
     providers
       .find((provider) => provider.id === "figma")!
@@ -418,7 +423,7 @@ describe("LinkTab integrations", () => {
       {
         id: "legacy-figma",
         type: "oauth",
-        label: "Saved legacy OAuth",
+        label: "Saved OAuth account",
         hasSecret: true,
         oauthStatus: { state: "valid" },
         meta: {
@@ -428,82 +433,157 @@ describe("LinkTab integrations", () => {
         },
       },
     ]);
-    const figma = visibleElements(container, "ARTICLE").filter(
-      (node) =>
-        reactPropsOf(node)["data-link-integration"] === "figma" &&
-        reactPropsOf(node)["data-link-runtime"] === "server",
-    );
-    expect(figma).toHaveLength(3);
     expect(
-      figma.some((node) =>
-        reactChildText(reactPropsOf(node).children).includes("Saved legacy OAuth"),
+      providerCards(container).filter(
+        (card) => reactPropsOf(card)["data-link-provider-card"] === "figma",
+      ),
+    ).toHaveLength(1);
+    expect(methodRows(container, "figma", "server")).toHaveLength(3);
+    expect(
+      methodRows(container, "figma").some((row) =>
+        reactChildText(reactPropsOf(row).children).includes("Saved OAuth account"),
       ),
     ).toBe(true);
     expect(
-      figma.some((node) => reactChildText(reactPropsOf(node).children).includes("独立 OAuth")),
+      methodRows(container, "figma").some((row) =>
+        reactChildText(reactPropsOf(row).children).includes("独立 OAuth"),
+      ),
     ).toBe(true);
   });
 
-  test("retains the planned method when the remote authorization mode is unavailable", async () => {
+  test("unavailable remote modes retain saved accounts with an honest service status", async () => {
     const providers = await projectedCatalog(["figma"]);
     providers
       .find((provider) => provider.id === "figma")!
       .authModes!.find((mode) => mode.id === "remote-link")!.available = false;
-    const container = await renderProjectedCatalog(providers);
-    const figma = visibleElements(container, "ARTICLE").filter(
-      (node) =>
-        reactPropsOf(node)["data-link-integration"] === "figma" &&
-        reactPropsOf(node)["data-link-runtime"] === "server",
-    );
-    expect(figma).toHaveLength(2);
+    const account: LinkSnapshot["connections"][number] = {
+      id: "saved-remote-figma",
+      providerId: "figma",
+      methodId: "remote-link",
+      label: "Offline Figma",
+      runtime: "server",
+      authSource: "remote-link",
+      status: "unavailable",
+      capabilityIds: [],
+      account: { label: "fixture-account", resources: [] },
+      revision: "saved",
+      scope: "user",
+      editable: true,
+    };
+    const container = await renderProjectedCatalog(providers, [], [account]);
+    const card = await expandProvider(container, "figma");
     expect(
-      figma.some((node) => reactChildText(reactPropsOf(node).children).includes("即将开放")),
+      findElements(card, "ARTICLE").some(
+        (node) => reactPropsOf(node)["data-remote-link"] === account.id,
+      ),
     ).toBe(true);
-    expectRuntimeCardCount(container, "server", 11);
+    expect(reactChildText(reactPropsOf(card).children)).not.toContain("即将开放");
+    expect(
+      findElements(card, "SPAN").some(
+        (node) => reactChildText(reactPropsOf(node).children) === "服务暂不可达",
+      ),
+    ).toBe(true);
+    expect(buttonWithLabel(card, "断开")).toBeDefined();
   });
 
-  test("keeps unconfigured placeholders and offline saved remote accounts manageable", async () => {
-    const container = await renderProjectedCatalog(
-      await projectedCatalog([]),
-      [],
-      [
-        {
-          id: "saved-remote-figma",
-          providerId: "figma",
-          methodId: "remote-link",
-          label: "Offline Figma",
-          runtime: "server",
-          authSource: "remote-link",
-          status: "unavailable",
-          capabilityIds: [],
-          account: { label: "fixture-account", resources: [] },
-          revision: "saved",
-          scope: "user",
-          editable: true,
-        },
-      ],
-    );
-    const figma = visibleElements(container, "ARTICLE").filter(
-      (node) =>
-        reactPropsOf(node)["data-link-integration"] === "figma" &&
-        reactPropsOf(node)["data-link-runtime"] === "server",
-    );
-    expect(figma).toHaveLength(2);
-    expectRuntimeCardCount(container, "server", 11);
+  test("a stale directory does not invalidate a valid saved grant", async () => {
+    const providers = await projectedCatalog(["figma"]);
+    providers
+      .find((provider) => provider.id === "figma")!
+      .authModes!.find((mode) => mode.id === "remote-link")!.available = false;
+    const account: LinkSnapshot["connections"][number] = {
+      id: "valid-saved",
+      providerId: "figma",
+      methodId: "remote-link",
+      label: "Saved design account",
+      runtime: "server",
+      authSource: "remote-link",
+      status: "connected",
+      capabilityIds: ["figma.get_file"],
+      account: { id: "owner", label: "Designer", resources: ["Design system"] },
+      revision: "saved",
+      scope: "user",
+      editable: true,
+    };
+    const container = await renderProjectedCatalog(providers, [], [account], {
+      remoteCatalog: "stale",
+    });
+    const card = await expandProvider(container, "figma");
     expect(
-      figma.some((node) => reactChildText(reactPropsOf(node).children).includes("即将开放")),
+      findElements(card, "SPAN").some(
+        (node) => reactChildText(reactPropsOf(node).children) === "已连接",
+      ),
     ).toBe(true);
-    const manage = figma.map((node) => buttonWithLabel(node, "需要重新连接")).find(Boolean);
-    expect(manage).toBeDefined();
+    expect(reactPropsOf(buttonWithLabel(card, "添加文件")).disabled).toBe(true);
+    expect(
+      findElements(container, "P").some((node) =>
+        reactChildText(reactPropsOf(node).children).includes("账号和权限仍保留"),
+      ),
+    ).toBe(true);
     await act(async () => {
-      reactPropsOf(manage).onClick();
+      reactPropsOf(buttonWithLabel(container, "已连接")).onClick();
       await flushMicrotasks();
     });
     expect(
-      findElements(container, "ARTICLE").some(
-        (node) => reactPropsOf(node)["data-remote-link"] === "saved-remote-figma",
+      providerCards(container).map((node) => reactPropsOf(node)["data-link-provider-card"]),
+    ).toEqual(["figma"]);
+    expect(account.status).toBe("connected");
+    expect(account.revision).toBe("saved");
+  });
+
+  test("provider and snapshot failures preserve saved Host accounts without inventing authorization", async () => {
+    const saved: MaskedCredentialView = {
+      id: "saved-mcp",
+      type: "oauth",
+      label: "Saved design account",
+      hasSecret: true,
+      meta: {
+        linkProvider: "figma",
+        linkExecutionRuntime: "local",
+        linkExecutionBackend: "mcp",
+        linkAuthSource: "mcp-oauth",
+        linkConnectionMethod: "mcp",
+      },
+    };
+    const container = await renderProjectedCatalog([], [saved], [], {
+      providers: true,
+      snapshot: true,
+    });
+    expect(providerCards(container)).toHaveLength(1);
+    const card = await expandProvider(container, "figma");
+    expect(
+      findElements(card, "SECTION").some(
+        (node) => reactPropsOf(node)["data-link-saved-unavailable"] === saved.id,
       ),
     ).toBe(true);
+    expect(reactChildText(reactPropsOf(card).children)).not.toContain("即将开放");
+    expect(findElements(container, "DIV").some((node) => reactPropsOf(node).role === "alert")).toBe(
+      true,
+    );
+    expect(reactPropsOf(buttonWithLabel(card, "连接设计上下文")).disabled).toBe(true);
+  });
+
+  test("multiple saved local accounts are retained as separate connection rows", async () => {
+    const credentials = ["first", "second"].map(
+      (id): MaskedCredentialView => ({
+        id,
+        type: "link",
+        label: `Account ${id}`,
+        hasSecret: true,
+        meta: {
+          linkProvider: "github",
+          linkExecutionRuntime: "local",
+          linkConnectionMethod: "fine-grained-pat",
+        },
+      }),
+    );
+    const container = await renderProjectedCatalog(await projectedCatalog([]), credentials);
+    expect(methodRows(container, "github", "local")).toHaveLength(2);
+    expect(
+      providerCards(container).filter(
+        (card) => reactPropsOf(card)["data-link-provider-card"] === "github",
+      ),
+    ).toHaveLength(1);
   });
 
   test("starts remote authorization directly and confirms the saved connection through status", async () => {
@@ -592,12 +672,8 @@ describe("LinkTab integrations", () => {
       await flushMicrotasks();
       await flushMicrotasks();
     });
-    const server = findElements(container, "SECTION").find(
-      (node) => reactPropsOf(node)["data-link-runtime-section"] === "server",
-    );
-    const github = findElements(server, "ARTICLE").filter(
-      (node) => reactPropsOf(node)["data-link-integration"] === "github",
-    );
+    await expandProvider(container, "github");
+    const github = methodRows(container, "github", "server");
     expect(github).toHaveLength(1);
     expect(findElements(github[0], "INPUT")).toHaveLength(0);
     expect(reactChildText(reactPropsOf(github[0]).children)).not.toContain("private-link.example");
@@ -630,11 +706,6 @@ describe("LinkTab integrations", () => {
     expect(buttonWithLabel(container, "完成")).toBeDefined();
     await act(async () => {
       reactPropsOf(buttonWithLabel(container, "完成")).onClick();
-      await flushMicrotasks();
-    });
-    expect(buttonWithLabel(container, "管理")).toBeDefined();
-    await act(async () => {
-      reactPropsOf(buttonWithLabel(container, "管理")).onClick();
       await flushMicrotasks();
     });
     expect(buttonWithLabel(container, "添加账号")).toBeDefined();
@@ -718,9 +789,9 @@ describe("LinkTab integrations", () => {
         cancelled.push(id);
       },
     });
-    const figma = findElements(container, "ARTICLE").find(
+    const figma = findElements(container, "SECTION").find(
       (node) =>
-        reactPropsOf(node)["data-link-integration"] === "figma" &&
+        reactPropsOf(node)["data-link-method-provider"] === "figma" &&
         reactPropsOf(node)["data-link-runtime"] === "server",
     );
     expect(buttonWithLabel(figma, "添加文件")).toBeDefined();
@@ -856,9 +927,9 @@ describe("LinkTab integrations", () => {
         await flushMicrotasks();
       });
 
-      const github = findElements(container, "ARTICLE").find(
+      const github = findElements(container, "SECTION").find(
         (card) =>
-          reactPropsOf(card)["data-link-integration"] === "github" &&
+          reactPropsOf(card)["data-link-method-provider"] === "github" &&
           reactPropsOf(card)["data-link-runtime"] === "local",
       );
       expect(github).toBeDefined();
@@ -866,7 +937,7 @@ describe("LinkTab integrations", () => {
         (span) => reactChildText(reactPropsOf(span).children) === "凭据不可用",
       );
       expect(badge).toBeDefined();
-      expect(reactPropsOf(badge).className).toContain("text-status-err");
+      expect(reactPropsOf(badge).className).toContain("text-status-warn");
       const githubText = reactChildText(reactPropsOf(github).children);
       expect(githubText).toContain("凭据缺失或当前设备无法读取，请重新连接。");
       expect(githubText).not.toContain("已验证");
@@ -875,7 +946,7 @@ describe("LinkTab integrations", () => {
       expect(buttonWithLabel(github, "重新连接")).toBeDefined();
       expect(
         findElements(container, "DIV").some(
-          (div) => reactChildText(reactPropsOf(div).children) === "1已连接",
+          (div) => reactChildText(reactPropsOf(div).children) === "1已连接服务",
         ),
       ).toBe(true);
 
@@ -884,10 +955,10 @@ describe("LinkTab integrations", () => {
         reactPropsOf(connected).onClick();
         await flushMicrotasks();
       });
-      const cards = findElements(container, "ARTICLE");
+      const cards = providerCards(container);
       expect(cards).toHaveLength(1);
-      expect(reactPropsOf(cards[0])["data-link-integration"]).toBe("figma");
-      expect(reactChildText(reactPropsOf(cards[0]).children)).toContain("连接账号 current-account");
+      expect(reactPropsOf(cards[0])["data-link-provider-card"]).toBe("figma");
+      expect(reactChildText(reactPropsOf(cards[0]).children)).toContain("current-account");
     },
   );
 
@@ -1005,13 +1076,10 @@ describe("LinkTab integrations", () => {
       await flushMicrotasks();
     });
 
-    const githubCards = findElements(container, "ARTICLE").filter(
-      (article) => reactPropsOf(article)["data-link-integration"] === "github",
+    const githubCards = methodRows(container, "github").filter(
+      (article) => reactPropsOf(article)["data-link-method-provider"] === "github",
     );
-    expect(githubCards.map((card) => reactPropsOf(card)["data-link-runtime"]).sort()).toEqual([
-      "local",
-      "server",
-    ]);
+    expect(githubCards.map((card) => reactPropsOf(card)["data-link-runtime"])).toEqual(["local"]);
 
     const toggleChannels = buttonWithAriaLabel(container, "展开或收起支持的聊天渠道");
     expect(toggleChannels).toBeDefined();
@@ -1201,9 +1269,9 @@ describe("LinkTab integrations", () => {
       await flushMicrotasks();
       await flushMicrotasks();
     });
-    const github = findElements(container, "ARTICLE").find(
+    const github = findElements(container, "SECTION").find(
       (card) =>
-        reactPropsOf(card)["data-link-integration"] === "github" &&
+        reactPropsOf(card)["data-link-method-provider"] === "github" &&
         reactPropsOf(card)["data-link-runtime"] === "local",
     );
     await act(async () => {
@@ -1293,9 +1361,9 @@ describe("LinkTab integrations", () => {
       await flushMicrotasks();
       await flushMicrotasks();
     });
-    const github = findElements(container, "ARTICLE").find(
+    const github = findElements(container, "SECTION").find(
       (card) =>
-        reactPropsOf(card)["data-link-integration"] === "github" &&
+        reactPropsOf(card)["data-link-method-provider"] === "github" &&
         reactPropsOf(card)["data-link-runtime"] === "local",
     );
     await act(async () => {
@@ -1632,6 +1700,11 @@ describe("LinkTab integrations", () => {
         await flushMicrotasks();
       });
 
+      expect(
+        methodRows(container, "figma").filter((row) =>
+          reactChildText(reactPropsOf(row).children).includes("Figma OAuth"),
+        ),
+      ).toHaveLength(1);
       const refresh = buttonWithLabel(container, "刷新");
       expect(refresh).toBeDefined();
       await act(async () => {
@@ -1711,9 +1784,9 @@ describe("LinkTab integrations", () => {
     // The card must probe on entry, without the connect dialog being opened.
     expect(cliStatusCalls).toBe(1);
 
-    const github = findElements(container, "ARTICLE").find(
+    const github = findElements(container, "SECTION").find(
       (card) =>
-        reactPropsOf(card)["data-link-integration"] === "github" &&
+        reactPropsOf(card)["data-link-method-provider"] === "github" &&
         reactPropsOf(card)["data-link-runtime"] === "local",
     );
     if (!github) throw new Error("missing GitHub local card");
@@ -1770,9 +1843,9 @@ describe("LinkTab integrations", () => {
       await flushMicrotasks();
     });
 
-    const github = findElements(container, "ARTICLE").find(
+    const github = findElements(container, "SECTION").find(
       (card) =>
-        reactPropsOf(card)["data-link-integration"] === "github" &&
+        reactPropsOf(card)["data-link-method-provider"] === "github" &&
         reactPropsOf(card)["data-link-runtime"] === "local",
     );
     if (!github) throw new Error("missing GitHub local card");
@@ -1781,5 +1854,400 @@ describe("LinkTab integrations", () => {
     );
     // A failed probe is not proof of a signed-out account.
     expect(reactPropsOf(liveness ?? {})["data-link-liveness-state"]).toBe("unknown");
+  });
+});
+
+describe("Link metadata request lifecycle", () => {
+  test("a slower earlier snapshot cannot replace a newer refresh", async () => {
+    ensureMiniDom();
+    let resolveFirst!: (value: LinkSnapshot) => void;
+    const first = new Promise<LinkSnapshot>((resolve) => {
+      resolveFirst = resolve;
+    });
+    const latest: LinkSnapshot = {
+      providers: [],
+      connections: [],
+      capabilities: { token: true, cliBinding: false, deviceAuth: false },
+      revision: "latest",
+    };
+    let calls = 0;
+    Object.assign(window, {
+      codeshell: { links: { remoteSnapshot: async () => (++calls === 1 ? first : latest) } },
+    });
+    let state!: ReturnType<typeof useRemoteLinkSnapshot>;
+    function Host() {
+      state = useRemoteLinkSnapshot("/repo");
+      return null;
+    }
+    root = createRoot(document.createElement("div"));
+    await act(async () => {
+      root!.render(<Host />);
+      await flushMicrotasks();
+    });
+    await act(async () => {
+      await state.reload();
+      await flushMicrotasks();
+    });
+    expect(state.snapshot?.revision).toBe("latest");
+    await act(async () => {
+      resolveFirst({ ...latest, revision: "stale" });
+      await flushMicrotasks();
+    });
+    expect(state.snapshot?.revision).toBe("latest");
+  });
+
+  test("a previous project's delayed credential load cannot replace the current accounts", async () => {
+    ensureMiniDom();
+    let resolveFirst!: (value: MaskedCredentialView[]) => void;
+    const first = new Promise<MaskedCredentialView[]>((resolve) => {
+      resolveFirst = resolve;
+    });
+    const account = (id: string): MaskedCredentialView => ({
+      id,
+      type: "link",
+      label: id,
+      hasSecret: true,
+      meta: {
+        linkProvider: "github",
+        linkExecutionRuntime: "local",
+        linkConnectionMethod: "fine-grained-pat",
+      },
+    });
+    Object.assign(window, {
+      codeshell: {
+        credentials: {
+          list: async (cwd: string) => (cwd === "/first" ? first : [account("second-account")]),
+        },
+        links: {
+          listLocalProviders: async () => LINK_PROVIDER_FIXTURES,
+          remoteSnapshot: async () => ({
+            providers: LINK_PROVIDER_FIXTURES,
+            connections: [],
+            capabilities: { token: true, cliBinding: false, deviceAuth: false },
+            revision: "snapshot",
+          }),
+        },
+      },
+    });
+    const container = document.createElement("div") as unknown as HTMLElement;
+    root = createRoot(container);
+    await act(async () => {
+      root!.render(<LinkTab cwd="/first" />);
+      await flushMicrotasks();
+    });
+    await act(async () => {
+      root!.render(<LinkTab cwd="/second" />);
+      await flushMicrotasks();
+      await flushMicrotasks();
+    });
+    await act(async () => {
+      resolveFirst([account("first-account")]);
+      await flushMicrotasks();
+    });
+    const card = await expandProvider(container, "github");
+    expect(reactChildText(reactPropsOf(card).children)).toContain("second-account");
+    expect(reactChildText(reactPropsOf(card).children)).not.toContain("first-account");
+  });
+});
+
+describe("reviewed Link authorization failures", () => {
+  test.each(["reviewed", "transport"] as const)(
+    "shows safe %s diagnostics without leaking upstream content",
+    async (mode) => {
+      ensureMiniDom();
+      const failure = {
+        stage: "credential_verification",
+        code: "protocol_error",
+        verificationStage: "account_verification",
+        reason: "account_identity_unavailable",
+        body: "private-provider-body",
+      };
+      Object.assign(window, {
+        codeshell: {
+          links: {
+            authorizationStart: async (_cwd: string, id: string) => {
+              if (mode === "transport")
+                throw new Error("https://private-provider.invalid/token?secret=private");
+              return {
+                id,
+                providerId: "figma",
+                methodId: "mcp",
+                state: "failed",
+                errorCode: "authorization_failed",
+                failure,
+              };
+            },
+            authorizationCancel: async () => undefined,
+          },
+        },
+      });
+      const container = document.createElement("div") as unknown as HTMLElement;
+      root = createRoot(container);
+      await act(async () => {
+        root!.render(
+          <LinkConnectionDialog
+            cwd="/repo"
+            providerName="Figma"
+            icon={Figma}
+            modes={[
+              {
+                id: "mcp-oauth",
+                methodId: "mcp",
+                kind: "redirect",
+                label: "Design context",
+                available: true,
+              },
+            ]}
+            input={{ providerId: "figma", methodId: "mcp", label: "Figma", expectedRevision: null }}
+            onClose={() => undefined}
+            onConnected={() => {
+              throw new Error("failed authorization cannot connect");
+            }}
+          />,
+        );
+        await flushMicrotasks();
+        await flushMicrotasks();
+      });
+      const alerts = findElements(container, "P").filter(
+        (node) => reactPropsOf(node).role === "alert",
+      );
+      expect(alerts).toHaveLength(1);
+      const text = reactChildText(reactPropsOf(alerts[0]).children);
+      expect(text).toContain(mode === "reviewed" ? "确认账号" : "连接未完成");
+      expect(text).not.toContain("private");
+      expect(text).not.toContain("https://");
+    },
+  );
+});
+
+describe("unified Figma connection card", () => {
+  const apiConnection: LinkSnapshot["connections"][number] = {
+    id: "figma-api",
+    providerId: "figma",
+    methodId: "remote-link",
+    label: "API account",
+    runtime: "server",
+    authSource: "remote-link",
+    status: "connected",
+    account: {
+      id: "api-user",
+      label: "API user",
+      resources: ["Design"],
+      resourceGroups: [{ id: "files", items: [{ id: "FileOne", label: "Design" }] }],
+    },
+    capabilityIds: ["figma.get_file"],
+    revision: "api-one",
+    scope: "user",
+    editable: true,
+  };
+  const mcpConnection: LinkSnapshot["connections"][number] = {
+    id: "figma-mcp",
+    providerId: "figma",
+    methodId: "mcp",
+    label: "MCP account",
+    runtime: "local",
+    authSource: "mcp-oauth",
+    status: "connected",
+    account: { id: "mcp-user", label: "MCP user", resources: [] },
+    capabilityIds: ["figma.get_design_context"],
+    revision: "mcp-one",
+    scope: "user",
+    editable: true,
+  };
+
+  async function renderCard(connections = [apiConnection]) {
+    ensureMiniDom();
+    let snapshot: LinkSnapshot = {
+      providers: [
+        {
+          ...LINK_PROVIDER_FIXTURES[1]!,
+          authModes: [
+            {
+              id: "remote-link",
+              methodId: "remote-link",
+              kind: "redirect",
+              label: "API",
+              available: true,
+            },
+            { id: "mcp-oauth", methodId: "mcp", kind: "redirect", label: "MCP", available: true },
+          ],
+        },
+      ],
+      connections,
+      capabilities: { token: true, cliBinding: false, deviceAuth: false, remoteAuth: true },
+      revision: "initial",
+    };
+    const starts: unknown[][] = [];
+    const refreshes: string[] = [];
+    const disconnects: unknown[][] = [];
+    let changed = 0;
+    let update!: () => void;
+    let nextSnapshot: (() => Promise<LinkSnapshot>) | undefined;
+    Object.assign(window, {
+      codeshell: {
+        links: {
+          remoteSnapshot: async () => (nextSnapshot ? nextSnapshot() : snapshot),
+          authorizationStart: async (...args: unknown[]) => {
+            starts.push(args);
+            snapshot = {
+              ...snapshot,
+              connections: [
+                ...snapshot.connections.filter((item) => item.id !== mcpConnection.id),
+                mcpConnection,
+              ],
+            };
+            return {
+              id: args[1],
+              providerId: "figma",
+              methodId: "mcp",
+              state: "connected",
+              connection: mcpConnection,
+            };
+          },
+          authorizationCancel: async () => undefined,
+          remoteDisconnect: async (...args: unknown[]) => {
+            disconnects.push(args);
+            snapshot = {
+              ...snapshot,
+              connections: snapshot.connections.filter((item) => item.id !== args[1]),
+            };
+          },
+        },
+        mcpOAuth: {
+          refresh: async (id: string) => {
+            refreshes.push(id);
+            return {};
+          },
+        },
+      },
+    });
+    const container = document.createElement("div") as unknown as HTMLElement;
+    root = createRoot(container);
+    function Host() {
+      const [, forceUpdate] = React.useReducer((value) => value + 1, 0);
+      update = forceUpdate;
+      return (
+        <LinkProviderCard
+          id="figma"
+          name="Figma"
+          description="Design service"
+          icon={Figma}
+          brandClass=""
+          status="Not connected"
+        >
+          <FigmaConnectionCard
+            cwd="/repo"
+            snapshot={snapshot}
+            loadError=""
+            reload={async () => forceUpdate()}
+            onChanged={() => changed++}
+            localApi={<span>Local API credential</span>}
+          />
+        </LinkProviderCard>
+      );
+    }
+    await act(async () => {
+      root!.render(<Host />);
+      await flushMicrotasks();
+    });
+    const click = async (label: string) => {
+      const channel = [
+        ...findElements(container, "DIV"),
+        ...findElements(container, "SECTION"),
+      ].find((node) => reactPropsOf(node)["data-figma-channel"] === "mcp");
+      const button = buttonWithLabel(channel, label);
+      expect(button).toBeDefined();
+      await act(async () => {
+        reactPropsOf(button).onClick();
+        await flushMicrotasks();
+        await flushMicrotasks();
+      });
+    };
+    return {
+      container,
+      starts,
+      refreshes,
+      disconnects,
+      click,
+      snapshot: () => snapshot,
+      changed: () => changed,
+      setSnapshot: (value: LinkSnapshot) => {
+        snapshot = value;
+      },
+      nextSnapshot: (read: (() => Promise<LinkSnapshot>) | undefined) => {
+        nextSnapshot = read;
+      },
+      update: async () => {
+        await act(async () => {
+          update();
+          await flushMicrotasks();
+        });
+      },
+    };
+  }
+
+  test("API and MCP share one card, authorize independently, and never read on connection", async () => {
+    const f = await renderCard();
+    expect(
+      findElements(f.container, "ARTICLE").filter(
+        (node) => reactPropsOf(node)["data-link-provider-card"] === "figma",
+      ),
+    ).toHaveLength(1);
+    expect(
+      [...findElements(f.container, "DIV"), ...findElements(f.container, "SECTION")].filter(
+        (node) => reactPropsOf(node)["data-figma-channel"],
+      ),
+    ).toHaveLength(2);
+    expect(buttonWithLabel(f.container, "连接设计上下文")).toBeDefined();
+    expect(f.starts).toHaveLength(0);
+    await f.click("连接设计上下文");
+    expect(f.starts).toHaveLength(1);
+    expect(f.starts[0]!.slice(2)).toEqual([
+      {
+        providerId: "figma",
+        methodId: "mcp",
+        label: "Figma MCP",
+        connectionId: undefined,
+        expectedRevision: null,
+      },
+      "mcp-oauth",
+    ]);
+    expect(f.snapshot().connections.map((item) => item.id)).toEqual(["figma-api", "figma-mcp"]);
+    expect(buttonWithLabel(f.container, "连接设计上下文")).toBeUndefined();
+    await f.click("刷新授权");
+    expect(f.refreshes).toEqual(["figma-mcp"]);
+    await f.click("断开");
+    expect(f.disconnects).toEqual([["/repo", "figma-mcp", "mcp-one"]]);
+    expect(f.snapshot().connections).toEqual([apiConnection]);
+  });
+
+  test("fresh account/revision checks reject stale MCP management without affecting API", async () => {
+    const f = await renderCard([apiConnection, mcpConnection]);
+    f.setSnapshot({
+      ...f.snapshot(),
+      connections: [apiConnection, { ...mcpConnection, revision: "mcp-two" }],
+    });
+    await f.click("刷新授权");
+    expect(f.refreshes).toHaveLength(0);
+    expect(f.disconnects).toHaveLength(0);
+    expect(f.starts).toHaveLength(0);
+    expect(
+      findElements(f.container, "P").some(
+        (node) =>
+          reactPropsOf(node).role === "alert" &&
+          reactChildText(reactPropsOf(node).children).includes("连接或权限已变化"),
+      ),
+    ).toBe(true);
+    await f.click("刷新授权");
+    expect(f.refreshes).toEqual(["figma-mcp"]);
+  });
+
+  test("an account appearing during connect requires explicit review instead of silent login", async () => {
+    const f = await renderCard();
+    f.setSnapshot({ ...f.snapshot(), connections: [apiConnection, mcpConnection] });
+    await f.click("连接设计上下文");
+    expect(f.starts).toHaveLength(0);
+    expect(buttonWithLabel(f.container, "刷新授权")).toBeDefined();
+    expect(f.snapshot().connections).toEqual([apiConnection, mcpConnection]);
   });
 });

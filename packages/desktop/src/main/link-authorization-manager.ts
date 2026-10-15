@@ -56,6 +56,7 @@ export function createNativeLinkAuthorizationManager(options: {
     return {
       ownerId: flow.ownerId,
       authorize: () => !closed && !flow.finished && !flow.cancelled && flow.context.authorize(),
+      signal: flow.abort.signal,
     };
   }
   async function launch(
@@ -73,6 +74,7 @@ export function createNativeLinkAuthorizationManager(options: {
     flow.opening = true;
     const authorization = new URL(job.step.authorizationUrl);
     try {
+      if (await service.openHostAuthorization(guarded(flow), job.id)) return;
       flow.window = await options.open({
         authorizationUrl: authorization.href,
         ...(navigationUrl ? { navigationUrl } : {}),
@@ -242,7 +244,14 @@ export function createNativeLinkAuthorizationManager(options: {
     async get(context: LinkOperationContext, id: string) {
       const result = await service.authorization(context, id);
       const flow = find(id);
-      if (flow?.ownerId === context.ownerId && result.state !== "pending") finish(flow);
+      if (flow?.ownerId === context.ownerId && result.state !== "pending") {
+        try {
+          if (result.state === "connected") await options.onConnected?.();
+        } catch {
+          /* Focus failure cannot change an adopted connection. */
+        }
+        finish(flow);
+      }
       return result;
     },
     async respond(context: LinkOperationContext, id: string, response: LinkAuthorizationResponse) {
@@ -273,7 +282,8 @@ export function createNativeLinkAuthorizationManager(options: {
     async open(context: LinkOperationContext, id: string) {
       await service.assertAuthorized(context);
       const flow = find(id);
-      if (!flow || flow.ownerId !== context.ownerId || flow.finished || !flow.window) return false;
+      if (!flow || flow.ownerId !== context.ownerId || flow.finished) return false;
+      if (!flow.window) return service.openHostAuthorization(guarded(flow), flow.jobId!);
       await flow.window.focus?.();
       return true;
     },

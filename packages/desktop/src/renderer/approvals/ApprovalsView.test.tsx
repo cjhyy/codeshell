@@ -68,7 +68,9 @@ async function render(queue: ApprovalRequestEnvelope[] = [], history: HistoryEnt
       <ApprovalsView
         queue={queue}
         history={history}
-        onDecide={(...args) => decisions.push(args)}
+        onDecide={(...args) => {
+          decisions.push(args);
+        }}
       />,
     );
     await flushMicrotasks();
@@ -137,21 +139,93 @@ describe("ApprovalsView", () => {
     },
   );
 
-  test("preserves newest-first history and its 50-entry limit without mutating the source", async () => {
+  test("sorts history by time, pages older entries, and never mutates the source", async () => {
     const history: HistoryEntry[] = Array.from({ length: 53 }, (_, index) => ({
       decision: "approve",
       envelope: envelope(String(index)),
       at: 1_800_000_000_000 + index,
-    }));
+    })).reverse();
     const original = history.slice();
     await render([], history);
     const requests = nodes(section(1)).filter((node) => node.tagName === "PRE");
     expect(requests).toHaveLength(50);
     expect(textOf(requests[0])).toBe("command-52");
     expect(textOf(requests[49])).toBe("command-3");
-    expect(textOf(section(1))).toContain("显示最近 50 条记录");
+    expect(textOf(section(1))).toContain("显示 50 / 53 条记录");
+    await click(
+      nodes(section(1)).find((node) => node.tagName === "BUTTON" && textOf(node) === "加载更多"),
+    );
+    expect(nodes(section(1)).filter((node) => node.tagName === "PRE")).toHaveLength(53);
     expect(history).toEqual(original);
     expect(decisions).toEqual([]);
+  });
+
+  test("search includes raw arguments, sessions and reasons, and filters decisions independently of the live queue", async () => {
+    const pending = envelope("pending");
+    pending.request.args = { command: "git status", target: "needle-hidden" };
+    const history: HistoryEntry[] = [
+      { decision: "approve", envelope: envelope("approved", "NEEDLE"), at: 20 },
+      { decision: "deny", envelope: envelope("denied"), reason: "Needle reason", at: 10 },
+    ];
+    await render([pending], history);
+    const search = nodes(container).find((node) => node.tagName === "INPUT");
+    await act(async () => {
+      props(search).onChange({ target: { value: " needle " } });
+    });
+    expect(nodes(section(0)).filter((node) => node.tagName === "LI")).toHaveLength(1);
+    expect(nodes(section(1)).filter((node) => node.tagName === "LI")).toHaveLength(2);
+    const filter = nodes(container).find((node) => node.tagName === "SELECT");
+    await act(async () => {
+      props(filter).onChange({ target: { value: "deny" } });
+    });
+    expect(nodes(section(0)).filter((node) => node.tagName === "LI")).toHaveLength(1);
+    expect(nodes(section(1)).filter((node) => node.tagName === "LI")).toHaveLength(1);
+    expect(textOf(section(1))).toContain("Needle reason");
+    await act(async () => {
+      props(search).onChange({ target: { value: "session-1" } });
+    });
+    expect(nodes(section(1)).filter((node) => node.tagName === "LI")).toHaveLength(1);
+    await act(async () => {
+      props(search).onChange({ target: { value: "missing" } });
+    });
+    expect(textOf(section(0))).toContain("没有匹配的审批记录");
+    expect(textOf(section(0))).not.toContain("没有待处理的工具调用");
+    expect(textOf(section(1))).toContain("没有匹配的审批记录");
+    expect(decisions).toEqual([]);
+  });
+
+  test("opens complete history context lazily and handles malformed timestamps", async () => {
+    const env = envelope("request-context");
+    env.request.args = { command: "safe-summary", payload: "FULL-RAW-TAIL" };
+    await render([], [{ decision: "approve", envelope: env, at: Number.NaN }]);
+    expect(textOf(section(1))).toContain("时间未知");
+    expect(textOf(section(1))).not.toContain("FULL-RAW-TAIL");
+    const details = nodes(section(1)).find((node) => node.tagName === "DETAILS");
+    await act(async () => {
+      props(details).onToggle({ currentTarget: { open: true } });
+    });
+    expect(textOf(details)).toContain("FULL-RAW-TAIL");
+    expect(textOf(details)).toContain("request-context");
+    expect(textOf(details)).toContain("session-1");
+    const raw = nodes(details).find((node) => node.tagName === "PRE");
+    expect(props(raw).tabIndex).toBe(0);
+    expect(props(raw)["aria-label"]).toBe("原始参数");
+  });
+
+  test("uses request session identity to keep another session's reused request ID actionable", async () => {
+    const first = envelope("reused");
+    const second = { ...envelope("reused"), sessionId: "session-2" };
+    await render([first]);
+    await click(
+      nodes(section(0)).find((node) => node.tagName === "BUTTON" && textOf(node) === "仅本次批准"),
+    );
+    await render([second]);
+    await click(
+      nodes(section(0)).find((node) => node.tagName === "BUTTON" && textOf(node) === "仅本次批准"),
+    );
+    expect(decisions.map((decision) => (decision[0] as ApprovalRequestEnvelope).sessionId)).toEqual(
+      ["session-1", "session-2"],
+    );
   });
 
   test("keeps queue order and forwards existing session / file approval scopes with their envelope", async () => {

@@ -359,7 +359,7 @@ describe("actual SDK OAuth issuer binding with two controlled authorization serv
     },
   );
 
-  test("legacy custom refresh without issuer keeps its stored endpoint despite changed discovery", async () => {
+  test("unbound legacy refresh fails closed without discovery or provider requests", async () => {
     const f = await fixture();
     f.save({
       clientId: "legacy-client",
@@ -368,11 +368,11 @@ describe("actual SDK OAuth issuer binding with two controlled authorization serv
       tokenEndpoint: `${f.a}/token`,
     });
     f.select(f.b);
-    await f.service.refresh("fixture");
-    expect(f.requests).toHaveLength(1);
-    expect(f.requests[0]).toMatchObject({ server: "a", path: "/token" });
-    expect(new URLSearchParams(f.requests[0].body).get("refresh_token")).toBe("legacy-refresh");
-    expect(new URLSearchParams(f.requests[0].body).get("client_secret")).toBe("legacy-secret");
+    await expect(f.service.refresh("fixture")).rejects.toThrow("Invalid MCP endpoint binding");
+    expect(f.requests).toHaveLength(0);
+    expect(parseOAuthCredentialSecret(f.store.resolve("fixture")!.secret!).refreshToken).toBe(
+      "legacy-refresh",
+    );
     expect(parseOAuthCredentialSecret(f.store.resolve("fixture")!.secret!).issuer).toBeUndefined();
   });
 });

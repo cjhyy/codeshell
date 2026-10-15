@@ -62,7 +62,7 @@ export function parseFigmaFileInput(value: unknown): { fileKey: string; nodeId?:
   return { fileKey, ...(nodeId ? { nodeId } : {}) };
 }
 
-function normalizeNodeId(value: unknown): string {
+export function normalizeNodeId(value: unknown): string {
   if (typeof value !== "string") throw new Error("Figma ids must contain node ID strings");
   const id = value.trim().replace(/(\d)-(\d)/g, "$1:$2");
   if (!id || id.length > 200 || !/^(?:I)?[0-9]+:[0-9]+(?:;[0-9]+:[0-9]+)*$/.test(id))

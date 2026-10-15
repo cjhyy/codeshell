@@ -705,10 +705,11 @@ export function usePanelBuckets({ sessions, quickChat, controls, stream, shell }
 
   const openSubagent = useCallback(
     (selection: SubagentSelection): void => {
+      if (!selection.agentId?.trim()) return;
       updatePanelBucket(activeBucketRef.current, (state) => ({
         ...state,
         open: true,
-        subagentSelection: selection,
+        subagentSelection: { ...selection, navigationNonce: state.requestNonce + 1 },
         requestNonce: state.requestNonce + 1,
         requestKind: "subagent",
       }));

@@ -2,8 +2,49 @@ import { describe, expect, test } from "bun:test";
 import { createInProcessTransport } from "../protocol/transport.js";
 import { createIpcCredentialAccess, type CredentialSnapshot } from "./access.js";
 import { RemoteLinkError } from "../links/remote.js";
+import { McpLinkActionError } from "../links/figma-mcp.js";
+import { FIGMA_MCP_SERVER_URL } from "@cjhyy/code-shell-link";
 
 describe("createIpcCredentialAccess", () => {
+  test("MCP recovery codes are reviewed and bound to the dedicated Host method", async () => {
+    for (const kind of ["mcp", "resolve"] as const) {
+      for (const code of ["reconnect", "response_too_large", "unreviewed"] as const) {
+        const [main, worker] = createInProcessTransport();
+        const access = createIpcCredentialAccess(worker);
+        main.onMessage((message) => {
+          if (!("id" in message) || !("method" in message)) return;
+          main.send({
+            jsonrpc: "2.0",
+            id: message.id,
+            error: {
+              code: -32603,
+              message: "untrusted provider text",
+              data: { mcpLinkCode: code },
+            },
+          });
+        });
+        let error: unknown;
+        try {
+          await (kind === "mcp"
+            ? access.executeMcpLinkAction!({
+                id: "figma",
+                scope: "full",
+                accountId: "1",
+                verifiedAt: "2026-10-15",
+                action: "get_metadata",
+                params: { file_key: "File" },
+              })
+            : access.resolveValue!({ id: "figma", scope: "full", purpose: "use" }));
+        } catch (cause) {
+          error = cause;
+        }
+        if (kind === "mcp" && code !== "unreviewed") {
+          expect(error).toBeInstanceOf(McpLinkActionError);
+          expect((error as Error).message).toBe(new McpLinkActionError(code).message);
+        } else expect(error).not.toBeInstanceOf(McpLinkActionError);
+      }
+    }
+  });
   test("reviewed Figma recovery codes survive IPC only for the bound remote action method", async () => {
     for (const [method, code] of [
       ["remote", "file_not_authorized"],
@@ -156,7 +197,12 @@ describe("createIpcCredentialAccess", () => {
         });
         main.send({ jsonrpc: "2.0", id: msg.id, result: { repositories: [] } });
       } else if (msg.method === "desktop/oauthAccessResolve") {
-        expect(msg.params).toEqual({ id: "oauth", scope: "full", forceRefresh: true });
+        expect(msg.params).toEqual({
+          id: "oauth",
+          scope: "full",
+          serverUrl: "https://mcp.example/mcp",
+          forceRefresh: true,
+        });
         main.send({
           jsonrpc: "2.0",
           id: msg.id,
@@ -172,7 +218,12 @@ describe("createIpcCredentialAccess", () => {
       access.materializeCookie?.({ cwd: "/repo", id: "xhs", scope: "full" }),
     ).resolves.toEqual({ cookiesFile: "/tmp/cookies.txt", count: 3 });
     await expect(
-      access.resolveOAuthAccess?.({ id: "oauth", scope: "full", forceRefresh: true }),
+      access.resolveOAuthAccess?.({
+        id: "oauth",
+        scope: "full",
+        serverUrl: "https://mcp.example/mcp",
+        forceRefresh: true,
+      }),
     ).resolves.toEqual({
       accessToken: "access-only",
       expiresAt: "2030-01-01T00:00:00.000Z",
@@ -197,35 +248,40 @@ describe("createIpcCredentialAccess", () => {
   });
 });
 
-test("local OAuth worker seam returns only action data and propagates cancellation to Host", async () => {
-  const [main, worker] = createInProcessTransport();
-  const access = createIpcCredentialAccess(worker);
-  const seen: Array<{ method: string; params: unknown }> = [];
-  main.onMessage((message) => {
-    if (!("method" in message)) return;
-    seen.push({ method: message.method, params: message.params });
-  });
-  const controller = new AbortController();
-  const pending = access.executeLocalOAuthLinkAction!(
-    {
-      id: "selected-link",
-      scope: "full",
-      accountId: "42",
-      verifiedAt: "2026-10-09T10:00:00Z",
-      action: "get_issue",
-      params: { owner: "acme", repo: "demo", issue_number: 1 },
-    },
-    { signal: controller.signal },
-  );
-  controller.abort();
-  await expect(pending).rejects.toMatchObject({ name: "AbortError" });
-  expect(seen.map((item) => item.method)).toEqual([
-    "desktop/localOAuthLinkAction",
-    "desktop/localOAuthLinkActionCancel",
-  ]);
-  expect(seen[1]!.params).toEqual({ requestId: "cred-1" });
-  expect(JSON.stringify(seen)).not.toContain("refreshToken");
-});
+test.each(["local", "mcp"] as const)(
+  "%s OAuth worker seam propagates cancellation to Host",
+  async (kind) => {
+    const [main, worker] = createInProcessTransport();
+    const access = createIpcCredentialAccess(worker);
+    const seen: Array<{ method: string; params: unknown }> = [];
+    main.onMessage((message) => {
+      if (!("method" in message)) return;
+      seen.push({ method: message.method, params: message.params });
+    });
+    const controller = new AbortController();
+    const pending = (
+      kind === "mcp" ? access.executeMcpLinkAction! : access.executeLocalOAuthLinkAction!
+    )(
+      {
+        id: "selected-link",
+        scope: "full",
+        accountId: "42",
+        verifiedAt: "2026-10-09T10:00:00Z",
+        action: "get_issue",
+        params: { owner: "acme", repo: "demo", issue_number: 1 },
+      },
+      { signal: controller.signal },
+    );
+    controller.abort();
+    await expect(pending).rejects.toMatchObject({ name: "AbortError" });
+    expect(seen.map((item) => item.method)).toEqual([
+      kind === "mcp" ? "desktop/mcpLinkAction" : "desktop/localOAuthLinkAction",
+      "desktop/localOAuthLinkActionCancel",
+    ]);
+    expect(seen[1]!.params).toEqual({ requestId: "cred-1" });
+    expect(JSON.stringify(seen)).not.toContain("refreshToken");
+  },
+);
 
 test("legacy local secret resolution denies browser OAuth Links and preserves ordinary MCP tokens", async () => {
   const { mkdtempSync, rmSync } = await import("node:fs");
@@ -236,6 +292,19 @@ test("legacy local secret resolution denies browser OAuth Links and preserves or
   const directory = mkdtempSync(join(tmpdir(), "local-oauth-access-"));
   try {
     const store = new CredentialStore(directory);
+    store.save("project", {
+      id: "figma-mcp",
+      type: "oauth",
+      label: "Figma MCP",
+      secret: JSON.stringify({ accessToken: "private-access", refreshToken: "private-refresh" }),
+      meta: {
+        linkProvider: "figma",
+        linkExecutionRuntime: "local",
+        linkExecutionBackend: "mcp",
+        linkAuthSource: "mcp-oauth",
+        mcpServerUrl: FIGMA_MCP_SERVER_URL,
+      },
+    });
     store.save("project", {
       id: "local-browser",
       type: "link",
@@ -253,15 +322,16 @@ test("legacy local secret resolution denies browser OAuth Links and preserves or
       label: "MCP bearer",
       secret: "mcp-bearer",
     });
-    for (const purpose of ["link", "use", "mcp"] as const)
-      await expect(
-        localCredentialAccess.resolveValue!({
-          cwd: directory,
-          id: "local-browser",
-          scope: "project",
-          purpose,
-        }),
-      ).rejects.toThrow("Host-owned actions");
+    for (const id of ["local-browser", "figma-mcp"])
+      for (const purpose of ["link", "use", "mcp"] as const)
+        await expect(
+          localCredentialAccess.resolveValue!({
+            cwd: directory,
+            id,
+            scope: "project",
+            purpose,
+          }),
+        ).rejects.toThrow("Host-owned actions");
     expect(
       await localCredentialAccess.resolveValue!({
         cwd: directory,

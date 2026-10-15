@@ -240,6 +240,34 @@ describe("task inbox original detail routing", () => {
     expect(seen).toEqual([{ limit: 200 }, { limit: 200, cursor: "page-2" }]);
     expect(calls).toEqual([["disk", disk]]);
   });
+  test("an asynchronous session selection failure reaches the caller instead of reporting success", async () => {
+    const { value } = adapter({
+      sessionIndices: {
+        project: {
+          activeSessionId: "ui-a",
+          sessions: [
+            { id: "ui-a", engineSessionId: "engine-a", title: "a", createdAt: 1, updatedAt: 2 },
+          ],
+        },
+      },
+      selectSession: async () => {
+        throw new Error("Workspace unavailable");
+      },
+    });
+    await expect(
+      openTaskInboxRecord(record("a", { sessionId: "engine-a" }), value),
+    ).rejects.toThrow("Workspace unavailable");
+  });
+  test("a superseded history opening stops without falling back to another page", async () => {
+    const { value, calls } = adapter({ openHistorySession: async () => "cancelled" });
+    expect(
+      await openTaskInboxRecord(
+        record("old-run", { source: "legacy-run", sessionId: "old-session" }),
+        value,
+      ),
+    ).toBe(true);
+    expect(calls).toEqual([]);
+  });
   test("Mimi, automation, Runs preserve selected source identity and missing sessions fail closed", async () => {
     const { value, calls } = adapter();
     for (const [source, id] of [

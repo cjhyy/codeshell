@@ -57,6 +57,13 @@ export {
   LocalOAuthLinkError,
   type LocalOAuthLinkActionRequest,
 } from "./local-oauth.js";
+export {
+  executeFigmaMcpLinkAction,
+  isFigmaMcpCredential,
+  McpLinkActionError,
+  type McpLinkActionRequest,
+  type McpLinkActionOptions,
+} from "./figma-mcp.js";
 
 export {
   REMOTE_LINK_PROVIDER_ADAPTERS,

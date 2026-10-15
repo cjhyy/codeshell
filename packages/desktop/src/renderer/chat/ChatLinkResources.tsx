@@ -8,7 +8,7 @@ import { useRemoteLinkSnapshot } from "../credentials/RemoteLinkSection";
 import { useT } from "../i18n/I18nProvider";
 import {
   chatLinkReadArguments,
-  figmaFileGranted,
+  figmaChatConnectionGranted,
   type ChatLinkReadHandler,
   type ChatLinkResourceIntent,
 } from "./linkResourceIntents";
@@ -27,7 +27,7 @@ export function ChatLinkResources({
   intents: ChatLinkResourceIntent[];
   busy: boolean;
   onRead: ChatLinkReadHandler;
-  onConsumed: (intent: ChatLinkResourceIntent) => void;
+  onConsumed: (intent: ChatLinkResourceIntent, reason?: "dismissed") => void;
   onResumeConnectionChange: (
     intent: ChatLinkResourceIntent,
     connection: MaskedLinkConnection | undefined,
@@ -39,7 +39,7 @@ export function ChatLinkResources({
     <div className="space-y-2" data-chat-link-resources>
       {intents.map((intent) => (
         <ChatLinkResourceCard
-          key={`${intent.clientMessageId}:${intent.resourceId}`}
+          key={`${intent.clientMessageId}:${intent.resourceId}:${intent.backend ?? "api"}:${intent.mcpRequest?.toolCallId ?? ""}`}
           intent={intent}
           busy={busy || readBusy(intent)}
           onRead={onRead}
@@ -64,7 +64,7 @@ function ChatLinkResourceCard({
   intent: ChatLinkResourceIntent;
   busy: boolean;
   onRead: ChatLinkReadHandler;
-  onConsumed: (intent: ChatLinkResourceIntent) => void;
+  onConsumed: (intent: ChatLinkResourceIntent, reason?: "dismissed") => void;
   onResumeConnectionChange: (
     intent: ChatLinkResourceIntent,
     connection: MaskedLinkConnection | undefined,
@@ -72,6 +72,7 @@ function ChatLinkResourceCard({
   readFailed: boolean;
 }) {
   const { t } = useT();
+  const mcp = intent.backend === "mcp";
   const { snapshot, error: loadError, reload } = useRemoteLinkSnapshot(intent.cwd);
   const [selectedId, setSelectedId] = React.useState("");
   const [authorization, setAuthorization] = React.useState<{
@@ -98,7 +99,9 @@ function ChatLinkResourceCard({
   }, []);
   const connections =
     snapshot?.connections.filter(
-      (connection) => connection.providerId === "figma" && connection.authSource === "remote-link",
+      (connection) =>
+        connection.providerId === "figma" &&
+        connection.authSource === (mcp ? "mcp-oauth" : "remote-link"),
     ) ?? [];
   const selected = selectedId
     ? connections.find((connection) => connection.id === selectedId)
@@ -106,9 +109,10 @@ function ChatLinkResourceCard({
       ? connections[0]
       : undefined;
   const provider = snapshot?.providers.find((item) => item.id === "figma");
-  const modes = provider?.authModes?.filter((mode) => mode.id === "remote-link") ?? [];
+  const modes =
+    provider?.authModes?.filter((mode) => mode.id === (mcp ? "mcp-oauth" : "remote-link")) ?? [];
   const available = modes.some((mode) => mode.available);
-  const granted = figmaFileGranted(selected, intent.resourceId);
+  const granted = figmaChatConnectionGranted(selected, intent);
 
   const act = async (resumeConnection?: MaskedLinkConnection) => {
     if (
@@ -129,7 +133,8 @@ function ChatLinkResourceCard({
       if (!alive.current || dismissedRef.current || current.current.busy) return;
       const live = reviewed ? fresh.connections.find((item) => item.id === reviewed.id) : undefined;
       const freshConnections = fresh.connections.filter(
-        (item) => item.providerId === "figma" && item.authSource === "remote-link",
+        (item) =>
+          item.providerId === "figma" && item.authSource === (mcp ? "mcp-oauth" : "remote-link"),
       );
       if (
         reviewed &&
@@ -137,8 +142,7 @@ function ChatLinkResourceCard({
           (!selectedId && connections.length === 1 && freshConnections.length !== 1) ||
           live.revision !== reviewed.revision ||
           live.account?.id !== reviewed.account?.id ||
-          figmaFileGranted(live, intent.resourceId) !==
-            figmaFileGranted(reviewed, intent.resourceId))
+          figmaChatConnectionGranted(live, intent) !== figmaChatConnectionGranted(reviewed, intent))
       ) {
         await reload();
         if (alive.current && !dismissedRef.current) {
@@ -151,14 +155,19 @@ function ChatLinkResourceCard({
       const liveModes =
         fresh.providers
           .find((item) => item.id === "figma")
-          ?.authModes?.filter((mode) => mode.id === "remote-link") ?? [];
-      if (figmaFileGranted(live, intent.resourceId)) {
+          ?.authModes?.filter((mode) => mode.id === (mcp ? "mcp-oauth" : "remote-link")) ?? [];
+      if (figmaChatConnectionGranted(live, intent)) {
         if (dismissedRef.current || sentRef.current) return;
+        const arguments_ = chatLinkReadArguments(intent, live!.id);
+        if (!arguments_) {
+          current.current.onConsumed(intent);
+          return;
+        }
         // Consume synchronously before calling the owner, including a repeated click in one frame.
         sentRef.current = true;
         const accepted = current.current.onRead(
-          t("chat.linkResource.readPrompt", {
-            arguments: JSON.stringify(chatLinkReadArguments(intent, live!.id)),
+          t(mcp ? "chat.linkResource.mcpReadPrompt" : "chat.linkResource.readPrompt", {
+            arguments: JSON.stringify(arguments_),
           }),
           intent.bucket,
           crypto.randomUUID(),
@@ -187,7 +196,8 @@ function ChatLinkResourceCard({
       if (
         !reviewed &&
         fresh.connections.some(
-          (item) => item.providerId === "figma" && item.authSource === "remote-link",
+          (item) =>
+            item.providerId === "figma" && item.authSource === (mcp ? "mcp-oauth" : "remote-link"),
         )
       ) {
         await reload();
@@ -231,6 +241,7 @@ function ChatLinkResourceCard({
     (granted &&
       !selectedId &&
       !intent.resumeConnection &&
+      !intent.mcpRequest &&
       !readFailed &&
       !error &&
       !loadError &&
@@ -254,9 +265,11 @@ function ChatLinkResourceCard({
                 ? "chat.linkResource.waiting"
                 : readFailed
                   ? "chat.linkResource.readFailed"
-                  : granted
-                    ? "chat.linkResource.granted"
-                    : "chat.linkResource.description",
+                  : mcp
+                    ? "chat.linkResource.mcpDescription"
+                    : granted
+                      ? "chat.linkResource.granted"
+                      : "chat.linkResource.description",
             )}
           </p>
         </div>
@@ -272,7 +285,7 @@ function ChatLinkResourceCard({
             // Cancellation takes effect within this event, before React removes
             // the card or an already-resolved snapshot resumes its async check.
             dismissedRef.current = true;
-            current.current.onConsumed(intent);
+            current.current.onConsumed(intent, "dismissed");
           }}
         >
           <X className="size-3.5" aria-hidden />
@@ -332,9 +345,11 @@ function ChatLinkResourceCard({
           {t(
             granted
               ? "chat.linkResource.read"
-              : selected
-                ? "chat.linkResource.authorize"
-                : "chat.linkResource.connect",
+              : mcp
+                ? "chat.linkResource.connectMcp"
+                : selected
+                  ? "chat.linkResource.authorize"
+                  : "chat.linkResource.connect",
           )}
         </Button>
       )}
@@ -347,7 +362,7 @@ function ChatLinkResourceCard({
           modes={modes}
           input={{
             providerId: "figma",
-            methodId: "remote-link",
+            methodId: mcp ? "mcp" : "remote-link",
             label: authorization.connection?.label ?? "Figma",
             connectionId: authorization.connection?.id,
             expectedRevision: authorization.connection?.revision ?? null,
@@ -378,8 +393,10 @@ function ChatLinkResourceCard({
               return;
             }
             if (connection) setSelectedId(connection.id);
-            if (figmaFileGranted(connection, intent.resourceId))
-              current.current.onResumeConnectionChange(intent, connection);
+            if (figmaChatConnectionGranted(connection, intent)) {
+              if (mcp && !intent.mcpRequest) current.current.onConsumed(intent);
+              else current.current.onResumeConnectionChange(intent, connection);
+            }
             void reload();
           }}
         />

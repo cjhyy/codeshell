@@ -1,5 +1,5 @@
-import React, { useId, useState } from "react";
-import { ChevronDown, Check, X } from "lucide-react";
+import React, { useId, useRef, useState } from "react";
+import { ChevronDown, Check, LoaderCircle, X } from "lucide-react";
 import type { ApprovalRequestEnvelope } from "../../preload/types";
 import { RiskPill, riskFor } from "./RiskPill";
 import { Button } from "@/components/ui/button";
@@ -20,6 +20,7 @@ import { approveOptionsFor, type ApproveChoice, type ApprovePathScope } from "./
 import { useT, type TFunction } from "../i18n/I18nProvider";
 import { translate } from "../i18n/translate";
 import { loadUILanguage } from "../uiLanguage";
+import { approvalKey } from "./approvalRecords";
 
 const DENY_PRESETS = [
   "looks unsafe",
@@ -42,10 +43,10 @@ interface Props {
     reason?: string,
     scope?: ApproveChoice,
     pathScope?: ApprovePathScope,
-  ) => void;
+  ) => void | Promise<void>;
 }
 
-/** Short confirmation shown once a choice is made (optimistic terminal state). */
+/** Short confirmation shown after the decision has been accepted. */
 export function decidedLabel(d: {
   kind: "approve" | "deny";
   scope?: ApproveChoice;
@@ -58,15 +59,21 @@ export function decidedLabel(d: {
   return translate(lang, "auto.approvalCard.approved");
 }
 
-export function ApprovalCard({ envelope, onDecide, allowScopes = true }: Props) {
+export function ApprovalCard(props: Props) {
+  // Chat surfaces can keep the same card mounted while switching sessions.
+  // A reused worker request ID must not carry a previous card's decision.
+  return <ApprovalCardBody key={approvalKey(props.envelope)} {...props} />;
+}
+
+function ApprovalCardBody({ envelope, onDecide, allowScopes = true }: Props) {
   const { t } = useT();
   const { request } = envelope;
   const [showRaw, setShowRaw] = useState(false);
   const rawArgsId = useId();
   const [denyReason, setDenyReason] = useState<string>("");
-  // Optimistic terminal state: set the instant the user clicks so the card
-  // shows a confirmation and disables its controls immediately, regardless of
-  // how long the worker takes to resume the turn and run the tool.
+  const submittingRef = useRef(false);
+  const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const [decided, setDecided] = useState<{
     kind: "approve" | "deny";
     scope?: ApproveChoice;
@@ -95,15 +102,38 @@ export function ApprovalCard({ envelope, onDecide, allowScopes = true }: Props) 
     ? options.filter((o) => o.scope !== "once" && o !== sessionOption)
     : [];
 
+  const submit = async (
+    kind: "approve" | "deny",
+    scope?: ApproveChoice,
+    pathScope?: ApprovePathScope,
+    label?: string,
+  ): Promise<void> => {
+    // The ref also blocks a second click before React has committed the first.
+    if (decided || submittingRef.current) return;
+    submittingRef.current = true;
+    setSubmitting(true);
+    setError(null);
+    try {
+      const result = onDecide(
+        kind,
+        kind === "deny" ? denyReason || undefined : undefined,
+        scope,
+        pathScope,
+      );
+      if (result) await result;
+      setDecided({ kind, scope, label });
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : String(cause));
+    } finally {
+      submittingRef.current = false;
+      setSubmitting(false);
+    }
+  };
   const approve = (scope: ApproveChoice, pathScope?: ApprovePathScope, label?: string): void => {
-    if (decided) return;
-    setDecided({ kind: "approve", scope, label });
-    onDecide("approve", undefined, scope, pathScope);
+    void submit("approve", scope, pathScope, label);
   };
   const deny = (): void => {
-    if (decided) return;
-    setDecided({ kind: "deny" });
-    onDecide("deny", denyReason || undefined);
+    void submit("deny");
   };
 
   return (
@@ -142,7 +172,20 @@ export function ApprovalCard({ envelope, onDecide, allowScopes = true }: Props) 
         )}
       </div>
 
-      {decided ? (
+      {error && (
+        <p
+          role="alert"
+          className="mt-3 break-words text-xs text-status-err [overflow-wrap:anywhere]"
+        >
+          {t("activityApprovals.failed")} {error}
+        </p>
+      )}
+      {submitting ? (
+        <div role="status" className="mt-3 flex items-center gap-1.5 text-sm text-muted-foreground">
+          <LoaderCircle size={15} className="animate-spin" aria-hidden />
+          <span>{t("activityApprovals.submitting")}</span>
+        </div>
+      ) : decided ? (
         <div
           className={
             "mt-3 flex items-center gap-1.5 text-sm " +

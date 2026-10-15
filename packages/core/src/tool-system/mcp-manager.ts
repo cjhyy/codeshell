@@ -7,7 +7,13 @@
 import type { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { ManagedMcpStdioTransport } from "./mcp-stdio-transport.js";
 import { StreamableHTTPClientTransport } from "@modelcontextprotocol/sdk/client/streamableHttp.js";
-import type { Tool as McpTool } from "@modelcontextprotocol/sdk/types.js";
+import type {
+  Tool as McpTool,
+  CallToolResult,
+  ReadResourceResult,
+  ListResourcesResult,
+  ListResourceTemplatesResult,
+} from "@modelcontextprotocol/sdk/types.js";
 import type { ContentBlock, MCPServerConfig, RegisteredTool } from "../types.js";
 import { capabilitiesForConfig } from "../llm/capabilities/index.js";
 import type { CredentialType } from "../credentials/types.js";
@@ -33,6 +39,18 @@ import {
   validMcpConnectTimeout,
 } from "./mcp-connection-policy.js";
 import { codeShellHome } from "../session/session-manager.js";
+import {
+  assertMcpOAuthCredentialBinding,
+  normalizeMcpServerUrl,
+} from "../credentials/mcp-binding.js";
+import {
+  boundedMcpResult,
+  boundMcpHttpResponse,
+  MAX_MCP_LIST_PAGES,
+  McpCapabilityUnavailableError,
+  validateMcpCursor,
+} from "./mcp-results.js";
+export { McpResponseTooLargeError, McpCapabilityUnavailableError } from "./mcp-results.js";
 import { adaptMcpToolSchema, normalizeMcpToolArgs } from "./mcp-compat.js";
 import { snapshotMcpConnectionConfig, type McpConnectionConfig } from "./mcp-connection-config.js";
 import {
@@ -326,9 +344,29 @@ export function createMcpAuthenticatedFetch(
   baseFetch: typeof fetch = fetch,
 ): typeof fetch {
   return (async (input: Parameters<typeof fetch>[0], init?: RequestInit) => {
+    const endpoint = normalizeMcpServerUrl(config.url);
+    const source = new Request(input as unknown as string, init);
+    if (normalizeMcpServerUrl(source.url) !== endpoint)
+      throw new Error("MCP request target does not match the selected server endpoint");
+    source.signal.throwIfAborted();
     const credentialId = config.credentialRef;
     const meta = credentialId ? access.resolveMeta(undefined, credentialId, "full") : undefined;
     const isOAuth = meta?.type === "oauth";
+    const binding = isOAuth ? assertMcpOAuthCredentialBinding(meta, endpoint) : undefined;
+    const assertCurrent = () => {
+      source.signal.throwIfAborted();
+      if (!credentialId) return;
+      const current = access.resolveMeta(undefined, credentialId, "full");
+      if (!current?.hasSecret || current.type !== meta?.type)
+        throw new Error("MCP credential is no longer available");
+      if (
+        isOAuth &&
+        JSON.stringify(assertMcpOAuthCredentialBinding(current, endpoint)) !==
+          JSON.stringify(binding)
+      )
+        throw new Error("MCP credential binding changed during the request");
+    };
+    assertCurrent();
 
     const headers = isOAuth
       ? buildHttpHeaders(serverName, { ...config, credentialRef: undefined })
@@ -340,13 +378,18 @@ export function createMcpAuthenticatedFetch(
           `MCP server "${serverName}": oauth credential "${credentialId}" requires host OAuth access`,
         );
       }
-      token = (await access.resolveOAuthAccess({ id: credentialId!, scope: "full" })).accessToken;
+      token = (
+        await access.resolveOAuthAccess({
+          id: credentialId!,
+          scope: "full",
+          serverUrl: config.url!,
+        })
+      ).accessToken;
     }
 
     // The SDK and Bun can contribute distinct undici-compatible Request types.
     // Normalize once at the adapter boundary instead of leaking that ambient
     // declaration mismatch through the authentication/replay logic.
-    const source = new Request(input as unknown as string, init);
     let replayable = true;
     try {
       source.clone();
@@ -354,24 +397,37 @@ export function createMcpAuthenticatedFetch(
       replayable = false;
     }
     const send = async (accessToken?: string): Promise<Response> => {
+      assertCurrent();
       const request = replayable ? source.clone() : source;
       const requestHeaders = new Headers(Array.from(request.headers.entries()));
       for (const [name, value] of Object.entries(headers)) requestHeaders.set(name, value);
       if (accessToken) requestHeaders.set("Authorization", `Bearer ${accessToken}`);
-      return baseFetch(
+      const response = await baseFetch(
         new Request(request as unknown as string, {
           headers: Array.from(requestHeaders.entries()),
+          redirect: "error",
         }),
       );
+      try {
+        assertCurrent();
+        if (response.status >= 300 && response.status < 400)
+          throw new Error("MCP endpoint redirects are not allowed");
+        return boundMcpHttpResponse(response, assertCurrent);
+      } catch (error) {
+        await response.body?.cancel().catch(() => {});
+        throw error;
+      }
     };
 
     const first = await send(token);
     if (first.status !== 401 || !isOAuth || !credentialId || !replayable || source.signal.aborted) {
       return first;
     }
+    await first.body?.cancel().catch(() => {});
     const refreshed = await access.resolveOAuthAccess!({
       id: credentialId,
       scope: "full",
+      serverUrl: config.url!,
       forceRefresh: true,
     });
     return send(refreshed.accessToken);
@@ -598,6 +654,7 @@ async function formatMcpToolResult(
   callResult: Record<string, unknown>,
   inlineImages: boolean,
 ): Promise<ToolSuccess> {
+  boundedMcpResult(callResult);
   // Images normally spill to disk. An opted-in server can attach bounded
   // vision blocks; base64 never enters the textual result.
   const parts: string[] = [];
@@ -634,9 +691,15 @@ async function formatMcpToolResult(
           );
           parts.push(note);
         }
+      } else {
+        // Keep resource links, embedded text/blob resources, audio/document
+        // envelopes and future typed content visible instead of discarding them.
+        parts.push(JSON.stringify(item));
       }
     }
   }
+  if (callResult.structuredContent !== undefined)
+    parts.push(JSON.stringify({ structuredContent: callResult.structuredContent }));
   const body = parts.join("\n") || "(no output)";
   // Trust boundary: MCP output is external content. Wrap it so the
   // model sees an explicit reminder that the body comes from an
@@ -657,6 +720,12 @@ async function formatMcpToolResult(
   };
 }
 
+export interface MCPManagerOptions {
+  /** Isolated Host clients must not replace the Engine's default manager. */
+  defaultInstance?: boolean;
+  credentialAccess?: CredentialAccess;
+}
+
 export class MCPManager {
   private static instance: MCPManager | null = null;
   private connections = new Map<string, MCPConnection>();
@@ -673,8 +742,11 @@ export class MCPManager {
   private runBindings = new Set<McpRunBinding>();
   private connectionGeneration = 0;
 
-  constructor(private readonly toolRegistry: ToolRegistry) {
-    MCPManager.instance = this;
+  constructor(
+    private readonly toolRegistry: ToolRegistry,
+    private readonly options: MCPManagerOptions = {},
+  ) {
+    if (options.defaultInstance !== false) MCPManager.instance = this;
   }
 
   static getInstance(): MCPManager {
@@ -868,14 +940,24 @@ export class MCPManager {
     work: (signal: AbortSignal | undefined) => Promise<T>,
   ): Promise<T> {
     const binding = (workspace as BoundMcpWorkspace | undefined)?.[MCP_RUN_SCOPE];
-    if (!binding) return work(signal);
+    const generation = this.connectionGeneration;
+    const invoke = async (activeSignal?: AbortSignal): Promise<T> => {
+      activeSignal?.throwIfAborted();
+      const result = await work(activeSignal);
+      activeSignal?.throwIfAborted();
+      if (generation !== this.connectionGeneration || (binding && !binding.active))
+        throw connectionCancelled();
+      if (binding) this.scopeForContext(workspace);
+      return result;
+    };
+    if (!binding) return invoke(signal);
     this.scopeForContext(workspace);
     const signals = [signal, workspace?.signal, binding.abort.signal].filter(
       (value): value is AbortSignal => value !== undefined,
     );
     const combined = AbortSignal.any(signals);
     // Register before work can call back into disposal or another Run.
-    const operation = Promise.resolve().then(() => work(combined));
+    const operation = Promise.resolve().then(() => invoke(combined));
     binding.operations.add(operation);
     void operation.then(
       () => binding.operations.delete(operation),
@@ -1159,7 +1241,7 @@ export class MCPManager {
       // credentialRef resolves against user-scope credential access. The shared
       // MCP-referenced credentials
       // (e.g. a Figma token) remain user-global by design.
-      const access = getCredentialAccess();
+      const access = this.options.credentialAccess ?? getCredentialAccess();
       const headers = buildHttpHeaders(name, { ...config, credentialRef: undefined });
       transport = new StreamableHTTPClientTransport(new URL(config.url), {
         requestInit: Object.keys(headers).length ? { headers } : undefined,
@@ -1174,7 +1256,7 @@ export class MCPManager {
     let timeoutHandle: NodeJS.Timeout | undefined;
     let onAbort: (() => void) | undefined;
     const attemptAbort = new AbortController();
-    let discoveredTools: McpTool[] = [];
+    const discoveredTools: McpTool[] = [];
     const priorErrorHandler = client.onerror;
     try {
       await new Promise<void>((resolve, reject) => {
@@ -1204,11 +1286,25 @@ export class MCPManager {
           await client.connect(transport, { signal: attemptAbort.signal, timeout: timeoutMs });
           logStage("initialized");
           logStage("discovering_tools");
-          const result = await client.listTools(undefined, {
-            signal: attemptAbort.signal,
-            timeout: timeoutMs,
-          });
-          discoveredTools = result.tools;
+          if (!client.getServerCapabilities()?.tools) return;
+          let cursor: string | undefined;
+          const seen = new Set<string>();
+          for (let page = 0; page < MAX_MCP_LIST_PAGES; page += 1) {
+            const result = boundedMcpResult(
+              await client.listTools(cursor ? { cursor } : undefined, {
+                signal: attemptAbort.signal,
+                timeout: timeoutMs,
+              }),
+            );
+            discoveredTools.push(...result.tools);
+            boundedMcpResult({ tools: discoveredTools });
+            validateMcpCursor(result.nextCursor);
+            if (!result.nextCursor) break;
+            if (seen.has(result.nextCursor) || page === MAX_MCP_LIST_PAGES - 1)
+              throw new Error("MCP tools pagination exceeded its bounded cursor traversal");
+            seen.add(result.nextCursor);
+            cursor = result.nextCursor;
+          }
         })().then(resolve, reject);
       });
       if (connectionClosed) throw new Error("MCP server closed during initialization.");
@@ -1506,8 +1602,7 @@ export class MCPManager {
     args: Record<string, unknown>,
     ctx?: ToolContext,
   ): Promise<ToolSuccess> {
-    return this.runOperation(ctx, ctx?.signal, async (signal) => {
-      const connection = await this.connectionForScope(serverName, ctx, signal);
+    return this.connectionRequest(serverName, ctx?.signal, ctx, async (connection, signal) => {
       const tool = connection.tools?.get(toolName);
       if (!tool)
         throw new Error(`MCP tool "${toolName}" is not available in the current workspace.`);
@@ -1617,8 +1712,7 @@ export class MCPManager {
     signal?: AbortSignal,
     workspace?: McpWorkspaceScope & Partial<Pick<ToolContext, "llmConfig">>,
   ): Promise<ToolSuccess> {
-    return this.runOperation(workspace, signal, async (signal) => {
-      const conn = await this.connectionForScope(serverName, workspace, signal);
+    return this.connectionRequest(serverName, signal, workspace, async (conn, signal) => {
       // Forward the run's abort signal so a user Stop cancels an in-flight MCP
       // call promptly instead of blocking until the SDK's default request timeout.
       // (The SDK still enforces its default timeout when no signal is provided.)
@@ -1643,6 +1737,121 @@ export class MCPManager {
     });
   }
 
+  /** Host-facing typed result. Discovery/formatting never discards protocol content. */
+  async callToolEnvelope(
+    serverName: string,
+    toolName: string,
+    args: Record<string, unknown>,
+    signal?: AbortSignal,
+    workspace?: McpWorkspaceScope,
+  ): Promise<CallToolResult> {
+    return this.connectionRequest(serverName, signal, workspace, async (conn, activeSignal) => {
+      if (conn.tools && !conn.tools.has(toolName))
+        throw new Error("MCP tool is not available on the selected connection");
+      return (await conn.client.callTool(
+        {
+          name: toolName,
+          arguments: normalizeMcpToolArgs(
+            conn.client.getServerVersion?.()?.name,
+            conn.tools?.get(toolName),
+            stripInternalToolArgs(args),
+          ),
+        },
+        undefined,
+        activeSignal ? { signal: activeSignal } : undefined,
+      )) as CallToolResult;
+    });
+  }
+
+  private connectionRequest<T>(
+    serverName: string,
+    signal: AbortSignal | undefined,
+    workspace: McpWorkspaceScope | undefined,
+    work: (connection: MCPConnection, signal?: AbortSignal) => Promise<T>,
+  ): Promise<T> {
+    return this.runOperation(workspace, signal, async (activeSignal) => {
+      const connection = await this.connectionForScope(serverName, workspace, activeSignal);
+      const result = boundedMcpResult(await work(connection, activeSignal));
+      activeSignal?.throwIfAborted();
+      if (connection.closed || this.findConnection(serverName, workspace) !== connection)
+        throw connectionCancelled();
+      return result;
+    });
+  }
+
+  /** Explicit pages let callers discover only the resources they currently need. */
+  async listResourcesPage(
+    serverName: string,
+    params: { cursor?: string } = {},
+    signal?: AbortSignal,
+    workspace?: McpWorkspaceScope,
+  ): Promise<ListResourcesResult> {
+    validateMcpCursor(params.cursor);
+    return this.connectionRequest(serverName, signal, workspace, async (conn, activeSignal) => {
+      const capabilities = conn.client.getServerCapabilities?.();
+      if (capabilities && !capabilities.resources)
+        throw new McpCapabilityUnavailableError("resources");
+      const result = await conn.client.listResources(
+        params,
+        activeSignal ? { signal: activeSignal } : undefined,
+      );
+      if (!Array.isArray(result.resources)) throw new Error("Invalid MCP resources response");
+      validateMcpCursor(result.nextCursor);
+      return result;
+    });
+  }
+
+  async listResourceTemplatesPage(
+    serverName: string,
+    params: { cursor?: string } = {},
+    signal?: AbortSignal,
+    workspace?: McpWorkspaceScope,
+  ): Promise<ListResourceTemplatesResult> {
+    validateMcpCursor(params.cursor);
+    return this.connectionRequest(serverName, signal, workspace, async (conn, activeSignal) => {
+      const capabilities = conn.client.getServerCapabilities?.();
+      if (capabilities && !capabilities.resources)
+        throw new McpCapabilityUnavailableError("resource templates");
+      const result = await conn.client.listResourceTemplates(
+        params,
+        activeSignal ? { signal: activeSignal } : undefined,
+      );
+      if (!Array.isArray(result.resourceTemplates))
+        throw new Error("Invalid MCP resource templates response");
+      validateMcpCursor(result.nextCursor);
+      return result;
+    });
+  }
+
+  async readResourceResult(
+    serverName: string,
+    uri: string,
+    signal?: AbortSignal,
+    workspace?: McpWorkspaceScope,
+  ): Promise<ReadResourceResult> {
+    if (typeof uri !== "string" || !uri || uri.length > 16_384)
+      throw new Error("Invalid MCP resource URI");
+    return this.connectionRequest(serverName, signal, workspace, async (conn, activeSignal) => {
+      const result = await conn.client.readResource(
+        { uri },
+        activeSignal ? { signal: activeSignal } : undefined,
+      );
+      if (
+        !Array.isArray(result.contents) ||
+        result.contents.some(
+          (item) =>
+            typeof item.uri !== "string" ||
+            !(
+              ("text" in item && typeof item.text === "string") ||
+              ("blob" in item && typeof item.blob === "string")
+            ),
+        )
+      )
+        throw new Error("Invalid MCP resource contents");
+      return result;
+    });
+  }
+
   /**
    * List resources from MCP servers.
    */
@@ -1657,21 +1866,28 @@ export class MCPManager {
 
       for (const name of servers) {
         try {
-          const conn = await this.connectionForScope(name, workspace, signal);
-          // Forward the run's abort signal so a user Stop cancels promptly
-          // instead of waiting out the SDK's default request timeout (same as
-          // callTool). The SDK still enforces its default timeout when no signal.
-          const res = await conn.client.listResources(undefined, signal ? { signal } : undefined);
-          for (const r of res.resources) {
-            results.push({
-              uri: r.uri,
-              name: r.name ?? r.uri,
-              description: r.description,
-              serverName: name,
-            });
+          let cursor: string | undefined;
+          const seen = new Set<string>();
+          for (let page = 0; page < MAX_MCP_LIST_PAGES; page += 1) {
+            const res = await this.listResourcesPage(name, { cursor }, signal, workspace);
+            results.push(
+              ...res.resources.map((r) => ({ ...r, name: r.name ?? r.uri, serverName: name })),
+            );
+            boundedMcpResult({ resources: results });
+            if (!res.nextCursor) break;
+            if (seen.has(res.nextCursor) || page === MAX_MCP_LIST_PAGES - 1)
+              throw new Error("MCP resources pagination exceeded its bounded cursor traversal");
+            seen.add(res.nextCursor);
+            cursor = res.nextCursor;
           }
-        } catch {
-          // Server may not support resources
+        } catch (error) {
+          if (
+            !serverName &&
+            (error instanceof McpCapabilityUnavailableError ||
+              (error as { code?: number })?.code === -32601)
+          )
+            continue;
+          throw error;
         }
       }
       return results;
@@ -1688,13 +1904,14 @@ export class MCPManager {
     workspace?: McpWorkspaceScope,
   ): Promise<string> {
     return this.runOperation(workspace, signal, async (signal) => {
-      const conn = await this.connectionForScope(serverName, workspace, signal);
-      // Forward the run's abort signal so a user Stop cancels promptly (same as
-      // callTool); the SDK still enforces its default timeout when no signal.
-      const result = await conn.client.readResource({ uri }, signal ? { signal } : undefined);
+      const result = await this.readResourceResult(serverName, uri, signal, workspace);
       const parts: string[] = [];
       if (Array.isArray(result.contents)) {
         for (const item of result.contents) {
+          if ("blob" in item)
+            throw new Error(
+              "MCP resource contains binary content; use readResourceResult to preserve its URI, MIME type and blob.",
+            );
           if (typeof item === "object" && item !== null && "text" in item) {
             parts.push(String(item.text));
           }

@@ -11,6 +11,7 @@ import {
   createLinkService,
   type LinkConnectionInput,
   type LinkAuthorizationResponse,
+  type HostLinkOAuthAdapter,
 } from "@cjhyy/code-shell-server/links";
 import { createNativeRemoteLinkManager } from "./remote-link-manager.js";
 import { openNativeLinkAuthorization } from "./remote-link-window.js";
@@ -24,6 +25,7 @@ export function registerRemoteLinkIpc(deps: {
   isMainWindow: (contents: WebContents) => boolean;
   withMutation: <T>(cwd: string, write: () => Promise<T>) => Promise<T>;
   onChanged: () => void;
+  hostOAuthAdapters?: () => readonly HostLinkOAuthAdapter[];
 }) {
   const { ipcMain, requireRendererProjectPath } = deps;
   const prepareGitHubLink = createAccountGitHubLinkPreparer({
@@ -83,6 +85,7 @@ export function registerRemoteLinkIpc(deps: {
           withMutation: (write) => deps.withMutation(cwd, write),
           onChanged: deps.onChanged,
           allowCliLogin: true,
+          hostOAuthAdapters: deps.hostOAuthAdapters?.(),
         }),
         open: openNativeLinkAuthorization,
         onConnected: () => {
