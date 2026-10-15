@@ -1,5 +1,5 @@
 import React from "react";
-import { Brain, LoaderCircle } from "lucide-react";
+import { Brain, LoaderCircle, X } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -13,20 +13,26 @@ import { MemoryStoreView } from "../settings/MemorySection";
 import { useT } from "../i18n";
 import { useConfirm } from "../ui/ConfirmDialog";
 import type { DigitalHumanProfileEntry } from "./types";
+import { useDialogFocus } from "../ui/useDialogFocus";
 
 export function DigitalHumanMemoryDialog({
   profile,
+  opener,
   enabling = false,
   onEnable,
   onOpenChange,
 }: {
   profile: DigitalHumanProfileEntry | null;
+  opener?: HTMLElement | null;
   enabling?: boolean;
   onEnable?: () => void;
   onOpenChange: (open: boolean) => void;
 }) {
   const { t } = useT();
-  const confirm = useConfirm();
+  const dialogFocus = useDialogFocus(!!profile, opener);
+  const confirmDialog = useConfirm();
+  const confirm: typeof confirmDialog = (options) =>
+    dialogFocus.withNestedFocus(() => confirmDialog(options));
   const [dirty, setDirty] = React.useState(false);
   const [saving, setSaving] = React.useState(false);
   React.useEffect(() => {
@@ -53,20 +59,27 @@ export function DigitalHumanMemoryDialog({
   return (
     <Dialog open onOpenChange={requestClose}>
       <DialogContent
-        className="flex max-h-[90vh] max-w-5xl flex-col gap-0 overflow-hidden p-0"
-        showClose={!saving}
+        ref={dialogFocus.contentRef}
+        data-dialog-focus-owner={dialogFocus.focusOwnerId}
+        onCloseAutoFocus={dialogFocus.onCloseAutoFocus}
+        className="flex max-h-[calc(100dvh-2rem)] min-w-0 max-w-5xl flex-col gap-0 overflow-hidden p-0"
+        showClose={false}
       >
-        <DialogHeader className="border-b border-border/70 bg-muted/25 px-6 py-5 pr-12">
-          <div className="flex items-start gap-3.5">
-            <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl border border-primary/15 bg-primary/10 text-sm font-semibold text-primary shadow-sm">
+        <DialogHeader className="shrink-0 flex-row items-start justify-between gap-3 space-y-0 border-b border-border/70 bg-muted/25 px-6 py-5 [@media(max-height:32rem)]:px-4 [@media(max-height:32rem)]:py-3">
+          <div className="flex min-w-0 flex-1 items-start gap-3.5">
+            <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl border border-primary/15 bg-primary/10 text-sm font-semibold text-primary shadow-sm [@media(max-height:32rem)]:hidden">
               {initials}
             </span>
             <div className="min-w-0 flex-1">
-              <p className="mb-1.5 text-[10px] font-semibold uppercase tracking-[0.16em] text-primary">
+              <p className="mb-1.5 text-[10px] font-semibold uppercase tracking-[0.16em] text-primary [@media(max-height:32rem)]:hidden">
                 {t("digitalHumans.memory.eyebrow")}
               </p>
               <div className="flex flex-wrap items-center gap-2">
-                <DialogTitle>
+                <DialogTitle
+                  tabIndex={0}
+                  data-dialog-scroll
+                  className="max-h-[25dvh] min-w-0 overflow-y-auto overscroll-contain text-base leading-5 [overflow-wrap:anywhere]"
+                >
                   {t("digitalHumans.memory.title", { name: profile.label })}
                 </DialogTitle>
                 <Badge variant={profile.portableMemory ? "success" : "secondary"}>
@@ -75,16 +88,38 @@ export function DigitalHumanMemoryDialog({
                     : t("digitalHumans.memory.inactiveBadge")}
                 </Badge>
               </div>
-              <DialogDescription className="mt-1.5 max-w-2xl leading-5">
+              <DialogDescription className="mt-1.5 max-w-2xl leading-5 [@media(max-height:32rem)]:sr-only">
                 {profile.portableMemory
                   ? t("digitalHumans.memory.description")
                   : t("digitalHumans.memory.disabledDescription")}
               </DialogDescription>
             </div>
           </div>
+          <Button
+            type="button"
+            size="icon"
+            variant="ghost"
+            className="size-8 shrink-0"
+            aria-label={t("digitalHumans.close")}
+            aria-disabled={saving}
+            onClick={() => requestClose(false)}
+          >
+            <X size={16} aria-hidden="true" />
+          </Button>
         </DialogHeader>
 
-        <div className="min-h-0 flex-1 overflow-y-auto p-5">
+        <div
+          data-dialog-scroll
+          role="region"
+          tabIndex={0}
+          aria-label={t("digitalHumans.memory.title", { name: profile.label })}
+          className="min-h-0 min-w-0 flex-1 overflow-y-auto overscroll-contain p-5 [overflow-wrap:anywhere] [@media(max-height:32rem)]:p-2"
+        >
+          <p className="mb-4 hidden text-xs leading-5 text-muted-foreground [@media(max-height:32rem)]:block">
+            {profile.portableMemory
+              ? t("digitalHumans.memory.description")
+              : t("digitalHumans.memory.disabledDescription")}
+          </p>
           <div
             className={
               profile.portableMemory
@@ -122,6 +157,7 @@ export function DigitalHumanMemoryDialog({
             level="profile"
             profileName={profile.name}
             presentation="profile"
+            confirmDialog={confirm}
             onDirtyChange={setDirty}
             onSavingChange={setSaving}
           />

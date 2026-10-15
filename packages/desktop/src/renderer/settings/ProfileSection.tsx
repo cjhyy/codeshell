@@ -85,7 +85,7 @@ export function ProfileSection({
                   size="sm"
                   variant="outline"
                   disabled={profileSwitch.busy}
-                  onClick={() => void profileSwitch.open(null)}
+                  onClick={(event) => void profileSwitch.open(null, event.currentTarget)}
                 >
                   {t("settingsX.profiles.deactivate")}
                 </Button>
@@ -93,7 +93,7 @@ export function ProfileSection({
                 <Button
                   size="sm"
                   disabled={profileSwitch.busy}
-                  onClick={() => void profileSwitch.open(profile.name)}
+                  onClick={(event) => void profileSwitch.open(profile.name, event.currentTarget)}
                 >
                   {t("settingsX.profiles.activate")}
                 </Button>

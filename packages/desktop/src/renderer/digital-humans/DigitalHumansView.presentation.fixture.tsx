@@ -253,7 +253,7 @@ try {
   } else if (scenario.endsWith("save-target-switch")) {
     if (scenario.startsWith("settings-")) {
       const edit = find((node) => node.tagName === "BUTTON" && textOf(node) === "编辑");
-      await update(() => props(edit).onClick());
+      await update(() => props(edit).onClick({ currentTarget: edit }));
     } else {
       await update(() => profileCardProps().onEdit());
     }

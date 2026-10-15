@@ -364,9 +364,37 @@ function Models({
   const [probing, setProbing] = React.useState<string | null>(null);
   const [results, setResults] = React.useState<Record<string, ModelProbeResult | string>>({});
   const probe = React.useRef<AbortController | null>(null);
+  const editorOpener = React.useRef<HTMLButtonElement | null>(null);
+  const addButton = React.useRef<HTMLButtonElement>(null);
+  const connectionsHeading = React.useRef<HTMLHeadingElement>(null);
+  const restoreEditorFocus = React.useRef<HTMLElement | null>(null);
   const connections = configuration.connections.filter((item) => item.tag === "text");
   const otherCount = configuration.connections.length - connections.length;
   const blocked = disabled || !!probing;
+  React.useLayoutEffect(() => {
+    const source = restoreEditorFocus.current;
+    if (editing !== null || !source) return;
+    restoreEditorFocus.current = null;
+    if (document.activeElement !== document.body && document.activeElement !== source) return;
+    const opener = editorOpener.current;
+    const target =
+      opener?.isConnected && !opener.disabled
+        ? opener
+        : addButton.current && !addButton.current.disabled
+          ? addButton.current
+          : connectionsHeading.current;
+    target?.focus();
+  }, [editing]);
+  const openEditor = (connection: HubConnection | "__new__", opener: HTMLButtonElement) => {
+    editorOpener.current = opener;
+    restoreEditorFocus.current = null;
+    setEditing(connection);
+  };
+  const closeEditor = (owned: boolean) => {
+    restoreEditorFocus.current =
+      owned && document.activeElement instanceof HTMLElement ? document.activeElement : null;
+    setEditing(null);
+  };
   React.useEffect(() => {
     if (removing && !configuration.connections.some((item) => item.id === removing.id))
       setRemoving(null);
@@ -429,15 +457,16 @@ function Models({
         onDirtyChange={setDefaultsDirty}
       />
       <div className="config-section-heading">
-        <h2>
+        <h2 ref={connectionsHeading} tabIndex={-1}>
           文字模型连接 <span className="config-count">{connections.length}</span>
         </h2>
         <button
+          ref={addButton}
           className="config-button"
           disabled={
             blocked || editing !== null || removing !== null || !configuration.catalog.length
           }
-          onClick={() => setEditing("__new__")}
+          onClick={(event) => openEditor("__new__", event.currentTarget)}
         >
           <span aria-hidden="true">＋</span> 添加连接
         </button>
@@ -451,7 +480,7 @@ function Models({
             configuration={configuration}
             disabled={blocked}
             save={save}
-            onDone={() => setEditing(null)}
+            onDone={closeEditor}
             onDirtyChange={setEditorDirty}
           />
         </div>
@@ -486,7 +515,7 @@ function Models({
                 <button
                   className="config-button config-button-quiet"
                   disabled={blocked || editing !== null || removing !== null}
-                  onClick={() => setEditing(connection)}
+                  onClick={(event) => openEditor(connection, event.currentTarget)}
                 >
                   编辑
                 </button>
@@ -743,9 +772,54 @@ function ConnectionEditor({
   configuration: HubConfiguration;
   disabled: boolean;
   save: Save;
-  onDone: () => void;
+  onDone: (restoreFocus: boolean) => void;
   onDirtyChange: (dirty: boolean) => void;
 }) {
+  const formRef = React.useRef<HTMLFormElement>(null);
+  const nameRef = React.useRef<HTMLInputElement>(null);
+  const modelRef = React.useRef<HTMLInputElement>(null);
+  const live = React.useRef(false);
+  const pendingFocus = React.useRef<{ cancelled: boolean; source: Element | null } | null>(null);
+  const [finished, setFinished] = React.useState<{
+    owner: { cancelled: boolean; source: Element | null };
+    ok: boolean;
+  } | null>(null);
+  React.useLayoutEffect(() => {
+    live.current = true;
+    (nameRef.current?.readOnly ? modelRef.current : nameRef.current)?.focus();
+    const relinquish = (event: Event) => {
+      if (pendingFocus.current && !formRef.current?.contains(event.target as Node)) {
+        pendingFocus.current.cancelled = true;
+      }
+    };
+    const blur = () => {
+      if (pendingFocus.current) pendingFocus.current.cancelled = true;
+    };
+    document.addEventListener("pointerdown", relinquish, true);
+    document.addEventListener("focusin", relinquish, true);
+    window.addEventListener("blur", blur);
+    return () => {
+      live.current = false;
+      pendingFocus.current = null;
+      document.removeEventListener("pointerdown", relinquish, true);
+      document.removeEventListener("focusin", relinquish, true);
+      window.removeEventListener("blur", blur);
+    };
+  }, []);
+  React.useLayoutEffect(() => {
+    if (disabled || !finished) return;
+    setFinished(null);
+    if (pendingFocus.current !== finished.owner) return;
+    pendingFocus.current = null;
+    const active = document.activeElement;
+    const owned =
+      !finished.owner.cancelled &&
+      (active === document.body ||
+        active === finished.owner.source ||
+        !!formRef.current?.contains(active));
+    if (finished.ok) onDone(owned);
+    else if (owned) (connection ? modelRef.current : nameRef.current)?.focus();
+  }, [connection, disabled, finished, onDone]);
   const [draft, setDraft] = React.useState<ConnectionDraft>(() => {
     const value = connectionDraft(connection);
     if (!connection) value.catalogId = configuration.catalog[0]?.id ?? "";
@@ -754,6 +828,19 @@ function ConnectionEditor({
   const initialDraft = React.useRef(draft);
   const dirty = JSON.stringify(draft) !== JSON.stringify(initialDraft.current);
   const [discardAsked, setDiscardAsked] = React.useState(false);
+  const continueButton = React.useRef<HTMLButtonElement>(null);
+  const continueSource = React.useRef<HTMLElement | null>(null);
+  React.useLayoutEffect(() => {
+    if (discardAsked) {
+      if (formRef.current?.contains(document.activeElement)) continueButton.current?.focus();
+      return;
+    }
+    const source = continueSource.current;
+    continueSource.current = null;
+    if (source && (document.activeElement === document.body || document.activeElement === source)) {
+      (nameRef.current?.readOnly ? modelRef.current : nameRef.current)?.focus();
+    }
+  }, [discardAsked]);
   const latest = connection
     ? configuration.connections.find((item) => item.id === connection.id)
     : undefined;
@@ -783,11 +870,15 @@ function ConnectionEditor({
     setDraft((current) => ({ ...current, [field]: value }));
   return (
     <form
+      ref={formRef}
       className="config-connection-editor"
       onSubmit={async (event) => {
         event.preventDefault();
-        if (outdated) return;
-        if (await save("模型连接", (signal) => saveConnection(draft, signal))) onDone();
+        if (disabled || outdated || pendingFocus.current) return;
+        const owner = { cancelled: false, source: document.activeElement };
+        pendingFocus.current = owner;
+        const ok = await save("模型连接", (signal) => saveConnection(draft, signal));
+        if (live.current) setFinished({ owner, ok });
       }}
     >
       <fieldset disabled={disabled}>
@@ -812,6 +903,7 @@ function ConnectionEditor({
           <label>
             <span>连接名称</span>
             <input
+              ref={nameRef}
               required
               maxLength={120}
               value={draft.id}
@@ -843,6 +935,7 @@ function ConnectionEditor({
           <label className="config-full-width">
             <span>模型名称</span>
             <input
+              ref={modelRef}
               required
               maxLength={240}
               value={draft.model}
@@ -901,13 +994,22 @@ function ConnectionEditor({
             <p>还有未保存的修改，确定放弃？</p>
             <div className="config-form-actions">
               <button
+                ref={continueButton}
                 type="button"
                 className="config-button"
-                onClick={() => setDiscardAsked(false)}
+                onClick={(event) => {
+                  continueSource.current =
+                    document.activeElement === event.currentTarget ? event.currentTarget : null;
+                  setDiscardAsked(false);
+                }}
               >
                 继续编辑
               </button>
-              <button type="button" className="config-button config-button-danger" onClick={onDone}>
+              <button
+                type="button"
+                className="config-button config-button-danger"
+                onClick={() => onDone(!!formRef.current?.contains(document.activeElement))}
+              >
                 放弃修改
               </button>
             </div>
@@ -917,7 +1019,11 @@ function ConnectionEditor({
           <button
             type="button"
             className="config-button config-button-quiet"
-            onClick={() => (dirty ? setDiscardAsked(true) : onDone())}
+            onClick={() =>
+              dirty
+                ? setDiscardAsked(true)
+                : onDone(!!formRef.current?.contains(document.activeElement))
+            }
           >
             取消
           </button>
