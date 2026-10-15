@@ -75,7 +75,7 @@ export const settingsNs = {
         cancelGitHubConnection: "取消 GitHub 连接",
         connectGitHubChecking: "正在检查此云服务是否支持同时连接 GitHub…",
         connectGitHubDescription:
-          "选中后将申请公开和私有仓库读写权限（repo）。连接后，在「凭证 → Link」中选择要使用的仓库和 Actions 权限。",
+          "登录只验证云账号，并保留已有 Link 连接。仅在需要新建或更新 GitHub 数据连接时勾选；将申请公开和私有仓库读写权限（repo），随后在「凭证 → Link」中选择要使用的仓库和 Actions 权限。",
         connectGitHubUnavailable:
           "此云服务暂不支持登录时连接 GitHub；仍可使用 GitHub 登录，稍后在「凭证 → Link」连接。",
         githubConnection: "GitHub 连接",
@@ -83,7 +83,8 @@ export const settingsNs = {
         githubConnection_connected: "GitHub 已连接。可在「凭证 → Link」中管理仓库和 Actions 权限。",
         githubConnection_failed:
           "云账号已登录，但 GitHub 连接未完成。可稍后在「凭证 → Link」中重试。",
-        githubConnection_skipped: "云账号已登录，尚未连接 GitHub。可稍后在「凭证 → Link」中连接。",
+        githubConnection_skipped:
+          "云账号已登录，GitHub 数据连接步骤已跳过或取消。已有 Link 连接保留，可在「凭证 → Link」中管理。",
         githubCreatesAccount: "首次授权会自动创建 CodeShell 账号，无需先注册或设置密码。",
         githubExistingOnly: "此服务已关闭注册；仅已关联 GitHub 的 CodeShell 账号可继续登录。",
         passwordMethod: "账号密码登录方式",
@@ -1228,7 +1229,7 @@ export const settingsNs = {
         connectGitHubChecking:
           "Checking whether this service supports connecting GitHub during sign-in…",
         connectGitHubDescription:
-          "When selected, this requests read and write access to public and private repositories (repo). After connecting, choose the repositories and Actions permissions to use in Credentials → Link.",
+          "Signing in verifies your cloud account and preserves existing Link connections. Select this only to create or update a GitHub data connection; it requests read and write access to public and private repositories (repo). Then choose the repositories and Actions permissions to use in Credentials → Link.",
         connectGitHubUnavailable:
           "This service does not support connecting GitHub during sign-in yet. You can still sign in with GitHub and connect later in Credentials → Link.",
         githubConnection: "GitHub connection",
@@ -1239,7 +1240,7 @@ export const settingsNs = {
         githubConnection_failed:
           "Your cloud account is signed in, but the GitHub connection did not finish. Retry later in Credentials → Link.",
         githubConnection_skipped:
-          "Your cloud account is signed in. GitHub is not connected; connect later in Credentials → Link.",
+          "Your cloud account is signed in. The GitHub data connection step was skipped or cancelled. Existing Link connections are preserved; manage them in Credentials → Link.",
         githubCreatesAccount:
           "Your first authorization automatically creates a CodeShell account. No prior registration or password is needed.",
         githubExistingOnly:

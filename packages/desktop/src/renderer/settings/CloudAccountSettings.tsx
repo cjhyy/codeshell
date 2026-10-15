@@ -20,7 +20,7 @@ export function CloudAccountSettings({ embedded = false }: { embedded?: boolean 
   const [password, setPassword] = useState("");
   const [confirmation, setConfirmation] = useState("");
   const [mode, setMode] = useState<"login" | "register">("login");
-  const [connectGitHub, setConnectGitHub] = useState(true);
+  const [connectGitHub, setConnectGitHub] = useState(false);
   const [busy, setBusy] = useState(false);
   const [logoutUnconfirmed, setLogoutUnconfirmed] = useState(false);
   const busyRef = useRef(false);
@@ -29,6 +29,7 @@ export function CloudAccountSettings({ embedded = false }: { embedded?: boolean 
   const authorityGenerationRef = useRef(0);
   const [authorityGeneration, setAuthorityGeneration] = useState(0);
   const applyStatus = (next: CloudAccountStatus) => {
+    if (next.state === "signed-in") setConnectGitHub(false);
     if (next.account) setLogoutUnconfirmed(false);
     const identity =
       next.state === "signed-in" && next.account ? `${next.origin}\n${next.account.id}` : "";

@@ -88,11 +88,14 @@ same nickname/username editing. The profile link does not authorize Link access.
 
 ## GitHub login and data connection
 
-“Continue with GitHub” defaults to “Connect GitHub too” when the selected service
-supports the account-to-Link handoff. It can be unchecked to sign in only. Older
-services remain usable for sign-in; the unavailable connection option is explained
-inline. Binding a GitHub login identity to an existing password account remains a
-separate action and does not start a data connection.
+"Continue with GitHub" defaults to account sign-in only, preserving existing Link
+connections and their repository/action grants. "Connect GitHub too" is an explicit
+option for creating or updating a data connection when the selected service supports
+the account-to-Link handoff. Each successful sign-in clears this choice, including
+when signing out and signing in again within the same dialog. Older services remain
+usable for sign-in; the unavailable connection option is explained inline. Binding
+a GitHub login identity to an existing password account remains a separate action
+and does not start a data connection.
 
 With the option enabled, Desktop prepares its existing Link PKCE job without opening
 a browser. The account service verifies that job with the configured Link service
@@ -107,10 +110,10 @@ Account identities/sessions remain in the account database; encrypted provider
 credentials, connections, repository/action grants, and owner-to-connection mappings
 remain in Link's database. CodeShell account bearer tokens never go to Link. Claim
 tickets remain in main memory, expire ten minutes after preparation, and are excluded
-from account persistence and renderer status. Repeated login reuses the same remote
-connection for the exact account origin, account UUID and GitHub ID. Desktop also
-reuses a uniquely matching user connection, preserving its local ID and label while
-retiring its previous grant; ambiguous matches fail safely.
+from account persistence and renderer status. Repeated explicit connection requests
+reuse the same remote connection for the exact account origin, account UUID and
+GitHub ID. Desktop also reuses a uniquely matching user connection, preserving its
+local ID and label while retiring its previous grant; ambiguous matches fail safely.
 
 Login succeeds independently of Link. Connection progress appears after sign-in;
 canceling or failing that step keeps the signed-in account. Logging out preserves

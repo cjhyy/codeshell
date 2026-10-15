@@ -49,8 +49,9 @@ const scenarios = {
     "keeps GitHub sign-in available when password registration is closed",
   "github-automatic-account":
     "signs in a first-time GitHub account without entering password credentials",
-  "github-connect-default":
-    "requests a GitHub connection by default and shows its result separately",
+  "github-login-only-default": "signs in with GitHub by default while preserving existing Links",
+  "github-connect-optin": "requests a GitHub connection only after opting in and shows its result",
+  "github-connect-repeat": "resets the connection choice after sign-in and allows a fresh opt-in",
   "github-connect-optout": "keeps GitHub login available when the connection choice is unchecked",
   "github-connect-unavailable": "disables unsupported GitHub connections without blocking sign-in",
   "github-connect-legacy": "treats missing connection support as unavailable for older services",
