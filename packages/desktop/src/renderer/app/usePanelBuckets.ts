@@ -50,6 +50,7 @@ import {
   type PanelBucketState,
 } from "./appUtils";
 import { startPanelResize } from "./panelResize";
+import type { SubagentSelection } from "../subagents/SubagentNavigation";
 
 interface Params {
   sessions: {
@@ -702,6 +703,19 @@ export function usePanelBuckets({ sessions, quickChat, controls, stream, shell }
       };
     });
 
+  const openSubagent = useCallback(
+    (selection: SubagentSelection): void => {
+      updatePanelBucket(activeBucketRef.current, (state) => ({
+        ...state,
+        open: true,
+        subagentSelection: selection,
+        requestNonce: state.requestNonce + 1,
+        requestKind: "subagent",
+      }));
+    },
+    [activeBucketRef, updatePanelBucket],
+  );
+
   const openPanel = (kind: PanelTab): void => {
     if (kind === "review" && !gitReviewAvailable) return;
     updateActivePanelBucket((state) => ({
@@ -979,6 +993,7 @@ export function usePanelBuckets({ sessions, quickChat, controls, stream, shell }
     panelBuckets,
     togglePanel,
     openPanel,
+    openSubagent,
     panelWidth,
     beginPanelResize,
     composerSeed,

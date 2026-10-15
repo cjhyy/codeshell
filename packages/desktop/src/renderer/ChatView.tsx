@@ -13,6 +13,7 @@ import {
   X,
 } from "lucide-react";
 import { MessageStream, type ContextPackageCreatedHandler } from "./MessageStream";
+import type { SubagentSelection } from "./subagents/SubagentNavigation";
 import type { Message } from "./types";
 import { loadHistory, pushHistory } from "./promptHistory";
 import { PermissionPill, type PermissionMode } from "./chat/PermissionPill";
@@ -107,6 +108,7 @@ interface Props {
   engineSessionId?: string | null;
   liveTurnActive?: boolean;
   onContextPackageCreated?: ContextPackageCreatedHandler;
+  onViewSubagent?: (selection: SubagentSelection) => void;
   contextSelectionRequest?: number;
   sendBucket?: string;
   /** Explicit file-read clicks are checked against the owner's live active-session ref. */
@@ -378,6 +380,7 @@ export function ChatView({
   engineSessionId,
   liveTurnActive,
   onContextPackageCreated,
+  onViewSubagent,
   contextSelectionRequest,
   sendBucket,
   onReadLinkResource,
@@ -1634,6 +1637,7 @@ export function ChatView({
             rootStatus={conversationRootStatus}
             sendEpoch={sendEpoch}
             onContextPackageCreated={onContextPackageCreated}
+            onViewSubagent={onViewSubagent}
             onContextSelectionChange={setContextSelectionOpen}
             contextSelectionRequest={contextSelectionRequest}
           />

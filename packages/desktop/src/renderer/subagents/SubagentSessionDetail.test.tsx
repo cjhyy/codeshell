@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, test } from "bun:test";
+import { afterEach, describe, expect, spyOn, test } from "bun:test";
 import React, { act } from "react";
 import { createRoot, type Root } from "react-dom/client";
 import type { FoldItem } from "../../preload/types";
@@ -7,8 +7,8 @@ import { MessageStream } from "../MessageStream";
 import { BackgroundShellPanel } from "../panels/BackgroundShellPanel";
 import { MessageRow } from "../cc-room/CCConversationView";
 import { SubagentSessionDetail } from "./SubagentSessionDetail";
-import { subagentIdForTool } from "./SubagentNavigation";
-import type { AgentMessage, ToolMessage } from "../types";
+import { subagentIdForTool, type SubagentSelection } from "./SubagentNavigation";
+import type { AgentMessage, Message, ToolMessage } from "../types";
 
 let root: Root | null = null;
 function props(node: any): Record<string, any> {
@@ -41,6 +41,25 @@ async function mount(element: React.ReactNode) {
     await flushMicrotasks();
   });
   return container;
+}
+async function rerender(element: React.ReactNode) {
+  await act(async () => {
+    root!.render(element);
+    await flushMicrotasks();
+  });
+}
+async function filesChanged() {
+  await act(async () => {
+    window.dispatchEvent(new Event("codeshell:files-changed"));
+    await flushMicrotasks();
+  });
+}
+function deferred<T>() {
+  let resolve!: (value: T) => void;
+  const promise = new Promise<T>((done) => {
+    resolve = done;
+  });
+  return { promise, resolve };
 }
 function transcript(label: string): FoldItem[] {
   return [
@@ -189,6 +208,252 @@ describe("subagent full transcript navigation", () => {
       nodes(container, "BUTTON").find((node) => props(node)["aria-label"] === "返回上级对话"),
     );
     expect(text(container)).not.toContain("Child request");
+  });
+
+  test("an external subagent opener preserves the parent stream and its subsequent output", async () => {
+    const reads: string[] = [];
+    const selections: SubagentSelection[] = [];
+    api({
+      getSessionTranscript: async (id: string) => {
+        reads.push(id);
+        return transcript("Child request");
+      },
+    });
+    const messages: Message[] = [
+      { kind: "user", id: "parent-request", text: "Continue the parent task" },
+      tool({ result: "agent_id: child-a (internal — do not show to user)" }),
+    ];
+    const open = (selection: SubagentSelection) => selections.push(selection);
+    const container = await mount(
+      <MessageStream engineSessionId="parent-a" messages={messages} onViewSubagent={open} />,
+    );
+    const stream = nodes(container, "DIV").find(
+      (node) => props(node).className === "cs-chat-transcript w-full min-w-0",
+    );
+    expect(stream).toBeDefined();
+    for (let i = 0; i < 4; i++) {
+      const view = nodes(container, "BUTTON").find((node) => text(node) === "完整对话");
+      if (view) {
+        await click(view);
+        break;
+      }
+      await click(
+        nodes(container, "BUTTON").find((node) => props(node)["aria-expanded"] === false),
+      );
+    }
+    expect(selections).toEqual([
+      { agentId: "child-a", parentSessionId: "parent-a", label: "Read document", running: true },
+    ]);
+    expect(reads).toEqual([]);
+    expect(text(container)).toContain("Continue the parent task");
+    expect(nodes(container, "DIV")).toContain(stream);
+    await rerender(
+      <MessageStream
+        engineSessionId="parent-a"
+        messages={[
+          ...messages,
+          { kind: "assistant", id: "parent-output", text: "Parent keeps working", done: false },
+        ]}
+        onViewSubagent={open}
+      />,
+    );
+    expect(text(container)).toContain("Continue the parent task");
+    expect(text(container)).toContain("Parent keeps working");
+    expect(nodes(container, "DIV")).toContain(stream);
+    expect(reads).toEqual([]);
+  });
+
+  test("inactive dock details defer reads and refresh when shown without a back button", async () => {
+    const reads: string[] = [];
+    const queries: string[] = [];
+    api({
+      listDiskSessions: async ({ parentSessionId }: { parentSessionId: string }) => {
+        queries.push(parentSessionId);
+        return { sessions: [], nextCursor: null };
+      },
+      getSessionTranscript: async (id: string) => {
+        reads.push(id);
+        return transcript(`Child request ${reads.length}`);
+      },
+    });
+    const detail = (active: boolean) => (
+      <SubagentSessionDetail agentId="child" parentSessionId="parent" active={active} />
+    );
+    const container = await mount(detail(false));
+    await filesChanged();
+    expect(reads).toEqual([]);
+    expect(queries).toEqual([]);
+    expect(
+      nodes(container, "BUTTON").some((node) => props(node)["aria-label"] === "返回上级对话"),
+    ).toBe(false);
+    expect(
+      props(nodes(container, "BUTTON").find((node) => props(node)["aria-label"] === "刷新对话"))
+        .disabled,
+    ).toBe(true);
+    await rerender(detail(true));
+    expect(reads).toEqual(["child"]);
+    expect(queries).toEqual(["parent"]);
+    expect(text(container)).toContain("Child request 1");
+    await rerender(detail(false));
+    await filesChanged();
+    expect(reads).toHaveLength(1);
+    expect(queries).toHaveLength(1);
+    await rerender(detail(true));
+    expect(reads).toEqual(["child", "child"]);
+    expect(queries).toEqual(["parent", "parent"]);
+    expect(text(container)).toContain("Child request 2");
+  });
+
+  test("hiding invalidates old transcript and catalog responses across reopening", async () => {
+    const oldTranscript = deferred<FoldItem[]>();
+    const oldCatalog = deferred<Awaited<ReturnType<typeof window.codeshell.listDiskSessions>>>();
+    let reads = 0;
+    let queries = 0;
+    api({
+      listDiskSessions: async () => {
+        queries += 1;
+        return queries === 1
+          ? oldCatalog.promise
+          : {
+              sessions: [
+                {
+                  id: "child",
+                  engineSessionId: "child",
+                  title: "Current child title",
+                  cwd: "/repo",
+                  origin: "subagent",
+                  updatedAt: 1,
+                },
+              ],
+              nextCursor: null,
+            };
+      },
+      getSessionTranscript: async () => {
+        reads += 1;
+        return reads === 1 ? oldTranscript.promise : transcript("Current child transcript");
+      },
+    });
+    const detail = (active: boolean) => (
+      <SubagentSessionDetail agentId="child" parentSessionId="parent" active={active} />
+    );
+    const container = await mount(detail(true));
+    await rerender(detail(false));
+    await rerender(detail(true));
+    expect(text(container)).toContain("Current child title");
+    expect(text(container)).toContain("Current child transcript");
+    await act(async () => {
+      oldTranscript.resolve(transcript("Stale child transcript"));
+      oldCatalog.resolve({
+        sessions: [
+          {
+            id: "child",
+            engineSessionId: "child",
+            title: "Stale child title",
+            cwd: "/repo",
+            origin: "subagent",
+            updatedAt: 1,
+          },
+        ],
+        nextCursor: null,
+      });
+      await flushMicrotasks();
+    });
+    expect(text(container)).toContain("Current child title");
+    expect(text(container)).toContain("Current child transcript");
+    expect(text(container)).not.toContain("Stale child");
+  });
+
+  test("switching the selected child refreshes both its title and full transcript", async () => {
+    api({
+      listDiskSessions: async () => ({
+        sessions: ["one", "two"].map((id) => ({
+          id,
+          engineSessionId: id,
+          title: `Title ${id}`,
+          cwd: "/repo",
+          origin: "subagent",
+          updatedAt: 1,
+        })),
+        nextCursor: null,
+      }),
+      getSessionTranscript: async (id: string) => transcript(`Transcript ${id}`),
+    });
+    const container = await mount(<SubagentSessionDetail agentId="one" parentSessionId="parent" />);
+    expect(text(container)).toContain("Transcript one");
+    await rerender(<SubagentSessionDetail agentId="two" parentSessionId="parent" />);
+    expect(text(container)).toContain("Title two");
+    expect(text(container)).toContain("Transcript two");
+    expect(text(container)).not.toContain("Transcript one");
+    expect(props(nodes(container, "SELECT")[0]).value).toBe("two");
+  });
+
+  test("hidden dock visibility pauses polling and change events for nested child details", async () => {
+    const reads: string[] = [];
+    api({
+      getSessionTranscript: async (id: string): Promise<FoldItem[]> => {
+        reads.push(id);
+        return id === "child"
+          ? [
+              {
+                kind: "stream",
+                event: { type: "agent_start", agentId: "grandchild", description: "Nested task" },
+              },
+            ]
+          : transcript("Grandchild request");
+      },
+    });
+    const scheduled = new Map<ReturnType<typeof setInterval>, () => void>();
+    const originalSetInterval = globalThis.setInterval;
+    const originalClearInterval = globalThis.clearInterval;
+    const intervalSpy = spyOn(globalThis, "setInterval").mockImplementation(
+      (callback, interval, ...args) => {
+        const timer = originalSetInterval(callback, interval, ...args);
+        if (interval === 3000 && typeof callback === "function")
+          scheduled.set(timer, () => callback(...args));
+        return timer;
+      },
+    );
+    const clearSpy = spyOn(globalThis, "clearInterval").mockImplementation((timer) => {
+      scheduled.delete(timer as ReturnType<typeof setInterval>);
+      originalClearInterval(timer);
+    });
+    const visibility = Object.getOwnPropertyDescriptor(document, "visibilityState");
+    Object.defineProperty(document, "visibilityState", { configurable: true, value: "visible" });
+    const detail = (active: boolean) => (
+      <SubagentSessionDetail agentId="child" parentSessionId="parent" running active={active} />
+    );
+    try {
+      const container = await mount(detail(true));
+      await click(
+        nodes(container, "BUTTON").find(
+          (node) => props(node)["aria-controls"] === "agent-body-grandchild",
+        ),
+      );
+      await click(nodes(container, "BUTTON").find((node) => text(node) === "完整对话"));
+      expect(text(container)).toContain("Grandchild request");
+      expect(scheduled.size).toBe(2);
+      await act(async () => {
+        for (const tick of [...scheduled.values()]) tick();
+        await flushMicrotasks();
+      });
+      expect(reads).toEqual(["child", "grandchild", "child", "grandchild"]);
+      await rerender(detail(false));
+      expect(scheduled.size).toBe(0);
+      await filesChanged();
+      expect(reads).toHaveLength(4);
+      await rerender(detail(true));
+      expect(scheduled.size).toBe(2);
+      expect(text(container)).toContain("Grandchild request");
+      expect(reads).toHaveLength(6);
+      expect(reads.slice(4).sort()).toEqual(["child", "grandchild"]);
+      await rerender(detail(false));
+      expect(scheduled.size).toBe(0);
+    } finally {
+      intervalSpy.mockRestore();
+      clearSpy.mockRestore();
+      if (visibility) Object.defineProperty(document, "visibilityState", visibility);
+      else Reflect.deleteProperty(document, "visibilityState");
+    }
   });
 
   test("child picker scopes by parent, follows pagination, and ignores stale transcript reads", async () => {

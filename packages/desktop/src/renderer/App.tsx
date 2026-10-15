@@ -1196,6 +1196,7 @@ function App() {
     panelBuckets,
     togglePanel,
     openPanel,
+    openSubagent,
     panelWidth,
     beginPanelResize,
     composerSeed,
@@ -2592,6 +2593,7 @@ function App() {
                       handleContextPackageCreated(result, activeBucket, options)
                     }
                     contextSelectionRequest={contextSelectionRequest}
+                    onViewSubagent={openSubagent}
                     sendBucket={activeBucket}
                     onPrepareLinkSubmission={() => {
                       const context = prepareAttachmentSession();

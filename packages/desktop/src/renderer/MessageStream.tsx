@@ -134,6 +134,8 @@ interface Props {
   onContextSelectionChange?: (open: boolean) => void;
   /** Monotonic request from the title-bar context-selection button. */
   contextSelectionRequest?: number;
+  /** Open a child conversation in the owning chat's side dock. */
+  onViewSubagent?: (selection: SubagentSelection) => void;
 }
 
 export function MessageStream({
@@ -155,6 +157,7 @@ export function MessageStream({
   onContextPackageCreated,
   onContextSelectionChange,
   contextSelectionRequest,
+  onViewSubagent,
 }: Props) {
   const { t } = useT();
   const [selectedSubagent, setSelectedSubagent] = useState<SubagentSelection | null>(null);
@@ -179,9 +182,9 @@ export function MessageStream({
     () => ({
       sessionId: localRuntime ? engineSessionId : undefined,
       agents: subagents,
-      onView: localRuntime ? setSelectedSubagent : () => undefined,
+      onView: localRuntime ? (onViewSubagent ?? setSelectedSubagent) : () => undefined,
     }),
-    [engineSessionId, subagents, localRuntime],
+    [engineSessionId, subagents, localRuntime, onViewSubagent],
   );
   useEffect(() => setSelectedSubagent(null), [engineSessionId]);
   // The LAST files_changed message = the most recent turn's file edits. Only

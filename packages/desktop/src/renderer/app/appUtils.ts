@@ -4,6 +4,7 @@ import type { ImageAttachment } from "../chat/attachments";
 import type { PermissionMode } from "../chat/PermissionPill";
 import type { MessagesReducerState } from "../types";
 import type { PanelTab } from "../view";
+import type { SubagentSelection } from "../subagents/SubagentNavigation";
 import { loadPanelState, NO_REPO_KEY } from "../transcripts";
 
 export function stablePromptHash(text: string): string {
@@ -70,6 +71,7 @@ export interface PanelBucketState {
   revealFile?: { path: string; cwd: string | null; nonce: number; consumed?: boolean };
   openUrl?: { url: string; nonce: number };
   openCliSession?: OpenCliSessionRequest;
+  subagentSelection?: SubagentSelection;
 }
 
 export function emptyPanelBucketState(): PanelBucketState {
