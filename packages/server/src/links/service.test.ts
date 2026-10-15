@@ -328,6 +328,125 @@ describe("Link catalog health and saved account management", () => {
     expect(service.snapshot().capabilities.remoteAuth).toBe(false);
   });
 
+  test("a direct remote start refreshes a cached ready catalog before creating an authorization", async () => {
+    let requests = 0;
+    const { service } = fixture({
+      remoteLink: () => catalogConfiguration,
+      readRemoteCatalog: async () => {
+        requests++;
+        if (requests > 1) throw new RemoteLinkCatalogError("network");
+        return ["figma"];
+      },
+    });
+    await service.refreshRemoteCatalog(owner);
+    expect(remoteMode(service)?.available).toBe(true);
+    await expect(
+      service.startRemoteAuth(owner, {
+        providerId: "figma",
+        methodId: "remote-link",
+        label: "Direct Figma",
+        expectedRevision: null,
+      }),
+    ).rejects.toMatchObject({ status: 503, code: "unavailable" });
+    expect(requests).toBe(2);
+    expect(service.snapshot().remoteCatalog?.state).toBe("stale");
+    expect(remoteMode(service)?.available).toBe(false);
+  });
+
+  test("a pending issuer does not block direct authorization through a different issuer", async () => {
+    const firstCatalog = deferred();
+    const firstStarted = deferred();
+    const secondStarted = deferred();
+    let configuration = catalogConfiguration;
+    const requests: string[] = [];
+    const { service } = fixture({
+      remoteLink: () => configuration,
+      readRemoteCatalog: async (config) => {
+        requests.push(config.issuer);
+        if (config.issuer === catalogConfiguration.issuer) {
+          firstStarted.resolve();
+          await firstCatalog.promise;
+          return ["github"];
+        }
+        secondStarted.resolve();
+        return ["figma"];
+      },
+    });
+    const firstRefresh = service.refreshRemoteCatalog(owner);
+    await firstStarted.promise;
+    configuration = { ...catalogConfiguration, issuer: "https://second-catalog.example" };
+    const starting = service.startRemoteAuth(owner, {
+      providerId: "figma",
+      methodId: "remote-link",
+      label: "Second deployment",
+      expectedRevision: null,
+    });
+    try {
+      await secondStarted.promise;
+      const authorization = await starting;
+      expect(new URL(authorization.redirect!.authorizationUrl).origin).toBe(configuration.issuer);
+      expect(requests).toEqual([catalogConfiguration.issuer, configuration.issuer]);
+      expect(service.snapshot().remoteCatalog?.state).toBe("ready");
+      expect(remoteMode(service)?.available).toBe(true);
+      expect(remoteMode(service, "github")?.available ?? false).toBe(false);
+    } finally {
+      firstCatalog.resolve();
+      await firstRefresh;
+    }
+    // The late first-issuer result cannot replace the selected issuer's catalog.
+    expect(service.snapshot().remoteServer?.issuer).toBe(configuration.issuer);
+    expect(remoteMode(service)?.available).toBe(true);
+    expect(remoteMode(service, "github")?.available ?? false).toBe(false);
+  });
+
+  test("a direct start selects the current issuer after its final owner check", async () => {
+    const finalOwnerCheck = deferred();
+    const finalOwnerCheckStarted = deferred();
+    let configuration = catalogConfiguration;
+    let ownerChecks = 0;
+    const requests: string[] = [];
+    const checkingOwner: LinkOperationContext = {
+      ownerId: owner.ownerId,
+      authorize: async () => {
+        ownerChecks++;
+        if (ownerChecks === 3) {
+          finalOwnerCheckStarted.resolve();
+          await finalOwnerCheck.promise;
+        } else if (ownerChecks > 3) {
+          // Another asynchronous owner check after selection would let the
+          // deployment change before the selected authorization URL is created.
+          configuration = { ...catalogConfiguration, issuer: "https://third-catalog.example" };
+        }
+        return true;
+      },
+    };
+    const { service } = fixture({
+      remoteLink: () => configuration,
+      readRemoteCatalog: async (config) => {
+        requests.push(config.issuer);
+        return ["figma"];
+      },
+    });
+    const starting = service.startRemoteAuth(checkingOwner, {
+      providerId: "figma",
+      methodId: "remote-link",
+      label: "Current deployment",
+      expectedRevision: null,
+    });
+    await finalOwnerCheckStarted.promise;
+    configuration = { ...catalogConfiguration, issuer: "https://second-catalog.example" };
+    try {
+      await service.refreshRemoteCatalog(owner);
+    } finally {
+      finalOwnerCheck.resolve();
+    }
+    const authorization = await starting;
+    expect(new URL(authorization.redirect!.authorizationUrl).origin).toBe(configuration.issuer);
+    expect(configuration.issuer).toBe("https://second-catalog.example");
+    expect(requests).toEqual([catalogConfiguration.issuer, configuration.issuer]);
+    expect(service.snapshot().remoteCatalog?.state).toBe("ready");
+  });
+
   test("a different issuer cannot borrow the previous catalog or success timestamp", async () => {
     let clock = Date.parse("2026-10-15T00:00:00Z");
     let configuration = catalogConfiguration;
