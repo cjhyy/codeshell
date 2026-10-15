@@ -45,9 +45,12 @@ export function resolveChildToolScope(
   parentEnabled: string[] | undefined,
 ): { enabled?: string[]; disabled: string[] } {
   if (allowlist) {
+    const parentDenied = new Set(parentDisabled ?? []);
     return {
-      enabled: allowlist.filter((tool) => !NESTED_AGENT_TOOLS.includes(tool)),
-      disabled: [...NESTED_AGENT_TOOLS],
+      enabled: allowlist.filter(
+        (tool) => !NESTED_AGENT_TOOLS.includes(tool) && !parentDenied.has(tool),
+      ),
+      disabled: Array.from(new Set([...(parentDisabled ?? []), ...NESTED_AGENT_TOOLS])),
     };
   }
   return {
@@ -124,6 +127,7 @@ export interface CreateSubAgentSpawnerDeps {
   appendParentSubagent: (agentId: string, description: string) => void;
   sessionExists: (sessionId: string) => boolean;
   getSessionParentId?: (sessionId: string) => string | null | undefined;
+  getSessionContinuation?: SubAgentSpawner["getSessionContinuation"];
   childRunner: ChildEngineRunner;
   parentStream?: StreamCallback;
 }
@@ -229,7 +233,15 @@ class ChildRunSupervisor implements LiveChildControl {
 
   async run(
     task: string,
-    options: Pick<EngineRunOptions, "signal" | "onStream" | "sessionId" | "onAgentProgress">,
+    options: Pick<
+      EngineRunOptions,
+      | "signal"
+      | "onStream"
+      | "sessionId"
+      | "onAgentProgress"
+      | "subAgentContinuation"
+      | "toolAllowlist"
+    >,
   ): Promise<Awaited<ReturnType<ChildEngineRuntime["run"]>>> {
     this.running = true;
     let nextTask = task;
@@ -303,6 +315,7 @@ export function createSubAgentSpawner(deps: CreateSubAgentSpawnerDeps): SubAgent
     }),
     sessionExists: deps.sessionExists,
     getSessionParentId: deps.getSessionParentId,
+    getSessionContinuation: deps.getSessionContinuation,
     spawn: async (request) => {
       if (!request.resumeSessionId) {
         try {
@@ -402,6 +415,8 @@ export function createSubAgentSpawner(deps: CreateSubAgentSpawnerDeps): SubAgent
             signal: request.signal,
             onStream: wrapChildRuntimeStream(destination, request.agentId, request.onProgressEvent),
             sessionId: childSessionId,
+            subAgentContinuation: request.continuation,
+            toolAllowlist: request.toolAllowlist === undefined ? undefined : scope.enabled,
             onAgentProgress: request.onAgentProgress,
           });
         }
@@ -410,6 +425,8 @@ export function createSubAgentSpawner(deps: CreateSubAgentSpawnerDeps): SubAgent
           signal: request.signal,
           onStream: wrapChildRuntimeStream(destination, request.agentId, request.onProgressEvent),
           sessionId: childSessionId,
+          subAgentContinuation: request.continuation,
+          toolAllowlist: request.toolAllowlist === undefined ? undefined : scope.enabled,
         });
         return result;
       } finally {

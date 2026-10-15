@@ -123,10 +123,12 @@ describe("synchronous Agent auto-backgrounds past the threshold", () => {
     expect(events.filter((event) => event.type === "usage_update")).toHaveLength(0);
   });
 
-  it("a fast sync agent (under threshold) returns its text inline as before", async () => {
+  it("a fast sync agent (under threshold) returns its continuation handle and text inline", async () => {
     const ctx = makeCtx(async () => "quick result");
     const out = await agentTool({ description: "d", prompt: "p" }, ctx);
-    expect(out).toBe("quick result");
+    expect(out).toMatch(/^agent_id: [A-Za-z0-9_-]+\b/m);
+    expect(out).toContain("AgentSendInput");
+    expect(out.endsWith("\n\nquick result")).toBe(true);
     // No background agent left running; no notification needed.
     expect(asyncAgentRegistry.hasRunningForSession("s-test")).toBe(false);
     expect(notificationQueue.getSnapshot("s-test")).toHaveLength(0);

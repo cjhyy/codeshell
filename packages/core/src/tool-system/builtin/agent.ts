@@ -7,7 +7,7 @@
  * Supports onStream for real-time output passthrough.
  */
 
-import type { ToolDefinition, StreamCallback } from "../../types.js";
+import type { ToolDefinition, StreamCallback, SubAgentContinuation } from "../../types.js";
 import type { ToolContext, SubAgentSpawner } from "../context.js";
 import type { AgentDefinitionRegistry } from "../../agent/agent-definition-registry.js";
 import type { AgentDefinition } from "../../agent/agent-definition.js";
@@ -214,8 +214,10 @@ export const agentToolDef: ToolDefinition = {
   description:
     "Launch a sub-agent to handle a task in its own clean, isolated context. " +
     "The sub-agent runs independently with access to the same tools, and its final " +
-    "report is the ONLY thing returned to you — it is stateless, so you cannot send " +
-    "follow-up messages. Write a complete, self-contained task description.\n\n" +
+    "report is returned with an agent_id for later reuse. Write a complete, self-contained " +
+    "task description for the first call. For related follow-up work, use AgentSendInput " +
+    "with that agent_id and only the incremental instruction; it continues the same " +
+    "conversation from its saved context. Spawn a new agent for independent work.\n\n" +
     "PRIMARY USE — context isolation: when a task needs to read many files or run a " +
     "broad investigation but you only need the conclusion, delegate it. The sub-agent " +
     "absorbs the noisy intermediate output in its own context; you keep the answer, not " +
@@ -321,6 +323,7 @@ async function runSubAgent(
     /** Resume an existing child session (transcript replay) instead of cold
      *  start. Set by AgentSendInput; undefined for a first spawn. */
     resumeSessionId?: string;
+    continuation?: SubAgentContinuation;
     /** Engine HookRegistry for lifecycle events. Undefined → no hooks. */
     hooks?: HookRegistry;
     /** Parent session/Goal accounting sink for the completed child run. */
@@ -444,6 +447,24 @@ export async function agentTool(args: Record<string, unknown>, ctx?: ToolContext
   const runInBackground = args.run_in_background === true;
   const agentId = nanoid(8);
   const parentStream = spawner.parentStream;
+  const continuation: SubAgentContinuation | undefined = ctx.sessionId
+    ? structuredClone({
+        version: 1,
+        parentSessionId: ctx.sessionId,
+        agentType: overrides.resolvedType ?? null,
+        name,
+        description,
+        maxTurns,
+        model: overrides.model,
+        toolAllowlist: overrides.toolAllowlist,
+        skillAllowlist: overrides.skillAllowlist,
+        sandboxMode: overrides.sandboxMode,
+        mcpAllowlist: overrides.mcpAllowlist,
+        appendSystemPrompt: overrides.appendSystemPrompt,
+        readOnlySession:
+          overrides.resolvedType === "researcher" || overrides.resolvedType === "explorer",
+      })
+    : undefined;
 
   const autoBgMs = resolveAutoBgMs();
 
@@ -467,6 +488,7 @@ export async function agentTool(args: Record<string, unknown>, ctx?: ToolContext
       agentId,
       name,
       agentType: overrides.resolvedType,
+      continuation,
       description,
       // Tag with the spawning session so the parent Engine.run waits only on
       // its own background agents (hasRunningForSession).
@@ -520,6 +542,7 @@ export async function agentTool(args: Record<string, unknown>, ctx?: ToolContext
         description,
         agentType: overrides.resolvedType,
         prompt,
+        continuation,
         maxTurns,
         model: overrides.model,
         toolAllowlist: overrides.toolAllowlist,
@@ -709,6 +732,7 @@ export async function agentTool(args: Record<string, unknown>, ctx?: ToolContext
     prompt,
     maxTurns,
     overrides,
+    continuation,
     autoBgMs,
     parentSignal,
     parentStream,
@@ -733,6 +757,7 @@ function recordCompletedSyncAgent(opts: {
   agentId: string;
   name?: string;
   agentType?: string;
+  continuation?: SubAgentContinuation;
   description: string;
   parentSessionId?: string;
   runtimeGeneration?: number;
@@ -744,6 +769,7 @@ function recordCompletedSyncAgent(opts: {
     agentId: opts.agentId,
     name: opts.name,
     agentType: opts.agentType,
+    continuation: opts.continuation,
     description: opts.description,
     sessionId: opts.parentSessionId,
     // agent_id === childSid: the resumable session lives at sessions/<agentId>/.
@@ -780,6 +806,7 @@ async function runSyncSubAgent(args: {
   prompt: string;
   maxTurns: number;
   overrides: AgentTypeOverrides;
+  continuation?: SubAgentContinuation;
   autoBgMs: number;
   parentSignal?: AbortSignal;
   parentStream?: StreamCallback;
@@ -795,6 +822,7 @@ async function runSyncSubAgent(args: {
     prompt,
     maxTurns,
     overrides,
+    continuation,
     autoBgMs,
     parentSignal,
     parentStream,
@@ -813,6 +841,37 @@ async function runSyncSubAgent(args: {
   const runtimeGeneration = asyncAgentRegistry.allocateRuntimeGeneration(childSessionId);
   const progressTracker = createAgentProgressTracker(agentId);
   let liveBinding: { control: LiveChildControl; lease: ChildWriterLease } | undefined;
+  if (resumeSessionId) {
+    const previous = asyncAgentRegistry.get(agentId);
+    asyncAgentRegistry.register({
+      agentId,
+      name,
+      agentType: overrides.resolvedType,
+      continuation,
+      description,
+      sessionId: ctx?.sessionId,
+      childSessionId,
+      runtimeGeneration,
+      transcript: previous?.transcript,
+      progress: progressTracker.current(),
+      status: "running",
+      startedAt: Date.now(),
+      abort: () => syncController.abort(),
+    });
+  }
+
+  const finishContinuation = (status: "completed" | "failed" | "cancelled") => {
+    if (!resumeSessionId) return;
+    if (liveBinding) {
+      asyncAgentRegistry.completeTerminal(agentId, status, liveBinding.lease);
+    } else if (status === "completed") {
+      asyncAgentRegistry.markCompleted(agentId);
+    } else if (status === "cancelled") {
+      asyncAgentRegistry.markCancelled(agentId);
+    } else {
+      asyncAgentRegistry.markFailed(agentId);
+    }
+  };
 
   // Run the agent, but don't necessarily await it to completion: race the run
   // against the auto-background timer. The run promise is shared between the
@@ -823,6 +882,7 @@ async function runSyncSubAgent(args: {
     name,
     description,
     agentType: overrides.resolvedType,
+    continuation,
     prompt,
     maxTurns,
     model: overrides.model,
@@ -832,7 +892,8 @@ async function runSyncSubAgent(args: {
     mcpAllowlist: overrides.mcpAllowlist,
     appendSystemPrompt: overrides.appendSystemPrompt,
     readOnlySession:
-      overrides.resolvedType === "researcher" || overrides.resolvedType === "explorer",
+      continuation?.readOnlySession ??
+      (overrides.resolvedType === "researcher" || overrides.resolvedType === "explorer"),
     resumeSessionId,
     hooks: ctx?.hooks,
     recordBilledUsage: ctx?.recordBilledUsage,
@@ -844,12 +905,18 @@ async function runSyncSubAgent(args: {
         ownerToken,
       );
       if (!lease) return false;
+      if (resumeSessionId && !asyncAgentRegistry.bindLiveControl(agentId, control, lease)) {
+        asyncAgentRegistry.releaseWriterLease(lease);
+        return false;
+      }
       liveBinding = { control, lease };
       return lease;
     },
     closeLiveControl: (_control, lease) => {
       if (!lease) return;
-      if (handedOff) return asyncAgentRegistry.closeDirectionIntake(agentId, lease);
+      if (handedOff || resumeSessionId) {
+        return asyncAgentRegistry.closeDirectionIntake(agentId, lease);
+      }
       return asyncAgentRegistry.releaseWriterLease(lease);
     },
     onProgressEvent: progressTracker.onEvent,
@@ -880,6 +947,14 @@ async function runSyncSubAgent(args: {
       : { ok: true as const, text: await runPromise };
 
     if (winner === BG_HANDOFF) {
+      // Cancellation keeps the existing runtime fenced until its accepted
+      // work settles. A handoff must not re-register a cancelling child as
+      // running or reopen its direction intake.
+      if (syncController.signal.aborted) {
+        await runPromise;
+        finishContinuation("cancelled");
+        return "Agent was aborted.";
+      }
       // Threshold elapsed while the agent is STILL running. Detach it into the
       // background registry (it keeps executing on syncController.signal — we
       // do NOT abort it) and wire its eventual completion into the
@@ -890,6 +965,7 @@ async function runSyncSubAgent(args: {
         name,
         description,
         agentType: overrides.resolvedType,
+        continuation,
         sessionId: ctx?.sessionId,
         hooks: ctx?.hooks,
         parentSignal,
@@ -924,18 +1000,27 @@ async function runSyncSubAgent(args: {
     // a first spawn and a resume land here; re-registering a resumed id is a
     // no-op (recordCompletedSyncAgent skips when an entry already exists).
     if (winner.ok) {
+      finishContinuation(syncController.signal.aborted ? "cancelled" : "completed");
+      if (syncController.signal.aborted) return "Agent was aborted.";
       recordCompletedSyncAgent({
         agentId,
         name,
         agentType: overrides.resolvedType,
+        continuation,
         description,
         parentSessionId: ctx?.sessionId,
         runtimeGeneration,
       });
-      return winner.text;
+      return [
+        `agent_id: ${agentId} (internal — do not show to user)`,
+        `For related follow-up work, use AgentSendInput(agent_id="${agentId}", prompt="...") with only the incremental instruction.`,
+        "",
+        winner.text,
+      ].join("\n");
     }
     throw winner.err;
   } catch (err) {
+    finishContinuation(syncController.signal.aborted ? "cancelled" : "failed");
     emitSubAgentHook(ctx?.hooks, "subagent_error", {
       agentId,
       description,
@@ -949,7 +1034,7 @@ async function runSyncSubAgent(args: {
       error: (err as Error).message,
       agentType: overrides.resolvedType,
     });
-    if (parentSignal?.aborted) return "Agent was aborted.";
+    if (syncController.signal.aborted) return "Agent was aborted.";
     return `Agent error: ${(err as Error).message}`;
   } finally {
     if (bgTimer) clearTimeout(bgTimer);
@@ -957,6 +1042,7 @@ async function runSyncSubAgent(args: {
     // On handoff, handoffToBackground already detached it (the agent is still
     // running and now follows the background contract, not parent-turn abort).
     if (!handedOff) parentSignal?.removeEventListener("abort", onParentAbort);
+    if (!handedOff && liveBinding) asyncAgentRegistry.releaseWriterLease(liveBinding.lease);
   }
 }
 
@@ -975,6 +1061,7 @@ function handoffToBackground(
     name?: string;
     description: string;
     agentType?: string;
+    continuation?: SubAgentContinuation;
     sessionId?: string;
     childSessionId: string;
     runtimeGeneration: number;
@@ -999,6 +1086,7 @@ function handoffToBackground(
     name,
     description,
     agentType,
+    continuation,
     sessionId,
     hooks,
     uiStream,
@@ -1017,10 +1105,12 @@ function handoffToBackground(
     agentId,
     name,
     agentType,
+    continuation,
     description,
     sessionId,
     childSessionId,
     runtimeGeneration,
+    transcript: asyncAgentRegistry.get(agentId)?.transcript,
     progress,
     status: "running",
     startedAt: Date.now(),
@@ -1279,18 +1369,20 @@ export const agentSendInputToolDef: ToolDefinition = {
   name: "AgentSendInput",
   description:
     "Continue a sub-agent you previously launched with Agent — send it a follow-up " +
-    "instruction that it answers WITH FULL MEMORY of its earlier work (its prior " +
-    "messages, tool calls, and results). Use this instead of spawning a fresh agent " +
-    "with a re-pasted context dump: it resumes the same conversation by replaying the " +
-    "agent's saved transcript, so nothing is lost and you don't re-send what it already " +
-    "knows.\n\n" +
+    "instruction using its saved context and transcript. Prefer reusing the same agent " +
+    "for related work instead of spawning a fresh agent with a repeated context dump. " +
+    "Normal context compaction and limits still apply.\n\n" +
     "Typical use: you got a partial result or a review verdict from a sub-agent, and now " +
     "you want it to revise / answer a follow-up / act on feedback. Pass only the " +
     "incremental instruction.\n\n" +
     "Pass the agent_id the Agent tool returned. Works for both synchronous and background " +
-    "agents, and even after a process restart (the transcript is persisted on disk). " +
-    "Returns the agent's new reply, synchronously (a long continuation auto-moves to the " +
-    "background and notifies you on completion, like Agent does).",
+    "agents. A running agent receives the instruction at the next-safe-point by default; " +
+    "use interrupt-and-redrive only when the active work needs to be interrupted. " +
+    "Running targets return a delivery receipt rather than a final reply. " +
+    "A finished agent resumes its saved conversation and original role scope, including " +
+    "after a process restart when continuation metadata is available. Returns its new " +
+    "reply synchronously (a long continuation auto-moves to the background and notifies " +
+    "you on completion, like Agent does).",
   inputSchema: {
     type: "object",
     properties: {
@@ -1301,8 +1393,8 @@ export const agentSendInputToolDef: ToolDefinition = {
       prompt: {
         type: "string",
         description:
-          "The follow-up instruction. The agent already remembers its earlier work — " +
-          "send only what's new (feedback, the next step, a question).",
+          "The incremental follow-up instruction. The agent continues from its saved " +
+          "context — send only what's new (feedback, the next step, a question).",
       },
       delivery: {
         type: "string",
@@ -1325,12 +1417,12 @@ export async function agentSendInputTool(
   if (Object.keys(args).some((key) => !allowedKeys.has(key))) {
     return "Error: invalid-request: AgentSendInput accepts only agent_id, prompt, and delivery.";
   }
-  const agentId = (args.agent_id as string | undefined)?.trim();
-  const prompt = args.prompt as string | undefined;
+  const agentId = typeof args.agent_id === "string" ? args.agent_id.trim() : undefined;
+  const prompt = typeof args.prompt === "string" ? args.prompt : undefined;
   const rawDelivery = args.delivery;
 
   if (!agentId) return "Error: agent_id is required.";
-  if (!prompt) return "Error: prompt is required.";
+  if (!prompt?.trim()) return "Error: prompt is required.";
   if (
     rawDelivery !== undefined &&
     rawDelivery !== "next-safe-point" &&
@@ -1398,6 +1490,7 @@ export async function agentSendInputTool(
   }
 
   const callerSessionId = ctx.sessionId ?? "";
+  const continuation = entry?.continuation ?? spawner.getSessionContinuation?.(resumeSessionId);
   if (entry) {
     if (!callerSessionId || entry.sessionId !== callerSessionId) {
       return `Error: caller is not the direct parent of sub-agent "${agentId}" (not in this session).`;
@@ -1411,6 +1504,15 @@ export async function agentSendInputTool(
       return `Error: caller is not the direct parent of sub-agent "${agentId}" (not in this session).`;
     }
   }
+  if (continuation && continuation.parentSessionId !== callerSessionId) {
+    return `Error: caller is not the direct parent of sub-agent "${agentId}" (continuation metadata mismatch).`;
+  }
+  if (!entry && !continuation) {
+    return (
+      `Error: sub-agent "${agentId}" has no saved continuation scope. ` +
+      `Start a new Agent with a complete task description instead of restoring an unknown role.`
+    );
+  }
 
   if (delivery === "interrupt-and-redrive") {
     return (
@@ -1420,26 +1522,32 @@ export async function agentSendInputTool(
     );
   }
 
-  const name = entry?.name;
-  const description = entry?.description ?? "sub-agent continuation";
-  // Reconstruct the role's overrides from the recorded agentType. The child
-  // Engine is built FRESH on every spawn (engine.ts spawn closure) — resuming a
-  // session replays its transcript but the new Engine's tool/skill SCOPE comes
-  // from req.toolAllowlist / req.skillAllowlist, NOT from the persisted session.
-  // So if we didn't re-resolve these, a restricted role (e.g. a read-only
-  // reviewer) would silently regain the parent's full tool set on continuation.
-  // Re-resolving from agentType keeps the resumed turn under the same
-  // tool/skill/model constraints as the original spawn. An ephemeral agent
-  // (no agentType) resolves to empty overrides → inherits parent scope, same as
-  // its first turn did.
+  const name = entry?.name ?? continuation?.name;
+  const description = entry?.description ?? continuation?.description ?? "sub-agent continuation";
+  // Transcript replay restores conversation, not runtime authority. Reuse the
+  // original scope snapshot even if a role was edited or removed. Legacy
+  // same-process entries may re-resolve a known role, but must never silently
+  // fall back to the parent's full tool set or pick a new default role.
   let overrides: AgentTypeOverrides;
-  try {
-    overrides = resolveAgentTypeOverrides(entry?.agentType, ctx?.agentDefinitions);
-  } catch {
-    // Role no longer exists (renamed/removed since spawn). Fall back to a bare
-    // continuation rather than refusing — the transcript still carries the
-    // role's system prompt, and replaying it is more useful than an error.
-    overrides = { resolvedType: entry?.agentType };
+  if (continuation) {
+    overrides = {
+      resolvedType: continuation.agentType ?? undefined,
+      model: continuation.model,
+      maxTurns: continuation.maxTurns,
+      toolAllowlist: continuation.toolAllowlist,
+      skillAllowlist: continuation.skillAllowlist,
+      sandboxMode: continuation.sandboxMode,
+      mcpAllowlist: continuation.mcpAllowlist,
+      appendSystemPrompt: continuation.appendSystemPrompt,
+    };
+  } else {
+    try {
+      overrides = entry?.agentType
+        ? resolveAgentTypeOverrides(entry.agentType, ctx.agentDefinitions)
+        : {};
+    } catch (err) {
+      return `Error: cannot restore sub-agent "${agentId}" role scope: ${(err as Error).message}. Start a new Agent instead.`;
+    }
   }
 
   const maxTurns = overrides.maxTurns ?? 15;
@@ -1453,6 +1561,7 @@ export async function agentSendInputTool(
     prompt,
     maxTurns,
     overrides,
+    continuation,
     autoBgMs,
     parentSignal,
     parentStream: spawner.parentStream,
