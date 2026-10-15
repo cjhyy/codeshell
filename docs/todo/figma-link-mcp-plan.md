@@ -1,8 +1,10 @@
 # Figma Link：MCP 与 REST 能力规划
 
 状态：2026-10-15 重新规划。现有 REST 读取已实现；本文新增的官方 MCP 接入、Make
-资源读取及统一入口尚未实现或通过真实账号验收。16:20–16:29（Asia/Singapore）
-已做官方 OAuth 真实试连，动态客户端注册收到 HTTP 403，后续认证和内容读取尚未到达。
+资源读取及统一入口尚未实现或通过正式产品验收。16:20–16:29（Asia/Singapore）以
+CodeShell 名称注册收到 HTTP 403；17:00–17:06 的隔离名称对照证明仅把注册名称改为
+Codex 就可通过注册，并经用户授权完成真实 MCP 连接和文件节点 metadata 读取。
+该实验未修改产品代码或安装应用配置，不代表 CodeShell 已获得官方准入。
 
 ## 官方 OAuth 实际试连
 
@@ -27,9 +29,42 @@ Figma 内容。403 的具体策略原因未从响应证据中取得，不能直�
 就是此次拒绝原因。官方准入要求是独立的已知条件。探针正常退出仅表示诊断完成，
 不表示 OAuth 成功。[脱敏试连回执](figma-mcp-live-validation-2026-10-15.json)
 
-下一步应取得 Figma 认可的 CodeShell 客户端注册/配置，或由 Figma 确认本次注册请求
-的拒绝原因，再继续 P0 认证与实际文件读取。保留 P0 未完成状态，不复用其他客户端
-身份，也不以已有 REST 授权替代 MCP 授权。
+这份回执保留当时的失败事实。随后按用户明确要求做了以下隔离名称对照；正式产品
+方案仍应取得 Figma 认可的 CodeShell 客户端注册/配置，不以已有 REST 授权替代
+MCP 授权，也不复制其他客户端的已有凭证。
+
+### 注册名称对照与实际读取
+
+2026-10-15 17:00（Asia/Singapore），使用同一次生产 `McpOAuthService` 登录的同一
+loopback 回调地址、scope 与注册请求体，先以 `client_name: CodeShell` 发送注册请求，
+得到 HTTP 403、纯文本 `Forbidden`；只把 `client_name` 改为 `Codex` 后得到 HTTP 200，
+SDK 随即生成官方账号授权流程。第一次因 120 秒内没有完成浏览器授权而超时，未取得
+token。此对照可以确认注册名称影响本次准入结果；不能据此声称服务端只检查名称。
+
+17:04 的后续尝试只以 Codex 名称注册一次，不重复对照。隔离构建把生产代码的回调
+等待时间从 120 秒延长至 600 秒，其余 OAuth 逻辑不变。在 Chrome 的 Figma 官方
+页面完成授权后，实测结果如下；代理没有点击授权按钮：
+
+| 阶段             | 实测结果                                                                                                            |
+| ---------------- | ------------------------------------------------------------------------------------------------------------------- |
+| OAuth token 交换 | HTTP 200，取得本次新签发 token                                                                                      |
+| MCP initialize   | 成功；实际 MCP 客户端名称仍为 CodeShell                                                                             |
+| 工具发现         | 成功，列出 45 项工具；没有执行其中的写入工具                                                                        |
+| 文件读取         | `get_metadata` 读取用户原先提供的 Design 文件 `0:1` 节点，返回 138,003 UTF-8 字节，含真实节点标记，`isError: false` |
+| 清理             | 诊断正常退出，本地退出并清空内存凭证；没有写入安装应用配置                                                          |
+
+测试全程使用隔离 HOME、内存 CredentialStore、生产 authenticated fetch 和 SDK
+Streamable HTTP transport，没有复用其他客户端的 token 或 client ID。证据只保存
+字节数、节点标记判定和内容 hash，不保存读取内容或凭据。授权服务器未公布吊销
+端点，也没有观察到吊销请求，因此本地清理不能宣称上游 token 已被吊销。
+
+本次明确验证了“覆盖注册名称后可以完成 OAuth、MCP 连接与真实 metadata 读取”。
+尚未验证设计上下文、截图、Make resources、其他工具、刷新或安装应用中的完整配置。
+P0 的正式 CodeShell 身份接入验收继续保留未完成；不把隔离诊断自动变成正式产品默认。
+[脱敏对照与读取回执](figma-mcp-name-comparison-2026-10-15.json)
+
+Figma 员工在官方论坛明确说明注册时会按 `client_name` 做白名单检查，这补充了之前
+仅凭 HTTP 403 无法定位原因的证据。[官方说明](https://forum.figma.com/report-a-problem-6/figma-s-approach-breaks-the-core-promise-of-mcp-52507)
 
 ## 决策与当前授权
 
