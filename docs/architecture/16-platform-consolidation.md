@@ -1,6 +1,6 @@
 # 16 · 平台层收敛技术方案
 
-> 状态：v1.1（2026-10-14，S0 实施后对齐）；变更记录见文末
+> 状态：v1.2（2026-10-15，S1 第 3–7 项地基实现，待主控 review）；变更记录见文末
 > 基线：codeshell `main @ 08eaa4369`（0.9.41 源码已合入、尚未正式发布；v0.9.40 之后 97 个提交）；codeshell-services `main @ a5958f0`（锁定 `@cjhyy/code-shell-server` 0.9.38）
 > 对照：Codex（本机 ChatGPT.app 26.1002.52244 安装包、本仓库第 15 章）、Claude Code（公开设计）
 > 上游文档：[15 · Codex 对比与路线](15-codex-harness-comparison-and-roadmap.md)（Protocol v2 契约与术语以该章为准）
@@ -207,6 +207,8 @@ class HostRuntime {
 | 1.5  | 手机远程编排改为 HostRuntime 的一个客户端，不再调用 `injectWorkerMessage`                                                                  | mobile-remote-orchestrator                                      | 手机直接走 Protocol v2（依赖 2.3 续传和 2.5 反向请求）                                                                                                   |
 | 1.6  | 拆分 `index.ts`：每个领域一个 `register(app, host)` 模块；IPC 改为一条 v2 通道加少量 Electron 专属 IPC                                     | index.ts、\*-ipc.ts                                             | 现有 `tests/architecture-budgets.test.ts` 已锁定 `index.ts` 7,277 行和主进程路由总数；拆分后把 `index.ts` 上限下调到 1,500 行，并按领域模块分别计数路由  |
 | 1.7  | pet、task-inbox、im-gateway、cc-room、external-runtime、operation batch 逐个改成 HostService                                               | 对应目录                                                        | 各自能在 serve 里启用，或在 capabilities 里声明不可用                                                                                                    |
+
+1.1 首版已接生产：`packages/host` 只依赖 core，提供同步 adapter/service 生命周期、能力注册、legacy HostRequest 分类/分发及 `interceptHostRequest`。serve 与 Panel agent-task 在客户端路由前调用；Desktop 的 Electron adapter 把既有 browser/credential/workspace/panel/automation/operation handler 注册给同一分发器。旧 `server/serve/host-requests.ts` 仅转导出，不再重复实现。此步不提供 v2 transport，也未迁移 1.2–1.4 大服务。
 
 ### 3.3 可选的后续：Desktop 连本机守护进程
 
@@ -565,7 +567,9 @@ flowchart LR
     W21 --> W22["2.2 Session/Turn/Item"]
     W22 --> W23["2.3 两类续传"]
     W22 --> W25["2.5 client/* 反向请求"]
-    W23 --> S12["1.2 合并重复实现"]
+    S11 --> S12["1.2 纯 skills/MCP/模型/会话目录去重"]
+    W23 --> Replay["1.2 输出回放去重"]
+    S12 --> Replay
     S11 --> S13["1.3 凭据进 host"]
     S11 --> S14["1.4 automation 单执行器"]
     W23 --> S15["1.5 手机改为 v2 客户端"]
@@ -581,19 +585,20 @@ flowchart LR
 
 ### 9.2 S0 遗留与 S1 待办
 
-- **内部回环的标识。** core 应拒绝名字以 `__` 开头的工具注册，或者在 `agent/approvalRequest` 上用显式 kind 标记内部回环，让宿主不再按 `toolName` 匹配。
-- **`packages/server/src/panels/agent-task-host.ts`。** `desktop/*` worker 请求从不应答（worker 等到自己的超时）；`__*__` 回环应答 `approved: false, failure: "unavailable"`，core 会当成拒绝，应复用 `unsupportedLoopbackAnswer`；它的环境变量构造没有清除 `CODE_SHELL_REMOTE_LINK_CLIENT_SECRET`。
-- **拦截逻辑收口。** 在步骤 1.2 之前把 `routeWorkerLine` 里的拦截抽成一个 `interceptHostRequest`；host-requests 的提示文案迁到 `packages/host` 时加宿主标签参数。
-- **环境变量开关。** serve 仍继承 `CODE_SHELL_HOST_MCP_SERVERS`；Desktop 自己的 agent-task 环境（`packages/desktop/src/main/desktop-web-service.ts`）没有清除 `CODE_SHELL_OPERATION_BATCH_ACCESS` 和 `CODE_SHELL_MODEL_REQUEST_SIGNING` 两个 IPC 开关。
-- **`packages/core/src/protocol/server.ts` 行数预算。** 已正好顶到架构行数上限；S1 的 v2 分发落地前先抽出一块内聚逻辑（例如表驱动的 `protocol/dispatch.ts`）。
-- **Windows `Path` 大小写。** `mergeShellEnv` 可能同时保留 `PATH` 和用户覆盖的 `Path`；win32 上应按大小写不敏感归一。
-- **REPL 写入协议。** REPL 没有像 Bash 那样设置 `CODESHELL_WORKSPACE_WRITE_PROTOCOL=1`。
-- **`process.native` 规则。** 已删除的进程审批存储可在 main 的 `40a71d9ca` 读取（`packages/desktop/src/main/panel-app-process-approval-store.ts`），以其设计为参考。
-- **浏览器安全的 contracts 子路径。** 考虑提供 `@cjhyy/code-shell-core/contracts`，让 renderer、chat 和 services 直接引用 `CONTRACTS`，去掉受守卫的字面量。
-- **REPL 环境变量变更的发版说明。** 需写明：不再传代理变量和 `NODE_PATH`、`PYTHONPATH`、`VIRTUAL_ENV`、`CONDA_*`；沙箱关闭时与 Bash 的差异（Bash 仍继承完整环境）；凭据服务的环境变量暴露（credential env exposures）现在也会进入 REPL；这不是防外泄的修复。
-- **`__workspace_action__` 还承载 `resolve_session_run`。** 跨会话消息（`packages/core/src/protocol/server.ts` 约 1211）、异步 AskUser 唤醒（约 4246）、邮箱唤醒（约 947）都走它；`packages/core/src/cli/agent-server-stdio.ts` 约 441 无条件开启 workspace bridge，所以 serve 里这些路径现在会按 `workspace.switch` 不支持而立即失败（之前是挂 5 分钟），而不是走 core 的磁盘回退（约 1214–1229）。S1：用宿主环境变量开关控制 bridge，让 serve 走回退。
-- **契约上报缺口。** `packages/server/src/project-runtime/control-server.ts` 约 234 与 `packages/server/src/mobile-remote/remote-host-manager.ts` 约 176 的 `/health` 没有返回 contracts；目前没有客户端调用 `initialize`，serve 的 Web 标签页调用它会得到 -32601。
-- **REPL 的 `bun` 来源。** REPL 从 PATH 运行 `bun`（`packages/core/src/tool-system/builtin/repl.ts` 约 63），可能与宿主自己的 bun 不是同一个；宿主运行在 Bun 下时考虑改用 `process.execPath`。
+本批跟踪与完整后续批次见[首版实施清单](../todo/platform-first-version-plan.md)。以下“已实现”只表示本仓代码事实，不表示后续 S1/S2/S3 或真实环境验收完成。
+
+- **已实现：内部回环标识兼容方案。** 保留既有 `__*__` wire 名字；core 工具注册、内置目录与 capability composition 全部拒绝第三方以 `__` 开头的工具名，防止伪装成内部回环。typed `host/*` 仍待 v2 批次。
+- **已实现：Panel agent-task。** `desktop/*` JSON-RPC worker 请求在 session 过滤前立即 -32601 / `data.failure: unsupported`；内部回环用 `approved: true` 携带 typed unsupported answer，不能误报用户拒绝；内部请求和 resolved ID 不向 client 暴露。普通审批、AskUser 和已安装 Panel callback 保留。最终 worker env 构造清 `CODE_SHELL_REMOTE_LINK_CLIENT_SECRET`，自定义 builder 也不能遗留。
+- **已实现：拦截收口及 1.1。** S0 纯逻辑迁 `packages/host`，错误文案由 adapter 注入宿主标签；`interceptHostRequest` 在 serve、Panel、Desktop 的生产链路共用，旧入口仅转导出。HostRuntime 注册能力并管理基本生命周期，仅依赖 core。1.2–1.4 留下一批。
+- **已实现：worker 环境开关。** serve 的交互与 automation worker 清 `CODE_SHELL_HOST_MCP_SERVERS`；Panel worker（含 Desktop Web 自定义 agent-task env）清 operation batch、model signing、workspace IPC 与 host MCP switches。Desktop 主 worker 明确安装自己的 bridge。
+- **已实现：协议预算。** 请求分发与 Run/Goal 输入校验抽到 `protocol/dispatch.ts`，旧 wire 保持；server.ts 预算由 5174 下调到 4949，dispatch.ts 单独预算 246。
+- **已实现：Windows shell env。** `mergeShellEnv` 在 win32 对变量名大小写不敏感归一，PATH/Path 不重复，显式项目覆盖仍优先。
+- **已实现：REPL。** 设置 `CODESHELL_WORKSPACE_WRITE_PROTOCOL=1`；Bun 宿主优先 `process.execPath`，Node 宿主使用已可用的 PATH Bun，均 `--no-env-file`。环境白名单不继承代理、`NODE_PATH`、`PYTHONPATH`、`VIRTUAL_ENV`、`CONDA_*`；credential env exposures 会进入 REPL；沙箱关闭的 Bash 仍完整继承。这不是防同用户文件/环境窃取的安全边界，REPL 仍未进入 OS 沙箱；已写发版说明。
+- **已实现：workspace bridge 选择。** worker 仅在宿主明确设 `CODE_SHELL_WORKSPACE_ACCESS=host` 时安装。Desktop 主 worker 启用；serve/Panel 清除，跨会话 `send_message`、`resolve_session_run` 的异步 AskUser 与邮箱唤醒走 Core 既有磁盘回退，而不因 `workspace.switch` unsupported 失败或挂起。
+- **待办：`process.native` 规则。** 已删除的审批存储可在 main 的 `40a71d9ca` 读取；PolicyEngine/ApprovalStore 要实际接入工具、浏览器、process.native。ExecutionService report-only 先做技术验证：后端无完整 dry-run，区分静态预检、单次执行观测和 unknown，不得双执行任意命令模拟。
+- **待办：浏览器安全 contracts 子路径与契约上报。** 考虑 `@cjhyy/code-shell-core/contracts`；project-runtime/control-server 与 mobile-remote/remote-host-manager 的 health 上报、客户端实际 initialize/serve Web 协商随 v2 批次解决。
+- **待办：后续服务与协议。** 1.1 后可先做纯 skills/MCP/模型/会话目录去重、凭据 1.3、单 automation 1.4；输出回放去重必须等 journal cursor 与 stateVersion 两类续传完成。v2 包含 Schema 生成、Session/Turn/Item、typed host/*、两类续传、client/* 与 TUI 真切换；兼容矩阵/契约进入 CI。S2 继续拆 index、Desktop/Web 真 v2、保持在线、薄云端与 Capacitor；S3 继续统一清单签名、Browser Panel runtime、其余服务与一任务一容器 runner。
+- **真实环境出口。** 跨仓 services/panel 业务、推送证书、签名 App、真机、Linux 与云容器目标必须把代码 fixture 和真实环境验收分开记录，本批未声称完成这些部署验收。
 
 ## 10. 决策（已定）
 
@@ -625,3 +630,4 @@ flowchart LR
 | 草案 | 2026-10-13 | 初稿，基线 012cab6 / 0.9.40                                                                                                                                                                                                                                                                        |
 | v1.0 | 2026-10-14 | 评审修订：基线刷新到 08eaa4369 / 0.9.41 与 services a5958f0；术语与范围对齐第 15 章；新增 2.1 能力协商、4.3 两类续传、4.5 客户端反向请求、5.1 策略合成规则、5.2 沙箱两步切换；W6 收窄为薄云端加沙箱任务，不做常驻云端工作台和云端 Panel 运行时；阶段改为 S0–S3；八项决策全部定稿；附目标架构交互图 |
 | v1.1 | 2026-10-14 | S0 实施后对齐：4.1 标注已实现的 `initialize` 子集（`contracts` 永久在顶层）；5.2 写明 REPL 改用沙箱 Bash 白名单且不是沙箱；7.1 写明派生方式与三处受守卫的字面量；沙箱 report-only 移到 S1；1.3 标注已删除的进程审批存储；新增 9.2 S0 遗留与 S1 待办                                                |
+| v1.2 | 2026-10-15 | S1 第 3–7 项：协议分发与预算下调、显式 workspace bridge、Panel typed unsupported、env/REPL/保留工具名与 Core-only host 1.1 生产接线；后续依赖及真实环境出口分开跟踪。 |
