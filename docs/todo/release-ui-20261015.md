@@ -50,7 +50,7 @@ The initial blockers below are retained as resolved verification history.
 
 Current integration worktree:
 `/Users/admin/.codex/worktrees/ui-task-center-20261015/codeshell`, branch
-`codex/integration/ui-review-wave3-20261015`. Other work advanced remote main to
+`codex/integration/ui-review-wave4-20261015`. Other work advanced remote main to
 `0.9.44`; this branch merged `976a79322` and `bb7a9b59a`, preserving the incoming model-capability,
 forwarding and Figma updates. The CSS merge preserves both context-selection and
 file-action styles. Do not revert incoming work or republish another version on
@@ -138,8 +138,14 @@ Both merge conflicts preserved all changes: Appearance + Context fixture entries
 and the listbox useId + new caret hook in ChatView. CI now includes all 19 Desktop
 browser fixtures and all three Web navigation/scrolling fixtures.
 
-Third-wave changes are integrated on the current task branch and passed the
-final combined local gate, ready for main delivery:
+Third-wave changes were delivered to remote main at `505263089`. CI
+`38722674533` passed all 12 jobs on attempt 2. The first attempt passed 11 jobs
+but the existing paced-output smoke measured stream p95 265ms against its 200ms
+limit: four worker fsync calls exceeded 200ms (maximum 280.062ms), while source
+write, Main observation/snapshot and stdout writes stayed below 1ms. Diagnostics
+were retained in `/tmp/codeshell-ui-wave3-ci-failure.log`; only the failed job
+was rerun, with all thresholds and production code unchanged. They passed the
+final combined local gate:
 
 - `5efea027a` (source `7b00fb28e`): native keyboard-accessible AskUser options,
   IME-safe confirmation, rejection recovery and request-bound question state.
@@ -202,6 +208,102 @@ Two further independent review tasks are accepted for the next wave:
   and preserve content/external/portal focus. Evidence:
   `/tmp/codeshell-settings-focus-review.log` and
   `/tmp/codeshell-settings-focus-electron-review.log`.
+
+Fourth-wave implementations use separate branches/trees from the latest delivered
+main: `codex/desktop/composer-overflow-20261015`,
+`codex/desktop/sidebar-overflow-20261015` and
+`codex/desktop/settings-nav-focus-20261015`. Integrate only their reviewed commits
+on the current root branch, refresh main, and verify the final combination before
+delivery. Third-wave CI must be checked before another main push cancels it.
+
+Fourth wave in progress (root branch contains the reviewed commits):
+
+- `95579ea41` (source `dc92d56cd`): Sidebar content scrolls as one region while
+  the account footer stays reachable. Resize/focusin only scroll the currently
+  focused descendant. Twenty Chrome layouts, seven behavior cases and sixteen
+  isolated native Electron 200% layouts passed, with no hidden-ancestor scrolling.
+- `b536278d5`, `c4959f81a` (sources `85724a135`, `9ef67cddd`): active main chat
+  with a queue reserves 40% for output and scrolls the composer in the remaining
+  space. Without a queue, normal draft height is retained with at least 64px of
+  output in short panes. New-chat nested scroll/focus bounds and actual pane
+  width are respected; pending 60/40 and Quick Chat rules remain. Sixty production
+  layouts and fifteen behavior cases passed, with original Ask/autocomplete,
+  types/build/lint and independent review.
+- `9fc5973bb` (source `1072834c8`): Settings clear/result/breakpoint focus
+  ownership, search selection preservation and self-owned popup close restoration.
+  Optional SimpleSelect/Notification close callbacks preserve other callers'
+  default behavior. Chrome dev/production eight-layout matrices, isolated native
+  Electron dev/production zh/en 100%↔200%, 25 guarded tests and independent
+  production review passed. Synthetic composition only proves the event guard,
+  not operating-system IME or VoiceOver acceptance. Root independently reviewed
+  the 141-line ownership hook and component changes. The frozen combination is
+  passed all 14 typechecks, full renderer/shared/Web shard, lint and all 25 browser
+  fixtures; the separate Sidebar and 60+15 composer combined fixtures also passed.
+  Root final types, Desktop full build, lint baseline and 3,395 guarded tests
+  (12,591 assertions) passed; actual Electron Settings/search E2E passed. The
+  first full browser run found an invalid extra variant root in the tool-card
+  fixture's real-Chat mode: its outer main also claimed data-chat-variant, causing
+  ordinary composer CSS to match a pending chat through the phantom ancestor.
+  Production TSX only assigns that attribute in ChatView. The fixture now leaves
+  the attribute on the standalone cards surface only, asserts exactly one variant
+  root, and retains all bounds/wire/120-frame assertions. No production change or
+  assertion weakening was made; the complete 25-fixture rerun passed. Fourth wave
+  is ready for main delivery after a final origin refresh.
+- Root separately owns the accepted search-dialog short-window P2 on
+  `codex/desktop/session-search-layout-20261015` in the clean reused
+  `file-browser-ui-20261015` tree, checkpoint `c5b7473a7`. Scoped
+  short-window density and wrapped mode labels increase 320×240 results from
+  8px to 85–97px; title empty states fit. Owned production audit passes recovery
+  and focus, but the new strict mouse-wheel fixture found a real unresolved
+  headless-Chrome scrolling issue: error list client97/scroll128 can scroll programmatically yet
+  native wheel20/40/800 never emits scroll, despite correct target and no prevented
+  event. Independent release_audit confirmed six fresh cases. The same production
+  source in isolated actual Electron 320×240 factor1 passed native mouse wheel
+  and full Retry hit/visibility in both languages, so this is not established as
+  a production transport/UI scroll failure. Runtime/harness diagnosis continues.
+  Do not integrate or claim this search fix complete until actual mouse and
+  keyboard reachability is proven. Root file:
+  `shell/SearchDialog.browser.fixture.mjs`; logs
+  `/tmp/codeshell-search-layout-fixture.log` and
+  `/tmp/codeshell-search-native-wheel-review.log`. Existing shell 27 tests, scoped
+  lint and Desktop/mobile typecheck passed. Keep the strict wheel assertion;
+  temporary catch-only instrumentation and nonmodal diagnostic build plugin must
+  be cleaned before final integration. Root has handed this clean tree/branch to
+  release_audit exclusively; do not edit it concurrently. ui_audit independently
+  investigates primary Playwright/Chromium sources and minimal harness variables.
+  The runtime distinction is now demonstrated: native Electron and owned native
+  headless-Chrome 320×240 popup windows pass wheel/Retry; a fresh context created
+  directly at 320×240 also passes. The same existing headless Chrome page resized
+  via viewport emulation fails native wheel even with modal=false, plain scroll
+  divs, bringToFront, no blur, two gestures and 120-frame settling. Chrome
+  155.0.8059.79 was used. Headful Chrome preserves the resize workflow and passes.
+  Do not add a product wheel handler or blame Radix based on that harness failure.
+  Preserve exact viewport, native wheel and full-button assertions in the final
+  fresh/native-window harness; live resize also needs its own real-window proof.
+
+Next read-only audits are delegated: bridge_test_fix owns actual Sessions/Runs
+pages; ui_audit owns actual connection-configuration panels (models/text/speech/
+search). Both must use only owned bridge/state and report reproduced issues
+before implementation on a fresh branch from the next delivered main.
+The Sessions/Runs audit has now confirmed and accepted the next implementation
+scope: a 320×360 Runs pane can have zero detail height even with no model rows;
+12 valid per-model usage rows reduce a 480px pane's list/detail to 16/26px. A long
+Sessions read error pushes its only Retry below a 320×360 pane, and wheel cannot
+reach it through AppMainView's hidden ancestor. Preserve complete model evidence,
+history identity, pagination and authority while bounding and scrolling the
+page content. Refresh/delete failure focus is being checked as the same recovery
+boundary. Evidence: `/tmp/codeshell-history-ui-review-report.json`,
+`/tmp/codeshell-runs-usage-800x480.png`,
+`/tmp/codeshell-sessions-error-320x360.png`.
+The connection audit independently confirmed Search settings recovery failures:
+a rejected Tavily default-provider write leaves a false Default marker and an
+unhandled rejection; a rejected Serper Clear loses the unsaved draft, and a
+held Save overwrites newer typing on success. The actual Settings→Connections
+owned-bridge fixture also reproduced a 280px card minimum exceeding a narrow
+nested group, plus long connection IDs widening the page. Evidence:
+`/tmp/codeshell-connections-ui-audit-20261015/report.json`. Accept recovery and
+actual-pane card bounds as the next independent scope; preserve persisted
+connection/provider identity, confirmation and all existing probe authority.
 
 Initial audit history follows:
 

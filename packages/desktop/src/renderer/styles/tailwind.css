@@ -197,6 +197,28 @@
     margin-inline: auto;
   }
 
+  /* Ordinary main chats scroll the composer within the actual pane. Keep a
+     readable slice of active output; queued previews share the space with it.
+     New-chat welcome content already has its own scrolling parent. */
+  [data-chat-variant="main"]:not([data-pending-interaction="true"]) .cs-chat-composer-wrap {
+    max-height: 100%;
+    overflow-y: auto;
+    overscroll-behavior-y: contain;
+    scroll-padding-block: 0.75rem;
+  }
+
+  [data-chat-variant="main"][data-mode="active"]:not([data-pending-interaction="true"])
+    .cs-chat-composer-wrap {
+    max-height: max(60%, calc(100% - 4rem));
+  }
+
+  [data-chat-variant="main"][data-mode="active"][data-queued-input="true"]:not(
+      [data-pending-interaction="true"]
+    )
+    .cs-chat-composer-wrap {
+    max-height: 60%;
+  }
+
   /* Pending questions and approvals share the actual chat pane with the composer. Bound
      both siblings by that pane's height, including short Quick Chat docks. */
   [data-pending-interaction="true"] .cs-chat-sticky {

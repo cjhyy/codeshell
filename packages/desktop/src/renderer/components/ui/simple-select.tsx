@@ -51,6 +51,7 @@ export interface SimpleSelectProps<V extends string = string> {
   icon?: React.ReactNode;
   name?: string;
   required?: boolean;
+  onCloseAutoFocus?: React.ComponentPropsWithoutRef<typeof SelectContent>["onCloseAutoFocus"];
   triggerProps?: Omit<
     React.ComponentPropsWithoutRef<typeof SelectTrigger>,
     "children" | "className" | "disabled" | "aria-label" | "onChange" | "value" | "defaultValue"
@@ -117,6 +118,7 @@ export function SimpleSelect<V extends string = string>({
   icon,
   name,
   required,
+  onCloseAutoFocus,
   triggerProps,
 }: SimpleSelectProps<V>) {
   const triggerRef = React.useRef<HTMLButtonElement>(null);
@@ -167,7 +169,7 @@ export function SimpleSelect<V extends string = string>({
             <SelectValue placeholder={placeholder} />
           )}
         </SelectTrigger>
-        <SelectContent>
+        <SelectContent onCloseAutoFocus={onCloseAutoFocus}>
           {grouped
             ? (options as SimpleSelectOptionGroup<V>[]).map((g) => (
                 <SelectGroup key={g.label}>
