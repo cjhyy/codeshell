@@ -476,6 +476,15 @@ caught an escaping absolute sr-only legend; a local positioned editor fixes
 passed before that CSS bound; final reruns with the retained tighter assertion
 are in progress. The same final fixture against unchanged UI5 fails directly
 on visible/focused model field, not a timeout.
+Final Web source is `81bae2e8b`/`ea35fe965`; production and development 8/10
+reruns, public isolated test command, final app build and scoped lint all pass
+with document width/height and hidden-ancestor assertions retained. bridge
+independently passed the final production 8/10, CSS review, 12 held-write
+outcomes and dirty Continue in three sizes. Source hooks match reviewed blobs
+`6fe8acdbc4`/CSS `d87d44babc0`. The fourth Web browser command is registered in
+the existing desktop CI shard after browser installation/workspace build.
+Root integrates both commits into UI6; only Cloud dialogs and Profile dialogs
+remain outstanding before combined gates.
 
 Initial audit history follows:
 
