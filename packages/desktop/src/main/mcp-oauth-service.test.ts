@@ -8,7 +8,11 @@ import {
   type EncryptionCipher,
   type OAuthTokens,
 } from "@cjhyy/code-shell-core";
-import { McpOAuthService, McpOAuthServiceError } from "./mcp-oauth-service.js";
+import {
+  McpOAuthService,
+  McpOAuthServiceError,
+  McpOAuthVerificationError,
+} from "./mcp-oauth-service.js";
 import type { McpOAuthProfile } from "./mcp-oauth-profiles.js";
 
 class TestCipher implements EncryptionCipher {
@@ -808,6 +812,63 @@ describe("McpOAuthService", () => {
       },
     ]);
     expect(store.list()).toEqual([]);
+  });
+
+  test("post-token verification keeps its fixed stage and never exposes provider bodies", async () => {
+    const logs: Array<{ event: string; fields: Record<string, unknown> }> = [];
+    const { service, store } = makeService({
+      logWarning: (event, fields) => logs.push({ event, fields }),
+    });
+    const input = {
+      source: "mcp" as const,
+      serverName: "Example",
+      serverUrl: "https://mcp.example/rpc",
+      clientId: "client",
+      authorizationEndpoint: "https://auth.example/authorize",
+      tokenEndpoint: "https://auth.example/token",
+    };
+    await service.login(input);
+    const saved = store.resolve("example-oauth");
+    let failure: unknown;
+    try {
+      await service.authorizeCredential(input, {
+        validateCredential: async () => {
+          throw new McpOAuthVerificationError("account_verification", "http_error", 503);
+        },
+      });
+    } catch (error) {
+      failure = error;
+    }
+    expect(failure).toMatchObject({
+      code: "server_error",
+      stage: "credential_verification",
+      verificationStage: "account_verification",
+      reason: "http_error",
+      status: 503,
+    });
+    expect(logs).toEqual([
+      {
+        event: "mcp.oauth.failed",
+        fields: {
+          code: "server_error",
+          stage: "credential_verification",
+          verificationStage: "account_verification",
+          reason: "http_error",
+          status: 503,
+        },
+      },
+    ]);
+    expect(store.resolve("example-oauth")).toEqual(saved);
+
+    await expect(
+      service.authorizeCredential(input, {
+        validateCredential: async () => {
+          throw new Error("private-provider-body-and-token");
+        },
+      }),
+    ).rejects.toMatchObject({ stage: "credential_verification" });
+    expect(JSON.stringify(logs)).not.toContain("private-provider-body-and-token");
+    expect(JSON.stringify(logs)).not.toContain("access-login");
   });
 
   test("normalizes discovery response bodies before they reach renderer or logs", async () => {
