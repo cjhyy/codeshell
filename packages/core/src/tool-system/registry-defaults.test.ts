@@ -18,6 +18,34 @@ const definition = (name: string) => ({
 });
 
 describe("ToolRegistry default built-ins", () => {
+  it("rejects reserved names at direct and MCP adapter registration", () => {
+    const registry = new ToolRegistry({ builtinTools: [] });
+    for (const name of ["__browser_action__", "__workspace_action__", "__ask_user__", "__custom"]) {
+      for (const source of ["builtin", "mcp"] as const) {
+        expect(() =>
+          registry.registerTool({ ...definition(name), source }, async () => "ok"),
+        ).toThrow("reserved for internal host requests");
+        expect(registry.hasTool(name)).toBe(false);
+      }
+    }
+  });
+
+  it("rejects reserved catalog names even when the tool is not selected", () => {
+    expect(
+      () =>
+        new ToolRegistry({
+          builtinTools: [],
+          toolCatalog: [
+            {
+              definition: definition("__credential_action__"),
+              execute: async () => "ok",
+              exposure: { presetTags: [] },
+            },
+          ],
+        }),
+    ).toThrow("reserved for internal host requests");
+  });
+
   it("keeps Arena out of the default registry", () => {
     expect(new ToolRegistry().hasTool("Arena")).toBe(false);
   });
@@ -112,6 +140,9 @@ describe("ToolRegistry default built-ins", () => {
       });
       expect(engine.getToolRegistry().hasTool("Arena")).toBe(true);
       expect(engine.getRuntimeToolRegistry().hasTool("Arena")).toBe(false);
+      expect(() =>
+        engine.registerCustomTool(definition("__panel_action__"), async () => "ok"),
+      ).toThrow("reserved for internal host requests");
     } finally {
       rmSync(dir, { recursive: true, force: true });
     }

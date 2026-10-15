@@ -67,7 +67,8 @@
     "@modelcontextprotocol/sdk": "^1.31.0",
     "@types/ws": "^8.18.1",
     "ws": "^8.21.0",
-    "@cjhyy/code-shell-link": "workspace:*"
+    "@cjhyy/code-shell-link": "workspace:*",
+    "@cjhyy/code-shell-host": "workspace:*"
   },
   "engines": {
     "node": ">=20.10"

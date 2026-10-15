@@ -3,6 +3,7 @@ import { DEFAULT_AGENT_PRESET, type AgentPreset } from "../preset/index.js";
 import { CORE_AGENT_MODULE } from "./core-module.js";
 import { freezeDeclarations } from "./freeze.js";
 import { computeCompositionDigest, toCompositionSnapshot } from "./snapshot.js";
+import { assertPublicToolName } from "../tool-system/tool-name.js";
 import type {
   AgentModule,
   CompileCompositionOptions,
@@ -157,6 +158,7 @@ function collectEngine(
   for (const { module } of registered) {
     for (const contribution of module.engine?.tools ?? []) {
       const name = contribution.tool.definition.name;
+      assertPublicToolName(name);
       const owner = toolOwners.get(name);
       if (owner !== undefined) throw duplicate("tool", name, owner, module.id);
       toolOwners.set(name, module.id);

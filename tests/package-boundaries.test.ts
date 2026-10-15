@@ -1,12 +1,14 @@
 import { describe, expect, it } from "bun:test";
 import { readFileSync, readdirSync } from "node:fs";
-import { join } from "node:path";
+import { builtinModules } from "node:module";
+import { dirname, join, relative, resolve, sep } from "node:path";
 
 import {
   AUDITED_RELEASE_PACKAGES,
   PRIVATE_VERSIONED_PACKAGES,
   PUBLIC_RELEASE_PACKAGES,
   RELEASE_PACKAGES,
+  collectPublishEntries,
   packageManifestPath,
   validatePublicReleaseOrder,
   validatePublishManifest,
@@ -128,6 +130,59 @@ describe("workspace package boundaries", () => {
       "@cjhyy/code-shell-core",
       "@cjhyy/code-shell-tui",
     ]);
+  });
+
+  it("keeps Host runtime and declaration imports independent of other hosts and capabilities", async () => {
+    const manifest = await loadManifest(join(repoRoot, "packages", "host", "package.json"));
+    expect(dependencyNames(manifest)).toEqual(["@cjhyy/code-shell-core"]);
+    expect(Object.keys(manifest.exports ?? {})).toEqual(["."]);
+
+    const hostSourceRoot = join(repoRoot, "packages", "host", "src");
+    const builtins = new Set(builtinModules.flatMap((name) => [name, `node:${name}`]));
+    const offenders: string[] = [];
+    for (const file of sourceFiles(hostSourceRoot)) {
+      const source = readFileSync(file, "utf8");
+      // Includes type-only imports, export-from and import("...") declaration
+      // references, so re-exporting another package cannot hide behind types.
+      const references = source.matchAll(
+        /(?:\bfrom\s*|\bimport\s*\(\s*|\brequire\s*\(\s*|\bimport\s*)["']([^"']+)["']/g,
+      );
+      for (const [, specifier] of references) {
+        if (specifier.startsWith(".")) {
+          const target = relative(hostSourceRoot, resolve(dirname(file), specifier));
+          if (target === ".." || target.startsWith(`..${sep}`)) {
+            offenders.push(`${relative(repoRoot, file)} -> ${specifier}`);
+          }
+        } else if (
+          specifier !== "@cjhyy/code-shell-core" &&
+          !specifier.startsWith("@cjhyy/code-shell-core/") &&
+          !builtins.has(specifier)
+        ) {
+          offenders.push(`${relative(repoRoot, file)} -> ${specifier}`);
+        }
+      }
+    }
+    expect(offenders).toEqual([]);
+  });
+
+  it("audits Host runtime and declarations after Core and before downstream hosts", async () => {
+    const name = "@cjhyy/code-shell-host";
+    const definition = AUDITED_RELEASE_PACKAGES.find((definition) => definition.name === name)!;
+    expect(definition?.directory).toBe("packages/host");
+    const manifest = await loadManifest(join(repoRoot, "packages", "host", "package.json"));
+    expect(collectPublishEntries(definition, manifest)).toEqual([
+      {
+        importTarget: "./dist/index.js",
+        runtimeImport: true,
+        specifier: name,
+        subpath: ".",
+        typeImport: true,
+        typesTarget: "./dist/index.d.ts",
+      },
+    ]);
+    const order = PUBLIC_RELEASE_PACKAGES.map((definition) => definition.name);
+    expect(order.indexOf(name)).toBeGreaterThan(order.indexOf("@cjhyy/code-shell-core"));
+    expect(order.indexOf(name)).toBeLessThan(order.indexOf("@cjhyy/code-shell-server"));
   });
 
   it("cleans package output before every package-local build", async () => {

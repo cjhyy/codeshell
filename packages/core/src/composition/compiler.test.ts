@@ -76,6 +76,17 @@ describe("compileComposition module validation", () => {
 });
 
 describe("compileComposition contributions", () => {
+  test("both module tool contribution kinds reject reserved host-loopback names", () => {
+    for (const contribution of [
+      alwaysTool("__browser_action__"),
+      presetTagsTool("__workspace_action__"),
+    ]) {
+      expect(() =>
+        compileComposition({ modules: [{ id: "extension", engine: { tools: [contribution] } }] }),
+      ).toThrow("reserved for internal host requests");
+    }
+  });
+
   test("tool order is preset-tags (module order) then always (module order)", () => {
     const result = compileComposition({
       modules: [

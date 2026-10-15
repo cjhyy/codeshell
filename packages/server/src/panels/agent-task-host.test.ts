@@ -30,13 +30,18 @@ createInterface({input:process.stdin}).on('line',line=>{
  if(frame.method==='agent/run'){
   run=frame; fs.writeFileSync(process.env.PANEL_TASK_FIXTURE_LOG,JSON.stringify(frame.params));
   send({method:'agent/streamEvent',params:{sessionId:run.params.sessionId,event:{type:'stream_request_start'}}});
+  if(run.params.task.startsWith('host:')){send({id:'host-private',method:run.params.task.slice(5),params:{}});return;}
+  if(run.params.task==='env'){send({id:run.id,result:{text:JSON.stringify(Object.fromEntries(['CODE_SHELL_REMOTE_LINK_CLIENT_SECRET','CODE_SHELL_HOST_MCP_SERVERS','CODE_SHELL_OPERATION_BATCH_ACCESS','CODE_SHELL_MODEL_REQUEST_SIGNING','CODE_SHELL_WORKSPACE_ACCESS'].map(key=>[key,process.env[key]??null]))),reason:'completed'}});return;}
+  if(run.params.task.startsWith('loop:')){send({method:'agent/approvalRequest',params:{sessionId:run.params.sessionId,connectionId:'fixture-owner',generation:17,requestId:'ask-1',request:{toolName:run.params.task.slice(5),description:'Question',args:{questions:[]}}}});return;}
   if(run.params.task==='approve'||run.params.task==='panel')send({method:'agent/approvalRequest',params:{sessionId:run.params.sessionId,connectionId:'fixture-owner',generation:17,requestId:'ask-1',request:{toolName:run.params.task==='panel'?'__panel_action__':'Bash',description:'Write fixture file',args:run.params.task==='panel'?{action:'invoke',panelId:'sample',toolName:'refresh'}:{command:'echo hello'}}}});
   else if(run.params.task!=='hold')send({id:run.id,result:{text:'fixture result',reason:'completed',usage:{promptTokens:2,completionTokens:3,totalTokens:5}}});
  }
+ if(frame.id==='host-private'&&frame.error){fs.writeFileSync(process.env.PANEL_TASK_FIXTURE_LOG+'.host',JSON.stringify(frame));send({id:run.id,result:{text:JSON.stringify(frame.error),reason:'completed'}});}
  if(frame.method==='agent/approve'){
   if(frame.params.connectionId!=='fixture-owner'||frame.params.generation!==17)return send({id:frame.id,error:{message:'wrong approval route'}});
   fs.writeFileSync(process.env.PANEL_TASK_FIXTURE_LOG+'.approval',JSON.stringify(frame.params));
   send({id:frame.id,result:{ok:true}});
+  send({method:'agent/approvalResolved',params:{sessionId:run.params.sessionId,requestId:'ask-1'}});
   send({id:run.id,result:{text:frame.params.decision.approved?'approved':'declined',reason:'completed'}});
  }
  if(frame.method==='agent/cancel'){
@@ -242,4 +247,128 @@ test("rejects missing model, unbundled Skills and delegation tools without fake 
   await until(async () => (await task(f.host, f.scope, started.id)).status === "failed");
   expect((await task(f.host, f.scope, started.id)).error).toContain("模型");
   expect(await readFile(f.log, "utf8").catch(() => null)).toBeNull();
+});
+
+for (const method of [
+  "desktop/automationCreate",
+  "desktop/credentialResolve",
+  "desktop/operationBatch",
+  "desktop/future",
+]) {
+  test(`answers private worker ${method} without a session route`, async () => {
+    const f = await fixture();
+    const started = (await f.host.call(f.scope, "agent.task.start", {
+      prompt: `host:${method}`,
+      label: "Host",
+    })) as PanelAgentTaskView;
+    await until(async () => (await task(f.host, f.scope, started.id)).status === "completed");
+    expect(JSON.parse(await readFile(`${f.log}.host`, "utf8"))).toMatchObject({
+      id: "host-private",
+      error: { code: -32601, data: { failure: "unsupported", capability: method } },
+    });
+    expect(JSON.stringify(f.events)).not.toContain("host-private");
+  });
+}
+
+for (const [tool, capability] of [
+  ["__browser_action__", "browser"],
+  ["__credential_action__", "credential.browserCookie"],
+  ["__workspace_action__", "workspace.switch"],
+  ["__panel_action__", "panel"],
+  ["__future_action__", "__future_action__"],
+]) {
+  test(`consumes ${tool} as unsupported without exposing the internal approval ID`, async () => {
+    const f = await fixture();
+    const started = (await f.host.call(f.scope, "agent.task.start", {
+      prompt: `loop:${tool}`,
+      label: "Loop",
+    })) as PanelAgentTaskView;
+    await until(async () => (await task(f.host, f.scope, started.id)).status === "completed");
+    const reply = JSON.parse(await readFile(`${f.log}.approval`, "utf8"));
+    expect(reply).toMatchObject({
+      connectionId: "fixture-owner",
+      generation: 17,
+      decision: { approved: true },
+    });
+    expect(JSON.parse(reply.decision.answer)).toMatchObject({
+      ok: false,
+      failure: "unsupported",
+      capability,
+    });
+    expect(reply.decision.answer).toContain("Panel agent task");
+    expect(JSON.stringify(f.events)).not.toContain('"ask-1"');
+    await expect(
+      f.host.call(f.scope, "agent.task.approvalRespond", {
+        taskId: started.id,
+        requestId: "ask-1",
+        approved: true,
+      }),
+    ).rejects.toThrow(/approval/);
+  });
+}
+
+test("preserves AskUser approval and answer routing", async () => {
+  const f = await fixture();
+  const started = (await f.host.call(f.scope, "agent.task.start", {
+    prompt: "loop:__ask_user__",
+    label: "Ask",
+  })) as PanelAgentTaskView;
+  await until(() => f.events.some(({ event }) => event === "agent.task.approvalRequested"));
+  const request = f.events.find(({ event }) => event === "agent.task.approvalRequested")!.payload;
+  await f.host.call(f.scope, "agent.task.approvalRespond", {
+    ...request,
+    approved: true,
+    answer: "chosen",
+  });
+  await until(async () => (await task(f.host, f.scope, started.id)).status === "completed");
+  expect(JSON.parse(await readFile(`${f.log}.approval`, "utf8")).decision).toMatchObject({
+    approved: true,
+    answer: "chosen",
+  });
+});
+
+test("clears Desktop-only authority and secret env even with a custom builder", async () => {
+  const keys = [
+    "CODE_SHELL_REMOTE_LINK_CLIENT_SECRET",
+    "CODE_SHELL_HOST_MCP_SERVERS",
+    "CODE_SHELL_OPERATION_BATCH_ACCESS",
+    "CODE_SHELL_MODEL_REQUEST_SIGNING",
+    "CODE_SHELL_WORKSPACE_ACCESS",
+  ];
+  const f = await fixture();
+  // The fixture builder inherits these values, while the production host sanitizes last.
+  const previous = keys.map((key) => process.env[key]);
+  try {
+    for (const key of keys) process.env[key] = "host";
+    const started = (await f.host.call(f.scope, "agent.task.start", {
+      prompt: "env",
+      label: "Env",
+    })) as PanelAgentTaskView;
+    await until(async () => (await task(f.host, f.scope, started.id)).status === "completed");
+    expect(JSON.parse((await task(f.host, f.scope, started.id)).result!.text)).toEqual(
+      Object.fromEntries(keys.map((key) => [key, null])),
+    );
+  } finally {
+    keys.forEach((key, i) => {
+      if (previous[i] === undefined) delete process.env[key];
+      else process.env[key] = previous[i];
+    });
+  }
+});
+
+test("installed Panel callback errors remain execution failures rather than user denial", async () => {
+  const f = await fixture({
+    onPanelAction: async () => {
+      throw new Error("fixture callback unavailable");
+    },
+  });
+  const started = (await f.host.call(f.scope, "agent.task.start", {
+    prompt: "panel",
+    label: "Panel",
+  })) as PanelAgentTaskView;
+  await until(async () => (await task(f.host, f.scope, started.id)).status === "completed");
+  const reply = JSON.parse(await readFile(`${f.log}.approval`, "utf8"));
+  expect(reply.decision.approved).toBe(true);
+  expect(JSON.parse(reply.decision.answer)).toMatchObject({ ok: false, failure: "unavailable" });
+  expect(JSON.stringify(f.events)).not.toContain('"ask-1"');
 });

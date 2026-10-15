@@ -17,6 +17,8 @@
 // bundles the renderer). Core, coding, Pet, and Optimization Lab are
 // runtime deps: main spawns the coding worker, which dynamically loads the
 // capabilities through core's extension seam.
+// Host is built before main and bundled by esbuild; it needs no separate
+// materialized runtime directory or additional production dependency closure.
 //
 // THE FIX
 // -------

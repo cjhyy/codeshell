@@ -28,6 +28,8 @@ async function buildMain(): Promise<void> {
     chunkNames: "chunks/[name]-[hash]",
     outExtension: { ".js": ".mjs" },
     splitting: true,
+    // Host is bundled into main; its only workspace dependency is core, which
+    // stays external with the worker/capability runtime packages below.
     external: [
       "electron",
       "playwright-core",

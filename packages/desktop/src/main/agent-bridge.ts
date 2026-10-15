@@ -29,6 +29,7 @@ import {
   type DesktopOperationBatchAuthorityInput,
   type DesktopOperationBatchAuthorityResult,
 } from "@cjhyy/code-shell-core/internal";
+import { createDesktopWorkerHost } from "./worker-host-runtime.js";
 import { randomUUID } from "node:crypto";
 import { MainOutputPublisher, type MainOutputSource } from "./main-output-publisher.js";
 import { createRequire } from "node:module";
@@ -357,6 +358,17 @@ export class AgentBridge implements PetStateBridge {
     }
   >();
 
+  private readonly workerHost = createDesktopWorkerHost({
+    operationBatch: (line) => this.maybeHandleOperationBatch(line),
+    credentials: (line) => this.maybeHandleCredentialAccessMessage(line),
+    browser: (line) => this.maybeHandleBrowserAction(line),
+    credentialCookie: (line) => this.maybeHandleCredentialAction(line),
+    workspace: (line) => this.maybeHandleWorkspaceAction(line),
+    panel: (line) => this.maybeHandlePanelAction(line),
+    automation: (line) => this.maybeHandleAutomationAuthorityMessage(line),
+    sendLine: (line) => this.core.sendLine(line),
+  });
+
   constructor(
     window: BrowserWindow,
     private readonly oauthAccessResolver?: (req: {
@@ -383,6 +395,8 @@ export class AgentBridge implements PetStateBridge {
         CODESHELL_AGENT_STDIO: "1",
         CODE_SHELL_MODEL_REQUEST_SIGNING: "host",
         CODE_SHELL_OPERATION_BATCH_ACCESS: "host",
+        // This bridge handles workspace switches and authoritative Session runs.
+        CODE_SHELL_WORKSPACE_ACCESS: "host",
         CODE_SHELL_CAPABILITY_MODULES: composeCapabilityModulesEnv(
           { coding: codingModule, pet: petCapabilityModule },
           readUserFeatureFlags(resolveNoRepoCwd()),
@@ -490,25 +504,8 @@ export class AgentBridge implements PetStateBridge {
   private handleWorkerLine(line: string): void {
     this.webConfiguration.observe(line);
     this.updateTentativeRunLifecycle(line);
-    // Internal credential access: worker asks main to resolve/materialize
-    // secrets. Consumed here; never forwarded to renderer/transcript.
-    if (this.maybeHandleOperationBatch(line)) return;
-    if (this.maybeHandleCredentialAccessMessage(line)) return;
-    // Browser automation: intercept __browser_action__ requests here (drive the
-    // independent Browser Runtime in main, reply to the worker) and DON'T
-    // forward the private bridge request to the renderer.
-    if (this.maybeHandleBrowserAction(line)) return;
-    // InjectCredential: intercept __credential_action__ (restore a cookie
-    // credential into the built-in browser) here; DON'T forward to renderer.
-    if (this.maybeHandleCredentialAction(line)) return;
-    // Workspace switching: intercept __workspace_action__ so the worker uses
-    // the same main-process service path as the UI switcher.
-    if (this.maybeHandleWorkspaceAction(line)) return;
-    // Generic Panel tool: renderer owns the live registry and tab state.
-    if (this.maybeHandlePanelAction(line)) return;
-    // cron change: the worker created/deleted a cron job (agent/cronChanged);
-    // reload main's scheduler so it arms immediately. DON'T forward to renderer.
-    if (this.maybeHandleAutomationAuthorityMessage(line)) return;
+    if (this.workerHost.intercept(line)) return;
+    // Reload the Desktop scheduler after worker-owned cron changes.
     if (this.maybeHandleCronChanged(line)) return;
     // Pet projection is a host-only read model. Its snapshot RPC responses are
     // consumed inside WorkerBridgeCore (consume: true); the delta notification

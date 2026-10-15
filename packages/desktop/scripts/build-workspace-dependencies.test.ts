@@ -44,4 +44,16 @@ describe("desktop workspace build dependencies", () => {
       built.add(entry.packageName);
     }
   });
+
+  test("builds Host after core with no server, web, or coding dependency closure", () => {
+    const host = readPackage("packages/host");
+    expect(Object.keys(host.dependencies ?? {})).toEqual(["@cjhyy/code-shell-core"]);
+    const names = DESKTOP_WORKSPACE_BUILD_ORDER.map<string>(({ packageName }) => packageName);
+    expect(names.indexOf("@cjhyy/code-shell-host")).toBeGreaterThan(
+      names.indexOf("@cjhyy/code-shell-core"),
+    );
+    expect(names.indexOf("@cjhyy/code-shell-server")).toBeGreaterThan(
+      names.indexOf("@cjhyy/code-shell-host"),
+    );
+  });
 });

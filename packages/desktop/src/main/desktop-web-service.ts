@@ -110,6 +110,10 @@ export function createDesktopWebService(options: {
                 buildEnv: () => ({
                   ...process.env,
                   CODE_SHELL_REMOTE_LINK_CLIENT_SECRET: undefined,
+                  CODE_SHELL_OPERATION_BATCH_ACCESS: undefined,
+                  CODE_SHELL_MODEL_REQUEST_SIGNING: undefined,
+                  CODE_SHELL_WORKSPACE_ACCESS: undefined,
+                  CODE_SHELL_HOST_MCP_SERVERS: undefined,
                   ELECTRON_RUN_AS_NODE: "1",
                 }),
               },

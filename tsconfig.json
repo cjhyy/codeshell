@@ -40,6 +40,7 @@
       "@cjhyy/code-shell-capability-optimization-lab/capability": [
         "packages/optimization-lab/src/index.capability.ts"
       ],
+      "@cjhyy/code-shell-host": ["packages/host/src/index.ts"],
       "@cjhyy/code-shell-server": ["packages/server/src/index.ts"],
       "@cjhyy/code-shell-server/auth": ["packages/server/src/index.auth.ts"],
       "@cjhyy/code-shell-server/storage": ["packages/server/src/index.storage.ts"],

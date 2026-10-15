@@ -18,6 +18,7 @@ import {
 } from "./builtin/index.js";
 import type { ToolContext } from "./context.js";
 import { validateToolMetadata } from "./validate-tool-metadata.js";
+import { assertPublicToolName } from "./tool-name.js";
 import { onceDispose, type Dispose } from "../composition/lifetime.js";
 
 /**
@@ -50,6 +51,7 @@ export class ToolRegistry {
     selectedBuiltinTools: readonly string[] | undefined,
     toolCatalog: readonly BuiltinTool[],
   ): void {
+    for (const tool of toolCatalog) assertPublicToolName(tool.definition.name);
     const availableNames = new Set(toolCatalog.map((tool) => tool.definition.name));
     if (availableNames.size !== toolCatalog.length) {
       throw new ConfigError("Tool catalog contains duplicate names");
@@ -81,6 +83,7 @@ export class ToolRegistry {
   }
 
   registerTool(tool: RegisteredTool, executor?: ToolImplementation): Dispose {
+    assertPublicToolName(tool.name);
     validateToolMetadata(tool);
     const name = tool.name;
     this.tools.set(name, tool);
