@@ -2,6 +2,7 @@ import React from "react";
 import { Figma, Loader2, ShieldCheck, X } from "lucide-react";
 import type { MaskedLinkConnection } from "@cjhyy/code-shell-link";
 import { Button } from "@/components/ui/button";
+import { SimpleSelect } from "@/components/ui/simple-select";
 import { LinkConnectionDialog } from "../credentials/LinkConnectionDialog";
 import { useRemoteLinkSnapshot } from "../credentials/RemoteLinkSection";
 import { useT } from "../i18n/I18nProvider";
@@ -280,23 +281,23 @@ function ChatLinkResourceCard({
       {connections.length > 1 || (selectedId && !selected) ? (
         <label className="flex flex-col gap-1 text-xs">
           {t("chat.linkResource.account")}
-          <select
-            className="h-8 min-w-0 rounded-md border border-input bg-background px-2"
+          <SimpleSelect
+            size="sm"
+            ariaLabel={t("chat.linkResource.account")}
             value={selected?.id ?? ""}
             disabled={checking || Boolean(authorization) || Boolean(intent.resumeConnection)}
-            onChange={(event) => {
-              setSelectedId(event.target.value);
+            onChange={(value) => {
+              setSelectedId(value);
               setError("");
             }}
-          >
-            <option value="">{t("chat.linkResource.chooseAccount")}</option>
-            {connections.map((connection) => (
-              <option key={connection.id} value={connection.id}>
-                {connection.label} ·{" "}
-                {connection.account?.label ?? connection.account?.id ?? "Figma"}
-              </option>
-            ))}
-          </select>
+            options={[
+              { value: "", label: t("chat.linkResource.chooseAccount") },
+              ...connections.map((connection) => ({
+                value: connection.id,
+                label: `${connection.label} · ${connection.account?.label ?? connection.account?.id ?? "Figma"}`,
+              })),
+            ]}
+          />
         </label>
       ) : selected ? (
         <p className="break-words text-xs text-muted-foreground">

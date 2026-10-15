@@ -13,6 +13,19 @@ function props(node: Element): Record<string, any> {
   const key = Object.keys(node).find((name) => name.startsWith("__reactProps$"));
   return key ? (node as any)[key] : {};
 }
+
+/** Closed Radix menus live outside the mini-DOM; inspect the owning selector contract. */
+function selectProps(node: Element): Record<string, any> {
+  const current = node as unknown as Record<string, any>;
+  const key = Object.keys(current).find((name) => name.startsWith("__reactFiber$"));
+  let fiber = key ? current[key] : undefined;
+  while (fiber) {
+    if (fiber.type?.name === "SimpleSelect") return fiber.memoizedProps;
+    fiber = fiber.return;
+  }
+  throw new Error("Expected a rendered SimpleSelect");
+}
+
 function initial(): EditableDataset {
   return {
     schemaVersion: 1,
@@ -77,7 +90,9 @@ describe("Optimization Lab dataset editor", () => {
   }
   async function change(id: string, next: string | boolean) {
     await act(async () => {
-      props(find(id)!).onChange({ target: { value: String(next), checked: next } });
+      const node = find(id)!;
+      if (props(node).role === "combobox") selectProps(node).onChange(String(next));
+      else props(node).onChange({ target: { value: String(next), checked: next } });
       await flushMicrotasks();
     });
     await render();

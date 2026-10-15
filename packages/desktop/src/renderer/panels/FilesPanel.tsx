@@ -10,6 +10,7 @@ import {
 } from "lucide-react";
 import type { FsEntry, FileContent } from "../../preload/types";
 import { Input } from "@/components/ui/input";
+import { SimpleSelect } from "@/components/ui/simple-select";
 import { Markdown } from "../Markdown";
 import { CommentBox } from "../chat/CommentBox";
 import { addAnchor } from "../chat/addAnchor";
@@ -313,26 +314,30 @@ export function FilesPanel({
 
   return (
     <FileSystemContext.Provider value={externalPreview ? LOCAL_FILE_SYSTEM : fileSystem}>
-      <div className="flex min-h-0 flex-1">
+      <div className="flex min-h-0 min-w-0 flex-1">
         {treeAvailable && treeOpen && cwd && (
-          <div className="flex w-72 shrink-0 flex-col border-r border-border">
+          <div className="flex w-72 min-w-0 max-w-[65%] shrink-0 flex-col border-r border-border">
             <div className="shrink-0 border-b border-border p-2">
               {rootOptions.length > 1 && (
-                <select
-                  className="mb-2 h-8 w-full rounded-md border border-input bg-background px-2 text-xs"
-                  aria-label={t("panels.files.rootPicker")}
+                <SimpleSelect
+                  size="sm"
+                  className="mb-2"
+                  ariaLabel={t("panels.files.rootPicker")}
+                  icon={<Folder size={14} />}
                   value={activeRoot?.id ?? ""}
-                  onChange={(event) => setSelectedRootId(event.target.value)}
-                >
-                  {rootOptions.map((root) => (
-                    <option key={root.id} value={root.id}>
-                      {root.name || root.path}
-                      {root.id === project?.primaryRootId
-                        ? ` (${t("panels.files.primaryRoot")})`
-                        : ""}
-                    </option>
-                  ))}
-                </select>
+                  onChange={setSelectedRootId}
+                  triggerProps={{ title: activeRoot?.path, "data-files-root-select": true }}
+                  options={rootOptions.map((root) => ({
+                    value: root.id,
+                    label: `${root.name || root.path.split(/[\\/]/).filter(Boolean).at(-1) || root.path}${
+                      root.id === project?.primaryRootId
+                        ? ` · ${t("panels.files.primaryRoot")}`
+                        : ""
+                    }`,
+                    description: root.path,
+                    textValue: root.name || root.path,
+                  }))}
+                />
               )}
               <Input
                 value={filter}
@@ -359,7 +364,7 @@ export function FilesPanel({
             </div>
           </div>
         )}
-        <div className="flex min-h-0 min-w-0 flex-1 flex-col">
+        <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
           <div className="flex shrink-0 items-center border-b border-border px-1 py-1">
             {treeAvailable && (
               <button

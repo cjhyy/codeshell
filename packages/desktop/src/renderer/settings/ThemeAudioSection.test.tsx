@@ -18,6 +18,18 @@ function propsOf(node: Element): Record<string, any> {
   return key ? (node as unknown as Record<string, any>)[key] : {};
 }
 
+/** Closed Radix menus live outside the mini-DOM; inspect the selector contract. */
+function selectPropsOf(node: Element): Record<string, any> {
+  const current = node as unknown as Record<string, any>;
+  const key = Object.keys(current).find((name) => name.startsWith("__reactFiber$"));
+  let fiber = key ? current[key] : undefined;
+  while (fiber) {
+    if (fiber.type?.name === "SimpleSelect") return fiber.memoizedProps;
+    fiber = fiber.return;
+  }
+  throw new Error("Expected a rendered SimpleSelect");
+}
+
 class FakeAudio {
   static instances: FakeAudio[] = [];
   src = "";
@@ -50,6 +62,7 @@ const theme: ThemePack = {
   music: [
     { title: "Original theme loop", file: "cstheme://music-theme/loop.wav" },
     { title: "Official listening", artist: "Artist", url: "https://example.com/official" },
+    { title: "Second loop", artist: "Artist", file: "cstheme://music-theme/second.wav" },
   ],
 };
 
@@ -135,7 +148,7 @@ describe("theme audio controls", () => {
   };
   const select = async (index: number) => {
     await act(async () => {
-      propsOf(element("data-theme-music-select")).onChange({ target: { value: String(index) } });
+      selectPropsOf(element("data-theme-music-select")).onChange(String(index));
       await flushMicrotasks();
     });
   };
@@ -155,8 +168,16 @@ describe("theme audio controls", () => {
     expect(FakeAudio.instances[0]!.src).toBe("");
   });
 
-  test("local tracks play, pause and resume; changing selection stops before opening an external link", async () => {
+  test("local tracks play, pause and resume; the picker excludes external listening links", async () => {
     await render();
+    expect(propsOf(element("data-theme-music-select")).role).toBe("combobox");
+    expect(selectPropsOf(element("data-theme-music-select")).options).toEqual([
+      { value: "0", label: "Original theme loop", description: undefined },
+      { value: "1", label: "Second loop", description: "Artist" },
+    ]);
+    expect(descendants(container).some((node) => propsOf(node)["data-theme-music-open"])).toBe(
+      false,
+    );
     await click("data-theme-music-play");
     const audio = FakeAudio.instances[0]!;
     expect(audio.src).toBe(theme.music![0]!.file!);
@@ -173,9 +194,25 @@ describe("theme audio controls", () => {
     await select(1);
     expect(audio.src).toBe("");
     expect(opened).toEqual([]);
-    await click("data-theme-music-open");
-    expect(opened).toEqual(["https://example.com/official"]);
-    expect(FakeAudio.instances).toHaveLength(1);
+    await click("data-theme-music-play");
+    expect(FakeAudio.instances[1]!.src).toBe("cstheme://music-theme/second.wav");
+    expect(opened).toEqual([]);
+  });
+
+  test("an all-external theme hides playback controls while local import remains available", async () => {
+    await render({ ...theme, music: [theme.music![1]!] });
+    expect(themeMusic.getSnapshot().tracks).toEqual([]);
+    expect(
+      descendants(container).some(
+        (node) =>
+          propsOf(node)["data-theme-music-select"] !== undefined ||
+          propsOf(node)["data-theme-music-play"] !== undefined ||
+          propsOf(node)["data-theme-music-open"] !== undefined,
+      ),
+    ).toBe(false);
+    expect(element("data-theme-music-import")).toBeDefined();
+    expect(FakeAudio.instances).toHaveLength(0);
+    expect(opened).toEqual([]);
   });
 
   test("uninstall notifications and theme changes stop playback immediately", async () => {

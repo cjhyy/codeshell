@@ -57,7 +57,12 @@ export class ThemeMusicStore {
     this.stop();
     this.revokeImports();
     this.signature = signature;
-    this.update({ packId: pack.id, tracks: [...(pack.music ?? [])], selected: 0, error: null });
+    this.update({
+      packId: pack.id,
+      tracks: (pack.music ?? []).filter((track) => Boolean(track.file?.trim())),
+      selected: 0,
+      error: null,
+    });
   }
 
   stop = (): void => {

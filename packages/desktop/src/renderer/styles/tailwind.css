@@ -635,26 +635,83 @@
     opacity: 0.5;
   }
 
+  .cs-select-trigger {
+    border-color: hsl(var(--cs-input) / 0.8);
+    background: hsl(var(--cs-card));
+    box-shadow: 0 1px 2px hsl(var(--cs-foreground) / 0.025);
+  }
+
+  .cs-select-trigger:hover:not(:disabled) {
+    border-color: hsl(var(--cs-primary) / 0.25);
+    background: hsl(var(--cs-accent) / 0.4);
+  }
+
+  .cs-select-trigger:focus-visible,
+  .cs-select-trigger[data-state="open"] {
+    border-color: hsl(var(--cs-primary) / 0.45);
+    box-shadow: 0 0 0 3px hsl(var(--cs-primary) / 0.07);
+  }
+
+  .cs-select-trigger[data-placeholder] {
+    color: hsl(var(--cs-muted-foreground));
+  }
+
+  .cs-select-chevron {
+    transition: transform 150ms ease;
+  }
+
+  .cs-select-trigger[data-state="open"] .cs-select-chevron {
+    transform: rotate(180deg);
+  }
+
+  .cs-menu-item.cs-select-item {
+    min-height: 2.25rem;
+  }
+
+  .cs-select-item[data-state="checked"] {
+    background: hsl(var(--cs-primary) / 0.07);
+  }
+
+  .cs-select-item[data-highlighted] {
+    background: hsl(var(--cs-accent));
+    color: hsl(var(--cs-accent-foreground));
+  }
+
+  .cs-select-option-label,
+  .cs-select-description {
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+    overflow: hidden;
+    overflow-wrap: anywhere;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .cs-select-chevron {
+      transition: none;
+    }
+  }
+
   .cs-popup-surface {
     background: hsl(var(--cs-popover));
     color: hsl(var(--cs-popover-foreground));
-    border: 1px solid hsl(var(--cs-border) / 0.86);
+    border: 1px solid hsl(var(--cs-border) / 0.75);
     box-shadow:
-      0 18px 45px hsl(var(--cs-foreground) / 0.1),
-      0 1px 2px hsl(var(--cs-foreground) / 0.08);
+      0 12px 32px hsl(var(--cs-foreground) / 0.08),
+      0 2px 6px hsl(var(--cs-foreground) / 0.045);
   }
   .dark .cs-popup-surface {
     border-color: hsl(var(--cs-border) / 0.95);
     box-shadow:
-      0 18px 45px rgb(0 0 0 / 0.26),
-      0 1px 2px rgb(0 0 0 / 0.18);
+      0 12px 32px rgb(0 0 0 / 0.3),
+      0 2px 6px rgb(0 0 0 / 0.18);
   }
 
   .cs-menu-item {
     display: flex;
     align-items: center;
-    min-height: 1.875rem;
-    border-radius: var(--radius-sm);
+    min-height: 2rem;
+    border-radius: 0.5rem;
     color: hsl(var(--cs-popover-foreground));
     outline: none;
   }

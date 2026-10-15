@@ -15,6 +15,19 @@ function props(node: any): Record<string, any> {
   const key = Object.keys(node).find((key) => key.startsWith("__reactProps$"));
   return key ? node[key] : {};
 }
+
+/** Closed Radix menus live outside the mini-DOM; inspect the owning selector contract. */
+function selectProps(node: Element): Record<string, any> {
+  const current = node as unknown as Record<string, any>;
+  const key = Object.keys(current).find((name) => name.startsWith("__reactFiber$"));
+  let fiber = key ? current[key] : undefined;
+  while (fiber) {
+    if (fiber.type?.name === "SimpleSelect") return fiber.memoizedProps;
+    fiber = fiber.return;
+  }
+  throw new Error("Expected a rendered SimpleSelect");
+}
+
 function nodes(node: any, tag: string): any[] {
   return [
     ...(node.tagName === tag ? [node] : []),
@@ -384,7 +397,10 @@ describe("subagent full transcript navigation", () => {
     expect(text(container)).toContain("Title two");
     expect(text(container)).toContain("Transcript two");
     expect(text(container)).not.toContain("Transcript one");
-    expect(props(nodes(container, "SELECT")[0]).value).toBe("two");
+    expect(
+      selectProps(nodes(container, "BUTTON").find((node) => props(node).role === "combobox")!)
+        .value,
+    ).toBe("two");
   });
 
   test("hidden dock visibility pauses polling and change events for nested child details", async () => {
@@ -484,13 +500,13 @@ describe("subagent full transcript navigation", () => {
       <SubagentSessionDetail parentSessionId="parent" onBack={() => undefined} />,
     );
     expect(queries.map((query) => query.parentSessionId)).toEqual(["parent", "parent"]);
-    const select = nodes(container, "SELECT")[0];
+    const select = nodes(container, "BUTTON").find((node) => props(node).role === "combobox")!;
     await act(async () => {
-      props(select).onChange({ target: { value: "child-a" } });
+      selectProps(select).onChange("child-a");
       await flushMicrotasks();
     });
     await act(async () => {
-      props(select).onChange({ target: { value: "child-b" } });
+      selectProps(select).onChange("child-b");
       await flushMicrotasks();
     });
     expect(reads).toEqual(["child-a", "child-b"]);

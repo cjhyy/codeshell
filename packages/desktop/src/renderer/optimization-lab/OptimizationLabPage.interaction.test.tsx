@@ -12,6 +12,19 @@ function props(node: Element): Record<string, any> {
   const key = Object.keys(node).find((name) => name.startsWith("__reactProps$"));
   return key ? (node as any)[key] : {};
 }
+
+/** Closed Radix menus live outside the mini-DOM; inspect the owning selector contract. */
+function selectProps(node: Element): Record<string, any> {
+  const current = node as unknown as Record<string, any>;
+  const key = Object.keys(current).find((name) => name.startsWith("__reactFiber$"));
+  let fiber = key ? current[key] : undefined;
+  while (fiber) {
+    if (fiber.type?.name === "SimpleSelect") return fiber.memoizedProps;
+    fiber = fiber.return;
+  }
+  throw new Error("Expected a rendered SimpleSelect");
+}
+
 describe("Optimization Lab manual Desktop workflow", () => {
   let root: Root, container: HTMLElement, previous: PropertyDescriptor | undefined;
   let calls: Array<{ type: string; input: any }>,
@@ -254,7 +267,7 @@ describe("Optimization Lab manual Desktop workflow", () => {
     snapshot.state = { ...snapshot.state, status: "report_ready", data: { reportRef: "report" } };
     await mount();
     await act(async () => {
-      props(find("execution-mode")).onChange({ target: { value: "codeshell_isolated" } });
+      selectProps(find("execution-mode")).onChange("codeshell_isolated");
       await flushMicrotasks();
     });
     await click("prepare");
@@ -263,7 +276,7 @@ describe("Optimization Lab manual Desktop workflow", () => {
     );
     await click("open-report");
     await act(async () => {
-      props(find("adoption-scope")).onChange({ target: { value: "session" } });
+      selectProps(find("adoption-scope")).onChange("session");
       await flushMicrotasks();
     });
     expect(props(find("adopt")).disabled).toBe(true);

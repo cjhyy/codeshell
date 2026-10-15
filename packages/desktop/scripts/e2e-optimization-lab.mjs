@@ -327,6 +327,26 @@ async function crashOwnedElectron() {
   win = null;
 }
 
+async function chooseLabOption(testId, label) {
+  await win.getByTestId(testId).click();
+  await win.getByRole("option", { name: label, exact: true }).click();
+}
+async function chooseSavedExperiment(id) {
+  if (!id) {
+    await chooseLabOption("optimization-lab-saved", "Create an experiment");
+    return;
+  }
+  const result = await query("list");
+  const experiments = Array.isArray(result) ? result : result.experiments;
+  const index = experiments.findIndex((experiment) => experiment.id === id);
+  assert.ok(index >= 0, "Saved experiment is listed");
+  await win.getByTestId("optimization-lab-saved").click();
+  await win
+    .getByRole("option")
+    .nth(index + 1)
+    .click();
+}
+
 async function recoverWithoutReplay(id, requestCount, interruptedPayload) {
   const interrupted = await until(
     async () => {
@@ -340,7 +360,7 @@ async function recoverWithoutReplay(id, requestCount, interruptedPayload) {
   assert.ok(interrupted.ledger.totals.unknownTokens > 0);
   assert.equal(interrupted.ledger.totals.requests, 1);
   await openPage();
-  await win.getByTestId("optimization-lab-saved").selectOption(id);
+  await chooseSavedExperiment(id);
   await win.getByTestId("optimization-lab-continue").waitFor();
   await until(
     async () => win.getByTestId("optimization-lab-continue").isEnabled(),
@@ -364,14 +384,19 @@ async function recoverWithoutReplay(id, requestCount, interruptedPayload) {
 }
 
 async function preparePage(cases) {
-  await win.getByTestId("optimization-lab-saved").selectOption("");
+  await chooseSavedExperiment("");
   if (cases) {
     await win.getByTestId("optimization-lab-dataset-json").click();
     await win.getByTestId("optimization-lab-dataset").fill(JSON.stringify(cases));
   }
-  await win.getByTestId("optimization-lab-skill").selectOption(skillName);
-  await win.getByTestId("optimization-lab-target-connection").selectOption("lab-connection");
-  await win.getByTestId("optimization-lab-optimizer-connection").selectOption("lab-connection");
+  const discovery = await query("discover");
+  const skill = discovery.skills.find((item) => item.name === skillName);
+  const connection = discovery.connections.find((item) => item.id === "lab-connection");
+  assert.ok(skill && connection, "Local fixture choices are available");
+  await chooseLabOption("optimization-lab-skill", `${skill.name} · ${skill.source}`);
+  for (const id of ["target-connection", "optimizer-connection"]) {
+    await chooseLabOption(`optimization-lab-${id}`, `${connection.label} · ${connection.model}`);
+  }
   await win.getByTestId("optimization-lab-maxRequests").fill("40");
   await win.getByTestId("optimization-lab-maxExecutionMs").fill("300000");
   await win.getByTestId("optimization-lab-maxOutputTokens").fill("2048");
@@ -445,11 +470,9 @@ async function editDatasetOffline() {
   await win.getByTestId("optimization-lab-case-6-missingEvidence-add").click();
   await win.getByTestId("optimization-lab-case-6-missingEvidence-0").fill("missing line 1\nline 2");
   await win.getByTestId("optimization-lab-case-6-assertion-add").click();
-  await win
-    .getByTestId("optimization-lab-case-6-assertion-0-kind")
-    .selectOption("json_field_equals");
+  await chooseLabOption("optimization-lab-case-6-assertion-0-kind", "JSON field equals");
   await win.getByTestId("optimization-lab-case-6-assertion-0-path-0").fill("nested\nfield");
-  await win.getByTestId("optimization-lab-case-6-assertion-0-value-type").selectOption("number");
+  await chooseLabOption("optimization-lab-case-6-assertion-0-value-type", "Number");
   await win.getByTestId("optimization-lab-case-6-assertion-0-value").fill("1.25");
   await win.getByTestId("optimization-lab-export-dataset").click();
   await until(async () => {
@@ -689,7 +712,7 @@ try {
   assert.equal(requests.length, 13, "Reopening a report does not replay model requests");
   assert.equal(reopened.plan.planHash, final.plan.planHash);
   await openPage();
-  await win.getByTestId("optimization-lab-saved").selectOption(id);
+  await chooseSavedExperiment(id);
   await win.getByTestId("optimization-lab-open-report").click();
   await win.getByTestId("optimization-lab-report").waitFor();
   assert.ok((await win.getByTestId("optimization-lab-report").innerText()).length > 100);
@@ -812,7 +835,7 @@ try {
   assert.equal(requests.length, 31, "App restart never starts a saved experiment");
   await recoverWithoutReplay(crashedApp.id, 31, appPayload);
   stage = "fixed candidate trial through page, new native grant and no optimizer";
-  await win.getByTestId("optimization-lab-saved").selectOption(id);
+  await chooseSavedExperiment(id);
   await win.getByTestId("optimization-lab-try-candidate").click();
   await win.getByTestId("optimization-lab-trial-source").waitFor();
   const fresh = structuredClone(dataset);

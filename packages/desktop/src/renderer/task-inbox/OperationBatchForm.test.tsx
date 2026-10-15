@@ -31,6 +31,18 @@ function props(node: Element): Record<string, any> {
   return key ? (node as any)[key] : {};
 }
 
+/** Closed Radix menus live outside the mini-DOM; inspect the owning selector contract. */
+function selectProps(node: Element): Record<string, any> {
+  const current = node as unknown as Record<string, any>;
+  const key = Object.keys(current).find((name) => name.startsWith("__reactFiber$"));
+  let fiber = key ? current[key] : undefined;
+  while (fiber) {
+    if (fiber.type?.name === "SimpleSelect") return fiber.memoizedProps;
+    fiber = fiber.return;
+  }
+  throw new Error("Expected a rendered SimpleSelect");
+}
+
 function textOf(node: Node): string {
   if (node.nodeType === 3) return node.nodeValue ?? (node as Text).data ?? node.textContent ?? "";
   return node.childNodes.length
@@ -133,12 +145,15 @@ describe("OperationBatchForm", () => {
   const button = (text: string) =>
     find((node) => node.tagName === "BUTTON" && textOf(node) === text);
   const form = () => find((node) => node.tagName === "FORM");
-  const select = () => find((node) => node.tagName === "SELECT");
+  const select = () => find((node) => props(node).role === "combobox");
   const fields = () => nodes().filter((node) => node.tagName === "FIELDSET");
   const field = (index: number, key: string) =>
     find((node) => props(node)["aria-label"] === `${index} ${key}`);
   const change = (node: Element, value: string) =>
-    settle(() => props(node).onChange({ target: { value } }));
+    settle(() => {
+      if (props(node).role === "combobox") selectProps(node).onChange(value);
+      else props(node).onChange({ target: { value } });
+    });
   const click = (node: Element) => settle(() => props(node).onClick());
   const submit = () => settle(() => props(form()).onSubmit({ preventDefault() {} }));
   const open = async (sessionId = "session-a") => {
@@ -171,14 +186,15 @@ describe("OperationBatchForm", () => {
     expect(props(button("Review with Native confirmation")).disabled).toBe(true);
 
     await settle(() => optionRequests[0]!.request.resolve(savedConnections));
-    expect(props(select()).value).toBe("");
-    expect(props(select()).required).toBe(true);
+    expect(selectProps(select()).value).toBe("");
+    expect(selectProps(select()).required).toBe(true);
+    expect(selectProps(select()).placeholder).toBe("Select a connection");
     expect(
-      nodes()
-        .filter((node) => node.tagName === "OPTION")
-        .map((node) => ({ value: props(node).value, text: textOf(node) })),
+      selectProps(select()).options.map((option: { value: string; label: string }) => ({
+        value: option.value,
+        text: option.label,
+      })),
     ).toEqual([
-      { value: "", text: "Select a connection" },
       { value: "saved-connection-a", text: "Saved account A" },
       { value: "saved-connection-b", text: "Saved account B" },
     ]);
@@ -304,7 +320,7 @@ describe("OperationBatchForm", () => {
     expect(optionRequests.map(({ sessionId }) => sessionId)).toEqual(["session-a", "session-b"]);
     await settle(() => optionRequests[1]!.request.resolve(savedConnections));
     expect(fields()).toHaveLength(1);
-    expect(props(select()).value).toBe("");
+    expect(selectProps(select()).value).toBe("");
     for (const key of ["owner", "repo", "title", "body"]) {
       expect(props(field(1, key)).value).toBe("");
     }

@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import { ArrowLeft, RefreshCw } from "lucide-react";
+import { SimpleSelect } from "@/components/ui/simple-select";
 import { MessageStream } from "../MessageStream";
 import { foldTranscript } from "../automation/foldTranscript";
 import { useT } from "../i18n/I18nProvider";
@@ -183,22 +184,22 @@ export function SubagentSessionDetail({
         </button>
       </div>
       {children.length > 1 && (
-        <select
-          aria-label={t("msg.agent.chooseChild")}
+        <SimpleSelect
+          ariaLabel={t("msg.agent.chooseChild")}
           value={selectedId ?? ""}
-          className="m-2 min-w-0 rounded border border-border bg-background p-2 text-sm"
-          onChange={(event) => setSelectedId(event.target.value || undefined)}
-        >
-          <option value="">{t("msg.agent.chooseChild")}</option>
-          {agentId && !children.some((child) => child.engineSessionId === agentId) && (
-            <option value={agentId}>{label || agentId}</option>
-          )}
-          {children.map((child) => (
-            <option key={child.engineSessionId} value={child.engineSessionId}>
-              {child.title || child.engineSessionId}
-            </option>
-          ))}
-        </select>
+          className="m-2 w-[calc(100%-1rem)]"
+          onChange={(value) => setSelectedId(value || undefined)}
+          options={[
+            { value: "", label: t("msg.agent.chooseChild") },
+            ...(agentId && !children.some((child) => child.engineSessionId === agentId)
+              ? [{ value: agentId, label: label || agentId }]
+              : []),
+            ...children.map((child) => ({
+              value: child.engineSessionId,
+              label: child.title || child.engineSessionId,
+            })),
+          ]}
+        />
       )}
       {(error || catalogError) && (
         <div role="alert" className="px-4 py-3 text-sm text-status-err">

@@ -14,14 +14,17 @@ const SelectTrigger = React.forwardRef<
   <SelectPrimitive.Trigger
     ref={ref}
     className={cn(
-      "cs-control flex h-9 w-full items-center justify-between whitespace-nowrap rounded-md px-3 py-2 text-sm placeholder:text-muted-foreground disabled:cursor-not-allowed disabled:opacity-50 [&>span]:line-clamp-1",
+      "cs-control cs-select-trigger flex h-9 w-full min-w-0 items-center justify-between gap-2 whitespace-nowrap rounded-lg px-3 py-2 text-left text-sm disabled:cursor-not-allowed disabled:opacity-50 [&>span]:min-w-0 [&>span]:truncate",
       className,
     )}
     {...props}
   >
     {children}
     <SelectPrimitive.Icon asChild>
-      <ChevronDown className="h-4 w-4 opacity-50" />
+      <ChevronDown
+        className="cs-select-chevron size-3.5 shrink-0 text-muted-foreground"
+        aria-hidden="true"
+      />
     </SelectPrimitive.Icon>
   </SelectPrimitive.Trigger>
 ));
@@ -77,9 +80,9 @@ const SelectContent = React.forwardRef<
       collisionPadding={12}
       sticky="partial"
       className={cn(
-        "cs-popup-surface relative z-50 max-h-[min(var(--radix-select-content-available-height),22rem)] min-w-[min(8rem,calc(100vw-1.5rem))] max-w-[min(var(--radix-select-content-available-width),calc(100vw-1.5rem))] overflow-hidden rounded-md p-1 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95",
+        "cs-popup-surface cs-select-content relative z-50 max-h-[min(var(--radix-select-content-available-height),22rem)] min-w-[min(8rem,calc(100vw-1.5rem))] max-w-[min(var(--radix-select-content-available-width),calc(100vw-1.5rem))] overflow-hidden rounded-xl p-1.5",
         position === "popper" &&
-          "min-w-[min(var(--radix-select-trigger-width),var(--radix-select-content-available-width),calc(100vw-1.5rem))] data-[side=bottom]:translate-y-0 data-[side=top]:translate-y-0",
+          "w-[var(--radix-select-trigger-width)] min-w-[min(max(14rem,var(--radix-select-trigger-width)),var(--radix-select-content-available-width),calc(100vw-1.5rem))]",
         className,
       )}
       {...props}
@@ -101,17 +104,17 @@ const SelectItem = React.forwardRef<
   <SelectPrimitive.Item
     ref={ref}
     className={cn(
-      "cs-menu-item relative w-full min-w-0 cursor-default select-none whitespace-normal px-2 py-1.5 pr-8 text-sm [overflow-wrap:anywhere] data-[disabled]:pointer-events-none data-[disabled]:opacity-50",
+      "cs-menu-item cs-select-item relative w-full min-w-0 cursor-default select-none whitespace-normal px-3 py-2 pr-9 text-sm [overflow-wrap:anywhere] data-[disabled]:pointer-events-none data-[disabled]:opacity-50",
       className,
     )}
     {...props}
   >
-    <span className="absolute right-2 flex h-3.5 w-3.5 items-center justify-center">
+    <span className="absolute right-2.5 flex size-4 items-center justify-center text-primary">
       <SelectPrimitive.ItemIndicator>
         <Check className="h-4 w-4" />
       </SelectPrimitive.ItemIndicator>
     </span>
-    <SelectPrimitive.ItemText>{children}</SelectPrimitive.ItemText>
+    <SelectPrimitive.ItemText className="min-w-0 flex-1">{children}</SelectPrimitive.ItemText>
   </SelectPrimitive.Item>
 ));
 SelectItem.displayName = SelectPrimitive.Item.displayName;

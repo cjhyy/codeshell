@@ -39,6 +39,21 @@ function findElement(node: unknown, tagName: string): any {
   return undefined;
 }
 
+// Root selection remains a component contract here; real pointer/keyboard
+// selection through the portaled menu is covered by the dropdown browser fixture.
+function rootSelectProps(): Record<string, any> {
+  const visit = (fiber: any): Record<string, any> | undefined => {
+    if (!fiber) return undefined;
+    if (fiber.type?.name === "SimpleSelect") return fiber.memoizedProps;
+    return visit(fiber.child) ?? visit(fiber.sibling);
+  };
+  const current = (root as unknown as { _internalRoot: { current: unknown } })._internalRoot
+    .current;
+  const props = visit(current);
+  if (!props) throw new Error("Expected the workspace root selector");
+  return props;
+}
+
 function textOf(node: any): string {
   return node.nodeType === 3
     ? (node.nodeValue ?? node.textContent ?? "")
@@ -145,7 +160,7 @@ describe("FilesPanel workspace identity", () => {
     revealConsumed = true;
     await render();
     await act(async () => {
-      reactPropsOf(findElement(container, "SELECT")).onChange({ target: { value: "secondary" } });
+      rootSelectProps().onChange("secondary");
       await flushMicrotasks();
     });
 
@@ -349,10 +364,10 @@ describe("FilesPanel workspace identity", () => {
     revealConsumed = true;
     await render();
 
-    const select = findElement(container, "SELECT");
-    expect(select).toBeDefined();
+    const select = rootSelectProps();
+    expect(select.options.map((option: { value: string }) => option.value)).toContain("secondary");
     await act(async () => {
-      reactPropsOf(select).onChange({ target: { value: "secondary" } });
+      select.onChange("secondary");
       await flushMicrotasks();
     });
 
@@ -378,14 +393,12 @@ describe("FilesPanel workspace identity", () => {
     await render();
 
     expect(readSessionDirs).toContainEqual(["old-session", "old-main", WORKTREE]);
-    const select = findElement(container, "SELECT");
-    const optionValues = (select?.childNodes ?? []).map(
-      (option: unknown) => reactPropsOf(option).value,
-    );
+    const select = rootSelectProps();
+    const optionValues = select.options.map((option: { value: string }) => option.value);
     expect(optionValues).toEqual(["old-main", "new-primary"]);
 
     await act(async () => {
-      reactPropsOf(select).onChange({ target: { value: "new-primary" } });
+      select.onChange("new-primary");
       await flushMicrotasks();
     });
     expect(readSessionDirs).toContainEqual(["old-session", "new-primary", "/notes"]);
