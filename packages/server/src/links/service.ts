@@ -18,6 +18,14 @@ import {
 } from "@cjhyy/code-shell-core";
 import { listDesktopLinkProviders } from "./catalog.js";
 import {
+  authorizationDiagnosticFailure,
+  authorizationDiagnosticIdentity,
+  authorizationDiagnosticStage,
+  withLinkAuthorizationTrace,
+  type LinkAuthorizationDiagnosticCode,
+  type LinkAuthorizationDiagnosticSink,
+} from "./diagnostics.js";
+import {
   readRemoteProviderCatalog,
   readRemoteProviderCapabilities,
   RemoteLinkCatalogError,
@@ -160,6 +168,8 @@ export interface LinkServiceOptions {
   /** Native Host only; remote browser callers may bind existing Host sessions but cannot start login. */
   allowCliLogin?: boolean;
   hostOAuthAdapters?: readonly HostLinkOAuthAdapter[];
+  /** Defaults to redacted single-line JSON on stderr for HTTP and native authorization starts. */
+  onAuthorizationDiagnostic?: LinkAuthorizationDiagnosticSink;
 }
 
 interface HostOAuthJob {
@@ -242,7 +252,21 @@ export function createLinkService(options: LinkServiceOptions = {}) {
         health: NonNullable<LinkSnapshot["remoteCatalog"]>;
       }
     | undefined;
-  const catalogPending = new Map<string, Promise<void>>();
+  type CatalogDiagnostic = {
+    internalCode: LinkAuthorizationDiagnosticCode;
+    upstreamStatus?: number;
+  };
+  const catalogPending = new Map<string, Promise<CatalogDiagnostic | undefined>>();
+  const catalogCodes = new Map<string, LinkAuthorizationDiagnosticCode>([
+    ["network", "catalog_network"],
+    ["timeout", "catalog_timeout"],
+    ["http_status", "catalog_http_status"],
+    ["invalid_json", "catalog_invalid_json"],
+    ["invalid_schema", "catalog_invalid_schema"],
+    ["unreviewed_capability", "catalog_unreviewed_capability"],
+    ["unsupported_auth", "catalog_unsupported_auth"],
+    ["response_limit", "catalog_response_limit"],
+  ]);
   const revokedOwners = new Set<string>();
   let closed = false;
   let snapshotSignature = "";
@@ -290,17 +314,24 @@ export function createLinkService(options: LinkServiceOptions = {}) {
       throw new LinkServiceError(401, "login_required");
   }
   async function authorize(context: LinkOperationContext): Promise<void> {
-    unavailable(context);
-    if (!(await context.authorize())) throw new LinkServiceError(401, "login_required");
-    unavailable(context);
+    try {
+      unavailable(context);
+      if (!(await context.authorize())) throw new LinkServiceError(401, "login_required");
+      unavailable(context);
+    } catch (error) {
+      authorizationDiagnosticFailure("authorization", "authorization_check_failed");
+      throw error;
+    }
   }
   function begin(context: LinkOperationContext): ActiveOperation {
     unavailable(context);
     if (
       operations.size >= 8 ||
       [...operations].filter((operation) => operation.ownerId === context.ownerId).length >= 2
-    )
+    ) {
+      authorizationDiagnosticFailure("job_creation", "job_capacity_exceeded");
       throw new LinkServiceError(409, "busy");
+    }
     const operation = { ownerId: context.ownerId, controller: new AbortController() };
     operations.add(operation);
     return operation;
@@ -318,12 +349,22 @@ export function createLinkService(options: LinkServiceOptions = {}) {
     return current.revision;
   }
   function records() {
-    const current = store.listWithStatus("full");
-    if (!current.readable) throw new LinkServiceError(503, "unavailable");
-    return {
-      credentials: current.credentials,
-      projectIds: new Set(store.list("project").map((c) => c.id)),
-    };
+    authorizationDiagnosticStage("host_store_read");
+    try {
+      const current = store.listWithStatus("full");
+      if (!current.readable) {
+        authorizationDiagnosticFailure("host_store_read", "host_store_unreadable");
+        throw new LinkServiceError(503, "unavailable");
+      }
+      return {
+        credentials: current.credentials,
+        projectIds: new Set(store.list("project").map((c) => c.id)),
+      };
+    } catch (error) {
+      if (!(error instanceof LinkServiceError))
+        authorizationDiagnosticFailure("host_store_read", "host_store_read_failed");
+      throw error;
+    }
   }
   function isLink(credential: Credential): boolean {
     return (
@@ -401,7 +442,7 @@ export function createLinkService(options: LinkServiceOptions = {}) {
     const current = records();
     const ids = new Set(current.credentials.map((credential) => credential.id));
     for (const id of revisions.keys()) if (!ids.has(id)) revisions.delete(id);
-    const remoteConfig = options.remoteLink?.();
+    const remoteConfig = remoteConfiguration();
     const remoteProviders = remoteConfig
       ? remoteCatalog?.issuer === remoteConfig.issuer
         ? remoteCatalog.providers
@@ -546,19 +587,33 @@ export function createLinkService(options: LinkServiceOptions = {}) {
     }
     return { ...result, revision: snapshotRevision };
   }
-  async function refreshRemoteCatalog(context: LinkOperationContext, force = false): Promise<void> {
+  function remoteConfiguration(): RemoteLinkConfiguration | undefined {
+    authorizationDiagnosticStage("remote_configuration");
+    try {
+      return options.remoteLink?.();
+    } catch (error) {
+      authorizationDiagnosticFailure("remote_configuration", "remote_configuration_invalid");
+      throw error;
+    }
+  }
+  async function refreshRemoteCatalogWithDiagnostic(
+    context: LinkOperationContext,
+    force = false,
+  ): Promise<CatalogDiagnostic | undefined> {
     await authorize(context);
-    const config = options.remoteLink?.();
+    const config = remoteConfiguration();
     if (
       !config ||
       (!force && remoteCatalog?.issuer === config.issuer && remoteCatalog.expiresAt > now())
     )
       return;
+    authorizationDiagnosticStage("remote_catalog");
     if (!catalogPending.has(config.issuer)) {
       const pending = (async () => {
         const previous = remoteCatalog?.issuer === config.issuer ? remoteCatalog : undefined;
         let available = previous?.providers ?? [];
         let health: NonNullable<LinkSnapshot["remoteCatalog"]>;
+        let diagnostic: CatalogDiagnostic | undefined;
         try {
           available = options.readRemoteCatalog
             ? (await options.readRemoteCatalog(config)).flatMap((id) => {
@@ -571,6 +626,15 @@ export function createLinkService(options: LinkServiceOptions = {}) {
           const checkedAt = new Date(now()).toISOString();
           health = { state: "ready", checkedAt, lastSuccessAt: checkedAt };
         } catch (error) {
+          diagnostic = {
+            internalCode:
+              error instanceof RemoteLinkCatalogError
+                ? (catalogCodes.get(error.reason) ?? "catalog_unexpected_error")
+                : "catalog_unexpected_error",
+            ...(error instanceof RemoteLinkCatalogError
+              ? { upstreamStatus: error.httpStatus }
+              : {}),
+          };
           // A failed discovery does not revoke saved accounts or erase the last good catalog.
           health = {
             state: previous?.health.lastSuccessAt ? "stale" : "unavailable",
@@ -591,13 +655,25 @@ export function createLinkService(options: LinkServiceOptions = {}) {
             providers: available,
             health,
           };
+        return diagnostic;
       })().finally(() => {
         if (catalogPending.get(config.issuer) === pending) catalogPending.delete(config.issuer);
       });
       catalogPending.set(config.issuer, pending);
     }
-    await catalogPending.get(config.issuer);
+    // The shared request performs no trace writes. Every waiter owns its failure correlation.
+    const diagnostic = await catalogPending.get(config.issuer);
+    if (diagnostic)
+      authorizationDiagnosticFailure(
+        "remote_catalog",
+        diagnostic.internalCode,
+        diagnostic.upstreamStatus,
+      );
     await authorize(context);
+    return diagnostic;
+  }
+  async function refreshRemoteCatalog(context: LinkOperationContext, force = false): Promise<void> {
+    await refreshRemoteCatalogWithDiagnostic(context, force);
   }
   function string(value: unknown, max = 200): string {
     if (
@@ -616,7 +692,9 @@ export function createLinkService(options: LinkServiceOptions = {}) {
     return id;
   }
   function reviewed(id: string, expectedRevision: unknown): Credential {
+    authorizationDiagnosticStage("connection_review");
     const current = records();
+    authorizationDiagnosticStage("connection_review");
     const credential = current.credentials.find((entry) => entry.id === id);
     if (!credential || !isLink(credential)) throw new LinkServiceError(409, "conflict");
     if (current.projectIds.has(id)) throw new LinkServiceError(403, "read_only");
@@ -628,6 +706,7 @@ export function createLinkService(options: LinkServiceOptions = {}) {
     raw: LinkConnectionInput,
     hostAdapter?: HostLinkOAuthAdapter,
   ): PreparedConnection {
+    authorizationDiagnosticStage("input_validation");
     if (!raw || typeof raw !== "object") throw new LinkServiceError(400, "invalid_request");
     const input = {
       providerId: string(raw.providerId, 80),
@@ -650,9 +729,12 @@ export function createLinkService(options: LinkServiceOptions = {}) {
     )
       throw new LinkServiceError(400, "invalid_request");
     const id = input.connectionId ?? `link-${input.providerId}-${input.methodId}`;
+    authorizationDiagnosticStage("connection_review");
     let expected: Credential | null = null;
     if (input.expectedRevision === null) {
-      if (records().credentials.some((credential) => credential.id === id))
+      const current = records();
+      authorizationDiagnosticStage("connection_review");
+      if (current.credentials.some((credential) => credential.id === id))
         throw new LinkServiceError(409, "conflict");
     } else {
       expected = reviewed(id, input.expectedRevision);
@@ -1036,10 +1118,15 @@ export function createLinkService(options: LinkServiceOptions = {}) {
     input: LinkConnectionInput,
     adapter: HostLinkOAuthAdapter,
   ): Promise<LinkAuthorization> {
+    authorizationDiagnosticStage("job_creation");
     for (const [id, job] of hostOAuthJobs)
       if (job.retireAt !== undefined && job.retireAt <= now()) hostOAuthJobs.delete(id);
-    if (hostOAuthJobs.size >= 32) throw new LinkServiceError(409, "busy");
+    if (hostOAuthJobs.size >= 32) {
+      authorizationDiagnosticFailure("job_creation", "job_capacity_exceeded");
+      throw new LinkServiceError(409, "busy");
+    }
     const prepared = prepare(input, adapter);
+    authorizationDiagnosticStage("job_creation");
     const operation = begin(context);
     const expiresAt = new Date(now() + 10 * 60_000).toISOString();
     const job: HostOAuthJob = {
@@ -1200,12 +1287,48 @@ export function createLinkService(options: LinkServiceOptions = {}) {
     return true;
   }
 
+  function diagnosticIdentity(input: LinkConnectionInput, authModeId: unknown): void {
+    const provider = providers.find((candidate) => candidate.id === input?.providerId);
+    if (!provider) return;
+    const remote = REMOTE_LINK_ADAPTERS.find(
+      (adapter) => adapter.id === provider.id && adapter.methodId === input.methodId,
+    );
+    const method = provider.connectionMethods.find((candidate) => candidate.id === input.methodId);
+    const modes = remote
+      ? [remote.authModeId]
+      : method
+        ? [
+            "token",
+            ...(method.quickAuth ? ["cli-session"] : []),
+            ...(method.browserAuth?.flow === "device-code" ? ["browser-oauth"] : []),
+            ...(method.oauthProfileId ? ["mcp-oauth"] : []),
+          ]
+        : [];
+    authorizationDiagnosticIdentity({
+      providerId: provider.id,
+      ...(remote || method ? { methodId: remote?.methodId ?? method!.id } : {}),
+      ...(modes.includes(authModeId as string) ? { authModeId: authModeId as string } : {}),
+    });
+  }
   async function startAuthorization(
     context: LinkOperationContext,
     input: LinkConnectionInput,
     rawAuthModeId: unknown,
   ): Promise<LinkAuthorization> {
+    return withLinkAuthorizationTrace(
+      options.onAuthorizationDiagnostic,
+      () => startAuthorizationWithinTrace(context, input, rawAuthModeId),
+      publicLinkError,
+    );
+  }
+  async function startAuthorizationWithinTrace(
+    context: LinkOperationContext,
+    input: LinkConnectionInput,
+    rawAuthModeId: unknown,
+  ): Promise<LinkAuthorization> {
     await authorize(context);
+    diagnosticIdentity(input, rawAuthModeId);
+    authorizationDiagnosticStage("input_validation");
     const authModeId = string(rawAuthModeId, 80);
     const hostAdapter = hostOAuthAdapters.find(
       (adapter) =>
@@ -1216,16 +1339,37 @@ export function createLinkService(options: LinkServiceOptions = {}) {
     if (input?.resourceUrl !== undefined && authModeId !== "remote-link" && !hostAdapter)
       throw new LinkServiceError(400, "invalid_request");
     if (authModeId === "remote-link") {
-      await refreshRemoteCatalog(context, true);
-      if (snapshot().remoteCatalog?.state !== "ready")
+      const diagnostic = await refreshRemoteCatalogWithDiagnostic(context, true);
+      const state = snapshot().remoteCatalog?.state;
+      if (state !== "ready") {
+        if (state === "unconfigured")
+          authorizationDiagnosticFailure("remote_configuration", "remote_configuration_missing");
+        else
+          authorizationDiagnosticFailure(
+            "remote_catalog",
+            diagnostic?.internalCode ?? "catalog_unavailable",
+            diagnostic?.upstreamStatus,
+          );
         throw new LinkServiceError(503, "unavailable");
+      }
     }
     const provider = snapshot().providers.find((candidate) => candidate.id === input?.providerId);
+    authorizationDiagnosticStage("mode_selection");
     const mode = provider?.authModes?.find(
       (candidate) =>
         candidate.id === authModeId && candidate.methodId === input.methodId && candidate.available,
     );
-    if (!mode) throw new LinkServiceError(400, "invalid_request");
+    if (!mode) {
+      authorizationDiagnosticFailure(
+        "mode_selection",
+        authModeId === "remote-link" &&
+          REMOTE_LINK_ADAPTERS.some((adapter) => adapter.id === input?.providerId) &&
+          !remoteCatalog?.providers.some((candidate) => candidate.id === input.providerId)
+          ? "provider_capability_missing"
+          : "auth_mode_unavailable",
+      );
+      throw new LinkServiceError(400, "invalid_request");
+    }
     if (hostAdapter) return startHostOAuth(context, input, hostAdapter);
     if (mode.kind === "redirect") {
       const result = await startRemoteAuthAfterCatalog(context, input);
@@ -1237,9 +1381,14 @@ export function createLinkService(options: LinkServiceOptions = {}) {
       return structuredClone(job.public);
     }
     if (mode.kind === "device-code") return startDeviceAuth(context, input);
+    authorizationDiagnosticStage("job_creation");
     pruneInteractive();
-    if (interactiveJobs.size >= 32) throw new LinkServiceError(409, "busy");
+    if (interactiveJobs.size >= 32) {
+      authorizationDiagnosticFailure("job_creation", "job_capacity_exceeded");
+      throw new LinkServiceError(409, "busy");
+    }
     const prepared = prepare(input);
+    authorizationDiagnosticStage("job_creation");
     const operation = begin(context);
     const expiresAt = now() + 10 * 60_000;
     const base = { id: randomUUID(), expiresAt: new Date(expiresAt).toISOString() };
@@ -1530,13 +1679,18 @@ export function createLinkService(options: LinkServiceOptions = {}) {
     context: LinkOperationContext,
     input: LinkConnectionInput,
   ): Promise<LinkAuthorization> {
+    authorizationDiagnosticStage("job_creation");
     pruneJobs();
-    if (jobs.size >= 32) throw new LinkServiceError(409, "busy");
+    if (jobs.size >= 32) {
+      authorizationDiagnosticFailure("job_creation", "job_capacity_exceeded");
+      throw new LinkServiceError(409, "busy");
+    }
     const operation = begin(context);
     let job: AuthorizationJob | undefined;
     try {
       await authorize(context);
       const prepared = prepare(input);
+      authorizationDiagnosticStage("job_creation");
       const providerId = prepared.input.providerId;
       if (!isLocalBrowserLinkProvider(providerId))
         throw new LinkServiceError(400, "invalid_request");
@@ -1617,6 +1771,7 @@ export function createLinkService(options: LinkServiceOptions = {}) {
     input: LinkConnectionInput,
   ): Promise<LinkAuthorization> {
     await authorize(context);
+    authorizationDiagnosticStage("job_creation");
     const checkCapacity = () => {
       pruneRemoteJobs();
       if (
@@ -1624,10 +1779,13 @@ export function createLinkService(options: LinkServiceOptions = {}) {
         [...remoteJobs.values()].filter(
           (job) => job.context.ownerId === context.ownerId && job.public.state === "pending",
         ).length >= 2
-      )
+      ) {
+        authorizationDiagnosticFailure("job_creation", "job_capacity_exceeded");
         throw new LinkServiceError(409, "busy");
+      }
     };
     checkCapacity();
+    authorizationDiagnosticStage("input_validation");
     if (
       !input ||
       input.methodId !== "remote-link" ||
@@ -1638,19 +1796,29 @@ export function createLinkService(options: LinkServiceOptions = {}) {
           !input.resourceUrl))
     )
       throw new LinkServiceError(400, "invalid_request");
-    const config = options.remoteLink?.();
-    if (!config) throw new LinkServiceError(503, "unavailable");
+    const config = remoteConfiguration();
+    if (!config) {
+      authorizationDiagnosticFailure("remote_configuration", "remote_configuration_missing");
+      throw new LinkServiceError(503, "unavailable");
+    }
     // No await between selecting the deployment and creating its authorization URL.
+    authorizationDiagnosticStage("remote_catalog");
     const capabilities =
       remoteCatalog?.issuer === config.issuer && remoteCatalog.health.state === "ready"
         ? remoteCatalog.providers.find((provider) => provider.id === input.providerId)
         : undefined;
-    if (!capabilities) throw new LinkServiceError(503, "unavailable");
+    if (!capabilities) {
+      authorizationDiagnosticFailure("remote_catalog", "provider_capability_missing");
+      throw new LinkServiceError(503, "unavailable");
+    }
+    authorizationDiagnosticStage("connection_review");
     const id =
       input.connectionId === undefined ? `link-remote-${randomUUID()}` : safeId(input.connectionId);
     let expected: Credential | null = null;
     if (input.expectedRevision === null) {
-      if (records().credentials.some((credential) => credential.id === id))
+      const current = records();
+      authorizationDiagnosticStage("connection_review");
+      if (current.credentials.some((credential) => credential.id === id))
         throw new LinkServiceError(409, "conflict");
     } else {
       expected = reviewed(id, input.expectedRevision);
@@ -1658,6 +1826,7 @@ export function createLinkService(options: LinkServiceOptions = {}) {
         throw new LinkServiceError(409, "conflict");
     }
     const prepared = { id, expected, input: { ...input, label: string(input.label) } };
+    authorizationDiagnosticStage("job_creation");
     let attempt: RemoteLinkAttempt;
     try {
       let resourceFiles: string[] | undefined;
@@ -1676,6 +1845,7 @@ export function createLinkService(options: LinkServiceOptions = {}) {
         ...(resourceFiles !== undefined ? { resourceFiles } : {}),
       });
     } catch {
+      authorizationDiagnosticFailure("job_creation", "remote_authorization_invalid");
       throw new LinkServiceError(400, "invalid_request");
     }
     const publicJob: LinkAuthorization = {

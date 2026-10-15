@@ -11,12 +11,17 @@ import {
   createLinkService,
   type LinkConnectionInput,
   type LinkAuthorizationResponse,
+  type LinkAuthorizationDiagnosticSink,
   type HostLinkOAuthAdapter,
 } from "@cjhyy/code-shell-server/links";
 import { createNativeRemoteLinkManager } from "./remote-link-manager.js";
 import { openNativeLinkAuthorization } from "./remote-link-window.js";
 import { desktopRemoteLinkConfiguration } from "./desktop-remote-link-configuration.js";
 import { createAccountGitHubLinkPreparer } from "./account-github-link.js";
+import { dlog } from "./desktop-logger.js";
+
+const logAuthorizationDiagnostic: LinkAuthorizationDiagnosticSink = (diagnostic) =>
+  dlog("main", "link.authorization", { ...diagnostic });
 
 /** Window-owned authorization managers retire on navigation and destruction. */
 export function registerRemoteLinkIpc(deps: {
@@ -31,6 +36,7 @@ export function registerRemoteLinkIpc(deps: {
   const prepareGitHubLink = createAccountGitHubLinkPreparer({
     createService: () =>
       createLinkService({
+        onAuthorizationDiagnostic: logAuthorizationDiagnostic,
         remoteLink: () => desktopRemoteLinkConfiguration(process.env, app.isPackaged),
         reuseRemoteConnection: true,
         withMutation: (write) => deps.withMutation("", write),
@@ -80,6 +86,7 @@ export function registerRemoteLinkIpc(deps: {
       if (owner.managers.size >= 64) throw new Error("打开的 Link 工作区过多，请重新打开窗口。");
       manager = createNativeRemoteLinkManager({
         service: createLinkService({
+          onAuthorizationDiagnostic: logAuthorizationDiagnostic,
           cwd: cwd || undefined,
           remoteLink: () => desktopRemoteLinkConfiguration(process.env, app.isPackaged),
           withMutation: (write) => deps.withMutation(cwd, write),

@@ -1,5 +1,6 @@
 import type { IncomingMessage, ServerResponse } from "node:http";
 import { createLinkBrowserHandoff } from "./browser-handoff.js";
+import { authorizationDiagnosticStage, createLinkAuthorizationTrace } from "./diagnostics.js";
 import {
   createLinkService,
   LinkServiceError,
@@ -8,6 +9,7 @@ import {
 } from "./service.js";
 import type {
   LinkAuthorizationResponse,
+  LinkAuthorization,
   LinkConnectionInput,
   LinkOperationContext,
   TokenConnectionInput,
@@ -104,155 +106,175 @@ export function createLinkHttp(options: LinkHttpOptions) {
         if (!response.writableEnded) abandoned = true;
       };
       response.once("close", onClose);
-      try {
-        const owner = await context(request, () => abandoned || request.aborted);
-        const method = request.method;
-        let result: unknown;
-        if (url.pathname === ROOT && method === "GET") {
-          await service.refreshRemoteCatalog(owner);
-          const snapshot = service.snapshot();
-          const configured = options.remoteLink?.();
-          result = {
-            ...snapshot,
-            capabilities: {
-              ...snapshot.capabilities,
-              ...(options.browserHandoff !== false &&
-              configured &&
-              new URL(configured.redirectUri).pathname === "/link/callback"
-                ? { browserHandoff: 1 }
-                : {}),
-            },
-          };
-        } else {
-          const cli = /^\/api\/v1\/links\/providers\/([^/]+)\/cli$/.exec(url.pathname);
-          const connection = /^\/api\/v1\/links\/connections\/([^/]+)$/.exec(url.pathname);
-          const remoteComplete = /^\/api\/v1\/links\/authorizations\/([^/]+)\/complete$/.exec(
-            url.pathname,
-          );
-          const handoff = /^\/api\/v1\/links\/authorizations\/([^/]+)\/browser$/.exec(url.pathname);
-          const authorization = /^\/api\/v1\/links\/authorizations\/([^/]+)$/.exec(url.pathname);
-          const respond = /^\/api\/v1\/links\/authorizations\/([^/]+)\/responses$/.exec(
-            url.pathname,
-          );
-          if (url.pathname === ROOT + "/authorizations" && method === "POST") {
-            const input = await body(request);
-            fields(input, [
-              "providerId",
-              "methodId",
-              "label",
-              "connectionId",
-              "expectedRevision",
-              "authModeId",
-              "resourceUrl",
-            ]);
-            result = await service.startAuthorization(
-              owner,
-              input as unknown as LinkConnectionInput,
-              input.authModeId,
-            );
-          } else if (handoff && method === "POST") {
-            fields(await body(request), []);
-            const id = decodeURIComponent(handoff[1]!);
-            const check = async () => {
-              const job = await service.authorization(owner, id);
-              if (job.state !== "pending") throw new LinkServiceError(409, "conflict");
-              return job;
-            };
+      const trace =
+        url.pathname === ROOT + "/authorizations" && request.method === "POST"
+          ? createLinkAuthorizationTrace(options.onAuthorizationDiagnostic)
+          : undefined;
+      if (trace) response.setHeader("X-Request-ID", trace.requestId);
+      const handle = async () => {
+        try {
+          authorizationDiagnosticStage("authorization");
+          const owner = await context(request, () => abandoned || request.aborted);
+          const method = request.method;
+          let result: unknown;
+          if (url.pathname === ROOT && method === "GET") {
+            await service.refreshRemoteCatalog(owner);
+            const snapshot = service.snapshot();
             const configured = options.remoteLink?.();
-            if (!configured) throw new LinkServiceError(503, "unavailable");
-            result = browser.create(
-              await check(),
-              {
-                check: async () => {
-                  await check();
-                },
-                complete: (callbackUrl) => service.completeRemoteAuth(owner, id, callbackUrl),
-                cancel: () => service.cancelAuthorization(owner, id),
+            result = {
+              ...snapshot,
+              capabilities: {
+                ...snapshot.capabilities,
+                ...(options.browserHandoff !== false &&
+                configured &&
+                new URL(configured.redirectUri).pathname === "/link/callback"
+                  ? { browserHandoff: 1 }
+                  : {}),
               },
-              new URL(configured.redirectUri).origin,
+            };
+          } else {
+            const cli = /^\/api\/v1\/links\/providers\/([^/]+)\/cli$/.exec(url.pathname);
+            const connection = /^\/api\/v1\/links\/connections\/([^/]+)$/.exec(url.pathname);
+            const remoteComplete = /^\/api\/v1\/links\/authorizations\/([^/]+)\/complete$/.exec(
+              url.pathname,
             );
-          } else if (respond && method === "POST") {
-            const input = await body(request);
-            fields(input, ["stepId", "operation", "input"]);
-            result = await service.respondAuthorization(
-              owner,
-              decodeURIComponent(respond[1]!),
-              input as unknown as LinkAuthorizationResponse,
+            const handoff = /^\/api\/v1\/links\/authorizations\/([^/]+)\/browser$/.exec(
+              url.pathname,
             );
-          } else if (remoteComplete && method === "POST") {
-            const input = await body(request);
-            fields(input, ["callbackUrl"]);
-            result = await service.completeRemoteAuth(
-              owner,
-              decodeURIComponent(remoteComplete[1]!),
-              input.callbackUrl as string,
+            const authorization = /^\/api\/v1\/links\/authorizations\/([^/]+)$/.exec(url.pathname);
+            const respond = /^\/api\/v1\/links\/authorizations\/([^/]+)\/responses$/.exec(
+              url.pathname,
             );
-          } else if (cli && method === "GET")
-            result = await service.cliStatus(owner, decodeURIComponent(cli[1]!));
-          else if (authorization && method === "GET")
-            result = await service.authorization(owner, decodeURIComponent(authorization[1]!));
-          else if (authorization && method === "DELETE") {
-            await service.cancelAuthorization(owner, decodeURIComponent(authorization[1]!));
-            result = { cancelled: true };
-          } else if (
-            method === "POST" &&
-            [
-              ROOT + "/connections/token",
-              ROOT + "/connections/cli",
-              ROOT + "/authorizations/device",
-              ROOT + "/authorizations/remote",
-            ].includes(url.pathname)
-          ) {
-            const input = await body(request);
-            const token = url.pathname.endsWith("/token");
-            fields(input, [
-              "providerId",
-              "methodId",
-              "label",
-              "connectionId",
-              "expectedRevision",
-              ...(token ? ["token"] : []),
-              ...(url.pathname.endsWith("/remote") ? ["resourceUrl"] : []),
-            ]);
-            result = token
-              ? await service.connectToken(owner, input as unknown as TokenConnectionInput)
-              : url.pathname.endsWith("/cli")
-                ? await service.connectCli(owner, input as unknown as LinkConnectionInput)
-                : url.pathname.endsWith("/remote")
-                  ? await service.startRemoteAuth(owner, input as unknown as LinkConnectionInput)
-                  : await service.startDeviceAuth(owner, input as unknown as LinkConnectionInput);
-          } else if (connection && (method === "PATCH" || method === "DELETE")) {
-            const input = await body(request);
-            fields(
-              input,
-              method === "PATCH" ? ["label", "expectedRevision"] : ["expectedRevision"],
-            );
-            const id = decodeURIComponent(connection[1]!);
-            if (method === "PATCH")
-              result = await service.rename(
+            if (url.pathname === ROOT + "/authorizations" && method === "POST") {
+              authorizationDiagnosticStage("body_validation");
+              const input = await body(request);
+              fields(input, [
+                "providerId",
+                "methodId",
+                "label",
+                "connectionId",
+                "expectedRevision",
+                "authModeId",
+                "resourceUrl",
+              ]);
+              result = await service.startAuthorization(
                 owner,
-                id,
-                input.label as string,
-                input.expectedRevision as string,
+                input as unknown as LinkConnectionInput,
+                input.authModeId,
               );
-            else {
-              await service.disconnect(owner, id, input.expectedRevision as string);
-              result = { removed: true };
-            }
-          } else throw new LinkServiceError(404, "not_found");
+            } else if (handoff && method === "POST") {
+              fields(await body(request), []);
+              const id = decodeURIComponent(handoff[1]!);
+              const check = async () => {
+                const job = await service.authorization(owner, id);
+                if (job.state !== "pending") throw new LinkServiceError(409, "conflict");
+                return job;
+              };
+              const configured = options.remoteLink?.();
+              if (!configured) throw new LinkServiceError(503, "unavailable");
+              result = browser.create(
+                await check(),
+                {
+                  check: async () => {
+                    await check();
+                  },
+                  complete: (callbackUrl) => service.completeRemoteAuth(owner, id, callbackUrl),
+                  cancel: () => service.cancelAuthorization(owner, id),
+                },
+                new URL(configured.redirectUri).origin,
+              );
+            } else if (respond && method === "POST") {
+              const input = await body(request);
+              fields(input, ["stepId", "operation", "input"]);
+              result = await service.respondAuthorization(
+                owner,
+                decodeURIComponent(respond[1]!),
+                input as unknown as LinkAuthorizationResponse,
+              );
+            } else if (remoteComplete && method === "POST") {
+              const input = await body(request);
+              fields(input, ["callbackUrl"]);
+              result = await service.completeRemoteAuth(
+                owner,
+                decodeURIComponent(remoteComplete[1]!),
+                input.callbackUrl as string,
+              );
+            } else if (cli && method === "GET")
+              result = await service.cliStatus(owner, decodeURIComponent(cli[1]!));
+            else if (authorization && method === "GET")
+              result = await service.authorization(owner, decodeURIComponent(authorization[1]!));
+            else if (authorization && method === "DELETE") {
+              await service.cancelAuthorization(owner, decodeURIComponent(authorization[1]!));
+              result = { cancelled: true };
+            } else if (
+              method === "POST" &&
+              [
+                ROOT + "/connections/token",
+                ROOT + "/connections/cli",
+                ROOT + "/authorizations/device",
+                ROOT + "/authorizations/remote",
+              ].includes(url.pathname)
+            ) {
+              const input = await body(request);
+              const token = url.pathname.endsWith("/token");
+              fields(input, [
+                "providerId",
+                "methodId",
+                "label",
+                "connectionId",
+                "expectedRevision",
+                ...(token ? ["token"] : []),
+                ...(url.pathname.endsWith("/remote") ? ["resourceUrl"] : []),
+              ]);
+              result = token
+                ? await service.connectToken(owner, input as unknown as TokenConnectionInput)
+                : url.pathname.endsWith("/cli")
+                  ? await service.connectCli(owner, input as unknown as LinkConnectionInput)
+                  : url.pathname.endsWith("/remote")
+                    ? await service.startRemoteAuth(owner, input as unknown as LinkConnectionInput)
+                    : await service.startDeviceAuth(owner, input as unknown as LinkConnectionInput);
+            } else if (connection && (method === "PATCH" || method === "DELETE")) {
+              const input = await body(request);
+              fields(
+                input,
+                method === "PATCH" ? ["label", "expectedRevision"] : ["expectedRevision"],
+              );
+              const id = decodeURIComponent(connection[1]!);
+              if (method === "PATCH")
+                result = await service.rename(
+                  owner,
+                  id,
+                  input.label as string,
+                  input.expectedRevision as string,
+                );
+              else {
+                await service.disconnect(owner, id, input.expectedRevision as string);
+                result = { removed: true };
+              }
+            } else throw new LinkServiceError(404, "not_found");
+          }
+          authorizationDiagnosticStage("final_authorization");
+          await service.assertAuthorized(owner);
+          json(response, 200, result);
+          trace?.complete(200, undefined, (result as LinkAuthorization).state);
+        } catch (error) {
+          const failure =
+            error instanceof URIError
+              ? new LinkServiceError(400, "invalid_request")
+              : publicLinkError(error);
+          trace?.complete(failure.status, failure.code);
+          if (!response.destroyed)
+            json(response, failure.status, {
+              error: failure.message,
+              code: failure.code,
+              ...(trace ? { requestId: trace.requestId } : {}),
+            });
+        } finally {
+          trace?.deactivate();
+          response.off("close", onClose);
         }
-        await service.assertAuthorized(owner);
-        json(response, 200, result);
-      } catch (error) {
-        const failure =
-          error instanceof URIError
-            ? new LinkServiceError(400, "invalid_request")
-            : publicLinkError(error);
-        if (!response.destroyed)
-          json(response, failure.status, { error: failure.message, code: failure.code });
-      } finally {
-        response.off("close", onClose);
-      }
+      };
+      await (trace ? trace.run(handle) : handle());
       return true;
     },
   };
