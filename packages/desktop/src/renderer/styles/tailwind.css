@@ -243,6 +243,8 @@
   }
 
   .cs-quick-chat-welcome {
+    /* This is the composer's sibling: containment never affects textarea sizing. */
+    container: quick-chat-welcome / size;
     justify-content: safe center;
   }
 
@@ -250,7 +252,44 @@
     width: 100%;
     max-width: 24rem;
     flex-shrink: 0;
+    padding-block: 1.5rem;
     text-align: center;
+  }
+
+  .cs-quick-chat-intro-icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .cs-quick-chat-starters {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 0.5rem;
+  }
+
+  @container quick-chat-welcome (max-height: 16rem) {
+    .cs-quick-chat-intro-icon {
+      display: none;
+    }
+  }
+
+  @container quick-chat-welcome (max-height: 9rem) {
+    .cs-quick-chat-intro {
+      padding-block: 0.5rem;
+    }
+
+    .cs-quick-chat-intro-description,
+    .cs-quick-chat-starters {
+      display: none;
+    }
+  }
+
+  @container quick-chat-welcome (max-height: 2rem) {
+    .cs-quick-chat-intro {
+      display: none;
+    }
   }
 
   .cs-quick-chat-starter {

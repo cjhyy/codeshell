@@ -1691,7 +1691,7 @@ export function ChatView({
           <div
             className={
               variant === "quickChat"
-                ? "cs-quick-chat-welcome flex min-h-0 w-full min-w-0 flex-1 flex-col items-center overflow-y-auto px-5 py-6"
+                ? "cs-quick-chat-welcome flex min-h-0 w-full min-w-0 flex-1 flex-col items-center overflow-y-auto px-5"
                 : "mb-5 flex w-full min-w-0 shrink-0 flex-col items-center"
             }
           >

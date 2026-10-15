@@ -219,17 +219,17 @@ export function QuickChatPanel({
             conversationRootId={null}
             welcomeNode={
               <div className="cs-quick-chat-intro">
-                <div className="mx-auto mb-4 flex size-12 items-center justify-center rounded-2xl border border-border/70 bg-card text-primary shadow-sm">
+                <div className="cs-quick-chat-intro-icon mx-auto mb-4 size-12 rounded-2xl border border-border/70 bg-card text-primary shadow-sm">
                   <MessageCircle size={23} strokeWidth={1.5} aria-hidden="true" />
                 </div>
                 <h3 className="text-base font-semibold tracking-tight text-foreground">
                   {t("panels.quickChat.empty")}
                 </h3>
-                <p className="mx-auto mt-2 max-w-64 text-xs leading-5 text-muted-foreground">
+                <p className="cs-quick-chat-intro-description mx-auto mt-2 max-w-64 text-xs leading-5 text-muted-foreground">
                   {t("panels.quickChat.emptyHint")}
                 </p>
                 <div
-                  className="mt-5 flex flex-wrap justify-center gap-2"
+                  className="cs-quick-chat-starters mt-5"
                   role="group"
                   aria-label={t("panels.quickChat.starters")}
                 >
