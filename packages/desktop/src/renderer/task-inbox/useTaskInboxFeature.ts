@@ -13,6 +13,7 @@ interface Params {
   sessionIndices: Record<string, SessionIndex>;
   selectSession(projectId: string | null, sessionId: string): void;
   openDiskSession(session: DiskSessionMeta): Promise<void>;
+  openHistorySession?(sessionId: string): Promise<"opened" | "unavailable" | "cancelled">;
   openPetTarget(request: PetOpenSessionRequest): Promise<boolean>;
   petSnapshot: { version: number; generation: number } | null;
   openPetPage(): void;
@@ -26,6 +27,7 @@ export function useTaskInboxFeature({
   sessionIndices,
   selectSession,
   openDiskSession,
+  openHistorySession,
   openPetTarget,
   petSnapshot,
   openPetPage,
@@ -63,6 +65,7 @@ export function useTaskInboxFeature({
       selectSession,
       listDiskSessions: (options) => window.codeshell.listDiskSessions(options),
       openDiskSession,
+      openHistorySession,
       openMimiSession: (sessionId) =>
         openPetTarget({
           agentSessionId: sessionId,

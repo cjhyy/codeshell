@@ -68,7 +68,7 @@ async function readBoundedFile(file: string, maxBytes: number): Promise<string> 
   try {
     const stat = await handle.stat();
     if (!stat.isFile() || stat.size > maxBytes) throw new Error("file exceeds the size limit");
-    const buffer = Buffer.allocUnsafe(maxBytes + 1);
+    const buffer = Buffer.allocUnsafe(stat.size + 1);
     let total = 0;
     while (total < buffer.byteLength) {
       const { bytesRead } = await handle.read(buffer, total, buffer.byteLength - total, total);
@@ -80,10 +80,6 @@ async function readBoundedFile(file: string, maxBytes: number): Promise<string> 
   } finally {
     await handle.close();
   }
-}
-
-async function readTailFile(file: string, maxBytes: number): Promise<string> {
-  return (await readTailWindow(file, maxBytes)).text;
 }
 
 async function readTailWindow(
@@ -117,6 +113,68 @@ async function readTailWindow(
   } finally {
     await handle.close();
   }
+}
+
+interface TranscriptSource {
+  file: string;
+  format: "jsonl" | "json";
+}
+
+/** Modern directories are authoritative even when their transcript is absent. */
+async function resolveTranscriptSource(
+  sessionId: string,
+  baseDir: string,
+): Promise<TranscriptSource | null> {
+  const directory = path.join(baseDir, sessionId);
+  try {
+    const info = await fs.lstat(directory);
+    if (info.isSymbolicLink() || !info.isDirectory()) return null;
+    const file = path.join(directory, "transcript.jsonl");
+    try {
+      const transcript = await fs.lstat(file);
+      return transcript.isFile() && !transcript.isSymbolicLink() ? { file, format: "jsonl" } : null;
+    } catch (error) {
+      if ((error as NodeJS.ErrnoException).code === "ENOENT") return null;
+      throw error;
+    }
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code !== "ENOENT") throw error;
+  }
+  for (const format of ["jsonl", "json"] as const) {
+    const file = path.join(baseDir, `${sessionId}.${format}`);
+    try {
+      const info = await fs.lstat(file);
+      // Fail closed instead of falling through to another stale copy.
+      return info.isFile() && !info.isSymbolicLink() ? { file, format } : null;
+    } catch (error) {
+      if ((error as NodeJS.ErrnoException).code !== "ENOENT") throw error;
+    }
+  }
+  return null;
+}
+
+async function readTranscriptWindow(source: TranscriptSource, maxBytes: number) {
+  if (source.format === "jsonl") return readTailWindow(source.file, maxBytes);
+  // TUI /export json writes a TranscriptEvent[] array. Arrays cannot be
+  // parsed from a file suffix: validate the hard size limit before reading,
+  // then page a normalized JSONL view through the same folding contract.
+  const text = await readBoundedFile(source.file, MAX_FOLDED_TRANSCRIPT_SCAN_BYTES);
+  let events: unknown;
+  try {
+    events = JSON.parse(text);
+  } catch {
+    return { text: "", loadedBytes: 0, hasMore: false };
+  }
+  if (!Array.isArray(events)) return { text: "", loadedBytes: 0, hasMore: false };
+  const normalized = Buffer.from(`${events.map((event) => JSON.stringify(event)).join("\n")}\n`);
+  const length = Math.min(normalized.byteLength, maxBytes);
+  const start = normalized.byteLength - length;
+  let window = normalized.subarray(start);
+  if (start > 0) {
+    const newline = window.indexOf(0x0a);
+    window = newline < 0 ? window.subarray(window.length) : window.subarray(newline + 1);
+  }
+  return { text: window.toString("utf8"), loadedBytes: length, hasMore: start > 0 };
 }
 
 /**
@@ -550,20 +608,12 @@ export async function getSessionTranscript(
   sessionId: string,
   baseDir: string = sessionsRoot(),
 ): Promise<FoldItem[]> {
-  if (!isSafeSessionId(sessionId)) return [];
-  const file = path.join(baseDir, sessionId, "transcript.jsonl");
-  try {
-    const sessionInfo = await fs.lstat(path.join(baseDir, sessionId));
-    if (sessionInfo.isSymbolicLink() || !sessionInfo.isDirectory()) return [];
-    const transcriptInfo = await fs.lstat(file);
-    if (transcriptInfo.isSymbolicLink() || !transcriptInfo.isFile()) return [];
-    const jsonl = await readTailFile(file, MAX_FOLDED_TRANSCRIPT_SCAN_BYTES);
-    const items = transcriptToFoldItems(jsonl);
-    return await enrichSubagentCards(items, baseDir);
-  } catch (e) {
-    if ((e as NodeJS.ErrnoException).code === "ENOENT") return [];
-    throw e;
-  }
+  const page = await getSessionTranscriptPage(
+    sessionId,
+    { maxBytes: MAX_FOLDED_TRANSCRIPT_SCAN_BYTES },
+    baseDir,
+  );
+  return page.items;
 }
 
 export interface SessionTranscriptPage {
@@ -591,17 +641,10 @@ export async function getSessionTranscriptPage(
     typeof requested === "number" && Number.isSafeInteger(requested) && requested > 0
       ? Math.min(requested, MAX_TRANSCRIPT_PAGE_BYTES)
       : DEFAULT_TRANSCRIPT_PAGE_BYTES;
-  const file = path.join(baseDir, sessionId, "transcript.jsonl");
   try {
-    const sessionInfo = await fs.lstat(path.join(baseDir, sessionId));
-    if (sessionInfo.isSymbolicLink() || !sessionInfo.isDirectory()) {
-      return { items: [], loadedBytes: 0, hasMore: false };
-    }
-    const transcriptInfo = await fs.lstat(file);
-    if (transcriptInfo.isSymbolicLink() || !transcriptInfo.isFile()) {
-      return { items: [], loadedBytes: 0, hasMore: false };
-    }
-    const page = await readTailWindow(file, maxBytes);
+    const source = await resolveTranscriptSource(sessionId, baseDir);
+    if (!source) return { items: [], loadedBytes: 0, hasMore: false };
+    const page = await readTranscriptWindow(source, maxBytes);
     const items = await enrichSubagentCards(transcriptToFoldItems(page.text), baseDir);
     return { items, loadedBytes: page.loadedBytes, hasMore: page.hasMore };
   } catch (error) {

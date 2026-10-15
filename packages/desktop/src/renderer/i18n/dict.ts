@@ -38,9 +38,17 @@ import { taskInbox } from "./ns/task-inbox";
 import { optimizationLab } from "./ns/optimization-lab";
 import { projectConfig } from "./ns/project-config";
 import { sourceCollections } from "./ns/source-collections";
+import { activity } from "./ns/activity";
+import { activityApprovals } from "./ns/activity-approvals";
+import { activityRuns } from "./ns/activity-runs";
+import { activitySessions } from "./ns/activity-sessions";
 
 export const messages = {
   zh: {
+    ...activity.zh,
+    ...activityApprovals.zh,
+    ...activityRuns.zh,
+    ...activitySessions.zh,
     ...core.zh,
     ...chat.zh,
     ...messagesNs.zh,
@@ -58,6 +66,10 @@ export const messages = {
     ...optimizationLab.zh,
   },
   en: {
+    ...activity.en,
+    ...activityApprovals.en,
+    ...activityRuns.en,
+    ...activitySessions.en,
     ...core.en,
     ...chat.en,
     ...messagesNs.en,
