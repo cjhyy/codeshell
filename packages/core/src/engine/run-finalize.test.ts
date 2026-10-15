@@ -1,6 +1,33 @@
 import { describe, expect, test } from "bun:test";
-import { finalizeRunSuccess } from "./run-finalize.js";
+import { buildRunFailureResult, finalizeRunSuccess } from "./run-finalize.js";
 import type { StreamEvent } from "../types.js";
+
+test("initialization failure still attempts its terminal when the error publication fails", () => {
+  const events: StreamEvent[] = [];
+  expect(() =>
+    buildRunFailureResult({
+      err: new Error("initialization failed"),
+      session: {
+        state: {
+          sessionId: "initialization-publication-failed",
+          status: "active",
+          turnCount: 0,
+          tokenUsage: { promptTokens: 0, completionTokens: 0, totalTokens: 0 },
+        },
+        transcript: { appendError() {} },
+      } as never,
+      persistFinalRunState() {},
+      options: {
+        onStream(event) {
+          events.push(event);
+          if (event.type === "error") throw new Error("error publication failed");
+        },
+      },
+    }),
+  ).toThrow("error publication failed");
+  expect(events.map((event) => event.type)).toEqual(["error", "turn_complete"]);
+  expect(events.at(-1)).toEqual({ type: "turn_complete", reason: "model_error" });
+});
 
 describe("finalizeRunSuccess", () => {
   test.each(["completed", "aborted_tools", "model_error"] as const)(

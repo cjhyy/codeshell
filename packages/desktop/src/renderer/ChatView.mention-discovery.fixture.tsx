@@ -44,7 +44,7 @@ Object.defineProperty(window, "codeshell", {
   configurable: true,
   value: {
     sttAvailable: async () => ({ available: false }),
-    listPluginCommands: async () => [],
+    listPluginCommands: async () => [{ name: "demo:review", pluginName: "demo" }],
     listSkills: async (...args: unknown[]) => {
       skillCalls.push(args);
       return [
@@ -153,6 +153,47 @@ try {
     .join("");
   assert.ok(renderedText.includes("/old-root/same-relative.md"));
   assert.equal(renderedText.includes("/new-root/same-relative.md"), false);
+
+  // A delayed blur belongs to the focus loss that scheduled it. If the user
+  // returns and types a new query first, it must not close the new suggestions.
+  const originalSetTimeout = globalThis.setTimeout;
+  const delayedBlurs: Array<() => void> = [];
+  globalThis.setTimeout = ((callback, delay, ...args) => {
+    if (delay === 120 && typeof callback === "function") {
+      delayedBlurs.push(() => callback(...args));
+      return 0 as unknown as ReturnType<typeof setTimeout>;
+    }
+    return originalSetTimeout(callback, delay, ...args);
+  }) as typeof setTimeout;
+  const currentListbox = () =>
+    descendants(document.body).find((node) => reactProps(node).role === "listbox");
+  try {
+    for (const query of ["@same", "/demo"]) {
+      await act(async () => {
+        document.body.focus();
+        reactProps(textarea).onBlur();
+        textarea.focus();
+        reactProps(textarea).onChange({ target: { value: query, selectionStart: query.length } });
+        await flushMicrotasks();
+      });
+      assert.ok(currentListbox(), `${query} opens after focus returns`);
+      assert.equal(delayedBlurs.length, 1, "The pending blur is controlled by this fixture");
+      await act(async () => {
+        delayedBlurs.shift()!();
+        await flushMicrotasks();
+      });
+      assert.ok(currentListbox(), `${query} survives the previous focus loss's delayed callback`);
+      await act(async () => {
+        document.body.focus();
+        reactProps(textarea).onBlur();
+        delayedBlurs.shift()!();
+        await flushMicrotasks();
+      });
+      assert.equal(currentListbox(), undefined, "Leaving the composer still closes suggestions");
+    }
+  } finally {
+    globalThis.setTimeout = originalSetTimeout;
+  }
 } finally {
   await act(async () => {
     root.unmount();

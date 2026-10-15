@@ -55,7 +55,7 @@ export function mergeHistoryIntoLive(
   live: MessagesReducerState,
 ): MessagesReducerState {
   live = alignSteerClientIds(history, live);
-  const merged = history.messages.length > 0 ? mergeTranscripts(history, live) : live;
+  const merged = history.messages.length > 0 ? mergeTranscripts(history, live, "live") : live;
   const liveMessages = new Map(live.messages.map((message) => [message.id, message]));
   const questions = new Map<string, AskUserMessage>();
   for (const source of [history, live]) {
@@ -67,7 +67,16 @@ export function mergeHistoryIntoLive(
   }
   const seenQuestions = new Set<string>();
   const messages = merged.messages.flatMap((message) => {
-    if (message.kind !== "ask_user") return [liveMessages.get(message.id) ?? message];
+    if (message.kind !== "ask_user") {
+      const local = liveMessages.get(message.id);
+      // The content merge already joined authoritative timing by durable user
+      // intent. Restoring the live UI object must not rewind its terminal.
+      return [
+        message.kind === "user" && local?.kind === "user" && message.turnTiming
+          ? { ...local, turnTiming: message.turnTiming }
+          : (local ?? message),
+      ];
+    }
     // Background approvals can arrive before this bucket begins hydration, so
     // both states already hold the same question under different local ids.
     if (seenQuestions.has(message.requestId)) return [];

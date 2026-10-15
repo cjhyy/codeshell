@@ -878,7 +878,7 @@ export class OperationLedger {
     return this.transact((state, _key, archives) => {
       const receipt = archives.lookup(digest.parse(id));
       if (!receipt) throw new Error("Operation does not exist");
-      if (receipt.state !== "running") return { result: receipt };
+      if (receipt.state !== "running" && receipt.state !== "succeeded") return { result: receipt };
       receipt.state = "unknown";
       receipt.updatedAt = Date.now();
       return { value: state, result: receipt };

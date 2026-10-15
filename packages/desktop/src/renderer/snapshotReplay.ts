@@ -8,6 +8,10 @@
  * SessionSnapshotStore — live StreamEvents have no stable id of their own.
  */
 import type { SessionSnapshot } from "../preload/types";
+import {
+  reduceTopLevelRunLifecycle,
+  type TopLevelRunLifecycle,
+} from "../shared/top-level-run-lifecycle";
 
 export interface ReplaySelection {
   /** The bare events to feed through the normal stream reducer, in order. */
@@ -32,15 +36,9 @@ export function selectReplayEvents(snapshot: SessionSnapshot, appliedSeq: number
 export function snapshotHasUnfinishedTopLevelTurn(snapshot: SessionSnapshot): boolean {
   if (typeof snapshot.topLevelRunning === "boolean") return snapshot.topLevelRunning;
 
-  let running = false;
+  let state: TopLevelRunLifecycle = { running: false };
   for (const entry of snapshot.events) {
-    const event = entry.event as { type?: unknown; agentId?: unknown };
-    if (event.agentId) continue;
-    if (event.type === "session_started" || event.type === "stream_request_start") {
-      running = true;
-    } else if (event.type === "turn_complete" || event.type === "error") {
-      running = false;
-    }
+    state = reduceTopLevelRunLifecycle(state, entry.event);
   }
-  return running;
+  return state.running;
 }

@@ -531,10 +531,12 @@ export interface SaveMemoryInput {
   origin?: "auto" | "manual" | "dream";
 }
 
+/** Terminal events identify exactly which in-flight Sessions lost their worker.
+ * An empty sessionIds list owns nothing; omitted lists come from older bridges. */
 export type AgentLifecycleEvent =
-  | { type: "exited"; code: number | null }
+  | { type: "exited"; code: number | null; sessionIds?: string[] }
   | { type: "restarted" }
-  | { type: "gave_up" };
+  | { type: "gave_up"; sessionIds?: string[] };
 
 export type Unsubscribe = () => void;
 

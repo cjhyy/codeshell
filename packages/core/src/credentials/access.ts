@@ -58,9 +58,12 @@ export interface CredentialMetadata {
 export interface CredentialAccess {
   executeLocalOAuthLinkAction?(
     request: LocalOAuthLinkActionRequest,
-    options?: { signal?: AbortSignal },
+    options?: { signal?: AbortSignal; assertAuthorized?: () => void },
   ): Promise<unknown>;
-  executeRemoteLinkAction?(request: RemoteLinkActionRequest): Promise<unknown>;
+  executeRemoteLinkAction?(
+    request: RemoteLinkActionRequest,
+    options?: { signal?: AbortSignal; assertAuthorized?: () => void },
+  ): Promise<unknown>;
   listMasked(cwd: string | undefined, scope: CredentialAccessScope): CredentialMetadata[];
   /** Optional read diagnostics. False means the list may be incomplete, not that it is empty. */
   listMaskedWithStatus?(
@@ -232,14 +235,30 @@ export function createIpcCredentialAccess(
   };
 
   return {
-    executeLocalOAuthLinkAction: (input, options) =>
-      request(
+    executeLocalOAuthLinkAction: async (input, options) => {
+      options?.signal?.throwIfAborted();
+      options?.assertAuthorized?.();
+      const result = await request(
         "desktop/localOAuthLinkAction",
         input as unknown as Record<string, unknown>,
         options?.signal,
-      ),
-    executeRemoteLinkAction: (input) =>
-      request("desktop/remoteLinkAction", input as unknown as Record<string, unknown>),
+      );
+      options?.signal?.throwIfAborted();
+      options?.assertAuthorized?.();
+      return result;
+    },
+    executeRemoteLinkAction: async (input, options) => {
+      options?.signal?.throwIfAborted();
+      options?.assertAuthorized?.();
+      const result = await request(
+        "desktop/remoteLinkAction",
+        input as unknown as Record<string, unknown>,
+        options?.signal,
+      );
+      options?.signal?.throwIfAborted();
+      options?.assertAuthorized?.();
+      return result;
+    },
     listMasked(cwd, scope) {
       const entry = entryFor(cwd);
       if (!entry) return [];

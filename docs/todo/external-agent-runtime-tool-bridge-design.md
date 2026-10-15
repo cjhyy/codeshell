@@ -25,6 +25,24 @@
 | Phase 4 产品接线(IPC + preload + 模型下拉)    | ✅ 真机                                    |
 | `Panel.invoke` 解禁                           | ⏸ 技术阻塞已解除,待逐个 Panel App 风险评审 |
 
+### 2026-10-15：连接与资料工具补齐
+
+Codex 与 Claude Code 共用的 Host 工具面新增 `LinkAction`、`ToolSearch`、
+`ListSources`、`ReadSource`。工具仍经现有 loopback MCP → `SessionToolHost` →
+`ToolExecutor` 执行，搜索结果只包含当前会话已获准的工具。
+
+Desktop 为每次用户提交捕获可信 run 身份、操作控制器和资料 profile；Goal 续轮
+沿用同一逻辑提交。连接写入继续使用具体操作审批、持久化 receipt 和独立回读验证。
+未验证的已发送写入会阻止成功完成；Stop、会话替换和迟到响应不能恢复旧提交的权限。
+凭证由 Host 保管，不通过 MCP 返回给外部 runtime。
+
+资料读取固定会话选中的 profile，并在异步读取后重新检查权限；profile 被切换、
+删除或修改时拒绝返回内容。此补齐不创建新的 MCP 数据源连接：`mcp-resource`
+来源仍需要 Host 绑定对应 MCPManager 和允许的 server，缺失时明确失败。
+
+新增验证包含真实 HTTP loopback MCP 与模拟 Codex app-server 的工具发现/调用，
+以及操作归属、未验证写入、资料撤权回归；这些测试不调用付费模型或真实账号写入。
+
 ```text
 packages/coding/src/external-runtimes/
   shared/          mcp-bridge / session-context-store / spawn-env   (两 runtime 共用)

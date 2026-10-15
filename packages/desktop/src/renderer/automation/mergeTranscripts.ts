@@ -18,7 +18,82 @@
  * collapses those, so renderer-synthesized cards (files_changed,
  * context_boundary) don't accumulate one duplicate per open.
  */
-import type { Message, MessagesReducerState } from "../types";
+import { compareOutputCursors } from "@cjhyy/code-shell-web";
+import type { Message, MessagesReducerState, UserMessage } from "../types";
+
+type TimingProjection = "disk" | "live";
+
+function preferredTimingProjection(
+  disk: MessagesReducerState,
+  live: MessagesReducerState,
+  fallback: TimingProjection,
+): TimingProjection {
+  if (disk.outputCursor && live.outputCursor) {
+    const order = compareOutputCursors(disk.outputCursor, live.outputCursor);
+    if (order !== undefined && order !== 0) return order > 0 ? "disk" : "live";
+  } else if (disk.outputCursor || live.outputCursor) {
+    return disk.outputCursor ? "disk" : "live";
+  }
+  if (disk.snapshotEpoch && disk.snapshotEpoch === live.snapshotEpoch) {
+    if (disk.snapshotSeq !== live.snapshotSeq)
+      return disk.snapshotSeq > live.snapshotSeq ? "disk" : "live";
+  }
+  return fallback;
+}
+
+function uniqueUserIdentities(messages: readonly Message[]) {
+  const clients = new Map<string, UserMessage | null>();
+  const steers = new Map<string, UserMessage | null>();
+  for (const message of messages) {
+    if (message.kind !== "user") continue;
+    for (const [map, key] of [
+      [clients, message.clientMessageId],
+      [steers, message.steerId],
+    ] as const) {
+      if (key) map.set(key, map.has(key) ? null : message);
+    }
+  }
+  return {
+    clients,
+    steers,
+    unique: (user: UserMessage) =>
+      (!user.clientMessageId || clients.get(user.clientMessageId) === user) &&
+      (!user.steerId || steers.get(user.steerId) === user),
+  };
+}
+
+function mergeUserTiming(
+  disk: UserMessage,
+  live: UserMessage,
+  projection: TimingProjection,
+): UserMessage {
+  const a = disk.turnTiming;
+  const b = live.turnTiming;
+  if (!b) return disk;
+  if (!a) return { ...disk, turnTiming: b };
+  const differentRun =
+    a.startedAt !== undefined && b.startedAt !== undefined && a.startedAt !== b.startedAt;
+  // A new run can reuse a visible user anchor. Its start and terminal must be
+  // selected as one unit; filling from the older run would close it early.
+  if (differentRun) return projection === "disk" ? disk : { ...disk, turnTiming: b };
+  const preferDisk =
+    a.completed !== b.completed && (a.completed === true || b.completed === true)
+      ? a.completed === true
+      : projection === "disk";
+  const primary = preferDisk ? a : b;
+  const secondary = preferDisk ? b : a;
+  const turnTiming = { ...secondary };
+  for (const key of [
+    "startedAt",
+    "completedAt",
+    "durationMs",
+    "completed",
+    "completedCleanly",
+  ] as const) {
+    if (primary[key] !== undefined) Object.assign(turnTiming, { [key]: primary[key] });
+  }
+  return { ...disk, turnTiming };
+}
 
 /**
  * Cross-projection signature for dedup, independent of renderer-local ids.
@@ -106,6 +181,7 @@ export function mergeTranscriptCursor(
 export function mergeTranscripts(
   disk: MessagesReducerState,
   live: MessagesReducerState,
+  timingProjection: TimingProjection = "disk",
 ): MessagesReducerState {
   const cursor = mergeTranscriptCursor(disk, live);
   if (disk.messages.length === 0) return { ...live, ...cursor };
@@ -142,7 +218,26 @@ export function mergeTranscripts(
   // id per fold (user / files_changed / context_boundary / goal_progress) are
   // already collapsed by the content signature, so they never collide on id
   // here — making a blanket id-dedup safe.
-  const mergedMessages = [...disk.messages, ...liveTail];
+  const diskUsers = uniqueUserIdentities(disk.messages);
+  const liveUsers = uniqueUserIdentities(live.messages);
+  const projection = preferredTimingProjection(disk, live, timingProjection);
+  const diskMessages = disk.messages.map((message) => {
+    if (message.kind !== "user" || !diskUsers.unique(message)) return message;
+    const peer =
+      (message.clientMessageId && liveUsers.clients.get(message.clientMessageId)) ||
+      (message.steerId && liveUsers.steers.get(message.steerId));
+    if (
+      !peer ||
+      !liveUsers.unique(peer) ||
+      (message.clientMessageId &&
+        peer.clientMessageId &&
+        message.clientMessageId !== peer.clientMessageId) ||
+      (message.steerId && peer.steerId && message.steerId !== peer.steerId)
+    )
+      return message;
+    return mergeUserTiming(message, peer, projection);
+  });
+  const mergedMessages = [...diskMessages, ...liveTail];
   const seenIds = new Set<string>();
   const deduped = mergedMessages.filter((m) => {
     if (seenIds.has(m.id)) return false;

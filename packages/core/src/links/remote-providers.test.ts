@@ -29,6 +29,8 @@ import { ToolRegistry } from "../tool-system/registry.js";
 import { ToolExecutor } from "../tool-system/executor.js";
 import { PermissionClassifier } from "../tool-system/permission.js";
 import { HookRegistry } from "../hooks/registry.js";
+import { createSessionOperationController } from "../operations/controller.js";
+import { CapabilityResolver } from "../operations/resolver.js";
 
 const cleanups: Array<() => void | Promise<void>> = [];
 afterEach(async () => {
@@ -733,6 +735,9 @@ test("request cancellation and provider errors cannot return success or credenti
 });
 
 test("remote GitHub write requires approval and the owning authorization pipeline before any request", async () => {
+  const operationRoot = mkdtempSync(join(tmpdir(), "remote-link-cancel-controller-"));
+  cleanups.push(() => rmSync(operationRoot, { recursive: true, force: true }));
+  let approvals = 0;
   const f = await fixture("github");
   const credential = await f.connect();
   const masked = {
@@ -761,15 +766,32 @@ test("remote GitHub write requires approval and the owning authorization pipelin
     JSON.parse(
       await linkActionTool(args, {
         cwd: "/fixture",
-        askUser: async () => "取消",
+        operations: {
+          controller: createSessionOperationController(operationRoot, "cancel-session", undefined),
+          resolver: new CapabilityResolver(),
+          sessionId: "cancel-session",
+          runId: "trusted-run",
+        },
+        executeBoundTool: async () => {
+          throw new Error("Cancelled writes must not execute a bound tool");
+        },
+        askUser: async (_question, options) => {
+          approvals++;
+          expect(options?.optionsOnly).toBe(true);
+          return "取消";
+        },
       } as unknown as ToolContext),
     ).kind,
   ).toBe("cancelled");
+  expect(approvals).toBe(1);
   expect(f.requests).toHaveLength(before);
   const approved = JSON.parse(
     await linkActionTool(args, {
       cwd: "/fixture",
-      askUser: async () => "允许执行",
+      askUser: async () => {
+        approvals++;
+        return "允许执行";
+      },
     } as unknown as ToolContext),
   );
   expect(approved).toMatchObject({
@@ -778,6 +800,7 @@ test("remote GitHub write requires approval and the owning authorization pipelin
     action: "create_issue",
     error: "Verified writes require the owning Engine and tool authorization pipeline.",
   });
+  expect(approvals).toBe(1);
   expect(f.requests).toHaveLength(before);
 });
 
