@@ -1,5 +1,5 @@
 import { afterAll, afterEach, expect, test } from "bun:test";
-import { mkdirSync, mkdtempSync, readFileSync, rmSync } from "node:fs";
+import { cpSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import http from "node:http";
@@ -434,6 +434,48 @@ test("invalid or superseded accounting owners cannot replace Session metadata", 
       }),
   ).toThrow("run identity conflict");
   expect(readFileSync(join(f.root, f.sessionId, "state.json")).equals(before)).toBe(true);
+});
+
+test("a migrated data directory rejects adoption repeatedly without rewriting either ledger or state", () => {
+  const f = fixture();
+  const usage = new UsageLedger({ storageDir: join(f.root, ".usage-ledger") });
+  usage.adoptSession(f.sessionId, f.sessions.readSessionState(f.sessionId)!.costState, f.root);
+  const receipt = usage.begin(usage.owner(f.sessionId, "paid-history", [], "main", f.root), {
+    provider: "openai",
+    model: "gpt-4o",
+  });
+  const tokens = { promptTokens: 100, completionTokens: 20, totalTokens: 120 };
+  usage.settle(receipt, tokens);
+  usage.finish(receipt, "completed");
+  const costState = usage.sessionState(f.sessionId, f.root);
+  expect(costState.summary.knownEstimatedCostUsd).toBeGreaterThan(0);
+  f.sessions.recordAuxiliaryUsage(f.sessionId, tokens, costState);
+  const migrated = `${f.root}-migrated`;
+  cpSync(f.root, migrated, { recursive: true });
+  cleanups.push(() => rmSync(migrated, { recursive: true, force: true }));
+  const original = readFileSync(join(f.root, f.sessionId, "state.json"));
+  const migratedState = readFileSync(join(migrated, f.sessionId, "state.json"));
+  const ledgerSnapshot = (root: string) =>
+    readdirSync(join(root, ".usage-ledger"), { recursive: true, withFileTypes: true })
+      .filter((file) => file.isFile())
+      .map((file) => readFileSync(join(file.parentPath, file.name)).toString());
+  const ledger = ledgerSnapshot(migrated);
+  for (let retry = 0; retry < 2; retry++) {
+    expect(
+      () =>
+        new ExternalRuntimeOperationRun({
+          root: migrated,
+          sessionId: f.sessionId,
+          runId: "run-1",
+          originClientMessageId: "retry",
+          isCurrent: () => true,
+        }),
+    ).toThrow("Native");
+    expect(readFileSync(join(migrated, f.sessionId, "state.json"))).toEqual(migratedState);
+    expect(ledgerSnapshot(migrated)).toEqual(ledger);
+    expect(ledgerSnapshot(f.root)).toEqual(ledger);
+    expect(readFileSync(join(f.root, f.sessionId, "state.json"))).toEqual(original);
+  }
 });
 
 test("a superseded run freezes only its own physical send after a late acknowledgement", async () => {

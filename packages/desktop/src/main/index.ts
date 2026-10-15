@@ -5335,17 +5335,21 @@ ipcMain.handle(
   },
 );
 
-ipcMain.handle("mcp:probe", async (_e, raw: unknown, force?: boolean) => {
-  if (!Array.isArray(raw)) return [];
-  const configs = raw.filter(
-    (x): x is McpServerConfig =>
-      !!x && typeof x === "object" && typeof (x as McpServerConfig).name === "string",
-  );
-  return probeMcpServers(configs, {
-    force: Boolean(force),
-    oauthService: getMcpOAuthService(),
-  });
-});
+ipcMain.handle(
+  "mcp:probe",
+  async (_e, raw: unknown, force?: boolean, target?: RendererConfigurationTarget | null) => {
+    if (!Array.isArray(raw)) return [];
+    const configs = raw.filter(
+      (x): x is McpServerConfig =>
+        !!x && typeof x === "object" && typeof (x as McpServerConfig).name === "string",
+    );
+    return probeMcpServers(configs, {
+      force: Boolean(force),
+      cwd: await rendererOptionalConfigurationCwd(target ?? null, resolveNoRepoCwd()),
+      oauthService: getMcpOAuthService(),
+    });
+  },
+);
 
 ipcMain.handle(
   "mcp:listMerged",

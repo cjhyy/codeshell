@@ -31,6 +31,7 @@ const server = (name: string) => ({
 let projectPath = "/fixture/project-a";
 let writesFail = scenario === "save-error";
 const mergedTargets: unknown[] = [];
+const probeTargets: unknown[] = [];
 const hasServers = [
   "stale-confirmation",
   "stale-load",
@@ -75,7 +76,8 @@ Object.assign(window, {
     },
     listPluginMcpTrust: async () => [],
     invalidateMcpProbeCache: async () => {},
-    probeMcpServers: async (inputs: Array<{ name: string }>, force: boolean) => {
+    probeMcpServers: async (inputs: Array<{ name: string }>, force: boolean, target: unknown) => {
+      probeTargets.push(target);
       if (scenario === "probe-error" && force) throw new Error("fixture probe failed");
       return inputs.map(({ name }) => ({ name, status: "connected", tools: [] }));
     },
@@ -267,6 +269,8 @@ try {
   } else if (scenario === "probe-error") {
     await click("settingsX.mcp.test");
     assert.ok(textOf(container).includes("fixture probe failed"));
+    assert.ok(probeTargets.length > 0);
+    assert.deepEqual(probeTargets.at(-1), { projectId: "/fixture/project-a" });
   } else throw new Error(`Unknown scenario: ${scenario}`);
   await new Promise((resolve) => setTimeout(resolve, 20));
   assert.deepEqual(unhandled, [], "Async failures must be handled in the UI");

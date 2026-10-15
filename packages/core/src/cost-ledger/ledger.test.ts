@@ -1,12 +1,15 @@
-import { afterEach, beforeEach, expect, test } from "bun:test";
+import { afterAll, afterEach, beforeEach, expect, test } from "bun:test";
 import { mkdtempSync, rmSync, writeFileSync, readdirSync, readFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
-import { UsageLedger } from "./store.js";
-import { withUsageOwner } from "./context.js";
-import { createLLMClient } from "../llm/client-factory.js";
-import { LLMClientBase } from "../llm/client-base.js";
+import { installFixtureNetworkGuard } from "../../../../tests/helpers/network-fixture.js";
+const network = installFixtureNetworkGuard();
+afterAll(() => network.restore());
+const { UsageLedger } = await import("./store.js");
+const { withUsageOwner } = await import("./context.js");
+const { createLLMClient } = await import("../llm/client-factory.js");
+const { LLMClientBase } = await import("../llm/client-base.js");
 
 const roots: string[] = [];
 let browserGlobals: Array<[string, PropertyDescriptor | undefined]> = [];
@@ -35,7 +38,7 @@ function directory() {
   roots.push(root);
   return root;
 }
-function bill(ledger: UsageLedger, sid: string, ancestors: string[] = []) {
+function bill(ledger: InstanceType<typeof UsageLedger>, sid: string, ancestors: string[] = []) {
   const receipt = ledger.begin(ledger.owner(sid, "run", ancestors), identity);
   ledger.settle(receipt, usage);
   ledger.finish(receipt, "completed");
@@ -301,6 +304,7 @@ test("direct SDK construction accounts real localhost retry attempts and explici
       return jsonResponse({ usage: { prompt_tokens: 0, completion_tokens: 0, total_tokens: 0 } });
     },
   });
+  network.allowOrigin(`http://127.0.0.1:${server.port}`);
   try {
     const client = new OpenAIClient(
       { ...identity, apiKey: "synthetic", baseUrl: `http://127.0.0.1:${server.port}/v1` },

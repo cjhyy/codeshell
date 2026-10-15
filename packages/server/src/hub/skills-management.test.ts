@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, test } from "bun:test";
+import { afterAll, afterEach, describe, expect, test } from "bun:test";
 import { createServer, type Server } from "node:http";
 import {
   promises as fs,
@@ -13,8 +13,12 @@ import {
 } from "node:fs";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
-import { createHubSkills, type HubSkillsOptions } from "./skills-management.js";
-import { HubConfigurationError } from "./configuration.js";
+import type { HubSkillsOptions } from "./skills-management.js";
+import { installFixtureNetworkGuard } from "../../../../tests/helpers/network-fixture.js";
+const network = installFixtureNetworkGuard();
+afterAll(() => network.restore());
+const { createHubSkills } = await import("./skills-management.js");
+const { HubConfigurationError } = await import("./configuration.js");
 
 const fixtures: { dir: string; server: Server; service: ReturnType<typeof createHubSkills> }[] = [];
 const FIRST = "1".repeat(40);
@@ -100,6 +104,7 @@ async function fixture(overrides: Partial<HubSkillsOptions> = {}) {
   fixtures.push({ dir, server, service });
   await new Promise<void>((resolve) => server.listen(0, "127.0.0.1", resolve));
   const url = `http://127.0.0.1:${(server.address() as { port: number }).port}`;
+  network.allowOrigin(url);
   async function api(path = "", method = "GET", body?: unknown, device: string | null = "laptop") {
     const response = await fetch(url + "/api/v1/skills" + path, {
       method,

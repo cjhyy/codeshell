@@ -1,4 +1,4 @@
-import { afterEach, expect, test } from "bun:test";
+import { afterAll, afterEach, expect, test } from "bun:test";
 import { createServer, type Server } from "node:http";
 import {
   mkdtempSync,
@@ -12,13 +12,12 @@ import {
 } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { SessionManager } from "@cjhyy/code-shell-core";
-import {
-  createHubSessions,
-  transcriptMarkdown,
-  readHubTranscript,
-  readHubSessionState,
-} from "./session-management.js";
+import { installFixtureNetworkGuard } from "../../../../tests/helpers/network-fixture.js";
+const network = installFixtureNetworkGuard();
+afterAll(() => network.restore());
+const { SessionManager } = await import("@cjhyy/code-shell-core");
+const { createHubSessions, transcriptMarkdown, readHubTranscript, readHubSessionState } =
+  await import("./session-management.js");
 
 const fixtures: Array<{ root: string; server: Server }> = [];
 afterEach(async () => {
@@ -58,6 +57,7 @@ async function fixture() {
   fixtures.push({ root, server });
   const address = server.address() as { port: number };
   const url = `http://127.0.0.1:${address.port}/api/v1/sessions`;
+  network.allowOrigin(url);
   const request = (path = "", method = "GET", body?: unknown, authorized = true) =>
     fetch(url + path, {
       method,

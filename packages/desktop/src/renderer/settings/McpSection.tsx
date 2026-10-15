@@ -290,7 +290,13 @@ function McpSectionForTarget({ scope, activeProjectPath, settingsProjectPath }: 
       return next;
     });
     try {
-      const results = await window.codeshell.probeMcpServers(inputs, force);
+      const results = await window.codeshell.probeMcpServers(
+        inputs,
+        force,
+        optionalProjectConfigurationTarget(
+          mcpEffectiveProjectPath(scope, settingsProjectPath, activeProjectPath),
+        ),
+      );
       if (!mounted.current) return;
       setProbes((prev) => {
         const next = { ...prev };
@@ -460,6 +466,9 @@ function McpSectionForTarget({ scope, activeProjectPath, settingsProjectPath }: 
           },
         ],
         true,
+        optionalProjectConfigurationTarget(
+          mcpEffectiveProjectPath(scope, settingsProjectPath, activeProjectPath),
+        ),
       );
       if (mounted.current) setProbes((prev) => ({ ...prev, [s.name]: r }));
     } catch (cause) {

@@ -1373,8 +1373,8 @@ contextBridge.exposeInMainWorld("codeshell", {
   inspectGithubSkill: (url: string, existingNames?: string[]) =>
     ipcRenderer.invoke("skills:inspectGithub", url, existingNames),
   installFromGithub: (input: unknown) => ipcRenderer.invoke("skills:installFromGithub", input),
-  probeMcpServers: (configs: unknown, force?: boolean) =>
-    ipcRenderer.invoke("mcp:probe", configs, force),
+  probeMcpServers: (cfgs: unknown, force?: boolean, target?: RendererConfigurationTarget | null) =>
+    ipcRenderer.invoke("mcp:probe", cfgs, force, target),
   listMergedMcpServers: (
     base: unknown,
     disabledPlugins?: unknown,

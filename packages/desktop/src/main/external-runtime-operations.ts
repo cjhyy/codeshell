@@ -28,6 +28,16 @@ type OperationRunInput = {
 export const EXTERNAL_UNVERIFIED_WRITE_NOTICE =
   "外部写操作尚未通过独立回读验证，任务未标记完成。请先确认已发送操作的实际结果，避免重复写入。";
 
+/** A rejected accounting reference is recoverable configuration, not a dead CLI. */
+export class ExternalAccountingOwnershipError extends Error {
+  constructor() {
+    super(
+      "External accounting owner changed：此会话的费用账本归属与当前目录不匹配，已停止外部提交。请先切换 Native 运行一轮以重建当前目录归属，再重试。原账本和历史费用保留，不会自动认领其他归属。",
+    );
+    this.name = "ExternalAccountingOwnershipError";
+  }
+}
+
 /** One Host-owned submission lease; model arguments cannot create or replace it. */
 export class ExternalRuntimeOperationRun {
   readonly context: RunContext;
@@ -51,7 +61,7 @@ export class ExternalRuntimeOperationRun {
       if (state.status !== "active" || !input.isCurrent()) throw new Error("External run changed");
       const adopted = this.usage.adoptSession(input.sessionId, state.costState, this.root);
       if (!adopted && state.costState?.kind === "usage-ledger")
-        throw new Error("External accounting owner changed");
+        throw new ExternalAccountingOwnershipError();
       // The external provider owns its model loop and supplies no model billing
       // receipts. Keep known Host costs without presenting their subtotal as an
       // exact total, even on the first turn with zero persisted tokens.

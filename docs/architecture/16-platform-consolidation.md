@@ -56,7 +56,7 @@ W1 和 W2 是交织的，不是先后关系。步骤级依赖见第 9.1 节。�
   - **混合的约 21k 行**：`agent-bridge.ts` 2,521 行、`panel-app-bridge.ts` 3,791 行、external-runtime、im-gateway、pty 等。
 - `index.ts` 有 189 个 import、276 个 `ipcMain` handler（main 里一共 418 个），模块级单例超过 15 个。
 - 已经和 server 共享的：panels 运行时（desktop 对 `@cjhyy/code-shell-server/panels` 有 18 处 import）、mobile-remote 传输、remote-relay、links、`WorkerBridgeCore`、desktop-web HTTP。
-- **重复实现的**：skills 管理；MCP 探测；模型探测；会话目录与 transcript 读取（对应 hub 侧的 session-management 和 run-replay）；快照与输出回放（`SessionSnapshotStore` 的 seq + epoch 对应 `HubRunReplay` 的 `HubStreamCursor { epoch, sequence }`）；automation 执行（main 里的 `automation-host` 对应 `serve/automation-worker`）。
+- **本批已收口的纯服务（待 CC review）**：Host skills inventory/MCP 探测与安全 Session FS，Desktop/Hub 真实接线；模型列举本就共享 Core model-fetcher，Hub 独有 tool-free connection probe 迁 Host ownership，不把 Desktop metadata 误称重复。剩余：快照与输出回放（`SessionSnapshotStore` 的 seq + epoch 对应 `HubRunReplay` 的 `HubStreamCursor { epoch, sequence }`）；automation 执行（main 里的 `automation-host` 对应 `serve/automation-worker`）。
 - **只有 Desktop 有的**：凭据服务、MCP OAuth、云账号客户端、pet、task-inbox、im-gateway、external-runtime、cc-room、profiles、marketplace / plugins、项目与信任、memory / dream、operation batch authority。
 - **两个宿主用的是同一个 worker**（`agent-server-stdio`，经 `WorkerBridgeCore`），但处理回环请求的能力不一样：
 
@@ -201,14 +201,16 @@ class HostRuntime {
 | ---- | ------------------------------------------------------------------------------------------------------------------------------------------ | --------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | 1.0  | 清点现有 query、RunParams 兼容字段、projection 方法和全部 `__*__` / `desktop/*` 请求，形成 v2 命名空间与废弃表                             | protocol/types.ts、agent-bridge、headless-server、capability 包 | 一份清单，S0 内完成，是 1.1 和 4.4 的输入                                                                                                                |
 | 1.1  | 建立 `packages/host` 骨架、`HostService` 注册表、`HostRequest` 分发器；把 `agent-bridge.ts` 和 `headless-server.ts` 里的回环拦截搬到分发器 | agent-bridge、headless-server、browser-driver/intercept         | serve 收到未支持的 `__*__` 或 `desktop/*` 请求立即返回 `host_unsupported`，带能力名；不再挂起                                                            |
-| 1.2  | 合并重复实现：skills、MCP 探测、模型探测、会话目录 / transcript、输出回放                                                                  | desktop/main/_-service 和 server/hub/_                          | Desktop 和 Hub 调用同一份实现；`SessionSnapshotStore` 和 `HubStreamCursor` 改为 output journal cursor 的内存缓存；session 目录的测试隔离守卫随代码一起搬 |
+| 1.2 | 1.2a：skills inventory、MCP 探测、安全会话文件共享与 Hub 模型连接探测 ownership 迁移；1.2b：后置输出回放 | desktop/main/*-service、server/hub/*、host/services | 1.2a 两端真实调用共享实现，保留入口权限/排序差异；1.2b 等 v2 journal cursor + stateVersion 两类续传再迁快照缓存，整体未完成 |
 | 1.3  | 凭据服务和 MCP OAuth 搬进 host，cipher 由 adapter 注入                                                                                     | credentials-service、credential-cipher、mcp-oauth-service       | serve 也能用 `credentialResolve` 同等能力，去掉 `CODE_SHELL_CREDENTIAL_ACCESS=local` 特例                                                                |
 | 1.4  | automation 只保留一个执行器，调度经过 `sharedLock`                                                                                         | automation-host、serve/automation-worker                        | Desktop 和 serve 共用调度；同机并存时只有一个实例实际触发；`automationCreate` 在 serve 下可用                                                            |
 | 1.5  | 手机远程编排改为 HostRuntime 的一个客户端，不再调用 `injectWorkerMessage`                                                                  | mobile-remote-orchestrator                                      | 手机直接走 Protocol v2（依赖 2.3 续传和 2.5 反向请求）                                                                                                   |
 | 1.6  | 拆分 `index.ts`：每个领域一个 `register(app, host)` 模块；IPC 改为一条 v2 通道加少量 Electron 专属 IPC                                     | index.ts、\*-ipc.ts                                             | 现有 `tests/architecture-budgets.test.ts` 已锁定 `index.ts` 7,277 行和主进程路由总数；拆分后把 `index.ts` 上限下调到 1,500 行，并按领域模块分别计数路由  |
 | 1.7  | pet、task-inbox、im-gateway、cc-room、external-runtime、operation batch 逐个改成 HostService                                               | 对应目录                                                        | 各自能在 serve 里启用，或在 capabilities 里声明不可用                                                                                                    |
 
-1.1 首版已接生产：`packages/host` 只依赖 core，提供同步 adapter/service 生命周期、能力注册、legacy HostRequest 分类/分发及 `interceptHostRequest`。serve 与 Panel agent-task 在客户端路由前调用；Desktop 的 Electron adapter 把既有 browser/credential/workspace/panel/automation/operation handler 注册给同一分发器。旧 `server/serve/host-requests.ts` 仅转导出，不再重复实现。此步不提供 v2 transport，也未迁移 1.2–1.4 大服务。Desktop 将 Host 内联，故列在 devDependencies；predist 实际实体化列表同时驱动生产 workspace 依赖守卫，禁止未实体化的生产包符号链接越出 app 边界。Desktop unsupported-loopback approve 使用独立 JSON-RPC id，由真实 Core pending 路径消费。
+1.1 首版已接生产：`packages/host` 只依赖 core，提供同步 adapter/service 生命周期、能力注册、legacy HostRequest 分类/分发及 `interceptHostRequest`。serve 与 Panel agent-task 在客户端路由前调用；Desktop 的 Electron adapter 把既有 browser/credential/workspace/panel/automation/operation handler 注册给同一分发器。旧 `server/serve/host-requests.ts` 仅转导出，不再重复实现。此步不提供 v2 transport；1.2 首批纯服务见下段，1.2 输出回放及 1.3–1.4 未迁移。Desktop 将 Host 内联，故列在 devDependencies；predist 实际实体化列表同时驱动生产 workspace 依赖守卫，禁止未实体化的生产包符号链接越出 app 边界。Desktop unsupported-loopback approve 使用独立 JSON-RPC id，由真实 Core pending 路径消费。
+
+1.2a 首版已接生产（独立 review/宿主补验待主控）：`host/services/skill-inventory` 组合 Core 扫描和 effective disabled，Desktop 继续 exact listed path grants，Hub 保留项目独占修改、revision/review token/revoke/mutation gate。`host/services/mcp-probe` 统一 transport 选择、分页/重复 cursor、2 MiB 总量/512 KiB stdio帧、timeout/cancel/close、typed errors 和脱敏；SDK 与短连接进程组回收仅在 Core `/internal` 的 `createMcpProbeConnection`。Desktop 保留 8 s/60 s cache、DTO/logger/OAuth callback；cache 绑定显式 workspace/config，对没有授权版本的 credential/env 引用不缓存。Hub 保留 HTTP 鉴权、owner 并发/撤权和 workspace。`model-connection-probe` 迁移 Hub 单次连接测试 ownership，旧入口转导出；不是三份模型算法去重，也没有 Desktop 付费入口。`session-files` 提供显式 root、safe ID、异步/同步普通文件有界读取、symlink拒绝、dev/ino重验和候选扫描；Core internal `listSessionEntries` 继续拥有 Hub 的筛选/排序/cursor/tail preview算法。Desktop listDisk 仍按目录 mtime 与 origin/legacy/missing-cwd 筛选，Hub 仍按 transcript/state mtime、workspace/search/custom-title 筛选。默认根仅用 Core `sessionsRoot()`；输出 journal/快照/seq/epoch/export格式未迁移。1.2b 输出回放仍须等待 journal cursor 与 stateVersion 两类续传，1.2 整体与 S1 均未完成。验证与受限项见[交付记录](../todo/evidence/host-shared-services-20261015.md)。
 
 ### 3.3 可选的后续：Desktop 连本机守护进程
 
@@ -567,7 +569,7 @@ flowchart LR
     W21 --> W22["2.2 Session/Turn/Item"]
     W22 --> W23["2.3 两类续传"]
     W22 --> W25["2.5 client/* 反向请求"]
-    S11 --> S12["1.2 纯 skills/MCP/模型/会话目录去重"]
+    S11 --> S12["1.2a skills/MCP/Session FS 共享 + Hub 模型探测 ownership"]
     W23 --> Replay["1.2 输出回放去重"]
     S12 --> Replay
     S11 --> S13["1.3 凭据进 host"]
@@ -589,7 +591,7 @@ flowchart LR
 
 - **已实现：内部回环标识兼容方案。** 保留既有 `__*__` wire 名字；core 工具注册、内置目录与 capability composition 全部拒绝第三方以 `__` 开头的工具名，防止伪装成内部回环。typed `host/*` 仍待 v2 批次。
 - **已实现：Panel agent-task。** `desktop/*` JSON-RPC worker 请求在 session 过滤前立即 -32601 / `data.failure: unsupported`；内部回环用 `approved: true` 携带 typed unsupported answer，不能误报用户拒绝；内部请求和 resolved ID 不向 client 暴露。普通审批和已安装 Panel callback 保留；Panel 的实际 runtime 只有 yes/no confirm，AskUser 立即返回 `approved:false, failure:unavailable` 加明确不支持原因，不弹内部工具审批、不构造空回答。Core 同步返回该原因，异步仅清理 pending、不注入答案或启动续跑；Desktop/Web 真实文字问答保持。最终 worker env 构造清 `CODE_SHELL_REMOTE_LINK_CLIENT_SECRET`，自定义 builder 也不能遗留。
-- **已实现：拦截收口及 1.1。** S0 纯逻辑迁 `packages/host`，错误文案由 adapter 注入宿主标签；`interceptHostRequest` 在 serve、Panel、Desktop 的生产链路共用，旧入口仅转导出。HostRuntime 注册能力并管理基本生命周期，仅依赖 core。1.2–1.4 留下一批。
+- **已实现：拦截收口及 1.1。** S0 纯逻辑迁 `packages/host`，错误文案由 adapter 注入宿主标签；`interceptHostRequest` 在 serve、Panel、Desktop 的生产链路共用，旧入口仅转导出。HostRuntime 注册能力并管理基本生命周期，仅依赖 core。1.2a 纯服务/ownership 首版见 §3.2；1.2b 回放和 1.3–1.4 仍待后续。
 - **已实现：worker 环境开关。** serve 的交互与 automation worker 清 `CODE_SHELL_HOST_MCP_SERVERS`；Panel worker（含 Desktop Web 自定义 agent-task env）清 operation batch、model signing、workspace IPC 与 host MCP switches。Desktop 主 worker 明确安装自己的 bridge。
 - **已实现：协议预算。** 请求分发与 Run/Goal 输入校验抽到 `protocol/dispatch.ts`，旧 wire 保持；server.ts 预算由 5174 下调到 4949，dispatch.ts 单独预算 246。
 - **已实现：Windows shell env。** `mergeShellEnv` 在 win32 对变量名大小写不敏感归一，PATH/Path 不重复，显式项目覆盖仍优先。
@@ -597,7 +599,7 @@ flowchart LR
 - **已实现：workspace bridge 选择。** worker 仅在宿主明确设 `CODE_SHELL_WORKSPACE_ACCESS=host` 时安装。Desktop 主 worker 启用；serve/Panel 清除，跨会话 `send_message`、`resolve_session_run` 的异步 AskUser 与邮箱唤醒走 Core 既有磁盘回退，而不因 `workspace.switch` unsupported 失败或挂起。
 - **待办：`process.native` 规则。** 已删除的审批存储可在 main 的 `40a71d9ca` 读取；PolicyEngine/ApprovalStore 要实际接入工具、浏览器、process.native。ExecutionService report-only 先做技术验证：后端无完整 dry-run，区分静态预检、单次执行观测和 unknown，不得双执行任意命令模拟。
 - **待办：浏览器安全 contracts 子路径与契约上报。** 考虑 `@cjhyy/code-shell-core/contracts`；project-runtime/control-server 与 mobile-remote/remote-host-manager 的 health 上报、客户端实际 initialize/serve Web 协商随 v2 批次解决。
-- **待办：后续服务与协议。** 1.1 后可先做纯 skills/MCP/模型/会话目录去重、凭据 1.3、单 automation 1.4；输出回放去重必须等 journal cursor 与 stateVersion 两类续传完成。v2 包含 Schema 生成、Session/Turn/Item、typed host/*、两类续传、client/* 与 TUI 真切换；兼容矩阵/契约进入 CI。S2 继续拆 index、Desktop/Web 真 v2、保持在线、薄云端与 Capacitor；S3 继续统一清单签名、Browser Panel runtime、其余服务与一任务一容器 runner。
+- **待办：后续服务与协议。** 1.2a 纯 skills/MCP/Session FS 共享及 Hub 模型探测 ownership 迁移已落代码、待独立 review/宿主补验；后续为凭据 1.3、单 automation 1.4；输出回放去重必须等 journal cursor 与 stateVersion 两类续传完成。v2 包含 Schema 生成、Session/Turn/Item、typed host/*、两类续传、client/* 与 TUI 真切换；兼容矩阵/契约进入 CI。S2 继续拆 index、Desktop/Web 真 v2、保持在线、薄云端与 Capacitor；S3 继续统一清单签名、Browser Panel runtime、其余服务与一任务一容器 runner。
 - **真实环境出口。** 跨仓 services/panel 业务、推送证书、签名 App、真机、Linux 与云容器目标必须把代码 fixture 和真实环境验收分开记录，本批未声称完成这些部署验收。
 
 ## 10. 决策（已定）
@@ -632,3 +634,4 @@ flowchart LR
 | v1.1 | 2026-10-14 | S0 实施后对齐：4.1 标注已实现的 `initialize` 子集（`contracts` 永久在顶层）；5.2 写明 REPL 改用沙箱 Bash 白名单且不是沙箱；7.1 写明派生方式与三处受守卫的字面量；沙箱 report-only 移到 S1；1.3 标注已删除的进程审批存储；新增 9.2 S0 遗留与 S1 待办                                                |
 | v1.2 | 2026-10-15 | S1 第 3–7 项：协议分发与预算下调、显式 workspace bridge、Panel typed unsupported、env/REPL/保留工具名与 Core-only host 1.1 生产接线；后续依赖及真实环境出口分开跟踪。 |
 | v1.3 | 2026-10-15 | CC 首轮修复：Desktop 内联 Host 改 devDependency、predist 同源实体化守卫；Panel 无文字 UI 的 AskUser 明确 unavailable 并清理；Desktop unsupported approve 增唯一 RPC id；主控已补齐上轮受限验证，本轮 unsigned pack 补跑单列。 |
+| v1.4 | 2026-10-15 | 第 8a 纯服务首版：skills inventory/MCP probe/Session FS 两端真实共用，MCP SDK 限 Core internal；Hub 模型探测 ownership 迁移；PR188 三个 P2 修复。8b replay 等两类续传，9–14 与 S2/S3 未开始；CC review/沙箱受限补验与提交单列。 |

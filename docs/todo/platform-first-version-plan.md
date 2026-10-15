@@ -5,7 +5,7 @@
 
 每批由 Codex 实现、验证、提交，再交主控安排 Claude Code 审查；Codex 修复并复审通过后才继续下一批。不得以计划、fixture 或接口声明代替生产接线和真实环境验收。
 
-## S1 当前批：3–7（CC 复审和宿主验证通过，待 CI）
+## S1 已合批：3–7（PR189 已审查、CI/宿主验证后合入）
 
 - [x] 3. 从 protocol/server.ts 抽请求分发和输入校验到 dispatch.ts，保持 v1 wire，降低架构行数预算；验收旧协议路由与非法输入。
 - [x] 4. workspace bridge 改宿主显式安装开关；Desktop 保持启用，serve/Panel 无 bridge 使用磁盘回退；验收跨会话 send_message、resolve_session_run 的异步 AskUser 与邮箱唤醒实际路径。
@@ -15,13 +15,15 @@
 
 出口：guarded unit shards、架构预算、engine-bypass、lint、完整 bun run typecheck、包发布/导出 smoke；逐路径提交，返回固定 base/head 与证据，停在本分支供主控 review。不推送、合并或发布。
 
-## S1 后续批：8–14（待主控在 review 后派发）
+## S1 当前批：8 的纯服务首版；其余须主控 review 后派发
 
-- [ ] 8. 1.2 纯服务去重：skills、MCP 探测、模型探测、会话目录/transcript；依赖 1.1，目录隔离守卫随迁移。Desktop/serve 生产调用同一实现。
+- [ ] 8. Host 1.2 整体（包含后置输出回放，不能标全部完成）。
+  - [x] 8a. 首批纯服务/ownership：Desktop 与 Hub skills inventory、MCP probe、Session FS 真实共用 Host；MCP SDK 仅由 Core internal 窄连接接口承担。Hub 独有的模型连接测试迁 Host ownership，Desktop metadata 和 Core model-fetcher 保持原语义。代码与本地验证完成，独立 CC review、正常宿主受限项补验/提交待接续。
+  - [x] PR188 三个非阻断 P2 修复与定向回归，见[修复清单](platform-pr188-followups.md)；不声称 CC 已复审。
 - [ ] 9. 1.3 凭据与 MCP OAuth 迁 host，由 adapter 注入 cipher；依赖 1.1。serve 同等能力，去掉 local 特例，验证凭据隔离。
 - [ ] 10. 1.4 单 automation 执行器，共享锁/单 owner；依赖 1.1。同机两宿主只触发一次，serve automationCreate 可用。
 - [ ] 11. Protocol v2：Schema 与客户端生成、版本协商、Session/Turn/Item、typed host/*、journal cursor 输出续传及 stateVersion 宿主状态续传、client/* 反向请求、TUI 真切换；保留 v1 兼容并覆盖断连、租约、非法 cursor。
-- [ ] 8 的后续：输出回放去重，依赖第 11 项两类续传完成，把 Desktop snapshot 与 Hub seq/epoch 改为 journal cursor 缓存；验证不漏不重与快照回退。
+- [ ] 8b. 后置输出回放去重，依赖第 11 项两类续传完成，把 Desktop snapshot 与 Hub seq/epoch 改为 journal cursor 缓存；验证不漏不重与快照回退。
 - [ ] 12. PolicyEngine + ApprovalStore 真接工具、浏览器、process.native。
 - [ ] 13. ExecutionService/report-only 技术验证。当前后端没有完整 dry-run：分别记录静态预检、单次执行观测、unknown，禁止双执行任意命令模拟 report-only。
 - [ ] 14. 兼容矩阵、契约 CI 与发版验收：覆盖客户端/宿主/runtime/扩展版本组合、包边界、Schema 漂移、v1 降级、两类续传及权限契约。
@@ -168,3 +170,9 @@ node scripts/run-bun-test-shard.mjs --timeout 30000 \
 
 
 本轮最后暂存文档再次受 Git 元数据权限限制：创建本树对应的共享 `index.lock` 报 `Operation not permitted`。三笔修复代码提交已完成；`CHANGELOG.md`、`TODO.md`、`docs/architecture/16-platform-consolidation.md`、本计划、`packages/host/README.md` 五份文档由主控在复审前使用正常宿主 Git 补交。不提升权限、不改 main，也不绕过 Git 元数据限制。该本轮状态与上轮已补交的 `65dbd365b` 文档记录分开。
+
+## 第 8a 批：共享服务首版（2026-10-15）
+
+本批 base：`19bc2167402da53caeace26ac69207822c166448`；分支：`codex/host/shared-services-20261015`。开始时指定工作树 clean，依赖由主控冻结安装。只实现第 8a 与 PR188 三个 P2，未触及 8b、9–14、S2/S3，也未将 S1 或全部第 8 项标完成。HostRuntime 仍为同步生命周期；新探测/文件方法显式 async，连接内部持有可关闭句柄。
+
+最终本地两组 341 pass / 0 fail / 0 skipped（1300 assertions），完整 typecheck、Desktop main、隔离 Node smoke、targeted lint/格式/预算/engine-bypass/包边界通过；真实 HTTP 监听和 Git index 仍受沙箱限制。实际入口、删除的重复实现、完整验证命令/结果与沙箱限制见 [第 8a 交付记录](evidence/host-shared-services-20261015.md)。本批只交主控安排独立 CC review；没有调用 Claude，也没有其他写入 worker；只读辅助审计未改文件。Git `index.lock` 受限时保留全部任务文件，并在该记录给出精确分组提交命令，不绕过共享 Git 元数据权限。

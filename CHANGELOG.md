@@ -12,10 +12,17 @@ breaking.
 
 - Add `@cjhyy/code-shell-host`, a Core-only HostRuntime foundation with capability
   registration, adapter lifecycle and a shared worker request interceptor used by
-  Desktop, serve and Panel task hosts. Larger service migrations remain pending.
+  Desktop, serve and Panel task hosts.
+- Share Host skill inventory, bounded MCP probes and safe session file metadata
+  between Desktop and Hub. MCP SDK connections remain behind a narrow Core
+  internal interface; adapters keep authorization, DTOs and cache policy.
 
 ### Changed
 
+- Move Hub's existing single-request model connection test into Host ownership,
+  retaining its compatibility entry and Core clients. Core model listing and
+  Desktop model metadata retain their existing behavior. Output replay remains
+  deferred until both journal cursor and stateVersion resumptions exist.
 - Extract protocol request dispatch and ingress validation without changing the
   legacy wire contract; reduce the AgentServer architecture budget to 4,949 lines.
 - Reserve tool names beginning with `__` for internal host loopbacks, including
@@ -33,6 +40,10 @@ breaking.
 
 ### Fixed
 
+- Reject mismatched external accounting references with actionable Native recovery
+  guidance while preserving historical costs and keeping a healthy CLI retryable.
+- Avoid a second renderer failure terminal/toast after the current run has already
+  streamed its terminal, including cancellation from another client.
 - Keep the bundled Host package in Desktop devDependencies, and derive the
   production workspace packaging guard from predist's actual materialization list.
 - Include a unique JSON-RPC id in Desktop unsupported-loopback replies so Core

@@ -1,23 +1,12 @@
 /**
  * Read-only enumeration of installed skills.
  *
- * The desktop main process imports core's `scanSkills` directly. We
- * don't go through the agent worker for this — the worker isn't
- * running between turns, and the data is purely "what's on disk".
- *
- * If core ever moves the scanner under a sub-export the desktop will
- * fail to compile, which is the right signal: the IPC payload schema
- * here mirrors core's SkillDefinition so we keep them in lockstep.
+ * Host combines Core discovery and effective toggles. This adapter owns
+ * renderer path grants, DTOs and local mutation authorization.
  */
 
-import {
-  SettingsManager,
-  scanSkills,
-  invalidateSkillCache,
-  userHome,
-  type SkillDefinition,
-} from "@cjhyy/code-shell-core";
-import { computeEffectiveDisabledLists } from "@cjhyy/code-shell-core/internal";
+import { invalidateSkillCache, userHome } from "@cjhyy/code-shell-core";
+import { readSkillInventory } from "@cjhyy/code-shell-host";
 import { installSkillFromDirectory as installSharedSkillDirectory } from "@cjhyy/code-shell-core/internal/skills";
 import { assertCodeShellMarkdownPath, rememberCodeShellMarkdownPath } from "./safe-read.js";
 import { promises as fs } from "node:fs";
@@ -44,41 +33,24 @@ export interface UninstallSkillInput {
 }
 
 export function listSkills(cwd: string, opts?: { includeDisabled?: boolean }): SkillSummary[] {
-  let defs: SkillDefinition[];
-  let enabledNames: Set<string> | undefined;
+  let inventory: ReturnType<typeof readSkillInventory>;
   try {
-    if (opts?.includeDisabled) {
-      // "Include disabled" applies to individual Skill/plugin toggles. Panel
-      // App Skills remain project-bound and must not appear in unrelated
-      // projects' catalogs.
-      defs = scanSkills(cwd);
-      const disabled = computeEffectiveDisabledLists(new SettingsManager(cwd, "full"), cwd);
-      enabledNames = new Set(
-        scanSkills(cwd, {
-          disabledSkills: disabled.disabledSkills,
-          disabledPlugins: disabled.disabledPlugins,
-        }).map((definition) => definition.name),
-      );
-    } else {
-      const disabled = computeEffectiveDisabledLists(new SettingsManager(cwd, "full"), cwd);
-      defs = scanSkills(cwd, {
-        disabledSkills: disabled.disabledSkills,
-        disabledPlugins: disabled.disabledPlugins,
-      });
-    }
+    inventory = readSkillInventory(cwd);
   } catch {
     return [];
   }
-  return defs.map((d) => {
-    rememberCodeShellMarkdownPath(d.filePath);
-    return {
-      name: d.name,
-      description: d.description,
-      source: d.source,
-      filePath: d.filePath,
-      enabled: enabledNames?.has(d.name) ?? true,
-    };
-  });
+  return inventory.skills
+    .filter((skill) => opts?.includeDisabled || skill.enabled)
+    .map(({ definition: d, enabled }) => {
+      rememberCodeShellMarkdownPath(d.filePath);
+      return {
+        name: d.name,
+        description: d.description,
+        source: d.source,
+        filePath: d.filePath,
+        enabled,
+      };
+    });
 }
 
 export async function readSkillBody(filePath: string): Promise<string> {

@@ -1168,7 +1168,7 @@ function App() {
       compactingBucketsRef,
       setCompactingBuckets,
     },
-    transcript: { dispatch, state },
+    transcript: { dispatch, state, transcriptsRef },
     approvals: {
       approval,
       approvalQueue,

@@ -1,7 +1,10 @@
 import { afterAll, afterEach, beforeAll, expect, test } from "bun:test";
 import { createServer, type Server } from "node:http";
-import { validateSettings } from "@cjhyy/code-shell-core";
-import { probeConfiguredModel } from "./model-probe.js";
+import { installFixtureNetworkGuard } from "../../../../tests/helpers/network-fixture.js";
+const network = installFixtureNetworkGuard();
+afterAll(() => network.restore());
+const { validateSettings } = await import("@cjhyy/code-shell-core");
+const { probeConfiguredModel } = await import("./model-probe.js");
 
 // Browser hook suites install a miniature DOM in the shared Bun process. These
 // integration tests exercise a native server host; retain the SDK browser guard
@@ -32,7 +35,9 @@ async function modelServer(handler: Parameters<typeof createServer>[0]) {
   const server = createServer(handler);
   servers.push(server);
   await new Promise<void>((resolve) => server.listen(0, "127.0.0.1", resolve));
-  return `http://127.0.0.1:${(server.address() as { port: number }).port}/v1`;
+  const url = `http://127.0.0.1:${(server.address() as { port: number }).port}/v1`;
+  network.allowOrigin(url);
+  return url;
 }
 function settings(baseUrl: string, apiKey: string | undefined = key) {
   return validateSettings({

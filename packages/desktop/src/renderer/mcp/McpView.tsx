@@ -1,8 +1,5 @@
 import React, { useCallback, useEffect, useState } from "react";
-import type {
-  McpProbeResult,
-  McpServerProbeInput,
-} from "../../preload/types";
+import type { McpProbeResult, McpServerProbeInput } from "../../preload/types";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { useT } from "../i18n/I18nProvider";
@@ -70,7 +67,7 @@ export function McpView() {
         envHeaders: s.envHeaders,
         credentialRef: s.credentialRef,
       }));
-      const results = await window.codeshell.probeMcpServers(inputs, force);
+      const results = await window.codeshell.probeMcpServers(inputs, force, null);
       const map: Record<string, McpProbeResult> = {};
       for (const r of results) map[r.name] = r;
       setProbes(map);
@@ -92,13 +89,17 @@ export function McpView() {
   }, [load]);
 
   if (error) return <div className="p-6 text-sm text-status-err">{error}</div>;
-  if (!servers) return <div className="p-6 text-sm text-muted-foreground">{t("ext.common.loading")}</div>;
+  if (!servers)
+    return <div className="p-6 text-sm text-muted-foreground">{t("ext.common.loading")}</div>;
 
   return (
     <div className="flex flex-col gap-3 p-6">
       <header className="flex items-center justify-between">
         <h2 className="flex items-center gap-2 text-sm font-semibold">
-          {t("ext.mcp.serversTitle")} <span className="rounded-full bg-muted px-2 py-0.5 text-xs text-muted-foreground">{servers.length}</span>
+          {t("ext.mcp.serversTitle")}{" "}
+          <span className="rounded-full bg-muted px-2 py-0.5 text-xs text-muted-foreground">
+            {servers.length}
+          </span>
         </h2>
         <Button
           size="sm"
@@ -121,13 +122,14 @@ export function McpView() {
             const p = probes[s.name];
             const enabled = isEnabled(s);
             const transport = s.transport ?? (s.url ? "streamable-http" : "stdio");
-            const target = s.command
-              ? [s.command, ...(s.args ?? [])].join(" ")
-              : s.url ?? "";
+            const target = s.command ? [s.command, ...(s.args ?? [])].join(" ") : (s.url ?? "");
             return (
               <article
                 key={s.name}
-                className={"rounded-lg border bg-card p-3 text-card-foreground shadow-sm " + (enabled ? "" : "opacity-60")}
+                className={
+                  "rounded-lg border bg-card p-3 text-card-foreground shadow-sm " +
+                  (enabled ? "" : "opacity-60")
+                }
               >
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
@@ -142,7 +144,9 @@ export function McpView() {
                     )}
                   </div>
                   {p?.status === "ok" && (
-                    <span className="text-xs text-muted-foreground">{t("ext.mcp.tools", { count: p.toolCount ?? 0 })}</span>
+                    <span className="text-xs text-muted-foreground">
+                      {t("ext.mcp.tools", { count: p.toolCount ?? 0 })}
+                    </span>
                   )}
                 </div>
                 {target && (
@@ -165,17 +169,22 @@ export function McpView() {
 function StatusPill({ probe, loading }: { probe?: McpProbeResult; loading: boolean }) {
   const { t } = useT();
   const base = "text-xs font-medium";
-  if (loading || probe?.status === "probing") return <span className={`${base} text-status-running`}>{t("ext.mcp.connecting")}</span>;
-  if (!probe) return <span className={`${base} text-muted-foreground`}>{t("ext.mcp.untested")}</span>;
-  if (probe.status === "ok") return <span className={`${base} text-status-ok`}>{t("ext.mcp.connected")}</span>;
-  if (probe.status === "error") return <span className={`${base} text-status-err`}>{t("ext.mcp.connectFailed")}</span>;
+  if (loading || probe?.status === "probing")
+    return <span className={`${base} text-status-running`}>{t("ext.mcp.connecting")}</span>;
+  if (!probe)
+    return <span className={`${base} text-muted-foreground`}>{t("ext.mcp.untested")}</span>;
+  if (probe.status === "ok")
+    return <span className={`${base} text-status-ok`}>{t("ext.mcp.connected")}</span>;
+  if (probe.status === "error")
+    return <span className={`${base} text-status-err`}>{t("ext.mcp.connectFailed")}</span>;
   return <span className={`${base} text-muted-foreground`}>{t("ext.mcp.unknown")}</span>;
 }
 
 function parseServers(value: unknown): McpServer[] {
   if (Array.isArray(value)) {
     return value.filter(
-      (x): x is McpServer => !!x && typeof x === "object" && typeof (x as McpServer).name === "string",
+      (x): x is McpServer =>
+        !!x && typeof x === "object" && typeof (x as McpServer).name === "string",
     );
   }
   if (value && typeof value === "object") {

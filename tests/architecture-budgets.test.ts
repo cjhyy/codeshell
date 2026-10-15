@@ -457,7 +457,10 @@ describe("architecture growth budgets", () => {
       // +1 reviewed Host composition of the existing operation controller and
       // resolver for external runtime run custody; public SDK and extension runtime
       // exports stay unchanged.
-      "packages/core/src/index.internal.ts": 113,
+      // +2 Host 1.2 internal seams: SDK-only bounded MCP connect/list/close,
+      // and the existing session listing algorithm with Host filesystem custody.
+      // Neither is exported by the stable public SDK or extension entry.
+      "packages/core/src/index.internal.ts": 115,
       "packages/coding/src/index.ts": 12,
       "packages/arena/src/index.ts": 19,
       // +1 for conversation-session.ts, which re-exports the four modules

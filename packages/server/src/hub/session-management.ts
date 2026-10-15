@@ -1,13 +1,6 @@
 import type { IncomingMessage, ServerResponse } from "node:http";
-import {
-  closeSync,
-  constants,
-  fstatSync,
-  lstatSync,
-  openSync,
-  readSync,
-  realpathSync,
-} from "node:fs";
+import { SessionFileError, readSessionFileSync, sessionListStorage } from "@cjhyy/code-shell-host";
+import { listSessionEntries } from "@cjhyy/code-shell-core/internal";
 import { join, resolve } from "node:path";
 import { SessionManager, type SessionState } from "@cjhyy/code-shell-core";
 import { replayTranscript, transcriptUserDisplay } from "@cjhyy/code-shell-web";
@@ -40,66 +33,26 @@ function boundedSessionFile(
   limit: number,
 ): string {
   safeSessionId(sessionId);
-  let directory: number | undefined;
-  let descriptor: number | undefined;
   try {
-    const root = realpathSync(rootDir);
-    const path = join(root, sessionId);
-    const info = lstatSync(path);
-    if (!info.isDirectory() || info.isSymbolicLink())
-      throw new SessionRequestError(403, "会话存储位置无效。");
-    directory = openSync(
-      path,
-      constants.O_RDONLY | (constants.O_NOFOLLOW ?? 0) | (constants.O_DIRECTORY ?? 0),
-    );
-    const openedDirectory = fstatSync(directory);
-    if (openedDirectory.dev !== info.dev || openedDirectory.ino !== info.ino)
-      throw new SessionRequestError(409, "会话存储正在变化，请重试。");
-    descriptor = openSync(
-      process.platform === "linux"
-        ? `/proc/self/fd/${directory}/${filename}`
-        : join(path, filename),
-      constants.O_RDONLY | (constants.O_NOFOLLOW ?? 0) | (constants.O_NONBLOCK ?? 0),
-    );
-    const file = fstatSync(descriptor);
-    if (!file.isFile()) throw new SessionRequestError(403, "会话记录不是普通文件。");
-    if (file.size > limit)
-      throw new SessionRequestError(
-        413,
-        filename === "transcript.jsonl"
-          ? "对话记录超过浏览器可读取的 32 MB 上限，请从服务器会话备份中获取完整记录。"
-          : "会话状态记录过大，无法在浏览器读取。",
-      );
-    // Snapshot exactly the checked prefix. An append during a running turn can
-    // be picked up by the live overlay without growing this allocation.
-    const buffer = Buffer.alloc(file.size);
-    let bytes = 0;
-    while (bytes < buffer.length) {
-      const count = readSync(descriptor, buffer, bytes, buffer.length - bytes, bytes);
-      if (!count) break;
-      bytes += count;
-    }
-    const currentDirectory = lstatSync(path);
-    const currentFile = lstatSync(join(path, filename));
-    if (
-      currentDirectory.isSymbolicLink() ||
-      currentFile.isSymbolicLink() ||
-      currentDirectory.dev !== info.dev ||
-      currentDirectory.ino !== info.ino ||
-      currentFile.dev !== file.dev ||
-      currentFile.ino !== file.ino
-    )
-      throw new SessionRequestError(409, "会话存储正在变化，请重试。");
-    return buffer.subarray(0, bytes).toString("utf8");
+    return readSessionFileSync(resolve(rootDir), sessionId, filename, limit);
   } catch (error) {
+    if (error instanceof SessionFileError) {
+      if (error.code === "too_large")
+        throw new SessionRequestError(
+          413,
+          filename === "transcript.jsonl"
+            ? "对话记录超过浏览器可读取的 32 MB 上限，请从服务器会话备份中获取完整记录。"
+            : "会话状态记录过大，无法在浏览器读取。",
+        );
+      if (error.code === "changed")
+        throw new SessionRequestError(409, "会话存储正在变化，请重试。");
+      throw new SessionRequestError(403, "会话存储位置无效。");
+    }
     if ((error as NodeJS.ErrnoException).code === "ENOENT")
       throw new SessionRequestError(404, "会话记录不存在或已移动。");
     if (["ELOOP", "ENOTDIR"].includes((error as NodeJS.ErrnoException).code ?? ""))
       throw new SessionRequestError(403, "不能读取符号链接中的会话记录。");
     throw error;
-  } finally {
-    if (descriptor !== undefined) closeSync(descriptor);
-    if (directory !== undefined) closeSync(directory);
   }
 }
 
@@ -151,7 +104,8 @@ export function createHubSessions(options: {
   isRunning: (sessionId: string) => boolean;
   onChanged: (sessionId: string) => void;
 }) {
-  const manager = new SessionManager(options.sessionRootDir);
+  const sessionRootDir = resolve(options.sessionRootDir);
+  const manager = new SessionManager(sessionRootDir);
   const titles = createSessionTitlesStore(join(options.dataDir, "session-titles.json"), {
     strictMutations: true,
   });
@@ -162,7 +116,7 @@ export function createHubSessions(options: {
     safeSessionId(sessionId);
     try {
       // Reading state alone avoids loading a large transcript for a rename.
-      const state = readHubSessionState(options.sessionRootDir, sessionId);
+      const state = readHubSessionState(sessionRootDir, sessionId);
       if (
         !state ||
         state.sessionId !== sessionId ||
@@ -226,18 +180,23 @@ export function createHubSessions(options: {
     }
     const customTitles = await titles.listTitles();
     const search = query.toLocaleLowerCase();
-    const entries = manager.list(limit + 1, {
-      cwd,
-      rootsOnly: true,
-      ...(archived !== "all" ? { archived: archived === "true" } : {}),
-      ...(before ? { before } : {}),
-      filter: search
-        ? (state) =>
-            `${customTitles[state.sessionId] ?? ""}\n${hubSessionPreview(state.title) ?? ""}\n${hubSessionPreview(state.preview) ?? ""}\n${state.sessionId}`
-              .toLocaleLowerCase()
-              .includes(search)
-        : undefined,
-    });
+    const entries = listSessionEntries(
+      sessionRootDir,
+      limit + 1,
+      {
+        cwd,
+        rootsOnly: true,
+        ...(archived !== "all" ? { archived: archived === "true" } : {}),
+        ...(before ? { before } : {}),
+        filter: search
+          ? (state) =>
+              `${customTitles[state.sessionId] ?? ""}\n${hubSessionPreview(state.title) ?? ""}\n${hubSessionPreview(state.preview) ?? ""}\n${state.sessionId}`
+                .toLocaleLowerCase()
+                .includes(search)
+          : undefined,
+      },
+      sessionListStorage(sessionRootDir),
+    );
     const page = entries.slice(0, limit);
     const last = page.at(-1);
     return {
@@ -283,7 +242,7 @@ export function createHubSessions(options: {
           throw new SessionRequestError(429, "正在导出的对话过多，请稍后重试。");
         activeExports++;
         exporting = true;
-        const transcript = readHubTranscript(options.sessionRootDir, sessionId);
+        const transcript = readHubTranscript(sessionRootDir, sessionId);
         const format = url.searchParams.get("format") ?? "markdown";
         if (format !== "json" && format !== "markdown")
           throw new SessionRequestError(400, "不支持这个导出格式。");

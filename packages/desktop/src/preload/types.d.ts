@@ -2235,7 +2235,11 @@ export interface CodeshellApi
   ): Promise<void>;
   inspectGithubSkill(url: string, existingNames?: string[]): Promise<GithubRepoInspection>;
   installFromGithub(input: GithubSkillInstallInput): Promise<InstalledSkill>;
-  probeMcpServers(configs: McpServerProbeInput[], force?: boolean): Promise<McpProbeResult[]>;
+  probeMcpServers(
+    configs: McpServerProbeInput[],
+    force?: boolean,
+    target?: RendererConfigurationTarget | null,
+  ): Promise<McpProbeResult[]>;
   listMergedMcpServers(
     base: Record<string, unknown>,
     disabledPlugins?: string[],
