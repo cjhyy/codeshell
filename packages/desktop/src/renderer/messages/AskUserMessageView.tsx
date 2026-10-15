@@ -58,7 +58,7 @@ function AskUserMessageViewImpl({ message, onAnswer }: Props) {
       // pixel width left this card narrower than the surrounding cards and
       // flush against the viewport edge at wide window sizes.
       <div className="min-w-0 max-w-full px-4 py-1">
-        <div className="my-2 min-w-0 rounded-md border bg-muted/30 p-3 text-sm">
+        <div className="my-2 min-w-0 whitespace-pre-wrap rounded-md border bg-muted/30 p-3 text-sm [overflow-wrap:anywhere]">
           <div className="mb-2 flex flex-col gap-1">
             {message.header && (
               <span className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
@@ -69,13 +69,15 @@ function AskUserMessageViewImpl({ message, onAnswer }: Props) {
           </div>
           <div
             className={cn(
-              "inline-flex items-center gap-1.5 rounded-full px-2 py-1 text-xs font-medium",
+              "inline-flex min-w-0 max-w-full items-start gap-1.5 rounded-xl px-2 py-1 text-xs font-medium",
               echo.className,
             )}
           >
-            {echo.icon === "check" && <Check size={12} />}
-            {echo.icon === "cross" && <X size={12} />}
-            {message.answer}
+            {echo.icon === "check" && <Check size={12} className="mt-0.5 shrink-0" aria-hidden />}
+            {echo.icon === "cross" && <X size={12} className="mt-0.5 shrink-0" aria-hidden />}
+            <span className="min-w-0 whitespace-pre-wrap [overflow-wrap:anywhere]">
+              {message.answer}
+            </span>
           </div>
         </div>
       </div>
