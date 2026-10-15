@@ -3,7 +3,7 @@ import { createInProcessTransport } from "../protocol/transport.js";
 import type { RpcMessage } from "../protocol/types.js";
 import { createIpcCredentialAccess } from "./access.js";
 
-function fixture(kind: "remote" | "local") {
+function fixture(kind: "remote" | "local" | "mcp") {
   const [main, worker] = createInProcessTransport();
   const access = createIpcCredentialAccess(worker);
   const messages: RpcMessage[] = [];
@@ -23,7 +23,7 @@ function fixture(kind: "remote" | "local") {
           input as Parameters<NonNullable<typeof access.executeRemoteLinkAction>>[0],
           options,
         )
-      : access.executeLocalOAuthLinkAction!(
+      : (kind === "mcp" ? access.executeMcpLinkAction! : access.executeLocalOAuthLinkAction!)(
           input as Parameters<NonNullable<typeof access.executeLocalOAuthLinkAction>>[0],
           options,
         );
@@ -34,7 +34,7 @@ function fixture(kind: "remote" | "local") {
   return { input, messages, execute, respond };
 }
 
-test.each(["remote", "local"] as const)(
+test.each(["remote", "local", "mcp"] as const)(
   "%s IPC checks custody before sending and returning, without wiring functions",
   async (kind) => {
     const f = fixture(kind);
@@ -51,7 +51,7 @@ test.each(["remote", "local"] as const)(
   },
 );
 
-test.each(["remote", "local"] as const)(
+test.each(["remote", "local", "mcp"] as const)(
   "%s IPC refuses a revoked run before any request",
   async (kind) => {
     const f = fixture(kind);
@@ -66,7 +66,7 @@ test.each(["remote", "local"] as const)(
   },
 );
 
-test.each(["remote", "local"] as const)(
+test.each(["remote", "local", "mcp"] as const)(
   "%s IPC discards results after custody was revoked",
   async (kind) => {
     const f = fixture(kind);
@@ -82,7 +82,7 @@ test.each(["remote", "local"] as const)(
   },
 );
 
-test.each(["remote", "local"] as const)(
+test.each(["remote", "local", "mcp"] as const)(
   "%s IPC cancellation still rejects a late response locally",
   async (kind) => {
     const f = fixture(kind);

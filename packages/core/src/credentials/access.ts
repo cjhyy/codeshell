@@ -39,6 +39,12 @@ import { assertMcpOAuthCredentialBinding } from "./mcp-binding.js";
 import type { SettingsScope } from "../settings/manager.js";
 import type { RpcMessage } from "../protocol/types.js";
 import type { Transport } from "../protocol/transport.js";
+import {
+  executeFigmaMcpLinkAction,
+  isFigmaMcpCredential,
+  McpLinkActionError,
+  type McpLinkActionRequest,
+} from "../links/figma-mcp.js";
 
 export type CredentialAccessScope = "full" | "project";
 
@@ -57,6 +63,10 @@ export interface CredentialMetadata {
 }
 
 export interface CredentialAccess {
+  executeMcpLinkAction?(
+    request: McpLinkActionRequest,
+    options?: { signal?: AbortSignal; assertAuthorized?: () => void },
+  ): Promise<unknown>;
   executeLocalOAuthLinkAction?(
     request: LocalOAuthLinkActionRequest,
     options?: { signal?: AbortSignal; assertAuthorized?: () => void },
@@ -174,16 +184,33 @@ export function createIpcCredentialAccess(
     clearTimeout(waiter.timer);
     waiter.cleanup?.();
     if ("error" in msg && msg.error) {
-      const data = msg.error.data as { remoteLinkCode?: unknown } | undefined;
+      const data = msg.error.data as
+        | { remoteLinkCode?: unknown; mcpLinkCode?: unknown }
+        | undefined;
       const remoteLinkCode =
         waiter.method === "desktop/remoteLinkAction" ? data?.remoteLinkCode : undefined;
+      const mcpLinkCode = waiter.method === "desktop/mcpLinkAction" ? data?.mcpLinkCode : undefined;
       waiter.reject(
-        remoteLinkCode === "file_not_authorized" ||
-          remoteLinkCode === "unsupported_file_type" ||
-          remoteLinkCode === "response_too_large" ||
-          remoteLinkCode === "content_unavailable"
-          ? new RemoteLinkError(remoteLinkCode)
-          : new Error(msg.error.message),
+        typeof mcpLinkCode === "string" &&
+          [
+            "invalid_request",
+            "changed",
+            "forbidden",
+            "reconnect",
+            "unsupported",
+            "response_too_large",
+            "resource_not_discovered",
+            "provider_error",
+          ].includes(mcpLinkCode)
+          ? new McpLinkActionError(
+              mcpLinkCode as ConstructorParameters<typeof McpLinkActionError>[0],
+            )
+          : remoteLinkCode === "file_not_authorized" ||
+              remoteLinkCode === "unsupported_file_type" ||
+              remoteLinkCode === "response_too_large" ||
+              remoteLinkCode === "content_unavailable"
+            ? new RemoteLinkError(remoteLinkCode)
+            : new Error(msg.error.message),
       );
     } else {
       waiter.resolve(msg.result);
@@ -215,7 +242,7 @@ export function createIpcCredentialAccess(
         () => {
           pending.delete(id);
           cleanup();
-          if (method === "desktop/localOAuthLinkAction")
+          if (method === "desktop/localOAuthLinkAction" || method === "desktop/mcpLinkAction")
             transport.send({
               jsonrpc: "2.0",
               method: "desktop/localOAuthLinkActionCancel",
@@ -223,7 +250,7 @@ export function createIpcCredentialAccess(
             });
           reject(new Error(`${method} timed out`));
         },
-        method === "desktop/localOAuthLinkAction"
+        method === "desktop/localOAuthLinkAction" || method === "desktop/mcpLinkAction"
           ? 90_000
           : method === "desktop/remoteLinkAction"
             ? 45_000
@@ -241,6 +268,18 @@ export function createIpcCredentialAccess(
   };
 
   return {
+    executeMcpLinkAction: async (input, options) => {
+      options?.signal?.throwIfAborted();
+      options?.assertAuthorized?.();
+      const result = await request(
+        "desktop/mcpLinkAction",
+        input as unknown as Record<string, unknown>,
+        options?.signal,
+      );
+      options?.signal?.throwIfAborted();
+      options?.assertAuthorized?.();
+      return result;
+    },
     executeLocalOAuthLinkAction: async (input, options) => {
       options?.signal?.throwIfAborted();
       options?.assertAuthorized?.();
@@ -364,6 +403,11 @@ function storeFor(cwd: string | undefined): CredentialStore {
 }
 
 export const localCredentialAccess: CredentialAccess = {
+  executeMcpLinkAction: (input, options) =>
+    executeFigmaMcpLinkAction(input, {
+      ...options,
+      resolveOAuthAccess: (request) => localCredentialAccess.resolveOAuthAccess!(request),
+    }),
   executeLocalOAuthLinkAction,
   executeRemoteLinkAction,
   subscribe(listener, context) {
@@ -395,7 +439,11 @@ export const localCredentialAccess: CredentialAccess = {
     if (!cred || !isCredentialSecretAvailable(cred.secret)) {
       throw new Error(`credential "${req.id}" is unavailable`);
     }
-    if (isRemoteLinkCredential(cred) || isBrowserOAuthLinkCredential(cred))
+    if (
+      isRemoteLinkCredential(cred) ||
+      isBrowserOAuthLinkCredential(cred) ||
+      isFigmaMcpCredential(cred)
+    )
       throw new Error("OAuth Link credentials only support Host-owned actions");
     if (
       req.purpose === "link" &&
