@@ -48,6 +48,7 @@ const fixtures = [
   "panels/FilesPanel.browser.fixture.mjs",
   "ui/specialized-overlays.browser.fixture.mjs",
   "ui/page-surfaces.browser.fixture.mjs",
+  "ui/NotificationHistory.browser.fixture.mjs",
 ];
 
 for (const fixture of fixtures) {
