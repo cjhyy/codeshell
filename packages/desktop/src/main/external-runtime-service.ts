@@ -56,6 +56,7 @@ import {
 } from "./external-runtime-goals.js";
 import {
   ExternalRuntimeOperationRun,
+  ExternalAccountingOwnershipError,
   EXTERNAL_UNVERIFIED_WRITE_NOTICE,
 } from "./external-runtime-operations.js";
 import { createExternalRuntimeSourceContext } from "./external-runtime-source-context.js";
@@ -1088,6 +1089,7 @@ export class ExternalRuntimeService {
     if (!entry) throw new Error(`no external runtime session for ${sessionId}`);
     const turnInput = typeof input === "string" ? { text: input } : input;
     const acceptedGeneration = entry.lifecycle.interruptGeneration;
+    let accountingRejected = false;
     const runTurnExclusive = async (): Promise<ExternalRuntimeTurnOutcome> => {
       if (this.sessions.get(sessionId) !== entry) {
         throw new Error(
@@ -1222,8 +1224,8 @@ export class ExternalRuntimeService {
                 entry.operations.current = new ExternalRuntimeOperationRun({
                   sessionId,
                   runId,
-                  // Injected reminders cannot mint another user-approved write slot.
-                  // An empty origin preserves reads but makes writes fail closed.
+                  // Reminders reuse the latest real user intent, never another write slot.
+                  // Only a Session with no real user message has an empty origin (reads only).
                   originClientMessageId: entry.recorder.operationIntentId ?? "",
                   sourceContext: createExternalRuntimeSourceContext({
                     sessionId,
@@ -1267,6 +1269,7 @@ export class ExternalRuntimeService {
               const turn = await entry.session.send(nextInput, onEvent);
               await turn.done;
             } catch (error) {
+              if (error instanceof ExternalAccountingOwnershipError) accountingRejected = true;
               if (!prepared) return entry.outputFailure();
               if (!entry.lifecycle.active || this.sessions.get(sessionId) !== entry) {
                 return entry.recorder.finishIfMissing();
@@ -1353,7 +1356,11 @@ export class ExternalRuntimeService {
       // The renderer drops its start binding on a provider error and expects the
       // next start to replace the runtime. Record that here so ensure() cannot
       // hand the broken provider back as "already compatible".
-      if (outcome.reason === "model_error" && this.sessions.get(sessionId) === entry) {
+      if (
+        outcome.reason === "model_error" &&
+        !accountingRejected &&
+        this.sessions.get(sessionId) === entry
+      ) {
         entry.lifecycle.faulted = true;
       }
       return outcome;

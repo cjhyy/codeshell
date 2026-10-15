@@ -1,5 +1,5 @@
 import { afterAll, afterEach, beforeEach, expect, mock, test } from "bun:test";
-import { mkdirSync, mkdtempSync, rmSync } from "node:fs";
+import { mkdirSync, mkdtempSync, rmSync, readFileSync, readdirSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import http from "node:http";
@@ -34,7 +34,7 @@ syncBuiltinESMExports();
 expect(() => fetch("https://outside.invalid/probe")).toThrow("denied outbound");
 expect(() => https.get("https://outside.invalid/probe")).toThrow("denied outbound");
 
-const { SessionManager } = await import("@cjhyy/code-shell-core");
+const { SessionManager, UsageLedger, sessionsRoot } = await import("@cjhyy/code-shell-core");
 const runtimeExports = {
   ...(await import("@cjhyy/code-shell-capability-coding/external-runtimes")),
 };
@@ -150,6 +150,47 @@ test("an unknown Host write stops Goal continuation and agrees with the returned
   expect(turns).toBe(1);
   expect(lastTerminal().reason).toBe(outcome.reason);
   expect(new SessionManager().readSessionState(sessionId)?.status).toBe("unverified_write");
+});
+
+test("rejected accounting custody remains retryable without replacing a healthy CLI", async () => {
+  expect((await svc.send(sessionId, { text: "initial", disableGoal: true })).reason).toBe(
+    "completed",
+  );
+  const sessions = new SessionManager();
+  const costState = sessions.readSessionState(sessionId)!.costState!;
+  const ledgerPath = join(sessionsRoot(), ".usage-ledger");
+  const usage = new UsageLedger({ storageDir: ledgerPath });
+  usage.adoptSession(sessionId, costState, sessionsRoot());
+  usage.begin(usage.owner(sessionId, "paid-history", [], "main", sessionsRoot()), {
+    provider: "fixture",
+    model: "fixture",
+  });
+  sessions.updateSessionState(sessionId, {
+    costState: { ...costState, sessionScopeId: "0".repeat(64) },
+  });
+  const ledgerSnapshot = () =>
+    readdirSync(ledgerPath, { recursive: true, withFileTypes: true })
+      .filter((file) => file.isFile())
+      .map((file) => readFileSync(join(file.parentPath, file.name)).toString());
+  const ledger = ledgerSnapshot();
+  const originalStart = lastStart;
+  for (let retry = 0; retry < 2; retry++) {
+    const outcome = await svc.send(sessionId, { text: "retry", disableGoal: true });
+    expect(outcome.reason).toBe("model_error");
+    expect(events.filter((event) => event.type === "error").at(-1)?.error).toContain("Native");
+    expect(sessions.readSessionState(sessionId)?.costState).toEqual({
+      ...costState,
+      sessionScopeId: "0".repeat(64),
+    });
+    expect(ledgerSnapshot()).toEqual(ledger);
+    expect(turns).toBe(1);
+  }
+  sessions.updateSessionState(sessionId, { costState });
+  expect((await svc.send(sessionId, { text: "repaired", disableGoal: true })).reason).toBe(
+    "completed",
+  );
+  expect(lastStart).toBe(originalStart);
+  expect(turns).toBe(2);
 });
 
 test("a later Goal cannot declare completion while its Session has an unresolved write", async () => {

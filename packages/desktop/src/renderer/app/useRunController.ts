@@ -39,7 +39,7 @@ import { resolveStopBucket } from "../stopRouting";
 import { runAfterModelSwitch } from "../modelSwitchRun";
 import { quickChatSessionIdFromBucket, type QuickChatSessionRef } from "../quickChatSession";
 import { browserPartitionForBucket, parsePanelBucket, type ApprovalHistoryEntry } from "./appUtils";
-import type { TranscriptsAction } from "../transcriptsReducer";
+import type { TranscriptsAction, TranscriptsMap } from "../transcriptsReducer";
 import type { ApprovalState, MessagesReducerState } from "../types";
 import { timePhase } from "../perf";
 import type { TrackedProject } from "../projects";
@@ -104,7 +104,11 @@ interface Params {
     compactingBucketsRef: MutableRefObject<Set<string>>;
     setCompactingBuckets: Dispatch<SetStateAction<Set<string>>>;
   };
-  transcript: { dispatch: Dispatch<TranscriptsAction>; state: MessagesReducerState };
+  transcript: {
+    dispatch: Dispatch<TranscriptsAction>;
+    state: MessagesReducerState;
+    transcriptsRef: MutableRefObject<TranscriptsMap>;
+  };
   approvals: {
     approval: ApprovalState;
     approvalQueue: ApprovalRequestEnvelope[];
@@ -145,7 +149,7 @@ export function useRunController({
     defaultActiveModelKey,
     quickChatDefaultModelKey,
   } = preferences;
-  const { dispatch, state } = transcript;
+  const { dispatch, state, transcriptsRef } = transcript;
   const {
     setBusyForKey,
     runningBucketRef,
@@ -206,6 +210,18 @@ export function useRunController({
     const sendGoalEnabled = goalOverrides[overrideBucket] ?? false;
     const sendModelKey = modelOverrides[overrideBucket] ?? defaultActiveModelKey;
     const clientMessageId = sendOpts.clientMessageId ?? newQueuedId();
+    const previousRunIds = new Set(
+      Object.values(transcriptsRef.current[bucket]?.streamRuns ?? {}).map((run) => run.runId),
+    );
+    const hasStreamedTerminal = () =>
+      ownsCurrentLaunch() &&
+      Object.values(transcriptsRef.current[bucket]?.streamRuns ?? {}).some(
+        (run) =>
+          run.completed &&
+          run.clientMessageId === clientMessageId &&
+          !!run.runId &&
+          !previousRunIds.has(run.runId),
+      );
     const displayText = sendOpts.displayText ?? text;
 
     // A draft has no sessionId, so its permission/goal overrides were keyed
@@ -506,7 +522,6 @@ export function useRunController({
       })
       .catch((err) => {
         if (pendingLaunch.cancelled || !ownsCurrentLaunch()) return;
-        playThemeSound("error");
         if (pendingLaunchesRef.current.get(bucket) === pendingLaunch) {
           pendingLaunchesRef.current.delete(bucket);
         }
@@ -522,6 +537,11 @@ export function useRunController({
         if (runningBucketRef.current === bucket) {
           runningBucketRef.current = null;
         }
+        // Claimed initialization failures reject RPC after publishing a durable
+        // terminal. This exact launch already rendered its error/cancellation,
+        // including Stop from another window. Older runs cannot cover a new RPC failure.
+        if (hasStreamedTerminal()) return;
+        playThemeSound("error");
         window.codeshell.log("run.rejected", {
           bucket,
           error: String((err as Error)?.message ?? err),
