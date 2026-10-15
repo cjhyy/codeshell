@@ -3497,8 +3497,7 @@ app.whenReady().then(async () => {
     log: (event, data) => dlog("main", event, data),
   });
 
-  // Bash, Panel processes and their children inherit these fallbacks. Keep
-  // existing executables first; explicit project PATH settings still override.
+  // Child tools inherit appended fallbacks; existing and project PATHs keep precedence.
   await injectDesktopManagedRuntimePath({
     isPackaged: app.isPackaged,
     resourcesPath: process.resourcesPath,
