@@ -139,8 +139,9 @@ export function Workbench({
     () => !window.matchMedia("(max-width: 760px)").matches,
   );
   const sidebarRef = React.useRef<HTMLElement>(null);
+  const sidebarBackdropRef = React.useRef<HTMLDivElement>(null);
   const sidebarToggleRef = React.useRef<HTMLButtonElement>(null);
-  const sidebarResizeFocus = React.useRef<{
+  const sidebarCloseFocus = React.useRef<{
     source: HTMLElement;
     workspace: string;
     cancelled: boolean;
@@ -171,8 +172,9 @@ export function Workbench({
     setView((current) => (current === "panel" ? "panels" : current));
   }, [controller.workspaceKey]);
   React.useLayoutEffect(() => {
-    const intent = sidebarResizeFocus.current;
-    sidebarResizeFocus.current = null;
+    if (sidebarOpen) return;
+    const intent = sidebarCloseFocus.current;
+    sidebarCloseFocus.current = null;
     const active = document.activeElement;
     if (
       intent &&
@@ -190,7 +192,7 @@ export function Workbench({
     const media = window.matchMedia("(max-width: 760px)");
     const change = () => {
       const source = document.activeElement;
-      sidebarResizeFocus.current =
+      sidebarCloseFocus.current =
         media.matches && source instanceof HTMLElement && sidebarRef.current?.contains(source)
           ? { source, workspace: controller.workspaceKey, cancelled: false }
           : null;
@@ -204,11 +206,26 @@ export function Workbench({
           : event.target;
       if (!(target instanceof Node) || (target === document.body && event.type !== "pointerdown"))
         return;
-      const intent = sidebarResizeFocus.current;
+      if (event.type === "pointerdown" && target === sidebarBackdropRef.current) return;
+      // Closing a mobile rail makes the main area non-inert in the same commit.
+      // Retain its actual focused source until the toggle can accept focus again.
+      if (
+        event.type === "focusin" &&
+        target instanceof HTMLElement &&
+        sidebarRef.current?.contains(target)
+      ) {
+        sidebarCloseFocus.current = {
+          source: target,
+          workspace: controller.workspaceKey,
+          cancelled: false,
+        };
+        return;
+      }
+      const intent = sidebarCloseFocus.current;
       if (intent && !intent.source.contains(target)) intent.cancelled = true;
     };
     const blur = () => {
-      if (sidebarResizeFocus.current) sidebarResizeFocus.current.cancelled = true;
+      if (sidebarCloseFocus.current) sidebarCloseFocus.current.cancelled = true;
     };
     media.addEventListener("change", change);
     document.addEventListener("pointerdown", handoff, true);
@@ -216,7 +233,7 @@ export function Workbench({
     document.addEventListener("focusout", handoff, true);
     window.addEventListener("blur", blur);
     return () => {
-      sidebarResizeFocus.current = null;
+      sidebarCloseFocus.current = null;
       media.removeEventListener("change", change);
       document.removeEventListener("pointerdown", handoff, true);
       document.removeEventListener("focusin", handoff, true);
@@ -364,6 +381,7 @@ export function Workbench({
     <div className={`shell${sidebarOpen ? " sidebar-open" : ""}`}>
       {narrow && sidebarOpen ? (
         <div
+          ref={sidebarBackdropRef}
           className="sidebar-backdrop"
           onClick={() => {
             setSidebarOpen(false);
