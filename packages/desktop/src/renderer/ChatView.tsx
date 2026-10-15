@@ -860,7 +860,11 @@ export function ChatView({
       ? t("chat.composer.placeholderCompacting")
       : busy
         ? t("chat.composer.placeholderBusy")
-        : t("chat.composer.placeholderIdle");
+        : t(
+            variant === "quickChat"
+              ? "panels.quickChat.placeholder"
+              : "chat.composer.placeholderIdle",
+          );
 
   const closeMention = (): void => {
     setMention(null);
@@ -1617,29 +1621,33 @@ export function ChatView({
         </div>
       )}
 
-      {/*
-        New-chat mode centers the whole hero group — welcome text, composer,
-        and project picker — in the empty stream space instead of pinning the
-        composer to the bottom. The flex-1 wrapper claims that space and
-        justify-center pulls the group to the middle; the composer is width-
-        capped so it reads as a centered hero. In active mode this wrapper is
-        absent (the MessageStream owns flex-1) and the composer stays pinned
-        at the bottom as a plain p-3 block.
-      */}
+      {/* Main/pet drafts center their welcome and composer together. Quick chat
+          keeps its composer at the bottom, with a separately scrolling welcome
+          so a short side panel can still reach every input control. */}
       <div
         className={
           contextSelectionOpen
             ? "hidden"
             : isNewChat
               ? cn(
-                  "flex min-w-0 max-w-full flex-1 flex-col items-center px-4",
-                  variant === "main" ? "cs-new-chat" : "justify-center",
+                  "flex min-w-0 max-w-full flex-1 flex-col items-center",
+                  variant === "main"
+                    ? "cs-new-chat px-4"
+                    : variant === "quickChat"
+                      ? "min-h-0"
+                      : "justify-center px-4",
                 )
               : "contents"
         }
       >
         {isNewChat && welcomeNode && (
-          <div className="mb-5 flex w-full min-w-0 shrink-0 flex-col items-center">
+          <div
+            className={
+              variant === "quickChat"
+                ? "cs-quick-chat-welcome flex min-h-0 w-full min-w-0 flex-1 flex-col items-center overflow-y-auto px-5 py-6"
+                : "mb-5 flex w-full min-w-0 shrink-0 flex-col items-center"
+            }
+          >
             {welcomeNode}
           </div>
         )}
@@ -1651,12 +1659,14 @@ export function ChatView({
             content height regardless of how tall the stream gets. */}
         <div
           className={
-            isNewChat
-              ? "w-full min-w-0 max-w-2xl shrink-0 p-3"
-              : cn(
-                  "min-w-0 shrink-0 p-3",
-                  variant === "main" ? "mx-auto w-full max-w-3xl" : "max-w-full",
-                )
+            variant === "quickChat"
+              ? "cs-quick-chat-composer-wrap w-full min-w-0 shrink-0 p-3"
+              : isNewChat
+                ? "w-full min-w-0 max-w-2xl shrink-0 p-3"
+                : cn(
+                    "min-w-0 shrink-0 p-3",
+                    variant === "main" ? "mx-auto w-full max-w-3xl" : "max-w-full",
+                  )
           }
         >
           {queuedInputItems.length > 0 && (
@@ -1742,9 +1752,10 @@ export function ChatView({
               // overflow. Keep this card out of the container-query tree: putting
               // container-type on the textarea's ancestor has collapsed the
               // composer during session/dock reflow.
-              "cs-chat-composer min-w-0 max-w-full border sm:min-w-[300px]" +
+              "cs-chat-composer min-w-0 max-w-full border" +
+              (variant === "quickChat" ? "" : " sm:min-w-[300px]") +
               (variant === "main" ? "" : " bg-card") +
-              (variant === "main" ? "" : " rounded-xl p-2 shadow-sm") +
+              (variant === "pet" ? " rounded-xl p-2 shadow-sm" : "") +
               (dragOver ? " ring-2 ring-primary/40" : "")
             }
             data-theme-surface={variant === "main" ? "composer" : undefined}
@@ -2024,7 +2035,11 @@ export function ChatView({
                 rows={1}
                 className={cn(
                   "max-h-[200px] w-full resize-none rounded-none border-0 bg-transparent px-2 py-1.5 text-sm leading-relaxed shadow-none placeholder:text-muted-foreground focus-visible:ring-0 disabled:opacity-60",
-                  isNewChat && variant === "main" ? "min-h-[72px]" : "min-h-[36px]",
+                  isNewChat && variant === "main"
+                    ? "min-h-[72px]"
+                    : variant === "quickChat"
+                      ? "min-h-[60px]"
+                      : "min-h-[36px]",
                 )}
               />
             </div>
@@ -2082,7 +2097,12 @@ export function ChatView({
             )}
 
             <div className="@container/composer-controls mt-1 min-h-8 w-full min-w-0">
-              <div className="flex min-w-0 items-center justify-between gap-2">
+              <div
+                className={cn(
+                  "flex min-w-0 items-center justify-between gap-2",
+                  variant === "quickChat" && "flex-wrap",
+                )}
+              >
                 <div className="flex min-w-0 items-center gap-1.5">
                   {variant !== "pet" && (localRuntime || onSelectRemoteFiles) && (
                     <Button
@@ -2107,6 +2127,7 @@ export function ChatView({
                       value={permissionMode}
                       onChange={onPermissionChange}
                       disabled={controlsDisabled}
+                      compact={variant === "quickChat"}
                     />
                   )}
                   {localRuntime && variant === "main" && (
@@ -2118,7 +2139,12 @@ export function ChatView({
                   )}
                 </div>
 
-                <div className="flex min-w-0 items-center justify-end gap-1.5">
+                <div
+                  className={cn(
+                    "flex min-w-0 items-center justify-end gap-1.5",
+                    variant === "quickChat" && "ml-auto",
+                  )}
+                >
                   {variant === "main" && (
                     <div data-composer-control="context-usage">
                       <ContextRing
@@ -2139,6 +2165,7 @@ export function ChatView({
                     options={modelOptions}
                     onSelect={onModelChange}
                     disabled={controlsDisabled}
+                    compact={variant === "quickChat"}
                   />
                   {/* 语音输入(听写):点击录音 → 再点停止 → 转写填进输入框(不自动发)。
                     idle=Mic / recording=红色 Square 脉冲 / transcribing=spinner。 */}
