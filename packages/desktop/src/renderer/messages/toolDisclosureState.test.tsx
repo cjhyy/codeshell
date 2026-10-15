@@ -94,19 +94,24 @@ describe.each(["tool", "group"] as const)("%s disclosure turn ownership", (kind)
     expect(toggleProps()["aria-controls"]).toBe(detailsId);
   });
 
-  test("folds its own completed run once, then preserves reopened history", async () => {
-    await render("running", 4);
-    await toggle();
-    await render("succeeded", 4);
-    expect(toggleProps()["aria-expanded"]).toBe(true);
+  test(
+    kind === "tool"
+      ? "folds its own completed run once, then preserves reopened history"
+      : "preserves manual group choices across completion and later turns",
+    async () => {
+      await render("running", 4);
+      await toggle();
+      await render("succeeded", 4);
+      expect(toggleProps()["aria-expanded"]).toBe(true);
 
-    await render("succeeded", 5);
-    expect(toggleProps()["aria-expanded"]).toBe(false);
+      await render("succeeded", 5);
+      expect(toggleProps()["aria-expanded"]).toBe(kind === "group");
 
-    await toggle();
-    await render("succeeded", 6);
-    expect(toggleProps()["aria-expanded"]).toBe(true);
-  });
+      await toggle();
+      await render("succeeded", 6);
+      expect(toggleProps()["aria-expanded"]).toBe(kind === "tool");
+    },
+  );
 
   test("preserves manual state without an epoch signal", async () => {
     await render("running");
@@ -116,17 +121,17 @@ describe.each(["tool", "group"] as const)("%s disclosure turn ownership", (kind)
   });
 
   if (kind === "group") {
-    test("keeps the nested group's default-open policy only for its own turn", async () => {
+    test("preserves manual choices in a default-open group across epochs", async () => {
       await render("running", 4, true);
       await toggle();
       expect(toggleProps()["aria-expanded"]).toBe(false);
       await render("succeeded", 4, true);
       await render("succeeded", 5, true);
-      expect(toggleProps()["aria-expanded"]).toBe(true);
+      expect(toggleProps()["aria-expanded"]).toBe(false);
 
       await toggle();
       await render("succeeded", 6, true);
-      expect(toggleProps()["aria-expanded"]).toBe(false);
+      expect(toggleProps()["aria-expanded"]).toBe(true);
     });
   }
 });
