@@ -252,7 +252,7 @@ try {
           `Task center navigation closes the narrow sidebar (${lang})`,
         );
       }
-      const search = win.getByRole("textbox", { name: /^(搜索任务标题|Search task titles)$/ });
+      const search = win.getByRole("searchbox", { name: /^(搜索任务标题|Search task titles)$/ });
       await search.fill("事件更新后的任务");
       assert(
         (await win.locator("article[data-task-key]").count()) === 1,
