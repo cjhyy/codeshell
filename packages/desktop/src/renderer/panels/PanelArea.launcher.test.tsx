@@ -219,6 +219,18 @@ describe("PanelArea launcher tabs", () => {
     expect(card(INTERNAL)).toBeUndefined();
   });
 
+  test("a tools-only launcher does not advertise an empty installed-panel group", async () => {
+    await render();
+    await click(plus());
+    expect(
+      nodes(container).some((node) => props(node)["data-panel-launcher-group"] === "tools"),
+    ).toBe(true);
+    expect(
+      nodes(container).some((node) => props(node)["data-panel-launcher-group"] === "panels"),
+    ).toBe(false);
+    expect(buttons().some((node) => props(node)["data-panel-launcher-window-kind"])).toBe(false);
+  });
+
   test("the only launcher tab can be closed using the normal tab close affordance", async () => {
     await render(true);
     await click(plus());

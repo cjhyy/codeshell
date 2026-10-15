@@ -1,5 +1,5 @@
 /* Real Desktop dock → native window → scoped Panel preload. No model/provider. */
-/* global localStorage, window */
+/* global localStorage, window, document */
 import assert from "node:assert/strict";
 import { createServer } from "node:http";
 import { mkdir, readFile, writeFile } from "node:fs/promises";
@@ -32,9 +32,11 @@ assert.ok(
 const executablePath = process.argv[3] ? resolve(process.argv[3]) : undefined;
 const appDir = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const isolated = await makeIsolatedElectronHome("codeshell-panel-window-");
-const evidence = "/tmp/codeshell-panel-app-window-qa";
+const evidence = "/tmp/codeshell-panel-launcher-availability-qa/native";
 const project = join(isolated.home, "window-project");
+const secondaryProject = join(isolated.home, "catalog-secondary-project");
 const appId = "window-fixture";
+const fixtureAppIds = [appId, "window-fixture-two", "window-fixture-three", "window-fixture-four"];
 const title = "Panel Window Fixture";
 const install = join(isolated.codeShellHome, "panel-apps", appId);
 const sessions = ["window-session-a", "window-session-b"];
@@ -67,6 +69,14 @@ async function dismissTrust(page) {
     )
   )
     await button.click();
+}
+async function openLauncher() {
+  const plus = win.locator('[data-panel-action="new-tab"]');
+  if (!(await plus.isVisible())) await win.locator('[data-panel-action="toggle"]').click();
+  const launcher = win.locator('[data-panel-launcher]:not([aria-hidden="true"])');
+  if (!(await launcher.isVisible())) await plus.click();
+  await launcher.waitFor();
+  return launcher;
 }
 async function panelWindows() {
   return electron.evaluate(({ BrowserWindow }, expectedTitle) => {
@@ -111,9 +121,10 @@ async function closePopup(popup) {
     popup.windowId,
   );
   await expectNoPopup("Closing the native window releases it");
-  assert.equal(
-    await electron.evaluate(({ webContents }, id) => !!webContents.fromId(id), popup.guestId),
-    false,
+  // Electron closes WebContents asynchronously even after BrowserWindow is
+  // gone; require actual guest destruction before continuing the lifecycle.
+  await until(
+    () => electron.evaluate(({ webContents }, id) => !webContents.fromId(id), popup.guestId),
     "WebContentsView guest must be destroyed when its native window closes",
   );
 }
@@ -122,6 +133,7 @@ async function seedFixture() {
     mkdir(join(install, ".codeshell-panel"), { recursive: true }),
     mkdir(join(install, "app"), { recursive: true }),
     mkdir(join(project, ".code-shell"), { recursive: true }),
+    mkdir(join(secondaryProject, ".code-shell"), { recursive: true }),
     mkdir(join(isolated.codeShellHome, "desktop"), { recursive: true }),
     mkdir(evidence, { recursive: true }),
   ]);
@@ -157,32 +169,54 @@ window.codeshellPanel.registerTool('context_probe',async()=>{window.fixture.tool
 document.getElementById('increment').onclick=()=>{window.fixture.counter++;document.getElementById('increment').textContent='Local counter: '+window.fixture.counter};
 refresh().catch(error=>{window.fixture.error=String(error)});
 `;
+  for (const [index, id] of fixtureAppIds.entries()) {
+    const folder = join(isolated.codeShellHome, "panel-apps", id);
+    await mkdir(join(folder, ".codeshell-panel"), { recursive: true });
+    await mkdir(join(folder, "app"), { recursive: true });
+    await Promise.all([
+      writeFile(
+        join(folder, ".codeshell-panel/panel.json"),
+        JSON.stringify({
+          ...manifest,
+          id,
+          title: { default: index === 0 ? title : `${title} ${index + 1}` },
+        }),
+      ),
+      writeFile(join(folder, "app/index.html"), html),
+      writeFile(join(folder, "app/app.js"), script),
+      writeFile(
+        join(folder, ".cs-panel-app-meta.json"),
+        JSON.stringify({
+          schemaVersion: 1,
+          id,
+          version: "1.0.0",
+          source: folder,
+          installedAt,
+        }),
+      ),
+    ]);
+  }
   await Promise.all([
-    writeFile(join(install, ".codeshell-panel/panel.json"), JSON.stringify(manifest)),
-    writeFile(join(install, "app/index.html"), html),
-    writeFile(join(install, "app/app.js"), script),
-    writeFile(
-      join(install, ".cs-panel-app-meta.json"),
-      JSON.stringify({
-        schemaVersion: 1,
-        id: appId,
-        version: "1.0.0",
-        source: install,
-        installedAt,
-      }),
-    ),
     writeFile(
       join(isolated.codeShellHome, "panel-apps/installed.json"),
       JSON.stringify({
         version: 1,
-        apps: [
-          { id: appId, version: "1.0.0", source: install, installedAt, lastUpdated: installedAt },
-        ],
+        apps: fixtureAppIds.map((id) => ({
+          id,
+          version: "1.0.0",
+          source: join(isolated.codeShellHome, "panel-apps", id),
+          installedAt,
+          lastUpdated: installedAt,
+        })),
       }),
     ),
     writeFile(
       join(project, ".code-shell/settings.json"),
-      JSON.stringify({ panelAppBindings: [appId] }),
+      JSON.stringify({ panelAppBindings: fixtureAppIds }),
+    ),
+    writeFile(
+      join(secondaryProject, ".code-shell/settings.json"),
+      JSON.stringify({ panelAppBindings: [] }),
     ),
     writeFile(
       join(isolated.codeShellHome, "desktop/recents.json"),
@@ -201,12 +235,23 @@ try {
   const confined = await prepareConfinedElectronFixture({ appDir, isolated, origin });
   // Installed before production Main creates any Electron Session. Node/Main
   // HTTP uses the maintained guard; Chromium may only read owned local assets.
-  const beforeMain = `import {app as fixtureApp} from 'electron';
+  const beforeMain = `import {app as fixtureApp,ipcMain as fixtureIpc} from 'electron';
 import {appendFileSync as fixtureAppend} from 'node:fs';
 import {fileURLToPath as fixtureFilePath} from 'node:url';
 const fixtureAssets=${JSON.stringify(join(appDir, "out/renderer/"))};
 const fixtureReceipt=${JSON.stringify(join(isolated.home, "chromium-network.jsonl"))};
-globalThis.__panelWindowFixture={hosts:new Set(),requests:[],sessions:0};
+globalThis.__panelWindowFixture={hosts:new Set(),requests:[],sessions:0,catalog:[],holdBind:false,heldBindings:0,bindReleases:[]};
+const fixtureHandle=fixtureIpc.handle.bind(fixtureIpc);
+fixtureIpc.handle=(channel,handler)=>fixtureHandle(channel,channel==='panel-apps:listForProjects'?async function(event,...args){
+ const paths=args[0];const failed=Array.isArray(paths)&&paths.length>1;
+ const request={paths,failed};globalThis.__panelWindowFixture.catalog.push(request);
+ if(failed)throw new Error('Synthetic batch catalog unavailable');
+ try{const result=await handler.call(this,event,...args);request.success=true;request.response={descriptors:result.descriptors.map(({id,appId,hostId,projectPaths})=>({id,appId,hostId,projectPaths})),boundProjectPathsByAppId:result.boundProjectPathsByAppId};return result}catch(error){request.error=String(error);throw error}
+}:channel==='panel-apps:bind'?async function(event,...args){
+ const result=await handler.call(this,event,...args);
+ if(globalThis.__panelWindowFixture.holdBind){globalThis.__panelWindowFixture.heldBindings++;await new Promise(resolve=>globalThis.__panelWindowFixture.bindReleases.push(resolve))}
+ return result;
+}:handler);
 fixtureApp.commandLine.appendSwitch('disable-background-networking');
 fixtureApp.commandLine.appendSwitch('disable-component-update');
 fixtureApp.commandLine.appendSwitch('no-pings');
@@ -274,6 +319,14 @@ fixtureApp.on('session-created',ses=>{
       ),
     "Fixture project must be registered through Desktop",
   );
+  await electron.evaluate(({ dialog }, path) => {
+    dialog.showOpenDialog = async () => ({ canceled: false, filePaths: [path] });
+  }, secondaryProject);
+  const secondary = await win.evaluate(() => window.codeshell.projectRegistry.createFromPicker());
+  assert.ok(
+    secondary?.id && secondary.id !== registered.id,
+    "A second real Main project registration exercises batch fallback",
+  );
   for (let index = 0; index < sessions.length; index++) {
     const sessionId = sessions[index],
       folder = join(isolated.codeShellHome, "sessions", sessionId),
@@ -328,6 +381,34 @@ fixtureApp.on('session-created',ses=>{
   await expandSidebar(win);
   await win.getByRole("button", { name: sessionTitles[0], exact: true }).click();
   await dismissTrust(win);
+  // Real Main operations migrate these isolated legacy installs into retained,
+  // project-pinned packages. No renderer catalog or project registry is mocked.
+  for (const id of fixtureAppIds) {
+    await win.evaluate(
+      async ({ cwd, id }) => {
+        const binding = (await window.codeshell.getPanelAppBindings(cwd)).find(
+          (item) => item.appId === id,
+        );
+        if (!binding) throw new Error(`Missing installed fixture binding ${id}`);
+        await window.codeshell.setPanelAppProjectBinding(cwd, id, true, binding.revision);
+      },
+      { cwd: project, id },
+    );
+  }
+  const projectSettings = JSON.parse(
+    await readFile(join(project, ".code-shell/settings.json"), "utf8"),
+  );
+  assert.deepEqual([...projectSettings.panelAppBindings].sort(), [...fixtureAppIds].sort());
+  assert.deepEqual(Object.keys(projectSettings.panelAppPins).sort(), [...fixtureAppIds].sort());
+  for (const pin of Object.values(projectSettings.panelAppPins)) {
+    assert.equal(pin.version, "1.0.0");
+    assert.match(pin.packageDigest, /^[a-f0-9]{64}$/);
+  }
+  report.availability = {
+    projectId: registered.id,
+    bindings: fixtureAppIds,
+    pins: projectSettings.panelAppPins,
+  };
   const descriptor = await until(
     () =>
       win.evaluate(
@@ -347,15 +428,82 @@ fixtureApp.on('session-created',ses=>{
     (_electron, host) => globalThis.__panelWindowFixture.hosts.add(host),
     new URL(prepared.src).hostname,
   );
-  await win.locator('[data-panel-action="toggle"]').click();
-  await win.locator('[data-panel-action="new-tab"]').click();
-  await win.locator(`[data-panel-menu-kind="${descriptor.id}"]`).click();
+  const launcher = await openLauncher();
+  const descriptors = await win.evaluate(
+    (cwd) => window.codeshell.listPanelApps(cwd, "en"),
+    project,
+  );
+  assert.deepEqual(descriptors.map((item) => item.appId).sort(), [...fixtureAppIds].sort());
+  await until(
+    async () => (await launcher.locator("[data-panel-launcher-window-kind]").count()) === 4,
+    "All four project-pinned apps must appear in the actual launcher",
+  );
+  await until(
+    () => launcher.locator("[data-panel-launcher-refresh]").isEnabled(),
+    "Launcher catalog must settle after the overlapping authorized reads",
+  );
+  report.availability.cards = await launcher.locator("[data-panel-launcher-window-kind]").count();
+  assert.equal(
+    report.availability.cards,
+    4,
+    "Settled catalog retains all four project-pinned apps",
+  );
+  const catalogRequests = await electron.evaluate(() => globalThis.__panelWindowFixture.catalog);
+  assert.ok(
+    catalogRequests.some((item) => item.failed && item.paths.length > 1),
+    "The actual App encounters a failed batch request",
+  );
+  for (const cwd of [project, secondaryProject])
+    assert.ok(
+      catalogRequests.some(
+        (item) => item.success && item.paths.length === 1 && item.paths[0] === cwd,
+      ),
+      "Per-project fallback retains real Main authorization for " + cwd,
+    );
+  report.availability.catalogRequests = catalogRequests;
+  report.cases.push(
+    "A failed real batch catalog recovers four bound cards through authorized per-project fallback",
+  );
+  await launcher.locator('[data-panel-launcher-group="panels"]').scrollIntoViewIfNeeded();
+  await win.evaluate(() => document.activeElement?.blur());
+  await win.screenshot({
+    path: join(evidence, "launcher-four-bound-panels.png"),
+    animations: "disabled",
+  });
+  assert.equal((await panelWindows()).length, 0);
+  assert.equal(
+    await win.locator(`webview[src="${prepared.src}"]`).count(),
+    0,
+    "Listing cards does not mount a source guest",
+  );
+  // Hold only the real binding acknowledgement, after Main has authorized the
+  // source; opening still must wait for the Host to report ready to PanelArea.
+  await electron.evaluate(() => {
+    globalThis.__panelWindowFixture.holdBind = true;
+  });
+  await launcher.locator(`[data-panel-launcher-window-kind="${descriptor.id}"]`).click();
   const view = win.locator(`webview[src="${prepared.src}"]`);
   await view.waitFor();
   await until(
     async () => await executeSource(view, "window.fixture?.ready"),
     "Source guest must bind its scoped preload",
   );
+  await until(
+    () => electron.evaluate(() => globalThis.__panelWindowFixture.heldBindings > 0),
+    "Source binding acknowledgement is deferred by the fixture",
+  );
+  assert.equal(
+    (await panelWindows()).length,
+    0,
+    "One-click open waits for binding acknowledgement",
+  );
+  assert.equal(await win.locator('[data-panel-action="popout"]').isDisabled(), true);
+  await electron.evaluate(() => {
+    const fixture = globalThis.__panelWindowFixture;
+    fixture.holdBind = false;
+    for (const release of fixture.bindReleases.splice(0)) release();
+  });
+  report.cases.push("Deferred real source binding cannot open a native window prematurely");
   const sourceId = await view.evaluate((node) => node.getWebContentsId());
   const sourceState = await executeSource(
     view,
@@ -385,7 +533,6 @@ fixtureApp.on('session-created',ses=>{
     }
   }, descriptor.id);
   assert.ok(target?.tabId && target?.bucket, "Real dock persisted target must identify its source");
-  await win.locator('[data-panel-action="popout"]').click();
   let popup = await popupContents();
   await until(
     () => executePopup(popup, "window.fixture?.ready"),
@@ -425,7 +572,46 @@ fixtureApp.on('session-created',ses=>{
     "Original guest memory stays mounted",
   );
   assert.equal(await view.evaluate((node) => node.getWebContentsId()), sourceId);
-  report.cases.push("Real header opens a sandboxed, source-scoped native Panel window");
+  report.cases.push("Four real project bindings and pins expose four launcher window actions");
+  report.cases.push(
+    "One launcher window action binds a real source and opens its sandboxed native Panel window",
+  );
+  await electron.evaluate(({ BrowserWindow }, url) => {
+    BrowserWindow.getAllWindows()
+      .find((item) => item.webContents.getURL() === url)
+      ?.focus();
+  }, win.url());
+  await until(
+    () =>
+      electron.evaluate(
+        ({ BrowserWindow }, url) =>
+          BrowserWindow.getAllWindows().some(
+            (item) => item.webContents.getURL() === url && item.isFocused(),
+          ),
+        win.url(),
+      ),
+    "The main window must own focus before testing repeated popup focus",
+  );
+  const repeatedLauncher = await openLauncher();
+  await repeatedLauncher.locator(`[data-panel-launcher-window-kind="${descriptor.id}"]`).click();
+  assert.deepEqual(
+    await popupContents(),
+    popup,
+    "Repeated launcher action reuses the native window and guest",
+  );
+  await until(
+    async () => (await panelWindows())[0]?.focused,
+    "Repeated launcher action focuses its native window",
+  );
+  assert.equal(
+    await view.evaluate((node) => node.getWebContentsId()),
+    sourceId,
+    "Repeated launcher action retains the owning source guest",
+  );
+  assert.equal(await executeSource(view, "window.fixture.counter"), 17);
+  report.cases.push(
+    "Repeated launcher window action focuses the same window and retains one source owner",
+  );
   await win.evaluate(
     (input) =>
       Promise.all([
@@ -558,15 +744,14 @@ fixtureApp.on('session-created',ses=>{
   await tab.focus();
   await tab.press("Delete");
   await expectNoPopup("Closing the source tab releases its native window");
-  assert.equal(
-    await electron.evaluate(({ webContents }, id) => !!webContents.fromId(id), popup.guestId),
-    false,
+  await until(
+    () => electron.evaluate(({ webContents }, id) => !webContents.fromId(id), popup.guestId),
+    "Source cleanup must destroy the native guest",
   );
-  await win.locator('[data-panel-action="toggle"]').click();
-  await win.locator('[data-panel-action="new-tab"]').click();
-  await win.locator(`[data-panel-menu-kind="${descriptor.id}"]`).click();
+  await (await openLauncher())
+    .locator(`[data-panel-launcher-window-kind="${descriptor.id}"]`)
+    .click();
   await until(() => executeSource(view, "window.fixture?.ready"), "Reopened source guest binds");
-  await win.locator('[data-panel-action="popout"]').click();
   popup = await popupContents();
   const parentId = await electron.evaluate(
     ({ BrowserWindow }, url) =>
@@ -590,9 +775,9 @@ fixtureApp.on('session-created',ses=>{
   );
   await electron.evaluate(({ BrowserWindow }, id) => BrowserWindow.fromId(id).close(), parentId);
   await expectNoPopup("Closing the owning main window releases its Panel window");
-  assert.equal(
-    await electron.evaluate(({ webContents }, id) => !!webContents.fromId(id), popup.guestId),
-    false,
+  await until(
+    () => electron.evaluate(({ webContents }, id) => !webContents.fromId(id), popup.guestId),
+    "Owner cleanup must destroy the native guest",
   );
   report.confinement = await confined.assertWorker(electron, { requireWorker: false });
   const network = await electron.evaluate(() => ({
@@ -608,6 +793,43 @@ fixtureApp.on('session-created',ses=>{
   failed = error;
   report.result = "fail";
   report.failure = error.stack;
+  if (electron)
+    report.catalogFailureRequests = await electron
+      .evaluate(() => globalThis.__panelWindowFixture?.catalog)
+      .catch(() => null);
+  if (win && !win.isClosed())
+    report.rendererFailure = await win
+      .evaluate(
+        async (cwd) => ({
+          catalog: await window.codeshell
+            .listPanelAppsForProjects([cwd], "en")
+            .catch((error) => ({ error: String(error) })),
+          registry: await window.codeshell.projectRegistry.list(),
+          alerts: [...document.querySelectorAll('[role="alert"]')].map((node) => node.textContent),
+          cards: document.querySelectorAll("[data-panel-launcher-window-kind]").length,
+          // Failure diagnostics only; pass assertions use the visible UI and
+          // real Main APIs, never React implementation details.
+          panelScopes: [...document.querySelectorAll('[data-theme-surface="panel"]')].map(
+            (node) => {
+              const key = Object.keys(node).find((key) => key.startsWith("__reactFiber$"));
+              let fiber = key ? node[key] : null;
+              for (let depth = 0; fiber && depth < 60; depth++, fiber = fiber.return) {
+                const props = fiber.memoizedProps;
+                if (props && typeof props.setTabs === "function" && "projectPath" in props)
+                  return {
+                    projectPath: props.projectPath,
+                    cwd: props.cwd,
+                    engineSessionId: props.engineSessionId,
+                    bucket: props.bucket,
+                  };
+              }
+              return null;
+            },
+          ),
+        }),
+        project,
+      )
+      .catch((error) => ({ error: String(error) }));
   if (win && !win.isClosed())
     await win.screenshot({ path: join(evidence, "failure.png") }).catch(() => {});
 } finally {
@@ -618,5 +840,22 @@ fixtureApp.on('session-created',ses=>{
   await writeFile(join(evidence, "process.log"), processLog);
   await isolated.cleanup();
 }
-console.log(JSON.stringify(report, null, 2));
+console.log(
+  JSON.stringify(
+    {
+      result: report.result,
+      cases: report.cases,
+      errors: report.errors,
+      availability: report.availability && {
+        bindings: report.availability.bindings.length,
+        pins: Object.keys(report.availability.pins).length,
+        cards: report.availability.cards,
+      },
+      failure: report.failure,
+      evidence,
+    },
+    null,
+    2,
+  ),
+);
 if (failed) throw failed;

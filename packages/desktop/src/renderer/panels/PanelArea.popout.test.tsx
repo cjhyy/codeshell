@@ -22,6 +22,8 @@ const reactProps = (node: Element): Record<string, any> => {
 const sourceMounts: string[] = [];
 const sourceUnmounts: string[] = [];
 const requests: Array<{ appDescriptorId: string; tabId: string; bucket: string }> = [];
+const sourceStates = new Map<string, NonNullable<PanelRenderContext["onPanelAppStateChange"]>>();
+let autoReady = true;
 let toastHistory: ToastHistoryEntry[] = [];
 let root: Root | null;
 let container: HTMLElement;
@@ -34,10 +36,16 @@ let rejectOpen: (error: Error) => void;
 function RetainedPanel({ context }: { context: PanelRenderContext }) {
   useEffect(() => {
     sourceMounts.push(context.tabId);
+    if (context.onPanelAppStateChange) {
+      sourceStates.set(context.tabId, context.onPanelAppStateChange);
+      context.onPanelAppStateChange(context.tabId, autoReady ? "ready" : "loading");
+    }
     return () => {
       sourceUnmounts.push(context.tabId);
+      sourceStates.delete(context.tabId);
+      context.onPanelAppStateChange?.(context.tabId, "loading");
     };
-  }, [context.tabId]);
+  }, [context.tabId, context.onPanelAppStateChange]);
   return <input data-source-tab={context.tabId} defaultValue="saved text" />;
 }
 
@@ -46,23 +54,38 @@ function ToastHistoryProbe() {
   return null;
 }
 
-function Harness({ activeTabId = appTabId }: { activeTabId?: string | null }) {
-  const [tabs, setTabs] = useState([
-    { id: appTabId, kind: appDescriptorId },
-    { id: "builtin-tab", kind: "window-fixture-builtin" },
-    { id: "internal-tab", kind: "window-fixture-internal" },
-  ]);
+function Harness({
+  activeTabId = appTabId,
+  empty = false,
+  engineSessionId,
+}: {
+  activeTabId?: string | null;
+  empty?: boolean;
+  engineSessionId?: string;
+}) {
+  const [selectedId, setSelectedId] = useState<string | null>(empty ? null : activeTabId);
+  useEffect(() => setSelectedId(activeTabId), [activeTabId]);
+  const [tabs, setTabs] = useState(
+    empty
+      ? []
+      : [
+          { id: appTabId, kind: appDescriptorId },
+          { id: "builtin-tab", kind: "window-fixture-builtin" },
+          { id: "internal-tab", kind: "window-fixture-internal" },
+        ],
+  );
   return (
     <ToastProvider>
       <ToastHistoryProbe />
       <PanelArea
         projectPath="/repo"
+        engineSessionId={engineSessionId}
         bucket={bucket}
         onClose={() => {}}
         tabs={tabs}
         setTabs={setTabs}
-        activeId={activeTabId}
-        setActiveId={() => {}}
+        activeId={selectedId}
+        setActiveId={setSelectedId}
         requestNonce={0}
         requestKind={null}
         width={480}
@@ -77,6 +100,8 @@ beforeEach(() => {
   sourceMounts.length = 0;
   sourceUnmounts.length = 0;
   requests.length = 0;
+  sourceStates.clear();
+  autoReady = true;
   toastHistory = [];
   codeshellDescriptor = Object.getOwnPropertyDescriptor(window, "codeshell");
   storageDescriptor = Object.getOwnPropertyDescriptor(globalThis, "localStorage");
@@ -138,9 +163,9 @@ afterEach(async () => {
   else Reflect.deleteProperty(globalThis, "localStorage");
 });
 
-const render = async (activeTabId = appTabId) => {
+const render = async (activeTabId = appTabId, empty = false) => {
   await act(async () => {
-    root?.render(<Harness activeTabId={activeTabId} />);
+    root?.render(<Harness activeTabId={activeTabId} empty={empty} />);
     await flushMicrotasks();
   });
 };
@@ -159,6 +184,250 @@ describe("PanelArea separate Panel App windows", () => {
     expect(action.getAttribute("aria-label")).toBeTruthy();
     expect(action.getAttribute("title")).toBe(action.getAttribute("aria-label"));
     expect(requests).toHaveLength(0);
+  });
+
+  test("a visible source header cannot open its window before binding completes", async () => {
+    autoReady = false;
+    await render();
+    expect(popout()!.getAttribute("disabled")).not.toBeNull();
+    expect(popout()!.getAttribute("title")).not.toBe(popout()!.getAttribute("aria-label"));
+    await act(async () => {
+      reactProps(popout()!).onClick();
+      await flushMicrotasks();
+    });
+    expect(requests).toHaveLength(0);
+    await act(async () => {
+      sourceStates.get(appTabId)!(appTabId, "ready");
+      await flushMicrotasks();
+    });
+    expect(popout()!.getAttribute("disabled")).toBeNull();
+  });
+
+  test("launcher window action creates one retained source and waits for its successful binding", async () => {
+    autoReady = false;
+    await render(appTabId, true);
+    const action = descendants(container).find(
+      (node) => node.getAttribute("data-panel-launcher-window-kind") === appDescriptorId,
+    )!;
+    expect(action).toBeDefined();
+    expect(action.parentElement?.tagName).not.toBe("BUTTON");
+    const click = reactProps(action).onClick;
+    await act(async () => {
+      click();
+      click();
+      await flushMicrotasks();
+    });
+    const source = descendants(container).find(
+      (node) => node.getAttribute("data-source-tab") !== null,
+    ) as HTMLInputElement;
+    const id = source.getAttribute("data-source-tab")!;
+    source.value = "source remains mounted";
+    expect(sourceMounts).toEqual([id]);
+    expect(requests).toHaveLength(0);
+    expect(popout()!.getAttribute("aria-busy")).toBe("true");
+    await act(async () => {
+      sourceStates.get(id)!(id, "ready");
+      await flushMicrotasks();
+    });
+    expect(requests).toEqual([{ appDescriptorId, tabId: id, bucket }]);
+    await act(async () => {
+      resolveOpen();
+      await flushMicrotasks();
+    });
+    expect(source.value).toBe("source remains mounted");
+    expect(sourceUnmounts).toEqual([]);
+    await act(async () => {
+      reactProps(
+        descendants(container).find(
+          (node) => node.getAttribute("data-panel-action") === "new-tab",
+        )!,
+      ).onClick();
+      await flushMicrotasks();
+    });
+    const again = descendants(container).find(
+      (node) => node.getAttribute("data-panel-launcher-window-kind") === appDescriptorId,
+    )!;
+    await act(async () => {
+      reactProps(again).onClick();
+      await flushMicrotasks();
+    });
+    expect(requests).toHaveLength(2);
+    expect(requests[1]).toEqual(requests[0]);
+    expect(sourceMounts).toEqual([id]);
+    await act(async () => {
+      resolveOpen();
+      await flushMicrotasks();
+    });
+  });
+
+  test("source binding failure clears the window intent and permits a fresh explicit retry", async () => {
+    autoReady = false;
+    await render(appTabId, true);
+    const action = descendants(container).find(
+      (node) => node.getAttribute("data-panel-launcher-window-kind") === appDescriptorId,
+    )!;
+    await act(async () => {
+      reactProps(action).onClick();
+      await flushMicrotasks();
+    });
+    const id = sourceMounts[0]!;
+    await act(async () => {
+      sourceStates.get(id)!(id, "error", "Source binding rejected");
+      await flushMicrotasks();
+    });
+    expect(requests).toHaveLength(0);
+    expect(popout()!.getAttribute("aria-busy")).toBeNull();
+    expect(toastHistory).toHaveLength(1);
+    expect(toastHistory[0]!.detail).toBe("Source binding rejected");
+    await act(async () => {
+      sourceStates.get(id)!(id, "ready");
+      await flushMicrotasks();
+    });
+    expect(requests).toHaveLength(0);
+    await act(async () => {
+      reactProps(popout()!).onClick();
+      await flushMicrotasks();
+    });
+    expect(requests).toHaveLength(1);
+    expect(sourceMounts).toEqual([id]);
+    await act(async () => {
+      resolveOpen();
+      await flushMicrotasks();
+    });
+  });
+
+  test("reusing an already-failed source reports its error immediately and can open after a successful retry", async () => {
+    autoReady = false;
+    await render();
+    const original = descendants(container).find(
+      (node) => node.getAttribute("data-source-tab") === appTabId,
+    );
+    await act(async () => {
+      sourceStates.get(appTabId)!(appTabId, "error", "Existing source could not bind");
+      // The failed guest's cleanup must not erase the failure we need on reuse.
+      sourceStates.get(appTabId)!(appTabId, "loading");
+      await flushMicrotasks();
+    });
+    expect(toastHistory).toHaveLength(0);
+    await act(async () => {
+      reactProps(
+        descendants(container).find(
+          (node) => node.getAttribute("data-panel-action") === "new-tab",
+        )!,
+      ).onClick();
+      await flushMicrotasks();
+    });
+    const action = descendants(container).find(
+      (node) => node.getAttribute("data-panel-launcher-window-kind") === appDescriptorId,
+    )!;
+    await act(async () => {
+      reactProps(action).onClick();
+      await flushMicrotasks();
+    });
+    expect(requests).toHaveLength(0);
+    expect(popout()!.getAttribute("aria-busy")).toBeNull();
+    expect(popout()!.getAttribute("disabled")).not.toBeNull();
+    expect(toastHistory).toHaveLength(1);
+    expect(toastHistory[0]!.detail).toBe("Existing source could not bind");
+    expect(
+      descendants(container).find((node) => node.getAttribute("data-source-tab") === appTabId),
+    ).toBe(original);
+    expect(sourceMounts.filter((id) => id === appTabId)).toHaveLength(1);
+    await act(async () => {
+      // PanelAppHost publishes ready only after its visible inline retry binds.
+      sourceStates.get(appTabId)!(appTabId, "ready");
+      await flushMicrotasks();
+    });
+    expect(requests).toHaveLength(0);
+    await act(async () => {
+      reactProps(popout()!).onClick();
+      await flushMicrotasks();
+    });
+    expect(requests).toEqual([{ appDescriptorId, tabId: appTabId, bucket }]);
+    await act(async () => {
+      resolveOpen();
+      await flushMicrotasks();
+    });
+  });
+
+  test("a window request survives the owning workspace's initial asynchronous resolution", async () => {
+    let resolveWorkspace!: (value: { root: string; kind: string }) => void;
+    Object.assign(window.codeshell, {
+      getSessionWorkspace: () =>
+        new Promise((resolve) => {
+          resolveWorkspace = resolve;
+        }),
+      getReviewStatus: async () => ({ repositories: [], errors: [] }),
+    });
+    await act(async () => {
+      root!.render(<Harness empty engineSessionId="cold-session" />);
+      await flushMicrotasks();
+    });
+    const action = descendants(container).find(
+      (node) => node.getAttribute("data-panel-launcher-window-kind") === appDescriptorId,
+    )!;
+    await act(async () => {
+      reactProps(action).onClick();
+      await flushMicrotasks();
+    });
+    expect(requests).toHaveLength(0);
+    expect(sourceMounts).toHaveLength(0);
+    await act(async () => {
+      resolveWorkspace({ root: "/repo", kind: "main" });
+      await flushMicrotasks();
+    });
+    expect(requests).toHaveLength(1);
+    expect(sourceMounts).toHaveLength(1);
+    await act(async () => {
+      resolveOpen();
+      await flushMicrotasks();
+    });
+  });
+
+  test("ordinary installed-card selection opens in the dock without requesting a separate window", async () => {
+    await render(appTabId, true);
+    const card = descendants(container).find(
+      (node) => node.getAttribute("data-panel-launcher-kind") === appDescriptorId,
+    )!;
+    await act(async () => {
+      reactProps(card).onClick();
+      await flushMicrotasks();
+    });
+    expect(sourceMounts).toHaveLength(1);
+    expect(requests).toHaveLength(0);
+    expect(popout()!.getAttribute("disabled")).toBeNull();
+  });
+
+  test("closing a source cancels its waiting window intent", async () => {
+    autoReady = false;
+    await render(appTabId, true);
+    const action = descendants(container).find(
+      (node) => node.getAttribute("data-panel-launcher-window-kind") === appDescriptorId,
+    )!;
+    await act(async () => {
+      reactProps(action).onClick();
+      await flushMicrotasks();
+    });
+    const id = sourceMounts[0]!;
+    const notify = sourceStates.get(id)!;
+    const tab = descendants(container).find(
+      (node) =>
+        node.getAttribute("role") === "tab" && node.getAttribute("id")?.endsWith(`-tab-${id}`),
+    )!;
+    const close = descendants(tab.parentNode as Element).find(
+      (node) => node.tagName === "BUTTON" && node.getAttribute("role") !== "tab",
+    )!;
+    await act(async () => {
+      reactProps(close).onClick({ currentTarget: close });
+      await flushMicrotasks();
+    });
+    await act(async () => {
+      notify(id, "ready");
+      await flushMicrotasks();
+    });
+    expect(requests).toHaveLength(0);
+    expect(sourceUnmounts).toEqual([id]);
+    expect(toastHistory).toHaveLength(0);
   });
 
   test("routes the exact descriptor, tab and bucket once while preserving the source body", async () => {

@@ -1,4 +1,12 @@
-import React, { useEffect, useId, useMemo, useRef, useState, useSyncExternalStore } from "react";
+import React, {
+  useCallback,
+  useEffect,
+  useId,
+  useMemo,
+  useRef,
+  useState,
+  useSyncExternalStore,
+} from "react";
 import {
   CircleOff,
   Plus,
@@ -36,6 +44,7 @@ import { PanelTabStrip } from "./PanelTabStrip";
 import { useReviewAvailability } from "./useReviewAvailability";
 import type { SubagentSelection } from "../subagents/SubagentNavigation";
 import { useToast } from "../ui/ToastProvider";
+import type { PanelAppStateChange } from "./PanelAppHost";
 import { PanelLauncher } from "./PanelLauncher";
 import { PANEL_LAUNCHER_KIND } from "./panelLauncherKind";
 
@@ -278,33 +287,118 @@ function ResolvedPanelArea({
       })
     : undefined;
   const canOpenWindow = activeEntry?.owner.kind === "panel-app" && !activeEntry.internalOnly;
-  const openingWindowTabs = useRef(new Set<string>());
+  const pendingWindows = useRef(
+    new Map<string, { appDescriptorId: string; tabId: string; bucket: string; opening: boolean }>(),
+  );
+  const readyWindowTabs = useRef(new Set<string>());
+  const sourceWindowErrors = useRef(new Map<string, string>());
+  const [readyWindowTabIds, setReadyWindowTabIds] = useState<ReadonlySet<string>>(new Set());
   const [openingWindowTabIds, setOpeningWindowTabIds] = useState<ReadonlySet<string>>(new Set());
   const openingActiveWindow = Boolean(activeTab && openingWindowTabIds.has(activeTab.id));
+  const activeWindowReady = Boolean(activeTab && readyWindowTabIds.has(activeTab.id));
+  const finishWindowRequest = useCallback((tabId: string) => {
+    pendingWindows.current.delete(tabId);
+    setOpeningWindowTabIds(new Set(pendingWindows.current.keys()));
+  }, []);
+  const failWindowRequest = (tabId: string, detail: string) => {
+    if (!pendingWindows.current.has(tabId)) return;
+    finishWindowRequest(tabId);
+    toast({ message: t("panels.area.openWindowFailed"), detail, variant: "error" });
+  };
+  const failWindowRequestRef = useRef(failWindowRequest);
+  failWindowRequestRef.current = failWindowRequest;
 
-  const openActiveWindow = async (): Promise<void> => {
-    if (!canOpenWindow || !activeTab || !activeEntry || openingWindowTabs.current.has(activeTab.id))
-      return;
-    const tabId = activeTab.id;
-    openingWindowTabs.current.add(tabId);
-    setOpeningWindowTabIds(new Set(openingWindowTabs.current));
+  const openBoundWindow = async (tabId: string): Promise<void> => {
+    const intent = pendingWindows.current.get(tabId);
+    if (!intent || intent.opening || !readyWindowTabs.current.has(tabId)) return;
+    intent.opening = true;
     try {
       await window.codeshell.openPanelAppWindow({
-        appDescriptorId: activeEntry.key,
+        appDescriptorId: intent.appDescriptorId,
         tabId,
-        bucket,
+        bucket: intent.bucket,
       });
     } catch (error) {
-      toast({
-        message: t("panels.area.openWindowFailed"),
-        detail: error instanceof Error ? error.message : String(error),
-        variant: "error",
-      });
+      if (pendingWindows.current.get(tabId) === intent)
+        failWindowRequestRef.current(tabId, error instanceof Error ? error.message : String(error));
     } finally {
-      openingWindowTabs.current.delete(tabId);
-      setOpeningWindowTabIds(new Set(openingWindowTabs.current));
+      if (pendingWindows.current.get(tabId) === intent) finishWindowRequest(tabId);
     }
   };
+  const openBoundWindowRef = useRef(openBoundWindow);
+  openBoundWindowRef.current = openBoundWindow;
+  const onPanelAppStateChange = useCallback<PanelAppStateChange>((tabId, state, error) => {
+    const wasReady = readyWindowTabs.current.has(tabId);
+    if (state === "ready") {
+      readyWindowTabs.current.add(tabId);
+      sourceWindowErrors.current.delete(tabId);
+    } else {
+      readyWindowTabs.current.delete(tabId);
+      // An error removes the guest view, whose cleanup can also report loading.
+      // Keep its failure until a successful retry proves this source is ready.
+      if (state === "error")
+        sourceWindowErrors.current.set(tabId, error ?? "Panel App source failed to load.");
+    }
+    if (wasReady !== (state === "ready")) setReadyWindowTabIds(new Set(readyWindowTabs.current));
+    if (state === "ready") void openBoundWindowRef.current(tabId);
+    else if (state === "error")
+      failWindowRequestRef.current(tabId, error ?? "Panel App source failed to load.");
+  }, []);
+  const requestWindow = (tab: OpenTab) => {
+    if (pendingWindows.current.has(tab.id)) return;
+    pendingWindows.current.set(tab.id, {
+      appDescriptorId: tab.kind,
+      tabId: tab.id,
+      bucket,
+      opening: false,
+    });
+    setOpeningWindowTabIds(new Set(pendingWindows.current.keys()));
+    const sourceError = sourceWindowErrors.current.get(tab.id);
+    if (sourceError) failWindowRequestRef.current(tab.id, sourceError);
+    else void openBoundWindowRef.current(tab.id);
+  };
+  const openActiveWindow = () => {
+    if (canOpenWindow && activeTab && readyWindowTabs.current.has(activeTab.id))
+      requestWindow(activeTab);
+  };
+  const openingWindowKinds = new Set(
+    [...pendingWindows.current.values()].map((intent) => intent.appDescriptorId),
+  );
+  useEffect(() => {
+    const liveIds = new Set(activeTabs.map((tab) => tab.id));
+    let changed = false;
+    for (const id of pendingWindows.current.keys()) {
+      if (!liveIds.has(id)) {
+        pendingWindows.current.delete(id);
+        changed = true;
+      }
+    }
+    for (const id of sourceWindowErrors.current.keys())
+      if (!liveIds.has(id)) sourceWindowErrors.current.delete(id);
+    if (changed) setOpeningWindowTabIds(new Set(pendingWindows.current.keys()));
+  }, [tabs, enabledPanelIds]);
+  const sourceScope = JSON.stringify([bucket, projectPath, engineSessionId]);
+  const sourceScopeRef = useRef(sourceScope);
+  const sourceCwdRef = useRef(cwd);
+  useEffect(() => {
+    const rootChanged = sourceCwdRef.current !== null && sourceCwdRef.current !== cwd;
+    sourceCwdRef.current = cwd;
+    if (sourceScopeRef.current === sourceScope && !rootChanged) return;
+    sourceScopeRef.current = sourceScope;
+    pendingWindows.current.clear();
+    readyWindowTabs.current.clear();
+    sourceWindowErrors.current.clear();
+    setOpeningWindowTabIds(new Set());
+    setReadyWindowTabIds(new Set());
+  }, [sourceScope, cwd]);
+  useEffect(
+    () => () => {
+      pendingWindows.current.clear();
+      readyWindowTabs.current.clear();
+      sourceWindowErrors.current.clear();
+    },
+    [],
+  );
 
   // Maximized = overlay the chat column (incl. composer) for more room (TODO
   // 2.4). Resets each open (local) — chat/composer state lives in App.
@@ -350,9 +444,49 @@ function ResolvedPanelArea({
     setActiveId(tab.id);
   };
 
+  const openLauncherWindow = (kind: string): void => {
+    const entry = getPanelEntry(kind, {
+      projectPath,
+      cwd,
+      engineSessionId: engineSessionId ?? null,
+    });
+    if (
+      !entry ||
+      entry.owner.kind !== "panel-app" ||
+      entry.internalOnly ||
+      !enabledPanelIds.has(kind)
+    )
+      return;
+    const pending = [...pendingWindows.current.values()].find(
+      (intent) => intent.appDescriptorId === kind,
+    );
+    if (pending) {
+      setActiveId(pending.tabId);
+      return;
+    }
+    const existing = activeTabs.find((tab) => tab.kind === kind);
+    const tab = existing ?? { id: mkId(kind), kind };
+    requestWindow(tab);
+    const launcherId = activeTab?.kind === PANEL_LAUNCHER_KIND ? activeTab.id : null;
+    if (!existing) {
+      setTabs((previous) =>
+        launcherId
+          ? previous.map((candidate) => (candidate.id === launcherId ? tab : candidate))
+          : [...previous, tab],
+      );
+    } else if (launcherId)
+      setTabs((previous) => previous.filter((candidate) => candidate.id !== launcherId));
+    pendingTabFocus.current = tab.id;
+    setActiveId(tab.id);
+  };
+
   const closeTab = (id: string): void => {
     const idx = activeTabs.findIndex((t) => t.id === id);
     if (idx === -1) return;
+    if (pendingWindows.current.has(id)) finishWindowRequest(id);
+    readyWindowTabs.current.delete(id);
+    sourceWindowErrors.current.delete(id);
+    setReadyWindowTabIds(new Set(readyWindowTabs.current));
     const next = activeTabs.filter((t) => t.id !== id);
     setTabs((prev) => prev.filter((t) => t.id !== id));
     if (next.length === 0) {
@@ -507,20 +641,25 @@ function ResolvedPanelArea({
             <Button
               type="button"
               onClick={() => void openActiveWindow()}
-              disabled={openingActiveWindow}
+              disabled={openingActiveWindow || !activeWindowReady}
               aria-label={t("panels.area.openWindow")}
-              title={t("panels.area.openWindow")}
+              title={
+                activeWindowReady
+                  ? t("panels.area.openWindow")
+                  : t("panels.area.openWindowPreparing")
+              }
               aria-busy={openingActiveWindow || undefined}
               data-panel-action="popout"
-              size="icon"
+              size="sm"
               variant="ghost"
-              className="size-8 shrink-0 rounded-lg text-muted-foreground"
+              className="h-8 shrink-0 gap-1.5 rounded-lg px-2 text-muted-foreground"
             >
               {openingActiveWindow ? (
                 <LoaderCircle className="size-4 animate-spin motion-reduce:animate-none" />
               ) : (
                 <AppWindow className="size-4" />
               )}
+              <span>{t("panels.area.openWindowShort")}</span>
             </Button>
           )}
           <Button
@@ -545,7 +684,13 @@ function ResolvedPanelArea({
           during a session switch. */}
       <div className="relative flex min-h-0 flex-1 flex-col">
         {activeTabs.length === 0 && (
-          <PanelLauncher entries={pickerPanels} onPick={addTab} active={!hidden} />
+          <PanelLauncher
+            entries={pickerPanels}
+            onPick={addTab}
+            onOpenWindow={openLauncherWindow}
+            openingWindowKinds={openingWindowKinds}
+            active={!hidden}
+          />
         )}
         {activeTabs.map((panelTab) => {
           const activeTab = panelTab.id === visibleActiveId;
@@ -561,6 +706,8 @@ function ResolvedPanelArea({
                 <PanelLauncher
                   entries={pickerPanels}
                   onPick={addTab}
+                  onOpenWindow={openLauncherWindow}
+                  openingWindowKinds={openingWindowKinds}
                   active={activeTab && !hidden}
                   focusRequest={launcherFocusRequest}
                 />
@@ -621,6 +768,7 @@ function ResolvedPanelArea({
                     onRemoveBrowserAnchor={onRemoveBrowserAnchor}
                     onUpdateBrowserAnchor={onUpdateBrowserAnchor}
                     builtinPanelAppHost={builtinPanelAppHost}
+                    onPanelAppStateChange={onPanelAppStateChange}
                   />
                 )}
               </DesktopPanelLifecycleBoundary>
@@ -670,6 +818,7 @@ function PanelBody({
   onRemoveBrowserAnchor,
   onUpdateBrowserAnchor,
   builtinPanelAppHost,
+  onPanelAppStateChange,
 }: {
   tab: OpenTab;
   bucket: string;
@@ -699,6 +848,7 @@ function PanelBody({
   onRemoveBrowserAnchor?: (anchorId: string) => void;
   onUpdateBrowserAnchor?: (anchorId: string, comment: string) => void;
   builtinPanelAppHost?: DesktopBuiltinPanelAppHost;
+  onPanelAppStateChange?: PanelAppStateChange;
 }) {
   const entry = getPanelEntry(tab.kind, {
     projectPath,
@@ -741,6 +891,7 @@ function PanelBody({
     onRemoveBrowserAnchor,
     onUpdateBrowserAnchor,
     builtinPanelAppHost,
+    onPanelAppStateChange,
   });
 }
 

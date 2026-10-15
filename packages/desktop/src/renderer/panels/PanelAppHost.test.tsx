@@ -11,6 +11,14 @@ let guestIdReads = 0;
 let prepareError: Error | null = null;
 let prepareCalls = 0;
 const bindings: Array<Record<string, unknown>> = [];
+const states: Array<{ tabId: string; state: string; error?: string }> = [];
+let bindResult: () => Promise<boolean>;
+const stateChanged = (tabId: string, state: string, error?: string) =>
+  states.push({ tabId, state, error });
+function props(node: HTMLElement): Record<string, any> {
+  const key = Object.keys(node).find((key) => key.startsWith("__reactProps$"));
+  return key ? (node as unknown as Record<string, any>)[key] : {};
+}
 
 function findElement(node: unknown, tagName: string): HTMLElement | null {
   const current = node as { tagName?: string; childNodes?: unknown[] };
@@ -50,6 +58,7 @@ async function render(visible = true): Promise<void> {
         planMode={false}
         hasGoal={true}
         visible={visible}
+        onStateChange={stateChanged}
       />,
     );
     await flushMicrotasks();
@@ -88,6 +97,8 @@ beforeEach(() => {
   prepareError = null;
   prepareCalls = 0;
   bindings.length = 0;
+  states.length = 0;
+  bindResult = async () => true;
   Object.assign(window, {
     codeshell: {
       preparePanelApp: async () => {
@@ -102,6 +113,7 @@ beforeEach(() => {
       },
       bindPanelApp: async (binding: Record<string, unknown>) => {
         bindings.push(binding);
+        return bindResult();
       },
     },
   });
@@ -175,5 +187,113 @@ describe("PanelAppHost webview readiness", () => {
     expect(prepareCalls).toBe(1);
     expect(findElement(container, "webview")).toBeNull();
     expect(findElement(container, "button")).not.toBeNull();
+    expect(
+      states.some(
+        (event) => event.state === "error" && event.error === "temporary prepare failure",
+      ),
+    ).toBe(true);
+  });
+
+  test("reports ready only after Main accepts the attached source binding", async () => {
+    let accept!: (value: boolean) => void;
+    bindResult = () =>
+      new Promise((resolve) => {
+        accept = resolve;
+      });
+    await render();
+    expect(states.some((event) => event.state === "ready")).toBe(false);
+    attached = true;
+    await act(async () => {
+      findElement(container, "webview")!.dispatchEvent(new Event("dom-ready"));
+      await flushMicrotasks();
+    });
+    expect(bindings).toHaveLength(1);
+    expect(states.some((event) => event.state === "ready")).toBe(false);
+    await act(async () => {
+      accept(true);
+      await flushMicrotasks();
+    });
+    expect(states.filter((event) => event.state === "ready")).toEqual([
+      { tabId: "job-hunt-1", state: "ready", error: undefined },
+    ]);
+  });
+
+  test("a refused binding reports failure and can become ready after the inline retry", async () => {
+    bindResult = async () => false;
+    await render();
+    attached = true;
+    await act(async () => {
+      findElement(container, "webview")!.dispatchEvent(new Event("dom-ready"));
+      await flushMicrotasks();
+    });
+    expect(states.some((event) => event.state === "ready")).toBe(false);
+    expect(
+      states.some((event) => event.state === "error" && /binding/.test(event.error ?? "")),
+    ).toBe(true);
+    bindResult = async () => true;
+    await act(async () => {
+      props(findElement(container, "button")!).onClick();
+      await flushMicrotasks();
+    });
+    expect(prepareCalls).toBe(2);
+    await act(async () => {
+      findElement(container, "webview")!.dispatchEvent(new Event("dom-ready"));
+      await flushMicrotasks();
+    });
+    expect(states.filter((event) => event.state === "ready")).toHaveLength(1);
+  });
+
+  test("superseded and unmounted bind completions cannot report a ready source", async () => {
+    const accepts: Array<(value: boolean) => void> = [];
+    bindResult = () => new Promise((resolve) => accepts.push(resolve));
+    await render(false);
+    attached = true;
+    await act(async () => {
+      findElement(container, "webview")!.dispatchEvent(new Event("dom-ready"));
+      await flushMicrotasks();
+    });
+    await render(true);
+    expect(accepts).toHaveLength(2);
+    await act(async () => {
+      accepts[0]!(true);
+      await flushMicrotasks();
+    });
+    expect(states.some((event) => event.state === "ready")).toBe(false);
+    await act(async () => {
+      root?.unmount();
+      root = null;
+      accepts[1]!(true);
+      await flushMicrotasks();
+    });
+    expect(states.some((event) => event.state === "ready")).toBe(false);
+  });
+
+  test("only a main-frame document navigation invalidates the ready source", async () => {
+    await render();
+    attached = true;
+    const view = findElement(container, "webview")!;
+    await act(async () => {
+      view.dispatchEvent(new Event("dom-ready"));
+      await flushMicrotasks();
+    });
+    const subframe = new Event("did-start-navigation");
+    Object.assign(subframe, { isMainFrame: false, isInPlace: false });
+    await act(async () => {
+      view.dispatchEvent(subframe);
+      await flushMicrotasks();
+    });
+    expect(states.at(-1)!.state).toBe("ready");
+    const mainFrame = new Event("did-start-navigation");
+    Object.assign(mainFrame, { isMainFrame: true, isInPlace: false });
+    await act(async () => {
+      view.dispatchEvent(mainFrame);
+      await flushMicrotasks();
+    });
+    expect(states.at(-1)!.state).toBe("loading");
+    await act(async () => {
+      view.dispatchEvent(new Event("dom-ready"));
+      await flushMicrotasks();
+    });
+    expect(states.at(-1)!.state).toBe("ready");
   });
 });

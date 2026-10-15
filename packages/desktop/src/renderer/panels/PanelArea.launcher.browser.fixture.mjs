@@ -15,7 +15,7 @@ const require = createRequire(path.join(desktop, "package.json"));
 const tailwindRequire = createRequire(require.resolve("@tailwindcss/vite"));
 const { compile } = tailwindRequire("@tailwindcss/node");
 const { Scanner } = tailwindRequire("@tailwindcss/oxide");
-const output = "/tmp/codeshell-panel-launcher-qa";
+const output = "/tmp/codeshell-panel-launcher-availability-qa/browser";
 await mkdir(output, { recursive: true });
 const source = `
   import React from 'react';
@@ -29,10 +29,11 @@ const source = `
   import {translate} from './i18n/translate';
   import {saveUILanguage} from './uiLanguage';
   const SINGLE='launcher-notes',APP='launcher-data',LINK='launcher-link',INTERNAL='launcher-private',LAST='launcher-final';
-  window.codeshell={openPanelAppWindow:async()=>{}};
-  function RetainedPanel({context}){
+  window.codeshell={openPanelAppWindow:async input=>{window.openRequests.push(input)}};
+  // Chrome has no Electron guest. This readiness stub only checks renderer orchestration; the native fixture exercises real binding.
+  function RetainedPanel({context,app,manualReady}){
     const [draft,setDraft]=React.useState('');
-    React.useEffect(()=>{window.mounts.push(context.tabId);return()=>window.unmounts.push(context.tabId)},[context.tabId]);
+    React.useEffect(()=>{window.mounts.push(context.tabId);if(app){window.finishSourceReady=()=>context.onPanelAppStateChange?.(context.tabId,'ready');if(!manualReady)window.finishSourceReady()}return()=>window.unmounts.push(context.tabId)},[context.tabId]);
     return <div className="flex min-h-0 flex-1 flex-col gap-3 p-4" data-retained-panel={context.tabId}>
       <label className="text-sm font-medium" htmlFor={'draft-'+context.tabId}>{window.labels.notes}</label>
       <textarea id={'draft-'+context.tabId} aria-label={context.tabId} value={draft} onChange={event=>setDraft(event.target.value)} className="min-h-24 w-full resize-y rounded-lg border border-border bg-background p-3 text-sm"/>
@@ -50,16 +51,18 @@ const source = `
   const root=createRoot(document.getElementById('root'));let generation=0;let dispose=[];
   window.renderFixture=props=>{
     flushSync(()=>root.render(null));for(const remove of dispose)remove();dispose=[];
-    window.mounts=[];window.unmounts=[];saveUILanguage(props.lang);document.documentElement.classList.toggle('dark',props.mode==='dark');
+    window.mounts=[];window.unmounts=[];window.openRequests=[];window.finishSourceReady=undefined;saveUILanguage(props.lang);document.documentElement.classList.toggle('dark',props.mode==='dark');
     window.labels={notes:props.lang==='zh'?'项目笔记':'Project notes',clear:translate(props.lang,'panels.launcher.clearSearch')};
     const register=(key,title,owner,singleton=true,internalOnly=false,icon=PanelsTopLeft)=>dispose.push(PANEL_REGISTRY.register({key,title:{kind:'literal',value:title},owner,icon,
-      order:900+dispose.length,singleton,internalOnly,enabled:()=>true,render:context=><RetainedPanel context={context}/>}));
+      order:900+dispose.length,singleton,internalOnly,enabled:()=>true,render:context=><RetainedPanel context={context} app={owner.kind==='panel-app'} manualReady={props.manualReady}/>}));
     register(SINGLE,window.labels.notes,{kind:'builtin'},true,false,NotebookPen);
+    if(!props.noApps){
     register(APP,props.lang==='zh'?'数据工作台':'Data workspace',{kind:'panel-app',appId:'fixture-data'});
     register(LINK,props.lang==='zh'?'Link 调研工作台':'Link research',{kind:'panel-app',appId:'fixture-link'},false,false,Link);
     for(let index=0;index<7;index++)register('launcher-collection-'+index,(props.lang==='zh'?'项目面板 ':'Project panel ')+(index+1),{kind:'panel-app',appId:'fixture-'+index});
     register('launcher-long',(props.lang==='zh'?'跨工作区资料整理与长名称面板':'Cross-workspace research and long panel title')+' '+('LongIdentifierWithoutSpaces'.repeat(7)),{kind:'panel-app',appId:'fixture-long'});
     register(LAST,props.lang==='zh'?'归档面板':'Archive panel',{kind:'panel-app',appId:'fixture-final'});
+    }
     register(INTERNAL,'Internal hidden entry',{kind:'builtin'},true,true,FolderTree);
     window.kinds={single:SINGLE,app:APP,link:LINK,internal:INTERNAL,last:LAST,launcher:PANEL_LAUNCHER_KIND};
     flushSync(()=>root.render(<I18nProvider key={++generation}><Fixture {...props}/></I18nProvider>));
@@ -98,6 +101,8 @@ const failures = [],
   errors = [],
   blocked = [],
   reports = [];
+let emptyCatalogCases = 0;
+let sourceReadinessCases = 0;
 await context.route("**/*", (route) => {
   if (route.request().url() === "http://panel-launcher.test/")
     return route.fulfill({
@@ -215,6 +220,82 @@ try {
     "Deleting the neighboring real tab focuses the surviving launcher tab",
   );
   assert.equal(await page.getByRole("tab").count(), 1);
+  await page.evaluate((props) => window.renderFixture(props), {
+    lang: "zh",
+    mode: "light",
+    pane: 320,
+    onlyNote: true,
+    manualReady: true,
+  });
+  await page
+    .getByRole("textbox", { name: "notes-retained", exact: true })
+    .fill("Preserved panel input");
+  await page.evaluate(
+    () => (window.originalInput = document.querySelector('textarea[aria-label="notes-retained"]')),
+  );
+  await plus.click();
+  const windowAction = launcher.locator('[data-panel-launcher-window-kind="launcher-data"]');
+  await reachable(windowAction, "direct window action");
+  await windowAction.focus();
+  await windowAction.press("Enter");
+  await settle();
+  const sourceTab = await page.evaluate(() =>
+    window.fixtureState.tabs.find((tab) => tab.kind === window.kinds.app),
+  );
+  assert.ok(sourceTab?.id, "window card creates a retained source tab");
+  assert.deepEqual(
+    await page.evaluate(() => window.openRequests),
+    [],
+    "window request waits for source binding readiness",
+  );
+  assert.equal(await page.locator('[data-panel-action="popout"]').isDisabled(), true);
+  await page.waitForFunction(() => typeof window.finishSourceReady === "function");
+  await page.evaluate(() => window.finishSourceReady());
+  await settle();
+  assert.deepEqual(
+    await page.evaluate(() => window.openRequests),
+    [{ appDescriptorId: "launcher-data", tabId: sourceTab.id, bucket: "launcher-browser" }],
+    "ready source issues one exact window request",
+  );
+  await preserved("source-ready window action");
+  await plus.click();
+  await launcher.locator('[data-panel-launcher-window-kind="launcher-data"]').click();
+  await settle();
+  const repeated = await page.evaluate(() => ({
+    requests: window.openRequests,
+    tabs: window.fixtureState.tabs,
+  }));
+  assert.equal(repeated.requests.length, 2, "repeated window card uses the existing source");
+  assert.deepEqual(repeated.requests[1], repeated.requests[0]);
+  assert.equal(repeated.tabs.filter((tab) => tab.kind === "launcher-data").length, 1);
+  await preserved("repeated window action");
+  sourceReadinessCases++;
+  for (const lang of ["zh", "en"])
+    for (const mode of ["light", "dark"]) {
+      const label = `no-apps-${lang}-${mode}`;
+      await page.setViewportSize({ width: 360, height: 360 });
+      await page.evaluate((props) => window.renderFixture(props), {
+        lang,
+        mode,
+        pane: 320,
+        onlyNote: true,
+        noApps: true,
+      });
+      await plus.click();
+      await settle();
+      assert.equal(await launcher.locator('[data-panel-launcher-group="tools"]').count(), 1);
+      assert.equal(
+        await launcher.locator('[data-panel-launcher-group="panels"]').count(),
+        0,
+        "zero installed apps have no misleading empty Panel group",
+      );
+      assert.equal(await launcher.locator("[data-panel-launcher-window-kind]").count(), 0);
+      await geometry(label);
+      await page
+        .locator('[data-theme-surface="panel"]')
+        .screenshot({ path: path.join(output, label + ".png"), animations: "disabled" });
+      emptyCatalogCases++;
+    }
   for (const lang of ["zh", "en"])
     for (const mode of ["light", "dark"])
       for (const layout of [
@@ -367,6 +448,11 @@ try {
             label + ": normal tab keyboard close removes launcher",
           );
           await preserved(label + "/close");
+          assert.deepEqual(
+            await page.evaluate(() => window.openRequests),
+            [],
+            label + ": ordinary card keeps dock behavior without opening a window",
+          );
         } catch (error) {
           failures.push({ label, error: error.stack });
           await page.screenshot({ path: path.join(output, `failure-${label}.png`) });
@@ -382,6 +468,8 @@ const result = {
   result: failures.length || errors.length || blocked.length ? "fail" : "pass",
   workflows: 8,
   keyboardCases: 1,
+  emptyCatalogCases,
+  sourceReadinessCases,
   geometryCases: reports.length,
   reports,
   failures,
