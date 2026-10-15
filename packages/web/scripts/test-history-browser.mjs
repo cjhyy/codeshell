@@ -70,6 +70,7 @@ async function mount(
     more = false,
     archived = false,
     theme = "light",
+    traceResize = false,
   } = {},
 ) {
   await context?.close();
@@ -149,6 +150,30 @@ async function mount(
   page.on("pageerror", (e) => errors.push(e.message));
   await page.goto(url);
   await page.evaluate((data) => (window.fixtureSessions = data), host.sessions);
+  if (traceResize)
+    await page.evaluate(() => {
+      const NativeObserver = window.ResizeObserver;
+      window.fixtureResizeObservers = [];
+      window.ResizeObserver = class {
+        constructor(callback) {
+          const entry = { callback, nodes: [], disconnected: false, observer: this };
+          this.entry = entry;
+          this.native = new NativeObserver((entries) => callback(entries, this));
+          window.fixtureResizeObservers.push(entry);
+        }
+        observe(node, options) {
+          this.entry.nodes.push(node);
+          this.native.observe(node, options);
+        }
+        unobserve(node) {
+          this.native.unobserve(node);
+        }
+        disconnect() {
+          this.entry.disconnected = true;
+          this.native.disconnect();
+        }
+      };
+    });
   for (const file of bundle.outputFiles.filter((f) => f.path.endsWith(".css")))
     await page.addStyleTag({ content: file.text });
   await page.addScriptTag({ content: bundle.outputFiles.find((f) => f.path.endsWith(".js")).text });
@@ -396,6 +421,96 @@ async function readLong(page, locator) {
   await visible(locator, true);
 }
 try {
+  for (const [kind, wide] of [
+    ...["archive-error", "rename-error", "input", "save", "more"].map((kind) => [kind, false]),
+    ...["archive-error", "input"].map((kind) => [kind, true]),
+  ]) {
+    const { page, host } = await mount(wide ? 1280 : 390, wide ? 720 : 360, {
+      more: kind === "more",
+      traceResize: true,
+    });
+    let target;
+    if (kind === "more") {
+      host.holdRead = true;
+      await page.getByRole("button", { name: "加载更多", exact: true }).focus();
+      await page.keyboard.press("Enter");
+      await until(page, () => host.pendingReads.length === 1);
+      await finishRead(host);
+      await ready(page);
+      target = page.getByRole("button", { name: "Owned session 6", exact: true });
+    } else if (kind === "input" || kind === "save") {
+      await openRename(page);
+      target = kind === "input" ? titleInput(page) : saveTitle(page);
+      if (kind === "save") {
+        await page.keyboard.press("Tab");
+        await frames(page);
+      }
+    } else {
+      host.hold = true;
+      if (kind === "archive-error") await archive(page);
+      else await rename(page);
+      await until(page, () => host.pending.length === 1);
+      await finish(host, 500);
+      await ready(page);
+      target = page.getByRole("alert");
+    }
+    await visible(target, true);
+    for (const [width, height] of wide
+      ? [
+          [800, 240],
+          [800, 360],
+          [1280, 720],
+        ]
+      : [
+          [320, 240],
+          [390, 240],
+          [390, 360],
+        ]) {
+      // Keep actual focus: no refocus or scrollIntoView after resizing the pane.
+      await page.setViewportSize({ width, height });
+      await frames(page);
+      await frames(page);
+      const visibility = await visible(target, true);
+      reports.push({ label: "owned-focus-live-resize", kind, wide, width, height, visibility });
+    }
+    const pane = await page.locator(".hub-sessions").elementHandle();
+    await external(page, "field", wide ? 720 : 360);
+    await page.setViewportSize({ width: wide ? 1280 : 390, height: 240 });
+    await frames(page);
+    await frames(page);
+    assert.equal(
+      await page.locator("#outside-field").evaluate((node) => node === document.activeElement),
+      true,
+    );
+    const activeScroll = await pane.evaluate((node) => node.scrollTop);
+    await page.evaluate(() => {
+      for (const entry of window.fixtureResizeObservers)
+        if (entry.nodes.some((node) => node.classList.contains("hub-sessions")))
+          entry.callback([], entry.observer);
+    });
+    assert.equal(await pane.evaluate((node) => node.scrollTop), activeScroll);
+    await page.evaluate(() => window.unmountFixture());
+    await frames(page);
+    const scroll = await pane.evaluate((node) => node.scrollTop);
+    const stale = await page.evaluate(() => {
+      const entries = window.fixtureResizeObservers.filter((entry) =>
+        entry.nodes.some((node) => node.classList.contains("hub-sessions")),
+      );
+      for (const entry of entries) {
+        if (!entry.disconnected) throw Error("History observer must disconnect on cleanup");
+        entry.callback([], entry.observer);
+      }
+      return entries.length;
+    });
+    assert.ok(stale > 0);
+    assert.equal(await pane.evaluate((node) => node.scrollTop), scroll);
+    assert.equal(
+      await page.locator("#outside-field").evaluate((node) => node === document.activeElement),
+      true,
+    );
+    await pane.dispose();
+    reports.push({ label: "outside-resize-and-stale-observer-cleanup", kind, wide, stale });
+  }
   if (!process.argv.includes("--behaviors-only"))
     for (const theme of ["light", "dark"])
       for (const [width, height] of [
