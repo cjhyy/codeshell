@@ -47,8 +47,7 @@
   .cs-agent-group-heading:focus-visible,
   .cs-thinking-heading:focus-visible,
   .cs-process-heading:focus-visible,
-  .cs-agent-transcript:focus-visible,
-  .cs-agent-tool-list:focus-visible {
+  .cs-agent-transcript:focus-visible {
     outline: 2px solid hsl(var(--cs-ring));
     outline-offset: -3px;
   }
@@ -75,7 +74,6 @@
   }
 
   .cs-agent-title-row,
-  .cs-agent-meta,
   .cs-agent-group-meta {
     display: flex;
     min-width: 0;
@@ -144,28 +142,10 @@
     line-height: 1.6;
   }
 
-  .cs-agent-meta,
   .cs-agent-group-meta {
     color: hsl(var(--cs-muted-foreground));
     font-size: 0.6875rem;
     line-height: 1.5;
-  }
-
-  .cs-agent-live {
-    display: inline-flex;
-    min-width: 0;
-    align-items: center;
-    gap: 0.375rem;
-  }
-
-  .cs-agent-live svg {
-    flex-shrink: 0;
-  }
-
-  .cs-agent-live > span {
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
   }
 
   .cs-agent-disclosure {
@@ -188,8 +168,7 @@
   }
 
   .cs-agent-task,
-  .cs-agent-output,
-  .cs-agent-activity {
+  .cs-agent-output {
     min-width: 0;
   }
 
@@ -203,10 +182,6 @@
     font-size: 0.6875rem;
     font-weight: 500;
     line-height: 1.5;
-  }
-
-  .cs-agent-operation-count {
-    font-weight: 400;
   }
 
   .cs-agent-task-text,
@@ -241,21 +216,6 @@
     color: hsl(var(--cs-status-err));
     font-size: 0.8125rem;
     white-space: pre-wrap;
-  }
-
-  .cs-agent-tool-list {
-    max-height: 22rem;
-    min-width: 0;
-    overflow: auto;
-    overscroll-behavior: contain;
-    border: 1px solid hsl(var(--cs-border) / 0.75);
-    border-radius: 0.625rem;
-    background: hsl(var(--cs-background) / 0.4);
-    scrollbar-gutter: stable;
-  }
-
-  .cs-agent-operation + .cs-agent-operation {
-    border-top: 1px solid hsl(var(--cs-border) / 0.6);
   }
 
   .cs-agent-group-body {
@@ -352,27 +312,6 @@
       transition: none;
     }
   }
-}
-
-/* ToolCard's utilities own standalone cards. Inside an agent, the list owns
-   the frame; only remove the repeated outer frame, never its detail borders. */
-.cs-agent-operation > [data-message-kind="tool"] > div {
-  min-width: 0;
-  border: 0;
-  border-radius: 0;
-  background: transparent;
-  overflow-wrap: anywhere;
-}
-
-.cs-agent-operation > [data-message-kind="tool"] > div > div:first-child > button {
-  min-height: 2.625rem;
-  border-radius: 0;
-  padding: 0.625rem;
-  font-size: 0.8125rem;
-}
-
-.cs-agent-operation > [data-message-kind="tool"] > div > div:first-child > button:hover {
-  background: hsl(var(--cs-muted) / 0.45);
 }
 
 @media (prefers-reduced-motion: reduce) {

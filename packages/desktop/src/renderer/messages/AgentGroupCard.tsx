@@ -8,7 +8,7 @@ import { useT } from "../i18n/I18nProvider";
 
 /**
  * Summary card for a fan-out of ≥2 sibling sub-agents (see agentGroup.ts).
- * Header shows the rollup (N 个子代理 · ✓X ✗Y · tools · wall-clock); expanding
+ * Header shows the status rollup and wall-clock; expanding
  * reveals each member rendered by the existing AgentMessageView. Starts open
  * if a member is running, or closed for settled history; subsequent updates
  * preserve the user's disclosure state.
@@ -58,7 +58,6 @@ function AgentGroupCardImpl({ group }: { group: AgentGroup }) {
                   {t("msg.agentGroup.running", { count: stats.running })}
                 </span>
               )}
-              <span>{t("msg.agentGroup.toolCount", { count: stats.toolTotal })}</span>
               {!anyRunning && dur && <span className="tabular-nums">{dur}</span>}
             </span>
           </span>

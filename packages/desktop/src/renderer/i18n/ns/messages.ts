@@ -32,7 +32,6 @@ export const messagesNs = {
       // sub-agent card
       agent: {
         fallbackName: "agent",
-        toolCount: "{count} 次工具调用",
         running: "运行中",
         completed: "已完成",
         failed: "失败",
@@ -41,10 +40,8 @@ export const messagesNs = {
         showDetails: "查看详情",
         hideDetails: "收起详情",
         task: "任务",
-        activity: "执行过程",
-        operationCount: "{count} 次操作",
         output: "结果",
-        waitingForActivity: "子代理运行中，执行过程将在这里显示。",
+        waitingForResult: "子代理运行中，完成后会在这里显示结果。",
         transcript: "完整对话",
         back: "返回上级对话",
         refresh: "刷新对话",
@@ -61,7 +58,6 @@ export const messagesNs = {
         running: "{count} 运行中",
         succeeded: "{count} 已完成",
         failed: "{count} 失败",
-        toolCount: "{count} 次工具调用",
       },
       // ask-user inline card
       ask: {
@@ -216,7 +212,6 @@ export const messagesNs = {
       },
       agent: {
         fallbackName: "agent",
-        toolCount: "{count} tools",
         running: "Running",
         completed: "Completed",
         failed: "Failed",
@@ -225,10 +220,8 @@ export const messagesNs = {
         showDetails: "View details",
         hideDetails: "Hide details",
         task: "Task",
-        activity: "Activity",
-        operationCount: "{count} operations",
         output: "Output",
-        waitingForActivity: "The agent is running. Its activity will appear here.",
+        waitingForResult: "The agent is running. Its result will appear here when complete.",
         transcript: "Full conversation",
         back: "Back to parent conversation",
         refresh: "Refresh conversation",
@@ -244,7 +237,6 @@ export const messagesNs = {
         running: "{count} running",
         succeeded: "{count} completed",
         failed: "{count} failed",
-        toolCount: "{count} tools",
       },
       ask: {
         other: "Other…",

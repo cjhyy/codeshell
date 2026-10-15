@@ -1,4 +1,4 @@
-/* Real agent/activity/thinking/process cards over a high-contrast chat wallpaper. */
+/* Real subagent summaries and main-session thinking/process cards over chat wallpaper. */
 /* global document, window, requestAnimationFrame, getComputedStyle */
 import assert from "node:assert/strict";
 import { createRequire } from "node:module";
@@ -14,7 +14,7 @@ const require = createRequire(path.join(desktop, "package.json"));
 const tailwindRequire = createRequire(require.resolve("@tailwindcss/vite"));
 const { compile } = tailwindRequire("@tailwindcss/node");
 const { Scanner } = tailwindRequire("@tailwindcss/oxide");
-const output = "/tmp/codeshell-chat-content-qa";
+const output = "/tmp/codeshell-subagent-summary-qa";
 await mkdir(output, { recursive: true });
 const source = `
   import React from 'react';
@@ -34,19 +34,19 @@ const source = `
   function tools(id,state,count=38){return Array.from({length:count},(_,index)=>{
     const last=index===count-1;
     const toolName=last?'Bash':['Read','Grep','Bash'][index%3];
-    const pending=last&&(state==='running'||state==='background');
+    const pending=last&&(state==='running'||state==='background'||state==='waiting');
     const failed=last&&state==='failed';
     return {kind:'tool',id:id+'-tool-'+index,toolName,
       args:JSON.stringify(toolName==='Bash'?{command:'bun test fixture-operation-'+(index+1)}:toolName==='Read'?{file_path:'/fixture/project/src/module-'+(index+1)+'.ts'}:{pattern:'schema',path:'/fixture/project/src'}),
       status:pending?'running':failed?'failed':'succeeded',startedAt:started+index*10,
       ...(pending?{}:{endedAt:started+index*10+12,durationMs:12}),
-      result:last?(pending?'Operation 38 is running':failed?'Operation 38 failed: expected fixture failure':'Operation 38 completed: all checks passed'):'Fixture operation '+(index+1)+' completed',
+      result:last?(pending?'Operation '+count+' is running':failed?'Operation '+count+' failed: expected fixture failure':'Operation '+count+' completed: all checks passed'):'Fixture operation '+(index+1)+' completed',
       ...(failed?{error:'Exit code 1: expected fixture failure'}:{})};
   })}
   function agent(id,state,lang,count=38){return {kind:'agent',id,name:lang==='zh'?'调用关系检查':'Call graph review',agentType:'general-purpose',
     description:task(lang),done:state==='completed'||state==='failed',startedAt:started,endedAt:state==='completed'||state==='failed'?started+65000:undefined,
     backgrounded:state==='background',lastHeartbeat:Date.now(),toolCalls:tools(id,state,count),toolCount:count,
-    text:state==='completed'?'**'+completeResult[lang]+'**\\n\\n- '+(lang==='zh'?'已核对 38 项操作。':'Verified all 38 operations.'):'',
+    text:state==='completed'?'**'+completeResult[lang]+'**\\n\\n- '+(lang==='zh'?'相关测试已通过。':'Related tests passed.'):'',
     textBuffer:state==='running'||state==='background'?(lang==='zh'?'已检查主要调用点，正在完成最后一项验证。':'The main callers are checked; the final verification is running.'):'',
     ...(state==='failed'?{error:'Command failed after repeated retries.\\n'+('LongFailureIdentifier'.repeat(15))}:{})};}
   const thinking=lang=>(lang==='zh'?'先明确输入和输出，再沿着调用链核对约束。把验证拆成可以独立确认的小步骤。':'Clarify inputs and outputs, then follow the call chain and verify each constraint in a small step.')+'\\n\\n'+('Reasoning notes with a very long identifier: '+('LongIdentifier'.repeat(20))+'\\n').repeat(4);
@@ -68,6 +68,7 @@ const source = `
     const [detail,setDetail]=React.useState(null);
     window.completeFixture=()=>setCurrent('completed');window.staleFixture=()=>setStale(true);window.bumpEpoch=()=>setEpoch(value=>value+1);
     const main=agent('agent-main',current,lang);
+    window.currentAgent=main;
     if(presentation){
       main.name=lang==='zh'?'Link 调研':'Link research';main.agentType='explorer';
       main.description=lang==='zh'?'追踪 Figma Link 的读取链，核对设计稿内容如何进入会话。\\n检查授权、数据解析与错误反馈，并整理验证结果。':'Trace the Figma Link read flow and how design content reaches a conversation.\\nCheck authorization, parsing, and error feedback.';
@@ -105,6 +106,7 @@ const source = `
   window.renderFixture=props=>{
     saveUILanguage(props.lang);document.documentElement.classList.toggle('dark',props.mode==='dark');window.actions=[];
     window.expected={description:task(props.lang),complete:completeResult[props.lang],lost:translate(props.lang,'msg.agent.mayBeLost'),
+      waiting:translate(props.lang,'msg.agent.waitingForResult'),
       transcript:translate(props.lang,'msg.agent.transcript'),back:translate(props.lang,'msg.agent.back')};
     root.render(<I18nProvider key={++generation}><Fixture {...props}/></I18nProvider>);
   };
@@ -140,6 +142,32 @@ const reports = [],
   failures = [],
   errors = [],
   blocked = [];
+let hiddenToolCases = 0;
+
+async function noSubagentTools(scope, label) {
+  assert.equal(
+    await scope
+      .locator(
+        '[data-message-kind="tool"],.cs-agent-tool-list,.cs-agent-operation,.cs-agent-activity,.cs-agent-operation-count,.cs-agent-live',
+      )
+      .count(),
+    0,
+    `${label}: summary contains no tool nodes or live tool activity`,
+  );
+  const text = await scope.textContent();
+  assert.ok(
+    !/(?:\d+\s*(?:tools?|tool calls?|operations?|次工具调用|项操作|次操作)|(?:tools?|operations?)\s*[·:]?\s*\d+)/i.test(
+      text,
+    ),
+    `${label}: summary contains no tool counter`,
+  );
+  assert.ok(
+    !text.includes("bun test fixture-operation") &&
+      !/msg\.agent\.(?:toolCount|activity|operationCount)/.test(text),
+    `${label}: hidden operations and removed translation keys do not leak`,
+  );
+  hiddenToolCases++;
+}
 
 async function settle(page) {
   await page.evaluate(
@@ -252,14 +280,22 @@ try {
             });
         };
         try {
-          for (const phase of ["running", "completed", "failed", "background"]) {
+          for (const phase of ["running", "completed", "failed", "background", "waiting"]) {
             const expected = await mount("agent", phase);
             const label = `${prefix}/agent-${phase}`;
             const header = page.locator('[aria-controls="agent-body-agent-main"]');
             const body = page.locator("#agent-body-agent-main");
             await header.waitFor();
+            assert.deepEqual(
+              await page.evaluate(() => [
+                window.currentAgent.toolCalls.length,
+                window.currentAgent.toolCount,
+              ]),
+              [38, 38],
+              label + ": complete underlying operation data is retained",
+            );
             assert.equal(await header.getAttribute("aria-expanded"), "false");
-            assert.equal(await page.locator('[data-message-kind="tool"]').count(), 0);
+            await noSubagentTools(page.locator(".cs-agent-card"), label + " collapsed");
             await fits(page, label + " collapsed");
             await capture("agent-" + phase + "-collapsed");
             await keyboardToggle(header, label + " header");
@@ -268,36 +304,17 @@ try {
               (await body.textContent()).includes(expected.description),
               label + ": full multiline task is available",
             );
-            assert.equal(
-              await body.locator('[data-message-kind="tool"]').count(),
-              38,
-              label + ": all tools retain arrival order",
-            );
-            const names = await body
-              .locator('[data-message-kind="tool"]')
-              .evaluateAll((nodes) => nodes.map((node) => node.getAttribute("data-tool-name")));
-            assert.deepEqual(
-              names,
-              Array.from({ length: 38 }, (_, index) =>
-                index === 37 ? "Bash" : ["Read", "Grep", "Bash"][index % 3],
-              ),
-            );
+            await noSubagentTools(body, label + " expanded");
             if (phase === "completed") {
               assert.ok(
                 (await body.locator(".cs-agent-output").textContent()).includes(expected.complete),
               );
-              assert.ok(
-                await body.evaluate(
-                  (node) =>
-                    !!(
-                      node
-                        .querySelector(".cs-agent-output")
-                        .compareDocumentPosition(node.querySelector(".cs-agent-activity")) & 4
-                    ),
-                ),
-                label + ": result appears before the operation log",
-              );
             }
+            if (phase === "waiting")
+              assert.ok(
+                (await body.textContent()).includes(expected.waiting),
+                label + ": running agent waits for its result despite existing tools",
+              );
             if (phase === "failed")
               assert.ok(
                 (await body.textContent()).includes("LongFailureIdentifier".repeat(15)),
@@ -305,57 +322,14 @@ try {
               );
             await fits(page, label + " expanded");
             await capture("agent-" + phase + "-expanded");
-            const list = body.locator(".cs-agent-tool-list");
-            assert.equal(await list.getAttribute("tabindex"), "0");
-            const overflow = await list.evaluate((node) => ({
-              width: node.clientWidth,
-              scrollWidth: node.scrollWidth,
-              headers: Array.from(node.querySelectorAll('[data-message-kind="tool"]')).map(
-                (tool) => {
-                  const header = tool.querySelector("button");
-                  return { width: header.clientWidth, scrollWidth: header.scrollWidth };
-                },
-              ),
-            }));
-            assert.ok(
-              overflow.scrollWidth <= overflow.width + 1 &&
-                overflow.headers.every((header) => header.scrollWidth <= header.width + 1),
-              `${label}: legacy tool rows do not overflow horizontally ${JSON.stringify(overflow)}`,
-            );
-            await list.focus();
-            await list.press("End");
-            await settle(page);
-            const last = body.locator('[data-message-kind="tool"]').last();
-            const lastHeader = last.getByRole("button").first();
-            await reachable(lastHeader, label + " last tool");
-            assert.ok(
-              await list.evaluate((node) => node.scrollTop > 0),
-              label + ": tool list scrolls independently",
-            );
-            await lastHeader.click();
-            await page.waitForFunction(() =>
-              document
-                .querySelector("#agent-body-agent-main")
-                ?.textContent.includes("Operation 38"),
-            );
-            assert.ok(
-              (await last.locator("pre").count()) >= 2,
-              label + ": command and result are rendered",
-            );
-            await fits(page, label + " last result");
-            await capture("agent-" + phase + "-last-tool");
             if (phase === "running") {
               await page.evaluate(() => window.completeFixture());
               await settle(page);
               assert.equal(await header.getAttribute("aria-expanded"), "true");
-              assert.equal(await lastHeader.getAttribute("aria-expanded"), "true");
-              assert.ok(
-                (await last.textContent()).includes("Operation 38 completed: all checks passed"),
-                label + ": open tool updates on completion",
-              );
               assert.ok(
                 (await body.locator(".cs-agent-output").textContent()).includes(expected.complete),
               );
+              await noSubagentTools(body, label + " completed");
             }
             if (phase === "background") {
               await page.evaluate(() => window.staleFixture());
@@ -416,6 +390,7 @@ try {
               1,
               prefix + ": sibling activity stays independent",
             );
+            await noSubagentTools(group, prefix + "/group " + phase);
             await fits(page, prefix + "/group " + phase);
             await capture("group-" + phase);
             await keyboardToggle(header, prefix + "/group collapse");
@@ -445,6 +420,11 @@ try {
           const process = page.locator("#process-fixture");
           const processHeader = process.locator(".cs-process-heading");
           assert.equal(await processHeader.getAttribute("aria-expanded"), "true");
+          assert.equal(
+            await process.locator('[data-message-kind="tool"]').count(),
+            2,
+            prefix + ": main-session process retains its own tool cards",
+          );
           await fits(page, prefix + "/process running");
           await capture("process-running");
           await page.evaluate(() => window.completeFixture());
@@ -462,6 +442,24 @@ try {
             "true",
             prefix + ": a later turn preserves historical expansion",
           );
+          const lastMainTool = process.locator('[data-message-kind="tool"]').last();
+          const lastMainHeader = lastMainTool.getByRole("button").first();
+          await reachable(lastMainHeader, prefix + "/last main tool");
+          await lastMainHeader.click();
+          assert.ok(
+            (await lastMainTool.locator("pre").count()) >= 2 &&
+              (await lastMainTool.textContent()).includes(
+                "Operation 2 completed: all checks passed",
+              ),
+            prefix + ": main-session command and result remain available",
+          );
+          const nestedAgent = process.locator('[aria-controls="agent-body-process-agent"]');
+          await keyboardToggle(nestedAgent, prefix + "/nested agent summary");
+          await noSubagentTools(
+            process.locator("#agent-body-process-agent"),
+            prefix + "/nested agent",
+          );
+          assert.equal(await process.locator('[data-message-kind="tool"]').count(), 2);
           await fits(page, prefix + "/process completed");
           await capture("process-completed");
           await keyboardToggle(processHeader, prefix + "/process close");
@@ -526,7 +524,8 @@ try {
     const header = page.locator('[aria-controls="agent-body-agent-main"]');
     await keyboardToggle(header, `presentation/${mode}`);
     await page.evaluate(() => document.activeElement?.blur());
-    await page.screenshot({
+    await noSubagentTools(page.locator(".cs-agent-card"), `presentation/${mode}`);
+    await page.locator(".cs-agent-card").screenshot({
       path: path.join(output, `preview-link-${mode}.png`),
       animations: "disabled",
     });
@@ -536,6 +535,7 @@ try {
     workflows: 8,
     geometryCases: reports.length,
     reducedMotionCases,
+    hiddenToolCases,
     failures,
     browserErrors: errors,
     blockedRequests: blocked,
