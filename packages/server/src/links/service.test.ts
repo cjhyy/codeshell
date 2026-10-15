@@ -12,7 +12,12 @@ import {
   type RemoteLinkConfiguration,
 } from "@cjhyy/code-shell-core";
 import { LinkDeviceOAuthBroker } from "./device-oauth.js";
-import { createLinkService, type LinkService, type LinkServiceOptions } from "./service.js";
+import {
+  createLinkService,
+  HostLinkOAuthError,
+  type LinkService,
+  type LinkServiceOptions,
+} from "./service.js";
 import type { LinkOperationContext } from "./types.js";
 import { RemoteLinkCatalogError } from "./remote-catalog.js";
 
@@ -394,6 +399,87 @@ describe("Link catalog health and saved account management", () => {
     } finally {
       server.closeAllConnections();
       await new Promise<void>((resolve) => server.close(() => resolve()));
+    }
+  });
+});
+
+describe("Host OAuth failure projection", () => {
+  const failure = {
+    code: "protocol_error" as const,
+    stage: "credential_verification" as const,
+    verificationStage: "account_verification" as const,
+    reason: "account_tool_error" as const,
+    httpStatus: 403,
+  };
+  test("only reviewed failure fields survive construction and input mutation", () => {
+    const input = {
+      ...failure,
+      message: "synthetic-private-provider-text",
+      accessToken: "synthetic-private-access",
+      callbackUrl: "https://example.invalid/callback?code=synthetic-private-code",
+    };
+    const error = new HostLinkOAuthError(input);
+    input.httpStatus = 500;
+    expect(error.failure).toEqual(failure);
+    expect(Object.isFrozen(error.failure)).toBe(true);
+    expect(JSON.stringify(error)).not.toContain("synthetic-private");
+    expect(error.message).not.toContain("synthetic-private");
+  });
+
+  test("unreviewed stages, reasons, codes and HTTP statuses cannot be published", () => {
+    for (const override of [
+      { code: "provider-private-error" },
+      { stage: "provider-private-stage" },
+      { verificationStage: "provider-private-stage" },
+      { reason: "provider-private-reason" },
+      { httpStatus: 399 },
+      { httpStatus: 600 },
+      { httpStatus: 403.5 },
+    ]) {
+      expect(() => new HostLinkOAuthError({ ...failure, ...override } as typeof failure)).toThrow(
+        "Link 请求参数无效",
+      );
+    }
+  });
+
+  test("authorization state projects reviewed failures and omits arbitrary errors and raw messages", async () => {
+    for (const reviewed of [true, false]) {
+      const error = reviewed
+        ? new HostLinkOAuthError({
+            ...failure,
+            message: "synthetic-private-provider-text",
+          } as typeof failure)
+        : Object.assign(new Error("synthetic-private-provider-text"), {
+            failure,
+            accessToken: "synthetic-private-access",
+          });
+      error.message = "synthetic-private-provider-text";
+      const { service, store } = fixture({
+        hostOAuthAdapters: [
+          {
+            providerId: "figma",
+            methodId: "mcp",
+            authModeId: "mcp-oauth",
+            label: "Fixture OAuth",
+            authorize: async () => {
+              throw error;
+            },
+            openAuthorizationUrl: async () => {
+              throw new Error("A failed flow cannot open a browser");
+            },
+          },
+        ],
+      });
+      const job = await service.startAuthorization(
+        owner,
+        { providerId: "figma", methodId: "mcp", label: "Fixture Figma", expectedRevision: null },
+        "mcp-oauth",
+      );
+      const result = await settled(service, job.id);
+      expect(result).toMatchObject({ state: "failed", errorCode: "authorization_failed" });
+      expect(result.failure).toEqual(reviewed ? failure : undefined);
+      expect(JSON.stringify(result)).not.toContain("synthetic-private");
+      expect(store.list()).toEqual([]);
     }
   });
 });
