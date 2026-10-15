@@ -8,7 +8,10 @@ import {
   type CredentialAccess,
   VERSION,
 } from "@cjhyy/code-shell-core";
-import { assertMcpOAuthCredentialBinding } from "@cjhyy/code-shell-core/internal";
+import {
+  assertMcpOAuthCredentialBinding,
+  McpResponseTooLargeError,
+} from "@cjhyy/code-shell-core/internal";
 import { FIGMA_MCP_SERVER_URL, FIGMA_MCP_TOOL_IDS } from "@cjhyy/code-shell-link";
 import { HostLinkOAuthError, type HostLinkOAuthAdapter } from "@cjhyy/code-shell-server/links";
 import {
@@ -338,15 +341,17 @@ export function createFigmaMcpLinkAdapter(options: {
                 if (error instanceof McpOAuthVerificationError) throw error;
                 const reason = signal?.aborted
                   ? "cancelled"
-                  : status
-                    ? "http_error"
-                    : stage === "credential_binding"
-                      ? "binding_mismatch"
-                      : /fetch|network|ECONN|ENOTFOUND|EAI_AGAIN/i.test(
-                            error instanceof Error ? error.message : "",
-                          )
-                        ? "network_error"
-                        : "protocol_error";
+                  : error instanceof McpResponseTooLargeError
+                    ? "response_too_large"
+                    : status
+                      ? "http_error"
+                      : stage === "credential_binding"
+                        ? "binding_mismatch"
+                        : /fetch|network|ECONN|ENOTFOUND|EAI_AGAIN/i.test(
+                              error instanceof Error ? error.message : "",
+                            )
+                          ? "network_error"
+                          : "protocol_error";
                 throw new McpOAuthVerificationError(stage, reason, status);
               } finally {
                 await client.close().catch(() => {});

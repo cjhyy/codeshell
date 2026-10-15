@@ -13,6 +13,7 @@ export {
 
 export { outputUserMessage } from "./engine/run-output-user-message.js";
 export { createRunTiming } from "./session/stream-timing.js";
+export { McpResponseTooLargeError } from "./tool-system/mcp-results.js";
 export {
   assertMcpOAuthCredentialBinding,
   assertMcpResourceTarget,

@@ -447,3 +447,21 @@ test("only the fixed official authorization page may launch", async () => {
     f.adapter.openAuthorizationUrl("https://www.figma.com/oauth/mcp#secret"),
   ).rejects.toThrow();
 });
+
+test("transport response limits retain their reviewed failure reason", async () => {
+  const f = fixture({
+    whoamiResult: { content: [{ type: "text", text: "x".repeat(8 * 1024 * 1024) }] },
+  });
+  await expect(
+    f.adapter.authorize({
+      id: "link-figma-mcp",
+      label: "Figma",
+      previous: null,
+      signal: new AbortController().signal,
+      onAuthorizationUrl: async () => {},
+    }),
+  ).rejects.toMatchObject({
+    verificationStage: "account_verification",
+    reason: "response_too_large",
+  });
+});
