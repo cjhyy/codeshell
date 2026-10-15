@@ -14,6 +14,53 @@ function line(type: string, data: Record<string, unknown>): string {
 }
 
 describe("transcriptToFoldItems", () => {
+  it("keeps missing or corrupt persisted time unknown instead of manufacturing epoch timestamps", () => {
+    for (const timestamp of [undefined, null, "yesterday", -1, Infinity]) {
+      const items = transcriptToFoldItems(
+        JSON.stringify({ type: "message", timestamp, data: { role: "user", content: "hello" } }),
+      );
+      expect(items).toEqual([{ kind: "user", text: "hello", timestamp: undefined }]);
+    }
+  });
+  it("does not complete a persisted user submission that received no reply after the previous boundary", () => {
+    for (const user of [
+      { role: "user", content: "next unanswered question" },
+      { role: "user", content: "internal wake", injected: true, clientMessageId: "wake" },
+    ]) {
+      const items = transcriptToFoldItems(
+        [
+          line("message", { role: "user", content: "first question" }),
+          line("message", { role: "assistant", content: "first answer" }),
+          line("turn_boundary", { turnNumber: 1 }),
+          line("message", user),
+        ].join("\n"),
+      );
+      expect(items.at(-1)?.kind).toBe("user");
+      expect(
+        items.filter((item) => item.kind === "stream" && item.event.type === "turn_complete"),
+      ).toHaveLength(1);
+    }
+  });
+  it("preserves interruption and error terminals after legacy content instead of appending success", () => {
+    for (const terminal of ["turn_stopped", "error"]) {
+      const items = transcriptToFoldItems(
+        [
+          line("message", { role: "user", content: "question" }),
+          line("turn_boundary", { turnNumber: 1 }),
+          line("message", { role: "assistant", content: "partial answer" }),
+          line(terminal, { error: "provider interrupted" }),
+        ].join("\n"),
+      );
+      expect(
+        items.filter((item) => item.kind === "stream" && item.event.type === "turn_complete"),
+      ).toHaveLength(1);
+      expect(items.at(-1)).toMatchObject(
+        terminal === "turn_stopped"
+          ? { kind: "turn_stopped" }
+          : { kind: "stream", event: { type: "error" } },
+      );
+    }
+  });
   it("maps a simple user→assistant turn", () => {
     const jsonl = [
       line("session_meta", { sessionId: "sess-1", cwd: "/repo" }),

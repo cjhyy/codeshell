@@ -7,6 +7,8 @@ import { setDefaultCredentialAccess, type CredentialAccess } from "../credential
 import type { ToolContext } from "../tool-system/context.js";
 import { linkActionTool } from "./link-action-tool.js";
 import { runCliLinkCommand } from "./cli.js";
+import { createSessionOperationController } from "../operations/controller.js";
+import { CapabilityResolver } from "../operations/resolver.js";
 import {
   getLocalLinkProvider,
   listLocalLinkProviders,
@@ -14,9 +16,27 @@ import {
 } from "./providers.js";
 
 const cwd = "/repo";
+const operationRoots: string[] = [];
 
 function context(askUser?: ToolContext["askUser"]): ToolContext {
   return { cwd, askUser, signal: new AbortController().signal } as unknown as ToolContext;
+}
+
+function cancellableWriteContext(askUser: NonNullable<ToolContext["askUser"]>): ToolContext {
+  const root = mkdtempSync(join(tmpdir(), "link-cancel-controller-"));
+  operationRoots.push(root);
+  return {
+    ...context(askUser),
+    operations: {
+      controller: createSessionOperationController(root, "cancel-session", undefined),
+      resolver: new CapabilityResolver(),
+      sessionId: "cancel-session",
+      runId: "trusted-run",
+    },
+    executeBoundTool: async () => {
+      throw new Error("Cancelled writes must not execute a bound tool");
+    },
+  };
 }
 
 interface GithubState {
@@ -62,6 +82,7 @@ function githubAccess(
 }
 
 afterEach(() => {
+  for (const root of operationRoots.splice(0)) rmSync(root, { recursive: true, force: true });
   setDefaultCredentialAccess(null);
   delete process.env.CODESHELL_CLI_LINK_HANG;
   delete process.env.CODESHELL_CLI_LINK_MARKER;
@@ -365,7 +386,7 @@ describe("LinkAction tool", () => {
             action: "create_issue",
             params: { owner: "acme", repo: "repo", title: "Bug" },
           },
-          context(async (_question, options) => {
+          cancellableWriteContext(async (_question, options) => {
             expect(options?.optionsOnly).toBe(true);
             return "取消";
           }),
@@ -622,19 +643,24 @@ test("refreshable local OAuth uses Host execution without resolving any token an
     JSON.parse(
       await linkActionTool(
         write,
-        context(async () => "取消"),
+        cancellableWriteContext(async () => "取消"),
       ),
     ).kind,
   ).toBe("cancelled");
   expect(actions).toBe(1);
+  let unownedApprovals = 0;
   expect(
     JSON.parse(
       await linkActionTool(
         write,
-        context(async () => "允许执行"),
+        context(async () => {
+          unownedApprovals++;
+          return "允许执行";
+        }),
       ),
     ).kind,
   ).toBe("error"); // Standalone calls cannot bypass the owning verification pipeline.
+  expect(unownedApprovals).toBe(0);
   expect(actions).toBe(1);
   expect(resolutions).toBe(0);
 });

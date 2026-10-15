@@ -20,6 +20,7 @@ import { createRunBatchAuthority } from "../operations/run-batch-authority.js";
 import { createSessionOperationController } from "../operations/controller.js";
 import { CapabilityResolver } from "../operations/resolver.js";
 import { buildWrappedOnStream, createRunOutputJournalPolicy } from "./run-stream.js";
+import { createRunTiming } from "../session/stream-timing.js";
 import { ToolRegistry } from "../tool-system/registry.js";
 import { readLastTodoSnapshot } from "../tool-system/builtin/task.js";
 import { getMergedCatalog } from "../model-catalog/index.js";
@@ -194,7 +195,8 @@ import {
 import {
   drainHeadlessBackgroundAgents,
   finalizeRunSuccess,
-  buildRunFailureResult,
+  appendClientRunReceipt,
+  createRunFailureHandler,
 } from "./run-finalize.js";
 import { join } from "node:path";
 import { chmodSync, existsSync, mkdirSync, readFileSync, renameSync, writeFileSync } from "node:fs";
@@ -451,6 +453,8 @@ export class Engine {
   private readonly runIds = new WeakMap<SessionState, string>();
   /** Stable through pre-loop awaits, finalization/end hooks, and outer cleanup. */
   private runningSession?: RunningSessionState;
+  /** Uses the claimed run's journal wrapper even when initialization fails before the loop. */
+  private failClaimedRun?: (error: unknown) => EngineResult;
   /**
    * Same-instance run guard. Engine owns single-valued live controls and one
    * HookRegistry, so a second run must not enter until the first has completed
@@ -1402,6 +1406,7 @@ export class Engine {
     if (this.runInProgress) {
       throw new Error("Engine.run() cannot start while another run is in progress");
     }
+    const runTiming = createRunTiming();
     this.runInProgress = true;
     this.loadedInstructionSnapshots = [];
     const abort = (this.runAbort = new AbortController());
@@ -1416,15 +1421,23 @@ export class Engine {
     try {
       await this.ready();
       if (this.disposed) throw new Error("Engine has been disposed");
-      return await this.runExclusive(task, options);
+      return await this.runExclusive(task, options, runTiming);
     } catch (error) {
       // Once a run is durably claimed, even a pre-loop initialization failure
       // must produce terminal fields for its closing owner before settlement.
       const running = this.runningSession;
       if (running && !running.finalized) {
-        running.state.status = options?.signal?.aborted ? "aborted_streaming" : "model_error";
-        delete running.state.lastCompletionKind;
-        this.persistFinalRunState(running.state);
+        if (this.failClaimedRun) {
+          try {
+            this.failClaimedRun(error);
+          } catch {
+            /* Terminal publication must not replace the original initialization rejection. */
+          }
+        } else {
+          running.state.status = options?.signal?.aborted ? "aborted_streaming" : "model_error";
+          delete running.state.lastCompletionKind;
+          this.persistFinalRunState(running.state);
+        }
       }
       throw error;
     } finally {
@@ -1450,6 +1463,7 @@ export class Engine {
           } finally {
             this.runInProgress = false;
             this.runningSession = undefined;
+            this.failClaimedRun = undefined;
             this.runAbort = undefined;
             settle();
           }
@@ -1520,7 +1534,11 @@ export class Engine {
     );
   }
 
-  private async runExclusive(task: string, options?: EngineRunOptions): Promise<EngineResult> {
+  private async runExclusive(
+    task: string,
+    options: EngineRunOptions | undefined,
+    runTiming: ReturnType<typeof createRunTiming>,
+  ): Promise<EngineResult> {
     // Stream wrappers capture this run's identity. Keep them off the caller's
     // options so reusing an options object cannot nest a previous run's wrapper.
     options = { ...options };
@@ -1592,10 +1610,12 @@ export class Engine {
         () => runId,
       ),
       userOnStream,
-      prepareEvent: (event) =>
-        event.type === "session_started"
+      prepareEvent: (event) => {
+        event = runTiming.prepareEvent(event);
+        return event.type === "session_started"
           ? { ...event, runId, previousRunId, clientMessageId }
-          : event,
+          : event;
+      },
       getSession: () => session,
       setLatestTodos: (todos) => {
         latestTodos = todos;
@@ -1717,6 +1737,15 @@ export class Engine {
       committedAnchor: structuredClone(session.state.contextUsageAnchor),
       finalized: false,
     };
+    const failClaimedRun = createRunFailureHandler({
+      session,
+      options,
+      runId,
+      sealForFinalization: () =>
+        toolCtx.operations?.controller.ledger.sealForFinalization(session.state.sessionId),
+      persistFinalRunState: (state) => this.persistFinalRunState(state),
+    });
+    this.failClaimedRun = failClaimedRun;
     const sessionLifetime = await this.openSessionLifetime(
       session.state.sessionId,
       options?.signal,
@@ -2059,49 +2088,12 @@ export class Engine {
         });
         finalized.runId = runId;
         if (options?.clientMessageId) {
-          this.appendClientRunReceipt(session, options.clientMessageId, finalized);
+          appendClientRunReceipt(session, options.clientMessageId, finalized);
         }
         return finalized;
       }),
     );
-    return Promise.resolve(sessionRun).catch((err): EngineResult => {
-      // Unexpected hook/checkpoint failures also publish a terminal result.
-      // Fence owned writes before any late transport callback can settle them.
-      try {
-        toolCtx.operations?.controller.ledger.sealForFinalization(session.state.sessionId);
-      } catch {
-        /* Failure remains non-completed; in-memory fences were installed first. */
-      }
-      const failed = buildRunFailureResult({
-        err,
-        session,
-        options,
-        persistFinalRunState: (state) => this.persistFinalRunState(state),
-      });
-      failed.runId = runId;
-      if (options?.clientMessageId) {
-        this.appendClientRunReceipt(session, options.clientMessageId, failed);
-      }
-      return failed;
-    });
-  }
-
-  /** A receipt write failure must not turn an already finalized model result
-   * into a second synthetic failure (or reject the Engine.run contract). */
-  private appendClientRunReceipt(
-    session: SessionBundle,
-    clientMessageId: string,
-    result: EngineResult,
-  ): void {
-    try {
-      session.transcript.appendRunResult(clientMessageId, result);
-    } catch (error) {
-      logger.warn("engine.client_message.receipt_persist_failed", {
-        sessionId: session.state.sessionId,
-        clientMessageId,
-        error: error instanceof Error ? error.message : String(error),
-      });
-    }
+    return Promise.resolve(sessionRun).catch(failClaimedRun);
   }
 
   /**

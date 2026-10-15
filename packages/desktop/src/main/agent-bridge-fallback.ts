@@ -13,6 +13,7 @@ export interface ParsedRpc {
   params?: {
     cwd?: string;
     sessionId?: string;
+    clientMessageId?: string;
     sourceSessionId?: string;
     targetSessionId?: string;
     forkKind?: "side";

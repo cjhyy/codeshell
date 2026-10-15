@@ -127,6 +127,7 @@ describe("Engine.enqueueSteer active-run gate", () => {
         id: "steer-final",
         sessionId,
         clientMessageId: "client-final",
+        timestamp: expect.any(Number),
         outputCursor: expect.any(String),
       });
       expect(result.reason).toBe("completed");

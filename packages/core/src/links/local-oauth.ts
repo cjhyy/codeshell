@@ -109,6 +109,7 @@ export async function executeLocalOAuthLinkAction(
   options: {
     store?: CredentialStore;
     signal?: AbortSignal;
+    assertAuthorized?: () => void;
     now?: () => number;
     fetchImpl?: typeof fetch;
   } = {},
@@ -131,6 +132,11 @@ export async function executeLocalOAuthLinkAction(
     Array.isArray(input.params)
   )
     throw new LocalOAuthLinkError("invalid_request");
+  const assertAuthorized = () => {
+    options.signal?.throwIfAborted();
+    options.assertAuthorized?.();
+  };
+  assertAuthorized();
   const store = options.store ?? new CredentialStore(input.cwd);
   const now = options.now ?? Date.now;
   const send = options.fetchImpl ?? requestOnce;
@@ -344,7 +350,7 @@ export async function executeLocalOAuthLinkAction(
       refreshes.set(key, receipt);
     }
     await pending;
-    options.signal?.throwIfAborted();
+    assertAuthorized();
     current = read();
     assertAllowed(current);
     secret = parse(current);
@@ -354,7 +360,7 @@ export async function executeLocalOAuthLinkAction(
     )
       throw new LocalOAuthLinkError("reconnect");
   };
-  options.signal?.throwIfAborted();
+  assertAuthorized();
   if (
     isOAuthAccessTokenExpired(secret, { now: now() }) ||
     current.meta?.linkOAuthState === "refreshing"
@@ -371,14 +377,16 @@ export async function executeLocalOAuthLinkAction(
       parse(credential).scope,
     ]);
   let originalAuthority = authority(current);
-  const execute = () =>
-    action.execute({
+  const execute = () => {
+    assertAuthorized();
+    return action.execute({
       token: secret.accessToken,
       authKind: "oauth",
       params: input.params,
       signal: options.signal,
       fetchImpl: options.fetchImpl,
     });
+  };
   let result: unknown;
   try {
     result = await execute();
@@ -406,10 +414,11 @@ export async function executeLocalOAuthLinkAction(
       throw retryError;
     }
   }
+  assertAuthorized();
   const latest = read();
   assertAllowed(latest);
   if (authority(latest) !== originalAuthority || latest.meta?.linkOAuthState === "refreshing")
     throw new LocalOAuthLinkError("changed");
-  options.signal?.throwIfAborted();
+  assertAuthorized();
   return result;
 }

@@ -132,6 +132,35 @@ describe("Session output journal", () => {
     expect(events.at(-1)).toMatchObject({ text: "C" });
     expect(() => wrapped({ type: "text_delta", text: "too late" })).toThrow("closed");
   });
+  test("buffered deltas retain source timestamps and replay uses the original user anchor time", () => {
+    const f = fixture();
+    const events: StreamEvent[] = [];
+    const wrapped = buildWrappedOnStream({
+      getSession: () => f.session,
+      setLatestTodos() {},
+      outputJournal: { root: f.root, getRunId: () => f.runId, onFailure() {} },
+      userOnStream: (event) => {
+        events.push(event);
+      },
+    });
+    const clock = spyOn(Date, "now").mockReturnValue(1_000);
+    try {
+      wrapped({ type: "text_delta", text: "first" });
+      clock.mockReturnValue(2_000);
+      wrapped({ type: "thinking_delta", text: "second" });
+      clock.mockReturnValue(3_000);
+      wrapped({ type: "turn_complete", reason: "completed" });
+    } finally {
+      clock.mockRestore();
+      wrapped.finish();
+    }
+    expect(events.map((event) => event.timestamp)).toEqual([1_000, 2_000, 3_000]);
+    const replay = readOutputJournal(f.root, f.id).frames.map((frame) => frame.event);
+    expect(replay[0]?.timestamp).toBe(
+      f.session.transcript.getEvents().find((event) => event.id === f.runId)?.timestamp,
+    );
+    expect(replay.slice(1).map((event) => event?.timestamp)).toEqual([1_000, 2_000, 3_000]);
+  });
   test("timer flush failure latches without unhandled errors and never publishes pending deltas or success", async () => {
     const f = fixture(),
       events: StreamEvent[] = [];

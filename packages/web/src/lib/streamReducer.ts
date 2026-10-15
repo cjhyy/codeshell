@@ -128,7 +128,7 @@ function staleGoalEvent(
  * default to "completed" rather than "error" — a stop we don't recognize is
  * still a stop, and mislabeling it a failure is the worse default.
  */
-function runStateForReason(reason: string): RunState {
+export function runStateForReason(reason: string): RunState {
   switch (reason) {
     case "aborted_streaming":
     case "aborted_tools":

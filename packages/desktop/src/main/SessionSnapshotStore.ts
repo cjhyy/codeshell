@@ -21,6 +21,11 @@
 import { randomUUID } from "node:crypto";
 import type { SessionOutputCoverageStore } from "@cjhyy/code-shell-core/internal";
 import { OutputCoverage } from "./output-coverage.js";
+import { compareOutputCursors } from "@cjhyy/code-shell-web";
+import {
+  reduceTopLevelRunLifecycle,
+  type TopLevelRunLifecycle,
+} from "../shared/top-level-run-lifecycle.js";
 
 /** One snapshot entry: the forwarded event plus its assigned sequence. */
 export interface SnapshotEntry {
@@ -49,7 +54,7 @@ interface SessionLog {
   /** Next seq to assign — keeps climbing across eviction, never reused. */
   nextSeq: number;
   /** Current top-level run state from the complete worker event stream. */
-  topLevelRunning: boolean;
+  topLevelRun: TopLevelRunLifecycle;
   bytes: number;
   outputCursor?: string;
   coverage: OutputCoverage;
@@ -90,7 +95,7 @@ export class SessionSnapshotStore {
       log = {
         events: [],
         nextSeq: 1,
-        topLevelRunning: false,
+        topLevelRun: { running: false },
         bytes: 0,
         coverage: new OutputCoverage(),
       };
@@ -131,15 +136,17 @@ export class SessionSnapshotStore {
     }
     this.coverageBytes += log.coverage.memoryBytes;
     const lifecycle = event as { type?: unknown; agentId?: unknown; outputCursor?: unknown } | null;
-    if (typeof lifecycle?.outputCursor === "string" && lifecycle.outputCursor.length <= 2048)
-      log.outputCursor = lifecycle.outputCursor;
-    if (lifecycle && !lifecycle.agentId) {
-      if (lifecycle.type === "session_started" || lifecycle.type === "stream_request_start") {
-        log.topLevelRunning = true;
-      } else if (lifecycle.type === "turn_complete" || lifecycle.type === "error") {
-        log.topLevelRunning = false;
-      }
-    }
+    const outputCursor =
+      typeof lifecycle?.outputCursor === "string" && lifecycle.outputCursor.length <= 2048
+        ? lifecycle.outputCursor
+        : undefined;
+    const cursorOrder =
+      outputCursor && log.outputCursor
+        ? compareOutputCursors(outputCursor, log.outputCursor)
+        : undefined;
+    const historicalCursor = cursorOrder !== undefined && cursorOrder <= 0;
+    if (outputCursor && !historicalCursor) log.outputCursor = outputCursor;
+    if (!historicalCursor) log.topLevelRun = reduceTopLevelRunLifecycle(log.topLevelRun, event);
     const entry = { seq: log.nextSeq, event };
     log.nextSeq += 1;
     const serialized = JSON.stringify(event) ?? "null";
@@ -185,7 +192,7 @@ export class SessionSnapshotStore {
       epoch: this.epoch,
       events,
       nextSeq: log.nextSeq,
-      topLevelRunning: log.topLevelRunning,
+      topLevelRunning: log.topLevelRun.running,
       ...(log.outputCursor ? { outputCursor: log.outputCursor } : {}),
       ...coverage,
       ...(log.coverage.incomplete || log.publicationFailed || proof?.unpaired
@@ -205,7 +212,7 @@ export class SessionSnapshotStore {
   onWorkerExit(ownedSessionIds: Iterable<string>): void {
     for (const sessionId of ownedSessionIds) {
       const log = this.logs.get(sessionId);
-      if (log) log.topLevelRunning = false;
+      if (log) log.topLevelRun = { ...log.topLevelRun, running: false };
     }
   }
 
