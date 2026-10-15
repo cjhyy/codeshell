@@ -13,7 +13,7 @@ import { useT } from "../i18n/I18nProvider";
 /** Responsive grid the connection cards sit in (inside a CollapsibleGroup). */
 export function ConnCardGrid({ children }: { children: React.ReactNode }) {
   return (
-    <div className="grid grid-cols-[repeat(auto-fill,minmax(280px,1fr))] gap-3 p-3">
+    <div className="grid grid-cols-[repeat(auto-fill,minmax(min(280px,100%),1fr))] gap-3 p-3">
       {children}
     </div>
   );

@@ -1,16 +1,14 @@
-import React, { useCallback, useMemo, useState } from "react";
-import { readScopedSettings } from "../settingsAuthority";
-import { useRefreshOnSettingsChange } from "./useSettingsResource";
-import type { SearchProbeInput, SearchProbeResult } from "../../preload/types";
-import { writeSettings } from "../settingsBus";
-import { cacheGet, cacheSet } from "./settingsCache";
+import React, { useMemo } from "react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
-import { useToast } from "../ui/ToastProvider";
-import { useConfirm } from "../ui/ConfirmDialog";
 import { useT } from "../i18n/I18nProvider";
 import type { TranslationKey } from "../i18n/dict";
+import {
+  useSearchConnections,
+  type SearchProvider as Provider,
+  type SearchProviderState as ProviderState,
+} from "./useSearchConnections";
 import { CollapsibleGroup } from "./CollapsibleGroup";
 import { TextConnectionsPanel as UnifiedConnectionsPanel } from "./TextConnectionsPanel";
 import {
@@ -52,7 +50,11 @@ export function ConnectionsPanel({ scope, activeProjectPath }: Props) {
           subtitle={t("settingsX.searchConn.groupWebSearchSub")}
           defaultOpen
         >
-          <SearchProvidersGrid scope={scope} activeProjectPath={activeProjectPath} />
+          <SearchProvidersGrid
+            key={`${scope}:${activeProjectPath ?? ""}`}
+            scope={scope}
+            activeProjectPath={activeProjectPath}
+          />
         </CollapsibleGroup>
 
         <CollapsibleGroup
@@ -107,8 +109,6 @@ export function ConnectionsPanel({ scope, activeProjectPath }: Props) {
   );
 }
 
-type Provider = "serper" | "tavily" | "searxng";
-
 interface ProviderMeta {
   id: Provider;
   displayName: string;
@@ -145,34 +145,6 @@ const PROVIDERS: ProviderMeta[] = [
   },
 ];
 
-interface ProviderState {
-  apiKey: string;
-  baseUrl: string;
-  probe?: SearchProbeResult;
-  testing: boolean;
-  saving: boolean;
-  showKey: boolean;
-  dirty: boolean;
-}
-
-const initialProviderState = (): ProviderState => ({
-  apiKey: "",
-  baseUrl: "",
-  testing: false,
-  saving: false,
-  showKey: false,
-  dirty: false,
-});
-
-function isProbeResult(value: unknown): value is SearchProbeResult {
-  if (!value || typeof value !== "object") return false;
-  const rec = value as Record<string, unknown>;
-  return (
-    (rec.status === "ok" || rec.status === "error" || rec.status === "unconfigured") &&
-    typeof rec.lastProbedAt === "string"
-  );
-}
-
 function formatProbeTime(iso?: string): string {
   if (!iso) return "";
   try {
@@ -187,226 +159,86 @@ function formatProbeTime(iso?: string): string {
   }
 }
 
-/** Last-loaded snapshot per scope (settingsCache) — seeds remounts so tab
- * switches don't flash the loading placeholder. */
-interface SearchSnapshot {
-  defaultProvider: Provider;
-  byProvider: Record<Provider, ProviderState>;
-}
-
 function SearchProvidersGrid({ scope, activeProjectPath }: Props) {
   const projectPath = scope === "project" ? (activeProjectPath ?? undefined) : undefined;
-  const cacheKey = `search:${scope}:${projectPath ?? ""}`;
-  const [seed] = useState(() => cacheGet<SearchSnapshot>(cacheKey));
-  const [defaultProvider, setDefaultProvider] = useState<Provider>(
-    seed?.defaultProvider ?? "serper",
-  );
-  const [byProvider, setByProvider] = useState<Record<Provider, ProviderState>>(
-    () =>
-      seed?.byProvider ?? {
-        serper: initialProviderState(),
-        tavily: initialProviderState(),
-        searxng: initialProviderState(),
-      },
-  );
-  const [loaded, setLoaded] = useState(!!seed);
-  const toast = useToast();
-  const confirm = useConfirm();
   const { t } = useT();
-
-  const load = useCallback(async () => {
-    const s = (await readScopedSettings(scope, projectPath)) ?? {};
-    const search =
-      s.search && typeof s.search === "object" ? (s.search as Record<string, unknown>) : {};
-    // Legacy schema stored a single { provider, apiKey, baseUrl }. We migrate
-    // by stamping its values onto the matching provider card; nothing is lost.
-    const legacyProvider = typeof search.provider === "string" ? search.provider : "serper";
-    const legacyKey = typeof search.apiKey === "string" ? search.apiKey : "";
-    const legacyBaseUrl = typeof search.baseUrl === "string" ? search.baseUrl : "";
-
-    const providersBag =
-      search.providers && typeof search.providers === "object"
-        ? (search.providers as Record<string, Record<string, unknown>>)
-        : {};
-
-    const next: Record<Provider, ProviderState> = {
-      serper: initialProviderState(),
-      tavily: initialProviderState(),
-      searxng: initialProviderState(),
-    };
-    for (const p of PROVIDERS) {
-      const bag = providersBag[p.id] ?? {};
-      next[p.id] = {
-        ...next[p.id],
-        apiKey: typeof bag.apiKey === "string" ? bag.apiKey : "",
-        baseUrl: typeof bag.baseUrl === "string" ? bag.baseUrl : "",
-        probe: isProbeResult(bag.lastProbe) ? bag.lastProbe : undefined,
-      };
-    }
-
-    // Apply legacy fallback to whatever provider the legacy slot named.
-    let nextDefault: Provider = "serper";
-    if (
-      legacyProvider === "serper" ||
-      legacyProvider === "tavily" ||
-      legacyProvider === "searxng"
-    ) {
-      const cur = next[legacyProvider];
-      if (!cur.apiKey && legacyKey) cur.apiKey = legacyKey;
-      if (!cur.baseUrl && legacyBaseUrl) cur.baseUrl = legacyBaseUrl;
-      nextDefault = legacyProvider;
-      setDefaultProvider(legacyProvider);
-    }
-
-    setByProvider(next);
-    setLoaded(true);
-    cacheSet(cacheKey, { defaultProvider: nextDefault, byProvider: next } satisfies SearchSnapshot);
-  }, [scope, projectPath, cacheKey]);
-
-  // Load on mount/scope switch + auto-refresh on config change (one place wires
-  // the listeners — see useRefreshOnSettingsChange).
-  useRefreshOnSettingsChange(() => void load(), [load]);
-
-  const updateProvider = (id: Provider, patch: Partial<ProviderState>) => {
-    setByProvider((cur) => ({ ...cur, [id]: { ...cur[id], ...patch } }));
-  };
-
-  const writeBack = useCallback(
-    async (nextProviders: Record<Provider, ProviderState>, nextDefault: Provider) => {
-      const providersOut: Record<string, Record<string, unknown>> = {};
-      for (const p of PROVIDERS) {
-        const st = nextProviders[p.id];
-        const bag: Record<string, unknown> = {};
-        if (st.apiKey) bag.apiKey = st.apiKey;
-        if (st.baseUrl) bag.baseUrl = st.baseUrl;
-        if (st.probe) bag.lastProbe = st.probe;
-        if (Object.keys(bag).length > 0) providersOut[p.id] = bag;
-      }
-      const active = nextProviders[nextDefault];
-      await writeSettings(
-        scope,
-        {
-          search: {
-            provider: nextDefault,
-            apiKey: active.apiKey || undefined,
-            baseUrl: active.baseUrl || undefined,
-            providers: providersOut,
-          },
-        },
-        projectPath,
-      );
-    },
-    [scope, projectPath],
-  );
-
-  const saveProvider = async (id: Provider) => {
-    updateProvider(id, { saving: true });
-    try {
-      const next = {
-        ...byProvider,
-        [id]: { ...byProvider[id], saving: false, dirty: false },
-      };
-      await writeBack(next, defaultProvider);
-      setByProvider(next);
-      toast({ message: t("settingsX.searchConn.toastSaved") });
-    } catch (err) {
-      console.error("saveProvider writeBack failed", err);
-      toast({ message: t("settingsX.searchConn.toastSaveFailed"), variant: "error" });
-      updateProvider(id, { saving: false });
-    }
-  };
-
-  const clearProvider = async (id: Provider) => {
-    const ok = await confirm({
-      message: t("settingsX.searchConn.confirmClearMsg", {
-        name: PROVIDERS.find((p) => p.id === id)?.displayName ?? id,
-      }),
-      detail: t("settingsX.searchConn.confirmClearDetail"),
-      destructive: true,
-    });
-    if (!ok) return;
-    const next = {
-      ...byProvider,
-      [id]: { ...initialProviderState() },
-    };
-    setByProvider(next);
-    try {
-      await writeBack(next, defaultProvider);
-    } catch (err) {
-      // Don't leave the UI cleared while the persisted settings still hold the
-      // old provider — log and reload from disk to resync.
-      console.error("clearProvider writeBack failed", err);
-      toast({ message: t("settingsX.searchConn.toastClearFailed"), variant: "error" });
-      void load();
-    }
-  };
-
-  const testProvider = async (id: Provider) => {
-    const st = byProvider[id];
-    updateProvider(id, { testing: true });
-    const input: SearchProbeInput = {
-      provider: id,
-      apiKey: st.apiKey || undefined,
-      baseUrl: st.baseUrl || undefined,
-    };
-    try {
-      const result = await window.codeshell.probeSearch(input);
-      const next = {
-        ...byProvider,
-        [id]: { ...byProvider[id], probe: result, testing: false },
-      };
-      setByProvider(next);
-      if (result.status === "ok") await writeBack(next, defaultProvider);
-    } catch (e) {
-      updateProvider(id, {
-        probe: {
-          status: "error",
-          errorMessage: String(e instanceof Error ? e.message : e),
-          lastProbedAt: new Date().toISOString(),
-        },
-        testing: false,
-      });
-    }
-  };
-
-  const setDefault = async (id: Provider) => {
-    setDefaultProvider(id);
-    await writeBack(byProvider, id);
-  };
-
-  if (!loaded) {
-    return (
-      <ConnCardGrid>
-        <div className="text-sm text-muted-foreground">{t("settingsX.searchConn.loading")}</div>
-      </ConnCardGrid>
-    );
-  }
-
+  const {
+    byProvider,
+    defaultProvider,
+    loaded,
+    loading,
+    loadFailed,
+    busy,
+    panelRef,
+    headingRef,
+    load,
+    patch,
+    save,
+    test,
+    clear,
+    setDefault,
+  } = useSearchConnections(scope, projectPath);
+  const disabled = Boolean(busy) || loading || loadFailed;
+  const titleId = React.useId();
   return (
-    <ConnCardGrid>
-      {PROVIDERS.map((meta) => {
-        const st = byProvider[meta.id];
-        const isDefault = defaultProvider === meta.id;
-        const isConfigured = meta.needsKey ? !!st.apiKey : !!st.baseUrl;
-        return (
-          <ConnectionCard
-            key={meta.id}
-            meta={meta}
-            state={st}
-            isDefault={isDefault}
-            isConfigured={isConfigured}
-            onConfigChange={(patch) =>
-              updateProvider(meta.id, { ...patch, dirty: true, probe: undefined })
-            }
-            onUiChange={(patch) => updateProvider(meta.id, patch)}
-            onSave={() => void saveProvider(meta.id)}
-            onTest={() => void testProvider(meta.id)}
-            onClear={() => void clearProvider(meta.id)}
-            onSetDefault={() => void setDefault(meta.id)}
-          />
-        );
-      })}
-    </ConnCardGrid>
+    <section
+      ref={panelRef}
+      aria-busy={Boolean(busy) || loading}
+      aria-labelledby={titleId}
+      className="relative min-w-0"
+    >
+      <h4 ref={headingRef} id={titleId} tabIndex={-1} className="sr-only">
+        {t("settingsX.searchConn.groupWebSearch")}
+      </h4>
+      {loadFailed && (
+        <div
+          role="alert"
+          className="mb-3 flex flex-wrap items-center gap-3 rounded-xl border border-status-err/25 bg-status-err/5 p-3"
+        >
+          <p className="min-w-0 flex-1 basis-48 text-sm text-status-err">
+            {t(loaded ? "settingsX.searchConn.refreshFailed" : "settingsX.searchConn.readFailed")}
+          </p>
+          <Button
+            type="button"
+            size="sm"
+            variant="outline"
+            disabled={loading}
+            onClick={() => void load()}
+          >
+            {t("settingsX.searchConn.retryRead")}
+          </Button>
+        </div>
+      )}
+      <ConnCardGrid>
+        {!loaded ? (
+          <div role="status" className="text-sm text-muted-foreground">
+            {loading ? t("settingsX.searchConn.loading") : null}
+          </div>
+        ) : (
+          PROVIDERS.map((meta) => {
+            const state = byProvider[meta.id];
+            return (
+              <ConnectionCard
+                key={meta.id}
+                meta={meta}
+                state={state}
+                isDefault={defaultProvider === meta.id}
+                isConfigured={meta.needsKey ? Boolean(state.apiKey) : Boolean(state.baseUrl)}
+                disabled={disabled}
+                testing={busy?.action === "test" && busy.id === meta.id}
+                saving={busy?.action === "save" && busy.id === meta.id}
+                onConfigChange={(values) => patch(meta.id, values, true)}
+                onUiChange={(values) => patch(meta.id, values)}
+                onSave={() => void save(meta.id)}
+                onTest={() => void test(meta.id)}
+                onClear={() => void clear(meta.id, meta.displayName)}
+                onSetDefault={() => void setDefault(meta.id)}
+              />
+            );
+          })
+        )}
+      </ConnCardGrid>
+    </section>
   );
 }
 
@@ -415,6 +247,9 @@ interface CardProps {
   state: ProviderState;
   isDefault: boolean;
   isConfigured: boolean;
+  disabled: boolean;
+  testing: boolean;
+  saving: boolean;
   onConfigChange: (patch: Partial<ProviderState>) => void;
   onUiChange: (patch: Partial<ProviderState>) => void;
   onSave: () => void;
@@ -428,6 +263,9 @@ function ConnectionCard({
   state,
   isDefault,
   isConfigured,
+  disabled,
+  testing,
+  saving,
   onConfigChange,
   onUiChange,
   onSave,
@@ -437,8 +275,7 @@ function ConnectionCard({
 }: CardProps) {
   const { t } = useT();
   const statusBadge = useMemo(() => {
-    if (state.testing)
-      return <Badge variant="info">{t("settingsX.searchConn.statusTesting")}</Badge>;
+    if (testing) return <Badge variant="info">{t("settingsX.searchConn.statusTesting")}</Badge>;
     if (state.probe?.status === "ok")
       return <Badge variant="success">{t("settingsX.searchConn.statusOk")}</Badge>;
     if (state.probe?.status === "error")
@@ -447,7 +284,7 @@ function ConnectionCard({
       return <Badge variant="secondary">{t("settingsX.searchConn.statusUnconfigured")}</Badge>;
     }
     return <Badge variant="secondary">{t("settingsX.searchConn.statusUntested")}</Badge>;
-  }, [state.testing, state.probe, isConfigured, t]);
+  }, [testing, state.probe, isConfigured, t]);
 
   return (
     <ConnCard isDefault={isDefault}>
@@ -519,23 +356,21 @@ function ConnectionCard({
           variant="default"
           size="sm"
           onClick={onTest}
-          disabled={state.testing || !isConfigured}
+          disabled={disabled || !isConfigured}
           title={
             isConfigured
               ? t("settingsX.searchConn.testConnTitle")
               : t("settingsX.searchConn.fillCredsFirst")
           }
         >
-          {state.testing
-            ? t("settingsX.searchConn.statusTesting")
-            : t("settingsX.searchConn.testSearch")}
+          {testing ? t("settingsX.searchConn.statusTesting") : t("settingsX.searchConn.testSearch")}
         </Button>
-        <Button variant="solid" size="sm" onClick={onSave} disabled={state.saving || !state.dirty}>
-          {state.saving ? t("settingsX.searchConn.saving") : t("settingsX.searchConn.save")}
+        <Button variant="solid" size="sm" onClick={onSave} disabled={disabled || !state.dirty}>
+          {saving ? t("settingsX.searchConn.saving") : t("settingsX.searchConn.save")}
         </Button>
         <ConnFooterRight>
           {isConfigured && !isDefault && (
-            <Button variant="ghost" size="sm" onClick={onSetDefault}>
+            <Button variant="ghost" size="sm" disabled={disabled} onClick={onSetDefault}>
               {t("settingsX.searchConn.setDefault")}
             </Button>
           )}
@@ -545,6 +380,7 @@ function ConnectionCard({
               size="sm"
               className="text-muted-foreground hover:text-status-err"
               onClick={onClear}
+              disabled={disabled}
             >
               {t("settingsX.searchConn.clear")}
             </Button>
