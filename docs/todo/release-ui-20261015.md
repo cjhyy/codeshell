@@ -50,7 +50,7 @@ The initial blockers below are retained as resolved verification history.
 
 Current integration worktree:
 `/Users/admin/.codex/worktrees/ui-task-center-20261015/codeshell`, branch
-`codex/integration/ui-review-wave6-20261015`. Other work advanced remote main to
+`codex/integration/ui-review-wave7-20261015`. Other work advanced remote main to
 `0.9.44`; this branch merged `976a79322` and `bb7a9b59a`, preserving the incoming model-capability,
 forwarding and Figma updates. The CSS merge preserves both context-selection and
 file-action styles. Do not revert incoming work or republish another version on
@@ -595,9 +595,21 @@ and DigitalHumans E2E passed sequentially, plus the four combined Cloud metadata
 format and diff checks passed. Logs: `/tmp/codeshell-ui-wave6-{typecheck,lint,
 desktop-build,unit,overlays,web-latest,web-sidebar,web-files,web-settings,
 native-settings,native-digital-humans,cloud-metadata-native}.log`.
-Fresh remote main is still UI5 `bef6e513e`; publish this verified UI6 source
-through the clean integration branch and retain other local main commits.
-Remote CI has not yet been verified; record it in the next continuation.
+UI6 was pushed and remote main confirmed at `3c6d8573f`. CI `38755011185`
+has passed 11 of 12 jobs, including Electron E2E; the Desktop test job is still
+running. Continue to preserve other tasks' local main commits.
+
+UI7 integrates only source changes for Web Skills (`7d874cabd`), model action
+recovery (`99cc938d1`, `5e8deab0d`, `b9330f911`) and MCP recovery
+(`a3559b1bd`, `6d5d14d31`). MCP's queued-refresh follow-up retains the visible
+error and owned recovery after a rejected removal is followed by an updated
+configuration where the target disappeared. Independent production cases cover
+owned, external field, blank pointer and window blur at 320x240 and 390x360;
+each preserves exactly one DELETE and two reads. Final production/development
+fixtures each pass 34 cases, with no outside request or page error.
+The three new Web browser commands are registered in the existing isolated CI
+step. Desktop ModelPill source and its native fixture are being finalized as the
+fourth scope. Final combined gates and delivery remain pending.
 
 Initial audit history follows:
 
