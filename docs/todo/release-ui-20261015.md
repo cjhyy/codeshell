@@ -237,8 +237,8 @@ Fourth wave in progress (root branch contains the reviewed commits):
   production review passed. Synthetic composition only proves the event guard,
   not operating-system IME or VoiceOver acceptance. Root independently reviewed
   the 141-line ownership hook and component changes. The frozen combination is
-  running all 14 typechecks, full renderer/shared/Web shard, lint and 25 browser
-  fixtures; the separate Sidebar and 60+15 composer combined fixtures passed.
+  passed all 14 typechecks, full renderer/shared/Web shard, lint and all 25 browser
+  fixtures; the separate Sidebar and 60+15 composer combined fixtures also passed.
   Root final types, Desktop full build, lint baseline and 3,395 guarded tests
   (12,591 assertions) passed; actual Electron Settings/search E2E passed. The
   first full browser run found an invalid extra variant root in the tool-card
@@ -247,7 +247,8 @@ Fourth wave in progress (root branch contains the reviewed commits):
   Production TSX only assigns that attribute in ChatView. The fixture now leaves
   the attribute on the standalone cards surface only, asserts exactly one variant
   root, and retains all bounds/wire/120-frame assertions. No production change or
-  assertion weakening was made; all 25 fixtures are rerunning.
+  assertion weakening was made; the complete 25-fixture rerun passed. Fourth wave
+  is ready for main delivery after a final origin refresh.
 - Root separately owns the accepted search-dialog short-window P2 on
   `codex/desktop/session-search-layout-20261015` in the clean reused
   `file-browser-ui-20261015` tree, checkpoint `c5b7473a7`. Scoped
@@ -294,6 +295,15 @@ page content. Refresh/delete failure focus is being checked as the same recovery
 boundary. Evidence: `/tmp/codeshell-history-ui-review-report.json`,
 `/tmp/codeshell-runs-usage-800x480.png`,
 `/tmp/codeshell-sessions-error-320x360.png`.
+The connection audit independently confirmed Search settings recovery failures:
+a rejected Tavily default-provider write leaves a false Default marker and an
+unhandled rejection; a rejected Serper Clear loses the unsaved draft, and a
+held Save overwrites newer typing on success. The actual Settings→Connections
+owned-bridge fixture also reproduced a 280px card minimum exceeding a narrow
+nested group, plus long connection IDs widening the page. Evidence:
+`/tmp/codeshell-connections-ui-audit-20261015/report.json`. Accept recovery and
+actual-pane card bounds as the next independent scope; preserve persisted
+connection/provider identity, confirmation and all existing probe authority.
 
 Initial audit history follows:
 
