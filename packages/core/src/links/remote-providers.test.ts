@@ -1,7 +1,9 @@
 import { afterEach, expect, test } from "bun:test";
 import { createServer } from "node:http";
 import { randomUUID } from "node:crypto";
-import { mkdtempSync, rmSync } from "node:fs";
+import { mkdtempSync, rmSync, symlinkSync } from "node:fs";
+import { spawn } from "node:child_process";
+import { fileURLToPath } from "node:url";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { CredentialStore } from "../credentials/store.js";
@@ -31,6 +33,8 @@ import { PermissionClassifier } from "../tool-system/permission.js";
 import { HookRegistry } from "../hooks/registry.js";
 import { createSessionOperationController } from "../operations/controller.js";
 import { CapabilityResolver } from "../operations/resolver.js";
+
+import { createBunTestEnvironment } from "../../../../scripts/bun-test-completion.mjs";
 
 const cleanups: Array<() => void | Promise<void>> = [];
 afterEach(async () => {
@@ -566,34 +570,61 @@ test("Figma get_file fails explicitly when the service returns only a pages summ
 });
 
 test("remote Figma full content has a larger bounded budget and a recoverable overflow", async () => {
-  const f = await fixture("figma");
-  await f.connect();
-  const content = "x".repeat(3 * 1024 * 1024);
-  f.setResult({
-    name: "Large file",
-    document: { id: "0:0", type: "DOCUMENT", description: content },
-  });
-  expect(await f.execute("get_file", { file_key: resources.figma, full: true })).toHaveProperty(
-    "document.description",
-    content,
-  );
-  f.setResult({
-    name: "Too large",
-    document: { id: "0:0", type: "DOCUMENT", description: "x".repeat(8 * 1024 * 1024) },
-  });
-  await expect(f.execute("get_file")).rejects.toMatchObject({ code: "response_too_large" });
-  await expect(f.execute("get_file")).rejects.toThrow("get_nodes");
-  expect(f.store.resolve("selected-link")?.meta?.linkRemoteState).toBe("connected");
-  f.setResult({
-    name: "Selected structure",
-    document: { id: "0:0", type: "DOCUMENT", children: [] },
-  });
-  expect(await f.execute("get_file", { file_key: resources.figma, depth: 1 })).toMatchObject({
-    name: "Selected structure",
-    requestedDepth: 1,
-  });
-  f.setStatus(413);
-  await expect(f.execute("get_file")).rejects.toMatchObject({ code: "response_too_large" });
+  // Bun 1.3.11's node:http client can stall multi-MiB responses from both Bun
+  // and independent Node servers. Exercise this transport contract in the
+  // shipped Node runtime; authorization/resource tests above still run in Bun.
+  const directory = mkdtempSync(join(tmpdir(), "figma-node-overflow-worker-"));
+  try {
+    symlinkSync(
+      fileURLToPath(new URL("../../node_modules", import.meta.url)),
+      join(directory, "node_modules"),
+      process.platform === "win32" ? "junction" : "dir",
+    );
+    const built = await Bun.build({
+      entrypoints: [fileURLToPath(new URL("./remote-overflow.node.fixture.mjs", import.meta.url))],
+      target: "node",
+      outdir: directory,
+      naming: "fixture.mjs",
+    });
+    expect(built.success).toBe(true);
+    expect(built.logs).toEqual([]);
+    const child = spawn("node", [join(directory, "fixture.mjs")], {
+      env: createBunTestEnvironment(process.env, directory),
+      stdio: ["ignore", "pipe", "pipe"],
+      timeout: 25_000,
+    });
+    let stdout = "",
+      stderr = "";
+    child.stdout.on("data", (part) => {
+      stdout += String(part);
+    });
+    child.stderr.on("data", (part) => {
+      stderr += String(part);
+    });
+    const exit = await new Promise<{ code: number | null; signal: NodeJS.Signals | null }>(
+      (resolve, reject) => {
+        child.once("error", reject);
+        child.once("close", (code, signal) => resolve({ code, signal }));
+      },
+    );
+    if (exit.code !== 0 || exit.signal !== null)
+      throw new Error(
+        `Node Figma overflow worker failed: ${JSON.stringify(exit)}\n${stdout}\n${stderr}`,
+      );
+    expect(stderr).toBe("");
+    expect(JSON.parse(stdout.trim())).toEqual({
+      result: "pass",
+      iterations: 1,
+      physicalRequests: 10,
+      receivedRequests: 10,
+      closedServers: 1,
+      canceledResponses: 2,
+      deniedNetwork: 4,
+      unhandled: [],
+    });
+  } finally {
+    rmSync(directory, { recursive: true, force: true });
+  }
 });
 
 test("remote Figma Make links fail explicitly before refresh or provider HTTP", async () => {

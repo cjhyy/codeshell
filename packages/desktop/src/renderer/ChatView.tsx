@@ -1415,6 +1415,23 @@ export function ChatView({
       break;
     }
   }
+  const previousQuestion = useRef<string | null>(null);
+  const stickyQuestionRef = useRef<HTMLDivElement>(null);
+  const questionComposerRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const hadQuestion = previousQuestion.current !== null;
+    previousQuestion.current = openAsk?.requestId ?? null;
+    const composer = textareaRef.current;
+    if (
+      hadQuestion &&
+      !openAsk &&
+      document.activeElement === document.body &&
+      composer?.getClientRects().length
+    ) {
+      composer.focus({ preventScroll: true });
+    }
+  }, [openAsk?.requestId]);
 
   // A truly new/draft chat has no messages AND isn't mid-hydration. An existing
   // session being hydrated also has messages.length === 0 for a frame, but must
@@ -1538,6 +1555,47 @@ export function ChatView({
     ) : null;
 
   const showStickyApproval = !!pendingApproval && !!onApprovalDecide && !inlineApprovalVisible;
+  // Keep the composer bound while the request exists. Tying this mode to
+  // inline visibility makes its resizing feed back into IntersectionObserver.
+  const hasPendingInteraction = !!openAsk || (!!pendingApproval && !!onApprovalDecide);
+  useEffect(() => {
+    if (!hasPendingInteraction || contextSelectionOpen || typeof ResizeObserver === "undefined")
+      return;
+    const scrollers = [stickyQuestionRef.current, questionComposerRef.current].filter(
+      (element): element is HTMLDivElement => element !== null,
+    );
+    const ensureFocusedVisible = (): void => {
+      const focused = document.activeElement;
+      if (!(focused instanceof HTMLElement)) return;
+      const scroller = scrollers.find((element) => element.contains(focused));
+      if (!scroller) return;
+      const bounds = scroller.getBoundingClientRect();
+      const target = focused.getBoundingClientRect();
+      if (bounds.height <= 0) return;
+      // A long textarea may fill the entire visible slice. Keep that slice;
+      // smaller controls need to remain fully visible after a dock resize.
+      if (target.height > bounds.height && target.top < bounds.bottom && target.bottom > bounds.top)
+        return;
+      if (target.top < bounds.top) scroller.scrollTop += target.top - bounds.top;
+      else if (target.bottom > bounds.bottom) scroller.scrollTop += target.bottom - bounds.bottom;
+    };
+    const observer = new ResizeObserver(ensureFocusedVisible);
+    scrollers.forEach((element) => {
+      observer.observe(element);
+      // Portaled menus may restore focus after the resize observer has run.
+      element.addEventListener("focusin", ensureFocusedVisible);
+    });
+    return () => {
+      observer.disconnect();
+      scrollers.forEach((element) => element.removeEventListener("focusin", ensureFocusedVisible));
+    };
+  }, [
+    hasPendingInteraction,
+    openAsk?.requestId,
+    showStickyApproval,
+    pendingApproval?.requestId,
+    contextSelectionOpen,
+  ]);
 
   // Show ALL queued items, not a 2-item slice — the old slice(0, 2) is what
   // made 引导 look like it "只能打断 2 句": only the first two ever rendered a
@@ -1614,6 +1672,7 @@ export function ChatView({
       }
       data-mode={isNewChat ? "new" : "active"}
       data-chat-variant={variant}
+      data-pending-interaction={!contextSelectionOpen && hasPendingInteraction ? "true" : undefined}
       data-theme-surface={variant === "main" ? "chat" : undefined}
       onDragEnter={onChatDragEnter}
       onDragOver={onChatDragOver}
@@ -1710,11 +1769,15 @@ export function ChatView({
       )}
 
       {!contextSelectionOpen && (openAsk || showStickyApproval) && (
-        <div className="cs-chat-sticky w-full min-w-0">
+        <div ref={stickyQuestionRef} className="cs-chat-sticky w-full min-w-0">
           {/* AskUserMessageView carries its own column padding so it lines up
               with the message stream; ApprovalCard has none of its own. */}
           {openAsk && (
-            <AskUserMessageView message={openAsk} onAnswer={onAskUserAnswer ?? (() => undefined)} />
+            <AskUserMessageView
+              key={openAsk.requestId}
+              message={openAsk}
+              onAnswer={onAskUserAnswer ?? (() => undefined)}
+            />
           )}
           {showStickyApproval && pendingApproval && onApprovalDecide && (
             <div className="px-4">
@@ -1766,7 +1829,9 @@ export function ChatView({
             collapsing the input row by row. Pinning shrink to 0 keeps it at its
             content height regardless of how tall the stream gets. */}
         <div
-          className={
+          ref={questionComposerRef}
+          className={cn(
+            "cs-chat-composer-wrap",
             variant === "quickChat"
               ? "cs-quick-chat-composer-wrap w-full min-w-0 shrink-0 p-3"
               : isNewChat
@@ -1774,8 +1839,8 @@ export function ChatView({
                 : cn(
                     "min-w-0 shrink-0 p-3",
                     variant === "main" ? "mx-auto w-full max-w-3xl" : "max-w-full",
-                  )
-          }
+                  ),
+          )}
         >
           {queuedInputItems.length > 0 && (
             <div className="mb-2 rounded-2xl border border-border/80 bg-background/80 px-3 py-2 shadow-sm">

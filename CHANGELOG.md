@@ -31,6 +31,10 @@ breaking.
   restoration when the reader edits, changes focus or switches conversations.
 - Recover failed update-status reads and actions with visible errors and retries;
   keep newer pushed state and contain long diagnostics on small screens.
+- Make inline questions keyboard accessible, preserve answers through failed
+  submissions, and keep questions and approvals usable in short chat panes.
+- Wrap complete question-answer receipts and long tool identities while keeping
+  approval risk, execution status and action controls visible.
 
 ## [0.9.44] - 2026-10-15
 
