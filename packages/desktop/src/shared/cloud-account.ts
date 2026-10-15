@@ -16,6 +16,12 @@ export interface CloudAccountStatus {
   githubConnection?: { state: "pending" | "connected" | "failed" | "skipped" };
 }
 
+/** Local credentials are erased even when the service cannot acknowledge revocation. */
+export interface CloudAccountLogoutResult {
+  state: "signed-out";
+  revocation: "confirmed" | "unconfirmed";
+}
+
 export interface CloudAccountLogin {
   origin: string;
   username: string;
@@ -83,6 +89,6 @@ export interface CloudAccountApi {
   manageLinks(input: CloudAccountLinksRequest): Promise<CloudAccountLinksResult>;
   profile(input: CloudAccountProfileRequest): Promise<CloudAccountStatus>;
   cancelSignIn(): Promise<void>;
-  logout(): Promise<void>;
+  logout(): Promise<CloudAccountLogoutResult>;
   onStatus(callback: (status: CloudAccountStatus) => void): () => void;
 }
