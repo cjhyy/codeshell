@@ -1376,7 +1376,12 @@ export class AgentBridge implements PetStateBridge {
             message: err instanceof Error ? err.message : String(err),
             ...(parsed.method === "desktop/remoteLinkAction" &&
             err instanceof RemoteLinkError &&
-            err.code === "file_not_authorized"
+            [
+              "file_not_authorized",
+              "unsupported_file_type",
+              "response_too_large",
+              "content_unavailable",
+            ].includes(err.code)
               ? { data: { remoteLinkCode: err.code } }
               : {}),
           },

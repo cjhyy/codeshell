@@ -2,6 +2,21 @@ import { describe, expect, test } from "bun:test";
 import { LINK_PROVIDER_MANIFESTS, getLinkProviderManifest } from "./catalog.js";
 
 describe("Link provider catalog", () => {
+  test("Figma advertises full document, node and image reads under file-content scope", () => {
+    const figma = getLinkProviderManifest("figma")!;
+    expect(figma.actionIds).toEqual([
+      "get_file",
+      "get_comments",
+      "get_nodes",
+      "get_images",
+      "get_image_fills",
+    ]);
+    expect(figma.connectionMethods[0]!.authGuide!.permissions).toContainEqual({
+      id: "file_content:read",
+      label: "file_content:read",
+      level: "required",
+    });
+  });
   test("contains ten unique providers with usable local and independent server methods", () => {
     expect(LINK_PROVIDER_MANIFESTS).toHaveLength(10);
     expect(new Set(LINK_PROVIDER_MANIFESTS.map((provider) => provider.id)).size).toBe(10);

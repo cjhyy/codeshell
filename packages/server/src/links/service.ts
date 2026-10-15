@@ -1271,7 +1271,6 @@ export function createLinkService(options: LinkServiceOptions = {}) {
       !REMOTE_LINK_ADAPTERS.some((adapter) => adapter.id === input.providerId) ||
       (input.resourceUrl !== undefined &&
         (input.providerId !== "figma" ||
-          !input.connectionId ||
           typeof input.resourceUrl !== "string" ||
           !input.resourceUrl))
     )
@@ -1299,13 +1298,12 @@ export function createLinkService(options: LinkServiceOptions = {}) {
         throw new LinkServiceError(409, "conflict");
     }
     const prepared = { id, expected, input: { ...input, label: string(input.label) } };
-    if (input.resourceUrl !== undefined && !expected)
-      throw new LinkServiceError(400, "invalid_request");
     let attempt: RemoteLinkAttempt;
     try {
       let resourceFiles: string[] | undefined;
       if (input.providerId === "figma") {
-        // Recover the old whitelist from Host custody. Browser input can only suggest one new file.
+        // A first connection may select the pasted file in the same OAuth consent.
+        // Existing files still come exclusively from Host custody; input suggests one new file.
         const groups = expected?.meta?.linkResourceGroups;
         if (expected && (!groups || groups.length !== 1 || groups[0]?.id !== "files"))
           throw new Error("Invalid saved Figma resources");
@@ -1423,6 +1421,27 @@ export function createLinkService(options: LinkServiceOptions = {}) {
           if (matches.length > 1) throw new LinkServiceError(409, "conflict");
           if (matches.length === 1) {
             const expected = matches[0]!;
+            if (credential!.meta?.linkProvider === "figma") {
+              const oldGroups = expected.meta?.linkResourceGroups;
+              const newGroups = credential!.meta?.linkResourceGroups;
+              // A concurrent first connection never reviewed this saved grant.
+              // Reuse only when the newly minted authority already covers it;
+              // a local union cannot expand the remote token's file whitelist.
+              if (
+                expected.meta?.linkAccountId !== credential!.meta?.linkAccountId ||
+                oldGroups?.length !== 1 ||
+                oldGroups[0]?.id !== "files" ||
+                newGroups?.length !== 1 ||
+                newGroups[0]?.id !== "files" ||
+                oldGroups[0].items.some(
+                  (item) => !newGroups[0].items.some((next) => next.id === item.id),
+                ) ||
+                expected.meta?.linkCapabilityIds?.some(
+                  (id) => !credential!.meta?.linkCapabilityIds?.includes(id),
+                )
+              )
+                throw new LinkServiceError(409, "conflict");
+            }
             prepared = { ...prepared, id: expected.id, expected };
             credential = { ...credential!, id: expected.id, label: expected.label };
           }

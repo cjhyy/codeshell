@@ -6,6 +6,12 @@ import {
   normalizeSlackSourceResult,
 } from "./source-reads.js";
 import { githubIssueStateParameters } from "./github-issue-state.js";
+import {
+  FIGMA_ACTIONS,
+  figmaActionParameters,
+  normalizeFigmaActionResult,
+  parseFigmaFileInput,
+} from "./figma.js";
 import { asRecord, intParam, pathParam, pathSegmentParam, pick, stringParam } from "./http.js";
 
 /** Executable authority is reviewed Host code; a discovery document cannot extend this list. */
@@ -53,7 +59,7 @@ export const REMOTE_LINK_PROVIDER_ADAPTERS = [
   { id: "linear", name: "Linear", group: "teams", actions: ["list_issues", "list_teams"] },
   { id: "todoist", name: "Todoist", group: "projects", actions: ["list_projects", "list_tasks"] },
   { id: "airtable", name: "Airtable", group: "bases", actions: ["list_bases", "list_tables"] },
-  { id: "figma", name: "Figma", group: "files", actions: ["get_file", "get_comments"] },
+  { id: "figma", name: "Figma", group: "files", actions: FIGMA_ACTIONS },
 ] as const;
 
 export type RemoteLinkProviderId = (typeof REMOTE_LINK_PROVIDER_ADAPTERS)[number]["id"];
@@ -71,21 +77,7 @@ export class RemoteLinkResourceNotGrantedError extends Error {
 }
 
 export function normalizeRemoteFigmaFileInput(value: unknown): string {
-  if (typeof value !== "string" || !value || value.length > 1_000 || /[\x00-\x20\x7f]/.test(value))
-    throw new Error("Invalid Figma file URL");
-  let key = value;
-  if (value.startsWith("https://")) {
-    const url = new URL(value);
-    if (
-      !["figma.com", "www.figma.com"].includes(url.hostname) ||
-      url.username ||
-      url.password ||
-      url.port
-    )
-      throw new Error("Invalid Figma file URL");
-    key = url.pathname.match(/^\/(?:file|design|board)\/([^/]+)(?:\/|$)/)?.[1] ?? "";
-  }
-  return normalizeRemoteLinkResourceId("figma", key);
+  return normalizeRemoteLinkResourceId("figma", parseFigmaFileInput(value).fileKey);
 }
 
 export const LEGACY_GITHUB_ACTIONS = ["list_repositories", "list_issues", "get_issue"] as const;
@@ -326,11 +318,8 @@ export function prepareRemoteLinkAction(
             ? "base_id"
             : undefined;
   if (providerId === "figma") {
-    assertKeys(params, ["file_url_or_key", "file_key"]);
-    const raw =
-      stringParam(params, "file_url_or_key", { maxLength: 1_000 }) ??
-      stringParam(params, "file_key", { maxLength: 200 });
-    return { file_url_or_key: requireResource(normalizeRemoteFigmaFileInput(raw)) };
+    const normalized = figmaActionParameters(action, params);
+    return { ...normalized, file_url_or_key: requireResource(normalized.file_url_or_key) };
   }
   const limitProviders = ["gitlab", "vercel", "slack", "linear", "todoist"];
   const supportsLimit =
@@ -510,17 +499,9 @@ export function normalizeRemoteLinkActionResult(
   }
   if (!record) throw new Error("Invalid remote Link result");
   if (providerId === "figma") {
-    if (action === "get_file")
-      return pick(record, ["name", "lastModified", "version", "role", "pages", "truncated"]);
-    if (!Array.isArray(record.comments)) throw new Error("Invalid remote Link result");
-    return {
-      ...(typeof record.truncated === "boolean" ? { truncated: record.truncated } : {}),
-      comments: record.comments
-        .slice(0, 100)
-        .map((value) =>
-          pick(value, ["id", "message", "created_at", "resolved_at", "user", "client_meta"]),
-        ),
-    };
+    const normalized = figmaActionParameters(action, params);
+    if (!permitted(normalized.file_url_or_key)) throw new Error("Unauthorized Figma file");
+    return normalizeFigmaActionResult(action, record, normalized);
   }
   if (providerId === "notion" && action === "get_page") {
     if (!permitted(record.id)) throw new Error("Remote Link returned an unauthorized page");

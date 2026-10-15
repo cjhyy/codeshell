@@ -1,4 +1,5 @@
 import { githubStarActionIds } from "./github-star.js";
+import { FIGMA_NEW_ACTIONS } from "./figma.js";
 import { getLocalLinkProvider } from "./providers.js";
 import type { CredentialMetadata } from "../credentials/access.js";
 
@@ -43,6 +44,7 @@ export function allowsLinkAction(
   const ids = credential.meta?.linkCapabilityIds;
   if (
     credential.meta?.linkExecutionRuntime === "server" ||
+    (provider === "figma" && (FIGMA_NEW_ACTIONS as readonly string[]).includes(action)) ||
     (provider === "github" &&
       (action === "update_issue" || (githubStarActionIds as readonly string[]).includes(action)))
   )

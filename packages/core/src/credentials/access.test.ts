@@ -4,11 +4,17 @@ import { createIpcCredentialAccess, type CredentialSnapshot } from "./access.js"
 import { RemoteLinkError } from "../links/remote.js";
 
 describe("createIpcCredentialAccess", () => {
-  test("Figma file authorization instructions survive IPC only for the bound remote action method", async () => {
+  test("reviewed Figma recovery codes survive IPC only for the bound remote action method", async () => {
     for (const [method, code] of [
       ["remote", "file_not_authorized"],
+      ["remote", "unsupported_file_type"],
+      ["remote", "response_too_large"],
+      ["remote", "content_unavailable"],
       ["remote", "unreviewed_code"],
       ["resolve", "file_not_authorized"],
+      ["resolve", "unsupported_file_type"],
+      ["resolve", "response_too_large"],
+      ["resolve", "content_unavailable"],
     ]) {
       const [main, worker] = createInProcessTransport();
       const access = createIpcCredentialAccess(worker);
@@ -40,9 +46,16 @@ describe("createIpcCredentialAccess", () => {
       } catch (cause) {
         error = cause;
       }
-      if (method === "remote" && code === "file_not_authorized") {
+      if (
+        method === "remote" &&
+        (code === "file_not_authorized" ||
+          code === "unsupported_file_type" ||
+          code === "response_too_large" ||
+          code === "content_unavailable")
+      ) {
         expect(error).toBeInstanceOf(RemoteLinkError);
-        expect((error as Error).message).toContain("添加文件");
+        expect((error as RemoteLinkError).code).toBe(code);
+        expect((error as Error).message).toBe(new RemoteLinkError(code).message);
         expect((error as Error).message).not.toContain("Provider-supplied");
       } else {
         expect(error).not.toBeInstanceOf(RemoteLinkError);

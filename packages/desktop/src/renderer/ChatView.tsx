@@ -73,7 +73,11 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import type { MarkdownRootStatus } from "./Markdown";
 import { ChatLinkResources, type ChatLinkReadHandler } from "./chat/ChatLinkResources";
-import { composerLinkResources, type ChatLinkResourceIntent } from "./chat/linkResourceIntents";
+import {
+  chatLinkReadOutcome,
+  composerLinkResources,
+  type ChatLinkResourceIntent,
+} from "./chat/linkResourceIntents";
 import { isDraftBucket } from "./transcripts";
 
 interface Props {
@@ -457,6 +461,22 @@ export function ChatView({
   const [localFilePaths, setLocalFilePaths] = useState<string[]>([]);
   const toast = useToast();
   const [linkIntents, setLinkIntents] = useState<ChatLinkResourceIntent[]>([]);
+  const sameLinkIntent = (left: ChatLinkResourceIntent, right: ChatLinkResourceIntent) =>
+    left.bucket === right.bucket &&
+    left.cwd === right.cwd &&
+    left.clientMessageId === right.clientMessageId &&
+    left.resourceId === right.resourceId;
+  const consumeLinkIntent = (consumed: ChatLinkResourceIntent) =>
+    setLinkIntents((previous) => previous.filter((intent) => !sameLinkIntent(intent, consumed)));
+  const setLinkResumeConnection = (
+    target: ChatLinkResourceIntent,
+    resumeConnection: ChatLinkResourceIntent["resumeConnection"],
+  ) =>
+    setLinkIntents((previous) =>
+      previous.map((intent) =>
+        sameLinkIntent(intent, target) ? { ...intent, resumeConnection } : intent,
+      ),
+    );
   const rememberLinkSubmission = (text: string) => {
     if (variant !== "main" || !sendBucket || !onReadLinkResource) return {};
     const resources = composerLinkResources(text);
@@ -1404,10 +1424,29 @@ export function ChatView({
         />
       </div>
     ) : null;
+  const linkReadOutcomes = useMemo(
+    () =>
+      new Map(
+        linkIntents
+          .filter((intent) => intent.bucket === sendBucket && intent.cwd === conversationRoot)
+          .map((intent) => [intent, chatLinkReadOutcome(intent, messages)]),
+      ),
+    [linkIntents, messages, sendBucket, conversationRoot],
+  );
+  useEffect(() => {
+    const consumed = new Set(
+      [...linkReadOutcomes]
+        .filter(([, outcome]) => outcome === "succeeded")
+        .map(([intent]) => intent),
+    );
+    if (consumed.size)
+      setLinkIntents((previous) => previous.filter((intent) => !consumed.has(intent)));
+  }, [linkReadOutcomes]);
   const visibleLinkIntents = linkIntents.filter(
     (intent) =>
       intent.bucket === sendBucket &&
       intent.cwd === conversationRoot &&
+      linkReadOutcomes.get(intent) !== "succeeded" &&
       messages.some(
         (message) =>
           message.kind === "user" &&
@@ -1423,6 +1462,10 @@ export function ChatView({
         intents={visibleLinkIntents}
         busy={busy || compacting}
         onRead={onReadLinkResource}
+        onConsumed={consumeLinkIntent}
+        onResumeConnectionChange={setLinkResumeConnection}
+        readFailed={(intent) => linkReadOutcomes.get(intent) === "failed"}
+        readBusy={(intent) => linkReadOutcomes.get(intent) === "in-progress"}
       />
     ) : null;
 

@@ -43,8 +43,8 @@ if (process.env.CODESHELL_FIGMA_CHAT_FIXTURE === "1") {
       ]);
       const output = `${stdout}\n${stderr}`;
       if (exitCode !== 0) throw new Error(output.trim());
-      expect(assertBunTestCompletion(report)).toEqual({ tests: 16, skipped: 0 });
-      expect(output).toMatch(/\n\s*16 pass/);
+      expect(assertBunTestCompletion(report)).toEqual({ tests: 30, skipped: 0 });
+      expect(output).toMatch(/\n\s*30 pass/);
       expect(output).toMatch(/\n\s*0 fail/);
     } finally {
       rmSync(directory, { recursive: true, force: true });

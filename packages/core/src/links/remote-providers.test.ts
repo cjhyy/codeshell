@@ -153,7 +153,10 @@ function params(provider: RemoteLinkProviderId, action: string): Record<string, 
       : { query: "fixture" };
   if (provider === "airtable" && action === "list_tables") return { base_id: resources.airtable };
   if (provider === "figma")
-    return { file_url_or_key: `https://www.figma.com/design/${resources.figma}/Fixture` };
+    return {
+      file_url_or_key: `https://www.figma.com/design/${resources.figma}/Fixture`,
+      ...(["get_nodes", "get_images"].includes(action) ? { ids: ["1:2"] } : {}),
+    };
   if (provider === "vercel") return { team_id: "team_installation", limit: 10 };
   return ["gitlab", "slack", "linear", "todoist"].includes(provider) ? { limit: 10 } : {};
 }
@@ -282,9 +285,29 @@ function result(provider: RemoteLinkProviderId, action: string, body: any): unkn
     return action === "list_bases"
       ? { bases: [{ id: "appAllowed123" }, { id: "appOther" }], offset: "next" }
       : { tables: [{ id: "tbl1", fields: [] }] };
-  return action === "get_file"
-    ? { name: "Fixture", version: "1", pages: [{ id: "0:1", name: "Page", type: "CANVAS" }] }
-    : { comments: [{ id: "1", message: "Hello" }] };
+  if (action === "get_file")
+    return {
+      name: "Fixture",
+      version: "1",
+      document: {
+        id: "0:0",
+        type: "DOCUMENT",
+        children: [{ id: "0:1", name: "Page", type: "CANVAS" }],
+      },
+    };
+  if (action === "get_nodes")
+    return {
+      name: "Fixture",
+      nodes: { "1:2": { document: { id: "1:2", type: "TEXT", characters: "Full text" } } },
+    };
+  if (action === "get_images") return { images: { "1:2": "https://example.test/render.png" } };
+  if (action === "get_image_fills")
+    return { meta: { images: { fill: "https://example.test/fill.png" } } };
+  return {
+    comments: [
+      { id: "1", message: "Hello", parent_id: "0", order_id: "1", file_key: resources.figma },
+    ],
+  };
 }
 async function fixture(
   providerId: RemoteLinkProviderId,
@@ -414,9 +437,15 @@ for (const adapter of REMOTE_LINK_PROVIDER_ADAPTERS) {
     for (const action of adapter.actions) {
       const output = await f.execute(action);
       expect(output).toBeObject();
+      if (adapter.id === "figma" && action === "get_comments")
+        expect(output).toMatchObject({
+          comments: [{ parent_id: "0", order_id: "1", file_key: resources.figma }],
+        });
       const lists = Object.values(output as Record<string, unknown>).filter(Array.isArray);
       for (const list of lists) expect(list.length).toBe(1);
       expect(f.requests.at(-1)?.path).toEndWith(`/actions/${action}`);
+      if (adapter.id === "figma" && action === "get_file")
+        expect(f.requests.at(-1)?.body).toEqual({ file_url_or_key: resources.figma, depth: 2 });
     }
     expect(f.requests.filter((request) => request.path.includes("/actions/"))).toHaveLength(
       adapter.actions.length,
@@ -488,6 +517,89 @@ test("Figma account-only grants are connected but cannot read any file or refres
   }
   expect(f.requests).toHaveLength(before);
   expect(f.store.resolve("selected-link")?.meta?.linkRemoteState).toBe("connected");
+});
+
+test("saved get_file grants permit explicit full reads without gaining node or image actions", async () => {
+  const f = await fixture("figma", { scopes: ["figma:get_file", "figma:get_comments"] });
+  const credential = await f.connect();
+  expect(credential.meta?.linkCapabilityIds).toEqual(["figma.get_file", "figma.get_comments"]);
+  const document = {
+    id: "0:0",
+    type: "DOCUMENT",
+    children: [
+      {
+        id: "0:1",
+        type: "CANVAS",
+        children: [{ id: "1:2", type: "TEXT", characters: "Design text", style: { fontSize: 24 } }],
+      },
+    ],
+  };
+  f.setResult({
+    name: "Full file",
+    document,
+    components: { "3:4": { name: "Button" } },
+    styles: { "5:6": { name: "Heading" } },
+    secret: "omit",
+  });
+  expect(await f.execute("get_file", { file_key: resources.figma, full: true })).toMatchObject({
+    document,
+    components: { "3:4": { name: "Button" } },
+    styles: { "5:6": { name: "Heading" } },
+  });
+  expect(f.requests.at(-1)?.body).toEqual({ file_url_or_key: resources.figma, full: true });
+  const before = f.requests.length;
+  for (const action of ["get_nodes", "get_images", "get_image_fills"])
+    await expect(f.execute(action)).rejects.toMatchObject({ code: "forbidden" });
+  expect(f.requests).toHaveLength(before);
+  expect(f.store.resolve("selected-link")?.meta?.linkCapabilityIds).toEqual([
+    "figma.get_file",
+    "figma.get_comments",
+  ]);
+});
+
+test("Figma get_file fails explicitly when the service returns only a pages summary", async () => {
+  const f = await fixture("figma", { scopes: ["figma:get_file", "figma:get_comments"] });
+  await f.connect();
+  f.setResult({ name: "Summary", pages: [{ id: "0:1", name: "Page", type: "CANVAS" }] });
+  await expect(f.execute("get_file")).rejects.toMatchObject({ code: "content_unavailable" });
+  expect(f.requests.filter((request) => request.path.includes("/actions/"))).toHaveLength(1);
+});
+
+test("remote Figma full content has a larger bounded budget and a recoverable overflow", async () => {
+  const f = await fixture("figma");
+  await f.connect();
+  const content = "x".repeat(3 * 1024 * 1024);
+  f.setResult({
+    name: "Large file",
+    document: { id: "0:0", type: "DOCUMENT", description: content },
+  });
+  expect(await f.execute("get_file", { file_key: resources.figma, full: true })).toHaveProperty(
+    "document.description",
+    content,
+  );
+  f.setResult({
+    name: "Too large",
+    document: { id: "0:0", type: "DOCUMENT", description: "x".repeat(8 * 1024 * 1024) },
+  });
+  await expect(f.execute("get_file")).rejects.toMatchObject({ code: "response_too_large" });
+  await expect(f.execute("get_file")).rejects.toThrow("get_nodes");
+  expect(f.store.resolve("selected-link")?.meta?.linkRemoteState).toBe("connected");
+  f.setStatus(413);
+  await expect(f.execute("get_file")).rejects.toMatchObject({ code: "response_too_large" });
+});
+
+test("remote Figma Make links fail explicitly before refresh or provider HTTP", async () => {
+  const f = await fixture("figma");
+  await f.connect();
+  const before = f.requests.length;
+  await expect(
+    f.execute(
+      "get_file",
+      { file_url_or_key: "https://www.figma.com/make/MakeOne/Prototype" },
+      { now: () => Date.now() + 1_000_000 },
+    ),
+  ).rejects.toMatchObject({ code: "unsupported_file_type" });
+  expect(f.requests).toHaveLength(before);
 });
 
 test("Figma selection is canonical, bounded and cannot silently widen or lose requested file access", async () => {
@@ -837,7 +949,7 @@ test("GitLab, Figma and Linear distinguish personal-token headers from OAuth Bea
       );
     }
     const provider = getLocalLinkProvider(providerId)!;
-    expect(provider.actions.length).toBe(2);
+    expect(provider.actions.length).toBe(providerId === "figma" ? 5 : 2);
   }
 });
 

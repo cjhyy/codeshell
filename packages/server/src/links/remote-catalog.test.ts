@@ -101,7 +101,14 @@ function allProviders() {
 
 test("all ten reviewed providers retain their own declared action/scope intersection", async () => {
   const providers = allProviders();
-  expect(providers.flatMap((provider) => provider.actions)).toHaveLength(35);
+  expect(providers.flatMap((provider) => provider.actions)).toHaveLength(38);
+  expect(providers.find((provider) => provider.id === "figma")?.actions).toEqual([
+    "get_file",
+    "get_comments",
+    "get_nodes",
+    "get_images",
+    "get_image_fills",
+  ]);
   expect(await catalog({ version: 1, providers }, 200, true)).toEqual(
     REMOTE_LINK_ADAPTERS.map(({ id, actions, scopes }) => ({ id, actions: [...actions], scopes })),
   );

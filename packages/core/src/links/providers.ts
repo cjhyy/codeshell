@@ -8,9 +8,15 @@ import {
 import { githubIssueStateParameters } from "./github-issue-state.js";
 import { githubRepositoryParameters, githubSetStarredParameters } from "./github-star.js";
 import {
+  FIGMA_RESPONSE_BYTES,
+  FIGMA_RESPONSE_TOO_LARGE,
+  figmaActionEndpoint,
+  figmaActionParameters,
+  normalizeFigmaActionResult,
+} from "./figma.js";
+import {
   asArray,
   asRecord,
-  assertPathSegment,
   firstString,
   intParam,
   linkRequestJson,
@@ -540,62 +546,48 @@ const figma: LocalLinkProviderSpec = {
   actions: [
     action(
       "get_file",
-      "读取文件摘要",
-      "用 file_url_or_key 读取 Figma 文件名称、版本和第一页结构摘要。",
-      async (ctx) => {
-        const fileKey = figmaFileKey(ctx.params);
-        const url = new URL(`https://api.figma.com/v1/files/${encodeURIComponent(fileKey)}`);
-        url.searchParams.set("depth", "1");
-        const data = asRecord(await request(ctx, url, { headers: figmaHeaders(ctx) })) ?? {};
-        const document = asRecord(data.document);
-        return {
-          name: data.name,
-          lastModified: data.lastModified,
-          version: data.version,
-          role: data.role,
-          pages: compactList(document?.children, ["id", "name", "type"], 100),
-        };
-      },
+      "读取文件结构或内容",
+      "用 file_url_or_key 先读取页面与顶层节点结构，默认 depth=2；有需要再用 get_nodes 按 ids 分批读取指定子树，只有明确需要完整文件时设置 full:true（不能同时指定depth）。可选 depth (1..100)、ids/node_ids (逗号字符串或数组，最多50)、version、geometry=paths、plugin_data、branch_data；节点URL的node-id会限制ids。设计字段完整保留在请求范围内，requestedDepth标明深度限制。复刻时用 get_images 渲染图和 get_image_fills 素材。远端token不由UseCredential导出，继续用LinkAction；缺token值不代表没权限。没有document的响应是读取失败，不可把pages当成设计全文。",
+      (ctx) => executeFigmaAction("get_file", ctx),
     ),
-    action("get_comments", "读取评论", "用 file_url_or_key 读取 Figma 文件评论。", async (ctx) => {
-      const fileKey = figmaFileKey(ctx.params);
-      const data =
-        asRecord(
-          await request(
-            ctx,
-            `https://api.figma.com/v1/files/${encodeURIComponent(fileKey)}/comments`,
-            { headers: figmaHeaders(ctx) },
-          ),
-        ) ?? {};
-      return {
-        comments: compactList(
-          data.comments,
-          ["id", "message", "created_at", "resolved_at", "user", "client_meta"],
-          100,
-        ),
-      };
-    }),
+    action(
+      "get_nodes",
+      "读取节点内容",
+      "用 file_url_or_key 与 ids/node_ids (最多50，或节点 URL 的 node-id) 读取完整节点子树，包括文字、布局、样式。可选 depth (1..100)、version、geometry=paths、plugin_data；depth 相对所选节点。",
+      (ctx) => executeFigmaAction("get_nodes", ctx),
+    ),
+    action(
+      "get_images",
+      "渲染节点图片",
+      "用 file_url_or_key 与 ids/node_ids (最多50，或节点 URL 的 node-id) 获取渲染图片 URL。可选 scale (0.01..4)、format (png/jpg/svg/pdf)、version、svg_outline_text、svg_include_id、svg_include_node_id、svg_simplify_stroke、contents_only、use_absolute_bounds (布尔)。图片 URL 有效期有限，null 表示对应节点未能渲染。",
+      (ctx) => executeFigmaAction("get_images", ctx),
+    ),
+    action(
+      "get_image_fills",
+      "读取填充图片",
+      "用 file_url_or_key 获取当前文件 imageRef 到图片 URL 的映射，用于还原 IMAGE 填充；URL 有效期有限。",
+      (ctx) => executeFigmaAction("get_image_fills", ctx),
+    ),
+    action("get_comments", "读取评论", "用 file_url_or_key 读取 Figma 文件评论。", (ctx) =>
+      executeFigmaAction("get_comments", ctx),
+    ),
   ],
 };
 
-function figmaFileKey(params: Record<string, unknown>): string {
-  const value =
-    stringParam(params, "file_url_or_key", { maxLength: 1_000 }) ??
-    stringParam(params, "file_key", { maxLength: 200 });
-  if (!value) throw new Error("Missing required Link Action parameter: file_url_or_key");
-  if (!/^https?:\/\//i.test(value)) return assertPathSegment(value, "file_url_or_key");
-  let url: URL;
-  try {
-    url = new URL(value);
-  } catch {
-    throw new Error("file_url_or_key must be a Figma URL or file key");
-  }
-  if (url.hostname !== "figma.com" && !url.hostname.endsWith(".figma.com")) {
-    throw new Error("file_url_or_key must use figma.com");
-  }
-  const match = url.pathname.match(/\/(?:file|design|board)\/([^/]+)/);
-  if (!match?.[1]) throw new Error("Could not find a Figma file key in the URL");
-  return assertPathSegment(decodeURIComponent(match[1]), "file_url_or_key");
+async function executeFigmaAction(
+  actionId: string,
+  context: LocalLinkActionContext,
+): Promise<unknown> {
+  const params = figmaActionParameters(actionId, context.params);
+  const data = await linkRequestJson({
+    url: figmaActionEndpoint(actionId, params),
+    headers: figmaHeaders(context),
+    signal: context.signal,
+    fetchImpl: context.fetchImpl,
+    maxResponseBytes: FIGMA_RESPONSE_BYTES,
+    responseTooLargeMessage: FIGMA_RESPONSE_TOO_LARGE,
+  });
+  return normalizeFigmaActionResult(actionId, data, params);
 }
 
 const notionHeaders = (token: string) => ({

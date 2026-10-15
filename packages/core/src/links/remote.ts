@@ -2,8 +2,14 @@ import { createHash, randomBytes } from "node:crypto";
 import { CredentialStore } from "../credentials/store.js";
 import type { Credential } from "../credentials/types.js";
 import { parseOAuthCredentialSecret } from "../credentials/oauth.js";
-import { asRecord, asArray } from "./http.js";
+import { asRecord, asArray, LinkProviderResponseTooLargeError } from "./http.js";
 import { requestOnce } from "./request-once.js";
+import {
+  FIGMA_RESPONSE_BYTES,
+  FIGMA_RESPONSE_TOO_LARGE,
+  FigmaContentUnavailableError,
+  UnsupportedFigmaFileTypeError,
+} from "./figma.js";
 import {
   getRemoteLinkProviderAdapter,
   LEGACY_GITHUB_ACTIONS,
@@ -28,6 +34,9 @@ export class RemoteLinkError extends Error {
       | "changed"
       | "forbidden"
       | "file_not_authorized"
+      | "unsupported_file_type"
+      | "response_too_large"
+      | "content_unavailable"
       | "busy",
   ) {
     super(
@@ -39,6 +48,9 @@ export class RemoteLinkError extends Error {
         forbidden: "这个 Link 授权不允许该操作或资源。",
         file_not_authorized:
           "请先在 Figma 连接卡片中点击“添加文件”，粘贴文件链接并确认授权后再读取。",
+        unsupported_file_type: new UnsupportedFigmaFileTypeError().message,
+        response_too_large: FIGMA_RESPONSE_TOO_LARGE,
+        content_unavailable: new FigmaContentUnavailableError().message,
         busy: "Link 正在刷新授权；若重启后仍未完成，请重新连接。",
       }[code],
     );
@@ -151,7 +163,9 @@ export function beginRemoteLinkAuthorization(
       resourceFiles = [...new Set(capabilities.resourceFiles.map(normalizeRemoteFigmaFileInput))];
       if (resourceFiles.length > 100 || JSON.stringify(resourceFiles).length > 20_000)
         throw new Error("Too many Figma files");
-    } catch {
+    } catch (error) {
+      if (error instanceof UnsupportedFigmaFileTypeError)
+        throw new RemoteLinkError("unsupported_file_type");
       throw new RemoteLinkError("invalid_request");
     }
     url.searchParams.set("resource_mode", resourceFiles.length ? "select" : "deferred");
@@ -174,6 +188,7 @@ async function request(
   issuer: string,
   path: string,
   init: RequestInit,
+  maxResponseBytes = 2 * 1024 * 1024,
 ): Promise<Record<string, unknown>> {
   try {
     const response = await requestOnce(new URL(path, origin(issuer)), {
@@ -185,6 +200,8 @@ async function request(
     });
     if (!response.ok) {
       await response.body?.cancel();
+      if (maxResponseBytes === FIGMA_RESPONSE_BYTES && response.status === 413)
+        throw new RemoteLinkError("response_too_large");
       throw new RemoteLinkError(
         response.status === 401 || response.status === 400
           ? "reconnect"
@@ -202,9 +219,11 @@ async function request(
         const { done, value } = await reader.read();
         if (done) break;
         size += value.byteLength;
-        if (size > 2 * 1024 * 1024) {
+        if (size > maxResponseBytes) {
           await reader.cancel();
-          throw new RemoteLinkError("unavailable");
+          throw new RemoteLinkError(
+            maxResponseBytes === FIGMA_RESPONSE_BYTES ? "response_too_large" : "unavailable",
+          );
         }
         chunks.push(value);
       }
@@ -529,6 +548,8 @@ export async function executeRemoteLinkAction(
       return prepareRemoteLinkAction(providerId, input.action, input.params, resources(credential));
     } catch (error) {
       if (error instanceof RemoteLinkError) throw error;
+      if (error instanceof UnsupportedFigmaFileTypeError)
+        throw new RemoteLinkError("unsupported_file_type");
       if (error instanceof RemoteLinkResourceNotGrantedError)
         throw new RemoteLinkError("file_not_authorized");
       throw new RemoteLinkError("forbidden");
@@ -670,6 +691,7 @@ export async function executeRemoteLinkAction(
         body: JSON.stringify(body),
         signal: options.signal,
       },
+      providerId === "figma" ? FIGMA_RESPONSE_BYTES : undefined,
     );
   } catch (error) {
     if (error instanceof RemoteLinkError && error.code === "reconnect") {
@@ -699,7 +721,11 @@ export async function executeRemoteLinkAction(
       input.params,
       resources(latest),
     );
-  } catch {
+  } catch (error) {
+    if (error instanceof FigmaContentUnavailableError)
+      throw new RemoteLinkError("content_unavailable");
+    if (error instanceof LinkProviderResponseTooLargeError)
+      throw new RemoteLinkError("response_too_large");
     throw new RemoteLinkError("unavailable");
   }
 }

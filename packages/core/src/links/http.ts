@@ -25,6 +25,10 @@ export class LinkProviderHttpError extends Error {
   }
 }
 
+export class LinkProviderResponseTooLargeError extends Error {
+  readonly code = "response_too_large";
+}
+
 export interface LinkHttpRequest {
   url: URL;
   method?: "GET" | "POST" | "PUT" | "DELETE" | "PATCH";
@@ -32,6 +36,9 @@ export interface LinkHttpRequest {
   body?: unknown;
   signal?: AbortSignal;
   fetchImpl?: typeof fetch;
+  /** Reviewed provider adapters may opt into a bounded larger JSON document. */
+  maxResponseBytes?: number;
+  responseTooLargeMessage?: string;
 }
 
 async function linkResponse(request: LinkHttpRequest): Promise<Response> {
@@ -64,7 +71,7 @@ export async function linkRequestStatus(
   accepted: readonly number[],
 ): Promise<number> {
   const response = await linkResponse(request);
-  const text = await readResponseText(response);
+  const text = await readResponseText(response, request);
   if (accepted.includes(response.status)) return response.status;
   let data: unknown;
   try {
@@ -77,7 +84,7 @@ export async function linkRequestStatus(
 
 export async function linkRequestJson(request: LinkHttpRequest): Promise<unknown> {
   const response = await linkResponse(request);
-  const text = await readResponseText(response);
+  const text = await readResponseText(response, request);
   let data: unknown;
   try {
     data = text ? JSON.parse(text) : null;
@@ -93,19 +100,23 @@ export async function linkRequestJson(request: LinkHttpRequest): Promise<unknown
   return data;
 }
 
-async function readResponseText(response: Response): Promise<string> {
+async function readResponseText(response: Response, request: LinkHttpRequest): Promise<string> {
   if (!response.body) return "";
   const reader = response.body.getReader();
   const chunks: Uint8Array[] = [];
   let bytes = 0;
+  const maxResponseBytes = request.maxResponseBytes ?? MAX_RESPONSE_BYTES;
   try {
     while (true) {
       const { done, value } = await reader.read();
       if (done) break;
       bytes += value.byteLength;
-      if (bytes > MAX_RESPONSE_BYTES) {
+      if (bytes > maxResponseBytes) {
         await reader.cancel();
-        throw new Error(`Link provider response exceeded ${MAX_RESPONSE_BYTES} bytes`);
+        throw new LinkProviderResponseTooLargeError(
+          request.responseTooLargeMessage ??
+            `Link provider response exceeded ${maxResponseBytes} bytes`,
+        );
       }
       chunks.push(value);
     }
