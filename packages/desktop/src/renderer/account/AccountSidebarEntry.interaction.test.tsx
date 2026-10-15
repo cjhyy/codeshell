@@ -4,8 +4,17 @@ import { fileURLToPath } from "node:url";
 const scenarios = {
   "menu-preview": "shows account actions without mounting a form or contacting the service",
   "menu-logout": "signs out directly from the account menu and restores focus",
+  "menu-logout-unconfirmed": "explains unconfirmed revocation after signing out from the menu",
+  "menu-logout-stale": "ignores a late menu revocation notice after a new account signs in",
   "menu-logout-pending": "disables pending sign-out and prevents duplicate menu requests",
   "menu-logout-failure": "explains sign-out failures and allows another attempt",
+  "settings-logout-unconfirmed":
+    "keeps a revocation notice after signing out from account settings",
+  "settings-logout-stale": "ignores a late settings revocation notice after a new account signs in",
+  "storage-logout-unconfirmed":
+    "explains unconfirmed revocation after clearing unavailable account storage",
+  "settings-logout-failure":
+    "preserves settings account state on sign-out failure and allows retry",
   "profile-read-pending": "gates updates while loading and compares edits to the latest profile",
   "profile-name-only": "preserves a username changed remotely when saving only the nickname",
   "profile-username-only": "preserves a nickname changed remotely when saving only the username",

@@ -119,6 +119,7 @@ export const settingsNs = {
         linksRevokeUnconfirmed: "尚未确认撤销结果，请重新加载核实；相同撤销可重试。",
         linksConfirmedReloadFailed: "撤销已确认，但无法刷新列表；请稍后重新加载。",
         logout: "退出云账号",
+        logoutUnconfirmed: "本机已退出；服务端未确认撤销，请联网后在账号会话管理中撤销此设备。",
         cancel: "取消登录",
         failed: "云账号操作未完成。",
         "state_signed-out": "本地使用中，尚未登录云账号",
@@ -1282,6 +1283,8 @@ export const settingsNs = {
         linksConfirmedReloadFailed:
           "Revocation was confirmed, but the list could not be refreshed. Reload later.",
         logout: "Sign out",
+        logoutUnconfirmed:
+          "Signed out on this device. Server revocation is unconfirmed; reconnect and revoke this device in account session management.",
         cancel: "Cancel sign-in",
         failed: "Cloud account operation failed.",
         "state_signed-out": "Using locally, not signed in",

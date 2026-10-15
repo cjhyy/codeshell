@@ -22,12 +22,14 @@ export function CloudAccountSettings({ embedded = false }: { embedded?: boolean 
   const [mode, setMode] = useState<"login" | "register">("login");
   const [connectGitHub, setConnectGitHub] = useState(true);
   const [busy, setBusy] = useState(false);
+  const [logoutUnconfirmed, setLogoutUnconfirmed] = useState(false);
   const busyRef = useRef(false);
   const statusRevisionRef = useRef(0);
   const accountIdentityRef = useRef("");
   const authorityGenerationRef = useRef(0);
   const [authorityGeneration, setAuthorityGeneration] = useState(0);
   const applyStatus = (next: CloudAccountStatus) => {
+    if (next.account) setLogoutUnconfirmed(false);
     const identity =
       next.state === "signed-in" && next.account ? `${next.origin}\n${next.account.id}` : "";
     if (accountIdentityRef.current !== identity) {
@@ -134,6 +136,22 @@ export function CloudAccountSettings({ embedded = false }: { embedded?: boolean 
     }
   };
   const pending = busy || status.state === "signing-in" || githubConnectionPending;
+  const logout = () => {
+    const generation = authorityGenerationRef.current;
+    return act(async () => {
+      const result = await window.codeshell.cloudAccount.logout();
+      // A result for the previous session must not describe a newer signed-in
+      // account as signed out while another window has already authenticated.
+      if (accountIdentityRef.current && generation !== authorityGenerationRef.current) return;
+      setLogoutUnconfirmed(result.revocation === "unconfirmed");
+      if (result.revocation === "unconfirmed") {
+        toast({
+          message: t("settingsX.cloudAccount.logoutUnconfirmed"),
+          durationMs: 10_000,
+        });
+      }
+    });
+  };
   const validUsername = /^[a-z0-9][a-z0-9._-]{2,63}$/i.test(username.trim());
   const canSubmit =
     !!origin.trim() &&
@@ -189,6 +207,11 @@ export function CloudAccountSettings({ embedded = false }: { embedded?: boolean 
           {operationError}
         </p>
       )}
+      {logoutUnconfirmed && (
+        <p role="status" className="text-sm text-muted-foreground">
+          {t("settingsX.cloudAccount.logoutUnconfirmed")}
+        </p>
+      )}
       {!capabilities ? (
         <div className="space-y-2 text-sm text-muted-foreground" role="status">
           <p>
@@ -235,11 +258,7 @@ export function CloudAccountSettings({ embedded = false }: { embedded?: boolean 
           )}
           <p className="text-muted-foreground">{t("settingsX.cloudAccount.linkDescription")}</p>
           <div className="flex flex-wrap gap-2">
-            <Button
-              variant="outline"
-              disabled={pending}
-              onClick={() => void act(() => window.codeshell.cloudAccount.logout())}
-            >
+            <Button variant="outline" disabled={pending} onClick={() => void logout()}>
               {t("settingsX.cloudAccount.logout")}
             </Button>
             <Button
@@ -458,11 +477,7 @@ export function CloudAccountSettings({ embedded = false }: { embedded?: boolean 
         </Button>
       ) : null}
       {status.state === "storage-error" ? (
-        <Button
-          className="self-start"
-          variant="outline"
-          onClick={() => void act(() => window.codeshell.cloudAccount.logout())}
-        >
+        <Button className="self-start" variant="outline" onClick={() => void logout()}>
           {t("settingsX.cloudAccount.logout")}
         </Button>
       ) : null}

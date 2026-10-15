@@ -57,6 +57,7 @@ const source = `
       window.requests.logout+=1;
       await new Promise(resolve=>setTimeout(resolve,25));
       window.emitStatus({state:'signed-out'});
+      return {state:'signed-out',revocation:'confirmed'};
     },
     login:unexpected('login'),register:unexpected('register'),
     signInWithGitHub:unexpected('signInWithGitHub'),linkGitHub:unexpected('linkGitHub'),

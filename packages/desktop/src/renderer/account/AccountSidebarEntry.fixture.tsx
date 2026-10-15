@@ -7,6 +7,7 @@ import type {
   CloudAccountApi,
   CloudAccountIdentity,
   CloudAccountLogin,
+  CloudAccountLogoutResult,
   CloudAccountStatus,
 } from "../../shared/cloud-account.js";
 import { ensureMiniDom, flushMicrotasks } from "../test-utils/renderHook";
@@ -67,7 +68,9 @@ let capabilityAttempts = 0;
 const credentials: Array<{ action: string; input: CloudAccountLogin }> = [];
 const authenticationRequest = deferred<CloudAccountStatus>();
 const logoutRequest = deferred<void>();
+const logoutResultRequest = deferred<CloudAccountLogoutResult>();
 let logoutCalls = 0;
+const toastErrors: string[] = [];
 const profileRequest = deferred<CloudAccountStatus>();
 const profileCalls: Array<Parameters<CloudAccountApi["profile"]>[0]> = [];
 let remoteProfile: CloudAccountIdentity | undefined;
@@ -193,10 +196,15 @@ const api: CloudAccountApi = {
   },
   logout: async () => {
     logoutCalls += 1;
-    if (scenario === "menu-logout-failure" && logoutCalls === 1)
+    if (["menu-logout-failure", "settings-logout-failure"].includes(scenario) && logoutCalls === 1)
       throw new Error("Unable to sign out");
     if (scenario === "menu-logout-pending") await logoutRequest.promise;
+    if (scenario.endsWith("logout-stale")) return logoutResultRequest.promise;
     emit({ state: "signed-out" });
+    return {
+      state: "signed-out",
+      revocation: scenario.endsWith("logout-unconfirmed") ? "unconfirmed" : "confirmed",
+    };
   },
   onStatus: (callback) => {
     subscriptions += 1;
@@ -210,7 +218,12 @@ const api: CloudAccountApi = {
 };
 Object.defineProperty(window, "codeshell", {
   configurable: true,
-  value: { cloudAccount: api },
+  value: {
+    cloudAccount: api,
+    log: (event: string) => {
+      if (event === "ui.toast.error") toastErrors.push(event);
+    },
+  },
 });
 
 function nodes(node: Element): Element[] {
@@ -417,7 +430,7 @@ try {
     menuItem("退出云账号");
     await settleCapabilities();
     assert.equal(capabilityAttempts, 0, "A signed-in menu also uses only the local status");
-  } else if (scenario === "menu-logout") {
+  } else if (["menu-logout", "menu-logout-unconfirmed"].includes(scenario)) {
     await settle(() => emit(signedIn("menu-user")));
     await openMenu();
     await selectMenu("退出云账号");
@@ -428,6 +441,70 @@ try {
     assert.equal(capabilityAttempts, 0, "Sign-out does not discover service capabilities");
     assert.equal(document.activeElement, trigger());
     assert.notEqual(document.body.style.pointerEvents, "none");
+    if (scenario === "menu-logout-unconfirmed") {
+      assert.ok(
+        text(document.body).includes("本机已退出；服务端未确认撤销"),
+        "Local sign-out explains the outstanding device revocation",
+      );
+      assert.ok(!text(document.body).includes("Error invoking remote method"));
+      assert.equal(toastErrors.length, 0, "Unconfirmed revocation is an informative notice");
+    }
+  } else if (["settings-logout-unconfirmed", "storage-logout-unconfirmed"].includes(scenario)) {
+    await settle(() =>
+      emit(
+        scenario === "storage-logout-unconfirmed"
+          ? { state: "storage-error" }
+          : signedIn("settings-user"),
+      ),
+    );
+    await open();
+    await click(button("退出云账号"));
+    assert.equal(logoutCalls, 1);
+    assertSignedOut();
+    assert.ok(text(dialog()!).includes("本地使用中，尚未登录云账号"));
+    assert.ok(
+      nodes(dialog()!).some(
+        (node) => props(node).role === "status" && text(node).includes("服务端未确认撤销"),
+      ),
+      "Settings keep an inline revocation notice after account controls are removed",
+    );
+    await settleCapabilities();
+    assert.ok(text(dialog()!).includes("请联网后在账号会话管理中撤销此设备"));
+    assert.ok(!text(document.body).includes("Error invoking remote method"));
+    assert.equal(toastErrors.length, 0, "Unconfirmed revocation does not raise an error toast");
+  } else if (scenario === "settings-logout-failure") {
+    await settle(() => emit(signedIn("settings-user")));
+    await open();
+    await click(button("退出云账号"));
+    assertSignedIn("settings-user");
+    assert.equal(logoutCalls, 1);
+    assert.ok(text(dialog()!).includes("Unable to sign out"));
+    assert.equal(toastErrors.length, 1, "A real failure still raises an error toast");
+    assert.ok(!text(dialog()!).includes("服务端未确认撤销"));
+    await click(button("退出云账号"));
+    assert.equal(logoutCalls, 2);
+    assertSignedOut();
+  } else if (["menu-logout-stale", "settings-logout-stale"].includes(scenario)) {
+    await settle(() => emit(signedIn("previous-user")));
+    if (scenario === "menu-logout-stale") {
+      await openMenu();
+      await selectMenu("退出云账号");
+    } else {
+      await open();
+      await click(button("退出云账号"));
+    }
+    assert.equal(logoutCalls, 1);
+    await settle(() => {
+      emit({ state: "signed-out" });
+      emit(signedIn("new-user"));
+      logoutResultRequest.resolve({ state: "signed-out", revocation: "unconfirmed" });
+    });
+    assertSignedIn("new-user");
+    assert.ok(
+      !text(document.body).includes("本机已退出"),
+      "A late logout reply cannot describe a new signed-in account as signed out",
+    );
+    assert.equal(toastErrors.length, 0);
   } else if (scenario === "menu-logout-pending") {
     for (const pending of [
       { ...signedIn("menu-user"), state: "signing-in" as const },
