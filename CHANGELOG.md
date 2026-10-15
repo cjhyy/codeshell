@@ -8,6 +8,21 @@ breaking.
 
 ## [Unreleased]
 
+## [0.9.44] - 2026-10-15
+
+### Changed
+
+- Refine forwarding selected conversation turns into a new session, including
+  selection controls, progress and error states, and transferred-context details.
+
+### Fixed
+
+- Use the currently selected model's configured vision capability consistently
+  across provider requests, image input, Browser, ViewImage and MCP image results.
+- Refresh auxiliary clients when model settings change, and retain the selected
+  model identity and capability when resolving pooled connections.
+- Allow saving model capability edits without requiring unrelated probe success.
+
 ## [0.9.43] - 2026-10-15
 
 ### Added
