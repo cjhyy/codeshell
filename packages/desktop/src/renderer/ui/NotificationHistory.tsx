@@ -10,7 +10,11 @@ import { MAX_TOAST_HISTORY, type ToastHistoryEntry } from "./toastState";
 import { OPEN_NOTIFICATION_SESSION_EVENT } from "../app/notificationSessionNavigation";
 
 /** Inspect earlier notifications without leaving the active conversation. */
-export function NotificationHistory() {
+export function NotificationHistory({
+  onCloseAutoFocus,
+}: {
+  onCloseAutoFocus?: React.ComponentPropsWithoutRef<typeof PopoverContent>["onCloseAutoFocus"];
+}) {
   const notifications = useToastHistory();
   const { t, lang } = useT();
   const titleId = useId();
@@ -69,6 +73,7 @@ export function NotificationHistory() {
           </IconButton>
         </PopoverTrigger>
         <PopoverContent
+          onCloseAutoFocus={onCloseAutoFocus}
           align="end"
           aria-labelledby={titleId}
           className="w-[min(28rem,calc(100vw-1.5rem))]"
