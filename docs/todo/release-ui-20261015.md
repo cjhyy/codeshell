@@ -608,8 +608,17 @@ owned, external field, blank pointer and window blur at 320x240 and 390x360;
 each preserves exactly one DELETE and two reads. Final production/development
 fixtures each pass 34 cases, with no outside request or page error.
 The three new Web browser commands are registered in the existing isolated CI
-step. Desktop ModelPill source and its native fixture are being finalized as the
-fourth scope. Final combined gates and delivery remain pending.
+step. Desktop ModelPill is integrated as `d69833e5f` plus native-fixture follow-up
+`7293b4276`, with the 33rd Desktop browser fixture registered. Actual ChatView
+keyboard selection previously stayed at the trigger or skipped every option;
+the listbox now uses focused options, selected-state semantics and owned focus
+return. Long provider/model names wrap, and disabling selection closes an open
+picker. Source production/development and real Electron 100/200% zoom passed,
+including focused live resize, actual AX relationships and complete name reads.
+The final fixture additionally covers empty-catalog plus disabled selection in
+production/development; the prior native run covered empty and disabled states
+separately. No claim is made about OS IME or spoken assistive-technology output.
+Final combined gates and delivery remain pending.
 
 Initial audit history follows:
 

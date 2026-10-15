@@ -61,6 +61,8 @@ breaking.
   and failed saves without interrupting another control.
 - Keep Web model defaults, deletion errors and MCP edit/removal recovery visible
   in short windows, including refreshed entries that have disappeared elsewhere.
+- Support keyboard navigation and selection in the Desktop model picker, keep
+  complete names readable, and close an open picker when selection is disabled.
 
 ## [0.9.44] - 2026-10-15
 

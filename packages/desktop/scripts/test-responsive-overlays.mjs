@@ -26,6 +26,7 @@ const fixtures = [
   "digital-humans/ProfileDialogs.browser.fixture.mjs",
   "account/AccountSidebarEntry.browser.fixture.mjs",
   "chat/anchored-popovers.browser.fixture.mjs",
+  "chat/ModelPill.browser.fixture.mjs",
   "ui/ContextMenu.browser.fixture.mjs",
   "ChatView.autocomplete.browser.fixture.mjs",
   "ChatView.submit.browser.fixture.mjs",
