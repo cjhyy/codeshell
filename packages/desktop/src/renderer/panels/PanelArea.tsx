@@ -31,6 +31,7 @@ import {
 } from "./DesktopBuiltinPanelApp";
 import { PanelTabStrip } from "./PanelTabStrip";
 import { useReviewAvailability } from "./useReviewAvailability";
+import type { SubagentSelection } from "../subagents/SubagentNavigation";
 
 export interface OpenTab {
   id: string;
@@ -91,6 +92,7 @@ interface Props {
   openUrl?: { url: string; nonce: number };
   /** DriveAgent external CLI conversation to open directly. */
   openCliSession?: OpenCliSessionRequest;
+  subagentSelection?: SubagentSelection;
   /** Parent-owned one-shot consumption for DriveAgent deep-link requests. */
   onOpenCliSessionConsumed?: (nonce: number) => void;
   /** Active engine sessionId — the background-shell panel queries shells by it (TODO 3.2). */
@@ -153,6 +155,7 @@ function ResolvedPanelArea({
   onRevealConsumed,
   openUrl,
   openCliSession,
+  subagentSelection,
   onOpenCliSessionConsumed,
   engineSessionId,
   busy = false,
@@ -382,9 +385,12 @@ function ResolvedPanelArea({
               });
               return {
                 id: tab.id,
-                label: entry
-                  ? panelEntryTitle(entry, (key) => t(key as never))
-                  : t("panels.area.unavailable"),
+                label:
+                  tab.kind === "subagent" && subagentSelection?.label
+                    ? subagentSelection.label
+                    : entry
+                      ? panelEntryTitle(entry, (key) => t(key as never))
+                      : t("panels.area.unavailable"),
                 icon: entry?.icon ?? CircleOff,
               };
             })}
@@ -510,6 +516,7 @@ function ResolvedPanelArea({
                     onRevealConsumed={onRevealConsumed}
                     openUrl={openUrl}
                     openCliSession={openCliSession}
+                    subagentSelection={subagentSelection}
                     onOpenCliSessionConsumed={onOpenCliSessionConsumed}
                     onAttachImage={onAttachImage}
                     onRemoveBrowserAnchor={onRemoveBrowserAnchor}
@@ -601,6 +608,7 @@ function PanelBody({
   onRevealConsumed,
   openUrl,
   openCliSession,
+  subagentSelection,
   onOpenCliSessionConsumed,
   engineSessionId,
   modelKey,
@@ -629,6 +637,7 @@ function PanelBody({
   onRevealConsumed?: (nonce: number) => void;
   openUrl?: { url: string; nonce: number };
   openCliSession?: OpenCliSessionRequest;
+  subagentSelection?: SubagentSelection;
   onOpenCliSessionConsumed?: (nonce: number) => void;
   engineSessionId?: string | null;
   modelKey: string | null;
@@ -674,6 +683,7 @@ function PanelBody({
     onRevealConsumed,
     openUrl,
     openCliSession,
+    subagentSelection,
     onOpenCliSessionConsumed,
     engineSessionId: engineSessionId ?? null,
     onAttachImage,

@@ -33,6 +33,8 @@ import { CCRoomView } from "../cc-room/CCRoomView";
 import type { OpenCliSessionRequest } from "../cc-room/types";
 import { PanelAppHost } from "./PanelAppHost";
 import type { DesktopBuiltinPanelAppHost } from "./DesktopBuiltinPanelApp";
+import { SubagentSessionDetail } from "../subagents/SubagentSessionDetail";
+import type { SubagentSelection } from "../subagents/SubagentNavigation";
 
 export interface PanelAvailabilityContext {
   projectPath: string | null;
@@ -60,6 +62,7 @@ export interface PanelRenderContext extends PanelAvailabilityContext {
   onRevealConsumed?: (nonce: number) => void;
   openUrl?: { url: string; nonce: number };
   openCliSession?: OpenCliSessionRequest;
+  subagentSelection?: SubagentSelection;
   onOpenCliSessionConsumed?: (nonce: number) => void;
   onAttachImage?: (absPath: string) => void;
   browserAnchors?: Anchor[];
@@ -195,6 +198,23 @@ const BUILTIN_PANEL_ENTRIES: PanelEntry[] = [
         active: foregroundVisible,
       }),
   }),
+  {
+    ...builtin({
+      key: "subagent",
+      title: { kind: "i18n", key: "panels.kinds.subagent" },
+      icon: Bot,
+      order: 45,
+      enabled: alwaysEnabled,
+      render: ({ engineSessionId, subagentSelection, foregroundVisible }) =>
+        createElement(SubagentSessionDetail, {
+          ...subagentSelection,
+          key: subagentSelection?.agentId ?? subagentSelection?.parentSessionId ?? engineSessionId,
+          parentSessionId: subagentSelection?.parentSessionId ?? engineSessionId,
+          active: foregroundVisible,
+        }),
+    }),
+    singleton: true,
+  },
   builtin({
     key: "ccRoom",
     title: { kind: "i18n", key: "panels.kinds.ccRoom" },
