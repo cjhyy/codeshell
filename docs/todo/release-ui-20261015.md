@@ -596,8 +596,9 @@ format and diff checks passed. Logs: `/tmp/codeshell-ui-wave6-{typecheck,lint,
 desktop-build,unit,overlays,web-latest,web-sidebar,web-files,web-settings,
 native-settings,native-digital-humans,cloud-metadata-native}.log`.
 UI6 was pushed and remote main confirmed at `3c6d8573f`. CI `38755011185`
-has passed 11 of 12 jobs, including Electron E2E; the Desktop test job is still
-running. Continue to preserve other tasks' local main commits.
+passed all 12 jobs, including Desktop browsers, Web browsers, real browser
+drivers and Electron E2E. The clean, merged UI6 integration branch was removed;
+continue to preserve other tasks' local main commits.
 
 UI7 integrates only source changes for Web Skills (`7d874cabd`), model action
 recovery (`99cc938d1`, `5e8deab0d`, `b9330f911`) and MCP recovery
@@ -632,9 +633,34 @@ CSS animation completion and two layout frames instead of a fixed 180ms;
 all existing overflow, complete-label, keyboard and pointer assertions remain.
 The full 33-fixture rerun is in progress. Source Skills was normally merged with
 UI6 and passed production/development 34 each plus its scoped tests/types/build
-again without changing product or fixture blobs. UI6 remote CI is still awaiting
-the Desktop job. Logs: `/tmp/codeshell-ui-wave7-{typecheck,lint,desktop-build,unit,
+again without changing product or fixture blobs. UI6 remote CI is fully green.
+Logs: `/tmp/codeshell-ui-wave7-{typecheck,lint,desktop-build,unit,
 overlays,overlays-stable,dropdown-isolated,web-*}.log`.
+
+The full Desktop rerun passed through Cloud metadata, then the unchanged Cloud
+dialog fixture timed out waiting for a native wheel scroll in the 800x480
+manager case. Its exact isolated source subsequently passed all 141 observations
+(`codeshell-cloud-dialogs-GdmEMO`, zero errors/blocked requests); no wheel
+assertion, product code or timeout was changed. Root resumes the remaining
+fixtures from ProfileDialogs, retaining the earlier successful fixtures and
+both failure logs. Do not report the failed whole-run command itself as passing;
+the final combined fixture receipts must account for all 33 entries.
+
+UI8 is isolated while UI7 gates finish. History's actual Workbench audit found
+offscreen archive failures and late rename completions stealing external focus;
+source checkpoint `c4e95fba0` adds owned local recovery and truthful initial-read
+errors, retaining title CAS and existing action APIs. Its formal fixture and
+independent review are in progress. TrustGate's failed-read/retry, failed-choice
+feedback and project-generation fence passed production layouts and independent
+320x240 long-error checks; native verification is in progress, with no change to
+Main trust authority or the shared dialog focus helper. PermissionPill remains
+under read-only actual ChatView audit. Root copy-only source `f5af6007b` on
+`codex/desktop/model-empty-copy-20261015` corrects the model picker's obsolete
+settings.json/models hint to model connections in Settings. Two translations
+only; formatting/lint passed, no new low-impact mirror test. Integrate this in
+UI8 after UI7 delivery and run the real empty-picker fixture with the combined
+source. Primary checkout advanced under another task to `05cfa4631`; preserve
+those local commits and untracked files.
 
 Initial audit history follows:
 
