@@ -4,6 +4,24 @@
 
 import type { GoalConfig, GoalLifecycleV1, GoalTerminal } from "./goal/lifecycle.js";
 
+/** Trusted lifecycle metadata; never accepted from an Agent tool's model input. */
+export interface SubAgentContinuation {
+  version: 1;
+  parentSessionId: string;
+  /** null explicitly records an ephemeral agent, independent of later role defaults. */
+  agentType: string | null;
+  name?: string;
+  description: string;
+  maxTurns: number;
+  model?: string;
+  toolAllowlist?: string[];
+  skillAllowlist?: string[];
+  sandboxMode?: import("./tool-system/sandbox/index.js").SandboxMode;
+  mcpAllowlist?: string[];
+  appendSystemPrompt?: string;
+  readOnlySession: boolean;
+}
+
 // ─── Content & Messages ───────────────────────────────────────────
 
 export interface ContentBlock {
@@ -397,6 +415,8 @@ export interface SessionState {
    * "key present && null" to tell a new top-level session apart from legacy.
    */
   parentSessionId?: string | null;
+  /** Frozen, trusted sub-agent spawn scope used for continuation after restart. */
+  subAgentContinuation?: SubAgentContinuation;
   /**
    * Durable archival timestamp (ms). Absent = not archived. Generic session
    * lifecycle marker: list surfaces filter it out by default. Set/cleared via

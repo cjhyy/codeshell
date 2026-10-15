@@ -16,6 +16,10 @@ breaking.
 
 ### Changed
 
+- Return a reusable `agent_id` with synchronous Agent reports and guide related
+  follow-up work through `AgentSendInput` using saved context and incremental input.
+- Persist sub-agent role scopes for continuation after restart. Legacy sessions
+  without saved scope metadata require a new Agent after restarting.
 - Extract protocol request dispatch and ingress validation without changing the
   legacy wire contract; reduce the AgentServer architecture budget to 4,949 lines.
 - Reserve tool names beginning with `__` for internal host loopbacks, including
@@ -33,6 +37,11 @@ breaking.
 
 ### Fixed
 
+- Track resumed sub-agents as running, route further input to their existing
+  runtime, and preserve cancellation until that runtime fully exits, including
+  across the automatic background threshold.
+- Enforce sub-agent role tool allowlists at execution time on both initial and
+  resumed runs, while retaining parent-disabled tools and the flat agent hierarchy.
 - Keep the bundled Host package in Desktop devDependencies, and derive the
   production workspace packaging guard from predist's actual materialization list.
 - Include a unique JSON-RPC id in Desktop unsupported-loopback replies so Core

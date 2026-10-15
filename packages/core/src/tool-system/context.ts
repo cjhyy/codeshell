@@ -161,6 +161,8 @@ export interface SubAgentSpawnRequest {
    * See AgentSendInput in builtin/agent.ts.
    */
   resumeSessionId?: string;
+  /** Frozen trusted spawn metadata, persisted only when the child session is created. */
+  continuation?: import("../types.js").SubAgentContinuation;
   /** Trusted live-runtime generation; never exposed in the Agent tool schema. */
   runtimeGeneration?: number;
   /** Bind the existing child runtime to the registry's single-writer lease. */
@@ -191,6 +193,10 @@ export interface SubAgentSpawner {
   sessionExists?(sessionId: string): boolean;
   /** Persisted direct-parent metadata used to authorize cross-restart continuation. */
   getSessionParentId?(sessionId: string): string | null | undefined;
+  /** Frozen original role/capability scope; undefined is not authority to widen it. */
+  getSessionContinuation?(
+    sessionId: string,
+  ): import("../types.js").SubAgentContinuation | undefined;
   /** Stream callback to forward sub-agent events back to the parent UI. */
   parentStream?: StreamCallback;
   /** Static config used to describe what the spawned engine looks like. */

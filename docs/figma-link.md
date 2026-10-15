@@ -1,6 +1,9 @@
-# Figma Link 完整读取
+# Figma Link REST 按需读取
 
-Figma Link 通过本地 PAT/OAuth 或独立 Link 服务读取已授权的 Design／FigJam 文件。
+本页记录已经实现的 REST 通道。官方 MCP、Make 项目资源及统一能力入口见
+[Figma Link：MCP 与 REST 能力规划](todo/figma-link-mcp-plan.md)，该规划尚未实现。
+
+Figma Link 通过本地 PAT 或独立 Link 服务托管的 OAuth 读取已授权的 Design／FigJam 文件。
 `get_file` 默认读取页面和顶层节点（`depth=2`），需要时再读取目标节点子树或全文。
 读取范围内的文字、尺寸、布局、颜色、字体、效果、组件属性、样式和向量路径
 保留在原始节点结构中。客户端和远端服务采用同一新契约，不提供旧版摘要回退。
@@ -66,8 +69,9 @@ Figma Link 通过本地 PAT/OAuth 或独立 Link 服务读取已授权的 Design
   缺少新动作权限时，应重新授权该连接，不能绕到另一个账号执行。
 - 远端 Link 的第三方凭证保存在独立服务，`UseCredential` 不导出它。读取设计内容
   应继续使用 `LinkAction`，本地凭证为空不等于远端 Link 没有文件权限。
-- `/make/` 链接明确返回不支持的文件类型，不能把它误报为 Design 文件授权失败。
-  当前实现不声称能够读取 Make 源码，也不提供修改 Figma 设计稿的能力。
+- `/make/` 链接在此 REST 通道中明确返回不支持的文件类型，不能把它误报为 Design
+  文件授权失败。官方 MCP 的 Make 资源路径另行接入；当前 REST 实现不读取 Make
+  源码，也不提供修改 Figma 设计稿的能力。
 
 接口依据：[Figma Files endpoints](https://developers.figma.com/docs/rest-api/file-endpoints/)
 和 [Figma OAuth scopes](https://developers.figma.com/docs/rest-api/scopes/)。实现测试覆盖

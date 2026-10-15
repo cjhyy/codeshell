@@ -27,6 +27,7 @@ import { nanoid } from "nanoid";
 import type {
   SessionForkLineage,
   SessionState,
+  SubAgentContinuation,
   SessionKind,
   SessionWorkspace,
   TokenUsage,
@@ -35,6 +36,7 @@ import type {
 } from "../types.js";
 import { Transcript } from "./transcript.js";
 import { preserveOutputCoverage } from "./output-coverage-state.js";
+import { parseSubAgentContinuation } from "./subagent-continuation.js";
 import { SessionError } from "../exceptions.js";
 import { addCumulativeUsage, addTokenUsage, normalizeCumulativeUsageCounters } from "./usage.js";
 import {
@@ -709,11 +711,19 @@ export class SessionManager {
     origin?: import("../types.js").SessionOrigin,
     kind: SessionKind = "work",
     ephemeral = false,
+    subAgentContinuation?: SubAgentContinuation,
   ): SessionBundle {
     // External callers may pass any string; nanoid output is trusted. Either
     // way the ID gets joined into a filesystem path, so the public entry
     // point validates before that join.
     if (explicitSessionId !== undefined) assertSafeSessionId(explicitSessionId);
+    const continuation =
+      subAgentContinuation === undefined
+        ? undefined
+        : parseSubAgentContinuation(subAgentContinuation, parentSessionId);
+    if (subAgentContinuation !== undefined && !continuation) {
+      throw new SessionError("Invalid sub-agent continuation metadata or parent ownership");
+    }
     const sessionId = explicitSessionId ?? nanoid(16);
     const state: SessionState = {
       sessionId,
@@ -736,6 +746,7 @@ export class SessionManager {
       // new top-level session (key present, null) apart from a legacy session
       // (key absent) and from a sub-agent (key present, non-empty string).
       parentSessionId: parentSessionId ?? null,
+      ...(continuation ? { subAgentContinuation: continuation } : {}),
       ...(ephemeral || sessionId.startsWith("qchat-") ? { ephemeral: true } : {}),
       ...(origin ? { origin } : {}),
     };
@@ -1006,6 +1017,18 @@ export class SessionManager {
       const state = JSON.parse(readFileSync(stateFile, "utf-8")) as SessionState;
       return state.parentSessionId === null || typeof state.parentSessionId === "string"
         ? state.parentSessionId
+        : undefined;
+    } catch {
+      return undefined;
+    }
+  }
+
+  /** Validated frozen child scope. Missing/corrupt snapshots cannot authorize resume. */
+  readSubAgentContinuation(sessionId: string): SubAgentContinuation | undefined {
+    try {
+      const state = this.readSessionState(sessionId);
+      return state
+        ? parseSubAgentContinuation(state.subAgentContinuation, state.parentSessionId)
         : undefined;
     } catch {
       return undefined;

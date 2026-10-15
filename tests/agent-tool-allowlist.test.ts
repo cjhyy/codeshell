@@ -16,8 +16,14 @@ describe("resolveChildToolScope", () => {
     expect(scope.disabled).toEqual(expect.arrayContaining(NESTED));
   });
 
-  it("allowlist wins even if parent had an enabled list", () => {
+  it("role allowlist is independent of the parent's force-enabled additions", () => {
     const scope = resolveChildToolScope(["Read"], undefined, ["Bash", "Edit"]);
     expect(scope.enabled).toEqual(["Read"]);
+  });
+
+  it("role allowlist cannot restore a parent-disabled tool", () => {
+    const scope = resolveChildToolScope(["Read", "Write"], ["Write"], []);
+    expect(scope.enabled).toEqual(["Read"]);
+    expect(scope.disabled).toContain("Write");
   });
 });
