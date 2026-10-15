@@ -46,10 +46,19 @@ authorization reads reject identity changes. Desktop catalog state is capped at
 logging state contents. Candidate discovery uses lstat and does not open transcripts.
 
 MCP adapters select their stdio policy explicitly: Desktop tolerates non-JSON
-launcher banners, Hub remains strict. Both retain byte limits and reject invalid
-JSON-RPC frames. Optional HTTP GET/SSE diagnostics do not invalidate successful
+launcher banners and valid JSON logger records that fail JSON-RPC validation;
+Hub remains strict. Both retain byte limits, cancellation and process cleanup.
+Optional HTTP GET/SSE diagnostics do not invalidate successful
 POST requests. Host returns neutral error codes and bounded safe detail; adapters
 choose local or server wording, and explicit credentials remain redacted.
+
+Preview redaction treats authentication fields (including apikey/x-apikey),
+envHeaders, bearerTokenEnvVar and explicit token argv as private at any length.
+Other env/envVars and argv values of at least eight characters are also private,
+including positional arguments; flag names are syntax. Short ordinary scalars
+such as DEBUG=1, MODE=read and LOG_LEVEL=info keep tool names and descriptions
+readable. Protocol/content-type headers remain ordinary text. This policy lives
+in Host and applies to both adapters.
 
 These explicit async methods do not change HostRuntime's synchronous lifecycle.
 Desktop retains path grants/cache/OAuth resolution; Hub retains HTTP authority,

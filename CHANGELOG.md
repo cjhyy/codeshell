@@ -41,8 +41,9 @@ breaking.
 ### Fixed
 
 - Keep successful MCP POST probes usable after optional GET/SSE diagnostics,
-  preserve Desktop launcher-banner compatibility, and retain explicit secret
-  redaction without corrupting ordinary tool names or protocol text.
+  preserve Desktop launcher-banner and structured-logger compatibility, and
+  redact explicit credentials at any length plus longer private env/argv values
+  without corrupting ordinary short launcher/env values or protocol text.
 - Retry ordinary session-state atomic replacements only in lists, retain strict
   authorization reads, and expose a narrow Host storage entry. Desktop catalog
   state over 2 MiB now emits a safe diagnostic when omitted.

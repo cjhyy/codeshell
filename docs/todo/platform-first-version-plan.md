@@ -18,7 +18,7 @@
 ## S1 当前批：8 的纯服务首版；其余须主控 review 后派发
 
 - [ ] 8. Host 1.2 整体（包含后置输出回放，不能标全部完成）。
-  - [x] 8a. 首批纯服务/ownership：Desktop 与 Hub skills inventory、MCP probe、Session FS 真实共用 Host；MCP SDK 仅由 Core internal 窄连接接口承担。Hub 独有的模型连接测试迁 Host ownership，Desktop metadata 和 Core model-fetcher 保持原语义。首轮已提交并经 CC 审查、宿主补验；新 1 P1/9 P2 和两 CI 分片修复见[复审清单](evidence/host-shared-services-cc-review-20261015.md)，尚待同一 CC 复审和新 head CI；勾选表示首版已实现。
+  - [x] 8a. 首批纯服务/ownership：Desktop 与 Hub skills inventory、MCP probe、Session FS 真实共用 Host；MCP SDK 仅由 Core internal 窄连接接口承担。Hub 独有的模型连接测试迁 Host ownership，Desktop metadata 和 Core model-fetcher 保持原语义。首轮已提交并经 CC 审查、宿主补验；同一 CC 第二轮已关闭旧 P1/其余 finding，env 脱敏与 Desktop JSON 日志两个 P2 加宿主暴露的隐私/cipher/Unicode fixture 回归本轮修复，见[复审清单](evidence/host-shared-services-cc-review-20261015.md)；仍待同一 CC 复审、正常宿主/新 head CI，勾选仅表示首版已实现。
   - [x] PR188 三个非阻断 P2 修复与定向回归，CC 已确认 closed，见[修复清单](platform-pr188-followups.md)。
 - [ ] 9. 1.3 凭据与 MCP OAuth 迁 host，由 adapter 注入 cipher；依赖 1.1。serve 同等能力，去掉 local 特例，验证凭据隔离。
 - [ ] 10. 1.4 单 automation 执行器，共享锁/单 owner；依赖 1.1。同机两宿主只触发一次，serve automationCreate 可用。
@@ -176,3 +176,5 @@ node scripts/run-bun-test-shard.mjs --timeout 30000 \
 本批 base：`19bc2167402da53caeace26ac69207822c166448`；分支：`codex/host/shared-services-20261015`。开始时指定工作树 clean，依赖由主控冻结安装。只实现第 8a 与 PR188 三个 P2，未触及 8b、9–14、S2/S3，也未将 S1 或全部第 8 项标完成。HostRuntime 仍为同步生命周期；新探测/文件方法显式 async，连接内部持有可关闭句柄。
 
 首轮本地两组 341 pass / 0 fail / 0 skipped（1300 assertions），主控随后补交 `b497f6d01`、`cd5489539`、`5d891c836` 并建立 draft PR190；正常宿主 bg_5u1l8 已通过完整 package-release、84 项真实 HTTP/账本、typecheck 14 workspace、Desktop main 与 Node identity。首轮受限补验/提交已 resolved，PR188 三 P2 由 CC closed。PR190 新 1 P1/9 P2 与 core-rest/rest 失败在同一第 8a 范围内修复；新代码验证与未完成宿主检查见[复审证据](evidence/host-shared-services-cc-review-20261015.md)，不能沿用旧 head 的通过结论。没有调用 Claude 或写入 worker，不继续第 9 项。
+
+cb2c652b5 接续：主控 bg_62zyzf 已完整通过 package-release/typecheck/Desktop main/原 130 契约；bg_755wdm 完整 core-rest 3620 pass，rest 45 fail 已精确归为 Unicode 34 + PDF 3 + cipher 7 + 位置参数 1。该 head 的历史受限项已 resolved，不能沿用为本轮最终源码全绿；本轮五组修复和宿主精确补验命令见复审清单，未开始第 9 项/8b/v2。

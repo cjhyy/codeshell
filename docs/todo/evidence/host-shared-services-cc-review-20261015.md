@@ -1,5 +1,7 @@
 # Host 1.2a：CC 审查与 CI 修复清单
 
+当前接续输入为 `cb2c652b5da37ffa301759a4351a5eb7bf30b7a8`。主控已补交上轮全部文档；旧 head 的正常宿主结果见“主控接续”节。本轮五组实现、可运行验证及未完成宿主门槛见文末；两个剩余 CC P2 尚待同一 CC 复审，不能将历史勾选理解为本轮全 closed/CI 全绿。
+
 审查 base `19bc2167402da53caeace26ac69207822c166448` → head `5d891c836fe99f67f104c96646d6d4b5d59ac2ed`，CC session `c6bcaca0-6811-42f4-a928-2aeb810c7a7d`。结论：1 个 P1 需先修复；以下 9 个 P2 非阻断，本轮在同一相关范围内一起处理。PR188 的原 3 个 P2 已由 CC 确认关闭。
 
 主控正常宿主 bg_5u1l8 已通过完整 package-release、84 项真实 HTTP/账本契约、完整 typecheck、Desktop main 与 Node identity smoke。但 PR190 的全量 core-rest/rest 分片另有失败，必须修复；不得把本地子集绿当 CI 绿。
@@ -39,7 +41,7 @@
 | 项 | 实际修复与验证 |
 | --- | --- |
 | P1 HTTP | `client.onerror` 仅把本方 `McpProbeConnectionError` 作为 fatal；SDK 普通诊断不设置永久 failure。connect/listTools 自身 rejection、close、timeout、cancel 保留。真实 SDK + 注入 HTTP transport 对 GET 400/403/404 各测两种时序：GET body 被 SDK cancel 后才返回首/次 tools page，成功 2 tools；不只 fake 调用 onerror。真实 TCP 的 Hub fixture 另改 GET404/POST成功并断言发生 GET，受限补跑见下。 |
-| P1 stdio | Desktop 明确 `skip-banner`，Hub 默认 `strict`；实际子进程先输出非 JSON banner，Desktop 成功、Hub invalid_protocol。有效 JSON 但非法 JSON-RPC 两方仍拒绝。512 KiB frame/2 MiB total、分页、重复 cursor、超时子孙回收等原 fixture 保留并通过。 |
+| P1 stdio | Desktop 明确 `skip-banner`，Hub 默认 `strict`；实际子进程先输出非 JSON banner，Desktop 成功、Hub invalid_protocol。Desktop 同时跳过不能通过 JSON-RPC validation 的结构化日志，Hub strict 仍拒绝；此前“两方拒绝”的兼容描述已在本轮更正。512 KiB frame/2 MiB total、分页、重复 cursor、超时子孙回收等原 fixture 保留并通过。 |
 | P2-1 | 只收集明确 auth/cookie/token/key/credential header、env/envHeaders、认证参数及敏感 URL 参数；保留 `run_query`、`run`、`application/json`、协议版本。真实 SDK tools preview 同时验证 auth/env/token/credential 参数与 header 不泄漏；credentialRef/OAuth 刷新走实际 Desktop adapter。 |
 | P2-2 | Host 返回中立 code、受控 detail，不返回原 SDK body/stack；缺失 env 名字/字段须与真实 config 引用匹配才返回。Desktop 映射本地文案、Hub 映射服务器文案；删除死 humanizeError/buildProbeHttpHeaders。Desktop 9 个真实生产路径测试覆盖缺失命令/env、HTTP auth、credentialRef、OAuth refresh/expiry、外来密文不被发出。 |
 | P2-3 | 列表读取固定原目录 dev/ino，只有 changed/file 且替代是安全普通文件才最多重试两次。Hub 单会话授权仍严格 read，无 retry。隔离 Node 验 sync/async 一次 rename 成功、连续替换三次失败、symlink/目录置换立即失败，每次所有 fd/handle 关闭，并验证真实 Desktop list/Hub read。 |
@@ -167,3 +169,159 @@ git -C "$TASK" status --short
 ```
 
 只停供同一 CC 复审，不开始 9 credentials/OAuth 或 8b replay，未 push/merge/release。
+
+## 主控接续：同一 CC 第二轮复审与正常宿主实测（cb2c652b5）
+
+主控已补交八份文档为 `cb2c652b5da37ffa301759a4351a5eb7bf30b7a8`，源码仍对应 `f48ca6bab`。同一 CC session `c6bcaca0-6811-42f4-a928-2aeb810c7a7d` 的 job `cc-crmj845sol` 对 `5d891c836..cb2c652b5` 只读复审：原 P1 与其余发现关闭，P2-1 的 env 部分和 Desktop JSON 日志兼容仍需收尾。静态“无阻断”不能代替以下宿主失败的修复。
+
+主控给定的五组修复范围（勾选表示本轮代码与可运行本地验证完成，尚待同一 CC 复审及正常宿主复验）：
+
+- [x] **普通 env 误脱敏（CC P2-1 剩余）**。`config.env` 和 `envVars` 所有值仍加入秘密集合。DEBUG=1、MODE=read、LOG_LEVEL=info 不应改坏 read_file、普通数字和描述；按认证字段识别真实凭据，真实短 token 仍须隐藏，长私有配置值不能回显。`apikey`/`x-apikey` 认证 header 一并识别；envHeaders/bearerTokenEnvVar 始终按凭据处理。增加生产 fixture 同时验证显示与不泄漏。
+- [x] **Desktop 结构化日志兼容（CC P2）**。`skip-banner` 当前只跳过 JSON.parse 失败；pino 风格合法 JSON、非 JSON-RPC 日志也要与旧 Desktop SDK/Core runtime 一样跳过。Hub strict 保持失败；所有行仍计帧/总量，超限、关闭、超时、取消及进程回收不退化。修正相关测试和文档既存“有效 JSON 但非法 JSON-RPC 两方都拒绝”的表述。
+- [x] **Hub 原位置参数隐私契约回归（宿主实测）**。`packages/server/src/hub/mcp-configuration.test.ts:326`：args `[script, "argument-secret"]` 与 TOKEN env 由真实 stdio 服务回显；当前只隐藏 TOKEN，位置参数泄漏。不得删除原断言，不能只把 fixture 改成 --token 掩盖，也不能重新无差别替换短 launcher/run 参数而改坏 run_query。可建立明确的秘密/配置私有值策略，兼容 Hub 的既有隐私要求，普通工具标识保持正确。
+- [x] **新测试污染全局 cipher（完整 rest 实测）**。`packages/host/src/services/mcp-probe.http-transport.test.ts` afterEach 调 `setDefaultCredentialCipher(null)`；新 Desktop `mcp-probe-service.test.ts` 也有同样错误。API 要求 EncryptionCipher，不支持 null reset。完整 rest 后续 `server/src/panels/runtime.test.ts` 七个 Cookie 场景因 `this.cipher.encrypt` null 失败。测试须保存并恢复准确的原 cipher，不能将生产接口放宽为 null 或移除真实 Cookie 场景。用指定执行顺序证明隔离。
+- [x] **中文路径 fixture 两处解码错误（本机完整 rest 暴露的既有问题）**。34 项 `tests/docker-candidate-browser-guard.test.ts` 将 `new URL(...).pathname` 交给 createRequire，导致路径仍含 `%E4...`，找不到 ws/package.json；3 项 `tests/docker-candidate-pdf-argv.test.ts` 的 `tests/fixtures/docker-candidate-pdf-argv-case.mjs:14-15` 用同样 pathname 读 preload/guard 报 ENOENT。修为标准 fileURLToPath，保留原权限/哈希/进程/路径拒绝断言，验证含中文/空格路径；不改安全机制或引入临时 ASCII checkout 回避。此两文件在本任务旧累计 diff 中未修改，须明确属于宿主暴露的原有 fixture 缺陷。
+
+固定 head 宿主 bg_62zyzf（日志 `/tmp/codeshell-pr190-repaired-host-20261015.log`）：冻结安装、**完整 package-release（10 tarballs / 49 typed / 47 runtime，含真实 Node HTTP owner/auth 和 uploaded docs）**、14 workspace typecheck、Desktop main、两组 **130 pass / 0 fail / 794 assertions** 均通过；第三组真实 HTTP/账本/native-global 组合 **91 pass / 1 fail / 532 assertions**，失败即位置参数隐私断言。后续步骤因 set -e 未执行，主控已另行补跑。
+
+固定同 head 宿主 bg_755wdm（日志 `/tmp/codeshell-pr190-repaired-full-shards-20261015.log`）：Node Session FS 与 Core exports smoke 均 exit0；**完整 core-rest 3620 pass / 0 fail**；完整 rest **5009 pass / 72 skip / 45 fail，577 files / 22054 assertions**。45 个失败完整归类为上述 34 个 Unicode fixture + 3 个 PDF fixture + 7 个 cipher 污染 + 1 个位置参数回显。两个分片完整执行，最终 `NODE_FS=0 NODE_EXPORTS=0 CORE_REST=0 REST=1`，结束 head 未变。不能将 rest 标绿；skip 为原测试显式条件，不是本轮新增。
+
+上文旧限制仅代表历史。本轮以上五组收尾必须由 Codex 实际修复、同 CC 复审，然后正常宿主/CI 重新验证最终源码，才允许 PR190 合并；不进入第9项。
+
+## cb2c652b5 后五组修复（本轮 Codex，待同 CC 复审）
+
+输入 `cb2c652b5da37ffa301759a4351a5eb7bf30b7a8`，累计任务 base 仍为 `19bc2167402da53caeace26ac69207822c166448`。仅指定任务树 `codex/host/shared-services-20261015`；保留并整理主控原有的本文件变更。未改 main/其他任务树，未调用 CC/Claude 或写入 worker；只读辅助审计没有写文件。没有进入第 9 项、8b、v2，没有 push/merge/release。
+
+| 组 | 根因、修复与有效证据 |
+| --- | --- |
+| 1 普通 env 与认证 header | 原所有 env/envVars 值进入秘密集合，导致 `1/read/info` 字串替换破坏预览。Host 统一规则：认证键（包括 camelCase、apikey/x-apikey）、envHeaders、bearerTokenEnvVar、显式认证 argv 不设最短长度；其余 env/envVars/argv 值长至少 **8 字符**仍按私有配置隐藏，flag 名是语法。普通短值保留；不会以“不是认证键”公开所有长值。实际 SDK stdio 的两 adapter fixture 保留 run_query/read_file、`run read info 1 42`，同时拒绝 TOKEN/APIKEY、长未标注 env/envVars、位置参数和短 token/access-key/key/passwd/cookie 回显；HTTP transport fixture 验 apikey/x-apikey 和非认证变量名的短 envHeaders/bearer 值。原 protocol/content-type 断言保留。 |
+| 2 Desktop JSON 日志 | 原兼容模式只跳过 parse 失败，validation 失败仍 fatal。Core 仅在 skip-banner 下也跳过合法 JSON 非 JSON-RPC logger 记录；Hub strict 未变。实际子进程分别输出非 JSON 横幅/pino 日志：Desktop 成功、Hub invalid_protocol 并关闭。新增兼容日志单行超限/总量超限断言；strict 与 skip-banner 都实际验证 timeout、取消、已撤销不启动和忽略 SIGTERM 的子孙回收。原分页/重复 cursor/512 KiB frame/2 MiB total 断言未删，旧“两方拒绝有效 JSON 非 RPC”的文档已更正。 |
+| 3 原 Hub 位置参数隐私 | 原命名 token-only 策略漏 `[script, "argument-secret"]`。共享 Host 的未标注长配置规则补齐，不新增 adapter 脱敏副本；Host stdio fixture 恢复该原始位置参数形态并经真实 Desktop/Hub adapter 通过。原 `server/hub/mcp-configuration.test.ts` 的 args/TOKEN/安全断言完全未改；其 HTTP 原用例在本沙箱仍被监听限制挡住，必须正常宿主补验，未声称本地原 HTTP 用例通过。 |
+| 4 cipher 与全局恢复 | 两新测试的 null 不是 reset，污染后续默认 CredentialStore。使用现成 getter，在每次覆盖前保存，finally 恢复同一 cipher 对象并断言身份；生产 setter/类型/exports 未改。两处遗漏的临时 env 也恢复旧值而非只 delete。HOME、DOM descriptor、network LIFO 恢复已核对。正序与逆序 MCP 测试之后运行现有真实 CredentialStore 加解密/持久化测试均通过；foreign encrypted-store failclosed 断言保留。七个真实 Cookie HTTP 场景未改，需正常宿主执行两种顺序；本地仅做一次监听确认后停止，不反复整片超时。 |
+| 5 Unicode/空格 fixture | 两处既有 fixture 把 URL.pathname 当文件路径，残留百分号编码。browser anchor 与 PDF preload/guard 来源改用 fileURLToPath。PDF 沿用既有 guard test 的两文件私有字节 bundle 准备，保持 preload/guard 哈希和严格 NODE_OPTIONS 契约；未修改任何 `scripts/docker-candidate-*` 安全机制。当前中文工作树全套通过；另用真实含中文/空格的 require anchor、以及 `--preserve-symlinks-main` 的中文/空格源码入口执行完整 18 个 PDF 边界并断言实际入口路径。仅建 tests/scripts 的临时别名和私有字节 bundle，未创建 ASCII checkout。原权限、哈希、拒绝、进程、字节断言全部保留。 |
+
+本轮源码/测试三个内聚提交：
+
+- `51d6008d9733f6fb07f791b4de36c273642b7c1d` — 共享脱敏与 Desktop logger 兼容及真实 stdio 回归。
+- `28a1cad75bb44d927acb94c0d60b3496bc359117` — cipher/env 精确恢复、认证 header fixture。
+- `11d602198da6c31643c2070fa0d4662a64bee0e3` — Unicode/空格 fixture 可移植性。
+
+Host 运行依赖仍仅 Core/Node builtin；未新增 runtime export、稳定 public SDK、adapter 权限、缓存 target 或调用模型的入口，未抬预算。
+
+### 本轮验证结果
+
+所有 Bun 测试经 guarded runner 隔离 HOME/应用状态/凭据；Node smoke 用现有隔离 launcher。MCP HTTP 为真实 SDK + 注入 fixture transport，stdio 为真实子进程；自身 guard 在生产 imports 前安装，其覆盖/模块缓存边界仍按前节说明。无真实 provider/付费调用/MCP 账户/操作者 credentials。先构建 Core/Host；package-release 串行结束后才 typecheck/读 dist。
+
+| 命令/范围 | 本轮结果 |
+| --- | --- |
+| 最终顺序契约组（下方 10 文件） | **98 pass / 0 fail / 0 skipped，699 assertions**。显式 miniDOM → Host 模型 → Host HTTP → Desktop MCP → stdio → 现有 CredentialStore，再检查 guard/export/预算/包边界。 |
+| Unicode/browser/PDF 两文件全量 | **43 pass / 0 fail / 0 skipped，152 assertions**，包括新增真实中文/空格路径用例。与前组共 **141 pass / 851 assertions**。 |
+| cipher 逆序组合（下方 3 文件） | **49 pass / 0 fail / 0 skipped，300 assertions**；与前组重叠，不重复累加。 |
+| `bun run typecheck` | exit 0，完整 14 workspace，含 Desktop/Web。最终认证 flag 复用规则后执行，构建声明也通过。 |
+| Desktop `build:main` | exit 0，实际 19.4 MB main bundle。 |
+| 两个隔离 Node smoke | exit 0；Session FS 身份/close/有界重试/候选预算、Core 精确 exports/identity 均通过（264 runtime/115 internal types）。 |
+| targeted ESLint / Prettier | 8 个本轮精确 TS/MJS 源码/测试全部 exit 0；最终 flag 收尾后再次检查。 |
+| engine-bypass/workflow paths/diff whitespace | exit 0；20 个 workflow 路径存在，架构/包边界已含最终 98 项组。 |
+| `bun run test:package-release` | exit 1；10 包 build/pack/extract、49 typed/47 runtime（含 Host 窄入口）与 owner-auth consumer 编译通过，Node HTTP owner-auth listen EPERM，uploaded-docs 未到达。最终 flag 收尾只改变内部值分类，无 export/声明变化；最终 typecheck 和 Node exports 另通过。必须正常宿主完整复验，不沿用 cb2 的完整成功。 |
+| 原 Hub 单用例 TCP 定向尝试 | exit 1，0 pass / 1 fail，14 filtered；原用例在 server 启动时报 Failed to start server，未到达 stdio/隐私断言。未改测试预期或新增 skip。 |
+| 原 Cookie HTTP 单用例定向尝试 | exit 1，0 pass / 1 fail，54 filtered；同样在监听时失败，未到达 Cookie 行为。仅确认限制一次，未再跑已知会阻塞的整片。 |
+
+原始日志 `/private/tmp/codeshell-shared-third-{core-build,host-build,contracts-final,cipher-reverse-final,unicode,stdio-final,typecheck,desktop-main,node-fs,node-exports,source-checks-final,lint-final,package-release,hub-tcp,cookie-tcp}.log`。最初契约 96 pass、cipher 逆序 49 pass；扩充两种 policy 的进程回收与认证 flags 后最终契约重跑为 98 pass，上表以最终组为准。没有把旧 cb2 的 3620/5009 或其 package-release 结果充作本轮新 head 的全量成功。
+
+### 精确复验与正常宿主待验
+
+本轮已跑的可运行组：
+
+```sh
+TASK='/Users/admin/Documents/个人学习/代码学习/codeshell/.worktrees/host-shared-services-20261015'
+cd "$TASK"
+node scripts/run-bun-test-shard.mjs --timeout 30000 \
+  ./packages/web/src/test-utils/miniDomStyle.test.ts \
+  ./packages/host/src/services/model-connection-probe.test.ts \
+  ./packages/host/src/services/mcp-probe.http-transport.test.ts \
+  ./packages/desktop/src/main/mcp-probe-service.test.ts \
+  ./packages/host/src/services/mcp-probe.integration.test.ts \
+  ./packages/core/src/credentials/store.test.ts \
+  ./tests/helpers/network-fixture.test.ts \
+  ./packages/core/src/index.exports.test.ts \
+  ./tests/architecture-budgets.test.ts \
+  ./tests/package-boundaries.test.ts
+node scripts/run-bun-test-shard.mjs --timeout 30000 \
+  ./tests/docker-candidate-browser-guard.test.ts \
+  ./tests/docker-candidate-pdf-argv.test.ts
+node scripts/run-bun-test-shard.mjs --timeout 30000 \
+  ./packages/desktop/src/main/mcp-probe-service.test.ts \
+  ./packages/host/src/services/mcp-probe.http-transport.test.ts \
+  ./packages/core/src/credentials/store.test.ts
+node scripts/run-isolated-node-smoke.mjs scripts/smoke-host-shared-session-files.mjs
+node scripts/run-isolated-node-smoke.mjs scripts/smoke-core-exports.mjs
+```
+
+源码格式/静态检查采用精确八路径（无全树写入）：
+
+```sh
+cd "$TASK"
+node --input-type=module <<'NODE'
+import { execFileSync } from 'node:child_process';
+const files = execFileSync('git', [
+  'diff', '--name-only', '-z', 'cb2c652b5da37ffa301759a4351a5eb7bf30b7a8', 'HEAD',
+], { encoding: 'utf8' }).split('\0').filter(p => /\.(ts|tsx|mjs)$/.test(p));
+execFileSync('bunx', ['--no-install', 'eslint', ...files], { stdio: 'inherit' });
+execFileSync('bunx', ['--no-install', 'prettier', '--check', ...files], { stdio: 'inherit' });
+NODE
+bun run lint:engine-bypass
+bun run lint:workflow-test-paths
+git diff --check
+```
+
+正常宿主必须接续（始终同一任务 cwd，所有 `./` 文件顺序保留；package-release 不与任何读 dist 检查并发）：
+
+```sh
+cd "$TASK"
+bun run test:package-release
+bun run typecheck
+bun run --cwd packages/desktop build:main
+
+# 完整原 Hub fixtures：包含未改的原位置参数隐私断言和真实 GET/SSE。
+node scripts/run-bun-test-shard.mjs --timeout 30000 \
+  ./packages/server/src/hub/mcp-configuration.test.ts
+
+# 正序与逆序的后续七个真实 Cookie 场景，不能只跑孤立 MCP 测试：
+node scripts/run-bun-test-shard.mjs --timeout 30000 \
+  ./packages/web/src/test-utils/miniDomStyle.test.ts \
+  ./packages/host/src/services/model-connection-probe.test.ts \
+  ./packages/host/src/services/mcp-probe.http-transport.test.ts \
+  ./packages/desktop/src/main/mcp-probe-service.test.ts \
+  ./packages/server/src/panels/runtime.test.ts
+node scripts/run-bun-test-shard.mjs --timeout 30000 \
+  ./packages/desktop/src/main/mcp-probe-service.test.ts \
+  ./packages/host/src/services/mcp-probe.http-transport.test.ts \
+  ./packages/server/src/panels/runtime.test.ts
+
+# 同 CC 复审后，对最终准确 checkout 运行 PR190 两分片：
+node scripts/run-bun-test-shard.mjs --timeout 30000 \
+  --path-ignore-patterns '**/src/engine/**' \
+  --path-ignore-patterns '**/src/tool-system/**' packages/core
+node scripts/run-bun-test-shard.mjs --timeout 30000 \
+  tests packages/coding packages/tui packages/pet packages/server packages/chat \
+  packages/web packages/arena packages/cdp packages/link packages/optimization-lab \
+  packages/browser-devtools packages/host
+```
+
+源码已逐路径提交；文档同步更新本清单、计划、TODO、架构、Host README 与 CHANGELOG。当前两项 CC 剩余 P2 的实现及宿主 45 fail 对应代码均已修复，**CC 复审和最终源码的正常宿主/CI 门槛仍待执行**。停供同一 CC 只读复审，不自行调用 CC 或进入下一批。
+
+本轮实际 newhead：`11d602198da6c31643c2070fa0d4662a64bee0e3`。三个源码提交成功后，文档精确 git add 再次被共享 `.git/worktrees/host-shared-services-20261015/index.lock` 的 `Operation not permitted` 拒绝（exit 128），文档 commit 未执行；未提升权限或绕过。六份未提交文档全部属于本任务（本文件含主控原变更），正常宿主精确补交命令：
+
+```sh
+TASK='/Users/admin/Documents/个人学习/代码学习/codeshell/.worktrees/host-shared-services-20261015'
+git -C "$TASK" add -- \
+  CHANGELOG.md \
+  TODO.md \
+  docs/architecture/16-platform-consolidation.md \
+  docs/todo/evidence/host-shared-services-cc-review-20261015.md \
+  docs/todo/platform-first-version-plan.md \
+  packages/host/README.md
+git -C "$TASK" commit -m 'docs(platform): record remaining Host review fixes and host gates'
+git -C "$TASK" rev-parse HEAD
+git -C "$TASK" status --short
+```
