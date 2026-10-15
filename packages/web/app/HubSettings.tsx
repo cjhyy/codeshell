@@ -460,6 +460,9 @@ function Models({
   const blocked = disabled || !!probing;
   React.useLayoutEffect(() => {
     if (!removalFinished || blocked || (removalFinished.kind === "close" && removing)) return;
+    // A queued read may remove the card before the existing cleanup clears
+    // `removing`. Keep its focus request until the stable receipt is mounted.
+    if (removing && !configuration.connections.some((item) => item.id === removing.id)) return;
     setRemovalFinished(null);
     removalFocus.apply(removalFinished.request, () => {
       const target =
@@ -475,7 +478,7 @@ function Models({
       target?.focus();
       removalMessage.current?.scrollIntoView({ block: "nearest", inline: "nearest" });
     });
-  }, [blocked, removalFinished, removing]);
+  }, [blocked, configuration.connections, removalFinished, removing]);
   React.useLayoutEffect(() => {
     const source = restoreEditorFocus.current;
     if (editing !== null || !source) return;
