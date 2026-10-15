@@ -450,6 +450,11 @@ export const settingsNs = {
         reset: "恢复默认",
         saved: "上下文设置已保存",
         saveFailed: "保存失败",
+        loading: "正在读取上下文设置…",
+        loadFailed: "无法读取上下文设置：{error}",
+        retry: "重新读取",
+        invalidRatio: "请输入 {min} 到 {max} 之间的整数百分比。",
+        resetting: "正在恢复…",
       },
       agents: {
         title: "子代理",
@@ -1643,6 +1648,11 @@ export const settingsNs = {
         reset: "Reset defaults",
         saved: "Context settings saved",
         saveFailed: "Save failed",
+        loading: "Loading context settings…",
+        loadFailed: "Could not load context settings: {error}",
+        retry: "Retry loading",
+        invalidRatio: "Enter a whole percentage from {min} to {max}.",
+        resetting: "Resetting…",
       },
       agents: {
         title: "Sub-agents",

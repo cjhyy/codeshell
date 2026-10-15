@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useCallback, useEffect, useId, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Slider } from "@/components/ui/slider";
@@ -53,9 +53,7 @@ function objectOf(value: unknown): Record<string, unknown> {
 }
 
 function percentOf(value: unknown, fallback: number): number {
-  return typeof value === "number" && Number.isFinite(value)
-    ? Math.round(value * 100)
-    : fallback;
+  return typeof value === "number" && Number.isFinite(value) ? Math.round(value * 100) : fallback;
 }
 
 function clamp(value: number, min: number, max: number): number {
@@ -65,180 +63,279 @@ function clamp(value: number, min: number, max: number): number {
 function normalizeRatios(input: RatioState): RatioState {
   const compactAtRatio = clamp(input.compactAtRatio, 10, 98);
   return {
-    microcompactFloorRatio: Math.min(
-      clamp(input.microcompactFloorRatio, 10, 95),
-      compactAtRatio,
-    ),
+    microcompactFloorRatio: Math.min(clamp(input.microcompactFloorRatio, 10, 95), compactAtRatio),
     compactAtRatio,
-    summarizeAtRatio: Math.max(
-      clamp(input.summarizeAtRatio, 10, 99),
-      compactAtRatio,
-    ),
+    summarizeAtRatio: Math.max(clamp(input.summarizeAtRatio, 10, 99), compactAtRatio),
   };
+}
+
+type RatioDrafts = Record<RatioKey, string>;
+
+function toDrafts(ratios: RatioState): RatioDrafts {
+  return Object.fromEntries(
+    Object.entries(ratios).map(([key, value]) => [key, String(value)]),
+  ) as RatioDrafts;
+}
+
+function validRatio(raw: string, min: number, max: number): boolean {
+  const value = Number(raw);
+  return raw.trim() !== "" && Number.isInteger(value) && value >= min && value <= max;
 }
 
 export function ContextSettingsSection() {
   const { t } = useT();
   const toast = useToast();
-  const [ratios, setRatios] = useState<RatioState>({ ...DEFAULT_RATIOS });
-  const [loading, setLoading] = useState(true);
-  const [saving, setSaving] = useState(false);
+  const fieldPrefix = useId();
+  const [drafts, setDrafts] = useState<RatioDrafts>(() => toDrafts(DEFAULT_RATIOS));
+  const [lastValid, setLastValid] = useState<RatioState>({ ...DEFAULT_RATIOS });
+  const [loadState, setLoadState] = useState<"loading" | "ready" | "error">("loading");
+  const [loadError, setLoadError] = useState("");
+  const [saving, setSaving] = useState<"save" | "reset" | null>(null);
+  const [touched, setTouched] = useState<Partial<Record<RatioKey, boolean>>>({});
+  const [submitted, setSubmitted] = useState(false);
+  const alive = useRef(false);
+  const loadSequence = useRef(0);
+  const writing = useRef(false);
+  const inputs = useRef<Partial<Record<RatioKey, HTMLInputElement>>>({});
+  const returnFocus = useRef<HTMLElement | null>(null);
+  const retryButton = useRef<HTMLButtonElement>(null);
+  const retryFocus = useRef(false);
 
-  const load = async () => {
-    setLoading(true);
+  const load = useCallback(async () => {
+    const sequence = ++loadSequence.current;
+    setLoadState("loading");
+    setLoadError("");
     try {
-      const settings = ((await window.codeshell.getSettings("user")) ?? {}) as Record<string, unknown>;
+      const settings = ((await window.codeshell.getSettings("user")) ?? {}) as Record<
+        string,
+        unknown
+      >;
+      if (!alive.current || sequence !== loadSequence.current) return;
       const context = objectOf(settings.context);
-      setRatios(
-        normalizeRatios({
-          microcompactFloorRatio: percentOf(
-            context.microcompactFloorRatio,
-            DEFAULT_RATIOS.microcompactFloorRatio,
-          ),
-          compactAtRatio: percentOf(context.compactAtRatio, DEFAULT_RATIOS.compactAtRatio),
-          summarizeAtRatio: percentOf(
-            context.summarizeAtRatio,
-            DEFAULT_RATIOS.summarizeAtRatio,
-          ),
-        }),
-      );
-    } finally {
-      setLoading(false);
+      const next = normalizeRatios({
+        microcompactFloorRatio: percentOf(
+          context.microcompactFloorRatio,
+          DEFAULT_RATIOS.microcompactFloorRatio,
+        ),
+        compactAtRatio: percentOf(context.compactAtRatio, DEFAULT_RATIOS.compactAtRatio),
+        summarizeAtRatio: percentOf(context.summarizeAtRatio, DEFAULT_RATIOS.summarizeAtRatio),
+      });
+      setDrafts(toDrafts(next));
+      setLastValid(next);
+      setTouched({});
+      setSubmitted(false);
+      setLoadState("ready");
+    } catch (error) {
+      if (!alive.current || sequence !== loadSequence.current) return;
+      setLoadError(error instanceof Error ? error.message : String(error));
+      setLoadState("error");
     }
-  };
-
-  useEffect(() => {
-    void load();
   }, []);
 
-  const setRatio = (key: RatioKey, value: number): void => {
-    const field = FIELDS.find((f) => f.key === key);
-    if (!field) return;
-    setRatios((prev) => ({
-      ...prev,
-      [key]: clamp(Math.round(value), field.min, field.max),
-    }));
-  };
+  useEffect(() => {
+    if (loadState === "loading" || !retryFocus.current) return;
+    retryFocus.current = false;
+    if (document.activeElement !== document.body) return;
+    if (loadState === "ready") inputs.current.microcompactFloorRatio?.focus();
+    else retryButton.current?.focus();
+  }, [loadState]);
 
-  const save = async () => {
-    const next = normalizeRatios(ratios);
-    setRatios(next);
-    setSaving(true);
-    try {
-      await writeSettings("user", {
-        context: {
-          microcompactFloorRatio: next.microcompactFloorRatio / 100,
-          compactAtRatio: next.compactAtRatio / 100,
-          summarizeAtRatio: next.summarizeAtRatio / 100,
-        },
-      });
-      toast({ message: t("settingsX.context.saved"), variant: "success" });
-    } catch (e) {
-      toast({
-        message: `${t("settingsX.context.saveFailed")}: ${
-          e instanceof Error ? e.message : String(e)
-        }`,
-        variant: "error",
-      });
-    } finally {
-      setSaving(false);
+  useEffect(() => {
+    alive.current = true;
+    void load();
+    return () => {
+      alive.current = false;
+      loadSequence.current++;
+    };
+  }, [load]);
+
+  useEffect(() => {
+    if (saving || !returnFocus.current) return;
+    const opener = returnFocus.current;
+    returnFocus.current = null;
+    if (document.activeElement === document.body && opener.isConnected) opener.focus();
+  }, [saving]);
+
+  const setDraft = (field: (typeof FIELDS)[number], value: string): void => {
+    setDrafts((previous) => ({ ...previous, [field.key]: value }));
+    if (validRatio(value, field.min, field.max)) {
+      setLastValid((previous) => ({ ...previous, [field.key]: Number(value) }));
     }
   };
 
-  const reset = async () => {
-    const next = { ...DEFAULT_RATIOS };
-    setRatios(next);
-    setSaving(true);
+  const persist = async (reset: boolean) => {
+    if (loadState !== "ready" || writing.current) return;
+    const invalid = FIELDS.find((field) => !validRatio(drafts[field.key], field.min, field.max));
+    if (!reset && invalid) {
+      setSubmitted(true);
+      inputs.current[invalid.key]?.focus();
+      return;
+    }
+    const next = reset
+      ? { ...DEFAULT_RATIOS }
+      : normalizeRatios(
+          Object.fromEntries(
+            Object.entries(drafts).map(([key, value]) => [key, Number(value)]),
+          ) as RatioState,
+        );
+    const opener = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+    writing.current = true;
+    setSaving(reset ? "reset" : "save");
     try {
       await writeSettings("user", {
         context: {
-          microcompactFloorRatio: null,
-          compactAtRatio: null,
-          summarizeAtRatio: null,
+          microcompactFloorRatio: reset ? null : next.microcompactFloorRatio / 100,
+          compactAtRatio: reset ? null : next.compactAtRatio / 100,
+          summarizeAtRatio: reset ? null : next.summarizeAtRatio / 100,
         },
       });
+      if (!alive.current) return;
+      setDrafts(toDrafts(next));
+      setLastValid(next);
+      setTouched({});
+      setSubmitted(false);
       toast({ message: t("settingsX.context.saved"), variant: "success" });
-    } catch (e) {
+    } catch (error) {
+      if (!alive.current) return;
       toast({
-        message: `${t("settingsX.context.saveFailed")}: ${
-          e instanceof Error ? e.message : String(e)
-        }`,
+        message: `${t("settingsX.context.saveFailed")}: ${error instanceof Error ? error.message : String(error)}`,
         variant: "error",
       });
     } finally {
-      setSaving(false);
+      writing.current = false;
+      if (alive.current) {
+        returnFocus.current = opener;
+        setSaving(null);
+      }
     }
   };
 
   return (
-    <section className="mb-6 flex max-w-3xl flex-col gap-4">
+    <section
+      className="mb-6 flex max-w-3xl flex-col gap-4"
+      aria-busy={loadState === "loading" || saving !== null}
+    >
       <div>
         <h3 className="m-0 text-[0.95rem] font-semibold text-foreground">
           {t("settingsX.context.title")}
         </h3>
-        <p className="m-0 mt-1 text-xs text-muted-foreground">
-          {t("settingsX.context.desc")}
+        <p className="m-0 mt-1 text-xs text-muted-foreground">{t("settingsX.context.desc")}</p>
+      </div>
+      {loadState === "loading" && (
+        <p className="text-xs text-muted-foreground" role="status">
+          {t("settingsX.context.loading")}
         </p>
-      </div>
-
-      <div className="grid gap-3">
-        {FIELDS.map((field) => (
-          <div
-            key={field.key}
-            className="rounded-md border border-border bg-background px-3 py-3"
+      )}
+      {loadState === "error" && (
+        <div className="rounded-md border border-status-err/30 bg-status-err/5 p-3">
+          <p className="break-words text-xs text-status-err" role="alert">
+            {t("settingsX.context.loadFailed", { error: loadError })}
+          </p>
+          <Button
+            ref={retryButton}
+            type="button"
+            variant="outline"
+            size="sm"
+            className="mt-3"
+            onClick={() => {
+              retryFocus.current = true;
+              void load();
+            }}
           >
-            <div className="flex items-start justify-between gap-3 max-[520px]:flex-col">
-              <div className="min-w-0">
-                <div className="text-sm font-medium text-foreground">
-                  {t(field.title)}
-                </div>
-                <p className="m-0 mt-1 text-xs text-muted-foreground">
-                  {t(field.desc)}
-                </p>
-              </div>
-              <label className="flex shrink-0 items-center gap-1.5 text-sm text-muted-foreground">
-                <Input
-                  type="number"
-                  min={field.min}
-                  max={field.max}
-                  value={ratios[field.key]}
-                  disabled={loading || saving}
-                  className="h-8 w-20 text-right"
-                  onChange={(e) => setRatio(field.key, Number(e.currentTarget.value))}
-                />
-                <span>%</span>
-              </label>
-            </div>
-            <Slider
-              min={field.min}
-              max={field.max}
-              value={[ratios[field.key]]}
-              disabled={loading || saving}
-              className="mt-3"
-              aria-label={t(field.title)}
-              onValueChange={([value]) => setRatio(field.key, value)}
-            />
-          </div>
-        ))}
-      </div>
-
-      <p className="m-0 text-xs text-muted-foreground">
-        {t("settingsX.context.orderHint")}
-      </p>
-
-      <div className="flex flex-wrap gap-2">
-        <Button type="button" onClick={() => void save()} disabled={loading || saving}>
-          {saving ? t("settingsX.context.saving") : t("settingsX.context.save")}
-        </Button>
-        <Button
-          type="button"
-          variant="outline"
-          onClick={() => void reset()}
-          disabled={loading || saving}
+            {t("settingsX.context.retry")}
+          </Button>
+        </div>
+      )}
+      {loadState === "ready" && (
+        <form
+          noValidate
+          className="flex flex-col gap-4"
+          onSubmit={(event) => {
+            event.preventDefault();
+            void persist(false);
+          }}
         >
-          {t("settingsX.context.reset")}
-        </Button>
-      </div>
+          <div className="grid gap-3">
+            {FIELDS.map((field) => {
+              const id = `${fieldPrefix}-${field.key}`;
+              const invalid = !validRatio(drafts[field.key], field.min, field.max);
+              const showError = invalid && (submitted || touched[field.key]);
+              return (
+                <div
+                  key={field.key}
+                  className="rounded-md border border-border bg-background px-3 py-3"
+                >
+                  <div className="flex items-start justify-between gap-3 max-[520px]:flex-col">
+                    <div className="min-w-0">
+                      <label htmlFor={id} className="text-sm font-medium text-foreground">
+                        {t(field.title)}
+                      </label>
+                      <p
+                        id={`${id}-description`}
+                        className="m-0 mt-1 text-xs text-muted-foreground"
+                      >
+                        {t(field.desc)}
+                      </p>
+                    </div>
+                    <div className="flex shrink-0 items-center gap-1.5 text-sm text-muted-foreground">
+                      <Input
+                        id={id}
+                        ref={(node) => {
+                          if (node) inputs.current[field.key] = node;
+                          else delete inputs.current[field.key];
+                        }}
+                        type="number"
+                        min={field.min}
+                        max={field.max}
+                        step={1}
+                        value={drafts[field.key]}
+                        disabled={saving !== null}
+                        className="h-8 w-20 text-right"
+                        aria-invalid={showError || undefined}
+                        aria-describedby={`${id}-description${showError ? ` ${id}-error` : ""}`}
+                        onChange={(event) => setDraft(field, event.currentTarget.value)}
+                        onBlur={() =>
+                          setTouched((previous) => ({ ...previous, [field.key]: true }))
+                        }
+                      />
+                      <span aria-hidden>%</span>
+                    </div>
+                  </div>
+                  <Slider
+                    min={field.min}
+                    max={field.max}
+                    value={[lastValid[field.key]]}
+                    disabled={saving !== null}
+                    className="mt-3"
+                    aria-label={t(field.title)}
+                    aria-describedby={`${id}-description`}
+                    onValueChange={([value]) => setDraft(field, String(value))}
+                  />
+                  {showError && (
+                    <p id={`${id}-error`} className="m-0 mt-2 text-xs text-status-err" role="alert">
+                      {t("settingsX.context.invalidRatio", { min: field.min, max: field.max })}
+                    </p>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+          <p className="m-0 text-xs text-muted-foreground">{t("settingsX.context.orderHint")}</p>
+          <div className="flex flex-wrap gap-2">
+            <Button type="submit" disabled={saving !== null}>
+              {saving === "save" ? t("settingsX.context.saving") : t("settingsX.context.save")}
+            </Button>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => void persist(true)}
+              disabled={saving !== null}
+            >
+              {saving === "reset" ? t("settingsX.context.resetting") : t("settingsX.context.reset")}
+            </Button>
+          </div>
+        </form>
+      )}
     </section>
   );
 }

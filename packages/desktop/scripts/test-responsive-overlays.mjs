@@ -10,6 +10,7 @@ const fixtures = [
   "components/ui/dropdown-surfaces.browser.fixture.mjs",
   "settings/SettingsMenu.browser.fixture.mjs",
   "settings/AppearanceSection.browser.fixture.mjs",
+  "settings/ContextSettingsSection.browser.fixture.mjs",
   "account/AccountSidebarEntry.browser.fixture.mjs",
   "chat/anchored-popovers.browser.fixture.mjs",
   "ui/ContextMenu.browser.fixture.mjs",
