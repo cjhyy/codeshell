@@ -49,6 +49,7 @@
   margin: 24px 0 12px;
 }
 .skills-filter > label {
+  position: relative;
   flex: 1;
 }
 .hub-skills input:not([type="radio"]),
