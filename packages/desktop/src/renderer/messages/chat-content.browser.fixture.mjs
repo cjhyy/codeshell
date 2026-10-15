@@ -14,7 +14,7 @@ const require = createRequire(path.join(desktop, "package.json"));
 const tailwindRequire = createRequire(require.resolve("@tailwindcss/vite"));
 const { compile } = tailwindRequire("@tailwindcss/node");
 const { Scanner } = tailwindRequire("@tailwindcss/oxide");
-const output = "/tmp/codeshell-subagent-summary-qa";
+const output = "/tmp/codeshell-subagent-transcript-qa";
 await mkdir(output, { recursive: true });
 const source = `
   import React from 'react';
@@ -61,13 +61,15 @@ const source = `
       {kind:'stream',event:{type:'turn_complete',reason:'completed'}},
     ]},
   };
-  function Fixture({kind,phase,lang,wallpaper=true,presentation=false}) {
+  function Fixture({kind,phase,lang,wallpaper=true,presentation=false,navigationAvailable=true,emptyDone=false,longName=false,paneWidth}) {
     const [current,setCurrent]=React.useState(phase);
     const [stale,setStale]=React.useState(false);
     const [epoch,setEpoch]=React.useState(0);
     const [detail,setDetail]=React.useState(null);
     window.completeFixture=()=>setCurrent('completed');window.staleFixture=()=>setStale(true);window.bumpEpoch=()=>setEpoch(value=>value+1);
     const main=agent('agent-main',current,lang);
+    if(longName)main.name=(lang==='zh'?'Figma 设计链接读取与跨工作区设计上下文解析调研':'Figma Link reading and cross-workspace design context research ').repeat(3);
+    if(emptyDone)Object.assign(main,{done:true,description:'',text:'',textBuffer:''});
     window.currentAgent=main;
     if(presentation){
       main.name=lang==='zh'?'Link 调研':'Link research';main.agentType='explorer';
@@ -80,13 +82,17 @@ const source = `
     const process={kind:'turn_process_group',id:'fixture-process',isLive:current==='running',startedAt:started,firstToolStartedAt:started,durationMs:65000,toolCount:2,
       items:[{kind:'assistant',id:'process-intro',done:true,text:lang==='zh'?'先检查实现，再核对测试。':'Inspect the implementation, then verify the tests.'},
         {kind:'thinking',id:'process-thinking',done:true,text:thinking(lang)},...tools('process','completed',2),agent('process-agent','completed',lang,2)]};
-    const navigation={sessionId:'fixture-parent',agents:[main],onView:selection=>{window.actions.push(['view',selection]);setDetail(selection)}};
+    const navigation={sessionId:'fixture-parent',agents:[main],onView:selection=>{
+      const heading=document.querySelector('[aria-controls="agent-body-'+selection.agentId+'"]');
+      window.actions.push(['view',selection,{expanded:heading?.getAttribute('aria-expanded'),bodyMounted:!!document.getElementById('agent-body-'+selection.agentId)}]);
+      setDetail(selection);
+    }};
     const surface=wallpaper?{'--cs-surface-chat-image':'repeating-conic-gradient(from 12deg at 25% 15%, #0c4a6e 0deg 25deg, #f8fafc 25deg 65deg, #1e293b 65deg 100deg)','--cs-surface-chat-opacity':'1','--cs-surface-chat-background-opacity':'0'}:{};
     return <main id="chat-content-fixture" data-theme-surface="chat" className="fixed inset-0 flex min-h-0 min-w-0 flex-col text-foreground" style={surface}>
-      <SubagentNavigationContext.Provider value={navigation}>
+      <SubagentNavigationContext.Provider value={navigationAvailable?navigation:null}>
         {detail?<div className="flex min-h-0 flex-1 flex-col bg-background"><SubagentSessionDetail {...detail} onBack={()=>setDetail(null)}/></div>
         :<div id="content-scroll" className="min-h-0 min-w-0 flex-1 overflow-y-auto py-4">
-          <div className="cs-chat-transcript mx-auto w-full min-w-0 max-w-3xl">
+          <div className="cs-chat-transcript mx-auto w-full min-w-0 max-w-3xl" style={paneWidth?{width:paneWidth,maxWidth:'100%'}:undefined}>
             {kind==='agent'?<AgentMessageView message={main}/>:kind==='group'?<div id="group-fixture"><AgentGroupCard group={group}/></div>
             :kind==='thinking'?<div id="thinking-fixture"><ThinkingMessageView message={{kind:'thinking',id:'thinking-main',text:thinking(lang),done:current==='completed'}}/></div>
             :kind==='process'?<div id="process-fixture"><TurnProcessGroupCard group={process} turnEpoch={epoch}/></div>
@@ -143,6 +149,7 @@ const reports = [],
   errors = [],
   blocked = [];
 let hiddenToolCases = 0;
+let directNavigationCases = 0;
 
 async function noSubagentTools(scope, label) {
   assert.equal(
@@ -236,6 +243,70 @@ async function keyboardToggle(header, label) {
   );
 }
 
+async function transcriptActionFits(card, expected, label) {
+  const action = card.getByRole("button", { name: expected.transcript, exact: true });
+  await reachable(action, label + "/transcript action");
+  const geometry = await action.evaluate((button) => {
+    const heading = button.closest(".cs-agent-card").querySelector(".cs-agent-heading");
+    const own = button.getBoundingClientRect(),
+      toggle = heading.getBoundingClientRect();
+    const overlapWidth = Math.max(
+      0,
+      Math.min(own.right, toggle.right) - Math.max(own.left, toggle.left),
+    );
+    const overlapHeight = Math.max(
+      0,
+      Math.min(own.bottom, toggle.bottom) - Math.max(own.top, toggle.top),
+    );
+    return {
+      width: button.clientWidth,
+      scrollWidth: button.scrollWidth,
+      height: own.height,
+      label: button.textContent.trim(),
+      nested: heading.contains(button),
+      overlapWidth,
+      overlapHeight,
+    };
+  });
+  assert.equal(geometry.label, expected.transcript, label + ": full transcript label is present");
+  assert.ok(
+    geometry.scrollWidth <= geometry.width + 1 && geometry.height >= 35,
+    `${label}: full label is visible with a usable target ${JSON.stringify(geometry)}`,
+  );
+  assert.ok(
+    !geometry.nested && (geometry.overlapWidth < 1 || geometry.overlapHeight < 1),
+    `${label}: independent header buttons do not overlap ${JSON.stringify(geometry)}`,
+  );
+  return action;
+}
+
+async function navigateTranscript(page, expected, label, expanded) {
+  const card = page.locator(".cs-agent-card");
+  const action = await transcriptActionFits(card, expected, label);
+  await action.focus();
+  await action.press("Enter");
+  await page
+    .getByText("Full child transcript: schema and callers verified.", { exact: true })
+    .waitFor();
+  const actions = await page.evaluate(() => window.actions);
+  const navigation = actions.filter((action) => action[0] === "view").at(-1);
+  assert.equal(navigation[1].agentId, "agent-main");
+  assert.equal(navigation[1].parentSessionId, "fixture-parent");
+  assert.deepEqual(
+    navigation[2],
+    { expanded: expanded ? "true" : "false", bodyMounted: expanded },
+    label + ": navigation does not mount a body or change expansion before opening",
+  );
+  assert.ok(actions.some((action) => action[0] === "transcript" && action[1] === "agent-main"));
+  await fits(page, label + "/full transcript");
+  await page.getByRole("button", { name: expected.back, exact: true }).click();
+  const heading = page.locator('[aria-controls="agent-body-agent-main"]');
+  await heading.waitFor();
+  assert.equal(await heading.getAttribute("aria-expanded"), "false");
+  assert.equal(await page.locator("#agent-body-agent-main").count(), 0);
+  directNavigationCases++;
+}
+
 try {
   const page = await browser.newPage({
     viewport: { width: 900, height: 760 },
@@ -296,8 +367,15 @@ try {
             );
             assert.equal(await header.getAttribute("aria-expanded"), "false");
             await noSubagentTools(page.locator(".cs-agent-card"), label + " collapsed");
+            await transcriptActionFits(
+              page.locator(".cs-agent-card"),
+              expected,
+              label + " collapsed",
+            );
             await fits(page, label + " collapsed");
             await capture("agent-" + phase + "-collapsed");
+            if (phase === "completed")
+              await navigateTranscript(page, expected, label + " collapsed", false);
             await keyboardToggle(header, label + " header");
             await body.waitFor();
             assert.ok(
@@ -340,31 +418,7 @@ try {
               );
             }
             if (phase === "completed") {
-              const transcript = body.getByRole("button", {
-                name: expected.transcript,
-                exact: true,
-              });
-              await reachable(transcript, label + " transcript");
-              await transcript.click();
-              await page
-                .getByText("Full child transcript: schema and callers verified.", { exact: true })
-                .waitFor();
-              const actions = await page.evaluate(() => window.actions);
-              assert.ok(
-                actions.some(
-                  (action) =>
-                    action[0] === "view" &&
-                    action[1].agentId === "agent-main" &&
-                    action[1].parentSessionId === "fixture-parent",
-                ),
-              );
-              assert.ok(
-                actions.some((action) => action[0] === "transcript" && action[1] === "agent-main"),
-              );
-              await fits(page, label + " full transcript");
-              await capture("full-transcript");
-              await page.getByRole("button", { name: expected.back, exact: true }).click();
-              await header.waitFor();
+              await navigateTranscript(page, expected, label + " expanded", true);
             } else {
               await keyboardToggle(header, label + " collapse");
               await body.waitFor({ state: "detached" });
@@ -471,6 +525,74 @@ try {
           if (process.argv.includes("--fail-fast")) throw error;
         }
       }
+  let availabilityCases = 0,
+    headerLayoutCases = 0;
+  await page.setViewportSize({ width: 320, height: 420 });
+  for (const availability of [{ navigationAvailable: false }, { emptyDone: true }]) {
+    await page.evaluate((props) => window.renderFixture(props), {
+      lang: "zh",
+      mode: "light",
+      kind: "agent",
+      phase: "completed",
+      wallpaper: false,
+      ...availability,
+    });
+    await settle(page);
+    const expected = await page.evaluate(() => window.expected);
+    const card = page.locator(".cs-agent-card"),
+      heading = card.locator(".cs-agent-heading");
+    if (availability.navigationAvailable === false) {
+      assert.equal(
+        await card.getByRole("button", { name: expected.transcript, exact: true }).count(),
+        0,
+      );
+      assert.ok(await heading.isEnabled());
+      await keyboardToggle(heading, "no navigation still permits result details");
+      assert.ok((await card.locator(".cs-agent-output").textContent()).includes(expected.complete));
+    } else {
+      assert.ok(
+        await heading.isDisabled(),
+        "navigation alone does not create an empty detail body",
+      );
+      assert.equal(await heading.getAttribute("aria-expanded"), "false");
+      assert.equal(await card.locator(".cs-agent-body").count(), 0);
+      await navigateTranscript(page, expected, "empty completed agent direct navigation", false);
+    }
+    availabilityCases++;
+  }
+  for (const lang of ["zh", "en"])
+    for (const layout of [
+      { width: 320, height: 420 },
+      { width: 1200, height: 760, paneWidth: 300 },
+    ]) {
+      await page.setViewportSize({ width: layout.width, height: layout.height });
+      await page.evaluate((props) => window.renderFixture(props), {
+        lang,
+        mode: "light",
+        kind: "agent",
+        phase: "completed",
+        wallpaper: true,
+        longName: true,
+        paneWidth: layout.paneWidth,
+      });
+      await settle(page);
+      const expected = await page.evaluate(() => window.expected);
+      await transcriptActionFits(
+        page.locator(".cs-agent-card"),
+        expected,
+        `${lang}/long name/${layout.width}`,
+      );
+      await fits(page, `${lang}/long name/${layout.width}`);
+      await page.screenshot({
+        path: path.join(
+          output,
+          `header-${lang}-${layout.width}${layout.paneWidth ? "-pane300" : ""}.png`,
+        ),
+        animations: "disabled",
+      });
+      await navigateTranscript(page, expected, `${lang}/long name/${layout.width}`, false);
+      headerLayoutCases++;
+    }
   let reducedMotionCases = 0;
   await page.emulateMedia({ reducedMotion: "reduce" });
   for (const kind of ["thinking", "group"]) {
@@ -522,11 +644,21 @@ try {
     });
     await settle(page);
     const header = page.locator('[aria-controls="agent-body-agent-main"]');
+    const expected = await page.evaluate(() => window.expected);
+    await transcriptActionFits(
+      page.locator(".cs-agent-card"),
+      expected,
+      `presentation/${mode}/collapsed`,
+    );
+    await page.locator(".cs-agent-card").screenshot({
+      path: path.join(output, `preview-link-${mode}-collapsed.png`),
+      animations: "disabled",
+    });
     await keyboardToggle(header, `presentation/${mode}`);
     await page.evaluate(() => document.activeElement?.blur());
     await noSubagentTools(page.locator(".cs-agent-card"), `presentation/${mode}`);
     await page.locator(".cs-agent-card").screenshot({
-      path: path.join(output, `preview-link-${mode}.png`),
+      path: path.join(output, `preview-link-${mode}-expanded.png`),
       animations: "disabled",
     });
   }
@@ -536,6 +668,9 @@ try {
     geometryCases: reports.length,
     reducedMotionCases,
     hiddenToolCases,
+    directNavigationCases,
+    availabilityCases,
+    headerLayoutCases,
     failures,
     browserErrors: errors,
     blockedRequests: blocked,
