@@ -25,10 +25,17 @@ export const messagesNs = {
         expand: "展开",
         collapse: "收起",
       },
+      thinking: {
+        title: "思考过程",
+        running: "正在思考…",
+      },
       // sub-agent card
       agent: {
         fallbackName: "agent",
-        toolCount: "{count} tools",
+        toolCount: "{count} 次工具调用",
+        running: "运行中",
+        completed: "已完成",
+        failed: "失败",
         backgrounded: "转后台 · 运行中",
         mayBeLost: "可能失联",
         showDetails: "查看详情",
@@ -36,7 +43,7 @@ export const messagesNs = {
         task: "任务",
         activity: "执行过程",
         operationCount: "{count} 次操作",
-        output: "输出",
+        output: "结果",
         waitingForActivity: "子代理运行中，执行过程将在这里显示。",
         transcript: "完整对话",
         back: "返回上级对话",
@@ -52,7 +59,9 @@ export const messagesNs = {
       agentGroup: {
         count: "{count} 个子代理",
         running: "{count} 运行中",
-        toolCount: "{count} tools",
+        succeeded: "{count} 已完成",
+        failed: "{count} 失败",
+        toolCount: "{count} 次工具调用",
       },
       // ask-user inline card
       ask: {
@@ -201,9 +210,16 @@ export const messagesNs = {
         expand: "Expand",
         collapse: "Collapse",
       },
+      thinking: {
+        title: "Thinking",
+        running: "Thinking…",
+      },
       agent: {
         fallbackName: "agent",
         toolCount: "{count} tools",
+        running: "Running",
+        completed: "Completed",
+        failed: "Failed",
         backgrounded: "Backgrounded · running",
         mayBeLost: "may be lost",
         showDetails: "View details",
@@ -226,6 +242,8 @@ export const messagesNs = {
       agentGroup: {
         count: "{count} sub-agents",
         running: "{count} running",
+        succeeded: "{count} completed",
+        failed: "{count} failed",
         toolCount: "{count} tools",
       },
       ask: {

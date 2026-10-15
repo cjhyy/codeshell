@@ -31,7 +31,13 @@ describe("AgentGroupCard", () => {
     };
     const html = renderToStaticMarkup(<AgentGroupCard group={group} />);
     expect(html).toContain("2 个子代理");
-    expect(html).toContain("7 tools"); // 4 + 3
+    expect(html).toContain("7 次工具调用"); // 4 + 3
+    expect(html).toContain("1 已完成");
+    expect(html).toContain("1 失败");
+    expect(html).toContain('type="button"');
+    expect(html).toContain('aria-expanded="false"');
+    expect(html).toContain("aria-controls=");
+    expect(html).not.toContain("desc-a");
     // wall-clock 3000-0 = 3.0s, shown because nothing is running.
     expect(html).toContain("3.0s");
   });
@@ -50,5 +56,7 @@ describe("AgentGroupCard", () => {
     // Default-open while running → member cards (names) render.
     expect(html).toContain("explorer");
     expect(html).toContain("worker");
+    expect(html).toContain('aria-expanded="true"');
+    expect(html).toContain("cs-agent-group-body");
   });
 });

@@ -1,4 +1,4 @@
-import React, { memo, useState, useEffect, useRef } from "react";
+import React, { memo, useState, useEffect, useRef, useId } from "react";
 import { ChevronRight, ChevronDown } from "lucide-react";
 import { ToolCard } from "../tool-cards";
 import { ToolGroupCard } from "./ToolGroupCard";
@@ -59,6 +59,7 @@ function TurnProcessGroupCardImpl({
   rootStatus,
 }: Props) {
   const [open, setOpen] = useState(group.isLive);
+  const detailsId = useId();
   const prevIsLiveRef = useRef(group.isLive);
 
   // Force-collapse only the process card whose own clean turn just transitioned
@@ -114,22 +115,25 @@ function TurnProcessGroupCardImpl({
   });
 
   return (
-    <div className="px-4 py-1" data-message-kind="process" data-tool-names={toolNames.join(" ")}>
+    <div
+      className="min-w-0 max-w-full px-4 py-1"
+      data-message-kind="process"
+      data-tool-names={toolNames.join(" ")}
+    >
       {showHeader && (
         <button
           type="button"
-          className={`flex w-full items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground${
-            open ? " border-b border-border pb-1" : ""
-          }`}
+          className="cs-process-heading"
           onClick={() => setOpen((v) => !v)}
           aria-expanded={open}
+          aria-controls={detailsId}
         >
           {open ? <ChevronDown size={12} /> : <ChevronRight size={12} />}
           <span>{label}</span>
         </button>
       )}
       {visibleItems.length > 0 && (
-        <div className={showHeader ? "mt-1 flex flex-col gap-1" : "flex flex-col gap-1"}>
+        <div id={detailsId} className="cs-process-content">
           {visibleItems.map((m) => {
             if (m.kind === "tool_group") {
               return (

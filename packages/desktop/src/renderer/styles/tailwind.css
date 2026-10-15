@@ -1,5 +1,6 @@
 @import "tailwindcss";
 @import "tw-animate-css";
+@import "./chat-content.css";
 
 /* Dark mode is driven by a `.dark` class on <html> (see theme.ts). */
 @custom-variant dark (&:is(.dark *));

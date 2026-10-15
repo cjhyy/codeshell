@@ -47,13 +47,21 @@ describe("MessageStream — empty marker suppression (no blank blocks)", () => {
       { kind: "thinking", id: "t1", text: "", done: true },
     ];
     const html = renderToStaticMarkup(<MessageStream messages={messages} />);
-    expect(html).not.toContain("thinking");
+    expect(html).not.toContain("cs-thinking");
   });
 
   test("still renders a thinking message that has text", () => {
     const messages: Message[] = [{ kind: "thinking", id: "t1", text: "pondering", done: true }];
     const html = renderToStaticMarkup(<MessageStream messages={messages} />);
-    expect(html).toContain("thinking");
+    expect(html).toContain("思考过程");
+    expect(html).toContain('type="button"');
+    expect(html).toContain('aria-expanded="false"');
+    expect(html).toContain("aria-controls=");
+    expect(html).not.toContain("pondering");
+    const runningHtml = renderToStaticMarkup(
+      <MessageStream messages={[{ ...messages[0], done: false } as Message]} />,
+    );
+    expect(runningHtml).toContain("正在思考");
   });
 });
 

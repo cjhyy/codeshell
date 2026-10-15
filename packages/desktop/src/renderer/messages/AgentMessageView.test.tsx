@@ -109,6 +109,22 @@ describe("AgentMessageView header", () => {
     );
     expect(html).toContain("explorer");
   });
+
+  test("a failed background agent shows failure instead of running activity", () => {
+    const html = renderToStaticMarkup(
+      <AgentMessageView
+        message={agent({
+          backgrounded: true,
+          error: "Unable to continue.",
+          toolCalls: [tool("t1", "Read", { status: "running" })],
+          toolCount: 1,
+        })}
+      />,
+    );
+    expect(html).toContain("失败");
+    expect(html).not.toContain("运行中");
+    expect(html).not.toContain("正在读取");
+  });
 });
 
 describe("AgentMessageView details", () => {
@@ -198,6 +214,12 @@ describe("AgentMessageView details", () => {
     const body = agentBody(container);
     expect(renderedText(body)).toContain("Verified the engine tests.");
     expect(renderedText(body)).toContain("The optional follow-up was interrupted.");
+    expect(renderedText(body).indexOf("Verified the engine tests.")).toBeLessThan(
+      renderedText(body).indexOf("执行过程"),
+    );
+    expect(renderedText(body).indexOf("The optional follow-up was interrupted.")).toBeLessThan(
+      renderedText(body).indexOf("执行过程"),
+    );
     expect(findElements(body, "STRONG").map(renderedText)).toContain("Verified the engine tests.");
     expect(renderedText(body)).not.toContain(result);
 
