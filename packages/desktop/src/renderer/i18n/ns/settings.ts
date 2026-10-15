@@ -71,7 +71,7 @@ export const settingsNs = {
         login: "登录",
         register: "注册",
         github: "使用 GitHub 登录",
-        connectGitHub: "同时连接 GitHub",
+        connectGitHub: "首次 GitHub 登录默认 Link",
         cancelGitHubConnection: "取消 GitHub 连接",
         connectGitHubChecking: "正在检查此云服务是否支持同时连接 GitHub…",
         connectGitHubDefaultChecking: "正在检查已保存的 GitHub Link 连接…",
@@ -1227,7 +1227,7 @@ export const settingsNs = {
         login: "Sign in",
         register: "Register",
         github: "Sign in with GitHub",
-        connectGitHub: "Also connect GitHub",
+        connectGitHub: "Link by default on first GitHub sign-in",
         cancelGitHubConnection: "Cancel GitHub connection",
         connectGitHubChecking:
           "Checking whether this service supports connecting GitHub during sign-in…",
