@@ -381,8 +381,13 @@ because the old viewer has no dialog role. Root registered the MCP fixture;
 UI5 now freezes Search/History/Connections/MCP for combined gates, 29 browser
 fixtures in total. No additional release/version change is planned.
 Combined all 14 workspace types, lint (0 errors/104 existing warnings) and full
-Desktop main/preload/renderer/mobile/extension build passed. Guarded unit,
-29 browser fixtures and sequential full-app native checks are running.
+Desktop main/preload/renderer/mobile/extension build passed. Guarded units passed
+3399 tests/12595 assertions across 372 files (one separately browser-covered
+skip); all 29 browser fixtures passed. Sequential production full-app Electron
+Settings, Search and Operations pages all passed. Logs are
+`/tmp/codeshell-ui-wave5-{typecheck,lint,desktop-build,unit,overlays,native-settings,native-search,native-operations}.log`.
+Root independently verified every final scope in the combination and refreshed
+remote main before delivery. Remote CI remains pending the push.
 
 The repository's later release `v0.9.44` was published at 09:44:42Z with all
 14 native/update assets present. This follows our verified `v0.9.43` publication;
@@ -421,6 +426,24 @@ reachability, preserving all ChatView/runtime/send/auth behavior. New branch
 main `94f1a462b` because this component is unchanged, then must refresh against
 delivered UI5 before final gates. Evidence `/tmp/codeshell-cloud-banner-review-report.json`
 and `/tmp/codeshell-cloud-banner-native-report.json`.
+
+UI6 also accepts ui_audit's independently reproduced Cloud chooser/sign-in/
+manager layout and owned failure-focus scope on
+`codex/desktop/cloud-dialog-recovery-20261015`; preserve all authentication,
+identity, password-clearing, uncertain-state and request guards. release_audit
+owns `codex/desktop/profile-dialog-layout-20261015`: actual Settings Editor,
+Memory and Switch dialogs have existing modal semantics but lose Escape focus,
+scroll Close outside short windows and overflow with long content. Limit changes
+to bounded header/body/footer, complete content and safe actual opener capture;
+preserve save/switch/memory/capability business. Each starts from fresh main
+`94f1a462b` because these files are unchanged, then must refresh delivered UI5
+before final verification. Independent owned fixtures only; no real credentials,
+provider traffic or configuration writes. Native windows are coordinated.
+
+Primary checkout currently remains on another task's main at `2e0462c68`,
+26 local commits ahead of the current remote, plus pre-existing `.claude/` and
+`docs/todo/browser-panel-runtime-design.md`. Leave it untouched; task delivery
+uses the clean integration checkout and does not publish unknown local commits.
 
 Initial audit history follows:
 
