@@ -23,6 +23,67 @@ function record(value: unknown): Record<string, unknown> | undefined {
     : undefined;
 }
 
+/** Fixed structural diagnostics; account values and provider text never leave this function. */
+function accountShape(value: unknown): Record<string, unknown> {
+  if (Buffer.byteLength(JSON.stringify(value)) > 65_536) return { oversized: true };
+  const shape = (item: unknown, depth = 0): unknown => {
+    if (item === null) return "null";
+    if (Array.isArray(item))
+      return {
+        type: "array",
+        length: item.length,
+        ...(depth < 3 ? { items: item.slice(0, 3).map((entry) => shape(entry, depth + 1)) } : {}),
+      };
+    const object = record(item);
+    if (object)
+      return {
+        type: "object",
+        ...(depth < 3
+          ? {
+              fields: Object.fromEntries(
+                Object.entries(object)
+                  .filter(([key]) => /^[A-Za-z_][A-Za-z0-9_]{0,59}$/.test(key))
+                  .slice(0, 30)
+                  .map(([key, entry]) => [key, shape(entry, depth + 1)]),
+              ),
+            }
+          : {}),
+      };
+    return typeof item;
+  };
+  const result = record(value);
+  const text = (Array.isArray(result?.content) ? result.content : []).flatMap((entry) => {
+    const block = record(entry);
+    if (block?.type !== "text" || typeof block.text !== "string") return [];
+    const trimmed = block.text.trim();
+    const fenced = trimmed.match(/^```(?:json)?\s*\n([\s\S]*?)\n```$/i);
+    let json: unknown;
+    try {
+      json = JSON.parse(fenced?.[1] ?? trimmed);
+    } catch {
+      /* Format flags below contain no text. */
+    }
+    return [
+      {
+        bytes: Buffer.byteLength(block.text),
+        format:
+          json !== undefined
+            ? "json"
+            : trimmed.startsWith("<")
+              ? "xml"
+              : trimmed.startsWith("```")
+                ? "fenced_text"
+                : "text",
+        ...(json !== undefined ? { json: shape(json) } : {}),
+        labelledFields: ["email", "handle", "id", "name"].filter((field) =>
+          new RegExp(`^(?:[-*]\\s*)?(?:\\*\\*)?${field}(?:\\*\\*)?\\s*[:=]`, "im").test(trimmed),
+        ),
+      },
+    ];
+  });
+  return { result: shape(value), text };
+}
+
 function authorizationUrl(rawUrl: string): URL {
   const url = new URL(rawUrl);
   if (
@@ -86,6 +147,8 @@ export function createFigmaMcpLinkAdapter(options: {
   openExternal(url: string): Promise<unknown>;
   fetch?: typeof fetch;
   now?: () => number;
+  /** Host diagnostics receive structure only, never raw tool/account responses. */
+  onAccountShape?: (shape: Record<string, unknown>) => void;
 }): HostLinkOAuthAdapter {
   return {
     providerId: "figma",
@@ -183,13 +246,17 @@ export function createFigmaMcpLinkAdapter(options: {
                   throw new McpOAuthVerificationError(stage, "tool_unavailable");
                 stage = "account_verification";
                 status = undefined;
-                const account = accountResult(
-                  await client.callTool(
-                    { name: "whoami", arguments: {} },
-                    undefined,
-                    signal ? { signal } : undefined,
-                  ),
+                const accountResponse = await client.callTool(
+                  { name: "whoami", arguments: {} },
+                  undefined,
+                  signal ? { signal } : undefined,
                 );
+                try {
+                  options.onAccountShape?.(accountShape(accountResponse));
+                } catch {
+                  /* Diagnostics never decide authorization. */
+                }
+                const account = accountResult(accountResponse);
                 stage = "capability_verification";
                 status = undefined;
                 const capabilities: string[] = FIGMA_MCP_TOOL_IDS.filter((name) =>

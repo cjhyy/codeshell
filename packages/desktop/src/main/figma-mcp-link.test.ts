@@ -40,6 +40,7 @@ function fixture(
   } = {},
 ) {
   const requests: Array<{ method: string; params?: Record<string, unknown> }> = [];
+  const shapes: Record<string, unknown>[] = [];
   let trustedOptions: HostMcpOAuthLoginOptions | undefined;
   const fetch = (async (input, init) => {
     const request = new Request(input, init);
@@ -100,6 +101,7 @@ function fixture(
     return Response.json({ jsonrpc: "2.0", id: call.id, result });
   }) as typeof globalThis.fetch;
   const adapter = createFigmaMcpLinkAdapter({
+    onAccountShape: (shape) => shapes.push(shape),
     fetch,
     oauth: {
       async authorizeCredential(input, loginOptions) {
@@ -121,6 +123,7 @@ function fixture(
   return {
     adapter,
     requests,
+    shapes,
     get trustedOptions() {
       return trustedOptions;
     },
@@ -259,6 +262,8 @@ test("official account fields survive separate JSON, explanatory text and empty 
     });
     expect(value.meta?.linkAccountId).toBe("fixture@example.test");
     expect(value.meta?.linkAccountLabel).toBe("Fixture user (fixture@example.test)");
+    expect(JSON.stringify(f.shapes)).not.toContain("fixture@example.test");
+    expect(JSON.stringify(f.shapes)).not.toContain("Fixture user");
     expect(
       f.requests
         .filter((request) => request.method === "tools/call")
