@@ -39,6 +39,7 @@ const {
 } = await import("./LinkTab");
 const { DialogProvider } = await import("../ui/DialogProvider");
 const { LinkConnectionDialog } = await import("./LinkConnectionDialog");
+const { FigmaConnectionCard } = await import("./FigmaConnectionCard");
 const { Github } = await import("lucide-react");
 
 function reactPropsOf(node: unknown): Record<string, any> {
@@ -329,7 +330,7 @@ describe("LinkTab integrations", () => {
       "即将开放",
     );
     expect(cards("server", "github")).toHaveLength(1);
-    expectRuntimeCardCount(container, "server", 10);
+    expectRuntimeCardCount(container, "server", 9);
     const plannedProviders = LINK_PROVIDER_MANIFESTS.filter(
       (provider) => !["github", "figma"].includes(provider.id),
     );
@@ -342,7 +343,9 @@ describe("LinkTab integrations", () => {
     }
     expect(cards("local")).toHaveLength(
       LINK_PROVIDER_MANIFESTS.flatMap((provider) =>
-        provider.connectionMethods.filter((method) => method.executionRuntime === "local"),
+        provider.connectionMethods.filter(
+          (method) => method.executionRuntime === "local" && method.id !== "mcp",
+        ),
       ).length,
     );
     expect(reactChildText(reactPropsOf(cards("local", "github")[0]).children)).toContain(
@@ -368,7 +371,7 @@ describe("LinkTab integrations", () => {
       await flushMicrotasks();
     });
     expect(cards("local")).toHaveLength(2);
-    expect(cards("server")).toHaveLength(0);
+    expect(cards("server")).toHaveLength(1);
     await act(async () => {
       reactPropsOf(
         findElements(container, "INPUT").find((node) => reactPropsOf(node).type === "search"),
@@ -384,9 +387,9 @@ describe("LinkTab integrations", () => {
     expect(cards("server", "figma")).toHaveLength(1);
   });
 
-  test("counts a single configured remote provider alongside the nine unconfigured placeholders", async () => {
+  test("counts other remote providers outside the unified Figma card", async () => {
     const container = await renderProjectedCatalog(await projectedCatalog(["github"]));
-    expectRuntimeCardCount(container, "server", 10);
+    expectRuntimeCardCount(container, "server", 9);
     const github = visibleElements(container, "ARTICLE").filter(
       (node) =>
         reactPropsOf(node)["data-link-integration"] === "github" &&
@@ -398,7 +401,7 @@ describe("LinkTab integrations", () => {
       reactPropsOf(buttonWithLabel(container, "接入计划")).onClick();
       await flushMicrotasks();
     });
-    expectRuntimeCardCount(container, "server", 9);
+    expectRuntimeCardCount(container, "server", 8);
   });
 
   test("preserves saved legacy OAuth and a different configured authorization method", async () => {
@@ -459,7 +462,7 @@ describe("LinkTab integrations", () => {
     expect(
       figma.some((node) => reactChildText(reactPropsOf(node).children).includes("即将开放")),
     ).toBe(true);
-    expectRuntimeCardCount(container, "server", 11);
+    expectRuntimeCardCount(container, "server", 9);
   });
 
   test("keeps unconfigured placeholders and offline saved remote accounts manageable", async () => {
@@ -489,7 +492,7 @@ describe("LinkTab integrations", () => {
         reactPropsOf(node)["data-link-runtime"] === "server",
     );
     expect(figma).toHaveLength(2);
-    expectRuntimeCardCount(container, "server", 11);
+    expectRuntimeCardCount(container, "server", 9);
     expect(
       figma.some((node) => reactChildText(reactPropsOf(node).children).includes("即将开放")),
     ).toBe(true);
@@ -1781,5 +1784,222 @@ describe("LinkTab integrations", () => {
     );
     // A failed probe is not proof of a signed-out account.
     expect(reactPropsOf(liveness ?? {})["data-link-liveness-state"]).toBe("unknown");
+  });
+});
+
+describe("unified Figma connection card", () => {
+  const apiConnection: LinkSnapshot["connections"][number] = {
+    id: "figma-api",
+    providerId: "figma",
+    methodId: "remote-link",
+    label: "API account",
+    runtime: "server",
+    authSource: "remote-link",
+    status: "connected",
+    account: {
+      id: "api-user",
+      label: "API user",
+      resources: ["Design"],
+      resourceGroups: [{ id: "files", items: [{ id: "FileOne", label: "Design" }] }],
+    },
+    capabilityIds: ["figma.get_file"],
+    revision: "api-one",
+    scope: "user",
+    editable: true,
+  };
+  const mcpConnection: LinkSnapshot["connections"][number] = {
+    id: "figma-mcp",
+    providerId: "figma",
+    methodId: "mcp",
+    label: "MCP account",
+    runtime: "local",
+    authSource: "mcp-oauth",
+    status: "connected",
+    account: { id: "mcp-user", label: "MCP user", resources: [] },
+    capabilityIds: ["figma.get_design_context"],
+    revision: "mcp-one",
+    scope: "user",
+    editable: true,
+  };
+
+  async function renderCard(connections = [apiConnection]) {
+    ensureMiniDom();
+    let snapshot: LinkSnapshot = {
+      providers: [
+        {
+          ...LINK_PROVIDER_FIXTURES[1]!,
+          authModes: [
+            {
+              id: "remote-link",
+              methodId: "remote-link",
+              kind: "redirect",
+              label: "API",
+              available: true,
+            },
+            { id: "mcp-oauth", methodId: "mcp", kind: "redirect", label: "MCP", available: true },
+          ],
+        },
+      ],
+      connections,
+      capabilities: { token: true, cliBinding: false, deviceAuth: false, remoteAuth: true },
+      revision: "initial",
+    };
+    const starts: unknown[][] = [];
+    const refreshes: string[] = [];
+    const disconnects: unknown[][] = [];
+    let changed = 0;
+    let update!: () => void;
+    let nextSnapshot: (() => Promise<LinkSnapshot>) | undefined;
+    Object.assign(window, {
+      codeshell: {
+        links: {
+          remoteSnapshot: async () => (nextSnapshot ? nextSnapshot() : snapshot),
+          authorizationStart: async (...args: unknown[]) => {
+            starts.push(args);
+            snapshot = {
+              ...snapshot,
+              connections: [
+                ...snapshot.connections.filter((item) => item.id !== mcpConnection.id),
+                mcpConnection,
+              ],
+            };
+            return {
+              id: args[1],
+              providerId: "figma",
+              methodId: "mcp",
+              state: "connected",
+              connection: mcpConnection,
+            };
+          },
+          authorizationCancel: async () => undefined,
+          remoteDisconnect: async (...args: unknown[]) => {
+            disconnects.push(args);
+            snapshot = {
+              ...snapshot,
+              connections: snapshot.connections.filter((item) => item.id !== args[1]),
+            };
+          },
+        },
+        mcpOAuth: {
+          refresh: async (id: string) => {
+            refreshes.push(id);
+            return {};
+          },
+        },
+      },
+    });
+    const container = document.createElement("div") as unknown as HTMLElement;
+    root = createRoot(container);
+    function Host() {
+      const [, forceUpdate] = React.useReducer((value) => value + 1, 0);
+      update = forceUpdate;
+      return (
+        <FigmaConnectionCard
+          cwd="/repo"
+          snapshot={snapshot}
+          loadError=""
+          reload={async () => forceUpdate()}
+          onChanged={() => changed++}
+          localApi={<span>Local API credential</span>}
+        />
+      );
+    }
+    await act(async () => {
+      root!.render(<Host />);
+      await flushMicrotasks();
+    });
+    const click = async (label: string) => {
+      const button = buttonWithLabel(container, label);
+      expect(button).toBeDefined();
+      await act(async () => {
+        reactPropsOf(button).onClick();
+        await flushMicrotasks();
+        await flushMicrotasks();
+      });
+    };
+    return {
+      container,
+      starts,
+      refreshes,
+      disconnects,
+      click,
+      snapshot: () => snapshot,
+      changed: () => changed,
+      setSnapshot: (value: LinkSnapshot) => {
+        snapshot = value;
+      },
+      nextSnapshot: (read: (() => Promise<LinkSnapshot>) | undefined) => {
+        nextSnapshot = read;
+      },
+      update: async () => {
+        await act(async () => {
+          update();
+          await flushMicrotasks();
+        });
+      },
+    };
+  }
+
+  test("API and MCP share one card, authorize independently, and never read on connection", async () => {
+    const f = await renderCard();
+    expect(
+      findElements(f.container, "SECTION").filter(
+        (node) => reactPropsOf(node)["data-link-integration"] === "figma",
+      ),
+    ).toHaveLength(1);
+    expect(
+      findElements(f.container, "DIV").filter((node) => reactPropsOf(node)["data-figma-channel"]),
+    ).toHaveLength(2);
+    expect(buttonWithLabel(f.container, "连接官方 MCP")).toBeDefined();
+    expect(f.starts).toHaveLength(0);
+    await f.click("连接官方 MCP");
+    expect(f.starts).toHaveLength(1);
+    expect(f.starts[0]!.slice(2)).toEqual([
+      {
+        providerId: "figma",
+        methodId: "mcp",
+        label: "Figma MCP",
+        connectionId: undefined,
+        expectedRevision: null,
+      },
+      "mcp-oauth",
+    ]);
+    expect(f.snapshot().connections.map((item) => item.id)).toEqual(["figma-api", "figma-mcp"]);
+    expect(buttonWithLabel(f.container, "连接官方 MCP")).toBeUndefined();
+    await f.click("刷新授权");
+    expect(f.refreshes).toEqual(["figma-mcp"]);
+    await f.click("断开");
+    expect(f.disconnects).toEqual([["/repo", "figma-mcp", "mcp-one"]]);
+    expect(f.snapshot().connections).toEqual([apiConnection]);
+  });
+
+  test("fresh account/revision checks reject stale MCP management without affecting API", async () => {
+    const f = await renderCard([apiConnection, mcpConnection]);
+    f.setSnapshot({
+      ...f.snapshot(),
+      connections: [apiConnection, { ...mcpConnection, revision: "mcp-two" }],
+    });
+    await f.click("刷新授权");
+    expect(f.refreshes).toHaveLength(0);
+    expect(f.disconnects).toHaveLength(0);
+    expect(f.starts).toHaveLength(0);
+    expect(
+      findElements(f.container, "P").some(
+        (node) =>
+          reactPropsOf(node).role === "alert" &&
+          reactChildText(reactPropsOf(node).children).includes("连接或权限已变化"),
+      ),
+    ).toBe(true);
+    await f.click("刷新授权");
+    expect(f.refreshes).toEqual(["figma-mcp"]);
+  });
+
+  test("an account appearing during connect requires explicit review instead of silent login", async () => {
+    const f = await renderCard();
+    f.setSnapshot({ ...f.snapshot(), connections: [apiConnection, mcpConnection] });
+    await f.click("连接官方 MCP");
+    expect(f.starts).toHaveLength(0);
+    expect(buttonWithLabel(f.container, "刷新授权")).toBeDefined();
+    expect(f.snapshot().connections).toEqual([apiConnection, mcpConnection]);
   });
 });

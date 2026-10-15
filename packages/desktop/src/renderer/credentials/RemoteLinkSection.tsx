@@ -82,6 +82,7 @@ export function RemoteLinkSection(props: {
   loadError: string;
   reload: () => Promise<void>;
   onChanged: () => void;
+  excludeProviderIds?: readonly string[];
 }) {
   const { t } = useT();
   const providers = remoteLinkProviders(props.snapshot);
@@ -99,20 +100,22 @@ export function RemoteLinkSection(props: {
     );
   return (
     <div data-remote-links className="space-y-3">
-      {[...providers].map(([providerId, provider]) => (
-        <RemoteProviderSection
-          key={providerId}
-          {...props}
-          providerId={providerId}
-          provider={provider}
-        />
-      ))}
+      {[...providers]
+        .filter(([id]) => !props.excludeProviderIds?.includes(id))
+        .map(([providerId, provider]) => (
+          <RemoteProviderSection
+            key={providerId}
+            {...props}
+            providerId={providerId}
+            provider={provider}
+          />
+        ))}
     </div>
   );
 }
 
 /** Native owner-bound IPC; private credentials never enter this component. */
-function RemoteProviderSection({
+export function RemoteProviderSection({
   cwd,
   snapshot,
   loadError,
@@ -120,6 +123,7 @@ function RemoteProviderSection({
   onChanged,
   providerId,
   provider,
+  embedded = false,
 }: {
   cwd: string;
   snapshot?: LinkSnapshot;
@@ -128,6 +132,7 @@ function RemoteProviderSection({
   onChanged: () => void;
   providerId: string;
   provider?: LinkProviderView;
+  embedded?: boolean;
 }) {
   const { t, lang } = useT();
   const [busy, setBusy] = React.useState(false);
@@ -214,7 +219,7 @@ function RemoteProviderSection({
       <article
         data-link-integration={providerId}
         data-link-runtime="server"
-        className="rounded-xl border border-border/70 bg-card p-4"
+        className={embedded ? "space-y-3" : "rounded-xl border border-border/70 bg-card p-4"}
       >
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div className="flex min-w-0 items-center gap-3">
@@ -222,7 +227,9 @@ function RemoteProviderSection({
               <Icon className="size-5" aria-hidden />
             </div>
             <div className="min-w-0">
-              <h5 className="text-sm font-semibold">{providerName}</h5>
+              <h5 className="text-sm font-semibold">
+                {embedded ? t("ext.link.figma.apiTitle") : providerName}
+              </h5>
               <p className="mt-0.5 text-xs text-muted-foreground">
                 {providerId === "github"
                   ? t("ext.link.remoteDescription")

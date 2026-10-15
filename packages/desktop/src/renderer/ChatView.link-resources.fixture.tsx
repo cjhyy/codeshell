@@ -78,6 +78,15 @@ function connection(id = "one", files: string[] = []): MaskedLinkConnection {
     editable: true,
   };
 }
+function mcpConnection(id = "mcp-one"): MaskedLinkConnection {
+  return {
+    ...connection(id),
+    methodId: "mcp",
+    runtime: "local",
+    authSource: "mcp-oauth",
+    capabilityIds: ["figma.get_design_context", "figma.get_screenshot"],
+  };
+}
 function deferred<T>() {
   let resolve!: (value: T) => void;
   const promise = new Promise<T>((done) => {
@@ -103,6 +112,7 @@ async function fixture(
     queued?: boolean;
     delayedStart?: Promise<unknown>;
     preparedBucket?: string;
+    mcp?: boolean;
   } = {},
 ) {
   ensureMiniDom();
@@ -130,6 +140,17 @@ async function fixture(
         tokenPlaceholder: "",
         actions: [],
         authModes: [
+          ...(options.mcp
+            ? [
+                {
+                  id: "mcp-oauth",
+                  methodId: "mcp",
+                  kind: "redirect" as const,
+                  label: "MCP",
+                  available: true,
+                },
+              ]
+            : []),
           {
             id: "remote-link",
             methodId: "remote-link",
@@ -145,6 +166,7 @@ async function fixture(
     revision: "snapshot-one",
   };
   const starts: LinkConnectionInput[] = [];
+  const startModes: string[] = [];
   const cancellations: string[] = [];
   const reads: Array<{ text: string; bucket: string; clientMessageId: string }> = [];
   const submissions: Array<{ text: string; opts: Record<string, any> }> = [];
@@ -167,19 +189,31 @@ async function fixture(
           snapshotCalls++;
           return nextSnapshot ? nextSnapshot() : currentSnapshot;
         },
-        authorizationStart: async (_cwd: string, id: string, input: LinkConnectionInput) => {
+        authorizationStart: async (
+          _cwd: string,
+          id: string,
+          input: LinkConnectionInput,
+          mode: string,
+        ) => {
           starts.push(input);
+          startModes.push(mode);
           if (options.delayedStart) return options.delayedStart;
           if (startConnected) {
-            const saved = connection(
-              input.connectionId ?? "created",
-              input.resourceUrl ? ["FileOne"] : [],
-            );
-            currentSnapshot = { ...currentSnapshot, connections: [saved] };
+            const saved =
+              input.methodId === "mcp"
+                ? mcpConnection(input.connectionId ?? "mcp-created")
+                : connection(input.connectionId ?? "created", input.resourceUrl ? ["FileOne"] : []);
+            currentSnapshot = {
+              ...currentSnapshot,
+              connections: [
+                ...currentSnapshot.connections.filter((item) => item.id !== saved.id),
+                saved,
+              ],
+            };
             return {
               id,
               providerId: "figma",
-              methodId: "remote-link",
+              methodId: input.methodId,
               state: "connected",
               connection: saved,
             };
@@ -187,7 +221,7 @@ async function fixture(
           return {
             id,
             providerId: "figma",
-            methodId: "remote-link",
+            methodId: input.methodId,
             state: "pending",
             step: {
               id: "redirect",
@@ -327,6 +361,7 @@ async function fixture(
   return {
     container,
     starts,
+    startModes,
     cancellations,
     reads,
     submissions,
@@ -360,6 +395,29 @@ async function fixture(
         await flushMicrotasks();
       });
     },
+    requireMcp: async (params: Record<string, unknown>, action = "get_design_context") => {
+      toolSequence++;
+      const tool: ToolMessage = {
+        kind: "tool",
+        id: `mcp-auth-${toolSequence}`,
+        toolName: "LinkAction",
+        args: JSON.stringify({ provider: "figma", action, params }),
+        status: "succeeded",
+        startedAt: toolSequence,
+        result: JSON.stringify({
+          kind: "authorization_required",
+          provider: "figma",
+          backend: "mcp",
+          action,
+          resourceUrl: params.file_url_or_key ?? params.file_key,
+        }),
+      };
+      await act(async () => {
+        update((state) => ({ ...state, messages: [...state.messages, tool] }));
+        await flushMicrotasks();
+        await flushMicrotasks();
+      });
+    },
     fileReadResult: async (
       resourceId = "FileOne",
       options: {
@@ -367,6 +425,8 @@ async function fixture(
         status?: ToolStatus;
         action?: string;
         agentId?: string;
+        params?: Record<string, unknown>;
+        backend?: "mcp";
       } = {},
     ) => {
       const action = options.action ?? "get_file";
@@ -380,14 +440,20 @@ async function fixture(
         args: JSON.stringify({
           provider: "figma",
           action,
-          params: { file_url_or_key: resourceId },
+          params: options.params ?? { file_url_or_key: resourceId },
         }),
         status: options.status ?? "succeeded",
         startedAt: toolSequence,
         result: JSON.stringify(
           options.failed
             ? { kind: "error", provider: "figma", action, error: "File read failed" }
-            : { kind: "action_result", provider: "figma", action, data: { name: resourceId } },
+            : {
+                kind: "action_result",
+                provider: "figma",
+                action,
+                ...(options.backend ? { backend: options.backend } : {}),
+                data: { name: resourceId },
+              },
         ),
       };
       const entry: Message = options.agentId
@@ -952,5 +1018,223 @@ describe("chat file authorization", () => {
     });
     expect(f.cancellations.length).toBeGreaterThan(0);
     expect(f.reads).toHaveLength(0);
+  });
+});
+
+describe("Figma MCP authorization and task resume", () => {
+  const makeUrl = "https://figma.com/make/FileOne/App";
+  const designUrl = "https://www.figma.com/design/FileOne/Design?node-id=0-1";
+  const params = { file_url_or_key: designUrl, node_id: "0:1", clientLanguages: "typescript" };
+
+  test("Make connects only its MCP channel and saves without a fabricated read", async () => {
+    const f = await fixture({ mcp: true, connections: [connection("api", ["FileOne"])] });
+    f.completeImmediately();
+    await f.send(`查看 ${makeUrl}`);
+    expect(f.starts).toHaveLength(0);
+    expect(button(f.container, "连接 Figma 设计上下文")).toBeDefined();
+    await f.click("连接 Figma 设计上下文");
+    expect(f.starts).toHaveLength(1);
+    expect(f.startModes).toEqual(["mcp-oauth"]);
+    expect(f.starts[0]).toMatchObject({
+      methodId: "mcp",
+      resourceUrl: makeUrl,
+    });
+    expect(f.reads).toHaveLength(0);
+    expect(f.snapshot().connections.map((item) => item.id)).toEqual(["api", "mcp-created"]);
+    expect(button(f.container, "连接 Figma 设计上下文")).toBeUndefined();
+  });
+
+  test("already connected Make and ordinary Design do not add a read or start OAuth", async () => {
+    const f = await fixture({
+      mcp: true,
+      connections: [connection("api", ["FileOne"]), mcpConnection()],
+    });
+    await f.send(`查看 ${makeUrl}`);
+    expect(button(f.container, "连接 Figma 设计上下文")).toBeUndefined();
+    await f.send();
+    expect(button(f.container, "授权此文件")).toBeUndefined();
+    expect(f.starts).toHaveLength(0);
+    expect(f.reads).toHaveLength(0);
+  });
+
+  test("API completion retains local provenance for a later real MCP need and resumes once", async () => {
+    const f = await fixture({ mcp: true, connections: [connection("api", ["FileOne"])] });
+    await f.send();
+    await f.fileReadResult();
+    expect(button(f.container, "连接 Figma 设计上下文")).toBeUndefined();
+    await f.requireMcp(params);
+    expect(button(f.container, "连接 Figma 设计上下文")).toBeDefined();
+    expect(f.starts).toHaveLength(0);
+    f.completeImmediately();
+    await f.click("连接 Figma 设计上下文");
+    expect(f.reads).toHaveLength(1);
+    expect(f.reads[0]!.text).toContain(
+      JSON.stringify({
+        provider: "figma",
+        action: "get_design_context",
+        connectionId: "mcp-created",
+        params,
+      }),
+    );
+    expect(f.reads[0]!.text).not.toContain('"get_file"');
+    expect(f.reads[0]!.text).not.toContain('"full"');
+    const original = f.messages();
+    await f.navigate("project::other");
+    await f.navigate("project::session-one", original);
+    await f.setBusy(false);
+    expect(f.reads).toHaveLength(1);
+    expect(button(f.container, "读取文件")).toBeUndefined();
+    expect(button(f.container, "连接 Figma 设计上下文")).toBeUndefined();
+  });
+
+  test("MCP need with an existing connection requires explicit continue and keeps the saved target", async () => {
+    const f = await fixture({
+      mcp: true,
+      connections: [connection("api", ["FileOne"]), mcpConnection()],
+    });
+    await f.send();
+    await f.requireMcp(params, "get_screenshot");
+    expect(f.reads).toHaveLength(0);
+    await f.click("读取文件");
+    expect(f.starts).toHaveLength(0);
+    expect(f.reads).toHaveLength(1);
+    expect(f.reads[0]!.text).toContain('"action":"get_screenshot"');
+    expect(f.reads[0]!.text).toContain('"connectionId":"mcp-one"');
+  });
+
+  test("multiple MCP accounts require an explicit choice and never select an API account", async () => {
+    const f = await fixture({
+      mcp: true,
+      connections: [
+        connection("api", ["FileOne"]),
+        mcpConnection("mcp-one"),
+        mcpConnection("mcp-two"),
+      ],
+    });
+    await f.send();
+    await f.requireMcp(params);
+    const select = descendants(f.container).find(
+      (node) => props(node).role === "combobox" && props(node)["aria-label"] === "使用账号",
+    );
+    expect(selectProps(select).options.map((option: { value: string }) => option.value)).toEqual([
+      "",
+      "mcp-one",
+      "mcp-two",
+    ]);
+    expect(props(button(f.container, "连接 Figma 设计上下文")).disabled).toBe(true);
+    await act(async () => {
+      selectProps(select).onChange("mcp-two");
+      await flushMicrotasks();
+    });
+    await f.click("读取文件");
+    expect(f.starts).toHaveLength(0);
+    expect(f.reads).toHaveLength(1);
+    expect(f.reads[0]!.text).toContain('"connectionId":"mcp-two"');
+  });
+
+  test("a newer blocked action cancels the old dialog and rejects its late resume", async () => {
+    const gate = deferred<unknown>();
+    const f = await fixture({
+      mcp: true,
+      connections: [connection("api", ["FileOne"])],
+      delayedStart: gate.promise,
+    });
+    await f.send();
+    await f.requireMcp(params);
+    await f.click("连接 Figma 设计上下文");
+    await f.requireMcp(params, "get_screenshot");
+    expect(f.cancellations).toHaveLength(1);
+    const saved = mcpConnection("mcp-created");
+    f.setSnapshot({ ...f.snapshot(), connections: [connection("api", ["FileOne"]), saved] });
+    await act(async () => {
+      gate.resolve({
+        id: "completed",
+        providerId: "figma",
+        methodId: "mcp",
+        state: "connected",
+        connection: saved,
+      });
+      await flushMicrotasks();
+      await flushMicrotasks();
+    });
+    expect(f.reads).toHaveLength(0);
+    expect(f.starts).toHaveLength(1);
+    expect(button(f.container, "连接 Figma 设计上下文")).toBeDefined();
+  });
+
+  test.each(["succeeded", "failed"] as const)(
+    "background MCP %s resolves a pending OAuth resume without duplicates",
+    async (status) => {
+      const gate = deferred<unknown>();
+      const f = await fixture({
+        mcp: true,
+        connections: [connection("api", ["FileOne"])],
+        delayedStart: gate.promise,
+      });
+      await f.send();
+      await f.requireMcp(params);
+      await f.click("连接 Figma 设计上下文");
+      const saved = mcpConnection("mcp-created");
+      f.setSnapshot({ ...f.snapshot(), connections: [connection("api", ["FileOne"]), saved] });
+      await f.fileReadResult("FileOne", {
+        status: "running",
+        action: "get_design_context",
+        backend: "mcp",
+        agentId: "background-mcp",
+        params,
+      });
+      await act(async () => {
+        gate.resolve({
+          id: "completed",
+          providerId: "figma",
+          methodId: "mcp",
+          state: "connected",
+          connection: saved,
+        });
+        await flushMicrotasks();
+        await flushMicrotasks();
+      });
+      expect(f.reads).toHaveLength(0);
+      expect(props(button(f.container, "读取文件")).disabled).toBe(true);
+      await f.fileReadResult("FileOne", {
+        status,
+        failed: status === "failed",
+        action: "get_design_context",
+        backend: "mcp",
+        agentId: "background-mcp",
+        params,
+      });
+      expect(f.reads).toHaveLength(status === "succeeded" ? 0 : 1);
+      expect(f.starts).toHaveLength(1);
+      expect(button(f.container, "读取文件")).toBeUndefined();
+    },
+  );
+
+  test("dismissed blocked MCP work stays closed after navigation and delayed checks", async () => {
+    const f = await fixture({
+      mcp: true,
+      connections: [connection("api", ["FileOne"]), mcpConnection()],
+    });
+    await f.send();
+    await f.requireMcp(params);
+    const wait = deferred<LinkSnapshot>();
+    f.nextSnapshot(() => wait.promise);
+    const read = button(f.container, "读取文件");
+    const close = descendants(f.container).find(
+      (node) => props(node)["aria-label"] === "关闭文件提示",
+    );
+    await act(async () => {
+      props(read).onClick();
+      props(close).onClick();
+      wait.resolve(f.snapshot());
+      await flushMicrotasks();
+      await flushMicrotasks();
+    });
+    expect(f.reads).toHaveLength(0);
+    f.nextSnapshot(undefined);
+    const original = f.messages();
+    await f.navigate("project::other");
+    await f.navigate("project::session-one", original);
+    expect(button(f.container, "读取文件")).toBeUndefined();
   });
 });

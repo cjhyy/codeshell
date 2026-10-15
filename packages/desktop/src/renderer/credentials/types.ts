@@ -23,8 +23,9 @@ export interface CredentialView {
       | "github-cli"
       | "cli-session"
       | "browser-oauth"
-      | "remote-link";
-    linkExecutionBackend?: "http-token" | "cli" | "remote";
+      | "remote-link"
+      | "mcp-oauth";
+    linkExecutionBackend?: "http-token" | "cli" | "remote" | "mcp";
     agentExposable?: boolean;
     linkAccountId?: string;
     linkAccountLabel?: string;

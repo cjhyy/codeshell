@@ -45,6 +45,7 @@ import {
 import { RemoteLinkSection, remoteLinkProviders, useRemoteLinkSnapshot } from "./RemoteLinkSection";
 import { linkOAuthPrimaryAction } from "./link-oauth-actions";
 import { LinkConnectionDialog } from "./LinkConnectionDialog";
+import { FigmaConnectionCard } from "./FigmaConnectionCard";
 import type { MaskedCredentialView } from "./types";
 import { DingTalkSetupDialog } from "./DingTalkSetupDialog";
 import type {
@@ -362,8 +363,9 @@ export function LinkTab({ cwd }: { cwd: string }) {
   const [filter, setFilter] = useState<IntegrationFilter>("all");
   const remote = useRemoteLinkSnapshot(cwd);
   const remoteConnections =
-    remote.snapshot?.connections.filter((connection) => connection.authSource === "remote-link") ??
-    [];
+    remote.snapshot?.connections.filter(
+      (connection) => connection.authSource === "remote-link" && connection.providerId !== "figma",
+    ) ?? [];
   const hasRemote = Boolean(remote.snapshot?.capabilities.remoteAuth || remoteConnections.length);
   const remoteMatches =
     (hasRemote || Boolean(remote.error)) &&
@@ -372,7 +374,11 @@ export function LinkTab({ cwd }: { cwd: string }) {
       remoteConnections.some((connection) => connection.status === "connected")) &&
     `${
       remote.snapshot?.providers
-        .filter((provider) => provider.authModes?.some((mode) => mode.id === "remote-link"))
+        .filter(
+          (provider) =>
+            provider.id !== "figma" &&
+            provider.authModes?.some((mode) => mode.id === "remote-link"),
+        )
         .map((provider) => `${provider.displayName} ${provider.description[lang]}`)
         .join(" ") ?? ""
     } ${t("ext.link.remoteDescription")} ${remoteConnections.map((connection) => `${connection.label} ${connection.account?.label ?? ""} ${connection.account?.resources.join(" ") ?? ""}`).join(" ")}`
@@ -491,7 +497,11 @@ export function LinkTab({ cwd }: { cwd: string }) {
   const byMethod = useMemo(() => {
     const map = new Map<string, MaskedCredentialView>();
     for (const credential of credentials) {
-      if (credential.meta?.linkExecutionBackend === "remote") continue;
+      if (
+        credential.meta?.linkExecutionBackend === "remote" ||
+        credential.meta?.linkExecutionBackend === "mcp"
+      )
+        continue;
       const provider = linkCredentialProvider(credential);
       const runtime = linkCredentialRuntime(credential);
       if (!provider || !runtime) continue;
@@ -682,7 +692,30 @@ export function LinkTab({ cwd }: { cwd: string }) {
     }
   };
 
-  const noMatches = entries.local.length === 0 && entries.server.length === 0 && !remoteMatches;
+  const figmaEntries = [...entries.local, ...entries.server].filter(
+    (entry) => entry.item.id === "figma" && entry.method.id !== "mcp",
+  );
+  const figmaAvailable = catalog.some((category) =>
+    category.items.some((item) => item.id === "figma"),
+  );
+  const figmaMatches =
+    figmaAvailable &&
+    filter !== "planned" &&
+    (filter !== "connected" ||
+      remote.snapshot?.connections.some(
+        (connection) => connection.providerId === "figma" && connection.status === "connected",
+      ) ||
+      credentials.some(
+        (credential) =>
+          linkCredentialProvider(credential) === "figma" && linkCredentialIsUsable(credential),
+      )) &&
+    `Figma API MCP Make Code Connect ${t("ext.link.figma.description")}`
+      .toLocaleLowerCase()
+      .includes(query.trim().toLocaleLowerCase());
+  const localEntries = entries.local.filter((entry) => entry.item.id !== "figma");
+  const serverEntries = entries.server.filter((entry) => entry.item.id !== "figma");
+  const noMatches =
+    localEntries.length === 0 && serverEntries.length === 0 && !remoteMatches && !figmaMatches;
 
   return (
     <div className="space-y-5" data-link-page>
@@ -868,10 +901,48 @@ export function LinkTab({ cwd }: { cwd: string }) {
           </div>
         ) : null}
         <div hidden={noMatches} className="grid gap-4 xl:grid-cols-2 xl:items-start">
+          {figmaAvailable && (
+            <div hidden={!figmaMatches} className="xl:col-span-2">
+              <FigmaConnectionCard
+                key={cwd}
+                cwd={cwd}
+                snapshot={remote.snapshot}
+                loadError={remote.error}
+                reload={remote.reload}
+                onChanged={() => {
+                  void load().catch(() => undefined);
+                }}
+                localApi={
+                  figmaEntries.length
+                    ? figmaEntries.map((entry) => (
+                        <LinkMethodCard
+                          key={entry.method.id}
+                          entry={entry}
+                          embedded
+                          busy={busyId === linkMethodStateKey(entry.item.id, entry.method)}
+                          error={errors[linkMethodStateKey(entry.item.id, entry.method)]}
+                          onLocalConnect={() => openLocalDialog(entry)}
+                          onLocalDisconnect={() => disconnectLocal(entry)}
+                          onServerLogin={(credential) =>
+                            onServerLogin(entry.item, entry.method, credential)
+                          }
+                          onServerRefresh={(credential) =>
+                            onServerRefresh(entry.item, entry.method, credential)
+                          }
+                          onServerLogout={(credential) =>
+                            onServerLogout(entry.item, entry.method, credential)
+                          }
+                        />
+                      ))
+                    : undefined
+                }
+              />
+            </div>
+          )}
           <RuntimeLinkSection
             runtime="local"
             cliLiveness={cliLiveness}
-            entries={entries.local}
+            entries={localEntries}
             busyId={busyId}
             errors={errors}
             onLocalConnect={openLocalDialog}
@@ -883,7 +954,7 @@ export function LinkTab({ cwd }: { cwd: string }) {
           <RuntimeLinkSection
             runtime="server"
             cliLiveness={cliLiveness}
-            entries={entries.server}
+            entries={serverEntries}
             busyId={busyId}
             errors={errors}
             onLocalConnect={openLocalDialog}
@@ -891,7 +962,12 @@ export function LinkTab({ cwd }: { cwd: string }) {
             onServerLogin={onServerLogin}
             onServerRefresh={onServerRefresh}
             onServerLogout={onServerLogout}
-            extraCount={remoteMatches ? remoteLinkProviders(remote.snapshot).size : 0}
+            extraCount={
+              remoteMatches
+                ? [...remoteLinkProviders(remote.snapshot).keys()].filter((id) => id !== "figma")
+                    .length
+                : 0
+            }
           >
             <div hidden={!remoteMatches}>
               {hasRemote || remote.error ? (
@@ -904,6 +980,7 @@ export function LinkTab({ cwd }: { cwd: string }) {
                   onChanged={() => {
                     void load().catch(() => undefined);
                   }}
+                  excludeProviderIds={["figma"]}
                 />
               ) : null}
             </div>
@@ -1776,6 +1853,7 @@ function LinkMethodCard({
   onServerLogin,
   onServerRefresh,
   onServerLogout,
+  embedded = false,
 }: {
   entry: LinkMethodEntry;
   liveness?: CliLiveness;
@@ -1786,6 +1864,7 @@ function LinkMethodCard({
   onServerLogin: (credential?: MaskedCredentialView) => void;
   onServerRefresh: (credential: MaskedCredentialView) => void;
   onServerLogout: (credential: MaskedCredentialView) => void;
+  embedded?: boolean;
 }) {
   const { t } = useT();
   const { item, method, credential, preferredRuntime } = entry;
@@ -1819,7 +1898,9 @@ function LinkMethodCard({
       data-link-integration={item.id}
       data-link-runtime={method.executionRuntime}
       className={cn(
-        "link-card group flex min-h-48 min-w-0 flex-col rounded-2xl border border-border/70 bg-card p-4 transition-all",
+        embedded
+          ? "group flex min-w-0 flex-col gap-3 rounded-xl border border-border/60 p-3"
+          : "link-card group flex min-h-48 min-w-0 flex-col rounded-2xl border border-border/70 bg-card p-4 transition-all",
         item.featured &&
           local &&
           "border-status-ok/20 bg-gradient-to-br from-status-ok/[0.045] via-card to-card",
