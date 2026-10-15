@@ -57,6 +57,12 @@ breaking.
 - Keep digital-human editing, memory and switch review dialogs usable in short
   windows, retaining visible actions and safe focus return through asynchronous
   previews, nested confirmations and rapid reopening.
+- Preserve Web skill-editor drafts and focus through delayed loads, cancellation
+  and failed saves without interrupting another control.
+- Keep Web model defaults, deletion errors and MCP edit/removal recovery visible
+  in short windows, including refreshed entries that have disappeared elsewhere.
+- Support keyboard navigation and selection in the Desktop model picker, keep
+  complete names readable, and close an open picker when selection is disabled.
 
 ## [0.9.44] - 2026-10-15
 

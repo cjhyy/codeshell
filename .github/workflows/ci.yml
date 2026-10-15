@@ -187,13 +187,16 @@ jobs:
       - name: test responsive overlays and settings menus
         if: matrix.shard == 'desktop'
         run: bun run --cwd packages/desktop test:ui:overlays
-      - name: test Web navigation and conversation scrolling
+      - name: test Web navigation, conversations and settings recovery
         if: matrix.shard == 'desktop'
         run: |
           node scripts/run-isolated-node-smoke.mjs packages/web/scripts/test-file-browser.mjs
           node scripts/run-isolated-node-smoke.mjs packages/web/scripts/test-latest-messages.mjs
           node scripts/run-isolated-node-smoke.mjs packages/web/scripts/test-sidebar-navigation.mjs
           node scripts/run-isolated-node-smoke.mjs packages/web/scripts/test-settings-browser.mjs
+          node scripts/run-isolated-node-smoke.mjs packages/web/scripts/test-skills-browser.mjs
+          node scripts/run-isolated-node-smoke.mjs packages/web/scripts/test-model-actions-browser.mjs
+          node scripts/run-isolated-node-smoke.mjs packages/web/scripts/test-mcp-settings-browser.mjs
       - name: Compiled isolated instruction adoption lifecycle
         if: matrix.shard == 'rest'
         run: |

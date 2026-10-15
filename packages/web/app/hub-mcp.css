@@ -81,7 +81,18 @@
   margin: 0 0 18px;
 }
 .hub-mcp-editor {
+  position: relative;
   margin-top: 20px;
+}
+.hub-mcp-operation-error {
+  min-width: 0;
+  max-height: min(12rem, 35dvh);
+  overflow: auto;
+  overflow-wrap: anywhere;
+  overscroll-behavior: contain;
+}
+.hub-mcp-delete > .hub-mcp-operation-error {
+  flex-basis: 100%;
 }
 .hub-mcp-editor-card .hub-mcp-editor {
   margin-top: 0;

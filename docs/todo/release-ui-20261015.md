@@ -50,7 +50,7 @@ The initial blockers below are retained as resolved verification history.
 
 Current integration worktree:
 `/Users/admin/.codex/worktrees/ui-task-center-20261015/codeshell`, branch
-`codex/integration/ui-review-wave6-20261015`. Other work advanced remote main to
+`codex/integration/ui-review-wave7-20261015`. Other work advanced remote main to
 `0.9.44`; this branch merged `976a79322` and `bb7a9b59a`, preserving the incoming model-capability,
 forwarding and Figma updates. The CSS merge preserves both context-selection and
 file-action styles. Do not revert incoming work or republish another version on
@@ -595,9 +595,86 @@ and DigitalHumans E2E passed sequentially, plus the four combined Cloud metadata
 format and diff checks passed. Logs: `/tmp/codeshell-ui-wave6-{typecheck,lint,
 desktop-build,unit,overlays,web-latest,web-sidebar,web-files,web-settings,
 native-settings,native-digital-humans,cloud-metadata-native}.log`.
-Fresh remote main is still UI5 `bef6e513e`; publish this verified UI6 source
-through the clean integration branch and retain other local main commits.
-Remote CI has not yet been verified; record it in the next continuation.
+UI6 was pushed and remote main confirmed at `3c6d8573f`. CI `38755011185`
+passed all 12 jobs, including Desktop browsers, Web browsers, real browser
+drivers and Electron E2E. The clean, merged UI6 integration branch was removed;
+continue to preserve other tasks' local main commits.
+
+UI7 integrates only source changes for Web Skills (`7d874cabd`), model action
+recovery (`99cc938d1`, `5e8deab0d`, `b9330f911`) and MCP recovery
+(`a3559b1bd`, `6d5d14d31`). MCP's queued-refresh follow-up retains the visible
+error and owned recovery after a rejected removal is followed by an updated
+configuration where the target disappeared. Independent production cases cover
+owned, external field, blank pointer and window blur at 320x240 and 390x360;
+each preserves exactly one DELETE and two reads. Final production/development
+fixtures each pass 34 cases, with no outside request or page error.
+The three new Web browser commands are registered in the existing isolated CI
+step. Desktop ModelPill is integrated as `d69833e5f` plus native-fixture follow-up
+`7293b4276`, with the 33rd Desktop browser fixture registered. Actual ChatView
+keyboard selection previously stayed at the trigger or skipped every option;
+the listbox now uses focused options, selected-state semantics and owned focus
+return. Long provider/model names wrap, and disabling selection closes an open
+picker. Source production/development and real Electron 100/200% zoom passed,
+including focused live resize, actual AX relationships and complete name reads.
+The final fixture additionally covers empty-catalog plus disabled selection in
+production/development; the prior native run covered empty and disabled states
+separately. No claim is made about OS IME or spoken assistive-technology output.
+Final combined gates and delivery remain pending.
+
+UI7 combined progress: all 14 workspace typechecks, full Desktop build and lint
+(0 errors, 104 baseline warnings), all seven Web browser commands and the guarded
+renderer/shared/Web shard (3399 pass, 12603 assertions, 372 files, one separately
+covered skip) have passed. Root reviewed Skills 320x240 light and 1280x820 dark
+screenshots. The first Desktop browser invocation failed the unchanged dropdown
+fixture while its entrance transform was still active (parent rectangle
+383.864px, client width 382px, scroll width 766px). The exact isolated fixture
+passed with 382/382 geometry. A test-only follow-up waits for the menu's actual
+CSS animation completion and two layout frames instead of a fixed 180ms;
+all existing overflow, complete-label, keyboard and pointer assertions remain.
+The full 33-fixture rerun is in progress. Source Skills was normally merged with
+UI6 and passed production/development 34 each plus its scoped tests/types/build
+again without changing product or fixture blobs. UI6 remote CI is fully green.
+Logs: `/tmp/codeshell-ui-wave7-{typecheck,lint,desktop-build,unit,
+overlays,overlays-stable,dropdown-isolated,web-*}.log`.
+
+The full Desktop rerun passed through Cloud metadata, then the unchanged Cloud
+dialog fixture timed out waiting for a native wheel scroll in the 800x480
+manager case. Its exact isolated source subsequently passed all 141 observations
+(`codeshell-cloud-dialogs-GdmEMO`, zero errors/blocked requests); no wheel
+assertion, product code or timeout was changed. Root resumes the remaining
+fixtures from ProfileDialogs, retaining the earlier successful fixtures and
+both failure logs. Do not report the failed whole-run command itself as passing;
+the final combined fixture receipts must account for all 33 entries.
+
+UI7 final combined gates are complete. The successful receipts cover all 33
+Desktop fixtures: the first 17 before CloudDialogs, the unchanged isolated
+CloudDialogs 141-observation pass, and the remaining 15 in
+`/tmp/codeshell-ui-wave7-overlays-remaining.log`. ModelPill passed 24 observations
+on the final combined source. All seven Web browser commands, all 14 workspace
+types, full Desktop build, lint and the 3399-pass guarded shard are green, along
+with workflow literal-path, scoped lint, formatting and diff checks. UI7 source
+is ready for a fresh-main delivery; remote CI will be recorded after push.
+UI8 frozen source checkpoints now include TrustGate `ea92663db` and PermissionPill
+`a54f7b002` plus test-only native capture correction `d5d70a055`. Their final
+native tests passed actual 100/200% with complete capturePage screenshots and
+strict PNG dimensions; the earlier cropped Playwright screenshots remain only
+DOM/AX evidence. Root will apply the same capture correction to ModelPill in UI8.
+
+UI8 is isolated while UI7 gates finish. History's actual Workbench audit found
+offscreen archive failures and late rename completions stealing external focus;
+source checkpoint `c4e95fba0` adds owned local recovery and truthful initial-read
+errors, retaining title CAS and existing action APIs. Its formal fixture and
+independent review are in progress. TrustGate's failed-read/retry, failed-choice
+feedback and project-generation fence passed production layouts and independent
+320x240 long-error checks; native verification is in progress, with no change to
+Main trust authority or the shared dialog focus helper. PermissionPill remains
+under read-only actual ChatView audit. Root copy-only source `f5af6007b` on
+`codex/desktop/model-empty-copy-20261015` corrects the model picker's obsolete
+settings.json/models hint to model connections in Settings. Two translations
+only; formatting/lint passed, no new low-impact mirror test. Integrate this in
+UI8 after UI7 delivery and run the real empty-picker fixture with the combined
+source. Primary checkout advanced under another task to `05cfa4631`; preserve
+those local commits and untracked files.
 
 Initial audit history follows:
 

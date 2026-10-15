@@ -39,7 +39,12 @@ type Run = <T>(
   label: string,
   work: (signal: AbortSignal) => Promise<T>,
   mutation?: boolean,
+  source?: HTMLElement,
 ) => Promise<T | undefined>;
+interface FocusRequest {
+  source: HTMLElement;
+  cancelled: boolean;
+}
 const sourceLabels: Record<ManagedSkill["source"], string> = {
   project: "工作区",
   user: "用户级",
@@ -70,6 +75,84 @@ export function HubSkills({
   callbacks.current = { onAuthLost, onChanged };
   const heading = React.useRef<HTMLHeadingElement | null>(null);
   const opener = React.useRef<HTMLElement | null>(null);
+  const panel = React.useRef<HTMLElement | null>(null);
+  const search = React.useRef<HTMLInputElement | null>(null);
+  const focusRequest = React.useRef<FocusRequest | null>(null);
+  const operationFocus = React.useRef<FocusRequest | null>(null);
+  const discardSource = React.useRef<HTMLElement | null>(null);
+  const pendingFocus = React.useRef<{
+    request: FocusRequest | null;
+    target: "pane" | "opener" | "editor";
+  } | null>(null);
+
+  const captureFocus = (source: Element | null = document.activeElement) => {
+    const request =
+      source instanceof HTMLElement && source !== document.body
+        ? { source, cancelled: false }
+        : null;
+    focusRequest.current = request;
+    return request;
+  };
+  React.useEffect(() => {
+    const cancelOutside = (target: EventTarget | null) => {
+      const request = focusRequest.current;
+      if (request && target instanceof Node && !request.source.contains(target))
+        request.cancelled = true;
+    };
+    const onPointerDown = (event: PointerEvent) => cancelOutside(event.target);
+    const onFocusIn = (event: FocusEvent) => {
+      if (event.target !== document.body) cancelOutside(event.target);
+    };
+    const onFocusOut = (event: FocusEvent) => {
+      if (event.relatedTarget && event.relatedTarget !== document.body)
+        cancelOutside(event.relatedTarget);
+    };
+    const onBlur = () => {
+      if (focusRequest.current) focusRequest.current.cancelled = true;
+    };
+    document.addEventListener("pointerdown", onPointerDown, true);
+    document.addEventListener("focusin", onFocusIn, true);
+    document.addEventListener("focusout", onFocusOut, true);
+    window.addEventListener("blur", onBlur);
+    return () => {
+      document.removeEventListener("pointerdown", onPointerDown, true);
+      document.removeEventListener("focusin", onFocusIn, true);
+      document.removeEventListener("focusout", onFocusOut, true);
+      window.removeEventListener("blur", onBlur);
+      focusRequest.current = null;
+      pendingFocus.current = null;
+    };
+  }, []);
+  React.useLayoutEffect(() => {
+    const pending = pendingFocus.current;
+    if (!pending || (pending.target === "opener" && (pane || busy))) return;
+    pendingFocus.current = null;
+    const { request } = pending;
+    const active = document.activeElement;
+    if (
+      pending.target === "pane" &&
+      active instanceof HTMLElement &&
+      search.current?.closest(".skills-filter")?.contains(active)
+    )
+      active.scrollIntoView({ block: "nearest", inline: "nearest" });
+    if (
+      !request ||
+      request !== focusRequest.current ||
+      request.cancelled ||
+      (active !== document.body && !request.source.contains(active))
+    )
+      return;
+    focusRequest.current = null;
+    const target =
+      pending.target === "pane"
+        ? heading.current
+        : pending.target === "editor"
+          ? discardSource.current
+          : opener.current;
+    if (target?.isConnected && !target.matches(":disabled")) target.focus();
+    else if (pending.target === "opener") search.current?.focus();
+    else panel.current?.querySelector<HTMLElement>("input, textarea")?.focus();
+  }, [pane, busy, discardAsked]);
 
   const report = React.useCallback((cause: unknown) => {
     if (cause instanceof ApiError && cause.status === 401) callbacks.current.onAuthLost();
@@ -99,35 +182,42 @@ export function HubSkills({
       });
     return () => controller.abort();
   }, [reload, configurationVersion, report]);
-  React.useEffect(() => {
-    if (pane) heading.current?.focus();
-  }, [pane?.kind]);
-
-  const open = (next: Pane) => {
-    opener.current = document.activeElement as HTMLElement | null;
+  const open = (next: Pane, fromOperation = false, source?: HTMLElement) => {
+    const request = fromOperation ? operationFocus.current : captureFocus(source);
+    if (!pane) opener.current = request?.source ?? null;
+    pendingFocus.current = { request, target: "pane" };
     setError("");
     setNotice("");
     setPaneDirty(false);
     setDiscardAsked(false);
     setPane(next);
   };
-  const finishClose = () => {
+  const finishClose = (fromOperation = false) => {
+    const request = fromOperation
+      ? operationFocus.current
+      : panel.current?.contains(document.activeElement)
+        ? captureFocus()
+        : null;
+    pendingFocus.current = { request, target: "opener" };
     setPane(null);
     setPaneDirty(false);
     setDiscardAsked(false);
     setError("");
-    opener.current?.focus();
   };
   const close = () => {
     if (operation.current) return;
     if (paneDirty) {
+      discardSource.current = panel.current?.contains(document.activeElement)
+        ? (document.activeElement as HTMLElement | null)
+        : null;
       setDiscardAsked(true);
       return;
     }
     finishClose();
   };
-  const run: Run = async (label, work, mutation = false) => {
+  const run: Run = async (label, work, mutation = false, source) => {
     if (operation.current) return undefined;
+    operationFocus.current = captureFocus(source);
     read.current?.abort();
     const controller = new AbortController();
     operation.current = controller;
@@ -193,14 +283,14 @@ export function HubSkills({
           <button
             className="config-button"
             disabled={!!busy || !!pane}
-            onClick={() => open({ kind: "import" })}
+            onClick={(event) => open({ kind: "import" }, false, event.currentTarget)}
           >
             从 GitHub 导入
           </button>
           <button
             className="config-button config-button-primary"
             disabled={!!busy || !!pane}
-            onClick={() => open({ kind: "create" })}
+            onClick={(event) => open({ kind: "create" }, false, event.currentTarget)}
           >
             ＋ 创建 Skill
           </button>
@@ -222,7 +312,11 @@ export function HubSkills({
         </p>
       )}
       {pane && (
-        <section className="skills-workspace-panel" aria-labelledby="skills-panel-title">
+        <section
+          ref={panel}
+          className="skills-workspace-panel"
+          aria-labelledby="skills-panel-title"
+        >
           <header>
             <h2 id="skills-panel-title" ref={heading} tabIndex={-1}>
               {pane.kind === "create"
@@ -245,10 +339,16 @@ export function HubSkills({
             <div className="skills-discard-confirm" role="alert">
               <p>还有未保存的修改。关闭会丢弃这些修改。</p>
               <div className="skills-actions">
-                <button className="config-button" onClick={() => setDiscardAsked(false)}>
+                <button
+                  className="config-button"
+                  onClick={() => {
+                    pendingFocus.current = { request: captureFocus(), target: "editor" };
+                    setDiscardAsked(false);
+                  }}
+                >
                   继续编辑
                 </button>
-                <button className="config-button skills-danger" onClick={finishClose}>
+                <button className="config-button skills-danger" onClick={() => finishClose()}>
                   放弃修改并关闭
                 </button>
               </div>
@@ -260,7 +360,7 @@ export function HubSkills({
               detail={pane.kind === "detail" ? pane.detail : undefined}
               busy={!!busy}
               run={run}
-              onSaved={finishClose}
+              onSaved={() => finishClose(true)}
               onDirtyChange={setPaneDirty}
             />
           )}
@@ -270,12 +370,17 @@ export function HubSkills({
               preview={pane.preview}
               busy={!!busy}
               run={run}
-              onPreview={(preview) => setPane({ kind: "import", preview })}
-              onInstalled={finishClose}
+              onPreview={(preview) => open({ kind: "import", preview }, true)}
+              onInstalled={() => finishClose(true)}
             />
           )}
           {pane.kind === "update" && (
-            <UpdatePreview preview={pane.preview} busy={!!busy} run={run} onUpdated={finishClose} />
+            <UpdatePreview
+              preview={pane.preview}
+              busy={!!busy}
+              run={run}
+              onUpdated={() => finishClose(true)}
+            />
           )}
           {pane.kind === "remove" && (
             <div className="skills-remove-confirm">
@@ -299,7 +404,7 @@ export function HubSkills({
                       (signal) => removeSkill(pane.skill.name, pane.skill.revision, signal),
                       true,
                     ).then((result) => {
-                      if (result) finishClose();
+                      if (result) finishClose(true);
                     });
                   }}
                 >
@@ -314,6 +419,7 @@ export function HubSkills({
         <label>
           <span className="config-sr-only">搜索 Skills</span>
           <input
+            ref={search}
             type="search"
             aria-label="搜索 Skills"
             value={query}
@@ -414,13 +520,15 @@ export function HubSkills({
               <button
                 className="config-button config-button-quiet"
                 disabled={!!busy || !!pane}
-                onClick={() => {
-                  opener.current = document.activeElement as HTMLElement | null;
-                  void run("正在读取 Skill", (signal) => readManagedSkill(skill.name, signal)).then(
-                    (detail) => {
-                      if (detail) open({ kind: "detail", detail });
-                    },
-                  );
+                onClick={(event) => {
+                  void run(
+                    "正在读取 Skill",
+                    (signal) => readManagedSkill(skill.name, signal),
+                    false,
+                    event.currentTarget,
+                  ).then((detail) => {
+                    if (detail) open({ kind: "detail", detail }, true);
+                  });
                 }}
               >
                 {skill.editable ? "查看与编辑" : "查看说明"}
@@ -429,11 +537,14 @@ export function HubSkills({
                 <button
                   className="config-button config-button-quiet"
                   disabled={!!busy || !!pane}
-                  onClick={() => {
-                    void run("正在检查来源更新", (signal) =>
-                      previewSkillUpdate(skill.name, skill.revision, signal),
+                  onClick={(event) => {
+                    void run(
+                      "正在检查来源更新",
+                      (signal) => previewSkillUpdate(skill.name, skill.revision, signal),
+                      false,
+                      event.currentTarget,
                     ).then((preview) => {
-                      if (preview?.changed) open({ kind: "update", preview });
+                      if (preview?.changed) open({ kind: "update", preview }, true);
                       else if (preview) setNotice(`${skill.name} 已是最新版本。`);
                     });
                   }}
@@ -445,7 +556,7 @@ export function HubSkills({
                 <button
                   className="config-button config-button-quiet skills-remove"
                   disabled={!!busy || !!pane}
-                  onClick={() => open({ kind: "remove", skill })}
+                  onClick={(event) => open({ kind: "remove", skill }, false, event.currentTarget)}
                 >
                   移除
                 </button>
