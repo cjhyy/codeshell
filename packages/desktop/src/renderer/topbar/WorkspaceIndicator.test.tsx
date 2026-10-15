@@ -1679,8 +1679,8 @@ describe("TopBar workspace label", () => {
     );
 
     expect(html).toContain('data-context-action="open"');
-    expect(html).toContain('aria-label="选择上下文"');
-    expect(html).not.toContain(">选择上下文<");
+    expect(html).toContain('aria-label="转发到新会话"');
+    expect(html).not.toContain(">转发到新会话<");
   });
 
   test("renders the current Session digital human as a switcher", () => {

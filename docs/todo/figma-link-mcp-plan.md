@@ -1,7 +1,35 @@
 # Figma Link：MCP 与 REST 能力规划
 
 状态：2026-10-15 重新规划。现有 REST 读取已实现；本文新增的官方 MCP 接入、Make
-资源读取及统一入口尚未实现或通过真实账号验收。本轮只修改规划文档。
+资源读取及统一入口尚未实现或通过真实账号验收。16:20–16:29（Asia/Singapore）
+已做官方 OAuth 真实试连，动态客户端注册收到 HTTP 403，后续认证和内容读取尚未到达。
+
+## 官方 OAuth 实际试连
+
+2026-10-15 在已安装的 CodeShell 0.9.42 中，通过 MCP 设置的新连接表单使用官方
+URL、独立 OAuth、空 Client ID 与端点启动自动发现/动态注册。测试未复用已有 REST
+或其他客户端凭证，本次操作未提交服务器表单。应用在浏览器打开前失败，Host 日志记录
+`discovery_registration / protocol_error / 403`。
+
+随后用隔离 HOME、仅内存 CredentialStore 和实际 `McpOAuthService`、SDK 1.31.0
+复现相同握手，记录了以下真实网络结果。探针配置的 authenticated fetch 与 SDK
+Client 未执行到，不能算作已验证连接或内容读取。
+
+| 阶段                                             | 请求                                                                 | 实测结果       |
+| ------------------------------------------------ | -------------------------------------------------------------------- | -------------- |
+| MCP 资源授权元数据                               | `GET https://mcp.figma.com/.well-known/oauth-protected-resource/mcp` | 200            |
+| OAuth 授权服务器元数据                           | `GET https://api.figma.com/.well-known/oauth-authorization-server`   | 200            |
+| 动态客户端注册                                   | `POST https://api.figma.com/v1/oauth/mcp/register`                   | 403            |
+| 用户授权、令牌交换、MCP 工具发现、内容读取和刷新 | 未到达                                                               | 未通过真实验收 |
+
+结论是当前 CodeShell 请求被官方注册端点拒绝；本次没有取得 token，也没有读取到
+Figma 内容。403 的具体策略原因未从响应证据中取得，不能直接断言 Catalog 白名单
+就是此次拒绝原因。官方准入要求是独立的已知条件。探针正常退出仅表示诊断完成，
+不表示 OAuth 成功。[脱敏试连回执](figma-mcp-live-validation-2026-10-15.json)
+
+下一步应取得 Figma 认可的 CodeShell 客户端注册/配置，或由 Figma 确认本次注册请求
+的拒绝原因，再继续 P0 认证与实际文件读取。保留 P0 未完成状态，不复用其他客户端
+身份，也不以已有 REST 授权替代 MCP 授权。
 
 ## 决策与当前授权
 
