@@ -216,7 +216,9 @@ main: `codex/desktop/composer-overflow-20261015`,
 on the current root branch, refresh main, and verify the final combination before
 delivery. Third-wave CI must be checked before another main push cancels it.
 
-Fourth wave delivered to remote main at `94f1a462b`. CI `38733481703` is running.
+Fourth wave delivered to remote main at `94f1a462b`. CI `38733481703` completed
+successfully with all 12 jobs green, including real Electron, real win32, all
+workspace types, guarded unit shards and all responsive browser checks.
 The root branch contains these reviewed commits:
 
 - `95579ea41` (source `dc92d56cd`): Sidebar content scrolls as one region while
@@ -312,7 +314,7 @@ file-browser tree; bridge_test_fix owns `codex/desktop/history-page-recovery-202
 in the desktop-bridge tree; ui_audit owns
 `codex/desktop/connection-settings-recovery-20261015` in the context-settings tree.
 Root integrates reviewed commits in the current UI5 branch, preserves incoming
-main, verifies the final combination and waits for the UI4 CI before another push.
+main and verifies the final combination before another push. UI4 CI is now green.
 
 Search is now complete and integrated as `9882f5b35` (source `ed1bc6374`, parent
 `94f1a462b`). The final six-file commit contains scoped short-window density,
@@ -328,13 +330,15 @@ green. Root independently passed the integrated 32/102 fixture. The unpublished
 checkpoint history is retained on
 `codex/desktop/session-search-layout-checkpoint-20261015` (`b48e9b9d3`).
 
-release_audit now independently audits actual MCP settings viewers with only
-owned settings/probe results. Root code inspection found ToolsViewer and
-ErrorDetailViewer are manual fixed div overlays without modal role/FocusScope/
-Escape ownership, plus potentially overflowing long names. Reproduce actual
-Settings→MCP keyboard/short-pane behavior before deciding implementation scope;
-preserve transport, credential and plugin trust authority. No MCP product edit
-has been authorized without that evidence yet.
+The actual Settings→MCP audit confirmed the two detail viewers have no dialog
+role/focus containment/Escape ownership, leave keyboard focus in background
+actions and push Close offscreen with long server names. Owned bridge evidence:
+`codeshell-mcp-details-audit-zr8R5s/report.json`. release_audit now owns
+`codex/desktop/mcp-detail-dialogs-20261015` in the clean sidebar worktree, based
+on main `94f1a462b`. Accepted scope is only ToolsViewer/ErrorDetailViewer modal
+keyboard/focus recovery and complete long-content bounds. Preserve every tool
+and raw diagnostic; no MCP probe/save/trust/credential/transport changes.
+Its completion and independent review determine whether it joins UI5 or UI6.
 
 Initial audit history follows:
 
