@@ -7,15 +7,10 @@ import {
   PanelsTopLeft,
   LoaderCircle,
   AppWindow,
+  LayoutGrid,
 } from "lucide-react";
 import type { PanelTab } from "../view";
 import { cn } from "@/lib/utils";
-import {
-  DropdownMenu,
-  DropdownMenuTrigger,
-  DropdownMenuContent,
-  DropdownMenuItem,
-} from "@/components/ui/dropdown-menu";
 import { Button } from "@/components/ui/button";
 import type { Anchor } from "../chat/anchors";
 import { useT } from "../i18n/I18nProvider";
@@ -41,6 +36,8 @@ import { PanelTabStrip } from "./PanelTabStrip";
 import { useReviewAvailability } from "./useReviewAvailability";
 import type { SubagentSelection } from "../subagents/SubagentNavigation";
 import { useToast } from "../ui/ToastProvider";
+import { PanelLauncher } from "./PanelLauncher";
+import { PANEL_LAUNCHER_KIND } from "./panelLauncherKind";
 
 export interface OpenTab {
   id: string;
@@ -251,7 +248,9 @@ function ResolvedPanelArea({
   const seenTabIds = new Set<string>();
   const activeTabs = tabs.filter((tb) => {
     if (
-      (!enabledPanelIds.has(tb.kind) && !(tb.kind === "review" && hasReviewSnapshot)) ||
+      (tb.kind !== PANEL_LAUNCHER_KIND &&
+        !enabledPanelIds.has(tb.kind) &&
+        !(tb.kind === "review" && hasReviewSnapshot)) ||
       seenTabIds.has(tb.id)
     )
       return false;
@@ -264,6 +263,13 @@ function ResolvedPanelArea({
       ? candidateActiveId
       : (activeTabs[0]?.id ?? null);
   const activeTab = activeTabs.find((tab) => tab.id === visibleActiveId);
+  const pendingTabFocus = useRef<string | null>(null);
+  useEffect(() => {
+    if (!hidden && pendingTabFocus.current === visibleActiveId) {
+      document.getElementById(`${panelDomId}-tab-${visibleActiveId}`)?.focus();
+      pendingTabFocus.current = null;
+    }
+  }, [hidden, panelDomId, visibleActiveId]);
   const activeEntry = activeTab
     ? getPanelEntry(activeTab.kind, {
         projectPath,
@@ -303,6 +309,19 @@ function ResolvedPanelArea({
   // Maximized = overlay the chat column (incl. composer) for more room (TODO
   // 2.4). Resets each open (local) — chat/composer state lives in App.
   const [maximized, setMaximized] = useState(false);
+  const [launcherFocusRequest, setLauncherFocusRequest] = useState(0);
+
+  const openLauncher = (): void => {
+    setLauncherFocusRequest((request) => request + 1);
+    const existing = activeTabs.find((tab) => tab.kind === PANEL_LAUNCHER_KIND);
+    if (existing) {
+      setActiveId(existing.id);
+      return;
+    }
+    const tab = { id: mkId(PANEL_LAUNCHER_KIND), kind: PANEL_LAUNCHER_KIND };
+    setTabs((prev) => [...prev, tab]);
+    setActiveId(tab.id);
+  };
 
   const addTab = (kind: PanelTab): void => {
     const entry = getPanelEntry(kind, {
@@ -310,16 +329,24 @@ function ResolvedPanelArea({
       cwd,
       engineSessionId: engineSessionId ?? null,
     });
-    if (!entry || !enabledPanelIds.has(kind)) return;
+    if (!entry || entry.internalOnly || !enabledPanelIds.has(kind)) return;
+    const launcherId = activeTab?.kind === PANEL_LAUNCHER_KIND ? activeTab.id : null;
     if (entry.singleton) {
       const existing = activeTabs.find((candidate) => candidate.kind === kind);
       if (existing) {
+        if (launcherId) setTabs((prev) => prev.filter((tab) => tab.id !== launcherId));
+        pendingTabFocus.current = existing.id;
         setActiveId(existing.id);
         return;
       }
     }
     const tab = { id: mkId(kind), kind };
-    setTabs((prev) => [...prev, tab]);
+    pendingTabFocus.current = tab.id;
+    setTabs((prev) =>
+      launcherId
+        ? prev.map((existing) => (existing.id === launcherId ? tab : existing))
+        : [...prev, tab],
+    );
     setActiveId(tab.id);
   };
 
@@ -436,12 +463,14 @@ function ResolvedPanelArea({
               return {
                 id: tab.id,
                 label:
-                  tab.kind === "subagent" && subagentSelection?.label
-                    ? subagentSelection.label
-                    : entry
-                      ? panelEntryTitle(entry, (key) => t(key as never))
-                      : t("panels.area.unavailable"),
-                icon: entry?.icon ?? CircleOff,
+                  tab.kind === PANEL_LAUNCHER_KIND
+                    ? t("panels.area.launcherTitle")
+                    : tab.kind === "subagent" && subagentSelection?.label
+                      ? subagentSelection.label
+                      : entry
+                        ? panelEntryTitle(entry, (key) => t(key as never))
+                        : t("panels.area.unavailable"),
+                icon: tab.kind === PANEL_LAUNCHER_KIND ? LayoutGrid : (entry?.icon ?? CircleOff),
               };
             })}
             activeId={visibleActiveId}
@@ -462,38 +491,18 @@ function ResolvedPanelArea({
 
         <div className="flex shrink-0 items-center gap-0.5 border-l border-border/70 pl-1.5">
           {/* Dock actions stay visible when the tab list overflows. */}
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button
-                type="button"
-                aria-label={t("panels.area.newTab")}
-                title={t("panels.area.newTab")}
-                data-panel-action="new-tab"
-                size="icon"
-                variant="ghost"
-                className="size-8 shrink-0 rounded-lg text-muted-foreground"
-              >
-                <Plus className="h-3.5 w-3.5" />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="min-w-48">
-              {pickerPanels.map((entry) => {
-                const Icon = entry.icon;
-                return (
-                  <DropdownMenuItem
-                    key={entry.key}
-                    data-panel-menu-kind={entry.key}
-                    onSelect={() => addTab(entry.key)}
-                  >
-                    <Icon className="mr-2 h-4 w-4" />
-                    <span className="flex-1">
-                      {panelEntryTitle(entry, (key) => t(key as never))}
-                    </span>
-                  </DropdownMenuItem>
-                );
-              })}
-            </DropdownMenuContent>
-          </DropdownMenu>
+          <Button
+            type="button"
+            onClick={openLauncher}
+            aria-label={t("panels.area.newTab")}
+            title={t("panels.area.newTab")}
+            data-panel-action="new-tab"
+            size="icon"
+            variant="ghost"
+            className="size-8 shrink-0 rounded-lg text-muted-foreground"
+          >
+            <Plus className="h-3.5 w-3.5" />
+          </Button>
           {canOpenWindow && (
             <Button
               type="button"
@@ -535,9 +544,29 @@ function ResolvedPanelArea({
           one mounted PanelArea per bucket, so no body here ever changes owner
           during a session switch. */}
       <div className="relative flex min-h-0 flex-1 flex-col">
-        {activeTabs.length === 0 && <PanelLanding entries={pickerPanels} onPick={addTab} />}
+        {activeTabs.length === 0 && (
+          <PanelLauncher entries={pickerPanels} onPick={addTab} active={!hidden} />
+        )}
         {activeTabs.map((panelTab) => {
           const activeTab = panelTab.id === visibleActiveId;
+          if (panelTab.kind === PANEL_LAUNCHER_KIND) {
+            return (
+              <Slot
+                key={panelTab.id}
+                active={activeTab}
+                panelId={PANEL_LAUNCHER_KIND}
+                id={`${panelDomId}-body-${panelTab.id}`}
+                labelledBy={`${panelDomId}-tab-${panelTab.id}`}
+              >
+                <PanelLauncher
+                  entries={pickerPanels}
+                  onPick={addTab}
+                  active={activeTab && !hidden}
+                  focusRequest={launcherFocusRequest}
+                />
+              </Slot>
+            );
+          }
           const visibility = resolvePanelVisibility({ hidden, keepActiveBodyLive, activeTab });
           const workspacePresentation = panelWorkspacePresentation(workspace);
           return (
@@ -607,55 +636,6 @@ function ResolvedPanelArea({
             </Slot>
           );
         })}
-      </div>
-    </div>
-  );
-}
-
-/** Empty-dock landing: a card grid to open one of the registered panels. */
-function PanelLanding({
-  entries,
-  onPick,
-}: {
-  entries: ReturnType<typeof getEnabledPanelEntries>;
-  onPick: (k: PanelTab) => void;
-}) {
-  const { t } = useT();
-  return (
-    <div className="flex min-h-0 flex-1 flex-col overflow-y-auto bg-muted/15 px-5 py-7">
-      <div className="mx-auto my-auto w-full max-w-lg">
-        <div className="mb-6">
-          <div className="mb-4 flex size-11 items-center justify-center rounded-2xl border border-border/80 bg-background text-primary shadow-sm">
-            <PanelsTopLeft className="size-5" />
-          </div>
-          <h2 className="text-base font-semibold tracking-tight text-foreground">
-            {t("panels.area.title")}
-          </h2>
-          <p className="mt-2 max-w-sm text-xs leading-relaxed text-muted-foreground">
-            {t("panels.area.landingHint")}
-          </p>
-        </div>
-        <div className="grid grid-cols-[repeat(auto-fit,minmax(min(100%,9rem),1fr))] gap-2.5">
-          {entries.map((entry) => {
-            const Icon = entry.icon;
-            return (
-              <Button
-                key={entry.key}
-                type="button"
-                onClick={() => onPick(entry.key)}
-                variant="outline"
-                className="group flex h-auto min-w-0 flex-col items-start gap-4 whitespace-normal rounded-xl bg-background px-4 py-4 text-left shadow-sm hover:border-primary/35 hover:bg-primary/5"
-              >
-                <span className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-muted/70 text-muted-foreground transition-colors group-hover:bg-primary/10 group-hover:text-primary">
-                  <Icon className="size-4" />
-                </span>
-                <span className="break-words text-sm font-medium text-foreground [overflow-wrap:anywhere]">
-                  {panelEntryTitle(entry, (key) => t(key as never))}
-                </span>
-              </Button>
-            );
-          })}
-        </div>
       </div>
     </div>
   );

@@ -500,6 +500,11 @@ Extensions → Plugins owns Agent Plugin packages and never lists Panel Apps.
 
 ## Separate Desktop windows
 
+The dock's **+** button opens a closable **New tab** page with local search and
+separate Tools / My panels sections. Picking an entry replaces the launcher
+tab, or focuses the app's existing singleton tab. Other panel instances stay
+mounted. Internal chat-only surfaces are omitted from the catalog.
+
 An installed Panel App's dock title bar offers **Open in a separate window**.
 It opens one native window per source tab; repeating the action focuses that
 window. Closing it leaves the source tab intact. Closing the source tab or its
