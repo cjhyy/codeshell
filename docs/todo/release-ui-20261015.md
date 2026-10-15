@@ -91,7 +91,8 @@ locked browser. Remote CI `38713943455` passed all UI/renderer/Web checks but fo
 an old Electron Task center locator (textbox instead of the new searchbox) and an
 intermittent Figma large-response read stall. The locator fix `e028d0d5b` is on main
 and its full 2,050-record Electron acceptance passed locally. Follow-up CI is
-`38716066133`. Figma is under isolated diagnosis; keep all response budgets and
+`38716066133` passed all 12 jobs. Figma is still under isolated diagnosis of the
+intermittent Bun transport behavior; keep all response budgets and
 overflow/recovery assertions intact.
 
 The first autocomplete browser run exposed a pending-caret timing issue: a queued
@@ -111,8 +112,11 @@ overwrites a newer event, and version/action rejections are unhandled. Evidence:
 `/tmp/codeshell-updater-ui-before-20261015/report.json`; no network was allowed.
 Continue with the current commits and evidence instead of redoing the initial audit.
 
-Second wave is committed on the current integration branch and undergoing combined
-verification:
+Second wave is committed on the current integration branch. Combined verification
+passed: all 14 workspace typechecks, full Desktop build, lint baseline, 3,289
+guarded renderer/Web tests (12,322 assertions; one separately covered browser
+test skipped), all 19 Desktop browser fixtures, all three Web fixtures, and real
+Electron Settings/2,050-record Task center acceptance. It is ready for main delivery:
 
 - `6396a90f2`, `809e0495b`: updater snapshot/event ordering, recoverable reads and
   actions, long-error wrapping, keyboard retry focus and concise update guidance.
@@ -135,8 +139,13 @@ browser fixtures and all three Web navigation/scrolling fixtures.
 
 Third-wave read-only audit confirmed AskUser keyboard-inaccessible options,
 IME-confirmation submission and overflowing sticky questions on short containers.
-These P1 fixes are in a separate task. Keep the long Approval/Tool card header and
-resolved-answer readability findings for a later reviewed change. Evidence:
+These P1 fixes are committed as `7b00fb28e` in the clean independent
+`ask-user-ui-20261015` tree, with 32 production layouts, StrictMode checks and 41
+related tests passed; independent review confirmed request identity and resize
+focus behavior. Root's separate `file-browser-ui-20261015` tree now uses branch
+`codex/desktop/tool-card-layout-20261015` for the long Approval/Tool card header P2;
+keep it separate from this verified integration tree. Resolved-answer readability
+remains a follow-up. Evidence:
 `/tmp/codeshell-session-cards-audit-20261015/report.json`.
 
 - Read-only audit is in progress, including Desktop and mobile/Web.
