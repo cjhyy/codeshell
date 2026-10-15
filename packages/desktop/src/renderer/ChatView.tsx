@@ -1504,25 +1504,40 @@ export function ChatView({
   // inline visibility makes its resizing feed back into IntersectionObserver.
   const hasPendingInteraction = !!openAsk || (!!pendingApproval && !!onApprovalDecide);
   useEffect(() => {
-    if (!hasPendingInteraction || contextSelectionOpen || typeof ResizeObserver === "undefined")
+    if (
+      (!hasPendingInteraction && variant !== "main") ||
+      contextSelectionOpen ||
+      typeof ResizeObserver === "undefined"
+    )
       return;
-    const scrollers = [stickyQuestionRef.current, questionComposerRef.current].filter(
-      (element): element is HTMLDivElement => element !== null,
-    );
+    const newChatScroller =
+      questionComposerRef.current?.closest<HTMLDivElement>(".cs-new-chat") ?? null;
+    const scrollers = [
+      stickyQuestionRef.current,
+      questionComposerRef.current,
+      newChatScroller,
+    ].filter((element): element is HTMLDivElement => element !== null);
     const ensureFocusedVisible = (): void => {
       const focused = document.activeElement;
       if (!(focused instanceof HTMLElement)) return;
-      const scroller = scrollers.find((element) => element.contains(focused));
-      if (!scroller) return;
-      const bounds = scroller.getBoundingClientRect();
-      const target = focused.getBoundingClientRect();
-      if (bounds.height <= 0) return;
-      // A long textarea may fill the entire visible slice. Keep that slice;
-      // smaller controls need to remain fully visible after a dock resize.
-      if (target.height > bounds.height && target.top < bounds.bottom && target.bottom > bounds.top)
-        return;
-      if (target.top < bounds.top) scroller.scrollTop += target.top - bounds.top;
-      else if (target.bottom > bounds.bottom) scroller.scrollTop += target.bottom - bounds.bottom;
+      // New chats nest the composer inside the welcome scroller. Align the
+      // focused control from the inner scroller out so neither clips it.
+      for (const scroller of scrollers) {
+        if (!scroller.contains(focused)) continue;
+        const bounds = scroller.getBoundingClientRect();
+        const target = focused.getBoundingClientRect();
+        if (bounds.height <= 0) continue;
+        // A long textarea may fill the entire visible slice. Keep that slice;
+        // smaller controls need to remain fully visible after a dock resize.
+        if (
+          target.height > bounds.height &&
+          target.top < bounds.bottom &&
+          target.bottom > bounds.top
+        )
+          continue;
+        if (target.top < bounds.top) scroller.scrollTop += target.top - bounds.top;
+        else if (target.bottom > bounds.bottom) scroller.scrollTop += target.bottom - bounds.bottom;
+      }
     };
     const observer = new ResizeObserver(ensureFocusedVisible);
     scrollers.forEach((element) => {
@@ -1530,6 +1545,11 @@ export function ChatView({
       // Portaled menus may restore focus after the resize observer has run.
       element.addEventListener("focusin", ensureFocusedVisible);
     });
+    // Queue or draft growth can move a focused action without changing the
+    // already bounded scroller's size. Observe its content as well.
+    const composer = questionComposerRef.current?.querySelector(".cs-chat-composer");
+    if (composer) observer.observe(composer);
+    ensureFocusedVisible();
     return () => {
       observer.disconnect();
       scrollers.forEach((element) => element.removeEventListener("focusin", ensureFocusedVisible));
@@ -1540,6 +1560,9 @@ export function ChatView({
     showStickyApproval,
     pendingApproval?.requestId,
     contextSelectionOpen,
+    variant,
+    isNewChat,
+    queuedInputItems.length,
   ]);
 
   // Show ALL queued items, not a 2-item slice — the old slice(0, 2) is what
@@ -1617,6 +1640,7 @@ export function ChatView({
       }
       data-mode={isNewChat ? "new" : "active"}
       data-chat-variant={variant}
+      data-queued-input={queuedInputItems.length > 0 ? "true" : undefined}
       data-pending-interaction={!contextSelectionOpen && hasPendingInteraction ? "true" : undefined}
       data-theme-surface={variant === "main" ? "chat" : undefined}
       onDragEnter={onChatDragEnter}
@@ -1864,14 +1888,17 @@ export function ChatView({
           */}
           <div
             className={
-              // sm:min-w-[300px]: stop the composer collapsing into an unusable
-              // sliver when a side panel squeezes the desktop chat; keep phones
-              // at min-w-0 so wide message content cannot force horizontal page
-              // overflow. Keep this card out of the container-query tree: putting
+              // Keep the preferred desktop minimum within the main pane's real
+              // width, including a new-chat column's extra padding. Keep this
+              // card out of the container-query tree: putting
               // container-type on the textarea's ancestor has collapsed the
               // composer during session/dock reflow.
               "cs-chat-composer min-w-0 max-w-full border" +
-              (variant === "quickChat" ? "" : " sm:min-w-[300px]") +
+              (variant === "quickChat"
+                ? ""
+                : variant === "main"
+                  ? " sm:min-w-[min(300px,100%)]"
+                  : " sm:min-w-[300px]") +
               (variant === "main" ? "" : " bg-card") +
               (variant === "pet" ? " rounded-xl p-2 shadow-sm" : "") +
               (dragOver ? " ring-2 ring-primary/40" : "")
