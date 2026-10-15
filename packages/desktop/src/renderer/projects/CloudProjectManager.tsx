@@ -215,7 +215,7 @@ export function CloudProjectManager({
   const canAct = !busy && !uncertain && connected === address.trim().replace(/\/$/, "");
   return (
     <div
-      ref={contentRef}
+      ref={focus.attachScope}
       className="grid min-w-0 grid-cols-[minmax(0,1fr)] gap-4 [overflow-wrap:anywhere]"
     >
       {status.state !== "signed-in" ? (

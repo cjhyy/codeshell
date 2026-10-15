@@ -122,7 +122,7 @@ export function NewProjectDialog({
   return (
     <Dialog open={open} onOpenChange={(next) => !pendingRef.current && onOpenChange(next)}>
       <DialogContent
-        ref={contentRef}
+        ref={focus.attachScope}
         className="flex min-h-0 min-w-0 max-h-[calc(100dvh-2rem)] w-[calc(100vw-2rem)] flex-col overflow-hidden sm:max-w-md"
         onOpenAutoFocus={() => {
           focus.discard(returnFocus.current);
@@ -145,6 +145,7 @@ export function NewProjectDialog({
           </DialogDescription>
         </DialogHeader>
         <div
+          data-cloud-dialog-scroll
           role="region"
           aria-label={t(location === "choose" ? "sidebar.projectLocation" : "sidebar.cloudHint")}
           tabIndex={0}
