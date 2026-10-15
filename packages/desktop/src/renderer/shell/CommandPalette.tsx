@@ -60,7 +60,7 @@ export function CommandPalette({ open, onClose, commands }: Props) {
           {filtered.length === 0 ? (
             <div
               role="status"
-              className="flex flex-col items-center gap-3 px-4 py-10 text-center text-sm text-muted-foreground"
+              className="cs-search-state flex flex-col items-center gap-3 px-4 py-10 text-center text-sm text-muted-foreground"
             >
               <CommandIcon className="size-6 opacity-60" aria-hidden />
               {t("panels.palette.noMatch")}

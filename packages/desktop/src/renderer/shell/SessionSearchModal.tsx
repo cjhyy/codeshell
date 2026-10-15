@@ -116,12 +116,12 @@ export function SessionSearchModal({
             type="button"
             variant="ghost"
             size="sm"
-            className="h-7 gap-1.5 rounded-lg px-2.5 text-xs text-muted-foreground aria-pressed:bg-primary/10 aria-pressed:text-primary"
+            className="h-auto min-h-7 min-w-0 flex-1 gap-1.5 whitespace-normal rounded-lg px-2.5 py-1 text-xs leading-4 text-muted-foreground aria-pressed:bg-primary/10 aria-pressed:text-primary"
             aria-pressed={contentMode === enabled}
             onClick={() => setContentMode(enabled)}
           >
             <Icon className="size-3.5" aria-hidden />
-            {label}
+            <span className="min-w-0">{label}</span>
           </Button>
         ))}
       </div>
@@ -140,7 +140,7 @@ export function SessionSearchModal({
           value={query}
           onValueChange={(value) => setFilter(contentMode ? `> ${value}` : value)}
         />
-        <div className="flex shrink-0 items-center justify-between gap-2 px-4 pb-1 pt-3 text-[11px] font-medium text-muted-foreground">
+        <div className="cs-search-results-heading flex shrink-0 items-center justify-between gap-2 px-4 pb-1 pt-3 text-[11px] font-medium text-muted-foreground">
           <span>{header}</span>
           {!loading && (
             <span className="tabular-nums">{contentMode ? matches.length : filtered.length}</span>
@@ -266,7 +266,7 @@ function SearchState({
   return (
     <div
       role="status"
-      className="flex flex-col items-center gap-3 px-4 py-9 text-center text-sm text-muted-foreground"
+      className="cs-search-state flex flex-col items-center gap-3 px-4 py-9 text-center text-sm text-muted-foreground"
     >
       <span className="opacity-60" aria-hidden>
         {icon}

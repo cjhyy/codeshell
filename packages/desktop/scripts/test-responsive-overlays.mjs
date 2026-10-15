@@ -10,6 +10,7 @@ const fixtures = [
   "components/ui/dropdown-surfaces.browser.fixture.mjs",
   "settings/SettingsMenu.browser.fixture.mjs",
   "settings/SettingsPage.focus.browser.fixture.mjs",
+  "shell/SearchDialog.browser.fixture.mjs",
   "messages/AskUserMessageView.browser.fixture.mjs",
   "messages/AskUserReceipt.browser.fixture.mjs",
   "tool-cards/ToolCardShell.browser.fixture.mjs",
