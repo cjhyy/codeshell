@@ -366,6 +366,7 @@ test("failed account diagnostics expose only fixed field names and types", async
 
 test("provider error objects produce fixed diagnostic categories without changing identity checks", async () => {
   for (const [message, category, status] of [
+    ["Unsupported client: private provider detail", "unsupported_client", 403],
     ["Rate limit exceeded: private provider detail", "rate_limit", 429],
     ["Permission denied: private provider detail", "access_denied", 403],
     ["Token expired: private provider detail", "invalid_token", 401],

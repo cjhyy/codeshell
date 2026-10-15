@@ -82,7 +82,13 @@ function accountShape(value: unknown): Record<string, unknown> {
   // never supply identity, grant capabilities or change authorization outcomes.
   const classifyError = (item: unknown) => {
     if (typeof item !== "string" || !item) return;
-    if (/rate.?limit|too many requests|quota|usage limit|tool call limit/i.test(item))
+    if (
+      /unsupported.?client|client.{0,50}(not supported|unsupported|not allowed|not permitted|not registered|unrecognized)/i.test(
+        item,
+      )
+    )
+      errorCategories.add("unsupported_client");
+    else if (/rate.?limit|too many requests|quota|usage limit|tool call limit/i.test(item))
       errorCategories.add("rate_limit");
     else if (/invalid.{0,10}token|token.{0,15}(invalid|expired)/i.test(item))
       errorCategories.add("invalid_token");
