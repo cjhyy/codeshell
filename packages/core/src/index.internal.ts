@@ -12,6 +12,7 @@ export {
 } from "./session/output-coverage-state.js";
 
 export { outputUserMessage } from "./engine/run-output-user-message.js";
+export { createRunTiming } from "./session/stream-timing.js";
 
 // ─── Utils (shared primitives used by TUI) ───────────────────────
 
@@ -337,7 +338,11 @@ export {
 } from "./profile/activation.js";
 export { planWorkspaceProfileSwitch, type ProfileSwitchImpact } from "./profile/switch-plan.js";
 export { effectiveProjectOverrides } from "./capability-control/overlay.js";
-export { resolveActiveWorkspaceProfile, workspaceProfilePresetFor } from "./profile/resolve.js";
+export {
+  resolveActiveWorkspaceProfile,
+  resolveActiveWorkspaceProfileSelection,
+  workspaceProfilePresetFor,
+} from "./profile/resolve.js";
 export {
   addHumanRepo,
   listHumanRepoDetails,
@@ -469,6 +474,7 @@ export {
   githubIssueBatchPolicy,
 } from "./links/github-issue-batch.js";
 export { readOperationSessionOwner } from "./operations/session-owner.js";
+export { createSessionOperationServices } from "./operations/session-services.js";
 export { allowsLinkAction, linkAuthoritySnapshot } from "./links/authority.js";
 export {
   isOperationBatchAuthorityFrame,

@@ -118,9 +118,10 @@ describe("stream run ownership", () => {
     ]);
     state = user(state, "b");
     state = event(state, "a", { type: "text_delta", text: " tail" });
+    state = event(state, "a", { type: "text_delta", text: " retained" });
     state = event(state, "a", { type: "turn_complete", reason: "aborted_streaming" });
     expect(state.messages.find((message) => message.id === "assistant-a")).toMatchObject({
-      text: "old partial tail",
+      text: "old partial tail retained",
       done: true,
     });
     expect(usageBetweenUsers(state, "b")).toEqual([]);

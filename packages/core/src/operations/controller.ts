@@ -13,6 +13,7 @@ export function createSessionOperationController(
   root: string,
   sessionId: string,
   usageLedger: UsageLedger | undefined,
+  assertAuthorized?: () => void,
 ): OperationController {
   return new OperationController(
     new OperationLedger(
@@ -25,6 +26,7 @@ export function createSessionOperationController(
           }
         : undefined,
     ),
+    assertAuthorized,
   );
 }
 
@@ -58,35 +60,54 @@ function category(error: unknown): OperationError {
 /** A durable control path shared by trusted adapters, independent of any UI. */
 export class OperationController {
   private readonly verificationFailures = new Map<string, number>();
-  constructor(readonly ledger: OperationLedger) {}
+  constructor(
+    readonly ledger: OperationLedger,
+    private readonly assertAuthorized?: () => void,
+  ) {}
 
   async run(plan: OperationPlan, adapter: OperationAdapter): Promise<OperationReceipt> {
+    this.assertAuthorized?.();
     let receipt = this.ledger.prepare(plan);
     if (receipt.state === "verified" || receipt.state === "blocked" || receipt.state === "unknown")
       return receipt;
     // Another process may still own the send. A restart cannot establish whether
     // it reached the provider, so neither caller is allowed to replay it.
     if (receipt.state === "running") return this.ledger.sealPending(receipt.id);
+    const assertHost = () => {
+      try {
+        this.assertAuthorized?.();
+      } catch (error) {
+        // Custody loss after a physical send freezes only this receipt. A
+        // superseded controller must not finalize the newer run's operations.
+        if (receipt.state === "running" || receipt.state === "succeeded")
+          receipt = this.ledger.sealPending(receipt.id);
+        throw error;
+      }
+    };
+    const assertAuthorized = () => {
+      assertHost();
+      adapter.assertAuthorized();
+    };
     const check = async () => {
-      adapter.assertAuthorized();
+      assertAuthorized();
       await adapter.checkAuthorized?.();
-      adapter.assertAuthorized();
+      assertAuthorized();
     };
     try {
       if (adapter.checkAuthorized) await check();
-      else adapter.assertAuthorized();
+      else assertAuthorized();
       if (receipt.state === "planned" && this.ledger.hasUnverifiedWrites(plan.sessionId))
         throw new OperationFailure("stale_reference");
       await adapter.preflight();
       if (adapter.checkAuthorized) await check();
-      else adapter.assertAuthorized();
+      else assertAuthorized();
       if (receipt.state === "planned") {
         await adapter.validate();
         if (adapter.checkAuthorized) await check();
-        else adapter.assertAuthorized();
+        else assertAuthorized();
         if (!(await adapter.authorize())) throw new OperationFailure("cancelled");
         if (adapter.checkAuthorized) await check();
-        else adapter.assertAuthorized();
+        else assertAuthorized();
         const preparedRecovery = adapter.recoveryInput?.("prepared");
         if (preparedRecovery !== undefined)
           this.ledger.captureRecovery(plan, receipt.id, "prepared", preparedRecovery);
@@ -96,6 +117,7 @@ export class OperationController {
           return receipt.state === "running" ? this.ledger.sealPending(receipt.id) : receipt;
         try {
           const reference = await adapter.execute();
+          assertHost();
           // Persist the receipt even if permission was revoked during the send.
           receipt = this.ledger.settle(receipt.id, receipt.attemptId, "succeeded", { reference });
           if (receipt.state !== "succeeded") return receipt;
@@ -112,7 +134,7 @@ export class OperationController {
         }
       }
       if (adapter.checkAuthorized) await check();
-      else adapter.assertAuthorized();
+      else assertAuthorized();
       if (!receipt.reference) throw new OperationFailure("validation");
       if ((this.verificationFailures.get(receipt.id) ?? 0) >= 2)
         return this.ledger.settle(receipt.id, receipt.attemptId, "succeeded", {
@@ -120,7 +142,7 @@ export class OperationController {
         });
       const verified = await adapter.verify(structuredClone(receipt.reference));
       if (adapter.checkAuthorized) await check();
-      else adapter.assertAuthorized();
+      else assertAuthorized();
       const identityRecovery = adapter.recoveryInput?.("identity");
       if (identityRecovery !== undefined)
         this.ledger.captureRecovery(plan, receipt.id, "identity", identityRecovery);

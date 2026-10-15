@@ -14,6 +14,7 @@ import { defaultSandboxConfig } from "../tool-system/sandbox/index.js";
 import type { CreateMessageOptions } from "../llm/types.js";
 import type { LLMResponse, SessionState, StreamEvent } from "../types.js";
 import { _resetLoggerStateForTesting, getInMemoryErrors } from "../logging/logger.js";
+import { readOutputJournal } from "../session/output-journal.js";
 
 const provider = "fake-engine-init-lifecycle";
 
@@ -149,6 +150,41 @@ afterEach(() => {
 });
 
 describe("Engine initialization lifecycle", () => {
+  it.each(["normal observer", "throwing error observer"])(
+    "preserves an early cancellation rejection after publishing its durable timed terminal with %s",
+    async (observer) => {
+      const fixture = setup(0, async () => {});
+      const signal = AbortSignal.abort();
+      const events: StreamEvent[] = [];
+      const sessionId = "early-cancelled";
+      const running = fixture.engine.run("cancelled before preparation", {
+        sessionId,
+        cwd: fixture.dir,
+        signal,
+        onStream: (event) => {
+          events.push(event);
+          if (observer === "throwing error observer" && event.type === "error")
+            throw new Error("Observer failed while receiving the initialization error");
+        },
+      });
+      await expect(running).rejects.toBe(signal.reason);
+      expect(fixture.scenario.modelCalls).toBe(0);
+      expect(readState(fixture.dir, sessionId).status).toBe("aborted_streaming");
+      const terminal = events.at(-1);
+      expect(terminal).toEqual({
+        type: "turn_complete",
+        reason: "aborted_streaming",
+        timestamp: expect.any(Number),
+        startedAt: expect.any(Number),
+        completedAt: expect.any(Number),
+        durationMs: expect.any(Number),
+        outputCursor: expect.any(String),
+      });
+      const replay = readOutputJournal(join(fixture.dir, "sessions"), sessionId);
+      expect(replay.frames.at(-1)?.event).toEqual({ ...terminal, outputCursor: undefined });
+      expect((fixture.engine as any).runInProgress).toBe(false);
+    },
+  );
   it("persists model_error, handles early client rejection, and releases the run guard", async () => {
     const fixture = setup(1, async () => {
       await new Promise<void>((resolve) => setTimeout(resolve, 20));
@@ -176,6 +212,7 @@ describe("Engine initialization lifecycle", () => {
     expect(events).toContainEqual({
       type: "error",
       error: "LLM client initialization failed",
+      timestamp: expect.any(Number),
       outputCursor: expect.any(String),
     });
     expect((fixture.engine as any).runInProgress).toBe(false);
@@ -213,6 +250,7 @@ describe("Engine initialization lifecycle", () => {
     expect(events).toContainEqual({
       type: "error",
       error: "MCP connection failed",
+      timestamp: expect.any(Number),
       outputCursor: expect.any(String),
     });
     expect((fixture.engine as any).runInProgress).toBe(false);

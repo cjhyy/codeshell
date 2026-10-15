@@ -401,6 +401,27 @@ describe("project picker and registry synchronization", () => {
     },
   );
 
+  test.each(["disk", "run"] as const)(
+    "a pending %s import cannot reopen history after a new conversation",
+    async (kind) => {
+      diskProjects = [project];
+      const pending = deferred<Array<{ projectId: string; rootId: string; created: boolean }>>();
+      window.codeshell.projectRegistry.resolveForCwdBatch = () => pending.promise;
+      hook = await renderHook(useHarness);
+      const opened = openLocalHistory(kind);
+      await act(flushMicrotasks);
+      await act(async () => {
+        hook!.result.current.handleNewConversationForProject(project.id);
+      });
+      await act(async () => {
+        pending.resolve([{ projectId: project.id, rootId: project.primaryRootId, created: false }]);
+        await opened;
+      });
+      expect(loadSessionIndex(project.id).activeSessionId).toBeNull();
+      expect(hook.result.current.activeBucketRef.current).toBe(bucketKey(project.id, null));
+    },
+  );
+
   test.each(["denied", "rejected"] as const)(
     "aborts activation when local runtime persistence is %s",
     async (reason) => {
@@ -483,6 +504,28 @@ describe("project picker and registry synchronization", () => {
       bucketKey(project.id, "newer-session"),
     );
   });
+
+  test.each(["direct", "disk", "run"] as const)(
+    "a pending %s selection cannot reopen history after a new conversation",
+    async (kind) => {
+      seedLocalSession();
+      const pending = deferred<boolean>();
+      beforeSelectLocalSession = () => pending.promise;
+      hook = await renderHook(useHarness);
+      const opened = openLocalHistory(kind);
+      await act(flushMicrotasks);
+      await act(async () => {
+        hook!.result.current.handleNewConversationForProject(project.id);
+      });
+      expect(loadSessionIndex(project.id).activeSessionId).toBeNull();
+      await act(async () => {
+        pending.resolve(true);
+        await opened;
+      });
+      expect(loadSessionIndex(project.id).activeSessionId).toBeNull();
+      expect(hook.result.current.activeBucketRef.current).toBe(bucketKey(project.id, null));
+    },
+  );
 
   test.each([true, false])(
     "rechecks disk navigation currency after runtime persistence (existing=%s)",

@@ -627,6 +627,8 @@ export type PromptTokenConfidence = "high" | "medium" | "low";
 export type TurnCompletionKind = "background_wait" | "goal_control_stop" | "limit_stop";
 
 export type StreamEvent = {
+  /** Source wall-clock time (Unix milliseconds), retained across durable replay. */
+  timestamp?: number;
   /** Transcript user-message event id that opened this run; scoped to the session. */
   runId?: string;
   clientMessageId?: string;
@@ -668,6 +670,8 @@ type StreamEventPayload =
       sessionId: string;
       /** Persisted run identity replaced when this run opened the session. */
       previousRunId?: string;
+      /** Start of the whole logical submission, before run preparation. */
+      startedAt?: number;
       promptTokens: number;
       promptTokensSource?: PromptTokenSource;
       promptTokensConfidence?: PromptTokenConfidence;
@@ -718,6 +722,11 @@ type StreamEventPayload =
       text?: string;
       completionKind?: TurnCompletionKind;
       agentId?: string;
+      /** Whole logical submission timing, independent of individual tool spans. */
+      startedAt?: number;
+      completedAt?: number;
+      /** Monotonic elapsed milliseconds; unaffected by wall-clock adjustments. */
+      durationMs?: number;
     }
   // Goal mode visibility: emitted each time the goal judge re-prompts the
   // model ("not_met", carries the judge's `gaps` + the running round count),

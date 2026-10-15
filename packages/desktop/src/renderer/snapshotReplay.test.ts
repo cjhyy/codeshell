@@ -108,4 +108,25 @@ describe("snapshotHasUnfinishedTopLevelTurn", () => {
     expect(snapshotHasUnfinishedTopLevelTurn(running)).toBe(true);
     expect(snapshotHasUnfinishedTopLevelTurn(idle)).toBe(false);
   });
+
+  it.each(["runId", "clientMessageId"])(
+    "legacy inference retains a successor after a late %s terminal",
+    (identity) => {
+      const events = [
+        { type: "session_started", [identity]: "A" },
+        { type: "session_started", [identity]: "B" },
+        { type: "stream_request_start", [identity]: "A" },
+        { type: "turn_complete", [identity]: "A" },
+        { type: "error", [identity]: "A" },
+      ];
+      const snapshot = () =>
+        snap(
+          events.map((event, index) => ({ seq: index + 1, event })),
+          6,
+        );
+      expect(snapshotHasUnfinishedTopLevelTurn(snapshot())).toBe(true);
+      events.push({ type: "turn_complete", [identity]: "B" });
+      expect(snapshotHasUnfinishedTopLevelTurn(snapshot())).toBe(false);
+    },
+  );
 });

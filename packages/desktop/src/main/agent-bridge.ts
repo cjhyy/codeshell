@@ -31,6 +31,7 @@ import {
 } from "@cjhyy/code-shell-core/internal";
 import { randomUUID } from "node:crypto";
 import { MainOutputPublisher, type MainOutputSource } from "./main-output-publisher.js";
+import { WorkerRunOwnership } from "./worker-run-ownership.js";
 import { createRequire } from "node:module";
 import { homedir } from "node:os";
 import { join } from "node:path";
@@ -104,8 +105,7 @@ import {
 import {
   activeGuestForSession,
   bucketForSession,
-  // Aliased: this class has its own forgetSession, and the two clear DIFFERENT
-  // registries. releaseExternalSession has to call both.
+  // Aliased: this clears the browser registration, not the retained stream.
   forgetSession as forgetSessionBucket,
   partitionForSession,
   registerSessionBucket,
@@ -284,8 +284,8 @@ export class AgentBridge implements PetStateBridge {
       return this.snapshots.get(sessionId).outputCursor === event.outputCursor;
     },
   });
-  /** Sessions the CURRENT worker streamed events for (reset per spawn). */
-  private workerSnapshotSessionIds = new Set<string>();
+  /** In-flight runs actually owned by the CURRENT stdio worker. */
+  private readonly workerRuns = new WorkerRunOwnership();
   /**
    * Out-of-band observers of worker→renderer lines (e.g. the Mobile Web
    * Remote, which streams the same events to a phone). Taps are read-only:
@@ -400,15 +400,19 @@ export class AgentBridge implements PetStateBridge {
         process.stderr.write(`[agent] ${text}`);
       },
       onWorkerStarted: () => {
-        this.workerSnapshotSessionIds = new Set<string>();
+        this.workerRuns.beginWorker();
         this.petWorkerGeneration.beginWorker();
         this.emitPetProjection({ kind: "lifecycle", state: "active" });
       },
       onSpawnFailed: () => {
         this.emitPetProjection({ kind: "lifecycle", state: "disconnected" });
-        this.safeSend("agent:lifecycle", { type: "gave_up" });
+        this.safeSend("agent:lifecycle", {
+          type: "gave_up",
+          sessionIds: this.workerRuns.endWorker(),
+        });
       },
       onSpawnError: () => {
+        const sessionIds = this.workerRuns.endWorker();
         this.abortLocalOAuthLinkActions();
         this.webConfiguration.workerExited();
         this.childBrowserLifetime.close();
@@ -416,25 +420,26 @@ export class AgentBridge implements PetStateBridge {
         this.failPendingQuickChatForks();
         // Snapshots intentionally survive worker exit — a respawn may resume
         // the same session, and a remounted renderer still needs to replay.
-        this.snapshots.onWorkerExit(this.workerSnapshotSessionIds);
+        this.snapshots.onWorkerExit(sessionIds);
         this.emitPetProjection({ kind: "lifecycle", state: "disconnected" });
-        this.safeSend("agent:lifecycle", { type: "gave_up" });
+        this.safeSend("agent:lifecycle", { type: "gave_up", sessionIds });
       },
       onExit: ({ code, clean, gaveUp }) => {
+        const sessionIds = this.workerRuns.endWorker();
         this.abortLocalOAuthLinkActions();
         this.webConfiguration.workerExited();
         this.childBrowserLifetime.close();
         this.evictPendingTentativeRuns();
         this.failPendingQuickChatForks();
-        this.snapshots.onWorkerExit(this.workerSnapshotSessionIds);
+        this.snapshots.onWorkerExit(sessionIds);
         if (clean) {
           this.emitPetProjection({ kind: "lifecycle", state: "reclaimed" });
-          this.safeSend("agent:lifecycle", { type: "exited", code });
+          this.safeSend("agent:lifecycle", { type: "exited", code, sessionIds });
           return;
         }
         this.emitPetProjection({ kind: "lifecycle", state: "disconnected" });
-        if (gaveUp) this.safeSend("agent:lifecycle", { type: "gave_up" });
-        else this.safeSend("agent:lifecycle", { type: "exited", code });
+        if (gaveUp) this.safeSend("agent:lifecycle", { type: "gave_up", sessionIds });
+        else this.safeSend("agent:lifecycle", { type: "exited", code, sessionIds });
       },
     });
     this.core.subscribeLines((line) => this.handleWorkerLine(line));
@@ -552,7 +557,7 @@ export class AgentBridge implements PetStateBridge {
           event: annotateBrowserRuntimeStreamEvent(rawAppend.event, "milestones"),
         }
       : null;
-    if (append) this.workerSnapshotSessionIds.add(append.sessionId);
+    if (append) this.workerRuns.observeWorker(append.sessionId, append.event);
     let snapshotEntry;
     try {
       snapshotEntry = append
@@ -602,6 +607,13 @@ export class AgentBridge implements PetStateBridge {
 
   private handleAgentRunMetadata(prepared: ReturnType<typeof prepareAgentRunMetadata>): string {
     this.core.ensureWorker(prepared.cwd);
+    if (prepared.sessionId && this.core.canSend()) {
+      const clientMessageId = prepared.parsed.params?.clientMessageId;
+      this.workerRuns.beginRun(
+        prepared.sessionId,
+        typeof clientMessageId === "string" ? clientMessageId : undefined,
+      );
+    }
     this.lastRunContext = {
       cwd: prepared.cwd,
       sessionId: prepared.sessionId,
@@ -1908,6 +1920,11 @@ export class AgentBridge implements PetStateBridge {
   forgetSession(sessionId: string): void {
     this.snapshots.forget(sessionId);
     this.mainOutput.forget(sessionId);
+    this.releaseSessionResources(sessionId);
+  }
+
+  /** Release a runtime's authority without deleting its business Session output. */
+  private releaseSessionResources(sessionId: string): void {
     forgetHostSessionMaps(this.sessionCwd, this.hostReservations, sessionId);
     getSessionCwdIndex().forget(sessionId);
     this.panelHostWindowRoutes.forgetSession(sessionId);
@@ -2017,8 +2034,8 @@ export class AgentBridge implements PetStateBridge {
    *
    * Paired with {@link releaseExternalSession} on purpose. The two registries
    * live in different modules and are torn down by different functions —
-   * `forgetSession` here clears sessionCwd, while the bucket lives in
-   * browser-driver/active-guest and is cleared by ITS own forgetSession. Split
+   * `releaseSessionResources` clears sessionCwd, while the bucket lives in
+   * browser-driver/active-guest and is cleared by its own forgetSession. Split
    * the register/release halves across call sites and the bucket leaks for the
    * lifetime of the process.
    *
@@ -2037,9 +2054,13 @@ export class AgentBridge implements PetStateBridge {
     if (webContentsId !== undefined) this.claimSessionPanelOwner(sessionId, webContentsId);
   }
 
-  /** Release everything {@link registerExternalSession} registered. */
+  /**
+   * Release runtime resources while retaining the Session's stream and coverage.
+   * A replacement uses the same snapshot epoch, so resetting its sequence would
+   * make the renderer discard new output as already applied.
+   */
   releaseExternalSession(sessionId: string): void {
-    this.forgetSession(sessionId);
+    this.releaseSessionResources(sessionId);
   }
 
   /**
@@ -2435,6 +2456,7 @@ export class AgentBridge implements PetStateBridge {
     event: unknown,
     options: { browserVisibility?: "hidden" | "milestones" | "full" },
   ): boolean {
+    this.workerRuns.observeExternal(sessionId, event);
     const projected = annotateBrowserRuntimeStreamEvent(event, options.browserVisibility ?? "full");
     let entry;
     try {
@@ -2454,6 +2476,7 @@ export class AgentBridge implements PetStateBridge {
 
   /** External interactive streams retain their exact owning window. */
   ingestOwnedExternalEvent(sessionId: string, event: unknown): void {
+    this.workerRuns.observeExternal(sessionId, event);
     const entry = publishOwnedExternalStream(
       this.snapshots,
       this.windows,

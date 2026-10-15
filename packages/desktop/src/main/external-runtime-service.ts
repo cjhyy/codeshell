@@ -32,6 +32,7 @@ import {
   type PermissionMode,
   type SessionProjectBinding,
   type StreamEvent,
+  type TerminalReason,
 } from "@cjhyy/code-shell-core";
 import {
   FIRST_PHASE_EXPOSURE,
@@ -53,6 +54,11 @@ import {
   type ExternalGoalExtension,
   type ExternalGoalUpdate,
 } from "./external-runtime-goals.js";
+import {
+  ExternalRuntimeOperationRun,
+  EXTERNAL_UNVERIFIED_WRITE_NOTICE,
+} from "./external-runtime-operations.js";
+import { createExternalRuntimeSourceContext } from "./external-runtime-source-context.js";
 
 export type DesktopExternalRuntimeTurnInput = ExternalRuntimeTurnInput & {
   goal?: string | GoalConfig;
@@ -176,6 +182,9 @@ export class ExternalRuntimeService {
       ownerWebContentsId?: number;
       forwardEvent: (event: StreamEvent) => void;
       outputFailure: () => ExternalRuntimeTurnOutcome;
+      operations: { current?: ExternalRuntimeOperationRun };
+      finalizeOperations: (reason: TerminalReason) => TerminalReason;
+      toolTurnAbort?: AbortController;
       providerTurn?: symbol;
       /** Serializes turns so one recorder can never be reset by an overlapping send. */
       turnTail: Promise<void>;
@@ -683,6 +692,10 @@ export class ExternalRuntimeService {
         "also show a player. Use angle brackets around paths containing spaces. " +
         "Link only files that exist. Playback requires a browser-supported codec; " +
         "remote media links open normally and are not inline players.",
+      this.areHostToolsEnabled() &&
+        "Use LinkAction discovery for connected services and ListSources/ReadSource for " +
+          "workspace data. These CodeShell host tools use normal authorization and approval; " +
+          "do not claim a service is unsupported because this runtime has no native connector.",
       request.developerInstructions,
     ]
       .filter(Boolean)
@@ -707,6 +720,24 @@ export class ExternalRuntimeService {
       faulted: false,
       goalRunActive: false,
       interruptGeneration: 0,
+    };
+    const operations: { current?: ExternalRuntimeOperationRun } = {};
+    let operationNoticeRunId: string | undefined;
+    const finalizeOperations = (reason: TerminalReason): TerminalReason => {
+      const current = operations.current;
+      if (!current) return reason;
+      const terminal = current.terminalReason(reason);
+      if (current.finish() && operationNoticeRunId !== recorder.outputRunId) {
+        operationNoticeRunId = recorder.outputRunId;
+        for (const event of [
+          { type: "error", error: EXTERNAL_UNVERIFIED_WRITE_NOTICE },
+          { type: "text_delta", text: `\n\n${EXTERNAL_UNVERIFIED_WRITE_NOTICE}` },
+        ] as StreamEvent[]) {
+          const published = recorder.onEvent(event);
+          if (published) this.emitSafely(request.sessionId, published);
+        }
+      }
+      return terminal;
     };
     for (const name of EXTERNAL_GOAL_TOOLS) {
       // Replace the native acknowledgement-only executors and their static
@@ -745,6 +776,8 @@ export class ExternalRuntimeService {
         },
         async (args, context) => {
           if (!lifecycle.active) throw new Error("This external runtime has been replaced");
+          if (name === "complete_goal" && operations.current?.hasUnverifiedWrites())
+            return JSON.stringify({ ok: false, error: EXTERNAL_UNVERIFIED_WRITE_NOTICE });
           const operation = () =>
             JSON.stringify(
               name === "get_goal"
@@ -769,6 +802,11 @@ export class ExternalRuntimeService {
     }
     let outputFailureReported = false;
     const outputFailure = (): ExternalRuntimeTurnOutcome => {
+      try {
+        operations.current?.finish();
+      } catch {
+        /* The output barrier remains sticky. */
+      }
       lifecycle.faulted = true;
       lifecycle.turnActive = false;
       const owned = recorder.isCurrentOutputOwner;
@@ -798,11 +836,16 @@ export class ExternalRuntimeService {
       // Provider thread/session ids are resume keys, not CodeShell identities.
       // Normalize at the Desktop boundary as defense-in-depth even though each
       // translator should already honor this contract.
-      const normalized: StreamEvent =
+      let normalized: StreamEvent =
         event.type === "session_started" && event.sessionId !== request.sessionId
           ? { ...event, sessionId: request.sessionId }
           : event;
       try {
+        if (normalized.type === "turn_complete") {
+          this.sessions.get(request.sessionId)?.toolTurnAbort?.abort("Provider turn ended");
+          if (!lifecycle.goalRunActive || operations.current?.hasUnverifiedWrites())
+            normalized = { ...normalized, reason: finalizeOperations(normalized.reason) };
+        }
         // Intermediate Goal terminals close provider turns, not the logical run.
         const published = recorder.onEvent(normalized, lifecycle.goalRunActive);
         if (published) this.emitSafely(request.sessionId, published);
@@ -870,6 +913,9 @@ export class ExternalRuntimeService {
         ],
         projectTrusted,
         planMode: request.planMode === true,
+        // This is the same trusted Desktop scope used by its native stdio
+        // Engine. projectTrusted still filters executable project permission rules.
+        settingsScope: "full",
         visibility: {
           cwd: request.cwd,
           hasGoal: request.hasGoal === true,
@@ -893,6 +939,24 @@ export class ExternalRuntimeService {
             }
           : {}),
         contextOverrides: contextOverrides as never,
+        captureRunContext: () => {
+          const entry = this.sessions.get(request.sessionId);
+          if (entry?.operations !== operations || !lifecycle.active || !lifecycle.turnActive)
+            return undefined;
+          const run = operations.current?.capture();
+          const physicalTurn = entry.providerTurn;
+          const turnSignal = entry.toolTurnAbort?.signal;
+          if (!run || !physicalTurn || !turnSignal) return undefined;
+          return {
+            ...run,
+            signal: AbortSignal.any([run.signal, turnSignal]),
+            assertCurrent: () => {
+              run.assertCurrent();
+              if (!lifecycle.turnActive || entry.providerTurn !== physicalTurn)
+                throw new Error("External provider turn changed");
+            },
+          };
+        },
         hooks: {
           onEvent: forwardEvent,
           ...(toolApprovalBackend
@@ -987,6 +1051,8 @@ export class ExternalRuntimeService {
       goalToolsAvailable,
       forwardEvent,
       outputFailure,
+      operations,
+      finalizeOperations,
       ...(ownerId !== undefined ? { ownerWebContentsId: ownerId } : {}),
       ...(request.model ? { model: request.model } : {}),
     });
@@ -1148,6 +1214,30 @@ export class ExternalRuntimeService {
               const physicalTurn = Symbol("provider-turn");
               entry.providerTurn = physicalTurn;
               const runId = entry.recorder.outputRunId;
+              entry.toolTurnAbort = new AbortController();
+              if (providerRound === 0) {
+                // A failed new lease must never finalize the preceding submission.
+                entry.operations.current = undefined;
+                if (!runId) throw new Error("External submission has no durable owner");
+                entry.operations.current = new ExternalRuntimeOperationRun({
+                  sessionId,
+                  runId,
+                  // Injected reminders cannot mint another user-approved write slot.
+                  // An empty origin preserves reads but makes writes fail closed.
+                  originClientMessageId: entry.recorder.operationIntentId ?? "",
+                  sourceContext: createExternalRuntimeSourceContext({
+                    sessionId,
+                    cwd: entry.cwd,
+                    settingsScope: "full",
+                  }),
+                  isCurrent: () =>
+                    this.sessions.get(sessionId) === entry &&
+                    entry.lifecycle.active &&
+                    acceptedGeneration === entry.lifecycle.interruptGeneration &&
+                    entry.recorder.outputRunId === runId &&
+                    entry.recorder.isCurrentOutputOwner,
+                });
+              }
               // Match the journal order. A Panel input already has cursor N;
               // publishing start N+1 first would invalidate shared coverage.
               if (nextInput.displayText && !nextInput.injected) this.emitSafely(sessionId, user);
@@ -1238,7 +1328,9 @@ export class ExternalRuntimeService {
             this.withGoalOutput(sessionId, publishGoalOutput, () => this.goals.end(goalRun));
             if (entry.lifecycle.active && finalOutcome && !entry.recorder.outputFailed) {
               try {
-                const terminal = entry.recorder.completeRun(finalOutcome.reason);
+                const terminal = entry.recorder.completeRun(
+                  entry.finalizeOperations(finalOutcome.reason),
+                );
                 if (terminal) this.emitSafely(sessionId, terminal);
               } catch {
                 entry.outputFailure();
@@ -1247,11 +1339,14 @@ export class ExternalRuntimeService {
           }
           entry.lifecycle.goalRunActive = false;
           entry.lifecycle.turnActive = false;
+          entry.toolTurnAbort?.abort("External submission ended");
           entry.providerTurn = undefined;
         }
       };
       const outcome = await runProviderRounds();
-      return entry.recorder.outputFailed ? entry.recorder.finishIfMissing() : outcome;
+      return entry.recorder.outputFailed || entry.recorder.isTurnFinished
+        ? entry.recorder.finishIfMissing()
+        : outcome;
     };
     const runTurn = async (): Promise<ExternalRuntimeTurnOutcome> => {
       const outcome = await runTurnExclusive();
@@ -1293,7 +1388,15 @@ export class ExternalRuntimeService {
         !entry.recorder.hasOpenRun)
     )
       throw new Error("External run changed before cancellation");
-    if (entry) entry.lifecycle.interruptGeneration++;
+    if (entry) {
+      try {
+        entry.finalizeOperations("aborted_streaming");
+      } catch {
+        entry.outputFailure();
+      }
+      entry.toolTurnAbort?.abort("External submission interrupted");
+      entry.lifecycle.interruptGeneration++;
+    }
     const run = this.goals.running(sessionId);
     if (run && this.goals.isCurrent(run)) this.goals.pause(run, "用户已停止本轮执行");
     this.goals.stop(sessionId);
@@ -1321,6 +1424,8 @@ export class ExternalRuntimeService {
     const entry = this.sessions.get(sessionId);
     if (!entry || (run && this.goals.running(sessionId) !== run)) return;
     try {
+      entry.finalizeOperations("aborted_streaming");
+      entry.toolTurnAbort?.abort("External submission interrupted");
       this.deps.cancelApprovals?.(sessionId);
       await entry.session.interrupt();
     } catch (error) {
@@ -1346,6 +1451,12 @@ export class ExternalRuntimeService {
   private async stopExclusive(sessionId: string): Promise<void> {
     const entry = this.sessions.get(sessionId);
     if (!entry) return;
+    try {
+      entry.finalizeOperations("aborted_streaming");
+    } catch {
+      entry.outputFailure();
+    }
+    entry.toolTurnAbort?.abort("External submission stopped");
     entry.lifecycle.interruptGeneration++;
     this.goals.stop(sessionId);
     if (

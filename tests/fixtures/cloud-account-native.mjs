@@ -104,7 +104,7 @@ try {
   assert.notEqual(active.accessToken, oldAccess);
   assert.equal(requests.filter((req) => req.url.endsWith("refresh")).length, 1);
   saved.accessTokenExpiresAt = Date.now() - 1000;
-  await manager.logout();
+  assert.deepEqual(await manager.logout(), { state: "signed-out", revocation: "confirmed" });
   assert.equal(saved, undefined);
   assert.equal(manager.status().state, "signed-out");
   assert.equal(

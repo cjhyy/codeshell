@@ -1,4 +1,6 @@
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
+import { spawnSync } from "node:child_process";
+import { resolve } from "node:path";
 import { act, useReducer, type SetStateAction } from "react";
 import { ensureMiniDom, flushMicrotasks, renderHook } from "../test-utils/renderHook";
 import { loadProjects, saveProjects, type TrackedProject } from "../projects";
@@ -14,7 +16,7 @@ import { transcriptsReducer, type TranscriptsAction } from "../transcriptsReduce
 import { getSessionPersistence } from "../sessionPersistence";
 import { useHostSubscriptions } from "./useHostSubscriptions";
 import { INITIAL_STATE, type ApprovalState, type AskUserMessage } from "../types";
-import type { ApprovalRequestEnvelope } from "../../preload/types";
+import type { ApprovalRequestEnvelope, StreamEventEnvelope } from "../../preload/types";
 import type { PermissionMode } from "../chat/PermissionPill";
 import { bindThemeSoundPlayer, ThemeAudioPlayback, ThemeSoundPlayer } from "../theme-audio";
 
@@ -151,6 +153,7 @@ describe("host subscriptions and recovery", () => {
           approveCalls.push(args);
         },
         mobileRemote: { notifyApprovalResolved: async () => {} },
+        externalRuntime: { onSessionState: subscribe("onExternalSessionState") },
         ...Object.fromEntries(
           [
             "onStreamEvent",
@@ -241,6 +244,124 @@ describe("host subscriptions and recovery", () => {
     expect(notices[0]?.variant).toBe("error");
     expect(notices[0]?.detail).toContain("workId: bg-server");
     expect(notices[0]?.detail).toContain("sessionId: shell-session");
+  });
+
+  test.each([
+    ["completed", "completed"],
+    ["aborted_streaming", "cancelled"],
+    ["aborted_tools", "cancelled"],
+    ["model_error", "failed"],
+    ["image_error", "failed"],
+    ["prompt_too_long", "failed"],
+    ["replay_incomplete", "failed"],
+    ["batch_incomplete", "failed"],
+    ["unverified_write", "failed"],
+    ["max_turns", "completed"],
+    ["goal_budget_exhausted", "completed"],
+    ["hook_stopped", "completed"],
+    ["stop_hook_prevented", "completed"],
+  ])("automation %s retains its actual terminal status %s", async (reason, status) => {
+    const sessionId = "automation-session";
+    const bucket = bucketKey("project", sessionId);
+    const index: SessionIndex = {
+      sessions: [
+        {
+          id: sessionId,
+          engineSessionId: sessionId,
+          title: "Automation",
+          source: "automation",
+          runStatus: "running",
+          createdAt: 1,
+          updatedAt: 1,
+        },
+      ],
+      activeSessionId: sessionId,
+    };
+    indices.value = { project: index };
+    saveSessionIndex("project", index);
+    params.routing.sessionIndicesRef.current = indices.value;
+    params.routing.engineToBucketRef.current.set(sessionId, bucket);
+    hook = await renderHook(() => useHostSubscriptions(params));
+    await act(async () => {
+      listeners.get("onStreamEvent")!({
+        sessionId,
+        event: { type: "turn_complete", reason },
+      });
+      await flushMicrotasks();
+    });
+    expect(indices.value.project?.sessions[0]?.runStatus).toBe(status);
+    expect(loadSessionIndex("project").sessions[0]?.runStatus).toBe(status);
+  });
+
+  test.each(["exited", "gave_up"])(
+    "Core %s clears only its own running Sessions before external ownership events arrive",
+    async (type) => {
+      const native = bucketKey("project", "native");
+      const external = bucketKey("project", "external");
+      const automation = bucketKey("project", "automation");
+      const clocks = new Map([
+        [native, 1],
+        [external, 2],
+        [automation, 3],
+      ]);
+      busy = new Set(clocks.keys());
+      params.routing.engineToBucketRef.current = new Map([
+        ["native", native],
+        ["external", external],
+        ["automation", automation],
+      ]);
+      params.routing.runningBucketRef.current = external;
+      params.activity.setBusyKeys = (action) => {
+        busy = typeof action === "function" ? action(busy) : action;
+      };
+      params.activity.setBusyForKey = (key, value) => {
+        if (value) busy.add(key);
+        else {
+          busy.delete(key);
+          clocks.delete(key);
+        }
+      };
+      hook = await renderHook(() => useHostSubscriptions(params));
+      await act(async () => {
+        listeners.get("onAgentLifecycle")!({ type, code: 1, sessionIds: ["native"] });
+      });
+      expect([...busy]).toEqual([external, automation]);
+      expect([...clocks.keys()]).toEqual([external, automation]);
+      expect(params.routing.runningBucketRef.current).toBe(external);
+    },
+  );
+
+  test("an empty worker ownership list never falls back to every Session", async () => {
+    const external = bucketKey("project", "external");
+    busy.add(external);
+    params.routing.engineToBucketRef.current.set("external", external);
+    params.activity.setBusyKeys = (action) => {
+      busy = typeof action === "function" ? action(busy) : action;
+    };
+    hook = await renderHook(() => useHostSubscriptions(params));
+    await act(async () => {
+      listeners.get("onAgentLifecycle")!({ type: "exited", code: 0, sessionIds: [] });
+    });
+    expect(busy.has(external)).toBe(true);
+  });
+
+  test("legacy worker exit clears native routes while retaining known external runtimes", async () => {
+    const native = bucketKey("project", "native");
+    const external = bucketKey("project", "external");
+    busy = new Set([native, external]);
+    params.routing.engineToBucketRef.current = new Map([
+      ["native", native],
+      ["external", external],
+    ]);
+    params.activity.setBusyKeys = (action) => {
+      busy = typeof action === "function" ? action(busy) : action;
+    };
+    hook = await renderHook(() => useHostSubscriptions(params));
+    await act(async () => {
+      listeners.get("onExternalSessionState")!({ sessionId: "external", active: true });
+      listeners.get("onAgentLifecycle")!({ type: "exited", code: 1 });
+    });
+    expect([...busy]).toEqual([external]);
   });
 
   test("theme sounds follow top-level completion and live approvals without replaying restored requests", async () => {
@@ -1137,6 +1258,92 @@ describe("host subscriptions and recovery", () => {
       expect.objectContaining({ id: "recovered", text: "prefix tail", done: true }),
     );
     expect(params.routing.transcriptsRef.current[bucket]?.snapshotSeq).toBe(12);
+    expect(busy.has(bucket)).toBe(false);
+  });
+
+  test("runtime replacement preserves second-turn output, tools and terminal busy state", async () => {
+    // The child uses the real AgentBridge lifecycle and snapshot publisher.
+    // Electron/service mocks stay isolated; neither a worker nor a model runs.
+    const child = spawnSync(
+      process.execPath,
+      [resolve(import.meta.dir, "../../main/__fixtures__/external-runtime-stream-restart.mjs")],
+      { encoding: "utf8", timeout: 20_000, maxBuffer: 512 * 1024 },
+    );
+    if (child.error || child.status !== 0)
+      throw new Error(`Runtime restart fixture failed: ${child.error ?? ""}\n${child.stderr}`);
+    const { first, second } = JSON.parse(child.stdout.trim()) as {
+      first: StreamEventEnvelope[];
+      second: StreamEventEnvelope[];
+    };
+    const bucket = bucketKey("project", "pinned-4");
+    params.routing.engineToBucketRef.current.set("runtime-restart", bucket);
+    const initial = transcriptsReducer(
+      {},
+      {
+        type: "user_message",
+        bucket,
+        text: "first request",
+        clientMessageId: "first-input",
+      },
+    );
+    hook = await renderHook(() => {
+      const [transcripts, dispatch] = useReducer(transcriptsReducer, initial);
+      params.services.dispatch = dispatch;
+      params.routing.transcriptsRef.current = transcripts;
+      useHostSubscriptions(params);
+    });
+    await act(async () => {
+      for (const envelope of first) listeners.get("onStreamEvent")!(envelope);
+      await flushMicrotasks();
+    });
+    const firstState = params.routing.transcriptsRef.current[bucket]!;
+    expect(firstState.snapshotSeq).toBe(first.at(-1)!.seq!);
+    expect(firstState.messages).toContainEqual(
+      expect.objectContaining({
+        kind: "assistant",
+        id: "first-assistant",
+        text: "first ".repeat(8),
+        done: true,
+      }),
+    );
+    expect(busy.has(bucket)).toBe(false);
+
+    await act(async () => {
+      params.services.dispatch({
+        type: "user_message",
+        bucket,
+        text: "second request",
+        clientMessageId: "second-input",
+      });
+      params.activity.setBusyForKey(bucket, true);
+      await flushMicrotasks();
+    });
+    expect(busy.has(bucket)).toBe(true);
+    await act(async () => {
+      for (const envelope of second) listeners.get("onStreamEvent")!(envelope);
+      await flushMicrotasks();
+    });
+    const current = params.routing.transcriptsRef.current[bucket]!;
+    expect(current.snapshotEpoch).toBe(firstState.snapshotEpoch);
+    expect(current.snapshotSeq).toBeGreaterThan(firstState.snapshotSeq);
+    expect(current.messages).toContainEqual(
+      expect.objectContaining({
+        kind: "assistant",
+        id: "second-assistant",
+        text: "second reply",
+        done: true,
+      }),
+    );
+    expect(current.messages).toContainEqual(
+      expect.objectContaining({
+        kind: "tool",
+        id: "read",
+        toolName: "Read",
+        result: "read ok",
+        status: "succeeded",
+      }),
+    );
+    expect(current.streamingAssistantId).toBeNull();
     expect(busy.has(bucket)).toBe(false);
   });
 
