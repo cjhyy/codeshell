@@ -35,6 +35,7 @@ import {
   type LocalOAuthLinkActionRequest,
 } from "../links/local-oauth.js";
 import { refreshToken } from "../services/oauth.js";
+import { assertMcpOAuthCredentialBinding } from "./mcp-binding.js";
 import type { SettingsScope } from "../settings/manager.js";
 import type { RpcMessage } from "../protocol/types.js";
 import type { Transport } from "../protocol/transport.js";
@@ -91,6 +92,7 @@ export interface CredentialAccess {
   resolveOAuthAccess?(req: {
     id: string;
     scope: "full";
+    serverUrl: string;
     forceRefresh?: boolean;
   }): Promise<{ accessToken: string; expiresAt?: string }>;
   materializeCookie?(req: {
@@ -406,7 +408,7 @@ export const localCredentialAccess: CredentialAccess = {
     return req.purpose === "link" ? resolveLinkCredentialAccessToken(cred)! : cred.secret;
   },
   async resolveOAuthAccess(req) {
-    return resolveLocalOAuthAccess(req.id, Boolean(req.forceRefresh));
+    return resolveLocalOAuthAccess(req.id, req.serverUrl, Boolean(req.forceRefresh));
   },
   async materializeCookie(req) {
     const cred = storeFor(req.cwd).resolve(req.id, req.scope);
@@ -421,6 +423,7 @@ const localOAuthRefreshes = new Map<string, Promise<{ accessToken: string; expir
 
 async function resolveLocalOAuthAccess(
   id: string,
+  serverUrl: string,
   forceRefresh: boolean,
 ): Promise<{ accessToken: string; expiresAt?: string }> {
   const store = new CredentialStore(undefined);
@@ -431,6 +434,7 @@ async function resolveLocalOAuthAccess(
   if (isRemoteLinkCredential(cred))
     throw new Error("Remote Link credentials cannot be used as MCP bearer tokens");
   const parsed = parseOAuthCredentialSecret(cred.secret);
+  assertMcpOAuthCredentialBinding(cred, serverUrl, parsed);
   const decision = shouldRefreshOAuthCredential(parsed);
   if (!forceRefresh && decision === "no") {
     return { accessToken: parsed.accessToken, expiresAt: parsed.expiresAt };
@@ -439,13 +443,20 @@ async function resolveLocalOAuthAccess(
     throw new Error(`oauth credential "${id}" requires login`);
   }
   const inflight = localOAuthRefreshes.get(id);
-  if (inflight) return inflight;
+  if (inflight) {
+    const result = await inflight;
+    const current = store.resolve(id, "full");
+    if (!current?.secret) throw new Error("MCP OAuth credential is unavailable");
+    assertMcpOAuthCredentialBinding(current, serverUrl, parseOAuthCredentialSecret(current.secret));
+    return result;
+  }
   const pending = (async () => {
     const latestCred = store.resolve(id, "full");
     if (!latestCred || latestCred.type !== "oauth" || !latestCred.secret) {
       throw new Error(`oauth credential "${id}" requires login`);
     }
     const latest = parseOAuthCredentialSecret(latestCred.secret);
+    assertMcpOAuthCredentialBinding(latestCred, serverUrl, latest);
     if (!forceRefresh && shouldRefreshOAuthCredential(latest) === "no") {
       return { accessToken: latest.accessToken, expiresAt: latest.expiresAt };
     }
@@ -471,11 +482,15 @@ async function resolveLocalOAuthAccess(
       tokenType: tokens.tokenType,
       scope: tokens.scope ?? latest.scope,
     };
-    store.save("user", {
-      ...latestCred,
-      secret: JSON.stringify(next),
-      meta: { ...latestCred.meta, lastRefreshAt: new Date().toISOString() },
-    });
+    assertMcpOAuthCredentialBinding(latestCred, serverUrl, next);
+    if (
+      !store.compareAndSwap("user", id, latestCred, {
+        ...latestCred,
+        secret: JSON.stringify(next),
+        meta: { ...latestCred.meta, lastRefreshAt: new Date().toISOString() },
+      })
+    )
+      throw new Error("MCP OAuth credential changed during refresh");
     return { accessToken: next.accessToken, expiresAt: next.expiresAt };
   })().finally(() => localOAuthRefreshes.delete(id));
   localOAuthRefreshes.set(id, pending);

@@ -13,6 +13,11 @@ export {
 
 export { outputUserMessage } from "./engine/run-output-user-message.js";
 export { createRunTiming } from "./session/stream-timing.js";
+export {
+  assertMcpOAuthCredentialBinding,
+  assertMcpResourceTarget,
+  normalizeMcpServerUrl,
+} from "./credentials/mcp-binding.js";
 
 // ─── Utils (shared primitives used by TUI) ───────────────────────
 

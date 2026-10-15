@@ -340,7 +340,13 @@ export function createMcpAuthenticatedFetch(
           `MCP server "${serverName}": oauth credential "${credentialId}" requires host OAuth access`,
         );
       }
-      token = (await access.resolveOAuthAccess({ id: credentialId!, scope: "full" })).accessToken;
+      token = (
+        await access.resolveOAuthAccess({
+          id: credentialId!,
+          scope: "full",
+          serverUrl: config.url!,
+        })
+      ).accessToken;
     }
 
     // The SDK and Bun can contribute distinct undici-compatible Request types.
@@ -372,6 +378,7 @@ export function createMcpAuthenticatedFetch(
     const refreshed = await access.resolveOAuthAccess!({
       id: credentialId,
       scope: "full",
+      serverUrl: config.url!,
       forceRefresh: true,
     });
     return send(refreshed.accessToken);
