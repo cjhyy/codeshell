@@ -48,6 +48,15 @@ breaking.
   delayed operations, and keep connection cards within narrow Settings panes.
 - Make MCP tool and error details keyboard-operable dialogs with visible Close
   controls, complete scrollable content and focus return to their opener.
+- Keep cloud project status and long errors within a keyboard-scrollable region
+  while preserving visible conversation output, draft input and status actions.
+- Bring Web model editors into view, return focus after cancel/discard, and keep
+  failed-save drafts editable without interrupting focus moved elsewhere.
+- Keep cloud project dialogs within short windows and recover owned failed
+  operations without interrupting another control, account or project.
+- Keep digital-human editing, memory and switch review dialogs usable in short
+  windows, retaining visible actions and safe focus return through asynchronous
+  previews, nested confirmations and rapid reopening.
 
 ## [0.9.44] - 2026-10-15
 

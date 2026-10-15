@@ -303,6 +303,7 @@ export function MemoryStoreView({
   presentation = "default",
   onDirtyChange,
   onSavingChange,
+  confirmDialog,
 }: {
   level: MemoryLevel;
   cwd?: string;
@@ -310,8 +311,10 @@ export function MemoryStoreView({
   presentation?: "default" | "profile";
   onDirtyChange?: (dirty: boolean) => void;
   onSavingChange?: (saving: boolean) => void;
+  confirmDialog?: ReturnType<typeof useConfirm>;
 }) {
-  const confirm = useConfirm();
+  const defaultConfirm = useConfirm();
+  const confirm = confirmDialog ?? defaultConfirm;
   const { t } = useT();
   const [scope, setScope] = useState<MemoryScope>("user");
   // Seed from the last-loaded snapshot (settingsCache) so a remount (tab
@@ -905,6 +908,7 @@ export function MemoryStoreView({
         {/* min-h-0 + the bounded grid height above let this list scroll on its own
             instead of growing the whole panel (which left it without a scrollbar). */}
         <ul
+          data-dialog-scroll={profilePresentation ? true : undefined}
           className={cn(
             "flex min-h-0 flex-col gap-1 overflow-y-auto rounded-md border p-2",
             profilePresentation && "rounded-xl border-border/70 bg-muted/10 p-2.5",
@@ -1003,6 +1007,7 @@ export function MemoryStoreView({
         </ul>
 
         <div
+          data-dialog-scroll={profilePresentation ? true : undefined}
           className={cn(
             "min-h-0 overflow-y-auto rounded-md border p-3",
             profilePresentation && "rounded-xl border-border/70 bg-background p-4",

@@ -193,6 +193,7 @@ jobs:
           node scripts/run-isolated-node-smoke.mjs packages/web/scripts/test-file-browser.mjs
           node scripts/run-isolated-node-smoke.mjs packages/web/scripts/test-latest-messages.mjs
           node scripts/run-isolated-node-smoke.mjs packages/web/scripts/test-sidebar-navigation.mjs
+          node scripts/run-isolated-node-smoke.mjs packages/web/scripts/test-settings-browser.mjs
       - name: Compiled isolated instruction adoption lifecycle
         if: matrix.shard == 'rest'
         run: |

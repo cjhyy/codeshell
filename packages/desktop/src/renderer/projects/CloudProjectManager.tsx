@@ -8,6 +8,7 @@ import type {
   CloudProject,
 } from "../../shared/cloud-management.js";
 import { CloudAccountSettings } from "../settings/CloudAccountSettings";
+import { useCloudDialogFocus } from "./useCloudDialogFocus";
 import { useT } from "../i18n";
 
 export function CloudProjectManager({
@@ -41,6 +42,14 @@ export function CloudProjectManager({
   const composing = useRef(false);
   const operation = useRef(0);
   const authority = useRef({ identity: "", generation: 0, status });
+  const contentRef = useRef<HTMLDivElement>(null);
+  const addressRef = useRef<HTMLInputElement>(null);
+  const nameRef = useRef<HTMLInputElement>(null);
+  const reloadRef = useRef<HTMLButtonElement>(null);
+  const focus = useCloudDialogFocus(
+    contentRef,
+    status.state === "signed-in" ? `${status.origin}\n${status.account?.id}` : "",
+  );
   useEffect(() => {
     live.current = true;
     let received = false;
@@ -126,6 +135,9 @@ export function CloudProjectManager({
       attempt = ++operation.current;
     const current = () =>
       live.current && attempt === operation.current && generation === authority.current.generation;
+    const lease = focus.capture();
+    let opened = false;
+    let failed = false;
     pending.current = true;
     setBusy(true);
     // The chooser's close guard must be set before IPC can dispatch another event.
@@ -169,10 +181,14 @@ export function CloudProjectManager({
             },
         );
         if (result.action === "create") setName("");
-        if (result.action === "open") onOpened(cloudOrigin);
+        if (result.action === "open") {
+          opened = true;
+          onOpened(cloudOrigin);
+        }
       }
     } catch (cause) {
       if (current()) {
+        failed = true;
         setError(cause instanceof Error ? cause.message : t("cloudManager.failed"));
         setUncertain(true);
       }
@@ -181,12 +197,27 @@ export function CloudProjectManager({
         pending.current = false;
         setBusy(false);
         onBusyChange(false);
-      }
+        if (opened) focus.discard(lease);
+        else
+          focus.recover(
+            lease,
+            () =>
+              failed
+                ? (reloadRef.current ?? addressRef.current)
+                : action === "create"
+                  ? nameRef.current
+                  : (reloadRef.current ?? addressRef.current),
+            failed,
+          );
+      } else focus.discard(lease);
     }
   };
   const canAct = !busy && !uncertain && connected === address.trim().replace(/\/$/, "");
   return (
-    <div className="grid max-h-[65vh] gap-4 overflow-y-auto">
+    <div
+      ref={focus.attachScope}
+      className="grid min-w-0 grid-cols-[minmax(0,1fr)] gap-4 [overflow-wrap:anywhere]"
+    >
       {status.state !== "signed-in" ? (
         <>
           <p className="text-sm text-muted-foreground">{t("cloudManager.signIn")}</p>
@@ -194,11 +225,11 @@ export function CloudProjectManager({
         </>
       ) : (
         <>
-          <p className="break-words text-sm">
+          <p className="text-sm [overflow-wrap:anywhere]">
             {status.account?.username} · {status.origin}
           </p>
           <form
-            className="grid gap-2"
+            className="grid min-w-0 grid-cols-[minmax(0,1fr)] gap-2"
             onSubmit={(event) => {
               event.preventDefault();
               if (!composing.current) void act("list");
@@ -212,6 +243,7 @@ export function CloudProjectManager({
               onCompositionEnd={() => {
                 composing.current = false;
               }}
+              ref={addressRef}
               id={id}
               value={address}
               inputMode="url"
@@ -230,7 +262,7 @@ export function CloudProjectManager({
                 setConfirmLogout(false);
               }}
             />
-            <Button type="submit" disabled={busy || !address.trim()}>
+            <Button ref={reloadRef} type="submit" disabled={busy || !address.trim()}>
               {t(view ? "cloudManager.reload" : "cloudManager.connect")}
             </Button>
           </form>
@@ -242,7 +274,7 @@ export function CloudProjectManager({
                 </p>
               )}
               <form
-                className="flex gap-2"
+                className="flex min-w-0 gap-2"
                 onSubmit={(event) => {
                   event.preventDefault();
                   if (!composing.current) void act("create");
@@ -255,6 +287,8 @@ export function CloudProjectManager({
                   onCompositionEnd={() => {
                     composing.current = false;
                   }}
+                  ref={nameRef}
+                  className="min-w-0 flex-1"
                   aria-label={t("cloudManager.projectName")}
                   onKeyDown={guardComposingEnter}
                   maxLength={80}
@@ -263,22 +297,28 @@ export function CloudProjectManager({
                   placeholder={t("cloudManager.projectName")}
                   onChange={(event) => setName(event.target.value)}
                 />
-                <Button type="submit" disabled={!canAct || !name.trim()}>
+                <Button type="submit" className="shrink-0" disabled={!canAct || !name.trim()}>
                   {t("cloudManager.create")}
                 </Button>
               </form>
               {view.projects.length === 0 && (
                 <p className="text-sm text-muted-foreground">{t("cloudManager.empty")}</p>
               )}
-              <ul className="grid gap-3">
+              <ul className="grid min-w-0 grid-cols-[minmax(0,1fr)] gap-3">
                 {view.projects.map((project: CloudProject) => (
-                  <li key={project.id} className="grid gap-2 rounded-lg border p-3">
-                    <p className="break-words font-medium">{project.name}</p>
+                  <li
+                    key={project.id}
+                    className="grid min-w-0 grid-cols-[minmax(0,1fr)] gap-2 rounded-lg border p-3"
+                  >
+                    <p className="font-medium [overflow-wrap:anywhere]">{project.name}</p>
                     <p className="text-xs text-muted-foreground">
                       {t(`cloudManager.${project.status}`)}
                     </p>
                     {project.error && (
-                      <p role="status" className="break-words text-sm text-destructive">
+                      <p
+                        role="status"
+                        className="text-sm text-destructive [overflow-wrap:anywhere]"
+                      >
                         {project.error}
                       </p>
                     )}
@@ -317,7 +357,7 @@ export function CloudProjectManager({
             </>
           )}
           {attempted && (
-            <div className="grid gap-2">
+            <div className="grid min-w-0 grid-cols-[minmax(0,1fr)] gap-2">
               <p className="break-all text-xs text-muted-foreground">{attempted.cloudOrigin}</p>
               {confirmLogout && <p className="text-sm">{t("cloudManager.logoutReview")}</p>}
               <Button
@@ -343,7 +383,7 @@ export function CloudProjectManager({
         </>
       )}
       {error && (
-        <p role="alert" className="break-words text-sm text-destructive">
+        <p role="alert" className="text-sm text-destructive [overflow-wrap:anywhere]">
           {error}
         </p>
       )}

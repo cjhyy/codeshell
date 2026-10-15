@@ -25,10 +25,12 @@ export function AppMainView({
   lifecycle,
   children,
   searchLayer,
+  navigation,
 }: {
   lifecycle: string | null;
   children: ReactNode;
   searchLayer: ReactNode;
+  navigation?: ReactNode;
 }) {
   return (
     <main className="flex min-w-0 flex-1 flex-col overflow-hidden">
@@ -37,7 +39,14 @@ export function AppMainView({
           {lifecycle}
         </div>
       )}
-      {children}
+      {navigation ? (
+        <>
+          {navigation}
+          <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden">{children}</div>
+        </>
+      ) : (
+        children
+      )}
       {searchLayer}
     </main>
   );

@@ -37,7 +37,21 @@ export function groupTaskInboxRecords(
     if (filters.source && record.source !== filters.source) continue;
     if (filters.status && record.status !== filters.status) continue;
     if (filters.project && taskInboxProject(record) !== filters.project) continue;
-    if (search && !record.title.toLocaleLowerCase().includes(search)) continue;
+    if (
+      search &&
+      ![
+        record.title,
+        record.taskKey,
+        record.sourceId,
+        record.sessionId,
+        record.workspacePath,
+        record.projectId,
+        record.summary,
+        record.error,
+        ...record.artifacts.map((artifact) => `${artifact.label} ${artifact.uri}`),
+      ].some((value) => value?.toLocaleLowerCase().includes(search))
+    )
+      continue;
     result[taskInboxGroup(record.status)].push(record);
   }
   for (const group of TASK_INBOX_GROUPS) {

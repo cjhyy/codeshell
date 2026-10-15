@@ -78,7 +78,9 @@ describe("ApprovalCard disclosure", () => {
       await render(
         <ApprovalCard
           envelope={envelope(args, "medium")}
-          onDecide={(...decision) => decisions.push(decision)}
+          onDecide={(...decision) => {
+            decisions.push(decision);
+          }}
         />,
       );
       const toggle = nodes(container).find(
@@ -152,5 +154,81 @@ describe("ApprovalCard disclosure", () => {
       />,
     );
     expect(textOf(container)).toContain("高风险");
+  });
+
+  test("waits for acceptance, blocks repeated clicks, and restores decisions after delivery failure", async () => {
+    let reject!: (error: Error) => void;
+    let resolve!: () => void;
+    let attempts = 0;
+    const first = new Promise<void>((_resolve, fail) => {
+      reject = fail;
+    });
+    const retry = new Promise<void>((accept) => {
+      resolve = accept;
+    });
+    await render(
+      <ApprovalCard
+        envelope={envelope({ command: "git status" })}
+        onDecide={() => (++attempts === 1 ? first : retry)}
+      />,
+    );
+    const approve = nodes(container).find(
+      (node) => node.tagName === "BUTTON" && textOf(node) === "仅本次批准",
+    );
+    await act(async () => {
+      props(approve).onClick();
+      props(approve).onClick();
+      await flushMicrotasks();
+    });
+    expect(attempts).toBe(1);
+    expect(textOf(container)).toContain("正在提交决定");
+    expect(textOf(container)).not.toContain("已批准");
+    await act(async () => {
+      reject(new Error("worker disconnected"));
+      await flushMicrotasks();
+    });
+    expect(textOf(container)).toContain("worker disconnected");
+    expect(nodes(container).some((node) => props(node).role === "alert")).toBe(true);
+    await act(async () => {
+      const retryButton = nodes(container).find(
+        (node) => node.tagName === "BUTTON" && textOf(node) === "仅本次批准",
+      );
+      props(retryButton).onClick();
+      await flushMicrotasks();
+    });
+    expect(attempts).toBe(2);
+    expect(textOf(container)).not.toContain("worker disconnected");
+    await act(async () => {
+      resolve();
+      await flushMicrotasks();
+    });
+    expect(textOf(container)).toContain("已批准");
+    expect(textOf(container)).not.toContain("正在提交决定");
+  });
+
+  test("does not carry a settled or in-flight decision into another session with the same request ID", async () => {
+    let resolve!: () => void;
+    const delivery = new Promise<void>((accept) => {
+      resolve = accept;
+    });
+    const first = envelope({ command: "first" });
+    await render(<ApprovalCard envelope={first} onDecide={() => delivery} />);
+    await act(async () => {
+      props(
+        nodes(container).find((node) => node.tagName === "BUTTON" && textOf(node) === "仅本次批准"),
+      ).onClick();
+      await flushMicrotasks();
+    });
+    expect(textOf(container)).toContain("正在提交决定");
+    const second = { ...envelope({ command: "second" }), sessionId: "another-session" };
+    await render(<ApprovalCard envelope={second} onDecide={() => undefined} />);
+    expect(textOf(container)).toContain("仅本次批准");
+    expect(textOf(container)).not.toContain("正在提交决定");
+    await act(async () => {
+      resolve();
+      await flushMicrotasks();
+    });
+    expect(textOf(container)).not.toContain("已批准");
+    expect(textOf(container)).toContain("仅本次批准");
   });
 });
