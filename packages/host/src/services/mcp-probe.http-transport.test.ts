@@ -1,4 +1,4 @@
-import { afterAll, afterEach, expect, test } from "bun:test";
+import { afterAll, afterEach, beforeEach, expect, test } from "bun:test";
 import { mkdirSync, mkdtempSync, rmSync } from "node:fs";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
@@ -11,16 +11,24 @@ const network = installFixtureNetworkGuard((async (input: any, init?: RequestIni
   handle(new Request(input, init))) as typeof fetch);
 network.allowOrigin(origin);
 afterAll(() => network.restore());
-const { CredentialStore, PlaintextCipher, setDefaultCredentialCipher } =
+const { CredentialStore, PlaintextCipher, getDefaultCredentialCipher, setDefaultCredentialCipher } =
   await import("@cjhyy/code-shell-core");
 const { probeMcp } = await import("@cjhyy/code-shell-host");
 const { probeMcpServer, invalidateMcpProbeCache } =
   await import("../../../desktop/src/main/mcp-probe-service.js");
 const cleanup: (() => void)[] = [];
+let previousCipher: ReturnType<typeof getDefaultCredentialCipher>;
+beforeEach(() => {
+  previousCipher = getDefaultCredentialCipher();
+});
 afterEach(() => {
-  invalidateMcpProbeCache();
-  setDefaultCredentialCipher(null);
-  for (const run of cleanup.splice(0).reverse()) run();
+  try {
+    invalidateMcpProbeCache();
+    for (const run of cleanup.splice(0).reverse()) run();
+  } finally {
+    setDefaultCredentialCipher(previousCipher);
+  }
+  expect(getDefaultCredentialCipher()).toBe(previousCipher);
 });
 function fixture() {
   const dir = mkdtempSync(join(tmpdir(), "http-probe-transport-"));
@@ -278,9 +286,17 @@ test.each([400, 403, 404])(
 
 test("ordinary verbs/content types/protocol headers survive while explicit HTTP secrets are redacted", async () => {
   const f = fixture();
-  process.env.CODESHELL_FIXTURE_HEADER_TOKEN = "env-header-secret";
+  const environment = {
+    CODESHELL_FIXTURE_HEADER_VALUE: "h5",
+    CODESHELL_FIXTURE_BEARER_VALUE: "b6",
+  };
+  const previous = new Map(Object.keys(environment).map((name) => [name, process.env[name]]));
+  Object.assign(process.env, environment);
   cleanup.push(() => {
-    delete process.env.CODESHELL_FIXTURE_HEADER_TOKEN;
+    for (const [name, value] of previous) {
+      if (value === undefined) delete process.env[name];
+      else process.env[name] = value;
+    }
   });
   handle = async (request) => {
     if (request.method !== "POST") return new Response(null, { status: 405 });
@@ -301,7 +317,7 @@ test("ordinary verbs/content types/protocol headers survive while explicit HTTP 
                 {
                   name: "run_query",
                   description:
-                    "run application/json 2024-11-05 auth-secret env-header-secret argument-secret credential-secret header-credential-secret",
+                    "run application/json 2024-11-05 auth-secret h5 b6 argument-secret credential-secret header-credential-secret k4 z7",
                   inputSchema: { type: "object", properties: {} },
                 },
               ],
@@ -318,8 +334,11 @@ test("ordinary verbs/content types/protocol headers survive while explicit HTTP 
         "MCP-Protocol-Version": "2024-11-05",
         Authorization: "Bearer auth-secret",
         "X-Credential": "header-credential-secret",
+        apikey: "k4",
+        "x-apikey": "z7",
       },
-      envHeaders: { "X-Custom": "CODESHELL_FIXTURE_HEADER_TOKEN" },
+      envHeaders: { "X-Custom": "CODESHELL_FIXTURE_HEADER_VALUE" },
+      bearerTokenEnvVar: "CODESHELL_FIXTURE_BEARER_VALUE",
     },
     { cwd: f.dir },
   );
@@ -327,6 +346,6 @@ test("ordinary verbs/content types/protocol headers survive while explicit HTTP 
   expect(result.tools?.[0]?.name).toBe("run_query");
   expect(result.tools?.[0]?.description).toContain("run application/json 2024-11-05");
   expect(JSON.stringify(result)).not.toMatch(
-    /auth-secret|env-header-secret|argument-secret|credential-secret/,
+    /auth-secret|h5|b6|argument-secret|credential-secret|k4|z7/,
   );
 });

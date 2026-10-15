@@ -30,26 +30,32 @@ const network = installFixtureNetworkGuard((async (input: any, init?: RequestIni
 }) as typeof fetch);
 network.allowOrigin(origin);
 afterAll(() => network.restore());
-const { CredentialStore, PlaintextCipher, setDefaultCredentialCipher } =
+const { CredentialStore, PlaintextCipher, getDefaultCredentialCipher, setDefaultCredentialCipher } =
   await import("@cjhyy/code-shell-core");
 const { probeMcpServer, invalidateMcpProbeCache } = await import("./mcp-probe-service.js");
 const { probeHubMcp } = await import("../../../server/src/hub/mcp-probe.js");
 let directory: string, oldHome: string | undefined;
+let previousCipher: EncryptionCipher;
 beforeEach(() => {
   directory = mkdtempSync(join(tmpdir(), "desktop-probe-production-"));
   oldHome = process.env.HOME;
   process.env.HOME = join(directory, "home");
   mkdirSync(process.env.HOME);
+  previousCipher = getDefaultCredentialCipher();
   setDefaultCredentialCipher(new PlaintextCipher());
   status = 200;
   authorizations.length = 0;
 });
 afterEach(() => {
-  invalidateMcpProbeCache();
-  setDefaultCredentialCipher(null);
-  if (oldHome === undefined) delete process.env.HOME;
-  else process.env.HOME = oldHome;
-  rmSync(directory, { recursive: true, force: true });
+  try {
+    invalidateMcpProbeCache();
+    if (oldHome === undefined) delete process.env.HOME;
+    else process.env.HOME = oldHome;
+    rmSync(directory, { recursive: true, force: true });
+  } finally {
+    setDefaultCredentialCipher(previousCipher);
+  }
+  expect(getDefaultCredentialCipher()).toBe(previousCipher);
 });
 const config = () => ({
   name: "fixture",
@@ -73,21 +79,27 @@ test.each(["bearerTokenEnvVar", "envHeaders"] as const)(
   "missing env uses a validated variable name and field from the real path (%s)",
   async (field) => {
     const name = "CODESHELL_FIXTURE_MISSING_MCP_TOKEN";
+    const previous = process.env[name];
     delete process.env[name];
-    const result = await probeMcpServer(
-      {
-        name: "missing-env",
-        url: `${origin}/mcp`,
-        ...(field === "envHeaders"
-          ? { envHeaders: { "X-API-Key": name } }
-          : { bearerTokenEnvVar: name }),
-      },
-      { cwd: directory },
-    );
-    expect(result.status).toBe("error");
-    expect(result.errorMessage).toContain(name);
-    expect(result.errorMessage).toContain(field);
-    expect(authorizations).toEqual([]);
+    try {
+      const result = await probeMcpServer(
+        {
+          name: "missing-env",
+          url: `${origin}/mcp`,
+          ...(field === "envHeaders"
+            ? { envHeaders: { "X-API-Key": name } }
+            : { bearerTokenEnvVar: name }),
+        },
+        { cwd: directory },
+      );
+      expect(result.status).toBe("error");
+      expect(result.errorMessage).toContain(name);
+      expect(result.errorMessage).toContain(field);
+      expect(authorizations).toEqual([]);
+    } finally {
+      if (previous === undefined) delete process.env[name];
+      else process.env[name] = previous;
+    }
   },
 );
 test("actual missing stdio command receives local wording while Hub retains server wording", async () => {
