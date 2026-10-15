@@ -186,7 +186,7 @@
   font-size: 13px;
   overflow-wrap: anywhere;
 }
-.file-preview header span {
+.file-preview header > div > span {
   display: block;
   font-size: 11px;
   color: var(--muted);
@@ -216,6 +216,22 @@
 .file-preview .library-hint {
   padding: 12px 18px;
   border-top: 1px solid var(--subtle);
+}
+.file-read-error {
+  margin: 14px;
+}
+.file-read-error p {
+  margin: 8px 0 12px;
+  line-height: 1.6;
+}
+.file-back-label {
+  display: none;
+}
+.file-directory:focus-visible,
+.file-preview:focus-visible,
+.file-preview pre:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: -2px;
 }
 .session-toolbar {
   display: flex;
@@ -384,8 +400,13 @@
     grid-template-columns: minmax(0, 1fr);
   }
   .file-columns.has-preview .file-directory {
-    max-height: 250px;
-    overflow: auto;
+    display: none;
+  }
+  .file-back-label {
+    display: inline;
+  }
+  .file-close-label {
+    display: none;
   }
 }
 @media (max-width: 600px) {
