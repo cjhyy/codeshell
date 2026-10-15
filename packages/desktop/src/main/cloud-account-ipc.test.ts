@@ -1,6 +1,23 @@
 import { expect, test } from "bun:test";
 import { registerCloudAccountIpc } from "./cloud-account-ipc.js";
-import type { CloudAccountStatus } from "../shared/cloud-account.js";
+import type { CloudAccountLogoutResult, CloudAccountStatus } from "../shared/cloud-account.js";
+
+test.each(["confirmed", "unconfirmed"] as const)(
+  "cloud logout IPC returns a public result for %s revocation without rejecting",
+  async (revocation) => {
+    const handlers = new Map<string, (...args: any[]) => any>();
+    const sender = { mainFrame: {}, isDestroyed: () => false };
+    const result: CloudAccountLogoutResult = { state: "signed-out", revocation };
+    registerCloudAccountIpc({
+      ipcMain: { handle: (name, handler) => handlers.set(name, handler) },
+      isMainWindow: (contents) => contents === (sender as any),
+      manager: { logout: async () => result } as any,
+    });
+    expect(
+      await handlers.get("cloudAccount:logout")!({ sender, senderFrame: sender.mainFrame }),
+    ).toEqual(result);
+  },
+);
 
 test("cloud account IPC rejects non-main frames and rechecks ownership after login/OAuth responses", () => {
   const handlers = new Map<string, (...args: any[]) => any>();

@@ -74,8 +74,11 @@ export const settingsNs = {
         connectGitHub: "同时连接 GitHub",
         cancelGitHubConnection: "取消 GitHub 连接",
         connectGitHubChecking: "正在检查此云服务是否支持同时连接 GitHub…",
+        connectGitHubDefaultChecking: "正在检查已保存的 GitHub Link 连接…",
+        connectGitHubDefaultUnavailable:
+          "暂时无法确认已保存的 GitHub Link，已取消自动勾选。仍可登录，或手动勾选以连接 GitHub；将申请公开和私有仓库读写权限（repo），随后在「凭证 → Link」中选择要使用的仓库和 Actions 权限。",
         connectGitHubDescription:
-          "选中后将申请公开和私有仓库读写权限（repo）。连接后，在「凭证 → Link」中选择要使用的仓库和 Actions 权限。",
+          "本机尚未保存 GitHub Link 时默认勾选，首次登录即可同时连接，也可取消勾选。已有 Link 连接会保留，默认不重复授权。勾选将申请公开和私有仓库读写权限（repo），随后在「凭证 → Link」中选择要使用的仓库和 Actions 权限。",
         connectGitHubUnavailable:
           "此云服务暂不支持登录时连接 GitHub；仍可使用 GitHub 登录，稍后在「凭证 → Link」连接。",
         githubConnection: "GitHub 连接",
@@ -83,7 +86,8 @@ export const settingsNs = {
         githubConnection_connected: "GitHub 已连接。可在「凭证 → Link」中管理仓库和 Actions 权限。",
         githubConnection_failed:
           "云账号已登录，但 GitHub 连接未完成。可稍后在「凭证 → Link」中重试。",
-        githubConnection_skipped: "云账号已登录，尚未连接 GitHub。可稍后在「凭证 → Link」中连接。",
+        githubConnection_skipped:
+          "云账号已登录，GitHub 数据连接步骤已跳过或取消。已有 Link 连接保留，可在「凭证 → Link」中管理。",
         githubCreatesAccount: "首次授权会自动创建 CodeShell 账号，无需先注册或设置密码。",
         githubExistingOnly: "此服务已关闭注册；仅已关联 GitHub 的 CodeShell 账号可继续登录。",
         passwordMethod: "账号密码登录方式",
@@ -119,6 +123,7 @@ export const settingsNs = {
         linksRevokeUnconfirmed: "尚未确认撤销结果，请重新加载核实；相同撤销可重试。",
         linksConfirmedReloadFailed: "撤销已确认，但无法刷新列表；请稍后重新加载。",
         logout: "退出云账号",
+        logoutUnconfirmed: "本机已退出；服务端未确认撤销，请联网后在账号会话管理中撤销此设备。",
         cancel: "取消登录",
         failed: "云账号操作未完成。",
         "state_signed-out": "本地使用中，尚未登录云账号",
@@ -1226,8 +1231,11 @@ export const settingsNs = {
         cancelGitHubConnection: "Cancel GitHub connection",
         connectGitHubChecking:
           "Checking whether this service supports connecting GitHub during sign-in…",
+        connectGitHubDefaultChecking: "Checking saved GitHub Link connections…",
+        connectGitHubDefaultUnavailable:
+          "Saved GitHub Link connections could not be checked, so automatic connection is off. You can still sign in or select this to connect GitHub; it requests read and write access to public and private repositories (repo). Then choose the repositories and Actions permissions to use in Credentials → Link.",
         connectGitHubDescription:
-          "When selected, this requests read and write access to public and private repositories (repo). After connecting, choose the repositories and Actions permissions to use in Credentials → Link.",
+          "Selected by default when no GitHub Link is saved on this computer, so your first sign-in can connect GitHub too. You can clear it. Existing Link connections are preserved and are not authorized again by default. Selecting this requests read and write access to public and private repositories (repo). Then choose the repositories and Actions permissions to use in Credentials → Link.",
         connectGitHubUnavailable:
           "This service does not support connecting GitHub during sign-in yet. You can still sign in with GitHub and connect later in Credentials → Link.",
         githubConnection: "GitHub connection",
@@ -1238,7 +1246,7 @@ export const settingsNs = {
         githubConnection_failed:
           "Your cloud account is signed in, but the GitHub connection did not finish. Retry later in Credentials → Link.",
         githubConnection_skipped:
-          "Your cloud account is signed in. GitHub is not connected; connect later in Credentials → Link.",
+          "Your cloud account is signed in. The GitHub data connection step was skipped or cancelled. Existing Link connections are preserved; manage them in Credentials → Link.",
         githubCreatesAccount:
           "Your first authorization automatically creates a CodeShell account. No prior registration or password is needed.",
         githubExistingOnly:
@@ -1282,6 +1290,8 @@ export const settingsNs = {
         linksConfirmedReloadFailed:
           "Revocation was confirmed, but the list could not be refreshed. Reload later.",
         logout: "Sign out",
+        logoutUnconfirmed:
+          "Signed out on this device. Server revocation is unconfirmed; reconnect and revoke this device in account session management.",
         cancel: "Cancel sign-in",
         failed: "Cloud account operation failed.",
         "state_signed-out": "Using locally, not signed in",

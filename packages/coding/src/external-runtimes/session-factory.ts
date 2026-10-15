@@ -67,6 +67,7 @@ export interface ExternalRuntimeSessionOptions {
   approvalBackend?: Parameters<typeof createSessionToolHost>[0]["approvalBackend"];
   /** Host seams the tools need (panels, browser, askUser, …). */
   contextOverrides?: Parameters<typeof createSessionToolHost>[0]["contextOverrides"];
+  captureRunContext?: Parameters<typeof createSessionToolHost>[0]["captureRunContext"];
   settingsScope?: Parameters<typeof createSessionToolHost>[0]["settingsScope"];
   model?: string;
   /** Runtime thread/session id recovered from durable Desktop state. */
@@ -169,6 +170,7 @@ export async function startExternalRuntimeSession(
       // Outside a concrete provider call there is no run output owner. Never
       // capture the lifetime callback and let it borrow a later active turn.
       getStreamCallback: () => turnSink,
+      ...(options.captureRunContext ? { captureRunContext: options.captureRunContext } : {}),
       ...(options.settingsScope ? { settingsScope: options.settingsScope } : {}),
     });
 

@@ -463,6 +463,7 @@ export async function executeRemoteLinkAction(
   options: {
     store?: CredentialStore;
     signal?: AbortSignal;
+    assertAuthorized?: () => void;
     now?: () => number;
   } = {},
 ): Promise<unknown> {
@@ -479,6 +480,11 @@ export async function executeRemoteLinkAction(
     typeof input.action !== "string"
   )
     throw new RemoteLinkError("invalid_request");
+  const assertAuthorized = () => {
+    options.signal?.throwIfAborted();
+    options.assertAuthorized?.();
+  };
+  assertAuthorized();
   const store = options.store ?? new CredentialStore(input.cwd);
   const now = options.now ?? Date.now;
   const read = () => {
@@ -571,7 +577,7 @@ export async function executeRemoteLinkAction(
     };
   };
   let secret = parse(current);
-  options.signal?.throwIfAborted();
+  assertAuthorized();
   if (
     Date.parse(secret.expiresAt) <= now() + 30_000 ||
     current.meta?.linkRemoteState === "refreshing"
@@ -628,6 +634,7 @@ export async function executeRemoteLinkAction(
       pendingRefreshes.set(key, pending);
     }
     await pending;
+    assertAuthorized();
     current = read();
     secret = parse(current);
     if (current.meta?.linkRemoteState !== "connected" || Date.parse(secret.expiresAt) <= now())
@@ -648,7 +655,7 @@ export async function executeRemoteLinkAction(
   const originalAuthority = authority(current);
   const connection = string(current.meta?.linkRemoteConnectionId, 36);
   if (!/^[a-f0-9-]{36}$/.test(connection)) throw new RemoteLinkError("reconnect");
-  options.signal?.throwIfAborted();
+  assertAuthorized();
   let response: Record<string, unknown>;
   try {
     response = await request(
@@ -673,6 +680,7 @@ export async function executeRemoteLinkAction(
     }
     throw error;
   }
+  assertAuthorized();
   const latest = read();
   if (
     latest.meta?.linkRemoteState !== "connected" ||
@@ -682,7 +690,7 @@ export async function executeRemoteLinkAction(
     authority(latest) !== originalAuthority
   )
     throw new RemoteLinkError("changed");
-  options.signal?.throwIfAborted();
+  assertAuthorized();
   try {
     return normalizeRemoteLinkActionResult(
       providerId,

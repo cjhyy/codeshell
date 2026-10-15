@@ -133,6 +133,12 @@ const onBusyChange = (next: boolean) => busy.push(next);
 const onOpened = (address: string) => opened.push(address);
 const onBack = () => backCalls++;
 window.codeshell = {
+  credentials: {
+    list: async (cwd: string) => {
+      assert.equal(cwd, "");
+      return [];
+    },
+  },
   onMenuEvent: (callback: typeof nativeMenu) => {
     nativeMenu = callback;
     return () => menuDetached++;

@@ -25,9 +25,9 @@ afterEach(async () => {
   if (originalBridge) Object.defineProperty(window, "codeshell", originalBridge);
 });
 
-test.each([false, true])(
-  "old stopped run promise cannot clear the successor (reject=%s)",
-  async (rejectOld) => {
+test.each(["old-resolve", "old-reject", "current-reject"] as const)(
+  "run promise settlement preserves the current launch (%s)",
+  async (settlement) => {
     ensureMiniDom();
     originalStorage = Object.getOwnPropertyDescriptor(globalThis, "localStorage");
     originalBridge = Object.getOwnPropertyDescriptor(window, "codeshell");
@@ -128,6 +128,29 @@ test.each([false, true])(
       await flushMicrotasks();
     });
     expect(calls).toBe(1);
+    if (settlement === "current-reject") {
+      params.runtime.busySinceRef.current.set(bucket, Date.now() - 3_456);
+      await act(async () => {
+        first.reject(new Error("worker disconnected during the turn"));
+        await oldRun;
+        await flushMicrotasks();
+      });
+      expect(busy).toBe(false);
+      expect(actions).toContainEqual(
+        expect.objectContaining({
+          type: "turn_end",
+          bucket,
+          reason: "error",
+          detail: "worker disconnected during the turn",
+          elapsedMs: expect.any(Number),
+        }),
+      );
+      const terminal = actions.find((action: any) => action.type === "turn_end") as {
+        elapsedMs: number;
+      };
+      expect(terminal.elapsedMs).toBeGreaterThanOrEqual(3_456);
+      return;
+    }
     await act(async () => {
       hook.result.current.stop();
       newRun = hook.result.current.send("new");
@@ -137,7 +160,7 @@ test.each([false, true])(
     expect(busy).toBe(true);
     const before = actions.length;
     await act(async () => {
-      if (rejectOld) first.reject(new Error("late old failure"));
+      if (settlement === "old-reject") first.reject(new Error("late old failure"));
       else first.resolve({ reason: "aborted_streaming" });
       await oldRun;
       await flushMicrotasks();

@@ -482,6 +482,10 @@ describe("Engine pet behavior", () => {
       type: "turn_complete",
       reason: "completed",
       text: result.text,
+      timestamp: expect.any(Number),
+      startedAt: expect.any(Number),
+      completedAt: expect.any(Number),
+      durationMs: expect.any(Number),
       outputCursor: expect.any(String),
     });
   });
@@ -546,6 +550,7 @@ describe("Engine pet behavior", () => {
       id: "gateway-steer-1",
       sessionId: "gateway-pet-steer",
       clientMessageId: "gateway-client-2",
+      timestamp: expect.any(Number),
       outputCursor: expect.any(String),
     });
     expect(calls.get(model)!.filter((call) => call.tools.includes("GatewayReply"))).toHaveLength(2);

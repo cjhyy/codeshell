@@ -1,4 +1,4 @@
-import { afterEach, expect, test } from "bun:test";
+import { afterEach, beforeEach, expect, test } from "bun:test";
 import { mkdtempSync, rmSync, writeFileSync, readdirSync, readFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -9,7 +9,22 @@ import { createLLMClient } from "../llm/client-factory.js";
 import { LLMClientBase } from "../llm/client-base.js";
 
 const roots: string[] = [];
+let browserGlobals: Array<[string, PropertyDescriptor | undefined]> = [];
+beforeEach(() => {
+  // Bun shares a process with renderer suites. Their mini-DOM must not make
+  // these real server SDK calls look like credential-bearing browser calls.
+  browserGlobals = ["window", "document"].map((name) => [
+    name,
+    Object.getOwnPropertyDescriptor(globalThis, name),
+  ]);
+  for (const [name] of browserGlobals) Reflect.deleteProperty(globalThis, name);
+});
 afterEach(() => {
+  for (const [name, descriptor] of browserGlobals) {
+    if (descriptor) Object.defineProperty(globalThis, name, descriptor);
+    else Reflect.deleteProperty(globalThis, name);
+  }
+  browserGlobals = [];
   for (const root of roots.splice(0)) rmSync(root, { recursive: true, force: true });
   LLMClientBase.onUsage = undefined;
 });

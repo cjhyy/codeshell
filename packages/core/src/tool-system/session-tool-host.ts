@@ -96,6 +96,17 @@ export interface SessionToolHost {
   dispose(): Promise<void>;
 }
 
+/** Captured by the trusted Host, never decoded from a tool's JSON arguments. */
+export interface SessionToolHostRunContext {
+  /** Absent when a Host reminder has no recoverable real user intent. */
+  operations: ToolContext["operations"];
+  originClientMessageId: string;
+  signal: AbortSignal;
+  assertCurrent(): void;
+  workspaceProfileName?: ToolContext["workspaceProfileName"];
+  isSourceProfileCurrent?: ToolContext["isSourceProfileCurrent"];
+}
+
 export interface CreateSessionToolHostOptions {
   businessSessionId: string;
   cwd: string;
@@ -156,6 +167,8 @@ export interface CreateSessionToolHostOptions {
   contextOverrides?: Partial<ToolContext>;
   /** Capture a concrete output owner once per tool invocation, before awaits. */
   getStreamCallback?: () => ToolContext["streamCallback"];
+  /** Bind tool calls to one active logical submission before their first await. */
+  captureRunContext?: () => SessionToolHostRunContext | undefined;
   signal?: AbortSignal;
 }
 
@@ -310,6 +323,14 @@ export function createSessionToolHost(options: CreateSessionToolHostOptions): Se
       if (disposed) {
         return failClosed(call.id, call.name, "This tool session has been closed.");
       }
+      let run: SessionToolHostRunContext | undefined;
+      try {
+        run = options.captureRunContext?.();
+        if (options.captureRunContext && !run) throw new Error("No active runtime submission");
+        run?.assertCurrent();
+      } catch {
+        return failClosed(call.id, call.name, "This runtime submission is no longer active.");
+      }
       if (!exposure.toolNames.has(call.name)) {
         // Fail closed on a KNOWN-but-unexposed name too. Not listing a tool is a
         // boundary, not a hint to the model.
@@ -333,13 +354,28 @@ export function createSessionToolHost(options: CreateSessionToolHostOptions): Se
       }
       // `sessionSignal` folds in the session lifetime and the caller-supplied
       // signal; `callSignal` is the optional per-call one (an MCP cancellation).
-      if (sessionSignal.aborted || callSignal?.aborted) {
+      if (sessionSignal.aborted || callSignal?.aborted || run?.signal.aborted) {
         return failClosed(call.id, call.name, `Tool aborted before execution: ${call.name}`);
       }
 
-      const callContext = options.getStreamCallback
-        ? { ...toolCtx, streamCallback: options.getStreamCallback() }
-        : toolCtx;
+      const signals = [sessionSignal, callSignal, run?.signal].filter(
+        (signal): signal is AbortSignal => signal !== undefined,
+      );
+      const signal = signals.length > 1 ? AbortSignal.any(signals) : sessionSignal;
+      const callContext = {
+        ...toolCtx,
+        ...(options.getStreamCallback ? { streamCallback: options.getStreamCallback() } : {}),
+        ...(run
+          ? { operations: run.operations, originClientMessageId: run.originClientMessageId }
+          : {}),
+        signal,
+        ...(run
+          ? {
+              workspaceProfileName: run.workspaceProfileName,
+              isSourceProfileCurrent: run.isSourceProfileCurrent,
+            }
+          : {}),
+      };
       const emit = async (event: import("../types.js").StreamEvent): Promise<void> => {
         try {
           await callContext.streamCallback?.(event);
@@ -361,7 +397,7 @@ export function createSessionToolHost(options: CreateSessionToolHostOptions): Se
       // brings its own signal gets its own executor — cheap (it is a thin wrapper
       // over the shared registry/permission/hooks) and free of shared mutable
       // state. Calls without one use the shared executor unchanged.
-      if (!callSignal && !options.getStreamCallback) {
+      if (!callSignal && !options.getStreamCallback && !run) {
         // The one authorized path. Everything above only NARROWS what may reach it.
         const result = await executor.executeSingle({
           id: call.id,
@@ -373,12 +409,15 @@ export function createSessionToolHost(options: CreateSessionToolHostOptions): Se
       }
       const scoped = new ToolExecutor(registry, permission, hooks);
       scoped.setContext(callContext);
-      scoped.setSignal(callSignal ? AbortSignal.any([sessionSignal, callSignal]) : sessionSignal);
-      const result = await scoped.executeSingle({
-        id: call.id,
-        toolName: call.name,
-        args: input,
-      });
+      scoped.setSignal(signal);
+      const result = await scoped.executeSingle(
+        {
+          id: call.id,
+          toolName: call.name,
+          args: input,
+        },
+        run ? { assertAuthorized: run.assertCurrent } : undefined,
+      );
       await emit({ type: "tool_result", result });
       return result;
     },

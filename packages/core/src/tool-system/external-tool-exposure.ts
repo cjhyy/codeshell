@@ -126,6 +126,45 @@ export const FIRST_PHASE_EXPOSURE_RATIONALE: readonly ExposureRationale[] = [
       "external runtime. If that approval is ever made skippable, this entry must " +
       "go back to excluded.",
   },
+  {
+    tool: "LinkAction",
+    kind: "host-loopback",
+    status: "exposed",
+    reason:
+      "Uses the Host's connected accounts without returning credentials. Discovery and reads " +
+      "retain the same account grants and ToolExecutor checks as native sessions. Writes still " +
+      "require the tool's exact-parameter approval and a Host-owned per-submission operation " +
+      "controller with independent verification; missing authority fails closed. Runtime input " +
+      "cannot choose the trusted run identity or turn an unknown write into a retry.",
+  },
+  {
+    tool: "ToolSearch",
+    kind: "self-contained",
+    status: "exposed",
+    reason:
+      "Discovers only the tools permitted by this session's allowedToolNames, availability " +
+      "guards and plan mode. The MCP bridge already advertises those schemas; search cannot " +
+      "register another tool, widen this allowlist or bypass execution checks.",
+  },
+  {
+    tool: "ListSources",
+    kind: "self-contained",
+    status: "exposed",
+    reason:
+      "Lists metadata for the workspace's explicitly bound data sources. It uses the same " +
+      "source/profile authority and revocation checks as native sessions and never reads " +
+      "resource contents merely because a source is discoverable.",
+  },
+  {
+    tool: "ReadSource",
+    kind: "self-contained",
+    status: "exposed",
+    reason:
+      "Reads an exact bound source, scope and resource through ToolExecutor approval and " +
+      "the existing source authorization recheck. Content remains bounded, redacted and " +
+      "untrusted; nested LinkAction reads use the same allowlist and account grants. Missing " +
+      "connector or parser capabilities remain unavailable rather than silently falling back.",
+  },
   // ── Delegation and state-machine exceptions ──────────────────────
   // Agent and the two plan-state tools remain structurally excluded. DriveAgent
   // is the reviewed exception because the child does not inherit the host

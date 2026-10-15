@@ -106,6 +106,7 @@ const expectedRuntimeExportsByPartition = {
     "readOutputJournal",
     "readOutputJournalLegacyBase",
     "outputUserMessage",
+    "createRunTiming",
   ],
   logging: ["rotateLogs", "recordUIEvent"],
   // Native approval and private worker RPC stay on the Host-only entry.
@@ -118,6 +119,7 @@ const expectedRuntimeExportsByPartition = {
     "linkAuthoritySnapshot",
     "normalizeGithubIssueBatch",
     "readOperationSessionOwner",
+    "createSessionOperationServices",
   ],
   managedRuntimes: [
     "createConstrainedDockerProcessHost",
@@ -240,6 +242,7 @@ const expectedRuntimeExportsByPartition = {
     "effectiveProjectOverrides",
     "profileOverridesFromDefinition",
     "resolveActiveWorkspaceProfile",
+    "resolveActiveWorkspaceProfileSelection",
     "workspaceProfilePresetFor",
     // Digital-human repos: a distribution channel parallel to the plugin
     // marketplace (profile/catalog-store.ts).

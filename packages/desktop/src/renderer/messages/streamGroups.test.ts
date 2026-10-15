@@ -10,7 +10,13 @@ import {
   type ToolGroup,
   type TurnProcessGroup,
 } from "./streamGroups";
-import type { AgentMessage, AssistantMessage, Message, ThinkingMessage, ToolMessage } from "../types";
+import type {
+  AgentMessage,
+  AssistantMessage,
+  Message,
+  ThinkingMessage,
+  ToolMessage,
+} from "../types";
 import { applyStreamEvent, INITIAL_STATE } from "../types";
 
 let idCounter = 0;
@@ -167,12 +173,7 @@ describe("buildStreamItems — interrupted turn (stopped)", () => {
   });
 
   test("turn_end stopped at the very tail (last turn) still marks that turn", () => {
-    const messages: Message[] = [
-      user("q"),
-      assistant("a"),
-      tool("Read", 1, 5),
-      turnEnd("stopped"),
-    ];
+    const messages: Message[] = [user("q"), assistant("a"), tool("Read", 1, 5), turnEnd("stopped")];
     const groups = processGroups(buildStreamItems(messages));
     expect(groups[0]!.stopped).toBe(true);
   });
@@ -220,11 +221,7 @@ describe("buildStreamItems", () => {
     const items = buildStreamItems(messages);
     // One outer card spanning [lead .. last tool]; the final summary
     // text after the last tool stays inline outside the card.
-    expect(items.map((item) => item.kind)).toEqual([
-      "user",
-      "turn_process_group",
-      "assistant",
-    ]);
+    expect(items.map((item) => item.kind)).toEqual(["user", "turn_process_group", "assistant"]);
 
     const groups = processGroups(items);
     expect(groups).toHaveLength(1);
@@ -299,20 +296,11 @@ describe("buildStreamItems", () => {
     expect(groups).toHaveLength(1);
     // Outer card holds: [tool_group(2), assistant, tool_group(2)].
     const inner = groups[0]!.items;
-    expect(inner.map((it) => it.kind)).toEqual([
-      "tool_group",
-      "assistant",
-      "tool_group",
-    ]);
+    expect(inner.map((it) => it.kind)).toEqual(["tool_group", "assistant", "tool_group"]);
   });
 
   test("keeps thinking transparent between adjacent tools", () => {
-    const messages: Message[] = [
-      user(),
-      tool("Read", 10, 20),
-      thinking(),
-      tool("Grep", 21, 30),
-    ];
+    const messages: Message[] = [user(), tool("Read", 10, 20), thinking(), tool("Grep", 21, 30)];
 
     const groups = processGroups(buildStreamItems(messages));
     expect(groups).toHaveLength(1);
@@ -334,9 +322,9 @@ describe("buildStreamItems", () => {
 
   test("completed assistant message makes the last turn non-live even if the bucket busy flag is stale", () => {
     const messages: Message[] = [
-      user("run", 0),
-      tool("Bash", 1_000, 2_000),
-      assistant("done", { createdAt: 500, doneAt: 3_000 }),
+      user("run", 100_000),
+      tool("Bash", 101_000, 102_000),
+      assistant("done", { createdAt: 100_500, doneAt: 103_000 }),
     ];
 
     const groups = processGroups(buildStreamItems(messages, { liveTurnActive: true }));
@@ -378,14 +366,10 @@ describe("buildStreamItems", () => {
     expect(groups).toHaveLength(1);
     expect(groups[0]!.isLive).toBe(true);
     expect(
-      groups[0]!.items.some(
-        (item) => item.kind === "user" && item.steerId === "steer-1",
-      ),
+      groups[0]!.items.some((item) => item.kind === "user" && item.steerId === "steer-1"),
     ).toBe(true);
     expect(
-      groups[0]!.items.some(
-        (item) => item.kind === "assistant" && item.text === "continuing…",
-      ),
+      groups[0]!.items.some((item) => item.kind === "assistant" && item.text === "continuing…"),
     ).toBe(true);
   });
 
@@ -407,10 +391,13 @@ describe("buildStreamItems", () => {
     // The wakeup opens a NEW segment: the prior completed turn folds into its
     // own (non-live) card, and the new streaming assistant renders inline as a
     // top-level item — NOT swallowed into the prior turn's fold card.
-    const priorCard = items.find((it) => it.kind === "turn_process_group") as TurnProcessGroup | undefined;
+    const priorCard = items.find((it) => it.kind === "turn_process_group") as
+      | TurnProcessGroup
+      | undefined;
     expect(priorCard?.isLive).toBe(false);
     const streamingInline = items.some(
-      (it) => it.kind === "assistant" && (it as { text?: string }).text === "picking up the result…",
+      (it) =>
+        it.kind === "assistant" && (it as { text?: string }).text === "picking up the result…",
     );
     expect(streamingInline).toBe(true);
   });
@@ -473,11 +460,7 @@ describe("buildStreamItems", () => {
   // reason="stopped" sits in the turn slice, so the card drops its fold header.
   test("marks a turn stopped when it ends with turn_end reason=stopped", () => {
     const turnEnd: Message = { kind: "turn_end", id: "te-1", reason: "stopped", elapsedMs: 4_000 };
-    const messages: Message[] = [
-      user("do it", 0),
-      tool("Bash", 1_000, 2_000),
-      turnEnd,
-    ];
+    const messages: Message[] = [user("do it", 0), tool("Bash", 1_000, 2_000), turnEnd];
     const groups = processGroups(buildStreamItems(messages));
     expect(groups).toHaveLength(1);
     expect(groups[0]!.stopped).toBe(true);
@@ -556,9 +539,9 @@ describe("turn process duration", () => {
     // Defensive: if a tool somehow ran past the recorded doneAt, don't shrink
     // the reported duration below the real tool wall time.
     const messages: Message[] = [
-      user("go", 0),
-      tool("Bash", 1_000, 12_000), // 12s tool
-      assistant("done", { createdAt: 0, doneAt: 5_000 }), // only 5s turn stamp
+      user("go", 100_000),
+      tool("Bash", 101_000, 112_000),
+      assistant("done", { createdAt: 100_000, doneAt: 105_000 }),
     ];
     const groups = processGroups(buildStreamItems(messages));
     expect(groups[0]!.durationMs).toBe(12_000);
@@ -605,7 +588,9 @@ describe("reconcileStreamItems", () => {
     expect(findAgentIn(recon2)?.toolCount).toBe(2);
 
     // Flipping to done is also a content change the card must observe.
-    const built3 = buildStreamItems([u, t, agent("a1", 2, { done: true })], { liveTurnActive: true });
+    const built3 = buildStreamItems([u, t, agent("a1", 2, { done: true })], {
+      liveTurnActive: true,
+    });
     const recon3 = reconcileStreamItems(recon2, built3);
     expect(findAgentIn(recon3)?.done).toBe(true);
   });

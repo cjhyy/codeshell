@@ -105,6 +105,8 @@ export const messagesNs = {
       // process / tool group header labels
       process: {
         toolGroupCommands: "已处理 {count} 条命令",
+        elapsedUnknown: "已处理",
+        elapsedLong: "已处理 {time}",
         elapsedSec: "已处理 {sec}s",
         elapsedMin: "已处理 {min}m",
         elapsedMinSec: "已处理 {min}m {sec}s",
@@ -274,6 +276,8 @@ export const messagesNs = {
         // Count-neutral wording — avoids the ungrammatical "Processed 1 commands"
         // (no ICU plural engine for beta1). "Elapsed" reads right for a ticking timer.
         toolGroupCommands: "Commands: {count}",
+        elapsedUnknown: "Processed",
+        elapsedLong: "Elapsed {time}",
         elapsedSec: "Elapsed {sec}s",
         elapsedMin: "Elapsed {min}m",
         elapsedMinSec: "Elapsed {min}m {sec}s",

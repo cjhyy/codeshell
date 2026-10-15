@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { playThemeSound } from "../theme-audio";
 import type { Dispatch, MutableRefObject, SetStateAction } from "react";
 import { flushSync } from "react-dom";
+import { runStateForReason } from "@cjhyy/code-shell-web";
 
 import {
   bgCompletionText,
@@ -141,6 +142,7 @@ export function useHostSubscriptions({
   const { mobileAnnounceSeqRef, setBusyForKey, setLifecycle, setBusyKeys } = activity;
   const pendingApprovalIdsRef = useRef(new Set<string>());
   const coreApprovalIdsRef = useRef(new Set<string>());
+  const externalRuntimeSessionIdsRef = useRef(new Set<string>());
   const externalApprovalsRef = useRef({
     ready: false,
     pending: new Set<string>(),
@@ -448,10 +450,16 @@ export function useHostSubscriptions({
               (s) => s.source === "automation" && s.engineSessionId === eid,
             );
             if (owner) {
+              const terminalState =
+                event.type === "error" ? "error" : runStateForReason(event.reason ?? "completed");
               const nextIdx = updateSessionRunStatus(
                 rid,
                 owner.id,
-                event.type === "error" ? "failed" : "completed",
+                terminalState === "error"
+                  ? "failed"
+                  : terminalState === "idle"
+                    ? "cancelled"
+                    : "completed",
               );
               setSessionIndices((prev) => ({ ...prev, [projectBucketSegmentFor(rid)]: nextIdx }));
               break;
@@ -1037,6 +1045,12 @@ export function useHostSubscriptions({
         return updated;
       });
     };
+    const offExternalSessionState = window.codeshell.externalRuntime?.onSessionState?.(
+      ({ sessionId, active }) => {
+        if (active) externalRuntimeSessionIdsRef.current.add(sessionId);
+        else externalRuntimeSessionIdsRef.current.delete(sessionId);
+      },
+    );
     const offLifecycle = window.codeshell.onAgentLifecycle((evt: AgentLifecycleEvent) => {
       window.codeshell.log("lifecycle", evt as Record<string, unknown>);
       if (evt.type === "exited" || evt.type === "gave_up") {
@@ -1044,6 +1058,28 @@ export function useHostSubscriptions({
         approvalRestoreActive = false;
         for (const requestId of [...coreApprovalIdsRef.current])
           handleApprovalResolved({ requestId });
+        // Main knows the exact in-flight worker owners. Shared routes also
+        // contain independent Main and external runs, which survive this exit.
+        // Older bridges lack the list; retain their native cleanup while
+        // excluding runtimes recovered by the external state subscription.
+        const sessionIds =
+          evt.sessionIds ??
+          [...engineToBucketRef.current.keys()].filter(
+            (id) => !externalRuntimeSessionIdsRef.current.has(id),
+          );
+        const affected = new Set<string>();
+        for (const id of sessionIds) {
+          const bucket = resolveBucket(
+            id,
+            engineToBucketRef.current,
+            sessionIndicesRef.current,
+            null,
+          );
+          if (bucket) affected.add(bucket);
+        }
+        for (const bucket of affected) setBusyForKey(bucket, false);
+        if (runningBucketRef.current && affected.has(runningBucketRef.current))
+          runningBucketRef.current = null;
       }
       if (evt.type === "restarted") setLifecycle("Agent restarted.");
       else if (evt.type === "gave_up") {
@@ -1056,17 +1092,6 @@ export function useHostSubscriptions({
         expireQuickChatSessions();
         if (evt.code === 0) setLifecycle(null);
         else setLifecycle(`Agent exited (code ${evt.code}).`);
-        // Worker died — every in-flight run is dead with it. Clear busy
-        // for *all* buckets we have routes for, not just the latest ref.
-        const inflight = Array.from(engineToBucketRef.current.values());
-        if (inflight.length > 0) {
-          setBusyKeys((prev) => {
-            const next = new Set(prev);
-            for (const b of inflight) next.delete(b);
-            return next;
-          });
-        }
-        runningBucketRef.current = null;
         // Do NOT clear engineToBucketRef here. The worker exits cleanly after
         // every run (and may later respawn + resume the same engine session),
         // so wiping the route table on exit is exactly what made resumed-
@@ -1095,6 +1120,7 @@ export function useHostSubscriptions({
       offApprovalResolved();
       offMobilePermissionMode();
       offStatus();
+      offExternalSessionState?.();
       offLifecycle();
     };
     // `toast` from useToast is a stable reference (memoized in ToastProvider),

@@ -55,6 +55,40 @@ function reply(id: string, text = "Recovered reply", done = true): Message {
 }
 
 describe("cached interrupted replies between durable user intents", () => {
+  test("restores an interior interrupted reply when timing enrichment replaces its user UI object", () => {
+    const oldUser = {
+      kind: "user" as const,
+      id: "disk-old",
+      clientMessageId: "old",
+      text: "Old request",
+      turnTiming: { startedAt: 1_000 },
+    };
+    const nextUser = question("disk-next", "next");
+    const nextReply = reply("disk-next-reply", "Final next answer");
+    const disk = snapshot([oldUser, nextUser, nextReply]);
+    const interrupted = reply("interrupted", "Partial old answer", false);
+    const terminalTiming = {
+      startedAt: 1_000,
+      completedAt: 2_000,
+      durationMs: 1_000,
+      completed: true,
+      completedCleanly: false,
+    };
+    const saved = snapshot([
+      { ...oldUser, id: "saved-old", turnTiming: terminalTiming },
+      interrupted,
+      { ...nextUser, id: "saved-next" },
+      { ...nextReply, id: "saved-next-reply" },
+    ]);
+    const merged = mergeHistoryWindows(disk, saved);
+    expect(merged.messages.map((message) => message.id)).toEqual([
+      "disk-old",
+      "interrupted",
+      "disk-next",
+      "disk-next-reply",
+    ]);
+    expect(merged.messages[0]).toMatchObject({ turnTiming: terminalTiming });
+  });
   test("retains the released app's interrupted reply after a later turn and another restart", () => {
     const intent = "b118b84e-1b22-4293-80a5-44c14bf65adc";
     const nextIntent = "c939b6f1-84e0-46fc-a2a0-42690d3c87d7";
