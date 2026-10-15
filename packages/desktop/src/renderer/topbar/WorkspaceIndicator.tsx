@@ -727,6 +727,7 @@ export function WorkspaceIndicator({
         key={row.path}
         row={hydratedRow}
         showDiff={showStats}
+        showExternalBadge={currentRows.includes(row)}
         diffStatus={diffState.status}
         onVisibilityChange={showStats ? onRowVisibilityChange : undefined}
         current={workspace}
@@ -796,10 +797,16 @@ export function WorkspaceIndicator({
             {!iconOnly && <span className="min-w-0 truncate">{label}</span>}
           </button>
         </PopoverTrigger>
-        <PopoverContent align="start" className="w-[520px] max-w-[calc(100vw-2rem)] p-0">
+        <PopoverContent
+          align="start"
+          sideOffset={8}
+          className="w-[420px] max-w-[calc(100vw-2rem)] overflow-hidden rounded-xl p-1.5 shadow-xl"
+        >
           <div className="flex max-h-[min(70vh,32rem)] flex-col">
-            <div className="flex items-center justify-between border-b border-border px-3 py-2 text-xs font-medium text-muted-foreground">
-              <span>{t("topbar.workspace.switcherTitle")}</span>
+            <div className="flex items-center justify-between px-2.5 pb-2 pt-1.5">
+              <span className="text-[13px] font-medium text-foreground">
+                {t("topbar.workspace.switcherTitle")}
+              </span>
               <Button
                 type="button"
                 variant="ghost"
@@ -811,24 +818,38 @@ export function WorkspaceIndicator({
                   if (!next) diffLoader.setOpen(false);
                   setShowStats(next);
                 }}
-                className={cn("h-6 px-2 text-xs", showStats && "bg-accent text-accent-foreground")}
+                className="h-7 gap-2 rounded-md px-1.5 text-[11px] font-normal text-muted-foreground hover:text-foreground"
               >
                 {t("topbar.workspace.changeStats")}
+                <span
+                  aria-hidden="true"
+                  className={cn(
+                    "inline-flex h-3.5 w-6 items-center rounded-full px-0.5",
+                    showStats ? "bg-primary" : "bg-muted-foreground/25",
+                  )}
+                >
+                  <span
+                    className={cn(
+                      "h-2.5 w-2.5 rounded-full shadow-sm",
+                      showStats ? "translate-x-2.5 bg-primary-foreground" : "bg-popover",
+                    )}
+                  />
+                </span>
               </Button>
             </div>
             {(rows.length > 6 || Boolean(search)) && (
-              <div className="relative border-b border-border px-2 py-1.5">
-                <Search className="pointer-events-none absolute left-4 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
+              <div className="relative mx-1 mb-1">
+                <Search className="pointer-events-none absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground/70" />
                 <Input
                   value={search}
                   onChange={(event) => setSearch(event.target.value)}
                   placeholder={t("topbar.workspace.search")}
                   aria-label={t("topbar.workspace.search")}
-                  className="h-8 border-0 bg-transparent pl-7 text-xs shadow-none"
+                  className="h-8 rounded-md border-transparent bg-muted/60 pl-8 text-xs shadow-none placeholder:text-muted-foreground/70 focus-visible:ring-1"
                 />
               </div>
             )}
-            <div data-workspace-scroll className="min-h-0 flex-1 overflow-y-auto p-1">
+            <div data-workspace-scroll className="min-h-0 flex-1 overflow-y-auto px-0.5">
               {listLoading && !list ? (
                 <div className="flex items-center gap-2 px-3 py-4 text-sm text-muted-foreground">
                   <Loader2 className="h-4 w-4 animate-spin" />
@@ -853,7 +874,8 @@ export function WorkspaceIndicator({
                   )}
                   {externalRows.length > 0 && (
                     <WorkspaceGroup
-                      title={`${t("topbar.workspace.groupExternal")} (${externalRows.length})`}
+                      title={t("topbar.workspace.groupExternal")}
+                      count={externalRows.length}
                       expanded={externalExpanded || Boolean(query)}
                       onToggle={() => setExternalExpanded(!externalExpanded)}
                     >
@@ -868,12 +890,12 @@ export function WorkspaceIndicator({
                 </>
               )}
             </div>
-            <div className="border-t border-border p-1">
+            <div className="mt-1 border-t border-border/60 pt-1">
               <Button
                 type="button"
                 variant="ghost"
                 size="sm"
-                className="w-full justify-start"
+                className="h-8 w-full justify-start rounded-md px-2.5 text-xs font-normal"
                 onClick={() => setNewOpen(true)}
                 disabled={sessionBusy}
               >
@@ -959,6 +981,7 @@ export function WorkspaceRow({
   onCleanup,
   cleanupMenuOpen,
   showDiff = true,
+  showExternalBadge = true,
   diffStatus,
   onVisibilityChange,
 }: {
@@ -972,6 +995,7 @@ export function WorkspaceRow({
   onCleanup: (action: CleanupAction) => void;
   cleanupMenuOpen?: boolean;
   showDiff?: boolean;
+  showExternalBadge?: boolean;
   diffStatus?: WorkspaceDiffState["status"];
   onVisibilityChange?: (path: string, visible: boolean) => void;
 }) {
@@ -1012,7 +1036,7 @@ export function WorkspaceRow({
   const external = workspaceIsExternal(row);
   const rowLabel = row.isMain
     ? mainBranch
-      ? `⑃ ${mainBranch}`
+      ? mainBranch
       : t("topbar.workspace.main")
     : row.branch || t("topbar.workspace.detached");
   const path = compactPath(row.path);
@@ -1027,7 +1051,7 @@ export function WorkspaceRow({
     <DropdownMenuTrigger asChild>
       <button
         type="button"
-        className="my-2 inline-flex h-8 w-8 items-center justify-center rounded-sm text-muted-foreground opacity-80 hover:bg-accent hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/25"
+        className="my-auto inline-flex h-7 w-7 items-center justify-center rounded-md text-muted-foreground/60 hover:bg-accent hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/25"
         title={cleanupDisabledReason ?? t("topbar.workspace.cleanup")}
         aria-label={
           cleanupDisabledReason
@@ -1050,8 +1074,8 @@ export function WorkspaceRow({
         onSwitch(target);
       }}
       className={cn(
-        "grid min-h-14 w-full grid-cols-[minmax(0,1fr)_auto] gap-2 rounded-sm px-2 py-2 text-left transition-colors",
-        active && "bg-accent text-accent-foreground ring-1 ring-border",
+        "grid min-h-12 w-full grid-cols-[minmax(0,1fr)_auto] gap-2 rounded-md px-2 py-1.5 text-left transition-colors",
+        active && "bg-accent/70 text-accent-foreground",
         !active && !disabledReason && "hover:bg-accent",
         visuallyMuted
           ? "cursor-default opacity-55"
@@ -1059,20 +1083,17 @@ export function WorkspaceRow({
       )}
     >
       <span className="min-w-0">
-        <span className="flex min-w-0 items-center gap-2">
+        <span className="flex min-w-0 items-center gap-1.5">
+          <GitBranch className="h-3.5 w-3.5 shrink-0 text-muted-foreground/70" />
           <span
             className={cn(
-              "truncate text-sm font-medium",
+              "truncate text-[13px] font-medium",
               active ? "text-accent-foreground" : "text-foreground",
             )}
+            title={rowLabel}
           >
             {rowLabel}
           </span>
-          {active && showDiff && (
-            <span className="shrink-0 rounded-sm bg-primary/10 px-1.5 py-0.5 text-[10px] font-medium text-primary">
-              {t("topbar.workspace.currentBadge")}
-            </span>
-          )}
           {ownedByCurrentSession && !active && (
             <span className="shrink-0 rounded-sm bg-primary/10 px-1.5 py-0.5 text-[10px] font-medium text-primary">
               {t("topbar.workspace.thisSession")}
@@ -1083,7 +1104,7 @@ export function WorkspaceRow({
               {t("topbar.workspace.occupied")}
             </span>
           )}
-          {external && (
+          {external && showExternalBadge && (
             <span className="shrink-0 rounded-sm bg-muted px-1.5 py-0.5 text-[10px] font-medium text-muted-foreground">
               {t("topbar.workspace.external")}
             </span>
@@ -1096,8 +1117,8 @@ export function WorkspaceRow({
         </span>
         <span
           className={cn(
-            "mt-0.5 block truncate text-xs",
-            active ? "text-accent-foreground/80" : "text-muted-foreground",
+            "mt-0.5 block truncate pl-5 text-[11px] leading-4",
+            active ? "text-accent-foreground/60" : "text-muted-foreground/70",
           )}
           title={row.path}
         >
@@ -1106,17 +1127,13 @@ export function WorkspaceRow({
       </span>
       <span
         className={cn(
-          "self-center whitespace-nowrap text-xs",
-          active ? "text-accent-foreground/80" : "text-muted-foreground",
+          "flex items-center gap-2 self-center whitespace-nowrap text-[11px] tabular-nums",
+          active ? "text-accent-foreground/70" : "text-muted-foreground",
         )}
       >
         {switching ? (
           <Loader2 className="h-4 w-4 animate-spin" />
-        ) : !showDiff ? (
-          active ? (
-            <Check className="h-3.5 w-3.5" aria-label={t("topbar.workspace.currentBadge")} />
-          ) : null
-        ) : (
+        ) : showDiff ? (
           <span title={diffStatus === "error" ? t("topbar.workspace.diffFailed") : undefined}>
             {row.diff
               ? formatWorkspaceDiffSummary(row.diff, t)
@@ -1126,6 +1143,12 @@ export function WorkspaceRow({
                   ? t("topbar.workspace.diffUnknown")
                   : formatWorkspaceDiffSummary(undefined, t)}
           </span>
+        ) : null}
+        {active && !switching && (
+          <Check
+            className="h-3.5 w-3.5 shrink-0 text-primary"
+            aria-label={t("topbar.workspace.currentBadge")}
+          />
         )}
       </span>
     </button>
@@ -1134,7 +1157,10 @@ export function WorkspaceRow({
   return (
     <div
       ref={rowRef}
-      className="group grid grid-cols-[minmax(0,1fr)_2rem] items-stretch gap-1 rounded-sm"
+      className={cn(
+        "group grid items-stretch gap-0.5 rounded-md",
+        row.isMain ? "grid-cols-1" : "grid-cols-[minmax(0,1fr)_1.75rem]",
+      )}
     >
       {disabledReason ? (
         <Tooltip>
@@ -1144,9 +1170,7 @@ export function WorkspaceRow({
       ) : (
         button
       )}
-      {row.isMain ? (
-        <span />
-      ) : (
+      {!row.isMain && (
         <DropdownMenu {...(cleanupMenuOpen === undefined ? {} : { open: cleanupMenuOpen })}>
           {cleanupDisabledReason ? (
             <Tooltip>
@@ -1200,11 +1224,13 @@ function WorkspaceGroup({
   children,
   expanded = true,
   onToggle,
+  count,
 }: {
   title: string;
   children: React.ReactNode;
   expanded?: boolean;
   onToggle?: () => void;
+  count?: number;
 }) {
   return (
     <section className="py-1">
@@ -1212,18 +1238,24 @@ function WorkspaceGroup({
         <button
           type="button"
           aria-expanded={expanded}
+          aria-label={count === undefined ? title : `${title} (${count})`}
           onClick={onToggle}
-          className="flex w-full items-center justify-between rounded-sm px-2 pb-1 pt-1.5 text-left text-[10px] font-semibold uppercase tracking-normal text-muted-foreground hover:bg-accent"
+          className="flex h-8 w-full items-center gap-1.5 rounded-md px-2 text-left text-[11px] font-medium text-muted-foreground hover:bg-accent hover:text-foreground"
         >
-          {title}
-          <ChevronDown className={cn("h-3 w-3 transition-transform", !expanded && "-rotate-90")} />
+          <ChevronDown className={cn("h-3 w-3 shrink-0", !expanded && "-rotate-90")} />
+          <span className="flex-1">{title}</span>
+          {count !== undefined && (
+            <span className="rounded bg-muted px-1.5 py-0.5 text-[10px] tabular-nums text-muted-foreground/80">
+              {count}
+            </span>
+          )}
         </button>
       ) : (
-        <div className="px-2 pb-1 pt-1.5 text-[10px] font-semibold uppercase tracking-normal text-muted-foreground">
+        <div className="px-2 pb-1.5 pt-1 text-[11px] font-medium text-muted-foreground/70">
           {title}
         </div>
       )}
-      {expanded && <div className="space-y-1">{children}</div>}
+      {expanded && <div className="space-y-0.5">{children}</div>}
     </section>
   );
 }

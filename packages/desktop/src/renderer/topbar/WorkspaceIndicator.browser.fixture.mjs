@@ -236,12 +236,44 @@ try {
   const final = await snapshot();
   assert.deepEqual(final.requests, closed.requests, "recent bottom summaries remain cached");
   assert.equal(final.maxActive, 2, "scrolling and reopening retain the concurrency bound");
+
+  await page.setViewportSize({ width: 390, height: 650 });
+  const dialog = page.getByRole("dialog");
+  await page.waitForFunction(
+    (element) => {
+      const box = element.getBoundingClientRect();
+      return (
+        box.left >= 8 &&
+        box.top >= 8 &&
+        box.right <= window.innerWidth - 8 &&
+        box.bottom <= window.innerHeight - 8
+      );
+    },
+    await dialog.elementHandle(),
+  );
+  assert.equal(
+    await dialog.evaluate((element) => element.scrollWidth <= element.clientWidth + 1),
+    true,
+    "390px window has no horizontal menu overflow",
+  );
+  await scroll.evaluate((element) => {
+    element.scrollTop = 0;
+  });
+  await page.evaluate(() => window.document.documentElement.classList.add("dark"));
+  const darkScreenshot = await screenshot("workspace-dark-narrow.png");
+  assert.deepEqual(
+    (await snapshot()).requests,
+    final.requests,
+    "theme and viewport changes reuse the visible summary cache",
+  );
   assert.deepEqual(errors, [], "production WorkspaceIndicator has no browser page errors");
   console.log(
     `WorkspaceIndicator browser smoke passed: 0 default checks; ${initial.requests.length}/40 enabled checks; ` +
       `${final.requests.length} total; max concurrency ${final.maxActive}; no page errors.`,
   );
-  console.log(`Default UI: ${defaultScreenshot}\nEnabled stats UI: ${statsScreenshot}`);
+  console.log(
+    `Default UI: ${defaultScreenshot}\nEnabled stats UI: ${statsScreenshot}\nDark narrow UI: ${darkScreenshot}`,
+  );
 } finally {
   await browser.close();
 }

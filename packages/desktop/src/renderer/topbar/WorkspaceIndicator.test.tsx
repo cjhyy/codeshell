@@ -58,17 +58,18 @@ mock.module("../components/ui/popover", () => ({
       </button>
     );
   },
-  PopoverContent: React.forwardRef<HTMLDivElement, React.HTMLAttributes<HTMLDivElement>>(
-    ({ children, ...props }, ref) => {
-      const { open } = React.useContext(PopoverTestContext);
-      if (!open) return null;
-      return (
-        <div ref={ref} {...props}>
-          {children}
-        </div>
-      );
-    },
-  ),
+  PopoverContent: React.forwardRef<
+    HTMLDivElement,
+    React.HTMLAttributes<HTMLDivElement> & { sideOffset?: number }
+  >(({ children, sideOffset: _sideOffset, ...props }, ref) => {
+    const { open } = React.useContext(PopoverTestContext);
+    if (!open) return null;
+    return (
+      <div ref={ref} {...props}>
+        {children}
+      </div>
+    );
+  }),
 }));
 
 const {
@@ -339,7 +340,7 @@ describe("WorkspaceRow", () => {
     );
 
     expect(activeHtml).toContain('aria-current="true"');
-    expect(activeHtml).toMatch(/⑃ release\/2026/);
+    expect(activeHtml).toMatch(/release\/2026/);
     expect(activeHtml).toMatch(/当前|Current/);
     expect(ownedHtml).toMatch(/本会话|This session/);
   });
@@ -878,7 +879,7 @@ describe("WorkspaceIndicator", () => {
     expect(text).toMatch(/当前工作区|Current workspace/);
     expect(text).toContain("CodeShell worktrees");
     expect(text).toMatch(/外部 worktrees|External worktrees/);
-    expect(text).toContain("⑃ release/main");
+    expect(text).toContain("release/main");
     expect(text).toContain("worktree/feature-session");
     expect(text).toMatch(/本会话|This session/);
     expect(text).toContain("external/branch");
@@ -1282,7 +1283,7 @@ describe("WorkspaceIndicator", () => {
       await flushMicrotasks();
     });
     expect(textOf(container)).not.toContain(translate("zh", "topbar.workspace.noMatches"));
-    expect(textOf(container)).toContain("⑃ main");
+    expect(textOf(container)).toContain("main");
     expect(diffCalls).toBe(0);
   });
 
