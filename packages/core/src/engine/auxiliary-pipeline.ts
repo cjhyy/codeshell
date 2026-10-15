@@ -1,4 +1,5 @@
-import type { LLMConfig, TokenUsage } from "../types.js";
+import { createHash } from "node:crypto";
+import type { ClientDefaults, LLMConfig, TokenUsage } from "../types.js";
 import { createLLMClient } from "../llm/client-factory.js";
 import type { ModelPool } from "../llm/model-pool.js";
 import type { SettingsManager } from "../settings/manager.js";
@@ -35,7 +36,11 @@ export function sameLlmIdentity(a: LLMConfig, b: LLMConfig): boolean {
     (a.provider ?? undefined) === (b.provider ?? undefined) &&
     (a.providerKind ?? undefined) === (b.providerKind ?? undefined) &&
     (a.maxTokens ?? undefined) === (b.maxTokens ?? undefined) &&
-    JSON.stringify(a.reasoning ?? null) === JSON.stringify(b.reasoning ?? null)
+    a.supportsVision === b.supportsVision &&
+    a.serviceTier === b.serviceTier &&
+    a.reasoningSummary === b.reasoningSummary &&
+    JSON.stringify(a.reasoning ?? null) === JSON.stringify(b.reasoning ?? null) &&
+    JSON.stringify(a.extraBody ?? null) === JSON.stringify(b.extraBody ?? null)
   );
 }
 
@@ -62,7 +67,12 @@ export function buildSummarizeFn(
 }
 
 export class AuxiliaryPipeline {
-  private auxClientCache?: { key: string; client: EngineLlmClient };
+  private auxClientCache?: {
+    key: string;
+    fingerprint: string;
+    fetch?: ClientDefaults["fetch"];
+    client: EngineLlmClient;
+  };
 
   constructor(
     private readonly deps: {
@@ -106,32 +116,46 @@ export class AuxiliaryPipeline {
     } catch {
       return { client: fallback, maxContextTokens: fallbackMaxContextTokens };
     }
-    if (!auxKey) return { client: fallback, maxContextTokens: fallbackMaxContextTokens };
+    if (!auxKey) {
+      this.auxClientCache = undefined;
+      return { client: fallback, maxContextTokens: fallbackMaxContextTokens };
+    }
 
     const modelPool = this.deps.modelPool();
     const entry = modelPool.get(auxKey);
-    if (entry && sameLlmIdentity(modelPool.toLLMConfig(entry), this.deps.config().llm)) {
+    if (!entry) {
+      this.auxClientCache = undefined;
+      logger.warn("engine.aux_model_missing", { auxModelKey: auxKey });
+      return { client: fallback, maxContextTokens: fallbackMaxContextTokens };
+    }
+    const llm = modelPool.toLLMConfig(entry);
+    const config = this.deps.config();
+    if (sameLlmIdentity(llm, config.llm)) {
       return {
         client: fallback,
         maxContextTokens: entry.maxContextTokens ?? fallbackMaxContextTokens,
       };
     }
-    if (this.auxClientCache?.key === auxKey) {
-      return {
-        client: this.auxClientCache.client,
-        maxContextTokens: entry?.maxContextTokens ?? fallbackMaxContextTokens,
-      };
-    }
-    if (!entry) {
-      logger.warn("engine.aux_model_missing", { auxModelKey: auxKey });
-      return { client: fallback, maxContextTokens: fallbackMaxContextTokens };
-    }
     try {
-      const client = await createLLMClient(
-        modelPool.toLLMConfig(entry),
-        this.deps.config().clientDefaults,
-      );
-      this.auxClientCache = { key: auxKey, client };
+      // Include credentials and all model metadata so reconfiguring the same
+      // connection cannot retain an old client. Store only an in-memory digest;
+      // the resolved configuration must never appear in cache diagnostics.
+      const defaults = config.clientDefaults;
+      const fingerprint = createHash("sha256")
+        .update(JSON.stringify({ llm, defaults }))
+        .digest("hex");
+      if (
+        this.auxClientCache?.key === auxKey &&
+        this.auxClientCache.fingerprint === fingerprint &&
+        this.auxClientCache.fetch === defaults?.fetch
+      ) {
+        return {
+          client: this.auxClientCache.client,
+          maxContextTokens: entry.maxContextTokens ?? fallbackMaxContextTokens,
+        };
+      }
+      const client = await createLLMClient(llm, defaults);
+      this.auxClientCache = { key: auxKey, fingerprint, fetch: defaults?.fetch, client };
       return {
         client,
         maxContextTokens: entry.maxContextTokens ?? fallbackMaxContextTokens,

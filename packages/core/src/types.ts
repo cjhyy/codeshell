@@ -978,6 +978,10 @@ export type StreamCallback = (event: StreamEvent) => void | Promise<void>;
 export interface LLMConfig {
   provider: string;
   model: string;
+  /** Selected ModelPool/connection key. Re-resolved at run boundaries after hot reload. */
+  modelKey?: string;
+  /** Explicit per-model catalog capability; false overrides family rules too. */
+  supportsVision?: boolean;
   apiKey?: string;
   baseUrl?: string;
   maxTokens?: number;

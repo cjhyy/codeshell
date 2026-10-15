@@ -9,11 +9,9 @@
  */
 
 import type { ProviderKindName } from "../provider-kinds.js";
+import type { LLMConfig } from "../../types.js";
 import { RULES } from "./rules.js";
-import {
-  type Capability,
-  DEFAULT_CAPABILITY,
-} from "./types.js";
+import { type Capability, DEFAULT_CAPABILITY } from "./types.js";
 
 export { DEFAULT_CAPABILITY } from "./types.js";
 export type {
@@ -32,10 +30,7 @@ export type {
  * First matching rule for the kind wins — rules.ts is ordered so that
  * more specific patterns come before catch-alls.
  */
-export function capabilitiesFor(
-  kind: ProviderKindName,
-  model: string,
-): Capability {
+export function capabilitiesFor(kind: ProviderKindName, model: string): Capability {
   for (const rule of RULES) {
     if (rule.kind !== kind) continue;
     if (!rule.match.test(model)) continue;
@@ -52,5 +47,29 @@ export function capabilitiesFor(
   return {
     ...DEFAULT_CAPABILITY,
     rejectedParams: new Set(DEFAULT_CAPABILITY.rejectedParams),
+  };
+}
+
+/**
+ * Runtime capabilities for the selected connection/model. Catalog metadata is
+ * authoritative (including false); rules only fill undeclared capabilities.
+ * Keep this pure so tools and provider request filtering use the same source.
+ */
+export function capabilitiesForConfig(
+  config?: Pick<LLMConfig, "provider" | "providerKind" | "model" | "supportsVision">,
+): Capability {
+  if (!config?.model || !(config.providerKind ?? config.provider)) {
+    return { ...DEFAULT_CAPABILITY, rejectedParams: new Set(DEFAULT_CAPABILITY.rejectedParams) };
+  }
+  const capability = capabilitiesFor(
+    (config.providerKind ?? config.provider) as ProviderKindName,
+    config.model,
+  );
+  return {
+    ...capability,
+    supportsVision:
+      typeof config.supportsVision === "boolean"
+        ? config.supportsVision
+        : capability.supportsVision,
   };
 }

@@ -8,10 +8,15 @@ import type { ToolContext } from "../context.js";
 const PNG_B64 =
   "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==";
 
-function ctxWith(model: string, providerKind: string, cwd: string): ToolContext {
+function ctxWith(
+  model: string,
+  providerKind: string,
+  cwd: string,
+  supportsVision?: boolean,
+): ToolContext {
   return {
     cwd,
-    llmConfig: { provider: providerKind, model, providerKind },
+    llmConfig: { provider: providerKind, model, providerKind, supportsVision },
   } as unknown as ToolContext;
 }
 
@@ -59,6 +64,75 @@ describe("view_image", () => {
     const out = await viewImageTool({ path: p }, ctxWith("gpt-4o", "openai", dir));
     expect(typeof out).toBe("object");
     expect((out as { contentBlocks: any[] }).contentBlocks[0].type).toBe("image");
+  });
+
+  it.each([
+    ["openai/gpt-6.1-sol", true, true],
+    ["future/unknown-model", true, true],
+    ["openai/gpt-5.6-sol", false, false],
+    ["openai/gpt-5.6-sol", undefined, true],
+    ["future/unknown-model", undefined, false],
+  ] as const)(
+    "uses the current configured vision capability for %s",
+    async (model, configured, allowed) => {
+      const p = join(dir, "configured.png");
+      await writeFile(p, Buffer.from(PNG_B64, "base64"));
+      const out = await viewImageTool({ path: p }, ctxWith(model, "openrouter", dir, configured));
+      expect(typeof out).toBe(allowed ? "object" : "string");
+      if (typeof out === "object") expect(out.contentBlocks?.[0]?.source?.data).toBe(PNG_B64);
+      else expect(out).toContain("不支持视觉");
+    },
+  );
+
+  it("reads the replacement model config rather than retaining the previous model capability", async () => {
+    const p = join(dir, "switch.png");
+    await writeFile(p, Buffer.from(PNG_B64, "base64"));
+    const ctx = ctxWith("openai/gpt-6.1-sol", "openrouter", dir, true);
+    expect(typeof (await viewImageTool({ path: p }, ctx))).toBe("object");
+
+    ctx.llmConfig = ctxWith("openai/gpt-5.6-sol", "openrouter", dir, false).llmConfig;
+    expect(await viewImageTool({ path: p }, ctx)).toContain("不支持视觉");
+
+    ctx.llmConfig = ctxWith("future/unknown-model", "openrouter", dir).llmConfig;
+    expect(await viewImageTool({ path: p }, ctx)).toContain("不支持视觉");
+  });
+
+  it("applies configured vision to historical images before reading the session", async () => {
+    let reads = 0;
+    const ctx = {
+      ...ctxWith("openai/gpt-6.1-sol", "openrouter", dir, true),
+      sessionId: "vision-history",
+      engine: {
+        getSessionManager: () => ({
+          resume: () => {
+            reads++;
+            return {
+              transcript: {
+                toMessages: () => [
+                  {
+                    role: "user",
+                    content: [
+                      {
+                        type: "image",
+                        source: { type: "base64", media_type: "image/png", data: PNG_B64 },
+                      },
+                    ],
+                  },
+                ],
+              },
+            };
+          },
+        }),
+      },
+    } as unknown as ToolContext;
+    const out = await viewImageTool({ imageNumber: 1 }, ctx);
+    expect(typeof out).toBe("object");
+    if (typeof out === "object") expect(out.contentBlocks?.[0]?.source?.data).toBe(PNG_B64);
+    expect(reads).toBe(1);
+
+    ctx.llmConfig = ctxWith("openai/gpt-5.6-sol", "openrouter", dir, false).llmConfig;
+    expect(await viewImageTool({ imageNumber: 1 }, ctx)).toContain("不支持视觉");
+    expect(reads).toBe(1);
   });
 
   it("accepts an optional detail parameter", async () => {

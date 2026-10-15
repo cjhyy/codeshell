@@ -54,6 +54,8 @@ export interface ModelEntry {
   provider: string;
   /** Full model path: "anthropic/claude-opus-4-6" */
   model: string;
+  /** Explicit capability of this connection's selected model, from its catalog preset. */
+  supportsVision?: boolean;
   /**
    * Catalog/provider kind used by capability rules. This can differ from
    * `provider`, which only selects the client protocol family.
@@ -159,9 +161,7 @@ export class ModelPool {
     }
     // 2. OpenRouter snapshot — translate the entry's provider kind to the
     //    snapshot's `<vendor>/<id>` form.
-    const kind = entry.providerKey
-      ? this.providerCatalog?.get(entry.providerKey)?.kind
-      : undefined;
+    const kind = entry.providerKey ? this.providerCatalog?.get(entry.providerKey)?.kind : undefined;
     if (kind === "openrouter") {
       const hit = findOpenRouterModel(entry.model);
       if (hit?.contextLength) return hit.contextLength;
@@ -279,11 +279,10 @@ export class ModelPool {
     };
     const providerKind = entry.providerKind ?? fromCat?.kind;
     return {
-      provider:
-        entry.provider ||
-        kindToClientProvider(fromCat?.kind) ||
-        "openai",
+      provider: entry.provider || kindToClientProvider(fromCat?.kind) || "openai",
       model: entry.model,
+      modelKey: entry.key,
+      ...(entry.supportsVision !== undefined ? { supportsVision: entry.supportsVision } : {}),
       apiKey: entry.apiKey ?? fromCat?.apiKey,
       baseUrl: entry.baseUrl ?? fromCat?.baseUrl,
       // No invented default: undefined lets each client apply its own fallback
@@ -293,11 +292,11 @@ export class ModelPool {
       maxTokens: entry.maxOutputTokens,
       ...(entry.maxContextTokens !== undefined ? { maxContextTokens: entry.maxContextTokens } : {}),
       // reasoning: entry overrides catalog. No base fallback — see class doc.
-      ...(entry.reasoning ?? fromCat?.reasoning
+      ...((entry.reasoning ?? fromCat?.reasoning)
         ? { reasoning: entry.reasoning ?? fromCat?.reasoning }
         : {}),
       // Auth command: entry overrides catalog. (TODO 7.2)
-      ...(entry.authCommand ?? fromCat?.authCommand
+      ...((entry.authCommand ?? fromCat?.authCommand)
         ? { authCommand: entry.authCommand ?? fromCat?.authCommand }
         : {}),
       // HTTP headers: merge catalog (base) then entry (override). (TODO 7.2)

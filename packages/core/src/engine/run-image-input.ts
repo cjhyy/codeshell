@@ -1,7 +1,6 @@
 import { existsSync } from "node:fs";
 import { isAbsolute, join } from "node:path";
-import { capabilitiesFor } from "../llm/capabilities/index.js";
-import type { ProviderKindName } from "../llm/provider-kinds.js";
+import { capabilitiesForConfig } from "../llm/capabilities/index.js";
 import { logger } from "../logging/logger.js";
 import type { InputAttachmentMeta, PermissionMode } from "../types.js";
 import type { ContentBlock, LLMConfig } from "../types.js";
@@ -28,7 +27,7 @@ export type PrepareRunImageInputResult =
 export async function prepareRunImageInput(args: {
   task: string;
   cwd: string;
-  llm: Pick<LLMConfig, "provider" | "providerKind" | "model">;
+  llm: Pick<LLMConfig, "provider" | "providerKind" | "model" | "supportsVision">;
   sessionId?: string;
   attachments?: readonly InputAttachmentMeta[];
   workspaceContext?: import("../workspace/workspace-context.js").WorkspaceContext;
@@ -60,7 +59,7 @@ export async function prepareRunImageInput(args: {
     };
   }
 
-  const cap = capabilitiesFor((llm.providerKind ?? llm.provider) as ProviderKindName, llm.model);
+  const cap = capabilitiesForConfig(llm);
   let attachmentContext: InputAttachmentContext;
   try {
     attachmentContext = await buildInputAttachmentContext(args.attachments, cwd, {
