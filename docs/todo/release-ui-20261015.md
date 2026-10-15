@@ -50,7 +50,7 @@ The initial blockers below are retained as resolved verification history.
 
 Current integration worktree:
 `/Users/admin/.codex/worktrees/ui-task-center-20261015/codeshell`, branch
-`codex/integration/ui-review-wave4-20261015`. Other work advanced remote main to
+`codex/integration/ui-review-wave5-20261015`. Other work advanced remote main to
 `0.9.44`; this branch merged `976a79322` and `bb7a9b59a`, preserving the incoming model-capability,
 forwarding and Figma updates. The CSS merge preserves both context-selection and
 file-action styles. Do not revert incoming work or republish another version on
@@ -216,7 +216,8 @@ main: `codex/desktop/composer-overflow-20261015`,
 on the current root branch, refresh main, and verify the final combination before
 delivery. Third-wave CI must be checked before another main push cancels it.
 
-Fourth wave in progress (root branch contains the reviewed commits):
+Fourth wave delivered to remote main at `94f1a462b`. CI `38733481703` is running.
+The root branch contains these reviewed commits:
 
 - `95579ea41` (source `dc92d56cd`): Sidebar content scrolls as one region while
   the account footer stays reachable. Resize/focusin only scroll the currently
@@ -247,8 +248,8 @@ Fourth wave in progress (root branch contains the reviewed commits):
   Production TSX only assigns that attribute in ChatView. The fixture now leaves
   the attribute on the standalone cards surface only, asserts exactly one variant
   root, and retains all bounds/wire/120-frame assertions. No production change or
-  assertion weakening was made; the complete 25-fixture rerun passed. Fourth wave
-  is ready for main delivery after a final origin refresh.
+  assertion weakening was made; the complete 25-fixture rerun passed before the
+  fresh-origin fast-forward delivery.
 - Root separately owns the accepted search-dialog short-window P2 on
   `codex/desktop/session-search-layout-20261015` in the clean reused
   `file-browser-ui-20261015` tree, checkpoint `c5b7473a7`. Scoped
@@ -304,6 +305,14 @@ nested group, plus long connection IDs widening the page. Evidence:
 `/tmp/codeshell-connections-ui-audit-20261015/report.json`. Accept recovery and
 actual-pane card bounds as the next independent scope; preserve persisted
 connection/provider identity, confirmation and all existing probe authority.
+
+Fifth wave is now implementing three independent scopes from delivered main:
+release_audit owns Search and its exact viewport/native-wheel harness in the
+file-browser tree; bridge_test_fix owns `codex/desktop/history-page-recovery-20261015`
+in the desktop-bridge tree; ui_audit owns
+`codex/desktop/connection-settings-recovery-20261015` in the context-settings tree.
+Root integrates reviewed commits in the current UI5 branch, preserves incoming
+main, verifies the final combination and waits for the UI4 CI before another push.
 
 Initial audit history follows:
 
