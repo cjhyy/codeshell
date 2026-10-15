@@ -77,9 +77,10 @@ interface Props {
   value: PermissionMode | null;
   onChange: (mode: PermissionMode) => void;
   disabled?: boolean;
+  compact?: boolean;
 }
 
-export function PermissionPill({ value, onChange, disabled }: Props) {
+export function PermissionPill({ value, onChange, disabled, compact = false }: Props) {
   const { t } = useT();
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
@@ -121,13 +122,18 @@ export function PermissionPill({ value, onChange, disabled }: Props) {
     t === "ok" ? "bg-status-ok" : t === "warn" ? "bg-status-warn" : "bg-status-err";
 
   return (
-    <div className="relative" ref={ref}>
+    <div className={cn("relative", compact && "min-w-0")} ref={ref}>
       <Button
         ref={anchorRef}
         type="button"
         variant="outline"
         size="sm"
-        className={`cs-control min-h-7 shrink-0 gap-1.5 px-2 py-1 text-xs font-medium ${toneText(cur.tone)} ${toneBorder(cur.tone)}`}
+        className={cn(
+          "cs-control min-h-7 shrink-0 gap-1.5 px-2 py-1 text-xs font-medium",
+          toneText(cur.tone),
+          toneBorder(cur.tone),
+          compact && "max-w-full",
+        )}
         disabled={disabled}
         aria-label={t("chat.permission.currentLabel", { label: t(cur.labelKey) })}
         title={t("chat.permission.currentLabel", { label: t(cur.labelKey) })}
@@ -136,12 +142,17 @@ export function PermissionPill({ value, onChange, disabled }: Props) {
         onClick={() => setOpen((o) => !o)}
       >
         <span className={`h-2 w-2 shrink-0 rounded-full ${toneDot(cur.tone)}`} aria-hidden="true" />
-        <span className="max-w-[7rem] truncate @max-[520px]/composer-controls:hidden">
+        <span
+          className={cn(
+            "truncate",
+            compact ? "max-w-24" : "max-w-[7rem] @max-[520px]/composer-controls:hidden",
+          )}
+        >
           {t(cur.labelKey)}
         </span>
         <ChevronDown
           size={11}
-          className="shrink-0 opacity-60 @max-[520px]/composer-controls:hidden"
+          className={cn("shrink-0 opacity-60", !compact && "@max-[520px]/composer-controls:hidden")}
           aria-hidden="true"
         />
       </Button>

@@ -30,6 +30,7 @@ interface Props {
   options: ModelOption[];
   onSelect: (opt: ModelOption) => void;
   disabled?: boolean;
+  compact?: boolean;
   /**
    * Render the fixed-position menu outside ancestors that establish their own
    * containing block (for example a backdrop-filter surface).
@@ -37,7 +38,14 @@ interface Props {
   portal?: boolean;
 }
 
-export function ModelPill({ activeKey, options, onSelect, disabled, portal = true }: Props) {
+export function ModelPill({
+  activeKey,
+  options,
+  onSelect,
+  disabled,
+  compact = false,
+  portal = true,
+}: Props) {
   const { t } = useT();
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
@@ -121,14 +129,17 @@ export function ModelPill({ activeKey, options, onSelect, disabled, portal = tru
   ) : null;
 
   return (
-    <div className="relative" ref={ref}>
+    <div className={cn("relative", compact && "min-w-0")} ref={ref}>
       <Button
         ref={anchorRef}
         type="button"
         variant="outline"
         size="sm"
         data-active-model={activeKey ?? ""}
-        className="cs-control min-h-7 shrink-0 gap-1.5 px-2 py-1 text-xs text-foreground"
+        className={cn(
+          "cs-control min-h-7 shrink-0 gap-1.5 px-2 py-1 text-xs text-foreground",
+          compact && "max-w-full",
+        )}
         disabled={disabled}
         aria-label={t("chat.model.currentLabel", { label })}
         title={t("chat.model.currentLabel", { label })}
@@ -137,12 +148,17 @@ export function ModelPill({ activeKey, options, onSelect, disabled, portal = tru
         onClick={() => setOpen((o) => !o)}
       >
         <Zap size={12} className="shrink-0" aria-hidden="true" />
-        <span className="max-w-[12rem] truncate @max-[520px]/composer-controls:hidden">
+        <span
+          className={cn(
+            "truncate",
+            compact ? "max-w-24" : "max-w-[12rem] @max-[520px]/composer-controls:hidden",
+          )}
+        >
           {label}
         </span>
         <ChevronDown
           size={11}
-          className="shrink-0 opacity-60 @max-[520px]/composer-controls:hidden"
+          className={cn("shrink-0 opacity-60", !compact && "@max-[520px]/composer-controls:hidden")}
           aria-hidden="true"
         />
       </Button>
