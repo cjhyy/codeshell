@@ -13,6 +13,7 @@ import { MessageContent, ToolMessage, subagentStatusLabel } from "./MessageConte
 import { sessionTitle } from "./chat.js";
 import type { WorkbenchController, WorkbenchNavigation } from "./workbench-types.js";
 import { parseWorkbenchLocation } from "./website-routes.js";
+import { useLatestMessages } from "./useLatestMessages.js";
 import "./app.css";
 import "./workbench-desktop.css";
 
@@ -133,9 +134,16 @@ export function Workbench({
   const sidebarRef = React.useRef<HTMLElement>(null);
   const sidebarToggleRef = React.useRef<HTMLButtonElement>(null);
   const sidebarWasOpen = React.useRef(false);
-  const messageListRef = React.useRef<HTMLDivElement>(null);
+  const messageListId = React.useId();
   const textareaRef = React.useRef<HTMLTextAreaElement>(null);
-  const followMessages = React.useRef(true);
+  const latest = useLatestMessages({
+    items: chat.items,
+    scope: JSON.stringify([controller.workspaceKey, activeId]),
+    connection,
+    loading: Boolean(controller.loading),
+    active: view === "chat",
+    approvalCount: controller.approvals.length,
+  });
   React.useEffect(() => {
     setOpenedPanel(undefined);
     setView((current) => (current === "panel" ? "panels" : current));
@@ -196,11 +204,6 @@ export function Workbench({
     textarea.style.height = `${Math.min(180, Math.max(64, textarea.scrollHeight))}px`;
   }, [draft, view]);
 
-  React.useLayoutEffect(() => {
-    const list = messageListRef.current;
-    if (list && followMessages.current && view === "chat") list.scrollTop = list.scrollHeight;
-  }, [chat.items, controller.approvals.length, view]);
-
   const closeMobileSidebar = () => {
     if (narrow) {
       setSidebarOpen(false);
@@ -250,14 +253,13 @@ export function Workbench({
     requestNavigation(() => {
       setView("chat");
       closeMobileSidebar();
-      followMessages.current = true;
+      latest.resume();
       action();
     });
   const openSession = (id: string) => openConversation(() => void controller.selectSession(id));
   const startNewSession = () => openConversation(controller.newSession);
   const send = () => {
-    followMessages.current = true;
-    controller.send();
+    if (controller.send()) latest.resume();
   };
   const stop = controller.stop;
   const approvals = controller.approvals.filter((a) => !a.sessionId || a.sessionId === activeId);
@@ -629,106 +631,140 @@ export function Workbench({
           hidden={view !== "chat"}
           aria-label="对话"
         >
-          <div
-            className="messages"
-            ref={messageListRef}
-            onScroll={(event) => {
-              const list = event.currentTarget;
-              followMessages.current = list.scrollHeight - list.scrollTop - list.clientHeight < 100;
-            }}
-          >
-            <div className="transcript">
-              {controller.chatControls}
-              {controller.loading ? (
-                <div className="banner" role="status">
-                  正在恢复会话记录…
-                </div>
-              ) : null}
-              {chat.goal ? (
-                <div className="banner goal">
-                  <span>{chat.goal}</span>
-                  {controller.goalActions}
-                </div>
-              ) : null}
-              {chat.items.map((item) => {
-                switch (item.kind) {
-                  case "user":
-                    return (
-                      <div key={item.id} className="msg user">
-                        {item.text}
-                        {item.attachments?.map((attachment, index) =>
-                          hub && attachment.path ? (
-                            <button
-                              className="attachment attachment-open"
-                              key={index}
-                              onClick={() => openFiles(attachment.path)}
-                            >
-                              📎 {attachment.name}
-                            </button>
-                          ) : (
-                            <span className="attachment" key={index}>
-                              📎 {attachment.name}
-                            </span>
-                          ),
-                        )}
-                      </div>
-                    );
-                  case "assistant":
-                    if (item.done && !item.text && !item.reasoning) return null;
-                    return (
-                      <div key={item.id} className="msg assistant">
-                        <MessageContent
-                          text={item.text}
-                          reasoning={item.reasoning}
-                          streaming={!item.done}
-                          onOpenFile={hub ? openMessageFile : undefined}
-                        />
-                      </div>
-                    );
-                  case "tool":
-                    return (
-                      <div key={item.id} className={`msg tool${item.error ? " tool-error" : ""}`}>
-                        <ToolMessage item={item} running={running} />
-                      </div>
-                    );
-                  case "subagent":
-                    return (
-                      <div key={item.id} className="msg info">
-                        ↳ {item.label} · {subagentStatusLabel(item.status)}
-                      </div>
-                    );
-                  case "system":
-                    return (
-                      <div key={item.id} className="msg info">
-                        {item.text}
-                      </div>
-                    );
-                  case "system_error":
-                    return (
-                      <div key={item.id} className="msg error">
-                        {item.text}
-                      </div>
-                    );
-                  default:
-                    return null;
-                }
-              })}
-              {controller.approvalContent}
+          <div className="message-viewport">
+            <div
+              className="messages"
+              id={messageListId}
+              role="region"
+              aria-label="消息列表"
+              tabIndex={0}
+              ref={latest.listRef}
+              onScroll={latest.onScroll}
+            >
+              <div className="transcript" ref={latest.contentRef}>
+                {controller.chatControls}
+                {controller.loading ? (
+                  <div className="banner" role="status">
+                    正在恢复会话记录…
+                  </div>
+                ) : null}
+                {chat.goal ? (
+                  <div className="banner goal">
+                    <span>{chat.goal}</span>
+                    {controller.goalActions}
+                  </div>
+                ) : null}
+                {chat.items.map((item) => {
+                  switch (item.kind) {
+                    case "user":
+                      return (
+                        <div key={item.id} className="msg user">
+                          {item.text}
+                          {item.attachments?.map((attachment, index) =>
+                            hub && attachment.path ? (
+                              <button
+                                className="attachment attachment-open"
+                                key={index}
+                                onClick={() => openFiles(attachment.path)}
+                              >
+                                📎 {attachment.name}
+                              </button>
+                            ) : (
+                              <span className="attachment" key={index}>
+                                📎 {attachment.name}
+                              </span>
+                            ),
+                          )}
+                        </div>
+                      );
+                    case "assistant":
+                      if (item.done && !item.text && !item.reasoning) return null;
+                      return (
+                        <div key={item.id} className="msg assistant">
+                          <MessageContent
+                            text={item.text}
+                            reasoning={item.reasoning}
+                            streaming={!item.done}
+                            onOpenFile={hub ? openMessageFile : undefined}
+                          />
+                        </div>
+                      );
+                    case "tool":
+                      return (
+                        <div key={item.id} className={`msg tool${item.error ? " tool-error" : ""}`}>
+                          <ToolMessage item={item} running={running} />
+                        </div>
+                      );
+                    case "subagent":
+                      return (
+                        <div key={item.id} className="msg info">
+                          ↳ {item.label} · {subagentStatusLabel(item.status)}
+                        </div>
+                      );
+                    case "system":
+                      return (
+                        <div key={item.id} className="msg info">
+                          {item.text}
+                        </div>
+                      );
+                    case "system_error":
+                      return (
+                        <div key={item.id} className="msg error">
+                          {item.text}
+                        </div>
+                      );
+                    default:
+                      return null;
+                  }
+                })}
+                {controller.approvalContent}
 
-              {empty ? (
-                <div className="empty-chat">
-                  <span className="welcome-mark">
-                    <WorkbenchIcon name="brand" />
-                  </span>
-                  <h1>今天想完成什么？</h1>
-                  <p>从一个问题或想法开始，让 CodeShell 帮你一步步完成。</p>
-                  <span className="welcome-workspace">
-                    <WorkbenchIcon name="folder" />
-                    {projectName ?? workspaceName}
-                  </span>
-                </div>
-              ) : null}
+                {empty ? (
+                  <div className="empty-chat">
+                    <span className="welcome-mark">
+                      <WorkbenchIcon name="brand" />
+                    </span>
+                    <h1>今天想完成什么？</h1>
+                    <p>从一个问题或想法开始，让 CodeShell 帮你一步步完成。</p>
+                    <span className="welcome-workspace">
+                      <WorkbenchIcon name="folder" />
+                      {projectName ?? workspaceName}
+                    </span>
+                  </div>
+                ) : null}
+              </div>
             </div>
+            {latest.showJump && (
+              <button
+                type="button"
+                className="latest-messages"
+                aria-controls={messageListId}
+                aria-label={
+                  latest.newOutputCount
+                    ? `回到最新消息，${latest.newOutputCount > 99 ? "99+" : latest.newOutputCount} 条新输出`
+                    : "回到最新消息"
+                }
+                onClick={latest.jumpToLatest}
+              >
+                <span aria-hidden="true">↓</span>
+                回到最新消息
+                {latest.newOutputCount > 0 && (
+                  <span className="latest-count" aria-hidden="true">
+                    {latest.newOutputCount > 99 ? "99+" : latest.newOutputCount} 条新输出
+                  </span>
+                )}
+              </button>
+            )}
+            <span
+              className="latest-announcement"
+              role="status"
+              aria-live="polite"
+              aria-atomic="true"
+            >
+              {latest.newOutputCount > 0
+                ? `${latest.newOutputCount > 99 ? "99+" : latest.newOutputCount} 条新输出，可回到最新消息。`
+                : ""}
+            </span>
           </div>
           {controller.readOnlyNote ? <div className="banner">{controller.readOnlyNote}</div> : null}
           <div className="composer-wrap">

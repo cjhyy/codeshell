@@ -17,6 +17,7 @@
     "dist-app"
   ],
   "scripts": {
+    "test:latest-browser": "node scripts/test-latest-messages.mjs",
     "build": "bun run clean && tsc -p tsconfig.json && vite build",
     "typecheck": "tsc -p tsconfig.json --noEmit && tsc -p tsconfig.app.json --noEmit",
     "build:app": "vite build",
