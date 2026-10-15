@@ -4,6 +4,7 @@ import {
   isHttpMcpAuthConfigured,
   isToggleableMcpServer,
   inferHttpAuthMode,
+  isGenericMcpOAuthCredential,
   mcpEffectiveProjectPath,
   mcpServersFromSettings,
   persistableMcpServers,
@@ -91,6 +92,26 @@ describe("plugin MCP servers in settings UI", () => {
     expect(
       inferHttpAuthMode({ credentialRef: "plain-token" }, [{ id: "plain-token", type: "token" }]),
     ).toBe("bearer");
+  });
+
+  it("keeps ordinary OAuth selectable while hiding Link and Host-only credentials", () => {
+    expect(isGenericMcpOAuthCredential({ type: "oauth" })).toBe(true);
+    expect(
+      isGenericMcpOAuthCredential({
+        type: "oauth",
+        meta: { mcpServerName: "generic-server", oauthProvider: "custom", agentExposable: true },
+      }),
+    ).toBe(true);
+    expect(
+      isGenericMcpOAuthCredential({
+        type: "oauth",
+        meta: { linkProvider: "figma", linkExecutionBackend: "mcp" },
+      }),
+    ).toBe(false);
+    expect(isGenericMcpOAuthCredential({ type: "oauth", meta: { agentExposable: false } })).toBe(
+      false,
+    );
+    expect(isGenericMcpOAuthCredential({ type: "token" })).toBe(false);
   });
 
   it("folds plugin capability state for the project being edited", () => {

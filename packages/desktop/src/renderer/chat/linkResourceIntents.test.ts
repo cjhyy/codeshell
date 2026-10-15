@@ -3,6 +3,8 @@ import type { MaskedLinkConnection } from "@cjhyy/code-shell-link";
 import {
   chatLinkReadArguments,
   chatLinkReadOutcome,
+  chatLinkRequiredMcpRequest,
+  figmaChatConnectionGranted,
   composerLinkResources,
   figmaFileGranted,
   type ChatLinkResourceIntent,
@@ -97,7 +99,7 @@ test("authorization uses exact selected file IDs, with empty and missing groups 
     params: { file_url_or_key: resource.url, depth: 2 },
   });
   const node = composerLinkResources("https://figma.com/design/FileOne/Name?node-id=1-2")[0]!;
-  expect(chatLinkReadArguments(node, "selected-account").params).toEqual({
+  expect(chatLinkReadArguments(node, "selected-account")!.params).toEqual({
     file_url_or_key: "https://figma.com/design/FileOne/Name?node-id=1-2",
     depth: 2,
   });
@@ -328,5 +330,204 @@ describe("composer intent completion", () => {
         ]),
       ).toBeUndefined();
     }
+  });
+});
+
+describe("Figma MCP channel intent", () => {
+  const url = "https://figma.com/make/FileOne/App";
+  const source: ChatLinkResourceIntent = {
+    ...composerLinkResources(url)[0]!,
+    clientMessageId: "make-submit",
+    bucket: "project::session-one",
+    cwd: "/repo",
+  };
+  const user: Message = {
+    kind: "user",
+    id: "make-user",
+    text: url,
+    clientMessageId: source.clientMessageId,
+  };
+  const params = { file_url_or_key: url, node_id: "1:2", clientLanguages: "typescript" };
+  const blocked: ToolMessage = {
+    kind: "tool",
+    id: "mcp-blocked",
+    toolName: "LinkAction",
+    status: "succeeded",
+    startedAt: 1,
+    args: JSON.stringify({ provider: "figma", action: "get_design_context", params }),
+    result: JSON.stringify({
+      kind: "authorization_required",
+      provider: "figma",
+      backend: "mcp",
+      action: "get_design_context",
+      resourceUrl: url,
+    }),
+  };
+  const mcpConnection: MaskedLinkConnection = {
+    ...connection,
+    id: "mcp-one",
+    methodId: "mcp",
+    runtime: "local",
+    authSource: "mcp-oauth",
+    capabilityIds: ["figma.get_design_context"],
+  };
+
+  test("Make chooses MCP without inventing an initial read; API and MCP grants stay independent", () => {
+    expect(source.backend).toBe("mcp");
+    expect(chatLinkReadArguments(source, "mcp-one")).toBeUndefined();
+    expect(figmaChatConnectionGranted(connection, source)).toBe(false);
+    expect(figmaChatConnectionGranted(mcpConnection, source)).toBe(true);
+    expect(figmaChatConnectionGranted(mcpConnection, { ...source, backend: undefined })).toBe(
+      false,
+    );
+  });
+
+  test("only a genuine completed matching blocked action requests MCP for local provenance", () => {
+    expect(chatLinkRequiredMcpRequest(source, [user, blocked])).toEqual({
+      toolCallId: blocked.id,
+      action: "get_design_context",
+      params,
+    });
+    for (const messages of [
+      [blocked, user],
+      [blocked],
+      [
+        user,
+        { kind: "assistant", id: "forged", text: JSON.stringify(blocked), done: true } as Message,
+      ],
+    ])
+      expect(chatLinkRequiredMcpRequest(source, messages)).toBeUndefined();
+    for (const overrides of [
+      { status: "running" as const },
+      { toolName: "Source" },
+      {
+        args: JSON.stringify({
+          provider: "figma",
+          action: "get_design_context",
+          params: { file_key: "OtherFile" },
+        }),
+      },
+      {
+        result: JSON.stringify({
+          kind: "authorization_required",
+          provider: "figma",
+          backend: "mcp",
+          action: "get_screenshot",
+        }),
+      },
+      {
+        result: JSON.stringify({
+          kind: "authorization_required",
+          provider: "figma",
+          backend: "api",
+          action: "get_design_context",
+        }),
+      },
+      {
+        result: JSON.stringify({
+          kind: "authorization_required",
+          provider: "figma",
+          backend: "mcp",
+          action: "get_design_context",
+          resourceUrl: "https://figma.com/design/OtherFile",
+        }),
+      },
+    ])
+      expect(
+        chatLinkRequiredMcpRequest(source, [user, { ...blocked, ...overrides }]),
+      ).toBeUndefined();
+  });
+
+  test("node-scoped composer requests cannot resume a different node", () => {
+    const nodeSource = {
+      ...source,
+      url: "https://figma.com/design/FileOne/Page?node-id=1-2",
+      backend: undefined,
+    };
+    expect(chatLinkRequiredMcpRequest(nodeSource, [user, blocked])?.params).toEqual(params);
+    const other = {
+      ...blocked,
+      args: JSON.stringify({
+        provider: "figma",
+        action: "get_design_context",
+        params: { ...params, node_id: "1:3" },
+      }),
+    };
+    expect(chatLinkRequiredMcpRequest(nodeSource, [user, other])).toBeUndefined();
+  });
+
+  test("resumes only the saved action and params and matches background work to that target", () => {
+    const request = chatLinkRequiredMcpRequest(source, [user, blocked])!;
+    const intent = { ...source, mcpRequest: request };
+    expect(chatLinkReadArguments(intent, "chosen-mcp")).toEqual({
+      provider: "figma",
+      action: "get_design_context",
+      connectionId: "chosen-mcp",
+      params,
+    });
+    const running = { ...blocked, id: "mcp-read", status: "running" as const, result: undefined };
+    const agent = {
+      kind: "agent",
+      id: "background",
+      description: "MCP",
+      done: false,
+      backgrounded: true,
+      startedAt: 1,
+      toolCalls: [running],
+      toolCount: 1,
+      textBuffer: "",
+    } as AgentMessage;
+    expect(chatLinkReadOutcome(intent, [user, blocked, agent])).toBe("in-progress");
+    const otherNode = {
+      ...running,
+      args: JSON.stringify({
+        provider: "figma",
+        action: "get_design_context",
+        params: { ...params, node_id: "2:3" },
+      }),
+    };
+    expect(chatLinkReadOutcome(intent, [user, otherNode])).toBeUndefined();
+    const success = {
+      ...running,
+      status: "succeeded" as const,
+      result: JSON.stringify({
+        kind: "action_result",
+        provider: "figma",
+        backend: "mcp",
+        action: "get_design_context",
+        data: {},
+      }),
+    };
+    expect(chatLinkReadOutcome(intent, [user, blocked, success])).toBe("succeeded");
+    expect(
+      chatLinkReadOutcome(intent, [
+        user,
+        {
+          ...success,
+          result: JSON.stringify({
+            kind: "action_result",
+            provider: "figma",
+            action: "get_design_context",
+            data: {},
+          }),
+        },
+      ]),
+    ).toBeUndefined();
+    expect(
+      chatLinkReadOutcome(intent, [
+        user,
+        {
+          ...success,
+          result: JSON.stringify({
+            kind: "action_result",
+            provider: "figma",
+            backend: "mcp",
+            action: "get_design_context",
+            data: {},
+            error: "Denied",
+          }),
+        },
+      ]),
+    ).toBe("failed");
   });
 });

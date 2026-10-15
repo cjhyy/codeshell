@@ -168,7 +168,11 @@ test("PKCE exchange discovers the selected account and restricts action shapes w
       localCredentialAccess.resolveValue!({ cwd: root, id: credential.id, scope: "full", purpose }),
     ).rejects.toThrow("Host-owned");
   await expect(
-    localCredentialAccess.resolveOAuthAccess!({ id: credential.id, scope: "full" }),
+    localCredentialAccess.resolveOAuthAccess!({
+      id: credential.id,
+      scope: "full",
+      serverUrl: "https://mcp.example/mcp",
+    }),
   ).rejects.toThrow("MCP");
   expect(localCredentialAccess.envExposures(root, "full")).toEqual({});
   expect(localCredentialAccess.listMasked(root, "full")[0]?.secretHint).toBe("****");

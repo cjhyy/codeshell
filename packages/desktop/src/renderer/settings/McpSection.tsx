@@ -119,6 +119,17 @@ function isOAuthCredential(c: Pick<MaskedCredentialView, "type">): boolean {
   return c.type === "oauth";
 }
 
+/** Link credentials are used through their provider channel, never a generic MCP server. */
+export function isGenericMcpOAuthCredential(
+  credential: Pick<MaskedCredentialView, "type" | "meta">,
+): boolean {
+  return (
+    isOAuthCredential(credential) &&
+    !credential.meta?.linkProvider &&
+    credential.meta?.agentExposable !== false
+  );
+}
+
 export function inferHttpAuthMode(
   s: {
     headers?: Record<string, string>;
@@ -1123,7 +1134,7 @@ function McpEditor({ initial, existingNames, mode = "full", onCancel, onSave }: 
     [credentials],
   );
   const oauthCredentials = useMemo(
-    () => credentials.filter((c) => c.type === "oauth"),
+    () => credentials.filter(isGenericMcpOAuthCredential),
     [credentials],
   );
   const oauthCredOptions = useMemo(

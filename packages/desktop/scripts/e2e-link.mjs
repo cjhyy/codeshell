@@ -3,11 +3,11 @@
  *
  * Boots the production main/preload/renderer stack in an isolated HOME and
  * proves the four independent credential categories, local/server Link split,
- * ten-provider catalog, five zero-copy CLI entry points, manual credential
- * fallback, and responsive layout.
+ * ten-provider catalog with one unified Figma API/MCP card, five zero-copy CLI
+ * entry points, manual credential fallback, and responsive layout.
  */
-/* global document */
-import { mkdir, writeFile } from "node:fs/promises";
+/* global document, window */
+import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { basename, join, resolve } from "node:path";
 import { dirname } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -25,6 +25,19 @@ const appDir = resolve(__dirname, "..");
 const isolated = await makeIsolatedElectronHome("codeshell-link-e2e-");
 const projectPath = join(isolated.home, "link-project");
 const screenshotDir = process.env.CODESHELL_LINK_SCREENSHOT_DIR;
+const networkReceipt = join(isolated.home, "network-attempts.jsonl");
+async function networkAttempts() {
+  const receipt = await readFile(networkReceipt, "utf8").catch((error) => {
+    if (error.code === "ENOENT") return "";
+    throw error;
+  });
+  return receipt.trim()
+    ? receipt
+        .trim()
+        .split("\n")
+        .map((line) => JSON.parse(line))
+    : [];
+}
 // Each category now includes a localized description in its accessible name.
 const credentialTabNames = {
   cookie: /^Cookie(?:\s|$)/i,
@@ -114,11 +127,35 @@ async function openCliDialog(providerId, providerName) {
 
 try {
   await seedFixture();
+  const networkGuard = join(isolated.home, "deny-network.cjs");
+  await writeFile(
+    networkGuard,
+    `const hostnameOf = (input) => {
+  try { return new URL(typeof input === "string" || input instanceof URL ? input : input?.url ?? (input?.hostname || input?.host ? "https://" + (input.hostname || input.host) : "https://unknown.invalid")).hostname; }
+  catch { return "unknown.invalid"; }
+};
+const deny = (input) => { require("node:fs").appendFileSync(${JSON.stringify(networkReceipt)}, JSON.stringify({ pid: process.pid, hostname: hostnameOf(input) }) + "\\n", { mode: 0o600 }); throw new Error("Link fixture forbids network"); };
+globalThis.fetch = async (input) => deny(input);
+for (const name of ["node:http", "node:https"]) {
+  const transport = require(name);
+  transport.request = deny;
+  transport.get = deny;
+}
+require("node:module").syncBuiltinESMExports();
+`,
+    { mode: 0o600 },
+  );
   app = await launchCodeShellElectron({
     appDir,
     home: isolated.home,
     userDataDir: isolated.userDataDir,
-    env: { CODESHELL_GITHUB_APP_CLIENT_ID: "", CODESHELL_GITLAB_OAUTH_CLIENT_ID: "" },
+    mainBootstrap: networkGuard,
+    env: {
+      NODE_OPTIONS: `--require ${networkGuard}`,
+      CODE_SHELL_REMOTE_LINK_DISABLED: "1",
+      CODESHELL_GITHUB_APP_CLIENT_ID: "",
+      CODESHELL_GITLAB_OAUTH_CLIENT_ID: "",
+    },
   });
   win = await findCodeShellWindow(app);
   const rendererErrors = captureRendererErrors(win);
@@ -158,12 +195,49 @@ try {
     "Link page did not render one independent server section",
   );
   assert(
-    (await win.locator('article[data-link-runtime="local"]').count()) === 10,
-    "Link page did not render all ten local provider methods",
+    (await win
+      .locator('[data-link-runtime-section="local"] article[data-link-runtime="local"]')
+      .count()) === 9,
+    "Link page did not render the nine other local providers outside Figma",
   );
   assert(
-    (await win.locator('article[data-link-runtime="server"]').count()) === 10,
-    "Link page did not render all ten server provider methods",
+    (await win
+      .locator('[data-link-runtime-section="server"] article[data-link-runtime="server"]')
+      .count()) === 9,
+    "Link page did not render the nine other server providers outside Figma",
+  );
+  const figma = win.locator('section[data-link-integration="figma"]');
+  assert((await figma.count()) === 1, "Figma did not render one unified connection card");
+  assert(
+    (await figma.locator('[data-figma-channel="api"]').count()) === 1,
+    "Figma API channel is missing",
+  );
+  const mcp = figma.locator('[data-figma-channel="mcp"]');
+  assert((await mcp.count()) === 1, "Figma official MCP channel is missing");
+  const officialMcpName = /连接官方 MCP|Connect official MCP/i;
+  assert(
+    (await mcp.getByRole("button", { name: officialMcpName }).count()) === 1,
+    "Official MCP connect is missing from the Figma card",
+  );
+  assert(
+    (await win.getByRole("button", { name: officialMcpName }).count()) === 1,
+    "Official Figma MCP connect leaked outside the unified card",
+  );
+  assert(
+    (await mcp.locator("[data-figma-mcp-connection]").count()) === 0,
+    "An isolated unauthenticated HOME acquired a Figma MCP connection",
+  );
+  const snapshot = await win.evaluate(
+    (cwd) => window.codeshell.links.remoteSnapshot(cwd),
+    projectPath,
+  );
+  assert(
+    !snapshot.connections.some((connection) => connection.providerId === "figma"),
+    "Viewing Figma settings created a connection without consent",
+  );
+  assert(
+    (await networkAttempts()).length === 0,
+    `Unauthenticated Link settings attempted authorization or content retrieval: ${JSON.stringify(await networkAttempts())}`,
   );
   await assertNoHorizontalOverflow("desktop Link page");
   await screenshot("link-desktop.png");
@@ -214,6 +288,10 @@ try {
     await screenshot(screenshotName);
   }
 
+  assert(
+    (await networkAttempts()).length === 0,
+    "Link settings attempted network access without explicit authorization",
+  );
   assert(rendererErrors.length === 0, `renderer emitted ${rendererErrors.length} page error(s)`);
   console.log("CodeShell Electron Link E2E: passed");
 } catch (error) {

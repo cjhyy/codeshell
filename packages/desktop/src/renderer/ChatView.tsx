@@ -85,6 +85,7 @@ import type { MarkdownRootStatus } from "./Markdown";
 import { ChatLinkResources, type ChatLinkReadHandler } from "./chat/ChatLinkResources";
 import {
   chatLinkReadOutcome,
+  chatLinkRequiredMcpRequest,
   composerLinkResources,
   type ChatLinkResourceIntent,
 } from "./chat/linkResourceIntents";
@@ -485,13 +486,29 @@ export function ChatView({
   const [localFilePaths, setLocalFilePaths] = useState<string[]>([]);
   const toast = useToast();
   const [linkIntents, setLinkIntents] = useState<ChatLinkResourceIntent[]>([]);
+  const linkProvenance = useRef<ChatLinkResourceIntent[]>([]);
+  const resolvedMcpRequests = useRef(new Set<string>());
+  const mcpRequestKey = (intent: ChatLinkResourceIntent) =>
+    `${intent.bucket}:${intent.cwd}:${intent.clientMessageId}:${intent.resourceId}:${intent.mcpRequest?.toolCallId}`;
   const sameLinkIntent = (left: ChatLinkResourceIntent, right: ChatLinkResourceIntent) =>
     left.bucket === right.bucket &&
     left.cwd === right.cwd &&
     left.clientMessageId === right.clientMessageId &&
-    left.resourceId === right.resourceId;
-  const consumeLinkIntent = (consumed: ChatLinkResourceIntent) =>
+    left.resourceId === right.resourceId &&
+    left.backend === right.backend &&
+    left.mcpRequest?.toolCallId === right.mcpRequest?.toolCallId;
+  const consumeLinkIntent = (consumed: ChatLinkResourceIntent, reason?: "dismissed") => {
+    if (consumed.mcpRequest) resolvedMcpRequests.current.add(mcpRequestKey(consumed));
+    if (reason === "dismissed")
+      linkProvenance.current = linkProvenance.current.filter(
+        (intent) =>
+          intent.bucket !== consumed.bucket ||
+          intent.cwd !== consumed.cwd ||
+          intent.clientMessageId !== consumed.clientMessageId ||
+          intent.resourceId !== consumed.resourceId,
+      );
     setLinkIntents((previous) => previous.filter((intent) => !sameLinkIntent(intent, consumed)));
+  };
   const setLinkResumeConnection = (
     target: ChatLinkResourceIntent,
     resumeConnection: ChatLinkResourceIntent["resumeConnection"],
@@ -512,6 +529,20 @@ export function ChatView({
     const targetBucket = prepared.bucket;
     const cwd = prepared.cwd;
     const clientMessageId = crypto.randomUUID();
+    const submitted = resources.map((resource) => ({
+      ...resource,
+      clientMessageId,
+      bucket: targetBucket,
+      cwd,
+    }));
+    linkProvenance.current = [
+      ...linkProvenance.current.filter(
+        (intent) =>
+          intent.bucket !== targetBucket ||
+          !resources.some((resource) => resource.resourceId === intent.resourceId),
+      ),
+      ...submitted,
+    ].slice(-20);
     setLinkIntents((previous) =>
       [
         ...previous.filter(
@@ -519,12 +550,7 @@ export function ChatView({
             intent.bucket !== targetBucket ||
             !resources.some((resource) => resource.resourceId === intent.resourceId),
         ),
-        ...resources.map((resource) => ({
-          ...resource,
-          clientMessageId,
-          bucket: targetBucket,
-          cwd,
-        })),
+        ...submitted,
       ].slice(-20),
     );
     return { clientMessageId, bucket: targetBucket };
@@ -1469,9 +1495,38 @@ export function ChatView({
         .filter(([, outcome]) => outcome === "succeeded")
         .map(([intent]) => intent),
     );
-    if (consumed.size)
-      setLinkIntents((previous) => previous.filter((intent) => !consumed.has(intent)));
-  }, [linkReadOutcomes]);
+    setLinkIntents((previous) => {
+      let changed = false;
+      const next = previous.flatMap((intent) => {
+        if (consumed.has(intent)) {
+          if (intent.mcpRequest) resolvedMcpRequests.current.add(mcpRequestKey(intent));
+          changed = true;
+          return [];
+        }
+        return [intent];
+      });
+      for (const source of linkProvenance.current) {
+        if (source.bucket !== sendBucket || source.cwd !== conversationRoot) continue;
+        const request = chatLinkRequiredMcpRequest(source, messages);
+        if (!request) continue;
+        const candidate = { ...source, backend: "mcp" as const, mcpRequest: request };
+        if (resolvedMcpRequests.current.has(mcpRequestKey(candidate))) continue;
+        const existing = next.findIndex(
+          (intent) =>
+            intent.bucket === source.bucket &&
+            intent.cwd === source.cwd &&
+            intent.clientMessageId === source.clientMessageId &&
+            intent.resourceId === source.resourceId,
+        );
+        if (existing !== -1 && next[existing].mcpRequest?.toolCallId === request.toolCallId)
+          continue;
+        if (existing !== -1) next.splice(existing, 1, candidate);
+        else next.push(candidate);
+        changed = true;
+      }
+      return changed ? next : previous;
+    });
+  }, [linkReadOutcomes, sendBucket, conversationRoot, messages]);
   const visibleLinkIntents = linkIntents.filter(
     (intent) =>
       intent.bucket === sendBucket &&

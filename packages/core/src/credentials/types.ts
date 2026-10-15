@@ -145,9 +145,9 @@ export interface Credential {
     /** Where the selected Link executes; runtime must not silently select another account. */
     linkExecutionRuntime?: "local" | "server";
     /** How a local Link credential was obtained without exposing its secret to the renderer. */
-    linkAuthSource?: "manual-token" | "github-cli" | "cli-session" | "browser-oauth";
+    linkAuthSource?: "manual-token" | "github-cli" | "cli-session" | "browser-oauth" | "mcp-oauth";
     /** Fixed execution adapter. CLI bindings never resolve or copy a provider token. */
-    linkExecutionBackend?: "http-token" | "cli" | "remote";
+    linkExecutionBackend?: "http-token" | "cli" | "remote" | "mcp";
     /** Remote Link authority; downstream tokens remain in the Host credential store. */
     linkRemoteIssuer?: string;
     linkRemoteConnectionId?: string;

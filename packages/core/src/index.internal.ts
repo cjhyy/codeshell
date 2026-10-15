@@ -13,6 +13,11 @@ export {
 
 export { outputUserMessage } from "./engine/run-output-user-message.js";
 export { createRunTiming } from "./session/stream-timing.js";
+export {
+  assertMcpOAuthCredentialBinding,
+  assertMcpResourceTarget,
+  normalizeMcpServerUrl,
+} from "./credentials/mcp-binding.js";
 
 // ─── Utils (shared primitives used by TUI) ───────────────────────
 
@@ -476,6 +481,13 @@ export {
 export { readOperationSessionOwner } from "./operations/session-owner.js";
 export { createSessionOperationServices } from "./operations/session-services.js";
 export { allowsLinkAction, linkAuthoritySnapshot } from "./links/authority.js";
+export {
+  executeFigmaMcpLinkAction,
+  isFigmaMcpCredential,
+  McpLinkActionError,
+  type McpLinkActionRequest,
+  type McpLinkActionOptions,
+} from "./links/figma-mcp.js";
 export {
   isOperationBatchAuthorityFrame,
   DESKTOP_OPERATION_BATCH_METHOD,

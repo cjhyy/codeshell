@@ -25,7 +25,7 @@ export interface LinkStatusDependencies {
 export interface LinkConnectionStatus {
   id: string;
   account?: string;
-  backend: "http-token" | "cli" | "oauth" | "remote";
+  backend: "http-token" | "cli" | "oauth" | "remote" | "mcp";
   runtime?: "local" | "server";
   verifiedAt?: string;
   /** Metadata readiness only; this does not revalidate a token or a CLI account binding. */
@@ -88,19 +88,22 @@ export function savedLinkConnectionStatus(credential: CredentialMetadata): LinkC
         ? "Link authorization refresh is pending. Reconnect if the Host restarted during refresh."
         : "Remote Link authorization requires reconnection.";
   } else if (
-    meta?.linkAuthSource === "browser-oauth" &&
-    meta.linkOAuthState &&
-    meta.linkOAuthState !== "connected"
+    ["browser-oauth", "mcp-oauth"].includes(String(meta?.linkAuthSource)) &&
+    meta?.linkOAuthState &&
+    meta?.linkOAuthState !== "connected"
   ) {
     result.state = "unavailable";
     result.reason =
-      meta.linkOAuthState === "refreshing"
+      meta?.linkOAuthState === "refreshing"
         ? "Local OAuth refresh is incomplete. Reconnect if the Host restarted."
         : "Local OAuth authorization requires reconnection.";
   } else if (
     credential.oauthStatus?.state === "expired" &&
     !(meta?.linkExecutionBackend === "remote" && credential.oauthStatus.hasRefreshToken) &&
-    !(meta?.linkAuthSource === "browser-oauth" && credential.oauthStatus.canRefresh)
+    !(
+      ["browser-oauth", "mcp-oauth"].includes(String(meta?.linkAuthSource)) &&
+      credential.oauthStatus.canRefresh
+    )
   ) {
     result.state = "expired";
     result.reason = "Saved authorization has expired. Reconnect this Link.";

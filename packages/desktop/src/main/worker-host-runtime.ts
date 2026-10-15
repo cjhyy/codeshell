@@ -28,6 +28,7 @@ export function createDesktopWorkerHost(handlers: DesktopWorkerHostHandlers) {
     "oauthAccessResolve",
     "remoteLinkAction",
     "localOAuthLinkAction",
+    "mcpLinkAction",
     "modelRequestSign",
   ])
     routes[`desktop/${method}`] = handlers.credentials;

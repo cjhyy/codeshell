@@ -698,6 +698,17 @@ export const extensions = {
         switchModeMerge: "只覆盖同名",
       },
       link: {
+        figma: {
+          description: "在一个连接入口管理 Figma API 和官方 MCP；内容只在任务需要时读取。",
+          apiTitle: "API · 节点、导出与评论",
+          localApi: "其他 API 连接方式",
+          mcpTitle: "官方 MCP · 设计上下文与 Make 源码",
+          mcpDescription:
+            "按需获取设计上下文、Make 源码、Code Connect 和动画信息。授权会保存并自动刷新；连接不会读取设计内容。",
+          connectMcp: "连接官方 MCP",
+          refresh: "刷新授权",
+          unavailable: "此环境暂时无法连接 Figma 官方 MCP。",
+        },
         intro:
           "连接 GitHub、Figma 等第三方服务，让 AI 在清晰的权限边界内读取信息和执行操作。可本地完成的连接不依赖 CodeShell Server。",
         remoteTitle: "独立 Link 服务",
@@ -1846,6 +1857,18 @@ export const extensions = {
         switchModeMerge: "Overwrite same-name",
       },
       link: {
+        figma: {
+          description:
+            "Manage Figma API and official MCP in one place. Content is read only when the task needs it.",
+          apiTitle: "API · Nodes, exports, and comments",
+          localApi: "Other API connection methods",
+          mcpTitle: "Official MCP · Design context and Make source",
+          mcpDescription:
+            "Read design context, Make source, Code Connect, and motion information on demand. Authorization is saved and refreshed automatically; connecting does not read design content.",
+          connectMcp: "Connect official MCP",
+          refresh: "Refresh authorization",
+          unavailable: "The official Figma MCP is unavailable in this environment.",
+        },
         intro:
           "Connect GitHub, Figma, and other services so AI can read information and take actions within clear permission boundaries. Connections that work locally never require CodeShell Server.",
         remoteTitle: "Independent Link service",
