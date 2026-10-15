@@ -196,9 +196,9 @@
     margin-inline: auto;
   }
 
-  /* A pending question shares the actual chat pane with the composer. Bound
+  /* Pending questions and approvals share the actual chat pane with the composer. Bound
      both siblings by that pane's height, including short Quick Chat docks. */
-  [data-pending-question="true"] .cs-chat-sticky {
+  [data-pending-interaction="true"] .cs-chat-sticky {
     min-height: 0;
     max-height: 60%;
     overflow-y: auto;
@@ -206,7 +206,7 @@
     scroll-padding-block: 0.5rem;
   }
 
-  [data-pending-question="true"] .cs-chat-composer-wrap {
+  [data-pending-interaction="true"] .cs-chat-composer-wrap {
     max-height: 40%;
     overflow-y: auto;
     overscroll-behavior-y: contain;
