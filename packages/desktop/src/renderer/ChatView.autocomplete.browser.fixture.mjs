@@ -502,6 +502,7 @@ try {
             failures.push(
               `${JSON.stringify({ lang, viewport, narrowPane, token, phase, inputState })}\n${error.message}`,
             );
+            console.error(failures.at(-1));
           }
           await input.press("Escape");
           if (recordOnly) await menu.waitFor({ state: "hidden" });
