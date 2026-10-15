@@ -2,16 +2,19 @@ import { afterEach, describe, expect, test } from "bun:test";
 import { mkdtempSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { createServer } from "node:http";
 import {
   CredentialStore,
   PlaintextCipher,
   getCredentialAccess,
   setDefaultCredentialAccess,
   linkActionTool,
+  type RemoteLinkConfiguration,
 } from "@cjhyy/code-shell-core";
 import { LinkDeviceOAuthBroker } from "./device-oauth.js";
 import { createLinkService, type LinkService, type LinkServiceOptions } from "./service.js";
 import type { LinkOperationContext } from "./types.js";
+import { RemoteLinkCatalogError } from "./remote-catalog.js";
 
 const directories: string[] = [];
 const services: LinkService[] = [];
@@ -106,6 +109,293 @@ async function settled(service: LinkService, id: string, context = owner) {
   }
   throw new Error("fixture authorization did not settle");
 }
+
+const catalogConfiguration: RemoteLinkConfiguration = {
+  issuer: "https://catalog.example",
+  clientId: "synthetic-catalog-client",
+  redirectUri: "http://127.0.0.1:9876/callback",
+};
+function remoteMode(service: LinkService, provider = "figma") {
+  return service
+    .snapshot()
+    .providers.find((item) => item.id === provider)
+    ?.authModes?.find((mode) => mode.id === "remote-link");
+}
+function saveRemoteFigma(store: CredentialStore, issuer = catalogConfiguration.issuer) {
+  store.save("user", {
+    id: "saved-remote-figma",
+    type: "oauth",
+    label: "Saved Figma account",
+    secret: JSON.stringify({
+      version: 1,
+      accessToken: "synthetic-private-access",
+      refreshToken: "synthetic-private-refresh",
+      tokenType: "Bearer",
+      issuer,
+      clientId: "synthetic-catalog-client",
+      expiresAt: "2099-01-01T00:00:00Z",
+    }),
+    meta: {
+      linkProvider: "figma",
+      linkConnectionMethod: "remote-link",
+      linkExecutionRuntime: "server",
+      linkExecutionBackend: "remote",
+      linkRemoteState: "connected",
+      linkRemoteIssuer: issuer,
+      linkRemoteConnectionId: "selected-connection",
+      linkRemoteGrantId: "selected-grant",
+      linkAccountId: "selected-account",
+      linkAccountLabel: "Saved designer",
+      linkResourceGroups: [{ id: "files", items: [{ id: "ExactFile", label: "Selected design" }] }],
+      linkCapabilityIds: ["figma.get_file"],
+      agentExposable: false,
+    },
+  });
+}
+
+describe("Link catalog health and saved account management", () => {
+  test("unconfigured and undiscovered catalogs differ from a verified empty catalog", async () => {
+    let configuration: RemoteLinkConfiguration | undefined;
+    const clock = Date.parse("2026-10-15T00:00:00Z");
+    let requests = 0;
+    const { service } = fixture({
+      now: () => clock,
+      remoteLink: () => configuration,
+      readRemoteCatalog: async () => {
+        requests++;
+        return [];
+      },
+    });
+    expect(service.snapshot().remoteCatalog).toEqual({ state: "unconfigured" });
+    await service.refreshRemoteCatalog(owner);
+    expect(requests).toBe(0);
+    configuration = catalogConfiguration;
+    expect(service.snapshot().remoteCatalog).toEqual({ state: "unknown" });
+    expect(service.snapshot().capabilities.remoteAuth).toBe(false);
+    await service.refreshRemoteCatalog(owner);
+    expect(service.snapshot().remoteCatalog).toMatchObject({
+      state: "ready",
+      checkedAt: new Date(clock).toISOString(),
+      lastSuccessAt: new Date(clock).toISOString(),
+    });
+    expect(service.snapshot().remoteCatalog?.errorCode).toBeUndefined();
+    expect(service.snapshot().capabilities.remoteAuth).toBe(false);
+    expect(requests).toBe(1);
+  });
+
+  test("cold discovery failure keeps saved accounts editable and retries after fifteen seconds", async () => {
+    let clock = Date.parse("2026-10-15T00:00:00Z");
+    let requests = 0;
+    const { service, store } = fixture({
+      now: () => clock,
+      remoteLink: () => catalogConfiguration,
+      readRemoteCatalog: async () => {
+        requests++;
+        throw new RemoteLinkCatalogError("http_status", 503);
+      },
+    });
+    saveRemoteFigma(store);
+    const secret = store.resolve("saved-remote-figma")!.secret;
+    await service.refreshRemoteCatalog(owner);
+    expect(service.snapshot().remoteCatalog).toMatchObject({
+      state: "unavailable",
+      checkedAt: new Date(clock).toISOString(),
+      errorCode: "http_error",
+      httpStatus: 503,
+    });
+    expect(service.snapshot().remoteCatalog?.lastSuccessAt).toBeUndefined();
+    expect(service.snapshot().capabilities.remoteAuth).toBe(false);
+    expect(remoteMode(service)).toMatchObject({ available: false, methodId: "remote-link" });
+    const connection = service
+      .snapshot()
+      .connections.find((item) => item.id === "saved-remote-figma")!;
+    expect(connection).toMatchObject({
+      status: "connected",
+      editable: true,
+      account: { id: "selected-account" },
+    });
+    expect(
+      await service.rename(owner, connection.id, "Renamed while offline", connection.revision),
+    ).toMatchObject({ label: "Renamed while offline", status: "connected" });
+    expect(store.resolve(connection.id)?.secret).toBe(secret);
+    expect(JSON.stringify(service.snapshot())).not.toContain("synthetic-private");
+    await service.refreshRemoteCatalog(owner);
+    clock += 14_999;
+    await service.refreshRemoteCatalog(owner);
+    expect(requests).toBe(1);
+    clock += 1;
+    await service.refreshRemoteCatalog(owner);
+    expect(requests).toBe(2);
+  });
+
+  test("last good catalog becomes stale without new authorization and recovers independently", async () => {
+    let clock = Date.parse("2026-10-15T00:00:00Z");
+    const firstSuccess = new Date(clock).toISOString();
+    let requests = 0,
+      fail = false,
+      empty = false;
+    const { service } = fixture({
+      now: () => clock,
+      remoteLink: () => catalogConfiguration,
+      readRemoteCatalog: async () => {
+        requests++;
+        if (fail) throw new RemoteLinkCatalogError("invalid_json");
+        return empty ? [] : ["figma"];
+      },
+    });
+    await service.refreshRemoteCatalog(owner);
+    expect(service.snapshot().remoteCatalog?.state).toBe("ready");
+    expect(remoteMode(service)?.available).toBe(true);
+    expect(service.snapshot().capabilities.remoteAuth).toBe(true);
+    fail = true;
+    clock += 59_999;
+    await service.refreshRemoteCatalog(owner);
+    expect(requests).toBe(1);
+    clock += 1;
+    await service.refreshRemoteCatalog(owner);
+    expect(service.snapshot().remoteCatalog).toMatchObject({
+      state: "stale",
+      checkedAt: new Date(clock).toISOString(),
+      lastSuccessAt: firstSuccess,
+      errorCode: "invalid_response",
+    });
+    expect(remoteMode(service)).toMatchObject({ available: false, methodId: "remote-link" });
+    expect(service.snapshot().capabilities.remoteAuth).toBe(false);
+    await expect(
+      service.startAuthorization(
+        owner,
+        {
+          providerId: "figma",
+          methodId: "remote-link",
+          label: "New Figma",
+          expectedRevision: null,
+        },
+        "remote-link",
+      ),
+    ).rejects.toThrow();
+    expect(requests).toBe(3);
+    fail = false;
+    clock += 15_000;
+    await service.refreshRemoteCatalog(owner);
+    expect(service.snapshot().remoteCatalog).toMatchObject({
+      state: "ready",
+      checkedAt: new Date(clock).toISOString(),
+      lastSuccessAt: new Date(clock).toISOString(),
+    });
+    expect(service.snapshot().remoteCatalog?.errorCode).toBeUndefined();
+    expect(service.snapshot().remoteCatalog?.httpStatus).toBeUndefined();
+    expect(remoteMode(service)?.available).toBe(true);
+    expect(service.snapshot().capabilities.remoteAuth).toBe(true);
+    empty = true;
+    clock += 60_000;
+    await service.refreshRemoteCatalog(owner);
+    expect(service.snapshot().remoteCatalog?.state).toBe("ready");
+    expect(remoteMode(service)?.available ?? false).toBe(false);
+    expect(service.snapshot().capabilities.remoteAuth).toBe(false);
+  });
+
+  test("explicit authorization refreshes a cached ready catalog before using its capabilities", async () => {
+    let requests = 0;
+    const { service } = fixture({
+      remoteLink: () => catalogConfiguration,
+      readRemoteCatalog: async () => {
+        requests++;
+        if (requests > 1) throw new RemoteLinkCatalogError("network");
+        return ["figma"];
+      },
+    });
+    await service.refreshRemoteCatalog(owner);
+    expect(remoteMode(service)?.available).toBe(true);
+    await expect(
+      service.startAuthorization(
+        owner,
+        {
+          providerId: "figma",
+          methodId: "remote-link",
+          label: "New Figma",
+          expectedRevision: null,
+        },
+        "remote-link",
+      ),
+    ).rejects.toThrow();
+    expect(requests).toBe(2);
+    expect(service.snapshot().remoteCatalog?.state).toBe("stale");
+    expect(service.snapshot().capabilities.remoteAuth).toBe(false);
+  });
+
+  test("a different issuer cannot borrow the previous catalog or success timestamp", async () => {
+    let clock = Date.parse("2026-10-15T00:00:00Z");
+    let configuration = catalogConfiguration;
+    let fail = false;
+    const requests: string[] = [];
+    const { service } = fixture({
+      now: () => clock,
+      remoteLink: () => configuration,
+      readRemoteCatalog: async (config) => {
+        requests.push(config.issuer);
+        if (fail) throw new RemoteLinkCatalogError("network");
+        return config.issuer === catalogConfiguration.issuer ? ["figma"] : ["github"];
+      },
+    });
+    await service.refreshRemoteCatalog(owner);
+    configuration = { ...catalogConfiguration, issuer: "https://other-catalog.example" };
+    fail = true;
+    expect(service.snapshot().remoteCatalog).toEqual({ state: "unknown" });
+    expect(remoteMode(service)?.available ?? false).toBe(false);
+    await service.refreshRemoteCatalog(owner);
+    expect(service.snapshot().remoteCatalog).toMatchObject({
+      state: "unavailable",
+      errorCode: "network_error",
+    });
+    expect(service.snapshot().remoteCatalog?.lastSuccessAt).toBeUndefined();
+    expect(remoteMode(service)?.available ?? false).toBe(false);
+    fail = false;
+    clock += 15_000;
+    await service.refreshRemoteCatalog(owner);
+    expect(service.snapshot().remoteCatalog?.state).toBe("ready");
+    expect(remoteMode(service, "github")?.available).toBe(true);
+    expect(remoteMode(service)?.available ?? false).toBe(false);
+    expect(requests).toEqual([
+      catalogConfiguration.issuer,
+      configuration.issuer,
+      configuration.issuer,
+    ]);
+  });
+
+  test("an unconfigured catalog retains saved account management and local revocation", async () => {
+    const requests: string[] = [];
+    const server = createServer((request, response) => {
+      requests.push(`${request.method} ${request.url}`);
+      response.setHeader("Content-Type", "application/json");
+      response.end("{}");
+    });
+    await new Promise<void>((resolve) => server.listen(0, "127.0.0.1", resolve));
+    try {
+      const address = server.address();
+      if (!address || typeof address === "string")
+        throw new Error("missing loopback fixture address");
+      const { service, store } = fixture();
+      saveRemoteFigma(store, `http://127.0.0.1:${address.port}`);
+      expect(service.snapshot().remoteCatalog?.state).toBe("unconfigured");
+      expect(remoteMode(service)).toMatchObject({ available: false });
+      const connection = service
+        .snapshot()
+        .connections.find((item) => item.id === "saved-remote-figma")!;
+      const renamed = await service.rename(
+        owner,
+        connection.id,
+        "Offline managed account",
+        connection.revision,
+      );
+      await service.disconnect(owner, renamed.id, renamed.revision);
+      expect(store.resolve(connection.id)).toBeUndefined();
+      expect(requests).toEqual(["POST /oauth/revoke"]);
+    } finally {
+      server.closeAllConnections();
+      await new Promise<void>((resolve) => server.close(() => resolve()));
+    }
+  });
+});
 
 describe("shared Link management", () => {
   test("masked remote resource references expose exact selected IDs without private metadata", () => {
