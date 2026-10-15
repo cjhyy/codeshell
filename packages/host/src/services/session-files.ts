@@ -7,6 +7,7 @@ export class SessionFileError extends Error {
   constructor(
     readonly code: "invalid_path" | "forbidden" | "too_large" | "changed",
     message: string,
+    readonly subject?: "directory" | "file",
   ) {
     super(message);
   }
@@ -44,9 +45,13 @@ function ordinary(info: fs.Stats, limit: number): fs.Stats {
     throw new SessionFileError("too_large", "Session record exceeds the read limit");
   return info;
 }
-function same(before: fs.Stats, after: fs.Stats): void {
+function same(
+  before: fs.Stats,
+  after: fs.Stats,
+  subject: "directory" | "file" = "directory",
+): void {
   if (after.isSymbolicLink() || before.dev !== after.dev || before.ino !== after.ino)
-    throw new SessionFileError("changed", "Session storage changed during read");
+    throw new SessionFileError("changed", "Session storage changed during read", subject);
 }
 const directoryFlags =
   fs.constants.O_RDONLY | (fs.constants.O_NOFOLLOW ?? 0) | (fs.constants.O_DIRECTORY ?? 0);
@@ -73,7 +78,7 @@ function withFileSync<T>(
     const info = ordinary(fs.fstatSync(file), limit);
     const value = read(file, info);
     same(before, fs.lstatSync(path.directory));
-    same(info, fs.lstatSync(path.file));
+    same(info, fs.lstatSync(path.file), "file");
     return value;
   } finally {
     try {
@@ -100,6 +105,67 @@ export function readSessionFileSync(
     }
     return data.subarray(0, offset).toString("utf8");
   });
+}
+
+/** Lists tolerate at most two ordinary-file atomic replacements, never directory changes. */
+export function readSessionListStateSync(root: string, id: string, maximumBytes: number): string {
+  const path = paths(root, id, "state.json");
+  const anchor = directory(fs.lstatSync(path.directory));
+  const fd = fs.openSync(path.directory, directoryFlags);
+  try {
+    same(anchor, fs.fstatSync(fd));
+    for (let attempt = 0; ; attempt++) {
+      try {
+        const value = readSessionFileSync(root, id, "state.json", maximumBytes);
+        same(anchor, fs.lstatSync(path.directory));
+        return value;
+      } catch (error) {
+        if (
+          !(error instanceof SessionFileError) ||
+          error.code !== "changed" ||
+          error.subject !== "file"
+        )
+          throw error;
+        same(anchor, fs.lstatSync(path.directory));
+        ordinary(fs.lstatSync(path.file), maximumBytes);
+        if (attempt >= 2) throw error;
+      }
+    }
+  } finally {
+    fs.closeSync(fd);
+  }
+}
+
+export async function readSessionListState(
+  root: string,
+  id: string,
+  maximumBytes: number,
+): Promise<string> {
+  const path = paths(root, id, "state.json");
+  const anchor = directory(await fsp.lstat(path.directory));
+  const handle = await fsp.open(path.directory, directoryFlags);
+  try {
+    same(anchor, await handle.stat());
+    for (let attempt = 0; ; attempt++) {
+      try {
+        const value = await readSessionFile(root, id, "state.json", maximumBytes);
+        same(anchor, await fsp.lstat(path.directory));
+        return value;
+      } catch (error) {
+        if (
+          !(error instanceof SessionFileError) ||
+          error.code !== "changed" ||
+          error.subject !== "file"
+        )
+          throw error;
+        same(anchor, await fsp.lstat(path.directory));
+        ordinary(await fsp.lstat(path.file), maximumBytes);
+        if (attempt >= 2) throw error;
+      }
+    }
+  } finally {
+    await handle.close();
+  }
 }
 
 export function statSessionFileSync(
@@ -137,7 +203,7 @@ export async function readSessionFile(
       offset += bytesRead;
     }
     same(before, await fsp.lstat(path.directory));
-    same(info, await fsp.lstat(path.file));
+    same(info, await fsp.lstat(path.file), "file");
     return data.subarray(0, offset).toString("utf8");
   } finally {
     try {
@@ -203,12 +269,18 @@ export function sessionListStorage(root: string) {
       scanSessionDirectoriesSync(root).flatMap(({ id }) => {
         if (id.startsWith(".pending-") || id.startsWith("qchat-")) return [];
         try {
-          const state = statSessionFileSync(root, id, "state.json", 1024 * 1024);
+          const state = ordinary(fs.lstatSync(join(root, id, "state.json")), 1024 * 1024);
           let transcript: fs.Stats | undefined;
           try {
-            transcript = statSessionFileSync(root, id, "transcript.jsonl");
+            transcript = ordinary(
+              fs.lstatSync(join(root, id, "transcript.jsonl")),
+              Number.MAX_SAFE_INTEGER,
+            );
           } catch (error) {
-            if ((error as NodeJS.ErrnoException).code !== "ENOENT") throw error;
+            if (
+              !["ENOENT", "EACCES", "EPERM"].includes((error as NodeJS.ErrnoException).code ?? "")
+            )
+              throw error;
           }
           return [
             {
@@ -222,6 +294,6 @@ export function sessionListStorage(root: string) {
         }
       }),
     readState: (id: string, maximumBytes: number) =>
-      readSessionFileSync(root, id, "state.json", maximumBytes),
+      readSessionListStateSync(root, id, maximumBytes),
   };
 }

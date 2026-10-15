@@ -4,6 +4,8 @@ export {
   assertSessionFileId,
   readSessionFile,
   readSessionFileSync,
+  readSessionListState,
+  readSessionListStateSync,
   statSessionFileSync,
   scanSessionDirectories,
   scanSessionDirectoriesSync,

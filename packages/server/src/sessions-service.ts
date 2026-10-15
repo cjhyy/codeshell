@@ -4,7 +4,11 @@
  */
 
 import { SessionManager, sessionsRoot, type TurnCompletionKind } from "@cjhyy/code-shell-core";
-import { scanSessionDirectories, readSessionFile } from "@cjhyy/code-shell-host";
+import {
+  scanSessionDirectories,
+  readSessionListState,
+  SessionFileError,
+} from "@cjhyy/code-shell-host/session-files";
 import * as fs from "node:fs/promises";
 import * as fsSync from "node:fs";
 import * as path from "node:path";
@@ -320,9 +324,15 @@ export async function listDiskSessions(
     const { id, mtime } = dirs[i]!;
     let state: Record<string, unknown>;
     try {
-      state = JSON.parse(await readSessionFile(baseDir, id, "state.json", MAX_HISTORY_STATE_BYTES));
+      state = JSON.parse(await readSessionListState(baseDir, id, MAX_HISTORY_STATE_BYTES));
       if (!state || typeof state !== "object" || Array.isArray(state)) continue;
-    } catch {
+    } catch (error) {
+      if (error instanceof SessionFileError && error.code === "too_large") {
+        process.emitWarning(
+          `Session ${id}: state.json exceeds the 2 MiB catalog metadata limit; entry omitted.`,
+          { code: "SESSION_LIST_STATE_TOO_LARGE" },
+        );
+      }
       continue;
     }
     if (state.ephemeral === true) continue;

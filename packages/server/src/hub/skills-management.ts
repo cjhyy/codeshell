@@ -2,7 +2,7 @@ import type { IncomingMessage, ServerResponse } from "node:http";
 import { randomBytes, createHash } from "node:crypto";
 import { promises as fs } from "node:fs";
 import { basename, dirname, join } from "node:path";
-import { invalidateSkillCache, userHome } from "@cjhyy/code-shell-core";
+import { scanSkills, invalidateSkillCache, userHome } from "@cjhyy/code-shell-core";
 import { readSkillInventory } from "@cjhyy/code-shell-host";
 import {
   assertSafeSkillName,
@@ -120,9 +120,7 @@ export function createHubSkills(options: HubSkillsOptions) {
     if (typeof name !== "string" || !name || name.length > 256)
       throw new HubConfigurationError(400, "Skill 名称无效。");
     invalidateSkillCache();
-    const skill = readSkillInventory(options.cwd)
-      .skills.map((entry) => entry.definition)
-      .find((entry) => entry.name === name);
+    const skill = scanSkills(options.cwd).find((entry) => entry.name === name);
     if (!skill) throw new HubConfigurationError(404, "找不到这个 Skill，请刷新后重试。");
     return skill;
   }
@@ -139,8 +137,7 @@ export function createHubSkills(options: HubSkillsOptions) {
   }
 
   function snapshot(): { skills: HubManagedSkill[]; directories: string[] } {
-    invalidateSkillCache();
-    const inventory = readSkillInventory(options.cwd);
+    const inventory = readSkillInventory(options.cwd, { refresh: true });
     const disabled = inventory;
     const skills = inventory.skills.map(({ definition: skill, enabled }): HubManagedSkill => {
       let editable = false;
@@ -299,11 +296,7 @@ export function createHubSkills(options: HubSkillsOptions) {
           try {
             await fs.writeFile(join(stage, "SKILL.md"), content, { mode: 0o600 });
             await mutation(req, async () => {
-              if (
-                readSkillInventory(options.cwd)
-                  .skills.map((entry) => entry.definition)
-                  .some((entry) => entry.name === name)
-              )
+              if (scanSkills(options.cwd).some((entry) => entry.name === name))
                 throw new HubConfigurationError(409, "已有同名 Skill，请修改名称。");
               const root = skillRoot("project", options.cwd, true);
               const localStage = await stageSkillDirectory(stage, root);
@@ -343,9 +336,7 @@ export function createHubSkills(options: HubSkillsOptions) {
         const inspection = await network(() =>
           github.inspect(
             string(body.url, 8192),
-            readSkillInventory(options.cwd)
-              .skills.map((entry) => entry.definition)
-              .map((skill) => skill.name),
+            scanSkills(options.cwd).map((skill) => skill.name),
           ),
         );
         if (!inspection.commit) throw new Error("source preview is not pinned to a commit");
@@ -395,11 +386,7 @@ export function createHubSkills(options: HubSkillsOptions) {
           });
           await mutation(req, async () => {
             await reviewFor(body.reviewToken, owner, "install");
-            if (
-              readSkillInventory(options.cwd)
-                .skills.map((entry) => entry.definition)
-                .some((skill) => skill.name === name)
-            )
+            if (scanSkills(options.cwd).some((skill) => skill.name === name))
               throw new HubConfigurationError(409, "已有同名 Skill，请选择其他名称。");
             const root = skillRoot("project", options.cwd, true);
             const localStage = await stageSkillDirectory(stage, root);

@@ -1,6 +1,7 @@
 import { describe, expect, it } from "bun:test";
 import { readFileSync, readdirSync } from "node:fs";
-import { builtinModules } from "node:module";
+import { builtinModules, createRequire } from "node:module";
+import { pathToFileURL } from "node:url";
 import { dirname, join, relative, resolve, sep } from "node:path";
 
 import {
@@ -135,7 +136,7 @@ describe("workspace package boundaries", () => {
   it("keeps Host runtime and declaration imports independent of other hosts and capabilities", async () => {
     const manifest = await loadManifest(join(repoRoot, "packages", "host", "package.json"));
     expect(dependencyNames(manifest)).toEqual(["@cjhyy/code-shell-core"]);
-    expect(Object.keys(manifest.exports ?? {})).toEqual(["."]);
+    expect(Object.keys(manifest.exports ?? {})).toEqual([".", "./session-files"]);
 
     const hostSourceRoot = join(repoRoot, "packages", "host", "src");
     const builtins = new Set(builtinModules.flatMap((name) => [name, `node:${name}`]));
@@ -179,10 +180,44 @@ describe("workspace package boundaries", () => {
         typeImport: true,
         typesTarget: "./dist/index.d.ts",
       },
+      {
+        importTarget: "./dist/index.session-files.js",
+        runtimeImport: true,
+        specifier: `${name}/session-files`,
+        subpath: "./session-files",
+        typeImport: true,
+        typesTarget: "./dist/index.session-files.d.ts",
+      },
     ]);
     const order = PUBLIC_RELEASE_PACKAGES.map((definition) => definition.name);
     expect(order.indexOf(name)).toBeGreaterThan(order.indexOf("@cjhyy/code-shell-core"));
     expect(order.indexOf(name)).toBeLessThan(order.indexOf("@cjhyy/code-shell-server"));
+  });
+
+  it("keeps the storage Host entry narrow in source aliases and the production server bundle", async () => {
+    const config = JSON.parse(readFileSync(join(repoRoot, "tsconfig.json"), "utf8"));
+    expect(config.compilerOptions.paths["@cjhyy/code-shell-host/session-files"]).toEqual([
+      "packages/host/src/index.session-files.ts",
+    ]);
+    // Use Desktop's declared bundler dependency, as its production build does.
+    const desktopRequire = createRequire(join(repoRoot, "packages/desktop/package.json"));
+    const { build } = await import(pathToFileURL(desktopRequire.resolve("esbuild")).href);
+    const result = await build({
+      entryPoints: [join(repoRoot, "packages/server/src/index.storage.ts")],
+      bundle: true,
+      write: false,
+      platform: "node",
+      format: "esm",
+      metafile: true,
+      external: ["@cjhyy/code-shell-core", "@cjhyy/code-shell-core/*"],
+    });
+    const hostInputs = Object.keys(result.metafile!.inputs).filter((file) =>
+      file.includes("packages/host/"),
+    );
+    expect(hostInputs.sort()).toEqual([
+      "packages/host/dist/index.session-files.js",
+      "packages/host/dist/services/session-files.js",
+    ]);
   });
 
   it("cleans package output before every package-local build", async () => {

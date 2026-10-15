@@ -1,5 +1,9 @@
 import type { IncomingMessage, ServerResponse } from "node:http";
-import { SessionFileError, readSessionFileSync, sessionListStorage } from "@cjhyy/code-shell-host";
+import {
+  SessionFileError,
+  readSessionFileSync,
+  sessionListStorage,
+} from "@cjhyy/code-shell-host/session-files";
 import { listSessionEntries } from "@cjhyy/code-shell-core/internal";
 import { join, resolve } from "node:path";
 import { SessionManager, type SessionState } from "@cjhyy/code-shell-core";
