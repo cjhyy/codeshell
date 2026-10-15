@@ -157,6 +157,8 @@ async function mount(config = { width: 390, height: 360, theme: "light" }) {
     reads: 0,
     allowProbe: false,
     probes: [],
+    holdRead: false,
+    pendingReads: [],
   };
   await context.route("**/*", async (route) => {
     const request = route.request(),
@@ -177,6 +179,10 @@ async function mount(config = { width: 390, height: 360, theme: "light" }) {
       return route.fulfill({ contentType: "application/json", body: JSON.stringify(snapshot()) });
     if (url.pathname === "/api/v1/mcp" && method === "GET") {
       host.reads++;
+      if (host.holdRead) {
+        host.pendingReads.push(route);
+        return;
+      }
       return route.fulfill({ contentType: "application/json", body: JSON.stringify(host.mcp) });
     }
     if (
@@ -492,6 +498,55 @@ try {
     reports.push({ kind: "explicit-save-and-test" });
     await context.close();
   }
+  for (const [width, height] of [
+    [320, 240],
+    [1280, 820],
+  ])
+    for (const interruption of ["owned", "blank"]) {
+      const { page, context, host } = await mount({ width, height, theme: "light" });
+      currentPage = page;
+      host.mode = "hold";
+      await remove(page).click();
+      await confirm(page).click();
+      await waitHeld(page, host);
+      host.holdRead = true;
+      host.mcp.servers = host.mcp.servers.filter((server) => server.name !== "owned-mcp-11");
+      await page.evaluate(() => window.refreshConfigurationFixture());
+      await frames(page);
+      await finish(host, 500);
+      const deadline = Date.now() + 5000;
+      while (!host.pendingReads.length) {
+        assert.ok(Date.now() < deadline, "Queued MCP read must arrive");
+        await frames(page);
+      }
+      assert.equal(await confirm(page).isDisabled(), true);
+      if (interruption === "blank") await page.mouse.click(5, height - 5);
+      const token = await page.evaluate(() =>
+        document.activeElement === document.body ? "BODY" : document.activeElement.outerHTML,
+      );
+      const pendingRead = host.pendingReads.shift();
+      await pendingRead.fulfill({
+        contentType: "application/json",
+        body: JSON.stringify(host.mcp),
+      });
+      await page.waitForFunction(() => document.querySelectorAll(".hub-mcp-card").length === 11);
+      await error(page).waitFor();
+      await frames(page);
+      assert.equal(await error(page).textContent(), longError);
+      assert.equal(await page.getByRole("alert").count(), 1);
+      assert.equal(await confirm(page).count(), 0);
+      exactWrite(host, "DELETE");
+      if (interruption === "owned") await visibleFocus(error(page));
+      else
+        assert.equal(
+          await page.evaluate(() =>
+            document.activeElement === document.body ? "BODY" : document.activeElement.outerHTML,
+          ),
+          token,
+        );
+      reports.push({ kind: "queued-refresh-target-removed", width, height, interruption });
+      await context.close();
+    }
   // An auth rejection follows the original auth-lost callback; no local alert is fabricated.
   {
     const { page, context, host } = await mount();

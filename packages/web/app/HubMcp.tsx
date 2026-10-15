@@ -258,6 +258,7 @@ export function HubMcp({
         setBusy(false);
         if (refreshQueued.current) {
           refreshQueued.current = false;
+          setLoading(true);
           setReload((value) => value + 1);
         }
       }
@@ -318,6 +319,14 @@ export function HubMcp({
     }
   };
   const disabled = busy || loading || probing !== null;
+  React.useEffect(() => {
+    if (
+      deleting &&
+      configuration &&
+      !configuration.servers.some((server) => server.name === deleting)
+    )
+      setDeleting(null);
+  }, [configuration, deleting]);
   React.useLayoutEffect(() => {
     if (disabled) return;
     if (editing === null && editorReturnFocus.current) {
@@ -347,15 +356,26 @@ export function HubMcp({
       removeReturnFocus.current = null;
     }
     if (removalFinished) {
+      const targetGone = !configuration?.servers.some(
+        (server) => server.name === removalFinished.name,
+      );
+      // A queued refresh can remove the old card. Let its confirmation cleanup
+      // mount the local receipt before consuming this operation's focus lease.
+      if (!removalFinished.ok && targetGone && deleting === removalFinished.name) return;
       setRemovalFinished(null);
       removalPending.current = false;
-      if (deleting !== removalFinished.name) focus.discard(removalFinished.lease);
+      if (deleting !== removalFinished.name && !(targetGone && deleting === null))
+        focus.discard(removalFinished.lease);
       else if (removalFinished.ok) {
         removeReturnFocus.current = removalFinished.lease;
         setDeleting(null);
-      } else focus.finish(removalFinished.lease, removalErrorRef.current ?? cancelRemoval.current);
+      } else
+        focus.finish(
+          removalFinished.lease,
+          removalErrorRef.current ?? cancelRemoval.current ?? searchInput.current,
+        );
     }
-  }, [deleting, disabled, editing, focus, removalFinished]);
+  }, [configuration, deleting, disabled, editing, focus, removalFinished]);
   const openEditor = (next: NonNullable<typeof editing>, opener: HTMLButtonElement) => {
     editorOpener.current = opener;
     editorOpenerName.current = next.kind === "edit" ? next.name : null;
@@ -420,6 +440,17 @@ export function HubMcp({
       {error && (
         <p className="config-message config-error" role="alert">
           {error}
+        </p>
+      )}
+      {!deleting && removalError && (
+        <p
+          ref={removalErrorRef}
+          className="config-message config-error hub-mcp-operation-error"
+          role="alert"
+          tabIndex={0}
+          aria-label="移除 MCP 服务失败"
+        >
+          {removalError}
         </p>
       )}
       {notice && (
@@ -618,6 +649,7 @@ export function HubMcp({
                         onClick={() => {
                           removeReturnFocus.current = focus.capture(scope.current);
                           setDeleting(null);
+                          setRemovalError("");
                         }}
                       >
                         取消
