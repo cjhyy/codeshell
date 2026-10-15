@@ -334,193 +334,199 @@ export function Workbench({
             <WorkbenchIcon name="sidebar" />
           </button>
         </div>
-        <EnvironmentMenu
-          discover={controller.workspaceApi}
-          navigate={(address) => {
-            const go = () => window.location.assign(address);
-            if (navigationDirty || controller.hasUnsent || controller.uploadBusy)
-              setPendingNavigation(() => go);
-            else go();
-          }}
-        />
-        <nav className="workbench-nav" aria-label="主要功能">
-          {onBackToProjects ? (
-            <button
-              className="nav-button"
-              title={projectName}
-              onClick={() => {
-                if (navigationDirty || controller.hasUnsent || controller.uploadBusy)
-                  setPendingNavigation(() => onBackToProjects);
-                else onBackToProjects();
-              }}
-            >
-              <WorkbenchIcon name="folder" />
-              <span>返回项目列表</span>
-            </button>
-          ) : null}
-          <button className="nav-button new-chat-button" onClick={startNewSession}>
-            <WorkbenchIcon name="plus" />
-            <span>新对话</span>
-          </button>
-          <button
-            className={`nav-button${view === "chat" ? " active" : ""}`}
-            onClick={() => {
-              requestNavigation(() => {
-                setView("chat");
-                closeMobileSidebar();
-              });
+        <div className="rail-content" role="region" aria-label="功能与最近对话" tabIndex={0}>
+          <EnvironmentMenu
+            discover={controller.workspaceApi}
+            navigate={(address) => {
+              const go = () => window.location.assign(address);
+              if (navigationDirty || controller.hasUnsent || controller.uploadBusy)
+                setPendingNavigation(() => go);
+              else go();
             }}
-            aria-current={view === "chat" ? "page" : undefined}
-          >
-            <WorkbenchIcon name="chat" />
-            <span>对话</span>
-          </button>
-          {hub ? (
-            <>
+          />
+          <nav className="workbench-nav" aria-label="主要功能">
+            {onBackToProjects ? (
               <button
-                className={`nav-button${view === "history" ? " active" : ""}`}
-                onClick={() =>
-                  requestNavigation(() => {
-                    setView("history");
-                    closeMobileSidebar();
-                  })
-                }
-                aria-current={view === "history" ? "page" : undefined}
-              >
-                <WorkbenchIcon name="history" />
-                <span>历史对话</span>
-              </button>
-              <button
-                className={`nav-button${view === "files" ? " active" : ""}`}
-                onClick={() => openFiles()}
-                aria-current={view === "files" ? "page" : undefined}
+                className="nav-button"
+                title={projectName}
+                onClick={() => {
+                  if (navigationDirty || controller.hasUnsent || controller.uploadBusy)
+                    setPendingNavigation(() => onBackToProjects);
+                  else onBackToProjects();
+                }}
               >
                 <WorkbenchIcon name="folder" />
-                <span>文件</span>
+                <span>返回项目列表</span>
               </button>
-              <button
-                className={`nav-button${view === "settings" && settingsSection === "skills" ? " active" : ""}`}
-                onClick={() => openSettings("skills")}
-                aria-current={
-                  view === "settings" && settingsSection === "skills" ? "page" : undefined
-                }
-              >
-                <WorkbenchIcon name="skills" />
-                <span>Skills</span>
-              </button>
-              <button
-                className={`nav-button${view === "panels" || view === "panel" ? " active" : ""}`}
-                onClick={() =>
-                  requestNavigation(() => {
-                    setView("panels");
-                    closeMobileSidebar();
-                  })
-                }
-                aria-current={view === "panels" || view === "panel" ? "page" : undefined}
-              >
-                <WorkbenchIcon name="panels" />
-                <span>面板</span>
-              </button>
-              <button
-                className={`nav-button${view === "links" ? " active" : ""}`}
-                onClick={() =>
-                  requestNavigation(() => {
-                    setView("links");
-                    closeMobileSidebar();
-                  })
-                }
-                aria-current={view === "links" ? "page" : undefined}
-              >
-                <WorkbenchIcon name="links" />
-                <span>Link</span>
-              </button>
-              <button
-                className={`nav-button${view === "settings" && settingsSection !== "skills" ? " active" : ""}`}
-                onClick={() => openSettings("overview")}
-                aria-current={
-                  view === "settings" && settingsSection !== "skills" ? "page" : undefined
-                }
-              >
-                <WorkbenchIcon name="settings" />
-                <span>设置</span>
-              </button>
-            </>
-          ) : null}
-        </nav>
-        <div className="rail-section-label">工作区</div>
-        {hub ? (
-          <button
-            className="workspace-button"
-            title={workspaceCwd ?? undefined}
-            onClick={() => openFiles()}
-          >
-            <WorkbenchIcon name="folder" />
-            <span>{projectName ?? workspaceName}</span>
-            <WorkbenchIcon name="chevron" />
-          </button>
-        ) : (
-          <div className="workspace-button" title={workspaceCwd ?? undefined}>
-            <WorkbenchIcon name="folder" />
-            <span>{projectName ?? workspaceName}</span>
+            ) : null}
+            <button className="nav-button new-chat-button" onClick={startNewSession}>
+              <WorkbenchIcon name="plus" />
+              <span>新对话</span>
+            </button>
+            <button
+              className={`nav-button${view === "chat" ? " active" : ""}`}
+              onClick={() => {
+                requestNavigation(() => {
+                  setView("chat");
+                  closeMobileSidebar();
+                });
+              }}
+              aria-current={view === "chat" ? "page" : undefined}
+            >
+              <WorkbenchIcon name="chat" />
+              <span>对话</span>
+            </button>
+            {hub ? (
+              <>
+                <button
+                  className={`nav-button${view === "history" ? " active" : ""}`}
+                  onClick={() =>
+                    requestNavigation(() => {
+                      setView("history");
+                      closeMobileSidebar();
+                    })
+                  }
+                  aria-current={view === "history" ? "page" : undefined}
+                >
+                  <WorkbenchIcon name="history" />
+                  <span>历史对话</span>
+                </button>
+                <button
+                  className={`nav-button${view === "files" ? " active" : ""}`}
+                  onClick={() => openFiles()}
+                  aria-current={view === "files" ? "page" : undefined}
+                >
+                  <WorkbenchIcon name="folder" />
+                  <span>文件</span>
+                </button>
+                <button
+                  className={`nav-button${view === "settings" && settingsSection === "skills" ? " active" : ""}`}
+                  onClick={() => openSettings("skills")}
+                  aria-current={
+                    view === "settings" && settingsSection === "skills" ? "page" : undefined
+                  }
+                >
+                  <WorkbenchIcon name="skills" />
+                  <span>Skills</span>
+                </button>
+                <button
+                  className={`nav-button${view === "panels" || view === "panel" ? " active" : ""}`}
+                  onClick={() =>
+                    requestNavigation(() => {
+                      setView("panels");
+                      closeMobileSidebar();
+                    })
+                  }
+                  aria-current={view === "panels" || view === "panel" ? "page" : undefined}
+                >
+                  <WorkbenchIcon name="panels" />
+                  <span>面板</span>
+                </button>
+                <button
+                  className={`nav-button${view === "links" ? " active" : ""}`}
+                  onClick={() =>
+                    requestNavigation(() => {
+                      setView("links");
+                      closeMobileSidebar();
+                    })
+                  }
+                  aria-current={view === "links" ? "page" : undefined}
+                >
+                  <WorkbenchIcon name="links" />
+                  <span>Link</span>
+                </button>
+                <button
+                  className={`nav-button${view === "settings" && settingsSection !== "skills" ? " active" : ""}`}
+                  onClick={() => openSettings("overview")}
+                  aria-current={
+                    view === "settings" && settingsSection !== "skills" ? "page" : undefined
+                  }
+                >
+                  <WorkbenchIcon name="settings" />
+                  <span>设置</span>
+                </button>
+              </>
+            ) : null}
+          </nav>
+          <div className="rail-section-label">工作区</div>
+          {hub ? (
+            <button
+              className="workspace-button"
+              title={workspaceCwd ?? undefined}
+              onClick={() => openFiles()}
+            >
+              <WorkbenchIcon name="folder" />
+              <span>{projectName ?? workspaceName}</span>
+              <WorkbenchIcon name="chevron" />
+            </button>
+          ) : (
+            <div className="workspace-button" title={workspaceCwd ?? undefined}>
+              <WorkbenchIcon name="folder" />
+              <span>{projectName ?? workspaceName}</span>
+            </div>
+          )}
+          <div className="rail-section-label history-label">
+            <span>最近对话</span>
+            <span>{sessions.length}</span>
           </div>
-        )}
-        <div className="rail-section-label history-label">
-          <span>最近对话</span>
-          <span>{sessions.length}</span>
+          {controller.renderSidebar?.({ guard: requestNavigation, conversation: openConversation })}
+          <ul className="sessions" aria-label="最近对话">
+            {localDrafts.map(({ sessionId, draft: pendingDraft }) => (
+              <li key={`draft-${sessionId}`}>
+                <button
+                  className={
+                    sessionId === activeId && view === "chat" ? "session active" : "session"
+                  }
+                  onClick={() => void openSession(sessionId)}
+                >
+                  <span className="session-title">
+                    {pendingDraft.text.trim() || `附件：${pendingDraft.files[0]?.name ?? "新对话"}`}
+                  </span>
+                  <span className="session-meta">草稿</span>
+                </button>
+              </li>
+            ))}
+            {sessions.map((item) => (
+              <li key={item.sessionId}>
+                <button
+                  className={
+                    item.sessionId === activeId && view === "chat" ? "session active" : "session"
+                  }
+                  onClick={() => void openSession(item.sessionId)}
+                  aria-current={item.sessionId === activeId && view === "chat" ? "page" : undefined}
+                >
+                  <span className="session-title">
+                    {item.sessionId === activeId
+                      ? item.customTitle ||
+                        chat.title ||
+                        item.title ||
+                        sessionTitle(chat, item.sessionId)
+                      : item.title || item.preview?.trim() || item.sessionId.slice(0, 8)}
+                  </span>
+                  <span className="session-meta">
+                    {controller.unreadSessionIds?.has(item.sessionId) &&
+                    item.sessionId !== activeId ? (
+                      <span className="session-unread" aria-label="有新消息">
+                        ●{" "}
+                      </span>
+                    ) : null}
+                    {approvalCount(item.sessionId)
+                      ? `${approvalCount(item.sessionId)} 项待审批`
+                      : item.running
+                        ? "进行中"
+                        : sessionStatusLabel(item.status)}
+                    {controller.showTurnCounts !== false ? (
+                      <span> · {item.turnCount} 轮</span>
+                    ) : null}
+                  </span>
+                </button>
+              </li>
+            ))}
+            {sessions.length === 0 && localDrafts.length === 0 ? (
+              <li className="empty">开始对话后，记录会保存在这里。</li>
+            ) : null}
+          </ul>
         </div>
-        {controller.renderSidebar?.({ guard: requestNavigation, conversation: openConversation })}
-        <ul className="sessions" aria-label="最近对话">
-          {localDrafts.map(({ sessionId, draft: pendingDraft }) => (
-            <li key={`draft-${sessionId}`}>
-              <button
-                className={sessionId === activeId && view === "chat" ? "session active" : "session"}
-                onClick={() => void openSession(sessionId)}
-              >
-                <span className="session-title">
-                  {pendingDraft.text.trim() || `附件：${pendingDraft.files[0]?.name ?? "新对话"}`}
-                </span>
-                <span className="session-meta">草稿</span>
-              </button>
-            </li>
-          ))}
-          {sessions.map((item) => (
-            <li key={item.sessionId}>
-              <button
-                className={
-                  item.sessionId === activeId && view === "chat" ? "session active" : "session"
-                }
-                onClick={() => void openSession(item.sessionId)}
-                aria-current={item.sessionId === activeId && view === "chat" ? "page" : undefined}
-              >
-                <span className="session-title">
-                  {item.sessionId === activeId
-                    ? item.customTitle ||
-                      chat.title ||
-                      item.title ||
-                      sessionTitle(chat, item.sessionId)
-                    : item.title || item.preview?.trim() || item.sessionId.slice(0, 8)}
-                </span>
-                <span className="session-meta">
-                  {controller.unreadSessionIds?.has(item.sessionId) &&
-                  item.sessionId !== activeId ? (
-                    <span className="session-unread" aria-label="有新消息">
-                      ●{" "}
-                    </span>
-                  ) : null}
-                  {approvalCount(item.sessionId)
-                    ? `${approvalCount(item.sessionId)} 项待审批`
-                    : item.running
-                      ? "进行中"
-                      : sessionStatusLabel(item.status)}
-                  {controller.showTurnCounts !== false ? <span> · {item.turnCount} 轮</span> : null}
-                </span>
-              </button>
-            </li>
-          ))}
-          {sessions.length === 0 && localDrafts.length === 0 ? (
-            <li className="empty">开始对话后，记录会保存在这里。</li>
-          ) : null}
-        </ul>
         <div className="rail-footer">
           <div className="host-label">
             <span className={`dot ${connection}`} />
