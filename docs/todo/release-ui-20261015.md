@@ -620,6 +620,22 @@ production/development; the prior native run covered empty and disabled states
 separately. No claim is made about OS IME or spoken assistive-technology output.
 Final combined gates and delivery remain pending.
 
+UI7 combined progress: all 14 workspace typechecks, full Desktop build and lint
+(0 errors, 104 baseline warnings), all seven Web browser commands and the guarded
+renderer/shared/Web shard (3399 pass, 12603 assertions, 372 files, one separately
+covered skip) have passed. Root reviewed Skills 320x240 light and 1280x820 dark
+screenshots. The first Desktop browser invocation failed the unchanged dropdown
+fixture while its entrance transform was still active (parent rectangle
+383.864px, client width 382px, scroll width 766px). The exact isolated fixture
+passed with 382/382 geometry. A test-only follow-up waits for the menu's actual
+CSS animation completion and two layout frames instead of a fixed 180ms;
+all existing overflow, complete-label, keyboard and pointer assertions remain.
+The full 33-fixture rerun is in progress. Source Skills was normally merged with
+UI6 and passed production/development 34 each plus its scoped tests/types/build
+again without changing product or fixture blobs. UI6 remote CI is still awaiting
+the Desktop job. Logs: `/tmp/codeshell-ui-wave7-{typecheck,lint,desktop-build,unit,
+overlays,overlays-stable,dropdown-isolated,web-*}.log`.
+
 Initial audit history follows:
 
 - Read-only audit is in progress, including Desktop and mobile/Web.
