@@ -7,15 +7,25 @@ deliver a final report, and disable the follow-up heartbeat.
 
 ## Release
 
+**Published:** [v0.9.43](https://github.com/cjhyy/codeshell/releases/tag/v0.9.43)
+from merged commit `156f2fad1`. Source CI `38707301929` and release workflow
+`38708921953` passed completely. Windows, macOS (Intel/Apple Silicon) and Linux
+installers are present; all three updater manifests report `0.9.43`.
+Independent public registry reads confirmed all 10 packages at `0.9.43` with
+their `latest` tags after publication. Release title and notes were updated.
+Do not recreate or move the tag.
+
+The initial blockers below are retained as resolved verification history.
+
 - Baseline: `origin/main` `bb01243ac`; latest public version `0.9.42`.
 - Prepared version: `0.9.43`, commit `b149c8f44` on
   `codex/release/0.9.43-20261015`.
 - Worktree: `/Users/admin/.codex/worktrees/release-ui-20261015/codeshell`.
-- Publication is pending. Main CI `38703068601` exposed stale Link action
+- Main CI `38703068601` exposed stale Link action
   counts, a one-line architecture-budget excess, inherited bridge enumerability
   in a React test and an obsolete native-select/external-track theme E2E.
 - Integrated test fixes `1ae1b1974` and `3fa768267`; theme E2E now uses the real
-  Radix selector and validates local playback. No release tag exists yet.
+  Radix selector and validates local playback.
 - Main follow-up CI `38705047770` passed 10 jobs and the theme acceptance, then
   exposed a shared App mock leaking into the subagent dock fixture and two
   obsolete native-select reads in Optimization Lab E2E. The dock fixture now
@@ -37,6 +47,51 @@ deliver a final report, and disable the follow-up heartbeat.
   update manifest versions before reporting publication complete.
 
 ## UI review
+
+Current integration worktree:
+`/Users/admin/.codex/worktrees/ui-task-center-20261015/codeshell`, branch
+`codex/integration/ui-review-wave1-20261015`. Other work advanced remote main to
+`0.9.44`; this branch merged `976a79322` and `bb7a9b59a`, preserving the incoming model-capability,
+forwarding and Figma updates. The CSS merge preserves both context-selection and
+file-action styles. Do not revert incoming work or republish another version on
+the assumption that `0.9.43` is still the repository manifest version.
+
+Implemented task commits (integration hashes):
+
+- `ddf69b9f7`: compact Task center header and advanced-filter popover; 14 real
+  browser layout cases, search/filter/clear/resize/focus/actions, 22 existing tests.
+- `8f9222b4e`: Web file navigation failure/retry, target-bound responses, canonical
+  file links and immediately readable mobile previews. Independent review and
+  520 Web tests plus production browser checks passed.
+- `0f65bd55f`: Desktop file directory recovery and empty/filter states,
+  container-responsive previews, visible keyboard/touch actions and IME-safe
+  comments. Existing workspace tests and real browser checks passed.
+- `6dfad0fba`: stable native-textbox/listbox/option accessibility relationships;
+  actual Chromium AX checks and 185 related tests passed. VoiceOver speech has
+  not been tested.
+- `b36304590`: fix focus when file-panel layout hides the active row/back button.
+  A strict regression first failed, then passed. Outside non-focusable pointer
+  interaction is also protected after independent review.
+- `69eb92e65`: stable localized composer name and replacement-popup ownership.
+- `81a4141d5`: Web return-to-latest control, stable new-output counts, explicit
+  follow behavior and session/reconnect cleanup. Two independent reviews, 524
+  Web tests and real browser streaming/resize/keyboard checks passed.
+- `34ffb19ff`, `ac708240c`: theme deletion preserves the current choice until
+  Host accepts, reports errors, prevents duplicate deletion and restores keyboard
+  focus without taking it from another control. Theme-mode buttons expose their
+  selection and stay synchronized across windows. Real keyboard/Host timing,
+  eight layout/theme/language cases and independent review passed.
+
+These product changes are awaiting final combined verification and integration
+into main. The combined 14-workspace typecheck, complete Desktop build, ESLint
+baseline and the two Web production-browser fixtures have passed. The complete
+renderer/Web unit shard and 15 Desktop browser fixtures are running. CI now also
+runs both Web browser fixtures with the already-installed locked browser.
+
+The second review wave uses independent trees: Desktop context settings read,
+edit and reset recovery; Web workspace/session navigation; and autocomplete
+cleanup after an accepted send. Continue with the current commits and evidence
+instead of redoing the initial audit.
 
 - Read-only audit is in progress, including Desktop and mobile/Web.
 - Initial mobile candidates were excluded after entry-point inspection: those
