@@ -157,6 +157,7 @@ export function HubSessions({
     identity: string;
   } | null>(null);
   const titleInput = React.useRef<HTMLInputElement>(null);
+  const historyPane = React.useRef<HTMLElement>(null);
   const titleError = React.useRef<HTMLDivElement>(null);
   const editTrigger = React.useRef<HTMLButtonElement | null>(null);
   const renameButtons = React.useRef(new Map<string, HTMLButtonElement>());
@@ -170,6 +171,38 @@ export function HubSessions({
   listIdentity.current = JSON.stringify([query, archived, version]);
   filterIdentity.current = JSON.stringify([query, archived]);
   const focus = useHistoryActionFocus();
+  React.useLayoutEffect(() => {
+    const pane = historyPane.current;
+    if (!pane) return;
+    let active = true;
+    const revealFocus = () => {
+      const target = document.activeElement;
+      if (!active || !(target instanceof HTMLElement) || !pane.contains(target)) return;
+      const bounds = pane.getBoundingClientRect();
+      const top = bounds.top + pane.clientTop + 4;
+      const bottom = bounds.top + pane.clientTop + pane.clientHeight - 4;
+      const rect = target.getBoundingClientRect();
+      if (rect.height <= bottom - top) {
+        if (rect.top < top) pane.scrollTop -= Math.ceil(top - rect.top);
+        else if (rect.bottom > bottom) pane.scrollTop += Math.ceil(rect.bottom - bottom);
+      } else if (rect.bottom < top || rect.top > bottom) {
+        // A full title may exceed the pane; retain its readable slice while scrolling.
+        pane.scrollTop += Math.floor(rect.top - top);
+      }
+    };
+    const observer = new ResizeObserver(revealFocus);
+    observer.observe(pane);
+    for (const child of pane.children) observer.observe(child);
+    pane.addEventListener("focusin", revealFocus);
+    window.addEventListener("resize", revealFocus);
+    revealFocus();
+    return () => {
+      active = false;
+      observer.disconnect();
+      pane.removeEventListener("focusin", revealFocus);
+      window.removeEventListener("resize", revealFocus);
+    };
+  }, [actionFeedback, edit?.id, error, entries, loading, loadingMore]);
   const [focusIntent, setFocusIntent] = React.useState<{
     request: HistoryFocusRequest | null;
     kind: "edit" | "error" | "return" | "input" | "action" | "read" | "more";
@@ -463,7 +496,11 @@ export function HubSessions({
     </div>
   ) : null;
   return (
-    <section className="hub-library hub-sessions" aria-labelledby="hub-history-heading">
+    <section
+      ref={historyPane}
+      className="hub-library hub-sessions"
+      aria-labelledby="hub-history-heading"
+    >
       <header className="library-heading">
         <div>
           <h1 id="hub-history-heading">历史对话</h1>
