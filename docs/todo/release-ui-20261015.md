@@ -270,6 +270,20 @@ Fourth wave in progress (root branch contains the reviewed commits):
   be cleaned before final integration. Root has handed this clean tree/branch to
   release_audit exclusively; do not edit it concurrently. ui_audit independently
   investigates primary Playwright/Chromium sources and minimal harness variables.
+  The runtime distinction is now demonstrated: native Electron and owned native
+  headless-Chrome 320×240 popup windows pass wheel/Retry; a fresh context created
+  directly at 320×240 also passes. The same existing headless Chrome page resized
+  via viewport emulation fails native wheel even with modal=false, plain scroll
+  divs, bringToFront, no blur, two gestures and 120-frame settling. Chrome
+  155.0.8059.79 was used. Headful Chrome preserves the resize workflow and passes.
+  Do not add a product wheel handler or blame Radix based on that harness failure.
+  Preserve exact viewport, native wheel and full-button assertions in the final
+  fresh/native-window harness; live resize also needs its own real-window proof.
+
+Next read-only audits are delegated: bridge_test_fix owns actual Sessions/Runs
+pages; ui_audit owns actual connection-configuration panels (models/text/speech/
+search). Both must use only owned bridge/state and report reproduced issues
+before implementation on a fresh branch from the next delivered main.
 
 Initial audit history follows:
 
