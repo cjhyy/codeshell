@@ -99,6 +99,7 @@ async function fixture(options: Partial<HubMcpConfigurationOptions> = {}) {
   network.allowOrigin(url);
   const request = (path: string, method = "GET", body?: unknown, extra: RequestInit = {}) =>
     fetch(`${url}/api/v1/mcp${path}`, {
+      redirect: "error",
       method,
       ...(body !== undefined
         ? { headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) }
@@ -379,9 +380,16 @@ describe("Hub MCP configuration", () => {
   });
 
   test("uses the real HTTP MCP handshake and reports auth errors without reflecting the server response", async () => {
+    let observedGet!: () => void;
+    const gotGet = new Promise<void>((resolve) => {
+      observedGet = resolve;
+    });
+    const methods: string[] = [];
     const mcp = createServer(async (req, res) => {
+      methods.push(req.method ?? "");
+      if (req.method === "GET") observedGet();
       if (req.method !== "POST") {
-        res.writeHead(405);
+        res.writeHead(404);
         res.end();
         return;
       }
@@ -398,6 +406,7 @@ describe("Hub MCP configuration", () => {
         res.end();
         return;
       }
+      if (input.method === "tools/list") await gotGet;
       const result =
         input.method === "initialize"
           ? {
@@ -431,6 +440,7 @@ describe("Hub MCP configuration", () => {
     });
     const good = await (await f.request("/servers/fixture-http/probe", "POST", {})).json();
     expect(good.status).toBe("ok");
+    expect(methods).toContain("GET");
     expect(good.toolCount).toBe(1);
     expect(JSON.stringify(good).includes("http-fixture-secret")).toBe(false);
     expect(JSON.stringify(good).includes("private-query-token")).toBe(false);

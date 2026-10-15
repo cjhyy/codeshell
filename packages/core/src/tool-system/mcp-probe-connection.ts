@@ -41,6 +41,7 @@ class BoundedStdioTransport implements Transport {
   constructor(
     private readonly config: MCPServerConfig,
     private readonly cwd: string,
+    private readonly stdioPolicy: "strict" | "skip-banner",
   ) {}
 
   async start(): Promise<void> {
@@ -84,9 +85,16 @@ class BoundedStdioTransport implements Transport {
       const line = this.pending.subarray(0, index).toString("utf8").trim();
       this.pending = this.pending.subarray(index + 1);
       if (!line) continue;
+      let parsed: unknown;
       try {
-        this.onmessage?.(JSONRPCMessageSchema.parse(JSON.parse(line)));
+        parsed = JSON.parse(line);
       } catch {
+        // Desktop and the long-lived runtime tolerate launcher banners. They
+        // still count toward the same frame and total byte limits.
+        if (this.stdioPolicy === "skip-banner") continue;
+      }
+      const message = JSONRPCMessageSchema.safeParse(parsed);
+      if (!message.success) {
         this.onerror?.(
           new McpProbeConnectionError(
             "invalid_protocol",
@@ -96,6 +104,7 @@ class BoundedStdioTransport implements Transport {
         void this.close();
         return;
       }
+      this.onmessage?.(message.data);
     }
   }
 
@@ -152,7 +161,7 @@ class BoundedStdioTransport implements Transport {
 /** SDK custody only: Host owns timeout, authorization, pagination and result policy. */
 export function createMcpProbeConnection(
   config: MCPServerConfig,
-  options: { cwd: string; fetch?: typeof fetch },
+  options: { cwd: string; fetch?: typeof fetch; stdioPolicy?: "strict" | "skip-banner" },
 ) {
   const client = new Client(
     { name: "code-shell-probe", version: "1.0.0" },
@@ -163,7 +172,7 @@ export function createMcpProbeConnection(
   }));
   const transport: Transport =
     config.transport === "stdio"
-      ? new BoundedStdioTransport(config, options.cwd)
+      ? new BoundedStdioTransport(config, options.cwd, options.stdioPolicy ?? "strict")
       : new StreamableHTTPClientTransport(new URL(config.url!), {
           fetch: options.fetch as never,
           reconnectionOptions: {
@@ -181,6 +190,10 @@ export function createMcpProbeConnection(
   // Closing can cause SDK errors after a settled request. Retain a handled promise.
   void failed.catch(() => {});
   client.onerror = (error) => {
+    // The SDK reports optional GET/SSE diagnostics here even when POST works.
+    // Request rejections still propagate normally; only our bounded transport's
+    // explicit fatal errors may poison this connection and its pending request.
+    if (!(error instanceof McpProbeConnectionError)) return;
     failure = error;
     rejectFailure(error);
   };

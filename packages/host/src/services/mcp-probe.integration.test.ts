@@ -49,6 +49,8 @@ if (mode === "descendants") {
   process.on("SIGTERM", () => {});
 }
 writeFileSync(marker, JSON.stringify({ pid: process.pid, childPid: child?.pid, cwd: process.cwd() }));
+if (mode === "banner") process.stdout.write("launcher is ready\\n");
+if (mode === "invalid-jsonrpc") process.stdout.write(JSON.stringify({ unexpected: true }) + "\\n");
 const reply = (id, result) => process.stdout.write(JSON.stringify({ jsonrpc: "2.0", id, result }) + "\\n");
 createInterface({ input: process.stdin }).on("line", (line) => {
   const msg = JSON.parse(line);
@@ -65,7 +67,7 @@ createInterface({ input: process.stdin }).on("line", (line) => {
   const config = {
     name: "fixture",
     command: process.execPath,
-    args: [script, "argument-secret"],
+    args: [script, "--api-token", "argument-secret"],
     env: { TOKEN: "fixture-secret" },
   };
   return { dir, cwd, marker, config };
@@ -88,7 +90,6 @@ async function until(check: () => boolean) {
 
 test("Desktop and Hub use one real stdio handshake, workspace, preview and redaction path", async () => {
   const f = fixture();
-  expect(probeHubMcp).toBe(probeMcp);
   const hub = await probeHubMcp(
     { ...f.config, disabledTools: ["tool_0"] },
     { cwd: f.cwd, signal: new AbortController().signal },
@@ -167,4 +168,13 @@ test("in-process servers preserve the unsupported classification without opening
   const result = await probeMcp({ name: "builtin", transport: "inprocess" }, { cwd: f.cwd });
   expect(result.error?.code).toBe("unsupported_transport");
   expect(existsSync(f.marker)).toBe(false);
+});
+
+test("Desktop skips non-JSON launcher banners while Hub keeps its strict policy", async () => {
+  const f = fixture("banner");
+  expect((await probeMcpServer(f.config, { cwd: f.cwd })).status).toBe("ok");
+  const hub = await probeHubMcp(f.config, { cwd: f.cwd, signal: new AbortController().signal });
+  expect(hub.error?.code).toBe("invalid_protocol");
+  const invalid = fixture("invalid-jsonrpc");
+  expect((await probeMcpServer(invalid.config, { cwd: invalid.cwd })).status).toBe("error");
 });

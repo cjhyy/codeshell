@@ -60,6 +60,7 @@ async function fixture() {
   network.allowOrigin(url);
   const request = (path = "", method = "GET", body?: unknown, authorized = true) =>
     fetch(url + path, {
+      redirect: "error",
       method,
       headers: {
         "content-type": "application/json",

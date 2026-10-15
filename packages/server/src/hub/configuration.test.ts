@@ -88,6 +88,7 @@ async function fixture(options: Partial<HubConfigurationOptions> = {}) {
   network.allowOrigin(origin);
   const api = (endpoint = "", body?: unknown, headers?: Record<string, string>, method?: string) =>
     fetch(`${origin}/api/v1/configuration${endpoint}`, {
+      redirect: "error",
       method: method ?? (body === undefined ? "GET" : "PUT"),
       ...(body !== undefined
         ? {
@@ -346,7 +347,12 @@ describe("Hub workspace configuration", () => {
     expect((await api("/defaults", { text: "x".repeat(70_000) })).status).toBe(413);
     expect((await api("/defaults", ["primary"])).status).toBe(400);
     expect(
-      (await fetch(`${origin}/api/v1/configuration/defaults`, { method: "POST" })).status,
+      (
+        await fetch(`${origin}/api/v1/configuration/defaults`, {
+          method: "POST",
+          redirect: "error",
+        })
+      ).status,
     ).toBe(405);
     expect(readFileSync(localFile, "utf8")).toBe(before);
   });
@@ -552,6 +558,7 @@ describe("Hub workspace configuration", () => {
     const controller = new AbortController();
     const requestId = randomUUID();
     const pending = fetch(`${f.origin}/api/v1/configuration/connections/probe`, {
+      redirect: "error",
       method: "POST",
       headers: { "content-type": "application/json" },
       body: JSON.stringify({ id: "primary", requestId }),

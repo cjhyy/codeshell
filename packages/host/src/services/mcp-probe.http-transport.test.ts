@@ -202,3 +202,131 @@ test.each(["preview", "repeat", "total"] as const)(
     }
   },
 );
+
+test.each([400, 403, 404])(
+  "optional SDK GET/SSE diagnostic %s cannot poison POST tools before or between pages",
+  async (status) => {
+    for (const timing of ["before", "between"] as const) {
+      const f = fixture();
+      let gotGet!: () => void, firstPage!: () => void;
+      const getFinished = new Promise<void>((resolve) => {
+        gotGet = resolve;
+      });
+      const pageReturned = new Promise<void>((resolve) => {
+        firstPage = resolve;
+      });
+      const events: string[] = [];
+      handle = async (request) => {
+        if (request.method === "GET") {
+          if (timing === "between") await pageReturned;
+          events.push("GET diagnostic");
+          return new Response(
+            new ReadableStream({
+              cancel() {
+                events.push("GET body cancelled");
+                gotGet();
+              },
+            }),
+            { status },
+          );
+        }
+        if (request.method !== "POST") return new Response(null, { status: 405 });
+        const input = await request.json();
+        if (input.id === undefined) return new Response(null, { status: 202 });
+        if (input.method === "initialize")
+          return Response.json({
+            jsonrpc: "2.0",
+            id: input.id,
+            result: {
+              protocolVersion: "2024-11-05",
+              capabilities: { tools: {} },
+              serverInfo: { name: "fixture", version: "1" },
+            },
+          });
+        const next = input.params?.cursor === "second";
+        if (timing === "before" || next) {
+          await getFinished;
+          await new Promise((resolve) => setTimeout(resolve, 0));
+        }
+        events.push(next ? "second tools" : "first tools");
+        firstPage();
+        return Response.json({
+          jsonrpc: "2.0",
+          id: input.id,
+          result: {
+            tools: [
+              { name: next ? "second" : "first", inputSchema: { type: "object", properties: {} } },
+            ],
+            ...(!next ? { nextCursor: "second" } : {}),
+          },
+        });
+      };
+      const result = await probeMcp(
+        { name: "sse-diagnostic", url: `${origin}/mcp` },
+        { cwd: f.dir },
+      );
+      expect(result.status).toBe("ok");
+      expect(result.toolCount).toBe(2);
+      expect(events).toEqual(
+        timing === "before"
+          ? ["GET diagnostic", "GET body cancelled", "first tools", "second tools"]
+          : ["first tools", "GET diagnostic", "GET body cancelled", "second tools"],
+      );
+    }
+  },
+);
+
+test("ordinary verbs/content types/protocol headers survive while explicit HTTP secrets are redacted", async () => {
+  const f = fixture();
+  process.env.CODESHELL_FIXTURE_HEADER_TOKEN = "env-header-secret";
+  cleanup.push(() => {
+    delete process.env.CODESHELL_FIXTURE_HEADER_TOKEN;
+  });
+  handle = async (request) => {
+    if (request.method !== "POST") return new Response(null, { status: 405 });
+    const input = await request.json();
+    if (input.id === undefined) return new Response(null, { status: 202 });
+    return Response.json({
+      jsonrpc: "2.0",
+      id: input.id,
+      result:
+        input.method === "initialize"
+          ? {
+              protocolVersion: "2024-11-05",
+              capabilities: { tools: {} },
+              serverInfo: { name: "fixture", version: "1" },
+            }
+          : {
+              tools: [
+                {
+                  name: "run_query",
+                  description:
+                    "run application/json 2024-11-05 auth-secret env-header-secret argument-secret credential-secret header-credential-secret",
+                  inputSchema: { type: "object", properties: {} },
+                },
+              ],
+            },
+    });
+  };
+  const result = await probeMcp(
+    {
+      name: "redaction",
+      url: `${origin}/mcp`,
+      args: ["run", "--token", "argument-secret", "--credential=credential-secret"],
+      headers: {
+        "Content-Type": "application/json",
+        "MCP-Protocol-Version": "2024-11-05",
+        Authorization: "Bearer auth-secret",
+        "X-Credential": "header-credential-secret",
+      },
+      envHeaders: { "X-Custom": "CODESHELL_FIXTURE_HEADER_TOKEN" },
+    },
+    { cwd: f.dir },
+  );
+  expect(result.status).toBe("ok");
+  expect(result.tools?.[0]?.name).toBe("run_query");
+  expect(result.tools?.[0]?.description).toContain("run application/json 2024-11-05");
+  expect(JSON.stringify(result)).not.toMatch(
+    /auth-secret|env-header-secret|argument-secret|credential-secret/,
+  );
+});

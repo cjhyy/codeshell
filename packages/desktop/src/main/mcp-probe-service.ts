@@ -10,13 +10,12 @@
  * so the UI can be refreshed without re-probing on every tab switch.
  */
 
+import { localCredentialAccess } from "@cjhyy/code-shell-core";
 import {
-  buildHttpHeaders,
-  CredentialStore,
-  isCredentialSecretAvailable,
-  localCredentialAccess,
-} from "@cjhyy/code-shell-core";
-import { probeMcp, mcpProbeTransport } from "@cjhyy/code-shell-host";
+  probeMcp,
+  mcpProbeTransport,
+  type McpProbeResult as HostMcpProbeResult,
+} from "@cjhyy/code-shell-host";
 import { dlog } from "./desktop-logger.js";
 import type { McpOAuthService } from "./mcp-oauth-service.js";
 
@@ -87,42 +86,36 @@ function hashConfig(cfg: McpServerConfig): string {
   });
 }
 
-/** Exported for unit testing (error classification). */
-export function humanizeError(raw: string, command?: string): string {
-  if (/ENOENT/.test(raw)) return "找不到命令（请确认已安装或路径正确）";
-  if (/EACCES/.test(raw)) return "命令没有可执行权限";
-  if (/ECONNREFUSED/.test(raw)) return "无法连接到服务（拒绝连接）";
-  if (/ETIMEDOUT|timed out/i.test(raw)) {
-    // npx/uvx-style runners download the package on FIRST run, which easily
-    // blows the probe timeout; the cache makes the next run instant. Say so,
-    // instead of leaving the user staring at a bare "连接超时".
-    if (command && /\b(npx|uvx|bunx|pipx)\b/.test(command)) {
-      return "连接超时 — npx/uvx 首次运行需下载包，常超过探测超时；稍后重试通常即可";
-    }
-    return "连接超时";
+function desktopProbeError(
+  error: NonNullable<HostMcpProbeResult["error"]>,
+  command?: string,
+): string {
+  switch (error.code) {
+    case "command_missing":
+      return "找不到命令（请确认已安装或路径正确）";
+    case "permission_denied":
+      return "命令没有可执行权限";
+    case "connection_refused":
+      return "无法连接到服务（拒绝连接）";
+    case "dns":
+      return "域名解析失败";
+    case "timeout":
+      return command && /\b(npx|uvx|bunx|pipx)\b/.test(command)
+        ? "连接超时 — npx/uvx 首次运行需下载包，常超过探测超时；稍后重试通常即可"
+        : "连接超时";
+    case "environment_missing":
+      return error.environment
+        ? `鉴权配置错误：环境变量 ${error.environment.name}（${error.environment.field}）未设置或为空 — 该字段填的是环境变量名，值在连接时从系统环境读取，请先在启动环境里设置它`
+        : "鉴权配置错误：引用的环境变量未设置或为空";
+    case "credential_expired":
+      return "OAuth 登录已过期 — 请在 MCP 认证设置里刷新或重新登录该 OAuth 凭证";
+    case "unauthorized":
+      return "鉴权失败（HTTP 401）— 该 server 需要认证：如果是 Bearer/JWT，请配置 Bearer 凭证或 Bearer Token 环境变量；如果是 OAuth，请登录或刷新 OAuth 凭证；如果是 API key，请配置服务要求的自定义认证 Header（如 x-api-key）";
+    case "forbidden":
+      return "无权限（HTTP 403）— 凭证有效但权限不足，请检查该 token / key 的权限范围";
+    default:
+      return error.message;
   }
-  if (/ENOTFOUND/.test(raw)) return "域名解析失败";
-  // Auth errors, most-specific first:
-  // 1. A referenced env var is missing — core's readRequiredEnv error names
-  //    the var and the config field; surface both so the fix is obvious.
-  const envMiss = /env var "([^"]+)" \(from ([^)]+)\) is not set/.exec(raw);
-  if (envMiss) {
-    return `鉴权配置错误：环境变量 ${envMiss[1]}（${envMiss[2]}）未设置或为空 — 该字段填的是环境变量名，值在连接时从系统环境读取，请先在启动环境里设置它`;
-  }
-  if (/oauth credential "([^"]+)" access token expired/i.test(raw)) {
-    return "OAuth 登录已过期 — 请在 MCP 认证设置里刷新或重新登录该 OAuth 凭证";
-  }
-  // 2. Credentials reached the server but were rejected (401) vs accepted
-  //    but lacking permission (403).
-  if (/unauthorized|\b401\b|-32001/i.test(raw)) {
-    return "鉴权失败（HTTP 401）— 该 server 需要认证：如果是 Bearer/JWT，请配置 Bearer 凭证或 Bearer Token 环境变量；如果是 OAuth，请登录或刷新 OAuth 凭证；如果是 API key，请配置服务要求的自定义认证 Header（如 x-api-key）";
-  }
-  if (/forbidden|\b403\b/i.test(raw)) {
-    return "无权限（HTTP 403）— 凭证有效但权限不足，请检查该 token / key 的权限范围";
-  }
-  if (/Invalid URL/i.test(raw)) return "URL 格式无效";
-  // Trim to first line to keep the card readable.
-  return raw.split("\n")[0].slice(0, 200);
 }
 
 interface ProbeOptions {
@@ -156,6 +149,7 @@ async function probeOne(cfg: McpServerConfig, options: ProbeOptions): Promise<Mc
     signal: options.signal,
     timeoutMs: PROBE_TIMEOUT_MS,
     credentialAccess: access,
+    stdioPolicy: "skip-banner",
   });
   if (result.status === "ok")
     return {
@@ -164,23 +158,14 @@ async function probeOne(cfg: McpServerConfig, options: ProbeOptions): Promise<Mc
       toolCount: result.toolCount,
       tools: result.tools?.map(({ name, description }) => ({ name, description })),
     };
-  const detail = result.error?.message ?? "连接测试失败";
+  const message = result.error ? desktopProbeError(result.error, cfg.command) : "连接测试失败";
+  const detail = result.error?.detail ?? message;
   dlog("mcp-probe", "failed", {
     server: cfg.name,
     transport: base.transport,
     code: result.error?.code,
   });
-  return { ...base, status: "error", errorMessage: detail, errorDetail: detail };
-}
-
-export function buildProbeHttpHeaders(cfg: McpServerConfig): Record<string, string> {
-  const credStore = new CredentialStore(undefined);
-  return buildHttpHeaders(cfg.name, cfg, (id) => {
-    const cred = credStore.resolve(id);
-    return cred && isCredentialSecretAvailable(cred.secret)
-      ? { secret: cred.secret, type: cred.type, label: cred.label }
-      : undefined;
-  });
+  return { ...base, status: "error", errorMessage: message, errorDetail: detail };
 }
 
 /**

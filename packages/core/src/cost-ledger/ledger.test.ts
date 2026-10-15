@@ -312,7 +312,7 @@ test("direct SDK construction accounts real localhost retry attempts and explici
         retryMaxAttempts: 1,
         fetch: ((...args: Parameters<typeof fetch>) => {
           ids.push(currentUsageAttempt()!.requestId);
-          return fetch(...args);
+          return fetch(new Request(new Request(...args), { redirect: "error" }));
         }) as typeof fetch,
       },
     );

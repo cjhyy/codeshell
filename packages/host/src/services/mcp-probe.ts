@@ -32,14 +32,20 @@ export interface McpProbeResult {
   toolCount?: number;
   truncated?: boolean;
   tools?: { name: string; description?: string; allowed: boolean }[];
-  error?: { code: string; message: string };
+  error?: {
+    code: string;
+    message: string;
+    detail: string;
+    environment?: { name: string; field: string };
+  };
 }
 
 function rememberSecret(secrets: Set<string>, value: string | undefined): void {
   if (!value) return;
   secrets.add(value);
-  if (/^Bearer\s+/i.test(value)) secrets.add(value.replace(/^Bearer\s+/i, ""));
-  const match = /(?:token|secret|password|api[-_]?key)=([^\s]+)/i.exec(value);
+  if (/^(Bearer|Basic|Token)\s+/i.test(value))
+    secrets.add(value.replace(/^(Bearer|Basic|Token)\s+/i, ""));
+  const match = /(?:token|secret|password|credentials?|api[-_]?key)=([^\s]+)/i.exec(value);
   if (match?.[1]) secrets.add(match[1]);
 }
 
@@ -66,31 +72,30 @@ function classify(error: unknown): { code: string; message: string } {
   if (/ENOENT/.test(raw))
     return {
       code: "command_missing",
-      message: "服务器上找不到这个命令，请确认已安装并填写正确路径。",
+      message: "找不到这个命令，请确认已安装并填写正确路径。",
     };
-  if (/EACCES/.test(raw))
-    return { code: "permission_denied", message: "服务器没有执行这个命令的权限。" };
+  if (/EACCES/.test(raw)) return { code: "permission_denied", message: "没有执行这个命令的权限。" };
   if (/ECONNREFUSED/.test(raw))
     return {
       code: "connection_refused",
       message: "目标服务拒绝连接，请检查地址、端口和服务状态。",
     };
   if (/ENOTFOUND|EAI_AGAIN/.test(raw))
-    return { code: "dns", message: "无法解析服务域名，请检查地址和服务器的网络。" };
+    return { code: "dns", message: "无法解析服务域名，请检查地址和当前网络。" };
   if (/env var .* is not set/.test(raw))
     return {
       code: "environment_missing",
-      message: "配置引用的服务器环境变量未设置，请检查环境变量名称和服务启动环境。",
+      message: "配置引用的环境变量未设置，请检查环境变量名称和服务启动环境。",
     };
   if (/credential .*not found|credential .*empty|metadata is unavailable/.test(raw))
     return {
       code: "credential_missing",
-      message: "引用的凭据不存在或不可用，请检查服务器上的凭据配置。",
+      message: "引用的凭据不存在或不可用，请检查凭据配置。",
     };
   if (/expired|oauth.*requires/i.test(raw))
     return {
       code: "credential_expired",
-      message: "认证凭据已过期或需要重新授权，请在服务器上更新凭据。",
+      message: "认证凭据已过期或需要重新授权，请更新凭据。",
     };
   if (
     status === 401 ||
@@ -110,10 +115,10 @@ function classify(error: unknown): { code: string; message: string } {
       message: "连接测试超时。首次运行包管理器可能需要下载依赖，可以稍后重试。",
     };
   if (/certificate|TLS|SSL/i.test(raw))
-    return { code: "tls", message: "服务的 HTTPS 证书验证失败，请检查证书和服务器信任配置。" };
+    return { code: "tls", message: "服务的 HTTPS 证书验证失败，请检查证书和信任配置。" };
   return {
     code: "connection_failed",
-    message: "连接测试失败。请确认服务支持 MCP、命令可以启动，并检查服务器上的服务日志。",
+    message: "连接测试失败。请确认服务支持 MCP、命令可以启动，并检查服务日志。",
   };
 }
 
@@ -125,18 +130,32 @@ export async function probeMcp(
     signal?: AbortSignal;
     timeoutMs?: number;
     credentialAccess?: Parameters<typeof createMcpAuthenticatedFetch>[2];
+    stdioPolicy?: "strict" | "skip-banner";
   },
 ): Promise<McpProbeResult> {
   if (!isAbsolute(options.cwd)) throw new Error("MCP probe requires an absolute workspace");
   config = structuredClone(config);
   const started = Date.now();
   const secrets = new Set<string>();
-  for (const value of [
-    ...Object.values(config.env ?? {}),
-    ...Object.values(config.headers ?? {}),
-    ...(config.args ?? []),
-  ])
-    rememberSecret(secrets, value);
+  for (const value of Object.values(config.env ?? {})) rememberSecret(secrets, value);
+  const secretHeader = (name: string) =>
+    /authorization|cookie|(?:^|[-_])(?:token|secret|password|credentials?|key|auth)(?:$|[-_])/i.test(
+      name,
+    ) || Object.hasOwn(config.envHeaders ?? {}, name);
+  for (const [name, value] of Object.entries(config.headers ?? {}))
+    if (secretHeader(name)) rememberSecret(secrets, value);
+  // Launcher verbs, paths and protocol/content-type values are not credentials.
+  // Recognize explicit token-style flags instead of treating every argv as a secret.
+  const args = config.args ?? [];
+  for (let index = 0; index < args.length; index++) {
+    const match =
+      /^--?(?:[\w]+[-_])*(?:token|secret|password|credentials?|api[-_]?key|authorization|auth)(?:=(.*))?$/i.exec(
+        args[index]!,
+      );
+    if (match) rememberSecret(secrets, match[1] ?? args[index + 1]);
+    const bearer = /\bBearer\s+(.+)/i.exec(args[index]!);
+    if (bearer) rememberSecret(secrets, bearer[1]);
+  }
   for (const name of [
     ...(config.envVars ?? []),
     ...Object.values(config.envHeaders ?? {}),
@@ -147,7 +166,12 @@ export async function probeMcp(
   if (config.url) {
     try {
       const url = new URL(config.url);
-      for (const value of [url.username, url.password, ...url.searchParams.values()]) {
+      const privateQueryValues = [...url.searchParams]
+        .filter(([name]) =>
+          /token|secret|password|credential|key|auth|^(access|code|sig|signature)$/i.test(name),
+        )
+        .map(([, value]) => value);
+      for (const value of [url.username, url.password, ...privateQueryValues]) {
         rememberSecret(secrets, value);
         try {
           rememberSecret(secrets, decodeURIComponent(value));
@@ -198,7 +222,8 @@ export async function probeMcp(
     let totalBytes = 0;
     const boundedFetch: typeof fetch = (async (input, init) => {
       const request = new Request(input as never, init);
-      for (const [, value] of request.headers) rememberSecret(secrets, value);
+      for (const [name, value] of request.headers)
+        if (secretHeader(name)) rememberSecret(secrets, value);
       const signal = AbortSignal.any([request.signal, controller.signal]);
       const response = await fetch(new Request(request, { signal, redirect: "error" }));
       if (!response.body) return response;
@@ -227,6 +252,7 @@ export async function probeMcp(
       { ...config, transport: mode },
       {
         cwd: options.cwd,
+        stdioPolicy: options.stdioPolicy,
         fetch: createMcpAuthenticatedFetch(
           config.name,
           config,
@@ -271,7 +297,33 @@ export async function probeMcp(
       ...result,
     };
   } catch (cause) {
-    const error = classify(controller.signal.aborted ? controller.signal.reason : cause);
+    const failure = controller.signal.aborted ? controller.signal.reason : cause;
+    const classified = classify(failure);
+    const raw = failure instanceof Error ? failure.message : "";
+    const missing =
+      /env var "([A-Za-z_][A-Za-z0-9_]{0,127})" \(from (envVars|envHeaders|bearerTokenEnvVar)\) is not set/.exec(
+        raw,
+      );
+    const referenced =
+      missing &&
+      (missing[2] === "envVars"
+        ? config.envVars?.includes(missing[1]!)
+        : missing[2] === "envHeaders"
+          ? Object.values(config.envHeaders ?? {}).includes(missing[1]!)
+          : config.bearerTokenEnvVar === missing[1]);
+    const environment =
+      referenced && missing ? { name: missing[1]!, field: missing[2]! } : undefined;
+    // SDK/provider error bodies can contain unrelated secrets. Never return raw
+    // stacks/bodies; expose bounded technical context and validated config names.
+    const error = {
+      ...classified,
+      detail: redact(
+        `MCP probe: code=${classified.code}; transport=${mcpProbeTransport(config)}${environment ? `; env var "${environment.name}" (from ${environment.field}) is not set` : ""}`,
+        secrets,
+        1200,
+      ),
+      ...(environment ? { environment } : {}),
+    };
     return {
       name: config.name,
       status: error.code === "cancelled" ? "cancelled" : "error",

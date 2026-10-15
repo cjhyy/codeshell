@@ -1,10 +1,25 @@
-import { afterAll, expect, test } from "bun:test";
+import { afterAll, beforeAll, expect, test } from "bun:test";
 import { installFixtureNetworkGuard } from "../../../../tests/helpers/network-fixture.js";
 const network = installFixtureNetworkGuard();
 afterAll(() => network.restore());
 const { validateSettings } = await import("@cjhyy/code-shell-core");
 const { probeConfiguredModel } = await import("@cjhyy/code-shell-host");
 const { probeConfiguredModel: legacy } = await import("../../../server/src/hub/model-probe.js");
+// Earlier renderer suites deliberately retain a mini DOM in the shared shard.
+// A native Host must exercise the real SDK browser guard without weakening it.
+const nativeHostGlobals = new Map<string, PropertyDescriptor | undefined>();
+beforeAll(() => {
+  for (const name of ["window", "document"]) {
+    nativeHostGlobals.set(name, Object.getOwnPropertyDescriptor(globalThis, name));
+    Reflect.deleteProperty(globalThis, name);
+  }
+});
+afterAll(() => {
+  for (const [name, descriptor] of nativeHostGlobals) {
+    if (descriptor) Object.defineProperty(globalThis, name, descriptor);
+    else Reflect.deleteProperty(globalThis, name);
+  }
+});
 const origin = "http://127.0.0.1:34721";
 const key = "fixture-key-never-echo";
 function settings() {
@@ -88,5 +103,35 @@ test("timeout and owner cancellation settle even when the transport stalls", asy
     if (cancelled) setTimeout(() => controller.abort(), 25);
     expect((await pending).code).toBe(cancelled ? "cancelled" : "timeout");
     expect(requests).toBeLessThanOrEqual(1);
+  }
+});
+
+test("production SDK credential protection still rejects a browser context before any request", async () => {
+  const descriptors = new Map(
+    ["window", "document"].map((name) => [name, Object.getOwnPropertyDescriptor(globalThis, name)]),
+  );
+  Object.defineProperty(globalThis, "window", { configurable: true, value: { document: {} } });
+  Object.defineProperty(globalThis, "document", { configurable: true, value: {} });
+  const f = transport({});
+  try {
+    const { createLLMClient } = await import("@cjhyy/code-shell-core");
+    const client = await createLLMClient(
+      { provider: "openai", model: "fixture-model", apiKey: key, baseUrl: `${origin}/v1` },
+      { retryMaxAttempts: 1, fetch: f.fetch },
+    );
+    await expect(
+      client.createMessage({
+        systemPrompt: "fixture",
+        messages: [{ role: "user", content: "OK" }],
+        tools: [],
+        billingEnabled: false,
+      }),
+    ).rejects.toThrow(/browser/i);
+    expect(f.count()).toBe(0);
+  } finally {
+    for (const [name, descriptor] of descriptors) {
+      if (descriptor) Object.defineProperty(globalThis, name, descriptor);
+      else Reflect.deleteProperty(globalThis, name);
+    }
   }
 });

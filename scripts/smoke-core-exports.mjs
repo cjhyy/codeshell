@@ -35,6 +35,9 @@ assert.equal(typeof publicApi.createServer, "function");
 // internal-only value (`BUILTIN_CATALOG`) even though the separation was
 // correct and the four source-level contract tests passed.
 const hostOnlySamples = [
+  "McpProbeConnectionError",
+  "createMcpProbeConnection",
+  "listSessionEntries",
   "backupOutputJournal",
   "restoreOutputJournalBackup",
   "inspectOutputJournalRepair",
@@ -174,6 +177,8 @@ const expectedInternalTypeExports = [
   "CronRunResult",
   "CronRunner",
   "CronTemplateSource",
+  "DesktopOperationBatchAuthorityInput",
+  "DesktopOperationBatchAuthorityResult",
   "DigitalHumanCatalogSourceEntry",
   "DigitalHumanCatalogTeam",
   "FakeToolContextOptions",

@@ -107,6 +107,7 @@ async function fixture(overrides: Partial<HubSkillsOptions> = {}) {
   network.allowOrigin(url);
   async function api(path = "", method = "GET", body?: unknown, device: string | null = "laptop") {
     const response = await fetch(url + "/api/v1/skills" + path, {
+      redirect: "error",
       method,
       headers: {
         ...(device ? { "x-device": device } : {}),
