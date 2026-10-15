@@ -101,6 +101,7 @@ export function Workbench({
   } | null>(null);
   const fileInput = React.useRef<HTMLInputElement>(null);
   const cameraInput = React.useRef<HTMLInputElement>(null);
+  const devicesOpener = React.useRef<HTMLButtonElement>(null);
   const [view, setView] = React.useState<
     "chat" | "settings" | "files" | "history" | "links" | "panels" | "panel"
   >(() => parseWorkbenchLocation(new URL(window.location.href)).view);
@@ -572,7 +573,8 @@ export function Workbench({
           {controller.host === "hub" && !cloudAccount ? (
             <button
               className="account-button"
-              onClick={() => {
+              onClick={(event) => {
+                devicesOpener.current = event.currentTarget;
                 closeMobileSidebar();
                 setDevicesOpen(true);
               }}
@@ -1040,7 +1042,13 @@ export function Workbench({
         />
       ) : null}
       {devicesOpen && controller.host === "hub" && !cloudAccount ? (
-        <Devices session={session} onClose={() => setDevicesOpen(false)} onAuthLost={onAuthLost} />
+        <Devices
+          session={session}
+          onClose={() => setDevicesOpen(false)}
+          onAuthLost={onAuthLost}
+          opener={devicesOpener.current}
+          fallbackOpener={sidebarToggleRef.current}
+        />
       ) : null}
     </div>
   );
