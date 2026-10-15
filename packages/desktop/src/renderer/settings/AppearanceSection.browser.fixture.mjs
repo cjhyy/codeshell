@@ -32,10 +32,11 @@ const source = `
     {id:'fixture-sky',name:'Fixture Sky',swatch:'205 65% 42%',colors:{light:{'--cs-primary':'205 65% 42%'},dark:{'--cs-primary':'205 65% 65%'}}},
     {id:'fixture-rose',name:'Fixture Rose',swatch:'335 65% 42%',colors:{light:{'--cs-primary':'335 65% 42%'},dark:{'--cs-primary':'335 65% 65%'}}},
   ];
-  let installed=[],pending,uninstallCalls=[],logs=[];
+  let installed=[],pending,immediate,uninstallCalls=[],logs=[];
   const listeners=new Set();
   window.fixture={
     get calls(){return uninstallCalls},get logs(){return logs},
+    completeImmediately(success){immediate=success},
     finish(success){
       if(!pending)throw new Error('No pending fixture uninstall');
       const op=pending;pending=undefined;
@@ -46,22 +47,24 @@ const source = `
   window.codeshell={
     listInstalledThemes:async()=>structuredClone(installed),
     onThemesChanged:listener=>{listeners.add(listener);return ()=>listeners.delete(listener)},
-    uninstallTheme:id=>{if(!packs.some(pack=>pack.id===id))throw new Error('Unexpected uninstall target');uninstallCalls.push(id);return new Promise((resolve,reject)=>{if(pending)throw new Error('Duplicate native uninstall');pending={id,resolve,reject}})},
+    uninstallTheme:id=>{if(!packs.some(pack=>pack.id===id))throw new Error('Unexpected uninstall target');uninstallCalls.push(id);return new Promise((resolve,reject)=>{if(pending)throw new Error('Duplicate native uninstall');pending={id,resolve,reject};if(immediate!==undefined)queueMicrotask(()=>window.fixture.finish(immediate))})},
     pickAndPreviewTheme:async()=>{throw new Error('Unexpected native file picker')},
     log:(event,value)=>logs.push({event,value}),
   };
   let generation=0;
   const root=createRoot(document.getElementById('root'));
   window.renderFixture=async({lang='zh',mode='light',active='fixture-sky'}={})=>{
-    installed=structuredClone(packs);uninstallCalls=[];logs=[];pending=undefined;
+    installed=structuredClone(packs);uninstallCalls=[];logs=[];pending=undefined;immediate=undefined;
     localStorage.clear();saveUILanguage(lang);saveTheme(mode);
     await refreshInstalledThemes();saveThemePackId(active);applyTheme(mode);applyThemePack(active);
-    root.render(<I18nProvider key={++generation}><DialogProvider><ToastProvider>
-      <div className='flex h-full min-h-0 flex-col bg-background text-foreground'>
+    const current=++generation;
+    root.render(<React.StrictMode><I18nProvider key={current}><DialogProvider><ToastProvider>
+      <div data-fixture-generation={current} className='flex h-full min-h-0 flex-col bg-background text-foreground'>
         <header className='h-11 shrink-0 border-b border-border px-4 py-3 text-xs'>CodeShell · Appearance</header>
         <main id='appearance-scroll' className='min-h-0 flex-1 overflow-y-auto p-4'><AppearanceSection/></main>
       </div>
-    </ToastProvider></DialogProvider></I18nProvider>);
+    </ToastProvider></DialogProvider></I18nProvider></React.StrictMode>);
+    return current;
   };
 `;
 const bundle = await build({
@@ -112,7 +115,11 @@ async function mount(width = 1000, lang = "zh", mode = "light") {
   await page.goto("http://codeshell-appearance-fixture.test/");
   await page.addStyleTag({ content: css });
   await page.addScriptTag({ content: bundle.outputFiles[0].text });
-  await page.evaluate((options) => window.renderFixture(options), { lang, mode });
+  const generation = await page.evaluate((options) => window.renderFixture(options), {
+    lang,
+    mode,
+  });
+  await page.locator(`[data-fixture-generation="${generation}"]`).waitFor();
   await page.locator('[data-theme-uninstall="fixture-sky"]').waitFor();
   return page;
 }
@@ -123,13 +130,18 @@ async function selected(page, id) {
   assert.equal(await page.evaluate(() => localStorage.getItem("codeshell.theme-pack")), id);
 }
 async function reset(page) {
-  await page.evaluate(() => window.renderFixture());
+  const generation = await page.evaluate(() => window.renderFixture());
+  await page.locator(`[data-fixture-generation="${generation}"]`).waitFor();
   await remove(page).waitFor();
 }
-async function confirm(page) {
-  await remove(page).click();
-  await page.getByRole("dialog").getByRole("button", { name: "删除", exact: true }).click();
+async function confirm(page, waitForPendingFocus = true) {
+  await remove(page).focus();
+  await page.keyboard.press("Enter");
+  await page.getByRole("dialog").getByRole("button", { name: "删除", exact: true }).focus();
+  await page.keyboard.press("Enter");
   await page.waitForFunction(() => window.fixture.calls.length === 1);
+  if (waitForPendingFocus)
+    await page.waitForFunction(() => document.activeElement === document.body);
 }
 async function settleToast(page) {
   await page
@@ -203,14 +215,57 @@ try {
   await selected(page, "fixture-sky");
   assert.equal(await page.locator("#cs-theme-pack").textContent(), beforeStyle);
   assert.equal(await remove(page).isDisabled(), false);
+  await page.waitForFunction(
+    () => document.activeElement?.getAttribute("data-theme-uninstall") === "fixture-sky",
+  );
   await page.screenshot({ path: path.join(output, "deletion-rejected.png") });
+  await page.keyboard.press("Tab");
+  assert.equal(
+    await card(page, "fixture-rose")
+      .locator("button")
+      .first()
+      .evaluate((el) => el === document.activeElement),
+    true,
+    "Retry focus preserves the natural next Tab target",
+  );
+  // A user can leave the deletion controls while Host is working.
+  await reset(page);
+  await confirm(page);
+  const importButton = page.locator("[data-theme-import]");
+  await importButton.focus();
+  await page.evaluate(() => window.fixture.finish(false));
+  await page.getByText(/无法删除主题包「Fixture Sky」/).waitFor();
+  await settleToast(page);
+  assert.equal(await importButton.evaluate((el) => el === document.activeElement), true);
+  await page.screenshot({
+    path: path.join(output, "deletion-rejected-preserves-outside-focus.png"),
+  });
   // A successful Host event before promise completion still persists fallback.
   await reset(page);
   await confirm(page);
   await page.evaluate(() => window.fixture.finish(true));
   await card(page, "fixture-sky").waitFor({ state: "hidden" });
   await selected(page, "default");
+  await page.waitForFunction(
+    () =>
+      document.activeElement?.closest("[data-theme-pack]")?.getAttribute("data-theme-pack") ===
+      "default",
+  );
   await page.getByText("已删除主题包「Fixture Sky」", { exact: true }).waitFor();
+  await settleToast(page);
+  await page.screenshot({ path: path.join(output, "deletion-success-focus.png") });
+  // A quick Host response may finish before the dialog finishes returning focus.
+  for (const success of [false, true]) {
+    await reset(page);
+    await page.evaluate((value) => window.fixture.completeImmediately(value), success);
+    await confirm(page, false);
+    await page.waitForFunction((removed) => {
+      const focused = document.activeElement;
+      return removed
+        ? focused?.closest("[data-theme-pack]")?.getAttribute("data-theme-pack") === "default"
+        : focused?.getAttribute("data-theme-uninstall") === "fixture-sky";
+    }, success);
+  }
   // Choosing another pack while deletion is pending must win over old closures.
   await reset(page);
   await confirm(page);
@@ -222,6 +277,14 @@ try {
   await selected(page, "fixture-rose");
   assert.ok((await page.locator("#cs-theme-pack").textContent()).includes("335 65% 42%"));
   assert.deepEqual(await page.evaluate(() => window.fixture.calls), ["fixture-sky"]);
+  assert.equal(
+    await card(page, "fixture-rose")
+      .locator("button")
+      .first()
+      .evaluate((el) => el === document.activeElement),
+    true,
+    "Successful deletion preserves focus on a newly selected theme",
+  );
   await page.screenshot({ path: path.join(output, "deletion-keeps-new-selection.png") });
   // A storage event from another window also refreshes display-mode semantics.
   await page.evaluate(() => {
@@ -240,6 +303,14 @@ try {
   await settleToast(narrow);
   await selected(narrow, "fixture-rose");
   assert.equal(await remove(narrow).isDisabled(), false);
+  assert.equal(
+    await card(narrow, "fixture-rose")
+      .locator("button")
+      .first()
+      .evaluate((el) => el === document.activeElement),
+    true,
+    "Rejected deletion preserves focus on a newly selected theme",
+  );
   await narrow.screenshot({
     path: path.join(output, "deletion-rejected-new-selection-390-en-dark.png"),
   });
@@ -248,7 +319,18 @@ try {
   assert.deepEqual(blocked, [], "No network access");
   await writeFile(
     path.join(output, "report.json"),
-    JSON.stringify({ reports, errors, blocked }, null, 2),
+    JSON.stringify(
+      {
+        reports,
+        keyboardRetryFocus: true,
+        successFocus: true,
+        preservesOutsideFocus: true,
+        errors,
+        blocked,
+      },
+      null,
+      2,
+    ),
   );
   console.log(
     `PASS Appearance cancellation, rejection, successful removal, concurrent selection, mode semantics and visual matrix: ${output}`,

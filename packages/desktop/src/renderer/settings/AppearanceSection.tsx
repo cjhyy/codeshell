@@ -56,6 +56,8 @@ export function AppearanceSection() {
   const [importing, setImporting] = useState(false);
   const removingRef = useRef<string | null>(null);
   const [removal, setRemoval] = useState<{ id: string; pending: boolean } | null>(null);
+  const packListRef = useRef<HTMLDivElement>(null);
+  const removalFocus = useRef<{ opener: HTMLButtonElement; removed: boolean } | null>(null);
 
   const api = globalThis.window?.codeshell;
 
@@ -90,6 +92,22 @@ export function AppearanceSection() {
       window.removeEventListener("codeshell:theme-pack-changed", sync);
     };
   }, []);
+
+  useEffect(() => {
+    if (removal || !removalFocus.current) return;
+    const request = removalFocus.current;
+    removalFocus.current = null;
+    // Wait for the dialog's close autofocus and the re-enabled/removed card
+    // to settle. A reader who moved focus while Host worked keeps that focus.
+    const timer = window.setTimeout(() => {
+      if (document.activeElement !== document.body) return;
+      const target = request.removed
+        ? packListRef.current?.querySelector<HTMLButtonElement>('button[aria-pressed="true"]')
+        : request.opener;
+      if (target?.isConnected && !target.disabled) target.focus();
+    }, 0);
+    return () => window.clearTimeout(timer);
+  }, [removal]);
 
   const choose = (next: Theme): void => {
     setTheme(next);
@@ -149,10 +167,11 @@ export function AppearanceSection() {
     }
   };
 
-  const removePack = async (pack: ThemePack): Promise<void> => {
+  const removePack = async (pack: ThemePack, opener: HTMLButtonElement): Promise<void> => {
     if (!api || removingRef.current) return;
     removingRef.current = pack.id;
     setRemoval({ id: pack.id, pending: false });
+    let removed = false;
     try {
       const approved = await confirm({
         title: t("settingsX.appearance.pack.removeTitle"),
@@ -163,6 +182,7 @@ export function AppearanceSection() {
       if (!approved) return;
       setRemoval({ id: pack.id, pending: true });
       await api.uninstallTheme(pack.id);
+      removed = true;
       // Read the latest persisted choice, not the closure captured before the
       // dialog. Host notifications may have already removed the pack from the
       // cache, so loadThemePackId() would normalize it before we can clear it.
@@ -183,6 +203,7 @@ export function AppearanceSection() {
       });
     } finally {
       removingRef.current = null;
+      removalFocus.current = { opener, removed };
       setRemoval(null);
     }
   };
@@ -259,6 +280,7 @@ export function AppearanceSection() {
       </div>
       <p className="m-0 text-xs text-muted-foreground">{t("settingsX.appearance.packDesc")}</p>
       <div
+        ref={packListRef}
         className="grid grid-cols-[repeat(auto-fill,minmax(190px,1fr))] gap-3"
         data-appearance-packs
       >
@@ -318,7 +340,7 @@ export function AppearanceSection() {
                   { name: String(pack.name) },
                 )}
                 className="absolute bottom-4 right-2 h-7 w-7 rounded-lg text-muted-foreground hover:bg-status-err/10 hover:text-status-err"
-                onClick={() => void removePack(pack)}
+                onClick={(event) => void removePack(pack, event.currentTarget)}
               >
                 {removal?.id === pack.id && removal.pending ? (
                   <Loader2
