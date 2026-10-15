@@ -1,5 +1,5 @@
-import React, { useEffect, useState } from "react";
-import { FolderOpen, Trash2, Upload } from "lucide-react";
+import React, { useEffect, useRef, useState } from "react";
+import { Check, FolderOpen, Loader2, Trash2, Upload } from "lucide-react";
 import type { ThemeImportKind } from "../../shared/theme-packs";
 import {
   applyTheme,
@@ -54,6 +54,8 @@ export function AppearanceSection() {
   const [packId, setPackId] = useState<string>(() => loadThemePackId());
   const [installed, setInstalled] = useState<ThemePack[]>(() => installedThemePacks());
   const [importing, setImporting] = useState(false);
+  const removingRef = useRef<string | null>(null);
+  const [removal, setRemoval] = useState<{ id: string; pending: boolean } | null>(null);
 
   const api = globalThis.window?.codeshell;
 
@@ -79,6 +81,7 @@ export function AppearanceSection() {
     const sync = () => setPackId(loadThemePackId());
     const storage = (event: StorageEvent) => {
       if (event.key === "codeshell.theme-pack" || event.key === null) sync();
+      if (event.key === "codeshell.theme" || event.key === null) setTheme(loadTheme());
     };
     window.addEventListener("storage", storage);
     window.addEventListener("codeshell:theme-pack-changed", sync);
@@ -147,19 +150,41 @@ export function AppearanceSection() {
   };
 
   const removePack = async (pack: ThemePack): Promise<void> => {
-    if (!api) return;
-    const approved = await confirm({
-      title: t("settingsX.appearance.pack.removeTitle"),
-      message: t("settingsX.appearance.pack.removeBody", { name: String(pack.name) }),
-      confirmLabel: t("settingsX.appearance.pack.removeAction"),
-      destructive: true,
-    });
-    if (!approved) return;
-    // If the removed pack is active, fall back to default before it vanishes.
-    if (packId === pack.id) choosePack(DEFAULT_PACK_ID);
-    await api.uninstallTheme(pack.id);
-    await refreshInstalledThemes();
-    setInstalled(installedThemePacks());
+    if (!api || removingRef.current) return;
+    removingRef.current = pack.id;
+    setRemoval({ id: pack.id, pending: false });
+    try {
+      const approved = await confirm({
+        title: t("settingsX.appearance.pack.removeTitle"),
+        message: t("settingsX.appearance.pack.removeBody", { name: String(pack.name) }),
+        confirmLabel: t("settingsX.appearance.pack.removeAction"),
+        destructive: true,
+      });
+      if (!approved) return;
+      setRemoval({ id: pack.id, pending: true });
+      await api.uninstallTheme(pack.id);
+      // Read the latest persisted choice, not the closure captured before the
+      // dialog. Host notifications may have already removed the pack from the
+      // cache, so loadThemePackId() would normalize it before we can clear it.
+      if (localStorage.getItem("codeshell.theme-pack") === pack.id) choosePack(DEFAULT_PACK_ID);
+      await refreshInstalledThemes();
+      setInstalled(installedThemePacks());
+      toast({
+        message: t("settingsX.appearance.pack.removeDone", { name: String(pack.name) }),
+        variant: "success",
+      });
+    } catch (cause) {
+      toast({
+        message: t("settingsX.appearance.pack.removeFailed", {
+          name: String(pack.name),
+          error: cause instanceof Error ? cause.message : String(cause),
+        }),
+        variant: "error",
+      });
+    } finally {
+      removingRef.current = null;
+      setRemoval(null);
+    }
   };
 
   const allPacks: ThemePack[] = [...THEME_PACKS, ...installed];
@@ -171,19 +196,31 @@ export function AppearanceSection() {
         {t("settingsX.appearance.title")}
       </h3>
       <p className="m-0 text-xs text-muted-foreground">{t("settingsX.appearance.desc")}</p>
-      <div className="grid grid-cols-[repeat(auto-fill,minmax(160px,1fr))] gap-2">
+      <div
+        role="group"
+        aria-label={t("settingsX.appearance.title")}
+        className="grid grid-cols-[repeat(auto-fill,minmax(160px,1fr))] gap-2"
+      >
         {THEMES.map((item) => (
           <Button
             key={item.id}
             type="button"
             variant="outline"
+            aria-pressed={theme === item.id}
+            data-theme-mode={item.id}
             className={cn(
               "h-auto min-h-20 flex-col items-start gap-1 whitespace-normal p-3 text-left",
               theme === item.id && "border-primary bg-primary/10 ring-1 ring-primary/30",
             )}
             onClick={() => choose(item.id)}
           >
-            <span className="text-sm font-medium text-foreground">{item.label}</span>
+            <span className="flex w-full items-center justify-between gap-2 text-sm font-medium text-foreground">
+              {item.label}
+              <Check
+                className={cn("size-3.5 shrink-0 text-primary", theme !== item.id && "invisible")}
+                aria-hidden
+              />
+            </span>
             <span className="text-xs text-muted-foreground">{item.description}</span>
           </Button>
         ))}
@@ -229,6 +266,7 @@ export function AppearanceSection() {
           <div
             key={pack.id}
             data-theme-pack={pack.id}
+            aria-busy={removal?.id === pack.id && removal.pending ? true : undefined}
             className={cn(
               "group relative overflow-hidden rounded-xl border text-left",
               packId === pack.id
@@ -272,11 +310,25 @@ export function AppearanceSection() {
                 variant="ghost"
                 size="icon"
                 data-theme-uninstall={pack.id}
-                aria-label={t("settingsX.appearance.pack.removeAction")}
+                disabled={removal !== null}
+                aria-label={t(
+                  removal?.id === pack.id && removal.pending
+                    ? "settingsX.appearance.pack.removingNamed"
+                    : "settingsX.appearance.pack.removeNamed",
+                  { name: String(pack.name) },
+                )}
                 className="absolute bottom-4 right-2 h-7 w-7 rounded-lg text-muted-foreground hover:bg-status-err/10 hover:text-status-err"
                 onClick={() => void removePack(pack)}
               >
-                <Trash2 size={13} aria-hidden="true" />
+                {removal?.id === pack.id && removal.pending ? (
+                  <Loader2
+                    size={13}
+                    className="animate-spin motion-reduce:animate-none"
+                    aria-hidden
+                  />
+                ) : (
+                  <Trash2 size={13} aria-hidden="true" />
+                )}
               </Button>
             )}
           </div>

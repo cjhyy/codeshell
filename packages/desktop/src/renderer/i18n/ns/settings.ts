@@ -172,6 +172,10 @@ export const settingsNs = {
           removeTitle: "删除这个主题包?",
           removeBody: "「{name}」将被永久删除。",
           removeAction: "删除",
+          removeNamed: "删除主题包「{name}」",
+          removingNamed: "正在删除主题包「{name}」",
+          removeDone: "已删除主题包「{name}」",
+          removeFailed: "无法删除主题包「{name}」:{error}",
         },
         audio: {
           sounds: "主题音效",
@@ -1338,6 +1342,10 @@ export const settingsNs = {
           removeTitle: "Remove this theme pack?",
           removeBody: "“{name}” will be permanently deleted.",
           removeAction: "Remove",
+          removeNamed: "Remove theme pack “{name}”",
+          removingNamed: "Removing theme pack “{name}”",
+          removeDone: "Removed theme pack “{name}”",
+          removeFailed: "Could not remove theme pack “{name}”: {error}",
         },
         audio: {
           sounds: "Theme sounds",
