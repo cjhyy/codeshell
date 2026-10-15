@@ -22,6 +22,7 @@ const fixtures = [
   "updater/UpdaterBanner.browser.fixture.mjs",
   "Sidebar.browser.fixture.mjs",
   "runtime/CloudProjectWorkspace.browser.fixture.mjs",
+  "projects/CloudProjectDialogs.browser.fixture.mjs",
   "account/AccountSidebarEntry.browser.fixture.mjs",
   "chat/anchored-popovers.browser.fixture.mjs",
   "ui/ContextMenu.browser.fixture.mjs",

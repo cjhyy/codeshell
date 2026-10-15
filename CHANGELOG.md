@@ -52,6 +52,8 @@ breaking.
   while preserving visible conversation output, draft input and status actions.
 - Bring Web model editors into view, return focus after cancel/discard, and keep
   failed-save drafts editable without interrupting focus moved elsewhere.
+- Keep cloud project dialogs within short windows and recover owned failed
+  operations without interrupting another control, account or project.
 
 ## [0.9.44] - 2026-10-15
 

@@ -486,6 +486,21 @@ the existing desktop CI shard after browser installation/workspace build.
 Root integrates both commits into UI6; only Cloud dialogs and Profile dialogs
 remain outstanding before combined gates.
 
+UI6 Cloud dialogs are integrated as `8eb2fe4ed` / `550724291` / `cff9a7dc7`
+(source `6c6611f95` / `15b2aebbd` / `2e479aa3f`), with the 31st public Desktop
+fixture registered. Chooser, manager and re-login keep bounded header/body,
+complete legal names/errors and visible Close. A local operation focus lease
+retains captured identity and cancels after explicit pointer/focus handoff,
+window blur, identity changes and unmount; uncertain manager failures still
+require Reload, failed login still clears its password. Native disabled-control
+FocusScope fallback is accepted only while the original operation owns focus.
+ResizeObserver only scrolls marked owned auto-scrollers with a current focused
+descendant, never the hidden shell or focus itself. Source production Chrome
+141 observations, development 33, actual Electron 69 including true 100/200%
+zoom and live resize, 21 guarded tests/42 assertions, Desktop/mobile types,
+renderer build and lint/format passed. Root and bridge independently reviewed
+the frozen source; final combined UI6 verification remains outstanding.
+
 Initial audit history follows:
 
 - Read-only audit is in progress, including Desktop and mobile/Web.
