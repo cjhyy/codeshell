@@ -108,11 +108,13 @@ export function ApprovalCard({ envelope, onDecide, allowScopes = true }: Props) 
 
   return (
     <div className="min-w-0 rounded-lg border bg-card p-3 text-card-foreground shadow-sm">
-      <div className="flex items-center gap-2">
-        <span className="font-mono text-sm font-semibold">{request.toolName}</span>
+      <div className="grid min-w-0 grid-cols-[minmax(0,1fr)_auto] items-start gap-x-2 gap-y-1">
+        <span className="min-w-0 font-mono text-sm font-semibold [overflow-wrap:anywhere]">
+          {request.toolName}
+        </span>
         <RiskPill level={risk} />
         {request.description && (
-          <span className="truncate text-xs text-muted-foreground" title={request.description}>
+          <span className="col-span-2 min-w-0 text-xs text-muted-foreground [overflow-wrap:anywhere]">
             {request.description}
           </span>
         )}

@@ -50,7 +50,7 @@ The initial blockers below are retained as resolved verification history.
 
 Current integration worktree:
 `/Users/admin/.codex/worktrees/ui-task-center-20261015/codeshell`, branch
-`codex/integration/ui-review-wave2-20261015`. Other work advanced remote main to
+`codex/integration/ui-review-wave3-20261015`. Other work advanced remote main to
 `0.9.44`; this branch merged `976a79322` and `bb7a9b59a`, preserving the incoming model-capability,
 forwarding and Figma updates. The CSS merge preserves both context-selection and
 file-action styles. Do not revert incoming work or republish another version on
@@ -112,11 +112,12 @@ overwrites a newer event, and version/action rejections are unhandled. Evidence:
 `/tmp/codeshell-updater-ui-before-20261015/report.json`; no network was allowed.
 Continue with the current commits and evidence instead of redoing the initial audit.
 
-Second wave is committed on the current integration branch. Combined verification
+Second wave was delivered to remote main at `f7287c91c`. CI `38717940777`
+passed all 12 jobs. Combined local verification
 passed: all 14 workspace typechecks, full Desktop build, lint baseline, 3,289
 guarded renderer/Web tests (12,322 assertions; one separately covered browser
 test skipped), all 19 Desktop browser fixtures, all three Web fixtures, and real
-Electron Settings/2,050-record Task center acceptance. It is ready for main delivery:
+Electron Settings/2,050-record Task center acceptance:
 
 - `6396a90f2`, `809e0495b`: updater snapshot/event ordering, recoverable reads and
   actions, long-error wrapping, keyboard retry focus and concise update guidance.
@@ -137,16 +138,72 @@ Both merge conflicts preserved all changes: Appearance + Context fixture entries
 and the listbox useId + new caret hook in ChatView. CI now includes all 19 Desktop
 browser fixtures and all three Web navigation/scrolling fixtures.
 
-Third-wave read-only audit confirmed AskUser keyboard-inaccessible options,
-IME-confirmation submission and overflowing sticky questions on short containers.
-These P1 fixes are committed as `7b00fb28e` in the clean independent
-`ask-user-ui-20261015` tree, with 32 production layouts, StrictMode checks and 41
-related tests passed; independent review confirmed request identity and resize
-focus behavior. Root's separate `file-browser-ui-20261015` tree now uses branch
-`codex/desktop/tool-card-layout-20261015` for the long Approval/Tool card header P2;
-keep it separate from this verified integration tree. Resolved-answer readability
-remains a follow-up. Evidence:
-`/tmp/codeshell-session-cards-audit-20261015/report.json`.
+Third-wave changes are integrated on the current task branch and passed the
+final combined local gate, ready for main delivery:
+
+- `5efea027a` (source `7b00fb28e`): native keyboard-accessible AskUser options,
+  IME-safe confirmation, rejection recovery and request-bound question state.
+  Thirty-two production layouts, StrictMode and 41 related tests passed.
+- `aaef664f3` (source `8a0c49ec4`): wrap long Approval/Tool card identities while
+  keeping risk, error, duration and controls visible. StatusDot was measured as
+  0×0 and transparent in all five states; it now renders an accessible 8px circle
+  with state colors and a reduced-motion-safe running indicator.
+- `bb39301a0` (source `9cac247f3`): preserve all receipt characters and original
+  line breaks, including long URLs/hashes and 50-line answers. Sixteen production
+  layouts passed; resolved receipts cannot resubmit.
+- `1411d3c0f`: keep approval/question and composer scroll regions within their
+  actual pane. Request existence owns the bounded mode, avoiding inline/sticky
+  IntersectionObserver oscillation. Resize and focusin only scroll the region
+  containing the current focus; no focus is taken from another control. The
+  independent fixture passed 32 header layouts, 16 true ChatView layouts and ten
+  behavior cases, including 120-frame stability, A→B decision identity and native
+  Select resize/escape focus visibility.
+- `cd0cbc026`, `c1a1b7f35`: retain the Figma overflow/recovery transport contract
+  against current production sources in the shipped Node runtime. Isolated
+  diagnosis reproduced intermittent multi-MiB node:http stalls in Bun 1.3.11;
+  Node passed 300 repetitions. This is a test-runtime correction, not a production
+  transport fix. The 8MiB/20s budgets remain unchanged, and exact-origin guards,
+  four denied-network probes, cancellation/abort socket closure, physical request
+  counts, credential state, 413 mapping and recovery remain asserted. Root's
+  guarded provider suite passed 29 tests and 311 assertions.
+
+Third-wave final local checks so far: all 14 workspace typechecks, full Desktop
+build (main/preload/renderer/mobile/extension), lint baseline (0 errors, 104
+existing warnings) and 3,395 guarded renderer/shared/Web tests with 12,590
+assertions passed (one browser test separately covered). All 22 Desktop browser
+fixtures passed, including 144 Quick Chat layouts, 120 interactions, 72 responsive
+cases, the new Ask/receipt/tool/approval fixtures and all existing shared overlays.
+Evidence
+includes `/tmp/codeshell-ui-wave3-*`, `/tmp/codeshell-approval-portal-final-review.log`
+and the independent task fixture reports.
+
+The next-wave read-only ordinary composer audit reproduced a P1: twelve queued
+items stretch the main composer to 726–742px, or 890–906px with a long draft, in
+240/360/480px panes. Mouse wheel cannot reach input/Stop through the clipped root.
+Keyboard-induced hidden-root scrolling does not count as a solution. The actual
+Quick Chat panel already scrolls internally and has no queue interface. All queue
+wire contracts passed. Independent implementation starts from `1411d3c0f` on
+`codex/desktop/composer-overflow-20261015`; preserve all pending-interaction fixes.
+Evidence: `/tmp/codeshell-ordinary-composer-audit-20261015/report.json`.
+
+Two further independent review tasks are accepted for the next wave:
+
+- Desktop Sidebar P1: in 800×360, the session scroller falls to 12px; in a
+  390×360 drawer the account footer is outside the viewport. At 320×240, navigation,
+  empty-state actions and account controls are clipped. Keep the content in a
+  usable scroll region and the footer reachable, preserving pagination, session
+  states and menus. Source `9862c50be`; production owned-bridge evidence:
+  `/tmp/codeshell-desktop-sidebar-audit.mjs`. A separate tiny search-dialog content
+  region at 320×240 is retained as a later P2, not part of the Sidebar fix.
+- Settings navigation P2: clear-search and narrow search-result activation lose
+  focus to BODY; switching across the responsive breakpoint while searching does
+  the same, including an isolated native Electron 200% zoom. Hand off only
+  settings-navigation focus to its visible equivalent, retain search selection,
+  and preserve content/external/portal focus. Evidence:
+  `/tmp/codeshell-settings-focus-review.log` and
+  `/tmp/codeshell-settings-focus-electron-review.log`.
+
+Initial audit history follows:
 
 - Read-only audit is in progress, including Desktop and mobile/Web.
 - Initial mobile candidates were excluded after entry-point inspection: those
