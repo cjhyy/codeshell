@@ -50,7 +50,7 @@ The initial blockers below are retained as resolved verification history.
 
 Current integration worktree:
 `/Users/admin/.codex/worktrees/ui-task-center-20261015/codeshell`, branch
-`codex/integration/ui-review-wave5-20261015`. Other work advanced remote main to
+`codex/integration/ui-review-wave6-20261015`. Other work advanced remote main to
 `0.9.44`; this branch merged `976a79322` and `bb7a9b59a`, preserving the incoming model-capability,
 forwarding and Figma updates. The CSS merge preserves both context-selection and
 file-action styles. Do not revert incoming work or republish another version on
@@ -387,7 +387,10 @@ skip); all 29 browser fixtures passed. Sequential production full-app Electron
 Settings, Search and Operations pages all passed. Logs are
 `/tmp/codeshell-ui-wave5-{typecheck,lint,desktop-build,unit,overlays,native-settings,native-search,native-operations}.log`.
 Root independently verified every final scope in the combination and refreshed
-remote main before delivery. Remote CI remains pending the push.
+remote main before delivery. UI5 is delivered at `bef6e513e` and independently
+confirmed by remote ls-remote. CI `38740819315` is queued/running; do not push
+UI6 until that run is complete. Current integration now starts UI6 from the
+delivered main while its three independent scopes refresh against that base.
 
 The repository's later release `v0.9.44` was published at 09:44:42Z with all
 14 native/update assets present. This follows our verified `v0.9.43` publication;
