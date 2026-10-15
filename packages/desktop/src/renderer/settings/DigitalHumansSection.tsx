@@ -56,6 +56,7 @@ export function DigitalHumansSection({
   const [skills, setSkills] = React.useState<DigitalHumanSkillEntry[]>([]);
   const [editing, setEditing] = React.useState<DigitalHumanProfileEntry | undefined>();
   const [editorOpen, setEditorOpen] = React.useState(false);
+  const editorOpener = React.useRef<HTMLButtonElement | null>(null);
   const [pluginExportName, setPluginExportName] = React.useState<string | null>(null);
   const [busy, setBusy] = React.useState(false);
   const [installingRequirements, setInstallingRequirements] = React.useState(false);
@@ -234,7 +235,8 @@ export function DigitalHumansSection({
             <Button
               size="sm"
               disabled={busy}
-              onClick={() => {
+              onClick={(event) => {
+                editorOpener.current = event.currentTarget;
                 setEditing(undefined);
                 setEditorOpen(true);
               }}
@@ -272,7 +274,8 @@ export function DigitalHumansSection({
                   size="sm"
                   variant="outline"
                   disabled={busy}
-                  onClick={() => {
+                  onClick={(event) => {
+                    editorOpener.current = event.currentTarget;
                     setEditing(profile);
                     setEditorOpen(true);
                   }}
@@ -286,6 +289,7 @@ export function DigitalHumansSection({
         )}
         <DigitalHumanEditorDialog
           open={editorOpen}
+          opener={editorOpener.current}
           profile={editing}
           existingIds={profiles.map((profile) => profile.name)}
           skills={skills.filter((skill) => skill.source !== "project")}
