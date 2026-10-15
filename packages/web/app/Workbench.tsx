@@ -140,7 +140,11 @@ export function Workbench({
   );
   const sidebarRef = React.useRef<HTMLElement>(null);
   const sidebarToggleRef = React.useRef<HTMLButtonElement>(null);
-  const sidebarWasOpen = React.useRef(false);
+  const sidebarResizeFocus = React.useRef<{
+    source: HTMLElement;
+    workspace: string;
+    cancelled: boolean;
+  } | null>(null);
   const messageListId = React.useId();
   const textareaRef = React.useRef<HTMLTextAreaElement>(null);
   const latest = useLatestMessages({
@@ -166,22 +170,60 @@ export function Workbench({
     setOpenedPanel(undefined);
     setView((current) => (current === "panel" ? "panels" : current));
   }, [controller.workspaceKey]);
-  React.useEffect(() => {
-    if (narrow && !sidebarOpen && sidebarWasOpen.current && !devicesOpen) {
+  React.useLayoutEffect(() => {
+    const intent = sidebarResizeFocus.current;
+    sidebarResizeFocus.current = null;
+    const active = document.activeElement;
+    if (
+      intent &&
+      !intent.cancelled &&
+      intent.workspace === controller.workspaceKey &&
+      narrow &&
+      !sidebarOpen &&
+      !devicesOpen &&
+      (active === intent.source || active === document.body || !active?.isConnected)
+    )
       sidebarToggleRef.current?.focus();
-    }
-    sidebarWasOpen.current = sidebarOpen;
-  }, [narrow, sidebarOpen, devicesOpen]);
+  }, [narrow, sidebarOpen, devicesOpen, controller.workspaceKey]);
 
   React.useEffect(() => {
     const media = window.matchMedia("(max-width: 760px)");
     const change = () => {
+      const source = document.activeElement;
+      sidebarResizeFocus.current =
+        media.matches && source instanceof HTMLElement && sidebarRef.current?.contains(source)
+          ? { source, workspace: controller.workspaceKey, cancelled: false }
+          : null;
       setNarrow(media.matches);
       setSidebarOpen(!media.matches);
     };
+    const handoff = (event: Event) => {
+      const target =
+        event instanceof FocusEvent && event.type === "focusout"
+          ? event.relatedTarget
+          : event.target;
+      if (!(target instanceof Node) || (target === document.body && event.type !== "pointerdown"))
+        return;
+      const intent = sidebarResizeFocus.current;
+      if (intent && !intent.source.contains(target)) intent.cancelled = true;
+    };
+    const blur = () => {
+      if (sidebarResizeFocus.current) sidebarResizeFocus.current.cancelled = true;
+    };
     media.addEventListener("change", change);
-    return () => media.removeEventListener("change", change);
-  }, []);
+    document.addEventListener("pointerdown", handoff, true);
+    document.addEventListener("focusin", handoff, true);
+    document.addEventListener("focusout", handoff, true);
+    window.addEventListener("blur", blur);
+    return () => {
+      sidebarResizeFocus.current = null;
+      media.removeEventListener("change", change);
+      document.removeEventListener("pointerdown", handoff, true);
+      document.removeEventListener("focusin", handoff, true);
+      document.removeEventListener("focusout", handoff, true);
+      window.removeEventListener("blur", blur);
+    };
+  }, [controller.workspaceKey]);
 
   React.useEffect(() => {
     if (!narrow || !sidebarOpen) return;
