@@ -89,7 +89,7 @@ same nickname/username editing. The profile link does not authorize Link access.
 ## GitHub login and data connection
 
 When opening account settings, Desktop checks saved global GitHub Link metadata.
-With no saved connection, "Continue with GitHub" defaults to "Connect GitHub too"
+With no saved connection, "Link by default on first GitHub sign-in" is selected
 when the service supports the account-to-Link handoff. Existing saved connections
 default to account sign-in only, preserving their repository/action grants. This
 includes unavailable connections: signing in does not silently reconnect or replace
