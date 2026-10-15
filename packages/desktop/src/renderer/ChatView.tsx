@@ -1157,6 +1157,8 @@ export function ChatView({
       setHistory(pushHistory(activeProjectId, withLocalFiles));
     }
     setDraft("");
+    closeMention();
+    closeSlash();
     setAttachments([]);
     setInputReferences([]);
     setLocalFilePaths([]);
@@ -2313,6 +2315,8 @@ export function ChatView({
                             setHistory(pushHistory(activeProjectId, withLocalFiles));
                           }
                           setDraft("");
+                          closeMention();
+                          closeSlash();
                           setAttachments([]);
                           setInputReferences([]);
                           setLocalFilePaths([]);
