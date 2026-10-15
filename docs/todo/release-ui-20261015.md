@@ -369,6 +369,18 @@ Evidence `codeshell-connections-ui-p5YgCr/report.json`; baseline fails the same
 default-provider and long-ID assertions. Root reviewed the final source and
 registered both new fixtures; combined UI5 gates remain pending MCP delivery.
 
+MCP is now integrated from `febb3dee2` (parent `94f1a462b`); only the two
+viewers and their actual opener capture changed. Complete tools/raw diagnostics
+remain; standard dialogs contain Tab, close with Escape and return only owned
+focus. External pointer/focus, window blur and unmounted targets cancel return.
+Source Chrome 16 layouts/84 observations and real Electron 16/96 (including
+12 actual live-resize observations) passed with no errors/outside requests/
+mutations. Types, renderer build, lint/format and 13 lifecycle tests passed,
+with two independent product reviews green. Before evidence fails directly
+because the old viewer has no dialog role. Root registered the MCP fixture;
+UI5 now freezes Search/History/Connections/MCP for combined gates, 29 browser
+fixtures in total. No additional release/version change is planned.
+
 Root's production TopBar→NotificationHistory audit passed 16 language/theme/
 window combinations down to 320×240 with 40 complete long notifications, native
 wheel, keyboard reachability, full final actions and exact Escape focus return.
