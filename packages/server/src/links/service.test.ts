@@ -155,7 +155,7 @@ function saveRemoteFigma(store: CredentialStore, issuer = catalogConfiguration.i
 
 describe("Link catalog health and saved account management", () => {
   test("unconfigured and undiscovered catalogs differ from a verified empty catalog", async () => {
-    let configuration: RemoteLinkConfiguration | undefined;
+    let configuration: RemoteLinkConfiguration | undefined = undefined;
     const clock = Date.parse("2026-10-15T00:00:00Z");
     let requests = 0;
     const { service } = fixture({
@@ -328,7 +328,7 @@ describe("Link catalog health and saved account management", () => {
     let configuration = catalogConfiguration;
     let fail = false;
     const requests: string[] = [];
-    const { service } = fixture({
+    const { service, store } = fixture({
       now: () => clock,
       remoteLink: () => configuration,
       readRemoteCatalog: async (config) => {
@@ -337,6 +337,7 @@ describe("Link catalog health and saved account management", () => {
         return config.issuer === catalogConfiguration.issuer ? ["figma"] : ["github"];
       },
     });
+    saveRemoteFigma(store);
     await service.refreshRemoteCatalog(owner);
     configuration = { ...catalogConfiguration, issuer: "https://other-catalog.example" };
     fail = true;
@@ -354,7 +355,7 @@ describe("Link catalog health and saved account management", () => {
     await service.refreshRemoteCatalog(owner);
     expect(service.snapshot().remoteCatalog?.state).toBe("ready");
     expect(remoteMode(service, "github")?.available).toBe(true);
-    expect(remoteMode(service)?.available ?? false).toBe(false);
+    expect(remoteMode(service)).toMatchObject({ available: false });
     expect(requests).toEqual([
       catalogConfiguration.issuer,
       configuration.issuer,
