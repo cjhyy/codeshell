@@ -746,12 +746,28 @@ describe("ExternalRuntimeService", () => {
         hostOptions as unknown as Parameters<typeof createSessionToolHost>[0],
       );
       try {
-        for (const filePath of [outside, sensitive]) {
-          const result = await host.execute({
-            id: filePath,
-            name: "Read",
-            input: { file_path: filePath },
-          });
+        expect(
+          await host.execute({ id: "idle-read", name: "Read", input: { file_path: outside } }),
+        ).toMatchObject({
+          isError: true,
+          error: "This runtime submission is no longer active.",
+        });
+        const results: Awaited<ReturnType<typeof host.execute>>[] = [];
+        providerSend = async () => {
+          for (const filePath of [outside, sensitive]) {
+            results.push(
+              await host.execute({
+                id: filePath,
+                name: "Read",
+                input: { file_path: filePath },
+              }),
+            );
+          }
+        };
+        await svc.send(request.sessionId, { text: "Read fixture files", disableGoal: true });
+        expect(results).toHaveLength(2);
+        for (const [index, filePath] of [outside, sensitive].entries()) {
+          const result = results[index]!;
           if (permissionMode === "bypassPermissions") {
             expect(result.isError).toBeFalsy();
             expect(result.result).toContain(readFileSync(filePath, "utf8"));
@@ -766,8 +782,15 @@ describe("ExternalRuntimeService", () => {
         expect(host.toolContext.permissionMode).toBe(
           permissionMode === "default" ? "default" : "acceptEdits",
         );
+        expect(
+          await host.execute({ id: "late-read", name: "Read", input: { file_path: outside } }),
+        ).toMatchObject({
+          isError: true,
+          error: "This runtime submission is no longer active.",
+        });
       } finally {
         await host.dispose();
+        await svc.stopAll();
       }
     },
   );
@@ -792,16 +815,26 @@ describe("ExternalRuntimeService", () => {
       hostOptions as unknown as Parameters<typeof createSessionToolHost>[0],
     );
     try {
-      const result = await host.execute({
-        id: "denied-read",
-        name: "Read",
-        input: { file_path: filePath },
-      });
-      expect(result.isError).toBe(true);
-      expect(result.error).toBe("Permission denied for tool: Read");
+      let result: Awaited<ReturnType<typeof host.execute>> | undefined;
+      providerSend = async () => {
+        result = await host.execute({
+          id: "denied-read",
+          name: "Read",
+          input: { file_path: filePath },
+        });
+      };
+      await svc.send(request.sessionId, { text: "Read denied fixture", disableGoal: true });
+      expect(result).toMatchObject({ isError: true, error: "Permission denied for tool: Read" });
       expect(asked).toBe(false);
+      expect(
+        await host.execute({ id: "late-read", name: "Read", input: { file_path: filePath } }),
+      ).toMatchObject({
+        isError: true,
+        error: "This runtime submission is no longer active.",
+      });
     } finally {
       await host.dispose();
+      await svc.stopAll();
     }
   });
 

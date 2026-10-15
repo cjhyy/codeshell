@@ -103,6 +103,7 @@ try {
           const menu = page.getByRole("listbox");
           await menu.waitFor();
           await page.waitForTimeout(250);
+          let phase = "open";
           const measure = async (phase) => {
             const box = await menu.evaluate((node) => {
               const rect = node.getBoundingClientRect();
@@ -147,6 +148,7 @@ try {
               ),
             });
             if (!recordOnly) {
+              phase = "scroll";
               const scrolled = await menu.evaluate((node) => {
                 node.scrollTop = node.scrollHeight;
                 return node.scrollTop;
@@ -163,6 +165,7 @@ try {
                 scrolled,
                 "Background token updates preserve manually scrolled suggestions",
               );
+              phase = "keyboard";
               await input.press("ArrowUp");
               await page.waitForTimeout(80);
               const selected = menu.getByRole("option", { selected: true });
@@ -175,8 +178,26 @@ try {
                 }),
                 "Keyboard selection remains visible and clickable",
               );
+              phase = "pick";
               await selected.click();
               await menu.waitFor({ state: "hidden" });
+              const pickedDraft = token === "@" ? "@/fixture/file11.ts " : "/demo:command19 ";
+              // Closing the portal is only one part of a pick. Check the
+              // controlled draft, then let the pick's scheduled caret restore
+              // finish before replacing the input again.
+              await page.waitForFunction((expected) => {
+                const node = document.querySelector("textarea");
+                return (
+                  node?.value === expected &&
+                  node.selectionStart === expected.length &&
+                  node.selectionEnd === expected.length
+                );
+              }, pickedDraft);
+              await page.evaluate(async () => {
+                await new Promise((resolve) =>
+                  requestAnimationFrame(() => requestAnimationFrame(resolve)),
+                );
+              });
               assert.ok(
                 await input.evaluate((node) => document.activeElement === node),
                 "Pointer selection retains composer focus",
@@ -186,14 +207,35 @@ try {
                 0,
                 "Picking a suggestion never sends the draft",
               );
+              phase = "reopen";
               await input.fill(token);
               await menu.waitFor();
+              assert.equal(
+                await input.inputValue(),
+                token,
+                "A fresh token replaces the picked draft",
+              );
+              // A transient blur must not close this new query after focus has
+              // already returned. The resize below outlives the blur callback.
+              await input.evaluate((node) => {
+                node.blur();
+                node.focus();
+              });
+              phase = "resize";
               await page.setViewportSize({ width: 320, height: 240 });
               await page.waitForTimeout(200);
               await measure("resize");
             }
           } catch (error) {
-            failures.push(error.message);
+            const inputState = await input.evaluate((node) => ({
+              value: node.value,
+              selectionStart: node.selectionStart,
+              selectionEnd: node.selectionEnd,
+              focused: document.activeElement === node,
+            }));
+            failures.push(
+              `${JSON.stringify({ lang, viewport, narrowPane, token, phase, inputState })}\n${error.message}`,
+            );
           }
           await input.press("Escape");
           await menu.waitFor({ state: "hidden" });

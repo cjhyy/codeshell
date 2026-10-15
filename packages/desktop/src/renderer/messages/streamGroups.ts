@@ -18,7 +18,7 @@
  * recent live turn extends to the turn end so the user watches progress.
  */
 
-import type { AgentMessage, Message, ThinkingMessage, ToolMessage } from "../types";
+import type { Message, ThinkingMessage, ToolMessage } from "../types";
 import type { AgentGroup } from "./agentGroup";
 import { describeActivity } from "../topbar/liveActivity";
 import { translate } from "../i18n/translate";
@@ -66,15 +66,16 @@ export interface ToolGroup {
 export interface TurnProcessGroup {
   kind: "turn_process_group";
   id: string;
-  /** Wall time from the first tool's startedAt to the last tool's
-   *  endedAt — 0 if any tool is still running and the card is live.
-   *  Consumers should prefer `firstToolStartedAt` + a 1s ticker for
-   *  live cards. */
-  durationMs: number;
+  /** Frozen whole-run duration; absent when legacy history has no timing. */
+  durationMs?: number;
+  /** Run start, including model work before the first tool. */
+  startedAt?: number;
   /** Earliest tool startedAt; used by the live ticker. */
   firstToolStartedAt: number;
   /** True while the owning turn is still streaming. */
   isLive: boolean;
+  /** Abnormal terminal events keep expanded details available. */
+  completedCleanly?: boolean;
   /** Number of tool calls inside (across all level-1 groups + inline). */
   toolCount: number;
   /** True when this turn was interrupted (a trailing turn_end reason="stopped"
@@ -131,11 +132,7 @@ function isHiddenTool(m: Message): boolean {
   return shouldHideBrowserRuntimeTool(m);
 }
 
-const BROWSER_RUNTIME_TOOL_NAMES = new Set([
-  "browser_observe",
-  "browser_act",
-  "browser_navigate",
-]);
+const BROWSER_RUNTIME_TOOL_NAMES = new Set(["browser_observe", "browser_act", "browser_navigate"]);
 
 /**
  * Browser Runtime keeps complete tool messages in state/transcript but projects
@@ -238,48 +235,38 @@ export function buildStreamItems(
  * sees a stable prop and skips the subtree. (perf: scroll-jank-2026-06-02)
  *
  * The signature captures everything the card renders from the group: the
- * member ids in order, plus the fields that flip its header (toolCount,
- * durationMs, isLive). Leaf ToolMessage content (args/result/status) is NOT
- * hashed here — those are owned by the memoized ToolCard, which re-renders on
- * its own message-identity change independently of the group wrapper.
+ * immutable member identities in order, plus the fields that flip its header.
+ * A changed leaf must invalidate its wrappers so memoized descendants receive
+ * the new message snapshot; an id alone cannot distinguish a tool's result.
  */
 /**
- * Agent messages are immutable reducer snapshots with stable ids. Their object
+ * Messages are immutable reducer snapshots with stable ids. Their object
  * identity changes for nested tool results, text and lifecycle updates, even
  * after completion. Use that identity without hashing large results, so groups
  * expose every updated detail and still reuse unchanged live or settled cards.
  * Weak keys let discarded transcript snapshots be garbage-collected.
  */
-const agentTokens = new WeakMap<AgentMessage, number>();
-let nextAgentToken = 0;
+const messageTokens = new WeakMap<Message, number>();
+let nextMessageToken = 0;
 function innerItemToken(it: Message | ToolGroup): string {
-  if (it.kind === "tool_group") return "tg(" + it.items.map((x) => x.id).join(",") + ")";
-  if (it.kind === "agent") {
-    let token = agentTokens.get(it);
-    if (token === undefined) {
-      token = ++nextAgentToken;
-      agentTokens.set(it, token);
-    }
-    return `a(${it.id}:${token})`;
+  if (it.kind === "tool_group") return "tg(" + it.items.map(innerItemToken).join(",") + ")";
+  // Reducer messages are immutable. Identity catches args/results, streaming
+  // text and same-length steer corrections without hashing large payloads.
+  let token = messageTokens.get(it);
+  if (token === undefined) {
+    token = ++nextMessageToken;
+    messageTokens.set(it, token);
   }
-  if (it.kind === "user") {
-    // An in-group steer bubble mutates in place on confirmation: same id, but
-    // pending flips true→false and the text may resolve from the optimistic
-    // draft to the engine-echoed text (steer_injected). Keying on id alone would
-    // reuse the stale group object (memoized card frozen at pending → the
-    // confirmed bubble never appears). Fold pending + text length into the token.
-    return `u(${it.id}:${(it as { pending?: boolean }).pending ? 1 : 0}:${it.text.length})`;
-  }
-  return it.id;
+  return `${it.kind}(${it.id}:${token})`;
 }
 
 function groupSignature(item: StreamItem): string {
   if (item.kind === "tool_group") {
-    return "g:" + item.items.map((it) => it.id).join(",");
+    return "g:" + item.items.map(innerItemToken).join(",");
   }
   if (item.kind === "turn_process_group") {
     const inner = item.items.map(innerItemToken).join(",");
-    return `p:${item.isLive ? 1 : 0}:${item.stopped ? 1 : 0}:${item.durationMs}:${item.toolCount}:${inner}`;
+    return `p:${item.isLive ? 1 : 0}:${item.stopped ? 1 : 0}:${item.completedCleanly}:${item.startedAt}:${item.firstToolStartedAt}:${item.durationMs}:${item.toolCount}:${inner}`;
   }
   return item.kind + ":" + item.id;
 }
@@ -450,7 +437,7 @@ function foldTurnProcess(items: Array<Message | ToolGroup>, liveTurnActive: bool
     // Injected: only a boundary if a done assistant precedes it since the last
     // real boundary (i.e. the prior turn completed before this wakeup).
     const priorStart = userIdxs.length ? userIdxs[userIdxs.length - 1]! : -1;
-    if (latestAssistantIsDone(items, priorStart, i)) userIdxs.push(i);
+    if (turnHasCompleted(items, priorStart, i)) userIdxs.push(i);
   }
   if (userIdxs.length === 0) return items.slice();
 
@@ -468,7 +455,7 @@ function foldTurnProcess(items: Array<Message | ToolGroup>, liveTurnActive: bool
     const start = userIdxs[k]!;
     const end = k + 1 < userIdxs.length ? userIdxs[k + 1]! : items.length;
     const isLive =
-      liveTurnActive && start === lastTurnStart && !latestAssistantIsDone(items, start, end);
+      liveTurnActive && start === lastTurnStart && !turnHasCompleted(items, start, end);
     // A turn the user interrupted carries a trailing turn_end reason="stopped"
     // (a flat sibling after the last tool). Such a turn must render flat, not
     // behind the elapsed-time fold header.
@@ -498,6 +485,9 @@ function foldTurnProcess(items: Array<Message | ToolGroup>, liveTurnActive: bool
     // the card until the next user message solidifies the summary.
     const innerEnd = isLive ? end : lastTool + 1;
     const innerItems = items.slice(start + 1, innerEnd);
+    const turnItems = items.slice(start, end);
+    const user = items[start]!;
+    const timing = user.kind === "user" ? user.turnTiming : undefined;
     // Closed-turn duration is the WHOLE turn's wall time, not just the tool
     // span: a turn whose tools each return instantly (a 0ms Skill, fast local
     // reads) still spent real time in the model. Prefer the user→assistant
@@ -507,9 +497,12 @@ function foldTurnProcess(items: Array<Message | ToolGroup>, liveTurnActive: bool
     out.push({
       kind: "turn_process_group",
       id: `process-${anchorId(innerItems[0]!)}`,
-      durationMs: isLive ? 0 : turnSpanMs(items.slice(start, end)) || spanDurationMs(innerItems),
+      durationMs: isLive ? 0 : (validStamp(timing?.durationMs) ?? turnSpanMs(turnItems)),
+      startedAt: validToolStamp(timing?.startedAt) ?? turnStartMs(turnItems),
       firstToolStartedAt: firstToolStart(innerItems),
       isLive,
+      completedCleanly:
+        timing?.completedCleanly ?? !turnItems.some((item) => item.kind === "turn_end"),
       toolCount: countToolsRecursive(innerItems),
       stopped,
       items: innerItems,
@@ -533,6 +526,23 @@ function latestAssistantIsDone(
     if (item.kind === "assistant") return item.done;
   }
   return false;
+}
+
+function turnHasCompleted(items: Array<Message | ToolGroup>, start: number, end: number): boolean {
+  for (let i = start + 1; i < end; i++) {
+    if (items[i]!.kind === "turn_end") return true;
+  }
+  const anchor = items[start];
+  if (anchor?.kind === "user" && anchor.turnTiming) {
+    return anchor.turnTiming.completed === true || anchor.turnTiming.completedAt !== undefined;
+  }
+  // Compatibility for old snapshots without lifecycle metadata. A completed
+  // commentary segment before an in-flight tool cannot finish the whole run.
+  let runningTool = false;
+  forEachTool(items.slice(start + 1, end), (tool) => {
+    if (tool.status === "running" || tool.status === "queued") runningTool = true;
+  });
+  return !runningTool && latestAssistantIsDone(items, start, end);
 }
 
 /** True when the turn slice [start+1, end) contains a turn_end reason="stopped"
@@ -559,9 +569,9 @@ function forEachTool(items: Array<Message | ToolGroup>, visit: (t: ToolMessage) 
 function firstToolStart(items: Array<Message | ToolGroup>): number {
   let earliest = Infinity;
   forEachTool(items, (t) => {
-    if (t.startedAt < earliest) earliest = t.startedAt;
+    if (validToolStamp(t.startedAt) !== undefined && t.startedAt < earliest) earliest = t.startedAt;
   });
-  return isFinite(earliest) ? earliest : Date.now();
+  return isFinite(earliest) ? earliest : 0;
 }
 
 function anchorId(item: Message | ToolGroup): string {
@@ -576,64 +586,50 @@ function countToolsRecursive(items: Array<Message | ToolGroup>): number {
   return n;
 }
 
-/**
- * Wall time from the first tool's startedAt to the last tool's
- * endedAt (or startedAt if still running). Returns 0 if no
- * timestamps are available.
- */
-function spanDurationMs(items: Array<Message | ToolGroup>): number {
-  let earliestStart = Infinity;
-  let latestEnd = 0;
-  forEachTool(items, (t) => {
-    if (typeof t.startedAt === "number" && t.startedAt < earliestStart) {
-      earliestStart = t.startedAt;
-    }
-    const end = t.endedAt ?? t.startedAt;
-    if (typeof end === "number" && end > latestEnd) latestEnd = end;
-  });
-  if (!isFinite(earliestStart) || latestEnd <= 0) return 0;
-  return Math.max(0, latestEnd - earliestStart);
+function validStamp(value: number | undefined): number | undefined {
+  return typeof value === "number" && Number.isFinite(value) && value >= 0 ? value : undefined;
 }
 
-/**
- * Whole-turn wall time as a single span: from the turn's earliest start (user
- * `createdAt`, assistant `createdAt`, or any tool `startedAt`) to its latest end
- * (assistant `doneAt` or any tool `endedAt`). `turnItems` is the full turn slice
- * [user .. next user), so it includes the trailing summary assistant that the
- * process card renders outside itself — that's the message carrying `doneAt`.
- *
- * Folding tool timestamps into the SAME span (rather than maxing two
- * independently-anchored spans) means a tool that outruns the recorded `doneAt`
- * still widens the end without resetting the start. Returns 0 only when NO
- * turn-level stamp exists (replayed/historical transcripts), letting the caller
- * fall back to the pure tool span instead of inventing a duration.
- */
-function turnSpanMs(turnItems: Array<Message | ToolGroup>): number {
+function validToolStamp(value: number | undefined): number | undefined {
+  // Older history used 0 as the missing wall-clock timestamp sentinel.
+  return value === 0 ? undefined : validStamp(value);
+}
+
+/** Legacy fallback only: never replace missing history with the current clock. */
+function turnSpan(turnItems: Array<Message | ToolGroup>): { start?: number; end?: number } {
   let earliest = Infinity;
-  let latest = 0;
-  let sawStamp = false;
+  let latest = -Infinity;
   const note = (start?: number, end?: number): void => {
-    if (typeof start === "number") {
-      if (start < earliest) earliest = start;
-      sawStamp = true;
-    }
-    if (typeof end === "number" && end > latest) latest = end;
+    if (validToolStamp(start) !== undefined) earliest = Math.min(earliest, start!);
+    if (validToolStamp(end) !== undefined) latest = Math.max(latest, end!);
   };
   for (const it of turnItems) {
-    if (it.kind === "user") note(it.createdAt);
-    else if (it.kind === "assistant") note(it.createdAt, it.doneAt);
-    else if (it.kind === "tool") note(it.startedAt, it.endedAt ?? it.startedAt);
+    if (it.kind === "user") {
+      note(it.createdAt);
+      note(it.turnTiming?.startedAt, it.turnTiming?.completedAt);
+    } else if (it.kind === "assistant") note(it.createdAt, it.doneAt);
+    else if (it.kind === "tool")
+      note(validToolStamp(it.startedAt), validToolStamp(it.endedAt ?? it.startedAt));
     else if (it.kind === "tool_group") {
       for (const inner of it.items) {
-        if (inner.kind === "tool") note(inner.startedAt, inner.endedAt ?? inner.startedAt);
+        if (inner.kind === "tool")
+          note(validToolStamp(inner.startedAt), validToolStamp(inner.endedAt ?? inner.startedAt));
       }
     }
   }
-  // Require a turn-level stamp (user/assistant) to claim a turn span; a span
-  // built only from tools is exactly what spanDurationMs already provides, so
-  // returning 0 here routes those to the tool-span fallback unchanged.
-  if (!sawStamp || !isFinite(earliest) || latest <= 0) return 0;
-  return Math.max(0, latest - earliest);
+  return {
+    start: Number.isFinite(earliest) ? earliest : undefined,
+    end: Number.isFinite(latest) ? latest : undefined,
+  };
+}
+
+function turnStartMs(items: Array<Message | ToolGroup>): number | undefined {
+  return turnSpan(items).start;
+}
+
+function turnSpanMs(items: Array<Message | ToolGroup>): number | undefined {
+  const { start, end } = turnSpan(items);
+  return start !== undefined && end !== undefined ? Math.max(0, end - start) : undefined;
 }
 
 // ── Header labels ─────────────────────────────────────────────────────
@@ -680,9 +676,27 @@ export function processGroupActivityLabel(group: TurnProcessGroup): string {
   });
 }
 
-export function processGroupLabel(durationMs: number): string {
+export function processGroupLabel(durationMs: number | undefined): string {
   const lang = activeLang();
-  const totalSec = Math.max(0, Math.floor(durationMs / 1000));
+  const duration = validStamp(durationMs);
+  if (duration === undefined || duration < 1000)
+    return translate(lang, "msg.process.elapsedUnknown");
+  const totalSec = Math.max(0, Math.floor(duration / 1000));
+  if (totalSec >= 3600) {
+    const days = Math.floor(totalSec / 86_400);
+    const hours = Math.floor((totalSec % 86_400) / 3600);
+    const minutes = Math.floor((totalSec % 3600) / 60);
+    const seconds = totalSec % 60;
+    const time = [
+      days && `${days}d`,
+      hours && `${hours}h`,
+      minutes && `${minutes}m`,
+      seconds && `${seconds}s`,
+    ]
+      .filter(Boolean)
+      .join(" ");
+    return translate(lang, "msg.process.elapsedLong", { time });
+  }
   if (totalSec < 60) return translate(lang, "msg.process.elapsedSec", { sec: totalSec });
   const m = Math.floor(totalSec / 60);
   const s = totalSec % 60;

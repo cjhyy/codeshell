@@ -254,11 +254,22 @@ process.env.CODESHELL_OUTPUT_PARTS = "1";
     title: "retained title",
     workspaceProfile: "fixture-profile",
   });
-  manager.recordAuxiliaryUsage(
-    id,
-    { promptTokens: 30, completionTokens: 3, totalTokens: 33 },
-    { marker: "preserved" },
-  );
+  const ledgerRoot = manager.getStorageDir();
+  const ledger = new core.UsageLedger({ storageDir: join(ledgerRoot, ".usage-ledger") });
+  const auxiliaryUsage = { promptTokens: 30, completionTokens: 3, totalTokens: 33 };
+  const receipt = ledger.begin(ledger.owner(id, "auxiliary-run", [], "aux_summary", ledgerRoot), {
+    provider: "openai",
+    model: "gpt-4o",
+  });
+  ledger.settle(receipt, auxiliaryUsage);
+  ledger.finish(receipt, "completed");
+  // Production Engine persists an opaque CostStateStore only in legacyStore,
+  // alongside a scope-pinned UsageLedger reference, never as arbitrary ledger fields.
+  const costState = {
+    ...ledger.sessionState(id, ledgerRoot),
+    legacyStore: { marker: "preserved" },
+  };
+  manager.recordAuxiliaryUsage(id, auxiliaryUsage, costState);
   const { service } = createService();
   try {
     await start(service, id);
@@ -279,7 +290,29 @@ process.env.CODESHELL_OUTPUT_PARTS = "1";
     );
     assert.equal(state.title, "retained title");
     assert.equal(state.workspaceProfile, "fixture-profile");
-    assert.equal(state.costState.marker, "preserved");
+    assert.equal(state.costState.legacyStore.marker, "preserved");
+    const expectedCostState = JSON.parse(JSON.stringify(costState));
+    expectedCostState.historicalCoverageIncomplete = true;
+    expectedCostState.summary.partial = true;
+    assert.deepEqual(state.costState, expectedCostState);
+    // Reopen the durable ledger independently: provider thread totals must not
+    // be mistaken for additional billed auxiliary receipts or a new owner.
+    const restartedLedger = new core.UsageLedger({
+      storageDir: join(ledgerRoot, ".usage-ledger"),
+    });
+    assert.equal(restartedLedger.adoptSession(id, state.costState, ledgerRoot), true);
+    const summary = restartedLedger.summary({ scope: "session", sessionId: id }, ledgerRoot);
+    assert.equal(summary.requests, 1);
+    assert.equal(summary.promptTokens, 30);
+    assert.equal(summary.completionTokens, 3);
+    assert.equal(summary.totalTokens, 33);
+    assert.equal(summary.knownEstimatedCostUsd, receipt.estimatedCostUsd);
+    assert(summary.knownEstimatedCostUsd > 0);
+    assert.deepEqual(
+      summary.byPurpose.map((item) => item.purpose),
+      ["aux_summary"],
+    );
+    assert.equal(summary.partial, true);
     output.cases.push({
       case: "cold-aux-provider-accounting",
       prompt: 150,

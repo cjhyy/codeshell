@@ -52,7 +52,9 @@ function restoreCachedReplies(
   base: MessagesReducerState,
 ): MessagesReducerState {
   const savedTurns = uniqueUserTurns(saved.messages);
-  const basePositions = new Map(base.messages.map((message, index) => [message, index]));
+  // Hydration can enrich a user anchor's timing by cloning its UI object.
+  // Its retained, unique UI id still locates the canonical slot reliably.
+  const basePositions = new Map(base.messages.map((message, index) => [message.id, index]));
   const retainedIds = new Set(base.messages.map((message) => message.id));
   const insertions = new Map<number, Message[]>();
   for (const [intent, turn] of uniqueUserTurns(disk.messages)) {
@@ -68,15 +70,15 @@ function restoreCachedReplies(
     )
       continue;
     const final = canonical.find((message) => message.kind === "turn_end");
-    const last = basePositions.get(disk.messages[turn.end - 1]!);
+    const last = basePositions.get(disk.messages[turn.end - 1]!.id);
     if (last === undefined) continue;
-    let nextPosition = (final ? basePositions.get(final) : undefined) ?? last + 1;
+    let nextPosition = (final ? basePositions.get(final.id) : undefined) ?? last + 1;
     const anchors = new Map(canonical.map((message) => [message.id, message]));
     const replies: Array<{ position: number; message: Message }> = [];
     for (let index = cached.end - 1; index > cached.start; index -= 1) {
       const message = saved.messages[index]!;
       const anchor = anchors.get(message.id);
-      const position = anchor?.kind === message.kind ? basePositions.get(anchor) : undefined;
+      const position = anchor?.kind === message.kind ? basePositions.get(anchor.id) : undefined;
       if (position !== undefined) nextPosition = position;
       if (message.kind !== "assistant" || !message.text || retainedIds.has(message.id)) continue;
       retainedIds.add(message.id);

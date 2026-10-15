@@ -136,7 +136,7 @@ export class ToolExecutor {
 
   async executeSingle(
     callIn: ToolCall,
-    constraint?: { pinnedInput: string; assertAuthorized?: () => void },
+    constraint?: { pinnedInput?: string; assertAuthorized?: () => void },
   ): Promise<ToolResult> {
     if (!this.toolCtx?.operations?.onToolFailure)
       return this.executeSingleAuthorized(callIn, constraint);
@@ -152,7 +152,7 @@ export class ToolExecutor {
 
   private async executeSingleAuthorized(
     callIn: ToolCall,
-    constraint?: { pinnedInput: string; assertAuthorized?: () => void },
+    constraint?: { pinnedInput?: string; assertAuthorized?: () => void },
   ): Promise<ToolResult> {
     // Local `call` so we can rewrite args via pre_tool_use updatedInput
     // without mutating the caller's object.
@@ -414,7 +414,10 @@ export class ToolExecutor {
         toolCallId: call.id,
       });
     }
-    if (constraint && JSON.stringify(call.args) !== constraint.pinnedInput) {
+    if (
+      constraint?.pinnedInput !== undefined &&
+      JSON.stringify(call.args) !== constraint.pinnedInput
+    ) {
       return {
         id: call.id,
         toolName: call.toolName,
@@ -568,13 +571,17 @@ export class ToolExecutor {
 
     if (constraint) {
       try {
-        if (JSON.stringify(call.args) !== constraint.pinnedInput)
+        if (
+          constraint.pinnedInput !== undefined &&
+          JSON.stringify(call.args) !== constraint.pinnedInput
+        )
           throw new Error("Bound tool input cannot be changed by hooks.");
         constraint.assertAuthorized?.();
         // Hooks may retain nested objects and mutate them after this point,
         // while the handler awaits credentials or IO. Record and execute a
         // fresh snapshot that shares no references with hook-visible input.
-        call = { ...call, args: JSON.parse(constraint.pinnedInput) };
+        if (constraint.pinnedInput !== undefined)
+          call = { ...call, args: JSON.parse(constraint.pinnedInput) };
       } catch {
         return {
           id: call.id,

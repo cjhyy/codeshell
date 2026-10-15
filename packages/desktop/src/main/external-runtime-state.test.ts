@@ -1,4 +1,4 @@
-import { afterEach, beforeEach, describe, expect, test } from "bun:test";
+import { afterEach, beforeEach, describe, expect, spyOn, test } from "bun:test";
 import {
   mkdtempSync,
   mkdirSync,
@@ -435,6 +435,56 @@ test("one logical Goal run keeps its actual first user anchor and one terminal",
   );
   expect(raw.match(/"type":"turn_complete"/g)).toHaveLength(1);
   expect(raw).toContain('"injected":true');
+});
+
+test("external timing spans Goal rounds and resets for the next submitted run", () => {
+  const recorder = new ExternalRuntimeSessionRecorder(
+    "timed-goal-journal",
+    "/tmp/project",
+    "fixture",
+    "codex",
+  );
+  const wall = spyOn(Date, "now").mockReturnValue(10_000);
+  const monotonic = spyOn(performance, "now").mockReturnValue(100);
+  try {
+    const firstUser = recorder.beginTurn({ text: "original" });
+    const start = recorder.startEvent();
+    expect(firstUser.timestamp).toBe(10_000);
+    expect(start).toMatchObject({ startedAt: 10_000, timestamp: 10_000 });
+    wall.mockReturnValue(20_000);
+    monotonic.mockReturnValue(1_100);
+    recorder.onEvent({ type: "turn_complete", reason: "completed" }, true);
+    recorder.beginTurn({ text: "continue", injected: true }, true);
+    wall.mockReturnValue(30_000);
+    monotonic.mockReturnValue(3_100);
+    recorder.onEvent({ type: "turn_complete", reason: "completed" }, true);
+    const terminal = recorder.completeRun("completed");
+    expect(terminal).toMatchObject({
+      timestamp: 30_000,
+      startedAt: 10_000,
+      completedAt: 30_000,
+      durationMs: 3_000,
+    });
+    const replay = readOutputJournal(new SessionManager().getStorageDir(), "timed-goal-journal");
+    expect(replay.frames.at(-1)?.event).toMatchObject({
+      startedAt: 10_000,
+      completedAt: 30_000,
+      durationMs: 3_000,
+    });
+    wall.mockReturnValue(40_000);
+    monotonic.mockReturnValue(4_100);
+    recorder.beginTurn({ text: "new request" });
+    wall.mockReturnValue(41_000);
+    monotonic.mockReturnValue(5_100);
+    expect(recorder.onEvent({ type: "turn_complete", reason: "aborted_streaming" })).toMatchObject({
+      startedAt: 40_000,
+      completedAt: 41_000,
+      durationMs: 1_000,
+    });
+  } finally {
+    wall.mockRestore();
+    monotonic.mockRestore();
+  }
 });
 
 test("superseded and closed recorders cannot append canonical output or replace metadata", () => {

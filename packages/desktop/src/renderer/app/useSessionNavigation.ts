@@ -91,9 +91,11 @@ export function useSessionNavigation({
     projectId: string | null,
     sessionId: string,
     isCurrent?: () => boolean,
+    selectionVersion?: number,
   ): Promise<void> => {
     if (isCurrent && !isCurrent()) return;
-    const request = ++selectionRequest.current;
+    const request = selectionVersion ?? ++selectionRequest.current;
+    if (request !== selectionRequest.current) return;
     if (beforeSelectLocalSession) {
       try {
         if (!(await beforeSelectLocalSession(projectId))) return;
@@ -222,6 +224,9 @@ export function useSessionNavigation({
   };
 
   const resetDraft = (projectId: string | null, clearOverrides: boolean): void => {
+    // New conversation is a selection too: a pending history activation must
+    // not replace this draft when its runtime persistence finishes later.
+    selectionRequest.current += 1;
     if (activeProjectId !== projectId) setActiveProjectId(projectId);
     setCollapsedProjects((current) => revealSidebarProject(current, projectId));
     const draftBucket = bucketKey(projectId, null);
@@ -332,6 +337,10 @@ export function useSessionNavigation({
   };
 
   const openAutomationRunSession = async (run: RunSummary): Promise<void> => {
+    // Reserve the navigation intent before importing/resolving its workspace.
+    // A later direct selection or new draft must win during either await.
+    const request = ++selectionRequest.current;
+    const isCurrent = () => request === selectionRequest.current;
     if (!run.sessionId) {
       setRunsInitialRunId(run.runId);
       setView((view) => ({ ...view, viewMode: "runs" }));
@@ -339,7 +348,7 @@ export function useSessionNavigation({
     }
     const existing = findSessionByEngineId(run.sessionId);
     if (existing) {
-      await selectSession(existing.projectId, existing.session.id);
+      await selectSession(existing.projectId, existing.session.id, isCurrent, request);
       return;
     }
     const projectsNow = loadProjects();
@@ -347,6 +356,7 @@ export function useSessionNavigation({
     const projectFactory = makeCreateProjectForCwd(projectsNow);
     const cwd = run.cwd;
     const resolvedForCwd = await resolveProjectCwds([cwd], "automation-import");
+    if (!isCurrent()) return;
     await importAutomationRuns(
       [{ ...run, sessionId: run.sessionId, cwd, source: "automation" }],
       projectsNow,
@@ -362,6 +372,7 @@ export function useSessionNavigation({
         },
       },
     );
+    if (!isCurrent()) return;
     if (projectFactory.changed()) setProjects(projectsNow.slice());
     if (touchedProjectIds.size > 0) {
       setSessionIndices((prev) => {
@@ -373,7 +384,7 @@ export function useSessionNavigation({
       });
     }
     const imported = findSessionByEngineId(run.sessionId);
-    if (imported) await selectSession(imported.projectId, imported.session.id);
+    if (imported) await selectSession(imported.projectId, imported.session.id, isCurrent, request);
     else {
       setRunsInitialRunId(run.runId);
       setView((view) => ({ ...view, viewMode: "runs" }));
@@ -384,25 +395,28 @@ export function useSessionNavigation({
     session: DiskSessionMeta,
     guard?: DiskSessionOpenGuard,
   ): Promise<void> => {
-    const isCurrent = guard ? () => guard.isCurrent() : undefined;
     if (guard && !guard.isCurrent()) return;
+    const request = ++selectionRequest.current;
+    const isCurrent = () =>
+      request === selectionRequest.current && (guard ? guard.isCurrent() : true);
     const existing = findSessionByEngineId(session.engineSessionId);
     if (existing) {
       if (guard && existing.session.archived) return;
-      await selectSession(existing.projectId, existing.session.id, isCurrent);
+      await selectSession(existing.projectId, existing.session.id, isCurrent, request);
       return;
     }
     const projectsNow = loadProjects();
     const projectFactory = makeCreateProjectForCwd(projectsNow);
     const cwd = session.cwd;
     const resolvedForCwd = await resolveProjectCwds([cwd], "disk-rebuild");
+    if (!isCurrent()) return;
     if (guard) {
-      if (!guard.isCurrent() || !(await guard.validate()) || !guard.isCurrent()) return;
+      if (!(await guard.validate()) || !isCurrent()) return;
       // Another importer may have finished while roots or metadata were loading.
       const latest = findSessionByEngineId(session.engineSessionId);
       if (latest) {
         if (!latest.session.archived)
-          await selectSession(latest.projectId, latest.session.id, isCurrent);
+          await selectSession(latest.projectId, latest.session.id, isCurrent, request);
         return;
       }
     }
@@ -418,7 +432,7 @@ export function useSessionNavigation({
       ...prev,
       [projectBucketSegment(placement.projectId)]: nextIndex,
     }));
-    await selectSession(placement.projectId, placement.summary.id, isCurrent);
+    await selectSession(placement.projectId, placement.summary.id, isCurrent, request);
   };
 
   return {

@@ -83,8 +83,12 @@ function turnCompletes(events: StreamEvent[]): Extract<StreamEvent, { type: "tur
       (event): event is Extract<StreamEvent, { type: "turn_complete" }> =>
         event.type === "turn_complete",
     )
-    .map(({ outputCursor, ...event }) => {
+    .map(({ outputCursor, timestamp, startedAt, completedAt, durationMs, ...event }) => {
       expect(outputCursor).toEqual(expect.any(String));
+      expect(timestamp).toEqual(expect.any(Number));
+      expect(startedAt).toEqual(expect.any(Number));
+      expect(completedAt).toBe(timestamp);
+      expect(durationMs).toBeGreaterThanOrEqual(0);
       return event;
     });
 }

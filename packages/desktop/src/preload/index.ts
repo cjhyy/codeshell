@@ -23,6 +23,7 @@ import { mobileRemoteApi } from "./mobile-remote-api.js";
 
 import { normalizeStreamEnvelope } from "../shared/stream-envelope";
 import { contextBridge, ipcRenderer, webUtils, type IpcRendererEvent } from "electron";
+import { subscribeExternalRuntimeSessionState } from "./external-runtime-session-state";
 import { createTaskInboxApi } from "./task-inbox-api";
 import { createNotificationNavigationApi } from "./notification-navigation-api";
 import { createOperationResolutionApi } from "./operation-resolution-api";
@@ -1637,14 +1638,12 @@ contextBridge.exposeInMainWorld("codeshell", {
       return ipcRenderer.invoke("externalRuntime:stop", sessionId);
     },
     /** Main-side runtime start/stop for a session (e.g. a Panel App replaced it). */
-    onSessionState: (
-      cb: (payload: { sessionId: string; active: boolean }) => void,
-    ): (() => void) => {
-      externalRuntimeSessionStateListeners.add(cb);
-      return () => {
-        externalRuntimeSessionStateListeners.delete(cb);
-      };
-    },
+    onSessionState: (cb: (payload: { sessionId: string; active: boolean }) => void): (() => void) =>
+      subscribeExternalRuntimeSessionState(
+        externalRuntimeSessions,
+        externalRuntimeSessionStateListeners,
+        cb,
+      ),
   },
   /** Probe common localhost dev-server ports via real TCP connect in main.
    *  Returns the open ports (ascending). Pass a custom candidate list or omit

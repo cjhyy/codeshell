@@ -516,6 +516,8 @@ export function useRunController({
         // is now reported via a successful RunResult with reason
         // "aborted_streaming" (see protocol/server.ts), so anything
         // reaching here is a real failure worth logging.
+        const startedAt = busySinceRef.current.get(bucket);
+        const elapsedMs = startedAt !== undefined ? Math.max(0, Date.now() - startedAt) : undefined;
         setBusyForKey(bucket, false);
         if (runningBucketRef.current === bucket) {
           runningBucketRef.current = null;
@@ -524,11 +526,11 @@ export function useRunController({
           bucket,
           error: String((err as Error)?.message ?? err),
         });
-        if (!directorySaved) {
-          const detail = t("misc.session.sendSaveFailed");
-          dispatch({ type: "turn_end", bucket, reason: "error", detail });
-          toast({ message: detail, variant: "error" });
-        }
+        const detail = directorySaved
+          ? String((err as Error)?.message ?? err) || t("misc.app.requestRejected")
+          : t("misc.session.sendSaveFailed");
+        dispatch({ type: "turn_end", bucket, reason: "error", detail, elapsedMs });
+        toast({ message: detail, variant: "error" });
       });
   };
 

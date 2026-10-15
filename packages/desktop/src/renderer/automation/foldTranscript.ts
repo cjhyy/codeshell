@@ -56,7 +56,7 @@ export function foldTranscript(
       // Rebuild the user-interrupt marker so the stopped turn renders flat
       // (turnWasStopped finds this turn_end → no fold header). No elapsed on
       // replay; the marker's presence is what un-folds the turn.
-      state = appendTurnEndMessage(state, "stopped");
+      state = appendTurnEndMessage(state, "stopped", undefined, undefined, replayClock);
     } else {
       state = applyTranscriptStreamEvent(state, item.event, replayClock);
     }

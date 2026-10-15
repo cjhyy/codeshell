@@ -3,6 +3,7 @@ import type { SessionBundle, SessionManager } from "../session/session-manager.j
 import type { StreamCallback, StreamEvent, TaskInfo } from "../types.js";
 import { SessionOutputJournal } from "../session/output-journal.js";
 import { outputUserMessage } from "./run-output-user-message.js";
+import { stampStreamEvent } from "../session/stream-timing.js";
 
 export function createRunOutputJournalPolicy(
   manager: SessionManager,
@@ -77,7 +78,7 @@ export function buildWrappedOnStream(args: {
       userOnStream?.({ ...events[index], outputCursor: cursors[index] });
   };
   const onStream: StreamCallback = (event) => {
-    event = args.prepareEvent?.(event) ?? event;
+    event = stampStreamEvent(args.prepareEvent?.(event) ?? event);
     if (args.outputJournal?.allowLateMetadata?.(event))
       return userOnStream?.({ ...event, outputCursor: undefined });
     if (event.outputCursor) event = { ...event, outputOriginCursor: event.outputCursor };
@@ -116,6 +117,7 @@ export function buildWrappedOnStream(args: {
           journal.append({
             ...outputUserMessage(events[index].data, session.state.sessionId, session.state.cwd),
             runId,
+            timestamp: events[index].timestamp,
           });
         }
         if (event.type === "text_delta" || event.type === "thinking_delta") {

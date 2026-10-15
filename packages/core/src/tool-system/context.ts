@@ -269,6 +269,8 @@ export interface ToolContext {
   documentParserExecutable?: (signal?: AbortSignal) => Promise<string>;
   /** Host-owned durable write control; never populated from model arguments. */
   operations?: {
+    /** Host custody recheck for adapter-internal awaits before physical IO. */
+    assertAuthorized?: () => void;
     controller: import("../operations/controller.js").OperationController;
     resolver: import("../operations/resolver.js").CapabilityResolver;
     sessionId: string;
