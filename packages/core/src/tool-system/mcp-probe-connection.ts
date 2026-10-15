@@ -95,6 +95,9 @@ class BoundedStdioTransport implements Transport {
       }
       const message = JSONRPCMessageSchema.safeParse(parsed);
       if (!message.success) {
+        // The Desktop/runtime compatibility policy also tolerates structured
+        // logger output (e.g. pino JSON). Every byte still counts toward limits.
+        if (this.stdioPolicy === "skip-banner") continue;
         this.onerror?.(
           new McpProbeConnectionError(
             "invalid_protocol",

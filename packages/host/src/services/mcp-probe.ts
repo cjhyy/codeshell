@@ -49,6 +49,20 @@ function rememberSecret(secrets: Set<string>, value: string | undefined): void {
   if (match?.[1]) secrets.add(match[1]);
 }
 
+function credentialField(name: string): boolean {
+  const separated = name.replace(/([a-z0-9])([A-Z])/g, "$1_$2");
+  return /(?:^|[-_])(?:authorization|cookie|tokens?|secrets?|password|passwd|credentials?|key|auth|api[-_]?key|access[-_]?key)(?:$|[-_])/i.test(
+    separated,
+  );
+}
+
+// Unlabelled env/argv can contain private configuration, including positional
+// credentials. Keep short ordinary scalars/launcher verbs intact, but hide values
+// of at least eight characters. Explicit authentication values have no minimum.
+function rememberPrivateConfig(secrets: Set<string>, value: string | undefined): void {
+  if (value && value.length >= 8) rememberSecret(secrets, value);
+}
+
 function redact(text: string, secrets: ReadonlySet<string>, maximum: number): string {
   let safe = text;
   for (const secret of [...secrets].sort((left, right) => right.length - left.length)) {
@@ -137,30 +151,34 @@ export async function probeMcp(
   config = structuredClone(config);
   const started = Date.now();
   const secrets = new Set<string>();
-  for (const value of Object.values(config.env ?? {})) rememberSecret(secrets, value);
+  for (const [name, value] of Object.entries(config.env ?? {})) {
+    if (credentialField(name)) rememberSecret(secrets, value);
+    else rememberPrivateConfig(secrets, value);
+  }
   const secretHeader = (name: string) =>
-    /authorization|cookie|(?:^|[-_])(?:token|secret|password|credentials?|key|auth)(?:$|[-_])/i.test(
-      name,
-    ) || Object.hasOwn(config.envHeaders ?? {}, name);
+    credentialField(name) ||
+    Object.keys(config.envHeaders ?? {}).some(
+      (header) => header.toLowerCase() === name.toLowerCase(),
+    );
   for (const [name, value] of Object.entries(config.headers ?? {}))
     if (secretHeader(name)) rememberSecret(secrets, value);
-  // Launcher verbs, paths and protocol/content-type values are not credentials.
-  // Recognize explicit token-style flags instead of treating every argv as a secret.
+  // Flags are syntax; their explicit authentication values are always private.
+  // Other argv values follow the same conservative length rule as untyped env.
   const args = config.args ?? [];
   for (let index = 0; index < args.length; index++) {
-    const match =
-      /^--?(?:[\w]+[-_])*(?:token|secret|password|credentials?|api[-_]?key|authorization|auth)(?:=(.*))?$/i.exec(
-        args[index]!,
-      );
-    if (match) rememberSecret(secrets, match[1] ?? args[index + 1]);
+    const flag = /^--?([^=]+)(?:=(.*))?$/.exec(args[index]!);
+    if (flag && credentialField(flag[1]!)) rememberSecret(secrets, flag[2] ?? args[index + 1]);
+    if (!args[index]!.startsWith("-")) rememberPrivateConfig(secrets, args[index]);
+    else if (args[index]!.includes("="))
+      rememberPrivateConfig(secrets, args[index]!.slice(args[index]!.indexOf("=") + 1));
     const bearer = /\bBearer\s+(.+)/i.exec(args[index]!);
     if (bearer) rememberSecret(secrets, bearer[1]);
   }
-  for (const name of [
-    ...(config.envVars ?? []),
-    ...Object.values(config.envHeaders ?? {}),
-    config.bearerTokenEnvVar,
-  ]) {
+  for (const name of config.envVars ?? []) {
+    if (credentialField(name)) rememberSecret(secrets, process.env[name]);
+    else rememberPrivateConfig(secrets, process.env[name]);
+  }
+  for (const name of [...Object.values(config.envHeaders ?? {}), config.bearerTokenEnvVar]) {
     if (name) rememberSecret(secrets, process.env[name]);
   }
   if (config.url) {
