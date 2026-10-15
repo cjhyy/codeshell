@@ -242,7 +242,15 @@ export async function executeFigmaMcpLinkAction(
       assertConnected();
       if (req.id !== input.id || req.serverUrl !== FIGMA_MCP_SERVER_URL)
         throw new McpLinkActionError("forbidden");
-      const token = await options.resolveOAuthAccess(req);
+      let token: { accessToken: string; expiresAt?: string };
+      try {
+        token = await options.resolveOAuthAccess(req);
+      } catch (error) {
+        // The Host persists permanent refresh failure; network errors leave
+        // the grant usable. Re-read custody before classifying the failure.
+        read();
+        throw error;
+      }
       assertConnected();
       return token;
     },

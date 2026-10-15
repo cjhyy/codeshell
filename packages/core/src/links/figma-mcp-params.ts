@@ -99,6 +99,12 @@ export function figmaMcpParameters(action: string, params: Record<string, unknow
     throw new Error("Figma source resources require a Make link or file_type:make.");
   if (action === "get_figjam" && target.fileType !== "figjam")
     throw new Error("get_figjam requires a FigJam link.");
+  if (
+    !["get_screenshot", "get_figjam", "list_resources", "read_resource"].includes(action) &&
+    target.fileType !== "design" &&
+    !(target.fileType === "make" && action === "get_design_context")
+  )
+    throw new Error("This MCP action requires a Figma Design file.");
   const needsNode =
     ![
       "get_metadata",
@@ -112,8 +118,7 @@ export function figmaMcpParameters(action: string, params: Record<string, unknow
       "Select a node_id or use a node URL before reading detailed Figma content. Use the API get_file shallow structure first.",
     );
   const args: Record<string, unknown> = { fileKey: target.fileKey };
-  if (target.nodeId || target.fileType === "make" || action === "get_metadata")
-    args.nodeId = target.nodeId ?? "0:1";
+  if (target.nodeId || target.fileType === "make") args.nodeId = target.nodeId ?? "0:1";
   for (const [key, name] of Object.entries(toolOptions)) {
     const value = params[key];
     if (value === undefined) continue;

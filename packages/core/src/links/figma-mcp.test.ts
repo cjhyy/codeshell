@@ -159,6 +159,9 @@ afterEach(() => setDefaultCredentialAccess(null));
 
 describe("Figma MCP on-demand target and resource boundaries", () => {
   test("detailed Design reads require selected nodes; Make first discovers a manifest", () => {
+    expect(figmaMcpParameters("get_metadata", { file_key: "FileOne" }).args).toEqual({
+      fileKey: "FileOne",
+    });
     expect(() =>
       figmaMcpParameters("get_design_context", {
         file_url_or_key: "https://figma.com/design/FileOne/Design",
@@ -322,6 +325,18 @@ describe("Figma MCP on-demand target and resource boundaries", () => {
     await expect(f.run("get_metadata", { file_key: "FileOne" })).resolves.toMatchObject({
       backend: "mcp",
     });
+  });
+  test("permanent refresh failure requests reconnect; a network failure does not", async () => {
+    for (const permanent of [true, false]) {
+      const f = fixture();
+      f.options.resolveOAuthAccess = async () => {
+        if (permanent) f.store.entries.get(f.value.id)!.meta!.linkOAuthState = "reconnect";
+        throw new Error("synthetic refresh failure");
+      };
+      await expect(f.run("get_metadata", { file_key: "FileOne" })).rejects.toMatchObject({
+        code: permanent ? "reconnect" : "provider_error",
+      });
+    }
   });
   test("untyped metadata and read responses cannot admit additional Make resources", async () => {
     const f = fixture();
