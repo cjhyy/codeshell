@@ -1,3 +1,4 @@
+import { randomUUID } from "node:crypto";
 import { HostRuntime, interceptHostRequest } from "@cjhyy/code-shell-host";
 
 export interface DesktopWorkerHostHandlers {
@@ -52,9 +53,16 @@ export function createDesktopWorkerHost(handlers: DesktopWorkerHostHandlers) {
       } catch {
         return false;
       }
-      // Legacy readiness/cancellation notifications have no JSON-RPC response.
-      if (message?.id === undefined && message?.method === "desktop/operationBatch")
-        return handlers.operationBatch(line);
+      // Preserve the authorities' legacy handling of known notifications: batch
+      // readiness is meaningful, while credential/automation frames without an
+      // id are consumed privately without executing or replying.
+      if (
+        message?.id === undefined &&
+        typeof message?.method === "string" &&
+        message.method.startsWith("desktop/") &&
+        Object.hasOwn(routes, message.method)
+      )
+        return routes[message.method](line);
       if (message?.method === "desktop/localOAuthLinkActionCancel")
         return handlers.credentials(line);
       return interceptHostRequest(message, line, {
@@ -64,6 +72,7 @@ export function createDesktopWorkerHost(handlers: DesktopWorkerHostHandlers) {
           handlers.sendLine(
             JSON.stringify({
               jsonrpc: "2.0",
+              id: `desktop-host-approve-${randomUUID()}`,
               method: "agent/approve",
               params,
             }),
