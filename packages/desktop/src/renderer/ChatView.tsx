@@ -2009,6 +2009,9 @@ export function ChatView({
                 onBlur={() => {
                   // Delay so a mousedown pick on the popover still resolves.
                   setTimeout(() => {
+                    // A pick or a quick return can restore focus before this
+                    // callback runs. That old blur must not close a new query.
+                    if (document.activeElement === textareaRef.current) return;
                     closeMention();
                     closeSlash();
                   }, 120);
