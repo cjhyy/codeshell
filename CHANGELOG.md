@@ -33,13 +33,20 @@ breaking.
 
 ### Fixed
 
+- Keep the bundled Host package in Desktop devDependencies, and derive the
+  production workspace packaging guard from predist's actual materialization list.
+- Include a unique JSON-RPC id in Desktop unsupported-loopback replies so Core
+  consumes the pending request immediately; keep known authority notifications private.
 - Enable workspace IPC only when the host explicitly installs it. Desktop keeps
   its bridge; serve and Panel workers use Core's disk fallback for cross-session
   messages, asynchronous AskUser and mailbox wakeups.
 - Panel task workers immediately answer unsupported `desktop/*` and internal
   loopbacks with typed failures instead of timing out or reporting user denial;
-  private loopback IDs are kept out of client approval events. Ordinary approvals,
-  AskUser and installed Panel callbacks keep their routes.
+  private loopback IDs are kept out of client approval events. Ordinary approvals
+  and installed Panel callbacks keep their routes. Panel tasks have no text-answer
+  UI: AskUser now returns an explicit host-unavailable failure without displaying
+  a yes/no approval or supplying a fake answer; asynchronous questions retire
+  without injecting an answer or waking a follow-up run.
 - Clear inherited host MCP/IPC switches from serve and Panel workers, and clear
   the remote Link client secret even when a Panel host supplies a custom env.
 

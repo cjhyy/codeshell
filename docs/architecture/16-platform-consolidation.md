@@ -1,6 +1,6 @@
 # 16 · 平台层收敛技术方案
 
-> 状态：v1.2（2026-10-15，S1 第 3–7 项地基实现，待主控 review）；变更记录见文末
+> 状态：v1.3（2026-10-15，S1 第 3–7 项 CC 首轮修复，待同一 CC 复审）；变更记录见文末
 > 基线：codeshell `main @ 08eaa4369`（0.9.41 源码已合入、尚未正式发布；v0.9.40 之后 97 个提交）；codeshell-services `main @ a5958f0`（锁定 `@cjhyy/code-shell-server` 0.9.38）
 > 对照：Codex（本机 ChatGPT.app 26.1002.52244 安装包、本仓库第 15 章）、Claude Code（公开设计）
 > 上游文档：[15 · Codex 对比与路线](15-codex-harness-comparison-and-roadmap.md)（Protocol v2 契约与术语以该章为准）
@@ -208,7 +208,7 @@ class HostRuntime {
 | 1.6  | 拆分 `index.ts`：每个领域一个 `register(app, host)` 模块；IPC 改为一条 v2 通道加少量 Electron 专属 IPC                                     | index.ts、\*-ipc.ts                                             | 现有 `tests/architecture-budgets.test.ts` 已锁定 `index.ts` 7,277 行和主进程路由总数；拆分后把 `index.ts` 上限下调到 1,500 行，并按领域模块分别计数路由  |
 | 1.7  | pet、task-inbox、im-gateway、cc-room、external-runtime、operation batch 逐个改成 HostService                                               | 对应目录                                                        | 各自能在 serve 里启用，或在 capabilities 里声明不可用                                                                                                    |
 
-1.1 首版已接生产：`packages/host` 只依赖 core，提供同步 adapter/service 生命周期、能力注册、legacy HostRequest 分类/分发及 `interceptHostRequest`。serve 与 Panel agent-task 在客户端路由前调用；Desktop 的 Electron adapter 把既有 browser/credential/workspace/panel/automation/operation handler 注册给同一分发器。旧 `server/serve/host-requests.ts` 仅转导出，不再重复实现。此步不提供 v2 transport，也未迁移 1.2–1.4 大服务。
+1.1 首版已接生产：`packages/host` 只依赖 core，提供同步 adapter/service 生命周期、能力注册、legacy HostRequest 分类/分发及 `interceptHostRequest`。serve 与 Panel agent-task 在客户端路由前调用；Desktop 的 Electron adapter 把既有 browser/credential/workspace/panel/automation/operation handler 注册给同一分发器。旧 `server/serve/host-requests.ts` 仅转导出，不再重复实现。此步不提供 v2 transport，也未迁移 1.2–1.4 大服务。Desktop 将 Host 内联，故列在 devDependencies；predist 实际实体化列表同时驱动生产 workspace 依赖守卫，禁止未实体化的生产包符号链接越出 app 边界。Desktop unsupported-loopback approve 使用独立 JSON-RPC id，由真实 Core pending 路径消费。
 
 ### 3.3 可选的后续：Desktop 连本机守护进程
 
@@ -588,7 +588,7 @@ flowchart LR
 本批跟踪与完整后续批次见[首版实施清单](../todo/platform-first-version-plan.md)。以下“已实现”只表示本仓代码事实，不表示后续 S1/S2/S3 或真实环境验收完成。
 
 - **已实现：内部回环标识兼容方案。** 保留既有 `__*__` wire 名字；core 工具注册、内置目录与 capability composition 全部拒绝第三方以 `__` 开头的工具名，防止伪装成内部回环。typed `host/*` 仍待 v2 批次。
-- **已实现：Panel agent-task。** `desktop/*` JSON-RPC worker 请求在 session 过滤前立即 -32601 / `data.failure: unsupported`；内部回环用 `approved: true` 携带 typed unsupported answer，不能误报用户拒绝；内部请求和 resolved ID 不向 client 暴露。普通审批、AskUser 和已安装 Panel callback 保留。最终 worker env 构造清 `CODE_SHELL_REMOTE_LINK_CLIENT_SECRET`，自定义 builder 也不能遗留。
+- **已实现：Panel agent-task。** `desktop/*` JSON-RPC worker 请求在 session 过滤前立即 -32601 / `data.failure: unsupported`；内部回环用 `approved: true` 携带 typed unsupported answer，不能误报用户拒绝；内部请求和 resolved ID 不向 client 暴露。普通审批和已安装 Panel callback 保留；Panel 的实际 runtime 只有 yes/no confirm，AskUser 立即返回 `approved:false, failure:unavailable` 加明确不支持原因，不弹内部工具审批、不构造空回答。Core 同步返回该原因，异步仅清理 pending、不注入答案或启动续跑；Desktop/Web 真实文字问答保持。最终 worker env 构造清 `CODE_SHELL_REMOTE_LINK_CLIENT_SECRET`，自定义 builder 也不能遗留。
 - **已实现：拦截收口及 1.1。** S0 纯逻辑迁 `packages/host`，错误文案由 adapter 注入宿主标签；`interceptHostRequest` 在 serve、Panel、Desktop 的生产链路共用，旧入口仅转导出。HostRuntime 注册能力并管理基本生命周期，仅依赖 core。1.2–1.4 留下一批。
 - **已实现：worker 环境开关。** serve 的交互与 automation worker 清 `CODE_SHELL_HOST_MCP_SERVERS`；Panel worker（含 Desktop Web 自定义 agent-task env）清 operation batch、model signing、workspace IPC 与 host MCP switches。Desktop 主 worker 明确安装自己的 bridge。
 - **已实现：协议预算。** 请求分发与 Run/Goal 输入校验抽到 `protocol/dispatch.ts`，旧 wire 保持；server.ts 预算由 5174 下调到 4949，dispatch.ts 单独预算 246。
@@ -631,3 +631,4 @@ flowchart LR
 | v1.0 | 2026-10-14 | 评审修订：基线刷新到 08eaa4369 / 0.9.41 与 services a5958f0；术语与范围对齐第 15 章；新增 2.1 能力协商、4.3 两类续传、4.5 客户端反向请求、5.1 策略合成规则、5.2 沙箱两步切换；W6 收窄为薄云端加沙箱任务，不做常驻云端工作台和云端 Panel 运行时；阶段改为 S0–S3；八项决策全部定稿；附目标架构交互图 |
 | v1.1 | 2026-10-14 | S0 实施后对齐：4.1 标注已实现的 `initialize` 子集（`contracts` 永久在顶层）；5.2 写明 REPL 改用沙箱 Bash 白名单且不是沙箱；7.1 写明派生方式与三处受守卫的字面量；沙箱 report-only 移到 S1；1.3 标注已删除的进程审批存储；新增 9.2 S0 遗留与 S1 待办                                                |
 | v1.2 | 2026-10-15 | S1 第 3–7 项：协议分发与预算下调、显式 workspace bridge、Panel typed unsupported、env/REPL/保留工具名与 Core-only host 1.1 生产接线；后续依赖及真实环境出口分开跟踪。 |
+| v1.3 | 2026-10-15 | CC 首轮修复：Desktop 内联 Host 改 devDependency、predist 同源实体化守卫；Panel 无文字 UI 的 AskUser 明确 unavailable 并清理；Desktop unsupported approve 增唯一 RPC id；主控已补齐上轮受限验证，本轮 unsigned pack 补跑单列。 |
