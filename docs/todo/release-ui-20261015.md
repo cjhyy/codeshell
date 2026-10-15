@@ -343,6 +343,32 @@ keyboard/focus recovery and complete long-content bounds. Preserve every tool
 and raw diagnostic; no MCP probe/save/trust/credential/transport changes.
 Its completion and independent review determine whether it joins UI5 or UI6.
 
+UI5 History is integrated as `b192e9cc9` (source `0dc8b31dd`, base `94f1a462b`):
+complete model usage has a bounded named keyboard scroll region, list/detail
+retain useful minimum reading areas, and Sessions owns its error/empty/list
+scrolling. Refresh/delete/rename use synchronous guards and focus ownership;
+failed drafts remain, external field/blank clicks prevent recovery focus theft.
+Source checks passed 19 guarded tests/143 assertions, Desktop/mobile types,
+renderer build, scoped lint/format, 8 Chrome layouts and 4 actual Electron
+language/100–200% zoom layouts. ui_audit independently reviewed and passed the
+production matrix. The same final fixture against unmodified Root history
+failed directly on minimum readable run detail height; evidence
+`/tmp/codeshell-history-page-recovery-before.log`.
+
+UI5 Connections is integrated as `9cd1cbe66`/`a5552da9d` (source
+`1054493cf`/`89c3eda85`, base `94f1a462b`). Search writes commit UI state only
+after success, preserve newer provider drafts and selection, serialize pending
+operations and protect unknown settings after failed reads. Actual user/project
+wire contracts and legacy credentials remain intact. Shared cards fit their
+actual pane and long IDs/subtitles wrap. Source checks passed 50 guarded
+tests/72 assertions, Desktop/mobile types, renderer build, scoped lint/format,
+24 production layouts/187 observations and independent bridge review. Strong
+document-height/hidden-ancestor assertions caught an escaping sr-only heading;
+the final local `relative` containing block fixes it without global shell edits.
+Evidence `codeshell-connections-ui-p5YgCr/report.json`; baseline fails the same
+default-provider and long-ID assertions. Root reviewed the final source and
+registered both new fixtures; combined UI5 gates remain pending MCP delivery.
+
 Root's production TopBar→NotificationHistory audit passed 16 language/theme/
 window combinations down to 320×240 with 40 complete long notifications, native
 wheel, keyboard reachability, full final actions and exact Escape focus return.
