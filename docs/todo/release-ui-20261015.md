@@ -239,6 +239,15 @@ Fourth wave in progress (root branch contains the reviewed commits):
   the 141-line ownership hook and component changes. The frozen combination is
   running all 14 typechecks, full renderer/shared/Web shard, lint and 25 browser
   fixtures; the separate Sidebar and 60+15 composer combined fixtures passed.
+  Root final types, Desktop full build, lint baseline and 3,395 guarded tests
+  (12,591 assertions) passed; actual Electron Settings/search E2E passed. The
+  first full browser run found an invalid extra variant root in the tool-card
+  fixture's real-Chat mode: its outer main also claimed data-chat-variant, causing
+  ordinary composer CSS to match a pending chat through the phantom ancestor.
+  Production TSX only assigns that attribute in ChatView. The fixture now leaves
+  the attribute on the standalone cards surface only, asserts exactly one variant
+  root, and retains all bounds/wire/120-frame assertions. No production change or
+  assertion weakening was made; all 25 fixtures are rerunning.
 - Root separately owns the accepted search-dialog short-window P2 on
   `codex/desktop/session-search-layout-20261015` in the clean reused
   `file-browser-ui-20261015` tree, checkpoint `c5b7473a7`. Scoped

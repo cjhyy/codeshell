@@ -62,7 +62,7 @@ window.mountFixture=({language='en',theme='light',variant='main',risk='high',all
  const current=++generation;
  const message={kind:'tool',id:'owned-tool',toolName:${JSON.stringify(toolName)},args:'{}',status,startedAt:0,durationMs:65432};
  const envelope={requestId:'owned-approval',sessionId:'owned-session',request:{toolName:${JSON.stringify(toolName)},description:${JSON.stringify(description)},riskLevel:risk,args:{path:'/owned/workspace/'+ 'target_'.repeat(16)}}};
- root.render(<I18nProvider key={current}><main data-generation={current} data-chat-variant={variant} className="min-w-0 p-4">
+ root.render(<I18nProvider key={current}><main data-generation={current} data-chat-variant={surface==='chat'?undefined:variant} className="min-w-0 p-4">
   {surface==='chat'?<ChatFixture variant={variant} envelope={shortApproval?{...envelope,request:{...envelope.request,toolName:'Bash',description:'Owned command',args:{command:'printf owned'}}}:envelope} longDraft={longDraft} message={message} queued={queued}/>:<div className="cs-chat-transcript w-full min-w-0 space-y-4">
    <section aria-label="Owned tool card"><ToolCardShell message={message} summary={'Selected target '+ 'long_summary_'.repeat(24)}
     details={<div>Owned expanded details: preserve the exact resource.</div>} preview={<p>Owned result preview</p>}
@@ -135,6 +135,11 @@ const mount = async (config) => {
   const id = await page.evaluate((config) => window.mountFixture(config), config);
   await page.locator(`[data-generation="${id}"]`).waitFor();
   await frames();
+  assert.equal(
+    await page.locator("[data-chat-variant]").count(),
+    1,
+    "Only the actual chat root owns its variant",
+  );
 };
 const dots = () =>
   page.locator(".status-dot").evaluateAll((nodes) =>
