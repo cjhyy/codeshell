@@ -54,6 +54,9 @@ breaking.
   failed-save drafts editable without interrupting focus moved elsewhere.
 - Keep cloud project dialogs within short windows and recover owned failed
   operations without interrupting another control, account or project.
+- Keep digital-human editing, memory and switch review dialogs usable in short
+  windows, retaining visible actions and safe focus return through asynchronous
+  previews, nested confirmations and rapid reopening.
 
 ## [0.9.44] - 2026-10-15
 

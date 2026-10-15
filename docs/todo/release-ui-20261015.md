@@ -445,7 +445,7 @@ before final verification. Independent owned fixtures only; no real credentials,
 provider traffic or configuration writes. Native windows are coordinated.
 
 Primary checkout currently remains on another task's main at `2e0462c68`,
-26 local commits ahead of the current remote, plus pre-existing `.claude/` and
+containing other local task commits, plus pre-existing `.claude/` and
 `docs/todo/browser-panel-runtime-design.md`. Leave it untouched; task delivery
 uses the clean integration checkout and does not publish unknown local commits.
 
@@ -552,6 +552,33 @@ the Node fix passes its four edit/remove × success/rejection cases without
 reclaiming focus. Evidence `/tmp/codeshell-web-mcp-svg-peer-{review,after}.log`,
 before `P9SjEx` / after `q12vgQ`; do not describe Root's injected SVG case as
 the actual entry proof. No UI7 change has been pushed yet.
+
+UI6 Profile dialogs final source `0f8a718ec` is integrated as `6464cf566`,
+with the 32nd Desktop browser fixture registered. Editing, memory and switch
+review use bounded content and visible Close/footer actions, with the actual
+More/Edit/Deactivate opener captured by callers. Focus intent spans asynchronous
+requirements and preview, explicit nested confirmations and Select portals;
+external focus/pointer/window blur permanently cancels return. Old closing
+callbacks consume their own content's lease, so rapid A-close/B-open cannot
+dispose or restore B's ownership. Resize only scrolls marked owned content for
+the current focused descendant. Native Save/Apply retain focus via aria-disabled
+while original synchronous save/adopt/close guards still block duplicate work.
+Original memory/capability/preview/adopt/configuration wires are preserved.
+Source production Chrome 16 layouts/968 observations, actual Electron 16/1004
+including true 200% zoom and 36 focus-preserving live resizes, 68 guarded tests,
+Desktop/mobile types, renderer build and lint/format passed. ui_audit independently
+verified held preview, held requirements, delayed close blur and rapid reopening
+in production/development; Root read the final ownership helper and callers and
+reviewed wide/narrow screenshots without a new blocker. Strict before source
+fails directly on 138px hidden dialog scroll. Root's integrated Cloud metadata
+and new SignIn portal additionally passed all 4 native language/100–200% cases.
+
+At UI6 freeze the primary checkout has advanced under another task to
+`f158ed9b5`, 30 local commits ahead of remote UI5 `bef6e513e`, including panel
+launcher and child conversation work. The pre-existing untracked files remain
+unchanged. Continue delivering only this goal's clean integration branch; do not
+publish, reset or synchronize those other local commits.
+UI6 combined gates now start after a fresh fetch; UI7 changes remain separate.
 
 Initial audit history follows:
 
