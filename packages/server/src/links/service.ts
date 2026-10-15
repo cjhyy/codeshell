@@ -20,6 +20,7 @@ import { listDesktopLinkProviders } from "./catalog.js";
 import {
   readRemoteProviderCatalog,
   readRemoteProviderCapabilities,
+  RemoteLinkCatalogError,
   REMOTE_LINK_ADAPTERS,
   type RemoteProviderCapabilities,
 } from "./remote-catalog.js";
@@ -234,7 +235,12 @@ export function createLinkService(options: LinkServiceOptions = {}) {
   const hostOAuthJobs = new Map<string, HostOAuthJob>();
   const hostOAuthAdapters = options.hostOAuthAdapters ?? [];
   let remoteCatalog:
-    | { issuer: string; expiresAt: number; providers: RemoteProviderCapabilities[] }
+    | {
+        issuer: string;
+        expiresAt: number;
+        providers: RemoteProviderCapabilities[];
+        health: NonNullable<LinkSnapshot["remoteCatalog"]>;
+      }
     | undefined;
   let catalogPending: Promise<void> | undefined;
   const revokedOwners = new Set<string>();
@@ -401,6 +407,12 @@ export function createLinkService(options: LinkServiceOptions = {}) {
         ? remoteCatalog.providers
         : []
       : [];
+    const catalogHealth: NonNullable<LinkSnapshot["remoteCatalog"]> = !remoteConfig
+      ? { state: "unconfigured" }
+      : remoteCatalog?.issuer === remoteConfig.issuer
+        ? { ...remoteCatalog.health }
+        : { state: "unknown" };
+    const remoteReady = catalogHealth.state === "ready";
     const result = {
       providers: providers.map((provider) => {
         const deviceAuth = isLocalBrowserLinkProvider(provider.id)
@@ -458,8 +470,15 @@ export function createLinkService(options: LinkServiceOptions = {}) {
         const remote = REMOTE_LINK_ADAPTERS.find(
           (adapter) =>
             adapter.id === provider.id &&
-            remoteProviders.some((remote) => remote.id === adapter.id),
+            (remoteProviders.some((remote) => remote.id === adapter.id) ||
+              current.credentials.some(
+                (credential) =>
+                  isRemoteLinkCredential(credential) &&
+                  credential.meta?.linkProvider === provider.id,
+              )),
         );
+        const remoteAvailable =
+          remoteReady && remoteProviders.some((candidate) => candidate.id === provider.id);
         return {
           ...provider,
           connectionMethods: [
@@ -486,7 +505,14 @@ export function createLinkService(options: LinkServiceOptions = {}) {
                     kind: "redirect" as const,
                     label: "网页授权",
                     preferred: true,
-                    available: true,
+                    available: remoteAvailable,
+                    ...(!remoteAvailable
+                      ? {
+                          unavailableReason: remoteConfig
+                            ? "连接目录暂时不可用。已有账号仍可管理，请稍后重试。"
+                            : "当前未配置 Link 服务。已有账号仍可管理。",
+                        }
+                      : {}),
                   },
                 ]
               : []),
@@ -504,10 +530,11 @@ export function createLinkService(options: LinkServiceOptions = {}) {
         token: true,
         cliBinding: true,
         deviceAuth: true,
-        remoteAuth: remoteProviders.length > 0,
+        remoteAuth: remoteReady && remoteProviders.length > 0,
         authorizationSteps: 1 as const,
       },
       ...(remoteConfig ? { remoteServer: { issuer: remoteConfig.issuer } } : {}),
+      remoteCatalog: catalogHealth,
       remoteCleanupPending: store.remoteLinkRetirementCount(),
     };
     const signature = JSON.stringify(result);
@@ -517,14 +544,19 @@ export function createLinkService(options: LinkServiceOptions = {}) {
     }
     return { ...result, revision: snapshotRevision };
   }
-  async function refreshRemoteCatalog(context: LinkOperationContext): Promise<void> {
+  async function refreshRemoteCatalog(context: LinkOperationContext, force = false): Promise<void> {
     await authorize(context);
     const config = options.remoteLink?.();
-    if (!config || (remoteCatalog?.issuer === config.issuer && remoteCatalog.expiresAt > now()))
+    if (
+      !config ||
+      (!force && remoteCatalog?.issuer === config.issuer && remoteCatalog.expiresAt > now())
+    )
       return;
     if (!catalogPending) {
       catalogPending = (async () => {
-        let available: RemoteProviderCapabilities[];
+        const previous = remoteCatalog?.issuer === config.issuer ? remoteCatalog : undefined;
+        let available = previous?.providers ?? [];
+        let health: NonNullable<LinkSnapshot["remoteCatalog"]>;
         try {
           available = options.readRemoteCatalog
             ? (await options.readRemoteCatalog(config)).flatMap((id) => {
@@ -534,15 +566,28 @@ export function createLinkService(options: LinkServiceOptions = {}) {
                   : [];
               })
             : await readRemoteProviderCapabilities(config);
-        } catch {
-          // Preserve the reviewed v1 behavior during temporary service/network failures.
-          available = remoteCatalog?.issuer === config.issuer ? remoteCatalog.providers : [];
+          const checkedAt = new Date(now()).toISOString();
+          health = { state: "ready", checkedAt, lastSuccessAt: checkedAt };
+        } catch (error) {
+          // A failed discovery does not revoke saved accounts or erase the last good catalog.
+          health = {
+            state: previous?.health.lastSuccessAt ? "stale" : "unavailable",
+            checkedAt: new Date(now()).toISOString(),
+            ...(previous?.health.lastSuccessAt
+              ? { lastSuccessAt: previous.health.lastSuccessAt }
+              : {}),
+            errorCode: error instanceof RemoteLinkCatalogError ? error.code : "network_error",
+            ...(error instanceof RemoteLinkCatalogError && error.httpStatus !== undefined
+              ? { httpStatus: error.httpStatus }
+              : {}),
+          };
         }
         if (!closed && options.remoteLink?.()?.issuer === config.issuer)
           remoteCatalog = {
             issuer: config.issuer,
-            expiresAt: now() + 60_000,
+            expiresAt: now() + (health.state === "ready" ? 60_000 : 15_000),
             providers: available,
+            health,
           };
       })().finally(() => {
         catalogPending = undefined;
@@ -1099,7 +1144,10 @@ export function createLinkService(options: LinkServiceOptions = {}) {
                 ? error.code
                 : "authorization_failed",
           );
-          if (job.public.state === "failed" && error instanceof HostLinkOAuthError)
+          if (
+            (job.public as LinkAuthorization).state === "failed" &&
+            error instanceof HostLinkOAuthError
+          )
             job.public = { ...job.public, failure: { ...error.failure } };
         }
       } finally {
@@ -1164,7 +1212,11 @@ export function createLinkService(options: LinkServiceOptions = {}) {
     );
     if (input?.resourceUrl !== undefined && authModeId !== "remote-link" && !hostAdapter)
       throw new LinkServiceError(400, "invalid_request");
-    if (authModeId === "remote-link") await refreshRemoteCatalog(context);
+    if (authModeId === "remote-link") {
+      await refreshRemoteCatalog(context, true);
+      if (snapshot().remoteCatalog?.state !== "ready")
+        throw new LinkServiceError(503, "unavailable");
+    }
     const provider = snapshot().providers.find((candidate) => candidate.id === input?.providerId);
     const mode = provider?.authModes?.find(
       (candidate) =>
@@ -1578,12 +1630,12 @@ export function createLinkService(options: LinkServiceOptions = {}) {
       throw new LinkServiceError(400, "invalid_request");
     const config = options.remoteLink?.();
     if (!config) throw new LinkServiceError(503, "unavailable");
-    await refreshRemoteCatalog(context);
+    await refreshRemoteCatalog(context, remoteCatalog?.health.state !== "ready");
     // Discovery awaits must not bypass owner revocation or the pending-job limit.
     await authorize(context);
     checkCapacity();
     const capabilities =
-      remoteCatalog?.issuer === config.issuer
+      remoteCatalog?.issuer === config.issuer && remoteCatalog.health.state === "ready"
         ? remoteCatalog.providers.find((provider) => provider.id === input.providerId)
         : undefined;
     if (!capabilities) throw new LinkServiceError(503, "unavailable");
