@@ -1,0 +1,83 @@
+{
+  "schemaVersion": 1,
+  "timezone": "Asia/Singapore",
+  "result": "oauth_and_metadata_read_succeeded_with_registration_name_override",
+  "endpoint": "https://mcp.figma.com/mcp",
+  "oauthSucceeded": true,
+  "figmaMetadataReadSucceeded": true,
+  "implementation": {
+    "oauth": "CodeShell McpOAuthService with SDK 1.31.0",
+    "transport": "CodeShell createMcpAuthenticatedFetch and SDK StreamableHTTPClientTransport",
+    "mcpInitializeClientName": "CodeShell",
+    "harnessReportedClientVersion": "0.9.42",
+    "productionSourceModified": false,
+    "installedAppConfigurationModified": false,
+    "existingCredentialsReused": false,
+    "credentialStorage": "memory_only"
+  },
+  "controlledRegistrationComparison": {
+    "observedAt": "2026-10-15T09:00:33.870Z",
+    "controlClientName": "CodeShell",
+    "controlHttpStatus": 403,
+    "controlResponseText": "Forbidden",
+    "experimentalClientName": "Codex",
+    "experimentalHttpStatus": 200,
+    "onlyClientNameChanged": true,
+    "sameRedirectUri": true,
+    "scope": "mcp:connect",
+    "firstAttemptCallbackWaitSeconds": 120,
+    "firstAttemptResult": "authorization_callback_timeout_before_token_exchange"
+  },
+  "authorizedContinuation": {
+    "startedAt": "2026-10-15T09:04:08.026Z",
+    "registrationRequests": 1,
+    "registrationClientName": "Codex",
+    "diagnosticCallbackWaitSeconds": 600,
+    "productionOAuthLogicAdjustment": "Callback timeout only: 120 seconds to 600 seconds in the isolated bundle",
+    "browser": "Chrome",
+    "tokenExchangeHttpStatus": 200,
+    "mcpInitializeSucceeded": true,
+    "mcpInitializeClientName": "CodeShell",
+    "toolsListSucceeded": true,
+    "listedToolCount": 45,
+    "read": {
+      "observedAt": "2026-10-15T09:04:48.132Z",
+      "tool": "get_metadata",
+      "target": "Figma Design file previously supplied by the user",
+      "nodeId": "0:1",
+      "isError": false,
+      "utf8Bytes": 138003,
+      "hasNodeMarkup": true,
+      "sha256": "0307492998b8f665f1c2b0ece2e226d11ef4972f7789bc000fb6a405e04617d5",
+      "rawContentPersisted": false
+    },
+    "authorizationCompletedInBrowser": true,
+    "authorizationGrantClickedByAgent": false
+  },
+  "cleanup": {
+    "completedAt": "2026-10-15T09:06:07.705Z",
+    "probeExitedNormally": true,
+    "memoryCleared": true,
+    "persistedCredentialCreated": false,
+    "providerRevocationEndpointAdvertised": false,
+    "providerRevocationRequestObserved": false,
+    "note": "Local logout and memory cleanup do not prove provider-side token revocation; the service returned remoteRevoked true without an advertised revocation endpoint."
+  },
+  "notValidated": [
+    "get_design_context",
+    "get_screenshot",
+    "Make resources",
+    "other listed tools",
+    "token refresh",
+    "formal provider approval of CodeShell",
+    "installed-app end-to-end configuration"
+  ],
+  "interpretation": {
+    "confirmed": "Changing only the registration client_name changed the real response from 403 to 200. Following user authorization, CodeShell initialized MCP and read real node metadata.",
+    "limit": "This is a user-authorized isolated diagnostic under an alternate registration name, not evidence that CodeShell is formally supported or that this naming workaround is stable."
+  },
+  "artifacts": {
+    "comparisonHarnessSha256": "588ad917b2940536c100c756352251defed5ea13cc3c2758981c26162e6394d3",
+    "continuationHarnessSha256": "ffddfa75c2df00436a2dc73d6fae6d3ec5c3e61b29665d5322f36ca1eec9c784"
+  }
+}
