@@ -332,6 +332,13 @@ export const automation = {
       // TrustGate
       trust: {
         title: "信任此项目？",
+        details: "项目信任详情",
+        readErrorTitle: "无法读取项目信任状态",
+        readErrorDescription: "请重新读取后再决定是否信任此项目。此错误不会更改项目的信任状态。",
+        readError: "读取失败：{error}",
+        retryRead: "重新读取",
+        reading: "正在重新读取信任状态…",
+        decisionError: "无法保存此选择，请重试：{error}",
         body: "Agent 会在此目录读写文件、运行命令。只信任你确认安全的项目。未信任项目仍可对话,但所有写工具调用会被拒绝。",
         viewOnly: "仅查看(拒绝写工具)",
         trustContinue: "信任并继续",
@@ -668,6 +675,14 @@ export const automation = {
       },
       trust: {
         title: "Trust this project?",
+        details: "Project trust details",
+        readErrorTitle: "Could not read project trust",
+        readErrorDescription:
+          "Retry reading before deciding whether to trust this project. This error does not change its trust status.",
+        readError: "Could not read trust: {error}",
+        retryRead: "Retry reading",
+        reading: "Reading project trust again…",
+        decisionError: "Could not save your choice. Please retry: {error}",
         body: "The agent will read/write files and run commands in this directory. Only trust projects you have confirmed are safe. Untrusted projects can still chat, but all write tool calls will be denied.",
         viewOnly: "View only (deny write tools)",
         trustContinue: "Trust and continue",
