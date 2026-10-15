@@ -176,7 +176,7 @@ export function assertFigmaMakeResourceUri(value: unknown, fileKey: string): str
     segments[2] !== fileKey ||
     segments.length < 4 ||
     segments.some(
-      (part) => !part || part === "." || part === ".." || /[\/\\\x00-\x1f\x7f]/.test(part),
+      (part) => !part || part === "." || part === ".." || /[/\\\x00-\x1f\x7f]/.test(part),
     )
   )
     throw new Error("The resource must belong to the selected Figma Make file.");

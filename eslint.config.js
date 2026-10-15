@@ -240,13 +240,18 @@ const codeshellBoundaryImportsRule = {
       if (isInsideRoot(filename, coreSrcRoot)) {
         const isCoreSelfImport =
           specifier === "@cjhyy/code-shell-core" || specifier.startsWith("@cjhyy/code-shell-core/");
+        // Link's public entry is a dependency-free provider contract, built before
+        // Core. Share reviewed identifiers without importing a Host or UI package.
+        const isPortableLinkContract = specifier === "@cjhyy/code-shell-link";
         if (
           matchesPackage(specifier, ["@cjhyy/code-shell-tui"]) ||
           resolvesInsideRoot(filename, specifier, tuiRoot)
         ) {
           context.report({ node, messageId: "coreToTui" });
         } else if (
-          (isCodeShellPackage(specifier) && !(isTestFile && isCoreSelfImport)) ||
+          (isCodeShellPackage(specifier) &&
+            !isPortableLinkContract &&
+            !(isTestFile && isCoreSelfImport)) ||
           (specifier.startsWith(".") &&
             workspacePackageRoots.some(
               (root) => root !== coreRoot && resolvesInsideRoot(filename, specifier, root),
