@@ -214,6 +214,65 @@ describe("McpOAuthService", () => {
     expect(store.resolve("example-oauth")).toEqual(prior);
   });
 
+  test("failed or cancelled Host validation revokes only the newly exchanged candidate", async () => {
+    for (const mode of ["validation", "validation-cancel", "exchange-cancel"] as const) {
+      const controller = new AbortController();
+      const revoked: string[] = [];
+      let minted = 0;
+      const { service, store } = makeService({
+        profiles: {
+          fixture: {
+            id: "fixture",
+            provider: "example",
+            label: "Example",
+            serverUrl: "https://mcp.example/rpc",
+            clientId: "client",
+            authorizationEndpoint: "https://auth.example/authorize",
+            tokenEndpoint: "https://auth.example/token",
+            revocationEndpoint: "https://auth.example/revoke",
+          },
+        },
+        authorizeTokens: () => {
+          minted++;
+          if (minted === 2 && mode === "exchange-cancel") controller.abort();
+          return {
+            accessToken: `new-access-${minted}`,
+            refreshToken: `new-refresh-${minted}`,
+            expiresAt: Date.UTC(2030, 0, 1),
+            tokenType: "Bearer",
+          };
+        },
+        fetch: (async (url, init) => {
+          const request = new Request(url, init);
+          expect(request.url).toBe("https://auth.example/revoke");
+          revoked.push(new URLSearchParams(await request.text()).get("token")!);
+          return new Response(null, { status: 503 });
+        }) as typeof fetch,
+      });
+      const input = {
+        source: "catalog" as const,
+        profileId: "fixture",
+        credentialId: `cleanup-${mode}`,
+      };
+      await service.login(input);
+      const prior = store.resolve(input.credentialId)!;
+      await expect(
+        service.authorizeCredential(input, {
+          signal: controller.signal,
+          validateCredential: async (value) => {
+            if (mode === "validation") throw new Error("validation failed");
+            controller.abort();
+            return value;
+          },
+        }),
+      ).rejects.toThrow();
+      expect(revoked).toEqual(["new-refresh-2"]);
+      expect(store.resolve(input.credentialId)).toEqual(prior);
+      expect(await service.revokeDetachedCredential(prior)).toBe(false);
+      expect(revoked).toHaveLength(1);
+    }
+  });
+
   test("a restarted Host refreshes a persisted bound connection and retains Link authority", async () => {
     const now = Date.UTC(2026, 0, 1);
     const { service, store } = makeService({

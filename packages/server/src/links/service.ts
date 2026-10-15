@@ -969,9 +969,11 @@ export function createLinkService(options: LinkServiceOptions = {}) {
     job.timer.unref?.();
     if (context.signal?.aborted) end("cancelled");
     void (async () => {
+      let candidate: Credential | undefined;
+      let committed = false;
       try {
         operation.controller.signal.throwIfAborted();
-        const candidate = await adapter.authorize({
+        candidate = await adapter.authorize({
           id: prepared.id,
           label: prepared.input.label,
           previous: prepared.expected,
@@ -1020,8 +1022,11 @@ export function createLinkService(options: LinkServiceOptions = {}) {
         await change(context, () => {
           operation.controller.signal.throwIfAborted();
           if (job.public.state !== "pending") throw new LinkServiceError(409, "cancelled");
-          swap(prepared, candidate);
-          job.public = terminal(job.public, "connected", { connection: masked(candidate, "user") });
+          swap(prepared, candidate!);
+          committed = true;
+          job.public = terminal(job.public, "connected", {
+            connection: masked(candidate!, "user"),
+          });
         });
       } catch (error) {
         if (job.public.state === "pending")
@@ -1033,6 +1038,18 @@ export function createLinkService(options: LinkServiceOptions = {}) {
                 : "authorization_failed",
           );
       } finally {
+        if (candidate?.secret && !committed) {
+          try {
+            const saved = store.resolve(candidate.id, "full");
+            if (
+              candidate.secret !== prepared.expected?.secret &&
+              candidate.secret !== saved?.secret
+            )
+              await adapter.disconnect?.(candidate);
+          } catch {
+            /* Detached cleanup cannot change the original authorization result. */
+          }
+        }
         clearTimeout(job.timer);
         context.signal?.removeEventListener("abort", onAbort);
         job.retireAt = now() + 5 * 60_000;

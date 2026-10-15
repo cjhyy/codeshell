@@ -360,13 +360,20 @@ export class McpOAuthService {
     options: HostMcpOAuthLoginOptions,
   ): Promise<Credential> {
     return this.runLogin(input, options, async (spec, result, generation) => {
-      let candidate = this.loginCredential(spec, result.secret, result.meta);
-      if (options.validateCredential)
-        candidate = await options.validateCredential(candidate, options.signal);
-      options.signal?.throwIfAborted();
-      if (!this.isCurrentGeneration(spec.credentialId, generation))
-        throw new StaleOAuthOperationError();
-      return candidate;
+      const minted = this.loginCredential(spec, result.secret, result.meta);
+      try {
+        options.signal?.throwIfAborted();
+        const candidate = options.validateCredential
+          ? await options.validateCredential(minted, options.signal)
+          : minted;
+        options.signal?.throwIfAborted();
+        if (!this.isCurrentGeneration(spec.credentialId, generation))
+          throw new StaleOAuthOperationError();
+        return candidate;
+      } catch (error) {
+        await this.revokeDetachedCredential(minted).catch(() => false);
+        throw error;
+      }
     });
   }
 
@@ -422,7 +429,6 @@ export class McpOAuthService {
         const result = explicit
           ? await this.explicitLogin(spec, options)
           : await this.discoveryLogin(spec, options);
-        options.signal?.throwIfAborted();
         return complete(spec, result, generation);
       })();
       const pending = operation.finally(() => {
@@ -534,6 +540,16 @@ export class McpOAuthService {
     )
       throw new Error("OAuth credential is unavailable");
     const secret = parseOAuthCredentialSecret(credential.secret);
+    const saved = this.store.resolve(credential.id, "full");
+    if (saved?.type === "oauth" && saved.secret) {
+      const active = parseOAuthCredentialSecret(saved.secret);
+      // A detached cleanup must never revoke tokens still owned by a saved connection.
+      if (
+        active.accessToken === secret.accessToken ||
+        (active.refreshToken && active.refreshToken === secret.refreshToken)
+      )
+        return false;
+    }
     if (!secret.revocationEndpoint) return false;
     validateOAuthEndpoint(secret.revocationEndpoint, "revocation endpoint");
     const token = secret.refreshToken ?? secret.accessToken;

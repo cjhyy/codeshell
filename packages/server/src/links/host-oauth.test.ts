@@ -57,6 +57,7 @@ function fixture(
     adapters?: boolean;
     cleanup?: Promise<void>;
     beforeUrl?: Promise<void>;
+    onChanged?: () => void;
   } = {},
 ) {
   const directory = mkdtempSync(join(tmpdir(), "host-oauth-link-"));
@@ -64,6 +65,7 @@ function fixture(
   const result = deferred<Credential>();
   let signal: AbortSignal | undefined;
   const opened: string[] = [];
+  const disconnected: Credential[] = [];
   const adapter: HostLinkOAuthAdapter = {
     providerId: "figma",
     methodId: "mcp",
@@ -81,13 +83,15 @@ function fixture(
     async openAuthorizationUrl(url) {
       opened.push(url);
     },
-    async disconnect() {
+    async disconnect(value) {
+      disconnected.push(value);
       await options.cleanup;
     },
   };
   const service = createLinkService({
     store,
     hostOAuthAdapters: options.adapters === false ? [] : [adapter],
+    onChanged: options.onChanged,
   });
   cleanups.push(() => {
     service.close();
@@ -99,6 +103,7 @@ function fixture(
     store,
     result,
     opened,
+    disconnected,
     context: { ownerId: "fixture-window", authorize: () => true },
     get signal() {
       return signal;
@@ -136,6 +141,7 @@ test("Host OAuth appears in the unified provider and commits a masked MCP connec
   });
   expect(JSON.stringify(completed)).not.toContain("fixture-access");
   expect(f.store.resolve("link-figma-mcp")?.type).toBe("oauth");
+  expect(f.disconnected).toEqual([]);
 });
 
 test("native request cancellation stops discovery before an authorization URL exists", async () => {
@@ -166,6 +172,8 @@ test("cancelled Host OAuth cannot adopt a late credential or reopen its browser"
   expect(f.signal?.aborted).toBe(true);
   f.result.resolve(credential());
   expect((await settle(f, job.id)).state).toBe("cancelled");
+  for (let i = 0; i < 100 && !f.disconnected.length; i++) await Promise.resolve();
+  expect(f.disconnected).toEqual([credential()]);
   expect(f.store.list()).toEqual([]);
   await expect(f.service.openHostAuthorization(f.context, job.id)).rejects.toThrow();
 });
@@ -183,6 +191,41 @@ test("a stale reconnect cannot overwrite a renamed connection", async () => {
   f.result.resolve({ ...credential(), secret: "candidate-that-must-not-win" });
   expect((await settle(f, job.id)).errorCode).toBe("conflict");
   expect(f.store.resolve(prior.id)?.label).toBe("Renamed while authorizing");
+  for (let i = 0; i < 100 && !f.disconnected.length; i++) await Promise.resolve();
+  expect(f.disconnected.map((value) => value.secret)).toEqual(["candidate-that-must-not-win"]);
+});
+
+test("notification failure after CAS never cleans up the committed candidate", async () => {
+  const f = fixture({
+    onChanged: () => {
+      throw new Error("notification failed");
+    },
+  });
+  const job = await f.service.startAuthorization(f.context, input, "mcp-oauth");
+  f.result.resolve(credential());
+  expect((await settle(f, job.id)).state).toBe("connected");
+  expect(f.store.resolve("link-figma-mcp")?.secret).toBe(credential().secret);
+  expect(f.disconnected).toEqual([]);
+});
+
+test("a rejected candidate sharing the old or current saved secret is never revoked", async () => {
+  for (const shared of ["previous", "current"] as const) {
+    const f = fixture();
+    f.store.save("user", credential());
+    const prior = f.service.snapshot().connections[0]!;
+    const job = await f.service.startAuthorization(
+      f.context,
+      { ...input, connectionId: prior.id, expectedRevision: prior.revision },
+      "mcp-oauth",
+    );
+    const current = { ...credential(), label: "Changed", secret: "new-saved-secret" };
+    f.store.save("user", current);
+    f.result.resolve(shared === "previous" ? credential() : current);
+    expect((await settle(f, job.id)).errorCode).toBe("conflict");
+    for (let i = 0; i < 20; i++) await Promise.resolve();
+    expect(f.disconnected).toEqual([]);
+    expect(f.store.resolve(prior.id)).toEqual(current);
+  }
 });
 
 test("disconnect removes only its exact connection before provider cleanup and preserves a later reconnect", async () => {
