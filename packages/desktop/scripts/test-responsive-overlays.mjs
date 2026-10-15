@@ -13,6 +13,7 @@ const fixtures = [
   "chat/anchored-popovers.browser.fixture.mjs",
   "ui/ContextMenu.browser.fixture.mjs",
   "ChatView.autocomplete.browser.fixture.mjs",
+  "MessageStream.context-selection.browser.fixture.mjs",
   "panels/QuickChatPanel.browser.fixture.mjs",
   "ui/specialized-overlays.browser.fixture.mjs",
   "ui/page-surfaces.browser.fixture.mjs",

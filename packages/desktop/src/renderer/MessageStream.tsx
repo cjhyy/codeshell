@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Check, Forward, X } from "lucide-react";
+import { Check, Forward, Loader2, MessageSquare, X } from "lucide-react";
 import type { Message } from "./types";
 import { ToolCard } from "./tool-cards";
 import { AssistantMessageView } from "./messages/AssistantMessageView";
@@ -220,12 +220,14 @@ export function MessageStream({
   const [selectionStatus, setSelectionStatus] = useState<"idle" | "loading" | "packaging">("idle");
   const [selectionError, setSelectionError] = useState<string | null>(null);
   const selectionLoadEpochRef = useRef(0);
+  const packagingEpochRef = useRef<number | null>(null);
   const contextSelectionRequestRef = useRef(contextSelectionRequest);
   const currentSessionIdRef = useRef(engineSessionId);
   currentSessionIdRef.current = engineSessionId;
 
   useEffect(() => {
     selectionLoadEpochRef.current += 1;
+    packagingEpochRef.current = null;
     setSelectionOpen(false);
     setSelectionTurns([]);
     setSelectionAnchor(null);
@@ -246,7 +248,11 @@ export function MessageStream({
   );
 
   const closeContextSelection = () => {
-    if (selectionStatus === "packaging") return;
+    if (
+      selectionStatus === "packaging" ||
+      packagingEpochRef.current === selectionLoadEpochRef.current
+    )
+      return;
     // Invalidate an in-flight raw-event read so cancelling cannot reopen or
     // repopulate this selection surface after it has disappeared.
     selectionLoadEpochRef.current += 1;
@@ -297,6 +303,8 @@ export function MessageStream({
   }, [contextSelectionRequest, openContextSelection]);
 
   const chooseTurn = (index: number) => {
+    if (selectionStatus !== "idle" || packagingEpochRef.current === selectionLoadEpochRef.current)
+      return;
     if (selectionAnchor === null || selectionEnd === null) {
       setSelectionAnchor(index);
       setSelectionEnd(index);
@@ -332,9 +340,17 @@ export function MessageStream({
   };
 
   const createContextPackage = async () => {
-    if (!localRuntime || !engineSessionId || selectionAnchor === null || selectionEnd === null)
+    if (
+      !localRuntime ||
+      !engineSessionId ||
+      selectionAnchor === null ||
+      selectionEnd === null ||
+      selectionStatus !== "idle" ||
+      packagingEpochRef.current === selectionLoadEpochRef.current
+    )
       return;
     const operationEpoch = selectionLoadEpochRef.current;
+    packagingEpochRef.current = operationEpoch;
     const sourceSessionId = engineSessionId;
     const operationIsCurrent = () =>
       operationEpoch === selectionLoadEpochRef.current &&
@@ -364,6 +380,7 @@ export function MessageStream({
       if (!operationIsCurrent()) return;
       setSelectionError(error instanceof Error ? error.message : String(error));
     } finally {
+      if (packagingEpochRef.current === operationEpoch) packagingEpochRef.current = null;
       if (operationIsCurrent()) setSelectionStatus("idle");
     }
   };
@@ -591,31 +608,31 @@ export function MessageStream({
     >
       <div className="relative flex min-w-0 max-w-full flex-1 flex-col overflow-hidden">
         {selectionOpen && (
-          <div className="flex shrink-0 items-center gap-3 border-b border-border bg-background px-4 py-2.5">
-            <Button
-              type="button"
-              variant="ghost"
-              size="icon"
-              className="h-8 w-8 shrink-0"
-              aria-label={t("chat.contextPackage.cancelAria")}
-              title={t("chat.contextPackage.cancel")}
-              disabled={selectionStatus === "packaging"}
-              onClick={closeContextSelection}
-            >
-              <X size={16} />
-            </Button>
-            <div className="min-w-0">
-              <div className="flex items-center gap-2 font-medium">
-                <Forward size={15} className="shrink-0" />
-                <span>{t("chat.contextPackage.title")}</span>
+          <div className="shrink-0 border-b border-border/60 bg-card/40 px-4 py-3">
+            <div className="mx-auto flex max-w-3xl items-start gap-3">
+              <span className="flex size-9 shrink-0 items-center justify-center rounded-xl border border-primary/10 bg-primary/5 text-primary">
+                <Forward size={17} aria-hidden="true" />
+              </span>
+              <div className="min-w-0 flex-1">
+                <h2 className="text-sm font-semibold leading-5 text-foreground">
+                  {t("chat.contextPackage.title")}
+                </h2>
+                <p className="mt-1 text-xs leading-5 text-muted-foreground">
+                  {t("chat.contextPackage.hint")}
+                </p>
               </div>
-              <div className="mt-0.5 truncate text-xs text-muted-foreground">
-                {selectionStatus === "loading"
-                  ? t("chat.contextPackage.loading")
-                  : selectionTurns.length === 0
-                    ? t("chat.contextPackage.empty")
-                    : t("chat.contextPackage.hint")}
-              </div>
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon"
+                className="size-8 shrink-0 rounded-lg text-muted-foreground"
+                aria-label={t("chat.contextPackage.cancelAria")}
+                title={t("chat.contextPackage.cancel")}
+                disabled={selectionStatus === "packaging"}
+                onClick={closeContextSelection}
+              >
+                <X size={16} aria-hidden="true" />
+              </Button>
             </div>
           </div>
         )}
@@ -625,7 +642,46 @@ export function MessageStream({
         >
           <div className="cs-chat-transcript w-full min-w-0">
             {!selectionOpen && leading}
+            {selectionOpen && (selectionStatus === "loading" || selectionTurns.length === 0) && (
+              <div
+                className={
+                  "cs-context-selection-state" +
+                  (selectionError && selectionStatus !== "loading"
+                    ? " cs-context-selection-state-error"
+                    : "")
+                }
+              >
+                {(!selectionError || selectionStatus === "loading") && (
+                  <span className="mb-3 flex size-11 items-center justify-center rounded-2xl border border-border/70 bg-card text-muted-foreground">
+                    {selectionStatus === "loading" ? (
+                      <Loader2 size={20} className="animate-spin text-primary" aria-hidden="true" />
+                    ) : (
+                      <MessageSquare size={20} aria-hidden="true" />
+                    )}
+                  </span>
+                )}
+                <p
+                  className="text-sm font-medium text-foreground"
+                  role={selectionStatus === "loading" ? "status" : undefined}
+                >
+                  {t(
+                    selectionStatus === "loading"
+                      ? "chat.contextPackage.loading"
+                      : selectionError
+                        ? "chat.contextPackage.readFailed"
+                        : "chat.contextPackage.empty",
+                  )}
+                </p>
+                {selectionStatus !== "loading" && !selectionError && (
+                  <p className="mt-2 max-w-64 text-xs leading-5 text-muted-foreground">
+                    {t("chat.contextPackage.emptyHint")}
+                  </p>
+                )}
+              </div>
+            )}
             {selectionOpen &&
+              selectionStatus !== "loading" &&
+              selectionTurns.length > 0 &&
               displayGroups.map((group) => {
                 const index = group.selectionIndex;
                 if (index === null) {
@@ -639,36 +695,60 @@ export function MessageStream({
                 const low = Math.min(selectionAnchor ?? -1, selectionEnd ?? -1);
                 const high = Math.max(selectionAnchor ?? -1, selectionEnd ?? -1);
                 const selected = selectionAnchor !== null && index >= low && index <= high;
-                const selectable = !!turn && selectionStatus !== "loading";
+                const selectable = !!turn;
+                const rangeLabel =
+                  low === high
+                    ? "chat.contextPackage.turnSelected"
+                    : index === low
+                      ? "chat.contextPackage.rangeStart"
+                      : index === high
+                        ? "chat.contextPackage.rangeEnd"
+                        : "chat.contextPackage.turnSelected";
                 return (
                   <div
                     key={group.key}
-                    className={
-                      "relative my-0.5 min-w-0 rounded-xl pl-9 transition-colors " +
-                      (selected ? "bg-primary/10 ring-1 ring-inset ring-primary/35" : "")
-                    }
+                    className="cs-context-turn"
                     data-context-turn-selected={selected ? "true" : "false"}
                   >
                     {selectable && (
                       <button
                         type="button"
-                        className={
-                          "group/turn absolute left-2 top-5 z-10 flex h-5 w-5 items-center justify-center rounded-full border transition-colors " +
-                          (selected
-                            ? "border-primary bg-primary text-primary-foreground"
-                            : "border-muted-foreground/50 bg-background hover:border-primary")
-                        }
+                        className="cs-context-turn-heading"
                         aria-label={t("chat.contextPackage.turnAria", {
                           number: turn.turnNumber + 1,
                         })}
                         aria-pressed={selected}
                         data-context-turn-index={index}
+                        disabled={selectionStatus !== "idle"}
                         onClick={() => chooseTurn(index)}
                       >
-                        {selected && <Check size={13} strokeWidth={3} />}
+                        <span
+                          className={
+                            "flex size-6 shrink-0 items-center justify-center rounded-lg border " +
+                            (selected
+                              ? "border-primary/70 bg-primary/10 text-primary"
+                              : "border-border bg-background text-muted-foreground")
+                          }
+                          aria-hidden="true"
+                        >
+                          {selected && <Check size={14} strokeWidth={2.5} />}
+                        </span>
+                        <span className="min-w-0 flex-1 text-left">
+                          <span className="block text-xs font-medium text-foreground">
+                            {t("chat.contextPackage.turnLabel", { number: turn.turnNumber + 1 })}
+                          </span>
+                          <span className="mt-0.5 block text-[11px] leading-4 text-muted-foreground">
+                            {t("chat.contextPackage.turnIncludesReply")}
+                          </span>
+                        </span>
+                        {selected && (
+                          <span className="shrink-0 rounded-md bg-primary/10 px-2 py-1 text-[10px] font-medium text-primary">
+                            {t(rangeLabel)}
+                          </span>
+                        )}
                       </button>
                     )}
-                    {group.items.map(renderStreamItem)}
+                    <div className="min-w-0 py-1">{group.items.map(renderStreamItem)}</div>
                   </div>
                 );
               })}
@@ -701,32 +781,72 @@ export function MessageStream({
           </div>
         </div>
         {selectionOpen && (
-          <div className="shrink-0 border-t border-border bg-background px-4 py-3">
-            <div className="mx-auto flex max-w-2xl items-center justify-between gap-3">
-              <div
-                className={
-                  "min-w-0 text-sm " +
-                  (selectionError ? "text-status-err" : "text-muted-foreground")
-                }
-              >
-                {selectionError
-                  ? t("chat.contextPackage.failed", { error: selectionError })
-                  : t("chat.contextPackage.selected", { count: selectedTurnCount })}
+          <div className="cs-context-selection-footer shrink-0 border-t border-border/60 bg-card/50 px-4 py-3">
+            <div className="mx-auto max-w-3xl">
+              {selectionError && (
+                <div
+                  className="mb-3 max-h-20 overflow-y-auto rounded-xl border border-status-err/20 bg-status-err/5 px-3 py-2 text-xs leading-5 text-status-err [overflow-wrap:anywhere]"
+                  role="alert"
+                >
+                  {t("chat.contextPackage.failed", { error: selectionError })}
+                </div>
+              )}
+              <div className="flex min-w-0 flex-wrap items-center justify-between gap-3">
+                <div className="min-w-0 flex-1 basis-48">
+                  <div
+                    className="flex items-center gap-2 text-xs font-medium text-foreground"
+                    role="status"
+                    aria-live="polite"
+                    aria-atomic="true"
+                  >
+                    <MessageSquare
+                      size={14}
+                      className="shrink-0 text-muted-foreground"
+                      aria-hidden="true"
+                    />
+                    {t("chat.contextPackage.selected", { count: selectedTurnCount })}
+                    {selectionStatus === "packaging" && (
+                      <span className="sr-only">{t("chat.contextPackage.packaging")}</span>
+                    )}
+                  </div>
+                  <p className="mt-1 text-[11px] leading-4 text-muted-foreground">
+                    {t("chat.contextPackage.selectionHint")}
+                  </p>
+                </div>
+                <div className="ml-auto flex min-w-0 flex-wrap items-center justify-end gap-2">
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    disabled={selectionStatus === "packaging"}
+                    onClick={closeContextSelection}
+                  >
+                    {t("chat.contextPackage.cancel")}
+                  </Button>
+                  <Button
+                    size="sm"
+                    type="button"
+                    className="gap-1.5 rounded-lg bg-primary/5"
+                    data-context-action="merge"
+                    aria-busy={selectionStatus === "packaging"}
+                    disabled={
+                      selectionAnchor === null ||
+                      selectionEnd === null ||
+                      selectionStatus !== "idle"
+                    }
+                    onClick={() => void createContextPackage()}
+                  >
+                    {selectionStatus === "packaging" ? (
+                      <Loader2 size={14} className="animate-spin" aria-hidden="true" />
+                    ) : (
+                      <Forward size={14} aria-hidden="true" />
+                    )}
+                    {selectionStatus === "packaging"
+                      ? t("chat.contextPackage.packaging")
+                      : t("chat.contextPackage.create")}
+                  </Button>
+                </div>
               </div>
-              <Button
-                type="button"
-                className="shrink-0 gap-1.5"
-                data-context-action="merge"
-                disabled={
-                  selectionAnchor === null || selectionEnd === null || selectionStatus !== "idle"
-                }
-                onClick={() => void createContextPackage()}
-              >
-                <Forward size={14} />
-                {selectionStatus === "packaging"
-                  ? t("chat.contextPackage.packaging")
-                  : t("chat.contextPackage.create")}
-              </Button>
             </div>
           </div>
         )}

@@ -274,6 +274,187 @@ describe("MessageStream context selection session boundary", () => {
     expect(contextTurnButtons(container)).toHaveLength(1);
   });
 
+  test("freezes the selected range while packaging, including manually invoked turn handlers", async () => {
+    const pendingFork = deferred<SummaryForkSessionResult>();
+    const calls: unknown[] = [];
+    const registered: Array<{ sessionId: string; shouldActivate: boolean }> = [];
+    const events: RawTranscriptEvent[] = ["first", "second", "third"].flatMap((text, index) => [
+      {
+        id: `u${index + 1}`,
+        type: "message",
+        turnNumber: index,
+        timestamp: index * 2,
+        data: { role: "user", content: text },
+      },
+      {
+        id: `b${index + 1}`,
+        type: "turn_boundary",
+        turnNumber: index + 1,
+        timestamp: index * 2 + 1,
+        data: {},
+      },
+    ]);
+    Object.assign(window.codeshell, {
+      getSessionRawEvents: async () => events,
+      forkSession: (params: unknown) => {
+        calls.push(params);
+        return pendingFork.promise;
+      },
+    });
+    const render = async (contextSelectionRequest: number) => {
+      await act(async () => {
+        root?.render(
+          <MessageStream
+            messages={multiTurnDisplayMessages}
+            engineSessionId="old-session"
+            liveTurnActive={false}
+            onContextPackageCreated={(result, options) => {
+              registered.push({
+                sessionId: result.sessionId,
+                shouldActivate: options?.shouldActivate() ?? true,
+              });
+            }}
+            contextSelectionRequest={contextSelectionRequest}
+          />,
+        );
+        await flushMicrotasks();
+      });
+    };
+    const selectedTurns = () =>
+      findElements(container, "DIV")
+        .filter((node) => reactPropsOf(node)["data-context-turn-selected"] !== undefined)
+        .map((node) => reactPropsOf(node)["data-context-turn-selected"]);
+
+    await render(0);
+    await render(1);
+    for (const index of [0, 1]) {
+      await act(async () => {
+        reactPropsOf(contextTurnButtons(container)[index]).onClick();
+        await flushMicrotasks();
+      });
+    }
+    expect(selectedTurns()).toEqual(["true", "true", "false"]);
+    await act(async () => {
+      reactPropsOf(mergeButton(container)).onClick();
+      await flushMicrotasks();
+    });
+
+    expect(contextTurnButtons(container)).toHaveLength(3);
+    expect(contextTurnButtons(container).every((button) => reactPropsOf(button).disabled)).toBe(
+      true,
+    );
+    expect(reactPropsOf(mergeButton(container)).disabled).toBe(true);
+    await act(async () => {
+      // The mini-DOM can bypass the browser's disabled control protection.
+      reactPropsOf(contextTurnButtons(container)[2]).onClick();
+      reactPropsOf(contextTurnButtons(container)[0]).onClick();
+      await flushMicrotasks();
+    });
+    expect(selectedTurns()).toEqual(["true", "true", "false"]);
+    expect(calls).toEqual([
+      {
+        sourceSessionId: "old-session",
+        mode: "summary",
+        fromEventId: "u1",
+        toEventId: "b2",
+      },
+    ]);
+
+    await act(async () => {
+      pendingFork.resolve({
+        ...summaryResult,
+        sourceRange: { fromEventId: "u1", toEventId: "b2" },
+      });
+      await flushMicrotasks();
+    });
+    expect(registered).toEqual([{ sessionId: "packaged-target", shouldActivate: true }]);
+    expect(contextTurnButtons(container)).toHaveLength(0);
+  });
+
+  test("coalesces merge clicks before commit and unlocks the same selection after a failed fork", async () => {
+    const firstFork = deferred<SummaryForkSessionResult>();
+    const retryFork = deferred<SummaryForkSessionResult>();
+    const calls: unknown[] = [];
+    const registered: string[] = [];
+    Object.assign(window.codeshell, {
+      forkSession: (params: unknown) => {
+        calls.push(params);
+        return calls.length === 1 ? firstFork.promise : retryFork.promise;
+      },
+    });
+    const render = async (contextSelectionRequest: number) => {
+      await act(async () => {
+        root?.render(
+          <MessageStream
+            messages={displayMessages}
+            engineSessionId="old-session"
+            liveTurnActive={false}
+            onContextPackageCreated={(result) => {
+              registered.push(result.sessionId);
+            }}
+            contextSelectionRequest={contextSelectionRequest}
+          />,
+        );
+        await flushMicrotasks();
+      });
+    };
+
+    await render(0);
+    await render(1);
+    await act(async () => {
+      reactPropsOf(contextTurnButtons(container)[0]).onClick();
+      await flushMicrotasks();
+    });
+    const merge = reactPropsOf(mergeButton(container)).onClick;
+    await act(async () => {
+      merge();
+      merge();
+      merge();
+      // Assert before React can commit a disabled button.
+      expect(calls).toHaveLength(1);
+      await flushMicrotasks();
+    });
+    expect(reactPropsOf(mergeButton(container)).disabled).toBe(true);
+
+    await act(async () => {
+      firstFork.reject(new Error("packaging failed"));
+      await flushMicrotasks();
+    });
+    expect(registered).toEqual([]);
+    expect(renderedText(container)).toContain("packaging failed");
+    expect(reactPropsOf(mergeButton(container)).disabled).toBe(false);
+    expect(reactPropsOf(contextTurnButtons(container)[0]).disabled).toBe(false);
+    expect(
+      findElements(container, "DIV").some(
+        (node) => reactPropsOf(node)["data-context-turn-selected"] === "true",
+      ),
+    ).toBe(true);
+
+    const retry = reactPropsOf(mergeButton(container)).onClick;
+    await act(async () => {
+      retry();
+      retry();
+      expect(calls).toHaveLength(2);
+      await flushMicrotasks();
+    });
+    expect(calls).toEqual([
+      {
+        sourceSessionId: "old-session",
+        mode: "summary",
+        fromEventId: "old-user",
+        toEventId: "old-boundary",
+      },
+      calls[0],
+    ]);
+    expect(renderedText(container)).not.toContain("packaging failed");
+    await act(async () => {
+      retryFork.resolve(summaryResult);
+      await flushMicrotasks();
+    });
+    expect(registered).toEqual(["packaged-target"]);
+    expect(contextTurnButtons(container)).toHaveLength(0);
+  });
+
   test("sends the inclusive raw-event range for a reverse continuous turn selection", async () => {
     const calls: unknown[] = [];
     const createdTitles: Array<string | undefined> = [];
