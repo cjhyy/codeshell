@@ -2,7 +2,8 @@ import { expect, test } from "bun:test";
 import type { Credential } from "@cjhyy/code-shell-core";
 import { FIGMA_MCP_SERVER_URL } from "@cjhyy/code-shell-link";
 import { createFigmaMcpLinkAdapter } from "./figma-mcp-link.js";
-import type { HostMcpOAuthLoginOptions } from "./mcp-oauth-service.js";
+import { McpOAuthServiceError, type HostMcpOAuthLoginOptions } from "./mcp-oauth-service.js";
+import { HostLinkOAuthError } from "@cjhyy/code-shell-server/links";
 
 function candidate(): Credential {
   return {
@@ -32,9 +33,14 @@ function fixture(
     tools?: string[];
     toolPages?: string[][];
     repeatCursor?: boolean;
+    whoamiResult?: unknown;
+    failMethod?: string;
+    toolOutputSchema?: Record<string, unknown>;
+    oauthError?: McpOAuthServiceError;
   } = {},
 ) {
   const requests: Array<{ method: string; params?: Record<string, unknown> }> = [];
+  const shapes: Record<string, unknown>[] = [];
   let trustedOptions: HostMcpOAuthLoginOptions | undefined;
   const fetch = (async (input, init) => {
     const request = new Request(input, init);
@@ -47,6 +53,8 @@ function fixture(
       params?: Record<string, unknown>;
     };
     requests.push(call);
+    if (call.method === options.failMethod)
+      return Response.json({ secret: "provider-body-must-stay-private" }, { status: 503 });
     if (call.id === undefined) return new Response(null, { status: 202 });
     let result: unknown;
     if (call.method === "initialize")
@@ -67,13 +75,19 @@ function fixture(
             "use_figma",
             "create_new_file",
           ]
-        ).map((name) => ({ name, inputSchema: { type: "object" } })),
+        ).map((name) => ({
+          name,
+          inputSchema: { type: "object" },
+          ...(name === "whoami" && options.toolOutputSchema
+            ? { outputSchema: options.toolOutputSchema }
+            : {}),
+        })),
         ...(options.repeatCursor || (options.toolPages && page + 1 < options.toolPages.length)
           ? { nextCursor: options.repeatCursor ? "1" : String(page + 1) }
           : {}),
       };
     } else if (call.method === "tools/call" && call.params?.name === "whoami")
-      result = {
+      result = options.whoamiResult ?? {
         content: [
           {
             type: "text",
@@ -87,16 +101,18 @@ function fixture(
     return Response.json({ jsonrpc: "2.0", id: call.id, result });
   }) as typeof globalThis.fetch;
   const adapter = createFigmaMcpLinkAdapter({
+    onAccountShape: (shape) => shapes.push(shape),
     fetch,
     oauth: {
-      async authorizeCredential(input, options) {
+      async authorizeCredential(input, loginOptions) {
+        if (options.oauthError) throw options.oauthError;
         expect(input).toEqual({
           source: "catalog",
           profileId: "figma-mcp",
           credentialId: "link-figma-mcp",
         });
-        trustedOptions = options;
-        return options.validateCredential!(candidate(), options.signal);
+        trustedOptions = loginOptions;
+        return loginOptions.validateCredential!(candidate(), loginOptions.signal);
       },
       async revokeDetachedCredential() {
         return false;
@@ -107,6 +123,7 @@ function fixture(
   return {
     adapter,
     requests,
+    shapes,
     get trustedOptions() {
       return trustedOptions;
     },
@@ -196,7 +213,7 @@ test("connection verification consumes bounded tool pagination before granting r
       signal: new AbortController().signal,
       onAuthorizationUrl: async () => {},
     }),
-  ).rejects.toThrow("pagination is invalid");
+  ).rejects.toMatchObject({ verificationStage: "tool_discovery", reason: "invalid_pagination" });
   expect(repeated.requests.filter((request) => request.method === "tools/call")).toEqual([]);
 });
 
@@ -210,7 +227,215 @@ test("missing account identity fails connection verification", async () => {
       signal: new AbortController().signal,
       onAuthorizationUrl: async () => {},
     }),
-  ).rejects.toThrow("identity is unavailable");
+  ).rejects.toMatchObject({
+    verificationStage: "account_verification",
+    reason: "account_identity_unavailable",
+  });
+});
+
+test("official account fields survive separate JSON, explanatory text and empty structured content", async () => {
+  const account = {
+    handle: "Fixture user",
+    email: "fixture@example.test",
+    plans: [{ seat: "Dev", tier: "pro" }],
+  };
+  for (const result of [
+    {
+      content: [
+        { type: "text", text: JSON.stringify(account) },
+        { type: "text", text: "Account plans are listed above." },
+      ],
+    },
+    {
+      structuredContent: {},
+      content: [{ type: "text", text: `\`\`\`json\n${JSON.stringify(account)}\n\`\`\`` }],
+    },
+    { structuredContent: { user: account }, content: [] },
+    { structuredContent: { result: account }, content: [] },
+    { structuredContent: { result: JSON.stringify(account) }, content: [] },
+  ]) {
+    const f = fixture({ whoamiResult: result });
+    const value = await f.adapter.authorize({
+      id: "link-figma-mcp",
+      label: "Figma",
+      previous: null,
+      signal: new AbortController().signal,
+      onAuthorizationUrl: async () => {},
+    });
+    expect(value.meta?.linkAccountId).toBe("fixture@example.test");
+    expect(value.meta?.linkAccountLabel).toBe("Fixture user (fixture@example.test)");
+    expect(JSON.stringify(f.shapes)).not.toContain("fixture@example.test");
+    expect(JSON.stringify(f.shapes)).not.toContain("Fixture user");
+    expect(
+      f.requests
+        .filter((request) => request.method === "tools/call")
+        .map((request) => request.params?.name),
+    ).toEqual(["whoami"]);
+  }
+});
+
+test("account result wrappers reject prose, lists, excessive nesting and display-only handles", async () => {
+  let deep: unknown = { email: "fixture@example.test", handle: "Fixture" };
+  for (let index = 0; index < 10; index++) deep = { result: deep };
+  for (const result of [
+    { result: "email: fixture@example.test" },
+    { result: [{ email: "fixture@example.test", handle: "Fixture" }] },
+    { result: { handle: "Mutable display name" } },
+    { result: true },
+    deep,
+  ]) {
+    const f = fixture({ whoamiResult: { structuredContent: result, content: [] } });
+    await expect(
+      f.adapter.authorize({
+        id: "link-figma-mcp",
+        label: "Figma",
+        previous: null,
+        signal: new AbortController().signal,
+        onAuthorizationUrl: async () => {},
+      }),
+    ).rejects.toMatchObject({
+      verificationStage: "account_verification",
+      reason: "account_identity_unavailable",
+    });
+  }
+  const oversized = fixture({
+    whoamiResult: {
+      structuredContent: {
+        result: JSON.stringify({
+          email: "fixture@example.test",
+          handle: "Fixture",
+          padding: "x".repeat(65_536),
+        }),
+      },
+      content: [],
+    },
+  });
+  await expect(
+    oversized.adapter.authorize({
+      id: "link-figma-mcp",
+      label: "Figma",
+      previous: null,
+      signal: new AbortController().signal,
+      onAuthorizationUrl: async () => {},
+    }),
+  ).rejects.toMatchObject({
+    verificationStage: "account_verification",
+    reason: "response_too_large",
+  });
+});
+
+test("account diagnostics expose only fixed field names and types", async () => {
+  const f = fixture({
+    whoamiResult: {
+      structuredContent: {
+        email: "fixture@example.test",
+        handle: "Fixture user",
+        syntheticSecretAsKey: "private value",
+        plans: [{ seat: "Dev", tier: "pro", nestedSecretAsKey: "private value" }],
+      },
+      content: [
+        {
+          type: "text",
+          text: JSON.stringify({ user: { textSecretAsKey: "private value" } }),
+        },
+      ],
+    },
+  });
+  await f.adapter.authorize({
+    id: "link-figma-mcp",
+    label: "Figma",
+    previous: null,
+    signal: new AbortController().signal,
+    onAuthorizationUrl: async () => {},
+  });
+  const diagnostics = JSON.stringify(f.shapes);
+  for (const secret of [
+    "syntheticSecretAsKey",
+    "nestedSecretAsKey",
+    "textSecretAsKey",
+    "private value",
+    "fixture@example.test",
+    "Fixture user",
+  ])
+    expect(diagnostics).not.toContain(secret);
+  expect(diagnostics).toContain('"unknownFields":1');
+});
+
+test("verification reports fixed stages and HTTP status without provider details", async () => {
+  for (const [method, stage] of [
+    ["initialize", "mcp_initialize"],
+    ["tools/list", "tool_discovery"],
+    ["tools/call", "account_verification"],
+  ]) {
+    const f = fixture({ failMethod: method });
+    let failure: unknown;
+    try {
+      await f.adapter.authorize({
+        id: "link-figma-mcp",
+        label: "Figma",
+        previous: null,
+        signal: new AbortController().signal,
+        onAuthorizationUrl: async () => {},
+      });
+    } catch (error) {
+      failure = error;
+    }
+    expect(failure).toMatchObject({ verificationStage: stage, reason: "http_error", status: 503 });
+    expect(String(failure)).not.toContain("provider-body-must-stay-private");
+    expect(JSON.stringify(failure)).not.toContain("fixture-access");
+  }
+});
+
+test("SDK structured output failure remains an account protocol failure", async () => {
+  const f = fixture({
+    toolOutputSchema: {
+      type: "object",
+      required: ["email"],
+      properties: { email: { type: "string" } },
+    },
+  });
+  await expect(
+    f.adapter.authorize({
+      id: "link-figma-mcp",
+      label: "Figma",
+      previous: null,
+      signal: new AbortController().signal,
+      onAuthorizationUrl: async () => {},
+    }),
+  ).rejects.toMatchObject({ verificationStage: "account_verification", reason: "protocol_error" });
+});
+
+test("normalized OAuth verification errors become reviewed Host authorization failures", async () => {
+  const f = fixture({
+    oauthError: new McpOAuthServiceError(
+      "server_error",
+      "MCP connection verification failed",
+      "credential_verification",
+      503,
+      "account_verification",
+      "http_error",
+    ),
+  });
+  let failure: unknown;
+  try {
+    await f.adapter.authorize({
+      id: "link-figma-mcp",
+      label: "Figma",
+      previous: null,
+      signal: new AbortController().signal,
+      onAuthorizationUrl: async () => {},
+    });
+  } catch (error) {
+    failure = error;
+  }
+  expect(failure).toBeInstanceOf(HostLinkOAuthError);
+  expect((failure as HostLinkOAuthError).failure).toEqual({
+    code: "server_error",
+    stage: "credential_verification",
+    verificationStage: "account_verification",
+    reason: "http_error",
+    httpStatus: 503,
+  });
 });
 
 test("only the fixed official authorization page may launch", async () => {
@@ -221,4 +446,22 @@ test("only the fixed official authorization page may launch", async () => {
   await expect(
     f.adapter.openAuthorizationUrl("https://www.figma.com/oauth/mcp#secret"),
   ).rejects.toThrow();
+});
+
+test("transport response limits retain their reviewed failure reason", async () => {
+  const f = fixture({
+    whoamiResult: { content: [{ type: "text", text: "x".repeat(8 * 1024 * 1024) }] },
+  });
+  await expect(
+    f.adapter.authorize({
+      id: "link-figma-mcp",
+      label: "Figma",
+      previous: null,
+      signal: new AbortController().signal,
+      onAuthorizationUrl: async () => {},
+    }),
+  ).rejects.toMatchObject({
+    verificationStage: "account_verification",
+    reason: "response_too_large",
+  });
 });

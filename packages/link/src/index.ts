@@ -31,6 +31,7 @@ export type {
   LinkProviderView,
   LinkAuthMode,
   LinkAuthorization,
+  LinkAuthorizationFailure,
   LinkAuthorizationInput,
   LinkAuthorizationResponse,
   LinkAuthorizationStep,

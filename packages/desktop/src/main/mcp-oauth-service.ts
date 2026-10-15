@@ -60,7 +60,39 @@ type OAuthFailureStage =
   | "authorization"
   | "discovery_registration"
   | "authorization_callback"
-  | "token_exchange";
+  | "token_exchange"
+  | "credential_verification";
+
+export type McpOAuthVerificationStage =
+  | "credential_binding"
+  | "mcp_initialize"
+  | "tool_discovery"
+  | "account_verification"
+  | "capability_verification";
+
+export type McpOAuthVerificationReason =
+  | "binding_mismatch"
+  | "cancelled"
+  | "network_error"
+  | "http_error"
+  | "protocol_error"
+  | "tool_unavailable"
+  | "invalid_pagination"
+  | "response_too_large"
+  | "account_tool_error"
+  | "account_identity_unavailable"
+  | "no_read_capabilities";
+
+/** Only Host-generated, fixed diagnostic fields survive provider error normalization. */
+export class McpOAuthVerificationError extends Error {
+  constructor(
+    readonly verificationStage: McpOAuthVerificationStage,
+    readonly reason: McpOAuthVerificationReason,
+    readonly status?: number,
+  ) {
+    super("MCP connection verification failed");
+  }
+}
 
 interface McpOAuthServiceOptions {
   store?: CredentialStore;
@@ -127,6 +159,8 @@ export class McpOAuthServiceError extends Error {
     message: string,
     readonly stage: OAuthFailureStage,
     readonly status?: number,
+    readonly verificationStage?: McpOAuthVerificationStage,
+    readonly reason?: McpOAuthVerificationReason,
   ) {
     super(`MCP_OAUTH_${code.toUpperCase()}: ${message}`);
   }
@@ -207,6 +241,22 @@ function internalStatus(error: unknown): number | undefined {
 
 function publicOAuthError(error: unknown, fallbackStage: OAuthFailureStage): McpOAuthServiceError {
   if (error instanceof McpOAuthServiceError) return error;
+  if (error instanceof McpOAuthVerificationError) {
+    const code =
+      error.reason === "network_error"
+        ? "network_error"
+        : error.status !== undefined && error.status >= 500
+          ? "server_error"
+          : "protocol_error";
+    return new McpOAuthServiceError(
+      code,
+      "MCP connection verification failed",
+      "credential_verification",
+      error.status,
+      error.verificationStage,
+      error.reason,
+    );
+  }
   const stage = error instanceof OAuthStageError ? error.stage : fallbackStage;
   const message = internalErrorMessage(error);
   const status = internalStatus(error);
@@ -429,6 +479,7 @@ export class McpOAuthService {
         const result = explicit
           ? await this.explicitLogin(spec, options)
           : await this.discoveryLogin(spec, options);
+        stage = "credential_verification";
         return complete(spec, result, generation);
       })();
       const pending = operation.finally(() => {
@@ -444,6 +495,10 @@ export class McpOAuthService {
         stage: normalized.stage,
         code: normalized.code,
         ...(normalized.status === undefined ? {} : { status: normalized.status }),
+        ...(normalized.verificationStage
+          ? { verificationStage: normalized.verificationStage }
+          : {}),
+        ...(normalized.reason ? { reason: normalized.reason } : {}),
       });
       throw normalized;
     }

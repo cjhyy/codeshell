@@ -20,6 +20,7 @@ import { listDesktopLinkProviders } from "./catalog.js";
 import {
   readRemoteProviderCatalog,
   readRemoteProviderCapabilities,
+  RemoteLinkCatalogError,
   REMOTE_LINK_ADAPTERS,
   type RemoteProviderCapabilities,
 } from "./remote-catalog.js";
@@ -31,6 +32,7 @@ import {
 } from "./device-oauth.js";
 import type {
   LinkAuthorization,
+  LinkAuthorizationFailure,
   LinkAuthMode,
   LinkAuthorizationResponse,
   LinkAuthorizationStep,
@@ -65,6 +67,67 @@ export class LinkServiceError extends Error {
   ) {
     super(messages[code]);
     this.name = "LinkServiceError";
+  }
+}
+
+/** Trusted Host adapters use this to expose reviewed failure stages, never raw provider text. */
+export class HostLinkOAuthError extends LinkServiceError {
+  readonly failure: LinkAuthorizationFailure;
+  constructor(failure: LinkAuthorizationFailure) {
+    super(422, "authorization_failed");
+    this.name = "HostLinkOAuthError";
+    if (
+      ![
+        "invalid_request",
+        "access_denied",
+        "timeout",
+        "network_error",
+        "server_error",
+        "protocol_error",
+      ].includes(failure.code) ||
+      ![
+        "validation",
+        "authorization",
+        "discovery_registration",
+        "authorization_callback",
+        "token_exchange",
+        "credential_verification",
+      ].includes(failure.stage) ||
+      (failure.verificationStage !== undefined &&
+        ![
+          "credential_binding",
+          "mcp_initialize",
+          "tool_discovery",
+          "account_verification",
+          "capability_verification",
+        ].includes(failure.verificationStage)) ||
+      (failure.reason !== undefined &&
+        ![
+          "binding_mismatch",
+          "cancelled",
+          "network_error",
+          "http_error",
+          "protocol_error",
+          "tool_unavailable",
+          "invalid_pagination",
+          "response_too_large",
+          "account_tool_error",
+          "account_identity_unavailable",
+          "no_read_capabilities",
+        ].includes(failure.reason)) ||
+      (failure.httpStatus !== undefined &&
+        (!Number.isInteger(failure.httpStatus) ||
+          failure.httpStatus < 400 ||
+          failure.httpStatus > 599))
+    )
+      throw new LinkServiceError(400, "invalid_request");
+    this.failure = Object.freeze({
+      code: failure.code,
+      stage: failure.stage,
+      ...(failure.verificationStage ? { verificationStage: failure.verificationStage } : {}),
+      ...(failure.reason ? { reason: failure.reason } : {}),
+      ...(failure.httpStatus !== undefined ? { httpStatus: failure.httpStatus } : {}),
+    });
   }
 }
 
@@ -172,9 +235,14 @@ export function createLinkService(options: LinkServiceOptions = {}) {
   const hostOAuthJobs = new Map<string, HostOAuthJob>();
   const hostOAuthAdapters = options.hostOAuthAdapters ?? [];
   let remoteCatalog:
-    | { issuer: string; expiresAt: number; providers: RemoteProviderCapabilities[] }
+    | {
+        issuer: string;
+        expiresAt: number;
+        providers: RemoteProviderCapabilities[];
+        health: NonNullable<LinkSnapshot["remoteCatalog"]>;
+      }
     | undefined;
-  let catalogPending: Promise<void> | undefined;
+  const catalogPending = new Map<string, Promise<void>>();
   const revokedOwners = new Set<string>();
   let closed = false;
   let snapshotSignature = "";
@@ -339,6 +407,12 @@ export function createLinkService(options: LinkServiceOptions = {}) {
         ? remoteCatalog.providers
         : []
       : [];
+    const catalogHealth: NonNullable<LinkSnapshot["remoteCatalog"]> = !remoteConfig
+      ? { state: "unconfigured" }
+      : remoteCatalog?.issuer === remoteConfig.issuer
+        ? { ...remoteCatalog.health }
+        : { state: "unknown" };
+    const remoteReady = catalogHealth.state === "ready";
     const result = {
       providers: providers.map((provider) => {
         const deviceAuth = isLocalBrowserLinkProvider(provider.id)
@@ -396,8 +470,15 @@ export function createLinkService(options: LinkServiceOptions = {}) {
         const remote = REMOTE_LINK_ADAPTERS.find(
           (adapter) =>
             adapter.id === provider.id &&
-            remoteProviders.some((remote) => remote.id === adapter.id),
+            (remoteProviders.some((remote) => remote.id === adapter.id) ||
+              current.credentials.some(
+                (credential) =>
+                  isRemoteLinkCredential(credential) &&
+                  credential.meta?.linkProvider === provider.id,
+              )),
         );
+        const remoteAvailable =
+          remoteReady && remoteProviders.some((candidate) => candidate.id === provider.id);
         return {
           ...provider,
           connectionMethods: [
@@ -424,7 +505,16 @@ export function createLinkService(options: LinkServiceOptions = {}) {
                     kind: "redirect" as const,
                     label: "网页授权",
                     preferred: true,
-                    available: true,
+                    available: remoteAvailable,
+                    ...(!remoteAvailable
+                      ? {
+                          unavailableReason: !remoteConfig
+                            ? "当前未配置 Link 服务。已有账号仍可管理。"
+                            : remoteReady
+                              ? "当前 Link 服务未提供此连接方式。已有账号仍可管理。"
+                              : "连接目录暂时不可用。已有账号仍可管理，请稍后重试。",
+                        }
+                      : {}),
                   },
                 ]
               : []),
@@ -442,10 +532,11 @@ export function createLinkService(options: LinkServiceOptions = {}) {
         token: true,
         cliBinding: true,
         deviceAuth: true,
-        remoteAuth: remoteProviders.length > 0,
+        remoteAuth: remoteReady && remoteProviders.length > 0,
         authorizationSteps: 1 as const,
       },
       ...(remoteConfig ? { remoteServer: { issuer: remoteConfig.issuer } } : {}),
+      remoteCatalog: catalogHealth,
       remoteCleanupPending: store.remoteLinkRetirementCount(),
     };
     const signature = JSON.stringify(result);
@@ -455,14 +546,19 @@ export function createLinkService(options: LinkServiceOptions = {}) {
     }
     return { ...result, revision: snapshotRevision };
   }
-  async function refreshRemoteCatalog(context: LinkOperationContext): Promise<void> {
+  async function refreshRemoteCatalog(context: LinkOperationContext, force = false): Promise<void> {
     await authorize(context);
     const config = options.remoteLink?.();
-    if (!config || (remoteCatalog?.issuer === config.issuer && remoteCatalog.expiresAt > now()))
+    if (
+      !config ||
+      (!force && remoteCatalog?.issuer === config.issuer && remoteCatalog.expiresAt > now())
+    )
       return;
-    if (!catalogPending) {
-      catalogPending = (async () => {
-        let available: RemoteProviderCapabilities[];
+    if (!catalogPending.has(config.issuer)) {
+      const pending = (async () => {
+        const previous = remoteCatalog?.issuer === config.issuer ? remoteCatalog : undefined;
+        let available = previous?.providers ?? [];
+        let health: NonNullable<LinkSnapshot["remoteCatalog"]>;
         try {
           available = options.readRemoteCatalog
             ? (await options.readRemoteCatalog(config)).flatMap((id) => {
@@ -472,21 +568,35 @@ export function createLinkService(options: LinkServiceOptions = {}) {
                   : [];
               })
             : await readRemoteProviderCapabilities(config);
-        } catch {
-          // Preserve the reviewed v1 behavior during temporary service/network failures.
-          available = remoteCatalog?.issuer === config.issuer ? remoteCatalog.providers : [];
+          const checkedAt = new Date(now()).toISOString();
+          health = { state: "ready", checkedAt, lastSuccessAt: checkedAt };
+        } catch (error) {
+          // A failed discovery does not revoke saved accounts or erase the last good catalog.
+          health = {
+            state: previous?.health.lastSuccessAt ? "stale" : "unavailable",
+            checkedAt: new Date(now()).toISOString(),
+            ...(previous?.health.lastSuccessAt
+              ? { lastSuccessAt: previous.health.lastSuccessAt }
+              : {}),
+            errorCode: error instanceof RemoteLinkCatalogError ? error.code : "network_error",
+            ...(error instanceof RemoteLinkCatalogError && error.httpStatus !== undefined
+              ? { httpStatus: error.httpStatus }
+              : {}),
+          };
         }
         if (!closed && options.remoteLink?.()?.issuer === config.issuer)
           remoteCatalog = {
             issuer: config.issuer,
-            expiresAt: now() + 60_000,
+            expiresAt: now() + (health.state === "ready" ? 60_000 : 15_000),
             providers: available,
+            health,
           };
       })().finally(() => {
-        catalogPending = undefined;
+        if (catalogPending.get(config.issuer) === pending) catalogPending.delete(config.issuer);
       });
+      catalogPending.set(config.issuer, pending);
     }
-    await catalogPending;
+    await catalogPending.get(config.issuer);
     await authorize(context);
   }
   function string(value: unknown, max = 200): string {
@@ -1029,7 +1139,7 @@ export function createLinkService(options: LinkServiceOptions = {}) {
           });
         });
       } catch (error) {
-        if (job.public.state === "pending")
+        if (job.public.state === "pending") {
           end(
             operation.controller.signal.aborted
               ? "cancelled"
@@ -1037,6 +1147,12 @@ export function createLinkService(options: LinkServiceOptions = {}) {
                 ? error.code
                 : "authorization_failed",
           );
+          if (
+            (job.public as LinkAuthorization).state === "failed" &&
+            error instanceof HostLinkOAuthError
+          )
+            job.public = { ...job.public, failure: { ...error.failure } };
+        }
       } finally {
         if (candidate?.secret && !committed) {
           try {
@@ -1099,7 +1215,11 @@ export function createLinkService(options: LinkServiceOptions = {}) {
     );
     if (input?.resourceUrl !== undefined && authModeId !== "remote-link" && !hostAdapter)
       throw new LinkServiceError(400, "invalid_request");
-    if (authModeId === "remote-link") await refreshRemoteCatalog(context);
+    if (authModeId === "remote-link") {
+      await refreshRemoteCatalog(context, true);
+      if (snapshot().remoteCatalog?.state !== "ready")
+        throw new LinkServiceError(503, "unavailable");
+    }
     const provider = snapshot().providers.find((candidate) => candidate.id === input?.providerId);
     const mode = provider?.authModes?.find(
       (candidate) =>
@@ -1108,7 +1228,7 @@ export function createLinkService(options: LinkServiceOptions = {}) {
     if (!mode) throw new LinkServiceError(400, "invalid_request");
     if (hostAdapter) return startHostOAuth(context, input, hostAdapter);
     if (mode.kind === "redirect") {
-      const result = await startRemoteAuth(context, input);
+      const result = await startRemoteAuthAfterCatalog(context, input);
       const job = remoteJobs.get(result.id)!;
       job.public.methodId = input.methodId;
       job.public.authModeId = authModeId;
@@ -1489,6 +1609,13 @@ export function createLinkService(options: LinkServiceOptions = {}) {
     context: LinkOperationContext,
     input: LinkConnectionInput,
   ): Promise<LinkAuthorization> {
+    await refreshRemoteCatalog(context, true);
+    return startRemoteAuthAfterCatalog(context, input);
+  }
+  async function startRemoteAuthAfterCatalog(
+    context: LinkOperationContext,
+    input: LinkConnectionInput,
+  ): Promise<LinkAuthorization> {
     await authorize(context);
     const checkCapacity = () => {
       pruneRemoteJobs();
@@ -1513,12 +1640,9 @@ export function createLinkService(options: LinkServiceOptions = {}) {
       throw new LinkServiceError(400, "invalid_request");
     const config = options.remoteLink?.();
     if (!config) throw new LinkServiceError(503, "unavailable");
-    await refreshRemoteCatalog(context);
-    // Discovery awaits must not bypass owner revocation or the pending-job limit.
-    await authorize(context);
-    checkCapacity();
+    // No await between selecting the deployment and creating its authorization URL.
     const capabilities =
-      remoteCatalog?.issuer === config.issuer
+      remoteCatalog?.issuer === config.issuer && remoteCatalog.health.state === "ready"
         ? remoteCatalog.providers.find((provider) => provider.id === input.providerId)
         : undefined;
     if (!capabilities) throw new LinkServiceError(503, "unavailable");
