@@ -22,6 +22,7 @@
     "typecheck": "tsc -p tsconfig.json --noEmit && tsc -p tsconfig.app.json --noEmit",
     "build:app": "vite build",
     "test:sidebar-browser": "node scripts/test-sidebar-navigation.mjs",
+    "test:settings-browser": "node ../../scripts/run-isolated-node-smoke.mjs scripts/test-settings-browser.mjs",
     "dev:app": "vite dev",
     "test:files-browser": "node scripts/test-file-browser.mjs",
     "clean": "node -e \"require('node:fs').rmSync('dist',{recursive:true,force:true});require('node:fs').rmSync('dist-app',{recursive:true,force:true})\""
