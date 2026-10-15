@@ -37,6 +37,16 @@ function props(node: any): Record<string, any> {
   const key = Object.keys(node).find((name) => name.startsWith("__reactProps$"));
   return key ? node[key] : {};
 }
+/** Closed Radix menus live outside the mini-DOM; inspect the owning selector contract. */
+function selectProps(node: any): Record<string, any> {
+  const key = Object.keys(node).find((name) => name.startsWith("__reactFiber$"));
+  let fiber = key ? node[key] : undefined;
+  while (fiber) {
+    if (fiber.type?.name === "SimpleSelect") return fiber.memoizedProps;
+    fiber = fiber.return;
+  }
+  throw new Error("Expected a rendered SimpleSelect");
+}
 function childText(value: any): string {
   if (typeof value === "string" || typeof value === "number") return String(value);
   if (Array.isArray(value)) return value.map(childText).join("");
@@ -754,12 +764,18 @@ describe("chat file authorization", () => {
   test("already authorized files read directly without reauthorization and require account selection", async () => {
     const f = await fixture({ connections: [connection("one", ["FileOne"]), connection("two")] });
     await f.send();
-    const select = descendants(f.container).find((node) => node.tagName === "SELECT");
+    const select = descendants(f.container).find(
+      (node) => props(node).role === "combobox" && props(node)["aria-label"] === "使用账号",
+    );
     expect(select).toBeDefined();
-    expect(childText(props(select).children)).toContain("Design one · user-one");
+    expect(selectProps(select).options.map((option: { label: string }) => option.label)).toEqual([
+      "选择 Figma 连接",
+      "Design one · user-one",
+      "Design two · user-two",
+    ]);
     expect(props(button(f.container, "连接 Figma")).disabled).toBe(true);
     await act(async () => {
-      props(select).onChange({ target: { value: "one" } });
+      selectProps(select).onChange("one");
       await flushMicrotasks();
     });
     await f.click("读取文件");
