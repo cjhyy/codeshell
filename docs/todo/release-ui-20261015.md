@@ -501,6 +501,27 @@ zoom and live resize, 21 guarded tests/42 assertions, Desktop/mobile types,
 renderer build and lint/format passed. Root and bridge independently reviewed
 the frozen source; final combined UI6 verification remains outstanding.
 
+Root's combined metadata + new Cloud sign-in portal Chrome matrix passed all
+8 layouts without errors. Additional read-only actual SettingsPage Appearance
+and Shortcuts review passed 32 language/theme/window cases down to 320×240;
+both sound/music sliders retain keyboard focus and hit visibility, all owned
+layout/document bounds hold and outside traffic/page errors are zero. Existing
+intentional theme/nav title truncation is not an overflow regression. Evidence
+`/tmp/codeshell-audio-shortcuts-ui-audit-20261015/report.json`; no product edit.
+
+UI7 accepted candidates from bridge's real Workbench owned-HTTP evidence:
+Skills detail GET finishing after the user resumes search steals input focus
+and later typing; create-close tries to focus its still-disabled opener before
+React re-enables it. bridge owns the local asynchronous pane/return focus scope.
+Models default save and connection deletion reject while the only error sits
+above the viewport (320 default error y−118; last-row deletion y−3302, also
+y−2272 at 1280). Confirmation initially opens below the short viewport with
+BODY focus. ui_audit may own local feedback/confirm/focus recovery after its
+independent Profile review. Keep original writes, revisions, replacement rules,
+drafts, refresh and authorization semantics. Evidence
+`/tmp/codeshell-web-settings-readonly-review-report.json`; neither fix is part
+of UI6 until independently completed and explicitly integrated later.
+
 Initial audit history follows:
 
 - Read-only audit is in progress, including Desktop and mobile/Web.
