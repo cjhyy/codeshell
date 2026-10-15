@@ -1,4 +1,12 @@
-import React, { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
+import React, {
+  useCallback,
+  useEffect,
+  useId,
+  useLayoutEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import {
   Archive,
   CornerDownRight,
@@ -52,7 +60,7 @@ import {
 } from "./chat/localFilePaths";
 import { compressBatch, type ImageDetail } from "./chat/compress";
 import { MentionPopover, type MentionItem } from "./chat/MentionPopover";
-import { ComposerSuggestions } from "./chat/ComposerSuggestions";
+import { ComposerSuggestions, suggestionOptionId } from "./chat/ComposerSuggestions";
 import { detectMention } from "./chat/mention";
 import {
   buildLoopCommandPrompt,
@@ -451,6 +459,7 @@ export function ChatView({
   const liveDraftStash = useRef<string>("");
   const [isComposing, setIsComposing] = useState(false);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const suggestionListboxId = useId();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [attachmentError, setAttachmentError] = useState<string | null>(null);
   const [dragOver, setDragOver] = useState(false);
@@ -1960,6 +1969,7 @@ export function ChatView({
             <div className="relative">
               {mention && (
                 <MentionPopover
+                  listboxId={suggestionListboxId}
                   anchorRef={textareaRef}
                   cwd={configurationAvailable ? conversationRoot : null}
                   rootId={configurationAvailable ? conversationRootId : null}
@@ -1980,6 +1990,7 @@ export function ChatView({
               )}
               {slash && (
                 <ComposerSuggestions
+                  id={suggestionListboxId}
                   anchorRef={textareaRef}
                   label={t("chat.slash.ariaLabel")}
                   selected={slashSelected}
@@ -1989,12 +2000,13 @@ export function ChatView({
                     {t("chat.slash.commands")}
                   </div>
                   {slashItems.length > 0 ? (
-                    <ul className="space-y-0.5">
+                    <ul role="presentation" className="space-y-0.5">
                       {slashItems.map((item, idx) => {
                         const active = idx === slashSelected;
                         return (
                           <li
                             key={item.name}
+                            id={suggestionOptionId(suggestionListboxId, `slash:${item.name}`)}
                             className={cn(
                               "grid cursor-pointer grid-cols-[auto_1fr] gap-x-2 rounded-md px-2 py-1.5 text-sm",
                               active && "bg-accent text-accent-foreground",
@@ -2036,6 +2048,8 @@ export function ChatView({
               )}
               <Textarea
                 ref={textareaRef}
+                aria-autocomplete="list"
+                aria-haspopup="listbox"
                 value={draft}
                 onChange={(e) => {
                   const value = e.target.value;

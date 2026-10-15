@@ -25,7 +25,7 @@ import type {
 import { cn } from "@/lib/utils";
 import { useT } from "../i18n/I18nProvider";
 import { filterMentionSkills } from "./mention";
-import { ComposerSuggestions } from "./ComposerSuggestions";
+import { ComposerSuggestions, suggestionOptionId } from "./ComposerSuggestions";
 
 export type MentionItem =
   | { kind: "skill"; skill: SkillSummary }
@@ -33,6 +33,7 @@ export type MentionItem =
   | { kind: "recent"; attachment: InputAttachmentMeta };
 
 interface Props {
+  listboxId: string;
   anchorRef: RefObject<HTMLElement | null>;
   /** Active repo cwd. When null the popover only shows skills (no files). */
   cwd: string | null;
@@ -54,6 +55,7 @@ interface Props {
 const EMPTY_PROJECT_ROOTS: Array<{ id: string; path: string }> = [];
 
 export function MentionPopover({
+  listboxId,
   anchorRef,
   cwd,
   rootId,
@@ -196,6 +198,7 @@ export function MentionPopover({
 
   return (
     <ComposerSuggestions
+      id={listboxId}
       anchorRef={anchorRef}
       label={t("chat.mention.ariaLabel")}
       selected={selected}
@@ -206,13 +209,14 @@ export function MentionPopover({
           <div className="px-2 py-1 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
             {t("chat.mention.skills")}
           </div>
-          <ul className="space-y-0.5">
+          <ul role="presentation" className="space-y-0.5">
             {filteredSkills.map((s, idx) => {
               const flatIndex = idx;
               const active = flatIndex === selected;
               return (
                 <li
                   key={s.filePath}
+                  id={suggestionOptionId(listboxId, JSON.stringify(["skill", s.filePath]))}
                   ref={active ? activeOptionRef : undefined}
                   className={cn(
                     "grid cursor-pointer grid-cols-[auto_1fr] gap-x-2 rounded-md px-2 py-1.5 text-sm",
@@ -243,13 +247,14 @@ export function MentionPopover({
           <div className="px-2 py-1 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
             {t("chat.mention.folders")}
           </div>
-          <ul className="space-y-0.5">
+          <ul role="presentation" className="space-y-0.5">
             {visibleFolders.map((f, idx) => {
               const flatIndex = filteredSkills.length + idx;
               const active = flatIndex === selected;
               return (
                 <li
                   key={f.path}
+                  id={suggestionOptionId(listboxId, JSON.stringify(["file", rootId, f.path]))}
                   ref={active ? activeOptionRef : undefined}
                   className={cn(
                     "grid cursor-pointer grid-cols-[auto_1fr] gap-x-2 rounded-md px-2 py-1.5 text-sm",
@@ -279,13 +284,14 @@ export function MentionPopover({
           <div className="px-2 py-1 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
             {t("chat.mention.files")}
           </div>
-          <ul className="space-y-0.5">
+          <ul role="presentation" className="space-y-0.5">
             {visibleFiles.map((f, idx) => {
               const flatIndex = filteredSkills.length + visibleFolders.length + idx;
               const active = flatIndex === selected;
               return (
                 <li
                   key={f.path}
+                  id={suggestionOptionId(listboxId, JSON.stringify(["file", rootId, f.path]))}
                   ref={active ? activeOptionRef : undefined}
                   className={cn(
                     "grid cursor-pointer grid-cols-[auto_1fr] gap-x-2 rounded-md px-2 py-1.5 text-sm",
@@ -315,7 +321,7 @@ export function MentionPopover({
           <div className="px-2 py-1 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
             {t("chat.mention.recentAttachments")}
           </div>
-          <ul className="space-y-0.5">
+          <ul role="presentation" className="space-y-0.5">
             {visibleRecent.map((attachment, idx) => {
               const flatIndex =
                 filteredSkills.length + visibleFolders.length + visibleFiles.length + idx;
@@ -325,6 +331,7 @@ export function MentionPopover({
               return (
                 <li
                   key={attachment.id}
+                  id={suggestionOptionId(listboxId, JSON.stringify(["recent", attachment.id]))}
                   ref={active ? activeOptionRef : undefined}
                   className={cn(
                     "grid cursor-pointer grid-cols-[auto_1fr] gap-x-2 rounded-md px-2 py-1.5 text-sm",
