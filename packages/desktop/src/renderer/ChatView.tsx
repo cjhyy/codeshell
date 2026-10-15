@@ -32,6 +32,7 @@ import { ContextRing } from "./chat/ContextRing";
 import { ProjectPicker } from "./chat/ProjectPicker";
 import { WelcomeSuggestions } from "./chat/WelcomeSuggestions";
 import { BranchPicker } from "./chat/BranchPicker";
+import { useComposerCaretRestore } from "./chat/useComposerCaretRestore";
 import { AskUserMessageView } from "./messages/AskUserMessageView";
 import { ApprovalCard } from "./approvals/ApprovalCard";
 import type { ApproveChoice, ApprovePathScope } from "./approvals/approvalDecision";
@@ -460,6 +461,11 @@ export function ChatView({
   const [isComposing, setIsComposing] = useState(false);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const suggestionListboxId = useId();
+  const { cancelCaretRestore, restoreCaret } = useComposerCaretRestore(
+    textareaRef,
+    draft,
+    JSON.stringify([activeProjectId, engineSessionId, variant]),
+  );
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [attachmentError, setAttachmentError] = useState<string | null>(null);
   const [dragOver, setDragOver] = useState(false);
@@ -467,7 +473,13 @@ export function ChatView({
   // Lightbox for staged attachment thumbnails (click to zoom). Mirrors
   // MessageStream's gallery zoom.
   const [zoomed, setZoomed] = useState<{ items: LightboxItem[]; index: number } | null>(null);
-  const setDraft = onDraftChange;
+  const setDraft = useCallback<Props["onDraftChange"]>(
+    (next) => {
+      cancelCaretRestore();
+      onDraftChange(next);
+    },
+    [cancelCaretRestore, onDraftChange],
+  );
   const setAttachments = onAttachmentsChange;
   const [inputReferences, setInputReferences] = useState<InputAttachmentMeta[]>([]);
   const [localFilePaths, setLocalFilePaths] = useState<string[]>([]);
@@ -824,13 +836,7 @@ export function ChatView({
         current.trim().length > 0 ? `${current}\n\n${composerSeed}` : composerSeed,
       );
       onComposerSeedConsumed?.(composerSeedNonce ?? 0);
-      requestAnimationFrame(() => {
-        const ta = textareaRef.current;
-        if (ta) {
-          ta.focus();
-          ta.setSelectionRange(ta.value.length, ta.value.length);
-        }
-      });
+      restoreCaret("end");
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [composerSeedNonce]);
@@ -1001,22 +1007,14 @@ export function ChatView({
     closeMention();
     // After React paints, restore caret to the end of the inserted token.
     const nextCaret = before.length + insertion.length;
-    requestAnimationFrame(() => {
-      if (textareaRef.current) {
-        textareaRef.current.focus();
-        textareaRef.current.setSelectionRange(nextCaret, nextCaret);
-      }
-    });
+    restoreCaret(nextCaret, next);
   };
 
   const completeSlashCommand = (item: SlashCommandItem): void => {
     const nextDraft = completedSlashCommandDraft(item);
     setDraft(nextDraft);
     closeSlash();
-    requestAnimationFrame(() => {
-      textareaRef.current?.focus();
-      textareaRef.current?.setSelectionRange(nextDraft.length, nextDraft.length);
-    });
+    restoreCaret(nextDraft.length, nextDraft);
   };
 
   const expandPluginSlashCommand = async (
@@ -1041,10 +1039,7 @@ export function ChatView({
       setHistoryCursor(-1);
       liveDraftStash.current = "";
       toast({ message: t("chat.slash.pluginExpanded"), variant: "success" });
-      requestAnimationFrame(() => {
-        textareaRef.current?.focus();
-        textareaRef.current?.setSelectionRange(result.prompt.length, result.prompt.length);
-      });
+      restoreCaret(result.prompt.length, result.prompt);
     } catch (error) {
       if (!mountedRef.current) return;
       toast({
@@ -2406,11 +2401,7 @@ export function ChatView({
                 setHistoryCursor(-1);
                 closeMention();
                 closeSlash();
-                requestAnimationFrame(() => {
-                  const textarea = textareaRef.current;
-                  textarea?.focus();
-                  textarea?.setSelectionRange(textarea.value.length, textarea.value.length);
-                });
+                restoreCaret("end");
               }}
             />
           )}
