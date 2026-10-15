@@ -18,7 +18,6 @@ import type {
 import { useT, type TFunction } from "../i18n/I18nProvider";
 import { driveAgentLinkDetail } from "../cc-room/driveAgentLink";
 import { DriveAgentLinkButton } from "../cc-room/DriveAgentLinkButton";
-import { SubagentSessionDetail } from "../subagents/SubagentSessionDetail";
 
 type AgentStatus = "running" | "completed" | "failed" | "cancelled";
 type ShellWorkItem = Extract<BackgroundWorkInfo, { kind: "shell" }>;
@@ -32,8 +31,8 @@ function shellItemKey(item: ShellWorkItem): string {
  * work, grouped by kind: background shells (Bash run_in_background), background
  * sub-agents (Agent run_in_background / auto-handed-off), and background jobs
  * (video generation, drive-claude-code). Shells are interactive — select to
- * pull their output, stop to kill — and sub-agents open their persisted
- * conversation, including tool calls and errors.
+ * pull their output, stop to kill. Sub-agents show their status here; their
+ * conversations open from the owning chat.
  *
  * Pull-based with two refresh triggers so the list stays live without the user
  * toggling the panel: (1) a `codeshell:files-changed`-style turn-complete event
@@ -53,10 +52,6 @@ export function BackgroundShellPanel({
   const { t } = useT();
   const [items, setItems] = useState<BackgroundWorkInfo[]>([]);
   const [selected, setSelected] = useState<string | null>(null);
-  const [selectedAgent, setSelectedAgent] = useState<Extract<
-    BackgroundWorkInfo,
-    { kind: "subagent" }
-  > | null>(null);
   // Which finished job's result detail is expanded (click to toggle).
   const [expandedJobId, setExpandedJobId] = useState<string | null>(null);
   // Mirror of `selected` for the poll tick, so reading the current selection
@@ -86,7 +81,6 @@ export function BackgroundShellPanel({
 
   useEffect(() => {
     setItems([]);
-    setSelectedAgent(null);
     setExpandedJobId(null);
     setError(null);
     setRefreshing(false);
@@ -284,20 +278,6 @@ export function BackgroundShellPanel({
     );
   }
 
-  if (selectedAgent) {
-    const current =
-      agents.find((agent) => agent.agentId === selectedAgent.agentId) ?? selectedAgent;
-    return (
-      <SubagentSessionDetail
-        agentId={current.agentId}
-        parentSessionId={current.sourceSession.sessionId}
-        label={current.description || current.name}
-        running={current.status === "running"}
-        onBack={() => setSelectedAgent(null)}
-      />
-    );
-  }
-
   const total = shells.length + agents.length + jobs.length;
 
   return (
@@ -349,18 +329,13 @@ export function BackgroundShellPanel({
             </Section>
           )}
 
-          {/* Background sub-agents open their complete child transcript. */}
+          {/* Background sub-agents expose status; chat owns transcript navigation. */}
           {agents.length > 0 && (
             <Section title={t("panels.shells.sectionAgents")}>
               <ul className="m-0 list-none p-0">
                 {agents.map((a) => (
                   <li key={a.agentId} className="border-b border-border/60">
-                    <button
-                      type="button"
-                      onClick={() => setSelectedAgent(a)}
-                      aria-label={`${t("msg.agent.transcript")}: ${a.description || a.name || a.agentId}`}
-                      className="flex w-full items-center gap-2 px-2 py-1.5 text-left text-xs hover:bg-accent focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring"
-                    >
+                    <div className="flex w-full items-center gap-2 px-2 py-1.5 text-left text-xs">
                       <AgentStatusDot status={a.status} />
                       <Bot className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
                       <span
@@ -378,7 +353,7 @@ export function BackgroundShellPanel({
                       <span className="shrink-0 text-[10px] text-muted-foreground">
                         {agentStatusLabel(t, a.status)}
                       </span>
-                    </button>
+                    </div>
                   </li>
                 ))}
               </ul>

@@ -171,6 +171,40 @@ describe("subagent conversation dock requests", () => {
     expect(hook.result.current.panelBuckets).toContain(firstBucket);
   });
 
+  test("missing or blank child IDs never open or modify a dock", async () => {
+    hook = await renderHook(useHarness);
+    const originalPanels = hook.result.current.panelByBucket;
+    const originalIndices = hook.result.current.sessionIndices;
+
+    await act(async () => {
+      for (const agentId of [undefined, "", "   "]) {
+        hook!.result.current.openSubagent({
+          agentId,
+          parentSessionId: "engine-parent-a",
+          label: "Unresolved child",
+        });
+      }
+    });
+
+    expect(hook.result.current.panelByBucket).toBe(originalPanels);
+    expect(hook.result.current.activePanelState.open).toBe(false);
+    expect(hook.result.current.sessionIndices).toBe(originalIndices);
+    expect(materializedBuckets).toEqual([]);
+
+    await act(async () => {
+      hook!.result.current.openSubagent(firstSelection);
+    });
+    const openedPanels = hook.result.current.panelByBucket;
+    const openedState = hook.result.current.activePanelState;
+    await act(async () => {
+      hook!.result.current.openSubagent({ parentSessionId: "engine-parent-a" });
+      hook!.result.current.openSubagent({ agentId: "  " });
+    });
+    expect(hook.result.current.panelByBucket).toBe(openedPanels);
+    expect(hook.result.current.activePanelState).toBe(openedState);
+    expect(hook.result.current.activePanelState.subagentSelection).toEqual(firstSelection);
+  });
+
   test("reissues the same dock request with a new selection and preserves its tabs", async () => {
     hook = await renderHook(useHarness);
     const tabs = [

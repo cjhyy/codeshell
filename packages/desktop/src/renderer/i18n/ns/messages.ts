@@ -45,7 +45,7 @@ export const messagesNs = {
         transcript: "完整对话",
         back: "返回上级对话",
         refresh: "刷新对话",
-        chooseChild: "选择子任务",
+        openFromChat: "从聊天消息中打开对应的子代理对话。",
         loadingTranscript: "正在加载子任务对话…",
         emptyTranscript: "暂未找到子任务对话记录。",
         externalTraceUnavailable:
@@ -225,7 +225,7 @@ export const messagesNs = {
         transcript: "Full conversation",
         back: "Back to parent conversation",
         refresh: "Refresh conversation",
-        chooseChild: "Choose a subtask",
+        openFromChat: "Open a subagent conversation from a chat message.",
         loadingTranscript: "Loading subtask conversation…",
         emptyTranscript: "No subtask conversation has been saved yet.",
         externalTraceUnavailable:

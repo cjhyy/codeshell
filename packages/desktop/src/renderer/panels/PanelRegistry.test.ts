@@ -62,6 +62,16 @@ describe("PanelRegistry", () => {
     ).toBe(true);
   });
 
+  it("keeps the chat-owned subagent kind registered and enabled for internal navigation", () => {
+    const context = { projectPath: "/repo", cwd: "/repo", engineSessionId: "parent-session" };
+    const entry = getPanelEntry("subagent", context);
+    expect(entry?.internalOnly).toBe(true);
+    expect(entry?.enabled(context)).toBe(true);
+    expect(entry?.render).toBeFunction();
+    expect(getEnabledPanelEntries(context).some((panel) => panel.key === "subagent")).toBe(true);
+    expect(getPanelEntry("files")?.internalOnly).not.toBe(true);
+  });
+
   it("routes QuickChat through a registered built-in Panel App service", () => {
     const context: PanelRenderContext = {
       projectPath: "/repo",

@@ -1,6 +1,5 @@
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import { ArrowLeft, RefreshCw } from "lucide-react";
-import { SimpleSelect } from "@/components/ui/simple-select";
 import { MessageStream } from "../MessageStream";
 import { foldTranscript } from "../automation/foldTranscript";
 import { useT } from "../i18n/I18nProvider";
@@ -30,18 +29,17 @@ export function SubagentSessionDetail({
   const detailActive = active && parentActive;
   const activeRef = useRef(detailActive);
   activeRef.current = detailActive;
-  const [selectedId, setSelectedId] = useState(agentId);
+  const selectedId = agentId;
   const [children, setChildren] = useState<ChildSession[]>([]);
   const [state, setState] = useState<MessagesReducerState | null>(null);
   const [loading, setLoading] = useState(false);
   const [loadingChildren, setLoadingChildren] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [catalogError, setCatalogError] = useState<string | null>(null);
   const generation = useRef(0);
   const catalogGeneration = useRef(0);
 
   const loadChildren = useCallback(async () => {
-    if (!activeRef.current || !parentSessionId) return;
+    if (!activeRef.current || !agentId || !parentSessionId) return;
     const request = ++catalogGeneration.current;
     setLoadingChildren(true);
     try {
@@ -58,22 +56,16 @@ export function SubagentSessionDetail({
         cursor = page.nextCursor ?? undefined;
       } while (cursor);
       setChildren(rows);
-      if (!agentId && rows.length === 1)
-        setSelectedId((current) => current ?? rows[0].engineSessionId);
-      setCatalogError(null);
-    } catch (cause) {
-      if (activeRef.current && request === catalogGeneration.current && !agentId) {
-        setCatalogError(String(cause instanceof Error ? cause.message : cause));
-      }
+    } catch {
+      // Catalog metadata is optional; the explicitly selected transcript can
+      // still load when its parent catalog is unavailable.
     } finally {
       if (activeRef.current && request === catalogGeneration.current) setLoadingChildren(false);
     }
   }, [agentId, parentSessionId]);
 
   useEffect(() => {
-    setSelectedId(agentId);
     setChildren([]);
-    setCatalogError(null);
   }, [agentId, parentSessionId]);
 
   useEffect(() => {
@@ -88,7 +80,7 @@ export function SubagentSessionDetail({
   }, [detailActive, loadChildren]);
 
   const selectedStatus = children.find((child) => child.engineSessionId === selectedId)?.status;
-  const selectedRunning = selectedStatus ? selectedStatus === "active" : running;
+  const selectedRunning = !!selectedId && (selectedStatus ? selectedStatus === "active" : running);
 
   const refresh = useCallback(async () => {
     if (!activeRef.current) return;
@@ -174,45 +166,25 @@ export function SubagentSessionDetail({
         <button
           type="button"
           onClick={refreshAll}
-          disabled={
-            !detailActive || loading || loadingChildren || (!selectedId && !parentSessionId)
-          }
+          disabled={!detailActive || loading || loadingChildren || !selectedId}
           aria-label={t("msg.agent.refresh")}
           className="rounded p-1 text-muted-foreground hover:bg-accent disabled:opacity-50"
         >
           <RefreshCw className={`size-4${loading || loadingChildren ? " animate-spin" : ""}`} />
         </button>
       </div>
-      {children.length > 1 && (
-        <SimpleSelect
-          ariaLabel={t("msg.agent.chooseChild")}
-          value={selectedId ?? ""}
-          className="m-2 w-[calc(100%-1rem)]"
-          onChange={(value) => setSelectedId(value || undefined)}
-          options={[
-            { value: "", label: t("msg.agent.chooseChild") },
-            ...(agentId && !children.some((child) => child.engineSessionId === agentId)
-              ? [{ value: agentId, label: label || agentId }]
-              : []),
-            ...children.map((child) => ({
-              value: child.engineSessionId,
-              label: child.title || child.engineSessionId,
-            })),
-          ]}
-        />
-      )}
-      {(error || catalogError) && (
+      {error && (
         <div role="alert" className="px-4 py-3 text-sm text-status-err">
-          {t("msg.agent.transcriptError", { error: error || catalogError || "" })}
+          {t("msg.agent.transcriptError", { error })}
         </div>
       )}
-      {!state || state.messages.length === 0 ? (
+      {!selectedId ? (
+        <div className="p-4 text-sm text-muted-foreground">{t("msg.agent.openFromChat")}</div>
+      ) : !state || state.messages.length === 0 ? (
         <div className="p-4 text-sm text-muted-foreground">
           {loading || loadingChildren
             ? t("msg.agent.loadingTranscript")
-            : !selectedId && children.length > 1
-              ? t("msg.agent.chooseChild")
-              : t("msg.agent.emptyTranscript")}
+            : t("msg.agent.emptyTranscript")}
         </div>
       ) : (
         <SubagentDetailActiveContext.Provider value={detailActive}>

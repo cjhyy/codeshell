@@ -85,6 +85,8 @@ export interface PanelEntry {
   readonly icon: LucideIcon;
   readonly order: number;
   readonly singleton: boolean;
+  /** Open only through dedicated in-app navigation, never a generic picker or external Host capability. */
+  readonly internalOnly?: boolean;
   readonly enabled: (context: PanelAvailabilityContext) => boolean;
   readonly render: (context: PanelRenderContext) => ReactNode;
   /** Present only for trusted built-in Panel Apps coordinated by core's lifecycle runtime. */
@@ -204,6 +206,7 @@ const BUILTIN_PANEL_ENTRIES: PanelEntry[] = [
       title: { kind: "i18n", key: "panels.kinds.subagent" },
       icon: Bot,
       order: 45,
+      internalOnly: true,
       enabled: alwaysEnabled,
       render: ({ engineSessionId, subagentSelection, foregroundVisible }) =>
         createElement(SubagentSessionDetail, {

@@ -10,6 +10,43 @@ import { replacePanelApps } from "./PanelRegistry";
 installQuickChatPanelApp();
 
 describe("resolveAgentPanelHostRequest", () => {
+  test("excludes internal chat navigation from discovery and every external panel action", async () => {
+    const opened: string[] = [];
+    const invoked: string[] = [];
+    const options = {
+      availability: { projectPath: "/repo", cwd: "/repo", engineSessionId: "parent-session" },
+      translate: (key: string) => key,
+      open: (panelId: string) => opened.push(panelId),
+      invoke: async (panelId: string) => {
+        invoked.push(panelId);
+        return null;
+      },
+    };
+    const request = {
+      requestId: "internal-chat-navigation",
+      routing: "owner" as const,
+      sessionId: "parent-session",
+      bucket: "repo::parent-session",
+      action: "list" as const,
+    };
+    const listed = await resolveAgentPanelHostRequest(request, options);
+    expect(listed.result.panels?.some((panel) => panel.id === "subagent")).toBe(false);
+    expect(listed.result.panels?.some((panel) => panel.id === "files")).toBe(true);
+    for (const action of ["open", "tools", "invoke"] as const) {
+      const blocked = await resolveAgentPanelHostRequest(
+        { ...request, action, panelId: "subagent", toolName: "unknown" },
+        options,
+      );
+      expect(blocked.result).toEqual({
+        ok: false,
+        panelId: "subagent",
+        detail: "panel 'subagent' is unavailable",
+      });
+    }
+    expect(opened).toEqual([]);
+    expect(invoked).toEqual([]);
+  });
+
   test("keeps Git review out of agent discovery and rejects direct opens in non-repositories", async () => {
     const opened: string[] = [];
     const options = {

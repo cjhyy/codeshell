@@ -217,6 +217,10 @@ function ResolvedPanelArea({
     () => new Set(enabledPanels.map((entry) => entry.key)),
     [enabledPanels],
   );
+  const pickerPanels = useMemo(
+    () => enabledPanels.filter((entry) => !entry.internalOnly),
+    [enabledPanels],
+  );
   // Fresh, collision-proof tab id. The module counter resets to 0 on a renderer
   // reload, but tabs are persisted per bucket; bump past ids already present in
   // this bucket so restored tabs and newly-opened tabs don't collide.
@@ -427,7 +431,7 @@ function ResolvedPanelArea({
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="min-w-48">
-              {enabledPanels.map((entry) => {
+              {pickerPanels.map((entry) => {
                 const Icon = entry.icon;
                 return (
                   <DropdownMenuItem
@@ -465,7 +469,7 @@ function ResolvedPanelArea({
           one mounted PanelArea per bucket, so no body here ever changes owner
           during a session switch. */}
       <div className="relative flex min-h-0 flex-1 flex-col">
-        {activeTabs.length === 0 && <PanelLanding entries={enabledPanels} onPick={addTab} />}
+        {activeTabs.length === 0 && <PanelLanding entries={pickerPanels} onPick={addTab} />}
         {activeTabs.map((panelTab) => {
           const activeTab = panelTab.id === visibleActiveId;
           const visibility = resolvePanelVisibility({ hidden, keepActiveBodyLive, activeTab });

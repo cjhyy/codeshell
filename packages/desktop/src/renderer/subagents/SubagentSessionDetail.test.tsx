@@ -16,18 +16,6 @@ function props(node: any): Record<string, any> {
   return key ? node[key] : {};
 }
 
-/** Closed Radix menus live outside the mini-DOM; inspect the owning selector contract. */
-function selectProps(node: Element): Record<string, any> {
-  const current = node as unknown as Record<string, any>;
-  const key = Object.keys(current).find((name) => name.startsWith("__reactFiber$"));
-  let fiber = key ? current[key] : undefined;
-  while (fiber) {
-    if (fiber.type?.name === "SimpleSelect") return fiber.memoizedProps;
-    fiber = fiber.return;
-  }
-  throw new Error("Expected a rendered SimpleSelect");
-}
-
 function nodes(node: any, tag: string): any[] {
   return [
     ...(node.tagName === tag ? [node] : []),
@@ -142,7 +130,7 @@ afterEach(async () => {
 });
 
 describe("subagent full transcript navigation", () => {
-  test("a background agent reads its own transcript and uses its actual source parent", async () => {
+  test("background agents retain their status without a transcript navigation entry", async () => {
     const reads: string[] = [];
     const queries: unknown[] = [];
     api({
@@ -168,27 +156,15 @@ describe("subagent full transcript navigation", () => {
       },
     });
     const container = await mount(<BackgroundShellPanel sessionId="viewed-parent" />);
-    await click(
-      nodes(container, "BUTTON").find((node) =>
-        props(node)["aria-label"]?.includes("Read document"),
-      ),
-    );
-    expect(reads).toEqual(["child-a"]);
-    expect(queries).toEqual([{ parentSessionId: "other-parent", limit: 100, cursor: undefined }]);
-    expect(text(container)).toContain("Child request");
-    // Expand the persisted normal tool card, so the exact denial remains reviewable.
-    for (let i = 0; i < 4; i++) {
-      const button = nodes(container, "BUTTON").find(
-        (node) => props(node)["aria-expanded"] === false,
-      );
-      if (!button) break;
-      await click(button);
-    }
-    expect(text(container)).toContain("Permission denied");
-    await click(
-      nodes(container, "BUTTON").find((node) => props(node)["aria-label"]?.includes("返回")),
-    );
-    expect(text(container)).toContain("Read document");
+    const row = nodes(container, "LI").find((node) => text(node).includes("Read document"));
+    expect(row).toBeDefined();
+    expect(text(row)).toContain("失败");
+    expect(nodes(row, "BUTTON")).toHaveLength(0);
+    expect(nodes(container, "BUTTON").some((node) => text(node) === "完整对话")).toBe(false);
+    await filesChanged();
+    expect(reads).toEqual([]);
+    expect(queries).toEqual([]);
+    expect(text(container)).not.toContain("Child request");
   });
 
   test("Agent tool cards open the child and returning restores the parent stream", async () => {
@@ -221,6 +197,43 @@ describe("subagent full transcript navigation", () => {
       nodes(container, "BUTTON").find((node) => props(node)["aria-label"] === "返回上级对话"),
     );
     expect(text(container)).not.toContain("Child request");
+  });
+
+  test("an Agent tool without a definite child never opens a generic child list", async () => {
+    const reads: string[] = [];
+    const queries: unknown[] = [];
+    api({
+      getSessionTranscript: async (id: string) => {
+        reads.push(id);
+        return transcript("Unexpected child transcript");
+      },
+      listDiskSessions: async (options: unknown) => {
+        queries.push(options);
+        return { sessions: [], nextCursor: null };
+      },
+    });
+    const container = await mount(
+      <MessageStream
+        engineSessionId="parent"
+        messages={[tool(), agent("one", "Read document"), agent("two", "Read document")]}
+      />,
+    );
+    const findTool = () =>
+      nodes(container, "DIV").find(
+        (node) =>
+          props(node)["data-message-kind"] === "tool" && props(node)["data-tool-name"] === "Agent",
+      );
+    for (let attempt = 0; !findTool() && attempt < 4; attempt++) {
+      await click(
+        nodes(container, "BUTTON").find((node) => props(node)["aria-expanded"] === false),
+      );
+    }
+    const launch = findTool();
+    expect(launch).toBeDefined();
+    await click(nodes(launch, "BUTTON").find((node) => props(node)["aria-expanded"] === false));
+    expect(nodes(launch, "BUTTON").some((node) => text(node) === "完整对话")).toBe(false);
+    expect(reads).toEqual([]);
+    expect(queries).toEqual([]);
   });
 
   test("an external subagent opener preserves the parent stream and its subsequent output", async () => {
@@ -376,7 +389,8 @@ describe("subagent full transcript navigation", () => {
     expect(text(container)).not.toContain("Stale child");
   });
 
-  test("switching the selected child refreshes both its title and full transcript", async () => {
+  test("an explicit child stays targeted across sibling catalogs and prop switches", async () => {
+    const reads: string[] = [];
     api({
       listDiskSessions: async () => ({
         sessions: ["one", "two"].map((id) => ({
@@ -389,18 +403,21 @@ describe("subagent full transcript navigation", () => {
         })),
         nextCursor: null,
       }),
-      getSessionTranscript: async (id: string) => transcript(`Transcript ${id}`),
+      getSessionTranscript: async (id: string) => {
+        reads.push(id);
+        return transcript(`Transcript ${id}`);
+      },
     });
     const container = await mount(<SubagentSessionDetail agentId="one" parentSessionId="parent" />);
+    expect(text(container)).toContain("Title one");
     expect(text(container)).toContain("Transcript one");
+    expect(nodes(container, "BUTTON").some((node) => props(node).role === "combobox")).toBe(false);
     await rerender(<SubagentSessionDetail agentId="two" parentSessionId="parent" />);
     expect(text(container)).toContain("Title two");
     expect(text(container)).toContain("Transcript two");
     expect(text(container)).not.toContain("Transcript one");
-    expect(
-      selectProps(nodes(container, "BUTTON").find((node) => props(node).role === "combobox")!)
-        .value,
-    ).toBe("two");
+    expect(nodes(container, "BUTTON").some((node) => props(node).role === "combobox")).toBe(false);
+    expect(reads).toEqual(["one", "two"]);
   });
 
   test("hidden dock visibility pauses polling and change events for nested child details", async () => {
@@ -472,7 +489,46 @@ describe("subagent full transcript navigation", () => {
     }
   });
 
-  test("child picker scopes by parent, follows pagination, and ignores stale transcript reads", async () => {
+  test("a missing child target stays empty and asks to open the conversation from chat", async () => {
+    const queries: unknown[] = [];
+    const reads: string[] = [];
+    api({
+      listDiskSessions: async (options: unknown) => {
+        queries.push(options);
+        return {
+          sessions: [
+            {
+              id: "only-child",
+              engineSessionId: "only-child",
+              title: "Only child",
+              cwd: "/repo",
+              origin: "subagent",
+              updatedAt: 1,
+            },
+          ],
+          nextCursor: null,
+        };
+      },
+      getSessionTranscript: async (id: string) => {
+        reads.push(id);
+        return transcript("Unexpected auto-selected child");
+      },
+    });
+    const container = await mount(
+      <SubagentSessionDetail parentSessionId="parent" onBack={() => undefined} />,
+    );
+    expect(text(container)).toContain("从聊天消息中打开对应的子代理对话。");
+    expect(nodes(container, "BUTTON").some((node) => props(node).role === "combobox")).toBe(false);
+    expect(
+      props(nodes(container, "BUTTON").find((node) => props(node)["aria-label"] === "刷新对话"))
+        .disabled,
+    ).toBe(true);
+    await filesChanged();
+    expect(queries).toEqual([]);
+    expect(reads).toEqual([]);
+  });
+
+  test("explicit child metadata follows pagination and stale transcript reads are ignored", async () => {
     let resolveA!: (items: FoldItem[]) => void;
     const queries: any[] = [];
     const reads: string[] = [];
@@ -497,18 +553,11 @@ describe("subagent full transcript navigation", () => {
       },
     });
     const container = await mount(
-      <SubagentSessionDetail parentSessionId="parent" onBack={() => undefined} />,
+      <SubagentSessionDetail agentId="child-a" parentSessionId="parent" />,
     );
     expect(queries.map((query) => query.parentSessionId)).toEqual(["parent", "parent"]);
-    const select = nodes(container, "BUTTON").find((node) => props(node).role === "combobox")!;
-    await act(async () => {
-      selectProps(select).onChange("child-a");
-      await flushMicrotasks();
-    });
-    await act(async () => {
-      selectProps(select).onChange("child-b");
-      await flushMicrotasks();
-    });
+    expect(nodes(container, "BUTTON").some((node) => props(node).role === "combobox")).toBe(false);
+    await rerender(<SubagentSessionDetail agentId="child-b" parentSessionId="parent" />);
     expect(reads).toEqual(["child-a", "child-b"]);
     expect(text(container)).toContain("B transcript");
     await act(async () => {
@@ -583,7 +632,7 @@ describe("subagent full transcript navigation", () => {
       },
     });
     const container = await mount(
-      <SubagentSessionDetail parentSessionId="parent" onBack={() => undefined} />,
+      <SubagentSessionDetail agentId="child" parentSessionId="parent" onBack={() => undefined} />,
     );
     await click(
       nodes(container, "BUTTON").find((node) => props(node)["aria-label"] === "刷新对话"),

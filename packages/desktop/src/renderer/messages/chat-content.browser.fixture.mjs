@@ -288,6 +288,11 @@ async function navigateTranscript(page, expected, label, expanded) {
   await page
     .getByText("Full child transcript: schema and callers verified.", { exact: true })
     .waitFor();
+  assert.equal(
+    await page.getByRole("combobox").count(),
+    0,
+    label + ": exact transcript has no sibling picker",
+  );
   const actions = await page.evaluate(() => window.actions);
   const navigation = actions.filter((action) => action[0] === "view").at(-1);
   assert.equal(navigation[1].agentId, "agent-main");

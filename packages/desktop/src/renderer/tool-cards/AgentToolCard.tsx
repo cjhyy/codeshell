@@ -79,7 +79,7 @@ export function AgentToolCard({ message, onSelect, selected, turnEpoch }: Props)
       summary={summary}
       details={details}
       headerAction={
-        navigation && (agentId || navigation.sessionId) ? (
+        navigation && agentId ? (
           <button
             type="button"
             className="rounded px-2 py-1 text-xs text-primary hover:bg-accent focus-visible:ring-2 focus-visible:ring-ring"
@@ -89,9 +89,7 @@ export function AgentToolCard({ message, onSelect, selected, turnEpoch }: Props)
                 agentId,
                 parentSessionId: navigation.sessionId,
                 label: description,
-                running: agentId
-                  ? !navigation.agents.find((agent) => agent.id === agentId)?.done
-                  : message.status === "running",
+                running: !navigation.agents.find((agent) => agent.id === agentId)?.done,
               });
             }}
           >
