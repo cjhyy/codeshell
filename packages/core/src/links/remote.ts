@@ -190,16 +190,20 @@ async function request(
   init: RequestInit,
   maxResponseBytes = 2 * 1024 * 1024,
 ): Promise<Record<string, unknown>> {
+  const transport = new AbortController();
   try {
     const response = await requestOnce(new URL(path, origin(issuer)), {
       ...init,
       redirect: "error",
-      signal: init.signal
-        ? AbortSignal.any([init.signal, AbortSignal.timeout(20_000)])
-        : AbortSignal.timeout(20_000),
+      signal: AbortSignal.any([
+        ...(init.signal ? [init.signal] : []),
+        transport.signal,
+        AbortSignal.timeout(20_000),
+      ]),
     });
     if (!response.ok) {
-      await response.body?.cancel();
+      transport.abort();
+      void response.body?.cancel().catch(() => {});
       if (maxResponseBytes === FIGMA_RESPONSE_BYTES && response.status === 413)
         throw new RemoteLinkError("response_too_large");
       throw new RemoteLinkError(
@@ -220,7 +224,11 @@ async function request(
         if (done) break;
         size += value.byteLength;
         if (size > maxResponseBytes) {
-          await reader.cancel();
+          // Stop the physical request immediately. The Node/Web stream bridge's
+          // cancellation can settle late or reject; neither should replace the
+          // already known size error or hold a retry until the transport timeout.
+          transport.abort();
+          void reader.cancel().catch(() => {});
           throw new RemoteLinkError(
             maxResponseBytes === FIGMA_RESPONSE_BYTES ? "response_too_large" : "unavailable",
           );

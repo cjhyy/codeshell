@@ -584,6 +584,14 @@ test("remote Figma full content has a larger bounded budget and a recoverable ov
   await expect(f.execute("get_file")).rejects.toMatchObject({ code: "response_too_large" });
   await expect(f.execute("get_file")).rejects.toThrow("get_nodes");
   expect(f.store.resolve("selected-link")?.meta?.linkRemoteState).toBe("connected");
+  f.setResult({
+    name: "Selected structure",
+    document: { id: "0:0", type: "DOCUMENT", children: [] },
+  });
+  expect(await f.execute("get_file", { file_key: resources.figma, depth: 1 })).toMatchObject({
+    name: "Selected structure",
+    requestedDepth: 1,
+  });
   f.setStatus(413);
   await expect(f.execute("get_file")).rejects.toMatchObject({ code: "response_too_large" });
 });
