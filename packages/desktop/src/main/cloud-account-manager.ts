@@ -6,6 +6,7 @@ import type {
   CloudAccountGitHubLogin,
   CloudAccountLogin,
   CloudAccountStatus,
+  CloudAccountLogoutResult,
   CloudAccountLinksRequest,
   CloudAccountLinksResult,
   CloudAccountProfileRequest,
@@ -260,7 +261,8 @@ export class CloudAccountManager {
     saved: SavedCloudAccount,
     inFlightRefresh?: Promise<unknown>,
   ): Promise<boolean> {
-    if (saved.refreshTokenExpiresAt <= this.now()) return true;
+    // A captured refresh can extend the session beyond the saved grant's expiry.
+    if (!inFlightRefresh && saved.refreshTokenExpiresAt <= this.now()) return true;
     try {
       let token = saved.accessToken;
       if (inFlightRefresh || saved.accessTokenExpiresAt <= this.now()) {
@@ -656,7 +658,7 @@ export class CloudAccountManager {
     this.invalidate();
     this.publish(this.saved ? "signed-in" : "signed-out");
   }
-  async logout() {
+  async logout(): Promise<CloudAccountLogoutResult> {
     this.load();
     const previous = this.saved;
     const inFlightRefresh = this.refreshResponse;
@@ -664,10 +666,12 @@ export class CloudAccountManager {
     this.invalidate();
     this.saved = undefined;
     this.githubConnection = undefined;
+    let storageError = false;
     try {
       this.deps.store.forget();
       this.publish("signed-out");
     } catch {
+      storageError = true;
       this.publish("storage-error");
     }
     let retireError: unknown;
@@ -678,9 +682,8 @@ export class CloudAccountManager {
     }
     const confirmed = previous ? await this.revoke(previous, inFlightRefresh) : true;
     if (retireError) throw retireError;
-    if (this.state === "storage-error") throw new Error("无法移除账号登记，请检查文件权限后重试。");
-    if (!confirmed)
-      throw new Error("本机已退出；服务端未确认撤销，请联网后在账号会话管理中撤销此设备。");
+    if (storageError) throw new Error("无法移除账号登记，请检查文件权限后重试。");
+    return { state: "signed-out", revocation: confirmed ? "confirmed" : "unconfirmed" };
   }
   /** Main-only root authority lease; refresh preserves it, logout/relogin invalidates it. */
   captureRootAccount(origin: string, accountId: string, authorized: () => boolean) {
