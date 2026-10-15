@@ -646,6 +646,20 @@ fixtures from ProfileDialogs, retaining the earlier successful fixtures and
 both failure logs. Do not report the failed whole-run command itself as passing;
 the final combined fixture receipts must account for all 33 entries.
 
+UI7 final combined gates are complete. The successful receipts cover all 33
+Desktop fixtures: the first 17 before CloudDialogs, the unchanged isolated
+CloudDialogs 141-observation pass, and the remaining 15 in
+`/tmp/codeshell-ui-wave7-overlays-remaining.log`. ModelPill passed 24 observations
+on the final combined source. All seven Web browser commands, all 14 workspace
+types, full Desktop build, lint and the 3399-pass guarded shard are green, along
+with workflow literal-path, scoped lint, formatting and diff checks. UI7 source
+is ready for a fresh-main delivery; remote CI will be recorded after push.
+UI8 frozen source checkpoints now include TrustGate `ea92663db` and PermissionPill
+`a54f7b002` plus test-only native capture correction `d5d70a055`. Their final
+native tests passed actual 100/200% with complete capturePage screenshots and
+strict PNG dimensions; the earlier cropped Playwright screenshots remain only
+DOM/AX evidence. Root will apply the same capture correction to ModelPill in UI8.
+
 UI8 is isolated while UI7 gates finish. History's actual Workbench audit found
 offscreen archive failures and late rename completions stealing external focus;
 source checkpoint `c4e95fba0` adds owned local recovery and truthful initial-read
