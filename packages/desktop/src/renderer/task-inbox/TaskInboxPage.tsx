@@ -1,6 +1,6 @@
 import { OperationBatchForm } from "./OperationBatchForm";
 import React, { useCallback, useEffect, useId, useMemo, useRef, useState } from "react";
-import { Inbox, Loader2, RefreshCw } from "lucide-react";
+import { Inbox, ListFilter, Loader2, RefreshCw } from "lucide-react";
 import type {
   TaskInboxRecordV1,
   TaskInboxListResult,
@@ -11,6 +11,7 @@ import type {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { SimpleSelect } from "@/components/ui/simple-select";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { useT } from "../i18n/I18nProvider";
 import { useOptionalConfirm } from "../ui/DialogProvider";
 import { OperationResolutionReview } from "./OperationResolutionReview";
@@ -76,6 +77,9 @@ export function TaskInboxPage({ onOpenTaskInboxRecord }: TaskInboxPageProps = {}
   const [error, setError] = useState<string | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
   const [filters, setFilters] = useState(EMPTY_FILTERS);
+  const [filtersOpen, setFiltersOpen] = useState(false);
+  const containerRef = useRef<HTMLElement>(null);
+  const searchRef = useRef<HTMLInputElement>(null);
   const [visibleCounts, setVisibleCounts] = useState(initialCounts);
   const [revision, setRevision] = useState(0);
   const [pending, setPending] = useState<ReadonlySet<string>>(new Set());
@@ -87,6 +91,16 @@ export function TaskInboxPage({ onOpenTaskInboxRecord }: TaskInboxPageProps = {}
   const loadInFlightRef = useRef(true);
   const refreshRef = useRef<HTMLButtonElement>(null);
   const refresh = useCallback(() => setRevision((value) => value + 1), []);
+
+  useEffect(() => {
+    const container = containerRef.current;
+    if (!container || typeof ResizeObserver === "undefined") return;
+    const observer = new ResizeObserver(([entry]) => {
+      if (entry.contentRect.width >= 1000) setFiltersOpen(false);
+    });
+    observer.observe(container);
+    return () => observer.disconnect();
+  }, [selectedSubagent]);
 
   useEffect(
     () =>
@@ -177,6 +191,43 @@ export function TaskInboxPage({ onOpenTaskInboxRecord }: TaskInboxPageProps = {}
     setFilters((current) => ({ ...current, [key]: value }));
     setVisibleCounts(initialCounts());
   };
+  const activeFilterCount = [filters.source, filters.project, filters.status].filter(
+    Boolean,
+  ).length;
+  const renderFilters = (suffix = "") => (
+    <>
+      <FilterSelect
+        id={`${id}-source${suffix}`}
+        label={t("taskInbox.source")}
+        all={t("taskInbox.all")}
+        value={filters.source}
+        onChange={(value) => filter("source", value)}
+        options={SOURCES.map((source) => ({
+          value: source,
+          label: t(`taskInbox.sources.${source}`),
+        }))}
+      />
+      <FilterSelect
+        id={`${id}-project${suffix}`}
+        label={t("taskInbox.project")}
+        all={t("taskInbox.all")}
+        value={filters.project}
+        onChange={(value) => filter("project", value)}
+        options={projects.map((project) => ({ value: project, label: project }))}
+      />
+      <FilterSelect
+        id={`${id}-status${suffix}`}
+        label={t("taskInbox.status")}
+        all={t("taskInbox.all")}
+        value={filters.status}
+        onChange={(value) => filter("status", value)}
+        options={STATUSES.map((status) => ({
+          value: status,
+          label: t(`taskInbox.statuses.${status}`),
+        }))}
+      />
+    </>
+  );
   const actOnTask = async (record: TaskInboxRecordV1, action: TaskInboxAction) => {
     if (pendingRef.current.has(record.taskKey)) return;
     pendingRef.current.add(record.taskKey);
@@ -242,19 +293,19 @@ export function TaskInboxPage({ onOpenTaskInboxRecord }: TaskInboxPageProps = {}
     );
 
   return (
-    <main className="@container/tasks flex h-full min-h-0 min-w-0 flex-col bg-background">
-      <header className="flex shrink-0 flex-wrap items-center justify-between gap-3 px-4 py-5 @min-[760px]/tasks:px-6">
-        <div className="min-w-0">
-          <h1 className="flex flex-wrap items-center gap-2.5 text-xl font-semibold tracking-tight">
-            {t("taskInbox.title")}
-            {snapshot && (
-              <span className="rounded-full border border-border/70 px-2.5 py-0.5 text-xs font-normal tabular-nums text-muted-foreground">
-                {t("taskInbox.total", { count: filteredCount })}
-              </span>
-            )}
-          </h1>
-          <p className="mt-1.5 text-sm text-muted-foreground">{t("taskInbox.subtitle")}</p>
-        </div>
+    <main
+      ref={containerRef}
+      className="@container/tasks flex h-full min-h-0 min-w-0 flex-col bg-background"
+    >
+      <header className="grid shrink-0 grid-cols-[minmax(0,1fr)_auto] items-center gap-x-3 gap-y-1.5 px-4 py-3 @min-[760px]/tasks:px-6">
+        <h1 className="flex flex-wrap items-center gap-2.5 text-xl font-semibold tracking-tight">
+          {t("taskInbox.title")}
+          {snapshot && (
+            <span className="rounded-full border border-border/70 px-2.5 py-0.5 text-xs font-normal tabular-nums text-muted-foreground">
+              {t("taskInbox.total", { count: filteredCount })}
+            </span>
+          )}
+        </h1>
         <Button
           type="button"
           ref={refreshRef}
@@ -276,47 +327,68 @@ export function TaskInboxPage({ onOpenTaskInboxRecord }: TaskInboxPageProps = {}
           )}
           {t("taskInbox.refresh")}
         </Button>
+        <p className="col-span-2 text-sm text-muted-foreground">{t("taskInbox.subtitle")}</p>
       </header>
-      <div className="grid shrink-0 grid-cols-1 gap-3 px-4 pb-4 @min-[600px]/tasks:grid-cols-2 @min-[1000px]/tasks:grid-cols-4 @min-[760px]/tasks:px-6">
-        <label className="space-y-1.5 text-xs text-muted-foreground" htmlFor={`${id}-search`}>
-          {t("taskInbox.search")}
+      <div className="grid shrink-0 grid-cols-[minmax(0,1fr)_auto] items-end gap-2 px-4 pb-3 @min-[1000px]/tasks:grid-cols-4 @min-[760px]/tasks:px-6">
+        <label
+          className="min-w-0 space-y-1.5 text-xs text-muted-foreground"
+          htmlFor={`${id}-search`}
+        >
+          <span className="sr-only @min-[1000px]/tasks:not-sr-only">{t("taskInbox.search")}</span>
           <Input
             id={`${id}-search`}
+            ref={searchRef}
+            type="search"
+            placeholder={t("taskInbox.search")}
             value={filters.search}
             onChange={(event) => filter("search", event.target.value)}
             className="h-9 rounded-lg"
           />
         </label>
-        <FilterSelect
-          id={`${id}-source`}
-          label={t("taskInbox.source")}
-          all={t("taskInbox.all")}
-          value={filters.source}
-          onChange={(value) => filter("source", value)}
-          options={SOURCES.map((source) => ({
-            value: source,
-            label: t(`taskInbox.sources.${source}`),
-          }))}
-        />
-        <FilterSelect
-          id={`${id}-project`}
-          label={t("taskInbox.project")}
-          all={t("taskInbox.all")}
-          value={filters.project}
-          onChange={(value) => filter("project", value)}
-          options={projects.map((project) => ({ value: project, label: project }))}
-        />
-        <FilterSelect
-          id={`${id}-status`}
-          label={t("taskInbox.status")}
-          all={t("taskInbox.all")}
-          value={filters.status}
-          onChange={(value) => filter("status", value)}
-          options={STATUSES.map((status) => ({
-            value: status,
-            label: t(`taskInbox.statuses.${status}`),
-          }))}
-        />
+        <div className="@min-[1000px]/tasks:hidden">
+          <Popover open={filtersOpen} onOpenChange={setFiltersOpen}>
+            <PopoverTrigger asChild>
+              <Button type="button" variant="outline" className="h-9 gap-2 rounded-lg">
+                <ListFilter size={14} aria-hidden />
+                {t("taskInbox.filters")}
+                {activeFilterCount > 0 && (
+                  <span className="rounded-full bg-accent px-1.5 text-xs tabular-nums">
+                    {activeFilterCount}
+                  </span>
+                )}
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent
+              align="end"
+              className="w-80 space-y-3 p-3"
+              aria-label={t("taskInbox.filters")}
+              onCloseAutoFocus={(event) => {
+                if ((containerRef.current?.getBoundingClientRect().width ?? 0) >= 1000) {
+                  event.preventDefault();
+                  searchRef.current?.focus();
+                }
+              }}
+            >
+              <div className="flex items-center justify-between gap-2">
+                <h2 className="text-sm font-medium">{t("taskInbox.filters")}</h2>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  disabled={activeFilterCount === 0}
+                  onClick={() => {
+                    setFilters((current) => ({ ...current, source: "", project: "", status: "" }));
+                    setVisibleCounts(initialCounts());
+                  }}
+                >
+                  {t("taskInbox.clearFilters")}
+                </Button>
+              </div>
+              {renderFilters("-compact")}
+            </PopoverContent>
+          </Popover>
+        </div>
+        <div className="hidden @min-[1000px]/tasks:contents">{renderFilters()}</div>
       </div>
       <div
         className="min-h-0 flex-1 overflow-y-auto px-4 pb-6 @min-[760px]/tasks:px-6"

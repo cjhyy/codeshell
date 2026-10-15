@@ -12,6 +12,8 @@ export const taskInbox = {
       project: "项目或工作区",
       status: "状态",
       all: "全部",
+      filters: "筛选",
+      clearFilters: "清除筛选",
       groups: { waiting: "等待处理", running: "运行中", failed: "失败", done: "已完成" },
       sources: {
         session: "会话",
@@ -73,6 +75,8 @@ export const taskInbox = {
       project: "Project or workspace",
       status: "Status",
       all: "All",
+      filters: "Filters",
+      clearFilters: "Clear filters",
       groups: {
         waiting: "Needs attention",
         running: "Running",
