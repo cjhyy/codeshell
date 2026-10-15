@@ -522,6 +522,37 @@ drafts, refresh and authorization semantics. Evidence
 `/tmp/codeshell-web-settings-readonly-review-report.json`; neither fix is part
 of UI6 until independently completed and explicitly integrated later.
 
+UI7 Skills checkpoint `dae09e610` is clean and ready for refresh after UI6.
+Only HubSkills, its local CSS and `scripts/test-skills-browser.mjs` change.
+Production/development StrictMode 34 observations each, 16 guarded tests/59
+assertions, types/build/lint/format passed; ui_audit independently reviewed.
+Old Root `12ca02005` has the same HubSkills blob as delivered UI5; formal close
+and held-read tests fail directly there. Callback ownership spans the actual
+click through asynchronous response; still-focused filters stay visible when
+the pane is inserted, and close waits for React's re-enabled opener.
+
+UI7 MCP checkpoint `96357a2a4` is clean in the exclusively owned file-browser
+tree on `codex/web/mcp-ui-recovery-20261015`, with the verified Web model editor
+commits as prerequisites. Only HubMcp, local CSS and its new browser fixture
+change; public commands/CI registration await UI7 integration. Actual Workbench
+read-only baseline reproduced edit/cancel BODY focus and failed edit/removal
+errors thousands of pixels above the viewport in 320/1280 windows. Local
+bounded full error feedback now remains with the operation, a remounted Edit
+opener is resolved by service identity, and source-owned recovery cancels on
+explicit pointer/focus handoff, blur or unmount. Regular save cannot probe;
+explicit Save and Test retains its exact owned HTTP sequence. Native disabling,
+401 auth loss, original credentials/reuse consent, cancellation and inheritance
+guards remain. Strict production/development each pass 30 observations,
+524 guarded Web tests/2452 assertions, types/build/lint/format pass. Final
+product blob `5982ace2b` / CSS `3eb874589` differs from bridge's reviewed Node
+version only by formatter whitespace. Root's before test fails directly on
+focused/hit input and 3140px document height. bridge additionally reproduced a
+real Workbench rail brand SVG pointer handoff missed by HTMLElement-only guards;
+the Node fix passes its four edit/remove × success/rejection cases without
+reclaiming focus. Evidence `/tmp/codeshell-web-mcp-svg-peer-{review,after}.log`,
+before `P9SjEx` / after `q12vgQ`; do not describe Root's injected SVG case as
+the actual entry proof. No UI7 change has been pushed yet.
+
 Initial audit history follows:
 
 - Read-only audit is in progress, including Desktop and mobile/Web.
