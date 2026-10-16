@@ -29,6 +29,7 @@
     "test:history-browser": "node ../../scripts/run-isolated-node-smoke.mjs scripts/test-history-browser.mjs",
     "test:links-browser": "node ../../scripts/run-isolated-node-smoke.mjs scripts/test-links-browser.mjs",
     "test:sidebar-focus-browser": "node ../../scripts/run-isolated-node-smoke.mjs scripts/test-sidebar-focus-browser.mjs",
+    "test:devices-browser": "node ../../scripts/run-isolated-node-smoke.mjs scripts/test-devices-browser.mjs",
     "dev:app": "vite dev",
     "test:files-browser": "node scripts/test-file-browser.mjs",
     "clean": "node -e \"require('node:fs').rmSync('dist',{recursive:true,force:true});require('node:fs').rmSync('dist-app',{recursive:true,force:true})\""

@@ -76,6 +76,8 @@ breaking.
   edit drafts, and avoid stealing focus after delayed operations.
 - Preserve the current control's focus when the Web sidebar collapses, while
   retaining focus return after deliberate mobile navigation and closing it.
+- Return focus after staying on a page with unsaved edits in development mode,
+  without overriding a newer focus choice or navigation.
 - Keep account-device actions and complete errors visible in short windows,
   recover failed reads, and preserve focus and authentication behavior through
   delayed operations and closing the dialog.
