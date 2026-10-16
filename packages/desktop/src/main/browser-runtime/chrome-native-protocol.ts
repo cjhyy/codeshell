@@ -3,6 +3,7 @@ import { constants } from "node:fs";
 import { lstat, open } from "node:fs/promises";
 import * as path from "node:path";
 import * as os from "node:os";
+import { StringDecoder } from "node:string_decoder";
 
 export const CHROME_NATIVE_HOST_NAME = "com.cjhyy.codeshell.browser_runtime";
 export const CODESHELL_CHROME_EXTENSION_ID = "lfibcnkpbhakjhfpjkmknhilbhldgflh";
@@ -59,9 +60,10 @@ export class ChromeNativeMessageDecoder {
 
 export class JsonLineDecoder {
   private buffered = "";
+  private readonly utf8 = new StringDecoder("utf8");
 
   push(chunk: Buffer | string): unknown[] {
-    this.buffered += chunk.toString();
+    this.buffered += typeof chunk === "string" ? chunk : this.utf8.write(chunk);
     const messages: unknown[] = [];
     for (;;) {
       const newline = this.buffered.indexOf("\n");
