@@ -43,6 +43,8 @@ breaking.
 
 - Avoid a source import cycle between credential metadata and MCP tool execution
   that could prevent the Host from starting.
+- Verify wrapped Figma MCP account identities while rejecting explicit failures
+  and conflicting identities before saving the connection.
 - Ship the Link provider bootstrap with packaged Desktop workers so provider
   execution remains available outside development checkouts.
 - Keep independent Link grants separate, preserve shared credential custody, and
