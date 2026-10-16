@@ -30,6 +30,7 @@
     "test:e2e:task-inbox-sources": "node scripts/e2e-task-inbox-sources.mjs",
     "test:e2e:link": "node scripts/e2e-link.mjs",
     "test:e2e:credential-operations": "node ../../scripts/run-isolated-node-smoke.mjs scripts/e2e-credential-operations.mjs",
+    "test:e2e:mcp-operations": "node ../../scripts/run-isolated-node-smoke.mjs scripts/e2e-mcp-operations.mjs",
     "test:e2e:digital-humans": "node scripts/e2e-digital-humans.mjs",
     "test:e2e:profile-memory-promotion": "node ../../scripts/run-isolated-node-smoke.mjs scripts/e2e-profile-memory-promotion.mjs",
     "test:e2e:pet-runtime": "node ../../scripts/run-isolated-node-smoke.mjs --private-keyring scripts/e2e-pet-runtime.mjs",
