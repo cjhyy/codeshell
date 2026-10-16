@@ -39,21 +39,22 @@ const pinSave = deferred<void>();
 const pinRefresh = deferred<RendererMemoryEntryFull[]>();
 const listCalls: MemoryScope[] = [];
 const readCalls: MemoryScope[] = [];
+const readNames: string[] = [];
 const saveCalls: SaveMemoryInput[] = [];
 let pinStarted = false;
 let userPinned = false;
-function entry(scope: MemoryScope): RendererMemoryEntryFull {
+function entry(scope: MemoryScope, second = false): RendererMemoryEntryFull {
   return {
-    id: `mem-${scope}`,
-    name: `Owned ${scope} entry`,
+    id: `mem-${scope}${second ? "-b" : ""}`,
+    name: `Owned ${scope} entry${second ? " B" : ""}`,
     description: `Owned ${scope} description`,
     type: "project",
-    content: `Owned ${scope} body`,
-    fileName: `${scope}.md`,
+    content: `Owned ${scope} body${second ? " B" : ""}`,
+    fileName: `${scope}${second ? "-b" : ""}.md`,
     scope,
     level: "project",
     origin: scope === "user" ? "manual" : "dream",
-    pinned: scope === "user" && userPinned,
+    pinned: scope === "user" && !second && userPinned,
   };
 }
 Object.assign(window, {
@@ -62,17 +63,29 @@ Object.assign(window, {
       listCalls.push(scope);
       if (scenario === "late-refresh-selected" && scope === "user" && listCalls.length === 2)
         return pinRefresh.promise;
-      return [entry(scope)];
+      return scenario === "same-scope-selection-change"
+        ? [entry(scope), entry(scope, true)]
+        : [entry(scope)];
     },
-    readMemory: async (_level: string, scope: MemoryScope) => {
+    readMemory: async (_level: string, scope: MemoryScope, name: string) => {
       readCalls.push(scope);
+      readNames.push(name);
       if (
         pinStarted &&
         scope === "user" &&
-        ["late-read", "late-read-error", "return-to-original-scope"].includes(scenario)
+        !name.endsWith(" B") &&
+        [
+          "late-read",
+          "late-read-error",
+          "return-to-original-scope",
+          "same-scope-selection-change",
+          "same-scope-draft",
+          "same-scope-open-draft",
+          "same-scope-close",
+        ].includes(scenario)
       )
         return pinRead.promise;
-      return entry(scope);
+      return entry(scope, name.endsWith(" B"));
     },
     saveMemory: async (input: SaveMemoryInput) => {
       saveCalls.push(structuredClone(input));
@@ -120,17 +133,66 @@ async function click(label: string, startsWith = false) {
 try {
   await update(() => root.render(<MemoryStoreView level="project" cwd="/owned-fixture" />));
   assert.ok(text(container).includes("Owned user entry"));
-  if (scenario === "late-refresh-selected") await click("Owned user entry", true);
+  const selectedBeforePin = [
+    "late-refresh-selected",
+    "same-scope-selected",
+    "same-scope-selection-change",
+    "same-scope-draft",
+    "same-scope-open-draft",
+    "same-scope-close",
+  ].includes(scenario);
+  if (selectedBeforePin) await click("Owned user entry", true);
+  if (scenario === "same-scope-open-draft") await click("settingsX.memory.edit");
   pinStarted = true;
   await click("settingsX.memory.pin");
   assert.equal(
     readCalls.filter((scope) => scope === "user").length,
-    scenario === "late-refresh-selected" ? 2 : 1,
+    selectedBeforePin ? (scenario === "same-scope-selected" ? 3 : 2) : 1,
   );
 
-  if (scenario === "same-scope") {
+  if (["same-scope", "same-scope-selected"].includes(scenario)) {
     assert.deepEqual(listCalls, ["user", "user"]);
     assert.ok(button("settingsX.memory.unpin"));
+    if (scenario === "same-scope-selected") assert.ok(text(container).includes("Owned user body"));
+  } else if (
+    [
+      "same-scope-selection-change",
+      "same-scope-draft",
+      "same-scope-open-draft",
+      "same-scope-close",
+    ].includes(scenario)
+  ) {
+    if (scenario === "same-scope-selection-change") {
+      await click("Owned user entry B", true);
+      assert.ok(text(container).includes("Owned user body B"));
+    } else if (scenario === "same-scope-close") {
+      await click("close");
+      assert.ok(text(container).includes("settingsX.memory.emptyDetail"));
+    } else {
+      if (scenario === "same-scope-draft") await click("settingsX.memory.edit");
+      const textarea = nodes(container).find((node) => node.tagName === "TEXTAREA");
+      assert.ok(textarea, "The selected entry's editor must be reachable while pin is pending");
+      await update(() => props(textarea).onChange({ target: { value: "Owned unsaved draft" } }));
+    }
+    const readsBeforeCompletion = [...readNames];
+    await update(() => pinRead.resolve(entry("user")));
+    assert.deepEqual(listCalls, ["user", "user"], "The successful pin still refreshes its list");
+    if (scenario === "same-scope-selection-change") {
+      assert.ok(
+        text(container).includes("Owned user body B"),
+        "Pin must preserve the new selection",
+      );
+    } else if (scenario === "same-scope-close") {
+      assert.ok(
+        text(container).includes("settingsX.memory.emptyDetail"),
+        "Pin must not reopen closed details",
+      );
+    } else {
+      const textarea = nodes(container).find((node) => node.tagName === "TEXTAREA");
+      assert.ok(textarea, "Pin must not close the editor");
+      assert.equal(props(textarea).value, "Owned unsaved draft", "Pin must preserve unsaved text");
+    }
+    assert.deepEqual(readNames, readsBeforeCompletion, "Pin must not reload the prior selection");
   } else {
     await click("settingsX.memory.scopeDreamLabel");
     assert.ok(text(container).includes("Owned dream entry"));
@@ -175,6 +237,7 @@ try {
       passed: true,
       listCalls,
       readCalls,
+      readNames,
       savedScopes: saveCalls.map((saved) => saved.scope),
       deniedFetches,
       unhandled,

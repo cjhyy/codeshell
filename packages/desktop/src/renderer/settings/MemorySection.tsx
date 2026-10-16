@@ -515,6 +515,7 @@ export function MemoryStoreView({
   const startEdit = async (): Promise<void> => {
     if (!selected) return;
     if (!(await confirmDiscardDraft())) return;
+    entryReadGeneration.current += 1;
     setPromotion(null);
     const next = buildEditDraft(selected, level, scope, cwd, profileName);
     setDrafting(true);
@@ -685,6 +686,7 @@ export function MemoryStoreView({
     if (saving) return;
     // Complete the original pin, but keep its UI effects within this store visit.
     const generation = storeGeneration.current;
+    const selectionGeneration = entryReadGeneration.current;
     setError(null);
     try {
       const full = await window.codeshell.readMemory(level, scope, entry.name, cwd, profileName);
@@ -695,7 +697,12 @@ export function MemoryStoreView({
       if (generation !== storeGeneration.current) return;
       await refresh();
       if (generation !== storeGeneration.current) return;
-      if (selected?.name === entry.name) await openEntry(entry.name);
+      if (
+        !drafting &&
+        selectionGeneration === entryReadGeneration.current &&
+        selected?.name === entry.name
+      )
+        await openEntry(entry.name);
     } catch (e: unknown) {
       if (generation !== storeGeneration.current) return;
       setError(String(e instanceof Error ? e.message : e));
@@ -1032,7 +1039,10 @@ export function MemoryStoreView({
             <ViewEntry
               entry={selected}
               onEdit={() => void startEdit()}
-              onClose={() => setSelected(null)}
+              onClose={() => {
+                entryReadGeneration.current += 1;
+                setSelected(null);
+              }}
               onPin={() => void togglePin(selected)}
               onDelete={() => void removeEntry(selected.name)}
               onPromote={

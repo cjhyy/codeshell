@@ -8,6 +8,11 @@ import { createBunTestEnvironment } from "../../../../../scripts/bun-test-comple
 describe("memory pin completion after a scope change", () => {
   test.each([
     "same-scope",
+    "same-scope-selected",
+    "same-scope-selection-change",
+    "same-scope-draft",
+    "same-scope-open-draft",
+    "same-scope-close",
     "late-read",
     "late-save",
     "late-read-error",
