@@ -1425,6 +1425,8 @@ export class AgentBridge implements PetStateBridge {
             [
               "invalid_request",
               "unavailable",
+              "configuration_error",
+              "refresh_outcome_unknown",
               "reconnect",
               "changed",
               "forbidden",
@@ -1447,7 +1449,11 @@ export class AgentBridge implements PetStateBridge {
         workerEpoch !== this.localOAuthLinkEpoch
       )
         return;
-      if (parsed.method === "desktop/remoteLinkAction") {
+      if (
+        parsed.method === "desktop/remoteLinkAction" ||
+        parsed.method === "desktop/localOAuthLinkAction" ||
+        parsed.method === "desktop/mcpLinkAction"
+      ) {
         // The Host may have refreshed or invalidated this grant while executing.
         // Read the current store after settlement. Deliver it in the same reply
         // so its invalidation cannot cancel this request before the Worker has
@@ -1460,7 +1466,13 @@ export class AgentBridge implements PetStateBridge {
           // Status delivery is best effort. Preserve the action's original
           // result/error even if reading or sending its snapshot fails.
           try {
-            dlog("bridge", "remote_link.credential_snapshot_failed", {});
+            dlog(
+              "bridge",
+              parsed.method === "desktop/remoteLinkAction"
+                ? "remote_link.credential_snapshot_failed"
+                : "link_action.credential_snapshot_failed",
+              {},
+            );
           } catch {
             // Logging must not turn an already settled action into another error.
           }

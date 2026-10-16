@@ -214,7 +214,7 @@ test("uncertain rotation persists reconnect status and never resends the old ref
   clock += 16 * 60_000;
   tokenMode = "lost";
   await expect(executeRemoteLinkAction(input(), { now: () => clock })).rejects.toMatchObject({
-    code: "reconnect",
+    code: "refresh_outcome_unknown",
   });
   expect(store.resolve("remote-github")?.meta?.linkRemoteState).toBe("reconnect");
   tokenMode = "ok";
@@ -350,7 +350,7 @@ test("a narrowed token cannot execute removed actions and cannot expand again", 
   clock += 16 * 60_000;
   scopes.push("github:get_issue");
   await expect(executeRemoteLinkAction(input(), { now: () => clock })).rejects.toMatchObject({
-    code: "reconnect",
+    code: "refresh_outcome_unknown",
   });
 });
 

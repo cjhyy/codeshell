@@ -55,6 +55,8 @@ describe("createIpcCredentialAccess", () => {
     const reviewedCodes = [
       "invalid_request",
       "unavailable",
+      "configuration_error",
+      "refresh_outcome_unknown",
       "reconnect",
       "changed",
       "forbidden",
@@ -569,31 +571,36 @@ describe("remote Action atomic snapshot replies", () => {
     f.close();
   });
 
-  test("cancelled non-remote requests never gain late snapshot authority", async () => {
-    const f = fixture();
-    const controller = new AbortController();
-    const pending = f.access.executeMcpLinkAction!(
-      {
-        id: "mcp",
-        scope: "full",
-        accountId: "selected",
-        verifiedAt: "verified",
-        action: "get_metadata",
-        params: {},
-      },
-      { signal: controller.signal },
-    ).catch((error) => error);
-    controller.abort();
-    f.reply({
-      jsonrpc: "2.0",
-      id: f.requests[0]!.id,
-      credentialSnapshot: f.snapshot(999, "unrelated-grant"),
-      result: {},
-    });
-    expect(await pending).toMatchObject({ name: "AbortError" });
-    expect(f.meta()?.linkRemoteGrantId).toBe("original-grant");
-    f.close();
-  });
+  test.each(["local", "mcp"] as const)(
+    "cancelled %s Link requests retain late Host state receipts",
+    async (kind) => {
+      const f = fixture();
+      const controller = new AbortController();
+      const execute =
+        kind === "mcp" ? f.access.executeMcpLinkAction! : f.access.executeLocalOAuthLinkAction!;
+      const pending = execute(
+        {
+          id: "mcp",
+          scope: "full",
+          accountId: "selected",
+          verifiedAt: "verified",
+          action: "get_metadata",
+          params: {},
+        },
+        { signal: controller.signal },
+      ).catch((error) => error);
+      controller.abort();
+      f.reply({
+        jsonrpc: "2.0",
+        id: f.requests[0]!.id,
+        credentialSnapshot: f.snapshot(999, "unrelated-grant"),
+        result: {},
+      });
+      expect(await pending).toMatchObject({ name: "AbortError" });
+      expect(f.meta()?.linkRemoteGrantId).toBe("unrelated-grant");
+      f.close();
+    },
+  );
 
   test("abandoned remote receipts expire without installing a late snapshot", async () => {
     const f = fixture();
@@ -730,6 +737,90 @@ test.each(["local", "mcp"] as const)(
     ]);
     expect(seen[1]!.params).toEqual({ requestId: "cred-1" });
     expect(JSON.stringify(seen)).not.toContain("refreshToken");
+  },
+);
+
+test.each(["local", "mcp"] as const)(
+  "%s Link reply preserves the action error while publishing monotonic Host state",
+  async (kind) => {
+    const [main, worker] = createInProcessTransport();
+    const access = createIpcCredentialAccess(worker);
+    const requests: RpcRequest[] = [];
+    main.onMessage((message) => {
+      if ("method" in message && "id" in message) requests.push(message as RpcRequest);
+    });
+    const snapshot = (revision: number, state: "connected" | "reconnect"): CredentialSnapshot => ({
+      revision,
+      entries: [
+        {
+          cwd: "/repo",
+          full: [
+            {
+              id: "selected-link",
+              type: "oauth",
+              label: "Synthetic account",
+              hasSecret: true,
+              meta: { linkOAuthState: state },
+            },
+          ],
+          project: [],
+          envFull: {},
+          envProject: {},
+        },
+      ],
+    });
+    main.send({
+      jsonrpc: "2.0",
+      method: "desktop/credentialSnapshot",
+      params: snapshot(1, "connected"),
+    });
+    const controller = new AbortController();
+    access.subscribe!(() => controller.abort());
+    const execute =
+      kind === "mcp" ? access.executeMcpLinkAction! : access.executeLocalOAuthLinkAction!;
+    const pending = execute(
+      {
+        cwd: "/repo",
+        id: "selected-link",
+        scope: "full",
+        accountId: "account",
+        verifiedAt: "verified",
+        action: "get_issue",
+        params: {},
+      },
+      { signal: controller.signal },
+    ).catch((error) => error);
+    main.send({
+      jsonrpc: "2.0",
+      id: requests[0]!.id,
+      credentialSnapshot: snapshot(3, "reconnect"),
+      error: {
+        code: -32603,
+        message: "Local Link authorization requires reconnection.",
+        ...(kind === "mcp" ? { data: { mcpLinkCode: "reconnect" } } : {}),
+      },
+    } as RemoteLinkActionReply);
+    const error = await pending;
+    expect(error.name).not.toBe("AbortError");
+    expect(error.message).toBe(
+      kind === "mcp"
+        ? new McpLinkActionError("reconnect").message
+        : "Local Link authorization requires reconnection.",
+    );
+    expect(controller.signal.aborted).toBe(true);
+    expect(access.resolveMeta("/repo", "selected-link", "full")?.meta?.linkOAuthState).toBe(
+      "reconnect",
+    );
+    main.send({
+      jsonrpc: "2.0",
+      method: "desktop/credentialSnapshot",
+      params: snapshot(2, "connected"),
+    });
+    expect(access.resolveMeta("/repo", "selected-link", "full")?.meta?.linkOAuthState).toBe(
+      "reconnect",
+    );
+    main.close();
+    worker.close();
   },
 );
 
