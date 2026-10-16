@@ -1,0 +1,11 @@
+bun test v1.3.11 (af24e281)
+
+docs/audit-2026-10-16/evidence/root-undo.test.ts:
+(pass) A08 protocol drops configured storage directory so /undo loads an empty default history [198.98ms]
+(pass) A09 /undo all ignores created-only turn while ordinary /undo correctly removes it [23.29ms]
+
+ 2 pass
+ 0 fail
+ 10 expect() calls
+Ran 2 tests across 1 file. [1043.00ms]
+Completed Bun shard: 2 tests, 0 skipped; 0 failures.

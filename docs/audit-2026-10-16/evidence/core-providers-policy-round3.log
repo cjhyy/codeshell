@@ -1,0 +1,19 @@
+bun test v1.3.11 (af24e281)
+
+docs/audit-2026-10-16/evidence/core-providers-policy.test.ts:
+(pass) control: a real SDK stream with finish_reason stop completes [11.27ms]
+EOF evidence {"reason":"completed","text":"The report contains these three issues: 1.","sends":1}
+(pass) bug: normal EOF without finish_reason or DONE is reported completed by TurnLoop [12.18ms]
+(pass) known bug still present: plan Bash rewrite bypasses final read-only gate [8.55ms]
+(pass) known bug still present: MCP rewrite bypasses same-server disabledTools gate [3.35ms]
+unsafe safe-read evidence: fake handlers only ["rg --pre ./workspace-preprocessor pattern README.md","npm audit fix"]
+(pass) bug: rg preprocessor and npm audit fix pass the Plan safe-read gate without hooks [5.86ms]
+relative Write undo evidence {"actualWrite":"/private/var/folders/1d/6__4f4y51g90nblfptt8s9v80000gn/T/audit-file-history-EH6RQY/workspace/report.txt","undoTarget":["/private/var/folders/1d/6__4f4y51g90nblfptt8s9v80000gn/T/audit-file-history-EH6RQY/host/report.txt"],"actualContentAfterUndo":"workspace after"}
+(pass) bug: relative Write backs up process cwd while modifying run cwd, so undo targets wrong file [46.37ms]
+audit cleanup: zero network attempts; no shell/MCP handler executed
+
+ 6 pass
+ 0 fail
+ 25 expect() calls
+Ran 6 tests across 1 file. [484.00ms]
+Completed Bun shard: 6 tests, 0 skipped; 0 failures.

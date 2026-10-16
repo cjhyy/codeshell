@@ -1,0 +1,51 @@
+bun test v1.3.11 (af24e281)
+
+packages/server/src/links/http.test.ts:
+{"event":"link_authorization","transport":"http","requestId":"a5e3367b-f76e-4b2f-bc55-2990ca460fcc","elapsedMs":1,"outcome":"stage","stage":"authorization"}
+{"event":"link_authorization","transport":"http","requestId":"a5e3367b-f76e-4b2f-bc55-2990ca460fcc","elapsedMs":1,"outcome":"stage","stage":"body_validation"}
+{"event":"link_authorization","transport":"http","requestId":"a5e3367b-f76e-4b2f-bc55-2990ca460fcc","elapsedMs":3,"providerId":"github","methodId":"fine-grained-pat","authModeId":"token","outcome":"stage","stage":"input_validation"}
+{"event":"link_authorization","transport":"http","requestId":"a5e3367b-f76e-4b2f-bc55-2990ca460fcc","elapsedMs":7,"providerId":"github","methodId":"fine-grained-pat","authModeId":"token","outcome":"stage","stage":"host_store_read"}
+{"event":"link_authorization","transport":"http","requestId":"a5e3367b-f76e-4b2f-bc55-2990ca460fcc","elapsedMs":7,"providerId":"github","methodId":"fine-grained-pat","authModeId":"token","outcome":"stage","stage":"remote_configuration"}
+{"event":"link_authorization","transport":"http","requestId":"a5e3367b-f76e-4b2f-bc55-2990ca460fcc","elapsedMs":7,"providerId":"github","methodId":"fine-grained-pat","authModeId":"token","outcome":"stage","stage":"mode_selection"}
+{"event":"link_authorization","transport":"http","requestId":"a5e3367b-f76e-4b2f-bc55-2990ca460fcc","elapsedMs":8,"providerId":"github","methodId":"fine-grained-pat","authModeId":"token","outcome":"stage","stage":"job_creation"}
+{"event":"link_authorization","transport":"http","requestId":"a5e3367b-f76e-4b2f-bc55-2990ca460fcc","elapsedMs":8,"providerId":"github","methodId":"fine-grained-pat","authModeId":"token","outcome":"stage","stage":"input_validation"}
+{"event":"link_authorization","transport":"http","requestId":"a5e3367b-f76e-4b2f-bc55-2990ca460fcc","elapsedMs":8,"providerId":"github","methodId":"fine-grained-pat","authModeId":"token","outcome":"stage","stage":"connection_review"}
+{"event":"link_authorization","transport":"http","requestId":"a5e3367b-f76e-4b2f-bc55-2990ca460fcc","elapsedMs":8,"providerId":"github","methodId":"fine-grained-pat","authModeId":"token","outcome":"stage","stage":"host_store_read"}
+{"event":"link_authorization","transport":"http","requestId":"a5e3367b-f76e-4b2f-bc55-2990ca460fcc","elapsedMs":8,"providerId":"github","methodId":"fine-grained-pat","authModeId":"token","outcome":"stage","stage":"connection_review"}
+{"event":"link_authorization","transport":"http","requestId":"a5e3367b-f76e-4b2f-bc55-2990ca460fcc","elapsedMs":8,"providerId":"github","methodId":"fine-grained-pat","authModeId":"token","outcome":"stage","stage":"job_creation"}
+{"event":"link_authorization","transport":"http","requestId":"a5e3367b-f76e-4b2f-bc55-2990ca460fcc","elapsedMs":9,"providerId":"github","methodId":"fine-grained-pat","authModeId":"token","outcome":"stage","stage":"final_authorization"}
+{"event":"link_authorization","transport":"http","requestId":"a5e3367b-f76e-4b2f-bc55-2990ca460fcc","elapsedMs":9,"providerId":"github","methodId":"fine-grained-pat","authModeId":"token","outcome":"success","stage":"final_authorization","httpStatus":200,"authorizationState":"pending"}
+(pass) shared Link HTTP boundary > unified authorization separates read-only begin/status from current-step submission [175.27ms]
+{"event":"link_authorization","transport":"http","requestId":"14a8e2fb-dc37-4896-b68a-cc879288d268","elapsedMs":0,"outcome":"stage","stage":"authorization"}
+{"event":"link_authorization","transport":"http","requestId":"14a8e2fb-dc37-4896-b68a-cc879288d268","elapsedMs":0,"outcome":"stage","stage":"body_validation"}
+{"event":"link_authorization","transport":"http","requestId":"14a8e2fb-dc37-4896-b68a-cc879288d268","elapsedMs":0,"outcome":"failure","stage":"body_validation","internalCode":"request_body_invalid","publicCode":"invalid_request","httpStatus":400}
+{"event":"link_authorization","transport":"http","requestId":"e5143a6f-d492-442b-b0f1-9337dca7cfbc","elapsedMs":0,"outcome":"stage","stage":"authorization"}
+{"event":"link_authorization","transport":"http","requestId":"e5143a6f-d492-442b-b0f1-9337dca7cfbc","elapsedMs":0,"outcome":"stage","stage":"body_validation"}
+{"event":"link_authorization","transport":"http","requestId":"e5143a6f-d492-442b-b0f1-9337dca7cfbc","elapsedMs":0,"providerId":"github","methodId":"fine-grained-pat","authModeId":"token","outcome":"stage","stage":"input_validation"}
+{"event":"link_authorization","transport":"http","requestId":"e5143a6f-d492-442b-b0f1-9337dca7cfbc","elapsedMs":0,"providerId":"github","methodId":"fine-grained-pat","authModeId":"token","outcome":"stage","stage":"host_store_read"}
+{"event":"link_authorization","transport":"http","requestId":"e5143a6f-d492-442b-b0f1-9337dca7cfbc","elapsedMs":0,"providerId":"github","methodId":"fine-grained-pat","authModeId":"token","outcome":"stage","stage":"remote_configuration"}
+{"event":"link_authorization","transport":"http","requestId":"e5143a6f-d492-442b-b0f1-9337dca7cfbc","elapsedMs":0,"providerId":"github","methodId":"fine-grained-pat","authModeId":"token","outcome":"stage","stage":"mode_selection"}
+{"event":"link_authorization","transport":"http","requestId":"e5143a6f-d492-442b-b0f1-9337dca7cfbc","elapsedMs":0,"providerId":"github","methodId":"fine-grained-pat","authModeId":"token","outcome":"stage","stage":"job_creation"}
+{"event":"link_authorization","transport":"http","requestId":"e5143a6f-d492-442b-b0f1-9337dca7cfbc","elapsedMs":0,"providerId":"github","methodId":"fine-grained-pat","authModeId":"token","outcome":"stage","stage":"input_validation"}
+{"event":"link_authorization","transport":"http","requestId":"e5143a6f-d492-442b-b0f1-9337dca7cfbc","elapsedMs":0,"providerId":"github","methodId":"fine-grained-pat","authModeId":"token","outcome":"stage","stage":"connection_review"}
+{"event":"link_authorization","transport":"http","requestId":"e5143a6f-d492-442b-b0f1-9337dca7cfbc","elapsedMs":0,"providerId":"github","methodId":"fine-grained-pat","authModeId":"token","outcome":"stage","stage":"host_store_read"}
+{"event":"link_authorization","transport":"http","requestId":"e5143a6f-d492-442b-b0f1-9337dca7cfbc","elapsedMs":0,"providerId":"github","methodId":"fine-grained-pat","authModeId":"token","outcome":"stage","stage":"connection_review"}
+{"event":"link_authorization","transport":"http","requestId":"e5143a6f-d492-442b-b0f1-9337dca7cfbc","elapsedMs":0,"providerId":"github","methodId":"fine-grained-pat","authModeId":"token","outcome":"stage","stage":"job_creation"}
+{"event":"link_authorization","transport":"http","requestId":"e5143a6f-d492-442b-b0f1-9337dca7cfbc","elapsedMs":0,"providerId":"github","methodId":"fine-grained-pat","authModeId":"token","outcome":"stage","stage":"final_authorization"}
+{"event":"link_authorization","transport":"http","requestId":"e5143a6f-d492-442b-b0f1-9337dca7cfbc","elapsedMs":0,"providerId":"github","methodId":"fine-grained-pat","authModeId":"token","outcome":"success","stage":"final_authorization","httpStatus":200,"authorizationState":"pending"}
+(pass) shared Link HTTP boundary > unified endpoints reject untrusted fields and require the same authenticated owner [6.13ms]
+(pass) shared Link HTTP boundary > requires authenticated owner and the host origin boundary [3.62ms]
+(pass) shared Link HTTP boundary > token connect, masked refresh, rename and CAS delete form one usable flow [26.89ms]
+(pass) shared Link HTTP boundary > rejects arbitrary URLs, CLI arguments, credential metadata and excessive payloads [5.13ms]
+(pass) shared Link HTTP boundary > provider failures never reflect raw bodies or credentials to the browser [3.58ms]
+(pass) shared Link HTTP boundary > bounds chunked bodies without accidentally finishing a 200 response [6.31ms]
+(pass) shared Link HTTP boundary > native Node detects a disconnected requester before persisting a provider response [889.03ms]
+(pass) shared Link HTTP boundary > reauthorizes a request after its body arrived [14.97ms]
+(pass) shared Link HTTP boundary > closing during the final asynchronous authorization cannot return stale success [3.61ms]
+(pass) shared Link HTTP boundary > malformed escaped route ids get a bounded request error [3.93ms]
+
+ 11 pass
+ 0 fail
+ 42 expect() calls
+Ran 11 tests across 1 file. [1.62s]
+Completed Bun shard: 11 tests, 0 skipped; 0 failures.

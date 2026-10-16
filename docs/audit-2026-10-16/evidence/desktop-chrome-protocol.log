@@ -1,0 +1,14 @@
+bun test v1.3.11 (af24e281)
+
+docs/audit-2026-10-16/evidence/desktop-chrome-protocol.test.ts:
+D03 {"original":{"type":"echo","text":"中文 🐈"},"decoded":[{"type":"echo","text":"���文 🐈"}]}
+(pass) audit D03: JSON-lines decoder corrupts UTF-8 when TCP splits a character [6.38ms]
+D03-fragment-boundaries {"failures":[24,25,27,28,31,32,33]}
+(pass) audit D03: every JSON-lines byte boundary preserves ASCII; UTF-8 has failing boundaries [0.67ms]
+(pass) audit D03 controls: unfragmented JSON-lines and all fragmented Native frames preserve UTF-8 [1.90ms]
+
+ 3 pass
+ 0 fail
+ 45 expect() calls
+Ran 3 tests across 1 file. [168.00ms]
+Completed Bun shard: 3 tests, 0 skipped; 0 failures.

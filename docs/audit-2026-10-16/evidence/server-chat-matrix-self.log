@@ -1,0 +1,19 @@
+EVIDENCE TYPE: TRANSCRIPT EXCERPT, NOT A RUNNER RAW FILE
+This file was copied verbatim from the retained exec_command tool stdout after execution.
+The original run did not redirect stdout/stderr to disk. No original raw log or JUnit file was retained.
+Original tool response: chunk_id=3d8ad2; exit_code=0; wall_time_seconds=0.124393791.
+Command: node scripts/run-bun-test-shard.mjs --timeout 30000 docs/audit-2026-10-16/evidence/server-chat-matrix-self.test.ts
+--- retained tool stdout begins ---
+bun test v1.3.11 (af24e281)
+
+docs/audit-2026-10-16/evidence/server-chat-matrix-self.test.ts:
+AUDIT Matrix optional botUserId omitted: own replies dispatch and trigger further sends
+(pass) optional Matrix botUserId omitted: adapter consumes its own replies repeatedly [5.76ms]
+(pass) configured Matrix botUserId excludes own replies [0.05ms]
+
+ 2 pass
+ 0 fail
+ 19 expect() calls
+Ran 2 tests across 1 file. [148.00ms]
+Completed Bun shard: 2 tests, 0 skipped; 0 failures.
+--- retained tool stdout ends ---

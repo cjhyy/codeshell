@@ -1,0 +1,92 @@
+bun test v1.3.11 (af24e281)
+
+packages/chat/src/adapter-factory.test.ts:
+(pass) channel adapter factory > contains no eager platform-module imports [1.81ms]
+(pass) channel adapter factory > the async factory loads only the selected channel module [0.22ms]
+(pass) channel adapter factory > the synchronous compatibility factory stays lazy and coalesces concurrent loads [0.16ms]
+(pass) channel adapter factory > the lazy compatibility proxy exposes webhook metadata before module load [0.12ms]
+(pass) channel adapter factory > wraps module-load failures with channel and dependency guidance [0.14ms]
+
+packages/chat/src/chat-gateway.test.ts:
+(pass) ChatGateway standalone runtime > runs generic middleware and replies through the source adapter [0.26ms]
+(pass) ChatGateway standalone runtime > supports multiple accounts for the same platform [0.06ms]
+(pass) ChatGateway standalone runtime > restarts one failed adapter without stopping healthy channels [12.89ms]
+(pass) ChatGateway standalone runtime > does not bind the webhook port when no channel needs a webhook route [21.72ms]
+(pass) ChatGateway standalone runtime > rate limits each channel/sender independently [0.30ms]
+
+packages/chat/src/desktop-control-client.test.ts:
+(pass) DesktopControlClient > an incomplete chat response remains retryable: null [0.76ms]
+(pass) DesktopControlClient > an incomplete chat response remains retryable: {} [0.04ms]
+(pass) DesktopControlClient > an incomplete chat response remains retryable: {"pending":true,"requestId":"bad/path"} [0.09ms]
+(pass) DesktopControlClient > starts once and polls across pending replies without resubmitting attachments [0.37ms]
+(pass) DesktopControlClient > HTTP %s leaves a message retryable [0.15ms]
+(pass) DesktopControlClient > HTTP %s leaves a message retryable [0.02ms]
+(pass) DesktopControlClient > HTTP %s leaves a message retryable [0.03ms]
+(pass) DesktopControlClient > caller cancellation remains attached while reading a response body [0.26ms]
+(pass) DesktopControlClient > rejects a descriptor that could redirect bearer auth away from loopback [0.05ms]
+(pass) DesktopControlClient > rejects symbolic-link descriptor and checkpoint trust files [5.34ms]
+(pass) DesktopControlClient > auto-launches desktop and waits for control readiness before opening [0.35ms]
+(pass) DesktopControlClient > surfaces a desktop operation error separately from offline state [0.08ms]
+(pass) DesktopControlClient > posts Mimi Pet turns and attachment bytes through authenticated loopback JSON [0.13ms]
+(pass) DesktopControlClient > retries a failed event handler and checkpoints only after success [9.42ms]
+(pass) DesktopControlClient > does not acknowledge an event when its durable checkpoint write fails [8.00ms]
+(pass) DesktopControlClient > resets a persisted cursor when the Desktop event stream changes [5.40ms]
+(pass) DesktopControlClient > resets a persisted cursor when the same Desktop outbox recovered behind it [6.08ms]
+(pass) DesktopControlClient > aborts an in-flight Desktop event long poll when the watcher stops [0.22ms]
+
+packages/chat/src/config.test.ts:
+(pass) loadGatewayConfig > loads Telegram secrets and allowlists from env without a config file [1.36ms]
+(pass) loadGatewayConfig > rejects a world-readable config because it controls secrets and launch commands [2.86ms]
+(pass) loadGatewayConfig > rejects linked and oversized config files before parsing [3.77ms]
+(pass) loadGatewayConfig > falls back to bounded runtime defaults for excessive numeric limits [4.79ms]
+(pass) loadGatewayConfig > rejects allowlists with excessive item counts [24.81ms]
+(pass) loadGatewayConfig > custom desktop command does not inherit macOS open arguments [3.45ms]
+(pass) loadGatewayConfig > loads multiple adapters and keeps each allowlist isolated [2.86ms]
+(pass) loadGatewayConfig > ignores disabled placeholder sections in the Desktop starter template [3.86ms]
+(pass) loadGatewayConfig > loads a QR-authenticated personal WeChat account without putting its token in config [8.80ms]
+(pass) loadGatewayConfig > plumbs extra WeChat CDN download hosts through the wechat section [11.07ms]
+(pass) loadGatewayConfig > rejects a partially configured adapter [0.46ms]
+(pass) loadGatewayConfig > allows proactive notifications only to enabled allowlisted targets [6.78ms]
+
+packages/chat/src/delivery-queue.test.ts:
+(pass) durable delivery queue > persists before acknowledgement, retries, and deduplicates platform message ids [48.08ms]
+(pass) durable delivery queue > recovers pending records and preserves per-target ordering [38.05ms]
+(pass) durable delivery queue > rejects new work at the configured backpressure boundary [26.58ms]
+(pass) durable delivery queue > drops an unroutable record instead of retrying it forever [67.68ms]
+(pass) durable delivery queue > retries a failed terminal state write instead of leaving the queue stuck [86.55ms]
+(pass) attachment durability > a message with attachments is persisted, not memory-only [31.37ms]
+(pass) attachment durability > the attachment survives a restart and its bytes are readable [37.84ms]
+(pass) attachment durability > attachment metadata round-trips through the restart [32.83ms]
+(pass) attachment durability > a slow attachment load does not block another conversation [35.81ms]
+(pass) attachment durability > text cannot overtake an earlier attachment in the same conversation [41.77ms]
+(pass) attachment durability > one persist retry cleans the spool for every terminal record [140.39ms]
+(pass) attachment durability > an oversized attachment falls back to memory rather than filling the disk [26.51ms]
+(pass) attachment durability > orphaned spool files are reclaimed on startup [34.83ms]
+(pass) attachment durability > never follows persisted spool traversal or deletes unrelated files [55.39ms]
+(pass) attachment durability > rejects a linked spool directory without touching its contents [37.04ms]
+(pass) attachment durability > text-only messages are unaffected [31.01ms]
+
+packages/chat/src/webhook-adapters.test.ts:
+(pass) webhook adapters > LINE validates the raw-body signature before dispatching a text message [2.49ms]
+(pass) webhook adapters > LINE rejects a forged signature without dispatching [0.04ms]
+(pass) webhook adapters > LINE exposes image content lazily after webhook admission [1.92ms]
+(pass) webhook adapters > WhatsApp verifies Meta's challenge token [0.15ms]
+(pass) webhook adapters > WhatsApp sends the pairing URL as a CTA button [0.25ms]
+(pass) webhook adapters > WhatsApp lazily resolves inbound media IDs through Graph [0.29ms]
+(pass) webhook adapters > WhatsApp uploads and sends an outbound document [0.46ms]
+
+packages/chat/src/media.test.ts:
+(pass) shared channel media > classifies media consistently from MIME and filename
+(pass) shared channel media > keeps authenticated inbound downloads lazy and bounded
+(pass) shared channel media > rejects private media URLs before issuing a request [0.64ms]
+(pass) shared channel media > validates every redirect target before following it
+(pass) shared channel media > does not forward platform credentials across redirect origins [0.17ms]
+(pass) shared channel media > allows an explicitly configured self-hosted platform origin [0.07ms]
+(pass) shared channel media > rejects unsupported outbound kinds before a platform request [0.02ms]
+(pass) shared channel media > resumes a multi-request send without repeating completed steps
+
+ 71 pass
+ 0 fail
+ 182 expect() calls
+Ran 71 tests across 7 files. [1022.00ms]
+Completed Bun shard: 71 tests, 0 skipped; 0 failures.
