@@ -1,13 +1,16 @@
 /* Native composer events through the production ChatView, preload and Main.
- * Only agent run/control RPCs are captured and answered at Main before the
- * production listener can enter the Worker/Engine. File search, authorization,
+ * Agent run/control RPCs are captured and answered at Main before the
+ * production listener can enter the Worker/Engine; catalog:list returns an
+ * owned synthetic model catalog. File search, authorization,
  * attachment staging and session persistence retain their production handlers.
  * Clipboard writes contain only owned fixture bytes/text; no existing clipboard
  * content is read. No React internals, synthetic DOM events or model are used. */
 /* global document, window */
 import assert from "node:assert/strict";
-import { execFileSync } from "node:child_process";
+import children, { execFileSync } from "node:child_process";
+import { createHash } from "node:crypto";
 import { mkdir, mkdtemp, readFile, realpath, writeFile } from "node:fs/promises";
+import { createRequire, syncBuiltinESMExports } from "node:module";
 import { tmpdir } from "node:os";
 import { basename, dirname, isAbsolute, join, relative, resolve, sep } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
@@ -55,7 +58,7 @@ const report = {
     production:
       "compiled ChatView/App → real preload → native Main IPC; file search/root authorization, attachment staging and session catalog are production",
     controlled:
-      "Main captures agent/run, agent/configure, agent/steer, agent/unsteer and agent/cancel before invoking the production agent listener; run results are synthetic and may be held pending",
+      "Main captures agent/run, agent/configure, agent/steer, agent/unsteer and agent/cancel before invoking the production agent listener; run results are synthetic and may be held pending. catalog:list returns an owned synthetic UI model catalog; browser file chooser selection is controlled with an owned path.",
     excluded:
       "No Worker, Engine, provider, external network, real credentials or original clipboard reads. This does not prove model execution or attachment consumption by Engine.",
   },
@@ -66,6 +69,7 @@ const report = {
 let electron,
   win,
   monitor,
+  captured,
   failure,
   stage = "setup";
 let confined;
@@ -334,20 +338,39 @@ async function stopHeld() {
 try {
   await prepare();
   stage = "launch";
-  electron = await launchCodeShellElectron(
-    { appDir, ...isolated, env: confined.env, mainEntry: confined.mainEntry },
-    {
-      watch: (child, options) => {
-        monitor = watchElectronTestProcess(child, {
-          ...options,
-          reportFailure: (message) => {
-            report.errors.push(message);
-          },
-        });
-        return monitor;
-      },
-    },
-  );
+  const executable = await realpath(createRequire(import.meta.url)("electron"));
+  const originalSpawn = children.spawn;
+  children.spawn = function (command, args, options) {
+    const child = originalSpawn.call(this, command, args, options);
+    if (command === executable && options?.env?.HOME === isolated.home) {
+      assert.equal(captured, undefined, "Exactly one owned Electron Main may be launched");
+      captured = child;
+      report.processCapture = { pid: child.pid, homeMatched: true, beforeHandshake: true };
+      child.once("error", () => report.errors.push("Owned Electron spawn error"));
+      // Establish PID + parent + birth custody before Playwright can await its
+      // native handshake. A failed identity query confers no signaling right.
+      monitor = watchElectronTestProcess(child, {
+        timeoutMs: 180_000,
+        reportFailure: (message) => {
+          report.errors.push(message);
+        },
+      });
+    }
+    return child;
+  };
+  syncBuiltinESMExports();
+  try {
+    electron = await launchCodeShellElectron(
+      { appDir, ...isolated, env: confined.env, mainEntry: confined.mainEntry },
+      { watch: () => {} },
+    );
+  } finally {
+    children.spawn = originalSpawn;
+    syncBuiltinESMExports();
+    report.spawnRestored = children.spawn === originalSpawn;
+  }
+  assert.equal(captured, electron.process(), "Early watcher must bind the launched Main");
+  report.processCapture.handshakeCompleted = true;
   win = await findCodeShellWindow(electron);
   win.setDefaultTimeout(10_000);
   win.on("pageerror", (error) => report.errors.push(error.message));
@@ -512,8 +535,24 @@ try {
     ],
   );
   assert.equal(explicitPayload.params.attachments[1].absPath, explicitPath);
-  assert.equal((await readFile(staged.absPath)).length, staged.size);
-  report.cases.push({ operation: stage, text: explicitText, staged, payload: explicitPayload });
+  const stagedBytes = await readFile(staged.absPath);
+  const fileSHA256 = createHash("sha256").update(stagedBytes).digest("hex");
+  assert.equal(stagedBytes.length, staged.size);
+  assert.equal(fileSHA256, staged.sha256);
+  assert.equal(fileSHA256, explicitPayload.params.attachments[0].sha256);
+  const decoded = await electron.evaluate(({ nativeImage }, base64) => {
+    const image = nativeImage.createFromBuffer(Buffer.from(base64, "base64"));
+    return { empty: image.isEmpty(), size: image.getSize() };
+  }, stagedBytes.toString("base64"));
+  assert.deepEqual(decoded, { empty: false, size: { width: 8, height: 8 } });
+  report.cases.push({
+    operation: stage,
+    text: explicitText,
+    staged,
+    fileSHA256,
+    decoded,
+    payload: explicitPayload,
+  });
   await win.screenshot({ path: join(evidence, "composer-reference.png"), animations: "disabled" });
   report.events = await win.evaluate(() => window.__composerEvents);
   assert.ok(report.events.some((event) => event.type === "paste" && event.trusted));
@@ -569,10 +608,28 @@ try {
   report.events = await win?.evaluate(() => window.__composerEvents ?? []).catch(() => []);
 } finally {
   try {
-    await electron?.close();
+    if (electron && monitor) {
+      let timer;
+      try {
+        await Promise.race([
+          electron.close(),
+          new Promise((_, reject) => {
+            timer = setTimeout(() => reject(new Error("Owned Electron close timed out")), 8_000);
+          }),
+        ]);
+      } finally {
+        clearTimeout(timer);
+      }
+    }
   } catch (error) {
     report.errors.push(error.message);
     failure ??= error;
+  }
+  if (!monitor && captured) {
+    // Never substitute an ordinary app.close or a raw PID signal for custody.
+    captured.unref();
+    captured.stdout?.unref?.();
+    captured.stderr?.unref?.();
   }
   try {
     report.processSettlement = (await monitor?.terminate()) ?? null;
