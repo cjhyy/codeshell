@@ -50,7 +50,7 @@ test("public Core starts without providers and explicit Host composition install
       ["--input-type=module", "-e", script],
       { cwd: root, env: process.env, encoding: "utf8" },
     );
-    expect(result.status).toBe(0);
+    expect(result.status, result.stderr).toBe(0);
     expect(result.stderr).toBe("");
     expect(result.stdout).toBe("ok");
   } finally {
