@@ -38,6 +38,7 @@ function accountShape(value: unknown): Record<string, unknown> {
     "text",
     "user",
     "result",
+    "whoami",
     "id",
     "email",
     "name",
@@ -212,8 +213,23 @@ function accountResult(value: unknown): { id: string; label: string } {
       /* Other text blocks carry no identity. */
     }
   }
-  // MCP SDKs wrap scalar results in { result: ... }. Accept bounded object or
-  // JSON-object wrappers, never arbitrary prose, lists or nested plan members.
+  // Figma wraps whoami in { whoami: { ... }, instructions: ... }; older servers
+  // and SDKs use user/result. Never derive identity from instructions or plans.
+  const hasError = (entry: unknown) =>
+    entry !== undefined &&
+    entry !== null &&
+    entry !== false &&
+    entry !== "" &&
+    (!Array.isArray(entry) || entry.length > 0);
+  const failed = (object: Record<string, unknown>) =>
+    object.isError === true ||
+    object.success === false ||
+    hasError(object.error) ||
+    hasError(object.errors) ||
+    [object.status, object.statusCode, object.status_code, object.httpStatus].some(
+      (status) => typeof status === "number" && status >= 400 && status <= 599,
+    );
+  let negativeSeen = failed(result);
   const accounts = (value: unknown, depth = 0): Record<string, unknown>[] => {
     if (depth > 3) return [];
     if (typeof value === "string") {
@@ -225,13 +241,23 @@ function accountResult(value: unknown): { id: string; label: string } {
     }
     const object = record(value);
     if (!object) return [];
+    // Any explicit failure in an identity wrapper vetoes the whole response.
+    if (failed(object)) {
+      negativeSeen = true;
+      return [];
+    }
     return [
       ...(record(object.user) ? accounts(object.user, depth + 1) : []),
       object,
       ...(Object.hasOwn(object, "result") ? accounts(object.result, depth + 1) : []),
+      ...(record(object.whoami) ? accounts(object.whoami, depth + 1) : []),
     ];
   };
-  for (const account of candidates.flatMap((candidate) => accounts(candidate))) {
+  const accountCandidates = candidates.flatMap((candidate) => accounts(candidate));
+  if (negativeSeen)
+    throw new McpOAuthVerificationError("account_verification", "account_identity_unavailable");
+  const identities: Array<{ id: string; explicitId: string; email: string; label: string }> = [];
+  for (const account of accountCandidates) {
     const email = typeof account?.email === "string" ? account.email.trim() : "";
     const id = typeof account?.id === "string" ? account.id.trim() : email.toLowerCase();
     const displayName =
@@ -251,8 +277,24 @@ function accountResult(value: unknown): { id: string; label: string } {
       label.length <= 512 &&
       !/[\x00-\x1f\x7f]/.test(id + label)
     )
-      return { id, label };
+      identities.push({
+        id,
+        explicitId: typeof account.id === "string" ? account.id.trim() : "",
+        email: email.toLowerCase(),
+        label,
+      });
   }
+  const emails = new Set(identities.map((identity) => identity.email).filter(Boolean));
+  const ids = new Set(identities.map((identity) => identity.explicitId).filter(Boolean));
+  if (
+    identities.length &&
+    emails.size <= 1 &&
+    ids.size <= 1 &&
+    (identities.length === 1 ||
+      identities.every((identity) => identity.email) ||
+      identities.every((identity) => identity.explicitId))
+  )
+    return { id: [...ids][0] ?? identities[0].id, label: identities[0].label };
   throw new McpOAuthVerificationError("account_verification", "account_identity_unavailable");
 }
 
