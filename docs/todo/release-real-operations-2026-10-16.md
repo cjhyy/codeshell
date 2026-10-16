@@ -222,3 +222,57 @@ isolated context is used for the repeated cost acceptance.
 That repeated acceptance passed through production usage IPC, renderer reload
 and a new guarded Electron Main process, with all six receipts and unknown/
 partial accounting intact.
+
+## Recovery wave — 2026-10-17
+
+The concurrent repository audit was preserved and merged as documentation.
+Its findings describe the frozen `66ee7737a` baseline, not the repaired state
+below. This wave resolves D01/D02/D03 and SWC-05/SWC-06 from that audit; its
+other engine, Coding, Chat and release-script findings remain separate work.
+
+| Repair | Trigger and current verification |
+| --- | --- |
+| Git file mentions (D01) | `git ls-files -z` plus streaming UTF-8 decoding preserves actual filenames, including Unicode and surrounding whitespace. Real Git tests verify returned paths remain readable. Before repair, actual Electron `@报告` showed no candidate despite the owned file existing; the screenshot and failed report remain at `codeshell-panel-operation-evidence-0cxOvA` in the system temporary directory. |
+| Current-root mentions (D02) | The conversation root ID now reaches the existing Main root-authority check before ranking/capping. Omitted root IDs retain project-wide discovery; invalid, removed and replaced roots cannot fall back. Real Git/two-root, preload/authority and rendered Popover tests pass. Actual Electron selects the primary root's long-path match while the other root contains 30 higher-scoring matches. |
+| Native JSON-lines Unicode (D03) | `StringDecoder` retains partial UTF-8 bytes across chunks. Pure production-decoder tests cover every split, byte-at-a-time input, multiline framing and error recovery. Native frame size/error rules remain unchanged. No Chrome/native socket/authentication/shutdown experiment was run for this repair. |
+| Disk session recovery (SWC-05/06) | Invalid non-object records are skipped locally without rewriting healthy data. Sorting and cursor comparison share the same comparator. Actual Core-backed reader/temporary-disk regressions and existing authorization/archive/filter cases pass with pre-Core deny-all HTTP guards. Equal-mtime cases are explicitly constructed; natural production timestamp equality is not claimed. |
+| Late memory pin UI | An old pin may complete its originally authorized save but cannot refresh another store visit, reopen a different/closed selection or discard an editor draft. Actual React controls with owned IPC stubs cover late read/save/error/refresh, leaving and returning, both editing orders, another selection and closing details. Normal pin persistence/refresh remains covered. These are component/IPC-stub receipts, not native-store persistence evidence. |
+| Revoked composer mentions | File/recent selections bind to their selected text ranges. Editing/removing those ranges drops their metadata for ordinary send, queue and force-send; clearing/restoring does not revive it. Still-visible selections and explicit pasted/dropped/uploaded attachments remain. Recent provenance is retained. Real React/Popover tests with owned submission spies and range-helper tests cover Unicode, spaces, duplicate occurrences and suffix edits. No Engine/model was invoked for this metadata regression. |
+
+The new native panel CLI accepts a fresh evidence directory for CI. The matrix
+now runs file mentions, Files/Git/browser-guest/PTY operations in addition to cold
+startup and packaged Settings/theme UI. Static review found a Windows test defect:
+the renderer legitimately combines native root separators with forward-slash
+relative hits. The test now normalizes separators for text comparison and still
+reads the native file path to verify its bytes. This is a harness repair, not a
+claim that Windows has run. Windows/Linux execution is still pending.
+
+On source `8e08d6bd2ca91d820043986b513d91f22479e951`, actual macOS Electron passed
+18 panel operations, including both mentions, real Git recovery, retained browser
+guests and PTY input/cancel/exit/reopen. Renderer errors were empty; observed
+processes settled `cleaned` with zero remaining, and the private HOME was removed.
+The report is `recovery-wave-native-panels/report.json` under the operation output
+directory. Three cold launches/reloads and a second window also passed again.
+
+A new ad-hoc package from that source passed 13 UI operations in a fresh repeat:
+`recovery-wave-package/ui-repeat/{receipt,launcher-receipt}.json`. Main exited 0,
+worker/model/native-secret call counts were zero, package inventory/signature and
+default-Keychain identity matched, recorded process settlements were `cleaned`,
+and the fixture HOME was removed. ASAR SHA256:
+`b8dfaa3ef02f09a8fc5c861723073091dd599263cebaeef92dfb48bd5d03f77b`.
+The preceding `recovery-wave-package/ui` run completed the same 13 operations but
+failed its final default-Keychain inode check. Its source remains unclassified;
+the failure is retained independently and never counted as a pass. The successful
+repeat neither adopts the old HOME nor relaxes pinning. Packaged Pet/encryption,
+OS approval, installer/update and publisher-signing boundaries remain open.
+
+Actual Web Host/Worker default and late-title sequences passed again, with receipts
+at `codeshell-web-real-host-nJuVgP/evidence` and
+`codeshell-web-real-host-5ZQeZp/evidence` in the system temporary directory.
+Latest combined guarded checks passed: 27 file-search/decoder/catalog tests,
+50 focused server tests with an external pre-Core guard, 37 memory tests and
+22 mention metadata/range tests. These groups overlap; their counts are not a
+unique-coverage total. Package release verification again passed 10 tarballs and
+48 typed entries. Production lint, workflow formatting and script syntax passed.
+All 14 workspace typechecks passed again after sealing the package and restoring
+development workspace links.
