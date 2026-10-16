@@ -177,8 +177,8 @@ export function CredentialsPage({
           aria-labelledby={`${pageId}-tab-${tab}`}
           className="mx-auto min-w-0 max-w-6xl pb-4"
         >
-          {tab === "cookie" && <CookieTab cwd={cwd} activeBucket={activeBucket} />}
-          {tab === "token" && <TokenTab cwd={cwd} />}
+          {tab === "cookie" && <CookieTab key={cwd} cwd={cwd} activeBucket={activeBucket} />}
+          {tab === "token" && <TokenTab key={cwd} cwd={cwd} />}
           {tab === "link" && <LinkTab key={cwd} cwd={cwd} />}
           {tab === "channels" && <ChatGatewayTab />}
         </div>

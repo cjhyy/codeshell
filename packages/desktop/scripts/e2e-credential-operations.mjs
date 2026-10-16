@@ -8,6 +8,7 @@ import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import {
   assert,
+  expandSidebar,
   findCodeShellWindow,
   launchCodeShellElectron,
   makeIsolatedElectronHome,
@@ -43,7 +44,7 @@ async function setup() {
   await writeFile(
     bootstrap,
     `const { ipcMain, app, net } = require("electron");
-const fixture = globalThis.__credentialOperations = {calls: {}, commits: {}, fail: null, defer: null, release: null, network: 0};
+const fixture = globalThis.__credentialOperations = {calls: {}, commits: {}, saveTargets: [], fail: null, defer: null, release: null, network: 0};
 const deny = () => { fixture.network++; throw new Error("Credential operations fixture forbids network"); };
 globalThis.fetch = async () => deny();
 for (const name of ["node:http", "node:https"]) { const transport = require(name); transport.request = deny; transport.get = deny; }
@@ -58,6 +59,7 @@ const handle = ipcMain.handle.bind(ipcMain);
 ipcMain.handle = (channel, listener) => handle(channel, async (...args) => {
   if (["credentials:save", "credentials:patchMeta", "credentials:remove", "credentials:loginCapture", "credentials:captureAllCookiesAllSessions"].includes(channel)) {
     fixture.calls[channel] = (fixture.calls[channel] || 0) + 1;
+    if (channel === "credentials:save") fixture.saveTargets.push(args[1]);
     if (fixture.defer === channel) { fixture.defer = null; await new Promise(resolve => { fixture.release = resolve; }); fixture.release = null; }
     if (fixture.fail === channel) { fixture.fail = null; throw new Error("Synthetic credential operation failure"); }
   }
@@ -136,6 +138,16 @@ async function waitPending() {
 
 async function list() {
   return win.evaluate(() => window.codeshell.credentials.list(""));
+}
+
+async function waitForStored(predicate) {
+  const deadline = Date.now() + 5_000;
+  while (Date.now() < deadline) {
+    const items = await list();
+    if (predicate(items)) return items;
+    await new Promise((resolve) => setTimeout(resolve, 50));
+  }
+  throw new Error("Credential operation did not complete in production storage");
 }
 
 async function loginWindow() {
@@ -422,13 +434,168 @@ try {
   await app.close();
   await launch();
   assert((await list()).length === 0, "Restart restored a successfully deleted credential");
+  stage = "credential target project picker setup";
+  const projectA = join(isolated.home, "project-a");
+  const projectB = join(isolated.home, "project-b");
+  await mkdir(projectA, { recursive: true });
+  await mkdir(projectB, { recursive: true });
+  await win.setViewportSize({ width: 1280, height: 900 });
+  await expandSidebar(win);
+  await app.evaluate(
+    ({ dialog }, paths) => {
+      globalThis.__credentialOperations.projectPickerCalls = 0;
+      dialog.showOpenDialog = async () => {
+        globalThis.__credentialOperations.projectPickerCalls++;
+        return { canceled: false, filePaths: [paths.shift()] };
+      };
+    },
+    [projectA, projectB],
+  );
+  for (const name of ["project-a", "project-b"]) {
+    await win
+      .getByRole("button", { name: /^(新项目|New project)$/ })
+      .first()
+      .click();
+    await win
+      .getByRole("dialog")
+      .getByRole("button", { name: /^(此计算机|This computer)/i })
+      .click();
+    const trust = win.getByRole("button", { name: /仅查看|View only/i });
+    if (
+      await trust
+        .waitFor({ state: "visible", timeout: 2_000 })
+        .then(() => true)
+        .catch(() => false)
+    )
+      await trust.click();
+    await win
+      .locator("#codeshell-sidebar-navigation")
+      .getByRole("button", { name, exact: true })
+      .waitFor();
+  }
+  const selectProject = async (name) => {
+    await win
+      .locator("#codeshell-sidebar-navigation")
+      .getByRole("button", { name, exact: true })
+      .click();
+    const trust = win.getByRole("button", { name: /仅查看|View only/i });
+    if (await trust.isVisible()) await trust.click();
+  };
+  stage = "credential target select project A";
+  await selectProject("project-a");
+  stage = "credential target save project A";
+  await win.locator("#token-id").fill("project-a-token");
+  await win.locator("#token-name").fill("Project A token");
+  await win.locator("#token-secret").fill("owned-project-a-fixture");
+  await arm("credentials:save", { defer: true });
+  await win
+    .locator("[data-token-page]")
+    .getByRole("button", { name: /保存|Save/ })
+    .first()
+    .click();
+  await waitPending();
+  stage = "credential target select project B";
+  await selectProject("project-b");
+  await win.waitForFunction(
+    () => {
+      const input = document.querySelector("#token-id");
+      return input && !input.disabled && input.value === "";
+    },
+    null,
+    { timeout: 3_000 },
+  );
+  assert(
+    await win.locator("#token-id").isEnabled(),
+    "Project B inherited project A's pending credential operation",
+  );
+  assert(
+    (await win.locator("#token-id").inputValue()) === "",
+    "Project B inherited project A's credential draft",
+  );
+  await win.locator("#token-id").fill("project-b-draft");
+  await win.locator("#token-name").fill("Project B draft");
+  await release();
+  stage = "credential target token completion";
+  await waitForStored((items) => items.some((item) => item.id === "project-a-token"));
+  assert(
+    (await win.locator("#token-id").inputValue()) === "project-b-draft",
+    "Project A completion erased project B's new credential draft",
+  );
+  assert(
+    (await app.evaluate(() => globalThis.__credentialOperations.saveTargets)).every(
+      (cwd) => cwd === projectA,
+    ),
+    "Project A credential write was redirected to project B",
+  );
+  await win.getByRole("tab", { name: /^(?:网站登录|Website sign-ins)(?:\s|$)/i }).click();
+  await selectProject("project-a");
+  await win.locator("#cookie-login-url").fill(`${origin}/login`);
+  await win.getByRole("button", { name: /弹窗登录并保存|Sign in.*save/i }).click();
+  const oldLoginWindow = await loginWindow();
+  await selectProject("project-b");
+  await win.waitForFunction(
+    () => {
+      const input = document.querySelector("#cookie-login-url");
+      return input && !input.disabled && input.value === "";
+    },
+    null,
+    { timeout: 3_000 },
+  );
+  assert(
+    await win.locator("#cookie-login-url").isEnabled(),
+    "Project B inherited project A's pending login window",
+  );
+  await win.locator("#cookie-login-url").fill("https://project-b-draft.invalid/sign-in");
+  await oldLoginWindow.getByRole("button", { name: "我已登录,保存", exact: true }).click();
+  stage = "credential target cookie login completion";
+  await waitForStored((items) => items.some((item) => item.type === "cookie"));
+  assert(
+    (await win.locator("#cookie-login-url").inputValue()) ===
+      "https://project-b-draft.invalid/sign-in",
+    "Project A login completion erased project B's URL draft",
+  );
+  assert(
+    (await app.evaluate(() => globalThis.__credentialOperations.saveTargets)).every(
+      (cwd) => cwd === projectA,
+    ),
+    "Project A login save was redirected to project B",
+  );
+  const targetReceipt = await app.evaluate(() => ({
+    calls: globalThis.__credentialOperations.calls,
+    commits: globalThis.__credentialOperations.commits,
+    saveTargets: globalThis.__credentialOperations.saveTargets,
+    network: globalThis.__credentialOperations.network,
+  }));
+  console.log(`Credential target receipt: ${JSON.stringify(targetReceipt)}`);
+  assert(
+    targetReceipt.commits["credentials:save"] === 2 &&
+      targetReceipt.network === 0 &&
+      rendererErrors.length === 0,
+    "Cross-project operations wrote unexpected state or emitted an error",
+  );
   console.log(
-    `Credential operation receipts: ${JSON.stringify({ firstReceipt, lastReceipt, physicalRequests })}`,
+    "PASS cross-project pending completion: project B starts fresh and editable; project A token/login writes retain A authority and preserve B's new drafts",
+  );
+  console.log(
+    `Credential operation receipts: ${JSON.stringify({ firstReceipt, lastReceipt, targetReceipt, physicalRequests })}`,
   );
   console.log("CodeShell credential operations E2E: passed");
 } catch (error) {
   console.error(`Credential operations failed during ${stage}: ${error?.name ?? "Error"}`);
   console.error(`Renderer error count: ${rendererErrors.length}`);
+  if (error?.name === "Error") console.error(String(error.message).split("\n")[0]);
+  if (stage.includes("credential target")) {
+    console.error(
+      await win
+        .locator("#codeshell-sidebar-navigation")
+        .getByRole("button")
+        .allTextContents()
+        .catch(() => []),
+    );
+    await win
+      .screenshot({ path: "/private/tmp/codeshell-credential-target-failure.png" })
+      .catch(() => {});
+  }
   process.exitCode = 1;
 } finally {
   await release().catch(() => {});
