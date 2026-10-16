@@ -356,6 +356,7 @@ async function executeLinkAction(
   if (!action) {
     return JSON.stringify({
       kind: "error",
+      code: "unsupported_contract",
       error: `Unknown ${provider.displayName} Link Action: ${actionId}`,
     });
   }

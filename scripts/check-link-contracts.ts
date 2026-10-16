@@ -25,8 +25,20 @@ if (base && !/^0+$/.test(base)) {
   if (!/^[a-f0-9]{7,40}$/i.test(base)) throw new Error("LINK_CONTRACT_BASE must be a commit SHA.");
   const commit = spawnSync("git", ["cat-file", "-e", `${base}^{commit}`]);
   if (commit.status !== 0) throw new Error("The Link contract comparison base is unavailable.");
-  const previous = spawnSync("git", ["show", `${base}:${snapshotPath}`], { encoding: "utf8" });
-  if (previous.status === 0) {
+  const listing = spawnSync("git", ["ls-tree", "-z", base, "--", snapshotPath], {
+    encoding: "utf8",
+  });
+  if (listing.error || listing.status !== 0)
+    throw new Error("The Link contract base tree is unreadable.");
+  if (listing.stdout) {
+    if (!/^100644 blob [a-f0-9]+\t[^\0]+\0$/.test(listing.stdout))
+      throw new Error("The Link contract baseline must be an ordinary tracked file.");
+    const previous = spawnSync("git", ["show", `${base}:${snapshotPath}`], {
+      encoding: "utf8",
+      maxBuffer: 8 * 1024 * 1024,
+    });
+    if (previous.error || previous.status !== 0)
+      throw new Error("The Link contract baseline cannot be read.");
     for (const [id, contract] of Object.entries(JSON.parse(previous.stdout))) {
       if (canonical(current[id]) !== canonical(contract))
         throw new Error(
