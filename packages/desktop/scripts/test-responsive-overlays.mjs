@@ -37,6 +37,7 @@ const fixtures = [
   "ChatView.caret.browser.fixture.mjs",
   "ChatView.composer-overflow.browser.fixture.mjs",
   "MessageStream.context-selection.browser.fixture.mjs",
+  "messages/TurnProcessGroupCard.steer.browser.fixture.mjs",
   "panels/QuickChatPanel.browser.fixture.mjs",
   "task-inbox/TaskInboxPage.browser.fixture.mjs",
   "panels/FilesPanel.browser.fixture.mjs",

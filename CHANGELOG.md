@@ -19,6 +19,8 @@ breaking.
 
 ### Fixed
 
+- Show consumed follow-up messages between activity cards and keep them visible
+  when activity is collapsed, without leaving an empty card body.
 - Show recoverable file-loading errors and prevent stale directory responses from
   replacing the current location in Desktop and Web.
 - Keep composer suggestion accessibility targets synchronized with their actual
