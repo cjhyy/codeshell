@@ -1,7 +1,9 @@
 /** Run-local task tracking and durable Goal progress projection. */
 import type { SessionBundle, SessionManager } from "../session/session-manager.js";
+import { randomUUID } from "node:crypto";
 import type { StreamCallback, StreamEvent, TaskInfo } from "../types.js";
-import { SessionOutputJournal } from "../session/output-journal.js";
+import { outputJournalCutover, SessionOutputJournal } from "../session/output-journal.js";
+import { outputCoverageIncarnation } from "../session/output-coverage-state.js";
 import { outputUserMessage } from "./run-output-user-message.js";
 import { stampStreamEvent } from "../session/stream-timing.js";
 
@@ -21,6 +23,36 @@ export function createRunOutputJournalPolicy(
         { outputRecoveryIncomplete: true },
         getRunId(),
       );
+    },
+    onIndependentFailure: (incarnation: string) => {
+      const session = getSession();
+      const { sessionId, startedAt } = session.state;
+      // A child can outlive its spawning run. Fence the same Session's current
+      // run, but never a replacement directory or a copied/restored Session.
+      for (let attempt = 0; attempt < 3; attempt++) {
+        const current = manager.readSessionState(sessionId);
+        if (
+          !current?.runId ||
+          current.startedAt !== startedAt ||
+          outputCoverageIncarnation(manager.getStorageDir(), sessionId, startedAt) !== incarnation
+        )
+          return;
+        try {
+          manager.updateSessionRunState(sessionId, current.runId, (latest) => {
+            if (
+              latest.startedAt !== startedAt ||
+              outputCoverageIncarnation(manager.getStorageDir(), sessionId, startedAt) !==
+                incarnation
+            )
+              throw new Error("Output Session was replaced");
+            return { outputRecoveryIncomplete: true };
+          });
+          session.state.outputRecoveryIncomplete = true;
+          return;
+        } catch (error) {
+          if (attempt === 2) throw error;
+        }
+      }
     },
     // Title generation can settle after a later run. Its persisted, exact
     // Session metadata remains authoritative; it cannot append turn output
@@ -42,20 +74,25 @@ export function buildWrappedOnStream(args: {
     root: string;
     getRunId: () => string;
     onFailure: () => void;
+    onIndependentFailure?: (incarnation: string) => void;
     allowLateMetadata?: (event: StreamEvent) => boolean;
   };
 }): StreamCallback & { finish(): void } {
   const { userOnStream, getSession, setLatestTodos } = args;
   let journal: SessionOutputJournal | undefined;
+  let childJournal: SessionOutputJournal | undefined;
+  let childIncarnation: string | undefined;
   let failed = false;
   let streamingClosed = false;
   let pending: StreamEvent[] = [],
     pendingBytes = 0;
   let timer: ReturnType<typeof setTimeout> | undefined;
-  const failure = () => {
+  const failure = (independent = false) => {
     failed = true;
     try {
-      args.outputJournal?.onFailure();
+      if (independent && args.outputJournal?.onIndependentFailure) {
+        if (childIncarnation) args.outputJournal.onIndependentFailure(childIncarnation);
+      } else args.outputJournal?.onFailure();
     } catch {
       /* Retain the live barrier when its durable marker also fails. */
     }
@@ -79,9 +116,43 @@ export function buildWrappedOnStream(args: {
   };
   const onStream: StreamCallback = (event) => {
     event = stampStreamEvent(args.prepareEvent?.(event) ?? event);
-    if (args.outputJournal?.allowLateMetadata?.(event))
+    if (!("agentId" in event && event.agentId) && args.outputJournal?.allowLateMetadata?.(event))
       return userOnStream?.({ ...event, outputCursor: undefined });
-    if (event.outputCursor) event = { ...event, outputOriginCursor: event.outputCursor };
+    if (event.outputCursor)
+      event = { ...event, outputOriginCursor: event.outputCursor, outputCursor: undefined };
+    if ("agentId" in event && event.agentId) {
+      if (args.outputJournal && getSession().transcript.isPersistent()) {
+        if (failed) throw new Error("Session output recovery is incomplete");
+        // Child details and lifecycle belong to the Session, not to the run
+        // that spawned them. They also must not update the parent's Todos or
+        // Goal transcript. Flush earlier parent text before independent output.
+        flush();
+        try {
+          if (!childJournal) {
+            const { sessionId, startedAt } = getSession().state;
+            childIncarnation = outputCoverageIncarnation(
+              args.outputJournal.root,
+              sessionId,
+              startedAt,
+            );
+            const at = outputJournalCutover(args.outputJournal.root, sessionId);
+            childJournal = new SessionOutputJournal(
+              args.outputJournal.root,
+              sessionId,
+              { kind: "host", id: randomUUID() },
+              at.legacy,
+              childIncarnation,
+            );
+          }
+          event = { ...event, outputCursor: childJournal.append(event) };
+        } catch (error) {
+          failure(true);
+          throw error;
+        }
+      }
+      userOnStream?.(event);
+      return;
+    }
     if (args.outputJournal && getSession().transcript.isPersistent()) {
       if (failed) {
         // The failure result must remain visible even if storage itself cannot
@@ -98,6 +169,9 @@ export function buildWrappedOnStream(args: {
         }
         throw new Error("Session output recovery is incomplete");
       }
+      // A late caller is a lifecycle error, not evidence of damaged storage.
+      if (streamingClosed && (event.type === "text_delta" || event.type === "thinking_delta"))
+        throw new Error("Run output stream is closed");
       try {
         if (!journal) {
           const session = getSession();
@@ -120,28 +194,32 @@ export function buildWrappedOnStream(args: {
             timestamp: events[index].timestamp,
           });
         }
-        if (event.type === "text_delta" || event.type === "thinking_delta") {
-          if (streamingClosed) throw new Error("Run output stream is closed");
-          const bytes = Buffer.byteLength(JSON.stringify(event));
-          if (pending.length && (pending.length >= 64 || pendingBytes + bytes > 256 * 1024))
-            flush();
-          pending.push({ ...event });
-          pendingBytes += bytes;
-          if (pendingBytes >= 256 * 1024) flush();
-          else if (!timer) {
-            timer = setTimeout(() => {
-              try {
-                flush();
-              } catch {
-                failure(); /* The next/terminal event surfaces the failure. */
-              }
-            }, 8);
-            timer.unref?.();
-          }
-          return;
+      } catch (error) {
+        failure();
+        throw error;
+      }
+      if (event.type === "text_delta" || event.type === "thinking_delta") {
+        const bytes = Buffer.byteLength(JSON.stringify(event));
+        if (pending.length && (pending.length >= 64 || pendingBytes + bytes > 256 * 1024)) flush();
+        pending.push({ ...event });
+        pendingBytes += bytes;
+        if (pendingBytes >= 256 * 1024) flush();
+        else if (!timer) {
+          timer = setTimeout(() => {
+            try {
+              flush();
+            } catch {
+              // flush fences storage failures itself; a consumer throw must
+              // not mark already durable output as damaged.
+            }
+          }, 8);
+          timer.unref?.();
         }
-        flush();
-        event = { ...event, outputCursor: journal.append(event) };
+        return;
+      }
+      flush();
+      try {
+        event = { ...event, outputCursor: journal!.append(event) };
       } catch (error) {
         failure();
         throw error;
@@ -169,7 +247,8 @@ export function buildWrappedOnStream(args: {
       try {
         flush();
       } catch {
-        failure(); /* Finalization emits only the fenced failure result. */
+        // Storage failures are already fenced by flush; UI failures do not
+        // invalidate the committed journal.
       }
     },
   });
