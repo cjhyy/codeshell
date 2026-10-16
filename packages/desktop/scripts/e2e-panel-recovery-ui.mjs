@@ -182,7 +182,7 @@ try {
     userDataDir: isolated.userDataDir,
   });
   const first = await findCodeShellWindow(electron);
-  await electron.evaluate(({ dialog }, path) => {
+  await electron.evaluate(({ dialog }) => {
     dialog.showOpenDialog = async () => ({ canceled: true, filePaths: [] });
   });
   await openPanels(first, projects[0]);

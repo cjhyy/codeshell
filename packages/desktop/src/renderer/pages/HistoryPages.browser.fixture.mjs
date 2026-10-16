@@ -373,7 +373,7 @@ async function sessionRecovery(page, lang) {
   );
   // Delete another row while the valid session ID "search" still exists.
   const row = page.getByRole("listitem").nth(1);
-  const deleteButton = row.getByRole("button").last();
+  const deleteButton = row.getByRole("button", { name: /^(删除会话：|Delete session:)/ });
   await deleteButton.focus();
   await page.keyboard.press("Enter");
   assert.deepEqual(await ledger(page, "deleteSession"), []);
@@ -439,7 +439,11 @@ async function ownership(page) {
           await page.evaluate(() => (window.fixture.readMode = "hold"));
           await page.getByRole("button", { name: "Refresh", exact: true }).click();
         } else if (operation === "delete") {
-          await page.getByRole("listitem").nth(1).getByRole("button").last().click();
+          await page
+            .getByRole("listitem")
+            .nth(1)
+            .getByRole("button", { name: /^(删除会话：|Delete session:)/ })
+            .click();
           await page.getByRole("button", { name: "Confirm deletion", exact: true }).click();
         } else {
           await page.getByRole("button", { name: "Rename", exact: true }).first().click();

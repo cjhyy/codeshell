@@ -111,6 +111,13 @@ const fixture = await prepareConfinedElectronFixture({
   origin,
   guardModule: new URL("./operation-read-guard.mjs", import.meta.url).href,
 });
+if (keychainReference) {
+  // Parent-only metadata for launch preflight; Main must not inherit the path.
+  process.env.CODESHELL_MACOS_DEFAULT_KEYCHAIN_REFERENCE = options.get(
+    "--default-keychain-reference",
+  );
+  fixture.env.CODESHELL_MACOS_DEFAULT_KEYCHAIN_REFERENCE = undefined;
+}
 const sourcePaths = [
   "packages/desktop/src/main/operation-batch-host.ts",
   "packages/desktop/src/main/operation-batch-ipc.ts",
