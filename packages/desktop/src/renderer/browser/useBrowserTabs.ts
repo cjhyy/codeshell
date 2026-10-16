@@ -65,6 +65,8 @@ export function useBrowserTabs(
   navigate: (raw: string) => void;
 } {
   const [tabs, setTabs] = useState<Tab[]>(() => [freshTab(initialUrl)]);
+  const currentTabs = useRef(tabs);
+  currentTabs.current = tabs;
   const [activeId, setActiveId] = useState<string>(() => tabs[0].id);
   const viewRef = useRef<WebviewElement | null>(null);
   const tabViews = useRef(new Map<string, WebviewElement>());
@@ -212,7 +214,11 @@ export function useBrowserTabs(
       // so the address bar and tab title catch up.
       try {
         const liveUrl = view.getURL();
-        if (liveUrl && liveUrl !== NEW_TAB) {
+        if (
+          liveUrl &&
+          liveUrl !== NEW_TAB &&
+          liveUrl !== currentTabs.current.find((tab) => tab.id === tabId)?.url
+        ) {
           patchTab(tabId, { url: liveUrl, draft: liveUrl });
         }
         const liveTitle = view.getTitle?.();

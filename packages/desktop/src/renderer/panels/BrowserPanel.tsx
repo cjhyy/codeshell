@@ -273,6 +273,10 @@ export function BrowserPanel({
   const [chromeExtensionPath, setChromeExtensionPath] = useState<string | undefined>();
 
   const handleGuestDomReady = useCallback((id: string) => setReadyGuestTabId(id), []);
+  const handleGuestUnavailable = useCallback(
+    (id: string) => setReadyGuestTabId((previous) => (previous === id ? null : previous)),
+    [],
+  );
   const activeGuestReady = readyGuestTabId === activeId && !showingNewTab;
 
   useEffect(() => {
@@ -666,6 +670,7 @@ export function BrowserPanel({
               bucket={bucket}
               engineSessionId={engineSessionId}
               onDomReady={handleGuestDomReady}
+              onUnavailable={handleGuestUnavailable}
             />
           ))}
 
@@ -787,6 +792,7 @@ function BrowserTabGuest({
   bucket,
   engineSessionId,
   onDomReady,
+  onUnavailable,
 }: {
   tab: Tab;
   active: boolean;
@@ -796,9 +802,13 @@ function BrowserTabGuest({
   bucket?: string;
   engineSessionId?: string | null;
   onDomReady: (id: string) => void;
+  onUnavailable: (id: string) => void;
 }) {
   const evicted = useIdleEvict(visible);
   const ready = useCallback(() => onDomReady(tab.id), [onDomReady, tab.id]);
+  useEffect(() => {
+    if (evicted) onUnavailable(tab.id);
+  }, [evicted, onUnavailable, tab.id]);
   return (
     <div className="absolute inset-0" hidden={!active} aria-hidden={!active || undefined}>
       {!evicted && (
