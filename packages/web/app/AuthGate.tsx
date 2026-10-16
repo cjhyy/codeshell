@@ -22,6 +22,12 @@ type GateState =
   | "legacy"
   | "error";
 
+function sessionKey(session?: AuthSession, cloud?: CloudManagementSession): string | undefined {
+  return cloud
+    ? `${cloud.audience}:${cloud.installationId}:${cloud.managementEpoch}:${cloud.accountOrigin}:${cloud.accountId}:${cloud.id}`
+    : session?.id;
+}
+
 export function AuthGate({ setupToken }: { setupToken: string }) {
   const [state, setState] = React.useState<GateState>("checking");
   const [session, setSession] = React.useState<AuthSession | undefined>();
@@ -35,6 +41,10 @@ export function AuthGate({ setupToken }: { setupToken: string }) {
   const [busy, setBusy] = React.useState(false);
   const [logoutError, setLogoutError] = React.useState("");
   const logoutPending = React.useRef(false);
+  const loginPending = React.useRef(false);
+  const authEpoch = React.useRef(0);
+  const authIdentity = React.useRef<string | undefined>(undefined);
+  const [sessionGeneration, setSessionGeneration] = React.useState(0);
   const cloudModeRef = React.useRef(false);
   const mounted = React.useRef(false);
   const authRevision = React.useRef(0);
@@ -43,6 +53,16 @@ export function AuthGate({ setupToken }: { setupToken: string }) {
 
   const acceptStatus = React.useCallback((status: AuthStatus | null) => {
     if (!mounted.current) return;
+    const identity =
+      status === null
+        ? "legacy"
+        : status.authenticated
+          ? sessionKey(status.session, status.cloudSession)
+          : undefined;
+    if (identity !== authIdentity.current) {
+      authIdentity.current = identity;
+      setSessionGeneration(++authEpoch.current);
+    }
     cloudModeRef.current = status?.mode === "cloud-account";
     setCloudMode(cloudModeRef.current);
     setCloudSession(status?.cloudSession);
@@ -68,6 +88,8 @@ export function AuthGate({ setupToken }: { setupToken: string }) {
   const authLost = React.useCallback(() => {
     if (!mounted.current) return;
     authRevision.current++;
+    authIdentity.current = undefined;
+    setSessionGeneration(++authEpoch.current);
     setSession(undefined);
     setCloudSession(undefined);
     setState(cloudModeRef.current ? "cloud-login" : "login");
@@ -79,8 +101,19 @@ export function AuthGate({ setupToken }: { setupToken: string }) {
     );
   }, []);
 
+  // A closed dialog may still finish a request for this login. It must remain
+  // effective within that identity, but cannot revoke a later login's view.
+  const sessionAuthLost = React.useMemo(
+    () => () => {
+      if (sessionGeneration === authEpoch.current) authLost();
+    },
+    [authLost, sessionGeneration],
+  );
+
   const check = React.useCallback(async () => {
-    if (logoutPending.current) return;
+    // Focus/visibility refreshes are read-only. They cannot supersede a user's
+    // pending login/setup POST before its cookie and identity arrive.
+    if (logoutPending.current || loginPending.current) return;
     const revision = ++authRevision.current;
     try {
       const status = await readAuthStatus();
@@ -130,9 +163,9 @@ export function AuthGate({ setupToken }: { setupToken: string }) {
 
   React.useEffect(() => {
     if (!cloudSession) return;
-    const timer = setTimeout(authLost, Math.max(0, cloudSession.expiresAt - Date.now()));
+    const timer = setTimeout(sessionAuthLost, Math.max(0, cloudSession.expiresAt - Date.now()));
     return () => clearTimeout(timer);
-  }, [cloudSession, authLost]);
+  }, [cloudSession, sessionAuthLost]);
 
   const logoutCloud = async () => {
     if (logoutPending.current || !cloudModeRef.current) return;
@@ -158,7 +191,8 @@ export function AuthGate({ setupToken }: { setupToken: string }) {
 
   const submit = async (event: React.FormEvent) => {
     event.preventDefault();
-    if (busy || cloudModeRef.current) return;
+    if (busy || loginPending.current || cloudModeRef.current) return;
+    loginPending.current = true;
     const revision = ++authRevision.current;
     setBusy(true);
     setError("");
@@ -180,8 +214,12 @@ export function AuthGate({ setupToken }: { setupToken: string }) {
     } catch (cause) {
       if (!mounted.current || revision !== authRevision.current) return;
       setError(cause instanceof Error ? cause.message : "登录失败，请重试。");
-      if (cause instanceof ApiError && cause.status === 409) void check();
+      if (cause instanceof ApiError && cause.status === 409) {
+        loginPending.current = false;
+        void check();
+      }
     } finally {
+      loginPending.current = false;
       if (mounted.current && revision === authRevision.current) setBusy(false);
     }
   };
@@ -197,12 +235,8 @@ export function AuthGate({ setupToken }: { setupToken: string }) {
       : undefined;
     return (
       <ProjectsGate
-        key={
-          cloudSession
-            ? `${cloudSession.audience}:${cloudSession.installationId}:${cloudSession.managementEpoch}:${cloudSession.accountOrigin}:${cloudSession.accountId}:${cloudSession.id}`
-            : session?.id
-        }
-        onAuthLost={authLost}
+        key={sessionKey(session, cloudSession)}
+        onAuthLost={sessionAuthLost}
         allowLegacy={!cloudMode}
         accountControl={controls ? <CloudAccountControls {...controls} /> : undefined}
       >
@@ -210,7 +244,7 @@ export function AuthGate({ setupToken }: { setupToken: string }) {
           <App
             session={session}
             hub
-            onAuthLost={authLost}
+            onAuthLost={sessionAuthLost}
             onCheckAuth={check}
             projectName={project?.name}
             onBackToProjects={onBack}
@@ -221,7 +255,7 @@ export function AuthGate({ setupToken }: { setupToken: string }) {
     );
   }
   if (state === "legacy") {
-    return <App session={session} hub={false} onAuthLost={authLost} onCheckAuth={check} />;
+    return <App session={session} hub={false} onAuthLost={sessionAuthLost} onCheckAuth={check} />;
   }
 
   return (
