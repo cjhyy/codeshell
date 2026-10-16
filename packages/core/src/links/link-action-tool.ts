@@ -33,7 +33,7 @@ import {
   type LinkOperationAuthorization,
   LinkOperationError,
 } from "@cjhyy/code-shell-link";
-import { isFigmaMcpCredential, McpLinkActionError } from "./figma-mcp.js";
+import { isFigmaMcpCredential, McpLinkActionError } from "./figma-mcp-contract.js";
 import { figmaMcpParameters } from "./figma-mcp-params.js";
 import { canonicalOperationValue } from "../operations/ledger.js";
 import { githubCreateIssueParameters, verifiedGithubCreateIssue } from "./verified-write.js";

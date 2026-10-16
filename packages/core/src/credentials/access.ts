@@ -41,11 +41,10 @@ import type { SettingsScope } from "../settings/manager.js";
 import type { RpcMessage, RpcResponse } from "../protocol/types.js";
 import type { Transport } from "../protocol/transport.js";
 import {
-  executeFigmaMcpLinkAction,
   isFigmaMcpCredential,
   McpLinkActionError,
   type McpLinkActionRequest,
-} from "../links/figma-mcp.js";
+} from "../links/figma-mcp-contract.js";
 
 export type CredentialAccessScope = "full" | "project";
 
@@ -469,11 +468,15 @@ function storeFor(cwd: string | undefined): CredentialStore {
 }
 
 export const localCredentialAccess: CredentialAccess = {
-  executeMcpLinkAction: (input, options) =>
-    executeFigmaMcpLinkAction(input, {
+  executeMcpLinkAction: async (input, options) => {
+    // Metadata discovery also runs while the builtin catalog is initializing.
+    // Load the MCP/tool execution graph only for an actual action request.
+    const { executeFigmaMcpLinkAction } = await import("../links/figma-mcp.js");
+    return executeFigmaMcpLinkAction(input, {
       ...options,
       resolveOAuthAccess: (request) => localCredentialAccess.resolveOAuthAccess!(request),
-    }),
+    });
+  },
   executeLocalOAuthLinkAction,
   executeRemoteLinkAction,
   subscribe(listener, context) {
