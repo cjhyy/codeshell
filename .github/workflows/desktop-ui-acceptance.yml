@@ -15,11 +15,6 @@ jobs:
     name: Web service worker and offline UI
     runs-on: ubuntu-latest
     timeout-minutes: 20
-    env:
-      ACCEPTANCE_ROOT: ${{ runner.temp }}/codeshell-web-ui-acceptance
-      # The isolated runner changes HOME/XDG_CACHE_HOME before launching. Keep
-      # its downloaded browser in the same owned path used by the installer.
-      PLAYWRIGHT_BROWSERS_PATH: ${{ runner.temp }}/codeshell-web-ui-browsers
     steps:
       - uses: actions/checkout@v7
         with:
@@ -33,12 +28,20 @@ jobs:
       - name: install locked dependencies
         timeout-minutes: 15
         run: bun install --frozen-lockfile
+      - name: prepare new evidence root
+        run: |
+          node <<'NODE'
+          const { mkdirSync, appendFileSync } = require("node:fs");
+          const { join } = require("node:path");
+          const root = join(process.env.RUNNER_TEMP, "codeshell-web-ui-acceptance");
+          const browsers = join(process.env.RUNNER_TEMP, "codeshell-web-ui-browsers");
+          mkdirSync(root, { mode: 0o700 });
+          // Both installation and the isolated HOME launch use this owned cache.
+          appendFileSync(process.env.GITHUB_ENV, `ACCEPTANCE_ROOT=${root}\nPLAYWRIGHT_BROWSERS_PATH=${browsers}\n`);
+          NODE
       - name: install Chromium and system browser dependencies
         timeout-minutes: 5
         run: node packages/desktop/node_modules/playwright/cli.js install --with-deps chromium
-      - name: prepare new evidence root
-        run: |
-          node -e 'require("node:fs").mkdirSync(process.env.ACCEPTANCE_ROOT, { mode: 0o700 })'
       - name: actual ServiceWorker lifecycle and public offline UI
         timeout-minutes: 3
         shell: bash
@@ -72,8 +75,6 @@ jobs:
           # Match release.yml's supported node-gyp / Visual Studio compiler.
           - os: windows-2022
             artifact: windows
-    env:
-      ACCEPTANCE_ROOT: ${{ runner.temp }}/codeshell-desktop-ui-acceptance
     defaults:
       run:
         shell: bash
@@ -99,7 +100,13 @@ jobs:
 
       - name: prepare new evidence root
         run: |
-          node -e 'require("node:fs").mkdirSync(process.env.ACCEPTANCE_ROOT, { mode: 0o700 })'
+          node <<'NODE'
+          const { mkdirSync, appendFileSync } = require("node:fs");
+          const { join } = require("node:path");
+          const root = join(process.env.RUNNER_TEMP, "codeshell-desktop-ui-acceptance");
+          mkdirSync(root, { mode: 0o700 });
+          appendFileSync(process.env.GITHUB_ENV, `ACCEPTANCE_ROOT=${root}\n`);
+          NODE
 
       - name: Linux display and owned SecretService dependencies
         if: runner.os == 'Linux'
