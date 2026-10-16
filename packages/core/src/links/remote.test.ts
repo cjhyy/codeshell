@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, expect, test } from "bun:test";
 import { createServer } from "node:http";
-import { mkdtempSync, rmSync } from "node:fs";
+import { mkdtempSync, rmSync, readFileSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { CredentialStore } from "../credentials/store.js";
@@ -9,6 +9,7 @@ import {
   beginRemoteLinkAuthorization,
   completeRemoteLinkAuthorization,
   executeRemoteLinkAction,
+  type RemoteLinkExecutionDiagnostic,
 } from "./remote.js";
 import { linkActionTool } from "./link-action-tool.js";
 import type { ToolContext } from "../tool-system/context.js";
@@ -22,6 +23,10 @@ let release: (() => void) | undefined;
 let actionWait: Promise<void> | undefined;
 let clock: number;
 let actionStatus: number;
+let actionErrorCode: string;
+let tokenStatus: number;
+let actionErrorBody: unknown;
+let stalledError: boolean;
 let scopes: string[];
 const connectionId = "12345678-1234-1234-1234-123456789abc";
 const grantId = "12345678-1234-1234-1234-123456789def";
@@ -31,6 +36,10 @@ beforeEach(async () => {
   process.env.HOME = join(root, "home");
   clock = Date.now();
   actionStatus = 200;
+  actionErrorCode = "provider might echo DOWNSTREAM-ACCESS here";
+  tokenStatus = 200;
+  actionErrorBody = undefined;
+  stalledError = false;
   scopes = ["github:list_repositories", "github:list_issues", "github:get_issue"];
   requests = [];
   tokenMode = "ok";
@@ -55,6 +64,11 @@ beforeEach(async () => {
         await new Promise<void>((done) => {
           release = done;
         });
+      if (tokenStatus !== 200) {
+        res.statusCode = tokenStatus;
+        res.end(JSON.stringify({ error: "invalid_grant", message: "private DOWNSTREAM-ACCESS" }));
+        return;
+      }
       res.end(
         JSON.stringify({
           access_token: "DOWNSTREAM-ACCESS",
@@ -77,12 +91,20 @@ beforeEach(async () => {
         }),
       );
     } else {
+      if (actionWait) await actionWait;
       if (actionStatus !== 200) {
         res.statusCode = actionStatus;
-        res.end(JSON.stringify({ error: "provider might echo DOWNSTREAM-ACCESS here" }));
+        if (stalledError) {
+          res.write('{"error":');
+          return;
+        }
+        res.end(
+          JSON.stringify(
+            actionErrorBody ?? { error: actionErrorCode, privateDynamicKey: "DOWNSTREAM-ACCESS" },
+          ),
+        );
         return;
       }
-      if (actionWait) await actionWait;
       const result = req.url?.endsWith("list_repositories")
         ? [{ full_name: "owner/repo", id: 1, unrelated: "omit" }]
         : req.url?.endsWith("list_issues")
@@ -344,4 +366,248 @@ test("remote revocation becomes reconnect status and never leaks provider error 
     expect(String(error)).not.toContain("DOWNSTREAM-ACCESS");
   }
   expect(requests).toHaveLength(count);
+});
+
+test("action 400 is a parameter failure, retains the grant and records only a reviewed broker code", async () => {
+  const { store, credential } = await connect();
+  const diagnostic: RemoteLinkExecutionDiagnostic[] = [];
+  actionStatus = 400;
+  actionErrorCode = "invalid_parameters";
+  await expect(
+    executeRemoteLinkAction(input(), { store, onDiagnostic: (event) => diagnostic.push(event) }),
+  ).rejects.toMatchObject({
+    code: "invalid_request",
+    httpStatus: 400,
+    brokerErrorCode: "invalid_parameters",
+  });
+  expect(store.resolve(credential.id)).toEqual(credential);
+  expect(diagnostic).toContainEqual({
+    stage: "action",
+    outcome: "failed",
+    code: "invalid_request",
+    httpStatus: 400,
+    brokerErrorCode: "invalid_parameters",
+  });
+  expect(diagnostic.some((event) => event.stage === "state_write")).toBe(false);
+  expect(JSON.stringify(diagnostic)).not.toContain("DOWNSTREAM");
+  expect(JSON.stringify(diagnostic)).not.toContain("privateDynamicKey");
+  actionStatus = 200;
+  await expect(executeRemoteLinkAction(input(), { store })).resolves.toMatchObject({
+    repositories: [{ full_name: "owner/repo" }],
+  });
+});
+
+test("action 401 records reviewed upstream reauthorization and invalidates the current grant", async () => {
+  const { store } = await connect();
+  const diagnostic: RemoteLinkExecutionDiagnostic[] = [];
+  actionStatus = 401;
+  actionErrorCode = "upstream_reauthorization_required";
+  await expect(
+    executeRemoteLinkAction(input(), { store, onDiagnostic: (event) => diagnostic.push(event) }),
+  ).rejects.toMatchObject({
+    code: "reconnect",
+    httpStatus: 401,
+    brokerErrorCode: "upstream_reauthorization_required",
+  });
+  expect(store.resolve(input().id)?.meta?.linkRemoteState).toBe("reconnect");
+  expect(diagnostic).toContainEqual({
+    stage: "action",
+    outcome: "failed",
+    code: "reconnect",
+    httpStatus: 401,
+    brokerErrorCode: "upstream_reauthorization_required",
+  });
+  expect(JSON.stringify(diagnostic)).not.toContain("DOWNSTREAM");
+});
+
+for (const status of [400, 401])
+  test(`refresh ${status} still requires reconnection and never replays the old rotation`, async () => {
+    const { store } = await connect();
+    clock += 16 * 60_000;
+    tokenStatus = status;
+    const diagnostic: RemoteLinkExecutionDiagnostic[] = [];
+    await expect(
+      executeRemoteLinkAction(input(), {
+        store,
+        now: () => clock,
+        onDiagnostic: (event) => diagnostic.push(event),
+      }),
+    ).rejects.toMatchObject({
+      code: "reconnect",
+      httpStatus: status,
+      brokerErrorCode: "invalid_grant",
+    });
+    expect(store.resolve(input().id)?.meta?.linkRemoteState).toBe("reconnect");
+    expect(diagnostic).toContainEqual({
+      stage: "token_refresh",
+      outcome: "failed",
+      code: "reconnect",
+      httpStatus: status,
+      brokerErrorCode: "invalid_grant",
+    });
+    const count = requests.length;
+    await expect(
+      executeRemoteLinkAction(input(), { store, now: () => clock }),
+    ).rejects.toMatchObject({ code: "reconnect" });
+    expect(requests).toHaveLength(count);
+    expect(JSON.stringify(diagnostic)).not.toContain("DOWNSTREAM");
+  });
+
+test("terminal preflight binding and scope errors mark the same saved grant before any request", async () => {
+  const { store, credential } = await connect();
+  for (const [changes, reason] of [
+    [{ issuer: "https://other.example" }, "binding_mismatch"],
+    [{ scope: "github:list_repositories github:list_repositories" }, "scope_mismatch"],
+  ] as const) {
+    const broken = {
+      ...credential,
+      secret: JSON.stringify({ ...JSON.parse(credential.secret!), ...changes }),
+    };
+    store.save("user", broken);
+    const count = requests.length;
+    const diagnostic: RemoteLinkExecutionDiagnostic[] = [];
+    await expect(
+      executeRemoteLinkAction(input(), { store, onDiagnostic: (event) => diagnostic.push(event) }),
+    ).rejects.toMatchObject({ code: "reconnect", reason });
+    expect(store.resolve(credential.id)?.meta?.linkRemoteState).toBe("reconnect");
+    expect(store.resolve(credential.id)?.secret).toBe(broken.secret);
+    expect(requests).toHaveLength(count);
+    expect(diagnostic).toContainEqual({
+      stage: "preflight",
+      outcome: "failed",
+      code: "reconnect",
+      reason,
+    });
+  }
+});
+
+test("a preflight CAS cannot overwrite a grant installed after the reviewed record", async () => {
+  const { store, credential } = await connect();
+  store.save("user", {
+    ...credential,
+    secret: JSON.stringify({ ...JSON.parse(credential.secret!), issuer: "https://other.example" }),
+  });
+  const replacement = {
+    ...credential,
+    meta: { ...credential.meta, linkRemoteGrantId: "22345678-1234-1234-1234-123456789def" },
+  };
+  const compare = store.compareAndSwap.bind(store);
+  store.compareAndSwap = (scope, id, expected, next, retirement) => {
+    store.save(scope, replacement);
+    return compare(scope, id, expected, next, retirement);
+  };
+  const count = requests.length;
+  await expect(executeRemoteLinkAction(input(), { store })).rejects.toMatchObject({
+    code: "changed",
+    reason: "cas_mismatch",
+  });
+  expect(store.resolve(credential.id)).toEqual(replacement);
+  expect(requests).toHaveLength(count);
+});
+
+test("undecryptable custody is never rewritten to mark a terminal preflight failure", async () => {
+  const { store, credential } = await connect();
+  const path = join(process.env.HOME!, ".code-shell", "credentials.json");
+  const disk = JSON.parse(readFileSync(path, "utf8"));
+  disk.credentials.find((entry) => entry.id === credential.id).secret =
+    "enc:foreign:PRIVATE-CIPHERTEXT";
+  writeFileSync(path, JSON.stringify(disk), { mode: 0o600 });
+  const before = readFileSync(path, "utf8");
+  const diagnostic: RemoteLinkExecutionDiagnostic[] = [];
+  const count = requests.length;
+  await expect(
+    executeRemoteLinkAction(input(), { store, onDiagnostic: (event) => diagnostic.push(event) }),
+  ).rejects.toMatchObject({ code: "reconnect", reason: "secret_unavailable" });
+  expect(readFileSync(path, "utf8")).toBe(before);
+  expect(requests).toHaveLength(count);
+  expect(diagnostic).toContainEqual({
+    stage: "state_write",
+    outcome: "skipped",
+    state: "reconnect",
+    code: "reconnect",
+    reason: "secret_unavailable",
+  });
+  expect(JSON.stringify(diagnostic)).not.toContain("PRIVATE-CIPHERTEXT");
+});
+
+test("a delayed action 401 cannot invalidate a later successful installation", async () => {
+  const { store, credential } = await connect();
+  actionStatus = 401;
+  let finish!: () => void;
+  actionWait = new Promise<void>((resolve) => {
+    finish = resolve;
+  });
+  const running = executeRemoteLinkAction(input(), { store });
+  while (!requests.some((request) => request.path.endsWith("list_repositories")))
+    await new Promise((resolve) => setTimeout(resolve, 5));
+  const replacement = {
+    ...credential,
+    meta: { ...credential.meta, linkRemoteGrantId: "22345678-1234-1234-1234-123456789def" },
+  };
+  store.save("user", replacement);
+  finish();
+  await expect(running).rejects.toMatchObject({ code: "changed" });
+  expect(store.resolve(credential.id)).toEqual(replacement);
+});
+
+test("a failed in-flight refresh cannot overwrite a later successful installation", async () => {
+  const { store, credential } = await connect();
+  clock += 16 * 60_000;
+  tokenMode = "delay";
+  tokenStatus = 401;
+  const running = executeRemoteLinkAction(input(), { store, now: () => clock });
+  while (!release) await new Promise((resolve) => setTimeout(resolve, 5));
+  const replacement = {
+    ...credential,
+    secret: JSON.stringify({
+      ...JSON.parse(credential.secret!),
+      accessToken: "NEW-GRANT-ACCESS",
+      refreshToken: "NEW-GRANT-REFRESH",
+      expiresAt: new Date(clock + 60_000).toISOString(),
+    }),
+    meta: { ...credential.meta, linkRemoteGrantId: "22345678-1234-1234-1234-123456789def" },
+  };
+  store.save("user", replacement);
+  release();
+  await expect(running).rejects.toMatchObject({ code: "changed" });
+  expect(store.resolve(credential.id)).toEqual(replacement);
+});
+
+test("unknown and oversized broker error bodies never enter execution diagnostics", async () => {
+  const { store, credential } = await connect();
+  actionStatus = 400;
+  for (const body of [
+    { error: "privateBrokerCode", message: "DOWNSTREAM-ACCESS" },
+    { error: "invalid_parameters", privateDynamicKey: "PRIVATE".repeat(1000) },
+  ]) {
+    actionErrorBody = body;
+    const diagnostic: RemoteLinkExecutionDiagnostic[] = [];
+    await expect(
+      executeRemoteLinkAction(input(), { store, onDiagnostic: (event) => diagnostic.push(event) }),
+    ).rejects.toMatchObject({
+      code: "invalid_request",
+      httpStatus: 400,
+      brokerErrorCode: undefined,
+    });
+    expect(store.resolve(credential.id)).toEqual(credential);
+    const serialized = JSON.stringify(diagnostic);
+    for (const secret of ["privateBrokerCode", "DOWNSTREAM-ACCESS", "privateDynamicKey", "PRIVATE"])
+      expect(serialized).not.toContain(secret);
+  }
+});
+
+test("a stalled broker error body cannot hide its HTTP status or delay recovery", async () => {
+  const { store, credential } = await connect();
+  actionStatus = 400;
+  stalledError = true;
+  const start = Date.now();
+  await expect(executeRemoteLinkAction(input(), { store })).rejects.toMatchObject({
+    code: "invalid_request",
+    httpStatus: 400,
+  });
+  expect(Date.now() - start).toBeLessThan(2000);
+  expect(store.resolve(credential.id)).toEqual(credential);
+  actionStatus = 200;
+  stalledError = false;
+  await expect(executeRemoteLinkAction(input(), { store })).resolves.toHaveProperty("repositories");
 });
