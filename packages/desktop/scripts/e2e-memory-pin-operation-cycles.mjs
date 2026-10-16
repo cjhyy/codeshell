@@ -319,15 +319,7 @@ ipcMain.handle = (channel, listener) => handle(channel, !["memory:list", "memory
   }
   assert.equal(captured, app.process(), "Early watcher did not bind the launched Main");
   receipt.mainPid = captured.pid;
-  receipt.runtime = await app.evaluate(({ app }) => ({
-    appPath: app.getAppPath(),
-    userData: app.getPath("userData"),
-    platform: process.platform,
-    arch: process.arch,
-    packaged: app.isPackaged,
-  }));
-  assert.equal(receipt.runtime.appPath, appDir);
-  assert.equal(receipt.runtime.userData, isolated.userDataDir);
+  stage = "wait for own compiled workbench renderer";
   await findCodeShellWindow(app);
   win = app.windows().find((page) => {
     const url = new URL(page.url());
@@ -340,8 +332,19 @@ ipcMain.handle = (channel, listener) => handle(channel, !["memory:list", "memory
     new URL(pathToFileURL(join(appDir, "out/renderer/index.html"))).pathname,
   );
   rendererErrors.push(captureRendererErrors(win));
+  stage = "read own compiled Desktop runtime metadata";
+  receipt.runtime = await app.evaluate(({ app }) => ({
+    appPath: app.getAppPath(),
+    userData: app.getPath("userData"),
+    platform: process.platform,
+    arch: process.arch,
+    packaged: app.isPackaged,
+  }));
+  assert.equal(receipt.runtime.appPath, appDir);
+  assert.equal(receipt.runtime.userData, isolated.userDataDir);
   win.setDefaultTimeout(10_000);
   await win.setViewportSize({ width: 1440, height: 960 });
+  stage = "verify own compiled Desktop confinement";
   receipt.confinement = await fixture.assertWorker(app, { requireWorker: false });
   assert.equal(receipt.confinement.workerCreated, false);
   const guiGuard = (await readFile(join(isolated.home, "cost-gui-guard.jsonl"), "utf8"))
