@@ -808,8 +808,8 @@ export function LinkTab({ cwd }: { cwd: string }) {
 
   return (
     <div className="space-y-5" data-link-page>
-      <header className="flex flex-col gap-5 pb-1 sm:flex-row sm:items-center sm:justify-between">
-        <div className="min-w-0">
+      <header className="flex flex-wrap items-center gap-5 pb-1">
+        <div className="min-w-0 flex-1 basis-80">
           <h2 className="text-xl font-semibold tracking-tight text-foreground">
             {t("ext.link.overviewTitle")}
           </h2>

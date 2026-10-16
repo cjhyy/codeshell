@@ -101,7 +101,7 @@ async function assertNoHorizontalOverflow(label) {
 }
 
 async function assertReadableHero(selector, label) {
-  const heading = win.locator(`${selector} section`).first().getByRole("heading", { level: 2 });
+  const heading = win.locator(selector).getByRole("heading", { level: 2 }).first();
   const box = await heading.boundingBox();
   assert(box && box.width >= 160, `${label} hero heading collapsed to ${box?.width ?? 0}px`);
 }
@@ -330,7 +330,7 @@ require("node:module").syncBuiltinESMExports();
   for (const [name, selector, label, screenshotName] of responsiveTabs) {
     await win.getByRole("tab", { name }).click();
     await win.locator(selector).waitFor({ state: "visible", timeout: 20_000 });
-    await win.locator(`${selector} section`).first().scrollIntoViewIfNeeded();
+    await win.locator(selector).getByRole("heading", { level: 2 }).first().scrollIntoViewIfNeeded();
     await assertNoHorizontalOverflow(`mobile ${label} page`);
     await assertReadableHero(selector, `mobile ${label} page`);
     await screenshot(screenshotName);
