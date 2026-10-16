@@ -1,6 +1,6 @@
 /** Native-host entry for a newly built package; never publishes or changes OS keychains. */
 import assert from "node:assert/strict";
-import { execFileSync, spawnSync } from "node:child_process";
+import { execFileSync, spawn } from "node:child_process";
 import { constants, openSync, closeSync } from "node:fs";
 import { lstat, mkdir, mkdtemp, open, realpath, writeFile } from "node:fs/promises";
 import { tmpdir, userInfo } from "node:os";
@@ -9,6 +9,7 @@ import { fileURLToPath } from "node:url";
 import { createBunTestEnvironment } from "../../../scripts/bun-test-completion.mjs";
 import { readDefaultKeychain } from "./macos-keychain-context.mjs";
 import { capturePackagedAppIntegrity } from "./packaged-app-integrity.mjs";
+import { watchElectronTestProcess } from "./electron-test-watchdog.mjs";
 
 const inside = (parent, child) => {
   const path = relative(parent, child);
@@ -126,13 +127,37 @@ export async function runPackagedUiAcceptance(args) {
   const stdout = openSync(join(scratch, "ui.stdout.log"), "wx", 0o600);
   const stderr = openSync(join(scratch, "ui.stderr.log"), "wx", 0o600);
   let result;
+  let processSettlement;
+  const observerFailures = [];
   try {
-    result = spawnSync(process.execPath, childArgs, {
+    const child = spawn(process.execPath, childArgs, {
       cwd: repository,
       env: environment,
       stdio: ["ignore", stdout, stderr],
-      timeout: 300_000,
+      windowsHide: true,
     });
+    const completion = new Promise((resolve) => {
+      child.once("error", (error) => resolve({ status: null, signal: null, error }));
+      child.once("close", (status, signal) => resolve({ status, signal }));
+    });
+    let monitor;
+    try {
+      if (child.pid)
+        monitor = watchElectronTestProcess(child, {
+          timeoutMs: 300_000,
+          reportFailure: (message) => observerFailures.push(message),
+        });
+      result = await completion;
+      if (monitor) processSettlement = await monitor.completed;
+    } catch (error) {
+      observerFailures.push("Native acceptance process identity could not be established");
+      result = { status: null, signal: null, error };
+      // Without a birth identity, signaling by PID is unsafe. Retain this
+      // private launch context and explicitly report unproven settlement.
+      child.unref();
+    } finally {
+      monitor?.();
+    }
   } finally {
     closeSync(stdout);
     closeSync(stderr);
@@ -140,7 +165,12 @@ export async function runPackagedUiAcceptance(args) {
   // Keep this scratch on failure or success. A timeout is not authorization to
   // remove any descendant's private HOME; the native fixture owns that decision.
   await mkdir(evidence, { recursive: true, mode: 0o700 });
-  const passed = !result.error && result.status === 0 && !result.signal;
+  const passed =
+    !result.error &&
+    result.status === 0 &&
+    !result.signal &&
+    processSettlement?.status === "cleaned" &&
+    observerFailures.length === 0;
   const report = {
     status: passed ? "passed" : "failed",
     sourceHead,
@@ -152,6 +182,8 @@ export async function runPackagedUiAcceptance(args) {
     code: result.status,
     signal: result.signal,
     errorCode: result.error?.code ?? null,
+    processSettlement: processSettlement ?? null,
+    observerFailures,
     retainedLauncherRoot: scratch,
     publishing: false,
     notarization: false,

@@ -138,6 +138,7 @@ export async function preparePackagedPetFixture({
         if (owned) {
           captured = child;
           children.push(child);
+          processMonitors.push(watchElectronTestProcess(child, { timeoutMs: 120_000 }));
           for (const stream of ["stdout", "stderr"])
             child[stream].on("data", (chunk) =>
               appendFileSync(join(isolated.home, `official-main-${child.pid}.${stream}`), chunk, {
@@ -176,7 +177,6 @@ export async function preparePackagedPetFixture({
         });
         const startupPause = await preload;
         assert.equal(captured, app.process(), "packaged executable was not captured at spawn");
-        processMonitors.push(watchElectronTestProcess(app.process(), { timeoutMs: 120_000 }));
         const identity = await app.evaluate(({ app }) => ({
           packaged: app.isPackaged,
           appPath: app.getAppPath(),
