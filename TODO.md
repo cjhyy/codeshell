@@ -35,6 +35,8 @@ P2 / P3、统一工作台等后续增强和新增第三方 Link / OAuth / token 
 
 ## 大功能升级（体量 L，分阶段落地）
 
+- **Link 连接器契约与运行时重构**（L，2026-10-16 设计稿，尚未实施）。按资源、操作、事件三类能力组合，授权方式与 API/MCP/CLI/浏览器执行通道独立建模。先修参数错误误判重连与 Host/Worker 状态同步，再增加动作契约协商、抽出通用运行时和 provider 包，以 Figma/GitHub 纵向迁移后覆盖现有连接器；保留托管、精确 grant、未知刷新与写操作账本。同步/Webhook/浏览器会话按实际需求后置，不启动第三方接入或部署。见[重构方案与分期验收](docs/todo/link-connector-refactor-plan-2026-10-16.md)。
+
 - **Figma Link：MCP 与 REST 统一能力**（L，2026-10-15 重新规划，新增部分尚未实施）。已有 REST 按需节点、导出、素材与评论读取保留；设计上下文、截图、变量和 Make resources 规划接入官方 MCP，独立 OAuth 与连接状态。先验证 CodeShell 客户端合法准入、补每次发送的 endpoint/credential 绑定及通用 MCP 资源协议，再做能力路由和新文件授权优化；不把已有 Link downstream grant 当作 MCP token，不自动启用画布写入。见[能力与分期规划](docs/todo/figma-link-mcp-plan.md)。本项不启动其他 provider 接入或正式发布。
 
 - **平台层收敛**（L，v1.0 方案已定）。统一 HostRuntime（`packages/host`）、Protocol v2（握手、Session/Turn/Item、两类续传、`client/*` 反向请求）、统一 PolicyEngine 与 ExecutionService、统一扩展包清单、集中契约版本，以及薄云端加沙箱任务。分 S0 快速修复、S1 地基、S2 多端、S3 生态与沙箱四阶段，与上方产品交付 P0／P1 分开排期。见[第 16 章](docs/architecture/16-platform-consolidation.md)与[目标架构图](docs/architecture/archify/platform-consolidation-target.architecture.html)。S0 已完成；S1 本批第 3–7 项已落代码（分发提取、workspace 回退、Panel unsupported、env/REPL 遗留及 Core-only HostRuntime 1.1 生产接线），326 项隔离单测、完整 typecheck 与 Desktop 主进程构建通过；上轮网络/监听受限项已由主控 `bg_125xe7` 严格安装→完整包 smoke→serve unsupported 单测链复验通过；本轮修复 CC 的 Desktop 打包依赖、Panel AskUser 与 unsupported 回复 id 缺陷，113 项定向回归和 14 工作区 typecheck 通过；同一 CC 复审确认原 3 项问题已关闭且无新增阻断；当前版本的冻结安装、完整包 smoke 与无签名包装边界验证已由正常宿主通过；PR #189 的 CI 进行中。PR #188 的 3 项非阻断 P2 在第 8 批先处理，见[修复清单](docs/todo/platform-pr188-followups.md)。第 8–14 项及 S2/S3 均未实施，依赖与验收见[首版实施清单](docs/todo/platform-first-version-plan.md)及第 16 章 §9.2。
