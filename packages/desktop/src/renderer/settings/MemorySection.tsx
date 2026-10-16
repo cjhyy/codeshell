@@ -335,6 +335,7 @@ export function MemoryStoreView({
   const [draftBaseline, setDraftBaseline] = useState<SaveMemoryInput | null>(null);
   const [saving, setSaving] = useState(false);
   const saveLock = React.useRef(false);
+  const storeGeneration = React.useRef(0);
   const refreshGeneration = React.useRef(0);
   const entryReadGeneration = React.useRef(0);
   const [error, setError] = useState<string | null>(null);
@@ -413,6 +414,7 @@ export function MemoryStoreView({
     setCleanupReviewOpen(false);
     setCleanupSelected(new Set());
     return () => {
+      storeGeneration.current += 1;
       refreshGeneration.current += 1;
       entryReadGeneration.current += 1;
     };
@@ -681,6 +683,8 @@ export function MemoryStoreView({
   /** Pin/unpin = re-save with the flag flipped (content fetched on demand). */
   const togglePin = async (entry: RendererMemoryEntry): Promise<void> => {
     if (saving) return;
+    // Complete the original pin, but keep its UI effects within this store visit.
+    const generation = storeGeneration.current;
     setError(null);
     try {
       const full = await window.codeshell.readMemory(level, scope, entry.name, cwd, profileName);
@@ -688,9 +692,12 @@ export function MemoryStoreView({
       await window.codeshell.saveMemory(
         buildPinSaveInput(full, !entry.pinned, level, scope, cwd, profileName),
       );
+      if (generation !== storeGeneration.current) return;
       await refresh();
+      if (generation !== storeGeneration.current) return;
       if (selected?.name === entry.name) await openEntry(entry.name);
     } catch (e: unknown) {
+      if (generation !== storeGeneration.current) return;
       setError(String(e instanceof Error ? e.message : e));
     }
   };
