@@ -704,7 +704,9 @@ describe("shared Link management", () => {
   test("create-only collision and stale rename/delete are rejected", async () => {
     const { service, store } = fixture();
     const original = await service.connectToken(owner, input);
-    await expect(service.connectToken(other, input)).rejects.toMatchObject({
+    await expect(
+      service.connectToken(other, { ...input, connectionId: original.id }),
+    ).rejects.toMatchObject({
       status: 409,
       code: "conflict",
     });

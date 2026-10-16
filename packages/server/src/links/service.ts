@@ -788,18 +788,6 @@ export function createLinkService(options: LinkServiceOptions = {}) {
   ): void {
     const current = records();
     if (current.projectIds.has(prepared.id)) throw new LinkServiceError(403, "read_only");
-    if (
-      !prepared.expected &&
-      next?.meta?.linkAccountId &&
-      current.credentials.some(
-        (credential) =>
-          credential.id !== prepared.id &&
-          credential.meta?.linkProvider === next.meta?.linkProvider &&
-          credential.meta?.linkConnectionMethod === next.meta?.linkConnectionMethod &&
-          credential.meta?.linkAccountId === next.meta?.linkAccountId,
-      )
-    )
-      throw new LinkServiceError(409, "conflict");
     if (!store.compareAndSwap("user", prepared.id, prepared.expected, next, retirement))
       throw new LinkServiceError(409, "conflict");
   }
