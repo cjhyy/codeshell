@@ -1,6 +1,27 @@
 export { LINK_PROVIDER_MANIFESTS, getLinkProviderManifest, localizeLinkText } from "./catalog.js";
 export { resolveLinkFileSelection } from "./file-selection.js";
 export {
+  LINK_CONNECTION_RECIPES,
+  getLinkConnectionRecipe,
+  resolveLinkRecipeId,
+} from "./recipes.js";
+export {
+  LinkOperationError,
+  type LinkValueSchema,
+  type LinkResourcePolicy,
+  type LinkOperationContract,
+  type LinkConnectionRecipe,
+  type LinkRecipeId,
+  type LinkOperationRequest,
+  type LinkOperationAuthorization,
+} from "./operation-types.js";
+export {
+  validateLinkOperationValue,
+  validateLinkOperationInput,
+  assertLinkOperationResult,
+  assertLinkOperationAuthorized,
+} from "./operation-validation.js";
+export {
   FIGMA_MCP_SERVER_URL,
   FIGMA_MCP_SCOPE,
   FIGMA_MCP_REGISTRATION_CLIENT_NAME,
