@@ -276,3 +276,12 @@ unique-coverage total. Package release verification again passed 10 tarballs and
 48 typed entries. Production lint, workflow formatting and script syntax passed.
 All 14 workspace typechecks passed again after sealing the package and restoring
 development workspace links.
+The tested wave was fast-forwarded into local `main`, with all five pre-existing
+modified/untracked paths verified byte-for-byte unchanged. Desktop then built
+successfully in the primary checkout. Its additional cold-start attempt was
+refused by `CODESHELL_KEYCHAIN_PREFLIGHT_IDENTITY_CHANGED` at `account-before`;
+the guard did not start that failing launch. The original log remains
+`recovery-wave-primary-startup.log`. A separate fresh-HOME repeat passed three
+cold launches/reloads and a second window, recorded in
+`recovery-wave-primary-startup-repeat.log`. This repeats the unclassified native
+environment issue and does not establish a cause or packaged encryption safety.
