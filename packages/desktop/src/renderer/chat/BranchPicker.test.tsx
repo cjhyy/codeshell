@@ -264,6 +264,62 @@ describe("BranchPicker context visibility", () => {
     expect(textOf(container)).toBe("project-b-main");
   });
 
+  test.each(["status", "status-error", "switch", "switch-error"] as const)(
+    "ignores a late %s reply after selecting A, B, then A with a new operation",
+    async (phase) => {
+      const oldStatus = deferred<{ clean: boolean }>();
+      const nextStatus = deferred<{ clean: boolean }>();
+      const lateStatus = phase.startsWith("status");
+      status = () => oldStatus.promise;
+      await render("project-a", "/repo-a");
+      await settle(0, repo());
+      await chooseFeature();
+      if (!lateStatus) {
+        await act(async () => {
+          oldStatus.resolve({ clean: true });
+          await flushMicrotasks();
+        });
+        expect(switches).toHaveLength(1);
+      }
+
+      await render("project-b", "/repo-b");
+      await settle(1, repo());
+      await render("project-a", "/repo-a");
+      await settle(2, repo());
+      status = () => nextStatus.promise;
+      await chooseFeature();
+      const expectedSwitches = lateStatus ? 0 : 1;
+      await act(async () => {
+        if (lateStatus) {
+          if (phase.endsWith("error")) oldStatus.reject(new Error("Old status rejected"));
+          else oldStatus.resolve({ clean: true });
+        } else if (phase.endsWith("error")) {
+          switches[0]!.pending.reject(new Error("Old switch rejected"));
+        } else {
+          switches[0]!.pending.resolve(repo("old-feature"));
+        }
+        await flushMicrotasks();
+      });
+      expect(switches).toHaveLength(expectedSwitches);
+      expect(props(buttons()[0]!)["aria-disabled"]).toBe(true);
+      expect(
+        descendants(document.body).filter((node) => props(node).role === "alert"),
+      ).toHaveLength(0);
+
+      await act(async () => {
+        nextStatus.resolve({ clean: true });
+        await flushMicrotasks();
+      });
+      expect(switches).toHaveLength(expectedSwitches + 1);
+      expect(switches[expectedSwitches]!.projectId).toBe("project-a");
+      await act(async () => {
+        switches[expectedSwitches]!.pending.resolve(repo("feature"));
+        await flushMicrotasks();
+      });
+      expect(textOf(container)).toBe("feature");
+    },
+  );
+
   test("an in-flight switch cannot overwrite a newly selected project's branch", async () => {
     await render("project-a", "/repo-a");
     await settle(0, repo());

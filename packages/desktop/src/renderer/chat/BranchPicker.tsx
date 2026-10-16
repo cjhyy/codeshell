@@ -264,19 +264,19 @@ export function BranchPicker({ projectId, cwd, clean, disabled }: Props) {
     return branches.current ?? t("chat.branch.detached");
   })();
 
-  const switchBranch = async (branch: string, stash = false): Promise<void> => {
+  const switchBranch = async (branch: string, operation: object, stash = false): Promise<void> => {
     if (!projectId || !cwd) return;
     try {
       const next = stash
         ? await window.codeshell.stashAndSwitchProjectGitBranch(projectId, branch)
         : await window.codeshell.switchProjectGitBranch(projectId, branch);
       notifyGitBranchesChanged(cwd);
-      if (targetRef.current !== target || !operationRef.current) return;
+      if (targetRef.current !== target || operationRef.current !== operation) return;
       setBranches(next);
       setState(next.isRepo && next.branches.length > 0 ? "ready" : "unavailable");
       closeMenu(true);
     } catch (err) {
-      if (targetRef.current !== target || !operationRef.current) return;
+      if (targetRef.current !== target || operationRef.current !== operation) return;
       setError(
         err instanceof Error
           ? err.message
@@ -293,7 +293,7 @@ export function BranchPicker({ projectId, cwd, clean, disabled }: Props) {
     setState("loading");
     setError(null);
     try {
-      await switchBranch(pendingBranch, true);
+      await switchBranch(pendingBranch, operation, true);
     } finally {
       if (operationRef.current === operation) operationRef.current = null;
     }
@@ -311,7 +311,7 @@ export function BranchPicker({ projectId, cwd, clean, disabled }: Props) {
     setError(null);
     try {
       const status = await window.codeshell.getProjectGitStatus(projectId);
-      if (targetRef.current !== target || !operationRef.current) return;
+      if (targetRef.current !== target || operationRef.current !== operation) return;
       // Dismissal during the status probe cancels an action that has not begun.
       if (!popupOwned.current) {
         setState("ready");
@@ -322,9 +322,9 @@ export function BranchPicker({ projectId, cwd, clean, disabled }: Props) {
         setPendingBranch(branch);
         return;
       }
-      await switchBranch(branch);
+      await switchBranch(branch, operation);
     } catch (err) {
-      if (targetRef.current !== target || !operationRef.current) return;
+      if (targetRef.current !== target || operationRef.current !== operation) return;
       setError(err instanceof Error ? err.message : t("chat.branch.switchFailed"));
       setState("ready");
     } finally {
