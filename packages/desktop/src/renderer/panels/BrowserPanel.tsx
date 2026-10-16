@@ -175,7 +175,7 @@ export function BrowserAddressField({
           void openExternally();
         }}
         placeholder={t("panels.browser.addressPlaceholder")}
-        className="h-8 flex-1"
+        className="h-8 min-w-0 flex-1"
       />
       {menu && (
         <ContextMenu
@@ -408,7 +408,7 @@ export function BrowserPanel({
   const { selectorMissFor } = useMarkerEcho(viewRef, visibleMarkers, editingMarker);
 
   return (
-    <div className="flex min-h-0 flex-1 flex-col bg-background">
+    <div className="@container/browser-panel flex min-h-0 min-w-0 flex-1 flex-col bg-background">
       {/* Tab strip */}
       <div className="flex shrink-0 items-center gap-1 border-b border-border px-2 py-1">
         {/* Tabs scroll horizontally when they overflow; the + button stays
@@ -461,7 +461,7 @@ export function BrowserPanel({
       </div>
 
       {/* Address bar */}
-      <div className="flex shrink-0 items-center gap-1 border-b border-border px-2 py-1.5">
+      <div className="flex min-w-0 shrink-0 flex-wrap items-center gap-1 border-b border-border px-2 py-1.5">
         <IconBtn
           disabled={!nav.canGoBack}
           onClick={() => viewRef.current?.goBack()}
@@ -485,108 +485,110 @@ export function BrowserPanel({
           onDraftChange={(draft) => patchTab(activeId, { draft })}
           onNavigate={navigate}
         />
-        <IconBtn
-          onClick={() => void startPicking()}
-          disabled={active.url === NEW_TAB || selecting}
-          label={selecting ? t("panels.browser.picking") : t("panels.browser.pickElement")}
-          active={selecting}
-        >
-          <MousePointerSquareDashed className="h-4 w-4" />
-        </IconBtn>
-        {markers.length > 0 && (
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button
-                type="button"
-                variant="ghost"
-                size="sm"
-                className="relative h-8 gap-1 px-1.5 text-muted-foreground"
-                title={t("panels.browser.markers", {
-                  total: markers.length,
-                  visible: visibleMarkers.length,
-                })}
-              >
-                <MapPin className="h-4 w-4" />
-                <span className="text-xs tabular-nums">{markers.length}</span>
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="max-h-96 w-80 overflow-y-auto">
-              {groupMarkersByPage(markers).map((group, gi) => (
-                <React.Fragment key={group.url}>
-                  {gi > 0 && <DropdownMenuSeparator />}
-                  <DropdownMenuLabel className="truncate text-xs font-normal text-muted-foreground">
-                    {group.title}
-                    {urlsMatch(group.url, active.url) ? t("panels.browser.onThisPage") : ""}
-                  </DropdownMenuLabel>
-                  {group.markers.map((m) => (
-                    <DropdownMenuItem
-                      key={m.anchor.id}
-                      onSelect={() => {
-                        // Same page: just open the marker. Another page:
-                        // navigate there first — the echo engine re-highlights
-                        // after dom-ready, and the dot appears once
-                        // active.url matches.
-                        if (!urlsMatch(group.url, active.url)) navigate(group.url);
-                        setEditingMarker(m.anchor.id);
-                      }}
-                    >
-                      <span className="truncate">
-                        <span className="font-medium">{m.anchor.label}</span>
-                        {m.anchor.comment ? ` · ${m.anchor.comment}` : ""}
-                      </span>
-                    </DropdownMenuItem>
-                  ))}
-                </React.Fragment>
-              ))}
-            </DropdownMenuContent>
-          </DropdownMenu>
-        )}
-        {showPopout && (
+        <div className="flex min-w-0 items-center gap-1 @max-[560px]/browser-panel:w-full @max-[560px]/browser-panel:justify-end">
           <IconBtn
-            onClick={() =>
-              void window.codeshell.openBrowserPopout(
-                active.url === NEW_TAB ? undefined : active.url,
-              )
-            }
-            label={t("panels.browser.popout")}
+            onClick={() => void startPicking()}
+            disabled={active.url === NEW_TAB || selecting}
+            label={selecting ? t("panels.browser.picking") : t("panels.browser.pickElement")}
+            active={selecting}
           >
-            <PictureInPicture2 className="h-4 w-4" />
+            <MousePointerSquareDashed className="h-4 w-4" />
           </IconBtn>
-        )}
-        {engineSessionId && (
+          {markers.length > 0 && (
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  className="relative h-8 gap-1 px-1.5 text-muted-foreground"
+                  title={t("panels.browser.markers", {
+                    total: markers.length,
+                    visible: visibleMarkers.length,
+                  })}
+                >
+                  <MapPin className="h-4 w-4" />
+                  <span className="text-xs tabular-nums">{markers.length}</span>
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="max-h-96 w-80 overflow-y-auto">
+                {groupMarkersByPage(markers).map((group, gi) => (
+                  <React.Fragment key={group.url}>
+                    {gi > 0 && <DropdownMenuSeparator />}
+                    <DropdownMenuLabel className="truncate text-xs font-normal text-muted-foreground">
+                      {group.title}
+                      {urlsMatch(group.url, active.url) ? t("panels.browser.onThisPage") : ""}
+                    </DropdownMenuLabel>
+                    {group.markers.map((m) => (
+                      <DropdownMenuItem
+                        key={m.anchor.id}
+                        onSelect={() => {
+                          // Same page: just open the marker. Another page:
+                          // navigate there first — the echo engine re-highlights
+                          // after dom-ready, and the dot appears once
+                          // active.url matches.
+                          if (!urlsMatch(group.url, active.url)) navigate(group.url);
+                          setEditingMarker(m.anchor.id);
+                        }}
+                      >
+                        <span className="truncate">
+                          <span className="font-medium">{m.anchor.label}</span>
+                          {m.anchor.comment ? ` · ${m.anchor.comment}` : ""}
+                        </span>
+                      </DropdownMenuItem>
+                    ))}
+                  </React.Fragment>
+                ))}
+              </DropdownMenuContent>
+            </DropdownMenu>
+          )}
+          {showPopout && (
+            <IconBtn
+              onClick={() =>
+                void window.codeshell.openBrowserPopout(
+                  active.url === NEW_TAB ? undefined : active.url,
+                )
+              }
+              label={t("panels.browser.popout")}
+            >
+              <PictureInPicture2 className="h-4 w-4" />
+            </IconBtn>
+          )}
+          {engineSessionId && (
+            <IconBtn
+              onClick={() => void toggleRuntimeHandoff()}
+              disabled={active.url === NEW_TAB || handoffBusy || !activeGuestReady}
+              label={t(
+                handoff.granted
+                  ? "panels.browser.revokeRuntimeHandoff"
+                  : "panels.browser.grantRuntimeHandoff",
+              )}
+              active={handoff.granted}
+            >
+              <ShieldCheck className="h-4 w-4" />
+            </IconBtn>
+          )}
+          {engineSessionId && (
+            <IconBtn
+              onClick={() => void toggleChromeRuntime()}
+              disabled={chromeBusy}
+              label={t(
+                chromeRuntime.granted || chromeRuntime.pairing
+                  ? "panels.browser.revokeChromeRuntime"
+                  : "panels.browser.connectChromeRuntime",
+              )}
+              active={Boolean(chromeRuntime.granted || chromeRuntime.pairing)}
+            >
+              <PlugZap className="h-4 w-4" />
+            </IconBtn>
+          )}
           <IconBtn
-            onClick={() => void toggleRuntimeHandoff()}
-            disabled={active.url === NEW_TAB || handoffBusy || !activeGuestReady}
-            label={t(
-              handoff.granted
-                ? "panels.browser.revokeRuntimeHandoff"
-                : "panels.browser.grantRuntimeHandoff",
-            )}
-            active={handoff.granted}
+            onClick={() => void openExternally(active.url)}
+            label={t("panels.browser.openExternal")}
           >
-            <ShieldCheck className="h-4 w-4" />
+            <ExternalLink className="h-4 w-4" />
           </IconBtn>
-        )}
-        {engineSessionId && (
-          <IconBtn
-            onClick={() => void toggleChromeRuntime()}
-            disabled={chromeBusy}
-            label={t(
-              chromeRuntime.granted || chromeRuntime.pairing
-                ? "panels.browser.revokeChromeRuntime"
-                : "panels.browser.connectChromeRuntime",
-            )}
-            active={Boolean(chromeRuntime.granted || chromeRuntime.pairing)}
-          >
-            <PlugZap className="h-4 w-4" />
-          </IconBtn>
-        )}
-        <IconBtn
-          onClick={() => void openExternally(active.url)}
-          label={t("panels.browser.openExternal")}
-        >
-          <ExternalLink className="h-4 w-4" />
-        </IconBtn>
+        </div>
       </div>
 
       {handoff.granted && (
