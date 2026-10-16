@@ -26,6 +26,7 @@ import {
   navigateSettingsMenu,
   seedSessionCatalog,
 } from "./electron-harness.mjs";
+import { settingsNetworkGuard } from "./settings-network-guard.mjs";
 
 const appDir = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const isolated = await makeIsolatedElectronHome("codeshell-themes-e2e-");
@@ -486,6 +487,7 @@ try {
   });
   const rootZip = await zipFixture(legacy, "legacy-root.zip");
   const wrappedZip = await zipFixture(rich, "surface-theme.zip", "surface-theme/");
+  const networkGuard = await settingsNetworkGuard(isolated.home);
   app = await launchCodeShellElectron({
     appDir,
     home: isolated.home,
@@ -493,9 +495,10 @@ try {
     // Bundled skins, background playback and source-pack imports extend
     // this smoke beyond the harness's default three-minute runtime budget.
     runtimeTimeoutMs: 300_000,
+    mainBootstrap: networkGuard.mainBootstrap,
     // The outer guarded runner owns a different fixture HOME. Keep the Core
     // test-runner fallback attached to this Electron profile as well.
-    env: { CODE_SHELL_TEST_HOME: isolated.codeShellHome },
+    env: { ...networkGuard.env, CODE_SHELL_TEST_HOME: isolated.codeShellHome },
   });
   app.process().stderr?.on("data", (chunk) => {
     processLog = (processLog + chunk).slice(-20_000);
@@ -786,6 +789,10 @@ try {
   assert(
     errors.length === 0,
     `Renderer errors: ${errors.map((error) => error.message).join("; ")}`,
+  );
+  assert(
+    (await app.evaluate(() => globalThis.__staticSettingsNetworkAttempts)) === 0,
+    "Offline theme settings attempted network access",
   );
   if (screenshotDir)
     await writeFile(join(screenshotDir, "report.json"), JSON.stringify(report, null, 2));
