@@ -55,6 +55,8 @@ export interface PageRenderContext {
   activeProjectId?: string | null;
   /** Start a conversation from a standalone page through the host's normal flow. */
   onNewSession?: () => void;
+  /** Open durable history through the host's project-aware session navigation. */
+  onOpenSession?: (id: string) => void | boolean | Promise<void | boolean>;
   /** Update the host's cached session metadata after successful history-page mutations. */
   onSessionRenamed?: (id: string, title: string) => void;
   onSessionDeleted?: (id: string) => void;
@@ -91,7 +93,12 @@ const RunsView: LazyExoticComponent<ComponentType<{ initialRunId?: string | null
   import("../runs/RunsView").then((module) => ({ default: module.RunsView })),
 );
 const SessionsView: LazyExoticComponent<
-  ComponentType<Pick<PageRenderContext, "onNewSession" | "onSessionRenamed" | "onSessionDeleted">>
+  ComponentType<
+    Pick<
+      PageRenderContext,
+      "onNewSession" | "onOpenSession" | "onSessionRenamed" | "onSessionDeleted"
+    >
+  >
 > = lazy(() =>
   import("../sessions/SessionsView").then((module) => ({ default: module.SessionsView })),
 );
@@ -183,8 +190,13 @@ const BUILTIN_PAGE_ENTRIES: PageEntry[] = [
     key: "sessions",
     title: { kind: "i18n", key: "panels.palette.openSessions" },
     icon: MessageSquare,
-    render: ({ onNewSession, onSessionRenamed, onSessionDeleted }) =>
-      createElement(SessionsView, { onNewSession, onSessionRenamed, onSessionDeleted }),
+    render: ({ onNewSession, onOpenSession, onSessionRenamed, onSessionDeleted }) =>
+      createElement(SessionsView, {
+        onNewSession,
+        onOpenSession,
+        onSessionRenamed,
+        onSessionDeleted,
+      }),
   }),
 ];
 

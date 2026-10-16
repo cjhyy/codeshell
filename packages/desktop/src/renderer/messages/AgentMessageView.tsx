@@ -1,31 +1,10 @@
 import React, { useState, memo } from "react";
-import type { AgentMessage, ToolMessage } from "../types";
+import type { AgentMessage } from "../types";
 import { StatusDot } from "../ui/StatusDot";
-import { ToolCard } from "../tool-cards";
 import { StreamingMarkdown } from "./StreamingMarkdown";
-import { summarizeAgentActivity, describeActivity } from "../topbar/liveActivity";
 import { useT } from "../i18n/I18nProvider";
 import { useSubagentNavigation } from "../subagents/SubagentNavigation";
-
-// Text deltas keep the tools array stable. Avoid walking the operation list on
-// every token; ToolCard also memoizes individual calls when one tool changes.
-const AgentToolCalls = memo(function AgentToolCalls({ tools }: { tools: ToolMessage[] }) {
-  const { t } = useT();
-  return (
-    <section aria-label={t("msg.agent.activity")} className="flex min-w-0 flex-col gap-2">
-      <div className="text-xs font-medium text-muted-foreground">
-        {t("msg.agent.activity")} · {t("msg.agent.operationCount", { count: tools.length })}
-      </div>
-      <div className="flex max-h-[28rem] min-w-0 flex-col gap-2 overflow-auto overscroll-contain">
-        {tools.map((tool) => (
-          // A child can use a different workspace. Do not resolve its paths
-          // against the parent session's cwd.
-          <ToolCard key={tool.id} message={tool} />
-        ))}
-      </div>
-    </section>
-  );
-});
+import { Bot, ChevronDown, ChevronRight, ArrowUpRight } from "lucide-react";
 
 function AgentMessageViewImpl({ message }: { message: AgentMessage }) {
   const { t } = useT();
@@ -37,122 +16,104 @@ function AgentMessageViewImpl({ message }: { message: AgentMessage }) {
   // explicitly so the gap after the parent turn ends no longer looks idle. A
   // backgrounded agent whose heartbeat went stale (>90s = 3× the 30s ping) is
   // flagged "可能失联".
-  const isBackgrounded = !!message.backgrounded && !message.done;
+  const isBackgrounded = !!message.backgrounded && !message.done && !message.error;
   const lostContact =
     isBackgrounded &&
     message.lastHeartbeat !== undefined &&
     Date.now() - message.lastHeartbeat > 90_000;
 
-  // Keep the current operation visible without opening the full activity.
-  const liveText =
-    !message.done && message.toolCalls.length > 0
-      ? describeActivity(summarizeAgentActivity(message.toolCalls))
-      : null;
-
   const bodyText = (message.text ?? "") + (message.textBuffer ?? "");
   const hasText = bodyText.trim().length > 0;
-  const hasTools = message.toolCalls.length > 0;
-  const hasBody =
-    hasTools || hasText || !!message.error || !!message.description.trim() || !!navigation;
+  const hasBody = !message.done || hasText || !!message.error || !!message.description.trim();
+  const isExpanded = expanded && hasBody;
+  const statusText = message.error
+    ? t("msg.agent.failed")
+    : message.done
+      ? t("msg.agent.completed")
+      : lostContact
+        ? t("msg.agent.mayBeLost")
+        : isBackgrounded
+          ? t("msg.agent.backgrounded")
+          : t("msg.agent.running");
 
   return (
-    <div className="min-w-0 max-w-full px-4 py-1">
-      <div className="min-w-0 max-w-full rounded-lg border border-border">
-        <button
-          type="button"
-          className="flex w-full min-w-0 items-center gap-2 px-3 py-2 text-left text-sm disabled:cursor-default"
-          onClick={() => setExpanded((v) => !v)}
-          aria-expanded={expanded}
-          aria-controls={`agent-body-${message.id}`}
-          disabled={!hasBody}
-        >
-          <StatusDot status={status} />
-          <span className="max-w-[35%] shrink-0 truncate font-medium" title={message.name}>
-            {message.name ?? t("msg.agent.fallbackName")}
-          </span>
-          {message.agentType && (
-            <span className="shrink-0 rounded bg-muted px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-wide text-muted-foreground">
-              {message.agentType}
+    <div className="cs-agent" data-message-kind="agent">
+      <div className="cs-agent-card">
+        <div className="cs-agent-header">
+          <button
+            type="button"
+            className="cs-agent-heading"
+            onClick={() => setExpanded((v) => !v)}
+            aria-expanded={isExpanded}
+            aria-controls={`agent-body-${message.id}`}
+            disabled={!hasBody}
+          >
+            <span className="cs-agent-icon" aria-hidden="true">
+              <Bot size={17} />
             </span>
-          )}
-          {isBackgrounded && (
-            <span
-              className={
-                "shrink-0 rounded px-1.5 py-0.5 text-[10px] font-medium " +
-                (lostContact
-                  ? "bg-status-warn/15 text-status-warn"
-                  : "bg-status-running/15 text-status-running")
+            <span className="cs-agent-heading-main">
+              <span className="cs-agent-title-row">
+                <span className="cs-agent-name" title={message.name}>
+                  {message.name ?? t("msg.agent.fallbackName")}
+                </span>
+                {message.agentType && <span className="cs-agent-type">{message.agentType}</span>}
+                <span className="cs-agent-status" data-status={lostContact ? "warn" : status}>
+                  <StatusDot status={lostContact ? "warn" : status} />
+                  {statusText}
+                </span>
+              </span>
+              {!isExpanded && message.description.trim() && (
+                <span className="cs-agent-description" title={message.description}>
+                  {message.description}
+                </span>
+              )}
+            </span>
+            {hasBody && (
+              <span className="cs-agent-disclosure">
+                <span>{isExpanded ? t("msg.agent.hideDetails") : t("msg.agent.showDetails")}</span>
+                {isExpanded ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
+              </span>
+            )}
+          </button>
+          {navigation && (
+            <button
+              type="button"
+              className="cs-agent-transcript"
+              onClick={() =>
+                navigation.onView({
+                  agentId: message.id,
+                  parentSessionId: navigation.sessionId,
+                  label: message.description || message.name,
+                  running: !message.done,
+                  agents: navigation.agents,
+                })
               }
             >
-              {lostContact ? t("msg.agent.mayBeLost") : t("msg.agent.backgrounded")}
-            </span>
+              {t("msg.agent.transcript")}
+              <ArrowUpRight size={13} aria-hidden="true" />
+            </button>
           )}
-          <span className="min-w-0 flex-1 truncate text-muted-foreground">
-            {message.description}
-          </span>
-          {/* Right side: live activity while running, else a quiet tool count. */}
-          {liveText ? (
-            <span className="min-w-0 max-w-[45%] shrink truncate text-xs text-muted-foreground">
-              {liveText}
-            </span>
-          ) : message.toolCount > 0 ? (
-            <span className="shrink-0 text-xs text-muted-foreground">
-              {t("msg.agent.toolCount", { count: message.toolCount })}
-            </span>
-          ) : null}
-          {hasBody && (
-            <span className="shrink-0 text-xs text-muted-foreground">
-              {expanded ? t("msg.agent.hideDetails") : t("msg.agent.showDetails")}{" "}
-              {expanded ? "▾" : "▸"}
-            </span>
-          )}
-        </button>
-        {expanded && (
-          <div
-            id={`agent-body-${message.id}`}
-            className="flex min-w-0 flex-col gap-3 border-t border-border p-3"
-          >
-            {navigation && (
-              <button
-                type="button"
-                className="self-start rounded px-2 py-1 text-xs text-primary hover:bg-accent"
-                onClick={() =>
-                  navigation.onView({
-                    agentId: message.id,
-                    parentSessionId: navigation.sessionId,
-                    label: message.description || message.name,
-                    running: !message.done,
-                  })
-                }
-              >
-                {t("msg.agent.transcript")}
-              </button>
-            )}
+        </div>
+        {isExpanded && (
+          <div id={`agent-body-${message.id}`} className="cs-agent-body">
             {message.description.trim() && (
-              <section aria-label={t("msg.agent.task")} className="min-w-0">
-                <div className="mb-1 text-xs font-medium text-muted-foreground">
-                  {t("msg.agent.task")}
-                </div>
-                <div className="whitespace-pre-wrap break-words text-sm">{message.description}</div>
+              <section aria-label={t("msg.agent.task")} className="cs-agent-task">
+                <div className="cs-agent-section-heading">{t("msg.agent.task")}</div>
+                <div className="cs-agent-task-text">{message.description}</div>
               </section>
             )}
-            {hasTools && <AgentToolCalls tools={message.toolCalls} />}
             {hasText && (
-              <section aria-label={t("msg.agent.output")} className="min-w-0 text-sm">
-                <div className="mb-1 text-xs font-medium text-muted-foreground">
-                  {t("msg.agent.output")}
-                </div>
-                {/* StreamingMarkdown handles incremental rendering. As with
-                    child tool cards, leave the parent's cwd out of path links. */}
+              <section aria-label={t("msg.agent.output")} className="cs-agent-output">
+                <div className="cs-agent-section-heading">{t("msg.agent.output")}</div>
+                {/* A child can have a different workspace. Leave the parent's
+                    cwd out of its path links. */}
                 <StreamingMarkdown text={bodyText} done={message.done} />
               </section>
             )}
-            {!message.done && !hasTools && !hasText && !message.error && (
-              <div className="text-sm text-muted-foreground">
-                {t("msg.agent.waitingForActivity")}
-              </div>
+            {message.error && <div className="cs-agent-error">{message.error}</div>}
+            {!message.done && !hasText && !message.error && (
+              <div className="text-sm text-muted-foreground">{t("msg.agent.waitingForResult")}</div>
             )}
-            {message.error && <div className="text-sm text-status-err">{message.error}</div>}
           </div>
         )}
       </div>
@@ -165,8 +126,7 @@ function AgentMessageViewImpl({ message }: { message: AgentMessage }) {
  * sibling cards. Reducer produces a new AgentMessage object only when
  * that agent's own event arrives, so shallow comparison is correct.
  *
- * Operation details are mounted only when requested, so collapsed agents stay
- * cheap during stream batches. Expanded agents reuse the normal tool cards for
- * commands, file changes, results and errors.
+ * The card summarizes the task, status and result. Detailed activity remains
+ * available through the child conversation rather than duplicating its tools.
  */
 export const AgentMessageView = memo(AgentMessageViewImpl);

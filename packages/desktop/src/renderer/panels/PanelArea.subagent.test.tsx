@@ -69,7 +69,18 @@ test("child conversations open in a retained dock tab while the parent stream an
   Object.defineProperty(window, "codeshell", {
     configurable: true,
     value: {
-      listDiskSessions: async () => ({ sessions: [], nextCursor: null }),
+      listDiskSessions: async () => ({
+        sessions: ["first", "second"].map((id) => ({
+          id,
+          engineSessionId: id,
+          title: `Title ${id}`,
+          cwd: "/repo",
+          origin: "subagent",
+          status: "completed",
+          updatedAt: 1,
+        })),
+        nextCursor: null,
+      }),
       getSessionTranscript: async (id: string) => {
         reads.push(id);
         return [{ kind: "user", text: `Transcript ${id}` }];
@@ -141,9 +152,13 @@ test("child conversations open in a retained dock tab while the parent stream an
     }
     const header = findHeader();
     expect(header).toBeDefined();
-    if (props(header)["aria-expanded"] === false) await click(header);
-    const body = nodes(main, "DIV").find((node) => props(node).id === `agent-body-${id}`);
-    await click(nodes(body, "BUTTON").find((node) => text(node) === "完整对话"));
+    expect(props(header)["aria-expanded"]).toBe(false);
+    const card = nodes(main, "DIV").find(
+      (node) =>
+        props(node)["data-message-kind"] === "agent" && nodes(node, "BUTTON").includes(header),
+    );
+    await click(nodes(card, "BUTTON").find((node) => text(node) === "完整对话"));
+    expect(props(findHeader())["aria-expanded"]).toBe(false);
   }
   await openAgent("first");
   expect(reads).toContain("first");
@@ -158,6 +173,7 @@ test("child conversations open in a retained dock tab while the parent stream an
     "Transcript first",
   );
   expect(text(main)).not.toContain("Transcript first");
+  expect(nodes(container, "BUTTON").some((node) => props(node).role === "combobox")).toBe(false);
 
   await openAgent("second");
   tab = nodes(container, "BUTTON").find((node) => props(node).role === "tab");
@@ -165,6 +181,8 @@ test("child conversations open in a retained dock tab while the parent stream an
   expect(text(tab)).toContain("second");
   expect(text(container)).toContain("Transcript second");
   expect(text(container)).not.toContain("Transcript first");
+  expect(reads).toEqual(["first", "second"]);
+  expect(nodes(container, "BUTTON").some((node) => props(node).role === "combobox")).toBe(false);
   expect(nodes(main, "TEXTAREA")[0]).toBe(draft);
 
   await click(

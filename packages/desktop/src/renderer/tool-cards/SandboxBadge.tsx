@@ -19,7 +19,7 @@ export function SandboxBadge({ sandbox }: { sandbox: NonNullable<ToolMessage["sa
   if (sandbox.backend === "off") {
     return (
       <span
-        className="flex shrink-0 items-center gap-1 rounded border border-border px-1.5 text-xs text-muted-foreground"
+        className="flex shrink-0 items-center gap-1 rounded border border-border/60 px-1 text-[10px] leading-4 text-muted-foreground"
         title={t("msg.sandbox.offTitle")}
       >
         <ShieldOff size={11} />
@@ -30,8 +30,11 @@ export function SandboxBadge({ sandbox }: { sandbox: NonNullable<ToolMessage["sa
   const net = sandbox.network ? t(`msg.sandbox.net.${sandbox.network}`) : "";
   return (
     <span
-      className="flex shrink-0 items-center gap-1 rounded border border-status-ok/40 px-1.5 text-xs text-status-ok"
-      title={t("msg.sandbox.onTitle", { backend: sandbox.backend, network: net ? ` · ${net}` : "" })}
+      className="flex shrink-0 items-center gap-1 rounded border border-status-ok/40 px-1 text-[10px] leading-4 text-status-ok"
+      title={t("msg.sandbox.onTitle", {
+        backend: sandbox.backend,
+        network: net ? ` · ${net}` : "",
+      })}
     >
       <ShieldCheck size={11} />
       {sandbox.backend}

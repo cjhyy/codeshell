@@ -44,6 +44,7 @@ import type { MediaPreviewRequest, MediaPreviewResult } from "../shared/media-pr
 import type { InstalledThemePack, ThemeImportKind, ThemePickPreview } from "../shared/theme-packs";
 import type { RendererConfigurationTarget } from "../shared/renderer-configuration";
 import type { ExternalRuntimeModelEntry } from "../shared/external-runtime-models";
+import type { PanelAppWindowTarget } from "../shared/panel-apps";
 import type { GoalConfig } from "@cjhyy/code-shell-core";
 import type {
   LocalPluginPreview,
@@ -1652,6 +1653,9 @@ contextBridge.exposeInMainWorld("codeshell", {
     ipcRenderer.invoke("browser:probePorts", ports),
   /** Open the standalone browser window, optionally at an initial URL. */
   openBrowserPopout: (initialUrl?: string) => ipcRenderer.invoke("browser:popout", initialUrl),
+  /** Open a separate view of a project-bound installed Panel App. */
+  openPanelAppWindow: (target: PanelAppWindowTarget): Promise<void> =>
+    ipcRenderer.invoke("panel-apps:open-window", target),
   /** From a popout: send an element-pick anchor back to the parent window. */
   sendBrowserAnchor: (anchor: unknown) => ipcRenderer.send("browser:anchor", anchor),
   /** In the parent: receive anchors forwarded from a popout. Returns unsubscribe. */

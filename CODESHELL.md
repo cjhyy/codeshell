@@ -167,6 +167,9 @@ evaluations use their separate, explicitly authorized workflow.
   when dependency packages are already built.
 - **Two hard ESLint guardrails** (in `eslint.config.js`):
   - `packages/core/**` MUST NOT import `@cjhyy/code-shell-tui` (core is UI-agnostic).
+    Core may consume the dependency-free `@cjhyy/code-shell-link` public provider
+    contract; other product/Host workspace dependencies and private Link entries
+    remain forbidden.
   - `packages/desktop/src/renderer/**` may runtime-import only the reviewed browser-safe
     `@cjhyy/code-shell-core/browser/panel-app-runtime` and `@cjhyy/code-shell-web` entries.
     Everything else must cross `window.codeshell.*`; type-only imports remain allowed.

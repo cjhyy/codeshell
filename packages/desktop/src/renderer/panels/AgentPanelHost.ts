@@ -39,22 +39,24 @@ export function resolveAgentPanelHostRequest(
   },
 ): Promise<AgentPanelHostResponse> {
   if (request.action === "list") {
-    const panels = getEnabledPanelEntries(options.availability).map((entry) => ({
-      id: entry.key,
-      title: panelEntryTitle(entry, options.translate),
-      source:
-        entry.owner.kind === "panel-app"
-          ? ("panel-app" as const)
-          : entry.owner.kind === "builtin-panel-app"
-            ? ("builtin-panel-app" as const)
-            : ("builtin" as const),
-    }));
+    const panels = getEnabledPanelEntries(options.availability)
+      .filter((entry) => !entry.internalOnly)
+      .map((entry) => ({
+        id: entry.key,
+        title: panelEntryTitle(entry, options.translate),
+        source:
+          entry.owner.kind === "panel-app"
+            ? ("panel-app" as const)
+            : entry.owner.kind === "builtin-panel-app"
+              ? ("builtin-panel-app" as const)
+              : ("builtin" as const),
+      }));
     return Promise.resolve({ requestId: request.requestId, result: { ok: true, panels } });
   }
 
   const panelId = request.panelId ?? "";
   const entry = getPanelEntry(panelId, options.availability);
-  if (!entry || !entry.enabled(options.availability)) {
+  if (!entry || entry.internalOnly || !entry.enabled(options.availability)) {
     return Promise.resolve({
       requestId: request.requestId,
       result: { ok: false, panelId, detail: `panel '${panelId}' is unavailable` },

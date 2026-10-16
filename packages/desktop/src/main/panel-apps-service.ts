@@ -18,6 +18,7 @@ import { isPanelAppAvailable, summarizePanelApp, type PanelAppPolicy } from "./p
 import { createPanelAppPolicyMemo } from "./panel-app-policy-memo.js";
 
 import { createDesktopPanelManagement } from "./panel-app-management.js";
+import { PanelAppDiscoveryQueue } from "./panel-app-discovery-queue.js";
 
 function localizedTitle(app: InstalledPanelApp, locale: string): string {
   return locale.toLowerCase().startsWith("zh")
@@ -260,7 +261,7 @@ export async function listPanelAppExtensions(
   });
 }
 
-const projectDiscoveries = new Map<string, object>();
+const projectDiscoveries = new PanelAppDiscoveryQueue();
 
 /** Runtime variants keep the stable dock ID but select package bytes per project. */
 export async function listPanelAppsForProjects(
@@ -281,18 +282,19 @@ export async function listPanelAppsForProjects(
     byCanonical.set(canonical, paths);
   }
   for (const [canonical, paths] of byCanonical) {
-    const discovery = {};
-    projectDiscoveries.set(canonical, discovery);
-    const discovered = await discoverPanelApps(locale, canonical);
-    if (projectDiscoveries.get(canonical) !== discovery) continue;
-    projectDiscoveries.delete(canonical);
-    const policy = panelAppPolicy(canonical);
-    const enabled = discovered.descriptors.filter((app) => isPanelAppAvailable(app, policy));
-    const enabledHosts = new Set(enabled.map((app) => app.hostId));
-    replacePanelAppResources(
-      discovered.resources.filter((resource) => enabledHosts.has(resource.descriptor.hostId)),
-      canonical,
-    );
+    // Every caller needs a complete snapshot. Dropping an older overlapping
+    // read made a normal refresh look like all of this project's apps vanished.
+    const enabled = await projectDiscoveries.read(canonical, async () => {
+      const discovered = await discoverPanelApps(locale, canonical);
+      const policy = panelAppPolicy(canonical);
+      const available = discovered.descriptors.filter((app) => isPanelAppAvailable(app, policy));
+      const enabledHosts = new Set(available.map((app) => app.hostId));
+      replacePanelAppResources(
+        discovered.resources.filter((resource) => enabledHosts.has(resource.descriptor.hostId)),
+        canonical,
+      );
+      return available;
+    });
     for (const app of enabled) {
       const bound = (boundProjectPathsByAppId[app.appId] ??= []);
       for (const projectPath of paths) if (!bound.includes(projectPath)) bound.push(projectPath);

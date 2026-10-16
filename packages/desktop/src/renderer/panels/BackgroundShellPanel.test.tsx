@@ -100,6 +100,44 @@ async function filesChanged() {
 }
 
 describe("BackgroundShellPanel request ownership", () => {
+  test("keeps subagent status fresh without exposing transcript navigation", async () => {
+    let child: Extract<BackgroundWorkInfo, { kind: "subagent" }> = {
+      kind: "subagent",
+      agentId: "background-child",
+      description: "Read the background document",
+      agentType: "explorer",
+      status: "running",
+      startedAt: 1,
+      sourceSession: { sessionId: "original-parent", shortId: "original", current: false },
+    };
+    const requests: unknown[] = [];
+    const transcriptReads: string[] = [];
+    api({
+      listBackgroundWork: async (sessionId: string, options: unknown) => {
+        requests.push({ sessionId, options });
+        return { items: [child] };
+      },
+      getSessionTranscript: async (id: string) => {
+        transcriptReads.push(id);
+        return [];
+      },
+    });
+    const container = await mount("viewed-parent");
+    const row = () => nodes(container, "LI").find((node) => text(node).includes(child.description));
+    expect(text(row())).toContain("original");
+    expect(text(row())).toContain("explorer");
+    expect(text(row())).toMatch(/运行中|running/i);
+    expect(nodes(row(), "BUTTON")).toHaveLength(0);
+    expect(nodes(row(), "A")).toHaveLength(0);
+    expect(requests).toEqual([{ sessionId: "viewed-parent", options: { scope: "all" } }]);
+
+    child = { ...child, status: "completed", finishedAt: 2 };
+    await filesChanged();
+    expect(text(row())).toMatch(/已完成|completed/i);
+    expect(nodes(row(), "BUTTON")).toHaveLength(0);
+    expect(transcriptReads).toEqual([]);
+  });
+
   test("a late output from the previous shell cannot replace the selected shell", async () => {
     const a = deferred<{ header: string; text: string }>();
     const b = deferred<{ header: string; text: string }>();

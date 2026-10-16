@@ -33,6 +33,7 @@ import type {
   LocalLinkProviderSpec,
   LocalLinkProviderSummary,
 } from "./types.js";
+import { FIGMA_MCP_ACTION_IDS, isFigmaMcpAction } from "@cjhyy/code-shell-link";
 
 const bearer = (token: string): Record<string, string> => ({ Authorization: `Bearer ${token}` });
 const gitlabHeaders = (ctx: { token: string; authKind?: "token" | "oauth" }) =>
@@ -571,6 +572,43 @@ const figma: LocalLinkProviderSpec = {
     action("get_comments", "读取评论", "用 file_url_or_key 读取 Figma 文件评论。", (ctx) =>
       executeFigmaAction("get_comments", ctx),
     ),
+    ...FIGMA_MCP_ACTION_IDS.map((id) =>
+      action(
+        id,
+        {
+          get_metadata: "读取 MCP 节点目录",
+          get_design_context: "读取设计上下文或 Make 文件清单",
+          get_screenshot: "读取节点截图",
+          get_variable_defs: "读取选中节点变量",
+          get_motion_context: "读取动画时间线",
+          get_figjam: "读取 FigJam 上下文",
+          get_code_connect_map: "读取组件代码映射",
+          get_libraries: "读取设计库",
+          search_design_system: "搜索设计系统",
+          list_resources: "列出 Make 源码资源",
+          read_resource: "读取所选 Make 源文件",
+        }[id],
+        "Official Figma MCP, only when API reads cannot supply the needed context. " +
+          "Requires the separate Figma MCP connection; API/PAT tokens cannot execute this action. " +
+          "params: file_url_or_key (preferred, Design/FigJam/Make URL) or file_key, optional file_type; " +
+          "node_id or URL node-id selects detailed Design content; do not read whole files automatically. " +
+          (id === "get_design_context"
+            ? "For Make, this first discovers the available source resources; read selected files with read_resource afterwards. "
+            : "") +
+          (id === "read_resource"
+            ? "Pass uri exactly as returned by get_design_context/list_resources on this connection and Make file. "
+            : "") +
+          (id === "list_resources"
+            ? "Optional cursor requests one resource page. If resource listing is unsupported, use get_design_context to obtain Make resource links. "
+            : "") +
+          (id === "search_design_system" ? "queries: 1 to 20 search strings. " : "") +
+          "Optional client_languages/client_frameworks describe the target implementation; recursive is for motion context. " +
+          "Raw node JSON, image exports, and comments should use the API get_nodes/get_images/get_comments actions.",
+        async () => {
+          throw new Error("Figma MCP actions require the Host-owned Figma Link executor.");
+        },
+      ),
+    ),
   ],
 };
 
@@ -1055,7 +1093,9 @@ export async function validateLocalLinkToken(
   return {
     providerId,
     identity,
-    capabilityIds: provider.actions.map((actionSpec) => `${providerId}.${actionSpec.id}`),
+    capabilityIds: provider.actions
+      .filter((actionSpec) => providerId !== "figma" || !isFigmaMcpAction(actionSpec.id))
+      .map((actionSpec) => `${providerId}.${actionSpec.id}`),
     verifiedAt: new Date().toISOString(),
   };
 }

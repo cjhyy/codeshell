@@ -1,9 +1,9 @@
+import { useTaskInboxSnapshot } from "./useTaskInboxSnapshot";
 import { OperationBatchForm } from "./OperationBatchForm";
-import React, { useCallback, useEffect, useId, useMemo, useRef, useState } from "react";
+import React, { useEffect, useId, useMemo, useRef, useState } from "react";
 import { Inbox, ListFilter, Loader2, RefreshCw } from "lucide-react";
 import type {
   TaskInboxRecordV1,
-  TaskInboxListResult,
   TaskInboxAction,
   TaskSource,
   TaskStatus,
@@ -72,25 +72,24 @@ export function TaskInboxPage({ onOpenTaskInboxRecord }: TaskInboxPageProps = {}
   const confirm = useOptionalConfirm();
   const id = useId();
   const [selectedSubagent, setSelectedSubagent] = useState<TaskInboxRecordV1 | null>(null);
-  const [snapshot, setSnapshot] = useState<TaskInboxListResult | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const { snapshot, loading, error, refresh } = useTaskInboxSnapshot();
   const [actionError, setActionError] = useState<string | null>(null);
   const [filters, setFilters] = useState(EMPTY_FILTERS);
   const [filtersOpen, setFiltersOpen] = useState(false);
   const containerRef = useRef<HTMLElement>(null);
   const searchRef = useRef<HTMLInputElement>(null);
   const [visibleCounts, setVisibleCounts] = useState(initialCounts);
-  const [revision, setRevision] = useState(0);
   const [pending, setPending] = useState<ReadonlySet<string>>(new Set());
   const pendingRef = useRef(new Set<string>());
-  const currentVersionRef = useRef(-1);
-  const notifiedVersionRef = useRef(-1);
-  // Notifications queue behind the immutable paginated snapshot being read.
-  // Cancelling that read on every source update could prevent the first render.
-  const loadInFlightRef = useRef(true);
   const refreshRef = useRef<HTMLButtonElement>(null);
-  const refresh = useCallback(() => setRevision((value) => value + 1), []);
+  const mounted = useRef(false);
+
+  useEffect(() => {
+    mounted.current = true;
+    return () => {
+      mounted.current = false;
+    };
+  }, []);
 
   useEffect(() => {
     const container = containerRef.current;
@@ -101,79 +100,6 @@ export function TaskInboxPage({ onOpenTaskInboxRecord }: TaskInboxPageProps = {}
     observer.observe(container);
     return () => observer.disconnect();
   }, [selectedSubagent]);
-
-  useEffect(
-    () =>
-      window.codeshell.taskInbox.onChanged((version) => {
-        if (version > Math.max(currentVersionRef.current, notifiedVersionRef.current)) {
-          notifiedVersionRef.current = version;
-          if (!loadInFlightRef.current) {
-            loadInFlightRef.current = true;
-            refresh();
-          }
-        }
-      }),
-    [refresh],
-  );
-
-  useEffect(() => {
-    let cancelled = false;
-    let published = false;
-    loadInFlightRef.current = true;
-    setLoading(true);
-    setError(null);
-    void (async () => {
-      try {
-        // Read all bounded pages once, then filter locally without losing options
-        // from other pages. An explicit refresh invalidates the request generation.
-        const records = new Map<string, TaskInboxRecordV1>();
-        let first: TaskInboxListResult | null = null;
-        let cursor: string | undefined;
-        const cursors = new Set<string>();
-        do {
-          const page = await window.codeshell.taskInbox.list({
-            limit: 200,
-            ...(cursor ? { cursor } : {}),
-          });
-          if (cancelled) return;
-          if (!first) first = page;
-          if (page.version !== first.version) {
-            // Mixed versions violate the immutable pagination contract. Start
-            // a new snapshot rather than displaying inconsistent pages.
-            refresh();
-            return;
-          }
-          for (const record of page.records) records.set(record.taskKey, record);
-          cursor = page.nextCursor;
-          if (cursor) {
-            if (cursors.has(cursor)) throw new Error("Task pagination did not advance");
-            cursors.add(cursor);
-          }
-        } while (cursor);
-        if (!cancelled && first) {
-          currentVersionRef.current = first.version;
-          setSnapshot({ ...first, records: [...records.values()], nextCursor: undefined });
-          published = true;
-        }
-      } catch (e) {
-        if (!cancelled) setError(e instanceof Error ? e.message : String(e));
-      } finally {
-        if (!cancelled) {
-          loadInFlightRef.current = false;
-          setLoading(false);
-          // Publish this complete snapshot before following the newest queued
-          // notification. A burst schedules only one subsequent load.
-          if (published && notifiedVersionRef.current > currentVersionRef.current) {
-            loadInFlightRef.current = true;
-            refresh();
-          }
-        }
-      }
-    })();
-    return () => {
-      cancelled = true;
-    };
-  }, [revision, refresh]);
 
   const grouped = useMemo(
     () => groupTaskInboxRecords(snapshot?.records ?? [], filters),
@@ -194,6 +120,11 @@ export function TaskInboxPage({ onOpenTaskInboxRecord }: TaskInboxPageProps = {}
   const activeFilterCount = [filters.source, filters.project, filters.status].filter(
     Boolean,
   ).length;
+  const clearFilters = () => {
+    setFilters(EMPTY_FILTERS);
+    setVisibleCounts(initialCounts());
+    searchRef.current?.focus({ preventScroll: true });
+  };
   const renderFilters = (suffix = "") => (
     <>
       <FilterSelect
@@ -252,6 +183,7 @@ export function TaskInboxPage({ onOpenTaskInboxRecord }: TaskInboxPageProps = {}
       });
       if (result.status === "ok") {
         if (action === "open") {
+          if (!mounted.current) return;
           if (record.source === "subagent") setSelectedSubagent(result.record ?? record);
           else if (onOpenTaskInboxRecord) await onOpenTaskInboxRecord(result.record ?? record);
           else setActionError(t("taskInbox.openUnavailable"));
@@ -339,7 +271,7 @@ export function TaskInboxPage({ onOpenTaskInboxRecord }: TaskInboxPageProps = {}
             id={`${id}-search`}
             ref={searchRef}
             type="search"
-            placeholder={t("taskInbox.search")}
+            placeholder={t("activity.taskSearch")}
             value={filters.search}
             onChange={(event) => filter("search", event.target.value)}
             className="h-9 rounded-lg"
@@ -390,6 +322,13 @@ export function TaskInboxPage({ onOpenTaskInboxRecord }: TaskInboxPageProps = {}
         </div>
         <div className="hidden @min-[1000px]/tasks:contents">{renderFilters()}</div>
       </div>
+      {(activeFilterCount > 0 || filters.search) && filteredCount > 0 && (
+        <div className="shrink-0 px-4 pb-2 @min-[760px]/tasks:px-6">
+          <Button type="button" size="sm" variant="ghost" onClick={clearFilters}>
+            {t("activity.clearFilters")}
+          </Button>
+        </div>
+      )}
       <div
         className="min-h-0 flex-1 overflow-y-auto px-4 pb-6 @min-[760px]/tasks:px-6"
         aria-busy={loading}
@@ -400,6 +339,21 @@ export function TaskInboxPage({ onOpenTaskInboxRecord }: TaskInboxPageProps = {}
             className="mb-3 rounded-xl border border-status-err/20 bg-status-err/5 p-3 text-sm text-status-err"
           >
             {t("taskInbox.listFailed", { message: error })}
+            <Button
+              type="button"
+              size="sm"
+              variant="outline"
+              aria-disabled={loading}
+              className="ml-3"
+              onClick={() => {
+                if (!loading) {
+                  refreshRef.current?.focus({ preventScroll: true });
+                  refresh();
+                }
+              }}
+            >
+              {t("activity.retry")}
+            </Button>
           </p>
         )}
         {actionError && (
@@ -426,6 +380,10 @@ export function TaskInboxPage({ onOpenTaskInboxRecord }: TaskInboxPageProps = {}
           <p role="status" className="py-10 text-center text-sm text-muted-foreground">
             {t("taskInbox.loading")}
           </p>
+        ) : !snapshot ? (
+          <p role="status" className="py-10 text-center text-sm text-muted-foreground">
+            {t("activity.unavailable")}
+          </p>
         ) : filteredCount === 0 ? (
           <div
             role="status"
@@ -433,6 +391,11 @@ export function TaskInboxPage({ onOpenTaskInboxRecord }: TaskInboxPageProps = {}
           >
             <Inbox size={24} aria-hidden />
             {t(snapshot?.records.length ? "taskInbox.noMatches" : "taskInbox.empty")}
+            {(activeFilterCount > 0 || filters.search) && (
+              <Button type="button" size="sm" variant="outline" onClick={clearFilters}>
+                {t("activity.clearFilters")}
+              </Button>
+            )}
           </div>
         ) : (
           <div className="space-y-5">
@@ -482,12 +445,20 @@ export function TaskInboxPage({ onOpenTaskInboxRecord }: TaskInboxPageProps = {}
                               </time>
                             </div>
                             {record.summary && (
-                              <p className="line-clamp-4 whitespace-pre-wrap break-words text-sm leading-relaxed">
+                              <p
+                                className="max-h-48 overflow-auto whitespace-pre-wrap break-words text-sm leading-relaxed [overflow-wrap:anywhere]"
+                                tabIndex={0}
+                                aria-label={t("activity.summary")}
+                              >
                                 {record.summary}
                               </p>
                             )}
                             {record.error && (
-                              <p className="line-clamp-4 whitespace-pre-wrap break-words text-xs text-status-err">
+                              <p
+                                className="max-h-48 overflow-auto whitespace-pre-wrap break-words text-xs text-status-err [overflow-wrap:anywhere]"
+                                tabIndex={0}
+                                aria-label={t("activity.taskError")}
+                              >
                                 {record.error}
                               </p>
                             )}

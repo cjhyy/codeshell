@@ -8,6 +8,7 @@ import {
   getSessionTranscriptPage,
 } from "./transcript-reader";
 import { foldTranscript } from "../renderer/automation/foldTranscript";
+import { listDiskSessions, listSessions } from "@cjhyy/code-shell-server/storage";
 
 function line(type: string, data: Record<string, unknown>): string {
   return JSON.stringify({ id: "x", type, timestamp: 1, turnNumber: 0, data });
@@ -637,6 +638,112 @@ describe("getSessionTranscript", () => {
     expect(await getSessionTranscript("sess-9", dir)).toEqual([
       { kind: "user", text: "yo", timestamp: 1 },
     ]);
+  });
+
+  it("reads archived, TUI and legacy history without exposing them in the resumable sidebar catalog", async () => {
+    for (const [id, state] of Object.entries({
+      archived: { origin: "desktop", parentSessionId: null, archivedAt: 1 },
+      tui: { origin: "tui", parentSessionId: null },
+      legacy: {},
+    })) {
+      const directory = path.join(dir, id);
+      fs.mkdirSync(directory);
+      fs.writeFileSync(path.join(directory, "state.json"), JSON.stringify(state));
+      fs.writeFileSync(
+        path.join(directory, "transcript.jsonl"),
+        line("message", { role: "user", content: `history-${id}` }),
+      );
+      expect((await getSessionTranscriptPage(id, {}, dir)).items).toContainEqual({
+        kind: "user",
+        text: `history-${id}`,
+        timestamp: 1,
+      });
+    }
+    expect((await listSessions(dir)).map((session) => session.id).sort()).toEqual([
+      "archived",
+      "legacy",
+      "tui",
+    ]);
+    expect((await listDiskSessions({ limit: 20 }, dir)).sessions).toEqual([]);
+  });
+
+  it.each(["jsonl", "json"] as const)(
+    "pages legacy flat %s transcripts through the existing fold contract",
+    async (format) => {
+      const events = Array.from({ length: 8 }, (_, index) =>
+        JSON.parse(line("message", { role: "user", content: `flat-${index}-${"x".repeat(120)}` })),
+      );
+      const content =
+        format === "jsonl"
+          ? `${events.map(JSON.stringify).join("\n")}\n`
+          : JSON.stringify(events, null, 2);
+      fs.writeFileSync(path.join(dir, `flat.${format}`), content);
+      const recent = await getSessionTranscriptPage("flat", { maxBytes: 400 }, dir);
+      expect(recent.loadedBytes).toBe(400);
+      expect(recent.hasMore).toBe(true);
+      expect(
+        recent.items.some((item) => item.kind === "user" && item.text.startsWith("flat-7-")),
+      ).toBe(true);
+      expect(
+        recent.items.some((item) => item.kind === "user" && item.text.startsWith("flat-0-")),
+      ).toBe(false);
+      const expanded = await getSessionTranscriptPage("flat", { maxBytes: 8_000 }, dir);
+      expect(expanded.hasMore).toBe(false);
+      expect(expanded.items).toHaveLength(8);
+      expect(await getSessionTranscript("flat", dir)).toEqual(expanded.items);
+    },
+  );
+
+  it("prefers modern directories and never revives stale flat copies when their transcript is absent", async () => {
+    fs.writeFileSync(
+      path.join(dir, "migrated.jsonl"),
+      line("message", { role: "user", content: "stale" }),
+    );
+    fs.mkdirSync(path.join(dir, "migrated"));
+    expect(await getSessionTranscript("migrated", dir)).toEqual([]);
+    fs.writeFileSync(
+      path.join(dir, "migrated", "transcript.jsonl"),
+      line("message", { role: "user", content: "current" }),
+    );
+    expect(await getSessionTranscript("migrated", dir)).toEqual([
+      { kind: "user", text: "current", timestamp: 1 },
+    ]);
+  });
+
+  it("rejects linked flat transcripts and ignores unsupported JSON objects", async () => {
+    fs.writeFileSync(
+      path.join(dir, "unknown.json"),
+      JSON.stringify({ messages: [{ role: "user", content: "not a transcript event" }] }),
+    );
+    expect(await getSessionTranscript("unknown", dir)).toEqual([]);
+    if (process.platform === "win32") return;
+    const outside = fs.mkdtempSync(path.join(os.tmpdir(), "cs-tr-flat-outside-"));
+    try {
+      const target = path.join(outside, "secret.jsonl");
+      fs.writeFileSync(target, line("message", { role: "user", content: "secret" }));
+      fs.symlinkSync(target, path.join(dir, "linked.jsonl"));
+      fs.writeFileSync(
+        path.join(dir, "linked.json"),
+        JSON.stringify([JSON.parse(line("message", { role: "user", content: "stale copy" }))]),
+      );
+      expect(await getSessionTranscript("linked", dir)).toEqual([]);
+      expect(await getSessionTranscriptPage("linked", {}, dir)).toEqual({
+        items: [],
+        loadedBytes: 0,
+        hasMore: false,
+      });
+    } finally {
+      fs.rmSync(outside, { recursive: true, force: true });
+    }
+  });
+
+  it("rejects oversized legacy JSON before attempting to allocate or parse it", async () => {
+    const file = path.join(dir, "huge.json");
+    fs.writeFileSync(file, "[]");
+    fs.truncateSync(file, 128 * 1024 * 1024 + 1);
+    await expect(getSessionTranscriptPage("huge", {}, dir)).rejects.toThrow(
+      "file exceeds the size limit",
+    );
   });
 
   it("hydrates a bounded recent window and expands it for older history", async () => {
