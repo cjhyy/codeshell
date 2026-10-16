@@ -57,6 +57,10 @@ export function TraceCallTypeFilter({
             data-trace-type-filter={type}
             aria-pressed={value === type}
             title={type ? traceCallTypeDescription(type, t) : undefined}
+            onFocus={(event) => {
+              // Native Tab scrolling can leave the last chip clipped after a resize.
+              event.currentTarget.scrollIntoView({ block: "nearest", inline: "nearest" });
+            }}
             onClick={() => {
               if (type !== value) onChange(type);
             }}
