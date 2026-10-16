@@ -295,14 +295,14 @@ export class CredentialStore {
   ): void {
     const p = this.pathFor(scope);
     if (!p) return;
-    // Encrypt secrets at the disk boundary. `file` carries plaintext secrets
-    // (read() decrypted them); serialize a copy with each secret encrypted so
-    // we never persist plaintext under an encrypting cipher.
+    // Encrypt available plaintext at the disk boundary. A secret read() could
+    // not decrypt is retained as enc:*; preserve those bytes so changing a
+    // different record cannot wrap and damage the unavailable credential.
     const onDisk: CredentialStoreFile = {
       version: file.version,
       credentials: [
         ...file.credentials.map((c) =>
-          typeof c.secret === "string" && c.secret.length > 0
+          isCredentialSecretAvailable(c.secret)
             ? { ...c, secret: this.cipher.encrypt(c.secret) }
             : c,
         ),
