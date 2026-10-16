@@ -2,6 +2,7 @@ import React, { useEffect, useId, useMemo, useRef, useState } from "react";
 import { Activity, ArrowLeft, Loader2, RefreshCw, Search } from "lucide-react";
 import type {
   ModelTraceApi,
+  ModelTraceCallType,
   ModelTraceSessionPage,
   ModelTraceSessionSummary,
   ModelTraceStatus,
@@ -14,6 +15,7 @@ import { useT } from "../i18n/I18nProvider";
 import { ModelTraceDetail, type TraceSelection } from "./ModelTraceDetail";
 import { ModelTraceRecording } from "./ModelTraceRecording";
 import { ModelTraceEvents } from "./ModelTraceEvents";
+import { TRACE_CALL_TYPES, traceCallTypeLabel } from "./TraceCallType";
 import { ModelTraceExecutions } from "./ModelTraceExecutions";
 import { useModelTraceSessionTitles } from "./useModelTraceSessionTitles";
 import { eventRequestId, mergeTraceCalls, traceTime } from "./modelTracePresentation";
@@ -21,6 +23,7 @@ import { eventRequestId, mergeTraceCalls, traceTime } from "./modelTracePresenta
 type TraceDetail = NonNullable<Awaited<ReturnType<ModelTraceApi["get"]>>>;
 type Filters = {
   search: string;
+  callType: "" | ModelTraceCallType;
   model: string;
   provider: string;
   purpose: string;
@@ -31,6 +34,7 @@ type Filters = {
 };
 const EMPTY_FILTERS: Filters = {
   search: "",
+  callType: "",
   model: "",
   provider: "",
   purpose: "",
@@ -142,26 +146,40 @@ export function ModelTracesView({
     [filters],
   );
   const groups = list?.items ?? [];
+  const callScopeKey = selectedSession
+    ? JSON.stringify([selectedSession.key, filters.callType])
+    : "";
+  const selectedCallQuery = selectedSession
+    ? {
+        ...scopeQuery(selectedSession),
+        ...(filters.callType ? { callType: filters.callType } : {}),
+      }
+    : null;
   useEffect(() => {
     if (listBodyRef.current) listBodyRef.current.scrollTop = 0;
   }, [cursor, query]);
   useEffect(() => {
     if (callsBodyRef.current) callsBodyRef.current.scrollTop = 0;
-  }, [selectedSession?.key]);
+  }, [callScopeKey]);
   useEffect(() => {
     if (detailBodyRef.current) detailBodyRef.current.scrollTop = 0;
   }, [selectedRequest, selection.kind, selection.kind === "request" ? null : selection.id]);
-  const detail = selectedRequest && !detailRead.missing ? cache[selectedRequest] : undefined;
+  const cachedDetail = selectedRequest && !detailRead.missing ? cache[selectedRequest] : undefined;
+  const detail =
+    cachedDetail && (!filters.callType || cachedDetail.record.callType === filters.callType)
+      ? cachedDetail
+      : undefined;
   const visibleCalls = useMemo(() => {
-    const current = calls.scopeKey === selectedSession?.key ? calls.items : [];
+    const current = calls.scopeKey === callScopeKey ? calls.items : [];
     return detail &&
       scopeOf(detail.record).key === selectedSession?.key &&
+      (!filters.callType || detail.record.callType === filters.callType) &&
       !current.some((item) => item.id === detail.record.id)
       ? mergeTraceCalls(current, [
           { ...detail.record, attemptCount: detail.record.attempts.length },
         ])
       : current;
-  }, [calls, selectedSession?.key, detail]);
+  }, [calls, selectedSession?.key, callScopeKey, filters.callType, detail]);
   const eventGroups = useMemo(() => {
     const events = detail?.record.traceId === selectedTrace ? detail.events : [];
     const requestIds = new Set(visibleCalls.map((call) => call.id));
@@ -240,9 +258,11 @@ export function ModelTracesView({
         setList(page);
         if (!selectedRequestRef.current) {
           const first = selectedSessionRef.current
-            ? page.items.find((item) => item.key === selectedSessionRef.current?.key)
+            ? (page.items.find((item) => item.key === selectedSessionRef.current?.key) ??
+              (filters.callType ? page.items[0] : undefined))
             : page.items[0];
           if (first) {
+            if (selectedSessionRef.current?.key !== first.key) callsVersion.current++;
             setSelectedSession(first);
             setSelectedTrace(first.latestTraceId);
             setSelectedRequest(first.latestRequestId);
@@ -273,16 +293,14 @@ export function ModelTracesView({
     setCallsLoading(true);
     setCallsError(null);
     setCalls((current) =>
-      current.scopeKey === selectedSession.key
-        ? current
-        : { scopeKey: selectedSession.key, items: [] },
+      current.scopeKey === callScopeKey ? current : { scopeKey: callScopeKey, items: [] },
     );
     void Promise.resolve()
-      .then(() => window.codeshell.modelTraces.list({ ...scopeQuery(selectedSession), limit: 100 }))
+      .then(() => window.codeshell.modelTraces.list({ ...selectedCallQuery!, limit: 100 }))
       .then((page) => {
         if (!mounted.current || version !== callsVersion.current) return;
         setCalls({
-          scopeKey: selectedSession.key,
+          scopeKey: callScopeKey,
           items: mergeTraceCalls([], page.items),
           nextCursor: page.nextCursor,
         });
@@ -300,7 +318,7 @@ export function ModelTracesView({
           setCallsLoading(false);
         }
       });
-  }, [selectedSession?.key, revision]);
+  }, [callScopeKey, revision]);
 
   useEffect(() => {
     const version = ++detailVersion.current;
@@ -352,13 +370,13 @@ export function ModelTracesView({
     const version = callsVersion.current;
     try {
       const page = await window.codeshell.modelTraces.list({
-        ...scopeQuery(selectedSession),
+        ...selectedCallQuery!,
         limit: 100,
         cursor: calls.nextCursor,
       });
       if (mounted.current && version === callsVersion.current)
         setCalls((current) => ({
-          scopeKey: selectedSession.key,
+          scopeKey: callScopeKey,
           items: mergeTraceCalls(current.items, page.items),
           nextCursor: page.nextCursor,
         }));
@@ -374,6 +392,13 @@ export function ModelTracesView({
   const changeFilter = (key: keyof Filters, value: string) => {
     setFilters((current) => ({ ...current, [key]: value }));
     setCursors([undefined]);
+    if (key === "callType") {
+      callsVersion.current++;
+      detailVersion.current++;
+      setSelectedRequest(null);
+      setSelectedTrace(null);
+      setSelection({ kind: "request" });
+    }
   };
   const refresh = () => {
     if (listPending.current) return;
@@ -452,7 +477,23 @@ export function ModelTracesView({
           className="grid grid-cols-2 gap-2 @min-[760px]/traces:grid-cols-5"
           aria-label={t("observability.filters")}
         >
-          {(["model", "purpose", "source"] as const).map((key) => (
+          <label className="min-w-0 space-y-1 text-[11px] text-muted-foreground">
+            <span>{t("observability.callType")}</span>
+            <select
+              data-trace-type-filter
+              className={`${selectClass} w-full`}
+              value={filters.callType}
+              onChange={(event) => changeFilter("callType", event.target.value)}
+            >
+              <option value="">{t("observability.allTypes")}</option>
+              {TRACE_CALL_TYPES.map((type) => (
+                <option key={type} value={type}>
+                  {traceCallTypeLabel(type, t)}
+                </option>
+              ))}
+            </select>
+          </label>
+          {(["model", "source"] as const).map((key) => (
             <label key={key} className="min-w-0 space-y-1 text-[11px] text-muted-foreground">
               <span>{t(`observability.${key}`)}</span>
               <input
@@ -482,7 +523,7 @@ export function ModelTracesView({
               {t("observability.moreFilters")}
             </summary>
             <div className="mt-2 space-y-2">
-              {(["provider", "sessionId", "traceId"] as const).map((key) => (
+              {(["purpose", "provider", "sessionId", "traceId"] as const).map((key) => (
                 <label
                   key={key}
                   className="block min-w-0 space-y-1 text-[11px] text-muted-foreground"
@@ -493,7 +534,9 @@ export function ModelTracesView({
                         ? "observability.session"
                         : key === "traceId"
                           ? "observability.trace"
-                          : "observability.provider",
+                          : key === "purpose"
+                            ? "observability.rawPurpose"
+                            : "observability.provider",
                     )}
                   </span>
                   <input
@@ -512,6 +555,13 @@ export function ModelTracesView({
             size="sm"
             variant="ghost"
             onClick={() => {
+              if (filters.callType) {
+                callsVersion.current++;
+                detailVersion.current++;
+                setSelectedRequest(null);
+                setSelectedTrace(null);
+                setSelection({ kind: "request" });
+              }
               setFilters(EMPTY_FILTERS);
               setCursors([undefined]);
               searchRef.current?.focus();
@@ -630,6 +680,14 @@ export function ModelTracesView({
                         {group.failedCount > 0 &&
                           ` · ${t("observability.failedCalls", { count: group.failedCount })}`}
                       </span>
+                      {!!group.callTypes?.length && (
+                        <span
+                          data-trace-session-call-types
+                          className="mt-1 block break-words text-[10px] text-muted-foreground [overflow-wrap:anywhere]"
+                        >
+                          {group.callTypes.map((type) => traceCallTypeLabel(type, t)).join(" / ")}
+                        </span>
+                      )}
                       <time className="mt-1 block text-[10px] text-muted-foreground">
                         {traceTime(group.updatedAt, lang)}
                       </time>
@@ -733,7 +791,8 @@ export function ModelTracesView({
                 expanded={expanded}
                 cache={cache}
                 eventsByRequest={eventGroups.byRequest}
-                scrollReady={calls.scopeKey === selectedSession?.key && !callsLoading}
+                scrollReady={calls.scopeKey === callScopeKey && !callsLoading}
+                scopeKey={callScopeKey}
                 activeStep={step}
                 onSelect={chooseRequest}
                 onToggle={(requestId) => {

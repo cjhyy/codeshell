@@ -46,7 +46,8 @@ function record(
     sessionId: "session-a",
     runId: "run-a",
     source: "desktop",
-    purpose: "answer",
+    purpose: "main",
+    callType: "execution",
     provider: "provider-a",
     model: "model-a",
     startedAt: 1000,
@@ -109,6 +110,7 @@ function sessionPage(records: ModelTraceRecord[], query: ModelTraceListQuery) {
     if (query.sessionId && item.sessionId !== query.sessionId) continue;
     if (query.traceId && item.traceId !== query.traceId) continue;
     if (query.withoutSession && item.sessionId) continue;
+    if (query.callType && item.callType !== query.callType) continue;
     const key = item.sessionId ? `session:${item.sessionId}` : `trace:${item.traceId}`;
     const group = groups.get(key) ?? [];
     group.push(item);
@@ -127,6 +129,7 @@ function sessionPage(records: ModelTraceRecord[], query: ModelTraceListQuery) {
       traceCount: new Set(calls.map((item) => item.traceId)).size,
       sources: [...new Set(calls.map((item) => item.source))],
       models: [...new Set(calls.map((item) => item.model))],
+      callTypes: [...new Set(calls.map((item) => item.callType ?? "other"))],
       runningCount: calls.filter((item) => item.status === "running").length,
       failedCount: calls.filter((item) => item.status === "failed").length,
     };
@@ -191,14 +194,12 @@ describe("model trace observability", () => {
       },
       list: async (query = {}) => {
         listCalls.push(query);
-        return {
-          items: records
-            .filter((item) => !query.traceId || item.traceId === query.traceId)
-            .filter((item) => !query.sessionId || item.sessionId === query.sessionId)
-            .filter((item) => !query.withoutSession || !item.sessionId)
-            .map(summary),
-          total: records.length,
-        };
+        const selected = records
+          .filter((item) => !query.traceId || item.traceId === query.traceId)
+          .filter((item) => !query.sessionId || item.sessionId === query.sessionId)
+          .filter((item) => !query.withoutSession || !item.sessionId)
+          .filter((item) => !query.callType || item.callType === query.callType);
+        return { items: selected.map(summary), total: selected.length };
       },
       get: async (id) => {
         getCalls.push(id);
@@ -285,6 +286,138 @@ describe("model trace observability", () => {
     expect(textOf(selectedDetail()!)).toContain("Source file content");
     await click(button("输入"));
     expect(textOf(selectedDetail()!)).toContain("/source/file.ts");
+  });
+
+  test("call types distinguish purposes inside one session and filter before counting groups", async () => {
+    records[1].purpose = "aux_summary";
+    records[1].callType = "summary";
+    records[2].purpose = "title";
+    records[2].callType = "title";
+    await render();
+    const session = attr("data-trace-session", "session:session-a");
+    expect(textOf(session)).toContain("运行 Prompt");
+    expect(textOf(session)).toContain("摘要 / 压缩 Prompt");
+    expect(textOf(session)).toContain("标题生成 Prompt");
+    expect(
+      nodes(attr("data-trace-request", "request-a")).some(
+        (node) => props(node)["data-trace-call-type"] === "execution",
+      ),
+    ).toBe(true);
+    const type = nodes(container).find(
+      (node) => props(node)["data-trace-type-filter"] !== undefined,
+    ) as HTMLElement;
+    await change(type, "summary");
+    expect(sessionCalls.at(-1)).toEqual({ limit: 50, callType: "summary" });
+    expect(listCalls.at(-1)).toEqual({ sessionId: "session-a", limit: 100, callType: "summary" });
+    expect(nodes(container).filter((node) => props(node)["data-trace-session"])).toHaveLength(1);
+    expect(nodes(container).filter((node) => props(node)["data-trace-request"])).toHaveLength(1);
+    expect(attr("data-trace-request", "request-b")).toBeDefined();
+    expect(props(selectedDetail()!)["data-trace-detail-id"]).toBe("request-b");
+    expect(textOf(attr("data-trace-session", "session:session-a"))).toContain("1 次模型调用");
+    await change(type, "");
+    expect(sessionCalls.at(-1)).toEqual({ limit: 50 });
+    expect(nodes(container).filter((node) => props(node)["data-trace-request"])).toHaveLength(3);
+  });
+
+  test("a late page for a previous call type cannot restore an incompatible prompt", async () => {
+    records[1].purpose = "aux_summary";
+    records[1].callType = "summary";
+    records[2].purpose = "title";
+    records[2].callType = "title";
+    const old = deferred<Awaited<ReturnType<ModelTraceApi["list"]>>>();
+    const normal = api.list;
+    api.list = (query = {}) => (query.callType === "summary" ? old.promise : normal(query));
+    await render();
+    const type = nodes(container).find(
+      (node) => props(node)["data-trace-type-filter"] !== undefined,
+    ) as HTMLElement;
+    await change(type, "summary");
+    expect(
+      selectedDetail() ? props(selectedDetail()!)["data-trace-detail-id"] : undefined,
+    ).not.toBe("request-a");
+    await change(type, "title");
+    expect(props(selectedDetail()!)["data-trace-detail-id"]).toBe("request-c");
+    await settle(() => old.resolve({ items: [summary(records[1])], total: 1 }));
+    expect(attr("data-trace-request", "request-b")).toBeUndefined();
+    expect(props(selectedDetail()!)["data-trace-detail-id"]).toBe("request-c");
+  });
+
+  test("runtime snapshots, provider requests, tool inputs and message roles stay distinct", async () => {
+    records[0].input!.messages = [
+      { role: "system", content: "Embedded system instruction" },
+      { role: "developer", content: "Embedded developer instruction" },
+      { role: "user", content: "Current user request" },
+      { role: "assistant", content: "Previous model answer" },
+      { role: "tool", content: "Previous tool result" },
+    ];
+    await render();
+    let detail = textOf(selectedDetail()!);
+    expect(detail).toContain("运行时输入快照");
+    expect(detail).toContain("用户角色消息 · user");
+    expect(detail).toContain("模型历史消息 · assistant");
+    expect(detail).toContain("系统指令 · system");
+    expect(detail).toContain("开发者指令 · developer");
+    expect(detail).toContain("工具返回 · tool");
+    await click(attr("data-trace-attempt", "request-a-attempt-1"));
+    detail = textOf(selectedDetail()!);
+    expect(detail).toContain("实际发送请求");
+    expect(detail).toContain("Final provider wire input");
+    expect(detail).not.toContain("Current user request");
+    await click(attr("data-trace-event", "tool-a"));
+    await click(button("输入"));
+    expect(textOf(selectedDetail()!)).toContain("工具输入");
+    expect(textOf(selectedDetail()!)).not.toContain("System snapshot at request time");
+  });
+
+  test("speech, transcription and unknown calls have explicit types instead of generic prompts", async () => {
+    records = [
+      record("speech-call", "speech-run", {
+        sessionId: undefined,
+        source: "panel:video-studio",
+        purpose: "tts",
+        callType: "speech",
+        input: {
+          messages: [{ role: "user", content: "Read this speech text" }],
+          parameters: { voice: "fixture", format: "wav" },
+        },
+        output: { data: { mimeType: "audio/wav", bytes: 1234 } },
+        attempts: [],
+      }),
+      record("transcription-call", "transcription-run", {
+        sessionId: undefined,
+        source: "panel:job-hunt-hq",
+        purpose: "interview-transcribe",
+        callType: "transcription",
+        input: { messages: [], parameters: { resource: "fixture-audio", mimeType: "audio/wav" } },
+        output: { text: "Recognized interview words" },
+        attempts: [],
+      }),
+      record("unknown-call", "unknown-run", {
+        sessionId: undefined,
+        purpose: "custom_unmapped_purpose",
+        callType: "other",
+        attempts: [],
+      }),
+    ];
+    await render();
+    expect(textOf(attr("data-trace-session", "trace:speech-run"))).toContain("语音合成");
+    expect(textOf(attr("data-trace-session", "trace:transcription-run"))).toContain("语音转写");
+    expect(textOf(attr("data-trace-session", "trace:unknown-run"))).toContain("其他调用");
+    expect(textOf(selectedDetail()!)).toContain("voice");
+    expect(textOf(selectedDetail()!)).toContain("媒体模型输入");
+    expect(textOf(selectedDetail()!)).not.toContain("运行时输入快照");
+    await click(button("输出"));
+    expect(textOf(selectedDetail()!)).toContain("audio/wav");
+    await change(
+      nodes(container).find(
+        (node) => props(node)["data-trace-type-filter"] !== undefined,
+      ) as HTMLElement,
+      "transcription",
+    );
+    expect(nodes(container).filter((node) => props(node)["data-trace-session"])).toHaveLength(1);
+    expect(props(selectedDetail()!)["data-trace-detail-id"]).toBe("transcription-call");
+    await click(button("输出"));
+    expect(textOf(selectedDetail()!)).toContain("Recognized interview words");
   });
 
   test("Panel calls with a session join its history while independent Panel calls stay separate", async () => {
@@ -621,6 +754,8 @@ describe("model trace observability", () => {
     records = [
       record("external-request", "external-trace", {
         source: "external-cli-input",
+        purpose: "external",
+        callType: "external",
         attempts: [
           {
             id: "logical-attempt",
@@ -628,7 +763,7 @@ describe("model trace observability", () => {
             startedAt: 1000,
             endedAt: 1100,
             status: "completed",
-            coverage: "logical-input",
+            coverage: "external-cli-input",
             inputState: "truncated",
             input: "Visible CLI entry input",
             outputState: "redacted",

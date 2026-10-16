@@ -17,13 +17,13 @@ import {createRoot} from "react-dom/client";
 import {ModelTraceExplorer} from "./components/ModelTraceExplorer";
 window.fixture={fail:false,failTrace:false,copied:"",reads:[]};
 Object.defineProperty(navigator,"clipboard",{value:{writeText:async(text)=>{window.fixture.copied=text}}});
-const record=(i)=>({version:1,id:"request-"+i,traceId:"trace-"+Math.floor(i/2),sessionId:"session-original",runId:"run-"+Math.floor(i/2),source:"desktop",purpose:"main",provider:"fixture",model:"fixture-model",startedAt:1800000000000+i*100,endedAt:1800000000040+i*100,status:"completed",stream:true,inputState:"recorded",input:{systemPrompt:"Original actual system Prompt <script>window.injected=true</script>",messages:[{role:"user",content:"Actual input "+i}],tools:[],parameters:{temperature:0.2}},outputState:"recorded",output:{text:"Actual answer "+i},usage:{promptTokens:10,completionTokens:5,totalTokens:15},attempts:[{id:"attempt-"+i,number:1,startedAt:1800000000000,endedAt:1800000000020,status:"failed",httpStatus:429,coverage:"provider-wire",inputState:"recorded",input:{model:"effective-wire-model",prompt:"Actual provider prompt"},outputState:"recorded",output:{text:"Partial attempt answer"},error:"Owned rate limit"}]});
+const record=(i)=>({version:1,id:"request-"+i,traceId:"trace-"+Math.floor(i/2),sessionId:"session-original",runId:"run-"+Math.floor(i/2),source:"desktop",purpose:["main","aux_summary","title"][i%3],callType:["execution","summary","title"][i%3],provider:"fixture",model:"fixture-model",startedAt:1800000000000+i*100,endedAt:1800000000040+i*100,status:"completed",stream:true,inputState:"recorded",input:{systemPrompt:"Original actual system Prompt <script>window.injected=true</script>",messages:[{role:"system",content:"Embedded system instruction"},{role:"developer",content:"Embedded developer instruction"},{role:"user",content:"Actual input "+i},{role:"assistant",content:"Previous model answer"},{role:"tool",content:"Previous tool result"}],tools:[],parameters:{temperature:0.2}},outputState:"recorded",output:{text:"Actual answer "+i},usage:{promptTokens:10,completionTokens:5,totalTokens:15},attempts:[{id:"attempt-"+i,number:1,startedAt:1800000000000,endedAt:1800000000020,status:"failed",httpStatus:429,coverage:"provider-wire",inputState:"recorded",input:{model:"effective-wire-model",prompt:"Actual provider prompt"},outputState:"recorded",output:{text:"Partial attempt answer"},error:"Owned rate limit"}]});
 const records=Array.from({length:6},(_,i)=>record(i));
-records.push({...record(0),id:"panel-independent",traceId:"panel-process",sessionId:undefined,runId:undefined,source:"panel:video-studio",purpose:"speech",model:"panel-speech-model",stream:false,usage:undefined,startedAt:1799999900000,endedAt:1799999900200,input:{messages:[{role:"user",content:"Independent Panel speech input"}]},output:{data:{mimeType:"audio/wav",bytes:1234}},attempts:[]});
-for(let i=0;i<55;i++) records.push({...record(i),id:"older-call-"+i,traceId:i===54?"panel-process":"older-run-"+i,sessionId:"older-session-"+i,runId:"older-run-"+i,startedAt:1799999000000-i*5000,endedAt:1799999000200-i*5000,attempts:[]});
-const matches=(r,q)=>(!q.withoutSession||!r.sessionId)&&(!q.traceId||r.traceId===q.traceId)&&(!q.search||JSON.stringify([r.id,r.traceId,r.sessionId,r.source,r.model]).includes(q.search))&&(!q.sessionId||r.sessionId===q.sessionId)&&(!q.model||r.model===q.model)&&(!q.purpose||r.purpose===q.purpose)&&(!q.status||r.status===q.status);
+records.push({...record(0),id:"panel-independent",traceId:"panel-process",sessionId:undefined,runId:undefined,source:"panel:video-studio",purpose:"tts",callType:"speech",model:"panel-speech-model",stream:false,usage:undefined,startedAt:1799999900000,endedAt:1799999900200,input:{messages:[{role:"user",content:"Independent Panel speech input"}],parameters:{voice:"fixture-voice",response_format:"wav"}},output:{data:{mimeType:"audio/wav",bytes:1234}},attempts:[]});
+for(let i=0;i<55;i++) records.push({...record(i),id:"older-call-"+i,purpose:"main",callType:"execution",traceId:i===54?"panel-process":"older-run-"+i,sessionId:"older-session-"+i,runId:"older-run-"+i,startedAt:1799999000000-i*5000,endedAt:1799999000200-i*5000,attempts:[]});
+const matches=(r,q)=>(!q.withoutSession||!r.sessionId)&&(!q.traceId||r.traceId===q.traceId)&&(!q.search||JSON.stringify([r.id,r.traceId,r.sessionId,r.source,r.model]).includes(q.search))&&(!q.sessionId||r.sessionId===q.sessionId)&&(!q.model||r.model===q.model)&&(!q.purpose||r.purpose===q.purpose)&&(!q.callType||r.callType===q.callType)&&(!q.status||r.status===q.status);
 const paginate=(rows,q)=>{const offset=Number(q.cursor||0),limit=q.limit||50;return{items:rows.slice(offset,offset+limit),total:rows.length,nextCursor:offset+limit<rows.length?String(offset+limit):undefined}};
-const api={sessions:async(q={})=>{window.fixture.reads.push({method:"sessions",query:q});const groups=new Map();for(const r of records.filter(r=>matches(r,q))){const key=r.sessionId?"session:"+r.sessionId:"trace:"+r.traceId;let group=groups.get(key);if(!group){group={key,...(r.sessionId?{sessionId:r.sessionId}:{traceId:r.traceId}),latestRequestId:r.id,latestTraceId:r.traceId,startedAt:r.startedAt,updatedAt:r.endedAt||r.startedAt,callCount:0,traceCount:0,sources:[],models:[],runningCount:0,failedCount:0,traces:new Set()};groups.set(key,group);}group.callCount++;group.traces.add(r.traceId);group.traceCount=group.traces.size;group.startedAt=Math.min(group.startedAt,r.startedAt);if((r.endedAt||r.startedAt)>=group.updatedAt){group.updatedAt=r.endedAt||r.startedAt;group.latestRequestId=r.id;group.latestTraceId=r.traceId;}if(!group.sources.includes(r.source))group.sources.push(r.source);if(!group.models.includes(r.model))group.models.push(r.model);if(r.status==="running")group.runningCount++;if(r.status==="failed")group.failedCount++;}return paginate([...groups.values()].sort((a,b)=>b.updatedAt-a.updatedAt).map(({traces,...group})=>group),q);},list:async(q={})=>{window.fixture.reads.push({method:"list",query:q});if((q.traceId||q.sessionId)&&window.fixture.failTrace)throw new Error("Owned tree read failure");return paginate(records.filter(r=>matches(r,q)).map(({input,output,attempts,...r})=>({...r,attemptCount:attempts.length})),q);},get:async(id)=>{if(window.fixture.fail)throw new Error("Owned refresh failure");const selected=records.find(r=>r.id===id);return selected?{record:selected,events:[{id:"tool-event",traceId:selected.traceId,kind:"tool",name:"Read fixture",startedAt:1800000000000,endedAt:1800000000030,status:"completed",inputState:"recorded",input:{path:"/original/project"},outputState:"recorded",output:"Recorded tool output"}]}:null},getConfig:async()=>({enabled:true,captureContent:true,includeEphemeral:true,retentionDays:7})};
+const api={sessions:async(q={})=>{window.fixture.reads.push({method:"sessions",query:q});const groups=new Map();for(const r of records.filter(r=>matches(r,q))){const key=r.sessionId?"session:"+r.sessionId:"trace:"+r.traceId;let group=groups.get(key);if(!group){group={key,...(r.sessionId?{sessionId:r.sessionId}:{traceId:r.traceId}),latestRequestId:r.id,latestTraceId:r.traceId,startedAt:r.startedAt,updatedAt:r.endedAt||r.startedAt,callCount:0,traceCount:0,sources:[],models:[],callTypes:[],runningCount:0,failedCount:0,traces:new Set()};groups.set(key,group);}group.callCount++;group.traces.add(r.traceId);group.traceCount=group.traces.size;group.startedAt=Math.min(group.startedAt,r.startedAt);if((r.endedAt||r.startedAt)>=group.updatedAt){group.updatedAt=r.endedAt||r.startedAt;group.latestRequestId=r.id;group.latestTraceId=r.traceId;}if(!group.sources.includes(r.source))group.sources.push(r.source);if(!group.models.includes(r.model))group.models.push(r.model);if(!group.callTypes.includes(r.callType))group.callTypes.push(r.callType);if(r.status==="running")group.runningCount++;if(r.status==="failed")group.failedCount++;}return paginate([...groups.values()].sort((a,b)=>b.updatedAt-a.updatedAt).map(({traces,...group})=>group),q);},list:async(q={})=>{window.fixture.reads.push({method:"list",query:q});if((q.traceId||q.sessionId)&&window.fixture.failTrace)throw new Error("Owned tree read failure");return paginate(records.filter(r=>matches(r,q)).map(({input,output,attempts,...r})=>({...r,attemptCount:attempts.length})),q);},get:async(id)=>{if(window.fixture.fail)throw new Error("Owned refresh failure");const selected=records.find(r=>r.id===id);return selected?{record:selected,events:[{id:"tool-event",traceId:selected.traceId,kind:"tool",name:"Read fixture",startedAt:1800000000000,endedAt:1800000000030,status:"completed",inputState:"recorded",input:{path:"/original/project"},outputState:"recorded",output:"Recorded tool output"}]}:null},getConfig:async()=>({enabled:true,captureContent:true,includeEphemeral:true,retentionDays:7})};
 createRoot(document.getElementById("root")).render(<ModelTraceExplorer api={api} sessionTitles={{"session-original":"Panel Prompt audit / 核对 Panel Prompt"}} lang={new URL(location.href).searchParams.get("lang")||"zh"}/>);
 `;
 const result = await build({
@@ -102,7 +102,11 @@ try {
       await page.screenshot({ path: path.join(output, `runs-${lang}-${viewport.width}.png`) });
       await tree.locator('[data-trace-request="request-0"]').click();
       const detail = page.locator(".cs-t-pane").nth(2);
-      await detail.getByText("Original actual system Prompt", { exact: false }).waitFor();
+      await detail
+        .getByText("Original actual system Prompt <script>window.injected=true</script>", {
+          exact: true,
+        })
+        .waitFor();
       assert.equal(
         await page.evaluate(() => window.injected),
         undefined,
@@ -227,6 +231,58 @@ try {
         "Independent Panel calls use their actual trace scope",
       );
       await page.screenshot({ path: path.join(output, `panel-${lang}-${viewport.width}.png`) });
+      await detail.locator('[data-trace-call-type="speech"]').waitFor();
+      await detail.getByText("fixture-voice", { exact: false }).waitFor();
+      assert.ok((await detail.innerText()).includes("audio/wav"));
+      if (viewport.width <= 1000) {
+        await detail
+          .getByRole("button", { name: lang === "zh" ? "返回" : "Back", exact: true })
+          .click();
+        await tree
+          .getByRole("button", { name: lang === "zh" ? "返回" : "Back", exact: true })
+          .click();
+      }
+      const typeFilter = page.getByRole("combobox", {
+        name: lang === "zh" ? "调用类型" : "Call type",
+        exact: true,
+      });
+      await typeFilter.selectOption("summary");
+      await page.waitForFunction(
+        () => document.querySelectorAll("[data-trace-session]").length === 1,
+      );
+      assert.ok(
+        await page.evaluate(() =>
+          window.fixture.reads.some(
+            ({ method, query }) =>
+              method === "sessions" && query.callType === "summary" && !query.cursor,
+          ),
+        ),
+        "The primary call-type filter resets session paging",
+      );
+      await list.locator('[data-trace-session="session:session-original"]').click();
+      await page.waitForFunction(
+        () => document.querySelectorAll("[data-trace-request]").length === 2,
+      );
+      assert.ok(
+        await page.evaluate(() =>
+          window.fixture.reads.some(
+            ({ method, query }) =>
+              method === "list" &&
+              query.sessionId === "session-original" &&
+              query.callType === "summary",
+          ),
+        ),
+        "The type filter reaches session calls as well as session grouping",
+      );
+      await page.screenshot({ path: path.join(output, `types-${lang}-${viewport.width}.png`) });
+      await typeFilter.selectOption("");
+      await page.waitForFunction(
+        () => document.querySelectorAll("[data-trace-session]").length === 50,
+      );
+      await list.locator('[data-trace-session="session:session-original"]').click();
+      await page.waitForFunction(
+        () => document.querySelectorAll("[data-trace-request]").length === 6,
+      );
       assert.deepEqual(errors, []);
       results.push({ lang, viewport, passed: true });
       await page.close();

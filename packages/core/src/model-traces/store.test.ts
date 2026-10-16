@@ -141,6 +141,28 @@ describe("ModelTraceStore", () => {
     expect(store.get("id-2")?.input?.systemPrompt).toBe("private prompt");
     expect(() => store.list({ cursor: "bad cursor" })).toThrow();
   });
+  test("derives categories for legacy records on read and ignores caller or saved labels", () => {
+    const store = new ModelTraceStore({ storageDir: directory });
+    store.write(record("legacy", { purpose: "manual_compact", callType: "execution" }));
+    const file = `${createHash("sha256").update("legacy").digest("hex")}.json`;
+    for (const folder of ["records", "summaries"]) {
+      const path = join(directory, folder, file);
+      const saved = JSON.parse(readFileSync(path, "utf8"));
+      expect(saved.callType).toBeUndefined();
+      // Old hosts have no category, and stale/imported labels have no authority.
+      writeFileSync(path, JSON.stringify({ ...saved, callType: "transcription" }));
+    }
+    const before = readFileSync(join(directory, "records", file), "utf8");
+    expect(store.get("legacy")).toMatchObject({ purpose: "manual_compact", callType: "summary" });
+    expect(store.list().items[0]).toMatchObject({ purpose: "manual_compact", callType: "summary" });
+    expect(store.list({ callType: "summary" }).total).toBe(1);
+    expect(store.list({ callType: "transcription" }).total).toBe(0);
+    expect(store.list({ purpose: "manual_compact", callType: "summary" }).total).toBe(1);
+    expect(store.list({ purpose: "main", callType: "summary" }).total).toBe(0);
+    expect(readFileSync(join(directory, "records", file), "utf8")).toBe(before);
+    for (const callType of ["main", "SUMMARY", "", null, 1, []])
+      expect(() => store.list({ callType } as any)).toThrow("query");
+  });
   test("Host workspace scopes union exact and prefix-limited sources before stable pagination", () => {
     const store = new ModelTraceStore({ storageDir: directory });
     const startedAt = Date.now();

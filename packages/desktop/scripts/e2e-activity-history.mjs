@@ -142,13 +142,37 @@ try {
     output: { text: "第二轮结果" },
     attempts: [],
   });
+  // Deliberately omit callType: the Host classifies records written by older versions.
+  traces.write({
+    version: 1,
+    id: "activity-file-summary-call",
+    traceId: "activity-file-second-execution",
+    sessionId,
+    runId: "activity-file-run-2",
+    workspacePath: isolated.home,
+    source: "fixture",
+    purpose: "aux_summary",
+    provider: "fixture",
+    model: "activity-fixture-model",
+    startedAt: now + 50,
+    endedAt: now + 60,
+    status: "completed",
+    stream: false,
+    inputState: "recorded",
+    input: {
+      messages: [{ role: "user", content: "归纳同一会话的历史内容" }],
+    },
+    outputState: "recorded",
+    output: { text: "会话摘要结果" },
+    attempts: [],
+  });
   traces.write({
     version: 1,
     id: "activity-file-panel-call",
     traceId: "activity-file-panel-execution",
     workspacePath: isolated.home,
     source: "panel:video-studio",
-    purpose: "speech",
+    purpose: "tts",
     provider: "fixture",
     model: "activity-panel-fixture-model",
     startedAt: now - 500,
@@ -234,8 +258,8 @@ try {
     (item) => item.sessionId === "activity-file-session",
   );
   assert(
-    traceSessions.total === 2 && conversation?.callCount === 2 && conversation.traceCount === 2,
-    "Production IPC groups both executions into one conversation before pagination",
+    traceSessions.total === 2 && conversation?.callCount === 3 && conversation.traceCount === 2,
+    "Production IPC groups all call types into one conversation before pagination",
   );
   assert(
     traceSessions.items.some(
@@ -243,7 +267,37 @@ try {
     ),
     "Independent Panel inference remains visible without a fabricated session",
   );
+  assert(
+    [...conversation.callTypes].sort().join(",") === "execution,summary",
+    "Old records receive Host-derived types before session aggregation",
+  );
+  const summaries = await win.evaluate(() =>
+    window.codeshell.modelTraces.sessions({ callType: "summary" }),
+  );
+  assert(
+    summaries.total === 1 &&
+      summaries.items[0].callCount === 1 &&
+      summaries.items[0].traceCount === 1,
+    "Type filtering occurs before session counting and paging through production IPC",
+  );
+  const typeFilter = tracePage.locator("[data-trace-type-filter]");
+  await typeFilter.selectOption("summary");
+  await tracePage.locator('[data-trace-session="session:activity-file-session"]').click();
+  await tracePage.locator('[data-trace-request="activity-file-summary-call"]').waitFor();
+  assert(
+    (await tracePage.locator("[data-trace-request]").count()) === 1,
+    "Only the summary call remains after filtering",
+  );
+  await typeFilter.selectOption("");
+  await tracePage.locator('[data-trace-request="activity-file-second-call"]').waitFor();
+  assert(
+    (await tracePage.locator("[data-trace-request]").count()) === 3,
+    "Clearing the type filter restores every call",
+  );
   const sessionRow = tracePage.locator('[data-trace-session="session:activity-file-session"]');
+  if (!(await sessionRow.isVisible())) {
+    await tracePage.getByRole("button", { name: "返回会话列表", exact: true }).click();
+  }
   await sessionRow.getByText(title, { exact: true }).waitFor();
   await sessionRow.click();
   await tracePage.locator('[data-trace-group="activity-file-execution"]').waitFor();
@@ -252,6 +306,8 @@ try {
   await tracePage.locator('[data-trace-request="activity-file-model-call"]').click();
   const detail = tracePage.locator('[data-trace-detail-id="activity-file-model-call"]');
   await detail.getByText(objective, { exact: true }).waitFor();
+  await detail.getByText("运行时输入快照", { exact: true }).waitFor();
+  await detail.getByText("用户角色消息 · user", { exact: false }).waitFor();
   await detail.getByRole("button", { name: "输出", exact: true }).click();
   await detail.getByText(summary, { exact: true }).waitFor();
   const panelRow = tracePage.locator('[data-trace-session="trace:activity-file-panel-execution"]');
@@ -292,7 +348,7 @@ try {
   await win.getByRole("tabpanel").getByText(marker, { exact: true }).waitFor();
   assert(errors.length === 0, "No renderer exceptions");
   console.log(
-    "PASS: real sessions group multiple executions, standalone Panel prompts and desktop logs through production IPC",
+    "PASS: real sessions group and filter Host-derived call types, preserve Prompt snapshots and standalone Panel media inputs through production IPC",
   );
 } finally {
   try {

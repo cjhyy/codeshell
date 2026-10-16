@@ -211,7 +211,7 @@ export function createPetSegmentClosureService(deps: {
           extraction = await withDesktopSessionModelTrace(
             deps.sessionsRootDir,
             deps.petSessionId,
-            "pet_segment_closure",
+            "aux_summary",
             () => generate(promptInput),
           );
         } catch (error) {

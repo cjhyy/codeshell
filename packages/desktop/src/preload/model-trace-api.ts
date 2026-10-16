@@ -10,6 +10,7 @@ import type {
 } from "@cjhyy/code-shell-core/internal";
 export type {
   ModelTraceAttempt,
+  ModelTraceCallType,
   ModelTraceConfig,
   ModelTraceConfigPatch,
   ModelTraceContentState,

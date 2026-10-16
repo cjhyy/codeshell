@@ -26,19 +26,19 @@ import { I18nProvider } from "./i18n/I18nProvider";
 const root = createRoot(document.getElementById("root"));
 window.fixture = { calls: [], copied: "", failList: false, failGet: false, failConfig: false, config: { enabled: true, captureContent: true, includeEphemeral: true, retentionDays: 7 } };
 const records = Array.from({length:70}, (_, i) => ({
- version:1,id:"request-"+i,traceId:"execution-"+Math.floor(i/10),sessionId:"session-original",runId:"run-"+Math.floor(i/10),source:i===4?"external-cli-input":"desktop",purpose:i%3===0?"answer":"compaction",provider:"provider-"+(i%2),model:"model-"+(i%3),startedAt:1800000000000+i*5000,endedAt:1800000002000+i*5000,status:i%5===0?"failed":"completed",stream:true,
- inputState:i===3?"not-recorded":"recorded", input:i===3?undefined:{systemPrompt:"System Prompt snapshot 中文\\n"+"Long system instruction content. 中文规则 ".repeat(80),messages:[{role:"user",content:"Original user request 中文"},{role:"assistant",content:[{type:"text",text:"Previous answer"}]}],tools:[{name:"Read",description:"Read original file",parameters:{path:{type:"string"}}}],parameters:{temperature:0.3}},
+ version:1,id:"request-"+i,traceId:"execution-"+Math.floor(i/10),sessionId:"session-original",runId:"run-"+Math.floor(i/10),source:i===4?"external-cli-input":"desktop",purpose:["main","aux_summary","title"][i%3],callType:["execution","summary","title"][i%3],provider:"provider-"+(i%2),model:"model-"+(i%3),startedAt:1800000000000+i*5000,endedAt:1800000002000+i*5000,status:i%5===0?"failed":"completed",stream:true,
+ inputState:i===3?"not-recorded":"recorded", input:i===3?undefined:{systemPrompt:"System Prompt snapshot 中文\\n"+"Long system instruction content. 中文规则 ".repeat(80),messages:[{role:"system",content:"Embedded system instruction"},{role:"developer",content:"Embedded developer instruction"},{role:"user",content:"Original user request 中文"},{role:"assistant",content:[{type:"text",text:"Previous answer"}]},{role:"tool",content:"Previous tool result"}],tools:[{name:"Read",description:"Read original file",parameters:{path:{type:"string"}}}],parameters:{temperature:0.3}},
  outputState:i===3?"not-recorded":"recorded",output:i===3?undefined:{text:"Final recorded answer "+i,thinking:"Recorded reasoning",stopReason:"stop"},usage:{promptTokens:1234,completionTokens:200,totalTokens:1434,cacheReadTokens:100},
  attempts:[{id:"attempt-"+i+"-1",number:1,startedAt:1800000000000+i*5000,endedAt:1800000000200+i*5000,status:"failed",httpStatus:429,coverage:i===4?"logical-input":"provider-wire",inputState:"recorded",input:{model:"final-wire-model",messages:[{role:"user",content:"Final provider wire input "+i}],tools:[{type:"function",function:{name:"Read"}}]},outputState:"not-recorded",error:"Owned rate limit"},{id:"attempt-"+i+"-2",number:2,startedAt:1800000000300+i*5000,firstTokenAt:1800000000500+i*5000,endedAt:1800000002000+i*5000,status:"completed",coverage:"provider-wire",inputState:"recorded",input:{model:"final-wire-model",retry:true},outputState:"recorded",output:{text:"Attempt two answer "+i},usage:{promptTokens:1234,completionTokens:200,totalTokens:1434}}]
 }));
 // One long conversation has seven runs. Independent Panel inference has no session.
-records.push({...records[1],id:"panel-independent",traceId:"panel-process",sessionId:undefined,runId:undefined,source:"panel:video-studio",purpose:"speech",model:"panel-speech-model",stream:false,usage:undefined,startedAt:1799999900000,endedAt:1799999902000,input:{messages:[{role:"user",content:"Independent Panel speech input"}]},output:{data:{mimeType:"audio/wav",bytes:1234}},attempts:[]});
-for(let i=0;i<55;i++) records.push({...records[1],id:"older-call-"+i,traceId:i===54?"panel-process":"older-run-"+i,sessionId:"older-session-"+i,runId:"older-run-"+i,startedAt:1799999000000-i*5000,endedAt:1799999002000-i*5000,attempts:[]});
-const matches = (r,query) => (!query.withoutSession||!r.sessionId)&&(!query.traceId||r.traceId===query.traceId)&&(!query.sessionId||r.sessionId===query.sessionId)&&(!query.model||r.model===query.model)&&(!query.purpose||r.purpose===query.purpose)&&(!query.source||r.source===query.source)&&(!query.provider||r.provider===query.provider)&&(!query.status||r.status===query.status)&&(!query.search||JSON.stringify([r.id,r.traceId,r.sessionId,r.model,r.source]).includes(query.search));
+records.push({...records[1],id:"panel-independent",traceId:"panel-process",sessionId:undefined,runId:undefined,source:"panel:video-studio",purpose:"tts",callType:"speech",model:"panel-speech-model",stream:false,usage:undefined,startedAt:1799999900000,endedAt:1799999902000,input:{messages:[{role:"user",content:"Independent Panel speech input"}],parameters:{voice:"fixture-voice",response_format:"wav"}},output:{data:{mimeType:"audio/wav",bytes:1234}},attempts:[]});
+for(let i=0;i<55;i++) records.push({...records[1],id:"older-call-"+i,purpose:"main",callType:"execution",traceId:i===54?"panel-process":"older-run-"+i,sessionId:"older-session-"+i,runId:"older-run-"+i,startedAt:1799999000000-i*5000,endedAt:1799999002000-i*5000,attempts:[]});
+const matches = (r,query) => (!query.withoutSession||!r.sessionId)&&(!query.traceId||r.traceId===query.traceId)&&(!query.sessionId||r.sessionId===query.sessionId)&&(!query.model||r.model===query.model)&&(!query.purpose||r.purpose===query.purpose)&&(!query.callType||r.callType===query.callType)&&(!query.source||r.source===query.source)&&(!query.provider||r.provider===query.provider)&&(!query.status||r.status===query.status)&&(!query.search||JSON.stringify([r.id,r.traceId,r.sessionId,r.model,r.source]).includes(query.search));
 const paginate = (items,query) => {const start=Number(query.cursor||0),limit=query.limit||50,total=items.length;return {items:items.slice(start,start+limit),total,...(start+limit<total?{nextCursor:String(start+limit)}:{})};};
 window.codeshell = { listSessions:async()=>[{id:"session-original",title:"Panel Prompt audit / 核对 Panel Prompt"},...Array.from({length:55},(_,i)=>({id:"older-session-"+i,title:"Archived conversation "+i}))], listSessionTitles:async()=>({}), modelTraces: {
- sessions:async(query={})=>{window.fixture.calls.push(["sessions",query]);if(window.fixture.failList)throw new Error("Owned list failure");const groups=new Map();for(const r of records.filter(r=>matches(r,query))){const key=r.sessionId?"session:"+r.sessionId:"trace:"+r.traceId;let group=groups.get(key);if(!group){group={key,...(r.sessionId?{sessionId:r.sessionId}:{traceId:r.traceId}),latestRequestId:r.id,latestTraceId:r.traceId,startedAt:r.startedAt,updatedAt:r.endedAt||r.startedAt,callCount:0,traceCount:0,sources:[],models:[],runningCount:0,failedCount:0,traces:new Set()};groups.set(key,group);}group.callCount++;group.traces.add(r.traceId);group.traceCount=group.traces.size;group.startedAt=Math.min(group.startedAt,r.startedAt);if((r.endedAt||r.startedAt)>=group.updatedAt){group.updatedAt=r.endedAt||r.startedAt;group.latestRequestId=r.id;group.latestTraceId=r.traceId;}if(!group.sources.includes(r.source))group.sources.push(r.source);if(!group.models.includes(r.model))group.models.push(r.model);if(r.status==="running")group.runningCount++;if(r.status==="failed")group.failedCount++;}return paginate([...groups.values()].sort((a,b)=>b.updatedAt-a.updatedAt).map(({traces,...group})=>group),query);},
- list:async(query={})=>{ window.fixture.calls.push(["list",query]); if(window.fixture.failList)throw new Error("Owned list failure");return paginate(records.filter(r=>matches(r,query)).map(({input,output,attempts,...r})=>({...r,attemptCount:attempts.length})),query); },
+ sessions:async(query={})=>{window.fixture.calls.push(["sessions",query]);if(window.fixture.failList)throw new Error("Owned list failure");const groups=new Map();for(const r of records.filter(r=>matches(r,query))){const key=r.sessionId?"session:"+r.sessionId:"trace:"+r.traceId;let group=groups.get(key);if(!group){group={key,...(r.sessionId?{sessionId:r.sessionId}:{traceId:r.traceId}),latestRequestId:r.id,latestTraceId:r.traceId,startedAt:r.startedAt,updatedAt:r.endedAt||r.startedAt,callCount:0,traceCount:0,sources:[],models:[],callTypes:[],runningCount:0,failedCount:0,traces:new Set()};groups.set(key,group);}group.callCount++;group.traces.add(r.traceId);group.traceCount=group.traces.size;group.startedAt=Math.min(group.startedAt,r.startedAt);if((r.endedAt||r.startedAt)>=group.updatedAt){group.updatedAt=r.endedAt||r.startedAt;group.latestRequestId=r.id;group.latestTraceId=r.traceId;}if(!group.sources.includes(r.source))group.sources.push(r.source);if(!group.models.includes(r.model))group.models.push(r.model);if(!group.callTypes.includes(r.callType))group.callTypes.push(r.callType);if(r.status==="running")group.runningCount++;if(r.status==="failed")group.failedCount++;}return paginate([...groups.values()].sort((a,b)=>b.updatedAt-a.updatedAt).map(({traces,...group})=>group),query);},
+ list:async(query={})=>{ window.fixture.calls.push(["list",query]); if(window.fixture.failList)throw new Error("Owned list failure");return paginate(records.filter(r=>matches(r,query)).sort((a,b)=>b.startedAt-a.startedAt).map(({input,output,attempts,...r})=>({...r,attemptCount:attempts.length})),query); },
  get:async(id)=>{window.fixture.calls.push(["get",id]);if(window.fixture.failGet)throw new Error("Owned detail failure "+"long-error/".repeat(30));const record=records.find(r=>r.id===id);return record?{record,events:[{id:"tool-event",parentId:record.id,traceId:record.traceId,kind:"tool",name:"Read source file",startedAt:record.startedAt+600,endedAt:record.startedAt+800,status:"completed",inputState:"recorded",input:{path:"/original/source.ts"},outputState:"recorded",output:"Original tool result 中文"}]}:null;},
  getConfig:async()=>window.fixture.config,
  setConfig:async(patch)=>{window.fixture.calls.push(["config",patch]);if(window.fixture.failConfig)throw new Error("Owned config failure");window.fixture.config={...window.fixture.config,...patch};return window.fixture.config;}
@@ -96,8 +96,12 @@ const labels = (lang) =>
         previous: "上一页",
         search: "搜索模型、用途、来源或编号",
         open: "打开原会话",
-        wire: "最终 Provider 请求",
+        wire: "实际发送请求",
         copy: "复制 JSON",
+        type: "调用类型",
+        summary: "摘要 / 压缩 Prompt",
+        speech: "语音合成",
+        snapshot: "运行时输入快照",
       }
     : {
         title: "Execution traces",
@@ -116,8 +120,12 @@ const labels = (lang) =>
         previous: "Previous page",
         search: "Search model, purpose, source or ID",
         open: "Open original conversation",
-        wire: "Final Provider request",
+        wire: "Sent request",
         copy: "Copy JSON",
+        type: "Call type",
+        summary: "Summary / compaction Prompt",
+        speech: "Speech synthesis",
+        snapshot: "Runtime input snapshot",
       };
 async function assertCallInView(page, requestId) {
   await page.waitForFunction((id) => {
@@ -219,6 +227,10 @@ try {
           "System Prompt snapshot",
         ),
       );
+      await page
+        .locator('[data-trace-detail-id="request-0"]')
+        .getByText(text.snapshot, { exact: true })
+        .waitFor();
       await page.screenshot({ path: path.join(output, `prompt-${lang}-${viewport.width}.png`) });
       await selectTree(page, text, '[data-trace-attempt="attempt-0-1"]');
       await page.getByRole("button", { name: text.copy + " · " + text.wire, exact: true }).click();
@@ -334,6 +346,68 @@ try {
         path: path.join(output, `traces-${lang}-${viewport.width}x${viewport.height}.png`),
         fullPage: true,
       });
+      const panelDetail = page.locator('[data-trace-detail-id="panel-independent"]');
+      await panelDetail.locator('[data-trace-call-type="speech"]').waitFor();
+      assert.ok((await panelDetail.innerText()).includes("fixture-voice"));
+      await page.getByRole("button", { name: text.output, exact: true }).click();
+      assert.ok((await panelDetail.innerText()).includes("audio/wav"));
+      if (viewport.width < 1100) {
+        await page.getByRole("button", { name: text.backTree, exact: true }).click();
+        await page.getByRole("button", { name: text.backList, exact: true }).click();
+      }
+      const typeFilter = page.locator("[data-trace-type-filter]");
+      await typeFilter.selectOption("summary");
+      await page.waitForFunction(
+        () => document.querySelectorAll("[data-trace-session]").length === 1,
+      );
+      assert.ok(
+        await page.evaluate(() =>
+          window.fixture.calls.some(
+            ([method, query]) =>
+              method === "sessions" && query.callType === "summary" && !query.cursor,
+          ),
+        ),
+        "A type filter resets session paging and reaches the Host",
+      );
+      const typedSession = page.locator('[data-trace-session="session:session-original"]');
+      assert.ok((await typedSession.textContent()).includes(text.summary));
+      await typedSession.click();
+      await page.waitForFunction(
+        () => document.querySelectorAll("[data-trace-request]").length === 23,
+      );
+      assert.ok(
+        await page.evaluate(() =>
+          window.fixture.calls.some(
+            ([method, query]) =>
+              method === "list" &&
+              query.sessionId === "session-original" &&
+              query.callType === "summary",
+          ),
+        ),
+        "The conversation tree uses the same type filter as the session count",
+      );
+      await page.screenshot({ path: path.join(output, `types-${lang}-${viewport.width}.png`) });
+      await typeFilter.selectOption("");
+      await page.waitForFunction(
+        () =>
+          document.querySelectorAll("[data-trace-session]").length === 50 &&
+          document.querySelectorAll("[data-trace-request]").length === 70,
+      );
+      if (viewport.width >= 1100) {
+        // Keep the same latest request while changing type. A previous scope's
+        // scroll cache must not suppress scrolling the newly filtered tree.
+        await page.locator('[data-trace-request="request-69"]').evaluate((button) => {
+          let scroller = button.parentElement;
+          while (scroller && !/auto|scroll/.test(window.getComputedStyle(scroller).overflowY))
+            scroller = scroller.parentElement;
+          if (scroller) scroller.scrollTop = scroller.scrollHeight;
+        });
+      }
+      await typeFilter.selectOption("execution");
+      await page.waitForFunction(
+        () => document.querySelectorAll("[data-trace-request]").length === 24,
+      );
+      if (viewport.width >= 1100) await assertCallInView(page, "request-69");
       reports.push({ lang, viewport });
       await page.close();
     }

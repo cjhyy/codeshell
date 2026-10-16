@@ -135,6 +135,9 @@ test("remote trace queries cannot select paths, override workspace, or mutate ca
     "?limit=2&limit=3",
     "?since=20&until=10",
     "?status=unknown",
+    "?callType=main",
+    "?callType=SUMMARY",
+    "?callType=title&callType=execution",
     "?cursor=%00",
   ])
     expect((await f.request(query)).status).toBe(400);
@@ -316,4 +319,60 @@ test("session aggregation rechecks related workspace authority before responding
   const response = await f.request("/sessions");
   expect(response.status).toBe(401);
   expect(await response.text()).not.toContain("root-session");
+});
+
+test("call category queries filter only authorized metadata before call and session paging", async () => {
+  const f = await fixture();
+  const now = Date.now();
+  for (const [id, workspacePath, purpose, sessionId, offset] of [
+    ["summary-a", f.cwd, "aux_summary", "session-a", 1],
+    ["summary-b", f.cwd, "manual_compact", "session-b", 2],
+    ["title-a", f.cwd, "title", "session-a", 3],
+    ["foreign-summary", f.other, "aux_summary", "session-a", 4],
+    ["unknown-summary", undefined, "aux_summary", "session-a", 5],
+  ] as const)
+    f.store.write({
+      ...entry(id, workspacePath),
+      sessionId,
+      purpose,
+      startedAt: now + offset,
+      callType: "execution",
+    });
+  const calls = await (await f.request("?callType=summary&limit=1")).json();
+  expect(calls.total).toBe(2);
+  expect(calls.items[0]).toMatchObject({
+    id: "summary-b",
+    purpose: "manual_compact",
+    callType: "summary",
+  });
+  const nextCalls = await (
+    await f.request("?callType=summary&limit=1&cursor=" + encodeURIComponent(calls.nextCursor))
+  ).json();
+  expect(nextCalls.items.map((item: any) => item.id)).toEqual(["summary-a"]);
+  const sessions = await (await f.request("/sessions?callType=summary&limit=1")).json();
+  expect(sessions.total).toBe(2);
+  expect(sessions.items[0]).toMatchObject({
+    sessionId: "session-b",
+    callCount: 1,
+    callTypes: ["summary"],
+  });
+  const nextSessions = await (
+    await f.request(
+      "/sessions?callType=summary&limit=1&cursor=" + encodeURIComponent(sessions.nextCursor),
+    )
+  ).json();
+  expect(nextSessions.items[0]).toMatchObject({
+    sessionId: "session-a",
+    callCount: 1,
+    callTypes: ["summary"],
+  });
+  expect((await (await f.request("/title-a")).json()).record.callType).toBe("title");
+  expect((await (await f.request("?callType=title&purpose=main")).json()).total).toBe(0);
+  for (const query of [
+    "?callType=main",
+    "?callType=",
+    "?callTypes=title",
+    "?callType=title&workspacePath=/foreign",
+  ])
+    expect((await f.request("/sessions" + query)).status).toBe(400);
 });

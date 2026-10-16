@@ -69,6 +69,7 @@ test("auxiliary session generation uses its source transcript's workspace and st
 
 test("temporary auxiliary sources obey the independent ephemeral switch; an unknown source never inherits the active workspace", () => {
   const { root, sessions, store } = fixture();
+  store.setConfig({ includeEphemeral: false });
   sessions.create("/workspace/temporary", "fixture", "fixture", "qchat-helper");
   const temporary = withDesktopSessionModelTrace(root, "qchat-helper", "fixture", event);
   expect(temporary.workspacePath).toBe("/workspace/temporary");

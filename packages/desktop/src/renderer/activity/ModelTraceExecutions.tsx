@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { useT } from "../i18n/I18nProvider";
 import type { TraceSelection } from "./ModelTraceDetail";
+import { TraceCallTypeBadge } from "./TraceCallType";
 import { ModelTraceEvents } from "./ModelTraceEvents";
 import {
   groupModelTraces,
@@ -29,6 +30,7 @@ export function ModelTraceExecutions({
   cache,
   eventsByRequest,
   scrollReady,
+  scopeKey,
   activeStep,
   onSelect,
   onToggle,
@@ -41,6 +43,7 @@ export function ModelTraceExecutions({
   cache: Record<string, Detail>;
   eventsByRequest: Map<string, ModelTraceEvent[]>;
   scrollReady: boolean;
+  scopeKey: string;
   activeStep: string;
   onSelect: (id: string, selection?: TraceSelection) => void;
   onToggle: (id: string) => void;
@@ -51,16 +54,17 @@ export function ModelTraceExecutions({
   const scrolledRequest = useRef<string | null>(null);
   useEffect(() => {
     const button = selectedButton.current;
+    const target = `${scopeKey}:${selectedRequest}`;
     if (
       !scrollReady ||
       !button ||
-      scrolledRequest.current === selectedRequest ||
+      scrolledRequest.current === target ||
       button.getClientRects?.().length === 0
     )
       return;
     button.scrollIntoView?.({ block: "nearest" });
-    scrolledRequest.current = selectedRequest;
-  }, [selectedRequest, scrollReady, activeStep]);
+    scrolledRequest.current = target;
+  }, [selectedRequest, scrollReady, scopeKey, activeStep]);
   return (
     <ul className="space-y-2">
       {executions.map((execution) => (
@@ -115,7 +119,8 @@ export function ModelTraceExecutions({
                     onClick={() => onSelect(call.id)}
                   >
                     <span className="block break-words text-xs font-medium [overflow-wrap:anywhere]">
-                      {call.purpose} · {call.model}
+                      <TraceCallTypeBadge type={call.callType} />
+                      <span className="mt-1 block">{call.model}</span>
                     </span>
                     <span className="mt-1 block break-words text-[10px] text-muted-foreground">
                       {call.provider} · {traceStatusLabel(call.status, t)} ·{" "}

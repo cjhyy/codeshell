@@ -18,6 +18,23 @@ with hundreds of calls is one list item. Filters apply to those counts; selectin
 a native session opens its execution history, including sibling executions of a
 deep-linked call.
 
+Calls also have a readable type: execution or subtask Prompt, Panel call, summary /
+compaction, context preparation, title, goal check, memory, follow-up suggestion,
+speech synthesis, transcription, audio processing, external CLI entry or other.
+The Host derives `callType` from recorded purpose/source/parent attribution when
+reading metadata, including older records; it never classifies Prompt text or
+trusts a saved/client-supplied category. Unknown purposes retain their raw value
+and show as other. Type filtering applies before pagination and session counts,
+and also filters calls inside the selected session.
+
+The default input view is the assembled runtime snapshot. Provider-wire attempts
+show the actual request for that attempt, subject to redaction and recording
+bounds. System instructions, user-role messages, model history, developer
+instructions and tool results have separate labels; a user role may also contain
+an internally generated helper input. Tool events show tool arguments/results.
+Media calls show text, parameters and resource metadata instead of being labelled
+as chat Prompts. External CLI input retains its narrower entry-only boundary.
+
 ## Recording
 
 Hosts explicitly initialize `configureModelTracing` from the Core internal entry.
