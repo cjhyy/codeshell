@@ -1099,6 +1099,8 @@ export function Workbench({
       </main>
       {pendingNavigation ? (
         <NavigationPrompt
+          identity={pendingNavigation}
+          workspaceKey={controller.workspaceKey}
           onStay={() => setPendingNavigation(null)}
           onLeave={() => {
             const action = pendingNavigation;
@@ -1121,16 +1123,96 @@ export function Workbench({
   );
 }
 
-function NavigationPrompt({ onStay, onLeave }: { onStay: () => void; onLeave: () => void }) {
+function NavigationPrompt({
+  onStay,
+  onLeave,
+  identity,
+  workspaceKey,
+}: {
+  onStay: () => void;
+  onLeave: () => void;
+  identity: () => void;
+  workspaceKey: string;
+}) {
   const dialog = React.useRef<HTMLDialogElement>(null);
-  React.useEffect(() => {
-    const previous = document.activeElement as HTMLElement | null;
-    dialog.current?.showModal();
-    return () => {
-      dialog.current?.close();
-      previous?.focus();
+  const current = React.useRef<{
+    identity: () => void;
+    workspace: string;
+    source: HTMLElement | null;
+    cancelled: boolean;
+    returning: boolean;
+  } | null>(null);
+  if (!current.current || current.current.identity !== identity) {
+    const source = document.activeElement;
+    current.current = {
+      identity,
+      workspace: workspaceKey,
+      source: source instanceof HTMLElement && source !== document.body ? source : null,
+      cancelled: false,
+      returning: false,
     };
-  }, []);
+  }
+  const session = current.current;
+  const workspace = React.useRef(workspaceKey);
+  workspace.current = workspaceKey;
+  React.useLayoutEffect(() => {
+    if (session.workspace !== workspaceKey) session.cancelled = true;
+  }, [session, workspaceKey]);
+  React.useEffect(() => {
+    const modal = dialog.current;
+    if (!modal) return;
+    const handoff = (event: Event) => {
+      const target =
+        event instanceof FocusEvent && event.type === "focusout"
+          ? event.relatedTarget
+          : event.target;
+      if (!(target instanceof Node) || (target === document.body && event.type !== "pointerdown"))
+        return;
+      if (!modal.contains(target)) session.cancelled = true;
+      if (event instanceof PointerEvent && target === modal) {
+        const bounds = modal.getBoundingClientRect();
+        if (
+          event.clientX < bounds.left ||
+          event.clientX > bounds.right ||
+          event.clientY < bounds.top ||
+          event.clientY > bounds.bottom
+        )
+          session.cancelled = true;
+      }
+    };
+    const blur = () => {
+      session.cancelled = true;
+    };
+    document.addEventListener("pointerdown", handoff, true);
+    document.addEventListener("focusin", handoff, true);
+    document.addEventListener("focusout", handoff, true);
+    window.addEventListener("blur", blur);
+    modal.showModal();
+    return () => {
+      document.removeEventListener("pointerdown", handoff, true);
+      document.removeEventListener("focusin", handoff, true);
+      document.removeEventListener("focusout", handoff, true);
+      window.removeEventListener("blur", blur);
+      // StrictMode replays effects while this exact native modal remains mounted.
+      // A real unmount must not let native close restore an unrelated old opener.
+      if (modal.isConnected && current.current === session) modal.close();
+      const active = document.activeElement;
+      if (
+        session.returning &&
+        !session.cancelled &&
+        current.current === session &&
+        workspace.current === session.workspace &&
+        session.source?.isConnected &&
+        !session.source.matches(":disabled") &&
+        (active === document.body || active === session.source || !active?.isConnected)
+      )
+        session.source.focus();
+    };
+  }, [session]);
+  const stay = () => {
+    session.returning = true;
+    onStay();
+  };
   return (
     <dialog
       className="navigation-prompt"
@@ -1138,7 +1220,7 @@ function NavigationPrompt({ onStay, onLeave }: { onStay: () => void; onLeave: ()
       aria-labelledby="navigation-prompt-title"
       onCancel={(event) => {
         event.preventDefault();
-        onStay();
+        stay();
       }}
     >
       <h2 id="navigation-prompt-title">还有未保存的修改</h2>
@@ -1146,7 +1228,7 @@ function NavigationPrompt({ onStay, onLeave }: { onStay: () => void; onLeave: ()
         离开会丢弃未提交的修改；切换项目还会清除未发送的草稿和附件。已经提交的操作可能仍会完成，请等待结果后再离开。
       </p>
       <div className="library-actions">
-        <button className="library-button primary" onClick={onStay} autoFocus>
+        <button className="library-button primary" onClick={stay} autoFocus>
           留在此页
         </button>
         <button className="library-button" onClick={onLeave}>
