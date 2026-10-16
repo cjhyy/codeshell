@@ -314,7 +314,7 @@ async function guardedProcesses() {
   }
 }
 async function activityReview() {
-  await navigateSettingsMenu(win, "Task center", { activity: true });
+  await navigateSettingsMenu(win, "Background work", { activity: true });
   const card = win.locator(`[data-task-key="session:${sessionId}"]`);
   await card.waitFor({ timeout: 20_000 });
   await card.getByRole("button", { name: "Review uncertain external writes", exact: true }).click();

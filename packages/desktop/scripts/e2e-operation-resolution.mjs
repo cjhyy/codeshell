@@ -132,7 +132,7 @@ async function launch() {
   return errors;
 }
 async function activityReview() {
-  await navigateSettingsMenu(win, "Task center", { activity: true });
+  await navigateSettingsMenu(win, "Background work", { activity: true });
   const card = win.locator(`[data-task-key="session:${sessionId}"]`);
   await card.waitFor({ timeout: 20_000 });
   await card.getByRole("button", { name: "Review uncertain external writes", exact: true }).click();
@@ -220,6 +220,12 @@ try {
       linkExecutionBackend: "remote",
       linkRemoteState: "connected",
       linkRemoteGrantId: "synthetic-grant",
+      linkResourceGroups: [
+        {
+          id: "repositories",
+          items: ["fixture/unknown", "fixture/success"].map((id) => ({ id, label: id })),
+        },
+      ],
       linkLastVerifiedAt: "2026-10-09T00:00:00Z",
       linkCapabilityIds: ["github.list_issues", "github.create_issue", "github.get_issue"],
     },
