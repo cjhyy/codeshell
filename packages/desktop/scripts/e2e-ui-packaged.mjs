@@ -350,8 +350,9 @@ try {
     async () => {
       await win.reload();
       await win.locator("#root").waitFor();
-      if (!(await win.locator("[data-settings-back]:visible").count()))
-        await navigateSettingsMenu(win, /^(设置|Settings)$/);
+      // The persisted Settings route mounts lazily after #root exists. Await
+      // its real control before choosing a module; the workbench sidebar is hidden here.
+      await win.locator("[data-settings-back]:visible").first().waitFor({ state: "visible" });
       await chooseModule("appearance");
       await win.locator('[data-theme-mode="dark"][aria-pressed="true"]').waitFor();
       await win
