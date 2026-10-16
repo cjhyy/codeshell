@@ -306,6 +306,10 @@ try {
       );
   }
   await render(false);
+  // Keep content below the focused historical tools. Compact process cards can
+  // otherwise let native Tab scrolling reach the tail and legitimately rearm
+  // following; this case checks reading history while still away from the tail.
+  await page.evaluate(() => window.streamFixture());
   await page.locator(".cs-process-heading").click();
   await page.waitForTimeout(1100);
   await page.locator(".cs-process-heading").focus();
@@ -321,6 +325,10 @@ try {
     assert.ok(entry.summary.last.focusLabel, entry.name + ": a transcript control owns focus");
   };
   await trace("history-Tab-to-tools", () => page.keyboard.press("Tab"), visibleFocus);
+  assert.ok(
+    (await page.evaluate(() => window.metric())).distance > 2,
+    "keyboard history fixture remains away from the transcript tail",
+  );
   await trace(
     "history-Tab-stream",
     () => page.evaluate(() => window.streamFixture()),

@@ -109,138 +109,140 @@ function TurnProcessGroupCardImpl({
 
   return (
     <div
-      className="min-w-0 max-w-full px-4 py-1"
+      className="cs-process min-w-0 max-w-full px-4 py-1"
       data-message-kind="process"
       data-tool-names={toolNames.join(" ")}
     >
-      {showHeader && (
-        <button
-          type="button"
-          className="cs-process-heading"
-          onClick={(event) => anchoredChange(event.currentTarget, () => setOpen((v) => !v))}
-          aria-expanded={open}
-          aria-controls={detailsId}
-        >
-          <span className="cs-process-label">
-            {group.isLive && (
-              <LoaderCircle
-                size={13}
-                className="animate-spin motion-reduce:animate-none"
-                aria-hidden="true"
-              />
-            )}
-            {label}
-          </span>
-          {duration && (
-            <span
-              className="cs-process-duration"
-              aria-label={t("msg.process.processDurationAccessible", { time: duration })}
-            >
-              {duration}
+      <div className="cs-process-surface">
+        {showHeader && (
+          <button
+            type="button"
+            className="cs-process-heading"
+            onClick={(event) => anchoredChange(event.currentTarget, () => setOpen((v) => !v))}
+            aria-expanded={open}
+            aria-controls={detailsId}
+          >
+            <span className="cs-process-label">
+              {group.isLive && (
+                <LoaderCircle
+                  size={13}
+                  className="animate-spin motion-reduce:animate-none"
+                  aria-hidden="true"
+                />
+              )}
+              {label}
             </span>
-          )}
-          {open ? (
-            <ChevronDown className="cs-process-chevron" size={13} aria-hidden="true" />
-          ) : (
-            <ChevronRight className="cs-process-chevron" size={13} aria-hidden="true" />
-          )}
-        </button>
-      )}
-      {visibleItems.length > 0 && (
-        <div id={detailsId} className="cs-process-content">
-          {visibleItems.map((m) => {
-            if (m.kind === "tool_group") {
-              return (
-                <ToolGroupCard
-                  key={m.id}
-                  group={m}
-                  turnEpoch={turnEpoch}
-                  cwd={cwd}
-                  sessionId={sessionId}
-                  sessionMainRootId={sessionMainRootId}
-                  rootStatus={rootStatus}
-                  defaultOpen
-                />
-              );
-            }
-            if (m.kind === "tool") {
-              return (
-                <ToolCard
-                  key={m.id}
-                  message={m}
-                  turnEpoch={turnEpoch}
-                  cwd={cwd}
-                  sessionId={sessionId}
-                  sessionMainRootId={sessionMainRootId}
-                  rootStatus={rootStatus}
-                />
-              );
-            }
-            if (m.kind === "assistant") {
-              // Empty assistant = nothing to draw (only text renders here).
-              // Replay makes tool-only turns done:true text:"" — suppress
-              // those too, not just streaming empties. See AssistantMessageView.
-              if (m.text === "") return null;
-              return (
-                <div key={m.id} className="py-1 text-sm">
-                  {/* Inline assistant text belongs to the MAIN agent of this
-                      turn — same session, same cwd the card already holds — so
-                      forward it (matches AssistantMessageView). Relative image
-                      paths / path links now resolve here too (stage 0b). */}
-                  <StreamingMarkdown
-                    text={m.text}
-                    done={m.done}
-                    cwd={cwd ?? null}
+            {duration && (
+              <span
+                className="cs-process-duration"
+                aria-label={t("msg.process.processDurationAccessible", { time: duration })}
+              >
+                {duration}
+              </span>
+            )}
+            {open ? (
+              <ChevronDown className="cs-process-chevron" size={13} aria-hidden="true" />
+            ) : (
+              <ChevronRight className="cs-process-chevron" size={13} aria-hidden="true" />
+            )}
+          </button>
+        )}
+        {visibleItems.length > 0 && (
+          <div id={detailsId} className="cs-process-content">
+            {visibleItems.map((m) => {
+              if (m.kind === "tool_group") {
+                return (
+                  <ToolGroupCard
+                    key={m.id}
+                    group={m}
+                    turnEpoch={turnEpoch}
+                    cwd={cwd}
+                    sessionId={sessionId}
+                    sessionMainRootId={sessionMainRootId}
+                    rootStatus={rootStatus}
+                    defaultOpen
+                  />
+                );
+              }
+              if (m.kind === "tool") {
+                return (
+                  <ToolCard
+                    key={m.id}
+                    message={m}
+                    turnEpoch={turnEpoch}
+                    cwd={cwd}
                     sessionId={sessionId}
                     sessionMainRootId={sessionMainRootId}
                     rootStatus={rootStatus}
                   />
-                </div>
-              );
-            }
-            if (m.kind === "user") {
-              if (isSystemReminderText(m.text)) {
-                return <SystemReminderTask key={m.id} text={m.text} />;
+                );
               }
-              // A steer / goal-wakeup / cron续接 spliced into a still-live turn
-              // lands INSIDE this group (injected user is not a turn boundary,
-              // see streamGroups foldTurnProcess). It must render as a
-              // right-aligned user bubble here — without this branch the
-              // confirmed steer hit `return null` and visibly vanished after
-              // being consumed (regression: steer bubble disappears).
-              // BUT a still-pending optimistic steer is owned by the queued-input
-              // panel (visible + revocable there until steer_injected flips it to
-              // pending:false). Rendering it here too would double it and show it
-              // as already-in-transcript before the engine consumed it. Only draw
-              // the CONFIRMED bubble; the panel handles the pending one.
-              if (m.pending || m.text === "") return null;
-              return (
-                <div key={m.id} className="flex min-w-0 max-w-full flex-col items-end py-1">
-                  <div className="min-w-0 max-w-[80%] rounded-xl border border-border bg-muted/40 px-3 py-2 text-sm">
-                    <div className="whitespace-pre-wrap break-words">{m.text}</div>
+              if (m.kind === "assistant") {
+                // Empty assistant = nothing to draw (only text renders here).
+                // Replay makes tool-only turns done:true text:"" — suppress
+                // those too, not just streaming empties. See AssistantMessageView.
+                if (m.text === "") return null;
+                return (
+                  <div key={m.id} className="cs-process-narration">
+                    {/* Inline assistant text belongs to the MAIN agent of this
+                      turn — same session, same cwd the card already holds — so
+                      forward it (matches AssistantMessageView). Relative image
+                      paths / path links now resolve here too (stage 0b). */}
+                    <StreamingMarkdown
+                      text={m.text}
+                      done={m.done}
+                      cwd={cwd ?? null}
+                      sessionId={sessionId}
+                      sessionMainRootId={sessionMainRootId}
+                      rootStatus={rootStatus}
+                    />
                   </div>
-                </div>
-              );
-            }
-            if (m.kind === "thinking") {
-              return <ThinkingMessageView key={m.id} message={m} />;
-            }
-            if (m.kind === "agent") {
-              return <AgentMessageView key={m.id} message={m} />;
-            }
-            if (m.kind === "agent_group") {
-              return <AgentGroupCard key={m.id} group={m} />;
-            }
-            if (m.kind === "context_boundary") {
-              return <ContextBoundaryView key={m.id} message={m} />;
-            }
-            if (m.kind === "goal_progress") {
-              return <GoalProgressView key={m.id} message={m} />;
-            }
-            return null;
-          })}
-        </div>
-      )}
+                );
+              }
+              if (m.kind === "user") {
+                if (isSystemReminderText(m.text)) {
+                  return <SystemReminderTask key={m.id} text={m.text} />;
+                }
+                // A steer / goal-wakeup / cron续接 spliced into a still-live turn
+                // lands INSIDE this group (injected user is not a turn boundary,
+                // see streamGroups foldTurnProcess). It must render as a
+                // right-aligned user bubble here — without this branch the
+                // confirmed steer hit `return null` and visibly vanished after
+                // being consumed (regression: steer bubble disappears).
+                // BUT a still-pending optimistic steer is owned by the queued-input
+                // panel (visible + revocable there until steer_injected flips it to
+                // pending:false). Rendering it here too would double it and show it
+                // as already-in-transcript before the engine consumed it. Only draw
+                // the CONFIRMED bubble; the panel handles the pending one.
+                if (m.pending || m.text === "") return null;
+                return (
+                  <div key={m.id} className="flex min-w-0 max-w-full flex-col items-end py-1">
+                    <div className="min-w-0 max-w-[80%] rounded-xl border border-border bg-muted/40 px-3 py-2 text-sm">
+                      <div className="whitespace-pre-wrap break-words">{m.text}</div>
+                    </div>
+                  </div>
+                );
+              }
+              if (m.kind === "thinking") {
+                return <ThinkingMessageView key={m.id} message={m} />;
+              }
+              if (m.kind === "agent") {
+                return <AgentMessageView key={m.id} message={m} />;
+              }
+              if (m.kind === "agent_group") {
+                return <AgentGroupCard key={m.id} group={m} />;
+              }
+              if (m.kind === "context_boundary") {
+                return <ContextBoundaryView key={m.id} message={m} />;
+              }
+              if (m.kind === "goal_progress") {
+                return <GoalProgressView key={m.id} message={m} />;
+              }
+              return null;
+            })}
+          </div>
+        )}
+      </div>
     </div>
   );
 }

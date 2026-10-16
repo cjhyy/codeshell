@@ -292,32 +292,45 @@
     overflow-wrap: anywhere;
   }
 
+  .cs-process-surface {
+    min-width: 0;
+    max-width: 100%;
+    border: 1px solid hsl(var(--cs-border) / 0.45);
+    border-radius: 0.625rem;
+    background: hsl(var(--cs-card));
+  }
+
   .cs-process-heading {
     display: flex;
     width: 100%;
     min-width: 0;
-    min-height: 2.25rem;
+    min-height: 2rem;
     align-items: center;
     gap: 0.5rem;
     border: 0;
-    border-radius: 0.5rem;
-    padding: 0.5rem 0.625rem;
-    background: hsl(var(--cs-card));
+    border-radius: calc(0.625rem - 1px);
+    padding: 0.5rem 0.75rem;
+    background: transparent;
     color: hsl(var(--cs-muted-foreground));
     text-align: left;
-    font-size: 0.8125rem;
+    font-size: 0.75rem;
     line-height: 1.5;
     cursor: pointer;
     transition: background-color 120ms ease;
   }
 
   .cs-process-heading:hover {
-    background: hsl(var(--cs-muted));
+    background: hsl(var(--cs-muted) / 0.45);
+  }
+
+  .cs-process-heading[aria-expanded="true"] {
+    border-bottom-right-radius: 0;
+    border-bottom-left-radius: 0;
   }
 
   .cs-process-heading:focus-visible {
-    outline: 2px solid hsl(var(--cs-ring));
-    outline-offset: -3px;
+    outline: 1px solid hsl(var(--cs-ring) / 0.6);
+    outline-offset: -2px;
   }
 
   .cs-process-label {
@@ -326,7 +339,7 @@
     flex: 1;
     align-items: center;
     gap: 0.5rem;
-    color: hsl(var(--cs-foreground) / 0.85);
+    color: hsl(var(--cs-muted-foreground));
     font-weight: 500;
     overflow-wrap: anywhere;
   }
@@ -359,15 +372,16 @@
   .cs-process-content {
     display: flex;
     min-width: 0;
-    max-width: calc(100% - 0.625rem);
+    max-width: 100%;
     flex-direction: column;
-    gap: 0.5rem;
-    margin-top: 0.375rem;
-    margin-left: 0.625rem;
-    border-radius: 0.5rem;
-    padding: 0.375rem 0.625rem;
-    background: hsl(var(--cs-card));
+    gap: 0.375rem;
+    padding: 0.125rem 0.75rem 0.625rem;
     overflow-wrap: anywhere;
+  }
+
+  .cs-process-narration {
+    min-width: 0;
+    padding-block: 0.25rem;
   }
 
   @media (max-width: 480px) {
@@ -400,6 +414,41 @@
     .cs-process-chevron {
       transition: none;
     }
+  }
+}
+
+/* Embedded records share the process surface. Keep standalone tool cards on
+   their own readable background, and preserve selected and expanded details. */
+@layer utilities {
+  .cs-process [data-tool-group] {
+    border: 0;
+    background: transparent;
+  }
+
+  .cs-process [data-tool-group-heading] {
+    padding-inline: 0;
+  }
+
+  .cs-process [data-tool-group-content]:not([hidden]) {
+    gap: 0;
+    padding: 0;
+  }
+
+  .cs-process [data-tool-card]:not([data-selected="true"]) {
+    border-color: transparent;
+    background: transparent;
+  }
+
+  .cs-process [data-tool-heading] {
+    padding-inline: 0;
+  }
+
+  .cs-process-narration > div > :first-child {
+    margin-top: 0;
+  }
+
+  .cs-process-narration > div > :last-child {
+    margin-bottom: 0;
   }
 }
 
