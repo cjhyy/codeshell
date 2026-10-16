@@ -229,6 +229,7 @@ type PreparedConnection = {
   input: LinkConnectionInput;
   id: string;
   expected: Credential | null;
+  knownConnectionIds?: string[];
 };
 
 /** One host/workspace credential domain. Browsers never provide the store or owner identity. */
@@ -779,11 +780,21 @@ export function createLinkService(options: LinkServiceOptions = {}) {
     const id = input.connectionId ?? `link-${randomUUID()}`;
     authorizationDiagnosticStage("connection_review");
     let expected: Credential | null = null;
+    let knownConnectionIds: string[] | undefined;
     if (input.expectedRevision === null) {
       const current = records();
       authorizationDiagnosticStage("connection_review");
       if (current.credentials.some((credential) => credential.id === id))
         throw new LinkServiceError(409, "conflict");
+      if (!input.connectionId)
+        knownConnectionIds = current.credentials
+          .filter(
+            (credential) =>
+              credential.meta?.linkProvider === input.providerId &&
+              credential.meta?.linkConnectionMethod === input.methodId,
+          )
+          .map((credential) => credential.id)
+          .sort();
     } else {
       expected = reviewed(id, input.expectedRevision);
       if (
@@ -792,7 +803,7 @@ export function createLinkService(options: LinkServiceOptions = {}) {
       )
         throw new LinkServiceError(409, "conflict");
     }
-    return { input, id, expected };
+    return { input, id, expected, ...(knownConnectionIds ? { knownConnectionIds } : {}) };
   }
   async function change<T>(
     context: LinkOperationContext,
@@ -817,6 +828,18 @@ export function createLinkService(options: LinkServiceOptions = {}) {
   ): void {
     const current = records();
     if (current.projectIds.has(prepared.id)) throw new LinkServiceError(403, "read_only");
+    if (prepared.knownConnectionIds) {
+      const currentIds = current.credentials
+        .filter(
+          (credential) =>
+            credential.meta?.linkProvider === prepared.input.providerId &&
+            credential.meta?.linkConnectionMethod === prepared.input.methodId,
+        )
+        .map((credential) => credential.id)
+        .sort();
+      if (JSON.stringify(currentIds) !== JSON.stringify(prepared.knownConnectionIds))
+        throw new LinkServiceError(409, "conflict");
+    }
     if (!store.compareAndSwap("user", prepared.id, prepared.expected, next, retirement))
       throw new LinkServiceError(409, "conflict");
   }
