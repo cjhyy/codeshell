@@ -34,7 +34,7 @@ import {
   urlsMatch,
   useMarkerEcho,
 } from "../browser/markerEcho";
-import { NEW_TAB, NEW_TAB_TITLE } from "../browser/types";
+import { NEW_TAB, NEW_TAB_TITLE, type Tab, type WebviewElement } from "../browser/types";
 import { WebviewHost } from "../browser/WebviewHost";
 import { FloatingAt, IconBtn } from "../browser/ui";
 import { MarkerDot } from "../browser/markers";
@@ -228,6 +228,7 @@ export function BrowserPanel({
     active,
     nav,
     viewRef,
+    tabViewRef,
     setActiveId,
     patchTab,
     closeTab,
@@ -235,10 +236,6 @@ export function BrowserPanel({
     navigate,
   } = useBrowserTabs(initialUrl, openUrl, bucket);
 
-  // Idle-eviction: true once the panel has been hidden past IDLE_EVICT_MS. While
-  // evicted the <webview> is unmounted (its renderer process freed); becoming
-  // visible again clears this and remounts WebviewHost, reloading the tab url.
-  const evicted = useIdleEvict(visible);
   const showingNewTab = active.url === NEW_TAB;
 
   // Element-picking ("圈选").
@@ -275,10 +272,8 @@ export function BrowserPanel({
   const [chromeBusy, setChromeBusy] = useState(false);
   const [chromeExtensionPath, setChromeExtensionPath] = useState<string | undefined>();
 
-  const handleActiveGuestDomReady = useCallback(() => {
-    setReadyGuestTabId(activeId);
-  }, [activeId]);
-  const activeGuestReady = readyGuestTabId === activeId && !evicted && !showingNewTab;
+  const handleGuestDomReady = useCallback((id: string) => setReadyGuestTabId(id), []);
+  const activeGuestReady = readyGuestTabId === activeId && !showingNewTab;
 
   useEffect(() => {
     let cancelled = false;
@@ -657,31 +652,22 @@ export function BrowserPanel({
       {/* Content: webview or the new-tab landing (localhost bookmarks). The
           element-pick comment box + saved markers float over the page. */}
       <div className="relative min-h-0 flex-1 overflow-hidden">
-        {evicted ? (
-          // Hidden past the idle window: the guest process was reclaimed. This
-          // placeholder renders only while off-screen, so the user never sees
-          // it — becoming visible clears `evicted` and remounts the webview,
-          // which reloads `active.url` from its frozen src.
-          <div className="flex min-h-0 flex-1 items-center justify-center" aria-hidden />
-        ) : active.url === NEW_TAB ? (
-          <NewTabLanding onOpen={navigate} />
-        ) : (
-          <WebviewHost
-            // key per tab: one <webview> is mounted at a time, so without a
-            // per-tab key React would reuse a single guest across tabs and
-            // their navigation histories (canGoBack/Forward) would bleed
-            // together. Keying by tab gives each its own guest + history — and
-            // freezes the per-tab initial src (see WebviewHost) so the guest's
-            // own redirects don't re-drive `src` into an ERR_ABORTED race.
-            key={activeId}
-            ref={viewRef}
-            initialUrl={active.url}
-            partition={partition}
-            bucket={bucket}
-            engineSessionId={engineSessionId}
-            onDomReady={handleActiveGuestDomReady}
-          />
-        )}
+        {showingNewTab && <NewTabLanding onOpen={navigate} />}
+        {tabs
+          .filter((tab) => tab.url !== NEW_TAB)
+          .map((tab) => (
+            <BrowserTabGuest
+              key={tab.id}
+              tab={tab}
+              active={tab.id === activeId}
+              visible={visible && tab.id === activeId}
+              viewRef={tabViewRef(tab.id)}
+              partition={partition}
+              bucket={bucket}
+              engineSessionId={engineSessionId}
+              onDomReady={handleGuestDomReady}
+            />
+          ))}
 
         {/* Load-failure overlay. The <webview> renders blank on a failed load,
             so we cover it with our own message + retry rather than leave the user
@@ -786,6 +772,46 @@ export function BrowserPanel({
           </FloatingAt>
         )}
       </div>
+    </div>
+  );
+}
+
+/** Keep unsent forms and history through quick tab switches; reclaim an idle
+ * tab's renderer using the same five-minute policy as a hidden browser panel. */
+function BrowserTabGuest({
+  tab,
+  active,
+  visible,
+  viewRef,
+  partition,
+  bucket,
+  engineSessionId,
+  onDomReady,
+}: {
+  tab: Tab;
+  active: boolean;
+  visible: boolean;
+  viewRef: React.RefCallback<WebviewElement>;
+  partition?: string;
+  bucket?: string;
+  engineSessionId?: string | null;
+  onDomReady: (id: string) => void;
+}) {
+  const evicted = useIdleEvict(visible);
+  const ready = useCallback(() => onDomReady(tab.id), [onDomReady, tab.id]);
+  return (
+    <div className="absolute inset-0" hidden={!active} aria-hidden={!active || undefined}>
+      {!evicted && (
+        <WebviewHost
+          ref={viewRef}
+          initialUrl={tab.url}
+          partition={partition}
+          bucket={bucket}
+          engineSessionId={engineSessionId}
+          onDomReady={ready}
+          active={active}
+        />
+      )}
     </div>
   );
 }
