@@ -1,5 +1,5 @@
 /** Actual Workbench sidebar/media ownership; owned Link data, no authorization or writes. */
-/* global window, document, requestAnimationFrame, getComputedStyle, innerWidth, innerHeight, Event, PointerEvent */
+/* global window, document, requestAnimationFrame, getComputedStyle, innerWidth, innerHeight, Event, PointerEvent, Node, Element */
 import assert from "node:assert/strict";
 import { createRequire } from "node:module";
 import { mkdtemp, writeFile } from "node:fs/promises";
@@ -273,6 +273,28 @@ async function outside(page, kind, height) {
   });
   return page.locator("body");
 }
+async function openDirtyPrompt(page) {
+  await toggle(page).focus();
+  await page.keyboard.press("Enter");
+  await frames(page);
+  await page.getByRole("button", { name: "历史对话", exact: true }).focus();
+  await page.keyboard.press("Enter");
+  await page
+    .locator(".session-history-row")
+    .first()
+    .getByRole("button", { name: "重命名", exact: true })
+    .click();
+  await page
+    .getByRole("textbox", { name: "对话标题", exact: true })
+    .fill("Owned unsaved history title");
+  await frames(page);
+  await toggle(page).click();
+  await frames(page);
+  await page.getByRole("button", { name: "对话", exact: true }).focus();
+  await page.keyboard.press("Enter");
+  await page.getByRole("heading", { name: "还有未保存的修改", exact: true }).waitFor();
+  await frames(page);
+}
 try {
   for (const theme of ["light", "dark"])
     for (const [width, height] of [
@@ -487,6 +509,96 @@ try {
       }
       reports.push({ label: "closing-source-handoff", kind, timing });
     }
+  for (const kind of [
+    "cancel",
+    "backdrop",
+    "closing-field",
+    "closing-svg",
+    "blur",
+    "workspace",
+    "unmount",
+    "rapid",
+  ]) {
+    const page = await mount(390, 360, "light", false, true);
+    await openDirtyPrompt(page);
+    const source = page.getByRole("button", { name: "对话", exact: true });
+    if (kind === "backdrop") {
+      await page.evaluate(() => {
+        document.addEventListener(
+          "pointerdown",
+          (event) => {
+            window.nativeBackdropPointer =
+              event.target === document.querySelector(".navigation-prompt");
+          },
+          { capture: true, once: true },
+        );
+      });
+      await page.mouse.click(2, 2);
+      assert.equal(await page.evaluate(() => window.nativeBackdropPointer), true);
+    }
+    if (kind === "blur") await page.evaluate(() => window.dispatchEvent(new Event("blur")));
+    if (kind === "workspace") await page.evaluate(() => window.changeWorkspace());
+    if (kind === "closing-field" || kind === "closing-svg") {
+      await page.evaluate((kind) => {
+        const remove = Node.prototype.removeChild;
+        Node.prototype.removeChild = function (node) {
+          const result = remove.call(this, node);
+          if (node instanceof Element && node.matches("dialog.navigation-prompt")) {
+            Node.prototype.removeChild = remove;
+            if (kind === "closing-field") {
+              const field = document.getElementById("outside-field");
+              field.style.visibility = "visible";
+              field.value = "Closing independent draft";
+              field.focus();
+            } else {
+              const target = document.querySelector("#outside-blank rect");
+              target.dispatchEvent(new PointerEvent("pointerdown", { bubbles: true }));
+              document.body.tabIndex = -1;
+              document.body.focus();
+            }
+            window.closingHandoffFired = !node.isConnected;
+          }
+          return result;
+        };
+      }, kind);
+    }
+    if (kind === "unmount") await page.evaluate(() => window.unmountFixture());
+    else if (kind === "cancel") await page.keyboard.press("Escape");
+    else await page.getByRole("button", { name: "留在此页", exact: true }).click();
+    await frames(page);
+    await frames(page);
+    assert.equal(await page.locator(".navigation-prompt").count(), 0);
+    if (kind === "cancel" || kind === "rapid") {
+      await focusMatches(source);
+      assert.equal(
+        await page.locator(".session-history-editor input").inputValue(),
+        "Owned unsaved history title",
+      );
+    } else if (kind === "closing-field") {
+      assert.equal(await page.evaluate(() => window.closingHandoffFired), true);
+      await focusMatches(page.locator("#outside-field"));
+      assert.equal(await page.locator("#outside-field").inputValue(), "Closing independent draft");
+    } else {
+      if (kind === "closing-svg")
+        assert.equal(await page.evaluate(() => window.closingHandoffFired), true);
+      assert.equal(await page.evaluate(() => document.activeElement === document.body), true);
+    }
+    if (kind === "rapid") {
+      const next = page.getByRole("button", { name: "文件", exact: true });
+      await next.focus();
+      await page.keyboard.press("Enter");
+      await page.getByRole("heading", { name: "还有未保存的修改", exact: true }).waitFor();
+      await page.keyboard.press("Escape");
+      await frames(page);
+      await frames(page);
+      await focusMatches(next);
+      assert.equal(
+        await page.locator(".session-history-editor input").inputValue(),
+        "Owned unsaved history title",
+      );
+    }
+    reports.push({ label: "native-prompt-owned-return", kind });
+  }
   assert.deepEqual(errors, []);
   assert.deepEqual(blocked, []);
 } catch (error) {
