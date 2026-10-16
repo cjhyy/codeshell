@@ -116,6 +116,16 @@ jobs:
             node scripts/run-isolated-node-smoke.mjs packages/desktop/scripts/e2e-startup-operation-cycles.mjs 2>&1 | tee "$ACCEPTANCE_ROOT/startup.log"
           fi
 
+      - name: actual file mentions, Git, browser guests, and PTY operations
+        timeout-minutes: 8
+        run: |
+          set -euo pipefail
+          if [[ "$RUNNER_OS" == Linux ]]; then
+            xvfb-run -a node scripts/run-isolated-node-smoke.mjs --private-keyring packages/desktop/scripts/e2e-panel-operation-cycles.mjs --evidence-dir "$ACCEPTANCE_ROOT/panels" 2>&1 | tee "$ACCEPTANCE_ROOT/panels.log"
+          else
+            node scripts/run-isolated-node-smoke.mjs packages/desktop/scripts/e2e-panel-operation-cycles.mjs --evidence-dir "$ACCEPTANCE_ROOT/panels" 2>&1 | tee "$ACCEPTANCE_ROOT/panels.log"
+          fi
+
       - name: actual packaged Main, preload, and renderer UI
         timeout-minutes: 8
         run: |
@@ -138,6 +148,10 @@ jobs:
             ${{ env.ACCEPTANCE_ROOT }}/package/electron-builder.local.json
             ${{ env.ACCEPTANCE_ROOT }}/package/build.log
             ${{ env.ACCEPTANCE_ROOT }}/startup.log
+            ${{ env.ACCEPTANCE_ROOT }}/panels.log
+            ${{ env.ACCEPTANCE_ROOT }}/panels/*.png
+            ${{ env.ACCEPTANCE_ROOT }}/panels/report.json
+            ${{ env.ACCEPTANCE_ROOT }}/panels/body.txt
             ${{ env.ACCEPTANCE_ROOT }}/packaged-ui.log
             ${{ env.ACCEPTANCE_ROOT }}/ui/*.png
             ${{ env.ACCEPTANCE_ROOT }}/ui/receipt.json

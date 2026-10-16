@@ -4,9 +4,9 @@
 import assert from "node:assert/strict";
 import { execFileSync } from "node:child_process";
 import { createServer } from "node:http";
-import { mkdir, mkdtemp, readFile, rename, writeFile } from "node:fs/promises";
+import { mkdir, mkdtemp, readFile, realpath, rename, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
-import { dirname, join, resolve } from "node:path";
+import { basename, dirname, isAbsolute, join, relative, resolve, sep } from "node:path";
 import { fileURLToPath } from "node:url";
 import { prepareConfinedElectronFixture } from "./confined-electron-fixture.mjs";
 import { watchElectronTestProcess } from "./electron-test-watchdog.mjs";
@@ -20,8 +20,24 @@ import {
 
 assert.ok(process.env.CODE_SHELL_TEST_HOME, "Run through run-isolated-node-smoke.mjs");
 const appDir = resolve(dirname(fileURLToPath(import.meta.url)), "..");
+const evidenceArgs = process.argv.slice(2);
+assert.ok(
+  evidenceArgs.length === 0 ||
+    (evidenceArgs.length === 2 && evidenceArgs[0] === "--evidence-dir" && evidenceArgs[1]),
+  "Expected no arguments or --evidence-dir <new-owned-directory>",
+);
+const evidence = evidenceArgs.length
+  ? join(await realpath(dirname(resolve(evidenceArgs[1]))), basename(resolve(evidenceArgs[1])))
+  : await mkdtemp(join(tmpdir(), "codeshell-panel-operation-evidence-"));
+const evidenceRelative = relative(appDir, evidence);
+assert.ok(
+  evidenceRelative === ".." ||
+    evidenceRelative.startsWith(`..${sep}`) ||
+    isAbsolute(evidenceRelative),
+  "Evidence must remain outside Desktop",
+);
+if (evidenceArgs.length) await mkdir(evidence, { mode: 0o700 });
 const isolated = await makeIsolatedElectronHome("codeshell-panel-operation-cycles-");
-const evidence = await mkdtemp(join(tmpdir(), "codeshell-panel-operation-evidence-"));
 const projectPath = join(isolated.home, "operation-project");
 const secondaryPath = join(isolated.home, "secondary-folder");
 const sessionId = "panel-operation-session";
