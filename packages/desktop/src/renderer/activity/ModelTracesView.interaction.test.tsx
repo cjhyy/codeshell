@@ -288,7 +288,7 @@ describe("model trace observability", () => {
     expect(textOf(selectedDetail()!)).toContain("/source/file.ts");
   });
 
-  test("call types distinguish purposes inside one session and filter before counting groups", async () => {
+  test("category buttons filter the unified session history and restore all calls", async () => {
     records[1].purpose = "aux_summary";
     records[1].callType = "summary";
     records[2].purpose = "title";
@@ -303,10 +303,15 @@ describe("model trace observability", () => {
         (node) => props(node)["data-trace-call-type"] === "execution",
       ),
     ).toBe(true);
-    const type = nodes(container).find(
-      (node) => props(node)["data-trace-type-filter"] !== undefined,
-    ) as HTMLElement;
-    await change(type, "summary");
+    const allTypes = attr("data-trace-type-filter", "");
+    const summaryType = attr("data-trace-type-filter", "summary");
+    expect(allTypes.tagName).toBe("BUTTON");
+    expect(summaryType.tagName).toBe("BUTTON");
+    expect(props(allTypes)["aria-pressed"]).toBe(true);
+    expect(props(summaryType)["aria-pressed"]).toBe(false);
+    await click(summaryType);
+    expect(props(summaryType)["aria-pressed"]).toBe(true);
+    expect(props(allTypes)["aria-pressed"]).toBe(false);
     expect(sessionCalls.at(-1)).toEqual({ limit: 50, callType: "summary" });
     expect(listCalls.at(-1)).toEqual({ sessionId: "session-a", limit: 100, callType: "summary" });
     expect(nodes(container).filter((node) => props(node)["data-trace-session"])).toHaveLength(1);
@@ -314,7 +319,12 @@ describe("model trace observability", () => {
     expect(attr("data-trace-request", "request-b")).toBeDefined();
     expect(props(selectedDetail()!)["data-trace-detail-id"]).toBe("request-b");
     expect(textOf(attr("data-trace-session", "session:session-a"))).toContain("1 次模型调用");
-    await change(type, "");
+    await click(attr("data-trace-type-filter", "memory"));
+    expect(nodes(container).filter((node) => props(node)["data-trace-session"])).toHaveLength(0);
+    expect(nodes(container).filter((node) => props(node)["data-trace-request"])).toHaveLength(0);
+    expect(selectedDetail()).toBeUndefined();
+    await click(allTypes);
+    expect(props(allTypes)["aria-pressed"]).toBe(true);
     expect(sessionCalls.at(-1)).toEqual({ limit: 50 });
     expect(nodes(container).filter((node) => props(node)["data-trace-request"])).toHaveLength(3);
   });
@@ -328,14 +338,11 @@ describe("model trace observability", () => {
     const normal = api.list;
     api.list = (query = {}) => (query.callType === "summary" ? old.promise : normal(query));
     await render();
-    const type = nodes(container).find(
-      (node) => props(node)["data-trace-type-filter"] !== undefined,
-    ) as HTMLElement;
-    await change(type, "summary");
+    await click(attr("data-trace-type-filter", "summary"));
     expect(
       selectedDetail() ? props(selectedDetail()!)["data-trace-detail-id"] : undefined,
     ).not.toBe("request-a");
-    await change(type, "title");
+    await click(attr("data-trace-type-filter", "title"));
     expect(props(selectedDetail()!)["data-trace-detail-id"]).toBe("request-c");
     await settle(() => old.resolve({ items: [summary(records[1])], total: 1 }));
     expect(attr("data-trace-request", "request-b")).toBeUndefined();
@@ -408,12 +415,7 @@ describe("model trace observability", () => {
     expect(textOf(selectedDetail()!)).not.toContain("运行时输入快照");
     await click(button("输出"));
     expect(textOf(selectedDetail()!)).toContain("audio/wav");
-    await change(
-      nodes(container).find(
-        (node) => props(node)["data-trace-type-filter"] !== undefined,
-      ) as HTMLElement,
-      "transcription",
-    );
+    await click(attr("data-trace-type-filter", "transcription"));
     expect(nodes(container).filter((node) => props(node)["data-trace-session"])).toHaveLength(1);
     expect(props(selectedDetail()!)["data-trace-detail-id"]).toBe("transcription-call");
     await click(button("输出"));

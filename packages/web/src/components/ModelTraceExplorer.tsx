@@ -19,16 +19,15 @@ import {
 const labels = {
   zh: {
     title: "执行观测",
-    description:
-      "先选择会话，再查看每次执行中的 Prompt、响应、重试和工具事件。无会话归属的调用单独显示。",
+    description: "按类型筛选同一份活动记录，再按会话查看执行、Prompt、响应、重试和工具事件。",
     refresh: "刷新",
     search: "搜索模型、用途、来源或编号",
     session: "会话 ID",
     model: "模型",
     purpose: "技术用途标识",
     filters: "更多筛选",
-    callType: "调用类型",
-    allTypes: "全部类型",
+    callType: "按类型查看",
+    allTypes: "全部调用",
     source: "来源入口",
     technical: "技术信息",
     all: "全部状态",
@@ -99,15 +98,15 @@ const labels = {
   en: {
     title: "Execution traces",
     description:
-      "Choose a session to inspect each execution’s prompts, responses, retries and tools. Calls without a session are listed separately.",
+      "Filter the same activity history by type, then browse sessions, executions, prompts, responses, retries and tools.",
     refresh: "Refresh",
     search: "Search model, purpose, source or ID",
     session: "Session ID",
     model: "Model",
     purpose: "Technical purpose",
     filters: "More filters",
-    callType: "Call type",
-    allTypes: "All types",
+    callType: "Browse by type",
+    allTypes: "All calls",
     source: "Source entry",
     technical: "Technical information",
     all: "All statuses",
@@ -193,11 +192,10 @@ const css = `
 .cs-trace-explorer .cs-t-search{display:flex;gap:6px;flex-direction:column;margin-top:10px;font-size:12px}.cs-trace-explorer .cs-t-filter-fold{margin:8px 0 0}.cs-trace-explorer .cs-t-grid{min-height:0;flex:1;display:grid;grid-template-columns:minmax(180px,1fr) minmax(190px,1fr) minmax(300px,2fr)}
 .cs-trace-explorer .cs-t-pane{overflow:auto;min-width:0;padding:16px;border-right:1px solid #8884}.cs-trace-explorer .cs-t-item{display:block;width:100%;text-align:left;margin-bottom:8px;overflow-wrap:anywhere;word-break:break-word;font-size:12px}
 .cs-trace-explorer .cs-t-item strong{display:block;font-size:13px;margin-bottom:5px}.cs-trace-explorer .cs-t-muted{opacity:.7;font-size:12px}.cs-trace-explorer .cs-t-error{color:#c95252;white-space:pre-wrap}
-.cs-trace-explorer .cs-t-type{display:inline-block;border:1px solid #8884;border-radius:5px;padding:2px 6px;font-size:12px;line-height:1.5;background:#8881}.cs-trace-explorer .cs-t-primary-filter{display:flex;flex-direction:column;gap:4px;min-width:0;font-size:12px;margin-top:10px}.cs-trace-explorer .cs-t-primary-filter select{width:100%}.cs-trace-explorer .cs-t-primary-filters{display:grid;grid-template-columns:minmax(0,2fr) minmax(140px,1fr);gap:10px}.cs-trace-explorer .cs-t-message{margin:12px 0}
+.cs-trace-explorer .cs-t-type{display:inline-block;border:1px solid #8884;border-radius:5px;padding:2px 6px;font-size:12px;line-height:1.5;background:#8881}.cs-trace-explorer .cs-t-type-filter-field{display:flex;flex-direction:column;gap:4px;min-width:0;font-size:12px;margin-top:10px}.cs-trace-explorer .cs-t-type-filters{display:flex;gap:6px;overflow-x:auto;padding:3px;scroll-padding:3px;max-width:100%;overscroll-behavior-x:contain}.cs-trace-explorer .cs-t-type-filters button{flex:0 0 auto;white-space:nowrap;font-size:12px;padding:6px 9px;border-radius:16px}.cs-trace-explorer .cs-t-type-filters button[aria-pressed=true]{font-weight:600;background:#4c91ee33;border-color:#4c91ee}.cs-trace-explorer .cs-t-primary-filters{display:flex;flex-direction:column;min-width:0}.cs-trace-explorer .cs-t-message{margin:12px 0}
 .cs-trace-explorer pre{font:12px/1.6 ui-monospace,monospace;white-space:pre-wrap;overflow-wrap:anywhere;word-break:break-word;max-height:65vh;overflow:auto;padding:12px;border:1px solid #8884;border-radius:8px;background:#8881}
 .cs-trace-explorer details{margin:12px 0}.cs-trace-explorer summary{cursor:pointer;font-size:13px}.cs-trace-explorer .cs-t-back{display:none}.cs-trace-explorer dl{display:grid;grid-template-columns:auto 1fr;gap:6px 12px;font-size:12px;margin:12px 0}.cs-trace-explorer dd{margin:0;overflow-wrap:anywhere}.cs-trace-explorer footer{display:flex;gap:8px;align-items:center;justify-content:space-between;padding-top:12px}
 @media(max-width:1000px){.cs-trace-explorer .cs-t-filters{grid-template-columns:1fr 1fr}.cs-trace-explorer .cs-t-grid{display:flex}.cs-trace-explorer .cs-t-pane{width:100%;border:0;display:none}.cs-trace-explorer .cs-t-pane[data-active=true]{display:block}.cs-trace-explorer .cs-t-back{display:inline-block;margin-bottom:12px}.cs-trace-explorer header{padding:10px;max-height:50%;overflow:auto}.cs-trace-explorer header>p{display:none}.cs-trace-explorer pre{max-height:none}}
-@media(max-width:420px){.cs-trace-explorer .cs-t-primary-filters{grid-template-columns:minmax(0,1fr)}}
 `;
 
 type Detail = { record: ModelTraceRecord; events: ModelTraceEvent[] };
@@ -506,6 +504,34 @@ export function ModelTraceExplorer({
         </div>
         <p className="cs-t-muted">{l.description}</p>
         <div className="cs-t-primary-filters">
+          <div className="cs-t-type-filter-field">
+            <span className="cs-t-muted">{l.callType}</span>
+            <div className="cs-t-type-filters" role="group" aria-label={l.callType}>
+              <button
+                type="button"
+                data-trace-type-filter=""
+                aria-pressed={callType === ""}
+                onClick={() => setCallType("")}
+              >
+                {l.allTypes}
+              </button>
+              {modelTraceCallTypes.map((value) => {
+                const type = presentModelTraceCallType(value, lang);
+                return (
+                  <button
+                    type="button"
+                    key={value}
+                    data-trace-type-filter={value}
+                    aria-pressed={callType === value}
+                    title={type.description}
+                    onClick={() => setCallType(value)}
+                  >
+                    {type.label}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
           <label className="cs-t-search">
             <span className="cs-t-muted">{l.search}</span>
             <input
@@ -514,21 +540,6 @@ export function ModelTraceExplorer({
               value={search}
               onChange={(event) => setSearch(event.target.value)}
             />
-          </label>
-          <label className="cs-t-primary-filter">
-            <span className="cs-t-muted">{l.callType}</span>
-            <select
-              aria-label={l.callType}
-              value={callType}
-              onChange={(event) => setCallType(event.target.value as ModelTraceCallType | "")}
-            >
-              <option value="">{l.allTypes}</option>
-              {modelTraceCallTypes.map((value) => (
-                <option key={value} value={value}>
-                  {presentModelTraceCallType(value, lang).label}
-                </option>
-              ))}
-            </select>
           </label>
         </div>
         <details className="cs-t-filter-fold">

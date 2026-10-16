@@ -355,8 +355,11 @@ try {
         await page.getByRole("button", { name: text.backTree, exact: true }).click();
         await page.getByRole("button", { name: text.backList, exact: true }).click();
       }
-      const typeFilter = page.locator("[data-trace-type-filter]");
-      await typeFilter.selectOption("summary");
+      const category = (type) => page.locator(`[data-trace-type-filter="${type}"]`);
+      assert.equal(await category("").getAttribute("aria-pressed"), "true");
+      await category("summary").click();
+      assert.equal(await category("summary").getAttribute("aria-pressed"), "true");
+      assert.equal(await category("").getAttribute("aria-pressed"), "false");
       await page.waitForFunction(
         () => document.querySelectorAll("[data-trace-session]").length === 1,
       );
@@ -386,8 +389,13 @@ try {
         ),
         "The conversation tree uses the same type filter as the session count",
       );
-      await page.screenshot({ path: path.join(output, `types-${lang}-${viewport.width}.png`) });
-      await typeFilter.selectOption("");
+      await category("summary").scrollIntoViewIfNeeded();
+      await page.screenshot({
+        path: path.join(output, `types-${lang}-${viewport.width}.png`),
+        animations: "disabled",
+      });
+      await category("").click();
+      assert.equal(await category("").getAttribute("aria-pressed"), "true");
       await page.waitForFunction(
         () =>
           document.querySelectorAll("[data-trace-session]").length === 50 &&
@@ -403,7 +411,7 @@ try {
           if (scroller) scroller.scrollTop = scroller.scrollHeight;
         });
       }
-      await typeFilter.selectOption("execution");
+      await category("execution").click();
       await page.waitForFunction(
         () => document.querySelectorAll("[data-trace-request]").length === 24,
       );

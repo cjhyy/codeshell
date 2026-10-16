@@ -26,6 +26,10 @@ reading metadata, including older records; it never classifies Prompt text or
 trusts a saved/client-supplied category. Unknown purposes retain their raw value
 and show as other. Type filtering applies before pagination and session counts,
 and also filters calls inside the selected session.
+Desktop and Web expose these types as category buttons above the same history.
+Selecting a category narrows the existing session list, execution tree and call
+details; selecting all calls restores the unified history. Categories do not
+create separate record panels or storage.
 
 The default input view is the assembled runtime snapshot. Provider-wire attempts
 show the actual request for that attempt, subject to redaction and recording

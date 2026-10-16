@@ -2,7 +2,8 @@ export const observability = {
   zh: {
     observability: {
       title: "执行观测",
-      description: "先选会话，再查看每轮执行的 Prompt、响应、重试和工具调用。独立调用单独列出。",
+      description:
+        "按类型筛选所有入口的调用，再按会话查看每轮执行的 Prompt、响应、重试和工具事件。",
       refresh: "刷新记录",
       retry: "重试",
       loading: "正在读取执行记录…",
@@ -12,8 +13,8 @@ export const observability = {
       noMatch: "没有符合筛选条件的调用",
       clearFilters: "清空筛选",
       search: "搜索模型、用途、来源或编号",
-      callType: "调用类型",
-      allTypes: "全部类型",
+      callType: "按类型查看",
+      allTypes: "全部调用",
       type_execution: "运行 Prompt",
       type_task: "子任务 Prompt",
       type_panel: "Panel 调用",
@@ -177,7 +178,7 @@ export const observability = {
     observability: {
       title: "Execution traces",
       description:
-        "Choose a conversation, then inspect its executions, prompts, responses and tools. Standalone calls are listed separately.",
+        "Filter calls from every entry point by type, then browse each conversation's executions, Prompts, responses, retries and tools.",
       refresh: "Refresh traces",
       retry: "Retry",
       loading: "Loading execution traces…",
@@ -188,8 +189,8 @@ export const observability = {
       noMatch: "No calls match these filters",
       clearFilters: "Clear filters",
       search: "Search model, purpose, source or ID",
-      callType: "Call type",
-      allTypes: "All types",
+      callType: "Browse by type",
+      allTypes: "All calls",
       type_execution: "Execution Prompt",
       type_task: "Subtask Prompt",
       type_panel: "Panel call",
