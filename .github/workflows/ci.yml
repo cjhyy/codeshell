@@ -284,8 +284,10 @@ jobs:
           bun-version: "1.3.11"
       - name: install
         run: bun install --frozen-lockfile
-      - name: build Link source dependency
-        run: bun run --filter '@cjhyy/code-shell-link' build
+      - name: build Link and Core source-test boundaries
+        run: |
+          bun run --filter '@cjhyy/code-shell-link' build
+          bun run --filter '@cjhyy/code-shell-core' build
       - name: ToolRegistry harness + builtin coverage gates
         run: bun run test:coverage
 
@@ -377,8 +379,10 @@ jobs:
           bun-version: "1.3.11"
       - name: install
         run: bun install --frozen-lockfile
-      - name: build Link source dependency
-        run: bun run --filter '@cjhyy/code-shell-link' build
+      - name: build Link and Core source-test boundaries
+        run: |
+          bun run --filter '@cjhyy/code-shell-link' build
+          bun run --filter '@cjhyy/code-shell-core' build
       - name: windows-port unit suites
         # The win32 code paths (shell selection, taskkill, PATHEXT resolution,
         # case-insensitive paths, CRLF, sandbox fail-open) are only mock-tested
