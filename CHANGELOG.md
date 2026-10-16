@@ -74,6 +74,11 @@ breaking.
   scrolling, and return focus through project selection and adding a project.
 - Keep Link management errors and actions inside short dialogs, retain failed
   edit drafts, and avoid stealing focus after delayed operations.
+- Preserve the current control's focus when the Web sidebar collapses, while
+  retaining focus return after deliberate mobile navigation and closing it.
+- Keep account-device actions and complete errors visible in short windows,
+  recover failed reads, and preserve focus and authentication behavior through
+  delayed operations and closing the dialog.
 
 ## [0.9.44] - 2026-10-15
 
