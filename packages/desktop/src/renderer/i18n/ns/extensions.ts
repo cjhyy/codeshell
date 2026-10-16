@@ -746,6 +746,7 @@ export const extensions = {
           needsAttention: "需处理",
           connectedServices: "已连接服务",
           services: "服务",
+          connectionCount: "{count} 个连接",
           savedUnavailable: "已保存的账号仍保留。服务恢复后可重新检查连接。",
         },
         figma: {
@@ -831,6 +832,7 @@ export const extensions = {
         loadFailed: "无法读取应用连接状态",
         retry: "重试",
         loadingConnections: "正在检查应用连接…",
+        refreshConnections: "刷新连接状态",
         appsTitle: "应用连接",
         appsDescription: "每个应用使用独立连接和权限；即将开放的项目也会清楚标注，不会伪装成可用。",
         appsDescriptionDual:
@@ -1960,6 +1962,7 @@ export const extensions = {
           needsAttention: "Needs attention",
           connectedServices: "Connected services",
           services: "Services",
+          connectionCount: "Connections: {count}",
           savedUnavailable:
             "Saved accounts are preserved. Check their connection again when the service recovers.",
         },
@@ -2055,6 +2058,7 @@ export const extensions = {
         loadFailed: "Could not load app connection status",
         retry: "Retry",
         loadingConnections: "Checking app connections…",
+        refreshConnections: "Refresh connections",
         appsTitle: "App connections",
         appsDescription:
           "Each app has its own connection and permissions. Planned integrations are labeled clearly and never presented as available.",

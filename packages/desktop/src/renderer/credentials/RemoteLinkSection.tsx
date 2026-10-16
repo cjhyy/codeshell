@@ -15,38 +15,46 @@ import { LinkConnectionDialog } from "./LinkConnectionDialog";
 import { LinkConnectionRow } from "./LinkProviderCard";
 
 /** Keep the snapshot above filters so connected accounts can always be discovered. */
-export function useRemoteLinkSnapshot(cwd: string) {
+export function useRemoteLinkSnapshot(cwd: string, { automatic = true } = {}) {
   const [snapshot, setSnapshot] = React.useState<LinkSnapshot>();
   const [error, setError] = React.useState("");
   const [loading, setLoading] = React.useState(true);
   const api = window.codeshell.links;
   const alive = React.useRef(false);
   const generation = React.useRef(0);
-  const reload = React.useCallback(async () => {
-    if (!api.remoteSnapshot) {
-      if (alive.current) setLoading(false);
-      return;
-    }
-    const current = ++generation.current;
-    if (alive.current) setLoading(true);
-    try {
-      const next = await api.remoteSnapshot(cwd);
-      if (alive.current && current === generation.current) {
-        setSnapshot(next);
-        setError("");
+  const reload = React.useCallback(
+    async (forceCatalog = false) => {
+      if (!api.remoteSnapshot) {
+        if (alive.current) setLoading(false);
+        return;
       }
-    } catch (cause) {
-      if (alive.current && current === generation.current) setError(linkError(cause));
-    } finally {
-      if (alive.current && current === generation.current) setLoading(false);
-    }
-  }, [cwd, api]);
+      const current = ++generation.current;
+      if (alive.current) setLoading(true);
+      try {
+        const next = await api.remoteSnapshot(cwd, forceCatalog);
+        if (alive.current && current === generation.current) {
+          setSnapshot(next);
+          setError("");
+        }
+      } catch (cause) {
+        if (alive.current && current === generation.current) setError(linkError(cause));
+      } finally {
+        if (alive.current && current === generation.current) setLoading(false);
+      }
+    },
+    [cwd, api],
+  );
   React.useEffect(() => {
     alive.current = true;
     generation.current++;
     setSnapshot(undefined);
     setError("");
     setLoading(true);
+    if (!automatic)
+      return () => {
+        alive.current = false;
+        generation.current++;
+      };
     const refresh = () => void reload();
     refresh();
     window.addEventListener("focus", refresh);
@@ -55,7 +63,7 @@ export function useRemoteLinkSnapshot(cwd: string) {
       generation.current++;
       window.removeEventListener("focus", refresh);
     };
-  }, [reload]);
+  }, [reload, automatic]);
   React.useEffect(() => {
     if (!snapshot?.remoteCleanupPending) return;
     const timer = setInterval(() => void reload(), 30_000);
@@ -315,7 +323,7 @@ export function RemoteProviderSection({
         </div>
         {connected.length > 0 && (
           <p className="mt-3 truncate text-xs text-muted-foreground">
-            {connected.map((item) => item.account?.label ?? item.label).join(" · ")}
+            {[...new Set(connected.map((item) => item.account?.label ?? item.label))].join(" · ")}
           </p>
         )}
         {providerId === "figma" &&

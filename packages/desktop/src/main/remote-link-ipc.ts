@@ -117,10 +117,12 @@ export function registerRemoteLinkIpc(deps: {
     };
     return { manager, context };
   }
-  ipcMain.handle("links:remoteSnapshot", async (event, cwd: string) => {
+  ipcMain.handle("links:remoteSnapshot", async (event, cwd: string, forceCatalog?: boolean) => {
+    if (forceCatalog !== undefined && typeof forceCatalog !== "boolean")
+      throw new Error("Link 目录刷新参数无效。");
     const { manager, context } = await nativeLinkContext(event, cwd);
     await manager.service.assertAuthorized(context);
-    await manager.service.refreshRemoteCatalog(context);
+    await manager.service.refreshRemoteCatalog(context, forceCatalog === true);
     return manager.service.snapshot();
   });
   ipcMain.handle(

@@ -29,6 +29,8 @@ export interface CliLinkStatus {
   installed: boolean;
   authenticated: boolean;
   account?: string;
+  /** Stable provider identity, separate from the mutable account display name. */
+  accountId?: string;
   message?: string;
 }
 
@@ -392,6 +394,7 @@ export async function getCliLinkStatus(
       installed: true,
       authenticated: true,
       account: user.label,
+      accountId: user.externalAccountId,
     };
   } catch (error) {
     if (isMissingExecutable(error)) {

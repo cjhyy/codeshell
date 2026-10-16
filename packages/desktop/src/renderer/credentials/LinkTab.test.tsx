@@ -6,7 +6,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { ensureMiniDom, flushMicrotasks } from "../test-utils/renderHook";
 import { buildLinkCatalog } from "./link-catalog";
-import type { LocalLinkProviderView } from "../../preload/types";
+import type { CliLinkStatusView, LocalLinkProviderView } from "../../preload/types";
 import type { MaskedCredentialView } from "./types";
 import type { LinkSnapshot } from "../../../../link/src/management-types";
 
@@ -34,6 +34,7 @@ const {
   gatewayCapabilityLabels,
   gatewayToolNames,
   LinkTab,
+  resolveCliLiveness,
   resolvePreferredLinkRuntime,
 } = await import("./LinkTab");
 const { DialogProvider } = await import("../ui/DialogProvider");
@@ -305,6 +306,107 @@ async function renderProjectedCatalog(
 }
 
 let root: Root | null = null;
+
+function cliBinding(id: string, accountId = "42"): MaskedCredentialView {
+  return {
+    id,
+    type: "link",
+    label: "GitHub CLI",
+    hasSecret: true,
+    meta: {
+      linkProvider: "github",
+      linkConnectionMethod: "fine-grained-pat",
+      linkExecutionRuntime: "local",
+      linkExecutionBackend: "cli",
+      linkAccountId: accountId,
+      linkAccountLabel: "cjhyy",
+      linkLastVerifiedAt: "2026-09-06T05:41:00.000Z",
+    },
+  };
+}
+
+async function connectionStatusFixture(
+  options: {
+    credentials?: MaskedCredentialView[];
+    connections?: LinkSnapshot["connections"];
+    read?: (cwd: string) => Promise<MaskedCredentialView[]>;
+    probe?: (cwd: string) => Promise<CliLinkStatusView>;
+    snapshot?: (cwd: string) => Promise<void>;
+  } = {},
+) {
+  ensureMiniDom();
+  const providers = await projectedCatalog(["github"]);
+  const calls = {
+    reads: [] as string[],
+    catalogs: 0,
+    snapshots: [] as Array<[string, boolean]>,
+    probes: [] as string[],
+    mutations: 0,
+  };
+  const mutation = async () => {
+    calls.mutations++;
+    throw new Error("Status refresh cannot mutate authorization");
+  };
+  Object.assign(window, {
+    codeshell: {
+      credentials: {
+        list: async (cwd: string) => {
+          calls.reads.push(cwd);
+          return options.read ? options.read(cwd) : (options.credentials ?? [cliBinding("cli")]);
+        },
+      },
+      links: {
+        listLocalProviders: async () => {
+          calls.catalogs++;
+          return providers;
+        },
+        remoteSnapshot: async (cwd: string, force = false) => {
+          calls.snapshots.push([cwd, force]);
+          await options.snapshot?.(cwd);
+          return {
+            providers,
+            connections: options.connections ?? [],
+            revision: "fixture",
+            remoteCatalog: { state: "ready" },
+            capabilities: { token: true, cliBinding: true, deviceAuth: false },
+          };
+        },
+        cliStatus: async (_providerId: string, cwd: string) => {
+          calls.probes.push(cwd);
+          return options.probe
+            ? options.probe(cwd)
+            : {
+                providerId: "github",
+                command: "gh",
+                installed: true,
+                authenticated: true,
+                account: "cjhyy",
+                accountId: "42",
+              };
+        },
+        authorizationStart: mutation,
+        remoteDisconnect: mutation,
+      },
+      mcpOAuth: { login: mutation, refresh: mutation, logout: mutation },
+    },
+  });
+  const container = document.createElement("div") as unknown as HTMLElement;
+  root = createRoot(container);
+  const renderAt = async (cwd = "/repo") => {
+    await act(async () => {
+      root!.render(
+        <DialogProvider>
+          <LinkTab cwd={cwd} />
+        </DialogProvider>,
+      );
+      await flushMicrotasks();
+      await flushMicrotasks();
+      await flushMicrotasks();
+    });
+  };
+  await renderAt();
+  return { container, calls, renderAt };
+}
 
 afterEach(async () => {
   if (root) {
@@ -1854,7 +1956,12 @@ describe("LinkTab integrations", () => {
           reactChildText(reactPropsOf(row).children).includes("Figma OAuth"),
         ),
       ).toHaveLength(1);
-      const refresh = buttonWithLabel(container, "刷新");
+      const oauthRow = methodRows(container, "figma", "server").find((row) =>
+        findElements(row, "DIV").some(
+          (node) => reactChildText(reactPropsOf(node).children) === "Figma OAuth",
+        ),
+      );
+      const refresh = buttonWithLabel(oauthRow, "刷新");
       expect(refresh).toBeDefined();
       await act(async () => {
         reactPropsOf(refresh).onClick();
@@ -1911,6 +2018,7 @@ describe("LinkTab integrations", () => {
               installed: true,
               authenticated: true,
               account: "someone-else",
+              accountId: "different-id",
             };
           },
         },
@@ -2007,6 +2115,217 @@ describe("LinkTab integrations", () => {
 });
 
 describe("Link metadata request lifecycle", () => {
+  test("CLI account labels never replace a stable identity in liveness checks", () => {
+    const status = { installed: true, authenticated: true, account: "cjhyy", accountId: "42" };
+    expect(resolveCliLiveness(status, "42")).toBe("ok");
+    expect(resolveCliLiveness({ ...status, account: "renamed" }, "42")).toBe("ok");
+    expect(resolveCliLiveness({ ...status, accountId: "99" }, "42")).toBe("mismatch");
+    expect(resolveCliLiveness({ ...status, accountId: undefined }, "cjhyy")).toBe("unknown");
+  });
+
+  test("one provider probe compares each CLI binding's own stable account ID", async () => {
+    const credentials = [cliBinding("first", "42"), cliBinding("second", "99")];
+    const f = await connectionStatusFixture({ credentials });
+    const rows = methodRows(f.container, "github", "local");
+    expect(rows).toHaveLength(2);
+    expect(
+      rows.map(
+        (row) =>
+          reactPropsOf(
+            findElements(row, "DIV").find(
+              (node) => reactPropsOf(node)["data-link-liveness"] === "github",
+            ),
+          )["data-link-liveness-state"],
+      ),
+    ).toEqual(["ok", "mismatch"]);
+    expect(f.calls.probes).toEqual(["/repo"]);
+    expect(credentials.map((record) => record.meta?.linkLastVerifiedAt)).toEqual([
+      "2026-09-06T05:41:00.000Z",
+      "2026-09-06T05:41:00.000Z",
+    ]);
+  });
+
+  test("one account summary retains every distinct CLI and remote connection", async () => {
+    const connections: LinkSnapshot["connections"] = ["cli", "remote-one", "remote-two"].map(
+      (id, index) => ({
+        id,
+        providerId: "github",
+        methodId: index ? "remote-link" : "fine-grained-pat",
+        label: id,
+        runtime: index ? "server" : "local",
+        authSource: index ? "remote-link" : "cli-session",
+        status: "connected",
+        account: { id: "42", label: "cjhyy", resources: index ? [`repo-${index}`] : [] },
+        capabilityIds: ["github.get_file"],
+        revision: id,
+        scope: "user",
+        editable: true,
+      }),
+    );
+    const f = await connectionStatusFixture({ connections });
+    const card = await expandProvider(f.container, "github");
+    expect(
+      findElements(card, "SPAN").map((node) => reactChildText(reactPropsOf(node).children)),
+    ).toContain("cjhyy · 3 个连接");
+    expect(
+      findElements(card, "ARTICLE").filter((node) => reactPropsOf(node)["data-remote-link"]),
+    ).toHaveLength(2);
+    const remoteSummary = findElements(card, "P").find(
+      (node) => reactPropsOf(node).className === "mt-3 truncate text-xs text-muted-foreground",
+    );
+    expect(reactChildText(reactPropsOf(remoteSummary).children)).toBe("cjhyy");
+    expect(methodRows(card, "github", "local")).toHaveLength(1);
+    expect(
+      findElements(card, "P").map((node) => reactChildText(reactPropsOf(node).children)),
+    ).toEqual(expect.arrayContaining(["repo-1", "repo-2"]));
+    expect(f.calls.mutations).toBe(0);
+  });
+
+  test("manual refresh and focus reload accounts, directory and CLI without changing authorization", async () => {
+    let resolveProbe!: (status: CliLinkStatusView) => void;
+    let blocked = false;
+    const pending = new Promise<CliLinkStatusView>((resolve) => {
+      resolveProbe = resolve;
+    });
+    const f = await connectionStatusFixture({
+      probe: async () =>
+        blocked
+          ? pending
+          : {
+              providerId: "github",
+              command: "gh",
+              installed: true,
+              authenticated: true,
+              account: "cjhyy",
+              accountId: "42",
+            },
+    });
+    expect(f.calls.reads).toHaveLength(1);
+    blocked = true;
+    await act(async () => {
+      reactPropsOf(buttonWithLabel(f.container, "刷新连接状态")).onClick();
+      await flushMicrotasks();
+      window.dispatchEvent(new Event("focus"));
+      window.dispatchEvent(new Event("focus"));
+      await flushMicrotasks();
+    });
+    expect(reactPropsOf(buttonWithLabel(f.container, "刷新连接状态")).disabled).toBe(true);
+    expect(f.calls.reads).toHaveLength(2);
+    expect(f.calls.probes).toHaveLength(2);
+    expect(f.calls.snapshots).toEqual([
+      ["/repo", false],
+      ["/repo", true],
+    ]);
+    await act(async () => {
+      resolveProbe({
+        providerId: "github",
+        command: "gh",
+        installed: true,
+        authenticated: true,
+        account: "cjhyy",
+        accountId: "42",
+      });
+      await flushMicrotasks();
+      await flushMicrotasks();
+    });
+    expect(reactPropsOf(buttonWithLabel(f.container, "刷新连接状态")).disabled).toBe(false);
+    blocked = false;
+    await act(async () => {
+      window.dispatchEvent(new Event("focus"));
+      await flushMicrotasks();
+      await flushMicrotasks();
+    });
+    expect(f.calls.reads).toHaveLength(3);
+    expect(f.calls.catalogs).toBe(3);
+    expect(f.calls.probes).toHaveLength(3);
+    expect(f.calls.snapshots.at(-1)).toEqual(["/repo", false]);
+    expect(f.calls.mutations).toBe(0);
+    await act(async () => {
+      root!.unmount();
+      await flushMicrotasks();
+    });
+    root = null;
+    window.dispatchEvent(new Event("focus"));
+    expect(f.calls.reads).toHaveLength(3);
+  });
+
+  test("a previous project's delayed CLI result cannot clear the current load error", async () => {
+    let resolveProbe!: (status: CliLinkStatusView) => void;
+    const pending = new Promise<CliLinkStatusView>((resolve) => {
+      resolveProbe = resolve;
+    });
+    const f = await connectionStatusFixture({
+      read: async (cwd) => {
+        if (cwd === "/other") throw new Error("Current project credentials unavailable");
+        return [cliBinding("first")];
+      },
+      probe: async () => pending,
+    });
+    await f.renderAt("/other");
+    await act(async () => {
+      resolveProbe({
+        providerId: "github",
+        command: "gh",
+        installed: true,
+        authenticated: true,
+        account: "cjhyy",
+        accountId: "42",
+      });
+      await flushMicrotasks();
+      await flushMicrotasks();
+    });
+    expect(
+      findElements(f.container, "P").map((node) => reactChildText(reactPropsOf(node).children)),
+    ).toContain("Current project credentials unavailable");
+    expect(f.calls.reads).toEqual(["/repo", "/other"]);
+  });
+
+  test("an old project's completed action cannot invalidate the new project's load", async () => {
+    const legacy: MaskedCredentialView = {
+      id: "github-oauth",
+      type: "oauth",
+      label: "Saved OAuth",
+      hasSecret: true,
+      meta: { oauthProvider: "github" },
+    };
+    let finishAction!: () => void;
+    let finishRead!: (value: MaskedCredentialView[]) => void;
+    const action = new Promise<void>((resolve) => {
+      finishAction = resolve;
+    });
+    const read = new Promise<MaskedCredentialView[]>((resolve) => {
+      finishRead = resolve;
+    });
+    const f = await connectionStatusFixture({
+      read: async (cwd) => (cwd === "/repo" ? [legacy] : read),
+    });
+    window.codeshell.mcpOAuth.refresh = async () => {
+      await action;
+      return {} as never;
+    };
+    const row = methodRows(f.container, "github", "server").find((node) =>
+      findElements(node, "DIV").some(
+        (item) => reactChildText(reactPropsOf(item).children) === "Saved OAuth",
+      ),
+    );
+    await act(async () => {
+      reactPropsOf(buttonWithLabel(row, "刷新")).onClick();
+      await flushMicrotasks();
+    });
+    await f.renderAt("/other");
+    await act(async () => {
+      finishAction();
+      await flushMicrotasks();
+    });
+    await act(async () => {
+      finishRead([]);
+      await flushMicrotasks();
+      await flushMicrotasks();
+    });
+    expect(f.calls.reads).toEqual(["/repo", "/other"]);
+    expect(reactPropsOf(buttonWithLabel(f.container, "刷新连接状态")).disabled).toBe(false);
+  });
+
   test("a slower earlier snapshot cannot replace a newer refresh", async () => {
     ensureMiniDom();
     let resolveFirst!: (value: LinkSnapshot) => void;

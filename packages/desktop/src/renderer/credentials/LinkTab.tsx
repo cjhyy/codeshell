@@ -212,14 +212,25 @@ export interface CliLiveness {
   account?: string;
 }
 
+interface CliProbe {
+  command: string;
+  pending: boolean;
+  status: CliLinkStatusView | null;
+}
+
 /** A failed probe is a network/service failure, not proof of a signed-out account. */
 export function resolveCliLiveness(
-  status: { installed: boolean; authenticated: boolean; account?: string } | null,
+  status: {
+    installed: boolean;
+    authenticated: boolean;
+    accountId?: string;
+    account?: string;
+  } | null,
   expectedAccountId: string | undefined,
 ): Exclude<CliLivenessState, "checking"> {
   if (!status || !status.installed || !status.authenticated) return "unknown";
-  if (!expectedAccountId || !status.account) return "unknown";
-  return status.account === expectedAccountId ? "ok" : "mismatch";
+  if (!expectedAccountId || !status.accountId) return "unknown";
+  return status.accountId === expectedAccountId ? "ok" : "mismatch";
 }
 
 interface LinkMethodEntry {
@@ -353,16 +364,30 @@ export function LinkTab({ cwd }: { cwd: string }) {
   const [query, setQuery] = useState("");
   const searchRef = useRef<HTMLInputElement>(null);
   const [filter, setFilter] = useState<IntegrationFilter>("all");
-  const remote = useRemoteLinkSnapshot(cwd);
+  const remote = useRemoteLinkSnapshot(cwd, { automatic: false });
   const [localDialog, setLocalDialog] = useState<{
     item: LinkIntegration;
     method: LinkConnectionMethod;
     credential?: MaskedCredentialView;
   } | null>(null);
-  const [cliLiveness, setCliLiveness] = useState<Record<string, CliLiveness>>({});
-  const [livenessNonce, setLivenessNonce] = useState(0);
+  const [cliProbes, setCliProbes] = useState<Record<string, CliProbe>>({});
+  const loadData = useRef<{
+    cwd: string;
+    credentials: MaskedCredentialView[];
+    providers: LocalLinkProviderView[];
+  }>({ cwd, credentials: [], providers: [] });
+  const [refreshing, setRefreshing] = useState(false);
+  const refreshPending = useRef<
+    | {
+        cwd: string;
+        forceCatalog: boolean;
+        promise: Promise<void>;
+      }
+    | undefined
+  >(undefined);
 
   const load = useCallback(async () => {
+    if (!loadMounted.current || loadCwd.current !== cwd) return;
     const generation = ++loadGeneration.current;
     const current = () =>
       loadMounted.current && generation === loadGeneration.current && loadCwd.current === cwd;
@@ -373,13 +398,72 @@ export function LinkTab({ cwd }: { cwd: string }) {
         window.codeshell.links.listLocalProviders(),
       ]);
       if (!current()) return;
-      if (all.status === "fulfilled")
-        setCredentials(
-          all.value.filter(
-            (credential) => credential.type === "oauth" || credential.type === "link",
-          ),
+      const previous = loadData.current.cwd === cwd ? loadData.current : undefined;
+      const nextCredentials =
+        all.status === "fulfilled"
+          ? all.value.filter(
+              (credential) => credential.type === "oauth" || credential.type === "link",
+            )
+          : (previous?.credentials ?? []);
+      const nextProviders =
+        providers.status === "fulfilled" ? providers.value : (previous?.providers ?? []);
+      loadData.current = { cwd, credentials: nextCredentials, providers: nextProviders };
+      setCredentials(nextCredentials);
+      setProviderViews(nextProviders);
+
+      // Probe each provider once. Stable account IDs are compared independently
+      // for each saved binding below; labels never identify the approved account.
+      const commands = new Map<string, string>();
+      for (const provider of nextProviders) {
+        const method = provider.connectionMethods.find(
+          (candidate) => candidate.quickAuth?.kind === "cli-session",
         );
-      if (providers.status === "fulfilled") setProviderViews(providers.value);
+        if (method?.quickAuth) commands.set(provider.id, method.quickAuth.command);
+      }
+      const providerIds = new Set(
+        nextCredentials.flatMap((credential) =>
+          credential.hasSecret &&
+          credential.meta?.linkExecutionBackend === "cli" &&
+          credential.meta.linkProvider &&
+          commands.has(credential.meta.linkProvider)
+            ? [credential.meta.linkProvider]
+            : [],
+        ),
+      );
+      const statusLoader = window.codeshell.links.cliStatus;
+      const targets = typeof statusLoader === "function" ? [...providerIds] : [];
+      setCliProbes(
+        Object.fromEntries(
+          targets.map((providerId) => [
+            providerId,
+            {
+              command: commands.get(providerId)!,
+              pending: true,
+              status: null,
+            },
+          ]),
+        ),
+      );
+      await Promise.all(
+        targets.map(async (providerId) => {
+          let status: CliLinkStatusView | null;
+          try {
+            status = await statusLoader(providerId, cwd);
+          } catch {
+            status = null;
+          }
+          if (!current()) return;
+          setCliProbes((probes) => ({
+            ...probes,
+            [providerId]: {
+              command: status?.command || commands.get(providerId)!,
+              pending: false,
+              status,
+            },
+          }));
+        }),
+      );
+      if (!current()) return;
       const failure = [all, providers].find((result) => result.status === "rejected");
       if (failure?.status === "rejected") throw failure.reason;
       setLoadError(null);
@@ -393,86 +477,67 @@ export function LinkTab({ cwd }: { cwd: string }) {
     }
   }, [cwd]);
 
+  const refresh = useCallback(
+    (forceCatalog = false) => {
+      if (!loadMounted.current || loadCwd.current !== cwd) return Promise.resolve();
+      const active = refreshPending.current;
+      if (active?.cwd === cwd) {
+        active.forceCatalog ||= forceCatalog;
+        return active.promise;
+      }
+      const entry = { cwd, forceCatalog, promise: Promise.resolve() };
+      entry.promise = Promise.resolve()
+        .then(async () => {
+          do {
+            if (!loadMounted.current || loadCwd.current !== cwd || refreshPending.current !== entry)
+              return;
+            const force = entry.forceCatalog;
+            entry.forceCatalog = false;
+            await Promise.allSettled([load(), remote.reload(force)]);
+          } while (entry.forceCatalog);
+        })
+        .finally(() => {
+          if (refreshPending.current !== entry) return;
+          refreshPending.current = undefined;
+          if (loadMounted.current && loadCwd.current === cwd) setRefreshing(false);
+        });
+      refreshPending.current = entry;
+      setRefreshing(true);
+      return entry.promise;
+    },
+    [cwd, load, remote.reload],
+  );
+
   useEffect(() => {
     loadMounted.current = true;
-    void load().catch(() => undefined);
+    void refresh();
+    const onFocus = () => void refresh();
+    window.addEventListener("focus", onFocus);
     return () => {
       loadMounted.current = false;
       loadGeneration.current++;
+      refreshPending.current = undefined;
+      window.removeEventListener("focus", onFocus);
     };
-  }, [load]);
+  }, [refresh]);
 
-  // Saved CLI connections carry only a local binding marker, so the stored card
-  // cannot show whether the provider CLI is still signed in to that account.
-  // Probe once per provider on entry and on manual refresh, never on a timer.
-  const cliConnections = useMemo(() => {
-    const byProvider = new Map<string, string | undefined>();
+  const cliLiveness = useMemo(() => {
+    const bindings: Record<string, CliLiveness> = {};
     for (const credential of credentials) {
-      const meta = credential.meta;
-      if (!meta?.linkProvider || meta.linkExecutionBackend !== "cli") continue;
-      if (!credential.hasSecret) continue;
-      if (!byProvider.has(meta.linkProvider)) {
-        byProvider.set(meta.linkProvider, meta.linkAccountId);
-      }
+      if (credential.meta?.linkExecutionBackend !== "cli" || !credential.meta.linkProvider)
+        continue;
+      const probe = cliProbes[credential.meta.linkProvider];
+      if (!probe) continue;
+      bindings[credential.id] = {
+        state: probe.pending
+          ? "checking"
+          : resolveCliLiveness(probe.status, credential.meta.linkAccountId),
+        command: probe.command,
+        account: probe.status?.account,
+      };
     }
-    return Array.from(byProvider, ([providerId, accountId]) => ({ providerId, accountId }));
-  }, [credentials]);
-
-  const cliCommands = useMemo(() => {
-    const commands = new Map<string, string>();
-    for (const provider of providerViews) {
-      for (const method of provider.connectionMethods) {
-        if (method.quickAuth?.kind === "cli-session") {
-          commands.set(provider.id, method.quickAuth.command);
-          break;
-        }
-      }
-    }
-    return commands;
-  }, [providerViews]);
-
-  useEffect(() => {
-    const statusLoader = window.codeshell.links?.cliStatus;
-    const targets = cliConnections.filter(({ providerId }) => cliCommands.has(providerId));
-    if (!statusLoader || targets.length === 0) {
-      setCliLiveness({});
-      return;
-    }
-    let cancelled = false;
-    setCliLiveness(
-      Object.fromEntries(
-        targets.map(({ providerId }) => [
-          providerId,
-          { state: "checking" as const, command: cliCommands.get(providerId) ?? "" },
-        ]),
-      ),
-    );
-    for (const { providerId, accountId } of targets) {
-      const command = cliCommands.get(providerId) ?? "";
-      void statusLoader(providerId, cwd)
-        .then((status) => {
-          if (cancelled) return;
-          setCliLiveness((current) => ({
-            ...current,
-            [providerId]: {
-              state: resolveCliLiveness(status, accountId),
-              command: status.command || command,
-              account: status.account,
-            },
-          }));
-        })
-        .catch(() => {
-          if (cancelled) return;
-          setCliLiveness((current) => ({
-            ...current,
-            [providerId]: { state: "unknown", command },
-          }));
-        });
-    }
-    return () => {
-      cancelled = true;
-    };
-  }, [cliCommands, cliConnections, cwd, livenessNonce]);
+    return bindings;
+  }, [credentials, cliProbes]);
 
   const catalog = useMemo(
     () =>
@@ -692,8 +757,12 @@ export function LinkTab({ cwd }: { cwd: string }) {
         );
       const needsAttention = saved > connected;
       const accountNames = [
-        ...accounts.map((account) => account.account?.label ?? account.label),
-        ...visibleStored.map((credential) => credential.meta?.linkAccountLabel ?? credential.label),
+        ...new Set([
+          ...accounts.map((account) => account.account?.label ?? account.label),
+          ...visibleStored.map(
+            (credential) => credential.meta?.linkAccountLabel ?? credential.label,
+          ),
+        ]),
       ];
       return {
         item,
@@ -806,6 +875,16 @@ export function LinkTab({ cwd }: { cwd: string }) {
               </Button>
             ))}
           </div>
+          <Button
+            type="button"
+            size="sm"
+            variant="outline"
+            disabled={refreshing || loading || remote.loading}
+            onClick={() => void refresh(true)}
+          >
+            <RefreshCw className={cn("size-3.5", refreshing && "animate-spin")} aria-hidden />
+            {t("ext.link.refreshConnections")}
+          </Button>
         </div>
 
         {directoryError ? (
@@ -828,11 +907,7 @@ export function LinkTab({ cwd }: { cwd: string }) {
               size="sm"
               variant="outline"
               disabled={loading}
-              onClick={() => {
-                setLivenessNonce((value) => value + 1);
-                void load().catch(() => undefined);
-                void remote.reload();
-              }}
+              onClick={() => void refresh(true)}
             >
               <RefreshCw className={cn("size-3.5", loading && "animate-spin")} aria-hidden />
               {t("ext.link.retry")}
@@ -882,7 +957,7 @@ export function LinkTab({ cwd }: { cwd: string }) {
                 <LinkMethodCard
                   key={`${entry.method.id}:${entry.credential?.id ?? "new"}`}
                   entry={entry}
-                  liveness={cliLiveness[item.id]}
+                  liveness={entry.credential ? cliLiveness[entry.credential.id] : undefined}
                   busy={busyId === linkMethodStateKey(item.id, entry.method)}
                   error={errors[linkMethodStateKey(item.id, entry.method)]}
                   onLocalConnect={() => openLocalDialog(entry)}
@@ -912,7 +987,12 @@ export function LinkTab({ cwd }: { cwd: string }) {
                       ? t("ext.link.directory.figmaDescription")
                       : item.description
                   }
-                  accounts={accountNames.join(" · ")}
+                  accounts={[
+                    accountNames.join(" · "),
+                    saved ? t("ext.link.directory.connectionCount", { count: saved }) : "",
+                  ]
+                    .filter(Boolean)
+                    .join(" · ")}
                   status={
                     remote.loading && missingAccounts.length
                       ? t("ext.link.directory.checking")
@@ -953,14 +1033,7 @@ export function LinkTab({ cwd }: { cwd: string }) {
                       )}
                       tone={remote.loading ? "neutral" : "warning"}
                       actions={
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={() => {
-                            void load().catch(() => undefined);
-                            void remote.reload();
-                          }}
-                        >
+                        <Button size="sm" variant="outline" onClick={() => void refresh(true)}>
                           {t("ext.link.retry")}
                         </Button>
                       }

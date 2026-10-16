@@ -1512,7 +1512,8 @@ contextBridge.exposeInMainWorld("codeshell", {
       ipcRenderer.invoke("links:authorizationCancel", cwd, id),
     authorizationOpen: (cwd: string, id: string) =>
       ipcRenderer.invoke("links:authorizationOpen", cwd, id),
-    remoteSnapshot: (cwd: string) => ipcRenderer.invoke("links:remoteSnapshot", cwd),
+    remoteSnapshot: (cwd: string, forceCatalog?: boolean) =>
+      ipcRenderer.invoke("links:remoteSnapshot", cwd, forceCatalog),
     remoteStart: (cwd: string, requestId: string, input: unknown) =>
       ipcRenderer.invoke("links:remoteStart", cwd, requestId, input),
     remoteCancel: (cwd: string, requestId: string) =>

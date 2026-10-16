@@ -782,6 +782,8 @@ export interface CliLinkStatusView {
   installed: boolean;
   authenticated: boolean;
   account?: string;
+  /** Stable provider identity, separate from the mutable account display name. */
+  accountId?: string;
   message?: string;
 }
 
@@ -1338,7 +1340,10 @@ export interface CodeshellApi
     ): Promise<import("@cjhyy/code-shell-link").LinkAuthorization>;
     authorizationCancel(cwd: string, id: string): Promise<void>;
     authorizationOpen(cwd: string, id: string): Promise<boolean>;
-    remoteSnapshot(cwd: string): Promise<import("@cjhyy/code-shell-link").LinkSnapshot>;
+    remoteSnapshot(
+      cwd: string,
+      forceCatalog?: boolean,
+    ): Promise<import("@cjhyy/code-shell-link").LinkSnapshot>;
     remoteStart(
       cwd: string,
       requestId: string,

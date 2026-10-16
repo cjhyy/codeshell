@@ -28,8 +28,40 @@ describe("CLI Link sessions", () => {
       installed: true,
       authenticated: true,
       account: "octocat",
+      accountId: "42",
     });
     expect(calls.some((call) => call.includes("token"))).toBe(false);
+  });
+
+  test("preserves stable account IDs across display-name changes and distinguishes reused names", async () => {
+    let id = 42;
+    let login = "same-display-name";
+    const run: CliLinkCommandRunner = async (_provider, _command, args) => ({
+      stdout: args[0] === "auth" ? "signed in" : JSON.stringify({ id, login }),
+      stderr: "",
+    });
+    const first = await getCliLinkStatus("github", {}, run);
+    login = "renamed-display-name";
+    expect(await getCliLinkStatus("github", {}, run)).toMatchObject({
+      account: "renamed-display-name",
+      accountId: "42",
+    });
+    await expect(
+      assertCliLinkAccount("github", first.accountId!, {}, run),
+    ).resolves.toBeUndefined();
+
+    id = 99;
+    login = "same-display-name";
+    const second = await getCliLinkStatus("github", {}, run);
+    expect(second.account).toBe(first.account);
+    expect(second.accountId).toBe("99");
+    expect(second.accountId).not.toBe(first.accountId);
+    await expect(assertCliLinkAccount("github", first.accountId!, {}, run)).rejects.toThrow(
+      "different account",
+    );
+    await expect(
+      assertCliLinkAccount("github", second.accountId!, {}, run),
+    ).resolves.toBeUndefined();
   });
 
   test("uses GitLab browser login and returns only safe validation metadata", async () => {
