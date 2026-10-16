@@ -23,6 +23,7 @@ import { useConfirm, usePrompt } from "../ui/DialogProvider";
 import type { MaskedCredentialView } from "./types";
 import { useT } from "../i18n/I18nProvider";
 import { CredentialNoMatches, CredentialSearch, credentialMatchesQuery } from "./CredentialSearch";
+import { CredentialsSectionHeader } from "./CredentialsSectionHeader";
 import { cookiePlatformName } from "./cookie-platform";
 
 type SwitchMode = "clear" | "merge";
@@ -430,37 +431,21 @@ export function CookieTab({ cwd, activeBucket }: { cwd: string; activeBucket?: s
 
   return (
     <div className="min-w-0 space-y-5" data-cookie-page>
-      <section className="credential-hero overflow-hidden rounded-2xl border border-border/70 px-5 py-6 sm:px-6">
-        <div className="flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between">
-          <div className="flex min-w-0 items-start gap-4">
-            <div className="flex size-12 shrink-0 items-center justify-center rounded-2xl border border-amber-500/20 bg-amber-500/10 text-amber-600 shadow-sm dark:text-amber-400">
-              <CookieIcon className="size-6" aria-hidden />
-            </div>
-            <div className="min-w-0 max-w-2xl">
-              <div className="flex flex-wrap items-center gap-2">
-                <span className="text-[11px] font-semibold uppercase tracking-[0.18em] text-amber-600 dark:text-amber-400">
-                  {t("ext.cookie.eyebrow")}
-                </span>
-                <span className="inline-flex items-center gap-1 rounded-full border border-status-ok/25 bg-status-ok/8 px-2 py-0.5 text-[10px] font-medium text-status-ok">
-                  <ShieldCheck className="size-3" aria-hidden />
-                  {t("ext.cookie.localStorage")}
-                </span>
-              </div>
-              <h2 className="mt-1.5 text-lg font-semibold tracking-tight text-foreground">
-                {t("ext.cookie.title")}
-              </h2>
-              <p className="mt-1.5 text-sm leading-6 text-muted-foreground">
-                {t("ext.cookie.description")}
-              </p>
-            </div>
-          </div>
-          <div className="grid shrink-0 grid-cols-3 gap-2 lg:min-w-72">
-            <CookieStat value={items.length} label={t("ext.cookie.accountCount")} />
-            <CookieStat value={groups.size} label={t("ext.cookie.platformCount")} />
-            <CookieStat value={autoInjectCount} label={t("ext.cookie.autoInjectCount")} />
-          </div>
-        </div>
-      </section>
+      <CredentialsSectionHeader
+        title={t("ext.cookie.title")}
+        description={t("ext.cookie.description")}
+        stats={[
+          { value: items.length, label: t("ext.cookie.accountCount") },
+          { value: groups.size, label: t("ext.cookie.platformCount") },
+          { value: autoInjectCount, label: t("ext.cookie.autoInjectCount") },
+        ]}
+        badge={
+          <span className="inline-flex items-center gap-1 rounded-full border border-status-ok/25 bg-status-ok/8 px-2 py-0.5 text-[10px] font-medium text-status-ok">
+            <ShieldCheck className="size-3" aria-hidden />
+            {t("ext.cookie.localStorage")}
+          </span>
+        }
+      />
 
       <section className="space-y-4" aria-labelledby="cookie-add-title">
         <div className="flex items-start gap-2.5">
@@ -786,17 +771,6 @@ export function CookieTab({ cwd, activeBucket }: { cwd: string; activeBucket?: s
           </div>
         )}
       </section>
-    </div>
-  );
-}
-
-function CookieStat({ value, label }: { value: number; label: string }) {
-  return (
-    <div className="rounded-xl border border-border/70 bg-background/70 px-3 py-2.5 backdrop-blur-sm">
-      <div className="text-lg font-semibold leading-none tabular-nums text-foreground">{value}</div>
-      <div className="mt-1 truncate text-[10px] text-muted-foreground" title={label}>
-        {label}
-      </div>
     </div>
   );
 }

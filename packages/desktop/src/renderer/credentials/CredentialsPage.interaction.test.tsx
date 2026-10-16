@@ -177,6 +177,22 @@ describe("CredentialsPage navigation and search", () => {
     expect(listCalls).toBe(1);
   });
 
+  test("category activation resets only the content scroll and leaves the page chrome in place", async () => {
+    await render();
+    const scroll = descendants(container).find(
+      (node) => propsOf(node)["data-credentials-scroll"] !== undefined,
+    ) as HTMLElement;
+    const tablist = descendants(container).find((node) => propsOf(node).role === "tablist");
+    scroll.scrollTop = 240;
+    await act(async () => {
+      propsOf(tab("token")).onClick();
+      await flushMicrotasks();
+    });
+    expect(scroll.scrollTop).toBe(0);
+    expect(descendants(container).find((node) => propsOf(node).role === "tablist")).toBe(tablist);
+    expect(scroll.contains(tablist!)).toBe(false);
+  });
+
   test("restores the saved Token category and finds a token by its environment variable", async () => {
     stored.set("codeshell:credentials:last-tab", "token");
     await render();

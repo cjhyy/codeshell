@@ -1,4 +1,4 @@
-import React, { useEffect, useId, useRef, useState } from "react";
+import React, { useEffect, useId, useLayoutEffect, useRef, useState } from "react";
 import { Cookie, KeyRound, Link2, MessagesSquare, type LucideIcon } from "lucide-react";
 import { TokenTab } from "./TokenTab";
 import { ChatGatewayTab, LinkTab } from "./LinkTab";
@@ -38,6 +38,7 @@ export function CredentialsPage({
   const [tab, setTab] = useState<TabKey>(() => initialTab ?? storedTab());
   const [focusedTab, setFocusedTab] = useState(tab);
   const tabRefs = useRef(new Map<TabKey, HTMLButtonElement>());
+  const contentRef = useRef<HTMLDivElement>(null);
   const pageId = useId();
   const cwd = activeProjectPath ?? "";
 
@@ -47,6 +48,11 @@ export function CredentialsPage({
     } catch {
       // Storage is optional; the current tab still works for this visit.
     }
+  }, [tab]);
+
+  useLayoutEffect(() => {
+    // Async category lists must not clamp or anchor the fixed page chrome.
+    if (contentRef.current) contentRef.current.scrollTop = 0;
   }, [tab]);
 
   // 凭证取用免审批改为**逐条**(每条凭证 autoUseByAI 开关,见 CookieTab)。全局总闸
@@ -65,12 +71,14 @@ export function CredentialsPage({
       id={`${pageId}-tab-${key}`}
       variant="ghost"
       className={cn(
-        "h-auto min-w-0 items-start justify-start gap-3 whitespace-normal rounded-xl border p-3 text-left focus-visible:ring-primary/40 focus-visible:ring-offset-2 focus-visible:ring-offset-background",
+        "h-11 min-w-0 justify-center gap-2 rounded-none border-b-2 px-2 text-[13px] shadow-none transition-colors focus-visible:ring-inset focus-visible:ring-primary/40 sm:justify-start sm:px-4",
         tab === key
-          ? "border-primary/25 bg-background text-foreground shadow-sm"
-          : "border-transparent text-muted-foreground hover:bg-background/60 hover:text-foreground",
+          ? "border-primary bg-transparent text-primary hover:bg-transparent"
+          : "border-transparent text-muted-foreground hover:bg-muted/40 hover:text-foreground",
       )}
       aria-selected={tab === key}
+      aria-description={description}
+      title={description}
       aria-controls={tab === key ? `${pageId}-panel-${key}` : undefined}
       tabIndex={focusedTab === key ? 0 : -1}
       onFocus={() => setFocusedTab(key)}
@@ -102,38 +110,26 @@ export function CredentialsPage({
         // Browsing categories does not reload connection state until Enter or
         // Space activates the focused native button.
         setFocusedTab(tabKeys[next]);
-        tabRefs.current.get(tabKeys[next])?.focus();
+        tabRefs.current.get(tabKeys[next])?.focus({ preventScroll: true });
       }}
     >
-      <span
-        className={cn(
-          "flex size-9 shrink-0 items-center justify-center rounded-lg",
-          tab === key ? "bg-primary/10 text-primary" : "bg-muted/80 text-muted-foreground",
-        )}
-      >
-        <Icon className="size-4" aria-hidden />
-      </span>
-      <span className="min-w-0 [overflow-wrap:anywhere]">
-        <span className="block text-sm font-semibold leading-5">{label}</span>
-        <span className="mt-1 block text-[11px] font-normal leading-4 text-muted-foreground">
-          {description}
-        </span>
-      </span>
+      <Icon className="size-4 shrink-0" aria-hidden />
+      <span className="truncate font-medium">{label}</span>
     </Button>
   );
 
   return (
-    <div className="h-full min-w-0 overflow-y-auto bg-muted/15 px-6 pb-10 pt-6 max-[720px]:px-4">
-      <div className="mx-auto w-full max-w-6xl">
-        <header className="mb-6 flex items-start gap-3.5">
-          <div className="flex size-11 shrink-0 items-center justify-center rounded-2xl border border-border/80 bg-background text-primary shadow-sm">
-            <KeyRound className="size-5" aria-hidden />
-          </div>
+    <div
+      className="flex h-full min-h-0 min-w-0 flex-col overflow-hidden bg-background"
+      data-credentials-page
+    >
+      <div className="shrink-0 overflow-hidden border-b border-border/60 px-6 pt-6 [scrollbar-gutter:stable] max-[720px]:px-4">
+        <header className="mx-auto mb-5 w-full max-w-6xl">
           <div className="min-w-0">
             <h1 className="text-xl font-semibold tracking-tight">
               {t("ext.credentials.pageTitle")}
             </h1>
-            <p className="mt-1.5 max-w-3xl text-sm leading-6 text-muted-foreground">
+            <p className="mt-1.5 max-w-3xl text-[13px] leading-5 text-muted-foreground">
               {t("ext.credentials.pageSubtitle")}
             </p>
           </div>
@@ -142,7 +138,7 @@ export function CredentialsPage({
         <div
           role="tablist"
           aria-label={t("ext.credentials.tabsAria")}
-          className="mb-6 grid w-full min-w-0 grid-cols-2 gap-1.5 rounded-2xl border border-border/70 bg-muted/50 p-1.5 lg:grid-cols-4"
+          className="mx-auto grid w-full min-w-0 max-w-6xl grid-cols-4 sm:flex"
         >
           {tabBtn(
             "cookie",
@@ -169,16 +165,21 @@ export function CredentialsPage({
             MessagesSquare,
           )}
         </div>
-
+      </div>
+      <div
+        ref={contentRef}
+        data-credentials-scroll
+        className="relative min-h-0 flex-1 overflow-y-auto overscroll-contain px-6 py-6 [scrollbar-gutter:stable] max-[720px]:px-4"
+      >
         <div
           id={`${pageId}-panel-${tab}`}
           role="tabpanel"
           aria-labelledby={`${pageId}-tab-${tab}`}
-          className="min-w-0"
+          className="mx-auto min-w-0 max-w-6xl pb-4"
         >
           {tab === "cookie" && <CookieTab cwd={cwd} activeBucket={activeBucket} />}
           {tab === "token" && <TokenTab cwd={cwd} />}
-          {tab === "link" && <LinkTab cwd={cwd} />}
+          {tab === "link" && <LinkTab key={cwd} cwd={cwd} />}
           {tab === "channels" && <ChatGatewayTab />}
         </div>
       </div>

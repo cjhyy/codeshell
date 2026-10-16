@@ -56,6 +56,7 @@ import { useCloudAccountStatus } from "./useCloudAccountStatus";
 import { localLinkProvider, localLinkSnapshot } from "./linkLocalPresentation";
 import type { MaskedCredentialView } from "./types";
 import { DingTalkSetupDialog } from "./DingTalkSetupDialog";
+import { CredentialsSectionHeader } from "./CredentialsSectionHeader";
 import type {
   ImGatewayChannel,
   ImGatewayChannelCapabilities,
@@ -364,6 +365,7 @@ export function LinkTab({ cwd }: { cwd: string }) {
   const [busyId, setBusyId] = useState<string | null>(null);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState(true);
+  const [localMetadataReady, setLocalMetadataReady] = useState(false);
   const loadGeneration = useRef(0);
   const loadMounted = useRef(false);
   const loadCwd = useRef(cwd);
@@ -376,6 +378,13 @@ export function LinkTab({ cwd }: { cwd: string }) {
   const [category, setCategory] = useState("all");
   const remote = useRemoteLinkSnapshot(cwd, { automatic: false });
   const account = useCloudAccountStatus();
+  const [initialLoadComplete, setInitialLoadComplete] = useState(false);
+  useEffect(() => {
+    // Present one coherent first directory, rather than sorting partial account
+    // and provider results in front of the user. Later refreshes keep the cards.
+    if (localMetadataReady && !remote.loading && !account.loading) setInitialLoadComplete(true);
+  }, [localMetadataReady, remote.loading, account.loading]);
+  const initialLoading = !initialLoadComplete;
   const cloudAvailable = Boolean(
     account.status?.state === "signed-in" && account.status.origin && account.status.account?.id,
   );
@@ -448,6 +457,7 @@ export function LinkTab({ cwd }: { cwd: string }) {
       loadData.current = { cwd, credentials: nextCredentials, providers: nextProviders };
       setCredentials(nextCredentials);
       setProviderViews(nextProviders);
+      setLocalMetadataReady(true);
 
       // Probe each provider once. Stable account IDs are compared independently
       // for each saved binding below; labels never identify the approved account.
@@ -511,7 +521,10 @@ export function LinkTab({ cwd }: { cwd: string }) {
       setLoadError(message);
       throw error;
     } finally {
-      if (current()) setLoading(false);
+      if (current()) {
+        setLocalMetadataReady(true);
+        setLoading(false);
+      }
     }
   }, [cwd]);
 
@@ -835,7 +848,7 @@ export function LinkTab({ cwd }: { cwd: string }) {
         .includes(needle),
   );
   const visibleProviderIds = new Set(visibleProviders.map(({ item }) => item.id));
-  const noMatches = visibleProviders.length === 0;
+  const noMatches = !initialLoading && visibleProviders.length === 0;
   const discoveryUnavailable = ["unavailable", "stale"].includes(
     visibleSnapshot?.remoteCatalog?.state ?? "",
   );
@@ -847,10 +860,10 @@ export function LinkTab({ cwd }: { cwd: string }) {
     <div className="space-y-5" data-link-page>
       <header className="flex flex-wrap items-center gap-5 pb-1">
         <div className="min-w-0 flex-1 basis-80">
-          <h2 className="text-xl font-semibold tracking-tight text-foreground">
+          <h2 className="text-lg font-semibold tracking-tight text-foreground">
             {t("ext.link.overviewTitle")}
           </h2>
-          <p className="mt-2 max-w-xl text-sm leading-6 text-muted-foreground">
+          <p className="mt-2 max-w-xl text-xs leading-5 text-muted-foreground">
             {t("ext.link.directory.description")}
           </p>
         </div>
@@ -886,22 +899,9 @@ export function LinkTab({ cwd }: { cwd: string }) {
         </div>
       </header>
 
-      {!cloudAvailable && (
-        <p
-          role="status"
-          data-link-local-only
-          className="flex flex-wrap items-center gap-x-3 gap-y-1 rounded-xl bg-muted/40 px-4 py-3 text-xs leading-5 text-muted-foreground"
-        >
-          <span className="inline-flex items-center gap-1.5 font-medium text-foreground">
-            <HardDrive aria-hidden className="size-3.5" />
-            {t("ext.link.directory.localOnly")}
-          </span>
-          <span>{t("ext.link.directory.localOnlyHint")}</span>
-        </p>
-      )}
-
       <section
         aria-label={t("ext.link.appsTitle")}
+        aria-busy={initialLoading}
         className="grid gap-6 md:grid-cols-[224px_minmax(0,1fr)]"
       >
         <aside className="flex min-w-0 flex-col gap-5 rounded-2xl bg-muted/35 p-3 md:self-start md:p-4">
@@ -929,12 +929,14 @@ export function LinkTab({ cwd }: { cwd: string }) {
                   aria-hidden
                   className="shrink-0 text-[11px] tabular-nums text-muted-foreground"
                 >
-                  {value === "all"
-                    ? directory.length
-                    : value === "connected"
-                      ? directory.filter((entry) => entry.connected > 0).length
-                      : directory.filter((entry) => entry.needsAttention || !entry.available)
-                          .length}
+                  {initialLoading
+                    ? "—"
+                    : value === "all"
+                      ? directory.length
+                      : value === "connected"
+                        ? directory.filter((entry) => entry.connected > 0).length
+                        : directory.filter((entry) => entry.needsAttention || !entry.available)
+                            .length}
                 </span>
               </Button>
             ))}
@@ -992,11 +994,26 @@ export function LinkTab({ cwd }: { cwd: string }) {
               total: directory.length,
             })}
           </p>
+          {!account.loading && !cloudAvailable && (
+            <div
+              role="status"
+              data-link-local-only
+              className="space-y-1.5 border-t border-border/50 px-2 pt-4 text-xs leading-5 text-muted-foreground"
+            >
+              <p className="flex items-center gap-1.5 font-medium text-foreground">
+                <HardDrive aria-hidden className="size-3.5" />
+                {t("ext.link.directory.localOnly")}
+              </p>
+              <p>{t("ext.link.directory.localOnlyHint")}</p>
+            </div>
+          )}
         </aside>
         <div className="min-w-0 space-y-4">
           <div className="flex items-center justify-between gap-3">
-            <p className="text-xs text-muted-foreground">
-              {t("ext.link.directory.results", { count: visibleProviders.length })}
+            <p role="status" className="min-h-5 text-xs leading-5 text-muted-foreground">
+              {initialLoading
+                ? t("ext.link.loadingConnections")
+                : t("ext.link.directory.results", { count: visibleProviders.length })}
             </p>
             <Button
               type="button"
@@ -1006,11 +1023,17 @@ export function LinkTab({ cwd }: { cwd: string }) {
               disabled={refreshing || loading || remote.loading}
               onClick={() => void refresh(true)}
             >
-              <RefreshCw className={cn("size-3.5", refreshing && "animate-spin")} aria-hidden />
+              <RefreshCw
+                className={cn(
+                  "size-3.5",
+                  (refreshing || loading || remote.loading) && "animate-spin",
+                )}
+                aria-hidden
+              />
               {t("ext.link.refreshConnections")}
             </Button>
           </div>
-          {directoryError ? (
+          {!initialLoading && directoryError ? (
             <div
               role="alert"
               className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-status-err/30 bg-status-err/5 px-4 py-3"
@@ -1036,14 +1059,36 @@ export function LinkTab({ cwd }: { cwd: string }) {
                 {t("ext.link.retry")}
               </Button>
             </div>
-          ) : loading || remote.loading ? (
-            <div
-              className="rounded-xl border border-border/70 bg-card px-4 py-3 text-xs text-muted-foreground"
-              aria-live="polite"
-            >
-              {t("ext.link.loadingConnections")}
-            </div>
           ) : null}
+
+          {initialLoading && (
+            <div
+              data-link-loading
+              aria-hidden
+              className="grid grid-cols-[repeat(auto-fit,minmax(min(100%,300px),1fr))] gap-4"
+            >
+              {Array.from({ length: 6 }, (_, index) => (
+                <div
+                  key={index}
+                  className="h-[230px] space-y-5 rounded-2xl border border-border/65 bg-card p-5"
+                >
+                  <div className="flex items-center gap-3">
+                    <div className="size-12 rounded-xl bg-muted" />
+                    <div className="flex-1 space-y-2">
+                      <div className="h-3.5 w-2/3 rounded bg-muted" />
+                      <div className="h-3 w-1/3 rounded bg-muted/60" />
+                    </div>
+                  </div>
+                  <div className="space-y-2">
+                    <div className="h-3 w-full rounded bg-muted/60" />
+                    <div className="h-3 w-4/5 rounded bg-muted/60" />
+                  </div>
+                  <div className="h-3 w-1/2 rounded bg-muted/60" />
+                  <div className="h-8 w-24 rounded-lg bg-muted" />
+                </div>
+              ))}
+            </div>
+          )}
 
           {noMatches ? (
             <div className="rounded-xl border border-dashed border-border px-4 py-10 text-center">
@@ -1068,7 +1113,7 @@ export function LinkTab({ cwd }: { cwd: string }) {
             </div>
           ) : null}
           <div
-            hidden={noMatches}
+            hidden={initialLoading || noMatches}
             data-link-directory
             className="grid grid-cols-[repeat(auto-fit,minmax(min(100%,300px),1fr))] items-start gap-4"
           >
@@ -1557,47 +1602,14 @@ export function ChatGatewayTab() {
 
   return (
     <div className="space-y-5" data-channel-page>
-      <section className="credential-hero overflow-hidden rounded-2xl border border-border/70 px-5 py-6 sm:px-6">
-        <div className="flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between">
-          <div className="flex min-w-0 items-start gap-4">
-            <div className="flex size-12 shrink-0 items-center justify-center rounded-2xl border border-emerald-500/20 bg-emerald-500/10 text-emerald-600 shadow-sm dark:text-emerald-400">
-              <MessagesSquare className="size-6" aria-hidden />
-            </div>
-            <div className="min-w-0 max-w-2xl">
-              <span className="text-[11px] font-semibold uppercase tracking-[0.18em] text-emerald-600 dark:text-emerald-400">
-                {t("ext.link.gatewayEyebrow")}
-              </span>
-              <h2 className="mt-1.5 text-lg font-semibold tracking-tight text-foreground">
-                {t("ext.link.gatewayTitle")}
-              </h2>
-              <p className="mt-1.5 text-sm leading-6 text-muted-foreground">
-                {t("ext.link.gatewayHeroDescription")}
-              </p>
-            </div>
-          </div>
-          <div className="grid shrink-0 grid-cols-2 gap-2 lg:min-w-56">
-            <div className="rounded-xl border border-border/70 bg-background/70 px-3 py-2.5 backdrop-blur-sm">
-              <div className="text-lg font-semibold leading-none tabular-nums text-foreground">
-                {enabledCount}
-              </div>
-              <div className="mt-1 text-[10px] text-muted-foreground">
-                {t("ext.link.gatewayConfiguredCount")}
-              </div>
-            </div>
-            <div className="rounded-xl border border-border/70 bg-background/70 px-3 py-2.5 backdrop-blur-sm">
-              <div
-                className="truncate text-sm font-semibold leading-none text-foreground"
-                title={statusLabel}
-              >
-                {statusLabel}
-              </div>
-              <div className="mt-1.5 text-[10px] text-muted-foreground">
-                {t("ext.link.gatewayStateLabel")}
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
+      <CredentialsSectionHeader
+        title={t("ext.link.gatewayTitle")}
+        description={t("ext.link.gatewayHeroDescription")}
+        stats={[
+          { label: t("ext.link.gatewayConfiguredCount"), value: enabledCount },
+          { label: t("ext.link.gatewayStateLabel"), value: statusLabel },
+        ]}
+      />
 
       <section className="space-y-4" aria-labelledby="link-channels-title">
         <div className="flex items-start gap-2.5">
