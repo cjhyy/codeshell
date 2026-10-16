@@ -8,6 +8,23 @@ import {
 } from "./PageRegistry";
 
 describe("PageRegistry", () => {
+  it("routes execution, session and request deep links to the observability page", () => {
+    const onOpenSession = () => true;
+    const element = PAGE_REGISTRY.get("traces")!.render!({
+      runsInitialRunId: null,
+      activeProjectPath: null,
+      tracesInitialSessionId: "original-session",
+      tracesInitialTraceId: "actual-execution",
+      tracesInitialRequestId: "actual-model-call",
+      onOpenSession,
+    }) as ReactElement<Record<string, unknown>>;
+    expect(element.props).toEqual({
+      initialSessionId: "original-session",
+      initialTraceId: "actual-execution",
+      initialRequestId: "actual-model-call",
+      onOpenSession,
+    });
+  });
   it("pins the builtin sidebar nav in product order", () => {
     // Settings remains reachable from the fixed footer menu, so it is not
     // duplicated in the first-level navigation.
@@ -15,6 +32,7 @@ describe("PageRegistry", () => {
       "extensions",
       "digital_humans",
       "automation",
+      "traces",
     ]);
   });
 
@@ -24,6 +42,7 @@ describe("PageRegistry", () => {
       { kind: "i18n", key: "sidebar.extensions" },
       { kind: "i18n", key: "sidebar.digitalHumans" },
       { kind: "i18n", key: "sidebar.automation" },
+      { kind: "i18n", key: "observability.title" },
     ]);
   });
 
@@ -125,6 +144,7 @@ describe("migrated builtin pages", () => {
       "extensions",
       "digital_humans",
       "automation",
+      "traces",
     ]);
   });
 

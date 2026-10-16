@@ -293,6 +293,14 @@ function App() {
   /** Transient: a run to pre-select when jumping into the runs view (e.g. from
    *  the 自动化 detail's 「查看最近运行」 button). Not persisted in view state. */
   const [runsInitialRunId, setRunsInitialRunId] = useState<string | null>(null);
+  const [traceTarget, setTraceTarget] = useState<{ sessionId?: string; traceId?: string }>({});
+  const openTrace = useCallback(
+    (sessionId?: string, traceId?: string) => {
+      setTraceTarget({ sessionId, traceId });
+      setView((current) => ({ ...current, viewMode: "traces" }));
+    },
+    [setView],
+  );
 
   const { sessionIndices, setSessionIndices, archivedPetSessionIds } = useSessionIndices();
   const locallyCreatedSessionIdsRef = useRef<Set<string>>(new Set());
@@ -1361,9 +1369,9 @@ function App() {
     setComposerDrafts,
   });
 
-  // toggleInspector retained as a no-op for menu/palette wiring that
-  // still references the action verb but the panel itself is gone.
-  const toggleInspector = (): void => undefined;
+  const toggleInspector = useCallback(() => {
+    openTrace(activeEngineSessionId ?? undefined);
+  }, [activeEngineSessionId, openTrace]);
 
   useEffect(() => {
     const handler = (e: KeyboardEvent): void => {
@@ -1461,7 +1469,7 @@ function App() {
           toggleSidebar();
           break;
         case "toggle-inspector":
-          // no-op: inspector panel removed
+          navigateFromSidebar(toggleInspector);
           break;
         case "new-window":
           void window.codeshell.newWindow();
@@ -1469,7 +1477,7 @@ function App() {
       }
     });
     return off;
-  }, [projects, toggleSidebar, navigateFromSidebar]);
+  }, [projects, toggleSidebar, toggleInspector, navigateFromSidebar]);
 
   // Refresh model list + active selection + permission from settings.
   useEffect(() => {
@@ -2262,7 +2270,12 @@ function App() {
               }
               onNewConversation={() => navigateFromSidebar(() => newVisibleConversation())}
               onOpenSearch={() => navigateFromSidebar(() => setSessionSearchOpen(true))}
-              onNavigate={(mode) => navigateFromSidebar(() => setViewMode(mode))}
+              onNavigate={(mode) =>
+                navigateFromSidebar(() => {
+                  if (mode === "traces") setTraceTarget({});
+                  setViewMode(mode);
+                })
+              }
               onOpenProjectConfig={(projectId) => {
                 navigateFromSidebar(() => {
                   setActiveProjectId(projectId);
@@ -2296,7 +2309,10 @@ function App() {
                   <ActivityNavigation
                     page={view.viewMode}
                     taskInboxEnabled={taskInboxEnabled}
-                    onNavigate={setViewMode}
+                    onNavigate={(page) => {
+                      if (page === "traces") setTraceTarget({});
+                      setViewMode(page);
+                    }}
                   />
                 ) : null
               }
@@ -2352,6 +2368,9 @@ function App() {
                 <React.Suspense fallback={<PageLoading label={t("ext.common.loading")} />}>
                   {registeredPageRender({
                     runsInitialRunId,
+                    tracesInitialSessionId: traceTarget.sessionId,
+                    tracesInitialTraceId: traceTarget.traceId,
+                    onOpenTrace: openTrace,
                     onOpenTaskInboxRecord,
                     activeProjectPath: activeProject?.path ?? null,
                     activeProjectId: activeProject?.id ?? null,
@@ -2773,7 +2792,10 @@ function App() {
           open={paletteOpen}
           onClose={() => setPaletteOpen(false)}
           commands={buildCommands({
-            setViewMode,
+            setViewMode: (mode) => {
+              if (mode === "traces") setTraceTarget({});
+              setViewMode(mode);
+            },
             openPanel,
             gitReviewAvailable: reviewAvailability.available,
             localRuntime: !cloudSelected && projectRuntime.ready,

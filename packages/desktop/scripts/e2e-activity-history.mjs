@@ -93,6 +93,7 @@ try {
     appDir,
     home: isolated.home,
     userDataDir: isolated.userDataDir,
+    env: { CODE_SHELL_TEST_HOME: isolated.codeShellHome },
   });
   win = await findCodeShellWindow(app);
   const errors = captureRendererErrors(win);

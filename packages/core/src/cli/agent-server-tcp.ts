@@ -41,6 +41,7 @@ import { join } from "node:path";
 import { getApprovalRouter } from "../tool-system/permission.js";
 import { assertSafeSessionId, SessionManager, sessionsRoot } from "../session/session-manager.js";
 import { notificationQueue } from "../tool-system/builtin/agent-notifications.js";
+import { configureModelTracing } from "../model-traces/index.js";
 
 const cwd = process.env.AGENT_CWD ?? process.cwd();
 const port = Number(process.env.AGENT_TCP_PORT ?? "4321");
@@ -48,6 +49,10 @@ const host = process.env.AGENT_TCP_HOST ?? "127.0.0.1";
 const dataRoot = process.env.CODE_SHELL_DATA_ROOT?.trim() || undefined;
 const dataSessionsDir = dataRoot ? join(dataRoot, "sessions") : undefined;
 const notificationSessionsDir = dataSessionsDir ?? sessionsRoot();
+configureModelTracing({
+  storageDir: join(notificationSessionsDir, ".model-traces"),
+  source: "tcp-worker",
+});
 
 notificationQueue.attachPersistence({
   fileForSession(sessionId) {

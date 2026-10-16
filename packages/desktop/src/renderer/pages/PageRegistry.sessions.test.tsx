@@ -92,7 +92,7 @@ describe("session history page route", () => {
       await flushMicrotasks();
     });
     const nodes = descendants(container);
-    expect(nodes.filter((node) => node.tagName === "H1").map(textOf)).toEqual(["会话历史"]);
+    expect(nodes.filter((node) => node.tagName === "H1").map(textOf)).toEqual(["会话管理"]);
     expect(textOf(container)).toContain("还没有会话记录");
     const newSession = nodes.find(
       (node) => node.tagName === "BUTTON" && textOf(node) === "新会话",

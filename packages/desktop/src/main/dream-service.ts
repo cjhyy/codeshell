@@ -24,7 +24,10 @@ import {
   runDreamConsolidation,
   resolveLLMConfigForTag,
   resolveAuxKey,
+  sessionsRoot,
 } from "@cjhyy/code-shell-core";
+import { withModelTraceContext } from "@cjhyy/code-shell-core/internal";
+import { join } from "node:path";
 import { createCodingModule } from "@cjhyy/code-shell-capability-coding/capability";
 import { dlog } from "./desktop-logger.js";
 
@@ -47,6 +50,23 @@ export interface DreamResult {
  * surface it to the renderer.
  */
 export async function runDream(level: DreamLevel, cwd?: string): Promise<DreamResult> {
+  return withModelTraceContext(
+    {
+      storageDir: join(sessionsRoot(), ".model-traces"),
+      source: "desktop-dream",
+      purpose: level === "project" ? "memory_dream_project" : "memory_dream_user",
+      // Global memory may span projects; a cwd used for settings cannot authorize it.
+      workspacePath: level === "project" ? cwd : undefined,
+      sessionId: undefined,
+      runId: undefined,
+      parentSessionId: undefined,
+      ephemeral: false,
+    },
+    () => runDreamPass(level, cwd),
+  );
+}
+
+async function runDreamPass(level: DreamLevel, cwd?: string): Promise<DreamResult> {
   if (level === "project" && !cwd) {
     throw new Error("project dream requires a cwd (open a project first)");
   }

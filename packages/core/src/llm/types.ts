@@ -2,12 +2,14 @@
  * LLM-specific internal types.
  */
 
-import type { Message, ToolDefinition, LLMResponse, LLMStreamChunk, TokenUsage } from "../types.js";
+import type { Message, ToolDefinition, LLMStreamChunk, TokenUsage } from "../types.js";
 import type { PromptCacheRequestContext } from "./prompt-cache.js";
 
 export interface CreateMessageOptions {
   /** Main-facade invocation token; auxiliary providers deliberately omit it. */
   requestBoundaryId?: string;
+  /** Diagnostic-only replacements; never forwarded to the model or provider wire. */
+  diagnosticRedactions?: ReadonlyMap<string, string>;
   systemPrompt: string;
   messages: Message[];
   tools?: ToolDefinition[];

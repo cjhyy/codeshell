@@ -10,6 +10,10 @@
 
 import OpenAI from "openai";
 import { withProviderRequestProjection } from "../../model-request-boundary/context.js";
+import {
+  recordModelTraceAttemptError,
+  recordModelTraceAttemptResult,
+} from "../../model-traces/context.js";
 import type {
   ClientDefaults,
   LLMConfig,
@@ -480,6 +484,7 @@ export class OpenAIClient extends LLMClientBase {
           if (cachePlan && !requestSignal?.aborted && (response.usage?.promptTokens ?? 0) > 0) {
             this.promptCacheHistory.commit(cachePlan);
           }
+          recordModelTraceAttemptResult(response);
           span.end({
             stopReason: response.stopReason,
             promptTokens: response.usage?.promptTokens,
@@ -489,6 +494,7 @@ export class OpenAIClient extends LLMClientBase {
           });
           return response;
         } catch (err) {
+          recordModelTraceAttemptError(err);
           span.fail(err);
           throw err;
         }

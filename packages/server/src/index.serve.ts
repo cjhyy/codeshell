@@ -1,5 +1,6 @@
 /** Ready-made headless HTTP/WebSocket host and CLI composition helpers. */
 export * from "./serve/headless-server.js";
+export * from "./model-trace-http.js";
 export {
   startProjectControlServer,
   type ProjectControlServerOptions,

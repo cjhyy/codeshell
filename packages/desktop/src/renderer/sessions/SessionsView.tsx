@@ -25,9 +25,11 @@ import type { DesktopSessionSummary } from "../../preload/types";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { formatBytes } from "@/lib/utils";
+import { OperationBatchForm } from "../task-inbox/OperationBatchForm";
 import { useT } from "../i18n/I18nProvider";
 
 interface Props {
+  onOpenTrace?: (sessionId?: string, traceId?: string) => void;
   onNewSession?: () => void;
   onOpenSession?: (id: string) => void | boolean | Promise<void | boolean>;
   onSessionRenamed?: (id: string, title: string) => void;
@@ -51,6 +53,7 @@ const validUpdatedAt = (session: DesktopSessionSummary) => {
 
 export function SessionsView({
   onNewSession,
+  onOpenTrace,
   onOpenSession,
   onSessionRenamed,
   onSessionDeleted,
@@ -363,7 +366,7 @@ export function SessionsView({
               id={`${pageId}-title`}
               className="text-xl font-semibold tracking-tight text-foreground"
             >
-              {t("auto.sessions.title")}
+              {t("activity.conversations")}
             </h1>
             <p className="mt-1 text-sm leading-relaxed text-muted-foreground">
               {t("auto.sessions.description")}
@@ -501,7 +504,7 @@ export function SessionsView({
               </div>
             ) : (
               <ul
-                aria-label={t("auto.sessions.title")}
+                aria-label={t("activity.conversations")}
                 className="min-h-40 min-w-0 shrink-0 space-y-2 pb-1"
               >
                 {visibleSessions.map((session) => {
@@ -608,6 +611,17 @@ export function SessionsView({
                             </p>
                           </div>
                           <div className="flex flex-wrap gap-1">
+                            <OperationBatchForm sessionId={session.id} />
+                            {onOpenTrace && (
+                              <Button
+                                type="button"
+                                size="sm"
+                                variant="outline"
+                                onClick={() => onOpenTrace(session.id)}
+                              >
+                                {t("activity.viewTrace")}
+                              </Button>
+                            )}
                             <Button
                               type="button"
                               size="sm"
@@ -770,7 +784,7 @@ export function SessionsView({
             )}
             {pages > 1 && (
               <nav
-                aria-label={t("auto.sessions.title")}
+                aria-label={t("activity.conversations")}
                 className="flex shrink-0 flex-wrap items-center justify-between gap-2 border-t border-border/60 pt-3"
               >
                 <Button

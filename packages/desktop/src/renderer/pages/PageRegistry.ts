@@ -19,6 +19,7 @@ import {
   type LucideIcon,
 } from "lucide-react";
 import type { TaskInboxPageProps } from "../task-inbox/TaskInboxPage";
+import type { ModelTracesViewProps } from "../activity/ModelTracesView";
 import type { ViewMode } from "../view";
 
 /**
@@ -47,6 +48,10 @@ export interface PageNav {
 
 /** App-owned state a full-screen page render may need. Grows per consumer. */
 export interface PageRenderContext {
+  onOpenTrace?: (sessionId?: string, traceId?: string) => void;
+  tracesInitialSessionId?: string | null;
+  tracesInitialTraceId?: string | null;
+  tracesInitialRequestId?: string | null;
   /** Deep-link into the runs view (set by the automation view). */
   runsInitialRunId: string | null;
   onOpenTaskInboxRecord?: TaskInboxPageProps["onOpenTaskInboxRecord"];
@@ -89,6 +94,9 @@ const builtin = (entry: Omit<PageEntry, "owner">): PageEntry => ({
 const LogsView: LazyExoticComponent<ComponentType> = lazy(() =>
   import("../logs/LogsView").then((module) => ({ default: module.LogsView })),
 );
+const ModelTracesView: LazyExoticComponent<ComponentType<ModelTracesViewProps>> = lazy(() =>
+  import("../activity/ModelTracesView").then((module) => ({ default: module.ModelTracesView })),
+);
 const RunsView: LazyExoticComponent<ComponentType<{ initialRunId?: string | null }>> = lazy(() =>
   import("../runs/RunsView").then((module) => ({ default: module.RunsView })),
 );
@@ -96,7 +104,7 @@ const SessionsView: LazyExoticComponent<
   ComponentType<
     Pick<
       PageRenderContext,
-      "onNewSession" | "onOpenSession" | "onSessionRenamed" | "onSessionDeleted"
+      "onNewSession" | "onOpenSession" | "onSessionRenamed" | "onSessionDeleted" | "onOpenTrace"
     >
   >
 > = lazy(() =>
@@ -121,6 +129,24 @@ const OptimizationLabPage = lazy(() =>
 
 const BUILTIN_PAGE_ENTRIES: PageEntry[] = [
   builtin({
+    key: "traces",
+    title: { kind: "i18n", key: "observability.title" },
+    icon: Workflow,
+    nav: { order: 15, target: "traces", isActive: (mode) => mode === "traces" },
+    render: ({
+      tracesInitialSessionId,
+      tracesInitialTraceId,
+      tracesInitialRequestId,
+      onOpenSession,
+    }) =>
+      createElement(ModelTracesView, {
+        initialSessionId: tracesInitialSessionId,
+        initialTraceId: tracesInitialTraceId,
+        initialRequestId: tracesInitialRequestId,
+        onOpenSession,
+      }),
+  }),
+  builtin({
     key: "extensions",
     title: { kind: "i18n", key: "sidebar.extensions" },
     icon: Puzzle,
@@ -139,7 +165,8 @@ const BUILTIN_PAGE_ENTRIES: PageEntry[] = [
     key: "task_inbox",
     title: { kind: "i18n", key: "sidebar.taskInbox" },
     icon: ListTodo,
-    render: ({ onOpenTaskInboxRecord }) => createElement(TaskInboxPage, { onOpenTaskInboxRecord }),
+    render: ({ onOpenTaskInboxRecord, onOpenTrace }) =>
+      createElement(TaskInboxPage, { onOpenTaskInboxRecord, onOpenTrace }),
   }),
   builtin({
     key: "optimization_lab",
@@ -190,12 +217,13 @@ const BUILTIN_PAGE_ENTRIES: PageEntry[] = [
     key: "sessions",
     title: { kind: "i18n", key: "panels.palette.openSessions" },
     icon: MessageSquare,
-    render: ({ onNewSession, onOpenSession, onSessionRenamed, onSessionDeleted }) =>
+    render: ({ onNewSession, onOpenSession, onSessionRenamed, onSessionDeleted, onOpenTrace }) =>
       createElement(SessionsView, {
         onNewSession,
         onOpenSession,
         onSessionRenamed,
         onSessionDeleted,
+        onOpenTrace,
       }),
   }),
 ];

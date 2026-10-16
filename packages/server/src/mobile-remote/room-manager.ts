@@ -27,6 +27,7 @@ import { randomUUID } from "node:crypto";
 import { isAbsolute, join, relative, resolve, sep } from "node:path";
 import type { ResidentAgentEvent } from "./resident-agent.js";
 import type { InputAttachmentMeta } from "../attachment-service.js";
+import { createRoomModelTrace } from "./room-model-tracing.js";
 
 /**
  * The exact shape createRoom() generates: `room_<base36>_<base36>`. Anything
@@ -359,6 +360,11 @@ export interface RoomAgentFactory {
 export interface RoomManagerOptions {
   rootDir: string; // <userData>/mobile-remote/rooms
   createAgent: RoomAgentFactory;
+  /** Explicit Host-owned model history target; never derived from room/client input. */
+  modelTracing?: {
+    storageDir: string;
+    parameters?: (room: Readonly<RoomMeta>) => Record<string, unknown>;
+  };
   /** Locate an already-running external CLI transcript without starting a CLI.
    * Returning null means the transcript is absent. The returned identity is
    * checked again here so a stale or mismatched locator fails closed. */
@@ -396,6 +402,7 @@ export interface RoomManagerOptions {
  */
 export class RoomManager {
   private agents = new Map<string, RoomAgent>();
+  private modelTraces = new Map<string, ReturnType<typeof createRoomModelTrace>>();
   /** Rooms whose visible output is currently sourced from the external CLI's
    * transcript tail. While present, the resident agent's stdout mirror is
    * suppressed so the same CLI output is not pushed twice. */
@@ -1142,6 +1149,9 @@ export class RoomManager {
       this.deferredEmits.set(id, queued);
       return;
     }
+    const trace = this.modelTraces.get(id);
+    trace?.observe(event);
+    if (trace?.ended) this.modelTraces.delete(id);
     if (
       this.transcriptFollowedRooms.has(id) &&
       (event.type === "text" ||
@@ -1291,6 +1301,25 @@ export class RoomManager {
       return false;
     }
 
+    if (this.opts.modelTracing) {
+      try {
+        let trace = this.modelTraces.get(id);
+        if (!trace || trace.ended) {
+          trace = createRoomModelTrace({
+            storageDir: this.opts.modelTracing.storageDir,
+            workspacePath: meta.cwd,
+            roomId: id,
+            kind: meta.kind ?? "claude",
+            parameters: this.opts.modelTracing.parameters?.(meta),
+          });
+          this.modelTraces.set(id, trace);
+        }
+        trace.submit(agentText);
+      } catch {
+        // Observability cannot change an already accepted external submission.
+      }
+    }
+
     this.append(id, {
       from: "user",
       type: "text",
@@ -1313,6 +1342,8 @@ export class RoomManager {
     // throttled write.
     this.flushLastActive(id);
     const agent = this.agents.get(id);
+    this.modelTraces.get(id)?.finish("cancelled");
+    this.modelTraces.delete(id);
     try {
       agent?.stop();
     } finally {
@@ -1328,6 +1359,8 @@ export class RoomManager {
   closeAll(): void {
     const ids = new Set([...this.agents.keys(), ...this.transcriptFollowedRooms]);
     let firstError: unknown;
+    for (const trace of this.modelTraces.values()) trace.finish("cancelled");
+    this.modelTraces.clear();
     for (const agent of this.agents.values()) {
       try {
         agent.stop();

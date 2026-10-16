@@ -1,4 +1,5 @@
 import type { CloudAccountApi } from "../shared/cloud-account.js";
+import type { ModelTraceApi } from "./model-trace-api.js";
 import type { CloudEnvironmentApi } from "../shared/cloud-environment.js";
 import type { CloudWorkbenchApi } from "../shared/cloud-management.js";
 import type {
@@ -1699,6 +1700,7 @@ export interface CodeshellApi
     patch: Record<string, unknown>,
   ): Promise<void>;
   listSessions(): Promise<DesktopSessionSummary[]>;
+  modelTraces: ModelTraceApi;
   setSessionArchived(id: string, archived: boolean): Promise<void>;
   deleteSession(id: string): Promise<void>;
   claimQuickChatSession(id: string, claimId: string): Promise<void>;

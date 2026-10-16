@@ -4,6 +4,10 @@
 
 import Anthropic from "@anthropic-ai/sdk";
 import { withProviderRequestProjection } from "../../model-request-boundary/context.js";
+import {
+  recordModelTraceAttemptError,
+  recordModelTraceAttemptResult,
+} from "../../model-traces/context.js";
 import type {
   ClientDefaults,
   LLMConfig,
@@ -208,6 +212,7 @@ export class AnthropicClient extends LLMClientBase {
             options.stream && options.onChunk
               ? await this.streamMessage(options, messages, tools, requestSignal)
               : await this.nonStreamMessage(options, messages, tools, requestSignal);
+          recordModelTraceAttemptResult(response);
           span.end({
             stopReason: response.stopReason,
             promptTokens: response.usage?.promptTokens,
@@ -217,6 +222,7 @@ export class AnthropicClient extends LLMClientBase {
           });
           return response;
         } catch (err) {
+          recordModelTraceAttemptError(err);
           span.fail(err);
           throw err;
         }

@@ -21,8 +21,8 @@ const { TaskInboxPage } = await import("./TaskInboxPage");
 function row(id: string, patch: Partial<TaskInboxRecordV1> = {}): TaskInboxRecordV1 {
   return {
     schemaVersion: 1,
-    taskKey: `session:${id}`,
-    source: "session",
+    taskKey: `background-job:${id}`,
+    source: "background-job",
     sourceId: id,
     title: `任务 ${id}`,
     status: "running",
@@ -211,7 +211,15 @@ describe("TaskInboxPage", () => {
     };
     await render();
     await settle(() =>
-      requests[0].request.resolve(snapshot([row("uncertain", { status: "failed" })])),
+      requests[0].request.resolve(
+        snapshot([
+          row("uncertain", {
+            source: "session",
+            capabilities: ["open", "verify"],
+            status: "failed",
+          }),
+        ]),
+      ),
     );
     expect(calls).toEqual([]);
     await click(button("外部写入人工处理"));
@@ -251,7 +259,15 @@ describe("TaskInboxPage", () => {
     };
     await render();
     await settle(() =>
-      requests[0].request.resolve(snapshot([row("uncertain", { status: "failed" })])),
+      requests[0].request.resolve(
+        snapshot([
+          row("uncertain", {
+            source: "session",
+            capabilities: ["open", "verify"],
+            status: "failed",
+          }),
+        ]),
+      ),
     );
     await click(button("外部写入人工处理"));
     await click(button("人工核查后处理…"));
@@ -294,7 +310,15 @@ describe("TaskInboxPage", () => {
     };
     await render();
     await settle(() =>
-      requests[0].request.resolve(snapshot([row("uncertain", { status: "failed" })])),
+      requests[0].request.resolve(
+        snapshot([
+          row("uncertain", {
+            source: "session",
+            capabilities: ["open", "verify"],
+            status: "failed",
+          }),
+        ]),
+      ),
     );
     await click(button("外部写入人工处理"));
     await click(button("只读核查…"));
@@ -314,7 +338,7 @@ describe("TaskInboxPage", () => {
         snapshot([
           row("done", {
             status: "done",
-            source: "legacy-run",
+            source: "background-shell",
             capabilities: ["open"],
             workspacePath: "/work/a",
           }),
@@ -349,7 +373,7 @@ describe("TaskInboxPage", () => {
     const source = nodes().find(
       (node) => props(node).role === "combobox" && String(props(node).id).endsWith("-source"),
     )!;
-    await settle(() => selectProps(source).onChange("legacy-run"));
+    await settle(() => selectProps(source).onChange("background-shell"));
     expect(cards()).toHaveLength(1);
     const input = nodes().find((node) => node.tagName === "INPUT")!;
     await settle(() => props(input).onChange({ target: { value: "missing" } }));
@@ -522,7 +546,9 @@ describe("TaskInboxPage", () => {
     await render();
     await settle(() => requests[0].request.resolve(snapshot([row("a")])));
     await click(button("打开来源"));
-    expect(actions).toEqual([{ taskKey: "session:a", action: "open", expectedRevision: "r1" }]);
+    expect(actions).toEqual([
+      { taskKey: "background-job:a", action: "open", expectedRevision: "r1" },
+    ]);
     expect(opened.map((record) => record.sourceId)).toEqual(["a"]);
     await settle(() =>
       requests[1].request.resolve(snapshot([row("a", { capabilities: ["pause"] })], 2)),
@@ -592,6 +618,8 @@ describe("TaskInboxPage", () => {
     await click(button("重试"));
     expect(textOf(container)).toContain("再次消耗模型额度");
     await click(button("确认"));
-    expect(actions).toEqual([{ taskKey: "session:a", action: "retry", expectedRevision: "r1" }]);
+    expect(actions).toEqual([
+      { taskKey: "background-job:a", action: "retry", expectedRevision: "r1" },
+    ]);
   });
 });

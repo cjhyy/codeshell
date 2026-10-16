@@ -114,6 +114,7 @@ export class ModelFacade {
         (requestSignal) =>
           this.client.createMessage({
             requestBoundaryId: reqId,
+            diagnosticRedactions: recordingOptions?.sensitiveToolResultRedactions,
             systemPrompt,
             messages,
             tools,
@@ -220,6 +221,7 @@ export class ModelFacade {
         (requestSignal) =>
           this.client.createMessage({
             requestBoundaryId: reqId,
+            diagnosticRedactions: recordingOptions?.sensitiveToolResultRedactions,
             systemPrompt,
             messages,
             tools,

@@ -9,6 +9,7 @@ import {
   userHome,
 } from "@cjhyy/code-shell-core";
 import { computeEffectiveDisabledLists, getMergedCatalog } from "@cjhyy/code-shell-core/internal";
+import { withModelTraceContext } from "@cjhyy/code-shell-core/internal";
 
 import { probeConfiguredModel } from "./model-probe.js";
 
@@ -40,6 +41,9 @@ export interface HubConfigurationOptions {
   ownerId?: (request: IncomingMessage) => Promise<string | undefined>;
   /** Test seam; production always uses the shared Core client. */
   probe?: typeof probeConfiguredModel;
+  /** Trusted Host route for auxiliary connection probes; never browser-selected. */
+  traceStorageDir?: string;
+  traceSource?: string;
 }
 
 /** The caller must authenticate and check Origin before dispatching any request here. */
@@ -424,9 +428,18 @@ export function createHubConfiguration(options: HubConfigurationOptions) {
         try {
           // Register before this final auth await, so a concurrent revoke also aborts this probe.
           await authorize(req);
-          const result = await (options.probe ?? probeConfiguredModel)(settings, id, {
-            signal: controller.signal,
-          });
+          const result = await withModelTraceContext(
+            {
+              ...(options.traceStorageDir ? { storageDir: options.traceStorageDir } : {}),
+              workspacePath: options.cwd,
+              source: options.traceSource ?? "server",
+              purpose: "connection_probe",
+            },
+            () =>
+              (options.probe ?? probeConfiguredModel)(settings, id, {
+                signal: controller.signal,
+              }),
+          );
           await authorize(req);
           json(res, 200, result);
         } finally {

@@ -5,6 +5,7 @@
  * The sub-agent spawner and sandbox resolution stay in engine.ts (the
  * `new Engine(` allowlist and RunEnvironmentResolver own them).
  */
+import { recordModelTraceEvent } from "../model-traces/context.js";
 import type { MCPServerConfig, PermissionMode, TaskInfo, ToolDefinition } from "../types.js";
 import type { SettingsScope } from "../settings/manager.js";
 import type { ToolContext } from "../tool-system/context.js";
@@ -210,7 +211,33 @@ export function buildRunPermissionPipeline(args: {
   // Surface approval waits on the notification hook (fire-and-forget, like
   // background-agent terminal states) so plugins / settings hooks can ping
   // the user while a decision is pending.
+  const approvalSpans = new Map<string, number>();
   permission.setApprovalEventListener((event) => {
+    const startedAt =
+      event.phase === "requested" ? Date.now() : approvalSpans.get(event.observationId);
+    if (event.phase === "requested" && startedAt !== undefined)
+      approvalSpans.set(event.observationId, startedAt);
+    if (event.phase === "resolved") approvalSpans.delete(event.observationId);
+    if (startedAt !== undefined)
+      recordModelTraceEvent({
+        id: event.observationId,
+        startedAt,
+        kind: "approval",
+        name: event.toolName,
+        sessionId: args.sessionId,
+        status:
+          event.phase === "requested"
+            ? "waiting"
+            : event.error
+              ? "failed"
+              : event.approved
+                ? "approved"
+                : "rejected",
+        ...(event.phase === "resolved" ? { endedAt: Date.now() } : {}),
+        input: { riskLevel: event.riskLevel },
+        error: event.error,
+        ...(event.approved !== undefined ? { output: { approved: event.approved } } : {}),
+      });
     args.emitNotificationHook({
       kind: event.phase === "requested" ? "approval_requested" : "approval_resolved",
       toolName: event.toolName,

@@ -76,6 +76,25 @@ const sessions = Array.from({ length: 30 }, (_, index) => ({
   status: "completed",
   turnCount: 3,
 }));
+const traceRecord = {
+  version: 1,
+  id: "fixture-request",
+  traceId: "fixture-execution",
+  sessionId: "session-1",
+  source: "fixture",
+  purpose: "main",
+  provider: "fixture",
+  model: "fixture-model",
+  startedAt: 1800000000000,
+  endedAt: 1800000000100,
+  status: "completed",
+  stream: false,
+  inputState: "recorded",
+  input: { systemPrompt: "Owned Workbench Prompt", messages: [], tools: [], parameters: {} },
+  outputState: "recorded",
+  output: { text: "Owned Workbench answer" },
+  attempts: [],
+};
 let model = {
   sessions,
   activeId: "session-0",
@@ -121,6 +140,19 @@ const server = createServer((request, response) => {
   }
   if (url.pathname === "/api/v1/environment") return reply({ error: "环境信息暂时无法读取" }, 503);
   if (url.pathname === "/api/v1/auth/sessions") return reply({ sessions: [] });
+  if (url.pathname === "/api/v1/model-traces/config")
+    return reply({
+      enabled: true,
+      captureContent: false,
+      includeEphemeral: false,
+      retentionDays: 7,
+    });
+  if (url.pathname === "/api/v1/model-traces") {
+    const { input: _input, output: _output, attempts: _attempts, ...metadata } = traceRecord;
+    return reply({ items: [{ ...metadata, attemptCount: 0 }], total: 1 });
+  }
+  if (url.pathname === "/api/v1/model-traces/fixture-request")
+    return reply({ record: traceRecord, events: [] });
   unexpected.push(request.url);
   reply({}, 404);
 });
@@ -185,6 +217,20 @@ const assertFocus = async () => {
   const result = await focused();
   assert.ok(result.inside && result.visible, JSON.stringify(result));
   return result;
+};
+const inspectTrace = async () => {
+  const explorer = page.locator(".cs-trace-explorer");
+  await explorer.waitFor();
+  assert.equal(new URL(page.url()).searchParams.get("view"), "activity");
+  await explorer.locator(".cs-t-pane").nth(0).locator(".cs-t-item").first().click();
+  await explorer.locator(".cs-t-pane").nth(1).locator(".cs-t-item").first().click();
+  await explorer.getByText("Owned Workbench Prompt", { exact: false }).waitFor();
+  await explorer.getByRole("button", { name: "打开原会话", exact: true }).click();
+  await page.waitForFunction(() =>
+    document.querySelector(".topbar-title")?.textContent.includes("session-1"),
+  );
+  await page.locator(".messages").waitFor();
+  assert.equal(new URL(page.url()).searchParams.has("view"), false);
 };
 try {
   for (const theme of ["light", "dark"]) {
@@ -276,6 +322,8 @@ try {
           .evaluate((node) => document.activeElement === node),
         true,
       );
+      await page.getByRole("button", { name: "执行观测", exact: true }).click();
+      await inspectTrace();
       reports.push({ theme, size, keyboardStops: count, footer });
     }
   }
@@ -348,8 +396,15 @@ try {
     await page.screenshot({
       path: path.join(output, `desktop-${size.width}x${size.height}-cli.png`),
     });
+    await page.getByRole("button", { name: "执行观测", exact: true }).click();
+    await inspectTrace();
+    await page.goto(`${origin}/?view=activity`);
+    await inspectTrace();
     reports.push({ host: "desktop", size, keyboardStops: count });
   }
+  model = { ...model, host: "hub", sessions, connection: "open" };
+  await page.goto(`${origin}/?view=activity`);
+  await inspectTrace();
   model = { ...model, host: "hub", sessions: [], connection: "closed" };
   await page.setViewportSize({ width: 390, height: 360 });
   await page.goto(origin);

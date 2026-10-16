@@ -33,6 +33,7 @@ import {
 import type { PetJournalStore } from "./pet-journal-store.js";
 import type { PetMemoryStore } from "./pet-memory-store.js";
 import { dlog } from "../desktop-logger.js";
+import { withDesktopSessionModelTrace } from "../auxiliary-model-tracing.js";
 
 export interface SegmentClosureInput {
   /** The segment that just closed (source of the journal entry + memory backlink). */
@@ -207,7 +208,12 @@ export function createPetSegmentClosureService(deps: {
         const promptInput = sanitize(buildClosureInput(window.messages));
         let extraction: ClosureExtraction | null = null;
         try {
-          extraction = await generate(promptInput);
+          extraction = await withDesktopSessionModelTrace(
+            deps.sessionsRootDir,
+            deps.petSessionId,
+            "pet_segment_closure",
+            () => generate(promptInput),
+          );
         } catch (error) {
           dlog("main", "pet.closure.generate.failed", { error: String(error) });
         }
