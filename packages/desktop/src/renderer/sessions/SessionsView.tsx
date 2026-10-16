@@ -26,6 +26,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { formatBytes } from "@/lib/utils";
 import { OperationBatchForm } from "../task-inbox/OperationBatchForm";
+import { OperationResolutionReview } from "../task-inbox/OperationResolutionReview";
 import { useT } from "../i18n/I18nProvider";
 
 interface Props {
@@ -515,6 +516,7 @@ export function SessionsView({
                   return (
                     <li
                       key={session.id}
+                      data-session-id={session.id}
                       className="min-w-0 rounded-2xl border border-border/70 bg-card p-4"
                     >
                       {isEditing ? (
@@ -714,6 +716,9 @@ export function SessionsView({
                           </time>
                         </span>
                         <span>{formatBytes(session.size)}</span>
+                      </div>
+                      <div className="mt-3">
+                        <OperationResolutionReview sessionId={session.id} />
                       </div>
                       {openError?.id === session.id && (
                         <p
