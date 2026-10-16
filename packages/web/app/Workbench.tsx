@@ -283,6 +283,13 @@ export function Workbench({
 
   const closeMobileSidebar = () => {
     if (narrow) {
+      const source = document.activeElement;
+      if (sidebarOpen && source instanceof HTMLElement && source !== document.body)
+        sidebarCloseFocus.current = {
+          source,
+          workspace: controller.workspaceKey,
+          cancelled: false,
+        };
       setSidebarOpen(false);
       sidebarToggleRef.current?.focus();
     }
