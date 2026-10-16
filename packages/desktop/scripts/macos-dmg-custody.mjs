@@ -42,6 +42,23 @@ export function ownedImageFromInfo(info, image) {
   return { image, devices, mountpoint: mounts[0] };
 }
 
+export function assertOwnedReadonlyVolume(volume, attachment) {
+  assert.equal(volume.MountPoint, attachment.mountpoint, "Readonly mountpoint changed");
+  assert.ok(attachment.devices.includes(volume.DeviceNode), "Foreign readonly volume device");
+  assert.equal(volume.BusProtocol, "Disk Image", "Expected the owned mounted disk image");
+  // Actual diskutil info -plist uses Writable* booleans, not ReadOnlyVolume.
+  // Missing fields never count as readonly evidence.
+  for (const key of ["Writable", "WritableVolume", "WritableMedia"])
+    assert.equal(volume[key], false, `The actual mounted ${key} must be false`);
+  return {
+    mountpoint: volume.MountPoint,
+    deviceNode: volume.DeviceNode,
+    writable: volume.Writable,
+    writableVolume: volume.WritableVolume,
+    writableMedia: volume.WritableMedia,
+  };
+}
+
 export function authorizeDmgCommand(
   args,
   state,

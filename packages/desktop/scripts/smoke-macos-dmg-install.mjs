@@ -16,6 +16,7 @@ import { captureMacosAppMetadata } from "./macos-app-metadata.mjs";
 import { readDefaultKeychain } from "./macos-keychain-context.mjs";
 import { watchElectronTestProcess } from "./electron-test-watchdog.mjs";
 import {
+  assertOwnedReadonlyVolume,
   isInside,
   queryOwnedDmgImage,
   readOwnedDmgState,
@@ -331,14 +332,12 @@ try {
       maxBuffer: 2 * 1024 * 1024,
     }),
   );
-  assert.equal(volume.ReadOnlyVolume, true, "The actual mounted filesystem must be readonly");
-  assert.equal(volume.MountPoint, paths.readonlyMount);
-  report.readonlyVolume = {
-    mountpoint: volume.MountPoint,
-    readOnlyVolume: volume.ReadOnlyVolume,
-    readOnlyMedia: volume.ReadOnlyMedia,
-    deviceIdentifier: volume.DeviceIdentifier,
-  };
+  await put(join(root, "diskutil-readonly-volume.json"), volume);
+  const readonlyAttachment = readOwnedDmgState(stateFile).attachments.find(
+    (entry) => entry.image === state.artifact && !entry.detached,
+  );
+  assert.ok(readonlyAttachment, "Readonly attachment custody must be recorded");
+  report.readonlyVolume = assertOwnedReadonlyVolume(volume, readonlyAttachment);
   const mounted = join(paths.readonlyMount, `${pkg.build.productName}.app`);
   assert.ok(lstatSync(mounted).isDirectory() && !lstatSync(mounted).isSymbolicLink());
   const mountedSnapshot = {

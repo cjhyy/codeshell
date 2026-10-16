@@ -1,6 +1,10 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { authorizeDmgCommand, ownedImageFromInfo } from "./macos-dmg-custody.mjs";
+import {
+  assertOwnedReadonlyVolume,
+  authorizeDmgCommand,
+  ownedImageFromInfo,
+} from "./macos-dmg-custody.mjs";
 
 // The production entry requires macOS; these fixtures use POSIX mount paths.
 const posixTest = process.platform === "win32" ? test.skip : test;
@@ -128,6 +132,29 @@ posixTest("read-only final mount cannot become writable or escape its owned moun
         fs,
       ),
     /strictly equal/,
+  );
+});
+
+test("readonly diskutil proof requires actual false flags and the recorded device/mount", () => {
+  const attachment = { mountpoint: "/owned/readonly", devices: ["/dev/disk90s1"] };
+  const volume = {
+    MountPoint: attachment.mountpoint,
+    DeviceNode: attachment.devices[0],
+    BusProtocol: "Disk Image",
+    Writable: false,
+    WritableVolume: false,
+    WritableMedia: false,
+  };
+  assert.equal(assertOwnedReadonlyVolume(volume, attachment).writableVolume, false);
+  for (const key of ["Writable", "WritableVolume", "WritableMedia"]) {
+    assert.throws(() => assertOwnedReadonlyVolume({ ...volume, [key]: true }, attachment));
+    assert.throws(() => assertOwnedReadonlyVolume({ ...volume, [key]: undefined }, attachment));
+  }
+  assert.throws(() =>
+    assertOwnedReadonlyVolume({ ...volume, MountPoint: "/operator/foreign" }, attachment),
+  );
+  assert.throws(() =>
+    assertOwnedReadonlyVolume({ ...volume, DeviceNode: "/dev/disk91s1" }, attachment),
   );
 });
 
