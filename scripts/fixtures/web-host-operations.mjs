@@ -14,12 +14,19 @@ import { createWebHostProcessCustody } from "./web-host-process-custody.mjs";
 
 export async function waitFor(check, label, timeout = 30_000) {
   const until = Date.now() + timeout;
+  const expired = () => new Error(`Timed out: ${label}`);
   while (Date.now() < until) {
-    const value = await check();
+    let timer;
+    const value = await Promise.race([
+      Promise.resolve().then(check),
+      new Promise((_, reject) => {
+        timer = setTimeout(() => reject(expired()), Math.max(1, until - Date.now()));
+      }),
+    ]).finally(() => clearTimeout(timer));
     if (value) return value;
-    await new Promise((done) => setTimeout(done, 50));
+    await new Promise((done) => setTimeout(done, Math.min(50, Math.max(0, until - Date.now()))));
   }
-  throw new Error(`Timed out: ${label}`);
+  throw expired();
 }
 
 export async function createWebHostOperationsFixture() {
