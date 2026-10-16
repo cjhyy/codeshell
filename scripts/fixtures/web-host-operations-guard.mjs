@@ -78,6 +78,10 @@ if (process.send) {
   process.on("message", (message) => {
     if (message?.nonce !== process.env.CODESHELL_WEB_HOST_CONTROL) return;
     const { id, action } = message;
+    if (action === "shutdown-host") {
+      if (!process.emit("SIGTERM")) process.exit(0);
+      return;
+    }
     if (action === "hold-next-upload") holdUpload = true;
     else if (action === "release-upload") for (const release of held.splice(0)) release();
     else if (action === "drop-websockets") {

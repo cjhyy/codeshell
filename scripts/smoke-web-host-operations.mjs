@@ -8,11 +8,9 @@ import http, { request as namedRequest } from "node:http";
 import https from "node:https";
 import { createWebHostOperationsFixture, waitFor } from "./fixtures/web-host-operations.mjs";
 import { installLocalNetworkGuard } from "./runtime-cost-smoke-isolation.mjs";
+import { finishWebHostOperations } from "./fixtures/web-host-process-custody.mjs";
 
 const fixture = await createWebHostOperationsFixture();
-const { chromium } = createRequire(join(fixture.repository, "packages/desktop/package.json"))(
-  "playwright",
-);
 const errors = [],
   blocked = [],
   wire = [],
@@ -22,8 +20,12 @@ let driverGuard;
 let browser,
   page,
   stage = "launch browser",
-  passed = false;
+  passed = false,
+  failure;
 try {
+  const { chromium } = createRequire(join(fixture.repository, "packages/desktop/package.json"))(
+    "playwright",
+  );
   browser = await chromium.launch({
     headless: true,
     executablePath:
@@ -49,7 +51,10 @@ try {
     negativeProbes++;
   }
   driverGuard = { pid: process.pid, ppid: process.ppid, origin: fixture.url, negativeProbes };
-  const context = await browser.newContext({ viewport: { width: 1280, height: 820 } });
+  const context = await browser.newContext({
+    viewport: { width: 1280, height: 820 },
+    serviceWorkers: "block",
+  });
   await context.route("**/*", (route) => {
     const url = new URL(route.request().url());
     if (url.origin === fixture.url) return route.continue();
@@ -247,6 +252,7 @@ try {
   assert.deepEqual(fixture.faults, []);
   passed = true;
 } catch (error) {
+  failure = String(error);
   if (page)
     await page
       .screenshot({ path: join(fixture.evidence, "failure.png"), animations: "disabled" })
@@ -255,31 +261,71 @@ try {
   console.error(fixture.safeLogs().slice(-4000));
   throw error;
 } finally {
-  await writeFile(
-    join(fixture.evidence, "report.json"),
-    JSON.stringify(
-      {
-        sourceHead: fixture.sourceHead,
-        artifactHashes: fixture.artifactHashes,
-        driverGuard,
-        passed,
-        stage,
-        operations,
-        wire,
-        errors,
-        blocked,
-        providerFaults: fixture.faults,
-        modelRequests: fixture.requests.map((r) => ({ marker: r.marker, model: r.body.model })),
-        receipts: await fixture.receipts().catch(() => []),
-        coverage:
-          "Production compiled Web entry, native Chromium HTTP/WebSocket, unmodified Host request handlers, real stdio Engine Worker and staged attachment bytes. Provider is owned loopback SSE; only HTTP response end/owned WebSocket termination are fault controls. No external account, paid model, or real user data.",
-      },
-      null,
-      2,
-    ),
-    { mode: 0o600 },
-  );
-  await browser?.close();
-  await fixture.close();
+  await finishWebHostOperations({
+    closeBrowser: () => browser?.close(),
+    closeFixture: () => fixture.close(),
+    report: async (cleanupFailures) => {
+      const cleanup = await readFile(join(fixture.evidence, "cleanup.json"), "utf8")
+        .then(JSON.parse)
+        .catch(() => null);
+      const counts = Object.fromEntries(
+        [
+          "OWNED_INIT_A",
+          "OWNED_INIT_B",
+          "OWNED_UPLOAD_A",
+          "OWNED_RECONNECT",
+          "OWNED_TITLE_A",
+          "OWNED_TITLE_B",
+        ].map((marker) => [
+          marker,
+          fixture.requests.filter((request) => request.marker === marker).length,
+        ]),
+      );
+      if (passed) {
+        try {
+          assert.equal(cleanup?.passed, true, "Owned Host/Worker/provider cleanup must complete");
+          for (const [marker, count] of Object.entries(counts))
+            assert.equal(count, 1, `Exactly one physical request for ${marker}`);
+          assert.equal(fixture.requests.length, 6);
+          assert.deepEqual(fixture.faults, []);
+        } catch (error) {
+          cleanupFailures.push(error);
+        }
+      }
+      passed = passed && cleanupFailures.length === 0;
+      await writeFile(
+        join(fixture.evidence, "report.json"),
+        JSON.stringify(
+          {
+            sourceHead: fixture.sourceHead,
+            artifactHashes: fixture.artifactHashes,
+            driverGuard,
+            passed,
+            stage,
+            failure,
+            operations,
+            wire,
+            errors,
+            blocked,
+            providerFaults: fixture.faults,
+            requestCountsAfterCleanup: counts,
+            modelRequests: fixture.requests.map((request) => ({
+              marker: request.marker,
+              model: request.body.model,
+              kind: request.body.stream === true ? "primary" : "session-title",
+            })),
+            receipts: await fixture.receipts().catch(() => []),
+            cleanup,
+            cleanupFailures: cleanupFailures.map(String),
+            coverage:
+              "Production compiled Web entry, native Chromium HTTP/WebSocket, unmodified Host request handlers, real stdio Engine Worker and staged attachment bytes. Provider is owned loopback SSE; only HTTP response end/owned WebSocket termination are fault controls. Service workers are blocked and remain a separate untested boundary. No external account, paid model, or real user data.",
+          },
+          null,
+          2,
+        ),
+        { mode: 0o600 },
+      );
+    },
+  });
 }
 console.log(`PASS Web real Host operations: 2 sequences; evidence: ${fixture.evidence}`);

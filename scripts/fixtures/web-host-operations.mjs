@@ -10,6 +10,7 @@ import { join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { createBunTestEnvironment } from "../bun-test-completion.mjs";
 import { confinedWorkerEnvironment } from "../runtime-cost-smoke-isolation.mjs";
+import { createWebHostProcessCustody } from "./web-host-process-custody.mjs";
 
 export async function waitFor(check, label, timeout = 30_000) {
   const until = Date.now() + timeout;
@@ -77,12 +78,21 @@ export async function createWebHostOperationsFixture() {
       for await (const part of req) parts.push(part);
       const body = JSON.parse(Buffer.concat(parts).toString("utf8"));
       if (body.stream !== true) {
-        const input = JSON.stringify(body.messages);
+        const system = body.messages.find((message) => message.role === "system");
+        const user = body.messages.find((message) => message.role === "user");
         assert(
-          input.includes("OWNED_"),
-          "Auxiliary request must contain only this fixture's conversation",
+          JSON.stringify(system?.content).includes("You generate a very short title"),
+          "Only the production session-title auxiliary prompt is accepted",
         );
-        requests.push({ marker: "owned-title", body });
+        const input = typeof user?.content === "string" ? user.content : "";
+        const firstTurn = ["OWNED_INIT_A", "OWNED_INIT_B"].find(
+          (marker) => input === `User: ${marker}\n\nAssistant: Saved ${marker}.\n\nTitle:`,
+        );
+        assert(firstTurn, "Auxiliary title must match the exact first user/assistant turn");
+        requests.push({
+          marker: firstTurn === "OWNED_INIT_A" ? "OWNED_TITLE_A" : "OWNED_TITLE_B",
+          body,
+        });
         res.writeHead(200, { "content-type": "application/json" });
         res.end(
           JSON.stringify({
@@ -131,147 +141,191 @@ export async function createWebHostOperationsFixture() {
       res.end(JSON.stringify({ error: { message: String(error) } }));
     });
   });
-  provider.listen(0, "127.0.0.1");
-  await once(provider, "listening");
-  const providerOrigin = `http://127.0.0.1:${provider.address().port}`;
-  const settings = JSON.parse(
-    await readFile(join(repository, "deploy/settings.example.json"), "utf8"),
-  );
-  settings.credentials[0].apiKey = "owned-local-provider-key";
-  settings.credentials[0].baseUrl = providerOrigin + "/v1";
-  settings.modelConnections[0].model = "gpt-4o-mini";
-  await mkdir(join(workspace, ".code-shell"), { recursive: true, mode: 0o700 });
-  await writeFile(join(workspace, ".code-shell/settings.local.json"), JSON.stringify(settings), {
-    mode: 0o600,
-  });
   const nonce = randomUUID();
   const receiptsPath = join(clean.HOME, "network-process-receipts.jsonl");
-  const env = {
-    ...confinedWorkerEnvironment(
-      clean,
-      clean.HOME,
-      providerOrigin,
-      new URL("./web-host-operations-guard.mjs", import.meta.url).href,
-    ),
-    CODESHELL_WEB_HOST_RECEIPTS: receiptsPath,
-    CODESHELL_WEB_HOST_CONTROL: nonce,
-    CODESHELL_SELF_UPDATE_CHECK: "0",
-  };
-  const entry = join(repository, "packages/server/dist/bin/code-shell-serve.js");
-  const child = spawn(
-    process.execPath,
-    [
-      entry,
-      "--auth",
-      "hub",
-      "--host",
-      "127.0.0.1",
-      "--port",
-      "0",
-      "--cwd",
-      workspace,
-      "--data-dir",
-      data,
-      "--static-root",
-      join(repository, "packages/web/dist-app"),
-    ],
-    {
-      cwd: workspace,
-      env,
-      stdio: ["ignore", "pipe", "pipe", "ipc"],
-      detached: process.platform !== "win32",
-    },
-  );
-  let spawnFailure;
-  child.on("error", (error) => {
-    spawnFailure = error;
-  });
+  let child, custody, monitor, monitorFailure, spawnFailure;
   let logs = "",
     serial = 0;
   const messages = [];
-  child.on("message", (message) => messages.push(message));
-  child.stdout.on("data", (part) => {
-    logs = (logs + part).slice(-60_000);
-  });
-  child.stderr.on("data", (part) => {
-    logs = (logs + part).slice(-60_000);
-  });
   const control = async (action) => {
     const id = ++serial;
     child.send({ nonce, id, action });
-    return (await waitFor(() => messages.find((m) => m.id === id), `Host control ${action}`, 5000))
-      .result;
+    return (
+      await waitFor(
+        () => messages.find((message) => message.id === id),
+        `Host control ${action}`,
+        5000,
+      )
+    ).result;
   };
   const close = async () => {
-    for (const res of streams) res.destroy();
-    if (child.exitCode === null && child.signalCode === null) {
-      const exited = once(child, "exit");
-      child.kill("SIGTERM");
-      const timer = setTimeout(() => {
+    const failures = [];
+    let remaining = null;
+    try {
+      for (const res of streams) res.destroy();
+      try {
+        custody?.observe();
+      } catch (error) {
+        failures.push(error);
+      }
+      if (child && !spawnFailure && child.exitCode === null && child.signalCode === null) {
+        // The private IPC pipe identifies this child independently of PID reuse.
+        // Main receives its existing production SIGTERM shutdown event.
         try {
-          process.kill(process.platform === "win32" ? child.pid : -child.pid, "SIGKILL");
-        } catch {
-          /* already stopped */
+          await new Promise((resolve, reject) =>
+            child.send({ nonce, action: "shutdown-host" }, (error) =>
+              error ? reject(error) : resolve(),
+            ),
+          );
+        } catch (error) {
+          failures.push(error);
+          custody?.signal("SIGTERM");
         }
-      }, 5000);
-      await exited;
-      clearTimeout(timer);
-    }
-    provider.closeAllConnections();
-    await new Promise((done) => provider.close(done));
-    const guards = (await readFile(receiptsPath, "utf8").catch(() => ""))
-      .trim()
-      .split("\n")
-      .filter(Boolean)
-      .map(JSON.parse)
-      .filter((row) => row.kind === "pre-core-network-guard");
-    const alive = (pid) => {
-      try {
-        process.kill(pid, 0);
-      } catch (error) {
-        if (error.code === "ESRCH") return false;
-        throw error;
+        try {
+          await waitFor(
+            () => child.exitCode !== null || child.signalCode !== null || spawnFailure,
+            "owned Host graceful shutdown",
+            5000,
+          );
+        } catch {
+          assert(custody, "Cannot escalate without captured process custody");
+          custody.signal("SIGKILL");
+          await waitFor(
+            () => child.exitCode !== null || child.signalCode !== null,
+            "owned Host identity-checked escalation",
+            3000,
+          );
+        }
       }
-      try {
-        const state = execFileSync("ps", ["-p", String(pid), "-o", "stat="], {
-          encoding: "utf8",
-        }).trim();
-        return state && !state.startsWith("Z");
-      } catch (error) {
-        if (error.status === 1) return false;
-        throw error;
-      }
-    };
-    const cleanup = [];
-    for (const row of guards) {
-      assert(
-        row.pid === child.pid ||
-          (row.ppid === child.pid &&
-            row.entry === join(repository, "packages/core/dist/cli/agent-server-stdio.js")),
-        "Cleanup touches only this Host and its guarded actual Worker",
-      );
-      let forced = false;
-      if (alive(row.pid)) {
-        const command = execFileSync("ps", ["-p", String(row.pid), "-o", "args="], {
-          encoding: "utf8",
-        });
-        assert(
-          command.includes(row.entry),
-          "Owned PID command identity must still match before cleanup",
+      if (custody) {
+        if (custody.remaining().length) {
+          custody.signal("SIGTERM");
+          try {
+            await waitFor(
+              () => !custody.remaining().length,
+              "observed descendants graceful shutdown",
+              2000,
+            );
+          } catch {
+            custody.signal("SIGKILL");
+            await waitFor(
+              () => !custody.remaining().length,
+              "observed descendants identity-checked escalation",
+              3000,
+            );
+          }
+        }
+        remaining = custody.remaining();
+        assert.equal(
+          remaining.length,
+          0,
+          "Every observed original process incarnation must terminate",
         );
-        process.kill(row.pid, "SIGKILL");
-        forced = true;
-        await waitFor(() => !alive(row.pid), "owned process cleanup", 3000);
       }
-      cleanup.push({ pid: row.pid, ppid: row.ppid, alive: false, forced });
+      if (monitorFailure) throw monitorFailure;
+    } catch (error) {
+      failures.push(error);
+    } finally {
+      clearInterval(monitor);
+      try {
+        provider.closeAllConnections();
+        if (provider.listening)
+          await new Promise((resolve, reject) =>
+            provider.close((error) => (error ? reject(error) : resolve())),
+          );
+      } catch (error) {
+        failures.push(error);
+      }
+      try {
+        await writeFile(
+          join(evidence, "cleanup.json"),
+          JSON.stringify(
+            {
+              passed: failures.length === 0,
+              custody: custody?.evidence() ?? null,
+              remaining,
+              providerClosed: !provider.listening,
+              failures: failures.map(String),
+            },
+            null,
+            2,
+          ),
+          { mode: 0o600 },
+        );
+      } catch (error) {
+        failures.push(error);
+      }
     }
-    await writeFile(
-      join(evidence, "cleanup.json"),
-      JSON.stringify({ processes: cleanup, providerClosed: !provider.listening }, null, 2),
-      { mode: 0o600 },
-    );
+    if (failures.length) throw new AggregateError(failures, "Owned Host/provider cleanup failed");
   };
   try {
+    provider.listen(0, "127.0.0.1");
+    await once(provider, "listening");
+    const providerOrigin = `http://127.0.0.1:${provider.address().port}`;
+    const settings = JSON.parse(
+      await readFile(join(repository, "deploy/settings.example.json"), "utf8"),
+    );
+    settings.credentials[0].apiKey = "owned-local-provider-key";
+    settings.credentials[0].baseUrl = providerOrigin + "/v1";
+    settings.modelConnections[0].model = "gpt-4o-mini";
+    await mkdir(join(workspace, ".code-shell"), { recursive: true, mode: 0o700 });
+    await writeFile(join(workspace, ".code-shell/settings.local.json"), JSON.stringify(settings), {
+      mode: 0o600,
+    });
+    const env = {
+      ...confinedWorkerEnvironment(
+        clean,
+        clean.HOME,
+        providerOrigin,
+        new URL("./web-host-operations-guard.mjs", import.meta.url).href,
+      ),
+      CODESHELL_WEB_HOST_RECEIPTS: receiptsPath,
+      CODESHELL_WEB_HOST_CONTROL: nonce,
+      CODESHELL_SELF_UPDATE_CHECK: "0",
+    };
+    const entry = join(repository, "packages/server/dist/bin/code-shell-serve.js");
+    child = spawn(
+      process.execPath,
+      [
+        entry,
+        "--auth",
+        "hub",
+        "--host",
+        "127.0.0.1",
+        "--port",
+        "0",
+        "--cwd",
+        workspace,
+        "--data-dir",
+        data,
+        "--static-root",
+        join(repository, "packages/web/dist-app"),
+      ],
+      {
+        cwd: workspace,
+        env,
+        stdio: ["ignore", "pipe", "pipe", "ipc"],
+        detached: process.platform !== "win32",
+      },
+    );
+    child.on("error", (error) => {
+      spawnFailure = error;
+    });
+    child.on("message", (message) => messages.push(message));
+    child.stdout.on("data", (part) => {
+      logs = (logs + part).slice(-60_000);
+    });
+    child.stderr.on("data", (part) => {
+      logs = (logs + part).slice(-60_000);
+    });
+    custody = createWebHostProcessCustody(child);
+    monitor = setInterval(() => {
+      try {
+        custody.observe();
+      } catch (error) {
+        monitorFailure ??= error;
+      }
+    }, 250);
     const url = await waitFor(
       () => {
         if (spawnFailure) throw spawnFailure;
@@ -325,7 +379,23 @@ export async function createWebHostOperationsFixture() {
       safeLogs: () => logs.replaceAll(token, "[owned-bootstrap-token]"),
     };
   } catch (error) {
-    await close();
-    throw error;
+    const failures = [error];
+    try {
+      await close();
+    } catch (cleanupError) {
+      failures.push(cleanupError);
+    }
+    try {
+      await writeFile(
+        join(evidence, "startup-failure.json"),
+        JSON.stringify({ passed: false, failures: failures.map(String) }, null, 2),
+        { mode: 0o600 },
+      );
+    } catch (reportError) {
+      failures.push(reportError);
+    }
+    throw new AggregateError(failures, `Owned Web Host startup failed; evidence: ${evidence}`, {
+      cause: error,
+    });
   }
 }
