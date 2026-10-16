@@ -46,6 +46,7 @@ export function LinkProviderCard({
   accounts,
   primaryOption,
   hasConnections = false,
+  localOnly = false,
   children,
   hidden = false,
 }: {
@@ -61,6 +62,7 @@ export function LinkProviderCard({
   accounts?: string;
   primaryOption?: string;
   hasConnections?: boolean;
+  localOnly?: boolean;
   children: React.ReactNode;
   hidden?: boolean;
 }) {
@@ -122,7 +124,12 @@ export function LinkProviderCard({
                   action?.onClick();
                 }}
               >
-                {t("ext.link.directory.connectApp", { name })}
+                {t(
+                  localOnly
+                    ? "ext.link.directory.connectAppLocally"
+                    : "ext.link.directory.connectApp",
+                  { name },
+                )}
               </Button>
             )}
             <button

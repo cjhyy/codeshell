@@ -1066,3 +1066,49 @@ test("another window cannot overlap or cancel an active profile edit", async () 
   await editing;
   expect(ctx.saved()?.account.displayName).toBe("First nickname");
 });
+
+test("an expired root account lease fails locally without refreshing or retiring credentials", () => {
+  const clock = Date.now();
+  const saved = grant({
+    accessTokenExpiresAt: clock - 10_000,
+    refreshTokenExpiresAt: clock - 1,
+  });
+  const ctx = setup(saved, undefined, undefined, () => clock);
+  expect(() => ctx.manager.captureRootAccount(origin, saved.account.id, () => true)).toThrow();
+  expect(ctx.requests).toEqual([]);
+  expect(ctx.retired).toEqual([]);
+  expect(ctx.writes()).toBe(0);
+  expect(ctx.saved()).toEqual(saved);
+});
+
+test("a previously captured root lease stops at its refresh expiry without changing custody", () => {
+  let clock = Date.now();
+  const saved = grant({
+    accessTokenExpiresAt: clock + 10_000,
+    refreshTokenExpiresAt: clock + 20_000,
+  });
+  const ctx = setup(saved, undefined, undefined, () => clock);
+  const lease = ctx.manager.captureRootAccount(origin, saved.account.id, () => true);
+  expect(() => lease.current()).not.toThrow();
+  clock = saved.refreshTokenExpiresAt;
+  expect(() => lease.current()).toThrow();
+  expect(ctx.requests).toEqual([]);
+  expect(ctx.retired).toEqual([]);
+  expect(ctx.writes()).toBe(0);
+  expect(ctx.saved()).toEqual(saved);
+});
+
+test("access expiry alone does not make a refreshable root identity perform network I/O", () => {
+  const clock = Date.now();
+  const saved = grant({
+    accessTokenExpiresAt: clock - 1,
+    refreshTokenExpiresAt: clock + 60_000,
+  });
+  const ctx = setup(saved, undefined, undefined, () => clock);
+  const lease = ctx.manager.captureRootAccount(origin, saved.account.id, () => true);
+  expect(() => lease.current()).not.toThrow();
+  expect(ctx.requests).toEqual([]);
+  expect(ctx.retired).toEqual([]);
+  expect(ctx.writes()).toBe(0);
+  expect(ctx.saved()).toEqual(saved);
+});

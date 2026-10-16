@@ -52,6 +52,8 @@ import {
   useLinkPrimaryAction,
 } from "./LinkPresentation";
 import { selectPrimaryLinkOption } from "./linkPrimaryConnection";
+import { useCloudAccountStatus } from "./useCloudAccountStatus";
+import { localLinkProvider, localLinkSnapshot } from "./linkLocalPresentation";
 import type { MaskedCredentialView } from "./types";
 import { DingTalkSetupDialog } from "./DingTalkSetupDialog";
 import type {
@@ -373,6 +375,34 @@ export function LinkTab({ cwd }: { cwd: string }) {
   const [filter, setFilter] = useState<IntegrationFilter>("all");
   const [category, setCategory] = useState("all");
   const remote = useRemoteLinkSnapshot(cwd, { automatic: false });
+  const account = useCloudAccountStatus();
+  const cloudAvailable = Boolean(
+    account.status?.state === "signed-in" && account.status.origin && account.status.account?.id,
+  );
+  const visibleSnapshot = useMemo(
+    () => (cloudAvailable ? remote.snapshot : localLinkSnapshot(remote.snapshot)),
+    [cloudAvailable, remote.snapshot],
+  );
+  const visibleCredentials = useMemo(
+    () =>
+      cloudAvailable
+        ? credentials
+        : credentials.filter(
+            (credential) =>
+              linkCredentialRuntime(credential) === "local" &&
+              credential.meta?.linkExecutionBackend !== "remote",
+          ),
+    [cloudAvailable, credentials],
+  );
+  const accountIdentity = cloudAvailable
+    ? `${account.status!.origin}\n${account.status!.account!.id}`
+    : "";
+  const previousAccountIdentity = useRef(accountIdentity);
+  useEffect(() => {
+    if (previousAccountIdentity.current === accountIdentity) return;
+    previousAccountIdentity.current = accountIdentity;
+    void remote.reload();
+  }, [accountIdentity, remote.reload]);
   const [localDialog, setLocalDialog] = useState<{
     item: LinkIntegration;
     method: LinkConnectionMethod;
@@ -551,20 +581,20 @@ export function LinkTab({ cwd }: { cwd: string }) {
     () =>
       buildLinkCatalog(
         mergeLinkDirectoryProviders(
-          providerViews,
-          remote.snapshot?.providers,
-          credentials,
-          remote.snapshot?.connections,
+          cloudAvailable ? providerViews : providerViews.map(localLinkProvider),
+          visibleSnapshot?.providers,
+          visibleCredentials,
+          visibleSnapshot?.connections,
         ),
         lang === "zh" ? "zh" : "en",
       ),
-    [lang, providerViews, credentials, remote.snapshot?.providers, remote.snapshot?.connections],
+    [lang, providerViews, visibleCredentials, visibleSnapshot, cloudAvailable],
   );
   const entries = useMemo(() => {
     const result: Record<LinkExecutionRuntime, LinkMethodEntry[]> = { local: [], server: [] };
     for (const category of catalog)
       for (const item of category.items) {
-        const remoteProvider = remote.snapshot?.providers.find(
+        const remoteProvider = visibleSnapshot?.providers.find(
           (provider) => provider.id === item.id,
         );
         for (const method of item.connectionMethods) {
@@ -575,7 +605,7 @@ export function LinkTab({ cwd }: { cwd: string }) {
             )
           )
             continue;
-          const matching = credentials.filter((credential) => {
+          const matching = visibleCredentials.filter((credential) => {
             if (
               ["remote", "mcp"].includes(credential.meta?.linkExecutionBackend ?? "") ||
               linkCredentialProvider(credential) !== item.id ||
@@ -614,7 +644,7 @@ export function LinkTab({ cwd }: { cwd: string }) {
               item,
               method,
               credential,
-              preferredRuntime: resolvePreferredLinkRuntime(credentials, item.id),
+              preferredRuntime: resolvePreferredLinkRuntime(visibleCredentials, item.id),
               available:
                 method.executionRuntime === "local"
                   ? Boolean(
@@ -628,7 +658,7 @@ export function LinkTab({ cwd }: { cwd: string }) {
         }
       }
     return result;
-  }, [catalog, credentials, remote.snapshot?.providers]);
+  }, [catalog, visibleCredentials, visibleSnapshot?.providers]);
 
   /**
    * 旧版通用表单创建的 type:"link" 凭据没有 linkProvider/oauthProvider meta，
@@ -636,10 +666,10 @@ export function LinkTab({ cwd }: { cwd: string }) {
    */
   const legacyCredentials = useMemo(
     () =>
-      credentials.filter(
+      visibleCredentials.filter(
         (credential) => credential.type === "link" && !linkCredentialProvider(credential),
       ),
-    [credentials],
+    [visibleCredentials],
   );
 
   const run = async (
@@ -742,12 +772,12 @@ export function LinkTab({ cwd }: { cwd: string }) {
     )
     .map(({ item, categoryId, categoryTitle }) => {
       const accounts =
-        remote.snapshot?.connections.filter((connection) => connection.providerId === item.id) ??
+        visibleSnapshot?.connections.filter((connection) => connection.providerId === item.id) ??
         [];
-      const stored = credentials.filter(
+      const stored = visibleCredentials.filter(
         (credential) => linkCredentialProvider(credential) === item.id,
       );
-      const provider = remote.snapshot?.providers.find((candidate) => candidate.id === item.id);
+      const provider = visibleSnapshot?.providers.find((candidate) => candidate.id === item.id);
       const visibleStored = stored.filter(
         (credential) => !accounts.some((account) => account.id === credential.id),
       );
@@ -807,7 +837,7 @@ export function LinkTab({ cwd }: { cwd: string }) {
   const visibleProviderIds = new Set(visibleProviders.map(({ item }) => item.id));
   const noMatches = visibleProviders.length === 0;
   const discoveryUnavailable = ["unavailable", "stale"].includes(
-    remote.snapshot?.remoteCatalog?.state ?? "",
+    visibleSnapshot?.remoteCatalog?.state ?? "",
   );
   const stateReadError = loadError || remote.error;
   const directoryError =
@@ -855,6 +885,20 @@ export function LinkTab({ cwd }: { cwd: string }) {
           ) : null}
         </div>
       </header>
+
+      {!cloudAvailable && (
+        <p
+          role="status"
+          data-link-local-only
+          className="flex flex-wrap items-center gap-x-3 gap-y-1 rounded-xl bg-muted/40 px-4 py-3 text-xs leading-5 text-muted-foreground"
+        >
+          <span className="inline-flex items-center gap-1.5 font-medium text-foreground">
+            <HardDrive aria-hidden className="size-3.5" />
+            {t("ext.link.directory.localOnly")}
+          </span>
+          <span>{t("ext.link.directory.localOnlyHint")}</span>
+        </p>
+      )}
 
       <section
         aria-label={t("ext.link.appsTitle")}
@@ -1117,11 +1161,11 @@ export function LinkTab({ cwd }: { cwd: string }) {
                     })),
                   ],
                 });
-                const missingAccounts = credentials.filter(
+                const missingAccounts = visibleCredentials.filter(
                   (credential) =>
                     linkCredentialProvider(credential) === item.id &&
                     ["remote", "mcp"].includes(credential.meta?.linkExecutionBackend ?? "") &&
-                    !remote.snapshot?.connections.some((account) => account.id === credential.id),
+                    !visibleSnapshot?.connections.some((account) => account.id === credential.id),
                 );
                 return (
                   <LinkProviderCard
@@ -1135,6 +1179,7 @@ export function LinkTab({ cwd }: { cwd: string }) {
                     brandText={item.brandText}
                     primaryOption={primaryOption}
                     hasConnections={saved > 0}
+                    localOnly={!cloudAvailable}
                     description={
                       item.id === "figma"
                         ? t("ext.link.directory.figmaDescription")
@@ -1195,7 +1240,7 @@ export function LinkTab({ cwd }: { cwd: string }) {
                     {item.id === "figma" ? (
                       <FigmaConnectionCard
                         cwd={cwd}
-                        snapshot={remote.snapshot}
+                        snapshot={visibleSnapshot}
                         loadError={remote.error}
                         loading={remote.loading}
                         reload={remote.reload}
@@ -1208,7 +1253,7 @@ export function LinkTab({ cwd }: { cwd: string }) {
                           <LinkConnectionOption optionId="remote-link">
                             <RemoteProviderSection
                               cwd={cwd}
-                              snapshot={remote.snapshot}
+                              snapshot={visibleSnapshot}
                               loadError={remote.error}
                               loading={remote.loading}
                               reload={remote.reload}
@@ -1297,7 +1342,7 @@ export function LinkTab({ cwd }: { cwd: string }) {
               : null,
           }}
           modes={
-            remote.snapshot?.providers
+            visibleSnapshot?.providers
               .find((item) => item.id === localDialog.item.id)
               ?.authModes?.filter((mode) => mode.methodId === localDialog.method.id) ?? []
           }

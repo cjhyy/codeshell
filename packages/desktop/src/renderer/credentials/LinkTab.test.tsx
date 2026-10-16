@@ -9,6 +9,7 @@ import { buildLinkCatalog } from "./link-catalog";
 import type { CliLinkStatusView, LocalLinkProviderView } from "../../preload/types";
 import type { MaskedCredentialView } from "./types";
 import type { LinkSnapshot } from "../../../../link/src/management-types";
+import type { CloudAccountApi, CloudAccountStatus } from "../../shared/cloud-account";
 
 // The mini-DOM cannot host Radix portals, so dialogs render inline (mirrors
 // PetLongTaskSection.test.tsx). Must run before LinkTab/DialogProvider load.
@@ -43,6 +44,47 @@ const { FigmaConnectionCard } = await import("./FigmaConnectionCard");
 const { LinkProviderCard } = await import("./LinkProviderCard");
 const { useRemoteLinkSnapshot } = await import("./RemoteLinkSection");
 const { Github, Figma } = await import("lucide-react");
+
+const SIGNED_IN_ACCOUNT: CloudAccountStatus = {
+  state: "signed-in",
+  origin: "https://fixture.invalid",
+  account: { id: "codeshell-fixture", username: "fixture" },
+};
+type AccountStatusBridge = Pick<CloudAccountApi, "status" | "onStatus">;
+
+function signedInCloudAccount(): AccountStatusBridge {
+  return { status: async () => SIGNED_IN_ACCOUNT, onStatus: () => () => undefined };
+}
+
+function accountStatusFixture(read: () => Promise<CloudAccountStatus>) {
+  const listeners = new Set<(status: CloudAccountStatus) => void>();
+  const calls: string[] = [];
+  const api: AccountStatusBridge = {
+    status: () => {
+      calls.push("read");
+      return read();
+    },
+    onStatus: (listener) => {
+      calls.push("subscribe");
+      listeners.add(listener);
+      return () => {
+        calls.push("unsubscribe");
+        listeners.delete(listener);
+      };
+    },
+  };
+  return {
+    api,
+    calls,
+    emit: async (status: CloudAccountStatus) => {
+      await act(async () => {
+        for (const listener of listeners) listener(status);
+        await flushMicrotasks();
+        await flushMicrotasks();
+      });
+    },
+  };
+}
 
 function reactPropsOf(node: unknown): Record<string, any> {
   const current = node as Record<string, any>;
@@ -261,11 +303,13 @@ async function renderProjectedCatalog(
     snapshot?: boolean;
     remoteCatalog?: NonNullable<LinkSnapshot["remoteCatalog"]>["state"];
     pendingSnapshot?: Promise<LinkSnapshot>;
+    account?: AccountStatusBridge;
   } = {},
 ) {
   ensureMiniDom();
   Object.assign(window, {
     codeshell: {
+      cloudAccount: failures.account ?? signedInCloudAccount(),
       credentials: { list: async () => credentials },
       links: {
         listLocalProviders: async () => {
@@ -351,6 +395,7 @@ async function connectionStatusFixture(
   };
   Object.assign(window, {
     codeshell: {
+      cloudAccount: signedInCloudAccount(),
       credentials: {
         list: async (cwd: string) => {
           calls.reads.push(cwd);
@@ -418,6 +463,346 @@ afterEach(async () => {
     });
   }
   root = null;
+});
+
+describe("CodeShell account access to Link", () => {
+  async function renderAccountLinks(account: AccountStatusBridge) {
+    const providers = await projectedCatalog(["github", "figma"]);
+    const figma = providers.find((provider) => provider.id === "figma")!;
+    const mcpMode = figma.authModes?.find((mode) => mode.id === "mcp-oauth");
+    if (mcpMode) mcpMode.available = true;
+    else
+      figma.authModes = [
+        ...(figma.authModes ?? []),
+        { id: "mcp-oauth", methodId: "mcp", kind: "redirect", label: "MCP", available: true },
+      ];
+    const credentials: MaskedCredentialView[] = [
+      cliBinding("local-cli"),
+      {
+        id: "local-figma-token",
+        type: "link",
+        label: "Local design token",
+        hasSecret: true,
+        meta: {
+          linkProvider: "figma",
+          linkConnectionMethod: "personal-access-token",
+          linkExecutionRuntime: "local",
+          linkAccountLabel: "Local token account",
+        },
+      },
+      {
+        id: "saved-server-oauth",
+        type: "oauth",
+        label: "Cloud legacy account",
+        hasSecret: true,
+        oauthStatus: { state: "valid" },
+        meta: {
+          oauthProvider: "figma",
+          linkConnectionMethod: "figma-oauth",
+          linkExecutionRuntime: "server",
+        },
+      },
+    ];
+    const connections: LinkSnapshot["connections"] = [
+      ...["github", "figma"].map((providerId): LinkSnapshot["connections"][number] => ({
+        id: `cloud-${providerId}`,
+        providerId,
+        methodId: "remote-link",
+        runtime: "server",
+        authSource: "remote-link",
+        label: `Cloud ${providerId} account`,
+        account: {
+          id: `cloud-${providerId}-owner`,
+          label: `Cloud ${providerId} owner`,
+          resources: [],
+        },
+        status: "connected",
+        capabilityIds: [],
+        revision: `cloud-${providerId}-revision`,
+        scope: "user",
+        editable: true,
+      })),
+      {
+        id: "local-mcp",
+        providerId: "figma",
+        methodId: "mcp",
+        runtime: "local",
+        authSource: "mcp-oauth",
+        label: "Local MCP account",
+        account: { id: "local-mcp-owner", label: "Local MCP owner", resources: [] },
+        status: "connected",
+        capabilityIds: ["figma.get_design_context"],
+        revision: "local-mcp-revision",
+        scope: "user",
+        editable: true,
+      },
+    ];
+    const originalCredentials = structuredClone(credentials);
+    const originalConnections = structuredClone(connections);
+    const container = await renderProjectedCatalog(providers, credentials, connections, {
+      account,
+    });
+    const calls: string[] = [];
+    const mutation = (name: string) => async () => {
+      calls.push(name);
+      throw new Error("Account presentation cannot mutate Link authorization");
+    };
+    Object.assign(window.codeshell.links, {
+      authorizationStart: mutation("start"),
+      authorizationCancel: mutation("cancel"),
+      remoteDisconnect: mutation("disconnect"),
+    });
+    Object.assign(window.codeshell.credentials, { delete: mutation("delete") });
+    const showManagement = async () => {
+      for (const providerId of ["github", "figma"]) {
+        const card = await expandProvider(container, providerId);
+        const advanced = findElements(card, "BUTTON").find(
+          (node) => reactPropsOf(node)["data-link-advanced-toggle"] === providerId,
+        );
+        if (advanced && !reactPropsOf(advanced)["aria-expanded"])
+          await act(async () => {
+            reactPropsOf(advanced).onClick();
+            await flushMicrotasks();
+          });
+      }
+    };
+    const summaries = () =>
+      providerCards(container)
+        .flatMap((card) =>
+          visibleElements(card, "SPAN")
+            .map((node) => reactPropsOf(node).title)
+            .filter((value): value is string => typeof value === "string"),
+        )
+        .join(" ");
+    const assertLocalOnly = () => {
+      expect(
+        visibleElements(container, "SECTION").filter(
+          (node) => reactPropsOf(node)["data-link-runtime"] === "server",
+        ),
+      ).toHaveLength(0);
+      expect(
+        visibleElements(container, "ARTICLE").filter(
+          (node) => reactPropsOf(node)["data-remote-link"],
+        ),
+      ).toHaveLength(0);
+      expect(
+        visibleElements(container, "DIV").filter(
+          (node) => reactPropsOf(node)["data-link-option"] === "remote-link",
+        ),
+      ).toHaveLength(0);
+      expect(
+        visibleElements(container, "SECTION").filter(
+          (node) => reactPropsOf(node)["data-link-runtime"] === "local",
+        ),
+      ).toHaveLength(2);
+      expect(
+        visibleElements(container, "DIV").some(
+          (node) => reactPropsOf(node)["data-figma-mcp-connection"] === "local-mcp",
+        ),
+      ).toBe(true);
+      const localMcp = findElements(container, "DIV").find(
+        (node) => reactPropsOf(node)["data-figma-mcp-connection"] === "local-mcp",
+      );
+      expect(reactPropsOf(buttonWithLabel(localMcp, "重新授权")).disabled).toBe(false);
+      expect(summaries()).toContain("Local token account");
+      expect(summaries()).toContain("Local MCP owner");
+      expect(summaries()).toContain("cjhyy");
+      expect(summaries()).not.toContain("Cloud");
+      const localNotice = [
+        ...visibleElements(container, "DIV"),
+        ...visibleElements(container, "P"),
+      ].find((node) => reactPropsOf(node)["data-link-local-only"] !== undefined);
+      expect(localNotice).toBeDefined();
+      expect(reactChildText(reactPropsOf(localNotice).children)).toContain("本地 Link");
+      expect(reactChildText(reactPropsOf(localNotice).children)).toContain("登录 CodeShell");
+    };
+    const assertCloudVisible = () => {
+      expect(
+        visibleElements(container, "ARTICLE")
+          .filter((node) => reactPropsOf(node)["data-remote-link"])
+          .map((node) => reactPropsOf(node)["data-remote-link"])
+          .sort(),
+      ).toEqual(["cloud-figma", "cloud-github"]);
+      expect(summaries()).toContain("Cloud github owner");
+      expect(summaries()).toContain("Cloud figma owner");
+    };
+    const assertUnchanged = () => {
+      expect(calls).toEqual([]);
+      expect(credentials).toEqual(originalCredentials);
+      expect(connections).toEqual(originalConnections);
+    };
+    return { container, showManagement, assertLocalOnly, assertCloudVisible, assertUnchanged };
+  }
+
+  test("a signed-out app with only a saved cloud connection starts a local token authorization", async () => {
+    const providers = await projectedCatalog(["github"]);
+    const github = providers.find((provider) => provider.id === "github")!;
+    github.authModes = [
+      {
+        id: "remote-link",
+        methodId: "remote-link",
+        kind: "redirect",
+        label: "Cloud",
+        preferred: true,
+        available: true,
+      },
+      {
+        id: "token",
+        methodId: "fine-grained-pat",
+        kind: "credential-input",
+        label: "PAT",
+        available: true,
+      },
+    ];
+    const saved: LinkSnapshot["connections"][number] = {
+      id: "saved-cloud-only",
+      providerId: "github",
+      methodId: "remote-link",
+      runtime: "server",
+      authSource: "remote-link",
+      label: "Saved cloud account",
+      account: { id: "cloud-owner", label: "Cloud owner", resources: [] },
+      status: "connected",
+      capabilityIds: [],
+      revision: "saved-cloud-revision",
+      scope: "user",
+      editable: true,
+    };
+    const original = structuredClone(saved);
+    const account = accountStatusFixture(async () => ({ state: "signed-out" }));
+    const container = await renderProjectedCatalog(providers, [], [saved], {
+      account: account.api,
+    });
+    const starts: unknown[][] = [];
+    const expiresAt = new Date(Date.now() + 60_000).toISOString();
+    Object.assign(window.codeshell.links, {
+      authorizationStart: async (...args: unknown[]) => {
+        starts.push(args);
+        return {
+          id: "local-token-attempt",
+          providerId: "github",
+          methodId: "fine-grained-pat",
+          state: "pending",
+          step: {
+            id: "local-token-step",
+            kind: "credential-input",
+            purpose: "credential",
+            expiresAt,
+            fields: [{ id: "token", label: "PAT", secret: true, required: true }],
+          },
+        };
+      },
+      authorizationCancel: async () => undefined,
+    });
+    const card = providerCards(container).find(
+      (node) => reactPropsOf(node)["data-link-provider-card"] === "github",
+    );
+    const connect = visibleElements(card, "BUTTON").find(
+      (node) => reactPropsOf(node)["data-link-primary-connect"] === "github",
+    );
+    expect(reactChildText(reactPropsOf(connect).children)).toBe("本地连接 GitHub");
+    expect(reactPropsOf(connect).disabled).toBe(false);
+    await act(async () => {
+      reactPropsOf(connect).onClick();
+      await flushMicrotasks();
+      await flushMicrotasks();
+    });
+    expect(starts).toHaveLength(1);
+    expect(starts[0]!.slice(2)).toEqual([
+      {
+        providerId: "github",
+        methodId: "fine-grained-pat",
+        label: "GitHub",
+        expectedRevision: null,
+      },
+      "token",
+    ]);
+    const input = visibleElements(container, "INPUT").find(
+      (node) => reactPropsOf(node).name === "token",
+    );
+    expect(reactPropsOf(input).type).toBe("password");
+    expect(saved).toEqual(original);
+    expect(
+      findElements(container, "ARTICLE").filter((node) => reactPropsOf(node)["data-remote-link"]),
+    ).toHaveLength(0);
+  });
+
+  test.each(["signed-out", "signing-in", "storage-error"] as const)(
+    "%s keeps Token, CLI and local MCP while hiding saved cloud accounts and methods",
+    async (state) => {
+      const account = accountStatusFixture(async () => ({ ...SIGNED_IN_ACCOUNT, state }));
+      const fixture = await renderAccountLinks(account.api);
+      await fixture.showManagement();
+      fixture.assertLocalOnly();
+      fixture.assertUnchanged();
+      expect(account.calls.slice(0, 2)).toEqual(["subscribe", "read"]);
+    },
+  );
+
+  test.each([
+    { state: "signed-in", origin: SIGNED_IN_ACCOUNT.origin },
+    { state: "signed-in", account: SIGNED_IN_ACCOUNT.account },
+  ] satisfies CloudAccountStatus[])(
+    "an incomplete signed-in status fails closed (%j)",
+    async (status) => {
+      const account = accountStatusFixture(async () => status);
+      const fixture = await renderAccountLinks(account.api);
+      await fixture.showManagement();
+      fixture.assertLocalOnly();
+      fixture.assertUnchanged();
+    },
+  );
+
+  test("a failed initial account read keeps Link local", async () => {
+    const account = accountStatusFixture(async () => {
+      throw new Error("Status unavailable");
+    });
+    const fixture = await renderAccountLinks(account.api);
+    await fixture.showManagement();
+    fixture.assertLocalOnly();
+    fixture.assertUnchanged();
+  });
+
+  test("login and logout events update cloud entry points independently of existing provider connections", async () => {
+    const account = accountStatusFixture(async () => ({ state: "signed-out" }));
+    const fixture = await renderAccountLinks(account.api);
+    await fixture.showManagement();
+    fixture.assertLocalOnly();
+    await account.emit(SIGNED_IN_ACCOUNT);
+    await fixture.showManagement();
+    fixture.assertCloudVisible();
+    await account.emit({ state: "signed-out" });
+    await fixture.showManagement();
+    fixture.assertLocalOnly();
+    fixture.assertUnchanged();
+  });
+
+  test.each(["signed-in", "signed-out"] as const)(
+    "a newer %s event wins over a late initial response",
+    async (state) => {
+      let resolve!: (status: CloudAccountStatus) => void;
+      const pending = new Promise<CloudAccountStatus>((done) => {
+        resolve = done;
+      });
+      const account = accountStatusFixture(() => pending);
+      const fixture = await renderAccountLinks(account.api);
+      await fixture.showManagement();
+      fixture.assertLocalOnly();
+      expect(account.calls.slice(0, 2)).toEqual(["subscribe", "read"]);
+      await account.emit(state === "signed-in" ? SIGNED_IN_ACCOUNT : { state });
+      await fixture.showManagement();
+      if (state === "signed-in") fixture.assertCloudVisible();
+      else fixture.assertLocalOnly();
+      await act(async () => {
+        resolve(state === "signed-in" ? { state: "signed-out" } : SIGNED_IN_ACCOUNT);
+        await flushMicrotasks();
+        await flushMicrotasks();
+      });
+      if (state === "signed-in") fixture.assertCloudVisible();
+      else fixture.assertLocalOnly();
+      fixture.assertUnchanged();
+    },
+  );
 });
 
 describe("LinkTab integrations", () => {
@@ -1180,6 +1565,7 @@ describe("LinkTab integrations", () => {
     };
     Object.assign(window, {
       codeshell: {
+        cloudAccount: signedInCloudAccount(),
         credentials: { list: async () => [] },
         links: {
           listLocalProviders: async () => LINK_PROVIDER_FIXTURES,
@@ -1513,6 +1899,7 @@ describe("LinkTab integrations", () => {
       ];
       Object.assign(window, {
         codeshell: {
+          cloudAccount: signedInCloudAccount(),
           credentials: { list: async () => credentials },
           links: { listLocalProviders: async () => LINK_PROVIDER_FIXTURES },
         },
@@ -1573,6 +1960,7 @@ describe("LinkTab integrations", () => {
     const openedUrls: string[] = [];
     Object.assign(window, {
       codeshell: {
+        cloudAccount: signedInCloudAccount(),
         imGateway: {
           status: async () => ({
             running: false,
@@ -1732,6 +2120,7 @@ describe("LinkTab integrations", () => {
     ];
     Object.assign(window, {
       codeshell: {
+        cloudAccount: signedInCloudAccount(),
         openExternal: async () => undefined,
         credentials: {
           list: async () => all,
@@ -1813,6 +2202,7 @@ describe("LinkTab integrations", () => {
     };
     Object.assign(window, {
       codeshell: {
+        cloudAccount: signedInCloudAccount(),
         credentials: { list: async () => [] },
         links: {
           listLocalProviders: async () => LINK_PROVIDER_FIXTURES,
@@ -1927,6 +2317,7 @@ describe("LinkTab integrations", () => {
     const expiresAt = new Date(Date.now() + 60_000).toISOString();
     Object.assign(window, {
       codeshell: {
+        cloudAccount: signedInCloudAccount(),
         credentials: { list: async () => [] },
         links: {
           listLocalProviders: async () => LINK_PROVIDER_FIXTURES,
@@ -2009,6 +2400,7 @@ describe("LinkTab integrations", () => {
     };
     Object.assign(window, {
       codeshell: {
+        cloudAccount: signedInCloudAccount(),
         links: {
           authorizationStart: async (...args: unknown[]) => {
             starts.push(args);
@@ -2116,6 +2508,7 @@ describe("LinkTab integrations", () => {
       const expiresAt = new Date(Date.now() + 60_000).toISOString();
       Object.assign(window, {
         codeshell: {
+          cloudAccount: signedInCloudAccount(),
           links: {
             authorizationStart: async () => ({
               id: `cli-install-${++starts}`,
@@ -2349,6 +2742,7 @@ describe("LinkTab integrations", () => {
     });
     Object.assign(window, {
       codeshell: {
+        cloudAccount: signedInCloudAccount(),
         imGateway: {
           status: async () => ({
             running: false,
@@ -2465,6 +2859,7 @@ describe("LinkTab integrations", () => {
     let cliStatusCalls = 0;
     Object.assign(window, {
       codeshell: {
+        cloudAccount: signedInCloudAccount(),
         openExternal: async () => undefined,
         credentials: { list: async () => credentials },
         links: {
@@ -2535,6 +2930,7 @@ describe("LinkTab integrations", () => {
     ];
     Object.assign(window, {
       codeshell: {
+        cloudAccount: signedInCloudAccount(),
         openExternal: async () => undefined,
         credentials: { list: async () => credentials },
         links: {
@@ -2678,6 +3074,8 @@ describe("Link metadata request lifecycle", () => {
     expect(f.calls.probes).toHaveLength(2);
     expect(f.calls.snapshots).toEqual([
       ["/repo", false],
+      // Resolving the CodeShell account refreshes the Host-gated directory once.
+      ["/repo", false],
       ["/repo", true],
     ]);
     await act(async () => {
@@ -2804,7 +3202,10 @@ describe("Link metadata request lifecycle", () => {
     };
     let calls = 0;
     Object.assign(window, {
-      codeshell: { links: { remoteSnapshot: async () => (++calls === 1 ? first : latest) } },
+      codeshell: {
+        cloudAccount: signedInCloudAccount(),
+        links: { remoteSnapshot: async () => (++calls === 1 ? first : latest) },
+      },
     });
     let state!: ReturnType<typeof useRemoteLinkSnapshot>;
     function Host() {
@@ -2849,6 +3250,7 @@ describe("Link metadata request lifecycle", () => {
     });
     Object.assign(window, {
       codeshell: {
+        cloudAccount: signedInCloudAccount(),
         credentials: {
           list: async (cwd: string) => (cwd === "/first" ? first : [account("second-account")]),
         },
@@ -2898,6 +3300,7 @@ describe("reviewed Link authorization failures", () => {
       };
       Object.assign(window, {
         codeshell: {
+          cloudAccount: signedInCloudAccount(),
           links: {
             authorizationStart: async (_cwd: string, id: string) => {
               if (mode === "transport")
@@ -3019,6 +3422,7 @@ describe("unified Figma connection card", () => {
     let nextSnapshot: (() => Promise<LinkSnapshot>) | undefined;
     Object.assign(window, {
       codeshell: {
+        cloudAccount: signedInCloudAccount(),
         links: {
           remoteSnapshot: async () => (nextSnapshot ? nextSnapshot() : snapshot),
           authorizationStart: async (...args: unknown[]) => {

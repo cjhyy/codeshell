@@ -158,6 +158,8 @@ export interface LinkServiceOptions {
   now?: () => number;
   /** Trusted Host configuration; never accepted from a browser request. */
   remoteLink?: () => RemoteLinkConfiguration | undefined;
+  /** Optional Host authority for a remote authorization's complete lifetime. */
+  captureRemoteAuthority?: () => { current(): void; signal: AbortSignal };
   /** Trusted Host opt-in: reuse a uniquely identified user connection after remote OAuth. */
   reuseRemoteConnection?: boolean;
   /** Test seams. Production delegates to Core's fixed provider and CLI executors. */
@@ -323,6 +325,33 @@ export function createLinkService(options: LinkServiceOptions = {}) {
       authorizationDiagnosticFailure("authorization", "authorization_check_failed");
       throw error;
     }
+  }
+  function remoteAuthority(context: LinkOperationContext): LinkOperationContext {
+    if (!options.captureRemoteAuthority) return context;
+    let lease: { current(): void; signal: AbortSignal };
+    try {
+      lease = options.captureRemoteAuthority();
+      lease.signal.throwIfAborted();
+      lease.current();
+    } catch {
+      authorizationDiagnosticFailure("authorization", "authorization_check_failed");
+      throw new LinkServiceError(401, "login_required");
+    }
+    const signal = context.signal ? AbortSignal.any([context.signal, lease.signal]) : lease.signal;
+    const current = () => {
+      try {
+        signal.throwIfAborted();
+        lease.current();
+        return true;
+      } catch {
+        return false;
+      }
+    };
+    return {
+      ownerId: context.ownerId,
+      signal,
+      authorize: async () => current() && (await context.authorize()) && current(),
+    };
   }
   function begin(context: LinkOperationContext): ActiveOperation {
     unavailable(context);
@@ -1375,6 +1404,7 @@ export function createLinkService(options: LinkServiceOptions = {}) {
     if (input?.resourceUrl !== undefined && authModeId !== "remote-link" && !hostAdapter)
       throw new LinkServiceError(400, "invalid_request");
     if (authModeId === "remote-link") {
+      context = remoteAuthority(context);
       const diagnostic = await refreshRemoteCatalogWithDiagnostic(context, true);
       const state = snapshot().remoteCatalog?.state;
       if (state !== "ready") {
@@ -1799,6 +1829,7 @@ export function createLinkService(options: LinkServiceOptions = {}) {
     context: LinkOperationContext,
     input: LinkConnectionInput,
   ): Promise<LinkAuthorization> {
+    context = remoteAuthority(context);
     await refreshRemoteCatalog(context, true);
     return startRemoteAuthAfterCatalog(context, input);
   }
@@ -2075,6 +2106,8 @@ export function createLinkService(options: LinkServiceOptions = {}) {
     const remote = remoteJobs.get(safeId(id));
     if (remote) {
       if (remote.context.ownerId !== context.ownerId) throw new LinkServiceError(404, "not_found");
+      if (options.captureRemoteAuthority && remote.public.state === "pending")
+        await authorize(remote.context);
       return structuredClone(remote.public);
     }
     const job = jobs.get(safeId(id));
