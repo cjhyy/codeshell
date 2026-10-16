@@ -58,6 +58,9 @@ const methods = [
   "contextFor",
   "call",
   "revokeGuest",
+  "revokeWindowSource",
+  "windowSourceIdentity",
+  "sessionOwnerWindow",
   "dispatch",
   "requirePermission",
   "submitPrompt",
@@ -213,10 +216,12 @@ function fixture(permissions = ["context.workspace", "context.session"]) {
   });
   const bridge = new Bridge();
   bridge.guests = new Map([[guest.id, binding]]);
+  bridge.windowSourceListeners = new Map();
   bridge.resourceTransfers = new Map();
   bridge.pendingAgentToolCalls = new Map();
   bridge.processService = { revokeGuest() {} };
   bridge.agentTaskService = { rebind() {} };
+  bridge.modelTraces = { cancelOwner() {} };
   bridge.agentTaskOwner = () => ({ projectPath: "/project" });
   bridge.workspaceWriteQueues = new Map();
   bridge.options = {

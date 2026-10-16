@@ -306,7 +306,7 @@ try {
   const activityMenu = win.getByRole("menu", { name: "活动记录", exact: true });
   await activityMenu.waitFor();
   await expectMenuInsideWindow(win, "活动记录");
-  await activityMenu.getByRole("menuitem", { name: "日志", exact: true }).hover();
+  await activityMenu.getByRole("menuitem", { name: "诊断日志", exact: true }).hover();
   await language.hover({ position: { x: 12, y: 12 } });
   await win.waitForTimeout(400);
   assert(await activityMenu.isVisible(), "Hovering past a child keeps the activity menu open");
@@ -324,7 +324,7 @@ try {
   assert(await drawer.isVisible(), "Escape dismisses settings options before navigation");
   await drawer.locator('button[aria-haspopup="menu"]').click();
   await settingsMenu.getByRole("menuitem", { name: "活动记录", exact: true }).click();
-  await activityMenu.getByRole("menuitem", { name: "日志", exact: true }).click();
+  await activityMenu.getByRole("menuitem", { name: "诊断日志", exact: true }).click();
   await drawer.waitFor({ state: "hidden" });
   await win.getByRole("heading", { name: "日志", level: 1, exact: true }).waitFor();
   await win.waitForFunction(() => getComputedStyle(document.body).pointerEvents !== "none");

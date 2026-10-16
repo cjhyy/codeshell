@@ -193,7 +193,7 @@ describe("SessionsView editing and recovery", () => {
 
   test("searches titles and IDs, distinguishes no results, and clears back to the field", async () => {
     await render();
-    expect(textOf(container)).toContain("会话历史");
+    expect(textOf(container)).toContain("会话管理");
     expect(button("新会话")).toBeUndefined();
     expect(rows()).toHaveLength(2);
     await change(search(), " BETA ");

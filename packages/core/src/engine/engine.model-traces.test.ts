@@ -118,29 +118,53 @@ function engine(withTool = false): Engine {
 
 test("real Engine runs retain assembled model inputs, separate execution IDs and exact tool parents without replay duplicates", async () => {
   const firstEngine = engine(true);
+  // Engine's durable output wrapper enables tool summaries even without a UI
+  // listener. Wait for this auxiliary call explicitly: the dynamic import may
+  // settle before or after run() returns depending on earlier tests.
+  let finishToolSummary!: () => void;
+  const toolSummaryFinished = new Promise<void>((resolve) => {
+    finishToolSummary = resolve;
+  });
   const first = await firstEngine.run("TRACE_FIRST_REQUEST", {
     sessionId: "trace-session",
     clientMessageId: "trace-input-first",
     behaviorMode: "trace-quiet",
+    onStream: (event) => {
+      if (event.type === "tool_summary") finishToolSummary();
+    },
   });
   expect(first.reason).toBe("completed");
+  await toolSummaryFinished;
   const firstRows = traces.list({ sessionId: "trace-session", traceId: first.runId }).items;
-  expect(firstRows).toHaveLength(2);
+  expect(firstRows.map((row) => row.purpose).sort()).toEqual(["main", "main", "tool_summary"]);
   expect(firstRows.every((row) => row.runId === first.runId && row.workspacePath === root)).toBe(
     true,
   );
-  const firstRecords = firstRows.map((row) => traces.get(row.id)!);
+  const firstRecords = firstRows
+    .filter((row) => row.purpose === "main")
+    .map((row) => traces.get(row.id)!);
+  const mainCalls = calls.filter((call) => call.purpose === "main");
+  expect(mainCalls).toHaveLength(2);
   const toolModel = firstRecords.find((record) => record.output?.toolCalls?.length)!;
-  expect(toolModel.input?.systemPrompt).toBe(calls[0].systemPrompt);
+  expect(toolModel.input?.systemPrompt).toBe(mainCalls[0].systemPrompt);
   expect(toolModel.input?.systemPrompt).toContain(`Working directory: ${root}`);
   expect(toolModel.input?.systemPrompt).toContain("# Available Tools");
-  expect(toolModel.input?.messages).toEqual(calls[0].messages);
-  expect(toolModel.input?.tools).toEqual(calls[0].tools);
+  expect(toolModel.input?.messages).toEqual(mainCalls[0].messages);
+  expect(toolModel.input?.tools).toEqual(mainCalls[0].tools);
   expect(JSON.stringify(toolModel.input?.messages)).toContain("TRACE_FIRST_REQUEST");
   expect(toolModel.input?.tools.some((tool: any) => tool.name === "TraceProbe")).toBe(true);
   expect(toolModel.attempts[0].coverage).toBe("logical-input");
   const following = firstRecords.find((record) => record.id !== toolModel.id)!;
+  expect(following.input?.messages).toEqual(mainCalls[1].messages);
   expect(JSON.stringify(following.input?.messages)).toContain(toolOutput);
+  const summary = traces.get(firstRows.find((row) => row.purpose === "tool_summary")!.id)!;
+  const summaryCalls = calls.filter((call) => call.purpose === "tool_summary");
+  expect(summaryCalls).toHaveLength(1);
+  expect(summary.input?.systemPrompt).toBe(summaryCalls[0].systemPrompt);
+  expect(summary.input?.messages).toEqual(summaryCalls[0].messages);
+  expect(JSON.stringify(summary.input?.messages)).toContain("TraceProbe");
+  expect(JSON.stringify(summary.input?.messages)).toContain(toolOutput);
+  expect(summary.input?.tools).toEqual([]);
   const toolEvents = traces.events(first.runId).filter((event) => event.kind === "tool");
   expect(toolEvents).toHaveLength(1);
   expect(toolEvents[0]).toMatchObject({
@@ -163,8 +187,10 @@ test("real Engine runs retain assembled model inputs, separate execution IDs and
   expect(secondRows).toHaveLength(1);
   expect(secondRows[0].runId).toBe(second.runId);
   const secondInput = traces.get(secondRows[0].id)!.input!;
-  expect(secondInput.systemPrompt).toBe(calls[2].systemPrompt);
-  expect(secondInput.messages).toEqual(calls[2].messages);
+  const secondCalls = calls.filter((call) => call.purpose === "main").slice(mainCalls.length);
+  expect(secondCalls).toHaveLength(1);
+  expect(secondInput.systemPrompt).toBe(secondCalls[0].systemPrompt);
+  expect(secondInput.messages).toEqual(secondCalls[0].messages);
   expect(JSON.stringify(secondInput.messages)).toContain("TRACE_FIRST_REQUEST");
   expect(JSON.stringify(secondInput.messages)).toContain("TRACE_SECOND_REQUEST");
 

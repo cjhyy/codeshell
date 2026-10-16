@@ -22,6 +22,32 @@ import { CONTRACTS } from "./contracts.js";
 // index.internal.ts. Host-assembly surfaces (installer/marketplace/onboarding/
 // updater) moved here in 0.8.
 const expectedRuntimeExportsByPartition = {
+  modelTraces: [
+    "ModelTraceStore",
+    "DEFAULT_MODEL_TRACE_CONFIG",
+    "MODEL_TRACE_CALL_TYPES",
+    "isModelTraceCallType",
+    "configureModelTracing",
+    "withModelTraceContext",
+    "recordModelTraceEvent",
+    "recordExternalModelTrace",
+    "clearModelTracingConfiguration",
+    "createNativeModelTraceFrameDecoder",
+  ],
+  mcpCredentialBinding: [
+    "McpResponseTooLargeError",
+    "assertMcpOAuthCredentialBinding",
+    "assertMcpResourceTarget",
+    "normalizeMcpServerUrl",
+  ],
+  linkHostServices: [
+    "executeFigmaMcpLinkAction",
+    "isFigmaMcpCredential",
+    "McpLinkActionError",
+    "isLegacyLinkConnection",
+    "previewLegacyLinkCleanup",
+    "cleanupLegacyLinkConnections",
+  ],
   "model-request-boundary": [
     "ModelRequestKeyStore",
     "assertDurableRequestOwner",
@@ -315,6 +341,9 @@ const expectedRuntimeExports = Object.values(expectedRuntimeExportsByPartition).
 // Host-only symbols that must NOT leak back onto the public root barrel.
 // (Representative sample across the removed @internal partitions.)
 const hostOnlySamples = [
+  ...expectedRuntimeExportsByPartition.modelTraces,
+  ...expectedRuntimeExportsByPartition.mcpCredentialBinding,
+  ...expectedRuntimeExportsByPartition.linkHostServices,
   "acquireWorkspaceWriteLock",
   "backupOutputJournal",
   "restoreOutputJournalBackup",
@@ -506,6 +535,13 @@ describe("core public/internal export contract", () => {
     expect(extensionApi).not.toHaveProperty("Engine");
     expect(extensionApi).not.toHaveProperty("sliceAnsi");
     expect(extensionApi).not.toHaveProperty("acquireWorkspaceWriteLock");
+    for (const name of [
+      ...expectedRuntimeExportsByPartition.modelTraces,
+      ...expectedRuntimeExportsByPartition.mcpCredentialBinding,
+      ...expectedRuntimeExportsByPartition.linkHostServices,
+    ]) {
+      expect(extensionApi, `${name} belongs to the host-only contract`).not.toHaveProperty(name);
+    }
     for (const name of [
       "InstructionBindingStore",
       "InstructionSnapshotSchema",

@@ -103,7 +103,7 @@ describe("workspace package boundaries", () => {
     expect(visited.size).toBe(graph.size);
   });
 
-  it("keeps core independent and capability runtime dependencies core-only", async () => {
+  it("keeps Core limited to the dependency-free Link contract and capabilities Core-only", async () => {
     const manifests = await workspaceManifests();
     const workspaceNames = new Set(manifests.keys());
     const runtimeWorkspaceDependencies = (name: string): string[] => {
@@ -117,7 +117,12 @@ describe("workspace package boundaries", () => {
         .sort();
     };
 
-    expect(runtimeWorkspaceDependencies("@cjhyy/code-shell-core")).toEqual([]);
+    expect(runtimeWorkspaceDependencies("@cjhyy/code-shell-core")).toEqual([
+      "@cjhyy/code-shell-link",
+    ]);
+    const link = manifests.get("@cjhyy/code-shell-link")!;
+    expect(dependencyNames(link)).toEqual([]);
+    expect(Object.keys(link.exports ?? {})).toEqual(["."]);
     for (const capability of [
       "@cjhyy/code-shell-capability-coding",
       "@cjhyy/code-shell-arena",
