@@ -18,6 +18,9 @@ export function installOperationReadFixture(core, origin, phase) {
       linkExecutionBackend: "remote",
       linkRemoteState: "connected",
       linkRemoteGrantId: "synthetic-grant",
+      linkResourceGroups: [
+        { id: "repositories", items: [{ id: "fixture/repo", label: "fixture/repo" }] },
+      ],
       linkLastVerifiedAt: "2026-10-09T00:00:00Z",
       linkCapabilityIds: ["github.get_repository", "github.get_starred", "github.set_starred"],
     },

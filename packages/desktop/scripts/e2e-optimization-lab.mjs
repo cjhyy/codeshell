@@ -546,7 +546,7 @@ async function editDatasetOffline() {
     edited,
     "Form and native export preserve all other fields",
   );
-  await navigateSettingsMenu(win, /^(Task center|任务中心)$/, { activity: true });
+  await navigateSettingsMenu(win, /^(Background work|后台工作)$/, { activity: true });
   await openPage();
   assert.equal(
     await win.getByTestId("optimization-lab-dataset-title").inputValue(),
@@ -719,7 +719,7 @@ try {
   blockRequests = true;
   await win.getByTestId("optimization-lab-start").click();
   await until(async () => requests.length === 1, "First model request did not start");
-  await navigateSettingsMenu(win, /^(Task center|任务中心)$/, { activity: true });
+  await navigateSettingsMenu(win, /^(Background work|后台工作)$/, { activity: true });
   await win.getByTestId("optimization-lab-page").waitFor({ state: "detached" });
   assert.equal(await win.getByTestId("optimization-lab-page").count(), 0);
   blockRequests = false;

@@ -166,7 +166,7 @@ try {
   let { win, errors } = await launch(origin);
   await win.getByLabel("电脑名称").fill("E2E 电脑");
   await win.getByLabel("一次性登记票据").fill(ticket);
-  await win.getByRole("button", { name: "登记电脑", exact: true }).click();
+  await win.getByRole("button", { name: "使用票据登记电脑", exact: true }).click();
   await win.getByText("已登记，连接已停止", { exact: true }).waitFor();
   assert(
     (await win.getByLabel("一次性登记票据").inputValue()) === "",
@@ -217,7 +217,7 @@ try {
   revoked = false;
   await win.getByLabel("电脑名称").fill("E2E 电脑");
   await win.getByLabel("一次性登记票据").fill(ticket);
-  await win.getByRole("button", { name: "登记电脑", exact: true }).click();
+  await win.getByRole("button", { name: "使用票据登记电脑", exact: true }).click();
   await win.getByText("已登记，连接已停止", { exact: true }).waitFor();
   await win.getByRole("button", { name: "移除本机登记", exact: true }).click();
   await win.getByRole("dialog").getByRole("button", { name: "移除本机登记", exact: true }).click();
