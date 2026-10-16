@@ -204,6 +204,9 @@ try {
   let processes = await guardProcesses();
   stage = "actual compiled Engine creates uncertain write";
   core = await import("@cjhyy/code-shell-core");
+  (await import("@cjhyy/code-shell-server/links")).installDefaultLinkProviders(
+    core.registerLocalLinkProviders,
+  );
   const credential = {
     id: "synthetic-link",
     type: "oauth",

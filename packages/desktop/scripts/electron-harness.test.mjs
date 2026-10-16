@@ -83,6 +83,8 @@ test("launch validates merged environment first and attaches a bounded watchdog"
         order.push("preflight");
         equal(options.environment.HOME, input.home);
         equal(options.environment.USERPROFILE, input.home);
+        equal(options.environment.CODE_SHELL_HOME, join(input.home, ".code-shell"));
+        equal(options.environment.CODE_SHELL_TEST_HOME, join(input.home, ".code-shell"));
         equal(options.environment.CODE_SHELL_NO_DEVTOOLS, "fixture");
         equal(existsSync(join(input.home, "real-keyring.cjs")), false);
       },

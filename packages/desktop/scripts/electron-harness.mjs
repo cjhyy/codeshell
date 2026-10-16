@@ -49,6 +49,7 @@ export async function launchCodeShellElectron(
     HOME: home,
     USERPROFILE: home,
     CODE_SHELL_HOME: join(home, ".code-shell"),
+    CODE_SHELL_TEST_HOME: join(home, ".code-shell"),
     CODE_SHELL_NO_DEVTOOLS: "1",
     CODE_SHELL_DISABLE_UPDATE_CHECK: "1",
     DISABLE_AUTOUPDATER: "1",

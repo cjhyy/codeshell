@@ -520,6 +520,9 @@ try {
   const processes = await guardedProcesses();
   stage = "actual compiled Engine creates durable unknown Star";
   core = await import(coreUrl);
+  (await import("@cjhyy/code-shell-server/links")).installDefaultLinkProviders(
+    core.registerLocalLinkProviders,
+  );
   (await import(helperUrl)).installOperationReadFixture(core, origin, "original");
   class SyntheticProvider extends core.LLMClientBase {
     initClient() {}
