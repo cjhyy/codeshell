@@ -407,7 +407,7 @@ try {
       await option("a-one").getByLabel("Supports image input", { exact: true }).count(),
       1,
     );
-    assert.ok(await option("a-one").locator('svg[aria-hidden="true"]').count());
+    assert.ok(await option("a-one").locator('[aria-hidden="true"] svg').count());
     for (const key of ["a-two", "b-one", "b-two"]) {
       await page.keyboard.press("ArrowDown");
       await selectedFocus(key);

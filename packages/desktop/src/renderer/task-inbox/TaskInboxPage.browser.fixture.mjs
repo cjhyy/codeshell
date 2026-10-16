@@ -22,11 +22,13 @@ const source = `
   import {TaskInboxPage} from './task-inbox/TaskInboxPage';
   import {I18nProvider} from './i18n/I18nProvider';
   const records=Array.from({length:14},(_,i)=>({schemaVersion:1,taskKey:'job:'+i,
-    source:['background-job','automation','external-runtime'][i%3],sourceId:String(i),
+    source:['background-job','session','background-shell'][i%3],sourceId:String(i),
+    ...(i%3===1?{automationId:'owned-schedule-'+i}:{}),
     title:'Review task '+(i+1),status:i===0?'waiting':'running',
     summary:'Review layout, keyboard navigation and recoverable errors.',
     workspacePath:i%2?'/work/very-long-project-name-without-spaces':'/work/project',
     artifacts:[],capabilities:['open'],createdAt:Date.UTC(2026,9,15,8),updatedAt:Date.UTC(2026,9,15,8),sourceRevision:'v1'}));
+  records.push({...records[0],taskKey:'ordinary-session',source:'external-runtime',sourceId:'ordinary-session',title:'Ordinary foreground conversation'});
   window.codeshell={taskInbox:{list:async()=>({version:1,records,errors:[]}),
     onChanged:()=>()=>{},act:async input=>({status:'ok'})}};
   const root=createRoot(document.getElementById('root'));
