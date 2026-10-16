@@ -285,3 +285,65 @@ the guard did not start that failing launch. The original log remains
 cold launches/reloads and a second window, recorded in
 `recovery-wave-primary-startup-repeat.log`. This repeats the unclassified native
 environment issue and does not establish a cause or packaged encryption safety.
+
+## Platform and native follow-up — 2026-10-17
+
+Three concrete cross-platform UI issues are repaired. The Chinese and English
+follow-system theme descriptions now refer to the system appearance. Sidebar
+session hints use the preload platform's Command/Control modifier. The command
+palette's hints now agree with registered handlers: B/F use the platform modifier,
+native-menu-only I/new-window hints appear on macOS, and three unregistered
+Files/Browser/Terminal hints are removed while their actions remain available.
+Actual Windows/Linux shortcut execution is still pending.
+
+New native suites upgrade two earlier component-only boundaries. Their root
+operation receipts are under
+`/private/tmp/codeshell-real-operation-cycles-20261016`:
+
+| Suite | Actual operation and evidence boundary |
+| --- | --- |
+| `e2e-memory-pin-operation-cycles.mjs` | Seven compiled Electron Main/preload/renderer sequences: normal pin, late user→dream completion, pending selection B, both edit/pin orders, closed details, and a late failed save. Successful saves call the original production handler and verify actual A content/pin state; B/dream whole-file hashes remain unchanged. Each successful sequence commits once; the rejected save commits zero times and leaves A's complete hash unchanged. Read/save timing and one error are controlled. `native-memory-pin/receipt.json` records source `a396d1656`, compiled-source hashes, zero worker/network attempts and renderer errors, Main exit 0/no signal, 21 observed process incarnations cleaned/zero remaining, and HOME removal. No Engine, provider or account is used. |
+| `e2e-composer-reference-operations.mjs` | Nine real native keyboard/mouse/clipboard/file-chooser sequences through ChatView/App, preload and Main. Unicode/space mentions retain visible metadata; delete/suffix/paste edits revoke it for ordinary send, queue and force. Explicit picker files and production-staged pasted images remain; actual image bytes match both metadata SHA256s and decode to 8×8. Main captures and answers run/control requests before the Engine; its model catalog and owned chooser selection are controlled. File/root authorization, staging and session persistence remain production handlers. `native-composer-reference-final/report.json` records 11 run, 2 steer, 2 unsteer and 4 cancel requests, zero workers/pending/errors, Main exit 0/no signal, 37 observed incarnations cleaned/zero remaining, and HOME removal. This proves submitted metadata, not Engine consumption. |
+| `test-service-worker-browser.mjs` | Eleven actual Chromium ServiceWorker/CacheStorage sequences exercise production registration, worker and offline UI. Root/mobile cache ownership, scoped legacy cleanup, activated controller replacement, 320px offline layout, reconnect, uncached API/upload/project/POST/public-query responses, and failing private root navigations pass. The HTML shell and HTTP/API replies are owned fixtures; no authenticated account or Host is involved. A local proxy never forwards and rejects external HTTP/CONNECT/upgrade requests; actual page HTTP/HTTPS and SW HTTP negative probes are retained. This is evidence for those channels, not an OS network sandbox. `service-worker-cli/report.json` and two screenshots remain; all eight observed browser incarnations settled cleaned with zero remaining. |
+
+Independent review strengthened controller-incarnation and private-root-navigation
+assertions, image-byte checks, early native process custody, final renderer-error
+gates and normal Main exits. Retained fixture failures are not product failures:
+Memory's first four attempts used an obsolete filename format, a pin-sensitive
+accessible name, an ambiguous hidden textarea and an incorrect discard label.
+Their original receipts/screenshots and failure HOMEs remain at
+`/private/tmp/codeshell-memory-pin-native-20261017-round-00{1,2,3,4}`.
+Composer's initial two attempts assumed unsent staging inspection and an absolute
+picker `path`; both failed and settled cleaned before the corrected native runs.
+Their reports remain at
+`/private/tmp/codeshell-native-composer-reference-20261017-{a,b}`.
+The first SW attempt mutated its expected cache array while sorting; its failed
+report remains at `codeshell-service-worker-browser-uAKxoB` in the system temp
+directory. No production assertion was relaxed to recover these tests.
+
+Desktop built successfully with the platform repairs, and 30 guarded platform/
+existing-UI/SW unit tests passed. All 14 workspace typechecks passed both before
+packaging and after development workspace links were restored. Targeted lint,
+formatting, script syntax and diff checks passed.
+
+A clean local ad-hoc macOS arm64 package from `a396d1656` contains the current
+production changes. Its ASAR SHA256 is
+`f837807dd88081e4928dd66539f66a6e1bc322b4678247996beb3eb6587d5fbc`.
+The first `operations-followup-package/ui` attempt completed all 13 UI operations
+but failed its final default-Keychain inode check; the overall result remains
+failed. A fresh-HOME repeat of the same artifact passed all 13 operations and
+seven screenshots at `operations-followup-package/ui-repeat`. Main exited 0,
+worker/model/native-secret calls were zero, package inventory/deep strict
+signature and default-Keychain identity matched, observed process settlements
+were cleaned with zero remaining, and HOME was removed. The first failure remains
+separate; the repeat does not explain the recurring inode changes or establish
+packaged Pet/encryption, native approval, installer/update or publisher signing.
+
+The dedicated acceptance workflow now includes both native suites on all three
+Desktop runners and an independent Linux Chromium SW/offline job. Static review
+caught an installer/isolated-HOME browser-cache mismatch before any remote run.
+An explicit owned `PLAYWRIGHT_BROWSERS_PATH` now spans both steps. The isolated
+runner and installed Playwright registry resolved that same path locally; this
+is not Linux execution. Action tag existence was checked through read-only
+GitHub API calls. The acceptance branch remains local pending push authorization;
+no remote job, main push, release tag or publication has been performed.
