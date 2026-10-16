@@ -101,7 +101,9 @@ async function seedFixture() {
           linkExecutionRuntime: "local",
           linkExecutionBackend: "http-token",
           linkAuthSource: "manual-token",
-          linkCapabilityIds: [`${provider}.get_file`],
+          linkCapabilityIds: [
+            provider === "figma" ? "figma.read_design_content" : "github.get_file",
+          ],
         },
       })),
     }),
@@ -447,7 +449,9 @@ async function checkDataSourceAdds(app, win) {
     ),
   );
   assert(
-    figma.length === 1 && figma[0].adapterConfig.params.file_url_or_key === "fixtureFile",
+    figma.length === 1 &&
+      figma[0].adapterConfig.action === "read_design_content" &&
+      figma[0].adapterConfig.params.file_url_or_key === "fixtureFile",
     "Figma reference did not retain exact file key",
   );
   assert(

@@ -1,5 +1,5 @@
 /* Production context menus across themed sidebar boundaries and modal drawers. */
-/* global window, document, getComputedStyle */
+/* global window, document, getComputedStyle, requestAnimationFrame, Event */
 import assert from "node:assert/strict";
 import { createRequire } from "node:module";
 import { mkdir, readFile } from "node:fs/promises";
@@ -129,6 +129,19 @@ async function fits(menu, label) {
   );
 }
 
+async function focusedItemVisible(item, label) {
+  await waitFocused(item, label);
+  const visible = await item.evaluate((element) => {
+    const menu = element.closest('[role="menu"]');
+    const bounds = menu.getBoundingClientRect();
+    const target = element.getBoundingClientRect();
+    const top = bounds.top + menu.clientTop;
+    const bottom = top + menu.clientHeight;
+    return target.top >= top - 1 && target.bottom <= bottom + 1;
+  });
+  assert.ok(visible, `${label}: keyboard focus is within the menu's visible scroll area`);
+}
+
 async function hitAcross(item, label) {
   await item.scrollIntoViewIfNeeded();
   const hits = await item.evaluate((element) => {
@@ -230,6 +243,20 @@ try {
           if (narrow) assert.ok(await page.getByRole("dialog").isVisible());
 
           await openMenu(page);
+          await outside.focus();
+          await menu.waitFor({ state: "hidden" });
+          await waitFocused(outside, `${label}: external focus dismisses without restoring`);
+
+          await openMenu(page);
+          await page.evaluate(() => window.dispatchEvent(new Event("blur")));
+          await menu.waitFor({ state: "hidden" });
+          assert.equal(
+            await opener.evaluate((node) => document.activeElement === node),
+            false,
+            `${label}: window blur dismisses without restoring`,
+          );
+
+          await openMenu(page);
           await page.keyboard.press("Escape");
           await menu.waitFor({ state: "hidden" });
           await waitFocused(opener, `${label}: Escape restores the menu opener`);
@@ -248,6 +275,31 @@ try {
             ]);
           }
         } else {
+          const choices = menu.getByRole("menuitem");
+          await page.keyboard.press("End");
+          await focusedItemVisible(choices.last(), `${label}: End reveals the last action`);
+          await page.keyboard.press("ArrowDown");
+          await focusedItemVisible(choices.first(), `${label}: ArrowDown reveals the first action`);
+          await page.keyboard.press("ArrowUp");
+          await focusedItemVisible(choices.last(), `${label}: ArrowUp reveals the last action`);
+          await menu.evaluate((node) => {
+            node.scrollTop = 0;
+            node.dispatchEvent(new Event("scroll"));
+          });
+          await page.evaluate(
+            () =>
+              new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve))),
+          );
+          assert.equal(
+            await menu.evaluate((node) => node.scrollTop),
+            0,
+            `${label}: intentional wheel scroll is preserved`,
+          );
+          await page.keyboard.press("End");
+          await focusedItemVisible(
+            choices.last(),
+            `${label}: End reveals the same focused action after wheel scroll`,
+          );
           for (const resized of [
             { width: 390, height: 320 },
             { width: 220, height: 200 },
@@ -255,6 +307,10 @@ try {
           ]) {
             await page.setViewportSize(resized);
             await fits(menu, `${label}/${resized.width}`);
+            await focusedItemVisible(
+              choices.last(),
+              `${label}/${resized.width}: resize preserves focus visibility`,
+            );
             await hitAcross(menu.getByRole("menuitem").last(), `${label}/${resized.width}/last`);
             viewportChecks++;
           }

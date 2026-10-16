@@ -147,6 +147,26 @@ const server = createServer((request, response) => {
       includeEphemeral: false,
       retentionDays: 7,
     });
+  if (url.pathname === "/api/v1/model-traces/sessions")
+    return reply({
+      items: [
+        {
+          key: `session:${traceRecord.sessionId}`,
+          sessionId: traceRecord.sessionId,
+          latestRequestId: traceRecord.id,
+          latestTraceId: traceRecord.traceId,
+          startedAt: traceRecord.startedAt,
+          updatedAt: traceRecord.endedAt,
+          callCount: 1,
+          traceCount: 1,
+          sources: [traceRecord.source],
+          models: [traceRecord.model],
+          runningCount: 0,
+          failedCount: 0,
+        },
+      ],
+      total: 1,
+    });
   if (url.pathname === "/api/v1/model-traces") {
     const { input: _input, output: _output, attempts: _attempts, ...metadata } = traceRecord;
     return reply({ items: [{ ...metadata, attemptCount: 0 }], total: 1 });
@@ -224,7 +244,7 @@ const inspectTrace = async () => {
   assert.equal(new URL(page.url()).searchParams.get("view"), "activity");
   await explorer.locator(".cs-t-pane").nth(0).locator(".cs-t-item").first().click();
   await explorer.locator(".cs-t-pane").nth(1).locator(".cs-t-item").first().click();
-  await explorer.getByText("Owned Workbench Prompt", { exact: false }).waitFor();
+  await explorer.getByText("Owned Workbench Prompt", { exact: true }).waitFor();
   await explorer.getByRole("button", { name: "打开原会话", exact: true }).click();
   await page.waitForFunction(() =>
     document.querySelector(".topbar-title")?.textContent.includes("session-1"),

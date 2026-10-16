@@ -22,11 +22,13 @@ const source = `
   import {TaskInboxPage} from './task-inbox/TaskInboxPage';
   import {I18nProvider} from './i18n/I18nProvider';
   const records=Array.from({length:14},(_,i)=>({schemaVersion:1,taskKey:'job:'+i,
-    source:['background-job','automation','external-runtime'][i%3],sourceId:String(i),
+    source:['background-job','session','background-shell'][i%3],sourceId:String(i),
+    ...(i%3===1?{automationId:'owned-schedule-'+i}:{}),
     title:'Review task '+(i+1),status:i===0?'waiting':'running',
     summary:'Review layout, keyboard navigation and recoverable errors.',
     workspacePath:i%2?'/work/very-long-project-name-without-spaces':'/work/project',
     artifacts:[],capabilities:['open'],createdAt:Date.UTC(2026,9,15,8),updatedAt:Date.UTC(2026,9,15,8),sourceRevision:'v1'}));
+  records.push({...records[0],taskKey:'ordinary-session',source:'external-runtime',sourceId:'ordinary-session',title:'Ordinary foreground conversation'});
   window.codeshell={taskInbox:{list:async()=>({version:1,records,errors:[]}),
     onChanged:()=>()=>{},act:async input=>({status:'ok'})}};
   const root=createRoot(document.getElementById('root'));
@@ -99,7 +101,18 @@ try {
       await page.evaluate((props) => window.mount(props), { lang, dark: lang === "en" });
       await page.getByRole("article").first().waitFor();
       const first = await page.getByRole("article").first().boundingBox();
-      assert.ok(first.y < viewport.height - 90, "The first task is visible below compact filters");
+      await page.screenshot({
+        path: path.join(output, `tasks-${lang}-${viewport.width}x${viewport.height}.png`),
+      });
+      assert.ok(
+        first.y < viewport.height - 90,
+        JSON.stringify({
+          message: "The first task is visible below compact filters",
+          lang,
+          viewport,
+          first,
+        }),
+      );
       assert.ok(
         await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth),
         "No horizontal page overflow",
@@ -110,10 +123,6 @@ try {
       });
       assert.equal(await filters.isVisible(), viewport.width < 1000);
       reports.push({ lang, viewport, first });
-      await page.screenshot({
-        path: path.join(output, `tasks-${lang}-${viewport.width}x${viewport.height}.png`),
-      });
-
       if (viewport.width === 390 && viewport.height === 360) {
         const search = page.getByRole("searchbox");
         await search.fill("Review task 1");
