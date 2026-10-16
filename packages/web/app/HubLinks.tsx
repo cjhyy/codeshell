@@ -55,6 +55,81 @@ export function safeLinkUrl(value?: string): string | undefined {
   }
 }
 
+interface LinkFocusLease {
+  source: HTMLElement;
+  cancelled: boolean;
+  dialog: boolean;
+}
+
+function useLinkEditorFocus(editor: React.RefObject<HTMLElement | null>) {
+  const live = React.useRef(false);
+  const leases = React.useRef(new Set<LinkFocusLease>());
+  React.useLayoutEffect(() => {
+    live.current = true;
+    const handoff = (event: Event) => {
+      const target =
+        event instanceof FocusEvent && event.type === "focusout"
+          ? event.relatedTarget
+          : event.target;
+      if (!(target instanceof Node) || (target === document.body && event.type !== "pointerdown"))
+        return;
+      for (const lease of leases.current) {
+        if (!lease.source.contains(target) && !(lease.dialog && editor.current?.contains(target)))
+          lease.cancelled = true;
+      }
+    };
+    const blur = () => {
+      for (const lease of leases.current) lease.cancelled = true;
+    };
+    document.addEventListener("pointerdown", handoff, true);
+    document.addEventListener("focusin", handoff, true);
+    document.addEventListener("focusout", handoff, true);
+    window.addEventListener("blur", blur);
+    return () => {
+      live.current = false;
+      blur();
+      leases.current.clear();
+      document.removeEventListener("pointerdown", handoff, true);
+      document.removeEventListener("focusin", handoff, true);
+      document.removeEventListener("focusout", handoff, true);
+      window.removeEventListener("blur", blur);
+    };
+  }, [editor]);
+  const capture = React.useCallback(
+    (source: Element | null = document.activeElement, dialog = false) => {
+      if (!(source instanceof HTMLElement) || source === document.body) return null;
+      const lease = { source, cancelled: false, dialog };
+      leases.current.add(lease);
+      return lease;
+    },
+    [],
+  );
+  const discard = React.useCallback((lease: LinkFocusLease | null) => {
+    if (lease) {
+      lease.cancelled = true;
+      leases.current.delete(lease);
+    }
+  }, []);
+  const finish = React.useCallback(
+    (lease: LinkFocusLease | null, target: HTMLElement | null, initial = false) => {
+      const active = document.activeElement;
+      const owned =
+        live.current &&
+        lease &&
+        !lease.cancelled &&
+        (initial ||
+          active === document.body ||
+          active === lease.source ||
+          !active?.isConnected ||
+          (lease.dialog && editor.current?.contains(active)));
+      discard(lease);
+      if (owned && target?.isConnected && !target.matches(":disabled")) target.focus();
+    },
+    [discard, editor],
+  );
+  return { capture, discard, finish };
+}
+
 export function HubLinks({
   onAuthLost,
   onDirtyChange,
@@ -141,6 +216,21 @@ export function HubLinks({
   const mounted = React.useRef(false);
   const lifecycle = React.useRef(0);
   const editorElement = React.useRef<HTMLElement>(null);
+  const editorFocus = useLinkEditorFocus(editorElement);
+  const initialFocus = React.useRef<LinkFocusLease | null>(null);
+  const returnFocus = React.useRef<LinkFocusLease | null>(null);
+  const flowFocus = React.useRef<LinkFocusLease | null>(null);
+  const editorOpener = React.useRef<{
+    source: HTMLElement;
+    connection?: string;
+    provider: string;
+  } | null>(null);
+  const manageButtons = React.useRef(new Map<string, HTMLButtonElement>());
+  const addButtons = React.useRef(new Map<string, HTMLButtonElement>());
+  const searchInput = React.useRef<HTMLInputElement>(null);
+  const editorErrorElement = React.useRef<HTMLParagraphElement>(null);
+  const [editorError, setEditorError] = React.useState("");
+  const [errorFocus, setErrorFocus] = React.useState<LinkFocusLease | null>(null);
   const write = React.useRef<AbortController | undefined>(undefined);
   const authUrl = React.useRef<string | undefined>(undefined);
   const authScope = React.useRef<ApiScope | undefined>(undefined);
@@ -162,13 +252,93 @@ export function HubLinks({
     else setError(cause instanceof Error ? cause.message : "连接操作失败，请重试。");
   }, []);
 
-  React.useEffect(() => {
-    if (!editor) return;
-    const previous = document.activeElement as HTMLElement | null;
-    editorElement.current
-      ?.querySelector<HTMLElement>("input:not(:disabled), button:not(:disabled)")
-      ?.focus();
-    return () => previous?.focus?.();
+  const captureEditorOperation = () => {
+    editorFocus.discard(flowFocus.current);
+    const source = document.activeElement;
+    flowFocus.current = editorElement.current?.contains(source)
+      ? editorFocus.capture(source)
+      : editorOpener.current?.source === source
+        ? editorFocus.capture(source, true)
+        : null;
+    setEditorError("");
+    return flowFocus.current;
+  };
+  const reportEditor = (
+    cause: unknown,
+    lease: LinkFocusLease | null = null,
+    scope = editorElement.current,
+  ) => {
+    if (
+      !(cause instanceof ApiError && cause.status === 401) &&
+      scope &&
+      scope === editorElement.current
+    ) {
+      setEditorError(cause instanceof Error ? cause.message : "连接操作失败，请重试。");
+      setErrorFocus(lease);
+    } else {
+      editorFocus.discard(lease);
+      report(cause);
+    }
+  };
+  React.useLayoutEffect(() => {
+    if (editor) {
+      if (initialFocus.current) {
+        const lease = initialFocus.current;
+        initialFocus.current = null;
+        editorFocus.finish(
+          lease,
+          editorElement.current?.querySelector<HTMLElement>(
+            "input:not(:disabled), button:not(:disabled)",
+          ) ?? null,
+          true,
+        );
+      }
+      if (errorFocus && !busy && !flow.busy) {
+        setErrorFocus(null);
+        editorFocus.finish(errorFocus, editorErrorElement.current);
+      }
+    } else if (!busy && !flow.busy && authorization?.state !== "pending") {
+      const lease = returnFocus.current;
+      returnFocus.current = null;
+      const opener = editorOpener.current;
+      editorOpener.current = null;
+      const target = opener?.source.isConnected
+        ? opener.source
+        : opener?.connection
+          ? manageButtons.current.get(opener.connection)
+          : opener
+            ? addButtons.current.get(opener.provider)
+            : null;
+      editorFocus.finish(
+        lease,
+        target?.isConnected && !target.matches(":disabled") ? target : searchInput.current,
+      );
+    }
+  }, [authorization?.state, busy, editor, editorFocus, errorFocus, flow.busy]);
+  React.useLayoutEffect(() => {
+    const scope = editorElement.current;
+    if (!editor || !scope) return;
+    let active = true;
+    const reveal = () => {
+      const focused = document.activeElement;
+      if (!active || !(focused instanceof HTMLElement) || !scope.contains(focused)) return;
+      const bounds = scope.getBoundingClientRect(),
+        box = focused.getBoundingClientRect();
+      const top = bounds.top + scope.clientTop,
+        bottom = top + scope.clientHeight;
+      if (box.top < top) scope.scrollTop += box.top - top;
+      else if (box.bottom > bottom) scope.scrollTop += box.bottom - bottom;
+    };
+    const observer = new ResizeObserver(reveal);
+    observer.observe(scope);
+    scope.addEventListener("focusin", reveal);
+    window.addEventListener("resize", reveal);
+    return () => {
+      active = false;
+      observer.disconnect();
+      scope.removeEventListener("focusin", reveal);
+      window.removeEventListener("resize", reveal);
+    };
   }, [Boolean(editor)]);
 
   React.useEffect(() => {
@@ -210,7 +380,14 @@ export function HubLinks({
 
   React.useEffect(() => {
     if (!generic) return;
-    if (flow.error) report(flow.error);
+    if (flow.error) {
+      const lease = flowFocus.current;
+      flowFocus.current = null;
+      reportEditor(flow.error, lease);
+    } else if (!flow.busy) {
+      editorFocus.discard(flowFocus.current);
+      flowFocus.current = null;
+    }
     if (flow.authorization?.state === "connected" && flow.authorization.connection) {
       setEditor(undefined);
       setNotice("授权完成，连接已保存。");
@@ -270,6 +447,9 @@ export function HubLinks({
   ) {
     if (write.current) return;
     const controller = new AbortController();
+    const scope = editorElement.current;
+    const lease = scope?.contains(document.activeElement) ? editorFocus.capture() : null;
+    setEditorError("");
     write.current = controller;
     read.current?.abort();
     setBusy(true);
@@ -279,9 +459,10 @@ export function HubLinks({
     try {
       const result = await run(controller.signal);
       if (mounted.current && !controller.signal.aborted) accept(result);
+      editorFocus.discard(lease);
     } catch (cause) {
       if (mounted.current && !controller.signal.aborted) {
-        report(cause);
+        reportEditor(cause, lease, scope);
         if (cause instanceof ApiError && [409, 503].includes(cause.status))
           setReload((value) => value + 1);
       }
@@ -323,7 +504,11 @@ export function HubLinks({
     setNotice("连接已保存。");
     setReload((value) => value + 1);
   }
-  function openEditor(provider: LinkProviderView, original?: MaskedLinkConnection) {
+  function openEditor(
+    provider: LinkProviderView,
+    original?: MaskedLinkConnection,
+    source = document.activeElement,
+  ) {
     if (busy || flow.busy || genericPending || authorization?.state === "pending") return;
     if (dirty && !window.confirm("放弃当前未保存的连接修改？")) return;
     controller.reset();
@@ -342,6 +527,17 @@ export function HubLinks({
       setError("当前环境未提供此连接的授权方式，请检查服务器连接设置。");
       return;
     }
+    editorFocus.discard(initialFocus.current);
+    editorFocus.discard(returnFocus.current);
+    editorFocus.discard(flowFocus.current);
+    initialFocus.current = editorFocus.capture(source);
+    returnFocus.current = editorFocus.capture(source, true);
+    flowFocus.current = null;
+    editorOpener.current =
+      source instanceof HTMLElement
+        ? { source, connection: original?.id, provider: provider.id }
+        : null;
+    setEditorError("");
     const next: Editor = {
       provider,
       original,
@@ -360,6 +556,7 @@ export function HubLinks({
   }
   async function beginGeneric(next: Editor, mode: LinkAuthMode) {
     if (!mode.available || !next.label.trim()) return;
+    captureEditorOperation();
     if (controller.getSnapshot().authorization?.state === "pending") {
       await controller.cancel();
       if (controller.getSnapshot().authorization?.state === "pending") return;
@@ -422,11 +619,12 @@ export function HubLinks({
       window.location.assign(url);
     } catch (cause) {
       await controller.cancel();
-      report(cause);
+      reportEditor(cause);
     }
   }
   async function cancelAuthorization() {
     if (genericPending) {
+      captureEditorOperation();
       await controller.cancel();
       if (controller.getSnapshot().authorization?.state === "cancelled") setNotice("授权已取消。");
       return;
@@ -445,6 +643,7 @@ export function HubLinks({
   }
   function closeEditor() {
     if (generic) {
+      captureEditorOperation();
       void controller.cancel().then(() => {
         if (controller.getSnapshot().authorization?.state !== "pending") setEditor(undefined);
       });
@@ -596,7 +795,13 @@ export function HubLinks({
                   <>
                     <button
                       disabled={unavailable || !provider}
-                      onClick={() => provider && openEditor(provider, connection)}
+                      ref={(node) => {
+                        if (node) manageButtons.current.set(connection.id, node);
+                        else manageButtons.current.delete(connection.id);
+                      }}
+                      onClick={(event) =>
+                        provider && openEditor(provider, connection, event.currentTarget)
+                      }
                     >
                       管理连接
                     </button>
@@ -630,13 +835,20 @@ export function HubLinks({
             className="links-editor"
             ref={editorElement}
             onKeyDown={(event) => {
+              if (event.nativeEvent.isComposing || event.keyCode === 229) return;
               if (event.key === "Escape") {
                 event.preventDefault();
                 closeEditor();
               }
               if (event.key !== "Tab") return;
-              const controls = editorElement.current?.querySelectorAll<HTMLElement>(
-                "button:not(:disabled), input:not(:disabled), a[href], summary",
+              const controls = Array.from(
+                editorElement.current?.querySelectorAll<HTMLElement>(
+                  'button:not(:disabled), input:not(:disabled), a[href], summary, [tabindex]:not([tabindex="-1"])',
+                ) ?? [],
+              ).filter(
+                (node) =>
+                  node.getClientRects().length > 0 &&
+                  getComputedStyle(node).visibility !== "hidden",
               );
               if (!controls?.length) return;
               const first = controls[0],
@@ -661,6 +873,17 @@ export function HubLinks({
                 关闭
               </button>
             </div>
+            {editorError && (
+              <p
+                ref={editorErrorElement}
+                className="form-error links-editor-error"
+                role="alert"
+                tabIndex={0}
+                aria-label="连接操作失败"
+              >
+                {editorError}
+              </p>
+            )}
             <label>
               连接名称
               <input
@@ -699,6 +922,7 @@ export function HubLinks({
                         browserLaunch?.id !== flow.authorization.id)
                     }
                     onRespond={(response) => {
+                      captureEditorOperation();
                       void controller.respond(response);
                     }}
                     onOpenUrl={(url) => {
@@ -1035,6 +1259,7 @@ export function HubLinks({
         <input
           type="search"
           aria-label="搜索 Link 服务"
+          ref={searchInput}
           placeholder="搜索服务"
           value={query}
           onChange={(event) => setQuery(event.target.value)}
@@ -1059,10 +1284,15 @@ export function HubLinks({
                   (snapshot?.capabilities.authorizationSteps !== 1 &&
                     !!(existing && !existing.editable))
                 }
-                onClick={() =>
+                ref={(node) => {
+                  if (node) addButtons.current.set(provider.id, node);
+                  else addButtons.current.delete(provider.id);
+                }}
+                onClick={(event) =>
                   openEditor(
                     provider,
                     snapshot?.capabilities.authorizationSteps === 1 ? undefined : existing,
+                    event.currentTarget,
                   )
                 }
               >

@@ -50,7 +50,7 @@ The initial blockers below are retained as resolved verification history.
 
 Current integration worktree:
 `/Users/admin/.codex/worktrees/ui-task-center-20261015/codeshell`, branch
-`codex/integration/ui-review-wave8-20261016`. Other work advanced remote main to
+`codex/integration/ui-review-wave9-20261016`. Other work advanced remote main to
 `0.9.44`; this branch merged `976a79322` and `bb7a9b59a`, preserving the incoming model-capability,
 forwarding and Figma updates. The CSS merge preserves both context-selection and
 file-action styles. Do not revert incoming work or republish another version on
@@ -699,6 +699,61 @@ combined production fixture passed all 136 observations. Logs are retained at
 The native TrustGate, PermissionPill and ModelPill receipts described above
 cover the same final product blobs. Fresh origin remains UI7 `756d5710f` before
 UI8 delivery; preserve the other task's primary checkout unchanged.
+
+UI8 is delivered as `ec4ebb25ce792bed605cae92cc026f81458ca915`; remote CI
+`38836413403` is running. Its clean integration branch remains until success.
+
+UI9 source integration includes Link management `fb4f3c52a` / `a15c2efd7`,
+ProjectPicker `b1d3bed06`, Devices `577a997a7`, and responsive sidebar ownership
+`ac8b1b207`, `b1e563783`, `d53493441`, `8e3101930`, `78c4d0e33`.
+Each source tree normally merged UI8 and retained its own product blobs. Link
+production/development fixtures passed 27 observations each, including exact
+synthetic requests, full errors and external handoffs. ProjectPicker production,
+development and native tests passed 16 layouts/102 observations each; native
+wheel moves cross real rows, six live resizes preserve focused actions, and
+16 full-frame capturePage screenshots have strict CSS viewport/DPR dimensions.
+Desktop/mobile types, renderer build, guarded 35 tests/132 assertions and
+independent review passed for that source. No native window remains open.
+Root's original Devices production/development 18-case matrix passed; strict
+UI7 baseline reproduces the clipped/offscreen error. The expanded owned-HTTP
+matrix retains current-device/logout/401 effects after closing, and checks late
+rejections, handoffs, duplicates, unmount, real wheel/full glyphs and live resize.
+Its final fixture and the independently reviewed StrictMode navigation-prompt
+follow-up are being frozen before the combined Web gates. Do not treat these
+pending final gates as delivered.
+
+UI9 final combined source is frozen. Prompt product `013daaeb3` and fixture
+`1df0d29dc` preserve actual opener ownership across StrictMode; the unchanged
+UI8 baseline returns BODY, while final production/development each pass all
+58 observations. Devices fixture `3467f264e` passes all 30 observations in
+production and development on the combined Workbench, with exact API requests
+and authentication effects. Independent final Workbench review confirms both
+Devices handoff and Sidebar/Prompt changes coexist; UI8 History remains intact.
+The first combined unit run exposed 13 legacy handler tests that supplied no
+event. Test-only `3ae93a5d1` supplies a native button currentTarget without
+changing authorization or API assertions. Those 13 tests/90 assertions and the
+full rerun pass. Preserve the initial failure log for provenance.
+
+Final UI9 gates passed: 3399 guarded tests/12603 assertions across 372 files
+(one separately browser-covered skip), all 14 workspace types, complete Desktop
+build, lint (zero errors, 104 existing warnings), all 36 Desktop browser fixtures
+in one invocation, and all 11 Web browser commands. Final production Sidebar
+passed 58 observations (`H281US`), Devices 30 (`3RFOxl`); independent combined
+development passed Sidebar 58 (`11ZWrq`) and Devices 30 (`eXGqwv`). Scoped
+formatting, workflow paths and diff checks passed. Logs are retained at
+`/tmp/codeshell-ui-wave9-{typecheck,lint,desktop-build-final,unit-final,overlays,web-*,sidebar-development,devices-development}.log`.
+UI9 is ready for fresh-main delivery and remote CI verification.
+
+UI9 is delivered as `b251305d7a4dab244e1f299f89266fb35bddb8f0`, confirmed
+by remote main. CI `38839123528` is running. UI8 CI `38836413403` completed
+11 successful jobs and one failed Desktop job: its unit shard and all 35 Desktop
+browser fixtures passed, then History's hardcoded macOS Chrome executable
+prevented browser launch on Linux. No History assertions executed in that CI
+step. The failure log is `/tmp/codeshell-ui-wave8-ci-failure.log`. A test-only
+follow-up selects `CODESHELL_TEST_CHROMIUM` first, macOS Chrome only on Darwin,
+and Playwright's locked default otherwise. All UI9 product blobs and strong
+browser assertions remain frozen. Verify the follow-up's actual Linux run;
+do not report either earlier workflow as successful.
 
 UI8 is isolated while UI7 gates finish. History's actual Workbench audit found
 offscreen archive failures and late rename completions stealing external focus;

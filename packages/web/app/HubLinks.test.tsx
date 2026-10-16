@@ -44,7 +44,9 @@ function input(tree: React.ReactNode, type: "name" | "token"): Element {
 async function click(element: Element) {
   expect(element.props.disabled).not.toBe(true);
   await act(async () => {
-    element.props.onClick();
+    // These handler-level API contracts still need the native event target.
+    // Actual opener ownership and focus are covered by test-links-browser.mjs.
+    element.props.onClick({ currentTarget: document.createElement("button") });
     await flushMicrotasks();
   });
 }
