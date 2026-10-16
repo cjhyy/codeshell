@@ -62,6 +62,7 @@ let fixture,
   keychainContext,
   processEvidence,
   nativeCalls,
+  explicitCheckDeadline,
   closeFailed = false,
   mode = "404";
 const failures = [];
@@ -189,6 +190,10 @@ async function launch() {
   return { ...app.__packagedIdentity, startupPause: app.__startupPause };
 }
 async function check(feedMode, version) {
+  assert.ok(
+    Date.now() < explicitCheckDeadline,
+    "Explicit UI sequence must precede the real 30s background timer",
+  );
   assert.equal(pending.length, 0, "No background request may overlap the explicit UI check");
   mode = feedMode;
   await win.evaluate(() => {
@@ -222,6 +227,10 @@ async function check(feedMode, version) {
   await until(
     async () => (await checkButton.getAttribute("aria-busy")) !== "true",
     "actual updater IPC settled",
+  );
+  assert.ok(
+    Date.now() < explicitCheckDeadline,
+    "Explicit UI sequence exceeded its pre-background timer budget",
   );
   const finalNative = await win.evaluate(() => window.codeshell.getUpdaterStatus());
   const events = await win.evaluate(() => window.__ownedUpdaterEvents);
@@ -271,8 +280,11 @@ try {
     requireWorkerEvidence: false,
   });
   fixture.env.CODESHELL_UPDATE_FEED = origin;
+  // Keep the production 30s timer unchanged. All ten actual UI checks share
+  // one Main and must finish in 20s from launch, before it can fire.
+  explicitCheckDeadline = Date.now() + 20_000;
+  const identity = await launch();
   for (const feedMode of ["404", "401", "403", "500", "yaml"]) {
-    const identity = await launch();
     const result = await check(feedMode, identity.version);
     await win.screenshot({ path: join(evidence, `updater-${feedMode}-result.png`) });
     const retry = await check("healthy", identity.version);
@@ -282,8 +294,8 @@ try {
     for (const item of [result, retry])
       for (const problem of item.problems)
         failures.push(new Error(`${feedMode}/${item.feedMode}: ${problem}`));
-    await closeApp();
   }
+  await closeApp();
   assert.equal(
     requests.length,
     10,
