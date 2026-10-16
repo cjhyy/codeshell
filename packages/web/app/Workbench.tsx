@@ -5,7 +5,7 @@ import { CloudAccountControls, type CloudAccountControlsProps } from "./CloudAcc
 import { HubSettings, type HubSettingsSection } from "./HubSettings.js";
 import { HubFiles } from "./HubFiles.js";
 import { HubModelTraces } from "./HubModelTraces.js";
-import { HubSessions } from "./HubSessions.js";
+import { HubSessions, useHistoryActionFocus } from "./HubSessions.js";
 import { HubLinks } from "./HubLinks.js";
 import { HubPanels } from "./HubPanels.js";
 import { PanelHost } from "./PanelHost.js";
@@ -94,6 +94,12 @@ export function Workbench({
   const hub = controller.workspaceApi;
   const hostLabel = controller.host === "desktop" ? "桌面" : "服务端";
   const [devicesOpen, setDevicesOpen] = React.useState(false);
+  const historyFocus = useHistoryActionFocus();
+  const historyHandoff = React.useRef<{
+    request: ReturnType<typeof historyFocus.capture>;
+    id: string;
+    workspace: string;
+  } | null>(null);
   const fileInput = React.useRef<HTMLInputElement>(null);
   const cameraInput = React.useRef<HTMLInputElement>(null);
   const [view, setView] = React.useState<
@@ -145,6 +151,17 @@ export function Workbench({
     active: view === "chat",
     approvalCount: controller.approvals.length,
   });
+  React.useLayoutEffect(() => {
+    const handoff = historyHandoff.current;
+    if (!handoff) return;
+    if (view !== "chat" || narrow || handoff.workspace !== controller.workspaceKey) {
+      historyHandoff.current = null;
+      historyFocus.finish(handoff.request, null);
+    } else if (activeId === handoff.id) {
+      historyHandoff.current = null;
+      historyFocus.finish(handoff.request, latest.listRef.current);
+    }
+  }, [activeId, controller.workspaceKey, historyFocus, latest.listRef, narrow, view]);
   React.useEffect(() => {
     setOpenedPanel(undefined);
     setView((current) => (current === "panel" ? "panels" : current));
@@ -257,7 +274,19 @@ export function Workbench({
       latest.resume();
       action();
     });
-  const openSession = (id: string) => openConversation(() => void controller.selectSession(id));
+  const openSession = (id: string, intent?: ReturnType<typeof historyFocus.capture>) => {
+    if (historyHandoff.current) historyFocus.finish(historyHandoff.current.request, null);
+    historyHandoff.current = null;
+    // A keyboard-opened history row is removed by this navigation. Keep that
+    // actual intent through the selected-session commit, not later replay.
+    if (intent && !narrow)
+      historyHandoff.current = {
+        request: historyFocus.adopt(intent),
+        id,
+        workspace: controller.workspaceKey,
+      };
+    openConversation(() => void controller.selectSession(id));
+  };
   const startNewSession = () => openConversation(controller.newSession);
   const send = () => {
     if (controller.send()) latest.resume();
@@ -972,7 +1001,7 @@ export function Workbench({
           <HubSessions
             key={`${controller.workspaceKey}:history`}
             onAuthLost={onAuthLost}
-            onOpen={(id) => void openSession(id)}
+            onOpen={(id, intent) => void openSession(id, intent)}
             onChanged={() => void refreshSessions()}
             version={sessionsVersion}
             onDirtyChange={setNavigationDirty}

@@ -431,3 +431,27 @@
     gap: 6px;
   }
 }
+
+/* History operation feedback stays fully readable without displacing its controls. */
+.hub-sessions .session-operation-receipt,
+.hub-sessions .session-read-error,
+.hub-sessions .session-history-editor .library-error {
+  max-height: min(12rem, 30dvh);
+  min-width: 0;
+  overflow: auto;
+  overscroll-behavior: contain;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+.hub-sessions .session-operation-receipt {
+  flex-basis: 100%;
+  margin: 0;
+}
+.hub-sessions .session-history-row.has-feedback {
+  flex-wrap: wrap;
+}
+.hub-sessions .session-read-error:focus-visible,
+.hub-sessions .session-operation-receipt:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 3px;
+}

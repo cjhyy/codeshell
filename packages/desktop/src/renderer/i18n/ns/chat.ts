@@ -203,7 +203,7 @@ export const chat = {
       model: {
         select: "选择模型",
         currentLabel: "当前模型：{label}",
-        noModels: "settings.json 里还没声明 models",
+        noModels: "暂无可用模型，请在设置中检查模型连接",
         visionSupported: "支持图片输入",
       },
       mention: {
@@ -519,7 +519,7 @@ export const chat = {
       model: {
         select: "Select model",
         currentLabel: "Current model: {label}",
-        noModels: "No models declared in settings.json yet",
+        noModels: "No models available. Check model connections in Settings.",
         visionSupported: "Supports image input",
       },
       mention: {

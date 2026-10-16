@@ -1,7 +1,7 @@
 /* Actual ChatView model picker, production CSS, strict owned bridge and exact-origin guard.
  * --development exercises StrictMode effects; --source-desktop=PATH checks an old implementation.
  * Composition/window blur assertions cover DOM events, not OS IME or screen-reader speech. */
-/* global document, window, requestAnimationFrame, getComputedStyle, innerWidth, innerHeight, KeyboardEvent, Event */
+/* global document, window, requestAnimationFrame, getComputedStyle, innerWidth, innerHeight, devicePixelRatio, KeyboardEvent, Event */
 import assert from "node:assert/strict";
 import { createServer } from "node:http";
 import { createRequire } from "node:module";
@@ -126,7 +126,33 @@ if (native) {
 const onlyCase = process.argv.find((arg) => arg.startsWith("--case="))?.slice(7);
 const reports = [],
   errors = [],
-  blocked = [];
+  blocked = [],
+  captures = [];
+async function screenshot(page, file) {
+  if (!app) return page.screenshot({ path: file });
+  // Native zoom makes Playwright clip at the logical viewport. Capture the
+  // entire Electron content area and verify the actual PNG pixel dimensions.
+  const capture = await app.evaluate(async ({ BrowserWindow }) => {
+    const win = BrowserWindow.getAllWindows()[0];
+    const image = await win.webContents.capturePage();
+    return {
+      png: image.toPNG().toString("base64"),
+      bounds: win.getContentBounds(),
+      zoom: win.webContents.getZoomFactor(),
+    };
+  });
+  const viewport = await page.evaluate(() => ({
+    width: innerWidth,
+    height: innerHeight,
+    dpr: devicePixelRatio,
+  }));
+  const bitmap = Buffer.from(capture.png, "base64");
+  const pixels = { width: bitmap.readUInt32BE(16), height: bitmap.readUInt32BE(20) };
+  assert.equal(pixels.width, viewport.width * viewport.dpr);
+  assert.equal(pixels.height, viewport.height * viewport.dpr);
+  await writeFile(file, bitmap);
+  captures.push({ file, viewport, pixels, bounds: capture.bounds, zoom: capture.zoom });
+}
 const frames = (page) =>
   page.evaluate(
     () => new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve))),
@@ -443,7 +469,7 @@ try {
           needed,
           "Every non-whitespace provider/model glyph can be read by scrolling the actual popup",
         );
-        await page.screenshot({ path: path.join(output, `long-${width}-${lang}.png`) });
+        await screenshot(page, path.join(output, `long-${width}-${lang}.png`));
         await page.keyboard.press("Escape");
         await closed();
         assert.equal(await page.evaluate(() => window.calls.length), 0);
@@ -580,8 +606,7 @@ try {
   if (app) assert.deepEqual(await app.evaluate(() => globalThis.blocked), []);
   else await context.close();
 } catch (cause) {
-  if (currentPage)
-    await currentPage.screenshot({ path: path.join(output, "failure.png") }).catch(() => {});
+  if (currentPage) await screenshot(currentPage, path.join(output, "failure.png")).catch(() => {});
   throw cause;
 } finally {
   try {
@@ -601,6 +626,7 @@ try {
         native,
         development: process.argv.includes("--development"),
         reports,
+        captures,
         errors,
         blocked,
       },

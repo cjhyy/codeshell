@@ -50,7 +50,7 @@ The initial blockers below are retained as resolved verification history.
 
 Current integration worktree:
 `/Users/admin/.codex/worktrees/ui-task-center-20261015/codeshell`, branch
-`codex/integration/ui-review-wave7-20261015`. Other work advanced remote main to
+`codex/integration/ui-review-wave8-20261016`. Other work advanced remote main to
 `0.9.44`; this branch merged `976a79322` and `bb7a9b59a`, preserving the incoming model-capability,
 forwarding and Figma updates. The CSS merge preserves both context-selection and
 file-action styles. Do not revert incoming work or republish another version on
@@ -659,6 +659,46 @@ UI8 frozen source checkpoints now include TrustGate `ea92663db` and PermissionPi
 native tests passed actual 100/200% with complete capturePage screenshots and
 strict PNG dimensions; the earlier cropped Playwright screenshots remain only
 DOM/AX evidence. Root will apply the same capture correction to ModelPill in UI8.
+
+UI7 is now pushed and remote main confirmed at
+`756d5710f7a8899fd46772347d524d45bd7ed10e`. Remote CI `38775300622` is running;
+keep its clean integration branch until success. The watch log is
+`/tmp/codeshell-ui-wave7-ci.log`; verify the structured run conclusion if the
+watch process encounters a transient API error.
+
+UI8 integration currently contains TrustGate `658d9225e`, PermissionPill
+`d791df911` plus capture fixture `4bbd6dc69`, and the model empty hint
+`2cc74070e`. Both agent scopes normally merged UI7 main and reverified unchanged
+product/fixture blobs in production/development, types, renderer build and lint.
+Root ModelPill capture-only source `e26d21b5e` is also integrated: its complete
+native 24-observation run passed on the new hint source with six full-frame
+captures, strict PNG dimensions, zero errors and zero blocked requests.
+Evidence `codeshell-model-picker-FDUYMl` and
+`/tmp/codeshell-model-picker-native-capture-20261016.log`; Root inspected the
+complete 320x240 logical/200% capture (1280x960 PNG). Native window/server have
+closed and the slot is free. The Desktop public runner now includes 35 fixtures.
+History is integrated as `1f46c50b9`, `29ee3e5c4`, `0b1e41fe7`, `3d96bcbf4`
+and `bef12eab9`. Source production 32 layouts plus 104 behaviors, development
+104 behaviors, 18 guarded tests/118 assertions, Web types/build/lint/format and
+independent review passed. The actual Desktop version increment is represented
+in the fixture: successful restoration/open survives its own refresh, while
+user filter/workspace/navigation changes cancel stale intent. Pagination
+failure keeps records and exposes owned retry/error; title CAS, automatic title,
+archive/restore/export and genuine dirty-navigation confirmation are preserved.
+The scoped resize observer only scrolls the actual history pane for its focused
+descendant and consumes queued callbacks safely after unmount. The eighth Web
+browser command is registered in CI. Combined UI8 gates start on this source.
+
+UI7 remote CI `38775300622` finished successfully in all 12 jobs. Its clean
+merged integration branch was removed. UI8 final combined gates also passed:
+all 14 workspace types, full Desktop build, lint (zero errors, 104 existing
+warnings), 3399 guarded tests/12603 assertions, all 35 Desktop browser fixtures
+in one successful invocation, and all eight Web browser commands. History's
+combined production fixture passed all 136 observations. Logs are retained at
+`/tmp/codeshell-ui-wave8-{typecheck,lint,desktop-build,unit,overlays,web-*}.log`.
+The native TrustGate, PermissionPill and ModelPill receipts described above
+cover the same final product blobs. Fresh origin remains UI7 `756d5710f` before
+UI8 delivery; preserve the other task's primary checkout unchanged.
 
 UI8 is isolated while UI7 gates finish. History's actual Workbench audit found
 offscreen archive failures and late rename completions stealing external focus;
