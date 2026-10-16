@@ -737,6 +737,7 @@ export const extensions = {
           localOnly: "本地 Link",
           localOnlyHint: "凭据保存在此设备。登录 CodeShell 账号后可使用云端 Link。",
           manageConnection: "管理连接",
+          closeDialog: "关闭",
           advancedSettings: "高级设置",
           advancedHint: "其他连接方式适用于特定需求，授权与权限分别保存。",
           accountActions: "账号操作",
@@ -1962,6 +1963,7 @@ export const extensions = {
           localOnly: "Local Link",
           localOnlyHint: "Credentials stay on this device. Sign in to CodeShell to use cloud Link.",
           manageConnection: "Manage connection",
+          closeDialog: "Close",
           advancedSettings: "Advanced settings",
           advancedHint:
             "Alternative methods support specific needs. Authorizations and permissions are saved separately.",

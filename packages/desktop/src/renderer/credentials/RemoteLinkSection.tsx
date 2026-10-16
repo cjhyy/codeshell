@@ -190,12 +190,12 @@ export function RemoteProviderSection({
     } catch (cause) {
       if (alive.current) setError(linkError(cause));
     } finally {
-      if (alive.current) {
+      try {
+        // A submitted write may finish after its app dialog is closed.
         await reload();
-        if (alive.current) {
-          setBusy(false);
-          onChanged();
-        }
+      } finally {
+        if (alive.current) setBusy(false);
+        onChanged();
       }
     }
   };

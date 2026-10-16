@@ -85,14 +85,14 @@ export function FigmaConnectionCard({
     } catch (cause) {
       if (alive.current) setError(cause instanceof Error ? cause.message : String(cause));
     } finally {
-      if (alive.current) {
+      try {
+        // Keep the directory current even if a submitted write outlives its dialog.
         await reload();
-        if (alive.current) {
-          setBusy(false);
-          onChanged();
-        }
+      } finally {
+        if (alive.current) setBusy(false);
+        onChanged();
+        locked.current = false;
       }
-      locked.current = false;
     }
   };
   const connect = (connection?: MaskedLinkConnection) =>

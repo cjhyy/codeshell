@@ -56,6 +56,10 @@ export function LinkConnectionDialog({
   onConnected: (connection?: MaskedLinkConnection) => void;
 }) {
   const { t, lang } = useT();
+  const [returnFocus] = React.useState(() => {
+    const element = typeof document !== "undefined" ? document.activeElement : null;
+    return element && "focus" in element ? (element as HTMLElement) : null;
+  });
   const designContext = input.methodId === "mcp";
   const requestId = React.useRef<string | undefined>(undefined);
   const api = window.codeshell.links;
@@ -205,7 +209,14 @@ export function LinkConnectionDialog({
   );
   return (
     <Dialog open onOpenChange={(open) => !open && close()}>
-      <DialogContent className="link-authorization-dialog w-[calc(100%-2rem)] max-h-[calc(100vh-2rem)] max-w-[480px] gap-0 overflow-y-auto rounded-2xl p-0">
+      <DialogContent
+        className="link-authorization-dialog w-[calc(100%-2rem)] max-h-[calc(100vh-2rem)] max-w-[480px] gap-0 overflow-y-auto rounded-2xl p-0"
+        onCloseAutoFocus={(event) => {
+          if (!returnFocus?.isConnected) return;
+          event.preventDefault();
+          returnFocus.focus({ preventScroll: true });
+        }}
+      >
         <DialogHeader className="flex-row items-start gap-4 space-y-0 p-6 pr-12 text-left sm:text-left">
           <div
             className={cn(

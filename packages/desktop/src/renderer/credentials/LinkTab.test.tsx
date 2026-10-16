@@ -13,11 +13,32 @@ import type { CloudAccountApi, CloudAccountStatus } from "../../shared/cloud-acc
 
 // The mini-DOM cannot host Radix portals, so dialogs render inline (mirrors
 // PetLongTaskSection.test.tsx). Must run before LinkTab/DialogProvider load.
+const MockDialogContext = React.createContext(false);
 mock.module("@/components/ui/dialog", () => ({
-  Dialog: ({ open, children }: { open: boolean; children: React.ReactNode }) =>
-    open ? React.createElement("div", null, children) : null,
-  DialogContent: ({ children }: { children: React.ReactNode }) =>
-    React.createElement("div", null, children),
+  Dialog: ({
+    open,
+    onOpenChange: _onOpenChange,
+    children,
+  }: {
+    open: boolean;
+    onOpenChange?: (open: boolean) => void;
+    children: React.ReactNode;
+  }) => React.createElement(MockDialogContext.Provider, { value: open }, children),
+  DialogContent: ({
+    children,
+    forceMount: _forceMount,
+    showClose: _showClose,
+    onEscapeKeyDown: _onEscapeKeyDown,
+    onOpenAutoFocus: _onOpenAutoFocus,
+    onCloseAutoFocus: _onCloseAutoFocus,
+    ...props
+  }: {
+    children: React.ReactNode;
+    [key: string]: unknown;
+  }) =>
+    React.useContext(MockDialogContext)
+      ? React.createElement("div", { role: "dialog", ...props }, children)
+      : null,
   DialogHeader: ({ children }: { children: React.ReactNode }) =>
     React.createElement("div", null, children),
   DialogFooter: ({ children }: { children: React.ReactNode }) =>
@@ -273,20 +294,78 @@ function visibleElements(node: unknown, tagName: string): any[] {
   ];
 }
 
-async function expandProvider(container: HTMLElement, id: string) {
-  const card = findElements(container, "ARTICLE").find(
+function providerCard(container: HTMLElement, id: string) {
+  return findElements(container, "ARTICLE").find(
     (node) => reactPropsOf(node)["data-link-provider-card"] === id,
   );
+}
+
+function providerDialog(container: HTMLElement, id: string) {
+  return findElements(container, "DIV").find(
+    (node) => reactPropsOf(node)["data-link-provider-dialog"] === id,
+  );
+}
+
+async function expandProvider(container: HTMLElement, id: string) {
+  const card = providerCard(container, id);
   expect(card).toBeDefined();
   const toggle = findElements(card, "BUTTON").find(
-    (node) => reactPropsOf(node)["data-link-provider-toggle"] !== undefined,
+    (node) =>
+      reactPropsOf(node)["data-link-provider-toggle"] !== undefined ||
+      reactPropsOf(node)["data-link-primary-connect"] === id,
   );
-  if (!reactPropsOf(toggle)["aria-expanded"])
+  expect(reactPropsOf(toggle)["aria-haspopup"]).toBe("dialog");
+  if (reactPropsOf(toggle)["data-state"] !== "open")
     await act(async () => {
       reactPropsOf(toggle).onClick();
       await flushMicrotasks();
     });
-  return card;
+  const dialog = providerDialog(container, id);
+  expect(dialog).toBeDefined();
+  expect(reactPropsOf(dialog).role).toBe("dialog");
+  return dialog;
+}
+
+async function showAdvanced(dialog: HTMLElement, id: string) {
+  const control = findElements(dialog, "BUTTON").find(
+    (node) => reactPropsOf(node)["data-link-advanced-toggle"] === id,
+  );
+  expect(control).toBeDefined();
+  if (!reactPropsOf(control)["aria-expanded"])
+    await act(async () => {
+      reactPropsOf(control).onClick();
+      await flushMicrotasks();
+    });
+}
+
+async function connectFromDialog(container: HTMLElement, id: string) {
+  const dialog = providerDialog(container, id);
+  const connect = visibleElements(dialog, "BUTTON").find(
+    (node) => reactPropsOf(node)["data-link-dialog-connect"] === id,
+  );
+  expect(connect).toBeDefined();
+  expect(reactPropsOf(connect).disabled).not.toBe(true);
+  await act(async () => {
+    reactPropsOf(connect).onClick();
+    await flushMicrotasks();
+    await flushMicrotasks();
+  });
+  return dialog;
+}
+
+async function closeProviderDialog(container: HTMLElement, id: string) {
+  const dialog = providerDialog(container, id);
+  expect(dialog).toBeDefined();
+  const close = findElements(dialog, "BUTTON").find(
+    (node) => reactPropsOf(node)["data-link-dialog-close"] === id,
+  );
+  expect(close).toBeDefined();
+  await act(async () => {
+    reactPropsOf(close).onClick();
+    await flushMicrotasks();
+    await flushMicrotasks();
+  });
+  expect(providerDialog(container, id)).toBeUndefined();
 }
 function providerCards(container: HTMLElement) {
   return visibleElements(container, "ARTICLE").filter(
@@ -731,12 +810,14 @@ describe("CodeShell account access to Link", () => {
       (node) => reactPropsOf(node)["data-link-primary-connect"] === "github",
     );
     expect(reactChildText(reactPropsOf(connect).children)).toBe("本地连接 GitHub");
-    expect(reactPropsOf(connect).disabled).toBe(false);
+    expect(reactPropsOf(connect).disabled).not.toBe(true);
     await act(async () => {
       reactPropsOf(connect).onClick();
       await flushMicrotasks();
       await flushMicrotasks();
     });
+    expect(starts).toHaveLength(0);
+    await connectFromDialog(container, "github");
     expect(starts).toHaveLength(1);
     expect(starts[0]!.slice(2)).toEqual([
       {
@@ -919,6 +1000,7 @@ describe("Link directory loading presentation", () => {
         (node) => reactPropsOf(node)["data-link-loading"] !== undefined,
       ),
     ).toHaveLength(0);
+    await expandProvider(container, "github");
     expect(
       findElements(container, "DIV").some(
         (node) => reactPropsOf(node)["data-link-liveness-state"] === "checking",
@@ -1020,7 +1102,7 @@ describe("Link directory loading presentation", () => {
 });
 
 describe("LinkTab integrations", () => {
-  test("renders one shared provider entry with collapsed connection management and keeps search/filter", async () => {
+  test("opens app management in a dialog without widening directory cards and keeps search/filter", async () => {
     const credentials: MaskedCredentialView[] = [
       {
         id: "saved-github",
@@ -1060,21 +1142,33 @@ describe("LinkTab integrations", () => {
       ),
     ).toBe(false);
     expect(
-      findElements(container, "DIV")
-        .filter((node) => reactPropsOf(node)["data-link-provider-details"])
-        .every((node) => reactPropsOf(node).hidden),
-    ).toBe(true);
+      findElements(container, "DIV").filter(
+        (node) => reactPropsOf(node)["data-link-provider-details"],
+      ),
+    ).toHaveLength(0);
+    const directoryCard = providerCard(container, "figma");
+    const originalClass = reactPropsOf(directoryCard).className;
     const figma = await expandProvider(container, "figma");
-    expect(reactPropsOf(figma).className).toContain("col-span-full");
+    expect(reactPropsOf(directoryCard).className).toBe(originalClass);
+    expect(reactPropsOf(directoryCard).className).not.toContain("col-span-full");
+    expect(
+      findElements(directoryCard, "DIV").some(
+        (node) => reactPropsOf(node)["data-link-provider-details"] === "figma",
+      ),
+    ).toBe(false);
     expect(
       findElements(container, "SVG").some(
         (node) => reactPropsOf(node)["data-link-service-icon"] === "gitlab",
       ),
     ).toBe(true);
     const github = await expandProvider(container, "github");
-    expect(reactPropsOf(github).className).toContain("col-span-full");
+    expect(reactPropsOf(github).role).toBe("dialog");
+    expect(reactPropsOf(providerCard(container, "github")).className).not.toContain(
+      "col-span-full",
+    );
     expect(methodRows(container, "figma", "server")).toHaveLength(1);
     expect(reactChildText(reactPropsOf(figma).children)).not.toContain("即将开放");
+    await showAdvanced(figma, "figma");
     expect(buttonWithLabel(figma, "连接设计上下文")).toBeDefined();
     await act(async () => {
       reactPropsOf(buttonWithLabel(container, "已连接")).onClick();
@@ -1112,6 +1206,7 @@ describe("LinkTab integrations", () => {
   test("partial remote catalogs never duplicate providers or render coming-soon account fallbacks", async () => {
     const container = await renderProjectedCatalog(await projectedCatalog(["github"]));
     expect(providerCards(container)).toHaveLength(10);
+    await expandProvider(container, "github");
     expect(methodRows(container, "github", "server")).toHaveLength(1);
     expect(
       providerCards(container).every(
@@ -1154,7 +1249,7 @@ describe("LinkTab integrations", () => {
       (node) => reactPropsOf(node)["data-link-primary-connect"] === "figma",
     );
     expect(primary).toHaveLength(1);
-    expect(reactPropsOf(primary[0]).disabled).toBe(false);
+    expect(reactPropsOf(primary[0]).disabled).not.toBe(true);
     expect(visibleElements(card, "SECTION")).toHaveLength(0);
     expect(
       visibleElements(card, "BUTTON").map((node) => reactChildText(reactPropsOf(node).children)),
@@ -1169,27 +1264,35 @@ describe("LinkTab integrations", () => {
       authorizationCancel: mutation,
       remoteDisconnect: mutation,
     });
-    await expandProvider(container, "figma");
+    const dialog = await expandProvider(container, "figma");
     const visibleOptions = () =>
-      visibleElements(card, "DIV")
+      visibleElements(dialog, "DIV")
         .filter((node) => reactPropsOf(node)["data-link-option"])
         .map((node) => reactPropsOf(node)["data-link-option"]);
+    expect(visibleOptions()).toEqual(["remote-link"]);
+    expect(
+      visibleElements(dialog, "SECTION").filter(
+        (node) => reactPropsOf(node)["data-link-runtime"] === "local",
+      ),
+    ).toHaveLength(0);
+    expect(mutations).toHaveLength(0);
+    await showAdvanced(dialog, "figma");
     expect(visibleOptions()).toEqual(
       expect.arrayContaining(["remote-link", "mcp-oauth", "method:personal-access-token:new"]),
     );
     expect(
-      visibleElements(card, "SECTION").filter(
+      visibleElements(dialog, "SECTION").filter(
         (node) => reactPropsOf(node)["data-link-runtime"] === "local",
       ),
     ).toHaveLength(1);
     expect(
-      visibleElements(card, "BUTTON").some(
+      visibleElements(dialog, "BUTTON").some(
         (node) => reactChildText(reactPropsOf(node).children) === "连接设计上下文",
       ),
     ).toBe(true);
     await act(async () => {
       reactPropsOf(
-        findElements(card, "BUTTON").find(
+        findElements(dialog, "BUTTON").find(
           (node) => reactPropsOf(node)["data-link-advanced-toggle"] === "figma",
         ),
       ).onClick();
@@ -1241,7 +1344,9 @@ describe("LinkTab integrations", () => {
       visibleElements(card, "SPAN").map((node) => reactChildText(reactPropsOf(node).children)),
     ).toContain("已连接");
     expect(
-      findElements(card, "SPAN").map((node) => reactChildText(reactPropsOf(node).children)),
+      findElements(providerCard(container, "figma"), "SPAN").map((node) =>
+        reactChildText(reactPropsOf(node).children),
+      ),
     ).toContain("API owner · MCP owner · 2 个连接");
     expect(
       visibleElements(card, "ARTICLE").map((node) => reactPropsOf(node)["data-remote-link"]),
@@ -1360,23 +1465,22 @@ describe("LinkTab integrations", () => {
       const card = providerCards(container).find(
         (node) => reactPropsOf(node)["data-link-provider-card"] === "figma",
       );
-      const details = findElements(card, "DIV").find(
-        (node) => reactPropsOf(node)["data-link-provider-details"] === "figma",
-      );
-      expect(reactPropsOf(details).hidden).toBe(true);
+      expect(providerDialog(container, "figma")).toBeUndefined();
       const connect = visibleElements(card, "BUTTON").find(
         (node) => reactPropsOf(node)["data-link-primary-connect"] === "figma",
       );
-      expect(reactPropsOf(connect).disabled).toBe(false);
+      expect(reactPropsOf(connect).disabled).not.toBe(true);
       await act(async () => {
         reactPropsOf(connect).onClick();
         await flushMicrotasks();
         await flushMicrotasks();
         await flushMicrotasks();
       });
-      expect(reactPropsOf(details).hidden).toBe(false);
+      expect(reads).toBe(0);
+      expect(starts).toBe(0);
+      const dialog = await connectFromDialog(container, "figma");
       expect(
-        visibleElements(card, "P")
+        visibleElements(dialog, "P")
           .filter((node) => reactPropsOf(node).role === "alert")
           .map((node) => reactChildText(reactPropsOf(node).children))
           .join(" "),
@@ -1389,6 +1493,7 @@ describe("LinkTab integrations", () => {
       expect(current.connections).toEqual(
         failure === "changed" ? [oldAccount, appearedAccount] : [oldAccount],
       );
+      await expandProvider(container, "github");
       expect(
         findElements(container, "ARTICLE").some(
           (node) => reactPropsOf(node)["data-remote-link"] === oldAccount.id,
@@ -1396,7 +1501,7 @@ describe("LinkTab integrations", () => {
       ).toBe(true);
       if (failure === "changed")
         expect(
-          findElements(card, "DIV").some(
+          findElements(dialog, "DIV").some(
             (node) => reactPropsOf(node)["data-figma-mcp-connection"] === appearedAccount.id,
           ),
         ).toBe(true);
@@ -1435,6 +1540,8 @@ describe("LinkTab integrations", () => {
         (card) => reactPropsOf(card)["data-link-provider-card"] === "figma",
       ),
     ).toHaveLength(1);
+    const dialog = await expandProvider(container, "figma");
+    await showAdvanced(dialog, "figma");
     expect(methodRows(container, "figma", "server")).toHaveLength(3);
     expect(
       methodRows(container, "figma").some((row) =>
@@ -1722,13 +1829,13 @@ describe("LinkTab integrations", () => {
       }),
     );
     const container = await renderProjectedCatalog(await projectedCatalog([]), credentials);
+    const card = await expandProvider(container, "github");
     expect(methodRows(container, "github", "local")).toHaveLength(2);
     expect(
       providerCards(container).filter(
         (card) => reactPropsOf(card)["data-link-provider-card"] === "github",
       ),
     ).toHaveLength(1);
-    const card = await expandProvider(container, "github");
     const advanced = findElements(card, "BUTTON").find(
       (node) => reactPropsOf(node)["data-link-advanced-toggle"] === "github",
     );
@@ -1742,10 +1849,10 @@ describe("LinkTab integrations", () => {
     ).toEqual([["Account first"], ["Account second"]]);
   });
 
-  test("starts remote authorization directly and confirms the saved connection through status", async () => {
+  test("starts remote authorization only in the app dialog, preserves it across filters, and cancels on close", async () => {
     ensureMiniDom();
     const calls: unknown[] = [];
-    let cancellations = 0;
+    const cancellations: string[] = [];
     let disconnections = 0;
     const opened: unknown[][] = [];
     let connected = false;
@@ -1810,8 +1917,8 @@ describe("LinkTab integrations", () => {
           },
           authorizationGet: async () =>
             connected ? { ...pending, state: "connected", step: undefined, connection } : pending,
-          authorizationCancel: async () => {
-            cancellations++;
+          authorizationCancel: async (_cwd: string, id: string) => {
+            cancellations.push(id);
           },
           remoteDisconnect: async () => {
             disconnections++;
@@ -1838,14 +1945,8 @@ describe("LinkTab integrations", () => {
     expect(github).toHaveLength(1);
     expect(findElements(github[0], "INPUT")).toHaveLength(0);
     expect(reactChildText(reactPropsOf(github[0]).children)).not.toContain("private-link.example");
-    await act(async () => {
-      reactPropsOf(
-        findElements(card, "BUTTON").find(
-          (node) => reactPropsOf(node)["data-link-primary-connect"] === "github",
-        ),
-      ).onClick();
-      await flushMicrotasks();
-    });
+    expect(calls).toHaveLength(0);
+    await connectFromDialog(container, "github");
     expect(calls).toHaveLength(1);
     expect((calls[0] as unknown[]).slice(2)).toEqual([
       { providerId: "github", methodId: "remote-link", label: "GitHub", expectedRevision: null },
@@ -1860,10 +1961,7 @@ describe("LinkTab integrations", () => {
     const advanced = findElements(card, "BUTTON").find(
       (node) => reactPropsOf(node)["data-link-advanced-toggle"] === "github",
     );
-    const toggle = findElements(card, "BUTTON").find(
-      (node) => reactPropsOf(node)["data-link-provider-toggle"] !== undefined,
-    );
-    for (const control of [advanced, advanced, toggle, toggle]) {
+    for (const control of [advanced, advanced]) {
       await act(async () => {
         reactPropsOf(control).onClick();
         await flushMicrotasks();
@@ -1879,31 +1977,50 @@ describe("LinkTab integrations", () => {
         await flushMicrotasks();
       });
       expect(authorizationStep()).toBe(originalStep);
-      expect(providerCards(container).some((node) => node === card)).toBe(!query);
+      expect(
+        providerCards(container).some(
+          (node) => reactPropsOf(node)["data-link-provider-card"] === "github",
+        ),
+      ).toBe(!query);
     }
     expect(calls).toHaveLength(1);
-    expect(cancellations).toBe(0);
+    expect(cancellations).toHaveLength(0);
     expect(disconnections).toBe(0);
-    // Reopening continues the Host-owned attempt instead of starting another authorization.
+    // Continuing in the system browser uses the same Host-owned attempt.
     expect(opened).toHaveLength(0);
     await act(async () => {
       reactPropsOf(buttonWithLabel(container, "在系统浏览器中继续授权 ↗")).onClick();
       await flushMicrotasks();
     });
     expect(opened).toEqual([["/repo", "native-attempt"]]);
+    await closeProviderDialog(container, "github");
+    expect(authorizationStep()).toBeUndefined();
+    expect(cancellations).toContain("native-attempt");
+    const cancelledCount = cancellations.length;
+    expect(disconnections).toBe(0);
+    expect(calls).toHaveLength(1);
+    await expandProvider(container, "github");
+    expect(calls).toHaveLength(1);
+    expect(authorizationStep()).toBeUndefined();
+    await connectFromDialog(container, "github");
+    expect(calls).toHaveLength(2);
+    expect(authorizationStep()).toBeDefined();
     await act(async () => {
       reactPropsOf(buttonWithLabel(container, "已连接")).onClick();
       await flushMicrotasks();
     });
-    expect(cancellations).toBe(0);
+    expect(cancellations).toHaveLength(cancelledCount);
     await act(async () => {
       connected = true;
       await new Promise((resolve) => setTimeout(resolve, 2_100));
       await flushMicrotasks();
     });
-    expect(buttonWithLabel(container, "完成")).toBeDefined();
+    const authorizationDialog = findElements(container, "DIV").find((node) =>
+      reactPropsOf(node).className?.includes("link-authorization-dialog"),
+    );
+    expect(buttonWithLabel(authorizationDialog, "完成")).toBeDefined();
     await act(async () => {
-      reactPropsOf(buttonWithLabel(container, "完成")).onClick();
+      reactPropsOf(buttonWithLabel(authorizationDialog, "完成")).onClick();
       await flushMicrotasks();
     });
     expect(buttonWithLabel(container, "添加账号")).toBeDefined();
@@ -2130,6 +2247,7 @@ describe("LinkTab integrations", () => {
         await flushMicrotasks();
       });
 
+      await expandProvider(container, "github");
       const github = findElements(container, "SECTION").find(
         (card) =>
           reactPropsOf(card)["data-link-method-provider"] === "github" &&
@@ -2282,6 +2400,7 @@ describe("LinkTab integrations", () => {
       await flushMicrotasks();
     });
 
+    await expandProvider(container, "github");
     const githubCards = methodRows(container, "github").filter(
       (article) => reactPropsOf(article)["data-link-method-provider"] === "github",
     );
@@ -2477,6 +2596,7 @@ describe("LinkTab integrations", () => {
       await flushMicrotasks();
       await flushMicrotasks();
     });
+    await expandProvider(container, "github");
     const github = findElements(container, "SECTION").find(
       (card) =>
         reactPropsOf(card)["data-link-method-provider"] === "github" &&
@@ -2570,6 +2690,7 @@ describe("LinkTab integrations", () => {
       await flushMicrotasks();
       await flushMicrotasks();
     });
+    await expandProvider(container, "github");
     const github = findElements(container, "SECTION").find(
       (card) =>
         reactPropsOf(card)["data-link-method-provider"] === "github" &&
@@ -2594,7 +2715,11 @@ describe("LinkTab integrations", () => {
       await flushMicrotasks();
     });
     expect(cancellations).toContain("late-attempt");
-    expect(buttonWithLabel(container, "完成")).toBeUndefined();
+    expect(
+      findElements(container, "DIV").some((node) =>
+        reactPropsOf(node).className?.includes("link-authorization-dialog"),
+      ),
+    ).toBe(false);
     expect(
       findElements(container, "INPUT").some((input) => reactPropsOf(input).name === "token"),
     ).toBe(false);
@@ -3018,6 +3143,8 @@ describe("LinkTab integrations", () => {
         await flushMicrotasks();
       });
 
+      const dialog = await expandProvider(container, "figma");
+      await showAdvanced(dialog, "figma");
       expect(
         methodRows(container, "figma").filter((row) =>
           reactChildText(reactPropsOf(row).children).includes("Figma OAuth"),
@@ -3109,6 +3236,7 @@ describe("LinkTab integrations", () => {
     // The card must probe on entry, without the connect dialog being opened.
     expect(cliStatusCalls).toBe(1);
 
+    await expandProvider(container, "github");
     const github = findElements(container, "SECTION").find(
       (card) =>
         reactPropsOf(card)["data-link-method-provider"] === "github" &&
@@ -3169,6 +3297,7 @@ describe("LinkTab integrations", () => {
       await flushMicrotasks();
     });
 
+    await expandProvider(container, "github");
     const github = findElements(container, "SECTION").find(
       (card) =>
         reactPropsOf(card)["data-link-method-provider"] === "github" &&
@@ -3195,6 +3324,7 @@ describe("Link metadata request lifecycle", () => {
   test("one provider probe compares each CLI binding's own stable account ID", async () => {
     const credentials = [cliBinding("first", "42"), cliBinding("second", "99")];
     const f = await connectionStatusFixture({ credentials });
+    await expandProvider(f.container, "github");
     const rows = methodRows(f.container, "github", "local");
     expect(rows).toHaveLength(2);
     expect(
@@ -3234,7 +3364,9 @@ describe("Link metadata request lifecycle", () => {
     const f = await connectionStatusFixture({ connections });
     const card = await expandProvider(f.container, "github");
     expect(
-      findElements(card, "SPAN").map((node) => reactChildText(reactPropsOf(node).children)),
+      findElements(providerCard(f.container, "github"), "SPAN").map((node) =>
+        reactChildText(reactPropsOf(node).children),
+      ),
     ).toContain("cjhyy · 3 个连接");
     const remoteAccounts = findElements(card, "ARTICLE").filter(
       (node) => reactPropsOf(node)["data-remote-link"],
@@ -3379,6 +3511,8 @@ describe("Link metadata request lifecycle", () => {
       await action;
       return {} as never;
     };
+    const dialog = await expandProvider(f.container, "github");
+    await showAdvanced(dialog, "github");
     const row = methodRows(f.container, "github", "server").find((node) =>
       findElements(node, "DIV").some(
         (item) => reactChildText(reactPropsOf(item).children) === "Saved OAuth",
@@ -3498,6 +3632,133 @@ describe("Link metadata request lifecycle", () => {
     expect(reactChildText(reactPropsOf(card).children)).toContain("second-account");
     expect(reactChildText(reactPropsOf(card).children)).not.toContain("first-account");
   });
+});
+
+describe("Link app dialog mutation lifecycle", () => {
+  test.each(["remote-disconnect", "figma-refresh"] as const)(
+    "%s refreshes the parent directory when a submitted operation finishes after its app dialog closes",
+    async (operation) => {
+      const providerId = operation === "remote-disconnect" ? "github" : "figma";
+      const providers = await projectedCatalog([providerId]);
+      if (providerId === "figma")
+        providers
+          .find((provider) => provider.id === "figma")!
+          .authModes!.push({
+            id: "mcp-oauth",
+            methodId: "mcp",
+            kind: "redirect",
+            label: "MCP",
+            available: true,
+          });
+      const connection: LinkSnapshot["connections"][number] = {
+        id: "saved-account",
+        providerId,
+        methodId: providerId === "figma" ? "mcp" : "remote-link",
+        runtime: providerId === "figma" ? "local" : "server",
+        authSource: providerId === "figma" ? "mcp-oauth" : "remote-link",
+        label: "Saved account",
+        account: { id: "saved-owner", label: "Account before", resources: [] },
+        status: "connected",
+        capabilityIds: [],
+        revision: "before",
+        scope: "user",
+        editable: true,
+      };
+      const container = await renderProjectedCatalog(providers, [], [connection]);
+      const initial = await window.codeshell.links.remoteSnapshot("/fixture");
+      let live = initial;
+      const submitted = deferred<void>();
+      const calls = { snapshots: 0, credentials: 0, starts: 0, cancellations: 0 };
+      const disconnects: unknown[][] = [];
+      const refreshes: string[] = [];
+      Object.assign(window.codeshell.credentials, {
+        list: async () => {
+          calls.credentials++;
+          return [];
+        },
+      });
+      Object.assign(window.codeshell.links, {
+        remoteSnapshot: async () => {
+          calls.snapshots++;
+          return live;
+        },
+        remoteDisconnect: async (...args: unknown[]) => {
+          disconnects.push(args);
+          await submitted.promise;
+          live = { ...initial, connections: [] };
+        },
+        authorizationStart: async () => {
+          calls.starts++;
+          throw new Error("A completed account mutation must not start authorization");
+        },
+        authorizationCancel: async () => {
+          calls.cancellations++;
+        },
+      });
+      Object.assign(window.codeshell, {
+        mcpOAuth: {
+          refresh: async (id: string) => {
+            refreshes.push(id);
+            await submitted.promise;
+            live = {
+              ...initial,
+              connections: [
+                {
+                  ...connection,
+                  revision: "after",
+                  account: { ...connection.account!, label: "Account after" },
+                },
+              ],
+            };
+            return {};
+          },
+        },
+      });
+      const summary = () =>
+        findElements(providerCard(container, providerId), "SPAN")
+          .map((node) => reactChildText(reactPropsOf(node).children))
+          .join(" ");
+      expect(summary()).toContain("Account before");
+      const dialog = await expandProvider(container, providerId);
+      if (providerId === "figma") await showAdvanced(dialog, providerId);
+      await act(async () => {
+        reactPropsOf(buttonWithAriaLabel(dialog, "账号操作")).onClick();
+        await flushMicrotasks();
+      });
+      await act(async () => {
+        reactPropsOf(
+          buttonWithLabel(dialog, operation === "remote-disconnect" ? "断开" : "刷新授权"),
+        ).onClick();
+        await flushMicrotasks();
+        await flushMicrotasks();
+      });
+      if (operation === "remote-disconnect")
+        await act(async () => {
+          reactPropsOf(buttonWithLabel(dialog, "确认断开")).onClick();
+          await flushMicrotasks();
+        });
+      expect(disconnects).toEqual(
+        operation === "remote-disconnect" ? [["/fixture", "saved-account", "before"]] : [],
+      );
+      expect(refreshes).toEqual(operation === "figma-refresh" ? ["saved-account"] : []);
+      expect(calls.credentials).toBe(0);
+      await closeProviderDialog(container, providerId);
+      expect(summary()).toContain("Account before");
+      await act(async () => {
+        submitted.resolve();
+        await flushMicrotasks();
+        await flushMicrotasks();
+      });
+      expect(calls.snapshots).toBe(operation === "figma-refresh" ? 2 : 1);
+      expect(calls.credentials).toBe(1);
+      expect(calls.starts).toBe(0);
+      expect(calls.cancellations).toBe(0);
+      expect(providerDialog(container, providerId)).toBeUndefined();
+      expect(summary()).not.toContain("Account before");
+      if (operation === "figma-refresh") expect(summary()).toContain("Account after");
+      else expect(summary()).toContain("未连接");
+    },
+  );
 });
 
 describe("reviewed Link authorization failures", () => {
@@ -3702,6 +3963,7 @@ describe("unified Figma connection card", () => {
       root!.render(<Host />);
       await flushMicrotasks();
     });
+    await expandProvider(container, "figma");
     const click = async (label: string) => {
       const channel = [
         ...findElements(container, "DIV"),

@@ -76,13 +76,15 @@ export function LinkAccountMenu({
   return (
     <div
       className="relative inline-flex"
+      data-link-account-menu-open={open}
       onBlur={(event) => {
         if (!event.currentTarget.contains(event.relatedTarget as Node | null)) setOpen(false);
       }}
       onKeyDown={(event) => {
-        if (event.key === "Escape") {
+        if (open && event.key === "Escape") {
+          event.stopPropagation();
           setOpen(false);
-          trigger.current?.focus();
+          trigger.current?.focus({ preventScroll: true });
         }
       }}
     >
