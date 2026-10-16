@@ -13,7 +13,9 @@ export function describePackagedAppLayout(appRoot, { platform = process.platform
   const executable =
     platform === "darwin"
       ? join(root, "Contents", "MacOS", "code-shell")
-      : join(root, platform === "win32" ? "code-shell.exe" : "code-shell");
+      : // LinuxPackager defaults to the sanitized package name, whereas Windows
+        // and macOS use productName. Keep the existing release binary contract.
+        join(root, platform === "win32" ? "code-shell.exe" : "code-shell-desktop");
   return {
     root,
     resources,

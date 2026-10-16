@@ -36,7 +36,12 @@ async function packageFixture(platform, run) {
   };
   for (const path of [layout.executable, layout.managedNode, join(layout.resources, "app.asar")])
     await mkdir(dirname(path), { recursive: true });
-  await writeFile(layout.executable, "owned application bytes");
+  // Independent of the path helper: mirror electron-builder's platform naming.
+  const emittedExecutable =
+    platform === "darwin"
+      ? join(root, "Contents/MacOS/code-shell")
+      : join(root, platform === "win32" ? "code-shell.exe" : "code-shell-desktop");
+  await writeFile(emittedExecutable, "owned application bytes");
   await writeFile(layout.managedNode, "owned node bytes");
   await writeFile(join(layout.resources, "app.asar"), "owned ASAR bytes");
   await writeFile(manifestPath, JSON.stringify(manifest));

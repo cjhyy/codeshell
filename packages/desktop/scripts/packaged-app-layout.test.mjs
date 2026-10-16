@@ -20,7 +20,7 @@ for (const platform of ["darwin", "win32", "linux"]) {
       executable:
         platform === "darwin"
           ? join(root, "Contents", "MacOS", "code-shell")
-          : join(root, platform === "win32" ? "code-shell.exe" : "code-shell"),
+          : join(root, platform === "win32" ? "code-shell.exe" : "code-shell-desktop"),
       managedNode: join(
         resources,
         "runtimes",
