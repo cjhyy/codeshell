@@ -130,9 +130,35 @@ jobs:
         timeout-minutes: 10
         run: bun run --cwd packages/desktop build
 
+      - name: inspect tracked source after build
+        run: |
+          git status --porcelain=v1 --untracked-files=no
+          git diff --stat
+
       - name: materialize production workspace packages
         timeout-minutes: 5
         run: bun run --cwd packages/desktop predist
+
+      - name: inspect tracked source after materialization
+        run: |
+          git status --porcelain=v1 --untracked-files=no
+          git diff --stat
+
+      - name: verify native process metadata before spawning a package builder
+        timeout-minutes: 2
+        run: |
+          node --input-type=module <<'NODE'
+          import { execFileSync } from "node:child_process";
+          import { snapshotElectronTestProcesses } from "./packages/desktop/scripts/electron-test-process-snapshot.mjs";
+          const cold = Date.now();
+          const rows = snapshotElectronTestProcesses({
+            execFile: (file, args, options) => execFileSync(file, args, { ...options, timeout: 30_000 }),
+          });
+          console.log(JSON.stringify({ phase: "cold-metadata-query", elapsedMs: Date.now() - cold, rows: rows.length }));
+          const warm = Date.now();
+          const verified = snapshotElectronTestProcesses();
+          console.log(JSON.stringify({ phase: "normal-custody-query", elapsedMs: Date.now() - warm, rows: verified.length }));
+          NODE
 
       - name: package native directory without publishing
         timeout-minutes: 12
@@ -231,6 +257,11 @@ jobs:
             ${{ env.ACCEPTANCE_ROOT }}/memory.log
             ${{ env.ACCEPTANCE_ROOT }}/memory/*.png
             ${{ env.ACCEPTANCE_ROOT }}/memory/receipt.json
+            ${{ env.ACCEPTANCE_ROOT }}/memory/main.stdout.log
+            ${{ env.ACCEPTANCE_ROOT }}/memory/main.stderr.log
+            ${{ env.ACCEPTANCE_ROOT }}/memory/network-guard.jsonl
+            ${{ env.ACCEPTANCE_ROOT }}/memory/cost-gui-guard.jsonl
+            ${{ env.ACCEPTANCE_ROOT }}/memory/spawned-workers.jsonl
             ${{ env.ACCEPTANCE_ROOT }}/packaged-ui.log
             ${{ env.ACCEPTANCE_ROOT }}/ui/*.png
             ${{ env.ACCEPTANCE_ROOT }}/ui/receipt.json
