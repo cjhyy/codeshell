@@ -41,7 +41,13 @@ function fixture(backend: "remote" | "oauth" = "remote") {
       linkAccountId: "42",
       linkLastVerifiedAt: "2026-10-09T00:00:00Z",
       ...(backend === "remote"
-        ? { linkRemoteState: "connected", linkRemoteGrantId: "grant" }
+        ? {
+            linkRemoteState: "connected",
+            linkRemoteGrantId: "grant",
+            linkResourceGroups: [
+              { id: "repositories", items: [{ id: "acme/repo", label: "acme/repo" }] },
+            ],
+          }
         : { linkAuthSource: "browser-oauth", linkOAuthState: "connected" }),
       linkCapabilityIds: [...caps],
     },

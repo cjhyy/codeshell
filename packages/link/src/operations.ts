@@ -50,10 +50,35 @@ const inputResource = (
   group,
   selector: { kind: "joined", fields, ...options },
 });
-const filtered = (provider: string): LinkResourcePolicy => ({
-  source: "grant-filtered",
-  group: groups[provider]!,
-});
+const filtered = (provider: string, action: string): LinkResourcePolicy => {
+  const collection = provider === "notion" ? "results" : action.replace(/^list_/, "");
+  const identityPath =
+    provider === "github"
+      ? ["full_name"]
+      : provider === "sentry"
+        ? ["slug"]
+        : provider === "gitlab" && action === "list_issues"
+          ? ["project_id"]
+          : provider === "todoist" && action === "list_tasks"
+            ? ["project_id"]
+            : provider === "linear" && action === "list_issues"
+              ? ["team", "id"]
+              : provider === "vercel" && action === "list_deployments"
+                ? ["projectId"]
+                : ["id"];
+  return {
+    source: "grant-filtered",
+    group: groups[provider]!,
+    resultFilter: {
+      collection,
+      identityPath,
+      ...(provider === "github" || provider === "notion" || provider === "linear"
+        ? { lowercase: true }
+        : {}),
+      ...(provider === "notion" ? { stripHyphens: true } : {}),
+    },
+  };
+};
 const repo = { owner: text(100), repo: text(100) };
 const file = { file_url_or_key: text(4096), file_key: text(200) };
 const fileInput = (
@@ -78,7 +103,7 @@ function operation(
   action: string,
   inputSchema: LinkValueSchema,
   outputSchema: LinkValueSchema,
-  resourcePolicy = filtered(provider),
+  resourcePolicy = filtered(provider, action),
   options: Options = {},
 ): LinkOperationContract {
   const effect = options.effect ?? "read";
@@ -260,7 +285,7 @@ export const LINK_OPERATION_CONTRACTS: readonly LinkOperationContract[] = [
     "figma",
     "get_file",
     fileInput(),
-    output({ pages: list({}, 100), truncated: flag }),
+    output({ pages: list({}, 100), truncated: flag }, ["pages", "truncated"]),
     fileResource,
     {
       defaults: { depth: 1 },
@@ -283,7 +308,14 @@ export const LINK_OPERATION_CONTRACTS: readonly LinkOperationContract[] = [
       branch_data: flag,
       full: flag,
     }),
-    output({ document: { type: "object" }, pages: list({}, 100), truncated: flag }),
+    output(
+      {
+        document: { type: "object" },
+        pages: { type: "array", items: { type: "object" } },
+        truncated: flag,
+      },
+      ["document"],
+    ),
     fileResource,
     {
       defaults: { depth: 2, full: false },
@@ -306,7 +338,10 @@ export const LINK_OPERATION_CONTRACTS: readonly LinkOperationContract[] = [
       geometry: { enum: ["paths"] },
       plugin_data: nodeList,
     }),
-    output({ nodes: { type: "object" }, truncated: flag }),
+    {
+      ...output({ nodes: { type: "object" }, truncated: flag }),
+      anyOf: [{ required: ["nodes"] }, { required: ["err"] }],
+    },
     fileResource,
     {
       content,
@@ -331,7 +366,10 @@ export const LINK_OPERATION_CONTRACTS: readonly LinkOperationContract[] = [
       contents_only: flag,
       use_absolute_bounds: flag,
     }),
-    output({ images: { type: "object" } }),
+    {
+      ...output({ images: { type: "object" } }),
+      anyOf: [{ required: ["images"] }, { required: ["err"] }],
+    },
     fileResource,
     {
       normalization: [
@@ -343,14 +381,19 @@ export const LINK_OPERATION_CONTRACTS: readonly LinkOperationContract[] = [
     "figma",
     "get_image_fills",
     fileInput(),
-    output({ images: { type: "object" }, meta: { type: "object" } }),
+    {
+      ...output({
+        meta: { type: "object", properties: { images: { type: "object" } }, required: ["images"] },
+      }),
+      anyOf: [{ required: ["meta"] }, { required: ["err"] }],
+    },
     fileResource,
   ),
   operation(
     "figma",
     "get_comments",
     fileInput(),
-    output({ comments: list({}, 100) }),
+    output({ comments: { type: "array", items: { type: "object" } } }),
     fileResource,
   ),
   ...FIGMA_MCP_ACTION_IDS.map((action) =>

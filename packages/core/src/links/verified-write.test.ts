@@ -44,7 +44,13 @@ async function fixture(backend: "remote" | "oauth" | "cli" = "remote") {
       linkExecutionBackend:
         backend === "remote" ? "remote" : backend === "cli" ? "cli" : "http-token",
       ...(backend === "remote"
-        ? { linkRemoteState: "connected", linkRemoteGrantId: "fixture-grant" }
+        ? {
+            linkRemoteState: "connected",
+            linkRemoteGrantId: "fixture-grant",
+            linkResourceGroups: [
+              { id: "repositories", items: [{ id: "acme/test", label: "acme/test" }] },
+            ],
+          }
         : backend === "oauth"
           ? { linkAuthSource: "browser-oauth", linkOAuthState: "connected" }
           : {}),

@@ -4,6 +4,7 @@ import { LINK_OPERATION_CONTRACTS, getLinkOperationContract } from "./operations
 import {
   assertLinkOperationAuthorized,
   assertLinkOperationResult,
+  filterLinkOperationResult,
   validateLinkOperationInput,
 } from "./operation-validation.js";
 import { LINK_CONNECTION_RECIPES, resolveLinkRecipeId } from "./recipes.js";
@@ -44,6 +45,10 @@ describe("reviewed operation contracts", () => {
     const content = getLinkOperationContract("figma", "read_design_content")!;
     expect(legacy.defaults.depth).toBe(1);
     expect(content.defaults.depth).toBe(2);
+    expect(() => assertLinkOperationResult(content, { pages: [] })).toThrow();
+    expect(() =>
+      assertLinkOperationResult(getLinkOperationContract("figma", "get_nodes")!, {}),
+    ).toThrow();
     validateLinkOperationInput(legacy, { file_key: "file" });
     expect(() => validateLinkOperationInput(legacy, { file_key: "file", depth: 2 })).toThrow();
     validateLinkOperationInput(content, {
@@ -94,6 +99,45 @@ describe("reviewed operation contracts", () => {
       ),
     ).toThrow();
   });
+  test("every listing filters selected resources and drops missing or crossed identities", () => {
+    const contract = getLinkOperationContract("github", "list_repositories")!;
+    expect(
+      filterLinkOperationResult(
+        contract,
+        {
+          repositories: [
+            { full_name: "Owner/Repo" },
+            { full_name: "other/repo" },
+            { name: "unproven" },
+          ],
+        },
+        authority,
+      ),
+    ).toEqual({ repositories: [{ full_name: "Owner/Repo" }] });
+    const linear = getLinkOperationContract("linear", "list_issues")!;
+    expect(
+      filterLinkOperationResult(
+        linear,
+        {
+          issues: [
+            { id: "first", team: { id: "allowed" } },
+            { id: "second", team: { id: "other" } },
+          ],
+        },
+        {
+          ...authority,
+          providerId: "linear",
+          resources: {
+            kind: "selected-resources",
+            groups: [{ id: "teams", items: [{ id: "allowed" }] }],
+          },
+        },
+      ),
+    ).toEqual({ issues: [{ id: "first", team: { id: "allowed" } }] });
+    for (const operation of LINK_OPERATION_CONTRACTS)
+      if (operation.resourcePolicy.source === "grant-filtered")
+        expect(operation.resourcePolicy.resultFilter?.identityPath.length).toBeGreaterThan(0);
+  });
   test("resource URLs never supply an arbitrary endpoint", () => {
     const contract = getLinkOperationContract("figma", "get_file")!;
     const auth: LinkOperationAuthorization = {
@@ -128,6 +172,10 @@ describe("reviewed operation contracts", () => {
         endpoint: "https://attacker.test",
       }),
     ).toThrow();
+    for (const key of ["toString", "valueOf", "hasOwnProperty"])
+      expect(() =>
+        validateLinkOperationInput(contract, { owner: "a", repo: "b", [key]: "unknown" }),
+      ).toThrow();
     expect(() =>
       validateLinkOperationInput(contract, JSON.parse('{"owner":"a","repo":"b","__proto__":{}}')),
     ).toThrow();

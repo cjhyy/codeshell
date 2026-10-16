@@ -2,6 +2,49 @@ import { describe, expect, test } from "bun:test";
 import { executeLinkOperation } from "./operation.js";
 
 describe("operation runtime boundaries", () => {
+  test("never invokes getters or toJSON while taking an execution snapshot", async () => {
+    let calls = 0;
+    let serializations = 0;
+    const input = Object.assign(
+      Object.create({
+        toJSON() {
+          serializations++;
+          return { owner: serializations === 1 ? "allowed" : "outside", repo: "b" };
+        },
+      }),
+      { owner: "allowed", repo: "b" },
+    );
+    await expect(
+      executeLinkOperation({
+        providerId: "github",
+        action: "get_repository",
+        params: input,
+        execute: async () => {
+          calls++;
+          return {};
+        },
+      }),
+    ).rejects.toMatchObject({ code: "invalid_input" });
+    const getter = {
+      repo: "b",
+      get owner() {
+        serializations++;
+        return "allowed";
+      },
+    };
+    await expect(
+      executeLinkOperation({
+        providerId: "github",
+        action: "get_repository",
+        params: getter,
+        execute: async () => {
+          calls++;
+          return {};
+        },
+      }),
+    ).rejects.toMatchObject({ code: "invalid_input" });
+    expect({ calls, serializations }).toEqual({ calls: 0, serializations: 0 });
+  });
   test("rejects an unsupported contract or invalid input without dispatch", async () => {
     let calls = 0;
     const execute = async () => {

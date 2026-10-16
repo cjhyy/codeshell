@@ -19,7 +19,9 @@ export {
 export {
   validateLinkOperationValue,
   validateLinkOperationInput,
+  snapshotLinkOperationInput,
   assertLinkOperationResult,
+  filterLinkOperationResult,
   assertLinkOperationAuthorized,
 } from "./operation-validation.js";
 export {

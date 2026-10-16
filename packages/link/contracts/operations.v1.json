@@ -46,7 +46,14 @@
     },
     "resourcePolicy": {
       "source": "grant-filtered",
-      "group": "repositories"
+      "group": "repositories",
+      "resultFilter": {
+        "collection": "repositories",
+        "identityPath": [
+          "full_name"
+        ],
+        "lowercase": true
+      }
     },
     "defaults": {
       "limit": 30
@@ -1273,7 +1280,13 @@
     },
     "resourcePolicy": {
       "source": "grant-filtered",
-      "group": "projects"
+      "group": "projects",
+      "resultFilter": {
+        "collection": "projects",
+        "identityPath": [
+          "id"
+        ]
+      }
     },
     "defaults": {
       "limit": 30
@@ -1334,7 +1347,13 @@
     },
     "resourcePolicy": {
       "source": "grant-filtered",
-      "group": "projects"
+      "group": "projects",
+      "resultFilter": {
+        "collection": "issues",
+        "identityPath": [
+          "project_id"
+        ]
+      }
     },
     "defaults": {
       "limit": 30
@@ -1397,7 +1416,10 @@
           "type": "boolean"
         }
       },
-      "required": [],
+      "required": [
+        "pages",
+        "truncated"
+      ],
       "additionalProperties": true
     },
     "resourcePolicy": {
@@ -1560,14 +1582,17 @@
         },
         "pages": {
           "type": "array",
-          "items": {},
-          "maxItems": 100
+          "items": {
+            "type": "object"
+          }
         },
         "truncated": {
           "type": "boolean"
         }
       },
-      "required": [],
+      "required": [
+        "document"
+      ],
       "additionalProperties": true
     },
     "resourcePolicy": {
@@ -1730,7 +1755,19 @@
         }
       },
       "required": [],
-      "additionalProperties": true
+      "additionalProperties": true,
+      "anyOf": [
+        {
+          "required": [
+            "nodes"
+          ]
+        },
+        {
+          "required": [
+            "err"
+          ]
+        }
+      ]
     },
     "resourcePolicy": {
       "source": "input",
@@ -1886,7 +1923,19 @@
         }
       },
       "required": [],
-      "additionalProperties": true
+      "additionalProperties": true,
+      "anyOf": [
+        {
+          "required": [
+            "images"
+          ]
+        },
+        {
+          "required": [
+            "err"
+          ]
+        }
+      ]
     },
     "resourcePolicy": {
       "source": "input",
@@ -1954,15 +2003,32 @@
     "outputSchema": {
       "type": "object",
       "properties": {
-        "images": {
-          "type": "object"
-        },
         "meta": {
-          "type": "object"
+          "type": "object",
+          "properties": {
+            "images": {
+              "type": "object"
+            }
+          },
+          "required": [
+            "images"
+          ]
         }
       },
       "required": [],
-      "additionalProperties": true
+      "additionalProperties": true,
+      "anyOf": [
+        {
+          "required": [
+            "meta"
+          ]
+        },
+        {
+          "required": [
+            "err"
+          ]
+        }
+      ]
     },
     "resourcePolicy": {
       "source": "input",
@@ -2030,8 +2096,9 @@
       "properties": {
         "comments": {
           "type": "array",
-          "items": {},
-          "maxItems": 100
+          "items": {
+            "type": "object"
+          }
         }
       },
       "required": [],
@@ -3401,7 +3468,15 @@
     },
     "resourcePolicy": {
       "source": "grant-filtered",
-      "group": "pages"
+      "group": "pages",
+      "resultFilter": {
+        "collection": "results",
+        "identityPath": [
+          "id"
+        ],
+        "lowercase": true,
+        "stripHyphens": true
+      }
     },
     "defaults": {
       "limit": 30
@@ -3510,7 +3585,15 @@
     },
     "resourcePolicy": {
       "source": "grant-filtered",
-      "group": "teams"
+      "group": "teams",
+      "resultFilter": {
+        "collection": "issues",
+        "identityPath": [
+          "team",
+          "id"
+        ],
+        "lowercase": true
+      }
     },
     "defaults": {
       "limit": 30
@@ -3570,7 +3653,14 @@
     },
     "resourcePolicy": {
       "source": "grant-filtered",
-      "group": "teams"
+      "group": "teams",
+      "resultFilter": {
+        "collection": "teams",
+        "identityPath": [
+          "id"
+        ],
+        "lowercase": true
+      }
     },
     "defaults": {},
     "limits": {
@@ -3626,7 +3716,13 @@
     },
     "resourcePolicy": {
       "source": "grant-filtered",
-      "group": "channels"
+      "group": "channels",
+      "resultFilter": {
+        "collection": "channels",
+        "identityPath": [
+          "id"
+        ]
+      }
     },
     "defaults": {
       "limit": 50
@@ -3874,7 +3970,13 @@
     },
     "resourcePolicy": {
       "source": "grant-filtered",
-      "group": "organizations"
+      "group": "organizations",
+      "resultFilter": {
+        "collection": "organizations",
+        "identityPath": [
+          "slug"
+        ]
+      }
     },
     "defaults": {},
     "limits": {
@@ -3972,7 +4074,13 @@
     },
     "resourcePolicy": {
       "source": "grant-filtered",
-      "group": "bases"
+      "group": "bases",
+      "resultFilter": {
+        "collection": "bases",
+        "identityPath": [
+          "id"
+        ]
+      }
     },
     "defaults": {},
     "limits": {
@@ -4085,7 +4193,13 @@
     },
     "resourcePolicy": {
       "source": "grant-filtered",
-      "group": "projects"
+      "group": "projects",
+      "resultFilter": {
+        "collection": "projects",
+        "identityPath": [
+          "id"
+        ]
+      }
     },
     "defaults": {},
     "limits": {
@@ -4142,7 +4256,13 @@
     },
     "resourcePolicy": {
       "source": "grant-filtered",
-      "group": "projects"
+      "group": "projects",
+      "resultFilter": {
+        "collection": "tasks",
+        "identityPath": [
+          "project_id"
+        ]
+      }
     },
     "defaults": {
       "limit": 50
@@ -4208,7 +4328,13 @@
     },
     "resourcePolicy": {
       "source": "grant-filtered",
-      "group": "projects"
+      "group": "projects",
+      "resultFilter": {
+        "collection": "projects",
+        "identityPath": [
+          "id"
+        ]
+      }
     },
     "defaults": {
       "limit": 50
@@ -4275,7 +4401,13 @@
     },
     "resourcePolicy": {
       "source": "grant-filtered",
-      "group": "projects"
+      "group": "projects",
+      "resultFilter": {
+        "collection": "deployments",
+        "identityPath": [
+          "projectId"
+        ]
+      }
     },
     "defaults": {
       "limit": 50

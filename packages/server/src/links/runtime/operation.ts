@@ -2,7 +2,7 @@ import {
   LinkOperationError,
   assertLinkOperationResult,
   getLinkOperationContract,
-  validateLinkOperationInput,
+  snapshotLinkOperationInput,
 } from "@cjhyy/code-shell-link";
 
 /** One adapter invocation. Write approval, durable intent and verification belong to the owning controller. */
@@ -21,8 +21,7 @@ export async function executeLinkOperation(options: {
       "This Host does not support the requested operation contract.",
     );
   // Detach input before asynchronous code can observe caller changes.
-  validateLinkOperationInput(contract, options.params);
-  const params = JSON.parse(JSON.stringify(options.params)) as Record<string, unknown>;
+  const params = snapshotLinkOperationInput(contract, options.params);
   options.signal?.throwIfAborted();
   options.assertAuthorized?.();
   const result = await options.execute(params);

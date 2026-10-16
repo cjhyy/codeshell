@@ -22,6 +22,13 @@ export interface LinkResourcePolicy {
   /** Always declared, including list operations whose results need grant filtering. */
   readonly source: "input" | "grant-filtered" | "account";
   readonly group: string;
+  /** A selected-resource listing must remove every item without a provable authorized identity. */
+  readonly resultFilter?: {
+    readonly collection: string;
+    readonly identityPath: readonly string[];
+    readonly lowercase?: boolean;
+    readonly stripHyphens?: boolean;
+  };
   readonly selector?: {
     readonly fields: readonly string[];
     readonly kind: "joined" | "identifier-or-url" | "slack-permalink";

@@ -21,7 +21,17 @@ import { getLinkStatus } from "./status.js";
 import { allowsLinkAction, linkAuthoritySnapshot } from "./authority.js";
 import { FigmaContentUnavailableError, UnsupportedFigmaFileTypeError } from "./figma.js";
 import { LinkProviderResponseTooLargeError } from "./http.js";
-import { isFigmaMcpAction } from "@cjhyy/code-shell-link";
+import {
+  isFigmaMcpAction,
+  getLinkOperationContract,
+  resolveLinkRecipeId,
+  validateLinkOperationInput,
+  assertLinkOperationAuthorized,
+  assertLinkOperationResult,
+  filterLinkOperationResult,
+  type LinkOperationAuthorization,
+  LinkOperationError,
+} from "@cjhyy/code-shell-link";
 import { isFigmaMcpCredential, McpLinkActionError } from "./figma-mcp.js";
 import { figmaMcpParameters } from "./figma-mcp-params.js";
 import { canonicalOperationValue } from "../operations/ledger.js";
@@ -83,6 +93,7 @@ interface ConnectedLink {
 }
 
 function isUsableLinkCredential(credential: CredentialMetadata): boolean {
+  if (credential.meta?.linkCleanupDisabled) return false;
   if (isFigmaMcpCredential(credential))
     return (
       credential.meta?.linkOAuthState !== "reconnect" &&
@@ -348,6 +359,13 @@ async function executeLinkAction(
       error: `Unknown ${provider.displayName} Link Action: ${actionId}`,
     });
   }
+  const contract = getLinkOperationContract(providerId, actionId);
+  if (!contract || (contract.effect === "write") !== (action.risk === "write"))
+    return JSON.stringify({
+      kind: "error",
+      code: "unsupported_contract",
+      error: "This Host does not support the requested operation contract.",
+    });
   const reviewedWrite =
     providerId === "github" && ["create_issue", "set_starred", "update_issue"].includes(actionId);
   if ((action.risk === "write" && !reviewedWrite) || (reviewedWrite && action.risk !== "write"))
@@ -368,10 +386,12 @@ async function executeLinkAction(
   if (!allowsLinkAction(connection.credential, providerId, actionId)) {
     return JSON.stringify({
       kind: "error",
+      code: "permission_denied",
       error: `${provider.displayName} connection does not allow Link Action ${actionId}.`,
     });
   }
   let params: Record<string, unknown>;
+  let operationAuthorization: LinkOperationAuthorization;
   try {
     // Closed-set approval must describe the exact detached values later sent.
     params = JSON.parse(
@@ -386,8 +406,31 @@ async function executeLinkAction(
       params = githubSetStarredParameters(params);
     if (providerId === "github" && actionId === "update_issue")
       params = githubIssueStateParameters(params);
+    validateLinkOperationInput(contract, params);
+    const recipeId = resolveLinkRecipeId(connection.credential.meta ?? {});
+    if (!recipeId)
+      throw new LinkOperationError("unsupported_contract", "The connection recipe is unsupported.");
+    const groups = connection.credential.meta?.linkResourceGroups;
+    operationAuthorization = {
+      connectionId: connection.credential.id,
+      providerId,
+      accountId: connection.credential.meta?.linkAccountId ?? "legacy-upstream-account",
+      recipeId,
+      authorityRevision: linkAuthoritySnapshot(connection.credential),
+      // Legacy local grants keep their existing allowlist semantics; new actions still
+      // require an explicit grant in allowsLinkAction above.
+      capabilityIds: connection.credential.meta?.linkCapabilityIds?.length
+        ? connection.credential.meta.linkCapabilityIds
+        : [contract.operationId],
+      resources: groups ? { kind: "selected-resources", groups } : { kind: "upstream-scoped" },
+    };
+    assertLinkOperationAuthorized(contract, params, operationAuthorization);
   } catch (error) {
-    return JSON.stringify({ kind: "error", error: String(error) });
+    return JSON.stringify({
+      kind: "error",
+      error: String(error),
+      ...(error instanceof LinkOperationError ? { code: error.code } : {}),
+    });
   }
 
   if (action.risk === "write") {
@@ -554,6 +597,9 @@ async function executeLinkAction(
           authKind: "token",
         });
       }
+      assertConnected();
+      assertLinkOperationResult(contract, data);
+      data = filterLinkOperationResult(contract, data, operationAuthorization);
       return data;
     };
     let operation: Awaited<ReturnType<typeof verifiedGithubCreateIssue>>["receipt"] | undefined;
@@ -627,6 +673,14 @@ async function executeLinkAction(
       action: actionId,
       runtime: connection.credential.meta?.linkExecutionRuntime,
       connectionId: connection.credential.id,
+      operationId: contract.operationId,
+      recipeId: resolveLinkRecipeId(connection.credential.meta ?? {}),
+      provenance: {
+        provider: providerId,
+        connectionId: connection.credential.id,
+        observedAt: new Date().toISOString(),
+      },
+      ...(contract.content ? { content: contract.content } : {}),
       ...(wantsFigmaMcp ? { backend: "mcp" } : {}),
       untrustedExternalContent: true,
       data,
@@ -670,6 +724,7 @@ async function executeLinkAction(
       error instanceof FigmaContentUnavailableError ||
       error instanceof UnsupportedFigmaFileTypeError ||
       error instanceof LinkProviderResponseTooLargeError ||
+      error instanceof LinkOperationError ||
       error instanceof McpLinkActionError
         ? { code: error.code }
         : {}),

@@ -232,6 +232,9 @@ if (process.env.CODESHELL_LINK_RUN_AUTHORITY_CHILD === "1" && caseName) {
         linkRemoteState: "connected",
         linkAccountId: "42",
         linkResourceLabels: ["owner/repo"],
+        linkResourceGroups: [
+          { id: "repositories", items: [{ id: "owner/repo", label: "owner/repo" }] },
+        ],
         linkCapabilityIds: ["github.list_repositories"],
         linkLastVerifiedAt: "2026-10-15T00:00:00Z",
       },
