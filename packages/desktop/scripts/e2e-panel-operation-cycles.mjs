@@ -22,6 +22,7 @@ const appDir = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const isolated = await makeIsolatedElectronHome("codeshell-panel-operation-cycles-");
 const evidence = await mkdtemp(join(tmpdir(), "codeshell-panel-operation-evidence-"));
 const projectPath = join(isolated.home, "operation-project");
+const secondaryPath = join(isolated.home, "secondary-folder");
 const sessionId = "panel-operation-session";
 const title = "Panel operation conversation";
 const report = { cases: [], errors: [], evidence };
@@ -105,6 +106,8 @@ async function navigate(url, expectedTitle) {
 }
 async function seed() {
   await mkdir(join(projectPath, "nested"), { recursive: true });
+  await mkdir(secondaryPath, { recursive: true });
+  await writeFile(join(secondaryPath, "secondary.txt"), "secondary folder actual content\n");
   await mkdir(join(isolated.codeShellHome, "desktop"), { recursive: true });
   await writeFile(join(projectPath, "alpha.txt"), "first content\n");
   await writeFile(join(projectPath, "nested", "deep.txt"), "deep file content\n");
@@ -156,6 +159,14 @@ try {
     projectPath,
   );
   assert.ok(project?.id);
+  await electron.evaluate(({ dialog }, path) => {
+    dialog.showOpenDialog = async () => ({ canceled: false, filePaths: [path] });
+  }, secondaryPath);
+  const multiRootProject = await win.evaluate(
+    (id) => window.codeshell.projectRegistry.addRootFromPicker(id),
+    project.id,
+  );
+  assert.equal(multiRootProject.project.roots.length, 2);
   const folder = join(isolated.codeShellHome, "sessions", sessionId);
   await mkdir(folder, { recursive: true });
   await writeFile(
@@ -230,6 +241,24 @@ try {
   await files.locator("[data-files-path]").filter({ hasText: "README.md" }).click();
   await files.getByRole("heading", { name: "Fixture document" }).waitFor();
   report.cases.push("Files filter and Markdown preview use owned project files");
+  await files.getByRole("button", { name: /返回文件|Back to files/ }).click();
+  await files.locator("input").fill("");
+  await files.getByRole("combobox", { name: "项目文件夹", exact: true }).click();
+  await win.getByRole("option", { name: /secondary-folder/ }).click();
+  await files.locator("[data-files-path]").filter({ hasText: "secondary.txt" }).click();
+  await files.getByText("secondary folder actual content", { exact: true }).waitFor();
+  await files.getByRole("button", { name: /返回文件|Back to files/ }).click();
+  await files.getByRole("combobox", { name: "项目文件夹", exact: true }).click();
+  await win.getByRole("option", { name: /operation-project/ }).click();
+  await files.locator("[data-files-path]").filter({ hasText: "alpha.txt" }).click();
+  await files.getByText("updated content", { exact: true }).waitFor();
+  assert.equal(
+    await files.getByText("secondary folder actual content", { exact: true }).count(),
+    0,
+  );
+  report.cases.push(
+    "Files real registered secondary-root selection reads its scoped files and switching back clears stale content",
+  );
 
   const browser = await navigate(`${origin}/a`, "Fixture A");
   await navigate(`${origin}/b`, "Fixture B");
@@ -307,6 +336,27 @@ try {
   assert.equal(afterSwitch.requests, 0, "Switching browser tabs must not reload the retained page");
   report.cases.push(
     "Browser back/forward and tab switching preserve guest, page draft and navigation history",
+  );
+  report.browserLayouts = [];
+  for (const width of [390, 768, 1280]) {
+    await win.setViewportSize({ width, height: 850 });
+    await win.waitForFunction((width) => window.innerWidth === width, width);
+    const layout = await browser.evaluate((node) => {
+      const field = node.querySelector('input[placeholder*="URL"]');
+      return {
+        panelWidth: node.clientWidth,
+        scrollWidth: node.scrollWidth,
+        addressWidth: field.getBoundingClientRect().width,
+      };
+    });
+    report.browserLayouts.push({ viewport: width, ...layout });
+    await win.screenshot({ path: join(evidence, `browser-${width}.png`) });
+    assert.ok(layout.panelWidth <= width, "A dock must fit the current viewport");
+    assert.ok(layout.addressWidth >= 120, "The narrow browser address must remain usable");
+  }
+  await writeFile(
+    join(evidence, "browser-layouts.json"),
+    JSON.stringify(report.browserLayouts, null, 2),
   );
   await browser.locator('input[placeholder*="URL"]').fill("Keep A address while opening B");
   await browser.getByRole("button", { name: "新选项卡", exact: true }).last().click();

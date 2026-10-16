@@ -128,6 +128,24 @@ async function confirmRestore(win) {
     .click();
   await win.getByRole("dialog").waitFor({ state: "hidden" });
 }
+async function closeElectron() {
+  if (!electron) return;
+  const closing = electron;
+  electron = undefined;
+  // Only this fixture's isolated child. Bound shutdown before reusing HOME.
+  const child = closing.process();
+  let forcedShutdown = false;
+  const killTimer = setTimeout(() => {
+    forcedShutdown = true;
+    child.kill("SIGKILL");
+  }, 10_000);
+  try {
+    await closing.close();
+  } finally {
+    clearTimeout(killTimer);
+  }
+  assert.equal(forcedShutdown, false, "Isolated Electron must close cleanly");
+}
 try {
   await mkdir(join(isolated.codeShellHome, "desktop"), { recursive: true });
   for (const project of projects) {
@@ -163,13 +181,31 @@ try {
   });
   const first = await findCodeShellWindow(electron);
   await electron.evaluate(({ dialog }, path) => {
+    dialog.showOpenDialog = async () => ({ canceled: true, filePaths: [] });
+  });
+  await openPanels(first, projects[0]);
+  await first.getByRole("button", { name: "选择源码文件夹", exact: true }).click();
+  assert.equal(await first.getByRole("dialog").count(), 0, "Canceled picker opens no review");
+  assert.equal(
+    await binding(first, projects[0]),
+    undefined,
+    "Canceled picker cannot bind a package",
+  );
+  await electron.evaluate(({ dialog }, path) => {
     dialog.showOpenDialog = async () => ({ canceled: false, filePaths: [path] });
   }, source);
-  await openPanels(first, projects[0]);
   await first.getByRole("button", { name: "选择源码文件夹", exact: true }).click();
   await first.getByRole("dialog").getByText("storage", { exact: true }).waitFor();
   assert.equal(await binding(first, projects[0]), undefined, "Preview must not install or bind");
-  await first.getByRole("button", { name: "确认并安装", exact: true }).click();
+  await first.getByRole("dialog").getByRole("button", { name: "取消", exact: true }).click();
+  await first.getByRole("dialog").waitFor({ state: "hidden" });
+  assert.equal(
+    await binding(first, projects[0]),
+    undefined,
+    "Canceling review cannot install or bind",
+  );
+  await first.getByRole("button", { name: "选择源码文件夹", exact: true }).click();
+  await first.getByRole("button", { name: "确认并安装", exact: true }).dblclick();
   await first.getByRole("dialog").waitFor({ state: "hidden" });
   const original = await expectVersion(first, projects[0], "1.0.0");
   assert.ok(original.bound && original.packageDigest);
@@ -201,9 +237,22 @@ try {
   assert.equal((await binding(second, projects[1])).packageDigest, original.packageDigest);
 
   await writePackage("2.0.0");
-  await row(first).getByRole("button", { name: "从源码更新", exact: true }).click();
+  await row(first)
+    .getByRole("button", { name: /^(从源码更新|更新到 v\S+)$/ })
+    .click();
   await first.getByRole("dialog").getByText("workspace.write", { exact: true }).waitFor();
   assert.equal((await binding(first, projects[0])).version, "1.0.0");
+  await first.getByRole("dialog").getByRole("button", { name: "取消", exact: true }).click();
+  await first.getByRole("dialog").waitFor({ state: "hidden" });
+  assert.equal(
+    (await binding(first, projects[0])).packageDigest,
+    original.packageDigest,
+    "Canceled update preserves the project's package",
+  );
+  await row(first)
+    .getByRole("button", { name: /^(从源码更新|更新到 v\S+)$/ })
+    .click();
+  await first.getByRole("dialog").getByText("workspace.write", { exact: true }).waitFor();
   await first.getByRole("button", { name: "确认并更新", exact: true }).click();
   await first.getByRole("dialog").waitFor({ state: "hidden" });
   const updated = await expectVersion(first, projects[0], "2.0.0");
@@ -215,6 +264,15 @@ try {
   const rollback = await reviewRestore(first, "1.0.0");
   await rollback.getByText(/切换程序版本不会恢复旧数据/).waitFor();
   assert.equal((await binding(first, projects[0])).version, "2.0.0");
+  await rollback.getByRole("button", { name: "关闭版本记录", exact: true }).click();
+  await first.getByRole("dialog").waitFor({ state: "hidden" });
+  assert.equal(
+    (await binding(first, projects[0])).packageDigest,
+    updated.packageDigest,
+    "Canceled restore retains the current project package",
+  );
+  await versionDialog(first, projects[0]);
+  await reviewRestore(first, "1.0.0");
   await confirmRestore(first);
   assert.equal(
     (await expectVersion(first, projects[0], "1.0.0")).packageDigest,
@@ -261,6 +319,26 @@ try {
   await reviewRestore(second, "2.0.0");
   await confirmRestore(second);
   await expectVersion(second, projects[1], "2.0.0");
+  const beforeRestart = await binding(first, projects[0]);
+  const originalMainPid = electron.process().pid;
+  await closeElectron();
+  electron = await launchCodeShellElectron({
+    appDir,
+    home: isolated.home,
+    userDataDir: isolated.userDataDir,
+  });
+  assert.notEqual(
+    electron.process().pid,
+    originalMainPid,
+    "Recovery must use a fresh native process",
+  );
+  const restarted = await findCodeShellWindow(electron);
+  await openPanels(restarted, projects[0]);
+  assert.equal(
+    (await expectVersion(restarted, projects[0], "2.0.0")).packageDigest,
+    beforeRestart.packageDigest,
+  );
+  assert.equal((await binding(restarted, projects[1])).version, "2.0.0");
   assert.deepEqual(
     await Promise.all(projects.map((project) => readFile(join(project, "document.json"), "utf8"))),
     documents,
@@ -274,6 +352,10 @@ try {
       reviewedRestoreUi: true,
       damagedPackageRepairUi: true,
       permissionReviewBeforeCommit: true,
+      canceledPickerAndInstallReview: true,
+      canceledUpdateAndRestoreReview: true,
+      doubleClickInstall: true,
+      coldRestartPinnedPackages: true,
       documentBytesPreserved: true,
     }),
   );
@@ -293,24 +375,6 @@ try {
   console.error("Evidence:", evidence);
   throw error;
 } finally {
-  if (electron) {
-    // Only this test's isolated child. A crashed renderer can veto app.quit
-    // while saving sessions; bounded teardown must still report the failure.
-    const child = electron.process();
-    let forcedShutdown = false;
-    const killTimer = setTimeout(() => {
-      forcedShutdown = true;
-      child.kill("SIGKILL");
-    }, 10_000);
-    try {
-      await electron.close();
-    } finally {
-      clearTimeout(killTimer);
-    }
-    if (forcedShutdown) {
-      console.error("Isolated Electron did not close cleanly");
-      process.exitCode = 1;
-    }
-  }
+  await closeElectron();
   await isolated.cleanup();
 }

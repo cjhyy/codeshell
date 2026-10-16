@@ -2,7 +2,8 @@
 /* global localStorage, window, document */
 import assert from "node:assert/strict";
 import { createServer } from "node:http";
-import { mkdir, readFile, writeFile } from "node:fs/promises";
+import { mkdir, mkdtemp, readFile, writeFile } from "node:fs/promises";
+import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { prepareConfinedElectronFixture } from "./confined-electron-fixture.mjs";
@@ -32,7 +33,7 @@ assert.ok(
 const executablePath = process.argv[3] ? resolve(process.argv[3]) : undefined;
 const appDir = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const isolated = await makeIsolatedElectronHome("codeshell-panel-window-");
-const evidence = "/tmp/codeshell-panel-launcher-availability-qa/native";
+const evidence = await mkdtemp(join(tmpdir(), "codeshell-panel-window-evidence-"));
 const project = join(isolated.home, "window-project");
 const secondaryProject = join(isolated.home, "catalog-secondary-project");
 const appId = "window-fixture";
