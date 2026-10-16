@@ -17,6 +17,7 @@ cause, repeat the operation, then check the combined build.
 | MCP settings | Pending mutations stayed clickable and long commands pushed actions outside the viewport. | Serialize mutations and constrain cards/actions. Native stdio initialize/tool discovery, settings rejection/retry, atomic rename, missing-executable recovery, deletion and cold recovery passed twice on the combined build; retain the earlier unclassified failure. |
 | Automation | A delayed failure from task A appeared in task B after selection changed. | Store action errors by job. Native schedule save/retry/reload, prompt cancel/failure/retry, resume failure/retry/pause, delete failure/retry; successful mutations reach the real Cron store. No run-now/model turn. |
 | Desktop cold start | The renderer called `pet:set-active-session` before Main registered its handler. | Register the Pet APIs before loading the renderer while hydration continues behind their ready promise. Three cold launches, renderer reloads and a second main window verify the native load boundary and actual Pet IPC. |
+| Concurrent project migration | Two fresh renderer windows each obtained an empty migration token; the second completion threw after the first wrote the durable marker. This appeared in actual packaged Main stderr. | Permit completion-only replay for a token issued by the current service whose pending paths are empty. Invalid, pending and restarted-service tokens remain rejected; authorization still closes after completion. Real ProjectStore/parallel renderer regressions verify one marker write and unchanged bytes/inode/mtime on replay. Three actual cold launches/reloads plus a second window then completed with zero migration errors in captured Main stderr. |
 | Web transcript recovery | A pending restore accepted a send and later replaced it; live text received during durable recovery could be dropped. | Block send until restore finishes, fold the final notification buffer, scope cursor/error commits to the current load. |
 | Web repeated stop | Repeated clicks sent duplicate cancellation requests. | A synchronous per-session cancellation guard. |
 | Web mobile composer | Resize immediately before Enter could submit using stale wide-layout state. | Read the current media query at the key event. |
@@ -42,6 +43,8 @@ clean dependency rebuild and must finish before other checks read `dist/`.
 | `e2e-automation-operation-cycles.mjs` | Real Main Cron store, renderer controls and durable reload. One update/resume/delete failure is injected; successful retries invoke original handlers. |
 | `e2e-startup-operation-cycles.mjs` | Real cold processes and window lifecycle. Observes native load/handler registration without substituting IPC. |
 | `e2e-pet-runtime.mjs` | Actual compiled worker/Pet, local model, synthetic installed stdio MCP discovery, conversation/work continuation, memory cold recovery, native safeStorage. Existing default-Keychain metadata is pinned and verified unchanged; no operator plugin configuration or actual IM delivery is covered. |
+| Local macOS arm64 package | Production `afterPack` supplies the locked Node archive and ad-hoc signs/verifies helpers, Node and the app. Builder identity is explicitly null; Developer ID signing, notarization and publishing are disabled. The first actual ASAR Main/preload/renderer/Node-mode-worker launch verified preimport guards and package identity, then failed before any model request: native `isEncryptionAvailable` entered without returning and shutdown timed out. Before/after full-tree hashes and deep strict signature verification matched; the private HOME remains because worker-exit receipts were incomplete. This is not a passing packaged Pet acceptance. |
+| `e2e-ui-packaged.mjs` | A new local ad-hoc app containing the migration repair passed 13 actual UI operations: settings navigation, owned directory-picker result followed by real theme review/install, `cstheme:` image decoding in both modes at actual 1280/768/390px BrowserWindow content widths, and persisted theme/mode after renderer reload. Seven screenshots retained. Main guard, normal-exit spawn count zero, model requests zero, native secret-storage calls zero, unchanged full package inventory/signature and private HOME removal verified. A post-run process-table observation found no command referencing that app or its private userData; this is not a historical all-OS-descendants exit acknowledgement. |
 | Web `test-chat-operations-browser.mjs` | Actual Chromium/React/controller/ProtocolClient through native loopback HTTP/WebSocket. The Host protocol peer is a fixture; this suite does not invoke the Engine/provider. Covers 17 operation sequences including failures, reconnect, attachments, choices and scope switching. |
 | `e2e-media-playback.mjs` | Production media protocol and actual Chromium WAV/MP4 decoding, seeking, coordination, range errors, missing/corrupt/outside-root rejection, narrow layout and session release. Generated local media only. |
 | Settings/model/theme/profile suites | Native IPC and synthetic local data. Theme surfaces, model configuration, static export output and memory promotion have separate receipts. MCP mutation and cross-project credential cases continue below. |
@@ -59,9 +62,11 @@ clean dependency rebuild and must finish before other checks read `dist/`.
   interface. The removed RunsView cross-session summary is not restored;
   production UsageLedger IPC/cold recovery and current request/attempt cost UI
   remain asserted, including unknown prices, missing usage and partial history.
-- Continue release-artifact verification after this local integration. Current
-  operation coverage is recorded below; an installed/signed package is a
-  separate boundary.
+- Continue release-artifact verification after this local integration. The
+  local ad-hoc app has been built and launched, but full packaged runtime,
+  installed update, Developer ID signing and notarization remain separate
+  boundaries. Package-content inspection found no own-project smoke/e2e/test
+  output, build metafiles/source maps or private settings/credential files.
 - Native OS approval automation, packaged application launch/install/update,
   Windows/Linux-specific runtime behavior, live external accounts and actual IM
   delivery have not been established by the rows above.
@@ -73,6 +78,38 @@ recorded Main PID was terminated after command identity verification. No native
 cancel/readability/default-focus result is accepted from this attempt. Its
 private receipt is `native-batch-inspect/evidence/cua-observation.json` under the
 operation audit output directory.
+The next native attempt requested the real dialog again and hit the same
+ScreenCaptureKit error. Only its exact guarded Main command was terminated;
+actual cancellation/readability/default focus remain unverified. Its receipt
+is `native-batch-inspect-round2/evidence/cua-observation.json`.
+
+The packaged fixture's Chromium guard also used the obsolete
+`codeshell-panel:` scheme. It now permits the production-registered local
+`cspanel:`, `csmedia:` and `cstheme:` protocols, retaining the same single HTTP
+origin and negative checks for lookalikes, wrong ports, HTTPS/WS and malformed
+requests. Product protocol authorization is unchanged. The native encryption
+timeout above is retained independently; the protocol correction does not
+establish its cause.
+
+Keychain preflight diagnostics now expose only locally generated fixed codes,
+stage names, `launchStarted: false` and identity-match booleans. They retain
+all original pin/no-overwrite checks and never recapture or retry an old HOME.
+The first MCP failure remains unclassified.
+
+The first packaged UI run passed navigation/theme installation and all six
+width/mode combinations, then its reload driver inspected the page before the
+lazy Settings route mounted and incorrectly tried the hidden workbench menu.
+The failure screenshot showed Settings already visible. Waiting for the actual
+restored Settings control repaired the driver; the repeated full UI run passed
+in a new HOME. The first failure and both receipts remain separate.
+
+`predist` intentionally materializes workspace runtime packages for packaging.
+A no-emit check immediately afterward saw both those copies and the development
+workspace declarations, producing private-class identity errors. After the
+package was sealed, `bun install --frozen-lockfile --ignore-scripts` restored the
+development symlinks with no lockfile changes; the Desktop/mobile no-emit check
+passed. The materialized-state failure is retained and no TypeScript assertion
+or production signature was weakened.
 
 The first broad loop's old-menu/authority-fixture failures were retained rather
 than counted as passing coverage. Explicit repository grants replaced obsolete
