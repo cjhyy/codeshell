@@ -50,7 +50,7 @@ The initial blockers below are retained as resolved verification history.
 
 Current integration worktree:
 `/Users/admin/.codex/worktrees/ui-task-center-20261015/codeshell`, branch
-`codex/integration/ui-review-wave8-20261016`. Other work advanced remote main to
+`codex/integration/ui-review-wave9-20261016`. Other work advanced remote main to
 `0.9.44`; this branch merged `976a79322` and `bb7a9b59a`, preserving the incoming model-capability,
 forwarding and Figma updates. The CSS merge preserves both context-selection and
 file-action styles. Do not revert incoming work or republish another version on
@@ -699,6 +699,28 @@ combined production fixture passed all 136 observations. Logs are retained at
 The native TrustGate, PermissionPill and ModelPill receipts described above
 cover the same final product blobs. Fresh origin remains UI7 `756d5710f` before
 UI8 delivery; preserve the other task's primary checkout unchanged.
+
+UI8 is delivered as `ec4ebb25ce792bed605cae92cc026f81458ca915`; remote CI
+`38836413403` is running. Its clean integration branch remains until success.
+
+UI9 source integration includes Link management `fb4f3c52a` / `a15c2efd7`,
+ProjectPicker `b1d3bed06`, Devices `577a997a7`, and responsive sidebar ownership
+`ac8b1b207`, `b1e563783`, `d53493441`, `8e3101930`, `78c4d0e33`.
+Each source tree normally merged UI8 and retained its own product blobs. Link
+production/development fixtures passed 27 observations each, including exact
+synthetic requests, full errors and external handoffs. ProjectPicker production,
+development and native tests passed 16 layouts/102 observations each; native
+wheel moves cross real rows, six live resizes preserve focused actions, and
+16 full-frame capturePage screenshots have strict CSS viewport/DPR dimensions.
+Desktop/mobile types, renderer build, guarded 35 tests/132 assertions and
+independent review passed for that source. No native window remains open.
+Root's original Devices production/development 18-case matrix passed; strict
+UI7 baseline reproduces the clipped/offscreen error. The expanded owned-HTTP
+matrix retains current-device/logout/401 effects after closing, and checks late
+rejections, handoffs, duplicates, unmount, real wheel/full glyphs and live resize.
+Its final fixture and the independently reviewed StrictMode navigation-prompt
+follow-up are being frozen before the combined Web gates. Do not treat these
+pending final gates as delivered.
 
 UI8 is isolated while UI7 gates finish. History's actual Workbench audit found
 offscreen archive failures and late rename completions stealing external focus;
