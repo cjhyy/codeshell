@@ -130,6 +130,8 @@ try {
     },
   };
   const bridge = Object.create(AgentBridge.prototype);
+  const accountSignal = new AbortController().signal;
+  bridge.captureLinkAccount = () => ({ signal: accountSignal, current: () => {} });
   bridge.localOAuthLinkActions = new Map();
   bridge.localOAuthLinkEpoch = 0;
   bridge.credentialSnapshotRevision = 0;

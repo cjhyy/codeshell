@@ -8,6 +8,12 @@ import { registerProfileSwitchIpc } from "./profile-switch-ipc.js";
 import { registerSourceCollectionIpc } from "./source-collections-ipc.js";
 import { openSourceCollectionOperation } from "./source-collections-host.js";
 import { registerRemoteLinkIpc } from "./remote-link-ipc.js";
+import {
+  createLinkAccountAccess,
+  linkAccountExecutionOptions,
+  requireLinkAccountAccess,
+  type CaptureLinkAccountAccess,
+} from "./link-account-access.js";
 import { createFigmaMcpLinkAdapter } from "./figma-mcp-link.js";
 import { registerOperationResolutionHost } from "./operation-resolution-host.js";
 /**
@@ -73,6 +79,8 @@ import {
   type CliLinkProviderId,
   sweepStaleCredentialCookies,
   setDefaultCredentialCipher,
+  setDefaultCredentialAccess,
+  localCredentialAccess,
   sessionsRoot,
   // Quota — remaining CC/Codex subscription usage.
   ErrorCodes,
@@ -1006,15 +1014,22 @@ const mobileRemote = new RemoteHostManager({
     authorizePanelDirectory: (app, projectPath, workspacePath) =>
       panelAppBridge.authorizePanelDirectory(app, projectPath, workspacePath),
     getBridge: () => bridge,
+    captureRemoteAuthority: () => requireLinkAccountAccess(captureLinkAccount),
     // A registered HTTPS origin is trusted deployment configuration, never a request header.
-    remoteLink: () =>
-      process.env.CODE_SHELL_REMOTE_LINK_WEB_ORIGIN
+    remoteLink: () => {
+      try {
+        requireLinkAccountAccess(captureLinkAccount);
+      } catch {
+        return undefined;
+      }
+      return process.env.CODE_SHELL_REMOTE_LINK_WEB_ORIGIN
         ? remoteLinkFromEnvironment(
             process.env,
             process.env.CODE_SHELL_REMOTE_LINK_WEB_ORIGIN,
             "/mobile/link/callback",
           )
-        : undefined,
+        : undefined;
+    },
     onPanelsChanged: (id, kind) => {
       if (kind === "remove") panelAppBridge.revokeAppId(id);
       broadcastPanelAppsChanged(BrowserWindow.getAllWindows());
@@ -1062,23 +1077,34 @@ const accessPasscode = new AccessPasscode({
 let prepareAccountGitHubLink:
   | ReturnType<typeof registerRemoteLinkIpc>["prepareGitHubLink"]
   | undefined = undefined;
-const { mobileRemoteController, cloudManagementManager } = createDesktopRemoteServices({
-  ipcMain,
-  userDataDir: app.getPath("userData"),
-  environmentDir: join(codeShellHome(), "desktop"),
-  safeStorage,
-  windows: () => mainWindows,
-  openExternal: (url) => shell.openExternal(url),
-  prepareGitHubLink: (signal, authorized) => {
-    if (!prepareAccountGitHubLink) throw new Error("GitHub Link 服务尚未就绪。");
-    return prepareAccountGitHubLink(signal, authorized);
-  },
-  host: mobileRemote,
-  tunnel: tunnelManager,
-  binary: cloudflaredBinary,
-  passcode: accessPasscode,
-  cloudWindows: { open: openManagedCloudWorkbench, close: closeManagedCloudWorkbench },
-  openLegacyCloud: openCloudWorkbench,
+const { cloudAccountManager, mobileRemoteController, cloudManagementManager } =
+  createDesktopRemoteServices({
+    ipcMain,
+    userDataDir: app.getPath("userData"),
+    environmentDir: join(codeShellHome(), "desktop"),
+    safeStorage,
+    windows: () => mainWindows,
+    openExternal: (url) => shell.openExternal(url),
+    prepareGitHubLink: (signal, authorized) => {
+      if (!prepareAccountGitHubLink) throw new Error("GitHub Link 服务尚未就绪。");
+      return prepareAccountGitHubLink(signal, authorized);
+    },
+    host: mobileRemote,
+    tunnel: tunnelManager,
+    binary: cloudflaredBinary,
+    passcode: accessPasscode,
+    cloudWindows: { open: openManagedCloudWorkbench, close: closeManagedCloudWorkbench },
+    openLegacyCloud: openCloudWorkbench,
+  });
+const captureLinkAccount: CaptureLinkAccountAccess = createLinkAccountAccess(cloudAccountManager);
+// Main-owned external runtimes use the same account gate as the stdio worker.
+setDefaultCredentialAccess({
+  ...localCredentialAccess,
+  executeRemoteLinkAction: async (input, options) =>
+    localCredentialAccess.executeRemoteLinkAction!(
+      input,
+      linkAccountExecutionOptions(captureLinkAccount, options),
+    ),
 });
 let gatewayControlServer: GatewayControlServer | undefined;
 let sessionBridge: SessionBridgeWiring | undefined;
@@ -1636,6 +1662,7 @@ async function createWindow(): Promise<BrowserWindow> {
             safeStorage.getSelectedStorageBackend() !== "basic_text"),
         hasActiveEphemeralOwner: (sessionId) => quickChatOwnership.hasActiveOwner(sessionId),
       }),
+      captureLinkAccount,
     );
     // External Agent Runtimes (Codex / Claude Code). Everything
     // security-relevant is resolved here, in the composition root: this is the
@@ -4172,6 +4199,7 @@ const remoteLinkIpc = registerRemoteLinkIpc({
   withMutation: (cwd, write) =>
     bridge ? bridge.withWebConfigurationMutation(cwd, write) : write(),
   onChanged: () => bridge?.notifyWebConfigurationChanged(),
+  captureAccount: captureLinkAccount,
   hostOAuthAdapters: () => [
     createFigmaMcpLinkAdapter({
       oauth: getMcpOAuthService(),

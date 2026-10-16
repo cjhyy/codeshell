@@ -702,6 +702,7 @@ export class CloudAccountManager {
         actual.sessionId !== saved.sessionId ||
         actual.origin !== origin ||
         actual.account.id !== accountId ||
+        actual.refreshTokenExpiresAt <= this.now() ||
         actual.kind === "device" ||
         (actual.audience !== undefined && actual.audience !== origin)
       )

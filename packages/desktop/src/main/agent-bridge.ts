@@ -34,6 +34,10 @@ import {
   type DesktopOperationBatchAuthorityResult,
 } from "@cjhyy/code-shell-core/internal";
 import { createDesktopWorkerHost } from "./worker-host-runtime.js";
+import {
+  linkAccountExecutionOptions,
+  type CaptureLinkAccountAccess,
+} from "./link-account-access.js";
 import { randomUUID } from "node:crypto";
 import { MainOutputPublisher, type MainOutputSource } from "./main-output-publisher.js";
 import { WorkerRunOwnership } from "./worker-run-ownership.js";
@@ -387,6 +391,7 @@ export class AgentBridge implements PetStateBridge {
     private readonly quickChatForkLifecycle?: QuickChatForkLifecycle,
     private readonly workerAutomationCreate?: WorkerAutomationCreate,
     private readonly modelRequestSigner?: ModelRequestSigner,
+    private readonly captureLinkAccount?: CaptureLinkAccountAccess,
   ) {
     dlog("bridge", "ctor", { agentEntry, execPath: process.execPath });
     this.core = new WorkerBridgeCore({
@@ -401,6 +406,7 @@ export class AgentBridge implements PetStateBridge {
         }),
         ELECTRON_RUN_AS_NODE: "1",
         CODESHELL_AGENT_STDIO: "1",
+        CODE_SHELL_CREDENTIAL_ACCESS: "host",
         CODE_SHELL_MODEL_REQUEST_SIGNING: "host",
         CODE_SHELL_OPERATION_BATCH_ACCESS: "host",
         // This bridge handles workspace switches and authoritative Session runs.
@@ -1367,6 +1373,7 @@ export class AgentBridge implements PetStateBridge {
             id,
             result: await executeRemoteLinkAction(
               parsed.params as unknown as RemoteLinkActionRequest,
+              linkAccountExecutionOptions(this.captureLinkAccount),
             ),
           };
         } else if (parsed.method === "desktop/credentialMaterializeCookie") {
