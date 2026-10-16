@@ -69,7 +69,9 @@ function reactChildText(value: unknown): string {
 
 function buttonWithLabel(container: HTMLElement, label: string): any {
   return findElements(container, "BUTTON").find(
-    (button) => reactChildText(reactPropsOf(button).children) === label,
+    (button) =>
+      reactPropsOf(button)["aria-label"] === label ||
+      reactChildText(reactPropsOf(button).children) === label,
   );
 }
 
@@ -464,14 +466,14 @@ describe("LinkTab integrations", () => {
         .every((node) => reactPropsOf(node).hidden),
     ).toBe(true);
     const figma = await expandProvider(container, "figma");
-    expect(reactPropsOf(figma).className).toContain("lg:col-span-2");
+    expect(reactPropsOf(figma).className).toContain("col-span-full");
     expect(
-      findElements(container, "SPAN").some(
-        (node) => reactChildText(reactPropsOf(node).children) === "GL",
+      findElements(container, "SVG").some(
+        (node) => reactPropsOf(node)["data-link-service-icon"] === "gitlab",
       ),
     ).toBe(true);
     const github = await expandProvider(container, "github");
-    expect(reactPropsOf(github).className).toContain("lg:col-span-2");
+    expect(reactPropsOf(github).className).toContain("col-span-full");
     expect(methodRows(container, "figma", "server")).toHaveLength(1);
     expect(reactChildText(reactPropsOf(figma).children)).not.toContain("即将开放");
     expect(buttonWithLabel(figma, "连接设计上下文")).toBeDefined();
@@ -492,6 +494,20 @@ describe("LinkTab integrations", () => {
     });
     expect(providerCards(container)).toHaveLength(1);
     expect(reactPropsOf(providerCards(container)[0])["data-link-provider-card"]).toBe("figma");
+    await act(async () => {
+      reactPropsOf(buttonWithLabel(container, "设计")).onClick();
+      await flushMicrotasks();
+    });
+    expect(providerCards(container)).toHaveLength(1);
+    expect(reactPropsOf(providerCards(container)[0])["data-link-provider-card"]).toBe("figma");
+    await act(async () => {
+      reactPropsOf(
+        findElements(container, "INPUT").find((node) => reactPropsOf(node).type === "search"),
+      ).onChange({ target: { value: "GitHub" } });
+      await flushMicrotasks();
+    });
+    expect(providerCards(container)).toHaveLength(1);
+    expect(reactPropsOf(providerCards(container)[0])["data-link-provider-card"]).toBe("github");
   });
 
   test("partial remote catalogs never duplicate providers or render coming-soon account fallbacks", async () => {
@@ -1196,8 +1212,10 @@ describe("LinkTab integrations", () => {
       expect(githubText).not.toContain("通过本机 gh");
       expect(buttonWithLabel(github, "重新连接")).toBeDefined();
       expect(
-        findElements(container, "DIV").some(
-          (div) => reactChildText(reactPropsOf(div).children) === "1已连接服务",
+        findElements(container, "P").some(
+          (paragraph) =>
+            reactChildText(reactPropsOf(paragraph).children) ===
+            `1 / ${LINK_PROVIDER_FIXTURES.length} 个应用已连接`,
         ),
       ).toBe(true);
 

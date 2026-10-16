@@ -24,14 +24,15 @@ import { cn } from "@/lib/utils";
 import { useT } from "../i18n/I18nProvider";
 import type { LinkAuthGuide } from "./link-catalog";
 import { linkAuthorizationFailureMessage } from "./linkAuthorizationFailure";
+import { LinkServiceIcon } from "./LinkServiceIcon";
 
 /** All secrets stay in the current step form until submitted to the owning Host. */
 export function LinkConnectionDialog({
   cwd,
   input,
   providerName,
-  icon: Icon,
-  brandClass = "bg-foreground text-background",
+  icon: _Icon,
+  brandClass: _brandClass,
   modes,
   authGuide,
   onClose,
@@ -195,62 +196,73 @@ export function LinkConnectionDialog({
   );
   return (
     <Dialog open onOpenChange={(open) => !open && close()}>
-      <DialogContent className="link-authorization-dialog w-[calc(100%-2rem)] max-h-[calc(100vh-2rem)] overflow-y-auto rounded-2xl p-0 sm:max-w-[440px]">
-        <DialogHeader className="items-center px-6 pt-7 text-center sm:text-center">
+      <DialogContent className="link-authorization-dialog w-[calc(100%-2rem)] max-h-[calc(100vh-2rem)] max-w-[480px] gap-0 overflow-y-auto rounded-2xl p-0">
+        <DialogHeader className="flex-row items-start gap-4 space-y-0 p-6 pr-12 text-left sm:text-left">
           <div
-            className={cn("mb-2 flex size-14 items-center justify-center rounded-2xl", brandClass)}
+            className={cn(
+              "flex size-12 shrink-0 items-center justify-center rounded-xl border sm:size-14",
+              connected
+                ? "border-status-ok/15 bg-status-ok/8 text-status-ok"
+                : "border-border/60 bg-background text-foreground",
+            )}
           >
             {connected ? (
               <Check className="size-7" aria-hidden />
             ) : (
-              <Icon className="size-7" aria-hidden />
+              <LinkServiceIcon
+                providerId={input.providerId}
+                name={providerName}
+                className="size-7"
+              />
             )}
           </div>
-          <DialogTitle className="text-lg">
-            {t(
-              input.resourceUrl && !designContext
-                ? connected
-                  ? "ext.link.authorizationFileAddedTitle"
-                  : "ext.link.authorizationFileTitle"
-                : connected
-                  ? "ext.link.authorizationConnectedTitle"
-                  : "ext.link.authorizationTitle",
-              {
-                name: providerName,
-              },
-            )}
-          </DialogTitle>
-          <DialogDescription className="max-w-[330px] text-xs leading-5">
-            {t(
-              designContext
-                ? "ext.link.directory.designContextDescription"
-                : input.resourceUrl
+          <div className="min-w-0 space-y-2 pt-0.5">
+            <DialogTitle className="text-lg leading-6">
+              {t(
+                input.resourceUrl && !designContext
                   ? connected
-                    ? "ext.link.authorizationFileAddedDescription"
-                    : "ext.link.remoteAddFileDescription"
-                  : connected &&
-                      input.providerId === "figma" &&
-                      !authorization?.connection?.account?.resources.length
-                    ? "ext.link.remoteNoFiles"
-                    : connected
-                      ? "ext.link.authorizationConnectedDescription"
-                      : "ext.link.authorizationDescription",
-            )}
-          </DialogDescription>
+                    ? "ext.link.authorizationFileAddedTitle"
+                    : "ext.link.authorizationFileTitle"
+                  : connected
+                    ? "ext.link.authorizationConnectedTitle"
+                    : "ext.link.authorizationTitle",
+                {
+                  name: providerName,
+                },
+              )}
+            </DialogTitle>
+            <DialogDescription className="text-xs leading-5">
+              {t(
+                designContext
+                  ? "ext.link.directory.designContextDescription"
+                  : input.resourceUrl
+                    ? connected
+                      ? "ext.link.authorizationFileAddedDescription"
+                      : "ext.link.remoteAddFileDescription"
+                    : connected &&
+                        input.providerId === "figma" &&
+                        !authorization?.connection?.account?.resources.length
+                      ? "ext.link.remoteNoFiles"
+                      : connected
+                        ? "ext.link.authorizationConnectedDescription"
+                        : "ext.link.authorizationDescription",
+              )}
+            </DialogDescription>
+          </div>
         </DialogHeader>
         <div
-          className="space-y-4 px-6 pb-1"
+          className="space-y-4 px-6 pb-6"
           aria-live="polite"
           data-link-authorization-step={authorization?.step?.kind}
         >
           {input.resourceUrl && (
-            <p className="break-all rounded-lg bg-muted/50 px-3 py-2 text-xs leading-5">
+            <p className="break-all rounded-lg border border-border/60 bg-muted/35 px-3 py-2 text-xs leading-5">
               {input.resourceUrl}
             </p>
           )}
           {!connected && availableModes.length > 1 && (
             <div
-              className="flex flex-wrap gap-1 rounded-lg bg-muted/65 p-1"
+              className="flex flex-wrap gap-1 rounded-lg border border-border/60 bg-muted/35 p-1"
               aria-label={t("ext.link.authorizationMethod")}
             >
               {availableModes.map((item) => (
@@ -261,7 +273,7 @@ export function LinkConnectionDialog({
                   data-link-auth-mode={item.id}
                   disabled={busy}
                   className={cn(
-                    "min-w-0 flex-1 rounded-md px-2 py-1.5 text-[11px] transition-colors disabled:opacity-50",
+                    "min-h-8 min-w-0 flex-1 rounded-md px-3 py-1.5 text-xs transition-colors disabled:opacity-50",
                     item.id === modeId
                       ? "bg-background font-medium text-foreground shadow-sm"
                       : "text-muted-foreground hover:text-foreground",
@@ -273,37 +285,46 @@ export function LinkConnectionDialog({
               ))}
             </div>
           )}
-          {(authorization?.step?.kind === "redirect" ||
-            authorization?.step?.kind === "processing") && (
-            <Loader2 className="mx-auto size-5 animate-spin text-muted-foreground" aria-hidden />
-          )}
-          {authorization ? (
-            <LinkAuthorizationStepView
-              authorization={authorization}
-              busy={busy}
-              labels={labels}
-              onRespond={(response) => void controller.respond(response)}
-              onOpenUrl={openUrl}
-              onCopy={(value) => void navigator.clipboard.writeText(value).catch(() => undefined)}
-            />
-          ) : (
-            <div
-              role="status"
-              className="flex min-h-28 flex-col items-center justify-center gap-3 text-xs text-muted-foreground"
-            >
-              {preferred && !state.error ? (
-                <Loader2 className="size-5 animate-spin" aria-hidden />
-              ) : null}
-              {preferred
-                ? t("ext.link.authorizationStarting")
-                : t("ext.link.authorizationUnavailable")}
+          <div className="flex items-start gap-3 rounded-xl border border-border/70 bg-muted/20 p-4 [&_.link-authorization-status]:py-0 [&_.link-authorization-status]:text-left [&_.link-authorization-step]:gap-3 [&_.link-authorization-step]:pt-0 [&_.link-authorization-step]:text-left">
+            {(authorization?.step?.kind === "redirect" ||
+              authorization?.step?.kind === "processing") && (
+              <Loader2
+                className="mt-0.5 size-4 shrink-0 animate-spin text-muted-foreground"
+                aria-hidden
+              />
+            )}
+            <div className="min-w-0 flex-1">
+              {authorization ? (
+                <LinkAuthorizationStepView
+                  authorization={authorization}
+                  busy={busy}
+                  labels={labels}
+                  onRespond={(response) => void controller.respond(response)}
+                  onOpenUrl={openUrl}
+                  onCopy={(value) =>
+                    void navigator.clipboard.writeText(value).catch(() => undefined)
+                  }
+                />
+              ) : (
+                <div
+                  role="status"
+                  className="flex min-h-16 items-center gap-3 text-xs leading-5 text-muted-foreground"
+                >
+                  {preferred && !state.error ? (
+                    <Loader2 className="size-4 shrink-0 animate-spin" aria-hidden />
+                  ) : null}
+                  {preferred
+                    ? t("ext.link.authorizationStarting")
+                    : t("ext.link.authorizationUnavailable")}
+                </div>
+              )}
             </div>
-          )}
+          </div>
           {(authorization?.failure || state.error || openError) && (
             <p
               role="alert"
               data-link-auth-failure-stage={authorization?.failure?.stage}
-              className="break-words rounded-lg bg-status-err/8 px-3 py-2 text-xs leading-5 text-status-err"
+              className="break-words rounded-lg border border-status-err/20 bg-status-err/8 p-3 text-xs leading-5 text-status-err"
             >
               {linkAuthorizationFailureMessage(authorization?.failure, t) ??
                 t("ext.link.authorizationFailure.safeFailure")}
@@ -324,8 +345,10 @@ export function LinkConnectionDialog({
               </Button>
             )}
           {authorization?.step?.kind === "credential-input" && authGuide && (
-            <details className="rounded-lg border border-border/70 px-3 py-2 text-xs text-muted-foreground">
-              <summary className="cursor-pointer text-foreground">{authGuide.title}</summary>
+            <details className="rounded-lg border border-border/70 p-3 text-xs text-muted-foreground">
+              <summary className="cursor-pointer font-medium text-foreground">
+                {authGuide.title}
+              </summary>
               <p className="mt-2 leading-5">{authGuide.summary}</p>
               <ol className="mt-2 list-decimal space-y-1 pl-4 text-[11px] leading-5">
                 {authGuide.steps.map((step) => (
@@ -343,7 +366,7 @@ export function LinkConnectionDialog({
             </details>
           )}
           {connected && authorization?.connection && (
-            <div className="rounded-xl border border-border/70 p-3 text-center">
+            <div className="rounded-xl border border-status-ok/20 bg-status-ok/5 p-4 text-left">
               <p className="text-sm font-medium">
                 {authorization.connection.account?.label ?? authorization.connection.label}
               </p>
@@ -355,8 +378,8 @@ export function LinkConnectionDialog({
             </div>
           )}
           {!connected && (
-            <p className="flex items-start gap-1.5 text-[10px] leading-4 text-muted-foreground">
-              <ShieldCheck className="mt-0.5 size-3 shrink-0" aria-hidden />
+            <p className="flex items-start gap-2 text-xs leading-5 text-muted-foreground">
+              <ShieldCheck className="mt-0.5 size-3.5 shrink-0" aria-hidden />
               {t(
                 input.methodId === "remote-link"
                   ? "ext.link.authorizationServerPrivacy"
@@ -365,18 +388,18 @@ export function LinkConnectionDialog({
             </p>
           )}
         </div>
-        <DialogFooter className="gap-2 border-t border-border/60 px-6 py-4 sm:justify-center sm:space-x-0">
+        <DialogFooter className="flex-row items-center justify-end gap-2 border-t border-border/60 bg-muted/20 p-6 sm:justify-end sm:space-x-0">
           {connected ? (
-            <Button className="w-full" onClick={onClose}>
+            <Button className="min-w-24" onClick={onClose}>
               {t("ext.link.authorizationDone")}
             </Button>
           ) : (
             <>
-              <Button variant="ghost" className="flex-1" onClick={close}>
+              <Button variant="ghost" className="min-w-24" onClick={close}>
                 {t("common.cancel")}
               </Button>
               {(terminal || (state.error && !authorization)) && modeId && (
-                <Button className="flex-1" disabled={busy} onClick={() => void begin(modeId)}>
+                <Button className="min-w-24" disabled={busy} onClick={() => void begin(modeId)}>
                   {t("ext.link.authorizationRetry")}
                 </Button>
               )}

@@ -364,6 +364,7 @@ export function LinkTab({ cwd }: { cwd: string }) {
   const [query, setQuery] = useState("");
   const searchRef = useRef<HTMLInputElement>(null);
   const [filter, setFilter] = useState<IntegrationFilter>("all");
+  const [category, setCategory] = useState("all");
   const remote = useRemoteLinkSnapshot(cwd, { automatic: false });
   const [localDialog, setLocalDialog] = useState<{
     item: LinkIntegration;
@@ -729,8 +730,10 @@ export function LinkTab({ cwd }: { cwd: string }) {
   };
 
   const directory = catalog
-    .flatMap((category) => category.items)
-    .map((item) => {
+    .flatMap((group) =>
+      group.items.map((item) => ({ item, categoryId: group.id, categoryTitle: t(group.titleKey) })),
+    )
+    .map(({ item, categoryId, categoryTitle }) => {
       const accounts =
         remote.snapshot?.connections.filter((connection) => connection.providerId === item.id) ??
         [];
@@ -766,6 +769,8 @@ export function LinkTab({ cwd }: { cwd: string }) {
       ];
       return {
         item,
+        categoryId,
+        categoryTitle,
         provider,
         accounts,
         stored,
@@ -775,10 +780,17 @@ export function LinkTab({ cwd }: { cwd: string }) {
         needsAttention,
         accountNames,
       };
-    });
+    })
+    .sort(
+      (left, right) =>
+        Number(right.connected > 0) - Number(left.connected > 0) ||
+        Number(right.needsAttention) - Number(left.needsAttention) ||
+        left.item.name.localeCompare(right.item.name),
+    );
   const needle = query.trim().toLocaleLowerCase();
   const visibleProviders = directory.filter(
-    ({ item, connected, available, needsAttention, accountNames }) =>
+    ({ item, categoryId, connected, available, needsAttention, accountNames }) =>
+      (needle || category === "all" || categoryId === category) &&
       (filter !== "connected" || connected > 0) &&
       (filter !== "planned" || needsAttention || !available) &&
       `${item.name} ${item.description} ${item.id === "figma" ? t("ext.link.directory.figmaDescription") : ""} ${accountNames.join(" ")} ${item.connectionMethods.map((method) => method.displayName).join(" ")}`
@@ -796,67 +808,56 @@ export function LinkTab({ cwd }: { cwd: string }) {
 
   return (
     <div className="space-y-5" data-link-page>
-      <section className="link-hero rounded-xl border border-border/70 p-4 sm:p-5">
-        <div className="flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between">
-          <div className="flex min-w-0 items-start gap-4">
-            <div className="flex size-12 shrink-0 items-center justify-center rounded-2xl border border-primary/20 bg-primary/10 text-primary shadow-sm">
-              <Cable className="size-6" aria-hidden />
-            </div>
-            <div className="min-w-0 max-w-2xl">
-              <h2 className="mt-1.5 text-lg font-semibold tracking-tight text-foreground">
-                {t("ext.link.overviewTitle")}
-              </h2>
-              <p className="mt-1.5 text-sm leading-6 text-muted-foreground">
-                {t("ext.link.directory.description")}
-              </p>
-            </div>
-          </div>
-          <div className="grid shrink-0 grid-cols-2 gap-3">
-            <LinkStat
-              value={directory.filter((provider) => provider.connected > 0).length}
-              label={t("ext.link.directory.connectedServices")}
-            />
-            <LinkStat value={directory.length} label={t("ext.link.directory.services")} />
-          </div>
+      <header className="flex flex-col gap-5 pb-1 sm:flex-row sm:items-center sm:justify-between">
+        <div className="min-w-0">
+          <h2 className="text-xl font-semibold tracking-tight text-foreground">
+            {t("ext.link.overviewTitle")}
+          </h2>
+          <p className="mt-2 max-w-xl text-sm leading-6 text-muted-foreground">
+            {t("ext.link.directory.description")}
+          </p>
         </div>
-      </section>
+        <div className="relative w-full shrink-0 sm:w-64" role="search">
+          <Search
+            className="pointer-events-none absolute left-3.5 top-1/2 size-4 -translate-y-1/2 text-muted-foreground"
+            aria-hidden
+          />
+          <Input
+            ref={searchRef}
+            value={query}
+            type="search"
+            className="h-10 rounded-xl border-border/60 bg-card pl-10 pr-9 [&::-webkit-search-cancel-button]:appearance-none"
+            placeholder={t("ext.link.searchPlaceholder")}
+            aria-label={t("ext.link.searchPlaceholder")}
+            onChange={(event) => setQuery(event.target.value)}
+          />
+          {query ? (
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon"
+              className="absolute right-1 top-1 size-8 text-muted-foreground"
+              aria-label={t("ext.link.clearSearch")}
+              onClick={() => {
+                setQuery("");
+                searchRef.current?.focus();
+              }}
+            >
+              <X className="size-3.5" aria-hidden />
+            </Button>
+          ) : null}
+        </div>
+      </header>
 
-      <section className="space-y-4" aria-label={t("ext.link.appsTitle")}>
-        <div className="flex flex-col gap-2 rounded-xl border border-border/70 bg-card p-2.5 lg:flex-row lg:items-center">
-          <div className="relative min-w-0 flex-1" role="search">
-            <Search
-              className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground"
-              aria-hidden
-            />
-            <Input
-              ref={searchRef}
-              value={query}
-              type="search"
-              className="h-9 border-transparent bg-muted/55 pl-9 pr-9 focus-visible:bg-background [&::-webkit-search-cancel-button]:appearance-none"
-              placeholder={t("ext.link.searchPlaceholder")}
-              aria-label={t("ext.link.searchPlaceholder")}
-              onChange={(event) => setQuery(event.target.value)}
-            />
-            {query ? (
-              <Button
-                type="button"
-                variant="ghost"
-                size="icon"
-                className="absolute right-0.5 top-0.5 size-8 text-muted-foreground"
-                aria-label={t("ext.link.clearSearch")}
-                onClick={() => {
-                  setQuery("");
-                  searchRef.current?.focus();
-                }}
-              >
-                <X className="size-3.5" aria-hidden />
-              </Button>
-            ) : null}
-          </div>
+      <section
+        aria-label={t("ext.link.appsTitle")}
+        className="grid gap-6 md:grid-cols-[224px_minmax(0,1fr)]"
+      >
+        <aside className="flex min-w-0 flex-col gap-5 rounded-2xl bg-muted/35 p-3 md:self-start md:p-4">
           <div
-            className="flex min-w-0 flex-wrap items-center gap-1 rounded-lg bg-muted/55 p-1"
             role="group"
             aria-label={t("ext.link.filterAria")}
+            className="flex gap-1 md:flex-col"
           >
             {(["all", "connected", "planned"] as IntegrationFilter[]).map((value) => (
               <Button
@@ -865,217 +866,302 @@ export function LinkTab({ cwd }: { cwd: string }) {
                 variant="ghost"
                 size="sm"
                 className={cn(
-                  "h-7 flex-1 px-2.5 sm:flex-none",
+                  "h-9 min-w-0 flex-1 justify-between gap-2 rounded-lg px-3 md:flex-none",
                   filter === value && "bg-background text-foreground shadow-sm",
                 )}
+                aria-label={t(`ext.link.filter.${value}`)}
                 aria-pressed={filter === value}
                 onClick={() => setFilter(value)}
               >
-                {t(`ext.link.filter.${value}`)}
+                <span className="min-w-0 truncate">{t(`ext.link.filter.${value}`)}</span>
+                <span
+                  aria-hidden
+                  className="shrink-0 text-[11px] tabular-nums text-muted-foreground"
+                >
+                  {value === "all"
+                    ? directory.length
+                    : value === "connected"
+                      ? directory.filter((entry) => entry.connected > 0).length
+                      : directory.filter((entry) => entry.needsAttention || !entry.available)
+                          .length}
+                </span>
               </Button>
             ))}
           </div>
-          <Button
-            type="button"
-            size="sm"
-            variant="outline"
-            disabled={refreshing || loading || remote.loading}
-            onClick={() => void refresh(true)}
-          >
-            <RefreshCw className={cn("size-3.5", refreshing && "animate-spin")} aria-hidden />
-            {t("ext.link.refreshConnections")}
-          </Button>
-        </div>
-
-        {directoryError ? (
           <div
-            role="alert"
-            className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-status-err/30 bg-status-err/5 px-4 py-3"
+            className="min-w-0 space-y-2 border-t border-border/50 pt-4"
+            role="group"
+            aria-label={t("ext.link.directory.categories")}
           >
-            <div className="min-w-0">
-              <p className="text-xs font-medium text-status-err">
-                {t(
-                  stateReadError
-                    ? "ext.link.loadFailed"
-                    : "ext.link.directory.catalogUnavailableTitle",
-                )}
-              </p>
-              <p className="mt-0.5 break-words text-xs text-muted-foreground">{directoryError}</p>
+            <p className="px-3 text-[11px] font-medium text-muted-foreground">
+              {t("ext.link.directory.categories")}
+            </p>
+            <div className="flex min-w-0 gap-1 overflow-x-auto md:block md:overflow-visible">
+              {[
+                {
+                  id: "all",
+                  title: t("ext.link.directory.allCategories"),
+                  count: directory.length,
+                },
+                ...catalog.map((group) => ({
+                  id: group.id,
+                  title: t(group.titleKey),
+                  count: group.items.length,
+                })),
+              ].map((group) => (
+                <Button
+                  key={group.id}
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  aria-label={group.title}
+                  aria-pressed={(needle ? "all" : category) === group.id}
+                  className={cn(
+                    "h-9 shrink-0 justify-between gap-3 rounded-lg px-3 font-normal md:w-full md:min-w-0",
+                    (needle ? "all" : category) === group.id &&
+                      "bg-background text-foreground shadow-sm",
+                  )}
+                  onClick={() => {
+                    setCategory(group.id);
+                    setQuery("");
+                  }}
+                >
+                  <span className="min-w-0 truncate">{group.title}</span>
+                  <span className="shrink-0 text-[11px] tabular-nums text-muted-foreground">
+                    {group.count}
+                  </span>
+                </Button>
+              ))}
             </div>
-            <Button
-              type="button"
-              size="sm"
-              variant="outline"
-              disabled={loading}
-              onClick={() => void refresh(true)}
-            >
-              <RefreshCw className={cn("size-3.5", loading && "animate-spin")} aria-hidden />
-              {t("ext.link.retry")}
-            </Button>
           </div>
-        ) : loading || remote.loading ? (
-          <div
-            className="rounded-xl border border-border/70 bg-card px-4 py-3 text-xs text-muted-foreground"
-            aria-live="polite"
-          >
-            {t("ext.link.loadingConnections")}
-          </div>
-        ) : null}
-
-        {noMatches ? (
-          <div className="rounded-xl border border-dashed border-border px-4 py-10 text-center">
-            <p className="text-sm font-medium text-foreground">{t("ext.link.noMatches")}</p>
-            <p className="mt-1 text-xs text-muted-foreground">
-              {t("ext.link.noMatchesDescription")}
+          <p className="hidden items-center gap-2 border-t border-border/50 px-2 pt-4 text-[11px] leading-5 text-muted-foreground md:flex">
+            <span aria-hidden className="size-1.5 shrink-0 rounded-full bg-status-ok" />
+            {t("ext.link.directory.connectedSummary", {
+              connected: directory.filter((entry) => entry.connected > 0).length,
+              total: directory.length,
+            })}
+          </p>
+        </aside>
+        <div className="min-w-0 space-y-4">
+          <div className="flex items-center justify-between gap-3">
+            <p className="text-xs text-muted-foreground">
+              {t("ext.link.directory.results", { count: visibleProviders.length })}
             </p>
             <Button
               type="button"
-              variant="link"
               size="sm"
-              className="mt-2"
-              onClick={() => {
-                setQuery("");
-                setFilter("all");
-                searchRef.current?.focus();
-              }}
+              variant="ghost"
+              className="h-8 text-xs text-muted-foreground"
+              disabled={refreshing || loading || remote.loading}
+              onClick={() => void refresh(true)}
             >
-              {t("ext.link.resetFilters")}
+              <RefreshCw className={cn("size-3.5", refreshing && "animate-spin")} aria-hidden />
+              {t("ext.link.refreshConnections")}
             </Button>
           </div>
-        ) : null}
-        <div
-          hidden={noMatches}
-          data-link-directory
-          className="grid gap-3 lg:grid-cols-2 lg:items-start"
-        >
-          {directory.map(
-            ({ item, provider, connected, saved, available, needsAttention, accountNames }) => {
-              const methodEntries = [...entries.local, ...entries.server].filter(
-                (entry) => entry.item.id === item.id,
-              );
-              const methods = methodEntries.map((entry) => (
-                <LinkMethodCard
-                  key={`${entry.method.id}:${entry.credential?.id ?? "new"}`}
-                  entry={entry}
-                  liveness={entry.credential ? cliLiveness[entry.credential.id] : undefined}
-                  busy={busyId === linkMethodStateKey(item.id, entry.method)}
-                  error={errors[linkMethodStateKey(item.id, entry.method)]}
-                  onLocalConnect={() => openLocalDialog(entry)}
-                  onLocalDisconnect={() => disconnectLocal(entry)}
-                  onServerLogin={(credential) => onServerLogin(item, entry.method, credential)}
-                  onServerRefresh={(credential) => onServerRefresh(item, entry.method, credential)}
-                  onServerLogout={(credential) => onServerLogout(item, entry.method, credential)}
-                />
-              ));
-              const missingAccounts = credentials.filter(
-                (credential) =>
-                  linkCredentialProvider(credential) === item.id &&
-                  ["remote", "mcp"].includes(credential.meta?.linkExecutionBackend ?? "") &&
-                  !remote.snapshot?.connections.some((account) => account.id === credential.id),
-              );
-              return (
-                <LinkProviderCard
-                  key={`${cwd}:${item.id}`}
-                  id={item.id}
-                  hidden={!visibleProviderIds.has(item.id)}
-                  name={item.name}
-                  icon={integrationIcon(item.id)}
-                  brandClass={item.brandClass}
-                  brandText={item.brandText}
-                  description={
-                    item.id === "figma"
-                      ? t("ext.link.directory.figmaDescription")
-                      : item.description
-                  }
-                  accounts={[
-                    accountNames.join(" · "),
-                    saved ? t("ext.link.directory.connectionCount", { count: saved }) : "",
-                  ]
-                    .filter(Boolean)
-                    .join(" · ")}
-                  status={
-                    remote.loading && missingAccounts.length
-                      ? t("ext.link.directory.checking")
-                      : needsAttention
-                        ? t("ext.link.directory.needsAttention")
-                        : connected
-                          ? t("ext.link.remoteAvailable")
-                          : saved
-                            ? t("ext.link.directory.unavailable")
-                            : available
-                              ? t("ext.link.directory.notConnected")
-                              : t("ext.link.directory.unavailable")
-                  }
-                  tone={
-                    remote.loading && missingAccounts.length
-                      ? "neutral"
-                      : needsAttention
-                        ? "warning"
-                        : connected
-                          ? "ready"
-                          : "neutral"
-                  }
-                >
-                  {missingAccounts.map((credential) => (
-                    <LinkConnectionRow
-                      key={credential.id}
-                      data-link-saved-unavailable={credential.id}
-                      title={credential.meta?.linkAccountLabel ?? credential.label}
-                      description={t(
-                        remote.loading
-                          ? "ext.link.loadingConnections"
-                          : "ext.link.directory.savedUnavailable",
-                      )}
-                      status={t(
-                        remote.loading
-                          ? "ext.link.directory.checking"
-                          : "ext.link.directory.serviceUnavailable",
-                      )}
-                      tone={remote.loading ? "neutral" : "warning"}
-                      actions={
-                        <Button size="sm" variant="outline" onClick={() => void refresh(true)}>
-                          {t("ext.link.retry")}
-                        </Button>
-                      }
-                    />
-                  ))}
-                  {item.id === "figma" ? (
-                    <FigmaConnectionCard
-                      cwd={cwd}
-                      snapshot={remote.snapshot}
-                      loadError={remote.error}
-                      loading={remote.loading}
-                      reload={remote.reload}
-                      onChanged={() => void load().catch(() => undefined)}
-                      localApi={methods}
-                    />
-                  ) : (
-                    <>
-                      {(provider?.authModes?.some((mode) => mode.id === "remote-link") ||
-                        remote.snapshot?.connections.some(
-                          (connection) =>
-                            connection.providerId === item.id &&
-                            connection.authSource === "remote-link",
-                        )) && (
-                        <RemoteProviderSection
-                          cwd={cwd}
-                          snapshot={remote.snapshot}
-                          loadError={remote.error}
-                          loading={remote.loading}
-                          reload={remote.reload}
-                          onChanged={() => void load().catch(() => undefined)}
-                          providerId={item.id}
-                          provider={provider}
-                          embedded
-                        />
-                      )}
-                      {methods}
-                    </>
+          {directoryError ? (
+            <div
+              role="alert"
+              className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-status-err/30 bg-status-err/5 px-4 py-3"
+            >
+              <div className="min-w-0">
+                <p className="text-xs font-medium text-status-err">
+                  {t(
+                    stateReadError
+                      ? "ext.link.loadFailed"
+                      : "ext.link.directory.catalogUnavailableTitle",
                   )}
-                </LinkProviderCard>
-              );
-            },
-          )}
+                </p>
+                <p className="mt-0.5 break-words text-xs text-muted-foreground">{directoryError}</p>
+              </div>
+              <Button
+                type="button"
+                size="sm"
+                variant="outline"
+                disabled={loading}
+                onClick={() => void refresh(true)}
+              >
+                <RefreshCw className={cn("size-3.5", loading && "animate-spin")} aria-hidden />
+                {t("ext.link.retry")}
+              </Button>
+            </div>
+          ) : loading || remote.loading ? (
+            <div
+              className="rounded-xl border border-border/70 bg-card px-4 py-3 text-xs text-muted-foreground"
+              aria-live="polite"
+            >
+              {t("ext.link.loadingConnections")}
+            </div>
+          ) : null}
+
+          {noMatches ? (
+            <div className="rounded-xl border border-dashed border-border px-4 py-10 text-center">
+              <p className="text-sm font-medium text-foreground">{t("ext.link.noMatches")}</p>
+              <p className="mt-1 text-xs text-muted-foreground">
+                {t("ext.link.noMatchesDescription")}
+              </p>
+              <Button
+                type="button"
+                variant="link"
+                size="sm"
+                className="mt-2"
+                onClick={() => {
+                  setQuery("");
+                  setFilter("all");
+                  setCategory("all");
+                  searchRef.current?.focus();
+                }}
+              >
+                {t("ext.link.resetFilters")}
+              </Button>
+            </div>
+          ) : null}
+          <div
+            hidden={noMatches}
+            data-link-directory
+            className="grid grid-cols-[repeat(auto-fit,minmax(min(100%,300px),1fr))] items-start gap-4"
+          >
+            {directory.map(
+              ({
+                item,
+                categoryTitle,
+                provider,
+                connected,
+                saved,
+                available,
+                needsAttention,
+                accountNames,
+              }) => {
+                const methodEntries = [...entries.local, ...entries.server].filter(
+                  (entry) => entry.item.id === item.id,
+                );
+                const methods = methodEntries.map((entry) => (
+                  <LinkMethodCard
+                    key={`${entry.method.id}:${entry.credential?.id ?? "new"}`}
+                    entry={entry}
+                    liveness={entry.credential ? cliLiveness[entry.credential.id] : undefined}
+                    busy={busyId === linkMethodStateKey(item.id, entry.method)}
+                    error={errors[linkMethodStateKey(item.id, entry.method)]}
+                    onLocalConnect={() => openLocalDialog(entry)}
+                    onLocalDisconnect={() => disconnectLocal(entry)}
+                    onServerLogin={(credential) => onServerLogin(item, entry.method, credential)}
+                    onServerRefresh={(credential) =>
+                      onServerRefresh(item, entry.method, credential)
+                    }
+                    onServerLogout={(credential) => onServerLogout(item, entry.method, credential)}
+                  />
+                ));
+                const missingAccounts = credentials.filter(
+                  (credential) =>
+                    linkCredentialProvider(credential) === item.id &&
+                    ["remote", "mcp"].includes(credential.meta?.linkExecutionBackend ?? "") &&
+                    !remote.snapshot?.connections.some((account) => account.id === credential.id),
+                );
+                return (
+                  <LinkProviderCard
+                    key={`${cwd}:${item.id}`}
+                    id={item.id}
+                    hidden={!visibleProviderIds.has(item.id)}
+                    name={item.name}
+                    category={categoryTitle}
+                    icon={integrationIcon(item.id)}
+                    brandClass={item.brandClass}
+                    brandText={item.brandText}
+                    description={
+                      item.id === "figma"
+                        ? t("ext.link.directory.figmaDescription")
+                        : item.description
+                    }
+                    accounts={[
+                      accountNames.join(" · "),
+                      saved ? t("ext.link.directory.connectionCount", { count: saved }) : "",
+                    ]
+                      .filter(Boolean)
+                      .join(" · ")}
+                    status={
+                      remote.loading && missingAccounts.length
+                        ? t("ext.link.directory.checking")
+                        : needsAttention
+                          ? t("ext.link.directory.needsAttention")
+                          : connected
+                            ? t("ext.link.remoteAvailable")
+                            : saved
+                              ? t("ext.link.directory.unavailable")
+                              : available
+                                ? t("ext.link.directory.notConnected")
+                                : t("ext.link.directory.unavailable")
+                    }
+                    tone={
+                      remote.loading && missingAccounts.length
+                        ? "neutral"
+                        : needsAttention
+                          ? "warning"
+                          : connected
+                            ? "ready"
+                            : "neutral"
+                    }
+                  >
+                    {missingAccounts.map((credential) => (
+                      <LinkConnectionRow
+                        key={credential.id}
+                        data-link-saved-unavailable={credential.id}
+                        title={credential.meta?.linkAccountLabel ?? credential.label}
+                        description={t(
+                          remote.loading
+                            ? "ext.link.loadingConnections"
+                            : "ext.link.directory.savedUnavailable",
+                        )}
+                        status={t(
+                          remote.loading
+                            ? "ext.link.directory.checking"
+                            : "ext.link.directory.serviceUnavailable",
+                        )}
+                        tone={remote.loading ? "neutral" : "warning"}
+                        actions={
+                          <Button size="sm" variant="outline" onClick={() => void refresh(true)}>
+                            {t("ext.link.retry")}
+                          </Button>
+                        }
+                      />
+                    ))}
+                    {item.id === "figma" ? (
+                      <FigmaConnectionCard
+                        cwd={cwd}
+                        snapshot={remote.snapshot}
+                        loadError={remote.error}
+                        loading={remote.loading}
+                        reload={remote.reload}
+                        onChanged={() => void load().catch(() => undefined)}
+                        localApi={methods}
+                      />
+                    ) : (
+                      <>
+                        {(provider?.authModes?.some((mode) => mode.id === "remote-link") ||
+                          remote.snapshot?.connections.some(
+                            (connection) =>
+                              connection.providerId === item.id &&
+                              connection.authSource === "remote-link",
+                          )) && (
+                          <RemoteProviderSection
+                            cwd={cwd}
+                            snapshot={remote.snapshot}
+                            loadError={remote.error}
+                            loading={remote.loading}
+                            reload={remote.reload}
+                            onChanged={() => void load().catch(() => undefined)}
+                            providerId={item.id}
+                            provider={provider}
+                            embedded
+                          />
+                        )}
+                        {methods}
+                      </>
+                    )}
+                  </LinkProviderCard>
+                );
+              },
+            )}
+          </div>
         </div>
       </section>
 
@@ -1804,17 +1890,6 @@ export function ChatGatewayTab() {
           </DialogContent>
         </Dialog>
       </section>
-    </div>
-  );
-}
-
-function LinkStat({ value, label }: { value: number; label: string }) {
-  return (
-    <div className="rounded-xl border border-border/70 bg-background/70 px-3 py-2.5 backdrop-blur-sm">
-      <div className="text-lg font-semibold leading-none tabular-nums text-foreground">{value}</div>
-      <div className="mt-1 truncate text-[10px] text-muted-foreground" title={label}>
-        {label}
-      </div>
     </div>
   );
 }
