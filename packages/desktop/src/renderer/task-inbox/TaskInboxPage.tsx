@@ -18,6 +18,7 @@ import { OperationResolutionReview } from "./OperationResolutionReview";
 import {
   TASK_INBOX_GROUPS,
   groupTaskInboxRecords,
+  isBackgroundWork,
   taskInboxProject,
   type TaskInboxFilters,
   type TaskInboxGroup,
@@ -31,8 +32,6 @@ const SubagentSessionDetail = React.lazy(() =>
 
 const SOURCES: TaskSource[] = [
   "session",
-  "legacy-run",
-  "automation",
   "mimi-delegation",
   "subagent",
   "background-shell",
@@ -64,10 +63,11 @@ const initialCounts = (): Record<TaskInboxGroup, number> => ({
 });
 
 export interface TaskInboxPageProps {
+  onOpenTrace?: (sessionId?: string, traceId?: string) => void;
   onOpenTaskInboxRecord?: (record: TaskInboxRecordV1) => void | Promise<void>;
 }
 
-export function TaskInboxPage({ onOpenTaskInboxRecord }: TaskInboxPageProps = {}) {
+export function TaskInboxPage({ onOpenTaskInboxRecord, onOpenTrace }: TaskInboxPageProps = {}) {
   const { t, lang } = useT();
   const confirm = useOptionalConfirm();
   const id = useId();
@@ -101,13 +101,17 @@ export function TaskInboxPage({ onOpenTaskInboxRecord }: TaskInboxPageProps = {}
     return () => observer.disconnect();
   }, [selectedSubagent]);
 
+  const backgroundRecords = useMemo(
+    () => (snapshot?.records ?? []).filter(isBackgroundWork),
+    [snapshot],
+  );
   const grouped = useMemo(
-    () => groupTaskInboxRecords(snapshot?.records ?? [], filters),
-    [snapshot, filters],
+    () => groupTaskInboxRecords(backgroundRecords, filters),
+    [backgroundRecords, filters],
   );
   const projects = useMemo(
-    () => [...new Set((snapshot?.records ?? []).map(taskInboxProject).filter(Boolean))].sort(),
-    [snapshot],
+    () => [...new Set(backgroundRecords.map(taskInboxProject).filter(Boolean))].sort(),
+    [backgroundRecords],
   );
   const filteredCount = TASK_INBOX_GROUPS.reduce(
     (count, group) => count + grouped[group].length,
@@ -231,7 +235,7 @@ export function TaskInboxPage({ onOpenTaskInboxRecord }: TaskInboxPageProps = {}
     >
       <header className="grid shrink-0 grid-cols-[minmax(0,1fr)_auto] items-center gap-x-3 gap-y-1.5 px-4 py-3 @min-[760px]/tasks:px-6">
         <h1 className="flex flex-wrap items-center gap-2.5 text-xl font-semibold tracking-tight">
-          {t("taskInbox.title")}
+          {t("activity.backgroundWork")}
           {snapshot && (
             <span className="rounded-full border border-border/70 px-2.5 py-0.5 text-xs font-normal tabular-nums text-muted-foreground">
               {t("taskInbox.total", { count: filteredCount })}
@@ -259,7 +263,9 @@ export function TaskInboxPage({ onOpenTaskInboxRecord }: TaskInboxPageProps = {}
           )}
           {t("taskInbox.refresh")}
         </Button>
-        <p className="col-span-2 text-sm text-muted-foreground">{t("taskInbox.subtitle")}</p>
+        <p className="col-span-2 text-sm text-muted-foreground">
+          {t("activity.backgroundDescription")}
+        </p>
       </header>
       <div className="grid shrink-0 grid-cols-[minmax(0,1fr)_auto] items-end gap-2 px-4 pb-3 @min-[1000px]/tasks:grid-cols-4 @min-[760px]/tasks:px-6">
         <label
@@ -390,7 +396,7 @@ export function TaskInboxPage({ onOpenTaskInboxRecord }: TaskInboxPageProps = {}
             className="flex flex-col items-center gap-3 py-10 text-sm text-muted-foreground"
           >
             <Inbox size={24} aria-hidden />
-            {t(snapshot?.records.length ? "taskInbox.noMatches" : "taskInbox.empty")}
+            {t(backgroundRecords.length ? "taskInbox.noMatches" : "taskInbox.empty")}
             {(activeFilterCount > 0 || filters.search) && (
               <Button type="button" size="sm" variant="outline" onClick={clearFilters}>
                 {t("activity.clearFilters")}
@@ -494,6 +500,16 @@ export function TaskInboxPage({ onOpenTaskInboxRecord }: TaskInboxPageProps = {}
                               />
                             )}
                             <div className="mt-auto flex flex-wrap items-center gap-2">
+                              {onOpenTrace && (record.sessionId || record.runId) && (
+                                <Button
+                                  type="button"
+                                  size="sm"
+                                  variant="outline"
+                                  onClick={() => onOpenTrace(record.sessionId, record.runId)}
+                                >
+                                  {t("activity.viewTrace")}
+                                </Button>
+                              )}
                               {record.capabilities.map((action) => (
                                 <Button
                                   type="button"

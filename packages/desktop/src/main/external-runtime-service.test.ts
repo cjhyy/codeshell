@@ -17,7 +17,13 @@ import {
 } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { SessionManager, type StreamEvent, type ToolRegistry } from "@cjhyy/code-shell-core";
+import {
+  sessionsRoot,
+  SessionManager,
+  type StreamEvent,
+  type ToolRegistry,
+} from "@cjhyy/code-shell-core";
+import { ModelTraceStore } from "@cjhyy/code-shell-core/internal";
 import { createSessionToolHost, FIRST_PHASE_EXPOSURE } from "@cjhyy/code-shell-core/extension";
 import { ExternalRuntimeApprovals } from "./external-runtime-approvals.js";
 import { EXTERNAL_GOAL_TOOLS } from "./external-runtime-goals.js";
@@ -165,6 +171,58 @@ afterEach(() => {
 });
 
 describe("ExternalRuntimeService", () => {
+  test("records the actual CLI submission and composed Host instructions without claiming provider wire coverage", async () => {
+    const store = new ModelTraceStore({ storageDir: join(sessionsRoot(), ".model-traces") });
+    store.setConfig({ captureContent: true });
+    const svc = service({ external_agent_runtime: true, external_host_tools: true });
+    await svc.start({
+      ...request,
+      model: "requested-cli-model",
+      developerInstructions: "fixture developer instructions",
+    });
+    providerSend = async (args, input) => {
+      expect(input.text).toBe("actual submitted input");
+      const hooks = args.hooks as { onEvent: (event: StreamEvent) => void };
+      hooks.onEvent({ type: "text_delta", text: "visible CLI output" });
+      hooks.onEvent({ type: "turn_complete", reason: "completed" });
+    };
+    await svc.send(request.sessionId, {
+      text: "actual submitted input",
+      displayText: "short display",
+      disableGoal: true,
+    });
+    const record = store.get(store.list().items[0]!.id)!;
+    expect(store.list().total).toBe(1);
+    expect(record).toMatchObject({
+      sessionId: request.sessionId,
+      workspacePath: request.cwd,
+      model: "requested-cli-model",
+      status: "completed",
+      input: { messages: [{ role: "user", content: "actual submitted input" }] },
+      output: { text: "visible CLI output" },
+    });
+    expect(record.runId).toBeTruthy();
+    expect(record.traceId).toBe(record.runId!);
+    expect(record.input!.parameters.developerInstructions).toBe(starts[0]!.developerInstructions);
+    expect(record.attempts[0]!.coverage).toBe("external-cli-input");
+    await svc.stopAll();
+  });
+
+  test("a rejected CLI send finishes the same trace as failed", async () => {
+    const store = new ModelTraceStore({ storageDir: join(sessionsRoot(), ".model-traces") });
+    store.setConfig({ captureContent: true });
+    const svc = service({ external_agent_runtime: true, external_host_tools: true });
+    await svc.start(request);
+    failNextSend = true;
+    await svc.send(request.sessionId, { text: "failed submission", disableGoal: true });
+    expect(store.list().total).toBe(1);
+    const record = store.get(store.list().items[0]!.id)!;
+    expect(record.status).toBe("failed");
+    expect(record.endedAt).toBeGreaterThanOrEqual(record.startedAt);
+    expect(record.error).toBe("provider process exited");
+    await svc.stopAll();
+  });
+
   test("task projections distinguish an allocated runtime from an executing turn", async () => {
     const svc = service({ external_agent_runtime: true, external_host_tools: true });
     await svc.start(request);

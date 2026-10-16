@@ -55,6 +55,7 @@ import { createHubFiles } from "../hub/files.js";
 import { createSessionHttpResponses } from "../session-http-responses.js";
 import { WorkerBridgeCore, previewLine, type WorkerBridgeLog } from "../worker-bridge-core.js";
 import { HostRuntime, interceptHostRequest } from "@cjhyy/code-shell-host";
+import { createModelTraceHttp } from "../model-trace-http.js";
 
 export interface HeadlessServeOptions {
   /** Bind host. Default 127.0.0.1 — expose beyond loopback deliberately. */
@@ -614,6 +615,8 @@ export async function startHeadlessServer(opts: HeadlessServeOptions): Promise<H
   };
   const configurationOptions = {
     cwd: workspaceCwd,
+    traceStorageDir: join(sessionRootDir, ".model-traces"),
+    traceSource: "server",
     isAuthorized: async (req: IncomingMessage) => !!(await hubAuth?.authenticate(req)),
     ownerId: async (req: IncomingMessage) => (await hubAuth?.authenticate(req))?.id,
     withMutation: withConfigurationMutation,
@@ -700,6 +703,13 @@ export async function startHeadlessServer(opts: HeadlessServeOptions): Promise<H
     : undefined;
   const files = hubAuth
     ? createHubFiles({ cwd: workspaceCwd, isAuthorized: configurationOptions.isAuthorized })
+    : undefined;
+  const modelTraces = hubAuth
+    ? createModelTraceHttp({
+        storageDir: join(sessionRootDir, ".model-traces"),
+        workspacePath: workspaceCwd,
+        isAuthorized: configurationOptions.isAuthorized,
+      })
     : undefined;
 
   const serveStatic = (req: IncomingMessage, res: ServerResponse): void => {
@@ -796,6 +806,7 @@ export async function startHeadlessServer(opts: HeadlessServeOptions): Promise<H
         if (await mcp!.handle(req, res)) return;
         if (await sessionManagement!.handle(req, res)) return;
         if (await files!.handle(req, res)) return;
+        if (await modelTraces!.handle(req, res)) return;
         const upload = /^\/api\/v1\/uploads\/([^/]+)$/.exec(pathname);
         if (upload && req.method === "PUT") {
           await uploads!.accept(

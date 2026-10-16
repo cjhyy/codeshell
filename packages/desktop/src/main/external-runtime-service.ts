@@ -59,6 +59,7 @@ import {
   EXTERNAL_UNVERIFIED_WRITE_NOTICE,
 } from "./external-runtime-operations.js";
 import { createExternalRuntimeSourceContext } from "./external-runtime-source-context.js";
+import { startExternalRuntimeTrace } from "./external-runtime-tracing.js";
 
 export type DesktopExternalRuntimeTurnInput = ExternalRuntimeTurnInput & {
   goal?: string | GoalConfig;
@@ -177,6 +178,8 @@ export class ExternalRuntimeService {
       kind: ExternalRuntimeKind;
       cwd: string;
       model?: string;
+      developerInstructions: string;
+      initialContext?: string;
       routingKey: string;
       configurationKey: string;
       ownerWebContentsId?: number;
@@ -1044,6 +1047,8 @@ export class ExternalRuntimeService {
       recorder,
       kind: request.kind,
       cwd: request.cwd,
+      developerInstructions,
+      initialContext: request.initialContext,
       routingKey: this.routingKey(request),
       configurationKey: this.configurationKey(request),
       turnTail: Promise.resolve(),
@@ -1205,6 +1210,7 @@ export class ExternalRuntimeService {
           while (true) {
             entry.lifecycle.turnActive = true;
             let prepared = false;
+            let trace: ReturnType<typeof startExternalRuntimeTrace>;
             try {
               const user = entry.recorder.beginTurn(
                 goalRun && providerRound === 0 ? providerInput : nextInput,
@@ -1262,8 +1268,21 @@ export class ExternalRuntimeService {
                   entry.recorder.outputRunId !== runId
                 )
                   return;
+                trace?.observe(event);
                 entry.forwardEvent(event);
               };
+              if (runId) {
+                trace = startExternalRuntimeTrace({
+                  sessionId,
+                  runId,
+                  workspacePath: entry.cwd,
+                  kind: entry.kind,
+                  model: entry.model,
+                  input: nextInput,
+                  developerInstructions: entry.developerInstructions,
+                  initialContext: entry.initialContext,
+                });
+              }
               const turn = await entry.session.send(nextInput, onEvent);
               await turn.done;
             } catch (error) {
@@ -1272,8 +1291,20 @@ export class ExternalRuntimeService {
                 return entry.recorder.finishIfMissing();
               }
               const detail = error instanceof Error ? error.message : String(error);
+              trace?.observe({ type: "error", error: detail });
+              trace?.observe({ type: "turn_complete", reason: "model_error" });
               entry.forwardEvent({ type: "error", error: detail });
               entry.forwardEvent({ type: "turn_complete", reason: "model_error" });
+            } finally {
+              trace?.finish(
+                !entry.lifecycle.active ||
+                  this.sessions.get(sessionId) !== entry ||
+                  acceptedGeneration !== entry.lifecycle.interruptGeneration
+                  ? "aborted_streaming"
+                  : entry.recorder.outputFailed
+                    ? "replay_incomplete"
+                    : undefined,
+              );
             }
             if (!entry.lifecycle.active || this.sessions.get(sessionId) !== entry) {
               return entry.recorder.finishIfMissing();

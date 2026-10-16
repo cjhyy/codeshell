@@ -4,6 +4,7 @@ import { mkdtempSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "nod
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { SessionManager } from "@cjhyy/code-shell-core";
+import { ModelTraceStore, type ModelTraceRecord } from "@cjhyy/code-shell-core/internal";
 import { createDesktopWebApi, type DesktopWebApiOptions } from "./http-api.js";
 import { RemoteHostManager } from "../mobile-remote/remote-host-manager.js";
 import { TrustedDeviceStore } from "../mobile-remote/trusted-device-store.js";
@@ -509,4 +510,47 @@ test("paired devices discover the same desktop identity without disclosing works
   );
   f.devices.revoke(f.device.id);
   expect((await f.request("/api/v1/environment", cookie)).status).toBe(401);
+});
+
+test("paired Desktop trace HTTP remains workspace scoped and cannot change native capture policy", async () => {
+  const f = await fixture();
+  const store = new ModelTraceStore({ storageDir: join(f.sessionRootDir, ".model-traces") });
+  for (const [id, workspacePath] of [
+    ["current-workspace", f.cwd],
+    ["other-workspace", f.other],
+    ["unknown-workspace", undefined],
+  ] as const) {
+    store.write({
+      version: 1,
+      id,
+      traceId: id,
+      workspacePath,
+      source: "fixture",
+      purpose: "main",
+      provider: "fixture",
+      model: "fixture",
+      startedAt: Date.now(),
+      status: "completed",
+      stream: false,
+      inputState: "not-recorded",
+      outputState: "not-recorded",
+      attempts: [],
+    } satisfies ModelTraceRecord);
+  }
+  expect((await f.request("/api/v1/model-traces")).status).toBe(401);
+  const cookie = await f.authenticate();
+  const page = await (await f.request("/api/v1/model-traces", cookie)).json();
+  expect(page.items.map((item: any) => item.id)).toEqual(["current-workspace"]);
+  expect((await f.request("/api/v1/model-traces/other-workspace", cookie)).status).toBe(404);
+  expect((await f.request("/api/v1/model-traces/unknown-workspace", cookie)).status).toBe(404);
+  const switched = await f.request("/api/v1/model-traces", cookie, {
+    headers: { "x-codeshell-workspace": encodeURIComponent(f.other) },
+  });
+  expect((await switched.json()).items.map((item: any) => item.id)).toEqual(["other-workspace"]);
+  expect(
+    (await f.put("/api/v1/model-traces/config", cookie, { captureContent: true })).status,
+  ).toBe(405);
+  expect(store.getConfig().captureContent).toBe(false);
+  f.devices.revoke(f.device.id);
+  expect((await f.request("/api/v1/model-traces/current-workspace", cookie)).status).toBe(401);
 });

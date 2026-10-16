@@ -108,7 +108,7 @@ export async function installAppMenu(win: BrowserWindow): Promise<void> {
           },
         },
         {
-          label: "切换 详情",
+          label: "查看当前会话的模型调用",
           accelerator: "CmdOrCtrl+I",
           click: () => {
             win.webContents.send("menu:toggle-inspector");
@@ -131,10 +131,7 @@ export async function installAppMenu(win: BrowserWindow): Promise<void> {
         { role: "minimize" },
         { role: "zoom" },
         ...(isMac
-          ? [
-              { type: "separator" as const },
-              { role: "front" as const },
-            ]
+          ? [{ type: "separator" as const }, { role: "front" as const }]
           : [{ role: "close" as const }]),
       ],
     },

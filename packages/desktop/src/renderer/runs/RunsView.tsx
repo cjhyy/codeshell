@@ -208,7 +208,7 @@ export function RunsView({ initialRunId }: { initialRunId?: string | null } = {}
         <div className="min-w-0">
           <div className="flex flex-wrap items-center gap-2.5">
             <h1 id={`${detailId}-title`} className="text-xl font-semibold tracking-tight">
-              {t("auto.runs.title")}
+              {t("activity.legacyRuns")}
             </h1>
             {runs && (
               <span className="rounded-full border border-border/70 bg-card px-2.5 py-0.5 text-xs tabular-nums text-muted-foreground">
@@ -216,7 +216,7 @@ export function RunsView({ initialRunId }: { initialRunId?: string | null } = {}
               </span>
             )}
           </div>
-          <p className="mt-1.5 text-sm text-muted-foreground">{t("auto.runs.subtitle")}</p>
+          <p className="mt-1.5 text-sm text-muted-foreground">{t("activity.legacyRunHint")}</p>
         </div>
         <Button
           ref={refreshRef}

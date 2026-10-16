@@ -110,7 +110,9 @@ describe("architecture growth budgets", () => {
     // Pinned linked files read the window's stored Link revisions through one
     // accessor that reuses the same owner/context and live authorization guard.
     // It adds no IPC route and fetches no remote catalog or file content.
-    expect(lines("packages/desktop/src/main/remote-link-ipc.ts")).toBeLessThanOrEqual(188);
+    // Already-integrated Link diagnostics add ten composition lines for a redacted
+    // Host snapshot. They add no IPC routes or credential-returning operations.
+    expect(lines("packages/desktop/src/main/remote-link-ipc.ts")).toBeLessThanOrEqual(198);
     // Count extracted registrations too: moving a route cannot hide API growth.
     // New explicit project-package, remote-Link and Cloud-window operations are
     // part of this feature's reviewed transport contract, total 295 routes.
@@ -143,6 +145,8 @@ describe("architecture growth budgets", () => {
         matches("packages/desktop/src/main/computer-use/settings-ipc.ts", /ipcMain\.handle\(/g) +
         matches("packages/desktop/src/main/local-file-preview-ipc.ts", /ipcMain\.handle\(/g) +
         matches("packages/desktop/src/main/session-transcript-ipc.ts", /ipcMain\.handle\(/g) +
+        matches("packages/desktop/src/main/activity-history-ipc.ts", /ipcMain\.handle\(/g) +
+        matches("packages/desktop/src/main/model-trace-ipc.ts", /handle\("modelTraces:/g) +
         matches("packages/desktop/src/main/profile-switch-ipc.ts", /ipcMain\.handle\(/g) +
         matches("packages/desktop/src/main/profile-plugin-export-ipc.ts", /ipcMain\.handle\(/g) +
         matches("packages/desktop/src/main/profile-memory-promotion-ipc.ts", /ipcMain\.handle\(/g) +
@@ -175,7 +179,9 @@ describe("architecture growth budgets", () => {
       // permission request, fixed System Settings links, and restart.
       // +2 main-frame-owned Native batch options/start operations.
       // +2 linked-file source snapshot/add operations; no file content crosses IPC.
-    ).toBeLessThanOrEqual(355);
+      // The integrated baseline contains 356 routes (the previous ceiling missed one).
+      // +4 local model trace list/detail/config read/update routes, restricted to application main frames.
+    ).toBeLessThanOrEqual(360);
     // v0.8.17 added the reviewed Panel catalog/task bridge to both preload
     // surfaces. Mimi's bounded transcript pagination adds one typed invoke;
     // the validation and file-reading implementation remain extracted in main.
@@ -198,7 +204,9 @@ describe("architecture growth budgets", () => {
     // +2 composition lines for masked native operation review; no resolution logic in preload.
     // +2 import/composition lines for the reviewed memory-copy API.
     // +4 typed linked-file snapshot/add adapters over fixed literal channels.
-    expect(lines("packages/desktop/src/preload/index.ts")).toBeLessThanOrEqual(1_888);
+    // The integrated baseline is 1,891 lines; model tracing adds only its
+    // extracted adapter import and one composition property (+2).
+    expect(lines("packages/desktop/src/preload/index.ts")).toBeLessThanOrEqual(1_893);
     // Include all nine extracted Lab invokes and the five generic Link
     // challenge invokes plus usage history. Main-only routes remain counted
     // above even when no renderer adapter exists; do not equate the totals.
@@ -215,6 +223,7 @@ describe("architecture growth budgets", () => {
           /ipcRenderer\.invoke\(/g,
         ) +
         matches("packages/desktop/src/preload/session-transcript-api.ts", /ipc\.invoke\(/g) +
+        matches("packages/desktop/src/preload/model-trace-api.ts", /ipc\.invoke\(/g) +
         matches("packages/desktop/src/preload/task-inbox-api.ts", /ipc\.invoke\(/g) +
         matches("packages/desktop/src/preload/profile-plugin-export-api.ts", /ipc\.invoke\(/g) +
         matches("packages/desktop/src/preload/profile-memory-promotion-api.ts", /ipc\.invoke\(/g) +
@@ -229,7 +238,9 @@ describe("architecture growth budgets", () => {
       // +5 typed Computer Use setup invokes; no raw native command surface.
       // +2 typed Native batch adapters return no private nonce.
       // +2 typed linked-file snapshot/add invokes mirror the two Main routes above.
-    ).toBeLessThanOrEqual(348);
+      // The integrated baseline contains 349 invokes; tracing adds four fixed
+      // list/detail/config read/update invokes, without renderer filesystem access.
+    ).toBeLessThanOrEqual(353);
     // GitHub skill previews and Panel task hosting carry main-issued review and
     // ownership fields across the typed preload boundary. The optional Mimi
     // transcript-page method adds its bounded response shape without widening
@@ -410,7 +421,9 @@ describe("architecture growth budgets", () => {
       // +1 the same type-only routing declarations for capability-owned presets.
       // +1 reviewed host MCP declaration encoder/type, consumed by Desktop's
       // process host without persisting servers or exposing credentials.
-      "packages/core/src/index.extension.ts": 59,
+      // +2 narrow external model-call observer and input type. Capability callers
+      // cannot configure stores or overwrite inherited execution/privacy scope.
+      "packages/core/src/index.extension.ts": 61,
       // Shared crash-safe persistence primitives and the Desktop-owned
       // background job registry are host-only API.
       // Speech model resolution adds one reviewed host-only module, shared by
@@ -457,7 +470,11 @@ describe("architecture growth budgets", () => {
       // +1 reviewed Host composition of the existing operation controller and
       // resolver for external runtime run custody; public SDK and extension runtime
       // exports stay unchanged.
-      "packages/core/src/index.internal.ts": 113,
+      // +2 Host-only model trace store/configuration/context and data contracts.
+      // The stable public SDK does not gain trace persistence or configuration authority.
+      // Pin three already-integrated Host grants: operation owner, session services
+      // and Link authority. These were present before model observability.
+      "packages/core/src/index.internal.ts": 118,
       "packages/coding/src/index.ts": 12,
       "packages/arena/src/index.ts": 19,
       // +1 for conversation-session.ts, which re-exports the four modules
@@ -485,7 +502,9 @@ describe("architecture growth budgets", () => {
       // responsibilities. These modules import no native/credential authority.
       // +1 shared bounded output-journal recovery reducer statement.
       // +1 browser-safe coverage validator shared by Desktop and paired Mobile.
-      "packages/web/src/index.ts": 21,
+      // +2 browser-only trace API contracts/requester and shared read-only explorer.
+      // Workspace authorization and recording policy remain on the Host.
+      "packages/web/src/index.ts": 23,
     };
     for (const [path, budget] of Object.entries(exportBudgets)) {
       expect(matches(path, /^export /gm), path).toBeLessThanOrEqual(budget);

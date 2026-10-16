@@ -7,6 +7,32 @@
  */
 
 export {
+  ModelTraceStore,
+  DEFAULT_MODEL_TRACE_CONFIG,
+  configureModelTracing,
+  withModelTraceContext,
+  recordModelTraceEvent,
+  recordExternalModelTrace,
+  clearModelTracingConfiguration,
+} from "./model-traces/index.js";
+export type {
+  ModelTraceContentState,
+  ModelTraceStatus,
+  ModelTraceConfig,
+  ModelTraceConfigPatch,
+  ModelTraceOutput,
+  ModelTraceAttempt,
+  ModelTraceRecord,
+  ModelTraceSummary,
+  ModelTraceListQuery,
+  ModelTracePage,
+  ModelTraceEvent,
+  ModelTraceEventInput,
+  ModelTraceContext,
+  ExternalModelTraceInput,
+} from "./model-traces/index.js";
+
+export {
   SessionOutputCoverageStore,
   type SessionOutputCoverageProof,
 } from "./session/output-coverage-state.js";

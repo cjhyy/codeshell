@@ -2,7 +2,7 @@ import { execFile, spawn } from "node:child_process";
 import { createInterface } from "node:readline";
 import type { AgentAdapter, BuildArgsOpts, PermissionMode } from "./agent-adapter.js";
 import { pathWithCommonBins } from "./cc-capability.js";
-import { killProcessGroup } from "@cjhyy/code-shell-core/extension";
+import { killProcessGroup, recordExternalModelCall } from "@cjhyy/code-shell-core/extension";
 
 export interface AgentRunResult {
   sessionId: string;
@@ -229,6 +229,7 @@ export function runAgentOnce(
   signal?: AbortSignal,
 ): Promise<AgentRunResult> {
   return new Promise((resolve, reject) => {
+    let finishTrace: (result?: AgentRunResult, error?: unknown) => void = () => {};
     void (async () => {
       throwIfAborted(signal);
       const codexImageInputSupported =
@@ -264,6 +265,53 @@ export function runAgentOnce(
         detached: false,
         stdio: [viaStdin ? "pipe" : "ignore", "pipe", "pipe"],
       });
+      const common = {
+        provider: adapter.kind,
+        model: opts.model ?? "CLI default",
+        source: `drive-agent-${adapter.kind}-cli`,
+        purpose: "external_delegation",
+        startedAt: Date.now(),
+      };
+      const initialTrace = recordExternalModelCall({
+        ...common,
+        status: "running",
+        input: {
+          messages: [{ role: "user", content: opts.prompt }],
+          parameters: {
+            cliArguments: args,
+            promptViaStdin: viaStdin,
+            launchCwd: opts.cwd,
+            resumeExternalSessionId: opts.resumeSessionId,
+            imagePaths: opts.imagePaths,
+            additionalReadDirs: opts.additionalReadDirs,
+            limitation:
+              "CLI entry input and visible final result only; private model requests, retries, and provider usage are opaque.",
+          },
+        },
+      });
+      let traceFinished = false;
+      finishTrace = (result, error) => {
+        if (!initialTrace || traceFinished) return;
+        traceFinished = true;
+        const status = signal?.aborted
+          ? "cancelled"
+          : error || result?.isError || result?.exitCode !== 0
+            ? "failed"
+            : "completed";
+        const captured = initialTrace.inputState !== "not-recorded";
+        recordExternalModelCall({
+          ...common,
+          id: initialTrace.id,
+          status,
+          endedAt: Date.now(),
+          output: captured && result ? { text: result.finalText, stopReason: status } : undefined,
+          error: error
+            ? captured
+              ? String(error instanceof Error ? error.message : error)
+              : "External CLI request failed"
+            : undefined,
+        });
+      };
       let reportedSessionId = "";
       const reportSessionId = (candidate: unknown): void => {
         if (reportedSessionId || typeof candidate !== "string" || !candidate.trim()) return;
@@ -311,6 +359,7 @@ export function runAgentOnce(
         if (settled) return;
         settled = true;
         cleanup();
+        finishTrace(undefined, err);
         // A missing binary is the most common failure (user hasn't installed the
         // CLI, or GUI-launched Electron's PATH misses it). Turn the cryptic
         // "spawn codex ENOENT" into something actionable that names the command.
@@ -328,12 +377,21 @@ export function runAgentOnce(
         if (settled) return;
         settled = true;
         cleanup();
-        void (termination ?? Promise.resolve()).then(() => {
-          const result = runWithLines(adapter, lines, code);
-          reportSessionId(result.sessionId);
-          resolve(result);
-        });
+        void (termination ?? Promise.resolve())
+          .then(() => {
+            const result = runWithLines(adapter, lines, code);
+            finishTrace(result);
+            reportSessionId(result.sessionId);
+            resolve(result);
+          })
+          .catch((error) => {
+            finishTrace(undefined, error);
+            reject(error);
+          });
       });
-    })().catch(reject);
+    })().catch((error) => {
+      finishTrace(undefined, error);
+      reject(error);
+    });
   });
 }

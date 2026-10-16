@@ -30,6 +30,7 @@ import { createOperationResolutionApi } from "./operation-resolution-api";
 import { createOptimizationLabApi } from "./optimization-lab-api";
 import { createComputerUseSettingsApi } from "./computer-use-api";
 import { createSessionTranscriptApi } from "./session-transcript-api";
+import { createModelTraceApi } from "./model-trace-api";
 import { createProfilePluginExportApi } from "./profile-plugin-export-api";
 import { createProfileMemoryPromotionApi } from "./profile-memory-promotion-api";
 import { createPetApi } from "./pet-api";
@@ -999,6 +1000,7 @@ contextBridge.exposeInMainWorld("codeshell", {
   listRuns: (options?: { includeSessions?: boolean }) => ipcRenderer.invoke("runs:list", options),
   getRun: (runId: string) => ipcRenderer.invoke("runs:get", runId),
   ...createSessionTranscriptApi(ipcRenderer),
+  modelTraces: createModelTraceApi(ipcRenderer),
   /**
    * Re-subscribe to a session's main-held event snapshot after a remount.
    * Returns events past `sinceSeq` plus the next cursor, so the renderer can

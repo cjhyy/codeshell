@@ -5,11 +5,6 @@ import {
   ArrowRight,
   Ghost,
   History,
-  MessageSquare,
-  Activity,
-  ShieldCheck,
-  ScrollText,
-  ListTodo,
   KeyRound,
   FlaskConical,
   UserRound,
@@ -33,8 +28,9 @@ import {
   DropdownMenuRadioItem,
 } from "@/components/ui/dropdown-menu";
 import { cn } from "@/lib/utils";
+import { ACTIVITY_PAGES, type ActivityPage } from "../activity/activityPages";
 
-export type ActivityPage = "task_inbox" | "sessions" | "runs" | "approvals" | "logs";
+export type { ActivityPage } from "../activity/activityPages";
 
 export interface SettingsMenuProps {
   onOpenSettingsPage: () => void;
@@ -224,30 +220,16 @@ export function SettingsMenu({
                 onFocusOutside={(event) => event.preventDefault()}
                 onEscapeKeyDown={(event) => closeSubmenu(event, "activity")}
               >
-                {[
-                  ...(taskInboxEnabled
-                    ? [{ page: "task_inbox" as const, label: t("taskInbox.title"), Icon: ListTodo }]
-                    : []),
-                  {
-                    page: "sessions" as const,
-                    label: t("auto.sessions.title"),
-                    Icon: MessageSquare,
-                  },
-                  { page: "runs" as const, label: t("auto.runs.title"), Icon: Activity },
-                  {
-                    page: "approvals" as const,
-                    label: t("auto.approvals.title"),
-                    Icon: ShieldCheck,
-                  },
-                  { page: "logs" as const, label: t("auto.logs.title"), Icon: ScrollText },
-                ].map(({ page, label, Icon }) => (
+                {ACTIVITY_PAGES.filter(
+                  (entry) => entry.page !== "task_inbox" || taskInboxEnabled,
+                ).map(({ page, label, Icon }) => (
                   <DropdownMenuItem
                     key={page}
                     className="rounded-lg py-2"
                     onSelect={() => closeThenNavigate(() => onNavigate(page))}
                   >
                     <Icon size={14} aria-hidden />
-                    {label}
+                    {t(label)}
                   </DropdownMenuItem>
                 ))}
               </DropdownMenuSubContent>

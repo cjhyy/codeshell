@@ -19,6 +19,7 @@ await mkdir(output, { recursive: true });
 const source = String.raw`
 import React, { useState } from "react";
 import { createRoot } from "react-dom/client";
+import { ModelTracesView } from "./activity/ModelTracesView";
 import { ActivityNavigation } from "./activity/ActivityNavigation";
 import { AppMainView } from "./app/AppShell";
 import { LogsView } from "./logs/LogsView";
@@ -36,6 +37,7 @@ const history = Array.from({ length: 75 }, (_, i) => ({ envelope: envelope("hist
 const sessions = Array.from({ length: 120 }, (_, i) => ({ id: "session-" + i, title: "Session " + i, file: "/fixture/" + i, size: 1024, createdAt: 1800000000000, updatedAt: 1800000000000 + i }));
 const run = { runId: "run-original", objective: "Original run", status: "completed", cwd: "/original/project", createdAt: 1800000000000, updatedAt: 1800000000010, startedAt: 1800000000000, finishedAt: 1800000000010, sessionId: "original-session", error: null, summary: "Run completed", model: null, provider: null, durationMs: 10, usage: null, attemptCount: 1, latestCheckpointId: null, latestApprovalId: null, tags: [], metadata: {} };
 window.codeshell = {
+  modelTraces: { list: async () => ({items:[], total:0}), get: async () => null, getConfig: async () => ({enabled:true,captureContent:false,includeEphemeral:false,retentionDays:7}), setConfig: async (patch) => ({enabled:true,captureContent:false,includeEphemeral:false,retentionDays:7,...patch}) },
   tailLog: async (bucket, limit) => {
     window.fixture.calls.push(["tail", bucket, limit]);
     if (window.fixture.logMode === "error") throw new Error("Owned log failure");
@@ -56,7 +58,7 @@ function App() {
   return <div className="flex h-screen min-h-0 flex-col bg-background text-foreground">
     <div className="h-11 shrink-0 border-b px-3 py-3 text-xs">CodeShell</div>
     <AppMainView lifecycle={null} searchLayer={null} navigation={<ActivityNavigation page={page} onNavigate={setPage} taskInboxEnabled={true} />}>
-      {page === "logs" ? <LogsView /> : page === "approvals" ? <ApprovalsView queue={queue} history={history} onDecide={async (env) => {
+      {page === "traces" ? <ModelTracesView /> : page === "logs" ? <LogsView /> : page === "approvals" ? <ApprovalsView queue={queue} history={history} onDecide={async (env) => {
         window.fixture.calls.push(["decide", env.requestId]);
         if (window.fixture.failApproval) throw new Error("Owned approval failure");
         setQueue([]);
@@ -182,8 +184,15 @@ try {
 
       const routes =
         lang === "zh"
-          ? ["任务收件箱", "会话历史", "运行记录", "审批记录", "日志"]
-          : ["Task inbox", "Session history", "Run history", "Approvals", "Logs"];
+          ? ["执行观测", "后台工作", "会话管理", "审批记录", "诊断日志", "旧版运行记录"]
+          : [
+              "Execution traces",
+              "Background work",
+              "Conversations",
+              "Approvals",
+              "Diagnostic logs",
+              "Legacy runs",
+            ];
       // Use the actual navigation labels from the translated production tree.
       const navButtons = await nav.getByRole("button").all();
       for (let index = 0; index < navButtons.length; index += 1) {
@@ -207,7 +216,7 @@ try {
           path: path.join(output, `${lang}-${viewport.width}-${index}.png`),
         });
         cases.push({ lang, viewport, label });
-        if (index === 1) {
+        if (index === 2) {
           await page
             .getByRole("button", { name: lang === "zh" ? "查看记录" : "View record", exact: true })
             .first()

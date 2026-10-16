@@ -56,3 +56,46 @@ describe("PermissionClassifier approval lifecycle events", () => {
     expect(events).toEqual([]);
   });
 });
+
+test("parallel same-tool approval waits retain their identity when resolved out of order", async () => {
+  const resolvers: Array<(value: { approved: boolean }) => void> = [];
+  const classifier = new PermissionClassifier([], "default", {
+    requestApproval: () => new Promise((resolve) => resolvers.push(resolve)),
+  });
+  const events: ApprovalLifecycleEvent[] = [];
+  classifier.setApprovalEventListener((event) => events.push(event));
+  const first = classifier.handleAsk("Bash", { command: "first" });
+  const second = classifier.handleAsk("Bash", { command: "second" });
+  expect(events[0].observationId).not.toBe(events[1].observationId);
+  resolvers[1]({ approved: false });
+  await second;
+  resolvers[0]({ approved: true });
+  await first;
+  expect(events[2]).toMatchObject({
+    observationId: events[1].observationId,
+    phase: "resolved",
+    approved: false,
+  });
+  expect(events[3]).toMatchObject({
+    observationId: events[0].observationId,
+    phase: "resolved",
+    approved: true,
+  });
+});
+
+test("a backend failure closes the exact approval observation", async () => {
+  const classifier = new PermissionClassifier([], "default", {
+    requestApproval: async () => {
+      throw new Error("fixture backend unavailable");
+    },
+  });
+  const events: ApprovalLifecycleEvent[] = [];
+  classifier.setApprovalEventListener((event) => events.push(event));
+  await expect(classifier.handleAsk("Bash", {})).rejects.toThrow("fixture backend unavailable");
+  expect(events).toHaveLength(2);
+  expect(events[1]).toMatchObject({
+    observationId: events[0].observationId,
+    phase: "resolved",
+    error: "fixture backend unavailable",
+  });
+});

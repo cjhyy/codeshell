@@ -342,7 +342,6 @@ import {
   deleteSession,
   listDiskSessions,
   listRecentAttachments,
-  listSessions,
   markAttachmentsSent,
   stablePromptHash,
   stageFileBytes,
@@ -416,7 +415,7 @@ import {
 } from "./memory-service.js";
 import { runDream } from "./dream-service.js";
 import type { MemoryScope } from "@cjhyy/code-shell-core";
-import { registerSessionTranscriptIpc } from "./session-transcript-ipc.js";
+import { registerActivityHistoryIpc } from "./activity-history-ipc.js";
 import { registerSessionCatalogIpc } from "./session-catalog-ipc.js";
 import { SessionCatalogStore } from "./session-catalog-store.js";
 import { createTaskInboxSources } from "./task-inbox/task-inbox-sources.js";
@@ -428,11 +427,9 @@ import { taskInboxPetView } from "./task-inbox/task-inbox-pet-view.js";
 import { assertDesktopSessionId } from "./session-validation.js";
 import { probeLocalhostPorts } from "./port-probe.js";
 import { getSessionEvents } from "./rawTranscript.js";
-import { listTitles, setTitle } from "./session-titles-store.js";
 import { createLinkService, remoteLinkFromEnvironment } from "@cjhyy/code-shell-server/links";
 import { createDesktopWebService } from "./desktop-web-service.js";
 import { createDesktopPanelAutomationHost } from "./panel-automation-host.js";
-import { tailLog, type LogBucket } from "./logs-service.js";
 import {
   installSkillFromDirectory,
   listSkills,
@@ -532,8 +529,6 @@ import { GithubSkillReviewStore } from "./github-skill-review.js";
 import { checkSkillUpdateEntry, updateSkillEntry } from "./skill-update-entry.js";
 import { resolveModelMeta } from "./model-meta-service.js";
 import { deleteRunDir } from "./runs-service.js";
-import { listRunsForUi, getRunHistory } from "./run-history-service.js";
-import { readUsageHistory } from "./usage-history-service.js";
 import { listRuns } from "./runs-service.js";
 import {
   initUpdater,
@@ -585,7 +580,6 @@ import {
   registerSecondInstanceFocus,
   runOwnedQuickChatStartupCleanup,
 } from "./quick-chat-startup-cleanup.js";
-import { getSessionCwdIndex } from "./session-cwd-index.js";
 import {
   readSessionDirectoryForUi,
   readSessionFileForUi,
@@ -1185,6 +1179,11 @@ const approvalBridge = new ApprovalBridge({
 });
 const roomManager = new RoomManager({
   rootDir: resolve(app.getPath("userData"), "mobile-remote", "rooms"),
+  modelTracing: {
+    storageDir: join(sessionsRoot(), ".model-traces"),
+    parameters: (room) =>
+      room.kind === "codex" ? {} : { appendSystemPrompt: CC_COST_GUARD_PROMPT },
+  },
   resolveLinkedSession: resolveLinkedSessionFromDisk,
   createAgent: (room, onEvent) =>
     room.kind === "codex"
@@ -6821,13 +6820,6 @@ ipcMain.handle("memory:dream", async (_e, level: unknown, cwd?: string) => {
   return runDream(level, authorizedCwd);
 });
 
-ipcMain.handle("sessions:list", async () => listSessions());
-ipcMain.handle("sessions:setArchived", async (_event, id: string, archived: boolean) => {
-  assertDesktopSessionId(id);
-  if (typeof archived !== "boolean") throw new Error("archived must be a boolean");
-  await archiveDiskSession(id, archived ? Date.now() : undefined);
-  await getSessionCwdIndex().refresh(id);
-});
 async function deleteDesktopSession(id: string): Promise<void> {
   mediaPreviewService.releaseSession(id);
   builtInBrowserHandoffGrants.clearSession(id);
@@ -6937,36 +6929,10 @@ ipcMain.handle("agent:subscribe", async (_e, sessionId: string, sinceSeq?: numbe
     }
   );
 });
-ipcMain.handle("sessions:titles", async () => listTitles());
-ipcMain.handle("sessions:rename", async (_e, id: string, title: string) => {
-  assertDesktopSessionId(id);
-  if (typeof title !== "string" || title.length > 1_024 || title.includes("\0")) {
-    throw new Error("title must be a bounded string");
-  }
-  await setTitle(id, title);
-});
-
-ipcMain.handle("logs:tail", async (_e, bucket: LogBucket, lines?: number) => {
-  if (bucket !== "ui-ink" && bucket !== "engine" && bucket !== "desktop") {
-    throw new Error("invalid bucket");
-  }
-  const boundedLines =
-    typeof lines === "number" && Number.isSafeInteger(lines) && lines > 0
-      ? Math.min(lines, 10_000)
-      : undefined;
-  return tailLog(bucket, boundedLines);
-});
-
-ipcMain.handle("usage:summary", async (_e, query) => readUsageHistory(query));
-
-ipcMain.handle("runs:list", async (_e, options?: { includeSessions?: boolean }) =>
-  listRunsForUi(options),
-);
-ipcMain.handle("runs:get", async (_e, runId: string) => {
-  if (typeof runId !== "string") throw new Error("runId required");
-  return getRunHistory(runId);
-});
-registerSessionTranscriptIpc(ipcMain);
+registerActivityHistoryIpc(ipcMain, () => [
+  ...mainWindows,
+  ...(petWidgetWindow ? [petWidgetWindow] : []),
+]);
 const sessionCatalogStore = new SessionCatalogStore();
 const sessionCatalogIpc = registerSessionCatalogIpc(
   ipcMain,

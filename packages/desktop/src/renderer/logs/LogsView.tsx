@@ -136,7 +136,7 @@ export function LogsView() {
             <FileText size={20} aria-hidden />
           </span>
           <div className="min-w-0">
-            <h1 className="text-xl font-semibold tracking-tight">{t("auto.logs.title")}</h1>
+            <h1 className="text-xl font-semibold tracking-tight">{t("activity.diagnostics")}</h1>
             <p className="mt-1 text-sm leading-relaxed text-muted-foreground">
               {t("auto.logs.description")}
             </p>

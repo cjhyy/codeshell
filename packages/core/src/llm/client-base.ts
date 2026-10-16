@@ -8,6 +8,7 @@ import { LLMError, ContextLimitError, LLMRateLimitError } from "../exceptions.js
 import { logger } from "../logging/logger.js";
 import { requestBoundaryFetch } from "../model-request-boundary/context.js";
 import { currentUsageAttempt, markCurrentUsageAttemptNotSent } from "../cost-ledger/context.js";
+import { modelTraceFetch, withModelTrace } from "../model-traces/context.js";
 import {
   recordOwnedUsage,
   usageTrackingFetch,
@@ -73,7 +74,7 @@ export abstract class LLMClientBase {
     this.imageDetail = defaults?.imageDetail;
     this.fetch = usageTrackingFetch(
       requestBoundaryFetch(
-        defaults?.fetch ?? globalThis.fetch,
+        modelTraceFetch(defaults?.fetch ?? globalThis.fetch),
         currentUsageAttempt,
         markCurrentUsageAttemptNotSent,
       ),
@@ -91,7 +92,22 @@ export abstract class LLMClientBase {
     const original = this.createMessage;
     if (typeof original !== "function" || accountingWrappers.has(original)) return;
     const wrapped = (options: CreateMessageOptions) =>
-      this.withUsageAccounting(options, () => original.call(this, options));
+      withModelTrace(
+        {
+          provider: this.provider,
+          providerKind: this.config.providerKind ?? this.provider,
+          model: this.model,
+          temperature: this.temperature,
+          maxTokens: this.maxTokens,
+          parameters: {
+            reasoning: this.config.reasoning,
+            extraBody: this.config.extraBody,
+            serviceTier: this.config.serviceTier,
+          },
+        },
+        options,
+        () => this.withUsageAccounting(options, () => original.call(this, options)),
+      );
     accountingWrappers.add(wrapped);
     this.createMessage = wrapped;
   }

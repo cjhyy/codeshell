@@ -76,3 +76,12 @@ export function taskInboxOpenTarget(record: TaskInboxRecordV1): TaskInboxOpenTar
   if (record.parentSessionId) return { kind: "session", sessionId: record.parentSessionId };
   return null;
 }
+
+/** Ordinary conversations and schedule definitions are navigation records, not background work. */
+export function isBackgroundWork(record: TaskInboxRecordV1): boolean {
+  return (
+    ["mimi-delegation", "subagent", "background-shell", "background-job"].includes(record.source) ||
+    record.capabilities.includes("verify") ||
+    (record.source === "session" && !!(record.automationId || record.parentSessionId))
+  );
+}

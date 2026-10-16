@@ -21,6 +21,7 @@ import { MCPManager } from "@cjhyy/code-shell-core";
 import { resolveLLMConfigForTag } from "@cjhyy/code-shell-core";
 import { costTracker } from "@cjhyy/code-shell-core";
 import { defaultSandboxConfig } from "@cjhyy/code-shell-core/internal";
+import { configureModelTracing } from "@cjhyy/code-shell-core/internal";
 import type { ClientDefaults, LLMConfig, PermissionMode } from "@cjhyy/code-shell-core";
 import { startInkRepl } from "../../ui/index.js";
 import { runInkOnboarding } from "../../ui/onboarding-runner.js";
@@ -119,6 +120,11 @@ export async function replCommand(options: ReplOptions): Promise<void> {
     // entries, and downstream code (e.g. /model) reads them from settings.
     settings = settingsManager.get();
   }
+
+  configureModelTracing({
+    storageDir: join(settings.session.storageDir ?? sessionsRoot(), ".model-traces"),
+    source: "tui",
+  });
 
   provider = provider ?? "openai";
   baseUrl = baseUrl ?? "https://openrouter.ai/api/v1";
