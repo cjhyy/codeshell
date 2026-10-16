@@ -218,6 +218,43 @@ const fullText = async (locator) => {
     );
   return result;
 };
+const compactToolLabel = async () => {
+  const locator = tool().getByText(toolName, { exact: true });
+  await locator.scrollIntoViewIfNeeded();
+  const result = await locator.evaluate((node) => {
+    const box = node.getBoundingClientRect(),
+      card = node.closest("[data-tool-card]"),
+      style = window.getComputedStyle(node);
+    return {
+      text: node.textContent,
+      title: node.getAttribute("title"),
+      box: box.toJSON(),
+      card: card.getBoundingClientRect().toJSON(),
+      client: card.clientWidth,
+      scroll: card.scrollWidth,
+      overflow: style.overflowX,
+      textOverflow: style.textOverflow,
+      whiteSpace: style.whiteSpace,
+    };
+  });
+  // Tool records deliberately use one compact row. The full name remains in
+  // the native tooltip and accessible toggle name while its visual label clips.
+  assert.equal(result.text, toolName);
+  assert.equal(result.title, toolName);
+  assert.equal(result.overflow, "hidden");
+  assert.equal(result.textOverflow, "ellipsis");
+  assert.equal(result.whiteSpace, "nowrap");
+  assert.ok(
+    result.box.width > 0 &&
+      result.box.height > 0 &&
+      result.box.left >= result.card.left - 1 &&
+      result.box.right <= result.card.right + 1 &&
+      result.scroll <= result.client + 1,
+    JSON.stringify(result),
+  );
+  assert.equal(await tool().getByRole("button", { name: toolName }).count(), 1);
+  return result;
+};
 const critical = async (locator) => {
   const result = await fullText(locator);
   const viewport = page.viewportSize();
@@ -299,7 +336,7 @@ try {
           for (const width of [320, 390, 760, 1280]) {
             await page.setViewportSize({ width, height: 700 });
             await mount({ language, theme, variant });
-            const toolLabel = await fullText(tool().getByText(toolName, { exact: true }));
+            const toolLabel = await compactToolLabel();
             const approvalLabel = await fullText(approval().getByText(toolName, { exact: true }));
             const approvalDescription = await fullText(
               approval().getByText(description, { exact: true }),
