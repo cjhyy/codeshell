@@ -35,7 +35,7 @@ P2 / P3、统一工作台等后续增强和新增第三方 Link / OAuth / token 
 
 ## 大功能升级（体量 L，分阶段落地）
 
-- **Link 连接器契约与运行时重构**（L，2026-10-16 设计稿，尚未实施）。按资源、操作、事件三类能力组合，授权方式与 API/MCP/CLI/浏览器执行通道独立建模。先修参数错误误判重连与 Host/Worker 状态同步，再增加动作契约协商、抽出通用运行时和 provider 包，以 Figma/GitHub 纵向迁移后覆盖现有连接器；旧版 Link 连接记录允许按精确范围清理并重新授权，不做旧 meta 双读迁移；保留托管、精确 grant、撤销清理票据、未知刷新与写操作账本。同步/Webhook/浏览器会话按实际需求后置，不启动第三方接入或部署。见[重构方案与分期验收](docs/todo/link-connector-refactor-plan-2026-10-16.md)。
+- **Link 连接器契约与运行时重构**（L，2026-10-16 实施中）。首批增加统一 Operation 契约、五种 recipe、完整快照 CI 门禁、Figma 新旧动作分离、刷新消费错误分类、各入口状态回执、HTTP provider 注册抽取与跨会话未决写屏障；新记录按 recipe 建立，旧连接可由精确离线工具清理。剩余纯领域 helpers/CLI/MCP/verified-write 的完整迁出、在线清理收口、正式契约包与部署兼容验收。同步/Webhook/浏览器会话继续后置。见[重构方案](docs/todo/link-connector-refactor-plan-2026-10-16.md)与[准确实施边界](docs/todo/link-connector-refactor-delivery-2026-10-16.md)。
 
 - **Figma Link：MCP 与 REST 统一能力**（L，2026-10-15 重新规划，新增部分尚未实施）。已有 REST 按需节点、导出、素材与评论读取保留；设计上下文、截图、变量和 Make resources 规划接入官方 MCP，独立 OAuth 与连接状态。先验证 CodeShell 客户端合法准入、补每次发送的 endpoint/credential 绑定及通用 MCP 资源协议，再做能力路由和新文件授权优化；不把已有 Link downstream grant 当作 MCP token，不自动启用画布写入。见[能力与分期规划](docs/todo/figma-link-mcp-plan.md)。本项不启动其他 provider 接入或正式发布。
 

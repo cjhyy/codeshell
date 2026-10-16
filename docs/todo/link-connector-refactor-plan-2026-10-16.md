@@ -1,10 +1,10 @@
 # Link 连接器契约与运行时重构方案
 
-日期：2026-10-16。状态：设计稿（评审修订版），尚未实施。修订内容见文末“修订记录”。
+日期：2026-10-16。状态：实施中，首批源码已完成；准确范围见[实施记录](link-connector-refactor-delivery-2026-10-16.md)。原评审修订保留在文末。
 
 Link 的目标是为 Agent、Panel 和各端客户端提供有明确账号、权限、资源范围和版本的连接能力。建议采用组合式连接器：首轮统一为带契约的 Operation，资源语义作为 Operation 的可选维度，事件订阅单独留接口；连接方式由 `ConnectionRecipe` 枚举，授权、托管、执行位置等字段从 recipe 推导；通过 Host 统一执行入口、动作命名规则和连接状态管理，把第三方差异收进 provider 目录。
 
-旧版 Link 连接记录允许清理并重新连接。首版采用新记录模型，不承担旧 meta 的自动迁移、旧连接 ID 保留或双读兼容；唯一例外是带未决写意图的旧连接，见“旧记录清理与发布切换”。客户端与服务的目录协商仍为长期要求。此次交付为方案修订，尚未清理真实连接或凭据。
+用户已明确允许直接清理旧版 Link 连接并重新连接。新版不自动迁移旧连接；过渡读取仅用于执行边界、现有撤销队列和清理。未决写的阻断证据保存在独立账本中，不能随连接删除。客户端与服务仍需按目录协商。
 
 本轮先完成按需读取与操作的可靠性、动作契约规则和 provider 抽离。同步、Webhook 和浏览器会话提供扩展位置，在有具体消费者时实现。继续遵守薄云端范围，不新增常驻云端工作台、通用云端脚本执行平台或独立同步调度系统。
 
@@ -56,12 +56,12 @@ CodeShell 源码现状以 main `8c872e4bd`（2026-10-16）为准；Services 仍�
 
 首轮只有一个执行入口 `OperationExecutor`，所有按需读取与操作都是 Operation。“资源”不是另一类执行对象，而是 Operation 上的可选维度：
 
-| 维度       | 何时声明                                                                                           | 额外义务                                                                                                 |
-| ---------- | -------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------- |
-| 无资源维度 | 查询或变更不针对一个可引用的资源，例如查询部署状态、创建 Issue。                                   | 声明 effect 与重复执行规则；写操作复用现有账本。                                                         |
-| `resource` | 读取或导出一个可被稳定引用、可被 grant 精确圈定的资源，例如 Figma 节点、GitHub 文件、Notion 页面。 | 输入含 resource selector；结果标明 appliedSelector、内容完整度、截断与后续读取方式；支持有界分页和取消。 |
+| 维度       | 何时声明                                       | 额外义务                                                         |
+| ---------- | ---------------------------------------------- | ---------------------------------------------------------------- |
+| 无内容特征 | 查询、列表或写操作，例如部署状态、创建 Issue。 | 仍声明资源授权策略、effect 与重复执行规则；写操作复用现有账本。  |
+| `content`  | 读取或导出内容，例如 Figma 节点、GitHub 文件。 | 附带内容格式、覆盖程度、截断与后续读取方式；支持有界分页和取消。 |
 
-判别规则：输入里是否有一个会被 grant 的 `selected-resources` 校验的资源引用。有则声明 `resource` 维度，否则不声明。`figma.get_file` 一类读取因此是带 `resource` 维度的 Operation，而不是与 Action 并列的第二套概念。
+授权与内容维度分别判断。**每个 Operation 必须声明 resourcePolicy**：输入目标校验、结果按 grant 过滤或账号级范围；创建 Issue 也必须授权父仓库，列表不能泄露未授权项目。可选 `content` 只描述文件内容、格式与覆盖程度，不决定是否鉴权。`figma.get_file` 和 `read_design_content` 因此仍属于 Operation。
 
 Event 的订阅与投递生命周期（subscribe/pause/resume/unsubscribe、至少一次投递、去重与游标）与一次性执行不同，保留独立的 `SubscriptionManager` 接口位置，P5 有消费者时实现。
 
@@ -88,11 +88,11 @@ Sync 是由资源读取构成的持久任务，后续复用已有任务/自动�
 | Executor kind   | `api / mcp / cli / browser`                        | 表示执行协议/驱动；真实 transport 由 adapter 配置，例如 MCP streamable-http/stdio、API HTTP、CLI process。MCP OAuth 组合 OAuth2 与 MCP。                             |
 | Brokered        | 是/否                                              | 是否经独立 Link 服务中转。中转包含两层授权，不能把下游 Link token 作为上游 token。                                                                                   |
 
-| 推导字段           | 推导规则                                                                                                                                                                                        |
-| ------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Credential custody | brokered → `link-service`（设备只持下游受限凭据）；external-session → `external-session-owner`；其余 → `device-host`。只公开不透明 credentialRef；CLI 或浏览器会话不因绑定而导出 token/cookie。 |
-| Executor location  | brokered → `service`；其余 → `device`。不能用它判断第三方 endpoint 在本机还是远端。                                                                                                             |
-| Route              | brokered → `brokered`；其余 → `direct`。                                                                                                                                                        |
+| 推导字段           | 推导规则                                                                                                                                                                           |
+| ------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Credential custody | brokered → `broker`（当前 Host 只持下游受限凭据）；external-session → `external-session-owner`；其余 → `current-host`。只公开不透明 credentialRef，不因绑定导出外部 token/cookie。 |
+| Executor location  | brokered → `broker`；其余 → `current-host`。Host 可以是本机 Desktop，也可以是远程 serve；不能将非 brokered 解释为必定在用户设备执行。                                              |
+| Route              | brokered → `brokered`；其余 → `direct`。                                                                                                                                           |
 
 出现推导规则的反例（例如设备托管凭据但由服务执行）时，再把对应字段升格为 recipe 的显式声明，并为新组合补审阅。
 
@@ -102,13 +102,13 @@ UI 只展示 recipe，例如“GitHub CLI”“Figma API 网页授权”“Figma
 
 ### 现有连接如何映射
 
-| 现有方式                | Recipe 声明（授权 / 通道 / brokered）                 | 推导结果（托管 / 执行位置 / 路由）                  |
-| ----------------------- | ----------------------------------------------------- | --------------------------------------------------- |
-| 手动 PAT/API token      | static-secret / api / 否                              | device-host / device / direct                       |
-| GitHub、GitLab 设备授权 | oauth2 device-code / api / 否                         | device-host / device / direct                       |
-| 已有 provider CLI 登录  | external-session / cli / 否                           | external-session-owner / device / direct            |
-| Remote Link             | 上游 provider OAuth + 下游 CodeShell OAuth / api / 是 | link-service / service / brokered                   |
-| Figma 官方 MCP          | oauth2 authorization-code + PKCE / mcp / 否           | device-host / device / direct，连接的是远端官方服务 |
+| 现有方式                | Recipe 声明（授权 / 通道 / brokered）                 | 推导结果（托管 / 执行位置 / 路由）                     |
+| ----------------------- | ----------------------------------------------------- | ------------------------------------------------------ |
+| 手动 PAT/API token      | static-secret / api / 否                              | current-host / current-host / direct                   |
+| GitHub、GitLab 设备授权 | oauth2 device-code / api / 否                         | current-host / current-host / direct                   |
+| 已有 provider CLI 登录  | external-session / cli / 否                           | external-session-owner / current-host / direct         |
+| Remote Link             | 上游 provider OAuth + 下游 CodeShell OAuth / api / 是 | broker / broker / brokered                             |
+| Figma 官方 MCP          | oauth2 authorization-code + PKCE / mcp / 否           | current-host / current-host / direct，连接远端官方服务 |
 
 ## 核心对象与模块边界
 
@@ -145,7 +145,7 @@ Connection ID、Credential ID、上游 remote connection ID 和 Grant ID 分别�
 | `codeshell-services/apps/link-server`                        | 独立 OAuth broker、上游凭据托管、下游 grant 与受限执行；固定精确版本消费 `@cjhyy/code-shell-link` 的契约数据并以其校验自身实现，执行实现留在 Services 仓库，保留自己的数据库与服务部署。                    |
 | Panel 与资料集                                               | 通过 LinkAccess 消费授权后的资源/动作；文档编辑、数据加工、业务同步策略继续由 Panel 或资料集能力持有。                                                                                                      |
 
-依赖方向：`packages/host` 继续只依赖 Core；runtime 与 provider 目录依赖 `packages/link`，不 import Core/Host 的实现。**Core 依赖 `packages/link` 是新增的依赖边**（main 上只有 server 与 desktop 依赖它），在 P2 引入 LinkAccess 契约类型时建立，须保持 `packages/link` 无 Node 运行时依赖。Desktop、serve/Server、TUI 的组合入口负责实例化 runtime/provider，并向 Core 的 LinkAccess 和 Host 通用服务注册机制注入实现。
+依赖方向：`packages/host` 继续只依赖 Core；Core 已在基线依赖公共 `packages/link`，该包继续保持无 Node 运行时依赖。Desktop、serve/Server、TUI 的组合入口注册 provider；Core 不反向 import Server。首批 HTTP 实现移出 Core，但部分纯参数/结果 helpers 暂经 Core extension 复用，完整迁出仍属于 P3/P4。`packages/server` 也是公开包，移入其中不会隐藏实现源码。
 
 现有 CredentialStore 暂留 Core，通过 `CredentialRepository`/`CredentialCustodian` 接口注入；provider 实现不能获得整个 Core。Services 只使用版本化公开包，不引用兄弟仓库源码或临时 worktree。
 
@@ -187,7 +187,7 @@ flowchart TB
 
 只新增输出字段、且旧消费者忽略它不改变语义时，可沿用原名。新增动作不自动加入已有 grant。
 
-命名建议为 `<provider>.<语义名>`，语义名直接表达内容差异（例如摘要与设计内容使用不同名称）；只有语义名无法区分时才用 `@2` 等后缀。具体名称由实现工作包确定。
+内部 operationId 使用 `<provider>.<语义名>`；v1 HTTP wire action 必须满足现有路由的 `[a-z_]+`，不能包含点、数字或 `@`。新设计内容动作为 `figma.read_design_content`，wire action 为 `read_design_content`，scope 为 `figma:read_design_content`。
 
 ### 协商沿用 v1 目录
 
@@ -198,9 +198,9 @@ flowchart TB
 5. 服务不认识的动作名在第三方调用前拒绝，返回 `unsupported_contract`。
 6. 任务需要的动作不在交集中时，向用户报告“服务需升级”，不回退到语义不同的旧动作。现行 Figma 方案已明确不新增摘要冒充设计内容的兼容路径。
 
-CI 门禁：`packages/link` 中每个动作的规范化 Schema 生成快照并入库；快照变化若不属于“允许沿用原名”的情况，CI 失败并要求换名。这把“契约漂移”从运行时 digest 校验前移到合并前。
+CI 门禁：快照覆盖完整规范化 OperationContract，包括输入/输出 Schema、effect、资源策略与过滤身份、默认值、预算、重复执行规则、覆盖程度和规范化行为。源码必须等于快照，且 CI 与目标基线中的既有动作逐项比较，不能靠更新快照绕过换名；行为差异另由实际 adapter fixtures 验证。
 
-不要把兼容性协商结果永久绑定在 OAuth token scope 中。Connection 保留权限与身份；动作可用性每次从目录求交得出。版本升级通常不需要重新连接，新增权限或资源范围仍需单独同意。
+兼容性与授权分别判定。服务目录不提供新动作，表示该服务不支持；服务提供但旧 grant 缺少新 scope，表示需要明确授权。改名意味着新增 scope，不能承诺无需重新授权。推迟独立 ExecutionBinding 类型不推迟发送前与返回前的 endpoint、issuer、resource 和当前 grant 重验。
 
 ### 保留的版本号
 
@@ -306,7 +306,7 @@ CLI 或 MCP 无法施加与 REST 相同的上游细粒度范围时，Host 仍须
 
 ## 渐进实施与工作包
 
-所有工作包均为待办。当前计划只定义改造，不启动第三方接入、授权、部署或正式发布。每个工作包开工前先在 rebase 后的 main 上重核“现状”表对应行。
+工作树已 rebase 到 main `8c872e4bd` 并开始实施。P0、P1 与部分 P2–P4 的实际代码和测试记录见交付文档；纯 provider helpers、CLI/MCP 驱动的完整抽离仍待完成。此次授权不包含新增第三方接入、生产部署或正式发布。
 
 | 阶段                | 工作包与主要位置                                                                                                                                                                                                             | 完成条件                                                                                                      |
 | ------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------- |
@@ -321,21 +321,21 @@ CLI 或 MCP 无法施加与 REST 相同的上游细粒度范围时，Host 仍须
 
 ### 旧记录清理与发布切换
 
-清理流程按“禁用 → 收口未决写 → 尽力撤销 → 删除”执行，不引入独立的清理票据状态机。
+2026-10-16 用户再次明确允许直接删除旧记录。实现采用“保护账本 → 禁用 → 删除可见旧连接”，远端凭据进入**已有** retirement custody，以便既有 Host 恢复撤销；删除本地记录不表示远端撤销成功，不新增第二套清理状态机。以下旧评审流程中“未决写必须保留旧连接”的限制由独立账本屏障替代。
 
 1. **清单**：只包含明确由旧版 Link 拥有的连接记录、绑定、缓存和其独占凭据。普通模型/MCP 凭据、聊天、项目文件、资料集内容与其他应用记录不在清理范围；不能整体删除 `credentials.json` 或清空 Keychain。
 2. **禁用**：旧连接停止接受新调用，等待或取消在途请求。禁用状态写入旧记录本身（CAS 更新），新版只读取这个禁用标记与下一步所需的账本关联，不双读其他旧 meta。
 3. **收口未决写意图**：现有账本以 `account.id = meta.linkAccountId ?? null` 加 `connectionId` 标识执行身份（`operation-recovery.ts`）。新连接换了 ID，因此：
-   - 旧连接名下存在 `write_outcome_unknown` 等未决写意图时，该旧连接保持禁用、不删除，在管理 UI 显示“有未决写操作”，先完成只读核查或人工处理；
+   - 删除连接前持久保护未决写的资源冲突范围；缺失账号时按 provider + target 保守阻断，缺失或不可解密目标证据时按 provider 保守阻断，保留原操作回执与人工处理路径；
    - 未决期间，新连接对同一 provider 的写操作按以下规则阻断：未决项 `account.id` 非空时按 provider + account + target 阻断；为空时按 provider + target 保守阻断，不依赖账号匹配；
    - 只读操作不受影响。业务 operation ledger 不随连接记录删除，不能靠更换 connection ID 绕过防重放。
-4. **尽力撤销**：没有未决写意图的旧连接，按旧 connection/grant 精确撤销下游授权；本地 OAuth 按 provider 已公布能力处理吊销。共享上游账号与其他 grant 不能连带删除；可能影响共享账号或新凭据的吊销不自动执行。CLI/浏览器只删除 Link 绑定，不默认退出外部登录。
-5. **删除**：撤销成功后删除旧记录与其独占凭据，失效项目/Profile/资料集中的连接引用并提示重新选择。撤销失败或结果不明时，保留禁用的旧记录与凭据，在 UI 显示“远端授权未撤销”并允许用户重试或手动处理；不能先丢弃唯一凭据再声称远端已撤销。
+4. **撤销托管**：远端旧 connection/grant 与独占凭据原子转入现有 retirement custody，现有 Host 在恢复时精确重试撤销。共享上游账号与其他 grant 不能连带删除；CLI/浏览器只删除 Link 绑定，不默认退出外部登录。
+5. **删除**：保护账本和远端撤销所需凭据后，CAS 删除可见旧连接。旧引用失效，用户重新选择。撤销失败或结果不明时保留私有 retirement 记录与凭据，报告 remoteCleanupPending，不能声称远端撤销完成。
 6. **新记录**：新版只写带 `recordSchemaVersion` 的连接模型。用户重新连接时创建新的连接/凭据/grant ID，重新验证账号、权限和资源范围；不从旧 labels、scopes 预览或旧工具缓存推导授权。未知刷新票据按既有安全规则处理，不能恢复旧 token。
 7. **发布顺序**：发布 `@cjhyy/code-shell-link` 契约数据，Services 固定精确依赖并部署新动作，再发布 Host。清理旧数据不意味着客户端和服务永远同步升级：目录求交、`unsupported_contract` 与跨版本验收仍保留。
 8. **部署与回滚**：部署后记录准确 build、提供的动作名和已授权的只读验证结果。回滚保留最新凭据/账本/数据库，不恢复已删除连接或被消费的旧 token；旧客户端无法理解新记录时清楚拒绝。数据库兼容性单独验证。
 
-如需比第 5 步更强的保证（例如进程崩溃后自动续做撤销），再引入持久清理票据与 tombstone，作为单独评审项。
+现有 retirement 队列、租约与启动恢复继续保留，不能因简化设计而删掉。离线清理须停止使用相同凭据的 CodeShell Host/Worker；外部修改文件无法撤回已取出的 token 或在途刷新。在线清理需要另外实现 Host 内的冻结、收口与广播管线，当前 CLI 不冒充该能力。
 
 `packages/server` 的 Host 管理 API 与 Services 的 OAuth broker 是两个边界；对应修改在各自仓库、独立 task branch/worktree 中实施。与平台 HostRuntime/PolicyEngine 收敛复用同一套机制，避免产生第二个审批器或任务宿主。
 
@@ -355,21 +355,21 @@ Fixture 必须执行旧版本真实参数解析器和实际 HTTP 边界。不能
 
 ### 权限 状态与故障
 
-- 参数错误、契约不兼容、429/5xx/网络失败不改变授权；token endpoint 的 invalid_grant、明确撤销与未知刷新按各自规则处理；token 阶段其他 400 不诱导重连。
+- 普通动作参数错误、契约不兼容与 429/5xx 不改变授权。token_refresh 只对已证实发生在消费 token 前的配置错误恢复原凭据；`invalid_grant`、`invalid_scope`、未知 400、坏成功响应与丢失回执分别按撤销或未知刷新处理。现有 OAuth 库在 scope 校验前消费 refresh token，不能把“非 invalid_grant 的 400”一概视为可安全重试。
 - Main/Worker/Renderer 状态 revision 一致；覆盖状态事件与错误响应两种到达顺序，以及旧响应不能覆盖新连接；本地 API、CLI、MCP 与 remote 动作均覆盖。
 - 账号替换、项目同 ID 覆盖、资源撤销、刷新中移除连接和返回前撤销均不能交付越权结果。
 - CLI session 不导出 token；MCP 配置/endpoint/schema 变化与旧 Run 正确隔离；未知工具不能因发现而自动授权。
 - 资源分页、大小限制、depth、摘要/全文与截断语义可验证；查询成功但无实际内容不能报告任务完成。
 - 写操作超时保留 unknown，不能重复执行；独立只读检查只能报告当前观测，不能伪造原写操作成功回执。
-- 旧连接带未决写意图时不被删除；新连接（含 `account.id` 为空的场景）对同一 target 的写操作被阻断，直至未决项收口。
-- 远端撤销失败时旧凭据保留且 UI 显示未撤销，不报告清理完成。
+- 删除旧连接仍保留未决写的独立账本屏障；新连接、跨 Session 与相同 ID 的新 incarnation 都不能绕过；不同已证实 target 不应被无故阻断。
+- 远端撤销失败时凭据在既有 retirement custody 中保留，报告未决撤销，不冒充远端清理完成。
 - 包安装、服务启动与恢复采用隔离 HOME、合成凭据和精确 origin guards；真实账号、正式包与生产部署分别验收，不由 fixture 代替。
 
 ### 首轮结束标准
 
 首轮 P0–P4 的结束标准是：破坏性变化都以新动作名发布且有 CI 门禁；新旧组合要么按目录交集执行，要么在副作用前清楚拒绝；普通请求失败不损坏授权；所有现有连接通道都由统一权限与结果管线管理；Core 不再随 provider 参数变化而修改领域分支。
 
-Event、Sync、浏览器会话、v2 契约协商与独立发包不作为首轮完成条件。通用 OAuth、加密托管、精确 grants、写操作账本和取消机制在每个阶段保持可用；已清理的旧连接需要重新建立，带未决写意图的旧连接在收口前保留。
+Event、Sync、浏览器会话、v2 契约协商与独立发包不作为首轮完成条件。通用 OAuth、加密托管、精确 grants、写操作账本和取消机制在每个阶段保持可用；已清理的旧连接需要重新建立，未决写证据独立保留。
 
 ## 与现有计划的关系
 
