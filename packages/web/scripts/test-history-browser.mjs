@@ -46,7 +46,11 @@ const bundle = await build({
 });
 const browser = await chromium.launch({
   headless: true,
-  executablePath: "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome",
+  executablePath:
+    process.env.CODESHELL_TEST_CHROMIUM ||
+    (process.platform === "darwin"
+      ? "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome"
+      : undefined),
 });
 const origin = "http://history-owned.test",
   url = origin + "/?view=history";
