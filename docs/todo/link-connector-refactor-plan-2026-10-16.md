@@ -4,6 +4,8 @@
 
 Link 的目标是为 Agent、Panel 和各端客户端提供有明确账号、权限、资源范围和版本的连接能力。建议采用组合式连接器：业务能力分为资源、操作、事件，授权方式与执行通道分别建模；通过 Host 统一执行入口、版本化动作契约和连接状态管理，把第三方差异收进连接器包。
 
+旧版 Link 连接记录允许清理并重新连接。首版采用新记录模型，不承担旧 meta 的自动迁移、旧连接 ID 保留或双读兼容；客户端与服务的协议协商仍为长期要求。此次交付为方案修订，尚未清理真实连接或凭据。
+
 本轮先完成按需读取与操作的可靠性、契约协商和 provider 抽离。同步、Webhook 和浏览器会话提供扩展位置，在有具体消费者时实现。继续遵守薄云端范围，不新增常驻云端工作台、通用云端脚本执行平台或独立同步调度系统。
 
 ## 目标与设计决定
@@ -13,7 +15,7 @@ Link 的目标是为 Agent、Panel 和各端客户端提供有明确账号、权
 3. 身份授权、技术兼容性、最近可用性分别表示。参数错误与服务故障不破坏有效授权。
 4. Core 保持领域无关，Host 提供通用托管与执行机制，provider 包持有第三方 API 规则。
 5. 保留现有凭据加密、CAS 更新、精确资源授权、写操作账本、撤销重验和未知刷新结果保护。
-6. 第一版保留 `LinkAction` 的调用外观和已保存连接 ID；兼容层明确标识旧契约，不把旧摘要冒充完整内容。
+6. 第一版保留 `LinkAction` 的调用外观，清理旧版连接后按新模型重新授权；新连接获得独立稳定 ID，不把旧摘要冒充完整内容。
 
 ## 业界参考与采用范围
 
@@ -113,7 +115,7 @@ UI 不展示这些字段的笛卡尔积。由 `ConnectionRecipe` 给出真实可
 
 现有 AuthorizationJob 继续作为短期连接任务，绑定 owner、connection、目标 revision、当前 step 和过期时间；不把它当成已建立的 Connection。
 
-Connection ID、Credential ID、上游 remote connection ID 和 Grant ID 分别建模。兼容层可暂时复用旧 ID 值，但不能再依赖它们一定相等。私有配置与凭据只以 Host 内部引用连接，不出现在 Agent/Renderer DTO。
+Connection ID、Credential ID、上游 remote connection ID 和 Grant ID 分别建模。重新连接时按各自职责创建 ID，不依赖它们相等。私有配置与凭据只以 Host 内部引用连接，不出现在 Agent/Renderer DTO。
 
 ### 建议的代码归属
 
@@ -255,11 +257,11 @@ Host 为状态权威。执行响应携带与该操作同一 authority 的状态�
 
 资源引用包含 provider/instance、account、connection、资源类型与 provider 规范化 ID。内容有来源、取得时间、格式和版本；资源 ID 由 provider adapter 解释，不强迫 Figma 节点、GitHub 仓库、Slack channel 共用一个字符串规则。
 
-授权按明确 selector 表达：资源发现权限、选定文件/仓库、子节点/路径和操作允许集分别建模。范围种类至少区分 `selected-resources`、`legacy-native-scope` 和 `unknown`，避免把不同连接的空值解释成同一种权限。Figma 显式 `selected-resources: []` 继续表示无文件权限；旧 PAT/CLI 的原生权限模型不能据此推导。
+授权按明确 selector 表达：资源发现权限、选定文件/仓库、子节点/路径和操作允许集分别建模。范围种类区分 `selected-resources` 与 `upstream-scoped`，未验证的范围不可执行，避免把不同连接的空值解释成同一种权限。Figma 显式 `selected-resources: []` 继续表示无文件权限；PAT/CLI 的原生权限模型不能据此推导。
 
-发现到的资源、展示标签和最近列出的资源都不是 grant。尤其旧 `linkResourceLabels` 可能只是有数量上限的预览，不能迁移成选定资源允许集。已有 broker grant 的完整 `resourceGroups` 只有在明确来自已验证 grant 时可迁移；PAT/CLI 则保留原生 scope 与既有 Host 限制的来源，缺少可靠权限依据时标为 unknown，复核前不能获得新的可执行范围。
+发现到的资源、展示标签和最近列出的资源都不是 grant。尤其旧 `linkResourceLabels` 可能只是有数量上限的预览，不复用于新授权。所有新连接重新核验账号、实际 scopes 和资源范围；broker 的 `resourceGroups` 必须来自本次已验证 grant，PAT/CLI 则明确记录原生权限与 Host 约束来源。
 
-兼容期沿用冻结旧 adapter 的原有限制；新增精确 selector 或扩大范围需要明确同意，不能借记录迁移悄悄改变已有访问范围。
+重新连接时明确展示将授予的操作与范围；添加精确 selector 或扩大范围需要明确同意，不能把清理重建当作自动增权。
 
 CLI 或 MCP 无法施加与 REST 相同的上游细粒度范围时，Host 仍须在已审阅动作映射处限制并如实呈现约束，不伪造“上游已按文件授权”的保证。
 
@@ -275,21 +277,24 @@ CLI 或 MCP 无法施加与 REST 相同的上游细粒度范围时，Host 仍须
 | --- | --- | --- |
 | P0 故障路径 | 修 `core/links/remote.ts` 的分阶段错误分类；补 Main/Worker typed outcome 和状态同步；增加 safe diagnostics。 | 400 不污染授权；确证失效与未知刷新分别处理；同一请求的错误不会被 snapshot 吞掉。 |
 | P1 契约底座 | `packages/link` 增加公共 contract/error/outcome 类型；Services 与 Host 增加 v2 发现/执行 envelope；建立旧 v1 识别与拒绝规则。 | 新客户端连接旧服务时，在业务请求前判断能否满足目标；已有 grant 与资源不变。 |
-| P2 运行时接口 | 引入小型 link-runtime；注入凭据、policy、任务和传输；现有实现通过兼容 adapter 接入；连接状态分层。 | LinkAction 外观保持，旧记录可读，只有一个执行/结果交付管线。 |
+| P2 运行时接口 | 引入小型 link-runtime；注入凭据、policy、任务和传输；现有执行实现通过 adapter 接入；采用新记录模型与分层状态，清理旧版 Link 记录。 | LinkAction 外观保持，新连接按新模型建立；旧引用明确失效，只有一个执行/结果交付管线。 |
 | P3 代表性迁移 | Figma + GitHub 先进入 link-providers，覆盖 PAT、设备 OAuth、CLI、broker、MCP，以及读取/导出/写操作。 | Core 不再持有这两家领域参数与结果规则；直接与中转契约一致且权限不扩大。 |
 | P4 收口 | 其余 provider 迁移；CLI/HTTP/MCP adapter 使用同一 registry；删除已替代分支，升级公共包/兼容矩阵与管理 UI。 | 所有既有 provider 通过同一契约工具链，Desktop/TUI/serve/Web 按实际宿主能力呈现。 |
 | P5 按需扩展 | 有消费者后实现 Event subscriptions、Sync checkpoints、浏览器会话 recipes。 | 每项有独立生命周期、消费方和可验证恢复语义；不反向拖延 P0–P4。 |
 
 依赖顺序是 P0 → P1 → P2 → P3 → P4；P1 的纯契约定义与 P0 可并行。P3 的两个 provider 可在 P2 接口固定后并行。P5 单独评审。优先用纵向迁移证明抽象，再扩展其余 provider；不先一次性重写全部文件。
 
-### 旧记录与发布迁移
+### 旧记录清理与发布切换
 
-1. 从旧 meta 派生新 descriptor，保留 connection/credential/grant ID、账号与存储位置。资源范围同时保留来源及范围种类：grant、原生 scopes、展示预览与未知值必须区分；不把 labels/发现结果升级为授权，不推断新增权限。
-2. 对无法可靠推断的契约标为 legacy/unknown，执行前发现并确认。当前刷新中或未知刷新记录继续要求安全恢复，不因迁移而恢复可用。
-3. 先双读、单写明确版本的新 metadata；只在连接变更时通过 CAS 保存。秘密迁移通过现有 custody，Agent/Renderer 不参与解密。
-4. 发布兼容 contracts/provider 包，Services 固定精确依赖并部署可同时识别必要旧契约的新运行时，再发布使用 v2 的 Host。
-5. 客户端仍做协商，不能把“服务先发”当作唯一保护。新服务若不保留旧摘要语义，须明确拒绝旧动作并走已公布的升级窗口，不能在 v1 路由静默返回不同语义。
-6. 部署后记录准确 build、支持契约和已授权的只读验证结果。回滚保留最新凭据/账本/数据库，不能恢复已被轮换消费的旧 token；数据库兼容性单独验证。
+1. 生成待清理清单，只包含明确由旧版 Link 拥有的连接记录、绑定、缓存和其独占凭据。普通模型/MCP 凭据、聊天、项目文件、资料集内容与其他应用记录不在清理范围；不能整体删除 `credentials.json` 或清空 Keychain。
+2. 先使旧连接停止接受新调用，处理在途请求，并按旧 connection/grant 精确撤销下游授权；本地 OAuth 按 provider 已公布能力处理吊销。共享上游账号与其他 grant 不能连带删除。CLI/浏览器只删除 Link 绑定，不默认退出外部登录。
+3. 撤销结果不明时保留 Host 私有的最小清理票据，并将旧连接禁用；票据不作为可用连接，也不参与旧记录兼容。不能先丢弃唯一凭据再声称远端已撤销。完成清理后删除旧记录，失效项目/Profile/资料集中的连接引用并提示重新选择。
+4. 新版只写明确 `recordSchemaVersion` 的连接模型，不双读旧 meta。用户重新连接时创建新的连接/凭据/grant ID，重新验证账号、权限和资源范围；不从旧 labels、scopes 预览或旧工具缓存推导授权。
+5. 业务 operation ledger 及未知写结果不随连接记录删除。重连后仍按账号、资源和操作意图关联未知结果阻断，不能靠更换 connection ID 绕过防重放。未知刷新票据按既有安全规则处理，不能恢复旧 token。
+6. 发布 contracts/provider 包，Services 固定精确依赖并部署新契约，再发布使用 v2 的 Host。清理旧数据不意味着客户端和服务永远同步升级：目录协商、版本不兼容错误与跨版本验收仍保留；不保留的旧契约明确拒绝。
+7. 部署后记录准确 build、支持契约和已授权的只读验证结果。回滚保留最新凭据/账本/数据库，不恢复已删除连接或被消费的旧 token；旧客户端无法理解新记录时清楚拒绝。数据库兼容性单独验证。
+
+清理票据固定旧 connection/grant、credential generation 与待撤销目标，执行前重验归属，通过 CAS/tombstone 防止旧清理任务影响新连接。provider 吊销若会影响共享账号或新凭据，不自动执行该吊销，只禁用旧 Link 并记录尚未完成的远端清理。
 
 `packages/server` 的 Host 管理 API 与 Services 的 OAuth broker 是两个边界；对应修改在各自仓库、独立 task branch/worktree 中实施。与平台 HostRuntime/PolicyEngine 收敛复用同一套机制，避免产生第二个审批器或任务宿主。
 
@@ -321,7 +326,7 @@ Fixture 必须执行旧版本真实参数解析器和实际 HTTP 边界。不能
 
 首轮 P0–P4 的结束标准是：同名动作的技术契约明确；新旧组合要么按已声明契约执行，要么在副作用前清楚拒绝；普通请求失败不损坏授权；所有现有连接通道都由统一权限与结果管线管理；Core 不再随 provider 参数变化而修改领域分支。
 
-Event、Sync 和浏览器会话不作为首轮完成条件。已有 OAuth、加密托管、精确 grants、写操作账本和取消机制在每个阶段保持可用。
+Event、Sync 和浏览器会话不作为首轮完成条件。通用 OAuth、加密托管、精确 grants、写操作账本和取消机制在每个阶段保持可用；已清理的旧连接需要重新建立。
 
 ## 与现有计划的关系
 
