@@ -9,6 +9,8 @@
 export {
   ModelTraceStore,
   DEFAULT_MODEL_TRACE_CONFIG,
+  MODEL_TRACE_CALL_TYPES,
+  isModelTraceCallType,
   configureModelTracing,
   withModelTraceContext,
   recordModelTraceEvent,
@@ -19,6 +21,7 @@ export { createNativeModelTraceFrameDecoder } from "./model-traces/native-frames
 export type {
   ModelTraceContentState,
   ModelTraceStatus,
+  ModelTraceCallType,
   ModelTraceConfig,
   ModelTraceConfigPatch,
   ModelTraceOutput,

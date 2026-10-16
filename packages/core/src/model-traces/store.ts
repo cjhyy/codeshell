@@ -12,6 +12,7 @@ import {
   writeFileSync,
 } from "node:fs";
 import { isAbsolute, join, relative, resolve, sep } from "node:path";
+import { deriveModelTraceCallType, isModelTraceCallType } from "./classification.js";
 import type {
   ModelTraceConfig,
   ModelTraceConfigPatch,
@@ -142,6 +143,7 @@ export class ModelTraceStore {
       limit < 1 ||
       limit > 500 ||
       (query.status !== undefined && !statuses.has(query.status)) ||
+      (query.callType !== undefined && !isModelTraceCallType(query.callType)) ||
       (query.withoutSession !== undefined && typeof query.withoutSession !== "boolean") ||
       [query.since, query.until].some(
         (time) => time !== undefined && (!Number.isFinite(time) || time < 0),
@@ -209,6 +211,8 @@ export class ModelTraceStore {
         !statuses.has(row.status)
       )
         continue;
+      const callType = deriveModelTraceCallType(row);
+      if (query.callType !== undefined && callType !== query.callType) continue;
       if (query.withoutSession && validId(row.sessionId)) continue;
       if (
         query.workspaceScopes &&
@@ -252,8 +256,8 @@ export class ModelTraceStore {
         .join(" ")
         .toLowerCase();
       if (!words.every((word) => haystack.includes(word))) continue;
-      rows.push(
-        Object.fromEntries(
+      rows.push({
+        ...Object.fromEntries(
           [
             "version",
             "id",
@@ -282,8 +286,9 @@ export class ModelTraceStore {
           ]
             .filter((field) => row[field] !== undefined)
             .map((field) => [field, row[field]]),
-        ) as unknown as ModelTraceSummary,
-      );
+        ),
+        callType,
+      } as unknown as ModelTraceSummary);
     }
     return rows;
   }
@@ -351,6 +356,7 @@ export class ModelTraceStore {
             traceCount: 0,
             sources: [],
             models: [],
+            callTypes: [],
             runningCount: 0,
             failedCount: 0,
           },
@@ -367,6 +373,8 @@ export class ModelTraceStore {
         item.sources.push(row.source);
       if (typeof row.model === "string" && !item.models.includes(row.model))
         item.models.push(row.model);
+      if (row.callType && !item.callTypes!.includes(row.callType))
+        item.callTypes!.push(row.callType);
       if (row.status === "running") item.runningCount++;
       if (row.status === "failed") item.failedCount++;
       if (
@@ -387,6 +395,7 @@ export class ModelTraceStore {
       traceCount: traces.size,
       sources: item.sources.sort(),
       models: item.models.sort(),
+      callTypes: item.callTypes!.sort(),
     }));
     items.sort((a, b) => b.updatedAt - a.updatedAt || b.key.localeCompare(a.key));
     let after: { kind: "sessions"; updatedAt: number; key: string } | undefined;
@@ -444,7 +453,7 @@ export class ModelTraceStore {
       record.startedAt < Date.now() - this.getConfig().retentionDays * 86_400_000
     )
       return null;
-    return record;
+    return { ...record, callType: deriveModelTraceCallType(record) };
   }
   events(traceId: string): ModelTraceEvent[] {
     if (!validId(traceId)) throw new Error("Invalid model trace ID");
@@ -483,6 +492,9 @@ export class ModelTraceStore {
   write(record: ModelTraceRecord): void {
     if (!validId(record.id) || !validId(record.traceId)) throw new Error("Invalid model trace ID");
     const safeRecord = structuredClone(record);
+    // Categories are projected from attribution on every read; never persist a
+    // caller-supplied label as an independent authority or migration requirement.
+    delete safeRecord.callType;
     let raw = JSON.stringify(safeRecord);
     if (Buffer.byteLength(raw) > MAX_RECORD_BYTES) {
       for (const attempt of safeRecord.attempts) {

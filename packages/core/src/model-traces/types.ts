@@ -3,6 +3,21 @@ import type { UsageReceipt } from "../cost-ledger/types.js";
 
 export type ModelTraceContentState = "recorded" | "not-recorded" | "truncated" | "redacted";
 export type ModelTraceStatus = "running" | "completed" | "failed" | "cancelled";
+export type ModelTraceCallType =
+  | "execution"
+  | "task"
+  | "panel"
+  | "summary"
+  | "context"
+  | "title"
+  | "goal"
+  | "memory"
+  | "suggestion"
+  | "speech"
+  | "transcription"
+  | "audio"
+  | "external"
+  | "other";
 
 export interface ModelTraceConfig {
   /** Host-owned generation; changed policy never resumes capture for an existing call. */
@@ -50,6 +65,8 @@ export interface ModelTraceRecord {
   workspacePath?: string;
   source: string;
   purpose: string;
+  /** Host-derived presentation category. Raw purpose remains available unchanged. */
+  callType?: ModelTraceCallType;
   provider: string;
   providerKind?: string;
   model: string;
@@ -91,6 +108,7 @@ export interface ModelTraceListQuery {
   model?: string;
   provider?: string;
   purpose?: string;
+  callType?: ModelTraceCallType;
   source?: string;
   status?: ModelTraceStatus;
   since?: number;
@@ -115,6 +133,8 @@ export interface ModelTraceSessionSummary {
   traceCount: number;
   sources: string[];
   models: string[];
+  /** Categories of the matching calls, after all query filters and before paging. */
+  callTypes?: ModelTraceCallType[];
   runningCount: number;
   failedCount: number;
 }

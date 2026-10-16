@@ -8,6 +8,7 @@ import type {
 } from "@cjhyy/code-shell-core/internal";
 export type {
   ModelTraceAttempt,
+  ModelTraceCallType,
   ModelTraceConfig,
   ModelTraceContentState,
   ModelTraceEvent,

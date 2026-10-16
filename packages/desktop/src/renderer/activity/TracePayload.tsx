@@ -1,8 +1,9 @@
 import React, { useState } from "react";
 import { Check, Copy } from "lucide-react";
-import type { ModelTraceContentState } from "../../preload/model-trace-api";
+import type { ModelTraceCallType, ModelTraceContentState } from "../../preload/model-trace-api";
 import { Button } from "@/components/ui/button";
 import { useT } from "../i18n/I18nProvider";
+import { isMediaModelCall } from "./TraceCallType";
 import { useCopyFeedback } from "../ui/useCopyFeedback";
 
 export function TraceContentNotice({ state }: { state: ModelTraceContentState }) {
@@ -83,17 +84,49 @@ export function TracePayload({
   );
 }
 
-export function TraceMessages({ messages }: { messages: unknown[] }) {
+export function TraceMessages({
+  messages,
+  callType,
+}: {
+  messages: unknown[];
+  callType?: ModelTraceCallType;
+}) {
   const { t } = useT();
   return (
     <section aria-label={t("observability.messages")} className="min-w-0 space-y-2">
+      {messages.length > 0 && (
+        <p className="text-xs leading-relaxed text-muted-foreground">
+          {t(
+            isMediaModelCall(callType)
+              ? "observability.mediaMessagesHint"
+              : "observability.messageRolesHint",
+          )}
+        </p>
+      )}
       {messages.map((value, index) => {
         const message =
           value && typeof value === "object" ? (value as Record<string, unknown>) : null;
+        const role = typeof message?.role === "string" ? message.role : "";
+        const roleKeys = {
+          user: "roleUser",
+          assistant: "roleAssistant",
+          system: "roleSystem",
+          developer: "roleDeveloper",
+          tool: "roleTool",
+        } as const;
+        const roleKey = Object.hasOwn(roleKeys, role)
+          ? roleKeys[role as keyof typeof roleKeys]
+          : undefined;
+        const roleLabel =
+          isMediaModelCall(callType) && role === "user"
+            ? t("observability.mediaInput")
+            : roleKey
+              ? t(`observability.${roleKey}`)
+              : t("observability.roleOther");
         return (
           <TracePayload
             key={index}
-            title={`${index + 1} · ${typeof message?.role === "string" ? message.role : t("observability.messages")}`}
+            title={`${index + 1} · ${roleLabel}${role ? ` · ${role}` : ""}`}
             value={message?.content ?? value}
             text={typeof message?.content === "string"}
           />

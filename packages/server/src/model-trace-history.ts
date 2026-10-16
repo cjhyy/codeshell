@@ -1,5 +1,6 @@
 import {
   ModelTraceStore,
+  isModelTraceCallType,
   type ModelTraceConfig,
   type ModelTraceConfigPatch,
   type ModelTraceEvent,
@@ -26,6 +27,7 @@ const QUERY_FIELDS = new Set([
   "model",
   "provider",
   "purpose",
+  "callType",
   "source",
   "status",
   "since",
@@ -57,7 +59,10 @@ export function validateModelTraceQuery(input?: unknown): ModelTraceListQuery {
     if (!QUERY_FIELDS.has(key))
       throw new ModelTraceRequestError(400, `Unknown model trace query field: ${key}`);
     if (value === undefined) continue;
-    if (key === "withoutSession") {
+    if (key === "callType") {
+      if (!isModelTraceCallType(value))
+        throw new ModelTraceRequestError(400, "Invalid model trace callType");
+    } else if (key === "withoutSession") {
       if (typeof value !== "boolean")
         throw new ModelTraceRequestError(400, "Invalid model trace withoutSession");
     } else if (key === "limit") {

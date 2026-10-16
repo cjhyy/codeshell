@@ -66,6 +66,7 @@ test("all calls in the same session aggregate before paging, across executions a
       traceCount: 2,
       sources: ["desktop", "panel:fixture"],
       models: ["fixture-model", "second"],
+      callTypes: ["execution", "panel"],
       runningCount: 1,
       failedCount: 1,
     },
@@ -166,4 +167,77 @@ test("session cursors reject corrupt or call-list cursors and share query bounds
       workspaceScopes: [{ workspacePath: "/project", includeChildren: true }],
     } as any),
   ).toThrow("workspace scopes");
+});
+
+test("type filters precede session counts, trace counts and pagination without leaking scopes", () => {
+  for (let index = 0; index < 205; index++)
+    write(`main-${index}`, {
+      workspacePath: "/project/worktree",
+      sessionId: "mixed",
+      traceId: index % 2 ? "execution-1" : "execution-2",
+      startedAt: now - index,
+    });
+  write("title", {
+    workspacePath: "/project/worktree",
+    sessionId: "mixed",
+    purpose: "title",
+    startedAt: now + 10,
+  });
+  write("title-other-session", {
+    workspacePath: "/project/worktree",
+    sessionId: "other",
+    purpose: "title",
+    startedAt: now + 20,
+  });
+  write("root-panel-title", {
+    workspacePath: "/project",
+    sessionId: "mixed",
+    purpose: "title",
+    source: "panel:fixture",
+    traceId: "panel-run",
+    startedAt: now + 30,
+  });
+  write("root-chat-title", {
+    workspacePath: "/project",
+    sessionId: "mixed",
+    purpose: "title",
+    startedAt: now + 40,
+  });
+  write("foreign-title", {
+    workspacePath: "/foreign",
+    sessionId: "mixed",
+    purpose: "title",
+    startedAt: now + 50,
+  });
+  const query = {
+    workspaceScopes: [
+      { workspacePath: "/project/worktree" },
+      { workspacePath: "/project", sourcePrefix: "panel:" },
+    ],
+    callType: "title" as const,
+    limit: 1,
+  };
+  const first = store.sessions(query);
+  expect(first.total).toBe(2);
+  expect(first.items[0]).toMatchObject({
+    sessionId: "mixed",
+    callCount: 2,
+    traceCount: 2,
+    callTypes: ["title"],
+    latestRequestId: "root-panel-title",
+  });
+  const second = store.sessions({ ...query, cursor: first.nextCursor });
+  expect(second.items[0]).toMatchObject({ sessionId: "other", callCount: 1, callTypes: ["title"] });
+  expect(second.nextCursor).toBeUndefined();
+  const mixed = store.sessions({ workspaceScopes: query.workspaceScopes, sessionId: "mixed" });
+  expect(mixed.items[0]).toMatchObject({ callCount: 207, callTypes: ["execution", "title"] });
+  expect(store.list(query).total).toBe(3);
+  const execution = store.sessions({ ...query, callType: "execution" });
+  expect(execution.total).toBe(1);
+  expect(execution.items[0]).toMatchObject({
+    callCount: 205,
+    traceCount: 2,
+    callTypes: ["execution"],
+  });
+  expect(() => store.sessions({ ...query, callType: "made-up" } as any)).toThrow("query");
 });

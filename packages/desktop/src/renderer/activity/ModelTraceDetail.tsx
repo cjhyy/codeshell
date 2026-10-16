@@ -2,6 +2,7 @@ import React, { useEffect, useRef, useState } from "react";
 import type { ModelTraceRecord, ModelTraceEvent } from "../../preload/model-trace-api";
 import { Button } from "@/components/ui/button";
 import { useT } from "../i18n/I18nProvider";
+import { TraceCallTypeBadge, traceCallTypeDescription, isMediaModelCall } from "./TraceCallType";
 import { TraceContentNotice, TraceMessages, TracePayload } from "./TracePayload";
 import {
   traceDuration,
@@ -63,13 +64,10 @@ export function ModelTraceDetail({
   const external =
     record.source.includes("external-cli") ||
     record.attempts.some((item) => item.coverage === "external-cli-input");
-  const coverage =
-    attempt?.coverage ??
-    (record.attempts.some((item) => item.coverage === "provider-wire")
-      ? "provider-wire"
-      : external
-        ? "external-cli-input"
-        : "logical-input");
+  const coverage = attempt?.coverage ?? (external ? "external-cli-input" : "logical-input");
+  const media = isMediaModelCall(record.callType);
+  const messages = Array.isArray(record.input?.messages) ? record.input.messages : [];
+  const tools = Array.isArray(record.input?.tools) ? record.input.tools : [];
   const cost = attempt ? attempt.estimatedCostUsd : isEvent ? undefined : record.estimatedCostUsd;
   const unknownCostAttempts = attempt || isEvent ? 0 : (record.unknownCostAttempts ?? 0);
   const costLabel =
@@ -128,6 +126,27 @@ export function ModelTraceDetail({
           </Button>
         )}
       </div>
+      {!isEvent && (
+        <div className="space-y-2">
+          <TraceCallTypeBadge type={record.callType} />
+          <p className="text-xs leading-relaxed text-muted-foreground">
+            {traceCallTypeDescription(record.callType, t)}
+          </p>
+          <details className="text-xs text-muted-foreground">
+            <summary className="cursor-pointer">{t("observability.technicalInfo")}</summary>
+            <dl className="mt-2 space-y-1 break-words [overflow-wrap:anywhere]">
+              <div>
+                <dt className="inline">{t("observability.rawPurpose")} · </dt>
+                <dd className="inline font-mono">{record.purpose}</dd>
+              </div>
+              <div>
+                <dt className="inline">{t("observability.source")} · </dt>
+                <dd className="inline font-mono">{record.source}</dd>
+              </div>
+            </dl>
+          </details>
+        </div>
+      )}
       {openError && (
         <p role="alert" className="break-words text-xs text-status-err">
           {t("observability.openError", { error: openError })}
@@ -169,13 +188,21 @@ export function ModelTraceDetail({
           <p>
             {coverage === "external-cli-input"
               ? t("observability.externalInput")
-              : t(
-                  coverage === "provider-wire"
-                    ? "observability.wireCoverage"
-                    : "observability.logicalCoverage",
-                )}
+              : coverage === "provider-wire"
+                ? t("observability.wireCoverage")
+                : t(media ? "observability.mediaInput" : "observability.logicalCoverage")}
           </p>
-          {external && <p className="leading-relaxed">{t("observability.externalCoverage")}</p>}
+          <p className="leading-relaxed">
+            {t(
+              coverage === "external-cli-input"
+                ? "observability.externalCoverage"
+                : coverage === "provider-wire"
+                  ? "observability.wireHint"
+                  : media
+                    ? "observability.mediaInputHint"
+                    : "observability.runtimeInputHint",
+            )}
+          </p>
         </div>
       )}
       {selected.error && (
@@ -206,18 +233,32 @@ export function ModelTraceDetail({
           {canShowInput &&
             (attempt || event ? (
               <TracePayload
-                title={attempt ? traceCoverageLabel(attempt.coverage, t) : t("observability.input")}
+                title={
+                  attempt
+                    ? traceCoverageLabel(attempt.coverage, t)
+                    : t(
+                        event?.kind === "tool"
+                          ? "observability.toolInput"
+                          : "observability.eventInput",
+                      )
+                }
                 value={selected.input}
               />
             ) : record.input ? (
               <>
-                <TracePayload
-                  title={t("observability.system")}
-                  value={record.input.systemPrompt}
-                  text
-                />
-                <TraceMessages messages={record.input.messages} />
-                <TracePayload title={t("observability.tools")} value={record.input.tools} />
+                {(!media || record.input.systemPrompt) && (
+                  <TracePayload
+                    title={t("observability.system")}
+                    value={record.input.systemPrompt}
+                    text
+                  />
+                )}
+                {(!media || messages.length > 0) && (
+                  <TraceMessages messages={messages} callType={record.callType} />
+                )}
+                {(!media || tools.length > 0) && (
+                  <TracePayload title={t("observability.tools")} value={tools} />
+                )}
                 <TracePayload
                   title={t("observability.parameters")}
                   value={record.input.parameters}
@@ -233,7 +274,9 @@ export function ModelTraceDetail({
           {canShowOutput &&
             (event ? (
               <TracePayload
-                title={t("observability.output")}
+                title={t(
+                  event.kind === "tool" ? "observability.toolOutput" : "observability.eventOutput",
+                )}
                 value={event.output}
                 text={typeof event.output === "string"}
               />
