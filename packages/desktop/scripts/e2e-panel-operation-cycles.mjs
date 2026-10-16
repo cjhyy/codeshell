@@ -1,0 +1,350 @@
+/* Real Electron panel operations against owned files, Git repositories and HTTP.
+ * The native folder picker is controlled; panel actions use production UI/IPC. */
+/* global document, window */
+import assert from "node:assert/strict";
+import { execFileSync } from "node:child_process";
+import { createServer } from "node:http";
+import { mkdir, mkdtemp, readFile, rename, writeFile } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import { dirname, join, resolve } from "node:path";
+import { fileURLToPath } from "node:url";
+import { prepareConfinedElectronFixture } from "./confined-electron-fixture.mjs";
+import {
+  expandSidebar,
+  findCodeShellWindow,
+  launchCodeShellElectron,
+  makeIsolatedElectronHome,
+  seedSessionCatalog,
+} from "./electron-harness.mjs";
+
+assert.ok(process.env.CODE_SHELL_TEST_HOME, "Run through run-isolated-node-smoke.mjs");
+const appDir = resolve(dirname(fileURLToPath(import.meta.url)), "..");
+const isolated = await makeIsolatedElectronHome("codeshell-panel-operation-cycles-");
+const evidence = await mkdtemp(join(tmpdir(), "codeshell-panel-operation-evidence-"));
+const projectPath = join(isolated.home, "operation-project");
+const sessionId = "panel-operation-session";
+const title = "Panel operation conversation";
+const report = { cases: [], errors: [], evidence };
+let electron, win, failure;
+let routeAvailable = false;
+const requests = [];
+const server = createServer((request, response) => {
+  requests.push(request.url);
+  if (request.url === "/retry" && !routeAvailable) {
+    request.socket.destroy();
+    return;
+  }
+  const name = request.url === "/b" ? "Fixture B" : "Fixture A";
+  response.writeHead(200, { "content-type": "text/html", "cache-control": "no-store" });
+  response.end(
+    `<!doctype html><title>${name}</title><style>body{margin:20px}input{display:block;margin-top:20px}</style><h1>${name}</h1><a href="/b">Next fixture page</a><input id="draft" aria-label="Page draft" placeholder="Page draft"><p>Owned browser fixture</p>`,
+  );
+});
+await new Promise((done) => server.listen(0, "127.0.0.1", done));
+const origin = `http://127.0.0.1:${server.address().port}`;
+const confined = await prepareConfinedElectronFixture({ appDir, isolated, origin });
+
+async function dismissTrust() {
+  const button = win.getByRole("button", { name: /^(仅查看|View only)/ });
+  if (
+    await button.waitFor({ state: "visible", timeout: 2000 }).then(
+      () => true,
+      () => false,
+    )
+  )
+    await button.click();
+}
+async function openPanel(kind) {
+  const toggle = win.locator('[data-panel-action="toggle"]');
+  if ((await toggle.getAttribute("aria-pressed")) !== "true") await toggle.click();
+  const slot = win.locator(`[data-panel-id="${kind}"]`);
+  if (await slot.count()) {
+    const id = await slot.getAttribute("aria-labelledby");
+    await win.locator(`[id="${id}"]`).click();
+  } else {
+    await win.locator('[data-panel-action="new-tab"]').click();
+    await win.locator(`[data-panel-menu-kind="${kind}"]`).click();
+  }
+  await win.locator(`[data-panel-id="${kind}"][data-panel-active="true"]`).waitFor();
+  return win.locator(`[data-panel-id="${kind}"][data-panel-active="true"]`);
+}
+const activeGuest = () =>
+  win.locator('[data-panel-id="browser"][data-panel-active="true"] webview:visible');
+async function guestValue(expression) {
+  return activeGuest().evaluate(
+    (node, expression) => node.executeJavaScript(expression),
+    expression,
+  );
+}
+async function navigate(url, expectedTitle) {
+  const browser = await openPanel("browser");
+  const address = browser.locator('input[placeholder*="URL"]');
+  await address.fill(url);
+  await address.press("Enter");
+  if (expectedTitle) {
+    await browser.getByRole("button", { name: expectedTitle, exact: true }).waitFor();
+    await win.waitForFunction((title) => {
+      const view = [...document.querySelectorAll('[data-panel-id="browser"] webview')].find(
+        (node) => node.getClientRects().length,
+      );
+      try {
+        return view?.getTitle() === title && !view.isLoading();
+      } catch {
+        return false;
+      }
+    }, expectedTitle);
+  }
+  return browser;
+}
+async function seed() {
+  await mkdir(join(projectPath, "nested"), { recursive: true });
+  await mkdir(join(isolated.codeShellHome, "desktop"), { recursive: true });
+  await writeFile(join(projectPath, "alpha.txt"), "first content\n");
+  await writeFile(join(projectPath, "nested", "deep.txt"), "deep file content\n");
+  await writeFile(join(projectPath, "README.md"), "# Fixture document\n\nReadable markdown.\n");
+  const git = (...args) => execFileSync("git", args, { cwd: projectPath, stdio: "pipe" });
+  git("init", "-b", "main");
+  git("add", ".");
+  git(
+    "-c",
+    "user.name=Fixture",
+    "-c",
+    "user.email=fixture@localhost",
+    "commit",
+    "-m",
+    "Fixture initial commit",
+  );
+  await writeFile(join(projectPath, "alpha.txt"), "updated content\n");
+  await writeFile(
+    join(isolated.codeShellHome, "desktop", "recents.json"),
+    JSON.stringify([{ path: projectPath, name: "operation-project", lastOpenedAt: Date.now() }]),
+  );
+  await writeFile(
+    join(isolated.codeShellHome, "settings.json"),
+    JSON.stringify({ autoUpdates: false }),
+  );
+}
+try {
+  await seed();
+  electron = await launchCodeShellElectron({
+    appDir,
+    home: isolated.home,
+    userDataDir: isolated.userDataDir,
+    mainEntry: confined.mainEntry,
+    env: confined.env,
+  });
+  win = await findCodeShellWindow(electron);
+  win.setDefaultTimeout(15_000);
+  win.on("pageerror", (error) => report.errors.push(error.message));
+  await win.setViewportSize({ width: 1280, height: 850 });
+  await dismissTrust();
+  await win.evaluate((cwd) => window.codeshell.setTrust(cwd, "trusted"), projectPath);
+  await win.getByText("operation-project", { exact: true }).first().click();
+  await dismissTrust();
+  const project = await win.evaluate(
+    async (cwd) =>
+      (await window.codeshell.projectRegistry.list()).find((item) =>
+        item.roots.some((root) => root.path === cwd),
+      ),
+    projectPath,
+  );
+  assert.ok(project?.id);
+  const folder = join(isolated.codeShellHome, "sessions", sessionId);
+  await mkdir(folder, { recursive: true });
+  await writeFile(
+    join(folder, "state.json"),
+    JSON.stringify({
+      sessionId,
+      title,
+      cwd: projectPath,
+      project: { projectId: project.id, mainRootId: project.primaryRootId },
+      origin: "desktop",
+      kind: "work",
+      parentSessionId: null,
+      status: "completed",
+      startedAt: Date.now(),
+    }),
+  );
+  await writeFile(
+    join(folder, "transcript.jsonl"),
+    [
+      { type: "session_meta", data: { sessionId } },
+      {
+        type: "message",
+        data: { role: "user", content: title, clientMessageId: `${sessionId}-input` },
+      },
+    ]
+      .map((event, index) =>
+        JSON.stringify({
+          id: `${sessionId}-${index}`,
+          timestamp: Date.now() + index,
+          turnNumber: 1,
+          ...event,
+        }),
+      )
+      .join("\n") + "\n",
+  );
+  await seedSessionCatalog(win, {
+    [project.id]: {
+      sessions: [
+        {
+          id: sessionId,
+          engineSessionId: sessionId,
+          title,
+          createdAt: Date.now(),
+          updatedAt: Date.now(),
+        },
+      ],
+      activeSessionId: null,
+    },
+  });
+  await win.reload();
+  await dismissTrust();
+  await expandSidebar(win);
+  await win.getByRole("button", { name: title, exact: true }).click();
+  await dismissTrust();
+  await confined.assertWorker(electron, { requireWorker: false });
+
+  const files = await openPanel("files");
+  const alpha = files.locator("[data-files-path]").filter({ hasText: "alpha.txt" });
+  await alpha.click();
+  await files.getByText("updated content", { exact: true }).waitFor();
+  await rename(join(projectPath, "alpha.txt"), join(projectPath, "alpha-hidden.txt"));
+  await files.getByRole("button", { name: "刷新", exact: true }).last().click();
+  await files.getByText(/读取失败|Failed to read/).waitFor();
+  await rename(join(projectPath, "alpha-hidden.txt"), join(projectPath, "alpha.txt"));
+  await files.getByRole("button", { name: "刷新", exact: true }).last().click();
+  await files.getByText("updated content", { exact: true }).waitFor();
+  report.cases.push(
+    "Files opens real project content, exposes deleted-file failure and refresh recovers it",
+  );
+  await files.getByRole("button", { name: /返回文件|Back to files/ }).click();
+  await files.locator("input").fill("README");
+  await files.locator("[data-files-path]").filter({ hasText: "README.md" }).click();
+  await files.getByRole("heading", { name: "Fixture document" }).waitFor();
+  report.cases.push("Files filter and Markdown preview use owned project files");
+
+  const browser = await navigate(`${origin}/a`, "Fixture A");
+  await navigate(`${origin}/b`, "Fixture B");
+  await browser.getByRole("button", { name: "后退", exact: true }).click();
+  await browser.getByRole("button", { name: "Fixture A", exact: true }).waitFor();
+  await browser.getByRole("button", { name: "前进", exact: true }).click();
+  await browser.getByRole("button", { name: "Fixture B", exact: true }).waitFor();
+  await win.waitForFunction(() => {
+    const view = document.querySelector(
+      '[data-panel-id="browser"][data-panel-active="true"] webview',
+    );
+    try {
+      return view?.getURL().endsWith("/b") && !view.isLoading();
+    } catch {
+      return false;
+    }
+  });
+  const inputRect = await guestValue(
+    "JSON.parse(JSON.stringify(document.getElementById('draft').getBoundingClientRect()))",
+  );
+  await activeGuest().click({
+    position: { x: inputRect.x + 10, y: inputRect.y + inputRect.height / 2 },
+  });
+  await win.keyboard.type("Keep this browser draft");
+  assert.equal(
+    await guestValue("document.getElementById('draft').value"),
+    "Keep this browser draft",
+  );
+  const guestId = await activeGuest().evaluate((node) => node.getWebContentsId());
+  const beforeSwitchRequests = requests.length;
+  await browser.getByRole("button", { name: "新选项卡", exact: true }).last().click();
+  await browser.getByRole("button", { name: "Fixture B", exact: true }).click();
+  await win.waitForFunction(() => {
+    const view = [...document.querySelectorAll('[data-panel-id="browser"] webview')].find(
+      (node) => node.getClientRects().length,
+    );
+    try {
+      return !!view?.getURL() && !view.isLoading();
+    } catch {
+      return false;
+    }
+  });
+  const afterSwitch = {
+    guestId: await activeGuest().evaluate((node) => node.getWebContentsId()),
+    draft: await guestValue("document.getElementById('draft').value"),
+    canGoBack: await activeGuest().evaluate((node) => node.canGoBack()),
+    requests: requests.length - beforeSwitchRequests,
+  };
+  await writeFile(
+    join(evidence, "browser-switch.json"),
+    JSON.stringify(
+      {
+        before: { guestId, draft: "Keep this browser draft", canGoBack: true },
+        after: afterSwitch,
+      },
+      null,
+      2,
+    ),
+  );
+  assert.equal(
+    afterSwitch.guestId,
+    guestId,
+    "Switching browser tabs must retain the original guest",
+  );
+  assert.equal(
+    afterSwitch.draft,
+    "Keep this browser draft",
+    "Switching browser tabs must preserve unsent page inputs",
+  );
+  assert.equal(
+    afterSwitch.canGoBack,
+    true,
+    "Switching browser tabs must retain navigation history",
+  );
+  assert.equal(afterSwitch.requests, 0, "Switching browser tabs must not reload the retained page");
+  report.cases.push(
+    "Browser back/forward and tab switching preserve guest, page draft and navigation history",
+  );
+  await navigate(`${origin}/retry`);
+  await browser.getByRole("button", { name: "重试", exact: true }).waitFor();
+  routeAvailable = true;
+  await browser.getByRole("button", { name: "重试", exact: true }).click();
+  await browser.getByRole("button", { name: "Fixture A", exact: true }).waitFor();
+  report.cases.push("Browser real connection failure shows Retry and recovers on the owned server");
+
+  const review = await openPanel("review");
+  await review.getByText("updated content", { exact: true }).waitFor();
+  execFileSync("git", ["add", "alpha.txt"], { cwd: projectPath });
+  await review.getByRole("button", { name: "选择审查范围", exact: true }).click();
+  await win.getByRole("menuitem", { name: "已暂存", exact: true }).click();
+  await review.getByText("updated content", { exact: true }).waitFor();
+  report.cases.push("Review reads actual working and staged Git diffs");
+
+  const terminal = await openPanel("terminal");
+  const input = terminal.locator(".xterm-helper-textarea");
+  await input.focus();
+  await win.keyboard.type("printf 'PANEL_OPERATION_PTY_OK\\n'\n");
+  await terminal.getByText("PANEL_OPERATION_PTY_OK", { exact: true }).waitFor();
+  await openPanel("files");
+  await openPanel("terminal");
+  await terminal.getByText("PANEL_OPERATION_PTY_OK", { exact: true }).waitFor();
+  report.cases.push("Terminal executes real PTY input and preserves output across panel switches");
+  assert.deepEqual(report.errors, []);
+  report.result = "pass";
+} catch (error) {
+  failure = error;
+  report.result = "fail";
+  report.failure = error.stack;
+  await win?.screenshot({ path: join(evidence, "failure.png") }).catch(() => {});
+  await writeFile(
+    join(evidence, "body.txt"),
+    (await win
+      ?.locator("body")
+      .innerText()
+      .catch(() => "unavailable")) ?? "unavailable",
+  );
+} finally {
+  await writeFile(join(evidence, "report.json"), JSON.stringify(report, null, 2));
+  await electron?.close().catch(() => {});
+  server.closeAllConnections();
+  await new Promise((done) => server.close(done));
+  await isolated.cleanup();
+}
+console.log(JSON.stringify(report, null, 2));
+if (failure) throw failure;
