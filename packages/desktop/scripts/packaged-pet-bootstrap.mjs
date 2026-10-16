@@ -80,12 +80,14 @@ appendFileSync(
 );
 
 if (role === "Main") {
-  // The actual signed Electron executable loads its own packaged entry.
+  // The actual supplied Electron executable loads its own packaged entry.
   // eslint-disable-next-line @typescript-eslint/no-require-imports -- This source is bundled as a synchronous CJS preload, also tested under plain Node.
   const { app, safeStorage } = require("electron");
   app.setName("code-shell");
   app.commandLine.removeSwitch("password-store");
   app.commandLine.removeSwitch("use-mock-keychain");
+  if (process.platform === "linux")
+    app.commandLine.appendSwitch("password-store", "gnome-libsecret");
   app.commandLine.appendSwitch("disable-background-networking");
   app.setPath("userData", process.env.CODESHELL_OFFICIAL_USER_DATA);
   installPackagedChromiumGuard(app, origin);

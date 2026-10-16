@@ -438,7 +438,7 @@ const receipt = {
   status: result.errors.length ? "failed" : "passed",
   suppliedApp: options.get("--packaged-app"),
   provenance:
-    "Caller-supplied packaged artifact; codesign verification does not establish Developer ID or notarization",
+    "Caller-supplied package; platform integrity checks do not establish publisher signing, notarization or installer/update acceptance",
   identity,
   processEvidence,
   operations,
@@ -452,7 +452,7 @@ const receipt = {
   guardScope:
     "Preimport Main fetch/http/https and private HOME; Chromium URL allowlist; no raw net/tls or OS sandbox claim",
   exitEvidenceBoundary:
-    "Recorded captured Main and actual stdio workers only; asynchronous watchdog descendant cleanup is not an all-OS-descendants exit acknowledgement",
+    "Captured Main, actual stdio workers and identity-checked observed descendants; this does not establish that every OS process was observed",
   keychainContext,
   privateHomeRemoved: result.privateHomeRemoved,
   retainedHome: result.privateHomeRemoved ? null : isolated.home,
