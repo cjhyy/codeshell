@@ -10,6 +10,7 @@ import {
   type SettingsScope,
 } from "./SettingsPage";
 import { DialogProvider } from "../ui/DialogProvider";
+import { ToastProvider } from "../ui/ToastProvider";
 
 describe("SettingsPage", () => {
   // The page restores its last-opened module from localStorage. This file has
@@ -88,6 +89,50 @@ describe("SettingsPage", () => {
 
     expect(html).toContain(">数字人</h1>");
     expect(html).toContain("数字人库");
+  });
+
+  test("opens account management as a global Settings module", () => {
+    const html = renderToStaticMarkup(
+      <ToastProvider>
+        <SettingsPage
+          activeProjectPath="/repo"
+          initialModule="account"
+          projects={[]}
+          sessionIndices={{}}
+          onRestoreArchivedSession={() => undefined}
+          onDeleteArchivedSession={() => undefined}
+          isMac={false}
+          isFullscreen={false}
+          onBack={() => undefined}
+        />
+      </ToastProvider>,
+    );
+
+    expect(html).toContain(">账号管理</h1>");
+    expect(html).toContain("不登录也可使用本地项目、模型和 MCP");
+    expect(html).toContain("云服务地址");
+    expect(html).not.toContain('role="dialog"');
+  });
+
+  test("excludes account management from project settings", () => {
+    const html = renderToStaticMarkup(
+      <SettingsPage
+        activeProjectPath="/repo"
+        initialProjectPath="/repo"
+        initialModule="account"
+        projects={[{ id: "repo", path: "/repo", name: "repo", addedAt: 1, pinned: false }]}
+        sessionIndices={{}}
+        onRestoreArchivedSession={() => undefined}
+        onDeleteArchivedSession={() => undefined}
+        isMac={false}
+        isFullscreen={false}
+        onBack={() => undefined}
+      />,
+    );
+
+    expect(html).toContain(">项目概览</h1>");
+    expect(html).not.toContain('data-settings-module="account"');
+    expect(html).not.toContain("账号管理");
   });
 
   test("keeps the current module when it supports the next scope", () => {

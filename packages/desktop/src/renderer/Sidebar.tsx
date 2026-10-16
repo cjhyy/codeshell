@@ -89,6 +89,7 @@ interface SidebarProps {
   onNavigate: (mode: ViewMode) => void;
   onOpenProjectConfig: (id: string) => void;
   onOpenSettingsPage: () => void;
+  onOpenAccountSettings: () => void;
   onOpenPetPage: () => void;
   onTogglePetWidget: () => void;
   onLoadMoreSessionHistory: () => void;
@@ -158,6 +159,7 @@ export function Sidebar({
   onNavigate,
   onOpenProjectConfig,
   onOpenSettingsPage,
+  onOpenAccountSettings,
   onOpenPetPage,
   onTogglePetWidget,
   onLoadMoreSessionHistory,
@@ -533,6 +535,7 @@ export function Sidebar({
           <div className="min-w-0 flex-1">
             <AccountSidebarEntry
               onOpenSettingsPage={onOpenSettingsPage}
+              onOpenAccountSettings={onOpenAccountSettings}
               onNavigate={onNavigate}
               taskInboxEnabled={taskInboxEnabled}
               optimizationLabEnabled={optimizationLabEnabled}

@@ -214,84 +214,97 @@ export function CloudAccountSettings({ embedded = false }: { embedded?: boolean 
   };
   return (
     <section
-      className={`flex min-w-0 flex-col gap-3 ${embedded ? "" : "mb-6"}`}
+      className={`flex min-w-0 flex-col gap-6 ${embedded ? "" : "mb-6 w-full max-w-3xl"}`}
       aria-label={t("settingsX.cloudAccount.title")}
     >
       {!embedded && (
-        <>
-          <h3 className="m-0 text-[0.95rem] font-semibold">{t("settingsX.cloudAccount.title")}</h3>
-          <p className="text-sm text-muted-foreground">{t("settingsX.cloudAccount.optional")}</p>
-        </>
+        <div className="space-y-2">
+          <h3 className="m-0 text-base font-semibold">{t("settingsX.cloudAccount.title")}</h3>
+          <p className="text-sm leading-6 text-muted-foreground">
+            {t("settingsX.cloudAccount.optional")}
+          </p>
+        </div>
       )}
-      <p role="status" className="text-sm">
-        {statusLoadFailed
-          ? t("settingsX.cloudAccount.unavailable")
-          : pending && passwordOperation
-            ? t("settingsX.cloudAccount.submitting")
-            : t(`settingsX.cloudAccount.state_${status.state}`)}
-      </p>
-      {status.githubConnection && (
-        <div
-          role="status"
-          aria-label={t("settingsX.cloudAccount.githubConnection")}
-          className="space-y-1 text-sm"
-        >
-          <p className="font-medium">{t("settingsX.cloudAccount.githubConnection")}</p>
-          <p
-            className={
-              status.githubConnection.state === "failed"
-                ? "text-status-err"
-                : "text-muted-foreground"
-            }
+      <div className="space-y-3">
+        <p role="status" className="text-sm leading-6">
+          {statusLoadFailed
+            ? t("settingsX.cloudAccount.unavailable")
+            : pending && passwordOperation
+              ? t("settingsX.cloudAccount.submitting")
+              : t(`settingsX.cloudAccount.state_${status.state}`)}
+        </p>
+        {status.githubConnection && (
+          <div
+            role="status"
+            aria-label={t("settingsX.cloudAccount.githubConnection")}
+            className="space-y-1 text-sm leading-6"
           >
-            {t(`settingsX.cloudAccount.githubConnection_${status.githubConnection.state}`)}
-          </p>
-        </div>
-      )}
-      {operationError && (
-        <p role="alert" className="text-sm text-status-err">
-          {operationError}
-        </p>
-      )}
-      {logoutUnconfirmed && (
-        <p role="status" className="text-sm text-muted-foreground">
-          {t("settingsX.cloudAccount.logoutUnconfirmed")}
-        </p>
-      )}
-      {!capabilities ? (
-        <div className="space-y-2 text-sm text-muted-foreground" role="status">
-          <p>
-            {t(
-              !serviceOrigin
-                ? "settingsX.cloudAccount.enterOrigin"
-                : capabilityCheckFailed
-                  ? "settingsX.cloudAccount.capabilitiesFailed"
-                  : "settingsX.cloudAccount.checking",
-            )}
-          </p>
-          {capabilityCheckFailed && (
-            <Button
-              variant="outline"
-              disabled={pending}
-              onClick={() => setCheckVersion((v) => v + 1)}
+            <p className="font-medium">{t("settingsX.cloudAccount.githubConnection")}</p>
+            <p
+              className={
+                status.githubConnection.state === "failed"
+                  ? "text-status-err"
+                  : "text-muted-foreground"
+              }
             >
-              {t("settingsX.cloudAccount.checkAgain")}
-            </Button>
-          )}
-        </div>
-      ) : !capabilities.githubEnabled || (!status.account && !capabilities.registrationAllowed) ? (
-        <div className="space-y-1 text-sm text-muted-foreground" role="status">
-          {!capabilities.githubEnabled && <p>{t("settingsX.cloudAccount.githubUnavailable")}</p>}
-          {!status.account && !capabilities.registrationAllowed && (
-            <p>{t("settingsX.cloudAccount.registrationUnavailable")}</p>
-          )}
-        </div>
-      ) : null}
-      {status.account ? (
-        <div className="space-y-2 text-sm">
-          <p className="break-all">
-            {status.account.displayName || status.account.username} · {status.origin}
+              {t(`settingsX.cloudAccount.githubConnection_${status.githubConnection.state}`)}
+            </p>
+          </div>
+        )}
+        {operationError && (
+          <p role="alert" className="text-sm text-status-err">
+            {operationError}
           </p>
+        )}
+        {logoutUnconfirmed && (
+          <p role="status" className="text-sm text-muted-foreground">
+            {t("settingsX.cloudAccount.logoutUnconfirmed")}
+          </p>
+        )}
+        {!capabilities ? (
+          <div className="space-y-2 text-sm text-muted-foreground" role="status">
+            <p>
+              {t(
+                !serviceOrigin
+                  ? "settingsX.cloudAccount.enterOrigin"
+                  : capabilityCheckFailed
+                    ? "settingsX.cloudAccount.capabilitiesFailed"
+                    : "settingsX.cloudAccount.checking",
+              )}
+            </p>
+            {capabilityCheckFailed && (
+              <Button
+                variant="outline"
+                disabled={pending}
+                onClick={() => setCheckVersion((v) => v + 1)}
+              >
+                {t("settingsX.cloudAccount.checkAgain")}
+              </Button>
+            )}
+          </div>
+        ) : !capabilities.githubEnabled ||
+          (!status.account && !capabilities.registrationAllowed) ? (
+          <div className="space-y-1 text-sm text-muted-foreground" role="status">
+            {!capabilities.githubEnabled && <p>{t("settingsX.cloudAccount.githubUnavailable")}</p>}
+            {!status.account && !capabilities.registrationAllowed && (
+              <p>{t("settingsX.cloudAccount.registrationUnavailable")}</p>
+            )}
+          </div>
+        ) : null}
+      </div>
+      {status.account ? (
+        <div className="space-y-6 text-sm">
+          <div className="flex flex-wrap items-start justify-between gap-4">
+            <div className="min-w-0 space-y-1">
+              <p className="break-words text-base font-semibold">
+                {status.account.displayName || status.account.username}
+              </p>
+              <p className="break-all text-xs leading-5 text-muted-foreground">{status.origin}</p>
+            </div>
+            <Button variant="outline" disabled={pending} onClick={() => void logout()}>
+              {t("settingsX.cloudAccount.logout")}
+            </Button>
+          </div>
           {status.state === "signed-in" && status.origin && (
             <CloudAccountProfile
               key={`profile:${authorityGeneration}`}
@@ -302,11 +315,11 @@ export function CloudAccountSettings({ embedded = false }: { embedded?: boolean 
               current={() => authorityGenerationRef.current === authorityGeneration}
             />
           )}
-          <p className="text-muted-foreground">{t("settingsX.cloudAccount.linkDescription")}</p>
-          <div className="flex flex-wrap gap-2">
-            <Button variant="outline" disabled={pending} onClick={() => void logout()}>
-              {t("settingsX.cloudAccount.logout")}
-            </Button>
+          <div className="space-y-3 border-t border-border pt-6">
+            <h4 className="font-medium">{t("settingsX.cloudAccount.loginMethods")}</h4>
+            <p className="leading-6 text-muted-foreground">
+              {t("settingsX.cloudAccount.linkDescription")}
+            </p>
             <Button
               variant="outline"
               disabled={pending || !capabilities?.githubEnabled}
@@ -330,8 +343,8 @@ export function CloudAccountSettings({ embedded = false }: { embedded?: boolean 
           )}
         </div>
       ) : (
-        <div className="max-w-lg space-y-3">
-          <label className="block space-y-1 text-sm">
+        <div className="w-full max-w-lg space-y-5">
+          <label className="block space-y-2 text-sm">
             {t("settingsX.cloudAccount.origin")}
             <Input
               value={origin}
@@ -342,7 +355,7 @@ export function CloudAccountSettings({ embedded = false }: { embedded?: boolean 
               autoComplete="url"
             />
           </label>
-          <div className="space-y-2 border-b border-border/70 pb-4">
+          <div className="space-y-3 border-b border-border/70 pb-6">
             <Button
               type="button"
               className="w-full"
@@ -377,7 +390,10 @@ export function CloudAccountSettings({ embedded = false }: { embedded?: boolean 
               />
               {t("settingsX.cloudAccount.connectGitHub")}
             </label>
-            <p id={`${helpId}-github-connection`} className="text-xs text-muted-foreground">
+            <p
+              id={`${helpId}-github-connection`}
+              className="text-xs leading-5 text-muted-foreground"
+            >
               {t(
                 !capabilities
                   ? "settingsX.cloudAccount.connectGitHubChecking"
@@ -393,7 +409,7 @@ export function CloudAccountSettings({ embedded = false }: { embedded?: boolean 
               )}
             </p>
             {capabilities?.githubEnabled && (
-              <p className="text-xs text-muted-foreground">
+              <p className="text-xs leading-5 text-muted-foreground">
                 {t(
                   capabilities.registrationAllowed
                     ? "settingsX.cloudAccount.githubCreatesAccount"
@@ -435,7 +451,7 @@ export function CloudAccountSettings({ embedded = false }: { embedded?: boolean 
             </Button>
           </div>
           <form
-            className="space-y-3"
+            className="space-y-4"
             // canSubmit validates the trimmed username, including when Enter
             // submits a pasted value before the input has lost focus.
             noValidate
@@ -449,7 +465,7 @@ export function CloudAccountSettings({ embedded = false }: { embedded?: boolean 
               signIn(mode);
             }}
           >
-            <label className="block space-y-1 text-sm">
+            <label className="block space-y-2 text-sm">
               {t("settingsX.cloudAccount.username")}
               <Input
                 name="username"
@@ -470,7 +486,7 @@ export function CloudAccountSettings({ embedded = false }: { embedded?: boolean 
                 {t("settingsX.cloudAccount.usernameHelp")}
               </p>
             )}
-            <label className="block space-y-1 text-sm">
+            <label className="block space-y-2 text-sm">
               {t("settingsX.cloudAccount.password")}
               <Input
                 name="password"
@@ -486,7 +502,7 @@ export function CloudAccountSettings({ embedded = false }: { embedded?: boolean 
             </label>
             {mode === "register" && (
               <>
-                <label className="block space-y-1 text-sm">
+                <label className="block space-y-2 text-sm">
                   {t("settingsX.cloudAccount.confirmPassword")}
                   <Input
                     name="password-confirmation"
