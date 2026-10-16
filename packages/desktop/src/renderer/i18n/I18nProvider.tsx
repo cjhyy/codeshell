@@ -1,5 +1,5 @@
 import React from "react";
-import { loadUILanguage, type UILanguage } from "../uiLanguage";
+import { loadUILanguage, UI_LANGUAGE_STORAGE_KEY, type UILanguage } from "../uiLanguage";
 import { translate, type TranslateParams } from "./translate";
 import type { TranslationKey } from "./dict";
 
@@ -18,7 +18,7 @@ const I18nContext = React.createContext<I18nContextValue | null>(null);
  *
  * The language initialises from `loadUILanguage()` (localStorage) and re-reads
  * whenever `saveUILanguage()` broadcasts the `codeshell:language-changed`
- * window event, so a language switch anywhere re-renders consumers. Mount this
+ * window event or another window changes the stored language. Mount this
  * at the very top of the provider stack (above DialogProvider) in `main.tsx`.
  */
 export function I18nProvider({ children }: { children: React.ReactNode }) {
@@ -26,8 +26,15 @@ export function I18nProvider({ children }: { children: React.ReactNode }) {
 
   React.useEffect(() => {
     const onChange = () => setLang(loadUILanguage());
+    const onStorage = (event: StorageEvent) => {
+      if (event.key === UI_LANGUAGE_STORAGE_KEY || event.key === null) onChange();
+    };
     window.addEventListener("codeshell:language-changed", onChange);
-    return () => window.removeEventListener("codeshell:language-changed", onChange);
+    window.addEventListener("storage", onStorage);
+    return () => {
+      window.removeEventListener("codeshell:language-changed", onChange);
+      window.removeEventListener("storage", onStorage);
+    };
   }, []);
 
   const value = React.useMemo<I18nContextValue>(

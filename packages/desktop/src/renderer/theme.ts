@@ -133,11 +133,10 @@ export function initTheme(): Theme {
   // without a flash of the base palette.
   applyThemePack(loadThemePackId());
   void refreshInstalledThemes().then(() => applyThemePack(loadThemePackId()));
-  if (t === "system") {
-    window
-      .matchMedia("(prefers-color-scheme: dark)")
-      .addEventListener("change", () => applyTheme("system"));
-  }
+  // A mode selected after startup decides whether later OS changes apply.
+  window.matchMedia("(prefers-color-scheme: dark)").addEventListener("change", () => {
+    if (loadTheme() === "system") applyTheme("system");
+  });
   // Same-origin windows (the pet popout) share this localStorage; a `storage`
   // event fires in the OTHER windows when one writes. Re-apply so switching the
   // theme or pack in the main window updates the widget window live too.

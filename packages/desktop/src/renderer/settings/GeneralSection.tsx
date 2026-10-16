@@ -11,10 +11,10 @@
  * doesn't exist yet, so they're intentionally omitted rather than shipped
  * as no-op switches.
  */
-import React, { useState } from "react";
+import React from "react";
 import { PermissionSection } from "./PermissionSection";
 import { UpdaterSettingsRow } from "../updater/UpdaterBanner";
-import { loadUILanguage, saveUILanguage, languageLabel, type UILanguage } from "../uiLanguage";
+import { saveUILanguage, languageLabel, type UILanguage } from "../uiLanguage";
 import { cn } from "@/lib/utils";
 import { useT } from "../i18n";
 import type { TranslationKey } from "../i18n";
@@ -26,11 +26,9 @@ const LANGUAGES: Array<{ id: UILanguage; descriptionKey: TranslationKey }> = [
 ];
 
 function LanguageBlock() {
-  const { t } = useT();
-  const [lang, setLang] = useState<UILanguage>(() => loadUILanguage());
+  const { t, lang } = useT();
 
   const choose = (next: UILanguage): void => {
-    setLang(next);
     saveUILanguage(next);
   };
 
