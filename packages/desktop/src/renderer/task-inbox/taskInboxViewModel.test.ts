@@ -2,6 +2,7 @@ import { describe, expect, test } from "bun:test";
 import type { TaskInboxRecordV1 } from "../../preload/task-inbox-api";
 import {
   groupTaskInboxRecords,
+  isBackgroundWork,
   taskInboxOpenTarget,
   TASK_INBOX_GROUPS,
 } from "./taskInboxViewModel";
@@ -286,4 +287,29 @@ describe("task inbox original detail routing", () => {
     );
     expect(calls).toHaveLength(3);
   });
+});
+
+test("background work excludes ordinary sessions and schedules while retaining actionable operations", () => {
+  const records = [
+    record("ordinary"),
+    record("external", { source: "external-runtime" }),
+    record("definition", { source: "automation", automationId: "cron" }),
+    record("legacy", { source: "legacy-run" }),
+    record("verify", { capabilities: ["open", "verify"] }),
+    record("cron-run", { automationId: "cron" }),
+    record("child", { parentSessionId: "parent" }),
+    record("delegated", { source: "mimi-delegation" }),
+    record("worker", { source: "subagent" }),
+    record("shell", { source: "background-shell" }),
+    record("job", { source: "background-job" }),
+  ];
+  expect(records.filter(isBackgroundWork).map((record) => record.sourceId)).toEqual([
+    "verify",
+    "cron-run",
+    "child",
+    "delegated",
+    "worker",
+    "shell",
+    "job",
+  ]);
 });

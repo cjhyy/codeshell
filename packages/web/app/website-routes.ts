@@ -2,7 +2,14 @@ import { validProjectId } from "./api-context.js";
 
 export type AccountSection = "profile" | "security" | "sessions" | "connections";
 export type AdminSection = "users" | "summary" | "audit";
-export type WorkbenchView = "chat" | "history" | "files" | "links" | "panels" | "settings";
+export type WorkbenchView =
+  | "chat"
+  | "activity"
+  | "history"
+  | "files"
+  | "links"
+  | "panels"
+  | "settings";
 export type WorkspaceSettingsSection = "overview" | "models" | "skills" | "mcp";
 export type WebsiteRoute =
   | { kind: "workbench" }
@@ -53,7 +60,7 @@ export function parseWorkbenchLocation(url: URL): {
   const view = url.searchParams.get("view"),
     section = url.searchParams.get("section");
   return {
-    view: ["history", "files", "links", "panels", "settings"].includes(view ?? "")
+    view: ["activity", "history", "files", "links", "panels", "settings"].includes(view ?? "")
       ? (view as WorkbenchView)
       : "chat",
     section: ["models", "skills", "mcp"].includes(section ?? "")

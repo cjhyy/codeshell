@@ -44,6 +44,7 @@ export * from "./lib/mobileAttachments.js";
 export * from "./lib/uiLanguage.js";
 export * from "./link-authorization.js";
 export * from "./link-authorization-view.js";
+export * from "./model-trace-api.js";
 
 // ── i18n: mobile namespace dict + zh-fallback translate ─────────────────────
 export { mobile } from "./i18n/mobile.js";
@@ -57,3 +58,5 @@ export {
 
 export { isEnvironmentDescriptor, projectReferenceKey } from "./lib/environment.js";
 export type { EnvironmentDescriptor, ProjectReference } from "./lib/environment.js";
+
+export { ModelTraceExplorer } from "./components/ModelTraceExplorer.js";

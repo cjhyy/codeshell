@@ -11,6 +11,7 @@ export const BUILTIN_VIEW_MODES = [
   "pet_memory", // Mimi memory center: durable memory + event journal
   "digital_humans", // catalog, installed digital humans, and teams
   "sessions",
+  "traces",
   "approvals",
   "runs",
   "automation", // scheduled automation jobs (cron) — list + detail + create

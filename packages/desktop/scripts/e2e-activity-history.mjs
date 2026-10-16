@@ -93,6 +93,7 @@ try {
     appDir,
     home: isolated.home,
     userDataDir: isolated.userDataDir,
+    env: { CODE_SHELL_TEST_HOME: isolated.codeShellHome },
   });
   win = await findCodeShellWindow(app);
   const errors = captureRendererErrors(win);
@@ -131,7 +132,7 @@ try {
     "Opt-in run IPC reads the archived Session receipt",
   );
 
-  await navigate("打开 会话", "会话历史");
+  await navigate("会话管理", "会话管理");
   await win
     .locator("[data-sessions-page]")
     .getByRole("heading", { name: title, exact: true })
@@ -152,7 +153,7 @@ try {
     await win.getByRole("button", { name: "返回会话历史", exact: true }).click();
   }
   await historyPage.getByRole("searchbox").fill("");
-  await navigate("打开 运行", "运行记录");
+  await navigate("旧版运行记录", "旧版运行记录");
   await win
     .getByRole("region", { name: "运行列表", exact: true })
     .getByRole("button", { name: new RegExp(`^${objective}`) })
@@ -173,7 +174,7 @@ try {
   await appendFile(join(logDir, `desktop-${stamp}.log`), `${marker}\n`);
   const lines = await win.evaluate(() => window.codeshell.tailLog("desktop", 500));
   assert(lines.includes(marker), "IPC reads the desktop logger's nested directory");
-  await navigate("打开 日志", "日志");
+  await navigate("诊断日志", "诊断日志");
   await win.getByRole("tab", { name: "桌面应用", exact: true }).click();
   await win.getByRole("searchbox", { name: "搜索日志内容…", exact: true }).fill(marker);
   await win.getByRole("tabpanel").getByText(marker, { exact: true }).waitFor();

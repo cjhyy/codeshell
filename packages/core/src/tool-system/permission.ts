@@ -27,6 +27,9 @@ export interface ApprovalBackend {
  * backend policy) answered, with the outcome.
  */
 export interface ApprovalLifecycleEvent {
+  /** Stable per wait, including parallel requests for the same tool. */
+  observationId: string;
+  error?: string;
   phase: "requested" | "resolved";
   toolName: string;
   riskLevel: "low" | "medium" | "high";
@@ -1638,9 +1641,11 @@ export class PermissionClassifier {
       riskLevel,
     });
     let result: ApprovalResult;
+    const observationId = randomUUID();
     this.activeApprovalCount++;
     this.approvalStateListener?.(true, toolName);
     this.emitApprovalEvent({
+      observationId,
       phase: "requested",
       toolName,
       riskLevel,
@@ -1658,6 +1663,14 @@ export class PermissionClassifier {
       });
     } catch (err) {
       span.fail(err, { tool: toolName });
+      this.emitApprovalEvent({
+        observationId,
+        phase: "resolved",
+        toolName,
+        riskLevel,
+        error: err instanceof Error ? err.message : String(err),
+        ...(opts?.sessionId ? { sessionId: opts.sessionId } : {}),
+      });
       throw err;
     } finally {
       this.activeApprovalCount = Math.max(0, this.activeApprovalCount - 1);
@@ -1670,6 +1683,7 @@ export class PermissionClassifier {
       this.denialTracker.record(toolName);
     }
     this.emitApprovalEvent({
+      observationId,
       phase: "resolved",
       toolName,
       riskLevel,

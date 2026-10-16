@@ -3,6 +3,8 @@
  */
 
 import { setMaxListeners } from "node:events";
+import { randomUUID } from "node:crypto";
+import { recordModelTraceEvent } from "../model-traces/context.js";
 import { resolve as resolvePath, isAbsolute as isAbsolutePath } from "node:path";
 import type {
   ToolCall,
@@ -82,6 +84,7 @@ export class ToolExecutor {
   private log: Logger = rootLogger;
   private guard?: InvestigationGuard;
   private taskGuard?: TaskGuard;
+  private parentTraceEventId?: string;
 
   constructor(
     private readonly registry: ToolRegistry,
@@ -138,13 +141,43 @@ export class ToolExecutor {
     callIn: ToolCall,
     constraint?: { pinnedInput?: string; assertAuthorized?: () => void },
   ): Promise<ToolResult> {
-    if (!this.toolCtx?.operations?.onToolFailure)
-      return this.executeSingleAuthorized(callIn, constraint);
+    const id = randomUUID();
+    const startedAt = Date.now();
+    let effectiveInput = callIn.args;
+    const event = () => ({
+      id,
+      kind: "tool" as const,
+      name: callIn.toolName,
+      startedAt,
+      parentId: this.parentTraceEventId,
+      input: { toolCallId: callIn.id, args: effectiveInput },
+    });
+    recordModelTraceEvent({ ...event(), status: "running", first: true });
     try {
-      const result = await this.executeSingleAuthorized(callIn, constraint);
+      const result = await this.executeSingleAuthorized(callIn, constraint, {
+        id,
+        onEffectiveInput: (args) => {
+          effectiveInput = args;
+          recordModelTraceEvent({ ...event(), status: "running" });
+        },
+      });
+      recordModelTraceEvent({
+        ...event(),
+        endedAt: Date.now(),
+        status: this.signal?.aborted ? "cancelled" : result.isError ? "failed" : "completed",
+        output: toolResultDisplayText(result),
+        ...(result.sensitive ? { outputState: "redacted" as const } : {}),
+        error: result.error,
+      });
       if (result.isError) await this.toolCtx?.operations?.onToolFailure?.();
       return result;
     } catch (error) {
+      recordModelTraceEvent({
+        ...event(),
+        endedAt: Date.now(),
+        status: this.signal?.aborted ? "cancelled" : "failed",
+        error: error instanceof Error ? error.message : String(error),
+      });
       await this.toolCtx?.operations?.onToolFailure?.();
       throw error;
     }
@@ -153,6 +186,7 @@ export class ToolExecutor {
   private async executeSingleAuthorized(
     callIn: ToolCall,
     constraint?: { pinnedInput?: string; assertAuthorized?: () => void },
+    trace?: { id: string; onEffectiveInput: (args: ToolCall["args"]) => void },
   ): Promise<ToolResult> {
     // Local `call` so we can rewrite args via pre_tool_use updatedInput
     // without mutating the caller's object.
@@ -618,6 +652,7 @@ export class ToolExecutor {
     const sid = getCurrentSid();
     recordToolCall(sid, { id: call.id, toolName: call.toolName, args: call.args });
     const toolStartedAt = Date.now();
+    trace?.onEffectiveInput(call.args);
     let result: ToolResult;
     try {
       result = await this.registry.executeTool(call.toolName, call.args, {
@@ -648,6 +683,7 @@ export class ToolExecutor {
                       }
                     : undefined,
                 );
+                nested.parentTraceEventId = trace?.id;
                 nested.setInvestigationGuard(this.guard);
                 nested.setTaskGuard(this.taskGuard);
                 nested.setLogger(this.log);

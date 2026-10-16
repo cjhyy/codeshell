@@ -11,6 +11,7 @@ import { join, resolve } from "node:path";
 import { existsSync } from "node:fs";
 import { startHeadlessServer } from "./headless-server.js";
 import { startProjectControlServer } from "../project-runtime/control-server.js";
+import { configureModelTracing } from "@cjhyy/code-shell-core/internal";
 
 interface CliArgs {
   cwd: string;
@@ -173,6 +174,12 @@ export async function runServeCli(argv: string[] = process.argv.slice(2)): Promi
     return;
   }
   const parsed = parseServeArgs(argv);
+  if (parsed.runtime === "local") {
+    configureModelTracing({
+      storageDir: join(parsed.dataDir, "worker", "sessions", ".model-traces"),
+      source: "server",
+    });
+  }
   const staticRootDir = parsed.staticRootDir ?? resolveWebAppRoot();
   const server =
     parsed.runtime === "docker"

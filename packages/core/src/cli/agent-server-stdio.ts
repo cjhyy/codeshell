@@ -67,6 +67,7 @@ import { compileComposition } from "../composition/compiler.js";
 import type { AgentModule } from "../composition/types.js";
 import { resolveSessionAgentConfig, resolveSessionCwd } from "./stdio-session-config.js";
 import { hasWorkspaceHostBridge } from "./stdio-host-config.js";
+import { configureModelTracing } from "../model-traces/index.js";
 
 /**
  * Load AgentModules from CODE_SHELL_CAPABILITY_MODULES: comma-separated
@@ -120,6 +121,10 @@ const composition = compileComposition({ modules: await loadConfiguredAgentModul
 const dataRoot = process.env.CODE_SHELL_DATA_ROOT?.trim() || undefined;
 const dataSessionsDir = dataRoot ? join(dataRoot, "sessions") : undefined;
 const notificationSessionsDir = dataSessionsDir ?? sessionsRoot();
+configureModelTracing({
+  storageDir: join(notificationSessionsDir, ".model-traces"),
+  source: "stdio-worker",
+});
 
 const notificationPersistence = {
   fileForSession(sessionId: string): string | null {

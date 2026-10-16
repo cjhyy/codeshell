@@ -4,6 +4,7 @@ import { Devices } from "./Devices.js";
 import { CloudAccountControls, type CloudAccountControlsProps } from "./CloudAccountControls.js";
 import { HubSettings, type HubSettingsSection } from "./HubSettings.js";
 import { HubFiles } from "./HubFiles.js";
+import { HubModelTraces } from "./HubModelTraces.js";
 import { HubSessions, useHistoryActionFocus } from "./HubSessions.js";
 import { HubLinks } from "./HubLinks.js";
 import { HubPanels } from "./HubPanels.js";
@@ -103,7 +104,7 @@ export function Workbench({
   const cameraInput = React.useRef<HTMLInputElement>(null);
   const devicesOpener = React.useRef<HTMLButtonElement>(null);
   const [view, setView] = React.useState<
-    "chat" | "settings" | "files" | "history" | "links" | "panels" | "panel"
+    "chat" | "activity" | "settings" | "files" | "history" | "links" | "panels" | "panel"
   >(() => parseWorkbenchLocation(new URL(window.location.href)).view);
   const [openedPanel, setOpenedPanel] = React.useState<{
     panel: ManagedPanel;
@@ -373,17 +374,19 @@ export function Workbench({
       ? title
       : view === "files"
         ? "工作区文件"
-        : view === "history"
-          ? "历史对话"
-          : view === "links"
-            ? "Link"
-            : view === "panels" || view === "panel"
-              ? openedPanel && view === "panel"
-                ? openedPanel.panel.title["zh-CN"] || openedPanel.panel.title.default
-                : "面板"
-              : settingsSection === "skills"
-                ? "Skills"
-                : "设置";
+        : view === "activity"
+          ? "执行观测"
+          : view === "history"
+            ? "历史对话"
+            : view === "links"
+              ? "Link"
+              : view === "panels" || view === "panel"
+                ? openedPanel && view === "panel"
+                  ? openedPanel.panel.title["zh-CN"] || openedPanel.panel.title.default
+                  : "面板"
+                : settingsSection === "skills"
+                  ? "Skills"
+                  : "设置";
   return (
     <div className={`shell${sidebarOpen ? " sidebar-open" : ""}`}>
       {narrow && sidebarOpen ? (
@@ -475,6 +478,19 @@ export function Workbench({
             </button>
             {hub ? (
               <>
+                <button
+                  className={`nav-button${view === "activity" ? " active" : ""}`}
+                  onClick={() =>
+                    requestNavigation(() => {
+                      setView("activity");
+                      closeMobileSidebar();
+                    })
+                  }
+                  aria-current={view === "activity" ? "page" : undefined}
+                >
+                  <WorkbenchIcon name="history" />
+                  <span>执行观测</span>
+                </button>
                 <button
                   className={`nav-button${view === "history" ? " active" : ""}`}
                   onClick={() =>
@@ -1041,6 +1057,13 @@ export function Workbench({
             initialPath={selectedFile}
             openVersion={fileOpenVersion}
             onAuthLost={onAuthLost}
+          />
+        ) : null}
+        {view === "activity" && hub ? (
+          <HubModelTraces
+            key={`${controller.workspaceKey}:activity`}
+            onAuthLost={onAuthLost}
+            onOpenSession={(id) => void openSession(id)}
           />
         ) : null}
         {view === "history" && hub ? (

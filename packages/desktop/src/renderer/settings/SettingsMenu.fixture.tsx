@@ -126,7 +126,7 @@ try {
   assert.notEqual(actions[0]?.pointerEvents, "none");
   await open();
   await openActivity();
-  await select("日志");
+  await select("诊断日志");
   assert.equal(actions[1]?.page, "logs");
   assert.equal(actions[1]?.focus, trigger());
   assert.notEqual(actions[1]?.pointerEvents, "none");
@@ -144,14 +144,14 @@ try {
   await select("凭证");
   await open();
   await openActivity();
-  await select("任务中心");
+  await select("后台工作");
   await render(false, true);
   await open();
   await select("优化实验室");
   await open();
   await openActivity();
-  assert.equal(item("任务中心"), undefined, "Disabled Task center is absent from activity");
-  assert.ok(item("日志"), "Other activity pages remain available");
+  assert.equal(item("后台工作"), undefined, "Disabled Task center is absent from activity");
+  assert.ok(item("诊断日志"), "Other activity pages remain available");
   assert.deepEqual(
     actions.map(({ page }) => page),
     ["settings", "logs", "credentials", "task_inbox", "optimization_lab"],
