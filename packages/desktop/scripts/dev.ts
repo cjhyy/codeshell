@@ -3,7 +3,7 @@
  *
  *   0. @cjhyy/code-shell-core: built once up-front, then `tsc --watch`
  *   1. vite dev server on http://localhost:5273 (renderer with HMR)
- *   2. esbuild watch on src/main/index.ts → out/main/index.cjs
+ *   2. esbuild watch on Main + Link worker module → out/main/*.mjs
  *   3. esbuild watch on src/preload/index.ts → out/preload/index.cjs
  *
  * Once 1+2+3 have all produced first output, we spawn `electron .` with
@@ -29,6 +29,7 @@ import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { buildChromeExtension } from "./build-chrome-extension.js";
 import { buildComputerUsePermissions } from "./build-computer-use-permissions.js";
+import { desktopMainBuildOptions } from "./build-main.js";
 
 const cwd = dirname(fileURLToPath(import.meta.url));
 const root = resolve(cwd, "..");
@@ -338,26 +339,14 @@ async function buildAndWatch(): Promise<void> {
   };
 
   const mainCtx = await esbuild.context({
-    entryPoints: [resolve(root, "src/main/index.ts")],
-    bundle: true,
-    platform: "node",
-    format: "esm",
-    outfile: resolve(root, "out/main/index.mjs"),
-    external: ["electron", "@cjhyy/code-shell-core", "@cjhyy/code-shell-capability-coding"],
-    loader: { ".md": "text" },
+    ...desktopMainBuildOptions(root),
     sourcemap: "inline",
-    logLevel: "info",
-    // node CJS deps (anything not converted to ESM) need a `require` shim
-    // and CommonJS path globals when imported from an .mjs file. esbuild
-    // bundles them inline but does not emulate Node's per-module wrapper.
-    banner: {
-      js: "import { createRequire as __ccr } from 'node:module'; import { dirname as __ccd } from 'node:path'; import { fileURLToPath as __ccf } from 'node:url'; var require = __ccr(import.meta.url); var __filename = __ccf(import.meta.url); var __dirname = __ccd(__filename);",
-    },
     plugins: [
       {
         name: "main-rebuild",
         setup(build) {
-          build.onEnd(() => {
+          build.onEnd((result) => {
+            if (result.errors.length > 0) return;
             mainBuilt = true;
             if (electronProc) {
               // eslint-disable-next-line no-console
