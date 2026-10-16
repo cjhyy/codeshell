@@ -70,6 +70,10 @@ breaking.
 - Point the empty model picker to model connections in Settings.
 - Keep Web history errors and focused actions visible, preserve rename drafts
   and restore/open intent through refreshes, and recover failed pagination.
+- Support keyboard navigation in the project picker, preserve deliberate list
+  scrolling, and return focus through project selection and adding a project.
+- Keep Link management errors and actions inside short dialogs, retain failed
+  edit drafts, and avoid stealing focus after delayed operations.
 
 ## [0.9.44] - 2026-10-15
 
