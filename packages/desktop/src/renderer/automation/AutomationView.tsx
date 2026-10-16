@@ -264,7 +264,9 @@ export function AutomationView({
     if (initialAutomationId) setSelected(initialAutomationId);
   }, [initialAutomationId]);
   const [error, setError] = useState<string | null>(null);
-  const [bindingError, setBindingError] = useState<string | null>(null);
+  const [actionErrors, setActionErrors] = useState<
+    Record<string, { general?: string; binding?: string }>
+  >({});
   /** Per-action in-flight flags, keyed by "<action>:<jobId>". */
   const [pending, setPending] = useState<Record<string, boolean>>({});
   const pendingKeys = useRef(new Set<string>());
@@ -319,6 +321,7 @@ export function AutomationView({
   );
 
   const detail = jobs?.find((j) => j.id === selected) ?? null;
+  const detailErrors = detail ? actionErrors[detail.id] : undefined;
 
   useEffect(() => {
     if (!jobs || jobs.length === 0) return;
@@ -334,17 +337,21 @@ export function AutomationView({
   // a quick double-click on 立即运行 submit multiple runs), while distinct
   // actions/jobs stay independent. The finally always clears the key so a
   // failed request can't leave a button stuck disabled.
-  const act = async (key: string, fn: () => Promise<unknown>, binding = false) => {
+  const act = async (jobId: string, key: string, fn: () => Promise<unknown>, binding = false) => {
     if (pendingKeys.current.has(key)) return;
     pendingKeys.current.add(key);
     setPending((p) => ({ ...p, [key]: true }));
     setError(null);
-    setBindingError(null);
+    setActionErrors((previous) => ({ ...previous, [jobId]: {} }));
     try {
       await fn();
       await refresh();
     } catch (e) {
-      (binding ? setBindingError : setError)(String(e instanceof Error ? e.message : e));
+      const message = String(e instanceof Error ? e.message : e);
+      setActionErrors((previous) => ({
+        ...previous,
+        [jobId]: { ...previous[jobId], [binding ? "binding" : "general"]: message },
+      }));
     } finally {
       pendingKeys.current.delete(key);
       setPending((p) => ({ ...p, [key]: false }));
@@ -431,7 +438,6 @@ export function AutomationView({
                   onClick={() => {
                     setSelected(j.id);
                     setError(null);
-                    setBindingError(null);
                   }}
                   className={cn(
                     "flex w-full min-w-0 flex-col gap-2 rounded-xl border px-3 py-3 text-left text-sm transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset",
@@ -482,12 +488,12 @@ export function AutomationView({
             aria-label={detail?.name ?? t("auto.view.selectJob")}
             className="min-h-0 min-w-0 overflow-y-auto rounded-2xl"
           >
-            {error && (
+            {(error || detailErrors?.general) && (
               <p
                 role="alert"
                 className="mb-3 break-words rounded-xl border border-status-err/20 bg-status-err/5 p-3 text-sm text-status-err [overflow-wrap:anywhere]"
               >
-                {error}
+                {error || detailErrors?.general}
               </p>
             )}
             {detail ? (
@@ -497,28 +503,38 @@ export function AutomationView({
                 projects={projects}
                 sessions={automationSessionLinks(detail, sessionIndices, runs, diskSessions)}
                 conversations={conversations}
-                bindingError={bindingError}
-                onClearBindingError={() => setBindingError(null)}
+                bindingError={detailErrors?.binding}
+                onClearBindingError={() =>
+                  setActionErrors((previous) => ({
+                    ...previous,
+                    [detail.id]: { ...previous[detail.id], binding: undefined },
+                  }))
+                }
                 conversationsLoading={loadingConversations}
                 onRefreshConversations={() => void loadConversations()}
                 onLoadMoreConversations={
                   diskCursor ? () => void loadConversations(diskCursor) : undefined
                 }
                 onToggleEnabled={(next) =>
-                  act("toggle:" + detail.id, () =>
+                  act(detail.id, "toggle:" + detail.id, () =>
                     next
                       ? window.codeshell.resumeAutomation(detail.id)
                       : window.codeshell.pauseAutomation(detail.id),
                   )
                 }
                 onDelete={() =>
-                  act("delete:" + detail.id, () => window.codeshell.deleteAutomation(detail.id))
+                  act(detail.id, "delete:" + detail.id, () =>
+                    window.codeshell.deleteAutomation(detail.id),
+                  )
                 }
                 onRunNow={() =>
-                  act("runNow:" + detail.id, () => window.codeshell.runAutomationNow(detail.id))
+                  act(detail.id, "runNow:" + detail.id, () =>
+                    window.codeshell.runAutomationNow(detail.id),
+                  )
                 }
                 onSave={(patch) =>
                   act(
+                    detail.id,
                     "save:" + detail.id,
                     () => window.codeshell.updateAutomation(detail.id, patch),
                     patch.resumeSessionId !== undefined,
