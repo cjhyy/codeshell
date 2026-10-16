@@ -12,7 +12,7 @@ permissions:
 
 jobs:
   web-ui:
-    name: Web service worker and offline UI
+    name: Web authentication, service worker and offline UI
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
@@ -48,6 +48,12 @@ jobs:
         run: |
           set -euo pipefail
           node scripts/run-isolated-node-smoke.mjs packages/web/scripts/test-service-worker-browser.mjs --evidence-dir "$ACCEPTANCE_ROOT/service-worker" 2>&1 | tee "$ACCEPTANCE_ROOT/service-worker.log"
+      - name: actual authentication and stale-response recovery
+        timeout-minutes: 3
+        shell: bash
+        run: |
+          set -euo pipefail
+          node scripts/run-isolated-node-smoke.mjs packages/web/scripts/test-auth-boundary-browser.mjs --evidence-dir "$ACCEPTANCE_ROOT/authentication" 2>&1 | tee "$ACCEPTANCE_ROOT/authentication.log"
       - name: retain public Web UI evidence
         if: always()
         uses: actions/upload-artifact@v7
@@ -57,6 +63,9 @@ jobs:
             ${{ env.ACCEPTANCE_ROOT }}/service-worker.log
             ${{ env.ACCEPTANCE_ROOT }}/service-worker/*.png
             ${{ env.ACCEPTANCE_ROOT }}/service-worker/report.json
+            ${{ env.ACCEPTANCE_ROOT }}/authentication.log
+            ${{ env.ACCEPTANCE_ROOT }}/authentication/*.png
+            ${{ env.ACCEPTANCE_ROOT }}/authentication/report.json
           if-no-files-found: error
           retention-days: 7
 
@@ -143,6 +152,21 @@ jobs:
         run: |
           git status --porcelain=v1 --untracked-files=no
           git diff --stat
+          node --input-type=module <<'NODE'
+          import { execFileSync } from "node:child_process";
+          import { readFileSync } from "node:fs";
+          import { createHash } from "node:crypto";
+          for (const path of ["packages/desktop/resources/chrome-extension/service-worker.js", "packages/desktop/resources/chrome-extension/service-worker.js.LEGAL.txt"]) {
+            const git = (args) => execFileSync("git", args, { encoding: "utf8", timeout: 5000 }).trim();
+            const bytes = readFileSync(path);
+            console.log(JSON.stringify({ path, normalizedBlobMatchesHead: git(["hash-object", `--path=${path}`, path]) === git(["rev-parse", `HEAD:${path}`]), rawSHA256: createHash("sha256").update(bytes).digest("hex"), crlfLines: bytes.toString("utf8").split("\r\n").length - 1 }));
+          }
+          NODE
+
+      - name: diagnose Windows fixed process-query transport
+        if: runner.os == 'Windows'
+        timeout-minutes: 3
+        run: node packages/desktop/scripts/diagnose-windows-process-metadata.mjs "$ACCEPTANCE_ROOT/process-metadata"
 
       - name: verify native process metadata before spawning a package builder
         timeout-minutes: 2
@@ -246,6 +270,7 @@ jobs:
             ${{ env.ACCEPTANCE_ROOT }}/package/build-receipt.json
             ${{ env.ACCEPTANCE_ROOT }}/package/electron-builder.local.json
             ${{ env.ACCEPTANCE_ROOT }}/package/build.log
+            ${{ env.ACCEPTANCE_ROOT }}/process-metadata/report.json
             ${{ env.ACCEPTANCE_ROOT }}/startup.log
             ${{ env.ACCEPTANCE_ROOT }}/panels.log
             ${{ env.ACCEPTANCE_ROOT }}/panels/*.png
