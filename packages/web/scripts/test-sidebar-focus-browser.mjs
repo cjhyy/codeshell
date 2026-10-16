@@ -96,7 +96,13 @@ const frames = (page) =>
     () => new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve))),
   );
 let context;
-async function mount(width = 1280, height = 720, theme = "light", traceMedia = false) {
+async function mount(
+  width = 1280,
+  height = 720,
+  theme = "light",
+  traceMedia = false,
+  history = false,
+) {
   await context?.close();
   context = await browser.newContext({
     viewport: { width, height },
@@ -122,7 +128,26 @@ async function mount(width = 1280, height = 720, theme = "light", traceMedia = f
       if (target.pathname === "/api/v1/sessions")
         return route.fulfill({
           contentType: "application/json",
-          body: JSON.stringify({ sessions: [], nextCursor: null }),
+          body: JSON.stringify({
+            sessions: history
+              ? [
+                  {
+                    cwd: "/owned",
+                    sessionId: "owned-session",
+                    title: "Owned history",
+                    customTitle: "Owned history",
+                    startedAt: 1,
+                    lastActiveAt: 1,
+                    model: "owned",
+                    status: "idle",
+                    turnCount: 1,
+                    archivedAt: null,
+                    running: false,
+                  },
+                ]
+              : [],
+            nextCursor: null,
+          }),
         });
     }
     blocked.push(method + " " + request.url());
@@ -364,6 +389,52 @@ try {
       await focusMatches(target);
       reports.push({ label: "rapid-resize-owner", owner, finalWidth });
     }
+  for (const action of ["stay", "leave"]) {
+    const page = await mount(390, 360, "light", false, true);
+    await toggle(page).focus();
+    await page.keyboard.press("Enter");
+    await frames(page);
+    await page.getByRole("button", { name: "历史对话", exact: true }).focus();
+    await page.keyboard.press("Enter");
+    await page
+      .locator(".session-history-row")
+      .first()
+      .getByRole("button", { name: "重命名", exact: true })
+      .click();
+    await page
+      .getByRole("textbox", { name: "对话标题", exact: true })
+      .fill("Owned unsaved history title");
+    await frames(page);
+    await toggle(page).click();
+    await frames(page);
+    const destination = page.getByRole("button", { name: "对话", exact: true });
+    await destination.focus();
+    await page.keyboard.press("Enter");
+    await page.getByRole("heading", { name: "还有未保存的修改", exact: true }).waitFor();
+    assert.equal(await page.locator(".rail").isVisible(), true);
+    await page
+      .getByRole("button", { name: action === "stay" ? "留在此页" : "放弃修改并离开", exact: true })
+      .click();
+    await frames(page);
+    await frames(page);
+    assert.equal(await page.locator(".navigation-prompt").count(), 0);
+    if (action === "stay") {
+      await focusMatches(destination);
+      assert.equal(await page.locator(".rail").isVisible(), true);
+      assert.equal(
+        await page.locator(".session-history-editor input").inputValue(),
+        "Owned unsaved history title",
+      );
+      await page.keyboard.press("Escape");
+      await frames(page);
+    } else {
+      assert.equal(await page.locator(".rail").isVisible(), false);
+      assert.equal(await page.locator(".session-history-editor").count(), 0);
+    }
+    await focusMatches(toggle(page));
+    await visible(toggle(page));
+    reports.push({ label: "actual-dirty-mobile-navigation", action });
+  }
   for (const kind of ["field", "pointer", "svg", "blur", "workspace", "unmount"])
     for (const timing of ["before-commit", "after-commit"]) {
       const page = await mount(1280, 720, "light", true);
