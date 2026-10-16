@@ -74,10 +74,16 @@ export function startExternalRuntimeTrace(options: {
   // Enabling capture during a turn cannot recover content that was not captured.
   const capture = initial.inputState !== "not-recorded";
   const store = new ModelTraceStore({ storageDir: context.storageDir });
+  const policyRevision = store.getConfig().policyRevision;
   const contentEnabled = () => {
     try {
       const config = store.getConfig();
-      return capture && config.enabled && config.captureContent;
+      return (
+        capture &&
+        config.enabled &&
+        config.captureContent &&
+        config.policyRevision === policyRevision
+      );
     } catch {
       return false;
     }
@@ -89,7 +95,18 @@ export function startExternalRuntimeTrace(options: {
   let finished = false;
   const tools = new Map<string, ModelTraceEvent>();
   const span = (input: Parameters<typeof recordModelTraceEvent>[0]) =>
-    withModelTraceContext(context, () => recordModelTraceEvent(input));
+    withModelTraceContext(context, () =>
+      recordModelTraceEvent({
+        ...input,
+        ...(!contentEnabled()
+          ? {
+              inputState: "not-recorded",
+              outputState: "not-recorded",
+              error: input.error ? "External CLI operation failed" : undefined,
+            }
+          : {}),
+      }),
+    );
 
   return {
     observe(event: StreamEvent) {
@@ -119,6 +136,7 @@ export function startExternalRuntimeTrace(options: {
           if (tools.size >= MAX_TOOLS) break;
           const tool = span({
             id: randomUUID(),
+            first: true,
             kind: "tool",
             name: event.toolCall.toolName,
             startedAt: Date.now(),

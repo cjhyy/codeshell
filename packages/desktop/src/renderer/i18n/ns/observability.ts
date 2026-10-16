@@ -81,7 +81,7 @@ export const observability = {
       externalInput: "外部 CLI 入口输入",
       notRecorded: "正文未采集",
       notRecordedHint: "这次调用没有保存正文。开启“记录 Prompt 正文”后，新的调用才会包含内容。",
-      truncated: "正文因存储上限被截断",
+      truncated: "正文仅部分记录",
       redacted: "正文已脱敏",
       noContent: "没有可用内容",
       text: "回答",
@@ -200,7 +200,7 @@ export const observability = {
       notRecorded: "Content was not recorded",
       notRecordedHint:
         "This call has no saved content. Enable Prompt content recording to capture future calls.",
-      truncated: "Content was truncated by storage limits",
+      truncated: "Content is only partially recorded",
       redacted: "Content was redacted",
       noContent: "No content available",
       text: "Answer",

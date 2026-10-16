@@ -75,14 +75,18 @@ function policyFor(
   kind: string,
   id: string,
   settings: ModelTraceConfig,
-): ModelTraceConfig {
+  first: boolean,
+): ModelTraceConfig | undefined {
   const key = JSON.stringify([store.storageDir, kind, id]);
   let policy = capturePolicies.get(key);
-  if (!policy) {
+  if (!policy && first) {
     policy = { ...settings };
     boundedSet(capturePolicies, key, policy);
   }
   return policy;
+}
+function metadataPolicy(settings: ModelTraceConfig): ModelTraceConfig {
+  return { ...settings, captureContent: false, includeEphemeral: false };
 }
 function targetForContext(context: ModelTraceContext) {
   if (!context.storageDir) return configured;
@@ -172,9 +176,24 @@ function estimateRecord(record: ModelTraceRecord): void {
 function config(call: TraceCall): ModelTraceConfig {
   return call.store.getConfig();
 }
+function contentAllowed(initial: ModelTraceConfig, settings: ModelTraceConfig): boolean {
+  return (
+    initial.enabled &&
+    initial.captureContent &&
+    settings.enabled &&
+    settings.captureContent &&
+    initial.policyRevision === settings.policyRevision
+  );
+}
+function ephemeralAllowed(initial: ModelTraceConfig, settings: ModelTraceConfig): boolean {
+  return (
+    initial.includeEphemeral &&
+    settings.includeEphemeral &&
+    initial.policyRevision === settings.policyRevision
+  );
+}
 function canCapture(call: TraceCall): boolean {
-  const settings = config(call);
-  return call.initialConfig.captureContent && settings.enabled && settings.captureContent;
+  return contentAllowed(call.initialConfig, config(call));
 }
 function persist(call: TraceCall, immediate = false): void {
   const write = () => {
@@ -184,8 +203,7 @@ function persist(call: TraceCall, immediate = false): void {
       const settings = call.store.getConfig();
       if (
         settings.enabled &&
-        (!call.context.ephemeral ||
-          (call.initialConfig.includeEphemeral && settings.includeEphemeral))
+        (!call.context.ephemeral || ephemeralAllowed(call.initialConfig, settings))
       )
         call.store.write(call.record);
     } catch {
@@ -213,10 +231,20 @@ function capture<T>(
     return { state: "not-recorded" };
   }
 }
+function settleOutput(
+  target: Pick<ModelTraceRecord, "output" | "outputState">,
+  captured: { value?: ModelTraceOutput; state: ModelTraceRecord["outputState"] },
+): void {
+  if (captured.value !== undefined) {
+    target.output = captured.value;
+    target.outputState = captured.state;
+  } else if (target.output !== undefined) {
+    target.outputState = "truncated";
+  } else target.outputState = captured.state;
+}
 function errorText(call: TraceCall, error: unknown): string {
   try {
-    if (!call.initialConfig.captureContent || !config(call).captureContent)
-      return error instanceof Error ? error.name : "Model request failed";
+    if (!canCapture(call)) return error instanceof Error ? error.name : "Model request failed";
     return String(
       sanitizeTraceValue(error instanceof Error ? error.message : String(error)).value,
     ).slice(0, 4096);
@@ -313,8 +341,10 @@ export async function withModelTrace<T extends LLMResponse>(
         toolCalls: response.toolCalls,
         stopReason: response.stopReason,
       });
-      record.outputState = output.state;
-      record.output = output.value;
+      if (output.value === undefined && call.latest?.output) {
+        record.output = call.latest.output;
+        record.outputState = "truncated";
+      } else settleOutput(record, output);
       record.usage = response.usage;
       record.status = "completed";
       if (record.attempts.length === 0) {
@@ -378,8 +408,7 @@ export function recordModelTraceAttemptResult(response: LLMResponse): void {
       toolCalls: response.toolCalls,
       stopReason: response.stopReason,
     });
-    attempt.output = output.value;
-    attempt.outputState = output.state;
+    settleOutput(attempt, output);
     attempt.usage = response.usage;
     rememberTools(call, response.toolCalls);
     attempt.status = "completed";
@@ -687,10 +716,26 @@ export function recordModelTraceEvent(input: ModelTraceEventInput): ModelTraceEv
       call.record.runId === attributed.runId;
     const traceId =
       input.traceId ?? runId ?? (matchingCall ? call?.record.traceId : undefined) ?? id;
-    const policy = policyFor(target.store, "event", id, settings);
+    const initialPolicy = policyFor(
+      target.store,
+      "event",
+      id,
+      settings,
+      input.id === undefined || input.first === true,
+    );
+    const allowed = initialPolicy && contentAllowed(initialPolicy, settings);
+    const previous = !allowed ? target.store.getEvent(traceId, id) : null;
+    const sameScope =
+      previous &&
+      previous.sessionId === (input.sessionId ?? attributed.sessionId) &&
+      previous.runId === runId &&
+      previous.workspacePath === (input.workspacePath ?? context.workspacePath);
+    if (!initialPolicy && !sameScope) return null;
+    const policy = initialPolicy ?? metadataPolicy(settings);
     if (!settings.enabled || !policy.enabled) return null;
+    const { first: _first, ...fields } = input;
     const event: ModelTraceEvent = {
-      ...input,
+      ...fields,
       id,
       traceId,
       runId,
@@ -710,7 +755,7 @@ export function recordModelTraceEvent(input: ModelTraceEventInput): ModelTraceEv
     }
     delete event.input;
     delete event.output;
-    if (policy.captureContent && settings.captureContent) {
+    if (allowed) {
       if (input.input !== undefined && input.inputState !== "not-recorded") {
         const safe = sanitizeTraceValue(input.input);
         event.input = safe.value;
@@ -722,9 +767,23 @@ export function recordModelTraceEvent(input: ModelTraceEventInput): ModelTraceEv
         event.outputState = input.outputState ?? safe.state;
       }
       if (event.error) event.error = String(sanitizeTraceValue(event.error).value).slice(0, 4096);
-    } else if (event.error) event.error = "Operation failed";
-    if (!context.ephemeral || (policy.includeEphemeral && settings.includeEphemeral))
-      target.store.writeEvent(event);
+    } else {
+      if (sameScope) {
+        event.input = previous.input;
+        event.inputState =
+          input.input !== undefined && previous.input !== undefined
+            ? "truncated"
+            : previous.inputState;
+        event.output = previous.output;
+        event.outputState =
+          input.output !== undefined && previous.output !== undefined
+            ? "truncated"
+            : previous.outputState;
+        event.parentId ??= previous.parentId;
+      }
+      if (event.error) event.error = "Operation failed";
+    }
+    if (!context.ephemeral || ephemeralAllowed(policy, settings)) target.store.writeEvent(event);
     return event;
   } catch {
     return null;
@@ -742,7 +801,9 @@ export function recordExternalModelTrace(input: ExternalModelTraceInput): ModelT
     const id = input.id ?? randomUUID(),
       runId = attributed.runId;
     const previous = input.id ? target.store.get(input.id) : null;
-    const policy = policyFor(target.store, "external", id, settings);
+    const initialPolicy = policyFor(target.store, "external", id, settings, input.id === undefined);
+    if (!initialPolicy && !previous) return null;
+    const policy = initialPolicy ?? metadataPolicy(settings);
     const record: ModelTraceRecord = {
       version: 1,
       id,
@@ -764,7 +825,7 @@ export function recordExternalModelTrace(input: ExternalModelTraceInput): ModelT
       usage: input.usage,
       attempts: [],
     };
-    if (policy.captureContent && settings.captureContent) {
+    if (contentAllowed(policy, settings)) {
       if (input.input) {
         const safe = sanitizeTraceValue({
           systemPrompt: "",
@@ -788,11 +849,16 @@ export function recordExternalModelTrace(input: ExternalModelTraceInput): ModelT
         record.outputState = previous.outputState;
       }
     }
+    if (previous && !contentAllowed(policy, settings)) {
+      record.input = previous.input;
+      record.inputState = input.input && previous.input ? "truncated" : previous.inputState;
+      record.output = previous.output;
+      record.outputState = input.output && previous.output ? "truncated" : previous.outputState;
+    }
     if (input.error)
-      record.error =
-        policy.captureContent && settings.captureContent
-          ? String(sanitizeTraceValue(input.error).value).slice(0, 4096)
-          : "External model request failed";
+      record.error = contentAllowed(policy, settings)
+        ? String(sanitizeTraceValue(input.error).value).slice(0, 4096)
+        : "External model request failed";
     record.attempts.push({
       id: previous?.attempts[0]?.id ?? randomUUID(),
       number: 1,
@@ -808,8 +874,7 @@ export function recordExternalModelTrace(input: ExternalModelTraceInput): ModelT
       usage: record.usage,
     });
     estimateRecord(record);
-    if (!context.ephemeral || (policy.includeEphemeral && settings.includeEphemeral))
-      target.store.write(record);
+    if (!context.ephemeral || ephemeralAllowed(policy, settings)) target.store.write(record);
     return record;
   } catch {
     return null;

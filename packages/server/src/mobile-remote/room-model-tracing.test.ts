@@ -113,12 +113,27 @@ test("room input and output received while capture is paused cannot leak into a 
   manager.send(room.id, "NEVER_CAPTURE_PAUSED_ROOM_INPUT");
   store.setConfig({ captureContent: true });
   manager.send(room.id, "last captured input");
+  emit({
+    type: "tool",
+    id: "late",
+    tool: "Read",
+    summary: "Read",
+    input: "NEVER_CAPTURE_LATE_TOOL",
+  });
+  emit({ type: "tool_result", id: "late", summary: "NEVER_CAPTURE_LATE_RESULT", isError: false });
   for (let index = 0; index < 3; index++) emit({ type: "turn_end", reason: "completed" });
   const record = store.get(store.list().items[0]!.id)!;
-  expect(record.input!.parameters.omittedInputCount).toBe(1);
-  expect(record.input!.parameters.submissionCount).toBe(3);
+  expect(record.inputState).toBe("truncated");
+  expect(record.input!.parameters.submissionCount).toBe(1);
   expect(JSON.stringify(record)).not.toContain("NEVER_CAPTURE_PAUSED_ROOM_INPUT");
-  expect(record.output!.text).toContain("[Content capture paused]");
+  expect(record.outputState).toBe("not-recorded");
+  expect(JSON.stringify(record)).not.toContain("last captured input");
+  const events = store.events(record.traceId);
+  expect(events.find((event) => event.kind === "tool")).toMatchObject({
+    inputState: "not-recorded",
+    outputState: "not-recorded",
+  });
+  expect(JSON.stringify(events)).not.toContain("NEVER_CAPTURE_LATE_");
   manager.closeAll();
 });
 
@@ -133,3 +148,16 @@ test("observe-only rooms never fabricate a submitted prompt trace", () => {
   expect(store.list().total).toBe(0);
   manager.closeAll();
 });
+
+test.each(["model_error", "aborted_streaming"])(
+  "a later successful room boundary cannot erase earlier %s in the batch",
+  (reason) => {
+    const { store, manager, room, emit } = fixture();
+    manager.send(room.id, "first");
+    manager.send(room.id, "second");
+    emit({ type: "turn_end", reason });
+    emit({ type: "turn_end", reason: "completed" });
+    expect(store.list().items[0].status).toBe(reason === "model_error" ? "failed" : "cancelled");
+    manager.closeAll();
+  },
+);

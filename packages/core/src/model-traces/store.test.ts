@@ -44,6 +44,7 @@ describe("ModelTraceStore", () => {
   test("configuration is private, validated and hot across store instances", () => {
     const store = new ModelTraceStore({ storageDir: directory });
     expect(store.getConfig()).toEqual({
+      policyRevision: "initial",
       enabled: true,
       captureContent: false,
       includeEphemeral: false,
@@ -101,6 +102,32 @@ describe("ModelTraceStore", () => {
     expect(store.get("old")).toBeNull();
     expect(store.list().total).toBe(0);
     expect(store.events("run")).toEqual([]);
+    expect(store.getEvent("run", "event")).toBeNull();
+  });
+  test("exact event lookup validates identity and rejects symlink directories", () => {
+    const store = new ModelTraceStore({ storageDir: directory });
+    const value = {
+      id: "exact-event",
+      traceId: "exact-trace",
+      kind: "tool" as const,
+      name: "Read",
+      startedAt: Date.now(),
+      status: "running",
+      inputState: "recorded" as const,
+      input: "safe input",
+      outputState: "not-recorded" as const,
+    };
+    store.writeEvent(value);
+    expect(store.getEvent("exact-trace", "exact-event")).toEqual(value);
+    expect(store.getEvent("other-trace", "exact-event")).toBeNull();
+    expect(store.getEvent("exact-trace", "other-event")).toBeNull();
+    expect(() => store.getEvent("exact-trace", "")).toThrow();
+    const eventPath = join(directory, "events");
+    const backup = join(directory, "event-backup");
+    mkdirSync(backup);
+    rmSync(eventPath, { recursive: true });
+    symlinkSync(backup, eventPath);
+    expect(store.getEvent("exact-trace", "exact-event")).toBeNull();
   });
   test("retention removes orphan bodies after a failed summary write", () => {
     const store = new ModelTraceStore({ storageDir: directory });
@@ -156,4 +183,22 @@ describe("ModelTraceStore", () => {
     );
     expect(raw.byteLength).toBeLessThanOrEqual(4 * 1024 * 1024);
   });
+});
+
+test("capture policy generations are Host-owned and change on every privacy transition", () => {
+  const root = mkdtempSync(join(tmpdir(), "model-trace-policy-"));
+  try {
+    const store = new ModelTraceStore({ storageDir: root });
+    const initial = store.getConfig().policyRevision;
+    expect(store.setConfig({ retentionDays: 14 }).policyRevision).toBe(initial);
+    const enabled = store.setConfig({ captureContent: true }).policyRevision;
+    expect(enabled).not.toBe(initial);
+    expect(store.setConfig({ captureContent: true }).policyRevision).toBe(enabled);
+    store.setConfig({ captureContent: false });
+    const reopened = store.setConfig({ captureContent: true }).policyRevision;
+    expect(reopened).not.toBe(enabled);
+    expect(() => store.setConfig({ policyRevision: enabled } as any)).toThrow();
+  } finally {
+    rmSync(root, { recursive: true, force: true });
+  }
 });

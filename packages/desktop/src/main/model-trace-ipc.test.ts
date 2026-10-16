@@ -71,7 +71,7 @@ test("production preload methods reach the validated native trace service and pe
   expect(detail?.record.sessionId).toBe("session-1");
   expect(detail?.events.map((event) => event.id)).toEqual(["event-1"]);
   expect(await f.api.get("missing")).toBeNull();
-  expect(await f.api.setConfig({ captureContent: true, includeEphemeral: true })).toEqual({
+  expect(await f.api.setConfig({ captureContent: true, includeEphemeral: true })).toMatchObject({
     enabled: true,
     captureContent: true,
     includeEphemeral: true,

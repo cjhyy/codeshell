@@ -614,14 +614,154 @@ describe("model trace collection at the provider boundary", () => {
       input: { text: "EARLIER_INPUT" },
     };
     store.setConfig({ enabled: false, captureContent: true });
-    expect(recordModelTraceEvent({ ...event, status: "running" })).toBeNull();
+    expect(recordModelTraceEvent({ ...event, status: "running", first: true })).toBeNull();
     store.setConfig({ enabled: true });
     expect(
       recordModelTraceEvent({ ...event, status: "completed", output: "LATER_OUTPUT" }),
     ).toBeNull();
     expect(store.events("disabled-span")).toEqual([]);
     expect(
-      recordModelTraceEvent({ ...event, id: "new-span", status: "completed" })?.inputState,
+      recordModelTraceEvent({ ...event, id: "new-span", status: "completed", first: true })
+        ?.inputState,
     ).toBe("recorded");
+  });
+  test("off/on between transport reads cannot replay a cumulative native response into an old call", async () => {
+    store.setConfig({ captureContent: true });
+    let toggled = false;
+    const llm = await client(
+      mock(() => {
+        if (!toggled) {
+          toggled = true;
+          store.setConfig({ captureContent: false });
+          store.setConfig({ captureContent: true });
+        }
+        return Response.json(response("PRIVATE_WHILE_CAPTURE_WAS_OFF"));
+      }),
+    );
+    expect((await llm.createMessage(options())).text).toBe("PRIVATE_WHILE_CAPTURE_WAS_OFF");
+    const old = only();
+    expect(old.outputState).toBe("not-recorded");
+    expect(JSON.stringify(old)).not.toContain("PRIVATE_WHILE_CAPTURE_WAS_OFF");
+    await llm.createMessage(options());
+    const saved = store.list().items.map((item) => store.get(item.id)!);
+    expect(
+      saved.filter((item) => item.output?.text === "PRIVATE_WHILE_CAPTURE_WAS_OFF"),
+    ).toHaveLength(1);
+  });
+  test("capability final-result replay cannot resume an earlier external call after off/on", () => {
+    store.setConfig({ captureContent: true });
+    const first = recordExternalModelCall({
+      source: "driver",
+      provider: "fixture",
+      model: "fixture",
+      startedAt: Date.now(),
+      status: "running",
+      input: { messages: [{ role: "user", content: "original delegated prompt" }] },
+    })!;
+    store.setConfig({ captureContent: false });
+    store.setConfig({ captureContent: true });
+    recordExternalModelCall({
+      id: first.id,
+      source: "driver",
+      provider: "fixture",
+      model: "fixture",
+      startedAt: first.startedAt,
+      status: "completed",
+      output: { text: "PRIVATE_CUMULATIVE_CLI_RESPONSE" },
+    });
+    const old = store.get(first.id)!;
+    expect(old.status).toBe("completed");
+    expect(old.outputState).toBe("not-recorded");
+    expect(JSON.stringify(old)).not.toContain("PRIVATE_CUMULATIVE_CLI_RESPONSE");
+  });
+  test("a native stream retains its safe prefix without replaying cumulative output after off/on", async () => {
+    store.setConfig({ captureContent: true });
+    const tail = Promise.withResolvers<void>();
+    const encoder = new TextEncoder();
+    const llm = await client(
+      mock(
+        () =>
+          new Response(
+            new ReadableStream({
+              start(controller) {
+                controller.enqueue(
+                  encoder.encode(
+                    'data: {"choices":[{"index":0,"delta":{"content":"SAFE_PREFIX"}}]}\n\n',
+                  ),
+                );
+              },
+              async pull(controller) {
+                await tail.promise;
+                controller.enqueue(
+                  encoder.encode(
+                    'data: {"choices":[{"index":0,"delta":{"content":"PRIVATE_TAIL"},"finish_reason":"stop"}]}\n\ndata: [DONE]\n\n',
+                  ),
+                );
+                controller.close();
+              },
+            }),
+            { headers: { "content-type": "text/event-stream" } },
+          ),
+      ),
+    );
+    const result = await llm.createMessage(
+      options({
+        stream: true,
+        onChunk: (chunk) => {
+          if (chunk.type === "text" && chunk.text === "SAFE_PREFIX") {
+            store.setConfig({ captureContent: false });
+            store.setConfig({ captureContent: true });
+            tail.resolve();
+          }
+        },
+      }),
+    );
+    expect(result.text).toBe("SAFE_PREFIXPRIVATE_TAIL");
+    const saved = only();
+    expect(saved.output?.text).toBe("SAFE_PREFIX");
+    expect(saved.outputState).toBe("truncated");
+    expect(saved.attempts[0].output?.text).toBe("SAFE_PREFIX");
+    expect(saved.attempts[0].outputState).toBe("truncated");
+    expect(saved.status).toBe("completed");
+    expect(JSON.stringify(saved)).not.toContain("PRIVATE_TAIL");
+  });
+  test("evicting an active external policy cannot recreate capture after off/on", () => {
+    store.setConfig({ captureContent: true });
+    const first = recordExternalModelCall({
+      source: "driver",
+      provider: "fixture",
+      model: "fixture",
+      startedAt: Date.now(),
+      status: "running",
+      input: { messages: ["SAFE_INPUT"] },
+      output: { text: "SAFE_PREFIX" },
+    })!;
+    store.setConfig({ enabled: false });
+    for (let index = 0; index < 4100; index++)
+      recordModelTraceEvent({
+        id: `eviction-${index}`,
+        first: true,
+        kind: "tool",
+        name: "Other",
+        startedAt: Date.now(),
+        status: "running",
+      });
+    store.setConfig({ enabled: true });
+    const final = recordExternalModelCall({
+      id: first.id,
+      source: "driver",
+      provider: "fixture",
+      model: "fixture",
+      startedAt: first.startedAt,
+      endedAt: Date.now(),
+      status: "completed",
+      output: { text: "SAFE_PREFIX_PRIVATE_WHILE_DISABLED" },
+    });
+    expect(final?.status).toBe("completed");
+    const saved = store.get(first.id)!;
+    expect(saved.input?.messages).toEqual(["SAFE_INPUT"]);
+    expect(saved.output?.text).toBe("SAFE_PREFIX");
+    expect(saved.outputState).toBe("truncated");
+    expect(JSON.stringify(saved)).not.toContain("PRIVATE_WHILE_DISABLED");
   });
 });

@@ -36,10 +36,16 @@ export function createRoomModelTrace(options: {
   const startedAt = Date.now();
   const traceId = randomUUID();
   const store = new ModelTraceStore({ storageDir: options.storageDir });
+  const policyRevision = store.getConfig().policyRevision;
   const contentEnabled = () => {
     try {
       const config = store.getConfig();
-      return capture && config.enabled && config.captureContent;
+      return (
+        capture &&
+        config.enabled &&
+        config.captureContent &&
+        config.policyRevision === policyRevision
+      );
     } catch {
       return false;
     }
@@ -48,6 +54,8 @@ export function createRoomModelTrace(options: {
   let recordId: string | undefined;
   let capture = false;
   let pending = 0;
+  let batchFailed = false;
+  let batchCancelled = false;
   let submissionCount = 0;
   let ended = false;
   let text = "";
@@ -86,7 +94,19 @@ export function createRoomModelTrace(options: {
     if (!result && !recordId) messages.length = 0;
   };
   const span = (input: Parameters<typeof recordModelTraceEvent>[0]) =>
-    withModelTraceContext(context, () => recordModelTraceEvent({ ...input, traceId }));
+    withModelTraceContext(context, () =>
+      recordModelTraceEvent({
+        ...input,
+        traceId,
+        ...(!contentEnabled()
+          ? {
+              inputState: "not-recorded",
+              outputState: "not-recorded",
+              error: input.error ? "External room operation failed" : undefined,
+            }
+          : {}),
+      }),
+    );
   const finish = (status: ModelTraceStatus) => {
     if (ended) return;
     ended = true;
@@ -172,15 +192,11 @@ export function createRoomModelTrace(options: {
             startedAt: Date.now(),
             status: event.reason,
           });
+          batchFailed ||= /error|fail/i.test(event.reason);
+          batchCancelled ||= /abort|cancel|interrupt/i.test(event.reason);
           pending = Math.max(0, pending - 1);
           if (pending === 0)
-            finish(
-              /error|fail/i.test(event.reason)
-                ? "failed"
-                : /abort|cancel|interrupt/i.test(event.reason)
-                  ? "cancelled"
-                  : "completed",
-            );
+            finish(batchFailed ? "failed" : batchCancelled ? "cancelled" : "completed");
           break;
         case "exit":
           finish(event.signal ? "cancelled" : "failed");

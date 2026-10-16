@@ -23,6 +23,7 @@ import type {
 } from "./types.js";
 
 export const DEFAULT_MODEL_TRACE_CONFIG: Readonly<ModelTraceConfig> = Object.freeze({
+  policyRevision: "initial",
   enabled: true,
   captureContent: false,
   retentionDays: 7,
@@ -66,6 +67,11 @@ export class ModelTraceStore {
       ? readJson(join(this.storageDir, "config.json"), 4096)
       : null;
     return {
+      policyRevision:
+        typeof saved?.policyRevision === "string" &&
+        /^[A-Za-z0-9_-]{1,128}$/.test(saved.policyRevision)
+          ? saved.policyRevision
+          : "initial",
       enabled: typeof saved?.enabled === "boolean" ? saved.enabled : true,
       captureContent: typeof saved?.captureContent === "boolean" ? saved.captureContent : false,
       includeEphemeral:
@@ -96,7 +102,18 @@ export class ModelTraceStore {
           patch.retentionDays > 365))
     )
       throw new Error("Invalid model trace configuration");
-    const config = { ...this.getConfig(), ...patch };
+    const previous = this.getConfig();
+    const updates = Object.fromEntries(
+      Object.entries(patch).filter(([, value]) => value !== undefined),
+    ) as ModelTraceConfigPatch;
+    const changed = (["enabled", "captureContent", "includeEphemeral"] as const).some(
+      (name) => updates[name] !== undefined && updates[name] !== previous[name],
+    );
+    const config: ModelTraceConfig = {
+      ...previous,
+      ...updates,
+      policyRevision: changed ? randomUUID() : previous.policyRevision,
+    };
     this.writeJson(this.storageDir, "config.json", config);
     this.prune(true);
     return config;
@@ -279,6 +296,21 @@ export class ModelTraceStore {
           : [];
       })
       .sort((a, b) => a.startedAt - b.startedAt || a.id.localeCompare(b.id));
+  }
+  /** Exact recorder lookup; continuations may retain an earlier safe span snapshot. */
+  getEvent(traceId: string, id: string): ModelTraceEvent | null {
+    if (!validId(traceId) || !validId(id)) throw new Error("Invalid model trace event ID");
+    const directory = join(this.storageDir, "events", key(traceId));
+    if (!this.directorySafe(directory)) return null;
+    const event = readJson(join(directory, `${key(id)}.json`), MAX_RECORD_BYTES);
+    return event &&
+      event.traceId === traceId &&
+      event.id === id &&
+      Number.isFinite(event.startedAt) &&
+      event.startedAt >= Date.now() - this.getConfig().retentionDays * 86_400_000 &&
+      ["tool", "approval", "lifecycle"].includes(event.kind)
+      ? (event as ModelTraceEvent)
+      : null;
   }
   /** Recorder-only write; observational persistence never participates in request admission. */
   write(record: ModelTraceRecord): void {

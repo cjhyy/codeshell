@@ -233,6 +233,7 @@ export function buildRunPermissionPipeline(args: {
               : event.approved
                 ? "approved"
                 : "rejected",
+        ...(event.phase === "requested" ? { first: true } : {}),
         ...(event.phase === "resolved" ? { endedAt: Date.now() } : {}),
         input: { riskLevel: event.riskLevel },
         error: event.error,

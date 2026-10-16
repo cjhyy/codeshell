@@ -29,9 +29,10 @@ Desktop exposes recording controls in Execution traces. Prompt and output conten
 require the separate content switch. Temporary sessions require an additional
 explicit persistence switch. Missing historical content cannot be recovered by
 turning either switch on. Re-enabling recording does not resume body capture for
-a call already in progress. Settings apply without restarting workers. Recorded
-content is local, bounded and subject to retention; credentials, sensitive tool
-results and media payloads are redacted or omitted.
+a call already in progress. Previously saved content remains subject to retention;
+turning recording off stops further body capture. Settings apply without restarting
+workers. Recorded content is local and bounded; credentials, sensitive tool results
+and media payloads are redacted or omitted.
 
 The collector wraps `LLMClientBase` and configured fetch, so it also covers title,
 summary, goal and other auxiliary calls independently of billing. Native image
@@ -46,8 +47,7 @@ its submitted prompt and visible final result. Remote CLI rooms group overlappin
 accepted submissions into an explicitly limited batch when the CLI supplies no
 per-request event identity; observed external transcripts do not fabricate inputs.
 Room approval requests can appear as events without a full decision lifecycle.
-Independent Panel
-processes making their own model calls are outside this collector; submitted
+Independent Panel processes making their own model calls are outside this collector; submitted
 native Agent work goes through the usual Engine instrumentation.
 
 ## Reading

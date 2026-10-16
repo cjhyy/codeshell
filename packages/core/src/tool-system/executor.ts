@@ -152,7 +152,7 @@ export class ToolExecutor {
       parentId: this.parentTraceEventId,
       input: { toolCallId: callIn.id, args: effectiveInput },
     });
-    recordModelTraceEvent({ ...event(), status: "running" });
+    recordModelTraceEvent({ ...event(), status: "running", first: true });
     try {
       const result = await this.executeSingleAuthorized(callIn, constraint, {
         id,

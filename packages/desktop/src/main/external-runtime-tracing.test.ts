@@ -111,14 +111,15 @@ describe("external CLI model history", () => {
     expect(persisted).not.toContain("known host instructions");
   });
 
-  test("revoking content capture clears captured payload on final update; disabled tracing writes nothing", () => {
+  test("revoking content capture preserves previously saved input but stops final output; disabled tracing writes nothing", () => {
     const { store, trace } = fixture();
     trace.observe({ type: "text_delta", text: "PRIVATE_RESPONSE" });
     store.setConfig({ captureContent: false });
     trace.finish();
     const record = store.get(store.list().items[0]!.id)!;
-    expect(record.input).toBeUndefined();
+    expect(record.input?.messages).toEqual([{ role: "user", content: "submitted request" }]);
     expect(record.output).toBeUndefined();
+    expect(JSON.stringify(record)).not.toContain("PRIVATE_RESPONSE");
     store.setConfig({ enabled: false });
     expect(
       startExternalRuntimeTrace({
@@ -157,11 +158,24 @@ describe("external CLI model history", () => {
     trace.observe({ type: "text_delta", text: "NEVER_CAPTURE_PAUSED_RESPONSE" });
     store.setConfig({ captureContent: true });
     trace.observe({ type: "text_delta", text: "after pause" });
+    trace.observe({
+      type: "tool_use_start",
+      toolCall: { id: "late-tool", toolName: "Read", args: { path: "NEVER_CAPTURE_LATE_TOOL" } },
+    });
+    trace.observe({
+      type: "tool_result",
+      result: { id: "late-tool", toolName: "Read", result: "NEVER_CAPTURE_LATE_RESULT" },
+    });
     trace.finish();
     const record = store.get(store.list().items[0]!.id)!;
-    expect(record.output!.text).toContain("before pause");
-    expect(record.output!.text).toContain("after pause");
-    expect(record.output!.text).toContain("[Content capture paused]");
+    expect(record.outputState).toBe("not-recorded");
+    expect(JSON.stringify(record)).not.toContain("after pause");
     expect(JSON.stringify(record)).not.toContain("NEVER_CAPTURE_PAUSED_RESPONSE");
+    const events = store.events(record.traceId);
+    expect(events.find((event) => event.kind === "tool")).toMatchObject({
+      inputState: "not-recorded",
+      outputState: "not-recorded",
+    });
+    expect(JSON.stringify(events)).not.toContain("NEVER_CAPTURE_LATE_");
   });
 });

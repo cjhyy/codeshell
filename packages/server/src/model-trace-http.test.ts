@@ -141,7 +141,12 @@ test("two Host stores stay isolated and native setters validate complete configu
   expect(second.get("visible")).toBeNull();
   expect(
     first.setConfig({ captureContent: true, includeEphemeral: true, retentionDays: 30 }),
-  ).toEqual({ enabled: true, captureContent: true, includeEphemeral: true, retentionDays: 30 });
+  ).toMatchObject({
+    enabled: true,
+    captureContent: true,
+    includeEphemeral: true,
+    retentionDays: 30,
+  });
   expect(second.getConfig().captureContent).toBe(false);
   for (const patch of [
     { captureContent: "yes" },

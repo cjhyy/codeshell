@@ -5,12 +5,14 @@ export type ModelTraceContentState = "recorded" | "not-recorded" | "truncated" |
 export type ModelTraceStatus = "running" | "completed" | "failed" | "cancelled";
 
 export interface ModelTraceConfig {
+  /** Host-owned generation; changed policy never resumes capture for an existing call. */
+  readonly policyRevision: string;
   enabled: boolean;
   captureContent: boolean;
   retentionDays: number;
   includeEphemeral: boolean;
 }
-export type ModelTraceConfigPatch = Partial<ModelTraceConfig>;
+export type ModelTraceConfigPatch = Partial<Omit<ModelTraceConfig, "policyRevision">>;
 
 export interface ModelTraceOutput {
   text?: string;
@@ -119,6 +121,8 @@ export type ModelTraceEventInput = Omit<
   traceId?: string;
   inputState?: ModelTraceContentState;
   outputState?: ModelTraceContentState;
+  /** Internal span-start marker; continuations cannot recreate an evicted capture policy. */
+  first?: boolean;
 };
 
 /** Trusted Host/Engine context; never inferred from the operator's process cwd. */

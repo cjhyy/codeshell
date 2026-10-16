@@ -26,7 +26,7 @@ export function withEngineRunTrace(
         name: "execution",
         startedAt: Date.now(),
       };
-      recordModelTraceEvent({ ...event, status: "running" });
+      recordModelTraceEvent({ ...event, status: "running", first: true });
       try {
         const result = await operation();
         recordModelTraceEvent({ ...event, endedAt: Date.now(), status: result.reason });
