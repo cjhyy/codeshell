@@ -70,6 +70,7 @@ let electron,
   win,
   monitor,
   captured,
+  processClosed,
   failure,
   stage = "setup";
 let confined;
@@ -345,6 +346,9 @@ try {
     if (command === executable && options?.env?.HOME === isolated.home) {
       assert.equal(captured, undefined, "Exactly one owned Electron Main may be launched");
       captured = child;
+      processClosed = new Promise((resolve) =>
+        child.once("close", (code, signal) => resolve({ code, signal })),
+      );
       report.processCapture = { pid: child.pid, homeMatched: true, beforeHandshake: true };
       child.once("error", () => report.errors.push("Owned Electron spawn error"));
       // Establish PID + parent + birth custody before Playwright can await its
@@ -638,6 +642,18 @@ try {
       "cleaned",
       "Owned process birth settlement must prove cleanup",
     );
+    let timer;
+    try {
+      report.mainExit = await Promise.race([
+        processClosed,
+        new Promise((_, reject) => {
+          timer = setTimeout(() => reject(new Error("Owned Main close event missing")), 2_000);
+        }),
+      ]);
+    } finally {
+      clearTimeout(timer);
+    }
+    assert.deepEqual(report.mainExit, { code: 0, signal: null }, "Main must exit normally");
     await isolated.cleanup();
     report.privateHomeRemoved = true;
   } catch (error) {
