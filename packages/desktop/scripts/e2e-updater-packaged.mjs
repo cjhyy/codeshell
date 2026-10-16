@@ -61,6 +61,8 @@ let fixture,
   keychainReference,
   keychainContext,
   processEvidence,
+  nativeCalls,
+  closeFailed = false,
   mode = "404";
 const failures = [];
 const server = createServer((request, response) => {
@@ -141,8 +143,17 @@ async function closeApp() {
   }
   if (child.exitCode === null && child.signalCode === null)
     closeErrors.push(new Error("Owned packaged updater exit unproven"));
-  else app = undefined;
-  if (closeErrors.length) throw new AggregateError(closeErrors, "Packaged updater close failed");
+  else {
+    app = undefined;
+    if (child.exitCode !== 0 || child.signalCode !== null)
+      closeErrors.push(
+        new Error("Packaged updater Main must exit normally with code 0 and no signal"),
+      );
+  }
+  if (closeErrors.length) {
+    closeFailed = true;
+    throw new AggregateError(closeErrors, "Packaged updater close failed");
+  }
 }
 async function launch() {
   app = await fixture.launch();
@@ -162,8 +173,10 @@ async function launch() {
     )
   )
     await view.click();
-  await navigateSettingsMenu(win, /^(设置|Settings)$/);
   const general = win.locator('[data-settings-module="general"]:visible');
+  // The real shell restores the Settings route across these app restarts.
+  // Only open its account menu when the Settings navigation is absent.
+  if (!(await general.count())) await navigateSettingsMenu(win, /^(设置|Settings)$/);
   if (await general.count()) await general.click();
   const heading = win.getByRole("heading", { name: /^(自动更新|Auto-update)$/ });
   await heading.waitFor();
@@ -299,28 +312,30 @@ const settled = await settlePackagedPet({
       spawnedWorkers: await rows("spawned-workers.jsonl"),
       mainExits: await rows("main-exits.jsonl"),
     };
-    return rows("native-storage.jsonl");
+    nativeCalls = await rows("native-storage.jsonl");
+    return nativeCalls;
   },
-  canCleanup: async () => (fixture ? fixture.canCleanup() : false),
+  canCleanup: async () => {
+    if (!fixture) return false;
+    assert.equal(closeFailed, false, "Abnormal Main close requires retaining private HOME");
+    assert.deepEqual(nativeCalls, [], "Native storage access requires retaining private HOME");
+    assert.deepEqual(
+      processEvidence.spawnedWorkers,
+      [],
+      "Worker creation requires retaining private HOME",
+    );
+    assert.deepEqual(errors, [], "Renderer/feed failure requires retaining private HOME");
+    if (keychainReference) {
+      const after = readDefaultKeychain(keychainReference.home);
+      for (const key of ["path", "dev", "ino", "uid"])
+        assert.equal(after[key], keychainReference[key], "OS default Keychain metadata drifted");
+      keychainContext.operatorDefaultUnchangedAfterRuntime = true;
+    }
+    return fixture.canCleanup();
+  },
   cleanup: () => isolated.cleanup(),
   retainedHome: isolated.home,
 });
-if (settled.nativeCalls?.length || processEvidence?.spawnedWorkers.length || errors.length)
-  settled.errors.push(
-    new Error(
-      "Packaged updater fixture touched native storage/Worker or produced a renderer/feed error",
-    ),
-  );
-if (keychainReference) {
-  try {
-    const after = readDefaultKeychain(keychainReference.home);
-    for (const key of ["path", "dev", "ino", "uid"])
-      assert.equal(after[key], keychainReference[key], "OS default Keychain metadata drifted");
-    keychainContext.operatorDefaultUnchangedAfterRuntime = true;
-  } catch (error) {
-    settled.errors.push(error);
-  }
-}
 const receipt = {
   status: settled.errors.length ? "failed" : "passed",
   packagedApp,
