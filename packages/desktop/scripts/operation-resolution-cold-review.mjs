@@ -77,8 +77,8 @@ try {
     localStorage.setItem("codeshell.uiLanguage", "en");
     window.dispatchEvent(new Event("codeshell:language-changed"));
   });
-  await navigateSettingsMenu(win, "Task center", { activity: true });
-  const card = win.locator('[data-task-key="session:operation-resolution-session"]');
+  await navigateSettingsMenu(win, "Conversations", { activity: true });
+  const card = win.locator('[data-session-id="operation-resolution-session"]');
   await card.waitFor({ timeout: 20_000 });
   await card.getByRole("button", { name: "Review uncertain external writes", exact: true }).click();
   await card

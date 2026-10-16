@@ -132,8 +132,8 @@ async function launch() {
   return errors;
 }
 async function activityReview() {
-  await navigateSettingsMenu(win, "Background work", { activity: true });
-  const card = win.locator(`[data-task-key="session:${sessionId}"]`);
+  await navigateSettingsMenu(win, "Conversations", { activity: true });
+  const card = win.locator(`[data-session-id="${sessionId}"]`);
   await card.waitFor({ timeout: 20_000 });
   await card.getByRole("button", { name: "Review uncertain external writes", exact: true }).click();
   await card
