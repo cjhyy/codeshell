@@ -77,11 +77,45 @@ export function LinkAccountMenu({
   const { t } = useT();
   const [open, setOpen] = React.useState(false);
   const triggerId = React.useId();
+  const triggerRef = React.useRef<HTMLButtonElement>(null);
+  const contentRef = React.useRef<HTMLDivElement>(null);
+  const resizeGeneration = React.useRef(0);
+  const resizeReturn = React.useRef<{
+    opener: HTMLButtonElement | null;
+    content: HTMLDivElement | null;
+    generation: number;
+  } | null>(null);
+  React.useEffect(() => {
+    if (!open) return;
+    const closeForResize = () => {
+      const focused = document.activeElement;
+      const opener = triggerRef.current;
+      const content = contentRef.current;
+      resizeReturn.current = {
+        opener: focused === opener || content?.contains(focused) ? opener : null,
+        content,
+        generation: ++resizeGeneration.current,
+      };
+      setOpen(false);
+    };
+    window.addEventListener("resize", closeForResize);
+    return () => window.removeEventListener("resize", closeForResize);
+  }, [open]);
   if (!context) return <>{children}</>;
   return (
-    <DropdownMenu open={open} onOpenChange={setOpen}>
+    <DropdownMenu
+      open={open}
+      onOpenChange={(next) => {
+        if (next) {
+          resizeGeneration.current += 1;
+          resizeReturn.current = null;
+        }
+        setOpen(next);
+      }}
+    >
       <DropdownMenuTrigger asChild>
         <button
+          ref={triggerRef}
           id={triggerId}
           type="button"
           aria-label={label ?? t("ext.link.directory.accountActions")}
@@ -92,11 +126,43 @@ export function LinkAccountMenu({
         </button>
       </DropdownMenuTrigger>
       <DropdownMenuContent
+        ref={contentRef}
         align="start"
         aria-labelledby={triggerId}
         data-link-account-menu
         data-link-account-menu-trigger={triggerId}
         onEscapeKeyDown={(event) => event.stopPropagation()}
+        onCloseAutoFocus={(event) => {
+          const pending = resizeReturn.current;
+          if (!pending) return;
+          resizeReturn.current = null;
+          event.preventDefault();
+          const focused = document.activeElement;
+          const { opener, content, generation } = pending;
+          if (
+            !opener?.isConnected ||
+            (focused !== opener && focused !== document.body && !content?.contains(focused))
+          )
+            return;
+          opener.focus({ preventScroll: true });
+          void (async () => {
+            // The dialog's height transitions after native resize. Reveal the
+            // launcher only when those bounds settle and it still owns focus.
+            await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
+            const dialog = opener.closest("[data-link-provider-dialog]");
+            await Promise.all(
+              (dialog?.getAnimations() ?? []).map((animation) =>
+                animation.finished.catch(() => undefined),
+              ),
+            );
+            if (
+              generation === resizeGeneration.current &&
+              opener.isConnected &&
+              document.activeElement === opener
+            )
+              opener.scrollIntoView({ block: "nearest", inline: "nearest" });
+          })();
+        }}
         className="flex min-w-40 flex-col items-stretch gap-1 [&_button]:w-full [&_button]:justify-start"
       >
         {React.Children.map(children, (child) =>

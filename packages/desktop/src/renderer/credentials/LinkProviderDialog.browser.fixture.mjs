@@ -357,26 +357,56 @@ try {
       );
       reports.push({ phase: "disconnect-cancel-and-confirm-exact-identity" });
       await open({ width: 800, height: 480, lang: "en", theme: "dark" });
+      const resizeLabels = await page.evaluate(() => window.labels);
       content = await menu();
+      await page.evaluate(() => {
+        const spinner = document.createElement("span");
+        spinner.className = "animate-spin";
+        spinner.style.position = "absolute";
+        spinner.setAttribute("data-owned-busy-spinner", "");
+        document.querySelector("[data-link-provider-dialog]").append(spinner);
+      });
       await page.setViewportSize({ width: 320, height: 240 });
-      await frames();
-      const item = page.locator('[role="menuitem"]:focus');
-      if (await item.count()) {
-        const data = await geometry(item);
-        assert.equal(data.full && data.hit, true, JSON.stringify(data));
-      }
+      await content.waitFor({ state: "hidden" });
+      assert.equal(await dialog().isVisible(), true, "Resize closes only the anchored menu");
+      await waitFocused(trigger());
+      await page.waitForFunction(
+        (node) => {
+          const bounds = node.getBoundingClientRect();
+          const clip = node.closest("[data-link-provider-details]").getBoundingClientRect();
+          return (
+            bounds.top >= clip.top && bounds.bottom <= clip.bottom && bounds.bottom <= innerHeight
+          );
+        },
+        await trigger().elementHandle(),
+      );
+      const anchor = await geometry(trigger());
+      assert.equal(anchor.full && anchor.hit, true, JSON.stringify(anchor));
+      content = await menu();
       await page.keyboard.press("End");
       await waitFocused(content.locator("button").last());
       const active = page.locator(":focus");
       const data = await geometry(active);
       assert.equal(data.full && data.hit, true, JSON.stringify(data));
       await screenshot("after-menu-live-resize-320-240-en-dark");
-      await page.keyboard.press("Escape");
+      await active.click();
       await content.waitFor({ state: "hidden" });
+      await row().getByRole("button", { name: resizeLabels.confirm, exact: true }).waitFor();
+      await row().getByRole("button", { name: resizeLabels.cancel, exact: true }).click();
       assert.equal(await dialog().isVisible(), true);
-      await waitFocused(trigger());
       await noAuthority();
-      reports.push({ phase: "menu-live-resize-320-240", data });
+      reports.push({ phase: "menu-live-resize-close-and-reopen-320-240", anchor, data });
+      await open({ width: 800, height: 480, lang: "en", theme: "dark" });
+      content = await menu();
+      await page.setViewportSize({ width: 320, height: 240 });
+      await content.waitFor({ state: "hidden" });
+      await waitFocused(trigger());
+      const other = dialog().locator('[data-link-dialog-close="figma"]');
+      await other.focus();
+      await page.waitForTimeout(350);
+      assert.equal(await focused(other), true, "Resize recovery preserves newer dialog focus");
+      await noAuthority();
+      reports.push({ phase: "menu-resize-preserves-newer-focus" });
       for (const lang of ["zh", "en"]) {
         await open({ width: 320, height: 240, lang, theme: "light", empty: true });
         const footer = dialog().locator('[data-link-advanced-toggle="figma"]').locator("..");
