@@ -8,7 +8,13 @@ import WebSocket from "ws";
 export async function preloadPausedPackagedMain(
   child,
   bootstrap,
-  { allowedPause, isHostScript, timeoutMs = 15_000, allowParsedHostOnStart = false } = {},
+  {
+    allowedPause,
+    isHostScript,
+    timeoutMs = 15_000,
+    allowParsedHostOnStart = false,
+    terminateChild,
+  } = {},
 ) {
   let socket;
   let timer;
@@ -126,10 +132,12 @@ export async function preloadPausedPackagedMain(
     const errors = [error];
     try {
       if (child.exitCode === null && child.signalCode === null) {
-        child.kill("SIGTERM");
-        await new Promise((resolve) => setTimeout(resolve, 250));
-        if (child.exitCode === null && child.signalCode === null) child.kill("SIGKILL");
-        await new Promise((resolve) => setTimeout(resolve, 250));
+        assert.equal(
+          typeof terminateChild,
+          "function",
+          "Owned birth identity is required to terminate startup",
+        );
+        await terminateChild();
         if (child.exitCode === null && child.signalCode === null)
           throw Error("captured startup child still alive; inspector and HOME retained", {
             cause: error,

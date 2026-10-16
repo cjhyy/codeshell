@@ -166,10 +166,7 @@ async function closeApp() {
   }
   if (child.exitCode === null && child.signalCode === null) {
     try {
-      child.kill("SIGTERM");
-      await new Promise((resolve) => setTimeout(resolve, 1_000));
-      if (child.exitCode === null && child.signalCode === null) child.kill("SIGKILL");
-      await new Promise((resolve) => setTimeout(resolve, 500));
+      await fixture.terminateChild(child);
     } catch (error) {
       errors.push(error);
     }

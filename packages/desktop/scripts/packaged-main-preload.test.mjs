@@ -5,6 +5,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { preloadPausedPackagedMain } from "./packaged-main-preload.mjs";
+import { watchElectronTestProcess } from "./electron-test-watchdog.mjs";
 
 const node = execFileSync("node", ["-p", "process.execPath"], { encoding: "utf8" }).trim();
 async function fixture(guard, verify, { esm = false } = {}) {
@@ -36,16 +37,13 @@ async function fixture(guard, verify, { esm = false } = {}) {
     stdio: ["ignore", "pipe", "pipe"],
     env: { HOME: root, PATH: process.env.PATH },
   });
+  const monitor = watchElectronTestProcess(child, { timeoutMs: 10_000 });
+  const terminateChild = () => monitor.terminate();
   try {
-    await verify({ child, bootstrap, entry, marker, dependency, dependencyMarker });
+    await verify({ child, bootstrap, entry, marker, dependency, dependencyMarker, terminateChild });
   } finally {
-    if (child.exitCode === null && child.signalCode === null) {
-      child.kill("SIGTERM");
-      await new Promise((resolve) => setTimeout(resolve, 100));
-      if (child.exitCode === null && child.signalCode === null) child.kill("SIGKILL");
-    }
-    if (child.exitCode === null && child.signalCode === null)
-      await new Promise((resolve) => child.once("exit", resolve));
+    const settlement = await monitor.terminate();
+    expect(settlement.status).toBe("cleaned");
     await rm(root, { recursive: true, force: true });
   }
 }
@@ -85,6 +83,39 @@ test("ESM Break-on-start precedes the static dependency body as well as entry", 
   );
 });
 test("a late or disallowed pause rejects without executing the entry", async () => {
+  await fixture(
+    "globalThis.__guardInstalled = true;",
+    async ({ child, bootstrap, marker, terminateChild }) => {
+      await expect(
+        preloadPausedPackagedMain(child, bootstrap, {
+          allowedPause: () => false,
+          isHostScript: () => false,
+          terminateChild,
+        }),
+      ).rejects.toThrow("startup barrier failed");
+      expect(child.exitCode !== null || child.signalCode !== null).toBe(true);
+      expect(await readFile(marker, "utf8").catch(() => null)).toBeNull();
+    },
+  );
+});
+test("a throwing guard rejects without executing the entry", async () => {
+  await fixture(
+    'throw Error("synthetic guard failed");',
+    async ({ child, bootstrap, marker, terminateChild }) => {
+      await expect(
+        preloadPausedPackagedMain(child, bootstrap, {
+          allowedPause: () => true,
+          isHostScript: () => false,
+          terminateChild,
+        }),
+      ).rejects.toThrow("startup barrier failed");
+      expect(child.exitCode !== null || child.signalCode !== null).toBe(true);
+      expect(await readFile(marker, "utf8").catch(() => null)).toBeNull();
+    },
+  );
+});
+
+test("a failed startup without termination custody neither signals nor resumes its child", async () => {
   await fixture("globalThis.__guardInstalled = true;", async ({ child, bootstrap, marker }) => {
     await expect(
       preloadPausedPackagedMain(child, bootstrap, {
@@ -92,19 +123,8 @@ test("a late or disallowed pause rejects without executing the entry", async () 
         isHostScript: () => false,
       }),
     ).rejects.toThrow("startup barrier failed");
-    expect(child.exitCode !== null || child.signalCode !== null).toBe(true);
-    expect(await readFile(marker, "utf8").catch(() => null)).toBeNull();
-  });
-});
-test("a throwing guard rejects without executing the entry", async () => {
-  await fixture('throw Error("synthetic guard failed");', async ({ child, bootstrap, marker }) => {
-    await expect(
-      preloadPausedPackagedMain(child, bootstrap, {
-        allowedPause: () => true,
-        isHostScript: () => false,
-      }),
-    ).rejects.toThrow("startup barrier failed");
-    expect(child.exitCode !== null || child.signalCode !== null).toBe(true);
+    expect(child.exitCode).toBeNull();
+    expect(child.signalCode).toBeNull();
     expect(await readFile(marker, "utf8").catch(() => null)).toBeNull();
   });
 });
@@ -144,6 +164,7 @@ for (const [name, payload] of [
       stdio: ["ignore", "pipe", "pipe"],
       env: { HOME: root, PATH: process.env.PATH },
     });
+    const monitor = watchElectronTestProcess(child, { timeoutMs: 10_000 });
     let stderr = "";
     child.stderr.on("data", (chunk) => {
       stderr += chunk.toString();
@@ -153,6 +174,7 @@ for (const [name, payload] of [
         preloadPausedPackagedMain(child, join(root, "unused.cjs"), {
           allowedPause: () => true,
           isHostScript: () => false,
+          terminateChild: () => monitor.terminate(),
         }),
       ).rejects.toThrow("startup barrier failed");
       expect(child.exitCode !== null || child.signalCode !== null).toBe(true);
@@ -166,9 +188,7 @@ for (const [name, payload] of [
         .map(JSON.parse);
       expect(events).toEqual([{ event: "term" }]);
     } finally {
-      if (child.exitCode === null && child.signalCode === null) child.kill("SIGKILL");
-      if (child.exitCode === null && child.signalCode === null)
-        await new Promise((resolve) => child.once("exit", resolve));
+      expect((await monitor.terminate()).status).toBe("cleaned");
       await rm(root, { recursive: true, force: true });
     }
   });

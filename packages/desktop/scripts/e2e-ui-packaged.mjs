@@ -118,10 +118,11 @@ async function closeApp() {
     clearTimeout(timer);
   }
   if (child.exitCode === null && child.signalCode === null) {
-    child.kill("SIGTERM");
-    await new Promise((resolve) => setTimeout(resolve, 1_000));
-    if (child.exitCode === null && child.signalCode === null) child.kill("SIGKILL");
-    await new Promise((resolve) => setTimeout(resolve, 500));
+    try {
+      await fixture.terminateChild(child);
+    } catch (error) {
+      errors.push(error);
+    }
   }
   if (child.exitCode === null && child.signalCode === null)
     errors.push(Error("Captured packaged UI Main still alive; HOME retained"));

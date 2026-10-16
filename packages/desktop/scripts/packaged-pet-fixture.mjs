@@ -106,10 +106,18 @@ export async function preparePackagedPetFixture({
   });
   const children = [];
   const processMonitors = [];
+  const monitorsByChild = new Map();
   const workers = new Set();
   const verifiedMains = new Set();
   const verifiedWorkerMains = new Set();
   let launchFailed = false;
+  const terminateChild = async (child) => {
+    const monitor = monitorsByChild.get(child);
+    assert.ok(monitor?.terminate, "Captured Main identity is unproven; private HOME retained");
+    const settlement = await monitor.terminate();
+    assert.equal(settlement.status, "cleaned", "Captured Main exit is unproven; HOME retained");
+    return settlement;
+  };
   return {
     env: environment,
     managedNode,
@@ -138,7 +146,9 @@ export async function preparePackagedPetFixture({
         if (owned) {
           captured = child;
           children.push(child);
-          processMonitors.push(watchElectronTestProcess(child, { timeoutMs: 120_000 }));
+          const monitor = watchElectronTestProcess(child, { timeoutMs: 120_000 });
+          processMonitors.push(monitor);
+          monitorsByChild.set(child, monitor);
           for (const stream of ["stdout", "stderr"])
             child[stream].on("data", (chunk) =>
               appendFileSync(join(isolated.home, `official-main-${child.pid}.${stream}`), chunk, {
@@ -151,6 +161,7 @@ export async function preparePackagedPetFixture({
             allowedPause: (url) => url.startsWith(layout.mainURLPrefix),
             isHostScript: (url) => url.startsWith(resourcesURLPrefix),
             allowParsedHostOnStart: true,
+            terminateChild: () => terminateChild(child),
           }).then(async (receipt) => {
             await writeFile(
               join(isolated.home, `startup-pause-${child.pid}.json`),
@@ -233,15 +244,7 @@ export async function preparePackagedPetFixture({
         ];
         if (captured && captured.exitCode === null && captured.signalCode === null) {
           try {
-            captured.kill("SIGTERM");
-            await new Promise((resolve) => setTimeout(resolve, 1_000));
-            if (captured.exitCode === null && captured.signalCode === null)
-              captured.kill("SIGKILL");
-            await new Promise((resolve) => setTimeout(resolve, 500));
-            if (captured.exitCode === null && captured.signalCode === null)
-              throw Error("captured packaged Main still alive; private HOME retained", {
-                cause: error,
-              });
+            await terminateChild(captured);
           } catch (closeError) {
             errors.push(closeError);
           }
@@ -255,6 +258,7 @@ export async function preparePackagedPetFixture({
       }
       return app;
     },
+    terminateChild,
     async assertWorker(app) {
       const pid = app.process().pid;
       const deadline = Date.now() + 15_000;
