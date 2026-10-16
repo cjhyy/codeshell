@@ -12,6 +12,7 @@ import { createBunTestEnvironment } from "../../../scripts/bun-test-completion.m
 import { localPackageConfiguration } from "./smoke-local-package.mjs";
 import { readPackagedUiBuildReceipt } from "./run-packaged-ui-acceptance.mjs";
 import { capturePackagedAppIntegrity } from "./packaged-app-integrity.mjs";
+import { captureMacosAppMetadata } from "./macos-app-metadata.mjs";
 import { readDefaultKeychain } from "./macos-keychain-context.mjs";
 import { watchElectronTestProcess } from "./electron-test-watchdog.mjs";
 import {
@@ -125,26 +126,7 @@ async function ownedProcess(label, args, environment, timeoutMs) {
     closeSync(stderr);
   }
 }
-async function metadata(app) {
-  // Preserve resource-fork/other xattr bytes without following framework symlinks.
-  const source = `import os,sys,json,hashlib,stat
-root=sys.argv[1]; rows=[]
-def visit(file,rel):
- s=os.lstat(file)
- attrs=[[key,hashlib.sha256(os.getxattr(file,key,follow_symlinks=False)).hexdigest()] for key in sorted(os.listxattr(file,follow_symlinks=False))]
- rows.append([rel,stat.S_IMODE(s.st_mode),os.readlink(file) if stat.S_ISLNK(s.st_mode) else None,attrs])
- if stat.S_ISDIR(s.st_mode):
-  for entry in sorted(os.scandir(file),key=lambda item:item.name): visit(entry.path,rel+'/'+entry.name)
-visit(root,'.')
-print(json.dumps(rows,ensure_ascii=True,separators=(',',':')))
-`;
-  const bytes = execFileSync("/usr/bin/python3", ["-c", source, app], {
-    timeout: 120_000,
-    maxBuffer: 8 * 1024 * 1024,
-    env: { PATH: "/usr/bin:/bin", HOME: root },
-  });
-  return { sha256: hash(bytes), records: JSON.parse(bytes) };
-}
+const metadata = (app) => captureMacosAppMetadata(app, root);
 async function copyAndVerify(source, destination, expected) {
   assert.ok(isInside(root, destination));
   await lstat(destination).then(
