@@ -709,6 +709,7 @@ export {
   type CredentialMetadata,
   type CredentialSnapshot,
   type CredentialSnapshotEntry,
+  type RemoteLinkActionReply,
   type EncryptionCipher,
   PlaintextCipher,
   setDefaultCredentialCipher,

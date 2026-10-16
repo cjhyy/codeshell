@@ -1,6 +1,12 @@
 import { describe, expect, test } from "bun:test";
 import { createInProcessTransport } from "../protocol/transport.js";
-import { createIpcCredentialAccess, type CredentialSnapshot } from "./access.js";
+import type { RpcRequest } from "../protocol/types.js";
+import {
+  createIpcCredentialAccess,
+  type CredentialMetadata,
+  type CredentialSnapshot,
+  type RemoteLinkActionReply,
+} from "./access.js";
 import { RemoteLinkError } from "../links/remote.js";
 import { McpLinkActionError } from "../links/figma-mcp.js";
 import { FIGMA_MCP_SERVER_URL } from "@cjhyy/code-shell-link";
@@ -45,64 +51,181 @@ describe("createIpcCredentialAccess", () => {
       }
     }
   });
-  test("reviewed Figma recovery codes survive IPC only for the bound remote action method", async () => {
-    for (const [method, code] of [
-      ["remote", "file_not_authorized"],
-      ["remote", "unsupported_file_type"],
-      ["remote", "response_too_large"],
-      ["remote", "content_unavailable"],
-      ["remote", "unreviewed_code"],
-      ["resolve", "file_not_authorized"],
-      ["resolve", "unsupported_file_type"],
-      ["resolve", "response_too_large"],
-      ["resolve", "content_unavailable"],
-    ]) {
-      const [main, worker] = createInProcessTransport();
-      const access = createIpcCredentialAccess(worker);
-      main.onMessage((message) => {
-        if (!("id" in message) || !("method" in message)) return;
-        main.send({
-          jsonrpc: "2.0",
-          id: message.id,
-          error: {
-            code: -32603,
-            message: "Provider-supplied text must not replace the reviewed instruction",
-            data: { remoteLinkCode: code },
-          },
+  test("reviewed remote Link recovery codes survive IPC only for the bound remote action method", async () => {
+    const reviewedCodes = [
+      "invalid_request",
+      "unavailable",
+      "reconnect",
+      "changed",
+      "forbidden",
+      "file_not_authorized",
+      "unsupported_file_type",
+      "response_too_large",
+      "content_unavailable",
+      "busy",
+    ] as const;
+    for (const method of ["remote", "resolve"] as const) {
+      for (const code of [
+        ...reviewedCodes,
+        "unreviewed_code",
+        "reconnect ",
+        null,
+        42,
+        { code: "reconnect" },
+        ["busy"],
+      ]) {
+        const [main, worker] = createInProcessTransport();
+        const access = createIpcCredentialAccess(worker);
+        main.onMessage((message) => {
+          if (!("id" in message) || !("method" in message)) return;
+          main.send({
+            jsonrpc: "2.0",
+            id: message.id,
+            error: {
+              code: -32603,
+              message: "Provider-supplied text must not replace the reviewed instruction",
+              data: { remoteLinkCode: code },
+            },
+          });
         });
-      });
-      const request =
-        method === "remote"
-          ? access.executeRemoteLinkAction!({
-              id: "figma",
-              scope: "full",
-              grantId: "grant",
-              action: "get_file",
-              params: { file_url_or_key: "File" },
-            })
-          : access.resolveValue!({ id: "figma", scope: "full", purpose: "use" });
-      let error: unknown;
-      try {
-        await request;
-      } catch (cause) {
-        error = cause;
-      }
-      if (
-        method === "remote" &&
-        (code === "file_not_authorized" ||
-          code === "unsupported_file_type" ||
-          code === "response_too_large" ||
-          code === "content_unavailable")
-      ) {
-        expect(error).toBeInstanceOf(RemoteLinkError);
-        expect((error as RemoteLinkError).code).toBe(code);
-        expect((error as Error).message).toBe(new RemoteLinkError(code).message);
-        expect((error as Error).message).not.toContain("Provider-supplied");
-      } else {
-        expect(error).not.toBeInstanceOf(RemoteLinkError);
-        expect((error as Error).message).toContain("Provider-supplied");
+        let error: unknown;
+        try {
+          await (method === "remote"
+            ? access.executeRemoteLinkAction!({
+                id: "figma",
+                scope: "full",
+                grantId: "grant",
+                action: "get_file",
+                params: { file_url_or_key: "File" },
+              })
+            : access.resolveValue!({ id: "figma", scope: "full", purpose: "use" }));
+        } catch (cause) {
+          error = cause;
+        }
+        if (method === "remote" && reviewedCodes.includes(code as (typeof reviewedCodes)[number])) {
+          expect(error).toBeInstanceOf(RemoteLinkError);
+          expect((error as RemoteLinkError).code).toBe(code);
+          expect((error as Error).message).toBe(
+            new RemoteLinkError(code as (typeof reviewedCodes)[number]).message,
+          );
+          expect((error as Error).message).not.toContain("Provider-supplied");
+        } else {
+          expect(error).not.toBeInstanceOf(RemoteLinkError);
+          expect((error as Error).message).toContain("Provider-supplied");
+        }
+        main.close();
+        worker.close();
       }
     }
+  });
+
+  test("a newer grant and its later removal cannot be overwritten by delayed or duplicate snapshots", () => {
+    const [main, worker] = createInProcessTransport();
+    const access = createIpcCredentialAccess(worker);
+    let notifications = 0;
+    access.subscribe!(() => {
+      notifications++;
+    });
+    const credential = (grantId: string): CredentialMetadata => ({
+      id: "figma-remote",
+      type: "oauth",
+      label: "Selected designer",
+      hasSecret: true,
+      meta: {
+        linkProvider: "figma",
+        linkExecutionRuntime: "server",
+        linkExecutionBackend: "remote",
+        linkRemoteGrantId: grantId,
+        linkRemoteState: "connected",
+        linkAccountId: "selected-account",
+      },
+    });
+    const publish = (revision: number, credentials: CredentialMetadata[], readable = true) => {
+      const snapshot: CredentialSnapshot = {
+        revision,
+        entries: [
+          {
+            cwd: "/repo",
+            full: credentials,
+            project: credentials,
+            readableFull: readable,
+            readableProject: readable,
+            envFull: { CURRENT_SNAPSHOT: String(revision) },
+            envProject: { CURRENT_SNAPSHOT: String(revision) },
+          },
+        ],
+      };
+      main.send({ jsonrpc: "2.0", method: "desktop/credentialSnapshot", params: { ...snapshot } });
+    };
+    publish(1, [credential("original-grant")]);
+    publish(3, [credential("newly-authorized-grant")]);
+    publish(2, [credential("original-grant")], false);
+    publish(3, [credential("original-grant")], false);
+    for (const scope of ["full", "project"] as const) {
+      expect(access.resolveMeta("/repo", "figma-remote", scope)?.meta?.linkRemoteGrantId).toBe(
+        "newly-authorized-grant",
+      );
+      expect(access.listMaskedWithStatus!("/repo", scope)).toEqual({
+        credentials: [credential("newly-authorized-grant")],
+        readable: true,
+      });
+      expect(access.envExposures("/repo", scope)).toEqual({ CURRENT_SNAPSHOT: "3" });
+    }
+    expect(notifications).toBe(2);
+
+    publish(4, []);
+    publish(3, [credential("newly-authorized-grant")]);
+    publish(4, [credential("original-grant")]);
+    expect(access.listMasked("/repo", "full")).toEqual([]);
+    expect(access.resolveMeta("/repo", "figma-remote", "project")).toBeUndefined();
+    expect(access.envExposures("/repo", "full")).toEqual({ CURRENT_SNAPSHOT: "4" });
+    expect(notifications).toBe(3);
+    main.close();
+    worker.close();
+  });
+
+  test("invalid snapshot revisions cannot replace metadata or poison subsequent valid revisions", () => {
+    const [main, worker] = createInProcessTransport();
+    const access = createIpcCredentialAccess(worker);
+    let notifications = 0;
+    access.subscribe!(() => {
+      notifications++;
+    });
+    for (const revision of [0, -1, 0.5, NaN, Infinity, Number.MAX_SAFE_INTEGER + 1, "1", null]) {
+      main.send({
+        jsonrpc: "2.0",
+        method: "desktop/credentialSnapshot",
+        params: {
+          revision,
+          entries: [{ cwd: "/invalid", full: [], project: [], envFull: {}, envProject: {} }],
+        },
+      });
+    }
+    expect(notifications).toBe(0);
+    main.send({
+      jsonrpc: "2.0",
+      method: "desktop/credentialSnapshot",
+      params: {
+        revision: 1,
+        entries: [
+          {
+            cwd: "/valid",
+            full: [],
+            project: [],
+            readableFull: true,
+            readableProject: true,
+            envFull: { VALID: "current" },
+            envProject: {},
+          },
+        ],
+      },
+    });
+    expect(access.envExposures("/invalid", "full")).toEqual({});
+    expect(access.envExposures("/valid", "full")).toEqual({ VALID: "current" });
+    expect(access.listMaskedWithStatus!("/valid", "full").readable).toBe(true);
+    expect(notifications).toBe(1);
+    main.close();
+    worker.close();
   });
   test("propagates scoped read failures and treats missing or legacy snapshots as unknown", () => {
     const [main, worker] = createInProcessTransport();
@@ -245,6 +368,232 @@ describe("createIpcCredentialAccess", () => {
       "desktop/remoteLinkAction",
     ]);
     unsubscribe?.();
+  });
+});
+
+describe("remote Action atomic snapshot replies", () => {
+  function fixture() {
+    const [main, worker] = createInProcessTransport();
+    const access = createIpcCredentialAccess(worker);
+    const requests: RpcRequest[] = [];
+    const cancellations: unknown[] = [];
+    main.onMessage((message) => {
+      if (!("method" in message)) return;
+      if ("id" in message) requests.push(message);
+      else if (message.method === "desktop/localOAuthLinkActionCancel")
+        cancellations.push(message.params);
+    });
+    const snapshot = (
+      revision: number,
+      grantId = "original-grant",
+      state: "connected" | "reconnect" = "connected",
+    ): CredentialSnapshot => {
+      const credential: CredentialMetadata = {
+        id: "selected-remote-link",
+        type: "oauth",
+        label: "Selected designer",
+        hasSecret: true,
+        meta: {
+          linkProvider: "figma",
+          linkExecutionBackend: "remote",
+          linkRemoteGrantId: grantId,
+          linkRemoteState: state,
+          linkAccountId: "selected-account",
+        },
+      };
+      return {
+        revision,
+        entries: [
+          {
+            cwd: "/repo",
+            full: [credential],
+            project: [credential],
+            readableFull: true,
+            readableProject: true,
+            envFull: {},
+            envProject: {},
+          },
+        ],
+      };
+    };
+    const publish = (value: CredentialSnapshot) =>
+      main.send({ jsonrpc: "2.0", method: "desktop/credentialSnapshot", params: { ...value } });
+    publish(snapshot(1));
+    return {
+      access,
+      requests,
+      cancellations,
+      snapshot,
+      publish,
+      meta: () => access.resolveMeta("/repo", "selected-remote-link", "full")?.meta,
+      execute: (options: { signal?: AbortSignal; assertAuthorized?: () => void } = {}) =>
+        access.executeRemoteLinkAction!(
+          {
+            cwd: "/repo",
+            id: "selected-remote-link",
+            scope: "full",
+            grantId: "original-grant",
+            action: "get_file",
+            params: { file_url_or_key: "File" },
+          },
+          options,
+        ),
+      reply: (reply: RemoteLinkActionReply) => main.send(reply),
+      close: () => {
+        main.close();
+        worker.close();
+      },
+    };
+  }
+
+  test("snapshot cancellation preserves this reply's reviewed error and cancels other in-flight Actions", async () => {
+    const f = fixture();
+    const current = new AbortController();
+    const other = new AbortController();
+    let observedState: string | undefined;
+    f.access.subscribe!(() => {
+      observedState = f.meta()?.linkRemoteState;
+      current.abort();
+      other.abort();
+    });
+    const pending = f.execute({ signal: current.signal }).catch((error) => error);
+    const otherPending = f.execute({ signal: other.signal }).catch((error) => error);
+    f.reply({
+      jsonrpc: "2.0",
+      id: f.requests[0]!.id,
+      credentialSnapshot: f.snapshot(2, "original-grant", "reconnect"),
+      error: {
+        code: -32603,
+        message: "untrusted provider text",
+        data: { remoteLinkCode: "reconnect" },
+      },
+    });
+    expect(observedState).toBe("reconnect");
+    expect(current.signal.aborted).toBe(true);
+    expect(await pending).toBeInstanceOf(RemoteLinkError);
+    expect(await pending).toMatchObject({
+      code: "reconnect",
+      message: new RemoteLinkError("reconnect").message,
+    });
+    expect(await otherPending).toMatchObject({ name: "AbortError" });
+    expect(f.cancellations).toEqual([{ requestId: f.requests[1]!.id }]);
+    f.close();
+  });
+
+  test.each(["signal", "authority"] as const)(
+    "successful replies still reject protected results after snapshot %s revocation",
+    async (kind) => {
+      const f = fixture();
+      const controller = new AbortController();
+      let authorized = true;
+      let checks = 0;
+      f.access.subscribe!(() => {
+        authorized = false;
+        if (kind === "signal") controller.abort();
+      });
+      const pending = f
+        .execute({
+          signal: controller.signal,
+          assertAuthorized: () => {
+            checks++;
+            if (!authorized) throw new Error("run authority changed");
+          },
+        })
+        .catch((error) => error);
+      f.reply({
+        jsonrpc: "2.0",
+        id: f.requests[0]!.id,
+        credentialSnapshot: f.snapshot(2, "new-grant"),
+        result: { protected: "must not return" },
+      });
+      const error = await pending;
+      if (kind === "signal") {
+        expect(error).toMatchObject({ name: "AbortError" });
+        expect(checks).toBe(1);
+      } else {
+        expect(error).toBeInstanceOf(Error);
+        expect(error.message).toBe("run authority changed");
+        expect(checks).toBe(2);
+      }
+      expect(f.meta()?.linkRemoteGrantId).toBe("new-grant");
+      expect(f.cancellations).toEqual([]);
+      f.close();
+    },
+  );
+
+  test("explicit cancellation before a reply wins and its abandoned snapshot cannot change authority", async () => {
+    const f = fixture();
+    let notifications = 0;
+    f.access.subscribe!(() => notifications++);
+    const controller = new AbortController();
+    const pending = f.execute({ signal: controller.signal }).catch((error) => error);
+    controller.abort();
+    f.reply({
+      jsonrpc: "2.0",
+      id: f.requests[0]!.id,
+      credentialSnapshot: f.snapshot(2, "original-grant", "reconnect"),
+      error: { code: -32603, message: "reviewed", data: { remoteLinkCode: "reconnect" } },
+    });
+    expect(await pending).toMatchObject({ name: "AbortError" });
+    expect(f.meta()?.linkRemoteState).toBe("connected");
+    expect(notifications).toBe(0);
+    expect(f.cancellations).toEqual([{ requestId: f.requests[0]!.id }]);
+    f.close();
+  });
+
+  test("only a matching pending remote Action response may install its snapshot", async () => {
+    const f = fixture();
+    let notifications = 0;
+    f.access.subscribe!(() => notifications++);
+    const remote = f.execute();
+    f.reply({
+      jsonrpc: "2.0",
+      id: f.requests[0]!.id,
+      credentialSnapshot: f.snapshot(2, "new-grant"),
+      result: { file: "reviewed" },
+    });
+    expect(await remote).toEqual({ file: "reviewed" });
+    const rejectedSnapshot = f.snapshot(999, "original-grant", "reconnect");
+    for (const id of [f.requests[0]!.id, "unknown-request"])
+      f.reply({ jsonrpc: "2.0", id, credentialSnapshot: rejectedSnapshot, result: {} });
+    const ordinary = f.access.resolveValue!({
+      id: "ordinary-token",
+      scope: "full",
+      purpose: "use",
+    });
+    f.reply({
+      jsonrpc: "2.0",
+      id: f.requests[1]!.id,
+      credentialSnapshot: rejectedSnapshot,
+      result: { value: "synthetic-token" },
+    });
+    expect(await ordinary).toBe("synthetic-token");
+    expect(f.meta()?.linkRemoteGrantId).toBe("new-grant");
+    expect(f.meta()?.linkRemoteState).toBe("connected");
+    expect(notifications).toBe(1);
+    f.close();
+  });
+
+  test("an old or duplicate reply snapshot cannot restore the grant replaced by a newer notification", async () => {
+    const f = fixture();
+    f.publish(f.snapshot(3, "new-grant"));
+    let notifications = 0;
+    f.access.subscribe!(() => notifications++);
+    for (const revision of [2, 3]) {
+      const pending = f.execute().catch((error) => error);
+      f.reply({
+        jsonrpc: "2.0",
+        id: f.requests.at(-1)!.id,
+        credentialSnapshot: f.snapshot(revision, "original-grant", "reconnect"),
+        error: { code: -32603, message: "reviewed", data: { remoteLinkCode: "changed" } },
+      });
+      expect(await pending).toMatchObject({ code: "changed" });
+      expect(await pending).toBeInstanceOf(RemoteLinkError);
+      expect(f.meta()?.linkRemoteGrantId).toBe("new-grant");
+      expect(f.meta()?.linkRemoteState).toBe("connected");
+    }
+    expect(notifications).toBe(0);
+    f.close();
   });
 });
 
