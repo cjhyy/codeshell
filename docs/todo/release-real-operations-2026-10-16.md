@@ -4,6 +4,8 @@ Status: in progress. A passing row covers its stated fixture and boundary; this
 is not a claim that every platform, external account, or packaged release works.
 Continue the loop: operate the current interface, retain the failure, fix the
 cause, repeat the operation, then check the combined build.
+The release target is macOS, Windows, Linux Desktop and Web. Native Windows/Linux
+execution is still pending; cross-platform fixture tests are not native acceptance.
 
 ## Reproduced and repaired
 
@@ -23,6 +25,7 @@ cause, repeat the operation, then check the combined build.
 | Web mobile composer | Resize immediately before Enter could submit using stale wide-layout state. | Read the current media query at the key event. |
 | Web questions | Choice labels/descriptions and options-only constraints were not rendered; optional asynchronous questions blocked subsequent tasks. | Render single/multi choice controls and preserve synchronous approval blocking. Optional questions remain answerable while work continues. |
 | Web late errors | Failed run/cancel/approval/upload responses appeared in another selected session. | Keep errors with the initiating session; preserve global authentication expiry. |
+| Web delayed conversation title | Actual Worker completed B, the user switched to A, then B's auxiliary title finished. The durable title and event were correct, but the shared sidebar retained B's old title. | Refresh the shared session list/history on title events. A request revision prevents an older list success or failure from replacing newer results; authentication expiry remains global. Actual Host/Worker/SSE regression preserves A's draft while B's late title updates, with separate unit races for old 200/500/401 responses. |
 | Web question drafts | Switching sessions while an answer was pending unmounted its form and lost the answer on failure. | Keep unresolved forms by request and hide other sessions accessibly. |
 | Ordinary-session write recovery | Background filtering hid the only uncertain-write review entry for a normal conversation. | Add the existing review UI to conversation management, loaded only on request. Native cancellation, read-only reconciliation, manual uncertainty acceptance and cold Main/Engine recovery preserve the original unknown result and never replay its write. |
 | Execution trace keyboard access | At 820px the focused final type filter was clipped; retrying a failed detail dropped focus to the page body. | Scroll the focused filter into view and move retry focus to the stable detail heading. Native geometry, hit testing and focus checks at 1280/820/390px in light/dark themes. |
@@ -46,11 +49,86 @@ clean dependency rebuild and must finish before other checks read `dist/`.
 | Local macOS arm64 package | Production `afterPack` supplies the locked Node archive and ad-hoc signs/verifies helpers, Node and the app. Builder identity is explicitly null; Developer ID signing, notarization and publishing are disabled. The first actual ASAR Main/preload/renderer/Node-mode-worker launch verified preimport guards and package identity, then failed before any model request: native `isEncryptionAvailable` entered without returning and shutdown timed out. Before/after full-tree hashes and deep strict signature verification matched; the private HOME remains because worker-exit receipts were incomplete. This is not a passing packaged Pet acceptance. |
 | `e2e-ui-packaged.mjs` | A new local ad-hoc app containing the migration repair passed 13 actual UI operations: settings navigation, owned directory-picker result followed by real theme review/install, `cstheme:` image decoding in both modes at actual 1280/768/390px BrowserWindow content widths, and persisted theme/mode after renderer reload. Seven screenshots retained. Main guard, normal-exit spawn count zero, model requests zero, native secret-storage calls zero, unchanged full package inventory/signature and private HOME removal verified. A post-run process-table observation found no command referencing that app or its private userData; this is not a historical all-OS-descendants exit acknowledgement. |
 | Web `test-chat-operations-browser.mjs` | Actual Chromium/React/controller/ProtocolClient through native loopback HTTP/WebSocket. The Host protocol peer is a fixture; this suite does not invoke the Engine/provider. Covers 17 operation sequences including failures, reconnect, attachments, choices and scope switching. |
+| Web `smoke-web-host-operations.mjs` | Actual SPA/AuthGate/Hub, headless Host and stdio Core worker against one owned SSE provider. A real upload 201 is held while switching A→B, then remains staged only in A. An owned WebSocket is dropped during streaming; missed journal events replay after reconnect with exactly one primary request per turn. A separate sequence reproduces and repairs the inactive conversation title. Model and auxiliary-title requests are counted separately after shutdown. Driver/Host/worker origin guards, process birth custody, provider closure and remaining-process receipts pass. Service workers are blocked; this does not test their lifecycle or a live provider/account. |
 | `e2e-media-playback.mjs` | Production media protocol and actual Chromium WAV/MP4 decoding, seeking, coordination, range errors, missing/corrupt/outside-root rejection, narrow layout and session release. Generated local media only. |
 | Settings/model/theme/profile suites | Native IPC and synthetic local data. Theme surfaces, model configuration, static export output and memory promotion have separate receipts. MCP mutation and cross-project credential cases continue below. |
 | Background work/source suites | Real authoritative session/delegation/automation/background records and recovery; no model needed for synthetic history. |
 | Device relay / optimization lab | Owned local relay / feature-flagged fixture; current enrollment controls, cancellation, reconnect and restart. No public relay or live paid evaluation. |
 | Current operations / cost history | Operations UI uses native preload and a trace IPC shim delegating to compiled `ModelTraceHistory`/`ModelTraceStore`; independent read failures and session/log metadata are synthetic. Cost history uses production usage/trace IPC and compiled receipt stores, plus a fresh guarded driver and new Main PID for cold recovery. No provider/model request. |
+
+## Three-platform acceptance preparation
+
+An independent `desktop-ui-acceptance.yml` workflow builds native directory
+packages on macOS, `windows-2022` and Ubuntu, then runs cold startup and the
+packaged UI sequence. It is limited to manual dispatch or a dedicated acceptance
+branch push, with read-only repository permissions. It uses no release identity,
+notarization, tag or publishing command. Linux gets an owned Xvfb/SecretService
+session and explicitly configured sandbox helpers; it does not use `--no-sandbox`.
+No remote run has been triggered at this audit checkpoint.
+
+`smoke-local-package.mjs` retains the three production resource/signing hooks,
+records their hashes, and runs the builder from a new private working directory
+with an explicit project directory. This avoids automatically loading a checkout's
+`electron-builder.env`. The first private-cwd build exposed relative hook
+resolution against cwd; it failed and cleaned its observed processes. Absolute
+paths to the same production hooks repaired the build. Both receipts are retained
+under `/private/tmp/codeshell-ui-ci-local-mac-20261016-{b,c}`.
+
+The native UI launcher requires a clean committed-source build receipt matching
+the actual OS/architecture and current HEAD. Before launch it compares the actual
+ASAR and managed-Node manifest hashes. Mac signatures are deep/strict verified;
+Windows/Linux integrity receipts explicitly say native signatures are unverified.
+Package layout, URL encoding, runtime manifest and payload containment checks
+cover all supported target layouts.
+
+All three platforms have bounded process metadata queries. Watchdogs bind each
+owned process to PID, parent and birth identity, recheck before every signal, and
+await settlement. Query failure remains sticky; manual disarm cannot reacquire
+termination authority. Startup, inspector failure and forced UI/Pet shutdown use
+the same custody API. An initial snapshot failure was reproduced in a pure Node
+injection: the old path sent SIGTERM despite missing custody; the final path
+starts no preload, sends no signal and retains unproven state. Inspector tests
+also prove a missing termination callback neither signals nor resumes the child.
+Only `cleaned` settlement permits successful launcher status or fixture HOME
+deletion. These receipts cover observed incarnations, not every historical OS
+process.
+
+Linux's wrapper records a fresh private bus/keyring reference. The reader verifies
+owned private directories, bounded metadata, process start ticks, executables,
+ancestry and current D-Bus/SecretService PIDs. It never adopts the operator bus
+or reads stored items. Actual Linux bus execution remains pending; Mac fixture
+parsing/refusal tests do not establish it. Xvfb alone does not verify window-manager
+behavior or Wayland. Windows native window, shortcut, PTY and encryption behavior
+also remain separate from the portable parser tests.
+
+The final local macOS arm64 package at source `f90592219bc6228241ecdd71f69533777e70e786`
+passed 13 packaged UI operations and seven screenshots, with Main exit 0, no
+worker/model/native-secret calls, matching before/after inventory/signature,
+unchanged default-Keychain identity and fixture HOME removal. Build, launcher
+and native-Main observers all settled `cleaned` with zero remaining recorded
+incarnations. Evidence is
+`/private/tmp/codeshell-real-operation-cycles-20261016/native-acceptance-verified`.
+ASAR SHA256 is `face643744f71bcb97fb95f8d64b2626e27742161b824c2e8e9f30c52cf02e64`.
+Three cold launches/reloads and a second source window also passed in
+`native-acceptance-final-startup.log`. This is not packaged Pet/native encryption,
+installer/update, Developer ID or notarization acceptance.
+
+Retain the preceding `native-acceptance-final/ui` failure: all 13 UI operations
+completed, but the OS default-Keychain inode differed at the end, so the overall
+receipt correctly failed. Its origin is unclassified. Recorded processes were
+confirmed absent and the fixture HOME was removed. The successful repeat used
+a new private HOME and freshly captured metadata, never recaptured the old HOME
+or relaxed identity checks.
+
+The combined actual Web default and late-title repeats passed with receipts at
+`codeshell-web-real-host-IFKdX7/evidence/report.json` and
+`codeshell-web-real-host-fmz4QJ/evidence/report.json` in the system temporary
+directory. The original late-title red evidence is retained separately. Latest
+checks passed: 41 package/environment input tests, 23 inspector/launcher/shutdown
+tests, 39 Node process/package contract tests, 18 Web controller tests, production
+script lint and Shell syntax. Package verification still passes 10 tarballs and
+48 typed entries; all 14 workspace typechecks passed again after the final
+package was sealed and development workspace links were restored.
 
 ## Remaining acceptance work
 
@@ -67,7 +145,7 @@ clean dependency rebuild and must finish before other checks read `dist/`.
   installed update, Developer ID signing and notarization remain separate
   boundaries. Package-content inspection found no own-project smoke/e2e/test
   output, build metafiles/source maps or private settings/credential files.
-- Native OS approval automation, packaged application launch/install/update,
+- Native OS approval automation, installer/update, full packaged runtime,
   Windows/Linux-specific runtime behavior, live external accounts and actual IM
   delivery have not been established by the rows above.
 
