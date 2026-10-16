@@ -68,6 +68,7 @@ export function ToolCardShell({
   return (
     <div
       data-tool-card=""
+      data-selected={selected || undefined}
       className={
         "min-w-0 rounded-md border text-xs [overflow-wrap:anywhere] " +
         (selected
@@ -82,7 +83,7 @@ export function ToolCardShell({
         <button
           type="button"
           data-tool-heading=""
-          className="flex min-h-8 min-w-0 flex-1 flex-wrap items-center gap-x-1.5 gap-y-1 rounded-md px-2 py-1.5 text-left leading-5 hover:bg-muted/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring [&>svg]:shrink-0"
+          className="flex min-h-8 min-w-0 flex-1 flex-wrap items-center gap-x-1.5 gap-y-1 rounded-md px-2 py-1.5 text-left leading-5 hover:bg-muted/40 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-inset focus-visible:ring-ring/60 [&>svg]:shrink-0"
           onClick={(e) => {
             e.stopPropagation();
             if (hasDetails) anchoredChange(e.currentTarget, () => setOpen((o) => !o));

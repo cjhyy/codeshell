@@ -50,9 +50,10 @@ function ToolGroupCardImpl({ group, turnEpoch, defaultOpen = false, ...attachmen
   return (
     <div data-tool-group="" className="min-w-0 rounded-md border border-border/40 bg-card">
       <Button
+        data-tool-group-heading=""
         type="button"
         variant="ghost"
-        className="h-auto min-h-8 w-full justify-start gap-1.5 rounded-md px-2 py-1.5 text-left leading-5 focus-visible:ring-inset"
+        className="h-auto min-h-8 w-full justify-start gap-1.5 rounded-md px-2 py-1.5 text-left leading-5 focus-visible:ring-1 focus-visible:ring-inset focus-visible:ring-ring/60 [&>svg]:size-3"
         onClick={(event) => {
           manuallyToggled.current = true;
           anchoredChange(event.currentTarget, () => setOpen((v) => !v));
@@ -66,6 +67,7 @@ function ToolGroupCardImpl({ group, turnEpoch, defaultOpen = false, ...attachmen
         </span>
       </Button>
       <div
+        data-tool-group-content=""
         id={detailsId}
         hidden={!open}
         className={open ? "flex min-w-0 flex-col gap-0.5 px-1 pb-1" : "hidden"}
