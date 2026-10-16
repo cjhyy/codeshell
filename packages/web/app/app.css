@@ -828,6 +828,42 @@ button.composer-submit {
   padding: 10px;
   min-height: 64px;
 }
+.approval-options {
+  display: grid;
+  gap: 8px;
+  min-width: 0;
+}
+.approval-option {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+  min-height: 44px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 10px;
+  color: var(--text);
+  background: var(--surface);
+  text-align: left;
+  overflow-wrap: anywhere;
+  cursor: pointer;
+}
+.approval-option:hover:not(:disabled) {
+  background: var(--hover);
+}
+label.approval-option {
+  flex-direction: row;
+  align-items: flex-start;
+  gap: 8px;
+}
+.approval-option > span {
+  min-width: 0;
+}
+.approval-option-description {
+  display: block;
+  color: var(--muted);
+  font-size: 12px;
+}
 .approval-actions {
   display: flex;
   gap: 8px;

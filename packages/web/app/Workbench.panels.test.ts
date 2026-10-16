@@ -63,6 +63,14 @@ test("drafts belonging to other conversations do not block an empty current comp
   expect(calls).toEqual(["draft:A confirmed panel task", "send"]);
 });
 
+test("a question that can be answered later does not block a confirmed panel task", () => {
+  const { controller, calls } = fixture({
+    approvals: [{ id: "optional", sessionId: "session-original", asynchronous: true }],
+  });
+  expect(submitWorkbenchPanelPrompt(controller, request)).toEqual({ accepted: true });
+  expect(calls).toEqual(["draft:A confirmed panel task", "send"]);
+});
+
 test("a sender that declines its private guard clears only the newly inserted panel draft", () => {
   const { controller, calls } = fixture({ send: () => false });
   expect(() => submitWorkbenchPanelPrompt(controller, request)).toThrow("暂时无法接收任务");

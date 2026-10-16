@@ -35,7 +35,7 @@ export interface WorkbenchController {
   uncertain: boolean;
   running: boolean;
   localDrafts: Array<{ sessionId: string; draft: ComposerDraft }>;
-  approvals: Array<{ id: string; sessionId?: string }>;
+  approvals: Array<{ id: string; sessionId?: string; asynchronous?: boolean }>;
   approvalCount: (sessionId: string) => number;
   approvalContent: React.ReactNode;
   workerNote?: string | null;

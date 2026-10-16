@@ -37,6 +37,9 @@ function newSessionId(): string {
 
 const noop = () => {};
 const checkNoop = async () => {};
+function isDeferredQuestion(payload: ApprovalRequestPayload): boolean {
+  return payload.request.toolName === "__ask_user__" && payload.request.args.asynchronous === true;
+}
 
 export function useHubController({
   session,
@@ -596,7 +599,11 @@ export function useHubController({
       liveRuns.current.has(sessionId) ||
       chat.run === "running" ||
       chat.run === "waiting" ||
-      Object.values(approvalState).some((a) => a.payload.sessionId === sessionId) ||
+      Object.values(approvalState).some(
+        (a) =>
+          (!a.payload.sessionId || a.payload.sessionId === sessionId) &&
+          !isDeferredQuestion(a.payload),
+      ) ||
       uncertainSubmissions.current.has(sessionId)
     )
       return false;
@@ -741,7 +748,10 @@ export function useHubController({
   const approvalCount = (sessionId: string) =>
     Object.values(approvalState).filter((a) => a.payload.sessionId === sessionId).length;
 
-  const running = chat.run === "running" || chat.run === "waiting" || approvals.length > 0;
+  const running =
+    chat.run === "running" ||
+    chat.run === "waiting" ||
+    approvals.some((a) => !isDeferredQuestion(a.payload));
   const localDrafts = React.useMemo(
     () =>
       draftStore.current
@@ -791,6 +801,7 @@ export function useHubController({
     approvals: Object.values(approvalState).map((a) => ({
       id: a.payload.requestId,
       sessionId: a.payload.sessionId,
+      ...(isDeferredQuestion(a.payload) ? { asynchronous: true } : {}),
     })),
     approvalCount,
     approvalContent: approvals.map((a) => (

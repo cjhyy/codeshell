@@ -318,6 +318,124 @@ try {
   await answer.waitFor({ state: "detached" });
   reports.push({ operation: "approval-failure-preserves-answer-retry-and-duplicate-once" });
 
+  const choices = {
+    requestId: "owned-closed-choice",
+    sessionId: "second",
+    request: {
+      toolName: "__ask_user__",
+      args: {
+        options: [
+          { label: "允许本次", description: "只允许这个请求" },
+          { label: "拒绝", description: "保留现有权限" },
+        ],
+        optionsOnly: true,
+      },
+      description: "Owned closed choice",
+    },
+  };
+  approvals.push(choices);
+  notify("agent/approvalRequest", choices);
+  await page.getByText("Owned closed choice", { exact: true }).waitFor();
+  assert.equal(
+    await page.getByRole("textbox", { name: "自定义回答", exact: true }).count(),
+    0,
+    "closed choices must not offer a free-text answer",
+  );
+  await page.getByRole("button", { name: "允许本次 只允许这个请求", exact: true }).click();
+  await until(() => heldDecisions.length === 1);
+  decision = heldDecisions.shift();
+  assert.equal(decision.request.params.decision.answer, "允许本次");
+  approvals.length = 0;
+  reply(decision.socket, decision.request.id, {});
+  await page.getByText("Owned closed choice", { exact: true }).waitFor({ state: "detached" });
+  reports.push({ operation: "closed-choice-options-only-shows-description-and-sends-exact-label" });
+
+  await page.setViewportSize({ width: 320, height: 360 });
+  const multiple = {
+    requestId: "owned-multiple-choice",
+    sessionId: "second",
+    request: {
+      toolName: "__ask_user__",
+      args: { options: ["选项甲", "选项乙", "OwnedLongOption".repeat(40)], multiSelect: true },
+      description: "Owned multiple choice",
+    },
+  };
+  approvals.push(multiple);
+  notify("agent/approvalRequest", multiple);
+  await page.getByText("Owned multiple choice", { exact: true }).waitFor();
+  const submitChoices = page.getByRole("button", { name: "回答", exact: true });
+  assert.equal(await submitChoices.isDisabled(), true);
+  const firstChoice = page.getByRole("checkbox", { name: "选项甲", exact: true });
+  await firstChoice.focus();
+  await page.keyboard.press("Space");
+  await page.getByRole("checkbox", { name: "选项乙", exact: true }).check();
+  await page.getByRole("textbox", { name: "自定义回答", exact: true }).fill("Owned extra");
+  assert.equal(
+    await page.locator(".approval").evaluate((node) => node.scrollWidth <= node.clientWidth + 1),
+    true,
+    "long choices must wrap at phone width",
+  );
+  await page.screenshot({ path: path.join(output, "mobile-multiple-choice-320x360.png") });
+  await submitChoices.click();
+  await until(() => heldDecisions.length === 1);
+  decision = heldDecisions.shift();
+  assert.equal(decision.request.params.decision.answer, "选项甲, 选项乙, Other: Owned extra");
+  reply(decision.socket, decision.request.id, undefined, {
+    code: -32000,
+    message: "Owned multiple choice rejected",
+  });
+  await page.getByRole("alert").filter({ hasText: "Owned multiple choice rejected" }).waitFor();
+  assert.equal(await firstChoice.isChecked(), true);
+  assert.equal(
+    await page.getByRole("textbox", { name: "自定义回答", exact: true }).inputValue(),
+    "Owned extra",
+  );
+  await submitChoices.click();
+  await until(() => heldDecisions.length === 1);
+  decision = heldDecisions.shift();
+  assert.equal(decision.request.params.decision.answer, "选项甲, 选项乙, Other: Owned extra");
+  approvals.length = 0;
+  reply(decision.socket, decision.request.id, {});
+  await page.getByText("Owned multiple choice", { exact: true }).waitFor({ state: "detached" });
+  await page.setViewportSize({ width: 1280, height: 720 });
+  reports.push({
+    operation: "mobile-multiple-choices-keyboard-custom-answer-failure-retry-preserves-selections",
+  });
+
+  const optional = {
+    requestId: "owned-optional-question",
+    sessionId: "second",
+    request: {
+      toolName: "__ask_user__",
+      args: { asynchronous: true },
+      description: "Owned optional question",
+    },
+  };
+  approvals.push(optional);
+  notify("agent/approvalRequest", optional);
+  await page.getByText("Owned optional question", { exact: true }).waitFor();
+  await input.fill("Continue while optional question is unanswered");
+  assert.equal(
+    await page.getByRole("button", { name: "停止", exact: true }).count(),
+    0,
+    "an optional asynchronous question must not block the conversation as a running task",
+  );
+  assert.equal(await send.isEnabled(), true);
+  await send.click();
+  await until(() => heldRuns.length === 1);
+  assert.equal(heldRuns[0].request.params.task, "Continue while optional question is unanswered");
+  const optionalRun = heldRuns.shift();
+  reply(optionalRun.socket, optionalRun.request.id, {});
+  notify("serve/sessionStatus", { sessionId: "second", running: false });
+  await page.getByRole("button", { name: "拒绝", exact: true }).click();
+  await until(() => heldDecisions.length === 1);
+  decision = heldDecisions.shift();
+  assert.equal(decision.request.params.decision.approved, false);
+  approvals.length = 0;
+  reply(decision.socket, decision.request.id, {});
+  await page.getByText("Owned optional question", { exact: true }).waitFor({ state: "detached" });
+  reports.push({ operation: "optional-async-question-allows-new-message-before-answer" });
+
   // Lost acknowledgement checks durable history and restores an unaccepted draft.
   const runsBeforeDisconnect = calls.filter((c) => c.method === "agent/run").length;
   await input.fill("Owned reconnect draft");

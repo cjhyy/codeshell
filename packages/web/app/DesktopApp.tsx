@@ -330,7 +330,9 @@ export function useDesktopController(
     turnCount: 0,
   }));
   const running =
-    app.chat.run === "running" || app.chat.run === "waiting" || app.approvals.length > 0;
+    app.chat.run === "running" ||
+    app.chat.run === "waiting" ||
+    app.approvals.some((approval) => !approval.asynchronous);
   const send = (options?: { modelTraceSource?: string }): boolean => {
     if (sendingRef.current || app.status !== "online" || running || app.activeRoom?.observing)
       return false;
@@ -485,6 +487,7 @@ export function useDesktopController(
     approvals: app.approvals.map((approval) => ({
       id: approval.requestId,
       sessionId: approval.roomId ? undefined : approval.sessionId,
+      ...(approval.asynchronous ? { asynchronous: true } : {}),
     })),
     approvalCount: (id) => app.approvals.filter((approval) => approval.sessionId === id).length,
     approvalContent: app.approvals.map((approval) => (
