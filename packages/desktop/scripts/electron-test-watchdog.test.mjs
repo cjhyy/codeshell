@@ -165,6 +165,120 @@ test("stop disarms an active watcher idempotently without signaling live process
   deepStrictEqual(f.signals, []);
 });
 
+test("terminate starts cleanup once and resolves only after fresh disappearance proof", async () => {
+  const f = fixture([root, descendant]);
+  const stop = watchElectronTestProcess(f.child, f.options);
+  const completion = stop.terminate();
+  equal(completion, stop.completed);
+  equal(stop.terminate(), completion);
+  deepStrictEqual(f.signals, [
+    [11, "SIGTERM"],
+    [10, "SIGTERM"],
+  ]);
+  equal(f.intervals.size, 0);
+  equal(f.timeouts.size, 1, "Only the existing escalation timer remains");
+  let resolved = false;
+  completion.then(() => (resolved = true));
+  await Promise.resolve();
+  equal(resolved, false);
+  stop(); // Manual disarm cannot cancel cleanup already in progress.
+  f.fireTimeout(1_000);
+  const receipt = await completion;
+  equal(receipt.status, "cleaned");
+  deepStrictEqual(receipt.remaining, []);
+  deepStrictEqual(f.signals.slice(2), [
+    [11, "SIGKILL"],
+    [10, "SIGKILL"],
+  ]);
+  deepStrictEqual(f.failures, [], "An explicit termination is not a deadline failure");
+  equal(f.timeouts.size, 0);
+  equal(stop.terminate(), completion);
+  equal(f.signals.length, 4);
+});
+
+test("terminate rechecks identity before each signal and skips PID replacements", async () => {
+  const f = fixture([root, descendant]);
+  let reads = 0;
+  const stop = watchElectronTestProcess(f.child, {
+    ...f.options,
+    snapshotProcesses() {
+      reads++;
+      // Both the initial binding and cleanup discovery see the originals.
+      // The individual-signal snapshot sees only new incarnations.
+      return reads < 3
+        ? [root, descendant]
+        : [
+            { ...root, birth: "replacement root" },
+            { ...descendant, birth: "replacement descendant" },
+            { pid: 12, ppid: 11, birth: "unrelated grandchild" },
+          ];
+    },
+  });
+  const receipt = await stop.terminate();
+  equal(receipt.status, "cleaned");
+  equal(receipt.ownedCount, 2);
+  equal(reads >= 5, true);
+  deepStrictEqual(f.signals, []);
+  deepStrictEqual(f.failures, []);
+  equal(f.timeouts.size, 0);
+});
+
+test("terminate cannot regain authority after a manual disarm", async () => {
+  const f = fixture([root, descendant]);
+  let reads = 0;
+  const stop = watchElectronTestProcess(f.child, {
+    ...f.options,
+    snapshotProcesses() {
+      reads++;
+      return [root, descendant];
+    },
+  });
+  stop();
+  const receipt = await stop.terminate();
+  equal(receipt.status, "disarmed");
+  equal(reads, 1, "A disarmed watcher must not query or rediscover processes");
+  deepStrictEqual(f.signals, []);
+  equal(f.timeouts.size, 0);
+  equal(f.intervals.size, 0);
+});
+
+test("terminate fails closed after a query failure even if a later query could recover", async () => {
+  const f = fixture();
+  let reads = 0;
+  const stop = watchElectronTestProcess(f.child, {
+    ...f.options,
+    snapshotProcesses() {
+      if (++reads === 2) throw new Error("fixed query failure");
+      return [root];
+    },
+  });
+  const receipt = await stop.terminate();
+  equal(receipt.status, "unproven");
+  equal(receipt.queryFailed, true);
+  equal(receipt.remaining, null);
+  equal(reads, 2, "Failed identity observation cannot be retried into signaling authority");
+  deepStrictEqual(f.signals, []);
+  equal(f.failures.length, 1);
+  equal(stop.terminate(), stop.completed);
+  equal(reads, 2);
+  equal(f.timeouts.size, 0);
+});
+
+test("already exited children expose terminate without acquiring identity or authority", async () => {
+  const f = fixture();
+  f.child.exitCode = 0;
+  const stop = watchElectronTestProcess(f.child, {
+    ...f.options,
+    snapshotProcesses() {
+      throw new Error("An exited child must not be queried");
+    },
+  });
+  equal(stop.terminate(), stop.completed);
+  equal((await stop.terminate()).status, "unproven");
+  deepStrictEqual(f.signals, []);
+  equal(f.timeouts.size, 0);
+});
+
 test("completion waits for fresh proof after escalation instead of equating a signal with exit", async () => {
   const f = fixture([root, descendant]);
   const stop = watchElectronTestProcess(f.child, {

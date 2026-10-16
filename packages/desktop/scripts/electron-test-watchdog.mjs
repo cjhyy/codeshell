@@ -30,6 +30,8 @@ function completionEvidence(status, owned, remaining, queryFailed) {
  * timeout still gets its one-second grace period and identity-checked escalation.
  * Its completed Promise proves cleanup only with status "cleaned"; manual disarm
  * and failed queries/residual processes resolve "disarmed" and "unproven".
+ * terminate() requests the same identity-checked cleanup immediately and returns
+ * completed. A disarmed or settled watcher never regains signaling authority.
  */
 export function watchElectronTestProcess(child, options = {}) {
   const {
@@ -47,10 +49,13 @@ export function watchElectronTestProcess(child, options = {}) {
   } = options;
   if (!Number.isInteger(timeoutMs) || timeoutMs <= 0 || timeoutMs > 2_147_483_647)
     throw new Error("Electron test timeoutMs must be an integer between 1 and 2147483647");
-  if (child.exitCode != null || child.signalCode != null)
+  if (child.exitCode != null || child.signalCode != null) {
+    const completed = Promise.resolve(completionEvidence("unproven", new Map(), null, false));
     return Object.assign(() => {}, {
-      completed: Promise.resolve(completionEvidence("unproven", new Map(), null, false)),
+      completed,
+      terminate: () => completed,
     });
+  }
   if (!["darwin", "linux", "win32"].includes(platform))
     throw new Error("Unsupported Electron test watchdog platform");
 
@@ -94,7 +99,7 @@ export function watchElectronTestProcess(child, options = {}) {
     }
   };
   const signalOwned = (signal, includeRoot) => {
-    observe();
+    if (!observe() || snapshotFailureReported) return 0;
     let count = 0;
     // Descendants are remembered after their parent, so the root is signaled last.
     for (const item of [...owned.values()].reverse()) {
@@ -102,7 +107,7 @@ export function watchElectronTestProcess(child, options = {}) {
       // A preceding signal/query may race process exit and PID reuse. Recheck
       // this exact incarnation immediately before each individual signal.
       const current = observe();
-      if (!current) break;
+      if (!current || snapshotFailureReported) break;
       if (current.get(item.pid)?.birth !== item.birth) continue;
       count += 1;
       try {
@@ -167,5 +172,9 @@ export function watchElectronTestProcess(child, options = {}) {
     disarm();
     finish("disarmed", null);
   };
-  return Object.assign(stop, { completed });
+  const terminate = () => {
+    if (state === "watching") cleanup(true);
+    return completed;
+  };
+  return Object.assign(stop, { completed, terminate });
 }
