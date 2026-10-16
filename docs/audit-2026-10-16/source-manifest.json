@@ -1,0 +1,78 @@
+[
+  {
+    "path": "packages/chat/src/chat-gateway.ts",
+    "sha256": "7032acecac774cc3c6bea6bb1b5f3b90ddf93c7234a8bded97112483300c311d"
+  },
+  {
+    "path": "packages/chat/src/delivery-queue.ts",
+    "sha256": "e1f4f384af3dee66030bed6cd9a51bc7c3585e4aa320501d3e336686e0321393"
+  },
+  {
+    "path": "packages/chat/src/matrix.ts",
+    "sha256": "a850e957ec5c7c9f1535251725a1842f284dcf293afbe5b080ebe79316ac205d"
+  },
+  {
+    "path": "packages/coding/src/git/parse-log.ts",
+    "sha256": "3fe382f24d088ed9f810f45400ac577d6ad4966aacb99379834573c643fe0861"
+  },
+  {
+    "path": "packages/coding/src/git/utils.ts",
+    "sha256": "8e3531c2b340359e99e13b35242a88bb12eed51008e2c9ded67b149be7983192"
+  },
+  {
+    "path": "packages/coding/src/tools/apply-patch/applier.ts",
+    "sha256": "8f4bfde4d496e3eae137525fc4a5af0a1c2db79f6b1d8c3cf0e8ca4989a4b4bb"
+  },
+  {
+    "path": "packages/core/src/engine/file-history-hook.ts",
+    "sha256": "de34629da6b0ba375c1fd837c2bc7792f168e25f3af19cd866fa8969bef3f343"
+  },
+  {
+    "path": "packages/core/src/llm/providers/openai.ts",
+    "sha256": "e45ff0572580ec70bbdba4f2bc95aa32f07c741e1b275e4000fa8b0cf2d25c81"
+  },
+  {
+    "path": "packages/core/src/tool-system/executor.ts",
+    "sha256": "af0a60f0e6c5fef8ece79ab1a2e0195951b1c0ae933657587c5bc9acb2acf254"
+  },
+  {
+    "path": "packages/core/src/tool-system/permission.ts",
+    "sha256": "2da27540210bbd2c767d37cc42e93649a6d155858c882560992b113434e1b8a6"
+  },
+  {
+    "path": "packages/desktop/src/main/browser-runtime/chrome-native-protocol.ts",
+    "sha256": "7b7806c75ac1e5377713839778708442ddb82a03662255bfa2a3a3ce6d3efd57"
+  },
+  {
+    "path": "packages/desktop/src/main/file-search-service.ts",
+    "sha256": "d841bddd7b31f22d092b77ec29bfccca4d88c25611637c4ca98dbc905ab07b3b"
+  },
+  {
+    "path": "packages/server/src/sessions-service.ts",
+    "sha256": "8be914ac63c6f235474eb07b5220f18a66d4d645c938beb05574e8eacacb5720"
+  },
+  {
+    "path": "packages/tui/src/cli/commands/builtin/git-commands.ts",
+    "sha256": "3b5322a8e7aa5783de55a0ed6645d8acd8a670fea627f0420e6f623a53a3ff1e"
+  },
+  {
+    "path": "packages/tui/src/cli/commands/builtin/permissions-command.ts",
+    "sha256": "e33336ee22ba8ea5900fce5b8e93e0e85f662dabdbb6c7944a79845c5c0acce6"
+  },
+  {
+    "path": "packages/tui/src/cli/commands/builtin/utility-commands.ts",
+    "sha256": "30f57f0789dc55613f4a50115bf5d9900793c8e9ec5d0d144f4ad3c7e2a55f60"
+  },
+  {
+    "path": "packages/tui/src/cli/commands/run.ts",
+    "sha256": "85307d96346050e7dace213847cdc4f480cbac8e14c50fe489d9aec07f57aa9c"
+  },
+  {
+    "path": "packages/tui/src/cli/output/renderer.ts",
+    "sha256": "2ed6d93112ae5ab123fc2b93964b04bc37ec21b3e286ceec93ddab68c1bb22d7"
+  },
+  {
+    "path": "scripts/release.ts",
+    "sha256": "c2cc6e0ea1b1ac6997825c779eeaae6747ea3d96e5d5bea8f1ff7f10ee345ec7"
+  }
+]

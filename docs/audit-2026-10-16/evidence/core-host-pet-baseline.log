@@ -1,0 +1,170 @@
+bun test v1.3.11 (af24e281)
+
+packages/host/src/ask-user-unavailable.test.ts:
+(pass) Core synchronous AskUser consumes a host unavailable result as a clear failure, not an empty answer [18.01ms]
+(pass) normal text answers and explicit user refusal retain their Core behavior ({"approved":true,"answer":"Use the existing directory"}) [5.74ms]
+(pass) normal text answers and explicit user refusal retain their Core behavior ({"approved":false,"reason":"User explicitly declined"}) [6.37ms]
+(pass) Core asynchronous AskUser retires an unavailable question without admitting an answer or waking another run [3.83ms]
+(pass) an asynchronous yes without text remains invalid and can be cleaned up by the host failure [3.05ms]
+
+packages/host/src/runtime.test.ts:
+(pass) HostRuntime capability registration > rejects conflicts atomically and permits registration after a failed attempt [0.46ms]
+(pass) HostRuntime capability registration > starts the adapter first and stops services in reverse order once [0.09ms]
+(pass) HostRuntime capability registration > rolls back partially started services and preserves startup plus cleanup failures [0.39ms]
+(pass) HostRuntime capability registration > a failing adapter is rolled back and no services are started [0.22ms]
+(pass) HostRuntime capability registration > startup rejects reentrant registration and rolls back [0.07ms]
+(pass) HostRuntime production request interception > dispatches an installed capability to its registered handler [0.18ms]
+(pass) HostRuntime production request interception > a supported downstream adapter route remains available
+(pass) HostRuntime production request interception > unsupported desktop requests get a private -32601 response with the Host label [0.05ms]
+(pass) HostRuntime production request interception > unsupported __browser_action__ resolves with a typed answer rather than a user denial [0.11ms]
+(pass) HostRuntime production request interception > unsupported __credential_action__ resolves with a typed answer rather than a user denial [0.02ms]
+(pass) HostRuntime production request interception > unsupported __workspace_action__ resolves with a typed answer rather than a user denial
+(pass) HostRuntime production request interception > unsupported __panel_action__ resolves with a typed answer rather than a user denial
+(pass) HostRuntime production request interception > unsupported __future_host_action__ resolves with a typed answer rather than a user denial
+(pass) HostRuntime production request interception > AskUser, ordinary approvals, and unrelated messages retain their existing route [0.04ms]
+(pass) HostRuntime production request interception > child lifecycle frames are consumed without inventing an approval [0.02ms]
+(pass) HostRuntime production request interception > classification ignores malformed approval envelopes [0.20ms]
+
+packages/pet/src/conversation-session-route.test.ts:
+(pass) createConversationSessionRoute > a notify route carries no expiry, a bound route does [0.13ms]
+(pass) createConversationSessionRoute > falls back to the session id when the title is blank
+(pass) createConversationSessionRoute > rejects an unaddressable route rather than guessing a conversation [0.04ms]
+(pass) createConversationSessionRoute > rejects control characters in a session title [0.02ms]
+(pass) mode transitions > entering upgrades to bound and stamps a fresh expiry [0.03ms]
+(pass) mode transitions > leaving downgrades to notify instead of deleting the route [0.03ms]
+(pass) mode transitions > entering clears a previous suspension [0.04ms]
+(pass) mode transitions > suspending stops delivery and records why
+(pass) expiry > a bound route expires only once the window has fully elapsed [0.02ms]
+(pass) expiry > a notify route never expires
+(pass) expiry > inbound traffic extends the window
+(pass) expiry > an expired bound route never captures the next message
+(pass) expiry > a suspended or notify route is never treated as bound
+(pass) expiry > one conversation's route never leaks into another
+(pass) stale prompt > a quiet bound route warns once before delivering [0.13ms]
+(pass) stale prompt > a new quiet period earns a new warning [0.03ms]
+(pass) parseConversationSessionRoute > round-trips a well-formed route [0.05ms]
+(pass) parseConversationSessionRoute > drops a row rather than repairing a partly-understood route [0.08ms]
+
+packages/pet/src/session-visit-receipt.test.ts:
+(pass) opening a visit > starts with nothing counted and no outcome claimed [0.09ms]
+(pass) counting during a visit > tracks what the user sent and what the Session finished [0.03ms]
+(pass) closing a visit > captures where the Session was left [0.07ms]
+(pass) closing a visit > bounds the text so one visit cannot flood Mimi's context [0.11ms]
+(pass) closing a visit > collapses whitespace and drops empty steps [0.02ms]
+(pass) closing a visit > records why the visit ended, including an unwanted ending [0.04ms]
+(pass) closing a visit > a pending approval survives into the receipt
+(pass) building Mimi's context > labels the receipts untrusted
+(pass) building Mimi's context > shows the most recent visits first and bounds how many
+(pass) building Mimi's context > no visits means no context rather than an empty block
+
+packages/pet/src/registered-follow-ups.test.ts:
+(pass) registered follow-up capability boundary > preserves a session-free registered row through protocol and Engine profile parsing [10.70ms]
+(pass) registered follow-up capability boundary > records a native reminder without trusting model-authored routes or operation identity [0.67ms]
+(pass) registered follow-up capability boundary > resume needs an exact source and ordinary reminders cannot smuggle execution targets [0.17ms]
+(pass) registered follow-up capability boundary > mutations use version fences and preserve explicit catch-up expiry [0.48ms]
+
+packages/pet/src/pending-decision-index.test.ts:
+(pass) PendingDecisionIndex > indexes tool approvals and AskUser by session without sensitive payloads [1.21ms]
+(pass) PendingDecisionIndex > never projects any line of raw AskUser text, including middle and trailing secrets [0.09ms]
+(pass) PendingDecisionIndex > does not surface internal bridge waits [2.32ms]
+(pass) PendingDecisionIndex > terminal transitions are session-scoped, generation-fenced and idempotent [0.18ms]
+(pass) PendingDecisionIndex > reconcile cancels old generation pending entries [0.03ms]
+(pass) PendingDecisionIndex > sanitizes tool names even when an alternate host skips core normalization
+(pass) PendingDecisionIndex > keeps every pending decision but bounds terminal history for long-lived workers [4.49ms]
+
+packages/pet/src/session-index.test.ts:
+(pass) SessionIndex > budget exhaustion is visibly incomplete even when final text claims completion [0.57ms]
+(pass) SessionIndex > does not replace the current projection with an older run start [0.11ms]
+(pass) SessionIndex > isolates child terminals while retaining child progress [0.27ms]
+(pass) SessionIndex > rejects a previous run terminal even with a newer timestamp and cursor [0.11ms]
+(pass) SessionIndex > projects disk-only work sessions without creating a live session [0.07ms]
+(pass) SessionIndex > maps live idle, queued, running and pending decision state [0.17ms]
+(pass) SessionIndex > waiting is a display phase and does not turn a dormant session into running [0.03ms]
+(pass) SessionIndex > reduces ordered stream events and rejects stale versions [0.10ms]
+(pass) SessionIndex > keeps background-wait boundaries non-terminal across live and disk projection [0.04ms]
+(pass) SessionIndex > builds safe bounded summaries without copying event payloads [0.03ms]
+(pass) SessionIndex > distinguishes abnormal disconnect from normal worker reclaim [0.09ms]
+(pass) SessionIndex > filters non-local, pet, ephemeral and sub-agent catalog entries [0.03ms]
+(pass) SessionIndex > does not retain live state after catalog removal and same-id recreation [0.05ms]
+(pass) crash-orphaned active sessions > does not present a long-idle active session as resumable [0.02ms]
+(pass) crash-orphaned active sessions > keeps a recently-active session dormant so a live resume still works
+
+packages/core/src/composition/activation.test.ts:
+(pass) composition activation ownership > failed observer rolls back its queries; other modules remain available [1.13ms]
+(pass) composition activation ownership > observer cannot register an undeclared query or replace another module's query [0.66ms]
+(pass) composition activation ownership > async host activation failure rolls back observers, queries and already acquired resources [0.69ms]
+(pass) composition activation ownership > engine activation failure unwinds pre-existing declarations and module resources [0.55ms]
+(pass) composition activation ownership > an async private service resolving after close is released instead of being installed [0.20ms]
+(pass) composition activation ownership > compiled declaration topology is a frozen copy, including Sets [0.54ms]
+(pass) composition activation ownership > compiler rejects an invalid private service lifetime before invoking a factory [0.30ms]
+(pass) composition activation ownership > a failed private service immediately rolls back acquired resources while another factory is pending [0.47ms]
+(pass) composition activation ownership > already-cancelled private service initialization does not start factories [0.12ms]
+(pass) composition activation ownership > cancellation retains simultaneous factory and cleanup failures without starting later services [0.44ms]
+(pass) composition activation ownership > an observer's captured query callback cannot leave a registration after its owner closes [0.69ms]
+
+packages/core/src/composition/lifetime.test.ts:
+(pass) LifetimeScope > children precede parent resources; acquisition order reverses, including async cleanup [0.18ms]
+(pass) LifetimeScope > all resources release before AggregateError is reported [0.13ms]
+(pass) LifetimeScope > a disposed child detaches from its long-lived owner [0.17ms]
+(pass) identity-bound registration disposers > hook disposer removes exactly one registration of the same function [0.30ms]
+(pass) identity-bound registration disposers > old tool disposal cannot remove a replacement, even if the definition object is reused [0.41ms]
+(pass) identity-bound registration disposers > query disposer is identity-bound even when the handler function is reused
+
+packages/core/src/engine/turn-loop-max-turns.test.ts:
+(pass) TurnLoop maxTurns ceiling (§4.3) > yields after an async tool handoff instead of issuing another model request [6.79ms]
+(pass) TurnLoop maxTurns ceiling (§4.3) > stops at maxTurns, makes a final summary call, returns reason 'max_turns' [11.27ms]
+(pass) TurnLoop maxTurns ceiling (§4.3) > records the final maxTurns summary response in session usage [5.35ms]
+(pass) TurnLoop maxTurns ceiling (§4.3) > keeps max_turns when the model obeys the forced last-turn summary [10.85ms]
+(pass) TurnLoop maxTurns ceiling (§4.3) > reports Goal exhaustion instead of accepting forced text as a met verdict [6.57ms]
+(pass) TurnLoop maxTurns ceiling (§4.3) > stops before another parent request when externally reported child usage exhausts Goal [3.51ms]
+(pass) TurnLoop maxTurns ceiling (§4.3) > stops cleanly when the final maxTurns summary resolves after the signal aborts [6.79ms]
+(pass) TurnLoop maxTurns ceiling (§4.3) > stops cleanly when the final maxTurns summary rejects with AbortError [10.15ms]
+(pass) TurnLoop maxTurns ceiling (§4.3) > keeps the prior text and max_turns reason when the final summary fails normally [10.27ms]
+(pass) TurnLoop maxTurns ceiling (§4.3) > injects the turns-remaining warning reminders (2 and 1 left) [18.78ms]
+(pass) TurnLoop maxTurns ceiling (§4.3) > a model that stops early never hits the ceiling [0.75ms]
+(pass) TurnLoop maxTurns ceiling (§4.3) > does not emit turn_complete from TurnLoop when maxTurns is reached [21.86ms]
+
+packages/core/src/engine/turn-loop-continuation.test.ts:
+(pass) TurnLoop max-output continuation > labels primary and continuation cache diagnostic samples [4.91ms]
+(pass) TurnLoop max-output continuation > continues when an OpenAI stream stops with 'length' (output cap) [4.66ms]
+(pass) TurnLoop max-output continuation > returns model_error when a text continuation request fails [9.06ms]
+(pass) TurnLoop max-output continuation > stops cleanly when a text continuation request is aborted [4.51ms]
+(pass) TurnLoop max-output continuation > does not continue on a clean 'stop' [0.50ms]
+(pass) TurnLoop max-output continuation > retries with a truncation notice instead of executing a tool call cut off by the output cap [13.92ms]
+(pass) TurnLoop max-output continuation > charges a truncated tool-call response to the Goal budget before retrying [4.92ms]
+(pass) TurnLoop max-output continuation > charges every text continuation and stops before the next request when over budget [9.65ms]
+(pass) TurnLoop max-output continuation > publishes normal non-truncated Goal conversation context [1.66ms]
+
+packages/core/src/engine/run-setup.test.ts:
+(pass) resolveRunProfileState > throws when a session-pinned workspace profile is unavailable [6.68ms]
+(pass) resolveRunProfileState > returns undefined overrides when the session has no pinned profile [34.06ms]
+(pass) resolveRunProfileState > resolves the portable profile memory root once for the run [12.74ms]
+(pass) buildPromptComposerConfig > maps portable profile instruction and memory directory [0.79ms]
+(pass) buildPromptComposerConfig > leaves profile fields undefined without a workspace profile [0.64ms]
+(pass) buildPromptComposerConfig > does not mount profile memory when portableMemory is false [0.71ms]
+(pass) buildPromptComposerConfig > passes explicit composer inputs through and resolves source settings lazily [4.13ms]
+
+packages/core/src/engine/run-finalize.test.ts:
+(pass) initialization failure still attempts its terminal when the error publication fails [0.70ms]
+(pass) finalizeRunSuccess > completed with an unresolved write never feeds memory/title or claims completion [5.83ms]
+(pass) finalizeRunSuccess > aborted_tools with an unresolved write never feeds memory/title or claims completion [0.46ms]
+(pass) finalizeRunSuccess > model_error with an unresolved write never feeds memory/title or claims completion [8.02ms]
+(pass) finalizeRunSuccess > settles all billed run usage before completed without including previous turns [0.50ms]
+(pass) finalizeRunSuccess > settles all billed run usage before aborted_streaming without including previous turns [4.46ms]
+(pass) finalizeRunSuccess > settles all billed run usage before model_error without including previous turns [0.56ms]
+(pass) finalizeRunSuccess > persists the exceptional completion kind with the terminal state [5.77ms]
+
+packages/core/src/session/usage.test.ts:
+(pass) foldRunUsage > adds the current run's usage onto the session baseline [0.86ms]
+(pass) foldRunUsage > is idempotent per boundary: same baseline + same run total = same result [0.04ms]
+(pass) foldRunUsage > treats a fresh session (undefined cache baseline) as zero [0.02ms]
+(pass) foldRunUsage > accumulates across runs when the folded result is fed back as the next baseline [0.01ms]
+(pass) cumulative prompt-cache usage > monotonically adds prompt/cache counters across recorded usages [0.27ms]
+(pass) cumulative prompt-cache usage > does not reset when the legacy turn/run accumulator is reset [0.05ms]
+(pass) single-turn prompt-cache usage > reflects only the current turn after the turn accumulator resets [0.06ms]
+
+ 135 pass
+ 0 fail
+ 464 expect() calls
+Ran 135 tests across 14 files. [960.00ms]
+Completed Bun shard: 135 tests, 0 skipped; 0 failures.

@@ -1,0 +1,10 @@
+bun test v1.3.11 (af24e281)
+
+docs/audit-2026-10-16/evidence/root-permissions.test.ts:
+(pass) A07 /permissions mutates detached engine and reports live success while session keeps old mode [7.73ms]
+
+ 1 pass
+ 0 fail
+ 5 expect() calls
+Ran 1 test across 1 file. [351.00ms]
+Completed Bun shard: 1 tests, 0 skipped; 0 failures.

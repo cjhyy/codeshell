@@ -1,0 +1,125 @@
+bun test v1.3.11 (af24e281)
+
+packages/cdp/src/keymap.test.ts:
+(pass) keyInfo > named keys [0.06ms]
+(pass) keyInfo > single chars derive Key*/Digit* [0.08ms]
+(pass) normalizeKey > aliases map to canonical [0.02ms]
+(pass) planKeySequence > ControlOrMeta follows the target platform and supports mac editing commands [0.48ms]
+(pass) planKeySequence > literal Control keeps its semantics on macOS; Meta shortcuts edit normally [0.06ms]
+(pass) planKeySequence > single key → keyDown + keyUp [0.03ms]
+(pass) planKeySequence > combination → modifier down, main down/up with bitmask, modifier up reversed [0.15ms]
+(pass) planKeySequence > multi-modifier bitmask OR (Meta+Shift+z) [0.06ms]
+
+packages/cdp/src/driver.test.ts:
+(pass) pressKey sends platform-aware editing commands through CDP [0.32ms]
+(pass) CdpActionsDriver.snapshot > enables domains once and returns RAW nodes (no flattening) [0.21ms]
+(pass) CdpActionsDriver.clickNode > scrolls into view, resolves box center, dispatches real 3-event click [0.42ms]
+(pass) CdpActionsDriver.clickNode > fails when the node has no layout box instead of using JS .click() [0.04ms]
+(pass) CdpActionsDriver.clickNode > clicks inside the visible viewport intersection [0.09ms]
+(pass) CdpActionsDriver.clickNode > keeps DOM click coordinates after Retina page scroll at zoom %s [0.08ms]
+(pass) CdpActionsDriver.clickNode > keeps DOM click coordinates after Retina page scroll at zoom %s [0.01ms]
+(pass) CdpActionsDriver.clickNode > fails when the node has no visible viewport intersection [0.07ms]
+(pass) CdpActionsDriver.typeNode > focuses and replaces text without dispatching an accidental mouse click [0.17ms]
+(pass) CdpActionsDriver.typeNode > rejects a disabled/read-only/non-text control before inserting [0.03ms]
+(pass) CdpActionsDriver.typeNode > marks an unresolvable text node stale [0.03ms]
+(pass) CdpActionsDriver.focusNode > uses DOM.focus without activating the element [0.09ms]
+(pass) CdpActionsDriver.scroll > waits for delayed progress without dispatching a second wheel [229.14ms]
+(pass) CdpActionsDriver.scroll > dispatches mouseWheel with signed deltaY [151.79ms]
+(pass) CdpActionsDriver.scroll > clamps huge deltas to one viewport and returns the resulting position [75.38ms]
+(pass) CdpActionsDriver.scroll > reports NO_PROGRESS instead of succeeding at the page end [1064.65ms]
+(pass) CdpActionsDriver.hoverNode > moves mouse to center without pressing [0.24ms]
+(pass) CdpActionsDriver.pressKey > sends text payloads for printable keys and Enter's native action [0.08ms]
+(pass) CdpActionsDriver.pressKey > dispatches the planned sequence for a combination [0.15ms]
+(pass) CdpActionsDriver.selectOptionNode > calls JS setter on the select node and reports the match [0.16ms]
+(pass) CdpActionsDriver.selectOptionNode > returns available options on no match
+(pass) buildExtractScript > includes link, image, and video collection + ref tagging
+(pass) CdpActionsDriver.fetchImageData > runs in-page fetch+canvas and returns parsed base64 [0.28ms]
+(pass) CdpActionsDriver.fetchImageData > passes a finite timeout into the in-page image fetch [0.07ms]
+(pass) CdpActionsDriver.fetchImageData > sanitizes maxDim before interpolating it into page JavaScript [0.04ms]
+(pass) CdpActionsDriver.fetchImageData > reports missing ref [0.03ms]
+(pass) CdpActionsDriver.screenshot > uses a native viewport capture without requiring any CDP geometry [0.07ms]
+(pass) CdpActionsDriver.screenshot > passes only the visible viewport CSS intersection to native region capture after scrolling [0.16ms]
+(pass) CdpActionsDriver.screenshot > does not call native capture for an element outside the visible viewport
+(pass) CdpActionsDriver.screenshot > captures the whole Retina viewport at zoom %s within the pixel cap [0.11ms]
+(pass) CdpActionsDriver.screenshot > captures the whole Retina viewport at zoom %s within the pixel cap
+(pass) CdpActionsDriver.screenshot > intersects Retina element boxes with the CSS viewport before applying zoom [0.08ms]
+(pass) CdpActionsDriver.screenshot > viewport: scales natively via clip.scale, no page round-trip [0.07ms]
+(pass) CdpActionsDriver.screenshot > element box: clips to the box and scale 1 when within maxDim [0.05ms]
+(pass) CdpActionsDriver.screenshot > element box: scrolls then clamps the clip to the visible viewport
+(pass) CdpActionsDriver.screenshot > element with no box → stale error
+(pass) CdpActionsDriver.navigate > normalizes and navigates allowed http(s) URLs [0.17ms]
+(pass) CdpActionsDriver.navigate > blocks unsafe schemes before Page.navigate
+(pass) CdpActionsDriver.navigate > honors an optional host policy callback
+(pass) validateNavigationUrl > allows about:blank but not other about URLs
+(pass) validateNavigationUrl > rejects relative URLs
+(pass) CdpActionsDriver.readContent cursor paging > returns deterministic chunks and completes with nextCursor [0.64ms]
+(pass) CdpActionsDriver.readContent cursor paging > rejects a cursor after the main document loader changes [0.09ms]
+(pass) cleanPageText > collapses whitespace and caps with truncation marker
+(pass) waitForLoad NaN/negative timeout guard > a NaN timeout uses the default deadline, not an infinite loop [301.56ms]
+(pass) waitForLoad NaN/negative timeout guard > a completed page still returns immediately [0.12ms]
+(pass) waitForLoad NaN/negative timeout guard > a never-completing page with NaN timeout terminates at the default deadline
+(pass) scroll NaN amount guard > a NaN amount does not send NaN deltaY to CDP [1064.06ms]
+(pass) scroll NaN amount guard > a normal amount scrolls by that amount [1064.40ms]
+
+packages/link/src/catalog.test.ts:
+(pass) Link provider catalog > Figma advertises full document, node and image reads under file-content scope [0.05ms]
+(pass) Link provider catalog > Figma MCP is an independent local OAuth connection with read-only actions [0.04ms]
+(pass) Link provider catalog > contains ten unique providers with usable local and independent server methods [0.10ms]
+(pass) Link provider catalog > prefills GitHub and GitLab least-privilege token creation [0.08ms]
+(pass) Link provider catalog > declares zero-copy sessions only for provider-owned CLIs with local Actions [0.11ms]
+(pass) Link provider catalog > offers provider-hosted browser login for GitHub and GitLab without requiring a CLI [0.03ms]
+
+packages/link/src/recipes.test.ts:
+(pass) recipe api-token derives routing without mutating its stored record [0.11ms]
+(pass) recipe api-oauth derives routing without mutating its stored record [0.01ms]
+(pass) recipe cli-session derives routing without mutating its stored record
+(pass) recipe broker-oauth derives routing without mutating its stored record
+(pass) recipe mcp-oauth derives routing without mutating its stored record
+(pass) explicit recipes override stale axes; unsupported recipes never borrow legacy authority [0.04ms]
+(pass) legacy github-cli resolves to CLI session without upgrading incomplete records [0.02ms]
+(pass) future record schemas cannot borrow the current recipe or legacy routing [0.01ms]
+
+packages/link/src/file-selection.test.ts:
+(pass) reviewed provider file selection > Figma Make reports an unsupported file type rather than a missing grant [0.26ms]
+(pass) reviewed provider file selection > only providers with actual file readers advertise selection [0.05ms]
+(pass) reviewed provider file selection > canonical GitHub references retain exact paths and refs without arbitrary action fields [0.07ms]
+(pass) reviewed provider file selection > Figma URLs and keys normalize to the same exact granted resource [0.13ms]
+(pass) reviewed provider file selection > rejects escaping GitHub path "../secret" [0.09ms]
+(pass) reviewed provider file selection > rejects escaping GitHub path "a/../secret"
+(pass) reviewed provider file selection > rejects escaping GitHub path "a/%2e%2e/secret" [0.01ms]
+(pass) reviewed provider file selection > rejects escaping GitHub path "a%2fb"
+(pass) reviewed provider file selection > rejects escaping GitHub path "a\\b"
+(pass) reviewed provider file selection > rejects escaping GitHub path "/a"
+(pass) reviewed provider file selection > rejects escaping GitHub path "a//b"
+(pass) reviewed provider file selection > rejects escaping GitHub path "a/\u0000b" [0.01ms]
+(pass) reviewed provider file selection > rejects non-file Figma reference "http://figma.com/file/key/title" [0.02ms]
+(pass) reviewed provider file selection > rejects non-file Figma reference "https://figma.com.evil.invalid/file/key"
+(pass) reviewed provider file selection > rejects non-file Figma reference "https://user@figma.com/file/key"
+(pass) reviewed provider file selection > rejects non-file Figma reference "https://figma.com:8443/file/key"
+(pass) reviewed provider file selection > rejects non-file Figma reference "https://figma.com/file/key%2fother"
+(pass) reviewed provider file selection > rejects non-file Figma reference "../../key"
+(pass) reviewed provider file selection > rejects unsupported providers, crossed kinds, and generic JSON [0.04ms]
+
+packages/link/src/operations.test.ts:
+(pass) reviewed operation contracts > the complete catalog equals the committed immutable snapshot [1.21ms]
+(pass) reviewed operation contracts > legacy Figma summary and explicit content have separate contracts [0.49ms]
+(pass) reviewed operation contracts > a create operation authorizes its parent resource without a content trait [0.14ms]
+(pass) reviewed operation contracts > full Figma results preserve deep JSON nodes and arbitrary nested data keys [0.70ms]
+(pass) reviewed operation contracts > broker listings require explicit resources and cannot use upstream-scoped authority [0.07ms]
+(pass) reviewed operation contracts > every listing filters selected resources and drops missing or crossed identities [0.20ms]
+(pass) reviewed operation contracts > resource URLs never supply an arbitrary endpoint [0.14ms]
+(pass) reviewed operation contracts > inputs and results are bounded before adapters can use them [0.73ms]
+(pass) reviewed operation contracts > recipes derive custody relative to the current Host [0.03ms]
+
+packages/browser-devtools/src/inspector.test.ts:
+(pass) bounded developer inspector > bounds URLs and never returns data URL bodies [0.80ms]
+(pass) bounded developer inspector > records only after requested; caps entries, removes queries, stops listeners [0.55ms]
+(pass) bounded developer inspector > different targets cannot share logs [0.10ms]
+(pass) bounded developer inspector > only main-document navigation clears recordings when frame identity is available [0.16ms]
+(pass) bounded developer inspector > page closure disposes all listeners and cannot restart recording [0.07ms]
+
+ 104 pass
+ 0 fail
+ 560 expect() calls
+Ran 104 tests across 7 files. [4.09s]
+Completed Bun shard: 104 tests, 0 skipped; 0 failures.

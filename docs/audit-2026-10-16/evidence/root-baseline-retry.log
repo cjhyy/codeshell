@@ -1,0 +1,350 @@
+bun test v1.3.11 (af24e281)
+
+packages/arena/src/capability.test.ts:
+(pass) Arena module > contributes Arena as an always-visible tool only when the host installs the module [3.83ms]
+(pass) Arena module > owns the arena_status query on the protocol surface [5.24ms]
+
+packages/arena/src/index.exports.test.ts:
+(pass) Arena package public entry contracts > keeps the host runtime focused and root-compatible
+(pass) Arena package public entry contracts > declares the exact runtime export and source alias [1.00ms]
+
+packages/arena/src/transitions.test.ts:
+(pass) claim transitions — unresolved sweep > markUnresolved succeeds from under_review [0.01ms]
+(pass) claim transitions — unresolved sweep > markUnresolved succeeds from proposed
+(pass) claim transitions — unresolved sweep > markUnresolved still succeeds from contested [0.03ms]
+(pass) claim transitions — unresolved sweep > terminal states cannot transition to unresolved [0.01ms]
+(pass) claim transitions — unresolved sweep > the normal happy path is unaffected
+
+packages/arena/src/arena-usage.test.ts:
+(pass) Arena usage accounting > returns usage aggregated across its multi-phase provider calls [3445.30ms]
+
+packages/optimization-lab/src/queries.test.ts:
+(pass) optimization lab queries > validate never writes to disk [3.36ms]
+(pass) optimization lab queries > freeze writes one immutable manifest and is idempotent [40.25ms]
+(pass) optimization lab queries > freeze refuses an invalid dataset without writing [2.16ms]
+(pass) optimization lab queries > freeze requires a cwd
+
+packages/optimization-lab/src/store.test.ts:
+(pass) bounded experiment storage > rejects external IDs and stale state revisions [55.24ms]
+(pass) bounded experiment storage > active writers require fence and started/stop control cannot be rewritten [64.05ms]
+(pass) bounded experiment storage > stores immutable artifacts and detects corruption and symlinks [40.70ms]
+(pass) bounded experiment storage > staging crash leftovers never appear runnable and no temp files remain [29.43ms]
+(pass) bounded experiment storage > non-owner host writes stop intent without requiring execution lease [34.99ms]
+(pass) bounded experiment storage > durable newer revocation wins crash before mutable head update [45.40ms]
+(pass) bounded experiment storage > grant renewal appends immutable history and preserves start identity [78.31ms]
+(pass) bounded experiment storage > grant history gap and corrupted state fail closed [73.23ms]
+(pass) bounded experiment storage > private state permissions [56.69ms]
+
+packages/optimization-lab/src/overfit-hints.test.ts:
+(pass) development overfit hints > Chinese source fragments, numbers and filenames are visible and deterministic [1.08ms]
+(pass) development overfit hints > original instructions and task objective are not treated as new examples [0.63ms]
+(pass) development overfit hints > advisory output remains bounded for large repeated inputs [0.32ms]
+
+packages/optimization-lab/src/assertions.test.ts:
+(pass) hard assertions never inherit properties or accept unsafe paths [0.26ms]
+(pass) contains and exclusions are independent hard conditions [0.13ms]
+
+packages/optimization-lab/src/candidate.test.ts:
+(pass) candidate preserves original metadata and never changes sources [0.45ms]
+(pass) overfit hints are deterministic and advisory [0.18ms]
+
+packages/optimization-lab/src/ledger.test.ts:
+(pass) durable request budget ledger > every request has durable reserve and dispatch before settlement [118.86ms]
+(pass) durable request budget ledger > duplicate same settlement is idempotent; conflicting duplicate fails [154.65ms]
+(pass) durable request budget ledger > no authorization, expiry, revocation and stop reject before request reservation [148.95ms]
+(pass) durable request budget ledger > operation deadline and execution window never reset across multiple HTTP requests [70.26ms]
+(pass) durable request budget ledger > final resources stay ringfenced from search then are consumed by final trials [159.65ms]
+(pass) durable request budget ledger > all final budget locked prevents any search operation [30.58ms]
+(pass) durable request budget ledger > unknown usage preserves reservation and unknown crash window survives renewal [84.15ms]
+(pass) durable request budget ledger > unknown monetary estimates cannot satisfy a finite cost threshold [82.50ms]
+(pass) durable request budget ledger > input/cache/reasoning accounting is independent and never double counted [139.10ms]
+(pass) durable request budget ledger > usage exceeding reservation invalidates estimate and prevents new calls [48.47ms]
+(pass) durable request budget ledger > larger candidate final needs checked against remaining budget without changing denominator [30.49ms]
+(pass) durable request budget ledger > new lease owner must convert old operation to unknown; old owner cannot settle late [59.77ms]
+(pass) durable request budget ledger > truncated tail repaired with evidence; middle corruption or gap fails closed [60.99ms]
+(pass) durable request budget ledger > operation limits and final denominator cannot be changed to bypass budget [37.65ms]
+(pass) durable request budget ledger > ledger copied from another experiment fails plan and experiment binding [52.85ms]
+(pass) durable request budget ledger > mixed roles share one cumulative budget and retain reservation revisions [173.85ms]
+(pass) durable request budget ledger > partial known usage remains auditable while full estimate stays unknown [53.03ms]
+(pass) durable request budget ledger > missing or rolled-back ledger cannot reset already spent budget [51.69ms]
+(pass) durable request budget ledger > crash after durable event before head update reconciles forward [47.14ms]
+(pass) durable request budget ledger > unstarted final HTTP preserves its future window after failed admission [70.29ms]
+(pass) durable request budget ledger > repair path cannot be a symlink [36.01ms]
+(pass) SIGKILL after dispatch retains unknown expenditure on replacement process [336.05ms]
+
+packages/optimization-lab/src/controller.test.ts:
+(pass) fixed candidate trials freeze provenance and model, require fresh authorization and make zero optimizer calls [3797.01ms]
+(pass) reusing revealed holdout remains inconclusive; wrong candidates and changed model or parent fail before requests [4359.61ms]
+(pass) fixed candidate trial preserves both human checkpoints without reflection [5460.84ms]
+(pass) six-case experiment closes without touching live Skill and never leaks holdout to optimizer [2601.10ms]
+(pass) human checkpoints pause all model calls and grading export roundtrips directly [3134.62ms]
+(pass) selected configuration changes and disabled feature cannot reach upstream [453.69ms]
+(pass) final allocation prevents search consuming its reserved requests [1904.41ms]
+(pass) native budget renewal retains consumption and can continue an unissued step [4270.77ms]
+(pass) revoke interrupts a real in-flight fake HTTP request and preserves unknown usage [588.92ms]
+(pass) inconclusive human feedback blocks optimizer until an explicit correction [1176.12ms]
+(pass) new worker recovers dispatched steps as unknown and never replays them [700.12ms]
+(pass) default Desktop controller reads user connections through full settings scope [532.44ms]
+(pass) optimizer without any issued HTTP can resume under a new budget without reusing a closed operation [4899.44ms]
+(pass) known development regressions veto candidate selection before any holdout request [1058.23ms]
+(pass) fully graded semantic regression is vetoed independently of hard assertions [1321.42ms]
+(pass) candidate cost tie-break requires comparable complete usage (known cache) [2480.78ms]
+(pass) candidate cost tie-break requires comparable complete usage (unknown cache) [2038.61ms]
+
+packages/optimization-lab/src/index.exports.test.ts:
+(pass) optimization-lab package entry contracts > keeps the capability entry to the module factory
+(pass) optimization-lab package entry contracts > stays private with only the root and capability subpaths [0.88ms]
+
+packages/optimization-lab/src/lease.test.ts:
+(pass) live lease cannot be taken; takeover fences late writes and heartbeats [43.86ms]
+(pass) two real processes competing for start yield exactly one live owner [1010.93ms]
+
+packages/optimization-lab/src/module.test.ts:
+(pass) createOptimizationLabModule > uses a valid composition id [0.94ms]
+(pass) createOptimizationLabModule > namespaces every protocol query
+
+packages/optimization-lab/src/evidence.test.ts:
+(pass) redaction precedes preview/hash, preserves loss, and import creates no answer key [22.97ms]
+
+packages/optimization-lab/src/grading.test.ts:
+(pass) blind templates omit private identities and reject conflicts [0.55ms]
+(pass) all not-applicable grades never create a semantic pass
+(pass) explicit corrections append evidence and inconclusive scores do not unlock a phase
+
+packages/optimization-lab/src/strategy.test.ts:
+(pass) reflection payload carries only the selected development feedback [0.40ms]
+
+packages/optimization-lab/src/store-paths.test.ts:
+(pass) store paths > keeps lab data under the isolated CodeShell home [1.17ms]
+(pass) store paths > gives a symlinked project the same key as its real path [1.24ms]
+
+packages/optimization-lab/src/report.test.ts:
+(pass) immutable experiment reports > reports real paired effects, source evidence, costs and individual cases in Markdown [11.14ms]
+(pass) immutable experiment reports > isolated adoption requires complete qualified effects and loading receipts [9.22ms]
+(pass) immutable experiment reports > content hash is independent of caller order or current clock [8.09ms]
+(pass) immutable experiment reports > known frozen development regressions veto holdout improvement [8.62ms]
+(pass) immutable experiment reports > hard failure cannot be overridden by semantic passing grades [7.26ms]
+(pass) immutable experiment reports > explicit correction heads are order independent and competing grades stay unknown [7.45ms]
+(pass) immutable experiment reports > missing human grades and analysis-only cases remain in the denominator [12.96ms]
+(pass) immutable experiment reports > claimed completed trial without actual model or usage is inconclusive [6.43ms]
+(pass) immutable experiment reports > changed cache conditions cannot establish cost savings [6.41ms]
+(pass) immutable experiment reports > partial lifecycle never becomes improved from local late grading [5.92ms]
+(pass) immutable experiment reports > hard token bounds require input proof and final grant revisions are numeric [5.56ms]
+(pass) immutable experiment reports > duplicate trials and artifact/hash mismatches are rejected [5.39ms]
+
+packages/coding/src/git/parse-log.test.ts:
+(pass) coding parseGitLog > parses well-formed --format=%H|%s|%an|%ci lines [0.17ms]
+(pass) coding parseGitLog > skips empty/whitespace lines
+(pass) coding parseGitLog > does not throw on a malformed line with no separators
+
+packages/coding/src/git/worktree-setup.test.ts:
+(pass) coding selectPlatformScript > undefined scripts → undefined [0.02ms]
+(pass) coding selectPlatformScript > picks macos on darwin, linux on linux, windows on win32 [0.02ms]
+(pass) coding selectPlatformScript > falls back to default when the platform key is missing [0.01ms]
+(pass) coding selectPlatformScript > platform key wins over default
+(pass) coding selectPlatformScript > blank/whitespace script is treated as absent (no fallback to it) [0.02ms]
+(pass) runWorktreeSetup > no script → skipped, ok, no spawn [0.85ms]
+(pass) runWorktreeSetup > runs the script in the worktree root [19.17ms]
+(pass) runWorktreeSetup > non-zero exit → ok:false but does not throw (warns-but-continues) [12.43ms]
+(pass) runWorktreeSetup > layers shellEnv into the script environment [13.12ms]
+
+packages/coding/src/git/resolve-project-root.test.ts:
+(pass) coding resolveProjectRoot > a subdirectory of a git repo resolves to the repo top-level [76.24ms]
+fatal: not a git repository (or any of the parent directories): .git
+fatal: not a git repository (or any of the parent directories): .git
+(pass) coding resolveProjectRoot > a non-git directory returns itself unchanged [40.95ms]
+(pass) coding resolveProjectRoot > a symlinked repo path resolves to the real repo root [64.45ms]
+(pass) coding resolveProjectRoot > uses the configured git.path override when resolving the project root [1568.57ms]
+(pass) coding resolveProjectRoot > a non-existent path does not throw (falls back to the input) [1.56ms]
+
+packages/arena/src/context/read-file-limit.test.ts:
+(pass) read_file limit guard > reads from offset for `limit` lines [4.78ms]
+(pass) read_file limit guard > negative limit does not silently drop the file's tail [2.67ms]
+(pass) read_file limit guard > NaN limit falls back to default (not a crash / not empty) [2.75ms]
+
+packages/arena/src/context/within-root.test.ts:
+(pass) isWithinRoot > the root itself is within root
+(pass) isWithinRoot > a child path is within root
+(pass) isWithinRoot > a sibling with the root as a string prefix is NOT within root
+(pass) isWithinRoot > an unrelated path is not within root
+(pass) isWithinRoot > uses the platform separator, not a hardcoded slash
+
+packages/arena/src/iterate/critics-for-round.test.ts:
+(pass) IterativeArena.criticsForRound > original author is excluded while they hold the pen
+(pass) IterativeArena.criticsForRound > a promoted critic does not review their own draft
+(pass) IterativeArena.criticsForRound > rotation to the last critic likewise swaps the pool
+(pass) IterativeArena.criticsForRound > every participant is a valid author and is never their own critic [0.33ms]
+(pass) IterativeArena.criticsForRound > degenerate single-participant config still yields reviewers
+
+packages/arena/src/strategies/extract-json-array.test.ts:
+(pass) extractJSONArray > extracts a single array
+(pass) extractJSONArray > returns only the FIRST array when two are present
+(pass) extractJSONArray > handles nested arrays (balanced, not smallest)
+(pass) extractJSONArray > respects ] inside strings
+(pass) extractJSONArray > prefers a fenced ```json block
+(pass) extractJSONArray > falls back to the original text when no array is present
+
+packages/arena/src/providers/truncate.test.ts:
+(pass) provider truncate handles content with no newline > docs: a long single line cuts at the cap, not cap-1
+(pass) provider truncate handles content with no newline > repo: a long single line cuts at the cap, not cap-1
+(pass) provider truncate handles content with no newline > docs: short content is returned unchanged
+(pass) provider truncate handles content with no newline > docs: still cuts at the last newline when one exists
+
+packages/optimization-lab/src/contracts/experiment.test.ts:
+(pass) immutable experiment plans > key order cannot change plan hash, and inputs are copied [0.79ms]
+(pass) immutable experiment plans > rejects extra root field [0.22ms]
+(pass) immutable experiment plans > rejects missing field [0.20ms]
+(pass) immutable experiment plans > rejects non-finite
+(pass) immutable experiment plans > rejects non-positive limit
+(pass) immutable experiment plans > rejects concurrency
+(pass) immutable experiment plans > rejects candidate count [0.62ms]
+(pass) immutable experiment plans > rejects model judge
+(pass) immutable experiment plans > rejects secret endpoint [0.29ms]
+(pass) immutable experiment plans > rejects query endpoint
+(pass) immutable experiment plans > rejects header projection
+(pass) immutable experiment plans > rejects markdown only revision
+(pass) immutable experiment plans > rejects extra files [0.81ms]
+(pass) immutable experiment plans > rejects body hash
+(pass) immutable experiment plans > rejects arbitrary body with valid hash
+(pass) immutable experiment plans > rejects arbitrary frontmatter prefix
+(pass) immutable experiment plans > rejects bundle revision
+(pass) immutable experiment plans > rejects unscoped criterion alias
+(pass) immutable experiment plans > rejects duplicated criterion [0.79ms]
+(pass) immutable experiment plans > rejects plan tampering even with valid component hashes [0.56ms]
+(pass) immutable experiment plans > worst-case bound is conditional, conservative and safe [1.72ms]
+(pass) budget grants > structural historical verification does not renew an expired grant
+(pass) budget grants > rejects malformed, mismatched, zero, non-finite and revoked authorization [1.15ms]
+
+packages/optimization-lab/src/contracts/verdict-policy.test.ts:
+(pass) verdict policy > matches the eval harness contract it was copied from [0.67ms]
+
+packages/optimization-lab/src/contracts/dataset.test.ts:
+(pass) validateDataset > accepts a healthy dataset and summarizes it [0.68ms]
+(pass) validateDataset > reports schema errors with their path [0.45ms]
+(pass) validateDataset > dataset-level schema issues remain visible without a case identity [0.22ms]
+(pass) validateDataset > rejects duplicate ids and duplicate inputs [0.23ms]
+(pass) validateDataset > rejects a source group that appears in both splits
+(pass) validateDataset > rejects runnable cases without criteria or with missing evidence
+(pass) validateDataset > requires at least one runnable case per split
+(pass) validateDataset > warns, without failing, when evidence can only be exploratory
+(pass) dataset boundaries > keeps unfrozen fixture references out of runnable cases
+(pass) dataset boundaries > rejects duplicate criterion ids: hard [1.02ms]
+(pass) dataset boundaries > rejects duplicate criterion ids: rubric
+(pass) dataset boundaries > rejects duplicate criterion ids: cross
+(pass) dataset boundaries > bounds text in UTF-8 bytes and supports the exact boundary
+(pass) dataset boundaries > rejects non-JSON assertion values without throwing [1.17ms]
+(pass) dataset boundaries > rejects unknown fields and more than 200 cases [1.85ms]
+(pass) dataset boundaries > normalizes defaults without mutating the caller's data [0.08ms]
+(pass) rejects datasets beyond the total JSON byte budget [14.46ms]
+
+packages/optimization-lab/src/contracts/dataset-loader.test.ts:
+(pass) verified loader recomputes frozen content, summary and case hashes [23.91ms]
+(pass) verified loader refuses traversal, missing content, symlink file or directory [7.34ms]
+
+packages/optimization-lab/src/contracts/canonical-json.test.ts:
+(pass) canonicalJson > sorts every object's keys independently of insertion order
+(pass) canonicalJson > preserves arrays, JSON scalars and special property names
+(pass) canonicalJson > rejects non-JSON data: undefined
+(pass) canonicalJson > rejects non-JSON data: NaN
+(pass) canonicalJson > rejects non-JSON data: Infinity
+(pass) canonicalJson > rejects non-JSON data: -Infinity
+(pass) canonicalJson > rejects non-JSON data: 1n
+(pass) canonicalJson > rejects non-JSON data: Symbol(x)
+(pass) canonicalJson > rejects non-JSON data: [Function]
+(pass) canonicalJson > rejects non-JSON data: 2026-10-16T15:20:17.763Z
+(pass) canonicalJson > rejects non-JSON data: Map {} [0.37ms]
+(pass) canonicalJson > rejects non-JSON data: Set {}
+(pass) canonicalJson > rejects sparse arrays, additional array keys, symbols and getters
+(pass) canonicalJson > rejects cycles but accepts a shared JSON object
+(pass) canonicalJson > hashes equal values to the same sha256
+
+packages/optimization-lab/src/contracts/dataset-freeze.test.ts:
+(pass) freezeDataset > sorts ids by code units and preserves constructor as an own hash key [6.87ms]
+(pass) freezeDataset > reuses exact stored bytes and never evaluates a new timestamp [7.96ms]
+(pass) freezeDataset > a content change creates a separate immutable version [5.57ms]
+(pass) freezeDataset > rejects a manifest with altered content without overwriting it [8.85ms]
+(pass) freezeDataset > rejects a manifest with altered declared hash without overwriting it [7.30ms]
+(pass) freezeDataset > rejects a manifest with altered case hash without overwriting it [8.32ms]
+(pass) freezeDataset > rejects a manifest with altered missing case hash without overwriting it [7.33ms]
+(pass) freezeDataset > rejects a manifest with altered summary without overwriting it [7.91ms]
+(pass) freezeDataset > rejects a manifest with altered case order without overwriting it [7.19ms]
+(pass) freezeDataset > rejects a manifest with altered timestamp without overwriting it [7.65ms]
+(pass) freezeDataset > rejects a manifest with altered policy without overwriting it [7.58ms]
+(pass) freezeDataset > rejects a manifest with altered unknown field without overwriting it [8.12ms]
+(pass) freezeDataset > rejects a manifest with altered missing normalized field without overwriting it [7.67ms]
+(pass) freezeDataset > rejects a manifest with altered null without overwriting it [8.04ms]
+(pass) freezeDataset > rejects truncated JSON and a symlinked manifest without repairing either [10.79ms]
+(pass) freezeDataset > concurrent processes freeze one manifest and agree on the winning timestamp [812.19ms]
+(pass) rejects a manifest over the byte budget before creating any lab directory [88.53ms]
+
+packages/optimization-lab/src/providers/transport.test.ts:
+(pass) openai actual client stays tool-free and records authoritative usage [288.88ms]
+(pass) anthropic actual client stays tool-free and records authoritative usage [299.51ms]
+(pass) strict selected connection never falls back to a usable default [256.48ms]
+(pass) actual compatibility/SDK retries each need a fresh admission and cannot change parameters [255.01ms]
+(pass) target request cannot receive expected, rubric, sibling or holdout data [288.12ms]
+(pass) connection identity pins effective temperature and redacts unsafe endpoints [259.50ms]
+(pass) Anthropic cache counters are included in normalized input exactly once [289.95ms]
+(pass) wire gate rejects images, tools and request-model changes before upstream [255.19ms]
+(pass) missing response model invalidates pairing while retaining known token usage [277.31ms]
+(pass) Anthropic unsupported top_p fails local preflight [255.39ms]
+(pass) real OpenAI SDK internal retry has a distinct durable admission for every HTTP [320.09ms]
+(pass) isolated Engine SSE requires terminal authoritative usage and keeps partial streams unknown [281.25ms]
+
+packages/coding/src/tools/apply-patch/backup-targets.test.ts:
+(pass) coding patchBackupTargets > update + delete hunks → their resolved paths [0.35ms]
+(pass) coding patchBackupTargets > add hunks are excluded (no prior content)
+(pass) coding patchBackupTargets > resolves relative paths against the given cwd
+(pass) coding patchBackupTargets > unparseable patch → empty (tool will reject it anyway)
+
+packages/coding/src/tools/apply-patch/cache-invalidate.test.ts:
+(pass) coding applyPatch invalidates the file cache by absolute path > a relative-path patch invalidates the absolute-keyed cache entry [4.10ms]
+
+packages/coding/src/tools/apply-patch/path-escape.test.ts:
+(pass) coding applyPatch path containment > rejects ../ traversal that escapes cwd (add) [1.94ms]
+(pass) coding applyPatch path containment > rejects an absolute path outside cwd (add) [1.67ms]
+(pass) coding applyPatch path containment > rejects writing through a symlink that points outside cwd [1.90ms]
+(pass) coding applyPatch path containment > still allows a normal write inside cwd [5.37ms]
+(pass) coding applyPatch path containment > rejects a rename whose destination escapes cwd [4.21ms]
+
+packages/coding/src/tools/apply-patch/atomicity.test.ts:
+(pass) coding applyPatch atomicity (all-or-nothing) > plan-phase failure on a later hunk leaves ALL files untouched [5.08ms]
+(pass) coding applyPatch atomicity (all-or-nothing) > commit-phase write failure rolls back an already-written file [7.50ms]
+(pass) coding applyPatch atomicity (all-or-nothing) > rollback removes a newly-added file when a later write fails [4.38ms]
+(pass) coding applyPatch atomicity (all-or-nothing) > allowPartialOnCommit leaves partial work on disk (codex parity) [4.90ms]
+
+packages/coding/src/git/worktree/query.test.ts:
+(pass) coding listWorktreesFast > returns empty list for a non-git directory [225.75ms]
+(pass) coding listWorktreesFast > propagates an AbortSignal to root and list git queries [289.15ms]
+Preparing worktree (new branch 'external/feature')
+(pass) coding listWorktreesFast > returns ownership and managed metadata without diff summaries [693.44ms]
+
+packages/coding/src/git/worktree/diff.test.ts:
+(pass) coding getWorktreeDiff > summarizes committed and uncommitted changes for one worktree [681.99ms]
+
+packages/coding/src/git/worktree/slug.test.ts:
+(pass) coding worktree slug and branch prefix helpers > validateWorktreeSlug rejects empty or whitespace slugs [0.17ms]
+(pass) coding worktree slug and branch prefix helpers > applyPrefix uses the default prefix and short session id [0.03ms]
+(pass) coding worktree slug and branch prefix helpers > applyPrefix normalizes custom prefixes to a trailing slash
+(pass) coding worktree slug and branch prefix helpers > normalizeWorktreeBranchPrefix rejects unsafe git branch namespaces [0.05ms]
+(pass) coding worktree slug and branch prefix helpers > managed branch detection accepts configured and historical prefixes
+
+packages/coding/src/git/worktree/crud.test.ts:
+(pass) coding worktree CRUD > errors clearly before git tries to check out a branch already used by a worktree [449.18ms]
+(pass) coding worktree CRUD > a failed create never deletes a pre-existing directory at the worktree path [420.82ms]
+(pass) coding worktree CRUD > symlinks root node_modules and workspace package node_modules into the worktree [391.17ms]
+(pass) coding worktree CRUD > removeBranch=true deletes managed branches with the default prefix [520.59ms]
+(pass) coding worktree CRUD > removeBranch=true allows configured prefixes and historical worktree prefixes [885.79ms]
+Preparing worktree (new branch 'external/feature')
+(pass) coding worktree CRUD > removeBranch=true refuses external branches [292.14ms]
+(pass) coding worktree CRUD > creates from an explicit base ref and records its immutable base commit [829.95ms]
+(pass) coding worktree CRUD > copies gitignored files selected by .worktreeinclude and explicit include patterns [848.54ms]
+fatal: cannot remove a locked working tree, lock reason: test owner
+use 'remove -f -f' to override or unlock first
+(pass) coding worktree CRUD > worktree locks block cleanup until the DriveAgent owner unlocks [641.73ms]
+
+ 253 pass
+ 0 fail
+ 664 expect() calls
+Ran 253 tests across 42 files. [61.95s]
+Completed Bun shard: 253 tests, 0 skipped; 0 failures.
