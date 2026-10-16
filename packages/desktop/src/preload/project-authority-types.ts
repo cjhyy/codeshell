@@ -8,6 +8,7 @@ import type {
 import type {
   GitBranches,
   GitStatus,
+  ProjectFileSearchHit,
   SessionWorkspaceList,
   Unsubscribe,
   WorktreeDiffSummary,
@@ -80,6 +81,12 @@ export type ProjectCwdResolution =
   | null;
 
 export interface ProjectAuthorityApi {
+  /** Fuzzy file discovery in one registered root, or all roots when omitted. */
+  searchProjectFiles(
+    projectId: string,
+    query: string,
+    rootId?: string,
+  ): Promise<ProjectFileSearchHit[]>;
   getProjectGitStatus(projectId: string): Promise<GitStatus>;
   getProjectGitBranches(projectId: string): Promise<GitBranches>;
   switchProjectGitBranch(projectId: string, branch: string): Promise<GitBranches>;

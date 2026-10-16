@@ -56,7 +56,7 @@ const GIT_LS_TIMEOUT_MS = 5_000;
 
 async function listViaGit(cwd: string): Promise<SearchEntry[] | null> {
   return new Promise((resolve) => {
-    const proc = spawn("git", ["ls-files", "--cached", "--others", "--exclude-standard"], {
+    const proc = spawn("git", ["ls-files", "-z", "--cached", "--others", "--exclude-standard"], {
       cwd,
       windowsHide: true,
     });
@@ -75,8 +75,11 @@ async function listViaGit(cwd: string): Promise<SearchEntry[] | null> {
       proc.kill();
       done(null);
     }, GIT_LS_TIMEOUT_MS);
-    proc.stdout.on("data", (b: Buffer) => {
-      out += b.toString("utf8");
+    // Decode across stream chunks before splitting the unquoted NUL records.
+    // Newlines, tabs and surrounding spaces can all be part of a real filename.
+    proc.stdout.setEncoding("utf8");
+    proc.stdout.on("data", (chunk: string) => {
+      out += chunk;
     });
     proc.stderr.on("data", () => {
       /* drained to avoid backpressure */
@@ -87,11 +90,7 @@ async function listViaGit(cwd: string): Promise<SearchEntry[] | null> {
         done(null);
         return;
       }
-      const lines = out
-        .split("\n")
-        .map((l) => l.trim())
-        .filter(Boolean);
-      done(entriesFromGitFiles(lines));
+      done(entriesFromGitFiles(out.split("\0").filter((file) => file.length > 0)));
     });
   });
 }
@@ -232,6 +231,24 @@ export async function searchProjectFiles(
     .sort((a, b) => a.score - b.score || a.hit.path.localeCompare(b.hit.path))
     .slice(0, MAX_HITS)
     .map(({ hit }) => hit);
+}
+
+/** Resolve opaque registry identities before searching or applying the global
+ * cap. Only an omitted root id retains the project-wide discovery behavior. */
+export function createRendererProjectFileSearch(authority: {
+  requireProject: (projectId: unknown) => Promise<{ roots: readonly ProjectSearchRoot[] }>;
+  requireRoot: (projectId: unknown, rootId: unknown) => Promise<{ rootId: string; path: string }>;
+}) {
+  return async (projectId: unknown, query: unknown, rootId?: unknown) => {
+    const q = typeof query === "string" ? query : "";
+    if (q.length > 512) throw new Error("files:searchProject query is too long");
+    if (rootId !== undefined) {
+      const root = await authority.requireRoot(projectId, rootId);
+      return searchProjectFiles([{ id: root.rootId, path: root.path }], q);
+    }
+    const project = await authority.requireProject(projectId);
+    return searchProjectFiles(project.roots, q);
+  };
 }
 
 export async function searchFiles(cwd: string, query: string): Promise<FileSearchHit[]> {

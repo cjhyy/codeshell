@@ -2194,8 +2194,6 @@ export interface CodeshellApi
   }): Promise<{ ok: true; id: string } | { ok: false; previewChanged?: true; error: string }>;
   /** Remove one independently installed Panel App. */
   uninstallPanelApp(id: string, cwd?: string): Promise<void>;
-  /** Fuzzy file search across every registered root in a project. */
-  searchProjectFiles(projectId: string, query: string): Promise<ProjectFileSearchHit[]>;
   /** Bounded full-text search over on-disk session transcripts (session switcher). */
   searchSessionContent(query: string): Promise<SessionContentSearchResult>;
   readSkillBody(target: RendererConfigurationTarget | null, filePath: string): Promise<string>;

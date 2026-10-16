@@ -11,6 +11,10 @@ type ProjectAuthorityIpcRenderer = Pick<IpcRenderer, "invoke" | "on" | "removeLi
 /** Renderer-safe transport for project registry and Session workspace authority. */
 export function createProjectAuthorityApi(ipcRenderer: ProjectAuthorityIpcRenderer) {
   return {
+    searchProjectFiles: (projectId: string, query: string, rootId?: string) =>
+      rootId === undefined
+        ? ipcRenderer.invoke("files:searchProject", projectId, query)
+        : ipcRenderer.invoke("files:searchProject", projectId, query, rootId),
     getProjectGitStatus: (projectId: string) => ipcRenderer.invoke("git:projectStatus", projectId),
     getProjectGitBranches: (projectId: string) =>
       ipcRenderer.invoke("git:projectBranches", projectId),

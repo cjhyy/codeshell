@@ -143,7 +143,9 @@ try {
     attachmentCalls.some((args) => JSON.stringify(args) === JSON.stringify([{ cwd: "/old-root" }])),
   );
   assert.ok(
-    searchCalls.some((args) => JSON.stringify(args) === JSON.stringify(["project-1", "same"])),
+    searchCalls.some(
+      (args) => JSON.stringify(args) === JSON.stringify(["project-1", "same", "old-root"]),
+    ),
   );
   const listbox = descendants(document.body).find((node) => reactProps(node).role === "listbox");
   assert.ok(listbox, "Mention discovery renders its real floating list");

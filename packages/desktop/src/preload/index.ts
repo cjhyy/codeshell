@@ -1043,8 +1043,6 @@ contextBridge.exposeInMainWorld("codeshell", {
   cancelAutomationRun: (id: string) => ipcRenderer.invoke("automation:cancelRun", id),
   listSkills: (target: RendererConfigurationTarget | null, opts?: { includeDisabled?: boolean }) =>
     ipcRenderer.invoke("skills:list", target, opts),
-  searchProjectFiles: (projectId: string, query: string) =>
-    ipcRenderer.invoke("files:searchProject", projectId, query),
   searchSessionContent: (query: string): Promise<SessionContentSearchResult> =>
     ipcRenderer.invoke("session:content-search", query),
   listPlugins: (target: RendererConfigurationTarget | null) =>

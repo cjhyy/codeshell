@@ -103,21 +103,22 @@ export function MentionPopover({
       return;
     }
     const handle = setTimeout(() => {
-      const request = projectId
-        ? window.codeshell.searchProjectFiles(projectId, query).then((hits) =>
-            hits
-              .filter((hit) => hit.rootId === rootId)
-              .map((hit) => {
-                const root = projectRoots.find((candidate) => candidate.id === hit.rootId);
-                if (!root) return hit;
-                const separator = root.path.includes("\\") ? "\\" : "/";
-                return {
-                  ...hit,
-                  path: `${root.path.replace(/[\\/]+$/, "")}${separator}${hit.path}`,
-                };
-              }),
-          )
-        : Promise.resolve([]);
+      const request =
+        projectId && rootId
+          ? window.codeshell.searchProjectFiles(projectId, query, rootId).then((hits) =>
+              hits
+                .filter((hit) => hit.rootId === rootId)
+                .map((hit) => {
+                  const root = projectRoots.find((candidate) => candidate.id === hit.rootId);
+                  if (!root) return hit;
+                  const separator = root.path.includes("\\") ? "\\" : "/";
+                  return {
+                    ...hit,
+                    path: `${root.path.replace(/[\\/]+$/, "")}${separator}${hit.path}`,
+                  };
+                }),
+            )
+          : Promise.resolve([]);
       void request
         .then((hits) => {
           if (!cancelled) setFiles(hits);

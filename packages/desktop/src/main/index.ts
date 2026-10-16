@@ -526,7 +526,7 @@ import {
   listDigitalHumanTeams,
   saveDigitalHumanTeam,
 } from "./digital-human-team-service.js";
-import { searchProjectFiles } from "./file-search-service.js";
+import { createRendererProjectFileSearch } from "./file-search-service.js";
 import { listAgents, readAgentBody, saveAgent, deleteAgent } from "./agents-service.js";
 import type { AgentDefinition } from "@cjhyy/code-shell-core";
 import {
@@ -5016,12 +5016,13 @@ ipcMain.handle(
   async (_e, target: RendererConfigurationTarget | null, filePath: unknown) =>
     updateSkillEntry(await requireRendererListedSkillPath(target, filePath)),
 );
-ipcMain.handle("files:searchProject", async (_e, projectId: string, query: string) => {
-  const project = await requireRendererProject(projectId);
-  const q = typeof query === "string" ? query : "";
-  if (q.length > 512) throw new Error("files:searchProject query is too long");
-  return searchProjectFiles(project.roots, q);
+const rendererProjectFileSearch = createRendererProjectFileSearch({
+  requireProject: requireRendererProject,
+  requireRoot: requireRendererProjectRoot,
 });
+ipcMain.handle("files:searchProject", (_e, projectId: unknown, query: unknown, rootId?: unknown) =>
+  rendererProjectFileSearch(projectId, query, rootId),
+);
 ipcMain.handle("session:content-search", async (_e, ...args: unknown[]) => {
   const query = args.length === 1 ? args[0] : undefined;
   if (typeof query !== "string") throw new Error("invalid content search query");
