@@ -34,7 +34,14 @@ const server = createServer((request, response) => {
     request.socket.destroy();
     return;
   }
-  const name = request.url === "/b" ? "Fixture B" : "Fixture A";
+  const name =
+    request.url === "/b"
+      ? "Fixture B"
+      : request.url === "/background"
+        ? "Fixture Background"
+        : request.url === "/idle"
+          ? "Fixture Idle"
+          : "Fixture A";
   response.writeHead(200, { "content-type": "text/html", "cache-control": "no-store" });
   response.end(
     `<!doctype html><title>${name}</title><style>body{margin:20px}input{display:block;margin-top:20px}</style><h1>${name}</h1><a href="/b">Next fixture page</a><input id="draft" aria-label="Page draft" placeholder="Page draft"><p>Owned browser fixture</p>`,
@@ -301,12 +308,106 @@ try {
   report.cases.push(
     "Browser back/forward and tab switching preserve guest, page draft and navigation history",
   );
+  await browser.locator('input[placeholder*="URL"]').fill("Keep A address while opening B");
+  await browser.getByRole("button", { name: "新选项卡", exact: true }).last().click();
+  await navigate(`${origin}/idle`, "Fixture Idle");
+  await browser.getByRole("button", { name: "关闭标签", exact: true }).last().click();
+  await browser.getByRole("button", { name: "Fixture B", exact: true }).click();
+  assert.equal(
+    await browser.locator('input[placeholder*="URL"]').inputValue(),
+    "Keep A address while opening B",
+    "Opening and closing another live guest must preserve this tab's unsubmitted address draft",
+  );
+  report.cases.push(
+    "Browser opening and closing another live tab preserves the first tab's unsubmitted address draft",
+  );
   await navigate(`${origin}/retry`);
   await browser.getByRole("button", { name: "重试", exact: true }).waitFor();
   routeAvailable = true;
   await browser.getByRole("button", { name: "重试", exact: true }).click();
   await browser.getByRole("button", { name: "Fixture A", exact: true }).waitFor();
   report.cases.push("Browser real connection failure shows Retry and recovers on the owned server");
+
+  // A retained background page may redirect or change its title. The active
+  // tab keeps its own address and history while the hidden tab records them.
+  await browser.getByRole("button", { name: "新选项卡", exact: true }).last().click();
+  await navigate(`${origin}/b`, "Fixture B");
+  const secondGuestId = await activeGuest().evaluate((node) => node.getWebContentsId());
+  await electron.evaluate(({ webContents }, { id, url }) => webContents.fromId(id).loadURL(url), {
+    id: guestId,
+    url: `${origin}/background`,
+  });
+  await browser.getByRole("button", { name: "Fixture Background", exact: true }).waitFor();
+  assert.equal(await browser.locator('input[placeholder*="URL"]').inputValue(), `${origin}/b`);
+  assert.equal(await activeGuest().evaluate((node) => node.getWebContentsId()), secondGuestId);
+  await browser.getByRole("button", { name: "Fixture Background", exact: true }).click();
+  assert.equal(await activeGuest().evaluate((node) => node.getWebContentsId()), guestId);
+  assert.equal(
+    await browser.locator('input[placeholder*="URL"]').inputValue(),
+    `${origin}/background`,
+  );
+  report.cases.push(
+    "Browser background navigation updates its own tab without replacing the active page",
+  );
+  await browser.getByRole("button", { name: "关闭标签", exact: true }).first().click();
+  await win.waitForFunction(
+    (id) =>
+      ![...document.querySelectorAll('[data-panel-id="browser"] webview')].some((node) => {
+        try {
+          return node.getWebContentsId() === id;
+        } catch {
+          return false;
+        }
+      }),
+    guestId,
+  );
+  assert.equal(await activeGuest().evaluate((node) => node.getWebContentsId()), secondGuestId);
+  report.cases.push(
+    "Closing the selected browser tab destroys its guest and selects the surviving tab",
+  );
+
+  // Advance only the owned renderer's clock to exercise the production idle
+  // policy without holding a release audit open for five real minutes.
+  await win.clock.install();
+  await browser.getByRole("button", { name: "新选项卡", exact: true }).last().click();
+  await navigate(`${origin}/idle`, "Fixture Idle");
+  await browser.locator('input[placeholder*="URL"]').fill("Keep the pending address draft");
+  await win.clock.fastForward(5 * 60 * 1000 + 1);
+  await win.waitForFunction(
+    (id) =>
+      ![...document.querySelectorAll('[data-panel-id="browser"] webview')].some((node) => {
+        try {
+          return node.getWebContentsId() === id;
+        } catch {
+          return false;
+        }
+      }),
+    secondGuestId,
+  );
+  assert.equal(
+    await browser.locator('input[placeholder*="URL"]').inputValue(),
+    "Keep the pending address draft",
+    "Reclaiming a background guest cannot overwrite the current address draft",
+  );
+  await browser.getByRole("button", { name: "Fixture B", exact: true }).click();
+  await win.waitForFunction((url) => {
+    const view = [...document.querySelectorAll('[data-panel-id="browser"] webview')].find(
+      (node) => node.getClientRects().length,
+    );
+    try {
+      return view?.getURL() === url && !view.isLoading();
+    } catch {
+      return false;
+    }
+  }, `${origin}/b`);
+  assert.notEqual(await activeGuest().evaluate((node) => node.getWebContentsId()), secondGuestId);
+  await navigate(`${origin}/a`, "Fixture A");
+  await browser.getByRole("button", { name: "后退", exact: true }).click();
+  await browser.getByRole("button", { name: "Fixture B", exact: true }).waitFor();
+  report.cases.push(
+    "Browser five-minute idle eviction frees the hidden guest and remount restores working navigation listeners",
+  );
+  await win.clock.resume();
 
   const review = await openPanel("review");
   await review.getByText("updated content", { exact: true }).waitFor();
@@ -315,6 +416,24 @@ try {
   await win.getByRole("menuitem", { name: "已暂存", exact: true }).click();
   await review.getByText("updated content", { exact: true }).waitFor();
   report.cases.push("Review reads actual working and staged Git diffs");
+  const indexPath = join(projectPath, ".git", "index");
+  const indexBytes = await readFile(indexPath);
+  await writeFile(indexPath, "broken fixture index");
+  await review.getByRole("button", { name: "刷新", exact: true }).click();
+  await review.getByText(/index file|bad index|index.*corrupt/).waitFor();
+  await writeFile(indexPath, indexBytes);
+  await review.getByRole("button", { name: "刷新", exact: true }).click();
+  await review.getByText("updated content", { exact: true }).waitFor();
+  report.cases.push(
+    "Review exposes a real corrupted-index error and refresh recovers after repair",
+  );
+  await review.getByRole("button", { name: "选择审查范围", exact: true }).click();
+  await win.getByRole("menuitem", { name: "提交", exact: true }).hover();
+  await win.getByRole("menuitem", { name: /Fixture initial commit/ }).click();
+  await review.getByText("first content", { exact: true }).waitFor();
+  report.cases.push(
+    "Review selected root commit displays its real additions instead of an empty diff",
+  );
 
   const terminal = await openPanel("terminal");
   const input = terminal.locator(".xterm-helper-textarea");
@@ -325,6 +444,33 @@ try {
   await openPanel("terminal");
   await terminal.getByText("PANEL_OPERATION_PTY_OK", { exact: true }).waitFor();
   report.cases.push("Terminal executes real PTY input and preserves output across panel switches");
+  await input.focus();
+  await win.keyboard.type("printf 'PANEL_OPERATION_SLEEP_STARTED\\n'; sleep 60\n");
+  await terminal.getByText("PANEL_OPERATION_SLEEP_STARTED", { exact: true }).waitFor();
+  await win.keyboard.press("Control+C");
+  await win.waitForFunction(() => {
+    const rows = document.querySelector(
+      '[data-panel-id="terminal"][data-panel-active="true"] .xterm-rows',
+    );
+    return /[%$#>]\s*$/.test(rows?.textContent ?? "");
+  });
+  await win.keyboard.type("printf 'PANEL_OPERATION_CANCEL_OK\\n'\n");
+  await terminal.getByText("PANEL_OPERATION_CANCEL_OK", { exact: true }).waitFor();
+  await win.keyboard.type("exit\n");
+  await terminal.getByText(/进程已退出/).waitFor();
+  const terminalLabel = await terminal.getAttribute("aria-labelledby");
+  await win
+    .locator(`[id="${terminalLabel}"]`)
+    .locator("..")
+    .getByRole("button", { name: "关闭标签: 终端", exact: true })
+    .click();
+  const replacement = await openPanel("terminal");
+  await replacement.locator(".xterm-helper-textarea").focus();
+  await win.keyboard.type("printf 'PANEL_OPERATION_REOPEN_OK\\n'\n");
+  await replacement.getByText("PANEL_OPERATION_REOPEN_OK", { exact: true }).waitFor();
+  report.cases.push(
+    "Terminal Ctrl+C cancels a real process; exit and reopening starts a fresh usable PTY",
+  );
   assert.deepEqual(report.errors, []);
   report.result = "pass";
 } catch (error) {
