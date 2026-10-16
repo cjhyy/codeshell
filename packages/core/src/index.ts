@@ -839,6 +839,7 @@ export {
   type RemoteLinkConfiguration,
   type RemoteLinkAttempt,
   type RemoteLinkActionRequest,
+  type RemoteLinkExecutionDiagnostic,
 } from "./links/remote.js";
 
 export {
