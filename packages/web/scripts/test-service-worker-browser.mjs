@@ -7,7 +7,7 @@ import assert from "node:assert/strict";
 import { createHash } from "node:crypto";
 import { createServer } from "node:http";
 import { createRequire } from "node:module";
-import { mkdtemp, readFile, writeFile } from "node:fs/promises";
+import { mkdir, mkdtemp, readFile, realpath, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -18,7 +18,23 @@ const repo = fileURLToPath(new URL("../../..", import.meta.url));
 const require = createRequire(path.join(repo, "packages/desktop/package.json"));
 const { build } = require("esbuild");
 const { chromium } = require("playwright");
-const evidence = await mkdtemp(path.join(tmpdir(), "codeshell-service-worker-browser-"));
+const args = process.argv.slice(2);
+assert.ok(
+  args.length === 0 || (args.length === 2 && args[0] === "--evidence-dir" && args[1]),
+  "Expected no arguments or --evidence-dir <new-owned-directory>",
+);
+const evidence = args.length
+  ? path.join(
+      await realpath(path.dirname(path.resolve(args[1]))),
+      path.basename(path.resolve(args[1])),
+    )
+  : await mkdtemp(path.join(tmpdir(), "codeshell-service-worker-browser-"));
+const relative = path.relative(repo, evidence);
+assert.ok(
+  relative === ".." || relative.startsWith(`..${path.sep}`) || path.isAbsolute(relative),
+  "Evidence must remain outside the checkout",
+);
+if (args.length) await mkdir(evidence, { mode: 0o700 });
 const report = {
   status: "preparing",
   evidence,
