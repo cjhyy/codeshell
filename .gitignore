@@ -119,18 +119,12 @@ video-output/
 # workspace data, not product fixtures or documentation.
 /.code-shell-feishu-*
 
-# Unreferenced Archify visual-check runs for the local full-repository diagrams.
-# Keep the selected final-global and root wide source/viewer pairs eligible;
-# the tracked runtime-overview diagram and its referenced review assets remain.
-/full-repo-workflow-*.archify.visual-check.*
-/docs/architecture/archify/full-repo-run-steer-stop*.visual-check.*
-/docs/architecture/archify/full-repo-file-list.txt
-
-# Exact duplicate of full-repo-workflow-wide.archify.html, kept locally only.
-/full-repo-workflow-sequence-full.html
-
-# Earlier, unreferenced full-repository diagram iterations and coverage notes.
-# Exact phase names avoid ignoring the selected final-global source/viewer.
+# Archify scratch for the full-repository sequence diagrams. Only the two
+# selected source/viewer pairs (final-global, workflow-wide) are tracked under
+# docs/architecture/archify/; every other iteration, visual-check run and
+# coverage note is a local regeneration product. Never put diagram output at
+# the repo root — always target docs/architecture/archify/.
+/docs/architecture/archify/full-repo-*.visual-check.*
 /docs/architecture/archify/full-repo-run-steer-stop-coverage-lite.sequence.*
 /docs/architecture/archify/full-repo-run-steer-stop-filecoverage.sequence.json
 /docs/architecture/archify/full-repo-run-steer-stop-fullchain.sequence.*
@@ -139,4 +133,7 @@ video-output/
 /docs/architecture/archify/full-repo-run-steer-stop.sequence.*
 /docs/architecture/archify/full-repo-run-steer-stop.workflow.json
 /docs/architecture/archify/full-repo-file-coverage.txt
+/docs/architecture/archify/full-repo-file-list.txt
 /docs/architecture/archify/run-steer-stop-flow-coverage.txt
+/full-repo-*
+/*.visual-check.*
