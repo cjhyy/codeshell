@@ -232,6 +232,10 @@ interface DiskSessionCursor {
   id: string;
 }
 
+function compareDiskSessionPosition(a: DiskSessionCursor, b: DiskSessionCursor): number {
+  return b.mtime - a.mtime || a.id.localeCompare(b.id);
+}
+
 function encodeDiskSessionCursor(cursor: DiskSessionCursor): string {
   return `v1:${cursor.mtime}:${cursor.id}`;
 }
@@ -301,7 +305,7 @@ export async function listDiskSessions(
     }),
   );
   const dirs = stats.filter((d): d is { id: string; mtime: number } => d !== null);
-  dirs.sort((a, b) => b.mtime - a.mtime || a.id.localeCompare(b.id));
+  dirs.sort(compareDiskSessionPosition);
 
   const decodedCursor = decodeDiskSessionCursor(opts.cursor);
   if (decodedCursor === null) return { sessions: [], nextCursor: null };
@@ -310,9 +314,7 @@ export async function listDiskSessions(
       ? Math.max(0, decodedCursor)
       : (() => {
           const index = dirs.findIndex(
-            (entry) =>
-              entry.mtime < decodedCursor.mtime ||
-              (entry.mtime === decodedCursor.mtime && entry.id > decodedCursor.id),
+            (entry) => compareDiskSessionPosition(entry, decodedCursor) > 0,
           );
           return index < 0 ? dirs.length : index;
         })();
@@ -336,7 +338,11 @@ export async function listDiskSessions(
     const { id, mtime } = dirs[i]!;
     let state: Record<string, unknown>;
     try {
-      state = JSON.parse(await fs.readFile(path.join(baseDir, id, "state.json"), "utf8"));
+      const parsed: unknown = JSON.parse(
+        await fs.readFile(path.join(baseDir, id, "state.json"), "utf8"),
+      );
+      if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) continue;
+      state = parsed as Record<string, unknown>;
     } catch {
       continue;
     }
