@@ -920,9 +920,60 @@ button.ghost:hover:not(:disabled) {
   background: var(--surface);
   border: 1px solid var(--border);
   border-radius: 16px;
-  padding: 22px;
+  padding: 0;
   width: min(560px, calc(100% - 32px));
-  max-height: calc(100% - 32px);
+  max-height: calc(100dvh - 32px);
+  overflow: hidden;
+}
+.devices-dialog[open] {
+  display: flex;
+  flex-direction: column;
+}
+.devices-dialog .dialog-head {
+  flex-shrink: 0;
+  padding: 16px 18px;
+  border-bottom: 1px solid var(--border);
+}
+.devices-body {
+  min-height: 48px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: 0 18px;
+}
+.devices-summary {
+  overflow-wrap: anywhere;
+}
+.devices-error {
+  min-height: 20px;
+  max-height: min(144px, 25dvh);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  white-space: pre-wrap;
+  margin: 10px 18px 0;
+}
+.devices-footer {
+  flex-shrink: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding: 12px 18px;
+  border-top: 1px solid var(--border);
+}
+.devices-dialog [aria-disabled="true"] {
+  opacity: 0.55;
+  cursor: default;
+}
+@media (max-height: 320px) {
+  .devices-dialog .dialog-head,
+  .devices-footer {
+    padding: 8px 12px;
+  }
+  .devices-body {
+    padding-inline: 12px;
+  }
+  .devices-error {
+    margin-inline: 12px;
+  }
 }
 .devices-dialog::backdrop {
   background: #0006;
@@ -967,7 +1018,7 @@ button.ghost:hover:not(:disabled) {
   flex-shrink: 0;
   font-size: 12px;
 }
-.devices-dialog > .stop {
+.devices-footer > .stop {
   padding: 10px 14px;
 }
 

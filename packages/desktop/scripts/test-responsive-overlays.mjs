@@ -30,6 +30,7 @@ const fixtures = [
   "chat/anchored-popovers.browser.fixture.mjs",
   "chat/ModelPill.browser.fixture.mjs",
   "chat/PermissionPill.browser.fixture.mjs",
+  "chat/ProjectPicker.browser.fixture.mjs",
   "ui/ContextMenu.browser.fixture.mjs",
   "ChatView.autocomplete.browser.fixture.mjs",
   "ChatView.submit.browser.fixture.mjs",
