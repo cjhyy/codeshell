@@ -406,7 +406,11 @@ export class AgentBridge implements PetStateBridge {
         // This bridge handles workspace switches and authoritative Session runs.
         CODE_SHELL_WORKSPACE_ACCESS: "host",
         CODE_SHELL_CAPABILITY_MODULES: composeCapabilityModulesEnv(
-          { coding: codingModule, pet: petCapabilityModule },
+          {
+            coding: codingModule,
+            pet: petCapabilityModule,
+            links: import.meta.resolve("@cjhyy/code-shell-server/links"),
+          },
           readUserFeatureFlags(resolveNoRepoCwd()),
           () => import.meta.resolve("@cjhyy/code-shell-capability-optimization-lab/capability"),
         ),

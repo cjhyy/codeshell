@@ -40,6 +40,7 @@
   "dependencies": {
     "@cjhyy/code-shell-capability-coding": "workspace:*",
     "@cjhyy/code-shell-core": "workspace:*",
+    "@cjhyy/code-shell-server": "workspace:*",
     "@alcalzone/ansi-tokenize": "^0.3.0",
     "auto-bind": "^5.0.1",
     "bidi-js": "^1.0.3",

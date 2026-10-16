@@ -176,3 +176,25 @@ See [CHANGELOG.md](https://github.com/cjhyy/codeshell/blob/main/CHANGELOG.md) in
 ## License
 
 MIT © maki maki. See [LICENSE](./LICENSE).
+
+### Link provider composition
+
+Core exposes the Link registry and credential/policy machinery, and starts with no
+provider implementations. Product hosts install reviewed providers before creating
+an Engine; importing Core alone does not activate HTTP integrations.
+
+```ts
+import { Engine, registerLocalLinkProviders } from "@cjhyy/code-shell-core";
+import { createDefaultLinkProviders } from "@cjhyy/code-shell-server/links";
+
+registerLocalLinkProviders(createDefaultLinkProviders());
+const engine = new Engine(config);
+```
+
+A custom SDK host can instead register its own `LocalLinkProviderSpec` implementations.
+Registration is process-scoped, validates unique provider/action IDs, and does not
+connect accounts or grant permissions. Desktop, TUI and serve compose the defaults
+explicitly; spawned workers load `createLinkProviderModule` through the existing
+trusted module-loading seam. Pure provider normalization helpers remain temporarily
+on the Core extension entry while their existing CLI/remote/verification consumers
+migrate; HTTP provider implementations live only in Server.

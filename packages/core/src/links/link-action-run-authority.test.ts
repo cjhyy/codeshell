@@ -1,3 +1,5 @@
+import { beforeAll as installHostFixture } from "bun:test";
+import { installTestLinkProviders } from "../../../../tests/helpers/link-providers.js";
 import { afterAll, afterEach, beforeEach, expect, mock, test } from "bun:test";
 import { spawn } from "node:child_process";
 import http from "node:http";
@@ -28,6 +30,10 @@ const cases = [
   "local OAuth results are discarded when custody is lost during an action",
 ];
 const caseName = process.env.CODESHELL_LINK_RUN_AUTHORITY_CASE;
+// Producer-only remote cases need no product provider catalog; avoid loading a
+// second Core module graph into Bun's confined native-HTTP regression children.
+if (caseName && (caseName.includes("local OAuth") || caseName.includes("LinkAction")))
+  installHostFixture(installTestLinkProviders);
 
 if (process.env.CODESHELL_LINK_RUN_AUTHORITY_CHILD === "1" && caseName) {
   const runCase = (name: string, body: () => void | Promise<void>) => {

@@ -8,6 +8,7 @@ import {
 export interface CoreCapabilityModuleUrls {
   readonly coding: string;
   readonly pet: string;
+  readonly links?: string;
 }
 
 /** Resolve optional capabilities only after their user-level flag is enabled. */
@@ -17,6 +18,7 @@ export function composeCapabilityModulesEnv(
   resolveOptimizationLab: () => string,
 ): string {
   const entries = [`${urls.coding}#createCodingModule`, `${urls.pet}#createPetModule`];
+  if (urls.links) entries.push(`${urls.links}#createLinkProviderModule`);
   if (isFeatureEnabled(flags, "optimization_lab")) {
     entries.push(`${resolveOptimizationLab()}#createOptimizationLabModule`);
   }

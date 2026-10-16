@@ -718,6 +718,7 @@ export {
 
 export {
   LOCAL_LINK_PROVIDERS,
+  registerLocalLinkProviders,
   getLocalLinkProvider,
   listLocalLinkProviders,
   validateLocalLinkToken,

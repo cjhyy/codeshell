@@ -150,7 +150,7 @@ export function resolveWorkerEntry(): string {
  * wrapper registered it; arena/pet stay desktop-only).
  */
 export function resolveWorkerCapabilityModules(): string {
-  return `${import.meta.resolve("@cjhyy/code-shell-capability-coding")}#createCodingModule`;
+  return `${import.meta.resolve("@cjhyy/code-shell-capability-coding")}#createCodingModule,${import.meta.resolve("@cjhyy/code-shell-server/links")}#createLinkProviderModule`;
 }
 
 /** Locate the built browser app (packages/web `app` build), when present. */

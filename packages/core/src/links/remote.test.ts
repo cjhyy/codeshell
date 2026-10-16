@@ -1,3 +1,6 @@
+import { beforeAll as installHostFixture } from "bun:test";
+import { installTestLinkProviders } from "../../../../tests/helpers/link-providers.js";
+installHostFixture(installTestLinkProviders);
 import { afterEach, beforeEach, expect, test } from "bun:test";
 import { createServer } from "node:http";
 import { mkdtempSync, rmSync, readFileSync, writeFileSync } from "node:fs";

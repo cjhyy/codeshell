@@ -1,3 +1,6 @@
+import { beforeAll as installHostFixture } from "bun:test";
+import { installTestLinkProviders } from "../../../../../tests/helpers/link-providers.js";
+installHostFixture(installTestLinkProviders);
 import { afterEach, beforeEach, expect, test } from "bun:test";
 import { mkdirSync, mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
@@ -471,7 +474,9 @@ test("fixed view handler input has no nested references retained by hooks during
     [],
     hooks,
   );
-  expect(urls).toEqual(["https://api.github.com/repos/acme/approved/issues?per_page=5"]);
+  expect(urls).toEqual([
+    "https://api.github.com/repos/acme/approved/issues?per_page=5&page=1&state=open",
+  ]);
   expect(output).toContain("Approved repository");
 });
 

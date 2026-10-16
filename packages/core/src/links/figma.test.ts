@@ -1,3 +1,6 @@
+import { beforeAll as installHostFixture } from "bun:test";
+import { installTestLinkProviders } from "../../../../tests/helpers/link-providers.js";
+installHostFixture(installTestLinkProviders);
 import { describe, expect, test } from "bun:test";
 import { asGlobalFetch } from "../testing/fetch-stub.js";
 import { allowsLinkAction } from "./authority.js";

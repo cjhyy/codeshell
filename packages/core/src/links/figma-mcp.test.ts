@@ -1,3 +1,6 @@
+import { beforeAll as installHostFixture } from "bun:test";
+import { installTestLinkProviders } from "../../../../tests/helpers/link-providers.js";
+installHostFixture(installTestLinkProviders);
 import { afterEach, describe, expect, test } from "bun:test";
 import { FIGMA_MCP_ACTION_IDS, FIGMA_MCP_SERVER_URL } from "@cjhyy/code-shell-link";
 import { CredentialStore } from "../credentials/store.js";
