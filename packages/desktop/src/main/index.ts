@@ -1571,13 +1571,15 @@ async function createWindow(): Promise<BrowserWindow> {
 
   const devUrl = process.env.VITE_DEV_URL;
   const noDevtools = process.env.CODE_SHELL_NO_DEVTOOLS === "1";
-  if (devUrl) {
-    win.loadURL(devUrl);
-    if (!noDevtools) win.webContents.openDevTools({ mode: "right" });
-  } else {
-    win.loadFile(resolve(__dirname, "..", "renderer", "index.html"));
-    if (!app.isPackaged && !noDevtools) win.webContents.openDevTools({ mode: "right" });
-  }
+  const loadRenderer = () => {
+    if (devUrl) {
+      void win.loadURL(devUrl);
+      if (!noDevtools) win.webContents.openDevTools({ mode: "right" });
+    } else {
+      void win.loadFile(resolve(__dirname, "..", "renderer", "index.html"));
+      if (!app.isPackaged && !noDevtools) win.webContents.openDevTools({ mode: "right" });
+    }
+  };
 
   win.webContents.on("did-fail-load", (_e, code, desc, url) => {
     dlog("main", "renderer.did-fail-load", { code, desc, url });
@@ -2785,12 +2787,17 @@ async function createWindow(): Promise<BrowserWindow> {
       windows: () => BrowserWindow.getAllWindows(),
       ready: petInitialization,
     });
+    // The renderer immediately publishes its active session and reads Mimi's
+    // state. Register those handlers before loading it; handlers themselves
+    // await hydration, so the interface can still load while indexes recover.
+    loadRenderer();
     await petInitialization;
     petRuntimeReady = petDispatchService !== null;
     markPetIpcReady?.();
     markPetIpcReady = null;
   } else {
     bridge.attachWindow(win);
+    loadRenderer();
   }
 
   await installAppMenu(win);
