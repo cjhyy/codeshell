@@ -47,6 +47,7 @@ Object.defineProperty(globalThis, "cancelAnimationFrame", {
 
 const { AccountSidebarEntry } = await import("./AccountSidebarEntry");
 const { ToastProvider } = await import("../ui/ToastProvider");
+const { CloudAccountSettings } = await import("../settings/CloudAccountSettings");
 const scenario = process.argv[2];
 type Capabilities = Awaited<ReturnType<CloudAccountApi["capabilities"]>>;
 const deferred = <T = CloudAccountStatus,>() => {
@@ -325,7 +326,8 @@ const trigger = () => {
   assert.ok(button, "The sidebar always has an account button");
   return button as HTMLButtonElement;
 };
-const dialog = () => nodes(document.body).find((node) => props(node).role === "dialog");
+const accountPage = () =>
+  nodes(document.body).find((node) => props(node)["data-account-settings-page"] !== undefined);
 const menu = () => nodes(document.body).find((node) => props(node).role === "menu");
 const menuItem = (label: string) => {
   const found = nodes(menu()!).find(
@@ -335,19 +337,21 @@ const menuItem = (label: string) => {
   return found;
 };
 const form = () => {
-  const found = nodes(dialog()!).find((node) => node.tagName === "FORM");
+  const found = nodes(accountPage()!).find((node) => node.tagName === "FORM");
   assert.ok(found, "Password credentials use a form that supports Enter submission");
   return found;
 };
 const button = (label: string) => {
-  const found = nodes(dialog() ?? document.body).find(
+  const found = nodes(accountPage() ?? document.body).find(
     (node) => node.tagName === "BUTTON" && text(node) === label,
   );
   assert.ok(found, `Account action is available: ${label}`);
   return found;
 };
 const input = (label: string) => {
-  const found = nodes(dialog()!).find((node) => node.tagName === "LABEL" && text(node) === label);
+  const found = nodes(accountPage()!).find(
+    (node) => node.tagName === "LABEL" && text(node) === label,
+  );
   assert.ok(found, `Account field is available: ${label}`);
   const field = nodes(found).find((node) => node.tagName === "INPUT");
   assert.ok(field);
@@ -422,19 +426,23 @@ const closeMenu = async () => {
 };
 const open = async () => {
   await openMenu();
-  assert.equal(dialog(), undefined, "Opening the menu does not mount account management");
+  assert.equal(accountPage(), undefined, "Opening the menu does not mount account management");
   await selectMenu(current.account?.username ? "账号管理" : "登录账号");
-  assert.ok(dialog(), "The account menu opens the real management dialog");
-  assert.equal(menu(), undefined, "The menu releases its surface before management opens");
+  assert.ok(accountPage(), "The account menu navigates to account settings");
+  assert.equal(
+    nodes(document.body).some((node) => props(node).role === "dialog"),
+    false,
+    "Account management does not mount a dialog",
+  );
+  assert.equal(menu(), undefined, "The menu releases its surface before account settings opens");
   assert.equal(props(trigger())["aria-expanded"], false);
-  assert.ok(text(dialog()!).includes("账号管理"));
+  assert.ok(text(accountPage()!).includes("账号管理"));
 };
 const close = async () => {
-  await click(button("Close"));
+  await click(button("返回应用"));
   await settleClose();
-  assert.equal(dialog(), undefined, "Closing removes account management");
+  assert.equal(accountPage(), undefined, "Closing removes account management");
   assert.equal(props(trigger())["aria-expanded"], false);
-  assert.equal(document.activeElement, trigger(), "Closing management restores account focus");
 };
 const assertTriggerDetails = (detail: string) => {
   const describedBy = props(trigger())["aria-describedby"];
@@ -458,22 +466,47 @@ const assertSignedOut = () => {
 const assertSignedIn = (username: string) => {
   assert.equal(props(trigger())["aria-label"], `账号管理: ${username}`);
   assertTriggerDetails("CodeShell 云账号");
-  if (dialog()) {
-    assert.ok(text(dialog()!).includes(username));
-    assert.ok(text(dialog()!).includes("云账号已登录"));
+  if (accountPage()) {
+    assert.ok(text(accountPage()!).includes(username));
+    assert.ok(text(accountPage()!).includes("云账号已登录"));
     button("退出云账号");
   }
 };
+
+// The mini DOM exercises account behavior after the navigation callback. The
+// browser fixture covers the real SettingsPage layout and return navigation.
+function Fixture() {
+  const [accountOpen, setAccountOpen] = React.useState(false);
+  return (
+    <>
+      <AccountSidebarEntry
+        onOpenSettingsPage={() => {}}
+        onOpenAccountSettings={() => {
+          assert.equal(menu(), undefined, "Navigation waits for the account menu to close");
+          assert.notEqual(document.body.style.pointerEvents, "none");
+          setAccountOpen(true);
+        }}
+        petWidgetVisible={false}
+        onTogglePetWidget={() => {}}
+      />
+      {accountOpen && (
+        <main data-account-settings-page>
+          <h1>账号管理</h1>
+          <button type="button" onClick={() => setAccountOpen(false)}>
+            返回应用
+          </button>
+          <CloudAccountSettings embedded />
+        </main>
+      )}
+    </>
+  );
+}
 
 try {
   await settle(() =>
     root.render(
       <ToastProvider>
-        <AccountSidebarEntry
-          onOpenSettingsPage={() => {}}
-          petWidgetVisible={false}
-          onTogglePetWidget={() => {}}
-        />
+        <Fixture />
       </ToastProvider>,
     ),
   );
@@ -483,7 +516,7 @@ try {
   if (scenario === "menu-preview") {
     assertSignedOut();
     await openMenu();
-    assert.equal(dialog(), undefined, "The account form stays unmounted in the menu");
+    assert.equal(accountPage(), undefined, "The account form stays unmounted in the menu");
     assert.equal(listeners.size, 1, "Opening the menu does not subscribe an account form");
     assert.deepEqual(
       nodes(menu()!)
@@ -514,7 +547,7 @@ try {
     await selectMenu("退出云账号");
     assert.equal(logoutCalls, 1);
     assertSignedOut();
-    assert.equal(dialog(), undefined, "Menu sign-out does not open account management");
+    assert.equal(accountPage(), undefined, "Menu sign-out does not open account management");
     assert.equal(menu(), undefined, "Sign-out dismisses its menu");
     assert.equal(capabilityAttempts, 0, "Sign-out does not discover service capabilities");
     assert.equal(document.activeElement, trigger());
@@ -539,15 +572,15 @@ try {
     await click(button("退出云账号"));
     assert.equal(logoutCalls, 1);
     assertSignedOut();
-    assert.ok(text(dialog()!).includes("本地使用中，尚未登录云账号"));
+    assert.ok(text(accountPage()!).includes("本地使用中，尚未登录云账号"));
     assert.ok(
-      nodes(dialog()!).some(
+      nodes(accountPage()!).some(
         (node) => props(node).role === "status" && text(node).includes("服务端未确认撤销"),
       ),
       "Settings keep an inline revocation notice after account controls are removed",
     );
     await settleCapabilities();
-    assert.ok(text(dialog()!).includes("请联网后在账号会话管理中撤销此设备"));
+    assert.ok(text(accountPage()!).includes("请联网后在账号会话管理中撤销此设备"));
     assert.ok(!text(document.body).includes("Error invoking remote method"));
     assert.equal(toastErrors.length, 0, "Unconfirmed revocation does not raise an error toast");
   } else if (scenario === "settings-logout-failure") {
@@ -556,9 +589,9 @@ try {
     await click(button("退出云账号"));
     assertSignedIn("settings-user");
     assert.equal(logoutCalls, 1);
-    assert.ok(text(dialog()!).includes("Unable to sign out"));
+    assert.ok(text(accountPage()!).includes("Unable to sign out"));
     assert.equal(toastErrors.length, 1, "A real failure still raises an error toast");
-    assert.ok(!text(dialog()!).includes("服务端未确认撤销"));
+    assert.ok(!text(accountPage()!).includes("服务端未确认撤销"));
     await click(button("退出云账号"));
     assert.equal(logoutCalls, 2);
     assertSignedOut();
@@ -631,7 +664,7 @@ try {
     assert.equal(logoutCalls, 1);
     assertSignedIn("menu-user");
     assert.ok(text(document.body).includes("Unable to sign out"), "A failed sign-out explains why");
-    assert.equal(dialog(), undefined);
+    assert.equal(accountPage(), undefined);
     assert.notEqual(document.body.style.pointerEvents, "none");
     await openMenu();
     assert.equal(props(menuItem("退出云账号"))["data-disabled"], undefined);
@@ -646,7 +679,7 @@ try {
       assert.equal(profileCalls.length, 0);
       assert.equal(props(button("保存资料")).disabled, true);
       assert.equal(props(input("昵称")).disabled, true);
-      assert.ok(text(dialog()!).includes("此云服务尚未启用资料编辑"));
+      assert.ok(text(accountPage()!).includes("此云服务尚未启用资料编辑"));
     } else if (scenario === "profile-read-pending") {
       assert.equal(profileCalls[0]?.action, "read");
       assert.equal(props(input("昵称")).disabled, true);
@@ -713,7 +746,7 @@ try {
         assert.equal(props(input("昵称")).value, "云端新昵称");
         assert.equal(props(input("登录用户名")).value, "alice-new");
       }
-      assert.ok(text(dialog()!).includes("账号资料已保存。"));
+      assert.ok(text(accountPage()!).includes("账号资料已保存。"));
     } else {
       assert.equal(profileCalls[0]?.action, "read");
       assertSignedIn("原昵称");
@@ -731,37 +764,41 @@ try {
         username: "alice-new",
       });
       if (scenario === "profile-failure") {
-        assert.ok(text(dialog()!).includes("此用户名已被使用"));
-        assert.ok(!text(dialog()!).includes("Error invoking"));
+        assert.ok(text(accountPage()!).includes("此用户名已被使用"));
+        assert.ok(!text(accountPage()!).includes("Error invoking"));
         assert.equal(props(input("昵称")).value, " e\u0301 中文 👩‍💻 ");
-        assert.ok(!text(dialog()!).includes("账号资料已保存。"));
+        assert.ok(!text(accountPage()!).includes("账号资料已保存。"));
       } else if (scenario === "profile-stale") {
         await settle(() => emit(signedIn("bob")));
         await settle(() => profileRequest.resolve(signedIn("late-old-user")));
-        assert.ok(!text(dialog()!).includes("账号资料已保存。"));
-        assert.ok(!text(dialog()!).includes("late-old-user"));
+        assert.ok(!text(accountPage()!).includes("账号资料已保存。"));
+        assert.ok(!text(accountPage()!).includes("late-old-user"));
       } else {
         assertSignedIn("é 中文 👩‍💻");
         assert.equal(props(input("登录用户名")).value, "alice-new");
-        assert.ok(text(dialog()!).includes("账号资料已保存。"));
+        assert.ok(text(accountPage()!).includes("账号资料已保存。"));
       }
     }
   } else if (scenario === "authentication") {
     assertSignedOut();
-    assert.equal(dialog(), undefined, "The initial account entry does not interrupt local work");
+    assert.equal(
+      accountPage(),
+      undefined,
+      "The initial account entry does not interrupt local work",
+    );
     await open();
     assert.equal(listeners.size, 2, "The account form independently observes status");
     assert.equal(props(button("登录")).disabled, true, "Empty credentials cannot be submitted");
     assert.equal(props(button("密码登录"))["aria-pressed"], true);
     assert.ok(
-      nodes(dialog()!).some(
+      nodes(accountPage()!).some(
         (node) => props(node).role === "group" && props(node)["aria-label"] === "账号密码登录方式",
       ),
     );
     assert.equal(props(button("创建账号")).type, "button");
     assert.equal(props(button("使用 GitHub 登录")).disabled, true);
     assert.equal(props(input("首次 GitHub 登录默认 Link")).disabled, true);
-    assert.ok(text(dialog()!).includes("正在检查可用登录方式…"));
+    assert.ok(text(accountPage()!).includes("正在检查可用登录方式…"));
     await settleCapabilities();
     assert.equal(props(button("使用 GitHub 登录")).disabled, false);
     await change(input("云服务地址"), " https://accounts.example.test/ ");
@@ -819,7 +856,7 @@ try {
           Object.assign(new Event("keydown", { cancelable: true }), { key: "Escape", ...extra }),
         );
       });
-      assert.ok(dialog(), "Cancelling an input composition must keep account management open");
+      assert.ok(accountPage(), "Cancelling an input composition must keep account management open");
       assert.equal(props(input("账号名称")).value, "draft-user");
     }
     await settle(() => {
@@ -827,7 +864,8 @@ try {
         Object.assign(new Event("keydown", { cancelable: true }), { key: "Escape" }),
       );
     });
-    assert.equal(dialog(), undefined, "Ordinary Escape closes account management");
+    assert.ok(accountPage(), "Ordinary Escape keeps account settings open");
+    assert.equal(props(input("账号名称")).value, "draft-user");
   } else if (scenario === "late-response" || scenario === "late-failure") {
     await open();
     assert.equal(requests.length, 2, "Both initial status reads are pending");
@@ -844,7 +882,7 @@ try {
     assert.equal(props(trigger())["aria-label"], "登录账号");
     assertTriggerDetails("暂时无法读取账号状态");
     await open();
-    assert.ok(text(dialog()!).includes("暂时无法读取账号状态"));
+    assert.ok(text(accountPage()!).includes("暂时无法读取账号状态"));
     button("登录");
     button("创建账号");
     await settleCapabilities();
@@ -854,7 +892,7 @@ try {
   } else if (scenario === "cleanup") {
     await open();
     await close();
-    assert.equal(unsubscriptions, 1, "Closing unregisters the dialog's listener");
+    assert.equal(unsubscriptions, 1, "Leaving account settings unregisters the form listener");
     assert.equal(listeners.size, 1);
     await open();
     assert.equal(listeners.size, 2, "Reopening installs one fresh listener");
@@ -868,13 +906,13 @@ try {
       for (const request of requests) request.resolve(signedIn("late-after-unmount"));
     });
     assert.equal(container.childNodes.length, 0);
-    assert.equal(dialog(), undefined);
+    assert.equal(accountPage(), undefined);
   } else if (scenario === "github-unavailable") {
     await open();
     assert.equal(props(button("使用 GitHub 登录")).disabled, true);
     await settleCapabilities();
     assert.equal(props(button("使用 GitHub 登录")).disabled, true);
-    assert.ok(text(dialog()!).includes("此云服务尚未配置 GitHub 登录，请使用账号密码。"));
+    assert.ok(text(accountPage()!).includes("此云服务尚未配置 GitHub 登录，请使用账号密码。"));
     assert.equal(githubOrigin, "", "Unsupported GitHub sign-in never starts authentication");
   } else if (scenario === "link-unavailable") {
     await settle(() => emit(signedIn("local-user")));
@@ -882,8 +920,8 @@ try {
     assert.equal(props(button("绑定 GitHub 登录")).disabled, true);
     await settleCapabilities();
     assert.equal(props(button("绑定 GitHub 登录")).disabled, true);
-    assert.ok(text(dialog()!).includes("此云服务尚未配置 GitHub 登录，请使用账号密码。"));
-    assert.ok(text(dialog()!).includes("此操作只绑定登录身份"));
+    assert.ok(text(accountPage()!).includes("此云服务尚未配置 GitHub 登录，请使用账号密码。"));
+    assert.ok(text(accountPage()!).includes("此操作只绑定登录身份"));
   } else if (scenario === "capabilities-stale") {
     await open();
     await settleCapabilities();
@@ -930,14 +968,14 @@ try {
       true,
       "A late response from the old origin cannot enable GitHub for the new origin",
     );
-    assert.ok(text(dialog()!).includes("此云服务尚未配置 GitHub 登录，请使用账号密码。"));
-    assert.ok(text(dialog()!).includes("此云服务暂未开放注册。"));
+    assert.ok(text(accountPage()!).includes("此云服务尚未配置 GitHub 登录，请使用账号密码。"));
+    assert.ok(text(accountPage()!).includes("此云服务暂未开放注册。"));
     assert.equal(props(input("首次 GitHub 登录默认 Link")).disabled, true);
   } else if (scenario === "capabilities-retry") {
     await open();
     await settleCapabilities();
     assert.equal(props(button("使用 GitHub 登录")).disabled, true);
-    assert.ok(text(dialog()!).includes("无法检查云服务的登录方式，请检查地址和网络后重试。"));
+    assert.ok(text(accountPage()!).includes("无法检查云服务的登录方式，请检查地址和网络后重试。"));
     await change(input("账号名称"), "existing-user");
     await change(input("密码（至少 12 位）"), "existing-user-password");
     assert.equal(
@@ -953,13 +991,13 @@ try {
     await change(input("密码（至少 12 位）"), "existing-user-password");
     await change(input("确认密码"), "existing-user-password");
     assert.equal(props(button("注册")).disabled, false);
-    assert.ok(!text(dialog()!).includes("无法检查云服务的登录方式"));
+    assert.ok(!text(accountPage()!).includes("无法检查云服务的登录方式"));
   } else if (scenario === "registration-unavailable") {
     await open();
     await settleCapabilities();
     await change(input("账号名称"), "existing-user");
     await change(input("密码（至少 12 位）"), "existing-user-password");
-    assert.ok(text(dialog()!).includes("此云服务暂未开放注册。"));
+    assert.ok(text(accountPage()!).includes("此云服务暂未开放注册。"));
     assert.equal(props(button("创建账号")).disabled, true);
     assert.equal(props(button("登录")).disabled, false);
     await click(button("登录"));
@@ -970,7 +1008,7 @@ try {
     await settleCapabilities();
     await click(button("创建账号"));
     assert.equal(props(button("创建账号"))["aria-pressed"], true);
-    assert.ok(text(dialog()!).includes("3–64 位，以字母或数字开头"));
+    assert.ok(text(accountPage()!).includes("3–64 位，以字母或数字开头"));
     assert.equal(props(input("密码（至少 12 位）")).autoComplete, "new-password");
     assert.equal(props(input("确认密码")).autoComplete, "new-password");
     await change(input("账号名称"), "bad name!");
@@ -992,7 +1030,7 @@ try {
     await change(input("密码（至少 12 位）"), "registration-password");
     await change(input("确认密码"), "different-password");
     assert.equal(props(input("确认密码"))["aria-invalid"], true);
-    assert.ok(text(dialog()!).includes("两次输入的密码不一致。"));
+    assert.ok(text(accountPage()!).includes("两次输入的密码不一致。"));
     assert.equal(props(button("注册")).disabled, true, "Password confirmation must match");
     await submit();
     assert.equal(credentials.length, 0, "Enter cannot bypass registration validation");
@@ -1052,7 +1090,7 @@ try {
       "Two submissions in one tick send one registration request",
     );
     assert.equal(credentials[0]?.action, "register");
-    assert.ok(text(dialog()!).includes("正在提交账号信息…"));
+    assert.ok(text(accountPage()!).includes("正在提交账号信息…"));
     for (const label of ["云服务地址", "账号名称", "密码（至少 12 位）", "确认密码"]) {
       assert.equal(
         props(input(label)).disabled,
@@ -1078,8 +1116,8 @@ try {
   } else if (scenario === "github-registration-closed") {
     await open();
     await settleCapabilities();
-    assert.ok(text(dialog()!).includes("此云服务暂未开放注册。"));
-    assert.ok(text(dialog()!).includes("仅已关联 GitHub 的 CodeShell 账号可继续登录。"));
+    assert.ok(text(accountPage()!).includes("此云服务暂未开放注册。"));
+    assert.ok(text(accountPage()!).includes("仅已关联 GitHub 的 CodeShell 账号可继续登录。"));
     assert.equal(props(button("创建账号")).disabled, true);
     assert.equal(props(button("使用 GitHub 登录")).disabled, false);
     assert.equal(props(input("密码（至少 12 位）")).value, "");
@@ -1095,7 +1133,7 @@ try {
     await open();
     await settleCapabilities();
     assert.ok(
-      text(dialog()!).includes("首次授权会自动创建 CodeShell 账号，无需先注册或设置密码。"),
+      text(accountPage()!).includes("首次授权会自动创建 CodeShell 账号，无需先注册或设置密码。"),
     );
     assert.equal(props(input("账号名称")).value, "");
     assert.equal(props(input("密码（至少 12 位）")).value, "");
@@ -1114,8 +1152,8 @@ try {
     assert.deepEqual(credentialListCalls, [""], "The form checks saved global Links once");
     assert.equal(props(input("首次 GitHub 登录默认 Link")).checked, true);
     assert.equal(props(input("首次 GitHub 登录默认 Link")).disabled, false);
-    assert.ok(text(dialog()!).includes("本机尚未保存 GitHub Link 时默认勾选"));
-    assert.ok(text(dialog()!).includes("已有 Link 连接会保留，默认不重复授权"));
+    assert.ok(text(accountPage()!).includes("本机尚未保存 GitHub Link 时默认勾选"));
+    assert.ok(text(accountPage()!).includes("已有 Link 连接会保留，默认不重复授权"));
     if (scenario === "github-first-optout") {
       await check(input("首次 GitHub 登录默认 Link"), false);
       await change(input("云服务地址"), "https://another.example.test");
@@ -1130,11 +1168,11 @@ try {
     assert.equal(githubRequests[0]?.connectGitHub, scenario !== "github-first-optout");
     assertSignedIn("github-user");
     if (scenario !== "github-first-optout") {
-      assert.ok(text(dialog()!).includes("云账号已登录，正在连接 GitHub"));
+      assert.ok(text(accountPage()!).includes("云账号已登录，正在连接 GitHub"));
       await settle(() =>
         emit({ ...signedIn("github-user"), githubConnection: { state: "connected" } }),
       );
-      assert.ok(text(dialog()!).includes("GitHub 已连接。"));
+      assert.ok(text(accountPage()!).includes("GitHub 已连接。"));
     }
     await click(button("退出云账号"));
     await settleCapabilities();
@@ -1162,7 +1200,7 @@ try {
       assert.equal(props(button("使用 GitHub 登录")).disabled, false);
       assert.equal(props(input("首次 GitHub 登录默认 Link")).checked, false);
       assert.equal(props(input("首次 GitHub 登录默认 Link")).disabled, false);
-      assert.ok(text(dialog()!).includes("暂时无法确认已保存的 GitHub Link，已取消自动勾选"));
+      assert.ok(text(accountPage()!).includes("暂时无法确认已保存的 GitHub Link，已取消自动勾选"));
       await click(button("使用 GitHub 登录"));
       assert.equal(githubRequests[0]?.connectGitHub, false);
       assertSignedIn("github-user");
@@ -1170,7 +1208,7 @@ try {
       assert.equal(props(input("首次 GitHub 登录默认 Link")).disabled, true);
       assert.equal(props(input("首次 GitHub 登录默认 Link")).checked, false);
       assert.equal(props(button("使用 GitHub 登录")).disabled, false);
-      assert.ok(text(dialog()!).includes("此云服务暂不支持登录时连接 GitHub"));
+      assert.ok(text(accountPage()!).includes("此云服务暂不支持登录时连接 GitHub"));
       await click(button("使用 GitHub 登录"));
       assert.equal(githubRequests[0]?.connectGitHub, false);
       assertSignedIn("github-user");
@@ -1179,7 +1217,7 @@ try {
     } else {
       assert.equal(props(button("使用 GitHub 登录")).disabled, true);
       assert.equal(props(input("首次 GitHub 登录默认 Link")).disabled, true);
-      assert.ok(text(dialog()!).includes("正在检查已保存的 GitHub Link 连接"));
+      assert.ok(text(accountPage()!).includes("正在检查已保存的 GitHub Link 连接"));
       await change(input("账号名称"), "existing-user");
       await change(input("密码（至少 12 位）"), "existing-user-password");
       assert.equal(
@@ -1206,7 +1244,9 @@ try {
         });
         assert.equal(props(button("使用 GitHub 登录")).disabled, false);
         assert.equal(props(input("首次 GitHub 登录默认 Link")).checked, false);
-        assert.ok(text(dialog()!).includes("暂时无法确认已保存的 GitHub Link，已取消自动勾选"));
+        assert.ok(
+          text(accountPage()!).includes("暂时无法确认已保存的 GitHub Link，已取消自动勾选"),
+        );
         await settle(() => credentialListRequests[0]!.resolve([]));
         assert.equal(
           props(input("首次 GitHub 登录默认 Link")).checked,
@@ -1267,16 +1307,16 @@ try {
       "Existing Links require explicit opt-in",
     );
     assert.equal(props(input("首次 GitHub 登录默认 Link")).disabled, false);
-    assert.ok(text(dialog()!).includes("已有 Link 连接会保留，默认不重复授权"));
-    assert.ok(text(dialog()!).includes("本机尚未保存 GitHub Link 时默认勾选"));
-    assert.ok(text(dialog()!).includes("公开和私有仓库读写权限（repo）"));
-    assert.ok(text(dialog()!).includes("选择要使用的仓库和 Actions 权限"));
+    assert.ok(text(accountPage()!).includes("已有 Link 连接会保留，默认不重复授权"));
+    assert.ok(text(accountPage()!).includes("本机尚未保存 GitHub Link 时默认勾选"));
+    assert.ok(text(accountPage()!).includes("公开和私有仓库读写权限（repo）"));
+    assert.ok(text(accountPage()!).includes("选择要使用的仓库和 Actions 权限"));
     await check(input("首次 GitHub 登录默认 Link"), true);
     await click(button("使用 GitHub 登录"));
     assert.equal(githubRequests.length, 1);
     assert.equal(githubRequests[0]?.connectGitHub, true);
     assertSignedIn("github-user");
-    assert.ok(text(dialog()!).includes("云账号已登录，正在连接 GitHub"));
+    assert.ok(text(accountPage()!).includes("云账号已登录，正在连接 GitHub"));
     assert.equal(props(button("退出云账号")).disabled, true);
     assert.equal(props(button("绑定 GitHub 登录")).disabled, true);
     button("取消 GitHub 连接");
@@ -1292,14 +1332,16 @@ try {
     assertSignedIn("github-user");
     assert.equal(props(button("退出云账号")).disabled, false);
     if (connectionState === "connected") {
-      assert.ok(text(dialog()!).includes("GitHub 已连接。"));
+      assert.ok(text(accountPage()!).includes("GitHub 已连接。"));
     } else if (connectionState === "failed") {
-      assert.ok(text(dialog()!).includes("云账号已登录，但 GitHub 连接未完成。"));
-      assert.ok(text(dialog()!).includes("可稍后在「凭证 → Link」中重试。"));
-      assert.ok(!text(dialog()!).includes("GitHub 已连接。"));
+      assert.ok(text(accountPage()!).includes("云账号已登录，但 GitHub 连接未完成。"));
+      assert.ok(text(accountPage()!).includes("可稍后在「凭证 → Link」中重试。"));
+      assert.ok(!text(accountPage()!).includes("GitHub 已连接。"));
     } else {
-      assert.ok(text(dialog()!).includes("GitHub 数据连接步骤已跳过或取消。已有 Link 连接保留"));
-      assert.ok(!text(dialog()!).includes("GitHub 已连接。"));
+      assert.ok(
+        text(accountPage()!).includes("GitHub 数据连接步骤已跳过或取消。已有 Link 连接保留"),
+      );
+      assert.ok(!text(accountPage()!).includes("GitHub 已连接。"));
     }
     if (scenario === "github-connect-repeat") {
       await click(button("退出云账号"));
@@ -1308,7 +1350,9 @@ try {
       await click(button("使用 GitHub 登录"));
       assert.equal(githubRequests[1]?.connectGitHub, false);
       assertSignedIn("github-user");
-      assert.ok(text(dialog()!).includes("GitHub 数据连接步骤已跳过或取消。已有 Link 连接保留"));
+      assert.ok(
+        text(accountPage()!).includes("GitHub 数据连接步骤已跳过或取消。已有 Link 连接保留"),
+      );
       await click(button("退出云账号"));
       await settleCapabilities();
       assert.equal(props(input("首次 GitHub 登录默认 Link")).checked, false);
@@ -1319,7 +1363,7 @@ try {
         emit({ ...signedIn("github-user"), githubConnection: { state: "connected" } }),
       );
       assertSignedIn("github-user");
-      assert.ok(text(dialog()!).includes("GitHub 已连接。"));
+      assert.ok(text(accountPage()!).includes("GitHub 已连接。"));
     }
   } else if (
     ["github-login-only-default", "github-connect-optout"].includes(scenario) ||
@@ -1328,7 +1372,7 @@ try {
     await open();
     await settleCapabilities();
     assert.equal(props(input("首次 GitHub 登录默认 Link")).checked, false);
-    assert.ok(text(dialog()!).includes("已有 Link 连接会保留，默认不重复授权"));
+    assert.ok(text(accountPage()!).includes("已有 Link 连接会保留，默认不重复授权"));
     if (scenario === "github-connect-optout") {
       await check(input("首次 GitHub 登录默认 Link"), true);
       await check(input("首次 GitHub 登录默认 Link"), false);
@@ -1337,26 +1381,26 @@ try {
     assert.equal(githubRequests.length, 1);
     assert.equal(githubRequests[0]?.connectGitHub, false);
     assertSignedIn("github-user");
-    assert.ok(text(dialog()!).includes("GitHub 数据连接步骤已跳过或取消。已有 Link 连接保留"));
-    assert.ok(!text(dialog()!).includes("尚未连接 GitHub"));
-    assert.ok(!text(dialog()!).includes("GitHub 已连接。"));
+    assert.ok(text(accountPage()!).includes("GitHub 数据连接步骤已跳过或取消。已有 Link 连接保留"));
+    assert.ok(!text(accountPage()!).includes("尚未连接 GitHub"));
+    assert.ok(!text(accountPage()!).includes("GitHub 已连接。"));
     assert.equal(credentials.length, 0);
   } else if (["github-connect-unavailable", "github-connect-legacy"].includes(scenario)) {
     await open();
     await settleCapabilities();
     assert.equal(props(input("首次 GitHub 登录默认 Link")).checked, false);
     assert.equal(props(input("首次 GitHub 登录默认 Link")).disabled, true);
-    assert.ok(text(dialog()!).includes("此云服务暂不支持登录时连接 GitHub"));
+    assert.ok(text(accountPage()!).includes("此云服务暂不支持登录时连接 GitHub"));
     assert.equal(props(button("使用 GitHub 登录")).disabled, false);
     await click(button("使用 GitHub 登录"));
     assert.equal(githubRequests[0]?.connectGitHub, false);
     assertSignedIn("github-user");
-    assert.ok(!text(dialog()!).includes("GitHub 已连接。"));
+    assert.ok(!text(accountPage()!).includes("GitHub 已连接。"));
   } else if (scenario === "github-bind-only") {
     await settle(() => emit(signedIn("password-user")));
     await open();
     await settleCapabilities();
-    assert.ok(text(dialog()!).includes("此操作只绑定登录身份"));
+    assert.ok(text(accountPage()!).includes("此操作只绑定登录身份"));
     await click(button("绑定 GitHub 登录"));
     assert.equal(githubBindings, 1);
     assert.equal(
@@ -1366,7 +1410,7 @@ try {
     );
     assertSignedIn("password-user");
     assert.equal(current.githubConnection, undefined);
-    assert.ok(!text(dialog()!).includes("GitHub 已连接。"));
+    assert.ok(!text(accountPage()!).includes("GitHub 已连接。"));
   } else if (["github-connect-late-status", "github-connect-late-failure"].includes(scenario)) {
     await open();
     await settleCapabilities();
@@ -1377,15 +1421,15 @@ try {
     await settle(() =>
       emit({ ...signedIn("github-user"), githubConnection: { state: "connected" } }),
     );
-    assert.ok(text(dialog()!).includes("GitHub 已连接。"));
+    assert.ok(text(accountPage()!).includes("GitHub 已连接。"));
     await settle(() => {
       if (scenario === "github-connect-late-status") requests[0]!.resolve(stale);
       else requests[0]!.reject(new Error("Late IPC failure"));
     });
     assertSignedIn("github-user");
-    assert.ok(text(dialog()!).includes("GitHub 已连接。"));
-    assert.ok(!text(dialog()!).includes("正在连接 GitHub"));
-    assert.ok(!text(dialog()!).includes("Late IPC failure"));
+    assert.ok(text(accountPage()!).includes("GitHub 已连接。"));
+    assert.ok(!text(accountPage()!).includes("正在连接 GitHub"));
+    assert.ok(!text(accountPage()!).includes("Late IPC failure"));
     assert.equal(props(button("退出云账号")).disabled, false);
   } else {
     assert.fail(`Unknown fixture scenario: ${scenario}`);

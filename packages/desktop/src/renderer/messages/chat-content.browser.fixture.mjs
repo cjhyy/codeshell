@@ -113,7 +113,8 @@ const source = `
     saveUILanguage(props.lang);document.documentElement.classList.toggle('dark',props.mode==='dark');window.actions=[];
     window.expected={description:task(props.lang),complete:completeResult[props.lang],lost:translate(props.lang,'msg.agent.mayBeLost'),
       waiting:translate(props.lang,'msg.agent.waitingForResult'),
-      transcript:translate(props.lang,'msg.agent.transcript'),back:translate(props.lang,'msg.agent.back')};
+      transcript:translate(props.lang,'msg.agent.transcript'),back:translate(props.lang,'msg.agent.back'),
+      backToList:translate(props.lang,'msg.agent.backToList'),listTitle:translate(props.lang,'msg.agent.listTitle')};
     root.render(<I18nProvider key={++generation}><Fixture {...props}/></I18nProvider>);
   };
 `;
@@ -182,6 +183,12 @@ async function settle(page) {
   );
 }
 async function fits(page, label) {
+  await page.mouse.move(2, 2);
+  await page.waitForFunction(() =>
+    [...document.querySelectorAll(".cs-process-heading")].every(
+      (node) => getComputedStyle(node).backgroundColor === "rgba(0, 0, 0, 0)",
+    ),
+  );
   const geometry = await page.locator("#chat-content-fixture").evaluate((node) => ({
     width: node.clientWidth,
     scrollWidth: node.scrollWidth,
@@ -194,15 +201,25 @@ async function fits(page, label) {
   );
   for (const card of await page
     .locator(
-      ".cs-agent-card,.cs-agent-group-card,.cs-thinking-heading,.cs-thinking-body,.cs-process-heading",
+      ".cs-agent-card,.cs-agent-group-card,.cs-thinking-heading,.cs-thinking-body,.cs-process-surface",
     )
     .all()) {
     assert.ok(
       await card.evaluate((node) => {
         const style = getComputedStyle(node);
-        return style.backgroundColor !== "rgba(0, 0, 0, 0)" && parseFloat(style.borderRadius) > 0;
+        const painted = node.classList.contains("cs-process-surface")
+          ? style.backgroundColor.startsWith("rgb(")
+          : style.backgroundColor !== "rgba(0, 0, 0, 0)";
+        return painted && parseFloat(style.borderRadius) > 0;
       }),
       `${label}: imported reading-surface CSS is applied`,
+    );
+  }
+  for (const content of await page.locator(".cs-process-heading,.cs-process-content").all()) {
+    assert.equal(
+      await content.evaluate((node) => getComputedStyle(node).backgroundColor),
+      "rgba(0, 0, 0, 0)",
+      `${label}: activity heading and content share their surface without nested paint`,
     );
   }
   reports.push({ label, geometry });
@@ -235,10 +252,15 @@ async function keyboardToggle(header, label) {
   await header.focus();
   await header.press("Enter");
   assert.ok(
-    await header.evaluate(
-      (node) =>
-        document.activeElement === node && parseFloat(getComputedStyle(node).outlineWidth) >= 2,
-    ),
+    await header.evaluate((node) => {
+      const style = getComputedStyle(node);
+      return (
+        document.activeElement === node &&
+        node.matches(":focus-visible") &&
+        style.outlineStyle !== "none" &&
+        parseFloat(style.outlineWidth) >= (node.matches(".cs-process-heading") ? 1 : 2)
+      );
+    }),
     `${label}: keyboard focus remains visible`,
   );
 }
@@ -304,11 +326,39 @@ async function navigateTranscript(page, expected, label, expanded) {
   );
   assert.ok(actions.some((action) => action[0] === "transcript" && action[1] === "agent-main"));
   await fits(page, label + "/full transcript");
+  assert.equal(await page.getByRole("button", { name: expected.back, exact: true }).count(), 0);
+  const backToList = page.getByRole("button", { name: expected.backToList, exact: true });
+  assert.equal(await backToList.getAttribute("data-subagent-action"), "back-to-list");
+  await backToList.click();
+  const list = page.locator("[data-subagent-list]");
+  await list.waitFor({ state: "visible" });
+  assert.equal(await list.getAttribute("aria-label"), expected.listTitle);
+  const child = list.locator('[data-subagent-list-id="agent-main"]');
+  await child.getByText("Schema review transcript", { exact: true }).waitFor();
+  assert.equal(await list.locator("[data-subagent-list-id]").count(), 1);
+  assert.equal(await child.isEnabled(), true);
+  assert.equal(
+    await page
+      .getByText("Full child transcript: schema and callers verified.", { exact: true })
+      .count(),
+    0,
+    label + ": returning to the child list leaves the transcript detail",
+  );
+  assert.equal(await backToList.count(), 0);
+  await fits(page, label + "/child list");
+  assert.equal(
+    await page
+      .getByRole("button", { name: expected.back, exact: true })
+      .getAttribute("data-subagent-action"),
+    "back-to-parent",
+  );
   await page.getByRole("button", { name: expected.back, exact: true }).click();
   const heading = page.locator('[aria-controls="agent-body-agent-main"]');
   await heading.waitFor();
   assert.equal(await heading.getAttribute("aria-expanded"), "false");
   assert.equal(await page.locator("#agent-body-agent-main").count(), 0);
+  assert.equal(await list.count(), 0);
+  await transcriptActionFits(card, expected, label + "/returned parent");
   directNavigationCases++;
 }
 
@@ -490,10 +540,15 @@ try {
           await settle(page);
           assert.equal(
             await processHeader.getAttribute("aria-expanded"),
-            "false",
-            prefix + ": own completed turn collapses",
+            "true",
+            prefix + ": completion preserves the current expansion",
           );
+          await keyboardToggle(processHeader, prefix + "/process close");
+          assert.equal(await processHeader.getAttribute("aria-expanded"), "false");
+          assert.equal(await process.locator('[data-message-kind="tool"]').count(), 0);
           await keyboardToggle(processHeader, prefix + "/process open");
+          assert.equal(await processHeader.getAttribute("aria-expanded"), "true");
+          assert.equal(await process.locator('[data-message-kind="tool"]').count(), 2);
           await page.evaluate(() => window.bumpEpoch());
           await settle(page);
           assert.equal(

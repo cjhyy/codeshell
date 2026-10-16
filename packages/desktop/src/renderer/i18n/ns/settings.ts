@@ -91,6 +91,7 @@ export const settingsNs = {
         githubCreatesAccount: "首次授权会自动创建 CodeShell 账号，无需先注册或设置密码。",
         githubExistingOnly: "此服务已关闭注册；仅已关联 GitHub 的 CodeShell 账号可继续登录。",
         passwordMethod: "账号密码登录方式",
+        loginMethods: "登录方式",
         passwordLogin: "密码登录",
         createAccount: "创建账号",
         usernameHelp: "3–64 位，以字母或数字开头，可包含字母、数字、点、下划线和短横线。",
@@ -1262,6 +1263,7 @@ export const settingsNs = {
         githubExistingOnly:
           "Registration is closed. Only CodeShell accounts already linked to GitHub can sign in.",
         passwordMethod: "Username and password sign-in method",
+        loginMethods: "Sign-in methods",
         passwordLogin: "Password sign-in",
         createAccount: "Create account",
         usernameHelp:

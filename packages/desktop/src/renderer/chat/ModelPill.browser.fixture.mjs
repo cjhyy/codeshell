@@ -35,12 +35,17 @@ const catalog=[{id:'short',displayName:'Owned provider',tag:'text',adapterKind:'
  {id:'long',displayName:longProvider,tag:'text',adapterKind:'openai',description:'',defaultBaseUrl:'https://owned.invalid/v1',needsKey:false,modelPresets:[{value:'long-model',label:longLabel}]}];
 const models=catalogModelOptions(Array.from({length:30},(_,i)=>({id:'model-'+i,catalogId:i===29?'long':'short',tag:'text',model:i===29?'long-model':'Model '+i})),catalog);
 window.models=models;
+window.groupedModels=[
+ {key:'a-one',provider:'Provider A',label:'Shared name',supportsVision:true},
+ {key:'b-one',provider:'Provider B',label:'Shared name'},
+ {key:'a-two',provider:'Provider A',label:'Second A'},
+ {key:'b-two',provider:'Provider B',label:'Second B'}];
 function Composer({index,variant}){
  const [state,patch]=React.useReducer((old,next)=>({...old,...next}),{models,active:'model-0',busy:false,draft:''});
  React.useLayoutEffect(()=>{window.composers[index]=patch;return()=>{delete window.composers[index]}},[index]);
  return <ChatView variant={variant} messages={[]} onSend={noop} onStop={noop} busy={state.busy}
  activeProjectId="project" permissionMode="plan" onPermissionChange={noop} goalEnabled={false} onGoalToggle={noop}
- modelOptions={state.models} activeModelKey={state.active} onModelChange={option=>{window.calls.push({index,key:option.key,same:models.includes(option)});patch({active:option.key})}}
+ modelOptions={state.models} activeModelKey={state.active} onModelChange={option=>{window.calls.push({index,key:option.key,same:models.includes(option)||window.groupedModels.includes(option)});patch({active:option.key})}}
  contextTokens={0} projects={[]} onSelectProject={noop} onAddProject={noop} configurationTarget={{projectId:'project'}} configurationAvailable
  conversationRoot="/owned" conversationRootId="root" draft={state.draft} onDraftChange={draft=>patch({draft})} attachments={[]} onAttachmentsChange={noop}/>;
 }
@@ -375,6 +380,60 @@ try {
         assert.equal(await page.evaluate(() => window.calls.length), 2);
         await record("keyboard", { lang });
       }
+  if (!onlyCase || onlyCase === "grouping") {
+    await boot(1280, 700, "en");
+    await page.evaluate(() =>
+      window.composers[0]({ models: window.groupedModels, active: "a-one" }),
+    );
+    await opened(0, "a-one");
+    const groups = menu().locator('[role="group"][data-model-provider]');
+    assert.deepEqual(
+      await groups.evaluateAll((nodes) => nodes.map((node) => node.dataset.modelProvider)),
+      ["Provider A", "Provider B"],
+    );
+    assert.deepEqual(await groups.locator("[data-model-provider-label]").allTextContents(), [
+      "Provider A",
+      "Provider B",
+    ]);
+    assert.deepEqual(
+      await menu()
+        .getByRole("option")
+        .evaluateAll((nodes) => nodes.map((node) => node.dataset.modelKey)),
+      ["a-one", "a-two", "b-one", "b-two"],
+    );
+    assert.equal(await option("a-one").locator("[data-model-label]").textContent(), "Shared name");
+    assert.equal(await option("b-one").locator("[data-model-label]").textContent(), "Shared name");
+    assert.equal(
+      await option("a-one").getByLabel("Supports image input", { exact: true }).count(),
+      1,
+    );
+    assert.ok(await option("a-one").locator('svg[aria-hidden="true"]').count());
+    for (const key of ["a-two", "b-one", "b-two"]) {
+      await page.keyboard.press("ArrowDown");
+      await selectedFocus(key);
+    }
+    assert.equal(await option("a-one").getAttribute("aria-selected"), "true");
+    await page.keyboard.press("Home");
+    await selectedFocus("a-one");
+    await page.keyboard.press("End");
+    await selectedFocus("b-two");
+    await page.keyboard.press("ArrowUp");
+    await selectedFocus("b-one");
+    await page.keyboard.press("Enter");
+    await closed();
+    assert.deepEqual(await page.evaluate(() => window.calls), [
+      { index: 0, key: "b-one", same: true },
+    ]);
+    await opened(0, "b-one");
+    await page.keyboard.press("Home");
+    await page.keyboard.press("Enter");
+    await closed();
+    assert.deepEqual(await page.evaluate(() => window.calls), [
+      { index: 0, key: "b-one", same: true },
+      { index: 0, key: "a-one", same: true },
+    ]);
+    await record("grouped-order-and-source-identity");
+  }
   if (!onlyCase || onlyCase === "long")
     for (const [width, height] of [
       [1280, 700],
@@ -389,20 +448,21 @@ try {
         await option("model-29").scrollIntoViewIfNeeded();
         const full = await option("model-29").evaluate((node) => {
           const list = node.closest("[role=listbox]"),
-            spans = node.querySelectorAll("span");
+            provider = node.closest("[role=group]").querySelector("[data-model-provider-label]"),
+            label = node.querySelector("[data-model-label]");
           return {
             popup: list.getBoundingClientRect().toJSON(),
             client: list.clientWidth,
             scroll: list.scrollWidth,
             provider: {
-              text: spans[0].textContent,
-              width: spans[0].clientWidth,
-              scroll: spans[0].scrollWidth,
+              text: provider.textContent,
+              width: provider.clientWidth,
+              scroll: provider.scrollWidth,
             },
             label: {
-              text: spans[1].textContent,
-              width: spans[1].clientWidth,
-              scroll: spans[1].scrollWidth,
+              text: label.textContent,
+              width: label.clientWidth,
+              scroll: label.scrollWidth,
             },
           };
         });
@@ -428,13 +488,23 @@ try {
         await page.keyboard.press("Home");
         await page.keyboard.press("End");
         await frames(page);
+        await option("model-29").evaluate((node) => {
+          const list = node.closest("[role=listbox]"),
+            provider = node.closest("[role=group]").querySelector("[data-model-provider-label]");
+          list.scrollTop += provider.getBoundingClientRect().top - list.getBoundingClientRect().top;
+        });
+        await frames(page);
         const seen = [new Set(), new Set()];
         let needed;
         for (let step = 0; step < 16; step++) {
           const glyphs = await option("model-29").evaluate((node) => {
             const list = node.closest("[role=listbox]"),
               clip = list.getBoundingClientRect();
-            return [...node.querySelectorAll("span")].map((span) => {
+            const provider = node
+                .closest("[role=group]")
+                .querySelector("[data-model-provider-label]"),
+              label = node.querySelector("[data-model-label]");
+            return [provider, label].map((span) => {
               const text = span.firstChild,
                 visible = [],
                 required = [];

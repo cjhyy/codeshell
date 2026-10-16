@@ -1,10 +1,11 @@
-import React, { useId, useLayoutEffect, useRef, useState } from "react";
+import React, { useId, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
-import { ChevronDown, Zap, Image } from "lucide-react";
+import { Check, ChevronDown, Zap, Image } from "lucide-react";
 import { useAnchoredPopover } from "./useAnchoredPopover";
 import { useT } from "../i18n/I18nProvider";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import { groupModelOptions } from "./modelPickerPresentation";
 
 /**
  * One row in the model dropdown.
@@ -13,7 +14,7 @@ import { cn } from "@/lib/utils";
  * settings.json under `models[].key` — same value as the top-level
  * `activeKey` field that code-shell uses to pick the active model.
  * `provider` is just `providerKey` from the same entry; we keep it
- * for UI grouping (left chip in the dropdown).
+ * for UI grouping (one heading per provider).
  */
 export interface ModelOption {
   key: string;
@@ -49,6 +50,8 @@ export function ModelPill({
   const { t } = useT();
   const [open, setOpen] = useState(false);
   const [focusedKey, setFocusedKey] = useState<string | null>(null);
+  const groups = useMemo(() => groupModelOptions(options), [options]);
+  const displayedOptions = useMemo(() => groups.flatMap((group) => group.options), [groups]);
   const popupId = useId();
   const ref = useRef<HTMLDivElement>(null);
   const anchorRef = useRef<HTMLButtonElement>(null);
@@ -109,9 +112,9 @@ export function ModelPill({
     )
       return;
     const next =
-      options.find((option) => option.key === focusedKey) ??
-      options.find((option) => option.key === activeKey) ??
-      options[0];
+      displayedOptions.find((option) => option.key === focusedKey) ??
+      displayedOptions.find((option) => option.key === activeKey) ??
+      displayedOptions[0];
     const nextKey = next?.key ?? null;
     if (nextKey !== focusedKey) setFocusedKey(nextKey);
     const target = (nextKey && optionRefs.current.get(nextKey)) || list;
@@ -128,15 +131,15 @@ export function ModelPill({
       if (box.top < top - 1 || box.height > list.clientHeight) list.scrollTop += box.top - top;
       else if (box.bottom > bottom + 1) list.scrollTop += box.bottom - bottom;
     }
-  }, [activeKey, focusedKey, isOpen, options, popoverStyle]);
+  }, [activeKey, focusedKey, isOpen, displayedOptions, popoverStyle]);
 
   const openMenu = (last = false) => {
     if (disabled) return;
     popupOwned.current = true;
     focusedLayout.current = "";
     setFocusedKey(
-      options.find((option) => option.key === activeKey)?.key ??
-        options[last ? options.length - 1 : 0]?.key ??
+      displayedOptions.find((option) => option.key === activeKey)?.key ??
+        displayedOptions[last ? displayedOptions.length - 1 : 0]?.key ??
         null,
     );
     setOpen(true);
@@ -148,7 +151,7 @@ export function ModelPill({
     popupOwned.current = false;
     setOpen(false);
     if (restore && owned && anchorRef.current?.isConnected && !anchorRef.current.disabled)
-      anchorRef.current.focus();
+      anchorRef.current.focus({ preventScroll: true });
   };
   const composing = (event: React.KeyboardEvent) => {
     if (!event.nativeEvent.isComposing && event.keyCode !== 229) return false;
@@ -167,17 +170,17 @@ export function ModelPill({
       closeMenu(true);
     } else if (["ArrowDown", "ArrowUp", "Home", "End"].includes(event.key)) {
       event.preventDefault();
-      if (!options.length) return;
-      const index = options.findIndex((option) => option.key === focusedKey);
+      if (!displayedOptions.length) return;
+      const index = displayedOptions.findIndex((option) => option.key === focusedKey);
       const next =
         event.key === "Home"
           ? 0
           : event.key === "End"
-            ? options.length - 1
+            ? displayedOptions.length - 1
             : event.key === "ArrowDown"
-              ? Math.min(index + 1, options.length - 1)
+              ? Math.min(index + 1, displayedOptions.length - 1)
               : Math.max(index - 1, 0);
-      setFocusedKey(options[next].key);
+      setFocusedKey(displayedOptions[next].key);
     }
   };
 
@@ -188,7 +191,7 @@ export function ModelPill({
       id={popupId}
       ref={popoverRef}
       style={popoverStyle}
-      className="cs-popup-surface max-h-[min(20rem,calc(100vh-20px))] w-72 max-w-[calc(100vw-20px)] overflow-y-auto rounded-md p-1"
+      className="cs-popup-surface max-h-[min(20rem,calc(100vh-20px))] w-72 max-w-[calc(100vw-20px)] overflow-y-auto rounded-xl p-1.5"
       role="listbox"
       aria-label={t("chat.model.select")}
       tabIndex={-1}
@@ -197,45 +200,70 @@ export function ModelPill({
       {options.length === 0 ? (
         <li className="px-2 py-1.5 text-sm text-muted-foreground">{t("chat.model.noModels")}</li>
       ) : (
-        options.map((o) => (
-          <li key={o.key} role="none">
-            <Button
-              ref={(node) => {
-                if (node) optionRefs.current.set(o.key, node);
-                else optionRefs.current.delete(o.key);
-              }}
-              type="button"
-              variant="ghost"
-              size="sm"
-              role="option"
-              aria-selected={o.key === activeKey}
-              tabIndex={o.key === focusedKey ? 0 : -1}
-              data-model-key={o.key}
-              className={cn(
-                "cs-menu-item h-auto w-full min-w-0 flex-col items-start justify-start gap-1 whitespace-normal px-2 py-1.5 text-sm font-normal",
-                o.key === activeKey && "bg-accent",
-              )}
-              onFocus={() => setFocusedKey(o.key)}
-              onClick={() => {
-                if (disabled) return;
-                onSelect(o);
-                closeMenu(true);
-              }}
+        groups.map((group, index) => (
+          <li
+            key={group.provider}
+            role="group"
+            aria-labelledby={`${popupId}-provider-${index}`}
+            data-model-provider={group.provider}
+            className="min-w-0 border-border/60 pb-0.5 [&+&]:border-t [&+&]:pt-0.5"
+          >
+            <div
+              id={`${popupId}-provider-${index}`}
+              data-model-provider-label
+              className="px-2.5 py-1.5 text-[11px] font-medium leading-4 text-muted-foreground [overflow-wrap:anywhere]"
             >
-              <span className="max-w-full rounded bg-muted px-1.5 py-0.5 text-left text-xs whitespace-normal text-muted-foreground [overflow-wrap:anywhere]">
-                {o.provider}
-              </span>
-              <span className="w-full min-w-0 text-left whitespace-pre-wrap [overflow-wrap:anywhere]">
-                {o.label}
-                {o.supportsVision && (
-                  <Image
-                    size={11}
-                    aria-label={t("chat.model.visionSupported")}
-                    className="ml-1 inline-block align-middle opacity-60"
-                  />
-                )}
-              </span>
-            </Button>
+              {group.provider}
+            </div>
+            <ul role="none" className="space-y-0.5">
+              {group.options.map((o) => (
+                <li key={o.key} role="none">
+                  <Button
+                    ref={(node) => {
+                      if (node) optionRefs.current.set(o.key, node);
+                      else optionRefs.current.delete(o.key);
+                    }}
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    role="option"
+                    aria-selected={o.key === activeKey}
+                    tabIndex={o.key === focusedKey ? 0 : -1}
+                    data-model-key={o.key}
+                    title={`${o.provider} · ${o.label}`}
+                    className={cn(
+                      "cs-menu-item h-auto min-h-8 w-full min-w-0 justify-start gap-2 rounded-lg whitespace-normal px-2.5 py-1.5 text-[13px] font-normal leading-5",
+                      o.key === activeKey && "bg-primary/8 text-foreground",
+                    )}
+                    onFocus={() => setFocusedKey(o.key)}
+                    onClick={() => {
+                      if (disabled) return;
+                      onSelect(o);
+                      closeMenu(true);
+                    }}
+                  >
+                    <span
+                      data-model-label
+                      className="min-w-0 flex-1 text-left whitespace-pre-wrap [overflow-wrap:anywhere]"
+                    >
+                      {o.label}
+                    </span>
+                    <span className="flex shrink-0 items-center gap-2">
+                      {o.supportsVision && (
+                        <Image
+                          size={13}
+                          aria-label={t("chat.model.visionSupported")}
+                          className="text-muted-foreground"
+                        />
+                      )}
+                      <span className="flex size-3.5 items-center justify-center" aria-hidden>
+                        {o.key === activeKey && <Check size={14} className="text-primary" />}
+                      </span>
+                    </span>
+                  </Button>
+                </li>
+              ))}
+            </ul>
           </li>
         ))
       )}

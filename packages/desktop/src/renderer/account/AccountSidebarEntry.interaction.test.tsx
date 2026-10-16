@@ -24,12 +24,14 @@ const scenarios = {
   "profile-stale": "ignores a late profile response after switching accounts",
   "profile-unavailable": "disables profile editing for services without the capability",
   authentication: "opens account management and keeps login, registration, and logout in sync",
-  github: "offers GitHub sign-in and cancellation from the sidebar",
-  composition: "preserves account drafts when Escape cancels Chinese input composition",
+  github: "offers GitHub sign-in and cancellation from account settings",
+  composition:
+    "preserves account settings and drafts when Escape cancels Chinese input composition",
   "late-response": "keeps live account events when the initial status response arrives late",
   "late-failure": "keeps live account events when the initial status request fails late",
   unavailable: "keeps account management usable when account status cannot be read",
-  cleanup: "unsubscribes on dialog close and unmount while status requests are still pending",
+  cleanup:
+    "unsubscribes when leaving settings or unmounting while status requests are still pending",
   "github-unavailable":
     "explains and disables GitHub sign-in when the server has not configured it",
   "link-unavailable": "disables GitHub linking when the signed-in server has not configured it",

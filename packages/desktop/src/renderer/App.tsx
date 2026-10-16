@@ -2280,6 +2280,12 @@ function App() {
                 });
               }}
               onOpenSettingsPage={() => navigateFromSidebar(() => setViewMode("settings_page"))}
+              onOpenAccountSettings={() =>
+                navigateFromSidebar(() => {
+                  setSettingsInitialModule("account");
+                  setViewMode("settings_page");
+                })
+              }
               onOpenPetPage={() => navigateFromSidebar(openPetPage)}
               onTogglePetWidget={togglePetWidget}
               onLoadMoreSessionHistory={() =>

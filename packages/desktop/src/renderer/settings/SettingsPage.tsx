@@ -38,6 +38,7 @@ import { MemorySection } from "./MemorySection";
 import { McpSection } from "./McpSection";
 import { GeneralSection } from "./GeneralSection";
 import { ComputerUseSettings } from "./ComputerUseSettings";
+import { CloudAccountSettings } from "./CloudAccountSettings";
 import { ExtensionsPage } from "../extensions/ExtensionsPage";
 import { ProjectInstructionsSection } from "../project-config/ProjectInstructionsSection";
 import { ProjectOverviewSection } from "./ProjectOverviewSection";
@@ -75,6 +76,7 @@ import { NotificationHistory } from "../ui/NotificationHistory";
 
 export type SettingsModuleId =
   | "project-overview"
+  | "account"
   | "general"
   | "computer-use"
   | "appearance"
@@ -243,6 +245,7 @@ function buildModuleGroups(t: TFunction): ModuleGroup[] {
           Icon: SettingsIcon,
           scopes: ["user", "project"],
         },
+        { id: "account", label: t("settingsX.cloudAccount.manage"), Icon: User },
         { id: "appearance", label: t("settingsX.page.appearance"), Icon: Sun },
         {
           id: "config",
@@ -416,6 +419,7 @@ export function SettingsPage({
   const moduleHeadingRef = useRef<HTMLHeadingElement>(null);
   const contentRef = useRef<HTMLElement>(null);
   const focusModuleHeading = useRef<HTMLElement | null>(null);
+  const focusInitialModuleHeading = useRef(!!initialModule);
   const restoreNavigationAfterPopupClose = useSettingsNavigationFocus(
     desktopNavigationRef,
     narrowNavigationRef,
@@ -469,6 +473,12 @@ export function SettingsPage({
     // A newly selected module starts at its heading, even when the previous
     // module was scrolled far down or the window is short.
     if (contentRef.current) contentRef.current.scrollTop = 0;
+    // Explicit links replace the surface that owned focus (e.g. the account
+    // menu). Start keyboard navigation at the destination, once per visit.
+    if (focusInitialModuleHeading.current) {
+      focusInitialModuleHeading.current = false;
+      moduleHeadingRef.current?.focus({ preventScroll: true });
+    }
   }, [contentTargetKey]);
 
   useEffect(() => {
@@ -767,6 +777,7 @@ export function SettingsPage({
                 />
               )}
               {active === "computer-use" && <ComputerUseSettings />}
+              {active === "account" && <CloudAccountSettings />}
               {active === "appearance" && <AppearanceSection />}
               {active === "config" && (
                 <>
