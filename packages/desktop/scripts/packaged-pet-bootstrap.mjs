@@ -8,6 +8,7 @@ import https from "node:https";
 import { syncBuiltinESMExports } from "node:module";
 import { isAbsolute, join, relative } from "node:path";
 import { installLocalNetworkGuard } from "../../../scripts/runtime-cost-smoke-isolation.mjs";
+import { installPackagedChromiumGuard } from "./packaged-chromium-guard.mjs";
 
 const hash = (value) => createHash("sha256").update(value).digest("hex");
 const root = realpathSync(process.env.CODESHELL_OFFICIAL_FIXTURE_ROOT);
@@ -87,20 +88,7 @@ if (role === "Main") {
   app.commandLine.removeSwitch("use-mock-keychain");
   app.commandLine.appendSwitch("disable-background-networking");
   app.setPath("userData", process.env.CODESHELL_OFFICIAL_USER_DATA);
-  const seenSessions = new WeakSet();
-  app.on("web-contents-created", (_event, contents) => {
-    const session = contents.session;
-    if (seenSessions.has(session)) return;
-    seenSessions.add(session);
-    session.webRequest.onBeforeRequest({ urls: ["<all_urls>"] }, (details, callback) => {
-      const url = new URL(details.url);
-      const allowed =
-        ["file:", "data:", "blob:", "devtools:"].includes(url.protocol) ||
-        url.protocol === "codeshell-panel:" ||
-        url.origin === origin;
-      callback({ cancel: !allowed });
-    });
-  });
+  installPackagedChromiumGuard(app, origin);
   for (const name of ["isEncryptionAvailable", "encryptString", "decryptString"]) {
     const original = safeStorage[name];
     safeStorage[name] = (...args) => {
