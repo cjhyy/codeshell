@@ -57,6 +57,7 @@ export function useHubController({
     () => sessionIdFromSearch(window.location.search) ?? newSessionId(),
   );
   const [chat, setChat] = React.useState<ChatState>(initialChatState());
+  const [loadingSession, setLoadingSession] = React.useState<string | null>(null);
   const [approvalState, dispatchApprovals] = React.useReducer(reduceApprovals, {} as ApprovalState);
   const [pendingDecisions, setPendingDecisions] = React.useState<Record<string, boolean>>({});
   const [draft, setDraft] = React.useState("");
@@ -97,6 +98,7 @@ export function useHubController({
     >(),
   );
   const runPending = React.useRef(new Set<string>());
+  const cancelPending = React.useRef(new Set<string>());
   const liveRuns = React.useRef(new Set<string>());
   const decisionPending = React.useRef(new Set<string>());
   const approvalRevision = React.useRef(0);
@@ -243,6 +245,7 @@ export function useHubController({
         bytes: 0,
       };
       loadingTranscript.current = load;
+      setLoadingSession(sessionId);
       try {
         const detail = await client.sessionDetail(sessionId, true);
         if (
@@ -254,8 +257,8 @@ export function useHubController({
         let latestRunning = load.running ?? detail.data.running;
         if (latestRunning) liveRuns.current.add(sessionId);
         else if (latestRunning === false) liveRuns.current.delete(sessionId);
-        const snapshot = chatFromSnapshot(detail.data, load.events);
-        let restored = snapshot.chat;
+        let durableChat: ChatState | undefined;
+        let durableOutputCursor: string | null = null;
         let durableRecovered = false;
         let durableFailed = false;
         try {
@@ -273,12 +276,11 @@ export function useHubController({
               activeIdRef.current === sessionId,
           );
           if (durable) {
-            restored = durable.chat;
-            activeOutputCursor.current = durable.outputCursor;
+            durableChat = durable.chat;
+            durableOutputCursor = durable.outputCursor;
             durableRecovered = true;
-          } else activeOutputCursor.current = null;
+          }
         } catch (cause) {
-          activeOutputCursor.current = null;
           // Older peers do not implement the v2 query; their existing snapshot
           // contract remains in force. Known v2 failures retain the notice.
           durableFailed = !(
@@ -295,6 +297,11 @@ export function useHubController({
           activeIdRef.current !== sessionId
         )
           return;
+        // Live notifications keep arriving while the durable query is pending.
+        // Fold the final buffer only after that asynchronous recovery completes.
+        const snapshot = chatFromSnapshot(detail.data, load.events);
+        const restored = durableChat ?? snapshot.chat;
+        activeOutputCursor.current = durableOutputCursor;
         latestRunning = load.running ?? detail.data.running;
         outputRecoveryBlocked.current = durableFailed;
         if (!durableFailed) activeStreamCursor.current = snapshot.cursor ?? null;
@@ -313,9 +320,13 @@ export function useHubController({
           restored.run = "idle";
         setChat((current) => (durableFailed ? current : restored));
       } catch (cause) {
-        if (activeIdRef.current === sessionId) reportError(cause);
+        if (loadingTranscript.current === load && activeIdRef.current === sessionId)
+          reportError(cause);
       } finally {
-        if (loadingTranscript.current === load) loadingTranscript.current = null;
+        if (loadingTranscript.current === load) {
+          loadingTranscript.current = null;
+          if (mounted.current) setLoadingSession(null);
+        }
       }
     },
     [reportError],
@@ -562,6 +573,7 @@ export function useHubController({
     activeOutputCursor.current = null;
     outputRecoveryBlocked.current = false;
     loadingTranscript.current = null;
+    setLoadingSession(null);
     setActiveId(id);
     syncDraft(id);
     setChat(initialChatState());
@@ -576,6 +588,9 @@ export function useHubController({
     if ((!text && !currentDraft.files.length) || !client || connection !== "open" || uploading)
       return false;
     const sessionId = activeIdRef.current;
+    // A newly selected/reconnected session may still be running on the Host.
+    // Its pending snapshot would also replace any optimistic user message.
+    if (loadingTranscript.current?.sessionId === sessionId) return false;
     if (
       runPending.current.has(sessionId) ||
       liveRuns.current.has(sessionId) ||
@@ -685,7 +700,14 @@ export function useHubController({
   };
 
   const stop = (): void => {
-    if (activeId) void clientRef.current?.cancel(activeId).catch(reportError);
+    const sessionId = activeIdRef.current;
+    const client = clientRef.current;
+    if (!client || connection !== "open" || cancelPending.current.has(sessionId)) return;
+    cancelPending.current.add(sessionId);
+    void client
+      .cancel(sessionId)
+      .catch(reportError)
+      .finally(() => cancelPending.current.delete(sessionId));
   };
 
   const addFiles = async (selected: FileList | null): Promise<void> => {
@@ -748,6 +770,7 @@ export function useHubController({
     connection,
     session,
     activeId,
+    loading: loadingSession === activeId,
     chat,
     sessions,
     workspaceCwd,

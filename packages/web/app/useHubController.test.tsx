@@ -73,6 +73,87 @@ function environment() {
   }
 }
 
+test("restoring a session gates sends and an older failed restore cannot replace a later success", async () => {
+  environment();
+  const pending: Array<{ id: number; method: string; params: Record<string, unknown> }> = [];
+  Socket.respond = (request) => {
+    if (request.params.type === "session_detail") {
+      pending.push(request);
+      return;
+    }
+    if (request.params.type === "output_journal")
+      return {
+        id: request.id,
+        error: { code: -32602, message: "Unknown query type: output_journal" },
+      };
+    return {
+      id: request.id,
+      result: {
+        type: "sessions",
+        data: [
+          {
+            sessionId: "saved",
+            cwd: "/owned",
+            startedAt: 1,
+            model: "owned",
+            status: "idle",
+            turnCount: 1,
+          },
+        ],
+      },
+    };
+  };
+  const hook = await renderHook(() => useHubController({}));
+  cleanups.push(() => hook.unmount());
+  const socket = Socket.instances[0];
+  await act(async () => {
+    socket.readyState = 1;
+    socket.onopen?.();
+    await flushMicrotasks();
+    void hook.result.current.selectSession("saved");
+    hook.result.current.setDraft("Draft while restoring");
+    expect(hook.result.current.send()).toBe(false);
+    await flushMicrotasks();
+  });
+  expect(hook.result.current.loading).toBe(true);
+  expect(hook.result.current.draft).toBe("Draft while restoring");
+  await act(async () => {
+    void hook.result.current.selectSession("saved");
+    await flushMicrotasks();
+    socket.onmessage?.({
+      data: JSON.stringify({
+        id: pending[1].id,
+        result: {
+          type: "session_detail",
+          data: {
+            state: {},
+            transcript: [{ message: { role: "assistant", content: "Latest saved response" } }],
+            running: false,
+          },
+        },
+      }),
+    });
+    await flushMicrotasks();
+  });
+  expect(hook.result.current.loading).toBe(false);
+  await act(async () => {
+    socket.onmessage?.({
+      data: JSON.stringify({
+        id: pending[0].id,
+        error: { code: -32000, message: "Older restore failed" },
+      }),
+    });
+    await flushMicrotasks();
+  });
+  expect(hook.result.current.error).toBe("");
+  expect(
+    hook.result.current.chat.items.some(
+      (item) => item.kind === "assistant" && item.text === "Latest saved response",
+    ),
+  ).toBe(true);
+  expect(hook.result.current.draft).toBe("Draft while restoring");
+});
+
 test("foreground on one healthy socket restores missed approvals/leases and selected history without repeating a Run", async () => {
   environment();
   const session = {

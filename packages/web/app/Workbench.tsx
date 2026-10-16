@@ -925,7 +925,7 @@ export function Workbench({
                 }}
                 onKeyDown={(event) => {
                   if (
-                    !narrow &&
+                    !window.matchMedia("(max-width: 760px)").matches &&
                     event.key === "Enter" &&
                     !event.shiftKey &&
                     !event.nativeEvent.isComposing
@@ -1031,6 +1031,7 @@ export function Workbench({
                     onClick={send}
                     disabled={
                       connection !== "open" ||
+                      controller.loading ||
                       uploading ||
                       controller.uncertain ||
                       controller.readOnly ||
