@@ -9,6 +9,7 @@ import { build } from "esbuild";
 import { chromium, _electron } from "playwright";
 
 const desktop = fileURLToPath(new URL("../../..", import.meta.url));
+const sessionsOnly = process.argv.includes("--sessions-only");
 const renderer = path.join(desktop, "src/renderer");
 const require = createRequire(path.join(desktop, "package.json"));
 const tailwindRequire = createRequire(require.resolve("@tailwindcss/vite"));
@@ -91,7 +92,7 @@ const request = (kind, payload) =>
   new Promise((resolve, reject) => window.fixture.pending[kind].push({ resolve, reject, payload }));
 window.fixture = {
   calls: [],
-  pending: { read: [], delete: [], rename: [], runs: [], detail: [] },
+  pending: { read: [], delete: [], rename: [], open: [], runs: [], detail: [] },
   readMode: "ready",
   runMode: "ready",
   detailMode: "ready",
@@ -194,7 +195,7 @@ window.renderFixture = (kind, lang, options = {}) => {
     window.fixture,
     {
       calls: [],
-      pending: { read: [], delete: [], rename: [], runs: [], detail: [] },
+      pending: { read: [], delete: [], rename: [], open: [], runs: [], detail: [] },
       readMode: "ready",
       runMode: "ready",
       detailMode: "ready",
@@ -218,6 +219,10 @@ window.renderFixture = (kind, lang, options = {}) => {
                 {kind === "sessions" ? (
                   <SessionsView
                     onNewSession={() => window.fixture.calls.push(["newSession"])}
+                    onOpenSession={(id) => {
+                      window.fixture.calls.push(["openSession", id]);
+                      return request("open", id);
+                    }}
                     onSessionRenamed={(id, title) =>
                       window.fixture.calls.push(["renamed", id, title])
                     }
@@ -282,6 +287,13 @@ const labels = (lang) =>
         title: "会话标题",
         search: "搜索会话 id 或标题…",
         clear: "清空搜索",
+        open: "打开会话",
+        opening: "正在打开…",
+        confirmDelete: "确认删除",
+        cancel: "取消",
+        nextPage: "下一页",
+        previousPage: "上一页",
+        sort: "会话排序",
       }
     : {
         runs: "Run history",
@@ -296,6 +308,13 @@ const labels = (lang) =>
         title: "Session title",
         search: "Search session id or title…",
         clear: "Clear search",
+        open: "Open conversation",
+        opening: "Opening…",
+        confirmDelete: "Confirm deletion",
+        cancel: "Cancel",
+        nextPage: "Next page",
+        previousPage: "Previous page",
+        sort: "Sort conversations",
       };
 const settle = (page) =>
   page.evaluate(
@@ -333,6 +352,7 @@ async function runsLayout(page, lang) {
   await detail.getByRole("heading", { level: 2 }).waitFor();
   const list = page.getByRole("region", { name: text.list, exact: true });
   const rows = list.locator("[aria-busy]");
+  assert.equal(await list.locator("ul > li").count(), 50, "Large run history is paged");
   assert.ok(
     (await detail.evaluate((node) => node.clientHeight)) >= 128,
     "Run details retain a readable scrolling area",
@@ -385,9 +405,9 @@ async function runsLayout(page, lang) {
   await page.mouse.wheel(0, 500);
   await page.waitForFunction(
     ({ label, before }) =>
-      Array.from(document.querySelectorAll("section")).find(
-        (node) => node.getAttribute("aria-label") === label,
-      ).lastElementChild.scrollTop > before,
+      Array.from(document.querySelectorAll("section"))
+        .find((node) => node.getAttribute("aria-label") === label)
+        .querySelector("[aria-busy]").scrollTop > before,
     { label: text.list, before },
   );
   await detail.focus();
@@ -407,6 +427,68 @@ async function runsLayout(page, lang) {
   assert.equal((await ledger(page, "getRun")).at(-1)[1], "run-1");
   assert.equal(await next.getAttribute("aria-pressed"), "true");
   assert.equal(await next.getAttribute("aria-controls"), await detail.getAttribute("id"));
+  const runText =
+    lang === "zh"
+      ? {
+          next: "下一页运行",
+          previous: "上一页运行",
+          hidden: "当前运行不在筛选结果中，详情仍保留。",
+          clear: "清空筛选条件",
+          retry: "重试详情",
+        }
+      : {
+          next: "Next runs page",
+          previous: "Previous runs page",
+          hidden: "The selected run is outside the current filters. Its details are retained.",
+          clear: "Clear filters",
+          retry: "Retry details",
+        };
+  await list.getByRole("button", { name: runText.next, exact: true }).click();
+  assert.equal(await list.locator("ul > li").count(), 50);
+  await list.getByRole("button", { name: runText.next, exact: true }).click();
+  assert.equal(await list.locator("ul > li").count(), 20);
+  await list.getByRole("button", { name: runText.previous, exact: true }).click();
+  const search = list.getByRole("searchbox");
+  await search.fill("run-119");
+  assert.equal(
+    await list.locator("ul > li").count(),
+    1,
+    "Search includes runs outside the current page",
+  );
+  await detail.getByText(runText.hidden, { exact: true }).waitFor();
+  await detail.getByRole("heading", { level: 2, name: /^Run 1 / }).waitFor();
+  await search.fill("no-matching-run");
+  await list.getByRole("button", { name: runText.clear, exact: true }).click();
+  assert.equal(await focused(search), true);
+  assert.equal(await list.locator("ul > li").count(), 50);
+  await list.getByRole("combobox").click();
+  await page
+    .getByRole("option", { name: lang === "zh" ? "已完成" : "Completed", exact: true })
+    .click();
+  assert.equal(
+    await list.locator("ul > li").count(),
+    30,
+    "Status filtering searches the full history",
+  );
+  await detail.getByText(runText.hidden, { exact: true }).waitFor();
+  await detail.getByRole("heading", { level: 2, name: /^Run 1 / }).waitFor();
+  await list.getByRole("combobox").click();
+  await page.getByRole("option", { name: lang === "zh" ? "全部" : "All", exact: true }).click();
+  const tool = detail.locator("details").first();
+  assert.equal(await tool.locator("pre").count(), 0, "Closed trace payloads are not mounted");
+  await tool.locator("summary").click();
+  await tool.getByText("Owned tool failed", { exact: true }).waitFor();
+  await page.evaluate(() => (window.fixture.detailMode = "hold"));
+  await page.getByRole("button", { name: text.refresh, exact: true }).click();
+  await tool.getByText("Owned tool failed", { exact: true }).waitFor();
+  assert.equal(await tool.getAttribute("open"), "", "Refreshing preserves expanded tool details");
+  await page.evaluate(() => window.fixture.settle("detail", "reject", "Detail refresh failed"));
+  await detail.getByRole("alert").waitFor();
+  await detail.getByRole("heading", { level: 2, name: /^Run 1 / }).waitFor();
+  await page.evaluate(() => (window.fixture.detailMode = "ready"));
+  await detail.getByRole("button", { name: runText.retry, exact: true }).click();
+  await detail.getByRole("alert").waitFor({ state: "hidden" });
+  assert.equal(await tool.getAttribute("open"), "", "Retry preserves expanded tool details");
   assert.deepEqual(
     await page
       .locator("main")
@@ -509,12 +591,42 @@ async function sessionRecovery(page, lang) {
     .filter({ hasText: text.clear });
   await clear.click();
   assert.equal(await focused(search), true);
-  assert.equal(await page.getByRole("listitem").count(), 120);
+  assert.equal(await page.getByRole("listitem").count(), 50);
+  await page.getByRole("button", { name: text.nextPage, exact: true }).click();
+  assert.equal(await page.getByRole("listitem").count(), 50);
+  await page.getByRole("button", { name: text.nextPage, exact: true }).click();
+  assert.equal(await page.getByRole("listitem").count(), 20);
+  assert.ok(
+    await page
+      .getByRole("listitem")
+      .last()
+      .textContent()
+      .then((value) => value.includes("search")),
+  );
+  await page.getByRole("combobox", { name: text.sort, exact: true }).selectOption("oldest");
+  assert.equal(await page.getByRole("listitem").count(), 50);
+  const open = page.getByRole("button", { name: text.open, exact: true }).first();
+  await open.click();
+  const opening = page.getByRole("button", { name: text.opening, exact: true });
+  await opening.focus();
+  await page.keyboard.press("Enter");
+  assert.deepEqual(await ledger(page, "openSession"), [["openSession", "search"]]);
+  await page.evaluate(() => window.fixture.settle("open", "reject", "Owned session open rejected"));
+  await page.getByRole("alert").waitFor();
+  assert.ok(
+    await page
+      .getByRole("alert")
+      .textContent()
+      .then((value) => value.includes("Owned session open rejected")),
+  );
+  await open.click();
+  await page.evaluate(() => window.fixture.settle("open", "resolve"));
+  await page.getByRole("alert").waitFor({ state: "hidden" });
   const sessionList = page.getByRole("list");
   await sessionList.hover();
   await page.mouse.wheel(0, 100000);
   await page.waitForFunction(() => {
-    const list = document.querySelector("[data-sessions-page] ul");
+    const list = document.querySelector("[data-sessions-page]");
     return list.scrollTop >= list.scrollHeight - list.clientHeight - 1;
   });
   const lastRename = page
@@ -524,17 +636,21 @@ async function sessionRecovery(page, lang) {
   assert.equal(
     await hit(lastRename),
     true,
-    "The last of 120 session rows is reachable with the wheel",
+    "The last session row of a page is reachable with the wheel",
   );
   // Delete another row while the valid session ID "search" still exists.
   const row = page.getByRole("listitem").nth(1);
   const deleteButton = row.getByRole("button").last();
   await deleteButton.focus();
   await page.keyboard.press("Enter");
+  assert.deepEqual(await ledger(page, "deleteSession"), []);
+  assert.equal(await focused(row.getByRole("button", { name: text.cancel, exact: true })), true);
+  const confirmDelete = row.getByRole("button", { name: text.confirmDelete, exact: true });
+  await confirmDelete.click();
   await page.keyboard.press("Enter");
   await settle(page);
   assert.deepEqual(await ledger(page, "deleteSession"), [["deleteSession", "session-1"]]);
-  assert.equal(await focused(deleteButton), true);
+  assert.equal(await focused(confirmDelete), true);
   await page.evaluate(() => window.fixture.settle("delete", "reject"));
   await row.getByRole("alert").waitFor();
   const deleteRetry = row.getByRole("button", { name: text.retry, exact: true });
@@ -548,9 +664,8 @@ async function sessionRecovery(page, lang) {
   assert.equal(await focused(deleteRetry), true);
   await page.keyboard.press("Enter");
   await page.evaluate(() => window.fixture.settle("delete", "resolve"));
-  await page.waitForFunction(
-    () => document.querySelectorAll("[data-sessions-page] li").length === 119,
-  );
+  await page.waitForFunction(() => window.fixture.deleted.includes("session-1"));
+  await row.getByRole("alert").waitFor({ state: "hidden" });
   assert.equal(
     await focused(search),
     true,
@@ -590,9 +705,10 @@ async function ownership(page) {
         if (operation === "refresh") {
           await page.evaluate(() => (window.fixture.readMode = "hold"));
           await page.getByRole("button", { name: "Refresh", exact: true }).click();
-        } else if (operation === "delete")
+        } else if (operation === "delete") {
           await page.getByRole("listitem").nth(1).getByRole("button").last().click();
-        else {
+          await page.getByRole("button", { name: "Confirm deletion", exact: true }).click();
+        } else {
           await page.getByRole("button", { name: "Rename", exact: true }).first().click();
           await page
             .getByRole("textbox", { name: "Session title", exact: true })
@@ -648,7 +764,7 @@ async function ownership(page) {
   assert.equal(await focused(page.getByRole("textbox", { name: "Outside field" })), true);
 }
 async function states(page, lang) {
-  for (const kind of ["runs", "sessions"])
+  for (const kind of sessionsOnly ? ["sessions"] : ["runs", "sessions"])
     for (const mode of ["hold", "empty", "error"]) {
       await render(page, kind, lang, {
         initialRunId: null,
@@ -704,7 +820,7 @@ if (!process.argv.includes("--electron-zoom")) {
           (scheme) => document.documentElement.classList.toggle("dark", scheme === "dark"),
           scheme,
         );
-        await runsLayout(page, lang);
+        if (!sessionsOnly) await runsLayout(page, lang);
         await sessionRecovery(page, lang);
         await states(page, lang);
         if (width === 800 && lang === "en") await ownership(page);
@@ -720,7 +836,9 @@ if (!process.argv.includes("--electron-zoom")) {
             lang +
             "/" +
             scheme +
-            ": readable runs, full usage, real scrolling, sessions recovery, draft and states",
+            (sessionsOnly
+              ? ": sessions pagination, open/delete recovery, scrolling, drafts and states"
+              : ": readable runs, full usage, real scrolling, sessions recovery, draft and states"),
         );
         await page.close();
       }
@@ -768,7 +886,7 @@ if (!process.argv.includes("--electron-zoom")) {
             BrowserWindow.getAllWindows()[0].webContents.setZoomFactor(zoom),
           zoom,
         );
-        await runsLayout(page, lang);
+        if (!sessionsOnly) await runsLayout(page, lang);
         await sessionRecovery(page, lang);
         await states(page, lang);
         console.log(

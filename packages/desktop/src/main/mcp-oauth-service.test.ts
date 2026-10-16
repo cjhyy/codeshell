@@ -8,7 +8,11 @@ import {
   type EncryptionCipher,
   type OAuthTokens,
 } from "@cjhyy/code-shell-core";
-import { McpOAuthService, McpOAuthServiceError } from "./mcp-oauth-service.js";
+import {
+  McpOAuthService,
+  McpOAuthServiceError,
+  McpOAuthVerificationError,
+} from "./mcp-oauth-service.js";
 import type { McpOAuthProfile } from "./mcp-oauth-profiles.js";
 
 class TestCipher implements EncryptionCipher {
@@ -138,7 +142,9 @@ describe("McpOAuthService", () => {
         agentExposable: false,
       },
     });
-    await expect(service.resolveAccessToken("remote-github")).rejects.toThrow("unavailable");
+    await expect(
+      service.resolveAccessToken("remote-github", { serverUrl: "https://mcp.example/rpc" }),
+    ).rejects.toThrow("unavailable");
   });
 
   test("singleflights refresh, rotates tokens and preserves an omitted refresh token", async () => {
@@ -168,8 +174,8 @@ describe("McpOAuthService", () => {
     });
 
     const [first, second] = await Promise.all([
-      service.resolveAccessToken("example-oauth"),
-      service.resolveAccessToken("example-oauth"),
+      service.resolveAccessToken("example-oauth", { serverUrl: "https://mcp.example/rpc" }),
+      service.resolveAccessToken("example-oauth", { serverUrl: "https://mcp.example/rpc" }),
     ]);
     expect(first.accessToken).toBe("new-access");
     expect(second.accessToken).toBe("new-access");
@@ -179,6 +185,207 @@ describe("McpOAuthService", () => {
       refreshToken: "old-refresh",
       expiresAt: "2026-01-01T01:00:00.000Z",
     });
+  });
+
+  test("a Host adapter validates an unpersisted candidate and cancellation never replaces a saved login", async () => {
+    const { service, store } = makeService();
+    const input = {
+      source: "mcp" as const,
+      serverName: "Example",
+      serverUrl: "https://mcp.example/rpc",
+      clientId: "client",
+      authorizationEndpoint: "https://auth.example/authorize",
+      tokenEndpoint: "https://auth.example/token",
+    };
+    const candidate = await service.authorizeCredential(input, {
+      callbackTimeoutMs: 600_000,
+      validateCredential: async (value) => ({ ...value, label: "Verified by Host" }),
+    });
+    expect(candidate.label).toBe("Verified by Host");
+    expect(store.list()).toEqual([]);
+    await service.login(input);
+    const prior = store.resolve("example-oauth");
+    const controller = new AbortController();
+    await expect(
+      service.authorizeCredential(input, {
+        signal: controller.signal,
+        validateCredential: async (value) => {
+          controller.abort();
+          return value;
+        },
+      }),
+    ).rejects.toThrow();
+    expect(store.resolve("example-oauth")).toEqual(prior);
+  });
+
+  test("failed or cancelled Host validation revokes only the newly exchanged candidate", async () => {
+    for (const mode of ["validation", "validation-cancel", "exchange-cancel"] as const) {
+      const controller = new AbortController();
+      const revoked: string[] = [];
+      let minted = 0;
+      const { service, store } = makeService({
+        profiles: {
+          fixture: {
+            id: "fixture",
+            provider: "example",
+            label: "Example",
+            serverUrl: "https://mcp.example/rpc",
+            clientId: "client",
+            authorizationEndpoint: "https://auth.example/authorize",
+            tokenEndpoint: "https://auth.example/token",
+            revocationEndpoint: "https://auth.example/revoke",
+          },
+        },
+        authorizeTokens: () => {
+          minted++;
+          if (minted === 2 && mode === "exchange-cancel") controller.abort();
+          return {
+            accessToken: `new-access-${minted}`,
+            refreshToken: `new-refresh-${minted}`,
+            expiresAt: Date.UTC(2030, 0, 1),
+            tokenType: "Bearer",
+          };
+        },
+        fetch: (async (url, init) => {
+          const request = new Request(url, init);
+          expect(request.url).toBe("https://auth.example/revoke");
+          revoked.push(new URLSearchParams(await request.text()).get("token")!);
+          return new Response(null, { status: 503 });
+        }) as typeof fetch,
+      });
+      const input = {
+        source: "catalog" as const,
+        profileId: "fixture",
+        credentialId: `cleanup-${mode}`,
+      };
+      await service.login(input);
+      const prior = store.resolve(input.credentialId)!;
+      await expect(
+        service.authorizeCredential(input, {
+          signal: controller.signal,
+          validateCredential: async (value) => {
+            if (mode === "validation") throw new Error("validation failed");
+            controller.abort();
+            return value;
+          },
+        }),
+      ).rejects.toThrow();
+      expect(revoked).toEqual(["new-refresh-2"]);
+      expect(store.resolve(input.credentialId)).toEqual(prior);
+      expect(await service.revokeDetachedCredential(prior)).toBe(false);
+      expect(revoked).toHaveLength(1);
+    }
+  });
+
+  test("a restarted Host refreshes a persisted bound connection and retains Link authority", async () => {
+    const now = Date.UTC(2026, 0, 1);
+    const { service, store } = makeService({
+      now: () => now,
+      authorizeTokens: {
+        accessToken: "old",
+        refreshToken: "old-refresh",
+        expiresAt: now - 1,
+        tokenType: "Bearer",
+      },
+    });
+    await service.login({
+      source: "mcp",
+      serverName: "Example",
+      serverUrl: "https://mcp.example/rpc",
+      clientId: "client",
+      authorizationEndpoint: "https://auth.example/authorize",
+      tokenEndpoint: "https://auth.example/token",
+    });
+    const saved = store.resolve("example-oauth")!;
+    store.save("user", {
+      ...saved,
+      meta: {
+        ...saved.meta,
+        linkProvider: "figma",
+        linkExecutionBackend: "mcp",
+        linkAuthSource: "mcp-oauth",
+        linkCapabilityIds: ["figma.get_metadata"],
+        agentExposable: false,
+      },
+    });
+    let calls = 0;
+    const restarted = new McpOAuthService({
+      store,
+      now: () => now,
+      openExternal: () => {
+        throw new Error("Refresh must not open a browser");
+      },
+      fetch: (async (input) => {
+        expect(new URL(input instanceof Request ? input.url : String(input)).href).toBe(
+          "https://auth.example/token",
+        );
+        calls++;
+        return Response.json({
+          access_token: "rotated-access",
+          refresh_token: "rotated-refresh",
+          expires_in: 3600,
+        });
+      }) as typeof fetch,
+    });
+    await expect(
+      restarted.resolveAccessToken(saved.id, { serverUrl: "https://other.example/mcp" }),
+    ).rejects.toThrow();
+    expect(calls).toBe(0);
+    expect(
+      (await restarted.resolveAccessToken(saved.id, { serverUrl: "https://mcp.example/rpc" }))
+        .accessToken,
+    ).toBe("rotated-access");
+    const rotated = store.resolve(saved.id)!;
+    expect(parseOAuthCredentialSecret(rotated.secret!).refreshToken).toBe("rotated-refresh");
+    expect(rotated.meta?.linkCapabilityIds).toEqual(["figma.get_metadata"]);
+    expect(rotated.meta?.agentExposable).toBe(false);
+  });
+
+  test("an external revocation during refresh cannot resurrect a saved credential or return its old token", async () => {
+    const now = Date.UTC(2026, 0, 1);
+    let complete!: (response: Response) => void;
+    let started!: () => void;
+    const didStart = new Promise<void>((resolve) => {
+      started = resolve;
+    });
+    const pending = new Promise<Response>((resolve) => {
+      complete = resolve;
+    });
+    const { service, store } = makeService({
+      now: () => now,
+      authorizeTokens: {
+        accessToken: "old",
+        refreshToken: "old-refresh",
+        expiresAt: now + 10_000,
+        tokenType: "Bearer",
+      },
+      fetch: (async () => {
+        started();
+        return pending;
+      }) as typeof fetch,
+    });
+    await service.login({
+      source: "mcp",
+      serverName: "Example",
+      serverUrl: "https://mcp.example/rpc",
+      clientId: "client",
+      authorizationEndpoint: "https://auth.example/authorize",
+      tokenEndpoint: "https://auth.example/token",
+    });
+    const refresh = service.resolveAccessToken("example-oauth", {
+      serverUrl: "https://mcp.example/rpc",
+    });
+    await didStart;
+    store.remove("user", "example-oauth");
+    complete(
+      Response.json({
+        access_token: "late-token",
+        refresh_token: "late-refresh",
+        expires_in: 3600,
+      }),
+    );
+    await expect(refresh).rejects.toThrow();
+    expect(store.resolve("example-oauth")).toBeUndefined();
   });
 
   test("invalid_grant requires login but retains the credential for UI recovery", async () => {
@@ -210,7 +417,7 @@ describe("McpOAuthService", () => {
 
   test("proactive refresh may use a still-live token while a forced refresh fails closed", async () => {
     const now = Date.UTC(2026, 0, 1);
-    const { service, store } = makeService({
+    const { service } = makeService({
       authorizeTokens: {
         accessToken: "still-live",
         refreshToken: "refresh",
@@ -231,12 +438,62 @@ describe("McpOAuthService", () => {
       tokenEndpoint: "https://auth.example/token",
     });
 
-    await expect(service.resolveAccessToken("example-oauth")).resolves.toMatchObject({
+    await expect(
+      service.resolveAccessToken("example-oauth", { serverUrl: "https://mcp.example/rpc" }),
+    ).resolves.toMatchObject({
       accessToken: "still-live",
     });
     await expect(
-      service.resolveAccessToken("example-oauth", { forceRefresh: true }),
+      service.resolveAccessToken("example-oauth", {
+        serverUrl: "https://mcp.example/rpc",
+        forceRefresh: true,
+      }),
     ).rejects.toThrow(/refresh failed/);
+  });
+
+  test("a revoked Figma MCP refresh marks reconnect and never falls back to a live access token", async () => {
+    const now = Date.UTC(2026, 0, 1);
+    let calls = 0;
+    const { service, store } = makeService({
+      authorizeTokens: {
+        accessToken: "still-live",
+        refreshToken: "revoked",
+        expiresAt: now + 30_000,
+        tokenType: "Bearer",
+      },
+      now: () => now,
+      fetch: (async () => {
+        calls++;
+        return Response.json({ error: "invalid_grant" }, { status: 400 });
+      }) as typeof fetch,
+    });
+    await service.login({
+      source: "mcp",
+      serverName: "Example",
+      serverUrl: "https://mcp.example/rpc",
+      clientId: "client",
+      authorizationEndpoint: "https://auth.example/authorize",
+      tokenEndpoint: "https://auth.example/token",
+    });
+    const credential = store.resolve("example-oauth")!;
+    store.save("user", {
+      ...credential,
+      meta: {
+        ...credential.meta,
+        linkProvider: "figma",
+        linkExecutionBackend: "mcp",
+        linkAuthSource: "mcp-oauth",
+        linkOAuthState: "connected",
+      },
+    });
+    await expect(
+      service.resolveAccessToken(credential.id, { serverUrl: "https://mcp.example/rpc" }),
+    ).rejects.toThrow("requires login");
+    expect(store.resolve(credential.id)?.meta?.linkOAuthState).toBe("reconnect");
+    await expect(
+      service.resolveAccessToken(credential.id, { serverUrl: "https://mcp.example/rpc" }),
+    ).rejects.toThrow("requires login");
+    expect(calls).toBe(1);
   });
 
   test("removes the local credential even when remote revocation fails", async () => {
@@ -405,7 +662,9 @@ describe("McpOAuthService", () => {
     await didStartRefresh;
     const loggingOut = service.logout("example-oauth");
 
-    await expect(service.resolveAccessToken("example-oauth")).rejects.toThrow(/unavailable/);
+    await expect(
+      service.resolveAccessToken("example-oauth", { serverUrl: "https://mcp.example/rpc" }),
+    ).rejects.toThrow(/unavailable/);
     finishRefresh(Response.json({ access_token: "late-access", refresh_token: "late-refresh" }));
 
     await expect(refreshing).rejects.toThrow(/unavailable/);
@@ -553,6 +812,63 @@ describe("McpOAuthService", () => {
       },
     ]);
     expect(store.list()).toEqual([]);
+  });
+
+  test("post-token verification keeps its fixed stage and never exposes provider bodies", async () => {
+    const logs: Array<{ event: string; fields: Record<string, unknown> }> = [];
+    const { service, store } = makeService({
+      logWarning: (event, fields) => logs.push({ event, fields }),
+    });
+    const input = {
+      source: "mcp" as const,
+      serverName: "Example",
+      serverUrl: "https://mcp.example/rpc",
+      clientId: "client",
+      authorizationEndpoint: "https://auth.example/authorize",
+      tokenEndpoint: "https://auth.example/token",
+    };
+    await service.login(input);
+    const saved = store.resolve("example-oauth");
+    let failure: unknown;
+    try {
+      await service.authorizeCredential(input, {
+        validateCredential: async () => {
+          throw new McpOAuthVerificationError("account_verification", "http_error", 503);
+        },
+      });
+    } catch (error) {
+      failure = error;
+    }
+    expect(failure).toMatchObject({
+      code: "server_error",
+      stage: "credential_verification",
+      verificationStage: "account_verification",
+      reason: "http_error",
+      status: 503,
+    });
+    expect(logs).toEqual([
+      {
+        event: "mcp.oauth.failed",
+        fields: {
+          code: "server_error",
+          stage: "credential_verification",
+          verificationStage: "account_verification",
+          reason: "http_error",
+          status: 503,
+        },
+      },
+    ]);
+    expect(store.resolve("example-oauth")).toEqual(saved);
+
+    await expect(
+      service.authorizeCredential(input, {
+        validateCredential: async () => {
+          throw new Error("private-provider-body-and-token");
+        },
+      }),
+    ).rejects.toMatchObject({ stage: "credential_verification" });
+    expect(JSON.stringify(logs)).not.toContain("private-provider-body-and-token");
+    expect(JSON.stringify(logs)).not.toContain("access-login");
   });
 
   test("normalizes discovery response bodies before they reach renderer or logs", async () => {
@@ -833,7 +1149,9 @@ describe("McpOAuthService", () => {
     const refreshing = service.refresh("example-oauth");
     await didStartRefresh;
     const relogin = service.login(input);
-    const requestDuringLogin = service.resolveAccessToken("example-oauth");
+    const requestDuringLogin = service.resolveAccessToken("example-oauth", {
+      serverUrl: "https://mcp.example/rpc",
+    });
     finishRelogin({
       accessToken: "new-login-access",
       refreshToken: "new-login-refresh",

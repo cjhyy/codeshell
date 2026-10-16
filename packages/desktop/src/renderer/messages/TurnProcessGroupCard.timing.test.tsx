@@ -81,26 +81,39 @@ describe("process card lifecycle clock", () => {
 
   test("uses the whole run start and catches up after a delayed timer tick", async () => {
     await render(base);
-    expect(text(container)).toContain("已处理 10s");
+    expect(text(container)).toContain("处理中");
+    expect(text(container)).toContain("10s");
     wallClock = 123_000;
     await act(async () => {
       tick?.();
       await flushMicrotasks();
     });
-    expect(text(container)).toContain("已处理 23s");
+    expect(text(container)).toContain("23s");
   });
 
-  test("freezes completion and collapses even when the epoch update was coalesced", async () => {
+  test("freezes completion while retaining the current reading state", async () => {
     await render(base);
     await render({ ...base, isLive: false, completedCleanly: true, durationMs: 12_000 });
-    expect(text(container)).toContain("已处理 12s");
-    expect(props(buttons(container)[0])["aria-expanded"]).toBe(false);
+    expect(text(container)).toContain("执行过程");
+    expect(text(container)).toContain("12s");
+    expect(props(buttons(container)[0])["aria-expanded"]).toBe(true);
     wallClock = 199_000;
     await act(async () => {
       tick?.();
       await flushMicrotasks();
     });
-    expect(text(container)).toContain("已处理 12s");
+    expect(text(container)).toContain("12s");
+  });
+
+  test("completion respects a running card the reader explicitly closed", async () => {
+    await render(base);
+    await act(async () => {
+      props(buttons(container)[0]).onClick({ currentTarget: buttons(container)[0] });
+      await flushMicrotasks();
+    });
+    expect(props(buttons(container)[0])["aria-expanded"]).toBe(false);
+    await render({ ...base, isLive: false, completedCleanly: true, durationMs: 12_000 }, 1);
+    expect(props(buttons(container)[0])["aria-expanded"]).toBe(false);
   });
 
   test("keeps abnormal completion expanded and preserves a manually reopened historical card", async () => {

@@ -575,7 +575,9 @@ function firstToolStart(items: Array<Message | ToolGroup>): number {
 }
 
 function anchorId(item: Message | ToolGroup): string {
-  return item.kind === "tool_group" ? item.id : item.id;
+  // A first tool can become a ToolGroup as streaming appends its next sibling.
+  // Keep the outer process card mounted so its disclosure state is preserved.
+  return item.kind === "tool_group" ? (item.items[0]?.id ?? item.id) : item.id;
 }
 
 function countToolsRecursive(items: Array<Message | ToolGroup>): number {
@@ -674,6 +676,24 @@ export function processGroupActivityLabel(group: TurnProcessGroup): string {
     turnStartedAt: group.firstToolStartedAt,
     toolInFlight: tool?.status === "running",
   });
+}
+
+export function processGroupDuration(durationMs: number | undefined): string | undefined {
+  const duration = validStamp(durationMs);
+  if (duration === undefined || duration < 1000) return undefined;
+  const totalSec = Math.floor(duration / 1000);
+  const days = Math.floor(totalSec / 86_400);
+  const hours = Math.floor((totalSec % 86_400) / 3600);
+  const minutes = Math.floor((totalSec % 3600) / 60);
+  const seconds = totalSec % 60;
+  return [
+    days && `${days}d`,
+    hours && `${hours}h`,
+    minutes && `${minutes}m`,
+    seconds && `${seconds}s`,
+  ]
+    .filter(Boolean)
+    .join(" ");
 }
 
 export function processGroupLabel(durationMs: number | undefined): string {

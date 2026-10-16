@@ -1,9 +1,9 @@
-import React, { useEffect, useId, useRef, useState } from "react";
-import { Activity, Clock3, Coins, FileClock, Loader2, RefreshCw, Wrench } from "lucide-react";
+import React, { useEffect, useId, useMemo, useRef, useState } from "react";
+import { ChevronLeft, ChevronRight, Loader2, RefreshCw, Search, X } from "lucide-react";
 import type { UsageSummary } from "@cjhyy/code-shell-core";
-import { UsageSummaryView } from "./UsageSummaryView";
 import type { RunSummary, RunDetail } from "../../preload/types";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import {
   Select,
   SelectContent,
@@ -12,123 +12,46 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { cn } from "@/lib/utils";
-import { useT, type TFunction } from "../i18n/I18nProvider";
-import type { TranslationKey } from "../i18n/dict";
+import { useT } from "../i18n/I18nProvider";
+import { UsageSummaryView } from "./UsageSummaryView";
+import { RunDetailView } from "./RunDetailView";
+import { filterRunHistory } from "./runTrace";
+import { formatRunTime, RUN_STATUSES, RunPlaceholder, RunStatus } from "./runPresentation";
 
-const STATUSES: Record<string, { tone: string; label: TranslationKey }> = {
-  queued: { tone: "text-muted-foreground", label: "auto.runs.statusQueued" },
-  running: { tone: "text-status-running", label: "auto.runs.statusRunning" },
-  waiting_input: { tone: "text-status-warn", label: "auto.runs.statusWaitingInput" },
-  waiting_approval: { tone: "text-status-warn", label: "auto.runs.statusWaitingApproval" },
-  blocked: { tone: "text-status-warn", label: "auto.runs.statusBlocked" },
-  completed: { tone: "text-status-ok", label: "auto.runs.statusCompleted" },
-  failed: { tone: "text-status-err", label: "auto.runs.statusFailed" },
-  cancelled: { tone: "text-muted-foreground", label: "auto.runs.statusCancelled" },
-  unknown: { tone: "text-muted-foreground", label: "auto.runs.statusUnknown" },
-};
-
-const EVENT_LABELS: Record<string, TranslationKey> = {
-  run_created: "auto.runs.eventCreated",
-  run_queued: "auto.runs.eventQueued",
-  run_started: "auto.runs.eventStarted",
-  session_linked: "auto.runs.eventSessionLinked",
-  checkpoint_written: "auto.runs.eventCheckpoint",
-  artifact_recorded: "auto.runs.eventArtifact",
-  approval_requested: "auto.runs.eventApprovalRequested",
-  approval_resolved: "auto.runs.eventApprovalResolved",
-  run_blocked: "auto.runs.eventBlocked",
-  run_resumed: "auto.runs.eventResumed",
-  run_completed: "auto.runs.eventCompleted",
-  run_failed: "auto.runs.eventFailed",
-  run_cancelled: "auto.runs.eventCancelled",
-  run_result: "auto.runs.eventResult",
-  message: "auto.runs.eventMessage",
-  tool_use: "auto.runs.eventToolUse",
-  tool_result: "auto.runs.eventToolResult",
-  turn_boundary: "auto.runs.eventTurnBoundary",
-  turn_stopped: "auto.runs.eventCancelled",
-};
+const RUNS_PAGE_SIZE = 50;
 
 type DetailState =
   | { kind: "idle" }
   | { kind: "loading"; runId: string }
-  | { kind: "ready"; runId: string; detail: RunDetail }
+  | {
+      kind: "ready";
+      runId: string;
+      detail: RunDetail;
+      refreshing?: boolean;
+      refreshError?: string;
+    }
   | { kind: "missing"; runId: string }
   | { kind: "error"; runId: string; message: string };
-
-function statusLabel(status: string, t: TFunction): string {
-  return STATUSES[status] ? t(STATUSES[status].label) : status || t("auto.runs.none");
-}
-
-function RunStatus({ status, t }: { status: string; t: TFunction }) {
-  return (
-    <span
-      className={cn(
-        "inline-flex items-center gap-1.5 text-xs font-medium",
-        STATUSES[status]?.tone ?? "text-muted-foreground",
-      )}
-      title={status}
-    >
-      <span className="size-1.5 shrink-0 rounded-full bg-current" aria-hidden />
-      {statusLabel(status, t)}
-    </span>
-  );
-}
-
-function formatTime(timestamp: number, lang: string, compact = false): string {
-  const date = new Date(timestamp);
-  if (!Number.isFinite(date.getTime())) return "—";
-  return date.toLocaleString(
-    lang === "zh" ? "zh-CN" : "en-US",
-    compact
-      ? {
-          month: "short",
-          day: "numeric",
-          hour: "2-digit",
-          minute: "2-digit",
-        }
-      : undefined,
-  );
-}
-
-function formatDuration(durationMs: number | null): string {
-  if (durationMs === null || !Number.isFinite(durationMs)) return "—";
-  if (durationMs < 1_000) return `${Math.round(durationMs)} ms`;
-  const seconds = durationMs / 1_000;
-  if (seconds < 60) return `${seconds < 10 ? seconds.toFixed(1) : Math.round(seconds)} s`;
-  const minutes = Math.floor(seconds / 60);
-  return `${minutes}m ${Math.round(seconds % 60)}s`;
-}
-
-function traceJson(value: unknown): string {
-  if (typeof value === "string") return value;
-  try {
-    return JSON.stringify(value, null, 2);
-  } catch {
-    return String(value);
-  }
-}
-
-function eventDetailTitle(event: RunDetail["events"][number], t: TFunction): string {
-  const base = EVENT_LABELS[event.type] ? t(EVENT_LABELS[event.type]) : event.type;
-  const toolName = typeof event.data.toolName === "string" ? event.data.toolName : null;
-  const role = typeof event.data.role === "string" ? event.data.role : null;
-  return toolName ? `${base} · ${toolName}` : role ? `${base} · ${role}` : base;
-}
 
 export function RunsView({ initialRunId }: { initialRunId?: string | null } = {}) {
   const { t, lang } = useT();
   const detailId = useId();
   const detailRef = useRef<HTMLDivElement>(null);
+  const listRef = useRef<HTMLDivElement>(null);
+  const searchRef = useRef<HTMLInputElement>(null);
   const filterRef = useRef<HTMLButtonElement>(null);
   const refreshRef = useRef<HTMLButtonElement>(null);
   const selectedRef = useRef<HTMLButtonElement>(null);
+  const listInFlight = useRef(true);
+  const revealDeepLink = useRef(initialRunId ?? null);
   const [runs, setRuns] = useState<RunSummary[] | null>(null);
   const [listLoading, setListLoading] = useState(true);
   const [selected, setSelected] = useState<string | null>(initialRunId ?? null);
   const [detail, setDetail] = useState<DetailState>({ kind: "idle" });
   const [error, setError] = useState<string | null>(null);
   const [filter, setFilter] = useState("all");
+  const [query, setQuery] = useState("");
+  const [page, setPage] = useState(0);
   const [revision, setRevision] = useState(0);
   const [usageSummary, setUsageSummary] = useState<UsageSummary | null>(null);
   const [usageFailed, setUsageFailed] = useState(false);
@@ -136,6 +59,7 @@ export function RunsView({ initialRunId }: { initialRunId?: string | null } = {}
 
   useEffect(() => {
     let cancelled = false;
+    listInFlight.current = true;
     setListLoading(true);
     setError(null);
     void (async () => {
@@ -145,7 +69,10 @@ export function RunsView({ initialRunId }: { initialRunId?: string | null } = {}
       } catch (e) {
         if (!cancelled) setError(e instanceof Error ? e.message : String(e));
       } finally {
-        if (!cancelled) setListLoading(false);
+        if (!cancelled) {
+          listInFlight.current = false;
+          setListLoading(false);
+        }
       }
     })();
     return () => {
@@ -156,17 +83,15 @@ export function RunsView({ initialRunId }: { initialRunId?: string | null } = {}
   useEffect(() => {
     let cancelled = false;
     setUsageFailed(false);
-    void window.codeshell
-      .getUsageSummary?.({ scope: "store" })
-      .then((summary) => {
+    void (async () => {
+      try {
+        if (!window.codeshell.getUsageSummary) return;
+        const summary = await window.codeshell.getUsageSummary({ scope: "store" });
         if (!cancelled) setUsageSummary(summary);
-      })
-      .catch(() => {
-        if (!cancelled) {
-          setUsageSummary(null);
-          setUsageFailed(true);
-        }
-      });
+      } catch {
+        if (!cancelled) setUsageFailed(true);
+      }
+    })();
     return () => {
       cancelled = true;
     };
@@ -175,8 +100,11 @@ export function RunsView({ initialRunId }: { initialRunId?: string | null } = {}
   // A deep link can target a run outside the default list page.
   useEffect(() => {
     if (initialRunId) {
+      revealDeepLink.current = initialRunId;
       setSelected(initialRunId);
       setFilter("all");
+      setQuery("");
+      setPage(0);
     }
   }, [initialRunId]);
 
@@ -186,7 +114,11 @@ export function RunsView({ initialRunId }: { initialRunId?: string | null } = {}
       return;
     }
     let cancelled = false;
-    setDetail({ kind: "loading", runId: selected });
+    setDetail((previous) =>
+      previous.kind === "ready" && previous.runId === selected
+        ? { ...previous, refreshing: true, refreshError: undefined }
+        : { kind: "loading", runId: selected },
+    );
     void (async () => {
       try {
         const result = await window.codeshell.getRun(selected);
@@ -198,10 +130,11 @@ export function RunsView({ initialRunId }: { initialRunId?: string | null } = {}
           );
       } catch (e) {
         if (!cancelled)
-          setDetail({
-            kind: "error",
-            runId: selected,
-            message: e instanceof Error ? e.message : String(e),
+          setDetail((previous) => {
+            const message = e instanceof Error ? e.message : String(e);
+            return previous.kind === "ready" && previous.runId === selected
+              ? { ...previous, refreshing: false, refreshError: message }
+              : { kind: "error", runId: selected, message };
           });
       }
     })();
@@ -210,27 +143,58 @@ export function RunsView({ initialRunId }: { initialRunId?: string | null } = {}
     };
   }, [selected, revision, detailAttempt]);
 
-  useEffect(() => {
-    selectedRef.current?.scrollIntoView?.({ block: "nearest" });
-  }, [selected, runs, filter]);
-
-  const filtered = (runs ?? []).filter((run) => filter === "all" || run.status === filter);
+  const filtered = useMemo(
+    () => filterRunHistory(runs ?? [], filter, query),
+    [runs, filter, query],
+  );
+  const pageCount = Math.max(1, Math.ceil(filtered.length / RUNS_PAGE_SIZE));
+  const currentPage = Math.min(page, pageCount - 1);
+  const visibleRuns = filtered.slice(
+    currentPage * RUNS_PAGE_SIZE,
+    (currentPage + 1) * RUNS_PAGE_SIZE,
+  );
+  const hasFilters = filter !== "all" || query.trim().length > 0;
   const selectionFilteredOut =
-    filter !== "all" &&
+    hasFilters &&
     runs?.some((run) => run.runId === selected) &&
     !filtered.some((run) => run.runId === selected);
+  useEffect(() => {
+    if (!runs || !selected || revealDeepLink.current !== selected) return;
+    const index = filtered.findIndex((run) => run.runId === selected);
+    if (index >= 0) setPage(Math.floor(index / RUNS_PAGE_SIZE));
+    revealDeepLink.current = null;
+  }, [runs, selected, filtered]);
+  useEffect(() => {
+    if (listRef.current) listRef.current.scrollTop = 0;
+  }, [currentPage, filter, query]);
+  useEffect(() => {
+    if (page !== currentPage) setPage(currentPage);
+  }, [page, currentPage]);
+  useEffect(() => {
+    if (detailRef.current) detailRef.current.scrollTop = 0;
+  }, [selected]);
+  useEffect(() => {
+    selectedRef.current?.scrollIntoView?.({ block: "nearest" });
+  }, [selected, currentPage]);
   const visibleDetail: DetailState =
     selected && (detail.kind === "idle" || detail.runId !== selected)
       ? { kind: "loading", runId: selected }
       : detail;
   const refresh = () => {
-    if (listLoading) return;
+    if (listInFlight.current) return;
+    listInFlight.current = true;
     refreshRef.current?.focus({ preventScroll: true });
     setRevision((value) => value + 1);
   };
   const retryDetail = () => {
     detailRef.current?.focus({ preventScroll: true });
     setDetailAttempt((value) => value + 1);
+  };
+  const clearFilters = () => {
+    setFilter("all");
+    setQuery("");
+    setPage(0);
+    searchRef.current?.focus({ preventScroll: true });
   };
 
   return (
@@ -276,7 +240,7 @@ export function RunsView({ initialRunId }: { initialRunId?: string | null } = {}
         )}
         {usageFailed && (
           <p role="status" className="text-xs text-status-warn">
-            {t("auto.runs.usageUnavailable")}
+            {t(usageSummary ? "activityRuns.usageRefreshFailed" : "auto.runs.usageUnavailable")}
           </p>
         )}
       </div>
@@ -296,36 +260,77 @@ export function RunsView({ initialRunId }: { initialRunId?: string | null } = {}
           </Button>
         </div>
       )}
-      <div className="grid min-h-80 min-w-0 flex-1 grid-rows-[minmax(128px,0.4fr)_minmax(160px,1fr)] gap-4 px-4 pb-4 @min-[760px]/runs:grid-cols-[minmax(240px,300px)_minmax(0,1fr)] @min-[760px]/runs:grid-rows-1 @min-[760px]/runs:px-6 @min-[760px]/runs:pb-6">
+      <div className="grid min-h-[32rem] min-w-0 flex-1 grid-rows-[minmax(240px,0.6fr)_minmax(240px,1fr)] gap-4 px-4 pb-4 @min-[760px]/runs:min-h-80 @min-[760px]/runs:grid-cols-[minmax(260px,320px)_minmax(0,1fr)] @min-[760px]/runs:grid-rows-1 @min-[760px]/runs:px-6 @min-[760px]/runs:pb-6">
         <section
           aria-label={t("auto.runs.list")}
           className="flex min-h-0 min-w-0 flex-col overflow-hidden rounded-2xl border border-border/70 bg-card/70"
         >
-          <div className="flex shrink-0 items-center gap-2 border-b border-border/70 px-3 py-2.5">
-            <Select value={filter} onValueChange={setFilter}>
-              <SelectTrigger
-                ref={filterRef}
-                aria-label={t("auto.runs.filterLabel")}
-                className="h-8 min-w-0 flex-1 rounded-lg text-xs"
+          <div className="shrink-0 space-y-2 border-b border-border/70 px-3 py-2.5">
+            <div className="relative min-w-0">
+              <Search
+                size={13}
+                className="pointer-events-none absolute left-2.5 top-1/2 -translate-y-1/2 text-muted-foreground"
+                aria-hidden
+              />
+              <Input
+                ref={searchRef}
+                type="search"
+                aria-label={t("activityRuns.search")}
+                placeholder={t("activityRuns.search")}
+                value={query}
+                onChange={(event) => {
+                  setQuery(event.target.value);
+                  setPage(0);
+                }}
+                className="h-8 rounded-lg pl-8 pr-8 text-xs [&::-webkit-search-cancel-button]:appearance-none"
+              />
+              {query && (
+                <button
+                  type="button"
+                  aria-label={t("activityRuns.clearSearch")}
+                  className="absolute right-1 top-1/2 flex size-6 -translate-y-1/2 items-center justify-center rounded-md text-muted-foreground hover:bg-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                  onClick={() => {
+                    setQuery("");
+                    setPage(0);
+                    searchRef.current?.focus({ preventScroll: true });
+                  }}
+                >
+                  <X size={12} aria-hidden />
+                </button>
+              )}
+            </div>
+            <div className="flex items-center gap-2">
+              <Select
+                value={filter}
+                onValueChange={(value) => {
+                  setFilter(value);
+                  setPage(0);
+                }}
               >
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">{t("auto.runs.filterAll")}</SelectItem>
-                {Object.entries(STATUSES).map(([status, { label }]) => (
-                  <SelectItem key={status} value={status}>
-                    {t(label)}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            {runs && (
-              <span className="shrink-0 text-xs tabular-nums text-muted-foreground">
-                {filtered.length}
-              </span>
-            )}
+                <SelectTrigger
+                  ref={filterRef}
+                  aria-label={t("auto.runs.filterLabel")}
+                  className="h-8 min-w-0 flex-1 rounded-lg text-xs"
+                >
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">{t("auto.runs.filterAll")}</SelectItem>
+                  {Object.entries(RUN_STATUSES).map(([status, { label }]) => (
+                    <SelectItem key={status} value={status}>
+                      {t(label)}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              {runs && (
+                <span role="status" className="shrink-0 text-xs tabular-nums text-muted-foreground">
+                  {filtered.length}
+                </span>
+              )}
+            </div>
           </div>
-          <div className="min-h-0 flex-1 overflow-y-auto p-2" aria-busy={listLoading}>
+          <div ref={listRef} className="min-h-0 flex-1 overflow-y-auto p-2" aria-busy={listLoading}>
             {!runs && listLoading ? (
               <RunPlaceholder loading>{t("auto.runs.loading")}</RunPlaceholder>
             ) : !runs && error ? (
@@ -333,27 +338,24 @@ export function RunsView({ initialRunId }: { initialRunId?: string | null } = {}
             ) : filtered.length === 0 ? (
               <RunPlaceholder>
                 <strong className="font-medium text-foreground">
-                  {t(filter === "all" ? "auto.runs.emptyTitle" : "auto.runs.noMatch")}
+                  {t(hasFilters ? "activityRuns.noMatch" : "auto.runs.emptyTitle")}
                 </strong>
-                {filter === "all" ? (
+                {!hasFilters ? (
                   <p>{t("auto.runs.emptyHint")}</p>
                 ) : (
                   <Button
                     size="sm"
                     variant="outline"
                     className="mt-1 rounded-lg"
-                    onClick={() => {
-                      setFilter("all");
-                      filterRef.current?.focus();
-                    }}
+                    onClick={clearFilters}
                   >
-                    {t("auto.runs.clearFilter")}
+                    {t("activityRuns.clearFilters")}
                   </Button>
                 )}
               </RunPlaceholder>
             ) : (
               <ul className="space-y-1">
-                {filtered.map((run) => (
+                {visibleRuns.map((run) => (
                   <li key={run.runId}>
                     <button
                       ref={selected === run.runId ? selectedRef : undefined}
@@ -378,9 +380,9 @@ export function RunsView({ initialRunId }: { initialRunId?: string | null } = {}
                         <RunStatus status={run.status} t={t} />
                         <span
                           className="text-[11px] tabular-nums text-muted-foreground"
-                          title={formatTime(run.updatedAt, lang)}
+                          title={formatRunTime(run.updatedAt, lang)}
                         >
-                          {formatTime(run.updatedAt, lang, true)}
+                          {formatRunTime(run.updatedAt, lang, true)}
                         </span>
                       </span>
                     </button>
@@ -389,23 +391,93 @@ export function RunsView({ initialRunId }: { initialRunId?: string | null } = {}
               </ul>
             )}
           </div>
+          {pageCount > 1 && (
+            <nav
+              aria-label={t("auto.runs.list")}
+              className="flex shrink-0 items-center justify-between gap-1 border-t border-border/70 p-2"
+            >
+              <Button
+                size="icon"
+                className="size-7"
+                variant="ghost"
+                aria-label={t("activityRuns.previousPage")}
+                disabled={currentPage === 0}
+                onClick={() => setPage(currentPage - 1)}
+              >
+                <ChevronLeft size={14} aria-hidden />
+              </Button>
+              <span
+                role="status"
+                className="text-center text-[11px] tabular-nums text-muted-foreground"
+              >
+                {t("activityRuns.page", {
+                  page: currentPage + 1,
+                  pages: pageCount,
+                  count: filtered.length,
+                })}
+              </span>
+              <Button
+                size="icon"
+                className="size-7"
+                variant="ghost"
+                aria-label={t("activityRuns.nextPage")}
+                disabled={currentPage === pageCount - 1}
+                onClick={() => setPage(currentPage + 1)}
+              >
+                <ChevronRight size={14} aria-hidden />
+              </Button>
+            </nav>
+          )}
         </section>
         <div
           ref={detailRef}
           id={detailId}
           role="region"
           aria-label={t("auto.runs.details")}
-          aria-busy={visibleDetail.kind === "loading"}
+          aria-busy={
+            visibleDetail.kind === "loading" ||
+            (visibleDetail.kind === "ready" && !!visibleDetail.refreshing)
+          }
           tabIndex={0}
           className="@container/run-detail min-h-0 min-w-0 overflow-y-auto rounded-2xl border border-border/70 bg-card/70 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset"
         >
           {selectionFilteredOut && (
             <p className="border-b border-border/70 bg-muted/30 px-4 py-2.5 text-xs leading-relaxed text-muted-foreground">
-              {t("auto.runs.selectionFilteredOut")}
+              {t("activityRuns.selectionHidden")}
             </p>
           )}
           {visibleDetail.kind === "ready" ? (
-            <RunDetailView detail={visibleDetail.detail} t={t} lang={lang} />
+            <>
+              {visibleDetail.refreshing && (
+                <p
+                  role="status"
+                  className="flex items-center gap-2 border-b border-border/70 px-4 py-2.5 text-xs text-muted-foreground"
+                >
+                  <Loader2
+                    size={12}
+                    className="animate-spin motion-reduce:animate-none"
+                    aria-hidden
+                  />
+                  {t("activityRuns.refreshingDetail")}
+                </p>
+              )}
+              {visibleDetail.refreshError && (
+                <div className="flex flex-wrap items-center gap-2 border-b border-status-err/20 bg-status-err/5 px-4 py-2.5">
+                  <p role="alert" className="min-w-0 flex-1 break-words text-xs text-status-err">
+                    {t("activityRuns.refreshFailed", { message: visibleDetail.refreshError })}
+                  </p>
+                  <Button size="sm" variant="outline" onClick={retryDetail}>
+                    {t("auto.runs.retryDetail")}
+                  </Button>
+                </div>
+              )}
+              <RunDetailView
+                key={visibleDetail.runId}
+                detail={visibleDetail.detail}
+                t={t}
+                lang={lang}
+              />
+            </>
           ) : visibleDetail.kind === "loading" ? (
             <RunPlaceholder loading>{t("auto.runs.detailLoading")}</RunPlaceholder>
           ) : visibleDetail.kind === "missing" || visibleDetail.kind === "error" ? (
@@ -429,310 +501,6 @@ export function RunsView({ initialRunId }: { initialRunId?: string | null } = {}
           )}
         </div>
       </div>
-    </div>
-  );
-}
-
-function RunPlaceholder({
-  children,
-  loading = false,
-}: {
-  children: React.ReactNode;
-  loading?: boolean;
-}) {
-  return (
-    <div
-      role="status"
-      className="flex min-w-0 flex-col items-center gap-3 px-4 py-8 text-center text-sm leading-relaxed text-muted-foreground"
-    >
-      {loading ? (
-        <Loader2 size={20} className="animate-spin motion-reduce:animate-none" aria-hidden />
-      ) : (
-        <FileClock size={24} className="opacity-60" aria-hidden />
-      )}
-      {children}
-    </div>
-  );
-}
-
-function Section({
-  title,
-  count,
-  children,
-}: {
-  title: string;
-  count?: number;
-  children: React.ReactNode;
-}) {
-  return (
-    <section className="min-w-0 border-t border-border/70 pt-4">
-      <h3 className="mb-3 flex items-center gap-2 text-sm font-semibold">
-        {title}
-        {count !== undefined && (
-          <span className="text-xs font-normal tabular-nums text-muted-foreground">{count}</span>
-        )}
-      </h3>
-      {children}
-    </section>
-  );
-}
-
-function TracePayload({ value }: { value: unknown }) {
-  return (
-    <pre className="max-h-96 min-w-0 overflow-auto whitespace-pre-wrap break-words rounded-lg bg-muted/50 p-3 font-mono text-[11px] leading-relaxed text-foreground">
-      {traceJson(value)}
-    </pre>
-  );
-}
-
-function RunDetailView({ detail, t, lang }: { detail: RunDetail; t: TFunction; lang: string }) {
-  const [sessionUsage, setSessionUsage] = useState<UsageSummary | null>(null);
-  useEffect(() => {
-    let cancelled = false;
-    setSessionUsage(null);
-    if (detail.sessionId)
-      void window.codeshell
-        .getUsageSummary?.({ scope: "session", sessionId: detail.sessionId, includeChildren: true })
-        .then((summary) => {
-          if (!cancelled) setSessionUsage(summary);
-        })
-        .catch(() => {});
-    return () => {
-      cancelled = true;
-    };
-  }, [detail]);
-  const toolUses = detail.events.filter((event) => event.type === "tool_use");
-  const toolResults = new Map(
-    detail.events
-      .filter((event) => event.type === "tool_result")
-      .map((event) => [String(event.data.toolCallId ?? ""), event] as const),
-  );
-  const metadata = [
-    { label: t("auto.runs.runId"), value: detail.runId },
-    { label: t("auto.runs.updatedAt"), value: formatTime(detail.updatedAt, lang) },
-    { label: t("auto.runs.cwd"), value: detail.cwd },
-    ...(detail.preset ? [{ label: t("auto.runs.preset"), value: detail.preset }] : []),
-    ...(detail.sessionId ? [{ label: t("auto.runs.sessionId"), value: detail.sessionId }] : []),
-    ...(detail.model ? [{ label: t("auto.runs.model"), value: detail.model }] : []),
-    ...(detail.provider ? [{ label: t("auto.runs.provider"), value: detail.provider }] : []),
-    { label: t("auto.runs.attempts"), value: String(detail.attemptCount) },
-  ];
-  return (
-    <div className="flex min-w-0 flex-col gap-5 p-4 @min-[520px]/run-detail:p-5">
-      <div className="flex min-w-0 flex-col items-start gap-3">
-        <span className="flex size-10 items-center justify-center rounded-xl border border-primary/15 bg-primary/5 text-primary">
-          <Activity size={19} aria-hidden />
-        </span>
-        <h2 className="w-full break-words text-lg font-semibold leading-snug">
-          {detail.objective || t("auto.runs.noObjective")}
-        </h2>
-        <RunStatus status={detail.status} t={t} />
-      </div>
-      <dl className="grid min-w-0 grid-cols-1 gap-x-5 gap-y-3 rounded-xl bg-muted/40 p-3 @min-[520px]/run-detail:grid-cols-2">
-        {metadata.map(({ label, value }) => (
-          <div key={label} className="min-w-0">
-            <dt className="mb-1 text-[11px] text-muted-foreground">{label}</dt>
-            <dd className="break-all text-xs leading-5 text-foreground">{value}</dd>
-          </div>
-        ))}
-      </dl>
-      <div className="grid min-w-0 grid-cols-2 gap-2 @min-[520px]/run-detail:grid-cols-4">
-        <TraceMetric
-          icon={<Clock3 size={15} aria-hidden />}
-          label={t("auto.runs.duration")}
-          value={formatDuration(detail.durationMs)}
-        />
-        <TraceMetric
-          icon={<Coins size={15} aria-hidden />}
-          label={t("auto.runs.totalTokens")}
-          value={detail.usage ? detail.usage.totalTokens.toLocaleString() : "—"}
-        />
-        <TraceMetric
-          icon={<Coins size={15} aria-hidden />}
-          label={t("auto.runs.inputOutputTokens")}
-          value={
-            detail.usage
-              ? `${detail.usage.promptTokens.toLocaleString()} / ${detail.usage.completionTokens.toLocaleString()}`
-              : "—"
-          }
-        />
-        <TraceMetric
-          icon={<Wrench size={15} aria-hidden />}
-          label={t("auto.runs.toolCalls")}
-          value={String(toolUses.length)}
-        />
-      </div>
-      {sessionUsage && (
-        <UsageSummaryView summary={sessionUsage} title={t("auto.runs.sessionUsage")} />
-      )}
-      {detail.error && (
-        <div
-          role="alert"
-          className="whitespace-pre-wrap break-words rounded-xl border border-status-err/20 bg-status-err/5 p-3 text-sm text-status-err"
-        >
-          {detail.error}
-        </div>
-      )}
-      {detail.summary && (
-        <Section title={t("auto.runs.summary")}>
-          <p className="whitespace-pre-wrap break-words text-sm leading-relaxed">
-            {detail.summary}
-          </p>
-        </Section>
-      )}
-      <Section title={t("auto.runs.prompt")}>
-        {detail.prompt ? (
-          <TracePayload value={detail.prompt} />
-        ) : (
-          <p className="text-sm text-muted-foreground">{t("auto.runs.promptUnavailable")}</p>
-        )}
-      </Section>
-      <Section title={t("auto.runs.tools")} count={toolUses.length}>
-        {toolUses.length === 0 ? (
-          <p className="text-sm text-muted-foreground">{t("auto.runs.noToolCalls")}</p>
-        ) : (
-          <ol className="space-y-2">
-            {toolUses.map((event) => {
-              const callId = String(event.data.toolCallId ?? "");
-              const result = toolResults.get(callId);
-              return (
-                <li key={event.eventId} className="min-w-0 rounded-xl border border-border/70">
-                  <details>
-                    <summary className="flex cursor-pointer list-none items-center justify-between gap-3 px-3 py-2.5 text-sm marker:content-none">
-                      <span className="min-w-0 break-all font-medium">
-                        {String(event.data.toolName ?? t("auto.runs.unknownTool"))}
-                      </span>
-                      <span className="shrink-0 text-[11px] tabular-nums text-muted-foreground">
-                        {result?.data.error
-                          ? t("auto.runs.toolError")
-                          : result
-                            ? t("auto.runs.toolDone")
-                            : t("auto.runs.toolNoResult")}
-                      </span>
-                    </summary>
-                    <div className="space-y-3 border-t border-border/60 p-3">
-                      <TraceField label={t("auto.runs.toolInput")} value={event.data.args ?? {}} />
-                      {result && (
-                        <TraceField
-                          label={
-                            result.data.error ? t("auto.runs.toolError") : t("auto.runs.toolOutput")
-                          }
-                          value={
-                            result.data.error ??
-                            result.data.result ??
-                            result.data.contentBlocks ??
-                            null
-                          }
-                        />
-                      )}
-                    </div>
-                  </details>
-                </li>
-              );
-            })}
-          </ol>
-        )}
-      </Section>
-      <Section title={t("auto.runs.checkpoints")} count={detail.checkpoints.length}>
-        {detail.checkpoints.length === 0 ? (
-          <p className="text-sm text-muted-foreground">{t("auto.runs.none")}</p>
-        ) : (
-          <ol className="space-y-2">
-            {detail.checkpoints.map((checkpoint) => (
-              <li
-                key={checkpoint.checkpointId}
-                className="min-w-0 rounded-xl border border-border/70 p-3 text-sm"
-              >
-                <div className="mb-2 flex min-w-0 flex-wrap items-center justify-between gap-2">
-                  <strong className="break-all text-xs font-medium">
-                    {statusLabel(checkpoint.phase, t)}
-                  </strong>
-                  <span className="text-[11px] tabular-nums text-muted-foreground">
-                    {formatTime(checkpoint.createdAt, lang)}
-                  </span>
-                </div>
-                <p className="whitespace-pre-wrap break-words leading-relaxed">
-                  {checkpoint.summary}
-                </p>
-                {checkpoint.nextAction && (
-                  <p className="mt-2 break-words text-xs leading-relaxed text-muted-foreground">
-                    {t("auto.runs.nextStep", { action: checkpoint.nextAction })}
-                  </p>
-                )}
-              </li>
-            ))}
-          </ol>
-        )}
-      </Section>
-      <Section title={t("auto.runs.artifacts")} count={detail.artifacts.length}>
-        {detail.artifacts.length === 0 ? (
-          <p className="text-sm text-muted-foreground">{t("auto.runs.none")}</p>
-        ) : (
-          <ul className="space-y-2">
-            {detail.artifacts.map((artifact) => (
-              <li key={artifact} className="min-w-0 rounded-lg bg-muted/40 px-3 py-2">
-                <code className="break-all text-xs leading-5">{artifact}</code>
-              </li>
-            ))}
-          </ul>
-        )}
-      </Section>
-      <Section title={t("auto.runs.events")} count={detail.events.length}>
-        {detail.events.length === 0 ? (
-          <p className="text-sm text-muted-foreground">{t("auto.runs.none")}</p>
-        ) : (
-          <ol className="space-y-2">
-            {detail.events.map((event) => (
-              <li key={event.eventId} className="min-w-0 rounded-xl border border-border/70">
-                <details>
-                  <summary className="flex cursor-pointer list-none items-center justify-between gap-3 px-3 py-2.5 text-xs marker:content-none">
-                    <span className="min-w-0 break-all" title={event.type}>
-                      {eventDetailTitle(event, t)}
-                    </span>
-                    <span className="shrink-0 tabular-nums text-muted-foreground">
-                      {formatTime(event.timestamp, lang)}
-                    </span>
-                  </summary>
-                  <div className="border-t border-border/60 p-3">
-                    <TracePayload value={event.data} />
-                  </div>
-                </details>
-              </li>
-            ))}
-          </ol>
-        )}
-      </Section>
-    </div>
-  );
-}
-
-function TraceMetric({
-  icon,
-  label,
-  value,
-}: {
-  icon: React.ReactNode;
-  label: string;
-  value: string;
-}) {
-  return (
-    <div className="min-w-0 rounded-xl border border-border/70 bg-card px-3 py-2.5">
-      <span className="mb-1 flex items-center gap-1.5 text-[11px] text-muted-foreground">
-        {icon}
-        {label}
-      </span>
-      <strong className="block truncate text-sm font-semibold tabular-nums" title={value}>
-        {value}
-      </strong>
-    </div>
-  );
-}
-
-function TraceField({ label, value }: { label: string; value: unknown }) {
-  return (
-    <div className="min-w-0">
-      <h4 className="mb-1.5 text-[11px] font-medium text-muted-foreground">{label}</h4>
-      <TracePayload value={value} />
     </div>
   );
 }

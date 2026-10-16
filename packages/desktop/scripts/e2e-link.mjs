@@ -2,12 +2,12 @@
  * Real Electron Link-page smoke.
  *
  * Boots the production main/preload/renderer stack in an isolated HOME and
- * proves the four independent credential categories, local/server Link split,
- * ten-provider catalog, five zero-copy CLI entry points, manual credential
- * fallback, and responsive layout.
+ * proves the four independent credential categories, ten expandable provider
+ * cards with one unified Figma API/MCP entry, five zero-copy CLI
+ * entry points, manual credential fallback, and responsive layout.
  */
-/* global document */
-import { mkdir, writeFile } from "node:fs/promises";
+/* global document, window */
+import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { basename, join, resolve } from "node:path";
 import { dirname } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -25,6 +25,19 @@ const appDir = resolve(__dirname, "..");
 const isolated = await makeIsolatedElectronHome("codeshell-link-e2e-");
 const projectPath = join(isolated.home, "link-project");
 const screenshotDir = process.env.CODESHELL_LINK_SCREENSHOT_DIR;
+const networkReceipt = join(isolated.home, "network-attempts.jsonl");
+async function networkAttempts() {
+  const receipt = await readFile(networkReceipt, "utf8").catch((error) => {
+    if (error.code === "ENOENT") return "";
+    throw error;
+  });
+  return receipt.trim()
+    ? receipt
+        .trim()
+        .split("\n")
+        .map((line) => JSON.parse(line))
+    : [];
+}
 // Each category now includes a localized description in its accessible name.
 const credentialTabNames = {
   cookie: /^Cookie(?:\s|$)/i,
@@ -94,10 +107,11 @@ async function assertReadableHero(selector, label) {
 }
 
 async function openCliDialog(providerId, providerName) {
-  const card = win.locator(
-    `article[data-link-integration="${providerId}"][data-link-runtime="local"]`,
+  const card = await expandProvider(providerId);
+  const method = card.locator(
+    `[data-link-method-provider="${providerId}"][data-link-runtime="local"]`,
   );
-  await card.getByRole("button", { name: /连接本地|Connect locally/i }).click();
+  await method.getByRole("button", { name: /连接本地|Connect locally/i }).click();
   const dialog = win.getByRole("dialog");
   await dialog
     .getByRole("heading", { name: new RegExp(`连接 ${providerName}|Connect ${providerName}`, "i") })
@@ -112,13 +126,61 @@ async function openCliDialog(providerId, providerName) {
   return dialog;
 }
 
+async function expandProvider(providerId) {
+  const card = win.locator(`article[data-link-provider-card="${providerId}"]`);
+  await card.waitFor({ state: "visible" });
+  const toggle = card.locator("[data-link-provider-toggle]");
+  if ((await toggle.getAttribute("aria-expanded")) !== "true") await toggle.click();
+  await card.locator(`[data-link-provider-details="${providerId}"]`).waitFor({ state: "visible" });
+  assert(
+    (await toggle.getAttribute("aria-expanded")) === "true",
+    `${providerId} details did not expand accessibly`,
+  );
+  return card;
+}
+
+async function collapseProvider(providerId) {
+  const card = win.locator(`article[data-link-provider-card="${providerId}"]`);
+  const toggle = card.locator("[data-link-provider-toggle]");
+  if ((await toggle.getAttribute("aria-expanded")) === "true") await toggle.click();
+  await card.locator(`[data-link-provider-details="${providerId}"]`).waitFor({ state: "hidden" });
+  assert(
+    (await toggle.getAttribute("aria-expanded")) === "false",
+    `${providerId} details did not collapse accessibly`,
+  );
+}
+
 try {
   await seedFixture();
+  const networkGuard = join(isolated.home, "deny-network.cjs");
+  await writeFile(
+    networkGuard,
+    `const hostnameOf = (input) => {
+  try { return new URL(typeof input === "string" || input instanceof URL ? input : input?.url ?? (input?.hostname || input?.host ? "https://" + (input.hostname || input.host) : "https://unknown.invalid")).hostname; }
+  catch { return "unknown.invalid"; }
+};
+const deny = (input) => { require("node:fs").appendFileSync(${JSON.stringify(networkReceipt)}, JSON.stringify({ pid: process.pid, hostname: hostnameOf(input) }) + "\\n", { mode: 0o600 }); throw new Error("Link fixture forbids network"); };
+globalThis.fetch = async (input) => deny(input);
+for (const name of ["node:http", "node:https"]) {
+  const transport = require(name);
+  transport.request = deny;
+  transport.get = deny;
+}
+require("node:module").syncBuiltinESMExports();
+`,
+    { mode: 0o600 },
+  );
   app = await launchCodeShellElectron({
     appDir,
     home: isolated.home,
     userDataDir: isolated.userDataDir,
-    env: { CODESHELL_GITHUB_APP_CLIENT_ID: "", CODESHELL_GITLAB_OAUTH_CLIENT_ID: "" },
+    mainBootstrap: networkGuard,
+    env: {
+      NODE_OPTIONS: `--require ${networkGuard}`,
+      CODE_SHELL_REMOTE_LINK_DISABLED: "1",
+      CODESHELL_GITHUB_APP_CLIENT_ID: "",
+      CODESHELL_GITLAB_OAUTH_CLIENT_ID: "",
+    },
   });
   win = await findCodeShellWindow(app);
   const rendererErrors = captureRendererErrors(win);
@@ -149,24 +211,83 @@ try {
   await win.getByRole("tab", { name: credentialTabNames.link }).click();
   await win.locator("[data-link-page]").waitFor({ state: "visible", timeout: 20_000 });
 
+  await win.locator('article[data-link-provider-card="github"]').waitFor({ state: "visible" });
   assert(
-    (await win.locator('[data-link-runtime-section="local"]').count()) === 1,
-    "Link page did not render one independent local section",
+    (await win.locator("[data-link-runtime-section]").count()) === 0,
+    "Link page retained the old runtime directory split",
   );
+  const providerIds = await win
+    .locator("article[data-link-provider-card]")
+    .evaluateAll((cards) => cards.map((card) => card.dataset.linkProviderCard));
+  const expectedProviders = [
+    "github",
+    "gitlab",
+    "sentry",
+    "vercel",
+    "slack",
+    "notion",
+    "linear",
+    "todoist",
+    "airtable",
+    "figma",
+  ];
   assert(
-    (await win.locator('[data-link-runtime-section="server"]').count()) === 1,
-    "Link page did not render one independent server section",
+    JSON.stringify([...providerIds].sort()) === JSON.stringify([...expectedProviders].sort()),
+    `Link directory does not contain exactly one card per service: ${JSON.stringify(providerIds)}`,
   );
-  assert(
-    (await win.locator('article[data-link-runtime="local"]').count()) === 10,
-    "Link page did not render all ten local provider methods",
-  );
-  assert(
-    (await win.locator('article[data-link-runtime="server"]').count()) === 10,
-    "Link page did not render all ten server provider methods",
-  );
-  await assertNoHorizontalOverflow("desktop Link page");
+  for (const providerId of expectedProviders) {
+    const card = win.locator(`article[data-link-provider-card="${providerId}"]`);
+    assert(
+      (await card.locator("[data-link-provider-toggle]").getAttribute("aria-expanded")) === "false",
+      `${providerId} was expanded before user interaction`,
+    );
+    assert(
+      !(await card.locator(`[data-link-provider-details="${providerId}"]`).isVisible()),
+      `${providerId} management details were initially visible`,
+    );
+  }
+  await assertNoHorizontalOverflow("desktop Link directory");
   await screenshot("link-desktop.png");
+  const figma = await expandProvider("figma");
+  assert(
+    (await figma.locator('[data-figma-channel="api"]').count()) === 1,
+    "Figma API channel is missing",
+  );
+  const mcp = figma.locator('[data-figma-channel="mcp"]');
+  assert((await mcp.count()) === 1, "Figma official MCP channel is missing");
+  const officialMcpName = /连接设计上下文|Connect design context/i;
+  assert(
+    (await mcp.getByRole("button", { name: officialMcpName }).count()) === 1,
+    "Official MCP connect is missing from the Figma card",
+  );
+  assert(
+    (await win.getByRole("button", { name: officialMcpName }).count()) === 1,
+    "Official Figma MCP connect leaked outside the unified card",
+  );
+  assert(
+    (await mcp.locator("[data-figma-mcp-connection]").count()) === 0,
+    "An isolated unauthenticated HOME acquired a Figma MCP connection",
+  );
+  assert(
+    !/即将开放|Coming soon/i.test(await figma.innerText()),
+    "Figma rendered failed or unavailable discovery as an unimplemented service",
+  );
+  const snapshot = await win.evaluate(
+    (cwd) => window.codeshell.links.remoteSnapshot(cwd),
+    projectPath,
+  );
+  assert(
+    !snapshot.connections.some((connection) => connection.providerId === "figma"),
+    "Viewing Figma settings created a connection without consent",
+  );
+  assert(
+    (await networkAttempts()).length === 0,
+    `Unauthenticated Link settings attempted authorization or content retrieval: ${JSON.stringify(await networkAttempts())}`,
+  );
+  await assertNoHorizontalOverflow("expanded Figma settings");
+  await figma.evaluate((card) => card.scrollIntoView({ block: "start" }));
+  await screenshot("link-figma-expanded.png");
+  await collapseProvider("figma");
 
   const quickAuthProviders = [
     ["github", "GitHub", /使用 GitHub CLI 登录|Sign in with GitHub CLI/i],
@@ -186,6 +307,7 @@ try {
     if (providerId === "github") await screenshot("link-github-token.png");
     await dialog.getByRole("button", { name: "Close" }).click();
     await dialog.waitFor({ state: "hidden" });
+    await collapseProvider(providerId);
   }
 
   await win.setViewportSize({ width: 700, height: 900 });
@@ -214,6 +336,16 @@ try {
     await screenshot(screenshotName);
   }
 
+  const mobileFigma = await expandProvider("figma");
+  await assertNoHorizontalOverflow("mobile expanded Figma settings");
+  await mobileFigma.evaluate((card) => card.scrollIntoView({ block: "start" }));
+  await screenshot("link-figma-mobile.png");
+  await collapseProvider("figma");
+
+  assert(
+    (await networkAttempts()).length === 0,
+    "Link settings attempted network access without explicit authorization",
+  );
   assert(rendererErrors.length === 0, `renderer emitted ${rendererErrors.length} page error(s)`);
   console.log("CodeShell Electron Link E2E: passed");
 } catch (error) {

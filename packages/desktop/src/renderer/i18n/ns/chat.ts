@@ -4,6 +4,10 @@ export const chat = {
     chat: {
       linkResource: {
         title: "Figma 文件",
+        connectMcp: "连接 Figma 设计上下文",
+        mcpDescription: "设计上下文和 Make 源码使用 Figma 官方 MCP；连接不会读取文件内容。",
+        mcpReadPrompt:
+          "Figma 官方 MCP 已连接。请仅恢复此前受阻的原操作和目标，并按原任务需要读取内容。参数：{arguments}",
         description: "首次读取此文件需要确认只读授权。",
         granted: "此文件已授权，会根据任务按需读取内容。",
         waiting: "文件已授权，当前任务结束后会继续处理。",
@@ -297,6 +301,11 @@ export const chat = {
     chat: {
       linkResource: {
         title: "Figma file",
+        connectMcp: "Connect Figma design context",
+        mcpDescription:
+          "Design context and Make source use the official Figma MCP. Connecting does not read file content.",
+        mcpReadPrompt:
+          "The official Figma MCP is connected. Resume only the earlier blocked operation and target, reading content as the original task needs it. Arguments: {arguments}",
         description: "Confirm read-only access before reading this file for the first time.",
         granted: "This file is authorized. Content will be read as the task needs it.",
         waiting: "File authorized. Work will continue when the current task finishes.",

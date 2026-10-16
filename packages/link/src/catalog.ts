@@ -1,4 +1,5 @@
 import type { LinkAuthGuide, LinkLocalizedText, LinkProviderManifest } from "./types.js";
+import { FIGMA_MCP_ACTION_IDS } from "./figma.js";
 
 const text = (zh: string, en: string): LinkLocalizedText => ({ zh, en });
 
@@ -612,8 +613,8 @@ export const LINK_PROVIDER_MANIFESTS: LinkProviderManifest[] = [
     displayName: "Figma",
     category: "design",
     description: text(
-      "按需读取设计结构、节点、渲染图、填充图片和评论。",
-      "Read design structure, nodes, rendered images, image fills, and comments on demand.",
+      "API 读取原始节点、图片和评论；需要设计上下文、动画、组件映射或 Make 源码时使用官方 MCP。",
+      "Use the API for nodes, images, and comments; use official MCP when design context, motion, code mappings, or Make source is needed.",
     ),
     brandText: "Fi",
     icon: "figma",
@@ -658,9 +659,39 @@ export const LINK_PROVIDER_MANIFESTS: LinkProviderManifest[] = [
         },
       ),
       { ...managedOAuth("Figma"), id: "figma-oauth" },
+      {
+        id: "mcp",
+        displayName: text("官方 MCP", "Official MCP"),
+        executionRuntime: "local",
+        secretLocation: "device",
+        authKind: "oauth",
+        availability: "available",
+        oauthProfileId: "figma-mcp",
+        browserAuth: {
+          kind: "browser-oauth",
+          flow: "authorization-code-pkce",
+          displayName: text("连接官方 MCP", "Connect official MCP"),
+          summary: text(
+            "需要高级设计内容时连接；授权保存在本机并自动刷新，连接时不读取文件。",
+            "Connect when advanced design content is needed. Authorization is saved locally and refreshed automatically; connecting does not read files.",
+          ),
+          docsUrl: "https://developers.figma.com/docs/figma-mcp-server/remote-server-installation/",
+          privacyNote: text(
+            "授权页面使用本次验证的 Codex 注册名称；Figma 账号权限仍由官方授权页面决定。",
+            "The authorization page uses the verified Codex registration name; Figma account access is controlled by the official consent page.",
+          ),
+        },
+      },
     ],
     fileSelection: { kind: "figma-file", action: "get_file", resourceGroup: "files" },
-    actionIds: ["get_file", "get_comments", "get_nodes", "get_images", "get_image_fills"],
+    actionIds: [
+      "get_file",
+      "get_comments",
+      "get_nodes",
+      "get_images",
+      "get_image_fills",
+      ...FIGMA_MCP_ACTION_IDS,
+    ],
   },
 ];
 

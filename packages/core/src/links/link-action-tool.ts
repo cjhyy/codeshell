@@ -21,6 +21,9 @@ import { getLinkStatus } from "./status.js";
 import { allowsLinkAction, linkAuthoritySnapshot } from "./authority.js";
 import { FigmaContentUnavailableError, UnsupportedFigmaFileTypeError } from "./figma.js";
 import { LinkProviderResponseTooLargeError } from "./http.js";
+import { isFigmaMcpAction } from "@cjhyy/code-shell-link";
+import { isFigmaMcpCredential, McpLinkActionError } from "./figma-mcp.js";
+import { figmaMcpParameters } from "./figma-mcp-params.js";
 import { canonicalOperationValue } from "../operations/ledger.js";
 import { githubCreateIssueParameters, verifiedGithubCreateIssue } from "./verified-write.js";
 
@@ -44,7 +47,10 @@ export const linkActionToolDef: ToolDefinition = {
     "GitHub set_starred requires explicit get_repository/get_starred/set_starred grants, verifies " +
     "the fixed repository and desired boolean state, and permits one target per trusted intent. " +
     "A verified unchanged result means no write was sent. CLI bindings expose read actions only; " +
-    "explicitly connect PAT/OAuth or remote Link for writes.",
+    "explicitly connect PAT/OAuth or remote Link for writes. Figma uses API actions for raw nodes, " +
+    "image exports, and comments. Only use its separate MCP connection when design context, " +
+    "motion, Code Connect, or Make source resources are needed. Connecting never reads files; " +
+    "get_file defaults to depth 2, detailed nodes and source files are fetched only as needed.",
   inputSchema: {
     type: "object",
     properties: {
@@ -77,6 +83,11 @@ interface ConnectedLink {
 }
 
 function isUsableLinkCredential(credential: CredentialMetadata): boolean {
+  if (isFigmaMcpCredential(credential))
+    return (
+      credential.meta?.linkOAuthState !== "reconnect" &&
+      (credential.oauthStatus?.state === "valid" || credential.oauthStatus?.canRefresh === true)
+    );
   if (isRemoteLinkCredential(credential))
     return (
       credential.meta?.linkRemoteState === "connected" &&
@@ -98,7 +109,9 @@ function connectedLinks(ctx?: ToolContext): ConnectedLink[] {
     .listMasked(cwd, scope)
     .flatMap((credential) => {
       const providerId = credential.meta?.linkProvider;
-      return (credential.type === "link" || isRemoteLinkCredential(credential)) &&
+      return (credential.type === "link" ||
+        isRemoteLinkCredential(credential) ||
+        isFigmaMcpCredential(credential)) &&
         credential.hasSecret &&
         isUsableLinkCredential(credential) &&
         (credential.meta?.linkExecutionRuntime === "local" || isRemoteLinkCredential(credential)) &&
@@ -243,6 +256,21 @@ async function executeLinkAction(
   if (!provider) {
     return JSON.stringify({ kind: "error", error: `Unknown local Link provider: ${providerId}` });
   }
+  const wantsFigmaMcp = providerId === "figma" && isFigmaMcpAction(actionId);
+  let figmaResourceUrl: string | undefined;
+  if (wantsFigmaMcp) {
+    try {
+      figmaResourceUrl = figmaMcpParameters(actionId, parseParams(args.params)).target.resourceUrl;
+    } catch (error) {
+      return JSON.stringify({
+        kind: "error",
+        provider: providerId,
+        action: actionId,
+        backend: "mcp",
+        error: error instanceof Error ? error.message : "Invalid Figma MCP parameters.",
+      });
+    }
+  }
   if (
     args.connectionId !== undefined &&
     (typeof args.connectionId !== "string" || !args.connectionId)
@@ -256,7 +284,8 @@ async function executeLinkAction(
     .filter(
       (credential) =>
         credential.meta?.linkProvider === providerId &&
-        (credential.meta.linkExecutionRuntime === "local" || isRemoteLinkCredential(credential)),
+        (credential.meta.linkExecutionRuntime === "local" || isRemoteLinkCredential(credential)) &&
+        (providerId !== "figma" || isFigmaMcpCredential(credential) === wantsFigmaMcp),
     );
   if (args.connectionId === undefined && saved.length > 1)
     return JSON.stringify({
@@ -274,6 +303,7 @@ async function executeLinkAction(
   const candidates = links.filter(
     (candidate) =>
       candidate.providerId === providerId &&
+      (providerId !== "figma" || isFigmaMcpCredential(candidate.credential) === wantsFigmaMcp) &&
       (args.connectionId === undefined || candidate.credential.id === args.connectionId),
   );
   if (candidates.length > 1)
@@ -290,6 +320,21 @@ async function executeLinkAction(
     });
   const connection = candidates[0] ? structuredClone(candidates[0]) : undefined;
   if (!connection) {
+    if (wantsFigmaMcp)
+      return JSON.stringify({
+        kind: "authorization_required",
+        provider: "figma",
+        backend: "mcp",
+        action: actionId,
+        ...(figmaResourceUrl ? { resourceUrl: figmaResourceUrl } : {}),
+        connections: saved.map((credential) => ({
+          id: credential.id,
+          label: credential.label,
+          account: credential.meta?.linkAccountLabel,
+        })),
+        message:
+          "Connect the official MCP capability inside Figma Link, then retry this original action. API authorization cannot be used for MCP.",
+      });
     return JSON.stringify({
       kind: "error",
       error: `No usable saved ${provider.displayName} Link is available. Query LinkAction with this provider and no action to inspect saved credentials and existing CLI login.`,
@@ -404,7 +449,7 @@ async function executeLinkAction(
     return Boolean(
       live?.hasSecret &&
       activeAuthority(live) === authority &&
-      (live.type === "link" || isRemoteLinkCredential(live)) &&
+      (live.type === "link" || isRemoteLinkCredential(live) || isFigmaMcpCredential(live)) &&
       live.meta?.linkExecutionRuntime === connection.credential.meta?.linkExecutionRuntime &&
       live.meta?.linkRemoteGrantId === connection.credential.meta?.linkRemoteGrantId &&
       live.meta?.linkProvider === providerId &&
@@ -434,7 +479,23 @@ async function executeLinkAction(
     assertConnected();
     let data: unknown;
     const execute = async (): Promise<unknown> => {
-      if (isRemoteLinkCredential(connection.credential)) {
+      if (isFigmaMcpCredential(connection.credential)) {
+        const meta = connection.credential.meta!;
+        if (!access.executeMcpLinkAction || !meta.linkAccountId || !meta.linkLastVerifiedAt)
+          throw new Error("MCP Link actions are unavailable on this Host");
+        data = await access.executeMcpLinkAction(
+          {
+            cwd,
+            scope,
+            id: connection.credential.id,
+            accountId: meta.linkAccountId,
+            verifiedAt: meta.linkLastVerifiedAt,
+            action: actionId,
+            params,
+          },
+          { signal, assertAuthorized: assertConnected },
+        );
+      } else if (isRemoteLinkCredential(connection.credential)) {
         if (!access.executeRemoteLinkAction || !connection.credential.meta?.linkRemoteGrantId)
           throw new Error("Remote Link actions are unavailable on this Host");
         data = await access.executeRemoteLinkAction(
@@ -543,17 +604,63 @@ async function executeLinkAction(
     // Cancellation is advisory to transports. Recheck both the live binding
     // and task signal before publishing any result from the completed action.
     assertConnected();
+    if (
+      wantsFigmaMcp &&
+      data &&
+      typeof data === "object" &&
+      (data as Record<string, unknown>).isError === true
+    )
+      return JSON.stringify({
+        kind: "error",
+        provider: providerId,
+        action: actionId,
+        backend: "mcp",
+        connectionId: connection.credential.id,
+        untrustedExternalContent: true,
+        code: "provider_rejected",
+        error: "Figma MCP could not complete the requested read.",
+        data,
+      });
     return JSON.stringify({
       kind: operation && operation.state !== "verified" ? "unverified_write" : "action_result",
       provider: providerId,
       action: actionId,
       runtime: connection.credential.meta?.linkExecutionRuntime,
       connectionId: connection.credential.id,
+      ...(wantsFigmaMcp ? { backend: "mcp" } : {}),
       untrustedExternalContent: true,
       data,
       ...(operation ? { operation } : {}),
     });
   } catch (error) {
+    let reconnectCurrentMcp = false;
+    if (wantsFigmaMcp && !ctx?.signal?.aborted) {
+      try {
+        ctx?.operations?.assertAuthorized?.();
+        const live = access.resolveMeta(cwd, connection.credential.id, scope);
+        reconnectCurrentMcp = Boolean(
+          live &&
+          isFigmaMcpCredential(live) &&
+          activeAuthority(live) === authority &&
+          (live.meta?.linkOAuthState === "reconnect" ||
+            (error instanceof McpLinkActionError && error.code === "reconnect")),
+        );
+      } catch {
+        /* Revoked runs cannot trigger a new authorization prompt. */
+      }
+    }
+    // A reconnect snapshot may cancel the worker IPC before its reviewed error
+    // arrives. Recover only for this same current grant, never a task cancellation.
+    if (reconnectCurrentMcp)
+      return JSON.stringify({
+        kind: "authorization_required",
+        provider: "figma",
+        backend: "mcp",
+        action: actionId,
+        connectionId: connection.credential.id,
+        ...(figmaResourceUrl ? { resourceUrl: figmaResourceUrl } : {}),
+        message: new McpLinkActionError("reconnect").message,
+      });
     return JSON.stringify({
       kind: "error",
       provider: providerId,
@@ -562,7 +669,8 @@ async function executeLinkAction(
       ...(error instanceof RemoteLinkError ||
       error instanceof FigmaContentUnavailableError ||
       error instanceof UnsupportedFigmaFileTypeError ||
-      error instanceof LinkProviderResponseTooLargeError
+      error instanceof LinkProviderResponseTooLargeError ||
+      error instanceof McpLinkActionError
         ? { code: error.code }
         : {}),
     });
@@ -580,7 +688,9 @@ export function isLinkActionAvailable(
       .listMasked(cwd, credentialAccessScope(settingsScope))
       .some(
         (credential) =>
-          (credential.type === "link" || isRemoteLinkCredential(credential)) &&
+          (credential.type === "link" ||
+            isRemoteLinkCredential(credential) ||
+            isFigmaMcpCredential(credential)) &&
           credential.hasSecret &&
           isUsableLinkCredential(credential) &&
           (credential.meta?.linkExecutionRuntime === "local" ||

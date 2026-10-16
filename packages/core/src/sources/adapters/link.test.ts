@@ -4,6 +4,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { setDefaultCredentialAccess, type CredentialMetadata } from "../../credentials/access.js";
 import { LOCAL_LINK_PROVIDERS } from "../../links/providers.js";
+import { isFigmaMcpAction } from "@cjhyy/code-shell-link";
 import { SettingsManager } from "../../settings/manager.js";
 import type { ToolContext } from "../../tool-system/context.js";
 import { listSourcesTool, readSourceTool } from "../../tool-system/builtin/sources.js";
@@ -144,7 +145,10 @@ test("ReadSource's bound LinkAction remains permission-gated without loading its
 test("all 10 providers/35 read actions reuse exact saved grant and caller credential scope, metadata does no IO", async () => {
   let calls = 0;
   for (const provider of LOCAL_LINK_PROVIDERS)
-    for (const action of provider.actions.filter((item) => item.risk !== "write")) {
+    // Remote grants cannot authorize the independent Host-owned Figma MCP channel.
+    for (const action of provider.actions.filter(
+      (item) => item.risk !== "write" && !(provider.id === "figma" && isFigmaMcpAction(item.id)),
+    )) {
       const def = definition(provider.id, action.id);
       const meta = credential(provider.id, action.id);
       setDefaultCredentialAccess({

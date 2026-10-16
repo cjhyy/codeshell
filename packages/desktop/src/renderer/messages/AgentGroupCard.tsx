@@ -1,5 +1,5 @@
-import React, { memo, useState } from "react";
-import { Check, X, Users } from "lucide-react";
+import React, { memo, useId, useState } from "react";
+import { Check, ChevronRight, Loader2, X, Users } from "lucide-react";
 import type { AgentGroup } from "./agentGroup";
 import { summarizeAgentGroup } from "./agentGroup";
 import { AgentMessageView } from "./AgentMessageView";
@@ -8,58 +8,70 @@ import { useT } from "../i18n/I18nProvider";
 
 /**
  * Summary card for a fan-out of ≥2 sibling sub-agents (see agentGroup.ts).
- * Header shows the rollup (N 个子代理 · ✓X ✗Y · tools · wall-clock); expanding
- * reveals each member rendered by the existing AgentMessageView. Defaults open
- * while any member is still running (the user is watching progress), collapsed
- * once all have settled (noise reduction).
+ * Header shows the status rollup and wall-clock; expanding
+ * reveals each member rendered by the existing AgentMessageView. Starts open
+ * if a member is running, or closed for settled history; subsequent updates
+ * preserve the user's disclosure state.
  */
 function AgentGroupCardImpl({ group }: { group: AgentGroup }) {
   const { t } = useT();
   const stats = summarizeAgentGroup(group.agents);
   const anyRunning = stats.running > 0;
   const [open, setOpen] = useState(anyRunning);
+  const bodyId = useId();
 
-  const dur = formatDuration(stats.wallMs);
+  const dur = stats.wallMs > 0 ? formatDuration(stats.wallMs) : "";
 
   return (
-    <div className="px-4 py-1">
-      <div className="rounded-lg border border-border">
+    <div className="cs-agent-group">
+      <div className="cs-agent-group-card" data-state={anyRunning ? "running" : "settled"}>
         <button
           type="button"
-          className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm"
+          className="cs-agent-group-heading"
           onClick={() => setOpen((v) => !v)}
           aria-expanded={open}
+          aria-controls={bodyId}
         >
-          <Users size={14} className="shrink-0 text-muted-foreground" />
-          <span className="font-medium">{t("msg.agentGroup.count", { count: stats.total })}</span>
-          <span className="flex items-center gap-2 text-xs text-muted-foreground">
-            {stats.succeeded > 0 && (
-              <span className="flex items-center gap-0.5 text-status-ok">
-                <Check size={12} />
-                {stats.succeeded}
-              </span>
-            )}
-            {stats.failed > 0 && (
-              <span className="flex items-center gap-0.5 text-status-err">
-                <X size={12} />
-                {stats.failed}
-              </span>
-            )}
-            {anyRunning && (
-              <span className="text-status-running">
-                {t("msg.agentGroup.running", { count: stats.running })}
-              </span>
-            )}
+          <span className="cs-agent-group-icon" aria-hidden="true">
+            <Users size={15} />
           </span>
-          <span className="min-w-0 flex-1" />
-          <span className="shrink-0 text-xs text-muted-foreground">
-            {t("msg.agentGroup.toolCount", { count: stats.toolTotal })}
-            {!anyRunning && dur ? ` · ${dur}` : ""}
+          <span className="cs-agent-group-heading-main">
+            <span className="cs-agent-group-title">
+              {t("msg.agentGroup.count", { count: stats.total })}
+            </span>
+            <span className="cs-agent-group-meta">
+              {stats.succeeded > 0 && (
+                <span className="cs-agent-group-status" data-status="succeeded">
+                  <Check size={12} aria-hidden="true" />
+                  {t("msg.agentGroup.succeeded", { count: stats.succeeded })}
+                </span>
+              )}
+              {stats.failed > 0 && (
+                <span className="cs-agent-group-status" data-status="failed">
+                  <X size={12} aria-hidden="true" />
+                  {t("msg.agentGroup.failed", { count: stats.failed })}
+                </span>
+              )}
+              {anyRunning && (
+                <span className="cs-agent-group-status" data-status="running">
+                  <Loader2 size={12} className="animate-spin" aria-hidden="true" />
+                  {t("msg.agentGroup.running", { count: stats.running })}
+                </span>
+              )}
+              {!anyRunning && dur && <span className="tabular-nums">{dur}</span>}
+            </span>
           </span>
-          <span className="shrink-0 text-muted-foreground">{open ? "▾" : "▸"}</span>
+          <ChevronRight
+            size={14}
+            className={
+              "cs-agent-group-chevron shrink-0 text-muted-foreground transition-transform " +
+              (open ? "rotate-90" : "")
+            }
+            aria-hidden="true"
+          />
         </button>
         {open && (
-          <div className="border-t border-border py-1">
+          <div id={bodyId} className="cs-agent-group-body">
             {group.agents.map((a) => (
               <AgentMessageView key={a.id} message={a} />
             ))}

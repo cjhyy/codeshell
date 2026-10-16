@@ -8,6 +8,7 @@ import { registerProfileSwitchIpc } from "./profile-switch-ipc.js";
 import { registerSourceCollectionIpc } from "./source-collections-ipc.js";
 import { openSourceCollectionOperation } from "./source-collections-host.js";
 import { registerRemoteLinkIpc } from "./remote-link-ipc.js";
+import { createFigmaMcpLinkAdapter } from "./figma-mcp-link.js";
 import { registerOperationResolutionHost } from "./operation-resolution-host.js";
 /**
  * Electron main entry — broker between renderer (ipcMain) and the
@@ -17,6 +18,7 @@ import { registerOperationResolutionHost } from "./operation-resolution-host.js"
 import {
   app,
   BrowserWindow,
+  WebContentsView,
   clipboard,
   dialog,
   ipcMain,
@@ -451,11 +453,13 @@ import { expandPluginCommand, listPluginCommands } from "./plugin-command-servic
 import { getPluginMedia } from "./plugin-media-service.js";
 import {
   preparedPanelAppPartitionProjectPath,
+  preparePanelApp,
   registerPanelAppSchemePrivileges,
   validatePanelAppEntryUrl,
 } from "./panel-app-protocol.js";
 import { installThemeAssetProtocol, THEME_ASSET_SCHEME } from "./theme-asset-protocol.js";
 import { PanelAppBridge } from "./panel-app-bridge.js";
+import { PanelAppWindows } from "./panel-app-windows.js";
 import { buildPanelAgentTaskModelCatalog } from "./panel-app-agent-task-models.js";
 import {
   listMarketplacesForUi,
@@ -862,6 +866,22 @@ const panelAppBridge = new PanelAppBridge({
   },
 });
 panelAppBridge.registerIpc();
+const panelAppWindows = new PanelAppWindows({
+  bridge: panelAppBridge,
+  prepare: preparePanelApp,
+  validateEntry: validatePanelAppEntryUrl,
+  ownerWindow: (id) => BrowserWindow.fromId(id),
+  createWindow: (options) => new BrowserWindow(options),
+  createView: (options) => new WebContentsView(options),
+  preloadPath: resolve(__dirname, "..", "preload", "panel-app.cjs"),
+});
+ipcMain.handle("panel-apps:open-window", async (event, target) => {
+  const parent = BrowserWindow.fromWebContents(event.sender);
+  if (!parent || !mainWindows.has(parent) || event.senderFrame !== event.sender.mainFrame) {
+    throw new Error("Panel windows can only be opened from their Desktop tab");
+  }
+  await panelAppWindows.open(event.sender, target);
+});
 const imGatewayService = new ImGatewayService({
   ensureDesktopControl: async () => {
     if (!gatewayControlServer) throw new Error("Desktop 消息桥接尚未启动");
@@ -908,6 +928,7 @@ function getMcpOAuthService(): McpOAuthService {
       onCredentialsChanged: () => {
         bridge?.pushCredentialSnapshot(undefined);
         invalidateMcpProbeCache();
+        bridge?.notifyWebConfigurationChanged();
       },
     });
   }
@@ -922,6 +943,7 @@ function normalizeMcpOAuthLoginInput(raw: unknown): McpOAuthLoginInput {
   if (input.source === "catalog") {
     const profileId = optionalString(input.profileId);
     if (!profileId) throw new Error("mcpOAuth:login requires profileId");
+    if (profileId === "figma-mcp") throw new Error("请通过 Figma Link 连接官方 MCP。");
     return { source: "catalog", profileId, credentialId: optionalString(input.credentialId) };
   }
   if (input.source !== "mcp") throw new Error("mcpOAuth:login source must be catalog or mcp");
@@ -1584,7 +1606,11 @@ async function createWindow(): Promise<BrowserWindow> {
   if (!bridge) {
     bridge = new AgentBridge(
       win,
-      (req) => getMcpOAuthService().resolveAccessToken(req.id, { forceRefresh: req.forceRefresh }),
+      (req) =>
+        getMcpOAuthService().resolveAccessToken(req.id, {
+          serverUrl: req.serverUrl,
+          forceRefresh: req.forceRefresh,
+        }),
       {
         begin: ({ sessionId, ownerId, claimId }) =>
           quickChatOwnership.beginFork(sessionId, ownerId, claimId),
@@ -4147,6 +4173,12 @@ const remoteLinkIpc = registerRemoteLinkIpc({
   withMutation: (cwd, write) =>
     bridge ? bridge.withWebConfigurationMutation(cwd, write) : write(),
   onChanged: () => bridge?.notifyWebConfigurationChanged(),
+  hostOAuthAdapters: () => [
+    createFigmaMcpLinkAdapter({
+      oauth: getMcpOAuthService(),
+      openExternal: (url) => shell.openExternal(url),
+    }),
+  ],
 });
 prepareAccountGitHubLink = remoteLinkIpc.prepareGitHubLink;
 
