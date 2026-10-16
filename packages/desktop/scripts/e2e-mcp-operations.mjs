@@ -12,6 +12,7 @@ import {
   navigateSettingsMenu,
 } from "./electron-harness.mjs";
 import { settingsNetworkGuard } from "./settings-network-guard.mjs";
+import { getElectronKeychainPreflightDiagnostic } from "./electron-keychain-preflight.mjs";
 
 const appDirArgument = process.argv.indexOf("--app-dir");
 if (appDirArgument >= 0 && !process.argv[appDirArgument + 1])
@@ -344,6 +345,8 @@ ipcMain.handle=(channel,listener)=>handle(channel,async(...args)=>{
   );
   console.log("CodeShell MCP operations E2E: passed");
 } catch (error) {
+  const keychainPreflight = getElectronKeychainPreflightDiagnostic(error);
+  if (keychainPreflight) console.error(JSON.stringify({ keychainPreflight }));
   console.error(
     `MCP operations failed during ${stage}: ${error?.name ?? "Error"}; renderer errors: ${errors.length}`,
   );

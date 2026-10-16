@@ -8,6 +8,7 @@ import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { createBunTestEnvironment } from "../../../scripts/bun-test-completion.mjs";
+import { getElectronKeychainPreflightDiagnostic } from "./electron-keychain-preflight.mjs";
 
 const appDir = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const repository = resolve(appDir, "../..");
@@ -583,9 +584,15 @@ try {
     `PASS cost GUI: compiled ledger → production IPC → actual Electron cold restart; current per-call trace cost UI; 2 Sessions, 6 deduplicated receipts, known + unknown + partial; refresh/reload; private evidence: ${evidenceDir}`,
   );
 } catch (error) {
-  if (win) await screenshot("cost-history-failure.png").catch(() => {});
-  console.error(`Cost GUI failed at ${stage}; private evidence retained: ${root}`);
-  throw error;
+  const keychainPreflight = getElectronKeychainPreflightDiagnostic(error);
+  if (keychainPreflight) {
+    console.error(JSON.stringify({ keychainPreflight }));
+    process.exitCode = 1;
+  } else {
+    if (win) await screenshot("cost-history-failure.png").catch(() => {});
+    console.error(`Cost GUI failed at ${stage}; private evidence retained: ${root}`);
+    throw error;
+  }
 } finally {
   await app?.close();
   // Keep successful screenshots and receipt hashes for review; delete only the

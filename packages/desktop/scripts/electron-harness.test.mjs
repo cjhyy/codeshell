@@ -1,6 +1,16 @@
-import { equal, match, rejects } from "node:assert/strict";
+import { deepStrictEqual, equal, match, rejects } from "node:assert/strict";
 import { createHash } from "node:crypto";
-import { existsSync, mkdirSync, mkdtempSync, realpathSync, rmSync, writeFileSync } from "node:fs";
+import {
+  existsSync,
+  mkdirSync,
+  mkdtempSync,
+  readFileSync,
+  realpathSync,
+  renameSync,
+  rmSync,
+  statSync,
+  writeFileSync,
+} from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { test } from "node:test";
@@ -9,7 +19,10 @@ import {
   makeIsolatedElectronHome,
   waitForAsyncFunction,
 } from "./electron-harness.mjs";
-import { ensureElectronKeychainContext } from "./electron-keychain-preflight.mjs";
+import {
+  ensureElectronKeychainContext,
+  getElectronKeychainPreflightDiagnostic,
+} from "./electron-keychain-preflight.mjs";
 import { keychainPreferenceXml } from "./macos-keychain-context.mjs";
 
 test("async condition polling awaits false results instead of accepting their Promise", async () => {
@@ -77,6 +90,84 @@ test("missing macOS default fails before bootstrap or Electron launch", async (t
   );
   equal(launches, 0);
   equal(existsSync(join(input.home, "real-keyring.cjs")), false);
+});
+
+test("a replaced owned inode blocks launch without repinning; a fresh fixture is independent", async (t) => {
+  const input = fixture(t);
+  // An ordinary temporary file exercises filesystem identity; no native Keychain is queried.
+  const target = join(input.operatorHome, "synthetic-metadata-file");
+  writeFileSync(target, "owned fixture\n", { mode: 0o600 });
+  const query = () => {
+    const info = statSync(target);
+    return {
+      path: target,
+      pathHash: createHash("sha256").update(target).digest("hex"),
+      dev: info.dev,
+      ino: info.ino,
+      uid: info.uid,
+    };
+  };
+  const preflight = (options) =>
+    ensureElectronKeychainContext({
+      ...options,
+      platform: "darwin",
+      operatorHome: input.operatorHome,
+      query,
+    });
+  const environment = { HOME: input.home, USERPROFILE: input.home };
+  preflight({ home: input.home, environment });
+  const files = [
+    join(input.home, "electron-keychain-reference.json"),
+    join(input.home, "electron-keychain-context.json"),
+    join(input.home, "Library", "Preferences", "com.apple.security.plist"),
+  ];
+  const snapshot = () =>
+    files.map((file) => {
+      const info = statSync(file);
+      return {
+        bytes: readFileSync(file),
+        inode: info.ino,
+        mtimeMs: info.mtimeMs,
+        mode: info.mode,
+      };
+    });
+  const original = snapshot();
+  const replacement = join(input.operatorHome, "replacement");
+  writeFileSync(replacement, "replacement owned fixture\n", { mode: 0o600 });
+  renameSync(replacement, target);
+  let launches = 0;
+  for (let attempt = 0; attempt < 2; attempt++) {
+    await rejects(
+      launchCodeShellElectron(input, {
+        preflight,
+        launch() {
+          launches++;
+        },
+      }),
+      (error) => {
+        const diagnostic = getElectronKeychainPreflightDiagnostic(error);
+        equal(diagnostic.code, "CODESHELL_KEYCHAIN_PREFLIGHT_IDENTITY_CHANGED");
+        equal(diagnostic.stage, "account-before");
+        deepStrictEqual(diagnostic.identity, {
+          sameHome: true,
+          samePath: true,
+          sameDevice: true,
+          sameInode: false,
+          sameOwner: true,
+        });
+        return true;
+      },
+    );
+    deepStrictEqual(snapshot(), original);
+  }
+  equal(launches, 0);
+  equal(existsSync(join(input.home, "real-keyring.cjs")), false);
+  const freshHome = join(input.appDir, "fresh-home");
+  mkdirSync(freshHome, { mode: 0o700 });
+  const fresh = { home: freshHome, environment: { HOME: freshHome, USERPROFILE: freshHome } };
+  equal(preflight(fresh).reused, false);
+  equal(preflight(fresh).reused, true);
+  deepStrictEqual(snapshot(), original);
 });
 
 test("HOME overrides cannot bypass preflight and reach Electron", async (t) => {

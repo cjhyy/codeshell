@@ -3,6 +3,7 @@
 import assert from "node:assert/strict";
 import { readFile, writeFile } from "node:fs/promises";
 import { join } from "node:path";
+import { getElectronKeychainPreflightDiagnostic } from "./electron-keychain-preflight.mjs";
 import {
   launchCodeShellElectron,
   findCodeShellWindow,
@@ -115,6 +116,11 @@ try {
   console.log(
     "PASS: actual Electron cold restart → production usage IPC + current unknown trace cost UI",
   );
+} catch (error) {
+  const keychainPreflight = getElectronKeychainPreflightDiagnostic(error);
+  if (!keychainPreflight) throw error;
+  console.error(JSON.stringify({ keychainPreflight }));
+  process.exitCode = 1;
 } finally {
   await app?.close();
 }
