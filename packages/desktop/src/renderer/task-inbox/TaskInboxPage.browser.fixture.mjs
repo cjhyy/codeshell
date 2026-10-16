@@ -101,7 +101,18 @@ try {
       await page.evaluate((props) => window.mount(props), { lang, dark: lang === "en" });
       await page.getByRole("article").first().waitFor();
       const first = await page.getByRole("article").first().boundingBox();
-      assert.ok(first.y < viewport.height - 90, "The first task is visible below compact filters");
+      await page.screenshot({
+        path: path.join(output, `tasks-${lang}-${viewport.width}x${viewport.height}.png`),
+      });
+      assert.ok(
+        first.y < viewport.height - 90,
+        JSON.stringify({
+          message: "The first task is visible below compact filters",
+          lang,
+          viewport,
+          first,
+        }),
+      );
       assert.ok(
         await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth),
         "No horizontal page overflow",
@@ -112,10 +123,6 @@ try {
       });
       assert.equal(await filters.isVisible(), viewport.width < 1000);
       reports.push({ lang, viewport, first });
-      await page.screenshot({
-        path: path.join(output, `tasks-${lang}-${viewport.width}x${viewport.height}.png`),
-      });
-
       if (viewport.width === 390 && viewport.height === 360) {
         const search = page.getByRole("searchbox");
         await search.fill("Review task 1");

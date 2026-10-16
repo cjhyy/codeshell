@@ -263,7 +263,7 @@ export function TaskInboxPage({ onOpenTaskInboxRecord, onOpenTrace }: TaskInboxP
           )}
           {t("taskInbox.refresh")}
         </Button>
-        <p className="col-span-2 text-sm text-muted-foreground">
+        <p className="col-span-2 line-clamp-2 text-sm text-muted-foreground @min-[480px]/tasks:line-clamp-none">
           {t("activity.backgroundDescription")}
         </p>
       </header>
