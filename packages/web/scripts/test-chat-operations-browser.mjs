@@ -64,13 +64,16 @@ const heldDetails = [],
   heldRuns = [],
   heldCancels = [],
   heldDecisions = [],
-  heldJournals = [];
+  heldJournals = [],
+  heldUploads = [];
 let holdDetail = false,
   runFailure = false,
   holdCancel = false,
   holdDecision = false,
   dropNextRun = false,
-  holdJournal = false;
+  holdJournal = false,
+  holdAdmission = false,
+  holdUpload = false;
 let uploaded = 0;
 const transcripts = new Map(
   sessions.map((s) => [
@@ -104,6 +107,7 @@ const server = createServer((request, response) => {
   if (url.pathname === "/api/v1/sessions") return json({ sessions, nextCursor: null });
   if (url.pathname.startsWith("/api/v1/uploads/") && request.method === "PUT") {
     request.resume();
+    if (holdUpload) return heldUploads.push((message, status) => json({ error: message }, status));
     return json({
       id: "owned-upload-" + ++uploaded,
       name: decodeURIComponent(request.headers["x-file-name"]),
@@ -162,6 +166,7 @@ sockets.on("connection", (socket) => {
         return socket.terminate();
       }
       heldRuns.push({ socket, request });
+      if (holdAdmission) return;
       notify("agent/runAccepted", { sessionId: params.sessionId });
       notify("serve/sessionStatus", { sessionId: params.sessionId, running: true });
       return;
@@ -218,6 +223,27 @@ try {
   await page.getByText("Saved first", { exact: true }).waitFor();
   const input = page.getByRole("textbox", { name: "任务内容", exact: true });
   const send = page.getByRole("button", { name: "发送", exact: true });
+  const rejectAway = async (held, message, marker) => {
+    await page.getByRole("button", { name: /Owned first/ }).click();
+    await page.getByText("Saved first", { exact: true }).waitFor();
+    reply(held.socket, held.request.id, undefined, { code: -32000, message });
+    // This later frame proves the browser processed the preceding rejection.
+    notify("agent/streamEvent", { sessionId: "first", event: { type: "stream_request_start" } });
+    notify("agent/streamEvent", {
+      sessionId: "first",
+      event: { type: "text_delta", text: marker },
+    });
+    notify("agent/streamEvent", { sessionId: "first", event: { type: "assistant_message" } });
+    notify("agent/streamEvent", { sessionId: "first", event: { type: "turn_complete" } });
+    await page.getByText(marker, { exact: true }).waitFor();
+    assert.equal(
+      await page.getByRole("alert").count(),
+      0,
+      "late operation errors must not enter another session",
+    );
+    await page.getByRole("button", { name: /Owned second/ }).click();
+    await page.getByRole("alert").filter({ hasText: message }).waitFor();
+  };
   holdDetail = true;
   await page.getByRole("button", { name: /Owned second/ }).click();
   await until(() => heldDetails.length === 1);
@@ -274,7 +300,33 @@ try {
     () => new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve))),
   );
   assert.equal(heldCancels.length, 1, "repeated Stop clicks must keep one cancellation in flight");
-  const cancellation = heldCancels.shift();
+  let cancellation = heldCancels.shift();
+  await page.getByRole("button", { name: /Owned first/ }).click();
+  await page.getByText("Saved first", { exact: true }).waitFor();
+  reply(cancellation.socket, cancellation.request.id, undefined, {
+    code: -32000,
+    message: "Owned cancellation rejected for second",
+  });
+  notify("agent/streamEvent", { sessionId: "first", event: { type: "stream_request_start" } });
+  notify("agent/streamEvent", {
+    sessionId: "first",
+    event: { type: "text_delta", text: "Owned after cancellation marker" },
+  });
+  notify("agent/streamEvent", { sessionId: "first", event: { type: "assistant_message" } });
+  await page.getByText("Owned after cancellation marker", { exact: true }).waitFor();
+  assert.equal(
+    await page.getByRole("alert").count(),
+    0,
+    "late cancellation errors must not enter another session",
+  );
+  await page.getByRole("button", { name: /Owned second/ }).click();
+  await page
+    .getByRole("alert")
+    .filter({ hasText: "Owned cancellation rejected for second" })
+    .waitFor();
+  await stop.click();
+  await until(() => heldCancels.length === 1);
+  cancellation = heldCancels.shift();
   reply(cancellation.socket, cancellation.request.id, {});
   const run = heldRuns.shift();
   reply(run.socket, run.request.id, {});
@@ -283,6 +335,7 @@ try {
   await send.waitFor();
   holdCancel = false;
   reports.push({ operation: "duplicate-cancel-once" });
+  reports.push({ operation: "late-cancellation-failure-scoped-and-origin-retry" });
 
   // Decision failure retains the question and answer for an explicit retry.
   const approval = {
@@ -305,10 +358,15 @@ try {
   let decision = heldDecisions.shift();
   reply(decision.socket, decision.request.id, undefined, {
     code: -32000,
-    message: "Owned decision rejected",
+    message: "Owned first decision rejected",
   });
-  await page.getByRole("alert").filter({ hasText: "Owned decision rejected" }).waitFor();
+  await page.getByRole("alert").filter({ hasText: "Owned first decision rejected" }).waitFor();
   assert.equal(await answer.inputValue(), "Owned answer");
+  await answerButton.click();
+  await until(() => heldDecisions.length === 1);
+  decision = heldDecisions.shift();
+  await rejectAway(decision, "Owned decision rejected", "Owned after decision marker");
+  await answer.fill("Owned answer");
   await answerButton.click();
   await until(() => heldDecisions.length === 1);
   decision = heldDecisions.shift();
@@ -317,6 +375,7 @@ try {
   reply(decision.socket, decision.request.id, {});
   await answer.waitFor({ state: "detached" });
   reports.push({ operation: "approval-failure-preserves-answer-retry-and-duplicate-once" });
+  reports.push({ operation: "late-approval-failure-scoped-and-origin-retry" });
 
   const choices = {
     requestId: "owned-closed-choice",
@@ -435,6 +494,39 @@ try {
   reply(decision.socket, decision.request.id, {});
   await page.getByText("Owned optional question", { exact: true }).waitFor({ state: "detached" });
   reports.push({ operation: "optional-async-question-allows-new-message-before-answer" });
+
+  holdAdmission = true;
+  await input.fill("Owned pending admission");
+  await send.click();
+  await until(() => heldRuns.length === 1);
+  const rejectedRun = heldRuns.shift();
+  await rejectAway(rejectedRun, "Owned admission rejected", "Owned after admission marker");
+  assert.equal(await input.inputValue(), "Owned pending admission");
+  await page.getByRole("alert").filter({ hasText: "内容和附件已恢复" }).waitFor();
+  holdAdmission = false;
+  reports.push({ operation: "late-run-rejection-scoped-and-original-draft-restored" });
+
+  holdUpload = true;
+  await page.locator('input[type="file"]').setInputFiles({
+    name: "owned-late.txt",
+    mimeType: "text/plain",
+    buffer: Buffer.from("owned"),
+  });
+  await until(() => heldUploads.length === 1);
+  await page.getByRole("button", { name: /Owned first/ }).click();
+  await page.getByText("Saved first", { exact: true }).waitFor();
+  heldUploads.shift()("Owned upload rejected", 500);
+  await page.waitForFunction(() => !window.controller.uploadBusy);
+  assert.equal(
+    await page.getByRole("alert").count(),
+    0,
+    "late upload errors must not enter another session",
+  );
+  await page.getByRole("button", { name: /Owned second/ }).click();
+  await page.getByRole("alert").filter({ hasText: "Owned upload rejected" }).waitFor();
+  assert.equal(await input.inputValue(), "Owned pending admission");
+  holdUpload = false;
+  reports.push({ operation: "late-upload-failure-scoped-and-origin-draft-kept" });
 
   // Lost acknowledgement checks durable history and restores an unaccepted draft.
   const runsBeforeDisconnect = calls.filter((c) => c.method === "agent/run").length;

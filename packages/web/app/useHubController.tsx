@@ -71,13 +71,23 @@ export function useHubController({
   const uploading = uploadingFor === activeId;
   const [workerNote, setWorkerNote] = React.useState<string | null>(null);
   const [replayNote, setReplayNote] = React.useState<string | null>(null);
-  const [error, setError] = React.useState("");
+  const [sessionErrors, setSessionErrors] = React.useState(() => new Map<string, string>());
   const [now, setNow] = React.useState(Date.now());
   const [sessionsVersion, setSessionsVersion] = React.useState(0);
   const [configuration, setConfiguration] = React.useState<HubConfiguration | null>(null);
   const [configurationVersion, setConfigurationVersion] = React.useState(0);
   const configurationRequest = React.useRef(0);
   const activeIdRef = React.useRef<string>(activeId);
+  const setError = React.useCallback((message: string, sessionId = activeIdRef.current) => {
+    setSessionErrors((current) => {
+      if ((current.get(sessionId) ?? "") === message) return current;
+      const next = new Map(current);
+      if (message) next.set(sessionId, message);
+      else next.delete(sessionId);
+      return next;
+    });
+  }, []);
+  const error = sessionErrors.get(activeId) ?? "";
   const activeStreamCursor = React.useRef<HubStreamCursor | null>(null);
   const activeOutputCursor = React.useRef<string | null>(null);
   const outputRecoveryBlocked = React.useRef(false);
@@ -134,6 +144,11 @@ export function useHubController({
     (submission: { clientMessageId: string; draft: SubmittedDraft }, reason?: string) => {
       const restored = draftStore.current.restore(submission.draft);
       syncDraft(submission.draft.sessionId);
+      if (restored)
+        setError(
+          `${reason ? `${reason} ` : "消息未送达。"}内容和附件已恢复，可以重试。`,
+          submission.draft.sessionId,
+        );
       if (activeIdRef.current === submission.draft.sessionId) {
         setChat((previous) => ({
           ...previous,
@@ -142,20 +157,18 @@ export function useHubController({
             (item) => item.kind !== "user" || item.clientMessageId !== submission.clientMessageId,
           ),
         }));
-        if (restored)
-          setError(`${reason ? `${reason} ` : "消息未送达。"}内容和附件已恢复，可以重试。`);
       }
     },
-    [syncDraft],
+    [syncDraft, setError],
   );
 
   const reportError = React.useCallback(
-    (cause: unknown) => {
+    (cause: unknown, sessionId = activeIdRef.current) => {
       if (!mounted.current) return;
       if (cause instanceof ApiError && cause.status === 401) onAuthLost();
-      else setError(cause instanceof Error ? cause.message : "操作失败，请重试。");
+      else setError(cause instanceof Error ? cause.message : "操作失败，请重试。", sessionId);
     },
-    [onAuthLost],
+    [onAuthLost, setError],
   );
 
   const refreshConfiguration = React.useCallback(async () => {
@@ -558,7 +571,6 @@ export function useHubController({
     setActiveId(sessionId);
     syncDraft(sessionId);
     setChat(initialChatState());
-    setError("");
     setReplayNote(null);
     if (
       !sessions.some((item) => item.sessionId === sessionId) &&
@@ -643,13 +655,13 @@ export function useHubController({
       })
       .catch((cause) => {
         if (!mounted.current) return;
-        reportError(cause);
+        reportError(cause, sessionId);
         if (
           cause instanceof ProtocolRequestError &&
           (cause.kind === "transport" || cause.kind === "timeout")
         ) {
           uncertainSubmissions.current.set(sessionId, submission);
-          setError("连接中断，重新连接后会核对这条消息是否已经送达。");
+          setError("连接中断，重新连接后会核对这条消息是否已经送达。", sessionId);
         } else if (!submission.accepted)
           restoreSubmission(
             submission,
@@ -679,6 +691,7 @@ export function useHubController({
   const decide = (payload: ApprovalRequestPayload, approved: boolean, answer?: string): void => {
     const client = clientRef.current;
     if (!client || connection !== "open" || decisionPending.current.has(payload.requestId)) return;
+    const sessionId = payload.sessionId ?? activeIdRef.current;
     approvalRevision.current++;
     decisionPending.current.add(payload.requestId);
     setPendingDecisions((prev) => ({ ...prev, [payload.requestId]: true }));
@@ -695,7 +708,7 @@ export function useHubController({
           params: { requestId: payload.requestId },
         }),
       )
-      .catch(reportError)
+      .catch((cause) => reportError(cause, sessionId))
       .finally(() => {
         decisionPending.current.delete(payload.requestId);
         setPendingDecisions((prev) => {
@@ -711,9 +724,10 @@ export function useHubController({
     const client = clientRef.current;
     if (!client || connection !== "open" || cancelPending.current.has(sessionId)) return;
     cancelPending.current.add(sessionId);
+    setError("", sessionId);
     void client
       .cancel(sessionId)
-      .catch(reportError)
+      .catch((cause) => reportError(cause, sessionId))
       .finally(() => cancelPending.current.delete(sessionId));
   };
 
@@ -735,7 +749,7 @@ export function useHubController({
         }
       }
     } catch (cause) {
-      reportError(cause);
+      reportError(cause, sessionId);
     } finally {
       if (uploadController.current === controller) uploadController.current = null;
       if (mounted.current) setUploadingFor(null);

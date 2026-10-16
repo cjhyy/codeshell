@@ -154,6 +154,53 @@ test("restoring a session gates sends and an older failed restore cannot replace
   expect(hook.result.current.draft).toBe("Draft while restoring");
 });
 
+test.each([401, 500])(
+  "an upload failure %i after switching sessions keeps authentication and error scope",
+  async (status) => {
+    environment();
+    Socket.respond = ({ id }) => ({ id, result: { type: "sessions", data: [] } });
+    let rejectUpload!: (response: Response) => void;
+    globalThis.fetch = (() =>
+      new Promise<Response>((resolve) => {
+        rejectUpload = resolve;
+      })) as typeof fetch;
+    let authLost = 0;
+    const onAuthLost = () => {
+      authLost++;
+    };
+    const hook = await renderHook(() => useHubController({ onAuthLost }));
+    cleanups.push(() => hook.unmount());
+    await act(async () => {
+      Socket.instances[0].readyState = 1;
+      Socket.instances[0].onopen?.();
+      await flushMicrotasks();
+      hook.result.current.setDraft("Original session draft");
+    });
+    const origin = hook.result.current.activeId;
+    let uploading!: Promise<void>;
+    await act(async () => {
+      uploading = Promise.resolve(
+        hook.result.current.addFiles([new File(["owned"], "owned.txt")] as unknown as FileList),
+      );
+      hook.result.current.newSession();
+      await flushMicrotasks();
+    });
+    await act(async () => {
+      rejectUpload(Response.json({ error: "Owned upload failure" }, { status }));
+      await uploading;
+      await flushMicrotasks();
+    });
+    expect(hook.result.current.error).toBe("");
+    expect(authLost).toBe(status === 401 ? 1 : 0);
+    await act(async () => {
+      await hook.result.current.selectSession(origin);
+      await flushMicrotasks();
+    });
+    expect(hook.result.current.draft).toBe("Original session draft");
+    expect(hook.result.current.error).toBe(status === 401 ? "" : "Owned upload failure");
+  },
+);
+
 test("foreground on one healthy socket restores missed approvals/leases and selected history without repeating a Run", async () => {
   environment();
   const session = {
