@@ -36,7 +36,7 @@ function matches(schema: LinkValueSchema, value: unknown, depth = 0): boolean {
       value.length <= (schema.maxItems ?? Infinity) &&
       (!schema.items || value.every((item) => matches(schema.items!, item, depth + 1)))
     );
-  if (schema.type === "object") {
+  if (schema.type === "object" || schema.required || schema.properties) {
     if (!value || typeof value !== "object" || Array.isArray(value)) return false;
     const record = value as Record<string, unknown>;
     if (schema.required?.some((key) => !Object.hasOwn(record, key))) return false;

@@ -1,0 +1,4293 @@
+{
+  "github.list_repositories": {
+    "operationId": "github.list_repositories",
+    "providerId": "github",
+    "action": "list_repositories",
+    "effect": "read",
+    "executors": [
+      "api",
+      "cli"
+    ],
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "limit": {
+          "anyOf": [
+            {
+              "type": "integer",
+              "minimum": 1
+            },
+            {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 100
+            }
+          ]
+        }
+      },
+      "required": [],
+      "additionalProperties": false
+    },
+    "outputSchema": {
+      "type": "object",
+      "properties": {
+        "repositories": {
+          "type": "array",
+          "items": {
+            "type": "object"
+          },
+          "maxItems": 100
+        }
+      },
+      "required": [
+        "repositories"
+      ],
+      "additionalProperties": true
+    },
+    "resourcePolicy": {
+      "source": "grant-filtered",
+      "group": "repositories"
+    },
+    "defaults": {
+      "limit": 30
+    },
+    "limits": {
+      "inputBytes": 65536,
+      "responseBytes": 1048576
+    },
+    "repeatability": "read-only",
+    "normalization": [
+      "limit: positive number or numeric string; clamp to 100"
+    ]
+  },
+  "github.get_repository": {
+    "operationId": "github.get_repository",
+    "providerId": "github",
+    "action": "get_repository",
+    "effect": "read",
+    "executors": [
+      "api",
+      "cli"
+    ],
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "owner": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 100
+        },
+        "repo": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 100
+        }
+      },
+      "required": [
+        "owner",
+        "repo"
+      ],
+      "additionalProperties": false
+    },
+    "outputSchema": {
+      "type": "object",
+      "properties": {
+        "id": {},
+        "full_name": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 300
+        },
+        "private": {
+          "type": "boolean"
+        },
+        "archived": {
+          "type": "boolean"
+        },
+        "html_url": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 4096
+        }
+      },
+      "required": [],
+      "additionalProperties": true
+    },
+    "resourcePolicy": {
+      "source": "input",
+      "group": "repositories",
+      "selector": {
+        "kind": "joined",
+        "fields": [
+          "owner",
+          "repo"
+        ],
+        "lowercase": true
+      }
+    },
+    "defaults": {},
+    "limits": {
+      "inputBytes": 65536,
+      "responseBytes": 1048576
+    },
+    "repeatability": "read-only",
+    "normalization": []
+  },
+  "github.get_starred": {
+    "operationId": "github.get_starred",
+    "providerId": "github",
+    "action": "get_starred",
+    "effect": "read",
+    "executors": [
+      "api",
+      "cli"
+    ],
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "owner": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 100
+        },
+        "repo": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 100
+        }
+      },
+      "required": [
+        "owner",
+        "repo"
+      ],
+      "additionalProperties": false
+    },
+    "outputSchema": {
+      "type": "object",
+      "properties": {
+        "starred": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "starred"
+      ],
+      "additionalProperties": true
+    },
+    "resourcePolicy": {
+      "source": "input",
+      "group": "repositories",
+      "selector": {
+        "kind": "joined",
+        "fields": [
+          "owner",
+          "repo"
+        ],
+        "lowercase": true
+      }
+    },
+    "defaults": {},
+    "limits": {
+      "inputBytes": 65536,
+      "responseBytes": 1048576
+    },
+    "repeatability": "read-only",
+    "normalization": []
+  },
+  "github.set_starred": {
+    "operationId": "github.set_starred",
+    "providerId": "github",
+    "action": "set_starred",
+    "effect": "write",
+    "executors": [
+      "api"
+    ],
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "owner": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 100
+        },
+        "repo": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 100
+        },
+        "starred": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "owner",
+        "repo",
+        "starred"
+      ],
+      "additionalProperties": false
+    },
+    "outputSchema": {
+      "type": "object",
+      "properties": {
+        "acknowledged": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "acknowledged"
+      ],
+      "additionalProperties": true
+    },
+    "resourcePolicy": {
+      "source": "input",
+      "group": "repositories",
+      "selector": {
+        "kind": "joined",
+        "fields": [
+          "owner",
+          "repo"
+        ],
+        "lowercase": true
+      }
+    },
+    "defaults": {},
+    "limits": {
+      "inputBytes": 65536,
+      "responseBytes": 1048576
+    },
+    "repeatability": "verified-write-once",
+    "normalization": []
+  },
+  "github.get_readme": {
+    "operationId": "github.get_readme",
+    "providerId": "github",
+    "action": "get_readme",
+    "effect": "read",
+    "executors": [
+      "api",
+      "cli"
+    ],
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "owner": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 100
+        },
+        "repo": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 100
+        }
+      },
+      "required": [
+        "owner",
+        "repo"
+      ],
+      "additionalProperties": false
+    },
+    "outputSchema": {
+      "type": "object",
+      "properties": {
+        "content": {
+          "type": "string",
+          "minLength": 0,
+          "maxLength": 262144
+        },
+        "truncated": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "content",
+        "truncated"
+      ],
+      "additionalProperties": true
+    },
+    "resourcePolicy": {
+      "source": "input",
+      "group": "repositories",
+      "selector": {
+        "kind": "joined",
+        "fields": [
+          "owner",
+          "repo"
+        ],
+        "lowercase": true
+      }
+    },
+    "defaults": {},
+    "limits": {
+      "inputBytes": 65536,
+      "responseBytes": 1048576
+    },
+    "repeatability": "read-only",
+    "normalization": [],
+    "content": {
+      "kind": "text/markdown",
+      "coverage": "selected-resource"
+    }
+  },
+  "github.get_file": {
+    "operationId": "github.get_file",
+    "providerId": "github",
+    "action": "get_file",
+    "effect": "read",
+    "executors": [
+      "api",
+      "cli"
+    ],
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "owner": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 100
+        },
+        "repo": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 100
+        },
+        "path": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 2000
+        },
+        "ref": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 300
+        }
+      },
+      "required": [
+        "owner",
+        "repo",
+        "path"
+      ],
+      "additionalProperties": false
+    },
+    "outputSchema": {
+      "type": "object",
+      "properties": {
+        "content": {
+          "type": "string",
+          "minLength": 0,
+          "maxLength": 262144
+        },
+        "truncated": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "content",
+        "truncated"
+      ],
+      "additionalProperties": true
+    },
+    "resourcePolicy": {
+      "source": "input",
+      "group": "repositories",
+      "selector": {
+        "kind": "joined",
+        "fields": [
+          "owner",
+          "repo"
+        ],
+        "lowercase": true
+      }
+    },
+    "defaults": {},
+    "limits": {
+      "inputBytes": 65536,
+      "responseBytes": 1048576
+    },
+    "repeatability": "read-only",
+    "normalization": [],
+    "content": {
+      "kind": "text/plain",
+      "coverage": "selected-resource"
+    }
+  },
+  "github.list_issues": {
+    "operationId": "github.list_issues",
+    "providerId": "github",
+    "action": "list_issues",
+    "effect": "read",
+    "executors": [
+      "api",
+      "cli"
+    ],
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "owner": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 100
+        },
+        "repo": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 100
+        },
+        "limit": {
+          "anyOf": [
+            {
+              "type": "integer",
+              "minimum": 1
+            },
+            {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 100
+            }
+          ]
+        },
+        "page": {
+          "anyOf": [
+            {
+              "type": "integer",
+              "minimum": 1
+            },
+            {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 100
+            }
+          ]
+        },
+        "state": {
+          "enum": [
+            "open",
+            "closed",
+            "all"
+          ]
+        }
+      },
+      "required": [
+        "owner",
+        "repo"
+      ],
+      "additionalProperties": false
+    },
+    "outputSchema": {
+      "type": "object",
+      "properties": {
+        "issues": {
+          "type": "array",
+          "items": {
+            "type": "object"
+          },
+          "maxItems": 100
+        }
+      },
+      "required": [
+        "issues"
+      ],
+      "additionalProperties": true
+    },
+    "resourcePolicy": {
+      "source": "input",
+      "group": "repositories",
+      "selector": {
+        "kind": "joined",
+        "fields": [
+          "owner",
+          "repo"
+        ],
+        "lowercase": true
+      }
+    },
+    "defaults": {
+      "limit": 30
+    },
+    "limits": {
+      "inputBytes": 65536,
+      "responseBytes": 1048576
+    },
+    "repeatability": "read-only",
+    "normalization": [
+      "limit: positive number or numeric string; clamp to 100"
+    ]
+  },
+  "github.list_pull_requests": {
+    "operationId": "github.list_pull_requests",
+    "providerId": "github",
+    "action": "list_pull_requests",
+    "effect": "read",
+    "executors": [
+      "api",
+      "cli"
+    ],
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "owner": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 100
+        },
+        "repo": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 100
+        },
+        "limit": {
+          "anyOf": [
+            {
+              "type": "integer",
+              "minimum": 1
+            },
+            {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 100
+            }
+          ]
+        },
+        "page": {
+          "anyOf": [
+            {
+              "type": "integer",
+              "minimum": 1
+            },
+            {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 100
+            }
+          ]
+        }
+      },
+      "required": [
+        "owner",
+        "repo"
+      ],
+      "additionalProperties": false
+    },
+    "outputSchema": {
+      "type": "object",
+      "properties": {
+        "pull_requests": {
+          "type": "array",
+          "items": {
+            "type": "object"
+          },
+          "maxItems": 100
+        }
+      },
+      "required": [
+        "pull_requests"
+      ],
+      "additionalProperties": true
+    },
+    "resourcePolicy": {
+      "source": "input",
+      "group": "repositories",
+      "selector": {
+        "kind": "joined",
+        "fields": [
+          "owner",
+          "repo"
+        ],
+        "lowercase": true
+      }
+    },
+    "defaults": {
+      "limit": 30
+    },
+    "limits": {
+      "inputBytes": 65536,
+      "responseBytes": 1048576
+    },
+    "repeatability": "read-only",
+    "normalization": [
+      "limit: positive number or numeric string; clamp to 100"
+    ]
+  },
+  "github.get_issue": {
+    "operationId": "github.get_issue",
+    "providerId": "github",
+    "action": "get_issue",
+    "effect": "read",
+    "executors": [
+      "api",
+      "cli"
+    ],
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "owner": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 100
+        },
+        "repo": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 100
+        },
+        "issue_number": {
+          "anyOf": [
+            {
+              "type": "integer",
+              "minimum": 1
+            },
+            {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 100
+            }
+          ]
+        }
+      },
+      "required": [
+        "owner",
+        "repo",
+        "issue_number"
+      ],
+      "additionalProperties": false
+    },
+    "outputSchema": {
+      "type": "object",
+      "properties": {},
+      "required": [],
+      "additionalProperties": true
+    },
+    "resourcePolicy": {
+      "source": "input",
+      "group": "repositories",
+      "selector": {
+        "kind": "joined",
+        "fields": [
+          "owner",
+          "repo"
+        ],
+        "lowercase": true
+      }
+    },
+    "defaults": {},
+    "limits": {
+      "inputBytes": 65536,
+      "responseBytes": 1048576
+    },
+    "repeatability": "read-only",
+    "normalization": []
+  },
+  "github.get_pull_request": {
+    "operationId": "github.get_pull_request",
+    "providerId": "github",
+    "action": "get_pull_request",
+    "effect": "read",
+    "executors": [
+      "api",
+      "cli"
+    ],
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "owner": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 100
+        },
+        "repo": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 100
+        },
+        "pull_number": {
+          "anyOf": [
+            {
+              "type": "integer",
+              "minimum": 1
+            },
+            {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 100
+            }
+          ]
+        }
+      },
+      "required": [
+        "owner",
+        "repo",
+        "pull_number"
+      ],
+      "additionalProperties": false
+    },
+    "outputSchema": {
+      "type": "object",
+      "properties": {},
+      "required": [],
+      "additionalProperties": true
+    },
+    "resourcePolicy": {
+      "source": "input",
+      "group": "repositories",
+      "selector": {
+        "kind": "joined",
+        "fields": [
+          "owner",
+          "repo"
+        ],
+        "lowercase": true
+      }
+    },
+    "defaults": {},
+    "limits": {
+      "inputBytes": 65536,
+      "responseBytes": 1048576
+    },
+    "repeatability": "read-only",
+    "normalization": []
+  },
+  "github.list_pull_request_files": {
+    "operationId": "github.list_pull_request_files",
+    "providerId": "github",
+    "action": "list_pull_request_files",
+    "effect": "read",
+    "executors": [
+      "api",
+      "cli"
+    ],
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "owner": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 100
+        },
+        "repo": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 100
+        },
+        "pull_number": {
+          "anyOf": [
+            {
+              "type": "integer",
+              "minimum": 1
+            },
+            {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 100
+            }
+          ]
+        },
+        "page": {
+          "anyOf": [
+            {
+              "type": "integer",
+              "minimum": 1
+            },
+            {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 100
+            }
+          ]
+        },
+        "limit": {
+          "anyOf": [
+            {
+              "type": "integer",
+              "minimum": 1
+            },
+            {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 100
+            }
+          ]
+        }
+      },
+      "required": [
+        "owner",
+        "repo",
+        "pull_number"
+      ],
+      "additionalProperties": false
+    },
+    "outputSchema": {
+      "type": "object",
+      "properties": {
+        "files": {
+          "type": "array",
+          "items": {
+            "type": "object"
+          },
+          "maxItems": 100
+        }
+      },
+      "required": [],
+      "additionalProperties": true
+    },
+    "resourcePolicy": {
+      "source": "input",
+      "group": "repositories",
+      "selector": {
+        "kind": "joined",
+        "fields": [
+          "owner",
+          "repo"
+        ],
+        "lowercase": true
+      }
+    },
+    "defaults": {
+      "page": 1,
+      "limit": 30
+    },
+    "limits": {
+      "inputBytes": 65536,
+      "responseBytes": 1048576
+    },
+    "repeatability": "read-only",
+    "normalization": [
+      "page: positive number or numeric string; clamp to 100",
+      "limit: positive integer <= 100",
+      "sha: full hexadecimal commit id"
+    ]
+  },
+  "github.list_pull_request_commits": {
+    "operationId": "github.list_pull_request_commits",
+    "providerId": "github",
+    "action": "list_pull_request_commits",
+    "effect": "read",
+    "executors": [
+      "api",
+      "cli"
+    ],
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "owner": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 100
+        },
+        "repo": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 100
+        },
+        "pull_number": {
+          "anyOf": [
+            {
+              "type": "integer",
+              "minimum": 1
+            },
+            {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 100
+            }
+          ]
+        },
+        "page": {
+          "anyOf": [
+            {
+              "type": "integer",
+              "minimum": 1
+            },
+            {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 100
+            }
+          ]
+        },
+        "limit": {
+          "anyOf": [
+            {
+              "type": "integer",
+              "minimum": 1
+            },
+            {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 100
+            }
+          ]
+        }
+      },
+      "required": [
+        "owner",
+        "repo",
+        "pull_number"
+      ],
+      "additionalProperties": false
+    },
+    "outputSchema": {
+      "type": "object",
+      "properties": {
+        "commits": {
+          "type": "array",
+          "items": {
+            "type": "object"
+          },
+          "maxItems": 100
+        }
+      },
+      "required": [],
+      "additionalProperties": true
+    },
+    "resourcePolicy": {
+      "source": "input",
+      "group": "repositories",
+      "selector": {
+        "kind": "joined",
+        "fields": [
+          "owner",
+          "repo"
+        ],
+        "lowercase": true
+      }
+    },
+    "defaults": {
+      "page": 1,
+      "limit": 30
+    },
+    "limits": {
+      "inputBytes": 65536,
+      "responseBytes": 1048576
+    },
+    "repeatability": "read-only",
+    "normalization": [
+      "page: positive number or numeric string; clamp to 100",
+      "limit: positive integer <= 100",
+      "sha: full hexadecimal commit id"
+    ]
+  },
+  "github.get_commit": {
+    "operationId": "github.get_commit",
+    "providerId": "github",
+    "action": "get_commit",
+    "effect": "read",
+    "executors": [
+      "api",
+      "cli"
+    ],
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "owner": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 100
+        },
+        "repo": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 100
+        },
+        "sha": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 40
+        },
+        "page": {
+          "anyOf": [
+            {
+              "type": "integer",
+              "minimum": 1
+            },
+            {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 100
+            }
+          ]
+        },
+        "limit": {
+          "anyOf": [
+            {
+              "type": "integer",
+              "minimum": 1
+            },
+            {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 100
+            }
+          ]
+        }
+      },
+      "required": [
+        "owner",
+        "repo",
+        "sha"
+      ],
+      "additionalProperties": false
+    },
+    "outputSchema": {
+      "type": "object",
+      "properties": {},
+      "required": [],
+      "additionalProperties": true
+    },
+    "resourcePolicy": {
+      "source": "input",
+      "group": "repositories",
+      "selector": {
+        "kind": "joined",
+        "fields": [
+          "owner",
+          "repo"
+        ],
+        "lowercase": true
+      }
+    },
+    "defaults": {
+      "page": 1,
+      "limit": 30
+    },
+    "limits": {
+      "inputBytes": 65536,
+      "responseBytes": 1048576
+    },
+    "repeatability": "read-only",
+    "normalization": [
+      "page: positive number or numeric string; clamp to 100",
+      "limit: positive integer <= 100",
+      "sha: full hexadecimal commit id"
+    ]
+  },
+  "github.create_issue": {
+    "operationId": "github.create_issue",
+    "providerId": "github",
+    "action": "create_issue",
+    "effect": "write",
+    "executors": [
+      "api"
+    ],
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "owner": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 100
+        },
+        "repo": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 100
+        },
+        "title": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 256
+        },
+        "body": {
+          "type": "string",
+          "minLength": 0,
+          "maxLength": 20000
+        }
+      },
+      "required": [
+        "owner",
+        "repo",
+        "title"
+      ],
+      "additionalProperties": false
+    },
+    "outputSchema": {
+      "type": "object",
+      "properties": {
+        "number": {
+          "type": "integer"
+        },
+        "title": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 256
+        },
+        "state": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 100
+        },
+        "html_url": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 4096
+        },
+        "created_at": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 100
+        }
+      },
+      "required": [],
+      "additionalProperties": true
+    },
+    "resourcePolicy": {
+      "source": "input",
+      "group": "repositories",
+      "selector": {
+        "kind": "joined",
+        "fields": [
+          "owner",
+          "repo"
+        ],
+        "lowercase": true
+      }
+    },
+    "defaults": {},
+    "limits": {
+      "inputBytes": 262144,
+      "responseBytes": 1048576
+    },
+    "repeatability": "verified-write-once",
+    "normalization": [
+      "trim title and body; owner/repo identify the authorized parent repository",
+      "requires independent list_issues/get_issue verification"
+    ]
+  },
+  "github.update_issue": {
+    "operationId": "github.update_issue",
+    "providerId": "github",
+    "action": "update_issue",
+    "effect": "write",
+    "executors": [
+      "api"
+    ],
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "owner": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 100
+        },
+        "repo": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 100
+        },
+        "issue_number": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "state": {
+          "enum": [
+            "open",
+            "closed"
+          ]
+        }
+      },
+      "required": [
+        "owner",
+        "repo",
+        "issue_number",
+        "state"
+      ],
+      "additionalProperties": false
+    },
+    "outputSchema": {
+      "type": "object",
+      "properties": {
+        "acknowledged": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "acknowledged"
+      ],
+      "additionalProperties": true
+    },
+    "resourcePolicy": {
+      "source": "input",
+      "group": "repositories",
+      "selector": {
+        "kind": "joined",
+        "fields": [
+          "owner",
+          "repo"
+        ],
+        "lowercase": true
+      }
+    },
+    "defaults": {},
+    "limits": {
+      "inputBytes": 65536,
+      "responseBytes": 1048576
+    },
+    "repeatability": "verified-write-once",
+    "normalization": [
+      "non-PR issue only; verify immutable repository and issue IDs independently"
+    ]
+  },
+  "gitlab.list_projects": {
+    "operationId": "gitlab.list_projects",
+    "providerId": "gitlab",
+    "action": "list_projects",
+    "effect": "read",
+    "executors": [
+      "api",
+      "cli"
+    ],
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "limit": {
+          "anyOf": [
+            {
+              "type": "integer",
+              "minimum": 1
+            },
+            {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 100
+            }
+          ]
+        }
+      },
+      "required": [],
+      "additionalProperties": false
+    },
+    "outputSchema": {
+      "type": "object",
+      "properties": {
+        "projects": {
+          "type": "array",
+          "items": {
+            "type": "object"
+          },
+          "maxItems": 100
+        }
+      },
+      "required": [
+        "projects"
+      ],
+      "additionalProperties": true
+    },
+    "resourcePolicy": {
+      "source": "grant-filtered",
+      "group": "projects"
+    },
+    "defaults": {
+      "limit": 30
+    },
+    "limits": {
+      "inputBytes": 65536,
+      "responseBytes": 1048576
+    },
+    "repeatability": "read-only",
+    "normalization": [
+      "limit: positive number or numeric string; clamp to 100"
+    ]
+  },
+  "gitlab.list_issues": {
+    "operationId": "gitlab.list_issues",
+    "providerId": "gitlab",
+    "action": "list_issues",
+    "effect": "read",
+    "executors": [
+      "api",
+      "cli"
+    ],
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "limit": {
+          "anyOf": [
+            {
+              "type": "integer",
+              "minimum": 1
+            },
+            {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 100
+            }
+          ]
+        }
+      },
+      "required": [],
+      "additionalProperties": false
+    },
+    "outputSchema": {
+      "type": "object",
+      "properties": {
+        "issues": {
+          "type": "array",
+          "items": {
+            "type": "object"
+          },
+          "maxItems": 100
+        }
+      },
+      "required": [
+        "issues"
+      ],
+      "additionalProperties": true
+    },
+    "resourcePolicy": {
+      "source": "grant-filtered",
+      "group": "projects"
+    },
+    "defaults": {
+      "limit": 30
+    },
+    "limits": {
+      "inputBytes": 65536,
+      "responseBytes": 1048576
+    },
+    "repeatability": "read-only",
+    "normalization": [
+      "limit: positive number or numeric string; clamp to 100"
+    ]
+  },
+  "figma.get_file": {
+    "operationId": "figma.get_file",
+    "providerId": "figma",
+    "action": "get_file",
+    "effect": "read",
+    "executors": [
+      "api"
+    ],
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "file_url_or_key": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 4096
+        },
+        "file_key": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 200
+        }
+      },
+      "required": [],
+      "additionalProperties": false,
+      "oneOf": [
+        {
+          "required": [
+            "file_url_or_key"
+          ]
+        },
+        {
+          "required": [
+            "file_key"
+          ]
+        }
+      ]
+    },
+    "outputSchema": {
+      "type": "object",
+      "properties": {
+        "pages": {
+          "type": "array",
+          "items": {},
+          "maxItems": 100
+        },
+        "truncated": {
+          "type": "boolean"
+        }
+      },
+      "required": [],
+      "additionalProperties": true
+    },
+    "resourcePolicy": {
+      "source": "input",
+      "group": "files",
+      "selector": {
+        "kind": "identifier-or-url",
+        "fields": [
+          "file_url_or_key",
+          "file_key"
+        ],
+        "urlHosts": [
+          "figma.com",
+          "www.figma.com"
+        ],
+        "urlPathIndex": 1
+      }
+    },
+    "defaults": {
+      "depth": 1
+    },
+    "limits": {
+      "inputBytes": 65536,
+      "responseBytes": 8388608
+    },
+    "repeatability": "read-only",
+    "normalization": [
+      "summary only; no document; at most 100 pages; reject all depth/full/ids parameters"
+    ],
+    "content": {
+      "kind": "application/vnd.figma.summary+json",
+      "coverage": "summary"
+    }
+  },
+  "figma.read_design_content": {
+    "operationId": "figma.read_design_content",
+    "providerId": "figma",
+    "action": "read_design_content",
+    "effect": "read",
+    "executors": [
+      "api"
+    ],
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "file_url_or_key": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 4096
+        },
+        "file_key": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 200
+        },
+        "ids": {
+          "anyOf": [
+            {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 20000
+            },
+            {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 200
+              },
+              "maxItems": 50
+            }
+          ]
+        },
+        "node_ids": {
+          "anyOf": [
+            {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 20000
+            },
+            {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 200
+              },
+              "maxItems": 50
+            }
+          ]
+        },
+        "version": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 200
+        },
+        "depth": {
+          "anyOf": [
+            {
+              "type": "integer",
+              "minimum": 1
+            },
+            {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 100
+            }
+          ]
+        },
+        "geometry": {
+          "enum": [
+            "paths"
+          ]
+        },
+        "plugin_data": {
+          "anyOf": [
+            {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 20000
+            },
+            {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 200
+              },
+              "maxItems": 50
+            }
+          ]
+        },
+        "branch_data": {
+          "type": "boolean"
+        },
+        "full": {
+          "type": "boolean"
+        }
+      },
+      "required": [],
+      "additionalProperties": false,
+      "oneOf": [
+        {
+          "required": [
+            "file_url_or_key"
+          ]
+        },
+        {
+          "required": [
+            "file_key"
+          ]
+        }
+      ]
+    },
+    "outputSchema": {
+      "type": "object",
+      "properties": {
+        "document": {
+          "type": "object"
+        },
+        "pages": {
+          "type": "array",
+          "items": {},
+          "maxItems": 100
+        },
+        "truncated": {
+          "type": "boolean"
+        }
+      },
+      "required": [],
+      "additionalProperties": true
+    },
+    "resourcePolicy": {
+      "source": "input",
+      "group": "files",
+      "selector": {
+        "kind": "identifier-or-url",
+        "fields": [
+          "file_url_or_key",
+          "file_key"
+        ],
+        "urlHosts": [
+          "figma.com",
+          "www.figma.com"
+        ],
+        "urlPathIndex": 1
+      }
+    },
+    "defaults": {
+      "depth": 2,
+      "full": false
+    },
+    "limits": {
+      "inputBytes": 65536,
+      "responseBytes": 8388608
+    },
+    "repeatability": "read-only",
+    "normalization": [
+      "reject conflicting file aliases, ids aliases and full/depth",
+      "node-id in URL is an input selector; depth 1..100; full:true must be explicit",
+      "preserve nested node properties; no implicit complete-file read"
+    ],
+    "content": {
+      "kind": "application/vnd.figma.document+json",
+      "coverage": "requested-subtree"
+    }
+  },
+  "figma.get_nodes": {
+    "operationId": "figma.get_nodes",
+    "providerId": "figma",
+    "action": "get_nodes",
+    "effect": "read",
+    "executors": [
+      "api"
+    ],
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "file_url_or_key": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 4096
+        },
+        "file_key": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 200
+        },
+        "ids": {
+          "anyOf": [
+            {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 20000
+            },
+            {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 200
+              },
+              "maxItems": 50
+            }
+          ]
+        },
+        "node_ids": {
+          "anyOf": [
+            {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 20000
+            },
+            {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 200
+              },
+              "maxItems": 50
+            }
+          ]
+        },
+        "version": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 200
+        },
+        "depth": {
+          "anyOf": [
+            {
+              "type": "integer",
+              "minimum": 1
+            },
+            {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 100
+            }
+          ]
+        },
+        "geometry": {
+          "enum": [
+            "paths"
+          ]
+        },
+        "plugin_data": {
+          "anyOf": [
+            {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 20000
+            },
+            {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 200
+              },
+              "maxItems": 50
+            }
+          ]
+        }
+      },
+      "required": [],
+      "additionalProperties": false,
+      "oneOf": [
+        {
+          "required": [
+            "file_url_or_key"
+          ]
+        },
+        {
+          "required": [
+            "file_key"
+          ]
+        }
+      ]
+    },
+    "outputSchema": {
+      "type": "object",
+      "properties": {
+        "nodes": {
+          "type": "object"
+        },
+        "truncated": {
+          "type": "boolean"
+        }
+      },
+      "required": [],
+      "additionalProperties": true
+    },
+    "resourcePolicy": {
+      "source": "input",
+      "group": "files",
+      "selector": {
+        "kind": "identifier-or-url",
+        "fields": [
+          "file_url_or_key",
+          "file_key"
+        ],
+        "urlHosts": [
+          "figma.com",
+          "www.figma.com"
+        ],
+        "urlPathIndex": 1
+      }
+    },
+    "defaults": {},
+    "limits": {
+      "inputBytes": 65536,
+      "responseBytes": 8388608
+    },
+    "repeatability": "read-only",
+    "normalization": [
+      "require explicit ids or URL node-id; 1..50 node IDs; reject conflicting aliases; depth 1..100"
+    ],
+    "content": {
+      "kind": "application/json",
+      "coverage": "selected-resource"
+    }
+  },
+  "figma.get_images": {
+    "operationId": "figma.get_images",
+    "providerId": "figma",
+    "action": "get_images",
+    "effect": "read",
+    "executors": [
+      "api"
+    ],
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "file_url_or_key": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 4096
+        },
+        "file_key": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 200
+        },
+        "ids": {
+          "anyOf": [
+            {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 20000
+            },
+            {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 200
+              },
+              "maxItems": 50
+            }
+          ]
+        },
+        "node_ids": {
+          "anyOf": [
+            {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 20000
+            },
+            {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 200
+              },
+              "maxItems": 50
+            }
+          ]
+        },
+        "version": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 200
+        },
+        "scale": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 100
+            }
+          ]
+        },
+        "format": {
+          "enum": [
+            "png",
+            "jpg",
+            "svg",
+            "pdf"
+          ]
+        },
+        "svg_outline_text": {
+          "type": "boolean"
+        },
+        "svg_include_id": {
+          "type": "boolean"
+        },
+        "svg_include_node_id": {
+          "type": "boolean"
+        },
+        "svg_simplify_stroke": {
+          "type": "boolean"
+        },
+        "contents_only": {
+          "type": "boolean"
+        },
+        "use_absolute_bounds": {
+          "type": "boolean"
+        }
+      },
+      "required": [],
+      "additionalProperties": false,
+      "oneOf": [
+        {
+          "required": [
+            "file_url_or_key"
+          ]
+        },
+        {
+          "required": [
+            "file_key"
+          ]
+        }
+      ]
+    },
+    "outputSchema": {
+      "type": "object",
+      "properties": {
+        "images": {
+          "type": "object"
+        }
+      },
+      "required": [],
+      "additionalProperties": true
+    },
+    "resourcePolicy": {
+      "source": "input",
+      "group": "files",
+      "selector": {
+        "kind": "identifier-or-url",
+        "fields": [
+          "file_url_or_key",
+          "file_key"
+        ],
+        "urlHosts": [
+          "figma.com",
+          "www.figma.com"
+        ],
+        "urlPathIndex": 1
+      }
+    },
+    "defaults": {},
+    "limits": {
+      "inputBytes": 65536,
+      "responseBytes": 8388608
+    },
+    "repeatability": "read-only",
+    "normalization": [
+      "require explicit ids or URL node-id; scale 0.01..4; reject conflicting aliases"
+    ]
+  },
+  "figma.get_image_fills": {
+    "operationId": "figma.get_image_fills",
+    "providerId": "figma",
+    "action": "get_image_fills",
+    "effect": "read",
+    "executors": [
+      "api"
+    ],
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "file_url_or_key": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 4096
+        },
+        "file_key": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 200
+        }
+      },
+      "required": [],
+      "additionalProperties": false,
+      "oneOf": [
+        {
+          "required": [
+            "file_url_or_key"
+          ]
+        },
+        {
+          "required": [
+            "file_key"
+          ]
+        }
+      ]
+    },
+    "outputSchema": {
+      "type": "object",
+      "properties": {
+        "images": {
+          "type": "object"
+        },
+        "meta": {
+          "type": "object"
+        }
+      },
+      "required": [],
+      "additionalProperties": true
+    },
+    "resourcePolicy": {
+      "source": "input",
+      "group": "files",
+      "selector": {
+        "kind": "identifier-or-url",
+        "fields": [
+          "file_url_or_key",
+          "file_key"
+        ],
+        "urlHosts": [
+          "figma.com",
+          "www.figma.com"
+        ],
+        "urlPathIndex": 1
+      }
+    },
+    "defaults": {},
+    "limits": {
+      "inputBytes": 65536,
+      "responseBytes": 8388608
+    },
+    "repeatability": "read-only",
+    "normalization": []
+  },
+  "figma.get_comments": {
+    "operationId": "figma.get_comments",
+    "providerId": "figma",
+    "action": "get_comments",
+    "effect": "read",
+    "executors": [
+      "api"
+    ],
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "file_url_or_key": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 4096
+        },
+        "file_key": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 200
+        }
+      },
+      "required": [],
+      "additionalProperties": false,
+      "oneOf": [
+        {
+          "required": [
+            "file_url_or_key"
+          ]
+        },
+        {
+          "required": [
+            "file_key"
+          ]
+        }
+      ]
+    },
+    "outputSchema": {
+      "type": "object",
+      "properties": {
+        "comments": {
+          "type": "array",
+          "items": {},
+          "maxItems": 100
+        }
+      },
+      "required": [],
+      "additionalProperties": true
+    },
+    "resourcePolicy": {
+      "source": "input",
+      "group": "files",
+      "selector": {
+        "kind": "identifier-or-url",
+        "fields": [
+          "file_url_or_key",
+          "file_key"
+        ],
+        "urlHosts": [
+          "figma.com",
+          "www.figma.com"
+        ],
+        "urlPathIndex": 1
+      }
+    },
+    "defaults": {},
+    "limits": {
+      "inputBytes": 65536,
+      "responseBytes": 8388608
+    },
+    "repeatability": "read-only",
+    "normalization": []
+  },
+  "figma.get_metadata": {
+    "operationId": "figma.get_metadata",
+    "providerId": "figma",
+    "action": "get_metadata",
+    "effect": "read",
+    "executors": [
+      "mcp"
+    ],
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "file_url_or_key": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 4096
+        },
+        "file_key": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 200
+        },
+        "file_type": {
+          "enum": [
+            "design",
+            "figjam",
+            "make",
+            "slides"
+          ]
+        },
+        "node_id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 200
+        },
+        "client_languages": {
+          "type": "string",
+          "minLength": 0,
+          "maxLength": 200
+        },
+        "client_frameworks": {
+          "type": "string",
+          "minLength": 0,
+          "maxLength": 200
+        },
+        "force_code": {
+          "type": "boolean"
+        },
+        "disable_code_connect": {
+          "type": "boolean"
+        },
+        "recursive": {
+          "type": "boolean"
+        },
+        "queries": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 1000
+          },
+          "maxItems": 20
+        }
+      },
+      "required": [],
+      "additionalProperties": false,
+      "oneOf": [
+        {
+          "required": [
+            "file_url_or_key"
+          ]
+        },
+        {
+          "required": [
+            "file_key"
+          ]
+        }
+      ]
+    },
+    "outputSchema": {
+      "type": "object",
+      "properties": {},
+      "required": [],
+      "additionalProperties": true
+    },
+    "resourcePolicy": {
+      "source": "input",
+      "group": "files",
+      "selector": {
+        "kind": "identifier-or-url",
+        "fields": [
+          "file_url_or_key",
+          "file_key"
+        ],
+        "urlHosts": [
+          "figma.com",
+          "www.figma.com"
+        ],
+        "urlPathIndex": 1
+      }
+    },
+    "defaults": {},
+    "limits": {
+      "inputBytes": 65536,
+      "responseBytes": 8388608
+    },
+    "repeatability": "read-only",
+    "normalization": [
+      "official MCP origin and issuer/resource binding; exact reviewed tool allowlist",
+      "detailed reads require node_id; Make uses discovery then selected file URI",
+      "resource URI must belong to selected file and be admitted on this connection"
+    ],
+    "content": {
+      "kind": "application/vnd.figma.mcp+json",
+      "coverage": "requested-subtree"
+    }
+  },
+  "figma.get_design_context": {
+    "operationId": "figma.get_design_context",
+    "providerId": "figma",
+    "action": "get_design_context",
+    "effect": "read",
+    "executors": [
+      "mcp"
+    ],
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "file_url_or_key": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 4096
+        },
+        "file_key": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 200
+        },
+        "file_type": {
+          "enum": [
+            "design",
+            "figjam",
+            "make",
+            "slides"
+          ]
+        },
+        "node_id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 200
+        },
+        "client_languages": {
+          "type": "string",
+          "minLength": 0,
+          "maxLength": 200
+        },
+        "client_frameworks": {
+          "type": "string",
+          "minLength": 0,
+          "maxLength": 200
+        },
+        "force_code": {
+          "type": "boolean"
+        },
+        "disable_code_connect": {
+          "type": "boolean"
+        },
+        "recursive": {
+          "type": "boolean"
+        },
+        "queries": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 1000
+          },
+          "maxItems": 20
+        }
+      },
+      "required": [],
+      "additionalProperties": false,
+      "oneOf": [
+        {
+          "required": [
+            "file_url_or_key"
+          ]
+        },
+        {
+          "required": [
+            "file_key"
+          ]
+        }
+      ]
+    },
+    "outputSchema": {
+      "type": "object",
+      "properties": {},
+      "required": [],
+      "additionalProperties": true
+    },
+    "resourcePolicy": {
+      "source": "input",
+      "group": "files",
+      "selector": {
+        "kind": "identifier-or-url",
+        "fields": [
+          "file_url_or_key",
+          "file_key"
+        ],
+        "urlHosts": [
+          "figma.com",
+          "www.figma.com"
+        ],
+        "urlPathIndex": 1
+      }
+    },
+    "defaults": {},
+    "limits": {
+      "inputBytes": 65536,
+      "responseBytes": 8388608
+    },
+    "repeatability": "read-only",
+    "normalization": [
+      "official MCP origin and issuer/resource binding; exact reviewed tool allowlist",
+      "detailed reads require node_id; Make uses discovery then selected file URI",
+      "resource URI must belong to selected file and be admitted on this connection"
+    ],
+    "content": {
+      "kind": "application/vnd.figma.mcp+json",
+      "coverage": "requested-subtree"
+    }
+  },
+  "figma.get_screenshot": {
+    "operationId": "figma.get_screenshot",
+    "providerId": "figma",
+    "action": "get_screenshot",
+    "effect": "read",
+    "executors": [
+      "mcp"
+    ],
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "file_url_or_key": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 4096
+        },
+        "file_key": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 200
+        },
+        "file_type": {
+          "enum": [
+            "design",
+            "figjam",
+            "make",
+            "slides"
+          ]
+        },
+        "node_id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 200
+        },
+        "client_languages": {
+          "type": "string",
+          "minLength": 0,
+          "maxLength": 200
+        },
+        "client_frameworks": {
+          "type": "string",
+          "minLength": 0,
+          "maxLength": 200
+        },
+        "force_code": {
+          "type": "boolean"
+        },
+        "disable_code_connect": {
+          "type": "boolean"
+        },
+        "recursive": {
+          "type": "boolean"
+        },
+        "queries": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 1000
+          },
+          "maxItems": 20
+        }
+      },
+      "required": [],
+      "additionalProperties": false,
+      "oneOf": [
+        {
+          "required": [
+            "file_url_or_key"
+          ]
+        },
+        {
+          "required": [
+            "file_key"
+          ]
+        }
+      ]
+    },
+    "outputSchema": {
+      "type": "object",
+      "properties": {},
+      "required": [],
+      "additionalProperties": true
+    },
+    "resourcePolicy": {
+      "source": "input",
+      "group": "files",
+      "selector": {
+        "kind": "identifier-or-url",
+        "fields": [
+          "file_url_or_key",
+          "file_key"
+        ],
+        "urlHosts": [
+          "figma.com",
+          "www.figma.com"
+        ],
+        "urlPathIndex": 1
+      }
+    },
+    "defaults": {},
+    "limits": {
+      "inputBytes": 65536,
+      "responseBytes": 8388608
+    },
+    "repeatability": "read-only",
+    "normalization": [
+      "official MCP origin and issuer/resource binding; exact reviewed tool allowlist",
+      "detailed reads require node_id; Make uses discovery then selected file URI",
+      "resource URI must belong to selected file and be admitted on this connection"
+    ],
+    "content": {
+      "kind": "application/vnd.figma.mcp+json",
+      "coverage": "requested-subtree"
+    }
+  },
+  "figma.get_variable_defs": {
+    "operationId": "figma.get_variable_defs",
+    "providerId": "figma",
+    "action": "get_variable_defs",
+    "effect": "read",
+    "executors": [
+      "mcp"
+    ],
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "file_url_or_key": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 4096
+        },
+        "file_key": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 200
+        },
+        "file_type": {
+          "enum": [
+            "design",
+            "figjam",
+            "make",
+            "slides"
+          ]
+        },
+        "node_id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 200
+        },
+        "client_languages": {
+          "type": "string",
+          "minLength": 0,
+          "maxLength": 200
+        },
+        "client_frameworks": {
+          "type": "string",
+          "minLength": 0,
+          "maxLength": 200
+        },
+        "force_code": {
+          "type": "boolean"
+        },
+        "disable_code_connect": {
+          "type": "boolean"
+        },
+        "recursive": {
+          "type": "boolean"
+        },
+        "queries": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 1000
+          },
+          "maxItems": 20
+        }
+      },
+      "required": [],
+      "additionalProperties": false,
+      "oneOf": [
+        {
+          "required": [
+            "file_url_or_key"
+          ]
+        },
+        {
+          "required": [
+            "file_key"
+          ]
+        }
+      ]
+    },
+    "outputSchema": {
+      "type": "object",
+      "properties": {},
+      "required": [],
+      "additionalProperties": true
+    },
+    "resourcePolicy": {
+      "source": "input",
+      "group": "files",
+      "selector": {
+        "kind": "identifier-or-url",
+        "fields": [
+          "file_url_or_key",
+          "file_key"
+        ],
+        "urlHosts": [
+          "figma.com",
+          "www.figma.com"
+        ],
+        "urlPathIndex": 1
+      }
+    },
+    "defaults": {},
+    "limits": {
+      "inputBytes": 65536,
+      "responseBytes": 8388608
+    },
+    "repeatability": "read-only",
+    "normalization": [
+      "official MCP origin and issuer/resource binding; exact reviewed tool allowlist",
+      "detailed reads require node_id; Make uses discovery then selected file URI",
+      "resource URI must belong to selected file and be admitted on this connection"
+    ],
+    "content": {
+      "kind": "application/vnd.figma.mcp+json",
+      "coverage": "requested-subtree"
+    }
+  },
+  "figma.get_motion_context": {
+    "operationId": "figma.get_motion_context",
+    "providerId": "figma",
+    "action": "get_motion_context",
+    "effect": "read",
+    "executors": [
+      "mcp"
+    ],
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "file_url_or_key": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 4096
+        },
+        "file_key": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 200
+        },
+        "file_type": {
+          "enum": [
+            "design",
+            "figjam",
+            "make",
+            "slides"
+          ]
+        },
+        "node_id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 200
+        },
+        "client_languages": {
+          "type": "string",
+          "minLength": 0,
+          "maxLength": 200
+        },
+        "client_frameworks": {
+          "type": "string",
+          "minLength": 0,
+          "maxLength": 200
+        },
+        "force_code": {
+          "type": "boolean"
+        },
+        "disable_code_connect": {
+          "type": "boolean"
+        },
+        "recursive": {
+          "type": "boolean"
+        },
+        "queries": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 1000
+          },
+          "maxItems": 20
+        }
+      },
+      "required": [],
+      "additionalProperties": false,
+      "oneOf": [
+        {
+          "required": [
+            "file_url_or_key"
+          ]
+        },
+        {
+          "required": [
+            "file_key"
+          ]
+        }
+      ]
+    },
+    "outputSchema": {
+      "type": "object",
+      "properties": {},
+      "required": [],
+      "additionalProperties": true
+    },
+    "resourcePolicy": {
+      "source": "input",
+      "group": "files",
+      "selector": {
+        "kind": "identifier-or-url",
+        "fields": [
+          "file_url_or_key",
+          "file_key"
+        ],
+        "urlHosts": [
+          "figma.com",
+          "www.figma.com"
+        ],
+        "urlPathIndex": 1
+      }
+    },
+    "defaults": {},
+    "limits": {
+      "inputBytes": 65536,
+      "responseBytes": 8388608
+    },
+    "repeatability": "read-only",
+    "normalization": [
+      "official MCP origin and issuer/resource binding; exact reviewed tool allowlist",
+      "detailed reads require node_id; Make uses discovery then selected file URI",
+      "resource URI must belong to selected file and be admitted on this connection"
+    ],
+    "content": {
+      "kind": "application/vnd.figma.mcp+json",
+      "coverage": "requested-subtree"
+    }
+  },
+  "figma.get_figjam": {
+    "operationId": "figma.get_figjam",
+    "providerId": "figma",
+    "action": "get_figjam",
+    "effect": "read",
+    "executors": [
+      "mcp"
+    ],
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "file_url_or_key": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 4096
+        },
+        "file_key": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 200
+        },
+        "file_type": {
+          "enum": [
+            "design",
+            "figjam",
+            "make",
+            "slides"
+          ]
+        },
+        "node_id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 200
+        },
+        "client_languages": {
+          "type": "string",
+          "minLength": 0,
+          "maxLength": 200
+        },
+        "client_frameworks": {
+          "type": "string",
+          "minLength": 0,
+          "maxLength": 200
+        },
+        "force_code": {
+          "type": "boolean"
+        },
+        "disable_code_connect": {
+          "type": "boolean"
+        },
+        "recursive": {
+          "type": "boolean"
+        },
+        "queries": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 1000
+          },
+          "maxItems": 20
+        }
+      },
+      "required": [],
+      "additionalProperties": false,
+      "oneOf": [
+        {
+          "required": [
+            "file_url_or_key"
+          ]
+        },
+        {
+          "required": [
+            "file_key"
+          ]
+        }
+      ]
+    },
+    "outputSchema": {
+      "type": "object",
+      "properties": {},
+      "required": [],
+      "additionalProperties": true
+    },
+    "resourcePolicy": {
+      "source": "input",
+      "group": "files",
+      "selector": {
+        "kind": "identifier-or-url",
+        "fields": [
+          "file_url_or_key",
+          "file_key"
+        ],
+        "urlHosts": [
+          "figma.com",
+          "www.figma.com"
+        ],
+        "urlPathIndex": 1
+      }
+    },
+    "defaults": {},
+    "limits": {
+      "inputBytes": 65536,
+      "responseBytes": 8388608
+    },
+    "repeatability": "read-only",
+    "normalization": [
+      "official MCP origin and issuer/resource binding; exact reviewed tool allowlist",
+      "detailed reads require node_id; Make uses discovery then selected file URI",
+      "resource URI must belong to selected file and be admitted on this connection"
+    ],
+    "content": {
+      "kind": "application/vnd.figma.mcp+json",
+      "coverage": "requested-subtree"
+    }
+  },
+  "figma.get_code_connect_map": {
+    "operationId": "figma.get_code_connect_map",
+    "providerId": "figma",
+    "action": "get_code_connect_map",
+    "effect": "read",
+    "executors": [
+      "mcp"
+    ],
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "file_url_or_key": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 4096
+        },
+        "file_key": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 200
+        },
+        "file_type": {
+          "enum": [
+            "design",
+            "figjam",
+            "make",
+            "slides"
+          ]
+        },
+        "node_id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 200
+        },
+        "client_languages": {
+          "type": "string",
+          "minLength": 0,
+          "maxLength": 200
+        },
+        "client_frameworks": {
+          "type": "string",
+          "minLength": 0,
+          "maxLength": 200
+        },
+        "force_code": {
+          "type": "boolean"
+        },
+        "disable_code_connect": {
+          "type": "boolean"
+        },
+        "recursive": {
+          "type": "boolean"
+        },
+        "queries": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 1000
+          },
+          "maxItems": 20
+        }
+      },
+      "required": [],
+      "additionalProperties": false,
+      "oneOf": [
+        {
+          "required": [
+            "file_url_or_key"
+          ]
+        },
+        {
+          "required": [
+            "file_key"
+          ]
+        }
+      ]
+    },
+    "outputSchema": {
+      "type": "object",
+      "properties": {},
+      "required": [],
+      "additionalProperties": true
+    },
+    "resourcePolicy": {
+      "source": "input",
+      "group": "files",
+      "selector": {
+        "kind": "identifier-or-url",
+        "fields": [
+          "file_url_or_key",
+          "file_key"
+        ],
+        "urlHosts": [
+          "figma.com",
+          "www.figma.com"
+        ],
+        "urlPathIndex": 1
+      }
+    },
+    "defaults": {},
+    "limits": {
+      "inputBytes": 65536,
+      "responseBytes": 8388608
+    },
+    "repeatability": "read-only",
+    "normalization": [
+      "official MCP origin and issuer/resource binding; exact reviewed tool allowlist",
+      "detailed reads require node_id; Make uses discovery then selected file URI",
+      "resource URI must belong to selected file and be admitted on this connection"
+    ],
+    "content": {
+      "kind": "application/vnd.figma.mcp+json",
+      "coverage": "requested-subtree"
+    }
+  },
+  "figma.get_libraries": {
+    "operationId": "figma.get_libraries",
+    "providerId": "figma",
+    "action": "get_libraries",
+    "effect": "read",
+    "executors": [
+      "mcp"
+    ],
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "file_url_or_key": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 4096
+        },
+        "file_key": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 200
+        },
+        "file_type": {
+          "enum": [
+            "design",
+            "figjam",
+            "make",
+            "slides"
+          ]
+        },
+        "node_id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 200
+        },
+        "client_languages": {
+          "type": "string",
+          "minLength": 0,
+          "maxLength": 200
+        },
+        "client_frameworks": {
+          "type": "string",
+          "minLength": 0,
+          "maxLength": 200
+        },
+        "force_code": {
+          "type": "boolean"
+        },
+        "disable_code_connect": {
+          "type": "boolean"
+        },
+        "recursive": {
+          "type": "boolean"
+        },
+        "queries": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 1000
+          },
+          "maxItems": 20
+        }
+      },
+      "required": [],
+      "additionalProperties": false,
+      "oneOf": [
+        {
+          "required": [
+            "file_url_or_key"
+          ]
+        },
+        {
+          "required": [
+            "file_key"
+          ]
+        }
+      ]
+    },
+    "outputSchema": {
+      "type": "object",
+      "properties": {},
+      "required": [],
+      "additionalProperties": true
+    },
+    "resourcePolicy": {
+      "source": "input",
+      "group": "files",
+      "selector": {
+        "kind": "identifier-or-url",
+        "fields": [
+          "file_url_or_key",
+          "file_key"
+        ],
+        "urlHosts": [
+          "figma.com",
+          "www.figma.com"
+        ],
+        "urlPathIndex": 1
+      }
+    },
+    "defaults": {},
+    "limits": {
+      "inputBytes": 65536,
+      "responseBytes": 8388608
+    },
+    "repeatability": "read-only",
+    "normalization": [
+      "official MCP origin and issuer/resource binding; exact reviewed tool allowlist",
+      "detailed reads require node_id; Make uses discovery then selected file URI",
+      "resource URI must belong to selected file and be admitted on this connection"
+    ],
+    "content": {
+      "kind": "application/vnd.figma.mcp+json",
+      "coverage": "requested-subtree"
+    }
+  },
+  "figma.search_design_system": {
+    "operationId": "figma.search_design_system",
+    "providerId": "figma",
+    "action": "search_design_system",
+    "effect": "read",
+    "executors": [
+      "mcp"
+    ],
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "file_url_or_key": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 4096
+        },
+        "file_key": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 200
+        },
+        "file_type": {
+          "enum": [
+            "design",
+            "figjam",
+            "make",
+            "slides"
+          ]
+        },
+        "node_id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 200
+        },
+        "client_languages": {
+          "type": "string",
+          "minLength": 0,
+          "maxLength": 200
+        },
+        "client_frameworks": {
+          "type": "string",
+          "minLength": 0,
+          "maxLength": 200
+        },
+        "force_code": {
+          "type": "boolean"
+        },
+        "disable_code_connect": {
+          "type": "boolean"
+        },
+        "recursive": {
+          "type": "boolean"
+        },
+        "queries": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 1000
+          },
+          "maxItems": 20
+        }
+      },
+      "required": [],
+      "additionalProperties": false,
+      "oneOf": [
+        {
+          "required": [
+            "file_url_or_key"
+          ]
+        },
+        {
+          "required": [
+            "file_key"
+          ]
+        }
+      ]
+    },
+    "outputSchema": {
+      "type": "object",
+      "properties": {},
+      "required": [],
+      "additionalProperties": true
+    },
+    "resourcePolicy": {
+      "source": "input",
+      "group": "files",
+      "selector": {
+        "kind": "identifier-or-url",
+        "fields": [
+          "file_url_or_key",
+          "file_key"
+        ],
+        "urlHosts": [
+          "figma.com",
+          "www.figma.com"
+        ],
+        "urlPathIndex": 1
+      }
+    },
+    "defaults": {},
+    "limits": {
+      "inputBytes": 65536,
+      "responseBytes": 8388608
+    },
+    "repeatability": "read-only",
+    "normalization": [
+      "official MCP origin and issuer/resource binding; exact reviewed tool allowlist",
+      "detailed reads require node_id; Make uses discovery then selected file URI",
+      "resource URI must belong to selected file and be admitted on this connection"
+    ],
+    "content": {
+      "kind": "application/vnd.figma.mcp+json",
+      "coverage": "requested-subtree"
+    }
+  },
+  "figma.list_resources": {
+    "operationId": "figma.list_resources",
+    "providerId": "figma",
+    "action": "list_resources",
+    "effect": "read",
+    "executors": [
+      "mcp"
+    ],
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "file_url_or_key": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 4096
+        },
+        "file_key": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 200
+        },
+        "file_type": {
+          "enum": [
+            "design",
+            "figjam",
+            "make",
+            "slides"
+          ]
+        },
+        "node_id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 200
+        },
+        "client_languages": {
+          "type": "string",
+          "minLength": 0,
+          "maxLength": 200
+        },
+        "client_frameworks": {
+          "type": "string",
+          "minLength": 0,
+          "maxLength": 200
+        },
+        "force_code": {
+          "type": "boolean"
+        },
+        "disable_code_connect": {
+          "type": "boolean"
+        },
+        "recursive": {
+          "type": "boolean"
+        },
+        "queries": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 1000
+          },
+          "maxItems": 20
+        },
+        "cursor": {
+          "type": "string",
+          "minLength": 0,
+          "maxLength": 4096
+        }
+      },
+      "required": [],
+      "additionalProperties": false,
+      "oneOf": [
+        {
+          "required": [
+            "file_url_or_key"
+          ]
+        },
+        {
+          "required": [
+            "file_key"
+          ]
+        }
+      ]
+    },
+    "outputSchema": {
+      "type": "object",
+      "properties": {},
+      "required": [],
+      "additionalProperties": true
+    },
+    "resourcePolicy": {
+      "source": "input",
+      "group": "files",
+      "selector": {
+        "kind": "identifier-or-url",
+        "fields": [
+          "file_url_or_key",
+          "file_key"
+        ],
+        "urlHosts": [
+          "figma.com",
+          "www.figma.com"
+        ],
+        "urlPathIndex": 1
+      }
+    },
+    "defaults": {},
+    "limits": {
+      "inputBytes": 65536,
+      "responseBytes": 8388608
+    },
+    "repeatability": "read-only",
+    "normalization": [
+      "official MCP origin and issuer/resource binding; exact reviewed tool allowlist",
+      "detailed reads require node_id; Make uses discovery then selected file URI",
+      "resource URI must belong to selected file and be admitted on this connection"
+    ],
+    "content": {
+      "kind": "application/vnd.figma.mcp+json",
+      "coverage": "page"
+    }
+  },
+  "figma.read_resource": {
+    "operationId": "figma.read_resource",
+    "providerId": "figma",
+    "action": "read_resource",
+    "effect": "read",
+    "executors": [
+      "mcp"
+    ],
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "file_url_or_key": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 4096
+        },
+        "file_key": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 200
+        },
+        "file_type": {
+          "enum": [
+            "design",
+            "figjam",
+            "make",
+            "slides"
+          ]
+        },
+        "node_id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 200
+        },
+        "client_languages": {
+          "type": "string",
+          "minLength": 0,
+          "maxLength": 200
+        },
+        "client_frameworks": {
+          "type": "string",
+          "minLength": 0,
+          "maxLength": 200
+        },
+        "force_code": {
+          "type": "boolean"
+        },
+        "disable_code_connect": {
+          "type": "boolean"
+        },
+        "recursive": {
+          "type": "boolean"
+        },
+        "queries": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 1000
+          },
+          "maxItems": 20
+        },
+        "uri": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 4096
+        }
+      },
+      "required": [
+        "uri"
+      ],
+      "additionalProperties": false,
+      "oneOf": [
+        {
+          "required": [
+            "file_url_or_key"
+          ]
+        },
+        {
+          "required": [
+            "file_key"
+          ]
+        }
+      ]
+    },
+    "outputSchema": {
+      "type": "object",
+      "properties": {},
+      "required": [],
+      "additionalProperties": true
+    },
+    "resourcePolicy": {
+      "source": "input",
+      "group": "files",
+      "selector": {
+        "kind": "identifier-or-url",
+        "fields": [
+          "file_url_or_key",
+          "file_key"
+        ],
+        "urlHosts": [
+          "figma.com",
+          "www.figma.com"
+        ],
+        "urlPathIndex": 1
+      }
+    },
+    "defaults": {},
+    "limits": {
+      "inputBytes": 65536,
+      "responseBytes": 8388608
+    },
+    "repeatability": "read-only",
+    "normalization": [
+      "official MCP origin and issuer/resource binding; exact reviewed tool allowlist",
+      "detailed reads require node_id; Make uses discovery then selected file URI",
+      "resource URI must belong to selected file and be admitted on this connection"
+    ],
+    "content": {
+      "kind": "application/vnd.figma.mcp+json",
+      "coverage": "requested-subtree"
+    }
+  },
+  "notion.search": {
+    "operationId": "notion.search",
+    "providerId": "notion",
+    "action": "search",
+    "effect": "read",
+    "executors": [
+      "api",
+      "cli"
+    ],
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "query": {
+          "type": "string",
+          "minLength": 0,
+          "maxLength": 200
+        },
+        "limit": {
+          "anyOf": [
+            {
+              "type": "integer",
+              "minimum": 1
+            },
+            {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 100
+            }
+          ]
+        }
+      },
+      "required": [],
+      "additionalProperties": false
+    },
+    "outputSchema": {
+      "type": "object",
+      "properties": {
+        "results": {
+          "type": "array",
+          "items": {
+            "type": "object"
+          },
+          "maxItems": 100
+        }
+      },
+      "required": [
+        "results"
+      ],
+      "additionalProperties": true
+    },
+    "resourcePolicy": {
+      "source": "grant-filtered",
+      "group": "pages"
+    },
+    "defaults": {
+      "limit": 30
+    },
+    "limits": {
+      "inputBytes": 65536,
+      "responseBytes": 1048576
+    },
+    "repeatability": "read-only",
+    "normalization": [
+      "limit: positive number or numeric string; clamp to 100"
+    ]
+  },
+  "notion.get_page": {
+    "operationId": "notion.get_page",
+    "providerId": "notion",
+    "action": "get_page",
+    "effect": "read",
+    "executors": [
+      "api",
+      "cli"
+    ],
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "page_id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 100
+        }
+      },
+      "required": [
+        "page_id"
+      ],
+      "additionalProperties": false
+    },
+    "outputSchema": {
+      "type": "object",
+      "properties": {},
+      "required": [],
+      "additionalProperties": true
+    },
+    "resourcePolicy": {
+      "source": "input",
+      "group": "pages",
+      "selector": {
+        "kind": "joined",
+        "fields": [
+          "page_id"
+        ],
+        "lowercase": true,
+        "stripHyphens": true
+      }
+    },
+    "defaults": {},
+    "limits": {
+      "inputBytes": 65536,
+      "responseBytes": 1048576
+    },
+    "repeatability": "read-only",
+    "normalization": []
+  },
+  "linear.list_issues": {
+    "operationId": "linear.list_issues",
+    "providerId": "linear",
+    "action": "list_issues",
+    "effect": "read",
+    "executors": [
+      "api"
+    ],
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "limit": {
+          "anyOf": [
+            {
+              "type": "integer",
+              "minimum": 1
+            },
+            {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 100
+            }
+          ]
+        }
+      },
+      "required": [],
+      "additionalProperties": false
+    },
+    "outputSchema": {
+      "type": "object",
+      "properties": {
+        "issues": {
+          "type": "array",
+          "items": {
+            "type": "object"
+          },
+          "maxItems": 50
+        }
+      },
+      "required": [
+        "issues"
+      ],
+      "additionalProperties": true
+    },
+    "resourcePolicy": {
+      "source": "grant-filtered",
+      "group": "teams"
+    },
+    "defaults": {
+      "limit": 30
+    },
+    "limits": {
+      "inputBytes": 65536,
+      "responseBytes": 1048576
+    },
+    "repeatability": "read-only",
+    "normalization": [
+      "limit: positive number or numeric string; clamp to 50"
+    ]
+  },
+  "linear.list_teams": {
+    "operationId": "linear.list_teams",
+    "providerId": "linear",
+    "action": "list_teams",
+    "effect": "read",
+    "executors": [
+      "api"
+    ],
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "limit": {
+          "anyOf": [
+            {
+              "type": "integer",
+              "minimum": 1
+            },
+            {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 100
+            }
+          ]
+        }
+      },
+      "required": [],
+      "additionalProperties": false
+    },
+    "outputSchema": {
+      "type": "object",
+      "properties": {
+        "teams": {
+          "type": "array",
+          "items": {
+            "type": "object"
+          },
+          "maxItems": 50
+        }
+      },
+      "required": [
+        "teams"
+      ],
+      "additionalProperties": true
+    },
+    "resourcePolicy": {
+      "source": "grant-filtered",
+      "group": "teams"
+    },
+    "defaults": {},
+    "limits": {
+      "inputBytes": 65536,
+      "responseBytes": 1048576
+    },
+    "repeatability": "read-only",
+    "normalization": []
+  },
+  "slack.list_channels": {
+    "operationId": "slack.list_channels",
+    "providerId": "slack",
+    "action": "list_channels",
+    "effect": "read",
+    "executors": [
+      "api"
+    ],
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "limit": {
+          "anyOf": [
+            {
+              "type": "integer",
+              "minimum": 1
+            },
+            {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 100
+            }
+          ]
+        }
+      },
+      "required": [],
+      "additionalProperties": false
+    },
+    "outputSchema": {
+      "type": "object",
+      "properties": {
+        "channels": {
+          "type": "array",
+          "items": {
+            "type": "object"
+          },
+          "maxItems": 200
+        }
+      },
+      "required": [
+        "channels"
+      ],
+      "additionalProperties": true
+    },
+    "resourcePolicy": {
+      "source": "grant-filtered",
+      "group": "channels"
+    },
+    "defaults": {
+      "limit": 50
+    },
+    "limits": {
+      "inputBytes": 65536,
+      "responseBytes": 1048576
+    },
+    "repeatability": "read-only",
+    "normalization": [
+      "limit: positive number or numeric string; clamp to 200"
+    ]
+  },
+  "slack.get_channel_history": {
+    "operationId": "slack.get_channel_history",
+    "providerId": "slack",
+    "action": "get_channel_history",
+    "effect": "read",
+    "executors": [
+      "api"
+    ],
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "channel": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 100
+        },
+        "limit": {
+          "anyOf": [
+            {
+              "type": "integer",
+              "minimum": 1
+            },
+            {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 100
+            }
+          ]
+        }
+      },
+      "required": [
+        "channel"
+      ],
+      "additionalProperties": false
+    },
+    "outputSchema": {
+      "type": "object",
+      "properties": {
+        "messages": {
+          "type": "array",
+          "items": {
+            "type": "object"
+          },
+          "maxItems": 100
+        }
+      },
+      "required": [
+        "messages"
+      ],
+      "additionalProperties": true
+    },
+    "resourcePolicy": {
+      "source": "input",
+      "group": "channels",
+      "selector": {
+        "kind": "joined",
+        "fields": [
+          "channel"
+        ]
+      }
+    },
+    "defaults": {
+      "limit": 15
+    },
+    "limits": {
+      "inputBytes": 65536,
+      "responseBytes": 1048576
+    },
+    "repeatability": "read-only",
+    "normalization": [
+      "limit: positive number or numeric string; clamp to 15"
+    ]
+  },
+  "slack.get_message": {
+    "operationId": "slack.get_message",
+    "providerId": "slack",
+    "action": "get_message",
+    "effect": "read",
+    "executors": [
+      "api"
+    ],
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "permalink": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 4096
+        }
+      },
+      "required": [
+        "permalink"
+      ],
+      "additionalProperties": false
+    },
+    "outputSchema": {
+      "type": "object",
+      "properties": {},
+      "required": [],
+      "additionalProperties": true
+    },
+    "resourcePolicy": {
+      "source": "input",
+      "group": "channels",
+      "selector": {
+        "kind": "slack-permalink",
+        "fields": [
+          "permalink"
+        ],
+        "urlPathIndex": 1
+      }
+    },
+    "defaults": {},
+    "limits": {
+      "inputBytes": 65536,
+      "responseBytes": 1048576
+    },
+    "repeatability": "read-only",
+    "normalization": [
+      "parse channel and timestamp from HTTPS Slack permalink; reply URL requires thread_ts",
+      "URL supplies identifiers only; never controls API origin"
+    ]
+  },
+  "slack.get_thread": {
+    "operationId": "slack.get_thread",
+    "providerId": "slack",
+    "action": "get_thread",
+    "effect": "read",
+    "executors": [
+      "api"
+    ],
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "channel": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 100
+        },
+        "ts": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 100
+        },
+        "permalink": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 4096
+        },
+        "cursor": {
+          "type": "string",
+          "minLength": 0,
+          "maxLength": 4096
+        },
+        "limit": {
+          "anyOf": [
+            {
+              "type": "integer",
+              "minimum": 1
+            },
+            {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 100
+            }
+          ]
+        }
+      },
+      "required": [
+        "channel",
+        "ts"
+      ],
+      "additionalProperties": false
+    },
+    "outputSchema": {
+      "type": "object",
+      "properties": {},
+      "required": [],
+      "additionalProperties": true
+    },
+    "resourcePolicy": {
+      "source": "input",
+      "group": "channels",
+      "selector": {
+        "kind": "joined",
+        "fields": [
+          "channel"
+        ]
+      }
+    },
+    "defaults": {
+      "limit": 15
+    },
+    "limits": {
+      "inputBytes": 65536,
+      "responseBytes": 1048576
+    },
+    "repeatability": "read-only",
+    "normalization": [
+      "one thread page; maximum limit 15; reject permalink conflicts"
+    ]
+  },
+  "sentry.list_organizations": {
+    "operationId": "sentry.list_organizations",
+    "providerId": "sentry",
+    "action": "list_organizations",
+    "effect": "read",
+    "executors": [
+      "api"
+    ],
+    "inputSchema": {
+      "type": "object",
+      "properties": {},
+      "required": [],
+      "additionalProperties": false
+    },
+    "outputSchema": {
+      "type": "object",
+      "properties": {
+        "organizations": {
+          "type": "array",
+          "items": {
+            "type": "object"
+          },
+          "maxItems": 100
+        }
+      },
+      "required": [
+        "organizations"
+      ],
+      "additionalProperties": true
+    },
+    "resourcePolicy": {
+      "source": "grant-filtered",
+      "group": "organizations"
+    },
+    "defaults": {},
+    "limits": {
+      "inputBytes": 65536,
+      "responseBytes": 1048576
+    },
+    "repeatability": "read-only",
+    "normalization": []
+  },
+  "sentry.list_projects": {
+    "operationId": "sentry.list_projects",
+    "providerId": "sentry",
+    "action": "list_projects",
+    "effect": "read",
+    "executors": [
+      "api"
+    ],
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "organization": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 100
+        }
+      },
+      "required": [
+        "organization"
+      ],
+      "additionalProperties": false
+    },
+    "outputSchema": {
+      "type": "object",
+      "properties": {
+        "projects": {
+          "type": "array",
+          "items": {
+            "type": "object"
+          },
+          "maxItems": 100
+        }
+      },
+      "required": [
+        "projects"
+      ],
+      "additionalProperties": true
+    },
+    "resourcePolicy": {
+      "source": "input",
+      "group": "organizations",
+      "selector": {
+        "kind": "joined",
+        "fields": [
+          "organization"
+        ]
+      }
+    },
+    "defaults": {},
+    "limits": {
+      "inputBytes": 65536,
+      "responseBytes": 1048576
+    },
+    "repeatability": "read-only",
+    "normalization": []
+  },
+  "airtable.list_bases": {
+    "operationId": "airtable.list_bases",
+    "providerId": "airtable",
+    "action": "list_bases",
+    "effect": "read",
+    "executors": [
+      "api"
+    ],
+    "inputSchema": {
+      "type": "object",
+      "properties": {},
+      "required": [],
+      "additionalProperties": false
+    },
+    "outputSchema": {
+      "type": "object",
+      "properties": {
+        "bases": {
+          "type": "array",
+          "items": {
+            "type": "object"
+          },
+          "maxItems": 100
+        }
+      },
+      "required": [
+        "bases"
+      ],
+      "additionalProperties": true
+    },
+    "resourcePolicy": {
+      "source": "grant-filtered",
+      "group": "bases"
+    },
+    "defaults": {},
+    "limits": {
+      "inputBytes": 65536,
+      "responseBytes": 1048576
+    },
+    "repeatability": "read-only",
+    "normalization": []
+  },
+  "airtable.list_tables": {
+    "operationId": "airtable.list_tables",
+    "providerId": "airtable",
+    "action": "list_tables",
+    "effect": "read",
+    "executors": [
+      "api"
+    ],
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "base_id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 100
+        }
+      },
+      "required": [
+        "base_id"
+      ],
+      "additionalProperties": false
+    },
+    "outputSchema": {
+      "type": "object",
+      "properties": {
+        "tables": {
+          "type": "array",
+          "items": {
+            "type": "object"
+          },
+          "maxItems": 100
+        }
+      },
+      "required": [
+        "tables"
+      ],
+      "additionalProperties": true
+    },
+    "resourcePolicy": {
+      "source": "input",
+      "group": "bases",
+      "selector": {
+        "kind": "joined",
+        "fields": [
+          "base_id"
+        ]
+      }
+    },
+    "defaults": {},
+    "limits": {
+      "inputBytes": 65536,
+      "responseBytes": 1048576
+    },
+    "repeatability": "read-only",
+    "normalization": []
+  },
+  "todoist.list_projects": {
+    "operationId": "todoist.list_projects",
+    "providerId": "todoist",
+    "action": "list_projects",
+    "effect": "read",
+    "executors": [
+      "api",
+      "cli"
+    ],
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "limit": {
+          "anyOf": [
+            {
+              "type": "integer",
+              "minimum": 1
+            },
+            {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 100
+            }
+          ]
+        }
+      },
+      "required": [],
+      "additionalProperties": false
+    },
+    "outputSchema": {
+      "type": "object",
+      "properties": {
+        "projects": {
+          "type": "array",
+          "items": {
+            "type": "object"
+          },
+          "maxItems": 100
+        }
+      },
+      "required": [
+        "projects"
+      ],
+      "additionalProperties": true
+    },
+    "resourcePolicy": {
+      "source": "grant-filtered",
+      "group": "projects"
+    },
+    "defaults": {},
+    "limits": {
+      "inputBytes": 65536,
+      "responseBytes": 1048576
+    },
+    "repeatability": "read-only",
+    "normalization": []
+  },
+  "todoist.list_tasks": {
+    "operationId": "todoist.list_tasks",
+    "providerId": "todoist",
+    "action": "list_tasks",
+    "effect": "read",
+    "executors": [
+      "api",
+      "cli"
+    ],
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "limit": {
+          "anyOf": [
+            {
+              "type": "integer",
+              "minimum": 1
+            },
+            {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 100
+            }
+          ]
+        }
+      },
+      "required": [],
+      "additionalProperties": false
+    },
+    "outputSchema": {
+      "type": "object",
+      "properties": {
+        "tasks": {
+          "type": "array",
+          "items": {
+            "type": "object"
+          },
+          "maxItems": 100
+        }
+      },
+      "required": [
+        "tasks"
+      ],
+      "additionalProperties": true
+    },
+    "resourcePolicy": {
+      "source": "grant-filtered",
+      "group": "projects"
+    },
+    "defaults": {
+      "limit": 50
+    },
+    "limits": {
+      "inputBytes": 65536,
+      "responseBytes": 1048576
+    },
+    "repeatability": "read-only",
+    "normalization": [
+      "limit: positive number or numeric string; clamp to 100"
+    ]
+  },
+  "vercel.list_projects": {
+    "operationId": "vercel.list_projects",
+    "providerId": "vercel",
+    "action": "list_projects",
+    "effect": "read",
+    "executors": [
+      "api",
+      "cli"
+    ],
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "team_id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 100
+        },
+        "limit": {
+          "anyOf": [
+            {
+              "type": "integer",
+              "minimum": 1
+            },
+            {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 100
+            }
+          ]
+        }
+      },
+      "required": [],
+      "additionalProperties": false
+    },
+    "outputSchema": {
+      "type": "object",
+      "properties": {
+        "projects": {
+          "type": "array",
+          "items": {
+            "type": "object"
+          },
+          "maxItems": 100
+        }
+      },
+      "required": [
+        "projects"
+      ],
+      "additionalProperties": true
+    },
+    "resourcePolicy": {
+      "source": "grant-filtered",
+      "group": "projects"
+    },
+    "defaults": {
+      "limit": 50
+    },
+    "limits": {
+      "inputBytes": 65536,
+      "responseBytes": 1048576
+    },
+    "repeatability": "read-only",
+    "normalization": [
+      "limit: positive number or numeric string; clamp to 100",
+      "broker checks team_id against installation"
+    ]
+  },
+  "vercel.list_deployments": {
+    "operationId": "vercel.list_deployments",
+    "providerId": "vercel",
+    "action": "list_deployments",
+    "effect": "read",
+    "executors": [
+      "api",
+      "cli"
+    ],
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "team_id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 100
+        },
+        "limit": {
+          "anyOf": [
+            {
+              "type": "integer",
+              "minimum": 1
+            },
+            {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 100
+            }
+          ]
+        }
+      },
+      "required": [],
+      "additionalProperties": false
+    },
+    "outputSchema": {
+      "type": "object",
+      "properties": {
+        "deployments": {
+          "type": "array",
+          "items": {
+            "type": "object"
+          },
+          "maxItems": 100
+        }
+      },
+      "required": [
+        "deployments"
+      ],
+      "additionalProperties": true
+    },
+    "resourcePolicy": {
+      "source": "grant-filtered",
+      "group": "projects"
+    },
+    "defaults": {
+      "limit": 50
+    },
+    "limits": {
+      "inputBytes": 65536,
+      "responseBytes": 1048576
+    },
+    "repeatability": "read-only",
+    "normalization": [
+      "limit: positive number or numeric string; clamp to 100",
+      "broker checks team_id against installation; filter deployments by granted project"
+    ]
+  }
+}

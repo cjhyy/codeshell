@@ -1,0 +1,33 @@
+import {
+  LinkOperationError,
+  assertLinkOperationResult,
+  getLinkOperationContract,
+  validateLinkOperationInput,
+} from "@cjhyy/code-shell-link";
+
+/** One adapter invocation. Write approval, durable intent and verification belong to the owning controller. */
+export async function executeLinkOperation(options: {
+  providerId: string;
+  action: string;
+  params: Record<string, unknown>;
+  execute(params: Record<string, unknown>): Promise<unknown>;
+  assertAuthorized?(): void;
+  signal?: AbortSignal;
+}): Promise<unknown> {
+  const contract = getLinkOperationContract(options.providerId, options.action);
+  if (!contract)
+    throw new LinkOperationError(
+      "unsupported_contract",
+      "This Host does not support the requested operation contract.",
+    );
+  // Detach input before asynchronous code can observe caller changes.
+  validateLinkOperationInput(contract, options.params);
+  const params = JSON.parse(JSON.stringify(options.params)) as Record<string, unknown>;
+  options.signal?.throwIfAborted();
+  options.assertAuthorized?.();
+  const result = await options.execute(params);
+  options.assertAuthorized?.();
+  options.signal?.throwIfAborted();
+  assertLinkOperationResult(contract, result);
+  return result;
+}

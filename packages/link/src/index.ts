@@ -1,5 +1,6 @@
 export { LINK_PROVIDER_MANIFESTS, getLinkProviderManifest, localizeLinkText } from "./catalog.js";
 export { resolveLinkFileSelection } from "./file-selection.js";
+export { LINK_OPERATION_CONTRACTS, getLinkOperationContract } from "./operations.js";
 export {
   LINK_CONNECTION_RECIPES,
   getLinkConnectionRecipe,
