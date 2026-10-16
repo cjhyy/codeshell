@@ -40,7 +40,6 @@ import { projectConfig } from "./ns/project-config";
 import { sourceCollections } from "./ns/source-collections";
 import { activity } from "./ns/activity";
 import { activityApprovals } from "./ns/activity-approvals";
-import { activityRuns } from "./ns/activity-runs";
 import { activitySessions } from "./ns/activity-sessions";
 import { observability } from "./ns/observability";
 
@@ -49,7 +48,6 @@ export const messages = {
     ...observability.zh,
     ...activity.zh,
     ...activityApprovals.zh,
-    ...activityRuns.zh,
     ...activitySessions.zh,
     ...core.zh,
     ...chat.zh,
@@ -71,7 +69,6 @@ export const messages = {
     ...observability.en,
     ...activity.en,
     ...activityApprovals.en,
-    ...activityRuns.en,
     ...activitySessions.en,
     ...core.en,
     ...chat.en,

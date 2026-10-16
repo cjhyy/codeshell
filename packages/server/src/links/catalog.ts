@@ -1,3 +1,4 @@
+import { installDefaultLinkProviders } from "./providers/index.js";
 import { LINK_PROVIDER_MANIFESTS, type LinkProviderManifest } from "@cjhyy/code-shell-link";
 import { listLocalLinkProviders, type LocalLinkProviderSummary } from "@cjhyy/code-shell-core";
 
@@ -51,5 +52,6 @@ export function composeLinkProviderCatalog(
 }
 
 export function listDesktopLinkProviders(): DesktopLinkProviderView[] {
+  installDefaultLinkProviders();
   return composeLinkProviderCatalog(LINK_PROVIDER_MANIFESTS, listLocalLinkProviders());
 }

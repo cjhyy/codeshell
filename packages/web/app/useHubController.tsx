@@ -569,7 +569,7 @@ export function useHubController({
     setReplayNote(null);
   };
 
-  const send = (): boolean => {
+  const send = (options?: { modelTraceSource?: string }): boolean => {
     const currentDraft = draftStore.current.get(activeIdRef.current);
     const text = currentDraft.text.trim();
     const client = clientRef.current;
@@ -614,6 +614,7 @@ export function useHubController({
       .run({
         sessionId,
         task: text,
+        ...(options?.modelTraceSource ? { modelTraceSource: options.modelTraceSource } : {}),
         clientMessageId: submission.clientMessageId,
         displayText: text,
         ...(attachments.length ? { uploadIds: attachments.map((file) => file.id) } : {}),

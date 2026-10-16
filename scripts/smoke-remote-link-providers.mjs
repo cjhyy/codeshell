@@ -3,19 +3,16 @@
  * Usage: node scripts/smoke-remote-link-providers.mjs /absolute/services/apps/link-server/http.mjs
  */
 import assert from "node:assert/strict";
+import {
+  linkProviderModuleUrl,
+  installLinkFlowNetworkGuard,
+} from "./fixtures/link-provider-module.mjs";
 import { randomBytes } from "node:crypto";
 import { mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { createServer } from "node:net";
 import { pathToFileURL } from "node:url";
-import {
-  CredentialStore,
-  executeRemoteLinkAction,
-  linkActionTool,
-  REMOTE_LINK_PROVIDER_ADAPTERS,
-} from "../packages/core/dist/index.js";
-import { createLinkService } from "../packages/server/dist/index.links.js";
 
 assert.ok(process.argv[2], "Pass the independently selected Link server http.mjs entry");
 const serviceEntry = pathToFileURL(resolve(process.argv[2]));
@@ -30,6 +27,12 @@ await new Promise((done) => probe.listen(0, "127.0.0.1", done));
 const port = probe.address().port;
 await new Promise((done) => probe.close(done));
 const issuer = `http://127.0.0.1:${port}`;
+installLinkFlowNetworkGuard(issuer);
+assert.throws(() => fetch("https://provider.invalid/"), /non-fixture request/);
+const { CredentialStore, executeRemoteLinkAction, linkActionTool, REMOTE_LINK_PROVIDER_ADAPTERS } =
+  await import("@cjhyy/code-shell-core");
+const { createLinkService, installDefaultLinkProviders } = await import(linkProviderModuleUrl);
+installDefaultLinkProviders();
 const page = "123456781234123412341234567890ab";
 const team = "12345678-1234-1234-1234-1234567890ab";
 const resource = {

@@ -1,3 +1,4 @@
+import { linkConnectionMetadata } from "@cjhyy/code-shell-link";
 import { randomBytes } from "node:crypto";
 import { createServer } from "node:http";
 import {
@@ -529,7 +530,10 @@ export class McpOAuthService {
     const cred = this.oauthCredential(id);
     const secret = parseOAuthCredentialSecret(cred.secret!);
     assertMcpOAuthCredentialBinding(cred, opts.serverUrl, secret);
-    if (cred.meta?.linkExecutionBackend === "mcp" && cred.meta.linkOAuthState === "reconnect")
+    if (
+      linkConnectionMetadata(cred.meta).linkExecutionBackend === "mcp" &&
+      cred.meta?.linkOAuthState === "reconnect"
+    )
       throw new NormalizedOAuthError(`OAuth credential "${id}" requires login`, "invalid_grant");
     const decision = shouldRefreshOAuthCredential(secret, { now: this.now });
     if (!opts.forceRefresh && decision === "no") {
@@ -593,17 +597,24 @@ export class McpOAuthService {
     if (
       credential.type !== "oauth" ||
       !credential.secret ||
-      credential.meta?.linkExecutionBackend === "remote"
+      linkConnectionMetadata(credential.meta).linkExecutionBackend === "remote"
     )
       throw new Error("OAuth credential is unavailable");
     const secret = parseOAuthCredentialSecret(credential.secret);
-    const saved = this.store.resolve(credential.id, "full");
-    if (saved?.type === "oauth" && saved.secret) {
-      const active = parseOAuthCredentialSecret(saved.secret);
-      // A detached cleanup must never revoke tokens still owned by a saved connection.
+    const detachedTokens = new Set([secret.accessToken, secret.refreshToken].filter(Boolean));
+    for (const saved of this.store.list("full")) {
+      if (saved.type !== "oauth" || !saved.secret) continue;
+      let active: OAuthCredentialSecret;
+      try {
+        active = parseOAuthCredentialSecret(saved.secret);
+      } catch {
+        continue;
+      }
+      // Providers can reuse tokens for a fresh connection ID. Token matching is
+      // only a cleanup veto; it never supplies authority for another connection.
       if (
-        active.accessToken === secret.accessToken ||
-        (active.refreshToken && active.refreshToken === secret.refreshToken)
+        detachedTokens.has(active.accessToken) ||
+        (active.refreshToken && detachedTokens.has(active.refreshToken))
       )
         return false;
     }
@@ -1134,8 +1145,8 @@ export class McpOAuthService {
             lastRefreshErrorCode: code,
             ...(code === "invalid_grant" &&
             latest.meta?.linkProvider === "figma" &&
-            latest.meta.linkExecutionBackend === "mcp" &&
-            latest.meta.linkAuthSource === "mcp-oauth"
+            linkConnectionMetadata(latest.meta).linkExecutionBackend === "mcp" &&
+            linkConnectionMetadata(latest.meta).linkAuthSource === "mcp-oauth"
               ? { linkOAuthState: "reconnect" as const }
               : {}),
           },
@@ -1157,7 +1168,7 @@ export class McpOAuthService {
     if (
       !cred ||
       cred.type !== "oauth" ||
-      cred.meta?.linkExecutionBackend === "remote" ||
+      linkConnectionMetadata(cred.meta).linkExecutionBackend === "remote" ||
       !cred.secret
     ) {
       throw new Error(`OAuth credential "${id}" is unavailable`);
@@ -1198,7 +1209,7 @@ export class McpOAuthService {
     if (
       !credential ||
       credential.type !== "oauth" ||
-      credential.meta?.linkExecutionBackend === "remote" ||
+      linkConnectionMetadata(credential.meta).linkExecutionBackend === "remote" ||
       !credential.secret
     ) {
       throw new StaleOAuthOperationError();

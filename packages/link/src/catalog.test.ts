@@ -7,6 +7,7 @@ describe("Link provider catalog", () => {
     const figma = getLinkProviderManifest("figma")!;
     expect(figma.actionIds).toEqual([
       "get_file",
+      "read_design_content",
       "get_comments",
       "get_nodes",
       "get_images",

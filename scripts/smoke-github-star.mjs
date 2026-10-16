@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { linkProviderModuleUrl } from "./fixtures/link-provider-module.mjs";
 import { spawn } from "node:child_process";
 import { createServer } from "node:http";
 import { createHash } from "node:crypto";
@@ -17,6 +18,8 @@ if (process.argv[2] === "--worker") {
   const root = process.env.AGENT_CWD;
   const origin = process.env.CODESHELL_COST_SMOKE_ORIGIN;
   const core = await import("@cjhyy/code-shell-core");
+  const { installDefaultLinkProviders } = await import(linkProviderModuleUrl);
+  installDefaultLinkProviders();
   const credential = {
     id: "fixture-link",
     type: "oauth",
@@ -30,6 +33,18 @@ if (process.argv[2] === "--worker") {
       linkExecutionBackend: "remote",
       linkRemoteState: "connected",
       linkRemoteGrantId: "fixture-grant",
+      linkResourceGroups: [
+        {
+          id: "repositories",
+          items: [
+            "fixture/success",
+            "fixture/noop",
+            "fixture/unknown",
+            "fixture/replacement",
+            "fixture/cli",
+          ].map((id) => ({ id, label: id })),
+        },
+      ],
       linkLastVerifiedAt: "2026-10-09T00:00:00Z",
       linkCapabilityIds: ["github.get_repository", "github.get_starred", "github.set_starred"],
     },
@@ -369,7 +384,7 @@ request.on("error", () => { process.exitCode = 1; }); request.end(JSON.stringify
       CODE_SHELL_DATA_ROOT: join(root, "data"),
       AGENT_CWD: root,
       CODESHELL_LINK_CLI_DIR: cliRoot,
-      CODE_SHELL_CAPABILITY_MODULES: "",
+      CODE_SHELL_CAPABILITY_MODULES: `${linkProviderModuleUrl}#createLinkProviderModule`,
       CODE_SHELL_DEV: "0",
       CODESHELL_SELF_UPDATE_CHECK: "0",
     },

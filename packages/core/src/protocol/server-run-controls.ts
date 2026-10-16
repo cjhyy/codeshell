@@ -13,8 +13,8 @@ import {
   type RunParams,
 } from "./types.js";
 
-/** Share Goal admission and forwarding across managed and legacy runs. */
-export function runGoalOptions(params: RunParams, readGoal: () => GoalConfig | undefined) {
+/** Share run controls and diagnostic labels across managed and legacy runs. */
+export function runOptions(params: RunParams, readGoal: () => GoalConfig | undefined) {
   if (params.goalContinuation !== undefined)
     assertGoalContinuation(params.goalContinuation, readGoal(), params.goal, params.disableGoal);
   return {
@@ -24,6 +24,7 @@ export function runGoalOptions(params: RunParams, readGoal: () => GoalConfig | u
         : undefined,
     disableGoal: params.disableGoal === true,
     goalContinuation: params.goalContinuation,
+    modelTraceSource: params.modelTraceSource,
   };
 }
 

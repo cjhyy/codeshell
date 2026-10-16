@@ -39,13 +39,17 @@ export function startExternalRuntimeTrace(options: {
   developerInstructions: string;
   initialContext?: string;
   storageDir?: string;
+  source?: string;
 }) {
   const context = {
     storageDir: options.storageDir ?? join(sessionsRoot(), ".model-traces"),
     workspacePath: options.workspacePath,
     sessionId: options.sessionId,
     runId: options.runId,
-    source: `desktop-${options.kind}-cli`,
+    source:
+      options.source && /^panel:[a-z][a-z0-9-]{0,63}$/.test(options.source)
+        ? options.source
+        : `desktop-${options.kind}-cli`,
     purpose: "external-runtime",
   };
   const startedAt = Date.now();

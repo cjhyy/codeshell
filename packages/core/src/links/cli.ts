@@ -579,7 +579,17 @@ async function executeGithubCliAction(
   }
   if (actionId === "list_issues") {
     const limit = intParam(params, "limit", 30, 100);
-    const data = asArray(await api("github", `${base}/issues?per_page=${limit}`, options, run));
+    const page = intParam(params, "page", 1, 1_000);
+    const state = stringParam(params, "state") ?? "open";
+    if (!["open", "closed", "all"].includes(state)) throw new Error("Invalid issue state");
+    const data = asArray(
+      await api(
+        "github",
+        `${base}/issues?per_page=${limit}&page=${page}&state=${state}`,
+        options,
+        run,
+      ),
+    );
     return {
       issues: data
         .filter((value) => !asRecord(value)?.pull_request)
@@ -600,7 +610,8 @@ async function executeGithubCliAction(
   }
   if (actionId === "list_pull_requests") {
     const limit = intParam(params, "limit", 30, 100);
-    const data = await api("github", `${base}/pulls?per_page=${limit}`, options, run);
+    const page = intParam(params, "page", 1, 1_000);
+    const data = await api("github", `${base}/pulls?per_page=${limit}&page=${page}`, options, run);
     return {
       pull_requests: compactList(data, [
         "number",
@@ -874,7 +885,7 @@ async function executeVercelCliAction(
     return {
       deployments: compactList(
         root.deployments,
-        ["uid", "name", "url", "state", "target", "created", "ready", "meta"],
+        ["uid", "projectId", "name", "url", "state", "target", "created", "ready", "meta"],
         100,
       ),
       pagination: root.pagination,

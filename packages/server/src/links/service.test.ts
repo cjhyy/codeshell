@@ -681,6 +681,17 @@ describe("shared Link management", () => {
       ),
     ).toBe(true);
     expect(connection.account?.label).toBe("fixture-user");
+    expect(store.resolve(connection.id)?.meta).toMatchObject({
+      recordSchemaVersion: 2,
+      linkRecipeId: "api-token",
+    });
+    for (const field of ["linkExecutionRuntime", "linkExecutionBackend", "linkAuthSource"])
+      expect(store.resolve(connection.id)?.meta).not.toHaveProperty(field);
+    expect(connection.connectionState).toEqual({
+      authorization: { state: "authorized" },
+      compatibility: { state: "unknown" },
+      observation: { state: "unchecked" },
+    });
     expect(connection.capabilityIds).toEqual(["github.list_repos"]);
     expect(JSON.stringify(snapshot)).not.toContain(input.token);
     expect(JSON.stringify(snapshot)).not.toContain("secretHint");
@@ -693,7 +704,9 @@ describe("shared Link management", () => {
   test("create-only collision and stale rename/delete are rejected", async () => {
     const { service, store } = fixture();
     const original = await service.connectToken(owner, input);
-    await expect(service.connectToken(other, input)).rejects.toMatchObject({
+    await expect(
+      service.connectToken(other, { ...input, connectionId: original.id }),
+    ).rejects.toMatchObject({
       status: 409,
       code: "conflict",
     });
@@ -708,6 +721,23 @@ describe("shared Link management", () => {
     });
     await service.disconnect(owner, renamed.id, renamed.revision);
     expect(store.resolve(original.id)).toBeUndefined();
+  });
+  test("a fresh connection never revives removed references and supports separate accounts", async () => {
+    const { service, store } = fixture({
+      validateToken: async (_provider, token) => ({
+        ...validation,
+        identity: { ...validation.identity, externalAccountId: token },
+      }),
+    });
+    const first = await service.connectToken(owner, input);
+    const second = await service.connectToken(owner, { ...input, token: "another-account" });
+    expect(second.id).not.toBe(first.id);
+    expect(service.snapshot().connections).toHaveLength(2);
+    await service.disconnect(owner, first.id, first.revision);
+    const reconnected = await service.connectToken(owner, input);
+    expect(reconnected.id).not.toBe(first.id);
+    expect(store.resolve(first.id)).toBeUndefined();
+    expect(store.resolve(second.id)).toBeDefined();
   });
   test("failed token verification does not replace the previous working connection", async () => {
     let reject = false;
@@ -843,6 +873,10 @@ describe("shared Link management", () => {
     const result = await service.connectCli(owner, input);
     expect(login).toBe(false);
     expect(result.authSource).toBe("cli-session");
+    expect(store.resolve(result.id)?.meta).toMatchObject({
+      recordSchemaVersion: 2,
+      linkRecipeId: "cli-session",
+    });
     expect(store.resolve(result.id)?.secret).toStartWith("cli-binding:");
     expect(JSON.stringify(result)).not.toContain("cli-binding:");
     const status = await service.cliStatus(owner, "github");
@@ -889,7 +923,7 @@ describe("owner-bound Link device authorization", () => {
     const credential = store.resolve(connection.id)!;
     store.save("user", {
       ...credential,
-      meta: { ...credential.meta, linkAuthSource: "browser-oauth" },
+      meta: { ...credential.meta, linkRecipeId: "api-oauth" },
       secret: JSON.stringify({
         version: 1,
         accessToken: "expired-access",

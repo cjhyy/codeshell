@@ -22,6 +22,8 @@ import {
 } from "@cjhyy/code-shell-server/panels";
 import type { TrustedDeviceStore } from "@cjhyy/code-shell-server/mobile-remote";
 import type { AgentBridge } from "./agent-bridge.js";
+import type { CaptureLinkAccountAccess } from "./link-account-access.js";
+import { createDesktopModelTraceScopeResolver } from "./desktop-model-trace-scopes.js";
 
 /** Host wiring only. Pages and management services live in shared packages. */
 export function createDesktopWebService(options: {
@@ -35,6 +37,7 @@ export function createDesktopWebService(options: {
   ) => Promise<PanelProjectScopeBinding | undefined>;
   getBridge: () => AgentBridge | null;
   remoteLink?: () => RemoteLinkConfiguration | undefined;
+  captureRemoteAuthority?: CaptureLinkAccountAccess;
   resolveWorkspace: (input: string | undefined, deviceId: string) => Promise<string | undefined>;
   onSessionsChanged: (cwd: string, sessionId: string) => void;
   onPanelsChanged?: (id: string, kind: "install" | "update" | "binding" | "remove") => void;
@@ -54,6 +57,10 @@ export function createDesktopWebService(options: {
     dataDir: join(codeShellHome(), "desktop"),
     sessionRootDir: sessionsRoot(),
     resolveWorkspace: options.resolveWorkspace,
+    resolveModelTraceScopes: createDesktopModelTraceScopeResolver({
+      resolveBindingProjectPath: resolvePanelAppBindingProjectPath,
+      resolveWorkspace: options.resolveWorkspace,
+    }),
     withConfigurationMutation: withMutation,
     isRunning: (id) => options.getBridge()?.isSessionRunning(id) ?? false,
     onSessionsChanged: options.onSessionsChanged,
@@ -95,6 +102,7 @@ export function createDesktopWebService(options: {
           entry = {
             active: 0,
             handler: createPanelHttp({
+              traceStorageDir: join(sessionsRoot(), ".model-traces"),
               cwd,
               bindingCwd,
               // Match Electron's existing panel storage exactly, including custom profiles.
@@ -168,6 +176,7 @@ export function createDesktopWebService(options: {
           handler: createLinkHttp({
             cwd,
             remoteLink: options.remoteLink,
+            captureRemoteAuthority: options.captureRemoteAuthority,
             ownerId: async (req) =>
               (await authorized(req)) ? contexts.get(req)?.sessionId : undefined,
             isAuthorized: authorized,

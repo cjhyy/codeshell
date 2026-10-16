@@ -206,3 +206,22 @@ test("conditional automation methods require an implementing Host and both conte
     ).not.toContain(method);
   }
 });
+
+test("every authorized Panel can write scoped model observations without reading history or policy", () => {
+  const value = desktopPanelCapabilities([], options);
+  expect(value.availableMethods).toContain("modelTraces.start");
+  expect(value.availableMethods).toContain("modelTraces.finish");
+  for (const method of [
+    "modelTraces.list",
+    "modelTraces.get",
+    "modelTraces.getConfig",
+    "modelTraces.setConfig",
+  ])
+    expect(value.availableMethods).not.toContain(method);
+  expect(value.capabilities.modelTraces).toMatchObject({
+    writeOnly: true,
+    coverage: "logical-input",
+  });
+  expect(value.capabilities.methodLimits["modelTraces.start"].maxParamsBytes).toBe(256 * 1024);
+  expect(value.capabilities.methodLimits["modelTraces.finish"].maxParamsBytes).toBe(256 * 1024);
+});

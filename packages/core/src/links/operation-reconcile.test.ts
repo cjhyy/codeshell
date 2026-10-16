@@ -1,3 +1,6 @@
+import { beforeAll as installHostFixture } from "bun:test";
+import { installTestLinkProviders } from "../../../../tests/helpers/link-providers.js";
+installHostFixture(installTestLinkProviders);
 import { expect, test } from "bun:test";
 import { spawn } from "node:child_process";
 import { createHash } from "node:crypto";

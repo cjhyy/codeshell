@@ -1,3 +1,4 @@
+import { linkConnectionMetadata } from "@cjhyy/code-shell-link";
 import type { BrowserWindow, IpcMain, IpcMainInvokeEvent, MessageBoxOptions } from "electron";
 import { randomUUID } from "node:crypto";
 import { lstatSync } from "node:fs";
@@ -79,7 +80,7 @@ function eligible(connection: CredentialMetadata): boolean {
   return (
     connection.meta?.linkProvider === "github" &&
     connection.hasSecret &&
-    connection.meta?.linkExecutionBackend !== "cli" &&
+    linkConnectionMetadata(connection.meta).linkExecutionBackend !== "cli" &&
     (!connection.oauthStatus || ["valid", "expired"].includes(connection.oauthStatus.state)) &&
     ["create_issue", "list_issues", "get_issue"].every((action) =>
       allowsLinkAction(connection, "github", action),

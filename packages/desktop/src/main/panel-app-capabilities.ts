@@ -1,5 +1,7 @@
 import {
   panelRuntimeCapabilities,
+  panelModelTraceMethods,
+  panelModelTraceLimits,
   panelProcessMethods,
   panelResourceMethods,
   panelToolJobMethods,
@@ -82,7 +84,7 @@ export function desktopPanelCapabilities(
     permitted.has("process") &&
     permitted.has("resources");
   const storageBytes = panelAppStorageQuotaBytes(options.limits?.storageQuotaBytes) + 8192;
-  const methods = ["context.get"];
+  const methods = ["context.get", ...panelModelTraceMethods];
   for (const [permission, entries] of Object.entries(groups)) {
     if (!permitted.has(permission)) continue;
     if (
@@ -134,7 +136,10 @@ export function desktopPanelCapabilities(
             : undefined,
         limits: options.limits,
       }),
+      modelTraces: { writeOnly: true, coverage: "logical-input", ...panelModelTraceLimits },
       methodLimits: {
+        "modelTraces.start": { maxParamsBytes: panelModelTraceLimits.maxParamsBytes },
+        "modelTraces.finish": { maxParamsBytes: panelModelTraceLimits.maxParamsBytes },
         "storage.getSnapshot": { maxResultBytes: options.limits?.maxResultBytes ?? storageBytes },
         "storage.compareAndSet": {
           maxParamsBytes: options.limits?.maxParamsBytes ?? storageBytes,

@@ -1,3 +1,4 @@
+import { linkConnectionMetadata } from "@cjhyy/code-shell-link";
 import {
   CredentialStore,
   credentialAllowsEnvExposure,
@@ -60,8 +61,8 @@ export function resolveCredentialValueForWorker(req: CredentialResolveRequest): 
   const allowed =
     req.purpose === "link"
       ? cred.type === "link" &&
-        cred.meta?.linkExecutionRuntime === "local" &&
-        Boolean(cred.meta.linkProvider)
+        linkConnectionMetadata(cred.meta).linkExecutionRuntime === "local" &&
+        Boolean(cred.meta?.linkProvider)
       : cred.type === "token" || cred.type === "link";
   if (!allowed) {
     throw new Error(
@@ -128,7 +129,7 @@ function toMetadata(cred: Credential): CredentialMetadata {
     autoUseByAI,
     autoInjectByAI,
     exposeAsEnv: credentialAllowsEnvExposure(type) ? cred.exposeAsEnv : undefined,
-    meta,
+    meta: meta ? linkConnectionMetadata(meta) : undefined,
     hasSecret,
     secretHint: hasSecret ? credentialSecretHint(type, secret) : undefined,
     ...(cred.type === "oauth" || isBrowserOAuthLinkCredential(cred)

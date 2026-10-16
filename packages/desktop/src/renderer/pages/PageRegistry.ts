@@ -10,7 +10,6 @@ import {
   FlaskConical,
   ListTodo,
   MessageSquare,
-  PlayCircle,
   Puzzle,
   ScrollText,
   Settings,
@@ -52,8 +51,6 @@ export interface PageRenderContext {
   tracesInitialSessionId?: string | null;
   tracesInitialTraceId?: string | null;
   tracesInitialRequestId?: string | null;
-  /** Deep-link into the runs view (set by the automation view). */
-  runsInitialRunId: string | null;
   onOpenTaskInboxRecord?: TaskInboxPageProps["onOpenTaskInboxRecord"];
   /** Active repository, used by project-aware standalone pages. */
   activeProjectPath: string | null;
@@ -96,9 +93,6 @@ const LogsView: LazyExoticComponent<ComponentType> = lazy(() =>
 );
 const ModelTracesView: LazyExoticComponent<ComponentType<ModelTracesViewProps>> = lazy(() =>
   import("../activity/ModelTracesView").then((module) => ({ default: module.ModelTracesView })),
-);
-const RunsView: LazyExoticComponent<ComponentType<{ initialRunId?: string | null }>> = lazy(() =>
-  import("../runs/RunsView").then((module) => ({ default: module.RunsView })),
 );
 const SessionsView: LazyExoticComponent<
   ComponentType<
@@ -178,11 +172,7 @@ const BUILTIN_PAGE_ENTRIES: PageEntry[] = [
     key: "automation",
     title: { kind: "i18n", key: "sidebar.automation" },
     icon: Workflow,
-    // Highlights on the view it actually navigates to. This previously said
-    // `mode === "runs"`, carried over from the hardcoded Sidebar: clicking the
-    // item opened Automation but left it un-highlighted, while the Runs page lit
-    // up an item that does not lead there. `runs` has no sidebar entry of its
-    // own (it is reached from Automation), so it highlights nothing.
+    // Navigation and highlight always refer to the same automation page.
     nav: { order: 10, target: "automation", isActive: (mode) => mode === "automation" },
     render: null,
   }),
@@ -206,12 +196,6 @@ const BUILTIN_PAGE_ENTRIES: PageEntry[] = [
     title: { kind: "i18n", key: "panels.palette.openLogs" },
     icon: ScrollText,
     render: () => createElement(LogsView),
-  }),
-  builtin({
-    key: "runs",
-    title: { kind: "i18n", key: "panels.palette.openRuns" },
-    icon: PlayCircle,
-    render: ({ runsInitialRunId }) => createElement(RunsView, { initialRunId: runsInitialRunId }),
   }),
   builtin({
     key: "sessions",

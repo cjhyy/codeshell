@@ -277,6 +277,45 @@ describe("McpOAuthService", () => {
     }
   });
 
+  for (const sharedToken of ["accessToken", "refreshToken"] as const) {
+    test(`detached cleanup preserves a saved connection with a different ID sharing its ${sharedToken}`, async () => {
+      let revocations = 0;
+      const { service, store } = makeService({
+        fetch: (async () => {
+          revocations++;
+          return new Response(null, { status: 200 });
+        }) as typeof fetch,
+      });
+      store.save("user", {
+        id: "unrelated-malformed-oauth",
+        type: "oauth",
+        label: "Unreadable OAuth",
+        secret: "not-json",
+      });
+      store.save("user", {
+        id: "saved-connection",
+        type: "oauth",
+        label: "Saved connection",
+        secret: JSON.stringify({ accessToken: "saved-access", refreshToken: "saved-refresh" }),
+      });
+      const saved = store.resolve("saved-connection")!;
+      const candidate = {
+        ...saved,
+        id: "fresh-detached-connection",
+        secret: JSON.stringify({
+          accessToken: "detached-access",
+          refreshToken: "detached-refresh",
+          [sharedToken]: sharedToken === "accessToken" ? "saved-access" : "saved-refresh",
+          revocationEndpoint: "https://auth.example/revoke",
+        }),
+      };
+      expect(store.resolve(candidate.id)).toBeUndefined();
+      expect(await service.revokeDetachedCredential(candidate)).toBe(false);
+      expect(revocations).toBe(0);
+      expect(store.resolve(saved.id)).toEqual(saved);
+    });
+  }
+
   test("a restarted Host refreshes a persisted bound connection and retains Link authority", async () => {
     const now = Date.UTC(2026, 0, 1);
     const { service, store } = makeService({

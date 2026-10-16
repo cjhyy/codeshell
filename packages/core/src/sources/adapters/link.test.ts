@@ -1,3 +1,6 @@
+import { beforeAll as installHostFixture } from "bun:test";
+import { installTestLinkProviders } from "../../../../../tests/helpers/link-providers.js";
+installHostFixture(installTestLinkProviders);
 import { afterEach, beforeEach, expect, test } from "bun:test";
 import { mkdirSync, mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
@@ -142,7 +145,7 @@ test("ReadSource's bound LinkAction remains permission-gated without loading its
   expect(reads).toBe(1);
 });
 
-test("all 10 providers/35 read actions reuse exact saved grant and caller credential scope, metadata does no IO", async () => {
+test("all 10 providers/36 read actions reuse exact saved grant and caller credential scope, metadata does no IO", async () => {
   let calls = 0;
   for (const provider of LOCAL_LINK_PROVIDERS)
     // Remote grants cannot authorize the independent Host-owned Figma MCP channel.
@@ -184,7 +187,7 @@ test("all 10 providers/35 read actions reuse exact saved grant and caller creden
       expect(output).toContain("untrusted");
     }
   expect(LOCAL_LINK_PROVIDERS).toHaveLength(10);
-  expect(calls).toBe(35);
+  expect(calls).toBe(36);
 }, 30_000);
 
 test.each(["http-token", "cli"] as const)(
@@ -471,7 +474,9 @@ test("fixed view handler input has no nested references retained by hooks during
     [],
     hooks,
   );
-  expect(urls).toEqual(["https://api.github.com/repos/acme/approved/issues?per_page=5"]);
+  expect(urls).toEqual([
+    "https://api.github.com/repos/acme/approved/issues?per_page=5&page=1&state=open",
+  ]);
   expect(output).toContain("Approved repository");
 });
 

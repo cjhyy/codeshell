@@ -13,7 +13,6 @@ export const BUILTIN_VIEW_MODES = [
   "sessions",
   "traces",
   "approvals",
-  "runs",
   "automation", // scheduled automation jobs (cron) — list + detail + create
   "settings_page", // full-screen Settings page
   "project_config", // full-screen settings for one tracked project
@@ -63,6 +62,7 @@ export function loadView(isRegisteredPage?: (mode: string) => boolean): ViewStat
     if (merged.viewMode === "customize" || merged.viewMode === "settings") {
       merged.viewMode = "settings_page";
     }
+    if (merged.viewMode === "runs") merged.viewMode = "traces";
     // Old builds persisted panel kinds (files/browser/review/terminal) as
     // ViewModes; those are now dock tabs, not full-screen views. Anything that
     // is neither builtin nor a registered page falls back to chat so a stale

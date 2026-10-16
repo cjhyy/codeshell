@@ -1,3 +1,4 @@
+import { linkConnectionMetadata } from "@cjhyy/code-shell-link";
 import { createHash, randomBytes, randomUUID } from "node:crypto";
 import {
   CredentialStore,
@@ -157,6 +158,8 @@ export interface LinkServiceOptions {
   now?: () => number;
   /** Trusted Host configuration; never accepted from a browser request. */
   remoteLink?: () => RemoteLinkConfiguration | undefined;
+  /** Optional Host authority for a remote authorization's complete lifetime. */
+  captureRemoteAuthority?: () => { current(): void; signal: AbortSignal };
   /** Trusted Host opt-in: reuse a uniquely identified user connection after remote OAuth. */
   reuseRemoteConnection?: boolean;
   /** Test seams. Production delegates to Core's fixed provider and CLI executors. */
@@ -226,6 +229,7 @@ type PreparedConnection = {
   input: LinkConnectionInput;
   id: string;
   expected: Credential | null;
+  knownConnectionIds?: string[];
 };
 
 /** One host/workspace credential domain. Browsers never provide the store or owner identity. */
@@ -323,6 +327,33 @@ export function createLinkService(options: LinkServiceOptions = {}) {
       throw error;
     }
   }
+  function remoteAuthority(context: LinkOperationContext): LinkOperationContext {
+    if (!options.captureRemoteAuthority) return context;
+    let lease: { current(): void; signal: AbortSignal };
+    try {
+      lease = options.captureRemoteAuthority();
+      lease.signal.throwIfAborted();
+      lease.current();
+    } catch {
+      authorizationDiagnosticFailure("authorization", "authorization_check_failed");
+      throw new LinkServiceError(401, "login_required");
+    }
+    const signal = context.signal ? AbortSignal.any([context.signal, lease.signal]) : lease.signal;
+    const current = () => {
+      try {
+        signal.throwIfAborted();
+        lease.current();
+        return true;
+      } catch {
+        return false;
+      }
+    };
+    return {
+      ownerId: context.ownerId,
+      signal,
+      authorize: async () => current() && (await context.authorize()) && current(),
+    };
+  }
   function begin(context: LinkOperationContext): ActiveOperation {
     unavailable(context);
     if (
@@ -370,16 +401,16 @@ export function createLinkService(options: LinkServiceOptions = {}) {
     return (
       isRemoteLinkCredential(credential) ||
       (credential.type === "link" &&
-        credential.meta?.linkExecutionRuntime === "local" &&
+        linkConnectionMetadata(credential.meta).linkExecutionRuntime === "local" &&
         providers.some((provider) => provider.id === credential.meta?.linkProvider)) ||
       (credential.type === "oauth" &&
-        credential.meta?.linkExecutionBackend === "mcp" &&
-        credential.meta.linkExecutionRuntime === "local" &&
+        linkConnectionMetadata(credential.meta).linkExecutionBackend === "mcp" &&
+        linkConnectionMetadata(credential.meta).linkExecutionRuntime === "local" &&
         providers.some((provider) => provider.id === credential.meta?.linkProvider))
     );
   }
   function masked(credential: Credential, scope: "user" | "project"): MaskedLinkConnection {
-    const meta = credential.meta!;
+    const meta = linkConnectionMetadata(credential.meta);
     const oauth =
       meta.linkAuthSource === "browser-oauth" || meta.linkAuthSource === "mcp-oauth"
         ? summarizeOAuthCredentialSecret(credential.secret)
@@ -416,6 +447,24 @@ export function createLinkService(options: LinkServiceOptions = {}) {
               ? "browser-oauth"
               : "manual-token",
       status,
+      recipeId: meta.linkRecipeId,
+      connectionState: {
+        authorization: {
+          state:
+            status === "connected"
+              ? "authorized"
+              : status === "expired" ||
+                  status === "invalid" ||
+                  meta.linkRemoteState === "reconnect" ||
+                  meta.linkOAuthState === "reconnect"
+                ? "reauthorization_required"
+                : "unknown",
+        },
+        // Compatibility is operation-specific. A saved grant or a successful
+        // account check cannot prove the contract required by a future task.
+        compatibility: { state: "unknown" },
+        observation: { state: "unchecked" },
+      },
       scope,
       editable: scope === "user",
       revision: revision(credential),
@@ -728,14 +777,24 @@ export function createLinkService(options: LinkServiceOptions = {}) {
         hostAdapter.methodId !== input.methodId)
     )
       throw new LinkServiceError(400, "invalid_request");
-    const id = input.connectionId ?? `link-${input.providerId}-${input.methodId}`;
+    const id = input.connectionId ?? `link-${randomUUID()}`;
     authorizationDiagnosticStage("connection_review");
     let expected: Credential | null = null;
+    let knownConnectionIds: string[] | undefined;
     if (input.expectedRevision === null) {
       const current = records();
       authorizationDiagnosticStage("connection_review");
       if (current.credentials.some((credential) => credential.id === id))
         throw new LinkServiceError(409, "conflict");
+      if (!input.connectionId)
+        knownConnectionIds = current.credentials
+          .filter(
+            (credential) =>
+              credential.meta?.linkProvider === input.providerId &&
+              credential.meta?.linkConnectionMethod === input.methodId,
+          )
+          .map((credential) => credential.id)
+          .sort();
     } else {
       expected = reviewed(id, input.expectedRevision);
       if (
@@ -744,7 +803,7 @@ export function createLinkService(options: LinkServiceOptions = {}) {
       )
         throw new LinkServiceError(409, "conflict");
     }
-    return { input, id, expected };
+    return { input, id, expected, ...(knownConnectionIds ? { knownConnectionIds } : {}) };
   }
   async function change<T>(
     context: LinkOperationContext,
@@ -769,6 +828,18 @@ export function createLinkService(options: LinkServiceOptions = {}) {
   ): void {
     const current = records();
     if (current.projectIds.has(prepared.id)) throw new LinkServiceError(403, "read_only");
+    if (prepared.knownConnectionIds) {
+      const currentIds = current.credentials
+        .filter(
+          (credential) =>
+            credential.meta?.linkProvider === prepared.input.providerId &&
+            credential.meta?.linkConnectionMethod === prepared.input.methodId,
+        )
+        .map((credential) => credential.id)
+        .sort();
+      if (JSON.stringify(currentIds) !== JSON.stringify(prepared.knownConnectionIds))
+        throw new LinkServiceError(409, "conflict");
+    }
     if (!store.compareAndSwap("user", prepared.id, prepared.expected, next, retirement))
       throw new LinkServiceError(409, "conflict");
   }
@@ -794,9 +865,13 @@ export function createLinkService(options: LinkServiceOptions = {}) {
       meta: {
         linkProvider: prepared.input.providerId,
         linkConnectionMethod: prepared.input.methodId,
-        linkExecutionRuntime: "local",
-        linkAuthSource: authSource,
-        linkExecutionBackend: authSource === "cli-session" ? "cli" : "http-token",
+        recordSchemaVersion: 2,
+        linkRecipeId:
+          authSource === "cli-session"
+            ? "cli-session"
+            : authSource === "browser-oauth"
+              ? "api-oauth"
+              : "api-token",
         agentExposable: false,
         linkAccountId: validation.identity.externalAccountId,
         linkAccountLabel: validation.identity.label,
@@ -976,7 +1051,7 @@ export function createLinkService(options: LinkServiceOptions = {}) {
   async function disconnect(context: LinkOperationContext, id: string, expectedRevision: string) {
     await authorize(context);
     const credential = reviewed(safeId(id), expectedRevision);
-    if (credential.meta?.linkExecutionBackend === "mcp") {
+    if (linkConnectionMetadata(credential.meta).linkExecutionBackend === "mcp") {
       const adapter = hostOAuthAdapters.find(
         (entry) =>
           entry.providerId === credential.meta?.linkProvider &&
@@ -1213,10 +1288,22 @@ export function createLinkService(options: LinkServiceOptions = {}) {
           candidate.type !== "oauth" ||
           candidate.meta?.linkProvider !== input.providerId ||
           candidate.meta.linkConnectionMethod !== input.methodId ||
-          candidate.meta.linkExecutionBackend !== "mcp" ||
+          linkConnectionMetadata(candidate.meta).linkExecutionBackend !== "mcp" ||
           candidate.meta.agentExposable !== false
         )
           throw new LinkServiceError(422, "provider_rejected");
+        // Host adapters may still return legacy routing fields. The installed
+        // connection keeps only its reviewed recipe; presentation derives axes.
+        const {
+          linkExecutionRuntime: _runtime,
+          linkExecutionBackend: _backend,
+          linkAuthSource: _source,
+          ...candidateMeta
+        } = candidate.meta!;
+        candidate = {
+          ...candidate,
+          meta: { ...candidateMeta, recordSchemaVersion: 2, linkRecipeId: "mcp-oauth" },
+        };
         await change(context, () => {
           operation.controller.signal.throwIfAborted();
           if (job.public.state !== "pending") throw new LinkServiceError(409, "cancelled");
@@ -1340,6 +1427,7 @@ export function createLinkService(options: LinkServiceOptions = {}) {
     if (input?.resourceUrl !== undefined && authModeId !== "remote-link" && !hostAdapter)
       throw new LinkServiceError(400, "invalid_request");
     if (authModeId === "remote-link") {
+      context = remoteAuthority(context);
       const diagnostic = await refreshRemoteCatalogWithDiagnostic(context, true);
       const state = snapshot().remoteCatalog?.state;
       if (state !== "ready") {
@@ -1764,6 +1852,7 @@ export function createLinkService(options: LinkServiceOptions = {}) {
     context: LinkOperationContext,
     input: LinkConnectionInput,
   ): Promise<LinkAuthorization> {
+    context = remoteAuthority(context);
     await refreshRemoteCatalog(context, true);
     return startRemoteAuthAfterCatalog(context, input);
   }
@@ -2040,6 +2129,8 @@ export function createLinkService(options: LinkServiceOptions = {}) {
     const remote = remoteJobs.get(safeId(id));
     if (remote) {
       if (remote.context.ownerId !== context.ownerId) throw new LinkServiceError(404, "not_found");
+      if (options.captureRemoteAuthority && remote.public.state === "pending")
+        await authorize(remote.context);
       return structuredClone(remote.public);
     }
     const job = jobs.get(safeId(id));

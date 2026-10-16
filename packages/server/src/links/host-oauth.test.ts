@@ -64,6 +64,7 @@ function fixture(
   const store = new CredentialStore(undefined, new PlaintextCipher(), directory);
   const result = deferred<Credential>();
   let signal: AbortSignal | undefined;
+  let candidateId: string | undefined;
   const opened: string[] = [];
   const disconnected: Credential[] = [];
   const adapter: HostLinkOAuthAdapter = {
@@ -73,12 +74,15 @@ function fixture(
     label: "Connect MCP",
     async authorize(request) {
       signal = request.signal;
+      candidateId = request.id;
       await options.beforeUrl;
       await request.onAuthorizationUrl(
         options.authorizeUrl ?? "https://www.figma.com/oauth/mcp?state=fixture",
         new Date(Date.now() + 600_000).toISOString(),
       );
-      return result.promise;
+      return result.promise.then((value) =>
+        value.id === "link-figma-mcp" ? { ...value, id: request.id } : value,
+      );
     },
     async openAuthorizationUrl(url) {
       opened.push(url);
@@ -108,6 +112,9 @@ function fixture(
     get signal() {
       return signal;
     },
+    get candidateId() {
+      return candidateId!;
+    },
   };
 }
 async function settle(f: ReturnType<typeof fixture>, id: string) {
@@ -133,14 +140,14 @@ test("Host OAuth appears in the unified provider and commits a masked MCP connec
   const completed = await settle(f, job.id);
   expect(completed.state).toBe("connected");
   expect(completed.connection).toMatchObject({
-    id: "link-figma-mcp",
+    id: f.candidateId,
     methodId: "mcp",
     authSource: "mcp-oauth",
     runtime: "local",
     capabilityIds: ["figma.get_metadata"],
   });
   expect(JSON.stringify(completed)).not.toContain("fixture-access");
-  expect(f.store.resolve("link-figma-mcp")?.type).toBe("oauth");
+  expect(f.store.resolve(f.candidateId)?.type).toBe("oauth");
   expect(f.disconnected).toEqual([]);
 });
 
@@ -173,7 +180,7 @@ test("cancelled Host OAuth cannot adopt a late credential or reopen its browser"
   f.result.resolve(credential());
   expect((await settle(f, job.id)).state).toBe("cancelled");
   for (let i = 0; i < 100 && !f.disconnected.length; i++) await Promise.resolve();
-  expect(f.disconnected).toEqual([credential()]);
+  expect(f.disconnected).toEqual([credential(f.candidateId)]);
   expect(f.store.list()).toEqual([]);
   await expect(f.service.openHostAuthorization(f.context, job.id)).rejects.toThrow();
 });
@@ -204,7 +211,7 @@ test("notification failure after CAS never cleans up the committed candidate", a
   const job = await f.service.startAuthorization(f.context, input, "mcp-oauth");
   f.result.resolve(credential());
   expect((await settle(f, job.id)).state).toBe("connected");
-  expect(f.store.resolve("link-figma-mcp")?.secret).toBe(credential().secret);
+  expect(f.store.resolve(f.candidateId)?.secret).toBe(credential().secret);
   expect(f.disconnected).toEqual([]);
 });
 

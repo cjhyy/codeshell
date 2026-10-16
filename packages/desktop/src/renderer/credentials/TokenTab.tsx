@@ -17,6 +17,7 @@ import { useConfirm, usePrompt } from "../ui/DialogProvider";
 import { useT } from "../i18n/I18nProvider";
 import type { MaskedCredentialView } from "./types";
 import { CredentialNoMatches, CredentialSearch, credentialMatchesQuery } from "./CredentialSearch";
+import { CredentialsSectionHeader } from "./CredentialsSectionHeader";
 
 /**
  * Standalone Permission Token credential CRUD. Link authorization has its own
@@ -136,37 +137,21 @@ export function TokenTab({ cwd }: { cwd: string }) {
 
   return (
     <div className="min-w-0 space-y-5" data-token-page>
-      <section className="credential-hero overflow-hidden rounded-2xl border border-border/70 px-5 py-6 sm:px-6">
-        <div className="flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between">
-          <div className="flex min-w-0 items-start gap-4">
-            <div className="flex size-12 shrink-0 items-center justify-center rounded-2xl border border-violet-500/20 bg-violet-500/10 text-violet-600 shadow-sm dark:text-violet-400">
-              <KeyRound className="size-6" aria-hidden />
-            </div>
-            <div className="min-w-0 max-w-2xl">
-              <div className="flex flex-wrap items-center gap-2">
-                <span className="text-[11px] font-semibold uppercase tracking-[0.18em] text-violet-600 dark:text-violet-400">
-                  {t("ext.token.eyebrow")}
-                </span>
-                <span className="inline-flex items-center gap-1 rounded-full border border-status-ok/25 bg-status-ok/8 px-2 py-0.5 text-[10px] font-medium text-status-ok">
-                  <ShieldCheck className="size-3" aria-hidden />
-                  {t("ext.token.localStorage")}
-                </span>
-              </div>
-              <h2 className="mt-1.5 text-lg font-semibold tracking-tight text-foreground">
-                {t("ext.token.title")}
-              </h2>
-              <p className="mt-1.5 text-sm leading-6 text-muted-foreground">
-                {t("ext.token.description")}
-              </p>
-            </div>
-          </div>
-          <div className="grid shrink-0 grid-cols-3 gap-2 lg:min-w-72">
-            <CredentialStat value={items.length} label={t("ext.token.storedCount")} />
-            <CredentialStat value={autoUseCount} label={t("ext.token.autoUseCount")} />
-            <CredentialStat value={envCount} label={t("ext.token.envCount")} />
-          </div>
-        </div>
-      </section>
+      <CredentialsSectionHeader
+        title={t("ext.token.title")}
+        description={t("ext.token.description")}
+        stats={[
+          { value: items.length, label: t("ext.token.storedCount") },
+          { value: autoUseCount, label: t("ext.token.autoUseCount") },
+          { value: envCount, label: t("ext.token.envCount") },
+        ]}
+        badge={
+          <span className="inline-flex items-center gap-1 rounded-full border border-status-ok/25 bg-status-ok/8 px-2 py-0.5 text-[10px] font-medium text-status-ok">
+            <ShieldCheck className="size-3" aria-hidden />
+            {t("ext.token.localStorage")}
+          </span>
+        }
+      />
 
       <section className="space-y-4" aria-labelledby="token-create-title">
         <div className="flex items-start gap-2.5">
@@ -387,17 +372,6 @@ export function TokenTab({ cwd }: { cwd: string }) {
           </div>
         )}
       </section>
-    </div>
-  );
-}
-
-function CredentialStat({ value, label }: { value: number; label: string }) {
-  return (
-    <div className="rounded-xl border border-border/70 bg-background/70 px-3 py-2.5 backdrop-blur-sm">
-      <div className="text-lg font-semibold leading-none tabular-nums text-foreground">{value}</div>
-      <div className="mt-1 truncate text-[10px] text-muted-foreground" title={label}>
-        {label}
-      </div>
     </div>
   );
 }

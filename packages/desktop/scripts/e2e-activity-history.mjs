@@ -3,6 +3,7 @@
 import { appendFile, mkdir, writeFile } from "node:fs/promises";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
+import { ModelTraceStore } from "@cjhyy/code-shell-core/internal";
 import {
   assert,
   captureRendererErrors,
@@ -89,6 +90,79 @@ try {
     join(isolated.codeShellHome, "sessions", "activity-export.json"),
     JSON.stringify(events),
   );
+  const traces = new ModelTraceStore({
+    storageDir: join(isolated.codeShellHome, "sessions", ".model-traces"),
+  });
+  traces.write({
+    version: 1,
+    id: "activity-file-model-call",
+    traceId: "activity-file-execution",
+    sessionId,
+    runId: "activity-file-run-1",
+    workspacePath: isolated.home,
+    source: "fixture",
+    purpose: "main",
+    provider: "fixture",
+    model: "activity-fixture-model",
+    startedAt: now - 1000,
+    endedAt: now,
+    status: "completed",
+    stream: false,
+    inputState: "recorded",
+    input: {
+      systemPrompt: "Activity fixture system",
+      messages: [{ role: "user", content: objective }],
+      tools: [],
+      parameters: {},
+    },
+    outputState: "recorded",
+    output: { text: summary },
+    attempts: [],
+  });
+  traces.write({
+    version: 1,
+    id: "activity-file-second-call",
+    traceId: "activity-file-second-execution",
+    sessionId,
+    runId: "activity-file-run-2",
+    workspacePath: isolated.home,
+    source: "fixture",
+    purpose: "main",
+    provider: "fixture",
+    model: "activity-fixture-model",
+    startedAt: now + 100,
+    endedAt: now + 200,
+    status: "completed",
+    stream: false,
+    inputState: "recorded",
+    input: {
+      messages: [{ role: "user", content: "同一会话的第二轮 Prompt" }],
+    },
+    outputState: "recorded",
+    output: { text: "第二轮结果" },
+    attempts: [],
+  });
+  traces.write({
+    version: 1,
+    id: "activity-file-panel-call",
+    traceId: "activity-file-panel-execution",
+    workspacePath: isolated.home,
+    source: "panel:video-studio",
+    purpose: "speech",
+    provider: "fixture",
+    model: "activity-panel-fixture-model",
+    startedAt: now - 500,
+    endedAt: now - 200,
+    status: "completed",
+    stream: false,
+    inputState: "recorded",
+    input: {
+      messages: [{ role: "user", content: "独立 Panel 的实际语音输入" }],
+    },
+    outputState: "recorded",
+    output: { data: { mimeType: "audio/wav", bytes: 1234 } },
+    attempts: [],
+  });
   app = await launchCodeShellElectron({
     appDir,
     home: isolated.home,
@@ -153,15 +227,53 @@ try {
     await win.getByRole("button", { name: "返回会话历史", exact: true }).click();
   }
   await historyPage.getByRole("searchbox").fill("");
-  await navigate("旧版运行记录", "旧版运行记录");
-  await win
-    .getByRole("region", { name: "运行列表", exact: true })
-    .getByRole("button", { name: new RegExp(`^${objective}`) })
-    .first()
-    .click();
-  const detail = win.getByRole("region", { name: "运行详情", exact: true });
-  await detail.getByRole("heading", { name: objective, exact: true }).waitFor();
+  await navigate("执行观测", "执行观测");
+  const tracePage = win.locator("[data-model-traces-page]");
+  const traceSessions = await win.evaluate(() => window.codeshell.modelTraces.sessions());
+  const conversation = traceSessions.items.find(
+    (item) => item.sessionId === "activity-file-session",
+  );
+  assert(
+    traceSessions.total === 2 && conversation?.callCount === 2 && conversation.traceCount === 2,
+    "Production IPC groups both executions into one conversation before pagination",
+  );
+  assert(
+    traceSessions.items.some(
+      (item) => !item.sessionId && item.traceId === "activity-file-panel-execution",
+    ),
+    "Independent Panel inference remains visible without a fabricated session",
+  );
+  const sessionRow = tracePage.locator('[data-trace-session="session:activity-file-session"]');
+  await sessionRow.getByText(title, { exact: true }).waitFor();
+  await sessionRow.click();
+  await tracePage.locator('[data-trace-group="activity-file-execution"]').waitFor();
+  await tracePage.locator('[data-trace-group="activity-file-second-execution"]').waitFor();
+  await tracePage.locator('[data-trace-request="activity-file-second-call"]').waitFor();
+  await tracePage.locator('[data-trace-request="activity-file-model-call"]').click();
+  const detail = tracePage.locator('[data-trace-detail-id="activity-file-model-call"]');
+  await detail.getByText(objective, { exact: true }).waitFor();
+  await detail.getByRole("button", { name: "输出", exact: true }).click();
   await detail.getByText(summary, { exact: true }).waitFor();
+  const panelRow = tracePage.locator('[data-trace-session="trace:activity-file-panel-execution"]');
+  if (!(await panelRow.isVisible())) {
+    await tracePage.getByRole("button", { name: "返回执行与调用", exact: true }).click();
+    await tracePage.getByRole("button", { name: "返回会话列表", exact: true }).click();
+  }
+  await panelRow.click();
+  await tracePage.locator('[data-trace-request="activity-file-panel-call"]').click();
+  await tracePage
+    .locator('[data-trace-detail-id="activity-file-panel-call"]')
+    .getByText("独立 Panel 的实际语音输入", { exact: true })
+    .waitFor();
+  const config = await win.evaluate(() => window.codeshell.modelTraces.getConfig());
+  assert(
+    config.captureContent && config.includeEphemeral,
+    "Prompt and temporary-call recording default to enabled",
+  );
+  assert(
+    (await win.getByRole("button", { name: "旧版运行记录", exact: true }).count()) === 0,
+    "No obsolete activity entrance remains",
+  );
 
   const logDir = join(isolated.codeShellHome, "logs", "desktop");
   await mkdir(logDir, { recursive: true });
@@ -180,7 +292,7 @@ try {
   await win.getByRole("tabpanel").getByText(marker, { exact: true }).waitFor();
   assert(errors.length === 0, "No renderer exceptions");
   console.log(
-    "PASS: real session files, run receipts and desktop logs reach activity pages through production IPC",
+    "PASS: real sessions group multiple executions, standalone Panel prompts and desktop logs through production IPC",
   );
 } finally {
   try {

@@ -331,7 +331,7 @@ export function useDesktopController(
   }));
   const running =
     app.chat.run === "running" || app.chat.run === "waiting" || app.approvals.length > 0;
-  const send = (): boolean => {
+  const send = (options?: { modelTraceSource?: string }): boolean => {
     if (sendingRef.current || app.status !== "online" || running || app.activeRoom?.observing)
       return false;
     if ((app.activeCwd ?? app.activeProjectCwd ?? null) !== workspaceCwd) {
@@ -360,7 +360,11 @@ export function useDesktopController(
     setSendingId(id);
     setError("");
     void app
-      .sendChat({ text: submitted.draft.text, attachments })
+      .sendChat({
+        text: submitted.draft.text,
+        attachments,
+        ...(options?.modelTraceSource ? { modelTraceSource: options.modelTraceSource } : {}),
+      })
       .then((accepted) => {
         if (!accepted) {
           if (pendingNewSend.current === pending) pendingNewSend.current = null;

@@ -248,6 +248,9 @@ export function ModelTraceDetail({
                 {output.toolCalls && (
                   <TracePayload title={t("observability.toolCalls")} value={output.toolCalls} />
                 )}
+                {output.data !== undefined && (
+                  <TracePayload title={t("observability.output")} value={output.data} />
+                )}
                 {output.stopReason && (
                   <TracePayload
                     title={t("observability.stopReason")}

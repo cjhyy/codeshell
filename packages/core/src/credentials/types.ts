@@ -131,6 +131,10 @@ export interface Credential {
    *   分区里其他站(不踢掉别的登录态);"clear" 先清空整分区再注入(干净换号,需显式选)。
    */
   meta?: {
+    /** Versioned Link connection metadata; private retirement entries use their own schema. */
+    recordSchemaVersion?: 2;
+    /** Routing and authorization strategy derive from this reviewed recipe. */
+    linkRecipeId?: import("@cjhyy/code-shell-link").LinkRecipeId;
     appUrl?: string;
     platform?: string;
     domain?: string;
@@ -140,6 +144,8 @@ export interface Credential {
     autoRefreshFromBrowser?: boolean;
     /** Link provider id for credentials owned by a local/server app connection. */
     linkProvider?: string;
+    /** Offline legacy cleanup fence. Never authorizes a reconnect or an execution. */
+    linkCleanupDisabled?: boolean;
     /** Provider-specific connection method, e.g. fine-grained-pat or github-app. */
     linkConnectionMethod?: string;
     /** Where the selected Link executes; runtime must not silently select another account. */

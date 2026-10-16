@@ -1,3 +1,4 @@
+import { linkConnectionMetadata } from "@cjhyy/code-shell-link";
 import { randomUUID } from "node:crypto";
 import type { ToolContext } from "../tool-system/context.js";
 import type { CredentialMetadata } from "../credentials/access.js";
@@ -6,7 +7,11 @@ import { OperationFailure } from "../operations/controller.js";
 import { asRecord } from "./http.js";
 import { githubIssueIdentity } from "./github-issue-state.js";
 import { boundToolResult } from "../tool-system/bound-tool-result.js";
-import { githubOperationPlan, githubRecoveryInput } from "./operation-recovery.js";
+import {
+  githubOperationPlan,
+  githubRecoveryInput,
+  GITHUB_OPERATION_CONFLICT_SCOPE,
+} from "./operation-recovery.js";
 
 export { githubCreateIssueParameters } from "./github-create-issue.js";
 import { githubCreateIssueParameters } from "./github-create-issue.js";
@@ -20,7 +25,8 @@ export async function verifiedGithubCreateIssue(options: {
 }): Promise<{ receipt: OperationReceipt; data: unknown }> {
   const { ctx, connection, assertConnected } = options;
   if (!ctx.operations || !ctx.executeBoundTool) throw new OperationFailure("unsupported");
-  if (connection.meta?.linkExecutionBackend === "cli") throw new OperationFailure("unsupported");
+  if (linkConnectionMetadata(connection.meta).linkExecutionBackend === "cli")
+    throw new OperationFailure("unsupported");
   const params = githubCreateIssueParameters(options.params);
   const channel = "link" as const;
   // The model still supplies only ordinary LinkAction parameters. Native custody
@@ -73,6 +79,7 @@ export async function verifiedGithubCreateIssue(options: {
   let data: unknown;
   let originalIssueIdentity: Record<string, unknown> | undefined;
   const receipt = await ctx.operations.controller.run(plan, {
+    conflictScope: GITHUB_OPERATION_CONFLICT_SCOPE,
     recoveryInput: (phase) =>
       phase === "prepared"
         ? githubRecoveryInput(ctx, connection, null)

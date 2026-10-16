@@ -19,10 +19,10 @@ async function mount() {
       sidebarCollapsed: true,
       inspectorCollapsed: true,
     });
-    const [runId, setRunsInitialRunId] = useState<string | null>(null);
+    const [traceTarget, setTraceTarget] = useState<{ sessionId?: string; traceId?: string }>({});
     return {
       view,
-      runId,
+      traceTarget,
       ...useTaskInboxFeature({
         settingsRevision,
         setView,
@@ -35,7 +35,10 @@ async function mount() {
         },
         petSnapshot: { version: 23, generation: 7 },
         openPetPage: () => setView((current) => ({ ...current, viewMode: "pet" })),
-        setRunsInitialRunId,
+        onOpenTrace: (sessionId, traceId) => {
+          setTraceTarget({ sessionId, traceId });
+          setView((current) => ({ ...current, viewMode: "traces" }));
+        },
       }),
     };
   });
@@ -112,8 +115,8 @@ test("feature wiring retains exact Mimi, automation, Run and external CLI destin
   expect(hook.result.current.petInitialTaskId).toBe("delegation-a");
   expect(hook.result.current.view.viewMode).toBe("pet");
   await open(task("legacy-run", "run-a"));
-  expect(hook.result.current.runId).toBe("run-a");
-  expect(hook.result.current.view.viewMode).toBe("runs");
+  expect(hook.result.current.traceTarget).toEqual({ sessionId: undefined, traceId: "run-a" });
+  expect(hook.result.current.view.viewMode).toBe("traces");
   await open({
     ...task("external-runtime", "observed-a"),
     sessionId: "external-a",

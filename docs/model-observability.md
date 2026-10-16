@@ -4,8 +4,19 @@ Activity → Execution traces inspects actual model calls. An execution uses the
 Engine `runId`; a session may contain many executions. Each native call contains its
 physical transport attempts, inputs, outputs, errors, token usage, timings and
 available bundled price estimates. Tool, approval and execution events share
-that execution identity. Legacy run objectives and transcripts are retained in
-their own views and are not reconstructed into model prompts.
+that execution identity. The obsolete run page is removed. Historical transcripts
+remain in conversation management; old run links resolve to their conversation
+or execution, and historical objectives are never presented as complete prompts.
+
+Browsing starts with sessions: conversation → executions → model calls and their
+recorded Prompt/response, retries and tool events. The native view resolves saved
+conversation titles, with IDs as secondary metadata. A Panel call with an actual
+session joins that session; calls without a session stay in separate execution
+groups and are never assigned to a synthetic conversation. Session counts and
+pagination are computed from all matching metadata before paging, so a session
+with hundreds of calls is one list item. Filters apply to those counts; selecting
+a native session opens its execution history, including sibling executions of a
+deep-linked call.
 
 ## Recording
 
@@ -19,16 +30,18 @@ Default configuration:
 ```json
 {
   "enabled": true,
-  "captureContent": false,
-  "includeEphemeral": false,
+  "captureContent": true,
+  "includeEphemeral": true,
   "retentionDays": 7
 }
 ```
 
-Desktop exposes recording controls in Execution traces. Prompt and output content
-require the separate content switch. Temporary sessions require an additional
-explicit persistence switch. Missing historical content cannot be recovered by
-turning either switch on. Re-enabling recording does not resume body capture for
+Desktop exposes recording controls in Execution traces. Prompt, response and
+temporary-call recording are enabled by default, including isolated Panel tasks.
+The v2 defaults migrate pre-v2 Prompt/temporary recording settings once; later
+explicit opt-outs remain in effect. The overall recording switch and retention
+are preserved. Missing historical content cannot be recovered by turning recording
+on. Re-enabling recording does not resume body capture for
 a call already in progress. Previously saved content remains subject to retention;
 turning recording off stops further body capture. Settings apply without restarting
 workers. Recorded content is local and bounded; credentials, sensitive tool results
@@ -47,15 +60,37 @@ its submitted prompt and visible final result. Remote CLI rooms group overlappin
 accepted submissions into an explicitly limited batch when the CLI supplies no
 per-request event identity; observed external transcripts do not fabricate inputs.
 Room approval requests can appear as events without a full decision lifecycle.
-Independent Panel processes making their own model calls are outside this collector; submitted
-native Agent work goes through the usual Engine instrumentation.
+Panel Agent submissions and independent AI tasks use the native Engine collector,
+with a Host-authored `panel:<appId>` source. Independent Panel inference uses a
+write-only channel tied to its reviewed package, process/task and workspace.
+This covers online speech JSON requests, multipart transcription fields, local
+Audio8/Qwen/Kokoro/Edge/macOS speech, Whisper transcription, voice separation and
+actual setup samples. Cache hits do not fabricate model calls. Binary inputs and
+outputs are represented by metadata, and local/multipart inference is explicitly
+`logical-input` coverage. Provider-internal steps are not invented.
+
+Reviewed native Panel entries receive FD 3 and `CODESHELL_MODEL_TRACE_FD=3`.
+The shared Panel helper reports bounded start/finish observations separately from
+stdout/stderr. Large frames use atomic fragments and bounded reassembly so sibling
+CLI processes cannot corrupt each other's prompts. Agent foreground/background
+shells expose the same channel for packaged native CLIs. Independent terminals
+without a Host channel keep their existing behavior and do not write private Host
+files. Older installed Panel packages must be updated to include the helper.
+
+Future browser/native Panels can use advertised `modelTraces.start/finish` methods
+or the reviewed native channel. These are write-only: the Host fixes identity,
+workspace, record IDs, timestamps, recording policy and storage location. A Panel
+cannot read model history or alter another call. Revocation, cancellation and
+process exit close pending observations; recording failures never retry inference.
 
 ## Reading
 
 Desktop uses `window.codeshell.modelTraces`. Authenticated Web and mobile clients
-use read-only `GET /api/v1/model-traces`, `/:id` and `/config`. Hosts enforce the
+use read-only `GET /api/v1/model-traces`, `/sessions`, `/:id` and `/config`. Hosts enforce the
 selected workspace; unknown workspace attribution and other workspaces are
-excluded. Clients cannot select storage paths or change remote recording policy.
+excluded. An independently authorized project root can additionally expose its
+project-owned Panel calls from a worktree, without including ordinary root chats.
+Clients cannot select storage paths/scopes or change remote recording policy.
 
 Background work lists delegated tasks, subagents, background processes and
 operations requiring verification. Ordinary sessions and schedule definitions

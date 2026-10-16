@@ -543,9 +543,9 @@ export async function startHeadlessServer(opts: HeadlessServeOptions): Promise<H
       CODE_SHELL_WORKSPACE_ACCESS: undefined,
       CODE_SHELL_DATA_ROOT: workerDataRoot,
       CODE_SHELL_CREDENTIAL_ACCESS: "local",
-      ...(opts.workerCapabilityModules
-        ? { CODE_SHELL_CAPABILITY_MODULES: opts.workerCapabilityModules }
-        : {}),
+      CODE_SHELL_CAPABILITY_MODULES:
+        opts.workerCapabilityModules ??
+        `${import.meta.resolve("@cjhyy/code-shell-server/links")}#createLinkProviderModule`,
     }),
     log,
     onStderr: (text) => log("worker.stderr", { text: previewLine(text) }),
@@ -666,9 +666,9 @@ export async function startHeadlessServer(opts: HeadlessServeOptions): Promise<H
             CODE_SHELL_WORKSPACE_ACCESS: undefined,
             CODE_SHELL_DATA_ROOT: workerDataRoot,
             CODE_SHELL_CREDENTIAL_ACCESS: "local",
-            ...(opts.workerCapabilityModules
-              ? { CODE_SHELL_CAPABILITY_MODULES: opts.workerCapabilityModules }
-              : {}),
+            CODE_SHELL_CAPABILITY_MODULES:
+              opts.workerCapabilityModules ??
+              `${import.meta.resolve("@cjhyy/code-shell-server/links")}#createLinkProviderModule`,
           }),
         },
         onChanged: () => notify("serve/configurationChanged", {}),

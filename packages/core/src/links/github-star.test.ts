@@ -1,3 +1,6 @@
+import { beforeAll as installHostFixture } from "bun:test";
+import { installTestLinkProviders } from "../../../../tests/helpers/link-providers.js";
+installHostFixture(installTestLinkProviders);
 import { afterEach, expect, test } from "bun:test";
 import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
@@ -38,7 +41,13 @@ function fixture(backend: "remote" | "oauth" = "remote") {
       linkAccountId: "42",
       linkLastVerifiedAt: "2026-10-09T00:00:00Z",
       ...(backend === "remote"
-        ? { linkRemoteState: "connected", linkRemoteGrantId: "grant" }
+        ? {
+            linkRemoteState: "connected",
+            linkRemoteGrantId: "grant",
+            linkResourceGroups: [
+              { id: "repositories", items: [{ id: "acme/repo", label: "acme/repo" }] },
+            ],
+          }
         : { linkAuthSource: "browser-oauth", linkOAuthState: "connected" }),
       linkCapabilityIds: [...caps],
     },
@@ -282,12 +291,13 @@ test("future unregistered writes fail before approval and transport while reads 
       return {};
     },
   };
-  provider.actions.push(action);
+  expect(() => (provider.actions as unknown as (typeof action)[]).push(action)).toThrow();
   f.credential.meta!.linkCapabilityIds!.push("github.future_write");
   try {
     const output = await f.invoke({}, { action: "future_write" });
     expect(output.kind).toBe("error");
-    expect(output.error).toContain("Unsupported verified write adapter");
+    expect(output.code).toBe("unsupported_contract");
+    expect(output.error).toBeString();
     expect(approvals).toBe(0);
     expect(sends).toBe(0);
     expect(f.calls).toEqual([]);
@@ -295,7 +305,7 @@ test("future unregistered writes fail before approval and transport while reads 
       (await f.invoke({ owner: "acme", repo: "repo" }, { action: "get_starred" })).data.starred,
     ).toBe(false);
   } finally {
-    provider.actions.splice(provider.actions.indexOf(action), 1);
+    // Provider registrations remain immutable; no injected action needs cleanup.
   }
 });
 

@@ -6,6 +6,27 @@ imports a Panel's JavaScript into the Host process. Model installers, providers,
 media formats, project schemas, templates and workflow decisions remain in the
 Panel package.
 
+## Model observations
+
+All reviewed native entries may report inference over the Host-owned FD 3 channel
+when `CODESHELL_MODEL_TRACE_FD=3` is present. Use the shared Panel SDK helper at the
+actual execution boundary, after cache checks. It keeps normal stdout/stderr and
+standalone CLI behavior intact. Start reports the actual model inputs; finish
+reports textual/structured results or binary-result metadata. The Host supplies
+the installed app/revision, workspace, task, record ID, timestamp and storage.
+See [local observability](model-observability.md) for defaults and coverage.
+
+The browser bridge advertises write-only `modelTraces.start` and
+`modelTraces.finish`. Start accepts `{provider,model,purpose?,input,stream?}` and
+returns an opaque `{id,recorded}`. Finish accepts `{id,status,output?,error?,usage?}`.
+Input has `{systemPrompt?,messages?,tools?,parameters?}`; output has optional
+`text`, `thinking`, `toolCalls`, `stopReason` and structured `data`. Report
+`inputState/outputState: "truncated"` when a local bound removed content.
+Each observation is limited to 256 KiB, with 64 active calls per owner and 240
+events per minute. These methods grant no history, credential or policy access.
+Discover methods from capabilities; older Hosts can run the model operation
+without recording. Model/provider and retry policy remain Panel-owned.
+
 ## Reviewed entries
 
 The optional manifest field `nativeEntries` maps up to 16 names to
@@ -324,7 +345,6 @@ which also passes the published 0.9.11 installer's discovery and package preflig
 The correction, compatible releases and remote CI are recorded in the
 [release acceptance matrix](todo/panel-plugin-runtime-implementation.md).
 
-
 ### Desktop / paired Web task ownership
 
 Desktop composes `createSharedPanelToolHost` into its paired Web facade. The
@@ -369,7 +389,6 @@ a synthetic reviewed Node entry and an isolated paired device, checks native
 progress, bidirectional task identity/cancellation, duplicate submission, logout,
 remote shutdown and result recovery, then closes its processes and deletes the
 fixture. It does not replace physical-phone or Panel business-flow acceptance.
-
 
 ### Shared directory bookmarks (Desktop main projects)
 
@@ -454,14 +473,12 @@ accepted record is found. Duplicate explicit submissions still use the existing
 request-key/digest gate. Native task records remain the execution authority when
 saving a separate Panel UI document fails.
 
-
 Cloud directory bookmarks live in `panel-directories/bookmarks.json` beneath the
 Host data directory. Its directory mutex stays inside the same writable volume,
 so a Docker runtime does not need to create `/data.lock` on its read-only root.
 Existing `panel-web-directory-bookmarks.json` IDs migrate on successful restore,
 after the same app/project and directory identity checks. Desktop keeps its
 existing shared store and mutex layout.
-
 
 ### Retained package identity (project binding integration pending)
 
@@ -492,7 +509,6 @@ Hub management and runtime select these project packages together. Desktop now
 selects package variants per binding project, and its paired Web composition uses
 the same selection with the native coordinator. Native project upgrade UI and
 legacy binding migration remain incomplete.
-
 
 Core project package selection now reads the project-only `panelAppPins` record:
 
@@ -570,7 +586,6 @@ Desktop's project binding rows and Web management expose this review flow.
 Restoring program bytes is not a document rollback: data migrations, backups,
 repair of projects whose selected package/configuration is already unavailable,
 and full deployment rollback remain separate unfinished work.
-
 
 Desktop descriptors may contain `projectPaths`, `packageDigest` and `packagePinned`.
 Several descriptors can share a stable `panel-app:<id>` while having different

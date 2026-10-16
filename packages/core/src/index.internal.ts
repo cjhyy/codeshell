@@ -15,6 +15,7 @@ export {
   recordExternalModelTrace,
   clearModelTracingConfiguration,
 } from "./model-traces/index.js";
+export { createNativeModelTraceFrameDecoder } from "./model-traces/native-frames.js";
 export type {
   ModelTraceContentState,
   ModelTraceStatus,
@@ -26,6 +27,8 @@ export type {
   ModelTraceSummary,
   ModelTraceListQuery,
   ModelTracePage,
+  ModelTraceSessionSummary,
+  ModelTraceSessionPage,
   ModelTraceEvent,
   ModelTraceEventInput,
   ModelTraceContext,
@@ -165,6 +168,12 @@ export type {
 // ─── Tool system and host services ───────────────────────────────
 
 export { createLinkOperationReviewStore } from "./links/operation-review.js";
+export {
+  isLegacyLinkConnection,
+  previewLegacyLinkCleanup,
+  cleanupLegacyLinkConnections,
+  type LegacyLinkCleanupEntry,
+} from "./links/legacy-cleanup.js";
 export { createOperationHookHost } from "./links/operation-hook-host.js";
 export { createConstrainedDockerProcessHost } from "./runtime/constrained-process/docker.js";
 export type {

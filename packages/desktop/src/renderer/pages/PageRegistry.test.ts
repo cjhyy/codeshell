@@ -11,7 +11,6 @@ describe("PageRegistry", () => {
   it("routes execution, session and request deep links to the observability page", () => {
     const onOpenSession = () => true;
     const element = PAGE_REGISTRY.get("traces")!.render!({
-      runsInitialRunId: null,
       activeProjectPath: null,
       tracesInitialSessionId: "original-session",
       tracesInitialTraceId: "actual-execution",
@@ -81,7 +80,6 @@ describe("PageRegistry", () => {
     });
     expect(extensions.nav!.isActive("extensions")).toBe(true);
     const element = extensions.render!({
-      runsInitialRunId: null,
       activeProjectPath: "/repo/example",
     }) as ReactElement<{ activeProjectPath: string | null; showDiscover?: boolean }>;
     expect(element.props).toEqual({
@@ -132,8 +130,8 @@ describe("PageRegistry", () => {
 });
 
 describe("migrated builtin pages", () => {
-  it("registers logs, runs, and sessions as render-only pages (no nav item)", () => {
-    for (const key of ["logs", "runs", "sessions"]) {
+  it("registers logs and sessions as render-only pages (no nav item)", () => {
+    for (const key of ["logs", "sessions"]) {
       const page = PAGE_REGISTRY.get(key)!;
       expect(PAGE_REGISTRY.has(key)).toBe(true);
       expect(page.nav).toBeUndefined();
@@ -148,12 +146,8 @@ describe("migrated builtin pages", () => {
     ]);
   });
 
-  it("threads the runs deep-link through the render context", () => {
-    const element = PAGE_REGISTRY.get("runs")!.render!({
-      runsInitialRunId: "run-42",
-      activeProjectPath: null,
-    }) as ReactElement<{ initialRunId?: string | null }>;
-    expect(element.props.initialRunId).toBe("run-42");
+  it("removes the obsolete runs page", () => {
+    expect(PAGE_REGISTRY.has("runs")).toBe(false);
   });
 
   it("passes session mutation notifications through the history route", () => {
@@ -162,7 +156,6 @@ describe("migrated builtin pages", () => {
       onSessionDeleted: (_id: string) => undefined,
     };
     const element = PAGE_REGISTRY.get("sessions")!.render!({
-      runsInitialRunId: null,
       activeProjectPath: null,
       ...notifications,
     }) as ReactElement<PageRenderContext>;

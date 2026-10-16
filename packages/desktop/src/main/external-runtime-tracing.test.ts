@@ -10,13 +10,14 @@ afterEach(() => {
   for (const directory of directories.splice(0))
     rmSync(directory, { recursive: true, force: true });
 });
-function fixture(captureContent = true) {
+function fixture(captureContent = true, source?: string) {
   const storageDir = mkdtempSync(join(tmpdir(), "external-model-trace-"));
   directories.push(storageDir);
   const store = new ModelTraceStore({ storageDir });
   store.setConfig({ captureContent });
   const trace = startExternalRuntimeTrace({
     storageDir,
+    source,
     sessionId: "session-cli",
     runId: "run-cli",
     workspacePath: "/workspace/cli",
@@ -178,4 +179,17 @@ describe("external CLI model history", () => {
     });
     expect(JSON.stringify(events)).not.toContain("NEVER_CAPTURE_LATE_");
   });
+});
+
+test("Host Panel submissions retain Panel source through external CLI calls without widening scope", () => {
+  const f = fixture(true, "panel:design-studio");
+  f.trace.finish();
+  expect(f.store.list().items[0]).toMatchObject({
+    source: "panel:design-studio",
+    workspacePath: "/workspace/cli",
+    sessionId: "session-cli",
+  });
+  const invalid = fixture(true, "../../forged");
+  invalid.trace.finish();
+  expect(invalid.store.list().items[0]?.source).toBe("desktop-codex-cli");
 });

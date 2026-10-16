@@ -66,6 +66,8 @@ export type DesktopExternalRuntimeTurnInput = ExternalRuntimeTurnInput & {
   disableGoal?: boolean;
   /** Trusted host projection of materialized attachments; never vendor input. */
   transcriptContent?: string;
+  /** Host observation label; never forwarded into vendor CLI input. */
+  modelTraceSource?: string;
 };
 
 function askUserApprovalRequest(question: string, options?: Record<string, unknown>) {
@@ -1188,7 +1190,12 @@ export class ExternalRuntimeService {
         deadlineTimer.unref?.();
       };
       armDeadline();
-      const { goal: _goal, disableGoal: _disableGoal, ...providerInput } = turnInput;
+      const {
+        goal: _goal,
+        disableGoal: _disableGoal,
+        modelTraceSource: _modelTraceSource,
+        ...providerInput
+      } = turnInput;
       const pendingBackground = goalRun
         ? this.deps.backgroundWork?.drainMessage(sessionId)
         : undefined;
@@ -1281,6 +1288,7 @@ export class ExternalRuntimeService {
                   input: nextInput,
                   developerInstructions: entry.developerInstructions,
                   initialContext: entry.initialContext,
+                  source: turnInput.modelTraceSource,
                 });
               }
               const turn = await entry.session.send(nextInput, onEvent);

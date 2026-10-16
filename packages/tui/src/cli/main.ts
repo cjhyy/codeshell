@@ -252,6 +252,8 @@ process.on("unhandledRejection", reportFatal);
 // command runs. Awaited so an early sub-agent can't fire before the hook
 // is installed.
 await installCostTracking();
+const { installDefaultLinkProviders } = await import("@cjhyy/code-shell-server/links");
+installDefaultLinkProviders();
 
 // parseAsync (not parse) so commander awaits each async .action() handler and
 // a rejection surfaces here instead of floating off as an unhandledRejection

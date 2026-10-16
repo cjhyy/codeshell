@@ -130,11 +130,18 @@ describe("Hub browser protocol", () => {
 describe("run delivery receipts", () => {
   test("server rejection carries a definite response kind and code", async () => {
     const pending = client
-      .run({ sessionId: "s1", task: "hello", clientMessageId: "client-1", displayText: "hello" })
+      .run({
+        sessionId: "s1",
+        task: "hello",
+        clientMessageId: "client-1",
+        displayText: "hello",
+        modelTraceSource: "panel:design-studio",
+      })
       .catch((error) => error);
     const frame = socket.sent[0];
     expect(frame.params.clientMessageId).toBe("client-1");
     expect(frame.params.displayText).toBe("hello");
+    expect(frame.params.modelTraceSource).toBe("panel:design-studio");
     socket.receive({ id: frame.id, error: { code: -32009, message: "configuration changing" } });
     const error = await pending;
     expect(error).toBeInstanceOf(ProtocolRequestError);

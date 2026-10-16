@@ -1,0 +1,1199 @@
+import { executeLinkOperation } from "../runtime/operation.js";
+import {
+  GITHUB_SOURCE_ACTIONS,
+  githubSourceEndpoint,
+  normalizeGithubSourceResult,
+  slackSourceParams,
+  normalizeSlackSourceResult,
+} from "@cjhyy/code-shell-core/extension";
+import { githubIssueStateParameters } from "@cjhyy/code-shell-core/extension";
+import {
+  githubRepositoryParameters,
+  githubSetStarredParameters,
+} from "@cjhyy/code-shell-core/extension";
+import {
+  FIGMA_RESPONSE_BYTES,
+  FIGMA_RESPONSE_TOO_LARGE,
+  figmaActionEndpoint,
+  figmaActionParameters,
+  normalizeFigmaActionResult,
+} from "@cjhyy/code-shell-core/extension";
+import {
+  asArray,
+  asRecord,
+  firstString,
+  intParam,
+  linkRequestJson,
+  linkRequestStatus,
+  pathParam,
+  pathSegmentParam,
+  pick,
+  stringParam,
+} from "@cjhyy/code-shell-core/extension";
+import type {
+  LocalLinkActionContext,
+  LocalLinkActionSpec,
+  LocalLinkIdentity,
+  LocalLinkProviderSpec,
+} from "@cjhyy/code-shell-core/extension";
+import { FIGMA_MCP_ACTION_IDS } from "@cjhyy/code-shell-link";
+
+/** Temporary injectable helper seam; keeps source and built Host module identities consistent. */
+export type LinkProviderRuntime = Pick<
+  typeof import("@cjhyy/code-shell-core/extension"),
+  | "GITHUB_SOURCE_ACTIONS"
+  | "githubSourceEndpoint"
+  | "normalizeGithubSourceResult"
+  | "slackSourceParams"
+  | "normalizeSlackSourceResult"
+  | "githubIssueStateParameters"
+  | "githubRepositoryParameters"
+  | "githubSetStarredParameters"
+  | "FIGMA_RESPONSE_BYTES"
+  | "FIGMA_RESPONSE_TOO_LARGE"
+  | "figmaActionEndpoint"
+  | "figmaActionParameters"
+  | "normalizeFigmaActionResult"
+  | "asArray"
+  | "asRecord"
+  | "firstString"
+  | "intParam"
+  | "linkRequestJson"
+  | "linkRequestStatus"
+  | "pathParam"
+  | "pathSegmentParam"
+  | "pick"
+  | "stringParam"
+>;
+const defaultRuntime: LinkProviderRuntime = {
+  GITHUB_SOURCE_ACTIONS,
+  githubSourceEndpoint,
+  normalizeGithubSourceResult,
+  slackSourceParams,
+  normalizeSlackSourceResult,
+  githubIssueStateParameters,
+  githubRepositoryParameters,
+  githubSetStarredParameters,
+  FIGMA_RESPONSE_BYTES,
+  FIGMA_RESPONSE_TOO_LARGE,
+  figmaActionEndpoint,
+  figmaActionParameters,
+  normalizeFigmaActionResult,
+  asArray,
+  asRecord,
+  firstString,
+  intParam,
+  linkRequestJson,
+  linkRequestStatus,
+  pathParam,
+  pathSegmentParam,
+  pick,
+  stringParam,
+};
+
+/** Product-owned HTTP implementations. Importing the factory does not install providers. */
+export function createDefaultLinkProviders(
+  runtime: LinkProviderRuntime = defaultRuntime,
+): readonly LocalLinkProviderSpec[] {
+  const {
+    GITHUB_SOURCE_ACTIONS,
+    githubSourceEndpoint,
+    normalizeGithubSourceResult,
+    slackSourceParams,
+    normalizeSlackSourceResult,
+    githubIssueStateParameters,
+    githubRepositoryParameters,
+    githubSetStarredParameters,
+    FIGMA_RESPONSE_BYTES,
+    FIGMA_RESPONSE_TOO_LARGE,
+    figmaActionEndpoint,
+    figmaActionParameters,
+    normalizeFigmaActionResult,
+    asArray,
+    asRecord,
+    firstString,
+    intParam,
+    linkRequestJson,
+    linkRequestStatus,
+    pathParam,
+    pathSegmentParam,
+    pick,
+    stringParam,
+  } = runtime;
+  const bearer = (token: string): Record<string, string> => ({ Authorization: `Bearer ${token}` });
+  const gitlabHeaders = (ctx: { token: string; authKind?: "token" | "oauth" }) =>
+    ctx.authKind === "oauth" ? bearer(ctx.token) : { "PRIVATE-TOKEN": ctx.token };
+  const figmaHeaders = (ctx: { token: string; authKind?: "token" | "oauth" }) =>
+    ctx.authKind === "oauth" ? bearer(ctx.token) : { "X-Figma-Token": ctx.token };
+  const GITHUB_API_VERSION = "2022-11-28";
+  const NOTION_API_VERSION = "2022-06-28";
+  const githubHeaders = (token: string): Record<string, string> => ({
+    ...bearer(token),
+    Accept: "application/vnd.github+json",
+    "X-GitHub-Api-Version": GITHUB_API_VERSION,
+    "User-Agent": "CodeShell-Link",
+  });
+
+  function action(
+    id: string,
+    title: string,
+    description: string,
+    execute: LocalLinkActionSpec["execute"],
+    risk: LocalLinkActionSpec["risk"] = "read",
+  ): LocalLinkActionSpec {
+    return { id, title, description, risk, execute };
+  }
+
+  async function request(
+    context: LocalLinkActionContext | Omit<LocalLinkActionContext, "params">,
+    url: string | URL,
+    options: {
+      method?: "GET" | "POST" | "PATCH";
+      headers?: Record<string, string>;
+      body?: unknown;
+    } = {},
+  ): Promise<unknown> {
+    return linkRequestJson({
+      url: typeof url === "string" ? new URL(url) : url,
+      method: options.method,
+      headers: options.headers ?? bearer(context.token),
+      body: options.body,
+      signal: context.signal,
+      fetchImpl: context.fetchImpl,
+    });
+  }
+
+  function identity(
+    data: unknown,
+    idKeys: string[],
+    labelKeys: string[],
+    detailKeys: string[] = [],
+  ): LocalLinkIdentity {
+    const record = asRecord(data) ?? {};
+    const externalAccountId =
+      firstString(...idKeys.map((key) => record[key])) ?? String(record.id ?? "account");
+    const label = firstString(...labelKeys.map((key) => record[key])) ?? externalAccountId;
+    const detail = firstString(...detailKeys.map((key) => record[key]));
+    return { externalAccountId, label, ...(detail ? { detail } : {}) };
+  }
+
+  function compactList(
+    data: unknown,
+    keys: readonly string[],
+    limit = 50,
+  ): Record<string, unknown>[] {
+    return asArray(data)
+      .slice(0, limit)
+      .map((value) => pick(value, keys));
+  }
+
+  const github: LocalLinkProviderSpec = {
+    id: "github",
+    displayName: "GitHub",
+    tokenLabel: "Fine-grained PAT",
+    tokenPlaceholder: "github_pat_…",
+    async validate(context) {
+      const data = await request(context, "https://api.github.com/user", {
+        headers: githubHeaders(context.token),
+      });
+      const repositoriesUrl = new URL("https://api.github.com/user/repos");
+      repositoriesUrl.searchParams.set("per_page", "12");
+      repositoriesUrl.searchParams.set("sort", "updated");
+      const repositories = await request(context, repositoriesUrl, {
+        headers: githubHeaders(context.token),
+      });
+      return {
+        ...identity(data, ["id"], ["login", "name"], ["name", "email"]),
+        resourceLabels: asArray(repositories)
+          .map((value) => firstString(asRecord(value)?.full_name))
+          .filter((value): value is string => Boolean(value))
+          .slice(0, 12),
+      };
+    },
+    actions: [
+      ...GITHUB_SOURCE_ACTIONS.map((id) =>
+        action(
+          id,
+          id,
+          "Read GitHub contribution evidence; params: owner, repo, pull_number (or full sha for get_commit), optional page/limit. Returns bounded patches and authors, never inferred responsibility.",
+          async (ctx) =>
+            normalizeGithubSourceResult(
+              id,
+              ctx.params,
+              await request(ctx, `https://api.github.com/${githubSourceEndpoint(id, ctx.params)}`, {
+                headers: githubHeaders(ctx.token),
+              }),
+            ),
+        ),
+      ),
+      action(
+        "list_repositories",
+        "列出仓库",
+        "列出当前 Token 可访问的 GitHub 仓库。",
+        async (ctx) => {
+          const url = new URL("https://api.github.com/user/repos");
+          url.searchParams.set("per_page", String(intParam(ctx.params, "limit", 30, 100)));
+          url.searchParams.set("sort", "updated");
+          const data = await request(ctx, url, {
+            headers: githubHeaders(ctx.token),
+          });
+          return {
+            repositories: compactList(
+              data,
+              [
+                "id",
+                "full_name",
+                "description",
+                "private",
+                "archived",
+                "default_branch",
+                "html_url",
+                "updated_at",
+              ],
+              100,
+            ),
+          };
+        },
+      ),
+      action(
+        "get_repository",
+        "读取仓库",
+        "读取固定 GitHub 仓库身份；params: owner, repo。",
+        async (ctx) => {
+          const { owner, repo } = githubRepositoryParameters(ctx.params);
+          return pick(
+            await request(ctx, `https://api.github.com/repos/${owner}/${repo}`, {
+              headers: githubHeaders(ctx.token),
+            }),
+            ["id", "full_name", "private", "archived", "html_url"],
+          );
+        },
+      ),
+      action(
+        "get_starred",
+        "读取 Star 状态",
+        "读取当前连接账号是否 Star 固定仓库；params: owner, repo。",
+        async (ctx) => {
+          const { owner, repo } = githubRepositoryParameters(ctx.params);
+          const status = await linkRequestStatus(
+            {
+              url: new URL(`https://api.github.com/user/starred/${owner}/${repo}`),
+              headers: githubHeaders(ctx.token),
+              signal: ctx.signal,
+              fetchImpl: ctx.fetchImpl,
+            },
+            [204, 404],
+          );
+          return { starred: status === 204 };
+        },
+      ),
+      action(
+        "set_starred",
+        "设置 Star 状态",
+        "设置固定仓库的 Star 状态并独立验证；params: owner, repo, starred（布尔）。",
+        async (ctx) => {
+          const { owner, repo, starred } = githubSetStarredParameters(ctx.params);
+          await linkRequestStatus(
+            {
+              url: new URL(`https://api.github.com/user/starred/${owner}/${repo}`),
+              method: starred ? "PUT" : "DELETE",
+              headers: { ...githubHeaders(ctx.token), "Content-Length": "0" },
+              signal: ctx.signal,
+              fetchImpl: ctx.fetchImpl,
+            },
+            [204],
+          );
+          return { acknowledged: true };
+        },
+        "write",
+      ),
+      action(
+        "get_readme",
+        "读取 README",
+        "读取 GitHub README；params: owner, repo。",
+        async (ctx) => {
+          const owner = pathSegmentParam(ctx.params, "owner", { required: true, maxLength: 100 })!;
+          const repo = pathSegmentParam(ctx.params, "repo", { required: true, maxLength: 100 })!;
+          const data =
+            asRecord(
+              await request(
+                ctx,
+                `https://api.github.com/repos/${encodeURIComponent(owner)}/${encodeURIComponent(repo)}/readme`,
+                { headers: githubHeaders(ctx.token) },
+              ),
+            ) ?? {};
+          const encoded = typeof data.content === "string" ? data.content.replace(/\s/g, "") : "";
+          const content = encoded
+            ? Buffer.from(encoded, "base64").toString("utf8").slice(0, 262_144)
+            : "";
+          return {
+            owner,
+            repo,
+            path: data.path,
+            sha: data.sha,
+            content,
+            truncated: content.length >= 262_144,
+            html_url: data.html_url,
+          };
+        },
+      ),
+      action(
+        "list_issues",
+        "列出 Issue",
+        "列出 GitHub Issue（排除 Pull Request）；params: owner, repo，可选 limit、page（1..1000）、state（open/closed/all，默认open）。",
+        async (ctx) => {
+          const owner = pathSegmentParam(ctx.params, "owner", { required: true, maxLength: 100 })!;
+          const repo = pathSegmentParam(ctx.params, "repo", { required: true, maxLength: 100 })!;
+          const url = new URL(
+            `https://api.github.com/repos/${encodeURIComponent(owner)}/${encodeURIComponent(repo)}/issues`,
+          );
+          url.searchParams.set("per_page", String(intParam(ctx.params, "limit", 30, 100)));
+          url.searchParams.set("page", String(intParam(ctx.params, "page", 1, 1_000)));
+          const state = stringParam(ctx.params, "state") ?? "open";
+          if (!["open", "closed", "all"].includes(state)) throw new Error("Invalid issue state");
+          url.searchParams.set("state", state);
+          const data = asArray(
+            await request(ctx, url, {
+              headers: githubHeaders(ctx.token),
+            }),
+          );
+          return {
+            issues: data
+              .filter((value) => !asRecord(value)?.pull_request)
+              .slice(0, 100)
+              .map((value) =>
+                pick(value, [
+                  "number",
+                  "title",
+                  "state",
+                  "html_url",
+                  "created_at",
+                  "updated_at",
+                  "user",
+                  "labels",
+                ]),
+              ),
+          };
+        },
+      ),
+      action(
+        "get_file",
+        "读取指定文件",
+        "读取 GitHub 仓库文件；params: owner, repo, path, 可选 ref。",
+        async (ctx) => {
+          const owner = pathSegmentParam(ctx.params, "owner", { required: true, maxLength: 100 })!;
+          const repo = pathSegmentParam(ctx.params, "repo", { required: true, maxLength: 100 })!;
+          const path = pathParam(ctx.params, "path", { required: true, maxLength: 2_000 })!;
+          const ref = stringParam(ctx.params, "ref", { maxLength: 300 });
+          const url = new URL(
+            `https://api.github.com/repos/${encodeURIComponent(owner)}/${encodeURIComponent(repo)}/contents/${path}`,
+          );
+          if (ref) url.searchParams.set("ref", ref);
+          const data =
+            asRecord(await request(ctx, url, { headers: githubHeaders(ctx.token) })) ?? {};
+          if (data.type !== "file") throw new Error("GitHub path is not a file");
+          const encoded = typeof data.content === "string" ? data.content.replace(/\s/g, "") : "";
+          const content = encoded
+            ? Buffer.from(encoded, "base64").toString("utf8").slice(0, 262_144)
+            : "";
+          return {
+            owner,
+            repo,
+            path: data.path,
+            ref,
+            sha: data.sha,
+            size: data.size,
+            content,
+            truncated:
+              typeof data.size === "number" ? data.size > Buffer.byteLength(content) : false,
+            html_url: data.html_url,
+          };
+        },
+      ),
+      action(
+        "list_pull_requests",
+        "列出 Pull Request",
+        "列出 GitHub Pull Request；params: owner, repo，可选 limit、page（1..1000）。",
+        async (ctx) => {
+          const owner = pathSegmentParam(ctx.params, "owner", { required: true, maxLength: 100 })!;
+          const repo = pathSegmentParam(ctx.params, "repo", { required: true, maxLength: 100 })!;
+          const url = new URL(
+            `https://api.github.com/repos/${encodeURIComponent(owner)}/${encodeURIComponent(repo)}/pulls`,
+          );
+          url.searchParams.set("per_page", String(intParam(ctx.params, "limit", 30, 100)));
+          url.searchParams.set("page", String(intParam(ctx.params, "page", 1, 1_000)));
+          const data = await request(ctx, url, {
+            headers: githubHeaders(ctx.token),
+          });
+          return {
+            pull_requests: compactList(
+              data,
+              [
+                "number",
+                "title",
+                "state",
+                "draft",
+                "html_url",
+                "created_at",
+                "updated_at",
+                "user",
+                "head",
+                "base",
+              ],
+              100,
+            ),
+          };
+        },
+      ),
+      action(
+        "get_issue",
+        "查看 Issue",
+        "查看单个 GitHub Issue；params: owner, repo, issue_number。",
+        async (ctx) => {
+          const owner = pathSegmentParam(ctx.params, "owner", { required: true, maxLength: 100 })!;
+          const repo = pathSegmentParam(ctx.params, "repo", { required: true, maxLength: 100 })!;
+          const number = intParam(ctx.params, "issue_number", 0, Number.MAX_SAFE_INTEGER);
+          return pick(
+            await request(
+              ctx,
+              `https://api.github.com/repos/${encodeURIComponent(owner)}/${encodeURIComponent(repo)}/issues/${number}`,
+              { headers: githubHeaders(ctx.token) },
+            ),
+            [
+              "id",
+              "url",
+              "repository_url",
+              "pull_request",
+              "number",
+              "title",
+              "body",
+              "state",
+              "state_reason",
+              "html_url",
+              "created_at",
+              "updated_at",
+              "closed_at",
+              "user",
+              "assignees",
+              "labels",
+              "milestone",
+              "comments",
+            ],
+          );
+        },
+      ),
+      action(
+        "get_pull_request",
+        "查看 Pull Request",
+        "查看单个 GitHub Pull Request；params: owner, repo, pull_number。",
+        async (ctx) => {
+          const owner = pathSegmentParam(ctx.params, "owner", { required: true, maxLength: 100 })!;
+          const repo = pathSegmentParam(ctx.params, "repo", { required: true, maxLength: 100 })!;
+          const number = intParam(ctx.params, "pull_number", 0, Number.MAX_SAFE_INTEGER);
+          return pick(
+            await request(
+              ctx,
+              `https://api.github.com/repos/${encodeURIComponent(owner)}/${encodeURIComponent(repo)}/pulls/${number}`,
+              { headers: githubHeaders(ctx.token) },
+            ),
+            [
+              "number",
+              "title",
+              "body",
+              "state",
+              "draft",
+              "merged",
+              "mergeable",
+              "html_url",
+              "created_at",
+              "updated_at",
+              "closed_at",
+              "merged_at",
+              "user",
+              "assignees",
+              "requested_reviewers",
+              "labels",
+              "head",
+              "base",
+              "commits",
+              "additions",
+              "deletions",
+              "changed_files",
+            ],
+          );
+        },
+      ),
+      action(
+        "update_issue",
+        "关闭或重开 Issue",
+        "设置已有 Issue 的状态并独立验证；params: owner, repo, issue_number（整数）, state（open 或 closed）。不支持 PR 或其它字段。",
+        async (ctx) => {
+          const { owner, repo, issue_number, state } = githubIssueStateParameters(ctx.params);
+          // The response is only an acknowledgement; the owning controller reads independently.
+          await request(
+            ctx,
+            `https://api.github.com/repos/${owner}/${repo}/issues/${issue_number}`,
+            {
+              method: "PATCH",
+              headers: githubHeaders(ctx.token),
+              body: { state },
+            },
+          );
+          return { acknowledged: true };
+        },
+        "write",
+      ),
+      action(
+        "create_issue",
+        "创建 Issue",
+        "创建 GitHub Issue；params: owner, repo, title, 可选 body；执行前始终审批。",
+        async (ctx) => {
+          const owner = pathSegmentParam(ctx.params, "owner", { required: true, maxLength: 100 })!;
+          const repo = pathSegmentParam(ctx.params, "repo", { required: true, maxLength: 100 })!;
+          const title = stringParam(ctx.params, "title", { required: true, maxLength: 256 })!;
+          const body = stringParam(ctx.params, "body", { maxLength: 20_000 });
+          const data = await request(
+            ctx,
+            `https://api.github.com/repos/${encodeURIComponent(owner)}/${encodeURIComponent(repo)}/issues`,
+            {
+              method: "POST",
+              headers: githubHeaders(ctx.token),
+              body: { title, ...(body ? { body } : {}) },
+            },
+          );
+          return pick(data, ["number", "title", "state", "html_url", "created_at"]);
+        },
+        "write",
+      ),
+    ],
+  };
+
+  const gitlab: LocalLinkProviderSpec = {
+    id: "gitlab",
+    displayName: "GitLab",
+    tokenLabel: "Personal access token",
+    tokenPlaceholder: "glpat-…",
+    async validate(context) {
+      const data = await request(context, "https://gitlab.com/api/v4/user", {
+        headers: gitlabHeaders(context),
+      });
+      return identity(data, ["id"], ["username", "name"], ["name", "email"]);
+    },
+    actions: [
+      action("list_projects", "列出项目", "列出当前 Token 可访问的 GitLab 项目。", async (ctx) => {
+        const url = new URL("https://gitlab.com/api/v4/projects");
+        url.searchParams.set("membership", "true");
+        url.searchParams.set("simple", "true");
+        url.searchParams.set("per_page", String(intParam(ctx.params, "limit", 30, 100)));
+        const data = await request(ctx, url, { headers: gitlabHeaders(ctx) });
+        return {
+          projects: compactList(
+            data,
+            [
+              "id",
+              "name",
+              "path_with_namespace",
+              "description",
+              "visibility",
+              "default_branch",
+              "web_url",
+              "last_activity_at",
+            ],
+            100,
+          ),
+        };
+      }),
+      action("list_issues", "列出 Issue", "列出当前用户可见的 GitLab Issue。", async (ctx) => {
+        const url = new URL("https://gitlab.com/api/v4/issues");
+        url.searchParams.set("scope", "assigned_to_me");
+        url.searchParams.set("per_page", String(intParam(ctx.params, "limit", 30, 100)));
+        const data = await request(ctx, url, { headers: gitlabHeaders(ctx) });
+        return {
+          issues: compactList(
+            data,
+            [
+              "id",
+              "iid",
+              "project_id",
+              "title",
+              "state",
+              "web_url",
+              "created_at",
+              "updated_at",
+              "labels",
+            ],
+            100,
+          ),
+        };
+      }),
+    ],
+  };
+
+  const figma: LocalLinkProviderSpec = {
+    id: "figma",
+    credentialActionIds: [
+      "get_file",
+      "read_design_content",
+      "get_nodes",
+      "get_images",
+      "get_image_fills",
+      "get_comments",
+    ],
+    displayName: "Figma",
+    tokenLabel: "Personal access token",
+    tokenPlaceholder: "figd_…",
+    async validate(context) {
+      const data = await request(context, "https://api.figma.com/v1/me", {
+        headers: figmaHeaders(context),
+      });
+      return identity(data, ["id"], ["handle", "email"], ["email"]);
+    },
+    actions: [
+      action(
+        "get_file",
+        "读取页面摘要（旧版）",
+        "只接受 file_url_or_key 或 file_key，返回最多100个页面的名称、ID和类型；不返回 document、节点内容或设计全文。需要实际设计内容时使用 read_design_content；旧服务未提供该动作时需升级服务，不能把 pages 摘要视为设计内容。",
+        (ctx) => executeFigmaAction("get_file", ctx),
+      ),
+      action(
+        "read_design_content",
+        "读取设计内容",
+        "用 file_url_or_key 读取实际设计 document，默认 depth=2；有需要再用 get_nodes 按 ids 分批读取指定子树，只有明确需要完整文件时设置 full:true（不能同时指定depth）。可选 depth (1..100)、ids/node_ids (逗号字符串或数组，最多50)、version、geometry=paths、plugin_data、branch_data；节点URL的node-id会限制ids。设计字段完整保留在请求范围内，requestedDepth标明深度限制。复刻时用 get_images 渲染图和 get_image_fills 素材。远端token不由UseCredential导出，继续用LinkAction；缺token值不代表没权限。没有document的响应是读取失败，不可把pages当成设计全文。",
+        (ctx) => executeFigmaAction("read_design_content", ctx),
+      ),
+      action(
+        "get_nodes",
+        "读取节点内容",
+        "用 file_url_or_key 与 ids/node_ids (最多50，或节点 URL 的 node-id) 读取完整节点子树，包括文字、布局、样式。可选 depth (1..100)、version、geometry=paths、plugin_data；depth 相对所选节点。",
+        (ctx) => executeFigmaAction("get_nodes", ctx),
+      ),
+      action(
+        "get_images",
+        "渲染节点图片",
+        "用 file_url_or_key 与 ids/node_ids (最多50，或节点 URL 的 node-id) 获取渲染图片 URL。可选 scale (0.01..4)、format (png/jpg/svg/pdf)、version、svg_outline_text、svg_include_id、svg_include_node_id、svg_simplify_stroke、contents_only、use_absolute_bounds (布尔)。图片 URL 有效期有限，null 表示对应节点未能渲染。",
+        (ctx) => executeFigmaAction("get_images", ctx),
+      ),
+      action(
+        "get_image_fills",
+        "读取填充图片",
+        "用 file_url_or_key 获取当前文件 imageRef 到图片 URL 的映射，用于还原 IMAGE 填充；URL 有效期有限。",
+        (ctx) => executeFigmaAction("get_image_fills", ctx),
+      ),
+      action("get_comments", "读取评论", "用 file_url_or_key 读取 Figma 文件评论。", (ctx) =>
+        executeFigmaAction("get_comments", ctx),
+      ),
+      ...FIGMA_MCP_ACTION_IDS.map((id) =>
+        action(
+          id,
+          {
+            get_metadata: "读取 MCP 节点目录",
+            get_design_context: "读取设计上下文或 Make 文件清单",
+            get_screenshot: "读取节点截图",
+            get_variable_defs: "读取选中节点变量",
+            get_motion_context: "读取动画时间线",
+            get_figjam: "读取 FigJam 上下文",
+            get_code_connect_map: "读取组件代码映射",
+            get_libraries: "读取设计库",
+            search_design_system: "搜索设计系统",
+            list_resources: "列出 Make 源码资源",
+            read_resource: "读取所选 Make 源文件",
+          }[id],
+          "Official Figma MCP, only when API reads cannot supply the needed context. " +
+            "Requires the separate Figma MCP connection; API/PAT tokens cannot execute this action. " +
+            "params: file_url_or_key (preferred, Design/FigJam/Make URL) or file_key, optional file_type; " +
+            "node_id or URL node-id selects detailed Design content; do not read whole files automatically. " +
+            (id === "get_design_context"
+              ? "For Make, this first discovers the available source resources; read selected files with read_resource afterwards. "
+              : "") +
+            (id === "read_resource"
+              ? "Pass uri exactly as returned by get_design_context/list_resources on this connection and Make file. "
+              : "") +
+            (id === "list_resources"
+              ? "Optional cursor requests one resource page. If resource listing is unsupported, use get_design_context to obtain Make resource links. "
+              : "") +
+            (id === "search_design_system" ? "queries: 1 to 20 search strings. " : "") +
+            "Optional client_languages/client_frameworks describe the target implementation; recursive is for motion context. " +
+            "Raw node JSON, image exports, and comments should use the API get_nodes/get_images/get_comments actions.",
+          async () => {
+            throw new Error("Figma MCP actions require the Host-owned Figma Link executor.");
+          },
+        ),
+      ),
+    ],
+  };
+
+  async function executeFigmaAction(
+    actionId: string,
+    context: LocalLinkActionContext,
+  ): Promise<unknown> {
+    const params = figmaActionParameters(actionId, context.params);
+    const data = await linkRequestJson({
+      url: figmaActionEndpoint(actionId, params),
+      headers: figmaHeaders(context),
+      signal: context.signal,
+      fetchImpl: context.fetchImpl,
+      maxResponseBytes: FIGMA_RESPONSE_BYTES,
+      responseTooLargeMessage: FIGMA_RESPONSE_TOO_LARGE,
+    });
+    return normalizeFigmaActionResult(actionId, data, params);
+  }
+
+  const notionHeaders = (token: string) => ({
+    ...bearer(token),
+    "Notion-Version": NOTION_API_VERSION,
+  });
+  const notion: LocalLinkProviderSpec = {
+    id: "notion",
+    displayName: "Notion",
+    tokenLabel: "Internal integration token",
+    tokenPlaceholder: "ntn_… / secret_…",
+    async validate(context) {
+      const data = await request(context, "https://api.notion.com/v1/users/me", {
+        headers: notionHeaders(context.token),
+      });
+      const record = asRecord(data) ?? {};
+      const bot = asRecord(record.bot);
+      return {
+        externalAccountId: String(record.id ?? "bot"),
+        label: firstString(record.name, bot?.owner && "Notion integration") ?? "Notion integration",
+        detail: firstString(record.type),
+      };
+    },
+    actions: [
+      action(
+        "search",
+        "搜索页面和数据库",
+        "搜索已授权给该 Integration 的 Notion 页面和数据库。",
+        async (ctx) => {
+          const query = stringParam(ctx.params, "query", { maxLength: 200 });
+          const data =
+            asRecord(
+              await request(ctx, "https://api.notion.com/v1/search", {
+                method: "POST",
+                headers: notionHeaders(ctx.token),
+                body: {
+                  page_size: intParam(ctx.params, "limit", 30, 100),
+                  ...(query ? { query } : {}),
+                },
+              }),
+            ) ?? {};
+          return {
+            results: asArray(data.results)
+              .slice(0, 100)
+              .map((value) =>
+                pick(value, [
+                  "object",
+                  "id",
+                  "url",
+                  "created_time",
+                  "last_edited_time",
+                  "archived",
+                  "parent",
+                  "properties",
+                  "title",
+                ]),
+              ),
+            has_more: data.has_more,
+            next_cursor: data.next_cursor,
+          };
+        },
+      ),
+      action("get_page", "读取页面属性", "读取 Notion 页面属性；params: page_id。", async (ctx) => {
+        const pageId = pathSegmentParam(ctx.params, "page_id", { required: true, maxLength: 100 })!;
+        return pick(
+          await request(ctx, `https://api.notion.com/v1/pages/${encodeURIComponent(pageId)}`, {
+            headers: notionHeaders(ctx.token),
+          }),
+          [
+            "object",
+            "id",
+            "url",
+            "created_time",
+            "last_edited_time",
+            "archived",
+            "parent",
+            "properties",
+          ],
+        );
+      }),
+    ],
+  };
+
+  async function linearGraphql(
+    context: LocalLinkActionContext | Omit<LocalLinkActionContext, "params">,
+    query: string,
+    variables: Record<string, unknown> = {},
+  ): Promise<Record<string, unknown>> {
+    const response =
+      asRecord(
+        await request(context, "https://api.linear.app/graphql", {
+          method: "POST",
+          headers:
+            context.authKind === "oauth" ? bearer(context.token) : { Authorization: context.token },
+          body: { query, variables },
+        }),
+      ) ?? {};
+    if (asArray(response.errors).length)
+      throw new Error(
+        `Linear GraphQL request failed: ${JSON.stringify(response.errors).slice(0, 300)}`,
+      );
+    return asRecord(response.data) ?? {};
+  }
+
+  const linear: LocalLinkProviderSpec = {
+    id: "linear",
+    displayName: "Linear",
+    tokenLabel: "Personal API key",
+    tokenPlaceholder: "lin_api_…",
+    async validate(context) {
+      const data = await linearGraphql(context, "query { viewer { id name displayName email } }");
+      const viewer = asRecord(data.viewer) ?? {};
+      return identity(viewer, ["id"], ["displayName", "name", "email"], ["email"]);
+    },
+    actions: [
+      action("list_issues", "列出 Issue", "列出分配给当前 Linear 用户的 Issue。", async (ctx) => {
+        const first = intParam(ctx.params, "limit", 30, 50);
+        const data = await linearGraphql(
+          ctx,
+          "query Issues($first: Int!) { viewer { assignedIssues(first: $first) { nodes { id identifier title description priority url createdAt updatedAt state { name type } team { id key name } } } } }",
+          { first },
+        );
+        const viewer = asRecord(data.viewer);
+        const assigned = asRecord(viewer?.assignedIssues);
+        return { issues: asArray(assigned?.nodes).slice(0, 50) };
+      }),
+      action("list_teams", "列出团队", "列出当前 Linear 工作区中的团队。", async (ctx) => {
+        const data = await linearGraphql(
+          ctx,
+          "query { teams(first: 50) { nodes { id key name description } } }",
+        );
+        return { teams: asArray(asRecord(data.teams)?.nodes).slice(0, 50) };
+      }),
+    ],
+  };
+
+  async function slackRequest(
+    context: LocalLinkActionContext | Omit<LocalLinkActionContext, "params">,
+    endpoint: string,
+    body?: Record<string, string>,
+  ): Promise<Record<string, unknown>> {
+    const data =
+      asRecord(
+        await request(context, `https://slack.com/api/${endpoint}`, {
+          method: "POST",
+          body: body ?? {},
+        }),
+      ) ?? {};
+    if (data.ok !== true)
+      throw new Error(`Slack API request failed: ${firstString(data.error) ?? "unknown_error"}`);
+    return data;
+  }
+
+  const slack: LocalLinkProviderSpec = {
+    id: "slack",
+    displayName: "Slack",
+    tokenLabel: "Bot or user token",
+    tokenPlaceholder: "xoxb-… / xoxp-…",
+    async validate(context) {
+      const data = await slackRequest(context, "auth.test");
+      return {
+        externalAccountId: firstString(data.user_id, data.bot_id, data.team_id) ?? "slack",
+        label: firstString(data.user, data.team) ?? "Slack",
+        detail: firstString(data.team, data.url),
+      };
+    },
+    actions: [
+      ...["get_message", "get_thread"].map((id) =>
+        action(
+          id,
+          id,
+          id === "get_message"
+            ? "Read exact Slack message; params: permalink (a reply URL must include thread_ts)."
+            : "Read one Slack thread page; params: channel, ts (parent), optional permalink/cursor/limit (max 15). Channel threads may require a user token.",
+          async (ctx) => {
+            const p = slackSourceParams(id, ctx.params);
+            const isReply = id === "get_message" && p.thread_ts && p.thread_ts !== p.ts;
+            const data = await slackRequest(
+              ctx,
+              id === "get_thread" || isReply ? "conversations.replies" : "conversations.history",
+              {
+                channel: p.channel,
+                limit: String(p.limit),
+                ...(id === "get_thread"
+                  ? { ts: p.ts, ...(p.cursor ? { cursor: p.cursor } : {}) }
+                  : {
+                      oldest: p.ts,
+                      latest: p.ts,
+                      inclusive: "true",
+                      ...(isReply ? { ts: p.thread_ts! } : {}),
+                    }),
+              },
+            );
+            // Resolve through the selected account; a supplied URL never controls the API origin.
+            const link = await slackRequest(ctx, "chat.getPermalink", {
+              channel: p.channel,
+              message_ts: p.ts,
+            });
+            return normalizeSlackSourceResult(id, ctx.params, {
+              ...data,
+              permalink: link.permalink,
+            });
+          },
+        ),
+      ),
+      action("list_channels", "列出频道", "列出 Token 可访问的 Slack 频道。", async (ctx) => {
+        const data = await slackRequest(ctx, "conversations.list", {
+          limit: String(intParam(ctx.params, "limit", 50, 200)),
+          exclude_archived: "true",
+        });
+        return {
+          channels: compactList(
+            data.channels,
+            ["id", "name", "is_private", "is_member", "topic", "purpose", "num_members"],
+            200,
+          ),
+          next_cursor: asRecord(data.response_metadata)?.next_cursor,
+        };
+      }),
+      action(
+        "get_channel_history",
+        "读取频道消息",
+        "读取 Slack 频道最近消息；params: channel, 可选 limit（最多 15）。",
+        async (ctx) => {
+          const channel = stringParam(ctx.params, "channel", { required: true, maxLength: 100 })!;
+          const data = await slackRequest(ctx, "conversations.history", {
+            channel,
+            limit: String(intParam(ctx.params, "limit", 15, 15)),
+          });
+          return {
+            messages: compactList(
+              data.messages,
+              ["type", "user", "text", "ts", "thread_ts", "reply_count", "files"],
+              100,
+            ),
+            has_more: data.has_more,
+          };
+        },
+      ),
+    ],
+  };
+
+  const sentry: LocalLinkProviderSpec = {
+    id: "sentry",
+    displayName: "Sentry",
+    tokenLabel: "User auth token",
+    tokenPlaceholder: "sntrys_…",
+    async validate(context) {
+      const data = await request(context, "https://sentry.io/api/0/organizations/");
+      const organizations = asArray(data);
+      const first = asRecord(organizations[0]);
+      return {
+        externalAccountId: firstString(first?.id, first?.slug) ?? "sentry-token",
+        label:
+          organizations.length > 0
+            ? `${firstString(first?.name, first?.slug) ?? "Sentry"} · ${organizations.length} org`
+            : "Sentry token",
+      };
+    },
+    actions: [
+      action(
+        "list_organizations",
+        "列出组织",
+        "列出当前 Sentry Token 可访问的组织。",
+        async (ctx) => ({
+          organizations: compactList(
+            await request(ctx, "https://sentry.io/api/0/organizations/"),
+            ["id", "slug", "name", "status", "dateCreated", "isEarlyAdopter"],
+            100,
+          ),
+        }),
+      ),
+      action(
+        "list_projects",
+        "列出项目",
+        "列出 Sentry 组织项目；params: organization。",
+        async (ctx) => {
+          const org = pathSegmentParam(ctx.params, "organization", {
+            required: true,
+            maxLength: 100,
+          })!;
+          return {
+            projects: compactList(
+              await request(
+                ctx,
+                `https://sentry.io/api/0/organizations/${encodeURIComponent(org)}/projects/`,
+              ),
+              ["id", "slug", "name", "platform", "dateCreated", "isBookmarked"],
+              100,
+            ),
+          };
+        },
+      ),
+    ],
+  };
+
+  const airtable: LocalLinkProviderSpec = {
+    id: "airtable",
+    displayName: "Airtable",
+    tokenLabel: "Personal access token",
+    tokenPlaceholder: "pat…",
+    async validate(context) {
+      const root = asRecord(await request(context, "https://api.airtable.com/v0/meta/bases")) ?? {};
+      const bases = asArray(root.bases);
+      const first = asRecord(bases[0]);
+      return {
+        externalAccountId: firstString(first?.id) ?? "airtable-token",
+        label:
+          bases.length > 0
+            ? `Airtable · ${bases.length} base${bases.length === 1 ? "" : "s"}`
+            : "Airtable token",
+      };
+    },
+    actions: [
+      action("list_bases", "列出 Base", "列出当前 Airtable PAT 可访问的 Base。", async (ctx) => {
+        const data = asRecord(await request(ctx, "https://api.airtable.com/v0/meta/bases")) ?? {};
+        return {
+          bases: compactList(data.bases, ["id", "name", "permissionLevel"], 100),
+          offset: data.offset,
+        };
+      }),
+      action(
+        "list_tables",
+        "列出数据表",
+        "列出 Airtable 表与字段；params: base_id。",
+        async (ctx) => {
+          const baseId = pathSegmentParam(ctx.params, "base_id", {
+            required: true,
+            maxLength: 100,
+          })!;
+          const data =
+            asRecord(
+              await request(
+                ctx,
+                `https://api.airtable.com/v0/meta/bases/${encodeURIComponent(baseId)}/tables`,
+              ),
+            ) ?? {};
+          return {
+            tables: asArray(data.tables)
+              .slice(0, 100)
+              .map((value) => pick(value, ["id", "name", "primaryFieldId", "fields", "views"])),
+          };
+        },
+      ),
+    ],
+  };
+
+  const todoist: LocalLinkProviderSpec = {
+    id: "todoist",
+    displayName: "Todoist",
+    tokenLabel: "Developer API token",
+    tokenPlaceholder: "Todoist API token",
+    async validate(context) {
+      const data = await request(context, "https://api.todoist.com/api/v1/user");
+      return identity(data, ["id"], ["full_name", "email"], ["email"]);
+    },
+    actions: [
+      action("list_projects", "列出项目", "列出当前 Todoist Token 可访问的项目。", async (ctx) => {
+        const root = asRecord(await request(ctx, "https://api.todoist.com/api/v1/projects"));
+        const data = root?.results ?? root ?? [];
+        return {
+          projects: compactList(
+            data,
+            ["id", "name", "color", "is_shared", "is_favorite", "is_archived", "url"],
+            100,
+          ),
+        };
+      }),
+      action("list_tasks", "列出任务", "列出当前 Todoist 用户的未完成任务。", async (ctx) => {
+        const url = new URL("https://api.todoist.com/api/v1/tasks");
+        url.searchParams.set("limit", String(intParam(ctx.params, "limit", 50, 100)));
+        const root = asRecord(await request(ctx, url));
+        const data = root?.results ?? root ?? [];
+        return {
+          tasks: compactList(
+            data,
+            ["id", "content", "description", "project_id", "priority", "due", "labels", "url"],
+            100,
+          ),
+          next_cursor: root?.next_cursor,
+        };
+      }),
+    ],
+  };
+
+  const vercel: LocalLinkProviderSpec = {
+    id: "vercel",
+    displayName: "Vercel",
+    tokenLabel: "Access token",
+    tokenPlaceholder: "Vercel access token",
+    async validate(context) {
+      const root = asRecord(await request(context, "https://api.vercel.com/v2/user")) ?? {};
+      return identity(root.user, ["id", "uid"], ["name", "username", "email"], ["email"]);
+    },
+    actions: [
+      action("list_projects", "列出项目", "列出当前 Vercel Token 可访问的项目。", async (ctx) => {
+        const url = new URL("https://api.vercel.com/v10/projects");
+        url.searchParams.set("limit", String(intParam(ctx.params, "limit", 50, 100)));
+        const teamId = stringParam(ctx.params, "team_id", { maxLength: 100 });
+        if (teamId) url.searchParams.set("teamId", teamId);
+        const root = asRecord(await request(ctx, url)) ?? {};
+        return {
+          projects: compactList(
+            root.projects,
+            ["id", "name", "framework", "updatedAt", "createdAt", "latestDeployments"],
+            100,
+          ),
+          pagination: root.pagination,
+        };
+      }),
+      action(
+        "list_deployments",
+        "列出部署",
+        "列出当前 Vercel Token 可访问的部署。",
+        async (ctx) => {
+          const url = new URL("https://api.vercel.com/v7/deployments");
+          url.searchParams.set("limit", String(intParam(ctx.params, "limit", 50, 100)));
+          const teamId = stringParam(ctx.params, "team_id", { maxLength: 100 });
+          if (teamId) url.searchParams.set("teamId", teamId);
+          const root = asRecord(await request(ctx, url)) ?? {};
+          return {
+            deployments: compactList(
+              root.deployments,
+              ["uid", "projectId", "name", "url", "state", "target", "created", "ready", "meta"],
+              100,
+            ),
+            pagination: root.pagination,
+          };
+        },
+      ),
+    ],
+  };
+
+  const DEFAULT_LINK_PROVIDERS: readonly LocalLinkProviderSpec[] = [
+    github,
+    gitlab,
+    figma,
+    notion,
+    linear,
+    slack,
+    sentry,
+    airtable,
+    todoist,
+    vercel,
+  ];
+
+  return DEFAULT_LINK_PROVIDERS.map((provider) => ({
+    ...provider,
+    actions: provider.actions.map((action) => ({
+      ...action,
+      execute: (context: LocalLinkActionContext) =>
+        executeLinkOperation({
+          providerId: provider.id,
+          action: action.id,
+          params: context.params,
+          signal: context.signal,
+          execute: (params) => action.execute({ ...context, params }),
+        }),
+    })),
+  }));
+}

@@ -21,7 +21,7 @@ import "./workbench-desktop.css";
 /** Both host controllers store drafts synchronously before send reads them. */
 export function submitWorkbenchPanelPrompt(
   controller: WorkbenchController,
-  request: { prompt: string; sessionId: string; workspaceKey: string },
+  request: { prompt: string; sessionId: string; workspaceKey: string; modelTraceSource?: string },
 ): { accepted: true } {
   if (request.workspaceKey !== controller.workspaceKey || request.sessionId !== controller.activeId)
     throw new Error("当前工作区或对话已经变化，请重新打开面板后发送。");
@@ -44,7 +44,11 @@ export function submitWorkbenchPanelPrompt(
   if (!request.prompt.trim() || request.prompt.length > 20000)
     throw new Error("面板任务内容无效。");
   controller.setDraft(request.prompt);
-  if (!controller.send()) {
+  if (
+    !controller.send(
+      request.modelTraceSource ? { modelTraceSource: request.modelTraceSource } : undefined,
+    )
+  ) {
     // The synchronous setter/send pair cannot interleave with another input
     // event. A declined sender has not consumed our just-inserted draft.
     controller.setDraft("");
@@ -1062,6 +1066,15 @@ export function Workbench({
         {view === "activity" && hub ? (
           <HubModelTraces
             key={`${controller.workspaceKey}:activity`}
+            sessionTitles={Object.fromEntries(
+              sessions.map((item) => [
+                item.sessionId,
+                item.customTitle ||
+                  item.title ||
+                  item.preview?.trim() ||
+                  item.sessionId.slice(0, 8),
+              ]),
+            )}
             onAuthLost={onAuthLost}
             onOpenSession={(id) => void openSession(id)}
           />

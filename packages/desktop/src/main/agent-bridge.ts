@@ -34,12 +34,17 @@ import {
   type DesktopOperationBatchAuthorityResult,
 } from "@cjhyy/code-shell-core/internal";
 import { createDesktopWorkerHost } from "./worker-host-runtime.js";
+import {
+  linkAccountExecutionOptions,
+  type CaptureLinkAccountAccess,
+} from "./link-account-access.js";
 import { randomUUID } from "node:crypto";
 import { MainOutputPublisher, type MainOutputSource } from "./main-output-publisher.js";
 import { WorkerRunOwnership } from "./worker-run-ownership.js";
 import { createRequire } from "node:module";
 import { homedir } from "node:os";
 import { join } from "node:path";
+import { pathToFileURL } from "node:url";
 import { mkdirSync } from "node:fs";
 import { app, BrowserWindow, ipcMain } from "electron";
 import { desktopManagedRuntimeRoot } from "./managed-runtime-service.js";
@@ -387,6 +392,7 @@ export class AgentBridge implements PetStateBridge {
     private readonly quickChatForkLifecycle?: QuickChatForkLifecycle,
     private readonly workerAutomationCreate?: WorkerAutomationCreate,
     private readonly modelRequestSigner?: ModelRequestSigner,
+    private readonly captureLinkAccount?: CaptureLinkAccountAccess,
   ) {
     dlog("bridge", "ctor", { agentEntry, execPath: process.execPath });
     this.core = new WorkerBridgeCore({
@@ -401,12 +407,17 @@ export class AgentBridge implements PetStateBridge {
         }),
         ELECTRON_RUN_AS_NODE: "1",
         CODESHELL_AGENT_STDIO: "1",
+        CODE_SHELL_CREDENTIAL_ACCESS: "host",
         CODE_SHELL_MODEL_REQUEST_SIGNING: "host",
         CODE_SHELL_OPERATION_BATCH_ACCESS: "host",
         // This bridge handles workspace switches and authoritative Session runs.
         CODE_SHELL_WORKSPACE_ACCESS: "host",
         CODE_SHELL_CAPABILITY_MODULES: composeCapabilityModulesEnv(
-          { coding: codingModule, pet: petCapabilityModule },
+          {
+            coding: codingModule,
+            pet: petCapabilityModule,
+            links: pathToFileURL(join(app.getAppPath(), "out/main/link-provider-module.mjs")).href,
+          },
           readUserFeatureFlags(resolveNoRepoCwd()),
           () => import.meta.resolve("@cjhyy/code-shell-capability-optimization-lab/capability"),
         ),
@@ -1367,6 +1378,7 @@ export class AgentBridge implements PetStateBridge {
             id,
             result: await executeRemoteLinkAction(
               parsed.params as unknown as RemoteLinkActionRequest,
+              linkAccountExecutionOptions(this.captureLinkAccount),
             ),
           };
         } else if (parsed.method === "desktop/credentialMaterializeCookie") {
@@ -1425,6 +1437,8 @@ export class AgentBridge implements PetStateBridge {
             [
               "invalid_request",
               "unavailable",
+              "configuration_error",
+              "refresh_outcome_unknown",
               "reconnect",
               "changed",
               "forbidden",
@@ -1447,7 +1461,11 @@ export class AgentBridge implements PetStateBridge {
         workerEpoch !== this.localOAuthLinkEpoch
       )
         return;
-      if (parsed.method === "desktop/remoteLinkAction") {
+      if (
+        parsed.method === "desktop/remoteLinkAction" ||
+        parsed.method === "desktop/localOAuthLinkAction" ||
+        parsed.method === "desktop/mcpLinkAction"
+      ) {
         // The Host may have refreshed or invalidated this grant while executing.
         // Read the current store after settlement. Deliver it in the same reply
         // so its invalidation cannot cancel this request before the Worker has
@@ -1460,7 +1478,13 @@ export class AgentBridge implements PetStateBridge {
           // Status delivery is best effort. Preserve the action's original
           // result/error even if reading or sending its snapshot fails.
           try {
-            dlog("bridge", "remote_link.credential_snapshot_failed", {});
+            dlog(
+              "bridge",
+              parsed.method === "desktop/remoteLinkAction"
+                ? "remote_link.credential_snapshot_failed"
+                : "link_action.credential_snapshot_failed",
+              {},
+            );
           } catch {
             // Logging must not turn an already settled action into another error.
           }

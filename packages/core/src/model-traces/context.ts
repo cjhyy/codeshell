@@ -1,5 +1,6 @@
 import { AsyncLocalStorage } from "node:async_hooks";
 import { randomUUID } from "node:crypto";
+import { createNativeModelTraceChannel } from "./native-process.js";
 import type { CreateMessageOptions } from "../llm/types.js";
 import type { LLMResponse, TokenUsage } from "../types.js";
 import { currentUsageAttempt, currentUsageOwner } from "../cost-ledger/context.js";
@@ -834,7 +835,7 @@ export function recordExternalModelTrace(input: ExternalModelTraceInput): ModelT
           parameters: {},
           ...input.input,
         });
-        record.inputState = safe.state;
+        record.inputState = input.inputState === "truncated" ? "truncated" : safe.state;
         record.input = safe.value;
       } else if (previous?.input) {
         record.input = previous.input;
@@ -842,7 +843,7 @@ export function recordExternalModelTrace(input: ExternalModelTraceInput): ModelT
       }
       if (input.output) {
         const safe = sanitizeTraceValue(input.output);
-        record.outputState = safe.state;
+        record.outputState = input.outputState === "truncated" ? "truncated" : safe.state;
         record.output = safe.value;
       } else if (previous?.output) {
         record.output = previous.output;
@@ -865,7 +866,7 @@ export function recordExternalModelTrace(input: ExternalModelTraceInput): ModelT
       startedAt: record.startedAt,
       endedAt: record.endedAt,
       status: record.status,
-      coverage: "external-cli-input",
+      coverage: input.coverage ?? previous?.attempts[0]?.coverage ?? "external-cli-input",
       inputState: record.inputState,
       input: record.input,
       outputState: record.outputState,
@@ -913,6 +914,9 @@ export function recordExternalModelCall(input: ExternalModelCallInput): ModelTra
       output: input.output,
       error: input.error,
       usage: input.usage,
+      coverage: input.coverage,
+      inputState: input.inputState,
+      outputState: input.outputState,
     });
     if (record && record.status === "running") boundedSet(externalCallContexts, record.id, context);
     else if (input.id) externalCallContexts.delete(input.id);
@@ -920,4 +924,21 @@ export function recordExternalModelCall(input: ExternalModelCallInput): ModelTra
   } catch {
     return null;
   }
+}
+
+/** Write-only diagnostic channel for native model tools launched by an Agent shell. */
+export function createNativeModelTraceCollector(scope: ModelTraceContext) {
+  const inherited = contexts.getStore() ?? {};
+  let target: ReturnType<typeof targetForContext>;
+  try {
+    target = targetForContext(inherited);
+  } catch {
+    return undefined;
+  }
+  if (!target || !scope.workspacePath) return undefined;
+  return createNativeModelTraceChannel({
+    context: { ...inherited, ...scope, storageDir: target.store.storageDir },
+    source: inherited.source ?? `${target.source}-native-cli`,
+    record: recordExternalModelTrace,
+  });
 }

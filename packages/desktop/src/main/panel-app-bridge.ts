@@ -4,6 +4,7 @@ import {
   type Credential,
   resolvePanelAppBindingProjectPath,
   validateToolArgsStrict,
+  sessionsRoot,
 } from "@cjhyy/code-shell-core";
 import { acquireLockOnPath, acquireWorkspaceWriteLock } from "@cjhyy/code-shell-core/internal";
 import { isDeepStrictEqual } from "node:util";
@@ -44,6 +45,7 @@ import {
 } from "./panel-app-protocol.js";
 import {
   panelExecutionGate,
+  PanelModelTraceService,
   PanelToolJobService,
   PanelTaskCookieHost,
   taskCookieFromInput,
@@ -475,6 +477,9 @@ export class PanelAppBridge {
   private readonly workspaceWriteQueues = new Map<string, Promise<void>>();
   private readonly pendingAgentToolCalls = new Map<string, PendingAgentToolCall>();
   private readonly processService: PanelAppProcessService;
+  private readonly modelTraces = new PanelModelTraceService({
+    storageDir: join(sessionsRoot(), ".model-traces"),
+  });
   private readonly directoryBookmarks = desktopPanelDirectoryBookmarks(app.getPath("userData"));
   private readonly agentTaskService: PanelAppAgentTaskService;
   private mediaService?: PanelMediaService;
@@ -487,7 +492,10 @@ export class PanelAppBridge {
   private toolJobService?: PanelToolJobService;
   private taskCookieHost?: PanelTaskCookieHost;
   private nextToolOwner = -1;
-  private readonly toolOwners = new Map<number, { scope: ToolJobScope; appTitle: string }>();
+  private readonly toolOwners = new Map<
+    number,
+    { scope: ToolJobScope; appTitle: string; taskId: string }
+  >();
 
   constructor(private readonly options: PanelAppBridgeOptions) {
     setPanelAppResourceAuthorizer((resource, projectPath) =>
@@ -507,6 +515,27 @@ export class PanelAppBridge {
       return this.getResourceService().openRead(scope, id, request);
     });
     this.processService = new PanelAppProcessService({
+      modelTraces: this.modelTraces,
+      modelTraceOwner: (owner) => {
+        const task = this.toolOwners.get(owner.guestId);
+        if (task)
+          return {
+            appId: owner.appId,
+            revision: owner.revision,
+            workspacePath: task.scope.projectPath,
+            traceId: task.taskId,
+            taskId: task.taskId,
+          };
+        const binding = this.guests.get(owner.guestId);
+        if (!binding || binding.resource.descriptor.revision !== owner.revision) return undefined;
+        this.assertLiveProjectBinding(binding);
+        return {
+          appId: owner.appId,
+          revision: owner.revision,
+          workspacePath: binding.cwd ?? binding.projectPath,
+          sessionId: binding.context.sessionId,
+        };
+      },
       acquireExecution: (owner) => {
         const projectPath =
           this.toolOwners.get(owner.guestId)?.scope.projectPath ??
@@ -577,6 +606,7 @@ export class PanelAppBridge {
               "agent/run",
               {
                 task: input.prompt,
+                modelTraceSource: `panel:${input.owner.appId}`,
                 displayText: input.label,
                 clientMessageId: `panel-task:${input.owner.appId}:${input.sessionId}`,
                 sessionId: input.sessionId,
@@ -727,6 +757,7 @@ export class PanelAppBridge {
     await this.taskCookieHost?.shutdown();
     await this.mediaService?.shutdown();
     await this.resourceService?.shutdown();
+    this.modelTraces.closeAll();
   }
 
   registerGuest(
@@ -776,6 +807,7 @@ export class PanelAppBridge {
   }
 
   revokeGuest(guestId: number): void {
+    this.modelTraces.cancelOwner(`guest:${guestId}`);
     this.guests.get(guestId)?.bindController?.abort();
     for (const [controller, transfer] of this.resourceTransfers)
       if (transfer.guestId === guestId) controller.abort();
@@ -1251,6 +1283,8 @@ export class PanelAppBridge {
     binding.sensitiveSessionId ??= sessionId;
     binding.bucket = input.bucket;
     binding.tabId = input.tabId;
+    if (binding.cwd && (binding.cwd !== cwd || binding.context.sessionId !== sessionId))
+      this.modelTraces.cancelOwner(`guest:${binding.guest.id}`);
     binding.cwd = cwd;
     binding.lastBindInput = { ...input };
     binding.execution = {
@@ -1353,13 +1387,15 @@ export class PanelAppBridge {
       limits?.maxParamsBytes ??
       (method === "media.document.set" || method === "media.render" || method === "tasks.start"
         ? 2 * 1024 * 1024 + 8 * 1024
-        : method === "process.write"
-          ? 128 * 1024
-          : method === "workspace.writeText"
-            ? MAX_WORKSPACE_WRITE_BYTES * 6 + 8 * 1024
-            : method === "storage.set" || method === "storage.compareAndSet"
-              ? this.storageQuotaBytes() + 8 * 1024
-              : MAX_PARAMS_BYTES);
+        : method.startsWith("modelTraces.")
+          ? 256 * 1024
+          : method === "process.write"
+            ? 128 * 1024
+            : method === "workspace.writeText"
+              ? MAX_WORKSPACE_WRITE_BYTES * 6 + 8 * 1024
+              : method === "storage.set" || method === "storage.compareAndSet"
+                ? this.storageQuotaBytes() + 8 * 1024
+                : MAX_PARAMS_BYTES);
     if (jsonBytes(params) > paramsLimit) {
       throw new PanelBridgeError("PARAMS_TOO_LARGE", "Panel App params are too large");
     }
@@ -1720,7 +1756,7 @@ export class PanelAppBridge {
             binding.projectPath === job.scope.projectPath,
         );
         const appTitle = binding?.resource.descriptor.title ?? job.scope.appId;
-        this.toolOwners.set(guestId, { scope: job.scope, appTitle });
+        this.toolOwners.set(guestId, { scope: job.scope, appTitle, taskId: job.id });
         return { guestId, appId: job.scope.appId, appTitle, revision: job.scope.revision, send };
       },
       releaseOwner: (owner) => {
@@ -1994,6 +2030,25 @@ export class PanelAppBridge {
     if (method.startsWith("automations.") && this.options.automations?.conditional) {
       this.requirePermission(binding, "automations.manage");
       return this.conditionalPanelAutomation(binding, method, params);
+    }
+    if (method.startsWith("modelTraces.")) {
+      this.assertLiveProjectBinding(binding);
+      if (!this.options.isWorkspaceTrusted(binding.cwd ?? binding.projectPath))
+        throw new PanelBridgeError(
+          "PERMISSION_DENIED",
+          "Panel model observation requires a trusted workspace",
+        );
+      return this.modelTraces.call(
+        {
+          ownerKey: `guest:${binding.guest.id}`,
+          appId: binding.resource.descriptor.appId,
+          revision: binding.resource.descriptor.revision,
+          workspacePath: binding.cwd ?? binding.projectPath,
+          sessionId: binding.context.sessionId,
+        },
+        method,
+        params,
+      );
     }
     if (method.startsWith("tasks.")) return this.dispatchToolJobs(binding, method, params);
     if (method.startsWith("resources.")) {
@@ -3323,6 +3378,7 @@ export class PanelAppBridge {
           this.assertSessionBinding(binding);
           const outcome = await service.send(sessionId, {
             text: task.trim(),
+            modelTraceSource: `panel:${binding.resource.descriptor.appId}`,
             displayText,
             clientMessageId,
           });
@@ -3340,6 +3396,7 @@ export class PanelAppBridge {
             "agent/run",
             {
               task: task.trim(),
+              modelTraceSource: `panel:${binding.resource.descriptor.appId}`,
               displayText,
               clientMessageId,
               sessionId,

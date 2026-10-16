@@ -1,3 +1,4 @@
+import { linkConnectionMetadata } from "@cjhyy/code-shell-link";
 import { FIGMA_MCP_SERVER_URL, isFigmaMcpAction } from "@cjhyy/code-shell-link";
 import type { Credential, OAuthCredentialSecret } from "../credentials/types.js";
 import type { CredentialAccess, CredentialMetadata } from "../credentials/access.js";
@@ -63,9 +64,9 @@ export function isFigmaMcpCredential(
   return (
     credential.type === "oauth" &&
     credential.meta?.linkProvider === "figma" &&
-    String(credential.meta.linkExecutionBackend) === "mcp" &&
-    String(credential.meta.linkAuthSource) === "mcp-oauth" &&
-    credential.meta.linkExecutionRuntime === "local" &&
+    String(linkConnectionMetadata(credential.meta).linkExecutionBackend) === "mcp" &&
+    String(linkConnectionMetadata(credential.meta).linkAuthSource) === "mcp-oauth" &&
+    linkConnectionMetadata(credential.meta).linkExecutionRuntime === "local" &&
     credential.meta.mcpServerUrl === FIGMA_MCP_SERVER_URL
   );
 }

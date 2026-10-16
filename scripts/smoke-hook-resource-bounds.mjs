@@ -1,5 +1,6 @@
 /** Real compiled Node, synthetic near-bound source and 64 explicitly granted files. */
 import assert from "node:assert/strict";
+import { linkProviderModuleUrl } from "./fixtures/link-provider-module.mjs";
 import { createHash } from "node:crypto";
 import { spawnSync } from "node:child_process";
 import { mkdirSync, readFileSync, realpathSync, writeFileSync } from "node:fs";
@@ -56,6 +57,8 @@ const {
 } = await import("./fixtures/finite-hook-metrics.mjs");
 const coreUrl = pathToFileURL(join(process.cwd(), "packages/core/dist/index.js")).href;
 await instrumentFiniteSettings(coreUrl);
+const { installDefaultLinkProviders } = await import(linkProviderModuleUrl);
+installDefaultLinkProviders();
 const { createOperationHookHost } =
   await import("../packages/core/dist/links/operation-hook-host.js");
 const { createGithubOperationReader } =
@@ -91,6 +94,9 @@ const credential = {
     linkExecutionBackend: "remote",
     linkRemoteState: "connected",
     linkRemoteGrantId: "grant",
+    linkResourceGroups: [
+      { id: "repositories", items: [{ id: "fixture/repo", label: "Synthetic repository" }] },
+    ],
     linkLastVerifiedAt: "2026-10-09T00:00:00Z",
     linkCapabilityIds: ["github.get_repository"],
   },

@@ -1,5 +1,12 @@
 import React from "react";
-import { Check, ExternalLink, Loader2, ShieldCheck, type LucideIcon } from "lucide-react";
+import {
+  Check,
+  ChevronDown,
+  ExternalLink,
+  Loader2,
+  ShieldCheck,
+  type LucideIcon,
+} from "lucide-react";
 import type {
   LinkConnectionInput,
   LinkProviderView,
@@ -49,6 +56,10 @@ export function LinkConnectionDialog({
   onConnected: (connection?: MaskedLinkConnection) => void;
 }) {
   const { t, lang } = useT();
+  const [returnFocus] = React.useState(() => {
+    const element = typeof document !== "undefined" ? document.activeElement : null;
+    return element && "focus" in element ? (element as HTMLElement) : null;
+  });
   const designContext = input.methodId === "mcp";
   const requestId = React.useRef<string | undefined>(undefined);
   const api = window.codeshell.links;
@@ -72,6 +83,8 @@ export function LinkConnectionDialog({
   const availableModes = modes.filter((mode) => mode.available);
   const preferred = availableModes.find((mode) => mode.preferred) ?? availableModes[0];
   const [modeId, setModeId] = React.useState(preferred?.id);
+  const [advancedModes, setAdvancedModes] = React.useState(false);
+  const advancedModesId = React.useId();
   const [switching, setSwitching] = React.useState(false);
   const [openError, setOpenError] = React.useState("");
   const [installing, setInstalling] = React.useState(false);
@@ -196,7 +209,14 @@ export function LinkConnectionDialog({
   );
   return (
     <Dialog open onOpenChange={(open) => !open && close()}>
-      <DialogContent className="link-authorization-dialog w-[calc(100%-2rem)] max-h-[calc(100vh-2rem)] max-w-[480px] gap-0 overflow-y-auto rounded-2xl p-0">
+      <DialogContent
+        className="link-authorization-dialog w-[calc(100%-2rem)] max-h-[calc(100vh-2rem)] max-w-[480px] gap-0 overflow-y-auto rounded-2xl p-0"
+        onCloseAutoFocus={(event) => {
+          if (!returnFocus?.isConnected) return;
+          event.preventDefault();
+          returnFocus.focus({ preventScroll: true });
+        }}
+      >
         <DialogHeader className="flex-row items-start gap-4 space-y-0 p-6 pr-12 text-left sm:text-left">
           <div
             className={cn(
@@ -261,28 +281,45 @@ export function LinkConnectionDialog({
             </p>
           )}
           {!connected && availableModes.length > 1 && (
-            <div
-              className="flex flex-wrap gap-1 rounded-lg border border-border/60 bg-muted/35 p-1"
-              aria-label={t("ext.link.authorizationMethod")}
-            >
-              {availableModes.map((item) => (
-                <button
-                  type="button"
-                  key={item.id}
-                  aria-pressed={item.id === modeId}
-                  data-link-auth-mode={item.id}
-                  disabled={busy}
-                  className={cn(
-                    "min-h-8 min-w-0 flex-1 rounded-md px-3 py-1.5 text-xs transition-colors disabled:opacity-50",
-                    item.id === modeId
-                      ? "bg-background font-medium text-foreground shadow-sm"
-                      : "text-muted-foreground hover:text-foreground",
-                  )}
-                  onClick={() => void changeMode(item.id)}
-                >
-                  {item.label}
-                </button>
-              ))}
+            <div className="rounded-lg border border-border/60 p-3">
+              <button
+                type="button"
+                aria-expanded={advancedModes}
+                aria-controls={advancedModesId}
+                onClick={() => setAdvancedModes((open) => !open)}
+                className="flex w-full items-center justify-between gap-2 rounded-sm text-left text-xs font-medium text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+              >
+                {t("ext.link.directory.advancedSettings")}
+                <ChevronDown
+                  aria-hidden
+                  className={cn("size-3.5 transition-transform", advancedModes && "rotate-180")}
+                />
+              </button>
+              <div
+                id={advancedModesId}
+                hidden={!advancedModes}
+                className="mt-3 flex flex-wrap gap-1 rounded-lg bg-muted/35 p-1"
+                aria-label={t("ext.link.authorizationMethod")}
+              >
+                {availableModes.map((item) => (
+                  <button
+                    type="button"
+                    key={item.id}
+                    aria-pressed={item.id === modeId}
+                    data-link-auth-mode={item.id}
+                    disabled={busy}
+                    className={cn(
+                      "min-h-8 min-w-0 flex-1 rounded-md px-3 py-1.5 text-xs transition-colors disabled:opacity-50",
+                      item.id === modeId
+                        ? "bg-background font-medium text-foreground shadow-sm"
+                        : "text-muted-foreground hover:text-foreground",
+                    )}
+                    onClick={() => void changeMode(item.id)}
+                  >
+                    {item.label}
+                  </button>
+                ))}
+              </div>
             </div>
           )}
           <div className="flex items-start gap-3 rounded-xl border border-border/70 bg-muted/20 p-4 [&_.link-authorization-status]:py-0 [&_.link-authorization-status]:text-left [&_.link-authorization-step]:gap-3 [&_.link-authorization-step]:pt-0 [&_.link-authorization-step]:text-left">

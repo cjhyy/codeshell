@@ -1,3 +1,6 @@
+import { beforeAll as installHostFixture } from "bun:test";
+import { installTestLinkProviders } from "../../../../tests/helpers/link-providers.js";
+installHostFixture(installTestLinkProviders);
 import { afterEach, beforeEach, expect, test } from "bun:test";
 import { createServer } from "node:http";
 import { mkdtempSync, rmSync, readFileSync, writeFileSync } from "node:fs";
@@ -163,10 +166,14 @@ test("PKCE exchange discovers the selected account and restricts action shapes w
   expect(new URL(attempt.authorizationUrl).searchParams.get("code_challenge_method")).toBe("S256");
   expect(requests[0]?.body.code_verifier).toBe(attempt.verifier);
   expect(credential.meta).toMatchObject({
+    recordSchemaVersion: 2,
+    linkRecipeId: "broker-oauth",
     linkAccountLabel: "alice",
     linkRemoteConnectionId: connectionId,
     agentExposable: false,
   });
+  for (const field of ["linkExecutionBackend", "linkExecutionRuntime", "linkAuthSource"])
+    expect(credential.meta).not.toHaveProperty(field);
   expect(JSON.stringify(credential.meta)).not.toContain("DOWNSTREAM");
   expect(await executeRemoteLinkAction(input())).toEqual({
     repositories: [{ id: 1, full_name: "owner/repo" }],
@@ -214,7 +221,7 @@ test("uncertain rotation persists reconnect status and never resends the old ref
   clock += 16 * 60_000;
   tokenMode = "lost";
   await expect(executeRemoteLinkAction(input(), { now: () => clock })).rejects.toMatchObject({
-    code: "reconnect",
+    code: "refresh_outcome_unknown",
   });
   expect(store.resolve("remote-github")?.meta?.linkRemoteState).toBe("reconnect");
   tokenMode = "ok";
@@ -350,7 +357,7 @@ test("a narrowed token cannot execute removed actions and cannot expand again", 
   clock += 16 * 60_000;
   scopes.push("github:get_issue");
   await expect(executeRemoteLinkAction(input(), { now: () => clock })).rejects.toMatchObject({
-    code: "reconnect",
+    code: "refresh_outcome_unknown",
   });
 });
 

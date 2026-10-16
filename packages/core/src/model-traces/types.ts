@@ -19,6 +19,8 @@ export interface ModelTraceOutput {
   thinking?: string;
   toolCalls?: unknown[];
   stopReason?: string;
+  /** Structured responses or media result metadata; binary payloads are omitted. */
+  data?: unknown;
 }
 export interface ModelTraceAttempt {
   id: string;
@@ -81,7 +83,11 @@ export interface ModelTraceListQuery {
   search?: string;
   traceId?: string;
   sessionId?: string;
+  /** Restrict to calls with no actual session identity, including when trace IDs coincide. */
+  withoutSession?: boolean;
   workspacePath?: string;
+  /** Host-only read scopes; transport query validators must reject this field. */
+  workspaceScopes?: ReadonlyArray<{ workspacePath: string; sourcePrefix?: string }>;
   model?: string;
   provider?: string;
   purpose?: string;
@@ -92,6 +98,28 @@ export interface ModelTraceListQuery {
 }
 export interface ModelTracePage {
   items: ModelTraceSummary[];
+  nextCursor?: string;
+  total: number;
+}
+/** One real session, or one independently attributed trace when no session exists. */
+export interface ModelTraceSessionSummary {
+  key: string;
+  sessionId?: string;
+  /** Present only for calls that have no session identity. */
+  traceId?: string;
+  latestRequestId: string;
+  latestTraceId: string;
+  startedAt: number;
+  updatedAt: number;
+  callCount: number;
+  traceCount: number;
+  sources: string[];
+  models: string[];
+  runningCount: number;
+  failedCount: number;
+}
+export interface ModelTraceSessionPage {
+  items: ModelTraceSessionSummary[];
   nextCursor?: string;
   total: number;
 }
@@ -153,6 +181,10 @@ export interface ExternalModelTraceInput extends ModelTraceContext {
   output?: ModelTraceOutput;
   error?: string;
   usage?: TokenUsage;
+  /** Host-selected observable boundary; external CLIs retain their narrower default. */
+  coverage?: "logical-input" | "external-cli-input";
+  inputState?: ModelTraceContentState;
+  outputState?: ModelTraceContentState;
 }
 
 /** Capability observer: execution attribution and storage are inherited from Core. */

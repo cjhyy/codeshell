@@ -99,6 +99,8 @@ export type MobileClientEvent =
   | { type: "pair.complete"; token: string; name: string; secretHash: string }
   | {
       type: "chat.send";
+      /** Observation source label only; no storage or workspace authority. */
+      modelTraceSource?: string;
       text: string;
       sessionId?: string;
       clientMessageId?: string;

@@ -1,3 +1,4 @@
+import { linkConnectionMetadata } from "@cjhyy/code-shell-link";
 import { constants, closeSync, fstatSync, openSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { OperationReviewStore } from "../operations/review-store.js";
@@ -125,7 +126,7 @@ export function createLinkOperationReviewStore(
         !plan ||
         !connection?.hasSecret ||
         connection.meta?.linkProvider !== "github" ||
-        connection.meta.linkExecutionBackend === "cli" ||
+        linkConnectionMetadata(connection.meta).linkExecutionBackend === "cli" ||
         !store.provePlan(sessionId, original.receipt, plan)
       )
         return unavailable();

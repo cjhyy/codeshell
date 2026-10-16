@@ -562,6 +562,12 @@ export class CredentialStore {
     return this.listWithStatus(scope).credentials;
   }
 
+  /** Host maintenance of one exact layer; project shadowing must not hide a user record. */
+  listLayerWithStatus(scope: CredentialScope): { credentials: Credential[]; readable: boolean } {
+    const result = this.readGuarded(scope);
+    return { credentials: result.file.credentials, readable: result.readable };
+  }
+
   /** Preserve read failures so diagnostics can distinguish unknown state from an empty store. */
   listWithStatus(scope: "full" | "project" = "full"): {
     credentials: Credential[];

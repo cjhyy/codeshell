@@ -39,7 +39,7 @@ mock.module(join(main, "cookie-credential-browser.ts"), () => ({
   restoreCookieCredentialToBrowser: () => {},
 }));
 mock.module(join(main, "credential-access-service.ts"), () => ({
-  buildCredentialSnapshot: () => ({ revision: 1, entries: [] }),
+  buildCredentialSnapshot: (_cwds, revision) => ({ revision, entries: [] }),
   materializeCredentialCookieForWorker: () => {},
   resolveCredentialValueForWorker: () => {},
 }));
@@ -113,6 +113,8 @@ const resolved = [];
 let afterResolve;
 bridge.localOAuthLinkActions = new Map();
 bridge.localOAuthLinkEpoch = 0;
+bridge.credentialSnapshotRevision = 0;
+bridge.credentialSnapshotCwds = new Set();
 bridge.core = { sendLine: (line) => replies.push(JSON.parse(line)) };
 bridge.oauthAccessResolver = async (request) => {
   resolved.push(request);
@@ -192,6 +194,7 @@ await waitFor(() => replies.length === 5);
 assert.equal(dedicated.length, 1);
 assert.equal(resolved.at(-1).id, figma.id);
 assert.equal(replies[4].result.content[0].text, "selected design context");
+assert.equal(replies[4].credentialSnapshot.revision, 1);
 assert(!JSON.stringify(replies[4]).includes("host-access-only"));
 
 deliver("cancelled", "desktop/mcpLinkAction", {
@@ -207,6 +210,7 @@ await waitFor(() => replies.length === 6);
 assert.equal(blockedSignal.aborted, true);
 assert.equal(bridge.localOAuthLinkActions.size, 0);
 assert.match(replies[5].error.message, /Cancelled/);
+assert.equal(replies[5].credentialSnapshot.revision, 2);
 assert(!JSON.stringify(replies[5]).includes("host-access-only"));
 
 // A response from the prior worker generation must not reach its replacement.
@@ -224,6 +228,12 @@ await new Promise((resolve) => setTimeout(resolve, 0));
 assert.equal(replies.length, 6);
 assert.equal(bridge.localOAuthLinkActions.size, 0);
 
+// Local OAuth preflight failures carry the same ordered Host state receipt.
+deliver("local-invalid", "desktop/localOAuthLinkAction", {});
+await waitFor(() => replies.length === 7);
+assert(replies[6].error);
+assert.equal(replies[6].credentialSnapshot.revision, 3);
+
 console.log(
   JSON.stringify({
     figmaTokenDenied: true,
@@ -232,5 +242,6 @@ console.log(
     dedicatedHostResolverPreserved: true,
     dedicatedActionCancelled: true,
     staleWorkerReplyDiscarded: true,
+    atomicStateReplies: true,
   }),
 );

@@ -470,7 +470,7 @@ export function TaskInboxPage({ onOpenTaskInboxRecord, onOpenTrace }: TaskInboxP
                             )}
                             {record.artifacts.length > 0 && (
                               <ul
-                                aria-label={t("auto.runs.artifacts")}
+                                aria-label={t("taskInbox.artifacts")}
                                 className="space-y-1 text-xs text-muted-foreground"
                               >
                                 {record.artifacts.slice(0, 8).map((artifact, index) => (

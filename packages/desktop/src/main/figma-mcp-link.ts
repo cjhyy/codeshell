@@ -389,17 +389,22 @@ export function createFigmaMcpLinkAdapter(options: {
                 if (!capabilities.length)
                   throw new McpOAuthVerificationError(stage, "no_read_capabilities");
                 signal?.throwIfAborted();
+                const {
+                  linkExecutionRuntime: _runtime,
+                  linkExecutionBackend: _backend,
+                  linkAuthSource: _source,
+                  ...bindingMeta
+                } = candidate.meta ?? {};
                 return {
                   ...candidate,
                   label: input.label,
                   autoUseByAI: false,
                   meta: {
-                    ...candidate.meta,
+                    ...bindingMeta,
                     linkProvider: "figma",
                     linkConnectionMethod: "mcp",
-                    linkExecutionRuntime: "local",
-                    linkExecutionBackend: "mcp",
-                    linkAuthSource: "mcp-oauth",
+                    recordSchemaVersion: 2,
+                    linkRecipeId: "mcp-oauth",
                     linkOAuthState: "connected",
                     agentExposable: false,
                     mcpServerName: "figma",

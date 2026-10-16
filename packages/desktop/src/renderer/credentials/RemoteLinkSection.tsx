@@ -13,6 +13,7 @@ import { Input } from "@/components/ui/input";
 import { useT } from "../i18n/I18nProvider";
 import { LinkConnectionDialog } from "./LinkConnectionDialog";
 import { LinkConnectionRow } from "./LinkProviderCard";
+import { LinkAccountMenu, LinkPresentationContext, useLinkPrimaryAction } from "./LinkPresentation";
 
 /** Keep the snapshot above filters so connected accounts can always be discovered. */
 export function useRemoteLinkSnapshot(cwd: string, { automatic = true } = {}) {
@@ -189,12 +190,12 @@ export function RemoteProviderSection({
     } catch (cause) {
       if (alive.current) setError(linkError(cause));
     } finally {
-      if (alive.current) {
+      try {
+        // A submitted write may finish after its app dialog is closed.
         await reload();
-        if (alive.current) {
-          setBusy(false);
-          onChanged();
-        }
+      } finally {
+        if (alive.current) setBusy(false);
+        onChanged();
       }
     }
   };
@@ -213,6 +214,13 @@ export function RemoteProviderSection({
   const connected = connections.filter((item) => item.status === "connected");
   const editableConnected = connected.filter((item) => item.editable);
   const available = modes.some((mode) => mode.available);
+  const primary = useLinkPrimaryAction("remote-link", {
+    onClick: () => start(),
+    disabled: busy || Boolean(authorization) || !available,
+  });
+  const presentation = React.useContext(LinkPresentationContext);
+  const showTechnical = !primary || presentation?.advanced;
+  const inline = embedded || primary;
   const failed = error || loadError;
   const catalogState = snapshot?.remoteCatalog?.state;
   const unavailableHint = loading
@@ -222,8 +230,8 @@ export function RemoteProviderSection({
       : catalogState === "unavailable" || catalogState === "stale"
         ? t("ext.link.directory.catalogUnavailable")
         : t("ext.link.directory.unavailableHint");
-  const Management = embedded ? InlineManagement : Dialog;
-  const ManagementContent = embedded ? "div" : DialogContent;
+  const Management = inline ? InlineManagement : Dialog;
+  const ManagementContent = inline ? "div" : DialogContent;
   const feedback = (
     <>
       {failed && (
@@ -246,82 +254,100 @@ export function RemoteProviderSection({
   return (
     <div className="space-y-3">
       <LinkConnectionRow
+        hidden={Boolean(
+          primary &&
+          available &&
+          !failed &&
+          !notice &&
+          !snapshot?.remoteCleanupPending &&
+          !(
+            providerId === "figma" &&
+            connected.length > 0 &&
+            connected.every((item) => !item.account?.resources.length)
+          ),
+        )}
         data-link-method-provider={providerId}
         data-link-runtime="server"
         title={
-          providerId === "figma"
-            ? t("ext.link.directory.basicReading")
-            : t("ext.link.directory.browserConnection")
+          primary
+            ? t("ext.link.directory.manageConnection")
+            : providerId === "figma"
+              ? t("ext.link.directory.basicReading")
+              : t("ext.link.directory.browserConnection")
         }
-        technical={providerId === "figma" ? "API" : undefined}
+        technical={!primary && providerId === "figma" ? "API" : undefined}
         description={
-          providerId === "figma"
-            ? t("ext.link.directory.basicReadingDescription")
-            : provider?.description[lang]
+          primary
+            ? undefined
+            : providerId === "figma"
+              ? t("ext.link.directory.basicReadingDescription")
+              : provider?.description[lang]
         }
       >
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <div className="flex items-center gap-2">
-            {connected.length > 0 ? (
-              <>
-                <span className="inline-flex items-center gap-1 text-xs text-status-ok">
-                  <Check className="size-3.5" aria-hidden />
-                  {t("ext.link.remoteAvailable")}
-                </span>
-                {providerId === "figma" && editableConnected.length > 0 && (
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    disabled={busy || !available}
-                    onClick={() =>
-                      editableConnected.length === 1
-                        ? addFile(editableConnected[0]!)
-                        : setManaging(true)
-                    }
-                  >
-                    {t("ext.link.remoteAddFile")}
-                  </Button>
-                )}
-                {!embedded && (
-                  <Button size="sm" variant="outline" onClick={() => setManaging(true)}>
-                    <Settings2 className="size-3.5" aria-hidden />
-                    {t("ext.link.remoteManage")}
-                  </Button>
-                )}
-              </>
-            ) : connections.length > 0 ? (
-              <Button
-                size="sm"
-                variant="outline"
-                hidden={embedded}
-                onClick={() => setManaging(true)}
-              >
-                {t(
-                  connections.some((connection) => connection.status === "unavailable")
-                    ? "ext.link.directory.serviceUnavailable"
-                    : "ext.link.remoteReconnectNeeded",
-                )}
-              </Button>
-            ) : (
-              <Button
-                size="sm"
-                disabled={busy || loading || (!available && !loadError)}
-                onClick={() => (loadError ? void reload() : start())}
-              >
-                {t(
-                  loading
-                    ? "ext.link.directory.checking"
-                    : loadError
-                      ? "ext.link.retry"
-                      : busy
-                        ? "ext.link.remoteConnecting"
-                        : "ext.link.remoteConnect",
-                )}
-              </Button>
-            )}
+        {!primary && (
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div className="flex items-center gap-2">
+              {connected.length > 0 ? (
+                <>
+                  <span className="inline-flex items-center gap-1 text-xs text-status-ok">
+                    <Check className="size-3.5" aria-hidden />
+                    {t("ext.link.remoteAvailable")}
+                  </span>
+                  {providerId === "figma" && editableConnected.length > 0 && (
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      disabled={busy || !available}
+                      onClick={() =>
+                        editableConnected.length === 1
+                          ? addFile(editableConnected[0]!)
+                          : setManaging(true)
+                      }
+                    >
+                      {t("ext.link.remoteAddFile")}
+                    </Button>
+                  )}
+                  {!inline && (
+                    <Button size="sm" variant="outline" onClick={() => setManaging(true)}>
+                      <Settings2 className="size-3.5" aria-hidden />
+                      {t("ext.link.remoteManage")}
+                    </Button>
+                  )}
+                </>
+              ) : connections.length > 0 ? (
+                <Button
+                  size="sm"
+                  variant="outline"
+                  hidden={inline}
+                  onClick={() => setManaging(true)}
+                >
+                  {t(
+                    connections.some((connection) => connection.status === "unavailable")
+                      ? "ext.link.directory.serviceUnavailable"
+                      : "ext.link.remoteReconnectNeeded",
+                  )}
+                </Button>
+              ) : (
+                <Button
+                  size="sm"
+                  disabled={busy || loading || (!available && !loadError)}
+                  onClick={() => (loadError ? void reload() : start())}
+                >
+                  {t(
+                    loading
+                      ? "ext.link.directory.checking"
+                      : loadError
+                        ? "ext.link.retry"
+                        : busy
+                          ? "ext.link.remoteConnecting"
+                          : "ext.link.remoteConnect",
+                  )}
+                </Button>
+              )}
+            </div>
           </div>
-        </div>
-        {connected.length > 0 && (
+        )}
+        {!primary && connected.length > 0 && (
           <p className="mt-3 truncate text-xs text-muted-foreground">
             {[...new Set(connected.map((item) => item.account?.label ?? item.label))].join(" · ")}
           </p>
@@ -339,10 +365,10 @@ export function RemoteProviderSection({
       <Management open={managing} onOpenChange={setManaging}>
         <ManagementContent
           className={
-            embedded ? "space-y-3 pb-4" : "max-h-[85vh] max-w-md overflow-y-auto rounded-2xl"
+            inline ? "space-y-3 py-4" : "max-h-[85vh] max-w-md overflow-y-auto rounded-2xl"
           }
         >
-          {!embedded && (
+          {!inline && (
             <DialogHeader>
               <DialogTitle>
                 {t("ext.link.authorizationManageTitle", { name: providerName })}
@@ -360,7 +386,7 @@ export function RemoteProviderSection({
               key={connection.id}
               data-remote-link={connection.id}
               className={
-                embedded
+                inline
                   ? "space-y-3 border-b border-border/60 pb-4 last:border-b-0"
                   : "space-y-3 rounded-xl border border-border/70 p-3"
               }
@@ -428,25 +454,57 @@ export function RemoteProviderSection({
                       {t("ext.link.remoteAddFile")}
                     </Button>
                   )}
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    disabled={busy}
-                    onClick={() => {
-                      setRename(connection.id);
-                      setNewName(connection.label);
-                    }}
-                  >
-                    {t("ext.link.remoteRename")}
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    disabled={busy || !available}
-                    onClick={() => start(connection)}
-                  >
-                    {t("ext.link.remoteReconnect")}
-                  </Button>
+                  {(!primary || connection.status !== "connected") && (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      disabled={busy || !available}
+                      onClick={() => start(connection)}
+                    >
+                      {t("ext.link.remoteReconnect")}
+                    </Button>
+                  )}
+                  <LinkAccountMenu label={t("ext.link.directory.accountActions")}>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      disabled={busy}
+                      onClick={() => {
+                        setRename(connection.id);
+                        setNewName(connection.label);
+                      }}
+                    >
+                      {t("ext.link.remoteRename")}
+                    </Button>
+                    {primary && connection.status === "connected" && (
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        disabled={busy || !available}
+                        onClick={() => start(connection)}
+                      >
+                        {t("ext.link.remoteReconnect")}
+                      </Button>
+                    )}
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      disabled={busy || !available}
+                      onClick={() => start()}
+                    >
+                      {t("ext.link.remoteAdd")}
+                    </Button>
+                    {disconnect !== connection.id && (
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        disabled={busy}
+                        onClick={() => setDisconnect(connection.id)}
+                      >
+                        {t("ext.link.remoteDisconnect")}
+                      </Button>
+                    )}
+                  </LinkAccountMenu>
                   {disconnect === connection.id ? (
                     <>
                       <Button
@@ -474,27 +532,33 @@ export function RemoteProviderSection({
                         {t("ext.link.remoteCancel")}
                       </Button>
                     </>
-                  ) : (
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      disabled={busy}
-                      onClick={() => setDisconnect(connection.id)}
-                    >
-                      {t("ext.link.remoteDisconnect")}
-                    </Button>
-                  )}
+                  ) : null}
                 </div>
               ) : (
                 <p className="text-xs text-muted-foreground">{t("ext.link.remoteReadOnly")}</p>
               )}
             </article>
           ))}
-          <Button variant="outline" disabled={busy || !available} onClick={() => start()}>
-            {t("ext.link.remoteAdd")}
-          </Button>
+          {connections.length === 0 ? (
+            !primary && (
+              <Button variant="outline" disabled={busy || !available} onClick={() => start()}>
+                {t("ext.link.remoteAdd")}
+              </Button>
+            )
+          ) : !connections.some((connection) => connection.editable) ? (
+            <LinkAccountMenu label={t("ext.link.directory.accountActions")}>
+              <Button
+                variant="ghost"
+                size="sm"
+                disabled={busy || !available}
+                onClick={() => start()}
+              >
+                {t("ext.link.remoteAdd")}
+              </Button>
+            </LinkAccountMenu>
+          ) : null}
           {snapshot?.remoteServer && (
-            <details className="text-xs text-muted-foreground">
+            <details hidden={!showTechnical} className="text-xs text-muted-foreground">
               <summary className="cursor-pointer">{t("ext.link.remoteServiceDetails")}</summary>
               <p className="mt-2 break-all">{snapshot.remoteServer.issuer}</p>
             </details>

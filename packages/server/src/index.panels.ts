@@ -39,3 +39,5 @@ export * from "./panels/task-cookie-host.js";
 
 export * from "./panels/execution-gate.js";
 export * from "./panels/package-mutation.js";
+
+export * from "./panels/model-traces.js";

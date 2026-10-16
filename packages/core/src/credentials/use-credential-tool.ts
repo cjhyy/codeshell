@@ -1,3 +1,4 @@
+import { linkConnectionMetadata } from "@cjhyy/code-shell-link";
 /**
  * UseCredential 工具(凭证模块第二期 §3-§5)。
  *
@@ -52,8 +53,8 @@ function isAgentExposableCredential(
   if (credential.meta?.agentExposable === false) return false;
   return !(
     credential.type === "link" &&
-    credential.meta?.linkExecutionRuntime === "local" &&
-    credential.meta.linkProvider
+    linkConnectionMetadata(credential.meta).linkExecutionRuntime === "local" &&
+    credential.meta?.linkProvider
   );
 }
 

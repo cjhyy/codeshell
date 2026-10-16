@@ -151,9 +151,10 @@ function allProviders() {
 
 test("all ten reviewed providers retain their own declared action/scope intersection", async () => {
   const providers = allProviders();
-  expect(providers.flatMap((provider) => provider.actions)).toHaveLength(38);
+  expect(providers.flatMap((provider) => provider.actions)).toHaveLength(39);
   expect(providers.find((provider) => provider.id === "figma")?.actions).toEqual([
     "get_file",
+    "read_design_content",
     "get_comments",
     "get_nodes",
     "get_images",
@@ -339,4 +340,20 @@ test("network and timeout failures never expose raw causes", async () => {
   } finally {
     globalThis.fetch = original;
   }
+});
+
+test("legacy Figma services do not advertise design-content authority under get_file", async () => {
+  const provider = {
+    ...github(),
+    id: "figma",
+    actions: ["get_file", "get_comments"],
+    scopes: ["figma:get_file", "figma:get_comments"],
+  };
+  const [legacy] = await catalog({ version: 1, providers: [provider] }, 200, true);
+  expect(legacy).toEqual({
+    id: "figma",
+    actions: ["get_file", "get_comments"],
+    scopes: ["figma:get_file", "figma:get_comments"],
+  });
+  expect(legacy!.actions).not.toContain("read_design_content");
 });

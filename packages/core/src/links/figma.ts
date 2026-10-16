@@ -2,17 +2,23 @@ import { asRecord, pick, LinkProviderResponseTooLargeError } from "./http.js";
 
 export const FIGMA_RESPONSE_BYTES = 8 * 1024 * 1024;
 export const FIGMA_RESPONSE_TOO_LARGE =
-  "Figma response exceeded the 8 MiB limit. Retry get_file with a smaller depth or ids, " +
+  "Figma response exceeded the 8 MiB limit. Retry read_design_content with a smaller depth or ids, " +
   "then use get_nodes for selected node IDs (at most 50 per request). No partial design data was returned.";
 
 export const FIGMA_ACTIONS = [
   "get_file",
+  "read_design_content",
   "get_comments",
   "get_nodes",
   "get_images",
   "get_image_fills",
 ] as const;
-export const FIGMA_NEW_ACTIONS = ["get_nodes", "get_images", "get_image_fills"] as const;
+export const FIGMA_NEW_ACTIONS = [
+  "read_design_content",
+  "get_nodes",
+  "get_images",
+  "get_image_fills",
+] as const;
 
 export class UnsupportedFigmaFileTypeError extends Error {
   readonly code = "unsupported_file_type";
@@ -28,7 +34,7 @@ export class FigmaContentUnavailableError extends Error {
   readonly code = "content_unavailable";
   constructor() {
     super(
-      "Figma get_file returned no document content. The Link service must implement Figma document reads; a pages-only summary cannot satisfy this request.",
+      "Figma read_design_content returned no document content. The Link service must implement Figma document reads; a pages-only summary cannot satisfy this request.",
     );
     this.name = "FigmaContentUnavailableError";
   }
@@ -109,14 +115,14 @@ export function figmaActionParameters(
 ): Record<string, unknown> {
   if (!(FIGMA_ACTIONS as readonly string[]).includes(action))
     throw new Error("Unknown Figma action");
-  const content = action === "get_file" || action === "get_nodes";
+  const content = action === "read_design_content" || action === "get_nodes";
   const images = action === "get_images";
   const allowed = [
     "file_url_or_key",
     "file_key",
     ...(content || images ? ["ids", "node_ids", "version"] : []),
     ...(content ? ["depth", "geometry", "plugin_data"] : []),
-    ...(action === "get_file" ? ["branch_data", "full"] : []),
+    ...(action === "read_design_content" ? ["branch_data", "full"] : []),
     ...(images ? ["scale", "format", ...IMAGE_FLAGS] : []),
   ];
   if (Object.keys(params).some((key) => !allowed.includes(key)))
@@ -128,7 +134,7 @@ export function figmaActionParameters(
     has("file_url_or_key") ? params.file_url_or_key : params.file_key,
   );
   const result: Record<string, unknown> = { file_url_or_key: file.fileKey };
-  if (action === "get_file" && has("full")) {
+  if (action === "read_design_content" && has("full")) {
     if (typeof params.full !== "boolean") throw new Error("Figma full must be a boolean");
     if (has("depth")) throw new Error("Supply only one Figma full or depth");
     if (params.full) result.full = true;
@@ -148,7 +154,7 @@ export function figmaActionParameters(
   }
   if (content) {
     if (params.depth !== undefined) result.depth = number(params.depth, "depth", 1, 100, true);
-    else if (action === "get_file" && result.full !== true) result.depth = 2;
+    else if (action === "read_design_content" && result.full !== true) result.depth = 2;
     if (params.geometry !== undefined) {
       if (params.geometry !== "paths") throw new Error("Figma geometry must be paths");
       result.geometry = "paths";
@@ -170,7 +176,7 @@ export function figmaActionParameters(
   }
   for (const key of [
     ...(images ? IMAGE_FLAGS : []),
-    ...(action === "get_file" ? ["branch_data"] : []),
+    ...(action === "read_design_content" ? ["branch_data"] : []),
   ]) {
     if (params[key] !== undefined) {
       if (typeof params[key] !== "boolean") throw new Error(`Figma ${key} must be a boolean`);
@@ -187,6 +193,7 @@ export function figmaActionEndpoint(action: string, params: Record<string, unkno
       ? `/v1/images/${key}`
       : `/v1/files/${key}${action === "get_nodes" ? "/nodes" : action === "get_image_fills" ? "/images" : action === "get_comments" ? "/comments" : ""}`;
   const url = new URL(path, "https://api.figma.com");
+  if (action === "get_file") url.searchParams.set("depth", "1");
   for (const [key, value] of Object.entries(params))
     if (key !== "file_url_or_key" && key !== "full") url.searchParams.set(key, String(value));
   return url;
@@ -228,9 +235,19 @@ export function normalizeFigmaActionResult(
 ): Record<string, unknown> {
   const record = asRecord(raw);
   if (!record) throw new Error("Invalid Figma result");
-  if (action === "get_file" || action === "get_nodes") {
+  if (action === "get_file") {
+    const document = asRecord(record.document);
+    const pages = document ? document.children : record.pages;
+    if (!Array.isArray(pages)) throw new Error("Figma summary is missing pages");
+    return boundedResult({
+      ...pick(record, ["name", "lastModified", "version", "role"]),
+      pages: pages.slice(0, 100).map((page) => pick(page, ["id", "name", "type"])),
+      truncated: record.truncated === true || pages.length > 100,
+    });
+  }
+  if (action === "read_design_content" || action === "get_nodes") {
     const result = pick(record, [...FILE_FIELDS, ...(action === "get_nodes" ? ["nodes"] : [])]);
-    if (action === "get_file") {
+    if (action === "read_design_content") {
       const document = asRecord(record.document);
       if (document) {
         result.pages = Array.isArray(document.children)

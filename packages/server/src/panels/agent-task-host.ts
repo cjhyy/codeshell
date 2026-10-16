@@ -431,6 +431,7 @@ export function createPanelAgentTaskHost(options: PanelAgentTaskHostOptions = {}
                 cwd: scope.cwd,
                 bucket: owner.bucket,
                 task: input.prompt,
+                modelTraceSource: `panel:${scope.appId}`,
                 displayText: input.label,
                 clientMessageId: `panel-task:${scope.appId}:${input.sessionId}`,
                 behaviorMode: "isolatedTask",

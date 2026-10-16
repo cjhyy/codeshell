@@ -290,9 +290,6 @@ function App() {
   >();
   const [collapsedProjects, setCollapsedProjects] = useState<Set<string>>(new Set());
   const [revealedSessionIds, setRevealedSessionIds] = useState<Record<string, string>>({});
-  /** Transient: a run to pre-select when jumping into the runs view (e.g. from
-   *  the 自动化 detail's 「查看最近运行」 button). Not persisted in view state. */
-  const [runsInitialRunId, setRunsInitialRunId] = useState<string | null>(null);
   const [traceTarget, setTraceTarget] = useState<{ sessionId?: string; traceId?: string }>({});
   const openTrace = useCallback(
     (sessionId?: string, traceId?: string) => {
@@ -1303,7 +1300,7 @@ function App() {
     setPanelByBucket,
     activeBucketRef,
     setView,
-    setRunsInitialRunId,
+    onOpenTrace: openTrace,
   });
 
   const [handleAddProject, newProjectDialog] = useNewProjectDialog(handleAddLocalProject, {
@@ -1347,7 +1344,7 @@ function App() {
       openPetTarget: handleOpenPetTarget,
       petSnapshot: petState.projection,
       openPetPage,
-      setRunsInitialRunId,
+      onOpenTrace: openTrace,
     });
 
   const { onSessionRenamed, onSessionDeleted } = useSessionHistorySync({
@@ -2367,7 +2364,6 @@ function App() {
               ) : registeredPageRender ? (
                 <React.Suspense fallback={<PageLoading label={t("ext.common.loading")} />}>
                   {registeredPageRender({
-                    runsInitialRunId,
                     tracesInitialSessionId: traceTarget.sessionId,
                     tracesInitialTraceId: traceTarget.traceId,
                     onOpenTrace: openTrace,

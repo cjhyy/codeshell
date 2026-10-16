@@ -81,7 +81,6 @@ describe("session history page route", () => {
       root.render(
         <React.Suspense fallback={null}>
           {route.render!({
-            runsInitialRunId: null,
             activeProjectPath: null,
             onNewSession: () => {
               created++;
@@ -118,7 +117,6 @@ describe("session history page route", () => {
       root.render(
         <React.Suspense fallback={null}>
           {PAGE_REGISTRY.get("sessions")!.render!({
-            runsInitialRunId: null,
             activeProjectPath: null,
             onOpenSession: (id) => {
               opened.push(id);

@@ -101,6 +101,7 @@ export interface SpawnBackgroundOptions {
    * project env as a one-shot command.
    */
   shellEnv?: Record<string, string>;
+  diagnosticPipe?: { data(chunk: Uint8Array): void; finish(status: "failed" | "cancelled"): void };
 }
 
 export type SpawnResult = { ok: true; shellId: string } | { ok: false; error: string };
@@ -194,6 +195,7 @@ export class BackgroundShellManager {
     const baseEnv =
       opts.sandbox && opts.sandbox.name !== "off" ? buildSandboxEnv() : { ...process.env };
     const env = mergeShellEnv(baseEnv, opts.shellEnv);
+    if (opts.diagnosticPipe && opts.sandbox?.name === "bwrap") args.unshift("--preserve-fds", "1");
 
     // Own backend resources even when spawn throws or returns a no-pid child.
     // A child's error need not end its process or pipes; only close releases
@@ -221,9 +223,40 @@ export class BackgroundShellManager {
         // branch) to reap the tree. windowsHide stops a console flashing up.
         detached: process.platform !== "win32",
         windowsHide: true,
-        stdio: ["ignore", "pipe", "pipe"],
+        stdio: opts.diagnosticPipe
+          ? ["ignore", "pipe", "pipe", "pipe"]
+          : ["ignore", "pipe", "pipe"],
       });
+      if (opts.diagnosticPipe) {
+        const pipe = child.stdio[3] as import("node:stream").Readable | undefined;
+        pipe?.on("data", (chunk: Buffer) => {
+          try {
+            opts.diagnosticPipe!.data(chunk);
+          } catch {
+            /* Observer only. */
+          }
+        });
+        pipe?.on("error", () => {
+          try {
+            opts.diagnosticPipe!.finish("failed");
+          } catch {
+            /* Observer only. */
+          }
+        });
+        child.once("close", (_code, signal) => {
+          try {
+            opts.diagnosticPipe!.finish(signal ? "cancelled" : "failed");
+          } catch {
+            /* Observer only. */
+          }
+        });
+      }
     } catch (err) {
+      try {
+        opts.diagnosticPipe?.finish("failed");
+      } catch {
+        /* Observer only. */
+      }
       cleanupOnce();
       logBackgroundSpawnProfile(file, args, elapsedProfileMs(profileStartedAt), "spawn_failed");
       return { ok: false, error: `Failed to spawn background shell: ${(err as Error).message}` };

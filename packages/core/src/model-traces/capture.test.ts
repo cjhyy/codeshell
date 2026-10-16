@@ -62,7 +62,8 @@ describe("model trace collection at the provider boundary", () => {
       return fn(JSON.parse(String(init?.body)), ++number);
     }) as typeof fetch;
   };
-  test("default capture is metadata-only even for hidden, billing-disabled calls without a UsageOwner", async () => {
+  test("explicit metadata-only capture covers hidden, billing-disabled calls without a UsageOwner", async () => {
+    store.setConfig({ captureContent: false });
     const llm = await client(mock(() => Response.json(response())));
     const result = await llm.createMessage(
       options({ billingEnabled: false, requestVisible: false, usagePurpose: "title" }),
@@ -79,6 +80,20 @@ describe("model trace collection at the provider boundary", () => {
     expect(trace.attempts[0].httpStatus).toBe(200);
     expect(JSON.stringify(trace)).not.toContain("private");
     expect(JSON.stringify(trace)).not.toContain("answer");
+  });
+  test("default recording includes Prompt, output and temporary auxiliary calls", async () => {
+    const llm = await client(mock(() => Response.json(response())));
+    await withModelTraceContext({ ephemeral: true }, () =>
+      llm.createMessage(
+        options({ billingEnabled: false, requestVisible: false, usagePurpose: "title" }),
+      ),
+    );
+    const trace = only();
+    expect(trace.input?.systemPrompt).toBe("private system");
+    expect(trace.input?.messages).toEqual([{ role: "user", content: "private input" }]);
+    expect(trace.output?.text).toBe("answer");
+    expect(trace.attempts[0].inputState).toBe("recorded");
+    expect(trace.attempts[0].coverage).toBe("provider-wire");
   });
   test("captures final provider messages and parameters with images, credentials and sensitive tool results removed", async () => {
     store.setConfig({ captureContent: true });
@@ -133,6 +148,7 @@ describe("model trace collection at the provider boundary", () => {
     expect(trace.output?.text).toBe("answer");
   });
   test("settings change for the same live client and preserve explicit workspace/run ownership", async () => {
+    store.setConfig({ captureContent: false });
     const llm = await client(mock(() => Response.json(response())));
     const ledger = new UsageLedger();
     const run = () =>
@@ -247,8 +263,8 @@ describe("model trace collection at the provider boundary", () => {
     expect((trace.attempts[0].input as any).system[0].text).toBe("private system");
     expect(trace.attempts[0].firstTokenAt).toBeDefined();
   });
-  test("ephemeral context propagates to hidden billing-disabled helpers and requires its own persistence opt-in", async () => {
-    store.setConfig({ captureContent: true });
+  test("ephemeral opt-out propagates to hidden billing-disabled helpers", async () => {
+    store.setConfig({ captureContent: true, includeEphemeral: false });
     const llm = await client(mock(() => Response.json(response())));
     await withModelTraceContext({ ephemeral: true }, () =>
       llm.createMessage(options({ billingEnabled: false, usagePurpose: "aux_summary" })),
@@ -327,6 +343,7 @@ describe("model trace collection at the provider boundary", () => {
     expect(count).toBe(1);
   });
   test("enabling content or ephemeral persistence during a call only affects later calls", async () => {
+    store.setConfig({ captureContent: false, includeEphemeral: false });
     let finish!: () => void;
     const ready = Promise.withResolvers<void>();
     const llm = await client(
@@ -378,6 +395,7 @@ describe("model trace collection at the provider boundary", () => {
     expect(JSON.stringify(only())).not.toContain("AFTER_OPT_OUT");
   });
   test("tool events link to the exact model call even before streamed tool-start delivery", async () => {
+    store.setConfig({ captureContent: false });
     let parentId: string | undefined;
     const llm = await client(
       mock(
@@ -513,7 +531,7 @@ describe("model trace collection at the provider boundary", () => {
     expect(ledger.summary({ scope: "session", sessionId: "old-session" }).requests).toBe(1);
   });
   test("the narrow capability observer pins initial scope and ignores runtime scope injection", () => {
-    store.setConfig({ captureContent: true });
+    store.setConfig({ captureContent: true, includeEphemeral: false });
     const first = withModelTraceContext(
       { workspacePath: "/first", sessionId: "first-session", runId: "first-run", ephemeral: true },
       () =>

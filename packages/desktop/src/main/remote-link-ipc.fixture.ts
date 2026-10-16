@@ -99,6 +99,7 @@ function fixture() {
   };
   registerRemoteLinkIpc({
     ipcMain: { handle: (name, handler) => void handlers.set(name, handler) },
+    captureAccount: () => ({ signal: new AbortController().signal, current: () => {} }),
     requireRendererProjectPath: async (path) => {
       projectChecks++;
       return resolveProject(path);

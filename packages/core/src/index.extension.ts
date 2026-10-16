@@ -171,3 +171,42 @@ export type { PermissionRule, PermissionMode } from "./types.js";
 export { ApprovalRouter } from "./tool-system/permission.js";
 
 export { runIsolatedInstruction } from "./skills/isolated-instruction-run.js";
+
+// Transitional Link provider extension seam. HTTP implementations live in Server;
+// pure provider helpers remain here until their remaining Core consumers migrate.
+export { registerLocalLinkProviders, getLocalLinkProvider } from "./links/providers.js";
+export type {
+  LocalLinkProviderSpec,
+  LocalLinkProviderSummary,
+  LocalLinkActionSpec,
+  LocalLinkActionContext,
+  LocalLinkIdentity,
+} from "./links/types.js";
+export {
+  asArray,
+  asRecord,
+  firstString,
+  intParam,
+  linkRequestJson,
+  linkRequestStatus,
+  pathParam,
+  pathSegmentParam,
+  pick,
+  stringParam,
+} from "./links/http.js";
+export {
+  GITHUB_SOURCE_ACTIONS,
+  githubSourceEndpoint,
+  normalizeGithubSourceResult,
+  slackSourceParams,
+  normalizeSlackSourceResult,
+} from "./links/source-reads.js";
+export { githubIssueStateParameters } from "./links/github-issue-state.js";
+export { githubRepositoryParameters, githubSetStarredParameters } from "./links/github-star.js";
+export {
+  FIGMA_RESPONSE_BYTES,
+  FIGMA_RESPONSE_TOO_LARGE,
+  figmaActionEndpoint,
+  figmaActionParameters,
+  normalizeFigmaActionResult,
+} from "./links/figma.js";

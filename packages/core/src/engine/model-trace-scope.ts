@@ -2,19 +2,25 @@ import type { SessionState } from "../types.js";
 import { isEphemeralSessionState } from "../session/session-manager.js";
 import { recordModelTraceEvent, withModelTraceContext } from "../model-traces/context.js";
 import type { EngineResult } from "./types.js";
+import type { EngineRunOptions } from "./run-types.js";
 
 /** One execution scope covers model calls, tools and its complete lifecycle. */
 export function withEngineRunTrace(
-  options: { state: SessionState; cwd: string; runId: string; signal?: AbortSignal },
+  state: SessionState,
+  cwd: string,
+  runId: string,
+  options: EngineRunOptions | undefined,
   operation: () => EngineResult | Promise<EngineResult>,
 ): Promise<EngineResult> {
-  const { state, cwd, runId, signal } = options;
+  const signal = options?.signal;
+  const source = options?.modelTraceSource;
   return withModelTraceContext(
     {
       workspacePath: cwd,
       sessionId: state.sessionId,
       runId,
       ephemeral: isEphemeralSessionState(state),
+      ...(source && /^[A-Za-z0-9][A-Za-z0-9:._/-]{0,127}$/.test(source) ? { source } : {}),
     },
     async () => {
       const event = {

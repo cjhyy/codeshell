@@ -1,4 +1,6 @@
 import type { IncomingMessage, ServerResponse } from "node:http";
+import type { ModelTraceListQuery } from "@cjhyy/code-shell-core/internal";
+import { resolve } from "node:path";
 import {
   createModelTraceHistory,
   ModelTraceRequestError,
@@ -23,7 +25,11 @@ function queryFromUrl(url: URL) {
     if (values.length !== 1)
       throw new ModelTraceRequestError(400, "Duplicate model trace query field");
     const value = values[0]!;
-    if (["limit", "since", "until"].includes(key)) {
+    if (key === "withoutSession") {
+      if (value !== "true" && value !== "false")
+        throw new ModelTraceRequestError(400, "Invalid model trace withoutSession");
+      query[key] = value === "true";
+    } else if (["limit", "since", "until"].includes(key)) {
       if (!value.trim()) throw new ModelTraceRequestError(400, "Invalid numeric model trace query");
       query[key] = Number(value);
     } else query[key] = value;
@@ -36,9 +42,20 @@ export function createModelTraceHttp(options: {
   storageDir: string;
   workspacePath: string;
   isAuthorized: (request: IncomingMessage) => boolean | Promise<boolean>;
+  /** Recomputed for each authenticated request and immediately before responding. */
+  resolveWorkspaceScopes?: (
+    request: IncomingMessage,
+  ) => ModelTraceListQuery["workspaceScopes"] | Promise<ModelTraceListQuery["workspaceScopes"]>;
   store?: ModelTraceReader;
 }) {
-  const history = createModelTraceHistory(options);
+  const resolveScopes = async (request: IncomingMessage) => {
+    const scopes = await options.resolveWorkspaceScopes?.(request);
+    return scopes?.map((scope) => ({ ...scope, workspacePath: resolve(scope.workspacePath) }));
+  };
+  const fingerprint = (scopes: ModelTraceListQuery["workspaceScopes"]) =>
+    JSON.stringify(
+      scopes?.map((scope) => [scope.workspacePath, scope.sourcePrefix ?? null]).sort(),
+    );
   return {
     async handle(request: IncomingMessage, response: ServerResponse): Promise<boolean> {
       const url = new URL(request.url ?? "/", "http://localhost");
@@ -50,8 +67,11 @@ export function createModelTraceHttp(options: {
           response.setHeader("allow", "GET");
           throw new ModelTraceRequestError(405, "Model history is read-only on remote clients");
         }
+        const workspaceScopes = await resolveScopes(request);
+        const history = createModelTraceHistory({ ...options, workspaceScopes });
         let result: unknown;
         if (url.pathname === ROOT) result = history.list(queryFromUrl(url));
+        else if (url.pathname === `${ROOT}/sessions`) result = history.sessions(queryFromUrl(url));
         else if (url.pathname === `${ROOT}/config`) {
           if (Object.keys(queryFromUrl(url)).length)
             throw new ModelTraceRequestError(400, "Configuration queries are not supported");
@@ -71,6 +91,10 @@ export function createModelTraceHttp(options: {
           if (!result) throw new ModelTraceRequestError(404, "Model record not found");
         }
         // Authentication may have been revoked during asynchronous Host validation.
+        if (!(await options.isAuthorized(request)))
+          throw new ModelTraceRequestError(401, "Model history authorization expired");
+        if (fingerprint(await resolveScopes(request)) !== fingerprint(workspaceScopes))
+          throw new ModelTraceRequestError(401, "Model history workspace authorization changed");
         if (!(await options.isAuthorized(request)))
           throw new ModelTraceRequestError(401, "Model history authorization expired");
         json(response, 200, result);

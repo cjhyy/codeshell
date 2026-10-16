@@ -4,6 +4,7 @@ import type { IncomingMessage, ServerResponse } from "node:http";
 import { isAbsolute } from "node:path";
 import { join } from "node:path";
 import { createModelTraceHttp } from "../model-trace-http.js";
+import type { ModelTraceListQuery } from "@cjhyy/code-shell-core/internal";
 import { createHubConfiguration, HubConfigurationError } from "../hub/configuration.js";
 import { createHubFiles } from "../hub/files.js";
 import { createHubMcpConfiguration } from "../hub/mcp-configuration.js";
@@ -36,6 +37,11 @@ export interface DesktopWebApiOptions {
     input: string | undefined,
     deviceId: string,
   ) => string | undefined | Promise<string | undefined>;
+  /** Related diagnostic scopes are resolved by Desktop's project authority, per device. */
+  resolveModelTraceScopes?: (
+    cwd: string,
+    deviceId: string,
+  ) => ModelTraceListQuery["workspaceScopes"] | Promise<ModelTraceListQuery["workspaceScopes"]>;
   /**
    * The existing Desktop AgentBridge owns this run/configuration admission lock.
    * Reject active runs with status 409, hold the lock through write + hot reload,
@@ -300,6 +306,11 @@ export function createDesktopWebApi(options: DesktopWebApiOptions): DesktopWebHt
       storageDir: join(options.sessionRootDir, ".model-traces"),
       workspacePath: cwd,
       isAuthorized: authorized,
+      resolveWorkspaceScopes: async (request) => {
+        const identity = identities.get(request);
+        if (!identity || !(await authorized(request))) return undefined;
+        return options.resolveModelTraceScopes?.(cwd, identity.session.deviceId);
+      },
     });
     return {
       configuration,

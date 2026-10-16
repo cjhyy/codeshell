@@ -1,3 +1,4 @@
+import { linkConnectionMetadata } from "@cjhyy/code-shell-link";
 import { z } from "zod";
 import { createHash } from "node:crypto";
 import { credentialAccessScope, getCredentialAccess } from "../credentials/access.js";
@@ -51,7 +52,8 @@ export function isLinkSourceAvailable(
     const remote = isRemoteLinkCredential(credential);
     if (
       !remote &&
-      (credential.type !== "link" || credential.meta?.linkExecutionRuntime !== "local")
+      (credential.type !== "link" ||
+        linkConnectionMetadata(credential.meta).linkExecutionRuntime !== "local")
     )
       return false;
     if (remote && credential.meta?.linkRemoteState !== "connected") return false;
@@ -63,7 +65,7 @@ export function isLinkSourceAvailable(
     )
       return false;
     if (
-      credential.meta?.linkAuthSource === "browser-oauth" &&
+      linkConnectionMetadata(credential.meta).linkAuthSource === "browser-oauth" &&
       (!credential.meta.linkCapabilityIds?.length ||
         !(
           credential.oauthStatus?.state === "valid" ||

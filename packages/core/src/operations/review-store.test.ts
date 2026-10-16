@@ -207,6 +207,15 @@ test("same-ID recreation has a new incarnation; old intents cannot be replayed o
   expect(() => f.ledger().prepare(f.plan)).toThrow("immutable");
   expect(
     f.ledger().claim(f.ledger().prepare({ ...f.plan, intentId: "fresh-incarnation" }).id).claimed,
+  ).toBe(false);
+  // A recreated Session cannot erase resource uncertainty; a different proven target can proceed.
+  expect(
+    f
+      .ledger()
+      .claim(
+        f.ledger().prepare({ ...f.plan, intentId: "different-target", target: "another-target" })
+          .id,
+      ).claimed,
   ).toBe(true);
 });
 
@@ -341,7 +350,7 @@ test("unbound callers cannot bypass bound uncertainty or borrow an incarnation's
   expect(bound.claim(planned.id).claimed).toBe(true);
 });
 
-test("unbound/bound barriers prevent actual adapter sends; only a new proven incarnation permits a fresh intent", async () => {
+test("new incarnations cannot bypass resource uncertainty; different proven targets remain independent", async () => {
   for (const legacy of [false, true]) {
     const f = fixture();
     f.unknown(undefined, legacy);
@@ -372,7 +381,13 @@ test("unbound/bound barriers prevent actual adapter sends; only a new proven inc
         { ...f.plan, intentId: "new-incarnation-intent" },
         adapter,
       );
-      expect(fresh.state).toBe("verified");
+      expect(fresh.state).toBe("blocked");
+      expect(sends).toBe(0);
+      const unrelated = await new OperationController(f.ledger()).run(
+        { ...f.plan, intentId: "new-incarnation-other-target", target: "another-target" },
+        adapter,
+      );
+      expect(unrelated.state).toBe("verified");
       expect(sends).toBe(1);
     }
   }

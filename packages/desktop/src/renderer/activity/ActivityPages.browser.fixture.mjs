@@ -25,7 +25,6 @@ import { AppMainView } from "./app/AppShell";
 import { LogsView } from "./logs/LogsView";
 import { ApprovalsView } from "./approvals/ApprovalsView";
 import { SessionsView } from "./sessions/SessionsView";
-import { RunsView } from "./runs/RunsView";
 import { TaskInboxPage } from "./task-inbox/TaskInboxPage";
 import { I18nProvider } from "./i18n/I18nProvider";
 const root = createRoot(document.getElementById("root"));
@@ -37,7 +36,7 @@ const history = Array.from({ length: 75 }, (_, i) => ({ envelope: envelope("hist
 const sessions = Array.from({ length: 120 }, (_, i) => ({ id: "session-" + i, title: "Session " + i, file: "/fixture/" + i, size: 1024, createdAt: 1800000000000, updatedAt: 1800000000000 + i }));
 const run = { runId: "run-original", objective: "Original run", status: "completed", cwd: "/original/project", createdAt: 1800000000000, updatedAt: 1800000000010, startedAt: 1800000000000, finishedAt: 1800000000010, sessionId: "original-session", error: null, summary: "Run completed", model: null, provider: null, durationMs: 10, usage: null, attemptCount: 1, latestCheckpointId: null, latestApprovalId: null, tags: [], metadata: {} };
 window.codeshell = {
-  modelTraces: { list: async () => ({items:[], total:0}), get: async () => null, getConfig: async () => ({enabled:true,captureContent:false,includeEphemeral:false,retentionDays:7}), setConfig: async (patch) => ({enabled:true,captureContent:false,includeEphemeral:false,retentionDays:7,...patch}) },
+  modelTraces: { sessions: async () => ({items:[], total:0}), list: async () => ({items:[], total:0}), get: async () => null, getConfig: async () => ({enabled:true,captureContent:true,includeEphemeral:true,retentionDays:7}), setConfig: async (patch) => ({enabled:true,captureContent:true,includeEphemeral:true,retentionDays:7,...patch}) },
   tailLog: async (bucket, limit) => {
     window.fixture.calls.push(["tail", bucket, limit]);
     if (window.fixture.logMode === "error") throw new Error("Owned log failure");
@@ -62,7 +61,7 @@ function App() {
         window.fixture.calls.push(["decide", env.requestId]);
         if (window.fixture.failApproval) throw new Error("Owned approval failure");
         setQueue([]);
-      }} /> : page === "sessions" ? <SessionsView onOpenSession={async id => { window.fixture.calls.push(["open", id]); }} /> : page === "runs" ? <RunsView initialRunId={"run-original"} /> : <TaskInboxPage onOpenTaskInboxRecord={async () => {}} />}
+      }} /> : page === "sessions" ? <SessionsView onOpenSession={async id => { window.fixture.calls.push(["open", id]); }} /> : <TaskInboxPage onOpenTaskInboxRecord={async () => {}} />}
     </AppMainView>
   </div>;
 }
@@ -184,17 +183,18 @@ try {
 
       const routes =
         lang === "zh"
-          ? ["执行观测", "后台工作", "会话管理", "审批记录", "诊断日志", "旧版运行记录"]
+          ? ["执行观测", "后台工作", "会话管理", "审批记录", "诊断日志"]
           : [
               "Execution traces",
               "Background work",
               "Conversations",
               "Approvals",
               "Diagnostic logs",
-              "Legacy runs",
             ];
       // Use the actual navigation labels from the translated production tree.
       const navButtons = await nav.getByRole("button").all();
+      assert.equal(navButtons.length, 5, "Only current activity pages are reachable");
+      assert.deepEqual(await nav.getByRole("button").allTextContents(), routes);
       for (let index = 0; index < navButtons.length; index += 1) {
         const button = navButtons[index];
         const label = await button.textContent();

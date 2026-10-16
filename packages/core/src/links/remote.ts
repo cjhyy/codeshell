@@ -1,3 +1,4 @@
+import { linkConnectionMetadata } from "@cjhyy/code-shell-link";
 import { createHash, randomBytes } from "node:crypto";
 import { CredentialStore } from "../credentials/store.js";
 import type { Credential } from "../credentials/types.js";
@@ -85,6 +86,8 @@ export class RemoteLinkError extends Error {
     readonly code:
       | "invalid_request"
       | "unavailable"
+      | "configuration_error"
+      | "refresh_outcome_unknown"
       | "reconnect"
       | "changed"
       | "forbidden"
@@ -102,6 +105,8 @@ export class RemoteLinkError extends Error {
       {
         invalid_request: "远程 Link 请求无效。",
         unavailable: "无法连接 Link 服务，请稍后重试。",
+        configuration_error: "Link 服务配置或刷新请求有误，请修正配置后重试；无需重新授权。",
+        refresh_outcome_unknown: "Link 刷新可能已消费令牌，无法安全重试，请重新连接。",
         reconnect: "Link 授权失效或刷新结果不明，请重新连接。",
         changed: "Link 连接已改变，请重新选择。",
         forbidden: "这个 Link 授权不允许该操作或资源。",
@@ -318,6 +323,30 @@ async function request(
       void response.body?.cancel().catch(() => {});
       if (maxResponseBytes === FIGMA_RESPONSE_BYTES && response.status === 413)
         throw new RemoteLinkError("response_too_large", { httpStatus, brokerErrorCode });
+      if (execution?.stage === "token_refresh") {
+        // These broker OAuth rejections precede getRefreshToken/revokeToken.
+        // Do not broaden this to other 4xx: invalid_scope, for example, can be
+        // emitted after the rotating refresh token has already been consumed.
+        const rejectedBeforeConsumption =
+          (response.status === 400 || response.status === 401) &&
+          [
+            "invalid_request",
+            "invalid_client",
+            "unauthorized_client",
+            "unsupported_grant_type",
+          ].includes(brokerErrorCode ?? "");
+        const revoked =
+          (response.status === 400 || response.status === 401) &&
+          ["invalid_grant", "grant_revoked", "connection_revoked"].includes(brokerErrorCode ?? "");
+        throw new RemoteLinkError(
+          rejectedBeforeConsumption
+            ? "configuration_error"
+            : revoked
+              ? "reconnect"
+              : "refresh_outcome_unknown",
+          { httpStatus, brokerErrorCode },
+        );
+      }
       throw new RemoteLinkError(
         response.status === 400 && execution?.stage === "action"
           ? "invalid_request"
@@ -546,8 +575,8 @@ export async function completeRemoteLinkAuthorization(
     meta: {
       linkProvider: providerId,
       linkConnectionMethod: "remote-link",
-      linkExecutionRuntime: "server",
-      linkExecutionBackend: "remote",
+      recordSchemaVersion: 2,
+      linkRecipeId: "broker-oauth",
       agentExposable: false,
       linkRemoteIssuer: config.issuer,
       linkRemoteConnectionId: connectionId,
@@ -598,8 +627,8 @@ export async function revokeRemoteLinkAuthorization(credential: Credential): Pro
 export function isRemoteLinkCredential(value: Pick<Credential, "type" | "meta">): boolean {
   return (
     value.type === "oauth" &&
-    value.meta?.linkExecutionRuntime === "server" &&
-    value.meta.linkExecutionBackend === "remote"
+    linkConnectionMetadata(value.meta).linkExecutionRuntime === "server" &&
+    linkConnectionMetadata(value.meta).linkExecutionBackend === "remote"
   );
 }
 export interface RemoteLinkActionRequest {
@@ -878,7 +907,23 @@ export async function executeRemoteLinkAction(
             writeState(marked, "connected", updated);
           } catch (error) {
             if (error instanceof RemoteLinkError && error.code === "changed") throw error;
-            writeState(marked, "reconnect");
+            // A definite rejection before consumption leaves the same refresh
+            // token usable after the configuration is corrected. Every other
+            // unsuccessful rotation stays durably non-replayable, including a
+            // successful response whose replacement could not be validated.
+            const code =
+              error instanceof RemoteLinkError && error.code === "configuration_error"
+                ? "configuration_error"
+                : error instanceof RemoteLinkError &&
+                    error.code === "reconnect" &&
+                    (error.httpStatus === 400 || error.httpStatus === 401) &&
+                    ["invalid_grant", "grant_revoked", "connection_revoked"].includes(
+                      error.brokerErrorCode ?? "",
+                    )
+                  ? "reconnect"
+                  : "refresh_outcome_unknown";
+            if (code === "configuration_error") writeState(marked, "connected", original);
+            else writeState(marked, "reconnect");
             const diagnostic =
               error instanceof RemoteLinkError
                 ? {
@@ -887,8 +932,8 @@ export async function executeRemoteLinkAction(
                     reason: error.reason,
                   }
                 : {};
-            report({ stage: "token_refresh", outcome: "failed", code: "reconnect", ...diagnostic });
-            throw new RemoteLinkError("reconnect", diagnostic);
+            report({ stage: "token_refresh", outcome: "failed", code, ...diagnostic });
+            throw new RemoteLinkError(code, diagnostic);
           }
         })
         .finally(() => pendingRefreshes.delete(key));

@@ -50,7 +50,8 @@
   "bin": {
     "code-shell-serve": "./dist/bin/code-shell-serve.js",
     "code-shell-settings-recovery": "./dist/bin/code-shell-settings-recovery.js",
-    "code-shell-cloud-account": "./dist/bin/code-shell-cloud-account.js"
+    "code-shell-cloud-account": "./dist/bin/code-shell-cloud-account.js",
+    "code-shell-link-cleanup": "./dist/bin/code-shell-link-cleanup.js"
   },
   "files": [
     "dist"

@@ -17,8 +17,8 @@ describe("CredentialsPage", () => {
         </DialogProvider>
       </ToastProvider>,
     );
-    expect(html).toContain("Cookie");
-    expect(html).toContain("Permission Token");
+    expect(html).toContain("网站登录");
+    expect(html).toContain("API 密钥");
     expect(html).toContain("Link");
     expect(html).toContain("沟通渠道");
     // Cookie tab's login form proves it's the default-rendered tab.

@@ -21,7 +21,7 @@ import {
   type ProtocolRequestHandler,
 } from "./dispatch.js";
 import type { Transport } from "./transport.js";
-import { handleCancelRequest, handleSteerRequest, runGoalOptions } from "./server-run-controls.js";
+import { handleCancelRequest, handleSteerRequest, runOptions } from "./server-run-controls.js";
 import { deliverAsyncUserAnswer } from "./async-user-answer.js";
 import {
   type RpcRequest,
@@ -1807,7 +1807,7 @@ export class AgentServer {
         }
         start.signal.throwIfAborted();
         const run = session.enqueueTurn(params.task, {
-          ...runGoalOptions(params, () => session.getGoal()),
+          ...runOptions(params, () => session.getGoal()),
           cwd: params.cwd,
           workspaceContext: params.workspaceContext,
           displayText: displayText || undefined,
@@ -1985,7 +1985,7 @@ export class AgentServer {
         sessionId: params.sessionId ?? "",
       });
       const result = await this.legacyEngine!.run(params.task, {
-        ...runGoalOptions(params, () =>
+        ...runOptions(params, () =>
           params.sessionId ? this.legacyEngine!.getGoal(params.sessionId) : undefined,
         ),
         cwd: params.cwd,

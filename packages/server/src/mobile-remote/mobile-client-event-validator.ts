@@ -34,6 +34,9 @@ export function parseMobileClientEvent(value: unknown): MobileClientEvent | unde
       valid =
         boundedOptionalEmptyString(event.text, MAX_MESSAGE_LENGTH) &&
         optionalBoundedString(event.sessionId, MAX_ID_LENGTH) &&
+        (event.modelTraceSource === undefined ||
+          (typeof event.modelTraceSource === "string" &&
+            /^panel:[a-z][a-z0-9-]{0,63}$/.test(event.modelTraceSource))) &&
         optionalBoundedString(event.clientMessageId, MAX_ID_LENGTH) &&
         optionalAttachments(event.attachments);
       break;

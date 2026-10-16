@@ -1,5 +1,6 @@
 /** Actual finite resources → compiled Core reader. Explicit local Docker only. */
 import assert from "node:assert/strict";
+import { linkProviderModuleUrl } from "./fixtures/link-provider-module.mjs";
 import { createHash } from "node:crypto";
 import { spawn, spawnSync } from "node:child_process";
 import {
@@ -79,6 +80,8 @@ writeFileSync(join(evidence, "preimport-guard.json"), JSON.stringify(guardReceip
 const coreUrl = pathToFileURL(join(process.cwd(), "packages/core/dist/index.js")).href;
 const { createOperationHookHost } =
   await import("../packages/core/dist/links/operation-hook-host.js");
+const { installDefaultLinkProviders } = await import(linkProviderModuleUrl);
+installDefaultLinkProviders();
 const { createGithubOperationReader } =
   await import("../packages/core/dist/links/operation-reader.js");
 const { setDefaultCredentialAccess } = await import("../packages/core/dist/credentials/access.js");
@@ -116,6 +119,9 @@ const credential = {
     linkExecutionBackend: "remote",
     linkRemoteState: "connected",
     linkRemoteGrantId: "grant",
+    linkResourceGroups: [
+      { id: "repositories", items: [{ id: "fixture/repo", label: "Synthetic repository" }] },
+    ],
     linkLastVerifiedAt: "2026-10-09T00:00:00Z",
     linkCapabilityIds: ["github.get_repository"],
   },

@@ -1,10 +1,15 @@
+import { linkConnectionMetadata } from "@cjhyy/code-shell-link";
 import { randomUUID } from "node:crypto";
 import type { ToolContext } from "../tool-system/context.js";
 import type { CredentialMetadata } from "../credentials/access.js";
 import type { OperationReceipt } from "../operations/ledger.js";
 import { OperationFailure } from "../operations/controller.js";
 import { boundToolResult } from "../tool-system/bound-tool-result.js";
-import { githubOperationPlan, githubRecoveryInput } from "./operation-recovery.js";
+import {
+  githubOperationPlan,
+  githubRecoveryInput,
+  GITHUB_OPERATION_CONFLICT_SCOPE,
+} from "./operation-recovery.js";
 import { asRecord } from "./http.js";
 import {
   githubIssueIdentity,
@@ -22,7 +27,8 @@ export async function verifiedGithubUpdateIssue(options: {
 }): Promise<{ receipt: OperationReceipt; data: unknown }> {
   const { ctx, connection, assertConnected } = options;
   if (!ctx.operations || !ctx.executeBoundTool) throw new OperationFailure("unsupported");
-  if (connection.meta?.linkExecutionBackend === "cli") throw new OperationFailure("unsupported");
+  if (linkConnectionMetadata(connection.meta).linkExecutionBackend === "cli")
+    throw new OperationFailure("unsupported");
   const params = githubIssueStateParameters(options.params);
   const repositoryTarget = { owner: params.owner, repo: params.repo };
   const target = { ...repositoryTarget, issue_number: params.issue_number };
@@ -68,6 +74,7 @@ export async function verifiedGithubUpdateIssue(options: {
       params,
     ),
     {
+      conflictScope: GITHUB_OPERATION_CONFLICT_SCOPE,
       recoveryInput: (phase) =>
         phase === "prepared"
           ? githubRecoveryInput(ctx, connection, { repositoryId: repositoryId!, issueId: issueId! })

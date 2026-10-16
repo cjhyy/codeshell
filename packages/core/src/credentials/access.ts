@@ -1,3 +1,4 @@
+import { linkConnectionMetadata } from "@cjhyy/code-shell-link";
 import { existsSync, readdirSync, rmSync, statSync, writeFileSync } from "node:fs";
 import { randomUUID } from "node:crypto";
 import { tmpdir } from "node:os";
@@ -128,7 +129,7 @@ export interface CredentialSnapshot {
   entries: CredentialSnapshotEntry[];
 }
 
-/** Host metadata and its remote Action outcome arrive as one ordered update. */
+/** Host metadata and its Link Action outcome arrive as one ordered update. */
 export interface RemoteLinkActionReply extends RpcResponse {
   credentialSnapshot?: CredentialSnapshot;
 }
@@ -165,16 +166,20 @@ export function createIpcCredentialAccess(
   // The Host can still finish an already-sent Action after the calling task
   // cancels or times out. Keep only bounded, short-lived receipt IDs so that
   // its current status reaches other tasks without reviving the old request.
-  const abandonedRemoteReplies = new Map<string, number>();
+  const isStateAction = (method: string) =>
+    ["desktop/remoteLinkAction", "desktop/localOAuthLinkAction", "desktop/mcpLinkAction"].includes(
+      method,
+    );
+  const abandonedStateReplies = new Map<string, number>();
   const rememberAbandonedReply = (id: string, method: string) => {
-    if (method !== "desktop/remoteLinkAction") return;
+    if (!isStateAction(method)) return;
     const now = Date.now();
-    for (const [key, expiresAt] of abandonedRemoteReplies) {
-      if (expiresAt <= now) abandonedRemoteReplies.delete(key);
+    for (const [key, expiresAt] of abandonedStateReplies) {
+      if (expiresAt <= now) abandonedStateReplies.delete(key);
     }
-    if (abandonedRemoteReplies.size >= 128)
-      abandonedRemoteReplies.delete(abandonedRemoteReplies.keys().next().value!);
-    abandonedRemoteReplies.set(id, now + 60_000);
+    if (abandonedStateReplies.size >= 128)
+      abandonedStateReplies.delete(abandonedStateReplies.keys().next().value!);
+    abandonedStateReplies.set(id, now + 60_000);
   };
 
   const applySnapshot = (value: unknown) => {
@@ -210,8 +215,8 @@ export function createIpcCredentialAccess(
     const id = String(msg.id);
     const waiter = pending.get(id);
     if (!waiter) {
-      const expiresAt = abandonedRemoteReplies.get(id);
-      abandonedRemoteReplies.delete(id);
+      const expiresAt = abandonedStateReplies.get(id);
+      abandonedStateReplies.delete(id);
       if (expiresAt !== undefined && expiresAt > Date.now())
         applySnapshot((msg as RemoteLinkActionReply).credentialSnapshot);
       return;
@@ -222,7 +227,7 @@ export function createIpcCredentialAccess(
     // Snapshot subscribers may abort other Actions when authority changes. This
     // reply's waiter is already retired so its reviewed error cannot be replaced
     // by that derived cancellation. Successful results still recheck authority.
-    if (waiter.method === "desktop/remoteLinkAction")
+    if (isStateAction(waiter.method))
       applySnapshot((msg as RemoteLinkActionReply).credentialSnapshot);
     if ("error" in msg && msg.error) {
       const data = msg.error.data as
@@ -250,6 +255,8 @@ export function createIpcCredentialAccess(
               [
                 "invalid_request",
                 "unavailable",
+                "configuration_error",
+                "refresh_outcome_unknown",
                 "reconnect",
                 "changed",
                 "forbidden",
@@ -439,6 +446,7 @@ function toMetadata(cred: Credential): CredentialMetadata {
   const { secret: _secret, ...rest } = cred;
   return {
     ...rest,
+    meta: cred.meta ? linkConnectionMetadata(cred.meta) : undefined,
     ...(credentialAllowsEnvExposure(cred.type) ? {} : { exposeAsEnv: undefined }),
     hasSecret: available,
     secretHint: available ? credentialSecretHint(cred.type, secret) : undefined,
@@ -450,7 +458,10 @@ function toMetadata(cred: Credential): CredentialMetadata {
 }
 
 function cloneMetadata(list: CredentialMetadata[]): CredentialMetadata[] {
-  return list.map((cred) => ({ ...cred, meta: cred.meta ? { ...cred.meta } : undefined }));
+  return list.map((cred) => ({
+    ...cred,
+    meta: cred.meta ? linkConnectionMetadata(cred.meta) : undefined,
+  }));
 }
 
 function storeFor(cwd: string | undefined): CredentialStore {
@@ -497,14 +508,15 @@ export const localCredentialAccess: CredentialAccess = {
     if (
       isRemoteLinkCredential(cred) ||
       isBrowserOAuthLinkCredential(cred) ||
-      isFigmaMcpCredential(cred)
+      isFigmaMcpCredential(cred) ||
+      (req.purpose !== "link" && cred.meta?.agentExposable === false)
     )
       throw new Error("OAuth Link credentials only support Host-owned actions");
     if (
       req.purpose === "link" &&
       (cred.type !== "link" ||
-        cred.meta?.linkExecutionRuntime !== "local" ||
-        !cred.meta.linkProvider)
+        linkConnectionMetadata(cred.meta).linkExecutionRuntime !== "local" ||
+        !cred.meta?.linkProvider)
     ) {
       throw new Error(`credential "${req.id}" is not a local Link credential`);
     }

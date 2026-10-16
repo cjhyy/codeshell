@@ -129,6 +129,10 @@ writeFileSync(
   }),
   { mode: 0o600 },
 );
+// This child has its own provider registry. Compose executors only after its
+// physical transport guard and negative probes are installed above.
+const { installTestLinkProviders } = await import("../../../tests/helpers/link-providers.js");
+await installTestLinkProviders();
 const { OperationLedger } = await import("../src/operations/ledger.js");
 const { OperationController } = await import("../src/operations/controller.js");
 const { CapabilityResolver } = await import("../src/operations/resolver.js");
@@ -180,11 +184,17 @@ function fixture() {
     oauthStatus: { state: "valid" as const, hasRefreshToken: true, canRefresh: true },
     meta: {
       linkProvider: "github",
+      linkConnectionMethod: "remote-link",
       linkAccountId: "42",
       linkExecutionRuntime: "server" as const,
       linkExecutionBackend: "remote" as const,
       linkRemoteState: "connected" as const,
       linkRemoteGrantId: "original-grant",
+      linkRemoteIssuer: origin,
+      linkRemoteConnectionId: "original-remote-connection",
+      linkResourceGroups: [
+        { id: "repositories", items: [{ id: "acme/repo", label: "Synthetic repository" }] },
+      ],
       linkLastVerifiedAt: "2026-10-09T00:00:00Z",
       linkCapabilityIds: [
         "github.get_repository",
@@ -210,7 +220,7 @@ function fixture() {
     onRead: () => {},
   };
   let reviewing = false;
-  route = (action, params) => {
+  route = (action) => {
     if (reviewing) data.onRead();
     if (action === "get_repository") return { id: data.repositoryId, full_name: "acme/repo" };
     if (action === "get_starred") return { starred: reviewing ? data.current : false };
@@ -226,7 +236,7 @@ function fixture() {
         body: "PRIVATE_BODY",
         state: reviewing && data.current ? "closed" : "open",
       };
-    if (action === "set_starred" || action === "update_issue") return params;
+    if (action === "set_starred" || action === "update_issue") return { acknowledged: true };
     throw new Error("Unexpected synthetic action");
   };
   setDefaultCredentialAccess({
