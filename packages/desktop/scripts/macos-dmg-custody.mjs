@@ -59,6 +59,37 @@ export function assertOwnedReadonlyVolume(volume, attachment) {
   };
 }
 
+/** The install runner consumes a successful UI receipt only with final custody. */
+export function assertInstalledUiReceipt(receipt, installed) {
+  assert.equal(receipt.status, "passed");
+  assert.equal(receipt.suppliedApp, installed);
+  assert.equal(receipt.operations.length, 13, "Every packaged UI operation must complete");
+  assert.equal(receipt.localModelRequests, 0);
+  assert.deepEqual(receipt.nativeCalls, []);
+  assert.deepEqual(receipt.rendererErrors, [], "Late renderer errors must fail installation UI");
+  assert.deepEqual(receipt.processEvidence.spawnedWorkers, []);
+  assert.equal(receipt.privateHomeRemoved, true);
+  assert.equal(receipt.artifacts.unchangedAfterRuntime, true);
+  assert.equal(receipt.artifacts.mainExits.length, 1, "One installed Main must have exited");
+  const main = receipt.artifacts.mainExits[0];
+  assert.ok(Number.isSafeInteger(main.pid) && main.pid > 0);
+  assert.equal(main.code, 0, "Installed Main must exit normally");
+  assert.equal(main.signal, null, "Installed Main must not be terminated by a signal");
+  const settlements = receipt.artifacts.observedProcessSettlements;
+  assert.equal(settlements.length, 1, "Installed Main custody must settle exactly once");
+  assert.equal(settlements[0].status, "cleaned");
+  assert.equal(settlements[0].remainingCount, 0);
+  assert.equal(settlements[0].queryFailed, false);
+  const guards = receipt.processEvidence.mainGuards.filter((row) => row.role === "Main");
+  assert.equal(guards.length, 1);
+  assert.equal(guards[0].pid, main.pid, "Exit must belong to the guarded Main");
+  const exits = receipt.processEvidence.mainSpawnExits;
+  assert.equal(exits.length, 1);
+  assert.equal(exits[0].pid, main.pid);
+  assert.equal(exits[0].workerSpawnCount, 0, "No worker may spawn during shutdown");
+  assert.equal(receipt.keychainContext.operatorDefaultUnchangedAfterRuntime, true);
+}
+
 export function authorizeDmgCommand(
   args,
   state,

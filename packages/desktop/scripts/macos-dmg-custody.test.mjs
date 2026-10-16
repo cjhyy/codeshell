@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import {
+  assertInstalledUiReceipt,
   assertOwnedReadonlyVolume,
   authorizeDmgCommand,
   ownedImageFromInfo,
@@ -156,6 +157,46 @@ test("readonly diskutil proof requires actual false flags and the recorded devic
   assert.throws(() =>
     assertOwnedReadonlyVolume({ ...volume, DeviceNode: "/dev/disk91s1" }, attachment),
   );
+});
+
+test("installed UI requires normal guarded Main exit and final zero-worker custody", () => {
+  const receipt = () => ({
+    status: "passed",
+    suppliedApp: "/owned/code-shell.app",
+    operations: Array(13).fill({}),
+    localModelRequests: 0,
+    nativeCalls: [],
+    rendererErrors: [],
+    privateHomeRemoved: true,
+    artifacts: {
+      unchangedAfterRuntime: true,
+      mainExits: [{ pid: 42, code: 0, signal: null }],
+      observedProcessSettlements: [{ status: "cleaned", remainingCount: 0, queryFailed: false }],
+    },
+    processEvidence: {
+      spawnedWorkers: [],
+      mainGuards: [{ pid: 42, role: "Main" }],
+      mainSpawnExits: [{ pid: 42, workerSpawnCount: 0 }],
+    },
+    keychainContext: { operatorDefaultUnchangedAfterRuntime: true },
+  });
+  assertInstalledUiReceipt(receipt(), "/owned/code-shell.app");
+  for (const mutate of [
+    (value) => (value.artifacts.mainExits[0].code = 1),
+    (value) => (value.artifacts.mainExits[0].signal = "SIGTERM"),
+    (value) => (value.artifacts.mainExits = []),
+    (value) => (value.artifacts.observedProcessSettlements[0].status = "remaining"),
+    (value) => (value.artifacts.observedProcessSettlements[0].queryFailed = true),
+    (value) => (value.processEvidence.mainGuards[0].pid = 99),
+    (value) => (value.processEvidence.mainSpawnExits[0].workerSpawnCount = 1),
+    (value) => value.rendererErrors.push("late renderer error"),
+    (value) => value.nativeCalls.push({ phase: "enter" }),
+    (value) => (value.keychainContext.operatorDefaultUnchangedAfterRuntime = false),
+  ]) {
+    const value = receipt();
+    mutate(value);
+    assert.throws(() => assertInstalledUiReceipt(value, "/owned/code-shell.app"));
+  }
 });
 
 posixTest(

@@ -16,6 +16,7 @@ import { captureMacosAppMetadata } from "./macos-app-metadata.mjs";
 import { readDefaultKeychain } from "./macos-keychain-context.mjs";
 import { watchElectronTestProcess } from "./electron-test-watchdog.mjs";
 import {
+  assertInstalledUiReceipt,
   assertOwnedReadonlyVolume,
   isInside,
   queryOwnedDmgImage,
@@ -171,12 +172,7 @@ async function launchInstalled(app, label, keychainReference) {
     300_000,
   );
   const receipt = JSON.parse(await readFile(join(root, label, "receipt.json"), "utf8"));
-  assert.equal(receipt.status, "passed");
-  assert.equal(receipt.suppliedApp, app);
-  assert.equal(receipt.localModelRequests, 0);
-  assert.deepEqual(receipt.nativeCalls, []);
-  assert.deepEqual(receipt.processEvidence.spawnedWorkers, []);
-  assert.equal(receipt.privateHomeRemoved, true);
+  assertInstalledUiReceipt(receipt, app);
   return receipt;
 }
 
@@ -369,6 +365,7 @@ try {
     (await capturePackagedAppIntegrity(installed)).appTreeSHA256,
     integrity.appTreeSHA256,
   );
+  assert.equal((await metadata(installed)).sha256, originalMetadata.sha256);
   // Same-build manual replacement only, after the UI child and observed descendants exited.
   const marker = join(root, "owned-user-data-marker.txt");
   await put(marker, "Owned data outside app survives same-build replacement 中文\n");
@@ -383,15 +380,18 @@ try {
     sameBuild: true,
     manualOwnedReplacement: true,
     markerSHA256,
+    markerBoundary: "Synthetic owned file outside app only; no real user-data migration proof",
     updaterAcceptance: false,
   };
   report.reinstalledUi = await launchInstalled(installed, "reinstalled-ui", keychainFile);
   const after = await capturePackagedAppIntegrity(installed);
   assert.equal(after.appTreeSHA256, integrity.appTreeSHA256);
+  assert.equal((await metadata(installed)).sha256, originalMetadata.sha256);
   assert.equal(
     (await capturePackagedAppIntegrity(original.appRoot)).appTreeSHA256,
     integrity.appTreeSHA256,
   );
+  assert.equal((await metadata(original.appRoot)).sha256, originalMetadata.sha256);
   assert.equal(hash(await readFile(state.artifact)), report.dmg.sha256, "Readonly DMG changed");
   await put(join(root, "after-app.json"), after);
   report.status = "passed";
