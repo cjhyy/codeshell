@@ -1,10 +1,11 @@
 /** Public SDK → actual upstream HTTP fixtures. Synthetic tokens only. */
 import assert from "node:assert/strict";
+import { linkProviderModuleUrl } from "./fixtures/link-provider-module.mjs";
 import { createServer } from "node:http";
 import { mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { CredentialStore, executeLocalOAuthLinkAction } from "../packages/core/dist/index.js";
+import { installLocalNetworkGuard } from "./runtime-cost-smoke-isolation.mjs";
 
 const directory = await mkdtemp(join(tmpdir(), "codeshell-local-oauth-sdk-"));
 const calls = {
@@ -67,6 +68,11 @@ server.on("fixture-error", (error) => {
 });
 await new Promise((resolve) => server.listen(0, "127.0.0.1", resolve));
 const port = server.address().port;
+installLocalNetworkGuard(`http://127.0.0.1:${port}`);
+assert.throws(() => fetch("https://provider.invalid/"), /non-fixture request/);
+const { CredentialStore, executeLocalOAuthLinkAction } = await import("@cjhyy/code-shell-core");
+const { installDefaultLinkProviders } = await import(linkProviderModuleUrl);
+installDefaultLinkProviders();
 try {
   for (const provider of ["github", "gitlab"]) {
     const store = new CredentialStore(directory, undefined, join(directory, provider));

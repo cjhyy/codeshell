@@ -2,6 +2,10 @@
  * GitHub responses are controlled; this does not claim a real provider login.
  */
 import assert from "node:assert/strict";
+import {
+  linkProviderModuleUrl,
+  installLinkFlowNetworkGuard,
+} from "./fixtures/link-provider-module.mjs";
 import { randomBytes } from "node:crypto";
 import { mkdtemp, mkdir, writeFile, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
@@ -16,12 +20,6 @@ if (!process.argv[2])
   );
 const { startLinkServer } = await import(pathToFileURL(resolve(process.argv[2])).href);
 import {
-  CredentialStore,
-  executeRemoteLinkAction,
-  linkActionTool,
-} from "../packages/core/dist/index.js";
-import { createLinkService } from "../packages/server/dist/index.links.js";
-import {
   launchCodeShellElectron,
   findCodeShellWindow,
 } from "../packages/desktop/scripts/electron-harness.mjs";
@@ -33,6 +31,12 @@ await new Promise((resolve) => probe.listen(0, "127.0.0.1", resolve));
 const port = probe.address().port;
 await new Promise((resolve) => probe.close(resolve));
 const issuer = `http://127.0.0.1:${port}`;
+installLinkFlowNetworkGuard(issuer);
+assert.throws(() => fetch("https://provider.invalid/"), /non-fixture request/);
+const { CredentialStore, executeRemoteLinkAction, linkActionTool } =
+  await import("@cjhyy/code-shell-core");
+const { createLinkService, installDefaultLinkProviders } = await import(linkProviderModuleUrl);
+installDefaultLinkProviders();
 let calls = 0;
 const app = await startLinkServer({
   port,

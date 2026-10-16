@@ -2,6 +2,7 @@
  * Run through run-isolated-node-smoke.mjs; config and evidence paths are explicit.
  */
 import assert from "node:assert/strict";
+import { linkProviderModuleUrl } from "./fixtures/link-provider-module.mjs";
 import { createHash } from "node:crypto";
 import { spawnSync } from "node:child_process";
 import {
@@ -78,6 +79,8 @@ for (const probe of [
 // These guards are installed and exercised before every Core import below.
 const { createConstrainedDockerProcessHost } =
   await import("../packages/core/dist/runtime/constrained-process/docker.js");
+const { installDefaultLinkProviders } = await import(linkProviderModuleUrl);
+installDefaultLinkProviders();
 const { createOperationHookHost } =
   await import("../packages/core/dist/links/operation-hook-host.js");
 const { createGithubOperationReader } =
@@ -376,6 +379,9 @@ try {
       linkExecutionBackend: "remote",
       linkRemoteState: "connected",
       linkRemoteGrantId: "grant",
+      linkResourceGroups: [
+        { id: "repositories", items: [{ id: "fixture/repo", label: "Synthetic repository" }] },
+      ],
       linkLastVerifiedAt: "2026-10-09T00:00:00Z",
       linkCapabilityIds: ["github.get_repository"],
     },

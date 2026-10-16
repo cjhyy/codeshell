@@ -2,6 +2,7 @@
  * Synthetic provider/account only. No sibling Services source or real GitHub request.
  */
 import assert from "node:assert/strict";
+import { linkProviderModuleUrl } from "./fixtures/link-provider-module.mjs";
 import { spawn } from "node:child_process";
 import { createServer, request as httpRequest } from "node:http";
 import https from "node:https";
@@ -70,6 +71,8 @@ if (process.argv[2] === "--worker") {
   syncBuiltinESMExports();
   // This import happens only after the parent has verified the preload receipt.
   const core = await import("@cjhyy/code-shell-core");
+  const { installDefaultLinkProviders } = await import(linkProviderModuleUrl);
+  installDefaultLinkProviders();
   const store = new core.CredentialStore(root, new core.PlaintextCipher(), join(root, "custody"));
   if (process.argv[3] !== "--resume") {
     const attempt = core.beginRemoteLinkAuthorization(
@@ -387,7 +390,7 @@ if (process.argv[2] === "--worker") {
     AGENT_CWD: root,
     CODE_SHELL_DATA_ROOT: join(root, "data"),
     CODESHELL_COST_SMOKE_GUARD_LOG: receiptFile,
-    CODE_SHELL_CAPABILITY_MODULES: "",
+    CODE_SHELL_CAPABILITY_MODULES: `${linkProviderModuleUrl}#createLinkProviderModule`,
     CODE_SHELL_DEV: "0",
     CODESHELL_SELF_UPDATE_CHECK: "0",
   };
