@@ -1,15 +1,12 @@
 import { spawnSync } from "node:child_process";
 import { cp, lstat, mkdir, mkdtemp, readFile, realpath, rm, writeFile } from "node:fs/promises";
 import { createHash } from "node:crypto";
+import esbuild from "esbuild";
 import { tmpdir } from "node:os";
-import { dirname, isAbsolute, join, relative, resolve } from "node:path";
-import { fileURLToPath } from "node:url";
+import { dirname, isAbsolute, join, relative, resolve, sep } from "node:path";
+import { fileURLToPath, pathToFileURL } from "node:url";
 import { createBunTestEnvironment } from "../../../scripts/bun-test-completion.mjs";
-import {
-  DESKTOP_LINK_PROVIDER_BUNDLE,
-  desktopLinkProviderModuleUrl,
-} from "../src/main/link-provider-module.js";
-import { buildWorkerLinkProviders } from "./build-worker-link-providers.js";
+import { desktopMainBuildOptions } from "./build-main.js";
 
 const here = dirname(fileURLToPath(import.meta.url));
 const sourceDesktopRoot = resolve(here, "..");
@@ -24,7 +21,11 @@ export async function smokeWorkerLinkProviders({
   try {
     const appPath = join(root, "应用 Code Shell.app", "Contents/Resources/app.asar");
     const fromRepository = relative(repoRoot, appPath);
-    if (!fromRepository.startsWith("..") || isAbsolute(fromRepository))
+    if (
+      !isAbsolute(fromRepository) &&
+      fromRepository !== ".." &&
+      !fromRepository.startsWith(`..${sep}`)
+    )
       throw new Error("Worker Link smoke application must be outside the repository");
     await mkdir(join(appPath, "node_modules/@cjhyy"), { recursive: true });
     for (const name of ["code-shell-core", "code-shell-link"]) {
@@ -44,18 +45,19 @@ export async function smokeWorkerLinkProviders({
         dereference: true,
       });
     }
-    const outfile = join(appPath, DESKTOP_LINK_PROVIDER_BUNDLE);
-    const built = await buildWorkerLinkProviders({ desktopRoot: sourceDesktopRoot, outfile });
+    const outfile = join(appPath, "out/main/link-provider-module.mjs");
+    // Preserve both production entries: the worker must resolve the actual
+    // shared chunks emitted alongside Electron Main, not a standalone rebuild.
+    const built = await esbuild.build({
+      ...desktopMainBuildOptions(sourceDesktopRoot),
+      outdir: join(appPath, "out/main"),
+      metafile: true,
+    });
     await cp(
       join(here, "__fixtures__/worker-link-provider-bundle.mjs"),
       join(appPath, "probe.mjs"),
     );
-    const url = desktopLinkProviderModuleUrl(
-      { isPackaged: true, getAppPath: () => appPath },
-      () => {
-        throw new Error("Packaged smoke cannot use a development workspace resolver");
-      },
-    );
+    const url = pathToFileURL(outfile).href;
     const child = spawnSync("node", [join(appPath, "probe.mjs"), url], {
       cwd: appPath,
       env: createBunTestEnvironment(process.env, root),
@@ -73,7 +75,11 @@ export async function smokeWorkerLinkProviders({
       bundleSHA256: createHash("sha256")
         .update(await readFile(outfile))
         .digest("hex"),
-      bundleExports: Object.values(built.metafile!.outputs)[0]!.exports,
+      bundleExports: Object.entries(built.metafile!.outputs).find(([path]) =>
+        path.endsWith("link-provider-module.mjs"),
+      )![1].exports,
+      sharedChunks: Object.values(built.metafile!.outputs).filter((output) => !output.entryPoint)
+        .length,
       materializedDesktopRoot: desktopRoot,
     };
   } finally {

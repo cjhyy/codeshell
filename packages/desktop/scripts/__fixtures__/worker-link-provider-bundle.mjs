@@ -36,7 +36,7 @@ const bundle = new URL(process.argv[2]);
 const bundleRelativePath = relative(appPath, fileURLToPath(bundle));
 assert.ok(bundleRelativePath && !isAbsolute(bundleRelativePath));
 assert.ok(!bundleRelativePath.startsWith(".."));
-assert.equal(bundle.href, pathToFileURL(join(appPath, "out/worker/link-providers.mjs")).href);
+assert.equal(bundle.href, pathToFileURL(join(appPath, "out/main/link-provider-module.mjs")).href);
 for (const missing of [
   "@cjhyy/code-shell-server/links",
   "@cjhyy/code-shell-host",

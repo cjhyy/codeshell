@@ -34,7 +34,6 @@ import {
   type DesktopOperationBatchAuthorityResult,
 } from "@cjhyy/code-shell-core/internal";
 import { createDesktopWorkerHost } from "./worker-host-runtime.js";
-import { desktopLinkProviderModuleUrl } from "./link-provider-module.js";
 import {
   linkAccountExecutionOptions,
   type CaptureLinkAccountAccess,
@@ -45,6 +44,7 @@ import { WorkerRunOwnership } from "./worker-run-ownership.js";
 import { createRequire } from "node:module";
 import { homedir } from "node:os";
 import { join } from "node:path";
+import { pathToFileURL } from "node:url";
 import { mkdirSync } from "node:fs";
 import { app, BrowserWindow, ipcMain } from "electron";
 import { desktopManagedRuntimeRoot } from "./managed-runtime-service.js";
@@ -416,9 +416,7 @@ export class AgentBridge implements PetStateBridge {
           {
             coding: codingModule,
             pet: petCapabilityModule,
-            links: desktopLinkProviderModuleUrl(app, () =>
-              import.meta.resolve("@cjhyy/code-shell-server/links"),
-            ),
+            links: pathToFileURL(join(app.getAppPath(), "out/main/link-provider-module.mjs")).href,
           },
           readUserFeatureFlags(resolveNoRepoCwd()),
           () => import.meta.resolve("@cjhyy/code-shell-capability-optimization-lab/capability"),
