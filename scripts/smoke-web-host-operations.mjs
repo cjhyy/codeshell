@@ -10,10 +10,16 @@ import { createWebHostOperationsFixture, waitFor } from "./fixtures/web-host-ope
 import { installLocalNetworkGuard } from "./runtime-cost-smoke-isolation.mjs";
 import { finishWebHostOperations } from "./fixtures/web-host-process-custody.mjs";
 
-const fixture = await createWebHostOperationsFixture();
+const lateTitle = process.argv.includes("--late-title");
+assert(
+  process.argv.slice(2).every((arg) => arg === "--late-title"),
+  "Only --late-title is supported",
+);
+const fixture = await createWebHostOperationsFixture({ lateTitle });
 const errors = [],
   blocked = [],
   wire = [],
+  received = [],
   sockets = [],
   operations = [];
 let driverGuard;
@@ -73,6 +79,14 @@ try {
   page.on("pageerror", (error) => errors.push(String(error)));
   page.on("websocket", (socket) => {
     sockets.push(socket.url());
+    socket.on("framereceived", ({ payload }) => {
+      const message = JSON.parse(String(payload));
+      if (
+        ["session_title", "turn_complete"].includes(message.params?.event?.type) ||
+        message.method === "serve/sessionsChanged"
+      )
+        received.push({ at: Date.now(), ...message });
+    });
     socket.on("framesent", ({ payload }) => {
       const message = JSON.parse(String(payload));
       wire.push({
@@ -122,119 +136,205 @@ try {
   await page.getByRole("button", { name: "新对话", exact: true }).click();
   const sessionB = await send("OWNED_INIT_B", "Saved OWNED_INIT_B.");
   assert(sessionB && sessionB !== sessionA);
-  await select(sessionA);
+  if (lateTitle) {
+    stage = "inactive session title arrives after its completed turn";
+    await fixture.waitLateTitle();
+    await select(sessionA);
+    await composer.fill("Owned A draft during B title");
+    fixture.releaseLateTitle();
+    await waitFor(
+      () =>
+        received.some(
+          (message) =>
+            message.params?.sessionId === sessionB &&
+            message.params?.event?.type === "session_title" &&
+            message.params.event.title === "Owned B late title",
+        ),
+      "actual late B title notification",
+    );
+    const readTitles = () =>
+      page.evaluate(async () =>
+        (await (await fetch("/api/v1/sessions")).json()).sessions.map(({ sessionId, title }) => ({
+          sessionId,
+          title,
+        })),
+      );
+    const authoritative = await waitFor(async () => {
+      const rows = await readTitles();
+      return rows.some((row) => row.sessionId === sessionB && row.title === "Owned B late title")
+        ? rows
+        : null;
+    }, "persisted late B title");
+    const snapshot = {
+      sessionA,
+      sessionB,
+      authoritative,
+      sidebar: await page.locator(".sessions .session-title").allTextContents(),
+      hostEvents: received,
+      providerTimeline: fixture.titleTimeline,
+    };
+    await writeFile(
+      join(fixture.evidence, "late-title-comparison.json"),
+      JSON.stringify(snapshot, null, 2),
+      { mode: 0o600 },
+    );
+    await waitFor(
+      () =>
+        page
+          .locator(".sessions .session-title")
+          .filter({ hasText: "Owned B late title" })
+          .isVisible(),
+      "inactive sidebar reflects authoritative late title",
+      2000,
+    );
+    assert.equal(await composer.inputValue(), "Owned A draft during B title");
+    assert.equal(new URL(page.url()).searchParams.get("session"), sessionA);
+    assert.equal(
+      await page.locator(".messages").getByText("Saved OWNED_INIT_A.", { exact: true }).count(),
+      1,
+    );
+    assert.equal(
+      await page.locator(".messages").getByText("Saved OWNED_INIT_B.", { exact: true }).count(),
+      0,
+    );
+    snapshot.sidebarAfter = await page.locator(".sessions .session-title").allTextContents();
+    snapshot.activeSessionAfter = new URL(page.url()).searchParams.get("session");
+    snapshot.currentDraftAfter = await composer.inputValue();
+    snapshot.passed = true;
+    await writeFile(
+      join(fixture.evidence, "late-title-comparison.json"),
+      JSON.stringify(snapshot, null, 2),
+      { mode: 0o600 },
+    );
+    await page.screenshot({
+      path: join(fixture.evidence, "inactive-late-title.png"),
+      animations: "disabled",
+    });
+    operations.push({
+      operation: "actual-late-title-refreshes-inactive-sidebar-without-changing-current-draft",
+      sessionA,
+      sessionB,
+      authoritativeTitle: "Owned B late title",
+    });
+  } else {
+    await select(sessionA);
 
-  stage = "actual upload 201 held → switch A to B → delayed response remains in A";
-  console.log("WEB HOST stage: " + stage);
-  const bytes = "Owned attachment bytes must remain in session A.\n";
-  await composer.fill("OWNED_UPLOAD_A");
-  await fixture.control("hold-next-upload");
-  await page
-    .locator('input[type="file"]')
-    .setInputFiles({ name: "owned-notes.txt", mimeType: "text/plain", buffer: Buffer.from(bytes) });
-  await fixture.waitUpload();
-  await page.getByText("正在上传…", { exact: true }).waitFor();
-  assert(await page.getByRole("button", { name: "发送", exact: true }).isDisabled());
-  await select(sessionB);
-  await composer.fill("Owned B draft must remain");
-  await fixture.control("release-upload");
-  await waitFor(
-    () => page.getByRole("button", { name: "添加附件", exact: true }).isEnabled(),
-    "upload settles in inactive session",
-  );
-  assert.equal(await page.locator(".attachments").count(), 0);
-  assert.equal(await composer.inputValue(), "Owned B draft must remain");
-  await select(sessionA);
-  await page.getByRole("button", { name: "移除 owned-notes.txt", exact: true }).waitFor();
-  assert.equal(await composer.inputValue(), "OWNED_UPLOAD_A");
-  assert.equal(
-    await page.getByRole("button", { name: "移除 owned-notes.txt", exact: true }).count(),
-    1,
-  );
-  await page.screenshot({
-    path: join(fixture.evidence, "upload-late-success-origin-session.png"),
-    animations: "disabled",
-  });
-  await send("OWNED_UPLOAD_A", "Owned attachment accepted.");
-  const uploaded = fixture.requests.find((r) => r.marker === "OWNED_UPLOAD_A");
-  assert(uploaded);
-  const modelInput = JSON.stringify(uploaded.body.messages);
-  assert(modelInput.includes("owned-notes.txt") && modelInput.includes(".code-shell/attachments/"));
-  const filesA = await readdir(join(fixture.workspace, ".code-shell/attachments", sessionA));
-  const attachment = filesA.find((file) => file.endsWith("-owned-notes.txt"));
-  assert(attachment);
-  assert.equal(
-    await readFile(
-      join(fixture.workspace, ".code-shell/attachments", sessionA, attachment),
-      "utf8",
-    ),
-    bytes,
-  );
-  assert(
-    !(await readdir(join(fixture.workspace, ".code-shell/attachments", sessionB)).catch((e) =>
-      e.code === "ENOENT" ? null : Promise.reject(e),
-    )),
-  );
-  await select(sessionB);
-  assert.equal(await composer.inputValue(), "Owned B draft must remain");
-  assert.equal(await page.locator(".attachments").count(), 0);
-  operations.push({
-    operation: "real-upload-late-success-stays-with-origin-session",
-    sessionA,
-    sessionB,
-    bytes: Buffer.byteLength(bytes),
-    stagedPath: relative(
-      fixture.workspace,
-      join(fixture.workspace, ".code-shell/attachments", sessionA, attachment),
-    ),
-  });
-  await select(sessionA);
+    stage = "actual upload 201 held → switch A to B → delayed response remains in A";
+    console.log("WEB HOST stage: " + stage);
+    const bytes = "Owned attachment bytes must remain in session A.\n";
+    await composer.fill("OWNED_UPLOAD_A");
+    await fixture.control("hold-next-upload");
+    await page.locator('input[type="file"]').setInputFiles({
+      name: "owned-notes.txt",
+      mimeType: "text/plain",
+      buffer: Buffer.from(bytes),
+    });
+    await fixture.waitUpload();
+    await page.getByText("正在上传…", { exact: true }).waitFor();
+    assert(await page.getByRole("button", { name: "发送", exact: true }).isDisabled());
+    await select(sessionB);
+    await composer.fill("Owned B draft must remain");
+    await fixture.control("release-upload");
+    await waitFor(
+      () => page.getByRole("button", { name: "添加附件", exact: true }).isEnabled(),
+      "upload settles in inactive session",
+    );
+    assert.equal(await page.locator(".attachments").count(), 0);
+    assert.equal(await composer.inputValue(), "Owned B draft must remain");
+    await select(sessionA);
+    await page.getByRole("button", { name: "移除 owned-notes.txt", exact: true }).waitFor();
+    assert.equal(await composer.inputValue(), "OWNED_UPLOAD_A");
+    assert.equal(
+      await page.getByRole("button", { name: "移除 owned-notes.txt", exact: true }).count(),
+      1,
+    );
+    await page.screenshot({
+      path: join(fixture.evidence, "upload-late-success-origin-session.png"),
+      animations: "disabled",
+    });
+    await send("OWNED_UPLOAD_A", "Owned attachment accepted.");
+    const uploaded = fixture.requests.find((r) => r.marker === "OWNED_UPLOAD_A");
+    assert(uploaded);
+    const modelInput = JSON.stringify(uploaded.body.messages);
+    assert(
+      modelInput.includes("owned-notes.txt") && modelInput.includes(".code-shell/attachments/"),
+    );
+    const filesA = await readdir(join(fixture.workspace, ".code-shell/attachments", sessionA));
+    const attachment = filesA.find((file) => file.endsWith("-owned-notes.txt"));
+    assert(attachment);
+    assert.equal(
+      await readFile(
+        join(fixture.workspace, ".code-shell/attachments", sessionA, attachment),
+        "utf8",
+      ),
+      bytes,
+    );
+    assert(
+      !(await readdir(join(fixture.workspace, ".code-shell/attachments", sessionB)).catch((e) =>
+        e.code === "ENOENT" ? null : Promise.reject(e),
+      )),
+    );
+    await select(sessionB);
+    assert.equal(await composer.inputValue(), "Owned B draft must remain");
+    assert.equal(await page.locator(".attachments").count(), 0);
+    operations.push({
+      operation: "real-upload-late-success-stays-with-origin-session",
+      sessionA,
+      sessionB,
+      bytes: Buffer.byteLength(bytes),
+      stagedPath: relative(
+        fixture.workspace,
+        join(fixture.workspace, ".code-shell/attachments", sessionA, attachment),
+      ),
+    });
+    await select(sessionA);
 
-  stage = "actual Worker stream → owned WebSocket drop → missed journal replay → no repeated Run";
-  console.log("WEB HOST stage: " + stage);
-  await composer.fill("OWNED_RECONNECT");
-  await page.getByRole("button", { name: "发送", exact: true }).click();
-  await page.locator(".message-streaming").filter({ hasText: "Owned stream first." }).waitFor();
-  const before = sockets.length;
-  const dropped = await fixture.control("drop-websockets");
-  assert.equal(dropped.count, 1, "Drop only the one owned browser WebSocket");
-  await page.locator(".connection-pill .dot.closed").waitFor();
-  fixture.middle();
-  await composer.fill("Owned reconnect draft remains");
-  assert(await page.getByRole("button", { name: "发送", exact: true }).isDisabled());
-  await fixture.control("allow-reconnect");
-  await page.locator(".connection-pill .dot.open").waitFor();
-  await waitFor(() => sockets.length > before, "new actual browser WebSocket");
-  await page
-    .locator(".message-streaming")
-    .filter({ hasText: "Owned stream first. Owned stream missed middle." })
-    .waitFor();
-  fixture.finish();
-  const result = "Owned stream first. Owned stream missed middle. Owned stream final.";
-  await page.locator(".messages").getByText(result, { exact: true }).waitFor();
-  await page.getByRole("button", { name: "停止", exact: true }).waitFor({ state: "hidden" });
-  assert.equal(await composer.inputValue(), "Owned reconnect draft remains");
-  assert.equal(
-    wire.filter((r) => r.method === "agent/run" && r.task === "OWNED_RECONNECT").length,
-    1,
-  );
-  assert.equal(fixture.requests.filter((r) => r.marker === "OWNED_RECONNECT").length, 1);
-  assert.equal(
-    await page.locator(".messages").getByText("OWNED_RECONNECT", { exact: true }).count(),
-    1,
-  );
-  await page.screenshot({
-    path: join(fixture.evidence, "real-worker-stream-reconnected.png"),
-    animations: "disabled",
-  });
-  operations.push({
-    operation: "real-worker-stream-reconnect-recovers-missed-text-without-repeat",
-    sessionId: sessionA,
-    browserSocketsBefore: before,
-    browserSocketsAfter: sockets.length,
-    modelRequests: 1,
-    runFrames: 1,
-  });
+    stage = "actual Worker stream → owned WebSocket drop → missed journal replay → no repeated Run";
+    console.log("WEB HOST stage: " + stage);
+    await composer.fill("OWNED_RECONNECT");
+    await page.getByRole("button", { name: "发送", exact: true }).click();
+    await page.locator(".message-streaming").filter({ hasText: "Owned stream first." }).waitFor();
+    const before = sockets.length;
+    const dropped = await fixture.control("drop-websockets");
+    assert.equal(dropped.count, 1, "Drop only the one owned browser WebSocket");
+    await page.locator(".connection-pill .dot.closed").waitFor();
+    fixture.middle();
+    await composer.fill("Owned reconnect draft remains");
+    assert(await page.getByRole("button", { name: "发送", exact: true }).isDisabled());
+    await fixture.control("allow-reconnect");
+    await page.locator(".connection-pill .dot.open").waitFor();
+    await waitFor(() => sockets.length > before, "new actual browser WebSocket");
+    await page
+      .locator(".message-streaming")
+      .filter({ hasText: "Owned stream first. Owned stream missed middle." })
+      .waitFor();
+    fixture.finish();
+    const result = "Owned stream first. Owned stream missed middle. Owned stream final.";
+    await page.locator(".messages").getByText(result, { exact: true }).waitFor();
+    await page.getByRole("button", { name: "停止", exact: true }).waitFor({ state: "hidden" });
+    assert.equal(await composer.inputValue(), "Owned reconnect draft remains");
+    assert.equal(
+      wire.filter((r) => r.method === "agent/run" && r.task === "OWNED_RECONNECT").length,
+      1,
+    );
+    assert.equal(fixture.requests.filter((r) => r.marker === "OWNED_RECONNECT").length, 1);
+    assert.equal(
+      await page.locator(".messages").getByText("OWNED_RECONNECT", { exact: true }).count(),
+      1,
+    );
+    await page.screenshot({
+      path: join(fixture.evidence, "real-worker-stream-reconnected.png"),
+      animations: "disabled",
+    });
+    operations.push({
+      operation: "real-worker-stream-reconnect-recovers-missed-text-without-repeat",
+      sessionId: sessionA,
+      browserSocketsBefore: before,
+      browserSocketsAfter: sockets.length,
+      modelRequests: 1,
+      runFrames: 1,
+    });
+  }
   const receipts = await fixture.receipts();
   const processes = receipts.filter((r) => r.kind === "pre-core-network-guard");
   assert(processes.some((r) => r.pid === fixture.hostPid && r.negativeProbes === 7));
@@ -285,8 +385,12 @@ try {
         try {
           assert.equal(cleanup?.passed, true, "Owned Host/Worker/provider cleanup must complete");
           for (const [marker, count] of Object.entries(counts))
-            assert.equal(count, 1, `Exactly one physical request for ${marker}`);
-          assert.equal(fixture.requests.length, 6);
+            assert.equal(
+              count,
+              lateTitle && ["OWNED_UPLOAD_A", "OWNED_RECONNECT"].includes(marker) ? 0 : 1,
+              `Exact physical request count for ${marker}`,
+            );
+          assert.equal(fixture.requests.length, lateTitle ? 4 : 6);
           assert.deepEqual(fixture.faults, []);
         } catch (error) {
           cleanupFailures.push(error);
@@ -305,6 +409,8 @@ try {
             failure,
             operations,
             wire,
+            received,
+            providerTimeline: fixture.titleTimeline,
             errors,
             blocked,
             providerFaults: fixture.faults,
@@ -328,4 +434,6 @@ try {
     },
   });
 }
-console.log(`PASS Web real Host operations: 2 sequences; evidence: ${fixture.evidence}`);
+console.log(
+  `PASS Web real Host operations: ${operations.length} sequences; evidence: ${fixture.evidence}`,
+);

@@ -73,6 +73,89 @@ function environment() {
   }
 }
 
+test.each([200, 500, 401])(
+  "a late inactive title refresh survives an older session-list response %i",
+  async (status) => {
+    environment();
+    const original = {
+      sessionId: "inactive-title-owner",
+      title: "Original title",
+      cwd: "/owned",
+      startedAt: 1,
+      model: "owned",
+      status: "completed",
+      turnCount: 1,
+    };
+    let latest = original,
+      hold = false,
+      finishOld!: (response: Response) => void;
+    globalThis.fetch = (async (path) => {
+      if (!String(path).includes("/api/v1/sessions")) return Response.json({});
+      if (hold) {
+        hold = false;
+        return new Promise<Response>((resolve) => {
+          finishOld = resolve;
+        });
+      }
+      return Response.json({ sessions: [latest] });
+    }) as typeof fetch;
+    Socket.respond = ({ id, method }) =>
+      method === "serve/approval.snapshot"
+        ? { id, result: { approvals: [], leases: [] } }
+        : { id, result: { type: "sessions", data: [] } };
+    let authLost = 0;
+    const onAuthLost = () => {
+      authLost++;
+    };
+    const hook = await renderHook(() => useHubController({ hub: true, onAuthLost }));
+    cleanups.push(() => hook.unmount());
+    const socket = Socket.instances[0];
+    await act(async () => {
+      socket.readyState = 1;
+      socket.onopen?.();
+      await flushMicrotasks();
+      hook.result.current.setDraft("Current session draft");
+    });
+    const active = hook.result.current.activeId;
+    const version = hook.result.current.sessionsVersion;
+    let older!: Promise<void>;
+    await act(async () => {
+      hold = true;
+      older = hook.result.current.refreshSessions();
+      await flushMicrotasks();
+      latest = { ...original, title: "Authoritative late title" };
+      socket.onmessage?.({
+        data: JSON.stringify({
+          jsonrpc: "2.0",
+          method: "agent/streamEvent",
+          params: {
+            sessionId: original.sessionId,
+            event: { type: "session_title", sessionId: original.sessionId, title: latest.title },
+          },
+        }),
+      });
+      for (let i = 0; i < 4; i++) await flushMicrotasks();
+    });
+    expect(hook.result.current.sessions[0].title).toBe(latest.title);
+    expect(hook.result.current.sessionsVersion).toBe(version + 1);
+    await act(async () => {
+      finishOld(
+        Response.json(status === 200 ? { sessions: [original] } : { error: "Older list failed" }, {
+          status,
+        }),
+      );
+      await older;
+      await flushMicrotasks();
+    });
+    expect(hook.result.current.sessions[0].title).toBe(latest.title);
+    expect(hook.result.current.activeId).toBe(active);
+    expect(hook.result.current.draft).toBe("Current session draft");
+    expect(hook.result.current.chat.title).not.toBe(latest.title);
+    expect(hook.result.current.error).toBe("");
+    expect(authLost).toBe(status === 401 ? 1 : 0);
+  },
+);
+
 test("restoring a session gates sends and an older failed restore cannot replace a later success", async () => {
   environment();
   const pending: Array<{ id: number; method: string; params: Record<string, unknown> }> = [];

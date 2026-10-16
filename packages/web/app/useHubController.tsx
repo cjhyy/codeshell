@@ -77,6 +77,7 @@ export function useHubController({
   const [configuration, setConfiguration] = React.useState<HubConfiguration | null>(null);
   const [configurationVersion, setConfigurationVersion] = React.useState(0);
   const configurationRequest = React.useRef(0);
+  const sessionsRequest = React.useRef(0);
   const activeIdRef = React.useRef<string>(activeId);
   const setError = React.useCallback((message: string, sessionId = activeIdRef.current) => {
     setSessionErrors((current) => {
@@ -187,11 +188,12 @@ export function useHubController({
   const refreshSessions = React.useCallback(async () => {
     const client = clientRef.current;
     if (!client) return;
+    const request = ++sessionsRequest.current;
     try {
       const data = hub
         ? (await readManagedSessions()).sessions
         : (await client.listSessions()).data;
-      if (clientRef.current === client && mounted.current) {
+      if (clientRef.current === client && mounted.current && request === sessionsRequest.current) {
         const sorted = [...data].sort(
           (a, b) => (b.lastActiveAt ?? b.startedAt) - (a.lastActiveAt ?? a.startedAt),
         );
@@ -199,7 +201,12 @@ export function useHubController({
         setSessions(sorted);
       }
     } catch (cause) {
-      reportError(cause);
+      if (
+        clientRef.current === client &&
+        mounted.current &&
+        (request === sessionsRequest.current || (cause instanceof ApiError && cause.status === 401))
+      )
+        reportError(cause);
     }
   }, [reportError, hub]);
 
@@ -449,6 +456,12 @@ export function useHubController({
       if (method === "agent/streamEvent") {
         const payload = params as unknown as StreamEventPayload;
         const { sessionId, event } = payload;
+        if (event.type === "session_title") {
+          // Title generation can finish after its turn and after another
+          // conversation is selected. Refresh the shared sidebar/history too.
+          void refreshSessions();
+          setSessionsVersion((value) => value + 1);
+        }
         const submission = submissions.current.get(sessionId);
         if (
           submission &&

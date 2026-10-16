@@ -29,7 +29,7 @@ export async function waitFor(check, label, timeout = 30_000) {
   throw expired();
 }
 
-export async function createWebHostOperationsFixture() {
+export async function createWebHostOperationsFixture({ lateTitle = false } = {}) {
   const repository = resolve(fileURLToPath(new URL("../..", import.meta.url)));
   const root = await realpath(await mkdtemp(join(tmpdir(), "codeshell-web-real-host-")));
   const clean = createBunTestEnvironment(process.env, root);
@@ -64,7 +64,8 @@ export async function createWebHostOperationsFixture() {
   const requests = [],
     faults = [];
   const streams = new Set();
-  let reconnectStream;
+  let reconnectStream, releaseLateTitle;
+  const titleTimeline = [];
   const frame = (model, text, finishReason = null) => ({
     id: "owned-web-host",
     object: "chat.completion.chunk",
@@ -101,24 +102,37 @@ export async function createWebHostOperationsFixture() {
           body,
         });
         res.writeHead(200, { "content-type": "application/json" });
-        res.end(
-          JSON.stringify({
-            id: "owned-title",
-            object: "chat.completion",
-            created: 1,
-            model: body.model,
-            choices: [
-              {
-                index: 0,
-                message: {
-                  role: "assistant",
-                  content: input.includes("OWNED_INIT_B") ? "OWNED_INIT_B" : "OWNED_INIT_A",
+        const answer = () =>
+          res.end(
+            JSON.stringify({
+              id: "owned-title",
+              object: "chat.completion",
+              created: 1,
+              model: body.model,
+              choices: [
+                {
+                  index: 0,
+                  message: {
+                    role: "assistant",
+                    content:
+                      firstTurn === "OWNED_INIT_B"
+                        ? lateTitle
+                          ? "Owned B late title"
+                          : "OWNED_INIT_B"
+                        : "OWNED_INIT_A",
+                  },
+                  finish_reason: "stop",
                 },
-                finish_reason: "stop",
-              },
-            ],
-          }),
-        );
+              ],
+            }),
+          );
+        if (lateTitle && firstTurn === "OWNED_INIT_B") {
+          titleTimeline.push({ kind: "provider-title-held", at: Date.now(), firstTurn });
+          releaseLateTitle = () => {
+            titleTimeline.push({ kind: "provider-title-released", at: Date.now(), firstTurn });
+            answer();
+          };
+        } else answer();
         return;
       }
       const user = body.messages.findLast(
@@ -383,6 +397,13 @@ export async function createWebHostOperationsFixture() {
         encoding: "utf8",
       }).trim(),
       artifactHashes,
+      titleTimeline,
+      waitLateTitle: () =>
+        waitFor(() => releaseLateTitle, "actual pending auxiliary title response"),
+      releaseLateTitle: () => {
+        assert(releaseLateTitle);
+        releaseLateTitle();
+      },
       safeLogs: () => logs.replaceAll(token, "[owned-bootstrap-token]"),
     };
   } catch (error) {
