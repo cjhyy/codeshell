@@ -818,10 +818,13 @@ export function useHubController({
       ...(isDeferredQuestion(a.payload) ? { asynchronous: true } : {}),
     })),
     approvalCount,
-    approvalContent: approvals.map((a) => (
+    // Keep unanswered form state for each request while other sessions are open.
+    // A resolution removes its card; changing the selected session only hides it.
+    approvalContent: Object.values(approvalState).map((a) => (
       <HubApprovalCard
         key={a.payload.requestId}
         payload={a.payload}
+        hidden={!!a.payload.sessionId && a.payload.sessionId !== activeId}
         onDecide={decide}
         busy={
           !!pendingDecisions[a.payload.requestId] ||

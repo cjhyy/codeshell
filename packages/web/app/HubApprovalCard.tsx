@@ -6,10 +6,12 @@ export function HubApprovalCard({
   onDecide,
   busy,
   connected,
+  hidden,
 }: {
   payload: ApprovalRequestPayload;
   busy: boolean;
   connected: boolean;
+  hidden?: boolean;
   onDecide: (payload: ApprovalRequestPayload, approved: boolean, answer?: string) => void;
 }) {
   const [answer, setAnswer] = React.useState("");
@@ -48,7 +50,7 @@ export function HubApprovalCard({
     payload.request.toolName,
   );
   return (
-    <div className="approval">
+    <div className="approval" hidden={hidden}>
       <div className="approval-title">
         {isAskUser ? "Agent 提问" : `工具审批：${payload.request.toolName}`}
         {!isAskUser ? <em> · {risk}</em> : null}

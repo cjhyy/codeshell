@@ -366,7 +366,11 @@ try {
   await until(() => heldDecisions.length === 1);
   decision = heldDecisions.shift();
   await rejectAway(decision, "Owned decision rejected", "Owned after decision marker");
-  await answer.fill("Owned answer");
+  assert.equal(
+    await answer.inputValue(),
+    "Owned answer",
+    "an approval answer draft must survive a session switch during submission",
+  );
   await answerButton.click();
   await until(() => heldDecisions.length === 1);
   decision = heldDecisions.shift();
@@ -444,6 +448,16 @@ try {
     message: "Owned multiple choice rejected",
   });
   await page.getByRole("alert").filter({ hasText: "Owned multiple choice rejected" }).waitFor();
+  await page.setViewportSize({ width: 1280, height: 720 });
+  await page.getByRole("button", { name: /Owned first/ }).click();
+  await page.getByText("Saved first", { exact: true }).waitFor();
+  assert.equal(
+    await page.getByRole("checkbox", { name: "选项甲", exact: true }).count(),
+    0,
+    "another session must not expose the pending question's controls",
+  );
+  await page.getByRole("button", { name: /Owned second/ }).click();
+  await page.getByText("Owned multiple choice", { exact: true }).waitFor();
   assert.equal(await firstChoice.isChecked(), true);
   assert.equal(
     await page.getByRole("textbox", { name: "自定义回答", exact: true }).inputValue(),
@@ -459,6 +473,9 @@ try {
   await page.setViewportSize({ width: 1280, height: 720 });
   reports.push({
     operation: "mobile-multiple-choices-keyboard-custom-answer-failure-retry-preserves-selections",
+  });
+  reports.push({
+    operation: "approval-draft-and-multiple-selections-stay-scoped-across-session-switch",
   });
 
   const optional = {
