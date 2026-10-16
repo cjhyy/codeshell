@@ -6,6 +6,7 @@ import { useT } from "../i18n/I18nProvider";
 import { LinkConnectionDialog } from "./LinkConnectionDialog";
 import { RemoteProviderSection } from "./RemoteLinkSection";
 import { LinkConnectionRow, LinkStatus } from "./LinkProviderCard";
+import { LinkAccountMenu, LinkConnectionOption, useLinkPrimaryAction } from "./LinkPresentation";
 
 /** Figma owns both channels. Connecting either channel never reads a design. */
 export function FigmaConnectionCard({
@@ -98,136 +99,167 @@ export function FigmaConnectionCard({
     void run(connection, async (live) => {
       if (alive.current) setAuthorization({ id: crypto.randomUUID(), connection: live });
     });
+  const primary = useLinkPrimaryAction("mcp-oauth", {
+    onClick: () => connect(),
+    disabled: busy || !available || Boolean(authorization) || connections.length > 0,
+  });
 
   return (
     <>
-      <div data-figma-channel="api">
-        {hasRemoteApi ? (
-          <RemoteProviderSection
-            cwd={cwd}
-            snapshot={snapshot}
-            loadError={loadError}
-            loading={loading}
-            reload={reload}
-            onChanged={onChanged}
-            providerId="figma"
-            provider={provider}
-            embedded
-          />
-        ) : (
-          <LinkConnectionRow
-            title={t("ext.link.directory.basicReading")}
-            technical="API"
-            description={t("ext.link.directory.basicReadingDescription")}
-          />
-        )}
-        {localApi}
-      </div>
-      <LinkConnectionRow
-        data-figma-channel="mcp"
-        title={t("ext.link.directory.designContext")}
-        technical="MCP"
-        description={t("ext.link.directory.designContextDescription")}
-        status={
-          connections.some((connection) => connection.status === "connected")
-            ? t("ext.link.remoteAvailable")
-            : connections.length
-              ? t("ext.link.remoteReconnectNeeded")
-              : loading
-                ? t("ext.link.directory.checking")
-                : !available
-                  ? t("ext.link.directory.unavailable")
-                  : t("ext.link.directory.notConnected")
-        }
-        tone={
-          connections.some((connection) => connection.status === "connected")
-            ? "ready"
-            : connections.length
-              ? "warning"
-              : "neutral"
-        }
-      >
-        {connections.map((connection) => (
-          <div
-            key={connection.id}
-            data-figma-mcp-connection={connection.id}
-            className="space-y-2 text-xs"
-          >
-            <div className="flex items-start justify-between gap-3">
-              <div className="min-w-0">
-                <strong className="block truncate text-sm font-medium">{connection.label}</strong>
-                <p className="mt-1 truncate text-xs text-muted-foreground">
-                  {connection.account?.label ?? "Figma"}
-                </p>
-              </div>
-              <LinkStatus tone={connection.status === "connected" ? "ready" : "warning"}>
-                {t(
-                  connection.status === "unavailable"
-                    ? "ext.link.directory.serviceUnavailable"
-                    : connection.status === "connected"
-                      ? "ext.link.remoteAvailable"
-                      : "ext.link.remoteReconnectNeeded",
-                )}
-              </LinkStatus>
-            </div>
-            <div className="flex flex-wrap gap-2">
-              <Button
-                size="sm"
-                variant="outline"
-                disabled={busy || !available || !connection.editable || Boolean(authorization)}
-                onClick={() => connect(connection)}
-              >
-                {t("ext.link.remoteReconnect")}
-              </Button>
-              <Button
-                size="sm"
-                variant="outline"
-                disabled={busy || !connection.editable || Boolean(authorization)}
-                onClick={() =>
-                  void run(connection, async (live) => {
-                    await window.codeshell.mcpOAuth.refresh(live!.id);
-                  })
-                }
-              >
-                {t("ext.link.figma.refresh")}
-              </Button>
-              <Button
-                size="sm"
-                variant="ghost"
-                disabled={busy || !connection.editable || Boolean(authorization)}
-                onClick={() =>
-                  void run(connection, async (live) => {
-                    await window.codeshell.links.remoteDisconnect(cwd, live!.id, live!.revision);
-                  })
-                }
-              >
-                {t("ext.link.remoteDisconnect")}
-              </Button>
-            </div>
+      {hasRemoteApi && (
+        <LinkConnectionOption optionId="remote-link">
+          <div data-figma-channel="api">
+            <RemoteProviderSection
+              cwd={cwd}
+              snapshot={snapshot}
+              loadError={loadError}
+              loading={loading}
+              reload={reload}
+              onChanged={onChanged}
+              providerId="figma"
+              provider={provider}
+              embedded
+            />
           </div>
-        ))}
-        {connections.length === 0 && (
-          <Button
-            size="sm"
-            variant="outline"
-            disabled={busy || !available || Boolean(authorization)}
-            onClick={() => connect()}
-          >
-            {busy && <Loader2 className="size-3.5 animate-spin" aria-hidden />}
-            {t("ext.link.directory.connectDesignContext")}
-          </Button>
-        )}
-        {!available && (
-          <p className="text-xs text-muted-foreground">
-            {t(loading ? "ext.link.loadingConnections" : "ext.link.directory.unavailableHint")}
-          </p>
-        )}
-        {(error || loadError) && (
-          <p role="alert" className="text-xs text-status-err">
-            {error || loadError}
-          </p>
-        )}
-      </LinkConnectionRow>
+        </LinkConnectionOption>
+      )}
+      {localApi}
+      <LinkConnectionOption optionId="mcp-oauth">
+        <LinkConnectionRow
+          data-figma-channel="mcp"
+          title={t("ext.link.directory.designContext")}
+          technical={primary ? undefined : "MCP"}
+          description={t("ext.link.directory.designContextDescription")}
+          status={
+            primary
+              ? undefined
+              : connections.some((connection) => connection.status === "connected")
+                ? t("ext.link.remoteAvailable")
+                : connections.length
+                  ? t("ext.link.remoteReconnectNeeded")
+                  : loading
+                    ? t("ext.link.directory.checking")
+                    : !available
+                      ? t("ext.link.directory.unavailable")
+                      : t("ext.link.directory.notConnected")
+          }
+          tone={
+            connections.some((connection) => connection.status === "connected")
+              ? "ready"
+              : connections.length
+                ? "warning"
+                : "neutral"
+          }
+        >
+          {connections.map((connection) => (
+            <div
+              key={connection.id}
+              data-figma-mcp-connection={connection.id}
+              className="space-y-2 text-xs"
+            >
+              <div className="flex items-start justify-between gap-3">
+                <div className="min-w-0">
+                  <strong className="block truncate text-sm font-medium">
+                    {primary ? (connection.account?.label ?? connection.label) : connection.label}
+                  </strong>
+                  {!primary && (
+                    <p className="mt-1 truncate text-xs text-muted-foreground">
+                      {connection.account?.label ?? "Figma"}
+                    </p>
+                  )}
+                </div>
+                <div className="flex shrink-0 items-center gap-2">
+                  <LinkStatus tone={connection.status === "connected" ? "ready" : "warning"}>
+                    {t(
+                      connection.status === "unavailable"
+                        ? "ext.link.directory.serviceUnavailable"
+                        : connection.status === "connected"
+                          ? "ext.link.remoteAvailable"
+                          : "ext.link.remoteReconnectNeeded",
+                    )}
+                  </LinkStatus>
+                  <LinkAccountMenu>
+                    {connection.status === "connected" && (
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        className="w-full justify-start"
+                        disabled={
+                          busy || !available || !connection.editable || Boolean(authorization)
+                        }
+                        onClick={() => connect(connection)}
+                      >
+                        {t("ext.link.remoteReconnect")}
+                      </Button>
+                    )}
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      className="w-full justify-start"
+                      disabled={busy || !connection.editable || Boolean(authorization)}
+                      onClick={() =>
+                        void run(connection, async (live) => {
+                          await window.codeshell.mcpOAuth.refresh(live!.id);
+                        })
+                      }
+                    >
+                      {t("ext.link.figma.refresh")}
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      className="w-full justify-start"
+                      disabled={busy || !connection.editable || Boolean(authorization)}
+                      onClick={() =>
+                        void run(connection, async (live) => {
+                          await window.codeshell.links.remoteDisconnect(
+                            cwd,
+                            live!.id,
+                            live!.revision,
+                          );
+                        })
+                      }
+                    >
+                      {t("ext.link.remoteDisconnect")}
+                    </Button>
+                  </LinkAccountMenu>
+                </div>
+              </div>
+              {connection.status !== "connected" && (
+                <Button
+                  size="sm"
+                  variant="outline"
+                  disabled={busy || !available || !connection.editable || Boolean(authorization)}
+                  onClick={() => connect(connection)}
+                >
+                  {t("ext.link.remoteReconnect")}
+                </Button>
+              )}
+            </div>
+          ))}
+          {connections.length === 0 && !primary && (
+            <Button
+              size="sm"
+              variant="outline"
+              disabled={busy || !available || Boolean(authorization)}
+              onClick={() => connect()}
+            >
+              {busy && <Loader2 className="size-3.5 animate-spin" aria-hidden />}
+              {t("ext.link.directory.connectDesignContext")}
+            </Button>
+          )}
+          {!available && (
+            <p className="text-xs text-muted-foreground">
+              {t(loading ? "ext.link.loadingConnections" : "ext.link.directory.unavailableHint")}
+            </p>
+          )}
+          {(error || loadError) && (
+            <p role="alert" className="text-xs text-status-err">
+              {error || loadError}
+            </p>
+          )}
+        </LinkConnectionRow>
+      </LinkConnectionOption>
       {authorization && (
         <LinkConnectionDialog
           key={authorization.id}
