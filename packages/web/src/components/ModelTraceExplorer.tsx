@@ -4,6 +4,8 @@ import type {
   ModelTraceEvent,
   ModelTracePage,
   ModelTraceRecord,
+  ModelTraceSessionPage,
+  ModelTraceSessionSummary,
   ModelTraceSummary,
   RemoteModelTraceApi,
 } from "../model-trace-api.js";
@@ -11,7 +13,8 @@ import type {
 const labels = {
   zh: {
     title: "执行观测",
-    description: "查看当前工作区实际记录的 Prompt、响应、重试和工具事件。",
+    description:
+      "先选择会话，再查看每次执行中的 Prompt、响应、重试和工具事件。无会话归属的调用单独显示。",
     refresh: "刷新",
     search: "搜索模型、用途、来源或编号",
     session: "会话 ID",
@@ -23,9 +26,15 @@ const labels = {
     completed: "已完成",
     failed: "失败",
     cancelled: "已取消",
-    empty: "没有符合条件的模型调用",
-    select: "选择执行，展开模型调用和工具事件",
-    calls: "调用与事件",
+    empty: "没有符合条件的会话或独立调用",
+    sessions: "会话与独立调用",
+    sessionRecord: "会话",
+    standalone: "独立调用",
+    standaloneExecutions: "独立调用的执行",
+    execution: "执行",
+    loaded: "已加载调用",
+    select: "选择会话或独立调用，查看其中的执行和模型调用",
+    calls: "会话内的执行",
     back: "返回",
     next: "下一页",
     previous: "上一页",
@@ -59,7 +68,8 @@ const labels = {
   },
   en: {
     title: "Execution traces",
-    description: "Inspect recorded prompts, responses, retries and tools in this workspace.",
+    description:
+      "Choose a session to inspect each execution’s prompts, responses, retries and tools. Calls without a session are listed separately.",
     refresh: "Refresh",
     search: "Search model, purpose, source or ID",
     session: "Session ID",
@@ -71,9 +81,15 @@ const labels = {
     completed: "Completed",
     failed: "Failed",
     cancelled: "Cancelled",
-    empty: "No matching model calls",
-    select: "Select an execution to inspect its calls and events",
-    calls: "Calls and events",
+    empty: "No matching sessions or standalone calls",
+    sessions: "Sessions and standalone calls",
+    sessionRecord: "Session",
+    standalone: "Standalone calls",
+    standaloneExecutions: "Standalone executions",
+    execution: "Execution",
+    loaded: "Loaded calls",
+    select: "Choose a session or standalone calls to inspect executions and model calls",
+    calls: "Executions in session",
     back: "Back",
     next: "Next page",
     previous: "Previous page",
@@ -136,11 +152,13 @@ export function ModelTraceExplorer({
   api,
   lang = "zh",
   initialSessionId,
+  sessionTitles,
   onOpenSession,
 }: {
   api: RemoteModelTraceApi;
   lang?: "zh" | "en";
   initialSessionId?: string;
+  sessionTitles?: Readonly<Record<string, string>>;
   onOpenSession?: (id: string) => void;
 }) {
   const l = labels[lang];
@@ -151,9 +169,10 @@ export function ModelTraceExplorer({
   const [status, setStatus] = useState("");
   const [cursors, setCursors] = useState<Array<string | undefined>>([undefined]);
   const [pageIndex, setPageIndex] = useState(0);
-  const [page, setPage] = useState<ModelTracePage>();
+  const [page, setPage] = useState<ModelTraceSessionPage>();
+  const [selectedSession, setSelectedSession] = useState<ModelTraceSessionSummary>();
   const [traceId, setTraceId] = useState<string>();
-  const [tracePage, setTracePage] = useState<ModelTracePage & { traceId: string }>();
+  const [tracePage, setTracePage] = useState<ModelTracePage & { scopeKey: string }>();
   const [traceError, setTraceError] = useState("");
   const [requestId, setRequestId] = useState<string>();
   const [detail, setDetail] = useState<Detail | null>();
@@ -169,25 +188,36 @@ export function ModelTraceExplorer({
   const [configHint, setConfigHint] = useState("");
   const [copied, setCopied] = useState("");
   const traceGeneration = useRef(0);
+  const sessionsHeading = useRef<HTMLHeadingElement>(null);
+  const executionsHeading = useRef<HTMLHeadingElement>(null);
   const [moreLoading, setMoreLoading] = useState(false);
   const filterKey = `${search}\u0000${model}\u0000${purpose}\u0000${sessionId}\u0000${status}`;
   useEffect(() => {
     setCursors([undefined]);
     setPageIndex(0);
-  }, [filterKey]);
+    setPage(undefined);
+    setSelectedSession(undefined);
+    setTraceId(undefined);
+    setTracePage(undefined);
+    setRequestId(undefined);
+    setDetail(undefined);
+    setDetailError("");
+    setTraceError("");
+    setStage("list");
+  }, [api, filterKey]);
   useEffect(() => {
     let alive = true;
     setLoading(true);
     setError("");
     const timer = setTimeout(() => {
       void api
-        .list({
+        .sessions({
           limit: 50,
           cursor: cursors[pageIndex],
-          search,
-          model,
-          purpose,
-          sessionId,
+          search: search || undefined,
+          model: model || undefined,
+          purpose: purpose || undefined,
+          sessionId: sessionId || undefined,
           status: status ? (status as ModelTraceRecord["status"]) : undefined,
         })
         .then((result) => {
@@ -220,16 +250,26 @@ export function ModelTraceExplorer({
       alive = false;
     };
   }, [api, revision, l]);
+  const callQuery = () => ({
+    search: search || undefined,
+    model: model || undefined,
+    purpose: purpose || undefined,
+    status: status ? (status as ModelTraceRecord["status"]) : undefined,
+    ...(selectedSession?.sessionId
+      ? { sessionId: selectedSession.sessionId }
+      : { traceId: selectedSession?.traceId, withoutSession: true }),
+  });
   useEffect(() => {
     const generation = ++traceGeneration.current;
-    if (!traceId) return;
+    if (!selectedSession) return;
+    const scopeKey = selectedSession.key;
     setMoreLoading(false);
     setTraceError("");
-    setTracePage((current) => (current?.traceId === traceId ? current : undefined));
+    setTracePage(undefined);
     void api
-      .list({ traceId, limit: 200 })
+      .list({ ...callQuery(), limit: 200 })
       .then((result) => {
-        if (generation === traceGeneration.current) setTracePage({ ...result, traceId });
+        if (generation === traceGeneration.current) setTracePage({ ...result, scopeKey });
       })
       .catch((cause) => {
         if (generation === traceGeneration.current) setTraceError(errorText(cause));
@@ -237,7 +277,7 @@ export function ModelTraceExplorer({
     return () => {
       traceGeneration.current++;
     };
-  }, [api, traceId, revision]);
+  }, [api, selectedSession?.key, filterKey, revision]);
   useEffect(() => {
     let alive = true;
     if (!requestId) return;
@@ -261,15 +301,23 @@ export function ModelTraceExplorer({
   }, [api, requestId, revision]);
   const groups = useMemo(() => {
     const result = new Map<string, ModelTraceSummary[]>();
-    for (const item of page?.items ?? [])
+    for (const item of tracePage?.items ?? [])
       result.set(item.traceId, [...(result.get(item.traceId) ?? []), item]);
     return [...result];
-  }, [page]);
+  }, [tracePage]);
   const visibleDetail =
-    detail && detail.record.id === requestId && detail.record.traceId === traceId
+    detail &&
+    detail.record.id === requestId &&
+    detail.record.traceId === traceId &&
+    selectedSession &&
+    (selectedSession.sessionId
+      ? detail.record.sessionId === selectedSession.sessionId
+      : detail.record.traceId === selectedSession.traceId && !detail.record.sessionId)
       ? detail
       : undefined;
   const record = visibleDetail?.record;
+  const executionsLabel =
+    selectedSession && !selectedSession.sessionId ? l.standaloneExecutions : l.calls;
   const selected: ModelTraceRecord | ModelTraceAttempt | ModelTraceEvent | undefined =
     node.kind === "attempt"
       ? record?.attempts.find((attempt) => attempt.id === node.id)
@@ -284,23 +332,25 @@ export function ModelTraceExplorer({
       setCopied(l.copyFailed);
     }
   };
-  const selectRequest = (id: string) => {
-    setRequestId(id);
+  const selectRequest = (call: ModelTraceSummary) => {
+    setRequestId(call.id);
+    setTraceId(call.traceId);
     setNode({ kind: "request" });
     setStage("detail");
     setCopied("");
   };
   const more = async () => {
-    if (!tracePage?.nextCursor || moreLoading || !traceId) return;
+    if (!tracePage?.nextCursor || moreLoading || !selectedSession) return;
+    const scopeKey = selectedSession.key;
     const generation = traceGeneration.current;
     setMoreLoading(true);
     try {
-      const result = await api.list({ traceId, cursor: tracePage.nextCursor, limit: 200 });
+      const result = await api.list({ ...callQuery(), cursor: tracePage.nextCursor, limit: 200 });
       if (generation === traceGeneration.current)
         setTracePage((current) => ({
           ...result,
-          traceId,
-          items: [...(current?.items ?? []), ...result.items],
+          scopeKey,
+          items: [...(current?.scopeKey === scopeKey ? current.items : []), ...result.items],
         }));
     } catch (cause) {
       if (generation === traceGeneration.current) setTraceError(errorText(cause));
@@ -388,20 +438,21 @@ export function ModelTraceExplorer({
         )}
       </header>
       <div className="cs-t-grid">
-        <div className="cs-t-pane" data-active={stage === "list"} aria-label={l.title}>
-          <h2>
-            {page?.total ?? "—"} {l.request} · {groups.length} traces
+        <div className="cs-t-pane" data-active={stage === "list"} aria-label={l.sessions}>
+          <h2 ref={sessionsHeading} tabIndex={-1}>
+            {l.sessions} · {page?.total ?? "—"}
           </h2>
           {loading && <p role="status">{l.loading}</p>}
-          {!loading && !groups.length && <p>{l.empty}</p>}
-          {groups.map(([id, items]) => (
+          {!loading && !page?.items.length && <p>{l.empty}</p>}
+          {page?.items.map((item) => (
             <button
               type="button"
               className="cs-t-item"
-              key={id}
-              aria-pressed={traceId === id}
+              key={item.key}
+              data-trace-session={item.key}
+              aria-pressed={selectedSession?.key === item.key}
               onClick={() => {
-                if (traceId === id) {
+                if (selectedSession?.key === item.key) {
                   setStage("tree");
                   return;
                 }
@@ -412,19 +463,25 @@ export function ModelTraceExplorer({
                 setDetail(undefined);
                 setDetailError("");
                 setCopied("");
-                setTraceId(id);
-                setRequestId(items[0].id);
+                setSelectedSession(item);
+                setTraceId(item.latestTraceId);
+                setRequestId(item.latestRequestId);
                 setNode({ kind: "request" });
                 setStage("tree");
               }}
             >
               <strong>
-                {items[0].purpose} · {items[0].model}
+                {item.sessionId ? sessionTitles?.[item.sessionId] || l.sessionRecord : l.standalone}
+                {" · "}
+                {item.callCount} {l.request}
               </strong>
-              <span>{id}</span>
+              <span className="cs-t-muted">{item.sessionId ?? item.traceId}</span>
               <p className="cs-t-muted">
-                {new Date(items[0].startedAt).toLocaleString(lang)} · {items.length} {l.request}
+                {new Date(item.updatedAt).toLocaleString(lang)} · {item.traceCount} {l.execution}
               </p>
+              <span>
+                {item.sources.join(" · ")} · {item.models.join(" · ")}
+              </span>
             </button>
           ))}
           <footer>
@@ -448,15 +505,25 @@ export function ModelTraceExplorer({
             </button>
           </footer>
         </div>
-        <div className="cs-t-pane" data-active={stage === "tree"} aria-label={l.calls}>
-          <button type="button" className="cs-t-back" onClick={() => setStage("list")}>
+        <div className="cs-t-pane" data-active={stage === "tree"} aria-label={executionsLabel}>
+          <button
+            type="button"
+            className="cs-t-back"
+            onClick={() => {
+              setStage("list");
+              requestAnimationFrame(() => sessionsHeading.current?.focus());
+            }}
+          >
             {l.back}
           </button>
-          <h2>{l.calls}</h2>
-          {!traceId ? (
+          <h2 ref={executionsHeading} tabIndex={-1}>
+            {executionsLabel}
+          </h2>
+          {!selectedSession ? (
             <p>{l.select}</p>
           ) : (
             <>
+              <p className="cs-t-muted">{selectedSession.sessionId ?? selectedSession.traceId}</p>
               {traceError && (
                 <div role="alert">
                   <p className="cs-t-error">{traceError}</p>
@@ -466,36 +533,50 @@ export function ModelTraceExplorer({
                 </div>
               )}
               {!tracePage && !traceError && <p role="status">{l.loading}</p>}
-              {tracePage?.items.map((call) => (
-                <div key={call.id}>
-                  <button
-                    type="button"
-                    className="cs-t-item"
-                    aria-pressed={requestId === call.id && node.kind === "request"}
-                    onClick={() => selectRequest(call.id)}
-                  >
-                    <strong>
-                      {call.model} · {call.purpose}
-                    </strong>
-                    {call.source} · {call.status} · {ms(call.startedAt, call.endedAt)}
-                  </button>
-                  {record?.id === call.id &&
-                    record.attempts.map((attempt) => (
+              {tracePage && (
+                <p className="cs-t-muted">
+                  {l.loaded}: {tracePage.items.length} / {tracePage.total}
+                </p>
+              )}
+              {groups.map(([executionId, calls]) => (
+                <details open key={executionId} data-trace-group={executionId}>
+                  <summary>
+                    {l.execution} · {new Date(calls[0].startedAt).toLocaleString(lang)}
+                  </summary>
+                  <p className="cs-t-muted">{executionId}</p>
+                  {calls.map((call) => (
+                    <div key={call.id}>
                       <button
                         type="button"
-                        key={attempt.id}
                         className="cs-t-item"
-                        aria-pressed={node.kind === "attempt" && node.id === attempt.id}
-                        onClick={() => {
-                          setNode({ kind: "attempt", id: attempt.id });
-                          setStage("detail");
-                        }}
+                        data-trace-request={call.id}
+                        aria-pressed={requestId === call.id && node.kind === "request"}
+                        onClick={() => selectRequest(call)}
                       >
-                        {l.attempt} {attempt.number} · {attempt.httpStatus ?? "—"} ·{" "}
-                        {attempt.status}
+                        <strong>
+                          {call.model} · {call.purpose}
+                        </strong>
+                        {call.source} · {l[call.status]} · {ms(call.startedAt, call.endedAt)}
                       </button>
-                    ))}
-                </div>
+                      {record?.id === call.id &&
+                        record.attempts.map((attempt) => (
+                          <button
+                            type="button"
+                            key={attempt.id}
+                            className="cs-t-item"
+                            aria-pressed={node.kind === "attempt" && node.id === attempt.id}
+                            onClick={() => {
+                              setNode({ kind: "attempt", id: attempt.id });
+                              setStage("detail");
+                            }}
+                          >
+                            {l.attempt} {attempt.number} · {attempt.httpStatus ?? "—"} ·{" "}
+                            {l[attempt.status]}
+                          </button>
+                        ))}
+                    </div>
+                  ))}
+                </details>
               ))}
               {tracePage?.nextCursor && (
                 <button type="button" disabled={moreLoading} onClick={() => void more()}>
@@ -523,7 +604,14 @@ export function ModelTraceExplorer({
           )}
         </div>
         <div className="cs-t-pane" data-active={stage === "detail"} aria-label={l.request}>
-          <button type="button" className="cs-t-back" onClick={() => setStage("tree")}>
+          <button
+            type="button"
+            className="cs-t-back"
+            onClick={() => {
+              setStage("tree");
+              requestAnimationFrame(() => executionsHeading.current?.focus());
+            }}
+          >
             {l.back}
           </button>
           {detailError && (

@@ -19,6 +19,7 @@ export function registerModelTraceIpc(
     });
   };
   handle("modelTraces:list", (query) => history.list(query));
+  handle("modelTraces:sessions", (query) => history.sessions(query));
   handle("modelTraces:get", (id) => history.get(id));
   handle("modelTraces:getConfig", () => history.getConfig());
   handle("modelTraces:setConfig", (patch) => history.setConfig(patch));

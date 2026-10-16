@@ -7,9 +7,11 @@ import { api, ApiError } from "./auth.js";
 export function HubModelTraces({
   onAuthLost,
   onOpenSession,
+  sessionTitles,
 }: {
   onAuthLost: () => void;
   onOpenSession: (id: string) => void;
+  sessionTitles?: Readonly<Record<string, string>>;
 }) {
   const traceApi = useMemo(() => {
     const scope = captureApiScope();
@@ -24,5 +26,11 @@ export function HubModelTraces({
       },
     });
   }, [onAuthLost]);
-  return <ModelTraceExplorer api={traceApi} onOpenSession={onOpenSession} />;
+  return (
+    <ModelTraceExplorer
+      api={traceApi}
+      sessionTitles={sessionTitles}
+      onOpenSession={onOpenSession}
+    />
+  );
 }

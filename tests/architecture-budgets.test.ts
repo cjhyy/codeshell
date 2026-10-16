@@ -185,7 +185,8 @@ describe("architecture growth budgets", () => {
       // +2 linked-file source snapshot/add operations; no file content crosses IPC.
       // The integrated baseline contains 356 routes (the previous ceiling missed one).
       // +4 local model trace list/detail/config read/update routes, restricted to application main frames.
-    ).toBeLessThanOrEqual(360);
+      // +1 metadata-only session grouping route shares the same fixed store and caller guard.
+    ).toBeLessThanOrEqual(361);
     // v0.8.17 added the reviewed Panel catalog/task bridge to both preload
     // surfaces. Mimi's bounded transcript pagination adds one typed invoke;
     // the validation and file-reading implementation remain extracted in main.
@@ -245,7 +246,8 @@ describe("architecture growth budgets", () => {
       // +2 typed linked-file snapshot/add invokes mirror the two Main routes above.
       // The integrated baseline contains 349 invokes; tracing adds four fixed
       // list/detail/config read/update invokes, without renderer filesystem access.
-    ).toBeLessThanOrEqual(353);
+      // +1 session grouping invoke mirrors the single guarded Main route above.
+    ).toBeLessThanOrEqual(354);
     // GitHub skill previews and Panel task hosting carry main-issued review and
     // ownership fields across the typed preload boundary. The optional Mimi
     // transcript-page method adds its bounded response shape without widening

@@ -129,6 +129,7 @@ test("remote trace queries cannot select paths, override workspace, or mutate ca
     "?storageDir=/tmp/foreign",
     "?workspacePath=/tmp/foreign",
     "?workspaceScopes=/tmp/foreign",
+    "?withoutSession=1",
     "?limit=0",
     "?limit=201",
     "?limit=2&limit=3",
@@ -234,4 +235,85 @@ test("revoking a related workspace during a request discards its already-read pr
   const response = await f.request("/root-panel");
   expect(response.status).toBe(401);
   expect(await response.text()).not.toContain("root-panel");
+});
+
+test("session HTTP groups all authorized executions before pagination and keeps standalone calls separate", async () => {
+  const f = await fixture();
+  const now = Date.now();
+  for (let i = 0; i < 205; i++)
+    f.store.write({
+      ...entry(`session-call-${i}`, f.cwd),
+      sessionId: "real-session",
+      traceId: i % 2 ? "second-run" : "first-run",
+      startedAt: now + 10 - i,
+    });
+  f.store.write({
+    ...entry("foreign-session-call", f.other),
+    sessionId: "real-session",
+    startedAt: now + 100,
+  });
+  f.store.write({
+    ...entry("other-visible", f.cwd),
+    traceId: "separate-run",
+    startedAt: now - 500,
+  });
+  expect((await f.request("/sessions", "GET", false)).status).toBe(401);
+  const first = await (await f.request("/sessions?limit=1")).json();
+  expect(first.total).toBe(3);
+  expect(first.items[0]).toMatchObject({
+    key: "session:real-session",
+    sessionId: "real-session",
+    callCount: 205,
+    traceCount: 2,
+    latestRequestId: "session-call-0",
+    latestTraceId: "first-run",
+  });
+  const second = await (
+    await f.request("/sessions?limit=1&cursor=" + encodeURIComponent(first.nextCursor))
+  ).json();
+  expect(second.items[0]).toMatchObject({
+    key: "trace:shared-run",
+    traceId: "shared-run",
+    callCount: 1,
+  });
+  expect(second.items[0]).not.toHaveProperty("sessionId");
+  const filtered = await (
+    await f.request("/sessions?sessionId=real-session&traceId=second-run")
+  ).json();
+  expect(filtered.total).toBe(1);
+  expect(filtered.items[0]).toMatchObject({ callCount: 102, traceCount: 1 });
+  expect((await (await f.request("/sessions?withoutSession=true")).json()).total).toBe(2);
+  expect((await (await f.request("?traceId=first-run&withoutSession=true")).json()).total).toBe(0);
+  for (const query of [
+    "?withoutSession=1",
+    "?cursor=invalid",
+    "?workspacePath=/foreign",
+    "?workspaceScopes=/foreign",
+    "?storageDir=/foreign",
+    "?limit=201",
+    "?limit=1&limit=2",
+  ])
+    expect((await f.request("/sessions" + query)).status).toBe(400);
+  f.setAllowed(false);
+  expect((await f.request("/sessions")).status).toBe(401);
+});
+
+test("session aggregation rechecks related workspace authority before responding", async () => {
+  const f = await fixture();
+  f.store.write({
+    ...entry("root-session-call", f.root),
+    sessionId: "root-session",
+    source: "panel:fixture",
+  });
+  f.setScopes([{ workspacePath: f.root, sourcePrefix: "panel:" }]);
+  expect(
+    (await (await f.request("/sessions?sessionId=root-session")).json()).items[0].callCount,
+  ).toBe(1);
+  let reads = 0;
+  f.setScopeResolver(() =>
+    ++reads === 1 ? [{ workspacePath: f.root, sourcePrefix: "panel:" }] : undefined,
+  );
+  const response = await f.request("/sessions");
+  expect(response.status).toBe(401);
+  expect(await response.text()).not.toContain("root-session");
 });

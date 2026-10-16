@@ -3,6 +3,7 @@ import type {
   ModelTraceEvent,
   ModelTraceListQuery,
   ModelTracePage,
+  ModelTraceSessionPage,
   ModelTraceRecord,
 } from "@cjhyy/code-shell-core/internal";
 export type {
@@ -13,13 +14,18 @@ export type {
   ModelTraceListQuery,
   ModelTraceOutput,
   ModelTracePage,
+  ModelTraceSessionPage,
   ModelTraceRecord,
   ModelTraceStatus,
   ModelTraceSummary,
+  ModelTraceSessionSummary,
 } from "@cjhyy/code-shell-core/internal";
 
+type RemoteModelTraceQuery = Omit<ModelTraceListQuery, "workspacePath" | "workspaceScopes">;
+
 export interface RemoteModelTraceApi {
-  list(query?: Omit<ModelTraceListQuery, "workspacePath">): Promise<ModelTracePage>;
+  list(query?: RemoteModelTraceQuery): Promise<ModelTracePage>;
+  sessions(query?: RemoteModelTraceQuery): Promise<ModelTraceSessionPage>;
   get(id: string): Promise<{ record: ModelTraceRecord; events: ModelTraceEvent[] } | null>;
   getConfig(): Promise<ModelTraceConfig>;
 }
@@ -28,16 +34,23 @@ export interface RemoteModelTraceApi {
 export function createRemoteModelTraceApi(options: {
   request: (path: string, init?: RequestInit) => Promise<unknown>;
 }): RemoteModelTraceApi {
+  const querySuffix = (query: RemoteModelTraceQuery) => {
+    const params = new URLSearchParams();
+    for (const [key, value] of Object.entries(query)) {
+      if (["workspacePath", "workspaceScopes", "storageDir"].includes(key))
+        throw new Error("Model history scope belongs to the Host");
+      if (value !== undefined) params.set(key, String(value));
+    }
+    return params.size ? `?${params}` : "";
+  };
   return {
     async list(query = {}) {
-      const params = new URLSearchParams();
-      for (const [key, value] of Object.entries(query)) {
-        if (key === "workspacePath" || key === "storageDir")
-          throw new Error("Model history scope belongs to the Host");
-        if (value !== undefined) params.set(key, String(value));
-      }
-      const suffix = params.size ? `?${params}` : "";
-      return (await options.request(`/api/v1/model-traces${suffix}`)) as ModelTracePage;
+      return (await options.request(`/api/v1/model-traces${querySuffix(query)}`)) as ModelTracePage;
+    },
+    async sessions(query = {}) {
+      return (await options.request(
+        `/api/v1/model-traces/sessions${querySuffix(query)}`,
+      )) as ModelTraceSessionPage;
     },
     async get(id) {
       if (!/^[A-Za-z0-9_-]{1,128}$/.test(id)) throw new Error("Invalid model trace id");

@@ -67,6 +67,14 @@ function fixture() {
 test("production preload methods reach the validated native trace service and persist policy independently of dev mode", async () => {
   const f = fixture();
   expect((await f.api.list()).items.map((record) => record.id)).toEqual(["record-1"]);
+  expect((await f.api.sessions()).items[0]).toMatchObject({
+    key: "session:session-1",
+    sessionId: "session-1",
+    callCount: 1,
+    traceCount: 1,
+    latestRequestId: "record-1",
+    latestTraceId: "run-1",
+  });
   const detail = await f.api.get("record-1");
   expect(detail?.record.sessionId).toBe("session-1");
   expect(detail?.events.map((event) => event.id)).toEqual(["event-1"]);
@@ -83,6 +91,10 @@ test("production preload methods reach the validated native trace service and pe
   await expect(f.api.list({ storageDir: "/foreign" } as any)).rejects.toThrow(
     "Unknown model trace query field",
   );
+  await expect(
+    f.api.sessions({ workspaceScopes: [{ workspacePath: "/foreign" }] } as any),
+  ).rejects.toThrow("Unknown model trace query field");
+  await expect(f.api.sessions({ withoutSession: "true" } as any)).rejects.toThrow("withoutSession");
   await expect(f.api.get("../secret")).rejects.toThrow("Invalid model trace id");
   f.registration.dispose();
   expect(f.handlers.size).toBe(0);

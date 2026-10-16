@@ -103,6 +103,37 @@ function summary(value: ModelTraceRecord): ModelTraceSummary {
   return { ...rest, attemptCount: attempts.length };
 }
 
+function sessionPage(records: ModelTraceRecord[], query: ModelTraceListQuery) {
+  const groups = new Map<string, ModelTraceRecord[]>();
+  for (const item of records) {
+    if (query.sessionId && item.sessionId !== query.sessionId) continue;
+    if (query.traceId && item.traceId !== query.traceId) continue;
+    if (query.withoutSession && item.sessionId) continue;
+    const key = item.sessionId ? `session:${item.sessionId}` : `trace:${item.traceId}`;
+    const group = groups.get(key) ?? [];
+    group.push(item);
+    groups.set(key, group);
+  }
+  const items = [...groups].map(([key, calls]) => {
+    const latest = [...calls].sort((a, b) => b.startedAt - a.startedAt)[0];
+    return {
+      key,
+      ...(latest.sessionId ? { sessionId: latest.sessionId } : { traceId: latest.traceId }),
+      latestRequestId: latest.id,
+      latestTraceId: latest.traceId,
+      startedAt: Math.min(...calls.map((item) => item.startedAt)),
+      updatedAt: Math.max(...calls.map((item) => item.endedAt ?? item.startedAt)),
+      callCount: calls.length,
+      traceCount: new Set(calls.map((item) => item.traceId)).size,
+      sources: [...new Set(calls.map((item) => item.source))],
+      models: [...new Set(calls.map((item) => item.model))],
+      runningCount: calls.filter((item) => item.status === "running").length,
+      failedCount: calls.filter((item) => item.status === "failed").length,
+    };
+  });
+  return { items, total: items.length };
+}
+
 describe("model trace observability", () => {
   let root: Root;
   let container: HTMLElement;
@@ -112,6 +143,7 @@ describe("model trace observability", () => {
   let config: ModelTraceConfig;
   let api: ModelTraceApi;
   let listCalls: ModelTraceListQuery[];
+  let sessionCalls: ModelTraceListQuery[];
   let getCalls: string[];
   const settle = async (action?: () => void) =>
     act(async () => {
@@ -143,17 +175,27 @@ describe("model trace observability", () => {
       configurable: true,
       value: { getItem: () => null },
     });
-    records = [record("request-a"), record("request-b"), record("request-c", "execution-b")];
+    records = [
+      record("request-a", "execution-a", { startedAt: 1000, endedAt: 2500 }),
+      record("request-b", "execution-a", { startedAt: 900, endedAt: 2400 }),
+      record("request-c", "execution-b", { startedAt: 800, endedAt: 2300 }),
+    ];
     config = { enabled: true, captureContent: false, retentionDays: 7, includeEphemeral: false };
     listCalls = [];
+    sessionCalls = [];
     getCalls = [];
     api = {
+      sessions: async (query = {}) => {
+        sessionCalls.push(query);
+        return sessionPage(records, query);
+      },
       list: async (query = {}) => {
         listCalls.push(query);
         return {
           items: records
             .filter((item) => !query.traceId || item.traceId === query.traceId)
             .filter((item) => !query.sessionId || item.sessionId === query.sessionId)
+            .filter((item) => !query.withoutSession || !item.sessionId)
             .map(summary),
           total: records.length,
         };
@@ -189,7 +231,20 @@ describe("model trace observability", () => {
         return config;
       },
     };
-    Object.defineProperty(window, "codeshell", { configurable: true, value: { modelTraces: api } });
+    Object.defineProperty(window, "codeshell", {
+      configurable: true,
+      value: {
+        modelTraces: api,
+        listSessions: async () => [
+          { id: "session-a", title: "Planning the next release" },
+          { id: "session-b", title: "Reviewing the change" },
+        ],
+        listSessionTitles: async () => ({
+          "session-a": "Planning the next release",
+          "session-b": "Reviewing the change",
+        }),
+      },
+    });
     container = document.createElement("div");
     document.body.appendChild(container);
     root = createRoot(container);
@@ -203,10 +258,16 @@ describe("model trace observability", () => {
     else Reflect.deleteProperty(globalThis, "localStorage");
   });
 
-  test("groups calls by trace identity and inspects logical input, provider retries and linked tools separately", async () => {
+  test("a session owns every execution and separates calls, provider retries and linked tools", async () => {
     await render();
+    expect(nodes(container).filter((node) => props(node)["data-trace-session"])).toHaveLength(1);
+    expect(textOf(attr("data-trace-session", "session:session-a"))).toContain(
+      "Planning the next release",
+    );
     expect(nodes(container).filter((node) => props(node)["data-trace-group"])).toHaveLength(2);
-    expect(nodes(container).filter((node) => props(node)["data-trace-request"])).toHaveLength(2);
+    expect(nodes(container).filter((node) => props(node)["data-trace-request"])).toHaveLength(3);
+    expect(listCalls).toContainEqual({ sessionId: "session-a", limit: 100 });
+    expect(listCalls.some((query) => query.traceId)).toBe(false);
     expect(textOf(attr("data-trace-request", "request-a").parentNode!.parentNode!)).toContain(
       "Read source",
     );
@@ -224,6 +285,139 @@ describe("model trace observability", () => {
     expect(textOf(selectedDetail()!)).toContain("Source file content");
     await click(button("输入"));
     expect(textOf(selectedDetail()!)).toContain("/source/file.ts");
+  });
+
+  test("Panel calls with a session join its history while independent Panel calls stay separate", async () => {
+    records.push(
+      record("attached-panel", "panel-execution", {
+        source: "panel:video-studio",
+        startedAt: 700,
+      }),
+      record("independent-panel", "independent-execution", {
+        sessionId: undefined,
+        source: "panel:job-hunt-hq",
+        startedAt: 600,
+      }),
+      record("second-independent-panel", "second-independent-execution", {
+        sessionId: undefined,
+        source: "panel:job-hunt-hq",
+        startedAt: 500,
+      }),
+    );
+    await render();
+    expect(nodes(container).filter((node) => props(node)["data-trace-session"])).toHaveLength(3);
+    expect(nodes(container).filter((node) => props(node)["data-trace-request"])).toHaveLength(4);
+    expect(attr("data-trace-request", "attached-panel")).toBeDefined();
+    expect(attr("data-trace-request", "independent-panel")).toBeUndefined();
+    await click(attr("data-trace-session", "trace:independent-execution"));
+    expect(listCalls.at(-1)).toEqual({
+      traceId: "independent-execution",
+      withoutSession: true,
+      limit: 100,
+    });
+    expect(nodes(container).filter((node) => props(node)["data-trace-request"])).toHaveLength(1);
+    expect(props(selectedDetail()!)["data-trace-detail-id"]).toBe("independent-panel");
+    await click(attr("data-trace-session", "trace:second-independent-execution"));
+    expect(props(selectedDetail()!)["data-trace-detail-id"]).toBe("second-independent-panel");
+  });
+
+  test("standalone calls exclude attached session calls even when their trace IDs collide", async () => {
+    records.push(
+      record("independent-collision", "execution-a", {
+        sessionId: undefined,
+        source: "panel:job-hunt-hq",
+        startedAt: 700,
+      }),
+    );
+    await render();
+    expect(nodes(container).filter((node) => props(node)["data-trace-session"])).toHaveLength(2);
+    expect(attr("data-trace-request", "independent-collision")).toBeUndefined();
+    await click(attr("data-trace-session", "trace:execution-a"));
+    expect(listCalls.at(-1)).toEqual({
+      traceId: "execution-a",
+      withoutSession: true,
+      limit: 100,
+    });
+    expect(nodes(container).filter((node) => props(node)["data-trace-request"])).toHaveLength(1);
+    expect(attr("data-trace-request", "request-a")).toBeUndefined();
+    expect(attr("data-trace-request", "request-b")).toBeUndefined();
+    expect(props(selectedDetail()!)["data-trace-detail-id"]).toBe("independent-collision");
+  });
+
+  test("reselecting the pending session and request does not discard their detail read", async () => {
+    const pending = deferred<Awaited<ReturnType<ModelTraceApi["get"]>>>();
+    const reads: string[] = [];
+    const normal = api.get;
+    api.get = (id) => {
+      reads.push(id);
+      return id === "request-a" ? pending.promise : normal(id);
+    };
+    await render();
+    expect(selectedDetail()).toBeUndefined();
+    await click(attr("data-trace-request", "request-a"));
+    await click(attr("data-trace-session", "session:session-a"));
+    await click(attr("data-trace-request", "request-a"));
+    expect(reads).toEqual(["request-a"]);
+    await settle(() => pending.resolve({ record: records[0], events: [] }));
+    expect(props(selectedDetail()!)["data-trace-detail-id"]).toBe("request-a");
+    expect(textOf(selectedDetail()!)).toContain("System snapshot at request time");
+  });
+
+  test("missing session-title APIs retain session identity without blocking prompts", async () => {
+    Reflect.deleteProperty(window.codeshell, "listSessions");
+    Reflect.deleteProperty(window.codeshell, "listSessionTitles");
+    await render();
+    expect(textOf(attr("data-trace-session", "session:session-a"))).toContain("session-a");
+    expect(textOf(selectedDetail()!)).toContain("System snapshot at request time");
+  });
+
+  test("a failed session refresh preserves the selected execution, request and prompt", async () => {
+    await render();
+    await click(attr("data-trace-request", "request-c"));
+    api.sessions = async () => {
+      throw new Error("Session index unavailable");
+    };
+    await click(button("刷新记录"));
+    expect(textOf(container)).toContain("Session index unavailable");
+    expect(attr("data-trace-session", "session:session-a")).toBeDefined();
+    expect(attr("data-trace-group", "execution-a")).toBeDefined();
+    expect(props(selectedDetail()!)["data-trace-detail-id"]).toBe("request-c");
+    expect(textOf(selectedDetail()!)).toContain("System snapshot at request time");
+  });
+
+  test("copies the visible prompt and acknowledges only after the clipboard accepts it", async () => {
+    const navigatorBefore = Object.getOwnPropertyDescriptor(globalThis, "navigator");
+    const secureBefore = Object.getOwnPropertyDescriptor(window, "isSecureContext");
+    const copied = deferred<void>();
+    const writes: string[] = [];
+    Object.defineProperty(globalThis, "navigator", {
+      configurable: true,
+      value: {
+        clipboard: {
+          writeText: (text: string) => {
+            writes.push(text);
+            return copied.promise;
+          },
+        },
+      },
+    });
+    Object.defineProperty(window, "isSecureContext", { configurable: true, value: true });
+    try {
+      await render();
+      const copy = nodes(container).find(
+        (node) => props(node)["aria-label"] === "复制文本 · System Prompt",
+      ) as HTMLElement;
+      await click(copy);
+      expect(writes).toEqual(["System snapshot at request time"]);
+      expect(textOf(copy)).toBe("复制文本");
+      await settle(() => copied.resolve());
+      expect(textOf(copy)).toBe("已复制");
+    } finally {
+      if (navigatorBefore) Object.defineProperty(globalThis, "navigator", navigatorBefore);
+      else Reflect.deleteProperty(globalThis, "navigator");
+      if (secureBefore) Object.defineProperty(window, "isSecureContext", secureBefore);
+      else Reflect.deleteProperty(window, "isSecureContext");
+    }
   });
 
   test("a late detail read cannot replace a newer selection", async () => {
@@ -301,35 +495,95 @@ describe("model trace observability", () => {
     expect(selectedDetail()).toBeDefined();
   });
 
-  test("paginates calls on the server and resets cursors for trimmed filters", async () => {
-    api.list = async (query = {}) => {
-      listCalls.push(query);
+  test("paginates sessions on the server and resets cursors for trimmed filters", async () => {
+    const all = sessionPage(records, {});
+    api.sessions = async (query = {}) => {
+      sessionCalls.push(query);
       return {
-        items: [summary(query.cursor ? records[2] : records[0])],
+        items: all.items,
         total: 3,
-        ...(query.traceId || query.cursor ? {} : { nextCursor: "page-two" }),
+        ...(query.cursor ? {} : { nextCursor: "page-two" }),
       };
     };
     await render();
     await click(button("下一页"));
-    expect(listCalls.filter((query) => !query.traceId).at(-1)?.cursor).toBe("page-two");
+    expect(sessionCalls.at(-1)?.cursor).toBe("page-two");
     const search = nodes(container).find(
       (node) => props(node)["aria-label"] === "搜索模型、用途、来源或编号",
     ) as HTMLElement;
     await change(search, "  model-b  ");
-    expect(listCalls.filter((query) => !query.traceId).at(-1)).toEqual({
-      limit: 50,
-      search: "model-b",
+    expect(sessionCalls.at(-1)).toEqual({ limit: 50, search: "model-b" });
+    expect(listCalls.every((query) => query.sessionId === "session-a")).toBe(true);
+  });
+
+  test("a late call page from another session cannot replace the active session", async () => {
+    records[2].sessionId = "session-b";
+    const old = deferred<Awaited<ReturnType<ModelTraceApi["list"]>>>();
+    const normal = api.list;
+    api.list = (query = {}) => (query.sessionId === "session-a" ? old.promise : normal(query));
+    await render();
+    await click(attr("data-trace-session", "session:session-b"));
+    expect(props(selectedDetail()!)["data-trace-detail-id"]).toBe("request-c");
+    await settle(() => old.resolve({ items: [summary(records[0])], total: 2 }));
+    expect(attr("data-trace-request", "request-a")).toBeUndefined();
+    expect(attr("data-trace-request", "request-c")).toBeDefined();
+  });
+
+  test("call paging rejects duplicate clicks and ignores a page after changing sessions", async () => {
+    records[2].sessionId = "session-b";
+    const page = deferred<Awaited<ReturnType<ModelTraceApi["list"]>>>();
+    api.list = async (query = {}) => {
+      listCalls.push(query);
+      if (query.cursor) return page.promise;
+      return query.sessionId === "session-a"
+        ? { items: [summary(records[0])], total: 2, nextCursor: "more-a" }
+        : { items: [summary(records[2])], total: 1 };
+    };
+    await render();
+    const more = button("加载更多调用");
+    expect(more).toBeDefined();
+    await settle(() => {
+      props(more).onClick();
+      props(more).onClick();
     });
+    expect(listCalls.filter((query) => query.cursor)).toEqual([
+      { sessionId: "session-a", limit: 100, cursor: "more-a" },
+    ]);
+    await click(attr("data-trace-session", "session:session-b"));
+    await settle(() => page.resolve({ items: [summary(records[1])], total: 2 }));
+    expect(attr("data-trace-request", "request-b")).toBeUndefined();
+    expect(props(selectedDetail()!)["data-trace-detail-id"]).toBe("request-c");
+  });
+
+  test("a late session search cannot restore an obsolete filter result", async () => {
+    const old = deferred<Awaited<ReturnType<ModelTraceApi["sessions"]>>>();
+    const normal = api.sessions;
+    api.sessions = (query = {}) => (query.search === "old" ? old.promise : normal(query));
+    await render();
+    const search = nodes(container).find(
+      (node) => props(node)["aria-label"] === "搜索模型、用途、来源或编号",
+    ) as HTMLElement;
+    await change(search, "old");
+    await change(search, "new");
+    await settle(() => old.resolve({ items: [], total: 0 }));
+    expect(attr("data-trace-session", "session:session-a")).toBeDefined();
   });
 
   test("deep links load the exact request even when it is outside the filtered list", async () => {
-    const normal = api.list;
-    api.list = async (query = {}) => (query.traceId ? normal(query) : { items: [], total: 0 });
+    api.sessions = async () => ({ items: [], total: 0 });
     await render({ initialSessionId: "target-session", initialRequestId: "request-c" });
     expect(getCalls).toEqual(["request-c"]);
     expect(props(selectedDetail()!)["data-trace-detail-id"]).toBe("request-c");
     expect(attr("data-trace-request", "request-c")).toBeDefined();
+  });
+
+  test("an execution deep link resolves its session and shows the sibling executions", async () => {
+    await render({ initialTraceId: "execution-b" });
+    expect(props(selectedDetail()!)["data-trace-detail-id"]).toBe("request-c");
+    expect(props(attr("data-trace-session", "session:session-a"))["aria-pressed"]).toBe(true);
+    expect(attr("data-trace-group", "execution-a")).toBeDefined();
+    expect(attr("data-trace-group", "execution-b")).toBeDefined();
+    expect(listCalls.some((query) => query.sessionId === "session-a")).toBe(true);
   });
 
   test("an initial request awaiting a read is never replaced by the first list result", async () => {
@@ -350,7 +604,7 @@ describe("model trace observability", () => {
     await render({ initialSessionId: "session-b" });
     expect(props(selectedDetail()!)["data-trace-detail-id"]).toBe("request-c");
     expect(textOf(selectedDetail()!)).not.toContain("Rate limited");
-    expect(props(attr("data-trace-group", "execution-b"))["aria-pressed"]).toBe(true);
+    expect(props(attr("data-trace-session", "session:session-b"))["aria-pressed"]).toBe(true);
     expect(listCalls.filter((query) => query.sessionId).at(-1)?.sessionId).toBe("session-b");
   });
 
@@ -429,14 +683,14 @@ describe("model trace observability", () => {
   });
 
   test("a failed initial list stays distinct from empty history and a refresh can recover it", async () => {
-    const normal = api.list;
-    api.list = async () => {
+    const normal = api.sessions;
+    api.sessions = async () => {
       throw new Error("Trace store unavailable");
     };
     await render();
     expect(textOf(container)).toContain("Trace store unavailable");
     expect(textOf(container)).not.toContain("还没有模型调用记录");
-    api.list = normal;
+    api.sessions = normal;
     await click(button("刷新记录"));
     expect(attr("data-trace-group", "execution-a")).toBeDefined();
   });

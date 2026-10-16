@@ -1066,6 +1066,15 @@ export function Workbench({
         {view === "activity" && hub ? (
           <HubModelTraces
             key={`${controller.workspaceKey}:activity`}
+            sessionTitles={Object.fromEntries(
+              sessions.map((item) => [
+                item.sessionId,
+                item.customTitle ||
+                  item.title ||
+                  item.preview?.trim() ||
+                  item.sessionId.slice(0, 8),
+              ]),
+            )}
             onAuthLost={onAuthLost}
             onOpenSession={(id) => void openSession(id)}
           />

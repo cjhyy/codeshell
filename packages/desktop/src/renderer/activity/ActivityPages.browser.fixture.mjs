@@ -36,7 +36,7 @@ const history = Array.from({ length: 75 }, (_, i) => ({ envelope: envelope("hist
 const sessions = Array.from({ length: 120 }, (_, i) => ({ id: "session-" + i, title: "Session " + i, file: "/fixture/" + i, size: 1024, createdAt: 1800000000000, updatedAt: 1800000000000 + i }));
 const run = { runId: "run-original", objective: "Original run", status: "completed", cwd: "/original/project", createdAt: 1800000000000, updatedAt: 1800000000010, startedAt: 1800000000000, finishedAt: 1800000000010, sessionId: "original-session", error: null, summary: "Run completed", model: null, provider: null, durationMs: 10, usage: null, attemptCount: 1, latestCheckpointId: null, latestApprovalId: null, tags: [], metadata: {} };
 window.codeshell = {
-  modelTraces: { list: async () => ({items:[], total:0}), get: async () => null, getConfig: async () => ({enabled:true,captureContent:false,includeEphemeral:false,retentionDays:7}), setConfig: async (patch) => ({enabled:true,captureContent:false,includeEphemeral:false,retentionDays:7,...patch}) },
+  modelTraces: { sessions: async () => ({items:[], total:0}), list: async () => ({items:[], total:0}), get: async () => null, getConfig: async () => ({enabled:true,captureContent:true,includeEphemeral:true,retentionDays:7}), setConfig: async (patch) => ({enabled:true,captureContent:true,includeEphemeral:true,retentionDays:7,...patch}) },
   tailLog: async (bucket, limit) => {
     window.fixture.calls.push(["tail", bucket, limit]);
     if (window.fixture.logMode === "error") throw new Error("Owned log failure");

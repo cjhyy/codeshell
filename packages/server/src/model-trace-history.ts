@@ -5,6 +5,7 @@ import {
   type ModelTraceEvent,
   type ModelTraceListQuery,
   type ModelTracePage,
+  type ModelTraceSessionPage,
   type ModelTraceRecord,
 } from "@cjhyy/code-shell-core/internal";
 import { resolve } from "node:path";
@@ -12,7 +13,7 @@ import { resolve } from "node:path";
 export type ModelTraceDetail = { record: ModelTraceRecord; events: ModelTraceEvent[] };
 export type ModelTraceReader = Pick<
   ModelTraceStore,
-  "list" | "get" | "events" | "getConfig" | "setConfig"
+  "list" | "sessions" | "get" | "events" | "getConfig" | "setConfig"
 >;
 
 const QUERY_FIELDS = new Set([
@@ -21,6 +22,7 @@ const QUERY_FIELDS = new Set([
   "search",
   "traceId",
   "sessionId",
+  "withoutSession",
   "model",
   "provider",
   "purpose",
@@ -55,7 +57,10 @@ export function validateModelTraceQuery(input?: unknown): ModelTraceListQuery {
     if (!QUERY_FIELDS.has(key))
       throw new ModelTraceRequestError(400, `Unknown model trace query field: ${key}`);
     if (value === undefined) continue;
-    if (key === "limit") {
+    if (key === "withoutSession") {
+      if (typeof value !== "boolean")
+        throw new ModelTraceRequestError(400, "Invalid model trace withoutSession");
+    } else if (key === "limit") {
       if (!Number.isSafeInteger(value) || (value as number) < 1 || (value as number) > 200)
         throw new ModelTraceRequestError(400, "Model trace limit must be between 1 and 200");
     } else if (key === "since" || key === "until") {
@@ -200,6 +205,23 @@ export function createModelTraceHistory(options: {
             ? {}
             : { workspacePath }),
       });
+    },
+    sessions(query?: unknown): ModelTraceSessionPage {
+      const validated = validateModelTraceQuery(query);
+      try {
+        return store.sessions({
+          ...validated,
+          ...(scopes
+            ? { workspaceScopes: scopes }
+            : workspacePath === undefined
+              ? {}
+              : { workspacePath }),
+        });
+      } catch (error) {
+        if (error instanceof Error && error.message === "Invalid model trace session cursor")
+          throw new ModelTraceRequestError(400, error.message);
+        throw error;
+      }
     },
     get(id: unknown): ModelTraceDetail | null {
       const entry = store.get(validateModelTraceId(id));
