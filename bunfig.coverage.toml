@@ -5,6 +5,10 @@
 # have direct executor tests.
 preload = ["./packages/core/test-setup.ts"]
 coverageSkipTestFiles = true
+# Host provider fixtures may also load built package entries. Generated copies
+# are not a second source coverage population; retain every source module,
+# including handwritten source directories named dist.
+coveragePathIgnorePatterns = ["dist/**", "packages/*/dist/**"]
 # Bun enforces coverageThreshold per file, while this gate measures the entire
 # loaded integration surface. check-builtin-coverage.ts enforces the unchanged
 # 45% lines / 38% functions minimums using Bun's mean of module ratios, computed
