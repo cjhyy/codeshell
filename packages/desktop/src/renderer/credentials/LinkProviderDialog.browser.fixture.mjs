@@ -46,9 +46,9 @@ window.mountFixture=({lang,theme,empty=false,legacy=false,remoteCount=4})=>{
  connections.push({id:'figma-local-api',providerId:'figma',methodId:'token',label:'Owned local token',runtime:'local',authSource:'manual-token',status:'connected',account:{id:'owned-local-user',label:'Owned local token account',resources:[]},capabilityIds:['figma.get_file'],revision:'owned-local-revision',scope:'project',editable:true});
  if(empty)connections.length=0;
  window.liveSnapshot={providers:[provider],connections,capabilities:{token:true,cliBinding:false,deviceAuth:false,remoteAuth:true,authorizationSteps:1},remoteServer:{issuer:'https://owned-link.invalid'},remoteCatalog:{state:'ready'},revision:'owned-snapshot'};
- window.calls={unsafe:[],disconnect:[],rename:[],open:[],start:[],cancel:[],reload:0,changed:0};window.allowAuthorization=false;
+ window.calls={unsafe:[],disconnect:[],rename:[],open:[],start:[],cancel:[],reload:0,changed:0};window.allowAuthorization=false;window.holdSnapshot=false;window.resolveSnapshot=null;
  const forbidden=name=>(...args)=>{window.calls.unsafe.push({name,args});throw Error('Forbidden owned action '+name)};
- let attempt;const links={remoteSnapshot:async()=>clone(window.liveSnapshot),remoteDisconnect:async(...args)=>{window.calls.disconnect.push(args);window.liveSnapshot.connections=window.liveSnapshot.connections.filter(item=>item.id!==args[1])},remoteRename:async(...args)=>{window.calls.rename.push(args)},authorizationStart:async(...args)=>{if(!window.allowAuthorization)return forbidden('authorizationStart')(...args);window.calls.start.push(args);attempt={id:args[1],providerId:'figma',state:'pending',step:{id:'owned-step',kind:'credential-input',expiresAt:new Date(Date.now()+60000).toISOString(),purpose:'credential',fields:[{id:'token',label:'Owned authorization token',secret:true,required:true,placeholder:'Owned only'}]}};return clone(attempt)},authorizationGet:async()=>{if(!window.allowAuthorization)return forbidden('authorizationGet')();return clone(attempt)},authorizationRespond:forbidden('authorizationRespond'),authorizationCancel:async(...args)=>{if(!window.allowAuthorization)return forbidden('authorizationCancel')(...args);window.calls.cancel.push(args)},authorizationOpen:forbidden('authorizationOpen')};
+ let attempt;const links={remoteSnapshot:async()=>{if(window.holdSnapshot)await new Promise(resolve=>window.resolveSnapshot=resolve);return clone(window.liveSnapshot)},remoteDisconnect:async(...args)=>{window.calls.disconnect.push(args);window.liveSnapshot.connections=window.liveSnapshot.connections.filter(item=>item.id!==args[1])},remoteRename:async(...args)=>{window.calls.rename.push(args)},authorizationStart:async(...args)=>{if(!window.allowAuthorization)return forbidden('authorizationStart')(...args);window.calls.start.push(args);attempt={id:args[1],providerId:'figma',state:'pending',step:{id:'owned-step',kind:'credential-input',expiresAt:new Date(Date.now()+60000).toISOString(),purpose:'credential',fields:[{id:'token',label:'Owned authorization token',secret:true,required:true,placeholder:'Owned only'}]}};return clone(attempt)},authorizationGet:async()=>{if(!window.allowAuthorization)return forbidden('authorizationGet')();return clone(attempt)},authorizationRespond:forbidden('authorizationRespond'),authorizationCancel:async(...args)=>{if(!window.allowAuthorization)return forbidden('authorizationCancel')(...args);window.calls.cancel.push(args)},authorizationOpen:forbidden('authorizationOpen')};
  window.codeshell=new Proxy({links:new Proxy(links,{get(target,key){if(key in target)return target[key];return forbidden('links.'+String(key))}}),mcpOAuth:{refresh:forbidden('mcpOAuth.refresh')},openExternal:async url=>{window.calls.open.push(url)},log:()=>{}},{get(target,key){if(key in target)return target[key];throw Error('Unexpected bridge '+String(key))}});
  window.labels={manage:translate(lang,'ext.link.directory.manageConnection'),account:translate(lang,'ext.link.directory.accountActions'),disconnect:translate(lang,'ext.link.remoteDisconnect'),confirm:translate(lang,'ext.link.remoteConfirmDisconnect'),cancel:translate(lang,'ext.link.remoteCancel'),cancelDialog:translate(lang,'common.cancel'),reconnect:translate(lang,'ext.link.remoteReconnect'),add:translate(lang,'ext.link.remoteAdd')};
  flushSync(()=>root.render(<React.StrictMode><I18nProvider key={++generation}><DialogProvider><ToastProvider><Fixture lang={lang}/></ToastProvider></DialogProvider></I18nProvider></React.StrictMode>));
@@ -430,7 +430,19 @@ try {
         await sourceTrigger.click();
         const mcpMenu = page.getByRole("menu");
         await menuLabel(mcpMenu, sourceTrigger);
+        await page.evaluate(() => {
+          window.holdSnapshot = true;
+        });
         await mcpMenu.getByText(labels.reconnect, { exact: true }).click();
+        await page.waitForFunction(() => typeof window.resolveSnapshot === "function");
+        await mcpMenu.waitFor({ state: "hidden" });
+        // Exercise the transient BODY focus seen during async menu teardown.
+        // The eventual dialog must retain the launcher captured at activation.
+        await page.evaluate(() => {
+          document.activeElement.blur();
+          window.holdSnapshot = false;
+          window.resolveSnapshot();
+        });
       } else {
         content = await menu();
         sourceTrigger = trigger();
