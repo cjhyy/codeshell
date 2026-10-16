@@ -7,6 +7,7 @@ import { translate } from "../i18n/translate";
 import { loadUILanguage } from "../uiLanguage";
 import { SearchDialog } from "./SearchDialog";
 import { ACTIVITY_PAGES } from "../activity/activityPages";
+import { formatModifierShortcut } from "../keyboardShortcutHints";
 
 export interface PaletteCommand {
   id: string;
@@ -113,18 +114,18 @@ export function buildCommands(opts: {
   // the language switch on the next render.
   const lang = loadUILanguage();
   const tt = (key: string) => translate(lang, key);
+  const platform = globalThis.window?.codeshell?.platform;
+  const isMac = platform === "darwin";
   const commands: PaletteCommand[] = [
     { id: "go.chat", label: tt("panels.palette.openChat"), run: () => setViewMode("chat") },
     {
       id: "go.files",
       label: tt("panels.palette.openFiles"),
-      hint: "Cmd+Shift+E",
       run: () => openPanel("files"),
     },
     {
       id: "go.browser",
       label: tt("panels.palette.openBrowser"),
-      hint: "Cmd+T",
       run: () => openPanel("browser"),
     },
     ...(opts.gitReviewAvailable
@@ -139,7 +140,6 @@ export function buildCommands(opts: {
     {
       id: "go.terminal",
       label: tt("panels.palette.openTerminal"),
-      hint: "Ctrl+`",
       run: () => openPanel("terminal"),
     },
     {
@@ -163,26 +163,27 @@ export function buildCommands(opts: {
     {
       id: "toggle.sidebar",
       label: tt("panels.palette.toggleSidebar"),
-      hint: "Cmd+B",
+      hint: formatModifierShortcut(platform, "B"),
       run: toggleSidebar,
     },
     {
       id: "toggle.inspector",
       label: tt("activity.inspectSession"),
-      hint: "Cmd+I",
+      // This accelerator belongs to the native menu, installed only on macOS.
+      hint: isMac ? formatModifierShortcut(platform, "I") : undefined,
       run: toggleInspector,
     },
     { id: "transcript.clear", label: tt("panels.palette.clearTranscript"), run: clearTranscript },
     {
       id: "search.open",
       label: tt("panels.palette.searchTranscript"),
-      hint: "Cmd+F",
+      hint: formatModifierShortcut(platform, "F"),
       run: openSearch,
     },
     {
       id: "window.new",
       label: tt("panels.palette.newWindow"),
-      hint: "Cmd+Shift+N",
+      hint: isMac ? formatModifierShortcut(platform, "Shift+N") : undefined,
       run: () => {
         void window.codeshell.newWindow();
       },

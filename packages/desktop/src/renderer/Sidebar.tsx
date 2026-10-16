@@ -55,6 +55,7 @@ import {
 import { cn } from "@/lib/utils";
 import type { SessionWorkspace, SessionWorkspaceAuthority } from "../preload/types";
 import { TrustGate } from "./workspace-trust/TrustGate";
+import { formatModifierShortcut } from "./keyboardShortcutHints";
 
 interface SidebarProps {
   projects: TrackedProject[];
@@ -1523,7 +1524,11 @@ const SessionRow = React.memo(
                     the slot width. */}
                 {showKbd ? (
                   <kbd className="rounded bg-muted px-1 text-[10px] text-muted-foreground">
-                    ⌘{kbdIndex}
+                    {formatModifierShortcut(
+                      globalThis.window?.codeshell?.platform,
+                      String(kbdIndex),
+                      "symbol",
+                    )}
                   </kbd>
                 ) : (
                   <span className="text-[10px] text-muted-foreground">
