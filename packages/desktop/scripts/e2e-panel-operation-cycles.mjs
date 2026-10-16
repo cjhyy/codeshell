@@ -9,6 +9,7 @@ import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { prepareConfinedElectronFixture } from "./confined-electron-fixture.mjs";
+import { watchElectronTestProcess } from "./electron-test-watchdog.mjs";
 import {
   expandSidebar,
   findCodeShellWindow,
@@ -26,7 +27,7 @@ const secondaryPath = join(isolated.home, "secondary-folder");
 const sessionId = "panel-operation-session";
 const title = "Panel operation conversation";
 const report = { cases: [], errors: [], evidence };
-let electron, win, failure;
+let electron, win, failure, processMonitor;
 let routeAvailable = false;
 const requests = [];
 const server = createServer((request, response) => {
@@ -112,6 +113,17 @@ async function seed() {
   await writeFile(join(projectPath, "alpha.txt"), "first content\n");
   await writeFile(join(projectPath, "nested", "deep.txt"), "deep file content\n");
   await writeFile(join(projectPath, "README.md"), "# Fixture document\n\nReadable markdown.\n");
+  await writeFile(join(projectPath, "报告.md"), "owned Unicode mention content\n");
+  await mkdir(join(projectPath, "a-long-directory"));
+  await writeFile(
+    join(projectPath, "a-long-directory", "needle-document.md"),
+    "owned primary-root mention content\n",
+  );
+  await Promise.all(
+    Array.from({ length: 30 }, (_, index) =>
+      writeFile(join(secondaryPath, `needle-${String(index).padStart(2, "0")}.md`), "other root\n"),
+    ),
+  );
   const git = (...args) => execFileSync("git", args, { cwd: projectPath, stdio: "pipe" });
   git("init", "-b", "main");
   git("add", ".");
@@ -136,13 +148,21 @@ async function seed() {
 }
 try {
   await seed();
-  electron = await launchCodeShellElectron({
-    appDir,
-    home: isolated.home,
-    userDataDir: isolated.userDataDir,
-    mainEntry: confined.mainEntry,
-    env: confined.env,
-  });
+  electron = await launchCodeShellElectron(
+    {
+      appDir,
+      home: isolated.home,
+      userDataDir: isolated.userDataDir,
+      mainEntry: confined.mainEntry,
+      env: confined.env,
+    },
+    {
+      watch: (child, options) => {
+        processMonitor = watchElectronTestProcess(child, options);
+        return processMonitor;
+      },
+    },
+  );
   win = await findCodeShellWindow(electron);
   win.setDefaultTimeout(15_000);
   win.on("pageerror", (error) => report.errors.push(error.message));
@@ -222,6 +242,29 @@ try {
   await win.getByRole("button", { name: title, exact: true }).click();
   await dismissTrust();
   await confined.assertWorker(electron, { requireWorker: false });
+  const composer = win.locator('textarea[aria-autocomplete="list"]:visible');
+  for (const [query, name, path, content] of [
+    ["报告", "报告.md", join(projectPath, "报告.md"), "owned Unicode mention content\n"],
+    [
+      "needle",
+      "needle-document.md",
+      join(projectPath, "a-long-directory", "needle-document.md"),
+      "owned primary-root mention content\n",
+    ],
+  ]) {
+    await composer.fill(`@${query}`);
+    await composer.press("End");
+    await win.getByRole("option").filter({ hasText: name }).click();
+    await win.waitForFunction(
+      (expected) =>
+        document.querySelector('textarea[aria-autocomplete="list"]')?.value === `@${expected} `,
+      path,
+    );
+    assert.equal(await readFile(path, "utf8"), content);
+    await composer.fill("");
+    await composer.press("Escape");
+    report.cases.push(`Composer @${query} selects the readable file in its authoritative root`);
+  }
   await win.evaluate(() => {
     window.__panelOperationAnchors = [];
     window.addEventListener("codeshell:add-anchor", (event) =>
@@ -597,11 +640,31 @@ try {
       .catch(() => "unavailable")) ?? "unavailable",
   );
 } finally {
-  await writeFile(join(evidence, "report.json"), JSON.stringify(report, null, 2));
-  await electron?.close().catch(() => {});
+  await electron?.close().catch((error) => {
+    report.errors.push(error.message);
+    failure ??= error;
+  });
+  try {
+    report.processSettlement = (await processMonitor?.terminate()) ?? null;
+    assert.equal(
+      report.processSettlement?.status,
+      "cleaned",
+      "Process exit unproven; HOME retained",
+    );
+    await isolated.cleanup();
+    report.privateHomeRemoved = true;
+  } catch (error) {
+    report.errors.push(error.message);
+    report.retainedHome = isolated.home;
+    failure ??= error;
+  }
   server.closeAllConnections();
   await new Promise((done) => server.close(done));
-  await isolated.cleanup();
+  if (failure) {
+    report.result = "fail";
+    report.failure ??= failure.stack;
+  }
+  await writeFile(join(evidence, "report.json"), JSON.stringify(report, null, 2));
 }
 console.log(JSON.stringify(report, null, 2));
 if (failure) throw failure;
