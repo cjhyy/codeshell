@@ -744,6 +744,17 @@ formatting, workflow paths and diff checks passed. Logs are retained at
 `/tmp/codeshell-ui-wave9-{typecheck,lint,desktop-build-final,unit-final,overlays,web-*,sidebar-development,devices-development}.log`.
 UI9 is ready for fresh-main delivery and remote CI verification.
 
+UI9 is delivered as `b251305d7a4dab244e1f299f89266fb35bddb8f0`, confirmed
+by remote main. CI `38839123528` is running. UI8 CI `38836413403` completed
+11 successful jobs and one failed Desktop job: its unit shard and all 35 Desktop
+browser fixtures passed, then History's hardcoded macOS Chrome executable
+prevented browser launch on Linux. No History assertions executed in that CI
+step. The failure log is `/tmp/codeshell-ui-wave8-ci-failure.log`. A test-only
+follow-up selects `CODESHELL_TEST_CHROMIUM` first, macOS Chrome only on Darwin,
+and Playwright's locked default otherwise. All UI9 product blobs and strong
+browser assertions remain frozen. Verify the follow-up's actual Linux run;
+do not report either earlier workflow as successful.
+
 UI8 is isolated while UI7 gates finish. History's actual Workbench audit found
 offscreen archive failures and late rename completions stealing external focus;
 source checkpoint `c4e95fba0` adds owned local recovery and truthful initial-read
