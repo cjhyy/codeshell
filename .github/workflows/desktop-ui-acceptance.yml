@@ -1,0 +1,147 @@
+name: desktop UI acceptance
+
+# Local native directory packages without a release identity. No publishing.
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - "codex/desktop/release-ui-acceptance-*"
+
+permissions:
+  contents: read
+
+jobs:
+  native-ui:
+    name: native UI (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 45
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-latest
+            artifact: linux
+          - os: macos-latest
+            artifact: mac
+          # Match release.yml's supported node-gyp / Visual Studio compiler.
+          - os: windows-2022
+            artifact: windows
+    env:
+      ACCEPTANCE_ROOT: ${{ runner.temp }}/codeshell-desktop-ui-acceptance
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: "1.3.11"
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: "22.16.0"
+
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.11"
+
+      - name: ensure setuptools for native node-gyp
+        run: python -m pip install --upgrade setuptools
+
+      - name: prepare new evidence root
+        run: |
+          node -e 'require("node:fs").mkdirSync(process.env.ACCEPTANCE_ROOT, { mode: 0o700 })'
+
+      - name: Linux display and owned SecretService dependencies
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y xvfb dbus-x11 gnome-keyring libsecret-tools
+
+      - name: install locked native dependencies
+        timeout-minutes: 15
+        run: bun install --frozen-lockfile
+
+      - name: verify local package authority and output ownership
+        run: node scripts/run-isolated-node-smoke.mjs --test packages/desktop/scripts/smoke-local-package.test.mjs
+
+      # Keep dist readers strictly after each preceding build completes.
+      - name: build Desktop workspace dependencies
+        timeout-minutes: 15
+        run: bun run packages/desktop/scripts/build-workspace-dependencies.ts
+
+      - name: build Desktop
+        timeout-minutes: 10
+        run: bun run --cwd packages/desktop build
+
+      - name: materialize production workspace packages
+        timeout-minutes: 5
+        run: bun run --cwd packages/desktop predist
+
+      - name: package native directory without publishing
+        timeout-minutes: 12
+        run: node packages/desktop/scripts/smoke-local-package.mjs --output "$ACCEPTANCE_ROOT/package"
+
+      - name: configure only the owned Linux Electron sandbox helpers
+        if: runner.os == 'Linux'
+        working-directory: packages/desktop
+        run: |
+          set -euo pipefail
+          node - "$ACCEPTANCE_ROOT/package/build-receipt.json" <<'NODE' > "$ACCEPTANCE_ROOT/sandbox-paths.txt"
+          const { realpathSync, lstatSync, readFileSync } = require("node:fs");
+          const { dirname, join } = require("node:path");
+          const receipt = JSON.parse(readFileSync(process.argv[2], "utf8"));
+          if (receipt.status !== "passed" || receipt.platform !== "linux") throw Error("No successful native Linux package");
+          for (const file of [join(dirname(realpathSync(require("electron"))), "chrome-sandbox"), join(receipt.appRoot, "chrome-sandbox")]) {
+            if (!lstatSync(file).isFile() || lstatSync(file).isSymbolicLink()) throw Error("Expected owned regular sandbox helper");
+            console.log(file);
+          }
+          NODE
+          while IFS= read -r sandbox; do
+            sudo chown root:root "$sandbox"
+            sudo chmod 4755 "$sandbox"
+            test "$(stat -c '%u %a' "$sandbox")" = '0 4755'
+          done < "$ACCEPTANCE_ROOT/sandbox-paths.txt"
+
+      - name: source Main cold startup, reload, and second window
+        timeout-minutes: 5
+        run: |
+          set -euo pipefail
+          if [[ "$RUNNER_OS" == Linux ]]; then
+            xvfb-run -a node scripts/run-isolated-node-smoke.mjs --private-keyring packages/desktop/scripts/e2e-startup-operation-cycles.mjs 2>&1 | tee "$ACCEPTANCE_ROOT/startup.log"
+          else
+            node scripts/run-isolated-node-smoke.mjs packages/desktop/scripts/e2e-startup-operation-cycles.mjs 2>&1 | tee "$ACCEPTANCE_ROOT/startup.log"
+          fi
+
+      - name: actual packaged Main, preload, and renderer UI
+        timeout-minutes: 8
+        run: |
+          set -euo pipefail
+          if [[ "$RUNNER_OS" == Linux ]]; then
+            xvfb-run -a node packages/desktop/scripts/run-packaged-ui-acceptance.mjs --build-receipt "$ACCEPTANCE_ROOT/package/build-receipt.json" --evidence-dir "$ACCEPTANCE_ROOT/ui" 2>&1 | tee "$ACCEPTANCE_ROOT/packaged-ui.log"
+          else
+            node packages/desktop/scripts/run-packaged-ui-acceptance.mjs --build-receipt "$ACCEPTANCE_ROOT/package/build-receipt.json" --evidence-dir "$ACCEPTANCE_ROOT/ui" 2>&1 | tee "$ACCEPTANCE_ROOT/packaged-ui.log"
+          fi
+
+      # Explicit evidence only: never upload private HOME, Keychain references,
+      # application archives, credentials, or caches.
+      - name: retain native UI acceptance evidence
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: desktop-ui-acceptance-${{ matrix.artifact }}
+          path: |
+            ${{ env.ACCEPTANCE_ROOT }}/package/build-receipt.json
+            ${{ env.ACCEPTANCE_ROOT }}/package/electron-builder.local.json
+            ${{ env.ACCEPTANCE_ROOT }}/package/build.log
+            ${{ env.ACCEPTANCE_ROOT }}/startup.log
+            ${{ env.ACCEPTANCE_ROOT }}/packaged-ui.log
+            ${{ env.ACCEPTANCE_ROOT }}/ui/*.png
+            ${{ env.ACCEPTANCE_ROOT }}/ui/receipt.json
+            ${{ env.ACCEPTANCE_ROOT }}/ui/operations.json
+            ${{ env.ACCEPTANCE_ROOT }}/ui/launcher-receipt.json
+          if-no-files-found: error
+          retention-days: 7
