@@ -8,7 +8,7 @@ import assert from "node:assert/strict";
 import http, { createServer } from "node:http";
 import https from "node:https";
 import { createRequire } from "node:module";
-import { mkdtemp, writeFile } from "node:fs/promises";
+import { mkdir, mkdtemp, realpath, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -20,7 +20,22 @@ const require = createRequire(path.join(repo, "packages/desktop/package.json"));
 const { build } = require("esbuild");
 const { chromium } = require("playwright");
 const { WebSocketServer, WebSocket } = require("ws");
-const output = await mkdtemp(path.join(tmpdir(), "codeshell-web-auth-boundary-"));
+const args = process.argv.slice(2);
+assert.ok(
+  args.length === 0 || (args.length === 2 && args[0] === "--evidence-dir" && args[1]),
+  "Expected no arguments or --evidence-dir <fresh-directory-outside-checkout>",
+);
+let output;
+if (args.length) {
+  const requested = path.resolve(args[1]);
+  output = path.join(await realpath(path.dirname(requested)), path.basename(requested));
+  const relative = path.relative(await realpath(repo), output);
+  assert.ok(
+    relative === ".." || relative.startsWith(`..${path.sep}`) || path.isAbsolute(relative),
+    "Evidence must remain outside this checkout",
+  );
+  await mkdir(output, { mode: 0o700 }); // Exclusive: never adopt or overwrite caller data.
+} else output = await mkdtemp(path.join(tmpdir(), "codeshell-web-auth-boundary-"));
 const reports = [],
   requests = [],
   rpc = [],
