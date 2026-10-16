@@ -386,7 +386,7 @@ describe("model trace observability", () => {
     await render();
     await click(attr("data-trace-attempt", "logical-attempt"));
     expect(textOf(selectedDetail()!)).toContain("不代表 CLI 实际发送");
-    expect(textOf(selectedDetail()!)).toContain("正文因存储上限被截断");
+    expect(textOf(selectedDetail()!)).toContain("正文仅部分记录");
     await click(button("输出"));
     expect(textOf(selectedDetail()!)).toContain("正文已脱敏");
     expect(textOf(selectedDetail()!)).toContain("Safe visible answer · [redacted]");
