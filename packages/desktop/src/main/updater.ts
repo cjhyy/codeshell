@@ -33,7 +33,13 @@ export type UpdaterStatus =
   | { kind: "idle" }
   | { kind: "checking" }
   | { kind: "available"; version: string }
-  | { kind: "manual-required"; version: string; url: string; message: string; reason: ManualInstallReason }
+  | {
+      kind: "manual-required";
+      version: string;
+      url: string;
+      message: string;
+      reason: ManualInstallReason;
+    }
   | { kind: "not-available"; version: string }
   | { kind: "downloading"; percent: number; transferred: number; total: number }
   | { kind: "downloaded"; version: string }
@@ -80,6 +86,34 @@ function updaterErrorStatus(message: string): UpdaterStatus {
       ? { reason: "github-unreachable" as const }
       : {}),
   };
+}
+
+function handleUpdaterError(error: unknown): void {
+  const message = error instanceof Error ? error.message : String(error);
+  if (isReadOnlyInstallError(message)) {
+    const version =
+      versionFromStatus(lastStatus) ??
+      downloadedVersion ??
+      activeDownloadVersion ??
+      app.getVersion();
+    downloadInFlight = false;
+    activeDownloadVersion = null;
+    installInFlight = false;
+    set(manualRequiredStatus(version, "mac-readonly-volume"));
+    return;
+  }
+  if (!downloadInFlight && !installInFlight && lastStatus.kind === "downloaded") return;
+  // electron-updater emits error and then rejects checkForUpdates(). Both
+  // paths must apply the same policy, including a genuinely missing manifest.
+  if (!downloadInFlight && !installInFlight && isNoUpdateManifestError(message)) {
+    dlog("main", "updater.no_manifest", { message });
+    set({ kind: "not-available", version: app.getVersion() });
+    return;
+  }
+  downloadInFlight = false;
+  activeDownloadVersion = null;
+  installInFlight = false;
+  set(updaterErrorStatus(message));
 }
 
 function macAppBundlePath(): string {
@@ -170,8 +204,6 @@ function versionFromStatus(status: UpdaterStatus): string | null {
   }
 }
 
-
-
 export function getLastStatus(): UpdaterStatus {
   return lastStatus;
 }
@@ -219,7 +251,13 @@ export function initUpdater(): void {
   autoUpdater.autoInstallOnAppQuit = false;
 
   autoUpdater.on("checking-for-update", () => {
-    if (downloadInFlight || installInFlight || lastStatus.kind === "downloaded" || lastStatus.kind === "installing") return;
+    if (
+      downloadInFlight ||
+      installInFlight ||
+      lastStatus.kind === "downloaded" ||
+      lastStatus.kind === "installing"
+    )
+      return;
     set({ kind: "checking" });
   });
   autoUpdater.on("update-available", (info) => {
@@ -233,7 +271,13 @@ export function initUpdater(): void {
     set(availableStatus(version));
   });
   autoUpdater.on("update-not-available", (info) => {
-    if (downloadInFlight || installInFlight || lastStatus.kind === "downloaded" || lastStatus.kind === "installing") return;
+    if (
+      downloadInFlight ||
+      installInFlight ||
+      lastStatus.kind === "downloaded" ||
+      lastStatus.kind === "installing"
+    )
+      return;
     set({ kind: "not-available", version: String((info as { version?: string }).version ?? "") });
   });
   autoUpdater.on("download-progress", (p) => {
@@ -252,30 +296,7 @@ export function initUpdater(): void {
     downloadedVersion = version || downloadedVersion;
     set({ kind: "downloaded", version });
   });
-  autoUpdater.on("error", (e) => {
-    const message = e instanceof Error ? e.message : String(e);
-    if (isReadOnlyInstallError(message)) {
-      const version = versionFromStatus(lastStatus) ?? downloadedVersion ?? activeDownloadVersion ?? app.getVersion();
-      downloadInFlight = false;
-      activeDownloadVersion = null;
-      installInFlight = false;
-      set(manualRequiredStatus(version, "mac-readonly-volume"));
-      return;
-    }
-    if (!downloadInFlight && !installInFlight && lastStatus.kind === "downloaded") return;
-    // A missing/404 manifest while merely CHECKING (not downloading/installing)
-    // means "release still publishing / nothing available" — surface it as a
-    // quiet not-available, not a scary error card.
-    if (!downloadInFlight && !installInFlight && isNoUpdateManifestError(message)) {
-      dlog("main", "updater.no_manifest", { message });
-      set({ kind: "not-available", version: app.getVersion() });
-      return;
-    }
-    downloadInFlight = false;
-    activeDownloadVersion = null;
-    installInFlight = false;
-    set(updaterErrorStatus(message));
-  });
+  autoUpdater.on("error", handleUpdaterError);
 
   // First check shortly after launch; then every 6h. Track the handles and
   // clear them on quit so the periodic check doesn't keep firing (or hold a
@@ -301,11 +322,12 @@ export async function checkForUpdate(): Promise<void> {
     lastStatus.kind === "downloading" ||
     lastStatus.kind === "downloaded" ||
     lastStatus.kind === "installing"
-  ) return;
+  )
+    return;
   try {
     await autoUpdater.checkForUpdates();
   } catch (e) {
-    set(updaterErrorStatus((e as Error).message));
+    handleUpdaterError(e);
   }
 }
 
@@ -322,7 +344,8 @@ export async function downloadUpdate(): Promise<void> {
     lastStatus.kind === "downloading" ||
     lastStatus.kind === "downloaded" ||
     lastStatus.kind === "installing"
-  ) return;
+  )
+    return;
   if (lastStatus.kind !== "available") return;
   downloadInFlight = true;
   activeDownloadVersion = lastStatus.version;
