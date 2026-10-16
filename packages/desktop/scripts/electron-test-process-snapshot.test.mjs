@@ -69,18 +69,29 @@ test("both parsers reject oversized output before accepting partial identities",
   throws(() => parseWindowsProcessSnapshot(oversized), /Invalid.*metadata/);
 });
 
-test("Windows query uses fixed native PowerShell without profiles, bypass or sensitive fields", () => {
+test("Windows query uses fixed PowerShell 7 without profiles, bypass or sensitive fields", () => {
   let calls = 0;
   const rows = snapshotElectronTestProcesses({
     platform: "win32",
-    environment: { SystemRoot: "C:\\Windows", PRIVATE_PROVIDER_KEY: "operator-secret" },
+    environment: {
+      SystemRoot: "C:\\Windows",
+      PRIVATE_PROVIDER_KEY: "operator-secret",
+      ProgramFiles: "X:\\untrusted-programs",
+      PATH: "X:\\untrusted-bin",
+      PSModulePath: "X:\\untrusted-modules",
+      USERPROFILE: "X:\\untrusted-profile",
+    },
     execFile(executable, args, options) {
       calls++;
-      equal(executable, "C:\\Windows\\System32\\WindowsPowerShell\\v1.0\\powershell.exe");
+      equal(executable, "C:\\Program Files\\PowerShell\\7\\pwsh.exe");
       deepStrictEqual(args.slice(0, 4), ["-NoLogo", "-NoProfile", "-NonInteractive", "-Command"]);
       match(
         args[4],
         /Get-CimInstance -ClassName Win32_Process -Property ProcessId,ParentProcessId,CreationDate/,
+      );
+      match(
+        args[4],
+        /CreationDate\.ToUniversalTime\(\)\.ToString\('o', \[Globalization\.CultureInfo\]::InvariantCulture\)/,
       );
       doesNotMatch(
         args.join(" "),
@@ -101,6 +112,42 @@ test("Windows query uses fixed native PowerShell without profiles, bypass or sen
   });
   equal(calls, 1);
   equal(rows.length, 2);
+});
+
+test("Windows fixed PowerShell path derives only from the canonical SystemRoot drive", () => {
+  const rows = snapshotElectronTestProcesses({
+    platform: "win32",
+    environment: { SystemRoot: "D:\\Windows", ProgramFiles: "X:\\operator-programs" },
+    execFile(executable, _args, options) {
+      equal(executable, "D:\\Program Files\\PowerShell\\7\\pwsh.exe");
+      deepStrictEqual(options.env, {
+        SystemRoot: "D:\\Windows",
+        WINDIR: "D:\\Windows",
+        PATH: "D:\\Windows\\System32",
+      });
+      return JSON.stringify(windowsRows);
+    },
+  });
+  equal(rows[0].birth, "2026-10-16T05:06:07.1234567Z");
+});
+
+test("missing PowerShell 7 fails closed without searching PATH or using legacy PowerShell", () => {
+  const calls = [];
+  throws(
+    () =>
+      snapshotElectronTestProcesses({
+        platform: "win32",
+        environment: { SystemRoot: "C:\\Windows" },
+        execFile(executable) {
+          calls.push(executable);
+          throw Object.assign(new Error("PRIVATE_SYNTHETIC_PATH"), { code: "ENOENT" });
+        },
+      }),
+    (error) =>
+      error.code === "ELECTRON_TEST_PROCESS_QUERY_FAILED" &&
+      !error.message.includes("PRIVATE_SYNTHETIC"),
+  );
+  deepStrictEqual(calls, ["C:\\Program Files\\PowerShell\\7\\pwsh.exe"]);
 });
 
 for (const platform of ["darwin", "linux"])

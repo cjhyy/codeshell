@@ -111,7 +111,10 @@ export function snapshotElectronTestProcesses({
       win32.normalize(root) !== root
     )
       throw new Error("Windows process metadata query requires a canonical SystemRoot");
-    executable = win32.join(root, "System32", "WindowsPowerShell", "v1.0", "powershell.exe");
+    // Windows acceptance requires the fixed PowerShell 7 installation. The
+    // legacy transport exceeded the fresh-query budget even after warmup;
+    // neither a PATH search nor fallback can establish custody safely.
+    executable = win32.join(win32.parse(root).root, "Program Files", "PowerShell", "7", "pwsh.exe");
     args = ["-NoLogo", "-NoProfile", "-NonInteractive", "-Command", windowsQuery];
     env = { SystemRoot: root, WINDIR: root, PATH: win32.join(root, "System32") };
     timeout = 5_000;
