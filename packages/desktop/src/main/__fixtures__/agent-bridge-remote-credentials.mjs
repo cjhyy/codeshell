@@ -95,6 +95,8 @@ try {
   // Use the real Host store projection, Bridge RPC handler, Worker metadata
   // transport and Link status function; none of these are mocked.
   const core = await import("@cjhyy/code-shell-core");
+  const { installDefaultLinkProviders } = await import("@cjhyy/code-shell-server/links");
+  installDefaultLinkProviders();
   const { AgentBridge } = await import("../agent-bridge.ts");
   const cwd = process.env.HOME;
   const store = new core.CredentialStore(cwd);

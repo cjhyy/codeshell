@@ -56,6 +56,14 @@ function signedInCloudAccount(): AccountStatusBridge {
   return { status: async () => SIGNED_IN_ACCOUNT, onStatus: () => () => undefined };
 }
 
+function deferred<T>() {
+  let resolve!: (value: T) => void;
+  const promise = new Promise<T>((done) => {
+    resolve = done;
+  });
+  return { promise, resolve };
+}
+
 function accountStatusFixture(read: () => Promise<CloudAccountStatus>) {
   const listeners = new Set<(status: CloudAccountStatus) => void>();
   const calls: string[] = [];
@@ -285,6 +293,28 @@ function providerCards(container: HTMLElement) {
     (node) => reactPropsOf(node)["data-link-provider-card"],
   );
 }
+
+function expectInitialLinkLoading(container: HTMLElement, accountPending = false) {
+  expect(providerCards(container)).toHaveLength(0);
+  expect(
+    visibleElements(container, "DIV").filter(
+      (node) => reactPropsOf(node)["data-link-loading"] !== undefined,
+    ),
+  ).toHaveLength(1);
+  expect(
+    visibleElements(container, "SECTION").some((node) => reactPropsOf(node)["aria-busy"] === true),
+  ).toBe(true);
+  expect(
+    visibleElements(container, "P").map((node) => reactChildText(reactPropsOf(node).children)),
+  ).not.toContain("没有匹配的应用连接");
+  if (accountPending)
+    expect(
+      visibleElements(container, "DIV").filter(
+        (node) => reactPropsOf(node)["data-link-local-only"] !== undefined,
+      ),
+    ).toHaveLength(0);
+}
+
 function methodRows(container: HTMLElement, provider?: string, runtime?: string) {
   return findElements(container, "SECTION").filter(
     (node) =>
@@ -786,8 +816,7 @@ describe("CodeShell account access to Link", () => {
       });
       const account = accountStatusFixture(() => pending);
       const fixture = await renderAccountLinks(account.api);
-      await fixture.showManagement();
-      fixture.assertLocalOnly();
+      expectInitialLinkLoading(fixture.container, true);
       expect(account.calls.slice(0, 2)).toEqual(["subscribe", "read"]);
       await account.emit(state === "signed-in" ? SIGNED_IN_ACCOUNT : { state });
       await fixture.showManagement();
@@ -803,6 +832,191 @@ describe("CodeShell account access to Link", () => {
       fixture.assertUnchanged();
     },
   );
+});
+
+describe("Link directory loading presentation", () => {
+  test("shows only the initial skeleton until account and metadata settle, without waiting for CLI liveness", async () => {
+    ensureMiniDom();
+    const credentials = deferred<MaskedCredentialView[]>();
+    const providers = deferred<LocalLinkProviderView[]>();
+    const snapshot = deferred<LinkSnapshot>();
+    const accountRead = deferred<CloudAccountStatus>();
+    const cli = deferred<CliLinkStatusView>();
+    const account = accountStatusFixture(() => accountRead.promise);
+    let probes = 0;
+    let mutations = 0;
+    const mutation = async () => {
+      mutations++;
+      throw new Error("Loading presentation cannot mutate authorization");
+    };
+    Object.assign(window, {
+      codeshell: {
+        cloudAccount: account.api,
+        credentials: { list: async () => credentials.promise },
+        links: {
+          listLocalProviders: async () => providers.promise,
+          remoteSnapshot: async () => snapshot.promise,
+          cliStatus: async () => {
+            probes++;
+            return cli.promise;
+          },
+          authorizationStart: mutation,
+          authorizationCancel: mutation,
+          remoteDisconnect: mutation,
+        },
+      },
+    });
+    const container = document.createElement("div") as unknown as HTMLElement;
+    root = createRoot(container);
+    await act(async () => {
+      root!.render(
+        <DialogProvider>
+          <LinkTab cwd="/fixture" />
+        </DialogProvider>,
+      );
+      await flushMicrotasks();
+      await flushMicrotasks();
+    });
+    expectInitialLinkLoading(container, true);
+    await act(async () => {
+      credentials.resolve([cliBinding("cli")]);
+      await flushMicrotasks();
+    });
+    expectInitialLinkLoading(container, true);
+    await act(async () => {
+      providers.resolve(LINK_PROVIDER_FIXTURES);
+      await flushMicrotasks();
+      await flushMicrotasks();
+    });
+    // Cards are mounted for lifecycle continuity, but their ancestor directory is hidden.
+    expect(
+      findElements(container, "ARTICLE").filter(
+        (node) => reactPropsOf(node)["data-link-provider-card"],
+      ),
+    ).toHaveLength(2);
+    expect(probes).toBe(1);
+    expectInitialLinkLoading(container, true);
+    await act(async () => {
+      accountRead.resolve(SIGNED_IN_ACCOUNT);
+      await flushMicrotasks();
+      await flushMicrotasks();
+    });
+    expectInitialLinkLoading(container);
+    await act(async () => {
+      snapshot.resolve({
+        providers: LINK_PROVIDER_FIXTURES,
+        connections: [],
+        capabilities: { token: true, cliBinding: true, deviceAuth: false },
+        revision: "initial-directory",
+      });
+      await flushMicrotasks();
+      await flushMicrotasks();
+    });
+    const firstCards = providerCards(container);
+    expect(firstCards).toHaveLength(2);
+    expect(
+      findElements(container, "DIV").filter(
+        (node) => reactPropsOf(node)["data-link-loading"] !== undefined,
+      ),
+    ).toHaveLength(0);
+    expect(
+      findElements(container, "DIV").some(
+        (node) => reactPropsOf(node)["data-link-liveness-state"] === "checking",
+      ),
+    ).toBe(true);
+    expect(reactPropsOf(buttonWithLabel(container, "刷新连接状态")).disabled).toBe(true);
+    await act(async () => {
+      cli.resolve({
+        providerId: "github",
+        command: "gh",
+        installed: true,
+        authenticated: true,
+        account: "cjhyy",
+        accountId: "42",
+      });
+      await flushMicrotasks();
+      await flushMicrotasks();
+    });
+    expect(providerCards(container)).toHaveLength(2);
+    providerCards(container).forEach((card, index) => expect(card).toBe(firstCards[index]));
+    expect(reactPropsOf(buttonWithLabel(container, "刷新连接状态")).disabled).toBe(false);
+    expect(mutations).toBe(0);
+  });
+
+  test("focus refresh keeps the loaded directory visible and does not reinsert a loading banner", async () => {
+    const credentials = deferred<MaskedCredentialView[]>();
+    const snapshot = deferred<void>();
+    const cli = deferred<CliLinkStatusView>();
+    let refreshing = false;
+    const fixture = await connectionStatusFixture({
+      read: async () => (refreshing ? credentials.promise : [cliBinding("cli")]),
+      snapshot: async () => {
+        if (refreshing) await snapshot.promise;
+      },
+      probe: async () =>
+        refreshing
+          ? cli.promise
+          : {
+              providerId: "github",
+              command: "gh",
+              installed: true,
+              authenticated: true,
+              account: "cjhyy",
+              accountId: "42",
+            },
+    });
+    const initialCards = providerCards(fixture.container);
+    expect(initialCards).toHaveLength(10);
+    const assertStable = () => {
+      const cards = providerCards(fixture.container);
+      expect(cards).toHaveLength(initialCards.length);
+      cards.forEach((card, index) => expect(card).toBe(initialCards[index]));
+      expect(
+        findElements(fixture.container, "DIV").filter(
+          (node) => reactPropsOf(node)["data-link-loading"] !== undefined,
+        ),
+      ).toHaveLength(0);
+      expect(
+        visibleElements(fixture.container, "P").map((node) =>
+          reactChildText(reactPropsOf(node).children),
+        ),
+      ).not.toContain("正在检查应用连接…");
+    };
+    assertStable();
+    await act(async () => {
+      refreshing = true;
+      window.dispatchEvent(new Event("focus"));
+      await flushMicrotasks();
+    });
+    assertStable();
+    expect(reactPropsOf(buttonWithLabel(fixture.container, "刷新连接状态")).disabled).toBe(true);
+    await act(async () => {
+      credentials.resolve([cliBinding("cli")]);
+      await flushMicrotasks();
+    });
+    assertStable();
+    await act(async () => {
+      snapshot.resolve();
+      await flushMicrotasks();
+    });
+    assertStable();
+    await act(async () => {
+      cli.resolve({
+        providerId: "github",
+        command: "gh",
+        installed: true,
+        authenticated: true,
+        account: "cjhyy",
+        accountId: "42",
+      });
+      await flushMicrotasks();
+      await flushMicrotasks();
+    });
+    assertStable();
+    expect(reactPropsOf(buttonWithLabel(fixture.container, "刷新连接状态")).disabled).toBe(false);
+    expect(fixture.calls.reads).toHaveLength(2);
+    expect(fixture.calls.mutations).toBe(0);
+  });
 });
 
 describe("LinkTab integrations", () => {

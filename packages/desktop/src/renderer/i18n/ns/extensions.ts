@@ -513,10 +513,10 @@ export const extensions = {
       },
       credentials: {
         pageTitle: "凭证",
-        pageSubtitle: "集中管理网站登录态、API 权限令牌，以及聊天渠道和第三方应用连接。",
+        pageSubtitle: "管理网站登录、API 密钥、应用连接和消息渠道。",
         tabsAria: "凭证与连接分类",
-        tabCookie: "Cookie",
-        tabToken: "Permission Token",
+        tabCookie: "网站登录",
+        tabToken: "API 密钥",
         tabLink: "Link",
         tabChannels: "沟通渠道",
         cookieDescription: "网站登录与账号切换",
@@ -536,19 +536,18 @@ export const extensions = {
       token: {
         eyebrow: "PERMISSION TOKEN",
         localStorage: "本地保存",
-        title: "管理 API 权限令牌",
-        description:
-          "统一保存个人访问令牌和 API Key。默认在每次使用前审批，只有你为某一条凭证明确开启后，AI 才能自动取用。",
+        title: "API 密钥与访问令牌",
+        description: "保存 API Key 和访问令牌。默认每次使用前审批，可按凭证开启自动取用。",
         storedCount: "已保存",
         autoUseCount: "自动取用",
         envCount: "环境变量",
-        createTitle: "添加 Permission Token",
+        createTitle: "添加 API 密钥",
         createDescription: "Token 与显示名称分开保存，后续通过稳定的引用键在工具和任务中使用。",
         referenceHelp: "保存后通过该引用键定位凭证；建议使用小写字母与连字符。",
         securityNote: "密文保存在本机凭证存储中，列表只返回脱敏提示，不会回显完整 Token。",
         listTitle: "已保存 Token",
         listDescription: "自动取用和环境变量注入均按凭证单独控制。",
-        emptyTitle: "还没有 Permission Token",
+        emptyTitle: "还没有保存 API 密钥",
         secretStored: "密文已保存",
         secretMissing: "这条凭证没有保存密文。",
         aiAutoUseDescription: "开启后，AI 使用此 Token 时不再弹出审批。",
@@ -951,8 +950,7 @@ export const extensions = {
         gatewaySection: "聊天渠道",
         gatewayEyebrow: "COMMUNICATION CHANNELS",
         gatewayTitle: "让消息成为任务入口",
-        gatewayHeroDescription:
-          "独立管理微信、Telegram 等消息渠道的连接、运行状态和收发能力，不与第三方应用授权混在一起。",
+        gatewayHeroDescription: "连接微信、Telegram 等消息渠道，查看接入状态和收发能力。",
         gatewayConfiguredCount: "已配置",
         gatewayStateLabel: "网关状态",
         gatewaySectionDescription:
@@ -1723,11 +1721,10 @@ export const extensions = {
       },
       credentials: {
         pageTitle: "Credentials",
-        pageSubtitle:
-          "Manage website sessions, API permission tokens, chat channels, and third-party app connections.",
+        pageSubtitle: "Manage website sign-ins, API keys, app connections, and messaging channels.",
         tabsAria: "Credential and connection categories",
-        tabCookie: "Cookie",
-        tabToken: "Permission Token",
+        tabCookie: "Website sign-ins",
+        tabToken: "API keys",
         tabLink: "Link",
         tabChannels: "Channels",
         cookieDescription: "Website sign-ins and accounts",
@@ -1747,13 +1744,13 @@ export const extensions = {
       token: {
         eyebrow: "PERMISSION TOKEN",
         localStorage: "Stored locally",
-        title: "Manage API permission tokens",
+        title: "API keys and access tokens",
         description:
-          "Keep personal access tokens and API keys in one place. Use requires approval by default; AI can only use a token automatically after you enable that specific credential.",
+          "Save API keys and access tokens. Use requires approval by default; auto-use can be enabled per credential.",
         storedCount: "Saved",
         autoUseCount: "Auto-use",
         envCount: "Environment",
-        createTitle: "Add a Permission Token",
+        createTitle: "Add an API key",
         createDescription:
           "Store the token separately from its display name, then reference it from tools and tasks with a stable key.",
         referenceHelp:
@@ -1762,7 +1759,7 @@ export const extensions = {
           "Secrets stay in local credential storage. Lists only return a masked hint and never reveal the full token.",
         listTitle: "Saved tokens",
         listDescription: "Auto-use and environment injection are controlled per credential.",
-        emptyTitle: "No Permission Tokens yet",
+        emptyTitle: "No API keys saved yet",
         secretStored: "Secret saved",
         secretMissing: "This credential has no saved secret.",
         aiAutoUseDescription:
@@ -2202,7 +2199,7 @@ export const extensions = {
         gatewayEyebrow: "COMMUNICATION CHANNELS",
         gatewayTitle: "Turn messages into task entry points",
         gatewayHeroDescription:
-          "Manage connections, runtime state, and send/receive capabilities for WeChat, Telegram, and other message channels separately from third-party app authorization.",
+          "Connect WeChat, Telegram, and other messaging channels, and view their status and messaging capabilities.",
         gatewayConfiguredCount: "Configured",
         gatewayStateLabel: "Gateway state",
         gatewaySectionDescription:
