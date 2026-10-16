@@ -17,6 +17,9 @@ jobs:
     timeout-minutes: 20
     env:
       ACCEPTANCE_ROOT: ${{ runner.temp }}/codeshell-web-ui-acceptance
+      # The isolated runner changes HOME/XDG_CACHE_HOME before launching. Keep
+      # its downloaded browser in the same owned path used by the installer.
+      PLAYWRIGHT_BROWSERS_PATH: ${{ runner.temp }}/codeshell-web-ui-browsers
     steps:
       - uses: actions/checkout@v7
         with:
