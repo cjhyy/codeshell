@@ -1,6 +1,13 @@
 import assert from "node:assert/strict";
 import { createHash } from "node:crypto";
-import { existsSync, readFileSync, realpathSync, statSync, writeFileSync } from "node:fs";
+import {
+  copyFileSync,
+  existsSync,
+  readFileSync,
+  realpathSync,
+  statSync,
+  writeFileSync,
+} from "node:fs";
 import { join, resolve } from "node:path";
 
 const [root, directory, entry] = process.argv.slice(2);
@@ -43,6 +50,11 @@ try {
   assert.equal(built.success, true, built.logs.map(String).join("\n"));
   const bundle = join(directory, "build/entry.js");
   assert.ok(statSync(bundle).size > 0);
+  // The production bundle also ships createRequire-loaded metadata beside code.
+  copyFileSync(
+    join(root, "packages/core/src/data/model-metadata.json"),
+    join(directory, "build/model-metadata.json"),
+  );
   receipt.success = true;
   receipt.bundleSha256 = createHash("sha256").update(readFileSync(bundle)).digest("hex");
 } catch (error) {

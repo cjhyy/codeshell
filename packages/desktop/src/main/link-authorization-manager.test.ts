@@ -117,6 +117,7 @@ test("native authorization returns pending immediately and status is authoritati
 test("Host-owned OAuth opens and reopens without binding a second callback listener", async () => {
   let opened = 0;
   let signal: AbortSignal | undefined;
+  let credentialId: string | undefined;
   let complete!: (value: import("@cjhyy/code-shell-core").Credential) => void;
   const candidate = new Promise<import("@cjhyy/code-shell-core").Credential>((resolve) => {
     complete = resolve;
@@ -127,6 +128,7 @@ test("Host-owned OAuth opens and reopens without binding a second callback liste
     authModeId: "mcp-oauth",
     label: "Connect MCP",
     async authorize(request) {
+      credentialId = request.id;
       signal = request.signal;
       await request.onAuthorizationUrl(
         "https://www.figma.com/oauth/mcp?state=fixture",
@@ -155,7 +157,7 @@ test("Host-owned OAuth opens and reopens without binding a second callback liste
   expect(await f.manager.open(f.context, job.id)).toBe(true);
   expect(opened).toBe(2);
   complete({
-    id: "link-figma-mcp",
+    id: credentialId!,
     type: "oauth",
     label: "Figma MCP",
     secret: JSON.stringify({

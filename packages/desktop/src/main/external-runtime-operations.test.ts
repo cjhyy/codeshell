@@ -34,8 +34,22 @@ syncBuiltinESMExports();
 expect(() => fetch("https://outside.invalid/probe")).toThrow("denied outbound");
 expect(() => https.get("https://outside.invalid/probe")).toThrow("denied outbound");
 
-const { SessionManager, ToolRegistry, UsageLedger, setDefaultCredentialAccess } =
-  await import("@cjhyy/code-shell-core");
+const { installTestLinkProviders } = await import("../../../../tests/helpers/link-providers.js");
+await installTestLinkProviders();
+const {
+  SessionManager,
+  ToolRegistry,
+  UsageLedger,
+  setDefaultCredentialAccess,
+  registerLocalLinkProviders,
+  getLocalLinkProvider,
+} = await import("@cjhyy/code-shell-core");
+// Desktop's tsconfig uses the built Core; the shared helper composes source Core.
+// Install the same reviewed provider specs into this Host's actual registry too.
+const { LOCAL_LINK_PROVIDERS } = await import("../../../core/src/links/providers.js");
+registerLocalLinkProviders(
+  LOCAL_LINK_PROVIDERS.filter((provider) => !getLocalLinkProvider(provider.id)),
+);
 const { createSessionToolHost } = await import("@cjhyy/code-shell-core/extension");
 const { ExternalRuntimeOperationRun } = await import("./external-runtime-operations.js");
 const cleanups: Array<() => void | Promise<void>> = [];
@@ -100,6 +114,13 @@ function fixture(backend: "remote" | "pat" = "remote") {
       linkLastVerifiedAt: "2026-10-09T00:00:00Z",
       linkRemoteState: "connected",
       linkRemoteGrantId: "grant",
+      ...(backend === "remote"
+        ? {
+            linkResourceGroups: [
+              { id: "repositories", items: [{ id: "acme/repo", label: "acme/repo" }] },
+            ],
+          }
+        : {}),
       linkCapabilityIds: ["github.get_repository", "github.get_starred", "github.set_starred"],
     },
   };
@@ -210,6 +231,7 @@ function fixture(backend: "remote" | "pat" = "remote") {
 test("an approved Link write executes once and independently reads its postcondition", async () => {
   const f = fixture();
   const result = await f.invoke();
+  expect(result.kind, JSON.stringify(result)).toBe("action_result");
   expect(result.operation.state).toBe("verified");
   expect(f.calls).toEqual([
     "get_repository",

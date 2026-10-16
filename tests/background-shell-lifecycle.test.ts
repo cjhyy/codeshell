@@ -165,6 +165,8 @@ test.skipIf(process.platform === "win32")(
         "--test-concurrency=1",
         "--test-reporter=junit",
         "--test-reporter-destination=" + report,
+        "--test-reporter=spec",
+        "--test-reporter-destination=stdout",
         fixture,
       ],
       { cwd: root, env: environment, detached: true, stdio: ["ignore", "pipe", "pipe"] },

@@ -98,7 +98,7 @@ if (process.env.CODESHELL_LINK_RUN_AUTHORITY_CHILD === "1" && caseName) {
   const connectionId = "12345678-1234-1234-1234-123456789abc";
   const grantId = "12345678-1234-1234-1234-123456789def";
   let directory: string;
-  let server: ReturnType<typeof Bun.serve> | undefined;
+  let server: ReturnType<typeof http.createServer> | undefined;
   let issuer: string;
   let store: InstanceType<typeof CredentialStore>;
   let tokenWait: Promise<void> | undefined;
@@ -124,48 +124,49 @@ if (process.env.CODESHELL_LINK_RUN_AUTHORITY_CHILD === "1" && caseName) {
     actionEntered = () => {};
     failFirstAction = false;
     counts = { refresh: 0, account: 0, action: 0 };
-    const json = (value: unknown, status = 200) =>
-      new Response(JSON.stringify(value), {
-        status,
-        headers: { "Content-Type": "application/json" },
-      });
-    server ??= Bun.serve({
-      hostname: "127.0.0.1",
-      port: 0,
-      async fetch(request) {
-        await request.arrayBuffer();
-        const path = new URL(request.url).pathname;
-        if (path === "/oauth/token" || path === "/local/token") {
-          counts.refresh++;
-          tokenEntered();
-          await tokenWait;
-          return json({
-            access_token: "rotated-access",
-            refresh_token: "rotated-refresh",
-            token_type: "Bearer",
-            expires_in: 3600,
-            scope: path === "/oauth/token" ? "github:list_repositories" : "repo",
-          });
-        } else if (path === "/local/account") {
-          counts.account++;
-          return json({ id: 42, login: "fixture" });
+    // Keep the real native HTTP transport without mixing Bun.serve response
+    // lifetimes with node:http's Readable.toWeb client during token rotation.
+    server ??= http.createServer(async (request, response) => {
+      for await (const _chunk of request) {
+        // Consume the request before releasing the token/action gates.
+      }
+      const json = (value: unknown, status = 200) => {
+        response.writeHead(status, { "Content-Type": "application/json" });
+        response.end(JSON.stringify(value));
+      };
+      const path = new URL(request.url!, "http://127.0.0.1").pathname;
+      if (path === "/oauth/token" || path === "/local/token") {
+        counts.refresh++;
+        tokenEntered();
+        await tokenWait;
+        return json({
+          access_token: "rotated-access",
+          refresh_token: "rotated-refresh",
+          token_type: "Bearer",
+          expires_in: 3600,
+          scope: path === "/oauth/token" ? "github:list_repositories" : "repo",
+        });
+      } else if (path === "/local/account") {
+        counts.account++;
+        return json({ id: 42, login: "fixture" });
+      } else {
+        counts.action++;
+        actionEntered();
+        await actionWait;
+        if (failFirstAction && counts.action === 1) {
+          return json({ message: "expired" }, 401);
         } else {
-          counts.action++;
-          actionEntered();
-          await actionWait;
-          if (failFirstAction && counts.action === 1) {
-            return json({ message: "expired" }, 401);
-          } else {
-            return json(
-              path.startsWith("/api/v1/")
-                ? { result: [{ id: 1, full_name: "owner/repo" }] }
-                : { number: 1, title: "fixture protected result" },
-            );
-          }
+          return json(
+            path.startsWith("/api/v1/")
+              ? { result: [{ id: 1, full_name: "owner/repo" }] }
+              : { number: 1, title: "fixture protected result" },
+          );
         }
-      },
+      }
     });
-    allowedPort = server.port!;
+    if (!server.listening)
+      await new Promise<void>((resolve) => server!.listen(0, "127.0.0.1", resolve));
+    allowedPort = (server.address() as { port: number }).port;
     issuer = `http://127.0.0.1:${allowedPort}`;
   });
 
@@ -178,7 +179,8 @@ if (process.env.CODESHELL_LINK_RUN_AUTHORITY_CHILD === "1" && caseName) {
     try {
       expect(deniedNetwork).toBe(caseName === cases[0] ? 2 : 0);
     } finally {
-      await server?.stop(true);
+      server?.closeAllConnections();
+      if (server) await new Promise<void>((resolve) => server!.close(() => resolve()));
       allowedPort = 0;
       globalThis.fetch = originalFetch;
       http.request = originalHttp;
