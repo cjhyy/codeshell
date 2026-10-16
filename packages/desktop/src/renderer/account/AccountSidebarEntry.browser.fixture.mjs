@@ -1,4 +1,4 @@
-/* Real browser regression for the account menu, its modal handoff and responsive layout. */
+/* Real browser regression for the account menu, its Settings handoff and responsive layout. */
 /* global window, document */
 import assert from "node:assert/strict";
 import { createRequire } from "node:module";
@@ -19,6 +19,9 @@ const source = `
   import React from 'react';
   import {createRoot} from 'react-dom/client';
   import {AccountSidebarEntry} from './account/AccountSidebarEntry';
+  import {SettingsPage} from './settings/SettingsPage';
+  import {DialogProvider} from './ui/DialogProvider';
+  import {ToastProvider} from './ui/ToastProvider';
   import {I18nProvider} from './i18n/I18nProvider';
   import {loadUILanguage, saveUILanguage} from './uiLanguage';
   const root=createRoot(document.getElementById('root'));
@@ -34,6 +37,7 @@ const source = `
   const snapshot=()=>({
     menuCount:document.querySelectorAll('[role="menu"]').length,
     dialogCount:document.querySelectorAll('[role="dialog"]').length,
+    accountPageCount:document.querySelectorAll('[data-account-settings-page]').length,
     pointerEvents:document.body.style.pointerEvents,
   });
   const recordAction=action=>{
@@ -68,21 +72,32 @@ const source = `
     manageLinks:unexpected('manageLinks'),
   }};
   window.fixtureLanguage=loadUILanguage;
-  window.renderFixture=({lang,status})=>{
-    current=status;
-    saveUILanguage(lang);
-    root.render(<I18nProvider>
-      <main className="h-full bg-background text-foreground">
+  function Fixture(){
+    const [accountOpen,setAccountOpen]=React.useState(false);
+    return <>
+      <main hidden={accountOpen} className="h-full bg-background text-foreground">
         <div className="fixed left-3 top-4 text-sm font-semibold">CodeShell</div>
         <button type="button" aria-label="Fixture outside" onClick={()=>recordAction('outside')}
           style={{position:'fixed',right:12,top:12}}>×</button>
         <div style={{position:'fixed',left:12,bottom:12,width:'min(264px,calc(100vw - 24px))'}}>
           <AccountSidebarEntry onOpenSettingsPage={()=>recordAction('settings')}
+            onOpenAccountSettings={()=>{recordAction('account-settings');setAccountOpen(true);}}
             onNavigate={page=>recordAction(page)} petWidgetVisible={false}
             onTogglePetWidget={()=>recordAction('pet')}/>
         </div>
       </main>
-    </I18nProvider>);
+      {accountOpen&&<div data-account-settings-page style={{position:'fixed',inset:0,overflow:'hidden'}}>
+        <SettingsPage initialModule='account' activeProjectPath={null} projects={[]}
+          sessionIndices={{}} onRestoreArchivedSession={()=>{}} onDeleteArchivedSession={()=>{}}
+          isMac={false} isFullscreen={false}
+          onBack={()=>{recordAction('back');setAccountOpen(false);}}/>
+      </div>}
+    </>;
+  }
+  window.renderFixture=({lang,status})=>{
+    current=status;
+    saveUILanguage(lang);
+    root.render(<I18nProvider><DialogProvider><ToastProvider><Fixture/></ToastProvider></DialogProvider></I18nProvider>);
   };
   window.unmountFixture=()=>root.unmount();
 `;
@@ -92,6 +107,7 @@ const bundle = await build({
   write: false,
   platform: "browser",
   format: "iife",
+  loader: { ".png": "empty", ".wav": "empty", ".css": "empty" },
   tsconfig: path.join(desktop, "tsconfig.json"),
   define: { "process.env.NODE_ENV": '"development"' },
 });
@@ -115,7 +131,7 @@ const labels = {
     settings: "设置",
     language: "切换语言",
     activity: "活动记录",
-    logs: "日志",
+    logs: "诊断日志",
     credentials: "凭证",
     pet: "显示 Mimi",
     logout: "退出云账号",
@@ -126,7 +142,7 @@ const labels = {
     settings: "Settings",
     language: "Switch language",
     activity: "Activity",
-    logs: "Logs",
+    logs: "Diagnostic logs",
     credentials: "Credentials",
     pet: "Show Mimi",
     logout: "Sign out",
@@ -267,9 +283,26 @@ try {
 
         await opener.click();
         await item(parentMenu, authenticated ? labels[lang].manage : labels[lang].signIn).click();
-        const dialog = page.getByRole("dialog", { name: labels[lang].manage, exact: true });
-        await dialog.waitFor();
+        const accountPage = page.locator("[data-account-settings-page]");
+        await accountPage.waitFor();
+        const accountHeading = accountPage.getByRole("heading", {
+          name: labels[lang].manage,
+          exact: true,
+        });
+        await accountHeading.waitFor();
+        await assertFocused(
+          accountHeading,
+          "Account navigation moves keyboard focus to its heading",
+        );
         await parentMenu.waitFor({ state: "hidden" });
+        const accountNavigation = await page.evaluate(() => window.actionSnapshots.at(-1));
+        assert.equal(accountNavigation.action, "account-settings");
+        assert.equal(accountNavigation.menuCount, 0, "Account navigation waits for menu dismissal");
+        assert.notEqual(
+          accountNavigation.pointerEvents,
+          "none",
+          "Account navigation releases pointer locks",
+        );
         await page.waitForFunction(() => window.requests.capabilities.length === 1);
         const capabilityRequest = await page.evaluate(() => window.requests.capabilities[0]);
         assert.equal(
@@ -277,15 +310,50 @@ try {
           0,
           "Account discovery runs after the menu closes",
         );
+        assert.equal(capabilityRequest.dialogCount, 0, "Account management uses the Settings page");
         assert.equal(
-          capabilityRequest.dialogCount,
+          capabilityRequest.accountPageCount,
           1,
-          "Discovery requires an explicitly opened form",
+          "Discovery requires explicitly opened Settings",
         );
-        await assertWithinViewport(dialog, { width, height: 760 }, "Account dialog");
-        await dialog.getByRole("button", { name: "Close", exact: true }).click();
-        await dialog.waitFor({ state: "hidden" });
-        await assertFocused(opener, "Closing account management restores row focus");
+        await assertWithinViewport(accountPage, { width, height: 760 }, "Account settings page");
+        assert.equal(await page.getByRole("dialog").count(), 0);
+        if (!authenticated) {
+          const username = accountPage.locator('input[name="username"]');
+          await username.fill("draft-user");
+          await username.dispatchEvent("keydown", {
+            key: "Escape",
+            bubbles: true,
+            cancelable: true,
+            isComposing: true,
+          });
+          await username.press("Escape");
+          assert.ok(await accountPage.isVisible(), "Escape keeps account settings open");
+          assert.equal(
+            await username.inputValue(),
+            "draft-user",
+            "Escape preserves account drafts",
+          );
+        }
+        if (lang === "zh" && authenticated) {
+          for (const theme of ["light", "dark"]) {
+            await page.evaluate(
+              (value) => document.documentElement.classList.toggle("dark", value === "dark"),
+              theme,
+            );
+            const screenshotPath = path.join(
+              screenshotDir,
+              `account-settings-${width}-${theme}.png`,
+            );
+            await page.screenshot({ path: screenshotPath, animations: "disabled" });
+            screenshots.push({ theme, path: screenshotPath, width, height: 760 });
+          }
+          await page.evaluate(() => document.documentElement.classList.remove("dark"));
+        }
+        await accountPage.locator("[data-settings-back]:visible").click();
+        await accountPage.waitFor({ state: "hidden" });
+        await opener.waitFor();
+        assert.equal(await page.evaluate(() => window.actions.at(-1)), "back");
         await assertUnlocked(page);
 
         await opener.click();
@@ -376,11 +444,19 @@ try {
         await opener.click();
         await parentMenu.waitFor();
         await item(parentMenu, labels[lang].signIn).click();
-        await dialog.waitFor();
-        await assertWithinViewport(dialog, { width: 280, height: 200 }, "Resized account dialog");
-        await dialog.getByRole("button", { name: "Close", exact: true }).click();
-        await dialog.waitFor({ state: "hidden" });
-        await assertFocused(opener, "The short viewport preserves modal close focus");
+        await accountPage.waitFor();
+        await assertWithinViewport(
+          accountPage,
+          { width: 280, height: 200 },
+          "Resized account settings",
+        );
+        await accountPage
+          .getByRole("heading", { name: labels[lang].manage, exact: true })
+          .waitFor();
+        assert.equal(await page.getByRole("dialog").count(), 0);
+        await accountPage.locator("[data-settings-back]:visible").click();
+        await accountPage.waitFor({ state: "hidden" });
+        await opener.waitFor();
         await assertUnlocked(page);
 
         await page.evaluate(() => window.unmountFixture());
@@ -397,7 +473,7 @@ try {
     }
   }
   console.log(
-    "PASS: account dropdown, lazy dialog, keyboard/language, logout and responsive bounds (zh/en, signed-out/in)",
+    "PASS: account dropdown, Settings navigation, keyboard/language, logout and responsive bounds (zh/en, signed-out/in)",
   );
   console.log(JSON.stringify({ screenshots }));
 } finally {
