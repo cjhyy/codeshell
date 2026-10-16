@@ -8,8 +8,30 @@ breaking.
 
 ## [Unreleased]
 
+## [0.9.45] - 2026-10-16
+
+### Added
+
+- Record local model calls with available prompts, responses, transport attempts,
+  token usage and timings, including auxiliary and reviewed Panel/native calls.
+  Browse recorded calls by conversation and execution in Desktop and Web, with
+  recording and retention controls and explicit limits on external CLI coverage.
+- Classify recorded calls by execution, subtask, Panel, auxiliary or media purpose,
+  with type filters. Distinguish runtime input snapshots from provider requests
+  and label System instructions, user-role input, history and tool results.
+- Add portable Link operation contracts and persisted connection recipes, with
+  immutable operation validation, resource authority and Host-derived routing.
+- Open installed Panel Apps in separate windows and provide a Panel launcher from
+  the new-tab button.
+
 ### Changed
 
+- Move cloud account management into a dedicated Settings page opened directly
+  from the sidebar, with separate profile, login and authorization sections.
+- Group configured models by provider in a simpler model picker while preserving
+  connection identity, complete labels and keyboard navigation.
+- Manage Link applications and their connections in dedicated dialogs, with
+  clearer account authorization, provider discovery and connection status.
 - Keep Task center search and advanced filters compact in narrow and short windows.
 - Use the file panel's available width for readable previews and keyboard-visible
   actions, with a return path to the file list on small screens.
@@ -19,6 +41,13 @@ breaking.
 
 ### Fixed
 
+- Avoid a source import cycle between credential metadata and MCP tool execution
+  that could prevent the Host from starting.
+- Ship the Link provider bootstrap with packaged Desktop workers so provider
+  execution remains available outside development checkouts.
+- Keep independent Link grants separate, preserve shared credential custody, and
+  reject stale connection creation after account changes. Retain bounded status
+  receipts and diagnostics when remote actions fail or are cancelled.
 - Show consumed follow-up messages between activity cards and keep them visible
   when activity is collapsed, without leaving an empty card body.
 - Show recoverable file-loading errors and prevent stale directory responses from
