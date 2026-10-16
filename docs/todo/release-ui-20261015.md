@@ -689,6 +689,17 @@ The scoped resize observer only scrolls the actual history pane for its focused
 descendant and consumes queued callbacks safely after unmount. The eighth Web
 browser command is registered in CI. Combined UI8 gates start on this source.
 
+UI7 remote CI `38775300622` finished successfully in all 12 jobs. Its clean
+merged integration branch was removed. UI8 final combined gates also passed:
+all 14 workspace types, full Desktop build, lint (zero errors, 104 existing
+warnings), 3399 guarded tests/12603 assertions, all 35 Desktop browser fixtures
+in one successful invocation, and all eight Web browser commands. History's
+combined production fixture passed all 136 observations. Logs are retained at
+`/tmp/codeshell-ui-wave8-{typecheck,lint,desktop-build,unit,overlays,web-*}.log`.
+The native TrustGate, PermissionPill and ModelPill receipts described above
+cover the same final product blobs. Fresh origin remains UI7 `756d5710f` before
+UI8 delivery; preserve the other task's primary checkout unchanged.
+
 UI8 is isolated while UI7 gates finish. History's actual Workbench audit found
 offscreen archive failures and late rename completions stealing external focus;
 source checkpoint `c4e95fba0` adds owned local recovery and truthful initial-read
