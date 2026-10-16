@@ -532,6 +532,7 @@ export const extensions = {
         addCookie: "添加第一个账号",
         addToken: "添加第一个 Token",
         autoApprove: "AI 取用凭证免审批",
+        operationFailed: "操作失败，请重试。",
       },
       token: {
         eyebrow: "PERMISSION TOKEN",
@@ -1746,6 +1747,7 @@ export const extensions = {
         addCookie: "Add your first account",
         addToken: "Add your first token",
         autoApprove: "Let AI use credentials without approval",
+        operationFailed: "Operation failed. Please try again.",
       },
       token: {
         eyebrow: "PERMISSION TOKEN",
