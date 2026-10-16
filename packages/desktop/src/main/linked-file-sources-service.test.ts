@@ -47,7 +47,7 @@ function connection(providerId = "github", remote = false): MaskedLinkConnection
     authSource: remote ? "remote-link" : "manual-token",
     status: "connected",
     revision: "reviewed-revision",
-    capabilityIds: [`${providerId}.get_file`],
+    capabilityIds: [`${providerId}.${providerId === "figma" ? "read_design_content" : "get_file"}`],
     scope: "user",
     editable: true,
     account: {
@@ -286,9 +286,10 @@ test("remote file authorization uses exact groups and URL/key selection deduplic
   ).toEqual(first);
   expect(readSourceDefinition(first.sourceIds[0]!)!.adapterConfig).toEqual({
     providerId: "figma",
-    action: "get_file",
+    action: "read_design_content",
     params: { file_url_or_key: "granted_key" },
   });
+  expect(bindings()).toMatchObject([{ scopes: ["figma:read_design_content"] }]);
   await expect(
     f.api.add("project-a", {
       ...selection,

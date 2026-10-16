@@ -70,7 +70,13 @@ try {
   const file = "FileAllowed123";
   const connectionId = "12345678-1234-1234-1234-123456789abc";
   const grantId = "12345678-1234-1234-1234-123456789def";
-  const actions = ["get_file", "get_nodes", "get_images", "get_image_fills", "get_comments"];
+  const actions = [
+    "read_design_content",
+    "get_nodes",
+    "get_images",
+    "get_image_fills",
+    "get_comments",
+  ];
   const scopes = actions.map((action) => `figma:${action}`);
 
   for (let iteration = 0; iteration < iterations; iteration++) {
@@ -153,7 +159,7 @@ try {
         params = { file_url_or_key: `https://www.figma.com/design/${file}/Fixture` },
       ) =>
         executeRemoteLinkAction(
-          { id: "selected-link", grantId, scope: "full", action: "get_file", params },
+          { id: "selected-link", grantId, scope: "full", action: "read_design_content", params },
           { store },
         );
       const content = "x".repeat(3 * 1024 * 1024);

@@ -238,7 +238,7 @@ export function createLinkedFileSourceService(deps: LinkedFileServiceDeps): Link
             const existing = bindings[index];
             const binding = WorkspaceSourceBindingSchema.parse({
               sourceId: source.id,
-              scopes: [`${connection.providerId}:get_file`],
+              scopes: [`${connection.providerId}:${source.adapterConfig.action}`],
               readPolicy: existing?.readPolicy ?? "ask",
               priority: input.priority,
             });

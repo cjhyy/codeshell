@@ -547,9 +547,15 @@ const figma: LocalLinkProviderSpec = {
   actions: [
     action(
       "get_file",
-      "读取文件结构或内容",
-      "用 file_url_or_key 先读取页面与顶层节点结构，默认 depth=2；有需要再用 get_nodes 按 ids 分批读取指定子树，只有明确需要完整文件时设置 full:true（不能同时指定depth）。可选 depth (1..100)、ids/node_ids (逗号字符串或数组，最多50)、version、geometry=paths、plugin_data、branch_data；节点URL的node-id会限制ids。设计字段完整保留在请求范围内，requestedDepth标明深度限制。复刻时用 get_images 渲染图和 get_image_fills 素材。远端token不由UseCredential导出，继续用LinkAction；缺token值不代表没权限。没有document的响应是读取失败，不可把pages当成设计全文。",
+      "读取页面摘要（旧版）",
+      "只接受 file_url_or_key 或 file_key，返回最多100个页面的名称、ID和类型；不返回 document、节点内容或设计全文。需要实际设计内容时使用 read_design_content；旧服务未提供该动作时需升级服务，不能把 pages 摘要视为设计内容。",
       (ctx) => executeFigmaAction("get_file", ctx),
+    ),
+    action(
+      "read_design_content",
+      "读取设计内容",
+      "用 file_url_or_key 读取实际设计 document，默认 depth=2；有需要再用 get_nodes 按 ids 分批读取指定子树，只有明确需要完整文件时设置 full:true（不能同时指定depth）。可选 depth (1..100)、ids/node_ids (逗号字符串或数组，最多50)、version、geometry=paths、plugin_data、branch_data；节点URL的node-id会限制ids。设计字段完整保留在请求范围内，requestedDepth标明深度限制。复刻时用 get_images 渲染图和 get_image_fills 素材。远端token不由UseCredential导出，继续用LinkAction；缺token值不代表没权限。没有document的响应是读取失败，不可把pages当成设计全文。",
+      (ctx) => executeFigmaAction("read_design_content", ctx),
     ),
     action(
       "get_nodes",

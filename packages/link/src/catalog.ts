@@ -683,9 +683,10 @@ export const LINK_PROVIDER_MANIFESTS: LinkProviderManifest[] = [
         },
       },
     ],
-    fileSelection: { kind: "figma-file", action: "get_file", resourceGroup: "files" },
+    fileSelection: { kind: "figma-file", action: "read_design_content", resourceGroup: "files" },
     actionIds: [
       "get_file",
+      "read_design_content",
       "get_comments",
       "get_nodes",
       "get_images",

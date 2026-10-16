@@ -290,7 +290,7 @@ function result(provider: RemoteLinkProviderId, action: string, body: any): unkn
     return action === "list_bases"
       ? { bases: [{ id: "appAllowed123" }, { id: "appOther" }], offset: "next" }
       : { tables: [{ id: "tbl1", fields: [] }] };
-  if (action === "get_file")
+  if (action === "get_file" || action === "read_design_content")
     return {
       name: "Fixture",
       version: "1",
@@ -450,6 +450,8 @@ for (const adapter of REMOTE_LINK_PROVIDER_ADAPTERS) {
       for (const list of lists) expect(list.length).toBe(1);
       expect(f.requests.at(-1)?.path).toEndWith(`/actions/${action}`);
       if (adapter.id === "figma" && action === "get_file")
+        expect(f.requests.at(-1)?.body).toEqual({ file_url_or_key: resources.figma });
+      if (adapter.id === "figma" && action === "read_design_content")
         expect(f.requests.at(-1)?.body).toEqual({ file_url_or_key: resources.figma, depth: 2 });
     }
     expect(f.requests.filter((request) => request.path.includes("/actions/"))).toHaveLength(
@@ -524,10 +526,27 @@ test("Figma account-only grants are connected but cannot read any file or refres
   expect(f.store.resolve("selected-link")?.meta?.linkRemoteState).toBe("connected");
 });
 
-test("saved get_file grants permit explicit full reads without gaining node or image actions", async () => {
+test("legacy Figma grants read summaries without gaining design-content authority", async () => {
   const f = await fixture("figma", { scopes: ["figma:get_file", "figma:get_comments"] });
+  await f.connect();
+  f.setResult({ name: "Summary", pages: [{ id: "0:1", name: "Page", type: "CANVAS" }] });
+  expect(await f.execute("get_file")).toMatchObject({ pages: [{ id: "0:1" }], truncated: false });
+  const before = f.requests.length;
+  await expect(f.execute("read_design_content")).rejects.toMatchObject({ code: "forbidden" });
+  expect(f.requests).toHaveLength(before);
+  expect(f.store.resolve("selected-link")?.meta?.linkCapabilityIds).toEqual([
+    "figma.get_file",
+    "figma.get_comments",
+  ]);
+});
+
+test("explicit design-content grants permit explicit full reads without gaining node or image actions", async () => {
+  const f = await fixture("figma", { scopes: ["figma:read_design_content", "figma:get_comments"] });
   const credential = await f.connect();
-  expect(credential.meta?.linkCapabilityIds).toEqual(["figma.get_file", "figma.get_comments"]);
+  expect(credential.meta?.linkCapabilityIds).toEqual([
+    "figma.read_design_content",
+    "figma.get_comments",
+  ]);
   const document = {
     id: "0:0",
     type: "DOCUMENT",
@@ -546,7 +565,9 @@ test("saved get_file grants permit explicit full reads without gaining node or i
     styles: { "5:6": { name: "Heading" } },
     secret: "omit",
   });
-  expect(await f.execute("get_file", { file_key: resources.figma, full: true })).toMatchObject({
+  expect(
+    await f.execute("read_design_content", { file_key: resources.figma, full: true }),
+  ).toMatchObject({
     document,
     components: { "3:4": { name: "Button" } },
     styles: { "5:6": { name: "Heading" } },
@@ -557,16 +578,18 @@ test("saved get_file grants permit explicit full reads without gaining node or i
     await expect(f.execute(action)).rejects.toMatchObject({ code: "forbidden" });
   expect(f.requests).toHaveLength(before);
   expect(f.store.resolve("selected-link")?.meta?.linkCapabilityIds).toEqual([
-    "figma.get_file",
+    "figma.read_design_content",
     "figma.get_comments",
   ]);
 });
 
-test("Figma get_file fails explicitly when the service returns only a pages summary", async () => {
-  const f = await fixture("figma", { scopes: ["figma:get_file", "figma:get_comments"] });
+test("Figma read_design_content fails explicitly when the service returns only a pages summary", async () => {
+  const f = await fixture("figma", { scopes: ["figma:read_design_content", "figma:get_comments"] });
   await f.connect();
   f.setResult({ name: "Summary", pages: [{ id: "0:1", name: "Page", type: "CANVAS" }] });
-  await expect(f.execute("get_file")).rejects.toMatchObject({ code: "content_unavailable" });
+  await expect(f.execute("read_design_content")).rejects.toMatchObject({
+    code: "content_unavailable",
+  });
   expect(f.requests.filter((request) => request.path.includes("/actions/"))).toHaveLength(1);
 });
 
@@ -990,6 +1013,7 @@ test("GitLab, Figma and Linear distinguish personal-token headers from OAuth Bea
       if (providerId === "figma") {
         expect(validated.capabilityIds).toEqual([
           "figma.get_file",
+          "figma.read_design_content",
           "figma.get_nodes",
           "figma.get_images",
           "figma.get_image_fills",
@@ -999,7 +1023,7 @@ test("GitLab, Figma and Linear distinguish personal-token headers from OAuth Bea
     }
     const provider = getLocalLinkProvider(providerId)!;
     expect(provider.actions.filter((action) => !isFigmaMcpAction(action.id)).length).toBe(
-      providerId === "figma" ? 5 : 2,
+      providerId === "figma" ? 6 : 2,
     );
   }
 });

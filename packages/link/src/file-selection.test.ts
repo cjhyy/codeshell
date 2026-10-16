@@ -46,6 +46,8 @@ describe("reviewed provider file selection", () => {
 
   test("Figma URLs and keys normalize to the same exact granted resource", () => {
     const key = resolveLinkFileSelection("figma", { kind: "figma-file", fileUrlOrKey: "File_key" });
+    expect(key.action).toBe("read_design_content");
+    expect(key.scopeId).toBe("figma:read_design_content");
     for (const type of ["file", "design", "board"])
       expect(
         resolveLinkFileSelection("figma", {

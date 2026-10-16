@@ -50,7 +50,7 @@ export const linkActionToolDef: ToolDefinition = {
     "explicitly connect PAT/OAuth or remote Link for writes. Figma uses API actions for raw nodes, " +
     "image exports, and comments. Only use its separate MCP connection when design context, " +
     "motion, Code Connect, or Make source resources are needed. Connecting never reads files; " +
-    "get_file defaults to depth 2, detailed nodes and source files are fetched only as needed.",
+    "read_design_content defaults to depth 2; get_file is only a legacy page summary. Detailed nodes and source files are fetched only as needed.",
   inputSchema: {
     type: "object",
     properties: {

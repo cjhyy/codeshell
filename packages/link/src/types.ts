@@ -100,7 +100,7 @@ export interface LinkProviderManifest {
   /** Reviewed exact-file reads; absence means this provider cannot supply file content. */
   fileSelection?: {
     kind: "github-file" | "figma-file";
-    action: "get_file";
+    action: "get_file" | "read_design_content";
     resourceGroup: "repositories" | "files";
   };
   fileSelectionLimitation?: "document-content-unavailable";
