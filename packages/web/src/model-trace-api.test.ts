@@ -15,15 +15,29 @@ test("remote trace API uses the supplied authenticated requester and encodes fil
   expect(url.searchParams.get("search")).toBe("hello & 世界");
   expect(url.searchParams.get("sessionId")).toBe("session-1");
   expect(url.searchParams.get("limit")).toBe("50");
+  await api.sessions({
+    search: "hello & 世界",
+    limit: 3,
+    cursor: "session-cursor",
+    withoutSession: true,
+  });
+  const sessions = new URL(requests[1]!, "https://fixture.test");
+  expect(sessions.pathname).toBe("/api/v1/model-traces/sessions");
+  expect(sessions.searchParams.get("search")).toBe("hello & 世界");
+  expect(sessions.searchParams.get("cursor")).toBe("session-cursor");
+  expect(sessions.searchParams.get("withoutSession")).toBe("true");
   await api.get("record-1");
   await api.getConfig();
-  expect(requests.slice(1)).toEqual([
+  expect(requests.slice(2)).toEqual([
     "/api/v1/model-traces/record-1",
     "/api/v1/model-traces/config",
   ]);
   await expect(api.list({ workspacePath: "/foreign" } as any)).rejects.toThrow(
     "scope belongs to the Host",
   );
+  await expect(
+    api.sessions({ workspaceScopes: [{ workspacePath: "/foreign" }] } as any),
+  ).rejects.toThrow("scope belongs to the Host");
   await expect(api.get("../secret")).rejects.toThrow("Invalid model trace id");
   expect("setConfig" in api).toBe(false);
 });

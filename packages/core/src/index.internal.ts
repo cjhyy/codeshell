@@ -27,6 +27,8 @@ export type {
   ModelTraceSummary,
   ModelTraceListQuery,
   ModelTracePage,
+  ModelTraceSessionSummary,
+  ModelTraceSessionPage,
   ModelTraceEvent,
   ModelTraceEventInput,
   ModelTraceContext,

@@ -8,6 +8,16 @@ that execution identity. The obsolete run page is removed. Historical transcript
 remain in conversation management; old run links resolve to their conversation
 or execution, and historical objectives are never presented as complete prompts.
 
+Browsing starts with sessions: conversation → executions → model calls and their
+recorded Prompt/response, retries and tool events. The native view resolves saved
+conversation titles, with IDs as secondary metadata. A Panel call with an actual
+session joins that session; calls without a session stay in separate execution
+groups and are never assigned to a synthetic conversation. Session counts and
+pagination are computed from all matching metadata before paging, so a session
+with hundreds of calls is one list item. Filters apply to those counts; selecting
+a native session opens its execution history, including sibling executions of a
+deep-linked call.
+
 ## Recording
 
 Hosts explicitly initialize `configureModelTracing` from the Core internal entry.
@@ -76,7 +86,7 @@ process exit close pending observations; recording failures never retry inferenc
 ## Reading
 
 Desktop uses `window.codeshell.modelTraces`. Authenticated Web and mobile clients
-use read-only `GET /api/v1/model-traces`, `/:id` and `/config`. Hosts enforce the
+use read-only `GET /api/v1/model-traces`, `/sessions`, `/:id` and `/config`. Hosts enforce the
 selected workspace; unknown workspace attribution and other workspaces are
 excluded. An independently authorized project root can additionally expose its
 project-owned Panel calls from a worktree, without including ordinary root chats.

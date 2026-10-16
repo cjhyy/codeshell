@@ -19,6 +19,8 @@ import type {
   ModelTraceListQuery,
   ModelTracePage,
   ModelTraceRecord,
+  ModelTraceSessionPage,
+  ModelTraceSessionSummary,
   ModelTraceSummary,
 } from "./types.js";
 
@@ -131,7 +133,7 @@ export class ModelTraceStore {
     this.prune(true);
     return config;
   }
-  list(query: ModelTraceListQuery = {}): ModelTracePage {
+  private matchingSummaries(query: ModelTraceListQuery): ModelTraceSummary[] {
     if (!query || typeof query !== "object" || Array.isArray(query))
       throw new Error("Invalid model trace query");
     const limit = query.limit ?? 50;
@@ -140,6 +142,7 @@ export class ModelTraceStore {
       limit < 1 ||
       limit > 500 ||
       (query.status !== undefined && !statuses.has(query.status)) ||
+      (query.withoutSession !== undefined && typeof query.withoutSession !== "boolean") ||
       [query.since, query.until].some(
         (time) => time !== undefined && (!Number.isFinite(time) || time < 0),
       )
@@ -206,6 +209,7 @@ export class ModelTraceStore {
         !statuses.has(row.status)
       )
         continue;
+      if (query.withoutSession && validId(row.sessionId)) continue;
       if (
         query.workspaceScopes &&
         !query.workspaceScopes.some(
@@ -281,6 +285,11 @@ export class ModelTraceStore {
         ) as unknown as ModelTraceSummary,
       );
     }
+    return rows;
+  }
+  list(query: ModelTraceListQuery = {}): ModelTracePage {
+    const rows = this.matchingSummaries(query);
+    const limit = query.limit ?? 50;
     rows.sort((a, b) => b.startedAt - a.startedAt || b.id.localeCompare(a.id));
     const total = rows.length;
     let after: { startedAt: number; id: string } | undefined;
@@ -309,6 +318,114 @@ export class ModelTraceStore {
         ? {
             nextCursor: Buffer.from(
               JSON.stringify({ startedAt: last.startedAt, id: last.id }),
+            ).toString("base64url"),
+          }
+        : {}),
+    };
+  }
+  /** Group matching metadata before pagination; never load Prompt or response bodies. */
+  sessions(query: ModelTraceListQuery = {}): ModelTraceSessionPage {
+    const rows = this.matchingSummaries(query);
+    const groups = new Map<
+      string,
+      { item: ModelTraceSessionSummary; traces: Set<string>; latestStartedAt: number }
+    >();
+    for (const row of rows) {
+      const sessionId = validId(row.sessionId) ? row.sessionId : undefined;
+      const groupKey = sessionId === undefined ? `trace:${row.traceId}` : `session:${sessionId}`;
+      const updatedAt =
+        row.endedAt !== undefined && Number.isFinite(row.endedAt)
+          ? Math.max(row.startedAt, row.endedAt)
+          : row.startedAt;
+      let group = groups.get(groupKey);
+      if (!group) {
+        group = {
+          item: {
+            key: groupKey,
+            ...(sessionId === undefined ? { traceId: row.traceId } : { sessionId }),
+            latestRequestId: row.id,
+            latestTraceId: row.traceId,
+            startedAt: row.startedAt,
+            updatedAt,
+            callCount: 0,
+            traceCount: 0,
+            sources: [],
+            models: [],
+            runningCount: 0,
+            failedCount: 0,
+          },
+          traces: new Set(),
+          latestStartedAt: row.startedAt,
+        };
+        groups.set(groupKey, group);
+      }
+      const item = group.item;
+      item.startedAt = Math.min(item.startedAt, row.startedAt);
+      item.callCount++;
+      group.traces.add(row.traceId);
+      if (typeof row.source === "string" && !item.sources.includes(row.source))
+        item.sources.push(row.source);
+      if (typeof row.model === "string" && !item.models.includes(row.model))
+        item.models.push(row.model);
+      if (row.status === "running") item.runningCount++;
+      if (row.status === "failed") item.failedCount++;
+      if (
+        updatedAt > item.updatedAt ||
+        (updatedAt === item.updatedAt &&
+          (row.startedAt > group.latestStartedAt ||
+            (row.startedAt === group.latestStartedAt &&
+              row.id.localeCompare(item.latestRequestId) > 0)))
+      ) {
+        item.updatedAt = updatedAt;
+        item.latestRequestId = row.id;
+        item.latestTraceId = row.traceId;
+        group.latestStartedAt = row.startedAt;
+      }
+    }
+    const items = [...groups.values()].map(({ item, traces }) => ({
+      ...item,
+      traceCount: traces.size,
+      sources: item.sources.sort(),
+      models: item.models.sort(),
+    }));
+    items.sort((a, b) => b.updatedAt - a.updatedAt || b.key.localeCompare(a.key));
+    let after: { kind: "sessions"; updatedAt: number; key: string } | undefined;
+    if (query.cursor) {
+      try {
+        after = JSON.parse(Buffer.from(query.cursor, "base64url").toString("utf8"));
+      } catch {
+        throw new Error("Invalid model trace session cursor");
+      }
+      if (
+        !after ||
+        after.kind !== "sessions" ||
+        !Number.isFinite(after.updatedAt) ||
+        after.updatedAt < 0 ||
+        typeof after.key !== "string" ||
+        !/^(session|trace):./s.test(after.key) ||
+        after.key.length > 1032 ||
+        after.key.includes("\0") ||
+        Object.keys(after).some((field) => !["kind", "updatedAt", "key"].includes(field))
+      )
+        throw new Error("Invalid model trace session cursor");
+    }
+    const candidates = after
+      ? items.filter(
+          (item) =>
+            item.updatedAt < after!.updatedAt ||
+            (item.updatedAt === after!.updatedAt && item.key.localeCompare(after!.key) < 0),
+        )
+      : items;
+    const limit = query.limit ?? 50;
+    const pageItems = candidates.slice(0, limit);
+    const last = pageItems.at(-1);
+    return {
+      items: pageItems,
+      total: items.length,
+      ...(candidates.length > limit && last
+        ? {
+            nextCursor: Buffer.from(
+              JSON.stringify({ kind: "sessions", updatedAt: last.updatedAt, key: last.key }),
             ).toString("base64url"),
           }
         : {}),

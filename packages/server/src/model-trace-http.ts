@@ -25,7 +25,11 @@ function queryFromUrl(url: URL) {
     if (values.length !== 1)
       throw new ModelTraceRequestError(400, "Duplicate model trace query field");
     const value = values[0]!;
-    if (["limit", "since", "until"].includes(key)) {
+    if (key === "withoutSession") {
+      if (value !== "true" && value !== "false")
+        throw new ModelTraceRequestError(400, "Invalid model trace withoutSession");
+      query[key] = value === "true";
+    } else if (["limit", "since", "until"].includes(key)) {
       if (!value.trim()) throw new ModelTraceRequestError(400, "Invalid numeric model trace query");
       query[key] = Number(value);
     } else query[key] = value;
@@ -67,6 +71,7 @@ export function createModelTraceHttp(options: {
         const history = createModelTraceHistory({ ...options, workspaceScopes });
         let result: unknown;
         if (url.pathname === ROOT) result = history.list(queryFromUrl(url));
+        else if (url.pathname === `${ROOT}/sessions`) result = history.sessions(queryFromUrl(url));
         else if (url.pathname === `${ROOT}/config`) {
           if (Object.keys(queryFromUrl(url)).length)
             throw new ModelTraceRequestError(400, "Configuration queries are not supported");

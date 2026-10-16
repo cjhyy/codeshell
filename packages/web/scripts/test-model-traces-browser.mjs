@@ -17,10 +17,14 @@ import {createRoot} from "react-dom/client";
 import {ModelTraceExplorer} from "./components/ModelTraceExplorer";
 window.fixture={fail:false,failTrace:false,copied:"",reads:[]};
 Object.defineProperty(navigator,"clipboard",{value:{writeText:async(text)=>{window.fixture.copied=text}}});
-const record=(i)=>({version:1,id:"request-"+i,traceId:"trace-"+Math.floor(i/2),sessionId:"session-"+Math.floor(i/2),source:"desktop",purpose:"main",provider:"fixture",model:"fixture-model",startedAt:1800000000000+i*100,endedAt:1800000000040+i*100,status:"completed",stream:true,inputState:"recorded",input:{systemPrompt:"Original actual system Prompt <script>window.injected=true</script>",messages:[{role:"user",content:"Actual input "+i}],tools:[],parameters:{temperature:0.2}},outputState:"recorded",output:{text:"Actual answer "+i},usage:{promptTokens:10,completionTokens:5,totalTokens:15},attempts:[{id:"attempt-"+i,number:1,startedAt:1800000000000,endedAt:1800000000020,status:"failed",httpStatus:429,coverage:"provider-wire",inputState:"recorded",input:{model:"effective-wire-model",prompt:"Actual provider prompt"},outputState:"recorded",output:{text:"Partial attempt answer"},error:"Owned rate limit"}]});
-const records=Array.from({length:54},(_,i)=>record(i));
-const api={list:async(q={})=>{window.fixture.reads.push(q);if(q.traceId&&window.fixture.failTrace)throw new Error("Owned tree read failure");let rows=records.filter(r=>(!q.traceId||r.traceId===q.traceId)&&(!q.search||r.id.includes(q.search))&&(!q.sessionId||r.sessionId===q.sessionId)&&(!q.model||r.model===q.model));const offset=Number(q.cursor||0),limit=q.limit||50;return{items:rows.slice(offset,offset+limit).map(({input,output,attempts,...r})=>({...r,attemptCount:attempts.length})),total:rows.length,nextCursor:offset+limit<rows.length?String(offset+limit):undefined}},get:async(id)=>{if(window.fixture.fail)throw new Error("Owned refresh failure");return{record:records.find(r=>r.id===id),events:[{id:"tool-event",traceId:records.find(r=>r.id===id).traceId,kind:"tool",name:"Read fixture",startedAt:1800000000000,endedAt:1800000000030,status:"completed",inputState:"recorded",input:{path:"/original/project"},outputState:"recorded",output:"Recorded tool output"}]}},getConfig:async()=>({enabled:true,captureContent:false,includeEphemeral:false,retentionDays:7})};
-createRoot(document.getElementById("root")).render(<ModelTraceExplorer api={api} lang={new URL(location.href).searchParams.get("lang")||"zh"}/>);
+const record=(i)=>({version:1,id:"request-"+i,traceId:"trace-"+Math.floor(i/2),sessionId:"session-original",runId:"run-"+Math.floor(i/2),source:"desktop",purpose:"main",provider:"fixture",model:"fixture-model",startedAt:1800000000000+i*100,endedAt:1800000000040+i*100,status:"completed",stream:true,inputState:"recorded",input:{systemPrompt:"Original actual system Prompt <script>window.injected=true</script>",messages:[{role:"user",content:"Actual input "+i}],tools:[],parameters:{temperature:0.2}},outputState:"recorded",output:{text:"Actual answer "+i},usage:{promptTokens:10,completionTokens:5,totalTokens:15},attempts:[{id:"attempt-"+i,number:1,startedAt:1800000000000,endedAt:1800000000020,status:"failed",httpStatus:429,coverage:"provider-wire",inputState:"recorded",input:{model:"effective-wire-model",prompt:"Actual provider prompt"},outputState:"recorded",output:{text:"Partial attempt answer"},error:"Owned rate limit"}]});
+const records=Array.from({length:6},(_,i)=>record(i));
+records.push({...record(0),id:"panel-independent",traceId:"panel-process",sessionId:undefined,runId:undefined,source:"panel:video-studio",purpose:"speech",model:"panel-speech-model",stream:false,usage:undefined,startedAt:1799999900000,endedAt:1799999900200,input:{messages:[{role:"user",content:"Independent Panel speech input"}]},output:{data:{mimeType:"audio/wav",bytes:1234}},attempts:[]});
+for(let i=0;i<55;i++) records.push({...record(i),id:"older-call-"+i,traceId:i===54?"panel-process":"older-run-"+i,sessionId:"older-session-"+i,runId:"older-run-"+i,startedAt:1799999000000-i*5000,endedAt:1799999000200-i*5000,attempts:[]});
+const matches=(r,q)=>(!q.withoutSession||!r.sessionId)&&(!q.traceId||r.traceId===q.traceId)&&(!q.search||JSON.stringify([r.id,r.traceId,r.sessionId,r.source,r.model]).includes(q.search))&&(!q.sessionId||r.sessionId===q.sessionId)&&(!q.model||r.model===q.model)&&(!q.purpose||r.purpose===q.purpose)&&(!q.status||r.status===q.status);
+const paginate=(rows,q)=>{const offset=Number(q.cursor||0),limit=q.limit||50;return{items:rows.slice(offset,offset+limit),total:rows.length,nextCursor:offset+limit<rows.length?String(offset+limit):undefined}};
+const api={sessions:async(q={})=>{window.fixture.reads.push({method:"sessions",query:q});const groups=new Map();for(const r of records.filter(r=>matches(r,q))){const key=r.sessionId?"session:"+r.sessionId:"trace:"+r.traceId;let group=groups.get(key);if(!group){group={key,...(r.sessionId?{sessionId:r.sessionId}:{traceId:r.traceId}),latestRequestId:r.id,latestTraceId:r.traceId,startedAt:r.startedAt,updatedAt:r.endedAt||r.startedAt,callCount:0,traceCount:0,sources:[],models:[],runningCount:0,failedCount:0,traces:new Set()};groups.set(key,group);}group.callCount++;group.traces.add(r.traceId);group.traceCount=group.traces.size;group.startedAt=Math.min(group.startedAt,r.startedAt);if((r.endedAt||r.startedAt)>=group.updatedAt){group.updatedAt=r.endedAt||r.startedAt;group.latestRequestId=r.id;group.latestTraceId=r.traceId;}if(!group.sources.includes(r.source))group.sources.push(r.source);if(!group.models.includes(r.model))group.models.push(r.model);if(r.status==="running")group.runningCount++;if(r.status==="failed")group.failedCount++;}return paginate([...groups.values()].sort((a,b)=>b.updatedAt-a.updatedAt).map(({traces,...group})=>group),q);},list:async(q={})=>{window.fixture.reads.push({method:"list",query:q});if((q.traceId||q.sessionId)&&window.fixture.failTrace)throw new Error("Owned tree read failure");return paginate(records.filter(r=>matches(r,q)).map(({input,output,attempts,...r})=>({...r,attemptCount:attempts.length})),q);},get:async(id)=>{if(window.fixture.fail)throw new Error("Owned refresh failure");const selected=records.find(r=>r.id===id);return selected?{record:selected,events:[{id:"tool-event",traceId:selected.traceId,kind:"tool",name:"Read fixture",startedAt:1800000000000,endedAt:1800000000030,status:"completed",inputState:"recorded",input:{path:"/original/project"},outputState:"recorded",output:"Recorded tool output"}]}:null},getConfig:async()=>({enabled:true,captureContent:true,includeEphemeral:true,retentionDays:7})};
+createRoot(document.getElementById("root")).render(<ModelTraceExplorer api={api} sessionTitles={{"session-original":"Panel Prompt audit / 核对 Panel Prompt"}} lang={new URL(location.href).searchParams.get("lang")||"zh"}/>);
 `;
 const result = await build({
   stdin: { contents: source, loader: "tsx", resolveDir: path.join(web, "src") },
@@ -40,11 +44,12 @@ const results = [];
 try {
   for (const lang of ["zh", "en"])
     for (const viewport of [
-      { width: 1440, height: 900 },
+      { width: 1280, height: 820 },
       { width: 390, height: 540 },
       { width: 320, height: 360 },
     ]) {
       const page = await browser.newPage({ viewport });
+      page.setDefaultTimeout(8000);
       const errors = [];
       page.on("pageerror", (error) => errors.push(error.message));
       await page.route("**/*", (route) =>
@@ -63,9 +68,39 @@ try {
         await page.screenshot({ path: path.join(output, `failed-${lang}-${viewport.width}.png`) });
         throw error;
       }
-      await list.locator(".cs-t-item").first().click();
+      assert.equal(
+        await list.locator("[data-trace-session]").count(),
+        50,
+        "Session pagination runs after grouping",
+      );
+      const sessionRow = list.locator('[data-trace-session="session:session-original"]');
+      assert.ok(
+        (await sessionRow.textContent()).includes("Panel Prompt audit / 核对 Panel Prompt"),
+        "Known conversations show their original human-readable title",
+      );
+      assert.ok(
+        (await sessionRow.textContent()).includes("session-original"),
+        "Raw session identity remains available below the title",
+      );
+      await sessionRow.click();
       const tree = page.locator(".cs-t-pane").nth(1);
-      await tree.locator(".cs-t-item").first().click();
+      await tree.locator('[data-trace-group="trace-2"]').waitFor();
+      assert.equal(
+        await tree.locator("[data-trace-group]").count(),
+        3,
+        "One session shows all three executions",
+      );
+      assert.equal(await tree.locator("[data-trace-request]").count(), 6);
+      assert.ok(
+        await page.evaluate(() =>
+          window.fixture.reads.some(
+            ({ method, query }) =>
+              method === "list" && query.sessionId === "session-original" && !query.traceId,
+          ),
+        ),
+      );
+      await page.screenshot({ path: path.join(output, `runs-${lang}-${viewport.width}.png`) });
+      await tree.locator('[data-trace-request="request-0"]').click();
       const detail = page.locator(".cs-t-pane").nth(2);
       await detail.getByText("Original actual system Prompt", { exact: false }).waitFor();
       assert.equal(
@@ -83,7 +118,7 @@ try {
           .click();
       await tree
         .getByRole("button", {
-          name: lang === "zh" ? "尝试 1 · 429 · failed" : "Attempt 1 · 429 · failed",
+          name: lang === "zh" ? "尝试 1 · 429 · 失败" : "Attempt 1 · 429 · Failed",
           exact: true,
         })
         .click();
@@ -124,10 +159,13 @@ try {
       await list
         .getByRole("button", { name: lang === "zh" ? "下一页" : "Next page", exact: true })
         .click();
-      await page.waitForFunction(() => window.fixture.reads.some((query) => query.cursor === "50"));
       await page.waitForFunction(() =>
-        document.querySelector(".cs-t-pane .cs-t-item")?.textContent.includes("trace-25"),
+        window.fixture.reads.some(
+          ({ method, query }) => method === "sessions" && query.cursor === "50",
+        ),
       );
+      await list.locator('[data-trace-session="session:older-session-48"]').waitFor();
+      assert.equal(await list.locator("[data-trace-session]").count(), 7);
       await page.evaluate(() => {
         window.fixture.fail = false;
         window.fixture.failTrace = true;
@@ -140,7 +178,7 @@ try {
       );
       assert.ok(
         !(await detail.innerText()).includes("Actual input 0"),
-        "Changing execution clears the previous Prompt",
+        "Changing session clears the previous Prompt",
       );
       await page.evaluate(() => {
         window.fixture.failTrace = false;
@@ -148,7 +186,47 @@ try {
       await tree
         .getByRole("button", { name: lang === "zh" ? "刷新" : "Refresh", exact: true })
         .click();
-      await tree.locator(".cs-t-item").first().waitFor();
+      await tree.locator("[data-trace-request]").first().waitFor();
+      if (viewport.width <= 1000) {
+        await tree
+          .getByRole("button", { name: lang === "zh" ? "返回" : "Back", exact: true })
+          .click();
+        await page.waitForFunction(
+          () =>
+            document.activeElement === document.querySelector('.cs-t-pane[data-active="true"] h2'),
+        );
+        assert.ok(
+          await list
+            .getByRole("heading", { level: 2 })
+            .evaluate((node) => document.activeElement === node),
+          "Back restores session-list focus",
+        );
+      }
+      await list
+        .getByRole("button", { name: lang === "zh" ? "上一页" : "Previous page", exact: true })
+        .click();
+      await list.locator('[data-trace-session="trace:panel-process"]').click();
+      await tree.locator('[data-trace-request="panel-independent"]').waitFor();
+      assert.equal(
+        await tree.locator("[data-trace-request]").count(),
+        1,
+        "A session sharing the trace ID stays outside the standalone Panel group",
+      );
+      await tree.locator('[data-trace-request="panel-independent"]').click();
+      await detail.getByText("Independent Panel speech input", { exact: false }).waitFor();
+      assert.ok(
+        await page.evaluate(() =>
+          window.fixture.reads.some(
+            ({ method, query }) =>
+              method === "list" &&
+              query.traceId === "panel-process" &&
+              query.withoutSession === true &&
+              !query.sessionId,
+          ),
+        ),
+        "Independent Panel calls use their actual trace scope",
+      );
+      await page.screenshot({ path: path.join(output, `panel-${lang}-${viewport.width}.png`) });
       assert.deepEqual(errors, []);
       results.push({ lang, viewport, passed: true });
       await page.close();
