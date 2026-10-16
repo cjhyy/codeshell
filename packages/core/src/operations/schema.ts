@@ -31,6 +31,16 @@ export const recordSchema = z
     id: digest,
     owner: digest,
     fingerprint: digest,
+    // HMACed resource identity, independent of Session/connection/token identity.
+    // A missing dimension is a conservative wildcard, never an empty permission.
+    conflictScope: z
+      .object({
+        instance: digest.optional(),
+        account: digest.optional(),
+        target: digest.optional(),
+      })
+      .strict()
+      .optional(),
     service: label,
     action: label,
     channel: label,

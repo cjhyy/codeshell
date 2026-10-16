@@ -140,6 +140,8 @@ export interface Credential {
     autoRefreshFromBrowser?: boolean;
     /** Link provider id for credentials owned by a local/server app connection. */
     linkProvider?: string;
+    /** Offline legacy cleanup fence. Never authorizes a reconnect or an execution. */
+    linkCleanupDisabled?: boolean;
     /** Provider-specific connection method, e.g. fine-grained-pat or github-app. */
     linkConnectionMethod?: string;
     /** Where the selected Link executes; runtime must not silently select another account. */

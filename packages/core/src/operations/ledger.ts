@@ -51,6 +51,8 @@ export interface OperationPlan {
   target: unknown;
   parameters: unknown;
   postcondition: unknown;
+  /** Trusted normalized provider identity; null/missing dimensions conservatively overlap. */
+  conflictScope?: { instance?: string | null; account?: string | null; target?: unknown };
 }
 
 /** Trusted adapter evidence only. Domain interpretation belongs to the adapter. */
@@ -241,7 +243,123 @@ export class OperationLedger {
           plan.target,
           plan.parameters,
           plan.postcondition,
+          ...(plan.conflictScope ? [plan.conflictScope] : []),
         ])
+    );
+  }
+
+  private conflictScope(
+    key: Buffer,
+    plan: OperationPlan,
+  ): NonNullable<OperationReceipt["conflictScope"]> {
+    const account =
+      plan.account && typeof plan.account === "object" && !Array.isArray(plan.account)
+        ? (plan.account as Record<string, unknown>)
+        : undefined;
+    const selected = plan.conflictScope;
+    const instance =
+      selected && Object.hasOwn(selected, "instance") ? selected.instance : account?.instance;
+    const identity =
+      selected && Object.hasOwn(selected, "account")
+        ? selected.account
+        : account
+          ? account.id
+          : typeof plan.account === "string"
+            ? plan.account
+            : undefined;
+    const target = selected && Object.hasOwn(selected, "target") ? selected.target : plan.target;
+    const known = (value: unknown) =>
+      value !== undefined &&
+      value !== null &&
+      value !== "" &&
+      !(typeof value === "object" && Object.keys(value).length === 0);
+    return {
+      ...(known(instance) ? { instance: this.hash(key, "conflict-instance", instance) } : {}),
+      ...(known(identity) ? { account: this.hash(key, "conflict-account", identity) } : {}),
+      ...(known(target) ? { target: this.hash(key, "conflict-target", target) } : {}),
+    };
+  }
+
+  private unresolved(receipt: OperationReceipt): boolean {
+    return !!receipt.attemptId && receipt.state !== "verified" && !receipt.operatorResolution;
+  }
+
+  private recoverConflictScope(
+    key: Buffer,
+    receipt: OperationReceipt,
+  ): NonNullable<OperationReceipt["conflictScope"]> {
+    if (receipt.conflictScope) return receipt.conflictScope;
+    if (receipt.recovery) {
+      try {
+        const input = JSON.parse(
+          new OperationRecoveryFiles(this.directory).read(
+            key,
+            receipt.id,
+            receipt.recovery.prepared,
+          ),
+        ) as OperationRecoveryInput;
+        if (input.schema === 1 && this.matchesPlan(key, receipt, input.plan))
+          return this.conflictScope(key, input.plan);
+      } catch {
+        // Unprovable legacy identity fences this provider, not unrelated providers.
+      }
+    }
+    return {};
+  }
+
+  /** Persist old conflict proof before removing credentials. No body or token is published. */
+  protectUnresolvedWrites(service: string): number {
+    label.parse(service);
+    if (this.absent()) return 0;
+    const root = lstatSync(this.scope);
+    if (
+      !root.isDirectory() ||
+      root.dev !== this.rootIdentity.dev ||
+      root.ino !== this.rootIdentity.ino
+    )
+      throw new Error("Operation storage root changed");
+    const directory = lstatSync(this.directory);
+    if (!directory.isDirectory() || directory.isSymbolicLink())
+      throw new Error("Invalid operation directory");
+    // Offline cleanup can run without the Desktop key. Preserve encrypted evidence;
+    // a provider-wide wildcard is sufficient to fence future sends after restart.
+    return mutateJsonFile<LedgerState, number>(this.file, {
+      maxBytes: OPERATION_ACTIVE_MAX_BYTES,
+      mode: 0o600,
+      parse: (raw) => {
+        if (raw === undefined) throw new Error("Operation ledger disappeared");
+        return ledgerStateSchema.parse(JSON.parse(raw));
+      },
+      serialize: (state) => JSON.stringify(state),
+      mutation: (state) => {
+        let key: Buffer | undefined;
+        try {
+          const secret = this.cipher.decrypt(state.key);
+          if (/^[a-f0-9]{64}$/.test(secret)) key = Buffer.from(secret, "hex");
+        } catch {
+          /* Missing Host key leaves an intentionally broad barrier. */
+        }
+        try {
+          let count = 0;
+          for (const receipt of Object.values(state.records)) {
+            if (receipt.service !== service || !this.unresolved(receipt)) continue;
+            receipt.conflictScope ??= key ? this.recoverConflictScope(key, receipt) : {};
+            count++;
+          }
+          return { ...(count ? { value: state } : {}), result: count };
+        } finally {
+          key?.fill(0);
+        }
+      },
+    })!;
+  }
+
+  private conflicts(key: Buffer, a: OperationReceipt, b: OperationReceipt): boolean {
+    if (a.service !== b.service) return false;
+    const left = this.recoverConflictScope(key, a);
+    const right = this.recoverConflictScope(key, b);
+    return (["instance", "account", "target"] as const).every(
+      (dimension) => !left[dimension] || !right[dimension] || left[dimension] === right[dimension],
     );
   }
 
@@ -566,6 +684,7 @@ export class OperationLedger {
         plan.target,
         plan.parameters,
         plan.postcondition,
+        ...(plan.conflictScope ? [plan.conflictScope] : []),
       ]);
       const existing = archives.lookup(id);
       if (existing) {
@@ -588,6 +707,7 @@ export class OperationLedger {
         id,
         owner,
         fingerprint,
+        conflictScope: this.conflictScope(key, plan),
         service: plan.service,
         action: plan.action,
         channel: plan.channel,
@@ -659,8 +779,10 @@ export class OperationLedger {
             plan.target,
             plan.parameters,
             plan.postcondition,
+            ...(plan.conflictScope ? [plan.conflictScope] : []),
           ]),
           service: plan.service,
+          conflictScope: this.conflictScope(key, plan),
           action: plan.action,
           channel: plan.channel,
           state: blocked ? "blocked" : "planned",
@@ -789,10 +911,11 @@ export class OperationLedger {
           Object.values(state.records).some(
             (other) =>
               other.id !== id &&
-              this.matchesOwner(other, receipt.owner, receipt.ownerIncarnation) &&
               !!other.attemptId &&
               other.state !== "verified" &&
-              !this.resolvedForOwner(other, receipt.ownerIncarnation),
+              (this.matchesOwner(other, receipt.owner, receipt.ownerIncarnation)
+                ? !this.resolvedForOwner(other, receipt.ownerIncarnation)
+                : this.unresolved(other) && this.conflicts(key, receipt, other)),
           )
         ) {
           receipt.state = "blocked";

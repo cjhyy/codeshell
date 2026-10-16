@@ -165,6 +165,12 @@ export type {
 // ─── Tool system and host services ───────────────────────────────
 
 export { createLinkOperationReviewStore } from "./links/operation-review.js";
+export {
+  isLegacyLinkConnection,
+  previewLegacyLinkCleanup,
+  cleanupLegacyLinkConnections,
+  type LegacyLinkCleanupEntry,
+} from "./links/legacy-cleanup.js";
 export { createOperationHookHost } from "./links/operation-hook-host.js";
 export { createConstrainedDockerProcessHost } from "./runtime/constrained-process/docker.js";
 export type {

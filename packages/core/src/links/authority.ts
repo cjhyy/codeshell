@@ -22,6 +22,7 @@ export function linkAuthoritySnapshot(credential: CredentialMetadata): string {
     legacyResources: meta?.linkResourceLabels,
     authSource: meta?.linkAuthSource,
     remoteState: meta?.linkRemoteState,
+    cleanupDisabled: meta?.linkCleanupDisabled,
     verifiedAt: meta?.linkLastVerifiedAt,
     clientId: credential.oauthStatus?.clientId ?? meta?.clientId,
     tokenEndpoint: credential.oauthStatus?.tokenEndpoint ?? meta?.tokenEndpoint,
@@ -44,6 +45,7 @@ export function allowsLinkAction(
   provider: string,
   action: string,
 ): boolean {
+  if (credential.meta?.linkCleanupDisabled) return false;
   if (provider === "figma") {
     const mcp = String(credential.meta?.linkExecutionBackend) === "mcp";
     if (mcp !== isFigmaMcpAction(action)) return false;

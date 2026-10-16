@@ -100,6 +100,12 @@ export function claimRetirement(
       if (cipher.canDecrypt && !cipher.canDecrypt(value.secret)) continue;
       credential = JSON.parse(cipher.decrypt(value.secret));
       if (!remote(credential) || retirementId(credential) !== value.id) continue;
+      // Offline removal may preserve an encrypted token without the Desktop key.
+      // Validate the custody id before unwrapping that original ciphertext.
+      if (credential.secret?.startsWith("enc:")) {
+        if (cipher.canDecrypt && !cipher.canDecrypt(credential.secret)) continue;
+        credential = { ...credential, secret: cipher.decrypt(credential.secret) };
+      }
     } catch {
       continue;
     }
