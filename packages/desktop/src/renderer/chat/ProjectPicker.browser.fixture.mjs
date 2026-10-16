@@ -96,7 +96,7 @@ const frames = (page) =>
   );
 const isFocused = (locator) => locator.evaluate((node) => node === document.activeElement);
 const trigger = (page, index = 0) =>
-  page.locator(`[data-composer-index="${index}"] button[aria-haspopup="dialog"]`);
+  page.locator(`[data-composer-index="${index}"] [data-project-picker-trigger]`);
 const popup = (page, names) => page.getByRole("dialog", { name: names.search, exact: true });
 async function resize(page, width, height) {
   if (native) {
@@ -562,7 +562,7 @@ async function behaviors(page, config) {
   menu = await open(page, names);
   await page.evaluate(() => {
     const anchor = document.querySelector(
-      '[data-composer-index="0"] button[aria-haspopup="dialog"]',
+      '[data-composer-index="0"] [data-project-picker-trigger]',
     );
     const controls = [
       ...document.querySelectorAll("button,input,textarea,select,a[href],[tabindex]"),

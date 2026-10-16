@@ -229,6 +229,7 @@ export function ProjectPicker({
         className="cs-control h-8 gap-1.5 px-2 py-1 text-xs text-foreground disabled:opacity-50"
         disabled={disabled}
         aria-haspopup="dialog"
+        data-project-picker-trigger=""
         aria-expanded={isOpen}
         aria-controls={isOpen ? popupId : undefined}
         aria-label={triggerLabel}
