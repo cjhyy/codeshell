@@ -280,15 +280,20 @@ try {
       summaries.items[0].traceCount === 1,
     "Type filtering occurs before session counting and paging through production IPC",
   );
-  const typeFilter = tracePage.locator("[data-trace-type-filter]");
-  await typeFilter.selectOption("summary");
+  const category = (type) => tracePage.locator(`[data-trace-type-filter="${type}"]`);
+  assert((await category("").getAttribute("aria-pressed")) === "true", "All calls start selected");
+  await category("summary").click();
+  assert(
+    (await category("summary").getAttribute("aria-pressed")) === "true",
+    "The selected category is visible",
+  );
   await tracePage.locator('[data-trace-session="session:activity-file-session"]').click();
   await tracePage.locator('[data-trace-request="activity-file-summary-call"]').waitFor();
   assert(
     (await tracePage.locator("[data-trace-request]").count()) === 1,
     "Only the summary call remains after filtering",
   );
-  await typeFilter.selectOption("");
+  await category("").click();
   await tracePage.locator('[data-trace-request="activity-file-second-call"]').waitFor();
   assert(
     (await tracePage.locator("[data-trace-request]").count()) === 3,

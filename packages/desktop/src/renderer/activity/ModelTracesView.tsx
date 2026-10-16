@@ -15,7 +15,7 @@ import { useT } from "../i18n/I18nProvider";
 import { ModelTraceDetail, type TraceSelection } from "./ModelTraceDetail";
 import { ModelTraceRecording } from "./ModelTraceRecording";
 import { ModelTraceEvents } from "./ModelTraceEvents";
-import { TRACE_CALL_TYPES, traceCallTypeLabel } from "./TraceCallType";
+import { TraceCallTypeFilter, traceCallTypeLabel } from "./TraceCallType";
 import { ModelTraceExecutions } from "./ModelTraceExecutions";
 import { useModelTraceSessionTitles } from "./useModelTraceSessionTitles";
 import { eventRequestId, mergeTraceCalls, traceTime } from "./modelTracePresentation";
@@ -457,6 +457,10 @@ export function ModelTracesView({
       </header>
       <div className="shrink-0 space-y-3 px-4 pb-4 sm:px-6">
         <ModelTraceRecording />
+        <TraceCallTypeFilter
+          value={filters.callType}
+          onChange={(type) => changeFilter("callType", type)}
+        />
         <div role="search" className="relative">
           <Search
             size={15}
@@ -474,25 +478,9 @@ export function ModelTracesView({
           />
         </div>
         <div
-          className="grid grid-cols-2 gap-2 @min-[760px]/traces:grid-cols-5"
+          className="grid grid-cols-2 gap-2 @min-[760px]/traces:grid-cols-4"
           aria-label={t("observability.filters")}
         >
-          <label className="min-w-0 space-y-1 text-[11px] text-muted-foreground">
-            <span>{t("observability.callType")}</span>
-            <select
-              data-trace-type-filter
-              className={`${selectClass} w-full`}
-              value={filters.callType}
-              onChange={(event) => changeFilter("callType", event.target.value)}
-            >
-              <option value="">{t("observability.allTypes")}</option>
-              {TRACE_CALL_TYPES.map((type) => (
-                <option key={type} value={type}>
-                  {traceCallTypeLabel(type, t)}
-                </option>
-              ))}
-            </select>
-          </label>
           {(["model", "source"] as const).map((key) => (
             <label key={key} className="min-w-0 space-y-1 text-[11px] text-muted-foreground">
               <span>{t(`observability.${key}`)}</span>

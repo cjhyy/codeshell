@@ -73,6 +73,21 @@ try {
         50,
         "Session pagination runs after grouping",
       );
+      const typeFilter = page.getByRole("group", {
+        name: lang === "zh" ? "按类型查看" : "Browse by type",
+        exact: true,
+      });
+      const allTypes = typeFilter.locator('[data-trace-type-filter=""]');
+      const summaryType = typeFilter.locator('[data-trace-type-filter="summary"]');
+      assert.equal(await typeFilter.getByRole("button").count(), 15);
+      assert.equal(await allTypes.getAttribute("aria-pressed"), "true");
+      assert.ok(
+        await typeFilter.evaluate((node) => {
+          const bounds = node.getBoundingClientRect();
+          return bounds.left >= 0 && bounds.right <= window.innerWidth;
+        }),
+        "Visible type categories stay within the viewport and scroll internally",
+      );
       const sessionRow = list.locator('[data-trace-session="session:session-original"]');
       assert.ok(
         (await sessionRow.textContent()).includes("Panel Prompt audit / 核对 Panel Prompt"),
@@ -242,11 +257,10 @@ try {
           .getByRole("button", { name: lang === "zh" ? "返回" : "Back", exact: true })
           .click();
       }
-      const typeFilter = page.getByRole("combobox", {
-        name: lang === "zh" ? "调用类型" : "Call type",
-        exact: true,
-      });
-      await typeFilter.selectOption("summary");
+      await summaryType.click();
+      assert.equal(await summaryType.getAttribute("aria-pressed"), "true");
+      assert.equal(await allTypes.getAttribute("aria-pressed"), "false");
+      assert.equal(await typeFilter.locator('[aria-pressed="true"]').count(), 1);
       await page.waitForFunction(
         () => document.querySelectorAll("[data-trace-session]").length === 1,
       );
@@ -274,8 +288,19 @@ try {
         ),
         "The type filter reaches session calls as well as session grouping",
       );
+      assert.equal(
+        await tree.locator('[data-trace-call-type="summary"]').count(),
+        2,
+        "The same session history shows only calls in the selected category",
+      );
+      assert.ok(
+        await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth),
+        "Browsing categories creates no horizontal viewport overflow",
+      );
       await page.screenshot({ path: path.join(output, `types-${lang}-${viewport.width}.png`) });
-      await typeFilter.selectOption("");
+      await allTypes.click();
+      assert.equal(await allTypes.getAttribute("aria-pressed"), "true");
+      assert.equal(await summaryType.getAttribute("aria-pressed"), "false");
       await page.waitForFunction(
         () => document.querySelectorAll("[data-trace-session]").length === 50,
       );

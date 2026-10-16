@@ -34,6 +34,46 @@ export function isMediaModelCall(type: ModelTraceCallType | undefined): boolean 
   return type === "speech" || type === "transcription" || type === "audio";
 }
 
+export function TraceCallTypeFilter({
+  value,
+  onChange,
+}: {
+  value: ModelTraceCallType | "";
+  onChange: (value: ModelTraceCallType | "") => void;
+}) {
+  const { t } = useT();
+  return (
+    <div className="min-w-0 space-y-2">
+      <p className="text-xs font-medium text-muted-foreground">{t("observability.callType")}</p>
+      <div
+        role="group"
+        aria-label={t("observability.callType")}
+        className="flex max-w-full gap-2 overflow-x-auto overscroll-x-contain pb-1"
+      >
+        {(["", ...TRACE_CALL_TYPES] as const).map((type) => (
+          <button
+            key={type}
+            type="button"
+            data-trace-type-filter={type}
+            aria-pressed={value === type}
+            title={type ? traceCallTypeDescription(type, t) : undefined}
+            onClick={() => {
+              if (type !== value) onChange(type);
+            }}
+            className={`min-h-9 shrink-0 rounded-lg border px-3 text-xs font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 ${
+              value === type
+                ? "border-primary bg-primary text-primary-foreground"
+                : "border-border bg-card text-muted-foreground hover:bg-muted hover:text-foreground"
+            }`}
+          >
+            {type ? traceCallTypeLabel(type, t) : t("observability.allTypes")}
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 export function TraceCallTypeBadge({ type }: { type?: ModelTraceCallType }) {
   const { t } = useT();
   return (
