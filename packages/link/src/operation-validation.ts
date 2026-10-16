@@ -7,8 +7,14 @@ import {
 import { getLinkConnectionRecipe } from "./recipes.js";
 
 /** Copy JSON data without invoking getters, toJSON, inherited code or mutable caller objects. */
-function snapshotJson(value: unknown, ancestors = new Set<object>(), depth = 0): unknown {
-  if (depth > 20) throw new Error("JSON nesting limit");
+function snapshotJson(
+  value: unknown,
+  ancestors: Set<object>,
+  depth: number,
+  maxDepth: number,
+  forbidKeys: boolean,
+): unknown {
+  if (depth > maxDepth) throw new Error("JSON nesting limit");
   if (value === null || typeof value === "string" || typeof value === "boolean") return value;
   if (typeof value === "number" && Number.isFinite(value)) return value;
   if (!value || typeof value !== "object" || ancestors.has(value))
@@ -29,7 +35,7 @@ function snapshotJson(value: unknown, ancestors = new Set<object>(), depth = 0):
         if (descriptor && !Object.hasOwn(descriptor, "value")) throw new Error("JSON accessor");
         return descriptor?.value === undefined
           ? null
-          : snapshotJson(descriptor.value, ancestors, depth + 1);
+          : snapshotJson(descriptor.value, ancestors, depth + 1, maxDepth, forbidKeys);
       });
     }
     const result: Record<string, unknown> = Object.create(null);
@@ -37,11 +43,11 @@ function snapshotJson(value: unknown, ancestors = new Set<object>(), depth = 0):
       if (!descriptor.enumerable) continue;
       if (
         !Object.hasOwn(descriptor, "value") ||
-        ["__proto__", "constructor", "prototype"].includes(key)
+        (forbidKeys && ["__proto__", "constructor", "prototype"].includes(key))
       )
         throw new Error("Invalid JSON property");
       if (descriptor.value !== undefined)
-        result[key] = snapshotJson(descriptor.value, ancestors, depth + 1);
+        result[key] = snapshotJson(descriptor.value, ancestors, depth + 1, maxDepth, forbidKeys);
     }
     return result;
   } finally {
@@ -113,7 +119,7 @@ export function snapshotLinkOperationInput(
   let detached: unknown;
   let size = Infinity;
   try {
-    detached = snapshotJson(input);
+    detached = snapshotJson(input, new Set(), 0, contract.limits.inputDepth, true);
     size = new TextEncoder().encode(JSON.stringify(detached)).length;
   } catch {
     /* Reject cyclic/non-JSON inputs. */
@@ -130,7 +136,7 @@ export function assertLinkOperationResult(contract: LinkOperationContract, resul
   let detached: unknown;
   let size = Infinity;
   try {
-    detached = snapshotJson(result);
+    detached = snapshotJson(result, new Set(), 0, contract.limits.responseDepth, false);
     size = new TextEncoder().encode(JSON.stringify(detached)).length;
   } catch {
     /* Fail closed. */

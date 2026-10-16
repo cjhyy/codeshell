@@ -124,6 +124,8 @@ function operation(
     limits: {
       inputBytes: action === "create_issue" ? 256 * 1024 : 65_536,
       responseBytes: provider === "figma" ? 8 * 1024 * 1024 : 1024 * 1024,
+      inputDepth: 20,
+      responseDepth: 256,
     },
     repeatability: effect === "write" ? "verified-write-once" : "read-only",
     normalization: options.normalization ?? [],

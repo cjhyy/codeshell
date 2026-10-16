@@ -55,7 +55,12 @@ export interface LinkOperationContract {
     readonly coverage: "summary" | "requested-subtree" | "selected-resource" | "page";
   };
   readonly defaults: Readonly<Record<string, string | number | boolean>>;
-  readonly limits: { readonly inputBytes: number; readonly responseBytes: number };
+  readonly limits: {
+    readonly inputBytes: number;
+    readonly responseBytes: number;
+    readonly inputDepth: number;
+    readonly responseDepth: number;
+  };
   readonly repeatability: "read-only" | "verified-write-once";
   /** Existing adapters perform these canonicalizations after structural validation. */
   readonly normalization: readonly string[];

@@ -82,6 +82,21 @@ describe("reviewed operation contracts", () => {
       ),
     ).toThrow();
   });
+  test("full Figma results preserve deep JSON nodes and arbitrary nested data keys", () => {
+    let node: Record<string, unknown> = JSON.parse(
+      '{"constructor":"design metadata","__proto__":{"name":"plain data"}}',
+    );
+    for (let depth = 0; depth < 100; depth++) node = { children: [node] };
+    assertLinkOperationResult(getLinkOperationContract("figma", "read_design_content")!, {
+      document: node,
+    });
+    for (let depth = 0; depth < 30; depth++) node = { children: [node] };
+    expect(() =>
+      assertLinkOperationResult(getLinkOperationContract("figma", "read_design_content")!, {
+        document: node,
+      }),
+    ).toThrow();
+  });
   test("broker listings require explicit resources and cannot use upstream-scoped authority", () => {
     const contract = getLinkOperationContract("github", "list_repositories")!;
     expect(() =>
