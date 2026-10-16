@@ -162,6 +162,20 @@ export function createIpcCredentialAccess(
       cleanup?: () => void;
     }
   >();
+  // The Host can still finish an already-sent Action after the calling task
+  // cancels or times out. Keep only bounded, short-lived receipt IDs so that
+  // its current status reaches other tasks without reviving the old request.
+  const abandonedRemoteReplies = new Map<string, number>();
+  const rememberAbandonedReply = (id: string, method: string) => {
+    if (method !== "desktop/remoteLinkAction") return;
+    const now = Date.now();
+    for (const [key, expiresAt] of abandonedRemoteReplies) {
+      if (expiresAt <= now) abandonedRemoteReplies.delete(key);
+    }
+    if (abandonedRemoteReplies.size >= 128)
+      abandonedRemoteReplies.delete(abandonedRemoteReplies.keys().next().value!);
+    abandonedRemoteReplies.set(id, now + 60_000);
+  };
 
   const applySnapshot = (value: unknown) => {
     const params = value as Partial<CredentialSnapshot> | undefined;
@@ -195,7 +209,13 @@ export function createIpcCredentialAccess(
     if (!("id" in msg) || "method" in msg) return;
     const id = String(msg.id);
     const waiter = pending.get(id);
-    if (!waiter) return;
+    if (!waiter) {
+      const expiresAt = abandonedRemoteReplies.get(id);
+      abandonedRemoteReplies.delete(id);
+      if (expiresAt !== undefined && expiresAt > Date.now())
+        applySnapshot((msg as RemoteLinkActionReply).credentialSnapshot);
+      return;
+    }
     pending.delete(id);
     clearTimeout(waiter.timer);
     waiter.cleanup?.();
@@ -260,6 +280,7 @@ export function createIpcCredentialAccess(
       const cancel = () => {
         if (!pending.has(id)) return;
         pending.delete(id);
+        rememberAbandonedReply(id, method);
         clearTimeout(timer);
         cleanup();
         transport.send({
@@ -272,7 +293,9 @@ export function createIpcCredentialAccess(
       const cleanup = () => signal?.removeEventListener("abort", cancel);
       const timer = setTimeout(
         () => {
+          if (!pending.has(id)) return;
           pending.delete(id);
+          rememberAbandonedReply(id, method);
           cleanup();
           if (method === "desktop/localOAuthLinkAction" || method === "desktop/mcpLinkAction")
             transport.send({

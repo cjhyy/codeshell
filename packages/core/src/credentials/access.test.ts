@@ -1,4 +1,4 @@
-import { describe, expect, test } from "bun:test";
+import { describe, expect, spyOn, test } from "bun:test";
 import { createInProcessTransport } from "../protocol/transport.js";
 import type { RpcRequest } from "../protocol/types.js";
 import {
@@ -521,7 +521,7 @@ describe("remote Action atomic snapshot replies", () => {
     },
   );
 
-  test("explicit cancellation before a reply wins and its abandoned snapshot cannot change authority", async () => {
+  test("explicit cancellation wins while its late remote receipt updates other tasks once", async () => {
     const f = fixture();
     let notifications = 0;
     f.access.subscribe!(() => notifications++);
@@ -535,9 +535,110 @@ describe("remote Action atomic snapshot replies", () => {
       error: { code: -32603, message: "reviewed", data: { remoteLinkCode: "reconnect" } },
     });
     expect(await pending).toMatchObject({ name: "AbortError" });
-    expect(f.meta()?.linkRemoteState).toBe("connected");
-    expect(notifications).toBe(0);
+    expect(f.meta()?.linkRemoteState).toBe("reconnect");
+    expect(notifications).toBe(1);
+    f.reply({
+      jsonrpc: "2.0",
+      id: f.requests[0]!.id,
+      credentialSnapshot: f.snapshot(999, "replayed-grant"),
+      result: { protected: "must not revive the cancelled request" },
+    });
+    expect(await pending).toMatchObject({ name: "AbortError" });
+    expect(f.meta()?.linkRemoteState).toBe("reconnect");
+    expect(f.meta()?.linkRemoteGrantId).toBe("original-grant");
+    expect(notifications).toBe(1);
     expect(f.cancellations).toEqual([{ requestId: f.requests[0]!.id }]);
+    f.close();
+  });
+
+  test("late receipts for cancelled remote Actions cannot restore a superseded grant", async () => {
+    const f = fixture();
+    const controller = new AbortController();
+    const pending = f.execute({ signal: controller.signal }).catch((error) => error);
+    controller.abort();
+    f.publish(f.snapshot(3, "new-grant"));
+    f.reply({
+      jsonrpc: "2.0",
+      id: f.requests[0]!.id,
+      credentialSnapshot: f.snapshot(2, "original-grant", "reconnect"),
+      error: { code: -32603, message: "reviewed", data: { remoteLinkCode: "reconnect" } },
+    });
+    expect(await pending).toMatchObject({ name: "AbortError" });
+    expect(f.meta()?.linkRemoteGrantId).toBe("new-grant");
+    expect(f.meta()?.linkRemoteState).toBe("connected");
+    f.close();
+  });
+
+  test("cancelled non-remote requests never gain late snapshot authority", async () => {
+    const f = fixture();
+    const controller = new AbortController();
+    const pending = f.access.executeMcpLinkAction!(
+      {
+        id: "mcp",
+        scope: "full",
+        accountId: "selected",
+        verifiedAt: "verified",
+        action: "get_metadata",
+        params: {},
+      },
+      { signal: controller.signal },
+    ).catch((error) => error);
+    controller.abort();
+    f.reply({
+      jsonrpc: "2.0",
+      id: f.requests[0]!.id,
+      credentialSnapshot: f.snapshot(999, "unrelated-grant"),
+      result: {},
+    });
+    expect(await pending).toMatchObject({ name: "AbortError" });
+    expect(f.meta()?.linkRemoteGrantId).toBe("original-grant");
+    f.close();
+  });
+
+  test("abandoned remote receipts expire without installing a late snapshot", async () => {
+    const f = fixture();
+    const now = spyOn(Date, "now").mockReturnValue(10_000);
+    try {
+      const controller = new AbortController();
+      const pending = f.execute({ signal: controller.signal }).catch((error) => error);
+      controller.abort();
+      now.mockReturnValue(70_001);
+      f.reply({
+        jsonrpc: "2.0",
+        id: f.requests[0]!.id,
+        credentialSnapshot: f.snapshot(999, "expired-grant"),
+        result: {},
+      });
+      expect(await pending).toMatchObject({ name: "AbortError" });
+      expect(f.meta()?.linkRemoteGrantId).toBe("original-grant");
+    } finally {
+      now.mockRestore();
+      f.close();
+    }
+  });
+
+  test("abandoned remote receipt tracking is bounded to recent requests", async () => {
+    const f = fixture();
+    for (let i = 0; i < 129; i++) {
+      const controller = new AbortController();
+      const pending = f.execute({ signal: controller.signal }).catch((error) => error);
+      controller.abort();
+      expect(await pending).toMatchObject({ name: "AbortError" });
+    }
+    f.reply({
+      jsonrpc: "2.0",
+      id: f.requests[0]!.id,
+      credentialSnapshot: f.snapshot(999, "evicted-grant"),
+      result: {},
+    });
+    expect(f.meta()?.linkRemoteGrantId).toBe("original-grant");
+    f.reply({
+      jsonrpc: "2.0",
+      id: f.requests.at(-1)!.id,
+      credentialSnapshot: f.snapshot(2, "current-grant"),
+      result: {},
+    });
+    expect(f.meta()?.linkRemoteGrantId).toBe("current-grant");
     f.close();
   });
 

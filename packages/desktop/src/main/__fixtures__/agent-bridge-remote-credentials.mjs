@@ -323,6 +323,10 @@ try {
   const beforeCancelledReply = messages.length;
   release();
   await waitFor(() => messages.length > beforeCancelledReply);
+  assert.equal((await status()).state, "unavailable");
+  assert.equal(access.resolveMeta(cwd, credential.id, "full").meta.linkRemoteState, "reconnect");
+  assert.equal(cancelledOutput.code, undefined);
+  assert.match(cancelledOutput.error, /cancelled/i);
   actionGate = undefined;
   actionStarted = undefined;
 
