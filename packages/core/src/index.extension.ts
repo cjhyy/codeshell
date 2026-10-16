@@ -174,7 +174,7 @@ export { runIsolatedInstruction } from "./skills/isolated-instruction-run.js";
 
 // Transitional Link provider extension seam. HTTP implementations live in Server;
 // pure provider helpers remain here until their remaining Core consumers migrate.
-export { registerLocalLinkProviders } from "./links/providers.js";
+export { registerLocalLinkProviders, getLocalLinkProvider } from "./links/providers.js";
 export type {
   LocalLinkProviderSpec,
   LocalLinkProviderSummary,

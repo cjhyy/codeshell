@@ -13,6 +13,8 @@ globalThis.fetch = (() => {
   networkCalls++;
   throw new Error("file selection must not fetch");
 }) as typeof fetch;
+const { installDefaultLinkProviders } = await import("@cjhyy/code-shell-server/links");
+installDefaultLinkProviders();
 const { SettingsManager } = await import("@cjhyy/code-shell-core");
 const { listSourceDefinitions, readSourceDefinition, saveSourceDefinition } =
   await import("@cjhyy/code-shell-core/internal");
@@ -403,6 +405,8 @@ test("failure in one project cannot delete the shared reference another project 
       mutateSettingsForScope() {
         const script = `
         globalThis.fetch = () => { throw new Error("selection network denied"); };
+        const { installDefaultLinkProviders } = await import("@cjhyy/code-shell-server/links");
+        installDefaultLinkProviders();
         const { createLinkedFileSourceService } = await import(${JSON.stringify(modulePath)});
         const api = createLinkedFileSourceService({
           assertCurrent() {}, assertProjectCurrent() {},
@@ -441,6 +445,8 @@ test("concurrent project writers retain every independent file binding", async (
   const children = Array.from({ length: total }, (_, index) => {
     const script = `
       globalThis.fetch = () => { throw new Error("selection network denied"); };
+      const { installDefaultLinkProviders } = await import("@cjhyy/code-shell-server/links");
+      installDefaultLinkProviders();
       const { createLinkedFileSourceService } = await import(${JSON.stringify(modulePath)});
       const api = createLinkedFileSourceService({
         assertCurrent() {}, assertProjectCurrent() {},

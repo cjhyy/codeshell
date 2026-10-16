@@ -1,5 +1,6 @@
 import {
   registerLocalLinkProviders,
+  getLocalLinkProvider,
   type AgentModule,
   type LocalLinkProviderSpec,
 } from "@cjhyy/code-shell-core/extension";
@@ -14,7 +15,15 @@ export function installDefaultLinkProviders(
   register: Registrar = registerLocalLinkProviders,
 ): void {
   if (installed.has(register)) return;
-  register(createDefaultLinkProviders());
+  const providers = createDefaultLinkProviders();
+  // Two product module copies may share one Core registry (e.g. a host/plugin
+  // composition). Preserve explicitly installed implementations instead of
+  // overwriting them or treating the second default composition as an error.
+  register(
+    register === registerLocalLinkProviders
+      ? providers.filter((provider) => !getLocalLinkProvider(provider.id))
+      : providers,
+  );
   installed.add(register);
 }
 

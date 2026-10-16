@@ -181,7 +181,7 @@ test("default trusted Figma profile completes SDK OAuth, account verification, L
     expect(state.state).toBe("connected");
     expect(initializeName).toBe("CodeShell");
     expect(browserOpened).toBe(1);
-    const saved = store.resolve("link-figma-mcp")!;
+    const saved = store.resolve(state.connection!.id)!;
     expect(saved.meta?.linkAccountId).toBe("fixture@example.test");
     expect(saved.meta?.linkCapabilityIds).toEqual([
       "figma.get_metadata",

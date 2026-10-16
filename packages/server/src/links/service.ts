@@ -747,7 +747,7 @@ export function createLinkService(options: LinkServiceOptions = {}) {
         hostAdapter.methodId !== input.methodId)
     )
       throw new LinkServiceError(400, "invalid_request");
-    const id = input.connectionId ?? `link-${input.providerId}-${input.methodId}`;
+    const id = input.connectionId ?? `link-${randomUUID()}`;
     authorizationDiagnosticStage("connection_review");
     let expected: Credential | null = null;
     if (input.expectedRevision === null) {
@@ -788,6 +788,18 @@ export function createLinkService(options: LinkServiceOptions = {}) {
   ): void {
     const current = records();
     if (current.projectIds.has(prepared.id)) throw new LinkServiceError(403, "read_only");
+    if (
+      !prepared.expected &&
+      next?.meta?.linkAccountId &&
+      current.credentials.some(
+        (credential) =>
+          credential.id !== prepared.id &&
+          credential.meta?.linkProvider === next.meta?.linkProvider &&
+          credential.meta?.linkConnectionMethod === next.meta?.linkConnectionMethod &&
+          credential.meta?.linkAccountId === next.meta?.linkAccountId,
+      )
+    )
+      throw new LinkServiceError(409, "conflict");
     if (!store.compareAndSwap("user", prepared.id, prepared.expected, next, retirement))
       throw new LinkServiceError(409, "conflict");
   }

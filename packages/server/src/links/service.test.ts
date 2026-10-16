@@ -720,6 +720,23 @@ describe("shared Link management", () => {
     await service.disconnect(owner, renamed.id, renamed.revision);
     expect(store.resolve(original.id)).toBeUndefined();
   });
+  test("a fresh connection never revives removed references and supports separate accounts", async () => {
+    const { service, store } = fixture({
+      validateToken: async (_provider, token) => ({
+        ...validation,
+        identity: { ...validation.identity, externalAccountId: token },
+      }),
+    });
+    const first = await service.connectToken(owner, input);
+    const second = await service.connectToken(owner, { ...input, token: "another-account" });
+    expect(second.id).not.toBe(first.id);
+    expect(service.snapshot().connections).toHaveLength(2);
+    await service.disconnect(owner, first.id, first.revision);
+    const reconnected = await service.connectToken(owner, input);
+    expect(reconnected.id).not.toBe(first.id);
+    expect(store.resolve(first.id)).toBeUndefined();
+    expect(store.resolve(second.id)).toBeDefined();
+  });
   test("failed token verification does not replace the previous working connection", async () => {
     let reject = false;
     const { service, store } = fixture({

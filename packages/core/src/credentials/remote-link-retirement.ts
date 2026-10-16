@@ -114,7 +114,9 @@ export function claimRetirement(
     if (
       active.some(
         (c) =>
-          remote(c) &&
+          // A future record format cannot execute on this Host, but its matching
+          // grant still protects custody from revocation by an older Host.
+          c.type === "oauth" &&
           c.meta?.linkRemoteIssuer === credential.meta?.linkRemoteIssuer &&
           (c.secret === credential.secret ||
             (!!credential.meta?.linkRemoteGrantId &&
