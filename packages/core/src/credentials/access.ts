@@ -37,7 +37,7 @@ import {
 import { refreshToken } from "../services/oauth.js";
 import { assertMcpOAuthCredentialBinding } from "./mcp-binding.js";
 import type { SettingsScope } from "../settings/manager.js";
-import type { RpcMessage } from "../protocol/types.js";
+import type { RpcMessage, RpcResponse } from "../protocol/types.js";
 import type { Transport } from "../protocol/transport.js";
 import {
   executeFigmaMcpLinkAction,
@@ -128,6 +128,11 @@ export interface CredentialSnapshot {
   entries: CredentialSnapshotEntry[];
 }
 
+/** Host metadata and its remote Action outcome arrive as one ordered update. */
+export interface RemoteLinkActionReply extends RpcResponse {
+  credentialSnapshot?: CredentialSnapshot;
+}
+
 const COOKIE_FILE_PREFIX = "codeshell-cred-cookie-";
 const COOKIE_FILE_MAX_AGE_MS = 30 * 60 * 1000;
 
@@ -157,32 +162,68 @@ export function createIpcCredentialAccess(
       cleanup?: () => void;
     }
   >();
+  // The Host can still finish an already-sent Action after the calling task
+  // cancels or times out. Keep only bounded, short-lived receipt IDs so that
+  // its current status reaches other tasks without reviving the old request.
+  const abandonedRemoteReplies = new Map<string, number>();
+  const rememberAbandonedReply = (id: string, method: string) => {
+    if (method !== "desktop/remoteLinkAction") return;
+    const now = Date.now();
+    for (const [key, expiresAt] of abandonedRemoteReplies) {
+      if (expiresAt <= now) abandonedRemoteReplies.delete(key);
+    }
+    if (abandonedRemoteReplies.size >= 128)
+      abandonedRemoteReplies.delete(abandonedRemoteReplies.keys().next().value!);
+    abandonedRemoteReplies.set(id, now + 60_000);
+  };
+
+  const applySnapshot = (value: unknown) => {
+    const params = value as Partial<CredentialSnapshot> | undefined;
+    // Delayed or replayed Host snapshots must not restore a superseded grant.
+    if (
+      params &&
+      typeof params.revision === "number" &&
+      Number.isSafeInteger(params.revision) &&
+      params.revision > snapshot.revision &&
+      Array.isArray(params.entries)
+    ) {
+      snapshot = {
+        revision: params.revision,
+        entries: params.entries as CredentialSnapshotEntry[],
+      };
+      for (const listener of subscribers) {
+        try {
+          listener();
+        } catch {
+          // One consumer must not break the credential snapshot transport.
+        }
+      }
+    }
+  };
 
   transport.onMessage((msg: RpcMessage) => {
     if ("method" in msg && msg.method === "desktop/credentialSnapshot") {
-      const params = msg.params as Partial<CredentialSnapshot> | undefined;
-      if (params && typeof params.revision === "number" && Array.isArray(params.entries)) {
-        snapshot = {
-          revision: params.revision,
-          entries: params.entries as CredentialSnapshotEntry[],
-        };
-        for (const listener of subscribers) {
-          try {
-            listener();
-          } catch {
-            // One consumer must not break the credential snapshot transport.
-          }
-        }
-      }
+      applySnapshot(msg.params);
       return;
     }
     if (!("id" in msg) || "method" in msg) return;
     const id = String(msg.id);
     const waiter = pending.get(id);
-    if (!waiter) return;
+    if (!waiter) {
+      const expiresAt = abandonedRemoteReplies.get(id);
+      abandonedRemoteReplies.delete(id);
+      if (expiresAt !== undefined && expiresAt > Date.now())
+        applySnapshot((msg as RemoteLinkActionReply).credentialSnapshot);
+      return;
+    }
     pending.delete(id);
     clearTimeout(waiter.timer);
     waiter.cleanup?.();
+    // Snapshot subscribers may abort other Actions when authority changes. This
+    // reply's waiter is already retired so its reviewed error cannot be replaced
+    // by that derived cancellation. Successful results still recheck authority.
+    if (waiter.method === "desktop/remoteLinkAction")
+      applySnapshot((msg as RemoteLinkActionReply).credentialSnapshot);
     if ("error" in msg && msg.error) {
       const data = msg.error.data as
         | { remoteLinkCode?: unknown; mcpLinkCode?: unknown }
@@ -205,11 +246,22 @@ export function createIpcCredentialAccess(
           ? new McpLinkActionError(
               mcpLinkCode as ConstructorParameters<typeof McpLinkActionError>[0],
             )
-          : remoteLinkCode === "file_not_authorized" ||
-              remoteLinkCode === "unsupported_file_type" ||
-              remoteLinkCode === "response_too_large" ||
-              remoteLinkCode === "content_unavailable"
-            ? new RemoteLinkError(remoteLinkCode)
+          : typeof remoteLinkCode === "string" &&
+              [
+                "invalid_request",
+                "unavailable",
+                "reconnect",
+                "changed",
+                "forbidden",
+                "file_not_authorized",
+                "unsupported_file_type",
+                "response_too_large",
+                "content_unavailable",
+                "busy",
+              ].includes(remoteLinkCode)
+            ? new RemoteLinkError(
+                remoteLinkCode as ConstructorParameters<typeof RemoteLinkError>[0],
+              )
             : new Error(msg.error.message),
       );
     } else {
@@ -228,6 +280,7 @@ export function createIpcCredentialAccess(
       const cancel = () => {
         if (!pending.has(id)) return;
         pending.delete(id);
+        rememberAbandonedReply(id, method);
         clearTimeout(timer);
         cleanup();
         transport.send({
@@ -240,7 +293,9 @@ export function createIpcCredentialAccess(
       const cleanup = () => signal?.removeEventListener("abort", cancel);
       const timer = setTimeout(
         () => {
+          if (!pending.has(id)) return;
           pending.delete(id);
+          rememberAbandonedReply(id, method);
           cleanup();
           if (method === "desktop/localOAuthLinkAction" || method === "desktop/mcpLinkAction")
             transport.send({

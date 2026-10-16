@@ -76,6 +76,8 @@ import {
   RemoteLinkError,
   executeLocalOAuthLinkAction,
   CredentialStore,
+  type CredentialSnapshot,
+  type RemoteLinkActionReply,
   type LocalOAuthLinkActionRequest,
   type RemoteLinkActionRequest,
   ErrorCodes,
@@ -1302,7 +1304,7 @@ export class AgentBridge implements PetStateBridge {
     if (id === undefined) return true;
     const workerEpoch = this.localOAuthLinkEpoch;
     void (async () => {
-      let reply: Record<string, unknown>;
+      let reply: RemoteLinkActionReply;
       try {
         if (parsed.method === "desktop/modelRequestSign") {
           if (!this.modelRequestSigner) throw new Error("Host request signing unavailable");
@@ -1421,10 +1423,16 @@ export class AgentBridge implements PetStateBridge {
             ...(parsed.method === "desktop/remoteLinkAction" &&
             err instanceof RemoteLinkError &&
             [
+              "invalid_request",
+              "unavailable",
+              "reconnect",
+              "changed",
+              "forbidden",
               "file_not_authorized",
               "unsupported_file_type",
               "response_too_large",
               "content_unavailable",
+              "busy",
             ].includes(err.code)
               ? { data: { remoteLinkCode: err.code } }
               : {}),
@@ -1434,10 +1442,30 @@ export class AgentBridge implements PetStateBridge {
       if (
         (parsed.method === "desktop/localOAuthLinkAction" ||
           parsed.method === "desktop/mcpLinkAction" ||
+          parsed.method === "desktop/remoteLinkAction" ||
           parsed.method === "desktop/modelRequestSign") &&
         workerEpoch !== this.localOAuthLinkEpoch
       )
         return;
+      if (parsed.method === "desktop/remoteLinkAction") {
+        // The Host may have refreshed or invalidated this grant while executing.
+        // Read the current store after settlement. Deliver it in the same reply
+        // so its invalidation cannot cancel this request before the Worker has
+        // detached the current waiter and preserved the original action error.
+        try {
+          const cwd = parsed.params?.cwd;
+          if (typeof cwd === "string" && cwd) this.credentialSnapshotCwds.add(cwd);
+          reply.credentialSnapshot = this.buildLatestCredentialSnapshot();
+        } catch {
+          // Status delivery is best effort. Preserve the action's original
+          // result/error even if reading or sending its snapshot fails.
+          try {
+            dlog("bridge", "remote_link.credential_snapshot_failed", {});
+          } catch {
+            // Logging must not turn an already settled action into another error.
+          }
+        }
+      }
       this.core.sendLine(JSON.stringify(reply));
     })();
     return true;
@@ -1941,17 +1969,21 @@ export class AgentBridge implements PetStateBridge {
   pushCredentialSnapshot(cwd?: string): void {
     if (typeof cwd === "string" && cwd) this.credentialSnapshotCwds.add(cwd);
     if (!this.core.hasLiveWorker()) return;
-    this.credentialSnapshotRevision += 1;
-    const snapshot = buildCredentialSnapshot(
-      [...this.credentialSnapshotCwds],
-      this.credentialSnapshotRevision,
-    );
+    const snapshot = this.buildLatestCredentialSnapshot();
     this.core.sendLine(
       JSON.stringify({
         jsonrpc: "2.0",
         method: "desktop/credentialSnapshot",
         params: snapshot,
       }),
+    );
+  }
+
+  private buildLatestCredentialSnapshot(): CredentialSnapshot {
+    this.credentialSnapshotRevision += 1;
+    return buildCredentialSnapshot(
+      [...this.credentialSnapshotCwds],
+      this.credentialSnapshotRevision,
     );
   }
 
