@@ -12,6 +12,7 @@ import { fileURLToPath } from "node:url";
 import { buildChromeExtension } from "./build-chrome-extension.js";
 import { buildComputerUsePermissions } from "./build-computer-use-permissions.js";
 import { buildComputerUseDriver } from "./build-computer-use-driver.js";
+import { buildWorkerLinkProviders } from "./build-worker-link-providers.js";
 
 const cwd = dirname(fileURLToPath(import.meta.url));
 const root = resolve(cwd, "..");
@@ -84,6 +85,7 @@ async function buildMobile(): Promise<void> {
 async function main(): Promise<void> {
   await Promise.all([
     buildMain(),
+    buildWorkerLinkProviders(),
     buildPreload(),
     buildRenderer(),
     buildMobile(),
@@ -92,7 +94,9 @@ async function main(): Promise<void> {
     buildComputerUseDriver(),
   ]);
   // eslint-disable-next-line no-console
-  console.log("[build] main, preload, renderer, mobile, and Chrome extension OK");
+  console.log(
+    "[build] main, worker Link providers, preload, renderer, mobile, and Chrome extension OK",
+  );
 }
 
 main().catch((err) => {

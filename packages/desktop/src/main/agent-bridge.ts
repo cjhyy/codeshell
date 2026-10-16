@@ -34,6 +34,7 @@ import {
   type DesktopOperationBatchAuthorityResult,
 } from "@cjhyy/code-shell-core/internal";
 import { createDesktopWorkerHost } from "./worker-host-runtime.js";
+import { desktopLinkProviderModuleUrl } from "./link-provider-module.js";
 import {
   linkAccountExecutionOptions,
   type CaptureLinkAccountAccess,
@@ -415,7 +416,9 @@ export class AgentBridge implements PetStateBridge {
           {
             coding: codingModule,
             pet: petCapabilityModule,
-            links: import.meta.resolve("@cjhyy/code-shell-server/links"),
+            links: desktopLinkProviderModuleUrl(app, () =>
+              import.meta.resolve("@cjhyy/code-shell-server/links"),
+            ),
           },
           readUserFeatureFlags(resolveNoRepoCwd()),
           () => import.meta.resolve("@cjhyy/code-shell-capability-optimization-lab/capability"),
