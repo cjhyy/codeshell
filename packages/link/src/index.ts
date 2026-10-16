@@ -5,6 +5,7 @@ export {
   LINK_CONNECTION_RECIPES,
   getLinkConnectionRecipe,
   resolveLinkRecipeId,
+  linkConnectionMetadata,
 } from "./recipes.js";
 export {
   LinkOperationError,
@@ -65,5 +66,6 @@ export type {
   LinkErrorCode,
   LinkSnapshot,
   MaskedLinkConnection,
+  LinkConnectionState,
   TokenConnectionInput,
 } from "./management-types.js";

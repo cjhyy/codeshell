@@ -1,3 +1,4 @@
+import { linkConnectionMetadata } from "@cjhyy/code-shell-link";
 import {
   credentialAccessScope,
   getCredentialAccess,
@@ -69,26 +70,26 @@ const GUIDANCE =
 // Do not return entire CredentialMetadata objects, even though they are called
 // masked: they can contain secret hints and unrelated provider metadata.
 export function savedLinkConnectionStatus(credential: CredentialMetadata): LinkConnectionStatus {
-  const meta = credential.meta;
+  const meta = linkConnectionMetadata(credential.meta);
   const result: LinkConnectionStatus = {
     id: credential.id,
     account: meta?.linkAccountLabel,
-    backend: meta?.linkExecutionBackend ?? (credential.type === "oauth" ? "oauth" : "http-token"),
-    runtime: meta?.linkExecutionRuntime ?? (credential.type === "oauth" ? "server" : undefined),
+    backend: meta.linkExecutionBackend ?? (credential.type === "oauth" ? "oauth" : "http-token"),
+    runtime: meta.linkExecutionRuntime ?? (credential.type === "oauth" ? "server" : undefined),
     verifiedAt: meta?.linkLastVerifiedAt,
     state: "ready",
   };
   if (!credential.hasSecret || credential.oauthStatus?.state === "missing") {
     result.state = "unavailable";
     result.reason = "Saved credential is missing or cannot be read. Reconnect this Link.";
-  } else if (meta?.linkExecutionBackend === "remote" && meta.linkRemoteState !== "connected") {
+  } else if (meta.linkExecutionBackend === "remote" && meta.linkRemoteState !== "connected") {
     result.state = "unavailable";
     result.reason =
       meta.linkRemoteState === "refreshing"
         ? "Link authorization refresh is pending. Reconnect if the Host restarted during refresh."
         : "Remote Link authorization requires reconnection.";
   } else if (
-    ["browser-oauth", "mcp-oauth"].includes(String(meta?.linkAuthSource)) &&
+    ["browser-oauth", "mcp-oauth"].includes(String(meta.linkAuthSource)) &&
     meta?.linkOAuthState &&
     meta?.linkOAuthState !== "connected"
   ) {
@@ -99,9 +100,9 @@ export function savedLinkConnectionStatus(credential: CredentialMetadata): LinkC
         : "Local OAuth authorization requires reconnection.";
   } else if (
     credential.oauthStatus?.state === "expired" &&
-    !(meta?.linkExecutionBackend === "remote" && credential.oauthStatus.hasRefreshToken) &&
+    !(meta.linkExecutionBackend === "remote" && credential.oauthStatus.hasRefreshToken) &&
     !(
-      ["browser-oauth", "mcp-oauth"].includes(String(meta?.linkAuthSource)) &&
+      ["browser-oauth", "mcp-oauth"].includes(String(meta.linkAuthSource)) &&
       credential.oauthStatus.canRefresh
     )
   ) {
@@ -110,13 +111,13 @@ export function savedLinkConnectionStatus(credential: CredentialMetadata): LinkC
   } else if (credential.oauthStatus?.state === "invalid") {
     result.state = "invalid";
     result.reason = "Saved authorization is invalid. Reconnect this Link.";
-  } else if (meta?.linkAuthSource === "browser-oauth" && meta.linkCapabilityIds?.length === 0) {
+  } else if (meta.linkAuthSource === "browser-oauth" && meta.linkCapabilityIds?.length === 0) {
     result.state = "unavailable";
     result.reason = "Local OAuth authorization no longer permits these actions.";
   } else if (!result.runtime) {
     result.state = "unavailable";
     result.reason = "Saved Link has no execution runtime. Reconnect it to enable local LinkAction.";
-  } else if (meta?.linkExecutionBackend === "cli" && !meta.linkAccountId) {
+  } else if (meta.linkExecutionBackend === "cli" && !meta.linkAccountId) {
     result.state = "invalid";
     result.reason = "Saved CLI connection has no account binding. Reconnect this Link.";
   }

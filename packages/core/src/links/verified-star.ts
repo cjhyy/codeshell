@@ -1,3 +1,4 @@
+import { linkConnectionMetadata } from "@cjhyy/code-shell-link";
 import { randomUUID } from "node:crypto";
 import type { ToolContext } from "../tool-system/context.js";
 import type { CredentialMetadata } from "../credentials/access.js";
@@ -18,7 +19,8 @@ export async function verifiedGithubSetStarred(options: {
 }): Promise<{ receipt: OperationReceipt; data: unknown }> {
   const { ctx, connection, assertConnected } = options;
   if (!ctx.operations || !ctx.executeBoundTool) throw new OperationFailure("unsupported");
-  if (connection.meta?.linkExecutionBackend === "cli") throw new OperationFailure("unsupported");
+  if (linkConnectionMetadata(connection.meta).linkExecutionBackend === "cli")
+    throw new OperationFailure("unsupported");
   const params = githubSetStarredParameters(options.params);
   const target = { owner: params.owner, repo: params.repo };
   const channel = "link" as const;

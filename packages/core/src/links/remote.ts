@@ -1,3 +1,4 @@
+import { linkConnectionMetadata } from "@cjhyy/code-shell-link";
 import { createHash, randomBytes } from "node:crypto";
 import { CredentialStore } from "../credentials/store.js";
 import type { Credential } from "../credentials/types.js";
@@ -574,8 +575,8 @@ export async function completeRemoteLinkAuthorization(
     meta: {
       linkProvider: providerId,
       linkConnectionMethod: "remote-link",
-      linkExecutionRuntime: "server",
-      linkExecutionBackend: "remote",
+      recordSchemaVersion: 2,
+      linkRecipeId: "broker-oauth",
       agentExposable: false,
       linkRemoteIssuer: config.issuer,
       linkRemoteConnectionId: connectionId,
@@ -626,8 +627,8 @@ export async function revokeRemoteLinkAuthorization(credential: Credential): Pro
 export function isRemoteLinkCredential(value: Pick<Credential, "type" | "meta">): boolean {
   return (
     value.type === "oauth" &&
-    value.meta?.linkExecutionRuntime === "server" &&
-    value.meta.linkExecutionBackend === "remote"
+    linkConnectionMetadata(value.meta).linkExecutionRuntime === "server" &&
+    linkConnectionMetadata(value.meta).linkExecutionBackend === "remote"
   );
 }
 export interface RemoteLinkActionRequest {

@@ -1,3 +1,4 @@
+import { linkConnectionMetadata } from "@cjhyy/code-shell-link";
 import { githubStarActionIds } from "./github-star.js";
 import { FIGMA_NEW_ACTIONS } from "./figma.js";
 import { getLocalLinkProvider } from "./providers.js";
@@ -10,9 +11,11 @@ export function linkAuthoritySnapshot(credential: CredentialMetadata): string {
   return JSON.stringify({
     id: credential.id,
     type: credential.type,
+    recipe: meta?.linkRecipeId,
+    recordSchemaVersion: meta?.recordSchemaVersion,
     provider: meta?.linkProvider,
-    runtime: meta?.linkExecutionRuntime,
-    backend: meta?.linkExecutionBackend,
+    runtime: linkConnectionMetadata(meta).linkExecutionRuntime,
+    backend: linkConnectionMetadata(meta).linkExecutionBackend,
     account: meta?.linkAccountId,
     issuer: meta?.linkRemoteIssuer,
     connection: meta?.linkRemoteConnectionId,
@@ -20,7 +23,7 @@ export function linkAuthoritySnapshot(credential: CredentialMetadata): string {
     capabilities: meta?.linkCapabilityIds,
     resources: meta?.linkResourceGroups,
     legacyResources: meta?.linkResourceLabels,
-    authSource: meta?.linkAuthSource,
+    authSource: linkConnectionMetadata(meta).linkAuthSource,
     remoteState: meta?.linkRemoteState,
     cleanupDisabled: meta?.linkCleanupDisabled,
     verifiedAt: meta?.linkLastVerifiedAt,
@@ -47,7 +50,7 @@ export function allowsLinkAction(
 ): boolean {
   if (credential.meta?.linkCleanupDisabled) return false;
   if (provider === "figma") {
-    const mcp = String(credential.meta?.linkExecutionBackend) === "mcp";
+    const mcp = String(linkConnectionMetadata(credential.meta).linkExecutionBackend) === "mcp";
     if (mcp !== isFigmaMcpAction(action)) return false;
     if (mcp)
       return (
@@ -57,14 +60,14 @@ export function allowsLinkAction(
       );
   }
   if (
-    credential.meta?.linkExecutionBackend === "cli" &&
+    linkConnectionMetadata(credential.meta).linkExecutionBackend === "cli" &&
     getLocalLinkProvider(provider)?.actions.find((candidate) => candidate.id === action)?.risk ===
       "write"
   )
     return false;
   const ids = credential.meta?.linkCapabilityIds;
   if (
-    credential.meta?.linkExecutionRuntime === "server" ||
+    linkConnectionMetadata(credential.meta).linkExecutionRuntime === "server" ||
     (provider === "figma" && (FIGMA_NEW_ACTIONS as readonly string[]).includes(action)) ||
     (provider === "github" &&
       (action === "update_issue" || (githubStarActionIds as readonly string[]).includes(action)))

@@ -145,9 +145,8 @@ test("connect verifies account and discovers only explicit read capabilities wit
   expect(credential.meta).toMatchObject({
     linkProvider: "figma",
     linkConnectionMethod: "mcp",
-    linkExecutionBackend: "mcp",
-    linkExecutionRuntime: "local",
-    linkAuthSource: "mcp-oauth",
+    recordSchemaVersion: 2,
+    linkRecipeId: "mcp-oauth",
     agentExposable: false,
     linkAccountId: "fixture@example.test",
   });

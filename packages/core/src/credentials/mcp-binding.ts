@@ -1,3 +1,4 @@
+import { linkConnectionMetadata } from "@cjhyy/code-shell-link";
 import type { Credential, OAuthCredentialSecret } from "./types.js";
 
 /** Normalize an MCP protected endpoint without permitting credential-bearing URLs. */
@@ -44,7 +45,9 @@ export function assertMcpOAuthCredentialBinding(
   const meta = credential.meta;
   if (
     credential.type !== "oauth" ||
-    meta?.linkExecutionBackend === "remote" ||
+    ((meta?.recordSchemaVersion !== undefined || meta?.linkRecipeId !== undefined) &&
+      linkConnectionMetadata(meta).linkExecutionBackend !== "mcp") ||
+    linkConnectionMetadata(meta).linkExecutionBackend === "remote" ||
     normalizeMcpServerUrl(meta?.mcpServerUrl) !== target
   )
     throw new Error("MCP OAuth credential is bound to another endpoint");

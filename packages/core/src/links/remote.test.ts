@@ -166,10 +166,14 @@ test("PKCE exchange discovers the selected account and restricts action shapes w
   expect(new URL(attempt.authorizationUrl).searchParams.get("code_challenge_method")).toBe("S256");
   expect(requests[0]?.body.code_verifier).toBe(attempt.verifier);
   expect(credential.meta).toMatchObject({
+    recordSchemaVersion: 2,
+    linkRecipeId: "broker-oauth",
     linkAccountLabel: "alice",
     linkRemoteConnectionId: connectionId,
     agentExposable: false,
   });
+  for (const field of ["linkExecutionBackend", "linkExecutionRuntime", "linkAuthSource"])
+    expect(credential.meta).not.toHaveProperty(field);
   expect(JSON.stringify(credential.meta)).not.toContain("DOWNSTREAM");
   expect(await executeRemoteLinkAction(input())).toEqual({
     repositories: [{ id: 1, full_name: "owner/repo" }],

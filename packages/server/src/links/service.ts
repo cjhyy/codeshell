@@ -1,3 +1,4 @@
+import { linkConnectionMetadata } from "@cjhyy/code-shell-link";
 import { createHash, randomBytes, randomUUID } from "node:crypto";
 import {
   CredentialStore,
@@ -370,16 +371,16 @@ export function createLinkService(options: LinkServiceOptions = {}) {
     return (
       isRemoteLinkCredential(credential) ||
       (credential.type === "link" &&
-        credential.meta?.linkExecutionRuntime === "local" &&
+        linkConnectionMetadata(credential.meta).linkExecutionRuntime === "local" &&
         providers.some((provider) => provider.id === credential.meta?.linkProvider)) ||
       (credential.type === "oauth" &&
-        credential.meta?.linkExecutionBackend === "mcp" &&
-        credential.meta.linkExecutionRuntime === "local" &&
+        linkConnectionMetadata(credential.meta).linkExecutionBackend === "mcp" &&
+        linkConnectionMetadata(credential.meta).linkExecutionRuntime === "local" &&
         providers.some((provider) => provider.id === credential.meta?.linkProvider))
     );
   }
   function masked(credential: Credential, scope: "user" | "project"): MaskedLinkConnection {
-    const meta = credential.meta!;
+    const meta = linkConnectionMetadata(credential.meta);
     const oauth =
       meta.linkAuthSource === "browser-oauth" || meta.linkAuthSource === "mcp-oauth"
         ? summarizeOAuthCredentialSecret(credential.secret)
@@ -416,6 +417,24 @@ export function createLinkService(options: LinkServiceOptions = {}) {
               ? "browser-oauth"
               : "manual-token",
       status,
+      recipeId: meta.linkRecipeId,
+      connectionState: {
+        authorization: {
+          state:
+            status === "connected"
+              ? "authorized"
+              : status === "expired" ||
+                  status === "invalid" ||
+                  meta.linkRemoteState === "reconnect" ||
+                  meta.linkOAuthState === "reconnect"
+                ? "reauthorization_required"
+                : "unknown",
+        },
+        // Compatibility is operation-specific. A saved grant or a successful
+        // account check cannot prove the contract required by a future task.
+        compatibility: { state: "unknown" },
+        observation: { state: "unchecked" },
+      },
       scope,
       editable: scope === "user",
       revision: revision(credential),
@@ -794,9 +813,13 @@ export function createLinkService(options: LinkServiceOptions = {}) {
       meta: {
         linkProvider: prepared.input.providerId,
         linkConnectionMethod: prepared.input.methodId,
-        linkExecutionRuntime: "local",
-        linkAuthSource: authSource,
-        linkExecutionBackend: authSource === "cli-session" ? "cli" : "http-token",
+        recordSchemaVersion: 2,
+        linkRecipeId:
+          authSource === "cli-session"
+            ? "cli-session"
+            : authSource === "browser-oauth"
+              ? "api-oauth"
+              : "api-token",
         agentExposable: false,
         linkAccountId: validation.identity.externalAccountId,
         linkAccountLabel: validation.identity.label,
@@ -976,7 +999,7 @@ export function createLinkService(options: LinkServiceOptions = {}) {
   async function disconnect(context: LinkOperationContext, id: string, expectedRevision: string) {
     await authorize(context);
     const credential = reviewed(safeId(id), expectedRevision);
-    if (credential.meta?.linkExecutionBackend === "mcp") {
+    if (linkConnectionMetadata(credential.meta).linkExecutionBackend === "mcp") {
       const adapter = hostOAuthAdapters.find(
         (entry) =>
           entry.providerId === credential.meta?.linkProvider &&
@@ -1213,10 +1236,22 @@ export function createLinkService(options: LinkServiceOptions = {}) {
           candidate.type !== "oauth" ||
           candidate.meta?.linkProvider !== input.providerId ||
           candidate.meta.linkConnectionMethod !== input.methodId ||
-          candidate.meta.linkExecutionBackend !== "mcp" ||
+          linkConnectionMetadata(candidate.meta).linkExecutionBackend !== "mcp" ||
           candidate.meta.agentExposable !== false
         )
           throw new LinkServiceError(422, "provider_rejected");
+        // Host adapters may still return legacy routing fields. The installed
+        // connection keeps only its reviewed recipe; presentation derives axes.
+        const {
+          linkExecutionRuntime: _runtime,
+          linkExecutionBackend: _backend,
+          linkAuthSource: _source,
+          ...candidateMeta
+        } = candidate.meta!;
+        candidate = {
+          ...candidate,
+          meta: { ...candidateMeta, recordSchemaVersion: 2, linkRecipeId: "mcp-oauth" },
+        };
         await change(context, () => {
           operation.controller.signal.throwIfAborted();
           if (job.public.state !== "pending") throw new LinkServiceError(409, "cancelled");

@@ -1,3 +1,4 @@
+import { linkConnectionMetadata } from "@cjhyy/code-shell-link";
 import { createHash } from "node:crypto";
 import { isDeepStrictEqual } from "node:util";
 import type { Credential, OAuthCredentialSecret } from "../credentials/types.js";
@@ -144,9 +145,10 @@ export async function executeLocalOAuthLinkAction(
     const credential = store.resolve(input.id, input.scope);
     if (
       !credential ||
+      !credential.meta ||
       !isBrowserOAuthLinkCredential(credential) ||
-      credential.meta?.linkExecutionRuntime !== "local" ||
-      credential.meta.linkExecutionBackend === "cli" ||
+      linkConnectionMetadata(credential.meta).linkExecutionRuntime !== "local" ||
+      linkConnectionMetadata(credential.meta).linkExecutionBackend === "cli" ||
       credential.meta.linkAccountId !== input.accountId ||
       credential.meta.linkLastVerifiedAt !== input.verifiedAt
     )

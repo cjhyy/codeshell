@@ -1,3 +1,4 @@
+import { linkConnectionMetadata } from "@cjhyy/code-shell-link";
 import { createHash, randomUUID } from "node:crypto";
 import type { Credential } from "./types.js";
 import type { EncryptionCipher } from "./cipher.js";
@@ -38,11 +39,11 @@ function entry(value: unknown): value is Entry {
 function remote(value: Credential): boolean {
   return (
     value?.type === "oauth" &&
-    value.meta?.linkExecutionBackend === "remote" &&
-    value.meta.linkExecutionRuntime === "server" &&
+    linkConnectionMetadata(value.meta).linkExecutionBackend === "remote" &&
+    linkConnectionMetadata(value.meta).linkExecutionRuntime === "server" &&
     typeof value.secret === "string" &&
     !!value.secret &&
-    !!value.meta.linkRemoteIssuer
+    !!value.meta?.linkRemoteIssuer
   );
 }
 export function retirementId(credential: Credential): string {

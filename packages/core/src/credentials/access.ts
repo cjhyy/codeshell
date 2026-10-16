@@ -1,3 +1,4 @@
+import { linkConnectionMetadata } from "@cjhyy/code-shell-link";
 import { existsSync, readdirSync, rmSync, statSync, writeFileSync } from "node:fs";
 import { randomUUID } from "node:crypto";
 import { tmpdir } from "node:os";
@@ -445,6 +446,7 @@ function toMetadata(cred: Credential): CredentialMetadata {
   const { secret: _secret, ...rest } = cred;
   return {
     ...rest,
+    meta: cred.meta ? linkConnectionMetadata(cred.meta) : undefined,
     ...(credentialAllowsEnvExposure(cred.type) ? {} : { exposeAsEnv: undefined }),
     hasSecret: available,
     secretHint: available ? credentialSecretHint(cred.type, secret) : undefined,
@@ -456,7 +458,10 @@ function toMetadata(cred: Credential): CredentialMetadata {
 }
 
 function cloneMetadata(list: CredentialMetadata[]): CredentialMetadata[] {
-  return list.map((cred) => ({ ...cred, meta: cred.meta ? { ...cred.meta } : undefined }));
+  return list.map((cred) => ({
+    ...cred,
+    meta: cred.meta ? linkConnectionMetadata(cred.meta) : undefined,
+  }));
 }
 
 function storeFor(cwd: string | undefined): CredentialStore {
@@ -503,14 +508,15 @@ export const localCredentialAccess: CredentialAccess = {
     if (
       isRemoteLinkCredential(cred) ||
       isBrowserOAuthLinkCredential(cred) ||
-      isFigmaMcpCredential(cred)
+      isFigmaMcpCredential(cred) ||
+      (req.purpose !== "link" && cred.meta?.agentExposable === false)
     )
       throw new Error("OAuth Link credentials only support Host-owned actions");
     if (
       req.purpose === "link" &&
       (cred.type !== "link" ||
-        cred.meta?.linkExecutionRuntime !== "local" ||
-        !cred.meta.linkProvider)
+        linkConnectionMetadata(cred.meta).linkExecutionRuntime !== "local" ||
+        !cred.meta?.linkProvider)
     ) {
       throw new Error(`credential "${req.id}" is not a local Link credential`);
     }

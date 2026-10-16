@@ -102,6 +102,18 @@ export interface LinkAuthorizationResponse {
   input?: Record<string, string | string[] | boolean>;
 }
 
+export interface LinkConnectionState {
+  authorization: { state: "authorized" | "reauthorization_required" | "unknown" };
+  compatibility: { state: "unknown" | "compatible" | "upgrade_required" | "unsupported" };
+  /** A live operation observation, never inferred from credential verification or refresh. */
+  observation: {
+    state: "unchecked" | "succeeded" | "failed";
+    checkedAt?: string;
+    action?: string;
+    resource?: string;
+  };
+}
+
 export interface MaskedLinkConnection {
   id: string;
   providerId: string;
@@ -109,6 +121,8 @@ export interface MaskedLinkConnection {
   label: string;
   runtime: "local" | "server";
   authSource: "manual-token" | "cli-session" | "browser-oauth" | "mcp-oauth" | "remote-link";
+  recipeId?: import("./operation-types.js").LinkRecipeId;
+  connectionState?: LinkConnectionState;
   status: "connected" | "expired" | "invalid" | "unavailable";
   account?: {
     id?: string;

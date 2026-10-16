@@ -681,6 +681,17 @@ describe("shared Link management", () => {
       ),
     ).toBe(true);
     expect(connection.account?.label).toBe("fixture-user");
+    expect(store.resolve(connection.id)?.meta).toMatchObject({
+      recordSchemaVersion: 2,
+      linkRecipeId: "api-token",
+    });
+    for (const field of ["linkExecutionRuntime", "linkExecutionBackend", "linkAuthSource"])
+      expect(store.resolve(connection.id)?.meta).not.toHaveProperty(field);
+    expect(connection.connectionState).toEqual({
+      authorization: { state: "authorized" },
+      compatibility: { state: "unknown" },
+      observation: { state: "unchecked" },
+    });
     expect(connection.capabilityIds).toEqual(["github.list_repos"]);
     expect(JSON.stringify(snapshot)).not.toContain(input.token);
     expect(JSON.stringify(snapshot)).not.toContain("secretHint");
@@ -843,6 +854,10 @@ describe("shared Link management", () => {
     const result = await service.connectCli(owner, input);
     expect(login).toBe(false);
     expect(result.authSource).toBe("cli-session");
+    expect(store.resolve(result.id)?.meta).toMatchObject({
+      recordSchemaVersion: 2,
+      linkRecipeId: "cli-session",
+    });
     expect(store.resolve(result.id)?.secret).toStartWith("cli-binding:");
     expect(JSON.stringify(result)).not.toContain("cli-binding:");
     const status = await service.cliStatus(owner, "github");
@@ -889,7 +904,7 @@ describe("owner-bound Link device authorization", () => {
     const credential = store.resolve(connection.id)!;
     store.save("user", {
       ...credential,
-      meta: { ...credential.meta, linkAuthSource: "browser-oauth" },
+      meta: { ...credential.meta, linkRecipeId: "api-oauth" },
       secret: JSON.stringify({
         version: 1,
         accessToken: "expired-access",

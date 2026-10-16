@@ -648,6 +648,8 @@ export interface CredentialView {
     scope?: "domain" | "all";
     switchMode?: "clear" | "merge";
     autoRefreshFromBrowser?: boolean;
+    recordSchemaVersion?: 2;
+    linkRecipeId?: import("@cjhyy/code-shell-link").LinkRecipeId;
     linkProvider?: string;
     linkConnectionMethod?: string;
     linkExecutionRuntime?: "local" | "server";
@@ -1411,6 +1413,8 @@ export interface CodeshellApi
           scope?: "domain" | "all";
           switchMode?: "clear" | "merge";
           autoRefreshFromBrowser?: boolean;
+          recordSchemaVersion?: 2;
+          linkRecipeId?: import("@cjhyy/code-shell-link").LinkRecipeId;
           linkProvider?: string;
           linkConnectionMethod?: string;
           linkExecutionRuntime?: "local" | "server";

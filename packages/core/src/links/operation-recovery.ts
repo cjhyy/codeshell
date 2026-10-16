@@ -1,3 +1,4 @@
+import { linkConnectionMetadata } from "@cjhyy/code-shell-link";
 import type { CredentialMetadata } from "../credentials/access.js";
 import type { OperationPlan } from "../operations/ledger.js";
 import type { ToolContext } from "../tool-system/context.js";
@@ -23,7 +24,10 @@ export function githubOperationPlan(
     intentId: `${originIntent}:github.${action}`,
     service: "github",
     action,
-    channel: connection.meta?.linkExecutionRuntime === "server" ? "remote-link" : "local-link",
+    channel:
+      linkConnectionMetadata(connection.meta).linkExecutionRuntime === "server"
+        ? "remote-link"
+        : "local-link",
     account: {
       id: connection.meta?.linkAccountId ?? null,
       connectionId: connection.id,

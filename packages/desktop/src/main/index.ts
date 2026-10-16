@@ -1,3 +1,4 @@
+import { linkConnectionMetadata } from "@cjhyy/code-shell-link";
 import { registerLinkedFileSourceIpc } from "./linked-file-sources-ipc.js";
 import { openLinkedFileSourceOperation } from "./linked-file-sources-host.js";
 import { registerOperationBatchHost } from "./operation-batch-host.js";
@@ -4138,6 +4139,7 @@ ipcMain.handle("credentials:list", async (_e, cwd: string) => {
   const projectIds = new Set(store.list("project").map((credential) => credential.id));
   return store.listMasked().map((credential) => ({
     ...credential,
+    meta: credential.meta ? linkConnectionMetadata(credential.meta) : undefined,
     storeScope: projectIds.has(credential.id) ? "project" : "user",
   }));
 });
@@ -4147,6 +4149,15 @@ ipcMain.handle(
     const authorizedCwd = cwd ? await requireRendererProjectPath(cwd) : "";
     assertGenericCredentialMutation(authorizedCwd, cred.id);
     if (isRemoteLinkCredential(cred)) throw new Error("远程 Link 连接必须通过授权创建。");
+    if (cred.meta?.recordSchemaVersion === 2) {
+      const {
+        linkExecutionRuntime: _runtime,
+        linkExecutionBackend: _backend,
+        linkAuthSource: _source,
+        ...meta
+      } = cred.meta;
+      cred = { ...cred, meta };
+    }
     new CredentialStore(authorizedCwd || undefined).save(scope, cred);
     cookieCredentialAutoRefresh.detachForCredential(authorizedCwd || undefined, cred.id, scope);
     bridge?.pushCredentialSnapshot(authorizedCwd || undefined);

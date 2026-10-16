@@ -131,6 +131,10 @@ export interface Credential {
    *   分区里其他站(不踢掉别的登录态);"clear" 先清空整分区再注入(干净换号,需显式选)。
    */
   meta?: {
+    /** Versioned Link connection metadata; private retirement entries use their own schema. */
+    recordSchemaVersion?: 2;
+    /** Routing and authorization strategy derive from this reviewed recipe. */
+    linkRecipeId?: import("@cjhyy/code-shell-link").LinkRecipeId;
     appUrl?: string;
     platform?: string;
     domain?: string;

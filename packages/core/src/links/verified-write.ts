@@ -1,3 +1,4 @@
+import { linkConnectionMetadata } from "@cjhyy/code-shell-link";
 import { randomUUID } from "node:crypto";
 import type { ToolContext } from "../tool-system/context.js";
 import type { CredentialMetadata } from "../credentials/access.js";
@@ -20,7 +21,8 @@ export async function verifiedGithubCreateIssue(options: {
 }): Promise<{ receipt: OperationReceipt; data: unknown }> {
   const { ctx, connection, assertConnected } = options;
   if (!ctx.operations || !ctx.executeBoundTool) throw new OperationFailure("unsupported");
-  if (connection.meta?.linkExecutionBackend === "cli") throw new OperationFailure("unsupported");
+  if (linkConnectionMetadata(connection.meta).linkExecutionBackend === "cli")
+    throw new OperationFailure("unsupported");
   const params = githubCreateIssueParameters(options.params);
   const channel = "link" as const;
   // The model still supplies only ordinary LinkAction parameters. Native custody
