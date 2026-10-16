@@ -21,6 +21,7 @@ const fixtures = [
   "tool-cards/ToolCardShell.browser.fixture.mjs",
   "settings/AppearanceSection.browser.fixture.mjs",
   "settings/ContextSettingsSection.browser.fixture.mjs",
+  "pet/PetSettingsPage.browser.fixture.mjs",
   "updater/UpdaterBanner.browser.fixture.mjs",
   "Sidebar.browser.fixture.mjs",
   "runtime/CloudProjectWorkspace.browser.fixture.mjs",
