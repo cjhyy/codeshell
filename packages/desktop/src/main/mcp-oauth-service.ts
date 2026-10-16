@@ -352,7 +352,9 @@ async function startLoopbackCallback(expectedState: string): Promise<{
       return;
     }
     res.writeHead(200, { "Content-Type": "text/html; charset=utf-8" });
-    res.end("<h1>Authorization successful</h1><p>You can close this window.</p>");
+    res.end(
+      "<h1>Authorization received / 已收到授权</h1><p>Return to CodeShell to see the verification result. 请返回 CodeShell 查看核验结果。</p>",
+    );
     finish(undefined, authorizationCode);
   });
   await new Promise<void>((resolve, rejectListen) => {

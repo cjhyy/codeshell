@@ -721,10 +721,9 @@ export function LinkTab({ cwd }: { cwd: string }) {
   const discoveryUnavailable = ["unavailable", "stale"].includes(
     remote.snapshot?.remoteCatalog?.state ?? "",
   );
+  const stateReadError = loadError || remote.error;
   const directoryError =
-    loadError ||
-    remote.error ||
-    (discoveryUnavailable ? t("ext.link.directory.catalogUnavailable") : "");
+    stateReadError || (discoveryUnavailable ? t("ext.link.directory.catalogUnavailable") : "");
 
   return (
     <div className="space-y-5" data-link-page>
@@ -815,7 +814,13 @@ export function LinkTab({ cwd }: { cwd: string }) {
             className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-status-err/30 bg-status-err/5 px-4 py-3"
           >
             <div className="min-w-0">
-              <p className="text-xs font-medium text-status-err">{t("ext.link.loadFailed")}</p>
+              <p className="text-xs font-medium text-status-err">
+                {t(
+                  stateReadError
+                    ? "ext.link.loadFailed"
+                    : "ext.link.directory.catalogUnavailableTitle",
+                )}
+              </p>
               <p className="mt-0.5 break-words text-xs text-muted-foreground">{directoryError}</p>
             </div>
             <Button
@@ -833,7 +838,7 @@ export function LinkTab({ cwd }: { cwd: string }) {
               {t("ext.link.retry")}
             </Button>
           </div>
-        ) : loading ? (
+        ) : loading || remote.loading ? (
           <div
             className="rounded-xl border border-border/70 bg-card px-4 py-3 text-xs text-muted-foreground"
             aria-live="polite"
@@ -909,26 +914,44 @@ export function LinkTab({ cwd }: { cwd: string }) {
                   }
                   accounts={accountNames.join(" · ")}
                   status={
-                    needsAttention
-                      ? t("ext.link.directory.needsAttention")
-                      : connected
-                        ? t("ext.link.remoteAvailable")
-                        : saved
-                          ? t("ext.link.directory.unavailable")
-                          : available
-                            ? t("ext.link.directory.notConnected")
-                            : t("ext.link.directory.unavailable")
+                    remote.loading && missingAccounts.length
+                      ? t("ext.link.directory.checking")
+                      : needsAttention
+                        ? t("ext.link.directory.needsAttention")
+                        : connected
+                          ? t("ext.link.remoteAvailable")
+                          : saved
+                            ? t("ext.link.directory.unavailable")
+                            : available
+                              ? t("ext.link.directory.notConnected")
+                              : t("ext.link.directory.unavailable")
                   }
-                  tone={needsAttention ? "warning" : connected ? "ready" : "neutral"}
+                  tone={
+                    remote.loading && missingAccounts.length
+                      ? "neutral"
+                      : needsAttention
+                        ? "warning"
+                        : connected
+                          ? "ready"
+                          : "neutral"
+                  }
                 >
                   {missingAccounts.map((credential) => (
                     <LinkConnectionRow
                       key={credential.id}
                       data-link-saved-unavailable={credential.id}
                       title={credential.meta?.linkAccountLabel ?? credential.label}
-                      description={t("ext.link.directory.savedUnavailable")}
-                      status={t("ext.link.directory.serviceUnavailable")}
-                      tone="warning"
+                      description={t(
+                        remote.loading
+                          ? "ext.link.loadingConnections"
+                          : "ext.link.directory.savedUnavailable",
+                      )}
+                      status={t(
+                        remote.loading
+                          ? "ext.link.directory.checking"
+                          : "ext.link.directory.serviceUnavailable",
+                      )}
+                      tone={remote.loading ? "neutral" : "warning"}
                       actions={
                         <Button
                           size="sm"
@@ -948,6 +971,7 @@ export function LinkTab({ cwd }: { cwd: string }) {
                       cwd={cwd}
                       snapshot={remote.snapshot}
                       loadError={remote.error}
+                      loading={remote.loading}
                       reload={remote.reload}
                       onChanged={() => void load().catch(() => undefined)}
                       localApi={methods}
@@ -964,6 +988,7 @@ export function LinkTab({ cwd }: { cwd: string }) {
                           cwd={cwd}
                           snapshot={remote.snapshot}
                           loadError={remote.error}
+                          loading={remote.loading}
                           reload={remote.reload}
                           onChanged={() => void load().catch(() => undefined)}
                           providerId={item.id}

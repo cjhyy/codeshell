@@ -264,8 +264,7 @@ test("official account fields survive separate JSON, explanatory text and empty 
     });
     expect(value.meta?.linkAccountId).toBe("fixture@example.test");
     expect(value.meta?.linkAccountLabel).toBe("Fixture user (fixture@example.test)");
-    expect(JSON.stringify(f.shapes)).not.toContain("fixture@example.test");
-    expect(JSON.stringify(f.shapes)).not.toContain("Fixture user");
+    expect(f.shapes).toEqual([]);
     expect(
       f.requests
         .filter((request) => request.method === "tools/call")
@@ -324,9 +323,10 @@ test("account result wrappers reject prose, lists, excessive nesting and display
   });
 });
 
-test("account diagnostics expose only fixed field names and types", async () => {
+test("failed account diagnostics expose only fixed field names and types", async () => {
   const f = fixture({
     whoamiResult: {
+      isError: true,
       structuredContent: {
         email: "fixture@example.test",
         handle: "Fixture user",
@@ -341,13 +341,16 @@ test("account diagnostics expose only fixed field names and types", async () => 
       ],
     },
   });
-  await f.adapter.authorize({
-    id: "link-figma-mcp",
-    label: "Figma",
-    previous: null,
-    signal: new AbortController().signal,
-    onAuthorizationUrl: async () => {},
-  });
+  await expect(
+    f.adapter.authorize({
+      id: "link-figma-mcp",
+      label: "Figma",
+      previous: null,
+      signal: new AbortController().signal,
+      onAuthorizationUrl: async () => {},
+    }),
+  ).rejects.toMatchObject({ reason: "account_tool_error" });
+  expect(f.shapes).toHaveLength(1);
   const diagnostics = JSON.stringify(f.shapes);
   for (const secret of [
     "syntheticSecretAsKey",
@@ -359,6 +362,96 @@ test("account diagnostics expose only fixed field names and types", async () => 
   ])
     expect(diagnostics).not.toContain(secret);
   expect(diagnostics).toContain('"unknownFields":1');
+});
+
+test("provider error objects produce fixed diagnostic categories without changing identity checks", async () => {
+  for (const [message, category, status] of [
+    ["Unsupported client: private provider detail", "unsupported_client", 403],
+    ["Rate limit exceeded: private provider detail", "rate_limit", 429],
+    ["Permission denied: private provider detail", "access_denied", 403],
+    ["Token expired: private provider detail", "invalid_token", 401],
+    ["Invalid argument: private provider detail", "invalid_request", 400],
+    ["Internal error: private provider detail", "server_error", 500],
+    ["Network timeout: private provider detail", "network_error", 503],
+    ["Unrecognized private provider detail", "unclassified_provider_message", 200],
+  ] as const) {
+    const error = {
+      error: { message },
+      status,
+      data: { account: { email: "private@example.test" }, output: "private output" },
+      syntheticSecretAsKey: "private unknown value",
+    };
+    const f = fixture({
+      whoamiResult: {
+        structuredContent: error,
+        content: [{ type: "text", text: JSON.stringify(error) }],
+      },
+    });
+    await expect(
+      f.adapter.authorize({
+        id: "link-figma-mcp",
+        label: "Figma",
+        previous: null,
+        signal: new AbortController().signal,
+        onAuthorizationUrl: async () => {},
+      }),
+    ).rejects.toMatchObject({ reason: "account_identity_unavailable" });
+    expect(f.shapes).toHaveLength(1);
+    expect(f.shapes[0]).toMatchObject({
+      errorCategories: [category],
+      bodyStatuses: status >= 400 ? [status] : [],
+      result: {
+        fields: {
+          structuredContent: {
+            fields: { error: { type: "object" }, status: "number", data: { type: "object" } },
+            unknownFields: 1,
+          },
+        },
+      },
+    });
+    const diagnostics = JSON.stringify(f.shapes);
+    for (const secret of [
+      message,
+      "private@example.test",
+      "private output",
+      "syntheticSecretAsKey",
+      "private unknown value",
+    ])
+      expect(diagnostics).not.toContain(secret);
+    expect(
+      f.requests
+        .filter((request) => request.method === "tools/call")
+        .map((request) => request.params?.name),
+    ).toEqual(["whoami"]);
+  }
+});
+
+test("unknown provider fields cannot inject diagnostic keys or classifications", async () => {
+  const f = fixture({
+    whoamiResult: {
+      structuredContent: {
+        privateDynamicKey: "rate_limit access_denied private detail",
+        code: 600,
+        status: "private status",
+        output: "private output",
+      },
+      content: [],
+    },
+  });
+  await expect(
+    f.adapter.authorize({
+      id: "link-figma-mcp",
+      label: "Figma",
+      previous: null,
+      signal: new AbortController().signal,
+      onAuthorizationUrl: async () => {},
+    }),
+  ).rejects.toMatchObject({ reason: "account_identity_unavailable" });
+  expect(f.shapes[0]).toMatchObject({ errorCategories: [], bodyStatuses: [] });
+  const diagnostics = JSON.stringify(f.shapes);
+  expect(diagnostics).not.toContain("private");
+  expect(diagnostics).not.toContain("rate_limit");
+  expect(diagnostics).not.toContain("access_denied");
 });
 
 test("verification reports fixed stages and HTTP status without provider details", async () => {

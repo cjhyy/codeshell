@@ -740,6 +740,8 @@ export const extensions = {
           unavailable: "暂不可用",
           unavailableHint: "当前连接方式暂不可用。请刷新后重试，已保存的账号仍保留。",
           serviceUnavailable: "服务暂不可达",
+          checking: "检查中…",
+          catalogUnavailableTitle: "服务目录暂不可达",
           catalogUnavailable: "服务目录暂不可达，已保存的账号和权限仍保留。",
           needsAttention: "需处理",
           connectedServices: "已连接服务",
@@ -1951,6 +1953,8 @@ export const extensions = {
           unavailableHint:
             "This connection method is temporarily unavailable. Refresh to retry; saved accounts are preserved.",
           serviceUnavailable: "Service unreachable",
+          checking: "Checking…",
+          catalogUnavailableTitle: "Service directory unreachable",
           catalogUnavailable:
             "The service directory is unreachable. Saved accounts and permissions are preserved.",
           needsAttention: "Needs attention",

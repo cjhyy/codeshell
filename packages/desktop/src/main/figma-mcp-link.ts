@@ -45,14 +45,76 @@ function accountShape(value: unknown): Record<string, unknown> {
     "plans",
     "seat",
     "tier",
+    "error",
+    "errors",
+    "message",
+    "status",
+    "statusCode",
+    "status_code",
+    "httpStatus",
+    "code",
+    "success",
+    "reason",
+    "detail",
+    "details",
+    "errorCode",
+    "errorMessage",
+    "instructions",
+    "data",
+    "output",
+    "account",
   ]);
-  const shape = (item: unknown, depth = 0): unknown => {
+  const errorKeys = new Set([
+    "error",
+    "errors",
+    "message",
+    "code",
+    "reason",
+    "detail",
+    "details",
+    "errorCode",
+    "errorMessage",
+  ]);
+  const statusKeys = new Set(["status", "statusCode", "status_code", "httpStatus", "code"]);
+  const errorCategories = new Set<string>();
+  const bodyStatuses = new Set<number>();
+  // These categories describe provider error fields for diagnostics only. They
+  // never supply identity, grant capabilities or change authorization outcomes.
+  const classifyError = (item: unknown) => {
+    if (typeof item !== "string" || !item) return;
+    if (
+      /unsupported.?client|client.{0,50}(not supported|unsupported|not allowed|not permitted|not registered|unrecognized)/i.test(
+        item,
+      )
+    )
+      errorCategories.add("unsupported_client");
+    else if (/rate.?limit|too many requests|quota|usage limit|tool call limit/i.test(item))
+      errorCategories.add("rate_limit");
+    else if (/invalid.{0,10}token|token.{0,15}(invalid|expired)/i.test(item))
+      errorCategories.add("invalid_token");
+    else if (
+      /access.?denied|permission|unauthori[sz]ed|forbidden|insufficient|not permitted/i.test(item)
+    )
+      errorCategories.add("access_denied");
+    else if (/invalid.{0,10}(request|argument|parameter)|bad request/i.test(item))
+      errorCategories.add("invalid_request");
+    else if (
+      /internal.{0,10}(error|failure)|server.{0,10}error|temporarily unavailable/i.test(item)
+    )
+      errorCategories.add("server_error");
+    else if (/network|timed? ?out|connection/i.test(item)) errorCategories.add("network_error");
+    else errorCategories.add("unclassified_provider_message");
+  };
+  const shape = (item: unknown, depth = 0, errorContext = false): unknown => {
+    if (errorContext) classifyError(item);
     if (item === null) return "null";
     if (Array.isArray(item))
       return {
         type: "array",
         length: item.length,
-        ...(depth < 3 ? { items: item.slice(0, 3).map((entry) => shape(entry, depth + 1)) } : {}),
+        ...(depth < 3
+          ? { items: item.slice(0, 3).map((entry) => shape(entry, depth + 1, errorContext)) }
+          : {}),
       };
     const object = record(item);
     if (object)
@@ -63,7 +125,17 @@ function accountShape(value: unknown): Record<string, unknown> {
               fields: Object.fromEntries(
                 Object.entries(object)
                   .filter(([key]) => diagnosticKeys.has(key))
-                  .map(([key, entry]) => [key, shape(entry, depth + 1)]),
+                  .map(([key, entry]) => {
+                    if (
+                      statusKeys.has(key) &&
+                      typeof entry === "number" &&
+                      Number.isInteger(entry) &&
+                      entry >= 400 &&
+                      entry <= 599
+                    )
+                      bodyStatuses.add(entry);
+                    return [key, shape(entry, depth + 1, errorContext || errorKeys.has(key))];
+                  }),
               ),
               unknownFields: Object.keys(object).filter((key) => !diagnosticKeys.has(key)).length,
             }
@@ -101,7 +173,12 @@ function accountShape(value: unknown): Record<string, unknown> {
       },
     ];
   });
-  return { result: shape(value), text };
+  return {
+    result: shape(value),
+    text,
+    errorCategories: [...errorCategories].sort(),
+    bodyStatuses: [...bodyStatuses].sort((a, b) => a - b),
+  };
 }
 
 function authorizationUrl(rawUrl: string): URL {
@@ -185,7 +262,7 @@ export function createFigmaMcpLinkAdapter(options: {
   openExternal(url: string): Promise<unknown>;
   fetch?: typeof fetch;
   now?: () => number;
-  /** Host diagnostics receive structure only, never raw tool/account responses. */
+  /** Failure-only Host diagnostics receive fixed structure, never raw account/provider values. */
   onAccountShape?: (shape: Record<string, unknown>) => void;
 }): HostLinkOAuthAdapter {
   return {
@@ -289,18 +366,14 @@ export function createFigmaMcpLinkAdapter(options: {
                   undefined,
                   signal ? { signal } : undefined,
                 );
-                try {
-                  options.onAccountShape?.(accountShape(accountResponse));
-                } catch {
-                  /* Diagnostics never decide authorization. */
-                }
                 let account: { id: string; label: string };
                 try {
                   account = accountResult(accountResponse);
                 } catch (error) {
                   try {
-                    if (!options.onAccountShape)
-                      logger.warn("link.figma.mcp.account_shape", accountShape(accountResponse));
+                    const shape = accountShape(accountResponse);
+                    if (options.onAccountShape) options.onAccountShape(shape);
+                    else logger.warn("link.figma.mcp.account_shape", shape);
                   } catch {
                     /* Diagnostics cannot change the authorization failure. */
                   }

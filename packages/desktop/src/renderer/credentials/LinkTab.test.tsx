@@ -256,7 +256,8 @@ async function renderProjectedCatalog(
   failures: {
     providers?: boolean;
     snapshot?: boolean;
-    remoteCatalog?: "stale" | "unavailable";
+    remoteCatalog?: NonNullable<LinkSnapshot["remoteCatalog"]>["state"];
+    pendingSnapshot?: Promise<LinkSnapshot>;
   } = {},
 ) {
   ensureMiniDom();
@@ -270,6 +271,7 @@ async function renderProjectedCatalog(
         },
         remoteSnapshot: async () => {
           if (failures.snapshot) throw new Error("Link service unreachable");
+          if (failures.pendingSnapshot) return failures.pendingSnapshot;
           return {
             providers,
             connections,
@@ -486,49 +488,193 @@ describe("LinkTab integrations", () => {
     expect(buttonWithLabel(card, "断开")).toBeDefined();
   });
 
-  test("a stale directory does not invalidate a valid saved grant", async () => {
+  test.each(["unavailable", "stale"] as const)(
+    "directory state %s preserves a valid API grant and independent local MCP availability",
+    async (catalogState) => {
+      const providers = await projectedCatalog(["figma"]);
+      providers
+        .find((provider) => provider.id === "figma")!
+        .authModes!.find((mode) => mode.id === "remote-link")!.available = false;
+      providers
+        .find((provider) => provider.id === "figma")!
+        .authModes!.push({
+          id: "mcp-oauth",
+          methodId: "mcp",
+          kind: "redirect",
+          label: "MCP",
+          available: true,
+        });
+      const account: LinkSnapshot["connections"][number] = {
+        id: "valid-saved",
+        providerId: "figma",
+        methodId: "remote-link",
+        label: "Saved design account",
+        runtime: "server",
+        authSource: "remote-link",
+        status: "connected",
+        capabilityIds: ["figma.get_file"],
+        account: { id: "owner", label: "Designer", resources: ["Design system"] },
+        revision: "saved",
+        scope: "user",
+        editable: true,
+      };
+      const container = await renderProjectedCatalog(providers, [], [account], {
+        remoteCatalog: catalogState,
+      });
+      const card = await expandProvider(container, "figma");
+      expect(
+        findElements(card, "SPAN").some(
+          (node) => reactChildText(reactPropsOf(node).children) === "已连接",
+        ),
+      ).toBe(true);
+      expect(reactPropsOf(buttonWithLabel(card, "添加文件")).disabled).toBe(true);
+      expect(reactPropsOf(buttonWithLabel(card, "连接设计上下文")).disabled).toBe(false);
+      expect(
+        findElements(card, "P").some((node) =>
+          reactChildText(reactPropsOf(node).children).includes("尚未配置桌面 Link 服务"),
+        ),
+      ).toBe(false);
+      expect(
+        findElements(container, "P").map((node) => reactChildText(reactPropsOf(node).children)),
+      ).toContain("服务目录暂不可达");
+      expect(
+        findElements(container, "P").some((node) =>
+          reactChildText(reactPropsOf(node).children).includes("无法读取应用连接状态"),
+        ),
+      ).toBe(false);
+      expect(
+        findElements(container, "P").some((node) =>
+          reactChildText(reactPropsOf(node).children).includes("账号和权限仍保留"),
+        ),
+      ).toBe(true);
+      await act(async () => {
+        reactPropsOf(buttonWithLabel(container, "已连接")).onClick();
+        await flushMicrotasks();
+      });
+      expect(
+        providerCards(container).map((node) => reactPropsOf(node)["data-link-provider-card"]),
+      ).toEqual(["figma"]);
+      expect(account.status).toBe("connected");
+      expect(account.revision).toBe("saved");
+    },
+  );
+
+  test("only an explicitly unconfigured directory describes the remote service as unconfigured", async () => {
     const providers = await projectedCatalog(["figma"]);
     providers
       .find((provider) => provider.id === "figma")!
       .authModes!.find((mode) => mode.id === "remote-link")!.available = false;
     const account: LinkSnapshot["connections"][number] = {
-      id: "valid-saved",
+      id: "unconfigured-api",
       providerId: "figma",
       methodId: "remote-link",
-      label: "Saved design account",
+      label: "Saved API",
       runtime: "server",
       authSource: "remote-link",
       status: "connected",
       capabilityIds: ["figma.get_file"],
-      account: { id: "owner", label: "Designer", resources: ["Design system"] },
+      account: { label: "Designer", resources: ["Design system"] },
       revision: "saved",
       scope: "user",
       editable: true,
     };
     const container = await renderProjectedCatalog(providers, [], [account], {
-      remoteCatalog: "stale",
+      remoteCatalog: "unconfigured",
     });
     const card = await expandProvider(container, "figma");
     expect(
-      findElements(card, "SPAN").some(
-        (node) => reactChildText(reactPropsOf(node).children) === "已连接",
+      findElements(card, "P").some((node) =>
+        reactChildText(reactPropsOf(node).children).includes("尚未配置桌面 Link 服务"),
       ),
     ).toBe(true);
-    expect(reactPropsOf(buttonWithLabel(card, "添加文件")).disabled).toBe(true);
+    expect(account.status).toBe("connected");
+    expect(buttonWithLabel(card, "断开")).toBeDefined();
+  });
+
+  test("the first pending snapshot shows checking and cannot grant local MCP authority", async () => {
+    const providers = await projectedCatalog(["figma"]);
+    providers
+      .find((provider) => provider.id === "figma")!
+      .authModes!.push({
+        id: "mcp-oauth",
+        methodId: "mcp",
+        kind: "redirect",
+        label: "MCP",
+        available: true,
+      });
+    let resolveSnapshot!: (snapshot: LinkSnapshot) => void;
+    const pendingSnapshot = new Promise<LinkSnapshot>((resolve) => {
+      resolveSnapshot = resolve;
+    });
+    const saved: MaskedCredentialView = {
+      id: "saved-api-pending",
+      type: "oauth",
+      label: "Saved API",
+      hasSecret: true,
+      meta: {
+        linkProvider: "figma",
+        linkConnectionMethod: "remote-link",
+        linkExecutionRuntime: "server",
+        linkExecutionBackend: "remote",
+      },
+    };
+    const container = await renderProjectedCatalog(providers, [saved], [], { pendingSnapshot });
+    const card = await expandProvider(container, "figma");
     expect(
-      findElements(container, "P").some((node) =>
-        reactChildText(reactPropsOf(node).children).includes("账号和权限仍保留"),
+      findElements(card, "P").some((node) =>
+        reactChildText(reactPropsOf(node).children).includes("正在检查应用连接"),
       ),
     ).toBe(true);
+    expect(
+      findElements(card, "P").some((node) =>
+        reactChildText(reactPropsOf(node).children).includes("尚未配置桌面 Link 服务"),
+      ),
+    ).toBe(false);
+    expect(
+      findElements(card, "SPAN").some(
+        (node) => reactChildText(reactPropsOf(node).children) === "服务暂不可达",
+      ),
+    ).toBe(false);
+    expect(reactPropsOf(buttonWithLabel(card, "连接设计上下文")).disabled).toBe(true);
+    expect(findElements(container, "DIV").some((node) => reactPropsOf(node).role === "alert")).toBe(
+      false,
+    );
     await act(async () => {
-      reactPropsOf(buttonWithLabel(container, "已连接")).onClick();
+      resolveSnapshot({
+        providers,
+        connections: [
+          {
+            id: saved.id,
+            providerId: "figma",
+            methodId: "remote-link",
+            label: saved.label,
+            runtime: "server",
+            authSource: "remote-link",
+            status: "connected",
+            capabilityIds: ["figma.get_file"],
+            account: { label: "Designer", resources: ["Design"] },
+            revision: "host-confirmed-api",
+            scope: "user",
+            editable: true,
+          },
+        ],
+        revision: "host-confirmed",
+        capabilities: { token: true, cliBinding: true, deviceAuth: false },
+        remoteCatalog: { state: "unavailable" },
+      });
       await flushMicrotasks();
     });
+    expect(reactPropsOf(buttonWithLabel(card, "连接设计上下文")).disabled).toBe(false);
     expect(
-      providerCards(container).map((node) => reactPropsOf(node)["data-link-provider-card"]),
-    ).toEqual(["figma"]);
-    expect(account.status).toBe("connected");
-    expect(account.revision).toBe("saved");
+      findElements(card, "P").some((node) =>
+        reactChildText(reactPropsOf(node).children).includes("正在检查应用连接"),
+      ),
+    ).toBe(false);
+    expect(
+      findElements(card, "SECTION").some(
+        (node) => reactPropsOf(node)["data-link-saved-unavailable"] === saved.id,
+      ),
+    ).toBe(false);
   });
 
   test("provider and snapshot failures preserve saved Host accounts without inventing authorization", async () => {
@@ -560,6 +706,9 @@ describe("LinkTab integrations", () => {
     expect(findElements(container, "DIV").some((node) => reactPropsOf(node).role === "alert")).toBe(
       true,
     );
+    expect(
+      findElements(container, "P").map((node) => reactChildText(reactPropsOf(node).children)),
+    ).toContain("无法读取应用连接状态");
     expect(reactPropsOf(buttonWithLabel(card, "连接设计上下文")).disabled).toBe(true);
   });
 
@@ -1884,11 +2033,13 @@ describe("Link metadata request lifecycle", () => {
       root!.render(<Host />);
       await flushMicrotasks();
     });
+    expect(state.loading).toBe(true);
     await act(async () => {
       await state.reload();
       await flushMicrotasks();
     });
     expect(state.snapshot?.revision).toBe("latest");
+    expect(state.loading).toBe(false);
     await act(async () => {
       resolveFirst({ ...latest, revision: "stale" });
       await flushMicrotasks();
