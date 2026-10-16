@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useRef, useState } from "react";
+import React, { useRef, useState } from "react";
 import { browserProfileIdForBucket, browserProfileLabel } from "../../shared/browser-profile";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -25,6 +25,8 @@ import { useT } from "../i18n/I18nProvider";
 import { CredentialNoMatches, CredentialSearch, credentialMatchesQuery } from "./CredentialSearch";
 import { CredentialsSectionHeader } from "./CredentialsSectionHeader";
 import { cookiePlatformName } from "./cookie-platform";
+import { useCredentialList } from "./useCredentialList";
+import { CredentialListStatus } from "./CredentialListStatus";
 
 type SwitchMode = "clear" | "merge";
 
@@ -79,7 +81,7 @@ export function CookieTab({ cwd, activeBucket }: { cwd: string; activeBucket?: s
     if (scope === "temporary") return t("ext.cookie.profileScopeTemporary");
     return name;
   };
-  const [items, setItems] = useState<MaskedCredentialView[]>([]);
+  const { items, loading, error: loadError, reload: load } = useCredentialList(cwd, "cookie");
   const [url, setUrl] = useState("");
   const [busy, setBusy] = useState(false);
   const [urlHistory, setUrlHistory] = useState<string[]>(() => readUrlHistory());
@@ -90,15 +92,6 @@ export function CookieTab({ cwd, activeBucket }: { cwd: string; activeBucket?: s
     setQuery("");
     searchRef.current?.focus();
   };
-
-  const load = useCallback(() => {
-    return window.codeshell.credentials
-      .list(cwd)
-      .then((all) => setItems(all.filter((c) => c.type === "cookie")));
-  }, [cwd]);
-  useEffect(() => {
-    void load();
-  }, [load]);
 
   /** platform__slug(label):同一平台多账号不撞键;slug 只保留安全字符。 */
   const buildId = (platform: string, name: string): string => {
@@ -598,7 +591,9 @@ export function CookieTab({ cwd, activeBucket }: { cwd: string; activeBucket?: s
           />
         )}
 
-        {items.length === 0 ? (
+        <CredentialListStatus loading={loading} error={loadError} onRetry={() => void load()} />
+
+        {items.length === 0 && (loading || loadError) ? null : items.length === 0 ? (
           <div className="rounded-2xl border border-dashed border-border bg-muted/15 px-5 py-10 text-center">
             <div className="mx-auto flex size-10 items-center justify-center rounded-xl bg-muted text-muted-foreground">
               <CookieIcon className="size-5" aria-hidden />

@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useRef, useState } from "react";
+import React, { useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -18,6 +18,8 @@ import { useT } from "../i18n/I18nProvider";
 import type { MaskedCredentialView } from "./types";
 import { CredentialNoMatches, CredentialSearch, credentialMatchesQuery } from "./CredentialSearch";
 import { CredentialsSectionHeader } from "./CredentialsSectionHeader";
+import { useCredentialList } from "./useCredentialList";
+import { CredentialListStatus } from "./CredentialListStatus";
 
 /**
  * Standalone Permission Token credential CRUD. Link authorization has its own
@@ -29,7 +31,7 @@ export function TokenTab({ cwd }: { cwd: string }) {
   const toast = useToast();
   const confirm = useConfirm();
   const prompt = usePrompt();
-  const [items, setItems] = useState<MaskedCredentialView[]>([]);
+  const { items, loading, error: loadError, reload: load } = useCredentialList(cwd, "token");
   const [busy, setBusy] = useState(false);
   const [id, setId] = useState("");
   const [label, setLabel] = useState("");
@@ -42,13 +44,6 @@ export function TokenTab({ cwd }: { cwd: string }) {
     setQuery("");
     searchRef.current?.focus();
   };
-
-  const load = useCallback(() => {
-    void window.codeshell.credentials
-      .list(cwd)
-      .then((all) => setItems(all.filter((c) => c.type === "token")));
-  }, [cwd]);
-  useEffect(load, [load]);
 
   const save = async () => {
     if (!id.trim() || !label.trim()) {
@@ -271,7 +266,9 @@ export function TokenTab({ cwd }: { cwd: string }) {
           />
         )}
 
-        {items.length === 0 ? (
+        <CredentialListStatus loading={loading} error={loadError} onRetry={() => void load()} />
+
+        {items.length === 0 && (loading || loadError) ? null : items.length === 0 ? (
           <div className="rounded-2xl border border-dashed border-border bg-muted/15 px-5 py-10 text-center">
             <div className="mx-auto flex size-10 items-center justify-center rounded-xl bg-muted text-muted-foreground">
               <KeyRound className="size-5" aria-hidden />
