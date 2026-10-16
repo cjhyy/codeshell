@@ -1,0 +1,151 @@
+{
+  "baseline": "ab8b03f86ad38835939d4125b56bf4513cae7f15",
+  "owner": "desktop_data_round2",
+  "productionSources": [
+    {
+      "path": "packages/desktop/src/renderer/chat/anchors.ts",
+      "sha256": "86a07a32e2d47824870af71d0decaf71cccc798b4f287ae0cff603790ca5a440",
+      "matchesFrozenGitBlob": true
+    },
+    {
+      "path": "packages/desktop/src/renderer/chat/CommentBox.tsx",
+      "sha256": "73fd0ab7120bbf488371c30b3d24a50632f4ec3967c273be67ed4eae99b04ae4",
+      "matchesFrozenGitBlob": true
+    },
+    {
+      "path": "packages/desktop/src/renderer/messages/AnnotationsBlock.tsx",
+      "sha256": "dee5c890171cb0b71bf8d14b2a8fbb47478d23479f94cf20edbe6e8dcb51f27a",
+      "matchesFrozenGitBlob": true
+    },
+    {
+      "path": "packages/desktop/src/renderer/MessageStream.tsx",
+      "sha256": "47a8bb813848cddbd56e1a53dd4b2f67feb01377c102e8b834c82f5e717e7b41",
+      "matchesFrozenGitBlob": true
+    },
+    {
+      "path": "packages/web/src/lib/format.ts",
+      "sha256": "4e0fd7d112630103c5847a561aac3d5aea4d17020eb4e222f1fa0921cb6e18e0",
+      "matchesFrozenGitBlob": true
+    },
+    {
+      "path": "packages/web/app/DesktopApp.tsx",
+      "sha256": "30d3656434f2d2409e91ec51465be8bb35fb1b6643fa6fef29d006269e5fa318",
+      "matchesFrozenGitBlob": true
+    },
+    {
+      "path": "packages/desktop/src/mobile/components/SessionList.tsx",
+      "sha256": "e8767aa0742b627564f731d15962d127726df4140a6737ddf68255883c947841",
+      "matchesFrozenGitBlob": true
+    },
+    {
+      "path": "packages/core/src/workspace/canonical-key.ts",
+      "sha256": "fbd8ece34e23633d262308c9458d5c9bb88807d2b2db9242f121f3156b467df0",
+      "matchesFrozenGitBlob": true
+    },
+    {
+      "path": "packages/desktop/src/main/transcript-reader.ts",
+      "sha256": "ecbc1f25fb00581ee0ce0b529245488350292b427fe07339e896a8275c0d837f",
+      "matchesFrozenGitBlob": true
+    },
+    {
+      "path": "packages/desktop/src/main/rawTranscript.ts",
+      "sha256": "89cae6c364927314077d562e8e217c2f72c281963442d3255e79017e6577f8fd",
+      "matchesFrozenGitBlob": true
+    },
+    {
+      "path": "packages/desktop/src/renderer/contextSelection.ts",
+      "sha256": "4b591ae3a417be3da46b475498a8ff64f07f4bcd3f503fbf13b2d205f67e78b1",
+      "matchesFrozenGitBlob": true
+    },
+    {
+      "path": "packages/desktop/src/renderer/app/useTranscriptBuckets.ts",
+      "sha256": "201a41e547bc89b10bcb7c45ec9afde9a0f5a5dd706fd7aeb43d95bca02a62cf",
+      "matchesFrozenGitBlob": true
+    },
+    {
+      "path": "packages/desktop/src/renderer/app/outputJournalRecovery.ts",
+      "sha256": "a68bbbdbdf4b061e354a29a033b2d51dfd37ff63dc067366208d1e4061ca2397",
+      "matchesFrozenGitBlob": true
+    },
+    {
+      "path": "packages/desktop/src/renderer/automation/foldTranscript.ts",
+      "sha256": "1403188188de6b8d0a85c7516aee2db2afdcbd024bb92e826a4d047f032e0504",
+      "matchesFrozenGitBlob": true
+    },
+    {
+      "path": "packages/desktop/src/renderer/app/mergeHistoryWindows.ts",
+      "sha256": "6426dde6503e36bd66e534715eaf3840ea388f15dbe52762df46ff642eb0678b",
+      "matchesFrozenGitBlob": true
+    },
+    {
+      "path": "packages/desktop/src/renderer/automation/hydrateOrder.ts",
+      "sha256": "a8ec30fe3617ee722f451170a9a5b47346133ad0fceb563b793ec81ffba53506",
+      "matchesFrozenGitBlob": true
+    },
+    {
+      "path": "packages/desktop/src/renderer/automation/mergeTranscripts.ts",
+      "sha256": "c6911ecb164f8818e8227523ce3f501382e81082b6cfbe8ffe1e1a1161e20512",
+      "matchesFrozenGitBlob": true
+    }
+  ],
+  "evidence": [
+    {
+      "path": "docs/audit-2026-10-17/evidence/ui-annotation-roundtrip.log",
+      "sha256": "faff6c5831883e403e58153792519863a1c5855a8dca4447d590f97bfc90d06c"
+    },
+    {
+      "path": "docs/audit-2026-10-17/evidence/ui-annotation-roundtrip.test.ts",
+      "sha256": "eaafc3525cc52e03cf4b1d3d31588786d297007f9c92881ffafa6beddc2d4b22"
+    },
+    {
+      "path": "docs/audit-2026-10-17/evidence/ui-context-tail-selection.log",
+      "sha256": "fd4a2c11ca7140d917e4fab244860cc3d10317b0f1c8f3d59b3db47fcc8d2d9f"
+    },
+    {
+      "path": "docs/audit-2026-10-17/evidence/ui-context-tail-selection.test.ts",
+      "sha256": "190227e22a7970f2810d4c47302996525a7e95da89e4c88b5a89b5254fea6663"
+    },
+    {
+      "path": "docs/audit-2026-10-17/evidence/ui-history-window.log",
+      "sha256": "3b4bb94855f5677c9d1e99ec956aac5efbe8c3e4944a57235b97f6ea442d867d"
+    },
+    {
+      "path": "docs/audit-2026-10-17/evidence/ui-history-window.test.ts",
+      "sha256": "9e1e71e720686687cd319778258d83eff4efb30847bdda8e3031ad2795b70753"
+    },
+    {
+      "path": "docs/audit-2026-10-17/evidence/ui-web-project-case.log",
+      "sha256": "2adffc3e9da17af69f5854cb653add485c3f05aa50dfa6cae4aa8b73ba9f9719"
+    },
+    {
+      "path": "docs/audit-2026-10-17/evidence/ui-web-project-case.test.ts",
+      "sha256": "d119dcec68c64b62cd443dafa56aebde7df7d81128ae1120192a49b1340917ee"
+    },
+    {
+      "path": "docs/audit-2026-10-17/evidence/ui-dedup-scan.json",
+      "sha256": "4c65f0c2059e6b06c0ef88647b15b163cf4e6aca4e8f3f04551de0c99f189c1a"
+    },
+    {
+      "path": "docs/audit-2026-10-17/evidence/ui-findings.json",
+      "sha256": "5240278b413708fbcaf8522caafc9253c28797823359c9606579d784b392b51b"
+    }
+  ],
+  "dynamic": {
+    "shards": 4,
+    "tests": 9,
+    "failures": 0,
+    "skipped": 0,
+    "expectCalls": 25,
+    "runner": "node scripts/run-bun-test-shard.mjs --timeout 30000 <evidence-test> > <first-run-log> 2>&1",
+    "allFirstRunsPreserved": true
+  },
+  "scope": {
+    "realNetwork": false,
+    "nativeProcesses": false,
+    "realIpc": false,
+    "realSettingsWrites": false,
+    "electronOrBrowserUi": false,
+    "productCodeEdits": false,
+    "ownedTemporaryTranscriptRemoved": true
+  }
+}

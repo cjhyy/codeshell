@@ -1,0 +1,424 @@
+{
+  "baseline": "ab8b03f86ad38835939d4125b56bf4513cae7f15",
+  "count": 26,
+  "findings": [
+    {
+      "id": "R2-01",
+      "priority": "P2",
+      "title": "Claude 项目编码碰撞导致会话归属错误",
+      "report": "root.md",
+      "reportLine": 7,
+      "source": "packages/coding/src/cc-orchestrator/session-discovery.ts",
+      "line": 244,
+      "logs": [
+        "evidence/root-session-discovery.log"
+      ],
+      "evidenceLevel": "真实 reader / 自有 JSONL",
+      "conditions": "自然路径编码碰撞；全局 Pet 发现不受同一入口影响",
+      "history": "limited-deduplication-no-same-root-cause-found",
+      "status": "confirmed-at-frozen-source-baseline"
+    },
+    {
+      "id": "R2-02",
+      "priority": "P2",
+      "title": "Codex 列表选新 rollout，历史定位选旧文件",
+      "report": "root.md",
+      "reportLine": 17,
+      "source": "packages/coding/src/cc-orchestrator/codex-session-history.ts",
+      "line": 209,
+      "logs": [
+        "evidence/root-rollout-selection.log"
+      ],
+      "evidenceLevel": "真实列表和 history reader",
+      "conditions": "同线程多个 resumed rollout；tail 仅静态接线",
+      "history": "limited-deduplication-no-same-root-cause-found",
+      "status": "confirmed-at-frozen-source-baseline"
+    },
+    {
+      "id": "R2-03",
+      "priority": "P3",
+      "title": "Markdown 导出围栏被工具正文提前闭合",
+      "report": "root.md",
+      "reportLine": 26,
+      "source": "packages/tui/src/cli/commands/builtin/export-md.ts",
+      "line": 134,
+      "logs": [
+        "evidence/root-export-fence.log"
+      ],
+      "evidenceLevel": "真实导出函数与 marked lexer",
+      "conditions": "只验证短 tool_result；原始文本仍存在",
+      "history": "limited-deduplication-no-same-root-cause-found",
+      "status": "confirmed-at-frozen-source-baseline"
+    },
+    {
+      "id": "R2-04",
+      "priority": "P3",
+      "title": "Claude null 记录中止该会话健康历史",
+      "report": "root.md",
+      "reportLine": 35,
+      "source": "packages/coding/src/cc-orchestrator/session-history.ts",
+      "line": 87,
+      "logs": [
+        "evidence/root-history-corruption.log"
+      ],
+      "evidenceLevel": "真实 snapshot/tail parser",
+      "conditions": "损坏或非对象 schema；未证明正常 writer 会生成 null",
+      "history": "limited-deduplication-no-same-root-cause-found",
+      "status": "confirmed-at-frozen-source-baseline"
+    },
+    {
+      "id": "R2-05",
+      "priority": "P3",
+      "title": "复制为纯文本会修改 fenced code 正文",
+      "report": "root.md",
+      "reportLine": 44,
+      "source": "packages/desktop/src/renderer/markdown/stripMarkdown.ts",
+      "line": 14,
+      "logs": [
+        "evidence/root-copy-code.log"
+      ],
+      "evidenceLevel": "生产纯函数",
+      "conditions": "仅回复整段纯文本复制；未操作剪贴板",
+      "history": "limited-deduplication-no-same-root-cause-found",
+      "status": "confirmed-at-frozen-source-baseline"
+    },
+    {
+      "id": "R2-06",
+      "priority": "P3",
+      "title": "TUI 将 fenced 表格示例当成真实表格",
+      "report": "root.md",
+      "reportLine": 53,
+      "source": "packages/tui/src/ui/components/MessageContent.tsx",
+      "line": 166,
+      "logs": [
+        "evidence/root-tui-tables.log"
+      ],
+      "evidenceLevel": "真实组件及 renderer / PassThrough",
+      "conditions": "显示投影错误；原消息不变",
+      "history": "limited-deduplication-no-same-root-cause-found",
+      "status": "confirmed-at-frozen-source-baseline"
+    },
+    {
+      "id": "R2-07",
+      "priority": "P3",
+      "title": "TUI 转义管道符导致表格错列并隐藏后列",
+      "report": "root.md",
+      "reportLine": 62,
+      "source": "packages/tui/src/ui/components/MessageContent.tsx",
+      "line": 179,
+      "logs": [
+        "evidence/root-tui-tables.log"
+      ],
+      "evidenceLevel": "真实组件及 renderer / PassThrough",
+      "conditions": "显示投影错误；与 R2-06 共享一个收据",
+      "history": "limited-deduplication-no-same-root-cause-found",
+      "status": "confirmed-at-frozen-source-baseline"
+    },
+    {
+      "id": "R2-08",
+      "priority": "P3",
+      "title": "Codex patch rename 变更归属遗漏新路径",
+      "report": "root.md",
+      "reportLine": 71,
+      "source": "packages/coding/src/cc-orchestrator/external-agent-changes.ts",
+      "line": 121,
+      "logs": [
+        "evidence/root-changed-file-paths.log"
+      ],
+      "evidenceLevel": "生产 extractor 纯函数",
+      "conditions": "只审归属元数据；JSON arguments 形状仍为候选",
+      "history": "limited-deduplication-no-same-root-cause-found",
+      "status": "confirmed-at-frozen-source-baseline"
+    },
+    {
+      "id": "R2-09",
+      "priority": "P2",
+      "title": "Review 将 hunk 正文误判为文件头并丢失改动",
+      "report": "root.md",
+      "reportLine": 80,
+      "source": "packages/desktop/src/renderer/diff/parseUnifiedDiff.ts",
+      "line": 62,
+      "logs": [
+        "evidence/root-unified-diff.log"
+      ],
+      "evidenceLevel": "自有 Git repo 真实 diff / 生产 parser",
+      "conditions": "Electron 打开/评论动作仅静态接线",
+      "history": "limited-deduplication-no-same-root-cause-found",
+      "status": "confirmed-at-frozen-source-baseline"
+    },
+    {
+      "id": "R2-10",
+      "priority": "P3",
+      "title": "Review 纯重命名丢失两个文件路径",
+      "report": "root.md",
+      "reportLine": 90,
+      "source": "packages/desktop/src/renderer/diff/parseUnifiedDiff.ts",
+      "line": 74,
+      "logs": [
+        "evidence/root-unified-diff.log"
+      ],
+      "evidenceLevel": "自有 Git repo 真实 diff / 生产 parser",
+      "conditions": "仅纯 rename；与 R2-09/11 共享收据",
+      "history": "limited-deduplication-no-same-root-cause-found",
+      "status": "confirmed-at-frozen-source-baseline"
+    },
+    {
+      "id": "R2-11",
+      "priority": "P2",
+      "title": "Review 未解码 Git quoted 中文路径",
+      "report": "root.md",
+      "reportLine": 100,
+      "source": "packages/desktop/src/renderer/diff/parseUnifiedDiff.ts",
+      "line": 143,
+      "logs": [
+        "evidence/root-unified-diff.log"
+      ],
+      "evidenceLevel": "自有 Git repo 真实 diff / 生产 parser",
+      "conditions": "默认 quotePath=true；文件打开/过滤影响静态接线",
+      "history": "limited-deduplication-no-same-root-cause-found",
+      "status": "confirmed-at-frozen-source-baseline"
+    },
+    {
+      "id": "S01",
+      "priority": "P2",
+      "title": "Office 关系路径拼接静默遗漏 sheet/slide",
+      "report": "sources.md",
+      "reportLine": 9,
+      "source": "packages/core/src/sources/documents/parse.ts",
+      "line": 291,
+      "logs": [
+        "evidence/sources-parse.log"
+      ],
+      "evidenceLevel": "内存 ZIP / 真实 parseDocument",
+      "conditions": "混合相对、./、包根关系；未作完整 OOXML schema 验证",
+      "history": "limited-deduplication-no-same-root-cause-found",
+      "status": "confirmed-at-frozen-source-baseline"
+    },
+    {
+      "id": "S02",
+      "priority": "P3",
+      "title": "Office 写死 r:id 前缀导致标签和顺序错误",
+      "report": "sources.md",
+      "reportLine": 22,
+      "source": "packages/core/src/sources/documents/parse.ts",
+      "line": 301,
+      "logs": [
+        "evidence/sources-parse.log"
+      ],
+      "evidenceLevel": "内存 ZIP / 真实 parseDocument",
+      "conditions": "动态 XLSX；PPTX 共用实现仅静态推论",
+      "history": "limited-deduplication-no-same-root-cause-found",
+      "status": "confirmed-at-frozen-source-baseline"
+    },
+    {
+      "id": "S03",
+      "priority": "P2",
+      "title": "ReadSource 单文件查询脱敏破坏已序列化 JSON",
+      "report": "sources.md",
+      "reportLine": 46,
+      "source": "packages/core/src/tool-system/builtin/sources.ts",
+      "line": 686,
+      "logs": [
+        "evidence/sources-redaction.log",
+        "evidence/sources-handler.log"
+      ],
+      "evidenceLevel": "生产函数组合及真实 handler / 本地 worker",
+      "conditions": "普通占位文字；未运行完整 executor/UI",
+      "history": "limited-deduplication-no-same-root-cause-found",
+      "status": "confirmed-at-frozen-source-baseline"
+    },
+    {
+      "id": "OM1",
+      "priority": "P2",
+      "title": "全局记忆 ADD 按名称覆盖项目另一条 dream",
+      "report": "operations-memory.md",
+      "reportLine": 18,
+      "source": "packages/core/src/services/global-dream-promotion.ts",
+      "line": 99,
+      "logs": [
+        "evidence/ops-memory-promotion-round2.log"
+      ],
+      "evidenceLevel": "真实 orchestrator/gate/manager / fake LLM",
+      "conditions": "只限 auto/dream；manual 和真实模型未验证",
+      "history": "limited-deduplication-no-same-root-cause-found",
+      "status": "confirmed-at-frozen-source-baseline"
+    },
+    {
+      "id": "OM3",
+      "priority": "P3",
+      "title": "Session summary 对有效时区时间按字符串排序",
+      "report": "operations-memory.md",
+      "reportLine": 29,
+      "source": "packages/core/src/services/session-memory-sort.ts",
+      "line": 12,
+      "logs": [
+        "evidence/ops-memory-data-round1.log"
+      ],
+      "evidenceLevel": "局部通过观察及明确源码契约",
+      "conditions": "失败 shard 中第一项通过；整组 1 pass/3 fail 无 Completed",
+      "history": "limited-deduplication-no-same-root-cause-found",
+      "status": "confirmed-at-frozen-source-baseline"
+    },
+    {
+      "id": "OM4",
+      "priority": "P3",
+      "title": "并行工具进度复制另一工具的开始时间",
+      "report": "operations-memory.md",
+      "reportLine": 39,
+      "source": "packages/core/src/tool-system/builtin/agent-progress.ts",
+      "line": 53,
+      "logs": [
+        "evidence/ops-progress-recovery-round3.log"
+      ],
+      "evidenceLevel": "生产 reducer 纯函数",
+      "conditions": "仅进度元数据；未发现 UI 时长消费者",
+      "history": "limited-deduplication-no-same-root-cause-found",
+      "status": "confirmed-at-frozen-source-baseline"
+    },
+    {
+      "id": "OM5",
+      "priority": "P2",
+      "title": "不同自然项目路径共用持久 memory 根",
+      "report": "operations-memory.md",
+      "reportLine": 49,
+      "source": "packages/core/src/session/memory.ts",
+      "line": 189,
+      "logs": [
+        "evidence/ops-memory-project-key-round4.log"
+      ],
+      "evidenceLevel": "真实本地 manager / 冷重建 / injection index",
+      "conditions": "自有自然路径；没有覆盖/删除/模型错误操作实验",
+      "history": "limited-deduplication-no-same-root-cause-found",
+      "status": "confirmed-at-frozen-source-baseline"
+    },
+    {
+      "id": "UI-01",
+      "priority": "P3",
+      "title": "多行本地评论显示截断并误分类续行",
+      "report": "desktop-data.md",
+      "reportLine": 20,
+      "source": "packages/desktop/src/renderer/chat/anchors.ts",
+      "line": 146,
+      "logs": [
+        "evidence/ui-annotation-roundtrip.log"
+      ],
+      "evidenceLevel": "生产 wire 编解码纯函数",
+      "conditions": "wire 保留全文；Textarea/消息卡为静态接线",
+      "history": "limited-deduplication-no-same-root-cause-found",
+      "status": "confirmed-at-frozen-source-baseline"
+    },
+    {
+      "id": "UI-02",
+      "priority": "P2",
+      "title": "Web/Mobile 对 cwd 转小写合并不同项目",
+      "report": "desktop-data.md",
+      "reportLine": 34,
+      "source": "packages/web/src/lib/format.ts",
+      "line": 18,
+      "logs": [
+        "evidence/ui-web-project-case.log"
+      ],
+      "evidenceLevel": "生产归属/分组纯函数",
+      "conditions": "条件：大小写敏感 Host 的两个合法仅大小写不同根",
+      "history": "limited-deduplication-no-same-root-cause-found",
+      "status": "confirmed-at-frozen-source-baseline"
+    },
+    {
+      "id": "UI-03",
+      "priority": "P2",
+      "title": "历史尾窗口选择新任务却匹配旧 raw turn",
+      "report": "desktop-data.md",
+      "reportLine": 48,
+      "source": "packages/desktop/src/renderer/MessageStream.tsx",
+      "line": 710,
+      "logs": [
+        "evidence/ui-context-tail-selection.log"
+      ],
+      "evidenceLevel": "真实 tmp transcript reader/折叠/选择逻辑",
+      "conditions": "合法 legacy 无 journal、512 KiB tail 不完整；未执行 fork",
+      "history": "limited-deduplication-no-same-root-cause-found",
+      "status": "confirmed-at-frozen-source-baseline"
+    },
+    {
+      "id": "PET-01",
+      "priority": "P3",
+      "title": "Pet JSON 原文预筛漏掉引号代码和反斜杠路径",
+      "report": "pet-data.md",
+      "reportLine": 9,
+      "source": "packages/pet/src/disclosure/search.ts",
+      "line": 123,
+      "logs": [
+        "evidence/pet-search-json-text.log"
+      ],
+      "evidenceLevel": "真实本地 reader / 自有 tmp",
+      "conditions": "全文 substring 搜索；Sessions/IPC 仅静态接线",
+      "history": "limited-deduplication-no-same-root-cause-found",
+      "status": "confirmed-at-frozen-source-baseline"
+    },
+    {
+      "id": "TIME1",
+      "priority": "P3",
+      "title": "Cron 多余分隔符被截断且 update 接受错误计划",
+      "report": "scheduling-data.md",
+      "reportLine": 14,
+      "source": "packages/core/src/automation/cron-expr.ts",
+      "line": 60,
+      "logs": [
+        "evidence/time-cron-data-round1.log"
+      ],
+      "evidenceLevel": "生产 parser/内存 scheduler / fake clock",
+      "conditions": "executionDisabled；未触发实际任务",
+      "history": "limited-deduplication-no-same-root-cause-found",
+      "status": "confirmed-at-frozen-source-baseline"
+    },
+    {
+      "id": "TIME2",
+      "priority": "P3",
+      "title": "CronCreate 的 Host 钟面时间贴上 job 时区",
+      "report": "scheduling-data.md",
+      "reportLine": 24,
+      "source": "packages/core/src/tool-system/builtin/cron.ts",
+      "line": 205,
+      "logs": [
+        "evidence/time-cron-data-round1.log",
+        "evidence/time-cron-once-display.log"
+      ],
+      "evidenceLevel": "真实确认字符串 / fake clock / 内存 scheduler",
+      "conditions": "Host 与 job 时区不同；nextRun 绝对时刻正确",
+      "history": "limited-deduplication-no-same-root-cause-found",
+      "status": "confirmed-at-frozen-source-baseline"
+    },
+    {
+      "id": "CHD01",
+      "priority": "P2",
+      "title": "Slack thread 身份丢失使回复落到频道顶层",
+      "report": "chat-data.md",
+      "reportLine": 7,
+      "source": "packages/chat/src/slack.ts",
+      "line": 69,
+      "logs": [
+        "evidence/chat-slack-thread.log"
+      ],
+      "evidenceLevel": "真实 Adapter/Gateway 数据链 / fake SDK 回调",
+      "conditions": "无真实连接或发送；平台参数语义来自官方文档",
+      "history": "limited-deduplication-no-same-root-cause-found",
+      "status": "confirmed-at-frozen-source-baseline"
+    },
+    {
+      "id": "CHD02",
+      "priority": "P3",
+      "title": "长附件标签截断拆开 Unicode 代理对",
+      "report": "chat-data.md",
+      "reportLine": 17,
+      "source": "packages/chat/src/media.ts",
+      "line": 232,
+      "logs": [
+        "evidence/chat-text-metadata.log"
+      ],
+      "evidenceLevel": "生产共享名称函数及 bridge metadata",
+      "conditions": "条件：长 remote/SDK 标签；未证明真实平台返回该长度",
+      "history": "limited-deduplication-no-same-root-cause-found",
+      "status": "confirmed-at-frozen-source-baseline"
+    }
+  ]
+}

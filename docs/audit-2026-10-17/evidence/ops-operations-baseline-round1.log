@@ -1,0 +1,23 @@
+bun test v1.3.11 (af24e281)
+
+packages/core/src/operations/archive.test.ts:
+(pass) schema2 reclaims active capacity without changing the key, full receipt or cold intent [690.45ms]
+(pass) readonly lookup keeps manifest and orphan generations byte-for-byte unchanged [502.64ms]
+(pass) a fresh verification after an interrupted rename uses its own receipt and timestamps [41.86ms]
+(pass) an unrelated real write discards unpublished proof while the durable succeeded receipt stays authoritative [41.77ms]
+(pass) a schema2 orphan keeps the current cold generation and its active attempt authoritative [41.04ms]
+(pass) unknowns, attempts, decisions and observations never enter cold buckets [472.46ms]
+(pass) all legal encrypted recovery slots including an orphan survive compaction and cold proof [361.05ms]
+(pass) an archived unsent blocked intent is never reopened by a late callback [435.47ms]
+
+packages/core/src/operations/controller.test.ts:
+(pass) original private recovery inputs persist before the one send and survive a cold lost response [25.32ms]
+(pass) only successful independent reads verify; a failed read resumes without repeating the write [16.97ms]
+(pass) two failed verification reads exhaust the Run budget without a third read or another write [31.43ms]
+
+ 11 pass
+ 26 filtered out
+ 0 fail
+ 89 expect() calls
+Ran 11 tests across 2 files. [2.78s]
+Completed Bun shard: 37 tests, 26 skipped; 0 failures.

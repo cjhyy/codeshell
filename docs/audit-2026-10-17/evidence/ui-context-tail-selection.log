@@ -1,0 +1,12 @@
+bun test v1.3.11 (af24e281)
+
+docs/audit-2026-10-17/evidence/ui-context-tail-selection.test.ts:
+{"observation":"tail-visible-turn-wrong-raw-range","loadedBytes":524288,"hasMore":true,"visibleUser":{"kind":"user","id":"user-1792172667664-1","text":"RECENT visible task to forward","createdAt":1001,"turnTiming":{"startedAt":1001,"completedAt":1002,"durationMs":1,"completed":true,"completedCleanly":true}},"displaySelectionIndex":0,"selectedRawPreview":"OLD confidential unrelated task","selectedRange":{"fromEventId":"old-user","toEventId":"old-boundary"}}
+(pass) round 4: default transcript tail selects the oldest raw turn by index [25.58ms]
+(pass) round 4 control: a complete visible transcript maps to the matching raw turn
+
+ 2 pass
+ 0 fail
+ 6 expect() calls
+Ran 2 tests across 1 file. [536.00ms]
+Completed Bun shard: 2 tests, 0 skipped; 0 failures.

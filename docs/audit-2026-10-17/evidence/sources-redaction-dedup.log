@@ -1,0 +1,4 @@
+docs/audit-2026-10-16/findings.json:265:      "title": "Chrome Native 的 JSON-lines 分片解码会静默损坏中文或 emoji",
+docs/audit-2026-10-16/quality.md:39:| SWC-05 / P2 | 保留 | JSON parse 之后非对象字段读取不在 try 内，null/42 可让整个调用 reject；相邻 reader 和 malformed JSON 对照支持隔离缺陷。未证明 Core writer 会生成该损坏。 |
+docs/audit-2026-10-16/desktop.md:26:### D03 / P2：Chrome Native 的 JSON-lines 分片解码会静默损坏中文或 emoji
+docs/audit-2026-10-16/desktop.md:30:- 预期：拼接接收到的字节后按完整 UTF-8 解码，得到原对象。实际：`中文 🐈` 在「中」第一个字节后切开会得到 `���文 🐈`，`JSON.parse` 仍然成功。这会把损坏值继续交付 request result/extension action，而非可诊断的解码错误。

@@ -1,0 +1,40 @@
+bun test v1.3.11 (af24e281)
+
+docs/audit-2026-10-17/evidence/root-summary-json.test.ts:
+{"case":"multiple-fences","extracted":"{\"summary\":\"Kept example\",\"keyTopics\":[],\"decisions\":[]}\n```\nExample:\n```txt\nsample","result":{"calls":2,"entries":[]}}
+(pass) R2-12 greedy fence extraction merges a valid summary JSON with a later fenced example [40.90ms]
+{"case":"trailing-comma-repair","response":"{\"summary\":\"The literal ,} must stay.\",\"keyTopics\":[\"format\",],\"decisions\":[]}","result":{"calls":2,"entries":[]}}
+39 | test("R2-13 trailing comma repair changes comma-brace characters inside summary string", async () => {
+40 |   const response = '{"summary":"The literal ,} must stay.","keyTopics":["format",],"decisions":[]}';
+41 |   const result = await summaryFixture(response);
+42 |   console.log(JSON.stringify({ case: "trailing-comma-repair", response, result }));
+43 |   expect(result.calls).toBe(2);
+44 |   expect(result.entries).toHaveLength(1);
+                              ^
+error: expect(received).toHaveLength(expected)
+
+Expected length: 1
+Received length: 0
+
+      at <anonymous> (/Users/admin/.codex/worktrees/repo-audit-20261016/codeshell/docs/audit-2026-10-17/evidence/root-summary-json.test.ts:44:26)
+(fail) R2-13 trailing comma repair changes comma-brace characters inside summary string [14.68ms]
+46 | });
+47 | 
+48 | test("single fence and valid punctuation JSON normal control", async () => {
+49 |   const response = '```json\n{"summary":"The literal ,} must stay.","keyTopics":["format"],"decisions":[]}\n```';
+50 |   const result = await summaryFixture(response);
+51 |   expect(result.entries).toHaveLength(1);
+                              ^
+error: expect(received).toHaveLength(expected)
+
+Expected length: 1
+Received length: 0
+
+      at <anonymous> (/Users/admin/.codex/worktrees/repo-audit-20261016/codeshell/docs/audit-2026-10-17/evidence/root-summary-json.test.ts:51:26)
+(fail) single fence and valid punctuation JSON normal control [9.46ms]
+
+ 1 pass
+ 2 fail
+ 6 expect() calls
+Ran 3 tests across 1 file. [184.00ms]
+Bun test process failed (1)
