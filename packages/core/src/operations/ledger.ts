@@ -52,7 +52,18 @@ export interface OperationPlan {
   parameters: unknown;
   postcondition: unknown;
   /** Trusted normalized provider identity; null/missing dimensions conservatively overlap. */
-  conflictScope?: { instance?: string | null; account?: string | null; target?: unknown };
+  conflictScope?: {
+    format?: string;
+    instance?: string | null;
+    account?: string | null;
+    target?: unknown;
+  };
+}
+
+/** Provider-owned normalization of authenticated legacy resource identities. */
+export interface OperationConflictScopeResolver {
+  format: string;
+  resolveTarget(plan: OperationPlan): unknown | undefined;
 }
 
 /** Trusted adapter evidence only. Domain interpretation belongs to the adapter. */
@@ -115,6 +126,13 @@ export class OperationLedger {
   private readonly sealedIds = new Set<string>();
   private readonly finalizedSessions = new Set<string>();
   private capturedIncarnation: string | undefined;
+  private readonly conflictScopeResolvers = new Map<string, OperationConflictScopeResolver>();
+
+  setConflictScopeResolver(service: string, resolver: OperationConflictScopeResolver): void {
+    label.parse(service);
+    label.parse(resolver.format);
+    this.conflictScopeResolvers.set(service, resolver);
+  }
 
   constructor(
     storageRoot: string,
@@ -243,7 +261,6 @@ export class OperationLedger {
           plan.target,
           plan.parameters,
           plan.postcondition,
-          ...(plan.conflictScope ? [plan.conflictScope] : []),
         ])
     );
   }
@@ -267,13 +284,21 @@ export class OperationLedger {
           : typeof plan.account === "string"
             ? plan.account
             : undefined;
-    const target = selected && Object.hasOwn(selected, "target") ? selected.target : plan.target;
+    const resolver = this.conflictScopeResolvers.get(plan.service);
+    const format = resolver?.format ?? selected?.format;
+    if (format !== undefined) label.parse(format);
+    const target = resolver
+      ? resolver.resolveTarget(plan)
+      : selected && Object.hasOwn(selected, "target")
+        ? selected.target
+        : plan.target;
     const known = (value: unknown) =>
       value !== undefined &&
       value !== null &&
       value !== "" &&
       !(typeof value === "object" && Object.keys(value).length === 0);
     return {
+      ...(format ? { format } : {}),
       ...(known(instance) ? { instance: this.hash(key, "conflict-instance", instance) } : {}),
       ...(known(identity) ? { account: this.hash(key, "conflict-account", identity) } : {}),
       ...(known(target) ? { target: this.hash(key, "conflict-target", target) } : {}),
@@ -288,7 +313,9 @@ export class OperationLedger {
     key: Buffer,
     receipt: OperationReceipt,
   ): NonNullable<OperationReceipt["conflictScope"]> {
-    if (receipt.conflictScope) return receipt.conflictScope;
+    const resolver = this.conflictScopeResolvers.get(receipt.service);
+    if (receipt.conflictScope && (!resolver || receipt.conflictScope.format === resolver.format))
+      return receipt.conflictScope;
     if (receipt.recovery) {
       try {
         const input = JSON.parse(
@@ -298,8 +325,10 @@ export class OperationLedger {
             receipt.recovery.prepared,
           ),
         ) as OperationRecoveryInput;
-        if (input.schema === 1 && this.matchesPlan(key, receipt, input.plan))
+        if (input.schema === 1 && this.matchesPlan(key, receipt, input.plan)) {
+          if (resolver && resolver.resolveTarget(input.plan) === undefined) return {};
           return this.conflictScope(key, input.plan);
+        }
       } catch {
         // Unprovable legacy identity fences this provider, not unrelated providers.
       }
@@ -343,7 +372,12 @@ export class OperationLedger {
           let count = 0;
           for (const receipt of Object.values(state.records)) {
             if (receipt.service !== service || !this.unresolved(receipt)) continue;
-            receipt.conflictScope ??= key ? this.recoverConflictScope(key, receipt) : {};
+            const resolver = this.conflictScopeResolvers.get(receipt.service);
+            if (
+              !receipt.conflictScope ||
+              (resolver && receipt.conflictScope.format !== resolver.format)
+            )
+              receipt.conflictScope = key ? this.recoverConflictScope(key, receipt) : {};
             count++;
           }
           return { ...(count ? { value: state } : {}), result: count };
@@ -359,7 +393,11 @@ export class OperationLedger {
     const left = this.recoverConflictScope(key, a);
     const right = this.recoverConflictScope(key, b);
     return (["instance", "account", "target"] as const).every(
-      (dimension) => !left[dimension] || !right[dimension] || left[dimension] === right[dimension],
+      (dimension) =>
+        (dimension === "target" && left.format !== right.format) ||
+        !left[dimension] ||
+        !right[dimension] ||
+        left[dimension] === right[dimension],
     );
   }
 
@@ -684,7 +722,6 @@ export class OperationLedger {
         plan.target,
         plan.parameters,
         plan.postcondition,
-        ...(plan.conflictScope ? [plan.conflictScope] : []),
       ]);
       const existing = archives.lookup(id);
       if (existing) {
@@ -779,7 +816,6 @@ export class OperationLedger {
             plan.target,
             plan.parameters,
             plan.postcondition,
-            ...(plan.conflictScope ? [plan.conflictScope] : []),
           ]),
           service: plan.service,
           conflictScope: this.conflictScope(key, plan),

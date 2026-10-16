@@ -5,7 +5,11 @@ import type { CredentialMetadata } from "../credentials/access.js";
 import type { OperationReceipt } from "../operations/ledger.js";
 import { OperationFailure } from "../operations/controller.js";
 import { boundToolResult } from "../tool-system/bound-tool-result.js";
-import { githubOperationPlan, githubRecoveryInput } from "./operation-recovery.js";
+import {
+  githubOperationPlan,
+  githubRecoveryInput,
+  GITHUB_OPERATION_CONFLICT_SCOPE,
+} from "./operation-recovery.js";
 import { asRecord } from "./http.js";
 import { githubSetStarredParameters } from "./github-star.js";
 
@@ -59,6 +63,7 @@ export async function verifiedGithubSetStarred(options: {
       params,
     ),
     {
+      conflictScope: GITHUB_OPERATION_CONFLICT_SCOPE,
       recoveryInput: (phase) =>
         phase === "prepared"
           ? githubRecoveryInput(ctx, connection, { repositoryId: repositoryId! })

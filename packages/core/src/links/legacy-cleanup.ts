@@ -2,6 +2,7 @@ import type { Credential } from "../credentials/types.js";
 import { CredentialStore, type CredentialScope } from "../credentials/store.js";
 import { OperationLedger } from "../operations/ledger.js";
 import { isRemoteLinkCredential } from "./remote.js";
+import { GITHUB_OPERATION_CONFLICT_SCOPE } from "./operation-recovery.js";
 
 /** Explicit old Link ownership only. Arbitrary MCP/OAuth/model credentials are excluded. */
 export function isLegacyLinkConnection(value: Credential): boolean {
@@ -81,6 +82,8 @@ export function cleanupLegacyLinkConnections(options: {
     throw new Error("Operation roots are required for Link cleanup");
   const selected = candidates(options.store, options.scope);
   const ledgers = options.operationRoots.map((root) => new OperationLedger(root));
+  for (const ledger of ledgers)
+    ledger.setConflictScopeResolver("github", GITHUB_OPERATION_CONFLICT_SCOPE);
   // Durable proof is independent of old connection records; unknown identities fence a provider.
   for (const provider of new Set(selected.map(({ credential }) => credential.meta!.linkProvider!)))
     for (const ledger of ledgers) ledger.protectUnresolvedWrites(provider);

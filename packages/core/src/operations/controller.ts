@@ -4,6 +4,7 @@ import {
   type OperationPlan,
   type OperationReceipt,
   type OperationReference,
+  type OperationConflictScopeResolver,
 } from "./ledger.js";
 import { readOperationSessionOwner } from "./session-owner.js";
 import type { UsageLedger } from "../cost-ledger/store.js";
@@ -36,6 +37,8 @@ export class OperationFailure extends Error {
   }
 }
 export interface OperationAdapter {
+  /** Trusted provider normalization; installed before the atomic resource conflict check. */
+  conflictScope?: OperationConflictScopeResolver;
   /** Live authority check; called again after every asynchronous stage. */
   assertAuthorized(): void;
   /** Host callback rechecks live batch authority around asynchronous stages. */
@@ -67,6 +70,8 @@ export class OperationController {
 
   async run(plan: OperationPlan, adapter: OperationAdapter): Promise<OperationReceipt> {
     this.assertAuthorized?.();
+    if (adapter.conflictScope)
+      this.ledger.setConflictScopeResolver(plan.service, adapter.conflictScope);
     let receipt = this.ledger.prepare(plan);
     if (receipt.state === "verified" || receipt.state === "blocked" || receipt.state === "unknown")
       return receipt;

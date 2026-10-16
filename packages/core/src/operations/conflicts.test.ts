@@ -5,6 +5,11 @@ import { join } from "node:path";
 import { spawn } from "node:child_process";
 import { OperationLedger, type OperationPlan } from "./ledger.js";
 import { PlaintextCipher } from "../credentials/cipher.js";
+import {
+  githubOperationPlan,
+  GITHUB_OPERATION_CONFLICT_SCOPE,
+  type ReviewedGithubWrite,
+} from "../links/operation-recovery.js";
 
 const roots: string[] = [];
 function fixture() {
@@ -157,4 +162,80 @@ test("two processes cannot both claim the same resource under different sessions
       );
     });
   expect((await Promise.all([run(first.id), run(second.id)])).filter(Boolean)).toHaveLength(1);
+});
+
+const githubPlan = (session: string, action: ReviewedGithubWrite, owner: string, repo: string) =>
+  githubOperationPlan(
+    session,
+    `intent-${session}`,
+    {
+      id: `connection-${session}`,
+      type: "link",
+      label: "fixture",
+      hasSecret: true,
+      meta: { linkAccountId: "42", linkExecutionRuntime: "local" },
+    },
+    action,
+    { owner, repo, title: "issue", starred: true, issue_number: 7, state: "closed" },
+  );
+
+test("GitHub mixed-case repo writes overlap across actions, connections and Sessions", () => {
+  for (const action of ["create_issue", "set_starred", "update_issue"] as const) {
+    const f = fixture();
+    f.ledger.setConflictScopeResolver("github", GITHUB_OPERATION_CONFLICT_SCOPE);
+    const originalPlan = githubPlan("old", "create_issue", "OWNER", "Repo");
+    const original = f.ledger.prepare(originalPlan);
+    const claim = f.ledger.claim(original.id);
+    const sent = f.ledger.settle(original.id, claim.receipt.attemptId, "unknown");
+    const cold = new OperationLedger(f.root);
+    cold.setConflictScopeResolver("github", GITHUB_OPERATION_CONFLICT_SCOPE);
+    const same = cold.prepare(githubPlan("replacement", action, "owner", "repo"));
+    expect(cold.claim(same.id).claimed).toBe(false);
+    const other = cold.prepare(githubPlan("other", action, "owner", "another-repo"));
+    expect(cold.claim(other.id).claimed).toBe(true);
+    expect(originalPlan.target).toEqual({ owner: "OWNER", repo: "Repo" });
+    expect(cold.provePlan(sent, originalPlan)).toBe(true);
+  }
+});
+
+test("GitHub issue-specific uncertainty also fences the parent repository", () => {
+  const f = fixture();
+  const issue = f.ledger.prepare(githubPlan("old-issue", "update_issue", "OWNER", "Repo"));
+  f.ledger.claim(issue.id);
+  const star = f.ledger.prepare(githubPlan("new-star", "set_starred", "owner", "repo"));
+  expect(f.ledger.claim(star.id).claimed).toBe(false);
+});
+
+test("authenticated old GitHub recovery rebuilds repository scope without altering the original plan proof", () => {
+  const f = fixture();
+  const { conflictScope: _scope, ...legacy } = githubPlan("old", "update_issue", "OWNER", "Repo");
+  const original = f.ledger.prepare(legacy);
+  f.ledger.captureRecovery(legacy, original.id, "prepared", { original: true });
+  f.ledger.claim(original.id);
+  const cold = new OperationLedger(f.root);
+  cold.setConflictScopeResolver("github", GITHUB_OPERATION_CONFLICT_SCOPE);
+  expect(cold.protectUnresolvedWrites("github")).toBe(1);
+  const persisted = JSON.parse(readFileSync(f.file, "utf8")).records[original.id];
+  expect(persisted.conflictScope.format).toBe("github-repository-v1");
+  expect(cold.provePlan(persisted, legacy)).toBe(true);
+  const newPlan = {
+    ...legacy,
+    conflictScope: githubPlan("unused", "update_issue", "owner", "repo").conflictScope,
+  };
+  expect(cold.provePlan(persisted, newPlan)).toBe(true); // conflict metadata is not execution identity
+  const same = cold.prepare(githubPlan("new", "set_starred", "owner", "repo"));
+  expect(cold.claim(same.id).claimed).toBe(false);
+  const other = cold.prepare(githubPlan("other", "create_issue", "owner", "elsewhere"));
+  expect(cold.claim(other.id).claimed).toBe(true);
+});
+
+test("unprovable old GitHub digest remains a provider-wide barrier", () => {
+  const f = fixture();
+  const { conflictScope: _scope, ...legacy } = githubPlan("old", "create_issue", "OWNER", "Repo");
+  f.ledger.claim(f.ledger.prepare(legacy).id);
+  const cold = new OperationLedger(f.root);
+  cold.setConflictScopeResolver("github", GITHUB_OPERATION_CONFLICT_SCOPE);
+  cold.protectUnresolvedWrites("github");
+  const unrelatedRepo = cold.prepare(githubPlan("other", "update_issue", "owner", "elsewhere"));
+  expect(cold.claim(unrelatedRepo.id).claimed).toBe(false);
 });

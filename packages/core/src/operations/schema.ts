@@ -35,6 +35,7 @@ export const recordSchema = z
     // A missing dimension is a conservative wildcard, never an empty permission.
     conflictScope: z
       .object({
+        format: label.optional(),
         instance: digest.optional(),
         account: digest.optional(),
         target: digest.optional(),

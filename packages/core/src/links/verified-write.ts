@@ -7,7 +7,11 @@ import { OperationFailure } from "../operations/controller.js";
 import { asRecord } from "./http.js";
 import { githubIssueIdentity } from "./github-issue-state.js";
 import { boundToolResult } from "../tool-system/bound-tool-result.js";
-import { githubOperationPlan, githubRecoveryInput } from "./operation-recovery.js";
+import {
+  githubOperationPlan,
+  githubRecoveryInput,
+  GITHUB_OPERATION_CONFLICT_SCOPE,
+} from "./operation-recovery.js";
 
 export { githubCreateIssueParameters } from "./github-create-issue.js";
 import { githubCreateIssueParameters } from "./github-create-issue.js";
@@ -75,6 +79,7 @@ export async function verifiedGithubCreateIssue(options: {
   let data: unknown;
   let originalIssueIdentity: Record<string, unknown> | undefined;
   const receipt = await ctx.operations.controller.run(plan, {
+    conflictScope: GITHUB_OPERATION_CONFLICT_SCOPE,
     recoveryInput: (phase) =>
       phase === "prepared"
         ? githubRecoveryInput(ctx, connection, null)
