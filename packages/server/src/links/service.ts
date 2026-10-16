@@ -950,6 +950,7 @@ export function createLinkService(options: LinkServiceOptions = {}) {
         installed: result.installed,
         authenticated: result.authenticated,
         ...(result.account ? { account: result.account } : {}),
+        ...(result.accountId ? { accountId: result.accountId } : {}),
       };
     } finally {
       finish(operation);

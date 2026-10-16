@@ -836,6 +836,7 @@ describe("shared Link management", () => {
         installed: true,
         authenticated: true,
         account: "fixture-user",
+        accountId: "42",
         message: "raw-private-diagnostic",
       }),
     });
@@ -844,9 +845,16 @@ describe("shared Link management", () => {
     expect(result.authSource).toBe("cli-session");
     expect(store.resolve(result.id)?.secret).toStartWith("cli-binding:");
     expect(JSON.stringify(result)).not.toContain("cli-binding:");
-    expect(JSON.stringify(await service.cliStatus(owner, "github"))).not.toContain(
-      "raw-private-diagnostic",
-    );
+    const status = await service.cliStatus(owner, "github");
+    expect(status).toEqual({
+      providerId: "github",
+      command: "gh",
+      installed: true,
+      authenticated: true,
+      account: "fixture-user",
+      accountId: "42",
+    });
+    expect(JSON.stringify(status)).not.toContain("raw-private-diagnostic");
   });
   test("rejects arbitrary methods, identifiers and missing CAS instead of invoking a provider", async () => {
     let calls = 0;
