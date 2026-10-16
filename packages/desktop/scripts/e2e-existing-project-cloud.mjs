@@ -15,6 +15,7 @@ import {
   launchCodeShellElectron,
   makeIsolatedElectronHome,
   seedSessionCatalog,
+  waitForAsyncFunction,
 } from "./electron-harness.mjs";
 
 const appDir = resolve(dirname(fileURLToPath(import.meta.url)), "..");
@@ -382,7 +383,8 @@ app.on("web-contents-created", (_event, contents) => configure(contents.session)
   const localChooser = win.getByRole("dialog", { name: /^(新项目|New project)$/ });
   await localChooser.getByRole("button", { name: /^(此计算机|This computer)$/ }).click();
   await localChooser.waitFor({ state: "hidden" });
-  await win.waitForFunction(
+  await waitForAsyncFunction(
+    win,
     async () => (await window.codeshell.projectRegistry.list()).length === 1,
   );
   await dismissTrust();

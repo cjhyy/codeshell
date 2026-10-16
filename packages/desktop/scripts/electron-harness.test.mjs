@@ -4,9 +4,46 @@ import { existsSync, mkdirSync, mkdtempSync, realpathSync, rmSync, writeFileSync
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { test } from "node:test";
-import { launchCodeShellElectron, makeIsolatedElectronHome } from "./electron-harness.mjs";
+import {
+  launchCodeShellElectron,
+  makeIsolatedElectronHome,
+  waitForAsyncFunction,
+} from "./electron-harness.mjs";
 import { ensureElectronKeychainContext } from "./electron-keychain-preflight.mjs";
 import { keychainPreferenceXml } from "./macos-keychain-context.mjs";
+
+test("async condition polling awaits false results instead of accepting their Promise", async () => {
+  let calls = 0;
+  const win = {
+    evaluate: async () => {
+      await new Promise((done) => setTimeout(done, 1));
+      return ++calls === 3;
+    },
+  };
+  equal(await waitForAsyncFunction(win, () => {}, undefined, { polling: 1 }), true);
+  equal(calls, 3);
+  await rejects(
+    waitForAsyncFunction({ evaluate: async () => false }, () => {}, undefined, { timeout: 0 }),
+    /Timed out waiting for an asynchronous UI condition/,
+  );
+  await rejects(
+    waitForAsyncFunction(
+      {
+        evaluate: async () => {
+          throw new Error("IPC failed");
+        },
+      },
+      () => {},
+    ),
+    /IPC failed/,
+  );
+  await rejects(
+    waitForAsyncFunction({ evaluate: () => new Promise(() => {}) }, () => {}, undefined, {
+      timeout: 10,
+    }),
+    /Timed out waiting for an asynchronous UI condition/,
+  );
+});
 
 function fixture(t) {
   const root = realpathSync(mkdtempSync(join(tmpdir(), "electron-launch-preflight-test-")));

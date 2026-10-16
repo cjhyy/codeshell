@@ -9,6 +9,7 @@ import {
   findCodeShellWindow,
   launchCodeShellElectron,
   makeIsolatedElectronHome,
+  waitForAsyncFunction,
 } from "./electron-harness.mjs";
 import { prepareConfinedElectronFixture } from "./confined-electron-fixture.mjs";
 const appDir = resolve(dirname(fileURLToPath(import.meta.url)), "..");
@@ -134,7 +135,8 @@ try {
   stage = "retry saved schedule reaches actual durable Cron store";
   await detail("Cycle Alpha").getByRole("combobox", { name: "频率", exact: true }).click();
   await win.getByRole("option", { name: "工作日", exact: true }).click();
-  await win.waitForFunction(
+  await waitForAsyncFunction(
+    win,
     async (id) => (await window.codeshell.getAutomation(id)).schedule === "0 9 * * 1-5",
     jobs[0].id,
   );
@@ -191,7 +193,8 @@ try {
     "Updated synthetic reminder",
   );
   await detail("Cycle Alpha").getByRole("button", { name: "保存", exact: true }).click();
-  await win.waitForFunction(
+  await waitForAsyncFunction(
+    win,
     async (id) =>
       (await window.codeshell.getAutomation(id)).prompt === "Updated synthetic reminder",
     jobs[0].id,
@@ -219,12 +222,14 @@ try {
     .waitFor();
   assert.equal((await readJob(jobs[0].id)).enabled, false);
   await enabled.click();
-  await win.waitForFunction(
+  await waitForAsyncFunction(
+    win,
     async (id) => (await window.codeshell.getAutomation(id)).enabled === true,
     jobs[0].id,
   );
   await enabled.click();
-  await win.waitForFunction(
+  await waitForAsyncFunction(
+    win,
     async (id) => (await window.codeshell.getAutomation(id)).enabled === false,
     jobs[0].id,
   );
@@ -252,7 +257,8 @@ try {
     .waitFor();
   assert.equal((await readJob(jobs[1].id)).id, jobs[1].id);
   await remove.click();
-  await win.waitForFunction(
+  await waitForAsyncFunction(
+    win,
     async (id) => !(await window.codeshell.listAutomations()).some((job) => job.id === id),
     jobs[1].id,
   );

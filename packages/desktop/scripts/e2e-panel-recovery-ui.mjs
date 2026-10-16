@@ -11,6 +11,7 @@ import {
   launchCodeShellElectron,
   makeIsolatedElectronHome,
   findCodeShellWindow,
+  waitForAsyncFunction,
 } from "./electron-harness.mjs";
 
 const appDir = resolve(dirname(fileURLToPath(import.meta.url)), "..");
@@ -79,7 +80,8 @@ async function binding(win, project) {
   );
 }
 async function expectVersion(win, project, version) {
-  await win.waitForFunction(
+  await waitForAsyncFunction(
+    win,
     async ({ cwd, id, version }) => {
       try {
         return (
@@ -232,7 +234,8 @@ try {
   await row(second)
     .getByRole("switch", { name: /在项目 recovery-b 中启用或停用/ })
     .click();
-  await second.waitForFunction(
+  await waitForAsyncFunction(
+    second,
     async ({ cwd, id }) => {
       try {
         return (

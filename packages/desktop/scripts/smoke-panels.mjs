@@ -22,6 +22,7 @@ import {
   launchCodeShellElectron,
   makeIsolatedElectronHome,
   navigateSettingsMenu,
+  waitForAsyncFunction,
 } from "./electron-harness.mjs";
 import { startMockProviderServer } from "./mock-provider-server.mjs";
 import { prepareConfinedElectronFixture } from "./confined-electron-fixture.mjs";
@@ -309,10 +310,14 @@ async function registerFixtureProject() {
     const chooser = win.getByRole("dialog", { name: /^(新项目|New project)$/ });
     await chooser.getByRole("button", { name: /^(此计算机|This computer)$/ }).click();
     await acceptancePhase("after-picker-click");
-    await win.waitForFunction(async (path) => {
-      const projects = await window.codeshell.projectRegistry.list();
-      return projects.some((entry) => entry.roots.some((root) => root.path === path));
-    }, projectPath);
+    await waitForAsyncFunction(
+      win,
+      async (path) => {
+        const projects = await window.codeshell.projectRegistry.list();
+        return projects.some((entry) => entry.roots.some((root) => root.path === path));
+      },
+      projectPath,
+    );
     const project = await win.evaluate(async (path) => {
       const projects = await window.codeshell.projectRegistry.list();
       return projects.find((entry) => entry.roots.some((root) => root.path === path));
