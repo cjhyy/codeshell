@@ -12,6 +12,7 @@ import { ensureElectronKeychainContext } from "./electron-keychain-preflight.mjs
 import { watchElectronTestProcess } from "./electron-test-watchdog.mjs";
 import { preloadPausedPackagedMain } from "./packaged-main-preload.mjs";
 import { capturePackagedAppIntegrity } from "./packaged-app-integrity.mjs";
+import { canCleanupPackagedProcesses } from "./packaged-process-exits.mjs";
 
 const hash = (value) => createHash("sha256").update(value).digest("hex");
 
@@ -21,7 +22,9 @@ export async function preparePackagedPetFixture({
   origin,
   fixtureRoot,
   keychainReferenceFile,
+  requireWorkerEvidence = true,
 }) {
+  assert.equal(typeof requireWorkerEvidence, "boolean");
   officialApp = await realpath(resolve(officialApp));
   keychainReferenceFile = keychainReferenceFile && (await realpath(keychainReferenceFile));
   const executable = await realpath(join(officialApp, "Contents/MacOS/code-shell"));
@@ -285,28 +288,15 @@ export async function preparePackagedPetFixture({
       throw Error("actual packaged Main/Node-mode worker preimport receipts were not verified");
     },
     async canCleanup() {
-      const spawned = (await readFile(join(isolated.home, "spawned-workers.jsonl"), "utf8"))
-        .trim()
-        .split("\n")
-        .filter(Boolean)
-        .map((line) => JSON.parse(line));
-      const exits = (await readFile(join(isolated.home, "worker-exits.jsonl"), "utf8"))
-        .trim()
-        .split("\n")
-        .filter(Boolean)
-        .map((line) => JSON.parse(line));
-      return (
-        !launchFailed &&
-        children.every(
-          (child) =>
-            verifiedMains.has(child.pid) &&
-            verifiedWorkerMains.has(child.pid) &&
-            (child.exitCode !== null || child.signalCode !== null),
-        ) &&
-        [...workers, ...spawned.map((worker) => worker.pid)].every((pid) =>
-          exits.some((exit) => exit.pid === pid),
-        )
-      );
+      return canCleanupPackagedProcesses({
+        home: isolated.home,
+        requireWorkerEvidence,
+        launchFailed,
+        children,
+        verifiedMains,
+        verifiedWorkerMains,
+        workers,
+      });
     },
     async verifyUnchanged() {
       const after = await capturePackagedAppIntegrity(officialApp);

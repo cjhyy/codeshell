@@ -113,6 +113,14 @@ if (role === "Main") {
     };
   }
   const spawn = children.spawn;
+  let workerSpawnCount = 0;
+  process.once("exit", () => {
+    appendFileSync(
+      join(home, "main-exits.jsonl"),
+      JSON.stringify({ pid: process.pid, workerSpawnCount }) + "\n",
+      { mode: 0o600 },
+    );
+  });
   children.spawn = function (command, args, options) {
     const worker = args?.some((argument) => argument.includes("agent-server-stdio"));
     if (worker) {
@@ -136,6 +144,7 @@ if (role === "Main") {
     }
     const child = spawn.call(this, command, args, options);
     if (worker && child.pid) {
+      workerSpawnCount++;
       child.stdin.cork();
       const timer = setInterval(() => {
         if (existsSync(join(home, `worker-${child.pid}.permit`))) {
@@ -156,6 +165,7 @@ if (role === "Main") {
         join(home, "spawned-workers.jsonl"),
         JSON.stringify({
           pid: child.pid,
+          mainPid: process.pid,
           command: realpathSync(command),
           args: args.filter((argument) => argument.includes("agent-server-stdio")),
         }) + "\n",
