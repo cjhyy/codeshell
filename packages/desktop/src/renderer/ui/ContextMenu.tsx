@@ -1,4 +1,4 @@
-import React, { useEffect, useRef } from "react";
+import React, { useCallback, useEffect, useLayoutEffect, useRef } from "react";
 import { createPortal } from "react-dom";
 import { cn } from "@/lib/utils";
 import { useAnchoredPopover } from "../chat/useAnchoredPopover";
@@ -22,7 +22,7 @@ interface Props {
 /**
  * Tiny right-click menu rendered at viewport coordinates.
  *
- * Closes on outside click, escape, or after any item activation. The
+ * Closes on outside pointer/focus, window blur, Escape, or item activation. The
  * menu escapes clipping and stacking ancestors through a portal. A modal
  * caller supplies its content boundary to preserve pointer/focus isolation.
  * Items with `danger` get a red text tint; disabled items are no-ops.
@@ -34,6 +34,8 @@ interface Props {
 export function ContextMenu({ x, y, items, onClose, container }: Props) {
   const ref = useRef<HTMLUListElement>(null);
   const openerRef = useRef<HTMLElement | null>(null);
+  const ownsFocus = useRef(true);
+  const focusGeometry = useRef<{ target: HTMLElement; bounds: string } | null>(null);
   const closeRef = useRef(onClose);
   closeRef.current = onClose;
   const style = useAnchoredPopover(true, ref, ref, {
@@ -43,9 +45,39 @@ export function ContextMenu({ x, y, items, onClose, container }: Props) {
     point: { x, y },
   });
 
+  const revealFocus = useCallback((keyboard = false) => {
+    const menu = ref.current;
+    const focused = document.activeElement;
+    if (!menu || !(focused instanceof HTMLElement) || !menu.contains(focused)) {
+      focusGeometry.current = null;
+      return;
+    }
+    const bounds = menu.getBoundingClientRect();
+    const geometry = `${bounds.left},${bounds.top},${menu.clientWidth},${menu.clientHeight}`;
+    // Positioning also updates on scroll. Preserve intentional wheel scrolling;
+    // reveal the active row only for keyboard navigation or a layout change.
+    if (
+      !keyboard &&
+      focusGeometry.current?.target === focused &&
+      focusGeometry.current.bounds === geometry
+    )
+      return;
+    focusGeometry.current = { target: focused, bounds: geometry };
+    const target = focused.getBoundingClientRect();
+    const top = bounds.top + menu.clientTop;
+    const bottom = top + menu.clientHeight;
+    if (target.top < top - 1) menu.scrollTop += target.top - top;
+    else if (target.bottom > bottom + 1) menu.scrollTop += target.bottom - bottom;
+  }, []);
+
+  useLayoutEffect(() => {
+    if (style.visibility === "visible") revealFocus();
+  }, [style, revealFocus]);
+
   const restoreFocus = () => {
     const active = document.activeElement;
     if (
+      ownsFocus.current &&
       openerRef.current?.isConnected &&
       (active === document.body || active === null || ref.current?.contains(active))
     ) {
@@ -60,33 +92,47 @@ export function ContextMenu({ x, y, items, onClose, container }: Props) {
     // The positioning hook first measures a hidden menu. Focus after its
     // visible position is committed, without moving the underlying page.
     const frame = window.requestAnimationFrame(() => {
-      const first = menu?.querySelector<HTMLButtonElement>(
-        'button[role="menuitem"]:not(:disabled)',
-      );
+      if (!ownsFocus.current || !menu?.isConnected) return;
+      const active = document.activeElement;
+      if (active !== document.body && active !== openerRef.current && !menu.contains(active))
+        return;
+      const first = menu.querySelector<HTMLButtonElement>('button[role="menuitem"]:not(:disabled)');
       (first ?? menu)?.focus({ preventScroll: true });
+      revealFocus(true);
     });
     return () => {
       window.cancelAnimationFrame(frame);
       const active = document.activeElement;
       if (
+        ownsFocus.current &&
         openerRef.current?.isConnected &&
         (active === document.body || active === null || menu?.contains(active))
       )
         openerRef.current.focus({ preventScroll: true });
     };
-  }, []);
+  }, [revealFocus]);
 
   useEffect(() => {
-    const onDown = (e: MouseEvent) => {
-      if (ref.current && !ref.current.contains(e.target as Node)) closeRef.current();
+    const onOutside = (event: PointerEvent | FocusEvent) => {
+      if (ref.current?.contains(event.target as Node)) return;
+      ownsFocus.current = false;
+      closeRef.current();
+    };
+    const onBlur = () => {
+      ownsFocus.current = false;
+      closeRef.current();
     };
     const onEsc = (e: KeyboardEvent) => {
       if (e.key === "Escape" && !e.isComposing && e.keyCode !== 229) closeRef.current();
     };
-    document.addEventListener("mousedown", onDown);
+    document.addEventListener("pointerdown", onOutside, true);
+    document.addEventListener("focusin", onOutside, true);
+    window.addEventListener("blur", onBlur);
     document.addEventListener("keydown", onEsc);
     return () => {
-      document.removeEventListener("mousedown", onDown);
+      document.removeEventListener("pointerdown", onOutside, true);
+      document.removeEventListener("focusin", onOutside, true);
+      window.removeEventListener("blur", onBlur);
       document.removeEventListener("keydown", onEsc);
     };
   }, []);
@@ -124,6 +170,7 @@ export function ContextMenu({ x, y, items, onClose, container }: Props) {
                     ? choices.length - 1
                     : (current - 1 + choices.length) % choices.length;
           choices[next]?.focus({ preventScroll: true });
+          revealFocus(true);
         } else if (event.key === "Escape" || event.key === "Tab") {
           event.stopPropagation();
           if (event.key === "Escape") event.preventDefault();

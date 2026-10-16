@@ -154,7 +154,7 @@ describe("BranchPicker context visibility", () => {
       await flushMicrotasks();
     });
   };
-  const chooseFeature = async () => {
+  const chooseFeature = async (repeat = false) => {
     const anchor = buttons()[0]!;
     // The shared mini DOM has no layout engine; provide this anchor's bounds
     // while still exercising the real popover and its branch click handlers.
@@ -163,10 +163,14 @@ describe("BranchPicker context visibility", () => {
     });
     await click(anchor);
     const item = descendants(document.body).find(
-      (node) => node.tagName === "LI" && textOf(node) === "feature",
+      (node) => props(node).role === "option" && textOf(node) === "feature",
     );
     expect(item).toBeDefined();
-    await click(item!);
+    await act(async () => {
+      props(item!).onClick();
+      if (repeat) props(item!).onClick();
+      await flushMicrotasks();
+    });
   };
 
   test("renders nothing without a project, while unconfirmed, for non-Git, or after a failed probe", async () => {
@@ -222,6 +226,26 @@ describe("BranchPicker context visibility", () => {
       expect(textOf(container)).toBe("current-branch");
     },
   );
+
+  test("coalesces repeated branch activation while the status probe is pending", async () => {
+    const pendingStatus = deferred<{ clean: boolean }>();
+    let probes = 0;
+    status = () => {
+      probes += 1;
+      return pendingStatus.promise;
+    };
+    await render("project-a", "/repo-a");
+    await settle(0, repo());
+    await chooseFeature(true);
+    expect(probes).toBe(1);
+    expect(switches).toHaveLength(0);
+    await act(async () => {
+      pendingStatus.resolve({ clean: true });
+      await flushMicrotasks();
+    });
+    expect(switches).toHaveLength(1);
+    expect(switches[0]!.branch).toBe("feature");
+  });
 
   test("does not start an old project's branch switch after its status probe completes", async () => {
     const pendingStatus = deferred<{ clean: boolean }>();
