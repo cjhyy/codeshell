@@ -15,7 +15,12 @@ directory holds three complementary views:
 
 Most subsystem chapters embed generated PNG architecture diagrams under
 [`images/`](images/); newer focused chapters may use source-controlled Mermaid
-when that keeps the relationship easier to maintain.
+when that keeps the relationship easier to maintain. Interactive Archify diagrams
+(standalone HTML viewers plus their JSON sources) live under
+[`archify/`](archify/): the runtime overview, the platform-consolidation
+target, and the two full-repository Run / Steer / Stop sequence diagrams.
+Regenerated visual-check runs and earlier iterations are git-ignored there and
+must never be written to the repo root.
 
 The subsystem chapters and feature inventory describe the as-built system. For
 _what changed in which release_ see the

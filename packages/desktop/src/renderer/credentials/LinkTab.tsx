@@ -45,6 +45,13 @@ import { linkCredentialProvider, mergeLinkDirectoryProviders } from "./linkDirec
 import { linkOAuthPrimaryAction } from "./link-oauth-actions";
 import { LinkConnectionDialog } from "./LinkConnectionDialog";
 import { FigmaConnectionCard } from "./FigmaConnectionCard";
+import {
+  LinkAccountMenu,
+  LinkConnectionOption,
+  LinkPresentationContext,
+  useLinkPrimaryAction,
+} from "./LinkPresentation";
+import { selectPrimaryLinkOption } from "./linkPrimaryConnection";
 import type { MaskedCredentialView } from "./types";
 import { DingTalkSetupDialog } from "./DingTalkSetupDialog";
 import type {
@@ -758,7 +765,7 @@ export function LinkTab({ cwd }: { cwd: string }) {
         item.connectionMethods.some(
           (method) => method.availability === "available" && Boolean(method.oauthProfileId),
         );
-      const needsAttention = saved > connected;
+      const needsAttention = saved > 0 && connected === 0;
       const accountNames = [
         ...new Set([
           ...accounts.map((account) => account.account?.label ?? account.label),
@@ -1026,6 +1033,7 @@ export function LinkTab({ cwd }: { cwd: string }) {
                 item,
                 categoryTitle,
                 provider,
+                accounts,
                 connected,
                 saved,
                 available,
@@ -1036,21 +1044,79 @@ export function LinkTab({ cwd }: { cwd: string }) {
                   (entry) => entry.item.id === item.id,
                 );
                 const methods = methodEntries.map((entry) => (
-                  <LinkMethodCard
+                  <LinkConnectionOption
                     key={`${entry.method.id}:${entry.credential?.id ?? "new"}`}
-                    entry={entry}
-                    liveness={entry.credential ? cliLiveness[entry.credential.id] : undefined}
-                    busy={busyId === linkMethodStateKey(item.id, entry.method)}
-                    error={errors[linkMethodStateKey(item.id, entry.method)]}
-                    onLocalConnect={() => openLocalDialog(entry)}
-                    onLocalDisconnect={() => disconnectLocal(entry)}
-                    onServerLogin={(credential) => onServerLogin(item, entry.method, credential)}
-                    onServerRefresh={(credential) =>
-                      onServerRefresh(item, entry.method, credential)
-                    }
-                    onServerLogout={(credential) => onServerLogout(item, entry.method, credential)}
-                  />
+                    optionId={`method:${entry.method.id}:${entry.credential?.id ?? "new"}`}
+                  >
+                    <LinkMethodCard
+                      key={`${entry.method.id}:${entry.credential?.id ?? "new"}`}
+                      entry={entry}
+                      liveness={entry.credential ? cliLiveness[entry.credential.id] : undefined}
+                      busy={busyId === linkMethodStateKey(item.id, entry.method)}
+                      error={errors[linkMethodStateKey(item.id, entry.method)]}
+                      onLocalConnect={() => openLocalDialog(entry)}
+                      onLocalDisconnect={() => disconnectLocal(entry)}
+                      onServerLogin={(credential) => onServerLogin(item, entry.method, credential)}
+                      onServerRefresh={(credential) =>
+                        onServerRefresh(item, entry.method, credential)
+                      }
+                      onServerLogout={(credential) =>
+                        onServerLogout(item, entry.method, credential)
+                      }
+                    />
+                  </LinkConnectionOption>
                 ));
+                const hasRemote = Boolean(
+                  provider?.authModes?.some((mode) => mode.id === "remote-link") ||
+                  accounts.some((connection) => connection.authSource === "remote-link"),
+                );
+                const hasMcp =
+                  item.id === "figma" &&
+                  Boolean(
+                    provider?.authModes?.some((mode) => mode.id === "mcp-oauth") ||
+                    accounts.some((connection) => connection.authSource === "mcp-oauth"),
+                  );
+                const primaryOption = selectPrimaryLinkOption({
+                  provider,
+                  connections: accounts,
+                  options: [
+                    ...(hasRemote
+                      ? [
+                          {
+                            id: "remote-link",
+                            methodId:
+                              provider?.authModes?.find((mode) => mode.id === "remote-link")
+                                ?.methodId ?? "remote-link",
+                            available: provider?.authModes?.some(
+                              (mode) => mode.id === "remote-link" && mode.available,
+                            ),
+                          },
+                        ]
+                      : []),
+                    ...(hasMcp
+                      ? [
+                          {
+                            id: "mcp-oauth",
+                            methodId: "mcp",
+                            available: provider?.authModes?.some(
+                              (mode) => mode.id === "mcp-oauth" && mode.available,
+                            ),
+                          },
+                        ]
+                      : []),
+                    ...methodEntries.map((entry) => ({
+                      id: `method:${entry.method.id}:${entry.credential?.id ?? "new"}`,
+                      methodId: entry.method.id,
+                      credentialId: entry.credential?.id,
+                      usable: linkCredentialIsUsable(entry.credential),
+                      available:
+                        entry.available ??
+                        (entry.method.availability === "available" &&
+                          (entry.method.authKind === "token" ||
+                            Boolean(entry.method.oauthProfileId))),
+                    })),
+                  ],
+                });
                 const missingAccounts = credentials.filter(
                   (credential) =>
                     linkCredentialProvider(credential) === item.id &&
@@ -1067,6 +1133,8 @@ export function LinkTab({ cwd }: { cwd: string }) {
                     icon={integrationIcon(item.id)}
                     brandClass={item.brandClass}
                     brandText={item.brandText}
+                    primaryOption={primaryOption}
+                    hasConnections={saved > 0}
                     description={
                       item.id === "figma"
                         ? t("ext.link.directory.figmaDescription")
@@ -1136,23 +1204,20 @@ export function LinkTab({ cwd }: { cwd: string }) {
                       />
                     ) : (
                       <>
-                        {(provider?.authModes?.some((mode) => mode.id === "remote-link") ||
-                          remote.snapshot?.connections.some(
-                            (connection) =>
-                              connection.providerId === item.id &&
-                              connection.authSource === "remote-link",
-                          )) && (
-                          <RemoteProviderSection
-                            cwd={cwd}
-                            snapshot={remote.snapshot}
-                            loadError={remote.error}
-                            loading={remote.loading}
-                            reload={remote.reload}
-                            onChanged={() => void load().catch(() => undefined)}
-                            providerId={item.id}
-                            provider={provider}
-                            embedded
-                          />
+                        {hasRemote && (
+                          <LinkConnectionOption optionId="remote-link">
+                            <RemoteProviderSection
+                              cwd={cwd}
+                              snapshot={remote.snapshot}
+                              loadError={remote.error}
+                              loading={remote.loading}
+                              reload={remote.reload}
+                              onChanged={() => void load().catch(() => undefined)}
+                              providerId={item.id}
+                              provider={provider}
+                              embedded
+                            />
+                          </LinkConnectionOption>
                         )}
                         {methods}
                       </>
@@ -1940,13 +2005,25 @@ function LinkMethodCard({
     entry.available ??
     (method.availability === "available" &&
       (method.authKind === "token" || Boolean(method.oauthProfileId)));
+  const primary = useLinkPrimaryAction(`method:${method.id}:${credential?.id ?? "new"}`, {
+    onClick: local ? onLocalConnect : () => onServerLogin(credential),
+    disabled: busy || !available,
+  });
+  const presentation = React.useContext(LinkPresentationContext);
+  const showTechnical = !primary || Boolean(presentation?.advanced);
 
   return (
     <LinkConnectionRow
       data-link-method-provider={item.id}
       data-link-runtime={method.executionRuntime}
-      title={method.displayName}
-      technical={t(local ? "ext.link.localRuntime" : "ext.link.serverRuntime")}
+      title={
+        primary
+          ? (credential?.meta?.linkAccountLabel ?? credential?.label ?? item.name)
+          : method.displayName
+      }
+      technical={
+        showTechnical ? t(local ? "ext.link.localRuntime" : "ext.link.serverRuntime") : undefined
+      }
       status={
         credential
           ? status
@@ -1959,17 +2036,25 @@ function LinkMethodCard({
       <div className="mt-3 min-w-0 flex-1">
         {credential ? (
           <div className="mt-3 rounded-xl border border-border/60 bg-background/65 px-3 py-2 text-xs text-muted-foreground">
-            <div className="truncate font-medium text-foreground" title={credential.label}>
+            <div
+              hidden={primary}
+              className="truncate font-medium text-foreground"
+              title={credential.label}
+            >
               {credential.label}
             </div>
-            <div className="mt-0.5 truncate font-mono" title={credential.id}>
+            <div
+              hidden={!showTechnical}
+              className="mt-0.5 truncate font-mono"
+              title={credential.id}
+            >
               {credential.id}
               {credential.oauthStatus?.expiresAt
                 ? ` · ${new Date(credential.oauthStatus.expiresAt).toLocaleString()}`
                 : ""}
             </div>
             {local && usable && credential.meta?.linkAccountLabel ? (
-              <div className="mt-1 truncate text-muted-foreground">
+              <div hidden={!showTechnical} className="mt-1 truncate text-muted-foreground">
                 {t("ext.link.localCredentialVerified", {
                   account: credential.meta.linkAccountLabel,
                 })}
@@ -2015,7 +2100,7 @@ function LinkMethodCard({
             usable &&
             credential.meta?.linkExecutionBackend === "cli" &&
             method.quickAuth ? (
-              <div className="mt-1 text-xs text-muted-foreground">
+              <div hidden={!showTechnical} className="mt-1 text-xs text-muted-foreground">
                 {t("ext.link.connectedViaCli", { command: method.quickAuth.command })}
               </div>
             ) : null}
@@ -2056,7 +2141,10 @@ function LinkMethodCard({
       </div>
 
       <div className="mt-4 flex min-h-8 flex-wrap items-center justify-between gap-2 border-t border-border/55 pt-3">
-        <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+        <div
+          hidden={!showTechnical}
+          className="flex items-center gap-1.5 text-xs text-muted-foreground"
+        >
           {local ? (
             <>
               <HardDrive className="size-3.5 text-status-ok" aria-hidden />
@@ -2072,46 +2160,63 @@ function LinkMethodCard({
         <div className="flex shrink-0 flex-wrap items-center gap-1">
           {local && credential ? (
             <>
-              <Button
-                variant="secondary"
-                size="sm"
-                onClick={onLocalConnect}
-                disabled={busy || !available}
-              >
-                {t("ext.link.localReconnect")}
-              </Button>
-              <Button variant="ghost" size="sm" onClick={onLocalDisconnect} disabled={busy}>
-                {t("ext.link.localDisconnect")}
-              </Button>
+              {(!primary || !usable) && (
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  onClick={onLocalConnect}
+                  disabled={busy || !available}
+                >
+                  {t("ext.link.localReconnect")}
+                </Button>
+              )}
+              <LinkAccountMenu>
+                {primary && usable && (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={onLocalConnect}
+                    disabled={busy || !available}
+                  >
+                    {t("ext.link.localReconnect")}
+                  </Button>
+                )}
+                <Button variant="ghost" size="sm" onClick={onLocalDisconnect} disabled={busy}>
+                  {t("ext.link.localDisconnect")}
+                </Button>
+              </LinkAccountMenu>
             </>
           ) : !local && credential ? (
             <>
-              <Button
-                variant="secondary"
-                size="sm"
-                onClick={() =>
-                  primaryAction === "login"
-                    ? onServerLogin(credential)
-                    : onServerRefresh(credential)
-                }
-                disabled={busy}
-              >
-                {busy ? <RefreshCw className="size-3.5 animate-spin" aria-hidden /> : null}
-                {primaryAction === "login"
-                  ? t("ext.link.oauthRelogin")
-                  : t("ext.link.oauthRefresh")}
-              </Button>
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => onServerLogout(credential)}
-                disabled={busy}
-              >
-                {t("ext.link.oauthLogout")}
-              </Button>
+              <LinkAccountMenu>
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  onClick={() =>
+                    primaryAction === "login"
+                      ? onServerLogin(credential)
+                      : onServerRefresh(credential)
+                  }
+                  disabled={busy}
+                >
+                  {busy ? <RefreshCw className="size-3.5 animate-spin" aria-hidden /> : null}
+                  {primaryAction === "login"
+                    ? t("ext.link.oauthRelogin")
+                    : t("ext.link.oauthRefresh")}
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => onServerLogout(credential)}
+                  disabled={busy}
+                >
+                  {t("ext.link.oauthLogout")}
+                </Button>
+              </LinkAccountMenu>
             </>
           ) : (
             <Button
+              hidden={primary}
               variant={available ? "default" : "outline"}
               size="sm"
               onClick={local ? onLocalConnect : () => onServerLogin()}
