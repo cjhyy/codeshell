@@ -222,6 +222,12 @@ try {
   await win.getByRole("button", { name: title, exact: true }).click();
   await dismissTrust();
   await confined.assertWorker(electron, { requireWorker: false });
+  await win.evaluate(() => {
+    window.__panelOperationAnchors = [];
+    window.addEventListener("codeshell:add-anchor", (event) =>
+      window.__panelOperationAnchors.push(event.detail.anchor),
+    );
+  });
 
   const files = await openPanel("files");
   const alpha = files.locator("[data-files-path]").filter({ hasText: "alpha.txt" });
@@ -258,6 +264,24 @@ try {
   );
   report.cases.push(
     "Files real registered secondary-root selection reads its scoped files and switching back clears stale content",
+  );
+  await files.getByRole("button", { name: "评论此行", exact: true }).first().click();
+  const fileComment = files.getByRole("textbox", { name: "本地评论 · alpha.txt:1", exact: true });
+  await fileComment.fill("Canceled file comment");
+  await fileComment.press("Escape");
+  await fileComment.waitFor({ state: "hidden" });
+  assert.equal(await win.evaluate(() => window.__panelOperationAnchors.length), 0);
+  await files.getByRole("button", { name: "评论此行", exact: true }).first().click();
+  await fileComment.fill("Owned file line comment");
+  await files.getByRole("button", { name: "添加到输入框", exact: true }).click();
+  const fileAnchor = await win.evaluate(() => window.__panelOperationAnchors[0]);
+  assert.equal(fileAnchor.locator["文件"], join(projectPath, "alpha.txt"));
+  assert.equal(fileAnchor.locator["行号"], "1");
+  const fileChip = win.locator('[title^="Owned file line comment"]');
+  await fileChip.getByRole("button", { name: "移除标注", exact: true }).click();
+  await fileChip.waitFor({ state: "hidden" });
+  report.cases.push(
+    "Files line-comment Escape cancels; adding pins the exact file and line to the composer and removal clears it",
   );
 
   const browser = await navigate(`${origin}/a`, "Fixture A");
@@ -357,6 +381,43 @@ try {
   await writeFile(
     join(evidence, "browser-layouts.json"),
     JSON.stringify(report.browserLayouts, null, 2),
+  );
+  const pickButton = browser.getByRole("button", { name: "圈选元素(加入输入框)", exact: true });
+  async function pickHeading() {
+    await pickButton.click();
+    const rect = await guestValue(
+      "JSON.parse(JSON.stringify(document.querySelector('h1').getBoundingClientRect()))",
+    );
+    await activeGuest().click({ position: { x: rect.x + 10, y: rect.y + rect.height / 2 } });
+    await browser.getByRole("textbox", { name: "本地评论 · h1", exact: true }).waitFor();
+  }
+  await pickHeading();
+  const browserComment = browser.getByRole("textbox", { name: "本地评论 · h1", exact: true });
+  await browserComment.fill("Canceled browser comment");
+  await browserComment.press("Escape");
+  await browserComment.waitFor({ state: "hidden" });
+  assert.equal(await win.evaluate(() => window.__panelOperationAnchors.length), 1);
+  await pickButton.click();
+  await browser.getByRole("button", { name: "新选项卡", exact: true }).first().click();
+  await browser.getByRole("button", { name: "Fixture B", exact: true }).click();
+  await pickButton.waitFor();
+  await pickHeading();
+  await browserComment.fill("Owned browser element comment");
+  await browser.getByRole("button", { name: "添加到输入框", exact: true }).click();
+  const browserAnchor = await win.evaluate(() => window.__panelOperationAnchors[1]);
+  assert.equal(browserAnchor.locator["网址"], `${origin}/b`);
+  assert.equal(browserAnchor.locator["元素"], "h1");
+  await browser.getByTitle("Owned browser element comment", { exact: true }).click();
+  await browser.getByPlaceholder("评论…", { exact: true }).fill("Updated browser element comment");
+  await browser.getByRole("button", { name: "保存", exact: true }).click();
+  await browser.getByTitle("Updated browser element comment", { exact: true }).waitFor();
+  await browser.getByRole("button", { name: "删除", exact: true }).click();
+  await browser
+    .getByTitle("Updated browser element comment", { exact: true })
+    .waitFor({ state: "hidden" });
+  assert.equal(await win.getByRole("button", { name: "移除标注", exact: true }).count(), 0);
+  report.cases.push(
+    "Browser real element picking cancels on Escape/tab switch; saved marker carries the exact page and supports edit/save/delete",
   );
   await browser.locator('input[placeholder*="URL"]').fill("Keep A address while opening B");
   await browser.getByRole("button", { name: "新选项卡", exact: true }).last().click();

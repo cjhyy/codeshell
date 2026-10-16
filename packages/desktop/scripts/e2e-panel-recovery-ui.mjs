@@ -194,6 +194,18 @@ try {
   await electron.evaluate(({ dialog }, path) => {
     dialog.showOpenDialog = async () => ({ canceled: false, filePaths: [path] });
   }, source);
+  await writeFile(join(source, ".codeshell-panel/panel.json"), "{");
+  await first.getByRole("button", { name: "选择源码文件夹", exact: true }).click();
+  await first
+    .locator(".text-status-err")
+    .filter({ hasText: /JSON|manifest|panel\.json|Unexpected/ })
+    .waitFor();
+  assert.equal(
+    await binding(first, projects[0]),
+    undefined,
+    "Invalid source must not install or bind",
+  );
+  await writePackage("1.0.0");
   await first.getByRole("button", { name: "选择源码文件夹", exact: true }).click();
   await first.getByRole("dialog").getByText("storage", { exact: true }).waitFor();
   assert.equal(await binding(first, projects[0]), undefined, "Preview must not install or bind");
@@ -353,6 +365,7 @@ try {
       damagedPackageRepairUi: true,
       permissionReviewBeforeCommit: true,
       canceledPickerAndInstallReview: true,
+      invalidSourceRetry: true,
       canceledUpdateAndRestoreReview: true,
       doubleClickInstall: true,
       coldRestartPinnedPackages: true,
