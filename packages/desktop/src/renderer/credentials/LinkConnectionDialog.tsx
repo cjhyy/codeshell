@@ -57,7 +57,14 @@ export function LinkConnectionDialog({
 }) {
   const { t, lang } = useT();
   const [returnFocus] = React.useState(() => {
-    const element = typeof document !== "undefined" ? document.activeElement : null;
+    if (typeof document === "undefined") return null;
+    const active = document.activeElement;
+    // A selected menu item unmounts as authorization opens. Return to its stable
+    // account-actions launcher rather than retaining that disappearing item.
+    const launcherId = active
+      ?.closest("[data-link-account-menu]")
+      ?.getAttribute("data-link-account-menu-trigger");
+    const element = (launcherId && document.getElementById(launcherId)) || active;
     return element && "focus" in element ? (element as HTMLElement) : null;
   });
   const designContext = input.methodId === "mcp";

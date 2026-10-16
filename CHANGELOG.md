@@ -8,6 +8,12 @@ breaking.
 
 ## [Unreleased]
 
+### Fixed
+
+- Keep Link account menus visible in scrolling dialogs, give authorized Figma
+  files clear names and open actions, and separate alternative connections and
+  authorization-service diagnostics from everyday account management.
+
 ## [0.9.45] - 2026-10-16
 
 ### Added

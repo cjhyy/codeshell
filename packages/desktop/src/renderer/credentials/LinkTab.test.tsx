@@ -49,6 +49,81 @@ mock.module("@/components/ui/dialog", () => ({
     React.createElement("div", null, children),
 }));
 
+// These unit tests exercise account actions, not Radix positioning/focus. Keep
+// the original buttons and controlled disclosure; real portals run in Chrome.
+const MockDropdownContext = React.createContext<{
+  open: boolean;
+  setOpen: (open: boolean) => void;
+} | null>(null);
+mock.module("@/components/ui/dropdown-menu", () => ({
+  DropdownMenu: ({ open, defaultOpen = false, onOpenChange, children }: any) => {
+    const [internalOpen, setInternalOpen] = React.useState(defaultOpen);
+    return React.createElement(
+      MockDropdownContext.Provider,
+      {
+        value: {
+          open: open ?? internalOpen,
+          setOpen: (next: boolean) => {
+            setInternalOpen(next);
+            onOpenChange?.(next);
+          },
+        },
+      },
+      children,
+    );
+  },
+  DropdownMenuTrigger: ({ asChild, children, onClick, ...props }: any) => {
+    const context = React.useContext(MockDropdownContext)!;
+    const child = asChild ? React.Children.only(children) : null;
+    const triggerProps = {
+      ...props,
+      "aria-haspopup": "menu",
+      "aria-expanded": context.open,
+      onClick: (event: any) => {
+        if (props.disabled || child?.props.disabled) return;
+        child?.props.onClick?.(event);
+        onClick?.(event);
+        if (!event?.defaultPrevented) context.setOpen(!context.open);
+      },
+    };
+    return child
+      ? React.cloneElement(child, triggerProps)
+      : React.createElement("button", triggerProps, children);
+  },
+  DropdownMenuContent: ({
+    children,
+    align: _align,
+    sideOffset: _sideOffset,
+    collisionPadding: _collisionPadding,
+    onCloseAutoFocus: _onCloseAutoFocus,
+    onEscapeKeyDown: _onEscapeKeyDown,
+    ...props
+  }: any) =>
+    React.useContext(MockDropdownContext)!.open
+      ? React.createElement("div", { role: "menu", ...props }, children)
+      : null,
+  DropdownMenuItem: ({ asChild, children, disabled, onClick, onSelect, ...props }: any) => {
+    const context = React.useContext(MockDropdownContext)!;
+    const child = asChild ? React.Children.only(children) : null;
+    const unavailable = Boolean(disabled || child?.props.disabled);
+    const itemProps = {
+      ...props,
+      role: "menuitem",
+      disabled: unavailable,
+      onClick: (event: any) => {
+        if (unavailable) return;
+        child?.props.onClick?.(event);
+        onClick?.(event);
+        onSelect?.(event);
+        if (!event?.defaultPrevented) context.setOpen(false);
+      },
+    };
+    return child
+      ? React.cloneElement(child, itemProps)
+      : React.createElement("button", itemProps, children);
+  },
+}));
+
 const {
   buildCliLinkConnectionRequest,
   ChatGatewayTab,
@@ -150,6 +225,23 @@ function buttonWithAriaLabel(container: HTMLElement, label: string): any {
   return findElements(container, "BUTTON").find(
     (button) => reactPropsOf(button)["aria-label"] === label,
   );
+}
+
+async function openAccountMenu(container: HTMLElement) {
+  const trigger = buttonWithAriaLabel(container, "账号操作");
+  expect(trigger).toBeDefined();
+  expect(reactPropsOf(trigger)["aria-haspopup"]).toBe("menu");
+  if (!reactPropsOf(trigger)["aria-expanded"])
+    await act(async () => {
+      reactPropsOf(trigger).onClick();
+      await flushMicrotasks();
+    });
+  expect(reactPropsOf(trigger)["aria-expanded"]).toBe(true);
+  expect(
+    findElements(container, "DIV").filter(
+      (node) => reactPropsOf(node)["data-link-account-menu"] !== undefined,
+    ),
+  ).toHaveLength(1);
 }
 
 const LINK_PROVIDER_FIXTURES: LocalLinkProviderView[] = [
@@ -331,6 +423,7 @@ async function showAdvanced(dialog: HTMLElement, id: string) {
     (node) => reactPropsOf(node)["data-link-advanced-toggle"] === id,
   );
   expect(control).toBeDefined();
+  expect(reactChildText(reactPropsOf(control).children)).toBe("其他连接方式");
   if (!reactPropsOf(control)["aria-expanded"])
     await act(async () => {
       reactPropsOf(control).onClick();
@@ -683,7 +776,7 @@ describe("CodeShell account access to Link", () => {
             .filter((value): value is string => typeof value === "string"),
         )
         .join(" ");
-    const assertLocalOnly = () => {
+    const assertLocalOnly = async () => {
       expect(
         visibleElements(container, "SECTION").filter(
           (node) => reactPropsOf(node)["data-link-runtime"] === "server",
@@ -712,6 +805,7 @@ describe("CodeShell account access to Link", () => {
       const localMcp = findElements(container, "DIV").find(
         (node) => reactPropsOf(node)["data-figma-mcp-connection"] === "local-mcp",
       );
+      await openAccountMenu(localMcp);
       expect(reactPropsOf(buttonWithLabel(localMcp, "重新授权")).disabled).toBe(false);
       expect(summaries()).toContain("Local token account");
       expect(summaries()).toContain("Local MCP owner");
@@ -844,7 +938,7 @@ describe("CodeShell account access to Link", () => {
       const account = accountStatusFixture(async () => ({ ...SIGNED_IN_ACCOUNT, state }));
       const fixture = await renderAccountLinks(account.api);
       await fixture.showManagement();
-      fixture.assertLocalOnly();
+      await fixture.assertLocalOnly();
       fixture.assertUnchanged();
       expect(account.calls.slice(0, 2)).toEqual(["subscribe", "read"]);
     },
@@ -859,7 +953,7 @@ describe("CodeShell account access to Link", () => {
       const account = accountStatusFixture(async () => status);
       const fixture = await renderAccountLinks(account.api);
       await fixture.showManagement();
-      fixture.assertLocalOnly();
+      await fixture.assertLocalOnly();
       fixture.assertUnchanged();
     },
   );
@@ -870,7 +964,7 @@ describe("CodeShell account access to Link", () => {
     });
     const fixture = await renderAccountLinks(account.api);
     await fixture.showManagement();
-    fixture.assertLocalOnly();
+    await fixture.assertLocalOnly();
     fixture.assertUnchanged();
   });
 
@@ -878,13 +972,13 @@ describe("CodeShell account access to Link", () => {
     const account = accountStatusFixture(async () => ({ state: "signed-out" }));
     const fixture = await renderAccountLinks(account.api);
     await fixture.showManagement();
-    fixture.assertLocalOnly();
+    await fixture.assertLocalOnly();
     await account.emit(SIGNED_IN_ACCOUNT);
     await fixture.showManagement();
     fixture.assertCloudVisible();
     await account.emit({ state: "signed-out" });
     await fixture.showManagement();
-    fixture.assertLocalOnly();
+    await fixture.assertLocalOnly();
     fixture.assertUnchanged();
   });
 
@@ -902,14 +996,14 @@ describe("CodeShell account access to Link", () => {
       await account.emit(state === "signed-in" ? SIGNED_IN_ACCOUNT : { state });
       await fixture.showManagement();
       if (state === "signed-in") fixture.assertCloudVisible();
-      else fixture.assertLocalOnly();
+      else await fixture.assertLocalOnly();
       await act(async () => {
         resolve(state === "signed-in" ? { state: "signed-out" } : SIGNED_IN_ACCOUNT);
         await flushMicrotasks();
         await flushMicrotasks();
       });
       if (state === "signed-in") fixture.assertCloudVisible();
-      else fixture.assertLocalOnly();
+      else await fixture.assertLocalOnly();
       fixture.assertUnchanged();
     },
   );
@@ -1587,6 +1681,7 @@ describe("LinkTab integrations", () => {
         (node) => reactChildText(reactPropsOf(node).children) === "服务暂不可达",
       ),
     ).toBe(true);
+    await openAccountMenu(card);
     expect(buttonWithLabel(card, "断开")).toBeDefined();
   });
 
@@ -1690,6 +1785,7 @@ describe("LinkTab integrations", () => {
       ),
     ).toBe(true);
     expect(account.status).toBe("connected");
+    await openAccountMenu(card);
     expect(buttonWithLabel(card, "断开")).toBeDefined();
   });
 
@@ -2023,6 +2119,7 @@ describe("LinkTab integrations", () => {
       reactPropsOf(buttonWithLabel(authorizationDialog, "完成")).onClick();
       await flushMicrotasks();
     });
+    await openAccountMenu(providerDialog(container, "github"));
     expect(buttonWithLabel(container, "添加账号")).toBeDefined();
     expect(buttonWithLabel(container, "改名")).toBeDefined();
   });
@@ -2156,6 +2253,175 @@ describe("LinkTab integrations", () => {
     expect(cancelled).toContain("add-file-attempt");
     expect(buttonWithLabel(container, "添加文件")).toBeDefined();
   });
+
+  test("authorized Figma files open known URLs while raw keys and service diagnostics stay in other connections", async () => {
+    const connection: LinkSnapshot["connections"][number] = {
+      id: "figma-authorized-files",
+      providerId: "figma",
+      methodId: "remote-link",
+      runtime: "server",
+      authSource: "remote-link",
+      label: "Design account",
+      account: {
+        id: "designer",
+        label: "Designer",
+        resources: ["DisplayLabel"],
+        resourceGroups: [
+          {
+            id: "files",
+            items: [
+              { id: "FileOne", label: "Design" },
+              { id: "FallbackTwo", label: "FallbackTwo" },
+              { id: "invalid file key", label: "invalid file key" },
+            ],
+          },
+        ],
+      },
+      capabilityIds: ["figma.get_file"],
+      scope: "user",
+      status: "connected",
+      editable: true,
+      revision: "files-revision",
+    };
+    const container = await renderProjectedCatalog(
+      await projectedCatalog(["figma"]),
+      [],
+      [connection],
+    );
+    const opened: string[] = [];
+    const writes: unknown[][] = [];
+    Object.assign(window.codeshell, {
+      openExternal: async (url: string) => {
+        opened.push(url);
+      },
+    });
+    const write = async (...args: unknown[]) => {
+      writes.push(args);
+      throw new Error("Opening an authorized file must not alter its grants");
+    };
+    Object.assign(window.codeshell.links, {
+      authorizationStart: write,
+      authorizationCancel: write,
+      remoteDisconnect: write,
+    });
+    const dialog = await expandProvider(container, "figma");
+    const files = findElements(dialog, "DIV").find(
+      (node) => reactPropsOf(node)["data-link-authorized-files"] !== undefined,
+    );
+    expect(files).toBeDefined();
+    expect(
+      findElements(files, "P").map((node) => reactChildText(reactPropsOf(node).children)),
+    ).toEqual(["已授权文件 · 3", "Figma 文件 3"]);
+    expect(visibleElements(files, "CODE")).toHaveLength(0);
+    expect(
+      visibleElements(dialog, "DIV").filter(
+        (node) => reactPropsOf(node)["data-link-service-diagnostics"] !== undefined,
+      ),
+    ).toHaveLength(0);
+    expect(buttonWithAriaLabel(files, "在 Figma 中打开 Figma 文件 3")).toBeUndefined();
+    await act(async () => {
+      reactPropsOf(buttonWithAriaLabel(files, "在 Figma 中打开 Design")).onClick();
+      reactPropsOf(buttonWithAriaLabel(files, "在 Figma 中打开 Figma 文件 2")).onClick();
+      await flushMicrotasks();
+    });
+    expect(opened).toEqual([
+      "https://www.figma.com/design/FileOne",
+      "https://www.figma.com/design/FallbackTwo",
+    ]);
+    expect(writes).toHaveLength(0);
+    await showAdvanced(dialog, "figma");
+    expect(
+      visibleElements(files, "CODE").map((node) => reactChildText(reactPropsOf(node).children)),
+    ).toEqual(["FileOne", "FallbackTwo", "invalid file key"]);
+    const diagnostics = visibleElements(dialog, "DIV").find(
+      (node) => reactPropsOf(node)["data-link-service-diagnostics"] !== undefined,
+    );
+    expect(
+      findElements(diagnostics, "P").map((node) => reactChildText(reactPropsOf(node).children)),
+    ).toEqual([
+      "Link 授权服务",
+      "此服务负责浏览器授权与连接管理。下方地址仅用于排障。",
+      "https://fixture.invalid",
+    ]);
+    const toggle = findElements(dialog, "BUTTON").find(
+      (node) => reactPropsOf(node)["data-link-advanced-toggle"] === "figma",
+    );
+    await act(async () => {
+      reactPropsOf(toggle).onClick();
+      await flushMicrotasks();
+    });
+    expect(visibleElements(files, "CODE")).toHaveLength(0);
+    expect(visibleElements(dialog, "DIV")).not.toContain(diagnostics);
+    expect(findElements(dialog, "DIV")).toContain(diagnostics);
+    expect(findElements(dialog, "DIV")).toContain(files);
+    expect(connection.account!.resources).toEqual(["DisplayLabel"]);
+    expect(connection.revision).toBe("files-revision");
+    expect(opened).toHaveLength(2);
+    expect(writes).toHaveLength(0);
+  });
+
+  test.each([false, true])(
+    "display labels cannot grant a Figma open URL (explicit empty file group: %s)",
+    async (emptyFileGroup) => {
+      const connection: LinkSnapshot["connections"][number] = {
+        id: "figma-display-label-only",
+        providerId: "figma",
+        methodId: "remote-link",
+        runtime: "server",
+        authSource: "remote-link",
+        label: "Design account",
+        account: {
+          id: "designer",
+          label: "Designer",
+          resources: ["LooksLikeAValidKey"],
+          ...(emptyFileGroup ? { resourceGroups: [{ id: "files", items: [] }] } : {}),
+        },
+        capabilityIds: ["figma.get_file"],
+        scope: "user",
+        status: "connected",
+        editable: true,
+        revision: "display-revision",
+      };
+      const container = await renderProjectedCatalog(
+        await projectedCatalog(["figma"]),
+        [],
+        [connection],
+      );
+      const calls: unknown[][] = [];
+      const unexpected = async (...args: unknown[]) => {
+        calls.push(args);
+      };
+      Object.assign(window.codeshell, { openExternal: unexpected });
+      Object.assign(window.codeshell.links, {
+        authorizationStart: unexpected,
+        authorizationCancel: unexpected,
+        remoteDisconnect: unexpected,
+      });
+      const dialog = await expandProvider(container, "figma");
+      const files = findElements(dialog, "DIV").filter(
+        (node) => reactPropsOf(node)["data-link-authorized-files"] !== undefined,
+      );
+      expect(files).toHaveLength(emptyFileGroup ? 0 : 1);
+      expect(
+        visibleElements(dialog, "P").map((node) => reactChildText(reactPropsOf(node).children)),
+      ).not.toContain("LooksLikeAValidKey");
+      if (!emptyFileGroup) {
+        expect(
+          findElements(files[0], "P").map((node) => reactChildText(reactPropsOf(node).children)),
+        ).toEqual(["已授权文件 · 1", "Figma 文件 1"]);
+        expect(visibleElements(files[0], "CODE")).toHaveLength(0);
+      }
+      expect(
+        visibleElements(dialog, "BUTTON").filter((node) =>
+          reactPropsOf(node)["aria-label"]?.startsWith("在 Figma 中打开"),
+        ),
+      ).toHaveLength(0);
+      await showAdvanced(dialog, "figma");
+      expect(calls).toHaveLength(0);
+      expect(connection.account!.resources).toEqual(["LooksLikeAValidKey"]);
+      expect(connection.revision).toBe("display-revision");
+    },
+  );
 
   test("uses a sole valid connection and requires a choice when several are saved", () => {
     const local: MaskedCredentialView = {
@@ -3155,6 +3421,7 @@ describe("LinkTab integrations", () => {
           (node) => reactChildText(reactPropsOf(node).children) === "Figma OAuth",
         ),
       );
+      await openAccountMenu(oauthRow);
       const refresh = buttonWithLabel(oauthRow, "刷新");
       expect(refresh).toBeDefined();
       await act(async () => {
@@ -3164,6 +3431,7 @@ describe("LinkTab integrations", () => {
         await flushMicrotasks();
       });
 
+      await openAccountMenu(oauthRow);
       const relogin = buttonWithLabel(container, "重新登录");
       expect(relogin).toBeDefined();
       await act(async () => {
@@ -3368,6 +3636,15 @@ describe("Link metadata request lifecycle", () => {
         reactChildText(reactPropsOf(node).children),
       ),
     ).toContain("cjhyy · 3 个连接");
+    const title = findElements(card, "DIV").find(
+      (node) => reactChildText(reactPropsOf(node).children) === "GitHub",
+    );
+    expect(title).toBeDefined();
+    expect(
+      findElements(title.parentNode, "P").map((node) =>
+        reactChildText(reactPropsOf(node).children),
+      ),
+    ).toEqual(["3 个连接"]);
     const remoteAccounts = findElements(card, "ARTICLE").filter(
       (node) => reactPropsOf(node)["data-remote-link"],
     );
@@ -3518,6 +3795,7 @@ describe("Link metadata request lifecycle", () => {
         (item) => reactChildText(reactPropsOf(item).children) === "Saved OAuth",
       ),
     );
+    await openAccountMenu(row);
     await act(async () => {
       reactPropsOf(buttonWithLabel(row, "刷新")).onClick();
       await flushMicrotasks();
@@ -3629,12 +3907,70 @@ describe("Link metadata request lifecycle", () => {
       await flushMicrotasks();
     });
     const card = await expandProvider(container, "github");
-    expect(reactChildText(reactPropsOf(card).children)).toContain("second-account");
-    expect(reactChildText(reactPropsOf(card).children)).not.toContain("first-account");
+    const accountLabels = methodRows(card, "github", "local").flatMap((row) =>
+      findElements(row, "H5").map((node) => reactChildText(reactPropsOf(node).children)),
+    );
+    expect(accountLabels).toContain("second-account");
+    expect(accountLabels).not.toContain("first-account");
   });
 });
 
 describe("Link app dialog mutation lifecycle", () => {
+  test("an account menu preserves disconnect confirmation and cancellation without submitting a write", async () => {
+    const connection: LinkSnapshot["connections"][number] = {
+      id: "cancel-disconnect-account",
+      providerId: "github",
+      methodId: "remote-link",
+      runtime: "server",
+      authSource: "remote-link",
+      label: "Saved account",
+      account: { id: "saved-owner", label: "Saved owner", resources: ["owner/repo"] },
+      status: "connected",
+      capabilityIds: [],
+      revision: "original-revision",
+      scope: "user",
+      editable: true,
+    };
+    const container = await renderProjectedCatalog(
+      await projectedCatalog(["github"]),
+      [],
+      [connection],
+    );
+    const writes: unknown[][] = [];
+    const write = async (...args: unknown[]) => {
+      writes.push(args);
+    };
+    Object.assign(window.codeshell.links, {
+      remoteDisconnect: write,
+      authorizationStart: write,
+      authorizationCancel: write,
+    });
+    const dialog = await expandProvider(container, "github");
+    expect(buttonWithLabel(dialog, "断开")).toBeUndefined();
+    await openAccountMenu(dialog);
+    await act(async () => {
+      reactPropsOf(buttonWithLabel(dialog, "断开")).onClick();
+      await flushMicrotasks();
+    });
+    expect(reactPropsOf(buttonWithAriaLabel(dialog, "账号操作"))["aria-expanded"]).toBe(false);
+    expect(writes).toHaveLength(0);
+    const confirmation = buttonWithLabel(dialog, "确认断开");
+    expect(confirmation).toBeDefined();
+    await showAdvanced(dialog, "github");
+    expect(buttonWithLabel(dialog, "确认断开")).toBe(confirmation);
+    await act(async () => {
+      reactPropsOf(buttonWithLabel(dialog, "取消")).onClick();
+      await flushMicrotasks();
+    });
+    expect(buttonWithLabel(dialog, "确认断开")).toBeUndefined();
+    expect(writes).toHaveLength(0);
+    await openAccountMenu(dialog);
+    expect(buttonWithLabel(dialog, "断开")).toBeDefined();
+    expect(connection.revision).toBe("original-revision");
+    await closeProviderDialog(container, "github");
+    expect(writes).toHaveLength(0);
+  });
+
   test.each(["remote-disconnect", "figma-refresh"] as const)(
     "%s refreshes the parent directory when a submitted operation finishes after its app dialog closes",
     async (operation) => {
@@ -3969,6 +4305,7 @@ describe("unified Figma connection card", () => {
         ...findElements(container, "DIV"),
         ...findElements(container, "SECTION"),
       ].find((node) => reactPropsOf(node)["data-figma-channel"] === "mcp");
+      if (!buttonWithLabel(channel, label)) await openAccountMenu(channel);
       const button = buttonWithLabel(channel, label);
       expect(button).toBeDefined();
       await act(async () => {
@@ -4061,6 +4398,11 @@ describe("unified Figma connection card", () => {
     f.setSnapshot({ ...f.snapshot(), connections: [apiConnection, mcpConnection] });
     await f.click("连接设计上下文");
     expect(f.starts).toHaveLength(0);
+    await openAccountMenu(
+      findElements(f.container, "SECTION").find(
+        (node) => reactPropsOf(node)["data-figma-channel"] === "mcp",
+      ),
+    );
     expect(buttonWithLabel(f.container, "刷新授权")).toBeDefined();
     expect(f.snapshot().connections).toEqual([apiConnection, mcpConnection]);
   });

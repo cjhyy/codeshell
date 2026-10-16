@@ -1,5 +1,11 @@
 import React from "react";
 import { MoreHorizontal } from "lucide-react";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { useT } from "../i18n/I18nProvider";
 
 export interface LinkPrimaryAction {
@@ -59,7 +65,7 @@ export function LinkConnectionOption({
   );
 }
 
-/** A disclosure with normal buttons keeps keyboard focus and destructive confirmations intact. */
+/** Portal and collision handling keep account actions reachable inside scrolling dialogs. */
 export function LinkAccountMenu({
   children,
   label,
@@ -70,49 +76,37 @@ export function LinkAccountMenu({
   const context = React.useContext(LinkPresentationContext);
   const { t } = useT();
   const [open, setOpen] = React.useState(false);
-  const id = React.useId();
-  const trigger = React.useRef<HTMLButtonElement>(null);
+  const triggerId = React.useId();
   if (!context) return <>{children}</>;
   return (
-    <div
-      className="relative inline-flex"
-      data-link-account-menu-open={open}
-      onBlur={(event) => {
-        if (!event.currentTarget.contains(event.relatedTarget as Node | null)) setOpen(false);
-      }}
-      onKeyDown={(event) => {
-        if (open && event.key === "Escape") {
-          event.stopPropagation();
-          setOpen(false);
-          trigger.current?.focus({ preventScroll: true });
-        }
-      }}
-    >
-      <button
-        ref={trigger}
-        type="button"
-        aria-label={label ?? t("ext.link.directory.accountActions")}
-        aria-expanded={open}
-        aria-controls={id}
-        onClick={() => setOpen((value) => !value)}
-        className="inline-flex size-8 items-center justify-center rounded-lg text-muted-foreground hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+    <DropdownMenu open={open} onOpenChange={setOpen}>
+      <DropdownMenuTrigger asChild>
+        <button
+          id={triggerId}
+          type="button"
+          aria-label={label ?? t("ext.link.directory.accountActions")}
+          data-link-account-menu-open={open}
+          className="inline-flex size-8 items-center justify-center rounded-lg text-muted-foreground hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+        >
+          <MoreHorizontal aria-hidden className="size-4" />
+        </button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent
+        align="start"
+        aria-labelledby={triggerId}
+        data-link-account-menu
+        data-link-account-menu-trigger={triggerId}
+        onEscapeKeyDown={(event) => event.stopPropagation()}
+        className="flex min-w-40 flex-col items-stretch gap-1 [&_button]:w-full [&_button]:justify-start"
       >
-        <MoreHorizontal aria-hidden className="size-4" />
-      </button>
-      <div
-        id={id}
-        hidden={!open}
-        onClick={(event) => {
-          const button = (event.target as Element).closest("button");
-          if (button && !(button as HTMLButtonElement).disabled) {
-            setOpen(false);
-            trigger.current?.focus();
-          }
-        }}
-        className="absolute left-0 top-full z-20 mt-1 flex min-w-40 flex-col items-stretch gap-1 rounded-xl border border-border bg-popover p-1.5 shadow-lg [&_button]:justify-start"
-      >
-        {children}
-      </div>
-    </div>
+        {React.Children.map(children, (child) =>
+          React.isValidElement<{ disabled?: boolean }>(child) ? (
+            <DropdownMenuItem asChild disabled={child.props.disabled}>
+              {child}
+            </DropdownMenuItem>
+          ) : null,
+        )}
+      </DropdownMenuContent>
+    </DropdownMenu>
   );
 }

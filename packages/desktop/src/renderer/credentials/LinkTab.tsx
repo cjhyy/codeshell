@@ -1224,6 +1224,7 @@ export function LinkTab({ cwd }: { cwd: string }) {
                     brandText={item.brandText}
                     primaryOption={primaryOption}
                     hasConnections={saved > 0}
+                    connectionCount={saved}
                     localOnly={!cloudAvailable}
                     description={
                       item.id === "figma"

@@ -12,6 +12,7 @@ const fixtures = [
   "settings/SettingsPage.focus.browser.fixture.mjs",
   "settings/ConnectionsSettings.browser.fixture.mjs",
   "settings/McpDetailDialogs.browser.fixture.mjs",
+  "credentials/LinkProviderDialog.browser.fixture.mjs",
   "shell/SearchDialog.browser.fixture.mjs",
   "pages/HistoryPages.browser.fixture.mjs",
   "activity/ActivityPages.browser.fixture.mjs",

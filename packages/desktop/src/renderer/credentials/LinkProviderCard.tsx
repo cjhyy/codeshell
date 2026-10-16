@@ -52,6 +52,7 @@ export function LinkProviderCard({
   status,
   tone,
   accounts,
+  connectionCount = 0,
   primaryOption,
   hasConnections = false,
   localOnly = false,
@@ -68,6 +69,7 @@ export function LinkProviderCard({
   status: string;
   tone?: LinkStatusTone;
   accounts?: string;
+  connectionCount?: number;
   primaryOption?: string;
   hasConnections?: boolean;
   localOnly?: boolean;
@@ -182,9 +184,9 @@ export function LinkProviderCard({
             trigger.current?.focus({ preventScroll: true });
           }}
         >
-          <DialogHeader className="border-b border-border/60 p-6 pr-12 text-left sm:text-left">
+          <DialogHeader className="border-b border-border/60 p-4 pr-10 text-left sm:p-6 sm:pr-12 sm:text-left [@media(max-height:420px)]:p-3 [@media(max-height:420px)]:pr-10">
             <div className="flex min-w-0 items-center gap-3">
-              <span className="flex size-11 shrink-0 items-center justify-center rounded-xl border border-border/55 bg-background">
+              <span className="flex size-11 shrink-0 items-center justify-center rounded-xl border border-border/55 bg-background [@media(max-height:420px)]:size-9">
                 <LinkServiceIcon providerId={id} name={name} className="size-6" />
               </span>
               <div className="min-w-0 flex-1">
@@ -195,63 +197,70 @@ export function LinkProviderCard({
                 >
                   {name}
                 </DialogTitle>
-                {accounts && (
-                  <p className="mt-1 break-words text-xs text-muted-foreground">{accounts}</p>
+                {connectionCount > 0 && (
+                  <p className="mt-1 text-xs text-muted-foreground">
+                    {t("ext.link.directory.connectionCount", { count: connectionCount })}
+                  </p>
                 )}
               </div>
               <LinkStatus tone={tone}>{status}</LinkStatus>
             </div>
-            <DialogDescription className="pt-2 text-xs leading-5">{description}</DialogDescription>
+            <DialogDescription className="pt-2 text-xs leading-5 [@media(max-height:420px)]:sr-only [@media(max-height:420px)]:p-0">
+              {description}
+            </DialogDescription>
           </DialogHeader>
           <div
+            id={advancedId}
             data-link-provider-details={id}
-            className="min-h-0 min-w-0 overflow-y-auto overscroll-contain px-6 [overflow-wrap:anywhere]"
+            className="min-h-0 min-w-0 overflow-y-auto overscroll-contain px-4 [overflow-wrap:anywhere] sm:px-6"
           >
-            {children}
             {primaryOption && (
-              <div className="border-t border-border/55 py-4">
-                <button
-                  type="button"
-                  data-link-advanced-toggle={id}
-                  aria-expanded={advanced}
-                  aria-controls={advancedId}
-                  onClick={() => setAdvanced((value) => !value)}
-                  className="inline-flex items-center gap-1.5 rounded-md py-1 text-xs text-muted-foreground hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                >
-                  {t("ext.link.directory.advancedSettings")}
-                  <ChevronDown
-                    aria-hidden
-                    className={cn("size-3 transition-transform", advanced && "rotate-180")}
-                  />
-                </button>
-                <p
-                  id={advancedId}
-                  hidden={!advanced}
-                  className="mt-1 text-xs leading-5 text-muted-foreground"
-                >
-                  {t("ext.link.directory.advancedHint")}
-                </p>
-              </div>
+              <p hidden={!advanced} className="pt-4 text-xs leading-5 text-muted-foreground">
+                {t("ext.link.directory.advancedHint")}
+              </p>
             )}
+            {children}
           </div>
-          <DialogFooter className="flex-row items-center justify-end gap-2 border-t border-border/60 bg-muted/20 px-6 py-4 sm:space-x-0">
-            <Button variant="outline" data-link-dialog-close={id} onClick={() => setOpen(false)}>
-              {t("ext.link.directory.closeDialog")}
-            </Button>
-            {!hasConnections && primaryOption && (
-              <Button
-                data-link-dialog-connect={id}
-                disabled={!action || action.disabled}
-                onClick={() => action?.onClick()}
+          <DialogFooter className="flex-row flex-wrap items-center justify-between gap-2 border-t border-border/60 bg-muted/20 px-4 py-3 sm:justify-between sm:space-x-0 sm:px-6 sm:py-4 [@media(max-height:420px)]:py-3">
+            {primaryOption ? (
+              <button
+                type="button"
+                data-link-advanced-toggle={id}
+                aria-expanded={advanced}
+                aria-controls={advancedId}
+                onClick={() => setAdvanced((value) => !value)}
+                className="inline-flex items-center gap-1.5 rounded-md py-1 text-xs text-muted-foreground hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
               >
-                {t(
-                  localOnly
-                    ? "ext.link.directory.connectAppLocally"
-                    : "ext.link.directory.connectApp",
-                  { name },
-                )}
-              </Button>
+                {t("ext.link.directory.otherConnections")}
+                <ChevronDown
+                  aria-hidden
+                  className={cn("size-3 transition-transform", advanced && "rotate-180")}
+                />
+              </button>
+            ) : (
+              <span />
             )}
+            <div className="ml-auto flex min-w-0 max-w-full flex-wrap items-center justify-end gap-2">
+              <Button
+                size="sm"
+                variant="outline"
+                data-link-dialog-close={id}
+                onClick={() => setOpen(false)}
+              >
+                {t("ext.link.directory.closeDialog")}
+              </Button>
+              {!hasConnections && primaryOption && (
+                <Button
+                  size="sm"
+                  data-link-dialog-connect={id}
+                  className="h-auto min-h-8 min-w-0 max-w-full whitespace-normal"
+                  disabled={!action || action.disabled}
+                  onClick={() => action?.onClick()}
+                >
+                  {t("ext.link.remoteConnect")}
+                </Button>
+              )}
+            </div>
           </DialogFooter>
         </DialogContent>
       </Dialog>

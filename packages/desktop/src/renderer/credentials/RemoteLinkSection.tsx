@@ -1,5 +1,5 @@
 import React from "react";
-import { Cable, Check, Figma, Github, Settings2 } from "lucide-react";
+import { Cable, Check, ExternalLink, Figma, FileText, Github, Settings2 } from "lucide-react";
 import type { LinkProviderView, LinkSnapshot, MaskedLinkConnection } from "@cjhyy/code-shell-link";
 import { Button } from "@/components/ui/button";
 import {
@@ -77,6 +77,15 @@ function linkError(cause: unknown): string {
   return cause instanceof Error
     ? cause.message.replace(/^Error invoking remote method '[^']+': (?:Error: )?/, "")
     : String(cause);
+}
+
+function authorizedFigmaFiles(
+  connection: MaskedLinkConnection,
+): Array<{ id?: string; label: string }> {
+  const files = connection.account?.resourceGroups?.find((group) => group.id === "files");
+  // Display labels are not file keys. Legacy snapshots can still list their
+  // files, but only an exact Host-selected reference gets an open action.
+  return files?.items ?? connection.account?.resources.map((label) => ({ label })) ?? [];
 }
 
 /** One card per advertised provider, including saved accounts that are currently offline. */
@@ -263,7 +272,7 @@ export function RemoteProviderSection({
           !(
             providerId === "figma" &&
             connected.length > 0 &&
-            connected.every((item) => !item.account?.resources.length)
+            connected.every((item) => !authorizedFigmaFiles(item).length)
           ),
         )}
         data-link-method-provider={providerId}
@@ -354,7 +363,7 @@ export function RemoteProviderSection({
         )}
         {providerId === "figma" &&
           connected.length > 0 &&
-          connected.every((item) => !item.account?.resources.length) && (
+          connected.every((item) => !authorizedFigmaFiles(item).length) && (
             <p className="mt-2 text-xs text-muted-foreground">{t("ext.link.remoteNoFiles")}</p>
           )}
         {!available && connections.length > 0 && (
@@ -381,22 +390,30 @@ export function RemoteProviderSection({
             </DialogHeader>
           )}
           {feedback}
-          {connections.map((connection) => (
+          {connections.map((connection, connectionIndex) => (
             <article
               key={connection.id}
               data-remote-link={connection.id}
               className={
                 inline
-                  ? "space-y-3 border-b border-border/60 pb-4 last:border-b-0"
+                  ? `space-y-3 ${connectionIndex < connections.length - 1 ? "border-b border-border/60 pb-4" : ""}`
                   : "space-y-3 rounded-xl border border-border/70 p-3"
               }
             >
               <div className="flex items-start justify-between gap-3">
                 <div className="min-w-0">
-                  <strong className="block truncate text-sm">{connection.label}</strong>
-                  <p className="mt-1 truncate text-xs text-muted-foreground">
-                    {connection.account?.label ?? providerName}
-                  </p>
+                  <strong className="block break-words text-sm">
+                    {connection.label === providerName
+                      ? (connection.account?.label ?? connection.label)
+                      : connection.label}
+                  </strong>
+                  {connection.account?.label &&
+                    connection.account.label !== connection.label &&
+                    connection.label !== providerName && (
+                      <p className="mt-1 break-words text-xs text-muted-foreground">
+                        {connection.account.label}
+                      </p>
+                    )}
                 </div>
                 <span className="text-xs text-muted-foreground">
                   {t(
@@ -408,10 +425,67 @@ export function RemoteProviderSection({
                   )}
                 </span>
               </div>
-              {!!connection.account?.resources.length && (
-                <p className="break-words text-xs text-muted-foreground">
-                  {connection.account.resources.join(" · ")}
-                </p>
+              {providerId === "figma" && authorizedFigmaFiles(connection).length ? (
+                <div className="space-y-1 rounded-lg bg-muted/30 p-3" data-link-authorized-files>
+                  <p className="mb-2 text-xs font-medium">
+                    {t("ext.link.remoteAuthorizedFiles", {
+                      count: authorizedFigmaFiles(connection).length,
+                    })}
+                  </p>
+                  {authorizedFigmaFiles(connection).map((file, index) => {
+                    const name =
+                      file.id && file.label.trim() && file.label !== file.id
+                        ? file.label
+                        : t("ext.link.remoteFigmaFile", { index: index + 1 });
+                    const url =
+                      file.id && /^[a-zA-Z0-9_-]{1,128}$/.test(file.id)
+                        ? `https://www.figma.com/design/${encodeURIComponent(file.id)}`
+                        : undefined;
+                    return (
+                      <div
+                        key={`${file.id ?? "legacy"}:${index}`}
+                        data-link-authorized-file={file.id ?? `legacy:${index}`}
+                        className="min-w-0"
+                      >
+                        {url ? (
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="h-auto w-full justify-start gap-2 whitespace-normal px-1 py-1.5 text-xs"
+                            aria-label={t("ext.link.remoteOpenFile", { name })}
+                            onClick={() =>
+                              void window.codeshell.openExternal(url).catch((cause) => {
+                                if (alive.current) setError(linkError(cause));
+                              })
+                            }
+                          >
+                            <FileText className="size-3.5 shrink-0" aria-hidden />
+                            <span className="min-w-0 flex-1 break-words text-left">{name}</span>
+                            <ExternalLink
+                              className="size-3 shrink-0 text-muted-foreground"
+                              aria-hidden
+                            />
+                          </Button>
+                        ) : (
+                          <p className="text-xs leading-5">{name}</p>
+                        )}
+                        <code
+                          hidden={!showTechnical}
+                          className="block break-all text-[11px] text-muted-foreground"
+                        >
+                          {file.id ?? file.label}
+                        </code>
+                      </div>
+                    );
+                  })}
+                </div>
+              ) : (
+                providerId !== "figma" &&
+                !!connection.account?.resources.length && (
+                  <p className="break-words text-xs text-muted-foreground">
+                    {connection.account.resources.join(" · ")}
+                  </p>
+                )
               )}
               {rename === connection.id && (
                 <form
@@ -558,10 +632,15 @@ export function RemoteProviderSection({
             </LinkAccountMenu>
           ) : null}
           {snapshot?.remoteServer && (
-            <details hidden={!showTechnical} className="text-xs text-muted-foreground">
-              <summary className="cursor-pointer">{t("ext.link.remoteServiceDetails")}</summary>
-              <p className="mt-2 break-all">{snapshot.remoteServer.issuer}</p>
-            </details>
+            <div
+              hidden={!showTechnical}
+              data-link-service-diagnostics
+              className="space-y-1 rounded-lg bg-muted/30 p-3 text-xs text-muted-foreground"
+            >
+              <p className="font-medium text-foreground">{t("ext.link.remoteServiceDetails")}</p>
+              <p className="leading-5">{t("ext.link.remoteServiceDescription")}</p>
+              <p className="break-all font-mono text-[11px]">{snapshot.remoteServer.issuer}</p>
+            </div>
           )}
         </ManagementContent>
       </Management>
