@@ -601,13 +601,20 @@ export class McpOAuthService {
     )
       throw new Error("OAuth credential is unavailable");
     const secret = parseOAuthCredentialSecret(credential.secret);
-    const saved = this.store.resolve(credential.id, "full");
-    if (saved?.type === "oauth" && saved.secret) {
-      const active = parseOAuthCredentialSecret(saved.secret);
-      // A detached cleanup must never revoke tokens still owned by a saved connection.
+    const detachedTokens = new Set([secret.accessToken, secret.refreshToken].filter(Boolean));
+    for (const saved of this.store.list("full")) {
+      if (saved.type !== "oauth" || !saved.secret) continue;
+      let active: OAuthCredentialSecret;
+      try {
+        active = parseOAuthCredentialSecret(saved.secret);
+      } catch {
+        continue;
+      }
+      // Providers can reuse tokens for a fresh connection ID. Token matching is
+      // only a cleanup veto; it never supplies authority for another connection.
       if (
-        active.accessToken === secret.accessToken ||
-        (active.refreshToken && active.refreshToken === secret.refreshToken)
+        detachedTokens.has(active.accessToken) ||
+        (active.refreshToken && detachedTokens.has(active.refreshToken))
       )
         return false;
     }
