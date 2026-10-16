@@ -107,15 +107,15 @@ HTTP 状态。并发共享目录发现的请求仍各自保留独立的请求 ID
 
 常见失败可以据此区分：
 
-| 阶段 | 内部错误码示例 | 检查方向 |
-| --- | --- | --- |
-| `host_store_read` | `host_store_unreadable` | Host 凭据文件读取或解密 |
-| `remote_configuration` | `remote_configuration_missing` | 当前 Host 的远端 Link 配置 |
-| `remote_catalog` | `catalog_network`、`catalog_timeout`、`catalog_http_status` | Host 到独立 Link 的目录请求 |
-| `remote_catalog` | `catalog_invalid_json`、`catalog_invalid_schema` | 目录协议响应 |
-| `mode_selection` | `provider_capability_missing` | 目录是否提供指定 provider 的授权能力 |
-| `connection_review` | `connection_review_failed` | 已有连接的审阅版本、归属和状态 |
-| `job_creation` | `remote_authorization_invalid` | 创建本地授权任务与跳转 URL |
+| 阶段                   | 内部错误码示例                                              | 检查方向                             |
+| ---------------------- | ----------------------------------------------------------- | ------------------------------------ |
+| `host_store_read`      | `host_store_unreadable`                                     | Host 凭据文件读取或解密              |
+| `remote_configuration` | `remote_configuration_missing`                              | 当前 Host 的远端 Link 配置           |
+| `remote_catalog`       | `catalog_network`、`catalog_timeout`、`catalog_http_status` | Host 到独立 Link 的目录请求          |
+| `remote_catalog`       | `catalog_invalid_json`、`catalog_invalid_schema`            | 目录协议响应                         |
+| `mode_selection`       | `provider_capability_missing`                               | 目录是否提供指定 provider 的授权能力 |
+| `connection_review`    | `connection_review_failed`                                  | 已有连接的审阅版本、归属和状态       |
+| `job_creation`         | `remote_authorization_invalid`                              | 创建本地授权任务与跳转 URL           |
 
 `job_creation` 成功仅表示创建授权任务；此时尚未访问 Figma OAuth 端点，不能据此
 确认上游 Token 交换或账号验证成功。起始请求结束后，后台任务不再向该 trace 追加事件。
@@ -161,6 +161,33 @@ journalctl --utc -u <host-unit> --since '<UTC start>' --until '<UTC end>' \
 故障窗口一直可用；执行主机的网络／TLS 失败也不能替代当时 Desktop 进程的证据。
 下一次复现需从实际发起授权的 Host 获取上述脱敏 trace，再决定是否继续查独立 Link
 的 OAuth 回调或 Token 交换。此次核查未修改生产配置或重启服务。
+
+### 02:40 UTC 内容读取故障的补充取证
+
+2026-10-16 的第二次只读核查确认，生产
+`apps/link-server/resource-providers.mjs` 的 SHA-256 为
+`79d373d59f2e09f886ad47d755ef5cb9e3e5d68e0115110bba93ae797f0e26eb`，
+与 services `c892b91b` 的对应文件一致。该版本尚不接受 `get_file` 的 `depth`
+参数。在拒绝真实网络的隔离夹具中，对这份代码调用 `get_file(depth=2)` 返回
+`400 / invalid_request`，且没有发起 Figma 请求；同一夹具的 `get_comments`
+可以通过参数校验。
+
+实际 Desktop 记录显示 02:40:56 UTC 的 `get_file` 携带 `depth: 2`，耗时 83ms；
+后续两次 `get_comments` 分别耗时 1ms、3ms。旧客户端将 action 的 HTTP 400 和
+401 一并映射成 reconnect，并且 Bridge 丢弃了 reconnect 错误码，也没有在执行
+结束后更新 Worker 的凭据快照。因此“授权失效”与仍显示 ready 可以由这条软件
+故障链解释；后续 comments 可能在本地被拦截。这些历史记录没有保留 HTTP 状态，
+不能将合成复现当作当时上游凭据有效或失效的证明。
+
+客户端现在区分 action 参数错误与授权失效，对终态使用相同记录的条件写入，并在
+remote Action 的回复中原子携带当前元数据快照。诊断事件 `link.remote.execution`
+按 `preflight`、`token_refresh`、`action`、`state_write` 分阶段，只包含固定枚举、
+HTTP 状态和审核过的 broker 错误码。错误正文有 4KiB／500ms 上限，不记录原文。
+不可解密的凭据保留原密文；更新一个连接不会再次加密或损坏其它不可解密的连接。
+
+独立 broker 的内容读取更新仍需单独部署。`/api/v1/data/authorization` 只验证
+下游 grant，并不重新请求 Figma；其成功与 `lastVerifiedAt` 不能替代实际内容读取
+验收。本次诊断没有重跑 OAuth，也没有读取真实设计内容。
 
 ## 共享 Host 授权管理
 
