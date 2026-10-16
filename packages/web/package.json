@@ -34,7 +34,8 @@
     "test:devices-browser": "node ../../scripts/run-isolated-node-smoke.mjs scripts/test-devices-browser.mjs",
     "dev:app": "vite dev",
     "test:files-browser": "node scripts/test-file-browser.mjs",
-    "clean": "node -e \"require('node:fs').rmSync('dist',{recursive:true,force:true});require('node:fs').rmSync('dist-app',{recursive:true,force:true})\""
+    "clean": "node -e \"require('node:fs').rmSync('dist',{recursive:true,force:true});require('node:fs').rmSync('dist-app',{recursive:true,force:true})\"",
+    "test:host-operations-browser": "node ../../scripts/run-isolated-node-smoke.mjs ../../scripts/smoke-web-host-operations.mjs"
   },
   "dependencies": {
     "@cjhyy/code-shell-core": "workspace:*",
