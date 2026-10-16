@@ -13,7 +13,13 @@ import {
 } from "./electron-harness.mjs";
 import { settingsNetworkGuard } from "./settings-network-guard.mjs";
 
-const appDir = resolve(dirname(fileURLToPath(import.meta.url)), "..");
+const appDirArgument = process.argv.indexOf("--app-dir");
+if (appDirArgument >= 0 && !process.argv[appDirArgument + 1])
+  throw new Error("Expected --app-dir <built desktop directory>");
+const appDir =
+  appDirArgument >= 0
+    ? resolve(process.argv[appDirArgument + 1])
+    : resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const isolated = await makeIsolatedElectronHome("codeshell-mcp-operations-");
 const server = join(isolated.home, "owned-mcp-server.cjs");
 const ledger = join(isolated.home, "owned-mcp-protocol.jsonl");
@@ -46,6 +52,7 @@ async function release() {
 }
 
 try {
+  console.log(`MCP acceptance app directory: ${appDir}`);
   await mkdir(isolated.codeShellHome, { recursive: true });
   await writeFile(settingsFile, '{"autoUpdates":false}\n');
   await writeFile(
@@ -242,7 +249,7 @@ ipcMain.handle=(channel,listener)=>handle(channel,async(...args)=>{
     "PASS MCP probe failure: actual missing executable produces error details; correcting the command recovers real initialize/tools-list",
   );
 
-  stage = "MCP deletion cancellation, failure and retry";
+  stage = "MCP deletion cancellation";
   const beforeCancel = await app.evaluate(() => globalThis.__mcpOperations.attempts);
   await renamed.getByRole("button", { name: "Delete", exact: true }).click();
   await win.getByRole("dialog").getByRole("button", { name: "Cancel", exact: true }).click();
@@ -251,6 +258,7 @@ ipcMain.handle=(channel,listener)=>handle(channel,async(...args)=>{
     (await app.evaluate(() => globalThis.__mcpOperations.attempts)) === beforeCancel,
     "Cancelled MCP deletion wrote settings",
   );
+  stage = "MCP deletion pending failure";
   await arm({ fail: true, defer: true });
   await renamed.getByRole("button", { name: "Delete", exact: true }).click();
   await win.getByRole("dialog").getByRole("button", { name: "Remove", exact: true }).click();
@@ -268,6 +276,7 @@ ipcMain.handle=(channel,listener)=>handle(channel,async(...args)=>{
     (await renamed.isVisible()) && (await storedServers())["owned-operation-renamed"],
     "Rejected MCP deletion removed its card or settings",
   );
+  stage = "MCP deletion retry storage";
   await renamed.getByRole("button", { name: "Delete", exact: true }).click();
   await win.getByRole("dialog").getByRole("button", { name: "Remove", exact: true }).click();
   await renamed.waitFor({ state: "hidden" });
@@ -280,6 +289,7 @@ ipcMain.handle=(channel,listener)=>handle(channel,async(...args)=>{
     commits: globalThis.__mcpOperations.commits,
     network: globalThis.__staticSettingsNetworkAttempts,
   }));
+  stage = "MCP mutation receipt";
   assert(
     receipt.attempts === 10 &&
       receipt.commits === 7 &&
@@ -287,7 +297,9 @@ ipcMain.handle=(channel,listener)=>handle(channel,async(...args)=>{
       errors.length === 0,
     "MCP mutation/network/error receipt changed",
   );
+  stage = "MCP application close";
   await app.close();
+  stage = "MCP restart";
   app = await launchCodeShellElectron({
     appDir,
     home: isolated.home,
@@ -296,7 +308,9 @@ ipcMain.handle=(channel,listener)=>handle(channel,async(...args)=>{
     env: guard.env,
   });
   win = await findCodeShellWindow(app);
+  stage = "MCP restart storage";
   assert(Object.keys(await storedServers()).length === 0, "Restart restored a deleted MCP server");
+  stage = "MCP protocol completion receipt";
   const protocol = (await readFile(ledger, "utf8"))
     .trim()
     .split("\n")
@@ -308,6 +322,7 @@ ipcMain.handle=(channel,listener)=>handle(channel,async(...args)=>{
     "MCP fixture did not complete protocol probes or executed a tool",
   );
   const probePids = [...new Set(protocol.map((item) => item.pid))];
+  stage = "MCP owned-process exit";
   assert(
     probePids.every((pid) => protocol.some((item) => item.pid === pid && item.method === "exit")),
     "An owned MCP probe process did not report its actual exit",
@@ -332,6 +347,43 @@ ipcMain.handle=(channel,listener)=>handle(channel,async(...args)=>{
   console.error(
     `MCP operations failed during ${stage}: ${error?.name ?? "Error"}; renderer errors: ${errors.length}`,
   );
+  const fixedLabels = new Set([
+    "Cancelled MCP deletion wrote settings",
+    "Pending MCP deletion remained clickable",
+    "Rejected MCP deletion removed its card or settings",
+    "MCP deletion retry left a durable server",
+    "MCP mutation/network/error receipt changed",
+    "Restart restored a deleted MCP server",
+    "MCP fixture did not complete protocol probes or executed a tool",
+    "An owned MCP probe process did not report its actual exit",
+    "An owned MCP probe process remained alive after closing Electron",
+    "Deferred settings write was not reached",
+  ]);
+  console.error(
+    `Failure check: ${fixedLabels.has(error?.message) ? error.message : "unclassified"}`,
+  );
+  console.error(
+    `Script locations: ${JSON.stringify(
+      String(error?.stack ?? "")
+        .match(/e2e-mcp-operations\.mjs:\d+:\d+/g)
+        ?.slice(0, 3) ?? [],
+    )}`,
+  );
+  if (app)
+    console.error(
+      await app
+        .evaluate(() => ({
+          fixtureState: {
+            attempts: globalThis.__mcpOperations?.attempts,
+            commits: globalThis.__mcpOperations?.commits,
+            defer: globalThis.__mcpOperations?.defer,
+            fail: globalThis.__mcpOperations?.fail,
+            releasePending: Boolean(globalThis.__mcpOperations?.release),
+            network: globalThis.__staticSettingsNetworkAttempts,
+          },
+        }))
+        .catch(() => ({ fixtureState: "main-unavailable" })),
+    );
   await win
     ?.screenshot({ path: "/private/tmp/codeshell-mcp-operations-failure.png" })
     .catch(() => {});
