@@ -273,7 +273,9 @@ try {
     await win.getByRole("option").filter({ hasText: name }).click();
     await win.waitForFunction(
       (expected) =>
-        document.querySelector('textarea[aria-autocomplete="list"]')?.value === `@${expected} `,
+        document
+          .querySelector('textarea[aria-autocomplete="list"]')
+          ?.value.replaceAll("\\", "/") === `@${expected.replaceAll("\\", "/")} `,
       path,
     );
     assert.equal(await readFile(path, "utf8"), content);
