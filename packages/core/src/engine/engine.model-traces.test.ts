@@ -60,7 +60,6 @@ const engines: Engine[] = [];
 beforeEach(() => {
   root = mkdtempSync(join(tmpdir(), "engine-model-traces-"));
   traces = configureModelTracing({ storageDir: join(root, "traces"), source: "engine-fixture" });
-  traces.setConfig({ captureContent: true });
 });
 afterEach(async () => {
   for (const engine of engines.splice(0).reverse()) await engine.dispose();
@@ -194,7 +193,38 @@ test("real Engine runs retain assembled model inputs, separate execution IDs and
   expect(traces.events(first.runId).filter((event) => event.kind === "tool")).toHaveLength(1);
 });
 
-test("ephemeral Engine runs and out-of-run summary/compact helpers persist only after their separate opt-in", async () => {
+test("an ephemeral Panel-like Engine run records its assembled Prompt by default with its fixed source", async () => {
+  const value = engine();
+  const manager = value.getSessionManager();
+  manager.create(root, "gpt-4o", provider, "panel-source");
+  manager.fork("panel-source", { targetSessionId: "panel-temporary", ephemeral: true });
+  const result = await value.run("PANEL_DEFAULT_PROMPT", {
+    sessionId: "panel-temporary",
+    clientMessageId: "panel-default-input",
+    behaviorMode: "trace-quiet",
+    modelTraceSource: "panel-app:fixture/summarize",
+  });
+  expect(result.reason).toBe("completed");
+  const rows = traces.list({ sessionId: "panel-temporary", traceId: result.runId }).items;
+  expect(rows).toHaveLength(1);
+  expect(rows[0]).toMatchObject({
+    source: "panel-app:fixture/summarize",
+    workspacePath: root,
+    runId: result.runId,
+    purpose: "main",
+    inputState: "recorded",
+    outputState: "recorded",
+  });
+  const recorded = traces.get(rows[0].id)!;
+  expect(recorded.input?.systemPrompt).toBe(calls[0].systemPrompt);
+  expect(recorded.input?.messages).toEqual(calls[0].messages);
+  expect(JSON.stringify(recorded.input?.messages)).toContain("PANEL_DEFAULT_PROMPT");
+  expect(recorded.output?.text).toBe("TRACE_ENGINE_ANSWER");
+  expect(existsSync(join(root, "sessions", "panel-temporary"))).toBe(false);
+});
+
+test("ephemeral Engine runs and out-of-run summary/compact helpers respect explicit persistence opt-out", async () => {
+  traces.setConfig({ includeEphemeral: false });
   const value = engine();
   const manager = value.getSessionManager();
   const parent = manager.create(root, "gpt-4o", provider, "trace-source");

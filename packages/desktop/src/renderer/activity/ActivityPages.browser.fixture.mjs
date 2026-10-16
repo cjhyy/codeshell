@@ -25,7 +25,6 @@ import { AppMainView } from "./app/AppShell";
 import { LogsView } from "./logs/LogsView";
 import { ApprovalsView } from "./approvals/ApprovalsView";
 import { SessionsView } from "./sessions/SessionsView";
-import { RunsView } from "./runs/RunsView";
 import { TaskInboxPage } from "./task-inbox/TaskInboxPage";
 import { I18nProvider } from "./i18n/I18nProvider";
 const root = createRoot(document.getElementById("root"));
@@ -62,7 +61,7 @@ function App() {
         window.fixture.calls.push(["decide", env.requestId]);
         if (window.fixture.failApproval) throw new Error("Owned approval failure");
         setQueue([]);
-      }} /> : page === "sessions" ? <SessionsView onOpenSession={async id => { window.fixture.calls.push(["open", id]); }} /> : page === "runs" ? <RunsView initialRunId={"run-original"} /> : <TaskInboxPage onOpenTaskInboxRecord={async () => {}} />}
+      }} /> : page === "sessions" ? <SessionsView onOpenSession={async id => { window.fixture.calls.push(["open", id]); }} /> : <TaskInboxPage onOpenTaskInboxRecord={async () => {}} />}
     </AppMainView>
   </div>;
 }
@@ -184,17 +183,18 @@ try {
 
       const routes =
         lang === "zh"
-          ? ["执行观测", "后台工作", "会话管理", "审批记录", "诊断日志", "旧版运行记录"]
+          ? ["执行观测", "后台工作", "会话管理", "审批记录", "诊断日志"]
           : [
               "Execution traces",
               "Background work",
               "Conversations",
               "Approvals",
               "Diagnostic logs",
-              "Legacy runs",
             ];
       // Use the actual navigation labels from the translated production tree.
       const navButtons = await nav.getByRole("button").all();
+      assert.equal(navButtons.length, 5, "Only current activity pages are reachable");
+      assert.deepEqual(await nav.getByRole("button").allTextContents(), routes);
       for (let index = 0; index < navButtons.length; index += 1) {
         const button = navButtons[index];
         const label = await button.textContent();

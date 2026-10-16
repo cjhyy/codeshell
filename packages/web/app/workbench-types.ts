@@ -47,7 +47,7 @@ export interface WorkbenchController {
   selectSession: (id: string) => void | Promise<void>;
   newSession: () => void;
   /** True only after the current draft has been accepted by the local sender. */
-  send: () => boolean;
+  send: (options?: { modelTraceSource?: string }) => boolean;
   stop: () => void;
   addFiles: (files: FileList | null) => void | Promise<void>;
   refreshSessions: () => void | Promise<void>;

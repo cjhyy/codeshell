@@ -98,7 +98,8 @@ test("permission denial is recorded as a failed tool span without executing its 
   expect(event.output).toBeUndefined();
 });
 
-test("ephemeral tool events require the separate persistence opt-in", async () => {
+test("ephemeral tool events respect an explicit persistence opt-out", async () => {
+  store.setConfig({ includeEphemeral: false });
   const { registry, hooks } = setup();
   const executor = new ToolExecutor(
     registry,

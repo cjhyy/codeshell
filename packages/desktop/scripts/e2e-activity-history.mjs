@@ -3,6 +3,7 @@
 import { appendFile, mkdir, writeFile } from "node:fs/promises";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
+import { ModelTraceStore } from "@cjhyy/code-shell-core/internal";
 import {
   assert,
   captureRendererErrors,
@@ -89,6 +90,34 @@ try {
     join(isolated.codeShellHome, "sessions", "activity-export.json"),
     JSON.stringify(events),
   );
+  const traces = new ModelTraceStore({
+    storageDir: join(isolated.codeShellHome, "sessions", ".model-traces"),
+  });
+  traces.write({
+    version: 1,
+    id: "activity-file-model-call",
+    traceId: "activity-file-execution",
+    sessionId,
+    workspacePath: isolated.home,
+    source: "fixture",
+    purpose: "main",
+    provider: "fixture",
+    model: "activity-fixture-model",
+    startedAt: now - 1000,
+    endedAt: now,
+    status: "completed",
+    stream: false,
+    inputState: "recorded",
+    input: {
+      systemPrompt: "Activity fixture system",
+      messages: [{ role: "user", content: objective }],
+      tools: [],
+      parameters: {},
+    },
+    outputState: "recorded",
+    output: { text: summary },
+    attempts: [],
+  });
   app = await launchCodeShellElectron({
     appDir,
     home: isolated.home,
@@ -153,15 +182,23 @@ try {
     await win.getByRole("button", { name: "返回会话历史", exact: true }).click();
   }
   await historyPage.getByRole("searchbox").fill("");
-  await navigate("旧版运行记录", "旧版运行记录");
-  await win
-    .getByRole("region", { name: "运行列表", exact: true })
-    .getByRole("button", { name: new RegExp(`^${objective}`) })
-    .first()
-    .click();
-  const detail = win.getByRole("region", { name: "运行详情", exact: true });
-  await detail.getByRole("heading", { name: objective, exact: true }).waitFor();
+  await navigate("执行观测", "执行观测");
+  const tracePage = win.locator("[data-model-traces-page]");
+  await tracePage.locator('[data-trace-group="activity-file-execution"]').click();
+  await tracePage.locator('[data-trace-request="activity-file-model-call"]').click();
+  const detail = tracePage.locator('[data-trace-detail-id="activity-file-model-call"]');
+  await detail.getByText(objective, { exact: true }).waitFor();
+  await detail.getByRole("button", { name: "输出", exact: true }).click();
   await detail.getByText(summary, { exact: true }).waitFor();
+  const config = await win.evaluate(() => window.codeshell.modelTraces.getConfig());
+  assert(
+    config.captureContent && config.includeEphemeral,
+    "Prompt and temporary-call recording default to enabled",
+  );
+  assert(
+    (await win.getByRole("button", { name: "旧版运行记录", exact: true }).count()) === 0,
+    "No obsolete activity entrance remains",
+  );
 
   const logDir = join(isolated.codeShellHome, "logs", "desktop");
   await mkdir(logDir, { recursive: true });
@@ -180,7 +217,7 @@ try {
   await win.getByRole("tabpanel").getByText(marker, { exact: true }).waitFor();
   assert(errors.length === 0, "No renderer exceptions");
   console.log(
-    "PASS: real session files, run receipts and desktop logs reach activity pages through production IPC",
+    "PASS: real session files, preserved receipts, model prompts and desktop logs reach current activity pages through production IPC",
   );
 } finally {
   try {

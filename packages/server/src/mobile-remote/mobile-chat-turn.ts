@@ -22,6 +22,7 @@ export interface DispatchMobileChatTurnInput {
   text: string;
   attachments?: MobileImageAttachment[];
   clientMessageId?: string;
+  modelTraceSource?: string;
   permissionMode?: PermissionMode;
   runId: string;
   bridge: MobileRunBridge;
@@ -96,6 +97,9 @@ export async function dispatchMobileChatTurn(
     id: input.runId,
     params: {
       task: text,
+      ...(input.modelTraceSource && /^panel:[a-z][a-z0-9-]{0,63}$/.test(input.modelTraceSource)
+        ? { modelTraceSource: input.modelTraceSource }
+        : {}),
       cwd,
       sessionId: input.sessionId,
       ...(input.projectId ? { projectId: input.projectId } : {}),

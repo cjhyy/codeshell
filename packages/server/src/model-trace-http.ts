@@ -1,4 +1,6 @@
 import type { IncomingMessage, ServerResponse } from "node:http";
+import type { ModelTraceListQuery } from "@cjhyy/code-shell-core/internal";
+import { resolve } from "node:path";
 import {
   createModelTraceHistory,
   ModelTraceRequestError,
@@ -36,9 +38,20 @@ export function createModelTraceHttp(options: {
   storageDir: string;
   workspacePath: string;
   isAuthorized: (request: IncomingMessage) => boolean | Promise<boolean>;
+  /** Recomputed for each authenticated request and immediately before responding. */
+  resolveWorkspaceScopes?: (
+    request: IncomingMessage,
+  ) => ModelTraceListQuery["workspaceScopes"] | Promise<ModelTraceListQuery["workspaceScopes"]>;
   store?: ModelTraceReader;
 }) {
-  const history = createModelTraceHistory(options);
+  const resolveScopes = async (request: IncomingMessage) => {
+    const scopes = await options.resolveWorkspaceScopes?.(request);
+    return scopes?.map((scope) => ({ ...scope, workspacePath: resolve(scope.workspacePath) }));
+  };
+  const fingerprint = (scopes: ModelTraceListQuery["workspaceScopes"]) =>
+    JSON.stringify(
+      scopes?.map((scope) => [scope.workspacePath, scope.sourcePrefix ?? null]).sort(),
+    );
   return {
     async handle(request: IncomingMessage, response: ServerResponse): Promise<boolean> {
       const url = new URL(request.url ?? "/", "http://localhost");
@@ -50,6 +63,8 @@ export function createModelTraceHttp(options: {
           response.setHeader("allow", "GET");
           throw new ModelTraceRequestError(405, "Model history is read-only on remote clients");
         }
+        const workspaceScopes = await resolveScopes(request);
+        const history = createModelTraceHistory({ ...options, workspaceScopes });
         let result: unknown;
         if (url.pathname === ROOT) result = history.list(queryFromUrl(url));
         else if (url.pathname === `${ROOT}/config`) {
@@ -71,6 +86,10 @@ export function createModelTraceHttp(options: {
           if (!result) throw new ModelTraceRequestError(404, "Model record not found");
         }
         // Authentication may have been revoked during asynchronous Host validation.
+        if (!(await options.isAuthorized(request)))
+          throw new ModelTraceRequestError(401, "Model history authorization expired");
+        if (fingerprint(await resolveScopes(request)) !== fingerprint(workspaceScopes))
+          throw new ModelTraceRequestError(401, "Model history workspace authorization changed");
         if (!(await options.isAuthorized(request)))
           throw new ModelTraceRequestError(401, "Model history authorization expired");
         json(response, 200, result);

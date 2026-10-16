@@ -505,7 +505,11 @@ test("panel prompt requires parent confirmation and duplicate request IDs cannot
   expect(view.requests.filter((request) => request.url.pathname.endsWith("/call"))).toHaveLength(1);
   await click(button(view.tree, "确认发送任务"));
   expect(view.submissions).toEqual([
-    { prompt: "Read the selected project", sessionId: prepared.context.sessionId },
+    {
+      prompt: "Read the selected project",
+      sessionId: prepared.context.sessionId,
+      modelTraceSource: `panel:${panel.id}`,
+    },
   ]);
   expect(view.replies.at(-1)?.data).toMatchObject({
     requestId: "first",

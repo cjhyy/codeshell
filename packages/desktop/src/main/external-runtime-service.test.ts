@@ -182,12 +182,14 @@ describe("ExternalRuntimeService", () => {
     });
     providerSend = async (args, input) => {
       expect(input.text).toBe("actual submitted input");
+      expect(input).not.toHaveProperty("modelTraceSource");
       const hooks = args.hooks as { onEvent: (event: StreamEvent) => void };
       hooks.onEvent({ type: "text_delta", text: "visible CLI output" });
       hooks.onEvent({ type: "turn_complete", reason: "completed" });
     };
     await svc.send(request.sessionId, {
       text: "actual submitted input",
+      modelTraceSource: "panel:design-studio",
       displayText: "short display",
       disableGoal: true,
     });
@@ -195,6 +197,7 @@ describe("ExternalRuntimeService", () => {
     expect(store.list().total).toBe(1);
     expect(record).toMatchObject({
       sessionId: request.sessionId,
+      source: "panel:design-studio",
       workspacePath: request.cwd,
       model: "requested-cli-model",
       status: "completed",

@@ -23,11 +23,11 @@ import type {
 } from "./types.js";
 
 export const DEFAULT_MODEL_TRACE_CONFIG: Readonly<ModelTraceConfig> = Object.freeze({
-  policyRevision: "initial",
+  policyRevision: "defaults-v2",
   enabled: true,
-  captureContent: false,
+  captureContent: true,
   retentionDays: 7,
-  includeEphemeral: false,
+  includeEphemeral: true,
 });
 const MAX_RECORD_BYTES = 4 * 1024 * 1024;
 const MAX_SUMMARY_BYTES = 32 * 1024;
@@ -66,16 +66,29 @@ export class ModelTraceStore {
     const saved = this.directorySafe(this.storageDir)
       ? readJson(join(this.storageDir, "config.json"), 4096)
       : null;
+    const savedRevision =
+      typeof saved?.policyRevision === "string" &&
+      /^[A-Za-z0-9_-]{1,128}$/.test(saved.policyRevision)
+        ? saved.policyRevision
+        : "initial";
+    const currentDefaults = saved?.defaultsVersion === 2;
+    // The v2 rollout explicitly enables Prompt and temporary-call recording.
+    // Derive a stable generation without a read-time write: processes must agree,
+    // while calls started under the old policy must never resume body capture.
+    const policyRevision = !saved
+      ? DEFAULT_MODEL_TRACE_CONFIG.policyRevision
+      : currentDefaults
+        ? savedRevision
+        : `defaults-v2-${createHash("sha256").update(savedRevision).digest("hex").slice(0, 32)}`;
     return {
-      policyRevision:
-        typeof saved?.policyRevision === "string" &&
-        /^[A-Za-z0-9_-]{1,128}$/.test(saved.policyRevision)
-          ? saved.policyRevision
-          : "initial",
+      policyRevision,
       enabled: typeof saved?.enabled === "boolean" ? saved.enabled : true,
-      captureContent: typeof saved?.captureContent === "boolean" ? saved.captureContent : false,
+      captureContent:
+        currentDefaults && typeof saved?.captureContent === "boolean" ? saved.captureContent : true,
       includeEphemeral:
-        typeof saved?.includeEphemeral === "boolean" ? saved.includeEphemeral : false,
+        currentDefaults && typeof saved?.includeEphemeral === "boolean"
+          ? saved.includeEphemeral
+          : true,
       retentionDays:
         Number.isSafeInteger(saved?.retentionDays) &&
         saved.retentionDays >= 1 &&
@@ -114,7 +127,7 @@ export class ModelTraceStore {
       ...updates,
       policyRevision: changed ? randomUUID() : previous.policyRevision,
     };
-    this.writeJson(this.storageDir, "config.json", config);
+    this.writeJson(this.storageDir, "config.json", { ...config, defaultsVersion: 2 });
     this.prune(true);
     return config;
   }
@@ -150,6 +163,33 @@ export class ModelTraceStore {
           query[field]!.includes("\0"))
       )
         throw new Error("Invalid model trace query");
+    if (query.workspaceScopes !== undefined) {
+      if (
+        !Array.isArray(query.workspaceScopes) ||
+        query.workspaceScopes.length < 1 ||
+        query.workspaceScopes.length > 8 ||
+        query.workspacePath !== undefined ||
+        query.workspaceScopes.some(
+          (scope) =>
+            !scope ||
+            typeof scope !== "object" ||
+            Array.isArray(scope) ||
+            Object.keys(scope).some(
+              (field) => !["workspacePath", "sourcePrefix"].includes(field),
+            ) ||
+            typeof scope.workspacePath !== "string" ||
+            !scope.workspacePath ||
+            scope.workspacePath.length > 4096 ||
+            scope.workspacePath.includes("\0") ||
+            (scope.sourcePrefix !== undefined &&
+              (typeof scope.sourcePrefix !== "string" ||
+                !scope.sourcePrefix ||
+                scope.sourcePrefix.length > 256 ||
+                scope.sourcePrefix.includes("\0"))),
+        )
+      )
+        throw new Error("Invalid model trace workspace scopes");
+    }
     this.prune();
     const cutoff = Date.now() - this.getConfig().retentionDays * 86_400_000;
     const words = query.search?.trim().toLowerCase().split(/\s+/).filter(Boolean) ?? [];
@@ -164,6 +204,16 @@ export class ModelTraceStore {
         !Number.isFinite(row.startedAt) ||
         row.startedAt < cutoff ||
         !statuses.has(row.status)
+      )
+        continue;
+      if (
+        query.workspaceScopes &&
+        !query.workspaceScopes.some(
+          (scope) =>
+            row.workspacePath === scope.workspacePath &&
+            (scope.sourcePrefix === undefined ||
+              (typeof row.source === "string" && row.source.startsWith(scope.sourcePrefix))),
+        )
       )
         continue;
       if (

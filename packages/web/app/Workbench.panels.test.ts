@@ -68,3 +68,15 @@ test("a sender that declines its private guard clears only the newly inserted pa
   expect(() => submitWorkbenchPanelPrompt(controller, request)).toThrow("暂时无法接收任务");
   expect(calls).toEqual(["draft:A confirmed panel task", "draft:"]);
 });
+
+test("confirmed Panel source is forwarded as observation metadata to the current sender", () => {
+  let options: unknown;
+  const { controller } = fixture({
+    send: (value) => {
+      options = value;
+      return true;
+    },
+  });
+  submitWorkbenchPanelPrompt(controller, { ...request, modelTraceSource: "panel:design-studio" });
+  expect(options).toEqual({ modelTraceSource: "panel:design-studio" });
+});

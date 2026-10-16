@@ -15,6 +15,7 @@ export {
   recordExternalModelTrace,
   clearModelTracingConfiguration,
 } from "./model-traces/index.js";
+export { createNativeModelTraceFrameDecoder } from "./model-traces/native-frames.js";
 export type {
   ModelTraceContentState,
   ModelTraceStatus,

@@ -90,6 +90,7 @@ test("production preload methods reach the validated native trace service and pe
 
 test("embedded frames and unrelated windows cannot inspect prompts or change capture settings", () => {
   const f = fixture();
+  const original = f.store.getConfig();
   for (const channel of f.handlers.keys()) {
     expect(() =>
       f.handlers.get(channel)!({ ...f.event, senderFrame: {} } as IpcMainInvokeEvent, {}),
@@ -101,5 +102,5 @@ test("embedded frames and unrelated windows cannot inspect prompts or change cap
       ),
     ).toThrow("application window");
   }
-  expect(f.store.getConfig().captureContent).toBe(false);
+  expect(f.store.getConfig()).toEqual(original);
 });

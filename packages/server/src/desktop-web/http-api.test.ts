@@ -515,6 +515,7 @@ test("paired devices discover the same desktop identity without disclosing works
 test("paired Desktop trace HTTP remains workspace scoped and cannot change native capture policy", async () => {
   const f = await fixture();
   const store = new ModelTraceStore({ storageDir: join(f.sessionRootDir, ".model-traces") });
+  const originalConfig = store.getConfig();
   for (const [id, workspacePath] of [
     ["current-workspace", f.cwd],
     ["other-workspace", f.other],
@@ -550,7 +551,76 @@ test("paired Desktop trace HTTP remains workspace scoped and cannot change nativ
   expect(
     (await f.put("/api/v1/model-traces/config", cookie, { captureContent: true })).status,
   ).toBe(405);
-  expect(store.getConfig().captureContent).toBe(false);
+  expect(store.getConfig()).toEqual(originalConfig);
   f.devices.revoke(f.device.id);
   expect((await f.request("/api/v1/model-traces/current-workspace", cookie)).status).toBe(401);
+});
+
+test("Desktop model history resolves related Panel scopes per paired device and rechecks root revocation", async () => {
+  const related = { projectRoot: "" };
+  let authorizedRoot = true;
+  let rootChecks = 0;
+  const checkedDevices: string[] = [];
+  const f = await fixture({
+    resolveModelTraceScopes: async (_cwd, deviceId) => {
+      checkedDevices.push(deviceId);
+      rootChecks++;
+      return authorizedRoot
+        ? [{ workspacePath: related.projectRoot, sourcePrefix: "panel:" }]
+        : undefined;
+    },
+  });
+  related.projectRoot = f.root;
+  const store = new ModelTraceStore({ storageDir: join(f.sessionRootDir, ".model-traces") });
+  const now = Date.now();
+  for (const [id, workspacePath, source, offset] of [
+    ["worktree-call", f.cwd, "desktop", 1],
+    ["project-panel-call", f.root, "panel:video:tts", 2],
+    ["project-chat-call", f.root, "desktop", 3],
+    ["unrelated-panel-call", f.other, "panel:video:tts", 4],
+  ] as const)
+    store.write({
+      version: 1,
+      id,
+      traceId: id,
+      workspacePath,
+      source,
+      purpose: "main",
+      provider: "fixture",
+      model: "fixture",
+      startedAt: now - offset,
+      status: "completed",
+      stream: false,
+      inputState: "not-recorded",
+      outputState: "not-recorded",
+      attempts: [],
+    });
+  const cookie = await f.authenticate();
+  const first = await (await f.request("/api/v1/model-traces?limit=1", cookie)).json();
+  expect(first.total).toBe(2);
+  expect(first.items.map((item: any) => item.id)).toEqual(["worktree-call"]);
+  const second = await (
+    await f.request(
+      "/api/v1/model-traces?limit=1&cursor=" + encodeURIComponent(first.nextCursor),
+      cookie,
+    )
+  ).json();
+  expect(second.items.map((item: any) => item.id)).toEqual(["project-panel-call"]);
+  expect((await f.request("/api/v1/model-traces/project-panel-call", cookie)).status).toBe(200);
+  for (const id of ["project-chat-call", "unrelated-panel-call"])
+    expect((await f.request("/api/v1/model-traces/" + id, cookie)).status).toBe(404);
+  expect((await f.request("/api/v1/model-traces?workspaceScopes=/attacker", cookie)).status).toBe(
+    400,
+  );
+  expect(checkedDevices.every((deviceId) => deviceId === f.device.id)).toBe(true);
+  expect(rootChecks).toBeGreaterThanOrEqual(8);
+  authorizedRoot = false;
+  expect((await f.request("/api/v1/model-traces/project-panel-call", cookie)).status).toBe(404);
+  expect(
+    (await (await f.request("/api/v1/model-traces", cookie)).json()).items.map(
+      (item: any) => item.id,
+    ),
+  ).toEqual(["worktree-call"]);
+  f.devices.revoke(f.device.id);
+  expect((await f.request("/api/v1/model-traces", cookie)).status).toBe(401);
 });

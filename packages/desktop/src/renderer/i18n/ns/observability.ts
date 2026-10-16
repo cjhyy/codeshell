@@ -8,7 +8,7 @@ export const observability = {
       loading: "正在读取执行记录…",
       unavailable: "记录暂时无法读取。",
       empty: "还没有模型调用记录",
-      emptyHint: "新的模型调用会自动记录元数据；Prompt 正文需要单独开启。",
+      emptyHint: "新的模型调用会默认记录 Prompt、响应和元数据，包括临时会话。",
       noMatch: "没有符合筛选条件的调用",
       clearFilters: "清空筛选",
       search: "搜索模型、用途、来源或编号",
@@ -57,7 +57,7 @@ export const observability = {
       recording: "记录调用",
       captureContent: "记录 Prompt 正文",
       includeEphemeral: "记录临时会话",
-      ephemeralHint: "仅开启后才会持久保存临时会话的执行记录。",
+      ephemeralHint: "临时会话默认记录；关闭后，新的临时会话调用不再保存。",
       captureHint: "仅影响开启后的新调用；已记录的正文按留存设置清理。历史未采集的内容不会补回。",
       settings: "记录设置",
       retention: "留存天数",
@@ -124,7 +124,7 @@ export const observability = {
       unavailable: "Traces are temporarily unavailable.",
       empty: "No model calls recorded yet",
       emptyHint:
-        "New calls record metadata automatically. Enable Prompt content recording separately.",
+        "New calls record Prompt content, responses and metadata by default, including temporary conversations.",
       noMatch: "No calls match these filters",
       clearFilters: "Clear filters",
       search: "Search model, purpose, source or ID",
@@ -173,7 +173,8 @@ export const observability = {
       recording: "Record calls",
       captureContent: "Record Prompt content",
       includeEphemeral: "Record temporary conversations",
-      ephemeralHint: "Temporary conversation traces are persisted only after this is enabled.",
+      ephemeralHint:
+        "Temporary conversations are recorded by default. Turn this off to exclude new temporary calls.",
       captureHint:
         "Applies to future calls. Recorded content expires with retention. Previously unrecorded content cannot be recovered.",
       settings: "Recording settings",

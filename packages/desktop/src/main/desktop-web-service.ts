@@ -23,6 +23,7 @@ import {
 import type { TrustedDeviceStore } from "@cjhyy/code-shell-server/mobile-remote";
 import type { AgentBridge } from "./agent-bridge.js";
 import type { CaptureLinkAccountAccess } from "./link-account-access.js";
+import { createDesktopModelTraceScopeResolver } from "./desktop-model-trace-scopes.js";
 
 /** Host wiring only. Pages and management services live in shared packages. */
 export function createDesktopWebService(options: {
@@ -56,6 +57,10 @@ export function createDesktopWebService(options: {
     dataDir: join(codeShellHome(), "desktop"),
     sessionRootDir: sessionsRoot(),
     resolveWorkspace: options.resolveWorkspace,
+    resolveModelTraceScopes: createDesktopModelTraceScopeResolver({
+      resolveBindingProjectPath: resolvePanelAppBindingProjectPath,
+      resolveWorkspace: options.resolveWorkspace,
+    }),
     withConfigurationMutation: withMutation,
     isRunning: (id) => options.getBridge()?.isSessionRunning(id) ?? false,
     onSessionsChanged: options.onSessionsChanged,
@@ -97,6 +102,7 @@ export function createDesktopWebService(options: {
           entry = {
             active: 0,
             handler: createPanelHttp({
+              traceStorageDir: join(sessionsRoot(), ".model-traces"),
               cwd,
               bindingCwd,
               // Match Electron's existing panel storage exactly, including custom profiles.

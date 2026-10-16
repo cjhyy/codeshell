@@ -178,6 +178,10 @@ export class MobileExternalRuntimeCommands {
           sessionId,
           {
             text: String(request.params.task ?? ""),
+            ...(typeof request.params.modelTraceSource === "string" &&
+            /^panel:[a-z][a-z0-9-]{0,63}$/.test(request.params.modelTraceSource)
+              ? { modelTraceSource: request.params.modelTraceSource }
+              : {}),
             // The actual canonical input is published with its journal cursor, including attachments-only.
             displayText: String(request.params.task ?? "") || "图片",
             clientMessageId: String(request.params.clientMessageId),

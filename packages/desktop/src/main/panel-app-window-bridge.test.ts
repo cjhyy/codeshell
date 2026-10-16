@@ -133,6 +133,7 @@ async function fixture() {
   bridge.windowSourceListeners = new Map();
   bridge.resourceTransfers = new Map();
   bridge.pendingAgentToolCalls = new Map();
+  bridge.modelTraces = { cancelOwner() {} };
   bridge.processService = { revokeGuest: (id: number) => revoked.push(id) };
   bridge.agentTaskService = { rebind() {} };
   bridge.capabilitiesFor = () => ({});

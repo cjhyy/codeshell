@@ -19,6 +19,8 @@ export interface ModelTraceOutput {
   thinking?: string;
   toolCalls?: unknown[];
   stopReason?: string;
+  /** Structured responses or media result metadata; binary payloads are omitted. */
+  data?: unknown;
 }
 export interface ModelTraceAttempt {
   id: string;
@@ -82,6 +84,8 @@ export interface ModelTraceListQuery {
   traceId?: string;
   sessionId?: string;
   workspacePath?: string;
+  /** Host-only read scopes; transport query validators must reject this field. */
+  workspaceScopes?: ReadonlyArray<{ workspacePath: string; sourcePrefix?: string }>;
   model?: string;
   provider?: string;
   purpose?: string;
@@ -153,6 +157,10 @@ export interface ExternalModelTraceInput extends ModelTraceContext {
   output?: ModelTraceOutput;
   error?: string;
   usage?: TokenUsage;
+  /** Host-selected observable boundary; external CLIs retain their narrower default. */
+  coverage?: "logical-input" | "external-cli-input";
+  inputState?: ModelTraceContentState;
+  outputState?: ModelTraceContentState;
 }
 
 /** Capability observer: execution attribution and storage are inherited from Core. */

@@ -25,6 +25,7 @@ import { backgroundShellManager } from "../../runtime/background-shell.js";
 import type { ToolDefinition, ToolResult } from "../../types.js";
 import type { SandboxBackend } from "../sandbox/index.js";
 import type { ToolExecutionResult, ToolFailure } from "./index.js";
+import { createNativeModelTraceCollector } from "../../model-traces/context.js";
 
 /** UI 标记:这次 Bash 走没走沙箱 + 网络策略。off 也带(显式标「未隔离」)。 */
 function sandboxMark(backend: SandboxBackend): NonNullable<ToolResult["sandbox"]> {
@@ -111,7 +112,10 @@ export async function bashTool(
   // full passthrough (off) or the hardened allowlist (sandboxed) — see
   // mergeShellEnv. Background mode merges the same way inside the manager.
   const baseEnv = backend.name === "off" ? { ...process.env } : buildSandboxEnv();
-  const env = { ...mergeShellEnv(baseEnv, ctx?.shellEnv), ...workspaceWriteShellEnv };
+  const env: NodeJS.ProcessEnv = {
+    ...mergeShellEnv(baseEnv, ctx?.shellEnv),
+    ...workspaceWriteShellEnv,
+  };
 
   // Background mode: spawn a detached, long-lived process and return a
   // shell_id immediately (design §5.1). Fire-and-forget — the turn is never
@@ -131,6 +135,12 @@ export async function bashTool(
   // "aborted before starting" message; SafeSpawn collapses both pre- and
   // mid-flight abort to aborted=true.
   const wasAbortedBeforeStart = ctx?.signal?.aborted === true;
+  const diagnosticPipe = createNativeModelTraceCollector({
+    workspacePath: cwd,
+    sessionId: ctx?.sessionId,
+  });
+  delete env.CODESHELL_MODEL_TRACE_FD;
+  if (diagnosticPipe) env.CODESHELL_MODEL_TRACE_FD = "3";
   const result = await safeSpawnShell(command, {
     cwd,
     env,
@@ -139,6 +149,7 @@ export async function bashTool(
     sandbox: backend,
     shell,
     signal: ctx?.signal,
+    diagnosticPipe,
   });
 
   if (result.aborted) {
@@ -203,12 +214,18 @@ function runInBackground(command: string, ctx?: ToolContext): string {
     return "Error: run_in_background requires a session context (no sessionId available).";
   }
   const mgr = ctx?.backgroundShells ?? backgroundShellManager;
+  const diagnosticPipe = createNativeModelTraceCollector({ workspacePath: ctx?.cwd, sessionId });
   const r = mgr.spawnBackground({
     command,
     cwd: ctx?.cwd ?? process.cwd(),
     sessionId,
     sandbox: ctx?.sandbox,
-    shellEnv: { ...ctx?.shellEnv, ...workspaceWriteShellEnv },
+    shellEnv: {
+      ...ctx?.shellEnv,
+      ...workspaceWriteShellEnv,
+      CODESHELL_MODEL_TRACE_FD: diagnosticPipe ? "3" : "",
+    },
+    diagnosticPipe,
   });
   if (!r.ok) {
     return `Error: ${r.error}`;

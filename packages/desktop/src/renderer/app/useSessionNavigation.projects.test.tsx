@@ -51,6 +51,7 @@ describe("project picker and registry synchronization", () => {
   let initialIndices: Record<string, SessionIndex>;
   let pendingPicks: Array<ReturnType<typeof deferred<LocalProject | null>>>;
   let listeners: Set<(projects: LocalProject[]) => void>;
+  let traceTargets: Array<{ sessionId?: string; traceId?: string }>;
   let beforeSelectLocalSession: ((projectId: string | null) => Promise<boolean>) | undefined;
   let hook: Awaited<ReturnType<typeof renderHook<ReturnType<typeof useHarness>>>> | undefined;
 
@@ -83,7 +84,7 @@ describe("project picker and registry synchronization", () => {
       setPanelByBucket: () => {},
       activeBucketRef,
       setView: () => {},
-      setRunsInitialRunId: () => {},
+      onOpenTrace: (sessionId, traceId) => traceTargets.push({ sessionId, traceId }),
       beforeSelectLocalSession,
     });
     const renderedTargets = projects.map((item) => projectIdForPath(item.path));
@@ -118,6 +119,7 @@ describe("project picker and registry synchronization", () => {
     pendingPicks = [];
     listeners = new Set();
     beforeSelectLocalSession = undefined;
+    traceTargets = [];
     Object.defineProperty(window, "codeshell", {
       configurable: true,
       value: {
@@ -355,6 +357,28 @@ describe("project picker and registry synchronization", () => {
       summary: null,
     });
   }
+
+  test("a run without a retained session opens its exact execution trace", async () => {
+    hook = await renderHook(useHarness);
+    await act(async () =>
+      hook!.result.current.handleOpenAutomationRunSession({
+        runId: "unbound-run",
+        sessionId: null,
+        cwd: "/workspace/travel",
+        objective: "Historical objective",
+        status: "completed",
+        createdAt: 1,
+        updatedAt: 2,
+        startedAt: 1,
+        finishedAt: 2,
+        error: null,
+        summary: null,
+      }),
+    );
+    expect(traceTargets).toEqual([{ sessionId: undefined, traceId: "unbound-run" }]);
+    expect(hook.result.current.activeProjectId).toBeNull();
+    expect(hook.result.current.sessionIndices).toEqual({});
+  });
 
   test("keeps local selection mutations synchronous when no runtime guard is supplied", async () => {
     seedLocalSession();

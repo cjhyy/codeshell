@@ -46,7 +46,8 @@ describe("PageRegistry contract", () => {
 
   test("App renders migrated pages through the registry, others via the legacy ternary", () => {
     expect(app).toContain("PAGE_REGISTRY");
-    expect(app).toContain("runsInitialRunId");
+    expect(app).toContain("tracesInitialTraceId");
+    expect(app).not.toContain("runsInitialRunId");
     // Migrated branches are gone from the ternary chain…
     expect(app).not.toContain('view.viewMode === "logs"');
     expect(app).not.toContain('view.viewMode === "runs"');

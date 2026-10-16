@@ -68,6 +68,8 @@ export interface SafeSpawnOptions {
    * already uses taskkill /T for direct children.
    */
   processGroup?: boolean;
+  /** Optional write-only diagnostics pipe at fd 3; never mixed into command output. */
+  diagnosticPipe?: { data(chunk: Uint8Array): void; finish(status: "failed" | "cancelled"): void };
 }
 
 export interface SafeSpawnShellOptions extends SafeSpawnOptions {
@@ -165,6 +167,7 @@ export function safeSpawnShell(
     shell,
     sandbox: opts.sandbox,
   });
+  if (opts.diagnosticPipe && opts.sandbox?.name === "bwrap") args.unshift("--preserve-fds", "1");
   // Shell commands run free-form LLM strings that routinely background
   // grandchildren (`pytest &`, `sh → npm → node`). Spawn as a process-group
   // leader (detached) so a timeout/abort kill reaches the WHOLE subtree, not
@@ -218,6 +221,11 @@ function runLifecycle({
     const finish = (result: SafeSpawnResult) => {
       if (settled) return;
       settled = true;
+      try {
+        opts.diagnosticPipe?.finish(result.aborted || result.timedOut ? "cancelled" : "failed");
+      } catch {
+        /* Observer only. */
+      }
       if (timer) clearTimeout(timer);
       if (settleTimer) clearTimeout(settleTimer);
       logSpawnProfile(file, args, resolveMs, elapsedMs(lifecycleStartedAt), result.reason);
@@ -234,7 +242,29 @@ function runLifecycle({
 
     let child: ChildProcess;
     try {
-      child = spawn(file, args, { cwd: opts.cwd, env: opts.env, detached });
+      child = spawn(file, args, {
+        cwd: opts.cwd,
+        env: opts.env,
+        detached,
+        ...(opts.diagnosticPipe ? { stdio: ["pipe", "pipe", "pipe", "pipe"] as const } : {}),
+      });
+      if (opts.diagnosticPipe) {
+        const pipe = child.stdio[3] as import("node:stream").Readable | undefined;
+        pipe?.on("data", (chunk: Buffer) => {
+          try {
+            opts.diagnosticPipe!.data(chunk);
+          } catch {
+            /* Observer only. */
+          }
+        });
+        pipe?.on("error", () => {
+          try {
+            opts.diagnosticPipe!.finish("failed");
+          } catch {
+            /* Observer only. */
+          }
+        });
+      }
     } catch (err) {
       finish(
         emptyResult({ reason: "spawn_failed", spawnFailed: true, error: (err as Error).message }),

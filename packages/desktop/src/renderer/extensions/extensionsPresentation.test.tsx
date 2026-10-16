@@ -168,7 +168,6 @@ describe("extension management", () => {
       <React.Suspense fallback={null}>
         {PAGE_REGISTRY.get("extensions")!.render!({
           activeProjectPath: null,
-          runsInitialRunId: null,
         })}
       </React.Suspense>,
     );

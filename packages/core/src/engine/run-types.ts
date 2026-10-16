@@ -139,6 +139,8 @@ export const ISOLATED_TASK_PROFILE: RunBehaviorProfile = {
 
 export interface EngineRunOptions {
   cwd?: string;
+  /** Diagnostic origin label only; grants no workspace or storage authority. */
+  modelTraceSource?: string;
   /** Trusted run-scoped root authorization. Protocol hosts must strip untrusted values. */
   workspaceContext?: import("../workspace/workspace-context.js").WorkspaceContext;
   onStream?: StreamCallback;

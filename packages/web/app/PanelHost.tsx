@@ -39,7 +39,11 @@ export interface PanelHostProps {
   onClose: () => void;
   onAuthLost: () => void;
   onDirtyChange?: (dirty: boolean) => void;
-  onSubmitPrompt: (input: { prompt: string; sessionId: string }) => Promise<{ accepted: true }>;
+  onSubmitPrompt: (input: {
+    prompt: string;
+    sessionId: string;
+    modelTraceSource: string;
+  }) => Promise<{ accepted: true }>;
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -605,6 +609,7 @@ export function PanelHost({
           const accepted = await callbacks.current.onSubmitPrompt({
             prompt: result.prompt,
             sessionId,
+            modelTraceSource: `panel:${panel.id}`,
           });
           if (disposed || controller.signal.aborted) return;
           setNotice("面板任务已提交到当前对话，可切换到对话查看进度。");

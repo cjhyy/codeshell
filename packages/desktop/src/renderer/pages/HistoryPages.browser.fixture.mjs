@@ -9,7 +9,6 @@ import { build } from "esbuild";
 import { chromium, _electron } from "playwright";
 
 const desktop = fileURLToPath(new URL("../../..", import.meta.url));
-const sessionsOnly = process.argv.includes("--sessions-only");
 const renderer = path.join(desktop, "src/renderer");
 const require = createRequire(path.join(desktop, "package.json"));
 const tailwindRequire = createRequire(require.resolve("@tailwindcss/vite"));
@@ -20,41 +19,11 @@ import React from "react";
 import { createRoot } from "react-dom/client";
 import { flushSync } from "react-dom";
 import { SessionsView } from "./sessions/SessionsView";
-import { RunsView } from "./runs/RunsView";
 import { AppShell, AppMainView } from "./app/AppShell";
 import { I18nProvider } from "./i18n/I18nProvider";
 import { saveUILanguage } from "./uiLanguage";
 const root = createRoot(document.getElementById("root"));
 let generation = 0;
-const totals = (count) => ({
-  requests: count,
-  promptTokens: count * 20,
-  completionTokens: count * 5,
-  totalTokens: count * 25,
-  cacheReadTokens: 0,
-  cacheCreationTokens: 0,
-  knownEstimatedCostUsd: count * 0.03,
-  unknownCostRequests: 0,
-  unknownUsageRequests: 0,
-});
-const usage = () => ({
-  version: 1,
-  scope: "store",
-  includesChildren: false,
-  partial: false,
-  persistenceErrors: 0,
-  invalidReceipts: 0,
-  scannedReceipts: window.fixture.usageRows * 50,
-  ...totals(window.fixture.usageRows * 50),
-  bySession: [],
-  byPurpose: [],
-  byModel: Array.from({ length: window.fixture.usageRows }, (_, index) => ({
-    ...totals(50),
-    provider: "provider-" + index,
-    providerKind: "openai",
-    model: "model-" + index + "-" + "long-model-中文".repeat(index === 23 ? 20 : 1),
-  })),
-});
 const sessions = () =>
   Array.from({ length: window.fixture.sessionCount }, (_, index) => ({
     id: index === 0 ? "search" : "session-" + index,
@@ -64,41 +33,13 @@ const sessions = () =>
     updatedAt: 1800000000000 + index,
     title: "Session " + index + " " + "Long English and 中文 title ".repeat(index % 4),
   }));
-const runs = () =>
-  Array.from({ length: 120 }, (_, index) => ({
-    runId: "run-" + index,
-    objective:
-      "Run " + index + " " + "Long English objective 中文运行记录 ".repeat(1 + (index % 5)),
-    status: ["running", "failed", "completed", "waiting_approval"][index % 4],
-    cwd: "/fixture",
-    createdAt: 1800000000000,
-    updatedAt: 1800000000000 + index,
-    startedAt: null,
-    finishedAt: null,
-    sessionId: null,
-    error: null,
-    summary: null,
-    model: null,
-    provider: null,
-    durationMs: 1000,
-    usage: null,
-    attemptCount: 1,
-    latestCheckpointId: null,
-    latestApprovalId: null,
-    tags: [],
-    metadata: {},
-  }));
 const request = (kind, payload) =>
   new Promise((resolve, reject) => window.fixture.pending[kind].push({ resolve, reject, payload }));
 window.fixture = {
   calls: [],
-  pending: { read: [], delete: [], rename: [], open: [], runs: [], detail: [] },
+  pending: { read: [], delete: [], rename: [], open: [] },
   readMode: "ready",
-  runMode: "ready",
-  detailMode: "ready",
-  usageRows: 24,
   sessionCount: 120,
-  initialRunId: "run-0",
   titles: {},
   deleted: [],
   unexpected: [],
@@ -117,7 +58,6 @@ window.fixture = {
       queued.resolve();
     } else if (kind === "read")
       queued.resolve(sessions().filter((row) => !this.deleted.includes(row.id)));
-    else if (kind === "runs") queued.resolve(runs());
     else queued.resolve(null);
   },
 };
@@ -142,46 +82,7 @@ const bridge = {
     window.fixture.calls.push(["deleteSession", id]);
     return request("delete", id);
   },
-  listRuns: (options) => {
-    window.fixture.calls.push(["listRuns", options]);
-    if (window.fixture.runMode === "hold") return request("runs");
-    if (window.fixture.runMode === "empty") return Promise.resolve([]);
-    if (window.fixture.runMode === "error")
-      return Promise.reject(new Error("Run store read failed " + "long error ".repeat(50)));
-    return Promise.resolve(runs());
-  },
-  getRun: (id) => {
-    window.fixture.calls.push(["getRun", id]);
-    if (window.fixture.detailMode === "hold") return request("detail", id);
-    if (window.fixture.detailMode === "error")
-      return Promise.reject(new Error("Owned detail read rejected"));
-    return Promise.resolve({
-      ...runs().find((row) => row.runId === id),
-      prompt: "Full prompt\n" + "English detail 中文内容\n".repeat(30),
-      summary: "Fixture result\n" + "summary line\n".repeat(12),
-      checkpoints: [],
-      artifacts: ["/fixture/result.txt"],
-      events: [
-        {
-          eventId: "tool-" + id,
-          type: "tool_use",
-          timestamp: 1800000000000,
-          data: {
-            toolName: "Read",
-            toolCallId: "call-" + id,
-            args: { file: "/fixture/input.txt" },
-          },
-        },
-        {
-          eventId: "result-" + id,
-          type: "tool_result",
-          timestamp: 1800000000001,
-          data: { toolCallId: "call-" + id, error: "Owned tool failed" },
-        },
-      ],
-    });
-  },
-  getUsageSummary: async () => usage(),
+
 };
 window.codeshell = new Proxy(bridge, {
   get(target, key) {
@@ -195,13 +96,9 @@ window.renderFixture = (kind, lang, options = {}) => {
     window.fixture,
     {
       calls: [],
-      pending: { read: [], delete: [], rename: [], open: [], runs: [], detail: [] },
+      pending: { read: [], delete: [], rename: [], open: [] },
       readMode: "ready",
-      runMode: "ready",
-      detailMode: "ready",
-      usageRows: 24,
       sessionCount: 120,
-      initialRunId: "run-0",
       titles: {},
       deleted: [],
     },
@@ -216,8 +113,7 @@ window.renderFixture = (kind, lang, options = {}) => {
           <div className="flex min-h-0 flex-1">
             <div className="relative flex min-w-0 flex-1 overflow-hidden">
               <AppMainView lifecycle={null} searchLayer={null}>
-                {kind === "sessions" ? (
-                  <SessionsView
+                <SessionsView
                     onNewSession={() => window.fixture.calls.push(["newSession"])}
                     onOpenSession={(id) => {
                       window.fixture.calls.push(["openSession", id]);
@@ -227,10 +123,7 @@ window.renderFixture = (kind, lang, options = {}) => {
                       window.fixture.calls.push(["renamed", id, title])
                     }
                     onSessionDeleted={(id) => window.fixture.calls.push(["deleted", id])}
-                  />
-                ) : (
-                  <RunsView initialRunId={window.fixture.initialRunId} />
-                )}
+                />
               </AppMainView>
             </div>
           </div>
@@ -275,11 +168,7 @@ const html =
 const labels = (lang) =>
   lang === "zh"
     ? {
-        runs: "运行记录",
-        sessions: "会话历史",
-        list: "运行列表",
-        details: "运行详情",
-        usage: "已记录的跨会话用量与费用估算",
+        sessions: "会话管理",
         refresh: "刷新",
         retry: "重试",
         rename: "重命名",
@@ -296,11 +185,7 @@ const labels = (lang) =>
         sort: "会话排序",
       }
     : {
-        runs: "Run history",
-        sessions: "Session history",
-        list: "Run list",
-        details: "Run details",
-        usage: "Recorded cross-session usage and cost estimates",
+        sessions: "Conversations",
         refresh: "Refresh",
         retry: "Retry",
         rename: "Rename",
@@ -344,158 +229,6 @@ async function render(page, kind, lang, options = {}) {
 async function inject(page) {
   await page.addStyleTag({ content: css });
   await page.addScriptTag({ content: bundle.outputFiles[0].text });
-}
-async function runsLayout(page, lang) {
-  const text = labels(lang);
-  await render(page, "runs", lang);
-  const detail = page.getByRole("region", { name: text.details, exact: true });
-  await detail.getByRole("heading", { level: 2 }).waitFor();
-  const list = page.getByRole("region", { name: text.list, exact: true });
-  const rows = list.locator("[aria-busy]");
-  assert.equal(await list.locator("ul > li").count(), 50, "Large run history is paged");
-  assert.ok(
-    (await detail.evaluate((node) => node.clientHeight)) >= 128,
-    "Run details retain a readable scrolling area",
-  );
-  assert.ok(
-    (await rows.evaluate((node) => node.clientHeight)) >= 64,
-    "The list retains a visible row area",
-  );
-  const usage = page.getByRole("region", { name: text.usage, exact: true });
-  assert.equal(
-    await usage.locator("p").count(),
-    26,
-    "All 24 model rows and both totals remain mounted",
-  );
-  await usage.focus();
-  await page.keyboard.press("End");
-  await page.waitForFunction((label) => {
-    const node = Array.from(document.querySelectorAll("section")).find(
-      (node) => node.getAttribute("aria-label") === label,
-    );
-    return node.scrollTop >= node.scrollHeight - node.clientHeight - 1;
-  }, text.usage);
-  assert.equal(await focused(usage), true, "Usage is keyboard scrollable");
-  assert.ok(
-    await usage.evaluate((node) => node.scrollWidth <= node.clientWidth + 1),
-    "Long model IDs wrap without horizontal loss",
-  );
-  await usage.hover();
-  await page.mouse.wheel(0, -5000);
-  await page.waitForFunction(
-    (label) =>
-      Array.from(document.querySelectorAll("section")).find(
-        (node) => node.getAttribute("aria-label") === label,
-      ).scrollTop === 0,
-    text.usage,
-  );
-  await usage.hover();
-  await page.mouse.wheel(0, 500);
-  await page.waitForFunction(
-    (label) =>
-      Array.from(document.querySelectorAll("section")).find(
-        (node) => node.getAttribute("aria-label") === label,
-      ).scrollTop > 0,
-    text.usage,
-  );
-  const first = list.getByRole("button", { name: /^Run 0 / });
-  await first.focus();
-  await rows.hover();
-  const before = await rows.evaluate((node) => node.scrollTop);
-  await page.mouse.wheel(0, 500);
-  await page.waitForFunction(
-    ({ label, before }) =>
-      Array.from(document.querySelectorAll("section"))
-        .find((node) => node.getAttribute("aria-label") === label)
-        .querySelector("[aria-busy]").scrollTop > before,
-    { label: text.list, before },
-  );
-  await detail.focus();
-  const detailBefore = await detail.evaluate((node) => node.scrollTop);
-  await page.keyboard.press("PageDown");
-  await page.waitForFunction(
-    ({ label, before }) =>
-      Array.from(document.querySelectorAll('[role="region"]')).find(
-        (node) => node.getAttribute("aria-label") === label,
-      ).scrollTop > before,
-    { label: text.details, before: detailBefore },
-  );
-  const next = list.getByRole("button", { name: /^Run 1 / });
-  await next.focus();
-  await page.keyboard.press("Enter");
-  await detail.getByRole("heading", { level: 2, name: /^Run 1 / }).waitFor();
-  assert.equal((await ledger(page, "getRun")).at(-1)[1], "run-1");
-  assert.equal(await next.getAttribute("aria-pressed"), "true");
-  assert.equal(await next.getAttribute("aria-controls"), await detail.getAttribute("id"));
-  const runText =
-    lang === "zh"
-      ? {
-          next: "下一页运行",
-          previous: "上一页运行",
-          hidden: "当前运行不在筛选结果中，详情仍保留。",
-          clear: "清空筛选条件",
-          retry: "重试详情",
-        }
-      : {
-          next: "Next runs page",
-          previous: "Previous runs page",
-          hidden: "The selected run is outside the current filters. Its details are retained.",
-          clear: "Clear filters",
-          retry: "Retry details",
-        };
-  await list.getByRole("button", { name: runText.next, exact: true }).click();
-  assert.equal(await list.locator("ul > li").count(), 50);
-  await list.getByRole("button", { name: runText.next, exact: true }).click();
-  assert.equal(await list.locator("ul > li").count(), 20);
-  await list.getByRole("button", { name: runText.previous, exact: true }).click();
-  const search = list.getByRole("searchbox");
-  await search.fill("run-119");
-  assert.equal(
-    await list.locator("ul > li").count(),
-    1,
-    "Search includes runs outside the current page",
-  );
-  await detail.getByText(runText.hidden, { exact: true }).waitFor();
-  await detail.getByRole("heading", { level: 2, name: /^Run 1 / }).waitFor();
-  await search.fill("no-matching-run");
-  await list.getByRole("button", { name: runText.clear, exact: true }).click();
-  assert.equal(await focused(search), true);
-  assert.equal(await list.locator("ul > li").count(), 50);
-  await list.getByRole("combobox").click();
-  await page
-    .getByRole("option", { name: lang === "zh" ? "已完成" : "Completed", exact: true })
-    .click();
-  assert.equal(
-    await list.locator("ul > li").count(),
-    30,
-    "Status filtering searches the full history",
-  );
-  await detail.getByText(runText.hidden, { exact: true }).waitFor();
-  await detail.getByRole("heading", { level: 2, name: /^Run 1 / }).waitFor();
-  await list.getByRole("combobox").click();
-  await page.getByRole("option", { name: lang === "zh" ? "全部" : "All", exact: true }).click();
-  const tool = detail.locator("details").first();
-  assert.equal(await tool.locator("pre").count(), 0, "Closed trace payloads are not mounted");
-  await tool.locator("summary").click();
-  await tool.getByText("Owned tool failed", { exact: true }).waitFor();
-  await page.evaluate(() => (window.fixture.detailMode = "hold"));
-  await page.getByRole("button", { name: text.refresh, exact: true }).click();
-  await tool.getByText("Owned tool failed", { exact: true }).waitFor();
-  assert.equal(await tool.getAttribute("open"), "", "Refreshing preserves expanded tool details");
-  await page.evaluate(() => window.fixture.settle("detail", "reject", "Detail refresh failed"));
-  await detail.getByRole("alert").waitFor();
-  await detail.getByRole("heading", { level: 2, name: /^Run 1 / }).waitFor();
-  await page.evaluate(() => (window.fixture.detailMode = "ready"));
-  await detail.getByRole("button", { name: runText.retry, exact: true }).click();
-  await detail.getByRole("alert").waitFor({ state: "hidden" });
-  assert.equal(await tool.getAttribute("open"), "", "Retry preserves expanded tool details");
-  assert.deepEqual(
-    await page
-      .locator("main")
-      .evaluate((node) => [node.scrollTop, node.scrollHeight <= node.clientHeight + 1]),
-    [0, true],
-    "Page scrolling stays inside history instead of shifting its app ancestor",
-  );
 }
 async function sessionRecovery(page, lang) {
   const text = labels(lang);
@@ -764,12 +497,9 @@ async function ownership(page) {
   assert.equal(await focused(page.getByRole("textbox", { name: "Outside field" })), true);
 }
 async function states(page, lang) {
-  for (const kind of sessionsOnly ? ["sessions"] : ["runs", "sessions"])
+  for (const kind of ["sessions"])
     for (const mode of ["hold", "empty", "error"]) {
       await render(page, kind, lang, {
-        initialRunId: null,
-        usageRows: 0,
-        runMode: mode,
         readMode: mode === "empty" ? "ready" : mode,
         sessionCount: 0,
       });
@@ -781,12 +511,6 @@ async function states(page, lang) {
       await settle(page);
       assert.equal(await focused(outer), true);
       assert.ok(await outer.evaluate((node) => node.scrollWidth <= node.clientWidth + 1));
-      if (kind === "runs")
-        assert.ok(
-          (await page
-            .getByRole("region", { name: labels(lang).details, exact: true })
-            .evaluate((node) => node.clientHeight)) >= 128,
-        );
     }
 }
 if (!process.argv.includes("--electron-zoom")) {
@@ -820,7 +544,6 @@ if (!process.argv.includes("--electron-zoom")) {
           (scheme) => document.documentElement.classList.toggle("dark", scheme === "dark"),
           scheme,
         );
-        if (!sessionsOnly) await runsLayout(page, lang);
         await sessionRecovery(page, lang);
         await states(page, lang);
         if (width === 800 && lang === "en") await ownership(page);
@@ -836,9 +559,7 @@ if (!process.argv.includes("--electron-zoom")) {
             lang +
             "/" +
             scheme +
-            (sessionsOnly
-              ? ": sessions pagination, open/delete recovery, scrolling, drafts and states"
-              : ": readable runs, full usage, real scrolling, sessions recovery, draft and states"),
+            ": sessions pagination, open/delete recovery, scrolling, drafts and states",
         );
         await page.close();
       }
@@ -886,7 +607,6 @@ if (!process.argv.includes("--electron-zoom")) {
             BrowserWindow.getAllWindows()[0].webContents.setZoomFactor(zoom),
           zoom,
         );
-        if (!sessionsOnly) await runsLayout(page, lang);
         await sessionRecovery(page, lang);
         await states(page, lang);
         console.log(

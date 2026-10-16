@@ -1961,7 +1961,7 @@ export class Engine {
     session.state.stateRevision = this.sessionManager.updateSessionState(session.state.sessionId, {
       costState: session.state.costState,
     });
-    return withEngineRunTrace({ state: session.state, cwd, runId, signal: options?.signal }, () =>
+    return withEngineRunTrace(session.state, cwd, runId, options, () =>
       withUsageOwner(billingOwner, () =>
         runWithSid(session.state.sessionId, async () => {
           const hookMessages = profile?.disableHooks

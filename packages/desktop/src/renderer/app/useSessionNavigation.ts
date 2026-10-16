@@ -58,7 +58,7 @@ interface Params {
   setPanelByBucket: Dispatch<SetStateAction<Record<string, PanelBucketState>>>;
   activeBucketRef: MutableRefObject<string>;
   setView: Dispatch<SetStateAction<ViewState>>;
-  setRunsInitialRunId: Dispatch<SetStateAction<string | null>>;
+  onOpenTrace: (sessionId?: string, traceId?: string) => void;
   /** Persist the local runtime before any local history row becomes active. */
   beforeSelectLocalSession?: (projectId: string | null) => Promise<boolean>;
 }
@@ -84,7 +84,7 @@ export function useSessionNavigation({
   setPanelByBucket,
   activeBucketRef,
   setView,
-  setRunsInitialRunId,
+  onOpenTrace,
   beforeSelectLocalSession,
 }: Params) {
   const selectionRequest = useRef(0);
@@ -345,8 +345,7 @@ export function useSessionNavigation({
     const request = ++selectionRequest.current;
     const isCurrent = () => request === selectionRequest.current;
     if (!run.sessionId) {
-      setRunsInitialRunId(run.runId);
-      setView((view) => ({ ...view, viewMode: "runs" }));
+      onOpenTrace(run.sessionId ?? undefined, run.runId);
       return;
     }
     const existing = findSessionByEngineId(run.sessionId);
@@ -389,8 +388,7 @@ export function useSessionNavigation({
     const imported = findSessionByEngineId(run.sessionId);
     if (imported) await selectSession(imported.projectId, imported.session.id, isCurrent, request);
     else {
-      setRunsInitialRunId(run.runId);
-      setView((view) => ({ ...view, viewMode: "runs" }));
+      onOpenTrace(run.sessionId ?? undefined, run.runId);
     }
   };
 

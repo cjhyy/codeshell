@@ -44,10 +44,10 @@ describe("ModelTraceStore", () => {
   test("configuration is private, validated and hot across store instances", () => {
     const store = new ModelTraceStore({ storageDir: directory });
     expect(store.getConfig()).toEqual({
-      policyRevision: "initial",
+      policyRevision: "defaults-v2",
       enabled: true,
-      captureContent: false,
-      includeEphemeral: false,
+      captureContent: true,
+      includeEphemeral: true,
       retentionDays: 7,
     });
     const peer = new ModelTraceStore({ storageDir: directory });
@@ -59,6 +59,62 @@ describe("ModelTraceStore", () => {
     expect(() => store.setConfig({ surprise: true } as any)).toThrow();
     if (process.platform !== "win32")
       expect(statSync(join(directory, "config.json")).mode & 0o777).toBe(0o600);
+  });
+  test("the v2 rollout enables old defaults once and preserves later explicit opt-outs", () => {
+    const configFile = join(directory, "config.json");
+    writeFileSync(
+      configFile,
+      JSON.stringify({
+        policyRevision: "old-host-policy",
+        enabled: false,
+        captureContent: false,
+        includeEphemeral: false,
+        retentionDays: 14,
+      }),
+    );
+    const store = new ModelTraceStore({ storageDir: directory });
+    const peer = new ModelTraceStore({ storageDir: directory });
+    const migrated = store.getConfig();
+    expect(migrated).toMatchObject({
+      enabled: false,
+      captureContent: true,
+      includeEphemeral: true,
+      retentionDays: 14,
+    });
+    expect(migrated.policyRevision).not.toBe("old-host-policy");
+    expect(peer.getConfig()).toEqual(migrated);
+    // Reading does not create a race with another process writing preferences.
+    expect(JSON.parse(readFileSync(configFile, "utf8")).defaultsVersion).toBeUndefined();
+    const disabled = store.setConfig({ captureContent: false, includeEphemeral: false });
+    expect(disabled.policyRevision).not.toBe(migrated.policyRevision);
+    expect(JSON.parse(readFileSync(configFile, "utf8")).defaultsVersion).toBe(2);
+    expect(peer.getConfig()).toEqual(disabled);
+    peer.setConfig({ retentionDays: 21, enabled: true });
+    expect(store.getConfig()).toMatchObject({
+      enabled: true,
+      captureContent: false,
+      includeEphemeral: false,
+      retentionDays: 21,
+    });
+    expect(() => store.setConfig({ defaultsVersion: 1 } as any)).toThrow();
+  });
+  test("saving an unrelated setting persists upgraded defaults without changing its generation", () => {
+    writeFileSync(
+      join(directory, "config.json"),
+      JSON.stringify({
+        enabled: true,
+        captureContent: false,
+        includeEphemeral: false,
+        retentionDays: 7,
+      }),
+    );
+    const store = new ModelTraceStore({ storageDir: directory });
+    const initial = store.getConfig();
+    expect(store.setConfig({ retentionDays: 30 })).toEqual({ ...initial, retentionDays: 30 });
+    expect(new ModelTraceStore({ storageDir: directory }).getConfig()).toEqual({
+      ...initial,
+      retentionDays: 30,
+    });
   });
   test("pages stable IDs and searches metadata without returning bodies", () => {
     const store = new ModelTraceStore({ storageDir: directory });
@@ -84,6 +140,55 @@ describe("ModelTraceStore", () => {
     expect(store.list({ traceId: "missing" }).total).toBe(0);
     expect(store.get("id-2")?.input?.systemPrompt).toBe("private prompt");
     expect(() => store.list({ cursor: "bad cursor" })).toThrow();
+  });
+  test("Host workspace scopes union exact and prefix-limited sources before stable pagination", () => {
+    const store = new ModelTraceStore({ storageDir: directory });
+    const startedAt = Date.now();
+    for (const [id, workspacePath, source, offset] of [
+      ["worktree-1", "/project/worktree", "desktop", 1],
+      ["root-panel-1", "/project", "panel:video:tts", 2],
+      ["worktree-2", "/project/worktree", "desktop", 3],
+      ["root-panel-2", "/project", "panel:research:query", 4],
+      ["root-chat", "/project", "desktop", 5],
+      ["other-panel", "/other", "panel:video:tts", 6],
+      ["unknown-panel", undefined, "panel:video:tts", 7],
+    ] as const)
+      store.write(record(id, { workspacePath, source, startedAt: startedAt - offset }));
+    const workspaceScopes = [
+      { workspacePath: "/project/worktree" },
+      { workspacePath: "/project", sourcePrefix: "panel:" },
+    ];
+    const first = store.list({ workspaceScopes, limit: 2 });
+    expect(first.total).toBe(4);
+    expect(first.items.map((item) => item.id)).toEqual(["worktree-1", "root-panel-1"]);
+    const second = store.list({ workspaceScopes, limit: 2, cursor: first.nextCursor });
+    expect(second.total).toBe(4);
+    expect(second.items.map((item) => item.id)).toEqual(["worktree-2", "root-panel-2"]);
+    expect(second.nextCursor).toBeUndefined();
+    expect(store.list({ workspacePath: "/project/worktree" }).total).toBe(2);
+    expect(store.list({ workspaceScopes, source: "desktop" }).items.map((item) => item.id)).toEqual(
+      ["worktree-1", "worktree-2"],
+    );
+  });
+  test("Host-only workspace scopes are bounded, explicit and reject unknown authority fields", () => {
+    const store = new ModelTraceStore({ storageDir: directory });
+    for (const workspaceScopes of [
+      null,
+      {},
+      [],
+      Array.from({ length: 9 }, () => ({ workspacePath: "/project" })),
+      [null],
+      [{ workspacePath: "" }],
+      [{ workspacePath: "x\0y" }],
+      [{ workspacePath: "/project", sourcePrefix: "" }],
+      [{ workspacePath: "/project", sourcePrefix: 1 }],
+      [{ workspacePath: "/project", sourcePrefix: "x\0y" }],
+      [{ workspacePath: "/project", includeChildren: true }],
+    ])
+      expect(() => store.list({ workspaceScopes } as any)).toThrow("workspace scopes");
+    expect(() =>
+      store.list({ workspacePath: "/project", workspaceScopes: [{ workspacePath: "/other" }] }),
+    ).toThrow("workspace scopes");
   });
   test("expired traces and events are unavailable and pruned", () => {
     const store = new ModelTraceStore({ storageDir: directory });
@@ -191,6 +296,7 @@ test("capture policy generations are Host-owned and change on every privacy tran
     const store = new ModelTraceStore({ storageDir: root });
     const initial = store.getConfig().policyRevision;
     expect(store.setConfig({ retentionDays: 14 }).policyRevision).toBe(initial);
+    store.setConfig({ captureContent: false });
     const enabled = store.setConfig({ captureContent: true }).policyRevision;
     expect(enabled).not.toBe(initial);
     expect(store.setConfig({ captureContent: true }).policyRevision).toBe(enabled);

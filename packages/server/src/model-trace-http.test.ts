@@ -3,7 +3,11 @@ import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { createServer, type Server } from "node:http";
-import { ModelTraceStore, type ModelTraceRecord } from "@cjhyy/code-shell-core/internal";
+import {
+  ModelTraceStore,
+  type ModelTraceRecord,
+  type ModelTraceListQuery,
+} from "@cjhyy/code-shell-core/internal";
 import { createModelTraceHistory } from "./model-trace-history.js";
 import { createModelTraceHttp } from "./model-trace-http.js";
 
@@ -61,10 +65,13 @@ async function fixture() {
       outputState: "not-recorded",
     });
   let allowed = true;
+  let scopes: ModelTraceListQuery["workspaceScopes"];
+  let scopeResolver: (() => ModelTraceListQuery["workspaceScopes"]) | undefined;
   const service = createModelTraceHttp({
     storageDir,
     workspacePath: cwd,
     isAuthorized: (req) => allowed && req.headers.authorization === "Bearer fixture",
+    resolveWorkspaceScopes: () => (scopeResolver ? scopeResolver() : scopes),
   });
   const server = createServer((req, res) => {
     void service.handle(req, res).then((handled) => {
@@ -86,6 +93,12 @@ async function fixture() {
     store,
     storageDir,
     request,
+    setScopes: (value: ModelTraceListQuery["workspaceScopes"]) => {
+      scopes = value;
+    },
+    setScopeResolver: (value: () => ModelTraceListQuery["workspaceScopes"]) => {
+      scopeResolver = value;
+    },
     setAllowed: (value: boolean) => {
       allowed = value;
     },
@@ -115,6 +128,7 @@ test("remote trace queries cannot select paths, override workspace, or mutate ca
   for (const query of [
     "?storageDir=/tmp/foreign",
     "?workspacePath=/tmp/foreign",
+    "?workspaceScopes=/tmp/foreign",
     "?limit=0",
     "?limit=201",
     "?limit=2&limit=3",
@@ -140,14 +154,14 @@ test("two Host stores stay isolated and native setters validate complete configu
   expect(second.list().items).toEqual([]);
   expect(second.get("visible")).toBeNull();
   expect(
-    first.setConfig({ captureContent: true, includeEphemeral: true, retentionDays: 30 }),
+    first.setConfig({ captureContent: false, includeEphemeral: false, retentionDays: 30 }),
   ).toMatchObject({
     enabled: true,
-    captureContent: true,
-    includeEphemeral: true,
+    captureContent: false,
+    includeEphemeral: false,
     retentionDays: 30,
   });
-  expect(second.getConfig().captureContent).toBe(false);
+  expect(second.getConfig().captureContent).toBe(true);
   for (const patch of [
     { captureContent: "yes" },
     { includeEphemeral: 1 },
@@ -158,4 +172,66 @@ test("two Host stores stay isolated and native setters validate complete configu
   ])
     expect(() => first.setConfig(patch)).toThrow();
   expect(first.getConfig().enabled).toBe(true);
+});
+
+test("trusted related scopes expose project Panel calls without exposing ordinary project chats or events", async () => {
+  const f = await fixture();
+  f.setScopes([{ workspacePath: f.root, sourcePrefix: "panel:" }]);
+  const now = Date.now();
+  f.store.write({ ...entry("root-panel", f.root), source: "panel:video:tts", startedAt: now + 2 });
+  f.store.write({ ...entry("root-chat", f.root), source: "desktop", startedAt: now + 3 });
+  f.store.write({
+    ...entry("other-panel", f.other),
+    source: "panel:video:tts",
+    startedAt: now + 4,
+  });
+  for (const [id, parentId, workspacePath] of [
+    ["panel-event", "root-panel", f.root],
+    ["panel-child", "panel-event", f.root],
+    ["root-chat-event", "root-chat", f.root],
+    ["unlinked-root-event", undefined, f.root],
+    ["other-panel-event", "root-panel", f.other],
+  ] as const)
+    f.store.writeEvent({
+      id,
+      parentId,
+      workspacePath,
+      traceId: "shared-run",
+      kind: "tool",
+      name: id,
+      startedAt: now,
+      status: "completed",
+      inputState: "not-recorded",
+      outputState: "not-recorded",
+    });
+  const first = await (await f.request("?limit=1")).json();
+  expect(first.total).toBe(2);
+  expect(first.items.map((item: any) => item.id)).toEqual(["root-panel"]);
+  const second = await (
+    await f.request("?limit=1&cursor=" + encodeURIComponent(first.nextCursor))
+  ).json();
+  expect(second.items.map((item: any) => item.id)).toEqual(["visible"]);
+  const detail = await (await f.request("/root-panel")).json();
+  expect(detail.events.map((event: any) => event.id).sort()).toEqual([
+    "our-event",
+    "panel-child",
+    "panel-event",
+  ]);
+  for (const id of ["root-chat", "other-panel"])
+    expect((await f.request("/" + id)).status).toBe(404);
+  f.setScopes(undefined);
+  expect((await (await f.request()).json()).items.map((item: any) => item.id)).toEqual(["visible"]);
+  expect((await f.request("/root-panel")).status).toBe(404);
+});
+
+test("revoking a related workspace during a request discards its already-read prompts", async () => {
+  const f = await fixture();
+  f.store.write({ ...entry("root-panel", f.root), source: "panel:video:tts" });
+  let reads = 0;
+  f.setScopeResolver(() =>
+    ++reads === 1 ? [{ workspacePath: f.root, sourcePrefix: "panel:" }] : undefined,
+  );
+  const response = await f.request("/root-panel");
+  expect(response.status).toBe(401);
+  expect(await response.text()).not.toContain("root-panel");
 });

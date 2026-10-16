@@ -10,6 +10,7 @@ import type { PanelProjectScopeBinding } from "./project-scope.js";
 export function createPanelHttp(
   options: PanelManagementHttpOptions & {
     dataDir: string;
+    traceStorageDir?: string;
     host: "hub" | "desktop";
     projectScope?: () => Promise<PanelProjectScopeBinding | undefined>;
     publicPathPrefix?: string;
