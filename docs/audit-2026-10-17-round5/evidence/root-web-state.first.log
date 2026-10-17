@@ -1,0 +1,13 @@
+bun test v1.3.11 (af24e281)
+
+docs/audit-2026-10-17-round5/evidence/root-web-state.test.ts:
+(pass) WEB-R5-01 child detail revives completed parent and child terminals never clear it [1.66ms]
+(pass) WEB-R5-01 snapshot running=false is overridden by a later buffered child delta [0.44ms]
+(pass) WEB-R5-01 scoped child error changes main run and clears its live accumulator [0.37ms]
+(pass) WEB-R5-02 buffered orphan result bypasses reminder stripping applied to ordered results [0.42ms]
+
+ 4 pass
+ 0 fail
+ 15 expect() calls
+Ran 4 tests across 1 file. [77.00ms]
+Completed Bun shard: 4 tests, 0 skipped; 0 failures.

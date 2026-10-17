@@ -1,0 +1,139 @@
+{
+  "base": "9a421b3e65d5bfe662b78062cb86bd99483a683a",
+  "note": "Selected source/contract manifest; some adapters received focused data-path reading, not exhaustive branch review. Discord excluded, not imported or read for revival.",
+  "sourceCount": 22,
+  "sources": [
+    {
+      "path": "CODESHELL.md",
+      "bytes": 17639,
+      "sha256": "56d9ffdd81b6f6f615ed7a7392ddfa60ec4338c0ccb88eef20c4b73ad8dad5a2",
+      "matchesFrozenGitBlob": true
+    },
+    {
+      "path": "packages/chat/src/channel.ts",
+      "bytes": 7027,
+      "sha256": "645c32c69b3a8d76de60b85783a765f96133b93a5c183100bfef20794380e0ce",
+      "matchesFrozenGitBlob": true
+    },
+    {
+      "path": "packages/chat/src/chat-gateway.ts",
+      "bytes": 10429,
+      "sha256": "7032acecac774cc3c6bea6bb1b5f3b90ddf93c7234a8bded97112483300c311d",
+      "matchesFrozenGitBlob": true
+    },
+    {
+      "path": "packages/chat/src/lifecycle.ts",
+      "bytes": 824,
+      "sha256": "cdf93e75be321a483b0b9d8339cbefe87b9e211549dfdda58f348ef1ab010d46",
+      "matchesFrozenGitBlob": true
+    },
+    {
+      "path": "packages/chat/src/notification-relay.ts",
+      "bytes": 14582,
+      "sha256": "60e29d26b36198ed04c77ec649143a401599dce9b0843eff1f290c01f71d25fc",
+      "matchesFrozenGitBlob": true
+    },
+    {
+      "path": "packages/chat/src/gateway.ts",
+      "bytes": 12984,
+      "sha256": "d73ad84b43ef1b2e705323cb3ed63c5102fbb0d31f51dc5ffc10fc45862a1b13",
+      "matchesFrozenGitBlob": true
+    },
+    {
+      "path": "packages/chat/src/line.ts",
+      "bytes": 5299,
+      "sha256": "22d083ca25614471798a32fa48cd6d67b489070b0c995a657e3c6df8896a4dae",
+      "matchesFrozenGitBlob": true
+    },
+    {
+      "path": "packages/chat/src/cli.ts",
+      "bytes": 11645,
+      "sha256": "4a4c052a8433836583cd9300669f4c400f394d780645c75156c38b78d6e1d9ed",
+      "matchesFrozenGitBlob": true
+    },
+    {
+      "path": "packages/pet/src/host-actions.ts",
+      "bytes": 21898,
+      "sha256": "75e4cbabcbe8b833a901b635f58590a04ed9fcd56521b5684c5fb55978c2cbd7",
+      "matchesFrozenGitBlob": true
+    },
+    {
+      "path": "packages/chat/src/desktop-control-client.ts",
+      "bytes": 15174,
+      "sha256": "8647ab741d9b91ee5e043d8d8a02224598b42273f585e02bb5aef81ddc3541d1",
+      "matchesFrozenGitBlob": true
+    },
+    {
+      "path": "packages/chat/src/dingtalk.ts",
+      "bytes": 4103,
+      "sha256": "2eb49f6da16ec98732ea2ecbcaf444c12206a5948dcbb758904799b862d1887b",
+      "matchesFrozenGitBlob": true
+    },
+    {
+      "path": "packages/chat/src/slack.ts",
+      "bytes": 5782,
+      "sha256": "64e9a881a428bc82edec00ff7dfd0811024b4846802fa802174dac2cb75231d8",
+      "matchesFrozenGitBlob": true
+    },
+    {
+      "path": "packages/chat/src/telegram.ts",
+      "bytes": 12790,
+      "sha256": "093491c212ceb29855f1588cc9b436315a7f05fe39c323614ad803eeef1cbc9e",
+      "matchesFrozenGitBlob": true
+    },
+    {
+      "path": "packages/chat/src/wechat.ts",
+      "bytes": 52841,
+      "sha256": "9849a97a5a8dc381af805cc83b2f9bba1168f4be135196f1597f3a3b3bcbfb08",
+      "matchesFrozenGitBlob": true
+    },
+    {
+      "path": "packages/chat/src/wecom.ts",
+      "bytes": 6876,
+      "sha256": "03614e6bf682d4a33fe63f5697059b49656aaf49a1b8ed5b2f204857759eced9",
+      "matchesFrozenGitBlob": true
+    },
+    {
+      "path": "packages/chat/src/lark.ts",
+      "bytes": 8151,
+      "sha256": "06c1242b31bd0bb8f30df8f07466f56c7be04b895e7127a2092a12d2271a23d5",
+      "matchesFrozenGitBlob": true
+    },
+    {
+      "path": "packages/chat/src/mattermost.ts",
+      "bytes": 6980,
+      "sha256": "ab77fad6ff661e2af867e766d6536d588160d7c218a9e2fdb6a32587fe1df06f",
+      "matchesFrozenGitBlob": true
+    },
+    {
+      "path": "packages/chat/src/teams.ts",
+      "bytes": 11374,
+      "sha256": "172cf065fb84b5659398c33bad63579fcf1f56e6fcf3c13b93668fb4ab683914",
+      "matchesFrozenGitBlob": true
+    },
+    {
+      "path": "packages/chat/src/whatsapp.ts",
+      "bytes": 10598,
+      "sha256": "9ca182ba75e87e24b069df7040b87a8a035375cb20a47a12d9acfb12515b9ee1",
+      "matchesFrozenGitBlob": true
+    },
+    {
+      "path": "packages/chat/src/matrix.ts",
+      "bytes": 9093,
+      "sha256": "a850e957ec5c7c9f1535251725a1842f284dcf293afbe5b080ebe79316ac205d",
+      "matchesFrozenGitBlob": true
+    },
+    {
+      "path": "packages/chat/src/bound-session-chat.ts",
+      "bytes": 3817,
+      "sha256": "3cfca7ed0caa2509102548f1e47a581e4d1e53423f5682c1f33f374a8ca0f4c7",
+      "matchesFrozenGitBlob": true
+    },
+    {
+      "path": "packages/chat/src/protocol.ts",
+      "bytes": 3521,
+      "sha256": "ac7e097c07b4d4ffbca59a7958e2cf71fa68b2ccc9833f8f07043ef6d9afb65a",
+      "matchesFrozenGitBlob": true
+    }
+  ]
+}

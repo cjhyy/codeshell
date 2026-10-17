@@ -1,0 +1,15 @@
+{
+  "command": [
+    "node",
+    "scripts/run-bun-test-shard.mjs",
+    "--timeout",
+    "30000",
+    "docs/audit-2026-10-17-round5/evidence/profile-catalog-data.test.ts"
+  ],
+  "startedAt": "2026-10-17T05:01:01.793822+00:00",
+  "finishedAt": "2026-10-17T05:01:02.074003+00:00",
+  "exitCode": 0,
+  "firstAttempt": true,
+  "retry": false,
+  "log": "profile-catalog-data.first.log"
+}

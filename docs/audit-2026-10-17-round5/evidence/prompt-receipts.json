@@ -1,0 +1,82 @@
+{
+  "frozenHead": "9a421b3e65d5bfe662b78062cb86bd99483a683a",
+  "receipts": [
+    {
+      "id": "prompt-instruction-order",
+      "command": [
+        "node",
+        "scripts/run-bun-test-shard.mjs",
+        "--timeout",
+        "30000",
+        "docs/audit-2026-10-17-round5/evidence/prompt-instruction-order.test.ts"
+      ],
+      "testPath": "docs/audit-2026-10-17-round5/evidence/prompt-instruction-order.test.ts",
+      "testSha256": "3d17912d64df46abb1f019862949e855c032e3949230e70026fb89d422a126e8",
+      "rawStdoutStderrPath": "docs/audit-2026-10-17-round5/evidence/prompt-instruction-order.first.log",
+      "rawStdoutStderrSha256": "6115fe83e3466a0a9d1413dd21195f431060538f000ffd30e2f69e0b3fe55bf8",
+      "exitPath": "docs/audit-2026-10-17-round5/evidence/prompt-instruction-order.first.exit.txt",
+      "exitCode": 0,
+      "firstRun": true,
+      "attempts": 1,
+      "pass": 2,
+      "fail": 0,
+      "expectCalls": 14,
+      "skipped": 0,
+      "guardedCompletion": true,
+      "fixtureCleanup": "instruction-order owned tmp removed by synchronous afterAll; composition creates no files; no separate filesystem postcheck",
+      "coverageLayer": "actual source functions and owned ordinary file data; no Engine/model/network/native app"
+    },
+    {
+      "id": "prompt-composition",
+      "command": [
+        "node",
+        "scripts/run-bun-test-shard.mjs",
+        "--timeout",
+        "30000",
+        "docs/audit-2026-10-17-round5/evidence/prompt-composition.test.ts"
+      ],
+      "testPath": "docs/audit-2026-10-17-round5/evidence/prompt-composition.test.ts",
+      "testSha256": "bf9c49064af2a4e0f405f1da1d5defeef02debb3f7329fa51d5916c08384f2e9",
+      "rawStdoutStderrPath": "docs/audit-2026-10-17-round5/evidence/prompt-composition.first.log",
+      "rawStdoutStderrSha256": "31708a8ee0d435dd3d177c9be9449dc749294c43c67164a30753b6ccabcd7e66",
+      "exitPath": "docs/audit-2026-10-17-round5/evidence/prompt-composition.first.exit.txt",
+      "exitCode": 0,
+      "firstRun": true,
+      "attempts": 1,
+      "pass": 4,
+      "fail": 0,
+      "expectCalls": 19,
+      "skipped": 0,
+      "guardedCompletion": true,
+      "fixtureCleanup": "instruction-order owned tmp removed by synchronous afterAll; composition creates no files; no separate filesystem postcheck",
+      "coverageLayer": "actual source functions and owned ordinary file data; no Engine/model/network/native app"
+    }
+  ],
+  "totals": {
+    "shards": 2,
+    "tests": 6,
+    "pass": 6,
+    "fail": 0,
+    "expectCalls": 33,
+    "skipped": 0,
+    "failedDirections": 0,
+    "retryRuns": 0
+  },
+  "findings": {
+    "freshP3": [
+      "PROMPT-01"
+    ],
+    "duplicates": [
+      "C-PROMPT-01"
+    ],
+    "notPromoted": [
+      "C-PROMPT-02",
+      "C-PROMPT-03"
+    ]
+  },
+  "dedupFilesScanned": 808,
+  "sourceFileCount": 28,
+  "sourceFrozenMatchCount": 28,
+  "productTrackedDiff": [],
+  "metadataAssemblyNote": "The first non-test receipt-assembly command had a regex AssertionError after writing the source manifest. Counts were read from the unchanged first-run raw logs. No fixture or test was edited/repaired/rerun; this is not a failed test direction."
+}

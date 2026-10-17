@@ -1,0 +1,123 @@
+{
+  "baseline": "9a421b3e65d5bfe662b78062cb86bd99483a683a",
+  "totals": {
+    "completedShards": 7,
+    "passedTests": 104,
+    "expectations": 330,
+    "skippedOrFilteredTests": 0,
+    "failedShardsSeparatelyRetained": 0,
+    "existingBaselineTests": 86,
+    "focusedTestsAndControls": 18
+  },
+  "runs": [
+    {
+      "log": "evidence/chat-line-button-contract.first.log",
+      "exitFile": "evidence/chat-line-button-contract.exit",
+      "exitCode": 0,
+      "firstRun": true,
+      "completed": true,
+      "passed": 3,
+      "failed": 0,
+      "expectations": 46,
+      "selectedTests": 3,
+      "skipped": 0,
+      "phase": "focused-observation-and-controls",
+      "sha256": "61a1e83e8519ae63b822f5699030b53c6c542438812ed632a94877f82bb7d02b"
+    },
+    {
+      "log": "evidence/profile-baseline.first.log",
+      "exitFile": "evidence/profile-baseline.first.exit.txt",
+      "exitCode": 0,
+      "firstRun": true,
+      "completed": true,
+      "passed": 86,
+      "failed": 0,
+      "expectations": 207,
+      "selectedTests": 86,
+      "skipped": 0,
+      "phase": "existing-profile-baseline",
+      "sha256": "6314fe6d166ff6561e1d5869163663daaa52dd2611a099163f279303078b7ff3"
+    },
+    {
+      "log": "evidence/profile-catalog-data.first.log",
+      "exitFile": "evidence/profile-catalog-data.first.exit.txt",
+      "exitCode": 0,
+      "firstRun": true,
+      "completed": true,
+      "passed": 4,
+      "failed": 0,
+      "expectations": 21,
+      "selectedTests": 4,
+      "skipped": 0,
+      "phase": "focused-observation-and-controls",
+      "sha256": "df9561dd183eb2908dc15b20cf5e071abce16e278d25bc4030c38568ee162220"
+    },
+    {
+      "log": "evidence/prompt-composition.first.log",
+      "exitFile": "evidence/prompt-composition.first.exit.txt",
+      "exitCode": 0,
+      "firstRun": true,
+      "completed": true,
+      "passed": 4,
+      "failed": 0,
+      "expectations": 19,
+      "selectedTests": 4,
+      "skipped": 0,
+      "phase": "focused-observation-and-controls",
+      "sha256": "31708a8ee0d435dd3d177c9be9449dc749294c43c67164a30753b6ccabcd7e66"
+    },
+    {
+      "log": "evidence/prompt-instruction-order.first.log",
+      "exitFile": "evidence/prompt-instruction-order.first.exit.txt",
+      "exitCode": 0,
+      "firstRun": true,
+      "completed": true,
+      "passed": 2,
+      "failed": 0,
+      "expectations": 14,
+      "selectedTests": 2,
+      "skipped": 0,
+      "phase": "focused-observation-and-controls",
+      "sha256": "6115fe83e3466a0a9d1413dd21195f431060538f000ffd30e2f69e0b3fe55bf8"
+    },
+    {
+      "log": "evidence/root-web-background.first.log",
+      "exitFile": "evidence/root-web-background.first.exit.txt",
+      "exitCode": 0,
+      "firstRun": true,
+      "completed": true,
+      "passed": 1,
+      "failed": 0,
+      "expectations": 8,
+      "selectedTests": 1,
+      "skipped": 0,
+      "phase": "focused-observation-and-controls",
+      "sha256": "7be27f8160087b5bdf857fc8161cf16cea15096e5c35b61b6c69934c5a816d2a"
+    },
+    {
+      "log": "evidence/root-web-state.first.log",
+      "exitFile": "evidence/root-web-state.first.exit.txt",
+      "exitCode": 0,
+      "firstRun": true,
+      "completed": true,
+      "passed": 4,
+      "failed": 0,
+      "expectations": 15,
+      "selectedTests": 4,
+      "skipped": 0,
+      "phase": "focused-observation-and-controls",
+      "sha256": "6e6c55423b5b5a9f98cce6d434f0ef7668e2441bc5d6edbe9abef34744f813a2"
+    }
+  ],
+  "notes": [
+    "Shared Web evidence counted once, not per finding.",
+    "Green wrong-behavior assertions reproduce bugs and controls, not product fixes.",
+    "Profile baseline has exactly seven existing files; 104 is not a full repository gate or 104 new defect tests.",
+    "WhatsApp first primary-source open failure is a research skip, not failed Bun fixture. DingTalk lacks exact readable primary contract.",
+    "Prompt metadata count-parser failure is transparently transcribed; corrected assembly uses unchanged first logs and adds zero test execution.",
+    "No previous failed CLI/recorder/summary/Discord direction revived; no product test retries this batch.",
+    "Crossreviews and final material verifiers add zero product execution.",
+    "No real models/servers/platform/account/Host/WS/DOM/Native/cross-platform/full build/typecheck/lint.",
+    "Direct source and reused node_modules do not prove clean package/dist validation. Frozen baseline remains unchanged by main integration."
+  ]
+}

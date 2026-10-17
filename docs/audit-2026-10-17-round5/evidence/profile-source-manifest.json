@@ -1,0 +1,236 @@
+{
+  "frozenHead": "9a421b3e65d5bfe662b78062cb86bd99483a683a",
+  "checkoutHead": "9a421b3e65d5bfe662b78062cb86bd99483a683a",
+  "sources": [
+    {
+      "path": "packages/core/src/profile/types.ts",
+      "sha256": "c6d8a5690e89c45b97272b3ee653d2c919962a140c6281368eeb41b7710e1b37",
+      "frozenSha256": "c6d8a5690e89c45b97272b3ee653d2c919962a140c6281368eeb41b7710e1b37",
+      "matchesFrozen": true,
+      "reviewedRanges": [
+        "whole"
+      ]
+    },
+    {
+      "path": "packages/core/src/profile/store.ts",
+      "sha256": "e57fe4a925082781def9b1276d5f8ed177a470bb9d4f1d05f9b0b5c98f6a7699",
+      "frozenSha256": "e57fe4a925082781def9b1276d5f8ed177a470bb9d4f1d05f9b0b5c98f6a7699",
+      "matchesFrozen": true,
+      "reviewedRanges": [
+        "whole ordinary read/list/save/delete data paths"
+      ]
+    },
+    {
+      "path": "packages/core/src/profile/catalog.ts",
+      "sha256": "2e68e21557bc5494fe2007100d24a9d55f7dc525876c02eadaaf9367ad5af438",
+      "frozenSha256": "2e68e21557bc5494fe2007100d24a9d55f7dc525876c02eadaaf9367ad5af438",
+      "matchesFrozen": true,
+      "reviewedRanges": [
+        "whole"
+      ]
+    },
+    {
+      "path": "packages/core/src/profile/catalog-store.ts",
+      "sha256": "3653e639285ae66a448f10d9ccea4b82deb796e1192e0559ea88fba43c88a201",
+      "frozenSha256": "3653e639285ae66a448f10d9ccea4b82deb796e1192e0559ea88fba43c88a201",
+      "matchesFrozen": true,
+      "reviewedRanges": [
+        "1-128",
+        "358-428",
+        "add/publish read for cache identity only; no network execution"
+      ]
+    },
+    {
+      "path": "packages/core/src/profile/requirements.ts",
+      "sha256": "887a548cd5fde135102ab9e3b11f6b036018f6fe05e323e8e97a585f29c690dc",
+      "frozenSha256": "887a548cd5fde135102ab9e3b11f6b036018f6fe05e323e8e97a585f29c690dc",
+      "matchesFrozen": true,
+      "reviewedRanges": [
+        "whole pure planning and argv generation; no installer execution"
+      ]
+    },
+    {
+      "path": "packages/core/src/profile/activation.ts",
+      "sha256": "4e70fc305c50cb19f50593bcd2b0cb1163dc70cd133c45d848ae597763f30654",
+      "frozenSha256": "4e70fc305c50cb19f50593bcd2b0cb1163dc70cd133c45d848ae597763f30654",
+      "matchesFrozen": true,
+      "reviewedRanges": [
+        "whole"
+      ]
+    },
+    {
+      "path": "packages/core/src/profile/resolve.ts",
+      "sha256": "5e5328661e5497e093ef78f257f2d9ab2207a939a3ee658ac7ccc24d14f896f7",
+      "frozenSha256": "5e5328661e5497e093ef78f257f2d9ab2207a939a3ee658ac7ccc24d14f896f7",
+      "matchesFrozen": true,
+      "reviewedRanges": [
+        "whole"
+      ]
+    },
+    {
+      "path": "packages/core/src/profile/switch-plan.ts",
+      "sha256": "fc660f19a4105afebef675d4f72eb69bec6170380c5d00f37057ea71fe0c598d",
+      "frozenSha256": "fc660f19a4105afebef675d4f72eb69bec6170380c5d00f37057ea71fe0c598d",
+      "matchesFrozen": true,
+      "reviewedRanges": [
+        "whole"
+      ]
+    },
+    {
+      "path": "packages/core/src/capability-control/overlay.ts",
+      "sha256": "75477176f70ab8d97f7669c0929dfdbcbc549f42121d46faa95766310e99e7c5",
+      "frozenSha256": "75477176f70ab8d97f7669c0929dfdbcbc549f42121d46faa95766310e99e7c5",
+      "matchesFrozen": true,
+      "reviewedRanges": [
+        "whole"
+      ]
+    },
+    {
+      "path": "packages/core/src/engine/run-setup.ts",
+      "sha256": "a1bd2efe2a676b7091de0095f6acd9efee2ebbadd9696fe1617308d909126d4a",
+      "frozenSha256": "a1bd2efe2a676b7091de0095f6acd9efee2ebbadd9696fe1617308d909126d4a",
+      "matchesFrozen": true,
+      "reviewedRanges": [
+        "whole"
+      ]
+    },
+    {
+      "path": "packages/core/src/engine/engine.ts",
+      "sha256": "a976791ffcc88f68a7106960d397cff2fec872dc0390d91f2b7c97731cbe78c3",
+      "frozenSha256": "a976791ffcc88f68a7106960d397cff2fec872dc0390d91f2b7c97731cbe78c3",
+      "matchesFrozen": true,
+      "reviewedRanges": [
+        "2693-2702 consumer identity refresh only"
+      ]
+    },
+    {
+      "path": "packages/desktop/src/main/profile-switch-service.ts",
+      "sha256": "68da99c05ebbce80db420ecb1818fa4bc9ba6403e0312451545612b2d86245f6",
+      "frozenSha256": "68da99c05ebbce80db420ecb1818fa4bc9ba6403e0312451545612b2d86245f6",
+      "matchesFrozen": true,
+      "reviewedRanges": [
+        "whole static only"
+      ]
+    },
+    {
+      "path": "packages/desktop/src/main/profiles-service.ts",
+      "sha256": "1b4b710ade153d98831ada032eb38d43f923969bc23467560272b03fec6140d7",
+      "frozenSha256": "1b4b710ade153d98831ada032eb38d43f923969bc23467560272b03fec6140d7",
+      "matchesFrozen": true,
+      "reviewedRanges": [
+        "330-405",
+        "420-465",
+        "557-620"
+      ]
+    },
+    {
+      "path": "packages/core/src/profile/catalog-store.concurrency.test.ts",
+      "sha256": "8e7490f763a3cb443016c5a8d88940b3147aae9ceadc12290cd21fb2e4eb9f57",
+      "frozenSha256": "8e7490f763a3cb443016c5a8d88940b3147aae9ceadc12290cd21fb2e4eb9f57",
+      "matchesFrozen": true,
+      "reviewedRanges": [
+        "whole, including 114-124 independent-removal contract; not executed"
+      ]
+    },
+    {
+      "path": "packages/core/src/profile/catalog.test.ts",
+      "sha256": "0d8fb23c73c11c220bf54d3b0bba351773d794094c232d384f8a45c8f80cba2b",
+      "frozenSha256": "0d8fb23c73c11c220bf54d3b0bba351773d794094c232d384f8a45c8f80cba2b",
+      "matchesFrozen": true,
+      "reviewedRanges": [
+        "whole read; excluded execution because addHumanRepo test calls network"
+      ]
+    },
+    {
+      "path": "packages/core/src/profile/types.test.ts",
+      "sha256": "8d42bc0c248dfc45f624078995ff13cae1d0afe741df716d031bb313fa0eb6bb",
+      "frozenSha256": "8d42bc0c248dfc45f624078995ff13cae1d0afe741df716d031bb313fa0eb6bb",
+      "matchesFrozen": true,
+      "reviewedRanges": [
+        "whole executed"
+      ]
+    },
+    {
+      "path": "packages/core/src/profile/store.test.ts",
+      "sha256": "ab7b14bf73949feee4c2504a00614217a31c7d7bf053c724a6b82187303f377e",
+      "frozenSha256": "ab7b14bf73949feee4c2504a00614217a31c7d7bf053c724a6b82187303f377e",
+      "matchesFrozen": true,
+      "reviewedRanges": [
+        "whole executed"
+      ]
+    },
+    {
+      "path": "packages/core/src/profile/activation.test.ts",
+      "sha256": "7353e3919244fe308b105af414d91747b86d0f7537e707069e8c10c419edeaa9",
+      "frozenSha256": "7353e3919244fe308b105af414d91747b86d0f7537e707069e8c10c419edeaa9",
+      "matchesFrozen": true,
+      "reviewedRanges": [
+        "whole executed"
+      ]
+    },
+    {
+      "path": "packages/core/src/profile/resolve.test.ts",
+      "sha256": "dc5b5edca9e51c8365fb2f55fea5d42d254734eb4ed134684f7d8a7295f09823",
+      "frozenSha256": "dc5b5edca9e51c8365fb2f55fea5d42d254734eb4ed134684f7d8a7295f09823",
+      "matchesFrozen": true,
+      "reviewedRanges": [
+        "whole executed"
+      ]
+    },
+    {
+      "path": "packages/core/src/profile/requirements.test.ts",
+      "sha256": "eb72319350b51f34ef2500ba82c776630419920d1da909f5dc71f8ece1247813",
+      "frozenSha256": "eb72319350b51f34ef2500ba82c776630419920d1da909f5dc71f8ece1247813",
+      "matchesFrozen": true,
+      "reviewedRanges": [
+        "whole executed"
+      ]
+    },
+    {
+      "path": "packages/core/src/profile/switch-plan.test.ts",
+      "sha256": "3d9c5adddc10b92c79ddf436d3fa8c69fe37e2a8485363401f802273e0f98f28",
+      "frozenSha256": "3d9c5adddc10b92c79ddf436d3fa8c69fe37e2a8485363401f802273e0f98f28",
+      "matchesFrozen": true,
+      "reviewedRanges": [
+        "whole executed"
+      ]
+    },
+    {
+      "path": "packages/core/src/engine/run-setup.test.ts",
+      "sha256": "785eab871b0a204be477c02b5381646cd5212d1cd2a6bec7d037b05e957154ad",
+      "frozenSha256": "785eab871b0a204be477c02b5381646cd5212d1cd2a6bec7d037b05e957154ad",
+      "matchesFrozen": true,
+      "reviewedRanges": [
+        "whole executed"
+      ]
+    },
+    {
+      "path": "docs/todo/workspace-profile-switch-preview.md",
+      "sha256": "bf36526fb4d21197ef09de7a9a311e14890c0e857a6d2c25219e565129bb5d5e",
+      "frozenSha256": "bf36526fb4d21197ef09de7a9a311e14890c0e857a6d2c25219e565129bb5d5e",
+      "matchesFrozen": true,
+      "reviewedRanges": [
+        "whole current delivery semantics"
+      ]
+    },
+    {
+      "path": "docs/superpowers/specs/2026-07-15-workspace-profile-design.md",
+      "sha256": "0c8f2ca4e90cc086f717b165fa345753d0c61cb1d14bcf5bd3dcc53167796770",
+      "frozenSha256": "0c8f2ca4e90cc086f717b165fa345753d0c61cb1d14bcf5bd3dcc53167796770",
+      "matchesFrozen": true,
+      "reviewedRanges": [
+        "historical contract read; current code/delivery supersedes legacy basePreset rule"
+      ]
+    },
+    {
+      "path": "docs/review-remaining-2026-10-12/core-lifecycle.md",
+      "sha256": "c75cb5a43357e34fca599dfec4e989e55bb06f67bbf3c9b1abe58e71976a8390",
+      "frozenSha256": "c75cb5a43357e34fca599dfec4e989e55bb06f67bbf3c9b1abe58e71976a8390",
+      "matchesFrozen": true,
+      "reviewedRanges": [
+        "whole profile coverage and prior findings"
+      ]
+    }
+  ],
+  "allListedSourcesMatchFrozen": true
+}
