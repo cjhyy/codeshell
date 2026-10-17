@@ -1,0 +1,237 @@
+{
+  "baseline": "0f83bbfdfb8f2c6f31148250bd6544f5325c16e7",
+  "branch": "codex/audit/broad-round3-20261017",
+  "note": "Static inspection manifest; some files were read as targeted ranges. Hash inclusion does not claim full-file or all-branch coverage. Authority, transport, permissions and security logic excluded.",
+  "files": [
+    {
+      "path": "CODESHELL.md",
+      "sha256": "56d9ffdd81b6f6f615ed7a7392ddfa60ec4338c0ccb88eef20c4b73ad8dad5a2",
+      "bytes": 17639
+    },
+    {
+      "path": "packages/arena/README.md",
+      "sha256": "15004699acb2712a668bf15441817260039ff71431aaf1ee29bc42a9a2ee05ea",
+      "bytes": 1248
+    },
+    {
+      "path": "packages/arena/src/arena.ts",
+      "sha256": "8b569a3758e6335fc83879eea1a0b9bef3729f6b641af5621729855693c5b927",
+      "bytes": 15608
+    },
+    {
+      "path": "packages/arena/src/types.ts",
+      "sha256": "61ac2a294f614a30ac506814395231eb6247949e4a39b90afab4082590beb413",
+      "bytes": 21397
+    },
+    {
+      "path": "packages/arena/src/ledger.ts",
+      "sha256": "33fa62063a289cca8bb812abe89064f9534b507ad16f56a5873804d6fbd1acc7",
+      "bytes": 6477
+    },
+    {
+      "path": "packages/arena/src/digest-builder.ts",
+      "sha256": "bdf1d305f609f25d3cec56612a2064944f33352b5176acd08a5e824179ebda90",
+      "bytes": 4871
+    },
+    {
+      "path": "packages/arena/src/transitions.ts",
+      "sha256": "7085ba83547500373db57797885fa797f4722ac587c73e45c16d56f6a9157639",
+      "bytes": 3596
+    },
+    {
+      "path": "packages/arena/src/planner.ts",
+      "sha256": "cdf26a142e62315f97aa6100b98dec25706e0afc8408fc8cef117bed8ff01120",
+      "bytes": 13158
+    },
+    {
+      "path": "packages/arena/src/detect-mode.ts",
+      "sha256": "7319bc60df1cc240fac40be0a467986f3becfe1ba32ba1d891dae1483d5937de",
+      "bytes": 3816
+    },
+    {
+      "path": "packages/arena/src/tools/selector.ts",
+      "sha256": "df84254128bbaaff2477e0200668c9749eb34646f3dc270f48491d022100fa78",
+      "bytes": 2024
+    },
+    {
+      "path": "packages/arena/src/phases/claim-registry.ts",
+      "sha256": "98a0aae1710c8923be8fcdfb38e514e62f585e39173613eababe084773471c40",
+      "bytes": 2516
+    },
+    {
+      "path": "packages/arena/src/phases/cross-review.ts",
+      "sha256": "950dd9f5d107867514a76984b5b58113509b0f7e195b2878f3c3bc90adcd72da",
+      "bytes": 10930
+    },
+    {
+      "path": "packages/arena/src/phases/adjudication.ts",
+      "sha256": "f2915203f260b4e504a0269c62ecb3b005d877affbf6d56894daf22d0a52176a",
+      "bytes": 6420
+    },
+    {
+      "path": "packages/arena/src/phases/debate-rounds.ts",
+      "sha256": "589938d1cd34fcea1e79beae7891b7b1b4e325e61d27b3475cab66606a6f4827",
+      "bytes": 7232
+    },
+    {
+      "path": "packages/arena/src/phases/build-consensus.ts",
+      "sha256": "206b033df941d02337f8d8ce58027148920c86116a649d46bef07e3f5ed32545",
+      "bytes": 4138
+    },
+    {
+      "path": "packages/arena/src/strategies/utils.ts",
+      "sha256": "65d8e2021ff8e0b7b05b668796d3390c4c8ee464caf54454015de2912158e165",
+      "bytes": 23924
+    },
+    {
+      "path": "packages/arena/src/render/session.ts",
+      "sha256": "9eff3622173dbebebb563942ec91802d6f3c24dfd28eddc49e6524bd1c07ef59",
+      "bytes": 7350
+    },
+    {
+      "path": "packages/arena/src/iterate/types.ts",
+      "sha256": "c37f057a5e5b9a253c1ec5dceab67d60f48d9cca4b46f00310db10ce8a9559cc",
+      "bytes": 6570
+    },
+    {
+      "path": "packages/arena/src/iterate/parse.ts",
+      "sha256": "f014b02ff4f9f40f463cbc3fb60bb279bfceb7ddc7c7b009589b3f007a155d7d",
+      "bytes": 4762
+    },
+    {
+      "path": "packages/arena/src/iterate/convergence.ts",
+      "sha256": "0058a2bbd7615a2f064868f643979dd1dd3320489ac0b8cb80743c43278ed73f",
+      "bytes": 3216
+    },
+    {
+      "path": "packages/arena/src/iterate/iterative-arena.ts",
+      "sha256": "c30172005234e6c3147ae5ec0c1eac3533eb49fb5f913cdb8d89fbdde1fc1c2d",
+      "bytes": 9475
+    },
+    {
+      "path": "packages/arena/src/iterate/phases/tournament.ts",
+      "sha256": "de1f8f0a89c297f3084a823ae4b39bbb7f4bb64f979e4cf3580d4786ecce0321",
+      "bytes": 5204
+    },
+    {
+      "path": "packages/arena/src/iterate/phases/argue.ts",
+      "sha256": "af70d479d0f1a75dc6e1cdb7d3eba1a827cc18c502cf2b1098f0104d03cdd870",
+      "bytes": 7001
+    },
+    {
+      "path": "packages/arena/src/iterate/phases/revise.ts",
+      "sha256": "0c3a86af497d7642e7c8acd5c8f88b2e66797b402270965dfa21886e49d2d7b3",
+      "bytes": 3046
+    },
+    {
+      "path": "packages/arena/src/iterate/formats/index.ts",
+      "sha256": "db2f7169256419c1ccd7c40557f0d30ffe7bf3539aab13e853e691a995be7e37",
+      "bytes": 12743
+    },
+    {
+      "path": "packages/optimization-lab/README.md",
+      "sha256": "ab3678643818628f1fd17f5d49914ce05b17d0748e35babeaea26c90a1e81843",
+      "bytes": 6849
+    },
+    {
+      "path": "packages/optimization-lab/src/candidate.ts",
+      "sha256": "a4b9098d0b9a16446b999117f0ffdd412c73b2b5e4618461d6692ac392525c34",
+      "bytes": 2689
+    },
+    {
+      "path": "packages/optimization-lab/src/strategy.ts",
+      "sha256": "f65dd74e60581e2b1339ce5f36194539deab6e8dd3a1eed33b64dca22baecc3d",
+      "bytes": 3656
+    },
+    {
+      "path": "packages/optimization-lab/src/grading.ts",
+      "sha256": "ed02a35ec48d171477dc0b5b7c252c4d6404df96603e30de8c74a93339ee2c2d",
+      "bytes": 7764
+    },
+    {
+      "path": "packages/optimization-lab/src/assertions.ts",
+      "sha256": "98786f057fc732a7b4d445a632f644dde3c4826d8d49a787667873cb6036bda4",
+      "bytes": 1739
+    },
+    {
+      "path": "packages/optimization-lab/src/report.ts",
+      "sha256": "fc0a79ca1ba29d6c4633e7cf28289416c7d2f0def0a5bf6844eb27c4a4c8159c",
+      "bytes": 23091
+    },
+    {
+      "path": "packages/optimization-lab/src/queries.ts",
+      "sha256": "64246e7cbc4da4dc2faf85e22fda4a0720e4e380cbb77f7a7709783fb7b433a4",
+      "bytes": 5243
+    },
+    {
+      "path": "packages/optimization-lab/src/controller.ts",
+      "sha256": "e2963dcd05dd5caa5012453e718463d8d2a309c8eaf2632699036e0e04bf8073",
+      "bytes": 54060
+    },
+    {
+      "path": "packages/optimization-lab/src/runner.ts",
+      "sha256": "f72f569da0e1abdc6073c68f4e58e34a424bc1706d92792b2d4b42c54bd6f9eb",
+      "bytes": 8349
+    },
+    {
+      "path": "packages/optimization-lab/src/store.ts",
+      "sha256": "e50ed4b76e95431cf572b43ba6e4d5396059389e6dd8787cbaee902e08c0d8df",
+      "bytes": 18264
+    },
+    {
+      "path": "packages/optimization-lab/src/store-paths.ts",
+      "sha256": "cdc8e3f4b560da90d6b426aa87ef5c6d1aafaef5f65d660c981a3c8f43608a02",
+      "bytes": 574
+    },
+    {
+      "path": "packages/optimization-lab/src/evidence.ts",
+      "sha256": "249891fcdc75798227443f2ddbe9a7d3f6a680c01fc0077077a2cf4d551eef89",
+      "bytes": 9821
+    },
+    {
+      "path": "packages/optimization-lab/src/overfit-hints.ts",
+      "sha256": "bd3d5fb555ddd695fba4a699622760787835f91f865a6f3d9011bd0ac91ca804",
+      "bytes": 1518
+    },
+    {
+      "path": "packages/optimization-lab/src/contracts/eval-case.ts",
+      "sha256": "407eaa17770ccc7184c6a68b039efa52a5dc82887b29e72b1d94a7362a9bd4f0",
+      "bytes": 2526
+    },
+    {
+      "path": "packages/optimization-lab/src/contracts/dataset.ts",
+      "sha256": "7de3ade87671b80d7f01410b39a2452aa9aad757db294c3d9b41702421808e02",
+      "bytes": 12327
+    },
+    {
+      "path": "packages/optimization-lab/src/contracts/canonical-json.ts",
+      "sha256": "9bca0f06abf6401c304f4c4e8ccd0963cb12405f36ed90bc9e30b2197728058f",
+      "bytes": 2142
+    },
+    {
+      "path": "packages/optimization-lab/src/contracts/experiment.ts",
+      "sha256": "87a910d26336a7a82ce3ea8dc9b35f4f4a7437a33d1207ec9d97ebb9553fe3a9",
+      "bytes": 9285
+    },
+    {
+      "path": "packages/optimization-lab/src/contracts/verdict-policy.ts",
+      "sha256": "2bde145cf91ad783ec884072424f6a10ad7b0535369b3958ea73299a66236972",
+      "bytes": 943
+    },
+    {
+      "path": "packages/optimization-lab/src/grading.test.ts",
+      "sha256": "ff35e96330f32a2c3aa700c23b5f162872c5f93d9936733548472fa914066d0b",
+      "bytes": 3460
+    },
+    {
+      "path": "packages/optimization-lab/src/report.test.ts",
+      "sha256": "b904c10684fc852a76efe638f32e9eb0ffa7fb064cbd72acae25494fd8150165",
+      "bytes": 12438
+    },
+    {
+      "path": "packages/optimization-lab/src/strategy.test.ts",
+      "sha256": "f0c95001acde31366f9525a733024310c2fe62f0c05929b1f06de04c39f98f35",
+      "bytes": 1761
+    }
+  ]
+}

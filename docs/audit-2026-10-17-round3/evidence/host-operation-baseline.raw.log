@@ -1,0 +1,13 @@
+bun test v1.3.11 (af24e281)
+
+packages/link/src/operations.test.ts:
+(pass) reviewed operation contracts > the complete catalog equals the committed immutable snapshot [5.13ms]
+(pass) reviewed operation contracts > legacy Figma summary and explicit content have separate contracts [2.39ms]
+(pass) reviewed operation contracts > full Figma results preserve deep JSON nodes and arbitrary nested data keys [0.90ms]
+
+ 3 pass
+ 6 filtered out
+ 0 fail
+ 209 expect() calls
+Ran 3 tests across 1 file. [144.00ms]
+Completed Bun shard: 9 tests, 6 skipped; 0 failures.

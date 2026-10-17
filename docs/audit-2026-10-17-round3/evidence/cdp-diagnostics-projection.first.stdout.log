@@ -1,0 +1,3 @@
+bun test v1.3.11 (af24e281)
+{"case":"visibility-override","parentSummary":{"nodes":[],"truncated":false},"childSummary":{"nodes":[{"tag":"div","id":"visible-child","text":"Visible message","rect":{"x":0,"y":0,"width":100,"height":30},"styles":{"display":"block","position":"static","overflow":"visible","color":"black","fontSize":"16px","zIndex":"auto"}}],"truncated":false}}
+Completed Bun shard: 6 tests, 0 skipped; 0 failures.

@@ -1,0 +1,207 @@
+{
+  "baseline": "0f83bbfdfb8f2c6f31148250bd6544f5325c16e7",
+  "count": 12,
+  "priorities": {
+    "P3": 11,
+    "P2": 1
+  },
+  "findings": [
+    {
+      "id": "R3-01",
+      "priority": "P3",
+      "title": "Codex file_change完成事件丢失修改文件投影",
+      "report": "root.md",
+      "reportLine": 5,
+      "source": "packages/server/src/mobile-remote/codex-parse.ts",
+      "line": 99,
+      "logs": [
+        "evidence/root-codex-event-data.log",
+        "evidence/root-codex-room-projection.log"
+      ],
+      "evidenceLevel": "生产parser及真实本地RoomManager/fake agent",
+      "conditions": "官方Codex0.142.4数组形状；没有真实CLI/文件改动实验",
+      "status": "confirmed-at-frozen-source-baseline",
+      "deduplication": "limited historical review; related families explicitly cross-referenced"
+    },
+    {
+      "id": "R3-02",
+      "priority": "P3",
+      "title": "Codex MCP结果与失败原因变成不可读摘要",
+      "report": "root.md",
+      "reportLine": 15,
+      "source": "packages/server/src/mobile-remote/codex-parse.ts",
+      "line": 79,
+      "logs": [
+        "evidence/root-codex-event-data.log",
+        "evidence/root-codex-room-projection.log"
+      ],
+      "evidenceLevel": "生产parser及真实本地RoomManager/fake agent",
+      "conditions": "结构化result和error.message；成功/失败同一投影缺陷",
+      "status": "confirmed-at-frozen-source-baseline",
+      "deduplication": "limited historical review; related families explicitly cross-referenced"
+    },
+    {
+      "id": "R3-03",
+      "priority": "P3",
+      "title": "Codex JSONL null记录未隔离",
+      "report": "root.md",
+      "reportLine": 25,
+      "source": "packages/server/src/mobile-remote/codex-parse.ts",
+      "line": 37,
+      "logs": [
+        "evidence/root-codex-event-data.log"
+      ],
+      "evidenceLevel": "生产parser纯函数",
+      "conditions": "损坏/非schema记录；与R2-04相关家族但独立Codex live入口",
+      "status": "confirmed-at-frozen-source-baseline",
+      "deduplication": "limited historical review; related families explicitly cross-referenced"
+    },
+    {
+      "id": "R3-04",
+      "priority": "P3",
+      "title": "Windows格式默认room名使用整段cwd并可生成不可读metadata",
+      "report": "root.md",
+      "reportLine": 33,
+      "source": "packages/server/src/mobile-remote/room-manager.ts",
+      "line": 617,
+      "logs": [
+        "evidence/root-room-default-name.log"
+      ],
+      "evidenceLevel": "真实本地RoomManager metadata读写",
+      "conditions": "Windows格式输入条件；未运行Windows/创建真实长路径",
+      "status": "confirmed-at-frozen-source-baseline",
+      "deduplication": "limited historical review; related families explicitly cross-referenced"
+    },
+    {
+      "id": "HL-01",
+      "priority": "P3",
+      "title": "精确GitHub文件路径被trim并合并引用",
+      "report": "host-link.md",
+      "reportLine": 7,
+      "source": "packages/link/src/file-selection.ts",
+      "line": 15,
+      "logs": [
+        "evidence/host-link-selection.raw.log"
+      ],
+      "evidenceLevel": "生产resolver纯函数/自有Map",
+      "conditions": "真实仓库含首尾空白文件名条件；identity/reader为静态接线",
+      "status": "confirmed-at-frozen-source-baseline",
+      "deduplication": "limited historical review; related families explicitly cross-referenced"
+    },
+    {
+      "id": "HL-02",
+      "priority": "P3",
+      "title": "长路径默认标签截断Unicode代理对",
+      "report": "host-link.md",
+      "reportLine": 16,
+      "source": "packages/link/src/file-selection.ts",
+      "line": 90,
+      "logs": [
+        "evidence/host-link-selection.raw.log"
+      ],
+      "evidenceLevel": "生产resolver纯函数",
+      "conditions": "合法多段长路径；path仍正确，仅label损坏",
+      "status": "confirmed-at-frozen-source-baseline",
+      "deduplication": "limited historical review; related families explicitly cross-referenced"
+    },
+    {
+      "id": "CDP-R3-01",
+      "priority": "P3",
+      "title": "旋转quad点击/hover取到元素外的点",
+      "report": "cdp-browser.md",
+      "reportLine": 15,
+      "source": "packages/cdp/src/driver.ts",
+      "line": 157,
+      "logs": [
+        "evidence/cdp-geometry-keymap.first.stdout.log",
+        "evidence/cdp-geometry-keymap.first.stderr.log"
+      ],
+      "evidenceLevel": "legacy SDK/fake sender/独立几何判定",
+      "conditions": "私有兼容SDK；无真实浏览器/命中/scroll布局验证",
+      "status": "confirmed-at-frozen-source-baseline",
+      "deduplication": "limited historical review; related families explicitly cross-referenced"
+    },
+    {
+      "id": "CDP-R3-02",
+      "priority": "P3",
+      "title": "Shift组合的logical key与text矛盾",
+      "report": "cdp-browser.md",
+      "reportLine": 25,
+      "source": "packages/cdp/src/keymap.ts",
+      "line": 316,
+      "logs": [
+        "evidence/cdp-geometry-keymap.first.stdout.log",
+        "evidence/cdp-geometry-keymap.first.stderr.log"
+      ],
+      "evidenceLevel": "legacy SDK生产planKeySequence/fake sender",
+      "conditions": "私有兼容SDK；没有真实OS键盘/Chromium事件验证",
+      "status": "confirmed-at-frozen-source-baseline",
+      "deduplication": "limited historical review; related families explicitly cross-referenced"
+    },
+    {
+      "id": "CDP-R3-03",
+      "priority": "P2",
+      "title": "DOM hidden祖先剪枝漏掉显式visible子节点",
+      "report": "cdp-browser.md",
+      "reportLine": 34,
+      "source": "packages/browser-devtools/src/inspector.ts",
+      "line": 138,
+      "logs": [
+        "evidence/cdp-diagnostics-projection.first.stdout.log",
+        "evidence/cdp-diagnostics-projection.first.stderr.log"
+      ],
+      "evidenceLevel": "实际inspector callback/Node VM/纯对象DOM",
+      "conditions": "有生产适配器静态消费者；没有CSS排版引擎E2E",
+      "status": "confirmed-at-frozen-source-baseline",
+      "deduplication": "limited historical review; related families explicitly cross-referenced"
+    },
+    {
+      "id": "LAB-R3-01",
+      "priority": "P3",
+      "title": "Lab反思输入仍选取已更正的旧评分",
+      "report": "arena-lab.md",
+      "reportLine": 9,
+      "source": "packages/optimization-lab/src/strategy.ts",
+      "line": 41,
+      "logs": [
+        "evidence/lab-offline-round1.raw.log"
+      ],
+      "evidenceLevel": "真实grading/correction/reflection纯转换",
+      "conditions": "实验flag默认off；Controller冻结链路静态/无真实模型",
+      "status": "confirmed-at-frozen-source-baseline",
+      "deduplication": "limited historical review; related families explicitly cross-referenced"
+    },
+    {
+      "id": "ARENA-R3-01",
+      "priority": "P3",
+      "title": "缺失或非法peer verdict默认agree并verified",
+      "report": "arena-lab.md",
+      "reportLine": 18,
+      "source": "packages/arena/src/strategies/utils.ts",
+      "line": 361,
+      "logs": [
+        "evidence/lab-offline-round1.raw.log"
+      ],
+      "evidenceLevel": "真实parser/claim状态纯函数",
+      "conditions": "私有保留Arena；非默认Host流程/无评审模型",
+      "status": "confirmed-at-frozen-source-baseline",
+      "deduplication": "limited historical review; related families explicitly cross-referenced"
+    },
+    {
+      "id": "ARENA-R3-02",
+      "priority": "P3",
+      "title": "Arena裁决早退跳过unresolved收尾",
+      "report": "arena-lab.md",
+      "reportLine": 27,
+      "source": "packages/arena/src/phases/adjudication.ts",
+      "line": 55,
+      "logs": [
+        "evidence/lab-offline-round1.raw.log"
+      ],
+      "evidenceLevel": "真实ledger/model-free裁决早退",
+      "conditions": "私有Arena；四桶summary遗漏静态/原始claims仍保留",
+      "status": "confirmed-at-frozen-source-baseline",
+      "deduplication": "limited historical review; related families explicitly cross-referenced"
+    }
+  ]
+}

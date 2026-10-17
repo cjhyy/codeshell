@@ -1,0 +1,31 @@
+bun test v1.3.11 (af24e281)
+
+packages/host/src/runtime.test.ts:
+(pass) HostRuntime capability registration > rejects conflicts atomically and permits registration after a failed attempt [0.71ms]
+(pass) HostRuntime capability registration > starts the adapter first and stops services in reverse order once [0.11ms]
+(pass) HostRuntime capability registration > rolls back partially started services and preserves startup plus cleanup failures [0.35ms]
+(pass) HostRuntime capability registration > a failing adapter is rolled back and no services are started [0.34ms]
+(pass) HostRuntime capability registration > startup rejects reentrant registration and rolls back [0.05ms]
+(pass) HostRuntime production request interception > dispatches an installed capability to its registered handler [0.42ms]
+(pass) HostRuntime production request interception > a supported downstream adapter route remains available [0.04ms]
+(pass) HostRuntime production request interception > unsupported desktop requests get a private -32601 response with the Host label [0.11ms]
+(pass) HostRuntime production request interception > unsupported __browser_action__ resolves with a typed answer rather than a user denial [0.06ms]
+(pass) HostRuntime production request interception > unsupported __credential_action__ resolves with a typed answer rather than a user denial [0.01ms]
+(pass) HostRuntime production request interception > unsupported __workspace_action__ resolves with a typed answer rather than a user denial [0.01ms]
+(pass) HostRuntime production request interception > unsupported __panel_action__ resolves with a typed answer rather than a user denial
+(pass) HostRuntime production request interception > unsupported __future_host_action__ resolves with a typed answer rather than a user denial
+(pass) HostRuntime production request interception > AskUser, ordinary approvals, and unrelated messages retain their existing route [0.03ms]
+(pass) HostRuntime production request interception > child lifecycle frames are consumed without inventing an approval [0.01ms]
+(pass) HostRuntime production request interception > classification ignores malformed approval envelopes [0.02ms]
+
+packages/link/src/file-selection.test.ts:
+(pass) reviewed provider file selection > only providers with actual file readers advertise selection [1.89ms]
+(pass) reviewed provider file selection > canonical GitHub references retain exact paths and refs without arbitrary action fields [0.35ms]
+(pass) reviewed provider file selection > Figma URLs and keys normalize to the same exact granted resource [0.26ms]
+
+ 19 pass
+ 16 filtered out
+ 0 fail
+ 88 expect() calls
+Ran 19 tests across 2 files. [68.00ms]
+Completed Bun shard: 35 tests, 16 skipped; 0 failures.

@@ -1,0 +1,21 @@
+{
+  "kind": "limited-text-deduplication",
+  "scans": [
+    {
+      "path": "docs/audit-2026-10-16/findings.json",
+      "hits": {}
+    },
+    {
+      "path": "docs/audit-2026-10-17/findings.json",
+      "hits": {}
+    },
+    {
+      "path": "docs/review-remaining-2026-10-12/findings.json",
+      "hits": {}
+    }
+  ],
+  "relatedKnownFamily": [
+    "R2-04 Claude history null guard; R3-03 is independent Codex live parser implementation",
+    "R84 legacy native image history; Mobile history candidate excluded from new confirmed entries"
+  ]
+}

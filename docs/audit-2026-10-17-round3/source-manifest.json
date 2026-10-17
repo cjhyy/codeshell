@@ -1,0 +1,607 @@
+{
+  "baseline": "0f83bbfdfb8f2c6f31148250bd6544f5325c16e7",
+  "files": [
+    {
+      "path": "AGENTS.md",
+      "bytes": 206,
+      "sha256": "2980647020f0ae72522f7f717ffa89f4c5ec7fb1efe48066e881b864cd428917",
+      "matchesFrozenGitBlob": true
+    },
+    {
+      "path": "CODESHELL.md",
+      "bytes": 17639,
+      "sha256": "56d9ffdd81b6f6f615ed7a7392ddfa60ec4338c0ccb88eef20c4b73ad8dad5a2",
+      "matchesFrozenGitBlob": true
+    },
+    {
+      "path": "bun.lock",
+      "bytes": 339166,
+      "sha256": "89653da5f19dce556850d5f8ba7de47e400274453ef303d9190ebf6bcb61ac2d",
+      "matchesFrozenGitBlob": true
+    },
+    {
+      "path": "package.json",
+      "bytes": 7063,
+      "sha256": "1f1cc2c90ce4e6b8e6cce3f392cd94e6a497464568ceda7c00c7d0c009fbc3d9",
+      "matchesFrozenGitBlob": true
+    },
+    {
+      "path": "packages/arena/README.md",
+      "bytes": 1248,
+      "sha256": "15004699acb2712a668bf15441817260039ff71431aaf1ee29bc42a9a2ee05ea",
+      "matchesFrozenGitBlob": true
+    },
+    {
+      "path": "packages/arena/package.json",
+      "bytes": 1188,
+      "sha256": "f24032ba260b58e6a3ecd85f99a207bc79112c15e96a7d12f05f7fa4acf8a8cd",
+      "matchesFrozenGitBlob": true
+    },
+    {
+      "path": "packages/arena/src/arena.ts",
+      "bytes": 15608,
+      "sha256": "8b569a3758e6335fc83879eea1a0b9bef3729f6b641af5621729855693c5b927",
+      "matchesFrozenGitBlob": true
+    },
+    {
+      "path": "packages/arena/src/detect-mode.ts",
+      "bytes": 3816,
+      "sha256": "7319bc60df1cc240fac40be0a467986f3becfe1ba32ba1d891dae1483d5937de",
+      "matchesFrozenGitBlob": true
+    },
+    {
+      "path": "packages/arena/src/digest-builder.ts",
+      "bytes": 4871,
+      "sha256": "bdf1d305f609f25d3cec56612a2064944f33352b5176acd08a5e824179ebda90",
+      "matchesFrozenGitBlob": true
+    },
+    {
+      "path": "packages/arena/src/iterate/convergence.ts",
+      "bytes": 3216,
+      "sha256": "0058a2bbd7615a2f064868f643979dd1dd3320489ac0b8cb80743c43278ed73f",
+      "matchesFrozenGitBlob": true
+    },
+    {
+      "path": "packages/arena/src/iterate/formats/index.ts",
+      "bytes": 12743,
+      "sha256": "db2f7169256419c1ccd7c40557f0d30ffe7bf3539aab13e853e691a995be7e37",
+      "matchesFrozenGitBlob": true
+    },
+    {
+      "path": "packages/arena/src/iterate/iterative-arena.ts",
+      "bytes": 9475,
+      "sha256": "c30172005234e6c3147ae5ec0c1eac3533eb49fb5f913cdb8d89fbdde1fc1c2d",
+      "matchesFrozenGitBlob": true
+    },
+    {
+      "path": "packages/arena/src/iterate/parse.ts",
+      "bytes": 4762,
+      "sha256": "f014b02ff4f9f40f463cbc3fb60bb279bfceb7ddc7c7b009589b3f007a155d7d",
+      "matchesFrozenGitBlob": true
+    },
+    {
+      "path": "packages/arena/src/iterate/phases/argue.ts",
+      "bytes": 7001,
+      "sha256": "af70d479d0f1a75dc6e1cdb7d3eba1a827cc18c502cf2b1098f0104d03cdd870",
+      "matchesFrozenGitBlob": true
+    },
+    {
+      "path": "packages/arena/src/iterate/phases/revise.ts",
+      "bytes": 3046,
+      "sha256": "0c3a86af497d7642e7c8acd5c8f88b2e66797b402270965dfa21886e49d2d7b3",
+      "matchesFrozenGitBlob": true
+    },
+    {
+      "path": "packages/arena/src/iterate/phases/tournament.ts",
+      "bytes": 5204,
+      "sha256": "de1f8f0a89c297f3084a823ae4b39bbb7f4bb64f979e4cf3580d4786ecce0321",
+      "matchesFrozenGitBlob": true
+    },
+    {
+      "path": "packages/arena/src/iterate/types.ts",
+      "bytes": 6570,
+      "sha256": "c37f057a5e5b9a253c1ec5dceab67d60f48d9cca4b46f00310db10ce8a9559cc",
+      "matchesFrozenGitBlob": true
+    },
+    {
+      "path": "packages/arena/src/ledger.ts",
+      "bytes": 6477,
+      "sha256": "33fa62063a289cca8bb812abe89064f9534b507ad16f56a5873804d6fbd1acc7",
+      "matchesFrozenGitBlob": true
+    },
+    {
+      "path": "packages/arena/src/phases/adjudication.ts",
+      "bytes": 6420,
+      "sha256": "f2915203f260b4e504a0269c62ecb3b005d877affbf6d56894daf22d0a52176a",
+      "matchesFrozenGitBlob": true
+    },
+    {
+      "path": "packages/arena/src/phases/build-consensus.ts",
+      "bytes": 4138,
+      "sha256": "206b033df941d02337f8d8ce58027148920c86116a649d46bef07e3f5ed32545",
+      "matchesFrozenGitBlob": true
+    },
+    {
+      "path": "packages/arena/src/phases/claim-registry.ts",
+      "bytes": 2516,
+      "sha256": "98a0aae1710c8923be8fcdfb38e514e62f585e39173613eababe084773471c40",
+      "matchesFrozenGitBlob": true
+    },
+    {
+      "path": "packages/arena/src/phases/cross-review.ts",
+      "bytes": 10930,
+      "sha256": "950dd9f5d107867514a76984b5b58113509b0f7e195b2878f3c3bc90adcd72da",
+      "matchesFrozenGitBlob": true
+    },
+    {
+      "path": "packages/arena/src/phases/debate-rounds.ts",
+      "bytes": 7232,
+      "sha256": "589938d1cd34fcea1e79beae7891b7b1b4e325e61d27b3475cab66606a6f4827",
+      "matchesFrozenGitBlob": true
+    },
+    {
+      "path": "packages/arena/src/planner.ts",
+      "bytes": 13158,
+      "sha256": "cdf26a142e62315f97aa6100b98dec25706e0afc8408fc8cef117bed8ff01120",
+      "matchesFrozenGitBlob": true
+    },
+    {
+      "path": "packages/arena/src/render/session.ts",
+      "bytes": 7350,
+      "sha256": "9eff3622173dbebebb563942ec91802d6f3c24dfd28eddc49e6524bd1c07ef59",
+      "matchesFrozenGitBlob": true
+    },
+    {
+      "path": "packages/arena/src/strategies/utils.ts",
+      "bytes": 23924,
+      "sha256": "65d8e2021ff8e0b7b05b668796d3390c4c8ee464caf54454015de2912158e165",
+      "matchesFrozenGitBlob": true
+    },
+    {
+      "path": "packages/arena/src/tools/selector.ts",
+      "bytes": 2024,
+      "sha256": "df84254128bbaaff2477e0200668c9749eb34646f3dc270f48491d022100fa78",
+      "matchesFrozenGitBlob": true
+    },
+    {
+      "path": "packages/arena/src/transitions.ts",
+      "bytes": 3596,
+      "sha256": "7085ba83547500373db57797885fa797f4722ac587c73e45c16d56f6a9157639",
+      "matchesFrozenGitBlob": true
+    },
+    {
+      "path": "packages/arena/src/types.ts",
+      "bytes": 21397,
+      "sha256": "61ac2a294f614a30ac506814395231eb6247949e4a39b90afab4082590beb413",
+      "matchesFrozenGitBlob": true
+    },
+    {
+      "path": "packages/browser-devtools/package.json",
+      "bytes": 910,
+      "sha256": "39e0f9861d873c034e7e9adcf2d652fad95ed99e74ca3613c946bddc856bf5fa",
+      "matchesFrozenGitBlob": true
+    },
+    {
+      "path": "packages/browser-devtools/src/contracts.ts",
+      "bytes": 1183,
+      "sha256": "fd9493faf494f65e6c3a3fefe446bba458d89571127e7a97567db8169a1650c2",
+      "matchesFrozenGitBlob": true
+    },
+    {
+      "path": "packages/browser-devtools/src/index.ts",
+      "bytes": 189,
+      "sha256": "0adccda06e4bd274a2f2af1bdf70db0446722d403c35620eef4ad14739892c55",
+      "matchesFrozenGitBlob": true
+    },
+    {
+      "path": "packages/browser-devtools/src/inspector.ts",
+      "bytes": 8534,
+      "sha256": "bab4ae5c83c666db5529acc5eae364c4301bfa21d0a093a96c08da5cc176c6e2",
+      "matchesFrozenGitBlob": true
+    },
+    {
+      "path": "packages/cdp/package.json",
+      "bytes": 1146,
+      "sha256": "e27ca7299a2328e27274f7bf7e47a391da32bf89371404f97dded35db64da8b8",
+      "matchesFrozenGitBlob": true
+    },
+    {
+      "path": "packages/cdp/src/driver.ts",
+      "bytes": 43787,
+      "sha256": "a442ceb609e5104db229cb20beddc2c5c22f0ec8600edca8812be55880514af1",
+      "matchesFrozenGitBlob": true
+    },
+    {
+      "path": "packages/cdp/src/index.ts",
+      "bytes": 1186,
+      "sha256": "9832c52ca5f3f6ec1ddc3859fc7a8e960e2ecd707886f39cbd3e286ba4a83442",
+      "matchesFrozenGitBlob": true
+    },
+    {
+      "path": "packages/cdp/src/keymap.ts",
+      "bytes": 9681,
+      "sha256": "d1eca6478c2f56a60741c654722cdc29273606464d3320de14222f4bcaa1ad31",
+      "matchesFrozenGitBlob": true
+    },
+    {
+      "path": "packages/cdp/src/scroll-state.ts",
+      "bytes": 4985,
+      "sha256": "2b49511400ae781cd61275f11a8079744312a214a920769a920a51d85df7b551",
+      "matchesFrozenGitBlob": true
+    },
+    {
+      "path": "packages/cdp/src/sender.ts",
+      "bytes": 968,
+      "sha256": "0b2fd0387b1391607dd7ec928a5933913989f30b468c34c0dce4e2bdaf05705e",
+      "matchesFrozenGitBlob": true
+    },
+    {
+      "path": "packages/cdp/src/types.ts",
+      "bytes": 3693,
+      "sha256": "89dba9f3c4be528686a66aaf2a942d0d70d8573f7db08977ebd722f0ea9ee717",
+      "matchesFrozenGitBlob": true
+    },
+    {
+      "path": "packages/core/package.json",
+      "bytes": 3452,
+      "sha256": "9568730f854ae323815a47c0db7d788983fabf10071ccd5657ebc346c7bb358b",
+      "matchesFrozenGitBlob": true
+    },
+    {
+      "path": "packages/core/src/links/cli.ts",
+      "bytes": 29283,
+      "sha256": "bbaaf7200746f7e313fa00c3236414003bb632478af3d80055caa50091e320ad",
+      "matchesFrozenGitBlob": true
+    },
+    {
+      "path": "packages/core/src/links/http.ts",
+      "bytes": 8182,
+      "sha256": "dbaa7403836bd28e4bf3e45cce7adedd7bb0a972900ad4045b8df7716bcf618c",
+      "matchesFrozenGitBlob": true
+    },
+    {
+      "path": "packages/core/src/links/remote-adapters.ts",
+      "bytes": 20634,
+      "sha256": "fa0efd76239cd3194dda45a840231818ed042d513cdd72dea907e5f5ccae4606",
+      "matchesFrozenGitBlob": true
+    },
+    {
+      "path": "packages/core/src/sources/catalog.ts",
+      "bytes": 9080,
+      "sha256": "7257cd54f1a1fd1ef9c1972429b0dfda284ebc560b022018a43cbc532d2c8142",
+      "matchesFrozenGitBlob": true
+    },
+    {
+      "path": "packages/core/src/sources/types.ts",
+      "bytes": 2896,
+      "sha256": "17a527864c47923879a4fc7a858d31eb86c68b9af43e1c358518943deb5075c9",
+      "matchesFrozenGitBlob": true
+    },
+    {
+      "path": "packages/desktop/src/browser-library/browser-inspector.ts",
+      "bytes": 668,
+      "sha256": "47898599f9b3fa63a5c4752205b477f1132ca4315a33b4b697198edec6dd67ac",
+      "matchesFrozenGitBlob": true
+    },
+    {
+      "path": "packages/desktop/src/browser-library/puppeteer-browser-driver.ts",
+      "bytes": 37488,
+      "sha256": "d275aaba9b2eb29a306bfb91d1ccd32499a288bf79c0f0fc08b8d90723bc080f",
+      "matchesFrozenGitBlob": true
+    },
+    {
+      "path": "packages/desktop/src/main/browser-driver/cdp-driver.ts",
+      "bytes": 8371,
+      "sha256": "460d17d7650676ef3752492859194f83357cb38edf1b369f978f08f9202d89b8",
+      "matchesFrozenGitBlob": true
+    },
+    {
+      "path": "packages/desktop/src/main/linked-file-sources-service.ts",
+      "bytes": 10555,
+      "sha256": "13a34056e542a6427ec1c68bd04bf57caea16b3291ae7f57552c61a7fc1ebdd0",
+      "matchesFrozenGitBlob": true
+    },
+    {
+      "path": "packages/desktop/src/main/worker-host-runtime.ts",
+      "bytes": 2766,
+      "sha256": "b43e6ababb56769c3186475c709bbd0f156529adb2abd0652dc9155d6a8c9cc0",
+      "matchesFrozenGitBlob": true
+    },
+    {
+      "path": "packages/desktop/src/renderer/credentials/LinkedFileSourcesDialog.tsx",
+      "bytes": 17657,
+      "sha256": "647477af05cab0b6bf0b7eab51d98add6b669fee65e622d663ba9a08d480d660",
+      "matchesFrozenGitBlob": true
+    },
+    {
+      "path": "packages/desktop/src/renderer/project-config/DataSourcesSection.tsx",
+      "bytes": 26396,
+      "sha256": "632200ef3cfdf74d6dbeb3a8fa8fcfe8275dc2ac6cb4aa695fabf930a0d86ba6",
+      "matchesFrozenGitBlob": true
+    },
+    {
+      "path": "packages/host/package.json",
+      "bytes": 923,
+      "sha256": "dea8055de59b310c169ca2caddbb95d441eb46c6336f855bf34a8a72b68ad3ea",
+      "matchesFrozenGitBlob": true
+    },
+    {
+      "path": "packages/host/src/host-requests.ts",
+      "bytes": 4880,
+      "sha256": "d3d96655a3f3877dedb9094f4ff8b5433ac750925dfbe4d4a5b00778e317be0d",
+      "matchesFrozenGitBlob": true
+    },
+    {
+      "path": "packages/host/src/index.ts",
+      "bytes": 388,
+      "sha256": "cbe279016f7d26c9e797398eb2af8e2f426ff4098fb389911d8bcbef39c9e107",
+      "matchesFrozenGitBlob": true
+    },
+    {
+      "path": "packages/host/src/runtime.test.ts",
+      "bytes": 10519,
+      "sha256": "789c3d008b4b153a3480b7c1a6b7981b988b6aa1f830f15fe87c382090bb8a62",
+      "matchesFrozenGitBlob": true
+    },
+    {
+      "path": "packages/host/src/runtime.ts",
+      "bytes": 4014,
+      "sha256": "b785ab50fd5265ffb7f7d78c312f01b8c2ace165a5bcfdb6a25655b3e5dd3089",
+      "matchesFrozenGitBlob": true
+    },
+    {
+      "path": "packages/link/package.json",
+      "bytes": 951,
+      "sha256": "d8dcf10e9c55af86d64faa9bcba724f622c35361f2ec70988b1b15eebeec74a6",
+      "matchesFrozenGitBlob": true
+    },
+    {
+      "path": "packages/link/src/catalog.ts",
+      "bytes": 30277,
+      "sha256": "2cf5bd2e1b2632a377750aa7c2aa6631120d341da801df9a185b3d8bf3e2bb4b",
+      "matchesFrozenGitBlob": true
+    },
+    {
+      "path": "packages/link/src/figma.ts",
+      "bytes": 1031,
+      "sha256": "976162d245cc7fd65b80feb7a2b3e8e3997ea22a62254e07f00f30288267aff8",
+      "matchesFrozenGitBlob": true
+    },
+    {
+      "path": "packages/link/src/file-selection.test.ts",
+      "bytes": 3564,
+      "sha256": "4f145853d1d1be65f0a180d3fceb9a5059d93b571281a890bc584504548013e1",
+      "matchesFrozenGitBlob": true
+    },
+    {
+      "path": "packages/link/src/file-selection.ts",
+      "bytes": 3645,
+      "sha256": "4b60b77e29a0f3e7ed46701d66394e3d8816b354c669222d622c726e8fdebd4b",
+      "matchesFrozenGitBlob": true
+    },
+    {
+      "path": "packages/link/src/index.ts",
+      "bytes": 1878,
+      "sha256": "d2c5d752e7bbd91386616d01b883fef8da62add62fcd38d2365b424abff7cd89",
+      "matchesFrozenGitBlob": true
+    },
+    {
+      "path": "packages/link/src/management-types.ts",
+      "bytes": 7193,
+      "sha256": "290214fc9c1f191c0dae2943eea79f32a54291e0fbe76134b880c7de0cb477ed",
+      "matchesFrozenGitBlob": true
+    },
+    {
+      "path": "packages/link/src/operation-types.ts",
+      "bytes": 4215,
+      "sha256": "43a5e96ef31b154f66663695023f5f769691205daa15c6fbd3eed36b6c3b7945",
+      "matchesFrozenGitBlob": true
+    },
+    {
+      "path": "packages/link/src/operation-validation.ts",
+      "bytes": 10999,
+      "sha256": "0aa6e812a889f8563f42c4a86114676fb46502a3fd43e4de38bc17435a5d10dd",
+      "matchesFrozenGitBlob": true
+    },
+    {
+      "path": "packages/link/src/operations.test.ts",
+      "bytes": 8281,
+      "sha256": "46fdf8b6575c41f5ddfae2d75fce03a41d3fae167010bc1245157d73f8ba978c",
+      "matchesFrozenGitBlob": true
+    },
+    {
+      "path": "packages/link/src/operations.ts",
+      "bytes": 17020,
+      "sha256": "a8b18b58eb56825f603d33b4031dcdf170ed5e05f5ddf84fcf93501a5b2190a3",
+      "matchesFrozenGitBlob": true
+    },
+    {
+      "path": "packages/link/src/recipes.ts",
+      "bytes": 4162,
+      "sha256": "fa330115b25373afc293fb12d91e6929de4119cfe87db54db09bedce0537c676",
+      "matchesFrozenGitBlob": true
+    },
+    {
+      "path": "packages/link/src/types.ts",
+      "bytes": 3278,
+      "sha256": "d26e95c578b079a7b18e0c7365062130db40707e2d4e500f53333b090fe75072",
+      "matchesFrozenGitBlob": true
+    },
+    {
+      "path": "packages/optimization-lab/README.md",
+      "bytes": 6849,
+      "sha256": "ab3678643818628f1fd17f5d49914ce05b17d0748e35babeaea26c90a1e81843",
+      "matchesFrozenGitBlob": true
+    },
+    {
+      "path": "packages/optimization-lab/package.json",
+      "bytes": 927,
+      "sha256": "be06b739f4838e434a0ad91563cdda72b1759ca518c49207ff526b0f05445a98",
+      "matchesFrozenGitBlob": true
+    },
+    {
+      "path": "packages/optimization-lab/src/assertions.ts",
+      "bytes": 1739,
+      "sha256": "98786f057fc732a7b4d445a632f644dde3c4826d8d49a787667873cb6036bda4",
+      "matchesFrozenGitBlob": true
+    },
+    {
+      "path": "packages/optimization-lab/src/candidate.ts",
+      "bytes": 2689,
+      "sha256": "a4b9098d0b9a16446b999117f0ffdd412c73b2b5e4618461d6692ac392525c34",
+      "matchesFrozenGitBlob": true
+    },
+    {
+      "path": "packages/optimization-lab/src/contracts/canonical-json.ts",
+      "bytes": 2142,
+      "sha256": "9bca0f06abf6401c304f4c4e8ccd0963cb12405f36ed90bc9e30b2197728058f",
+      "matchesFrozenGitBlob": true
+    },
+    {
+      "path": "packages/optimization-lab/src/contracts/dataset.ts",
+      "bytes": 12327,
+      "sha256": "7de3ade87671b80d7f01410b39a2452aa9aad757db294c3d9b41702421808e02",
+      "matchesFrozenGitBlob": true
+    },
+    {
+      "path": "packages/optimization-lab/src/contracts/eval-case.ts",
+      "bytes": 2526,
+      "sha256": "407eaa17770ccc7184c6a68b039efa52a5dc82887b29e72b1d94a7362a9bd4f0",
+      "matchesFrozenGitBlob": true
+    },
+    {
+      "path": "packages/optimization-lab/src/contracts/experiment.ts",
+      "bytes": 9285,
+      "sha256": "87a910d26336a7a82ce3ea8dc9b35f4f4a7437a33d1207ec9d97ebb9553fe3a9",
+      "matchesFrozenGitBlob": true
+    },
+    {
+      "path": "packages/optimization-lab/src/contracts/verdict-policy.ts",
+      "bytes": 943,
+      "sha256": "2bde145cf91ad783ec884072424f6a10ad7b0535369b3958ea73299a66236972",
+      "matchesFrozenGitBlob": true
+    },
+    {
+      "path": "packages/optimization-lab/src/controller.ts",
+      "bytes": 54060,
+      "sha256": "e2963dcd05dd5caa5012453e718463d8d2a309c8eaf2632699036e0e04bf8073",
+      "matchesFrozenGitBlob": true
+    },
+    {
+      "path": "packages/optimization-lab/src/evidence.ts",
+      "bytes": 9821,
+      "sha256": "249891fcdc75798227443f2ddbe9a7d3f6a680c01fc0077077a2cf4d551eef89",
+      "matchesFrozenGitBlob": true
+    },
+    {
+      "path": "packages/optimization-lab/src/grading.test.ts",
+      "bytes": 3460,
+      "sha256": "ff35e96330f32a2c3aa700c23b5f162872c5f93d9936733548472fa914066d0b",
+      "matchesFrozenGitBlob": true
+    },
+    {
+      "path": "packages/optimization-lab/src/grading.ts",
+      "bytes": 7764,
+      "sha256": "ed02a35ec48d171477dc0b5b7c252c4d6404df96603e30de8c74a93339ee2c2d",
+      "matchesFrozenGitBlob": true
+    },
+    {
+      "path": "packages/optimization-lab/src/overfit-hints.ts",
+      "bytes": 1518,
+      "sha256": "bd3d5fb555ddd695fba4a699622760787835f91f865a6f3d9011bd0ac91ca804",
+      "matchesFrozenGitBlob": true
+    },
+    {
+      "path": "packages/optimization-lab/src/queries.ts",
+      "bytes": 5243,
+      "sha256": "64246e7cbc4da4dc2faf85e22fda4a0720e4e380cbb77f7a7709783fb7b433a4",
+      "matchesFrozenGitBlob": true
+    },
+    {
+      "path": "packages/optimization-lab/src/report.test.ts",
+      "bytes": 12438,
+      "sha256": "b904c10684fc852a76efe638f32e9eb0ffa7fb064cbd72acae25494fd8150165",
+      "matchesFrozenGitBlob": true
+    },
+    {
+      "path": "packages/optimization-lab/src/report.ts",
+      "bytes": 23091,
+      "sha256": "fc0a79ca1ba29d6c4633e7cf28289416c7d2f0def0a5bf6844eb27c4a4c8159c",
+      "matchesFrozenGitBlob": true
+    },
+    {
+      "path": "packages/optimization-lab/src/runner.ts",
+      "bytes": 8349,
+      "sha256": "f72f569da0e1abdc6073c68f4e58e34a424bc1706d92792b2d4b42c54bd6f9eb",
+      "matchesFrozenGitBlob": true
+    },
+    {
+      "path": "packages/optimization-lab/src/store-paths.ts",
+      "bytes": 574,
+      "sha256": "cdc8e3f4b560da90d6b426aa87ef5c6d1aafaef5f65d660c981a3c8f43608a02",
+      "matchesFrozenGitBlob": true
+    },
+    {
+      "path": "packages/optimization-lab/src/store.ts",
+      "bytes": 18264,
+      "sha256": "e50ed4b76e95431cf572b43ba6e4d5396059389e6dd8787cbaee902e08c0d8df",
+      "matchesFrozenGitBlob": true
+    },
+    {
+      "path": "packages/optimization-lab/src/strategy.test.ts",
+      "bytes": 1761,
+      "sha256": "f0c95001acde31366f9525a733024310c2fe62f0c05929b1f06de04c39f98f35",
+      "matchesFrozenGitBlob": true
+    },
+    {
+      "path": "packages/optimization-lab/src/strategy.ts",
+      "bytes": 3656,
+      "sha256": "f65dd74e60581e2b1339ce5f36194539deab6e8dd3a1eed33b64dca22baecc3d",
+      "matchesFrozenGitBlob": true
+    },
+    {
+      "path": "packages/server/package.json",
+      "bytes": 2789,
+      "sha256": "23685a75a5146710f81f35c0405b0cb460c5c7f221cffa24030fb77ce6571245",
+      "matchesFrozenGitBlob": true
+    },
+    {
+      "path": "packages/server/src/links/providers/defaults.ts",
+      "bytes": 44168,
+      "sha256": "5018a7d16dc3d5b3bd740dafd62bc8389f430110c819801a9739f767e40e9a72",
+      "matchesFrozenGitBlob": true
+    },
+    {
+      "path": "packages/server/src/links/runtime/operation.ts",
+      "bytes": 1162,
+      "sha256": "ab20cf800ad31d91e0fe25405bf4e70e5d434c5ab1afe337d125980f89b3b447",
+      "matchesFrozenGitBlob": true
+    },
+    {
+      "path": "packages/server/src/mobile-remote/codex-parse.ts",
+      "bytes": 5410,
+      "sha256": "a7a7604e92ea7fcde75a77a52f3d9d1925ce7d4ad3a8619d910cb61508e7483c",
+      "matchesFrozenGitBlob": true
+    },
+    {
+      "path": "packages/server/src/mobile-remote/room-manager.ts",
+      "bytes": 54678,
+      "sha256": "22fdb3d701f016b908edf747942421823eca20653ee2a27f9adac1be25ddf5df",
+      "matchesFrozenGitBlob": true
+    },
+    {
+      "path": "packages/server/src/panels/agent-task-host.ts",
+      "bytes": 21797,
+      "sha256": "b21b444ea6ea0cdbcdf45aa4f00f769beefdb565a2780d351b4b2cc42308ee08",
+      "matchesFrozenGitBlob": true
+    },
+    {
+      "path": "packages/server/src/serve/headless-server.ts",
+      "bytes": 66162,
+      "sha256": "dda2af52d1cf136ae0c7ff6ed9697216b603a5b8beb66e204582d3c532098376",
+      "matchesFrozenGitBlob": true
+    }
+  ],
+  "unresolvedReferences": [],
+  "note": "Selected source/contract files match frozen blobs; hashes do not prove full-file review depth."
+}
