@@ -1,0 +1,33 @@
+{
+  "capturedUTC": "2026-10-17T12:33:43.633426+00:00",
+  "files": [
+    {
+      "path": "packages/core/src/engine/aux-key.test.ts",
+      "bytes": 578,
+      "lineCount": 14,
+      "sha256": "b5570d68ff778211073d09d896b53584f35536ec68770019395e1e31fc8abbf8",
+      "timing": "Before direct source range read; prior filename inventory only"
+    },
+    {
+      "path": "packages/core/src/engine/auxiliary-pipeline.ts",
+      "bytes": 9461,
+      "lineCount": 273,
+      "sha256": "92102a78a75a2114750c279aee9c3692f42c4eda76776dfc8a186025cf2892de",
+      "timing": "Before direct source range read; prior filename inventory only"
+    },
+    {
+      "path": "packages/core/src/tool-system/executor.ts",
+      "bytes": 36414,
+      "lineCount": 917,
+      "sha256": "5c0a8e441916e7b5d6dbe12f93e02966183379ce3f850a6523efca3b3fe43c6e",
+      "timing": "Before direct source range read; prior filename inventory only"
+    },
+    {
+      "path": "packages/core/src/tool-system/builtin/sources.ts",
+      "bytes": 27850,
+      "lineCount": 690,
+      "sha256": "a35b83b791428ae124e77fdfc6e2c55ca9224e418d19e915594b93bf3b075138",
+      "timing": "Before direct source range read; prior filename inventory only"
+    }
+  ]
+}

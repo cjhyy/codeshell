@@ -1,0 +1,604 @@
+{
+  "prepOnly": true,
+  "rootSuppliedParentShort": "40d79ff",
+  "formalBaseline": null,
+  "gitBindingPerformed": false,
+  "finishedAtUTC": "2026-10-17T12:35:15.507047+00:00",
+  "files": [
+    {
+      "path": "packages/desktop/src/renderer/extensions/panelAppRecommendations.ts",
+      "bytes": 997,
+      "sha256": "012fda7cd11fa07a975dc418281550b9e992e60884f0697e869d9692383cc3af",
+      "totalLines": 43,
+      "coverage": "full",
+      "selectedLineRanges": [
+        [
+          1,
+          43
+        ]
+      ],
+      "additionalNavigationSnippetLines": [],
+      "declaredReadLineCount": 43,
+      "purpose": "recommendation literals and ordinary Git source DTO mapper",
+      "initialFilesystemPin": {
+        "path": "packages/desktop/src/renderer/extensions/panelAppRecommendations.ts",
+        "bytes": 997,
+        "sha256": "012fda7cd11fa07a975dc418281550b9e992e60884f0697e869d9692383cc3af",
+        "lines": 43,
+        "pinTimeUTC": "2026-10-17T12:31:41.336710+00:00",
+        "purpose": "initial filesystem pin before present source content reading",
+        "pinArtifact": "initial-pins.json"
+      },
+      "initialBeforeSemanticRead": true,
+      "finishFilesystemPin": {
+        "bytes": 997,
+        "sha256": "012fda7cd11fa07a975dc418281550b9e992e60884f0697e869d9692383cc3af",
+        "timeUTC": "2026-10-17T12:35:15.507047+00:00"
+      },
+      "unchangedFromInitialPin": true
+    },
+    {
+      "path": "packages/desktop/src/renderer/extensions/uninstallTarget.ts",
+      "bytes": 1840,
+      "sha256": "90ae9788efe607e159e1c6163a849ef903ee6faee38e4552e484a71a4cb3cc50",
+      "totalLines": 39,
+      "coverage": "full",
+      "selectedLineRanges": [
+        [
+          1,
+          39
+        ]
+      ],
+      "additionalNavigationSnippetLines": [],
+      "declaredReadLineCount": 39,
+      "purpose": "local / marketplace ordinary identifier split and already-described regression",
+      "initialFilesystemPin": {
+        "path": "packages/desktop/src/renderer/extensions/uninstallTarget.ts",
+        "bytes": 1840,
+        "sha256": "90ae9788efe607e159e1c6163a849ef903ee6faee38e4552e484a71a4cb3cc50",
+        "lines": 39,
+        "pinTimeUTC": "2026-10-17T12:31:41.337413+00:00",
+        "purpose": "initial filesystem pin before present source content reading",
+        "pinArtifact": "initial-pins.json"
+      },
+      "initialBeforeSemanticRead": true,
+      "finishFilesystemPin": {
+        "bytes": 1840,
+        "sha256": "90ae9788efe607e159e1c6163a849ef903ee6faee38e4552e484a71a4cb3cc50",
+        "timeUTC": "2026-10-17T12:35:15.507047+00:00"
+      },
+      "unchangedFromInitialPin": true
+    },
+    {
+      "path": "packages/desktop/src/renderer/extensions/uninstallTarget.test.ts",
+      "bytes": 2011,
+      "sha256": "69e4a1b52a22085f3f7af7c903bee76948f4055ff3791ee0c5f17a0cd022a6ea",
+      "totalLines": 39,
+      "coverage": "full",
+      "selectedLineRanges": [
+        [
+          1,
+          39
+        ]
+      ],
+      "additionalNavigationSnippetLines": [],
+      "declaredReadLineCount": 39,
+      "purpose": "five existing test declarations, not executed",
+      "initialFilesystemPin": {
+        "path": "packages/desktop/src/renderer/extensions/uninstallTarget.test.ts",
+        "bytes": 2011,
+        "sha256": "69e4a1b52a22085f3f7af7c903bee76948f4055ff3791ee0c5f17a0cd022a6ea",
+        "lines": 39,
+        "pinTimeUTC": "2026-10-17T12:31:41.337805+00:00",
+        "purpose": "initial filesystem pin before present source content reading",
+        "pinArtifact": "initial-pins.json"
+      },
+      "initialBeforeSemanticRead": true,
+      "finishFilesystemPin": {
+        "bytes": 2011,
+        "sha256": "69e4a1b52a22085f3f7af7c903bee76948f4055ff3791ee0c5f17a0cd022a6ea",
+        "timeUTC": "2026-10-17T12:35:15.507047+00:00"
+      },
+      "unchangedFromInitialPin": true
+    },
+    {
+      "path": "packages/desktop/src/renderer/extensions/PanelsTab.test.ts",
+      "bytes": 2154,
+      "sha256": "5cc9f665f95631fa7ae90f11af59358c33e7a6f81e52fe12d9bcbf58f2256ace",
+      "totalLines": 63,
+      "coverage": "full",
+      "selectedLineRanges": [
+        [
+          1,
+          63
+        ]
+      ],
+      "additionalNavigationSnippetLines": [],
+      "declaredReadLineCount": 63,
+      "purpose": "three existing test declarations including mapping and React render fixture, source only",
+      "initialFilesystemPin": {
+        "path": "packages/desktop/src/renderer/extensions/PanelsTab.test.ts",
+        "bytes": 2154,
+        "sha256": "5cc9f665f95631fa7ae90f11af59358c33e7a6f81e52fe12d9bcbf58f2256ace",
+        "lines": 63,
+        "pinTimeUTC": "2026-10-17T12:32:23.893150+00:00",
+        "purpose": "before source or focused history content reading in this prep",
+        "pinArtifact": "consumer-history-initial-pins.json"
+      },
+      "initialBeforeSemanticRead": true,
+      "finishFilesystemPin": {
+        "bytes": 2154,
+        "sha256": "5cc9f665f95631fa7ae90f11af59358c33e7a6f81e52fe12d9bcbf58f2256ace",
+        "timeUTC": "2026-10-17T12:35:15.507047+00:00"
+      },
+      "unchangedFromInitialPin": true
+    },
+    {
+      "path": "packages/desktop/src/renderer/extensions/PanelsTab.tsx",
+      "bytes": 51799,
+      "sha256": "3e0b07d3fe53e0a0596021f5b4a4384e0a15bde60ede91ebfec5bb9738937d51",
+      "totalLines": 1293,
+      "coverage": "selected",
+      "selectedLineRanges": [
+        [
+          1,
+          56
+        ],
+        [
+          76,
+          95
+        ],
+        [
+          164,
+          191
+        ],
+        [
+          285,
+          317
+        ],
+        [
+          548,
+          574
+        ],
+        [
+          669,
+          751
+        ]
+      ],
+      "additionalNavigationSnippetLines": [
+        60,
+        63,
+        64,
+        65,
+        71,
+        72,
+        98,
+        111,
+        112,
+        121,
+        153,
+        157,
+        203,
+        231,
+        256,
+        260,
+        264,
+        275,
+        276,
+        327,
+        379,
+        427,
+        440,
+        460,
+        473,
+        487,
+        502,
+        503,
+        522,
+        532,
+        581,
+        592,
+        599,
+        600,
+        959,
+        1075,
+        1091
+      ],
+      "declaredReadLineCount": 284,
+      "purpose": "actual recommendation mapping/icon/installed-list data and review delegation boundary",
+      "initialFilesystemPin": {
+        "path": "packages/desktop/src/renderer/extensions/PanelsTab.tsx",
+        "bytes": 51799,
+        "sha256": "3e0b07d3fe53e0a0596021f5b4a4384e0a15bde60ede91ebfec5bb9738937d51",
+        "lines": 1293,
+        "pinTimeUTC": "2026-10-17T12:32:23.891970+00:00",
+        "purpose": "before source or focused history content reading in this prep",
+        "pinArtifact": "consumer-history-initial-pins.json"
+      },
+      "initialBeforeSemanticRead": true,
+      "finishFilesystemPin": {
+        "bytes": 51799,
+        "sha256": "3e0b07d3fe53e0a0596021f5b4a4384e0a15bde60ede91ebfec5bb9738937d51",
+        "timeUTC": "2026-10-17T12:35:15.507047+00:00"
+      },
+      "unchangedFromInitialPin": true
+    },
+    {
+      "path": "packages/desktop/src/renderer/extensions/PluginsTab.tsx",
+      "bytes": 18987,
+      "sha256": "347d6e15c50e20beb4699852bcf6773f017585039996d91c4d781ac6824fc045",
+      "totalLines": 530,
+      "coverage": "selected",
+      "selectedLineRanges": [
+        [
+          95,
+          166
+        ]
+      ],
+      "additionalNavigationSnippetLines": [
+        8
+      ],
+      "declaredReadLineCount": 73,
+      "purpose": "actual target split result dispatch and adjacent source text; no destructive call invoked",
+      "initialFilesystemPin": {
+        "path": "packages/desktop/src/renderer/extensions/PluginsTab.tsx",
+        "bytes": 18987,
+        "sha256": "347d6e15c50e20beb4699852bcf6773f017585039996d91c4d781ac6824fc045",
+        "lines": 530,
+        "pinTimeUTC": "2026-10-17T12:32:23.893665+00:00",
+        "purpose": "before source or focused history content reading in this prep",
+        "pinArtifact": "consumer-history-initial-pins.json"
+      },
+      "initialBeforeSemanticRead": true,
+      "finishFilesystemPin": {
+        "bytes": 18987,
+        "sha256": "347d6e15c50e20beb4699852bcf6773f017585039996d91c4d781ac6824fc045",
+        "timeUTC": "2026-10-17T12:35:15.507047+00:00"
+      },
+      "unchangedFromInitialPin": true
+    },
+    {
+      "path": "packages/desktop/src/preload/types.d.ts",
+      "bytes": 102234,
+      "sha256": "cd152ddf606dac52a88370b05808ce5c9eafe9d968b5162a5fb4211161a546ba",
+      "totalLines": 2982,
+      "coverage": "selected",
+      "selectedLineRanges": [
+        [
+          1,
+          44
+        ],
+        [
+          2790,
+          2820
+        ]
+      ],
+      "additionalNavigationSnippetLines": [
+        107,
+        1779,
+        2159,
+        2829
+      ],
+      "declaredReadLineCount": 79,
+      "purpose": "type-only reexport and renderer PluginSummary fields",
+      "initialFilesystemPin": {
+        "path": "packages/desktop/src/preload/types.d.ts",
+        "bytes": 102234,
+        "sha256": "cd152ddf606dac52a88370b05808ce5c9eafe9d968b5162a5fb4211161a546ba",
+        "lines": 2982,
+        "pinTimeUTC": "2026-10-17T12:33:01.088657+00:00",
+        "purpose": "before focused ordinary DTO / display-key source reading",
+        "pinArtifact": "dto-display-initial-pins.json"
+      },
+      "initialBeforeSemanticRead": true,
+      "finishFilesystemPin": {
+        "bytes": 102234,
+        "sha256": "cd152ddf606dac52a88370b05808ce5c9eafe9d968b5162a5fb4211161a546ba",
+        "timeUTC": "2026-10-17T12:35:15.507047+00:00"
+      },
+      "unchangedFromInitialPin": true
+    },
+    {
+      "path": "packages/desktop/src/renderer/i18n/ns/extensions.ts",
+      "bytes": 136243,
+      "sha256": "3f7a0a1e1efc18947a4c102f4f3b5bf81b96c073d64ea22071240deee5d9455b",
+      "totalLines": 2460,
+      "coverage": "selected",
+      "selectedLineRanges": [
+        [
+          49,
+          87
+        ],
+        [
+          1227,
+          1273
+        ]
+      ],
+      "additionalNavigationSnippetLines": [],
+      "declaredReadLineCount": 86,
+      "purpose": "Chinese / English recommendation display keys",
+      "initialFilesystemPin": {
+        "path": "packages/desktop/src/renderer/i18n/ns/extensions.ts",
+        "bytes": 136243,
+        "sha256": "3f7a0a1e1efc18947a4c102f4f3b5bf81b96c073d64ea22071240deee5d9455b",
+        "lines": 2460,
+        "pinTimeUTC": "2026-10-17T12:33:01.089717+00:00",
+        "purpose": "before focused ordinary DTO / display-key source reading",
+        "pinArtifact": "dto-display-initial-pins.json"
+      },
+      "initialBeforeSemanticRead": true,
+      "finishFilesystemPin": {
+        "bytes": 136243,
+        "sha256": "3f7a0a1e1efc18947a4c102f4f3b5bf81b96c073d64ea22071240deee5d9455b",
+        "timeUTC": "2026-10-17T12:35:15.507047+00:00"
+      },
+      "unchangedFromInitialPin": true
+    },
+    {
+      "path": "packages/core/src/panel-apps/installer.ts",
+      "bytes": 43723,
+      "sha256": "00bde4a3f48995d015ff2b013646f28013bb899dc18d9edc03bb4fe58fd66817",
+      "totalLines": 1228,
+      "coverage": "selected",
+      "selectedLineRanges": [
+        [
+          94,
+          120
+        ]
+      ],
+      "additionalNavigationSnippetLines": [],
+      "declaredReadLineCount": 27,
+      "purpose": "GitPanelAppSourceInput declaration only; installer behavior excluded",
+      "initialFilesystemPin": {
+        "path": "packages/core/src/panel-apps/installer.ts",
+        "bytes": 43723,
+        "sha256": "00bde4a3f48995d015ff2b013646f28013bb899dc18d9edc03bb4fe58fd66817",
+        "lines": 1228,
+        "pinTimeUTC": "2026-10-17T12:33:50.720755+00:00",
+        "purpose": "before selected declaration / ordinary DTO list mapping only",
+        "pinArtifact": "actual-producer-initial-pins.json"
+      },
+      "initialBeforeSemanticRead": true,
+      "finishFilesystemPin": {
+        "bytes": 43723,
+        "sha256": "00bde4a3f48995d015ff2b013646f28013bb899dc18d9edc03bb4fe58fd66817",
+        "timeUTC": "2026-10-17T12:35:15.507047+00:00"
+      },
+      "unchangedFromInitialPin": true
+    },
+    {
+      "path": "packages/desktop/src/main/plugins-service.ts",
+      "bytes": 11267,
+      "sha256": "acffed1af5934499848c5a46f025b5aa6d702d50e24e9f9a161edc8c7f2a72ec",
+      "totalLines": 323,
+      "coverage": "selected",
+      "selectedLineRanges": [
+        [
+          1,
+          57
+        ],
+        [
+          129,
+          169
+        ]
+      ],
+      "additionalNavigationSnippetLines": [
+        170,
+        171,
+        174,
+        183,
+        225,
+        252,
+        255
+      ],
+      "declaredReadLineCount": 105,
+      "purpose": "list producer forwards catalog installKey/name/marketplace; no catalog/disk/native function invoked",
+      "initialFilesystemPin": {
+        "path": "packages/desktop/src/main/plugins-service.ts",
+        "bytes": 11267,
+        "sha256": "acffed1af5934499848c5a46f025b5aa6d702d50e24e9f9a161edc8c7f2a72ec",
+        "lines": 323,
+        "pinTimeUTC": "2026-10-17T12:33:50.722768+00:00",
+        "purpose": "before selected declaration / ordinary DTO list mapping only",
+        "pinArtifact": "actual-producer-initial-pins.json"
+      },
+      "initialBeforeSemanticRead": true,
+      "finishFilesystemPin": {
+        "bytes": 11267,
+        "sha256": "acffed1af5934499848c5a46f025b5aa6d702d50e24e9f9a161edc8c7f2a72ec",
+        "timeUTC": "2026-10-17T12:35:15.507047+00:00"
+      },
+      "unchangedFromInitialPin": true
+    },
+    {
+      "path": "packages/core/src/panel-apps/source.ts",
+      "bytes": 3214,
+      "sha256": "4e1e7addf65af1ba7d28d813a80c3739e4614646f895ea3779d610a1b669600b",
+      "totalLines": 96,
+      "coverage": "selected-incidental",
+      "selectedLineRanges": [
+        [
+          1,
+          45
+        ]
+      ],
+      "additionalNavigationSnippetLines": [],
+      "declaredReadLineCount": 45,
+      "purpose": "source navigation disclosed URL normalizer text; no authority/network audit or invocation",
+      "initialFilesystemPin": {
+        "path": "packages/core/src/panel-apps/source.ts",
+        "bytes": 3214,
+        "sha256": "4e1e7addf65af1ba7d28d813a80c3739e4614646f895ea3779d610a1b669600b",
+        "lines": 96,
+        "pinTimeUTC": "2026-10-17T12:33:17.887667+00:00",
+        "purpose": "before selected ordinary DTO / list producer mapping read; authority implementation excluded",
+        "pinArtifact": "producer-initial-pins.json"
+      },
+      "initialBeforeSemanticRead": true,
+      "finishFilesystemPin": {
+        "bytes": 3214,
+        "sha256": "4e1e7addf65af1ba7d28d813a80c3739e4614646f895ea3779d610a1b669600b",
+        "timeUTC": "2026-10-17T12:35:15.507047+00:00"
+      },
+      "unchangedFromInitialPin": true
+    },
+    {
+      "path": "packages/desktop/src/main/marketplace-service.ts",
+      "bytes": 20169,
+      "sha256": "d5f6623dccb27087bdad2f9263bdb5c514252a20a6ba8d6a7ca45cf80e0cafe6",
+      "totalLines": 612,
+      "coverage": "snippet-only-incidental",
+      "selectedLineRanges": [],
+      "additionalNavigationSnippetLines": [
+        7
+      ],
+      "declaredReadLineCount": 1,
+      "purpose": "one matching module comment from unsuccessful source navigation; rest hash only",
+      "initialFilesystemPin": {
+        "path": "packages/desktop/src/main/marketplace-service.ts",
+        "bytes": 20169,
+        "sha256": "d5f6623dccb27087bdad2f9263bdb5c514252a20a6ba8d6a7ca45cf80e0cafe6",
+        "lines": 612,
+        "pinTimeUTC": "2026-10-17T12:33:17.891464+00:00",
+        "purpose": "before selected ordinary DTO / list producer mapping read; authority implementation excluded",
+        "pinArtifact": "producer-initial-pins.json"
+      },
+      "initialBeforeSemanticRead": true,
+      "finishFilesystemPin": {
+        "bytes": 20169,
+        "sha256": "d5f6623dccb27087bdad2f9263bdb5c514252a20a6ba8d6a7ca45cf80e0cafe6",
+        "timeUTC": "2026-10-17T12:35:15.507047+00:00"
+      },
+      "unchangedFromInitialPin": true
+    }
+  ],
+  "instructionFiles": [
+    {
+      "path": "CODESHELL.md",
+      "bytes": 17639,
+      "sha256": "56d9ffdd81b6f6f615ed7a7392ddfa60ec4338c0ccb88eef20c4b73ad8dad5a2",
+      "coverage": "full-instructions",
+      "selectedLineRanges": [
+        [
+          1,
+          217
+        ]
+      ],
+      "initialFilesystemPin": {
+        "path": "CODESHELL.md",
+        "bytes": 17639,
+        "sha256": "56d9ffdd81b6f6f615ed7a7392ddfa60ec4338c0ccb88eef20c4b73ad8dad5a2",
+        "lines": 217,
+        "pinTimeUTC": "2026-10-17T12:31:41.333851+00:00",
+        "purpose": "initial filesystem pin before present source content reading",
+        "pinArtifact": "initial-pins.json"
+      },
+      "finishTimeUTC": "2026-10-17T12:35:15.507047+00:00",
+      "unchangedFromInitialPin": true
+    },
+    {
+      "path": "AGENTS.md",
+      "bytes": 206,
+      "sha256": "2980647020f0ae72522f7f717ffa89f4c5ec7fb1efe48066e881b864cd428917",
+      "coverage": "full-instructions",
+      "selectedLineRanges": [
+        [
+          1,
+          5
+        ]
+      ],
+      "initialFilesystemPin": {
+        "path": "AGENTS.md",
+        "bytes": 206,
+        "sha256": "2980647020f0ae72522f7f717ffa89f4c5ec7fb1efe48066e881b864cd428917",
+        "lines": 5,
+        "pinTimeUTC": "2026-10-17T12:31:41.335842+00:00",
+        "purpose": "initial filesystem pin before present source content reading",
+        "pinArtifact": "initial-pins.json"
+      },
+      "finishTimeUTC": "2026-10-17T12:35:15.507047+00:00",
+      "unchangedFromInitialPin": true
+    }
+  ],
+  "selectedHistoricalFiles": [
+    {
+      "path": "docs/archive/local-plugin-upgrade-uninstall-plan-2026-06-22.md",
+      "bytes": 5879,
+      "sha256": "471686d840e144dfdfa2b27bbbbe428abc04f97b1e5bab09affe5deaa6d663f5",
+      "totalLines": 72,
+      "coverage": "selected-history",
+      "selectedLineRanges": [
+        [
+          31,
+          46
+        ]
+      ],
+      "declaredFocusedReadLineCount": 16,
+      "initialBeforeSemanticRead": null,
+      "initialPinTimingNote": "Historical excerpt contexts were already seen from first history scan before this dedicated pin; do not backdate dedicated pin. Original history inventory retains byte SHA captured in the scan.",
+      "dedicatedLaterPin": {
+        "path": "docs/archive/local-plugin-upgrade-uninstall-plan-2026-06-22.md",
+        "bytes": 5879,
+        "sha256": "471686d840e144dfdfa2b27bbbbe428abc04f97b1e5bab09affe5deaa6d663f5",
+        "lines": 72,
+        "pinTimeUTC": "2026-10-17T12:32:23.894448+00:00",
+        "purpose": "before source or focused history content reading in this prep",
+        "pinArtifact": "consumer-history-initial-pins.json"
+      },
+      "finishFilesystemPin": {
+        "bytes": 5879,
+        "sha256": "471686d840e144dfdfa2b27bbbbe428abc04f97b1e5bab09affe5deaa6d663f5",
+        "timeUTC": "2026-10-17T12:35:15.507047+00:00"
+      },
+      "unchangedFromDedicatedPin": true
+    },
+    {
+      "path": "docs/superpowers/plans/2026-05-30-codex-style-extensions-ui.md",
+      "bytes": 28861,
+      "sha256": "8c7d16bab5218d53379f40408a68da5a58bd87b45cd9029a972ea405d930da80",
+      "totalLines": 720,
+      "coverage": "selected-history",
+      "selectedLineRanges": [
+        [
+          50,
+          126
+        ]
+      ],
+      "declaredFocusedReadLineCount": 77,
+      "initialBeforeSemanticRead": null,
+      "initialPinTimingNote": "Historical excerpt contexts were already seen from first history scan before this dedicated pin; do not backdate dedicated pin. Original history inventory retains byte SHA captured in the scan.",
+      "dedicatedLaterPin": {
+        "path": "docs/superpowers/plans/2026-05-30-codex-style-extensions-ui.md",
+        "bytes": 28861,
+        "sha256": "8c7d16bab5218d53379f40408a68da5a58bd87b45cd9029a972ea405d930da80",
+        "lines": 720,
+        "pinTimeUTC": "2026-10-17T12:32:23.894857+00:00",
+        "purpose": "before source or focused history content reading in this prep",
+        "pinArtifact": "consumer-history-initial-pins.json"
+      },
+      "finishFilesystemPin": {
+        "bytes": 28861,
+        "sha256": "8c7d16bab5218d53379f40408a68da5a58bd87b45cd9029a972ea405d930da80",
+        "timeUTC": "2026-10-17T12:35:15.507047+00:00"
+      },
+      "unchangedFromDedicatedPin": true
+    }
+  ],
+  "otherHistoricalCoverage": "history.json metadata query contexts + focused-history.json all19 contexts; ranking two JSON rows only; no whole-file semantic history claim",
+  "counts": {
+    "productAndTestPins": 12,
+    "fullProductAndTestPins": 4,
+    "selectedAndIncidentalPins": 8,
+    "productAndTestDeclaredReadLinesIncludingNavigation": 884,
+    "instructionLines": 222,
+    "focusedHistoricalLineReads": 93,
+    "existingTestDeclarationsRead": 8,
+    "existingTestDeclarationsExecuted": 0
+  },
+  "timingNotes": [
+    "All12 product/test pins precede observed source content in this prep. Historical dedicated pins are honestly late after history contexts and marked null.",
+    "Whole-file bytes/SHA captures do not imply whole-file semantic reading. Additional rg matching line text is enumerated separately from contiguous detailed selections.",
+    "The Git URL normalizer45 lines and marketplace module1 matching comment were incidental navigation reads, not new installer/authority/security coverage."
+  ],
+  "allSourceInitialAndFinishBytesEqual": true
+}

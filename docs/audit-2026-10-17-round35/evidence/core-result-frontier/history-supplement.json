@@ -1,0 +1,147 @@
+{
+  "startedUTC": "2026-10-17T12:34:29.940050+00:00",
+  "completedUTC": "2026-10-17T12:34:33.394852+00:00",
+  "originalHistorySha256": "f834b09e91612799d79398c2da18ef7ac0aa441e2adf14a19125f85f01a2c5ad",
+  "originalInventoryRows": 3137,
+  "sameDatedInventoryBytes": true,
+  "snapshotDrift": [],
+  "patterns": {
+    "bound-api": "\\b(?:rememberBoundToolResult|boundToolResult)\\b",
+    "aux-api": "\\bresolveAuxKey\\b"
+  },
+  "occurrenceCounts": {
+    "bound-api": 1,
+    "aux-api": 23
+  },
+  "contextCapEach": 40,
+  "hits": {
+    "bound-api": [
+      {
+        "path": "docs/todo/workspace-crossfile-query-delivery.md",
+        "at": "whole Markdown",
+        "context": "示结果均不能创建该 Symbol 身份。每个 bound 调用复制其服务 Map，进一步嵌套默认不继承；无全局可猜 call id capture，无从文本解析“可信回执”的路径，不新增 stable SDK 入口。子调用还必须通过已有 `boundToolResult` 的真实执行成功检查；既有 post Hook 的 additionalContext 保留为子调用附加上下文，不参与词法评分或来源证据。\n\n每个 await 后重新检查 source/Profile/current pin、已选 resource 的当前显式 deny 和 workspace/state/uploads 目录身份；最终返回前同步重验每份实际原件的目录/文件 dev/ino、真实路径及内容 SHA-256。温缓存同样不"
+      }
+    ],
+    "aux-api": [
+      {
+        "path": "docs/audit-2026-10-17-round17/evidence/catalog-dedup.json",
+        "at": "$[\"hits\"][\"default_fallback\"][9][\"context\"]",
+        "context": "ream-service.ts:65` | 改调共享解析器;dream 用 aux 模型 → `resolveAuxKey` + pool |\n| `renderer/App.tsx:2758` | `resolveActiveKey` 的 legacy `activeKey` fallback 删除,只读 `defaults.text` |\n| `renderer` 其它 | 删读 `models[]` 作为 model picker 选项的地方(改读 modelConnections) |\n\n### 4.4 一次性迁移脚本\n\n`scripts/migr"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round17/evidence/catalog-dedup.json",
+        "at": "$[\"hits\"][\"default_fallback\"][10][\"context\"]",
+        "context": "erminal.at` 变化才调 **aux 模型**生成并落盘，已有直接返回（不看不烧钱）。\n  - aux 解析走 `resolveAuxKey` → `resolveLLMConfigForTag(settings,\"text\",auxId)`，\n    **aux 未配时回退 `defaults.text`**；one-shot 调用照 `dream-service.ts` 范式\n    （`createLLMClient` + `createMessage`，无 Engine/工具）。\n  - 产出**一段**自然语言（结论 + 待跟进追问），**不逐条**；aux 判定"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round28/evidence/coverage-prep/shortlist-history.json",
+        "at": "$[\"patterns\"][\"aux-key\"]",
+        "context": "aux-key\\.ts|resolveAuxKey"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round28/evidence/coverage-prep/shortlist-history.json",
+        "at": "$[\"hits\"][\"aux-key\"][4][\"excerpt\"]",
+        "context": "ream-service.ts:65` | 改调共享解析器;dream 用 aux 模型 → `resolveAuxKey` + pool |\n| `renderer/App.tsx:2758` | `resolveActiveKey` 的 legacy `activeKey` fallback 删除,只读 `defaults.text` |\n| `renderer` 其它 | 删读 `models[]` 作为 model picker 选项的地方(改读 modelConnections) |\n\n### 4.4 一次性迁移脚本\n\n`scripts/migr"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round28/evidence/coverage-prep/shortlist-history.json",
+        "at": "$[\"hits\"][\"aux-key\"][5][\"excerpt\"]",
+        "context": "erminal.at` 变化才调 **aux 模型**生成并落盘，已有直接返回（不看不烧钱）。\n  - aux 解析走 `resolveAuxKey` → `resolveLLMConfigForTag(settings,\"text\",auxId)`，\n    **aux 未配时回退 `defaults.text`**；one-shot 调用照 `dream-service.ts` 范式\n    （`createLLMClient` + `createMessage`，无 Engine/工具）。\n  - 产出**一段**自然语言（结论 + 待跟进追问），**不逐条**；aux 判定"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round28/evidence/coverage-prep/shortlist-history.json",
+        "at": "$[\"hits\"][\"aux-key\"][28][\"excerpt\"]",
+        "context": "2. `resolveAuxKey()` 只读 `defaults.auxText`，空串视为 unset，legacy `auxModelKey` 已删除：`packages/core/src/engine/aux-key.ts:1-12`；回归测试也明确不再读取旧字段：`packages/core/src/engine/aux-key.test.ts:5-12`。"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round28/evidence/coverage-prep/shortlist-history.json",
+        "at": "$[\"hits\"][\"aux-key\"][29][\"excerpt\"]",
+        "context": "2. `resolveAuxKey()` 只读 `defaults.auxText`，空串视为 unset，legacy `auxModelKey` 已删除：`packages/core/src/engine/aux-key.ts:1-12`；回归测试也明确不再读取旧字段：`packages/core/src/engine/aux-key.test.ts:5-12`。"
+      },
+      {
+        "path": "docs/refactor/goal-judge-context-redesign.md",
+        "at": "whole Markdown",
+        "context": "配置”成立。\n\n1. 实际配置字段已经不是旧 `auxModelKey`，而是 `settings.defaults.auxText`：`packages/core/src/settings/schema.ts:190-200`。\n2. `resolveAuxKey()` 只读 `defaults.auxText`，空串视为 unset，legacy `auxModelKey` 已删除：`packages/core/src/engine/aux-key.ts:1-12`；回归测试也明确不再读取旧字段：`packages/core/src/engine/aux-key.test.ts:5-12`。\n3. Engine 先创建 primary，再 `resolveAuxClient(primary)`"
+      },
+      {
+        "path": "docs/superpowers/plans/2026-06-22-remove-legacy-model-storage.md",
+        "at": "whole Markdown",
+        "context": "试**\n\n`packages/core/src/engine/aux-key.test.ts`:\n\n```typescript\nimport { describe, it, expect } from \"vitest\";\nimport { resolveAuxKey } from \"./aux-key.js\";\n\ndescribe(\"resolveAuxKey\", () => {\n  it(\"returns defaults.auxText when set\", () => {\n    expect(resolveAuxKey({ defaults: { auxText: \"fast\" } })).toBe(\"fast\");\n  });\n  it(\"returns undefined when d"
+      },
+      {
+        "path": "docs/superpowers/plans/2026-06-22-remove-legacy-model-storage.md",
+        "at": "whole Markdown",
+        "context": "\n\n```typescript\nimport { describe, it, expect } from \"vitest\";\nimport { resolveAuxKey } from \"./aux-key.js\";\n\ndescribe(\"resolveAuxKey\", () => {\n  it(\"returns defaults.auxText when set\", () => {\n    expect(resolveAuxKey({ defaults: { auxText: \"fast\" } })).toBe(\"fast\");\n  });\n  it(\"returns undefined when defaults.auxText unset (legacy auxModelKey no lon"
+      },
+      {
+        "path": "docs/superpowers/plans/2026-06-22-remove-legacy-model-storage.md",
+        "at": "whole Markdown",
+        "context": " } from \"./aux-key.js\";\n\ndescribe(\"resolveAuxKey\", () => {\n  it(\"returns defaults.auxText when set\", () => {\n    expect(resolveAuxKey({ defaults: { auxText: \"fast\" } })).toBe(\"fast\");\n  });\n  it(\"returns undefined when defaults.auxText unset (legacy auxModelKey no longer consulted)\", () => {\n    expect(resolveAuxKey({ auxModelKey: \"legacy\" } as never)"
+      },
+      {
+        "path": "docs/superpowers/plans/2026-06-22-remove-legacy-model-storage.md",
+        "at": "whole Markdown",
+        "context": "  });\n  it(\"returns undefined when defaults.auxText unset (legacy auxModelKey no longer consulted)\", () => {\n    expect(resolveAuxKey({ auxModelKey: \"legacy\" } as never)).toBeUndefined();\n  });\n  it(\"treats empty string as unset\", () => {\n    expect(resolveAuxKey({ defaults: { auxText: \"\" } })).toBeUndefined();\n  });\n});\n```\n\n- [ ] **Step 2: 跑测试确认失败**"
+      },
+      {
+        "path": "docs/superpowers/plans/2026-06-22-remove-legacy-model-storage.md",
+        "at": "whole Markdown",
+        "context": "Key({ auxModelKey: \"legacy\" } as never)).toBeUndefined();\n  });\n  it(\"treats empty string as unset\", () => {\n    expect(resolveAuxKey({ defaults: { auxText: \"\" } })).toBeUndefined();\n  });\n});\n```\n\n- [ ] **Step 2: 跑测试确认失败**\n\nRun: `cd packages/core && bunx vitest run src/engine/aux-key.test.ts`\nExpected: FAIL —「returns undefined when ... legacy」用例失败(当前"
+      },
+      {
+        "path": "docs/superpowers/plans/2026-06-22-remove-legacy-model-storage.md",
+        "at": "whole Markdown",
+        "context": "前还读 auxModelKey)\n\n- [ ] **Step 3: 改实现,删 legacy 分支**\n\n`packages/core/src/engine/aux-key.ts` 整体替换为:\n\n```typescript\n/**\n * resolveAuxKey — pick the pool key for the background/aux client. Reads the\n * unified store's settings.defaults.auxText (a connection id, also the pool\n * key). Empty strings are treated as unset. (legacy settings.auxModelKey 已删除)\n *"
+      },
+      {
+        "path": "docs/superpowers/plans/2026-06-22-remove-legacy-model-storage.md",
+        "at": "whole Markdown",
+        "context": "on id, also the pool\n * key). Empty strings are treated as unset. (legacy settings.auxModelKey 已删除)\n */\nexport function resolveAuxKey(settings: {\n  defaults?: { auxText?: string };\n}): string | undefined {\n  const unified = settings.defaults?.auxText;\n  if (unified) return unified;\n  return undefined;\n}\n```\n\n- [ ] **Step 4: 跑测试确认通过**\n\nRun: `cd package"
+      },
+      {
+        "path": "docs/superpowers/plans/2026-06-22-remove-legacy-model-storage.md",
+        "at": "whole Markdown",
+        "context": "ash\ngit add packages/core/src/engine/aux-key.ts packages/core/src/engine/aux-key.test.ts\ngit commit -m \"refactor(core): resolveAuxKey 删 auxModelKey fallback,只读 defaults.auxText\"\n```\n\n---\n\n## Task 4: fallbackModelKeys 消费删除\n\n**Files:**\n- Modify: `packages/core/src/engine/engine.ts`(`resolveFallbackClients` 及其调用)\n\n- [ ] **Step 1: 定位 fallbackModelKeys 消费点"
+      },
+      {
+        "path": "docs/superpowers/plans/2026-06-22-remove-legacy-model-storage.md",
+        "at": "whole Markdown",
+        "context": "});\n```\n\n- [ ] **Step 3: dream-service.ts —— 用 aux 模型**\n\ndream 用辅助模型。改为:\n```typescript\nimport { resolveLLMConfigForTag, resolveAuxKey } from \"@cjhyy/code-shell-core\";\n// ...\nconst settings = new SettingsManager(seedCwd, \"full\").get();\nconst auxId = resolveAuxKey(settings); // defaults.auxText\nconst llmConfig =\n  resolveLLMConfigForTag(settings, \"text\""
+      },
+      {
+        "path": "docs/superpowers/plans/2026-06-22-remove-legacy-model-storage.md",
+        "at": "whole Markdown",
+        "context": "xKey } from \"@cjhyy/code-shell-core\";\n// ...\nconst settings = new SettingsManager(seedCwd, \"full\").get();\nconst auxId = resolveAuxKey(settings); // defaults.auxText\nconst llmConfig =\n  resolveLLMConfigForTag(settings, \"text\", auxId) ??\n  resolveLLMConfigForTag(settings, \"text\", (settings as any).defaults?.text);\nif (!llmConfig) throw new Error(\"Dream:"
+      },
+      {
+        "path": "docs/superpowers/plans/2026-06-22-remove-legacy-model-storage.md",
+        "at": "whole Markdown",
+        "context": "packages/desktop/src/main/dream-service.ts\ngit commit -m \"refactor(desktop): automation/dream 改用 resolveLLMConfigForTag/resolveAuxKey\"\n```\n\n---\n\n## Task 9: 删 schema legacy 字段 + 清理 renderer 残留\n\n**Files:**\n- Modify: `packages/core/src/settings/schema.ts`(删字段)\n- Modify: `packages/desktop/src/renderer/App.tsx:2758`(resolveActiveKey 删 activeKey fallback)\n-"
+      },
+      {
+        "path": "docs/superpowers/plans/2026-06-22-remove-legacy-model-storage.md",
+        "at": "whole Markdown",
+        "context": " \"text\", id)` 签名全程一致;`appendOnboardingResult` 新参数(instanceId/catalogId/tag/model/apiKey/baseUrl)在 T6 定义、调用方 T6-S4 适配一致;`resolveAuxKey` 返回 key string、dream 用它 T8-S3 一致。\n"
+      },
+      {
+        "path": "docs/superpowers/specs/2026-06-22-remove-legacy-model-storage-design.md",
+        "at": "whole Markdown",
+        "context": "engine 内部的 pool 解析是「**有热切换需求**」的场景。两者底层复用同一批零件(`modelEntriesFromConnections` / `toLLMConfig`),不会逻辑分叉。\n\n### 3.2 aux 解析\n\n`resolveAuxKey(settings)` 已优先读 `defaults.auxText`(删 `auxModelKey` 分支后只读它)。返回 key 后,engine 用 `pool.resolveLLMConfig(key)` 拿 config —— 已有逻辑,不动。\n\n### 3.3 数据流(改造后)\n\n```\nsettings.json\n  ├─ modelConnections[] ─┐\n  ├─ credentials[]       ├─→"
+      },
+      {
+        "path": "docs/superpowers/specs/2026-06-22-remove-legacy-model-storage-design.md",
+        "at": "whole Markdown",
+        "context": "---|---|\n| `main/automation-host.ts:106` | 改调共享解析器(text tag) |\n| `main/dream-service.ts:65` | 改调共享解析器;dream 用 aux 模型 → `resolveAuxKey` + pool |\n| `renderer/App.tsx:2758` | `resolveActiveKey` 的 legacy `activeKey` fallback 删除,只读 `defaults.text` |\n| `renderer` 其它 | 删读 `models[]` 作为 model picker 选项的地方(改读 modelConnections) |\n\n### 4.4 一次性迁移脚本\n\n`scripts/migr"
+      },
+      {
+        "path": "docs/superpowers/specs/2026-07-23-session-world-progressive-disclosure-design.md",
+        "at": "whole Markdown",
+        "context": "不碰。\n  - **惰性生成**：工作台请求时，对终态 session 逐个查持久化 store；缺失或\n    `terminal.at` 变化才调 **aux 模型**生成并落盘，已有直接返回（不看不烧钱）。\n  - aux 解析走 `resolveAuxKey` → `resolveLLMConfigForTag(settings,\"text\",auxId)`，\n    **aux 未配时回退 `defaults.text`**；one-shot 调用照 `dream-service.ts` 范式\n    （`createLLMClient` + `createMessage`，无 Engine/工具）。\n  - 产出**一段**自然语言（结论 + 待跟进追问），**不逐条**；aux 判定"
+      }
+    ]
+  },
+  "sourceSemanticReadsAdded": 0,
+  "productAttempts": 0,
+  "gitCommands": 0,
+  "limits": "Targeted metadata supplement only; original history stays verbatim. Counts are not complete semantic history proof."
+}

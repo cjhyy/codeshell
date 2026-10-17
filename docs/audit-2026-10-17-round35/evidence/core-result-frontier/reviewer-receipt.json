@@ -1,0 +1,77 @@
+{
+  "frozenUTC": "2026-10-17T12:36:21.023234+00:00",
+  "prepOnly": true,
+  "formalBaseline": null,
+  "parentReportedFrozenRound33": "40d79ff2190a98aa31067eb07006099c2726b21a",
+  "historyExclusionsPreserved": [
+    "mutable34",
+    "future35"
+  ],
+  "selfExcluded": true,
+  "artifactCount": 8,
+  "files": [
+    {
+      "path": "consumer-initial-pins.json",
+      "bytes": 1212,
+      "sha256": "c2160a91afe898a50058876019c18a950d189c2100ed83e7c77e2b131277cea2"
+    },
+    {
+      "path": "history-finish-checks.json",
+      "bytes": 311,
+      "sha256": "cae95872a22419db34de50e8fae154f0c009617fbfa7054353cf94f0e8177406"
+    },
+    {
+      "path": "history-method.py",
+      "bytes": 3742,
+      "sha256": "b707ce24bbbfc6aa169de181edec13be6c24161939235e11b6d908c00358d33f"
+    },
+    {
+      "path": "history-supplement.json",
+      "bytes": 14029,
+      "sha256": "c015b3aad740a2c0fb6c92c9d308b80796ff8399771561e415b893487ebc783a"
+    },
+    {
+      "path": "history.json",
+      "bytes": 684805,
+      "sha256": "f834b09e91612799d79398c2da18ef7ac0aa441e2adf14a19125f85f01a2c5ad"
+    },
+    {
+      "path": "initial-pins.json",
+      "bytes": 1703,
+      "sha256": "4e3b79d0c78a6a2f38caebf1893c98fd56b44abc8d39321c7a99c8fc501e9cf8"
+    },
+    {
+      "path": "review.md",
+      "bytes": 3468,
+      "sha256": "97232c300b5fb2225a7ab0a9b40656e4e3e91f7b7126bb57b54073f504acd549"
+    },
+    {
+      "path": "source-manifest.json",
+      "bytes": 11613,
+      "sha256": "a0f14c0fde589c708e193418d3d7a129e46b0eda7d410f56cd338a6dd6d09bbc"
+    }
+  ],
+  "classification": {
+    "newFormal": 0,
+    "newCandidates": 0,
+    "newRelated": 0
+  },
+  "semanticSourceRows": 6,
+  "hashOnlyRows": 2,
+  "productSourceLines": 120,
+  "testDeclarationLines": 14,
+  "totalDeclaredReadLines": 134,
+  "sourceFinishChecks": 8,
+  "historyFinishRowsUnchanged": 3137,
+  "productAttempts": 0,
+  "testsExecuted": 0,
+  "promiseLanguageFixtures": 0,
+  "toolExecutions": 0,
+  "modelCalls": 0,
+  "networkRequests": 0,
+  "nativeRuns": 0,
+  "gitCommands": 0,
+  "runtimePasses": 0,
+  "runtimeExpectations": 0,
+  "metadataFailures": []
+}
