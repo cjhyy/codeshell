@@ -8,13 +8,14 @@ The release target is macOS, Windows, Linux Desktop and Web. Authorized native C
 has now executed; its passing and incomplete boundaries are recorded below.
 Cross-platform fixture tests alone are not native acceptance.
 
-The latest completed run, CI20, failed overall. Web passes its job. macOS and
-Linux each complete the original 18-operation/four-Main subset and two new draft
-operations, then the third draft operation stops on an ambiguous panel locator.
-Windows stops earlier in thirteen platform-dependent pure tests; no Windows
-native suite or installer runs. Later native suites and installer acceptance
-remain incomplete. See the
-[CI20 failure record](#ci20--panel-locator-and-windows-test-portability-failures).
+The latest completed run, CI21, failed overall. Web, Linux and macOS pass their
+independently audited scopes, including the first complete new Review-draft
+three-operation/one-Main sequences. Windows completes the recorded UI actions,
+but its full custody acceptance is withdrawn after an older foreign PID is
+adopted and named in a cleanup signal request. Actual NSIS Setup then exits
+`3221225477` (`0xC0000005`); its cause and post-failure OS state are unknown.
+See the [CI21 failure record](#ci21--functional-progress-with-windows-custody-and-installer-failures).
+CI22 preparation below is local source/compiler evidence, not native recovery.
 
 CI14 remains the latest fully passing matrix. The
 [CI17 record](#ci17--windows-nsis-failure-without-an-artifact), CI16 fixture failure
@@ -2076,3 +2077,184 @@ from `5b353ba81579cff4fa318c864d4fc9978eed5e63`; this is fixture instrumentation
 and pure verification only. Three-platform native and installer revalidation
 remain pending, with historical GC/NSIS causes unknown. No CI21 execution or
 runtime result is asserted.
+
+## CI21 — functional progress with Windows custody and installer failures
+
+[Run 39037383789](https://github.com/cjhyy/codeshell/actions/runs/39037383789),
+attempt 1 / push, binds source
+`037c2afbb05f2fcb3b2f3f3588be2b4a980032a1`. Its final API reports overall
+failure: Web, Linux and macOS jobs succeed; Windows fails at actual NSIS install.
+The frozen final run API has SHA-256
+`bd4381cca5841d74a7c009080bd74285bba128d5b2dde2e1555cddae3729c69e`.
+Job success is insufficient evidence for process ownership or release readiness.
+
+Web independently passes the original 31 browser behaviors, image nine/45 and
+64 lifecycle contracts. Separate negative controls retain two passing controls
+and six expected failures with runner-verified private-profile retention.
+The audit binds 106 source hashes and 33 CRC-checked PNGs, actual normal browser
+exits, observed full-birth custody, final ledgers and recorded HOME cleanup.
+Current logout/relogin and 390px annotation samples show readable CJK.
+
+Linux independently passes original 83 operations/12 Main launches and, separately,
+new Review drafts three/one. Its actual AppImage runtime supplies APPIMAGE/APPDIR,
+passes the first-JS identity/sandbox barriers and performs ten owned manifest GETs
+across five failure/healthy-retry pairs. Source/cache bytes, ASAR and managed-Node identities remain bound and unchanged.
+Full `07777` inventories retain only the exact recorded authorized directory
+`0755→0700`, sandbox and LICENSE normalization deltas.
+Suite inner HOMEs are recorded removed; both outer package-launcher scratch roots
+are intentionally retained. Actual generated-image, narrow settings, Review,
+updater and three draft PNGs have readable CJK in the independently viewed samples.
+
+macOS independently passes original 83/12, new drafts three/one and the separate
+DMG installed/reinstalled UI 13+13 across two mounts, both detached. Its 212 machine
+checks are exactly 116+55 original checks plus 41 draft checks. Summary v2 corrects
+one inherited prose count of 173 to 171; the original summary/freeze and all raw
+receipts remain preserved. This does not alter any runtime result or condition.
+Ad-hoc local packaging is not Developer ID, notarization, Gatekeeper, real
+Applications installation or automatic update installation acceptance.
+
+Both new Mac/Linux draft sequences verify five actual production preparations,
+two results held only after their real handlers finish, complete A/B input equality,
+original prefixes and unchanged model/permission controls. Each observes three
+attempts and three accepted seeds, zero rejections and zero pending acknowledgements.
+The optional rejected late-A event is not observed in this run; events have no
+Main request ID. Two actual owned readonly metadata requests form the complete
+final prefix, with zero late rows. Mac Main 9016 exits `0/null`, observed custody
+25→0; Linux Main 5857 exits `0/null`, 17→0. Both record HOME removal, empty denied/
+Worker and signal ledgers, seven blocked probes and complete durable diagnostics.
+These three/one results are kept separate from original 83/12 and DMG 26/two.
+
+Windows independently retains functional original 83/12 and new draft three/one
+with recorded normal Main exit tuples, five preparations and three accepted seeds.
+However, the panel cleanup ledger adopts PID 976 through a newer process lineage:
+
+```text
+PID   PPID  complete recorded UTC birth
+3188  2356  2026-10-17T13:46:56.2948840Z
+5136  3188  2026-10-17T13:47:26.7472560Z
+5968  5136  2026-10-17T13:47:26.8281970Z
+4512  5968  2026-10-17T13:47:27.6041920Z
+2520  4512  2026-10-17T13:47:27.6162490Z
+976   2520  2026-10-17T13:41:23.3361640Z
+```
+
+PID 976 predates both its claimed parent and Main; diagnostics record a SIGTERM
+request for 976. Full Windows custody acceptance is therefore withdrawn despite
+successful UI actions and HOME-removal flags. The request does not independently
+prove OS signal delivery or its effect. This is not established as the Setup cause.
+The finding `custody-identity-order-finding.json` has SHA-256
+`a01e1575ee648dd43ae52c5fc3fd57e3cf88b2494205612c16ea9a50c2705d58`.
+
+The real installer completes six pre-installation stages and a normal NSIS build,
+then Setup exits `3221225477/null`, before cleanup and before installed-UI or
+registration acceptance. Its captured stdout/stderr are empty. No exception
+module, OS or product cause is established. Replacement, uninstall, cache cleanup,
+final registry restoration and both installer UI rounds are unreached. The owned
+installer root is retained; pre-install absent-state probes do not prove post-failure
+OS state. Uploaded command/inventory hashes cannot independently rehash the absent
+raw installer executable. Early and final uploads retain the available evidence.
+
+Separate actual aggregation gates pass 344 tests: Mac 3,256 assertions, Linux
+3,253 and Windows 3,247, reflecting platform controls. Write 11/38, output 16/32,
+branch 15/50, original Review Node 13 and draft Node 37 are separate; Windows also
+passes its 31 NSIS/signal contracts. They are not added to native actions.
+Frozen independent summaries under `codeshell-real-operation-cycles-20261016` are:
+
+- Web `ci-39037383789-web-independent-20261017/ci-39037383789-web-independent-audit.json`,
+  SHA-256 `cf66127eba13e7165135438708e37316b9f8e6805f036d8700d41cc2218e7159`.
+- Linux `ci-39037383789-linux-independent-20261017/verified-summary.json`,
+  SHA-256 `e5fac22a8763f6d120eb62132682eb9e42da93643ab5992c9bc7f4299b820504`.
+- Mac `ci-39037383789-mac-independent-20261017/verified-summary-v2.json`,
+  SHA-256 `43fc055e5ced5c4708050802f029d0fc6b02f980df1f814a1f64bba2451ecd9c`.
+- Windows `ci-39037383789-windows-independent-20261017/verified-failed-summary.json`,
+  SHA-256 `e8c694477b0644da219517c8681d2dc4f429d90aa363af1cf1c9628ff310aab8`.
+
+Historical GC, prior inode differences and older incomplete installer observations
+remain unexplained. CI14 remains the latest fully passing matrix; CI21 is not a
+complete Windows custody or installer pass.
+
+## CI22 — local source preparation after the custody finding
+
+Candidate `8daede3417cd4e0efdb03ad5cecbe87e8b40dcac` combines the scoped UI repairs,
+process-lineage restriction, explicit-test selection guard and installer diagnostics.
+Its frozen local receipt `ci22-frozen-final-combined-source-gates-proof-v2-20261017.json`,
+SHA-256 `80016388c9c95113ce96007e8dae250bacc7c93d075089df0602a1acfd889085`,
+binds 21 non-document source paths and eight final logs. This is local evidence;
+CI22 has not been dispatched and no new native or installer result is asserted.
+
+- MCP args `09e5aaed1dedd72a2d821b9ec1925fd51df26d74` preserves structured original
+  arguments until Args changes. Actual React/MiniDOM create→reopen/no-edit gives
+  three failures with fifteen controls; the related fixed shard passes 34/60.
+  Manual edits and explicit clears retain the existing parser/deletion semantics.
+- Marketplace origin `2ee3f5efb36453a61a86caa430c8e4e2c2081f35` distinguishes a
+  marketplace named `local` from a direct-local install using real catalog path/
+  key provenance, not that word alone. Unknown or conflicting origin refuses both
+  update/uninstall routing. Twelve actual catalog/extracted-UI/Main-route tests
+  give seven failures with five controls; related fixed tests pass 27/154.
+  Destructive callees are inert; this is not actual installation or uninstallation.
+- MCP rename `ce87d2b0b5574c4b65f6ed81e746159b023a5e2a` retains only supported
+  `connectTimeoutMs`, `connectRetries` and `inlineImages` before applying the existing
+  editor patch. It preserves zero/false, old-key tombstones, scopes, plugin locks
+  and explicit clears without persisting UI flags. Three actual rename failures
+  have twenty passing controls. Fixed component tests pass 33/61 across two files,
+  including a second UI rename while refresh is still pending. Pinned import-free
+  production merge declarations execute in an owned memory sink; LF and CRLF source
+  forms yield the same hash. No Main/Core configuration module or actual MCP
+  connection is executed by these new cases. Existing probe input mapping does
+  not forward these three fields, so real connection-option behavior is not claimed.
+
+The three author proofs, respectively, have SHA-256
+`bea8873ff978d4b8929d81f0d8e77df2b3e01167e8263713355c7875f25b4060`,
+`0ddf221129a21d331187716c769130f0842977f650f32da5a1ed8af3d0b01152` and
+`4fbb896a29b30b3747031a81ad359cd511d154626d29756f6f43bc22480d1ee0`.
+Missing-dependency setup failures remain recorded separately, never counted as
+product RED. These component/owned-file checks do not validate a real MCP account.
+
+Custody fix `f88ca1e46b86393ff971b2a9f9c3ddc1c173c29e` keeps the existing fresh
+PID/full-birth and reuse checks, adding child birth ≥ current pinned-parent birth.
+The complete recorded Windows chain reproduces the flaw in pure metadata: seven
+controls pass and seventeen fail; fixed dedicated 24 pass. Full seven-fraction
+Windows precision and equal-second POSIX children are retained. Malformed snapshots
+reject atomically; established watchers latch them as unproven. Owned orphans and normal
+exit/caps remain covered. Actual helper/watchdog calls use guarded fake snapshots,
+timers and signal spies; no OS query or signal is exercised by those dedicated runs.
+Proof SHA-256 is `8a18a49dc59446205d609adade8cc4784258f12d16ff4a7554747594aaa294ce`.
+This source fix does not restore CI21's revoked custody acceptance.
+
+A separate local execution mistake invoked bare Node `--test` in a task worktree
+based on 037. It triggered default discovery before being interrupted with code 130.
+Visible retained records contain 55 TypeScript failures and 17 interrupted/cancelled
+cases; truncated output is incomplete. Missing middle output, other test-body effects
+and descendant settlement are unknown; zero side effects cannot be claimed.
+Later explicit pure tests cannot resolve this incident. Frozen incident SHA-256 is
+`2c6644cb611725f6a56808a291c357052e62d5d362687ea40bf325a2dfbdf49a`;
+independent assessment is `5b6e545f5b92a5b72dbc64c9183e3cfd2b550469217b74d9350cff6ca3026032`.
+The new wrapper rejects bare/options-only discovery, directories, globs, symlinks
+and invalid selectors before HOME creation/spawn; ten pure VM contracts pass.
+Explicit file selection still does not prove test purity or provide an OS sandbox.
+
+Installer instrumentation adds bounded readonly crash-metadata collection using
+fixed PowerShell 7 and the runner's existing owned HOME/TEMP environment. Query
+or environment failures remain unknown/unproven; they cannot make the installer
+pass. Fifteen pure contracts pass, without actual PowerShell/EventLog execution.
+This records a future failure; it does not fix or explain Setup `0xC0000005`.
+
+Root's complete 405/3,470/30-file product shard and full workspace build remain
+at checkpoint `4062f1fff5431c1803fa95b9762289dd0938030c` (proof SHA-256
+`da13b1c7eb0ed7c3ef41934598c303a0c18a51d4bb94dfaad94eaad3452e1522`).
+At final 8dae, Root separately passes the two-component 33/61, all fourteen actual
+workspace typechecks, three-source lint/format and four safe Desktop static bundles.
+Non-Desktop workspace/build/package/lock bytes remain unchanged from 4062;
+there is no claim of a new full 410-test shard or final-HEAD full workspace build.
+Final Node passes 130 across nine explicit pre-read pure files: original 81,
+24 lineage, ten wrapper and fifteen crash-diagnostic contracts. Its source at
+`aa6f897b84caea1f5df06bb31fa9eb308a55740b` has eleven pins identical to final 8dae
+(proof SHA-256 `b8bf7e675eaba67bb230685866d0b371f52b128bd52871266b176fdc603ba57e`).
+Overlapping counts remain separate. Three-platform native, Windows custody,
+Setup/installer UI and actual crash-diagnostic collection still require fresh CI.
+
+The final engine-bypass scan also reruns successfully at
+`95ef93b1c96a9f9b3b872bf54eefe826a26d0c49`; the 21 source pins remain unchanged.
+Concurrent static round42 records P3 `TRANSCRIPT-R42-01` in TUI background detail.
+Desktop/Web do not consume that translator registry transcript; this separate TUI
+issue remains for the next loop, with no repository-wide zero-defect claim.
