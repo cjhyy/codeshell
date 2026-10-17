@@ -1,0 +1,11 @@
+bun test v1.3.11 (af24e281)
+
+docs/audit-2026-10-17-round7/evidence/files-grep-fallback.test.ts:
+(pass) FILES-R7-03 Node fallback loses a directory-qualified glob despite finding the same file unfiltered [18.67ms]
+(pass) simple basename filter control finds TypeScript and omits Markdown [8.18ms]
+
+ 2 pass
+ 0 fail
+ 7 expect() calls
+Ran 2 tests across 1 file. [122.00ms]
+Completed Bun shard: 2 tests, 0 skipped; 0 failures.

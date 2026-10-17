@@ -1,0 +1,259 @@
+{
+  "sourceBase": "1b04838474bcd57212f80f791d0e268a00d347e3",
+  "method": "SHA-256 of raw git show <sourceBase>:<path> bytes; current equality separately checked. Read scope records inspection, not execution coverage.",
+  "sources": [
+    {
+      "path": "CODESHELL.md",
+      "readScope": "full",
+      "readRanges": null,
+      "bytes": 17639,
+      "lines": 217,
+      "frozenSourceSha256": "56d9ffdd81b6f6f615ed7a7392ddfa60ec4338c0ccb88eef20c4b73ad8dad5a2",
+      "currentWorkingTreeMatchesFrozenBlob": true
+    },
+    {
+      "path": "packages/core/src/tool-system/builtin/read.ts",
+      "readScope": "full",
+      "readRanges": null,
+      "bytes": 8099,
+      "lines": 216,
+      "frozenSourceSha256": "2200440c32b2fff2f39fa7fcb808ac84bacb3a8719ab0842b56ca4017e2a9c4c",
+      "currentWorkingTreeMatchesFrozenBlob": true
+    },
+    {
+      "path": "packages/core/src/tool-system/builtin/write.ts",
+      "readScope": "full",
+      "readRanges": null,
+      "bytes": 2423,
+      "lines": 61,
+      "frozenSourceSha256": "6ba134100676a861574db5c982f7c033ce9cf9b6752880a355dc7276c3dcd859",
+      "currentWorkingTreeMatchesFrozenBlob": true
+    },
+    {
+      "path": "packages/core/src/tool-system/builtin/edit.ts",
+      "readScope": "full",
+      "readRanges": null,
+      "bytes": 5412,
+      "lines": 139,
+      "frozenSourceSha256": "4805f3667953f9f41cb81d98a010ead6318ed80595774ab9ab349591e0aa61ce",
+      "currentWorkingTreeMatchesFrozenBlob": true
+    },
+    {
+      "path": "packages/core/src/tool-system/builtin/glob.ts",
+      "readScope": "full",
+      "readRanges": null,
+      "bytes": 4080,
+      "lines": 121,
+      "frozenSourceSha256": "8b416c156820a67e02b8101904440190235cf74d99753530526455ab5d1b18ce",
+      "currentWorkingTreeMatchesFrozenBlob": true
+    },
+    {
+      "path": "packages/core/src/tool-system/builtin/grep.ts",
+      "readScope": "full",
+      "readRanges": null,
+      "bytes": 12269,
+      "lines": 395,
+      "frozenSourceSha256": "4941c2ecc8aa5be2af5f893a249508bd78c18e81994152c6e14e8e0143e1eac8",
+      "currentWorkingTreeMatchesFrozenBlob": true
+    },
+    {
+      "path": "packages/core/src/tool-system/builtin/file-cache.ts",
+      "readScope": "full",
+      "readRanges": null,
+      "bytes": 1690,
+      "lines": 62,
+      "frozenSourceSha256": "699f1bb25f76d4d408e18258c8581b95fbd37d5f3dc7e4a33b9c0e74bbae5fd2",
+      "currentWorkingTreeMatchesFrozenBlob": true
+    },
+    {
+      "path": "packages/core/src/tool-system/builtin/eol.ts",
+      "readScope": "full",
+      "readRanges": null,
+      "bytes": 1592,
+      "lines": 41,
+      "frozenSourceSha256": "6e4f0ee37ea02f9945634b75269cc6b7cac024e65348343df31a465e541f7287",
+      "currentWorkingTreeMatchesFrozenBlob": true
+    },
+    {
+      "path": "packages/core/src/tool-system/builtin/read.test.ts",
+      "readScope": "full",
+      "readRanges": null,
+      "bytes": 4743,
+      "lines": 112,
+      "frozenSourceSha256": "34f50adfde69e4c0269c6e3639c484a9795e2127eaf1118ae482f2109dc9d392",
+      "currentWorkingTreeMatchesFrozenBlob": true
+    },
+    {
+      "path": "packages/core/src/tool-system/builtin/edit-write.test.ts",
+      "readScope": "full",
+      "readRanges": null,
+      "bytes": 3609,
+      "lines": 103,
+      "frozenSourceSha256": "8600ca986fda8917fdea288ce48c9229137856dfa7005dfdaed08701d3ad8040",
+      "currentWorkingTreeMatchesFrozenBlob": true
+    },
+    {
+      "path": "packages/core/src/tool-system/builtin/glob.test.ts",
+      "readScope": "full",
+      "readRanges": null,
+      "bytes": 4941,
+      "lines": 119,
+      "frozenSourceSha256": "23dacdfa4fa413e6230a9e3eae705440d06c1014fb523933daf9fef65ea41bb4",
+      "currentWorkingTreeMatchesFrozenBlob": true
+    },
+    {
+      "path": "packages/core/src/tool-system/builtin/grep.test.ts",
+      "readScope": "full",
+      "readRanges": null,
+      "bytes": 3539,
+      "lines": 92,
+      "frozenSourceSha256": "2e24a0baca5c5401fc4730d0a373af5c57bde1ffb904ce5067bd136dfbe05010",
+      "currentWorkingTreeMatchesFrozenBlob": true
+    },
+    {
+      "path": "packages/coding/src/tools/notebook-edit.ts",
+      "readScope": "full",
+      "readRanges": null,
+      "bytes": 5085,
+      "lines": 156,
+      "frozenSourceSha256": "6cecb4a998cb68e9b845b92abf0e1aa692cbc8a7d009a6783dc6a13bd957b030",
+      "currentWorkingTreeMatchesFrozenBlob": true
+    },
+    {
+      "path": "packages/coding/src/tools/notebook-edit.test.ts",
+      "readScope": "full",
+      "readRanges": null,
+      "bytes": 3378,
+      "lines": 86,
+      "frozenSourceSha256": "75942a58bec6e558f07618c768493c918325c664c843d09787d377ca18b29af5",
+      "currentWorkingTreeMatchesFrozenBlob": true
+    },
+    {
+      "path": "packages/coding/src/tools/apply-patch/index.ts",
+      "readScope": "full",
+      "readRanges": null,
+      "bytes": 4352,
+      "lines": 117,
+      "frozenSourceSha256": "90870de9f68eea46c44ae8971461d163bb29ff678cf925ca7dd77e7ddae31ee2",
+      "currentWorkingTreeMatchesFrozenBlob": true
+    },
+    {
+      "path": "packages/coding/src/tools/apply-patch/types.ts",
+      "readScope": "full",
+      "readRanges": null,
+      "bytes": 1960,
+      "lines": 58,
+      "frozenSourceSha256": "cc2e53039c195b6d4150ef357dbe634c43c4181a7a60559fbea068e4dbe6ad7a",
+      "currentWorkingTreeMatchesFrozenBlob": true
+    },
+    {
+      "path": "packages/coding/src/tools/apply-patch/parser.ts",
+      "readScope": "full",
+      "readRanges": null,
+      "bytes": 8351,
+      "lines": 287,
+      "frozenSourceSha256": "2572d1d2204c222d62bd37e609ed5d68a253b64a8637a5e7334800bb497b3611",
+      "currentWorkingTreeMatchesFrozenBlob": true
+    },
+    {
+      "path": "packages/coding/src/tools/apply-patch/seek-sequence.ts",
+      "readScope": "full",
+      "readRanges": null,
+      "bytes": 3421,
+      "lines": 132,
+      "frozenSourceSha256": "c7d9155f6b62bcdc3a6fb901b0265ac3f926e732fbe1456a7a6ef82fc0adeb66",
+      "currentWorkingTreeMatchesFrozenBlob": true
+    },
+    {
+      "path": "packages/coding/src/tools/apply-patch/eol.ts",
+      "readScope": "full",
+      "readRanges": null,
+      "bytes": 381,
+      "lines": 13,
+      "frozenSourceSha256": "2d54066dacad5e32c76b3752d755a6266a7fa02c99d90e6f00c0fdebf68cf040",
+      "currentWorkingTreeMatchesFrozenBlob": true
+    },
+    {
+      "path": "packages/coding/src/tools/apply-patch/applier.ts",
+      "readScope": "full",
+      "readRanges": null,
+      "bytes": 13344,
+      "lines": 379,
+      "frozenSourceSha256": "8f4bfde4d496e3eae137525fc4a5af0a1c2db79f6b1d8c3cf0e8ca4989a4b4bb",
+      "currentWorkingTreeMatchesFrozenBlob": true
+    },
+    {
+      "path": "packages/core/src/workspace/canonical-key.ts",
+      "readScope": "full",
+      "readRanges": null,
+      "bytes": 1585,
+      "lines": 42,
+      "frozenSourceSha256": "fbd8ece34e23633d262308c9458d5c9bb88807d2b2db9242f121f3156b467df0",
+      "currentWorkingTreeMatchesFrozenBlob": true
+    },
+    {
+      "path": "packages/core/src/tool-system/builtin/index.ts",
+      "readScope": "selected ranges",
+      "readRanges": [
+        [
+          275,
+          315
+        ],
+        [
+          380,
+          430
+        ]
+      ],
+      "bytes": 39835,
+      "lines": 1233,
+      "frozenSourceSha256": "d997b1a1c499cd4130191a7886cf4b986b108cab3528c154decf23774b791844",
+      "currentWorkingTreeMatchesFrozenBlob": true
+    },
+    {
+      "path": "packages/core/src/tool-system/path-policy.ts",
+      "readScope": "selected ranges",
+      "readRanges": [
+        [
+          1,
+          55
+        ],
+        [
+          510,
+          550
+        ]
+      ],
+      "bytes": 43285,
+      "lines": 1120,
+      "frozenSourceSha256": "a7bc1a0a944600d6ea0cc99dd822c221907872d611b2b948b4192557ecea85df",
+      "currentWorkingTreeMatchesFrozenBlob": true
+    },
+    {
+      "path": "packages/core/src/plugins/installedPlugins.ts",
+      "readScope": "selected ranges",
+      "readRanges": [
+        [
+          1,
+          65
+        ]
+      ],
+      "bytes": 9314,
+      "lines": 265,
+      "frozenSourceSha256": "e3b7527fd42f9b47555599ed868ca9db04e86b03a055999cd2ac53eb7afd0208",
+      "currentWorkingTreeMatchesFrozenBlob": true
+    },
+    {
+      "path": "packages/core/src/runtime/spawn-common.ts",
+      "readScope": "selected ranges",
+      "readRanges": [
+        [
+          1,
+          60
+        ]
+      ],
+      "bytes": 20389,
+      "lines": 493,
+      "frozenSourceSha256": "d7ca0eca978a8b4752fe25364faf3f90491099b08b8a769a3a27883026ac4e60",
+      "currentWorkingTreeMatchesFrozenBlob": true
+    }
+  ]
+}

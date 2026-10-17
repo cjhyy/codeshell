@@ -1,0 +1,55 @@
+{
+  "sourceCommit": "1b04838474bcd57212f80f791d0e268a00d347e3",
+  "artifacts": [
+    {
+      "path": "docs/audit-2026-10-17-round7/evidence/tui-dedup-diff-semantic.json",
+      "sha256": "465c7fe536e06a0bd9f528ef437a2d9c9158bdebf5bb7839cf670e2fffbcfcc9",
+      "bytes": 14832
+    },
+    {
+      "path": "docs/audit-2026-10-17-round7/evidence/tui-dedup-scan.json",
+      "sha256": "bc0828bccb07f0f3110d59256d37c4735ebb5e7ca642ca555d69bb17a732ddbb",
+      "bytes": 42268
+    },
+    {
+      "path": "docs/audit-2026-10-17-round7/evidence/tui-diff-display.first.exit.json",
+      "sha256": "3c2e00e05ce0a5aae6f02a881f23307671229652b0f6284799bbe4cbc39bcd1f",
+      "bytes": 187
+    },
+    {
+      "path": "docs/audit-2026-10-17-round7/evidence/tui-diff-display.first.log",
+      "sha256": "5adeb72c980169bf6713153ce841c33e815749443f696fc9d7a808923e2f1987",
+      "bytes": 497
+    },
+    {
+      "path": "docs/audit-2026-10-17-round7/evidence/tui-diff-display.test.tsx",
+      "sha256": "5680b938114a752586b16757272d1f4fe8d53b7f2befa5e28303bceea1d086bc",
+      "bytes": 3185
+    },
+    {
+      "path": "docs/audit-2026-10-17-round7/evidence/tui-source-manifest.json",
+      "sha256": "d366b13069c5dd23d65c8a0c125df71e801adce6e01837e0882f3252be8b6835",
+      "bytes": 8621
+    },
+    {
+      "path": "docs/audit-2026-10-17-round7/evidence/tui-store-anchor-baseline.first.exit.json",
+      "sha256": "67c4b65d1ed4099bebeccf45d524cf1fe6a7e2e85fbfd2220720de516dbfd893",
+      "bytes": 335
+    },
+    {
+      "path": "docs/audit-2026-10-17-round7/evidence/tui-store-anchor-baseline.first.log",
+      "sha256": "e3c66a2efa1354440e0479e23aa90feef7ab59576fa8b005d897b90f1ad4e8f3",
+      "bytes": 3086
+    },
+    {
+      "path": "docs/audit-2026-10-17-round7/evidence/tui-validation.json",
+      "sha256": "da99ea10d1cf0bf3c6f5cd7ac62b711db36a6a48cb0ec4c9d74358dae1556729",
+      "bytes": 1484
+    },
+    {
+      "path": "docs/audit-2026-10-17-round7/tui.md",
+      "sha256": "fa13450f37f50c6d6f1aff1c2389657805e67de0878a33d00e40162daa94fba1",
+      "bytes": 5777
+    }
+  ]
+}

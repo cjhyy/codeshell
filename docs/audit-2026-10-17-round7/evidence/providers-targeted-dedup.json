@@ -1,0 +1,132 @@
+[
+  {
+    "path": "docs/review-2026-07-09/pre-beta-01-core.md",
+    "line": 14,
+    "match": "- 证据：`ContentBlock.is_error` 用于让 provider 设置 Anthropic `is_error:true`（`types.ts:17`）；live path 在 `toolResultToBlock()` 设置（`turn-loop.ts:177`）；但 transcript 落盘只存 `result/error/contentBlocks`，不存 `isError/is_error`（`transcript.ts:89`）；replay 时即使有 `error` 也只拼 `\"Error: ...\"`、未设 `is_error`（`transcript.ts:171`）；Anthropic provider 只在 block 有 `is_error` 时转发（`anthropic.ts:412`）。"
+  },
+  {
+    "path": "docs/review-2026-07-09/pre-beta-01-core.md",
+    "line": 15,
+    "match": "- 影响：resume 会话或修复缺失 tool result 后，模型/Anthropic wire contract 可能把失败工具结果当普通成功文本处理，影响 resume 后正确性。"
+  },
+  {
+    "path": "docs/archive/research-cc-vs-codex-image-handling.md",
+    "line": 16,
+    "match": "| Detail 字段 | 不支持(Anthropic 没这个参数)                                                  | high / original,默认 high,**没 low**              |"
+  },
+  {
+    "path": "docs/archive/plan-2026-07-09-input-attachment-pipeline.md",
+    "line": 84,
+    "match": "- Anthropic provider 直接把 nested image blocks 映射到 tool_result content，见 `packages/core/src/llm/providers/anthropic.ts:384` 到 `packages/core/src/llm/providers/anthropic.ts:417`。"
+  },
+  {
+    "path": "docs/archive/core-complete-review.md",
+    "line": 848,
+    "match": "- tools 使用 Anthropic tools。"
+  },
+  {
+    "path": "docs/archive/core-complete-review.md",
+    "line": 2412,
+    "match": "- Anthropic parallel tool calls 用 disable flag 形状。"
+  },
+  {
+    "path": "docs/archive/beta-prep-audit-2026-06-23.md",
+    "line": 51,
+    "match": "> - **bug-scan 第三批(llm/hooks/mcp/memory/context)3 候选**:#1 `context-tools.executeReadFile` 负 limit→`slice` 丢尾 ✅**已修**(`f64e376a`,limit 缺失/NaN→默认 200、≤0→空,+3 测);#2/#3 MCP `listResources`/`readResource` 不转发 abort signal ✅**已修**(`7e36048b`,加 signal 参数转发 SDK client + 工具读 `__signal`,Stop 可提前取消;subagent「永久挂起」夸大——SDK 默认超时本兜底,实为与 callTool 一致性 gap;tsc 验 SDK 签名正确,33 MCP 测回归绿)。范围其余(openai/anthropic JSON.parse·cost-tracker·model-pool·extract-memories·hooks emit)均已妥善守卫。"
+  },
+  {
+    "path": "docs/review-remaining-2026-10-12/core.md",
+    "line": 69,
+    "match": "Impact: a long running tool loop retaining its model client can begin failing authentication once the externally minted token expires; subsequent requests/retries keep the old key. A new Engine/client can recover. The post-gate accounting fixture now also captures Anthropic x-api-key headers `[token-first, token-first, token-fresh]` under the same cache-rotation control. Thus both SDK clients are dynamically evidenced with injected auth resolution; neither real time expiry nor an external identity provider was exercised. Per-run reuse and creation should be included when explaining the trigger, rather than claiming all future sessions fail."
+  },
+  {
+    "path": "docs/review-remaining-2026-10-12/core.md",
+    "line": 91,
+    "match": "| llm | 25/32 | Provider/base/retry/watchdog/model auth/pool/fetch/cache/catalog/support code read; capability/spec/type/export files partly read. Real Anthropic SDK error/retry/success parsing, both SDK auth headers/cache rotation and pre-aborted control tested. Existing 32 test files not run here; OpenAI streamed failure/fallback, malformed/interleaved tool streams, active cancellation/stalls and real provider networking remain outside executed coverage. |"
+  },
+  {
+    "path": "docs/review-remaining-2026-10-12/core.md",
+    "line": 122,
+    "match": "- Ghost tool cards after a failed Anthropic attempt have only static UI reasoning and were not dynamically reproduced; no duplicate tool side effect is claimed."
+  },
+  {
+    "path": "docs/audit-2026-10-17-round4/context.md",
+    "line": 11,
+    "match": "**Exact implementation:** [compaction.ts:324](../../packages/core/src/context/compaction.ts#L324)–342 adjusts `lastStart` only and copies `messages.slice(0, keepFirstN)` without protecting its closing boundary. [manager.ts:635](../../packages/core/src/context/manager.ts#L635)–640 invokes this fallback after unavailable/failed/no-progress summarization when pressure remains over the normal compact gate. The sync fallback is also at 489; manual fallback at 712. The contract is explicit in [compaction.ts:10](../../packages/core/src/context/compaction.ts#L10)–11 and the actual ordered-pair validator [transcript.ts:94](../../packages/core/src/sess"
+  },
+  {
+    "path": "docs/audit-2026-10-17-round4/context.md",
+    "line": 23,
+    "match": "**Exact implementation:** [compaction.ts:842](../../packages/core/src/context/compaction.ts#L842)–844 serializes array content as `\"\"`. This is a supported ordinary contract: [turn-loop.ts:249](../../packages/core/src/engine/turn-loop.ts#L249)–255 forwards `ToolResult.contentBlocks` verbatim, [transcript.ts:265](../../packages/core/src/session/transcript.ts#L265)–279 replays it, and provider conversion retains nested text ([anthropic.ts:461](../../packages/core/src/llm/providers/anthropic.ts#L461)–465). A concrete producer is an opted-in vision-capable MCP server: [mcp-manager.ts:715](../../packages/core/src/tool-system/mcp-manager.ts#L715)–7"
+  },
+  {
+    "path": "docs/audit-2026-10-17-round4/quality-settings.md",
+    "line": 9,
+    "match": "| CTX-1 | 默认 snip 的 first-N 边界不调整，源码注释却承诺两边界保持工具对；完整原始输入经过真实 manager 后变成不完整序列，真实 TurnLoop 将它发送给两次 fake model，晚期 cancellation 补齐不能恢复原成功结果。支持 P2。 | provider 拒绝由 fake model 调用 Core 的真实 validator 实现，真实 Anthropic 只核对转换源码，不能称已实测真实 API 拒绝。 |"
+  },
+  {
+    "path": "docs/audit-2026-10-17-round4/quality-settings.md",
+    "line": 16,
+    "match": "- Context：复核 `compaction.ts` 的 snip、summary builder、portable serializer，`manager.ts` 的 automatic fallback 与 range archive，TurnLoop 的 manage→model→error repair 顺序、toolResultToBlock，以及 Anthropic conversion、MCP wrapped text+image producer、Transcript ordered-pair validator。`assembleRunMessages` 可前置 userContext；加上原用户请求，fixture 的 tool call 落在第三条消息是正常可达形状。fake hooks 只是普通空适配器，没有执行 hook 进程。"
+  },
+  {
+    "path": "docs/audit-2026-10-16/core.md",
+    "line": 62,
+    "match": "已进行四轮静态审查：run session open/finalize/accounting、goal resolve/termination、ToolExecutor/permission/controller/run-tooling、OpenAI/Anthropic provider 的流收尾与重试、SessionManager run CAS/fork/state merge、HostRuntime 请求分发/rollback、Pet follow-up 校验/manager tools/session projection/IM route/visit receipt、Core composition activation/lifetime、FileHistory hook/undo/redo、Core Cron scheduler/parser/runner、AuxiliaryPipeline。动态覆盖为六个聚焦测试与上述 135 个既有 baseline 测试，不能视为所有 Core/Host/Pet 测试已过。"
+  },
+  {
+    "path": "docs/review-remaining-2026-10-12/validation/source-reports/codeshell-remaining-core-report.md",
+    "line": 69,
+    "match": "Impact: a long running tool loop retaining its model client can begin failing authentication once the externally minted token expires; subsequent requests/retries keep the old key. A new Engine/client can recover. The post-gate accounting fixture now also captures Anthropic x-api-key headers `[token-first, token-first, token-fresh]` under the same cache-rotation control. Thus both SDK clients are dynamically evidenced with injected auth resolution; neither real time expiry nor an external identity provider was exercised. Per-run reuse and creation should be included when explaining the trigger, rather than claiming all future sessions fail."
+  },
+  {
+    "path": "docs/review-remaining-2026-10-12/validation/source-reports/codeshell-remaining-core-report.md",
+    "line": 91,
+    "match": "| llm | 25/32 | Provider/base/retry/watchdog/model auth/pool/fetch/cache/catalog/support code read; capability/spec/type/export files partly read. Real Anthropic SDK error/retry/success parsing, both SDK auth headers/cache rotation and pre-aborted control tested. Existing 32 test files not run here; OpenAI streamed failure/fallback, malformed/interleaved tool streams, active cancellation/stalls and real provider networking remain outside executed coverage. |"
+  },
+  {
+    "path": "docs/review-remaining-2026-10-12/validation/source-reports/codeshell-remaining-core-report.md",
+    "line": 122,
+    "match": "- Ghost tool cards after a failed Anthropic attempt have only static UI reasoning and were not dynamically reproduced; no duplicate tool side effect is claimed."
+  },
+  {
+    "path": "docs/archive/review-2026-07-09/07-new-observations-verification.md",
+    "line": 108,
+    "match": "- `packages/core/src/llm/providers/openai.ts:596` 到 `packages/core/src/llm/providers/openai.ts:631`、`packages/core/src/llm/providers/anthropic.ts:291` 到 `packages/core/src/llm/providers/anthropic.ts:315`：provider 只发 tool chunk。"
+  },
+  {
+    "path": "docs/archive/review-2026-07-09/07-new-observations-verification.md",
+    "line": 117,
+    "match": "- `packages/core/src/llm/providers/openai.ts:607` 到 `packages/core/src/llm/providers/openai.ts:610` 发 `type: \"tool_use_start\"`；`packages/core/src/llm/providers/openai.ts:624` 到 `packages/core/src/llm/providers/openai.ts:627` 发 `type: \"tool_use_delta\"`。Anthropic 同类路径在 `packages/core/src/llm/providers/anthropic.ts:296` 到 `packages/core/src/llm/providers/anthropic.ts:299`、`packages/core/src/llm/providers/anthropic.ts:306` 到 `packages/core/src/llm/providers/anthropic.ts:313`。"
+  },
+  {
+    "path": "docs/archive/todo/plan-group-a-core.md",
+    "line": 407,
+    "match": "- 第二阶段 tokenizer 不能承诺 Anthropic 精确 tokenization；模型 prompt 包装和 tool schema serialization 仍由 provider 决定，真实 usage 仍是唯一 high-confidence anchor。"
+  },
+  {
+    "path": "docs/archive/todo/review-tests-deps-2026-07-08.md",
+    "line": 157,
+    "match": "- Concern: core runtime dependencies use caret ranges for model/network/IPC/archive/schema packages including `@anthropic-ai/sdk`, `@modelcontextprotocol/sdk`, `openai`, `yaml`, `yauzl`, and `zod` (`packages/core/package.json:29-43`). Desktop uses caret ranges for Electron/electron-builder/electron-updater/node-pty/ws and markdown/HTML tooling (`packages/desktop/package.json:109-158`). The root lockfile pins the current install, but B1 means packaging can resolve outside the committed root lockfile."
+  },
+  {
+    "path": "docs/archive/architecture/19-core-chain-review-beta.md",
+    "line": 315,
+    "match": "OpenAI/Anthropic 工具消息都有配对约束。`adjustIndexToPreserveAPIInvariants()` 会在裁剪窗口时往前扩展起点,确保保留下来的 `tool_result` 能找到对应 `tool_use`。"
+  },
+  {
+    "path": "docs/archive/architecture/07-llm-model-layer.md",
+    "line": 30,
+    "match": "[`AnthropicClient`](../../src/llm/providers/anthropic.ts) uses `@anthropic-ai/sdk` and maps CodeShell messages/tools into Anthropic message blocks."
+  },
+  {
+    "path": "docs/archive/core-modules/arena.md",
+    "line": 140,
+    "match": "- **Model presets use OpenRouter-style namespaced paths** (`anthropic/claude-opus-4.6`). Those only resolve on a multi-vendor gateway; a vendor's direct endpoint will reject them — the builtin tool fails fast with a descriptive error (`assertEndpointAcceptsModel`) rather than burning retries."
+  },
+  {
+    "path": "docs/archive/core-modules/llm.md",
+    "line": 126,
+    "match": "- **No `?? 8192` max_tokens fallback.** When the output ceiling is unknown, `maxTokens` stays `undefined` so each provider decides (OpenAI omits the field; Anthropic supplies its own constant). Forcing 8192 silently truncated streamed tool-arg JSON → \"Missing file_path\"."
+  }
+]
