@@ -36,6 +36,7 @@ export interface RunningSessionState {
   finalized: boolean;
   ownUsage?: () => TokenUsage;
   ownCacheUsage?: () => TokenUsage;
+  ownToolSelection?: () => SessionState["toolSelection"];
 }
 
 /** Merge only this run's uncommitted usage, preserving other owners' durable additions. */

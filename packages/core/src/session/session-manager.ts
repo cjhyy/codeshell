@@ -98,6 +98,7 @@ const RUN_FINAL_STATE_FIELDS = [
   "turnCount",
   "turnSeq",
   "tokenUsage",
+  "toolSelection",
   "cacheUsageVersion",
   "cumulativePromptTokens",
   "cumulativeCacheReadTokens",
@@ -674,6 +675,8 @@ export class SessionManager {
             const fields = Object.fromEntries(
               RUN_FINAL_STATE_FIELDS.map((field) => [field, structuredClone(partial[field])]),
             );
+            // Older closing callers have no loading snapshot; retain the latest hints.
+            fields.toolSelection ??= latest.toolSelection;
             if (
               [...Object.values(usageDelta), ...Object.values(cacheUsageDelta)].some(
                 (n) => !Number.isFinite(n) || n < 0,

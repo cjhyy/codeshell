@@ -3290,8 +3290,20 @@ export class Engine {
           profileAllowedToolNames: runAllowedToolNames,
           runPlanMode,
         }),
-      { taskText, policy: this.preset.initialToolRouting },
+      {
+        taskText,
+        policy: this.preset.initialToolRouting,
+        injected: options?.injected === true,
+        selection: session.state.toolSelection,
+        onSelectionChanged: (selection) => {
+          session.state.toolSelection = selection;
+        },
+      },
     );
+    const surface = toolCtx.runToolSurface!;
+    if (this.runningSession?.state === session.state) {
+      this.runningSession.ownToolSelection = () => surface.getSelection();
+    }
 
     return {
       promptComposer,
@@ -3788,6 +3800,10 @@ export class Engine {
     const runOwned = {
       status: live.status,
       summary: live.summary,
+      toolSelection:
+        (this.runningSession?.state === live
+          ? this.runningSession.ownToolSelection?.()
+          : undefined) ?? live.toolSelection,
       tokenUsage: live.tokenUsage,
       contextUsageAnchor: live.contextUsageAnchor,
       cacheUsageVersion: live.cacheUsageVersion,
@@ -3896,6 +3912,7 @@ export class Engine {
     state: SessionState,
     usage = state.tokenUsage,
   ): SessionRunFinalStatePatch {
+    this.syncRunToolSelection(state);
     state.costState = this.usageCostState(state.sessionId);
     return {
       status: state.status,
@@ -3903,6 +3920,7 @@ export class Engine {
       turnCount: state.turnCount,
       turnSeq: state.turnSeq,
       tokenUsage: usage,
+      toolSelection: state.toolSelection,
       cacheUsageVersion: state.cacheUsageVersion,
       cumulativePromptTokens: state.cumulativePromptTokens,
       cumulativeCacheReadTokens: state.cumulativeCacheReadTokens,
@@ -3925,14 +3943,22 @@ export class Engine {
   }
 
   private persistOwnedRunState(state: SessionState, fields: SessionStateFieldPatch): boolean {
+    const ownsSelection = this.runningSession?.state === state;
+    this.syncRunToolSelection(state);
     return persistRunState({
       manager: this.sessionManager,
       state,
-      fields,
+      fields: ownsSelection ? { ...fields, toolSelection: state.toolSelection } : fields,
       runId: this.runIds.get(state),
       running: this.runningSession,
       costState: () => this.usageCostState(state.sessionId),
     });
+  }
+
+  private syncRunToolSelection(state: SessionState): void {
+    if (this.runningSession?.state !== state) return;
+    const selection = this.runningSession.ownToolSelection?.();
+    if (selection) state.toolSelection = selection;
   }
 
   private persistRunProgress(state: SessionState): boolean {

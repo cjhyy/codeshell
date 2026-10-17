@@ -26,6 +26,9 @@ const MAX_TERMS_PER_RULE = 32;
 const MAX_TOTAL_TERMS = 256;
 const MAX_TERM_CHARACTERS = 128;
 const MAX_INITIAL_TOOLS = 15;
+// Ignore tag names and attributes, while keeping body text and ordinary comparisons.
+const MARKUP_TAG =
+  /<\/?[a-z][a-z0-9._:-]*(?:\s+[a-z_:][a-z0-9_.:-]*(?:\s*=\s*(?:"[^"]*"|'[^']*'|[^\s"'=<>`]+))?)*\s*\/?>/gu;
 
 interface ValidPolicy {
   managed: readonly string[];
@@ -157,7 +160,8 @@ export function routeInitialTools(input: {
     .slice(0, MAX_TASK_CHARACTERS)
     .normalize("NFKC")
     .toLowerCase()
-    .slice(0, MAX_TASK_CHARACTERS);
+    .slice(0, MAX_TASK_CHARACTERS)
+    .replace(MARKUP_TAG, " ");
   const matches = policy.rules
     .map((rule, index) => ({
       rule,

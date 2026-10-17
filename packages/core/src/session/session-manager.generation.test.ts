@@ -134,6 +134,21 @@ describe("closing run finalization lease", () => {
     cumulativeCacheCreationTokens: 0,
   };
 
+  it("keeps loading hints across close and accepts the settled run's latest selection", () => {
+    const before = { version: 1 as const, names: ["ToolSearch", "Read"] };
+    const next = { version: 1 as const, names: ["ToolSearch", "Read", "CheckQuota"] };
+    const legacy = activeRun("close-tools-legacy", (host) => {
+      host.updateSessionState("close-tools-legacy", { toolSelection: before });
+    });
+    expect(legacy.commit(finalFields)).toBe(true);
+    expect(legacy.host.readSessionState(legacy.sid)?.toolSelection).toEqual(before);
+    const current = activeRun("close-tools-current", (host) => {
+      host.updateSessionState("close-tools-current", { toolSelection: before });
+    });
+    expect(current.commit({ ...finalFields, toolSelection: next })).toBe(true);
+    expect(current.host.readSessionState(current.sid)?.toolSelection).toEqual(next);
+  });
+
   it("commits only run fields once without restoring the revoked writer's authority", () => {
     const f = activeRun("close-run-fields");
     f.host.updateSessionState(f.sid, {

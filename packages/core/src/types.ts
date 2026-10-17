@@ -303,6 +303,12 @@ export interface SessionForkLineage {
   createdAt: number;
 }
 
+export interface SessionToolSelection {
+  version: 1;
+  /** Ordered schema-loading hints; current eligibility and permissions remain authoritative. */
+  names: string[];
+}
+
 export interface SessionState {
   sessionId: string;
   /** Durable local classification. Missing on legacy state and normalized to `work`. */
@@ -319,6 +325,8 @@ export interface SessionState {
    * prompt, not the input box.
    */
   sessionBrief?: string;
+  /** Loaded tool names survive run boundaries without carrying schemas or authority. */
+  toolSelection?: SessionToolSelection;
   /**
    * Monotonic whole-state revision used by SessionManager.saveState as a CAS
    * token. Absent only on legacy state files; the first successful save
