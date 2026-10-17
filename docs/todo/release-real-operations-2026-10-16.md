@@ -10,8 +10,8 @@ Cross-platform fixture tests alone are not native acceptance.
 
 The latest completed run, CI30, **FAILED** overall: three jobs pass and two fail.
 See the [CI30 actual record](#ci30--actual-five-job-results-and-pending-follow-ups).
-The subsequent Goal, diagnostic-clock and attachment fixes have finite local
-regressions; native CI31 is still pending.
+The subsequent Goal, attachment and advisory diagnostic fixes have finite local
+regressions; [CI31 is now running](#ci31--actual-dispatch-with-native-results-pending).
 
 CI29 failed overall across five jobs; its original result remains unchanged. macOS, Linux
 and Web pass their stated audited scopes. The original Windows matrix accepts
@@ -3638,3 +3638,45 @@ Existing bundle-size warnings remain: Web 773.23 kB and mobile 741.23 kB exceed
 500 kB; renderer index 1,468.78 kB exceeds 1,000 kB. This is not a zero-warning
 result. The earlier pending statement remains its historical checkpoint;
 source-bound native CI31 is still pending and CI30 remains failed.
+
+
+## CI31 — actual dispatch with native results pending
+
+The authorized acceptance branch was normally pushed from `2bbb517b615a6035e1c68fa8cac13f0b6f3a1eb2`
+to `309a4fd134acf46cd535fd602da1f8defc3ce466`. Before and after remote checks leave
+`origin/main` at `02d5d9a9ecbbb206d5f3d8a1d367e7081d937101`. No force push, tag,
+release, signing, pull request or publication occurred.
+[Run 39073589399](https://github.com/cjhyy/codeshell/actions/runs/39073589399)
+is the actual push-triggered attempt one for that exact source and acceptance
+branch. At this checkpoint all five jobs are in progress; no job or matrix
+success is claimed.
+
+The source includes the Goal hydration and shared-path attachment repairs from
+the preceding checkpoint. Their finite guarded local gates are forty tests/85
+expectations across three files, five new retention tests/32 expectations and
+twenty-two original attachment tests/85 expectations in separate processes.
+The final advisory NSIS role suite passes thirteen pure tests with no failures,
+skips or cancellations. The default clock keeps its receiver; commit
+`8bde05e31dd61157a283de7be1ff73e6f2e036c4` also copies the last existing role sample
+when the first watchdog failure is recorded. Later cleanup samples cannot evict
+that saved sample. It adds no process query or timer, and it does not establish
+the unknown installer timeout cause or an atomic deadline observation.
+
+The combined static checkpoint remains the seventeen actual successful commands
+at `97909db793d2714f52a2e0ac3ea9402485e61b9d`. Only workflow, documentation and
+the separately tested advisory MJS helper/test change after that source; all
+TypeScript product and regression bytes are identical. Bundle warnings remain.
+The final local gate record has SHA-256
+`b528851d657f80beeddd6b749aa05ba62cd7da75f69d90055e13090f31e2073a`.
+The workflow retains its existing native predicates and budgets and adds three
+separate finite Goal/attachment commands with public logs. Native early/final
+public patterns are 103/178, Web 28 and independent NSIS 59. Expected new Node
+contract totals are 45 in the native matrix and 29 in the independent installer
+job; their actual uploaded logs must be checked before acceptance.
+
+A separate subsequent investigation concerns attachment IDs across cold module
+lifetimes and is outside this frozen CI31 source. It has two meaningful local
+baseline failures, not native restart acceptance; repair validation remains
+pending at this checkpoint. CI30 remains failed, and older native failures and
+the historical accidental-discovery effects remain unknown in their recorded
+scopes. This dispatch is not release readiness.
