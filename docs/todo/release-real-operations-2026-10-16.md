@@ -87,6 +87,7 @@ main, tags and publication remain outside that authorization. The branch is
 | [38982907208](https://github.com/cjhyy/codeshell/actions/runs/38982907208), source `6054fa9b6` | Complete macOS native job passed again. Ubuntu startup/panels/composer/memory passed; packaged UI still failed before launch because the first corrected name `code-shell-desktop` also omitted the npm scope. The locked builder actually computes `@cjhyycode-shell-desktop`; the subsequent repair derives its name from that builder and records actual package root entries plus executable hash. Web ServiceWorker and authentication cases 2–4 passed, while case 1 timed out waiting for a trusted native tab focus/visibility event before releasing login. Windows transport/profile timing diagnostics completed, but the original custody query still failed before packaging. |
 | [39003474715](https://github.com/cjhyy/codeshell/actions/runs/39003474715), source `dac146ed2` | Complete macOS job passes, including packaged updater five modes/ten GETs and actual DMG install/replacement 13+13 UI operations. Linux preferences 6 and directory packaged UI 13 pass; updater makes zero requests because this artifact is a directory app without runtime-owned `APPIMAGE`. Windows clean-source build and packaging pass with fixed LF attributes and PowerShell 7 identity queries (472/487ms). Its three cold launches/reloads and second-window operations finish, then one shutdown custody query fails; the overall job fails and no full Windows acceptance is claimed. Headless Web again fails actual blur; other auth cases and ServiceWorker pass. |
 | [39004577231](https://github.com/cjhyy/codeshell/actions/runs/39004577231), source `ccaed3142`, manual `suite=web` | Web ServiceWorker 11 and authentication 4 pass in hosted Linux Chromium under Xvfb. The login tab reports `focused=false` before an actual trusted focus event, with no status read during its pending login. Native jobs are intentionally skipped in this diagnostic run; it is not a complete matrix pass. |
+| [39007288837](https://github.com/cjhyy/codeshell/actions/runs/39007288837), source `34553b747`, manual `suite=web` | The expanded browser job passes: ServiceWorker 11, authentication 4, child-state/send/stop/tool display 8 and multiline CommentBox/save/display 8. New receipts bind clean source `34553b747`, normal browser exits and ten observed incarnations cleaned with zero remaining. Narrow screenshots were independently inspected. Native jobs are skipped while the Windows transport is repaired; this is not a full matrix pass. |
 
 Artifacts are downloaded as ZIPs under the private operation evidence root,
 with individual reports inspected directly. First-failure Main logs missing from
@@ -250,6 +251,22 @@ source evidence, not a new Windows runtime result or an explanation of run 5's
 shutdown-query failure. A narrow exact-vector direct-spawn transport and actual
 Main identity checks are being prepared before the next Windows job; no package
 patch, arbitrary shell parser or shell fallback is planned.
+
+The Windows exact-vector helper `807992bea` is independently reviewed and passes
+seven pure Node policy tests. A separate manually transcribed command test plus
+unproven/rejected/thrown cleanup tests pass four cases, avoiding a circular
+expected-vector assertion. The permanent literal library-taskkill guard records
+any forced fallback as failure and redirects only through the same captured
+birth-custody monitor; suppression never returns native success or authorizes a
+replacement PID. Source/common and packaged wiring still await final checks and
+actual Windows CI. These local fake-policy tests are not Windows execution.
+
+Local integration to `34553b747` preserves all five pre-existing primary checkout
+changes with exact content hashes, modes and sizes. Receipt:
+`/private/tmp/codeshell-real-operation-cycles-20261016/integration-ui-review-context-multiline-childstream.json`.
+Only the dedicated acceptance branch was pushed; no remote main, tag or release
+was changed. An initial integration invocation supplied a mistyped expected task
+hash and was refused before any mutation; the corrected verified hash completed.
 
 Actual native preference evidence is
 `/private/tmp/codeshell-native-preferences-round-006/receipt.json`: one production
