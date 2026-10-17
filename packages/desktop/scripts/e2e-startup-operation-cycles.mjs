@@ -38,6 +38,19 @@ export async function resolveStartupEvidence(requested, repository, outerHome) {
   return evidence;
 }
 
+/** Electron can log a caught IPC failure while the renderer still looks healthy. */
+export function startupMainLogErrors(stderr) {
+  return stderr
+    .split(/\r?\n/)
+    .some(
+      (line) =>
+        line.includes("projectRegistry:completeLegacyMigration") &&
+        /\bError:?\s+legacy project migration is complete\b/.test(line),
+    )
+    ? ["legacy-project-migration-completion-error"]
+    : [];
+}
+
 /** Cleanup proves disappearance; normal application exit is a separate requirement. */
 export function assertStartupCycleSettled(cycle) {
   assert.ok(Number.isSafeInteger(cycle.pid) && cycle.pid > 0, "Main PID must be captured at spawn");
@@ -49,6 +62,11 @@ export function assertStartupCycleSettled(cycle) {
   assert.equal(cycle.settlement.remainingCount, 0);
   assert.deepEqual(cycle.observerFailures, [], "Custody observer failed");
   assert.deepEqual(cycle.rendererErrors, [], "Renderer errors were observed through shutdown");
+  assert.deepEqual(
+    cycle.mainErrors,
+    [],
+    "Known Main startup errors were observed through shutdown",
+  );
   assert.deepEqual(cycle.deniedAttempts, [], "Forbidden runtime attempt observed");
   assert.deepEqual(cycle.spawnedWorkers, [], "Startup must not create an Engine worker");
 }
@@ -142,6 +160,7 @@ export async function runStartupOperationCycles(args) {
       errors.push(error);
     }
     resource.proof.rendererErrors = resource.errors.flat().map((error) => error.message);
+    resource.proof.mainErrors = startupMainLogErrors(resource.logs.stderr);
     try {
       resource.proof.deniedAttempts = await rows("startup-denied-attempts.jsonl");
       resource.proof.spawnedWorkers = await rows("spawned-workers.jsonl");
@@ -173,8 +192,9 @@ export async function runStartupOperationCycles(args) {
       resource.child?.stdout?.unref?.();
       resource.child?.stderr?.unref?.();
     }
+    if (!errors.length) resource.proof.status = "passed";
+    await write(join(evidence, `cycle-${resource.proof.cycle}.json`), resource.proof);
     if (errors.length) throw new AggregateError(errors, "Startup cycle did not settle safely");
-    resource.proof.status = "passed";
   }
   try {
     await write(join(isolated.codeShellHome, "settings.json"), { autoUpdates: false });
@@ -331,28 +351,7 @@ for(const method of ["loadFile","loadURL"]){const original=BrowserWindow.prototy
         await other.close();
       }
       await closeCycle(); // Prove this cycle before starting the next Main.
-      await write(join(evidence, `cycle-${cycle}.json`), proof);
     }
-    report.loads = await rows("startup-renderer-loads.jsonl");
-    assert.equal(report.loads.length, 4, "Three cold loads plus one production second window");
-    assert.ok(
-      report.loads.every((entry) => entry.missing.length === 0),
-      "Pet handlers must precede every native renderer load",
-    );
-    assert.ok(
-      report.loads.every(
-        (entry) =>
-          entry.method === "loadFile" && entry.source === join(appDir, "out/renderer/index.html"),
-      ),
-      "Native loads must target this own compiled renderer",
-    );
-    assert.ok(
-      cycles.every(
-        (cycle) =>
-          report.loads.filter((load) => load.pid === cycle.pid).length ===
-          (cycle.cycle === 1 ? 2 : 1),
-      ),
-    );
   } catch (error) {
     const diagnostic = getElectronKeychainPreflightDiagnostic(error);
     failures.push({
@@ -395,9 +394,29 @@ for(const method of ["loadFile","loadURL"]){const original=BrowserWindow.prototy
       }
     }
     try {
+      // Preserve the actual load observations even when a cycle failed at shutdown.
+      report.loads = await rows("startup-renderer-loads.jsonl");
       assert.equal(cycles.length, 3);
       for (const cycle of cycles) assertStartupCycleSettled(cycle);
-      assert.equal(report.loads?.length, 4);
+      assert.equal(report.loads.length, 4, "Three cold loads plus one production second window");
+      assert.ok(
+        report.loads.every((entry) => entry.missing.length === 0),
+        "Pet handlers must precede every native renderer load",
+      );
+      assert.ok(
+        report.loads.every(
+          (entry) =>
+            entry.method === "loadFile" && entry.source === join(appDir, "out/renderer/index.html"),
+        ),
+        "Native loads must target this own compiled renderer",
+      );
+      assert.ok(
+        cycles.every(
+          (cycle) =>
+            report.loads.filter((load) => load.pid === cycle.pid).length ===
+            (cycle.cycle === 1 ? 2 : 1),
+        ),
+      );
       assert.deepEqual(failures, []);
       await isolated.cleanup();
       report.privateHomeRemoved = true;

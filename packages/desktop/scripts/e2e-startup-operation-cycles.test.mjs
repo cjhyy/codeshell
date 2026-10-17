@@ -6,6 +6,7 @@ import { test } from "node:test";
 import {
   assertStartupCycleSettled,
   resolveStartupEvidence,
+  startupMainLogErrors,
 } from "./e2e-startup-operation-cycles.mjs";
 
 const proof = () => ({
@@ -15,6 +16,7 @@ const proof = () => ({
   settlement: { status: "cleaned", queryFailed: false, remainingCount: 0 },
   observerFailures: [],
   rendererErrors: [],
+  mainErrors: [],
   deniedAttempts: [],
   spawnedWorkers: [],
 });
@@ -31,6 +33,7 @@ test("a cycle is ready to advance only with guarded normal exit and settled cust
     (value) => (value.settlement.remainingCount = 1),
     (value) => value.observerFailures.push("query failed"),
     (value) => value.rendererErrors.push("late renderer error"),
+    (value) => value.mainErrors.push("legacy-project-migration-completion-error"),
     (value) => value.deniedAttempts.push({ pid: 42, kind: "worker" }),
     (value) => value.spawnedWorkers.push({ pid: 43 }),
   ]) {
@@ -38,6 +41,24 @@ test("a cycle is ready to advance only with guarded normal exit and settled cust
     mutate(value);
     assert.throws(() => assertStartupCycleSettled(value));
   }
+});
+
+test("caught migration IPC errors fail the final Main log gate without rejecting native warnings", () => {
+  const warning = "[1234:1017/130000.000:WARNING:resource_bundle.cc] locale warning\n";
+  assert.deepEqual(startupMainLogErrors(warning), []);
+  assert.deepEqual(startupMainLogErrors("projectRegistry:completeLegacyMigration completed\n"), []);
+  assert.deepEqual(
+    startupMainLogErrors("unrelated handler Error: legacy project migration is complete\n"),
+    [],
+  );
+  const value = proof();
+  value.operations = ["cold launch", "renderer reload", "second window"];
+  value.mainErrors = startupMainLogErrors(
+    warning +
+      "Error occurred in handler for 'projectRegistry:completeLegacyMigration': Error: legacy project migration is complete\r\n    at requirePending (file:///owned/index.mjs:1:1)\n",
+  );
+  assert.deepEqual(value.mainErrors, ["legacy-project-migration-completion-error"]);
+  assert.throws(() => assertStartupCycleSettled(value), /Known Main startup errors/);
 });
 
 test("a late custody query failure cannot be advertised as pass even after successful UI", () => {
