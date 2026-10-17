@@ -1,1 +1,3 @@
 dist/**  linguist-generated=true
+packages/desktop/resources/chrome-extension/service-worker.js text eol=lf
+packages/desktop/resources/chrome-extension/service-worker.js.LEGAL.txt text eol=lf
