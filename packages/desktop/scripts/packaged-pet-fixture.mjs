@@ -16,6 +16,7 @@ import { capturePackagedAppIntegrity } from "./packaged-app-integrity.mjs";
 import { canCleanupPackagedProcesses } from "./packaged-process-exits.mjs";
 import { describePackagedAppLayout } from "./packaged-app-layout.mjs";
 import { readPackagedLinuxEnvironment } from "./packaged-linux-environment.mjs";
+import { installWindowsElectronDirectTransport } from "./windows-electron-direct-transport.mjs";
 
 const hash = (value) => createHash("sha256").update(value).digest("hex");
 
@@ -122,6 +123,8 @@ export async function preparePackagedPetFixture({
   const verifiedWorkerMains = new Set();
   const mainPidByChild = new Map();
   const mainBirthByChild = new Map();
+  const windowsTransports = [];
+  const transportFailures = [];
   let launchFailed = false;
   const terminateChild = async (child) => {
     const monitor = monitorsByChild.get(child);
@@ -149,98 +152,116 @@ export async function preparePackagedPetFixture({
       let captured;
       let preload;
       let preloadFailure;
-      childrenModule.spawn = function (command, args, options) {
-        const owned =
-          command === launcherExecutable &&
-          args?.includes("--inspect-brk=0") &&
-          options?.env?.HOME === isolated.home;
-        const child = spawn.call(this, command, args, options);
-        if (owned) {
-          assert.equal(captured, undefined, "Packaged launcher captured more than once");
-          captured = child;
-          children.push(child);
-          let rootIdentity;
-          const monitor = watchElectronTestProcess(child, {
-            timeoutMs: 120_000,
-            ...(appImageRuntime
-              ? {
-                  snapshotProcesses: () => {
-                    const rows = snapshotElectronTestProcesses();
-                    rootIdentity ??= rows.find(
-                      (row) => row.pid === child.pid && row.ppid === process.pid,
-                    );
-                    return rows;
-                  },
-                }
-              : {}),
-          });
-          processMonitors.push(monitor);
-          monitorsByChild.set(child, monitor);
-          for (const stream of ["stdout", "stderr"])
-            child[stream].on("data", (chunk) =>
-              appendFileSync(join(isolated.home, `official-main-${child.pid}.${stream}`), chunk, {
-                mode: 0o600,
-              }),
-            );
-          preload = preloadPausedPackagedMain(child, bootstrap, {
-            // Initial ESM Break-on-start precedes the first dependency body.
-            // Parsing the graph is expected; ordinary later pauses are denied.
-            allowedPause: (url) => url.startsWith(layout.mainURLPrefix),
-            isHostScript: (url) => url.startsWith(resourcesURLPrefix),
-            allowParsedHostOnStart: true,
-            terminateChild: () => terminateChild(child),
-            launcherOwnsInspector: !appImageRuntime,
-            verifyPausedIdentity: async (evaluate) => {
-              const main = await evaluate(
-                `({pid:process.pid,ppid:process.ppid,executable:process.execPath,appImage:process.env.APPIMAGE,appDir:process.env.APPDIR,home:process.env.HOME,argv:process.argv,noSandboxSwitch:require("electron").app.commandLine.hasSwitch("no-sandbox")})`,
-              );
-              assert.equal(
-                main.noSandboxSwitch,
-                false,
-                "Actual packaged Main disabled the sandbox",
-              );
-              assert.ok(!main.argv.some((arg) => /^--no-sandbox(?:=|$)/.test(arg)));
-              const identity = appImageRuntime
-                ? appImageRuntime.verifyPaused(rootIdentity, main)
-                : main;
-              if (appImageRuntime) {
-                const pinned = monitor.bindObservedDescendant(identity.pid);
-                assert.deepEqual(
-                  pinned,
-                  { pid: identity.pid, ppid: identity.ppid, birth: identity.birth },
-                  "Paused Main was not bound to active runtime birth custody",
-                );
+      let windowsTransport;
+      const launchArgs = ["--inspect-brk=0", `--user-data-dir=${isolated.userDataDir}`];
+      const captureMain = (child) => {
+        assert.equal(captured, undefined, "Packaged launcher captured more than once");
+        captured = child;
+        children.push(child);
+        let rootIdentity;
+        const monitor = watchElectronTestProcess(child, {
+          timeoutMs: 120_000,
+          ...(appImageRuntime
+            ? {
+                snapshotProcesses: () => {
+                  const rows = snapshotElectronTestProcesses();
+                  rootIdentity ??= rows.find(
+                    (row) => row.pid === child.pid && row.ppid === process.pid,
+                  );
+                  return rows;
+                },
               }
-              assert.equal(identity.pid, appImageRuntime ? main.pid : child.pid);
-              return { ...identity, chromiumSandboxRequested: true };
-            },
-          }).then(async (receipt) => {
-            await writeFile(
-              join(isolated.home, `startup-pause-${child.pid}.json`),
-              JSON.stringify(receipt),
-              { mode: 0o600 },
+            : {}),
+        });
+        processMonitors.push(monitor);
+        monitorsByChild.set(child, monitor);
+        for (const stream of ["stdout", "stderr"])
+          child[stream].on("data", (chunk) =>
+            appendFileSync(join(isolated.home, `official-main-${child.pid}.${stream}`), chunk, {
+              mode: 0o600,
+            }),
+          );
+        preload = preloadPausedPackagedMain(child, bootstrap, {
+          // Initial ESM Break-on-start precedes the first dependency body.
+          // Parsing the graph is expected; ordinary later pauses are denied.
+          allowedPause: (url) => url.startsWith(layout.mainURLPrefix),
+          isHostScript: (url) => url.startsWith(resourcesURLPrefix),
+          allowParsedHostOnStart: true,
+          terminateChild: () => terminateChild(child),
+          launcherOwnsInspector: !appImageRuntime,
+          verifyPausedIdentity: async (evaluate) => {
+            const main = await evaluate(
+              `({pid:process.pid,ppid:process.ppid,executable:require("node:fs").realpathSync(process.execPath),appImage:process.env.APPIMAGE,appDir:process.env.APPDIR,home:process.env.HOME,argv:process.argv,noSandboxSwitch:require("electron").app.commandLine.hasSwitch("no-sandbox")})`,
             );
-            return receipt;
-          });
-          preload.catch((error) => {
-            preloadFailure = error;
-          });
-        }
-        return child;
+            assert.equal(main.noSandboxSwitch, false, "Actual packaged Main disabled the sandbox");
+            assert.ok(!main.argv.some((arg) => /^--no-sandbox(?:=|$)/.test(arg)));
+            const identity = appImageRuntime
+              ? appImageRuntime.verifyPaused(rootIdentity, main)
+              : main;
+            if (appImageRuntime) {
+              const pinned = monitor.bindObservedDescendant(identity.pid);
+              assert.deepEqual(
+                pinned,
+                { pid: identity.pid, ppid: identity.ppid, birth: identity.birth },
+                "Paused Main was not bound to active runtime birth custody",
+              );
+            }
+            assert.equal(identity.pid, appImageRuntime ? main.pid : child.pid);
+            if (!appImageRuntime) {
+              assert.equal(identity.ppid, process.pid, "Actual Main has a foreign parent");
+              assert.equal(identity.executable, executable, "Actual Main executable changed");
+              assert.equal(identity.home, isolated.home, "Actual Main HOME changed");
+            }
+            return { ...identity, chromiumSandboxRequested: true };
+          },
+        }).then(async (receipt) => {
+          await writeFile(
+            join(isolated.home, `startup-pause-${child.pid}.json`),
+            JSON.stringify(receipt),
+            { mode: 0o600 },
+          );
+          return receipt;
+        });
+        preload.catch((error) => {
+          preloadFailure = error;
+        });
+        return monitor;
       };
-      syncBuiltinESMExports();
+      if (process.platform === "win32") {
+        windowsTransport = installWindowsElectronDirectTransport({
+          executable: launcherExecutable,
+          args: launchArgs,
+          home: isolated.home,
+          cwd: isolated.home,
+          onCapturedSpawn: captureMain,
+          reportFailure: (message) => transportFailures.push(message),
+        });
+        windowsTransports.push(windowsTransport);
+      } else {
+        childrenModule.spawn = function (command, args, options) {
+          const owned =
+            command === launcherExecutable &&
+            args?.includes("--inspect-brk=0") &&
+            options?.env?.HOME === isolated.home;
+          const child = spawn.call(this, command, args, options);
+          if (owned) captureMain(child);
+          return child;
+        };
+        syncBuiltinESMExports();
+      }
       let app;
       try {
         app = await _electron.launch({
           executablePath: launcherExecutable,
           chromiumSandbox: true,
-          args: ["--inspect-brk=0", `--user-data-dir=${isolated.userDataDir}`],
+          args: launchArgs,
           cwd: isolated.home,
           env: environment,
           timeout: 30_000,
         });
         const startupPause = await preload;
         assert.equal(captured, app.process(), "packaged executable was not captured at spawn");
+        if (windowsTransport) assert.deepEqual(windowsTransport.receipt().failures, []);
         const identity = await app.evaluate(({ app }) => ({
           packaged: app.isPackaged,
           appPath: app.getAppPath(),
@@ -259,6 +280,7 @@ export async function preparePackagedPetFixture({
         }));
         assert.equal(identity.packaged, true);
         assert.equal(identity.appPath, join(resources, "app.asar"));
+        identity.executable = await realpath(identity.executable);
         assert.equal(identity.executable, executable);
         assert.equal(identity.resources, resources);
         assert.equal(identity.userData, isolated.userDataDir);
@@ -322,7 +344,8 @@ export async function preparePackagedPetFixture({
           cause: error,
         });
       } finally {
-        childrenModule.spawn = spawn;
+        if (windowsTransport) windowsTransport.restoreSpawn();
+        else childrenModule.spawn = spawn;
         syncBuiltinESMExports();
       }
       return app;
@@ -398,6 +421,16 @@ export async function preparePackagedPetFixture({
       )
         return false;
       if (
+        transportFailures.length ||
+        (windowsTransports.length &&
+          children.some((child) => child.exitCode !== 0 || child.signalCode !== null)) ||
+        windowsTransports.some(
+          (transport) =>
+            transport.receipt().failures.length || transport.receipt().cleanupRequests.length,
+        )
+      )
+        return false;
+      if (
         appImageRuntime &&
         children.some(
           (child, index) =>
@@ -434,6 +467,8 @@ export async function preparePackagedPetFixture({
         unchangedAfterRuntime: true,
         ...(runtime ? { appImageRuntime: runtime } : {}),
         observedProcessSettlements,
+        windowsTransports: windowsTransports.map((transport) => transport.receipt()),
+        transportFailures: [...transportFailures],
         bootstrapSHA256: hash(await readFile(bootstrap)),
         mainExits: children.map((child) => ({
           pid: child.pid,

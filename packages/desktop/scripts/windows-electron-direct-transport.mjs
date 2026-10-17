@@ -135,8 +135,13 @@ export function installWindowsElectronDirectTransport(
 ) {
   assert.equal(platform, "win32", "Direct transport is only for actual Windows Electron calls");
   assert.equal(
-    playwrightVersion,
+    installedVersion,
     reviewedPlaywrightElectronVersion,
+    "Unreviewed installed Playwright Electron transport version",
+  );
+  assert.equal(
+    playwrightVersion,
+    installedVersion,
     "Unreviewed Playwright Electron transport version",
   );
   assert.ok(absolute(home) && absolute(cwd), "Canonical owned HOME and cwd are required");
@@ -223,7 +228,7 @@ export function installWindowsElectronDirectTransport(
       return {
         method: "reviewed exact Windows shell vector converted to direct Electron spawn",
         playwrightVersion,
-        directMain: Boolean(captured),
+        directMain: Boolean(Number.isSafeInteger(captured?.pid) && entry?.monitor),
         pid: captured?.pid ?? null,
         failures: [...failures],
         unsafeFallbackDenied: failures.length > 0,
