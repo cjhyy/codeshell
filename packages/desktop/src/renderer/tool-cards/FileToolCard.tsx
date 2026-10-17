@@ -38,6 +38,13 @@ export function FileToolCard({
   const offset = typeof a.offset === "number" ? a.offset : undefined;
   const limit = typeof a.limit === "number" ? a.limit : undefined;
   const content = typeof a.content === "string" ? a.content : undefined;
+  const contentBytes = React.useMemo(
+    () =>
+      variant === "write" && content !== undefined
+        ? new TextEncoder().encode(content).byteLength
+        : undefined,
+    [variant, content],
+  );
   const oldStr = typeof a.old_string === "string" ? a.old_string : undefined;
   const newStr = typeof a.new_string === "string" ? a.new_string : undefined;
 
@@ -52,8 +59,8 @@ export function FileToolCard({
     <span>
       <span className="font-mono text-foreground">{truncate(path, 70)}</span>
       {range && <span className="text-muted-foreground"> {range}</span>}
-      {variant === "write" && content !== undefined && (
-        <span className="text-muted-foreground"> ({content.length}B)</span>
+      {contentBytes !== undefined && (
+        <span className="text-muted-foreground"> ({contentBytes}B)</span>
       )}
     </span>
   );
