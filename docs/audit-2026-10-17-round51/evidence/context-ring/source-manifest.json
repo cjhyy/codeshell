@@ -1,0 +1,590 @@
+{
+  "schema": "static-source-manifest-v1",
+  "rootReportedInitialContextOnly": "8e366d97c92c614f00df989006f5b8208185246f",
+  "rootLaterDocsOnlyContextNotification": "424ef9c8953eaaa295d24d63c49127aa8b3ea79e",
+  "GitIndependentlyVerified": false,
+  "files": [
+    {
+      "path": "packages/desktop/src/renderer/chat/ContextRing.tsx",
+      "bytes": 9089,
+      "lines": 247,
+      "sha256": "b28fbfc2e74fdb645cc5b2cb935eb0fb6a5e1f896b6150a121a75294013baa3d",
+      "pinnedBeforeProductBodyOrLineNavigationUTC": "2026-10-17T17:15:11.668911+00:00",
+      "coverage": "selected",
+      "selectedLineRanges": [
+        [
+          6,
+          46
+        ],
+        [
+          52,
+          65
+        ],
+        [
+          91,
+          130
+        ],
+        [
+          134,
+          163
+        ],
+        [
+          173,
+          234
+        ],
+        [
+          242,
+          247
+        ]
+      ],
+      "semanticLineCount": 193,
+      "sourceKind": "product",
+      "displayedLineRanges": [
+        [
+          1,
+          247
+        ]
+      ],
+      "bodyDisplayedLineCount": 247,
+      "navigationLineRanges": [],
+      "displayedUnionIncludingNavigationLineCount": 247,
+      "navigationOnlyDisplayedLineRanges": [
+        [
+          1,
+          5
+        ],
+        [
+          47,
+          51
+        ],
+        [
+          66,
+          90
+        ],
+        [
+          131,
+          133
+        ],
+        [
+          164,
+          172
+        ],
+        [
+          235,
+          241
+        ]
+      ],
+      "purpose": "Ordinary props contract, cache hit arithmetic, fallback constant, clamped percentage/remaining/tone/data fields and displayed token/cache labels, formatTok. Hover/close timer66–89, handler131–132, anchored geometry, portal164–172/235–241 are display/adjacency only. Old model-spec comment48–51 not independently validated. No full-module or liveDOM/React/provider/billing certification.",
+      "initialSemanticReadSha256": "b28fbfc2e74fdb645cc5b2cb935eb0fb6a5e1f896b6150a121a75294013baa3d",
+      "dedicatedInitialPinBeforeBodyAndLineNavigation": true,
+      "endingSha256": "b28fbfc2e74fdb645cc5b2cb935eb0fb6a5e1f896b6150a121a75294013baa3d",
+      "endingBytes": 9089,
+      "unchanged": true,
+      "fullFileReadingClaimed": false,
+      "firstEverReadingClaimed": false
+    },
+    {
+      "path": "packages/desktop/src/renderer/ChatView.tsx",
+      "bytes": 106169,
+      "lines": 2622,
+      "sha256": "f9581b0772281f87120e94821e51d4b6d7335fb8cecd1ede98feddd8ff2f8ee7",
+      "pinnedBeforeBodyOrLineNavigationUTC": "2026-10-17T17:17:30.019898+00:00",
+      "coverage": "selected",
+      "selectedLineRanges": [
+        [
+          218,
+          225
+        ],
+        [
+          433,
+          440
+        ],
+        [
+          2406,
+          2420
+        ]
+      ],
+      "semanticLineCount": 31,
+      "sourceKind": "product",
+      "displayedLineRanges": [
+        [
+          214,
+          226
+        ],
+        [
+          429,
+          442
+        ],
+        [
+          2400,
+          2422
+        ]
+      ],
+      "bodyDisplayedLineCount": 50,
+      "navigationLineRanges": [
+        [
+          31,
+          31
+        ],
+        [
+          218,
+          218
+        ],
+        [
+          220,
+          220
+        ],
+        [
+          223,
+          223
+        ],
+        [
+          433,
+          433
+        ],
+        [
+          435,
+          435
+        ],
+        [
+          438,
+          438
+        ],
+        [
+          2408,
+          2408
+        ],
+        [
+          2409,
+          2409
+        ],
+        [
+          2412,
+          2412
+        ],
+        [
+          2415,
+          2415
+        ]
+      ],
+      "displayedUnionIncludingNavigationLineCount": 51,
+      "navigationOnlyDisplayedLineRanges": [
+        [
+          31,
+          31
+        ],
+        [
+          214,
+          217
+        ],
+        [
+          226,
+          226
+        ],
+        [
+          429,
+          432
+        ],
+        [
+          441,
+          442
+        ],
+        [
+          2400,
+          2405
+        ],
+        [
+          2421,
+          2422
+        ]
+      ],
+      "purpose": "Actual numeric props and destructure, main-variant ContextRing field forwarding. Model selection actions/project/authority/other UI orchestration adjacent only; no wholeChatView claim.",
+      "initialSemanticReadSha256": "f9581b0772281f87120e94821e51d4b6d7335fb8cecd1ede98feddd8ff2f8ee7",
+      "dedicatedInitialPinBeforeBodyAndLineNavigation": true,
+      "endingSha256": "f9581b0772281f87120e94821e51d4b6d7335fb8cecd1ede98feddd8ff2f8ee7",
+      "endingBytes": 106169,
+      "unchanged": true,
+      "fullFileReadingClaimed": false,
+      "firstEverReadingClaimed": false
+    },
+    {
+      "path": "packages/desktop/src/renderer/App.tsx",
+      "bytes": 122863,
+      "lines": 2924,
+      "sha256": "02ae12bfccf26878226720ad90282a6a11a1fdc3e05efd1ce54a09d256d5d715",
+      "pinnedBeforeBodyOrLineNavigationUTC": "2026-10-17T17:17:30.023189+00:00",
+      "coverage": "selected",
+      "selectedLineRanges": [
+        [
+          2672,
+          2684
+        ]
+      ],
+      "semanticLineCount": 13,
+      "sourceKind": "product",
+      "displayedLineRanges": [
+        [
+          2666,
+          2690
+        ]
+      ],
+      "bodyDisplayedLineCount": 25,
+      "navigationLineRanges": [
+        [
+          1542,
+          1542
+        ],
+        [
+          1548,
+          1548
+        ],
+        [
+          1563,
+          1563
+        ],
+        [
+          2675,
+          2675
+        ],
+        [
+          2677,
+          2677
+        ],
+        [
+          2679,
+          2679
+        ],
+        [
+          2682,
+          2682
+        ]
+      ],
+      "displayedUnionIncludingNavigationLineCount": 28,
+      "navigationOnlyDisplayedLineRanges": [
+        [
+          1542,
+          1542
+        ],
+        [
+          1548,
+          1548
+        ],
+        [
+          1563,
+          1563
+        ],
+        [
+          2666,
+          2671
+        ],
+        [
+          2685,
+          2690
+        ]
+      ],
+      "purpose": "Actual ordinary model key/options and prompt/cache counts forwarded to ChatView. Selected model maxContextTokens find and optional max boundary only; model catalog/provider/auth/credentials/backfill/settings mechanisms not expanded.",
+      "initialSemanticReadSha256": "02ae12bfccf26878226720ad90282a6a11a1fdc3e05efd1ce54a09d256d5d715",
+      "dedicatedInitialPinBeforeBodyAndLineNavigation": true,
+      "endingSha256": "02ae12bfccf26878226720ad90282a6a11a1fdc3e05efd1ce54a09d256d5d715",
+      "endingBytes": 122863,
+      "unchanged": true,
+      "fullFileReadingClaimed": false,
+      "firstEverReadingClaimed": false
+    },
+    {
+      "path": "packages/desktop/src/renderer/types.ts",
+      "bytes": 93752,
+      "lines": 2479,
+      "sha256": "6d7b173656e7ebe22d5c9347b7097d2040793610135c1f797d76139aa6f69845",
+      "pinnedBeforeBodyOrLineNavigationUTC": "2026-10-17T17:17:30.021436+00:00",
+      "coverage": "selected",
+      "selectedLineRanges": [
+        [
+          362,
+          376
+        ],
+        [
+          1869,
+          1935
+        ]
+      ],
+      "semanticLineCount": 82,
+      "sourceKind": "product",
+      "displayedLineRanges": [
+        [
+          352,
+          379
+        ],
+        [
+          1858,
+          1940
+        ]
+      ],
+      "bodyDisplayedLineCount": 111,
+      "navigationLineRanges": [
+        [
+          365,
+          365
+        ],
+        [
+          370,
+          370
+        ],
+        [
+          415,
+          415
+        ],
+        [
+          428,
+          428
+        ],
+        [
+          431,
+          431
+        ],
+        [
+          449,
+          449
+        ],
+        [
+          450,
+          450
+        ],
+        [
+          459,
+          459
+        ],
+        [
+          1038,
+          1038
+        ],
+        [
+          1057,
+          1057
+        ],
+        [
+          1094,
+          1094
+        ],
+        [
+          1877,
+          1877
+        ],
+        [
+          1879,
+          1879
+        ],
+        [
+          1892,
+          1892
+        ],
+        [
+          1895,
+          1895
+        ],
+        [
+          1909,
+          1909
+        ],
+        [
+          1918,
+          1918
+        ],
+        [
+          1919,
+          1919
+        ],
+        [
+          1925,
+          1925
+        ],
+        [
+          1928,
+          1928
+        ],
+        [
+          2311,
+          2311
+        ],
+        [
+          2346,
+          2346
+        ],
+        [
+          2353,
+          2353
+        ]
+      ],
+      "displayedUnionIncludingNavigationLineCount": 123,
+      "navigationOnlyDisplayedLineRanges": [
+        [
+          352,
+          361
+        ],
+        [
+          377,
+          379
+        ],
+        [
+          415,
+          415
+        ],
+        [
+          428,
+          428
+        ],
+        [
+          431,
+          431
+        ],
+        [
+          449,
+          450
+        ],
+        [
+          459,
+          459
+        ],
+        [
+          1038,
+          1038
+        ],
+        [
+          1057,
+          1057
+        ],
+        [
+          1094,
+          1094
+        ],
+        [
+          1858,
+          1868
+        ],
+        [
+          1936,
+          1940
+        ],
+        [
+          2311,
+          2311
+        ],
+        [
+          2346,
+          2346
+        ],
+        [
+          2353,
+          2353
+        ]
+      ],
+      "purpose": "Ordinary display-state numeric fields and usage_update DTO projection, independent live context/single-turn/cumulative updates and cumulative heartbeat guard. Treat accepted normal numeric event fields only, no provider billing/sessions/identity/authority or tombstone mechanism certified.",
+      "initialSemanticReadSha256": "6d7b173656e7ebe22d5c9347b7097d2040793610135c1f797d76139aa6f69845",
+      "dedicatedInitialPinBeforeBodyAndLineNavigation": true,
+      "endingSha256": "6d7b173656e7ebe22d5c9347b7097d2040793610135c1f797d76139aa6f69845",
+      "endingBytes": 93752,
+      "unchanged": true,
+      "fullFileReadingClaimed": false,
+      "firstEverReadingClaimed": false
+    },
+    {
+      "path": "packages/desktop/src/renderer/messages/TurnUsageMessageView.tsx",
+      "bytes": 2344,
+      "lines": 52,
+      "sha256": "4f941fcbec7d2f0c8e225df7e3e661da27acf6bb8b02cf2ee65f8640f563bb8b",
+      "pinnedBeforeBodyOrLineNavigationUTC": "2026-10-17T17:17:30.022103+00:00",
+      "coverage": "selected",
+      "selectedLineRanges": [
+        [
+          4,
+          4
+        ],
+        [
+          7,
+          50
+        ]
+      ],
+      "semanticLineCount": 45,
+      "sourceKind": "product",
+      "displayedLineRanges": [
+        [
+          1,
+          52
+        ]
+      ],
+      "bodyDisplayedLineCount": 52,
+      "navigationLineRanges": [
+        [
+          4,
+          4
+        ],
+        [
+          31,
+          31
+        ],
+        [
+          42,
+          42
+        ]
+      ],
+      "displayedUnionIncludingNavigationLineCount": 52,
+      "navigationOnlyDisplayedLineRanges": [
+        [
+          1,
+          3
+        ],
+        [
+          5,
+          6
+        ],
+        [
+          51,
+          52
+        ]
+      ],
+      "purpose": "Actual formatTok import, distinction between context occupancy and turn spend, ordinary prompt/cache row labels/value formatting. React memo and browser layout not validated; no true cost/account/billing correctness claim.",
+      "initialSemanticReadSha256": "4f941fcbec7d2f0c8e225df7e3e661da27acf6bb8b02cf2ee65f8640f563bb8b",
+      "dedicatedInitialPinBeforeBodyAndLineNavigation": true,
+      "endingSha256": "4f941fcbec7d2f0c8e225df7e3e661da27acf6bb8b02cf2ee65f8640f563bb8b",
+      "endingBytes": 2344,
+      "unchanged": true,
+      "fullFileReadingClaimed": false,
+      "firstEverReadingClaimed": false
+    }
+  ],
+  "counts": {
+    "full": 0,
+    "selected": 5,
+    "productSemanticLines": 364,
+    "bodyDisplayedLines": 485,
+    "displayedUnionIncludingNavigationLines": 501,
+    "testDeclarationsRead": 0,
+    "testsExecuted": 0
+  },
+  "instructionPins": [
+    {
+      "path": "CODESHELL.md",
+      "bytes": 17639,
+      "lines": 217,
+      "sha256": "56d9ffdd81b6f6f615ed7a7392ddfa60ec4338c0ccb88eef20c4b73ad8dad5a2",
+      "pinnedBeforeProductBodyOrLineNavigationUTC": "2026-10-17T17:15:11.666940+00:00"
+    },
+    {
+      "path": "AGENTS.md",
+      "bytes": 206,
+      "lines": 5,
+      "sha256": "2980647020f0ae72522f7f717ffa89f4c5ec7fb1efe48066e881b864cd428917",
+      "pinnedBeforeProductBodyOrLineNavigationUTC": "2026-10-17T17:15:11.668445+00:00"
+    }
+  ],
+  "instructionReading": "Current CODESHELL217+AGENTS5 reread after initialpins; sameSHA prior instruction history retained; repeated instruction reading excluded from product/unique-source counts.",
+  "filenameOnlyUnopened": [
+    "packages/desktop/src/renderer/types.test.ts",
+    "packages/desktop/src/renderer/chat/anchored-popovers.browser.fixture.mjs"
+  ],
+  "priorConsumerCoverageLimit": "ChatView/types/App consumers have previous selected readings; this necessary current producer chain is not first or all-history unique coverage. Consumer full histories not separately exhausted.",
+  "historyGateIn": "gate-decision.json",
+  "scope": "Ordinary UI numeric/text DTO projection only; provider/auth/account billing, real data and native mechanisms not expanded or certified. No live UI/timing validation.",
+  "sourceExcerptTiming": "Post-read capture; initial durable pins preceded all body/navigation.",
+  "capturedUTC": "2026-10-17T17:19:17.770895+00:00"
+}

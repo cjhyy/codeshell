@@ -1,0 +1,80 @@
+{
+  "capturedUTC": "2026-10-17T17:19:58.346918+00:00",
+  "sourcePins": [
+    {
+      "path": "AGENTS.md",
+      "initialSha256": "2980647020f0ae72522f7f717ffa89f4c5ec7fb1efe48066e881b864cd428917",
+      "endingBytes": 206,
+      "endingSha256": "2980647020f0ae72522f7f717ffa89f4c5ec7fb1efe48066e881b864cd428917",
+      "matchesInitial": true
+    },
+    {
+      "path": "CODESHELL.md",
+      "initialSha256": "56d9ffdd81b6f6f615ed7a7392ddfa60ec4338c0ccb88eef20c4b73ad8dad5a2",
+      "endingBytes": 17639,
+      "endingSha256": "56d9ffdd81b6f6f615ed7a7392ddfa60ec4338c0ccb88eef20c4b73ad8dad5a2",
+      "matchesInitial": true
+    },
+    {
+      "path": "packages/desktop/src/renderer/messages/ContextBoundaryView.tsx",
+      "initialSha256": "bff0c43715622ace107ab48493754d34304fb013120d013e6d52768a18e24699",
+      "endingBytes": 5293,
+      "endingSha256": "bff0c43715622ace107ab48493754d34304fb013120d013e6d52768a18e24699",
+      "matchesInitial": true
+    },
+    {
+      "path": "packages/desktop/src/renderer/types.ts",
+      "initialSha256": "6d7b173656e7ebe22d5c9347b7097d2040793610135c1f797d76139aa6f69845",
+      "endingBytes": 93752,
+      "endingSha256": "6d7b173656e7ebe22d5c9347b7097d2040793610135c1f797d76139aa6f69845",
+      "matchesInitial": true
+    },
+    {
+      "path": "packages/desktop/src/renderer/chat/compactFeedback.ts",
+      "initialSha256": "3a149cfd7df17d5d642a6f47d221e478e645c027898b7cf5be0542b8fc4a39e5",
+      "endingBytes": 2980,
+      "endingSha256": "3a149cfd7df17d5d642a6f47d221e478e645c027898b7cf5be0542b8fc4a39e5",
+      "matchesInitial": true
+    },
+    {
+      "path": "packages/desktop/src/renderer/MessageStream.tsx",
+      "initialSha256": "f74d19bddcdc48c0de2e63921ba598d733e2f1c3d58f68e7c8c0b32046ddbd4c",
+      "endingBytes": 37921,
+      "endingSha256": "f74d19bddcdc48c0de2e63921ba598d733e2f1c3d58f68e7c8c0b32046ddbd4c",
+      "matchesInitial": true
+    },
+    {
+      "path": "packages/desktop/src/renderer/messages/TurnProcessGroupCard.tsx",
+      "initialSha256": "d96ccf9fdd6d252cf6bb8e39a9fe74a3b55df401a92beadfe17f0816a4884128",
+      "endingBytes": 10530,
+      "endingSha256": "d96ccf9fdd6d252cf6bb8e39a9fe74a3b55df401a92beadfe17f0816a4884128",
+      "matchesInitial": true
+    },
+    {
+      "path": "packages/desktop/src/renderer/transcripts.ts",
+      "initialSha256": "7a6ad6f03a9e7135851eca6f7e67e45b073a739920d0523b17ffa33cd2e63bc8",
+      "endingBytes": 43637,
+      "endingSha256": "7a6ad6f03a9e7135851eca6f7e67e45b073a739920d0523b17ffa33cd2e63bc8",
+      "matchesInitial": true
+    },
+    {
+      "path": "packages/desktop/src/renderer/chat/compactFeedback.test.ts",
+      "initialSha256": "cf8c432525d72eb8547b04baf07af4fcbba719245d4d807c2d8ae52c0e4c0b65",
+      "endingBytes": 2819,
+      "endingSha256": "cf8c432525d72eb8547b04baf07af4fcbba719245d4d807c2d8ae52c0e4c0b65",
+      "matchesInitial": true
+    }
+  ],
+  "allSourcePinsMatch": true,
+  "history": {
+    "originalCount": 4895,
+    "endingCount": 4895,
+    "added": [],
+    "removed": [],
+    "changed": [],
+    "sameFilter": "(^|/)audit-2026-10-17-round(?:5[1-9]|[6-9][0-9]|[1-9][0-9]{2,})(/|$)",
+    "originalInventoryUnmodified": true
+  },
+  "scope": "Source/history hashes only, not repeated semantic reading or product execution.",
+  "ownGitOperations": 0
+}

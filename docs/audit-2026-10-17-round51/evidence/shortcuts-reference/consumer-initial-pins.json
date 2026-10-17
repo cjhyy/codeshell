@@ -1,0 +1,53 @@
+{
+  "files": [
+    {
+      "path": "packages/desktop/src/renderer/settings/AdvancedSections.tsx",
+      "bytes": 75319,
+      "sha256": "3a18e0123775066a6ba3178934ed1bac9e1bc9f48d74dee3842ec422204fa014",
+      "lines": 2032,
+      "pinnedUTC": "2026-10-17T17:21:39.575592+00:00",
+      "timing": "Before current98 contentlocator/selected read; filename-only inventory already seen"
+    },
+    {
+      "path": "packages/desktop/src/renderer/settings/SettingsPage.tsx",
+      "bytes": 35851,
+      "sha256": "1ac7c97703cf3aa43063b35b13581b20efcb3f87abbad972272e1bc3fc396376",
+      "lines": 931,
+      "pinnedUTC": "2026-10-17T17:21:39.576702+00:00",
+      "timing": "Before current98 contentlocator/selected read; filename-only inventory already seen"
+    },
+    {
+      "path": "packages/desktop/src/renderer/App.tsx",
+      "bytes": 122863,
+      "sha256": "02ae12bfccf26878226720ad90282a6a11a1fdc3e05efd1ce54a09d256d5d715",
+      "lines": 2924,
+      "pinnedUTC": "2026-10-17T17:23:29.833379+00:00",
+      "timing": "Before current98 selected body; after seven content navigation lines",
+      "firstNavigationReadSha256": null,
+      "pinBeforeAnyNavigation": false,
+      "pinBeforeSelectedBody": true
+    },
+    {
+      "path": "packages/desktop/src/renderer/ChatView.tsx",
+      "bytes": 106169,
+      "sha256": "f9581b0772281f87120e94821e51d4b6d7335fb8cecd1ede98feddd8ff2f8ee7",
+      "lines": 2622,
+      "pinnedUTC": "2026-10-17T17:23:29.835382+00:00",
+      "timing": "Before current98 contentlocator/body read; canonical path now inventoried",
+      "firstNavigationReadSha256": "f9581b0772281f87120e94821e51d4b6d7335fb8cecd1ede98feddd8ff2f8ee7",
+      "pinBeforeAnyNavigation": true,
+      "pinBeforeSelectedBody": true
+    },
+    {
+      "path": "packages/desktop/src/renderer/i18n/ns/settings.ts",
+      "bytes": 132800,
+      "sha256": "c27620951b2c5ddfca0ebf0782f44e8bade2c0e7d42f5acdfc46a18da3569f24",
+      "lines": 2423,
+      "pinnedUTC": "2026-10-17T17:23:29.836577+00:00",
+      "timing": "Before current98 contentlocator/body read; canonical path now inventoried",
+      "firstNavigationReadSha256": "c27620951b2c5ddfca0ebf0782f44e8bade2c0e7d42f5acdfc46a18da3569f24",
+      "pinBeforeAnyNavigation": true,
+      "pinBeforeSelectedBody": true
+    }
+  ]
+}

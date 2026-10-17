@@ -1,0 +1,89 @@
+{
+  "capturedUTC": "2026-10-17T17:18:04.559475+00:00",
+  "classification": {
+    "formal": 0,
+    "candidate": 0,
+    "related": 0
+  },
+  "decision": "Exclude target before current product body read: explicit same-SHA original Markdown full-source claim paired with original canonical source manifest. No new specific independent problem supplied or established.",
+  "target": "packages/desktop/src/renderer/messages/time.ts",
+  "currentSha256": "aa7268c80a57df06eed92c7b0439e5d0eefed9c7410e6df6553ab160a82a5435",
+  "canonicalSourcePointer": {
+    "document": "docs/audit-2026-10-17-round13/evidence/groups-source-manifest.json",
+    "documentSha256": "e1157450175c31e7725623a89ef0e707d88ec7763da362920226799db3d8f123",
+    "jsonPointer": "/files/11",
+    "sha256": "aa7268c80a57df06eed92c7b0439e5d0eefed9c7410e6df6553ab160a82a5435"
+  },
+  "originalMarkdownQualifier": {
+    "document": "docs/audit-2026-10-17-round13/groups.md",
+    "bytes": 7742,
+    "sha256": "f476375c2755ae844859fdc3b047bc271cf33b11cf4b5f60c9afb98208d8922d",
+    "selectedLineRanges": [
+      [
+        5,
+        9
+      ],
+      [
+        34,
+        36
+      ],
+      [
+        43,
+        43
+      ]
+    ],
+    "actualReadLines": [
+      {
+        "line": 5,
+        "text": "## 范围与证据等级"
+      },
+      {
+        "line": 6,
+        "text": ""
+      },
+      {
+        "line": 7,
+        "text": "阅读 `packages/desktop/src/renderer/messages/streamGroups.ts` 的核心分组/时间/签名路径，完整阅读 `agentGroup.ts`、`fileChangeAggregator.ts`、`time.ts` 及其三份现有基线、时间测试；选择性阅读 `turnTiming.test.ts`、`MessageStream.tsx:416` 的实际折叠管线、`types.ts:1224` 工具消息 producer、`:1335` 结果终态 producer、`:1897` 文件摘要消费，以及 `FilesChangedCard.tsx:30` 的摘要卡合同。另静态核对 Coding `tools/apply-patch/parser.ts` / `types.ts` / `index.ts:25` 中本地 V4A 合同。大消费者文件只核对指定相关片段，没有声称通读或端到端验收。"
+      },
+      {
+        "line": 8,
+        "text": ""
+      },
+      {
+        "line": 9,
+        "text": "只执行了一份现有纯逻辑基线：真实 `aggregateFileChangeSummary` / `countLines` / `summarizeAgentGroup` / `foldAgentGroups`，以及已有测试调用的 `parseUnifiedDiff`。33 tests / 66 expect / 0 fail / 0 skip，guarded runner 完整 Completed。`streamGroups` / `time` / `turnTiming` 没有动态验证；没有运行 React、Electron、DOM、原生工具、真实补丁、Git 产品调用、模型、网络或用户数据。"
+      },
+      {
+        "line": 34,
+        "text": "- `agentGroup.ts` 的成功/失败/运行数、并行 wallMs、单 agent 保持、相邻与嵌套折叠在既有基线中通过。普通 agent_start/agent_end 对 done 和时间的生产写入仅静态核对。没有从畸形手工对象推出“正常子代理失败被计成功”等结论。"
+      },
+      {
+        "line": 35,
+        "text": "- `streamGroups.ts` 的透明 thinking、硬边界、bookkeeping 尾锚点、steer、生命周期 timing 和不可变消息 identity reconciliation 只做源码/既有测试阅读。多 thinking lookahead 的性能可能性缺少本轮普通 producer 与动态证据，不新增项；没有假称全分组路径通过。"
+      },
+      {
+        "line": 36,
+        "text": "- `time.ts:86` 的固定 24 小时算昨天与 `:66` 的固定毫秒回推周一在夏令时日历下需要进一步核对；本轮没有设置实际时区、验证相邻 DST 日或运行时间/i18n 入口，不登记正式/候选，也不把旧 recorder midnight 失败路线恢复为新证据。未来跨日时间归类与超出 Date 可表示范围同样缺少正常 producer 合同，未新增项。"
+      },
+      {
+        "line": 43,
+        "text": "[验证清单](evidence/groups-validation.json) 与 [冻结源码清单](evidence/groups-source-manifest.json) 分开记录：1 clean 首跑 shard（33 tests、66 expect）+ 1 failed 首跑 shard（加载阶段 0 pass、1 fail、1 error），0 重跑。只有 clean shard 计入成功测试总数。[artifact 收据](evidence/groups-artifact-receipt.json) 仅校验自有文件字节，不是产品测试；没有安装外部依赖。"
+      }
+    ]
+  },
+  "oldFullSourceProofActivatedForTargetOnly": true,
+  "testFullSourceProofSeparatelyActivated": false,
+  "runtimeCoverageImplied": false,
+  "priorDated87JSONOnlyScopeChanged": false,
+  "globalCoverageCountsUpdated": false,
+  "scopeWarnings": [
+    "R13 selected-source/pin disclaimer limits behavior/runtime claims; original Markdown explicitly states full source reading for time.ts.",
+    "Old fixed24-hour/DST and out-of-range Date topics atline36 were not classified or run in R13. They are not new findings here; old recorder-midnight failure direction remains closed.",
+    "R13 old33-test result and failed shard remain historical metadata, not any current96 test execution.",
+    "Old test-log artifactSHA is not a sourceSHA.",
+    "No current producer/consumer source body read or current consumer correctness conclusion."
+  ],
+  "currentProductBodyLines": 0,
+  "currentTestDeclarationLines": 0,
+  "currentProductHelperOrClockRuns": 0
+}

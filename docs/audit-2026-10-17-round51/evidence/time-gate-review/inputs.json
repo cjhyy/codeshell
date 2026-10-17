@@ -1,0 +1,135 @@
+{
+  "packetDirectory": "/tmp/codeshell-audit-round96-message-time",
+  "packetPins": [
+    {
+      "path": "/tmp/codeshell-audit-round96-message-time/artifact-receipt.json",
+      "bytes": 3331,
+      "sha256": "8d474bd446d486cab7559a3306097f4300ef5cb1a911f33c839c0774e859ccb5",
+      "pinnedBeforeSemanticMetadataReadUTC": "2026-10-17T17:20:51.977436+00:00"
+    },
+    {
+      "path": "/tmp/codeshell-audit-round96-message-time/canonical-gate-read.json",
+      "bytes": 8297,
+      "sha256": "607dcd3cf7333c47abde4acad33c99d35658ea990e653ba671d4e61f00198f88",
+      "pinnedBeforeSemanticMetadataReadUTC": "2026-10-17T17:20:51.979666+00:00"
+    },
+    {
+      "path": "/tmp/codeshell-audit-round96-message-time/checks.json",
+      "bytes": 775,
+      "sha256": "044cf346cec5a78173387c6da9c1f47bc2abe9370b6d334d642f269622a05f46",
+      "pinnedBeforeSemanticMetadataReadUTC": "2026-10-17T17:20:51.980450+00:00"
+    },
+    {
+      "path": "/tmp/codeshell-audit-round96-message-time/consumer-initial-pins.json",
+      "bytes": 770,
+      "sha256": "690c67fe0cba81b151d0f8679cb81ae4dd469caa4dd4b2eada53564b5cb255e1",
+      "pinnedBeforeSemanticMetadataReadUTC": "2026-10-17T17:20:51.981485+00:00"
+    },
+    {
+      "path": "/tmp/codeshell-audit-round96-message-time/ending-checks.json",
+      "bytes": 2172,
+      "sha256": "7724e183946bf82518d94a868f9e21e3f252180e40d72e035ad58c145654a863",
+      "pinnedBeforeSemanticMetadataReadUTC": "2026-10-17T17:20:51.982126+00:00"
+    },
+    {
+      "path": "/tmp/codeshell-audit-round96-message-time/finalize-metadata.py",
+      "bytes": 11459,
+      "sha256": "dbe6275a6294984825969b75074d85e760ff7dd582364569562326fa08f09d12",
+      "pinnedBeforeSemanticMetadataReadUTC": "2026-10-17T17:20:51.982778+00:00"
+    },
+    {
+      "path": "/tmp/codeshell-audit-round96-message-time/history-command.json",
+      "bytes": 207,
+      "sha256": "897f43ac11a61892c76a9cdaa7aa3d3e42e9f15720970b99e59f1c4ccebd523e",
+      "pinnedBeforeSemanticMetadataReadUTC": "2026-10-17T17:20:51.983410+00:00"
+    },
+    {
+      "path": "/tmp/codeshell-audit-round96-message-time/history-contexts.json",
+      "bytes": 110808,
+      "sha256": "36a7faad44efd3c5af826beeab862c565a6c3b1ec80e98068e9ceb026053e076",
+      "pinnedBeforeSemanticMetadataReadUTC": "2026-10-17T17:20:51.984272+00:00"
+    },
+    {
+      "path": "/tmp/codeshell-audit-round96-message-time/history-initial-inventory.json",
+      "bytes": 982323,
+      "sha256": "99f6ad7440a5c8d5d239fd042b259c68195279a3b77f23a59ad4cad601073768",
+      "pinnedBeforeSemanticMetadataReadUTC": "2026-10-17T17:20:51.985772+00:00"
+    },
+    {
+      "path": "/tmp/codeshell-audit-round96-message-time/history-source-rows.json",
+      "bytes": 44541,
+      "sha256": "6eac811ee4be657bc31c042c2d726ec4cccebf5232e353d26af0c402154593b2",
+      "pinnedBeforeSemanticMetadataReadUTC": "2026-10-17T17:20:51.986616+00:00"
+    },
+    {
+      "path": "/tmp/codeshell-audit-round96-message-time/history-summary.json",
+      "bytes": 805,
+      "sha256": "d9c08ea547606b545c4c5dd241970d04b746ed1915bd647b326426d3fc331181",
+      "pinnedBeforeSemanticMetadataReadUTC": "2026-10-17T17:20:51.987201+00:00"
+    },
+    {
+      "path": "/tmp/codeshell-audit-round96-message-time/initial-pins.json",
+      "bytes": 1375,
+      "sha256": "f4744de0224783f7112ec6daba4149c102086ee9b7886108bb871ee03a328d0f",
+      "pinnedBeforeSemanticMetadataReadUTC": "2026-10-17T17:20:51.988095+00:00"
+    },
+    {
+      "path": "/tmp/codeshell-audit-round96-message-time/report.md",
+      "bytes": 4399,
+      "sha256": "af93ea7a3d782c541a2bbf3d3fbb01220b0aa231745951d339b867783fd35ae1",
+      "pinnedBeforeSemanticMetadataReadUTC": "2026-10-17T17:20:51.988795+00:00"
+    },
+    {
+      "path": "/tmp/codeshell-audit-round96-message-time/scan-history.py",
+      "bytes": 5040,
+      "sha256": "61333b88cfcd58add62ab29cec4153535386cee249c4145dbd041bdd2a50a59b",
+      "pinnedBeforeSemanticMetadataReadUTC": "2026-10-17T17:20:51.989407+00:00"
+    },
+    {
+      "path": "/tmp/codeshell-audit-round96-message-time/scope-decision.json",
+      "bytes": 5228,
+      "sha256": "ce7fb8719eca96b67a7007d60df5d22f8abbf1966967e6206348838749ed6962",
+      "pinnedBeforeSemanticMetadataReadUTC": "2026-10-17T17:20:51.990082+00:00"
+    },
+    {
+      "path": "/tmp/codeshell-audit-round96-message-time/source-manifest.json",
+      "bytes": 6614,
+      "sha256": "db31a674354ce888e01caa09a1dbef81e3207b5f883650353b02d0408c11e5ce",
+      "pinnedBeforeSemanticMetadataReadUTC": "2026-10-17T17:20:51.990448+00:00"
+    },
+    {
+      "path": "/tmp/codeshell-audit-round96-message-time/validation.json",
+      "bytes": 1622,
+      "sha256": "e6cb6b13157d72cb4f65c0db169224c009efbcbeaebed5a005fa10e95adeb60f",
+      "pinnedBeforeSemanticMetadataReadUTC": "2026-10-17T17:20:51.990756+00:00"
+    }
+  ],
+  "canonicalPins": [
+    {
+      "path": "/Users/admin/.codex/worktrees/repo-audit-20261016/codeshell/docs/audit-2026-10-17-round13/groups.md",
+      "bytes": 7742,
+      "sha256": "f476375c2755ae844859fdc3b047bc271cf33b11cf4b5f60c9afb98208d8922d",
+      "pinnedBeforeSemanticMetadataReadUTC": "2026-10-17T17:20:52.009659+00:00"
+    },
+    {
+      "path": "/Users/admin/.codex/worktrees/repo-audit-20261016/codeshell/docs/audit-2026-10-17-round13/evidence/groups-source-manifest.json",
+      "bytes": 7253,
+      "sha256": "e1157450175c31e7725623a89ef0e707d88ec7763da362920226799db3d8f123",
+      "pinnedBeforeSemanticMetadataReadUTC": "2026-10-17T17:20:52.010090+00:00"
+    }
+  ],
+  "filenameInventory": {
+    "command": [
+      "rg",
+      "--files",
+      "docs/audit-2026-10-17-round13"
+    ],
+    "exitCode": 0,
+    "stderr": "",
+    "selectedNames": [
+      "docs/audit-2026-10-17-round13/groups.md",
+      "docs/audit-2026-10-17-round13/evidence/groups-source-manifest.json"
+    ]
+  },
+  "noProductSourceBodyRead": true
+}

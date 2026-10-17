@@ -1,0 +1,32 @@
+{
+  "pins": [
+    {
+      "path": "packages/desktop/src/renderer/ChatView.tsx",
+      "bytes": 106169,
+      "lines": 2622,
+      "sha256": "f9581b0772281f87120e94821e51d4b6d7335fb8cecd1ede98feddd8ff2f8ee7",
+      "pinnedBeforeBodyOrLineNavigationUTC": "2026-10-17T17:17:30.019898+00:00"
+    },
+    {
+      "path": "packages/desktop/src/renderer/types.ts",
+      "bytes": 93752,
+      "lines": 2479,
+      "sha256": "6d7b173656e7ebe22d5c9347b7097d2040793610135c1f797d76139aa6f69845",
+      "pinnedBeforeBodyOrLineNavigationUTC": "2026-10-17T17:17:30.021436+00:00"
+    },
+    {
+      "path": "packages/desktop/src/renderer/messages/TurnUsageMessageView.tsx",
+      "bytes": 2344,
+      "lines": 52,
+      "sha256": "4f941fcbec7d2f0c8e225df7e3e661da27acf6bb8b02cf2ee65f8640f563bb8b",
+      "pinnedBeforeBodyOrLineNavigationUTC": "2026-10-17T17:17:30.022103+00:00"
+    },
+    {
+      "path": "packages/desktop/src/renderer/App.tsx",
+      "bytes": 122863,
+      "lines": 2924,
+      "sha256": "02ae12bfccf26878226720ad90282a6a11a1fdc3e05efd1ce54a09d256d5d715",
+      "pinnedBeforeBodyOrLineNavigationUTC": "2026-10-17T17:17:30.023189+00:00"
+    }
+  ]
+}

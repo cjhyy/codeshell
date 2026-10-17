@@ -1,0 +1,109 @@
+{
+  "frozenUTC": "2026-10-17T17:21:26.543946+00:00",
+  "directory": "/tmp/codeshell-audit-round95-context-boundary",
+  "role": "Independent bounded ordinary source/data reviewer; self metadata freeze, not runtime verifier.",
+  "files": [
+    {
+      "path": "classification.json",
+      "bytes": 623,
+      "sha256": "a2f4d5eedd4ce44e6ed7fde5dd8f5fdda4d46d25371f6bb35c141850f5614780"
+    },
+    {
+      "path": "consumer-initial-pins.json",
+      "bytes": 1065,
+      "sha256": "d5a8a5841bedd21ce7e51cc966bf960d7b1669a5f259947c772a4f7e45fceb06"
+    },
+    {
+      "path": "coverage-gate-objects.json",
+      "bytes": 24979,
+      "sha256": "d803f7ef0e9991bf3dc4066e7a4dc54b3ad0277a7c6c9bc4c43d8f7b4b466879"
+    },
+    {
+      "path": "ending-checks.json",
+      "bytes": 3286,
+      "sha256": "2d4e33aefeefcaf22bee4cd384d1be9e24a1f4da26317b75fe31e3d934b83ac6"
+    },
+    {
+      "path": "first-diagnostic.json",
+      "bytes": 761,
+      "sha256": "a04ced1d9768fc4478f6d18f0bb6aff537dc90a3984f1fdbedcc451591829e71"
+    },
+    {
+      "path": "gate-decision.json",
+      "bytes": 670,
+      "sha256": "37017f32e2e67ae3df3efe86266079109376c52c9562726a90d32ef6c12531e5"
+    },
+    {
+      "path": "gate-summary.json",
+      "bytes": 9910,
+      "sha256": "c92f420dadb4e180c3253529dcbf033e52ae614c630fae2a9c8a37001db4a7eb"
+    },
+    {
+      "path": "history-contexts.json",
+      "bytes": 231461,
+      "sha256": "b3e5c815377c49f46f135311e7ff9254df93a5c820d11a65dc9d4d4ba71b9402"
+    },
+    {
+      "path": "history-method.py",
+      "bytes": 3873,
+      "sha256": "29587ab174e1d33e7724f843057117732dbd7a1f46ab817bc06c2d08671ddb78"
+    },
+    {
+      "path": "history.json",
+      "bytes": 1087863,
+      "sha256": "8d348f0bb60af90ec6345bb31175991d13089209fd406887310993e30f3a1d56"
+    },
+    {
+      "path": "initial-pins.json",
+      "bytes": 1011,
+      "sha256": "ca8e3f5c0812d13a9dd50a8163c0594b7823fb63110d62afb4dd8fe78cd325bf"
+    },
+    {
+      "path": "old-cause-selected.json",
+      "bytes": 8991,
+      "sha256": "5dbc8284a1b1f78e12f618c8aea48ab76e5a4c9ee8113bc770f4f49ecc8cd657"
+    },
+    {
+      "path": "report.md",
+      "bytes": 5931,
+      "sha256": "0320bbfa8d2c5f3b297cceba9356a6f6d81f12710c3332561d231e6303c77ee2"
+    },
+    {
+      "path": "source-excerpts.json",
+      "bytes": 31538,
+      "sha256": "5ec04031363636220a7a2d7f947bea0ad2e2346a2a3a18f909f100aebf73eab5"
+    },
+    {
+      "path": "source-manifest.json",
+      "bytes": 10818,
+      "sha256": "630c202f4da7a451d90dbb10e55c4b8fc1a356e59ffa5e8b51ab7af90bf11d6b"
+    },
+    {
+      "path": "test-initial-pin.json",
+      "bytes": 327,
+      "sha256": "d8d996abdc6ee457326d799833e99c908718eb65aa1d0cd5f0b9e090cc946aff"
+    },
+    {
+      "path": "transcript-producer-initial-pin.json",
+      "bytes": 316,
+      "sha256": "ceb4cd3962bb3ceec5e307961ce128f81906c7205f3c05bf1d37ee986c31d05a"
+    },
+    {
+      "path": "validation.json",
+      "bytes": 1301,
+      "sha256": "b8ec47ca9832153287c374b8bf8cbd6e50e9c7ea3f0012ff431f8638a6b1f6c9"
+    }
+  ],
+  "fileCountExcludingReceipt": 18,
+  "selfExcluded": true,
+  "reportMarkdownLinks": 18,
+  "allRelativeLinksExistIncludingReceiptByConstruction": true,
+  "sourceAndInstructionPins": 9,
+  "allInitialEndingPinsSame": true,
+  "historyMemberByteDrift": 0,
+  "newFormal": 0,
+  "newCandidate": 0,
+  "newRelated": 0,
+  "productExecutions": 0,
+  "ownGitOperations": 0
+}

@@ -1,0 +1,10 @@
+Traceback (most recent call last):
+  File "<stdin>", line 5, in <module>
+  File "/opt/homebrew/Cellar/python@3.14/3.14.5/Frameworks/Python.framework/Versions/3.14/lib/python3.14/pathlib/__init__.py", line 777, in read_bytes
+    with self.open(mode='rb', buffering=0) as f:
+         ~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/homebrew/Cellar/python@3.14/3.14.5/Frameworks/Python.framework/Versions/3.14/lib/python3.14/pathlib/__init__.py", line 771, in open
+    return io.open(self, mode, buffering, encoding, errors, newline)
+           ~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+FileNotFoundError: [Errno 2] No such file or directory: '/Users/admin/.codex/worktrees/repo-audit-20261016/codeshell/packages/desktop/src/renderer/components/chat/ChatView.tsx'
+rg: packages/desktop/src/renderer/components/chat/ChatView.tsx: IO error for operation on packages/desktop/src/renderer/components/chat/ChatView.tsx: No such file or directory (os error 2)

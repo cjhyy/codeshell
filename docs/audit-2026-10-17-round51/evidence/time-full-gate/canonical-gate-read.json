@@ -1,0 +1,189 @@
+{
+  "rows": [
+    {
+      "document": "docs/audit-2026-10-17-round13/evidence/groups-source-manifest.json",
+      "documentSha256": "e1157450175c31e7725623a89ef0e707d88ec7763da362920226799db3d8f123",
+      "pointer": "/files/11",
+      "row": {
+        "path": "packages/desktop/src/renderer/messages/time.ts",
+        "frozenSha256": "aa7268c80a57df06eed92c7b0439e5d0eefed9c7410e6df6553ab160a82a5435",
+        "sha256": "aa7268c80a57df06eed92c7b0439e5d0eefed9c7410e6df6553ab160a82a5435",
+        "frozenBytes": 3874,
+        "currentEqualsFrozen": true
+      },
+      "ancestorQualifiers": [
+        {
+          "scope": "Inspected selected source and baseline runtime inputs. Pins do not imply full-file behavioural coverage; source-only versus executed scope is in groups.md."
+        }
+      ]
+    },
+    {
+      "document": "docs/audit-2026-10-17-round13/evidence/groups-source-manifest.json",
+      "documentSha256": "e1157450175c31e7725623a89ef0e707d88ec7763da362920226799db3d8f123",
+      "pointer": "/files/12",
+      "row": {
+        "path": "packages/desktop/src/renderer/messages/time.test.ts",
+        "frozenSha256": "cbe5812d2ce49fad4a01303f2a0d2f33e182a661d06f93cd8334a06007298c41",
+        "sha256": "cbe5812d2ce49fad4a01303f2a0d2f33e182a661d06f93cd8334a06007298c41",
+        "frozenBytes": 2342,
+        "currentEqualsFrozen": true
+      },
+      "ancestorQualifiers": [
+        {
+          "scope": "Inspected selected source and baseline runtime inputs. Pins do not imply full-file behavioural coverage; source-only versus executed scope is in groups.md."
+        }
+      ]
+    },
+    {
+      "document": "docs/audit-2026-10-17-round13/source-manifest.json",
+      "documentSha256": "5d8162f50e27b504164e10a321d1bceaf7c31ef2ba8008554b2619281fb80762",
+      "pointer": "/files/40",
+      "row": {
+        "path": "packages/desktop/src/renderer/messages/time.test.ts",
+        "bytes": 2342,
+        "sha256": "cbe5812d2ce49fad4a01303f2a0d2f33e182a661d06f93cd8334a06007298c41",
+        "frozenBlobVerified": true,
+        "currentWorkingTreeMatchesFrozenBlob": true
+      },
+      "ancestorQualifiers": [
+        {
+          "note": "Selected source pins and current equality; not full-file/transitive/full repository review coverage."
+        }
+      ]
+    },
+    {
+      "document": "docs/audit-2026-10-17-round13/source-manifest.json",
+      "documentSha256": "5d8162f50e27b504164e10a321d1bceaf7c31ef2ba8008554b2619281fb80762",
+      "pointer": "/files/41",
+      "row": {
+        "path": "packages/desktop/src/renderer/messages/time.ts",
+        "bytes": 3874,
+        "sha256": "aa7268c80a57df06eed92c7b0439e5d0eefed9c7410e6df6553ab160a82a5435",
+        "frozenBlobVerified": true,
+        "currentWorkingTreeMatchesFrozenBlob": true
+      },
+      "ancestorQualifiers": [
+        {
+          "note": "Selected source pins and current equality; not full-file/transitive/full repository review coverage."
+        }
+      ]
+    },
+    {
+      "document": "docs/audit-2026-10-17-round13/source-manifest.json",
+      "documentSha256": "5d8162f50e27b504164e10a321d1bceaf7c31ef2ba8008554b2619281fb80762",
+      "pointer": "/workerSourceChecks/29",
+      "row": {
+        "manifest": "groups-source-manifest.json",
+        "path": "packages/desktop/src/renderer/messages/time.ts",
+        "sha256": "aa7268c80a57df06eed92c7b0439e5d0eefed9c7410e6df6553ab160a82a5435"
+      },
+      "ancestorQualifiers": [
+        {
+          "note": "Selected source pins and current equality; not full-file/transitive/full repository review coverage."
+        }
+      ]
+    },
+    {
+      "document": "docs/audit-2026-10-17-round13/source-manifest.json",
+      "documentSha256": "5d8162f50e27b504164e10a321d1bceaf7c31ef2ba8008554b2619281fb80762",
+      "pointer": "/workerSourceChecks/30",
+      "row": {
+        "manifest": "groups-source-manifest.json",
+        "path": "packages/desktop/src/renderer/messages/time.test.ts",
+        "sha256": "cbe5812d2ce49fad4a01303f2a0d2f33e182a661d06f93cd8334a06007298c41"
+      },
+      "ancestorQualifiers": [
+        {
+          "note": "Selected source pins and current equality; not full-file/transitive/full repository review coverage."
+        }
+      ]
+    },
+    {
+      "document": "docs/audit-2026-10-17-round50/evidence/frontier-selection/source-manifest.json",
+      "documentSha256": "5343e12c9a27ab2fd6f616dc13ed3a6e0c8589fe4ae570fc21c892fc0c1303f9",
+      "pointer": "/files/20",
+      "row": {
+        "path": "packages/desktop/src/renderer/messages/time.ts",
+        "bytes": 3874,
+        "sha256": "aa7268c80a57df06eed92c7b0439e5d0eefed9c7410e6df6553ab160a82a5435",
+        "lines": 107,
+        "pinnedUTC": "2026-10-17T16:48:11.093926+00:00",
+        "coverage": "hash-only",
+        "selectedLineRanges": [],
+        "displayedLineRanges": [],
+        "semanticLineCount": 0,
+        "displayedLineCount": 0,
+        "initialPinIsSemanticReadProof": false,
+        "endingSha256": "aa7268c80a57df06eed92c7b0439e5d0eefed9c7410e6df6553ab160a82a5435"
+      },
+      "ancestorQualifiers": [
+        {
+          "globalSemanticCoverageUpdate": false
+        }
+      ]
+    },
+    {
+      "document": "docs/audit-2026-10-17-round50/source-manifest.json",
+      "documentSha256": "62ee29069f3994a9c24c4a4d22c99dded52da412235c938a8306bc166dc94fdb",
+      "pointer": "/files/51",
+      "row": {
+        "path": "packages/desktop/src/renderer/messages/time.ts",
+        "bytes": 3874,
+        "sha256": "aa7268c80a57df06eed92c7b0439e5d0eefed9c7410e6df6553ab160a82a5435",
+        "currentBytes": 3874,
+        "currentSha256": "aa7268c80a57df06eed92c7b0439e5d0eefed9c7410e6df6553ab160a82a5435",
+        "mainBytes": 3874,
+        "mainSha256": "aa7268c80a57df06eed92c7b0439e5d0eefed9c7410e6df6553ab160a82a5435",
+        "currentWorkingTreeMatchesFrozenBlob": true,
+        "mainMatchesFrozenBlob": true
+      },
+      "ancestorQualifiers": [
+        {
+          "note": "Original full/selected/navigation/hash distinctions and timing retained. Discovery-only hash pins do not become semantic coverage through current Git binding. No product execution or source reread added."
+        }
+      ]
+    },
+    {
+      "document": "docs/audit-2026-10-17-round50/source-manifest.json",
+      "documentSha256": "62ee29069f3994a9c24c4a4d22c99dded52da412235c938a8306bc166dc94fdb",
+      "pointer": "/hashOnlyChecks/24",
+      "row": {
+        "manifest": "frontier-selection/source-manifest.json",
+        "collection": "files",
+        "path": "packages/desktop/src/renderer/messages/time.ts",
+        "sha256": "aa7268c80a57df06eed92c7b0439e5d0eefed9c7410e6df6553ab160a82a5435",
+        "coverage": "hash-only",
+        "note": "Original timing/ranges/null and same-read limitations retained; formalization adds no repeated semantic read."
+      },
+      "ancestorQualifiers": [
+        {
+          "note": "Original full/selected/navigation/hash distinctions and timing retained. Discovery-only hash pins do not become semantic coverage through current Git binding. No product execution or source reread added."
+        }
+      ]
+    },
+    {
+      "document": "docs/review-2026-10-12/validation/original-baseline-evidence-round28/manifest.json",
+      "documentSha256": "16f4dac9f9f13073662fcc299b72efd7add8ff28ab8868f3b9cb7d1a7c45d763",
+      "pointer": "/logs/271",
+      "row": {
+        "group": "desktop-renderer",
+        "file": "packages/desktop/src/renderer/messages/time.test.ts",
+        "originalLog": "/tmp/codeshell-review-20261012/desktop-baseline/130-time.test.ts.log",
+        "tarMember": "desktop-renderer/130-time.test.ts.log",
+        "bytes": 814,
+        "sha256": "472594929fa23c0763953d3c3a529aa7248afb9629d92bee65c8c949ecd244cc",
+        "tests": 8,
+        "skipped": 0,
+        "code": 0,
+        "signal": null,
+        "completed": true
+      },
+      "ancestorQualifiers": []
+    }
+  ],
+  "decision": "Exclude target before current product body read: explicit same-SHA original Markdown full-source claim paired with original canonical source manifest. No new specific independent problem supplied or established.",
+  "sameShaOriginalMarkdownQualifiedTargetFullActivated": true,
+  "sourceHashOnlyManifestDoesNotOverrideOriginalMarkdown": true,
+  "originalSourceMetadataRowsRead": 9,
+  "oldLogArtifactLocatorRowsRead": 1
+}

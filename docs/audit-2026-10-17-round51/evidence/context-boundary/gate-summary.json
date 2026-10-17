@@ -1,0 +1,335 @@
+{
+  "rows": [
+    {
+      "index": 0,
+      "document": "docs/audit-2026-10-17-round28/evidence/coverage-prep/package-inventory.json",
+      "pointer": "/files/2773",
+      "qualifiers": {},
+      "ranges": {}
+    },
+    {
+      "index": 1,
+      "document": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+      "pointer": "/claims/11072",
+      "qualifiers": {
+        "coverageKind": "incidental-path-or-pin-object"
+      },
+      "ranges": {}
+    },
+    {
+      "index": 2,
+      "document": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+      "pointer": "/claims/11073",
+      "qualifiers": {
+        "coverageKind": "incidental-path-or-pin-object"
+      },
+      "ranges": {}
+    },
+    {
+      "index": 3,
+      "document": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+      "pointer": "/claims/11073/sourceHashFields",
+      "qualifiers": {},
+      "ranges": {}
+    },
+    {
+      "index": 4,
+      "document": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-index.json",
+      "pointer": "/files/3093",
+      "qualifiers": {
+        "status": "historical-object-no-current-explicit-semantic-coverage"
+      },
+      "ranges": {}
+    },
+    {
+      "index": 5,
+      "document": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/package-inventory.json",
+      "pointer": "/files/3093",
+      "qualifiers": {},
+      "ranges": {}
+    },
+    {
+      "index": 6,
+      "document": "docs/audit-2026-10-17-round44/evidence/coverage-status/current-inventory.json",
+      "pointer": "/files/3094",
+      "qualifiers": {},
+      "ranges": {}
+    },
+    {
+      "index": 7,
+      "document": "docs/audit-2026-10-17-round50/evidence/frontier-selection/candidate-initial-pins.json",
+      "pointer": "/files/16",
+      "qualifiers": {
+        "coverage": "hash-only; no source body displayed or semantically read"
+      },
+      "ranges": {}
+    },
+    {
+      "index": 8,
+      "document": "docs/audit-2026-10-17-round50/evidence/frontier-selection/candidate-initial-pins.json",
+      "pointer": "/files/16/oldInventoryRow",
+      "qualifiers": {},
+      "ranges": {}
+    },
+    {
+      "index": 9,
+      "document": "docs/audit-2026-10-17-round50/evidence/frontier-selection/candidates.json",
+      "pointer": "/files/4",
+      "qualifiers": {
+        "status": "semantic-scope-not-confirmed"
+      },
+      "ranges": {}
+    },
+    {
+      "index": 10,
+      "document": "docs/audit-2026-10-17-round50/evidence/frontier-selection/ending-checks.json",
+      "pointer": "/products/16",
+      "qualifiers": {},
+      "ranges": {}
+    },
+    {
+      "index": 11,
+      "document": "docs/audit-2026-10-17-round50/evidence/frontier-selection/history-claims.json",
+      "pointer": "/claims/48",
+      "qualifiers": {},
+      "ranges": {}
+    },
+    {
+      "index": 12,
+      "document": "docs/audit-2026-10-17-round50/evidence/frontier-selection/history-claims.json",
+      "pointer": "/claims/48/hashFields",
+      "qualifiers": {},
+      "ranges": {}
+    },
+    {
+      "index": 13,
+      "document": "docs/audit-2026-10-17-round50/evidence/frontier-selection/history-claims.json",
+      "pointer": "/claims/176",
+      "qualifiers": {},
+      "ranges": {}
+    },
+    {
+      "index": 14,
+      "document": "docs/audit-2026-10-17-round50/evidence/frontier-selection/history-claims.json",
+      "pointer": "/claims/177",
+      "qualifiers": {},
+      "ranges": {}
+    },
+    {
+      "index": 15,
+      "document": "docs/audit-2026-10-17-round50/evidence/frontier-selection/history-claims.json",
+      "pointer": "/claims/254",
+      "qualifiers": {},
+      "ranges": {}
+    },
+    {
+      "index": 16,
+      "document": "docs/audit-2026-10-17-round50/evidence/frontier-selection/history-claims.json",
+      "pointer": "/claims/254/hashFields",
+      "qualifiers": {},
+      "ranges": {}
+    },
+    {
+      "index": 17,
+      "document": "docs/audit-2026-10-17-round50/evidence/frontier-selection/history-claims.json",
+      "pointer": "/claims/284",
+      "qualifiers": {},
+      "ranges": {}
+    },
+    {
+      "index": 18,
+      "document": "docs/audit-2026-10-17-round50/evidence/frontier-selection/history-claims.json",
+      "pointer": "/claims/284/hashFields",
+      "qualifiers": {},
+      "ranges": {}
+    },
+    {
+      "index": 19,
+      "document": "docs/audit-2026-10-17-round50/evidence/frontier-selection/history-claims.json",
+      "pointer": "/claims/314",
+      "qualifiers": {},
+      "ranges": {}
+    },
+    {
+      "index": 20,
+      "document": "docs/audit-2026-10-17-round50/evidence/frontier-selection/history-claims.json",
+      "pointer": "/claims/314/hashFields",
+      "qualifiers": {},
+      "ranges": {}
+    },
+    {
+      "index": 21,
+      "document": "docs/audit-2026-10-17-round50/evidence/frontier-selection/history-locators.json",
+      "pointer": "/locators/32",
+      "qualifiers": {},
+      "ranges": {}
+    },
+    {
+      "index": 22,
+      "document": "docs/audit-2026-10-17-round50/evidence/frontier-selection/history-locators.json",
+      "pointer": "/locators/34",
+      "qualifiers": {},
+      "ranges": {}
+    },
+    {
+      "index": 23,
+      "document": "docs/audit-2026-10-17-round50/evidence/frontier-selection/history-locators.json",
+      "pointer": "/locators/36",
+      "qualifiers": {},
+      "ranges": {}
+    },
+    {
+      "index": 24,
+      "document": "docs/audit-2026-10-17-round50/evidence/frontier-selection/history-locators.json",
+      "pointer": "/locators/54",
+      "qualifiers": {},
+      "ranges": {}
+    },
+    {
+      "index": 25,
+      "document": "docs/audit-2026-10-17-round50/evidence/frontier-selection/history-locators.json",
+      "pointer": "/locators/158",
+      "qualifiers": {},
+      "ranges": {}
+    },
+    {
+      "index": 26,
+      "document": "docs/audit-2026-10-17-round50/evidence/frontier-selection/history-locators.json",
+      "pointer": "/locators/159",
+      "qualifiers": {},
+      "ranges": {}
+    },
+    {
+      "index": 27,
+      "document": "docs/audit-2026-10-17-round50/evidence/frontier-selection/history-locators.json",
+      "pointer": "/locators/444",
+      "qualifiers": {},
+      "ranges": {}
+    },
+    {
+      "index": 28,
+      "document": "docs/audit-2026-10-17-round50/evidence/frontier-selection/history-locators.json",
+      "pointer": "/locators/445",
+      "qualifiers": {},
+      "ranges": {}
+    },
+    {
+      "index": 29,
+      "document": "docs/audit-2026-10-17-round50/evidence/frontier-selection/history-locators.json",
+      "pointer": "/locators/446",
+      "qualifiers": {},
+      "ranges": {}
+    },
+    {
+      "index": 30,
+      "document": "docs/audit-2026-10-17-round50/evidence/frontier-selection/history-locators.json",
+      "pointer": "/locators/447",
+      "qualifiers": {},
+      "ranges": {}
+    },
+    {
+      "index": 31,
+      "document": "docs/audit-2026-10-17-round50/evidence/frontier-selection/history-locators.json",
+      "pointer": "/locators/448",
+      "qualifiers": {},
+      "ranges": {}
+    },
+    {
+      "index": 32,
+      "document": "docs/audit-2026-10-17-round50/evidence/frontier-selection/history-locators.json",
+      "pointer": "/locators/653",
+      "qualifiers": {},
+      "ranges": {}
+    },
+    {
+      "index": 33,
+      "document": "docs/audit-2026-10-17-round50/evidence/frontier-selection/history-locators.json",
+      "pointer": "/locators/654",
+      "qualifiers": {},
+      "ranges": {}
+    },
+    {
+      "index": 34,
+      "document": "docs/audit-2026-10-17-round50/evidence/frontier-selection/history-locators.json",
+      "pointer": "/locators/713",
+      "qualifiers": {},
+      "ranges": {}
+    },
+    {
+      "index": 35,
+      "document": "docs/audit-2026-10-17-round50/evidence/frontier-selection/history-locators.json",
+      "pointer": "/locators/714",
+      "qualifiers": {},
+      "ranges": {}
+    },
+    {
+      "index": 36,
+      "document": "docs/audit-2026-10-17-round50/evidence/frontier-selection/history-locators.json",
+      "pointer": "/locators/758",
+      "qualifiers": {},
+      "ranges": {}
+    },
+    {
+      "index": 37,
+      "document": "docs/audit-2026-10-17-round50/evidence/frontier-selection/history-locators.json",
+      "pointer": "/locators/803",
+      "qualifiers": {},
+      "ranges": {}
+    },
+    {
+      "index": 38,
+      "document": "docs/audit-2026-10-17-round50/evidence/frontier-selection/history-locators.json",
+      "pointer": "/locators/804",
+      "qualifiers": {},
+      "ranges": {}
+    },
+    {
+      "index": 39,
+      "document": "docs/audit-2026-10-17-round50/evidence/frontier-selection/history-locators.json",
+      "pointer": "/locators/959",
+      "qualifiers": {},
+      "ranges": {}
+    },
+    {
+      "index": 40,
+      "document": "docs/audit-2026-10-17-round50/evidence/frontier-selection/source-manifest.json",
+      "pointer": "/files/16",
+      "qualifiers": {
+        "coverage": "hash-only"
+      },
+      "ranges": {
+        "selectedLineRanges": [],
+        "displayedLineRanges": []
+      }
+    },
+    {
+      "index": 41,
+      "document": "docs/audit-2026-10-17-round50/evidence/packet-review/checks.json",
+      "pointer": "/packets/3/manifestRangeChecks/16",
+      "qualifiers": {
+        "coverage": "hash-only"
+      },
+      "ranges": {
+        "selectedLineRanges": [],
+        "displayedLineRanges": []
+      }
+    },
+    {
+      "index": 42,
+      "document": "docs/audit-2026-10-17-round50/source-manifest.json",
+      "pointer": "/files/45",
+      "qualifiers": {},
+      "ranges": {}
+    },
+    {
+      "index": 43,
+      "document": "docs/audit-2026-10-17-round50/source-manifest.json",
+      "pointer": "/hashOnlyChecks/20",
+      "qualifiers": {
+        "coverage": "hash-only"
+      },
+      "ranges": {}
+    }
+  ],
+  "scope": "Compact first view; canonical raw qualifying rows must be read before full adjudication."
+}

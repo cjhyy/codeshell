@@ -1,0 +1,45 @@
+{
+  "beforeTargetBody": "completed before5e7d97 target body display",
+  "currentTargetSha256": "b28fbfc2e74fdb645cc5b2cb935eb0fb6a5e1f896b6150a121a75294013baa3d",
+  "sameShaCanonicalFullEstablished": false,
+  "bodyDecision": "Proceed with bounded ordinary UI data selected scope; no first-ever/unread claim.",
+  "canonicalObjectsActuallyRead": 6,
+  "metadataProjectionsActuallyRead": 12,
+  "locatorRowsInspected": 122,
+  "oldCauseBoundedMarkdownWindowsActuallyRead": 7,
+  "sourceScopeFieldsChecked": [
+    "coverage",
+    "scope",
+    "review",
+    "readScope",
+    "inspectionScope",
+    "reviewMode",
+    "purpose",
+    "selectedLineRanges",
+    "ancestor limitations"
+  ],
+  "canonicalInterpretations": [
+    {
+      "document": "docs/archive/review-2026-05-30/findings.json",
+      "pointer": "/264",
+      "decision": "Old redundant type assertion simplify record; no source SHA/full coverage or ordinary new runtime bug; not recounted."
+    },
+    {
+      "document": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-index.json",
+      "pointer": "/files/2851",
+      "decision": "Derived inventory/status with3incidental objects, not evidence of unread/full."
+    },
+    {
+      "document": "docs/audit-2026-10-17-round50/evidence/frontier-selection/source-manifest.json",
+      "pointer": "/files/4",
+      "decision": "SameSHA explicit hash-only, source body0 and selected[]."
+    },
+    {
+      "document": "docs/audit-2026-10-17-round50/source-manifest.json",
+      "pointer": "/files/28 + /hashOnlyChecks/8",
+      "decision": "Git binding metadata plus explicitly hash-only; not new semantic read."
+    }
+  ],
+  "oldCauseLimits": "Archived baseline/cache usage plans are known family context, not proof of an unresolved current defect or current full; no new finding and no family-wide exclusion. Other retained JSON/MD windows not exhausted.",
+  "failedDirections": "All historical failed dynamic directions remain SKIP; no product/runtime attempted."
+}

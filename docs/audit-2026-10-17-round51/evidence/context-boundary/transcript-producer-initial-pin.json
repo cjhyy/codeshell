@@ -1,0 +1,12 @@
+{
+  "capturedUTC": "2026-10-17T17:17:23.546073+00:00",
+  "files": [
+    {
+      "path": "packages/desktop/src/renderer/transcripts.ts",
+      "bytes": 43637,
+      "lines": 1146,
+      "sha256": "7a6ad6f03a9e7135851eca6f7e67e45b073a739920d0523b17ffa33cd2e63bc8",
+      "beforeBodyOrLineNavigation": true
+    }
+  ]
+}

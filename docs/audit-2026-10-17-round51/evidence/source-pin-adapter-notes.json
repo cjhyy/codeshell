@@ -1,0 +1,20 @@
+{
+  "missingDeclaredByteCounts": [],
+  "nonReadingGateAssertions": [],
+  "unboundNavigationReferences": [
+    {
+      "manifest": "context-ring/source-manifest.json",
+      "collection": "filenameOnlyUnopened",
+      "row": "packages/desktop/src/renderer/types.test.ts",
+      "note": "Original filename/navigation reference only; no new hash/source binding or semantic reading inferred."
+    },
+    {
+      "manifest": "context-ring/source-manifest.json",
+      "collection": "filenameOnlyUnopened",
+      "row": "packages/desktop/src/renderer/chat/anchored-popovers.browser.fixture.mjs",
+      "note": "Original filename/navigation reference only; no new hash/source binding or semantic reading inferred."
+    }
+  ],
+  "scope": "Only explicit frozen source/instruction/nav/hash pins bound; filename-only references stay unbound, missing bytes derived separately from baseline Git, never fabricated into original rows.",
+  "productRuns": 0
+}

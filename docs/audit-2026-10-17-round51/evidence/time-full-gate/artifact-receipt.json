@@ -1,0 +1,104 @@
+{
+  "frozenUTC": "2026-10-17T17:19:53.848229+00:00",
+  "root": "/tmp/codeshell-audit-round96-message-time",
+  "kind": "Author receipt for body-before exclusion packet; metadata/oldscope reading only",
+  "classification": {
+    "formal": 0,
+    "candidate": 0,
+    "related": 0
+  },
+  "oldFullSourceExclusions": 1,
+  "files": [
+    {
+      "path": "canonical-gate-read.json",
+      "bytes": 8297,
+      "sha256": "607dcd3cf7333c47abde4acad33c99d35658ea990e653ba671d4e61f00198f88"
+    },
+    {
+      "path": "checks.json",
+      "bytes": 775,
+      "sha256": "044cf346cec5a78173387c6da9c1f47bc2abe9370b6d334d642f269622a05f46"
+    },
+    {
+      "path": "consumer-initial-pins.json",
+      "bytes": 770,
+      "sha256": "690c67fe0cba81b151d0f8679cb81ae4dd469caa4dd4b2eada53564b5cb255e1"
+    },
+    {
+      "path": "ending-checks.json",
+      "bytes": 2172,
+      "sha256": "7724e183946bf82518d94a868f9e21e3f252180e40d72e035ad58c145654a863"
+    },
+    {
+      "path": "finalize-metadata.py",
+      "bytes": 11459,
+      "sha256": "dbe6275a6294984825969b75074d85e760ff7dd582364569562326fa08f09d12"
+    },
+    {
+      "path": "history-command.json",
+      "bytes": 207,
+      "sha256": "897f43ac11a61892c76a9cdaa7aa3d3e42e9f15720970b99e59f1c4ccebd523e"
+    },
+    {
+      "path": "history-contexts.json",
+      "bytes": 110808,
+      "sha256": "36a7faad44efd3c5af826beeab862c565a6c3b1ec80e98068e9ceb026053e076"
+    },
+    {
+      "path": "history-initial-inventory.json",
+      "bytes": 982323,
+      "sha256": "99f6ad7440a5c8d5d239fd042b259c68195279a3b77f23a59ad4cad601073768"
+    },
+    {
+      "path": "history-source-rows.json",
+      "bytes": 44541,
+      "sha256": "6eac811ee4be657bc31c042c2d726ec4cccebf5232e353d26af0c402154593b2"
+    },
+    {
+      "path": "history-summary.json",
+      "bytes": 805,
+      "sha256": "d9c08ea547606b545c4c5dd241970d04b746ed1915bd647b326426d3fc331181"
+    },
+    {
+      "path": "initial-pins.json",
+      "bytes": 1375,
+      "sha256": "f4744de0224783f7112ec6daba4149c102086ee9b7886108bb871ee03a328d0f"
+    },
+    {
+      "path": "report.md",
+      "bytes": 4399,
+      "sha256": "af93ea7a3d782c541a2bbf3d3fbb01220b0aa231745951d339b867783fd35ae1"
+    },
+    {
+      "path": "scan-history.py",
+      "bytes": 5040,
+      "sha256": "61333b88cfcd58add62ab29cec4153535386cee249c4145dbd041bdd2a50a59b"
+    },
+    {
+      "path": "scope-decision.json",
+      "bytes": 5228,
+      "sha256": "ce7fb8719eca96b67a7007d60df5d22f8abbf1966967e6206348838749ed6962"
+    },
+    {
+      "path": "source-manifest.json",
+      "bytes": 6614,
+      "sha256": "db31a674354ce888e01caa09a1dbef81e3207b5f883650353b02d0408c11e5ce"
+    },
+    {
+      "path": "validation.json",
+      "bytes": 1622,
+      "sha256": "e6cb6b13157d72cb4f65c0db169224c009efbcbeaebed5a005fa10e95adeb60f"
+    }
+  ],
+  "fileCountExcludingSelf": 16,
+  "selfExcluded": true,
+  "currentProductBodyLines": 0,
+  "currentTestDeclarationLines": 0,
+  "currentProductHelperClockOrTestRuns": 0,
+  "GitOperations": 0,
+  "metadataCommandFailures": 0,
+  "metadataTruncations": 0,
+  "oldFrozenPacketsChanged": false,
+  "globalCoverageCountsUpdated": false,
+  "authorDisclosure": "This author wrote prep87/formal50 JSON-only selection; current96 originalR13 Markdown evidence is now read and used for this target-only exclusion, with old frozen87 unchanged."
+}

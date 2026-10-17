@@ -1,0 +1,32 @@
+{
+  "checkedUTC": "2026-10-17T17:19:16.961296+00:00",
+  "currentPins": 6,
+  "currentSemanticOrDeclarationLines": 0,
+  "sourceHashOnlyRows": 4,
+  "instructionHashOnlyRows": 2,
+  "allSourceAndInstructionPinsSame": true,
+  "history": {
+    "initialFiles": 4895,
+    "sourceEndingChanged": 0,
+    "addedIncluded": 0,
+    "removedIncluded": 0,
+    "sameIncludedPathSet": true
+  },
+  "classification": {
+    "formal": 0,
+    "candidate": 0,
+    "related": 0
+  },
+  "oldFullSourceExclusions": 1,
+  "bodyReadBeforeGate": false,
+  "bodyReadAfterExclusion": false,
+  "runtimeRuns": 0,
+  "GitOperations": 0,
+  "metadataCommandFailures": 0,
+  "metadataTruncations": 0,
+  "globalCountsUpdated": false,
+  "localReportLinks": {
+    "count": 12,
+    "allValidWhenReceiptCreated": true
+  }
+}

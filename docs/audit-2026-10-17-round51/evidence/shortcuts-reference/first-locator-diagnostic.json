@@ -1,0 +1,23 @@
+{
+  "toolChunk": "c931c3",
+  "outerExitCode": 0,
+  "nestedPythonExitCode": null,
+  "nestedMissingPathRgExitCode": null,
+  "nestedExitCodesSeparatelyCaptured": false,
+  "failure": "Python FileNotFoundError for guessed renderer/components/chat/ChatView.tsx; rg emitted IO error for same nonexistent path. Last shell rg-l succeeded so outer exit0 is not success of all preceding operations.",
+  "cause": "Guessed path without filename inventory; Python batch had computed App row but failed before writing consumer pin receipt. Subsequent shell rg proceeded despite failed pin stage.",
+  "appFirstNavigationReadSha256": null,
+  "appFirstComputedUnpersistedHashClaimedAsBeforePin": false,
+  "navigationPrintedAfterFailedPin": [
+    "App391,1389,1414,2097,2216,2868,2896",
+    "SettingsPage62,365,390,446,835",
+    "AdvancedSections281"
+  ],
+  "scope": "Metadata path/pin failure only; no product/helper/test/import/UI execution",
+  "productRerun": false,
+  "frozenPacketModified": false,
+  "correction": "Inventory canonical path, persist App late navigation pin honestly and selected-body-before pin; pin actual ChatView before content. No retry of any dynamic failure direction.",
+  "stderrFileIsTranscription": true,
+  "exactOriginalToolOutputLocation": "c931c3",
+  "canonicalLocatedPath": "packages/desktop/src/renderer/ChatView.tsx"
+}

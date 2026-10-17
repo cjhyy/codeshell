@@ -1,0 +1,180 @@
+{
+  "root": "/Users/admin/.codex/worktrees/repo-audit-20261016/codeshell",
+  "rootContextCommitExternal": "424ef9c8953eaaa295d24d63c49127aa8b3ea79e",
+  "GitVerifiedByThisAuthor": false,
+  "files": [
+    {
+      "path": "packages/desktop/src/renderer/messages/time.ts",
+      "bytes": 3874,
+      "sha256": "aa7268c80a57df06eed92c7b0439e5d0eefed9c7410e6df6553ab160a82a5435",
+      "lines": 107,
+      "pinnedUTC": "2026-10-17T17:16:03.808363+00:00",
+      "timing": "Before current96 body/contentlocator review",
+      "endingSha256": "aa7268c80a57df06eed92c7b0439e5d0eefed9c7410e6df6553ab160a82a5435",
+      "coverage": "hash-only",
+      "selectedLineRanges": [],
+      "bodyDisplayedLineRanges": [],
+      "additionalNavigationSnippetLines": [],
+      "displayedLineRanges": [],
+      "semanticLineCount": 0,
+      "displayedLineCount": 0,
+      "firstEverReadClaim": false,
+      "sourceKind": "product-hash-only",
+      "scope": "Excluded target before current body by original same-SHA full-source proof."
+    },
+    {
+      "path": "packages/desktop/src/renderer/messages/time.test.ts",
+      "bytes": 2342,
+      "sha256": "cbe5812d2ce49fad4a01303f2a0d2f33e182a661d06f93cd8334a06007298c41",
+      "lines": 64,
+      "pinnedUTC": "2026-10-17T17:16:03.809022+00:00",
+      "timing": "Before current96 body/contentlocator review",
+      "endingSha256": "cbe5812d2ce49fad4a01303f2a0d2f33e182a661d06f93cd8334a06007298c41",
+      "coverage": "hash-only",
+      "selectedLineRanges": [],
+      "bodyDisplayedLineRanges": [],
+      "additionalNavigationSnippetLines": [],
+      "displayedLineRanges": [],
+      "semanticLineCount": 0,
+      "displayedLineCount": 0,
+      "firstEverReadClaim": false,
+      "sourceKind": "test-hash-only",
+      "scope": "Unused current read-before pin; no source/test declaration/consumer body followed after target exclusion."
+    },
+    {
+      "path": "packages/desktop/src/renderer/MessageStream.tsx",
+      "bytes": 37921,
+      "sha256": "f74d19bddcdc48c0de2e63921ba598d733e2f1c3d58f68e7c8c0b32046ddbd4c",
+      "lines": 928,
+      "pinnedUTC": "2026-10-17T17:16:45.010473+00:00",
+      "timing": "Before current96 contentlocator/selected read; filename-only import inventory already seen",
+      "endingSha256": "f74d19bddcdc48c0de2e63921ba598d733e2f1c3d58f68e7c8c0b32046ddbd4c",
+      "coverage": "hash-only",
+      "selectedLineRanges": [],
+      "bodyDisplayedLineRanges": [],
+      "additionalNavigationSnippetLines": [],
+      "displayedLineRanges": [],
+      "semanticLineCount": 0,
+      "displayedLineCount": 0,
+      "firstEverReadClaim": false,
+      "sourceKind": "product-hash-only",
+      "scope": "Unused current read-before pin; no source/test declaration/consumer body followed after target exclusion."
+    },
+    {
+      "path": "packages/desktop/src/renderer/messages/AssistantMessageView.tsx",
+      "bytes": 3880,
+      "sha256": "b08bd86c993873f10902024d091628d99a0d60a42dce74a3938fa2287f8bfe86",
+      "lines": 98,
+      "pinnedUTC": "2026-10-17T17:16:45.012384+00:00",
+      "timing": "Before current96 contentlocator/selected read; filename-only import inventory already seen",
+      "endingSha256": "b08bd86c993873f10902024d091628d99a0d60a42dce74a3938fa2287f8bfe86",
+      "coverage": "hash-only",
+      "selectedLineRanges": [],
+      "bodyDisplayedLineRanges": [],
+      "additionalNavigationSnippetLines": [],
+      "displayedLineRanges": [],
+      "semanticLineCount": 0,
+      "displayedLineCount": 0,
+      "firstEverReadClaim": false,
+      "sourceKind": "product-hash-only",
+      "scope": "Unused current read-before pin; no source/test declaration/consumer body followed after target exclusion."
+    }
+  ],
+  "instructionFiles": [
+    {
+      "path": "CODESHELL.md",
+      "bytes": 17639,
+      "sha256": "56d9ffdd81b6f6f615ed7a7392ddfa60ec4338c0ccb88eef20c4b73ad8dad5a2",
+      "lines": 217,
+      "pinnedUTC": "2026-10-17T17:16:03.806854+00:00",
+      "timing": "Before current96 body/contentlocator review",
+      "endingSha256": "56d9ffdd81b6f6f615ed7a7392ddfa60ec4338c0ccb88eef20c4b73ad8dad5a2",
+      "coverage": "hash-only",
+      "selectedLineRanges": [],
+      "bodyDisplayedLineRanges": [],
+      "additionalNavigationSnippetLines": [],
+      "displayedLineRanges": [],
+      "semanticLineCount": 0,
+      "displayedLineCount": 0,
+      "firstEverReadClaim": false,
+      "scope": "Current instruction bytes checked only; CODESHELL was read in prior90 and current hash matches. No new instruction body reading."
+    },
+    {
+      "path": "AGENTS.md",
+      "bytes": 206,
+      "sha256": "2980647020f0ae72522f7f717ffa89f4c5ec7fb1efe48066e881b864cd428917",
+      "lines": 5,
+      "pinnedUTC": "2026-10-17T17:16:03.807970+00:00",
+      "timing": "Before current96 body/contentlocator review",
+      "endingSha256": "2980647020f0ae72522f7f717ffa89f4c5ec7fb1efe48066e881b864cd428917",
+      "coverage": "hash-only",
+      "selectedLineRanges": [],
+      "bodyDisplayedLineRanges": [],
+      "additionalNavigationSnippetLines": [],
+      "displayedLineRanges": [],
+      "semanticLineCount": 0,
+      "displayedLineCount": 0,
+      "firstEverReadClaim": false,
+      "scope": "Current instruction bytes checked only; CODESHELL was read in prior90 and current hash matches. No new instruction body reading."
+    }
+  ],
+  "totals": {
+    "currentSourceAndInstructionPins": 6,
+    "productHashOnlyFiles": 3,
+    "testHashOnlyFiles": 1,
+    "instructionHashOnlyFiles": 2,
+    "currentProductSemanticLines": 0,
+    "currentTestDeclarationLines": 0,
+    "currentProductNavigationLines": 0,
+    "currentProductBodyDisplayLines": 0,
+    "currentInstructionBodyReadLines": 0
+  },
+  "historicalGateRead": {
+    "manifestHintOriginalRowsRead": 10,
+    "sourceCoverageRows": 9,
+    "oldTestLogArtifactLocatorRows": 1,
+    "uniqueOriginalMetadataDocuments": 5,
+    "originalR13MarkdownSelectedRanges": [
+      [
+        5,
+        9
+      ],
+      [
+        34,
+        36
+      ],
+      [
+        43,
+        43
+      ]
+    ],
+    "originalR13MarkdownAdditionalNavigationSnippetLines": [
+      18
+    ],
+    "originalR13MarkdownCanonicalDisplayedRanges": [
+      [
+        5,
+        9
+      ],
+      [
+        18,
+        18
+      ],
+      [
+        34,
+        36
+      ],
+      [
+        43,
+        43
+      ]
+    ],
+    "originalR13MarkdownDisplayedLineCount": 10,
+    "basenameMarkdownBoundedExcerptsRead": 2,
+    "broadOldCause24MachineExcerptsClaimedRead": false
+  },
+  "targetOldFullSourceExclusionOnly": true,
+  "globalCoverageUpdated": false,
+  "runtimeCoverageInferredFromOldFullSource": false,
+  "sourceHashNotSemanticRead": true
+}

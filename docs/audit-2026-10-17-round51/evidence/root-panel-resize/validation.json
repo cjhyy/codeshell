@@ -1,0 +1,15 @@
+{
+  "formal": 0,
+  "candidate": 0,
+  "newRelated": 0,
+  "productRuns": 0,
+  "helperRuns": 0,
+  "testRuns": 0,
+  "fixtureRuns": 0,
+  "reactDomRuns": 0,
+  "clockTimerRuns": 0,
+  "modelRuns": 0,
+  "nativeRuns": 0,
+  "networkRuns": 0,
+  "gitMutationsWithinPrep": 0
+}

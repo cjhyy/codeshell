@@ -1,0 +1,87 @@
+{
+  "checkedUTC": "2026-10-17T17:26:49.856386+00:00",
+  "sources": [
+    {
+      "path": "CODESHELL.md",
+      "bytes": 17639,
+      "sha256": "56d9ffdd81b6f6f615ed7a7392ddfa60ec4338c0ccb88eef20c4b73ad8dad5a2",
+      "sameAsFirstPersistedPin": true,
+      "checkedUTC": "2026-10-17T17:26:48.059952+00:00"
+    },
+    {
+      "path": "AGENTS.md",
+      "bytes": 206,
+      "sha256": "2980647020f0ae72522f7f717ffa89f4c5ec7fb1efe48066e881b864cd428917",
+      "sameAsFirstPersistedPin": true,
+      "checkedUTC": "2026-10-17T17:26:48.061429+00:00"
+    },
+    {
+      "path": "packages/desktop/src/renderer/settings/ShortcutsSection.tsx",
+      "bytes": 4521,
+      "sha256": "ee9161604475561743cab550fe144c9f0bd8fa045fe18d1ef8664d5c851dc1a4",
+      "sameAsFirstPersistedPin": true,
+      "checkedUTC": "2026-10-17T17:26:48.062399+00:00"
+    },
+    {
+      "path": "packages/desktop/src/renderer/settings/ShortcutsSection.test.tsx",
+      "bytes": 2721,
+      "sha256": "ba16076628e88e408a0b7dfcb9566b597e12949c20b89ecfcd421029f918db02",
+      "sameAsFirstPersistedPin": true,
+      "checkedUTC": "2026-10-17T17:26:48.062967+00:00"
+    },
+    {
+      "path": "packages/desktop/src/renderer/settings/AdvancedSections.tsx",
+      "bytes": 75319,
+      "sha256": "3a18e0123775066a6ba3178934ed1bac9e1bc9f48d74dee3842ec422204fa014",
+      "sameAsFirstPersistedPin": true,
+      "checkedUTC": "2026-10-17T17:26:48.064117+00:00"
+    },
+    {
+      "path": "packages/desktop/src/renderer/settings/SettingsPage.tsx",
+      "bytes": 35851,
+      "sha256": "1ac7c97703cf3aa43063b35b13581b20efcb3f87abbad972272e1bc3fc396376",
+      "sameAsFirstPersistedPin": true,
+      "checkedUTC": "2026-10-17T17:26:48.065011+00:00"
+    },
+    {
+      "path": "packages/desktop/src/renderer/App.tsx",
+      "bytes": 122863,
+      "sha256": "02ae12bfccf26878226720ad90282a6a11a1fdc3e05efd1ce54a09d256d5d715",
+      "sameAsFirstPersistedPin": true,
+      "checkedUTC": "2026-10-17T17:26:48.066041+00:00"
+    },
+    {
+      "path": "packages/desktop/src/renderer/ChatView.tsx",
+      "bytes": 106169,
+      "sha256": "f9581b0772281f87120e94821e51d4b6d7335fb8cecd1ede98feddd8ff2f8ee7",
+      "sameAsFirstPersistedPin": true,
+      "checkedUTC": "2026-10-17T17:26:48.066580+00:00"
+    },
+    {
+      "path": "packages/desktop/src/renderer/i18n/ns/settings.ts",
+      "bytes": 132800,
+      "sha256": "c27620951b2c5ddfca0ebf0782f44e8bade2c0e7d42f5acdfc46a18da3569f24",
+      "sameAsFirstPersistedPin": true,
+      "checkedUTC": "2026-10-17T17:26:48.067255+00:00"
+    }
+  ],
+  "allPinsEqualFirstPersisted": true,
+  "appBeforeFirstNavigationPinStillNull": true,
+  "history": {
+    "initialCount": 4895,
+    "endingIncludedCount": 4895,
+    "sameIncludedPathSet": true,
+    "changed": [],
+    "missing": [],
+    "addedIncludedPaths": [],
+    "removedIncludedPaths": [],
+    "excludedAudit51PlusPaths": [
+      "docs/audit-2026-10-17-round51/README.md",
+      "docs/audit-2026-10-17-round51/evidence/continuation-audit.json",
+      "docs/audit-2026-10-17-round51/evidence/integration-before.json",
+      "docs/audit-2026-10-17-round51/evidence/integration-plan.json",
+      "docs/audit-2026-10-17-round51/evidence/worktrees-before.json"
+    ],
+    "initialInventoryPreserved": true
+  }
+}

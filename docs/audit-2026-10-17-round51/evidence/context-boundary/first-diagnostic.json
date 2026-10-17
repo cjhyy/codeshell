@@ -1,0 +1,10 @@
+{
+  "toolChunk": "5d5ced",
+  "exitCode": 1,
+  "kind": "Own optional metadata line-number reader SyntaxError",
+  "stderr": "File \"<stdin>\", line 7\n    if (p.endswith('transcripts.ts')and 40<=i<=86 or p.endswith('types.ts')and149<=i<=168)and any(l.startswith(n)for n in needles):print(i,l)\nSyntaxError: invalid syntax. Perhaps you forgot a comma?",
+  "timing": "After sed successfully displayed existing compactFeedback.test.ts31–51; Python failed to parse before any of its navigation reads. No test/product function executed.",
+  "originalToolOutputPreservedInTranscript": true,
+  "fullRawStdoutFileCaptured": false,
+  "disposition": "Optional metadata display not rerun; continue with already displayed source ranges. Original pins/history unchanged."
+}

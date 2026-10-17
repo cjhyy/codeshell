@@ -1,0 +1,36 @@
+{
+  "files": [],
+  "hashOnlySourceRows": [
+    {
+      "path": "packages/desktop/src/renderer/messages/time.ts",
+      "bytes": 3874,
+      "sha256": "aa7268c80a57df06eed92c7b0439e5d0eefed9c7410e6df6553ab160a82a5435",
+      "lines": 107,
+      "checkedUTC": "2026-10-17T17:21:08.891035+00:00",
+      "coverage": "hash-only",
+      "semanticLines": 0,
+      "displayedLineRanges": [],
+      "matchesCanonicalSha256": true,
+      "matchesCanonicalBytes": false,
+      "canonicalRow": 11
+    },
+    {
+      "path": "packages/desktop/src/renderer/messages/time.test.ts",
+      "bytes": 2342,
+      "sha256": "cbe5812d2ce49fad4a01303f2a0d2f33e182a661d06f93cd8334a06007298c41",
+      "lines": 64,
+      "checkedUTC": "2026-10-17T17:21:08.892161+00:00",
+      "coverage": "hash-only",
+      "semanticLines": 0,
+      "displayedLineRanges": [],
+      "matchesCanonicalSha256": true,
+      "matchesCanonicalBytes": false,
+      "canonicalRow": 12
+    }
+  ],
+  "newProductSemanticLines": 0,
+  "productSourceBodiesRead": 0,
+  "testDeclarationsRead": 0,
+  "Git": 0,
+  "scope": "Metadata gate review only; product time/test bytes read for SHA/length/linecount without text decoding or display. No source semantic reading."
+}

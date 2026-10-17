@@ -1,0 +1,120 @@
+{
+  "captures": [
+    {
+      "path": "packages/desktop/src/renderer/settings/ShortcutsSection.tsx",
+      "sha256": "ee9161604475561743cab550fe144c9f0bd8fa045fe18d1ef8664d5c851dc1a4",
+      "ranges": [
+        [
+          1,
+          110
+        ]
+      ],
+      "text": "1: import React from \"react\";\n2: import { Keyboard } from \"lucide-react\";\n3: import { useT } from \"../i18n/I18nProvider\";\n4: \n5: interface Shortcut {\n6:   label: string;\n7:   keys: string[];\n8:   hint?: string;\n9: }\n10: \n11: export function ShortcutsSection({ isMac = false }: { isMac?: boolean }) {\n12:   const { t } = useT();\n13:   const id = React.useId();\n14:   const mod = isMac ? \"⌘\" : \"Ctrl\";\n15:   // App.tsx owns Mod+K/P/F/B/1–9. The native new-window accelerator\n16:   // lives in main/menu.ts, whose menu is installed only on macOS.\n17:   const navigation: Shortcut[] = [\n18:     { label: t(\"settingsX.adv.scCommandPalette\"), keys: [mod, \"K\"] },\n19:     { label: t(\"settingsX.adv.scSearchAll\"), keys: [mod, \"P\"] },\n20:     { label: t(\"settingsX.adv.scToggleSidebar\"), keys: [mod, \"B\"] },\n21:     { label: t(\"settingsX.adv.scJumpSession\"), keys: [mod, \"1–9\"] },\n22:     ...(isMac ? [{ label: t(\"settingsX.adv.scNewWindow\"), keys: [mod, \"Shift\", \"N\"] }] : []),\n23:   ];\n24:   // Composer history is entered only from an empty input; once browsing,\n25:   // Down returns toward the draft. Do not present these as app-global keys.\n26:   const conversation: Shortcut[] = [\n27:     { label: t(\"settingsX.adv.scSearchConv\"), keys: [mod, \"F\"] },\n28:     { label: t(\"settingsX.adv.scSend\"), keys: [\"Enter\"] },\n29:     { label: t(\"settingsX.adv.scNewline\"), keys: [\"Shift\", \"Enter\"] },\n30:     {\n31:       label: t(\"settingsX.adv.scPreviousInput\"),\n32:       keys: [\"↑\"],\n33:       hint: t(\"settingsX.adv.scPreviousInputHint\"),\n34:     },\n35:     {\n36:       label: t(\"settingsX.adv.scNextInput\"),\n37:       keys: [\"↓\"],\n38:       hint: t(\"settingsX.adv.scNextInputHint\"),\n39:     },\n40:   ];\n41:   const groups = [\n42:     { id: `${id}-navigation`, title: t(\"settingsX.adv.scNavigationGroup\"), rows: navigation },\n43:     { id: `${id}-conversation`, title: t(\"settingsX.adv.scConversationGroup\"), rows: conversation },\n44:   ];\n45: \n46:   return (\n47:     <section aria-label={t(\"settingsX.adv.shortcutsTitle\")} className=\"flex min-w-0 flex-col gap-5\">\n48:       <p className=\"text-sm leading-6 text-muted-foreground\">\n49:         {t(\"settingsX.adv.scDescription\", { modifier: isMac ? \"⌘\" : \"Ctrl\" })}\n50:       </p>\n51:       {groups.map((group) => (\n52:         <section\n53:           key={group.id}\n54:           aria-labelledby={group.id}\n55:           className=\"min-w-0 overflow-hidden rounded-xl border border-border/70 bg-card\"\n56:         >\n57:           <h2\n58:             id={group.id}\n59:             className=\"flex items-center gap-2 border-b border-border/60 bg-muted/25 px-4 py-3 text-sm font-semibold\"\n60:           >\n61:             <Keyboard size={15} className=\"shrink-0 text-primary\" aria-hidden=\"true\" />\n62:             {group.title}\n63:           </h2>\n64:           <dl className=\"divide-y divide-border/60\">\n65:             {group.rows.map((shortcut) => (\n66:               <div\n67:                 key={shortcut.label}\n68:                 className=\"grid min-w-0 grid-cols-[minmax(0,1fr)_auto] items-center gap-3 px-4 py-3\"\n69:               >\n70:                 <dt className=\"min-w-0 text-sm leading-5 [overflow-wrap:anywhere]\">\n71:                   {shortcut.label}\n72:                   {shortcut.hint ? (\n73:                     <span className=\"mt-1 block text-xs leading-5 text-muted-foreground\">\n74:                       {shortcut.hint}\n75:                     </span>\n76:                   ) : null}\n77:                 </dt>\n78:                 <dd className=\"flex flex-wrap items-center justify-end gap-1\">\n79:                   {shortcut.keys.map((key, index) => (\n80:                     <React.Fragment key={`${key}-${index}`}>\n81:                       {index > 0 ? (\n82:                         <span className=\"text-[10px] text-muted-foreground\" aria-hidden=\"true\">\n83:                           +\n84:                         </span>\n85:                       ) : null}\n86:                       <kbd\n87:                         aria-label={\n88:                           key === \"⌘\"\n89:                             ? \"Command\"\n90:                             : key === \"↑\"\n91:                               ? t(\"settingsX.adv.scArrowUp\")\n92:                               : key === \"↓\"\n93:                                 ? t(\"settingsX.adv.scArrowDown\")\n94:                                 : undefined\n95:                         }\n96:                         className=\"inline-flex min-h-7 min-w-7 items-center justify-center whitespace-nowrap rounded-md border border-border bg-background px-2 font-mono text-[11px] font-medium text-foreground shadow-sm\"\n97:                       >\n98:                         {key}\n99:                       </kbd>\n100:                     </React.Fragment>\n101:                   ))}\n102:                 </dd>\n103:               </div>\n104:             ))}\n105:           </dl>\n106:         </section>\n107:       ))}\n108:     </section>\n109:   );\n110: }",
+      "readUTC": "2026-10-17T17:21:39.577583+00:00"
+    },
+    {
+      "path": "packages/desktop/src/renderer/settings/ShortcutsSection.test.tsx",
+      "sha256": "ba16076628e88e408a0b7dfcb9566b597e12949c20b89ecfcd421029f918db02",
+      "ranges": [
+        [
+          1,
+          67
+        ]
+      ],
+      "text": "1: import { afterEach, beforeEach, describe, expect, test } from \"bun:test\";\n2: import React from \"react\";\n3: import { renderToStaticMarkup } from \"react-dom/server\";\n4: import { ShortcutsSection } from \"./ShortcutsSection\";\n5: import { ShortcutsSection as CompatibilityExport } from \"./AdvancedSections\";\n6: \n7: let storageBefore: PropertyDescriptor | undefined;\n8: beforeEach(() => {\n9:   storageBefore = Object.getOwnPropertyDescriptor(globalThis, \"localStorage\");\n10: });\n11: afterEach(() => {\n12:   if (storageBefore) Object.defineProperty(globalThis, \"localStorage\", storageBefore);\n13:   else Reflect.deleteProperty(globalThis, \"localStorage\");\n14: });\n15: \n16: describe(\"platform-aware keyboard shortcut reference\", () => {\n17:   test.each([\n18:     { lang: \"zh\", isMac: true },\n19:     { lang: \"zh\", isMac: false },\n20:     { lang: \"en\", isMac: true },\n21:     { lang: \"en\", isMac: false },\n22:   ])(\"renders accurate $lang shortcuts when isMac=$isMac\", ({ lang, isMac }) => {\n23:     Object.defineProperty(globalThis, \"localStorage\", {\n24:       configurable: true,\n25:       value: { getItem: () => lang },\n26:     });\n27:     const html = renderToStaticMarkup(<ShortcutsSection isMac={isMac} />);\n28:     const keys = Array.from(html.matchAll(/<kbd\\b[^>]*>(.*?)<\\/kbd>/g), (match) => match[1]);\n29:     const mod = isMac ? \"⌘\" : \"Ctrl\";\n30:     expect(keys).toEqual([\n31:       mod,\n32:       \"K\",\n33:       mod,\n34:       \"P\",\n35:       mod,\n36:       \"B\",\n37:       mod,\n38:       \"1–9\",\n39:       ...(isMac ? [mod, \"Shift\", \"N\"] : []),\n40:       mod,\n41:       \"F\",\n42:       \"Enter\",\n43:       \"Shift\",\n44:       \"Enter\",\n45:       \"↑\",\n46:       \"↓\",\n47:     ]);\n48:     expect(html).toContain(`aria-label=\"${lang === \"zh\" ? \"键盘快捷键\" : \"Keyboard shortcuts\"}\"`);\n49:     expect(html).toContain(lang === \"zh\" ? \"应用导航\" : \"App navigation\");\n50:     expect(html).toContain(lang === \"zh\" ? \"对话与输入\" : \"Conversation and input\");\n51:     expect(html).toContain(lang === \"zh\" ? \"输入区为空时开始回看历史\" : \"when the input is empty\");\n52:     expect(html).toContain(lang === \"zh\" ? \"较新的输入或原草稿\" : \"return to your draft\");\n53:     expect(html).toContain(`${mod} + F`);\n54:     expect(html).toContain(lang === \"zh\" ? \"搜索设置\" : \"searches settings\");\n55:     expect((html.match(/<dt\\b/g) ?? []).length).toBe(isMac ? 10 : 9);\n56:     expect(html.includes(lang === \"zh\" ? \"新窗口\" : \"New window\")).toBe(isMac);\n57:     // The removed inspector action and macOS-only native Add Project command\n58:     // are not presented as cross-platform shortcuts.\n59:     expect(keys).not.toContain(\"I\");\n60:     expect(keys).not.toContain(\"O\");\n61:     expect(html).toContain(`aria-label=\"${lang === \"zh\" ? \"向上方向键\" : \"Up arrow\"}\"`);\n62:   });\n63: \n64:   test(\"preserves the AdvancedSections export for existing callers\", () => {\n65:     expect(CompatibilityExport).toBe(ShortcutsSection);\n66:   });\n67: });",
+      "readUTC": "2026-10-17T17:21:39.577960+00:00"
+    },
+    {
+      "path": "packages/desktop/src/renderer/App.tsx",
+      "sha256": "02ae12bfccf26878226720ad90282a6a11a1fdc3e05efd1ce54a09d256d5d715",
+      "ranges": [
+        [
+          389,
+          396
+        ],
+        [
+          1383,
+          1436
+        ],
+        [
+          2852,
+          2871
+        ]
+      ],
+      "text": "389:   const compacting = compactingBuckets.has(activeBucket);\n390:   const platform = typeof window !== \"undefined\" ? window.codeshell?.platform : undefined;\n391:   const isMac =\n392:     platform === \"darwin\" ||\n393:     (!platform && typeof navigator !== \"undefined\" && /Mac/.test(navigator.platform));\n394:   const [composerDrafts, setComposerDrafts] = useState<ComposerDraftsMap>({});\n395:   const [quickChatSessions, setQuickChatSessions] = useState<Record<string, QuickChatSessionRef>>(\n396:     {},\n1383:   }, [activeEngineSessionId, openTrace]);\n1384: \n1385:   useEffect(() => {\n1386:     const handler = (e: KeyboardEvent): void => {\n1387:       if (view.viewMode === \"settings_page\" || view.viewMode === \"project_config\") return;\n1388: \n1389:       const mod = e.metaKey || e.ctrlKey;\n1390:       // Is the user typing into an editable field? Panel-switch hotkeys\n1391:       // (esp. ⌃` and ⌘⇧E, which produce/consume printable chars) must not\n1392:       // fire while typing, or they'd swallow keystrokes. The app-global\n1393:       // ⌘K/⌘P/⌘F palette/search keys deliberately still work from inputs.\n1394:       const t = e.target as HTMLElement | null;\n1395:       const _typing =\n1396:         !!t &&\n1397:         (t.tagName === \"INPUT\" ||\n1398:           t.tagName === \"TEXTAREA\" ||\n1399:           t.isContentEditable ||\n1400:           // xterm's helper textarea / the terminal viewport\n1401:           !!t.closest(\".xterm\"));\n1402:       if (mod && e.key.toLowerCase() === \"k\") {\n1403:         e.preventDefault();\n1404:         navigateFromSidebar(() => setPaletteOpen((o) => !o));\n1405:       } else if (mod && e.key.toLowerCase() === \"p\") {\n1406:         e.preventDefault();\n1407:         navigateFromSidebar(() => setSessionSearchOpen(true));\n1408:       } else if (mod && e.key.toLowerCase() === \"f\") {\n1409:         e.preventDefault();\n1410:         navigateFromSidebar(() => setSearchOpen(true));\n1411:       } else if (mod && e.key.toLowerCase() === \"b\") {\n1412:         e.preventDefault();\n1413:         toggleSidebar();\n1414:       } else if (mod && e.key >= \"1\" && e.key <= \"9\") {\n1415:         // Cmd+N — jump to Nth session under active repo.\n1416:         const n = parseInt(e.key, 10) - 1;\n1417:         const idx = visibleSessionIndices[projectBucketSegmentFor(activeProjectId)];\n1418:         const target = idx?.sessions[n];\n1419:         if (target) {\n1420:           e.preventDefault();\n1421:           navigateFromSidebar(() => {\n1422:             if (cloudSelected) cloudRuntime?.selectSession(target.id);\n1423:             else handleSelectSession(activeProjectId, target.id);\n1424:           });\n1425:         }\n1426:       } else if (e.key === \"Escape\") {\n1427:         if (paletteOpen) setPaletteOpen(false);\n1428:         if (searchOpen) setSearchOpen(false);\n1429:         if (sessionSearchOpen) setSessionSearchOpen(false);\n1430:       }\n1431:     };\n1432:     window.addEventListener(\"keydown\", handler);\n1433:     return () => window.removeEventListener(\"keydown\", handler);\n1434:   }, [\n1435:     paletteOpen,\n1436:     searchOpen,\n2852:           <React.Suspense fallback={<PageLoading label={t(\"ext.common.loading\")} />}>\n2853:             {view.viewMode === \"settings_page\" ? (\n2854:               <SettingsPage\n2855:                 key=\"settings-global\"\n2856:                 activeProjectPath={activeProject?.path ?? null}\n2857:                 initialModule={settingsInitialModule}\n2858:                 projects={projects}\n2859:                 sessionIndices={sessionIndices}\n2860:                 onRestoreArchivedSession={(projectId, sessionId) => {\n2861:                   const next = archiveSession(projectId, sessionId, false);\n2862:                   setSessionIndices((prev) => ({\n2863:                     ...prev,\n2864:                     [projectBucketSegmentFor(projectId)]: next,\n2865:                   }));\n2866:                 }}\n2867:                 onDeleteArchivedSession={handleDeleteSession}\n2868:                 isMac={isMac}\n2869:                 isFullscreen={isFullscreen}\n2870:                 onBack={() => setViewMode(\"chat\")}\n2871:                 onOpenDigitalHumans={() => setViewMode(\"digital_humans\")}",
+      "readUTC": "2026-10-17T17:23:42.825109+00:00"
+    },
+    {
+      "path": "packages/desktop/src/renderer/settings/SettingsPage.tsx",
+      "sha256": "1ac7c97703cf3aa43063b35b13581b20efcb3f87abbad972272e1bc3fc396376",
+      "ranges": [
+        [
+          359,
+          367
+        ],
+        [
+          830,
+          838
+        ]
+      ],
+      "text": "359:   /** Explicit destination for deep links into Settings. */\n360:   initialModule?: SettingsModuleId;\n361:   projects: TrackedProject[];\n362:   sessionIndices: Record<string, SessionIndex>;\n363:   onRestoreArchivedSession: (projectId: string | null, sessionId: string) => void;\n364:   onDeleteArchivedSession: (projectId: string | null, sessionId: string) => void;\n365:   isMac: boolean;\n366:   isFullscreen: boolean;\n367:   onBack: () => void;\n830:                   projectPath={scopeProjectPath ?? activeProjectPath}\n831:                   configurationTarget={digitalHumansConfigurationTarget}\n832:                   onOpenDigitalHumans={onOpenDigitalHumans}\n833:                 />\n834:               )}\n835:               {active === \"shortcuts\" && <ShortcutsSection isMac={isMac} />}\n836:               {active === \"capabilities\" && (\n837:                 <CapabilitiesOverviewSection\n838:                   scope={scope}",
+      "readUTC": "2026-10-17T17:23:42.827538+00:00"
+    },
+    {
+      "path": "packages/desktop/src/renderer/settings/AdvancedSections.tsx",
+      "sha256": "3a18e0123775066a6ba3178934ed1bac9e1bc9f48d74dee3842ec422204fa014",
+      "ranges": [
+        [
+          279,
+          281
+        ]
+      ],
+      "text": "279: }\n280: \n281: export { ShortcutsSection } from \"./ShortcutsSection\";",
+      "readUTC": "2026-10-17T17:23:42.828798+00:00"
+    },
+    {
+      "path": "packages/desktop/src/renderer/ChatView.tsx",
+      "sha256": "f9581b0772281f87120e94821e51d4b6d7335fb8cecd1ede98feddd8ff2f8ee7",
+      "ranges": [
+        [
+          1340,
+          1344
+        ],
+        [
+          1407,
+          1440
+        ]
+      ],
+      "text": "1340: \n1341:   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>): void => {\n1342:     if (isComposing || e.nativeEvent.isComposing) return;\n1343:     if (e.key === \"Backspace\" || e.key === \"Delete\") captureMentionEditSelection(e.currentTarget);\n1344: \n1407:     }\n1408: \n1409:     if (e.key === \"Enter\" && (e.metaKey || e.ctrlKey || !e.shiftKey)) {\n1410:       e.preventDefault();\n1411:       submit();\n1412:       return;\n1413:     }\n1414: \n1415:     const browsingHistory = historyCursor !== -1;\n1416:     const canEnterHistory =\n1417:       (e.key === \"ArrowUp\" || e.key === \"ArrowDown\") && (draft.length === 0 || browsingHistory);\n1418: \n1419:     if (!canEnterHistory) return;\n1420: \n1421:     if (e.key === \"ArrowUp\") {\n1422:       e.preventDefault();\n1423:       if (history.length === 0) return;\n1424:       if (!browsingHistory) liveDraftStash.current = draft;\n1425:       const next = Math.min(historyCursor + 1, history.length - 1);\n1426:       setHistoryCursor(next);\n1427:       setDraft(history[next]);\n1428:     } else if (e.key === \"ArrowDown\") {\n1429:       e.preventDefault();\n1430:       if (!browsingHistory) return;\n1431:       const next = historyCursor - 1;\n1432:       if (next < 0) {\n1433:         setHistoryCursor(-1);\n1434:         setDraft(liveDraftStash.current);\n1435:       } else {\n1436:         setHistoryCursor(next);\n1437:         setDraft(history[next]);\n1438:       }\n1439:     }\n1440:   };",
+      "readUTC": "2026-10-17T17:24:12.956607+00:00"
+    },
+    {
+      "path": "packages/desktop/src/renderer/i18n/ns/settings.ts",
+      "sha256": "c27620951b2c5ddfca0ebf0782f44e8bade2c0e7d42f5acdfc46a18da3569f24",
+      "ranges": [
+        [
+          940,
+          966
+        ],
+        [
+          2190,
+          2218
+        ]
+      ],
+      "text": "940:         instrFilesTitle: \"指令文件\",\n941:         instrFilesDesc: \"始终读取 CODESHELL.md。可选地兼容读取其他工具的指令文件。\",\n942:         compatClaude: \"兼容 Claude(CLAUDE.md)\",\n943:         compatCodex: \"兼容 Codex(AGENTS.md)\",\n944:         toggleSaveFailed: \"保存失败,已恢复\",\n945:         shortcutsTitle: \"键盘快捷键\",\n946:         scDescription: \"以下快捷键用于主界面和对话。在设置页，{modifier} + F 用于搜索设置。\",\n947:         scNavigationGroup: \"应用导航\",\n948:         scConversationGroup: \"对话与输入\",\n949:         scToggleSidebar: \"展开或收起侧栏\",\n950:         scJumpSession: \"切换到当前项目的第 1–9 个对话\",\n951:         scPreviousInput: \"回看上一条输入\",\n952:         scPreviousInputHint: \"输入区为空时开始回看历史。\",\n953:         scNextInput: \"查看下一条输入\",\n954:         scNextInputHint: \"回看历史时，向下返回较新的输入或原草稿。\",\n955:         scArrowUp: \"向上方向键\",\n956:         scArrowDown: \"向下方向键\",\n957:         scCommandPalette: \"打开命令面板\",\n958:         scSearchConv: \"搜索当前对话\",\n959:         scSearchAll: \"搜索全部对话\",\n960:         scNewWindow: \"新窗口\",\n961:         scSend: \"发送消息\",\n962:         scNewline: \"输入换行\",\n963:         hooksDesc: \"钩子分两层:全局钩子对所有项目生效,项目钩子只对该项目生效,两层会一起运行。\",\n964:         hookEvtPreTool: \"pre_tool_use（工具执行前）\",\n965:         hookEvtPostTool: \"post_tool_use（工具执行后）\",\n966:         hookEvtPrompt: \"user_prompt_submit（提交输入）\",\n2190:         instrFilesDesc:\n2191:           \"CODESHELL.md is always read. Optionally also read other tools' instruction files for compatibility.\",\n2192:         compatClaude: \"Claude compatibility (CLAUDE.md)\",\n2193:         compatCodex: \"Codex compatibility (AGENTS.md)\",\n2194:         toggleSaveFailed: \"Save failed, reverted\",\n2195:         shortcutsTitle: \"Keyboard shortcuts\",\n2196:         scDescription:\n2197:           \"Use these shortcuts in the main workspace and conversations. In settings, {modifier} + F searches settings.\",\n2198:         scNavigationGroup: \"App navigation\",\n2199:         scConversationGroup: \"Conversation and input\",\n2200:         scToggleSidebar: \"Show or hide the sidebar\",\n2201:         scJumpSession: \"Switch to conversation 1–9 in the current project\",\n2202:         scPreviousInput: \"Recall the previous input\",\n2203:         scPreviousInputHint: \"Start browsing history when the input is empty.\",\n2204:         scNextInput: \"Recall the next input\",\n2205:         scNextInputHint:\n2206:           \"While browsing history, move toward newer inputs or return to your draft.\",\n2207:         scArrowUp: \"Up arrow\",\n2208:         scArrowDown: \"Down arrow\",\n2209:         scCommandPalette: \"Open command palette\",\n2210:         scSearchConv: \"Search current conversation\",\n2211:         scSearchAll: \"Search all sessions\",\n2212:         scNewWindow: \"New window\",\n2213:         scSend: \"Send message\",\n2214:         scNewline: \"Insert newline\",\n2215:         hooksDesc:\n2216:           \"Hooks have two layers: global hooks apply to all projects, project hooks only to that project; both layers run together.\",\n2217:         hookEvtPreTool: \"pre_tool_use (before tool runs)\",\n2218:         hookEvtPostTool: \"post_tool_use (after tool runs)\",",
+      "readUTC": "2026-10-17T17:24:12.958122+00:00"
+    },
+    {
+      "path": "packages/desktop/src/renderer/settings/SettingsPage.tsx",
+      "sha256": "1ac7c97703cf3aa43063b35b13581b20efcb3f87abbad972272e1bc3fc396376",
+      "ranges": [
+        [
+          505,
+          523
+        ]
+      ],
+      "text": "505:   }, [scopeState, activeModule, active, MODULES]);\n506: \n507:   useEffect(() => {\n508:     const focusSearch = (event: KeyboardEvent) => {\n509:       if ((event.metaKey || event.ctrlKey) && event.key.toLocaleLowerCase() === \"f\") {\n510:         // Both responsive layouts stay mounted. Use their actual visibility so\n511:         // resizing never directs the shortcut into the hidden desktop sidebar.\n512:         const input = [searchRef.current, narrowSearchRef.current].find(\n513:           (candidate) => candidate && candidate.getClientRects().length > 0,\n514:         );\n515:         if (!input) return;\n516:         event.preventDefault();\n517:         input.focus();\n518:       }\n519:     };\n520:     window.addEventListener(\"keydown\", focusSearch);\n521:     return () => window.removeEventListener(\"keydown\", focusSearch);\n522:   }, []);\n523: ",
+      "readUTC": "2026-10-17T17:24:44.811222+00:00"
+    }
+  ]
+}

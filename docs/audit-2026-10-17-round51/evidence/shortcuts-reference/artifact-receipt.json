@@ -1,0 +1,148 @@
+{
+  "frozenUTC": "2026-10-17T17:27:41.802683+00:00",
+  "root": "/tmp/codeshell-audit-round98-shortcuts-section",
+  "classification": {
+    "formal": 0,
+    "candidate": 0,
+    "related": 0
+  },
+  "files": [
+    {
+      "path": "canonical-gate-read.json",
+      "bytes": 10869,
+      "sha256": "068f93e7a8bcf906f18d8b7bc2675fd367c4a82e1e09a2d2a64c875fd758c070"
+    },
+    {
+      "path": "checks.json",
+      "bytes": 1179,
+      "sha256": "9c42c0340cfc6bbba48805f487b24a87111356fe821e02deb860138d1a16e10e"
+    },
+    {
+      "path": "consumer-initial-pins.json",
+      "bytes": 2277,
+      "sha256": "e7bc2d1b3ec89f94fd1db888fb44f14644bc63ca916aaf6093e7f87524b51550"
+    },
+    {
+      "path": "ending-checks.json",
+      "bytes": 3247,
+      "sha256": "68ce4793e64021e84d0bd53b7d015bf94608028be9d48495f8142dbd3b4b63d9"
+    },
+    {
+      "path": "finalize-metadata.first.py",
+      "bytes": 16526,
+      "sha256": "85839df2329621e7fb36697307a96d9eff52023bb2dfce8102c201cbf4c8316e"
+    },
+    {
+      "path": "finalize-metadata.py",
+      "bytes": 16526,
+      "sha256": "7306f9a4e0c7a51815792bf642f58c3900bc31ef0a9614b6af124e4a637db957"
+    },
+    {
+      "path": "first-display-count-diagnostic.json",
+      "bytes": 821,
+      "sha256": "233e4df0339f4903380c477d4cd9e3d2226ca9fe4510301f8a3bee1358b69bdc"
+    },
+    {
+      "path": "first-locator-diagnostic.json",
+      "bytes": 1336,
+      "sha256": "d7a77e62afb28ca432ff2888bf3bd58a228625f56caa893e3da2d47084ba4bda"
+    },
+    {
+      "path": "first-locator-stderr.txt",
+      "bytes": 964,
+      "sha256": "ef4d2966434444f4dcab13c4a5a942ab8880a225e1dabb997bcb1ab2c372aa3d"
+    },
+    {
+      "path": "first-output-truncation.json",
+      "bytes": 552,
+      "sha256": "da9e88a6c9f4be78bce9f4cd25d03151163b8c703401092df236fd48e5f4857a"
+    },
+    {
+      "path": "history-command.json",
+      "bytes": 207,
+      "sha256": "897f43ac11a61892c76a9cdaa7aa3d3e42e9f15720970b99e59f1c4ccebd523e"
+    },
+    {
+      "path": "history-contexts.json",
+      "bytes": 137258,
+      "sha256": "9a08bd07507ed4aec712a7b6cf6ef39243b8e5ce60f1930610e140e4ce3c68bd"
+    },
+    {
+      "path": "history-initial-inventory.json",
+      "bytes": 982318,
+      "sha256": "20b2481d2d49f8c038c18b48bb3d7f1400290fcc93ff25d12f732028ac6129ec"
+    },
+    {
+      "path": "history-source-rows.json",
+      "bytes": 58791,
+      "sha256": "52a237112052ebe6cefef3f5a561c6a71b2e0ed6bd940af184f1fe1ec3a49510"
+    },
+    {
+      "path": "history-summary.json",
+      "bytes": 774,
+      "sha256": "bf73d44fbca3e6acfe074db3622feb17dd4ed1f39d29fbd438aa816a25a12140"
+    },
+    {
+      "path": "initial-pins.json",
+      "bytes": 1441,
+      "sha256": "c6dfd82d542d4e430caf2428becb609351d7337fae6a179bdababe3de966ed02"
+    },
+    {
+      "path": "old-cause-selected-read.json",
+      "bytes": 7982,
+      "sha256": "42e763410b3b5386ff16ad9819d6fe2f5b9955e53fd37bf4fb09b00ab1fc0e90"
+    },
+    {
+      "path": "read-ledger.json",
+      "bytes": 916,
+      "sha256": "fa51f6ff664c6cc80afca6d8af2e772d1c6eab98f4b94d4ae9972f85a03873ec"
+    },
+    {
+      "path": "report.first.md",
+      "bytes": 5086,
+      "sha256": "f1468e1ada46c7cbcb8c5c63eb2743a9ebae327d03497b75681faa2571781d29"
+    },
+    {
+      "path": "report.md",
+      "bytes": 5500,
+      "sha256": "21edf19f1f6aab7d615de34e0431f1d5dfd74d851f8e0b24ff71212b67f5707c"
+    },
+    {
+      "path": "scan-history.py",
+      "bytes": 4823,
+      "sha256": "9fc525a36ca9bddee563c131f337564321d33a1d3860a1c5771a809ddce89e4a"
+    },
+    {
+      "path": "source-excerpts.json",
+      "bytes": 22510,
+      "sha256": "efec017bc3b5cfbff38e7a724b7099a2e195791e4398cfa564380908f0f003ad"
+    },
+    {
+      "path": "source-manifest.json",
+      "bytes": 15181,
+      "sha256": "19270b89b4e8c296313626ce1405261cdaf295daeb541b042bd952f695b18dc6"
+    },
+    {
+      "path": "validation.json",
+      "bytes": 2100,
+      "sha256": "9f6e48a7000ea134d0a2cab0e08a2173eb8cc45b5288275dea776b382a2c6eeb"
+    }
+  ],
+  "fileCountExcludingSelf": 24,
+  "selfExcluded": true,
+  "productSemanticLines": 214,
+  "testDeclarationLines": 67,
+  "productAndTestDisplayLines": 409,
+  "firstAppReadShaRemainsNull": true,
+  "productValidationRuns": 0,
+  "GitOperations": 0,
+  "metadataFailedPinLocatorStages": 1,
+  "metadataObservedErrorMessages": 2,
+  "nestedExitCodesSeparatelyCaptured": false,
+  "metadataTruncations": 1,
+  "metadataProseCountCorrections": 1,
+  "oldFrozenPacketsChanged": false,
+  "globalCoverageUpdated": false,
+  "firstArtifacts": "Error diagnostic + stderr transcription/toolchunk reference, truncated locator list diagnostic/full retained metadata, first report/script bytes and display-count diagnostic retained; not regenerated raw stdout.",
+  "authorDisclosure": "Author also wrote prep87/formal50datedselection; this task independentlyfresh-gated currentsource and preserves metadata limitations."
+}

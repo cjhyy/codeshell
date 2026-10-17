@@ -1,0 +1,76 @@
+{
+  "pins": [
+    {
+      "path": "packages/desktop/src/renderer/chat/ContextRing.tsx",
+      "bytes": 9089,
+      "sha256": "b28fbfc2e74fdb645cc5b2cb935eb0fb6a5e1f896b6150a121a75294013baa3d",
+      "beforeCurrentBodyDisplayUTC": "2026-10-17T17:17:10.190011+00:00",
+      "displayedLineRanges": [
+        [
+          1,
+          247
+        ]
+      ]
+    },
+    {
+      "path": "packages/desktop/src/renderer/ChatView.tsx",
+      "sha256": "f9581b0772281f87120e94821e51d4b6d7335fb8cecd1ede98feddd8ff2f8ee7",
+      "bytes": 106169,
+      "beforeDisplayUTC": "2026-10-17T17:17:46.993806+00:00",
+      "displayedLineRanges": [
+        [
+          214,
+          226
+        ],
+        [
+          429,
+          442
+        ],
+        [
+          2400,
+          2422
+        ]
+      ]
+    },
+    {
+      "path": "packages/desktop/src/renderer/App.tsx",
+      "sha256": "02ae12bfccf26878226720ad90282a6a11a1fdc3e05efd1ce54a09d256d5d715",
+      "bytes": 122863,
+      "beforeDisplayUTC": "2026-10-17T17:17:46.996816+00:00",
+      "displayedLineRanges": [
+        [
+          2666,
+          2690
+        ]
+      ]
+    },
+    {
+      "path": "packages/desktop/src/renderer/types.ts",
+      "sha256": "6d7b173656e7ebe22d5c9347b7097d2040793610135c1f797d76139aa6f69845",
+      "bytes": 93752,
+      "beforeDisplayUTC": "2026-10-17T17:17:46.998622+00:00",
+      "displayedLineRanges": [
+        [
+          352,
+          379
+        ],
+        [
+          1858,
+          1940
+        ]
+      ]
+    },
+    {
+      "path": "packages/desktop/src/renderer/messages/TurnUsageMessageView.tsx",
+      "sha256": "4f941fcbec7d2f0c8e225df7e3e661da27acf6bb8b02cf2ee65f8640f563bb8b",
+      "bytes": 2344,
+      "beforeDisplayUTC": "2026-10-17T17:17:47.000075+00:00",
+      "displayedLineRanges": [
+        [
+          1,
+          52
+        ]
+      ]
+    }
+  ]
+}

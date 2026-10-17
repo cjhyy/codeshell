@@ -1,0 +1,207 @@
+{
+  "rows": [
+    {
+      "document": "docs/audit-2026-10-17-round39/evidence/mcp-rename-fields-frontier/source-manifest.json",
+      "documentSha256": "453f2420da299d0134a6911db69424c865cfce8352d1b17cb203bc80d9f6e2ec",
+      "pointer": "/hashOnlyFiles/105",
+      "row": {
+        "path": "packages/desktop/src/renderer/settings/ShortcutsSection.test.tsx",
+        "bytes": 2721,
+        "sha256": "ba16076628e88e408a0b7dfcb9566b597e12949c20b89ecfcd421029f918db02",
+        "totalLines": 67,
+        "pinTimeUTC": "2026-10-17T13:24:31.782787+00:00",
+        "coverage": "hash-only-before-any-current-semantic-read"
+      },
+      "ancestorQualifiers": []
+    },
+    {
+      "document": "docs/audit-2026-10-17-round39/evidence/mcp-rename-fields-frontier/source-manifest.json",
+      "documentSha256": "453f2420da299d0134a6911db69424c865cfce8352d1b17cb203bc80d9f6e2ec",
+      "pointer": "/hashOnlyFiles/114",
+      "row": {
+        "path": "packages/desktop/src/renderer/settings/ShortcutsSection.tsx",
+        "bytes": 4521,
+        "sha256": "ee9161604475561743cab550fe144c9f0bd8fa045fe18d1ef8664d5c851dc1a4",
+        "totalLines": 110,
+        "pinTimeUTC": "2026-10-17T13:24:31.782787+00:00",
+        "coverage": "hash-only-before-any-current-semantic-read"
+      },
+      "ancestorQualifiers": []
+    },
+    {
+      "document": "docs/audit-2026-10-17-round39/source-manifest.json",
+      "documentSha256": "70e845f14c9b8e63b0cf761940090ef6af9caa99bee2be0c21d9f06c92fd3383",
+      "pointer": "/files/183",
+      "row": {
+        "path": "packages/desktop/src/renderer/settings/ShortcutsSection.test.tsx",
+        "bytes": 2721,
+        "sha256": "ba16076628e88e408a0b7dfcb9566b597e12949c20b89ecfcd421029f918db02",
+        "currentBytes": 2721,
+        "currentSha256": "ba16076628e88e408a0b7dfcb9566b597e12949c20b89ecfcd421029f918db02",
+        "mainBytes": 2721,
+        "mainSha256": "ba16076628e88e408a0b7dfcb9566b597e12949c20b89ecfcd421029f918db02",
+        "currentWorkingTreeMatchesFrozenBlob": true,
+        "mainMatchesFrozenBlob": true
+      },
+      "ancestorQualifiers": [
+        {
+          "note": "Original full/selected/navigation/hash distinctions and timing retained. Discovery-only hash pins do not become semantic coverage through current Git binding. No product execution or source reread added."
+        }
+      ]
+    },
+    {
+      "document": "docs/audit-2026-10-17-round39/source-manifest.json",
+      "documentSha256": "70e845f14c9b8e63b0cf761940090ef6af9caa99bee2be0c21d9f06c92fd3383",
+      "pointer": "/files/184",
+      "row": {
+        "path": "packages/desktop/src/renderer/settings/ShortcutsSection.tsx",
+        "bytes": 4521,
+        "sha256": "ee9161604475561743cab550fe144c9f0bd8fa045fe18d1ef8664d5c851dc1a4",
+        "currentBytes": 4521,
+        "currentSha256": "ee9161604475561743cab550fe144c9f0bd8fa045fe18d1ef8664d5c851dc1a4",
+        "mainBytes": 4521,
+        "mainSha256": "ee9161604475561743cab550fe144c9f0bd8fa045fe18d1ef8664d5c851dc1a4",
+        "currentWorkingTreeMatchesFrozenBlob": true,
+        "mainMatchesFrozenBlob": true
+      },
+      "ancestorQualifiers": [
+        {
+          "note": "Original full/selected/navigation/hash distinctions and timing retained. Discovery-only hash pins do not become semantic coverage through current Git binding. No product execution or source reread added."
+        }
+      ]
+    },
+    {
+      "document": "docs/audit-2026-10-17-round39/source-manifest.json",
+      "documentSha256": "70e845f14c9b8e63b0cf761940090ef6af9caa99bee2be0c21d9f06c92fd3383",
+      "pointer": "/hashOnlyChecks/107",
+      "row": {
+        "manifest": "mcp-rename-fields-frontier/source-manifest.json",
+        "collection": "hashOnlyFiles",
+        "path": "packages/desktop/src/renderer/settings/ShortcutsSection.test.tsx",
+        "sha256": "ba16076628e88e408a0b7dfcb9566b597e12949c20b89ecfcd421029f918db02",
+        "coverage": "hash-only-before-any-current-semantic-read",
+        "note": "Original timing/ranges/null and same-read limitations retained; formalization adds no repeated semantic read."
+      },
+      "ancestorQualifiers": [
+        {
+          "note": "Original full/selected/navigation/hash distinctions and timing retained. Discovery-only hash pins do not become semantic coverage through current Git binding. No product execution or source reread added."
+        }
+      ]
+    },
+    {
+      "document": "docs/audit-2026-10-17-round39/source-manifest.json",
+      "documentSha256": "70e845f14c9b8e63b0cf761940090ef6af9caa99bee2be0c21d9f06c92fd3383",
+      "pointer": "/hashOnlyChecks/116",
+      "row": {
+        "manifest": "mcp-rename-fields-frontier/source-manifest.json",
+        "collection": "hashOnlyFiles",
+        "path": "packages/desktop/src/renderer/settings/ShortcutsSection.tsx",
+        "sha256": "ee9161604475561743cab550fe144c9f0bd8fa045fe18d1ef8664d5c851dc1a4",
+        "coverage": "hash-only-before-any-current-semantic-read",
+        "note": "Original timing/ranges/null and same-read limitations retained; formalization adds no repeated semantic read."
+      },
+      "ancestorQualifiers": [
+        {
+          "note": "Original full/selected/navigation/hash distinctions and timing retained. Discovery-only hash pins do not become semantic coverage through current Git binding. No product execution or source reread added."
+        }
+      ]
+    },
+    {
+      "document": "docs/audit-2026-10-17-round50/evidence/frontier-selection/source-manifest.json",
+      "documentSha256": "5343e12c9a27ab2fd6f616dc13ed3a6e0c8589fe4ae570fc21c892fc0c1303f9",
+      "pointer": "/files/22",
+      "row": {
+        "path": "packages/desktop/src/renderer/settings/ShortcutsSection.tsx",
+        "bytes": 4521,
+        "sha256": "ee9161604475561743cab550fe144c9f0bd8fa045fe18d1ef8664d5c851dc1a4",
+        "lines": 110,
+        "pinnedUTC": "2026-10-17T16:48:11.095189+00:00",
+        "coverage": "hash-only",
+        "selectedLineRanges": [],
+        "displayedLineRanges": [],
+        "semanticLineCount": 0,
+        "displayedLineCount": 0,
+        "initialPinIsSemanticReadProof": false,
+        "endingSha256": "ee9161604475561743cab550fe144c9f0bd8fa045fe18d1ef8664d5c851dc1a4"
+      },
+      "ancestorQualifiers": [
+        {
+          "globalSemanticCoverageUpdate": false
+        }
+      ]
+    },
+    {
+      "document": "docs/audit-2026-10-17-round50/source-manifest.json",
+      "documentSha256": "62ee29069f3994a9c24c4a4d22c99dded52da412235c938a8306bc166dc94fdb",
+      "pointer": "/files/56",
+      "row": {
+        "path": "packages/desktop/src/renderer/settings/ShortcutsSection.tsx",
+        "bytes": 4521,
+        "sha256": "ee9161604475561743cab550fe144c9f0bd8fa045fe18d1ef8664d5c851dc1a4",
+        "currentBytes": 4521,
+        "currentSha256": "ee9161604475561743cab550fe144c9f0bd8fa045fe18d1ef8664d5c851dc1a4",
+        "mainBytes": 4521,
+        "mainSha256": "ee9161604475561743cab550fe144c9f0bd8fa045fe18d1ef8664d5c851dc1a4",
+        "currentWorkingTreeMatchesFrozenBlob": true,
+        "mainMatchesFrozenBlob": true
+      },
+      "ancestorQualifiers": [
+        {
+          "note": "Original full/selected/navigation/hash distinctions and timing retained. Discovery-only hash pins do not become semantic coverage through current Git binding. No product execution or source reread added."
+        }
+      ]
+    },
+    {
+      "document": "docs/audit-2026-10-17-round50/source-manifest.json",
+      "documentSha256": "62ee29069f3994a9c24c4a4d22c99dded52da412235c938a8306bc166dc94fdb",
+      "pointer": "/hashOnlyChecks/26",
+      "row": {
+        "manifest": "frontier-selection/source-manifest.json",
+        "collection": "files",
+        "path": "packages/desktop/src/renderer/settings/ShortcutsSection.tsx",
+        "sha256": "ee9161604475561743cab550fe144c9f0bd8fa045fe18d1ef8664d5c851dc1a4",
+        "coverage": "hash-only",
+        "note": "Original timing/ranges/null and same-read limitations retained; formalization adds no repeated semantic read."
+      },
+      "ancestorQualifiers": [
+        {
+          "note": "Original full/selected/navigation/hash distinctions and timing retained. Discovery-only hash pins do not become semantic coverage through current Git binding. No product execution or source reread added."
+        }
+      ]
+    },
+    {
+      "document": "docs/review-2026-10-12/validation/original-baseline-evidence-round28/manifest.json",
+      "documentSha256": "16f4dac9f9f13073662fcc299b72efd7add8ff28ab8868f3b9cb7d1a7c45d763",
+      "pointer": "/logs/371",
+      "row": {
+        "group": "desktop-renderer",
+        "file": "packages/desktop/src/renderer/settings/ShortcutsSection.test.tsx",
+        "originalLog": "/tmp/codeshell-review-20261012/desktop-baseline/230-ShortcutsSection.test.tsx.log",
+        "tarMember": "desktop-renderer/230-ShortcutsSection.test.tsx.log",
+        "bytes": 763,
+        "sha256": "43b820e5b57ba0efc7ef77360ac1fd56c00194b8e6f7c24e29ab0c78a9699394",
+        "tests": 5,
+        "skipped": 0,
+        "code": 0,
+        "signal": null,
+        "completed": true
+      },
+      "ancestorQualifiers": []
+    }
+  ],
+  "uncappedMarkdownBasenameContexts": [
+    {
+      "document": "docs/audit-2026-10-17-round50/evidence/frontier-selection/report.md",
+      "documentSha256": "48d768e61c46481db1b5e8309f489d34abd651b3ee3633c9a844de8fa3205064",
+      "paragraph": 7,
+      "excerpt": "sages/agentGroup.ts` | 133 | scope unconfirmed |\n| 9 | `app/panelResize.ts` | 138 | scope unconfirmed |\n| 10 | `settings/ThemePackPreview.tsx` | 121 | hash only |\n| 11 | `settings/ShortcutsSection.tsx` | 110 | hash only |\n| 12 | `components/ui/select.tsx` | 157 | scope unconfirmed |\n| 13 | `components/ui/dialog.tsx` | 106 | scope unconfirmed |\n| 14 | `chat/InlineMedia.tsx` | 217 | scope unconfirmed |\n| 15 | `chat/Lightbox.tsx` | 277 | scope unconfirmed |\n| 16 | `chat/MentionPopover.tsx` | 370 | scope unconfirmed |\n| 17 | `chat/useAnchoredPopover.ts` | 178 | scope unconfirmed |\n| 18 | `messages/AgentMessageView.tsx` | 132 | scope unconfirmed |\n| 19 | `builtin-character-themes.ts` | 132 | scope unconfirmed |\n| 20 | `topbar/liveActivity.ts` | 183 | scope unconfirmed |\n| 21 | `chat/compress.ts` | 218 | scope unconfirmed |\n| 22 | `app/appUtils.ts` | 133 | selected |\n| 23 | `chat/ModelPill.tsx` | 321 | selected |\n| 24 | `shell/CommandPalette.tsx` | 206 | selected |\n| 25 | `theme.ts` | 155 | selected |\n| 26 | `theme-packs.ts` | 245 | selected |\n| 27 | `components/ui/drop",
+      "originalChars": 1889,
+      "excerptStart": 538,
+      "excerptEnd": 1618,
+      "excerptTruncated": true
+    }
+  ],
+  "uncappedMarkdownCount": 1,
+  "decision": "Original10 manifest hints + uncapped1MD basename context read; no explicit current sameSHAfull activated. R39/R50 hash-only does not mean unread; finite ordinary body review proceeds.",
+  "oldTestLogArtifactNotSourceHash": true
+}

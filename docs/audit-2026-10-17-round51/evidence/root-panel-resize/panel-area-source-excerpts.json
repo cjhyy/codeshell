@@ -1,0 +1,11 @@
+{
+  "atUTC": "2026-10-17T17:19:29.083194+00:00",
+  "path": "packages/desktop/src/renderer/panels/PanelArea.tsx",
+  "displayedLineRanges": [
+    [
+      540,
+      589
+    ]
+  ],
+  "text": "540:   const panelStyle: React.CSSProperties | undefined = hidden\n541:     ? keepActiveBodyLive\n542:       ? maximized\n543:         ? { opacity: 0, pointerEvents: \"none\" }\n544:         : {\n545:             position: \"absolute\",\n546:             top: 0,\n547:             right: 0,\n548:             bottom: 0,\n549:             width,\n550:             maxWidth: \"100%\",\n551:             opacity: 0,\n552:             pointerEvents: \"none\",\n553:           }\n554:       : { display: \"none\" }\n555:     : maximized\n556:       ? undefined\n557:       : { width, maxWidth: \"100%\" };\n558: \n559:   return (\n560:     <div\n561:       className={cn(\n562:         \"relative flex min-h-0 min-w-0 flex-col\",\n563:         maximized ? \"absolute inset-0 z-30 shrink\" : \"shrink-0 border-l border-border\",\n564:       )}\n565:       // Closed docks use display:none so BrowserPanel may idle-evict. Temporary\n566:       // full-page views keep the dock invisible but laid out enough for webview\n567:       // guests to stay alive instead of returning blank after display:none.\n568:       style={panelStyle}\n569:       data-theme-surface=\"panel\"\n570:       aria-hidden={hidden || undefined}\n571:       inert={hidden || undefined}\n572:     >\n573:       {/* Drag handle on the left edge to resize the dock — hidden when maximized. */}\n574:       {!maximized && (\n575:         <div\n576:           role=\"separator\"\n577:           aria-orientation=\"vertical\"\n578:           aria-label={t(\"panels.area.resizeWidth\")}\n579:           onMouseDown={(e) => {\n580:             if (e.button !== 0) return;\n581:             e.preventDefault();\n582:             const target = e.currentTarget.parentElement;\n583:             if (target) onResizeStart(e.clientX, width, target);\n584:           }}\n585:           className=\"absolute left-0 top-0 z-20 h-full w-1 -translate-x-1/2 cursor-col-resize transition-colors hover:bg-primary/40\"\n586:         />\n587:       )}\n588:       {/* Tab strip */}\n589:       <div className=\"flex min-w-0 shrink-0 items-center gap-1 border-b border-border/80 bg-muted/35 px-1.5 py-0.5\">"
+}

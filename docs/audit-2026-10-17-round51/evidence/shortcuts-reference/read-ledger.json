@@ -1,0 +1,34 @@
+{
+  "bodyToolChunks": [
+    "c4e100",
+    "8b09a7",
+    "111c53",
+    "6203d3"
+  ],
+  "navigationChunks": [
+    "c931c3",
+    "8b09a7",
+    "111c53"
+  ],
+  "firstMixedFailureChunk": "c931c3",
+  "firstMetadataTruncationChunk": "111c53",
+  "originalCanonicalRowsRead": 10,
+  "sourceCoverageMetadataRows": 9,
+  "oldTestLogArtifactLocatorRows": 1,
+  "originalCanonicalMetadataDocuments": 5,
+  "uncappedMarkdownBasenameContextsRead": 1,
+  "baselineBasenameTotal120Retained100": "Originalcap retained; separate allMarkdown basename sweep found1context and read it. No claim that all120JSON/MD matches were read.",
+  "actualOldCauseBoundedReadIndices": [
+    26,
+    35,
+    36,
+    37,
+    38
+  ],
+  "oldCauseTotalRetained": 41,
+  "all41ClaimedRead": false,
+  "oldLogSHAUsedAsSourceBinding": false,
+  "oldSameSHAFullActivated": false,
+  "allNewSemanticOrFirstFullClaim": false,
+  "sourceCurrentRuntimeValidationRuns": 0
+}

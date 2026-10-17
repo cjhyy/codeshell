@@ -1,0 +1,11 @@
+{
+  "path": "packages/desktop/src/renderer/App.tsx",
+  "displayedLineRanges": [
+    [
+      1150,
+      1150
+    ]
+  ],
+  "text": "1150:   } = usePanelBuckets({",
+  "captureAfterEarlierNavigation": true
+}

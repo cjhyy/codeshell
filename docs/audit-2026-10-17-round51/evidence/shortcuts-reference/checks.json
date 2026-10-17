@@ -1,0 +1,42 @@
+{
+  "checkedUTC": "2026-10-17T17:26:49.858668+00:00",
+  "totals": {
+    "productFiles": 6,
+    "productFull": 1,
+    "productSelected": 5,
+    "productSemanticLines": 214,
+    "testDeclarationFiles": 1,
+    "testDeclarationLines": 67,
+    "semanticPlusTestLines": 281,
+    "productDisplayLines": 342,
+    "testDisplayLines": 67,
+    "totalProductAndTestDisplayLines": 409,
+    "instructionHashOnlyFiles": 2,
+    "instructionBodyLines": 0,
+    "testsExecuted": 0
+  },
+  "sourceAndInstructionPins": 9,
+  "allPinsEqualFirstPersisted": true,
+  "initialAppReadShaRemainsNull": true,
+  "historyChangedCount": 0,
+  "historyAddedIncludedCount": 0,
+  "historyRemovedIncludedCount": 0,
+  "sameHistoryIncludedPathSet": true,
+  "rangeUnionsChecked": true,
+  "classification": {
+    "formal": 0,
+    "candidate": 0,
+    "related": 0
+  },
+  "productValidationRuns": 0,
+  "GitOperations": 0,
+  "metadataFailedPinLocatorStages": 1,
+  "metadataTruncations": 1,
+  "globalCoverageCountChanges": false,
+  "localReportLinks": {
+    "count": 20,
+    "allValidWhenReceiptCreated": true
+  },
+  "metadataProseCountCorrections": 1,
+  "firstDisplayCountDiagnostic": "first-display-count-diagnostic.json"
+}
