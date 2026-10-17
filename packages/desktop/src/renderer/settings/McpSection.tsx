@@ -1119,7 +1119,8 @@ function McpEditor({ initial, existingNames, mode = "full", onCancel, onSave }: 
   );
   const [name, setName] = useState(initial?.name ?? "");
   const [command, setCommand] = useState(initial?.command ?? "");
-  const [args, setArgs] = useState((initial?.args ?? []).join(" "));
+  const initialArgsText = (initial?.args ?? []).join(" ");
+  const [args, setArgs] = useState(initialArgsText);
   const [url, setUrl] = useState(initial?.url ?? "");
   const [envText, setEnvText] = useState(envOrHeadersToText(initial?.env));
   const [forwardEnvVarsText, setForwardEnvVarsText] = useState(envNamesToText(initial?.envVars));
@@ -1381,7 +1382,14 @@ function McpEditor({ initial, existingNames, mode = "full", onCancel, onSave }: 
           ...(isStdio
             ? {
                 command: command.trim(),
-                args: args.trim() ? splitArgs(args.trim()) : undefined,
+                // The display join loses quoting. Keep the original boundaries
+                // until the user actually changes the Args field.
+                args:
+                  args === initialArgsText
+                    ? initial?.args?.slice()
+                    : args.trim()
+                      ? splitArgs(args.trim())
+                      : undefined,
                 env: env && Object.keys(env).length ? env : undefined,
                 envVars: envVars && envVars.length ? envVars : undefined,
               }
