@@ -1,0 +1,9 @@
+{
+  "baseline": "9b667863e8a8eb91db7b1f99eb9876169dcf19ec",
+  "mainHead": "9b667863e8a8eb91db7b1f99eb9876169dcf19ec",
+  "externalMainCommits": [],
+  "externalMainPaths": [],
+  "changedSelectedSourcePaths": [],
+  "sourceChangesSemanticReview": "No concurrent main source delta at this observed premerge time; author frozen/current/main hashes verified separately by assembler.",
+  "runtimeRetested": false
+}

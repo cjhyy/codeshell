@@ -1,0 +1,34 @@
+{
+  "copiedAtUTC": "2026-10-17T11:02:58.870852+00:00",
+  "files": [
+    {
+      "source": "/tmp/codeshell-audit-round27-compose-frontier/dedup.py",
+      "destination": "docs/audit-2026-10-17-round27/evidence/compose-prep/dedup.py",
+      "bytes": 3793,
+      "sha256": "a25bb401432564a039e8a6c31dbe8a7ac1908f8131eb66c870ad6c2e783c7b43",
+      "byteIdentical": true
+    },
+    {
+      "source": "/tmp/codeshell-audit-round27-compose-frontier/history-supplement.json",
+      "destination": "docs/audit-2026-10-17-round27/evidence/compose-prep/history-supplement.json",
+      "bytes": 682189,
+      "sha256": "e6067f1ead832148925af7e7997f376ab22566856386bde6d0872bb0b05cce5d",
+      "byteIdentical": true
+    },
+    {
+      "source": "/tmp/codeshell-audit-round27-compose-frontier/history.json",
+      "destination": "docs/audit-2026-10-17-round27/evidence/compose-prep/history.json",
+      "bytes": 702616,
+      "sha256": "0a6911615672977e946a2fa289bc8ff0606ac6f2055f2397650f2652015e2474",
+      "byteIdentical": true
+    },
+    {
+      "source": "/tmp/codeshell-audit-round27-compose-frontier/inventory.json",
+      "destination": "docs/audit-2026-10-17-round27/evidence/compose-prep/inventory.json",
+      "bytes": 7019,
+      "sha256": "e6d61955f80b800df8d80c5c1931bca410d14a40b780312d7701428d3cffbcbc",
+      "byteIdentical": true
+    }
+  ],
+  "note": "Four verbatim interrupted-agent prep files; original parentReportedHead/read timestamps/source pins stay unchanged. These are metadata provenance, not runtime logs or newly completed source reads."
+}

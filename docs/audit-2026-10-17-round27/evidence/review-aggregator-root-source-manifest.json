@@ -1,0 +1,246 @@
+{
+  "baseline": "9b667863e8a8eb91db7b1f99eb9876169dcf19ec",
+  "files": [
+    {
+      "path": "packages/coding/src/tools/drive-agent.ts",
+      "bytes": 72074,
+      "sha256": "7e64fa7df67103bc83510c05dc03068f0cd848d17cd04991c2b2354f0004976d",
+      "coverage": "selected",
+      "selectedLineRanges": [
+        [
+          85,
+          122
+        ],
+        [
+          240,
+          257
+        ],
+        [
+          315,
+          414
+        ],
+        [
+          447,
+          473
+        ],
+        [
+          740,
+          820
+        ],
+        [
+          1060,
+          1115
+        ],
+        [
+          1145,
+          1195
+        ],
+        [
+          1235,
+          1282
+        ]
+      ],
+      "lineCount": 1714,
+      "coveredLineCount": 419,
+      "frozenGitBoundByRoot": true,
+      "note": "Root independent static producer/consumer review; no runtime. Previously fully read aggregator is in root-source-manifest, not duplicated here."
+    },
+    {
+      "path": "packages/coding/src/cc-orchestrator/external-agent-changes.ts",
+      "bytes": 7735,
+      "sha256": "ab83d44a75517e131dca7842b0aa4cd3d47f470d61b50dba59f71960774e8e2d",
+      "coverage": "full",
+      "selectedLineRanges": [
+        [
+          1,
+          239
+        ]
+      ],
+      "lineCount": 239,
+      "coveredLineCount": 239,
+      "frozenGitBoundByRoot": true,
+      "note": "Root independent static producer/consumer review; no runtime. Previously fully read aggregator is in root-source-manifest, not duplicated here."
+    },
+    {
+      "path": "packages/desktop/src/renderer/messages/FilesChangedCard.tsx",
+      "bytes": 16212,
+      "sha256": "15d7d4a53188869aa3af554bbc9e9b4a429af44578135f2576ef718f1dec3fbf",
+      "coverage": "selected",
+      "selectedLineRanges": [
+        [
+          1,
+          145
+        ],
+        [
+          235,
+          280
+        ]
+      ],
+      "lineCount": 420,
+      "coveredLineCount": 191,
+      "frozenGitBoundByRoot": true,
+      "note": "Root independent static producer/consumer review; no runtime. Previously fully read aggregator is in root-source-manifest, not duplicated here."
+    },
+    {
+      "path": "packages/desktop/src/renderer/MessageStream.tsx",
+      "bytes": 37921,
+      "sha256": "f74d19bddcdc48c0de2e63921ba598d733e2f1c3d58f68e7c8c0b32046ddbd4c",
+      "coverage": "selected",
+      "selectedLineRanges": [
+        [
+          590,
+          625
+        ]
+      ],
+      "lineCount": 928,
+      "coveredLineCount": 36,
+      "frozenGitBoundByRoot": true,
+      "note": "Root independent static producer/consumer review; no runtime. Previously fully read aggregator is in root-source-manifest, not duplicated here."
+    },
+    {
+      "path": "packages/desktop/src/renderer/chat/openWith.ts",
+      "bytes": 3038,
+      "sha256": "22c7db69e59cd73df03a58fe293ab4b5a83cf5d915bd63f1e878204c4dee2e1a",
+      "coverage": "full",
+      "selectedLineRanges": [
+        [
+          1,
+          77
+        ]
+      ],
+      "lineCount": 77,
+      "coveredLineCount": 77,
+      "frozenGitBoundByRoot": true,
+      "note": "Root independent static producer/consumer review; no runtime. Previously fully read aggregator is in root-source-manifest, not duplicated here."
+    },
+    {
+      "path": "packages/desktop/src/renderer/app/usePanelBuckets.ts",
+      "bytes": 40459,
+      "sha256": "77cfff3fd385f1630540b5b19bc2bac4fbc21e2a593ff4cf4209c8bdea91de8f",
+      "coverage": "selected",
+      "selectedLineRanges": [
+        [
+          918,
+          956
+        ]
+      ],
+      "lineCount": 1033,
+      "coveredLineCount": 39,
+      "frozenGitBoundByRoot": true,
+      "note": "Root independent static producer/consumer review; no runtime. Previously fully read aggregator is in root-source-manifest, not duplicated here."
+    },
+    {
+      "path": "packages/desktop/src/renderer/panels/FilesPanel.tsx",
+      "bytes": 42096,
+      "sha256": "a6baf2b503aee4ffbe492fc609d6cb77ff7c3b58dc0b8fc394c8286c5267c263",
+      "coverage": "selected",
+      "selectedLineRanges": [
+        [
+          205,
+          248
+        ]
+      ],
+      "lineCount": 1072,
+      "coveredLineCount": 44,
+      "frozenGitBoundByRoot": true,
+      "note": "Root independent static producer/consumer review; no runtime. Previously fully read aggregator is in root-source-manifest, not duplicated here."
+    },
+    {
+      "path": "packages/desktop/src/renderer/types.ts",
+      "bytes": 86699,
+      "sha256": "645de29eb12c5cc3a84ba68e9d5ece4020f2a272eca1191f3120a2f7620b7f3f",
+      "coverage": "selected",
+      "selectedLineRanges": [
+        [
+          155,
+          178
+        ],
+        [
+          280,
+          322
+        ],
+        [
+          1964,
+          2042
+        ]
+      ],
+      "lineCount": 2289,
+      "coveredLineCount": 146,
+      "frozenGitBoundByRoot": true,
+      "note": "Root independent static producer/consumer review; no runtime. Previously fully read aggregator is in root-source-manifest, not duplicated here."
+    },
+    {
+      "path": "packages/desktop/src/renderer/runtime/RuntimeCapabilities.tsx",
+      "bytes": 295,
+      "sha256": "374e9c433d4288fe6063f5fefa497ff26266ef96d5a46b2a17dc9ac4871b1b2b",
+      "coverage": "full",
+      "selectedLineRanges": [
+        [
+          1,
+          7
+        ]
+      ],
+      "lineCount": 7,
+      "coveredLineCount": 7,
+      "frozenGitBoundByRoot": true,
+      "note": "Root independent static producer/consumer review; no runtime. Previously fully read aggregator is in root-source-manifest, not duplicated here."
+    },
+    {
+      "path": "packages/core/src/tool-system/context.ts",
+      "bytes": 29617,
+      "sha256": "1bfff3d434f876089460f61336ff160d31a0eda6483b604cf874b331fb6e3b03",
+      "coverage": "selected",
+      "selectedLineRanges": [
+        [
+          245,
+          266
+        ]
+      ],
+      "lineCount": 624,
+      "coveredLineCount": 22,
+      "frozenGitBoundByRoot": true,
+      "note": "Root independent static producer/consumer review; no runtime. Previously fully read aggregator is in root-source-manifest, not duplicated here."
+    },
+    {
+      "path": "docs/todo/small-features-2026-07-10/review-panel-wrong-cwd.md",
+      "bytes": 15898,
+      "sha256": "171cc6cab7750b1f435d1e4d5e3835f6806c3ee1207fc637122247b81c089808",
+      "coverage": "selected",
+      "selectedLineRanges": [
+        [
+          1,
+          26
+        ],
+        [
+          112,
+          130
+        ]
+      ],
+      "lineCount": 208,
+      "coveredLineCount": 45,
+      "frozenGitBoundByRoot": true,
+      "note": "Root independently selected prior mechanisms for semantic dedup; no old runtime validation repeated."
+    },
+    {
+      "path": "docs/research/driveagent-worktree-cwd-visibility-gap.md",
+      "bytes": 24462,
+      "sha256": "d0ffe269a25a71f448da13aaf2f6f783d1182cb3d58762980322942a05ca9dac",
+      "coverage": "selected",
+      "selectedLineRanges": [
+        [
+          1,
+          40
+        ],
+        [
+          188,
+          239
+        ]
+      ],
+      "lineCount": 293,
+      "coveredLineCount": 92,
+      "frozenGitBoundByRoot": true,
+      "note": "Root independently selected prior mechanisms for semantic dedup; no old runtime validation repeated."
+    }
+  ],
+  "productExecution": false
+}

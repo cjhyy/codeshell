@@ -1,0 +1,157 @@
+{
+  "firstPinUTC": "2026-10-17T10:53:51.505267+00:00",
+  "parentReportedHead": "5e10a7e19734cfebd940fc11020bab3600b6e802",
+  "gitCommandsExecuted": 0,
+  "independentGitBlobVerification": false,
+  "files": [
+    {
+      "path": "CODESHELL.md",
+      "bytes": 17639,
+      "lines": 217,
+      "firstFilesystemSha256": "56d9ffdd81b6f6f615ed7a7392ddfa60ec4338c0ccb88eef20c4b73ad8dad5a2",
+      "readScope": "inventory/hash only until explicit source-manifest reading scope"
+    },
+    {
+      "path": "packages/desktop/src/renderer/diff/UnifiedDiffViewer.header-only.test.tsx",
+      "bytes": 3816,
+      "lines": 95,
+      "firstFilesystemSha256": "a842b7fc3b30f31720cac379e4e5fb43a6ace2d21264b3995edf2b1be4ba59b5",
+      "readScope": "inventory/hash only until explicit source-manifest reading scope"
+    },
+    {
+      "path": "packages/desktop/src/renderer/diff/UnifiedDiffViewer.review.test.ts",
+      "bytes": 1594,
+      "lines": 41,
+      "firstFilesystemSha256": "1ced46ca3ff825d24a15d74b0d14afde16cb4beefe986a105f3823108ae40b93",
+      "readScope": "inventory/hash only until explicit source-manifest reading scope"
+    },
+    {
+      "path": "packages/desktop/src/renderer/diff/UnifiedDiffViewer.tsx",
+      "bytes": 17458,
+      "lines": 449,
+      "firstFilesystemSha256": "31d77cfe853aceaa92f16bd91a9a63779b9e7ea079adf5831410c63abd82d220",
+      "readScope": "inventory/hash only until explicit source-manifest reading scope"
+    },
+    {
+      "path": "packages/desktop/src/renderer/diff/composeFileEdits.test.ts",
+      "bytes": 8578,
+      "lines": 203,
+      "firstFilesystemSha256": "242400f40f6994f82af49270cdcbfb76f97851e378ccb92f20e5b139bf624c56",
+      "readScope": "inventory/hash only until explicit source-manifest reading scope"
+    },
+    {
+      "path": "packages/desktop/src/renderer/diff/composeFileEdits.ts",
+      "bytes": 8020,
+      "lines": 245,
+      "firstFilesystemSha256": "48a279cc6c2ebe3e4ee5333b3bea1e14d930180855b5f8518848419e0977edb8",
+      "readScope": "inventory/hash only until explicit source-manifest reading scope"
+    },
+    {
+      "path": "packages/desktop/src/renderer/diff/headerOnlyGit.fixture.ts",
+      "bytes": 3133,
+      "lines": 85,
+      "firstFilesystemSha256": "502592782ae767987307cd6154970a2bca5673faada7038897945eefe3081660",
+      "readScope": "inventory/hash only until explicit source-manifest reading scope"
+    },
+    {
+      "path": "packages/desktop/src/renderer/diff/parseUnifiedDiff.header-only.test.ts",
+      "bytes": 3100,
+      "lines": 82,
+      "firstFilesystemSha256": "47b83e54fcec7494b17376b2e7f0dbac081363be484d4f4e25601fdadccaf9d9",
+      "readScope": "inventory/hash only until explicit source-manifest reading scope"
+    },
+    {
+      "path": "packages/desktop/src/renderer/diff/parseUnifiedDiff.test.ts",
+      "bytes": 4648,
+      "lines": 115,
+      "firstFilesystemSha256": "3ae9fb7c6e1f6859ade0145343246ab3172d1e2be31cc59a1aa3bfd8a8f2f29f",
+      "readScope": "inventory/hash only until explicit source-manifest reading scope"
+    },
+    {
+      "path": "packages/desktop/src/renderer/diff/parseUnifiedDiff.ts",
+      "bytes": 8028,
+      "lines": 265,
+      "firstFilesystemSha256": "95d07569855d128fe9edb304a40ba5ff4d9dbe25c99b0a121eae07b38507f2b6",
+      "readScope": "inventory/hash only until explicit source-manifest reading scope"
+    },
+    {
+      "path": "packages/desktop/src/renderer/diff/reviewScope.test.ts",
+      "bytes": 2739,
+      "lines": 67,
+      "firstFilesystemSha256": "4a3aa3f4038de8e2b14bfdcd61bc75671d3ae181bd46bf18a2440e9eac71031b",
+      "readScope": "inventory/hash only until explicit source-manifest reading scope"
+    },
+    {
+      "path": "packages/desktop/src/renderer/diff/reviewScope.ts",
+      "bytes": 3316,
+      "lines": 89,
+      "firstFilesystemSha256": "80ae68bb3244f81dcb382f36d24448002298ca666da82119b7c39ae3119f33d7",
+      "readScope": "inventory/hash only until explicit source-manifest reading scope"
+    },
+    {
+      "path": "packages/desktop/src/renderer/diff/reviewSnapshot.test.ts",
+      "bytes": 2395,
+      "lines": 48,
+      "firstFilesystemSha256": "71a2811fc2060194ea1a1641da91749a76357920b33c0385c329a2adfb0e392c",
+      "readScope": "inventory/hash only until explicit source-manifest reading scope"
+    },
+    {
+      "path": "packages/desktop/src/renderer/diff/reviewSnapshot.ts",
+      "bytes": 1903,
+      "lines": 47,
+      "firstFilesystemSha256": "616db299d2eea30218c7996cd2bb89f579472ed57bb053bb014d31ee9b07658e",
+      "readScope": "inventory/hash only until explicit source-manifest reading scope"
+    },
+    {
+      "path": "packages/desktop/src/renderer/messages/fileChangeAggregator.count.test.ts",
+      "bytes": 878,
+      "lines": 27,
+      "firstFilesystemSha256": "e89e1cfbf5dcc6d05770b47aa4bbdeb4954e0d66071578c3931804121afd32c8",
+      "readScope": "inventory/hash only until explicit source-manifest reading scope"
+    },
+    {
+      "path": "packages/desktop/src/renderer/messages/fileChangeAggregator.test.ts",
+      "bytes": 14527,
+      "lines": 377,
+      "firstFilesystemSha256": "f6b406ec220edbdf065e548189aea7a16988b365a339e1046d47afd55589f8a3",
+      "readScope": "inventory/hash only until explicit source-manifest reading scope"
+    },
+    {
+      "path": "packages/desktop/src/renderer/messages/fileChangeAggregator.ts",
+      "bytes": 13565,
+      "lines": 396,
+      "firstFilesystemSha256": "90ffda89cf0cb2d05751bb8370056793591be41c358477de8bd9f12db447bc2d",
+      "readScope": "inventory/hash only until explicit source-manifest reading scope"
+    },
+    {
+      "path": "packages/desktop/src/renderer/messages/FilesChangedCard.tsx",
+      "bytes": 16212,
+      "lines": 420,
+      "firstFilesystemSha256": "15d7d4a53188869aa3af554bbc9e9b4a429af44578135f2576ef718f1dec3fbf",
+      "firstPinUTC": "2026-10-17T10:56:14.107306+00:00",
+      "firstPinBeforeThisTaskSourceRead": false,
+      "readScope": "inventory/hash only until explicit source-manifest scope",
+      "note": "First filesystem pin recorded after selected source read; no earlier pin claimed."
+    },
+    {
+      "path": "packages/desktop/src/renderer/types.ts",
+      "bytes": 86699,
+      "lines": 2289,
+      "firstFilesystemSha256": "645de29eb12c5cc3a84ba68e9d5ece4020f2a272eca1191f3120a2f7620b7f3f",
+      "firstPinUTC": "2026-10-17T10:56:14.109051+00:00",
+      "firstPinBeforeThisTaskSourceRead": true,
+      "readScope": "inventory/hash only until explicit source-manifest scope",
+      "note": "Pinned before first selected source read."
+    },
+    {
+      "path": "packages/core/src/tool-system/builtin/edit.ts",
+      "bytes": 5412,
+      "lines": 139,
+      "firstFilesystemSha256": "4805f3667953f9f41cb81d98a010ead6318ed80595774ab9ab349591e0aa61ce",
+      "firstPinUTC": "2026-10-17T10:56:14.109614+00:00",
+      "firstPinBeforeThisTaskSourceRead": false,
+      "readScope": "inventory/hash only until explicit source-manifest scope",
+      "note": "First filesystem pin recorded after selected source read; no earlier pin claimed."
+    }
+  ]
+}

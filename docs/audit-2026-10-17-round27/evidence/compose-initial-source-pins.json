@@ -1,0 +1,51 @@
+{
+  "atUTC": "2026-10-17T11:02:58.879910+00:00",
+  "parentReportedBaseline": "9b667863e8a8eb91db7b1f99eb9876169dcf19ec",
+  "gitCommandsExecuted": 0,
+  "independentGitBlobVerification": false,
+  "note": "Resumed agent filesystem pins before this task product-source re-reading; CODESHELL just read. Historical prep earliest pins stay in unchanged copies. Hashes do not imply full semantic reading.",
+  "files": [
+    {
+      "path": "CODESHELL.md",
+      "bytes": 17639,
+      "lineCount": 217,
+      "sha256": "56d9ffdd81b6f6f615ed7a7392ddfa60ec4338c0ccb88eef20c4b73ad8dad5a2"
+    },
+    {
+      "path": "packages/desktop/src/renderer/diff/composeFileEdits.ts",
+      "bytes": 8020,
+      "lineCount": 245,
+      "sha256": "48a279cc6c2ebe3e4ee5333b3bea1e14d930180855b5f8518848419e0977edb8"
+    },
+    {
+      "path": "packages/desktop/src/renderer/diff/composeFileEdits.test.ts",
+      "bytes": 8578,
+      "lineCount": 203,
+      "sha256": "242400f40f6994f82af49270cdcbfb76f97851e378ccb92f20e5b139bf624c56"
+    },
+    {
+      "path": "packages/core/src/tool-system/builtin/edit.ts",
+      "bytes": 5412,
+      "lineCount": 139,
+      "sha256": "4805f3667953f9f41cb81d98a010ead6318ed80595774ab9ab349591e0aa61ce"
+    },
+    {
+      "path": "packages/desktop/src/renderer/messages/fileChangeAggregator.ts",
+      "bytes": 13565,
+      "lineCount": 396,
+      "sha256": "90ffda89cf0cb2d05751bb8370056793591be41c358477de8bd9f12db447bc2d"
+    },
+    {
+      "path": "packages/desktop/src/renderer/messages/FilesChangedCard.tsx",
+      "bytes": 16212,
+      "lineCount": 420,
+      "sha256": "15d7d4a53188869aa3af554bbc9e9b4a429af44578135f2576ef718f1dec3fbf"
+    },
+    {
+      "path": "packages/desktop/src/renderer/types.ts",
+      "bytes": 86699,
+      "lineCount": 2289,
+      "sha256": "645de29eb12c5cc3a84ba68e9d5ece4020f2a272eca1191f3120a2f7620b7f3f"
+    }
+  ]
+}

@@ -1,0 +1,40 @@
+{
+  "baseline": "9b667863e8a8eb91db7b1f99eb9876169dcf19ec",
+  "formalCount": 0,
+  "candidateCount": 1,
+  "relatedCount": 0,
+  "runs": [],
+  "authorRuntimeAttempts": 0,
+  "authorProductImports": 0,
+  "authorTestsExecuted": 0,
+  "authorFixturesWritten": 0,
+  "authorGitCommands": 0,
+  "authorNetworkOrNativeOrUIRuns": 0,
+  "productReruns": 0,
+  "rootAttemptReference": {
+    "exitPath": "evidence/root-containment-first.exit.json",
+    "rawPath": "evidence/root-containment-first.raw.log",
+    "rawBytes": 2272,
+    "rawSha256": "3419b38917c264fa865bcca06aa7160da25216f1b056c713ceb57a42f6a33a48",
+    "attempt": 1,
+    "exitCode": 1,
+    "guardedCompletion": false,
+    "existingTestsReportedPass": 16,
+    "existingExpectCalls": 54,
+    "reportedFail": 1,
+    "reportedError": 1,
+    "focusedTestsPlanned": 3,
+    "focusedTestsEntered": 0,
+    "focusedAssertionsExecuted": 0,
+    "bugOutputObserved": false,
+    "rootFixturesUnchangedByAuthor": true,
+    "rootReruns": 0,
+    "classification": "Root fixture import resolution failure, not a product missing-module defect. Whole direction SKIP. Referenced existing successes stay in failed-shard accounting and are not a clean gate."
+  },
+  "scope": "Resumed author filesystem source/doc/hash/JSON inspection only; all new candidate statements static.",
+  "excluded": [
+    "Any product/test/fixture/helper invocation, runtime import, JS/VM/AST/eval, actual Edit/Write/filesystem/business Git, React/browser/native/network/model/account/security/identity experiments.",
+    "Fixing the Root fixture path, dependency recovery, re-running its command or alternate validation."
+  ],
+  "productChanges": false
+}
